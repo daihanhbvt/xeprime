@@ -95,11 +95,11 @@ export function DriverDailyWageFields({
       <div className={styles.facts}>
         <span>
           {t('total', {
-            daily: valid ? fmt.money(String(daily)) : '—',
+            daily: valid ? fmt.money(String(daily)) : '-',
             days: quote.days,
           })}
         </span>
-        <b>{total === null ? '—' : fmt.money(String(total))}</b>
+        <b>{total === null ? '-' : fmt.money(String(total))}</b>
       </div>
       {total !== null && total > Number(quote.rentAmount) ? (
         <Alert type="warning" showIcon title={t('aboveRent', { rent: fmt.money(quote.rentAmount) })} />

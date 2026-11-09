@@ -58,7 +58,7 @@
     "cancel": "Huỷ yêu cầu",
     "cancelConfirm": "Huỷ yêu cầu rút này?",
     "cancelHint": "Tiền quay lại số dư rút được ngay.",
-    "reversed": "Chuyển không thành công: {reason}. Tiền đã về lại số dư — kiểm tra tài khoản nhận rồi tạo lệnh mới."
+    "reversed": "Chuyển không thành công: {reason}. Tiền đã về lại số dư - kiểm tra tài khoản nhận rồi tạo lệnh mới."
   },
   "admin": {
     "title": "Yêu cầu rút tiền",
@@ -82,7 +82,7 @@
     },
     "actions": {
       "approve": "Duyệt",
-      "approved": "Đã duyệt — bắt đầu đếm hạn chuyển.",
+      "approved": "Đã duyệt - bắt đầu đếm hạn chuyển.",
       "markPaid": "Đã chuyển khoản",
       "reject": "Từ chối",
       "reverse": "Chuyển hụt / sai tài khoản"
@@ -90,7 +90,7 @@
     "paid": {
       "title": "Xác nhận đã chuyển khoản",
       "bankReference": "Mã giao dịch ngân hàng",
-      "bankReferenceHint": "Bằng chứng đã chuyển — bắt buộc, dùng để đối chiếu về sau.",
+      "bankReferenceHint": "Bằng chứng đã chuyển - bắt buộc, dùng để đối chiếu về sau.",
       "submit": "Xác nhận đã chuyển",
       "done": "Đã ghi nhận chuyển khoản.",
       "referenceRequired": "Nhập mã giao dịch ngân hàng (tối thiểu 3 ký tự)."
@@ -107,7 +107,7 @@
     "reverse": {
       "title": "Đảo lệnh đã chuyển",
       "reason": "Vì sao tiền quay lại",
-      "reasonHint": "Chủ ví đọc được câu này — nói rõ vì sao tiền quay lại để họ kiểm tra tài khoản nhận trước khi rút lại.",
+      "reasonHint": "Chủ ví đọc được câu này - nói rõ vì sao tiền quay lại để họ kiểm tra tài khoản nhận trước khi rút lại.",
       "submit": "Đảo bút toán",
       "done": "Đã đảo. Tiền quay lại ví chủ ví, cả hai bút toán đều còn trên sổ.",
       "reasonPlaceholder": "Ví dụ: ngân hàng trả về vì sai số tài khoản",
@@ -144,7 +144,7 @@
       "returnAt": "Ngày về",
       "unitAmount": "Đơn giá",
       "revenue": "Doanh thu",
-      "commission": "Phí dịch vụ – Chủ xe",
+      "commission": "Phí dịch vụ - Chủ xe",
       "tax": "Thuế khấu trừ",
       "delivery": "Phí giao xe",
       "balanceChange": "Thay đổi SD"
@@ -158,20 +158,20 @@
       "body": "Chọn tháng khác, hoặc quay lại sau khi chuyến đang chạy kết thúc."
     },
     "totals": {
-      "balanceChange": "Tổng thay đổi số dư — chuyến đã hoàn thành",
+      "balanceChange": "Tổng thay đổi số dư - chuyến đã hoàn thành",
       "payAtPickup": "Khách thanh toán trực tiếp khi nhận xe",
       "payAtPickupHint": "Phần tiền thuê khách đưa thẳng cho bạn, không đi qua XePrime. Không gồm phí giao xe.",
       "delivery": "Phí giao xe khách trả trực tiếp",
       "deliveryHint": "Bạn nhận trọn khoản này; không tính phí dịch vụ và thuế.",
       "subscriptionFee": "Phí quản lý & vận hành gói nền tảng",
-      "commission": "Tổng phí dịch vụ – Chủ xe",
+      "commission": "Tổng phí dịch vụ - Chủ xe",
       "tax": "Tổng thuế khấu trừ, nộp thay",
       "ownerIncome": "Thu nhập chủ gian hàng",
-      "ownerIncomeHint": "Doanh thu cho thuê xe trừ phí dịch vụ – chủ xe, thuế khấu trừ và phí gói — gồm cả phần khách trả trực tiếp, không gồm phí giao xe.",
+      "ownerIncomeHint": "Doanh thu cho thuê xe trừ phí dịch vụ - chủ xe, thuế khấu trừ và phí gói - gồm cả phần khách trả trực tiếp, không gồm phí giao xe.",
       "ownerIncomeCommission": "Thu nhập chủ xe",
       "ownerIncomeGeneric": "Thu nhập",
       "appSubscriptionFee": "Phí quản lý & vận hành nền tảng",
-      "appOwnerIncomeHint": "Doanh thu cho thuê xe trừ phí dịch vụ – chủ xe, thuế khấu trừ và phí nền tảng — gồm cả phần khách trả trực tiếp, không gồm phí giao xe."
+      "appOwnerIncomeHint": "Doanh thu cho thuê xe trừ phí dịch vụ - chủ xe, thuế khấu trừ và phí nền tảng - gồm cả phần khách trả trực tiếp, không gồm phí giao xe."
     }
   },
   "pill": {
@@ -207,7 +207,7 @@
     "totalLabel": "{count, plural, other {# giao dịch}}",
     "empty": {
       "title": "Tháng này chưa có biến động nào",
-      "body": "Chọn tháng khác — tiền chuyến, bồi thường và các lệnh rút của bạn sẽ hiện ở đây."
+      "body": "Chọn tháng khác - tiền chuyến, bồi thường và các lệnh rút của bạn sẽ hiện ở đây."
     },
     "columns": {
       "code": "Mã giao dịch",

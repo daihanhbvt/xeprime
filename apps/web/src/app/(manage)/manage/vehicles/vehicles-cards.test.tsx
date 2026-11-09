@@ -212,7 +212,7 @@ afterEach(cleanup);
 
 /* ------------------------------------------------------------------ hình thái mặc định */
 
-describe('/manage/vehicles — lưới thẻ là mặc định', () => {
+describe('/manage/vehicles - lưới thẻ là mặc định', () => {
   it('dựng lưới thẻ, không còn bảng nào', () => {
     renderPage();
 
@@ -223,7 +223,7 @@ describe('/manage/vehicles — lưới thẻ là mặc định', () => {
 
 /* ------------------------------------------------------------------ nội dung thẻ */
 
-describe('/manage/vehicles — nội dung thẻ', () => {
+describe('/manage/vehicles - nội dung thẻ', () => {
   it('định danh: tên, mã, biển số', () => {
     renderPage();
 
@@ -294,7 +294,7 @@ describe('/manage/vehicles — nội dung thẻ', () => {
     expect(within(card).getByText('350.000 ₫')).toBeTruthy();
   });
 
-  it('xe chưa có giá: ô giá là "—", không phải 0 giả', () => {
+  it('xe chưa có giá: ô giá là "-", không phải 0 giả', () => {
     setQuery({
       data: { items: [vehicle({ weekdayPrice: null, weekendPrice: null })], meta: META },
     });
@@ -323,7 +323,7 @@ describe('/manage/vehicles — nội dung thẻ', () => {
 
 /* ------------------------------------------------------------------ quyền tài chính */
 
-describe('/manage/vehicles — quyền tài chính', () => {
+describe('/manage/vehicles - quyền tài chính', () => {
   it('thiếu `finance.view`: API không trả số tiền → thẻ không dựng phần tài chính', () => {
     // Backend bỏ hẳn hai trường khi thiếu quyền; thẻ phải chịu được điều đó.
     setStats([statsOf({ totalIncome: undefined, totalExpense: undefined })]);
@@ -347,7 +347,7 @@ describe('/manage/vehicles — quyền tài chính', () => {
 
 /* ------------------------------------------------------------------ trạng thái */
 
-describe('/manage/vehicles — trạng thái lưới thẻ', () => {
+describe('/manage/vehicles - trạng thái lưới thẻ', () => {
   it('đang tải lần đầu: skeleton, chưa nói "chưa có xe"', () => {
     setQuery({ isFetching: true });
     renderPage();
@@ -356,7 +356,7 @@ describe('/manage/vehicles — trạng thái lưới thẻ', () => {
     expect(screen.queryByText('Chưa có xe nào')).toBeNull();
   });
 
-  it('số liệu hỏng KHÔNG làm hỏng thẻ — xe vẫn xem và thao tác được', () => {
+  it('số liệu hỏng KHÔNG làm hỏng thẻ - xe vẫn xem và thao tác được', () => {
     setStats([], { isError: true });
     renderPage();
 
@@ -408,7 +408,7 @@ describe('/manage/vehicles — trạng thái lưới thẻ', () => {
 
 /* ------------------------------------------------------------------ hành động */
 
-describe('/manage/vehicles — hành động trên thẻ', () => {
+describe('/manage/vehicles - hành động trên thẻ', () => {
   it('chỉ có quyền xem: còn Chi tiết và Lịch, không có Chỉnh sửa/Xoá', () => {
     renderPage();
 
@@ -461,7 +461,7 @@ describe('/manage/vehicles — hành động trên thẻ', () => {
     expect(nav.push.mock.calls.at(-1)?.[0]).toContain('q=Honda+SH+150i+2023');
   });
 
-  it('KHÔNG có "Xoá" trên thẻ dù đủ quyền — xoá chỉ nằm trong Hồ sơ 360 (bản chỉnh 11/08/2026)', () => {
+  it('KHÔNG có "Xoá" trên thẻ dù đủ quyền - xoá chỉ nằm trong Hồ sơ 360 (bản chỉnh 11/08/2026)', () => {
     grant(PERMISSION.VEHICLE_UPDATE, PERMISSION.VEHICLE_DELETE);
     renderPage();
 
@@ -475,7 +475,7 @@ describe('/manage/vehicles — hành động trên thẻ', () => {
  * Ở ≤640px Figma `186:2374` vẽ một hình thái KHÁC — hàng ngang, ảnh 80×60 bên trái, chỉ số gộp
  * một dòng rút gọn. Test khoá đúng điểm đó: cùng dữ liệu, cùng bộ hành động, khác cách trình bày.
  */
-describe('/manage/vehicles — hàng ngang ở mobile', () => {
+describe('/manage/vehicles - hàng ngang ở mobile', () => {
   beforeEach(() => {
     viewport.mobile = true;
   });
@@ -502,7 +502,7 @@ describe('/manage/vehicles — hàng ngang ở mobile', () => {
     expect(card.queryByText('12.750.000 ₫')).toBeNull();
   });
 
-  it('đủ bộ hành động như desktop — không cắt bớt quyền ở màn nhỏ', () => {
+  it('đủ bộ hành động như desktop - không cắt bớt quyền ở màn nhỏ', () => {
     grant(PERMISSION.VEHICLE_UPDATE, PERMISSION.VEHICLE_DELETE);
     renderPage();
 
@@ -551,7 +551,7 @@ describe('/manage/vehicles — hàng ngang ở mobile', () => {
     expect(String(nav.replace.mock.calls.at(-1)?.[0])).toContain('operationStatus=maintenance');
   });
 
-  it('chip "Tất cả" đang bật khi không lọc — và có trạng thái bật cho trình đọc', () => {
+  it('chip "Tất cả" đang bật khi không lọc - và có trạng thái bật cho trình đọc', () => {
     renderPage();
 
     const chips = screen.getByRole('group', { name: 'Lọc theo trạng thái vận hành' });
@@ -560,7 +560,7 @@ describe('/manage/vehicles — hàng ngang ở mobile', () => {
     );
   });
 
-  it('desktop KHÔNG dựng dải chỉ số và hàng chip — hai khối là của mobile', () => {
+  it('desktop KHÔNG dựng dải chỉ số và hàng chip - hai khối là của mobile', () => {
     viewport.mobile = false;
     renderPage();
 
@@ -571,7 +571,7 @@ describe('/manage/vehicles — hàng ngang ở mobile', () => {
 
 /* ------------------------------------------------------ việc cần làm & KM (Wave 8) */
 
-describe('/manage/vehicles — cảnh báo và KM trên thẻ', () => {
+describe('/manage/vehicles - cảnh báo và KM trên thẻ', () => {
   /** Cảnh báo do SERVER tính; thẻ chỉ hiển thị, không tự suy ra. */
   function withAlerts(items: unknown[], currentOdometerKm: number | null = 45_230) {
     alerts.byId = new Map([['v1', { vehicleId: 'v1', currentOdometerKm, alerts: items }]]);
@@ -626,7 +626,7 @@ describe('/manage/vehicles — cảnh báo và KM trên thẻ', () => {
     expect(within(card).queryByRole('list', { name: 'Cảnh báo của xe' })).toBeNull();
   });
 
-  it('mọi thẻ dùng CÙNG một tỉ lệ khung ảnh — ảnh dọc không kéo cao thẻ', () => {
+  it('mọi thẻ dùng CÙNG một tỉ lệ khung ảnh - ảnh dọc không kéo cao thẻ', () => {
     const read = (name: string) =>
       readFileSync(
         join(
@@ -649,7 +649,7 @@ describe('/manage/vehicles — cảnh báo và KM trên thẻ', () => {
 
 /* ------------------------------------------- trạng thái tải/hỏng của cảnh báo (Wave 8.1) */
 
-describe('/manage/vehicles — cảnh báo hỏng KHÔNG được giống "không có việc"', () => {
+describe('/manage/vehicles - cảnh báo hỏng KHÔNG được giống "không có việc"', () => {
   it('đang tải: skeleton ở vùng cảnh báo, chưa kết luận gì', () => {
     alerts.isLoading = true;
     const view = renderPage();

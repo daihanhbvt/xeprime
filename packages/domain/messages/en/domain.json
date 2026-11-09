@@ -62,7 +62,7 @@
     "provider_flagged": "Gateway flagged the transaction",
     "duplicate_provider_tx": "Gateway transaction already used on another payment",
     "result_after_resolution": "Gateway confirmed payment after the case was closed",
-    "overpaid": "Duplicate payment — the item was already fully paid"
+    "overpaid": "Duplicate payment - the item was already fully paid"
   },
   "paymentOrderQueueView": {
     "review": "Needs action",
@@ -384,7 +384,7 @@
     "hold_paid": "Reservation payment received",
     "hold_expiring": "Payment window closing",
     "hold_expired": "Payment window closed",
-    "hold_refunded": "Trip fell through — refunded",
+    "hold_refunded": "Trip fell through - refunded",
     "hold_refund_paid": "Reservation payment refunded",
     "booking_request_slot_reopened": "That car is free again",
     "booking_cancelled_by_host": "Host cancelled the trip",
@@ -502,7 +502,7 @@
   "routeTypeDescription": {
     "in_city": "Travel within the city or nearby, with a free itinerary",
     "inter_city": "Travel to another province and return to the pickup point (round trip)",
-    "inter_city_one_way": "One-way travel to another province — the shop may add a surcharge"
+    "inter_city_one_way": "One-way travel to another province - the shop may add a surcharge"
   },
   "seatBucket": {
     "4": "4 seats",
@@ -811,7 +811,7 @@
   "feePolicyActivationBlocker": {
     "service_fee_out_of_range": "Service fee % is out of the allowed range",
     "tax_requires_rates_and_basis": "Tax needs a full rate table by service type and a legal basis",
-    "tax_rate_out_of_range": "A VAT or PIT rate is out of range (0–5%, at most two decimals)",
+    "tax_rate_out_of_range": "A VAT or PIT rate is out of range (0-5%, at most two decimals)",
     "insurance_requires_partner": "Insurance needs a real partner name",
     "trip_insurance_requires_rate": "Passenger accident insurance needs a daily rate for every vehicle type",
     "vehicle_protection_requires_rate": "Vehicle damage insurance needs a daily rate for every vehicle type",
@@ -835,7 +835,7 @@
   "bookingHoldOutcome": {
     "kept": "Used for the trip",
     "settled": "Settled",
-    "split_late_cancel": "Late cancellation — hold forfeited",
+    "split_late_cancel": "Late cancellation - hold forfeited",
     "refunded": "Refunded to customer",
     "forfeited": "Compensated to owner",
     "released_to_shop": "Released to shop"
@@ -966,7 +966,7 @@
   },
   "catalogTypeHint": {
     "vehicle_brand": "Shown in the \"Brand\" field when adding a vehicle, and in marketplace filters.",
-    "body_type": "Shown as picture cards when adding a vehicle, in the marketplace \"Type\" filter and — when \"Show on home page\" is on — in the home page \"Vehicle types\" section.",
+    "body_type": "Shown as picture cards when adding a vehicle, in the marketplace \"Type\" filter and - when \"Show on home page\" is on - in the home page \"Vehicle types\" section.",
     "fuel_type": "Shown in the \"Energy source\" field when adding a vehicle, and in filters.",
     "vehicle_feature": "Shown under \"Features\" when adding a vehicle, and in marketplace filters.",
     "vehicle_model": "Shown in the \"Model\" field once a brand is picked. Each model belongs to one brand and one vehicle type."
@@ -977,7 +977,7 @@
     "hold_refund": "Deposit refund",
     "hold_overpay": "Overpayment refund",
     "withdrawal": "Bank withdrawal",
-    "withdrawal_reversal": "Returned — transfer failed",
+    "withdrawal_reversal": "Returned - transfer failed",
     "adjustment": "Adjustment",
     "extension_release": "Extension reservation payout",
     "extension_refund": "Extension refund"
@@ -1674,7 +1674,7 @@
   "driverDropZone": {
     "grace": "Within the free release window",
     "far": "More than 12 hours ahead",
-    "same_day": "Same day (2–12 hours)",
+    "same_day": "Same day (2-12 hours)",
     "critical": "Last minute (under 2 hours)"
   },
   "bookingHistoryOutcome": {

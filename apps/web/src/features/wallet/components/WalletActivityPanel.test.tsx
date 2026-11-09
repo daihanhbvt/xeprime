@@ -101,7 +101,7 @@ describe('WalletActivityPanel', () => {
     expect(row.queryByRole('button', { name: 'Huỷ yêu cầu' })).toBeNull();
   });
 
-  it('lệnh rút chờ duyệt: đích chuyển, hạn chuyển, nút Huỷ — không có "số dư sau"', () => {
+  it('lệnh rút chờ duyệt: đích chuyển, hạn chuyển, nút Huỷ - không có "số dư sau"', () => {
     query.data = page([withdrawal(WITHDRAWAL_STATUS.PENDING)]);
     render();
     const row = within(rowOf('XPW0001'));

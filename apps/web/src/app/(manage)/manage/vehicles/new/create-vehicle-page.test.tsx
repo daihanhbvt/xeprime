@@ -154,7 +154,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('/manage/vehicles/new — Wave 3 create wizard', () => {
+describe('/manage/vehicles/new - Wave 3 create wizard', () => {
   it('chặn toàn bộ form khi thiếu quyền tạo xe', () => {
     permissions.allow = false;
     renderPage();

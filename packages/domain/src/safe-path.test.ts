@@ -23,7 +23,7 @@ describe('isSafeNextPath', () => {
     expect(isSafeNextPath('data:text/html,<script>')).toBe(false);
   });
 
-  it('từ chối protocol-relative URL — trình duyệt hiểu là host khác', () => {
+  it('từ chối protocol-relative URL - trình duyệt hiểu là host khác', () => {
     expect(isSafeNextPath('//evil.example')).toBe(false);
     expect(isSafeNextPath('//evil.example/trips')).toBe(false);
   });

@@ -55,7 +55,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('ForgotPasswordByPhone — một màn + popup OTP', () => {
+describe('ForgotPasswordByPhone - một màn + popup OTP', () => {
   it('một màn có đủ SĐT, mật khẩu mới, nhập lại; chưa có ô mã', () => {
     renderView();
 
@@ -118,7 +118,7 @@ describe('ForgotPasswordByPhone — một màn + popup OTP', () => {
     expect(screen.getByLabelText(/^Mã xác thực gồm/)).toBeTruthy();
   });
 
-  it('mã bị KHOÁ vì sai quá số lần: ô mã khoá, câu báo đứng yên — chỉ còn gửi lại mã', async () => {
+  it('mã bị KHOÁ vì sai quá số lần: ô mã khoá, câu báo đứng yên - chỉ còn gửi lại mã', async () => {
     api.resetPasswordWithOtp.mockRejectedValueOnce(
       new ApiClientError({ code: 'OTP_LOCKED', message: 'x', status: 400 }),
     );

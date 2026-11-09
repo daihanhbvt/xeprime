@@ -1,4 +1,4 @@
-/* Ô soạn có định dạng — design `24047:78679` (thanh công cụ trên, vùng soạn dưới, một khung viền). */
+/* Ô soạn có định dạng - design `24047:78679` (thanh công cụ trên, vùng soạn dưới, một khung viền). */
 .box {
   position: relative;
   display: flex;
@@ -79,7 +79,7 @@
   color: var(--xp-color-text);
 }
 
-/* Chữ gợi ý khi rỗng — extension `Placeholder` gắn `is-editor-empty` + `data-placeholder` lên đoạn đầu. */
+/* Chữ gợi ý khi rỗng - extension `Placeholder` gắn `is-editor-empty` + `data-placeholder` lên đoạn đầu. */
 .content :global(p.is-editor-empty:first-child)::before {
   float: left;
   height: 0;

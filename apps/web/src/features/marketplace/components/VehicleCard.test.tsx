@@ -86,7 +86,7 @@ describe('VehicleCard', () => {
    * Không có hành động thuê nào trong thẻ: nút DUY NHẤT là trái tim Xe yêu thích (mở 21/10/2026,
    * nối API thật) — mọi chỗ còn lại của thẻ là một liên kết tới trang chi tiết.
    */
-  it('nút duy nhất trong thẻ là trái tim yêu thích — còn lại là một liên kết', () => {
+  it('nút duy nhất trong thẻ là trái tim yêu thích - còn lại là một liên kết', () => {
     render(<VehicleCard listing={LISTING} />);
     const buttons = screen.queryAllByRole('button');
     expect(buttons).toHaveLength(1);
@@ -195,13 +195,13 @@ describe('VehicleCard', () => {
     expect(screen.queryByText('600.000 ₫')).toBeNull();
   });
 
-  it('bậc triệu giữ 2 chữ số lẻ — không làm tròn mất 50.000đ của khách', () => {
+  it('bậc triệu giữ 2 chữ số lẻ - không làm tròn mất 50.000đ của khách', () => {
     render(<VehicleCard listing={LISTING} />);
     // 1.050.000 ₫ — ở 1 chữ số lẻ nó sẽ in ra "1tr" và thẻ nói sai giá.
     expect(screen.getByText('1,05tr')).toBeTruthy();
   });
 
-  it('giá gạch bỏ cũng rút gọn — hai số cạnh nhau phải cùng một dạng', () => {
+  it('giá gạch bỏ cũng rút gọn - hai số cạnh nhau phải cùng một dạng', () => {
     const discounted = { ...LISTING, discountPercent: 20 } as PublicListing;
     const { container } = render(<VehicleCard listing={discounted} />);
     const struck = container.querySelector('s');
@@ -230,7 +230,7 @@ describe('VehicleCard', () => {
     // trong — nên chính nó phải mang nghĩa của dấu.
     expect(
       screen.getByRole('link', {
-        name: 'Gian hàng Minh Tuấn — gian hàng đã được XePrime xác minh',
+        name: 'Gian hàng Minh Tuấn - gian hàng đã được XePrime xác minh',
       }),
     ).toBeTruthy();
   });
@@ -263,7 +263,7 @@ describe('VehicleCard', () => {
     expect(clipped.contains(mark)).toBe(false);
   });
 
-  it('hoá đơn VAT (ADR 0059): chỉ gắn nhãn khi chủ xe đã bật — false không có nhãn phủ định', () => {
+  it('hoá đơn VAT (ADR 0059): chỉ gắn nhãn khi chủ xe đã bật - false không có nhãn phủ định', () => {
     const { rerender } = render(<VehicleCard listing={LISTING} />);
     expect(screen.queryByText(/hoá đơn VAT/i)).toBeNull();
 
@@ -271,7 +271,7 @@ describe('VehicleCard', () => {
     expect(screen.getByText('Xuất hoá đơn VAT')).toBeTruthy();
   });
 
-  it('không để lại vùng hành động rỗng ở chân thẻ — giá nằm trên, dòng chủ xe chốt đáy', () => {
+  it('không để lại vùng hành động rỗng ở chân thẻ - giá nằm trên, dòng chủ xe chốt đáy', () => {
     const { container } = render(<VehicleCard listing={LISTING} />);
     // Figma list v2 (`21636:46969`): hàng điểm + giá rồi tới dòng chủ xe ở đáy — không còn
     // khối trống nơi nút thuê từng đứng.
@@ -283,7 +283,7 @@ describe('VehicleCard', () => {
   });
 });
 
-describe('VehicleCard — trái tim yêu thích', () => {
+describe('VehicleCard - trái tim yêu thích', () => {
   it('cả hai dạng thẻ gắn trái tim của ĐÚNG xe (không còn state cục bộ)', () => {
     const { unmount } = render(<VehicleCard listing={LISTING} />);
     expect(screen.getByTestId('favorite-V1')).toBeTruthy();

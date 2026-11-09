@@ -20,7 +20,7 @@ export class HolidayDto {
   @ApiProperty({
     example: '2026-04-30',
     description:
-      'Ngày CUỐI CÙNG của kỳ nghỉ — INCLUSIVE. Một ngày lễ đúng một ngày có startDate = endDate.',
+      'Ngày CUỐI CÙNG của kỳ nghỉ - INCLUSIVE. Một ngày lễ đúng một ngày có startDate = endDate.',
   })
   endDate!: string;
 

@@ -251,7 +251,7 @@ function DriverOverviewSection({ overview }: { overview: DriverOverview }) {
         key: 'averageDaily',
         icon: 'calendar-outline',
         label: t('stats.averageDaily'),
-        value: month.averageDailyWage == null ? '—' : fmt.money(month.averageDailyWage),
+        value: month.averageDailyWage == null ? '-' : fmt.money(month.averageDailyWage),
         hint: shopDaily
           ? t('stats.shopDaily', { amount: fmt.money(shopDaily) })
           : t('stats.noShopDaily'),
@@ -386,7 +386,7 @@ function DriverOverviewSection({ overview }: { overview: DriverOverview }) {
             label={t('reliability.response')}
             value={
               reliability.medianResponseMinutes == null
-                ? '—'
+                ? '-'
                 : reliability.medianResponseMinutes === 0
                   ? t('reliability.underMinute')
                   : fmt.minutesDuration(reliability.medianResponseMinutes)
@@ -517,7 +517,7 @@ function DriverTripsSection({ driver, month }: { driver: Driver; month: string }
                       {[row.vehicleName, row.vehiclePlate].filter(Boolean).join(' · ')}
                     </Text>
                     <Text col={colors.textMuted} fos={fontSize.label}>
-                      {fmt.shortDateTimeRange(row.pickupAt, row.returnAt)}
+                      {fmt.rentalRange(row.pickupAt, row.returnAt)}
                     </Text>
                     <Text
                       col={!line || line.kind === 'none' ? colors.textMuted : colors.text}
@@ -525,7 +525,7 @@ function DriverTripsSection({ driver, month }: { driver: Driver; month: string }
                       fow={!line || line.kind === 'none' ? fontWeight.regular : fontWeight.semibold}
                     >
                       {!line
-                        ? '—'
+                        ? '-'
                         : line.kind === 'none'
                           ? tLine('none')
                           : tLine(line.kind, {

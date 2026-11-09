@@ -151,7 +151,7 @@ export function deliverySummaryText(
   const parts = deliveryTierRanges(values.deliveryTiers).map((range) => {
     const price =
       range.perKm != null ? perKm(money(range.perKm)) : range.free ? free : money(range.fee);
-    return `${range.fromKm === 0 ? '0' : `>${range.fromKm}`}–${range.toKm} km: ${price}`;
+    return `${range.fromKm === 0 ? '0' : `>${range.fromKm}`}-${range.toKm} km: ${price}`;
   });
   if (values.deliveryMaxRadiusKm != null) {
     parts.push(`>${values.deliveryMaxRadiusKm} km: ${quote}`);

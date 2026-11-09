@@ -182,9 +182,15 @@
     display: none;
   }
 
-  .locationWrap,
+  /* Ngày nhận/trả hiện ĐỦ định dạng chuẩn (`T2, 09/11  17h00 → …`) - không co; địa điểm lấy phần
+     còn lại và tự "…" khi tên tỉnh dài (09/11/2026: chia đôi thì cắt mất giờ). */
+  .locationWrap {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
   .dateWrap {
-    flex: 1 1 0;
+    flex: none;
     min-width: 0;
   }
 

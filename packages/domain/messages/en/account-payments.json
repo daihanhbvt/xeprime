@@ -22,7 +22,7 @@
   "balance": {
     "notes": {
       "title": "Before adding a payout account:",
-      "holder": "<strong>Account holder:</strong> the beneficiary name must match the name registered with your bank exactly — otherwise the bank returns the transfer.",
+      "holder": "<strong>Account holder:</strong> the beneficiary name must match the name registered with your bank exactly - otherwise the bank returns the transfer.",
       "timing": "<strong>When money arrives:</strong> XePrime transfers within {days, plural, one {# business day} other {# business days}} of approving a withdrawal.",
       "accountType": "<strong>Account type:</strong> only Vietnamese bank accounts are supported. Transfers cannot go to credit cards or e-wallets.",
       "change": "<strong>Changing accounts:</strong> withdrawals already requested still go to the account chosen when they were sent."

@@ -13,9 +13,11 @@ import Animated, {
   KeyboardState,
   runOnJS,
   useAnimatedKeyboard,
+  useAnimatedScrollHandler,
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets, type Edge } from 'react-native-safe-area-context';
 import {
@@ -25,6 +27,7 @@ import {
   revealNodeAboveKeyboard,
   type KeyboardHold,
 } from './focus-reveal';
+import { ScrollRevealProvider, useScrollRevealDefault } from '@/components/motion/ScrollReveal';
 import { layout } from '@/theme/layout';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
 import { space } from '@/theme/tokens';
@@ -119,6 +122,16 @@ interface ScreenProps {
    * Opt-in vì ở màn khác thanh dưới CHÍNH LÀ thứ phải đi cùng bàn phím (thanh soạn tin, nút Lưu).
    */
   hideFooterWhileTyping?: boolean;
+  /**
+   * Offset cuộn dọc ghi trên LUỒNG UI — cho màn có hiệu ứng theo cuộn (ảnh parallax, tiêu đề hiện
+   * dần). Có prop thì vùng cuộn là `Animated.ScrollView`; giá trị phải ổn định suốt đời màn.
+   */
+  scrollOffset?: SharedValue<number>;
+  /**
+   * Bật "khối hiện khi cuộn tới": dựng `ScrollRevealProvider` với offset cuộn của màn (tự tạo nếu
+   * nơi gọi không truyền `scrollOffset`), để các `<ScrollReveal>` bên trong chạy trên luồng UI.
+   */
+  scrollReveal?: boolean;
 }
 
 /**
@@ -137,7 +150,17 @@ export function Screen({
   onRefresh,
   scrollRef,
   hideFooterWhileTyping = false,
+  scrollOffset: scrollOffsetProp,
+  scrollReveal: scrollRevealProp,
 }: ScreenProps) {
+  const scrollRevealDefault = useScrollRevealDefault();
+  const scrollReveal = scroll && (scrollRevealProp ?? scrollRevealDefault);
+  const ownOffset = useSharedValue(0);
+  const scrollOffset = scrollOffsetProp ?? (scrollReveal ? ownOffset : undefined);
+  const revealCtx = useMemo(
+    () => (scrollReveal && scrollOffset ? { scrollY: scrollOffset } : null),
+    [scrollReveal, scrollOffset],
+  );
   const colors = useColors();
   const styles = useStyles();
   /**
@@ -233,12 +256,20 @@ export function Screen({
     [scrollRef],
   );
   const scrollY = useRef(0);
+  const offsetRef = useRef(scrollOffset);
+  offsetRef.current = scrollOffset;
+  const readScrollY = () => (offsetRef.current ? offsetRef.current.value : scrollY.current);
+  const animatedScrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      if (scrollOffset) scrollOffset.value = event.contentOffset.y;
+    },
+  });
 
   /** Mép trên bàn phím trong hệ CỬA SỔ — `null` khi bàn phím đang đóng. */
   const keyboardTop = useRef<number | null>(null);
 
   const reveal = useCallback((top: number) => {
-    revealFocusedInput(scroller.current, scrollY.current, top);
+    revealFocusedInput(scroller.current, readScrollY(), top);
   }, []);
 
   /**
@@ -264,7 +295,7 @@ export function Screen({
   const revealHeld = useCallback(() => {
     const top = keyboardTop.current;
     if (top === null) return;
-    revealNodeAboveKeyboard(scroller.current, scrollY.current, top, heldNode.current);
+    revealNodeAboveKeyboard(scroller.current, readScrollY(), top, heldNode.current);
   }, []);
   const keyboardHold = useMemo<KeyboardHold>(
     () => ({
@@ -343,9 +374,10 @@ export function Screen({
     centered ? styles.centered : null,
   ];
 
+  const Scroller = scrollOffset ? Animated.ScrollView : ScrollView;
   const body = scroll ? (
-    <ScrollView
-      ref={attachScroller}
+    <Scroller
+      ref={attachScroller as never}
       contentContainerStyle={[
         contentStyle,
         keyboardTail > 0 || tabBarInset > 0
@@ -356,10 +388,14 @@ export function Screen({
       // Đang giữ bàn phím cho danh sách gợi ý: kéo trang KHÔNG được làm ô mất tiêu điểm.
       keyboardDismissMode={holding ? 'none' : 'on-drag'}
       // Ghi vào ref, không vào state — vị trí cuộn chỉ cần cho lần cuộn tới ô đang gõ.
-      onScroll={(event) => {
-        scrollY.current = event.nativeEvent.contentOffset.y;
-      }}
-      scrollEventThrottle={SCROLL_REPORT_MS}
+      onScroll={
+        scrollOffset
+          ? animatedScrollHandler
+          : (event: { nativeEvent: { contentOffset: { y: number } } }) => {
+              scrollY.current = event.nativeEvent.contentOffset.y;
+            }
+      }
+      scrollEventThrottle={scrollOffset ? 16 : SCROLL_REPORT_MS}
       {...(onRefresh
         ? {
             refreshControl: (
@@ -367,13 +403,15 @@ export function Screen({
                 refreshing={refreshing}
                 onRefresh={onRefresh}
                 tintColor={colors.accentText}
+                colors={[colors.accentText]}
+                progressBackgroundColor={colors.surface}
               />
             ),
           }
         : {})}
     >
-      {children}
-    </ScrollView>
+      {revealCtx ? <ScrollRevealProvider value={revealCtx}>{children}</ScrollRevealProvider> : children}
+    </Scroller>
   ) : (
     <View style={[contentStyle, styles.flex]}>{children}</View>
   );

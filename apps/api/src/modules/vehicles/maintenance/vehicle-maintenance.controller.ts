@@ -210,7 +210,7 @@ export class VehicleMaintenanceController {
   @Post('records/:recordId/complete')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.VEHICLE_MAINTENANCE_MANAGE)
-  @ApiOperation({ summary: 'Hoàn tất: nhả lịch + ghi KM + (thay nhớt) dời mốc — một transaction' })
+  @ApiOperation({ summary: 'Hoàn tất: nhả lịch + ghi KM + (thay nhớt) dời mốc - một transaction' })
   @ApiOkResponse({ type: MaintenanceRecordDto })
   completeRecord(
     @CurrentTenant() tenant: TenantContext,
@@ -236,7 +236,7 @@ export class VehicleMaintenanceController {
   @Patch('records/:recordId/cost')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.VEHICLE_MAINTENANCE_MANAGE, PERMISSION.VEHICLE_MAINTENANCE_COST_VIEW)
-  @ApiOperation({ summary: 'Sửa chi phí phiếu ĐÃ hoàn tất — phiếu chi trong sổ đổi theo' })
+  @ApiOperation({ summary: 'Sửa chi phí phiếu ĐÃ hoàn tất - phiếu chi trong sổ đổi theo' })
   @ApiOkResponse({ type: MaintenanceRecordDto })
   correctCost(
     @CurrentTenant() tenant: TenantContext,
@@ -258,7 +258,7 @@ export class VehicleMaintenanceController {
   @Post('records/:recordId/cancel')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.VEHICLE_MAINTENANCE_MANAGE)
-  @ApiOperation({ summary: 'Hủy lịch — NHẢ chỗ trên lịch xe trong cùng transaction' })
+  @ApiOperation({ summary: 'Hủy lịch - NHẢ chỗ trên lịch xe trong cùng transaction' })
   @ApiOkResponse({ type: MaintenanceRecordDto })
   cancelRecord(
     @CurrentTenant() tenant: TenantContext,

@@ -57,8 +57,7 @@
   font-weight: var(--xp-font-weight-medium);
   line-height: var(--xp-line-height-body-lg);
   color: var(--xp-color-text-secondary);
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 768px) {

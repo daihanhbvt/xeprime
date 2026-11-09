@@ -30,7 +30,7 @@
     "providerTx": "Mã giao dịch nhà cung cấp",
     "matchedInvoice": "Đã khớp vào hoá đơn",
     "rawTitle": "Bằng chứng gốc từ ngân hàng",
-    "rawHint": "Bằng chứng khi có tranh cãi — không chỉnh sửa được.",
+    "rawHint": "Bằng chứng khi có tranh cãi - không chỉnh sửa được.",
     "bankGateway": "Ngân hàng nhận",
     "bankAccount": "Tài khoản nhận",
     "bankReference": "Mã tham chiếu ngân hàng",
@@ -44,7 +44,7 @@
   },
   "suggestions": {
     "title": "Hoá đơn gói đang chờ tiền",
-    "hint": "Chọn đúng hoá đơn của khoản tiền này — hoá đơn trùng số tiền được đưa lên đầu.",
+    "hint": "Chọn đúng hoá đơn của khoản tiền này - hoá đơn trùng số tiền được đưa lên đầu.",
     "empty": "Không có hoá đơn nào đang chờ tiền",
     "amountMatches": "Khớp đúng số tiền",
     "remaining": "Còn thiếu: {amount}",
@@ -83,9 +83,9 @@
     "reasonRequired": "Nhập lý do xử lý"
   },
   "footer": {
-    "choose": "Chọn một hoá đơn bên phải để khớp — hoặc bỏ qua nếu khoản này không thuộc hoá đơn nào.",
+    "choose": "Chọn một hoá đơn bên phải để khớp - hoặc bỏ qua nếu khoản này không thuộc hoá đơn nào.",
     "chosen": "Sẽ khớp vào {code} · {tenant}",
-    "noInvoice": "Không có hoá đơn nào đang chờ tiền — khoản này chỉ có thể bỏ qua.",
+    "noInvoice": "Không có hoá đơn nào đang chờ tiền - khoản này chỉ có thể bỏ qua.",
     "handled": "Giao dịch này đã được xử lý."
   }
 }

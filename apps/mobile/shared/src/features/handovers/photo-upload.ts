@@ -170,7 +170,7 @@ export class HandoverUploadError extends Error {
     readonly meta: HandoverUploadMeta,
     override readonly cause: unknown,
   ) {
-    super(`[handover-photo] ${stage} thất bại — ${describe(cause)}`);
+    super(`[handover-photo] ${stage} thất bại - ${describe(cause)}`);
     this.name = 'HandoverUploadError';
   }
 }

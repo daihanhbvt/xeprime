@@ -130,7 +130,7 @@ describe('CategoryManagerSheet', () => {
     expect(deletes).toHaveLength(1);
   });
 
-  it('xoá phải XÁC NHẬN trước — một cú chạm nhầm không được xoá danh mục của gian hàng', async () => {
+  it('xoá phải XÁC NHẬN trước - một cú chạm nhầm không được xoá danh mục của gian hàng', async () => {
     const { findAllByLabelText, findByText, removeSpy } = await renderSheet([
       PERMISSION.FINANCE_VIEW,
       PERMISSION.RECEIPT_CREATE,

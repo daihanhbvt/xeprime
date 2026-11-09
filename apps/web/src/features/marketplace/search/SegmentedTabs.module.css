@@ -202,20 +202,26 @@
 .listSegment {
   display: inline-flex;
   align-items: center;
-  height: 44px;
-  padding: 3px;
+  /* Theo thẻ tìm kiếm (`--search-field-h`); ngoài thẻ giữ 44 như cũ. */
+  height: var(--search-field-h, 44px);
+  /* Không đệm: mục đang chọn đè đúng lên viền ngoài (lề -1px) để hai viền trùng làm MỘT. */
+  padding: 0;
   border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg-container);
+  /* Nền nhóm xám nhạt như app (`colors.background`): mục đang chọn nền TRẮNG nổi lên rõ - nền
+     trắng cả hai thì mục chọn chỉ còn phân biệt bằng một vệt bóng mờ. */
+  background: var(--xp-color-bg-layout);
   box-shadow: none;
-  gap: 2px;
+  gap: 0;
 }
 
 .listSegment .tab {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 36px;
+  /* Cao bằng khung, lề -1px đè lên viền ngoài của nhóm. */
+  height: var(--search-field-h, 44px);
+  margin: -1px;
   min-height: 0;
   padding: 0 14px;
   border: 1px solid transparent;
@@ -236,9 +242,14 @@
 
 .listSegment .tabActive,
 .listSegment .tabActive:hover {
+  /*
+   * KHÔNG viền riêng cho mục đang chọn: nó nằm sát viền ngoài của nhóm và đọc thành viền ĐÔI
+   * (06/11/2026). Mục chọn nổi nhờ nền TRẮNG trên nền nhóm xám + màu chữ; nhóm chỉ có một viền
+   * ngoài. KHÔNG bóng (09/11/2026): vệt `box-shadow` quanh viên trắng đọc thành viền thứ hai.
+   */
   border-color: var(--xp-color-border);
   background: var(--xp-color-bg-container);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: none;
   color: var(--xp-color-primary-strong);
   font-weight: var(--xp-font-weight-semibold);
 }
@@ -296,7 +307,7 @@
 
 :global([data-theme='dark']) .listSegment .tabActive,
 :global([data-theme='dark']) .listSegment .tabActive:hover {
-  border-color: var(--xp-color-primary);
+  border-color: var(--xp-color-border);
   background: var(--xp-color-bg-container);
   box-shadow: none;
   color: var(--xp-color-primary);

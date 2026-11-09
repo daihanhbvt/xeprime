@@ -129,7 +129,7 @@ describe('useThreadRealtime', () => {
     expect(chatDebug.listenerSkipped).not.toHaveBeenCalled();
   });
 
-  it('snapshot chỉ gọi `onChange` — không truyền nội dung doc nào ra ngoài', async () => {
+  it('snapshot chỉ gọi `onChange` - không truyền nội dung doc nào ra ngoài', async () => {
     const onChange = jest.fn();
     await renderHook(() => useThreadRealtime('conv-1', onChange));
 

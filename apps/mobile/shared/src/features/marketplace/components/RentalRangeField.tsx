@@ -11,6 +11,7 @@ import { useColors } from '@/theme/ThemeProvider';
 import { XP_TOKENS, toPx } from '@xeprime/ui';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { RentalRangeSheet, type RentalRangeDraft } from './RentalRangeSheet';
+import { SEARCH_FIELD_HEIGHT } from './search-card-metrics';
 
 interface RentalRangeFieldProps {
   value: RentalRangeDraft;
@@ -88,7 +89,7 @@ export function RentalRangeField({
           thương hiệu) — cả hai là ô nhập của cùng một thẻ tìm kiếm, `SearchCard.tsx`.
         */}
         <XStack
-          h={44}
+          h={SEARCH_FIELD_HEIGHT}
           ai="center"
           gap={space.sm}
           bg={colors.surface}

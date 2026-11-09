@@ -11,6 +11,7 @@ import { HomeCarousel } from './HomeCarousel';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from './SectionHeading';
 import styles from './FeaturedLocations.module.css';
+import { kenBurnsSlowClass, shineClass } from '@/components/motion/motion-classes';
 
 /**
  * Bốn điểm đến của bản vẽ v2 (Figma `19695:40795`) — mỗi thành phố là một mã tỉnh THẬT (danh mục
@@ -69,7 +70,7 @@ export function FeaturedLocations() {
                       className={styles.layer}
                     />
                   </span>
-                  <span className={cx(styles.illustration, city.className)}>
+                  <span className={cx(styles.illustration, city.className, kenBurnsSlowClass)}>
                     <Image
                       src="/home/dest-cities.webp"
                       alt=""
@@ -114,7 +115,7 @@ export function FeaturedLocations() {
                     unoptimized
                     className={styles.waveFront}
                   />
-                  <span className={styles.explore}>
+                  <span className={cx(styles.explore, shineClass)}>
                     {t('explore')}
                     <Image
                       src="/home/arrow-right-dark.svg"

@@ -314,7 +314,7 @@ export class VehicleSettingsService {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
         message:
-          'Chỉ dịch vụ tự lái và có tài xế có thiết lập riêng — thuê dài hạn luôn do gian hàng chốt lịch',
+          'Chỉ dịch vụ tự lái và có tài xế có thiết lập riêng - thuê dài hạn luôn do gian hàng chốt lịch',
       });
     }
     await this.assertOwned(this.prisma, tenantId, vehicleId);
@@ -354,11 +354,11 @@ export class VehicleSettingsService {
     }
     if (!isDriverDepositModeSupported(next.depositMode)) {
       throw invalid(
-        'Chế độ đặt cọc này chưa được hệ thống thu — chỉ "không yêu cầu đặt cọc" đang dùng được',
+        'Chế độ đặt cọc này chưa được hệ thống thu - chỉ "không yêu cầu đặt cọc" đang dùng được',
       );
     }
     if (next.requiredDocuments.includes(CUSTOMER_DOCUMENT_TYPE.OTHER)) {
-      throw invalid('"Giấy tờ khác" không định danh được khách — không dùng làm yêu cầu bắt buộc');
+      throw invalid('"Giấy tờ khác" không định danh được khách - không dùng làm yêu cầu bắt buộc');
     }
     if (next.requireTermsAcceptance && !next.termsText) {
       throw invalid('Bắt buộc khách đồng ý điều khoản thì phải có nội dung điều khoản');
@@ -375,7 +375,7 @@ export class VehicleSettingsService {
           code: API_ERROR_CODE.CONFLICT,
           message: capability.driversFeatureEnabled
             ? 'Cần ít nhất một tài xế đang hoạt động để bật tự động nhận chuyến có tài xế'
-            : 'Gói hiện hành chưa có tính năng Tài xế — chưa bật được tự động nhận chuyến có tài xế',
+            : 'Gói hiện hành chưa có tính năng Tài xế - chưa bật được tự động nhận chuyến có tài xế',
           details: capability,
         });
       }
@@ -659,7 +659,7 @@ export class VehicleSettingsService {
     throw new UnprocessableEntityException({
       code: API_ERROR_CODE.DRIVER_SURCHARGE_RETIRED,
       message:
-        'Phụ phí tài xế đã gỡ — giá có tài xế là giá trọn gói, phí cầu đường khách trả trực tiếp',
+        'Phụ phí tài xế đã gỡ - giá có tài xế là giá trọn gói, phí cầu đường khách trả trực tiếp',
     });
   }
 

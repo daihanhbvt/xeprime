@@ -131,7 +131,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('ListingBookingCard — lịch bận của xe', () => {
+describe('ListingBookingCard - lịch bận của xe', () => {
   it('nạp lịch bận của ĐÚNG xe này, cửa sổ bắt đầu từ quanh hôm nay', async () => {
     renderCard();
 
@@ -159,14 +159,14 @@ describe('ListingBookingCard — lịch bận của xe', () => {
     expect((busyDay as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('thuê dài hạn KHÔNG hỏi lịch bận — không có ô chọn khoảng nhận–trả', async () => {
+  it('thuê dài hạn KHÔNG hỏi lịch bận - không có ô chọn khoảng nhận-trả', async () => {
     renderCard(SERVICE_TYPE.LONG_TERM);
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(api.fetchVehicleBusyDays).not.toHaveBeenCalled();
   });
 });
 
-describe('ListingBookingCard — "Chọn thuê" chỉ mở hộp khi chuyến đã đủ', () => {
+describe('ListingBookingCard - "Chọn thuê" chỉ mở hộp khi chuyến đã đủ', () => {
   it('tự lái, tự nhận xe, có khoảng thuê ⇒ mở hộp với prefill đủ chuyến', () => {
     renderCard();
     fireEvent.click(screen.getByRole('button', { name: 'Chọn thuê' }));

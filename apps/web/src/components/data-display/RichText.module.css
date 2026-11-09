@@ -1,8 +1,8 @@
 /*
- * Kiểu chữ của nội dung có định dạng — CHUNG cho ô soạn (`RichTextField`) và nơi hiển thị
+ * Kiểu chữ của nội dung có định dạng - CHUNG cho ô soạn (`RichTextField`) và nơi hiển thị
  * (`RichText`), để thứ chủ gian hàng thấy lúc gõ đúng là thứ khách thấy trên chợ.
  */
-/* Màu, cỡ chữ, khoảng dòng KẾ THỪA nơi đặt — ô soạn và từng trang hiển thị tự quyết. */
+/* Màu, cỡ chữ, khoảng dòng KẾ THỪA nơi đặt - ô soạn và từng trang hiển thị tự quyết. */
 .richText {
   margin: 0;
   overflow-wrap: anywhere;

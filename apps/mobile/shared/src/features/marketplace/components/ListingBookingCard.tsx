@@ -1,3 +1,4 @@
+import { CountUpText } from '@/components/motion/use-count-up';
 import { Ionicons } from '@expo/vector-icons';
 import { Children, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
@@ -29,6 +30,13 @@ import {
   type RentalMode,
 } from '@xeprime/domain';
 import { DashedDivider } from '@/components/ui/DashedDivider';
+import { InfoHint } from '@/components/ui/InfoHint';
+import { ValueTicker } from '@/components/motion/ValueTicker';
+import {
+  INDICATOR_BASE_WIDTH,
+  useSlidingIndicator,
+} from '@/components/motion/use-sliding-indicator';
+import Animated from 'react-native-reanimated';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
@@ -477,6 +485,13 @@ export function ListingBookingCard({
   }
 
   const visibleTabs = SERVICE_TABS.filter((tab) => services.includes(tab.value));
+  const tabIndicator = useSlidingIndicator(
+    Math.max(
+      visibleTabs.findIndex((tab) => tab.value === trip.serviceType),
+      0,
+    ),
+    visibleTabs.length,
+  );
 
   return (
     /*
@@ -494,13 +509,16 @@ export function ListingBookingCard({
       >
       {visibleTabs.length > 1 ? (
         // `.tabHeader` ≤640px: khay `bg-muted`, cao 50; tab bo trên 12 (tab đầu 16), chữ 14.
-        <XStack h={50} bg={colors.surfaceMuted}>
+        // Chia bề ngang THEO ĐỘ DÀI nhãn (flexGrow 1 + flexBasis auto) thay vì 3 phần bằng nhau;
+        // máy hẹp/tiếng Anh vẫn thiếu chỗ thì nhãn xuống 2 dòng căn giữa, không cắt "…".
+        <XStack mih={50} bg={colors.surfaceMuted}>
           {visibleTabs.map((tab, index) => {
             const active = trip.serviceType === tab.value;
             return (
               <Pressable
                 key={tab.value}
-                style={{ flex: 1 }}
+                onLayout={tabIndicator.onItemLayout(index)}
+                style={{ flexGrow: 1, flexShrink: 1, flexBasis: 'auto' }}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: active }}
                 onPress={() => {
@@ -511,18 +529,20 @@ export function ListingBookingCard({
                   f={1}
                   ai="center"
                   jc="center"
-                  px={12}
+                  px={10}
+                  py={6}
                   borderTopLeftRadius={index === 0 ? radius.card : 12}
                   borderTopRightRadius={12}
                   bg={active ? colors.surface : 'transparent'}
                   borderBottomWidth={2}
-                  borderBottomColor={active ? market.accent : 'transparent'}
+                  borderBottomColor={active && !tabIndicator.ready ? market.accent : 'transparent'}
                 >
                   <Text
                     col={active ? colors.brandText : colors.textMuted}
                     fos={fontSize.body}
                     fow={active ? fontWeight.semibold : fontWeight.medium}
-                    numberOfLines={1}
+                    ta="center"
+                    numberOfLines={2}
                   >
                     {t(`tabs.${tab.key}`)}
                   </Text>
@@ -530,6 +550,23 @@ export function ListingBookingCard({
               </Pressable>
             );
           })}
+          {/* Gạch chân TRƯỢT giữa các tab (luồng UI); chưa đo xong thì viền tĩnh ở trên thay. */}
+          {tabIndicator.ready ? (
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                {
+                  position: 'absolute',
+                  left: 0,
+                  bottom: 0,
+                  height: 2,
+                  width: INDICATOR_BASE_WIDTH,
+                  backgroundColor: market.accent,
+                },
+                tabIndicator.indicatorStyle,
+              ]}
+            />
+          ) : null}
         </XStack>
       ) : null}
       <YStack gap={space.md} p={space.md}>
@@ -729,7 +766,10 @@ export function ListingBookingCard({
           </YStack>
         ) : (
           <YStack gap={space.sm}>
-            <BarTitle text={t('pickup.title')} />
+            <BarTitle
+              text={t('pickup.title')}
+              hint={{ content: t('pickup.note'), label: t('pickup.noteLabel') }}
+            />
             {/* `.deliveryToggle` ≤640px: khay `bg` cao 72, bo 12; ô chọn nền thẻ + viền vàng. */}
             <XStack minHeight={72} br={radius.control} bg={colors.background}>
               <DeliveryToggle
@@ -775,10 +815,6 @@ export function ListingBookingCard({
                 onPress={() => setAddressSheet('delivery')}
               />
             )}
-            {/* `.addressNote`: 14 mảnh, nghiêng, `text-tertiary`. */}
-            <Text col={colors.placeholder} fos={fontSize.body} fow="300" fontStyle="italic">
-              {t('pickup.note')}
-            </Text>
           </YStack>
         )}
 
@@ -931,7 +967,7 @@ export function ListingBookingCard({
               {cost.holdAmount ? (
                 <CostLine
                   label={tPrice('holdAmount')}
-                  sub={tPrice('holdHint')}
+                  hint={{ content: tPrice('holdHint'), label: tPrice('holdHintLabel') }}
                   value={fmt.money(cost.holdAmount)}
                 />
               ) : null}
@@ -941,7 +977,7 @@ export function ListingBookingCard({
               {cost.deposit ? (
                 <CostLine
                   label={tPrice('deposit')}
-                  sub={cost.deposit.note}
+                  hint={{ content: cost.deposit.note, label: tPrice('depositHintLabel') }}
                   value={
                     cost.deposit.mode === COLLATERAL_MODE.CASH && cost.deposit.amount
                       ? fmt.money(cost.deposit.amount)
@@ -959,14 +995,24 @@ export function ListingBookingCard({
                 borderTopWidth={1}
                 borderTopColor={colors.border}
               >
-                <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                  {cost.total?.label}
-                </Text>
-                <Text col={colors.primary} fos={fontSize.lead} fow={fontWeight.semibold}>
-                  {fmt.money(cost.total?.amount ?? quoteWithPromo.breakdown.totalAmount)}
-                </Text>
+                <XStack f={1} ai="center" gap={4}>
+                  <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+                    {cost.total?.label}
+                  </Text>
+                  {cost.costNote ? (
+                    <InfoHint content={cost.costNote} label={tPrice('totalHintLabel')} />
+                  ) : null}
+                </XStack>
+                <ValueTicker value={cost.total?.amount ?? quoteWithPromo.breakdown.totalAmount}>
+                  <Text col={colors.primary} fos={fontSize.lead} fow={fontWeight.semibold}>
+                    <CountUpText
+                      amount={cost.total?.amount ?? quoteWithPromo.breakdown.totalAmount}
+                      format={fmt.money}
+                    />
+                  </Text>
+                </ValueTicker>
               </XStack>
-              <CostNote>{cost.costNote}</CostNote>
+              {cost.estimateNote ? <CostNote>{cost.estimateNote}</CostNote> : null}
             </>
           ) : (
             /* Báo giá không về: không bịa số — chủ xe vẫn xác nhận giá khi duyệt. */
@@ -1245,11 +1291,14 @@ function ChooseAddress({ label, onPress }: { label: string; onPress: () => void 
 function CostLine({
   label,
   sub,
+  hint,
   value,
   tone,
 }: {
   label: string;
   sub?: string | null;
+  /** Ghi chú giải thích — dấu "i" cạnh nhãn, chạm mở tấm trượt (không chiếm dòng). */
+  hint?: { content: string; label: string } | null;
   value: string;
   tone?: 'discount';
 }) {
@@ -1257,9 +1306,12 @@ function CostLine({
   return (
     <XStack ai="flex-start" jc="space-between" gap={space.md}>
       <YStack f={1} gap={2}>
-        <Text col={colors.text} fos={fontSize.body}>
-          {label}
-        </Text>
+        <XStack ai="center" gap={4}>
+          <Text col={colors.text} fos={fontSize.body}>
+            {label}
+          </Text>
+          {hint ? <InfoHint content={hint.content} label={hint.label} /> : null}
+        </XStack>
         {sub ? (
           <Text col={colors.placeholder} fos={fontSize.body}>
             {sub}
@@ -1282,13 +1334,23 @@ function CostLine({
  * `primary-accent`, đệm ngang 12. Khác vạch 3×18 của tiêu đề trang (`MarketSectionTitle`) — web vẽ
  * hai kiểu khác nhau cho hai tầng, giữ đúng như thế.
  */
-function BarTitle({ text, size = fontSize.bodyLg }: { text: string; size?: number }) {
+function BarTitle({
+  text,
+  size = fontSize.bodyLg,
+  hint,
+}: {
+  text: string;
+  size?: number;
+  /** Ghi chú giải thích — dấu "i" cạnh tiêu đề. */
+  hint?: { content: string; label: string };
+}) {
   const colors = useColors();
   return (
-    <XStack px={12} borderLeftWidth={4} borderLeftColor={market.accent}>
+    <XStack px={12} ai="center" gap={4} borderLeftWidth={4} borderLeftColor={market.accent}>
       <Text col={colors.text} fos={size} fow={fontWeight.semibold} accessibilityRole="header">
         {text}
       </Text>
+      {hint ? <InfoHint content={hint.content} label={hint.label} size={size} /> : null}
     </XStack>
   );
 }
@@ -1375,7 +1437,6 @@ function TimeFrame({
         col={value ? colors.text : colors.placeholder}
         fos={fontSize.body}
         fow={fontWeight.medium}
-        numberOfLines={1}
       >
         {value ?? tRange('notSelected')}
       </Text>

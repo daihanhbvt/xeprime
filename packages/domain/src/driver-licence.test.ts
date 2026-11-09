@@ -42,7 +42,7 @@ describe('normalizeLicenceClass', () => {
   });
 
   it('danh sách bỏ trùng, bỏ rác, giữ thứ tự', () => {
-    expect(normalizeLicenceClasses(['a1', 'B2', 'b2', '—'])).toEqual(['A1', 'B2']);
+    expect(normalizeLicenceClasses(['a1', 'B2', 'b2', '-'])).toEqual(['A1', 'B2']);
   });
 });
 
@@ -120,7 +120,7 @@ describe('licenceClassCoverage', () => {
     ).toEqual({ car: true, motorbike: false });
   });
 
-  it('bằng nước ngoài không suy được — người duyệt chốt', () => {
+  it('bằng nước ngoài không suy được - người duyệt chốt', () => {
     expect(
       licenceClassCoverage({ kind: DRIVER_LICENCE_KIND.FOREIGN, classes: ['C'], issuedOn: null }),
     ).toBeNull();
@@ -148,7 +148,7 @@ describe('licenceValidThrough', () => {
     ).toBe(false);
   });
 
-  it('bằng quốc tế / nước ngoài: hạn chưa đọc được KHÔNG phải hết hạn — chủ xe đối chiếu bằng gốc', () => {
+  it('bằng quốc tế / nước ngoài: hạn chưa đọc được KHÔNG phải hết hạn - chủ xe đối chiếu bằng gốc', () => {
     for (const kind of [DRIVER_LICENCE_KIND.FOREIGN, DRIVER_LICENCE_KIND.INTERNATIONAL_PERMIT]) {
       expect(licenceValidThrough({ expiresOn: null, noExpiry: false, kind }, '2030-01-01')).toBe(
         true,

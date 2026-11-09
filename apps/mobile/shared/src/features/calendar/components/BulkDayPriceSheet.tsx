@@ -492,7 +492,7 @@ function PriceSheetInner({
                     Chữ xuống bậc `meta` để hai cột số gọn lại, nhường bề ngang cho tên xe.
                   */}
                   <Text w={76} ta="right" col={colors.textMuted} fos={fontSize.meta}>
-                    {row.basePrice === null ? '—' : fmt.money(row.basePrice)}
+                    {row.basePrice === null ? '-' : fmt.money(row.basePrice)}
                   </Text>
                   <Text
                     w={84}

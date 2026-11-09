@@ -62,7 +62,7 @@ describe('routeShape', () => {
     expect(routeShape('/manage/subscriptions')).toBe('/manage/subscriptions');
   });
 
-  it('bỏ query và hash — chúng không kiểm được', () => {
+  it('bỏ query và hash - chúng không kiểm được', () => {
     expect(routeShape('/chat?c=01JB9ZK2QW3E4R5T6Y7U8I9O0P#x')).toBe('/chat');
   });
 
@@ -72,7 +72,7 @@ describe('routeShape', () => {
   });
 });
 
-describe('chatDebug — vòng đời push', () => {
+describe('chatDebug - vòng đời push', () => {
   it('phân biệt được BA trạng thái nhận', () => {
     chatDebug.pushReceived(PUSH_TRIGGER.FOREGROUND, true);
     chatDebug.pushReceived(PUSH_TRIGGER.BACKGROUND, true);
@@ -137,7 +137,7 @@ describe('chatDebug — vòng đời push', () => {
  * Bật log chẩn đoán thường (`EXPO_PUBLIC_CHAT_DEBUG`) KHÔNG được kéo theo việc đổ tiêu đề, nội
  * dung tin và `data.url` đầy đủ vào logcat của máy thật. Hai cờ, hai mục đích.
  */
-describe('push.raw — đổ nguyên payload', () => {
+describe('push.raw - đổ nguyên payload', () => {
   const payload = {
     notification: { title: 'Bạn có tin nhắn mới', body: 'Chào anh, xe còn trống không ạ?' },
     data: { url: '/manage/chat/01M256TWX9R6YH9AFY46ZHWBQZ' },

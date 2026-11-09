@@ -194,7 +194,7 @@ function BookingEditForm({ booking, onDone }: { booking: BookingDetail; onDone: 
           {withDriver && booking.routeType ? ` · ${dl('routeType', booking.routeType)}` : ''}
         </Form.Item>
         <Form.Item label={t('scheduleLabel')}>
-          {fmt.shortDateTimeRange(booking.pickupAt, booking.returnAt)}
+          {fmt.rentalRange(booking.pickupAt, booking.returnAt)}
         </Form.Item>
         <Form.Item label={t('total')}>
           <strong>{fmt.money(booking.totalAmount)}</strong>

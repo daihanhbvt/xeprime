@@ -11,11 +11,11 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import type { SellerTaxFormValues } from '../hooks/use-seller-tax-form';
 
 /**
- * Ba ô của "Thông tin khai thuế" — loại chủ thể, tên pháp lý, MST (hoặc CCCD với cá nhân). Dùng chung
+ * Ba ô của "Thông tin khai thuế" - loại chủ thể, tên pháp lý, MST (hoặc CCCD với cá nhân). Dùng chung
  * cho section của hồ sơ chủ xe và hộp thoại của trang Thông tin cửa hàng.
  *
  * Ô CHỌN nhận `disabled` tường minh: `fieldset[disabled]` chỉ khoá ô NATIVE, còn ô chọn của AntD dựng
- * bằng div — không thì hồ sơ đã khoá vẫn đổi được loại chủ thể (và đổi luôn ô CCCD ↔ MST).
+ * bằng div - không thì hồ sơ đã khoá vẫn đổi được loại chủ thể (và đổi luôn ô CCCD ↔ MST).
  */
 export function SellerTaxFields({
   control,

@@ -6,11 +6,14 @@ import Animated, {
   FadeOut,
   LinearTransition,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
+  withSequence,
+  withSpring,
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
-import { useEffect, useState, type ComponentProps } from 'react';
+import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -32,9 +35,10 @@ import { FONT_FAMILY } from '@/theme/fonts';
 import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { fontSize, iconSize, space } from '@/theme/tokens';
 import { elevation } from '@/theme/elevation';
-import { duration } from '@/theme/motion';
+import { duration, pressScale, spring } from '@/theme/motion';
 import { Avatar } from '@/components/ui/Avatar';
 import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
+import { haptics } from '@/lib/haptics';
 
 /** Viên vàng co/nở + đẩy mục bên cạnh. */
 // Đẩy NHẸ và CHẬM (người dùng chốt 28/10/2026): trượt êm 380ms, không lò xo nảy.
@@ -100,7 +104,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingVertical: space.sm,
   },
-  itemPressed: { transform: [{ scale: 0.92 }] },
+  itemPressed: { transform: [{ scale: pressScale.icon }] },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -191,6 +195,7 @@ function AppTabBar({
             canPreventDefault: true,
           });
           if (!focused && !event.defaultPrevented) {
+            haptics.selection();
             navigation.navigate(route.name, route.params);
           }
         };
@@ -220,7 +225,9 @@ function AppTabBar({
               layout={TAB_LAYOUT_TRANSITION}
               style={[styles.pill, focused ? { backgroundColor: colors.primarySubtle } : null]}
             >
-              {options.tabBarIcon?.({ focused, color, size: iconSize.lg })}
+              <TabIconPop focused={focused}>
+                {options.tabBarIcon?.({ focused, color, size: iconSize.lg })}
+              </TabIconPop>
               {focused ? (
                 <Animated.Text
                   entering={FadeIn.duration(320)}
@@ -240,6 +247,32 @@ function AppTabBar({
     </Animated.View>
   );
 }
+
+/**
+ * Icon NẢY nhẹ khi tab vừa được chọn: 1 → 1.18 → lò xo về 1 (luồng UI, chỉ `transform`).
+ * Lượt render đầu không nảy; "Giảm chuyển động" thì đứng yên.
+ */
+function TabIconPop({ focused, children }: { focused: boolean; children: ReactNode }) {
+  const reduceMotion = useReducedMotion();
+  const scale = useSharedValue(1);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    if (!focused || reduceMotion) return;
+    scale.value = withSequence(
+      withTiming(TAB_ICON_POP_SCALE, { duration: duration.fast }),
+      withSpring(1, spring.pop),
+    );
+  }, [focused, reduceMotion, scale]);
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return <Animated.View style={style}>{children}</Animated.View>;
+}
+
+/** Đỉnh nảy của icon tab vừa chọn. */
+const TAB_ICON_POP_SCALE = 1.18;
 
 /**
  * Biểu tượng tab, kèm huy hiệu đếm (nếu có) VẼ TĨNH ngay trong biểu tượng.
@@ -322,11 +355,12 @@ export default function TabsLayout() {
         )}
         screenOptions={{
           headerShown: false,
-          // Mờ dần giữa hai tab: hai màn có đầu trang khác hẳn nhau (logo ↔ khung tìm kiếm), đổi tức thì
-          // thì cả phần đầu nhảy cái rụp — người dùng đọc ra là giật.
-          animation: 'fade',
-          // Cùng nhịp với thanh tab app Partner.
-          transitionSpec: { animation: 'timing', config: { duration: duration.fast } },
+          /*
+           * Đổi tab TỨC THÌ (09/11/2026, bỏ `fade`): mờ dần cả màn làm mọi thẻ có bóng (elevation)
+           * trong màn mới NHẤP NHÁY trên Android - rõ nhất khi vào tab Chuyến (user báo "trông như
+           * bug"). Không làm mờ/trượt cả màn khi đổi tab; nền khung (`sceneStyle`) chặn nháy trắng.
+           */
+          animation: 'none',
           // Tab ẩn đứng yên (react-freeze): đổi sáng/tối chỉ vẽ lại tab đang xem, tab kia vẽ lúc quay lại.
           freezeOnBlur: true,
           // Nền của khung tab — thiếu nó khung trong suốt, lúc lui từ màn chi tiết về (tab gắn

@@ -52,7 +52,7 @@ export class PlatformBannersController {
 
   @Get()
   @ApiOperation({
-    summary: 'Toàn bộ banner của một vị trí (kèm cờ đang-hiển-thị theo lịch) — mặc định đầu trang',
+    summary: 'Toàn bộ banner của một vị trí (kèm cờ đang-hiển-thị theo lịch) - mặc định đầu trang',
   })
   @ApiOkResponse({ type: [AdminBannerDto] })
   list(@Query() query: BannerPlacementQueryDto): Promise<AdminBannerDto[]> {
@@ -88,7 +88,7 @@ export class PlatformBannersController {
     if (!this.r2.enabled) {
       throw new ServiceUnavailableException({
         code: API_ERROR_CODE.UPLOADS_NOT_CONFIGURED,
-        message: 'Chưa cấu hình R2 — không upload được ảnh banner',
+        message: 'Chưa cấu hình R2 - không upload được ảnh banner',
       });
     }
     return this.r2.presignUpload({
@@ -112,7 +112,7 @@ export class PlatformBannersController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Xoá banner (ảnh vẫn còn trên R2 — tạo lại được từ URL cũ)' })
+  @ApiOperation({ summary: 'Xoá banner (ảnh vẫn còn trên R2 - tạo lại được từ URL cũ)' })
   @ApiNoContentResponse()
   remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<void> {
     return this.banners.remove(user.id, id);

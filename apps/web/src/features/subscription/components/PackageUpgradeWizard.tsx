@@ -377,7 +377,7 @@ export function PackageUpgradeWizard() {
             <p className={styles.total} aria-live="polite">
               <span className={styles.totalLabel}>{t('upgrade.totalLabel')}</span>
               <span className={styles.totalValue}>
-                {selection.total == null ? '—' : fmt.money(String(selection.total))}
+                {selection.total == null ? '-' : fmt.money(String(selection.total))}
               </span>
               <span className={styles.totalFor}>
                 {selection.incomplete

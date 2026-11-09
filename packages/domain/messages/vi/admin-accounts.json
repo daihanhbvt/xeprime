@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Tra cứu tài khoản",
-    "subtitle": "Một số điện thoại hoặc email có thể là nhiều tài khoản — khách thuê, đối tác, nhân sự nền tảng. Mỗi dòng là một tài khoản riêng, mật khẩu riêng.",
+    "subtitle": "Một số điện thoại hoặc email có thể là nhiều tài khoản - khách thuê, đối tác, nhân sự nền tảng. Mỗi dòng là một tài khoản riêng, mật khẩu riêng.",
     "tableLabel": "Tài khoản trùng định danh"
   },
   "form": {

@@ -247,3 +247,23 @@
   background: #fff5e5;
 }
 
+
+/*
+ * Coverflow mobile (≤ 640px, Embla căn giữa từng thẻ): thẻ giữa nổi đủ cỡ, hai thẻ kề thu 0.88 +
+ * mờ 0.5. Dùng `scale` riêng trên PHẦN TỬ CON — Embla (vòng lặp) đang chiếm `transform` của `li`.
+ * Bố cục lưới tĩnh (`gridLayout` — Embla tắt) không bị ảnh hưởng vì chỉ chạy ở khổ mobile.
+ */
+@media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
+  .slide > * {
+    opacity: 0.5;
+    scale: 0.88;
+    transition:
+      scale 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 0.45s ease;
+  }
+
+  .slide[data-active] > * {
+    opacity: 1;
+    scale: 1;
+  }
+}

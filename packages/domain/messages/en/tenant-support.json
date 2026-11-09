@@ -14,8 +14,8 @@
     "actor": "Acting as: {name}",
     "expiresAt": "Expires at {time}",
     "restriction": {
-      "tenant_locked": "This shop is locked — the session is now view only.",
-      "assist_permission_revoked": "Your account no longer has the assist permission — the session is now view only."
+      "tenant_locked": "This shop is locked - the session is now view only.",
+      "assist_permission_revoked": "Your account no longer has the assist permission - the session is now view only."
     },
     "exit": "Exit support mode"
   },
@@ -38,7 +38,7 @@
   },
   "start": {
     "title": "Open support workspace · {tenant}",
-    "lead": "You enter the shop's workspace with your own account — you do not sign in as the owner. The session expires after {minutes} minutes, and every action is logged with the reason below.",
+    "lead": "You enter the shop's workspace with your own account - you do not sign in as the owner. The session expires after {minutes} minutes, and every action is logged with the reason below.",
     "modeLabel": "Mode",
     "mode": {
       "view": {
@@ -60,7 +60,7 @@
       "reasonRequired": "Enter a support reason",
       "reasonMin": "The reason needs at least 10 characters",
       "reasonMax": "The reason can be at most 500 characters",
-      "reasonGeneric": "Not specific enough — \"support\", \"admin fix\", \"as requested\" don't say why"
+      "reasonGeneric": "Not specific enough - \"support\", \"admin fix\", \"as requested\" don't say why"
     }
   },
   "home": {
@@ -90,15 +90,15 @@
   "reason": {
     "title": "Confirm support action",
     "label": "Reason for this action",
-    "placeholder": "E.g. Owner called the hotline at 2pm to move the car to the Thu Duc branch — ticket #5521",
+    "placeholder": "E.g. Owner called the hotline at 2pm to move the car to the Thu Duc branch - ticket #5521",
     "help": "Say why, or give the owner's request code. The reason is logged with the change.",
     "submit": "Confirm and continue",
-    "invalid": "That reason isn't specific enough — say why, or give the owner's request code.",
+    "invalid": "That reason isn't specific enough - say why, or give the owner's request code.",
     "ownerRequested": "I confirm the owner asked for this vehicle to be submitted for review.",
     "validation": {
       "reasonRequired": "Enter a reason for this action",
       "reasonMax": "The reason can be at most 500 characters",
-      "reasonGeneric": "Not specific enough — \"support\", \"admin fix\", \"as requested\" don't say why",
+      "reasonGeneric": "Not specific enough - \"support\", \"admin fix\", \"as requested\" don't say why",
       "ownerRequestRequired": "Confirm that the owner requested this"
     },
     "consequence": {
@@ -128,7 +128,7 @@
       },
       "submitReview": {
         "title": "Submit the vehicle for review on behalf of the owner",
-        "body": "The vehicle joins the platform review queue under your name. Someone else reviews it — this action doesn't approve anything."
+        "body": "The vehicle joins the platform review queue under your name. Someone else reviews it - this action doesn't approve anything."
       },
       "listingRepair": {
         "title": "Resync the public listing",

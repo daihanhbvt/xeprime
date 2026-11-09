@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
+import { useRevealChild, useRevealFadeUp } from '@/components/motion/ScrollReveal';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontWeight, radius, space } from '@/theme/tokens';
 
@@ -25,9 +27,16 @@ export function MarketSectionTitle({
   action?: ReactNode;
 }) {
   const colors = useColors();
+  // Trong khối `ScrollReveal`: vạch vàng mọc dọc, chữ fade + trượt lên (chữ không bóng). Ngoài ⇒ tĩnh.
+  const bar = useRevealChild(0);
+  const barStyle = useAnimatedStyle(() => (bar ? { transform: [{ scaleY: bar.value }] } : {}));
+  const textStyle = useRevealFadeUp(80, 10);
   return (
     <XStack ai="center" gap={space.sm}>
-      <YStack w={BAR.width} h={BAR.height} br={radius.pill} bg={colors.primary} />
+      <Animated.View style={barStyle}>
+        <YStack w={BAR.width} h={BAR.height} br={radius.pill} bg={colors.primary} />
+      </Animated.View>
+      <Animated.View style={[{ flex: 1 }, textStyle]}>
       <Text
         f={1}
         col={colors.text}
@@ -38,6 +47,7 @@ export function MarketSectionTitle({
       >
         {children}
       </Text>
+      </Animated.View>
       {action}
     </XStack>
   );

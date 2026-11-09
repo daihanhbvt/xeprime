@@ -34,7 +34,7 @@ export class PlaceSearchQueryDto {
   q!: string;
 
   @ApiPropertyOptional({
-    description: 'Vĩ độ để ưu tiên kết quả gần — thường là ghim hiện tại hoặc trung tâm tỉnh',
+    description: 'Vĩ độ để ưu tiên kết quả gần - thường là ghim hiện tại hoặc trung tâm tỉnh',
   })
   @IsOptional()
   @Transform(toNumber)
@@ -58,7 +58,7 @@ export class PlaceSearchQueryDto {
   provinceCode?: string;
 
   @ApiPropertyOptional({
-    description: 'Xã người dùng đã chọn — nối tên xã vào truy vấn. Cần đi kèm `provinceCode`.',
+    description: 'Xã người dùng đã chọn - nối tên xã vào truy vấn. Cần đi kèm `provinceCode`.',
   })
   @IsOptional()
   @Transform(trimmed)
@@ -76,7 +76,7 @@ export class PlaceDetailQueryDto {
   placeId!: string;
 
   @ApiPropertyOptional({
-    description: 'Tỉnh đã chọn — có thì server gợi ý mã xã khớp trong tỉnh đó',
+    description: 'Tỉnh đã chọn - có thì server gợi ý mã xã khớp trong tỉnh đó',
   })
   @IsOptional()
   @Transform(trimmed)
@@ -111,7 +111,7 @@ export class PlaceSearchResultDto {
   outOfProvinceCount!: number;
   @ApiProperty({
     description:
-      'Bản đồ có đang dùng được không. `false` = chưa cấu hình khoá hoặc nhà cung cấp lỗi — ' +
+      'Bản đồ có đang dùng được không. `false` = chưa cấu hình khoá hoặc nhà cung cấp lỗi - ' +
       'giao diện rơi về nhập tay, KHÔNG hiện lỗi đỏ.',
   })
   available!: boolean;
@@ -131,7 +131,7 @@ export class PlaceDetailDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Địa chỉ nhà cung cấp hiểu ra — có thể còn dùng tên đơn vị hành chính CŨ',
+    description: 'Địa chỉ nhà cung cấp hiểu ra - có thể còn dùng tên đơn vị hành chính CŨ',
   })
   formattedAddress!: string | null;
   @ApiPropertyOptional({
@@ -143,14 +143,14 @@ export class PlaceDetailDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Phần "số nhà, đường" tách ra từ địa chỉ nhà cung cấp — gợi ý điền sẵn ô nhập',
+    description: 'Phần "số nhà, đường" tách ra từ địa chỉ nhà cung cấp - gợi ý điền sẵn ô nhập',
   })
   suggestedAddressLine!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
     description:
-      'Mã xã GỢI Ý trong tỉnh client gửi lên (ADR 0077) — chỉ để hỏi người dùng xác nhận, không tự lưu',
+      'Mã xã GỢI Ý trong tỉnh client gửi lên (ADR 0077) - chỉ để hỏi người dùng xác nhận, không tự lưu',
   })
   suggestedWardCode!: string | null;
 }

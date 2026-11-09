@@ -19,13 +19,13 @@ import { ShopLegalFields } from './ShopLegalFields';
 import cardStyles from '@/components/layout/InfoCard.module.css';
 
 /**
- * Thẻ "Địa chỉ & pháp lý" — design `23999:111319`: bốn dòng đọc từ bản ĐÃ LƯU (tỉnh · xã · địa chỉ ·
+ * Thẻ "Địa chỉ & pháp lý" - design `23999:111319`: bốn dòng đọc từ bản ĐÃ LƯU (tỉnh · xã · địa chỉ ·
  * số giấy phép KD) + ghi chú "Theo thông tin chi nhánh mặc định · Quản lý" dẫn tới section Chi nhánh.
  *
  * Địa chỉ ở đây LÀ địa chỉ của chi nhánh mặc định (backend chuyển tiếp cho `BranchesService`), nên
- * các dòng đọc từ `defaultBranch` trước, hồ sơ sau — cùng thứ tự với `toShopProfileValues`.
+ * các dòng đọc từ `defaultBranch` trước, hồ sơ sau - cùng thứ tự với `toShopProfileValues`.
  *
- * Số giấy phép KD vắng trong phiên hỗ trợ (ADR 0050 §10 — giấy tờ pháp lý không mở cho phiên).
+ * Số giấy phép KD vắng trong phiên hỗ trợ (ADR 0050 §10 - giấy tờ pháp lý không mở cho phiên).
  */
 export function ShopLegalCard({ shop, onEdit }: { shop: MyShop; onEdit?: () => void }) {
   const t = useTranslations('Shop.info.legal');
@@ -79,7 +79,7 @@ export function ShopLegalCard({ shop, onEdit }: { shop: MyShop; onEdit?: () => v
   );
 }
 
-/** Hộp thoại sửa — design `23999:111878`; ô nằm trên cùng form của trang (xem `ShopWorkspace`). */
+/** Hộp thoại sửa - design `23999:111878`; ô nằm trên cùng form của trang (xem `ShopWorkspace`). */
 export function ShopLegalDialog({
   open,
   control,

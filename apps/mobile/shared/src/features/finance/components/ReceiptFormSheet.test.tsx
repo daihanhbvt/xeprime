@@ -125,7 +125,7 @@ afterEach(() => jest.restoreAllMocks());
  * Chọn một đơn rồi đổi sang "gắn xe" mà vẫn gửi `bookingId` cũ là gửi một liên kết người dùng đã
  * bỏ — và server sẽ từ chối bằng một lỗi họ không hiểu vì ô đơn đã biến khỏi màn hình.
  */
-describe('ReceiptFormSheet — chọn cái gì để gắn', () => {
+describe('ReceiptFormSheet - chọn cái gì để gắn', () => {
   it('chỉ hỏi danh sách ĐƠN khi đang ở chế độ gắn đơn', async () => {
     const view = await renderForm();
     expect(view.bookingOptionsSpy).not.toHaveBeenCalled();
@@ -183,8 +183,8 @@ describe('ReceiptFormSheet — chọn cái gì để gắn', () => {
   });
 });
 
-describe('ReceiptFormSheet — ô bắt buộc', () => {
-  it('thiếu diễn giải thì KHÔNG gửi đi — một dòng sổ không diễn giải là dòng không đối chiếu được', async () => {
+describe('ReceiptFormSheet - ô bắt buộc', () => {
+  it('thiếu diễn giải thì KHÔNG gửi đi - một dòng sổ không diễn giải là dòng không đối chiếu được', async () => {
     const view = await renderForm();
 
     await fireEvent.press(await view.findByText('Tạo khoản chi'));
@@ -207,7 +207,7 @@ describe('ReceiptFormSheet — ô bắt buộc', () => {
 const BRANCH_A = { id: 'b1', name: 'Quận 1', provinceName: 'TP HCM' } as Branch;
 const BRANCH_B = { id: 'b2', name: 'Quận 5', provinceName: 'TP HCM' } as Branch;
 
-describe('ReceiptFormSheet — chi nhánh phát sinh (ADR 0052)', () => {
+describe('ReceiptFormSheet - chi nhánh phát sinh (ADR 0052)', () => {
   it('chưa có chi nhánh nào: nói ra bằng cảnh báo thay vì một ô chặn vô hình', async () => {
     const view = await renderForm(null, { branches: [] });
     expect(await view.findByText(/Gian hàng chưa có chi nhánh nào/)).toBeTruthy();

@@ -116,7 +116,7 @@ beforeEach(() => {
   mockDismissTo.mockClear();
 });
 
-describe('AccountScreen — hồ sơ (CUS-04)', () => {
+describe('AccountScreen - hồ sơ (CUS-04)', () => {
   it('đọc hồ sơ từ `GET /users/me`, KHÔNG lấy từ `/auth/me`', async () => {
     const view = await renderScreen();
 
@@ -154,7 +154,7 @@ describe('AccountScreen — hồ sơ (CUS-04)', () => {
    * chỉ để XEM. Một nút "Đổi" mọc lại là hai bề mặt cùng sửa một thứ, và người dùng không đoán
    * được cái nào là "thật".
    */
-  it('gian hàng tuyến gói: CHỈ XEM — không nút sửa hồ sơ, không nút đổi email/SĐT', async () => {
+  it('gian hàng tuyến gói: CHỈ XEM - không nút sửa hồ sơ, không nút đổi email/SĐT', async () => {
     const view = await renderScreen(PROFILE, {
       tenant: { ...TENANT, billingMode: 'package' },
     });
@@ -207,7 +207,7 @@ describe('AccountScreen — hồ sơ (CUS-04)', () => {
  * Ở đây kiểm đúng ba thứ chỉ thấy được khi màn chạy thật: menu đứng NGAY SAU thẻ hồ sơ, phân nhóm
  * hiện ra thành tiêu đề đọc được, và Đăng xuất nằm TRONG menu chứ không còn là một nút rời.
  */
-describe('AccountScreen — điều hướng tài khoản', () => {
+describe('AccountScreen - điều hướng tài khoản', () => {
   it('menu nằm NGAY SAU thẻ hồ sơ, không phải khối đầu màn', async () => {
     const view = await renderScreen();
     await view.findByText(PROFILE_CARD_TEXT);
@@ -309,7 +309,7 @@ describe('AccountScreen — điều hướng tài khoản', () => {
  * Trạng thái quan trọng nhất là lúc ĐANG TẢI: mời một chủ shop "đăng xe cho thuê" vì `/auth/me`
  * chưa về là mời họ làm lại thứ họ đã làm rồi.
  */
-describe('AccountScreen — thẻ gian hàng', () => {
+describe('AccountScreen - thẻ gian hàng', () => {
   /**
    * Lối vào duy nhất của hành trình chủ xe ở app khách là MỤC MENU "Trở thành chủ xe" — thẻ quảng
    * bá riêng đã bị gỡ ngày 06/10/2026 (người dùng chốt: màn Tài khoản không cần hai lối vào cho
@@ -368,7 +368,7 @@ describe('AccountScreen — thẻ gian hàng', () => {
    * của thẻ đã bị gỡ. Vai nền tảng vẫn THẮNG vai gian hàng: không mời họ vào một app sẽ trả
    * 403 `PARTNER_ACCESS_REQUIRED`, và cũng không rơi về thẻ gian hàng của tenant họ mang.
    */
-  it('tài khoản nền tảng: KHÔNG dựng thẻ nào — kể cả khi có vai gian hàng', async () => {
+  it('tài khoản nền tảng: KHÔNG dựng thẻ nào - kể cả khi có vai gian hàng', async () => {
     const view = await renderScreen(PROFILE, {
       tenant: TENANT,
       openRenterTripCount: 0,

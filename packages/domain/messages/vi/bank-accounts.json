@@ -12,7 +12,7 @@
     "number": "Số tài khoản",
     "holder": "Người thụ hưởng",
     "label": "Tên gợi nhớ",
-    "noLabel": "—"
+    "noLabel": "-"
   },
   "actions": {
     "add": "Thêm tài khoản",
@@ -30,7 +30,7 @@
     "bankCodePlaceholder": "Chọn ngân hàng",
     "accountNumber": "Số tài khoản",
     "accountName": "Họ và tên người thụ hưởng",
-    "accountNameHint": "Gõ đúng như đăng ký ở ngân hàng — sai tên là lệnh chuyển bị trả về.",
+    "accountNameHint": "Gõ đúng như đăng ký ở ngân hàng - sai tên là lệnh chuyển bị trả về.",
     "label": "Tên gợi nhớ",
     "labelPlaceholder": "Không bắt buộc",
     "isDefault": "Đặt làm tài khoản nhận tiền mặc định",

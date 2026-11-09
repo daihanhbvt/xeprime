@@ -11,6 +11,7 @@ import {
   isAwaitingPayment,
   type BookingHoldStatus,
 } from '@xeprime/types';
+import { NumberTicker } from '@/components/motion/NumberTicker';
 import { Countdown } from '@/components/data-display/Countdown';
 import { InfoHint } from '@/components/data-display/InfoHint';
 import { LEGAL_DOC, legalPath } from '@/constants/legal';
@@ -229,7 +230,9 @@ function HoldPaymentCard({
         <InfoHint content={tHold('vsDepositHint')} label={tHold('vsDepositHintLabel')} />
       </div>
 
-      <p className={styles.amount}>{amount}</p>
+      <p className={styles.amount}>
+        <NumberTicker value={amount} />
+      </p>
       <Countdown
         deadline={hold.expiresAt}
         urgentMs={HOLD_COUNTDOWN_URGENT_MINUTES * 60_000}

@@ -65,7 +65,7 @@ beforeEach(() => {
 });
 
 describe('ChatRealtimeProvider', () => {
-  it('mint custom token rồi đăng nhập Firebase — `ready` bật và có db', async () => {
+  it('mint custom token rồi đăng nhập Firebase - `ready` bật và có db', async () => {
     const { result } = await renderHook(() => useChatRealtime(), { wrapper });
 
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -81,7 +81,7 @@ describe('ChatRealtimeProvider', () => {
     expect(api.firebaseToken).not.toHaveBeenCalled();
   });
 
-  it('chưa cấu hình `EXPO_PUBLIC_FIREBASE_*` thì không gọi API — chat rơi về REST', async () => {
+  it('chưa cấu hình `EXPO_PUBLIC_FIREBASE_*` thì không gọi API - chat rơi về REST', async () => {
     firebase.isFirebaseConfigured.mockReturnValue(false);
     const { result } = await renderHook(() => useChatRealtime(), { wrapper });
 
@@ -90,7 +90,7 @@ describe('ChatRealtimeProvider', () => {
     expect(result.current.db).toBeNull();
   });
 
-  it('`enabled: false` từ server là CẤU HÌNH, không phải lỗi — không đăng nhập Firebase', async () => {
+  it('`enabled: false` từ server là CẤU HÌNH, không phải lỗi - không đăng nhập Firebase', async () => {
     api.firebaseToken.mockResolvedValue({ enabled: false, token: null });
     const { result } = await renderHook(() => useChatRealtime(), { wrapper });
 
@@ -99,7 +99,7 @@ describe('ChatRealtimeProvider', () => {
     expect(result.current.ready).toBe(false);
   });
 
-  it('mint token HỎNG thì im lặng — `ready` vẫn false, không ném ra ngoài', async () => {
+  it('mint token HỎNG thì im lặng - `ready` vẫn false, không ném ra ngoài', async () => {
     api.firebaseToken.mockRejectedValue(new Error('mạng rớt'));
     const { result } = await renderHook(() => useChatRealtime(), { wrapper });
 

@@ -219,7 +219,7 @@ export class DepositPolicyService {
       throw new ForbiddenException({
         code: API_ERROR_CODE.DEPOSIT_ALWAYS_REQUIRED,
         message:
-          'Trong giai đoạn này mọi gian hàng đều thu cọc qua XePrime — công tắc tạm khoá, ' +
+          'Trong giai đoạn này mọi gian hàng đều thu cọc qua XePrime - công tắc tạm khoá, ' +
           'lựa chọn đang lưu sẽ được dùng lại khi mở lại tính năng',
         details: { billingMode, platformMandatory: true },
       });
@@ -228,7 +228,7 @@ export class DepositPolicyService {
     if (billingMode === BILLING_MODE.COMMISSION) {
       throw new ForbiddenException({
         code: API_ERROR_CODE.DEPOSIT_ALWAYS_REQUIRED,
-        message: 'Gian hàng tuyến hoa hồng luôn thu cọc qua XePrime — không tắt được',
+        message: 'Gian hàng tuyến hoa hồng luôn thu cọc qua XePrime - không tắt được',
         details: { billingMode },
       });
     }

@@ -57,7 +57,7 @@ afterEach(cleanup);
 
 /* ------------------------------------------------------------------ thứ tự ưu tiên trạng thái */
 
-describe('DataTable — thứ tự ưu tiên trạng thái', () => {
+describe('DataTable - thứ tự ưu tiên trạng thái', () => {
   it('quyền thắng tất cả, kể cả khi có lỗi và có dữ liệu', () => {
     renderTable({
       permission: { missingPermissions: ['vehicles.view'] },
@@ -69,7 +69,7 @@ describe('DataTable — thứ tự ưu tiên trạng thái', () => {
     expect(screen.queryByRole('table')).toBeNull();
   });
 
-  it('lỗi thắng dữ liệu — người gọi chỉ truyền lỗi khi KHÔNG còn dữ liệu hợp lệ', () => {
+  it('lỗi thắng dữ liệu - người gọi chỉ truyền lỗi khi KHÔNG còn dữ liệu hợp lệ', () => {
     renderTable({ error: { title: 'Không tải được danh sách xe', onRetry: vi.fn() } });
 
     expect(screen.getByText('Không tải được danh sách xe')).toBeTruthy();
@@ -101,7 +101,7 @@ describe('DataTable — thứ tự ưu tiên trạng thái', () => {
 
 /* ------------------------------------------------------------------ rỗng vs không-kết-quả */
 
-describe('DataTable — rỗng và không có kết quả', () => {
+describe('DataTable - rỗng và không có kết quả', () => {
   it('rỗng không lọc dùng slot empty', () => {
     renderTable({ items: [], empty: { title: 'Gian hàng chưa có xe nào' } });
 
@@ -139,7 +139,7 @@ describe('DataTable — rỗng và không có kết quả', () => {
 
 /* ------------------------------------------------------------------ lỗi + thử lại */
 
-describe('DataTable — lỗi và thử lại', () => {
+describe('DataTable - lỗi và thử lại', () => {
   it('nút thử lại gọi onRetry', () => {
     const onRetry = vi.fn();
     renderTable({ error: { title: 'Không tải được', onRetry } });
@@ -161,7 +161,7 @@ describe('DataTable — lỗi và thử lại', () => {
 
 /* ------------------------------------------------------------------ bảng desktop */
 
-describe('DataTable — bảng ở desktop', () => {
+describe('DataTable - bảng ở desktop', () => {
   it('render đủ hàng dữ liệu', () => {
     renderTable();
 
@@ -175,7 +175,7 @@ describe('DataTable — bảng ở desktop', () => {
     expect(screen.getByRole('region', { name: 'Danh sách xe' })).toBeTruthy();
   });
 
-  it('đặt sàn bề rộng để cuộn ngang thay vì nén cột (127:2097 R1–R2, R8)', () => {
+  it('đặt sàn bề rộng để cuộn ngang thay vì nén cột (127:2097 R1-R2, R8)', () => {
     const { container } = renderTable({ minWidth: 1050 });
 
     expect(container.querySelector('.ant-table-content, .ant-table-body')).toBeTruthy();
@@ -283,7 +283,7 @@ describe('DataTable — bảng ở desktop', () => {
 
 /* ------------------------------------------------------------------ cột hành động */
 
-describe('DataTable — cột hành động', () => {
+describe('DataTable - cột hành động', () => {
   const withActions = () =>
     renderTable({
       columns: [
@@ -294,7 +294,7 @@ describe('DataTable — cột hành động', () => {
       ],
     });
 
-  it('actionColumn dính phải và có bề rộng cố định (127:2060 R1–R2)', () => {
+  it('actionColumn dính phải và có bề rộng cố định (127:2060 R1-R2)', () => {
     const column = actionColumn<Row>(() => []);
 
     expect(column.fixed).toBe('right');
@@ -353,7 +353,7 @@ describe('DataTable — cột hành động', () => {
 
 /* ------------------------------------------------------------------ phân trang */
 
-describe('DataTable — phân trang', () => {
+describe('DataTable - phân trang', () => {
   it('hiện tổng theo đơn vị của feature', () => {
     renderTable({
       pagination: {
@@ -417,7 +417,7 @@ describe('DataTable — phân trang', () => {
 
 /* ------------------------------------------------------------------ mobile */
 
-describe('DataTable — chế độ thẻ ở mobile', () => {
+describe('DataTable - chế độ thẻ ở mobile', () => {
   beforeEach(() => {
     viewport.mobile = true;
   });
@@ -432,7 +432,7 @@ describe('DataTable — chế độ thẻ ở mobile', () => {
     expect(within(list).getAllByRole('listitem')).toHaveLength(2);
   });
 
-  it('KHÔNG có renderCard thì tự chuyển các cột thành thẻ nhãn–giá trị', () => {
+  it('KHÔNG có renderCard thì tự chuyển các cột thành thẻ nhãn-giá trị', () => {
     renderTable();
 
     expect(screen.queryByRole('table')).toBeNull();
@@ -534,13 +534,13 @@ describe('DataTable — chế độ thẻ ở mobile', () => {
 
 /* ------------------------------------------------------------------ ranh giới trách nhiệm */
 
-describe('DataTable — không chứa nghiệp vụ', () => {
+describe('DataTable - không chứa nghiệp vụ', () => {
   it('render được mà không cần provider query, router hay permission nào', () => {
     // Nếu có API call / hook quyền / hook route lọt vào trong, render trần thế này sẽ nổ.
     expect(() => renderTable()).not.toThrow();
   });
 
-  it('không tự sinh cột nào — cột hoàn toàn do feature khai', () => {
+  it('không tự sinh cột nào - cột hoàn toàn do feature khai', () => {
     renderTable({ columns: [{ title: 'Chỉ một cột', key: 'only', render: () => 'x' }] });
 
     expect(screen.getAllByRole('columnheader')).toHaveLength(1);
@@ -549,7 +549,7 @@ describe('DataTable — không chứa nghiệp vụ', () => {
 
 /* ------------------------------------------------------------------ hàng mở rộng */
 
-describe('DataTable — hàng mở rộng (expandable)', () => {
+describe('DataTable - hàng mở rộng (expandable)', () => {
   const expandable = {
     label: 'Chi tiết',
     rowExpandable: (row: Row) => row.id === 'r1',

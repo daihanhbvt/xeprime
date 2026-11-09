@@ -8,6 +8,8 @@ import { PARTNER_MONTHLY_INCOME_RANGE } from '@/constants/partner-offer';
 import { resolveOwnerCtaHref } from '@/features/auth/post-auth-destination';
 import { usePartnerOffer } from '@/features/account/hooks/use-partner-offer';
 
+import { enterClass, popInClass } from '@/components/motion/motion-classes';
+import { cx } from '@/lib/cx';
 import styles from './PartnerInviteCard.module.css';
 
 const MILLION = 1_000_000;
@@ -30,9 +32,9 @@ export function PartnerInviteCard() {
   const dismiss = () => setDismissed(true);
 
   return (
-    <aside className={styles.card} aria-label={t('title')}>
+    <aside className={cx(styles.card, enterClass(400))} aria-label={t('title')}>
       <div className={styles.head}>
-        <span className={styles.icon} aria-hidden>
+        <span className={cx(styles.icon, popInClass)} aria-hidden>
           <TrophyOutlined />
         </span>
         <button type="button" className={styles.close} onClick={dismiss} aria-label={t('dismiss')}>

@@ -40,7 +40,7 @@ function tenant(overrides: Partial<NonNullable<CurrentUser['tenant']>> = {}) {
 
 const keys = (items: readonly { key: string }[]) => items.map((item) => item.key);
 
-describe('ACCOUNT_NAV — thành phần', () => {
+describe('ACCOUNT_NAV - thành phần', () => {
   it('đúng bảy mục, đúng thứ tự (design Account 22/10/2026)', () => {
     expect(keys(ACCOUNT_NAV)).toEqual([
       // Giấy tờ & Xác minh nằm TRONG trang hồ sơ (design 22/10/2026), không còn là mục riêng.
@@ -86,7 +86,7 @@ describe('ACCOUNT_NAV — thành phần', () => {
     }
   });
 
-  it('KHÔNG có ví/ưu đãi — số dư là sổ công nợ (ADR 0033 điều 1), nhãn là "Ví điểm"', () => {
+  it('KHÔNG có ví/ưu đãi - số dư là sổ công nợ (ADR 0033 điều 1), nhãn là "Ví điểm"', () => {
     expect(keys(ACCOUNT_NAV)).not.toContain('wallet');
     expect(keys(ACCOUNT_NAV)).not.toContain('promotions');
   });

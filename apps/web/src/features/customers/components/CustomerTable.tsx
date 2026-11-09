@@ -39,7 +39,7 @@ function DebtValue({ value }: { value: string | null | undefined }) {
   const fmt = useAppFormat();
 
   // `null` = KHÔNG được xem tiền (server quyết). Khác hẳn 0 đồng — nên hiện gạch, không hiện 0.
-  if (value === null || value === undefined) return <span className={styles.muted}>—</span>;
+  if (value === null || value === undefined) return <span className={styles.muted}>-</span>;
   return (
     <span className={cx(styles.money, !isZeroMoney(value) && styles.debt)}>
       {fmt.money(value)}
@@ -195,7 +195,7 @@ export function CustomerTable({
         </div>
         <div>
           <dt>{t('card.lastRentalShort')}</dt>
-          <dd>{row.lastRentalAt ? fmt.date(row.lastRentalAt) : '—'}</dd>
+          <dd>{row.lastRentalAt ? fmt.date(row.lastRentalAt) : '-'}</dd>
         </div>
         {canViewFinance ? (
           <div>

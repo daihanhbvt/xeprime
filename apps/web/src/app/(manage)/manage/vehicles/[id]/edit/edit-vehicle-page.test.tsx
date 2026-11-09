@@ -293,7 +293,7 @@ function menuLabels(menu: HTMLElement): string[] {
     .map((button) => (button.textContent ?? '').replace(/(\d+ thiếu|\d+\/\d+)$/, ''));
 }
 
-describe('/manage/vehicles/[id]/edit — màn sửa xe (design 23731:37932)', () => {
+describe('/manage/vehicles/[id]/edit - màn sửa xe (design 23731:37932)', () => {
   it('không có quyền thì không gọi API và hiện màn 403', () => {
     permissions.allow = false;
     renderPage();
@@ -390,7 +390,7 @@ describe('/manage/vehicles/[id]/edit — màn sửa xe (design 23731:37932)', ()
     );
   });
 
-  it('Dịch vụ & giá: giá nhúng thẳng trong tab dịch vụ — lỗi tải giá chỉ chặn phần giá', async () => {
+  it('Dịch vụ & giá: giá nhúng thẳng trong tab dịch vụ - lỗi tải giá chỉ chặn phần giá', async () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Dịch vụ & giá' }));
     expect(await screen.findByText('Không tải được giá & chính sách')).toBeTruthy();
@@ -415,7 +415,7 @@ describe('/manage/vehicles/[id]/edit — màn sửa xe (design 23731:37932)', ()
     expect(screen.queryByRole('tab', { name: /Thông số kỹ thuật nâng cao/ })).toBeNull();
   });
 
-  it('đổi "Vận hành" ở cột phải — lưu ngay, form không gửi operationStatus', async () => {
+  it('đổi "Vận hành" ở cột phải - lưu ngay, form không gửi operationStatus', async () => {
     renderPage();
     expect(screen.queryByLabelText('Trạng thái vận hành')).toBeNull();
 
@@ -460,7 +460,7 @@ describe('/manage/vehicles/[id]/edit — màn sửa xe (design 23731:37932)', ()
     expect(payload).not.toHaveProperty('serviceTypes');
   });
 
-  it('chuyển xe sang chi nhánh tỉnh khác PHẢI gửi branchId — vị trí công khai đổi thật', async () => {
+  it('chuyển xe sang chi nhánh tỉnh khác PHẢI gửi branchId - vị trí công khai đổi thật', async () => {
     renderPage();
     fireEvent.mouseDown(screen.getByLabelText(/Chi nhánh giữ xe/));
     fireEvent.click(await screen.findByTitle('Chi nhánh Hà Nội · Hà Nội'));
@@ -577,7 +577,7 @@ describe('/manage/vehicles/[id]/edit — màn sửa xe (design 23731:37932)', ()
  * có "Lịch sử chuyến", không có nhóm Vận hành nâng cao (năng lực gói), sửa đúng bộ ô cũ của họ và
  * địa chỉ xe ngay trong Thông tin chung.
  */
-describe('/vehicles/[id]/edit — chủ xe tuyến hoa hồng', () => {
+describe('/vehicles/[id]/edit - chủ xe tuyến hoa hồng', () => {
   function renderOwner() {
     plan.fullManage = false;
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -609,7 +609,7 @@ describe('/vehicles/[id]/edit — chủ xe tuyến hoa hồng', () => {
     expect(screen.queryByRole('region', { name: 'Thông số nâng cao' })).toBeNull();
   });
 
-  it('lưu chỉ gửi đúng bộ ô của chủ xe — không gửi tên, chi nhánh, kích thước', async () => {
+  it('lưu chỉ gửi đúng bộ ô của chủ xe - không gửi tên, chi nhánh, kích thước', async () => {
     renderOwner();
     fireEvent.change(screen.getByLabelText(/^Màu sắc/), { target: { value: 'Xanh rêu' } });
     fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
@@ -635,7 +635,7 @@ describe('/vehicles/[id]/edit — chủ xe tuyến hoa hồng', () => {
  * CÙNG trang, dựng trong phiên hỗ trợ gian hàng tuyến gói (ADR 0050): trang tự thu về các mục
  * phiên được mở và khoá các ô "ghim" nhờ đọc ngữ cảnh phiên.
  */
-describe('/manage/vehicles/[id]/edit — trong phiên hỗ trợ của nhân sự nền tảng', () => {
+describe('/manage/vehicles/[id]/edit - trong phiên hỗ trợ của nhân sự nền tảng', () => {
   function renderInSupport() {
     const context = supportContextFixture({ workspace: SUPPORT_WORKSPACE.MANAGE });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -661,7 +661,7 @@ describe('/manage/vehicles/[id]/edit — trong phiên hỗ trợ của nhân s�
     return Boolean(item?.querySelector('.ant-select-disabled'));
   }
 
-  it('chỉ các mục phiên được mở — giá, điều kiện, nguồn xe, giấy tờ, vận hành không có mặt', () => {
+  it('chỉ các mục phiên được mở - giá, điều kiện, nguồn xe, giấy tờ, vận hành không có mặt', () => {
     renderInSupport();
     // Suy từ capability của phiên (`VEHICLE_VIEW` + `MAINTENANCE_VIEW`), không từ hình thái menu.
     const menu = screen.getByRole('navigation', { name: 'Mục hồ sơ xe' });

@@ -30,7 +30,7 @@
     "providerTx": "Provider transaction ID",
     "matchedInvoice": "Matched to invoice",
     "rawTitle": "Original bank evidence",
-    "rawHint": "Evidence in case of a dispute — not editable.",
+    "rawHint": "Evidence in case of a dispute - not editable.",
     "bankGateway": "Receiving bank",
     "bankAccount": "Receiving account",
     "bankReference": "Bank reference",
@@ -44,7 +44,7 @@
   },
   "suggestions": {
     "title": "Plan invoices awaiting payment",
-    "hint": "Pick the invoice this payment belongs to — invoices with the exact amount are listed first.",
+    "hint": "Pick the invoice this payment belongs to - invoices with the exact amount are listed first.",
     "empty": "No invoices are awaiting payment",
     "amountMatches": "Exact amount match",
     "remaining": "Outstanding: {amount}",
@@ -83,9 +83,9 @@
     "reasonRequired": "Enter a reason"
   },
   "footer": {
-    "choose": "Pick an invoice on the right to match — or ignore this payment if it belongs to no invoice.",
+    "choose": "Pick an invoice on the right to match - or ignore this payment if it belongs to no invoice.",
     "chosen": "Will match to {code} · {tenant}",
-    "noInvoice": "No invoice is awaiting payment — this payment can only be ignored.",
+    "noInvoice": "No invoice is awaiting payment - this payment can only be ignored.",
     "handled": "This transaction has been handled."
   }
 }

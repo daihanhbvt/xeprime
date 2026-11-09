@@ -48,18 +48,18 @@ function values(overrides: Partial<BookingRequestFormValues> = {}): BookingReque
  * chúng có test riêng thay vì chỉ có một docblock.
  */
 describe('toRequestBody', () => {
-  it('KHÔNG mang danh tính người thuê hay client/device — server đọc từ tài khoản (ADR 0060)', () => {
+  it('KHÔNG mang danh tính người thuê hay client/device - server đọc từ tài khoản (ADR 0060)', () => {
     const body = bodyOf(values());
     for (const key of ['customerName', 'customerPhone', 'customerEmail', 'client', 'device']) {
       expect(body).not.toHaveProperty(key);
     }
   });
 
-  it('không bao giờ mang tenantId — server suy từ xe', () => {
+  it('không bao giờ mang tenantId - server suy từ xe', () => {
     expect(bodyOf(values())).not.toHaveProperty('tenantId');
   });
 
-  it('không có trường OTP nào — xác thực SĐT xảy ra TRƯỚC, server tự tra', () => {
+  it('không có trường OTP nào - xác thực SĐT xảy ra TRƯỚC, server tự tra', () => {
     const body = bodyOf(values()) as Record<string, unknown>;
     for (const key of Object.keys(body)) {
       expect(key.toLowerCase()).not.toContain('otp');
@@ -68,7 +68,7 @@ describe('toRequestBody', () => {
     }
   });
 
-  it('dịch vụ theo ngày gửi khoảng nhận–trả', () => {
+  it('dịch vụ theo ngày gửi khoảng nhận-trả', () => {
     const body = bodyOf(values());
     expect(body.pickupAt).toBe('2026-09-01T03:00:00.000Z');
     expect(body.returnAt).toBe('2026-09-03T03:00:00.000Z');
@@ -142,7 +142,7 @@ describe('toRequestBody', () => {
       expect(body.destination).toBe('Đà Lạt');
     });
 
-    it('KHÔNG kèm giao tận nơi — xe đã đến đón thì không có khái niệm giao xe', () => {
+    it('KHÔNG kèm giao tận nơi - xe đã đến đón thì không có khái niệm giao xe', () => {
       const body = bodyOf(
         values({
           serviceType: SERVICE_TYPE.WITH_DRIVER,
@@ -186,7 +186,7 @@ describe('toRequestBody', () => {
     expect(body).not.toHaveProperty('acceptedTerms');
   });
 
-  it('bảo hiểm MIC chỉ gửi khi khách tích — như web #213', () => {
+  it('bảo hiểm MIC chỉ gửi khi khách tích - như web #213', () => {
     expect(bodyOf(values())).not.toHaveProperty('vehicleProtectionSelected');
     expect(bodyOf(values())).not.toHaveProperty('personalAccidentSelected');
     const body = bodyOf(values({ vehicleProtectionSelected: true, personalAccidentSelected: true }));
@@ -194,7 +194,7 @@ describe('toRequestBody', () => {
     expect(body.personalAccidentSelected).toBe(true);
   });
 
-  it('đã tick điều khoản chủ xe thì gửi acceptedTerms: true — như web', () => {
+  it('đã tick điều khoản chủ xe thì gửi acceptedTerms: true - như web', () => {
     expect(bodyOf(values({ acceptedTerms: true })).acceptedTerms).toBe(true);
   });
 

@@ -2,12 +2,12 @@ import type { ThemeConfig } from 'antd';
 import { XP_TOKENS, toPx, type XpTokenName } from '@xeprime/ui';
 
 /**
- * Lối vào token của WEB — token THẬT đã chuyển sang `@xeprime/ui` (24/08/2026) để app native
+ * Lối vào token của WEB - token THẬT đã chuyển sang `@xeprime/ui` (24/08/2026) để app native
  * dùng chung một nguồn. File này giữ lại đúng hai việc:
  *
- *  1. re-export toàn bộ API cũ ở đúng đường dẫn cũ — mọi `import … from '@/styles/theme'`
+ *  1. re-export toàn bộ API cũ ở đúng đường dẫn cũ - mọi `import … from '@/styles/theme'`
  *     hiện có không phải sửa;
- *  2. `antdTheme` — bản ÁNH XẠ token sang AntD, thứ duy nhất ở đây buộc phải biết `antd`
+ *  2. `antdTheme` - bản ÁNH XẠ token sang AntD, thứ duy nhất ở đây buộc phải biết `antd`
  *     và vì thế không được vào package dùng chung.
  *
  * `tokens.css` cũng đã theo token sang package (nạp ở `app/layout.tsx` qua
@@ -16,17 +16,20 @@ import { XP_TOKENS, toPx, type XpTokenName } from '@xeprime/ui';
 export { XP_TOKENS, XP_METRICS, XP_BREAKPOINTS, cssVar, toPx, type XpTokenName } from '@xeprime/ui';
 
 /**
- * Theme cho `ConfigProvider` — ánh xạ token ngữ nghĩa XePrime sang token AntD 6.
+ * Theme cho `ConfigProvider` - ánh xạ token ngữ nghĩa XePrime sang token AntD 6.
  *
  * Nguyên tắc: **chỉ set seed/alias token**, không set `components: {...}`. Bám tên token
  * nội bộ của từng component AntD là thứ vỡ qua mỗi lần nâng cấp.
  *
  * Token nào Figma KHÔNG định nghĩa thì để AntD tự dẫn xuất từ seed (`colorTextBase`,
- * `colorBgBase`, `colorPrimary`) — đó là lý do `colorLink`, `colorPrimaryActive` và
+ * `colorBgBase`, `colorPrimary`) - đó là lý do `colorLink`, `colorPrimaryActive` và
  * `colorTextDisabled` không có mặt ở đây.
  */
 export const antdTheme: ThemeConfig = {
   token: {
+    // Chuyển động modal/drawer/dropdown - cùng nhịp với token `motion-*` của chợ khách.
+    motionDurationMid: XP_TOKENS['motion-duration-overlay'],
+    motionEaseOut: XP_TOKENS['motion-ease-out'],
     // Seed: gốc để AntD dẫn xuất các bậc chữ/nền còn lại.
     colorTextBase: XP_TOKENS['color-text'],
     colorBgBase: XP_TOKENS['color-bg-elevated'],
@@ -37,7 +40,7 @@ export const antdTheme: ThemeConfig = {
     // `colorPrimaryActive` KHÔNG set: v2 chưa vẽ trạng thái nhấn, và `color-primary-active` (bậc
     // nhấn của bộ cũ, giữ cho CSS Module + native) chỉ đạt 4.47:1 với chữ v2 trên nút. Bậc AntD
     // tự dẫn xuất từ gold mới đậm hơn hover và đạt ~5.7:1 (ADR 0062 điều 6).
-    // Nền của mục đang chọn (option, hàng bảng, menu, khoảng ngày) và lúc rê chuột lên nó — chung
+    // Nền của mục đang chọn (option, hàng bảng, menu, khoảng ngày) và lúc rê chuột lên nó - chung
     // MỘT token với nền "đang chọn" của CSS Module, để hai nơi không trôi khỏi nhau.
     colorPrimaryBg: XP_TOKENS['color-bg-selected'],
     colorPrimaryBgHover: XP_TOKENS['color-primary-muted'],
@@ -61,7 +64,7 @@ export const antdTheme: ThemeConfig = {
     colorTextSecondary: XP_TOKENS['color-text-secondary'],
     colorTextTertiary: XP_TOKENS['color-text-tertiary'],
     // v2 Text/Gray/very-low. `colorTextDisabled` thì KHÔNG set: AntD dùng nó cả cho giá trị ô
-    // nhập bị khoá và ngày ngoài tháng (vẫn bấm được) — v2 Text/Gray/disable quá mờ cho các chỗ
+    // nhập bị khoá và ngày ngoài tháng (vẫn bấm được) - v2 Text/Gray/disable quá mờ cho các chỗ
     // đó, nên giữ bậc AntD dẫn xuất 25% từ `colorTextBase` (= token `color-text-disabled`).
     colorTextPlaceholder: XP_TOKENS['color-text-placeholder'],
 
@@ -91,17 +94,17 @@ export const antdTheme: ThemeConfig = {
     fontSizeHeading4: toPx(XP_TOKENS['font-size-h4']),
     fontSizeHeading5: toPx(XP_TOKENS['font-size']),
 
-    // Đổ bóng — Elevation 1/2/3 của Figma. Trước Wave 1A, bóng của AntD (xám trung tính)
+    // Đổ bóng - Elevation 1/2/3 của Figma. Trước Wave 1A, bóng của AntD (xám trung tính)
     // và bóng của CSS Module (nâu ấm) là hai hệ khác nhau; ánh xạ ở đây gộp về một.
     boxShadow: XP_TOKENS['shadow-card'],
     boxShadowTertiary: XP_TOKENS['shadow-card'],
     boxShadowSecondary: XP_TOKENS['shadow-raised'],
 
-    // Focus — vòng 2px gold 25% thay cho vòng mặc định của AntD.
+    // Focus - vòng 2px gold 25% thay cho vòng mặc định của AntD.
     controlOutline: XP_TOKENS['color-focus-ring'],
     controlOutlineWidth: toPx(XP_TOKENS['focus-ring-width']),
 
-    // Kích thước control: giữ đúng chiều cao đang chạy (32px). Figma vẽ 40px —
+    // Kích thước control: giữ đúng chiều cao đang chạy (32px). Figma vẽ 40px -
     // đổi là việc của wave component, không phải wave token (P16).
     controlHeight: toPx(XP_TOKENS['control-height']),
     controlHeightSM: toPx(XP_TOKENS['control-height-sm']),
@@ -112,10 +115,10 @@ export const antdTheme: ThemeConfig = {
   },
 
   /**
-   * Ngoại lệ DUY NHẤT của quy tắc "chỉ seed token" — có kiểm chứng, không phải tiện tay.
+   * Ngoại lệ DUY NHẤT của quy tắc "chỉ seed token" - có kiểm chứng, không phải tiện tay.
    *
    * Nút primary của AntD lấy màu chữ từ `colorTextLightSolid` (= `#fff`) cho mọi nền đặc.
-   * Trên nền gold `#e9ac29` của XePrime, chữ trắng chỉ đạt **2.0:1** — trượt cả ngưỡng
+   * Trên nền gold `#e9ac29` của XePrime, chữ trắng chỉ đạt **2.0:1** - trượt cả ngưỡng
    * 4.5:1 lẫn 3:1 của WCAG. Bảng nút v2 vẽ **chữ tối** trên nền gold, và hệ đã có sẵn token cho
    * đúng vai trò này (`color-primary-contrast`, 8.8:1).
    *
@@ -128,7 +131,7 @@ export const antdTheme: ThemeConfig = {
       /*
        * Bảng nút v2 (Figma `8636:8263`, cùng mọi màn partner redesign 11/2026): chữ nút là
        * `14px/Semibold`, nút viền ("Xem gian hàng", "Hủy", "Quản lý tài khoản"…) chữ
-       * `Text/Gray/medium`. Mặc định AntD là 400 + `colorText` — đậm màu hơn và mảnh hơn design.
+       * `Text/Gray/medium`. Mặc định AntD là 400 + `colorText` - đậm màu hơn và mảnh hơn design.
        */
       fontWeight: Number(XP_TOKENS['font-weight-semibold']),
       defaultColor: XP_TOKENS['color-text-secondary'],
@@ -137,11 +140,11 @@ export const antdTheme: ThemeConfig = {
 };
 
 /**
- * Bản TỐI của các token MÀU — soi 1-1 khối `[data-theme="dark"]` của `tokens.css` (theme.test
+ * Bản TỐI của các token MÀU - soi 1-1 khối `[data-theme="dark"]` của `tokens.css` (theme.test
  * khoá hai bên). Chỉ web có giao diện tối nên bảng này ở lại web, không vào `@xeprime/ui`.
  *
  * Cần một bản TS vì AntD không đọc được `var(--xp-…)`: nó phải có màu thật để dẫn xuất các bậc
- * hover/active. Thiếu bảng này thì `darkAlgorithm` vô tác dụng — `antdTheme` set tường minh
+ * hover/active. Thiếu bảng này thì `darkAlgorithm` vô tác dụng - `antdTheme` set tường minh
  * `colorText`/`colorBgContainer`… bằng giá trị SÁNG, và token tường minh luôn thắng thuật toán,
  * nên ở chế độ tối mọi nút, ô nhập, hộp thoại của AntD vẫn nền trắng giữa trang tối.
  */
@@ -188,7 +191,7 @@ export const XP_DARK_TOKENS = {
 } as const satisfies Partial<Record<XpTokenName, string>>;
 
 /**
- * Phần token GHI ĐÈ lên `antdTheme` khi giao diện tối — cùng bộ khoá màu, đọc từ
+ * Phần token GHI ĐÈ lên `antdTheme` khi giao diện tối - cùng bộ khoá màu, đọc từ
  * `XP_DARK_TOKENS`. `algorithm: theme.darkAlgorithm` gắn ở `Providers` (client): kéo `theme`
  * runtime của antd vào file này sẽ kéo cả antd vào mọi Server Component đang import token.
  */
@@ -218,7 +221,7 @@ export const antdDarkTokens: NonNullable<ThemeConfig['token']> = {
 };
 
 /**
- * Phần `components` GHI ĐÈ khi giao diện tối — chỉ những token component mang MÀU (màu tường minh
+ * Phần `components` GHI ĐÈ khi giao diện tối - chỉ những token component mang MÀU (màu tường minh
  * của component thắng cả thuật toán lẫn token tối, y như `antdDarkTokens`).
  */
 export const antdDarkComponents: NonNullable<ThemeConfig['components']> = {

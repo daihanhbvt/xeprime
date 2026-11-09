@@ -278,8 +278,8 @@ export function DrivingTripDetailScreen({ bookingId }: { bookingId: string }) {
           ) : null}
 
           <Section title={t('schedule')}>
-            <DataRow label={t('pickupAt')} value={fmt.dateTime(trip.pickupAt)} />
-            <DataRow label={t('returnAt')} value={fmt.dateTime(trip.returnAt)} />
+            <DataRow label={t('pickupAt')} value={fmt.rentalAt(trip.pickupAt)} />
+            <DataRow label={t('returnAt')} value={fmt.rentalAt(trip.returnAt)} />
             {trip.actualPickupAt ? (
               <Text col={colors.textMuted} fos={fontSize.label}>
                 {t('actualPickupAt', { time: fmt.dateTime(trip.actualPickupAt) })}

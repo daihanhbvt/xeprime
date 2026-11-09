@@ -12,12 +12,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Tài khoản nhận tiền của tôi — số đã che
+         * Tài khoản nhận tiền của tôi - số đã che
          * @description Mảng 0 hoặc 1 phần tử: mỗi chủ MỘT tài khoản nhận tiền đang dùng.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["AccountBankAccountsController_list"];
         put?: never;
@@ -27,7 +27,7 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["AccountBankAccountsController_create"];
         delete?: never;
@@ -52,7 +52,7 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         delete: operations["AccountBankAccountsController_archive"];
         options?: never;
@@ -76,11 +76,11 @@ export interface paths {
         /**
          * Đặt làm tài khoản nhận tiền mặc định
          * @deprecated
-         * @description Tương thích ngược — tài khoản duy nhất luôn là mặc định; trả lại chính nó.
+         * @description Tương thích ngược - tài khoản duy nhất luôn là mặc định; trả lại chính nó.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         patch: operations["AccountBankAccountsController_setDefault"];
         trace?: never;
@@ -93,12 +93,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Bằng lái của tôi — bằng đang dùng và lượt nộp gần nhất
-         * @description Lượt nộp đang `processing` thì hỏi lại sau 1–2 giây: đọc ảnh chạy nền và thường xong trong vài chục giây.
+         * Bằng lái của tôi - bằng đang dùng và lượt nộp gần nhất
+         * @description Lượt nộp đang `processing` thì hỏi lại sau 1-2 giây: đọc ảnh chạy nền và thường xong trong vài chục giây.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["DriverLicencesController_overview"];
         put?: never;
@@ -119,12 +119,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Xác nhận đã tải ảnh — kiểm ảnh rồi bắt đầu đọc (chạy nền)
+         * Xác nhận đã tải ảnh - kiểm ảnh rồi bắt đầu đọc (chạy nền)
          * @description Trả về lượt nộp ở trạng thái `processing`. Gọi lại sau khi đã xong là idempotent.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["DriverLicencesController_complete"];
         delete?: never;
@@ -141,10 +141,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Xem ảnh bằng lái đã nộp — URL sống ngắn
+         * Xem ảnh bằng lái đã nộp - URL sống ngắn
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["DriverLicencesController_image"];
         put?: never;
@@ -165,12 +165,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Bắt đầu nộp ảnh mặt trước bằng lái — trả URL PUT riêng tư
+         * Bắt đầu nộp ảnh mặt trước bằng lái - trả URL PUT riêng tư
          * @description Bắt buộc `consent: true`. Lượt nộp đang chờ duyệt (nếu có) bị thay bằng lượt mới. Đang có một ảnh được đọc dở thì 409 `DRIVER_LICENCE_STATE_CONFLICT`.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["DriverLicencesController_presign"];
         delete?: never;
@@ -187,12 +187,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Xe yêu thích của tôi — một tab Ô tô/Xe máy, phân trang, dữ liệu chợ hiện hành
+         * Xe yêu thích của tôi - một tab Ô tô/Xe máy, phân trang, dữ liệu chợ hiện hành
          * @description Xe đang bị ẩn/gỡ/đình chỉ hoặc không còn dịch vụ nào không hiện (mục yêu thích vẫn giữ, mở bán lại là hiện lại). Mới lưu lên trước.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["FavoritesController_list"];
         put?: never;
@@ -213,19 +213,19 @@ export interface paths {
         get?: never;
         /**
          * Lưu một xe vào yêu thích (idempotent)
-         * @description Chỉ xe đang niêm yết công khai — không thì 404 `FAVORITE_VEHICLE_UNAVAILABLE`. Thích lại một xe đã thích trả 200 như lần đầu.
+         * @description Chỉ xe đang niêm yết công khai - không thì 404 `FAVORITE_VEHICLE_UNAVAILABLE`. Thích lại một xe đã thích trả 200 như lần đầu.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         put: operations["FavoritesController_add"];
         post?: never;
         /**
-         * Bỏ một xe khỏi yêu thích (idempotent — chưa lưu cũng trả 200)
+         * Bỏ một xe khỏi yêu thích (idempotent - chưa lưu cũng trả 200)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         delete: operations["FavoritesController_remove"];
         options?: never;
@@ -241,10 +241,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Trong các xe này, xe nào tôi đã thích — trái tim ở kết quả tìm kiếm/chi tiết
+         * Trong các xe này, xe nào tôi đã thích - trái tim ở kết quả tìm kiếm/chi tiết
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["FavoritesController_status"];
         put?: never;
@@ -263,10 +263,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Cổng thanh toán đang mở cho tiền giữ chỗ — rỗng khi chưa cấu hình hoặc chưa bật
+         * Cổng thanh toán đang mở cho tiền giữ chỗ - rỗng khi chưa cấu hình hoặc chưa bật
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["CustomerPaymentGatewayController_methods"];
         put?: never;
@@ -285,10 +285,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Trạng thái MỘT lượt thanh toán qua cổng (trang quay về) — server tự hỏi cổng khi còn chờ quá lâu
+         * Trạng thái MỘT lượt thanh toán qua cổng (trang quay về) - server tự hỏi cổng khi còn chờ quá lâu
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["CustomerPaymentGatewayController_order"];
         put?: never;
@@ -309,10 +309,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Mở phiên thanh toán tiền giữ chỗ qua cổng — số tiền và mã đọc từ DB; dùng lại phiên còn hạn
+         * Mở phiên thanh toán tiền giữ chỗ qua cổng - số tiền và mã đọc từ DB; dùng lại phiên còn hạn
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["CustomerPaymentGatewayController_checkout"];
         delete?: never;
@@ -329,12 +329,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Các khoản tôi đã trả cho chuyến đã thuê — phân trang server-side
-         * @description Đọc từ `payments`: tiền khách trả cho GIAN HÀNG. KHÔNG phải ví điểm (`/account/balance`) và không phải khoản giữ chỗ chuyển cho XePrime (`/trips/:id`) — ba bảng, ba chủ nợ, ba màn hình. `totals` chỉ cộng khoản `succeeded`.
+         * Các khoản tôi đã trả cho chuyến đã thuê - phân trang server-side
+         * @description Đọc từ `payments`: tiền khách trả cho GIAN HÀNG. KHÔNG phải ví điểm (`/account/balance`) và không phải khoản giữ chỗ chuyển cho XePrime (`/trips/:id`) - ba bảng, ba chủ nợ, ba màn hình. `totals` chỉ cộng khoản `succeeded`.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["AccountPaymentsController_list"];
         put?: never;
@@ -353,12 +353,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lịch sử giao dịch của tôi — một danh sách hợp nhất, phân trang server-side
+         * Lịch sử giao dịch của tôi - một danh sách hợp nhất, phân trang server-side
          * @description Gộp tiền giữ chỗ (SePay + cổng), lệnh rút ví điểm, dòng ghi có ví, hoàn tiền chuyển thẳng và khoản tiền thuê/cọc. Số tiền có dấu theo góc nhìn khách. Lọc `status` + khoảng ngày giờ Việt Nam; mới nhất trước.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["AccountTransactionsController_list"];
         put?: never;
@@ -382,7 +382,7 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["AccountWalletController_summary"];
         put?: never;
@@ -401,10 +401,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Sổ ví — phân trang server-side, mới nhất trước
+         * Sổ ví - phân trang server-side, mới nhất trước
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["AccountWalletController_entries"];
         put?: never;
@@ -426,17 +426,17 @@ export interface paths {
          * Các yêu cầu rút của tôi
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["AccountWalletController_listWithdrawals"];
         put?: never;
         /**
          * Tạo yêu cầu rút về tài khoản ngân hàng
-         * @description Đích chuyển phải là một tài khoản ĐÃ LƯU của chính chủ ví — không gõ số tài khoản ngay tại bước chi tiền. Tiền bị khoá khỏi số dư khả dụng ngay khi tạo.
+         * @description Đích chuyển phải là một tài khoản ĐÃ LƯU của chính chủ ví - không gõ số tài khoản ngay tại bước chi tiền. Tiền bị khoá khỏi số dư khả dụng ngay khi tạo.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["AccountWalletController_createWithdrawal"];
         delete?: never;
@@ -460,7 +460,7 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["AccountWalletController_cancelWithdrawal"];
         delete?: never;
@@ -477,10 +477,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Cấu hình app Partner (isPlanPromotionEnabled + version) — không cache, không cần đăng nhập
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * Cấu hình app Partner (isPlanPromotionEnabled + version) - không cache, không cần đăng nhập
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          */
         get: operations["AppConfigController_partner"];
         put?: never;
@@ -501,10 +501,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Đăng nhập bằng số điện thoại + mật khẩu (site quản trị: email hoặc số điện thoại) — ADR 0060
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * Đăng nhập bằng số điện thoại + mật khẩu (site quản trị: email hoặc số điện thoại) - ADR 0060
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         post: operations["AuthController_login"];
         delete?: never;
@@ -524,7 +524,7 @@ export interface paths {
          * Thông tin user hiện tại kèm tenant scope và quyền
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["AuthController_me"];
         put?: never;
@@ -545,10 +545,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Native iOS: đăng nhập bằng Apple — đổi identityToken lấy access + refresh token
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * Native iOS: đăng nhập bằng Apple - đổi identityToken lấy access + refresh token
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["MobileAuthController_appleLogin"];
         delete?: never;
@@ -568,9 +568,9 @@ export interface paths {
         put?: never;
         /**
          * Native: đăng nhập bằng số điện thoại + mật khẩu
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["MobileAuthController_login"];
         delete?: never;
@@ -590,9 +590,9 @@ export interface paths {
         put?: never;
         /**
          * Native: thu hồi phiên của thiết bị hiện tại
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["MobileAuthController_logout"];
         delete?: never;
@@ -611,11 +611,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * ĐÃ GỠ — Native: đăng nhập bằng OTP. Luôn 410 OTP_LOGIN_RETIRED (ADR 0060)
+         * ĐÃ GỠ - Native: đăng nhập bằng OTP. Luôn 410 OTP_LOGIN_RETIRED (ADR 0060)
          * @deprecated
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["MobilePhoneAuthController_login"];
         delete?: never;
@@ -635,9 +635,9 @@ export interface paths {
         put?: never;
         /**
          * Native: xoay refresh token, nhận cặp token mới
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["MobileAuthController_refresh"];
         delete?: never;
@@ -657,9 +657,9 @@ export interface paths {
         put?: never;
         /**
          * Native: đăng ký bằng số điện thoại + mật khẩu + mã OTP
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["MobileAuthController_register"];
         delete?: never;
@@ -679,9 +679,9 @@ export interface paths {
         put?: never;
         /**
          * Native: đổi one-time code của social login lấy access + refresh token
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["MobileAuthController_exchangeSocialCode"];
         delete?: never;
@@ -700,10 +700,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Đổi mật khẩu — cần mật khẩu hiện tại; tài khoản chưa có thì dùng password/set. Mọi phiên KHÁC (web + app) bị đăng xuất
+         * Đổi mật khẩu - cần mật khẩu hiện tại; tài khoản chưa có thì dùng password/set. Mọi phiên KHÁC (web + app) bị đăng xuất
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         post: operations["AuthController_changePassword"];
         delete?: never;
@@ -723,9 +723,9 @@ export interface paths {
         put?: never;
         /**
          * Quên mật khẩu: gửi link đặt lại qua email (về site của tài khoản)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         post: operations["AuthController_forgotPassword"];
         delete?: never;
@@ -745,9 +745,9 @@ export interface paths {
         put?: never;
         /**
          * Đặt lại mật khẩu từ token trong email
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         post: operations["AuthController_resetPassword"];
         delete?: never;
@@ -767,9 +767,9 @@ export interface paths {
         put?: never;
         /**
          * Quên mật khẩu bằng SĐT: mã OTP `purpose=password_reset` + mật khẩu mới (không cấp phiên)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["AuthController_resetPasswordWithOtp"];
         delete?: never;
@@ -791,7 +791,7 @@ export interface paths {
          * Đặt mật khẩu lần đầu cho tài khoản chưa có (vd tạo bằng Google/Facebook)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         post: operations["AuthController_setPassword"];
         delete?: never;
@@ -810,11 +810,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * ĐÃ GỠ — đăng nhập bằng OTP. Luôn 410 OTP_LOGIN_RETIRED (ADR 0060)
+         * ĐÃ GỠ - đăng nhập bằng OTP. Luôn 410 OTP_LOGIN_RETIRED (ADR 0060)
          * @deprecated
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["PhoneVerificationController_login"];
         delete?: never;
@@ -832,9 +832,9 @@ export interface paths {
         };
         /**
          * Cấu hình OTP cho giao diện (có nhận mã test hay không)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         get: operations["PhoneVerificationController_otpConfig"];
         put?: never;
@@ -856,9 +856,9 @@ export interface paths {
         put?: never;
         /**
          * Gửi mã OTP tới số điện thoại. `register`: số đã có tài khoản ⇒ PHONE_TAKEN. `password_reset`: luôn trả như nhau. `login`: 410 OTP_LOGIN_RETIRED (ADR 0060)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["PhoneVerificationController_sendOtp"];
         delete?: never;
@@ -878,9 +878,9 @@ export interface paths {
         put?: never;
         /**
          * Xác nhận mã OTP
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["PhoneVerificationController_verifyOtp"];
         delete?: never;
@@ -899,10 +899,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Đăng ký bằng số điện thoại + mật khẩu + mã OTP `purpose=register` — tài khoản thuộc realm của site đang gọi
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * Đăng ký bằng số điện thoại + mật khẩu + mã OTP `purpose=register` - tài khoản thuộc realm của site đang gọi
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         post: operations["AuthController_register"];
         delete?: never;
@@ -922,9 +922,9 @@ export interface paths {
         put?: never;
         /**
          * Kiểm thông tin đăng ký (SĐT, mật khẩu, họ tên, SĐT chưa có tài khoản) trước bước nhập mã OTP
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["AuthController_checkRegistration"];
         delete?: never;
@@ -945,9 +945,9 @@ export interface paths {
         post?: never;
         /**
          * Đăng xuất: thu hồi phiên của cookie (phía server) rồi xoá cookie của site đang gọi
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         delete: operations["AuthController_logout"];
         options?: never;
@@ -963,12 +963,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Bắt đầu đăng nhập mạng xã hội — chuyển hướng sang Google/Facebook
+         * Bắt đầu đăng nhập mạng xã hội - chuyển hướng sang Google/Facebook
          * @description Trình duyệt điều hướng thẳng tới đây (không phải XHR). Luôn trả 302: sang provider nếu cấu hình đủ, hoặc về web kèm `?authError=SOCIAL_NOT_CONFIGURED`.
          *
-         *     **Truy cập:** công khai — không cần đăng nhập.
+         *     **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["SocialAuthController_begin"];
         put?: never;
@@ -987,12 +987,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Provider gọi về sau khi người dùng đồng ý — phát session cookie rồi về web
-         * @description Chỉ provider điều hướng tới đây, và nó tự gắn thêm tham số riêng (`iss`, `scope`, `authuser`, `prompt`…) — endpoint cố ý bỏ qua mọi tham số ngoài ba cái dưới đây. Luôn trả 302 về site của realm đã mở luồng; hỏng thì kèm `?authError=<mã>` (`SOCIAL_STATE_INVALID` · `SOCIAL_CANCELLED` · `SOCIAL_EXCHANGE_FAILED` · `CONFLICT` · `ACCOUNT_LOCKED`).
+         * Provider gọi về sau khi người dùng đồng ý - phát session cookie rồi về web
+         * @description Chỉ provider điều hướng tới đây, và nó tự gắn thêm tham số riêng (`iss`, `scope`, `authuser`, `prompt`…) - endpoint cố ý bỏ qua mọi tham số ngoài ba cái dưới đây. Luôn trả 302 về site của realm đã mở luồng; hỏng thì kèm `?authError=<mã>` (`SOCIAL_STATE_INVALID` · `SOCIAL_CANCELLED` · `SOCIAL_EXCHANGE_FAILED` · `CONFLICT` · `ACCOUNT_LOCKED`).
          *
-         *     **Truy cập:** công khai — không cần đăng nhập.
+         *     **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["SocialAuthController_callback"];
         put?: never;
@@ -1016,9 +1016,9 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1042,9 +1042,9 @@ export interface paths {
          * Danh sách yêu cầu đặt xe (phân trang, filter trạng thái)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `booking_requests.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1068,9 +1068,9 @@ export interface paths {
          * Chi tiết một yêu cầu
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `booking_requests.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1094,13 +1094,13 @@ export interface paths {
         put?: never;
         /**
          * Duyệt yêu cầu → giữ lịch + chốt giá (đơn thuê chỉ ra đời khi khách thanh toán đủ)
-         * @description Có tiền giữ chỗ: request chuyển sang `awaiting_hold`, KHÔNG có Booking nào được tạo ở bước này. Không thu tiền giữ chỗ: Booking được tạo ngay trong cùng transaction. Thuê dài hạn: body bắt buộc scheduledPickupAt — gian hàng chốt giờ nhận, server tính giờ trả theo gói tháng lịch (ADR 0011). Trùng lịch → 409, yêu cầu vẫn chờ duyệt.
+         * @description Có tiền giữ chỗ: request chuyển sang `awaiting_hold`, KHÔNG có Booking nào được tạo ở bước này. Không thu tiền giữ chỗ: Booking được tạo ngay trong cùng transaction. Thuê dài hạn: body bắt buộc scheduledPickupAt - gian hàng chốt giờ nhận, server tính giờ trả theo gói tháng lịch (ADR 0011). Trùng lịch → 409, yêu cầu vẫn chờ duyệt.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `booking_requests.approve` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1126,9 +1126,9 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `booking_requests.approve` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1150,13 +1150,13 @@ export interface paths {
         put?: never;
         /**
          * Mở/lấy hội thoại với khách của yêu cầu (phía gian hàng)
-         * @description Idempotent theo (khách, xe) — mở lại đúng thread cũ. Khách vãng lai chưa có tài khoản trả CHAT_CUSTOMER_UNAVAILABLE.
+         * @description Idempotent theo (khách, xe) - mở lại đúng thread cũ. Khách vãng lai chưa có tài khoản trả CHAT_CUSTOMER_UNAVAILABLE.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `booking_requests.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1180,9 +1180,9 @@ export interface paths {
          * Từ chối yêu cầu
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `booking_requests.approve` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1208,9 +1208,9 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `booking_requests.approve` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1232,9 +1232,9 @@ export interface paths {
          * Danh sách đơn thuê (phân trang, filter, sort)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1244,9 +1244,9 @@ export interface paths {
          * Tạo đơn thuê (giữ chỗ lịch, chặn trùng bằng constraint DB)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.create` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1268,9 +1268,9 @@ export interface paths {
          * Chi tiết một đơn thuê
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1284,9 +1284,9 @@ export interface paths {
          * Sửa đơn (đổi khung giờ sẽ reschedule lịch)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1304,21 +1304,21 @@ export interface paths {
          * Hợp đồng của một đơn (nếu đã tạo)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
         get: operations["ContractsController_byBooking"];
         put?: never;
         /**
-         * Tạo (hoặc lấy) hợp đồng từ một đơn thuê — idempotent
+         * Tạo (hoặc lấy) hợp đồng từ một đơn thuê - idempotent
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `contracts.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1346,9 +1346,9 @@ export interface paths {
          * Cập nhật phí giao nhận của đơn (server tính lại tổng, có audit)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1374,9 +1374,9 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1402,9 +1402,9 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1422,9 +1422,9 @@ export interface paths {
          * Lịch sử gán tài xế của một đơn thuê
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1448,9 +1448,9 @@ export interface paths {
          * Tiền công gợi ý khi gán tài xế cho đơn: số ngày, mức mặc định × số ngày, khoảng hợp lệ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1474,9 +1474,9 @@ export interface paths {
          * Các phụ lục gia hạn của một đơn (cũ trước)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1486,9 +1486,9 @@ export interface paths {
          * Tạo phụ lục gia hạn: kéo lịch xe, phát mã XPE… để khách chuyển khoản; hiệu lực khi tiền về đủ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1509,12 +1509,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Huỷ phụ lục còn chờ thanh toán — nhả phần lịch kéo thêm, hoàn phần khách đã chuyển
+         * Huỷ phụ lục còn chờ thanh toán - nhả phần lịch kéo thêm, hoàn phần khách đã chuyển
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1536,9 +1536,9 @@ export interface paths {
          * Xem trước giá + lịch trống của một phụ lục gia hạn N tháng (miễn phí nền tảng)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1563,9 +1563,9 @@ export interface paths {
          * Đánh dấu / bỏ đánh dấu tay một việc chuẩn bị bàn giao
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `handovers.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1588,9 +1588,9 @@ export interface paths {
          * Ngữ cảnh bàn giao của đơn: biên bản giao + trả + số liệu suy ra
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `handovers.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1615,9 +1615,9 @@ export interface paths {
          * Tạo hoặc lưu bản nháp bàn giao (không có hệ quả nghiệp vụ)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `handovers.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1642,9 +1642,9 @@ export interface paths {
          * Hủy bản nháp (biên bản đã xác nhận không hủy được)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `handovers.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1665,12 +1665,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Xác nhận bàn giao — ghi KM + chuyển trạng thái đơn + lịch + audit, một transaction
+         * Xác nhận bàn giao - ghi KM + chuyển trạng thái đơn + lịch + audit, một transaction
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `handovers.confirm` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1694,9 +1694,9 @@ export interface paths {
          * Bổ sung/sửa KM của biên bản đã xác nhận (bắt buộc lý do + audit)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.odometer.correct` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1720,9 +1720,9 @@ export interface paths {
          * Xác minh object rồi gắn ảnh vào đúng góc chụp
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `handovers.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1744,9 +1744,9 @@ export interface paths {
          * Phát signed URL ngắn hạn xem một ảnh hiện trạng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `handovers.view_files` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1773,9 +1773,9 @@ export interface paths {
          * Gỡ ảnh khỏi một góc chụp của bản nháp
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `handovers.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1798,9 +1798,9 @@ export interface paths {
          * Presign upload ảnh hiện trạng vào kho riêng tư (Wave 4.1)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `handovers.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1821,14 +1821,14 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Gian hàng báo khách chưa trả xe — huỷ lời báo, mở tranh chấp khẩn
+         * Gian hàng báo khách chưa trả xe - huỷ lời báo, mở tranh chấp khẩn
          * @description Xoá `customerReturnedAt`/`returnAutoCompleteAt` (chuyến không tự hoàn thành nữa), mở MỘT case `dispute` khẩn cho CSKH xác minh (giữ quyết toán), báo khách. Lỗi: 409 `BOOKING_RETURN_REPORT_NOT_PENDING` khi không còn lời báo nào đang chờ. Trả về ngữ cảnh bàn giao.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `handovers.confirm` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1850,9 +1850,9 @@ export interface paths {
          * Giấy chứng nhận bảo hiểm đã cấp của một đơn
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1876,9 +1876,9 @@ export interface paths {
          * Tình trạng bảo hiểm của một đơn, theo từng sản phẩm
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1902,9 +1902,9 @@ export interface paths {
          * Lịch sử thu tiền của một đơn
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1914,9 +1914,9 @@ export interface paths {
          * Ghi nhận một lần thu tiền cho đơn (cập nhật đã trả/còn nợ)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `payments.record` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1938,9 +1938,9 @@ export interface paths {
          * Quyết toán đơn: phát sinh, cọc đã thu, đề xuất hoàn
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1966,9 +1966,9 @@ export interface paths {
          * Đánh dấu đã hoàn cọc (ghi nhận thủ công, không chuyển tiền)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `payments.record` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -1980,9 +1980,9 @@ export interface paths {
          * Điều chỉnh bản ghi hoàn cọc (quyền cao, bắt buộc lý do)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `payments.void` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2002,9 +2002,9 @@ export interface paths {
          * Xem trước quyết toán lúc nhận lại xe: cọc, phát sinh nháp, hoàn cọc, còn phải thu
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2028,9 +2028,9 @@ export interface paths {
          * Thêm một khoản phát sinh (không sinh giao dịch)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `payments.record` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2055,9 +2055,9 @@ export interface paths {
          * Gỡ một khoản phát sinh (huỷ mềm, có lý do + audit)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `payments.record` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2068,9 +2068,9 @@ export interface paths {
          * Sửa một khoản phát sinh (audit before/after)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `payments.record` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2090,9 +2090,9 @@ export interface paths {
          * Chuyển trạng thái đơn (validate canTransitionBooking; huỷ/no_show bắt buộc có lý do, ghi vào audit)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2114,9 +2114,9 @@ export interface paths {
          * Danh sách chi nhánh của gian hàng (kèm số xe mỗi chi nhánh)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `branches.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2126,9 +2126,9 @@ export interface paths {
          * Tạo chi nhánh mới (mã CNxx sinh ở server)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `branches.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2150,9 +2150,9 @@ export interface paths {
          * Chi tiết một chi nhánh
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `branches.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2166,9 +2166,9 @@ export interface paths {
          * Sửa chi nhánh (đổi tỉnh sẽ đồng bộ lại vị trí công khai của xe)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `branches.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2188,9 +2188,9 @@ export interface paths {
          * Bật lại chi nhánh đã ngừng hoạt động
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `branches.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2214,9 +2214,9 @@ export interface paths {
          * Ngừng hoạt động (chặn nếu còn xe hoặc đơn đang chạy/sắp tới)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `branches.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2238,9 +2238,9 @@ export interface paths {
          * Ảnh bản đồ tĩnh (PNG) của một chi nhánh
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `branches.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2266,9 +2266,9 @@ export interface paths {
          * Đặt làm chi nhánh mặc định của gian hàng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `branches.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2290,9 +2290,9 @@ export interface paths {
          * Số xe còn trống theo từng ngày của khoảng đang xem
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `calendar.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2316,13 +2316,13 @@ export interface paths {
         put?: never;
         /**
          * Khoá mọi xe được chọn trong khoảng ngày
-         * @description Chỉ khoá những cặp (xe, ngày) đang RẢNH — xe có đơn thì bỏ qua đúng ngày đó (ADR 0006). Kết quả nói rõ bao nhiêu xe khoá đủ, khoá một phần, hoặc không khoá được ngày nào. Mọi dòng mang chung một `batchId` để gỡ lại được.
+         * @description Chỉ khoá những cặp (xe, ngày) đang RẢNH - xe có đơn thì bỏ qua đúng ngày đó (ADR 0006). Kết quả nói rõ bao nhiêu xe khoá đủ, khoá một phần, hoặc không khoá được ngày nào. Mọi dòng mang chung một `batchId` để gỡ lại được.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.block_schedule` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2349,9 +2349,9 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.block_schedule` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2370,13 +2370,13 @@ export interface paths {
         };
         /**
          * Xem trước tập xe bị ảnh hưởng bởi một thao tác hàng loạt
-         * @description Trả giá NIÊM YẾT của từng xe và những ngày xe đang bận. Phép tính giá mới nằm ở hàm thuần `planBulkDayPrices` của @xeprime/domain — client và server dùng chung, nên bảng xem trước và dòng ghi xuống DB không thể lệch nhau.
+         * @description Trả giá NIÊM YẾT của từng xe và những ngày xe đang bận. Phép tính giá mới nằm ở hàm thuần `planBulkDayPrices` của @xeprime/domain - client và server dùng chung, nên bảng xem trước và dòng ghi xuống DB không thể lệch nhau.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `calendar.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2399,13 +2399,13 @@ export interface paths {
         get?: never;
         /**
          * Đặt giá riêng cho mọi xe được chọn trong khoảng ngày
-         * @description `percent` tính trên giá niêm yết của TỪNG xe cho ĐÚNG ngày đó (giá cuối tuần nếu là T7/CN), và luôn lấy giá niêm yết làm gốc — nên bấm nhiều lần không cộng dồn. Xe chưa cấu hình giá bị bỏ qua thay vì bị đặt thành 0₫.
+         * @description `percent` tính trên giá niêm yết của TỪNG xe cho ĐÚNG ngày đó (giá cuối tuần nếu là T7/CN), và luôn lấy giá niêm yết làm gốc - nên bấm nhiều lần không cộng dồn. Xe chưa cấu hình giá bị bỏ qua thay vì bị đặt thành 0₫.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2432,9 +2432,9 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2456,9 +2456,9 @@ export interface paths {
          * Lịch bận theo ngày của một xe của gian hàng (tô ô chọn thời gian thuê)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.create` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2484,9 +2484,9 @@ export interface paths {
          * Xem trước trùng lịch (preview, không phải lớp bảo vệ)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `calendar.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2508,9 +2508,9 @@ export interface paths {
          * Bản ghi đè giá theo ngày của các xe đang lọc, trong khoảng xem
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `calendar.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2534,9 +2534,9 @@ export interface paths {
          * Sự kiện chiếm lịch trong khoảng thời gian
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `calendar.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2560,9 +2560,9 @@ export interface paths {
          * Báo giá nội bộ cho một xe của gian hàng (kèm giá riêng theo ngày)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.create` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2586,9 +2586,9 @@ export interface paths {
          * Danh sách xe làm hàng của resource timeline
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `calendar.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2610,9 +2610,9 @@ export interface paths {
         };
         /**
          * Danh mục lọc đang bật (hãng xe / kiểu dáng / nhiên liệu / tiện ích)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["CatalogController_list"];
         put?: never;
@@ -2632,9 +2632,9 @@ export interface paths {
         };
         /**
          * Mẫu xe theo loại phương tiện và hãng
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["CatalogController_listModels"];
         put?: never;
@@ -2658,7 +2658,7 @@ export interface paths {
          * Xin presigned URL để upload đính kèm chat lên R2
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["ChatController_presign"];
         delete?: never;
@@ -2680,7 +2680,7 @@ export interface paths {
          * Custom token để signInWithCustomToken (uid = user id)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["ChatController_firebaseToken"];
         delete?: never;
@@ -2700,9 +2700,9 @@ export interface paths {
          * Chi tiết một hợp đồng (để xem/in)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2726,7 +2726,7 @@ export interface paths {
          * Hộp thư của một bề mặt (khách hoặc gian hàng), phân trang
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         get: operations["ConversationsController_list"];
         put?: never;
@@ -2734,7 +2734,7 @@ export interface paths {
          * Mở/lấy hội thoại với shop về một xe (khách)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["ConversationsController_create"];
         delete?: never;
@@ -2751,10 +2751,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Một hội thoại theo id — mở deep link không nằm ở trang đầu
+         * Một hội thoại theo id - mở deep link không nằm ở trang đầu
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         get: operations["ConversationsController_detail"];
         put?: never;
@@ -2776,7 +2776,7 @@ export interface paths {
          * Lịch sử tin nhắn (cursor keyset, mới nhất trước)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         get: operations["ConversationsController_messages"];
         put?: never;
@@ -2784,7 +2784,7 @@ export interface paths {
          * Gửi một tin nhắn (idempotent theo clientMessageId)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["ConversationsController_send"];
         delete?: never;
@@ -2806,7 +2806,7 @@ export interface paths {
          * Đánh dấu đã đọc hội thoại
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["ConversationsController_read"];
         delete?: never;
@@ -2826,7 +2826,7 @@ export interface paths {
          * Khách có nhắn được cho gian hàng này không (để ẩn/hiện nút)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["ConversationsController_eligibility"];
         put?: never;
@@ -2848,7 +2848,7 @@ export interface paths {
          * Tổng tin chưa đọc của một bề mặt (cho badge icon chat)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         get: operations["ConversationsController_unreadCount"];
         put?: never;
@@ -2867,10 +2867,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Chưa đọc của cả hai vai — cho badge biểu tượng chat ở mọi trang
+         * Chưa đọc của cả hai vai - cho badge biểu tượng chat ở mọi trang
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         get: operations["ConversationsController_unreadSummary"];
         put?: never;
@@ -2894,9 +2894,9 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2904,13 +2904,13 @@ export interface paths {
         put?: never;
         /**
          * Thêm khách vào sổ
-         * @description SĐT bắt buộc và là định danh — trùng với khách khác trả 409 CUSTOMER_PHONE_DUPLICATE.
+         * @description SĐT bắt buộc và là định danh - trùng với khách khác trả 409 CUSTOMER_PHONE_DUPLICATE.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2932,9 +2932,9 @@ export interface paths {
          * Hồ sơ khách + số liệu tổng hợp + hoạt động gần đây
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2946,13 +2946,13 @@ export interface paths {
         head?: never;
         /**
          * Sửa hồ sơ khách
-         * @description Không đụng tới snapshot tên/SĐT trên đơn thuê và yêu cầu cũ — đó là sự thật của giao dịch.
+         * @description Không đụng tới snapshot tên/SĐT trên đơn thuê và yêu cầu cũ - đó là sự thật của giao dịch.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2969,12 +2969,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Lưu trữ hồ sơ khách (soft — lịch sử đơn giữ nguyên)
+         * Lưu trữ hồ sơ khách (soft - lịch sử đơn giữ nguyên)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -2996,9 +2996,9 @@ export interface paths {
          * Lịch sử thuê của khách (phân trang)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.view`, `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3019,12 +3019,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Giấy tờ của khách (metadata — không có đường dẫn file)
+         * Giấy tờ của khách (metadata - không có đường dẫn file)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3051,9 +3051,9 @@ export interface paths {
          * Gỡ giấy tờ (soft-delete + audit)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.documents.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3064,9 +3064,9 @@ export interface paths {
          * Sửa chủ thẻ / số giấy tờ / hạn của một giấy tờ đã tải (có audit)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.documents.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3083,12 +3083,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Bước 2 — xác minh tệp đã tải lên (HEAD + chữ ký byte đầu) rồi chuyển `ready`
+         * Bước 2 - xác minh tệp đã tải lên (HEAD + chữ ký byte đầu) rồi chuyển `ready`
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.documents.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3107,12 +3107,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Signed GET ngắn hạn để mở giấy tờ — ghi audit từng lần
+         * Signed GET ngắn hạn để mở giấy tờ - ghi audit từng lần
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.documents.view_files` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3135,12 +3135,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Ghi nhận đã đối chiếu giấy tờ (thủ công — VNeID/bản gốc), có audit
+         * Ghi nhận đã đối chiếu giấy tờ (thủ công - VNeID/bản gốc), có audit
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.documents.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3161,12 +3161,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Bước 1 — xin URL PUT lên bucket riêng tư (tạo bản ghi `pending`)
+         * Bước 1 - xin URL PUT lên bucket riêng tư (tạo bản ghi `pending`)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.documents.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3188,9 +3188,9 @@ export interface paths {
          * Ghi chú nội bộ về khách (phân trang)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3200,9 +3200,9 @@ export interface paths {
          * Thêm ghi chú nội bộ (bản ghi bất biến, có tác giả + thời điểm)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3227,9 +3227,9 @@ export interface paths {
          * Gỡ ghi chú nội bộ (soft-delete)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3252,9 +3252,9 @@ export interface paths {
          * Khôi phục hồ sơ khách đã lưu trữ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3276,9 +3276,9 @@ export interface paths {
          * Doanh thu từ khách theo kỳ + khoản phải thu đang mở
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.view`, `bookings.view`, `finance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3306,9 +3306,9 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.manage_risk` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3330,9 +3330,9 @@ export interface paths {
          * Dải chỉ số đầu trang sổ khách
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3356,9 +3356,9 @@ export interface paths {
          * Tổng quan partner: việc giao/nhận hôm nay, yêu cầu chờ duyệt, lịch 7 ngày, tháng này so cùng kỳ, xe trên chợ, uy tín
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
         get: operations["PartnerDashboardController_overview"];
         put?: never;
@@ -3377,12 +3377,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Yêu cầu đặt xe chờ duyệt và sắp hết hạn — số trên menu site partner
+         * Yêu cầu đặt xe chờ duyệt và sắp hết hạn - số trên menu site partner
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `booking_requests.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3403,12 +3403,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Việc giao/nhận xe hôm nay — số trên menu site partner
+         * Việc giao/nhận xe hôm nay - số trên menu site partner
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3432,9 +3432,9 @@ export interface paths {
          * Danh sách đơn còn công nợ (lọc quá hạn/sắp đến/chưa thu)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3455,12 +3455,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Dải thẻ + số đếm chip của màn Công nợ (tổng · quá hạn · trong hạn · sắp đến hạn · chưa thu) — cùng phạm vi tìm kiếm/chi nhánh/trạng thái với danh sách, không theo nhóm hạn đang mở
+         * Dải thẻ + số đếm chip của màn Công nợ (tổng · quá hạn · trong hạn · sắp đến hạn · chưa thu) - cùng phạm vi tìm kiếm/chi nhánh/trạng thái với danh sách, không theo nhóm hạn đang mở
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3481,10 +3481,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Nơi tôi làm tài xế — lời mời + liên kết (hoặc lịch sử)
+         * Nơi tôi làm tài xế - lời mời + liên kết (hoặc lịch sử)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["DriverSelfController_links"];
         put?: never;
@@ -3508,7 +3508,7 @@ export interface paths {
          * Chấp nhận lời mời làm tài xế
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["DriverSelfController_acceptLink"];
         delete?: never;
@@ -3530,7 +3530,7 @@ export interface paths {
          * Từ chối lời mời làm tài xế
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["DriverSelfController_declineLink"];
         delete?: never;
@@ -3554,7 +3554,7 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["DriverSelfController_leave"];
         delete?: never;
@@ -3574,7 +3574,7 @@ export interface paths {
          * Số lời mời và chuyến đang chờ tôi trả lời
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["DriverSelfController_pendingCounts"];
         put?: never;
@@ -3596,7 +3596,7 @@ export interface paths {
          * Chuyến tôi lái (sắp tới / đã qua, phân trang)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["DriverSelfController_trips"];
         put?: never;
@@ -3618,7 +3618,7 @@ export interface paths {
          * Chi tiết một chuyến tôi được gán (404 nếu không phải của tôi)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["DriverSelfController_trip"];
         put?: never;
@@ -3640,11 +3640,11 @@ export interface paths {
         put?: never;
         /**
          * Nhận chuyến được gán
-         * @description Chỉ trước hạn `respondBy` (ADR 0066). Quá hạn ⇒ 409 `DRIVER_ASSIGNMENT_EXPIRED` — chuyến được trả về bên thuê.
+         * @description Chỉ trước hạn `respondBy` (ADR 0066). Quá hạn ⇒ 409 `DRIVER_ASSIGNMENT_EXPIRED` - chuyến được trả về bên thuê.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["DriverSelfController_acceptTrip"];
         delete?: never;
@@ -3664,11 +3664,11 @@ export interface paths {
         put?: never;
         /**
          * Từ chối chuyến được gán
-         * @description Đơn quay về chưa có tài xế và bên thuê được báo. Chuyến biến khỏi danh sách của tôi. Từ chối sau hạn `respondBy` (ADR 0066) được coi là quá hạn: lượt khép với kết cục `expired`, vẫn trả thành công — kể cả khi hệ thống đã trả lượt về trước đó.
+         * @description Đơn quay về chưa có tài xế và bên thuê được báo. Chuyến biến khỏi danh sách của tôi. Từ chối sau hạn `respondBy` (ADR 0066) được coi là quá hạn: lượt khép với kết cục `expired`, vẫn trả thành công - kể cả khi hệ thống đã trả lượt về trước đó.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["DriverSelfController_declineTrip"];
         delete?: never;
@@ -3688,11 +3688,11 @@ export interface paths {
         put?: never;
         /**
          * Báo sự cố / rút khỏi chuyến đã nhận
-         * @description ADR 0074. Chỉ chuyến của tôi đã nhận, đơn chưa giao xe (`canDrop`). Đơn KHÔNG bị huỷ: về chưa có tài xế, bên thuê được báo khẩn kèm hạn điều phối lại. Vùng theo độ sát giờ nhận: trước `releaseUntil` không phạt; ≥ 12h vi phạm nhẹ; 2–12h cooldown "Đặt ngay" 24h; < 2h cooldown 48h. `other` thiếu ghi chú ⇒ 422 `DRIVER_DROP_NOTE_REQUIRED`; lượt không còn của tôi / chưa nhận ⇒ 409 `DRIVER_ASSIGNMENT_STATE_CONFLICT`.
+         * @description ADR 0074. Chỉ chuyến của tôi đã nhận, đơn chưa giao xe (`canDrop`). Đơn KHÔNG bị huỷ: về chưa có tài xế, bên thuê được báo khẩn kèm hạn điều phối lại. Vùng theo độ sát giờ nhận: trước `releaseUntil` không phạt; ≥ 12h vi phạm nhẹ; 2-12h cooldown "Đặt ngay" 24h; < 2h cooldown 48h. `other` thiếu ghi chú ⇒ 422 `DRIVER_DROP_NOTE_REQUIRED`; lượt không còn của tôi / chưa nhận ⇒ 409 `DRIVER_ASSIGNMENT_STATE_CONFLICT`.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["DriverSelfController_dropTrip"];
         delete?: never;
@@ -3712,11 +3712,11 @@ export interface paths {
         put?: never;
         /**
          * Trả lại chuyến đã nhận
-         * @description Chỉ khi đơn còn `reserved` và trước `releaseUntil` (= clamp(20%·ΔT, 15′, 2h) tính xuôi từ lúc nhận, kẹp bởi giờ nhận — cùng công thức huỷ miễn phí của khách). Đơn KHÔNG bị huỷ: quay về chưa có tài xế, bên thuê được báo khẩn để gán người khác. Lượt khép với kết cục `declined` (có `acceptedAt`). Khác điều kiện ⇒ 409 `CONFLICT`.
+         * @description Chỉ khi đơn còn `reserved` và trước `releaseUntil` (= clamp(20%·ΔT, 15′, 2h) tính xuôi từ lúc nhận, kẹp bởi giờ nhận - cùng công thức huỷ miễn phí của khách). Đơn KHÔNG bị huỷ: quay về chưa có tài xế, bên thuê được báo khẩn để gán người khác. Lượt khép với kết cục `declined` (có `acceptedAt`). Khác điều kiện ⇒ 409 `CONFLICT`.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["DriverSelfController_releaseTrip"];
         delete?: never;
@@ -3736,9 +3736,9 @@ export interface paths {
          * Danh sách tài xế liên kết (lọc trạng thái liên kết, phân trang)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `drivers.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3746,13 +3746,13 @@ export interface paths {
         put?: never;
         /**
          * Mời tài xế theo SĐT tài khoản khách
-         * @description SĐT phải là tài khoản khách đã xác minh — không có thì 404 `DRIVER_ACCOUNT_NOT_FOUND`. Đã có lời mời / liên kết đang mở thì 409 `DRIVER_ALREADY_LINKED`.
+         * @description SĐT phải là tài khoản khách đã xác minh - không có thì 404 `DRIVER_ACCOUNT_NOT_FOUND`. Đã có lời mời / liên kết đang mở thì 409 `DRIVER_ALREADY_LINKED`.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `drivers.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3779,9 +3779,9 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `drivers.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3792,9 +3792,9 @@ export interface paths {
          * Sửa tên gọi / loại / ghi chú của một liên kết tài xế
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `drivers.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3809,12 +3809,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Các chuyến tài xế đã nhận, kết thúc trong tháng — kèm tiền công (phân trang)
+         * Các chuyến tài xế đã nhận, kết thúc trong tháng - kèm tiền công (phân trang)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `drivers.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3835,12 +3835,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Chi tiết một tài xế — tiền công tháng, việc đang treo, độ tin cậy khi được gán, xu hướng 6 tháng
+         * Chi tiết một tài xế - tiền công tháng, việc đang treo, độ tin cậy khi được gán, xu hướng 6 tháng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `drivers.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3866,9 +3866,9 @@ export interface paths {
          * Mở khoá tài xế
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `drivers.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3889,12 +3889,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Tạm khoá tài xế — giữ chuyến đã gán, chặn gán mới
+         * Tạm khoá tài xế - giữ chuyến đã gán, chặn gán mới
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `drivers.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3913,12 +3913,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Tài xế cho bộ chọn gán đơn — kèm cờ bận (theo người, mọi bên thuê) và mức bằng lái
+         * Tài xế cho bộ chọn gán đơn - kèm cờ bận (theo người, mọi bên thuê) và mức bằng lái
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `drivers.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3942,9 +3942,9 @@ export interface paths {
          * Số đếm theo trạng thái liên kết + số cần đối chiếu bằng lái (đã áp bộ lọc chung)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `drivers.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3968,9 +3968,9 @@ export interface paths {
          * Tiền công tài xế/ngày mặc định của gian hàng + giới hạn hợp lệ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `drivers.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -3982,13 +3982,13 @@ export interface paths {
         head?: never;
         /**
          * Đặt / xoá tiền công tài xế/ngày mặc định của gian hàng
-         * @description Chỉ áp cho lượt gán tạo SAU lượt này — lượt đã có giữ số của nó. Ngoài giới hạn chính sách ⇒ 422 `DRIVER_WAGE_OUT_OF_RANGE` (details min/max). XePrime chỉ ghi nhận số thoả thuận; tiền công do chủ xe trả trực tiếp.
+         * @description Chỉ áp cho lượt gán tạo SAU lượt này - lượt đã có giữ số của nó. Ngoài giới hạn chính sách ⇒ 422 `DRIVER_WAGE_OUT_OF_RANGE` (details min/max). XePrime chỉ ghi nhận số thoả thuận; tiền công do chủ xe trả trực tiếp.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `drivers.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4006,9 +4006,9 @@ export interface paths {
          * Cơ cấu doanh thu hoặc chi phí theo danh mục thu/chi
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4029,12 +4029,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Doanh thu theo từng khách trong kỳ — tiền THẬT đã thu. Phần không gắn khách nào nằm ở `/finance/summary` (`unassignedRevenue`)
+         * Doanh thu theo từng khách trong kỳ - tiền THẬT đã thu. Phần không gắn khách nào nằm ở `/finance/summary` (`unassignedRevenue`)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4055,12 +4055,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lãi/lỗ theo từng xe trong kỳ. Chi phí chung chưa gắn xe nằm ở `/finance/summary` (`unassignedCost`) — nó là số của KỲ, không đổi theo trang
+         * Lãi/lỗ theo từng xe trong kỳ. Chi phí chung chưa gắn xe nằm ở `/finance/summary` (`unassignedCost`) - nó là số của KỲ, không đổi theo trang
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4084,9 +4084,9 @@ export interface paths {
          * Danh mục thu/chi (hệ thống + của tenant)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4096,9 +4096,9 @@ export interface paths {
          * Tạo danh mục riêng của tenant
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `receipts.create` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4123,9 +4123,9 @@ export interface paths {
          * Xoá danh mục (chỉ danh mục riêng)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `receipts.create` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4136,9 +4136,9 @@ export interface paths {
          * Đổi tên danh mục (chỉ danh mục riêng)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `receipts.create` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4153,12 +4153,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Chuỗi thu-chi theo ngày/tuần/tháng — đã điền bucket rỗng, gộp theo giờ VN
+         * Chuỗi thu-chi theo ngày/tuần/tháng - đã điền bucket rỗng, gộp theo giờ VN
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4182,9 +4182,9 @@ export interface paths {
          * Ba lớp tiền của một kỳ: kết quả kinh doanh, dòng tiền quỹ, cọc đang giữ + công nợ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4208,9 +4208,9 @@ export interface paths {
          * Hàng đợi "Thiếu KM trả" (phân trang, lọc được theo chi nhánh)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `handovers.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4232,11 +4232,11 @@ export interface paths {
         };
         /**
          * Liveness + readiness (có ping PostgreSQL)
-         * @description Khác mọi endpoint còn lại: response KHÔNG có lớp bọc `{ data }` — trả thẳng kết quả Terminus để uptime monitor đọc `status` mà không phải bóc lớp.
+         * @description Khác mọi endpoint còn lại: response KHÔNG có lớp bọc `{ data }` - trả thẳng kết quả Terminus để uptime monitor đọc `status` mà không phải bóc lớp.
          *
-         *     **Truy cập:** công khai — không cần đăng nhập.
+         *     **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["HealthController_check"];
         put?: never;
@@ -4258,9 +4258,9 @@ export interface paths {
          * Ngày lễ giao với một khoảng ngày
          * @description Lọc theo OVERLAP: một kỳ nghỉ nhiều ngày vắt qua biên khoảng vẫn được trả về. `endDate` là ngày CUỐI CÙNG (inclusive). Chưa cấu hình đồng bộ thì `items` rỗng, không phải lỗi.
          *
-         *     **Truy cập:** công khai — không cần đăng nhập.
+         *     **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["HolidaysController_list"];
         put?: never;
@@ -4280,9 +4280,9 @@ export interface paths {
         };
         /**
          * Xem trước một lời mời (không cần đăng nhập)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          */
         get: operations["InviteAnswersController_preview"];
         put?: never;
@@ -4303,10 +4303,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Đồng ý tham gia gian hàng — cần đăng nhập tài khoản có đúng SĐT được mời (đã xác minh)
+         * Đồng ý tham gia gian hàng - cần đăng nhập tài khoản có đúng SĐT được mời (đã xác minh)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["InviteAnswersController_accept"];
         delete?: never;
@@ -4325,10 +4325,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Từ chối lời mời — cần đăng nhập tài khoản có đúng SĐT được mời
+         * Từ chối lời mời - cần đăng nhập tài khoản có đúng SĐT được mời
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["InviteAnswersController_decline"];
         delete?: never;
@@ -4348,9 +4348,9 @@ export interface paths {
          * Danh sách xe theo việc cần làm (quá hạn / sắp hạn / thiếu KM…)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4371,12 +4371,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Đếm theo từng nhóm việc — độc lập với trang/bộ lọc hiện tại
+         * Đếm theo từng nhóm việc - độc lập với trang/bộ lọc hiện tại
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4400,7 +4400,7 @@ export interface paths {
          * Huy hiệu của tôi: chưa đọc ở chuông và hai hộp thư chat
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["BadgesController_mine"];
         put?: never;
@@ -4419,10 +4419,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Yêu cầu hỗ trợ của tôi — mặc định chỉ case còn mở
+         * Yêu cầu hỗ trợ của tôi - mặc định chỉ case còn mở
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         get: operations["CustomerSupportController_list"];
         put?: never;
@@ -4430,7 +4430,7 @@ export interface paths {
          * Mở yêu cầu hỗ trợ. Tranh chấp phải gắn một chuyến CỦA CHÍNH BẠN và sẽ tạm giữ tiền
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["CustomerSupportController_open"];
         delete?: never;
@@ -4450,7 +4450,7 @@ export interface paths {
          * Chi tiết + dòng thời gian
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         get: operations["CustomerSupportController_detail"];
         put?: never;
@@ -4474,7 +4474,7 @@ export interface paths {
          * Gửi thêm thông tin / bằng chứng dạng văn bản
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["CustomerSupportController_message"];
         delete?: never;
@@ -4496,7 +4496,7 @@ export interface paths {
          * Rút yêu cầu xoá tài khoản (chỉ case account_deletion còn mở do chính bạn mở)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["CustomerSupportController_withdraw"];
         delete?: never;
@@ -4516,9 +4516,9 @@ export interface paths {
          * Danh sách thành viên gian hàng (phân trang, filter)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `members.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4545,9 +4545,9 @@ export interface paths {
          * Gỡ thành viên khỏi gian hàng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `members.remove` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4558,9 +4558,9 @@ export interface paths {
          * Đổi vai trò thành viên
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `members.update_role` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4575,24 +4575,24 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lời mời của gian hàng — mặc định chỉ những lời đang chờ
+         * Lời mời của gian hàng - mặc định chỉ những lời đang chờ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `members.view` (đọc từ DB mỗi request, không nằm trong session).
          */
         get: operations["InvitesController_list"];
         put?: never;
         /**
-         * Tạo lời mời tham gia gian hàng (SĐT + vai trò) — trả link một lần để người mời tự gửi (ADR 0060)
+         * Tạo lời mời tham gia gian hàng (SĐT + vai trò) - trả link một lần để người mời tự gửi (ADR 0060)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `members.invite` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4613,12 +4613,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Thu hồi một lời mời đang chờ — link đã gửi hết giá trị ngay
+         * Thu hồi một lời mời đang chờ - link đã gửi hết giá trị ngay
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `members.invite` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4640,7 +4640,7 @@ export interface paths {
          * Danh sách thông báo của tôi (phân trang, lọc chưa đọc)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["NotificationController_list"];
         put?: never;
@@ -4668,7 +4668,7 @@ export interface paths {
          * Đánh dấu một thông báo đã đọc
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         patch: operations["NotificationController_markRead"];
         trace?: never;
@@ -4686,14 +4686,14 @@ export interface paths {
          * Đăng ký thiết bị nhận thông báo đẩy (idempotent)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         post: operations["NotificationController_registerDevice"];
         /**
          * Ngừng nhận thông báo đẩy trên thiết bị này
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         delete: operations["NotificationController_unregisterDevice"];
         options?: never;
@@ -4714,7 +4714,7 @@ export interface paths {
          * Đánh dấu tất cả đã đọc
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         post: operations["NotificationController_markAllRead"];
         delete?: never;
@@ -4734,7 +4734,7 @@ export interface paths {
          * Số thông báo chưa đọc (cho badge chuông)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["NotificationController_unreadCount"];
         put?: never;
@@ -4755,10 +4755,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * IPN MoMo — xác minh chữ ký, ghi kết quả, áp tiền vào hoá đơn/giữ chỗ
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * IPN MoMo - xác minh chữ ký, ghi kết quả, áp tiền vào hoá đơn/giữ chỗ
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         post: operations["PaymentGatewayCallbackController_momoIpn"];
         delete?: never;
@@ -4775,10 +4775,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * IPN VNPAY — xác minh chữ ký, ghi kết quả, trả RspCode theo tài liệu
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * IPN VNPAY - xác minh chữ ký, ghi kết quả, trả RspCode theo tài liệu
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PaymentGatewayCallbackController_vnpayIpn"];
         put?: never;
@@ -4802,9 +4802,9 @@ export interface paths {
          * Huỷ/hoàn một lần thu (trừ lại đã trả)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `payments.void` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4824,9 +4824,9 @@ export interface paths {
         };
         /**
          * Chi tiết một địa điểm đã chọn (toạ độ, địa chỉ, tỉnh gợi ý)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PlacesController_detail"];
         put?: never;
@@ -4846,9 +4846,9 @@ export interface paths {
         };
         /**
          * Ảnh bản đồ tĩnh (PNG) của một địa điểm vừa chọn
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PlacesController_map"];
         put?: never;
@@ -4868,9 +4868,9 @@ export interface paths {
         };
         /**
          * Tra địa chỉ chữ từ toạ độ ghim
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PlacesController_reverse"];
         put?: never;
@@ -4890,9 +4890,9 @@ export interface paths {
         };
         /**
          * Gợi ý địa điểm theo chữ đang gõ (giới hạn trong Việt Nam)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PlacesController_search"];
         put?: never;
@@ -4914,9 +4914,9 @@ export interface paths {
          * Tra cứu xuyên realm: mọi tài khoản trùng một SĐT/email, mỗi dòng ghi rõ realm
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.customers.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4940,9 +4940,9 @@ export interface paths {
          * Cấu hình app Partner (kèm hotline/Zalo in trong email)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.app_config.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4953,12 +4953,12 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Đổi cấu hình app Partner — audit, version +1
+         * Đổi cấu hình app Partner - audit, version +1
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.app_config.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -4976,9 +4976,9 @@ export interface paths {
          * Hàng đợi phiếu duyệt (phân trang, lọc theo trạng thái/loại)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.approvals.review` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5002,9 +5002,9 @@ export interface paths {
          * Chi tiết phiếu duyệt (hồ sơ snapshot + lịch sử)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.approvals.review` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5030,9 +5030,9 @@ export interface paths {
          * Duyệt phiếu (gian hàng → hoạt động)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.approvals.review` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5056,9 +5056,9 @@ export interface paths {
          * Từ chối phiếu (cần lý do)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.approvals.review` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5082,9 +5082,9 @@ export interface paths {
          * Yêu cầu bổ sung (cần lý do)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.approvals.review` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5106,9 +5106,9 @@ export interface paths {
          * Danh sách nhật ký (phân trang, lọc scope/action/đối tượng/thời gian)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.audit.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5132,9 +5132,9 @@ export interface paths {
          * Chi tiết một dòng nhật ký (kèm snapshot before/after)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.audit.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5155,12 +5155,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Hàng đợi giao dịch tiền vào — mặc định chỉ những khoản CHƯA KHỚP
+         * Hàng đợi giao dịch tiền vào - mặc định chỉ những khoản CHƯA KHỚP
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5184,9 +5184,9 @@ export interface paths {
          * Chi tiết một giao dịch: payload gốc + hoá đơn gợi ý để khớp tay
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5209,12 +5209,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Bỏ qua một giao dịch không thuộc luồng nào — giữ dòng, ghi lý do
+         * Bỏ qua một giao dịch không thuộc luồng nào - giữ dòng, ghi lý do
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5235,12 +5235,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Khớp TAY vào một hoá đơn gói — cùng đường tiền với webhook, kèm audit và ghi chú
+         * Khớp TAY vào một hoá đơn gói - cùng đường tiền với webhook, kèm audit và ghi chú
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5259,12 +5259,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Toàn bộ banner của một vị trí (kèm cờ đang-hiển-thị theo lịch) — mặc định đầu trang
+         * Toàn bộ banner của một vị trí (kèm cờ đang-hiển-thị theo lịch) - mặc định đầu trang
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.banners.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5274,9 +5274,9 @@ export interface paths {
          * Tạo banner
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.banners.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5298,12 +5298,12 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Xoá banner (ảnh vẫn còn trên R2 — tạo lại được từ URL cũ)
+         * Xoá banner (ảnh vẫn còn trên R2 - tạo lại được từ URL cũ)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.banners.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5314,9 +5314,9 @@ export interface paths {
          * Sửa banner (ảnh/lịch/thứ tự/bật-tắt)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.banners.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5336,9 +5336,9 @@ export interface paths {
          * Presign upload ảnh banner lên R2 (prefix banners/ dựng server-side)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.banners.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5362,9 +5362,9 @@ export interface paths {
          * Sắp lại thứ tự hiển thị (gửi trọn danh sách id)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.banners.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5386,9 +5386,9 @@ export interface paths {
          * Danh sách đơn thuê toàn hệ thống (phân trang, lọc, tìm kiếm)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5412,9 +5412,9 @@ export interface paths {
          * Chi tiết một đơn thuê (SĐT khách ở dạng đã che)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5440,9 +5440,9 @@ export interface paths {
          * Xem SĐT khách đầy đủ (ghi audit từng lần xem)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.bookings.view`, `platform.customers.view_pii` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5464,9 +5464,9 @@ export interface paths {
          * Danh mục đầy đủ, kèm mục đã tắt và số xe đang dùng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5476,9 +5476,9 @@ export interface paths {
          * Thêm mục danh mục
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5503,9 +5503,9 @@ export interface paths {
          * Xoá mục chưa có xe nào dùng (đã có xe thì tắt, không xoá)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5516,9 +5516,9 @@ export interface paths {
          * Sửa nhãn / mô tả / ảnh / thứ tự / bật-tắt (không đổi mã)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5536,9 +5536,9 @@ export interface paths {
          * Mẫu xe của một loại phương tiện, kèm mẫu đã tắt và số xe đang gắn
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5548,9 +5548,9 @@ export interface paths {
          * Thêm mẫu xe vào danh mục (khôi phục nếu đúng mẫu đó từng bị xoá)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5575,9 +5575,9 @@ export interface paths {
          * Xoá mẫu xe chưa có xe nào gắn (đã có xe thì tắt, không xoá)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5588,9 +5588,9 @@ export interface paths {
          * Sửa mẫu xe (không đổi hãng và loại phương tiện)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5608,9 +5608,9 @@ export interface paths {
          * Số mẫu xe theo hãng của một loại phương tiện (kèm số mẫu thiếu thông số)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5636,9 +5636,9 @@ export interface paths {
          * Presign upload ảnh danh mục lên R2 (prefix catalog/ dựng server-side)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5662,9 +5662,9 @@ export interface paths {
          * Sắp lại thứ tự hiển thị của một chiều danh mục
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5686,9 +5686,9 @@ export interface paths {
          * Danh sách khách thuê (phân trang, tra theo tên/SĐT/email)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.customers.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5712,9 +5712,9 @@ export interface paths {
          * Chi tiết một khách (kèm 10 yêu cầu thuê gần nhất, PII đã che)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.customers.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5740,9 +5740,9 @@ export interface paths {
          * Xem SĐT/email khách đầy đủ (ghi audit từng lần xem)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.customers.view`, `platform.customers.view_pii` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5764,9 +5764,9 @@ export interface paths {
          * KPI tháng so cùng kỳ (đơn, GMV, khách/đối tác mới, doanh thu nền tảng), xu hướng 30 ngày, phễu kích hoạt đối tác
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.dashboard.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5790,9 +5790,9 @@ export interface paths {
          * Tổng quan nền tảng: gian hàng / listing / đơn thuê / chờ duyệt
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.dashboard.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5813,12 +5813,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lịch sử nộp bằng lái của một khách — mới nhất trước
+         * Lịch sử nộp bằng lái của một khách - mới nhất trước
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.driver_licences.review` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5842,9 +5842,9 @@ export interface paths {
          * Chi tiết một lượt nộp
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.driver_licences.review` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5865,12 +5865,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Mở ảnh bằng lái — URL sống ngắn, ghi audit mỗi lần mở
+         * Mở ảnh bằng lái - URL sống ngắn, ghi audit mỗi lần mở
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.driver_licences.review` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5891,12 +5891,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Mọi phiên bản chính sách phí — mới nhất trước
+         * Mọi phiên bản chính sách phí - mới nhất trước
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.fee_policies.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5906,9 +5906,9 @@ export interface paths {
          * Tạo bản NHÁP mới (số phiên bản kế tiếp)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.fee_policies.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5930,9 +5930,9 @@ export interface paths {
          * Một phiên bản
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.fee_policies.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5943,9 +5943,9 @@ export interface paths {
          * Bỏ bản nháp
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.fee_policies.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5953,12 +5953,12 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Sửa bản nháp — bản đã hiệu lực là bất biến
+         * Sửa bản nháp - bản đã hiệu lực là bất biến
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.fee_policies.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5975,12 +5975,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Kích hoạt bản nháp — lưu trữ bản đang hiệu lực trong cùng transaction, không hồi tố
+         * Kích hoạt bản nháp - lưu trữ bản đang hiệu lực trong cùng transaction, không hồi tố
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.fee_policies.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -5999,12 +5999,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Khách mất đơn cần chăm sóc — mới kết thúc trước
+         * Khách mất đơn cần chăm sóc - mới kết thúc trước
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6034,9 +6034,9 @@ export interface paths {
          * Ghi trạng thái / ghi chú / người phụ trách chăm sóc (ghi audit)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.bookings.view`, `platform.sales_followups.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6056,9 +6056,9 @@ export interface paths {
          * Xem SĐT/email khách đầy đủ để gọi lại (ghi audit từng lần xem)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.bookings.view`, `platform.customers.view_pii` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6080,9 +6080,9 @@ export interface paths {
          * Nhân sự giao được làm phụ trách (có quyền chăm sóc khách)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.bookings.view`, `platform.sales_followups.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6106,9 +6106,9 @@ export interface paths {
          * Danh mục sản phẩm bảo hiểm (cả sản phẩm đang tắt)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.insurance.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6135,14 +6135,14 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Sửa một sản phẩm bảo hiểm — tên, quyền lợi, khấu trừ, mẫu URL GCN, bật/tắt
-         * @description Biểu phí NGÀY không sửa ở đây — nó có phiên bản ở chính sách phí. Hợp đồng đã bán giữ snapshot riêng, nên sửa danh mục không viết lại quyền lợi đã hứa. Có audit.
+         * Sửa một sản phẩm bảo hiểm - tên, quyền lợi, khấu trừ, mẫu URL GCN, bật/tắt
+         * @description Biểu phí NGÀY không sửa ở đây - nó có phiên bản ở chính sách phí. Hợp đồng đã bán giữ snapshot riêng, nên sửa danh mục không viết lại quyền lợi đã hứa. Có audit.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.insurance.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6160,9 +6160,9 @@ export interface paths {
          * Toàn bộ danh mục tỉnh/thành kèm số chi nhánh, số xe và số xe đang công khai
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.locations.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6172,9 +6172,9 @@ export interface paths {
          * Thêm đơn vị hành chính cấp tỉnh mới (mã bất biến sau khi tạo)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.locations.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6202,9 +6202,9 @@ export interface paths {
          * Đổi metadata hiển thị / bật-tắt chọn mới / ẩn-hiện công khai
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.locations.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6219,12 +6219,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Hàng đợi khoản giữ chỗ — lọc trạng thái, hoặc chỉ hold chưa chốt kết cục
+         * Hàng đợi khoản giữ chỗ - lọc trạng thái, hoặc chỉ hold chưa chốt kết cục
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6247,12 +6247,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Chốt tay kết cục một hold đang chờ (thường sau tranh chấp) — bắt buộc lý do, có audit
+         * Chốt tay kết cục một hold đang chờ (thường sau tranh chấp) - bắt buộc lý do, có audit
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6271,14 +6271,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Hàng đợi hợp đồng bảo hiểm — mặc định chỉ các hợp đồng ĐANG LỖI
+         * Hàng đợi hợp đồng bảo hiểm - mặc định chỉ các hợp đồng ĐANG LỖI
          * @description Phí của hợp đồng chưa quyết toán nằm ở vế GIỮ HỘ của đối soát ba vế: mỗi dòng lỗi là một khoản tiền khách đã trả mà chưa có chứng nhận nào được cấp. Lọc theo trạng thái (`any` = tất cả), loại sản phẩm, đơn, hoặc tìm theo mã đơn / số GCN.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6299,12 +6299,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Chi tiết một hợp đồng — kèm yêu cầu/phản hồi nguyên trạng với đối tác
+         * Chi tiết một hợp đồng - kèm yêu cầu/phản hồi nguyên trạng với đối tác
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6328,13 +6328,13 @@ export interface paths {
         put?: never;
         /**
          * Thử phát hành lại
-         * @description Chỉ đặt lại mốc để worker nhặt ở vòng kế tiếp (≤ 60 giây) — KHÔNG gọi đối tác ngay trong request, vì một đối tác chậm sẽ treo tab của người trực. Môi trường chưa cắm đối tác trả 409 `INSURANCE_PARTNER_NOT_CONFIGURED`.
+         * @description Chỉ đặt lại mốc để worker nhặt ở vòng kế tiếp (≤ 60 giây) - KHÔNG gọi đối tác ngay trong request, vì một đối tác chậm sẽ treo tab của người trực. Môi trường chưa cắm đối tác trả 409 `INSURANCE_PARTNER_NOT_CONFIGURED`.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6355,12 +6355,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Thu hồi hợp đồng — bắt buộc lý do, có audit
+         * Thu hồi hợp đồng - bắt buộc lý do, có audit
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6386,9 +6386,9 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6408,13 +6408,13 @@ export interface paths {
         };
         /**
          * Đối soát BA VẾ một ngày (giờ VN)
-         * @description Số dư ngân hàng cuối ngày = tiền CỦA NỀN TẢNG + tiền GIỮ HỘ + chênh lệch (ADR 0025 điều 6). Chưa nhập số dư ⇒ `bankBalanceEod` và `variance` trả `null` — chênh lệch CHƯA TÍNH ĐƯỢC, không phải bằng 0.
+         * @description Số dư ngân hàng cuối ngày = tiền CỦA NỀN TẢNG + tiền GIỮ HỘ + chênh lệch (ADR 0025 điều 6). Chưa nhập số dư ⇒ `bankBalanceEod` và `variance` trả `null` - chênh lệch CHƯA TÍNH ĐƯỢC, không phải bằng 0.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6435,12 +6435,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Hàng đợi chuyển trả khoản giữ chỗ — mặc định chỉ CHỜ CHUYỂN
+         * Hàng đợi chuyển trả khoản giữ chỗ - mặc định chỉ CHỜ CHUYỂN
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6463,12 +6463,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Đã chuyển trả — ghi mã giao dịch ngân hàng, báo khách
+         * Đã chuyển trả - ghi mã giao dịch ngân hàng, báo khách
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6489,12 +6489,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Từ chối hoàn — bắt buộc lý do, có audit
+         * Từ chối hoàn - bắt buộc lý do, có audit
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6513,14 +6513,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Số đếm các hàng đợi tiền — dải thẻ đầu màn Tài chính
+         * Số đếm các hàng đợi tiền - dải thẻ đầu màn Tài chính
          * @description Trạng thái HIỆN TẠI của sáu hàng đợi (tiền vào chưa khớp, giữ chỗ chờ chốt, hoàn chờ chuyển, rút tiền, bảo hiểm lỗi, thuế kỳ này chờ kê khai). Mỗi nhóm đếm đúng tập mà danh sách tương ứng hiện khi không lọc.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6546,9 +6546,9 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6572,13 +6572,13 @@ export interface paths {
         put?: never;
         /**
          * Đánh dấu CẢ KỲ đã kê khai (`accrued → declared`)
-         * @description Chạy lại chỉ đụng dòng còn `accrued` — bấm hai lần không đẩy sang `remitted`.
+         * @description Chạy lại chỉ đụng dòng còn `accrued` - bấm hai lần không đẩy sang `remitted`.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6604,9 +6604,9 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6625,14 +6625,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Từng dòng nghĩa vụ — phân trang server-side
+         * Từng dòng nghĩa vụ - phân trang server-side
          * @description `amount` ÂM là bút toán ĐẢO; nó nằm cùng kỳ với dòng gốc.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6655,14 +6655,14 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * ĐẢO một dòng — bắt buộc lý do, có audit
-         * @description Ghi một dòng ÂM trỏ về dòng gốc, KHÔNG sửa `amount` của dòng cũ (sổ chỉ-ghi-thêm). Dòng `remitted` không đảo được — tiền đã nộp thì sửa bằng tờ khai điều chỉnh.
+         * ĐẢO một dòng - bắt buộc lý do, có audit
+         * @description Ghi một dòng ÂM trỏ về dòng gốc, KHÔNG sửa `amount` của dòng cũ (sổ chỉ-ghi-thêm). Dòng `remitted` không đảo được - tiền đã nộp thì sửa bằng tờ khai điều chỉnh.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6681,14 +6681,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Tờ khai một kỳ — tổng, chia theo loại chủ thể, chia theo gian hàng
-         * @description Chia theo `entityType` vì cá nhân / hộ kinh doanh / doanh nghiệp có nghĩa vụ khác nhau. Nhóm `unknown` là gian hàng CHƯA khai hồ sơ người bán — nó hiện ra thay vì bị gộp vào `individual`, vì gộp là đoán hộ họ một nghĩa vụ pháp lý.
+         * Tờ khai một kỳ - tổng, chia theo loại chủ thể, chia theo gian hàng
+         * @description Chia theo `entityType` vì cá nhân / hộ kinh doanh / doanh nghiệp có nghĩa vụ khác nhau. Nhóm `unknown` là gian hàng CHƯA khai hồ sơ người bán - nó hiện ra thay vì bị gộp vào `individual`, vì gộp là đoán hộ họ một nghĩa vụ pháp lý.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6709,14 +6709,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Hàng đợi yêu cầu rút — mặc định VIỆC CẦN LÀM, cũ nhất trước
+         * Hàng đợi yêu cầu rút - mặc định VIỆC CẦN LÀM, cũ nhất trước
          * @description Không lọc thì chỉ hiện `pending` + `approved` (những lệnh còn phải làm gì đó). `overdue=true` lọc riêng các lệnh đã quá hạn cam kết.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6739,14 +6739,14 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Duyệt — bắt đầu đếm hạn cam kết
+         * Duyệt - bắt đầu đếm hạn cam kết
          * @description Tiền VẪN bị khoá, chưa rời ngân hàng. Duyệt và chi là hai việc, đôi khi hai người.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6767,14 +6767,14 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Đã chuyển khoản — ghi bút toán âm
+         * Đã chuyển khoản - ghi bút toán âm
          * @description Bắt buộc có mã giao dịch ngân hàng: đây là đầu duy nhất của đối soát chiều RA, và DB cũng chặn một lệnh `paid` không có bằng chứng. `rowVersion` chặn hai admin cùng bấm.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6795,14 +6795,14 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Từ chối — nhả khoá, tiền về số dư khả dụng
+         * Từ chối - nhả khoá, tiền về số dư khả dụng
          * @description Không sinh bút toán nào: tiền chưa bao giờ rời ví, nó chỉ bị treo.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6823,14 +6823,14 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Chuyển hụt / sai tài khoản — đảo bút toán đã chi
+         * Chuyển hụt / sai tài khoản - đảo bút toán đã chi
          * @description Tiền quay lại ví bằng một dòng MỚI trỏ về dòng cũ, không phải bằng cách sửa dòng cũ (ADR 0023 điều 4). Người đọc sổ thấy cả hai sự kiện.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6849,12 +6849,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Nhật ký hoạt động của đối tác — không kèm IP/thiết bị (chỉ đọc)
+         * Nhật ký hoạt động của đối tác - không kèm IP/thiết bị (chỉ đọc)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.view`, `platform.audit.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6875,12 +6875,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Gói & phí của gian hàng gói — gói, hạn mức, hoá đơn (chỉ đọc)
+         * Gói & phí của gian hàng gói - gói, hạn mức, hoá đơn (chỉ đọc)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.view`, `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6901,12 +6901,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Yêu cầu thuê của đối tác — khách đã che (chỉ đọc)
+         * Yêu cầu thuê của đối tác - khách đã che (chỉ đọc)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.view`, `platform.bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6927,12 +6927,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Đơn thuê của đối tác — khách đã che; tổng tiền chỉ khi có platform.money.manage
+         * Đơn thuê của đối tác - khách đã che; tổng tiền chỉ khi có platform.money.manage
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.view`, `platform.bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6956,9 +6956,9 @@ export interface paths {
          * Số đơn theo nhóm trạng thái + đơn sắp nhận xe + yêu cầu chờ duyệt
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.view`, `platform.bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -6979,12 +6979,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Phí dịch vụ & số liệu theo tháng của chủ xe cá nhân — số tiền theo platform.money.manage
+         * Phí dịch vụ & số liệu theo tháng của chủ xe cá nhân - số tiền theo platform.money.manage
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7005,12 +7005,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Chi tiết đối tác — đầu drawer + tab Tổng quan (chỉ đọc)
+         * Chi tiết đối tác - đầu drawer + tab Tổng quan (chỉ đọc)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7031,12 +7031,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Hồ sơ đối tác — PII đã che; giấy tờ pháp lý chỉ khi có platform.sellers.verify
+         * Hồ sơ đối tác - PII đã che; giấy tờ pháp lý chỉ khi có platform.sellers.verify
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7060,9 +7060,9 @@ export interface paths {
          * Các phiên hỗ trợ đã mở cho đối tác (chỉ đọc)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.view`, `platform.audit.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7083,12 +7083,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Xe của đối tác — phân trang, lọc, sắp xếp, kèm cảnh báo (chỉ đọc)
+         * Xe của đối tác - phân trang, lọc, sắp xếp, kèm cảnh báo (chỉ đọc)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.view`, `platform.vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7109,12 +7109,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lượt thanh toán qua cổng — mặc định chỉ những lượt CẦN NGƯỜI XỬ LÝ, cũ nhất trước
+         * Lượt thanh toán qua cổng - mặc định chỉ những lượt CẦN NGƯỜI XỬ LÝ, cũ nhất trước
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7138,9 +7138,9 @@ export interface paths {
          * Chi tiết một lượt: kết quả cổng (đã bỏ chữ ký) + tình trạng hiện tại của đích
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7163,12 +7163,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Ghi nhận TAY một lượt cổng đã thu mà máy không tự áp (vd kết quả tới sau khi đã đóng) — cùng đường tiền, có audit
+         * Ghi nhận TAY một lượt cổng đã thu mà máy không tự áp (vd kết quả tới sau khi đã đóng) - cùng đường tiền, có audit
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7189,12 +7189,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Hỏi lại cổng ngay và thử áp tiền nếu cổng đã thu — trả kèm kết quả của lượt hỏi
+         * Hỏi lại cổng ngay và thử áp tiền nếu cổng đã thu - trả kèm kết quả của lượt hỏi
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7215,12 +7215,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Đóng một lượt ở hàng đợi sau khi đã xử lý bên ngoài (vd hoàn tay) — kèm ghi chú và audit
+         * Đóng một lượt ở hàng đợi sau khi đã xử lý bên ngoài (vd hoàn tay) - kèm ghi chú và audit
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7242,9 +7242,9 @@ export interface paths {
          * Danh sách mẫu email hướng dẫn gói (mẫu đang bật đứng đầu)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.app_config.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7254,9 +7254,9 @@ export interface paths {
          * Tạo mẫu mới (chưa bật)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.app_config.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7278,9 +7278,9 @@ export interface paths {
          * Chi tiết một mẫu (kèm thân HTML vi/en)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.app_config.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7288,12 +7288,12 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Xoá mềm mẫu — mẫu đang bật không xoá được
+         * Xoá mềm mẫu - mẫu đang bật không xoá được
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.app_config.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7301,12 +7301,12 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Sửa mẫu — version +1; `expectedVersion` lệch ⇒ 409
+         * Sửa mẫu - version +1; `expectedVersion` lệch ⇒ 409
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.app_config.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7323,12 +7323,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Bật mẫu này (mẫu đang bật trước đó tự tắt — đúng một mẫu bật)
+         * Bật mẫu này (mẫu đang bật trước đó tự tắt - đúng một mẫu bật)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.app_config.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7352,9 +7352,9 @@ export interface paths {
          * Nhân bản một mẫu thành mẫu mới (chưa bật)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.app_config.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7375,12 +7375,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Dựng tiêu đề + HTML bằng dữ liệu mẫu (có thể gửi bản nháp chưa lưu) — không ghi gì
+         * Dựng tiêu đề + HTML bằng dữ liệu mẫu (có thể gửi bản nháp chưa lưu) - không ghi gì
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.app_config.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7404,9 +7404,9 @@ export interface paths {
          * Xếp hàng thư thử tới CHÍNH email của admin đang đăng nhập
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.app_config.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7428,9 +7428,9 @@ export interface paths {
          * Danh sách gói (mặc định chỉ gói đang bán; status=all để xem hết)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7440,9 +7440,9 @@ export interface paths {
          * Tạo gói mới
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7464,12 +7464,12 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Xoá HẲN gói chưa từng được dùng (bản nháp) — gói đã có thuê bao/hoá đơn trả PLAN_IN_USE, hãy ngừng bán
+         * Xoá HẲN gói chưa từng được dùng (bản nháp) - gói đã có thuê bao/hoá đơn trả PLAN_IN_USE, hãy ngừng bán
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7477,12 +7477,12 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Sửa gói (giá mới chỉ áp cho lượt gán sau — price snapshot)
+         * Sửa gói (giá mới chỉ áp cho lượt gán sau - price snapshot)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7502,9 +7502,9 @@ export interface paths {
          * Mở bán lại gói đã ngừng bán (chỉ đổi danh mục, không đụng thuê bao)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7528,9 +7528,9 @@ export interface paths {
          * Ngừng bán gói (thuê bao đã gán giữ nguyên hiệu lực)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7549,12 +7549,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Danh sách mã khuyến mãi — lọc/tìm/sắp/phân trang ở SERVER, kèm thẻ thống kê
+         * Danh sách mã khuyến mãi - lọc/tìm/sắp/phân trang ở SERVER, kèm thẻ thống kê
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7564,9 +7564,9 @@ export interface paths {
          * Tạo mã khuyến mãi
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7588,9 +7588,9 @@ export interface paths {
          * Chi tiết một mã
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7598,12 +7598,12 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Xoá MỀM — mã đã dùng vẫn giải thích được giá của đơn cũ (RESTRICT ở DB)
+         * Xoá MỀM - mã đã dùng vẫn giải thích được giá của đơn cũ (RESTRICT ở DB)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7611,12 +7611,12 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Sửa mã — mã đã phát sinh lượt thì mức giảm/điều kiện/phạm vi bị khoá (PROMO_CODE_LOCKED)
+         * Sửa mã - mã đã phát sinh lượt thì mức giảm/điều kiện/phạm vi bị khoá (PROMO_CODE_LOCKED)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7633,12 +7633,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Nhân bản — mã mới TẮT sẵn để soát lại số trước khi chạy
+         * Nhân bản - mã mới TẮT sẵn để soát lại số trước khi chạy
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7660,9 +7660,9 @@ export interface paths {
          * Lượt sử dụng của một mã (tên khách đã che)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7685,12 +7685,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Bật/tắt — thao tác duy nhất còn dùng được khi mã đã có lượt dùng
+         * Bật/tắt - thao tác duy nhất còn dùng được khi mã đã có lượt dùng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7709,12 +7709,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Hàng đợi hồ sơ — mặc định CHỜ XÁC MINH, cũ nhất trước. PII đã che.
+         * Hàng đợi hồ sơ - mặc định CHỜ XÁC MINH, cũ nhất trước. PII đã che.
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.sellers.verify` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7735,12 +7735,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Chi tiết một hồ sơ — PII đầy đủ để đối chiếu giấy tờ
+         * Chi tiết một hồ sơ - PII đầy đủ để đối chiếu giấy tờ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.sellers.verify` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7766,9 +7766,9 @@ export interface paths {
          * Từ chối hồ sơ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.sellers.verify` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7789,12 +7789,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Yêu cầu bổ sung — người bán sửa rồi gửi lại
+         * Yêu cầu bổ sung - người bán sửa rồi gửi lại
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.sellers.verify` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7818,9 +7818,9 @@ export interface paths {
          * Xác minh đạt
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.sellers.verify` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7842,9 +7842,9 @@ export interface paths {
          * Danh sách nhân sự nền tảng (phân trang, lọc vai trò, tìm kiếm)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.staff.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7854,9 +7854,9 @@ export interface paths {
          * Thêm nhân sự theo email tài khoản đã có
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.staff.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7881,9 +7881,9 @@ export interface paths {
          * Gỡ nhân sự khỏi nền tảng (status → removed)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.staff.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7894,9 +7894,9 @@ export interface paths {
          * Đổi vai trò nhân sự
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.staff.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7911,12 +7911,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Hàng đợi toàn sàn — ưu tiên cao trước, rồi cũ nhất trước
+         * Hàng đợi toàn sàn - ưu tiên cao trước, rồi cũ nhất trước
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.support.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7940,9 +7940,9 @@ export interface paths {
          * Chi tiết + dòng thời gian ĐẦY ĐỦ (gồm ghi chú nội bộ)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.support.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7968,9 +7968,9 @@ export interface paths {
          * Phân công + đặt mức ưu tiên (nhận việc thì case sang đang xử lý)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.support.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -7994,9 +7994,9 @@ export interface paths {
          * Trả lời; `internal=true` là ghi chú nội bộ hai bên KHÔNG thấy
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.support.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8020,9 +8020,9 @@ export interface paths {
          * Kết luận. Với tranh chấp: sau bước này mới chốt được kết cục khoản giữ chỗ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.support.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8046,9 +8046,9 @@ export interface paths {
          * Đổi trạng thái theo máy trạng thái của case
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.support.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8072,9 +8072,9 @@ export interface paths {
          * Mở phiên hỗ trợ cho một gian hàng (có lý do, hết hạn sau 45 phút)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenant_support.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8096,9 +8096,9 @@ export interface paths {
          * Đọc phiên hỗ trợ đang mở của chính mình (403 khi hết hạn/đã thoát)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenant_support.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8124,9 +8124,9 @@ export interface paths {
          * Thoát phiên hỗ trợ (idempotent)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenant_support.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8145,12 +8145,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Danh sách đối tác theo loại (gian hàng gói / chủ xe cá nhân) — phân trang, lọc, sắp xếp
+         * Danh sách đối tác theo loại (gian hàng gói / chủ xe cá nhân) - phân trang, lọc, sắp xếp
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8174,9 +8174,9 @@ export interface paths {
          * Chi tiết một gian hàng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8202,9 +8202,9 @@ export interface paths {
          * Khoá gian hàng (đang hoạt động → bị khoá)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8228,9 +8228,9 @@ export interface paths {
          * Mở khoá gian hàng (bị khoá → hoạt động)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8252,9 +8252,9 @@ export interface paths {
          * Lịch sử thuê bao của gian hàng (mới nhất trước)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8264,9 +8264,9 @@ export interface paths {
          * Gán / gia hạn gói (chu kỳ mới nối đuôi gói còn hạn). `price` bỏ trống = giá niêm yết của kỳ hạn; BẮT BUỘC với bậc salesOnly (ADR 0041 điều 5)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8294,9 +8294,9 @@ export interface paths {
          * Sửa một kỳ còn hạn: giá (chỉ kỳ admin gán), ngày kết thúc (kỳ xếp sau dời theo), trần số xe, ghi chú (ADR 0080)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8313,12 +8313,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Huỷ sớm một kỳ còn hạn — các kỳ xếp sau trong chuỗi bị huỷ kèm (ADR 0080)
+         * Huỷ sớm một kỳ còn hạn - các kỳ xếp sau trong chuỗi bị huỷ kèm (ADR 0080)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8340,9 +8340,9 @@ export interface paths {
          * Hàng đợi đơn thuê: sắp giao xe (kể cả quá giờ) / đang thuê
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8366,9 +8366,9 @@ export interface paths {
          * Hàng đợi yêu cầu thuê: chờ chủ xe duyệt / chờ khách giữ chỗ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8394,9 +8394,9 @@ export interface paths {
          * Nhắc tay chủ xe về một yêu cầu đang chờ duyệt (thông báo + audit, có cooldown)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8418,9 +8418,9 @@ export interface paths {
          * Số dòng + số khẩn của bốn hàng đợi vận hành, và lịch giao/trả hôm nay
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.bookings.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8444,9 +8444,9 @@ export interface paths {
          * Hàng đợi duyệt xe (lọc loại xe/nguồn đăng/trạng thái/tìm/ngày gửi, kèm số theo tab)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.approvals.review` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8470,9 +8470,9 @@ export interface paths {
          * Chi tiết phiếu duyệt xe (ảnh chụp lúc gửi, danh mục kiểm tra, lịch sử)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.approvals.review` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8498,9 +8498,9 @@ export interface paths {
          * Phê duyệt xe lên chợ (đủ danh mục kiểm tra thủ công)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.approvals.review` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8523,9 +8523,9 @@ export interface paths {
          * Đánh dấu / bỏ đánh dấu một mục kiểm tra thủ công (phiếu đang chờ)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.approvals.review` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8549,9 +8549,9 @@ export interface paths {
          * Lưu ghi chú nội bộ (không gửi chủ xe; khoá lạc quan theo updatedAt)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.approvals.review` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8576,9 +8576,9 @@ export interface paths {
          * Từ chối xe (lý do gửi chủ xe là bắt buộc)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.approvals.review` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8602,9 +8602,9 @@ export interface paths {
          * Yêu cầu chủ xe bổ sung (lý do là bắt buộc)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.approvals.review` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8626,9 +8626,9 @@ export interface paths {
          * Danh sách xe toàn hệ thống (phân trang, lọc, tìm kiếm)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8652,9 +8652,9 @@ export interface paths {
          * Chi tiết một xe (kèm gian hàng chủ quản, số đơn, số đánh giá)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8680,9 +8680,9 @@ export interface paths {
          * Ẩn xe vi phạm khỏi Marketplace (đang hiển thị → đã ẩn)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.vehicles.view`, `platform.vehicles.moderate` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8706,9 +8706,9 @@ export interface paths {
          * Bỏ ẩn xe (đã ẩn → hiển thị lại trên Marketplace)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.vehicles.view`, `platform.vehicles.moderate` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -8728,9 +8728,9 @@ export interface paths {
         };
         /**
          * Danh mục tỉnh/thành đang mở cho đăng ký & tạo chi nhánh
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["ProvincesController_list"];
         put?: never;
@@ -8750,9 +8750,9 @@ export interface paths {
         };
         /**
          * Xã/phường/đặc khu của một tỉnh (có tìm kiếm bỏ dấu)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["WardsController_list"];
         put?: never;
@@ -8772,9 +8772,9 @@ export interface paths {
         };
         /**
          * Toàn bộ banner đang hiển thị của một vị trí trang chủ (mặc định dải banner đầu trang)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicBannersController_list"];
         put?: never;
@@ -8798,7 +8798,7 @@ export interface paths {
          * Khách (đã đăng nhập, SĐT đã xác minh) gửi yêu cầu thuê một xe trên Marketplace
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["PublicBookingRequestsController_submit"];
         delete?: never;
@@ -8816,9 +8816,9 @@ export interface paths {
         };
         /**
          * Ngày/giờ xe đã bận trong một cửa sổ, để tô lịch chọn thời gian thuê
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicBookingRequestsController_busyDays"];
         put?: never;
@@ -8840,9 +8840,9 @@ export interface paths {
         put?: never;
         /**
          * Khách kiểm tra nhanh khung giờ của một xe có trống không (preview)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         post: operations["PublicBookingRequestsController_checkAvailability"];
         delete?: never;
@@ -8860,9 +8860,9 @@ export interface paths {
         };
         /**
          * Tỉnh/thành đang có xe cho thuê, kèm số xe và ảnh đại diện
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicDestinationsController_list"];
         put?: never;
@@ -8881,10 +8881,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Khoảng % hoa hồng (thấp nhất → cao nhất) của chính sách hiện hành — cho lời mời hợp tác
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * Khoảng % hoa hồng (thấp nhất → cao nhất) của chính sách hiện hành - cho lời mời hợp tác
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicFeePoliciesController_partnerOffer"];
         put?: never;
@@ -8904,9 +8904,9 @@ export interface paths {
         };
         /**
          * Sản phẩm bảo hiểm đang bật cho một loại xe
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicInsuranceProductsController_list"];
         put?: never;
@@ -8926,9 +8926,9 @@ export interface paths {
         };
         /**
          * Tìm xe trên Marketplace (phân trang, filter, sort)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicListingsController_search"];
         put?: never;
@@ -8948,9 +8948,9 @@ export interface paths {
         };
         /**
          * Chi tiết một xe trên Marketplace
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicListingsController_getById"];
         put?: never;
@@ -8970,9 +8970,9 @@ export interface paths {
         };
         /**
          * Khoảng cách giao xe tận nơi + phí dự kiến theo bậc của gian hàng
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicQuoteController_deliveryDistance"];
         put?: never;
@@ -8992,9 +8992,9 @@ export interface paths {
         };
         /**
          * Ảnh bản đồ tĩnh (PNG) của điểm nhận xe
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicQuoteController_pickupMap"];
         put?: never;
@@ -9013,10 +9013,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Báo giá thuê — theo khoảng ngày, hoặc theo GÓI tháng lịch với thuê dài hạn
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * Báo giá thuê - theo khoảng ngày, hoặc theo GÓI tháng lịch với thuê dài hạn
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicQuoteController_quote"];
         put?: never;
@@ -9036,9 +9036,9 @@ export interface paths {
         };
         /**
          * Đánh giá công khai của một xe (phân trang)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicReviewController_list"];
         put?: never;
@@ -9058,9 +9058,9 @@ export interface paths {
         };
         /**
          * Facet counts cho panel Bộ lọc (đếm theo từng chiều filter)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicListingsController_facets"];
         put?: never;
@@ -9080,9 +9080,9 @@ export interface paths {
         };
         /**
          * Khoảng giá thuê/ngày tham khảo theo phân khúc xe và tỉnh
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicListingsController_priceSuggestion"];
         put?: never;
@@ -9101,10 +9101,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Xe phù hợp với bạn — gợi ý trang chủ, ưu tiên theo tỉnh của khách
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * Xe phù hợp với bạn - gợi ý trang chủ, ưu tiên theo tỉnh của khách
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicListingsController_recommended"];
         put?: never;
@@ -9124,9 +9124,9 @@ export interface paths {
         };
         /**
          * Mã khuyến mãi khả dụng cho chuyến đang chọn (kèm lý do nếu không áp được)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicPromoCodesController_available"];
         put?: never;
@@ -9147,10 +9147,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Xem trước một mã khuyến mãi cho chuyến đang chọn — KHÔNG giữ lượt sử dụng
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * Xem trước một mã khuyến mãi cho chuyến đang chọn - KHÔNG giữ lượt sử dụng
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["PublicPromoCodesController_preview"];
         delete?: never;
@@ -9168,9 +9168,9 @@ export interface paths {
         };
         /**
          * Đánh giá nổi bật toàn sàn (mới nhất, từ 4 sao, có lời nhận xét)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicFeaturedReviewController_featured"];
         put?: never;
@@ -9190,9 +9190,9 @@ export interface paths {
         };
         /**
          * Danh sách gian hàng công khai (phân trang, sắp theo đánh giá)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicShopsController_listShops"];
         put?: never;
@@ -9212,9 +9212,9 @@ export interface paths {
         };
         /**
          * Hồ sơ công khai của một gian hàng theo slug
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicShopsController_getShop"];
         put?: never;
@@ -9234,9 +9234,9 @@ export interface paths {
         };
         /**
          * Danh sách xe công khai của một gian hàng (phân trang)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicShopsController_getShopListings"];
         put?: never;
@@ -9256,9 +9256,9 @@ export interface paths {
         };
         /**
          * Đánh giá công khai của một gian hàng (mọi xe, phân trang)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["PublicShopReviewController_list"];
         put?: never;
@@ -9278,11 +9278,11 @@ export interface paths {
         };
         /**
          * Quyền của user hiện tại theo từng scope
-         * @description Frontend dùng để ẩn/hiện menu. KHÔNG phải nguồn bảo vệ — backend guard mới là nguồn.
+         * @description Frontend dùng để ẩn/hiện menu. KHÔNG phải nguồn bảo vệ - backend guard mới là nguồn.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["RbacController_myPermissions"];
         put?: never;
@@ -9304,9 +9304,9 @@ export interface paths {
          * Danh sách phiếu thu/chi (phân trang, filter)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -9316,9 +9316,9 @@ export interface paths {
          * Tạo phiếu thu/chi (chờ duyệt)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `receipts.create` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -9340,9 +9340,9 @@ export interface paths {
          * Chi tiết phiếu
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -9368,9 +9368,9 @@ export interface paths {
          * Duyệt phiếu
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `receipts.approve` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -9394,9 +9394,9 @@ export interface paths {
          * Huỷ phiếu
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `receipts.approve` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -9415,12 +9415,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Đơn thuê gợi ý để gắn phiếu — ưu tiên đơn còn nợ
+         * Đơn thuê gợi ý để gắn phiếu - ưu tiên đơn còn nợ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `receipts.create` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -9441,12 +9441,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Tổng thu/chi của ĐÚNG bộ lọc đang xem — thẻ tổng phải khớp danh sách bên dưới
+         * Tổng thu/chi của ĐÚNG bộ lọc đang xem - thẻ tổng phải khớp danh sách bên dưới
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -9470,9 +9470,9 @@ export interface paths {
          * Xe gợi ý để gắn phiếu (tìm theo mã xe / tên / biển số)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `receipts.create` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -9498,7 +9498,7 @@ export interface paths {
          * Đánh giá một chuyến thuê đã hoàn thành
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["ReviewController_create"];
         delete?: never;
@@ -9521,10 +9521,10 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Chỉnh sửa đánh giá của chính mình — chỉ được MỘT lần
+         * Chỉnh sửa đánh giá của chính mình - chỉ được MỘT lần
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         patch: operations["ReviewController_update"];
         trace?: never;
@@ -9540,9 +9540,9 @@ export interface paths {
          * Hồ sơ người bán của gian hàng (tự tạo bản nháp nếu chưa có)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `seller_profile.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -9551,9 +9551,9 @@ export interface paths {
          * Lưu hồ sơ. Đổi TÀI KHOẢN NHẬN TIỀN trên hồ sơ đã xác minh sẽ phải xác minh lại
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `seller_profile.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -9575,12 +9575,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Gửi xác minh — vào hàng đợi duyệt của nền tảng
+         * Gửi xác minh - vào hàng đợi duyệt của nền tảng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `seller_profile.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -9601,10 +9601,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Webhook SePay — ghi giao dịch tiền vào và khớp hoá đơn gói
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * Webhook SePay - ghi giao dịch tiền vào và khớp hoá đơn gói
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         post: operations["SepayController_webhook"];
         delete?: never;
@@ -9621,14 +9621,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Tài khoản nhận tiền của gian hàng — số đã che
+         * Tài khoản nhận tiền của gian hàng - số đã che
          * @description Mảng 0 hoặc 1 phần tử: mỗi chủ MỘT tài khoản nhận tiền đang dùng.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
         get: operations["ShopBankAccountsController_list"];
         put?: never;
@@ -9638,9 +9638,9 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
         post: operations["ShopBankAccountsController_create"];
         delete?: never;
@@ -9663,9 +9663,9 @@ export interface paths {
          * Bỏ dùng tài khoản nhận tiền của gian hàng (lưu trữ, không xoá)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
         delete: operations["ShopBankAccountsController_archive"];
         options?: never;
@@ -9689,13 +9689,13 @@ export interface paths {
         /**
          * Đặt làm tài khoản nhận tiền mặc định của gian hàng
          * @deprecated
-         * @description Tương thích ngược — tài khoản duy nhất luôn là mặc định; trả lại chính nó.
+         * @description Tương thích ngược - tài khoản duy nhất luôn là mặc định; trả lại chính nó.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
         patch: operations["ShopBankAccountsController_setDefault"];
         trace?: never;
@@ -9711,9 +9711,9 @@ export interface paths {
          * Thời gian chết mặc định của gian hàng theo loại xe
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `tenant.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -9722,9 +9722,9 @@ export interface paths {
          * Lưu thời gian chết mặc định theo loại xe (áp cho lịch giữ mới của xe đang theo mặc định)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `tenant.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -9744,14 +9744,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Công tắc thu cọc của gian hàng — kèm lý do bật/tắt/khoá
+         * Công tắc thu cọc của gian hàng - kèm lý do bật/tắt/khoá
          * @description Tuyến hoa hồng trả `depositRequired = true`, `editable = false`: công tắc hiện ở trạng thái bật và khoá, không ẩn (ADR 0027 điều 4).
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `seller_profile.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -9763,13 +9763,13 @@ export interface paths {
         head?: never;
         /**
          * Bật/tắt thu cọc qua XePrime (chỉ tuyến gói)
-         * @description Tuyến hoa hồng → 403 `DEPOSIT_ALWAYS_REQUIRED`. Gói thiếu `escrow_hold` → 403 `FEATURE_NOT_IN_PLAN`. Đổi công tắc KHÔNG đụng đơn đã tạo — `deposit_collection_mode` đóng băng lúc tạo đơn (ADR 0025 ràng buộc 4).
+         * @description Tuyến hoa hồng → 403 `DEPOSIT_ALWAYS_REQUIRED`. Gói thiếu `escrow_hold` → 403 `FEATURE_NOT_IN_PLAN`. Đổi công tắc KHÔNG đụng đơn đã tạo - `deposit_collection_mode` đóng băng lúc tạo đơn (ADR 0025 ràng buộc 4).
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `seller_profile.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -9787,9 +9787,9 @@ export interface paths {
          * Chính sách thuê mặc định (theo loại xe) + số xe kế thừa/ghi đè
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `tenant.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -9798,9 +9798,9 @@ export interface paths {
          * Lưu chính sách thuê mặc định theo loại xe (upsert, audit)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `tenant.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -9821,13 +9821,13 @@ export interface paths {
         };
         /**
          * Thuế đã khấu trừ của gian hàng trong một kỳ
-         * @description Thuế do CHỦ XE chịu: nó được trừ khỏi khoản XePrime phải trả (`D − T`), KHÔNG cộng vào tổng khách. Chỉ phát sinh khi chuyến ĐÃ BẮT ĐẦU — chuyến huỷ trước giờ nhận không có dòng nào ở đây (ADR 0032 điều 3).
+         * @description Thuế do CHỦ XE chịu: nó được trừ khỏi khoản XePrime phải trả (`D − T`), KHÔNG cộng vào tổng khách. Chỉ phát sinh khi chuyến ĐÃ BẮT ĐẦU - chuyến huỷ trước giờ nhận không có dòng nào ở đây (ADR 0032 điều 3).
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -9851,9 +9851,9 @@ export interface paths {
          * Số dư ví điểm của gian hàng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
         get: operations["ShopWalletController_summary"];
         put?: never;
@@ -9873,13 +9873,13 @@ export interface paths {
         };
         /**
          * Biến động số dư của gian hàng trong một kỳ
-         * @description Bút toán sổ ví và lệnh rút của kỳ (giờ Việt Nam) trong MỘT danh sách, mới nhất trước, phân trang ở server. Bút toán `withdrawal`/`withdrawal_reversal` không lặp lại — lệnh rút đã là dòng của chính nó, kèm trạng thái, hạn chuyển và lý do.
+         * @description Bút toán sổ ví và lệnh rút của kỳ (giờ Việt Nam) trong MỘT danh sách, mới nhất trước, phân trang ở server. Bút toán `withdrawal`/`withdrawal_reversal` không lặp lại - lệnh rút đã là dòng của chính nó, kèm trạng thái, hạn chuyển và lý do.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
         get: operations["ShopWalletController_activity"];
         put?: never;
@@ -9901,9 +9901,9 @@ export interface paths {
          * Sổ ví của gian hàng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
         get: operations["ShopWalletController_entries"];
         put?: never;
@@ -9927,9 +9927,9 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
         get: operations["ShopWalletController_tenantStatement"];
         put?: never;
@@ -9951,9 +9951,9 @@ export interface paths {
          * Các yêu cầu rút của gian hàng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
         get: operations["ShopWalletController_listWithdrawals"];
         put?: never;
@@ -9961,9 +9961,9 @@ export interface paths {
          * Gian hàng tạo yêu cầu rút
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
         post: operations["ShopWalletController_createWithdrawal"];
         delete?: never;
@@ -9985,9 +9985,9 @@ export interface paths {
          * Gian hàng tự huỷ yêu cầu rút
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
         post: operations["ShopWalletController_cancelWithdrawal"];
         delete?: never;
@@ -10007,9 +10007,9 @@ export interface paths {
          * Gói hiện hành theo từng loại xe + hạn mức/mức dùng theo loại + lượt miễn phí (ADR 0026 · 0065)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `subscription.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10032,12 +10032,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Mua nhiều gói một lần — sinh phiếu thanh toán gộp + hoá đơn mỗi loại xe (ADR 0083)
+         * Mua nhiều gói một lần - sinh phiếu thanh toán gộp + hoá đơn mỗi loại xe (ADR 0083)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `subscription.purchase` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10059,9 +10059,9 @@ export interface paths {
          * Một phiếu thanh toán gộp của gian hàng, kèm hoá đơn con (ADR 0083)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `subscription.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10085,9 +10085,9 @@ export interface paths {
          * Lịch sử hoá đơn gói (mới nhất trước)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `subscription.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10111,9 +10111,9 @@ export interface paths {
          * Một hoá đơn gói của gian hàng (mọi trạng thái)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `subscription.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10137,9 +10137,9 @@ export interface paths {
          * Hoá đơn gói đang chờ tiền (issued | partially_paid); `invoice: null` nếu không có
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `subscription.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10162,12 +10162,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Mở phiên thanh toán hoá đơn gói qua cổng — số tiền là phần còn thiếu đọc từ DB; dùng lại phiên còn hạn
+         * Mở phiên thanh toán hoá đơn gói qua cổng - số tiền là phần còn thiếu đọc từ DB; dùng lại phiên còn hạn
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `subscription.purchase` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10186,12 +10186,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Cổng thanh toán đang mở cho hoá đơn gói — rỗng khi chưa cấu hình hoặc chưa bật
+         * Cổng thanh toán đang mở cho hoá đơn gói - rỗng khi chưa cấu hình hoặc chưa bật
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `subscription.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10212,12 +10212,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Trạng thái MỘT lượt thanh toán hoá đơn qua cổng (trang quay về) — server tự hỏi cổng khi còn chờ quá lâu
+         * Trạng thái MỘT lượt thanh toán hoá đơn qua cổng (trang quay về) - server tự hỏi cổng khi còn chờ quá lâu
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `subscription.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10238,12 +10238,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Thông tin nhận chuyển khoản của nền tảng — web dựng VietQR từ đây (ADR 0016 điều 5)
+         * Thông tin nhận chuyển khoản của nền tảng - web dựng VietQR từ đây (ADR 0016 điều 5)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `subscription.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10264,12 +10264,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Bảng giá gói nhóm theo loại xe: motorbike · car · all (doanh nghiệp) — ADR 0065
+         * Bảng giá gói nhóm theo loại xe: motorbike · car · all (doanh nghiệp) - ADR 0065
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `subscription.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10293,9 +10293,9 @@ export interface paths {
          * Danh sách gói đang bán để gian hàng chọn mua
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `subscription.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10318,12 +10318,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Mua / gia hạn gói — sinh hoá đơn + mã đối soát, gói bật khi tiền về (ADR 0026 điều 4 · 0084)
+         * Mua / gia hạn gói - sinh hoá đơn + mã đối soát, gói bật khi tiền về (ADR 0026 điều 4 · 0084)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `subscription.purchase` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10344,12 +10344,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Xem trước một lượt mua gói — loại lượt mua, kỳ dự kiến, kỳ bị thay (ADR 0084)
+         * Xem trước một lượt mua gói - loại lượt mua, kỳ dự kiến, kỳ bị thay (ADR 0084)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `subscription.purchase` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10368,12 +10368,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Case của gian hàng — mặc định chỉ case còn MỞ
+         * Case của gian hàng - mặc định chỉ case còn MỞ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `support.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10383,9 +10383,9 @@ export interface paths {
          * Mở case mới (tranh chấp bắt buộc gắn đơn thuê của gian hàng)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `support.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10407,9 +10407,9 @@ export interface paths {
          * Chi tiết + dòng thời gian (ghi chú nội bộ của XePrime KHÔNG hiện)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `support.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10435,9 +10435,9 @@ export interface paths {
          * Trả lời trong case
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `support.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10461,9 +10461,9 @@ export interface paths {
          * Đóng case do chính gian hàng mở (kết luận là việc của XePrime)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `support.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10487,7 +10487,7 @@ export interface paths {
          * Gửi yêu cầu tư vấn gói (case `plan_consultation` + email hướng dẫn gói). Tắt `isPlanPromotionEnabled` ⇒ 403 PLAN_CONSULTATION_DISABLED
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["PlanConsultationController_create"];
         delete?: never;
@@ -10509,7 +10509,7 @@ export interface paths {
          * Đăng ký gian hàng mới (tạo ở trạng thái nháp)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["TenantsController_register"];
         delete?: never;
@@ -10529,9 +10529,9 @@ export interface paths {
          * Gian hàng của user hiện tại (scope lấy từ membership)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `tenant.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10561,9 +10561,9 @@ export interface paths {
          * Cập nhật hồ sơ gian hàng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `tenant.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10581,9 +10581,9 @@ export interface paths {
          * Hồ sơ gian hàng của tôi + trạng thái duyệt
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `tenant.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10609,9 +10609,9 @@ export interface paths {
          * Gửi hồ sơ gian hàng cho nền tảng duyệt
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `tenant.submit_review` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10633,9 +10633,9 @@ export interface paths {
          * Thiết lập hỗ trợ xuất hoá đơn VAT của gian hàng (ADR 0059)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `tenant.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10649,9 +10649,9 @@ export interface paths {
          * Bật/tắt hỗ trợ xuất hoá đơn VAT cho mọi xe của gian hàng (ADR 0059)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `tenant.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -10669,7 +10669,7 @@ export interface paths {
          * Danh sách chuyến của tôi (lọc theo tab, phân trang ở DB)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         get: operations["CustomerTripsController_list"];
         put?: never;
@@ -10689,11 +10689,11 @@ export interface paths {
         };
         /**
          * Chi tiết một chuyến của tôi
-         * @description Nhận id YÊU CẦU thuê hoặc id ĐƠN thuê — thông báo trỏ vào cả hai loại. Không phải chuyến của mình thì trả 404 (không tiết lộ id có tồn tại hay không).
+         * @description Nhận id YÊU CẦU thuê hoặc id ĐƠN thuê - thông báo trỏ vào cả hai loại. Không phải chuyến của mình thì trả 404 (không tiết lộ id có tồn tại hay không).
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         get: operations["CustomerTripsController_detail"];
         put?: never;
@@ -10715,11 +10715,11 @@ export interface paths {
         put?: never;
         /**
          * Khách tự huỷ chuyến của mình
-         * @description Huỷ được khi yêu cầu còn chờ gian hàng trả lời, hoặc khi đơn đã duyệt nhưng CHƯA giao xe. Đã giao xe rồi thì 409 `TRIP_CANCEL_NOT_ALLOWED` — việc cần làm lúc đó là liên hệ chủ xe. Trả về chính chuyến đó sau khi huỷ để giao diện không phải gọi thêm một lượt.
+         * @description Huỷ được khi yêu cầu còn chờ gian hàng trả lời, hoặc khi đơn đã duyệt nhưng CHƯA giao xe. Đã giao xe rồi thì 409 `TRIP_CANCEL_NOT_ALLOWED` - việc cần làm lúc đó là liên hệ chủ xe. Trả về chính chuyến đó sau khi huỷ để giao diện không phải gọi thêm một lượt.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["CustomerTripsController_cancel"];
         delete?: never;
@@ -10741,7 +10741,7 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["CustomerTripsController_cancelPreview"];
         put?: never;
@@ -10762,12 +10762,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Khách xác nhận đã nhận xe — đơn chuyển sang đang thuê
+         * Khách xác nhận đã nhận xe - đơn chuyển sang đang thuê
          * @description Được khi đơn `reserved`, chuyến tự lái/dài hạn, chưa có biên bản giao xe đã xác nhận và đã tới `pickupAt − CUSTOMER_PICKUP_CONFIRM_LEAD_MINUTES`. Lập biên bản giao xe nguồn `customer` (không KM/hiện trạng), chuyển đơn qua đúng đường bàn giao, kết luận case `handover_unconfirmed`, báo gian hàng. Lỗi: 409 `TRIP_PICKUP_CONFIRM_NOT_ALLOWED`, `TRIP_PICKUP_CONFIRM_TOO_EARLY` (`details.opensAt`); chuyến của người khác 404. Trả về chính chuyến đó.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["CustomerTripsController_confirmPickup"];
         delete?: never;
@@ -10787,7 +10787,7 @@ export interface paths {
          * Các phụ lục gia hạn của một chuyến của tôi (cũ trước)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["CustomerTripsController_extensionsOf"];
         put?: never;
@@ -10807,11 +10807,11 @@ export interface paths {
         };
         /**
          * Biên bản giao/nhận xe đã xác nhận của chuyến này
-         * @description Chỉ biên bản ĐÃ XÁC NHẬN (nháp / chờ xác nhận / đã huỷ không bao giờ ra tới đây). Trả tối đa hai bản theo thứ tự giao xe → nhận lại; chuyến chưa được duyệt thì mảng rỗng. Ảnh mở qua endpoint download theo GÓC CHỤP — không có `fileId` nào trong payload này.
+         * @description Chỉ biên bản ĐÃ XÁC NHẬN (nháp / chờ xác nhận / đã huỷ không bao giờ ra tới đây). Trả tối đa hai bản theo thứ tự giao xe → nhận lại; chuyến chưa được duyệt thì mảng rỗng. Ảnh mở qua endpoint download theo GÓC CHỤP - không có `fileId` nào trong payload này.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         get: operations["CustomerTripsController_handoverEvidence"];
         put?: never;
@@ -10831,11 +10831,11 @@ export interface paths {
         };
         /**
          * Phát signed URL ngắn hạn xem một ảnh hiện trạng của chuyến mình
-         * @description Khoá là (chuyến của tôi, chiều bàn giao, góc chụp) — không phải id file, nên không có định danh nào cầm đi thử ở chuyến khác được.
+         * @description Khoá là (chuyến của tôi, chiều bàn giao, góc chụp) - không phải id file, nên không có định danh nào cầm đi thử ở chuyến khác được.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         get: operations["CustomerTripsController_handoverEvidencePhoto"];
         put?: never;
@@ -10857,11 +10857,11 @@ export interface paths {
         put?: never;
         /**
          * Khách khai tài khoản nhận hoàn khoản giữ chỗ
-         * @description Bắt buộc trước khi admin chuyển được: `markRefundPaid` từ chối một lệnh chuyển không có đích. Chọn một tài khoản đã lưu bằng `bankAccountId`, hoặc khai ba ô — khai mới thì tài khoản được LƯU LẠI để lần sau không phải gõ. Trả về chính chuyến đó sau khi khai.
+         * @description Bắt buộc trước khi admin chuyển được: `markRefundPaid` từ chối một lệnh chuyển không có đích. Chọn một tài khoản đã lưu bằng `bankAccountId`, hoặc khai ba ô - khai mới thì tài khoản được LƯU LẠI để lần sau không phải gõ. Trả về chính chuyến đó sau khi khai.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
          */
         post: operations["CustomerTripsController_provideRefundAccount"];
         delete?: never;
@@ -10880,12 +10880,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Khách báo chưa nhận được xe — mở tranh chấp khẩn, tạm giữ tiền của chuyến
+         * Khách báo chưa nhận được xe - mở tranh chấp khẩn, tạm giữ tiền của chuyến
          * @description Mở được trong `[pickupAt, pickupAt + 120′]` khi đơn `reserved` hoặc `active`. Mở MỘT case `dispute` mức `urgent` gắn đơn (vào hàng đợi hỗ trợ của nền tảng, báo gian hàng); tranh chấp mở giữ quyết toán khoản giữ chỗ. Idempotent: đơn đã có tranh chấp mở thì không tạo thêm. Lỗi: 409 `TRIP_NOT_RECEIVED_NOT_ALLOWED` (sai trạng thái), `TRIP_NOT_RECEIVED_TOO_EARLY`, `TRIP_NOT_RECEIVED_WINDOW_CLOSED`; chuyến của người khác 404. Trả về chính chuyến đó.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["CustomerTripsController_reportNotReceived"];
         delete?: never;
@@ -10904,12 +10904,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Khách báo đã trả xe — chủ xe xác nhận trong hạn, quá hạn tự hoàn thành
+         * Khách báo đã trả xe - chủ xe xác nhận trong hạn, quá hạn tự hoàn thành
          * @description Được khi đơn `active`, chuyến tự lái/dài hạn, chưa có biên bản trả xe và chưa báo lần nào. Ghi `customerReturnedAt` + `returnAutoCompleteAt` (server tính), báo gian hàng. Lỗi: 409 `TRIP_RETURN_REPORT_NOT_ALLOWED`; chuyến của người khác 404. Trả về chính chuyến đó.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         post: operations["CustomerTripsController_reportReturned"];
         delete?: never;
@@ -10929,7 +10929,7 @@ export interface paths {
          * Chuyến đang giữ chưa thanh toán của tôi + đã chạm trần giữ chỗ chưa
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
          */
         get: operations["CustomerTripsController_unpaidHolds"];
         put?: never;
@@ -10953,7 +10953,7 @@ export interface paths {
          * Presign upload ảnh đại diện của chính mình lên R2
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         post: operations["AvatarUploadController_presignAvatar"];
         delete?: never;
@@ -10975,9 +10975,9 @@ export interface paths {
          * Presign upload chứng từ phiếu thu/chi (ảnh hoặc PDF) lên R2
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `receipts.create` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11001,9 +11001,9 @@ export interface paths {
          * Presign upload logo/ảnh bìa gian hàng lên R2
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `tenant.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11027,9 +11027,9 @@ export interface paths {
          * Presign upload ảnh xe (đại diện/gallery) lên R2
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11051,7 +11051,7 @@ export interface paths {
          * Hồ sơ của user hiện tại
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["UsersController_me"];
         put?: never;
@@ -11063,7 +11063,7 @@ export interface paths {
          * Cập nhật tên hiển thị và ảnh đại diện của chính mình
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         patch: operations["UsersController_updateMe"];
         trace?: never;
@@ -11081,7 +11081,7 @@ export interface paths {
          * Gửi mã xác thực tới email mới của chính mình
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         post: operations["UsersController_sendEmailOtp"];
         delete?: never;
@@ -11103,7 +11103,7 @@ export interface paths {
          * Xác nhận mã và đổi email của chính mình
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         post: operations["UsersController_verifyEmail"];
         delete?: never;
@@ -11125,7 +11125,7 @@ export interface paths {
          * Gửi mã xác thực tới số điện thoại mới của chính mình
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         post: operations["UsersController_sendPhoneOtp"];
         delete?: never;
@@ -11147,7 +11147,7 @@ export interface paths {
          * Xác nhận mã và đổi số điện thoại của chính mình
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         post: operations["UsersController_verifyPhone"];
         delete?: never;
@@ -11169,9 +11169,9 @@ export interface paths {
          * Khoá xe một khoảng thời gian (giữ chỗ lịch trong cùng transaction)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.block_schedule` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11193,9 +11193,9 @@ export interface paths {
          * Chi tiết một lịch khoá xe
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `calendar.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11203,12 +11203,12 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Gỡ khoá — NHẢ chỗ trên lịch xe trong cùng transaction
+         * Gỡ khoá - NHẢ chỗ trên lịch xe trong cùng transaction
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.block_schedule` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11219,9 +11219,9 @@ export interface paths {
          * Sửa lịch khoá (optimistic concurrency, đồng bộ lịch xe)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.block_schedule` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11239,9 +11239,9 @@ export interface paths {
          * Danh sách xe của gian hàng (phân trang, filter, sort)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11251,9 +11251,9 @@ export interface paths {
          * Thêm xe mới (mặc định trạng thái public = nháp)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.create` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11275,9 +11275,9 @@ export interface paths {
          * Chi tiết một xe
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11288,9 +11288,9 @@ export interface paths {
          * Xoá mềm xe (chặn nếu còn lịch hiện tại/tương lai)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.delete` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11301,9 +11301,9 @@ export interface paths {
          * Sửa thông tin xe (sửa trường nhạy cảm khi đang công khai → chờ duyệt lại)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11321,9 +11321,9 @@ export interface paths {
          * Bản ghi đè giá theo ngày trong [from, to] (ngày local VN)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `calendar.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11332,21 +11332,21 @@ export interface paths {
          * Đặt giá riêng cho các ngày (upsert tất định theo (xe, ngày))
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.update` (đọc từ DB mỗi request, không nằm trong session).
          */
         put: operations["VehicleDailyPricesController_save"];
         post?: never;
         /**
-         * Khôi phục giá mặc định cho [from, to] — xoá bản ghi đè
+         * Khôi phục giá mặc định cho [from, to] - xoá bản ghi đè
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11364,24 +11364,24 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Danh sách TRẠNG THÁI giấy tờ của một xe (summary — không PII)
+         * Danh sách TRẠNG THÁI giấy tờ của một xe (summary - không PII)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.documents.view` (đọc từ DB mỗi request, không nằm trong session).
          */
         get: operations["VehicleDocumentsController_list"];
         put?: never;
         /**
-         * Tạo hồ sơ giấy tờ (metadata — file gắn sau)
+         * Tạo hồ sơ giấy tờ (metadata - file gắn sau)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.documents.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11403,9 +11403,9 @@ export interface paths {
          * Chi tiết metadata một giấy tờ (không kèm lịch sử file/OCR)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.documents.view_details` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11419,9 +11419,9 @@ export interface paths {
          * Cập nhật metadata giấy tờ (optimistic concurrency)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.documents.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11441,9 +11441,9 @@ export interface paths {
          * Lưu trữ giấy tờ (không xoá lịch sử/file)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.documents.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11467,9 +11467,9 @@ export interface paths {
          * Yêu cầu trích xuất OCR (chưa cấu hình provider → 503 kiểm soát)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.documents.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11493,9 +11493,9 @@ export interface paths {
          * Áp các trường OCR đã chọn (fields rỗng = bỏ qua/đã đối soát)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.documents.manage`, `vehicles.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11517,9 +11517,9 @@ export interface paths {
          * Lịch sử phiên bản file của một giấy tờ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.documents.view_files` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11529,9 +11529,9 @@ export interface paths {
          * Xác minh object rồi gắn thành phiên bản mới (bản cũ vào lịch sử)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.documents.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11553,9 +11553,9 @@ export interface paths {
          * Phát signed URL ngắn hạn xem/tải một phiên bản giấy tờ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.documents.view_files` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11581,9 +11581,9 @@ export interface paths {
          * Presign upload file giấy tờ vào kho riêng tư (Wave 4.1)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.documents.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11602,25 +11602,25 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * ĐÃ GỠ — phụ phí tài xế (ADR 0075): luôn trả bốn loại đều tắt
+         * ĐÃ GỠ - phụ phí tài xế (ADR 0075): luôn trả bốn loại đều tắt
          * @deprecated
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
          */
         get: operations["VehicleSettingsController_listSurchargeRules"];
         /**
-         * ĐÃ GỠ — phụ phí tài xế (ADR 0075): luôn 422 `DRIVER_SURCHARGE_RETIRED`
+         * ĐÃ GỠ - phụ phí tài xế (ADR 0075): luôn 422 `DRIVER_SURCHARGE_RETIRED`
          * @deprecated
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11642,12 +11642,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Đồng bộ lại snapshot công khai của xe (phiên hỗ trợ — ADR 0050)
+         * Đồng bộ lại snapshot công khai của xe (phiên hỗ trợ - ADR 0050)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11671,9 +11671,9 @@ export interface paths {
          * Điều chỉnh KM hiện tại (bắt buộc lý do; giảm cần quyền cao hơn)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.odometer.correct` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11695,9 +11695,9 @@ export interface paths {
          * Lịch sử KM (chỉ-thêm), mới nhất trước
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11721,9 +11721,9 @@ export interface paths {
          * KM hiện tại + chu kỳ + mốc bảo dưỡng suy ra
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11732,9 +11732,9 @@ export interface paths {
          * Lưu cấu hình chu kỳ (KM hiện tại sửa ở endpoint riêng có lý do)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11757,9 +11757,9 @@ export interface paths {
          * Lịch sắp tới + lịch sử bảo dưỡng của xe
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11769,9 +11769,9 @@ export interface paths {
          * Tạo phiếu/lịch bảo dưỡng (có khoảng thời gian → giữ chỗ lịch xe)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11794,9 +11794,9 @@ export interface paths {
          * Sửa phiếu bảo dưỡng (optimistic concurrency, đồng bộ lịch xe)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11821,9 +11821,9 @@ export interface paths {
          * Xác minh object rồi đính chứng từ vào phiếu
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11845,9 +11845,9 @@ export interface paths {
          * Phát signed URL ngắn hạn xem/tải một chứng từ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.view_files` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11873,9 +11873,9 @@ export interface paths {
          * Presign upload chứng từ vào kho riêng tư (Wave 4.1)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11896,12 +11896,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Hủy lịch — NHẢ chỗ trên lịch xe trong cùng transaction
+         * Hủy lịch - NHẢ chỗ trên lịch xe trong cùng transaction
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11922,12 +11922,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Hoàn tất: nhả lịch + ghi KM + (thay nhớt) dời mốc — một transaction
+         * Hoàn tất: nhả lịch + ghi KM + (thay nhớt) dời mốc - một transaction
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11952,12 +11952,12 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Sửa chi phí phiếu ĐÃ hoàn tất — phiếu chi trong sổ đổi theo
+         * Sửa chi phí phiếu ĐÃ hoàn tất - phiếu chi trong sổ đổi theo
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.manage`, `vehicles.maintenance.view_cost` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -11977,9 +11977,9 @@ export interface paths {
          * Bắt đầu thực hiện (giữ nguyên chỗ đã đặt trên lịch)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12004,12 +12004,12 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Bật/tắt hiển thị xe trên chợ (lựa chọn của chủ xe — ADR 0048)
+         * Bật/tắt hiển thị xe trên chợ (lựa chọn của chủ xe - ADR 0048)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.submit_public` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12027,9 +12027,9 @@ export interface paths {
          * Khung giờ giao/nhận và thời gian chết giữa hai chuyến của xe
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12038,9 +12038,9 @@ export interface paths {
          * Lưu khung giờ giao/nhận + thời gian chết (áp cho lịch giữ mới, không sửa lịch cũ)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12063,9 +12063,9 @@ export interface paths {
          * Giá & chính sách của một xe (nguồn kế thừa/ghi đè + bản gian hàng)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12074,9 +12074,9 @@ export interface paths {
          * Lưu giá & chính sách theo xe (ghi đè hoặc đặt lại theo gian hàng)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12099,9 +12099,9 @@ export interface paths {
          * Thiết lập tự động nhận / giấy tờ / điều khoản theo dịch vụ của xe
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12131,9 +12131,9 @@ export interface paths {
          * Sửa một phần thiết lập của một dịch vụ (trường không gửi giữ nguyên)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.update` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12151,9 +12151,9 @@ export interface paths {
          * Hồ sơ nguồn xe & tài chính (Wave 4)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12162,9 +12162,9 @@ export interface paths {
          * Lưu hồ sơ nguồn xe & tài chính (replace theo hình thức nguồn)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.update`, `finance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12189,9 +12189,9 @@ export interface paths {
          * Hoàn tất upload hợp đồng (xác minh object rồi mới cho đính)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.update`, `finance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12213,9 +12213,9 @@ export interface paths {
          * Phát signed URL ngắn hạn tải hợp đồng nguồn xe
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12241,9 +12241,9 @@ export interface paths {
          * Presign upload hợp đồng nguồn xe vào kho riêng tư
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.update`, `finance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12264,12 +12264,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Gửi xe đi duyệt công khai (đi qua luồng duyệt nền tảng — ADR 0008)
+         * Gửi xe đi duyệt công khai (đi qua luồng duyệt nền tảng - ADR 0008)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.submit_public` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12291,9 +12291,9 @@ export interface paths {
          * Tổng hợp Hồ sơ 360 của một xe (chỉ số + đơn thuê theo quyền)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12314,12 +12314,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lịch sử chuyến của một xe — đơn thuê + yêu cầu chưa thành đơn, trộn và phân trang ở DB
+         * Lịch sử chuyến của một xe - đơn thuê + yêu cầu chưa thành đơn, trộn và phân trang ở DB
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view`, `booking_requests.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12343,9 +12343,9 @@ export interface paths {
          * Việc cần làm + KM hiện tại theo lô xe (thẻ xe ở danh sách)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12369,9 +12369,9 @@ export interface paths {
          * Đếm đội xe theo trạng thái vận hành (dải chỉ số đầu danh sách)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12395,9 +12395,9 @@ export interface paths {
          * Số xe có việc cần xử lý (huy hiệu menu Danh sách xe)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12421,9 +12421,9 @@ export interface paths {
          * Chỉ số vận hành/tài chính luỹ kế theo xe
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
          *
-         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
          */
@@ -12445,9 +12445,9 @@ export interface paths {
         };
         /**
          * Tra tên xã/phường theo danh sách mã (tối đa 50)
-         * @description **Truy cập:** công khai — không cần đăng nhập.
+         * @description **Truy cập:** công khai - không cần đăng nhập.
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
          */
         get: operations["WardsController_lookup"];
         put?: never;
@@ -12528,7 +12528,7 @@ export interface components {
             paidTotal: string;
             /** @description Phần là tiền thuê */
             rentalTotal: string;
-            /** @description Phần là tiền cọc — cọc trả gian hàng, sẽ hoàn khi trả xe */
+            /** @description Phần là tiền cọc - cọc trả gian hàng, sẽ hoàn khi trả xe */
             depositTotal: string;
             /** @description Số chuyến có ít nhất một khoản đã trả */
             tripCount: number;
@@ -12539,7 +12539,7 @@ export interface components {
             /** @enum {string} */
             kind: "hold_payment" | "withdrawal" | "wallet_credit" | "hold_refund" | "rental_payment";
             /**
-             * @description Khoá tiêu đề — client dịch, không tự suy
+             * @description Khoá tiêu đề - client dịch, không tự suy
              * @enum {string}
              */
             title: "hold_payment" | "withdrawal" | "hold_refund" | "hold_overpay" | "hold_release" | "hold_forfeit" | "adjustment" | "rental" | "deposit";
@@ -12556,7 +12556,7 @@ export interface components {
             /** @description Id mở `/trips/:id` (đơn, hoặc yêu cầu khi chưa có đơn) */
             tripId?: string | null;
             bookingCode?: string | null;
-            /** @description Lệnh rút còn chờ duyệt — khách tự huỷ được */
+            /** @description Lệnh rút còn chờ duyệt - khách tự huỷ được */
             cancellable: boolean;
         };
         AccountTransactionPageDto: {
@@ -12571,7 +12571,7 @@ export interface components {
             /** @enum {string|null} */
             wardAdministrativeType?: "ward" | "commune" | "special_zone" | null;
             addressLine?: string | null;
-            /** @description Chuỗi hiển thị đã ghép sẵn — dùng thẳng, đừng ghép lại ở client */
+            /** @description Chuỗi hiển thị đã ghép sẵn - dùng thẳng, đừng ghép lại ở client */
             displayAddress?: string | null;
             placeId?: string | null;
             /** @description Chuỗi thập phân */
@@ -12579,7 +12579,7 @@ export interface components {
             longitude?: string | null;
             /** @enum {string|null} */
             locationSource?: "google_place" | "map_pin" | "geocoded" | "manual" | null;
-            /** @description Địa chỉ chưa khớp danh mục hành chính hiện hành — cần người dùng mở ra chọn lại và xác nhận */
+            /** @description Địa chỉ chưa khớp danh mục hành chính hiện hành - cần người dùng mở ra chọn lại và xác nhận */
             needsAddressReview: boolean;
         };
         AddStaffDto: {
@@ -12597,12 +12597,12 @@ export interface components {
             id: string;
             /** @description Ảnh desktop */
             imageUrl: string;
-            /** @description Ảnh tablet (1024×450) — null thì client fallback ảnh desktop */
+            /** @description Ảnh tablet (1024×450) - null thì client fallback ảnh desktop */
             tabletImageUrl: string | null;
-            /** @description Ảnh mobile (780×450) — null thì client fallback tablet rồi desktop */
+            /** @description Ảnh mobile (780×450) - null thì client fallback tablet rồi desktop */
             mobileImageUrl: string | null;
             altText: string;
-            /** @description Đích đến khi bấm — null = không bấm được */
+            /** @description Đích đến khi bấm - null = không bấm được */
             linkUrl: string | null;
             /** @description Tên nội bộ */
             title: string;
@@ -12656,7 +12656,7 @@ export interface components {
             applyPlateToVehicle?: boolean;
         };
         ApplyPaymentOrderDto: {
-            /** @description Vì sao ghi nhận tay — đã đối chiếu gì với cổng */
+            /** @description Vì sao ghi nhận tay - đã đối chiếu gì với cổng */
             note: string;
         };
         ApprovalLogEntryDto: {
@@ -12724,7 +12724,7 @@ export interface components {
             publicVehicleCount: number;
         };
         ApproveBookingRequestDto: {
-            /** @description Ngày/giờ nhận xe chính xác (ISO-8601) — BẮT BUỘC với yêu cầu thuê dài hạn */
+            /** @description Ngày/giờ nhận xe chính xác (ISO-8601) - BẮT BUỘC với yêu cầu thuê dài hạn */
             scheduledPickupAt?: string;
             /** @enum {number} */
             longTermPackageMonths?: 1 | 2 | 3 | 6 | 9 | 12;
@@ -12742,26 +12742,26 @@ export interface components {
             data: components["schemas"]["AssignableDriverDto"][];
         };
         AssignBookingDriverDto: {
-            /** @description ID liên kết tài xế (ULID) — null để bỏ gán. Không gửi cùng `externalDriver`. */
+            /** @description ID liên kết tài xế (ULID) - null để bỏ gán. Không gửi cùng `externalDriver`. */
             driverId?: string | null;
             /**
              * @deprecated
-             * @description ĐÃ BỎ (ADR 0074 điều 4) — có mặt là 422 `EXTERNAL_DRIVER_NOT_SUPPORTED`. Giữ trong contract để app cũ nhận đúng mã lỗi.
+             * @description ĐÃ BỎ (ADR 0074 điều 4) - có mặt là 422 `EXTERNAL_DRIVER_NOT_SUPPORTED`. Giữ trong contract để app cũ nhận đúng mã lỗi.
              */
             externalDriver?: components["schemas"]["ExternalDriverInputDto"];
-            /** @description Tiền công của lượt gán (VND, bội 1.000đ — ADR 0075). Bỏ trống = tiền công/ngày mặc định của gian hàng × số ngày; bắt buộc khi gian hàng chưa đặt mức mặc định (422 `DRIVER_WAGE_REQUIRED`). Chỉ áp khi gán một tài xế. */
+            /** @description Tiền công của lượt gán (VND, bội 1.000đ - ADR 0075). Bỏ trống = tiền công/ngày mặc định của gian hàng × số ngày; bắt buộc khi gian hàng chưa đặt mức mặc định (422 `DRIVER_WAGE_REQUIRED`). Chỉ áp khi gán một tài xế. */
             wageAmount?: string;
         };
         AssignSubscriptionDto: {
             /** @description ID gói (ULID) */
             planId: string;
             /**
-             * @description Kỳ hạn THÁNG LỊCH (ADR 0015 điều 2) — ends_at = starts_at + N tháng lịch
+             * @description Kỳ hạn THÁNG LỊCH (ADR 0015 điều 2) - ends_at = starts_at + N tháng lịch
              * @enum {number}
              */
             termMonths: 1 | 3 | 6 | 12;
             /**
-             * @description Giá đàm phán CẢ KỲ — VND, chuỗi. Bắt buộc với bậc salesOnly (ADR 0041 điều 5)
+             * @description Giá đàm phán CẢ KỲ - VND, chuỗi. Bắt buộc với bậc salesOnly (ADR 0041 điều 5)
              * @example 5000000
              */
             price?: string;
@@ -12803,7 +12803,7 @@ export interface components {
             action: string;
             targetType: string;
             targetId?: string | null;
-            /** @description Tên người đọc được của đối tượng (tên gói, biển số, mã đơn…) — null khi loại đối tượng không tra nhãn (dữ liệu cá nhân) hoặc bản ghi không còn */
+            /** @description Tên người đọc được của đối tượng (tên gói, biển số, mã đơn…) - null khi loại đối tượng không tra nhãn (dữ liệu cá nhân) hoặc bản ghi không còn */
             targetLabel?: string | null;
             tenantId?: string | null;
             tenantName?: string | null;
@@ -12830,7 +12830,7 @@ export interface components {
             action: string;
             targetType: string;
             targetId?: string | null;
-            /** @description Tên người đọc được của đối tượng (tên gói, biển số, mã đơn…) — null khi loại đối tượng không tra nhãn (dữ liệu cá nhân) hoặc bản ghi không còn */
+            /** @description Tên người đọc được của đối tượng (tên gói, biển số, mã đơn…) - null khi loại đối tượng không tra nhãn (dữ liệu cá nhân) hoặc bản ghi không còn */
             targetLabel?: string | null;
             tenantId?: string | null;
             tenantName?: string | null;
@@ -12859,33 +12859,33 @@ export interface components {
             ownerType: "user" | "tenant";
             bankCode: string;
             /**
-             * @description Số tài khoản đã che — PII
+             * @description Số tài khoản đã che - PII
              * @example ••••4567
              */
             accountNumberMasked: string;
             accountName: string;
             label?: string | null;
-            /** @description Luôn `true` với tài khoản đang dùng — giữ cho client cũ */
+            /** @description Luôn `true` với tài khoản đang dùng - giữ cho client cũ */
             isDefault: boolean;
             /** @enum {string} */
             status: "active" | "archived";
-            /** @description Đã đối chiếu với một khoản tiền thật chưa — null là người dùng tự khai */
+            /** @description Đã đối chiếu với một khoản tiền thật chưa - null là người dùng tự khai */
             verifiedAt?: string | null;
             createdAt: string;
         };
         BankInQueueSummaryDto: {
             count: number;
-            /** @description Tổng tiền của các dòng đang đếm, string — ADR 0007 */
+            /** @description Tổng tiền của các dòng đang đếm, string - ADR 0007 */
             amount: string;
-            /** @description Lúc khoản CŨ NHẤT còn chưa khớp tới ngân hàng (thiếu mốc ngân hàng thì lúc webhook về) — ISO-8601 UTC */
+            /** @description Lúc khoản CŨ NHẤT còn chưa khớp tới ngân hàng (thiếu mốc ngân hàng thì lúc webhook về) - ISO-8601 UTC */
             oldestAt?: string | null;
         };
         BankTransactionDetailDto: {
             id: string;
             provider: string;
-            /** @description Mã giao dịch phía nhà cung cấp — khoá chống ghi đôi */
+            /** @description Mã giao dịch phía nhà cung cấp - khoá chống ghi đôi */
             providerTxId: string;
-            /** @description Tiền vào, string — ADR 0007 */
+            /** @description Tiền vào, string - ADR 0007 */
             amountIn: string;
             /** @description Nội dung chuyển khoản NGUYÊN VĂN */
             content: string;
@@ -12900,23 +12900,23 @@ export interface components {
             matchNote?: string | null;
             /** @description ISO-8601 UTC */
             matchedAt?: string | null;
-            /** @description Tên admin đã khớp tay / bỏ qua — `null` khi máy tự khớp */
+            /** @description Tên admin đã khớp tay / bỏ qua - `null` khi máy tự khớp */
             matchedByName?: string | null;
             /** @description ISO-8601 UTC */
             createdAt: string;
             /** @description Mã hoá đơn / phiếu gộp đã khớp (khi `matchedType` là `subscription_invoice` hoặc `subscription_checkout`) */
             matchedInvoiceCode?: string | null;
-            /** @description Mã giao dịch chuyển TRẢ người gửi — chỉ ở dòng `ignored` đã trả lại tiền */
+            /** @description Mã giao dịch chuyển TRẢ người gửi - chỉ ở dòng `ignored` đã trả lại tiền */
             refundReference?: string | null;
             /** @description ISO-8601 UTC */
             refundedAt?: string | null;
-            /** @description Payload webhook nguyên trạng — BẰNG CHỨNG khi tranh cãi. Chỉ ở màn chi tiết, không ở danh sách. */
+            /** @description Payload webhook nguyên trạng - BẰNG CHỨNG khi tranh cãi. Chỉ ở màn chi tiết, không ở danh sách. */
             rawJson: Record<string, never>;
             /** @description Ngân hàng nhận theo nhà cung cấp (SePay `gateway`) */
             bankGateway?: string | null;
             /** @description Số tài khoản NHẬN của nền tảng (SePay `accountNumber`) */
             bankAccountNumber?: string | null;
-            /** @description Mã tham chiếu phía ngân hàng (SePay `referenceCode`) — khác mã đối soát XePrime */
+            /** @description Mã tham chiếu phía ngân hàng (SePay `referenceCode`) - khác mã đối soát XePrime */
             bankReferenceNumber?: string | null;
             /** @description Hoá đơn đang chờ tiền, sắp theo mức khớp số tiền rồi tới mới nhất */
             suggestions: components["schemas"]["BankTransactionSuggestionDto"][];
@@ -12924,9 +12924,9 @@ export interface components {
         BankTransactionDto: {
             id: string;
             provider: string;
-            /** @description Mã giao dịch phía nhà cung cấp — khoá chống ghi đôi */
+            /** @description Mã giao dịch phía nhà cung cấp - khoá chống ghi đôi */
             providerTxId: string;
-            /** @description Tiền vào, string — ADR 0007 */
+            /** @description Tiền vào, string - ADR 0007 */
             amountIn: string;
             /** @description Nội dung chuyển khoản NGUYÊN VĂN */
             content: string;
@@ -12941,13 +12941,13 @@ export interface components {
             matchNote?: string | null;
             /** @description ISO-8601 UTC */
             matchedAt?: string | null;
-            /** @description Tên admin đã khớp tay / bỏ qua — `null` khi máy tự khớp */
+            /** @description Tên admin đã khớp tay / bỏ qua - `null` khi máy tự khớp */
             matchedByName?: string | null;
             /** @description ISO-8601 UTC */
             createdAt: string;
             /** @description Mã hoá đơn / phiếu gộp đã khớp (khi `matchedType` là `subscription_invoice` hoặc `subscription_checkout`) */
             matchedInvoiceCode?: string | null;
-            /** @description Mã giao dịch chuyển TRẢ người gửi — chỉ ở dòng `ignored` đã trả lại tiền */
+            /** @description Mã giao dịch chuyển TRẢ người gửi - chỉ ở dòng `ignored` đã trả lại tiền */
             refundReference?: string | null;
             /** @description ISO-8601 UTC */
             refundedAt?: string | null;
@@ -12968,7 +12968,7 @@ export interface components {
             paidAmount: string;
             /** @description Còn thiếu = tổng − đã nhận, string */
             remainingAmount: string;
-            /** @description Số tiền giao dịch KHỚP ĐÚNG phần còn thiếu — chỉ là gợi ý sắp xếp, không tự khớp */
+            /** @description Số tiền giao dịch KHỚP ĐÚNG phần còn thiếu - chỉ là gợi ý sắp xếp, không tự khớp */
             amountMatches: boolean;
             /** @description ISO-8601 UTC */
             createdAt: string;
@@ -12985,20 +12985,20 @@ export interface components {
             vehiclePlate?: string | null;
             customerName: string;
             customerPhone?: string | null;
-            /** @description SĐT tài khoản khách — chỉ khi khác SĐT liên hệ của đơn */
+            /** @description SĐT tài khoản khách - chỉ khi khác SĐT liên hệ của đơn */
             customerAccountPhone?: string | null;
             /** @enum {string} */
             status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
             /** @enum {string} */
             serviceType: "self_drive" | "with_driver" | "long_term";
             /**
-             * @description Gói thuê dài hạn (tháng lịch) — null với dịch vụ khác và đơn dài hạn LEGACY
+             * @description Gói thuê dài hạn (tháng lịch) - null với dịch vụ khác và đơn dài hạn LEGACY
              * @enum {number|null}
              */
             longTermPackageMonths?: 1 | 2 | 3 | 6 | 9 | 12 | null;
             /** @description ISO-8601 UTC */
             pickupAt: string;
-            /** @description ISO-8601 UTC — với thuê dài hạn do SERVER tính từ gói */
+            /** @description ISO-8601 UTC - với thuê dài hạn do SERVER tính từ gói */
             returnAt: string;
             /**
              * @description Trạng thái biên bản GIAO XE còn hiệu lực (bản huỷ không tính). null = chưa lập biên bản nào
@@ -13006,25 +13006,25 @@ export interface components {
              */
             pickupHandoverStatus: "draft" | "ready" | "confirmed" | "canceled" | null;
             /**
-             * @description Chỗ xe đổi tay — MÃ; nhãn do client dịch
+             * @description Chỗ xe đổi tay - MÃ; nhãn do client dịch
              * @enum {string|null}
              */
             handoverPlaceKind: "delivery" | "driver_pickup" | "branch" | null;
-            /** @description Địa chỉ hoặc tên chi nhánh đi kèm `handoverPlaceKind` — chuỗi thô, không dịch */
+            /** @description Địa chỉ hoặc tên chi nhánh đi kèm `handoverPlaceKind` - chuỗi thô, không dịch */
             handoverPlace: string | null;
-            /** @description Giá thuê đã chốt, KHÔNG gồm phụ phí. Tiền dạng string — ADR 0007 */
+            /** @description Giá thuê đã chốt, KHÔNG gồm phụ phí. Tiền dạng string - ADR 0007 */
             totalAmount: string;
-            /** @description Tiền thuê đã thu (`payments`) — writer duy nhất là PaymentsService */
+            /** @description Tiền thuê đã thu (`payments`) - writer duy nhất là PaymentsService */
             paidAmount: string;
             /** @description Tổng phụ phí còn hiệu lực (quá giờ, vệ sinh, hư hại) */
             surchargeTotal: string;
-            /** @description PHẢI THU = tiền thuê + phụ phí — con số khách nợ tính trên nó */
+            /** @description PHẢI THU = tiền thuê + phụ phí - con số khách nợ tính trên nó */
             amountDue: string;
             /** @description Thu thêm bằng phiếu NHẬP TAY đã duyệt gắn đơn */
             otherCollected: string;
             /** @description ĐÃ THU = tiền thuê + phiếu tay + phần phụ phí cọc đã gánh */
             collectedAmount: string;
-            /** @description Công nợ = max(0, phải thu − đã thu) — common/booking-money.ts */
+            /** @description Công nợ = max(0, phải thu − đã thu) - common/booking-money.ts */
             debtAmount: string;
             depositAmount: string;
             driver?: components["schemas"]["BookingDriverSummaryDto"] | null;
@@ -13041,19 +13041,19 @@ export interface components {
             customerAvatarUrl?: string | null;
             bookingRequestId?: string | null;
             canMessageOnPlatform: boolean;
-            /** @description Giao xe thật — ISO-8601 UTC */
+            /** @description Giao xe thật - ISO-8601 UTC */
             actualPickupAt?: string | null;
-            /** @description Trả xe thật — ISO-8601 UTC */
+            /** @description Trả xe thật - ISO-8601 UTC */
             actualReturnAt?: string | null;
             customerReturnedAt?: string | null;
-            /** @description Hạn gian hàng xác nhận — ISO-8601 UTC */
+            /** @description Hạn gian hàng xác nhận - ISO-8601 UTC */
             returnAutoCompleteAt?: string | null;
             /** @enum {string|null} */
             cancellationParty?: "host" | "customer" | "platform" | "force_majeure" | null;
             customerTotalAmount?: string | null;
             holdPaidAmount?: string | null;
             payAtPickupAmount?: string | null;
-            /** @description Phần tiền thuê CỦA CHỦ XE (`D`) khách đã trả trước trong tiền giữ chỗ, đang ở XePrime — vào ví khi chuyến xong. KHÁC `holdPaidAmount` (gồm cả phí sàn `S` và bảo hiểm). 0 với đơn lập tay / chưa thu giữ chỗ (VND string) */
+            /** @description Phần tiền thuê CỦA CHỦ XE (`D`) khách đã trả trước trong tiền giữ chỗ, đang ở XePrime - vào ví khi chuyến xong. KHÁC `holdPaidAmount` (gồm cả phí sàn `S` và bảo hiểm). 0 với đơn lập tay / chưa thu giữ chỗ (VND string) */
             ownerShareOnlineAmount: string;
             /** @description Số khách CÒN PHẢI TRẢ TẬN TAY gian hàng = công nợ (`debtAmount`) − `ownerShareOnlineAmount`, sàn 0. Cùng phép với "Thu tiền thuê" của Chuẩn bị bàn giao và hộp nhận lại xe (VND string) */
             counterDueAmount: string;
@@ -13062,7 +13062,7 @@ export interface components {
             /** @enum {string|null} */
             routeType?: "in_city" | "inter_city" | "inter_city_one_way" | null;
             pickupAddress?: string | null;
-            /** @description Điểm đón có cấu trúc — SNAPSHOT của đơn, không viết lại khi danh mục đổi */
+            /** @description Điểm đón có cấu trúc - SNAPSHOT của đơn, không viết lại khi danh mục đổi */
             pickupLocation?: components["schemas"]["AddressViewDto"] | null;
             destination?: string | null;
             /** @description Ghim của điểm đến */
@@ -13073,34 +13073,34 @@ export interface components {
             priceSnapshot?: components["schemas"]["BookingPriceSnapshotDto"] | null;
             /**
              * @deprecated
-             * @description DEPRECATED — đọc `ownerPayout.ownerCommissionAmount`. `H` — phí dịch vụ – chủ xe (lũy tiến theo ngày), XePrime giữ lại từ phần của chủ xe
+             * @description DEPRECATED - đọc `ownerPayout.ownerCommissionAmount`. `H` - phí dịch vụ - chủ xe (lũy tiến theo ngày), XePrime giữ lại từ phần của chủ xe
              */
             ownerCommissionAmount?: string | null;
             /**
              * @deprecated
-             * @description DEPRECATED — đọc `ownerPayout.taxAmount`. `T` — thuế khấu trừ khỏi tiền chủ xe
+             * @description DEPRECATED - đọc `ownerPayout.taxAmount`. `T` - thuế khấu trừ khỏi tiền chủ xe
              */
             ownerTaxAmount?: string | null;
             /**
              * @deprecated
-             * @description DEPRECATED — đọc `ownerPayout.ownerNetAmount`. `B − H − T` — chủ xe thực nhận cả chuyến
+             * @description DEPRECATED - đọc `ownerPayout.ownerNetAmount`. `B − H − T` - chủ xe thực nhận cả chuyến
              */
             ownerNetAmount?: string | null;
-            /** @description Bảng cộng ví chủ xe — doanh thu, phí dịch vụ – chủ xe, thuế tách GTGT/TNCN, thu nhập (a), khách trả trực tiếp (b), cộng ví (a − b). null = đơn không có bảng phí */
+            /** @description Bảng cộng ví chủ xe - doanh thu, phí dịch vụ - chủ xe, thuế tách GTGT/TNCN, thu nhập (a), khách trả trực tiếp (b), cộng ví (a − b). null = đơn không có bảng phí */
             ownerPayout?: components["schemas"]["OwnerPayoutDto"] | null;
             note?: string | null;
             /** @description ISO-8601 UTC */
             updatedAt: string;
-            /** @description Việc chuẩn bị bàn giao — chỉ có khi đơn còn chờ giao xe, null ở mọi chặng khác */
+            /** @description Việc chuẩn bị bàn giao - chỉ có khi đơn còn chờ giao xe, null ở mọi chặng khác */
             handoverPrep?: components["schemas"]["BookingHandoverPrepDto"] | null;
             /** @description Mốc ĐÃ XÁC NHẬN của thanh tiến trình: lượt gian hàng nhận yêu cầu (đơn từ chợ) hoặc lúc lập đơn (đơn tự lập) */
             confirmedAt: string;
-            /** @description Lúc tiền giữ chỗ về ĐỦ (ADR 0044) — null với đơn không qua giữ chỗ */
+            /** @description Lúc tiền giữ chỗ về ĐỦ (ADR 0044) - null với đơn không qua giữ chỗ */
             holdPaidAt?: string | null;
             /** @enum {string|null} */
             cancellationReasonCategory?: "vehicle_unavailable" | "schedule_conflict" | "customer_requirements" | "customer_unreachable" | "customer_changed_plan" | "driver_unavailable" | "other" | null;
             cancellationReason?: string | null;
-            /** @description Số chuyến ĐÃ HOÀN TẤT của khách này tại gian hàng (sổ khách) — để gắn nhãn "Khách quen"; null khi đơn không gắn hồ sơ khách. Chỉ có ở GET chi tiết */
+            /** @description Số chuyến ĐÃ HOÀN TẤT của khách này tại gian hàng (sổ khách) - để gắn nhãn "Khách quen"; null khi đơn không gắn hồ sơ khách. Chỉ có ở GET chi tiết */
             customerCompletedRentals?: number | null;
         };
         BookingDriverHistoryItemDto: {
@@ -13114,21 +13114,21 @@ export interface components {
             outcome: "open" | "declined" | "unassigned" | "cancelled" | "no_show" | "completed" | "expired" | "dropped";
             /** @description ISO-8601 UTC */
             assignedAt: string;
-            /** @description Người gán — null = hệ thống ("Đặt ngay" tự gán) */
+            /** @description Người gán - null = hệ thống ("Đặt ngay" tự gán) */
             assignedByName?: string | null;
             acceptedAt?: string | null;
             endedAt?: string | null;
-            /** @description Người kết thúc lượt (gỡ/từ chối) — null khi hệ thống khép theo trạng thái đơn */
+            /** @description Người kết thúc lượt (gỡ/từ chối) - null khi hệ thống khép theo trạng thái đơn */
             endedByName?: string | null;
             /**
-             * @description Chỉ lượt `dropped` — nhóm lý do tài xế rút (ADR 0074)
+             * @description Chỉ lượt `dropped` - nhóm lý do tài xế rút (ADR 0074)
              * @enum {string|null}
              */
             dropReasonCategory?: "health_issue" | "vehicle_accident" | "family_emergency" | "route_blocked" | "other" | null;
             /** @description Ghi chú của tài xế khi rút */
             dropReason?: string | null;
             /**
-             * @description Chỉ lượt `dropped` — vùng theo độ sát giờ nhận; `grace` = trong cửa sổ trả lại, không phạt
+             * @description Chỉ lượt `dropped` - vùng theo độ sát giờ nhận; `grace` = trong cửa sổ trả lại, không phạt
              * @enum {string|null}
              */
             dropZone?: "grace" | "far" | "same_day" | "critical" | null;
@@ -13136,15 +13136,15 @@ export interface components {
             wage: components["schemas"]["DriverWageDto"];
         };
         BookingDriverIncidentDto: {
-            /** @description ISO-8601 — lúc tài xế rút */
+            /** @description ISO-8601 - lúc tài xế rút */
             droppedAt: string;
-            /** @description ISO-8601 — hạn bên thuê gán tài xế liên kết khác (SLA điều phối theo vùng) */
+            /** @description ISO-8601 - hạn bên thuê gán tài xế liên kết khác (SLA điều phối theo vùng) */
             reassignBy: string;
             /** @enum {string} */
             level: "arranging" | "rearranging" | "urgent";
             /** @description true = khách đang được huỷ hoàn 100% và lượt huỷ tính cho bên thuê (quá hạn điều phối hoặc còn dưới 2 giờ) */
             customerCanCancelFree: boolean;
-            /** @description Tên tài xế đã rút — null khi sự cố đến từ lượt "trả lại" không lý do */
+            /** @description Tên tài xế đã rút - null khi sự cố đến từ lượt "trả lại" không lý do */
             driverName?: string | null;
             /** @enum {string|null} */
             reasonCategory?: "health_issue" | "vehicle_accident" | "family_emergency" | "route_blocked" | "other" | null;
@@ -13158,25 +13158,25 @@ export interface components {
              * @enum {string}
              */
             source: "linked" | "external";
-            /** @description ID liên kết tài xế (`drivers.id`) — null khi `source = external`, và luôn null ở bề mặt khách */
+            /** @description ID liên kết tài xế (`drivers.id`) - null khi `source = external`, và luôn null ở bề mặt khách */
             id?: string | null;
             name: string;
             /** @description Dạng hiển thị `0xxxxxxxxx` */
             phone: string;
             /**
-             * @description Tài xế ngoài hệ thống luôn `accepted` — không có lượt chờ
+             * @description Tài xế ngoài hệ thống luôn `accepted` - không có lượt chờ
              * @enum {string}
              */
             assignmentStatus: "pending" | "accepted";
-            /** @description ISO-8601 UTC — mốc gán (hoặc mốc ghi tài xế ngoài hệ thống) */
+            /** @description ISO-8601 UTC - mốc gán (hoặc mốc ghi tài xế ngoài hệ thống) */
             assignedAt: string;
             respondedAt?: string | null;
-            /** @description Hạn tài xế trả lời (ISO-8601, ADR 0066) — chỉ khác null khi lượt đang chờ (pending). Quá hạn ⇒ hệ thống trả lượt về bên thuê. */
+            /** @description Hạn tài xế trả lời (ISO-8601, ADR 0066) - chỉ khác null khi lượt đang chờ (pending). Quá hạn ⇒ hệ thống trả lượt về bên thuê. */
             respondBy?: string | null;
         };
         BookingExtensionDto: {
             id: string;
-            /** @description Mã đối soát XPE… — NỘI DUNG chuyển khoản */
+            /** @description Mã đối soát XPE… - NỘI DUNG chuyển khoản */
             code: string;
             bookingId: string;
             months: number;
@@ -13203,9 +13203,9 @@ export interface components {
         };
         BookingExtensionQuoteDto: {
             months: number;
-            /** @description ISO — bắt đầu phụ lục = giờ trả hiện tại của đơn */
+            /** @description ISO - bắt đầu phụ lục = giờ trả hiện tại của đơn */
             fromAt: string;
-            /** @description ISO — giờ trả mới (tháng lịch, giờ Việt Nam) */
+            /** @description ISO - giờ trả mới (tháng lịch, giờ Việt Nam) */
             toAt: string;
             /** @description Số ngày lịch của phụ lục */
             rentalDays: number;
@@ -13217,9 +13217,9 @@ export interface components {
             durationDiscountPercent?: number | null;
             /** @description Ưu đãi cam kết (VND string) */
             durationDiscountAmount: string;
-            /** @description `B_ext` — tiền thuê phụ lục (VND string) */
+            /** @description `B_ext` - tiền thuê phụ lục (VND string) */
             rentalAmount: string;
-            /** @description `T_ext` — thuế khấu trừ khỏi tiền chủ xe (VND string) */
+            /** @description `T_ext` - thuế khấu trừ khỏi tiền chủ xe (VND string) */
             taxAmount: string;
             vatAmount?: string | null;
             pitAmount?: string | null;
@@ -13238,9 +13238,9 @@ export interface components {
              * @enum {string}
              */
             billingMode: "commission" | "package";
-            /** @description Xe trống trong khoảng gia hạn (xem trước — DB vẫn quyết lúc tạo) */
+            /** @description Xe trống trong khoảng gia hạn (xem trước - DB vẫn quyết lúc tạo) */
             available: boolean;
-            /** @description ISO — xe bận từ mốc này nếu không trống */
+            /** @description ISO - xe bận từ mốc này nếu không trống */
             busyFrom?: string | null;
         };
         BookingHandoverManualCheckDto: {
@@ -13252,9 +13252,9 @@ export interface components {
             checkedByName?: string | null;
         };
         BookingHandoverPrepDto: {
-            /** @description Khách có CCCD/GPLX/hộ chiếu ĐÃ ĐỐI CHIẾU trong sổ khách, hoặc GPLX tài khoản đã xác thực (ADR 0057) — và còn hạn tới hết ngày cuối chuyến */
+            /** @description Khách có CCCD/GPLX/hộ chiếu ĐÃ ĐỐI CHIẾU trong sổ khách, hoặc GPLX tài khoản đã xác thực (ADR 0057) - và còn hạn tới hết ngày cuối chuyến */
             documentsReady: boolean;
-            /** @description Khách còn phải đưa TAY lúc nhận xe (VND string) = công nợ − phần D chủ xe đã có trong tiền giữ chỗ online — 0 ⇒ xong việc thu tiền thuê */
+            /** @description Khách còn phải đưa TAY lúc nhận xe (VND string) = công nợ − phần D chủ xe đã có trong tiền giữ chỗ online - 0 ⇒ xong việc thu tiền thuê */
             rentDueAmount: string;
             /** @description Cọc theo đơn (VND string) */
             depositRequired: string;
@@ -13268,7 +13268,7 @@ export interface components {
             pickupPhotoCount: number;
             /** @description Số ô ảnh bắt buộc */
             pickupPhotoRequired: number;
-            /** @description Tài xế đã nhận chuyến — null khi đơn không có tài xế */
+            /** @description Tài xế đã nhận chuyến - null khi đơn không có tài xế */
             driverReady?: boolean | null;
             /** @description Việc người vận hành đánh dấu TAY (sự thật nằm ngoài hệ thống). Web: việc xong = suy tự động HOẶC có dấu tay */
             manualChecks: components["schemas"]["BookingHandoverManualCheckDto"][];
@@ -13280,7 +13280,7 @@ export interface components {
             code?: string | null;
             /** @enum {string} */
             outcome: "completed" | "cancelled_by_customer" | "cancelled_by_host" | "cancelled_other" | "no_show" | "request_rejected" | "request_expired" | "request_withdrawn" | "request_hold_expired" | "request_slot_taken" | "request_cancelled_by_host";
-            /** @description ISO-8601 UTC — lúc chuyến kết thúc / yêu cầu đóng */
+            /** @description ISO-8601 UTC - lúc chuyến kết thúc / yêu cầu đóng */
             endedAt: string;
             /** @enum {string} */
             serviceType: "self_drive" | "with_driver" | "long_term";
@@ -13327,20 +13327,20 @@ export interface components {
             vehiclePlate?: string | null;
             customerName: string;
             customerPhone?: string | null;
-            /** @description SĐT tài khoản khách — chỉ khi khác SĐT liên hệ của đơn */
+            /** @description SĐT tài khoản khách - chỉ khi khác SĐT liên hệ của đơn */
             customerAccountPhone?: string | null;
             /** @enum {string} */
             status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
             /** @enum {string} */
             serviceType: "self_drive" | "with_driver" | "long_term";
             /**
-             * @description Gói thuê dài hạn (tháng lịch) — null với dịch vụ khác và đơn dài hạn LEGACY
+             * @description Gói thuê dài hạn (tháng lịch) - null với dịch vụ khác và đơn dài hạn LEGACY
              * @enum {number|null}
              */
             longTermPackageMonths?: 1 | 2 | 3 | 6 | 9 | 12 | null;
             /** @description ISO-8601 UTC */
             pickupAt: string;
-            /** @description ISO-8601 UTC — với thuê dài hạn do SERVER tính từ gói */
+            /** @description ISO-8601 UTC - với thuê dài hạn do SERVER tính từ gói */
             returnAt: string;
             /**
              * @description Trạng thái biên bản GIAO XE còn hiệu lực (bản huỷ không tính). null = chưa lập biên bản nào
@@ -13348,25 +13348,25 @@ export interface components {
              */
             pickupHandoverStatus: "draft" | "ready" | "confirmed" | "canceled" | null;
             /**
-             * @description Chỗ xe đổi tay — MÃ; nhãn do client dịch
+             * @description Chỗ xe đổi tay - MÃ; nhãn do client dịch
              * @enum {string|null}
              */
             handoverPlaceKind: "delivery" | "driver_pickup" | "branch" | null;
-            /** @description Địa chỉ hoặc tên chi nhánh đi kèm `handoverPlaceKind` — chuỗi thô, không dịch */
+            /** @description Địa chỉ hoặc tên chi nhánh đi kèm `handoverPlaceKind` - chuỗi thô, không dịch */
             handoverPlace: string | null;
-            /** @description Giá thuê đã chốt, KHÔNG gồm phụ phí. Tiền dạng string — ADR 0007 */
+            /** @description Giá thuê đã chốt, KHÔNG gồm phụ phí. Tiền dạng string - ADR 0007 */
             totalAmount: string;
-            /** @description Tiền thuê đã thu (`payments`) — writer duy nhất là PaymentsService */
+            /** @description Tiền thuê đã thu (`payments`) - writer duy nhất là PaymentsService */
             paidAmount: string;
             /** @description Tổng phụ phí còn hiệu lực (quá giờ, vệ sinh, hư hại) */
             surchargeTotal: string;
-            /** @description PHẢI THU = tiền thuê + phụ phí — con số khách nợ tính trên nó */
+            /** @description PHẢI THU = tiền thuê + phụ phí - con số khách nợ tính trên nó */
             amountDue: string;
             /** @description Thu thêm bằng phiếu NHẬP TAY đã duyệt gắn đơn */
             otherCollected: string;
             /** @description ĐÃ THU = tiền thuê + phiếu tay + phần phụ phí cọc đã gánh */
             collectedAmount: string;
-            /** @description Công nợ = max(0, phải thu − đã thu) — common/booking-money.ts */
+            /** @description Công nợ = max(0, phải thu − đã thu) - common/booking-money.ts */
             debtAmount: string;
             depositAmount: string;
             driver?: components["schemas"]["BookingDriverSummaryDto"] | null;
@@ -13383,19 +13383,19 @@ export interface components {
             customerAvatarUrl?: string | null;
             bookingRequestId?: string | null;
             canMessageOnPlatform: boolean;
-            /** @description Giao xe thật — ISO-8601 UTC */
+            /** @description Giao xe thật - ISO-8601 UTC */
             actualPickupAt?: string | null;
-            /** @description Trả xe thật — ISO-8601 UTC */
+            /** @description Trả xe thật - ISO-8601 UTC */
             actualReturnAt?: string | null;
             customerReturnedAt?: string | null;
-            /** @description Hạn gian hàng xác nhận — ISO-8601 UTC */
+            /** @description Hạn gian hàng xác nhận - ISO-8601 UTC */
             returnAutoCompleteAt?: string | null;
             /** @enum {string|null} */
             cancellationParty?: "host" | "customer" | "platform" | "force_majeure" | null;
             customerTotalAmount?: string | null;
             holdPaidAmount?: string | null;
             payAtPickupAmount?: string | null;
-            /** @description Phần tiền thuê CỦA CHỦ XE (`D`) khách đã trả trước trong tiền giữ chỗ, đang ở XePrime — vào ví khi chuyến xong. KHÁC `holdPaidAmount` (gồm cả phí sàn `S` và bảo hiểm). 0 với đơn lập tay / chưa thu giữ chỗ (VND string) */
+            /** @description Phần tiền thuê CỦA CHỦ XE (`D`) khách đã trả trước trong tiền giữ chỗ, đang ở XePrime - vào ví khi chuyến xong. KHÁC `holdPaidAmount` (gồm cả phí sàn `S` và bảo hiểm). 0 với đơn lập tay / chưa thu giữ chỗ (VND string) */
             ownerShareOnlineAmount: string;
             /** @description Số khách CÒN PHẢI TRẢ TẬN TAY gian hàng = công nợ (`debtAmount`) − `ownerShareOnlineAmount`, sàn 0. Cùng phép với "Thu tiền thuê" của Chuẩn bị bàn giao và hộp nhận lại xe (VND string) */
             counterDueAmount: string;
@@ -13433,41 +13433,41 @@ export interface components {
             policy?: components["schemas"]["SnapshotPolicyDto"] | null;
         };
         BookingRequestApprovalPreviewDto: {
-            /** @description Luôn true — số chốt khi duyệt */
+            /** @description Luôn true - số chốt khi duyệt */
             isEstimate: boolean;
-            /** @description Duyệt xong khách có nhận QR tiền giữ chỗ không. false = không thu online (báo giá tạm tính hoặc không thu cọc) — đơn tạo ngay lúc duyệt */
+            /** @description Duyệt xong khách có nhận QR tiền giữ chỗ không. false = không thu online (báo giá tạm tính hoặc không thu cọc) - đơn tạo ngay lúc duyệt */
             collectsHold: boolean;
-            /** @description Tiền giữ chỗ khách chuyển qua QR (VND string) — null khi không thu online */
+            /** @description Tiền giữ chỗ khách chuyển qua QR (VND string) - null khi không thu online */
             onlineAmount?: string | null;
             /** @description Khách trả TRỰC TIẾP chủ xe lúc nhận xe (VND string) */
             payAtPickupAmount: string;
             /**
              * @deprecated
-             * @description DEPRECATED — đọc `ownerPayout.ownerCommissionAmount`. `H` — phí dịch vụ – chủ xe (lũy tiến theo ngày), XePrime giữ lại từ phần của chủ xe (VND string)
+             * @description DEPRECATED - đọc `ownerPayout.ownerCommissionAmount`. `H` - phí dịch vụ - chủ xe (lũy tiến theo ngày), XePrime giữ lại từ phần của chủ xe (VND string)
              */
             ownerCommissionAmount: string;
             /**
              * @deprecated
-             * @description DEPRECATED — đọc `ownerPayout.taxAmount`. `T` — thuế khấu trừ khỏi tiền chủ xe (VND string)
+             * @description DEPRECATED - đọc `ownerPayout.taxAmount`. `T` - thuế khấu trừ khỏi tiền chủ xe (VND string)
              */
             taxAmount: string;
             /**
              * @deprecated
-             * @description DEPRECATED — đọc `ownerPayout.ownerPayableAmount`. `D − T` — XePrime ghi vào ví điểm chủ xe khi chuyến hoàn thành (VND string)
+             * @description DEPRECATED - đọc `ownerPayout.ownerPayableAmount`. `D − T` - XePrime ghi vào ví điểm chủ xe khi chuyến hoàn thành (VND string)
              */
             ownerPayableAmount: string;
             /**
              * @deprecated
-             * @description DEPRECATED — đọc `ownerPayout.ownerNetAmount`. `B − H − T` — chủ xe thực nhận cả chuyến (VND string)
+             * @description DEPRECATED - đọc `ownerPayout.ownerNetAmount`. `B − H − T` - chủ xe thực nhận cả chuyến (VND string)
              */
             ownerNetAmount: string;
-            /** @description Bảng cộng ví chủ xe nếu duyệt ngay (ADR 0068 điều 5) — doanh thu, phí dịch vụ – chủ xe, thuế tách GTGT/TNCN, thu nhập (a), khách trả trực tiếp (b), cộng ví (a − b) */
+            /** @description Bảng cộng ví chủ xe nếu duyệt ngay (ADR 0068 điều 5) - doanh thu, phí dịch vụ - chủ xe, thuế tách GTGT/TNCN, thu nhập (a), khách trả trực tiếp (b), cộng ví (a − b) */
             ownerPayout: components["schemas"]["OwnerPayoutDto"];
-            /** @description Cửa sổ huỷ miễn phí khi đặt xa (giờ) — trần của cửa sổ động */
+            /** @description Cửa sổ huỷ miễn phí khi đặt xa (giờ) - trần của cửa sổ động */
             policyFreeCancelHours: number;
-            /** @description Cửa sổ thanh toán khi đặt xa (phút) — trần của cửa sổ động */
+            /** @description Cửa sổ thanh toán khi đặt xa (phút) - trần của cửa sổ động */
             policyPaymentWindowMinutes: number;
-            /** @description Hai cửa sổ nếu duyệt ngay — null khi chưa có giờ nhận (dài hạn: gian hàng chốt lúc duyệt) hoặc khi chuyến không thu online */
+            /** @description Hai cửa sổ nếu duyệt ngay - null khi chưa có giờ nhận (dài hạn: gian hàng chốt lúc duyệt) hoặc khi chuyến không thu online */
             windows?: components["schemas"]["BookingRequestApprovalWindowsDto"] | null;
         };
         BookingRequestApprovalWindowsDto: {
@@ -13475,13 +13475,13 @@ export interface components {
             leadMinutes: number;
             /** @description Khách có bấy nhiêu phút để chuyển tiền giữ chỗ */
             paymentWindowMinutes: number;
-            /** @description Khách huỷ miễn phí trong bấy nhiêu phút KỂ TỪ LÚC THANH TOÁN ĐỦ (ADR 0072) — ước tính nếu khách trả ngay khi được nhận (sàn 15′, chưa kẹp bởi giờ nhận xe); 0 = chính sách tắt huỷ miễn phí */
+            /** @description Khách huỷ miễn phí trong bấy nhiêu phút KỂ TỪ LÚC THANH TOÁN ĐỦ (ADR 0072) - ước tính nếu khách trả ngay khi được nhận (sàn 15′, chưa kẹp bởi giờ nhận xe); 0 = chính sách tắt huỷ miễn phí */
             freeCancelMinutes: number;
-            /** @description ISO — hạn chuyển tiền dự kiến (đã kẹp bởi giờ nhận xe) */
+            /** @description ISO - hạn chuyển tiền dự kiến (đã kẹp bởi giờ nhận xe) */
             expiresAt: string;
-            /** @description ISO — mốc huỷ miễn phí dự kiến NẾU khách trả đủ ngay khi được nhận (ADR 0072) */
+            /** @description ISO - mốc huỷ miễn phí dự kiến NẾU khách trả đủ ngay khi được nhận (ADR 0072) */
             freeCancelUntil: string;
-            /** @description Cửa sổ còn lại quá ngắn để phát QR — duyệt sẽ nhận `HOLD_WINDOW_TOO_SHORT` */
+            /** @description Cửa sổ còn lại quá ngắn để phát QR - duyệt sẽ nhận `HOLD_WINDOW_TOO_SHORT` */
             tooShort: boolean;
         };
         BookingRequestDeliveryQuoteDto: {
@@ -13511,9 +13511,9 @@ export interface components {
             /** @enum {string} */
             status: "pending_host_approval" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_expired" | "slot_taken" | "cancelled_by_host";
             customerName: string;
-            /** @description SĐT khách — null với chủ xe tuyến hoa hồng khi chuyến chưa có đơn */
+            /** @description SĐT khách - null với chủ xe tuyến hoa hồng khi chuyến chưa có đơn */
             customerPhone: string | null;
-            /** @description SĐT tài khoản khách — chỉ trả về khi chủ xe được xem liên hệ và SĐT liên hệ khác SĐT tài khoản */
+            /** @description SĐT tài khoản khách - chỉ trả về khi chủ xe được xem liên hệ và SĐT liên hệ khác SĐT tài khoản */
             customerAccountPhone?: string | null;
             customerEmail?: string | null;
             tenantCustomerId?: string | null;
@@ -13525,16 +13525,16 @@ export interface components {
             customerIsRegular: boolean;
             /** @description Nhắn tin trong ứng dụng được không */
             canMessageOnPlatform: boolean;
-            /** @description Kênh nhắn tin mở ở chặng này — tuyến hoa hồng chỉ khi đã có đơn */
+            /** @description Kênh nhắn tin mở ở chặng này - tuyến hoa hồng chỉ khi đã có đơn */
             chatOpen: boolean;
-            /** @description ISO-8601 UTC — null với yêu cầu dài hạn chưa chốt lịch */
+            /** @description ISO-8601 UTC - null với yêu cầu dài hạn chưa chốt lịch */
             pickupAt?: string | null;
             /** @description ISO-8601 UTC */
             returnAt?: string | null;
             /** @enum {string} */
             serviceType: "self_drive" | "with_driver" | "long_term";
             /**
-             * @description Gói thuê dài hạn khách chọn — null ở yêu cầu dài hạn LEGACY
+             * @description Gói thuê dài hạn khách chọn - null ở yêu cầu dài hạn LEGACY
              * @enum {number|null}
              */
             longTermPackageMonths?: 1 | 2 | 3 | 6 | 9 | 12 | null;
@@ -13549,44 +13549,44 @@ export interface components {
             /** @enum {string|null} */
             routeType?: "in_city" | "inter_city" | "inter_city_one_way" | null;
             pickupAddress?: string | null;
-            /** @description Điểm đón có cấu trúc — null với yêu cầu không có điểm đón */
+            /** @description Điểm đón có cấu trúc - null với yêu cầu không có điểm đón */
             pickupLocation?: components["schemas"]["AddressViewDto"] | null;
             destination?: string | null;
-            /** @description Ghim toạ độ của điểm đến — điểm đến không có mã hành chính */
+            /** @description Ghim toạ độ của điểm đến - điểm đến không có mã hành chính */
             destinationPin?: components["schemas"]["GeoPinDto"] | null;
             note?: string | null;
             /** @description Khách yêu cầu giao xe tận nơi */
             deliveryRequested: boolean;
             deliveryAddress?: string | null;
-            /** @description Địa chỉ giao xe có cấu trúc — null khi khách tự tới lấy */
+            /** @description Địa chỉ giao xe có cấu trúc - null khi khách tự tới lấy */
             deliveryLocation?: components["schemas"]["AddressViewDto"] | null;
-            /** @description LỊCH SỬ: báo giá giao nhận của các yêu cầu tạo trước Wave 9. Chỉ để đọc — không còn ảnh hưởng tới việc duyệt, và yêu cầu mới luôn null. */
+            /** @description LỊCH SỬ: báo giá giao nhận của các yêu cầu tạo trước Wave 9. Chỉ để đọc - không còn ảnh hưởng tới việc duyệt, và yêu cầu mới luôn null. */
             deliveryQuote?: components["schemas"]["BookingRequestDeliveryQuoteDto"] | null;
             rejectReason?: string | null;
             /** @description Booking đã tạo khi duyệt */
             bookingId?: string | null;
             /** @description ISO-8601 UTC */
             createdAt: string;
-            /** @description ISO-8601 UTC — hạn gian hàng phải phản hồi (server tính: 20% của ΔT = giờ nhận − lúc gửi, 15–240 phút; dài hạn chưa có giờ nhận ⇒ 240 phút — ADR 0066) */
+            /** @description ISO-8601 UTC - hạn gian hàng phải phản hồi (server tính: 20% của ΔT = giờ nhận − lúc gửi, 15-240 phút; dài hạn chưa có giờ nhận ⇒ 240 phút - ADR 0066) */
             respondBy: string;
-            /** @description ISO-8601 UTC — thời điểm gian hàng duyệt/từ chối; null khi còn chờ */
+            /** @description ISO-8601 UTC - thời điểm gian hàng duyệt/từ chối; null khi còn chờ */
             decidedAt?: string | null;
             /**
-             * @description Ai quyết định — chủ xe hay hệ thống tự nhận (08/09/2026); null khi chưa quyết
+             * @description Ai quyết định - chủ xe hay hệ thống tự nhận (08/09/2026); null khi chưa quyết
              * @enum {string|null}
              */
             decisionSource?: "host" | "system" | null;
-            /** @description ISO-8601 UTC — hạn khách chuyển tiền giữ chỗ; null khi chuyến không thu */
+            /** @description ISO-8601 UTC - hạn khách chuyển tiền giữ chỗ; null khi chuyến không thu */
             holdExpiresAt?: string | null;
-            /** @description ISO-8601 UTC — lúc gian hàng nhắc khách thanh toán được; null khi không có gì để nhắc */
+            /** @description ISO-8601 UTC - lúc gian hàng nhắc khách thanh toán được; null khi không có gì để nhắc */
             paymentReminderAvailableAt?: string | null;
             vehicleProtectionSelected: boolean;
             personalAccidentSelected: boolean;
-            /** @description Tiền của yêu cầu này — xem docblock BookingRequestPricingDto cho nguồn theo trạng thái. Luôn có mặt (kể cả `null`) ở danh sách và chi tiết; VẮNG MẶT ở phiếu trả về của các thao tác duyệt/từ chối/huỷ — client đọc lại danh sách/chi tiết để thấy số mới. */
+            /** @description Tiền của yêu cầu này - xem docblock BookingRequestPricingDto cho nguồn theo trạng thái. Luôn có mặt (kể cả `null`) ở danh sách và chi tiết; VẮNG MẶT ở phiếu trả về của các thao tác duyệt/từ chối/huỷ - client đọc lại danh sách/chi tiết để thấy số mới. */
             pricing?: components["schemas"]["BookingRequestPricingDto"] | null;
-            /** @description Xem trước lượt duyệt (tiền + hai cửa sổ nếu duyệt ngay) — chỉ yêu cầu còn chờ duyệt. Cùng luật vắng mặt với `pricing` ở phiếu trả về của các thao tác. */
+            /** @description Xem trước lượt duyệt (tiền + hai cửa sổ nếu duyệt ngay) - chỉ yêu cầu còn chờ duyệt. Cùng luật vắng mặt với `pricing` ở phiếu trả về của các thao tác. */
             approvalPreview?: components["schemas"]["BookingRequestApprovalPreviewDto"] | null;
-            /** @description Chiếc xe của yêu cầu đang ở một chuyến ĐÃ QUÁ GIỜ TRẢ mà chưa được nhận về — chỉ có ở lượt đọc CHI TIẾT một yêu cầu còn chờ duyệt (hộp duyệt đọc lại chi tiết mỗi lần mở). Lịch bận chỉ chặn tới giờ trả gốc, nên đây là lời cảnh báo cho người duyệt; "Đặt ngay" cũng tạm dừng với xe đó (`vehicle_still_out`). */
+            /** @description Chiếc xe của yêu cầu đang ở một chuyến ĐÃ QUÁ GIỜ TRẢ mà chưa được nhận về - chỉ có ở lượt đọc CHI TIẾT một yêu cầu còn chờ duyệt (hộp duyệt đọc lại chi tiết mỗi lần mở). Lịch bận chỉ chặn tới giờ trả gốc, nên đây là lời cảnh báo cho người duyệt; "Đặt ngay" cũng tạm dừng với xe đó (`vehicle_still_out`). */
             vehicleStillOut?: components["schemas"]["BookingRequestVehicleStillOutDto"] | null;
         };
         BookingRequestPageDto: {
@@ -13607,28 +13607,28 @@ export interface components {
         BookingRequestPricingDto: {
             /** @description true = tạm tính (chưa duyệt), false = số đã chốt/đã đóng băng */
             isEstimate: boolean;
-            /** @description Tiền thuê — doanh thu gian hàng, VND string */
+            /** @description Tiền thuê - doanh thu gian hàng, VND string */
             rentalTotal: string;
             /** @description Tổng khách phải trả (đã gồm phụ phí nếu có), VND string */
             customerTotalAmount: string;
-            /** @description Đã trả qua nền tảng (giữ chỗ/đơn) — null khi còn tạm tính */
+            /** @description Đã trả qua nền tảng (giữ chỗ/đơn) - null khi còn tạm tính */
             paidAmount?: string | null;
-            /** @description Trả TRỰC TIẾP chủ xe khi nhận xe — null khi tạm tính hoặc không áp dụng */
+            /** @description Trả TRỰC TIẾP chủ xe khi nhận xe - null khi tạm tính hoặc không áp dụng */
             remainingAmount?: string | null;
-            /** @description Tiền giữ chỗ PHẢI chuyển của khoản đã phát hành (`booking_holds.amount`) — null khi chưa ai nhận chuyến (số dự kiến ở `approvalPreview.onlineAmount`) hoặc chuyến không thu online */
+            /** @description Tiền giữ chỗ PHẢI chuyển của khoản đã phát hành (`booking_holds.amount`) - null khi chưa ai nhận chuyến (số dự kiến ở `approvalPreview.onlineAmount`) hoặc chuyến không thu online */
             holdAmount?: string | null;
-            /** @description Tiền giữ chỗ khách ĐÃ chuyển (`booking_holds.paid_amount`) — "Đã giữ chỗ" chỉ khi số này đủ `holdAmount` (ADR 0044). null khi không có khoản giữ chỗ */
+            /** @description Tiền giữ chỗ khách ĐÃ chuyển (`booking_holds.paid_amount`) - "Đã giữ chỗ" chỉ khi số này đủ `holdAmount` (ADR 0044). null khi không có khoản giữ chỗ */
             holdPaidAmount?: string | null;
         };
         BookingRequestReceiptDto: {
             id: string;
             /** @enum {string} */
             status: "pending_host_approval" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_expired" | "slot_taken" | "cancelled_by_host";
-            /** @description Luôn `true` — người gửi luôn là tài khoản khách đã đăng nhập (ADR 0060). Giữ cho client cũ. */
+            /** @description Luôn `true` - người gửi luôn là tài khoản khách đã đăng nhập (ADR 0060). Giữ cho client cũ. */
             authenticated: boolean;
             /**
              * @deprecated
-             * @description ĐÃ GỠ (ADR 0060) — không bao giờ có mặt.
+             * @description ĐÃ GỠ (ADR 0060) - không bao giờ có mặt.
              */
             session?: components["schemas"]["MobileSessionDto"];
             autoAccepted: boolean;
@@ -13646,13 +13646,13 @@ export interface components {
             bookingCode: string;
             /**
              * Format: date-time
-             * @description Giờ trả theo đơn — đã qua
+             * @description Giờ trả theo đơn - đã qua
              */
             returnAt: string;
         };
         BookingSettlementDto: {
             bookingId: string;
-            /** @description Cọc theo cấu hình đơn — CHƯA chắc đã thu */
+            /** @description Cọc theo cấu hình đơn - CHƯA chắc đã thu */
             depositRequired: string;
             /** @description Cọc ĐÃ THU (từ payments kind=deposit) */
             depositReceived: string;
@@ -13677,7 +13677,7 @@ export interface components {
             id: string;
             /** @enum {string} */
             category: "overtime" | "cleaning" | "damage" | "waiting" | "long_distance" | "overnight" | "excess_mileage" | "other";
-            /** @description Tiền dạng chuỗi — ADR 0007 */
+            /** @description Tiền dạng chuỗi - ADR 0007 */
             amount: string;
             reason: string;
             createdByName?: string | null;
@@ -13700,7 +13700,7 @@ export interface components {
             wardName?: string | null;
             /** @enum {string|null} */
             wardAdministrativeType?: "ward" | "commune" | "special_zone" | null;
-            /** @description Địa chỉ HIỂN THỊ đã ghép sẵn (số nhà, xã/phường, tỉnh) — dùng thẳng, đừng ghép lại */
+            /** @description Địa chỉ HIỂN THỊ đã ghép sẵn (số nhà, xã/phường, tỉnh) - dùng thẳng, đừng ghép lại */
             address?: string | null;
             /** @description Số nhà, đường, toà nhà */
             addressLine?: string | null;
@@ -13710,7 +13710,7 @@ export interface components {
             longitude?: string | null;
             placeId?: string | null;
             /**
-             * @description Ghim đến từ đâu — `geocoded` là máy đoán, giao diện nhắc chủ shop kiểm lại
+             * @description Ghim đến từ đâu - `geocoded` là máy đoán, giao diện nhắc chủ shop kiểm lại
              * @enum {string|null}
              */
             locationSource?: "google_place" | "map_pin" | "geocoded" | "manual" | null;
@@ -13719,7 +13719,7 @@ export interface components {
             status: "active" | "inactive";
             /** @description Số xe (chưa xoá) đang thuộc chi nhánh */
             vehicleCount: number;
-            /** @description Địa chỉ chưa khớp danh mục hành chính hiện hành (thiếu tỉnh hoặc thiếu xã/phường) — chủ shop cần mở form ra chọn lại và xác nhận ghim */
+            /** @description Địa chỉ chưa khớp danh mục hành chính hiện hành (thiếu tỉnh hoặc thiếu xã/phường) - chủ shop cần mở form ra chọn lại và xác nhận ghim */
             needsLocationReview: boolean;
             /** @description Giá trị tỉnh tự do cũ, chỉ để đối chiếu khi bổ sung vị trí */
             legacyProvinceValue?: string | null;
@@ -13750,7 +13750,7 @@ export interface components {
             note?: string;
         };
         BulkDayBlockResultDto: {
-            /** @description Mã lô — dùng để GỠ lại đúng những dòng vừa tạo */
+            /** @description Mã lô - dùng để GỠ lại đúng những dòng vừa tạo */
             batchId: string;
             /** @description Số dòng khoá đã tạo (một dòng cho mỗi cặp xe × ngày) */
             blockedDays: number;
@@ -13767,7 +13767,7 @@ export interface components {
             /** @description Số ngày trong khoảng */
             dayCount: number;
             vehicles: components["schemas"]["BulkDayVehicleDto"][];
-            /** @description Mã lô khoá hàng loạt đang phủ ĐÚNG khoảng này — công tắc trên lịch đang BẬT nếu khác null */
+            /** @description Mã lô khoá hàng loạt đang phủ ĐÚNG khoảng này - công tắc trên lịch đang BẬT nếu khác null */
             activeBlockBatchId?: string | null;
         };
         BulkDayPriceDto: {
@@ -13778,7 +13778,7 @@ export interface components {
             /** @description ID xe; backend vẫn kiểm từng chiếc thuộc gian hàng */
             vehicleIds: string[];
             /**
-             * @description `percent` = tăng/giảm theo giá niêm yết của TỪNG xe (mặc định của giao diện). `fixed` = một con số cho mọi xe — chỉ hợp lý khi nhóm chọn hẹp.
+             * @description `percent` = tăng/giảm theo giá niêm yết của TỪNG xe (mặc định của giao diện). `fixed` = một con số cho mọi xe - chỉ hợp lý khi nhóm chọn hẹp.
              * @enum {string}
              */
             mode: "percent" | "fixed";
@@ -13810,7 +13810,7 @@ export interface components {
             weekdayPrice?: string | null;
             /** @description Giá cuối tuần; null = dùng giá thường */
             weekendPrice?: string | null;
-            /** @description Những ngày (YYYY-MM-DD) xe đang BẬN trong khoảng — không khoá được */
+            /** @description Những ngày (YYYY-MM-DD) xe đang BẬN trong khoảng - không khoá được */
             busyDates: string[];
         };
         CalendarAvailabilityDayDto: {
@@ -13833,7 +13833,7 @@ export interface components {
         };
         CalendarEventDto: {
             id: string;
-            /** @description vehicleId — khớp CalendarResourceDto.id */
+            /** @description vehicleId - khớp CalendarResourceDto.id */
             resourceId: string;
             /** @enum {string} */
             type: "booking" | "blocked_range" | "maintenance" | "booking_request";
@@ -13864,7 +13864,7 @@ export interface components {
             mainImageUrl?: string | null;
             /** @description Giá thuê ngày thường (chuỗi VND) */
             weekdayPrice?: string | null;
-            /** @description Giá thuê theo giờ — null = không cho thuê giờ */
+            /** @description Giá thuê theo giờ - null = không cho thuê giờ */
             hourlyPrice?: string | null;
             /** @enum {string} */
             vehicleType: "car" | "motorbike";
@@ -13873,7 +13873,7 @@ export interface components {
         };
         CancelBookingRequestDto: {
             /**
-             * @description Nhóm lý do — thứ DUY NHẤT người huỷ chọn. Không có nhóm "bất khả kháng".
+             * @description Nhóm lý do - thứ DUY NHẤT người huỷ chọn. Không có nhóm "bất khả kháng".
              * @enum {string}
              */
             reasonCategory: "vehicle_unavailable" | "schedule_conflict" | "customer_requirements" | "customer_unreachable" | "customer_changed_plan" | "driver_unavailable" | "other";
@@ -13902,7 +13902,7 @@ export interface components {
             /** @example SUV */
             label: string;
             /**
-             * @description Nhãn tiếng Anh (ADR 0012). NULL = chưa dịch hoặc là tên riêng (hãng xe) — client dùng `label`.
+             * @description Nhãn tiếng Anh (ADR 0012). NULL = chưa dịch hoặc là tên riêng (hãng xe) - client dùng `label`.
              * @example SUV
              */
             labelEn: string | null;
@@ -13943,7 +13943,7 @@ export interface components {
             /** @example SUV */
             label: string;
             /**
-             * @description Nhãn tiếng Anh (ADR 0012). NULL = chưa dịch hoặc là tên riêng (hãng xe) — client dùng `label`.
+             * @description Nhãn tiếng Anh (ADR 0012). NULL = chưa dịch hoặc là tên riêng (hãng xe) - client dùng `label`.
              * @example SUV
              */
             labelEn: string | null;
@@ -14080,7 +14080,7 @@ export interface components {
              */
             shop: number;
             /**
-             * @description Tổng hai vai — con số cho badge biểu tượng chat
+             * @description Tổng hai vai - con số cho badge biểu tượng chat
              * @example 7
              */
             total: number;
@@ -14119,15 +14119,15 @@ export interface components {
             conflicts: components["schemas"]["ConflictItemDto"][];
         };
         CompleteMaintenanceDto: {
-            /** @description ISO — mặc định là bây giờ */
+            /** @description ISO - mặc định là bây giờ */
             completedAt?: string | null;
-            /** @description KM lúc bảo dưỡng — bỏ trống nếu ghi nhận hồi tố */
+            /** @description KM lúc bảo dưỡng - bỏ trống nếu ghi nhận hồi tố */
             odometerKm?: number | null;
-            /** @description Tiền string — ADR 0007 */
+            /** @description Tiền string - ADR 0007 */
             cost?: string | null;
             receiptCode?: string | null;
             notes?: string | null;
-            /** @description Bắt buộc — chống sửa đè */
+            /** @description Bắt buộc - chống sửa đè */
             expectedRowVersion: number;
         };
         ConfirmHandoverDto: {
@@ -14135,7 +14135,7 @@ export interface components {
             expectedRowVersion?: number;
             /** @description ISO-8601. Không được ở tương lai. Mặc định: lúc xác nhận */
             occurredAt?: string;
-            /** @description 0–2000000 */
+            /** @description 0-2000000 */
             odometerKm?: number | null;
             /** @enum {string} */
             condition?: "normal" | "attention";
@@ -14192,7 +14192,7 @@ export interface components {
             depositAmount: string;
             /** @description MoneyString */
             paidAmount: string;
-            /** @description MoneyString — còn phải trả = tổng − đã trả */
+            /** @description MoneyString - còn phải trả = tổng − đã trả */
             remainingAmount: string;
         };
         ContractRentalDto: {
@@ -14261,64 +14261,64 @@ export interface components {
             /** @description Số tin chưa đọc của phía người xem */
             unread: number;
             status: string;
-            /** @description Gửi tin được không — tuyến hoa hồng chỉ khi đã có đơn (ADR 0073) */
+            /** @description Gửi tin được không - tuyến hoa hồng chỉ khi đã có đơn (ADR 0073) */
             canSend: boolean;
         };
         CorrectDepositRefundDto: {
-            /** @description Số tiền thực hoàn (chuỗi — ADR 0007) */
+            /** @description Số tiền thực hoàn (chuỗi - ADR 0007) */
             refundAmount: string;
             /** @enum {string} */
             refundMethod: "bank_transfer" | "cash" | "other";
-            /** @description ISO — mặc định hiện tại. Không được ở tương lai. */
+            /** @description ISO - mặc định hiện tại. Không được ở tương lai. */
             refundedAt?: string;
             /** @description Mã giao dịch/tham chiếu */
             reference?: string;
             note?: string;
-            /** @description Lý do điều chỉnh — bắt buộc, vào audit */
+            /** @description Lý do điều chỉnh - bắt buộc, vào audit */
             correctionReason: string;
-            /** @description Bắt buộc — chống sửa đè */
+            /** @description Bắt buộc - chống sửa đè */
             expectedRowVersion: number;
         };
         CorrectMaintenanceCostDto: {
-            /** @description Tiền string — ADR 0007. `null` = xoá chi phí (phiếu chi bị huỷ theo) */
+            /** @description Tiền string - ADR 0007. `null` = xoá chi phí (phiếu chi bị huỷ theo) */
             cost?: string | null;
             receiptCode?: string | null;
-            /** @description Vì sao sửa — vào audit cùng giá trị cũ */
+            /** @description Vì sao sửa - vào audit cùng giá trị cũ */
             correctionReason: string;
-            /** @description rowVersion đang thấy — chống ghi đè */
+            /** @description rowVersion đang thấy - chống ghi đè */
             expectedRowVersion: number;
         };
         CorrectOdometerDto: {
-            /** @description KM mới, 0–2000000 */
+            /** @description KM mới, 0-2000000 */
             odometerKm: number;
             /** @enum {string} */
             reasonCode: "handover_error" | "device_error" | "cluster_replaced" | "data_migration" | "other";
-            /** @description Lý do chi tiết — bắt buộc, không được để trống */
+            /** @description Lý do chi tiết - bắt buộc, không được để trống */
             reason: string;
             /** @description Xác nhận giảm KM có chủ ý */
             confirmDecrease?: boolean;
-            /** @description Bắt buộc — chống sửa đè */
+            /** @description Bắt buộc - chống sửa đè */
             expectedRowVersion?: number | null;
         };
         CreateBannerDto: {
             /**
-             * @description Vị trí — đặt lúc tạo, KHÔNG đổi được về sau (mỗi vị trí một bộ khổ ảnh)
+             * @description Vị trí - đặt lúc tạo, KHÔNG đổi được về sau (mỗi vị trí một bộ khổ ảnh)
              * @default hero
              * @enum {string}
              */
             placement: "hero" | "promo" | "partner";
             /**
-             * @description Tên nội bộ — không hiển thị công khai
+             * @description Tên nội bộ - không hiển thị công khai
              * @example Chiến dịch hè 2026
              */
             title: string;
             /** @description URL ảnh desktop (upload qua presign R2) */
             imageUrl: string;
-            /** @description URL ảnh tablet 1024×450 (chỉ banner đầu trang) — bỏ trống dùng ảnh desktop */
+            /** @description URL ảnh tablet 1024×450 (chỉ banner đầu trang) - bỏ trống dùng ảnh desktop */
             tabletImageUrl?: string | null;
-            /** @description URL ảnh mobile — bỏ trống dùng ảnh desktop */
+            /** @description URL ảnh mobile - bỏ trống dùng ảnh desktop */
             mobileImageUrl?: string | null;
-            /** @description Mô tả ảnh cho screen reader — bắt buộc */
+            /** @description Mô tả ảnh cho screen reader - bắt buộc */
             altText: string;
             /** @description Đích đến khi bấm banner */
             linkUrl?: string | null;
@@ -14326,9 +14326,9 @@ export interface components {
             sortOrder: number;
             /** @default true */
             active: boolean;
-            /** @description Bắt đầu hiển thị (ISO) — bỏ trống = ngay lập tức */
+            /** @description Bắt đầu hiển thị (ISO) - bỏ trống = ngay lập tức */
             startsAt?: string | null;
-            /** @description Ngừng hiển thị (ISO) — bỏ trống = vô hạn */
+            /** @description Ngừng hiển thị (ISO) - bỏ trống = vô hạn */
             endsAt?: string | null;
         };
         CreateBookingDto: {
@@ -14371,10 +14371,10 @@ export interface components {
             pickupAt: string;
             /** @enum {number} */
             longTermPackageMonths?: 1 | 2 | 3 | 6 | 9 | 12;
-            /** @description Trả xe (ISO-8601) — không dùng cho long_term */
+            /** @description Trả xe (ISO-8601) - không dùng cho long_term */
             returnAt?: string;
             /**
-             * @description Tiền thuê gốc, string thập phân — ADR 0007
+             * @description Tiền thuê gốc, string thập phân - ADR 0007
              * @example 600000
              */
             baseAmount?: string;
@@ -14396,29 +14396,29 @@ export interface components {
         CreateBookingRequestDto: {
             /** @description ID xe (ULID) trên marketplace */
             vehicleId: string;
-            /** @description Họ tên người thuê — bỏ trống thì dùng tên tài khoản (ADR 0063) */
+            /** @description Họ tên người thuê - bỏ trống thì dùng tên tài khoản (ADR 0063) */
             customerName?: string;
-            /** @description SĐT liên hệ `0xxxxxxxxx`/`+84xxxxxxxxx` — bỏ trống thì dùng SĐT tài khoản; khác số không cần OTP (ADR 0063) */
+            /** @description SĐT liên hệ `0xxxxxxxxx`/`+84xxxxxxxxx` - bỏ trống thì dùng SĐT tài khoản; khác số không cần OTP (ADR 0063) */
             customerPhone?: string;
             /**
              * @deprecated
-             * @description ĐÃ GỠ (ADR 0060) — server bỏ qua; không còn phiên nào được cấp ở route này.
+             * @description ĐÃ GỠ (ADR 0060) - server bỏ qua; không còn phiên nào được cấp ở route này.
              * @enum {string}
              */
             client?: "web" | "native";
             /**
              * @deprecated
-             * @description ĐÃ GỠ (ADR 0060) — server bỏ qua.
+             * @description ĐÃ GỠ (ADR 0060) - server bỏ qua.
              */
             device?: components["schemas"]["MobileDeviceDto"];
             /**
              * @deprecated
-             * @description ĐÃ GỠ (ADR 0060) — server bỏ qua; email đã xác minh lấy từ tài khoản.
+             * @description ĐÃ GỠ (ADR 0060) - server bỏ qua; email đã xác minh lấy từ tài khoản.
              */
             customerEmail?: string;
-            /** @description Nhận xe (ISO-8601) — không dùng cho long_term */
+            /** @description Nhận xe (ISO-8601) - không dùng cho long_term */
             pickupAt?: string;
-            /** @description Trả xe (ISO-8601) — không dùng cho long_term */
+            /** @description Trả xe (ISO-8601) - không dùng cho long_term */
             returnAt?: string;
             /** @enum {number} */
             longTermPackageMonths?: 1 | 2 | 3 | 6 | 9 | 12;
@@ -14452,11 +14452,11 @@ export interface components {
             destinationLatitude?: number;
             /** @description Kinh độ ghim điểm đến */
             destinationLongitude?: number;
-            /** @description Lời nhắn của khách cho chủ xe — server cắt khoảng trắng hai đầu, chỉ có khoảng trắng thì lưu null */
+            /** @description Lời nhắn của khách cho chủ xe - server cắt khoảng trắng hai đầu, chỉ có khoảng trắng thì lưu null */
             note?: string;
-            /** @description Yêu cầu giao xe tận nơi — chỉ nhận khi chính sách giao nhận của xe đang bật */
+            /** @description Yêu cầu giao xe tận nơi - chỉ nhận khi chính sách giao nhận của xe đang bật */
             deliveryRequested?: boolean;
-            /** @description Địa điểm giao xe — bắt buộc khi yêu cầu giao tận nơi */
+            /** @description Địa điểm giao xe - bắt buộc khi yêu cầu giao tận nơi */
             deliveryAddress?: string;
             /** @description Mã tỉnh/thành của địa chỉ giao xe (GET /provinces) */
             deliveryProvinceCode?: string;
@@ -14474,21 +14474,21 @@ export interface components {
             acceptedTerms?: boolean;
             /** @description Mã khuyến mãi nền tảng (server tự chuẩn hoá) */
             promoCode?: string;
-            /** @description Thêm bảo hiểm vật chất xe (IV) — tính theo ngày */
+            /** @description Thêm bảo hiểm vật chất xe (IV) - tính theo ngày */
             vehicleProtectionSelected?: boolean;
-            /** @description Thêm bảo hiểm tai nạn người trên xe (IP) — tính theo ngày */
+            /** @description Thêm bảo hiểm tai nạn người trên xe (IP) - tính theo ngày */
             personalAccidentSelected?: boolean;
         };
         CreateBranchDto: {
             /** @example Chi nhánh Đà Nẵng */
             name: string;
             /**
-             * @description Mã tỉnh — BẮT BUỘC, phải đang mở đăng ký
+             * @description Mã tỉnh - BẮT BUỘC, phải đang mở đăng ký
              * @example 48
              */
             provinceCode: string;
             /**
-             * @description Mã xã/phường/đặc khu 5 chữ số — lấy từ `GET /provinces/:code/wards`
+             * @description Mã xã/phường/đặc khu 5 chữ số - lấy từ `GET /provinces/:code/wards`
              * @example 00004
              */
             wardCode?: string;
@@ -14501,16 +14501,16 @@ export interface components {
             placeId?: string;
             /**
              * @deprecated
-             * @description Cũ — dùng `addressLine`
+             * @description Cũ - dùng `addressLine`
              */
             address?: string;
             /** @example 0901234567 */
             phone?: string;
-            /** @description Vĩ độ của ghim chủ shop đã xác nhận — THẮNG toạ độ server tự tra */
+            /** @description Vĩ độ của ghim chủ shop đã xác nhận - THẮNG toạ độ server tự tra */
             latitude?: number;
             longitude?: number;
             /**
-             * @description Ghim đến từ đâu. Server ghi đè khi tự tra — client không tự phong "đã xác nhận".
+             * @description Ghim đến từ đâu. Server ghi đè khi tự tra - client không tự phong "đã xác nhận".
              * @enum {string}
              */
             locationSource?: "google_place" | "map_pin" | "geocoded" | "manual";
@@ -14519,14 +14519,14 @@ export interface components {
             /** @enum {string} */
             type: "vehicle_brand" | "body_type" | "fuel_type" | "vehicle_feature";
             /**
-             * @description Slug lưu xuống xe và đi vào URL bộ lọc — không đổi được sau khi tạo
+             * @description Slug lưu xuống xe và đi vào URL bộ lọc - không đổi được sau khi tạo
              * @example coupe
              */
             key: string;
             /** @example Coupe */
             label: string;
             /**
-             * @description Nhãn tiếng Anh — bỏ trống thì giao diện tiếng Anh dùng `label`
+             * @description Nhãn tiếng Anh - bỏ trống thì giao diện tiếng Anh dùng `label`
              * @example Coupe
              */
             labelEn?: string | null;
@@ -14536,7 +14536,7 @@ export interface components {
             descriptionEn?: string | null;
             /** @example /body-types/coupe.png */
             iconUrl?: Record<string, never>;
-            /** @description Chỉ kiểu dáng — bật thì bắt buộc có showcaseImageUrl */
+            /** @description Chỉ kiểu dáng - bật thì bắt buộc có showcaseImageUrl */
             showOnHome?: boolean;
             /** @description Chỉ kiểu dáng */
             showcaseImageUrl?: string | null;
@@ -14570,7 +14570,7 @@ export interface components {
             seatCounts?: number[];
             yearFrom?: number | null;
             yearTo?: number | null;
-            /** @description Trang sản phẩm chính hãng — nguồn của dữ liệu này */
+            /** @description Trang sản phẩm chính hãng - nguồn của dữ liệu này */
             sourceUrl?: string | null;
             /** @default true */
             active: boolean;
@@ -14582,9 +14582,9 @@ export interface components {
             name: string;
         };
         CreateConversationDto: {
-            /** @description ID xe (listing) muốn nhắn shop — hoặc dùng `shopSlug` */
+            /** @description ID xe (listing) muốn nhắn shop - hoặc dùng `shopSlug` */
             vehicleId?: string;
-            /** @description Slug gian hàng muốn nhắn — hoặc dùng `vehicleId` */
+            /** @description Slug gian hàng muốn nhắn - hoặc dùng `vehicleId` */
             shopSlug?: string;
         };
         CreateCustomerNoteDto: {
@@ -14607,7 +14607,7 @@ export interface components {
              */
             phone: string;
             /**
-             * @description Không nhận `shop_owner` — chủ gian hàng là người tạo gian hàng, không mời được. Giá trị đó nằm trong enum nhưng bị `InvitesService.create` từ chối bằng `VALIDATION_FAILED`.
+             * @description Không nhận `shop_owner` - chủ gian hàng là người tạo gian hàng, không mời được. Giá trị đó nằm trong enum nhưng bị `InvitesService.create` từ chối bằng `VALIDATION_FAILED`.
              * @enum {string}
              */
             roleKey: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer";
@@ -14616,7 +14616,7 @@ export interface components {
             id: string;
             /** @description SĐT được mời, dạng nội địa 0xxxxxxxxx (ADR 0060). null với lời mời email cũ. */
             phone: string | null;
-            /** @description Email được mời — CHỈ lời mời tạo trước ADR 0060; lời mời mới luôn null. */
+            /** @description Email được mời - CHỈ lời mời tạo trước ADR 0060; lời mời mới luôn null. */
             email: string | null;
             /** @enum {string} */
             roleKey: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer";
@@ -14628,12 +14628,12 @@ export interface components {
             createdAt: string;
             /** @description Tên người gửi lời mời */
             createdByName?: string | null;
-            /** @description Link nhận lời mời trên site partner — chỉ trả về ở đây, một lần. Người mời tự gửi cho người được mời. */
+            /** @description Link nhận lời mời trên site partner - chỉ trả về ở đây, một lần. Người mời tự gửi cho người được mời. */
             inviteUrl: string;
         };
         CreatePlanDto: {
             /**
-             * @description Mã gói — unique, không đổi sau khi tạo. Chữ hoa được nhận và chuẩn hoá về chữ thường, để "BASIC" và "basic" không thành hai gói khác nhau (unique ở DB phân biệt hoa/thường).
+             * @description Mã gói - unique, không đổi sau khi tạo. Chữ hoa được nhận và chuẩn hoá về chữ thường, để "BASIC" và "basic" không thành hai gói khác nhau (unique ở DB phân biệt hoa/thường).
              * @example basic
              */
             code: string;
@@ -14648,7 +14648,7 @@ export interface components {
             /** @description BẮT BUỘC khi billingMode=commission; phải trống khi package */
             commissionPercent?: number | null;
             /**
-             * @description Phạm vi loại xe của bậc (ADR 0065) — bỏ trống = all. KHÔNG sửa được sau khi tạo. Bậc commission chỉ được là all
+             * @description Phạm vi loại xe của bậc (ADR 0065) - bỏ trống = all. KHÔNG sửa được sau khi tạo. Bậc commission chỉ được là all
              * @enum {string}
              */
             vehicleScope?: "all" | "car" | "motorbike";
@@ -14679,7 +14679,7 @@ export interface components {
              */
             type: "income" | "expense";
             /**
-             * @description Tiền, string thập phân — ADR 0007
+             * @description Tiền, string thập phân - ADR 0007
              * @example 500000
              */
             amount: string;
@@ -14689,9 +14689,9 @@ export interface components {
             categoryId?: string;
             /** @description Đơn thuê liên quan (ULID) */
             bookingId?: string;
-            /** @description Xe liên quan (ULID). Gắn được MỘT MÌNH — chi phí của một chiếc xe (rửa, vá lốp, gửi bãi) không thuộc chuyến nào. Gửi kèm `bookingId` thì phải là ĐÚNG xe của đơn đó, nếu không server trả `RECEIPT_BOOKING_VEHICLE_MISMATCH`; bỏ trống mà có `bookingId` thì server tự suy từ đơn. */
+            /** @description Xe liên quan (ULID). Gắn được MỘT MÌNH - chi phí của một chiếc xe (rửa, vá lốp, gửi bãi) không thuộc chuyến nào. Gửi kèm `bookingId` thì phải là ĐÚNG xe của đơn đó, nếu không server trả `RECEIPT_BOOKING_VEHICLE_MISMATCH`; bỏ trống mà có `bookingId` thì server tự suy từ đơn. */
             vehicleId?: string;
-            /** @description Chi nhánh phát sinh khoản tiền (ULID) — BẮT BUỘC khi phiếu không gắn xe và không gắn đơn. Danh mục không suy ra được chi nhánh ("Chi phí văn phòng" ở hai chi nhánh là hai khoản mang cùng một tên), nên phải hỏi. Không có "toàn gian hàng": một khoản xếp ngoài mọi chi nhánh thì lọc từng chi nhánh đều ra 0 trong khi tổng vẫn có nó — không ai đối chiếu được nữa. Gửi kèm xe/đơn ⇒ VALIDATION_FAILED: lúc đó chi nhánh SUY TỪ XE. */
+            /** @description Chi nhánh phát sinh khoản tiền (ULID) - BẮT BUỘC khi phiếu không gắn xe và không gắn đơn. Danh mục không suy ra được chi nhánh ("Chi phí văn phòng" ở hai chi nhánh là hai khoản mang cùng một tên), nên phải hỏi. Không có "toàn gian hàng": một khoản xếp ngoài mọi chi nhánh thì lọc từng chi nhánh đều ra 0 trong khi tổng vẫn có nó - không ai đối chiếu được nữa. Gửi kèm xe/đơn ⇒ VALIDATION_FAILED: lúc đó chi nhánh SUY TỪ XE. */
             branchId?: string;
             /** @description Ngày tiền phát sinh (ISO hoặc YYYY-MM-DD); mặc định bây giờ. Nhập bù cho hôm trước thì đặt đúng ngày đó. */
             occurredAt?: string;
@@ -14716,7 +14716,7 @@ export interface components {
             /** @example Nguyễn Văn An */
             fullName: string;
             /**
-             * @description Bắt buộc — SĐT là định danh của khách trong sổ khách. Server chuẩn hoá trước khi lưu.
+             * @description Bắt buộc - SĐT là định danh của khách trong sổ khách. Server chuẩn hoá trước khi lưu.
              * @example 0901234567
              */
             phone: string;
@@ -14740,7 +14740,7 @@ export interface components {
             startAt: string;
             /**
              * Format: date-time
-             * @description Kết thúc khoá, ISO-8601 UTC — phải sau startAt
+             * @description Kết thúc khoá, ISO-8601 UTC - phải sau startAt
              */
             endAt: string;
             /** @enum {string} */
@@ -14766,7 +14766,7 @@ export interface components {
             /** @example 51K-123.45 */
             plateNumber?: string | null;
             /**
-             * @description Key hãng xe thuộc danh mục `vehicle_brand` (GET /catalog) — không phải tên tự do
+             * @description Key hãng xe thuộc danh mục `vehicle_brand` (GET /catalog) - không phải tên tự do
              * @example vinfast
              */
             brand?: string | null;
@@ -14797,12 +14797,12 @@ export interface components {
             /** @description Xe điện: mức tiêu thụ điện (kWh/100km). Gửi null = bỏ khai. */
             electricConsumptionKwhPer100Km?: number | null;
             /**
-             * @description Key kiểu dáng thuộc danh mục `body_type` (GET /catalog) — chỉ với ô tô. Gửi null để xoá.
+             * @description Key kiểu dáng thuộc danh mục `body_type` (GET /catalog) - chỉ với ô tô. Gửi null để xoá.
              * @example suv
              */
             bodyType?: string | null;
             /**
-             * @description Phân khúc — chỉ với xe máy. Gửi null để xoá.
+             * @description Phân khúc - chỉ với xe máy. Gửi null để xoá.
              * @example scooter
              * @enum {string|null}
              */
@@ -14814,41 +14814,41 @@ export interface components {
             description?: string | null;
             /**
              * @deprecated
-             * @description BỊ BỎ QUA — ảnh bìa luôn là ảnh mặt trước trong `media`
+             * @description BỊ BỎ QUA - ảnh bìa luôn là ảnh mặt trước trong `media`
              */
             mainImageUrl?: string | null;
             /**
-             * @description Giá ngày thường, string thập phân — ADR 0007
+             * @description Giá ngày thường, string thập phân - ADR 0007
              * @example 600000
              */
             weekdayPrice?: string;
             /**
-             * @description Giá cuối tuần — gửi null = xoá (dùng giá ngày thường)
+             * @description Giá cuối tuần - gửi null = xoá (dùng giá ngày thường)
              * @example 750000
              */
             weekendPrice?: string | null;
             /**
-             * @description Giá thuê theo giờ, string thập phân — ADR 0007. Gửi null = không cho thuê giờ.
+             * @description Giá thuê theo giờ, string thập phân - ADR 0007. Gửi null = không cho thuê giờ.
              * @example 120000
              */
             hourlyPrice?: string | null;
             /**
-             * @description Giá tháng tham chiếu thuê dài hạn (÷30 ra đơn giá ngày) — chỉ có nghĩa khi serviceTypes chứa long_term. Gửi null = bỏ giá tháng.
+             * @description Giá tháng tham chiếu thuê dài hạn (÷30 ra đơn giá ngày) - chỉ có nghĩa khi serviceTypes chứa long_term. Gửi null = bỏ giá tháng.
              * @example 8000000
              */
             monthlyPrice?: string | null;
             /**
-             * @description Giá/ngày ĐÃ GỒM tài xế — chỉ có nghĩa khi serviceTypes chứa with_driver. Gửi null = shop báo giá khi duyệt.
+             * @description Giá/ngày ĐÃ GỒM tài xế - chỉ có nghĩa khi serviceTypes chứa with_driver. Gửi null = shop báo giá khi duyệt.
              * @example 1500000
              */
             withDriverDailyPrice?: string | null;
             /**
-             * @description Giá/ngày có tài xế liên tỉnh (khứ hồi) — null = rơi về giá cơ bản kèm ghi chú
+             * @description Giá/ngày có tài xế liên tỉnh (khứ hồi) - null = rơi về giá cơ bản kèm ghi chú
              * @example 1600000
              */
             withDriverInterCityPrice?: string | null;
             /**
-             * @description Giá/ngày có tài xế liên tỉnh 1 CHIỀU — null = fallback liên tỉnh → cơ bản
+             * @description Giá/ngày có tài xế liên tỉnh 1 CHIỀU - null = fallback liên tỉnh → cơ bản
              * @example 2000000
              */
             withDriverOneWayPrice?: string | null;
@@ -14860,7 +14860,7 @@ export interface components {
             images?: string[];
             media?: components["schemas"]["VehicleMediaInputDto"][];
             /**
-             * @description Key tiện ích thuộc danh mục `vehicle_feature` (GET /catalog) — thay toàn bộ khi gửi
+             * @description Key tiện ích thuộc danh mục `vehicle_feature` (GET /catalog) - thay toàn bộ khi gửi
              * @example [
              *       "bluetooth",
              *       "gps"
@@ -14874,7 +14874,7 @@ export interface components {
              * @example 200000
              */
             amount: string;
-            /** @description Tài khoản nhận — phải thuộc chính chủ ví */
+            /** @description Tài khoản nhận - phải thuộc chính chủ ví */
             bankAccountId: string;
         };
         CurrentPlanDto: {
@@ -14893,13 +14893,13 @@ export interface components {
              */
             phase: "current" | "grace" | "lapsed" | "unconfigured";
             /**
-             * @description SNAPSHOT trên dòng thuê bao (ADR 0024 điều 2) — null ở dòng trước ADR 0015
+             * @description SNAPSHOT trên dòng thuê bao (ADR 0024 điều 2) - null ở dòng trước ADR 0015
              * @enum {string|null}
              */
             billingMode?: "commission" | "package" | null;
             /** @description SNAPSHOT lúc gán */
             commissionPercent?: number | null;
-            /** @description SNAPSHOT hạn mức (ADR 0041 điều 3) — null ở tuyến hoa hồng và dòng cũ */
+            /** @description SNAPSHOT hạn mức (ADR 0041 điều 3) - null ở tuyến hoa hồng và dòng cũ */
             quota?: components["schemas"]["PlanQuotaDto"] | null;
             /** @description ISO-8601 UTC */
             endsAt: string;
@@ -14916,7 +14916,7 @@ export interface components {
             phone?: Record<string, never> | null;
             email?: Record<string, never> | null;
             /**
-             * @description Decimal trả về dạng string — ADR 0007
+             * @description Decimal trả về dạng string - ADR 0007
              * @example 4.75
              */
             ratingAvg: string;
@@ -14949,18 +14949,18 @@ export interface components {
             serviceFeePercent: number | null;
             /** @description Xem BillingMode trong @xeprime/types */
             billingMode: string | null;
-            /** @description ISO-8601 UTC — băng hết hạn đọc ngày này */
+            /** @description ISO-8601 UTC - băng hết hạn đọc ngày này */
             planEndsAt: string | null;
             /** @description Xem BillingPhase trong @xeprime/types */
             billingPhase: string;
-            /** @description ISO-8601 UTC — hết ân hạn; null khi gói còn hạn hoặc chưa có gói */
+            /** @description ISO-8601 UTC - hết ân hạn; null khi gói còn hạn hoặc chưa có gói */
             graceEndsAt: string | null;
             /** @description Số xe đang công khai trên marketplace */
             publicVehicleCount: number;
         };
         CustomerBookingExtensionDto: {
             id: string;
-            /** @description Mã đối soát XPE… — NỘI DUNG chuyển khoản */
+            /** @description Mã đối soát XPE… - NỘI DUNG chuyển khoản */
             code: string;
             months: number;
             fromAt: string;
@@ -15008,9 +15008,9 @@ export interface components {
             email?: string | null;
         };
         CustomerDocumentDownloadDto: {
-            /** @description Signed GET URL ngắn hạn — không cache, không lưu */
+            /** @description Signed GET URL ngắn hạn - không cache, không lưu */
             downloadUrl: string;
-            /** @description ISO — thời điểm URL hết hiệu lực */
+            /** @description ISO - thời điểm URL hết hiệu lực */
             expiresAt: string;
         };
         CustomerDocumentDto: {
@@ -15022,7 +15022,7 @@ export interface components {
             holderName?: string | null;
             /** @description Số CCCD / GPLX / hộ chiếu… */
             documentNumber?: string | null;
-            /** @description Tên file gốc (hiển thị) — KHÔNG phải đường dẫn lưu trữ */
+            /** @description Tên file gốc (hiển thị) - KHÔNG phải đường dẫn lưu trữ */
             originalName: string;
             mimeType: string;
             sizeBytes: number;
@@ -15040,7 +15040,7 @@ export interface components {
             createdAt: string;
         };
         CustomerDocumentPresignDto: {
-            /** @description ID bản ghi giấy tờ — dùng cho bước hoàn tất */
+            /** @description ID bản ghi giấy tờ - dùng cho bước hoàn tất */
             documentId: string;
             /** @description URL PUT lên bucket riêng tư (hết hạn ngắn) */
             uploadUrl: string;
@@ -15051,44 +15051,44 @@ export interface components {
             billingMode: "commission" | "package";
             policy: components["schemas"]["FeePolicySnapshotDto"];
             /**
-             * @description Loại xe — quyết định mức S và biểu phí bảo hiểm
+             * @description Loại xe - quyết định mức S và biểu phí bảo hiểm
              * @enum {string}
              */
             vehicleType: "car" | "motorbike";
-            /** @description Số ngày thuê tính phí — nhân biểu phí bảo hiểm, chia nấc hoa hồng */
+            /** @description Số ngày thuê tính phí - nhân biểu phí bảo hiểm, chia nấc hoa hồng */
             rentalDays: number;
-            /** @description Giá thuê TỪNG ngày (ngày 1 trước, sau khuyến mãi trực tiếp, không gồm phí giao) — đúng mảng đã làm mẫu số hoa hồng H. Vắng = không biết (H chia đều, hoặc snapshot trước 22/10/2026) */
+            /** @description Giá thuê TỪNG ngày (ngày 1 trước, sau khuyến mãi trực tiếp, không gồm phí giao) - đúng mảng đã làm mẫu số hoa hồng H. Vắng = không biết (H chia đều, hoặc snapshot trước 22/10/2026) */
             dayAmounts?: string[];
-            /** @description B — tổng bảng kê giá thuê (gồm giao nhận) */
+            /** @description B - tổng bảng kê giá thuê (gồm giao nhận) */
             baseAmount: string;
-            /** @description G — phí giao nhận nằm trong B, khách trả TẬN TAY chủ xe: không vào tiền giữ chỗ online, không chịu hoa hồng hay thuế (ADR 0064). Vắng mặt ở snapshot trước 21/10/2026 = "0" */
+            /** @description G - phí giao nhận nằm trong B, khách trả TẬN TAY chủ xe: không vào tiền giữ chỗ online, không chịu hoa hồng hay thuế (ADR 0064). Vắng mặt ở snapshot trước 21/10/2026 = "0" */
             deliveryAmount?: string;
             lines: components["schemas"]["FeeLineDto"][];
             /** @description Tổng phụ phí KHÁCH gánh (S + IV + IP) */
             customerFeeTotal: string;
             /** @description Số KHÁCH TRẢ cả chuyến (chưa gồm cọc thế chấp) */
             customerTotalAmount: string;
-            /** @description D — phần của CHỦ XE trong tiền giữ chỗ online (cam kết giữ xe); "0" khi chuyến không thu online */
+            /** @description D - phần của CHỦ XE trong tiền giữ chỗ online (cam kết giữ xe); "0" khi chuyến không thu online */
             depositAmount: string;
-            /** @description H — hoa hồng lũy tiến trừ vào tiền chủ xe (tính trên tiền thuê, KHÔNG trên phí giao xe). "0" ở tuyến gói */
+            /** @description H - hoa hồng lũy tiến trừ vào tiền chủ xe (tính trên tiền thuê, KHÔNG trên phí giao xe). "0" ở tuyến gói */
             ownerCommissionAmount: string;
-            /** @description S + H — phần XePrime giữ lại từ tiền giữ chỗ online (trước tài trợ mã) */
+            /** @description S + H - phần XePrime giữ lại từ tiền giữ chỗ online (trước tài trợ mã) */
             platformRetainedAmount: string;
-            /** @description Tiền giữ chỗ online TRƯỚC tài trợ mã khuyến mãi = D + S + H + IV + IP — con số phân bổ quyền lợi làm việc trên */
+            /** @description Tiền giữ chỗ online TRƯỚC tài trợ mã khuyến mãi = D + S + H + IV + IP - con số phân bổ quyền lợi làm việc trên */
             grossOnlineAmount: string;
-            /** @description D + S + H — phần tiền giữ chỗ online XePrime được phép tài trợ bằng mã (không gồm bảo hiểm) */
+            /** @description D + S + H - phần tiền giữ chỗ online XePrime được phép tài trợ bằng mã (không gồm bảo hiểm) */
             sponsorableAmount: string;
-            /** @description P — số XePrime TÀI TRỢ qua mã khuyến mãi (ADR 0046). "0" khi không có mã. Không đụng tiền gian hàng. */
+            /** @description P - số XePrime TÀI TRỢ qua mã khuyến mãi (ADR 0046). "0" khi không có mã. Không đụng tiền gian hàng. */
             promoDiscountAmount: string;
             /** @description Mã đã áp + điều kiện đóng băng. null khi chuyến không dùng mã. */
             promo?: components["schemas"]["PromoCodeSnapshotDto"] | null;
-            /** @description Tiền giữ chỗ − P — số quét QR trả ngay */
+            /** @description Tiền giữ chỗ − P - số quét QR trả ngay */
             onlineAmount: string;
-            /** @description Tổng khách trả trước mã − tiền giữ chỗ — khách trả TRỰC TIẾP chủ xe lúc nhận xe */
+            /** @description Tổng khách trả trước mã − tiền giữ chỗ - khách trả TRỰC TIẾP chủ xe lúc nhận xe */
             payAtPickupAmount: string;
-            /** @description T = GTGT + TNCN — thuế khấu trừ khỏi tiền chủ xe, KHÔNG cộng vào tổng khách. "0" khi cổng thuế tắt hoặc người bán được miễn (taxExemptReason) */
+            /** @description T = GTGT + TNCN - thuế khấu trừ khỏi tiền chủ xe, KHÔNG cộng vào tổng khách. "0" khi cổng thuế tắt hoặc người bán được miễn (taxExemptReason) */
             taxAmount: string;
-            /** @description R = B − G — tiền THUÊ: mẫu số của hoa hồng, thuế và phần giữ chỗ D */
+            /** @description R = B − G - tiền THUÊ: mẫu số của hoa hồng, thuế và phần giữ chỗ D */
             rentAmount?: string;
             /** @description Thuế GTGT khấu trừ = roundVnd(vat% × R) */
             vatAmount?: string;
@@ -15104,12 +15104,12 @@ export interface components {
              */
             taxCategory?: "service" | "transport" | null;
             /**
-             * @description Vì sao không khấu trừ dù cổng thuế mở — company (doanh nghiệp đã xác minh)
+             * @description Vì sao không khấu trừ dù cổng thuế mở - company (doanh nghiệp đã xác minh)
              * @enum {string|null}
              */
             taxExemptReason?: "company" | null;
             /**
-             * @description Loại dịch vụ đã đóng băng — chọn cặp tỷ lệ thuế
+             * @description Loại dịch vụ đã đóng băng - chọn cặp tỷ lệ thuế
              * @enum {string|null}
              */
             serviceType?: "self_drive" | "with_driver" | "long_term" | null;
@@ -15118,16 +15118,16 @@ export interface components {
              * @enum {string}
              */
             sellerEntityType?: "individual" | "household_business" | "company";
-            /** @description D − T — khoản XePrime chuyển vào ví chủ xe khi chuyến hoàn thành */
+            /** @description D − T - khoản XePrime chuyển vào ví chủ xe khi chuyến hoàn thành */
             ownerPayableAmount: string;
             /** @description Chủ xe THỰC NHẬN cả chuyến = B − H − T */
             ownerNetAmount: string;
-            /** @description Khoản giữ chỗ khách chuyển XePrime — null khi không cần (tuyến gói, báo giá tạm tính) */
+            /** @description Khoản giữ chỗ khách chuyển XePrime - null khi không cần (tuyến gói, báo giá tạm tính) */
             holdAmount?: string | null;
         };
         CustomerHoldDto: {
             id: string;
-            /** @description Mã đối soát XPH… — NỘI DUNG chuyển khoản */
+            /** @description Mã đối soát XPH… - NỘI DUNG chuyển khoản */
             code: string;
             /** @enum {string} */
             status: "pending" | "underpaid" | "paid" | "expired" | "cancelled" | "released";
@@ -15139,17 +15139,17 @@ export interface components {
             paidAmount: string;
             /** @description Còn thiếu = amount − paidAmount, kẹp sàn 0 */
             remainingAmount: string;
-            /** @description ISO — quá mốc này mà chưa đủ tiền thì chỗ được nhả */
+            /** @description ISO - quá mốc này mà chưa đủ tiền thì chỗ được nhả */
             expiresAt: string;
-            /** @description ISO — đã trả đủ: huỷ trước mốc này được hoàn toàn bộ. Chưa trả: mốc DỰ KIẾN nếu trả ngay (xem freeCancelStarted) */
+            /** @description ISO - đã trả đủ: huỷ trước mốc này được hoàn toàn bộ. Chưa trả: mốc DỰ KIẾN nếu trả ngay (xem freeCancelStarted) */
             freeCancelUntil: string;
-            /** @description true khi đã trả đủ — mốc huỷ miễn phí đã lưu và đang đếm */
+            /** @description true khi đã trả đủ - mốc huỷ miễn phí đã lưu và đang đếm */
             freeCancelStarted: boolean;
             /** @description Số phút huỷ miễn phí (chưa trả: nếu trả ngay bây giờ) */
             freeCancelMinutes: number;
             /** @description false = không có thời gian huỷ miễn phí (chính sách tắt, hoặc giờ nhận xe kẹp cửa sổ về 0) */
             freeCancelAvailable: boolean;
-            /** @description Hoàn vào ví nếu huỷ muộn (đã trả đủ) — VND string */
+            /** @description Hoàn vào ví nếu huỷ muộn (đã trả đủ) - VND string */
             lateCancelRefundAmount: string;
             paidAt?: string | null;
             /** @enum {string|null} */
@@ -15194,9 +15194,9 @@ export interface components {
             oldest?: components["schemas"]["CustomerBookingItemDto"] | null;
         };
         CustomerRevenueBucketDto: {
-            /** @description ISO — đầu khoảng (giờ VN 00:00) */
+            /** @description ISO - đầu khoảng (giờ VN 00:00) */
             from: string;
-            /** @description ISO — đầu khoảng kế tiếp */
+            /** @description ISO - đầu khoảng kế tiếp */
             to: string;
             /** @description Giá trị đơn nhận xe trong khoảng (VND string) */
             amount: string;
@@ -15230,9 +15230,9 @@ export interface components {
             avatarUrl?: string | null;
             /** @description Số chuyến có ngày NHẬN XE rơi trong kỳ, không tính đơn đã huỷ */
             trips: number;
-            /** @description Tiền THẬT đã thu của khách này trong kỳ (phiếu đã duyệt, đã loại tiền cọc). KHÁC "tổng giá trị thuê" ở sổ khách — con số đó tính trên giá trị đơn đã chốt, kể cả phần chưa thu. */
+            /** @description Tiền THẬT đã thu của khách này trong kỳ (phiếu đã duyệt, đã loại tiền cọc). KHÁC "tổng giá trị thuê" ở sổ khách - con số đó tính trên giá trị đơn đã chốt, kể cả phần chưa thu. */
             revenue: string;
-            /** @description Tỷ trọng % trên doanh thu CẢ KỲ (kể cả phần chưa gắn khách) — cùng mẫu số với thẻ "Doanh thu". `null` khi kỳ chưa có doanh thu nào. */
+            /** @description Tỷ trọng % trên doanh thu CẢ KỲ (kể cả phần chưa gắn khách) - cùng mẫu số với thẻ "Doanh thu". `null` khi kỳ chưa có doanh thu nào. */
             sharePercent?: number | null;
         };
         CustomerRevenuePageDto: {
@@ -15242,9 +15242,9 @@ export interface components {
         CustomerSurchargeDto: {
             /** @enum {string} */
             category: "overtime" | "cleaning" | "damage" | "waiting" | "long_distance" | "overnight" | "excess_mileage" | "other";
-            /** @description Tiền dạng string — ADR 0007 */
+            /** @description Tiền dạng string - ADR 0007 */
             amount: string;
-            /** @description Lý do chủ xe ghi — khách được thấy để đối chiếu */
+            /** @description Lý do chủ xe ghi - khách được thấy để đối chiếu */
             reason: string;
             /** @description ISO-8601 UTC */
             recordedAt: string;
@@ -15264,11 +15264,11 @@ export interface components {
             forfeitAmount: string;
             /** @description Phần đền chủ xe vì giữ lịch khi huỷ muộn (VND string) */
             ownerCompensationAmount: string;
-            /** @description ISO — mốc huỷ miễn phí ĐÃ LƯU; null khi chuyến chưa có khoản giữ chỗ */
+            /** @description ISO - mốc huỷ miễn phí ĐÃ LƯU; null khi chuyến chưa có khoản giữ chỗ */
             freeCancelUntil?: string | null;
             /** @description false = không có thời gian huỷ miễn phí (chính sách tắt, hoặc giờ nhận xe kẹp cửa sổ về 0) */
             freeCancelAvailable: boolean;
-            /** @description Có tranh chấp mở — tiền chờ XePrime chốt, không tự chia */
+            /** @description Có tranh chấp mở - tiền chờ XePrime chốt, không tự chia */
             deferred: boolean;
             /** @description true = huỷ do SỰ CỐ TÀI XẾ (ADR 0074): hoàn 100% dù đã qua mốc huỷ miễn phí, lỗi ghi cho phía cho thuê */
             driverIncident: boolean;
@@ -15295,17 +15295,17 @@ export interface components {
             /** @enum {string} */
             role: "host" | "renter";
             renter?: components["schemas"]["CustomerTripRenterDto"] | null;
-            /** @description ISO-8601 UTC — hạn chủ xe phải trả lời (15 phút–4 giờ tuỳ khoảng cách tới giờ nhận, ADR 0066) */
+            /** @description ISO-8601 UTC - hạn chủ xe phải trả lời (15 phút-4 giờ tuỳ khoảng cách tới giờ nhận, ADR 0066) */
             respondBy?: string | null;
             /** @description Được lộ SĐT và mở hội thoại chưa */
             canContact: boolean;
-            /** @description Tài xế của chuyến, chỉ khi đã có đơn. Chủ xe: lượt gán đầy đủ (liên kết chờ/đã nhận, hoặc ngoài hệ thống). Khách: người sẽ đến đón — tài xế liên kết đã nhận hoặc tài xế ngoài hệ thống (ADR 0067), id luôn null; null = đang sắp xếp */
+            /** @description Tài xế của chuyến, chỉ khi đã có đơn. Chủ xe: lượt gán đầy đủ (liên kết chờ/đã nhận, hoặc ngoài hệ thống). Khách: người sẽ đến đón - tài xế liên kết đã nhận hoặc tài xế ngoài hệ thống (ADR 0067), id luôn null; null = đang sắp xếp */
             driver?: components["schemas"]["BookingDriverSummaryDto"] | null;
             /** @description Sự cố tài xế (ADR 0074): tài xế đã nhận rồi rút, chưa ai nhận lại. Không lộ ai đã rút. `freeCancel` = khách huỷ được hoàn 100%. */
             driverIncident?: components["schemas"]["TripDriverIncidentDto"] | null;
             /** @description Tổng tiền còn tạm tính, chưa chốt vào đơn */
             totalIsEstimate: boolean;
-            /** @description Đã chuyển qua XePrime (khoản giữ chỗ), string — ADR 0007 */
+            /** @description Đã chuyển qua XePrime (khoản giữ chỗ), string - ADR 0007 */
             holdPaidAmount?: string | null;
             /** @enum {string|null} */
             cancelledBy?: "host" | "customer" | "platform" | "force_majeure" | null;
@@ -15339,7 +15339,7 @@ export interface components {
             deliveryRequested: boolean;
             deliveryAddress?: string | null;
             vehiclePickupPoint?: components["schemas"]["TripPickupPointDto"] | null;
-            /** @description Tổng dịch vụ mới nhất (tiền thuê + phát sinh), string — ADR 0007 */
+            /** @description Tổng dịch vụ mới nhất (tiền thuê + phát sinh), string - ADR 0007 */
             totalAmount?: string | null;
             canReview: boolean;
             hasReview: boolean;
@@ -15370,12 +15370,12 @@ export interface components {
         CustomerTripEstimateDto: {
             /** @description Các dòng của giá THUÊ */
             rows: components["schemas"]["PriceBreakdownRowDto"][];
-            /** @description Tổng giá thuê, TRƯỚC phụ phí — doanh thu của gian hàng */
+            /** @description Tổng giá thuê, TRƯỚC phụ phí - doanh thu của gian hàng */
             rentalTotal: string;
-            /** @description Cọc thế chấp hoàn trả — KHÔNG nằm trong tổng */
+            /** @description Cọc thế chấp hoàn trả - KHÔNG nằm trong tổng */
             depositAmount: string;
             fees?: components["schemas"]["PublicCustomerFeeBreakdownDto"] | null;
-            /** @description Chủ xe thực nhận — chỉ vai chủ xe, khách luôn null */
+            /** @description Chủ xe thực nhận - chỉ vai chủ xe, khách luôn null */
             ownerNetAmount?: string | null;
             estimateNote?: string | null;
             longTerm?: components["schemas"]["LongTermPackageOptionDto"] | null;
@@ -15383,7 +15383,7 @@ export interface components {
         CustomerTripFinanceBreakdownDto: {
             /** @description Các dòng của giá THUÊ */
             rows: components["schemas"]["PriceBreakdownRowDto"][];
-            /** @description Cọc thế chấp hoàn trả — KHÔNG nằm trong tổng */
+            /** @description Cọc thế chấp hoàn trả - KHÔNG nằm trong tổng */
             depositAmount: string;
             fees?: components["schemas"]["PublicCustomerFeeBreakdownDto"] | null;
             longTerm?: components["schemas"]["LongTermPackageOptionDto"] | null;
@@ -15395,7 +15395,7 @@ export interface components {
             baseAmount: string;
             /** @description Khuyến mãi (số dương, hiển thị dấu trừ) */
             discountAmount: string;
-            /** @description Phí giao nhận MỚI NHẤT chủ xe chốt — mặc định 0 */
+            /** @description Phí giao nhận MỚI NHẤT chủ xe chốt - mặc định 0 */
             deliveryFee: string;
             /** @description Tiền thuê sau khuyến mãi + giao nhận (chưa gồm phát sinh) */
             rentalTotal: string;
@@ -15409,7 +15409,7 @@ export interface components {
             customerTotalAmount?: string | null;
             /** @description Khoản giữ chỗ khách đã thực trả cho XePrime */
             holdPaidAmount?: string | null;
-            /** @description B − D — còn trả trực tiếp chủ xe khi nhận xe */
+            /** @description B − D - còn trả trực tiếp chủ xe khi nhận xe */
             payAtPickupAmount?: string | null;
             /** @description Cọc theo đơn (cấu hình) */
             depositRequired: string;
@@ -15417,7 +15417,7 @@ export interface components {
             depositReceived: string;
             /** @description Phần phát sinh khấu trừ vào cọc = min(phát sinh, cọc đã thu) */
             depositDeducted: string;
-            /** @description Phát sinh vượt quá cọc — khách trả thêm trực tiếp */
+            /** @description Phát sinh vượt quá cọc - khách trả thêm trực tiếp */
             additionalDue: string;
             /** @description Số dự kiến hoàn lại (khi chưa có bản ghi hoàn) */
             expectedRefund: string;
@@ -15428,7 +15428,7 @@ export interface components {
             refundMethod?: "bank_transfer" | "cash" | "other" | null;
             refundedAt?: string | null;
             refundReference?: string | null;
-            /** @description Thiếu snapshot giá — chỉ còn tổng, không có chi tiết */
+            /** @description Thiếu snapshot giá - chỉ còn tổng, không có chi tiết */
             legacyPricing: boolean;
             breakdown?: components["schemas"]["CustomerTripFinanceBreakdownDto"] | null;
         };
@@ -15457,13 +15457,13 @@ export interface components {
         };
         CustomerTripHandoverEvidencePhotoDto: {
             /**
-             * @description @xeprime/types → HandoverPhotoSlot. Mã, không phải nhãn — client tự dịch
+             * @description @xeprime/types → HandoverPhotoSlot. Mã, không phải nhãn - client tự dịch
              * @enum {string}
              */
             slot: "front" | "rear" | "left" | "right" | "odometer";
-            /** @description ISO-8601 UTC — thời điểm ảnh được tải lên */
+            /** @description ISO-8601 UTC - thời điểm ảnh được tải lên */
             uploadedAt: string;
-            /** @description Ảnh thêm sau mốc xác nhận — giao diện phải nói rõ */
+            /** @description Ảnh thêm sau mốc xác nhận - giao diện phải nói rõ */
             addedAfterConfirmation: boolean;
         };
         CustomerTripListItemDto: {
@@ -15471,17 +15471,17 @@ export interface components {
             /** @enum {string} */
             role: "host" | "renter";
             renter?: components["schemas"]["CustomerTripRenterDto"] | null;
-            /** @description ISO-8601 UTC — hạn chủ xe phải trả lời (15 phút–4 giờ tuỳ khoảng cách tới giờ nhận, ADR 0066) */
+            /** @description ISO-8601 UTC - hạn chủ xe phải trả lời (15 phút-4 giờ tuỳ khoảng cách tới giờ nhận, ADR 0066) */
             respondBy?: string | null;
             /** @description Được lộ SĐT và mở hội thoại chưa */
             canContact: boolean;
-            /** @description Tài xế của chuyến, chỉ khi đã có đơn. Chủ xe: lượt gán đầy đủ (liên kết chờ/đã nhận, hoặc ngoài hệ thống). Khách: người sẽ đến đón — tài xế liên kết đã nhận hoặc tài xế ngoài hệ thống (ADR 0067), id luôn null; null = đang sắp xếp */
+            /** @description Tài xế của chuyến, chỉ khi đã có đơn. Chủ xe: lượt gán đầy đủ (liên kết chờ/đã nhận, hoặc ngoài hệ thống). Khách: người sẽ đến đón - tài xế liên kết đã nhận hoặc tài xế ngoài hệ thống (ADR 0067), id luôn null; null = đang sắp xếp */
             driver?: components["schemas"]["BookingDriverSummaryDto"] | null;
             /** @description Sự cố tài xế (ADR 0074): tài xế đã nhận rồi rút, chưa ai nhận lại. Không lộ ai đã rút. `freeCancel` = khách huỷ được hoàn 100%. */
             driverIncident?: components["schemas"]["TripDriverIncidentDto"] | null;
             /** @description Tổng tiền còn tạm tính, chưa chốt vào đơn */
             totalIsEstimate: boolean;
-            /** @description Đã chuyển qua XePrime (khoản giữ chỗ), string — ADR 0007 */
+            /** @description Đã chuyển qua XePrime (khoản giữ chỗ), string - ADR 0007 */
             holdPaidAmount?: string | null;
             /** @enum {string|null} */
             cancelledBy?: "host" | "customer" | "platform" | "force_majeure" | null;
@@ -15515,7 +15515,7 @@ export interface components {
             deliveryRequested: boolean;
             deliveryAddress?: string | null;
             vehiclePickupPoint?: components["schemas"]["TripPickupPointDto"] | null;
-            /** @description Tổng dịch vụ mới nhất (tiền thuê + phát sinh), string — ADR 0007 */
+            /** @description Tổng dịch vụ mới nhất (tiền thuê + phát sinh), string - ADR 0007 */
             totalAmount?: string | null;
             canReview: boolean;
             hasReview: boolean;
@@ -15531,7 +15531,7 @@ export interface components {
             name: string;
             /** @description null khi chưa được liên hệ */
             phone?: string | null;
-            /** @description SĐT tài khoản khách — null khi chưa được liên hệ hoặc trùng SĐT liên hệ */
+            /** @description SĐT tài khoản khách - null khi chưa được liên hệ hoặc trùng SĐT liên hệ */
             accountPhone?: string | null;
         };
         CustomerTripReviewDto: {
@@ -15540,7 +15540,7 @@ export interface components {
             comment?: string | null;
             /** @description ISO-8601 UTC */
             createdAt: string;
-            /** @description ISO-8601 UTC — mốc khách đã chỉnh sửa (null = chưa sửa) */
+            /** @description ISO-8601 UTC - mốc khách đã chỉnh sửa (null = chưa sửa) */
             editedAt?: string | null;
             /** @description Server quyết: còn lượt sửa duy nhất (chuyến hoàn thành, published, chưa sửa) */
             canEdit: boolean;
@@ -15566,7 +15566,7 @@ export interface components {
             plateNumber?: string | null;
         };
         CustomerUnpaidHoldDto: {
-            /** @description Id yêu cầu thuê — đích của trang thanh toán `/payment/:id` */
+            /** @description Id yêu cầu thuê - đích của trang thanh toán `/payment/:id` */
             tripId: string;
             /** @description Mã giữ chỗ (XPH…) */
             code: string;
@@ -15576,15 +15576,15 @@ export interface components {
             pickupAt?: string | null;
             /** @description ISO-8601 UTC */
             returnAt?: string | null;
-            /** @description Số CÒN phải chuyển — VND, chuỗi (ADR 0007) */
+            /** @description Số CÒN phải chuyển - VND, chuỗi (ADR 0007) */
             remainingAmount: string;
-            /** @description Hạn thanh toán — ISO-8601 UTC */
+            /** @description Hạn thanh toán - ISO-8601 UTC */
             expiresAt: string;
         };
         CustomerUnpaidHoldsDto: {
             /** @description Số chỗ chưa trả tối đa được giữ cùng lúc (HOLD_MAX_OPEN_PER_CUSTOMER) */
             limit: number;
-            /** @description Đã giữ đủ trần — không đặt thêm xe được tới khi trả hoặc huỷ bớt */
+            /** @description Đã giữ đủ trần - không đặt thêm xe được tới khi trả hoặc huỷ bớt */
             limitReached: boolean;
             /** @description Gấp nhất trước */
             items: components["schemas"]["CustomerUnpaidHoldDto"][];
@@ -15596,9 +15596,9 @@ export interface components {
             custodied: components["schemas"]["ReconciliationCustodiedDto"];
             outflow: components["schemas"]["ReconciliationOutflowDto"];
             inflow: components["schemas"]["ReconciliationInflowDto"];
-            /** @description Số dư ngân hàng cuối ngày, NHẬP TAY (SePay không gửi số dư). `null` = chưa nhập — giao diện phải nói rõ, KHÔNG hiển thị 0. */
+            /** @description Số dư ngân hàng cuối ngày, NHẬP TAY (SePay không gửi số dư). `null` = chưa nhập - giao diện phải nói rõ, KHÔNG hiển thị 0. */
             bankBalanceEod?: string | null;
-            /** @description bankBalanceEod − (platform.total + custodied.total). `null` khi chưa nhập số dư — chênh lệch CHƯA TÍNH ĐƯỢC, không phải bằng 0. */
+            /** @description bankBalanceEod − (platform.total + custodied.total). `null` khi chưa nhập số dư - chênh lệch CHƯA TÍNH ĐƯỢC, không phải bằng 0. */
             variance?: string | null;
             walletDrift: components["schemas"]["WalletDriftDto"];
         };
@@ -15613,12 +15613,12 @@ export interface components {
             status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
             /** @description ISO-8601 UTC */
             returnAt: string;
-            /** @description PHẢI THU = tiền thuê + phụ phí còn hiệu lực. Tiền dạng string — ADR 0007 */
+            /** @description PHẢI THU = tiền thuê + phụ phí còn hiệu lực. Tiền dạng string - ADR 0007 */
             totalAmount: string;
             /** @description ĐÃ THU = tiền thuê + phiếu tay đã duyệt + phần phụ phí cọc gánh */
             paidAmount: string;
             surchargeTotal: string;
-            /** @description max(0, phải thu − đã thu) — common/booking-money.ts */
+            /** @description max(0, phải thu − đã thu) - common/booking-money.ts */
             debtAmount: string;
         };
         DebtPageDto: {
@@ -15653,7 +15653,7 @@ export interface components {
             wardName?: string | null;
             /** @description Địa chỉ hiển thị đã ghép của chi nhánh mặc định */
             address?: string | null;
-            /** @description Địa chỉ chưa khớp danh mục hành chính hiện hành — cần bổ sung */
+            /** @description Địa chỉ chưa khớp danh mục hành chính hiện hành - cần bổ sung */
             needsLocationReview: boolean;
         };
         DeletedCountDto: {
@@ -15667,23 +15667,23 @@ export interface components {
             /** @enum {string} */
             status: "auto" | "manual" | "unsupported" | "address_not_found" | "unavailable";
             /**
-             * @description Nguyên nhân báo giá thủ công — chỉ khác null khi status = 'manual'
+             * @description Nguyên nhân báo giá thủ công - chỉ khác null khi status = 'manual'
              * @enum {string|null}
              */
             manualReason?: "outside_auto_radius" | "route_unavailable" | "provider_unavailable" | null;
             /** @description Khoảng cách đường bộ MỘT CHIỀU (km). Null khi không tra được. */
             distanceKm?: number | null;
-            /** @description Khoảng cách đường chim bay (km) — chỉ có ở ca ngoài bán kính, không phải đường lái */
+            /** @description Khoảng cách đường chim bay (km) - chỉ có ở ca ngoài bán kính, không phải đường lái */
             straightLineKm?: number | null;
-            /** @description Bán kính tự báo giá của chính sách hiệu lực (km) — để giao diện nói đúng con số */
+            /** @description Bán kính tự báo giá của chính sách hiệu lực (km) - để giao diện nói đúng con số */
             maxRadiusKm?: number | null;
             /** @description Phí giao dự kiến (VND dạng chuỗi). Chỉ khác null khi status = 'auto'. */
             fee?: string | null;
-            /** @description Điểm giao xe đi — chi nhánh giữ xe, toạ độ XẤP XỈ ~1km (ADR 0077). Null khi chi nhánh chưa có toạ độ. */
+            /** @description Điểm giao xe đi - chi nhánh giữ xe, toạ độ XẤP XỈ ~1km (ADR 0077). Null khi chi nhánh chưa có toạ độ. */
             origin?: components["schemas"]["GeoPointDto"] | null;
             /** @description Địa chỉ khách nhập */
             destination?: components["schemas"]["GeoPointDto"] | null;
-            /** @description Địa chỉ bản đồ hiểu ra — hiện lại để khách xác nhận đúng chỗ */
+            /** @description Địa chỉ bản đồ hiểu ra - hiện lại để khách xác nhận đúng chỗ */
             formattedAddress?: string | null;
         };
         DeliverySummaryDto: {
@@ -15692,16 +15692,16 @@ export interface components {
             tiers: components["schemas"]["DeliveryTierDto"][];
         };
         DeliveryTierDto: {
-            /** @description Mốc "đến" (km) — các bậc phải tăng dần nghiêm ngặt */
+            /** @description Mốc "đến" (km) - các bậc phải tăng dần nghiêm ngặt */
             toKm: number;
             /**
-             * @description Phí TRỌN GÓI cho cả bậc (VND chuỗi, bội 1.000đ) — '0' = miễn phí
+             * @description Phí TRỌN GÓI cho cả bậc (VND chuỗi, bội 1.000đ) - '0' = miễn phí
              * @example 30000
              */
             fee?: string;
             /**
              * @deprecated
-             * @description ĐÃ GỠ (ADR 0078) — gửi lên bị từ chối; mỗi bậc chỉ có phí trọn gói
+             * @description ĐÃ GỠ (ADR 0078) - gửi lên bị từ chối; mỗi bậc chỉ có phí trọn gói
              */
             perKm?: string;
         };
@@ -15715,7 +15715,7 @@ export interface components {
             reference?: string | null;
             note?: string | null;
             recordedByName?: string | null;
-            /** @description Optimistic concurrency — nộp lại khi điều chỉnh */
+            /** @description Optimistic concurrency - nộp lại khi điều chỉnh */
             rowVersion: number;
         };
         DisabledCountDto: {
@@ -15727,11 +15727,11 @@ export interface components {
         };
         DiscountTierDto: {
             /**
-             * @description Số tháng cam kết tối thiểu — phải là một gói thuê hợp lệ
+             * @description Số tháng cam kết tối thiểu - phải là một gói thuê hợp lệ
              * @enum {number}
              */
             minMonths: 1 | 2 | 3 | 6 | 9 | 12;
-            /** @description Mức giảm % (1–100), CHỈ áp lên giá cơ sở của gói dài hạn */
+            /** @description Mức giảm % (1-100), CHỈ áp lên giá cơ sở của gói dài hạn */
             percent: number;
             /** @description Ghi chú hiển thị */
             note?: string;
@@ -15803,7 +15803,7 @@ export interface components {
             /** @description Số chuyến chưa xong đang gán cho tài xế này */
             activeBookingCount: number;
             /**
-             * @description Chỉ ở dòng LỊCH SỬ (đã từ chối / đã kết thúc): trạng thái liên kết ĐANG MỞ hiện tại của cùng tài khoản với bên thuê này — null = chưa mời lại, hiện nút "Mời lại"
+             * @description Chỉ ở dòng LỊCH SỬ (đã từ chối / đã kết thúc): trạng thái liên kết ĐANG MỞ hiện tại của cùng tài khoản với bên thuê này - null = chưa mời lại, hiện nút "Mời lại"
              * @enum {string|null}
              */
             currentOpenLinkStatus?: "invited" | "active" | "suspended" | "declined" | "ended" | null;
@@ -15811,7 +15811,7 @@ export interface components {
             dropCount: number;
             /** @description Trong đó: số lần rút khi còn dưới 2 giờ tới giờ nhận */
             criticalDropCount: number;
-            /** @description Đang bị loại khỏi tự gán "Đặt ngay" tới mốc này (ISO-8601) sau một lượt rút sát giờ — null = không */
+            /** @description Đang bị loại khỏi tự gán "Đặt ngay" tới mốc này (ISO-8601) sau một lượt rút sát giờ - null = không */
             autoAssignCooldownUntil?: string | null;
             /** @description Số chuyến tài xế HOÀN THÀNH, kết thúc trong tháng được chọn (ADR 0075) */
             monthCompletedTrips: number;
@@ -15860,9 +15860,9 @@ export interface components {
             rejectionReason: "not_a_licence" | "back_side" | "unreadable" | "missing_fields" | "expired" | "no_drivable_class" | "reader_unavailable" | "other" | null;
             /** @description Lời nhắn của người duyệt */
             reviewNote: string | null;
-            /** @description Vấn đề chất lượng ảnh bộ đọc nhận ra — để gợi ý cách chụp lại. */
+            /** @description Vấn đề chất lượng ảnh bộ đọc nhận ra - để gợi ý cách chụp lại. */
             qualityIssues: ("blurry" | "glare" | "cropped" | "too_dark" | "obstructed" | "low_resolution")[];
-            /** @description LEGACY — lúc khách nhờ xem lại (trước ADR 0070). Không còn writer. */
+            /** @description LEGACY - lúc khách nhờ xem lại (trước ADR 0070). Không còn writer. */
             reviewRequestedAt: string | null;
             /** @enum {string|null} */
             decisionSource: "auto" | "manual" | null;
@@ -15880,7 +15880,7 @@ export interface components {
         };
         DriverLicencePresignDto: {
             licenceId: string;
-            /** @description URL PUT riêng tư, sống ngắn — tải ảnh thẳng lên kho lưu trữ. */
+            /** @description URL PUT riêng tư, sống ngắn - tải ảnh thẳng lên kho lưu trữ. */
             uploadUrl: string;
             expiresIn: number;
         };
@@ -15891,7 +15891,7 @@ export interface components {
             classes: string[];
             /** @description YYYY-MM-DD */
             expiresOn?: string | null;
-            /** @description Họ tên in trên bằng đã xác thực — để bên thuê đối chiếu với người được mời */
+            /** @description Họ tên in trên bằng đã xác thực - để bên thuê đối chiếu với người được mời */
             fullName?: string | null;
             /** @description Loại bằng (DRIVER_LICENCE_KIND) */
             kind?: string | null;
@@ -15911,7 +15911,7 @@ export interface components {
             agreedWage: string;
             /** @description Tổng tiền công ghi nhận = hoàn thành + thoả thuận (VND) */
             wageTotal: string;
-            /** @description Tiền công bình quân một ngày lái (VND, làm tròn tới đồng) — null khi chưa có ngày lái */
+            /** @description Tiền công bình quân một ngày lái (VND, làm tròn tới đồng) - null khi chưa có ngày lái */
             averageDailyWage?: string | null;
             /** @description Số chuyến bên thuê đã SỬA tiền công ít nhất một lần */
             editedTrips: number;
@@ -15920,10 +15920,10 @@ export interface components {
             driver: components["schemas"]["DriverDto"];
             month: components["schemas"]["DriverMonthStatsDto"];
             upcoming: components["schemas"]["DriverUpcomingDto"];
-            /** @description Các đơn đang gán, sớm nhất trước — tối đa 20; tổng nằm ở driver.activeBookingCount */
+            /** @description Các đơn đang gán, sớm nhất trước - tối đa 20; tổng nằm ở driver.activeBookingCount */
             current: components["schemas"]["DriverCurrentTripDto"][];
             reliability: components["schemas"]["DriverReliabilityDto"];
-            /** @description Các tháng liên tiếp kết thúc ở tháng được chọn, cũ trước — tháng trống vẫn có mặt */
+            /** @description Các tháng liên tiếp kết thúc ở tháng được chọn, cũ trước - tháng trống vẫn có mặt */
             trend: components["schemas"]["DriverWageTrendPointDto"][];
         };
         DriverPageDto: {
@@ -15945,9 +15945,9 @@ export interface components {
             accepted: number;
             declined: number;
             expired: number;
-            /** @description Tỉ lệ nhận (%, số nguyên) — null khi chưa có lượt nào để đo */
+            /** @description Tỉ lệ nhận (%, số nguyên) - null khi chưa có lượt nào để đo */
             acceptRate?: number | null;
-            /** @description Trung vị thời gian trả lời (phút, gồm nhận và từ chối) — null khi chưa có */
+            /** @description Trung vị thời gian trả lời (phút, gồm nhận và từ chối) - null khi chưa có */
             medianResponseMinutes?: number | null;
         };
         DriverSummaryDto: {
@@ -15970,7 +15970,7 @@ export interface components {
              */
             unit: "per_hour" | "per_30_minutes" | "per_km" | "per_night";
             enabled: boolean;
-            /** @description VND string — ADR 0007 */
+            /** @description VND string - ADR 0007 */
             amount: string;
             /** @description Ngưỡng theo loại: phút-trong-ngày · phút chờ miễn phí · km/ngày; null với overnight */
             thresholdValue?: number | null;
@@ -15981,7 +15981,7 @@ export interface components {
         DriverTripCustomerDto: {
             name: string;
             phone?: string | null;
-            /** @description Mốc SĐT khách bắt đầu hiện (ISO-8601) — null khi đã hiện hoặc không bao giờ hiện */
+            /** @description Mốc SĐT khách bắt đầu hiện (ISO-8601) - null khi đã hiện hoặc không bao giờ hiện */
             contactVisibleFrom?: string | null;
         };
         DriverTripDetailDto: {
@@ -16000,11 +16000,11 @@ export interface components {
             /** @description ISO-8601 UTC */
             assignedAt: string;
             respondedAt?: string | null;
-            /** @description Hạn tôi phải Nhận/Từ chối (ISO-8601, ADR 0066) — chỉ khác null khi chuyến còn chờ tôi trả lời. Quá hạn ⇒ chuyến được trả về bên thuê. */
+            /** @description Hạn tôi phải Nhận/Từ chối (ISO-8601, ADR 0066) - chỉ khác null khi chuyến còn chờ tôi trả lời. Quá hạn ⇒ chuyến được trả về bên thuê. */
             respondBy?: string | null;
             /** @description Lượt của tài xế kết thúc lúc */
             endedAt?: string | null;
-            /** @description Mốc cuối tôi còn được TRẢ LẠI chuyến đã nhận (ISO-8601) — chỉ khác null khi chuyến của tôi đã nhận, đơn còn `reserved` và mốc chưa qua. */
+            /** @description Mốc cuối tôi còn được TRẢ LẠI chuyến đã nhận (ISO-8601) - chỉ khác null khi chuyến của tôi đã nhận, đơn còn `reserved` và mốc chưa qua. */
             releaseUntil?: string | null;
             /** @description Tôi còn RÚT được khỏi chuyến này không (ADR 0074): chuyến của tôi, đã nhận, đơn chưa giao xe. Rút qua `POST /driver/trips/:id/drop`; trước `releaseUntil` thì không bị phạt. */
             canDrop: boolean;
@@ -16016,7 +16016,7 @@ export interface components {
             vehicle: components["schemas"]["DriverTripVehicleDto"];
             employer: components["schemas"]["DriverEmployerDto"];
             customer: components["schemas"]["DriverTripCustomerDto"];
-            /** @description Tiền công chuyến này — chủ xe trả trực tiếp, XePrime chỉ ghi nhận (ADR 0075) */
+            /** @description Tiền công chuyến này - chủ xe trả trực tiếp, XePrime chỉ ghi nhận (ADR 0075) */
             wage: components["schemas"]["DriverWageDto"];
             pickupLatitude?: number | null;
             pickupLongitude?: number | null;
@@ -16041,11 +16041,11 @@ export interface components {
             /** @description ISO-8601 UTC */
             assignedAt: string;
             respondedAt?: string | null;
-            /** @description Hạn tôi phải Nhận/Từ chối (ISO-8601, ADR 0066) — chỉ khác null khi chuyến còn chờ tôi trả lời. Quá hạn ⇒ chuyến được trả về bên thuê. */
+            /** @description Hạn tôi phải Nhận/Từ chối (ISO-8601, ADR 0066) - chỉ khác null khi chuyến còn chờ tôi trả lời. Quá hạn ⇒ chuyến được trả về bên thuê. */
             respondBy?: string | null;
             /** @description Lượt của tài xế kết thúc lúc */
             endedAt?: string | null;
-            /** @description Mốc cuối tôi còn được TRẢ LẠI chuyến đã nhận (ISO-8601) — chỉ khác null khi chuyến của tôi đã nhận, đơn còn `reserved` và mốc chưa qua. */
+            /** @description Mốc cuối tôi còn được TRẢ LẠI chuyến đã nhận (ISO-8601) - chỉ khác null khi chuyến của tôi đã nhận, đơn còn `reserved` và mốc chưa qua. */
             releaseUntil?: string | null;
             /** @description Tôi còn RÚT được khỏi chuyến này không (ADR 0074): chuyến của tôi, đã nhận, đơn chưa giao xe. Rút qua `POST /driver/trips/:id/drop`; trước `releaseUntil` thì không bị phạt. */
             canDrop: boolean;
@@ -16057,7 +16057,7 @@ export interface components {
             vehicle: components["schemas"]["DriverTripVehicleDto"];
             employer: components["schemas"]["DriverEmployerDto"];
             customer: components["schemas"]["DriverTripCustomerDto"];
-            /** @description Tiền công chuyến này — chủ xe trả trực tiếp, XePrime chỉ ghi nhận (ADR 0075) */
+            /** @description Tiền công chuyến này - chủ xe trả trực tiếp, XePrime chỉ ghi nhận (ADR 0075) */
             wage: components["schemas"]["DriverWageDto"];
         };
         DriverTripPageDto: {
@@ -16086,11 +16086,11 @@ export interface components {
             reason?: string | null;
             /** @description ISO-8601 UTC */
             changedAt: string;
-            /** @description Người sửa (thành viên bên thuê) — null khi tài khoản không còn */
+            /** @description Người sửa (thành viên bên thuê) - null khi tài khoản không còn */
             changedByName?: string | null;
         };
         DriverWageDto: {
-            /** @description VND — số hiện hành */
+            /** @description VND - số hiện hành */
             amount?: string | null;
             /** @description Số ngày tính tiền lúc gán */
             days?: number | null;
@@ -16103,25 +16103,25 @@ export interface components {
             editable: boolean;
             /** @description Mốc khoá sửa (ISO-8601) = kết thúc lượt + 72h; null khi lượt chưa kết thúc */
             editableUntil?: string | null;
-            /** @description Khoảng hợp lệ khi sửa (chính sách hiện hành × số ngày) — null khi lượt không có tiền công */
+            /** @description Khoảng hợp lệ khi sửa (chính sách hiện hành × số ngày) - null khi lượt không có tiền công */
             range?: components["schemas"]["DriverWageRangeDto"] | null;
             /** @description Lịch sử sửa, mới nhất trước */
             changes: components["schemas"]["DriverWageChangeDto"][];
         };
         DriverWageQuoteDto: {
-            /** @description Số ngày tính tiền của đơn — mẫu số của tiền công */
+            /** @description Số ngày tính tiền của đơn - mẫu số của tiền công */
             days: number;
-            /** @description Tiền công/ngày mặc định của gian hàng — null = chưa đặt */
+            /** @description Tiền công/ngày mặc định của gian hàng - null = chưa đặt */
             dailyWage?: string | null;
-            /** @description Gợi ý = mức mặc định × số ngày — null khi chưa đặt mức mặc định */
+            /** @description Gợi ý = mức mặc định × số ngày - null khi chưa đặt mức mặc định */
             suggestedAmount?: string | null;
             /** @description Khoảng hợp lệ khi gán chuyến này */
             range: components["schemas"]["DriverWageRangeDto"];
             /** @description Khoảng tiền công/ngày hợp lệ */
             wageDaily: components["schemas"]["DriverWageRangeDto"];
-            /** @description Tiền công/ngày GỢI Ý của nền tảng — chỉ để nhắc khi gian hàng chưa đặt mức chung */
+            /** @description Tiền công/ngày GỢI Ý của nền tảng - chỉ để nhắc khi gian hàng chưa đặt mức chung */
             suggestedDaily: string;
-            /** @description Tiền thuê của đơn (VND) — để cảnh báo tiền công cao bất thường */
+            /** @description Tiền thuê của đơn (VND) - để cảnh báo tiền công cao bất thường */
             rentAmount: string;
         };
         DriverWageRangeDto: {
@@ -16129,13 +16129,13 @@ export interface components {
             max: string;
         };
         DriverWageSettingsDto: {
-            /** @description Tiền công/ngày mặc định (VND) — null = chưa đặt */
+            /** @description Tiền công/ngày mặc định (VND) - null = chưa đặt */
             dailyWage?: string | null;
             /** @description Khoảng tiền công/ngày hợp lệ */
             wageDaily: components["schemas"]["DriverWageRangeDto"];
             /** @description Khoảng giá có tài xế/ngày hợp lệ */
             priceDaily: components["schemas"]["DriverWageRangeDto"];
-            /** @description Tiền công/ngày GỢI Ý của nền tảng — chỉ để nhắc, không phải mức của gian hàng */
+            /** @description Tiền công/ngày GỢI Ý của nền tảng - chỉ để nhắc, không phải mức của gian hàng */
             suggestedDaily: string;
         };
         DriverWageTrendPointDto: {
@@ -16149,7 +16149,7 @@ export interface components {
         DropDriverTripDto: {
             /** @enum {string} */
             reasonCategory: "health_issue" | "vehicle_accident" | "family_emergency" | "route_blocked" | "other";
-            /** @description Mô tả sự cố — bắt buộc 10–500 ký tự khi chọn `other` (422 `DRIVER_DROP_NOTE_REQUIRED`) */
+            /** @description Mô tả sự cố - bắt buộc 10-500 ký tự khi chọn `other` (422 `DRIVER_DROP_NOTE_REQUIRED`) */
             reason?: string;
         };
         DuplicatePlanGuideTemplateDto: {
@@ -16183,12 +16183,12 @@ export interface components {
         };
         ExternalDriverInputDto: {
             /**
-             * @description Tên tài xế — cắt khoảng trắng hai đầu trước khi kiểm
+             * @description Tên tài xế - cắt khoảng trắng hai đầu trước khi kiểm
              * @example Nguyễn Văn Tài
              */
             name: string;
             /**
-             * @description SĐT di động VN (`0xxxxxxxxx` / `84xxxxxxxxx` / `+84xxxxxxxxx`; dấu cách, chấm, gạch bị bỏ qua; lưu `0…`) — khách gọi số này để gặp người đón
+             * @description SĐT di động VN (`0xxxxxxxxx` / `84xxxxxxxxx` / `+84xxxxxxxxx`; dấu cách, chấm, gạch bị bỏ qua; lưu `0…`) - khách gọi số này để gặp người đón
              * @example 0901234567
              */
             phone: string;
@@ -16221,40 +16221,40 @@ export interface components {
             /** @description Kiểu dáng (BODY_TYPE) */
             bodyType?: string | null;
             /**
-             * @description Phân khúc — chỉ xe máy
+             * @description Phân khúc - chỉ xe máy
              * @enum {string|null}
              */
             motorbikeCategory: "scooter" | "underbone" | "naked" | "sport" | "cruiser" | "adventure" | "touring" | "offroad" | "other" | null;
             mainImageUrl?: string | null;
-            /** @description Tổng số ảnh của xe — thẻ hiện "+N" ảnh */
+            /** @description Tổng số ảnh của xe - thẻ hiện "+N" ảnh */
             imageCount: number;
             /**
-             * @description Hộp số (TRANSMISSION_TYPE_EXT — cùng bộ mã với hồ sơ xe) — null khi chủ xe chưa khai
+             * @description Hộp số (TRANSMISSION_TYPE_EXT - cùng bộ mã với hồ sơ xe) - null khi chủ xe chưa khai
              * @enum {string|null}
              */
             transmission: "automatic" | "manual" | "cvt" | "e_cvt" | "dct" | "amt" | "direct_drive" | "automatic_cvt" | "semi_automatic" | "manual_clutch" | "other" | null;
-            /** @description Dịch vụ đang bật tự động nhận chuyến — thẻ hiện "Không cần xác nhận" khi dịch vụ khách đang xem nằm trong mảng này */
+            /** @description Dịch vụ đang bật tự động nhận chuyến - thẻ hiện "Không cần xác nhận" khi dịch vụ khách đang xem nằm trong mảng này */
             instantBookServiceTypes: ("self_drive" | "with_driver" | "long_term")[];
-            /** @description Tiền dạng string — ADR 0007 */
+            /** @description Tiền dạng string - ADR 0007 */
             weekdayPrice?: string | null;
             weekendPrice?: string | null;
-            /** @description Giá thuê giờ (string — ADR 0007). Null = xe không cho thuê theo giờ. */
+            /** @description Giá thuê giờ (string - ADR 0007). Null = xe không cho thuê theo giờ. */
             hourlyPrice?: string | null;
-            /** @description Giá tháng tham chiếu thuê dài hạn (string — ADR 0007). */
+            /** @description Giá tháng tham chiếu thuê dài hạn (string - ADR 0007). */
             monthlyPrice?: string | null;
-            /** @description Giá/ngày đã gồm tài xế (string — ADR 0007). Null = gian hàng báo khi duyệt. */
+            /** @description Giá/ngày đã gồm tài xế (string - ADR 0007). Null = gian hàng báo khi duyệt. */
             withDriverDailyPrice?: string | null;
-            /** @description Giá/ngày có tài xế lộ trình liên tỉnh — string tiền (ADR 0007) */
+            /** @description Giá/ngày có tài xế lộ trình liên tỉnh - string tiền (ADR 0007) */
             withDriverInterCityPrice?: string | null;
-            /** @description Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều — string tiền (ADR 0007) */
+            /** @description Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều - string tiền (ADR 0007) */
             withDriverOneWayPrice?: string | null;
             /** @description Chủ xe hỗ trợ giao xe tận nơi */
             deliveryEnabled: boolean;
             /** @description Miễn thế chấp (không cần cọc tài sản) */
             noCollateral: boolean;
-            /** @description Chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê xe theo thoả thuận trực tiếp với khách — XePrime không xuất hoá đơn thay chủ xe */
+            /** @description Chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê xe theo thoả thuận trực tiếp với khách - XePrime không xuất hoá đơn thay chủ xe */
             vatInvoiceSupported: boolean;
-            /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái (0–100) */
+            /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái (0-100) */
             discountPercent?: number | null;
             /** @description Tên gian hàng */
             shopName: string;
@@ -16264,19 +16264,19 @@ export interface components {
             shopLogoUrl?: string | null;
             /** @description Tỉnh/thành gian hàng */
             shopProvince?: string | null;
-            /** @description Gian hàng tuyến gói — đeo dấu xác thực XePrime (hasVerifiedStorefront) */
+            /** @description Gian hàng tuyến gói - đeo dấu xác thực XePrime (hasVerifiedStorefront) */
             shopVerified: boolean;
             /** @description Số chuyến đã hoàn thành của xe */
             completedTripCount: number;
-            /** @description Mã tỉnh nơi xe đang đỗ (theo chi nhánh) — dùng để lọc/điều hướng */
+            /** @description Mã tỉnh nơi xe đang đỗ (theo chi nhánh) - dùng để lọc/điều hướng */
             provinceCode?: string | null;
-            /** @description Tên xã/phường của chi nhánh đang giữ xe — chỉ để HIỂN THỊ */
+            /** @description Tên xã/phường của chi nhánh đang giữ xe - chỉ để HIỂN THỊ */
             wardName?: string | null;
             /** @description Điểm đánh giá trung bình CỦA XE (review published). Null khi chưa có đánh giá. */
             ratingAvg?: string | null;
             /** @description Số lượt đánh giá của xe */
             ratingCount: number;
-            /** @description Lúc khách lưu xe này — ISO-8601 UTC. */
+            /** @description Lúc khách lưu xe này - ISO-8601 UTC. */
             favoritedAt: string;
         };
         FavoriteVehiclePageDto: {
@@ -16290,9 +16290,9 @@ export interface components {
             comment: string;
             /** @description Tên khách (đã rút gọn) */
             customerName: string;
-            /** @description Số chuyến người viết đã hoàn thành trên XePrime — "Đã thuê N lần" */
+            /** @description Số chuyến người viết đã hoàn thành trên XePrime - "Đã thuê N lần" */
             customerTripCount: number;
-            /** @description Xe đã thuê — để mở trang chi tiết từ đánh giá */
+            /** @description Xe đã thuê - để mở trang chi tiết từ đánh giá */
             vehicleId: string;
             /** @description Tên xe đã thuê */
             vehicleName: string;
@@ -16307,11 +16307,11 @@ export interface components {
             /** @example customer */
             bearer: string;
             percent: number | null;
-            /** @description Đơn giá MỖI NGÀY (VND) — dòng tính theo ngày */
+            /** @description Đơn giá MỖI NGÀY (VND) - dòng tính theo ngày */
             unitAmount?: string;
             /** @description Số ngày đã nhân với `unitAmount` */
             quantity?: number;
-            /** @description VND string nguyên — khoản tính từ tỷ lệ đúng tới đồng (ADR 0069) */
+            /** @description VND string nguyên - khoản tính từ tỷ lệ đúng tới đồng (ADR 0069) */
             amount: string;
             partnerName?: string;
         };
@@ -16322,7 +16322,7 @@ export interface components {
             status: "draft" | "active" | "archived";
             name: string;
             note?: string | null;
-            /** @description LEGACY — luồng tiền v2 không đọc trường này */
+            /** @description LEGACY - luồng tiền v2 không đọc trường này */
             serviceFeePercent: number;
             holdMinAmount: string;
             holdPaymentWindowMinutes: number;
@@ -16334,9 +16334,9 @@ export interface components {
             /** @description Bảng mức khấu trừ theo loại dịch vụ (ADR 0068). null ở chính sách ≤ v8 */
             taxRates?: components["schemas"]["TaxRatesDto"] | null;
             taxLegalBasis?: string | null;
-            /** @description LEGACY (≤ v8) — một mức cho mọi chuyến; thay bằng taxRates */
+            /** @description LEGACY (≤ v8) - một mức cho mọi chuyến; thay bằng taxRates */
             taxPercent?: number | null;
-            /** @description LEGACY (≤ v8) — nhãn của chính sách một-mức; thay bằng taxLegalBasis */
+            /** @description LEGACY (≤ v8) - nhãn của chính sách một-mức; thay bằng taxLegalBasis */
             taxLabel?: string | null;
             tripInsuranceEnabled: boolean;
             tripInsurancePercent?: number | null;
@@ -16347,7 +16347,7 @@ export interface components {
             ownerCommissionTiers: components["schemas"]["OwnerCommissionTierDto"][];
             vehicleProtectionDailyAmount: components["schemas"]["PerVehicleTypeAmountDto"];
             tripInsuranceDailyAmount: components["schemas"]["PerVehicleTypeAmountDto"];
-            /** @description Giới hạn chuyến có tài xế đang áp — bản chưa khai trả mặc định nền tảng */
+            /** @description Giới hạn chuyến có tài xế đang áp - bản chưa khai trả mặc định nền tảng */
             withDriverLimits: components["schemas"]["WithDriverLimitsDto"];
             effectiveFrom?: string | null;
             effectiveTo?: string | null;
@@ -16361,19 +16361,19 @@ export interface components {
         FeePolicySnapshotDto: {
             policyId: string;
             version: number;
-            /** @description LEGACY — luồng tiền v2 không đọc trường này */
+            /** @description LEGACY - luồng tiền v2 không đọc trường này */
             serviceFeePercent: number;
             holdMinAmount: string;
-            /** @description Cửa sổ thanh toán khi đặt xa — trần của cửa sổ động */
+            /** @description Cửa sổ thanh toán khi đặt xa - trần của cửa sổ động */
             holdPaymentWindowMinutes: number;
-            /** @description Cửa sổ huỷ miễn phí (giờ) khi đặt xa — trần của cửa sổ động */
+            /** @description Cửa sổ huỷ miễn phí (giờ) khi đặt xa - trần của cửa sổ động */
             freeCancelHours: number;
             taxEnabled: boolean;
             /** @description Bảng mức khấu trừ theo loại dịch vụ (ADR 0068). Vắng/null ở snapshot ≤ v8 */
             taxRates?: components["schemas"]["TaxRatesDto"] | null;
             /** @description Căn cứ pháp lý khấu trừ */
             taxLegalBasis?: string | null;
-            /** @description LEGACY (≤ v8) — một mức */
+            /** @description LEGACY (≤ v8) - một mức */
             taxPercent?: number | null;
             /** @description LEGACY (≤ v8) */
             taxLabel?: string | null;
@@ -16382,32 +16382,32 @@ export interface components {
             vehicleProtectionEnabled: boolean;
             vehicleProtectionPercent?: number | null;
             insurancePartnerName?: string | null;
-            /** @description % phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi của xe, không gồm phí giao xe) — ADR 0066 */
+            /** @description % phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi của xe, không gồm phí giao xe) - ADR 0066 */
             depositPercent: number;
             /** @description Sàn của `D` (VND): D = max(% × tiền thuê, sàn) */
             depositMinAmount: string;
             /** @description Trần % của `D` ở chính sách này */
             depositMaxPercent: number;
-            /** @description `S` — phí sàn cố định mỗi đơn */
+            /** @description `S` - phí sàn cố định mỗi đơn */
             customerPlatformFee: components["schemas"]["PerVehicleTypeAmountDto"];
-            /** @description `H` — nấc hoa hồng lũy tiến */
+            /** @description `H` - nấc hoa hồng lũy tiến */
             ownerCommissionTiers: components["schemas"]["OwnerCommissionTierDto"][];
-            /** @description `IV` — biểu phí mỗi ngày */
+            /** @description `IV` - biểu phí mỗi ngày */
             vehicleProtectionDailyAmount: components["schemas"]["PerVehicleTypeAmountDto"];
-            /** @description `IP` — biểu phí mỗi ngày */
+            /** @description `IP` - biểu phí mỗi ngày */
             tripInsuranceDailyAmount: components["schemas"]["PerVehicleTypeAmountDto"];
         };
         FinanceCategoryBreakdownDto: {
-            /** @description Tổng của cả chiều tiền — khớp `revenue`/`cost` ở summary */
+            /** @description Tổng của cả chiều tiền - khớp `revenue`/`cost` ở summary */
             total: string;
             items: components["schemas"]["FinanceCategoryBreakdownItemDto"][];
         };
         FinanceCategoryBreakdownItemDto: {
-            /** @description `null` = phiếu chưa gán danh mục — gom thành một dòng "Chưa phân loại" */
+            /** @description `null` = phiếu chưa gán danh mục - gom thành một dòng "Chưa phân loại" */
             categoryId?: string | null;
             /** @description Tên trong DB (tiếng Việt). `null` với dòng chưa phân loại */
             name?: string | null;
-            /** @description Khoá danh mục hệ thống — web dịch NHÃN từ khoá này, không dịch `name` */
+            /** @description Khoá danh mục hệ thống - web dịch NHÃN từ khoá này, không dịch `name` */
             systemKey?: string | null;
             /** @description Tổng tiền của danh mục trong kỳ, string */
             amount: string;
@@ -16421,7 +16421,7 @@ export interface components {
             /** @enum {string} */
             type: "income" | "expense";
             name: string;
-            /** @description Danh mục hệ thống — không sửa/xoá được */
+            /** @description Danh mục hệ thống - không sửa/xoá được */
             isSystem: boolean;
         };
         FinanceSeriesBucketDto: {
@@ -16440,7 +16440,7 @@ export interface components {
         };
         FinanceSeriesDto: {
             /**
-             * @description Độ mịn THỰC SỰ đã dùng — có thể khác thứ client xin nếu kỳ quá dài
+             * @description Độ mịn THỰC SỰ đã dùng - có thể khác thứ client xin nếu kỳ quá dài
              * @enum {string}
              */
             granularity: "day" | "week" | "month";
@@ -16448,29 +16448,29 @@ export interface components {
             buckets: components["schemas"]["FinanceSeriesBucketDto"][];
         };
         FinanceSummaryDto: {
-            /** @description DÒNG TIỀN QUỸ — tổng thu mọi phiếu đã duyệt, GỒM cọc. String */
+            /** @description DÒNG TIỀN QUỸ - tổng thu mọi phiếu đã duyệt, GỒM cọc. String */
             totalIncome: string;
-            /** @description DÒNG TIỀN QUỸ — tổng chi mọi phiếu đã duyệt, GỒM hoàn cọc */
+            /** @description DÒNG TIỀN QUỸ - tổng chi mọi phiếu đã duyệt, GỒM hoàn cọc */
             totalExpense: string;
             /** @description Cân đối quỹ = thu − chi, string */
             balance: string;
-            /** @description KINH DOANH — doanh thu, đã LOẠI tiền giữ hộ (ADR 0013 §3) */
+            /** @description KINH DOANH - doanh thu, đã LOẠI tiền giữ hộ (ADR 0013 §3) */
             revenue: string;
-            /** @description KINH DOANH — chi phí, đã loại hoàn cọc */
+            /** @description KINH DOANH - chi phí, đã loại hoàn cọc */
             cost: string;
-            /** @description Phần của `cost` KHÔNG gắn xe nào (marketing, văn phòng…). Bảng hiệu quả theo xe cần nó để giải thích vì sao tổng chi phí các dòng nhỏ hơn thẻ "Chi phí" — đây là số của KỲ, không đổi theo trang, nên nó ở đây chứ không nằm trong trang dữ liệu. */
+            /** @description Phần của `cost` KHÔNG gắn xe nào (marketing, văn phòng…). Bảng hiệu quả theo xe cần nó để giải thích vì sao tổng chi phí các dòng nhỏ hơn thẻ "Chi phí" - đây là số của KỲ, không đổi theo trang, nên nó ở đây chứ không nằm trong trang dữ liệu. */
             unassignedCost: string;
-            /** @description Phần của `revenue` KHÔNG gắn khách nào — phiếu thu tay không liên kết đơn thuê. Bảng doanh thu theo khách cần nó vì cùng lý do: thiếu con số này thì tổng các dòng nhỏ hơn thẻ "Doanh thu" và phần chênh không có chỗ nào giải thích. */
+            /** @description Phần của `revenue` KHÔNG gắn khách nào - phiếu thu tay không liên kết đơn thuê. Bảng doanh thu theo khách cần nó vì cùng lý do: thiếu con số này thì tổng các dòng nhỏ hơn thẻ "Doanh thu" và phần chênh không có chỗ nào giải thích. */
             unassignedRevenue: string;
-            /** @description KINH DOANH — lãi TIỀN MẶT theo sổ = doanh thu − chi phí. CHƯA trừ khấu hao/lãi vay */
+            /** @description KINH DOANH - lãi TIỀN MẶT theo sổ = doanh thu − chi phí. CHƯA trừ khấu hao/lãi vay */
             profit: string;
-            /** @description Biên lợi nhuận %. `null` khi chưa có doanh thu — không phải 0 */
+            /** @description Biên lợi nhuận %. `null` khi chưa có doanh thu - không phải 0 */
             profitMarginPercent?: number | null;
-            /** @description TẠI THỜI ĐIỂM NÀY — cọc đã thu chưa hoàn, không lọc theo kỳ. String */
+            /** @description TẠI THỜI ĐIỂM NÀY - cọc đã thu chưa hoàn, không lọc theo kỳ. String */
             depositHeld: string;
             /** @description Số đơn còn giữ cọc */
             depositHeldBookings: number;
-            /** @description TẠI THỜI ĐIỂM NÀY — tổng công nợ các đơn còn nợ, string */
+            /** @description TẠI THỜI ĐIỂM NÀY - tổng công nợ các đơn còn nợ, string */
             totalDebt: string;
             /** @description Số đơn còn nợ */
             debtBookings: number;
@@ -16486,10 +16486,10 @@ export interface components {
         FleetQuotaDto: {
             /** @enum {string} */
             kind: "unlimited" | "total";
-            /** @description Trần TỔNG số xe — chỉ có giá trị khi kind = 'total' */
+            /** @description Trần TỔNG số xe - chỉ có giá trị khi kind = 'total' */
             totalLimit: number | null;
             /**
-             * @description Trần này từ đâu ra — null khi kind = 'unlimited'
+             * @description Trần này từ đâu ra - null khi kind = 'unlimited'
              * @enum {string|null}
              */
             reason?: "plan" | "owner_lite" | "billing_unconfigured" | null;
@@ -16513,7 +16513,7 @@ export interface components {
             displayName: string;
             email: string | null;
             /**
-             * @description Vai trò nền tảng — để phân biệt với tên hiển thị
+             * @description Vai trò nền tảng - để phân biệt với tên hiển thị
              * @enum {string}
              */
             roleKey: "platform_admin" | "platform_staff" | "reviewer" | "support" | "finance_admin";
@@ -16554,7 +16554,7 @@ export interface components {
             vehicleId: string;
             vehicleName: string;
             plateNumber?: string | null;
-            /** @description @xeprime/types → VehicleType — quyết bộ góc chụp (`handoverPhotoSlotsFor`): xe máy không có trái/phải */
+            /** @description @xeprime/types → VehicleType - quyết bộ góc chụp (`handoverPhotoSlotsFor`): xe máy không có trái/phải */
             vehicleType: string;
             /** @description @xeprime/types → HandoverEnergyKind */
             energyKind: string;
@@ -16562,7 +16562,7 @@ export interface components {
             bookingPickupAt: string;
             /** @description Giờ trả xe theo đơn (ISO-8601 UTC) */
             bookingReturnAt: string;
-            /** @description KM hiện tại của xe theo hệ thống — null = chưa từng ghi nhận */
+            /** @description KM hiện tại của xe theo hệ thống - null = chưa từng ghi nhận */
             vehicleOdometerKm?: number | null;
             pickupOdometerKm?: number | null;
             nextMaintenanceKm?: number | null;
@@ -16598,9 +16598,9 @@ export interface components {
             damageNote?: string | null;
             notes?: string | null;
             photos: components["schemas"]["HandoverPhotoDto"][];
-            /** @description ISO — khi việc giao/nhận THỰC SỰ xảy ra (bản ghi cũ: null, đọc confirmedAt) */
+            /** @description ISO - khi việc giao/nhận THỰC SỰ xảy ra (bản ghi cũ: null, đọc confirmedAt) */
             occurredAt?: string | null;
-            /** @description ISO — khi được GHI NHẬN */
+            /** @description ISO - khi được GHI NHẬN */
             confirmedAt?: string | null;
             confirmedByName?: string | null;
             /**
@@ -16610,7 +16610,7 @@ export interface components {
             confirmSource: "host" | "customer" | "auto";
             /** @description ISO */
             canceledAt?: string | null;
-            /** @description Optimistic concurrency — nộp lại khi lưu/xác nhận */
+            /** @description Optimistic concurrency - nộp lại khi lưu/xác nhận */
             rowVersion: number;
             /** @description ISO */
             updatedAt: string;
@@ -16632,7 +16632,7 @@ export interface components {
              */
             start: string;
             /**
-             * @description HH:mm giờ Việt Nam — 24:00 là hết ngày
+             * @description HH:mm giờ Việt Nam - 24:00 là hết ngày
              * @example 22:00
              */
             end: string;
@@ -16668,14 +16668,14 @@ export interface components {
             bankCode?: string | null;
             accountNumber?: string | null;
             accountName?: string | null;
-            /** @description Từ khoá đặt trước mã trong nội dung chuyển khoản — xem PaymentInfoDto */
+            /** @description Từ khoá đặt trước mã trong nội dung chuyển khoản - xem PaymentInfoDto */
             transferPrefix?: string | null;
         };
         HoldQueueSummaryDto: {
             count: number;
-            /** @description Tổng tiền của các dòng đang đếm, string — ADR 0007 */
+            /** @description Tổng tiền của các dòng đang đếm, string - ADR 0007 */
             amount: string;
-            /** @description Trong số đó, bao nhiêu khoản đang bị tạm giữ vì case giữ quyết toán còn mở (tranh chấp, chưa xác nhận bàn giao — ADR 0066) */
+            /** @description Trong số đó, bao nhiêu khoản đang bị tạm giữ vì case giữ quyết toán còn mở (tranh chấp, chưa xác nhận bàn giao - ADR 0066) */
             disputeCount: number;
         };
         HolidayDto: {
@@ -16687,7 +16687,7 @@ export interface components {
              */
             startDate: string;
             /**
-             * @description Ngày CUỐI CÙNG của kỳ nghỉ — INCLUSIVE. Một ngày lễ đúng một ngày có startDate = endDate.
+             * @description Ngày CUỐI CÙNG của kỳ nghỉ - INCLUSIVE. Một ngày lễ đúng một ngày có startDate = endDate.
              * @example 2026-04-30
              */
             endDate: string;
@@ -16708,13 +16708,13 @@ export interface components {
         HostMetricsDto: {
             /** @description Số YÊU CẦU mà gian hàng thật sự phải quyết, trong 90 ngày gần nhất. Không gồm slot_taken, khách rút trước khi gian hàng quyết, và dữ liệu LEGACY ADR 0039 không có quyết định nào. */
             sampleCount: number;
-            /** @description Tỉ lệ phản hồi trong hạn (0–100). Null = chưa đủ mẫu, KHÔNG phải 0. */
+            /** @description Tỉ lệ phản hồi trong hạn (0-100). Null = chưa đủ mẫu, KHÔNG phải 0. */
             responseRatePercent: number | null;
-            /** @description Tỉ lệ NHẬN VÀ GIỮ chuyến (0–100). Từ chối trong hạn KHÔNG nằm trong tử số; gian hàng huỷ sau khi đã nhận thì mẫu đó rời tử số. Null = chưa đủ mẫu. */
+            /** @description Tỉ lệ NHẬN VÀ GIỮ chuyến (0-100). Từ chối trong hạn KHÔNG nằm trong tử số; gian hàng huỷ sau khi đã nhận thì mẫu đó rời tử số. Null = chưa đủ mẫu. */
             acceptKeepRatePercent: number | null;
-            /** @description Trung vị số PHÚT tới quyết định của NGƯỜI. Lượt tự nhận không vào phép tính này — xem instantBook. Null = chưa đủ mẫu do người quyết. */
+            /** @description Trung vị số PHÚT tới quyết định của NGƯỜI. Lượt tự nhận không vào phép tính này - xem instantBook. Null = chưa đủ mẫu do người quyết. */
             responseMinutesMedian: number | null;
-            /** @description Gian hàng có xe bật "Đặt ngay" trong cửa sổ — giao diện hiện nhãn thay cho số phút, thay vì quảng cáo một tốc độ trả lời thủ công không có thật. */
+            /** @description Gian hàng có xe bật "Đặt ngay" trong cửa sổ - giao diện hiện nhãn thay cho số phút, thay vì quảng cáo một tốc độ trả lời thủ công không có thật. */
             instantBook: boolean;
         };
         IdResultDto: {
@@ -16725,9 +16725,9 @@ export interface components {
             id: string;
         };
         IgnoreBankTransactionDto: {
-            /** @description Lý do bỏ qua — bắt buộc, để dòng bị loại vẫn truy được */
+            /** @description Lý do bỏ qua - bắt buộc, để dòng bị loại vẫn truy được */
             note: string;
-            /** @description Mã giao dịch ngân hàng của lần chuyển TRẢ người gửi. Có mã ⇒ dòng được ghi là đã trả lại; không có mã thì không ghi "đã trả" — một lần chuyển không có bằng chứng chỉ là lời khai */
+            /** @description Mã giao dịch ngân hàng của lần chuyển TRẢ người gửi. Có mã ⇒ dòng được ghi là đã trả lại; không có mã thì không ghi "đã trả" - một lần chuyển không có bằng chứng chỉ là lời khai */
             refundReference?: string;
         };
         InsuranceCertificateDto: {
@@ -16741,7 +16741,7 @@ export interface components {
             certificateUrl?: string | null;
             coverageFrom?: string | null;
             coverageTo?: string | null;
-            /** @description GCN THỬ NGHIỆM (adapter giả lập) — không có hiệu lực bảo hiểm */
+            /** @description GCN THỬ NGHIỆM (adapter giả lập) - không có hiệu lực bảo hiểm */
             isTest: boolean;
             issuedAt: string;
         };
@@ -16754,13 +16754,13 @@ export interface components {
             productNameEn?: string | null;
             /** @description Phí khách đã trả cho sản phẩm này (VND string) */
             premiumAmount: string;
-            /** @description GCN — chỉ có khi `status = issued` */
+            /** @description GCN - chỉ có khi `status = issued` */
             certificate?: components["schemas"]["InsuranceCertificateDto"] | null;
         };
         InsuranceOfferedByKindDto: {
-            /** @description `IV` — bảo hiểm vật chất xe */
+            /** @description `IV` - bảo hiểm vật chất xe */
             vehicleProtection: boolean;
-            /** @description `IP` — bảo hiểm tai nạn người trên xe */
+            /** @description `IP` - bảo hiểm tai nạn người trên xe */
             tripInsurance: boolean;
         };
         InsuranceProductDto: {
@@ -16774,13 +16774,13 @@ export interface components {
             nameEn: string;
             coverageVi: string;
             coverageEn: string;
-            /** @description Khấu trừ/vụ — ô tô. `null` = không áp dụng */
+            /** @description Khấu trừ/vụ - ô tô. `null` = không áp dụng */
             deductibleCar?: string | null;
-            /** @description Khấu trừ/vụ — xe máy */
+            /** @description Khấu trừ/vụ - xe máy */
             deductibleMotorbike?: string | null;
-            /** @description Bồi thường tối đa — ô tô. `null` = xem ghi chú */
+            /** @description Bồi thường tối đa - ô tô. `null` = xem ghi chú */
             maxPayoutCar?: string | null;
-            /** @description Bồi thường tối đa — xe máy */
+            /** @description Bồi thường tối đa - xe máy */
             maxPayoutMotorbike?: string | null;
             maxPayoutNoteVi?: string | null;
             maxPayoutNoteEn?: string | null;
@@ -16793,7 +16793,7 @@ export interface components {
         InviteAnswerDto: {
             /** @enum {string} */
             status: "pending" | "accepted" | "declined" | "expired" | "revoked";
-            /** @description Slug gian hàng vừa vào — `null` khi từ chối. FE dùng để điều hướng. */
+            /** @description Slug gian hàng vừa vào - `null` khi từ chối. FE dùng để điều hướng. */
             tenantSlug?: string | null;
         };
         InviteDriverDto: {
@@ -16818,7 +16818,7 @@ export interface components {
             id: string;
             /** @description SĐT được mời, dạng nội địa 0xxxxxxxxx (ADR 0060). null với lời mời email cũ. */
             phone: string | null;
-            /** @description Email được mời — CHỈ lời mời tạo trước ADR 0060; lời mời mới luôn null. */
+            /** @description Email được mời - CHỈ lời mời tạo trước ADR 0060; lời mời mới luôn null. */
             email: string | null;
             /** @enum {string} */
             roleKey: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer";
@@ -16848,7 +16848,7 @@ export interface components {
             invitedByName?: string | null;
             /** @description SĐT được mời, ĐÃ che bớt (ADR 0060). null với lời mời email cũ. */
             invitedPhoneMasked: string | null;
-            /** @description Email được mời, ĐÃ che bớt — chỉ lời mời tạo trước ADR 0060. */
+            /** @description Email được mời, ĐÃ che bớt - chỉ lời mời tạo trước ADR 0060. */
             invitedEmailMasked: string | null;
             /** @description ISO-8601 UTC */
             expiresAt: string;
@@ -16866,14 +16866,14 @@ export interface components {
             minDays: number;
             percent: number;
             note?: string | null;
-            /** @description Luôn true — cờ nhận diện mốc cũ chưa quy đổi */
+            /** @description Luôn true - cờ nhận diện mốc cũ chưa quy đổi */
             legacy: boolean;
         };
         ListingCollateralDto: {
             /** @enum {string} */
             mode: "cash" | "asset" | "none";
             assetTypes: ("vehicle_registration" | "motorbike" | "passport")[];
-            /** @description VND string — chỉ khác 0 khi mode = cash */
+            /** @description VND string - chỉ khác 0 khi mode = cash */
             depositAmount: string;
         };
         ListingDriverSurchargeRuleDto: {
@@ -16881,12 +16881,12 @@ export interface components {
             kind: string;
             /** @description DRIVER_SURCHARGE_UNIT */
             unit: string;
-            /** @description VND string — ADR 0007 */
+            /** @description VND string - ADR 0007 */
             amount: string;
             thresholdValue?: number | null;
         };
         ListingFacetsDto: {
-            /** @description Số xe khớp toàn bộ filter — nút "Áp dụng (N xe)" */
+            /** @description Số xe khớp toàn bộ filter - nút "Áp dụng (N xe)" */
             total: number;
             price: components["schemas"]["PriceBoundsDto"];
             /** @description Theo kiểu dáng (BODY_TYPE key) */
@@ -16924,21 +16924,21 @@ export interface components {
         ListingMileagePolicyDto: {
             /** @description Số km/ngày đã nằm trong giá thuê */
             includedKmPerDay: number;
-            /** @description VND mỗi km vượt — ghi nhận lúc quyết toán, không cộng vào báo giá */
+            /** @description VND mỗi km vượt - ghi nhận lúc quyết toán, không cộng vào báo giá */
             excessFeePerKm: string;
         };
         ListingRentalTermsDto: {
             /** @enum {string} */
             serviceType: "self_drive" | "with_driver" | "long_term";
-            /** @description CUSTOMER_DOCUMENT_TYPE — bộ HIỆU LỰC */
+            /** @description CUSTOMER_DOCUMENT_TYPE - bộ HIỆU LỰC */
             requiredDocuments: string[];
-            /** @description IDENTITY_VERIFY_METHOD — đối chiếu TAY, kể cả qua app VNeID của khách */
+            /** @description IDENTITY_VERIFY_METHOD - đối chiếu TAY, kể cả qua app VNeID của khách */
             identityVerifyMethod: string;
             termsText?: string | null;
             requireTermsAcceptance: boolean;
             /**
              * @deprecated
-             * @description NGỪNG DÙNG (29/10/2026) — DRIVER_DEPOSIT_MODE, chỉ with_driver; tiền giữ chỗ do nền tảng thu, đừng hiển thị
+             * @description NGỪNG DÙNG (29/10/2026) - DRIVER_DEPOSIT_MODE, chỉ with_driver; tiền giữ chỗ do nền tảng thu, đừng hiển thị
              */
             depositMode?: string | null;
             /** @description Xe bật tự động nhận cho dịch vụ này (điều kiện cụ thể do báo giá trả) */
@@ -16959,7 +16959,7 @@ export interface components {
         };
         LoginDto: {
             /**
-             * @description Site khách / site partner / app: CHỈ SĐT Việt Nam dạng 0xxxxxxxxx / +84xxxxxxxxx — email bị từ chối bằng `PHONE_LOGIN_REQUIRED` (ADR 0060). Site quản trị: email hoặc SĐT.
+             * @description Site khách / site partner / app: CHỈ SĐT Việt Nam dạng 0xxxxxxxxx / +84xxxxxxxxx - email bị từ chối bằng `PHONE_LOGIN_REQUIRED` (ADR 0060). Site quản trị: email hoặc SĐT.
              * @example 0901234567
              */
             identifier: string;
@@ -16972,10 +16972,10 @@ export interface components {
             baseMonthlyPrice: string;
             /** @description baseMonthlyPrice × packageMonths */
             basePackageAmount: string;
-            /** @description % mốc cam kết đang áp — null = không mốc nào áp cho gói này */
+            /** @description % mốc cam kết đang áp - null = không mốc nào áp cho gói này */
             durationDiscountPercent?: number | null;
             durationDiscountAmount: string;
-            /** @description Giá gói sau ưu đãi — số khách thực trả (trước cọc) */
+            /** @description Giá gói sau ưu đãi - số khách thực trả (trước cọc) */
             finalPackageAmount: string;
             /** @description finalPackageAmount ÷ packageMonths */
             effectiveMonthlyAmount: string;
@@ -17004,7 +17004,7 @@ export interface components {
             dueStatus: string;
             dueSoonKm: number;
             activeRecord?: components["schemas"]["MaintenanceRecordDto"] | null;
-            /** @description ISO — hoàn tất gần nhất */
+            /** @description ISO - hoàn tất gần nhất */
             lastCompletedAt?: string | null;
             expiringDocumentCount: number;
             /** @description ISO */
@@ -17021,7 +17021,7 @@ export interface components {
             inProgress: number;
             missingOdometer: number;
             upcoming: number;
-            /** @description Xe có giấy tờ sắp/đã hết hạn — cảnh báo liên quan */
+            /** @description Xe có giấy tờ sắp/đã hết hạn - cảnh báo liên quan */
             expiringDocuments: number;
             /** @description Việc "Thiếu KM trả" đang tồn đọng */
             missingReturnKm: number;
@@ -17045,7 +17045,7 @@ export interface components {
             /** @description @xeprime/types → MaintenanceDueStatus */
             dueStatus: string;
             dueSoonKm: number;
-            /** @description Optimistic concurrency — nộp lại khi lưu */
+            /** @description Optimistic concurrency - nộp lại khi lưu */
             rowVersion: number;
             /** @description ISO */
             updatedAt: string;
@@ -17059,18 +17059,18 @@ export interface components {
             title?: string | null;
             /** @enum {string} */
             status: "scheduled" | "in_progress" | "completed" | "canceled";
-            /** @description ISO — ngày dự kiến (chỉ để nhắc, không giữ chỗ lịch xe — ADR 0079) */
+            /** @description ISO - ngày dự kiến (chỉ để nhắc, không giữ chỗ lịch xe - ADR 0079) */
             plannedStartAt?: string | null;
             /**
              * @deprecated
-             * @description Không còn ghi (ADR 0079) — chỉ phiếu cũ đã đóng còn giá trị lịch sử
+             * @description Không còn ghi (ADR 0079) - chỉ phiếu cũ đã đóng còn giá trị lịch sử
              */
             plannedEndAt?: string | null;
             /** @description ISO */
             completedAt?: string | null;
             odometerKm?: number | null;
             providerName?: string | null;
-            /** @description Tiền string — ADR 0007 */
+            /** @description Tiền string - ADR 0007 */
             cost?: string | null;
             receiptCode?: string | null;
             notes?: string | null;
@@ -17085,9 +17085,9 @@ export interface components {
             data: components["schemas"]["MaintenanceRecordDto"][];
         };
         MarketPriceSuggestionDto: {
-            /** @description Mức thấp (phân vị 25) — tiền dạng string, ADR 0007 */
+            /** @description Mức thấp (phân vị 25) - tiền dạng string, ADR 0007 */
             low: string;
-            /** @description Mức giữa (trung vị) — giá đề xuất */
+            /** @description Mức giữa (trung vị) - giá đề xuất */
             median: string;
             /** @description Mức cao (phân vị 75) */
             high: string;
@@ -17105,37 +17105,37 @@ export interface components {
             unread: number;
         };
         MarkRefundPaidDto: {
-            /** @description Mã giao dịch ngân hàng chiều ra — bằng chứng đã chuyển */
+            /** @description Mã giao dịch ngân hàng chiều ra - bằng chứng đã chuyển */
             bankReference: string;
             note?: string | null;
         };
         MarkWithdrawalPaidDto: {
-            /** @description Mã giao dịch ngân hàng — BẰNG CHỨNG đã chuyển */
+            /** @description Mã giao dịch ngân hàng - BẰNG CHỨNG đã chuyển */
             bankReference: string;
-            /** @description Bản ghi đang cầm — chặn hai admin cùng bấm */
+            /** @description Bản ghi đang cầm - chặn hai admin cùng bấm */
             rowVersion: number;
         };
         MatchBankTransactionDto: {
             /** @description Id hoá đơn gói được chọn để khớp */
             invoiceId: string;
-            /** @description Lý do/ghi chú — BẮT BUỘC: mỗi lần khớp tay là một người chịu trách nhiệm */
+            /** @description Lý do/ghi chú - BẮT BUỘC: mỗi lần khớp tay là một người chịu trách nhiệm */
             note: string;
         };
         MeDto: {
             id: string;
             /**
-             * @description Không gian tài khoản (ADR 0053) — customer · partner · platform. Luôn bằng site/app đang dùng; server luôn gửi.
+             * @description Không gian tài khoản (ADR 0053) - customer · partner · platform. Luôn bằng site/app đang dùng; server luôn gửi.
              * @enum {string}
              */
             realm?: "customer" | "partner" | "platform";
             displayName: string;
             email: string | null;
             avatarUrl: string | null;
-            /** @description SĐT của chính tài khoản, dạng nội địa `0xxxxxxxxx` — để điền sẵn ô liên hệ */
+            /** @description SĐT của chính tài khoản, dạng nội địa `0xxxxxxxxx` - để điền sẵn ô liên hệ */
             phone: string | null;
-            /** @description Đã xác thực SĐT chưa — gate cho việc đặt xe/mở shop */
+            /** @description Đã xác thực SĐT chưa - gate cho việc đặt xe/mở shop */
             phoneVerified: boolean;
-            /** @description Đã có mật khẩu chưa — false với tài khoản tạo bằng Google/Facebook (hoặc bằng OTP trước ADR 0060): họ đặt mật khẩu qua "Quên mật khẩu" bằng SĐT hoặc POST /auth/password/set */
+            /** @description Đã có mật khẩu chưa - false với tài khoản tạo bằng Google/Facebook (hoặc bằng OTP trước ADR 0060): họ đặt mật khẩu qua "Quên mật khẩu" bằng SĐT hoặc POST /auth/password/set */
             hasPassword: boolean;
             tenant: components["schemas"]["CurrentTenantSummaryDto"] | null;
             /** @description Số chuyến đi thuê chưa khép của chính người dùng */
@@ -17145,7 +17145,7 @@ export interface components {
             permissions: string[];
         };
         MemberDto: {
-            /** @description ID user — dùng cho PATCH/DELETE /members/:userId */
+            /** @description ID user - dùng cho PATCH/DELETE /members/:userId */
             userId: string;
             displayName: string;
             email?: string | null;
@@ -17156,7 +17156,7 @@ export interface components {
             status: "active" | "invited" | "locked" | "removed";
             /** @enum {string} */
             branchScope: "all" | "limited";
-            /** @description Rỗng khi `branchScope = 'all'` — lúc đó thành viên thấy mọi chi nhánh */
+            /** @description Rỗng khi `branchScope = 'all'` - lúc đó thành viên thấy mọi chi nhánh */
             branchIds: string[];
             /** @description ISO-8601 UTC */
             joinedAt?: string | null;
@@ -17181,11 +17181,11 @@ export interface components {
             senderType: string;
             messageType: string;
             text?: string | null;
-            /** @description Khoá idempotency client gửi kèm — client dùng để khớp tin lạc quan với tin thật */
+            /** @description Khoá idempotency client gửi kèm - client dùng để khớp tin lạc quan với tin thật */
             clientMessageId?: string | null;
-            /** @description Xe tin nhắn này nói về — null khi câu đó không gắn ngữ cảnh nào */
+            /** @description Xe tin nhắn này nói về - null khi câu đó không gắn ngữ cảnh nào */
             vehicle?: components["schemas"]["MessageVehicleDto"] | null;
-            /** @description Chuyến tin nhắn này nói về — null khi câu đó không gắn chuyến nào */
+            /** @description Chuyến tin nhắn này nói về - null khi câu đó không gắn chuyến nào */
             trip?: components["schemas"]["MessageTripDto"] | null;
             attachments: components["schemas"]["MessageAttachmentDto"][];
             /** @description ISO-8601 UTC */
@@ -17200,15 +17200,15 @@ export interface components {
             nextBeforeId?: string | null;
         };
         MessageTripDto: {
-            /** @description ID yêu cầu thuê — định danh chuyến (`/trips/:id` phía khách) */
+            /** @description ID yêu cầu thuê - định danh chuyến (`/trips/:id` phía khách) */
             id: string;
-            /** @description Đơn thuê — có khi đã thành đơn */
+            /** @description Đơn thuê - có khi đã thành đơn */
             bookingId?: string | null;
-            /** @description Mã đơn — có khi đã thành đơn */
+            /** @description Mã đơn - có khi đã thành đơn */
             code?: string | null;
-            /** @description ISO-8601 UTC — giờ nhận (của đơn nếu có; dài hạn chưa chốt lịch là null) */
+            /** @description ISO-8601 UTC - giờ nhận (của đơn nếu có; dài hạn chưa chốt lịch là null) */
             pickupAt?: string | null;
-            /** @description ISO-8601 UTC — giờ trả */
+            /** @description ISO-8601 UTC - giờ trả */
             returnAt?: string | null;
         };
         MessageVehicleDto: {
@@ -17223,12 +17223,12 @@ export interface components {
             vehicleId: string;
             vehicleName: string;
             plateNumber?: string | null;
-            /** @description ISO — thời điểm biên bản được xác nhận */
+            /** @description ISO - thời điểm biên bản được xác nhận */
             confirmedAt: string;
             confirmedByName?: string | null;
-            /** @description KM chốt lúc giao xe — mốc sàn khi bổ sung. null = biên bản giao cũng chưa có số */
+            /** @description KM chốt lúc giao xe - mốc sàn khi bổ sung. null = biên bản giao cũng chưa có số */
             pickupOdometerKm?: number | null;
-            /** @description Optimistic concurrency — nộp lại khi bổ sung KM */
+            /** @description Optimistic concurrency - nộp lại khi bổ sung KM */
             rowVersion: number;
         };
         MissingOdometerQueueDto: {
@@ -17271,7 +17271,7 @@ export interface components {
             clientApp?: "customer" | "partner";
         };
         MobileLogoutDto: {
-            /** @description Refresh token của thiết bị này — dùng để xác định phiên cần thu hồi */
+            /** @description Refresh token của thiết bị này - dùng để xác định phiên cần thu hồi */
             refreshToken: string;
         };
         MobileRefreshDto: {
@@ -17320,7 +17320,7 @@ export interface components {
             /** @description JWT ngắn hạn. Gửi ở header `Authorization: Bearer <accessToken>` */
             accessToken: string;
             /**
-             * @description Số GIÂY còn lại của access token. Để client chủ động refresh trước khi hết hạn — không phải để tin: hạn thật nằm trong `exp` của token và do server kiểm.
+             * @description Số GIÂY còn lại của access token. Để client chủ động refresh trước khi hết hạn - không phải để tin: hạn thật nằm trong `exp` của token và do server kiểm.
              * @example 900
              */
             accessTokenExpiresIn: number;
@@ -17331,7 +17331,7 @@ export interface components {
         };
         MoneyQueueCountDto: {
             count: number;
-            /** @description Tổng tiền của các dòng đang đếm, string — ADR 0007 */
+            /** @description Tổng tiền của các dòng đang đếm, string - ADR 0007 */
             amount: string;
         };
         MoneyRangeDto: {
@@ -17383,9 +17383,9 @@ export interface components {
             verification: "unverified" | "pending" | "verified" | "needs_revision" | "rejected";
             /** @enum {string} */
             onboardingState: "commission" | "package_pending" | "package_active";
-            /** @description SĐT liên hệ của GIAN HÀNG (hiện cho khách) — khác SĐT đăng nhập ở `ownerAccount` */
+            /** @description SĐT liên hệ của GIAN HÀNG (hiện cho khách) - khác SĐT đăng nhập ở `ownerAccount` */
             phone?: string | null;
-            /** @description Email liên hệ của GIAN HÀNG (hiện cho khách) — khác email đăng nhập ở `ownerAccount` */
+            /** @description Email liên hệ của GIAN HÀNG (hiện cho khách) - khác email đăng nhập ở `ownerAccount` */
             email?: string | null;
             profile: components["schemas"]["TenantProfileDto"];
             ownerAccount: components["schemas"]["ShopOwnerAccountDto"];
@@ -17398,9 +17398,9 @@ export interface components {
             /** @description Mọi kỳ GÓI đang hiệu lực (current | grace), tối đa một mỗi phạm vi loại xe (ADR 0065). Rỗng khi không ở tuyến gói */
             currentPlans: components["schemas"]["CurrentPlanDto"][];
             usage: components["schemas"]["VehicleSlotUsageDto"];
-            /** @description Hạn mức THEO LOẠI xe (ADR 0065) — nguồn chính cho màn hình */
+            /** @description Hạn mức THEO LOẠI xe (ADR 0065) - nguồn chính cho màn hình */
             vehicleQuotas: components["schemas"]["VehicleTypeQuotasDto"];
-            /** @description Trần GỘP (hình dạng trước ADR 0065) — suy từ vehicleQuotas, giữ cho client cũ */
+            /** @description Trần GỘP (hình dạng trước ADR 0065) - suy từ vehicleQuotas, giữ cho client cũ */
             fleetQuota: components["schemas"]["FleetQuotaDto"];
             freeTrips: components["schemas"]["FreeTripsDto"];
         };
@@ -17456,7 +17456,7 @@ export interface components {
         };
         OkResultDto: {
             /**
-             * @description Luôn `true` — thao tác đã thực hiện xong.
+             * @description Luôn `true` - thao tác đã thực hiện xong.
              * @example true
              */
             ok: boolean;
@@ -17467,7 +17467,7 @@ export interface components {
             /** @example Xe giao không đúng mô tả */
             subject: string;
             description: string;
-            /** @description Đơn thuê liên quan — bắt buộc với `dispute` (tranh chấp phải gắn một chuyến) */
+            /** @description Đơn thuê liên quan - bắt buộc với `dispute` (tranh chấp phải gắn một chuyến) */
             bookingId?: string | null;
             /** @description Yêu cầu thuê liên quan */
             bookingRequestId?: string | null;
@@ -17481,13 +17481,13 @@ export interface components {
              */
             mode: "view" | "assist";
             /**
-             * @description Lý do hỗ trợ — ghi vào phiên và mọi dòng audit của phiên
+             * @description Lý do hỗ trợ - ghi vào phiên và mọi dòng audit của phiên
              * @example Chủ xe nhờ cập nhật ảnh xe theo ticket #1234
              */
             reason: string;
         };
         OtpConfigDto: {
-            /** @description Môi trường nhận mã OTP test (dev/staging): giao diện hiện ô nhập mã ngay, không bắt gửi SMS trước. Chỉ là CỜ — bản thân mã không bao giờ đi trên dây. Production luôn false. */
+            /** @description Môi trường nhận mã OTP test (dev/staging): giao diện hiện ô nhập mã ngay, không bắt gửi SMS trước. Chỉ là CỜ - bản thân mã không bao giờ đi trên dây. Production luôn false. */
             testCodeEnabled: boolean;
         };
         OvertimeSuggestionDto: {
@@ -17510,23 +17510,23 @@ export interface components {
              */
             fromDay: number;
             /**
-             * @description % giá thuê của ngày đó (0–30)
+             * @description % giá thuê của ngày đó (0-30)
              * @example 10
              */
             percent: number;
         };
         OwnerPayoutDto: {
-            /** @description Doanh thu cho thuê xe `R` — tiền thuê sau khuyến mãi của xe, KHÔNG gồm phí giao xe, phí đặt xe, bảo hiểm (VND string) */
+            /** @description Doanh thu cho thuê xe `R` - tiền thuê sau khuyến mãi của xe, KHÔNG gồm phí giao xe, phí đặt xe, bảo hiểm (VND string) */
             rentAmount: string;
-            /** @description Số ngày thuê tính phí. Bảng phí đời cũ thiếu số ngày thì suy từ giá từng ngày / giờ nhận–trả của đơn; `0` = không còn nguồn nào để biết ⇒ hiện "Tiền thuê" không kèm số ngày */
+            /** @description Số ngày thuê tính phí. Bảng phí đời cũ thiếu số ngày thì suy từ giá từng ngày / giờ nhận-trả của đơn; `0` = không còn nguồn nào để biết ⇒ hiện "Tiền thuê" không kèm số ngày */
             rentalDays: number;
-            /** @description Đơn giá thuê / ngày — CHỈ khi mọi ngày cùng một giá (biết được từ giá từng ngày, hoặc chuyến 1 ngày). `null` = giá khác nhau theo ngày hoặc không biết ⇒ hiện "Tiền thuê N ngày" */
+            /** @description Đơn giá thuê / ngày - CHỈ khi mọi ngày cùng một giá (biết được từ giá từng ngày, hoặc chuyến 1 ngày). `null` = giá khác nhau theo ngày hoặc không biết ⇒ hiện "Tiền thuê N ngày" */
             unitAmount?: string | null;
-            /** @description `H` — phí dịch vụ – chủ xe (lũy tiến theo ngày). `0` ở tuyến gói (VND string) */
+            /** @description `H` - phí dịch vụ - chủ xe (lũy tiến theo ngày). `0` ở tuyến gói (VND string) */
             ownerCommissionAmount: string;
-            /** @description Nấc lũy tiến của CHÍNH SÁCH ĐÃ ĐÓNG BĂNG cùng bảng phí (`fromDay` tăng dần) — đúng các nấc đã tính ra `H`. `null` ở tuyến gói, hoặc snapshot không mang nấc (trước luồng tiền v2) ⇒ màn hình giải thích chung, không có con số */
+            /** @description Nấc lũy tiến của CHÍNH SÁCH ĐÃ ĐÓNG BĂNG cùng bảng phí (`fromDay` tăng dần) - đúng các nấc đã tính ra `H`. `null` ở tuyến gói, hoặc snapshot không mang nấc (trước luồng tiền v2) ⇒ màn hình giải thích chung, không có con số */
             commissionTiers: components["schemas"]["OwnerCommissionTierDto"][] | null;
-            /** @description `T` = GTGT + TNCN — thuế khấu trừ, nộp thay (VND string) */
+            /** @description `T` = GTGT + TNCN - thuế khấu trừ, nộp thay (VND string) */
             taxAmount: string;
             /** @description Phần GTGT của `T`. `null` = snapshot trước ADR 0068 (một mức, không tách) */
             vatAmount?: string | null;
@@ -17539,15 +17539,15 @@ export interface components {
             /** @description Tổng % thuế đã áp (`vat + pit`, hoặc mức đơn của snapshot cũ). `null` khi không khấu trừ */
             taxTotalPercent?: number | null;
             /**
-             * @description Vì sao KHÔNG khấu trừ dù cổng thuế mở — `company` = doanh nghiệp đã xác minh (ADR 0068 điều 2)
+             * @description Vì sao KHÔNG khấu trừ dù cổng thuế mở - `company` = doanh nghiệp đã xác minh (ADR 0068 điều 2)
              * @enum {string|null}
              */
             taxExemptReason?: "company" | null;
             /** @description Thu nhập chủ xe (a) = `R − H − T` (VND string) */
             ownerNetAmount: string;
-            /** @description Khách thanh toán trực tiếp (b) = `R − D − H` — phần TIỀN THUÊ khách trả tay lúc nhận xe, không gồm phí giao xe (VND string) */
+            /** @description Khách thanh toán trực tiếp (b) = `R − D − H` - phần TIỀN THUÊ khách trả tay lúc nhận xe, không gồm phí giao xe (VND string) */
             payAtPickupRentAmount: string;
-            /** @description Số tiền cộng ví (a − b) = `D − T` — ghi có khi chuyến hoàn thành (VND string) */
+            /** @description Số tiền cộng ví (a − b) = `D − T` - ghi có khi chuyến hoàn thành (VND string) */
             ownerPayableAmount: string;
             /** @description Chuyến có thu tiền giữ chỗ online không. `false` (báo giá tạm tính) ⇒ không có khoản nào đi qua XePrime, (b) và số cộng ví không có nghĩa */
             collectsHold: boolean;
@@ -17583,7 +17583,7 @@ export interface components {
             actorName?: string | null;
             targetType: string;
             targetId?: string | null;
-            /** @description Tên người đọc được của đối tượng — cùng nguồn với trang Nhật ký hệ thống */
+            /** @description Tên người đọc được của đối tượng - cùng nguồn với trang Nhật ký hệ thống */
             targetLabel?: string | null;
             /** @description Thao tác thực hiện trong một phiên hỗ trợ */
             viaSupport: boolean;
@@ -17618,7 +17618,7 @@ export interface components {
             /** @example 0901234567 */
             supportZalo: string | null;
             /**
-             * @description Gửi SMS OTP thật. TẮT (chỉ dev/staging): không gọi nhà mạng, mã cố định 123456 — tránh phí SMS khi phát triển.
+             * @description Gửi SMS OTP thật. TẮT (chỉ dev/staging): không gọi nhà mạng, mã cố định 123456 - tránh phí SMS khi phát triển.
              * @example true
              */
             otpSmsEnabled: boolean;
@@ -17646,7 +17646,7 @@ export interface components {
         };
         PartnerBillingDto: {
             plan: components["schemas"]["PartnerPlanSummaryDto"];
-            /** @description ISO — bắt đầu kỳ hiện hành */
+            /** @description ISO - bắt đầu kỳ hiện hành */
             termStartsAt?: string | null;
             quota: components["schemas"]["PartnerQuotaDto"];
             features: components["schemas"]["PartnerFeatureStateDto"][];
@@ -17674,7 +17674,7 @@ export interface components {
             pickupAt: string;
             /** @description ISO */
             returnAt: string;
-            /** @description Decimal — null khi người gọi không có platform.money.manage */
+            /** @description Decimal - null khi người gọi không có platform.money.manage */
             totalAmount?: string | null;
         };
         PartnerBookingPageDto: {
@@ -17697,7 +17697,7 @@ export interface components {
             pickupAt?: string | null;
             /** @description ISO */
             returnAt?: string | null;
-            /** @description ISO — hạn gian hàng phải phản hồi (động 15 phút–4 giờ, ADR 0066) */
+            /** @description ISO - hạn gian hàng phải phản hồi (động 15 phút-4 giờ, ADR 0066) */
             respondBy: string;
             /** @description ISO */
             createdAt: string;
@@ -17716,7 +17716,7 @@ export interface components {
             cancelled: number;
             /** @description Tổng số đơn trong khoảng lọc */
             total: number;
-            /** @description Đơn chưa nhận xe có giờ nhận trong PARTNER_PICKUP_SOON_HOURS tới — không theo khoảng lọc */
+            /** @description Đơn chưa nhận xe có giờ nhận trong PARTNER_PICKUP_SOON_HOURS tới - không theo khoảng lọc */
             pickupSoon: number;
             /** @description Yêu cầu thuê đang chờ gian hàng duyệt */
             pendingRequests: number;
@@ -17750,11 +17750,11 @@ export interface components {
             closed: boolean;
             /** @description Số chuyến hoàn tất trong tháng */
             completedCount: number;
-            /** @description Decimal — Σ total_amount */
+            /** @description Decimal - Σ total_amount */
             revenue?: string | null;
-            /** @description Decimal — Σ service_fee_amount (phí dịch vụ XePrime, khách trả) */
+            /** @description Decimal - Σ service_fee_amount (phí dịch vụ XePrime, khách trả) */
             serviceFee?: string | null;
-            /** @description Decimal — Σ tax_amount */
+            /** @description Decimal - Σ tax_amount */
             tax?: string | null;
         };
         PartnerCountsDto: {
@@ -17763,7 +17763,7 @@ export interface components {
             listed: number;
             /** @description Xe đang có khách thuê */
             renting: number;
-            /** @description Số xe có ít nhất một cảnh báo — null khi không có platform.vehicles.view */
+            /** @description Số xe có ít nhất một cảnh báo - null khi không có platform.vehicles.view */
             vehiclesWithAlerts?: number | null;
         };
         PartnerDashboardAgendaDto: {
@@ -17775,7 +17775,7 @@ export interface components {
         PartnerDashboardAgendaItemDto: {
             /** @enum {string} */
             kind: "pickup" | "return";
-            /** @description Giờ HẸN giao (pickup) hoặc trả (return) — ISO-8601 UTC. */
+            /** @description Giờ HẸN giao (pickup) hoặc trả (return) - ISO-8601 UTC. */
             at: string;
             bookingId: string;
             /** @description Mã đơn hiển thị */
@@ -17788,11 +17788,11 @@ export interface components {
             serviceType: "self_drive" | "with_driver" | "long_term";
         };
         PartnerDashboardMarketDto: {
-            /** @description Xe khách đang tìm thấy được — tin đăng `active` do `ListingsService` duy trì. */
+            /** @description Xe khách đang tìm thấy được - tin đăng `active` do `ListingsService` duy trì. */
             onMarket: number;
             /** @description Xe đang chờ XePrime duyệt (`pending_public_review`). */
             inReview: number;
-            /** @description Xe XePrime yêu cầu sửa (`needs_revision`) — việc của gian hàng. */
+            /** @description Xe XePrime yêu cầu sửa (`needs_revision`) - việc của gian hàng. */
             needsRevision: number;
             /** @description Xe chưa gửi duyệt (`draft`). */
             draft: number;
@@ -17804,17 +17804,17 @@ export interface components {
             newBookings: number;
             /** @description Cùng phép đếm, cùng số ngày, của tháng trước. */
             newBookingsPrevious: number;
-            /** @description Chuyến KẾT THÚC (completed) từ đầu tháng — cùng câu với "Số chuyến" của bảng tổng hợp giao dịch (`completedTripsInPeriodWhere`). */
+            /** @description Chuyến KẾT THÚC (completed) từ đầu tháng - cùng câu với "Số chuyến" của bảng tổng hợp giao dịch (`completedTripsInPeriodWhere`). */
             completedTrips: number;
             /** @description Cùng phép đếm, cùng số ngày, của tháng trước. */
             completedTripsPrevious: number;
-            /** @description Tỉ lệ lấp đầy (0–100, một chữ số thập phân): thời gian xe có khách (đơn đang thuê hoặc đã hoàn thành) ÷ thời gian xe có mặt trong đội (từ lúc tạo xe), trong kỳ. Null = chưa có xe nào trong kỳ — KHÔNG phải 0%. */
+            /** @description Tỉ lệ lấp đầy (0-100, một chữ số thập phân): thời gian xe có khách (đơn đang thuê hoặc đã hoàn thành) ÷ thời gian xe có mặt trong đội (từ lúc tạo xe), trong kỳ. Null = chưa có xe nào trong kỳ - KHÔNG phải 0%. */
             utilizationPercent: number | null;
             /** @description Cùng phép tính cho cùng kỳ tháng trước. */
             utilizationPercentPrevious: number | null;
         };
         PartnerDashboardOverviewDto: {
-            /** @description Thời điểm tính — mọi mốc "hôm nay", "quá giờ" đều so với nó. */
+            /** @description Thời điểm tính - mọi mốc "hôm nay", "quá giờ" đều so với nó. */
             generatedAt: string;
             /** @description Cần `bookings.view`. */
             today: components["schemas"]["PartnerDashboardTodayDto"] | null;
@@ -17824,39 +17824,39 @@ export interface components {
             agenda: components["schemas"]["PartnerDashboardAgendaDto"] | null;
             /** @description Cần `bookings.view`. */
             month: components["schemas"]["PartnerDashboardMonthDto"] | null;
-            /** @description 6 tháng gần nhất, cũ → mới. Chỉ có ở TUYẾN GÓI có tính năng sổ tổng hợp (`finance` không `hidden`) và người gọi có `bookings.view` — báo cáo theo kỳ là năng lực của gói (ADR 0027 điều 1). */
+            /** @description 6 tháng gần nhất, cũ → mới. Chỉ có ở TUYẾN GÓI có tính năng sổ tổng hợp (`finance` không `hidden`) và người gọi có `bookings.view` - báo cáo theo kỳ là năng lực của gói (ADR 0027 điều 1). */
             trend: components["schemas"]["PartnerDashboardTrendPointDto"][] | null;
             /** @description Cần `vehicles.view`. */
             market: components["schemas"]["PartnerDashboardMarketDto"] | null;
-            /** @description Uy tín của CẢ gian hàng, cửa sổ công khai 90 ngày — đúng con số khách thấy trên chợ (`HostMetricsService`, ADR 0045). Không đổi theo ô chi nhánh. */
+            /** @description Uy tín của CẢ gian hàng, cửa sổ công khai 90 ngày - đúng con số khách thấy trên chợ (`HostMetricsService`, ADR 0045). Không đổi theo ô chi nhánh. */
             reputation: components["schemas"]["HostMetricsDto"];
         };
         PartnerDashboardRequestsDto: {
             /** @description Yêu cầu đang chờ gian hàng duyệt (`pending_host_approval`). */
             pending: number;
-            /** @description Trong `pending`: còn ít hơn `TRIP_REQUEST_URGENT_MINUTES` phút tới hạn trả lời (gồm cả yêu cầu đã chạm hạn mà worker chưa quét) — cùng mốc với lượt nhắc cuối của hệ thống. */
+            /** @description Trong `pending`: còn ít hơn `TRIP_REQUEST_URGENT_MINUTES` phút tới hạn trả lời (gồm cả yêu cầu đã chạm hạn mà worker chưa quét) - cùng mốc với lượt nhắc cuối của hệ thống. */
             pendingUrgent: number;
-            /** @description Hạn trả lời SỚM NHẤT trong các yêu cầu đang chờ — ISO-8601 UTC. Null = không có. */
+            /** @description Hạn trả lời SỚM NHẤT trong các yêu cầu đang chờ - ISO-8601 UTC. Null = không có. */
             nextRespondBy: string | null;
             /** @description Đã nhận, chờ KHÁCH chuyển tiền giữ chỗ (`awaiting_hold`, ADR 0044). */
             awaitingPayment: number;
         };
         PartnerDashboardTodayDto: {
-            /** @description Đơn CHỜ GIAO XE — đúng tập của màn "Chờ giao xe" (`preset=awaiting_pickup`): đơn đã hình thành, xe chưa rời bãi. Gồm cả đơn đã quá giờ hẹn. */
+            /** @description Đơn CHỜ GIAO XE - đúng tập của màn "Chờ giao xe" (`preset=awaiting_pickup`): đơn đã hình thành, xe chưa rời bãi. Gồm cả đơn đã quá giờ hẹn. */
             awaitingPickup: number;
             /** @description Trong `awaitingPickup`: hẹn giao trong HÔM NAY (ngày lịch VN). */
             pickupsToday: number;
             /** @description Trong `awaitingPickup`: đã QUÁ giờ hẹn giao mà xe chưa rời bãi (mọi ngày). */
             pickupsOverdue: number;
-            /** @description Trong `awaitingPickup`: ĐẾN HẠN giao — hẹn giao tới hết hôm nay, gồm cả lượt đã quá giờ từ những ngày trước. Mỗi đơn đếm một lần (khác `pickupsToday + pickupsOverdue`). */
+            /** @description Trong `awaitingPickup`: ĐẾN HẠN giao - hẹn giao tới hết hôm nay, gồm cả lượt đã quá giờ từ những ngày trước. Mỗi đơn đếm một lần (khác `pickupsToday + pickupsOverdue`). */
             pickupsDue: number;
-            /** @description Đơn đang thuê (`status = active`) — xe đang ở với khách. */
+            /** @description Đơn đang thuê (`status = active`) - xe đang ở với khách. */
             active: number;
             /** @description Trong `active`: hẹn trả trong HÔM NAY (ngày lịch VN). */
             returnsToday: number;
             /** @description Trong `active`: đã QUÁ giờ hẹn trả (mọi ngày). */
             returnsOverdue: number;
-            /** @description Trong `active`: ĐẾN HẠN trả — hẹn trả tới hết hôm nay, gồm cả lượt đã quá giờ. Mỗi đơn đếm một lần. */
+            /** @description Trong `active`: ĐẾN HẠN trả - hẹn trả tới hết hôm nay, gồm cả lượt đã quá giờ. Mỗi đơn đếm một lần. */
             returnsDue: number;
         };
         PartnerDashboardTrendPointDto: {
@@ -17874,9 +17874,9 @@ export interface components {
             state: string;
         };
         PartnerFeePolicyDto: {
-            /** @description Phí sàn khách trả mỗi đơn ô tô — VND, chuỗi (ADR 0007) */
+            /** @description Phí sàn khách trả mỗi đơn ô tô - VND, chuỗi (ADR 0007) */
             platformFeeCar: string;
-            /** @description Phí sàn khách trả mỗi đơn xe máy — VND, chuỗi */
+            /** @description Phí sàn khách trả mỗi đơn xe máy - VND, chuỗi */
             platformFeeMotorbike: string;
             /** @description Nấc hoa hồng chủ xe tuyến hoa hồng, `fromDay` tăng dần; tuyến gói không áp */
             ownerCommissionTiers: components["schemas"]["OwnerCommissionTierDto"][];
@@ -17890,7 +17890,7 @@ export interface components {
             name: string;
             slug: string;
             /**
-             * @description Server suy từ tuyến (platformPartnerKindOf) — biến thể của drawer
+             * @description Server suy từ tuyến (platformPartnerKindOf) - biến thể của drawer
              * @enum {string}
              */
             partnerKind: "package_shop" | "individual_owner";
@@ -17940,7 +17940,7 @@ export interface components {
             dueSoon: number;
             /** @description Còn nợ, đã quá hạn */
             overdue: number;
-            /** @description ISO — hạn gần nhất */
+            /** @description ISO - hạn gần nhất */
             nextDueAt?: string | null;
         };
         PartnerLegalDto: {
@@ -17967,7 +17967,7 @@ export interface components {
             onboardingCompleted?: boolean | null;
             /** @description Gian hàng gói: mục còn thiếu để gửi xe lên chợ (mã). null = không áp dụng */
             listingRequirementsMissing?: string[] | null;
-            /** @description ISO — dòng nhật ký gần nhất */
+            /** @description ISO - dòng nhật ký gần nhất */
             lastActivityAt?: string | null;
             /** @description Tỉnh/thành có chi nhánh hoặc điểm nhận xe */
             areaNames: string[];
@@ -18012,29 +18012,29 @@ export interface components {
             graceEndsAt?: string | null;
             /** @description Trần xe ĐANG CƯỠNG CHẾ (BillingService.vehicleQuotaFor) và số xe đã dùng */
             vehicleQuota: components["schemas"]["PartnerQuotaItemDto"];
-            /** @description Trần xe theo LOẠI (ADR 0065) — vehicleQuota ở trên là tổng gộp của hai trần này */
+            /** @description Trần xe theo LOẠI (ADR 0065) - vehicleQuota ở trên là tổng gộp của hai trần này */
             vehicleQuotaByType: components["schemas"]["PartnerVehicleTypeQuotasDto"];
             /** @description Phạm vi loại xe đang có kỳ gói hiệu lực (all → car → motorbike); rỗng ngoài tuyến gói */
             packageScopes: ("all" | "car" | "motorbike")[];
-            /** @description Kỳ đã xếp lịch kế tiếp (gia hạn / đổi gói từ kỳ sau) — null nếu chưa có */
+            /** @description Kỳ đã xếp lịch kế tiếp (gia hạn / đổi gói từ kỳ sau) - null nếu chưa có */
             nextTerm?: components["schemas"]["PlanTermRefDto"] | null;
         };
         PartnerProfileDto: {
-            /** @description Mặt tiền — chỉ gian hàng gói */
+            /** @description Mặt tiền - chỉ gian hàng gói */
             publicProfile?: components["schemas"]["PartnerPublicProfileDto"] | null;
             owner: components["schemas"]["PartnerOwnerDto"];
             publicPhoneMasked?: string | null;
             publicEmailMasked?: string | null;
-            /** @description Địa chỉ — chi nhánh (gói) / điểm nhận xe */
+            /** @description Địa chỉ - chi nhánh (gói) / điểm nhận xe */
             addresses: components["schemas"]["PartnerBranchDto"][];
             activityAreas: string[];
             /** @description Chỉ gian hàng gói */
             legal?: components["schemas"]["PartnerLegalDto"] | null;
             /** @description Chỉ chủ xe cá nhân */
             identity?: components["schemas"]["PartnerIdentityVerificationDto"] | null;
-            /** @description Giấy tờ pháp lý — null khi không có platform.sellers.verify. Không bao giờ có file */
+            /** @description Giấy tờ pháp lý - null khi không có platform.sellers.verify. Không bao giờ có file */
             documents?: components["schemas"]["PartnerTenantDocumentDto"][] | null;
-            /** @description Giấy tờ xe (chủ xe cá nhân) — null khi không có platform.vehicles.view */
+            /** @description Giấy tờ xe (chủ xe cá nhân) - null khi không có platform.vehicles.view */
             vehicleDocuments?: components["schemas"]["PartnerVehicleDocumentDto"][] | null;
             verificationHistory: components["schemas"]["PartnerVerificationEventDto"][];
         };
@@ -18046,7 +18046,7 @@ export interface components {
             address?: string | null;
         };
         PartnerQuotaDto: {
-            /** @description Trần xe gộp — tổng của vehiclesByType */
+            /** @description Trần xe gộp - tổng của vehiclesByType */
             vehicles: components["schemas"]["PartnerQuotaItemDto"];
             /** @description Trần xe theo loại (ADR 0065) */
             vehiclesByType: components["schemas"]["PartnerVehicleTypeQuotasDto"];
@@ -18057,7 +18057,7 @@ export interface components {
             used: number;
             /** @enum {string} */
             kind: "total" | "unlimited" | "not_applicable" | "not_covered";
-            /** @description Trần đang được cưỡng chế — chỉ khi kind = total */
+            /** @description Trần đang được cưỡng chế - chỉ khi kind = total */
             limit?: number | null;
             /**
              * @description Vì sao trần là con số đó (chỉ trần xe)
@@ -18081,7 +18081,7 @@ export interface components {
             /** @description @xeprime/types → SubscriptionStatus (lưu trữ) */
             status: string;
             /**
-             * @description Trạng thái KỲ theo đồng hồ server — hiển thị cái này, không phải status
+             * @description Trạng thái KỲ theo đồng hồ server - hiển thị cái này, không phải status
              * @enum {string}
              */
             termState: "current" | "scheduled" | "ended" | "cancelled";
@@ -18153,7 +18153,7 @@ export interface components {
             publicStatus: "draft" | "pending_public_review" | "approved_public" | "needs_revision" | "rejected" | "hidden" | "archived";
             isMarketplaceVisible: boolean;
             branchName?: string | null;
-            /** @description Khu vực nhận xe — phường/xã, tỉnh/thành của chi nhánh gắn xe */
+            /** @description Khu vực nhận xe - phường/xã, tỉnh/thành của chi nhánh gắn xe */
             pickupAreaName?: string | null;
             /** @description Đã sắp theo ưu tiên */
             alerts: components["schemas"]["PartnerVehicleAlertDto"][];
@@ -18167,7 +18167,7 @@ export interface components {
         PartnerVehicleTypeQuotasDto: {
             car: components["schemas"]["PartnerQuotaItemDto"];
             motorbike: components["schemas"]["PartnerQuotaItemDto"];
-            /** @description Hai loại xe đếm chung MỘT trần (gói doanh nghiệp phạm vi all, hoặc Owner Lite tuyến hoa hồng) — car và motorbike khi đó là CÙNG một con số tổng; hiển thị một dòng, đừng cộng hai dòng */
+            /** @description Hai loại xe đếm chung MỘT trần (gói doanh nghiệp phạm vi all, hoặc Owner Lite tuyến hoa hồng) - car và motorbike khi đó là CÙNG một con số tổng; hiển thị một dòng, đừng cộng hai dòng */
             combined: boolean;
         };
         PartnerVerificationEventDto: {
@@ -18181,7 +18181,7 @@ export interface components {
         };
         PatchVehicleServiceSettingDto: {
             autoAcceptEnabled?: boolean;
-            /** @description Phút — null = không giới hạn; chỉ có nghĩa với with_driver */
+            /** @description Phút - null = không giới hạn; chỉ có nghĩa với with_driver */
             minRentalMinutes?: number | null;
             preferredRouteTypes?: ("in_city" | "inter_city" | "inter_city_one_way")[];
             /** @description Tập con của citizen_id | driver_licence | passport */
@@ -18198,7 +18198,7 @@ export interface components {
         };
         PaymentDto: {
             id: string;
-            /** @description Tiền dạng string — ADR 0007 */
+            /** @description Tiền dạng string - ADR 0007 */
             amount: string;
             /**
              * @description Tiền thuê hay tiền cọc
@@ -18218,26 +18218,26 @@ export interface components {
         PaymentGatewayMethodDto: {
             /** @enum {string} */
             provider: "momo" | "vnpay";
-            /** @description Số tiền tối thiểu cổng công bố (VND, chuỗi) — null khi tài liệu không công bố */
+            /** @description Số tiền tối thiểu cổng công bố (VND, chuỗi) - null khi tài liệu không công bố */
             minAmount?: string | null;
-            /** @description Số tiền tối đa cổng công bố (VND, chuỗi) — null khi tài liệu không công bố */
+            /** @description Số tiền tối đa cổng công bố (VND, chuỗi) - null khi tài liệu không công bố */
             maxAmount?: string | null;
         };
         PaymentGatewayMethodsDto: {
             /** @enum {string} */
             target: "subscription_invoice" | "booking_hold";
-            /** @description Cổng đang ở môi trường thử (sandbox) — giao diện gắn nhãn để người thử không tưởng mình trả tiền thật */
+            /** @description Cổng đang ở môi trường thử (sandbox) - giao diện gắn nhãn để người thử không tưởng mình trả tiền thật */
             sandbox: boolean;
             methods: components["schemas"]["PaymentGatewayMethodDto"][];
         };
         PaymentInfoDto: {
-            /** @description Nhóm SEPAY_* đã khai đủ chưa — false thì ba trường dưới là null */
+            /** @description Nhóm SEPAY_* đã khai đủ chưa - false thì ba trường dưới là null */
             configured: boolean;
             /** @description Mã ngân hàng chuẩn VietQR (vd VCB) */
             bankCode?: string | null;
             accountNumber?: string | null;
             accountName?: string | null;
-            /** @description Từ khoá ngân hàng nhận bắt buộc có trong nội dung (vd SEVQR) — nội dung chuyển khoản là `<transferPrefix> <mã>`; null thì chỉ là mã. Dựng bằng `transferContent` của @xeprime/domain */
+            /** @description Từ khoá ngân hàng nhận bắt buộc có trong nội dung (vd SEVQR) - nội dung chuyển khoản là `<transferPrefix> <mã>`; null thì chỉ là mã. Dựng bằng `transferContent` của @xeprime/domain */
             transferPrefix?: string | null;
         };
         PaymentOrderDto: {
@@ -18248,28 +18248,28 @@ export interface components {
             targetType: "subscription_invoice" | "booking_hold";
             /** @description Mã đối soát của đích (XPG… / XPH…) */
             targetCode: string;
-            /** @description Chuyến (id yêu cầu thuê) — chỉ có ở lượt trả tiền giữ chỗ */
+            /** @description Chuyến (id yêu cầu thuê) - chỉ có ở lượt trả tiền giữ chỗ */
             tripId?: string | null;
-            /** @description Hoá đơn gói — chỉ có ở lượt trả hoá đơn gói */
+            /** @description Hoá đơn gói - chỉ có ở lượt trả hoá đơn gói */
             invoiceId?: string | null;
-            /** @description Số tiền đã gửi sang cổng — VND, chuỗi (ADR 0007) */
+            /** @description Số tiền đã gửi sang cổng - VND, chuỗi (ADR 0007) */
             amount: string;
             /** @enum {string} */
             status: "pending" | "succeeded" | "failed" | "cancelled" | "expired";
             /**
-             * @description Chặng nhìn từ phía người trả — awaiting · confirming · completed · duplicate_refunded (trả trùng, đã ghi hoàn vào Ví điểm) · failed · needs_support
+             * @description Chặng nhìn từ phía người trả - awaiting · confirming · completed · duplicate_refunded (trả trùng, đã ghi hoàn vào Ví điểm) · failed · needs_support
              * @enum {string}
              */
             viewState: "awaiting" | "confirming" | "completed" | "duplicate_refunded" | "failed" | "needs_support";
             /** @enum {string|null} */
             applyOutcome?: "activated" | "partial" | "already_paid" | "target_closed" | "target_not_found" | null;
-            /** @description Liên kết thanh toán — chỉ có khi lượt còn chờ và chưa quá hạn dùng lại; mở lại để trả tiếp */
+            /** @description Liên kết thanh toán - chỉ có khi lượt còn chờ và chưa quá hạn dùng lại; mở lại để trả tiếp */
             checkoutUrl?: string | null;
-            /** @description Lượt còn chờ nhưng cổng đã KÝ XÁC NHẬN chưa có giao dịch nào (khách huỷ ở cổng / chưa trả) — thôi hiện "đang chờ", mời chọn lại phương thức; trạng thái vẫn `pending` (ADR 0058) */
+            /** @description Lượt còn chờ nhưng cổng đã KÝ XÁC NHẬN chưa có giao dịch nào (khách huỷ ở cổng / chưa trả) - thôi hiện "đang chờ", mời chọn lại phương thức; trạng thái vẫn `pending` (ADR 0058) */
             noTransaction: boolean;
-            /** @description Hạn dùng lại liên kết — ISO-8601 UTC */
+            /** @description Hạn dùng lại liên kết - ISO-8601 UTC */
             expiresAt: string;
-            /** @description Lúc cổng báo đã thu — ISO */
+            /** @description Lúc cổng báo đã thu - ISO */
             paidAt?: string | null;
             /** @description Cổng đang ở môi trường thử */
             sandbox: boolean;
@@ -18277,19 +18277,19 @@ export interface components {
             createdAt: string;
         };
         PaymentOrderTargetSnapshotDto: {
-            /** @description Trạng thái hiện tại của hoá đơn / khoản giữ chỗ — null khi đích không còn */
+            /** @description Trạng thái hiện tại của hoá đơn / khoản giữ chỗ - null khi đích không còn */
             status?: string | null;
-            /** @description Tổng phải trả — VND */
+            /** @description Tổng phải trả - VND */
             amount?: string | null;
-            /** @description Đã nhận — VND */
+            /** @description Đã nhận - VND */
             paidAmount?: string | null;
-            /** @description Hạn nhận tiền — ISO */
+            /** @description Hạn nhận tiền - ISO */
             expiresAt?: string | null;
         };
         PaymentReminderResultDto: {
-            /** @description ISO-8601 UTC — lúc lời nhắc được gửi */
+            /** @description ISO-8601 UTC - lúc lời nhắc được gửi */
             remindedAt: string;
-            /** @description ISO-8601 UTC — lúc nhắc lại được */
+            /** @description ISO-8601 UTC - lúc nhắc lại được */
             nextAvailableAt: string;
         };
         PaymentSettingsDto: {
@@ -18307,7 +18307,7 @@ export interface components {
             /** @description Công tắc có sửa được không */
             editable: boolean;
             /**
-             * @description Vì sao — client ánh xạ sang câu giải thích, KHÔNG hiện mã này ra màn hình
+             * @description Vì sao - client ánh xạ sang câu giải thích, KHÔNG hiện mã này ra màn hình
              * @enum {string}
              */
             reason: "platform_mandatory" | "commission_mandatory" | "package_enabled" | "package_disabled" | "package_feature_missing" | "billing_not_configured";
@@ -18315,17 +18315,17 @@ export interface components {
         PendingSubscriptionInvoiceDto: {
             /** @description Hoá đơn còn nhận được tiền (issued | partially_paid); null khi không có */
             invoice: components["schemas"]["SubscriptionInvoiceDto"] | null;
-            /** @description MỌI hoá đơn còn nhận được tiền, mới nhất trước — tối đa một cho mỗi phạm vi loại xe (ADR 0065). `invoice` ở trên là phần tử đầu, giữ cho client cũ */
+            /** @description MỌI hoá đơn còn nhận được tiền, mới nhất trước - tối đa một cho mỗi phạm vi loại xe (ADR 0065). `invoice` ở trên là phần tử đầu, giữ cho client cũ */
             invoices: components["schemas"]["SubscriptionInvoiceDto"][];
         };
         PerVehicleTypeAmountDto: {
             /**
-             * @description Ô tô — VND, bội 1.000đ
+             * @description Ô tô - VND, bội 1.000đ
              * @example 50000
              */
             car: string;
             /**
-             * @description Xe máy — VND, bội 1.000đ
+             * @description Xe máy - VND, bội 1.000đ
              * @example 30000
              */
             motorbike: string;
@@ -18333,7 +18333,7 @@ export interface components {
         PickupPointDto: {
             /** @description Tên chi nhánh giữ xe. Null khi địa chỉ rơi về hồ sơ gian hàng. */
             branchName?: string | null;
-            /** @description Gian hàng tuyến gói: địa chỉ đầy đủ. Chủ xe tuyến hoa hồng: chỉ KHU VỰC "Phường/Xã, Tỉnh/TP" — địa chỉ chính xác trả ở chi tiết chuyến khi đã có đơn (ADR 0077, customerSeesPickupAddress). */
+            /** @description Gian hàng tuyến gói: địa chỉ đầy đủ. Chủ xe tuyến hoa hồng: chỉ KHU VỰC "Phường/Xã, Tỉnh/TP" - địa chỉ chính xác trả ở chi tiết chuyến khi đã có đơn (ADR 0077, customerSeesPickupAddress). */
             address: string;
             /** @description Tỉnh/thành của điểm nhận */
             provinceName?: string | null;
@@ -18350,13 +18350,13 @@ export interface components {
             latitude: string;
             /** @description Chuỗi thập phân */
             longitude: string;
-            /** @description Địa chỉ nhà cung cấp hiểu ra — có thể còn dùng tên đơn vị hành chính CŨ */
+            /** @description Địa chỉ nhà cung cấp hiểu ra - có thể còn dùng tên đơn vị hành chính CŨ */
             formattedAddress?: string | null;
             /** @description Mã tỉnh GỢI Ý, quy từ tên nhà cung cấp trả về qua bảng bí danh. Có thể null. */
             suggestedProvinceCode?: string | null;
-            /** @description Phần "số nhà, đường" tách ra từ địa chỉ nhà cung cấp — gợi ý điền sẵn ô nhập */
+            /** @description Phần "số nhà, đường" tách ra từ địa chỉ nhà cung cấp - gợi ý điền sẵn ô nhập */
             suggestedAddressLine?: string | null;
-            /** @description Mã xã GỢI Ý trong tỉnh client gửi lên (ADR 0077) — chỉ để hỏi người dùng xác nhận, không tự lưu */
+            /** @description Mã xã GỢI Ý trong tỉnh client gửi lên (ADR 0077) - chỉ để hỏi người dùng xác nhận, không tự lưu */
             suggestedWardCode?: string | null;
         };
         PlaceDetailResultDto: {
@@ -18368,7 +18368,7 @@ export interface components {
             items: components["schemas"]["PlaceSuggestionDto"][];
             /** @description Số gợi ý đã bị LOẠI vì nhận ra là thuộc tỉnh khác tỉnh đã chọn (ADR 0077) */
             outOfProvinceCount: number;
-            /** @description Bản đồ có đang dùng được không. `false` = chưa cấu hình khoá hoặc nhà cung cấp lỗi — giao diện rơi về nhập tay, KHÔNG hiện lỗi đỏ. */
+            /** @description Bản đồ có đang dùng được không. `false` = chưa cấu hình khoá hoặc nhà cung cấp lỗi - giao diện rơi về nhập tay, KHÔNG hiện lỗi đỏ. */
             available: boolean;
         };
         PlaceSuggestionDto: {
@@ -18410,7 +18410,7 @@ export interface components {
              */
             emailQueued: boolean;
             /**
-             * @description Các địa chỉ THẬT SỰ vừa được xếp email hướng dẫn, cách nhau bởi ", " — email tài khoản (nếu có) và email liên hệ đã nhập (trùng thì một). `null` khi không xếp thư (`isPlanPromotionEnabled` tắt, hoặc hôm nay đã gửi tới các địa chỉ đó).
+             * @description Các địa chỉ THẬT SỰ vừa được xếp email hướng dẫn, cách nhau bởi ", " - email tài khoản (nếu có) và email liên hệ đã nhập (trùng thì một). `null` khi không xếp thư (`isPlanPromotionEnabled` tắt, hoặc hôm nay đã gửi tới các địa chỉ đó).
              * @example chuxe@example.vn, lienhe@gianhang.vn
              */
             emailedTo: string | null;
@@ -18425,7 +18425,7 @@ export interface components {
              * @enum {string}
              */
             billingMode: "commission" | "package";
-            /** @description % hoa hồng — chỉ có ở bậc commission */
+            /** @description % hoa hồng - chỉ có ở bậc commission */
             commissionPercent?: number | null;
             /**
              * @description Phạm vi loại xe (ADR 0065): motorbike | car | all (doanh nghiệp, tuyến hoa hồng)
@@ -18452,7 +18452,7 @@ export interface components {
             code: string;
             /** @example Tối giản */
             name: string;
-            /** @description Đúng MỘT bộ đang dùng — DB gác bằng partial unique index. */
+            /** @description Đúng MỘT bộ đang dùng - DB gác bằng partial unique index. */
             isActive: boolean;
             /**
              * @description Tăng 1 mỗi lần sửa.
@@ -18485,7 +18485,7 @@ export interface components {
             code: string;
             /** @example Tối giản */
             name: string;
-            /** @description Đúng MỘT bộ đang dùng — DB gác bằng partial unique index. */
+            /** @description Đúng MỘT bộ đang dùng - DB gác bằng partial unique index. */
             isActive: boolean;
             /**
              * @description Tăng 1 mỗi lần sửa.
@@ -18509,7 +18509,7 @@ export interface components {
             subjectVi: string;
             /** @example How to subscribe to a shop plan on the XePrime website */
             subjectEn: string;
-            /** @description HTML có biến {{name}} — xem PLAN_GUIDE_PLACEHOLDER. */
+            /** @description HTML có biến {{name}} - xem PLAN_GUIDE_PLACEHOLDER. */
             bodyVi: string;
             bodyEn: string;
         };
@@ -18539,9 +18539,9 @@ export interface components {
             vehicleType?: "car" | "motorbike";
             quantity: number;
             months: number;
-            /** @description VND, chuỗi — ADR 0007 */
+            /** @description VND, chuỗi - ADR 0007 */
             unitPrice: string;
-            /** @description VND, chuỗi — ADR 0007 */
+            /** @description VND, chuỗi - ADR 0007 */
             amount: string;
         };
         PlanLimitsDto: {
@@ -18563,7 +18563,7 @@ export interface components {
             maxMembers?: number | null;
             /** @description Bảng giá = danh sách kỳ hạn ĐƯỢC BÁN. Rỗng = bậc không bán trực tiếp */
             termPrices?: components["schemas"]["PlanTermPriceDto"][];
-            /** @description Bậc bán bằng TƯ VẤN — tenant không tự mua được (ADR 0041 điều 5) */
+            /** @description Bậc bán bằng TƯ VẤN - tenant không tự mua được (ADR 0041 điều 5) */
             salesOnly?: boolean;
             /** @description Nhãn "Được đề xuất" trên bảng giá */
             recommended?: boolean;
@@ -18587,7 +18587,7 @@ export interface components {
              */
             months: 1 | 3 | 6 | 12;
             /**
-             * @description Tiền CẢ KỲ — VND, chuỗi — ADR 0007
+             * @description Tiền CẢ KỲ - VND, chuỗi - ADR 0007
              * @example 250000
              */
             price: string;
@@ -18619,7 +18619,7 @@ export interface components {
             totalAmount: string;
             /** @description Số tiền dạng string (ADR 0007) */
             paidAmount: string;
-            /** @description Công nợ = max(0, total − paid), string — ADR 0007 */
+            /** @description Công nợ = max(0, total − paid), string - ADR 0007 */
             debtAmount: string;
             tenantId: string;
             tenantName: string;
@@ -18669,7 +18669,7 @@ export interface components {
             totalAmount: string;
             /** @description Số tiền dạng string (ADR 0007) */
             paidAmount: string;
-            /** @description Công nợ = max(0, total − paid), string — ADR 0007 */
+            /** @description Công nợ = max(0, total − paid), string - ADR 0007 */
             debtAmount: string;
             tenantId: string;
             tenantName: string;
@@ -18771,9 +18771,9 @@ export interface components {
             createdAt: string;
         };
         PlatformDashboardActivityDto: {
-            /** @description Đơn thuê RA ĐỜI trong kỳ, mọi trạng thái — cùng phép đếm `bookingThisMonth`. */
+            /** @description Đơn thuê RA ĐỜI trong kỳ, mọi trạng thái - cùng phép đếm `bookingThisMonth`. */
             bookings: components["schemas"]["PlatformPeriodCountDto"];
-            /** @description Trong `bookings`: đơn đã huỷ hoặc khách không đến — phần không vào GMV. */
+            /** @description Trong `bookings`: đơn đã huỷ hoặc khách không đến - phần không vào GMV. */
             cancelled: components["schemas"]["PlatformPeriodCountDto"];
             /** @description GMV = Σ tiền thuê `B` (`bookings.total_amount`, KHÔNG gồm phí dịch vụ phía khách, bảo hiểm hay phụ phí) của đơn ra đời trong kỳ, trừ đơn huỷ/không đến. */
             gmv: components["schemas"]["PlatformPeriodMoneyDto"];
@@ -18785,7 +18785,7 @@ export interface components {
             date: string;
             /** @description Đơn thuê ra đời trong ngày (mọi trạng thái) */
             bookings: number;
-            /** @description GMV của các đơn đó — VND string, cùng định nghĩa với `gmv` */
+            /** @description GMV của các đơn đó - VND string, cùng định nghĩa với `gmv` */
             gmv: string;
         };
         PlatformDashboardFunnelDto: {
@@ -18803,11 +18803,11 @@ export interface components {
         PlatformDashboardGrowthDto: {
             /** @description Tài khoản KHÁCH (realm customer) mới. */
             newCustomers: components["schemas"]["PlatformPeriodCountDto"];
-            /** @description Đối tác mới — gian hàng/chủ xe (tenant) được tạo trong kỳ, cả hai tuyến. */
+            /** @description Đối tác mới - gian hàng/chủ xe (tenant) được tạo trong kỳ, cả hai tuyến. */
             newPartners: components["schemas"]["PlatformPeriodCountDto"];
         };
         PlatformDashboardOverviewDto: {
-            /** @description Thời điểm tính — ISO-8601 UTC */
+            /** @description Thời điểm tính - ISO-8601 UTC */
             generatedAt: string;
             /** @description Tháng lịch hiện tại `YYYY-MM` giờ VN */
             period: string;
@@ -18819,7 +18819,7 @@ export interface components {
             funnel: components["schemas"]["PlatformDashboardFunnelDto"];
         };
         PlatformDashboardRevenueDto: {
-            /** @description Phí dịch vụ GHI NHẬN: Σ `settled_platform_amount` của khoản giữ chỗ đã chốt (`released_at` trong kỳ). Là số RÒNG sau tài trợ mã khuyến mãi — âm được (ADR 0046). */
+            /** @description Phí dịch vụ GHI NHẬN: Σ `settled_platform_amount` của khoản giữ chỗ đã chốt (`released_at` trong kỳ). Là số RÒNG sau tài trợ mã khuyến mãi - âm được (ADR 0046). */
             serviceFee: components["schemas"]["PlatformPeriodMoneyDto"];
             /** @description Tiền gói ĐÃ THU: Σ `paid_amount` của hoá đơn gói có `paid_at` trong kỳ. */
             subscriptions: components["schemas"]["PlatformPeriodMoneyDto"];
@@ -18871,9 +18871,9 @@ export interface components {
             rejectionReason: "not_a_licence" | "back_side" | "unreadable" | "missing_fields" | "expired" | "no_drivable_class" | "reader_unavailable" | "other" | null;
             /** @description Lời nhắn của người duyệt */
             reviewNote: string | null;
-            /** @description Vấn đề chất lượng ảnh bộ đọc nhận ra — để gợi ý cách chụp lại. */
+            /** @description Vấn đề chất lượng ảnh bộ đọc nhận ra - để gợi ý cách chụp lại. */
             qualityIssues: ("blurry" | "glare" | "cropped" | "too_dark" | "obstructed" | "low_resolution")[];
-            /** @description LEGACY — lúc khách nhờ xem lại (trước ADR 0070). Không còn writer. */
+            /** @description LEGACY - lúc khách nhờ xem lại (trước ADR 0070). Không còn writer. */
             reviewRequestedAt: string | null;
             /** @enum {string|null} */
             decisionSource: "auto" | "manual" | null;
@@ -18886,7 +18886,7 @@ export interface components {
         PlatformDriverLicenceOwnerDto: {
             id: string;
             displayName: string;
-            /** @description Luôn che — xem đầy đủ qua "Hiện liên hệ" ở màn Khách thuê (quyền PII + audit) */
+            /** @description Luôn che - xem đầy đủ qua "Hiện liên hệ" ở màn Khách thuê (quyền PII + audit) */
             phone: string | null;
             email: string | null;
         };
@@ -18972,26 +18972,26 @@ export interface components {
             freeCancelUntil?: string | null;
             paidAt?: string | null;
             releasedAt?: string | null;
-            /** @description Đơn có case GIỮ quyết toán còn mở (tranh chấp, hoặc chưa xác nhận bàn giao — ADR 0066) — kết cục bị tạm giữ */
+            /** @description Đơn có case GIỮ quyết toán còn mở (tranh chấp, hoặc chưa xác nhận bàn giao - ADR 0066) - kết cục bị tạm giữ */
             disputeOpen: boolean;
             /** @enum {string|null} */
             refundStatus?: "pending" | "paid" | "credited" | "rejected" | null;
             createdAt: string;
             /** @enum {string} */
             purpose: "commission" | "escrow";
-            /** @description `D` — phần của chủ xe trong cọc online */
+            /** @description `D` - phần của chủ xe trong cọc online */
             depositAmount: string;
-            /** @description `S` — phí sàn phía khách */
+            /** @description `S` - phí sàn phía khách */
             serviceFeeAmount: string;
-            /** @description `H` — hoa hồng lũy tiến sàn giữ lại từ phần của chủ xe */
+            /** @description `H` - hoa hồng lũy tiến sàn giữ lại từ phần của chủ xe */
             ownerCommissionAmount: string;
-            /** @description `IV` — bảo hiểm xe */
+            /** @description `IV` - bảo hiểm xe */
             vehicleInsuranceAmount: string;
-            /** @description `IP` — bảo hiểm người */
+            /** @description `IP` - bảo hiểm người */
             personalInsuranceAmount: string;
-            /** @description `P` — nền tảng tài trợ qua mã khuyến mãi */
+            /** @description `P` - nền tảng tài trợ qua mã khuyến mãi */
             promoDiscountAmount: string;
-            /** @description Thuế khấu trừ đã đóng băng trên snapshot — chỉ áp khi chuyến hoàn thành */
+            /** @description Thuế khấu trừ đã đóng băng trên snapshot - chỉ áp khi chuyến hoàn thành */
             taxAmount: string;
         };
         PlatformHoldPageDto: {
@@ -19041,12 +19041,12 @@ export interface components {
             premiumAmount: string;
             partnerName: string;
             partnerProductCode?: string | null;
-            /** @description Tên sản phẩm đã bán (snapshot, tiếng Việt) — `null` với hợp đồng tạo trước danh mục */
+            /** @description Tên sản phẩm đã bán (snapshot, tiếng Việt) - `null` với hợp đồng tạo trước danh mục */
             productNameVi?: string | null;
             productNameEn?: string | null;
             certificateNumber?: string | null;
             certificateUrl?: string | null;
-            /** @description GCN do adapter GIẢ LẬP cấp — không có hiệu lực bảo hiểm */
+            /** @description GCN do adapter GIẢ LẬP cấp - không có hiệu lực bảo hiểm */
             isTest: boolean;
             coverageFrom?: string | null;
             coverageTo?: string | null;
@@ -19054,7 +19054,7 @@ export interface components {
             issueAttempts: number;
             lastErrorCode?: string | null;
             lastErrorMessage?: string | null;
-            /** @description `null` ở trạng thái lỗi nghĩa là KHÔNG tự thử lại — cần người xử lý */
+            /** @description `null` ở trạng thái lỗi nghĩa là KHÔNG tự thử lại - cần người xử lý */
             nextAttemptAt?: string | null;
             issuedAt?: string | null;
             /** @description Bằng chứng khách CHỌN sản phẩm này (ADR 0028 điều 5) */
@@ -19093,12 +19093,12 @@ export interface components {
             premiumAmount: string;
             partnerName: string;
             partnerProductCode?: string | null;
-            /** @description Tên sản phẩm đã bán (snapshot, tiếng Việt) — `null` với hợp đồng tạo trước danh mục */
+            /** @description Tên sản phẩm đã bán (snapshot, tiếng Việt) - `null` với hợp đồng tạo trước danh mục */
             productNameVi?: string | null;
             productNameEn?: string | null;
             certificateNumber?: string | null;
             certificateUrl?: string | null;
-            /** @description GCN do adapter GIẢ LẬP cấp — không có hiệu lực bảo hiểm */
+            /** @description GCN do adapter GIẢ LẬP cấp - không có hiệu lực bảo hiểm */
             isTest: boolean;
             coverageFrom?: string | null;
             coverageTo?: string | null;
@@ -19106,7 +19106,7 @@ export interface components {
             issueAttempts: number;
             lastErrorCode?: string | null;
             lastErrorMessage?: string | null;
-            /** @description `null` ở trạng thái lỗi nghĩa là KHÔNG tự thử lại — cần người xử lý */
+            /** @description `null` ở trạng thái lỗi nghĩa là KHÔNG tự thử lại - cần người xử lý */
             nextAttemptAt?: string | null;
             issuedAt?: string | null;
             /** @description Bằng chứng khách CHỌN sản phẩm này (ADR 0028 điều 5) */
@@ -19139,9 +19139,9 @@ export interface components {
             tenantId: string;
             /** @description Tên gian hàng / chủ xe sở hữu đích */
             tenantName: string;
-            /** @description Số tiền đã gửi sang cổng — VND, chuỗi */
+            /** @description Số tiền đã gửi sang cổng - VND, chuỗi */
             amount: string;
-            /** @description Số tiền cổng báo đã thu — VND, chuỗi */
+            /** @description Số tiền cổng báo đã thu - VND, chuỗi */
             paidAmount?: string | null;
             /** @enum {string} */
             status: "pending" | "succeeded" | "failed" | "cancelled" | "expired";
@@ -19175,16 +19175,16 @@ export interface components {
             /** @description ISO */
             reviewedAt?: string | null;
             refundReference?: string | null;
-            /** @description Hạn dùng lại liên kết — ISO */
+            /** @description Hạn dùng lại liên kết - ISO */
             expiresAt: string;
             /** @description ISO */
             lastQueriedAt?: string | null;
             target: components["schemas"]["PaymentOrderTargetSnapshotDto"];
-            /** @description Kết quả gần nhất của cổng, đã bỏ chữ ký — BẰNG CHỨNG, chỉ ở màn chi tiết */
+            /** @description Kết quả gần nhất của cổng, đã bỏ chữ ký - BẰNG CHỨNG, chỉ ở màn chi tiết */
             resultJson?: Record<string, never> | null;
             /** @description Nhật ký mọi kết quả đã xác minh của cổng, mới nhất trước (tối đa 50) */
             events: components["schemas"]["PlatformPaymentOrderEventDto"][];
-            /** @description Người trực ghi nhận tay được không — cổng đã thu, chưa áp, lượt đang ở hàng đợi (vd kết quả tới sau khi đã đóng) */
+            /** @description Người trực ghi nhận tay được không - cổng đã thu, chưa áp, lượt đang ở hàng đợi (vd kết quả tới sau khi đã đóng) */
             canApply: boolean;
         };
         PlatformPaymentOrderDto: {
@@ -19197,9 +19197,9 @@ export interface components {
             tenantId: string;
             /** @description Tên gian hàng / chủ xe sở hữu đích */
             tenantName: string;
-            /** @description Số tiền đã gửi sang cổng — VND, chuỗi */
+            /** @description Số tiền đã gửi sang cổng - VND, chuỗi */
             amount: string;
-            /** @description Số tiền cổng báo đã thu — VND, chuỗi */
+            /** @description Số tiền cổng báo đã thu - VND, chuỗi */
             paidAmount?: string | null;
             /** @enum {string} */
             status: "pending" | "succeeded" | "failed" | "cancelled" | "expired";
@@ -19227,7 +19227,7 @@ export interface components {
             id: string;
             /** @enum {string} */
             source: "ipn" | "query";
-            /** @description Kết cục theo lời cổng — succeeded · pending · failed · cancelled · expired · flagged · not_found */
+            /** @description Kết cục theo lời cổng - succeeded · pending · failed · cancelled · expired · flagged · not_found */
             outcome: string;
             resultCode: string;
             /** @description VND, chuỗi */
@@ -19256,9 +19256,9 @@ export interface components {
             previous: number;
         };
         PlatformPeriodMoneyDto: {
-            /** @description Từ đầu tháng (giờ VN) tới hiện tại — VND string */
+            /** @description Từ đầu tháng (giờ VN) tới hiện tại - VND string */
             current: string;
-            /** @description Cùng số ngày, tháng trước — VND string */
+            /** @description Cùng số ngày, tháng trước - VND string */
             previous: string;
         };
         PlatformProvinceDto: {
@@ -19329,7 +19329,7 @@ export interface components {
             /** @enum {string} */
             status: "draft" | "pending_review" | "needs_revision" | "active" | "suspended" | "rejected" | "expired";
             /**
-             * @description Danh sách đối tác chứa gian hàng này — server suy từ tuyến, không nhận từ client
+             * @description Danh sách đối tác chứa gian hàng này - server suy từ tuyến, không nhận từ client
              * @enum {string}
              */
             partnerKind: "package_shop" | "individual_owner";
@@ -19347,7 +19347,7 @@ export interface components {
             taxCode?: string | null;
             businessLicenseNo?: string | null;
             bookingCount: number;
-            /** @description Gói hiện hành (ADR 0010) — null = chưa có gói (không giới hạn) */
+            /** @description Gói hiện hành (ADR 0010) - null = chưa có gói (không giới hạn) */
             currentPlan?: components["schemas"]["CurrentPlanDto"] | null;
         };
         PlatformTenantDto: {
@@ -19360,7 +19360,7 @@ export interface components {
             /** @enum {string} */
             status: "draft" | "pending_review" | "needs_revision" | "active" | "suspended" | "rejected" | "expired";
             /**
-             * @description Danh sách đối tác chứa gian hàng này — server suy từ tuyến, không nhận từ client
+             * @description Danh sách đối tác chứa gian hàng này - server suy từ tuyến, không nhận từ client
              * @enum {string}
              */
             partnerKind: "package_shop" | "individual_owner";
@@ -19387,22 +19387,22 @@ export interface components {
             billingMode?: "commission" | "package" | null;
             planName?: string | null;
             planCode?: string | null;
-            /** @description ISO — bắt đầu kỳ đang xét */
+            /** @description ISO - bắt đầu kỳ đang xét */
             termStartsAt?: string | null;
-            /** @description ISO — kết thúc kỳ đang xét */
+            /** @description ISO - kết thúc kỳ đang xét */
             endsAt?: string | null;
-            /** @description ISO — hết ân hạn */
+            /** @description ISO - hết ân hạn */
             graceEndsAt?: string | null;
             /**
-             * @description Trần xe của KỲ GÓI đang xét (snapshot — ADR 0041 điều 3). not_applicable khi không ở tuyến gói
+             * @description Trần xe của KỲ GÓI đang xét (snapshot - ADR 0041 điều 3). not_applicable khi không ở tuyến gói
              * @enum {string}
              */
             vehicleLimitKind: "total" | "unlimited" | "not_applicable" | "not_covered";
             /** @description Chỉ khi vehicleLimitKind = total */
             vehicleLimit?: number | null;
-            /** @description Mọi kỳ gói đang hiệu lực, mỗi phạm vi loại xe một kỳ (ADR 0065) — all → car → motorbike. Rỗng khi không ở tuyến gói. vehicleLimit ở trên là TỔNG trần các kỳ này */
+            /** @description Mọi kỳ gói đang hiệu lực, mỗi phạm vi loại xe một kỳ (ADR 0065) - all → car → motorbike. Rỗng khi không ở tuyến gói. vehicleLimit ở trên là TỔNG trần các kỳ này */
             terms: components["schemas"]["PlatformTenantPlanTermDto"][];
-            /** @description Kỳ đã xếp lịch kế tiếp (gia hạn / đổi gói từ kỳ sau) — null nếu chưa có */
+            /** @description Kỳ đã xếp lịch kế tiếp (gia hạn / đổi gói từ kỳ sau) - null nếu chưa có */
             nextTerm?: components["schemas"]["PlanTermRefDto"] | null;
         };
         PlatformTenantPlanTermDto: {
@@ -19419,11 +19419,11 @@ export interface components {
              * @enum {string}
              */
             phase: "current" | "grace" | "lapsed" | "unconfigured";
-            /** @description ISO — bắt đầu kỳ */
+            /** @description ISO - bắt đầu kỳ */
             startsAt: string;
-            /** @description ISO — kết thúc kỳ */
+            /** @description ISO - kết thúc kỳ */
             endsAt: string;
-            /** @description ISO — hết ân hạn */
+            /** @description ISO - hết ân hạn */
             graceEndsAt?: string | null;
             /**
              * @description Trần xe snapshot của KỲ này
@@ -19483,15 +19483,15 @@ export interface components {
             pickupWindowEndDate?: string | null;
             /** @description ISO-8601 UTC */
             createdAt: string;
-            /** @description ISO-8601 UTC — hạn gian hàng phải trả lời (ADR 0044; độ dài động 15 phút–4 giờ, ADR 0066) */
+            /** @description ISO-8601 UTC - hạn gian hàng phải trả lời (ADR 0044; độ dài động 15 phút-4 giờ, ADR 0066) */
             respondBy: string;
-            /** @description Worker đã nhắc lần 1 (khi còn 60 phút tới hạn — bỏ qua nếu cửa sổ ngắn hơn) */
+            /** @description Worker đã nhắc lần 1 (khi còn 60 phút tới hạn - bỏ qua nếu cửa sổ ngắn hơn) */
             firstRemindedAt?: string | null;
             /** @description Worker đã nhắc lần cuối (khi còn 15 phút tới hạn) */
             finalRemindedAt?: string | null;
             /** @description Lúc chủ xe nhận chuyến */
             decidedAt?: string | null;
-            /** @description Hạn khách chuyển tiền giữ chỗ — chỉ có ở `awaiting_hold` */
+            /** @description Hạn khách chuyển tiền giữ chỗ - chỉ có ở `awaiting_hold` */
             holdExpiresAt?: string | null;
             /** @description Số tiền giữ chỗ (string) */
             holdAmount?: string | null;
@@ -19500,7 +19500,7 @@ export interface components {
             /** @enum {string} */
             tenantStatus: "draft" | "pending_review" | "needs_revision" | "active" | "suspended" | "rejected" | "expired";
             ownerName?: string | null;
-            /** @description SĐT chủ xe — để gọi */
+            /** @description SĐT chủ xe - để gọi */
             ownerPhone?: string | null;
             vehicleId: string;
             vehicleName: string;
@@ -19516,7 +19516,7 @@ export interface components {
             meta: components["schemas"]["PaginationMetaDto"];
         };
         PlatformTripSummaryDto: {
-            /** @description ISO-8601 UTC — mốc server tính; web đếm ngược từ các mốc, không từ đây */
+            /** @description ISO-8601 UTC - mốc server tính; web đếm ngược từ các mốc, không từ đây */
             generatedAt: string;
             today: components["schemas"]["PlatformTripTodayDto"];
             queues: components["schemas"]["PlatformTripQueueCountsDto"];
@@ -19566,7 +19566,7 @@ export interface components {
             tenantName: string;
             /** @enum {string} */
             tenantStatus: "draft" | "pending_review" | "needs_revision" | "active" | "suspended" | "rejected" | "expired";
-            /** @description Tỉnh/thành của chi nhánh gắn xe — vị trí công khai của xe */
+            /** @description Tỉnh/thành của chi nhánh gắn xe - vị trí công khai của xe */
             provinceName?: string | null;
             /**
              * @description Trạng thái snapshot trên Marketplace; null = xe chưa từng lên sàn
@@ -19635,7 +19635,7 @@ export interface components {
             tenantName: string;
             /** @enum {string} */
             tenantStatus: "draft" | "pending_review" | "needs_revision" | "active" | "suspended" | "rejected" | "expired";
-            /** @description Tỉnh/thành của chi nhánh gắn xe — vị trí công khai của xe */
+            /** @description Tỉnh/thành của chi nhánh gắn xe - vị trí công khai của xe */
             provinceName?: string | null;
             /**
              * @description Trạng thái snapshot trên Marketplace; null = xe chưa từng lên sàn
@@ -19670,17 +19670,17 @@ export interface components {
         };
         PlatformWithdrawalDto: {
             id: string;
-            /** @description Mã XPW… — ghi vào nội dung chuyển khoản */
+            /** @description Mã XPW… - ghi vào nội dung chuyển khoản */
             code: string;
             amount: string;
             /** @enum {string} */
             status: "pending" | "approved" | "paid" | "rejected" | "cancelled" | "reversed";
             /** @enum {string} */
             ownerType: "user" | "tenant";
-            /** @description Tên chủ ví — người hoặc gian hàng */
+            /** @description Tên chủ ví - người hoặc gian hàng */
             ownerName?: string | null;
             bankCode: string;
-            /** @description SỐ ĐẦY ĐỦ — admin phải gõ vào app ngân hàng */
+            /** @description SỐ ĐẦY ĐỦ - admin phải gõ vào app ngân hàng */
             bankAccountNumber: string;
             bankAccountName: string;
             /** @description Hạn cam kết chuyển */
@@ -19692,7 +19692,7 @@ export interface components {
             paidAt?: string | null;
             bankReference?: string | null;
             rejectReason?: string | null;
-            /** @description Lúc lệnh ĐÃ CHI bị đảo (chuyển hụt / sai tài khoản) — chỉ ở trạng thái `reversed` */
+            /** @description Lúc lệnh ĐÃ CHI bị đảo (chuyển hụt / sai tài khoản) - chỉ ở trạng thái `reversed` */
             reversedAt?: string | null;
             /** @description Vì sao tiền quay lại */
             reverseReason?: string | null;
@@ -19705,7 +19705,7 @@ export interface components {
             page: number;
             limit: number;
             hasNext: boolean;
-            /** @description Số lệnh đang quá hạn cam kết — chỉ số vận hành, hiện ở đầu màn */
+            /** @description Số lệnh đang quá hạn cam kết - chỉ số vận hành, hiện ở đầu màn */
             overdueCount: number;
         };
         PostSupportEventDto: {
@@ -19764,7 +19764,7 @@ export interface components {
             /** @description Tên file gốc (chỉ để hiển thị) */
             fileName: string;
             /**
-             * @description Chỉ ảnh — không nhận PDF
+             * @description Chỉ ảnh - không nhận PDF
              * @enum {string}
              */
             contentType: "image/jpeg" | "image/png" | "image/webp";
@@ -19830,15 +19830,15 @@ export interface components {
             body?: string;
         };
         PreviewPromoCodeDto: {
-            /** @description Mã khách gõ — server tự chuẩn hoá */
+            /** @description Mã khách gõ - server tự chuẩn hoá */
             code: string;
             /** @description Xe đang xem (ULID) */
             vehicleId: string;
             /** @enum {string} */
             serviceType?: "self_drive" | "with_driver" | "long_term";
-            /** @description ISO-8601 — bắt buộc với dịch vụ theo ngày */
+            /** @description ISO-8601 - bắt buộc với dịch vụ theo ngày */
             pickupAt?: string;
-            /** @description ISO-8601 — bắt buộc với dịch vụ theo ngày */
+            /** @description ISO-8601 - bắt buộc với dịch vụ theo ngày */
             returnAt?: string;
             /** @description Gói thuê dài hạn (tháng lịch) */
             packageMonths?: number;
@@ -19850,9 +19850,9 @@ export interface components {
             personalAccidentSelected?: boolean;
         };
         PreviewReturnSettlementDto: {
-            /** @description ISO — giờ nhận lại xe đang chọn; dùng cho gợi ý quá giờ. Trống ⇒ bây giờ */
+            /** @description ISO - giờ nhận lại xe đang chọn; dùng cho gợi ý quá giờ. Trống ⇒ bây giờ */
             occurredAt?: string;
-            /** @description Odo lúc nhận lại đang nhập (0–2000000); dùng cho gợi ý vượt km */
+            /** @description Odo lúc nhận lại đang nhập (0-2000000); dùng cho gợi ý vượt km */
             odometerKm?: number | null;
             surcharges?: components["schemas"]["ReturnSurchargeDraftDto"][];
         };
@@ -19860,9 +19860,9 @@ export interface components {
             items: components["schemas"]["PurchaseSubscriptionDto"][];
         };
         PriceBoundsDto: {
-            /** @description Giá thấp nhất — string tiền (ADR 0007) */
+            /** @description Giá thấp nhất - string tiền (ADR 0007) */
             min?: string | null;
-            /** @description Giá cao nhất — string tiền (ADR 0007) */
+            /** @description Giá cao nhất - string tiền (ADR 0007) */
             max?: string | null;
         };
         PriceBreakdownRowDto: {
@@ -19894,7 +19894,7 @@ export interface components {
             provinceCodes: string[];
             totalUsageLimit?: number | null;
             perCustomerLimit?: number | null;
-            /** @description Lượt đang giữ + đã chốt — con số mà trần tổng so sánh */
+            /** @description Lượt đang giữ + đã chốt - con số mà trần tổng so sánh */
             reservedCount: number;
             /** @description Lượt đã thành đơn */
             redeemedCount: number;
@@ -19902,7 +19902,7 @@ export interface components {
             startsAt: string;
             /** @description ISO-8601 */
             endsAt: string;
-            /** @description Công tắc admin — trạng thái duy nhất được LƯU */
+            /** @description Công tắc admin - trạng thái duy nhất được LƯU */
             isActive: boolean;
             listed: boolean;
             /**
@@ -19932,7 +19932,7 @@ export interface components {
             code: string;
             /** @description Tên chương trình lúc khách áp mã */
             name: string;
-            /** @description Số giảm ĐÃ ÁP (VND string — ADR 0007) */
+            /** @description Số giảm ĐÃ ÁP (VND string - ADR 0007) */
             discountApplied: string;
             /** @enum {string} */
             discountType: "fixed" | "percent";
@@ -19952,7 +19952,7 @@ export interface components {
         };
         PromoCodeStatsDto: {
             total: number;
-            /** @description Thêm mới trong 30 ngày qua — cho chỉ số "so với tháng trước" */
+            /** @description Thêm mới trong 30 ngày qua - cho chỉ số "so với tháng trước" */
             createdLast30Days: number;
             active: number;
             /** @description Hết hạn trong PROMO_ENDING_SOON_DAYS ngày tới */
@@ -19964,15 +19964,15 @@ export interface components {
             code: string;
             applicable: boolean;
             /**
-             * @description Mã lý do ổn định — giao diện dịch từ MÃ, không hiện message của server
+             * @description Mã lý do ổn định - giao diện dịch từ MÃ, không hiện message của server
              * @enum {string|null}
              */
             reason?: "not_found" | "disabled" | "not_started" | "expired" | "exhausted" | "customer_limit_reached" | "audience_mismatch" | "min_order_not_met" | "vehicle_scope_mismatch" | "service_scope_mismatch" | "province_mismatch" | "no_online_payment" | "discount_below_floor" | "requires_identity" | null;
             /** @description VND string (ADR 0007) */
             discountAmount?: string | null;
-            /** @description Số giảm đã bị một trần nào đó kẹp xuống — giao diện nói rõ để khách không tự trừ */
+            /** @description Số giảm đã bị một trần nào đó kẹp xuống - giao diện nói rõ để khách không tự trừ */
             clamped?: boolean | null;
-            /** @description Tổng khách trả SAU khi áp mã (VND string) — số duy nhất giao diện được hiện */
+            /** @description Tổng khách trả SAU khi áp mã (VND string) - số duy nhất giao diện được hiện */
             customerTotalAmount?: string | null;
             /** @description Tiền giữ chỗ sau khi áp mã */
             holdAmount?: string | null;
@@ -20002,7 +20002,7 @@ export interface components {
             bookingRequestId: string;
             bookingId?: string | null;
             bookingCode?: string | null;
-            /** @description ĐÃ CHE — admin xem danh sách không cần PII */
+            /** @description ĐÃ CHE - admin xem danh sách không cần PII */
             customerNameMasked: string;
             /** @description ISO-8601 */
             reservedAt: string;
@@ -20021,7 +20021,7 @@ export interface components {
              * @example VCB
              */
             bankCode?: string;
-            /** @description Số tài khoản — chỉ chữ số */
+            /** @description Số tài khoản - chỉ chữ số */
             accountNumber?: string;
             /** @description Tên chủ tài khoản, đúng như đăng ký ở ngân hàng */
             accountName?: string;
@@ -20046,75 +20046,75 @@ export interface components {
             id: string;
             /** @description Ảnh desktop */
             imageUrl: string;
-            /** @description Ảnh tablet (1024×450) — null thì client fallback ảnh desktop */
+            /** @description Ảnh tablet (1024×450) - null thì client fallback ảnh desktop */
             tabletImageUrl: string | null;
-            /** @description Ảnh mobile (780×450) — null thì client fallback tablet rồi desktop */
+            /** @description Ảnh mobile (780×450) - null thì client fallback tablet rồi desktop */
             mobileImageUrl: string | null;
             altText: string;
-            /** @description Đích đến khi bấm — null = không bấm được */
+            /** @description Đích đến khi bấm - null = không bấm được */
             linkUrl: string | null;
         };
         PublicCustomerFeeBreakdownDto: {
             /**
-             * @description Loại xe — quyết định mức S và biểu phí bảo hiểm
+             * @description Loại xe - quyết định mức S và biểu phí bảo hiểm
              * @enum {string}
              */
             vehicleType: "car" | "motorbike";
-            /** @description Số ngày thuê tính phí — nhân biểu phí bảo hiểm, chia nấc hoa hồng */
+            /** @description Số ngày thuê tính phí - nhân biểu phí bảo hiểm, chia nấc hoa hồng */
             rentalDays: number;
-            /** @description B — tổng bảng kê giá thuê (gồm giao nhận) */
+            /** @description B - tổng bảng kê giá thuê (gồm giao nhận) */
             baseAmount: string;
-            /** @description G — phí giao nhận nằm trong B, khách trả TẬN TAY chủ xe: không vào tiền giữ chỗ online, không chịu hoa hồng hay thuế (ADR 0064). Vắng mặt ở snapshot trước 21/10/2026 = "0" */
+            /** @description G - phí giao nhận nằm trong B, khách trả TẬN TAY chủ xe: không vào tiền giữ chỗ online, không chịu hoa hồng hay thuế (ADR 0064). Vắng mặt ở snapshot trước 21/10/2026 = "0" */
             deliveryAmount?: string;
             lines: components["schemas"]["FeeLineDto"][];
             /** @description Tổng phụ phí KHÁCH gánh (S + IV + IP) */
             customerFeeTotal: string;
             /** @description Số KHÁCH TRẢ cả chuyến (chưa gồm cọc thế chấp) */
             customerTotalAmount: string;
-            /** @description Tiền giữ chỗ online TRƯỚC tài trợ mã khuyến mãi = D + S + H + IV + IP — con số phân bổ quyền lợi làm việc trên */
+            /** @description Tiền giữ chỗ online TRƯỚC tài trợ mã khuyến mãi = D + S + H + IV + IP - con số phân bổ quyền lợi làm việc trên */
             grossOnlineAmount: string;
-            /** @description P — số XePrime TÀI TRỢ qua mã khuyến mãi (ADR 0046). "0" khi không có mã. Không đụng tiền gian hàng. */
+            /** @description P - số XePrime TÀI TRỢ qua mã khuyến mãi (ADR 0046). "0" khi không có mã. Không đụng tiền gian hàng. */
             promoDiscountAmount: string;
             /** @description Mã đã áp + điều kiện đóng băng. null khi chuyến không dùng mã. */
             promo?: components["schemas"]["PromoCodeSnapshotDto"] | null;
-            /** @description Tiền giữ chỗ − P — số quét QR trả ngay */
+            /** @description Tiền giữ chỗ − P - số quét QR trả ngay */
             onlineAmount: string;
-            /** @description Tổng khách trả trước mã − tiền giữ chỗ — khách trả TRỰC TIẾP chủ xe lúc nhận xe */
+            /** @description Tổng khách trả trước mã − tiền giữ chỗ - khách trả TRỰC TIẾP chủ xe lúc nhận xe */
             payAtPickupAmount: string;
-            /** @description Khoản giữ chỗ khách chuyển XePrime — null khi không cần (tuyến gói, báo giá tạm tính) */
+            /** @description Khoản giữ chỗ khách chuyển XePrime - null khi không cần (tuyến gói, báo giá tạm tính) */
             holdAmount?: string | null;
             policy: components["schemas"]["PublicFeePolicySnapshotDto"];
         };
         PublicDestinationDto: {
-            /** @description Mã tỉnh — giá trị đi vào URL và bộ lọc `provinceCode` */
+            /** @description Mã tỉnh - giá trị đi vào URL và bộ lọc `provinceCode` */
             provinceCode: string;
-            /** @description Tên tỉnh chuẩn — chỉ để HIỂN THỊ, không dùng để lọc */
+            /** @description Tên tỉnh chuẩn - chỉ để HIỂN THỊ, không dùng để lọc */
             provinceName: string;
             /** @description Số xe đang hiển thị công khai ở tỉnh/thành này */
             vehicleCount: number;
             /** @description Ảnh đại diện lấy từ một xe */
             imageUrl?: string | null;
-            /** @description Giá thuê TỰ LÁI theo ngày thấp nhất (đã trừ khuyến mãi của chủ xe), string — ADR 0007. Null khi tỉnh không có xe tự lái nào có giá ngày. */
+            /** @description Giá thuê TỰ LÁI theo ngày thấp nhất (đã trừ khuyến mãi của chủ xe), string - ADR 0007. Null khi tỉnh không có xe tự lái nào có giá ngày. */
             minDailyPrice?: string | null;
         };
         PublicFeePolicySnapshotDto: {
             policyId: string;
             version: number;
             holdMinAmount: string;
-            /** @description Cửa sổ thanh toán khi đặt xa — trần của cửa sổ động */
+            /** @description Cửa sổ thanh toán khi đặt xa - trần của cửa sổ động */
             holdPaymentWindowMinutes: number;
-            /** @description Cửa sổ huỷ miễn phí (giờ) khi đặt xa — trần của cửa sổ động */
+            /** @description Cửa sổ huỷ miễn phí (giờ) khi đặt xa - trần của cửa sổ động */
             freeCancelHours: number;
             tripInsuranceEnabled: boolean;
             vehicleProtectionEnabled: boolean;
             insurancePartnerName?: string | null;
-            /** @description % phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi của xe, không gồm phí giao xe) — ADR 0066 */
+            /** @description % phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi của xe, không gồm phí giao xe) - ADR 0066 */
             depositPercent: number;
-            /** @description `S` — phí sàn cố định mỗi đơn */
+            /** @description `S` - phí sàn cố định mỗi đơn */
             customerPlatformFee: components["schemas"]["PerVehicleTypeAmountDto"];
-            /** @description `IV` — biểu phí mỗi ngày */
+            /** @description `IV` - biểu phí mỗi ngày */
             vehicleProtectionDailyAmount: components["schemas"]["PerVehicleTypeAmountDto"];
-            /** @description `IP` — biểu phí mỗi ngày */
+            /** @description `IP` - biểu phí mỗi ngày */
             tripInsuranceDailyAmount: components["schemas"]["PerVehicleTypeAmountDto"];
         };
         PublicInsuranceProductDto: {
@@ -20146,40 +20146,40 @@ export interface components {
             /** @description Kiểu dáng (BODY_TYPE) */
             bodyType?: string | null;
             /**
-             * @description Phân khúc — chỉ xe máy
+             * @description Phân khúc - chỉ xe máy
              * @enum {string|null}
              */
             motorbikeCategory: "scooter" | "underbone" | "naked" | "sport" | "cruiser" | "adventure" | "touring" | "offroad" | "other" | null;
             mainImageUrl?: string | null;
-            /** @description Tổng số ảnh của xe — thẻ hiện "+N" ảnh */
+            /** @description Tổng số ảnh của xe - thẻ hiện "+N" ảnh */
             imageCount: number;
             /**
-             * @description Hộp số (TRANSMISSION_TYPE_EXT — cùng bộ mã với hồ sơ xe) — null khi chủ xe chưa khai
+             * @description Hộp số (TRANSMISSION_TYPE_EXT - cùng bộ mã với hồ sơ xe) - null khi chủ xe chưa khai
              * @enum {string|null}
              */
             transmission: "automatic" | "manual" | "cvt" | "e_cvt" | "dct" | "amt" | "direct_drive" | "automatic_cvt" | "semi_automatic" | "manual_clutch" | "other" | null;
-            /** @description Dịch vụ đang bật tự động nhận chuyến — thẻ hiện "Không cần xác nhận" khi dịch vụ khách đang xem nằm trong mảng này */
+            /** @description Dịch vụ đang bật tự động nhận chuyến - thẻ hiện "Không cần xác nhận" khi dịch vụ khách đang xem nằm trong mảng này */
             instantBookServiceTypes: ("self_drive" | "with_driver" | "long_term")[];
-            /** @description Tiền dạng string — ADR 0007 */
+            /** @description Tiền dạng string - ADR 0007 */
             weekdayPrice?: string | null;
             weekendPrice?: string | null;
-            /** @description Giá thuê giờ (string — ADR 0007). Null = xe không cho thuê theo giờ. */
+            /** @description Giá thuê giờ (string - ADR 0007). Null = xe không cho thuê theo giờ. */
             hourlyPrice?: string | null;
-            /** @description Giá tháng tham chiếu thuê dài hạn (string — ADR 0007). */
+            /** @description Giá tháng tham chiếu thuê dài hạn (string - ADR 0007). */
             monthlyPrice?: string | null;
-            /** @description Giá/ngày đã gồm tài xế (string — ADR 0007). Null = gian hàng báo khi duyệt. */
+            /** @description Giá/ngày đã gồm tài xế (string - ADR 0007). Null = gian hàng báo khi duyệt. */
             withDriverDailyPrice?: string | null;
-            /** @description Giá/ngày có tài xế lộ trình liên tỉnh — string tiền (ADR 0007) */
+            /** @description Giá/ngày có tài xế lộ trình liên tỉnh - string tiền (ADR 0007) */
             withDriverInterCityPrice?: string | null;
-            /** @description Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều — string tiền (ADR 0007) */
+            /** @description Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều - string tiền (ADR 0007) */
             withDriverOneWayPrice?: string | null;
             /** @description Chủ xe hỗ trợ giao xe tận nơi */
             deliveryEnabled: boolean;
             /** @description Miễn thế chấp (không cần cọc tài sản) */
             noCollateral: boolean;
-            /** @description Chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê xe theo thoả thuận trực tiếp với khách — XePrime không xuất hoá đơn thay chủ xe */
+            /** @description Chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê xe theo thoả thuận trực tiếp với khách - XePrime không xuất hoá đơn thay chủ xe */
             vatInvoiceSupported: boolean;
-            /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái (0–100) */
+            /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái (0-100) */
             discountPercent?: number | null;
             /** @description Tên gian hàng */
             shopName: string;
@@ -20189,13 +20189,13 @@ export interface components {
             shopLogoUrl?: string | null;
             /** @description Tỉnh/thành gian hàng */
             shopProvince?: string | null;
-            /** @description Gian hàng tuyến gói — đeo dấu xác thực XePrime (hasVerifiedStorefront) */
+            /** @description Gian hàng tuyến gói - đeo dấu xác thực XePrime (hasVerifiedStorefront) */
             shopVerified: boolean;
             /** @description Số chuyến đã hoàn thành của xe */
             completedTripCount: number;
-            /** @description Mã tỉnh nơi xe đang đỗ (theo chi nhánh) — dùng để lọc/điều hướng */
+            /** @description Mã tỉnh nơi xe đang đỗ (theo chi nhánh) - dùng để lọc/điều hướng */
             provinceCode?: string | null;
-            /** @description Tên xã/phường của chi nhánh đang giữ xe — chỉ để HIỂN THỊ */
+            /** @description Tên xã/phường của chi nhánh đang giữ xe - chỉ để HIỂN THỊ */
             wardName?: string | null;
             /** @description Điểm đánh giá trung bình CỦA XE (review published). Null khi chưa có đánh giá. */
             ratingAvg?: string | null;
@@ -20209,7 +20209,7 @@ export interface components {
             manufactureYear?: number | null;
             /** @description Giới thiệu gian hàng */
             shopBio?: string | null;
-            /** @description Điểm đánh giá trung bình CỦA GIAN HÀNG, string — ADR 0007 */
+            /** @description Điểm đánh giá trung bình CỦA GIAN HÀNG, string - ADR 0007 */
             shopRatingAvg: string;
             /** @description Số lượt đánh giá của gian hàng */
             shopRatingCount: number;
@@ -20220,7 +20220,7 @@ export interface components {
             /** @description Key tiện ích (VEHICLE_FEATURE_LABEL) */
             features: string[];
             longTermPackages: components["schemas"]["LongTermPackageOptionDto"][];
-            /** @description Chỗ nhận xe khi khách tự tới lấy — chi nhánh giữ xe, fallback hồ sơ gian hàng. */
+            /** @description Chỗ nhận xe khi khách tự tới lấy - chi nhánh giữ xe, fallback hồ sơ gian hàng. */
             pickupPoint?: components["schemas"]["PickupPointDto"] | null;
             /** @description Giao xe tận nơi có ĐẶT ĐƯỢC không (theo chính sách hiệu lực) */
             deliveryAvailable: boolean;
@@ -20251,40 +20251,40 @@ export interface components {
             /** @description Kiểu dáng (BODY_TYPE) */
             bodyType?: string | null;
             /**
-             * @description Phân khúc — chỉ xe máy
+             * @description Phân khúc - chỉ xe máy
              * @enum {string|null}
              */
             motorbikeCategory: "scooter" | "underbone" | "naked" | "sport" | "cruiser" | "adventure" | "touring" | "offroad" | "other" | null;
             mainImageUrl?: string | null;
-            /** @description Tổng số ảnh của xe — thẻ hiện "+N" ảnh */
+            /** @description Tổng số ảnh của xe - thẻ hiện "+N" ảnh */
             imageCount: number;
             /**
-             * @description Hộp số (TRANSMISSION_TYPE_EXT — cùng bộ mã với hồ sơ xe) — null khi chủ xe chưa khai
+             * @description Hộp số (TRANSMISSION_TYPE_EXT - cùng bộ mã với hồ sơ xe) - null khi chủ xe chưa khai
              * @enum {string|null}
              */
             transmission: "automatic" | "manual" | "cvt" | "e_cvt" | "dct" | "amt" | "direct_drive" | "automatic_cvt" | "semi_automatic" | "manual_clutch" | "other" | null;
-            /** @description Dịch vụ đang bật tự động nhận chuyến — thẻ hiện "Không cần xác nhận" khi dịch vụ khách đang xem nằm trong mảng này */
+            /** @description Dịch vụ đang bật tự động nhận chuyến - thẻ hiện "Không cần xác nhận" khi dịch vụ khách đang xem nằm trong mảng này */
             instantBookServiceTypes: ("self_drive" | "with_driver" | "long_term")[];
-            /** @description Tiền dạng string — ADR 0007 */
+            /** @description Tiền dạng string - ADR 0007 */
             weekdayPrice?: string | null;
             weekendPrice?: string | null;
-            /** @description Giá thuê giờ (string — ADR 0007). Null = xe không cho thuê theo giờ. */
+            /** @description Giá thuê giờ (string - ADR 0007). Null = xe không cho thuê theo giờ. */
             hourlyPrice?: string | null;
-            /** @description Giá tháng tham chiếu thuê dài hạn (string — ADR 0007). */
+            /** @description Giá tháng tham chiếu thuê dài hạn (string - ADR 0007). */
             monthlyPrice?: string | null;
-            /** @description Giá/ngày đã gồm tài xế (string — ADR 0007). Null = gian hàng báo khi duyệt. */
+            /** @description Giá/ngày đã gồm tài xế (string - ADR 0007). Null = gian hàng báo khi duyệt. */
             withDriverDailyPrice?: string | null;
-            /** @description Giá/ngày có tài xế lộ trình liên tỉnh — string tiền (ADR 0007) */
+            /** @description Giá/ngày có tài xế lộ trình liên tỉnh - string tiền (ADR 0007) */
             withDriverInterCityPrice?: string | null;
-            /** @description Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều — string tiền (ADR 0007) */
+            /** @description Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều - string tiền (ADR 0007) */
             withDriverOneWayPrice?: string | null;
             /** @description Chủ xe hỗ trợ giao xe tận nơi */
             deliveryEnabled: boolean;
             /** @description Miễn thế chấp (không cần cọc tài sản) */
             noCollateral: boolean;
-            /** @description Chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê xe theo thoả thuận trực tiếp với khách — XePrime không xuất hoá đơn thay chủ xe */
+            /** @description Chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê xe theo thoả thuận trực tiếp với khách - XePrime không xuất hoá đơn thay chủ xe */
             vatInvoiceSupported: boolean;
-            /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái (0–100) */
+            /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái (0-100) */
             discountPercent?: number | null;
             /** @description Tên gian hàng */
             shopName: string;
@@ -20294,13 +20294,13 @@ export interface components {
             shopLogoUrl?: string | null;
             /** @description Tỉnh/thành gian hàng */
             shopProvince?: string | null;
-            /** @description Gian hàng tuyến gói — đeo dấu xác thực XePrime (hasVerifiedStorefront) */
+            /** @description Gian hàng tuyến gói - đeo dấu xác thực XePrime (hasVerifiedStorefront) */
             shopVerified: boolean;
             /** @description Số chuyến đã hoàn thành của xe */
             completedTripCount: number;
-            /** @description Mã tỉnh nơi xe đang đỗ (theo chi nhánh) — dùng để lọc/điều hướng */
+            /** @description Mã tỉnh nơi xe đang đỗ (theo chi nhánh) - dùng để lọc/điều hướng */
             provinceCode?: string | null;
-            /** @description Tên xã/phường của chi nhánh đang giữ xe — chỉ để HIỂN THỊ */
+            /** @description Tên xã/phường của chi nhánh đang giữ xe - chỉ để HIỂN THỊ */
             wardName?: string | null;
             /** @description Điểm đánh giá trung bình CỦA XE (review published). Null khi chưa có đánh giá. */
             ratingAvg?: string | null;
@@ -20318,14 +20318,14 @@ export interface components {
             hasNext: boolean;
         };
         PublicQuoteBreakdownDto: {
-            /** @description Số ngày tính tiền — null với báo giá theo GÓI dài hạn (không tính theo ngày) */
+            /** @description Số ngày tính tiền - null với báo giá theo GÓI dài hạn (không tính theo ngày) */
             days?: number | null;
-            /** @description Cấu tạo giá gói — khác null ⇒ đây là báo giá THUÊ DÀI HẠN theo gói tháng lịch */
+            /** @description Cấu tạo giá gói - khác null ⇒ đây là báo giá THUÊ DÀI HẠN theo gói tháng lịch */
             longTerm?: components["schemas"]["LongTermPackageOptionDto"] | null;
             rows: components["schemas"]["PriceBreakdownRowDto"][];
             /** @description Tổng khách trả TRƯỚC cọc */
             totalAmount: string;
-            /** @description Cọc thế chấp hoàn trả — không nằm trong tổng */
+            /** @description Cọc thế chấp hoàn trả - không nằm trong tổng */
             depositAmount: string;
             /** @enum {string|null} */
             policySource: "shop" | "vehicle" | null;
@@ -20338,7 +20338,7 @@ export interface components {
         PublicQuoteDto: {
             breakdown: components["schemas"]["PublicQuoteBreakdownDto"];
             delivery: components["schemas"]["DeliverySummaryDto"];
-            /** @description Nền tảng có đối tác bảo hiểm phát hành thật — false thì ẩn ô chọn bảo hiểm, server không thu IV/IP */
+            /** @description Nền tảng có đối tác bảo hiểm phát hành thật - false thì ẩn ô chọn bảo hiểm, server không thu IV/IP */
             insuranceOffered: boolean;
             insuranceOfferedByKind: components["schemas"]["InsuranceOfferedByKindDto"];
             autoAccept?: components["schemas"]["AutoAcceptPreviewDto"] | null;
@@ -20347,18 +20347,18 @@ export interface components {
             id: string;
             name: string;
             provinceName?: string | null;
-            /** @description Địa chỉ đầy đủ của chi nhánh — CHỈ gian hàng tuyến gói; chủ xe tuyến hoa hồng luôn null (ADR 0077) */
+            /** @description Địa chỉ đầy đủ của chi nhánh - CHỈ gian hàng tuyến gói; chủ xe tuyến hoa hồng luôn null (ADR 0077) */
             address?: string | null;
             /** @description Số xe công khai đang ở chi nhánh */
             vehicleCount: number;
-            /** @description Điểm trung bình (string — ADR 0007); null khi chưa có đánh giá */
+            /** @description Điểm trung bình (string - ADR 0007); null khi chưa có đánh giá */
             ratingAvg?: string | null;
             ratingCount: number;
         };
         PublicShopBrandDto: {
             /** @description Nhãn hiển thị của hãng (từ danh mục; hãng ngoài danh mục giữ nguyên giá trị đã lưu) */
             label: string;
-            /** @description Logo hãng từ danh mục `vehicle_brand` — null khi hãng không có trong danh mục */
+            /** @description Logo hãng từ danh mục `vehicle_brand` - null khi hãng không có trong danh mục */
             iconUrl?: string | null;
         };
         PublicShopDto: {
@@ -20366,24 +20366,24 @@ export interface components {
             /** @description Slug gian hàng */
             slug: string;
             /**
-             * @description Mặt tiền cần vẽ — suy từ tuyến thu tiền hiệu lực (resolveStorefrontKind)
+             * @description Mặt tiền cần vẽ - suy từ tuyến thu tiền hiệu lực (resolveStorefrontKind)
              * @enum {string}
              */
             storefrontKind: "personal" | "shop";
-            /** @description Đeo dấu xác thực XePrime — CHỈ gian hàng tuyến gói (hasVerifiedStorefront) */
+            /** @description Đeo dấu xác thực XePrime - CHỈ gian hàng tuyến gói (hasVerifiedStorefront) */
             verified: boolean;
             provinceName?: string | null;
             logoUrl?: string | null;
             coverUrl?: string | null;
             bio?: string | null;
-            /** @description Giới thiệu ĐÃ ĐỊNH DẠNG — HTML đã lọc ở server (danh sách thẻ cho phép); null thì hiện `bio` */
+            /** @description Giới thiệu ĐÃ ĐỊNH DẠNG - HTML đã lọc ở server (danh sách thẻ cho phép); null thì hiện `bio` */
             bioHtml?: string | null;
             address?: string | null;
             /** @description Gian hàng mở hộp thư công khai (storefrontAllowsPublicChat) */
             chatOpen: boolean;
-            /** @description Ngày mở gian hàng (ISO-8601 UTC) — "Tham gia từ …" */
+            /** @description Ngày mở gian hàng (ISO-8601 UTC) - "Tham gia từ …" */
             joinedAt: string;
-            /** @description Điểm đánh giá trung bình, string — ADR 0007 */
+            /** @description Điểm đánh giá trung bình, string - ADR 0007 */
             ratingAvg: string;
             ratingCount: number;
             /** @description Số xe ĐANG hiển thị công khai (cùng luật lọc với chợ) */
@@ -20393,11 +20393,11 @@ export interface components {
             metrics: components["schemas"]["HostMetricsDto"];
             /** @description Số chi nhánh đang hoạt động */
             branchCount: number;
-            /** @description Tên các tỉnh/thành đang có xe công khai — theo số xe giảm dần */
+            /** @description Tên các tỉnh/thành đang có xe công khai - theo số xe giảm dần */
             serviceProvinceNames: string[];
-            /** @description Các tỉnh/thành đang có xe công khai, kèm MÃ để lọc — theo số xe giảm dần */
+            /** @description Các tỉnh/thành đang có xe công khai, kèm MÃ để lọc - theo số xe giảm dần */
             serviceProvinces: components["schemas"]["PublicShopProvinceDto"][];
-            /** @description Chi nhánh đang giữ xe công khai — theo số xe giảm dần */
+            /** @description Chi nhánh đang giữ xe công khai - theo số xe giảm dần */
             branches: components["schemas"]["PublicShopBranchDto"][];
             vehicleFilterCounts: components["schemas"]["ShopVehicleFilterCountsDto"];
             trust: components["schemas"]["ShopTrustDto"];
@@ -20409,7 +20409,7 @@ export interface components {
             meta: components["schemas"]["PublicListingPageMetaDto"];
         };
         PublicShopProvinceDto: {
-            /** @description Mã tỉnh 2 ký tự — giá trị của tham số `provinceCode` */
+            /** @description Mã tỉnh 2 ký tự - giá trị của tham số `provinceCode` */
             code: string;
             name: string;
             vehicleCount: number;
@@ -20421,20 +20421,20 @@ export interface components {
             provinceName?: string | null;
             /** @description Số xe đang hiển thị công khai */
             vehicleCount: number;
-            /** @description Điểm đánh giá trung bình, string — ADR 0007 */
+            /** @description Điểm đánh giá trung bình, string - ADR 0007 */
             ratingAvg: string;
             ratingCount: number;
-            /** @description Gian hàng tuyến gói — đeo dấu xác thực XePrime (hasVerifiedStorefront). Cùng phép suy với `shopVerified` của thẻ xe: false là mặt tiền chủ xe cá nhân. */
+            /** @description Gian hàng tuyến gói - đeo dấu xác thực XePrime (hasVerifiedStorefront). Cùng phép suy với `shopVerified` của thẻ xe: false là mặt tiền chủ xe cá nhân. */
             verified: boolean;
-            /** @description Lời giới thiệu ngắn của gian hàng (hồ sơ) — null khi chưa viết */
+            /** @description Lời giới thiệu ngắn của gian hàng (hồ sơ) - null khi chưa viết */
             bio?: string | null;
             /** @description Số chuyến đã hoàn thành của cả gian hàng */
             completedTripCount: number;
-            /** @description Ảnh của xe xếp hạng cao nhất đang hiển thị công khai — ảnh đại diện trên thẻ */
+            /** @description Ảnh của xe xếp hạng cao nhất đang hiển thị công khai - ảnh đại diện trên thẻ */
             featuredVehicleImageUrl?: string | null;
-            /** @description Tối đa 3 hãng có nhiều xe công khai nhất của gian hàng — dãy logo trên thẻ "Gian hàng nổi bật" */
+            /** @description Tối đa 3 hãng có nhiều xe công khai nhất của gian hàng - dãy logo trên thẻ "Gian hàng nổi bật" */
             brands: components["schemas"]["PublicShopBrandDto"][];
-            /** @description Tổng số hãng xe đang công khai — phần dư so với `brands` hiện "+N" */
+            /** @description Tổng số hãng xe đang công khai - phần dư so với `brands` hiện "+N" */
             brandCount: number;
         };
         PurchaseReplacedTermDto: {
@@ -20454,7 +20454,7 @@ export interface components {
             termMonths: 1 | 3 | 6 | 12;
             /**
              * @deprecated
-             * @description Bị bỏ qua — server tự suy thời điểm áp dụng theo bậc được chọn (ADR 0084)
+             * @description Bị bỏ qua - server tự suy thời điểm áp dụng theo bậc được chọn (ADR 0084)
              * @enum {string}
              */
             timing?: "next_term" | "now";
@@ -20474,14 +20474,14 @@ export interface components {
             pushEnabled: boolean;
         };
         QuoteBreakdownDto: {
-            /** @description Số ngày tính tiền — null với báo giá theo GÓI dài hạn (không tính theo ngày) */
+            /** @description Số ngày tính tiền - null với báo giá theo GÓI dài hạn (không tính theo ngày) */
             days?: number | null;
-            /** @description Cấu tạo giá gói — khác null ⇒ đây là báo giá THUÊ DÀI HẠN theo gói tháng lịch */
+            /** @description Cấu tạo giá gói - khác null ⇒ đây là báo giá THUÊ DÀI HẠN theo gói tháng lịch */
             longTerm?: components["schemas"]["LongTermPackageOptionDto"] | null;
             rows: components["schemas"]["PriceBreakdownRowDto"][];
             /** @description Tổng khách trả TRƯỚC cọc */
             totalAmount: string;
-            /** @description Cọc thế chấp hoàn trả — không nằm trong tổng */
+            /** @description Cọc thế chấp hoàn trả - không nằm trong tổng */
             depositAmount: string;
             /** @enum {string|null} */
             policySource: "shop" | "vehicle" | null;
@@ -20504,7 +20504,7 @@ export interface components {
             plateNumber?: string | null;
             /** @description Ảnh đại diện xe */
             vehicleImageUrl?: string | null;
-            /** @description Tiền dạng string — ADR 0007 */
+            /** @description Tiền dạng string - ADR 0007 */
             totalAmount: string;
             paidAmount: string;
             /** @description Còn nợ = max(0, tổng − đã trả) */
@@ -20521,13 +20521,13 @@ export interface components {
             /** @enum {string} */
             status: "draft" | "pending_approval" | "approved" | "cancelled";
             /**
-             * @description Nguồn sinh phiếu — `manual` mới sửa/huỷ tay được
+             * @description Nguồn sinh phiếu - `manual` mới sửa/huỷ tay được
              * @enum {string}
              */
             source: "manual" | "payment" | "deposit" | "deposit_refund" | "maintenance";
             /** @description Id bản ghi nghiệp vụ gốc */
             sourceRefId?: string | null;
-            /** @description Tiền dạng string — ADR 0007 */
+            /** @description Tiền dạng string - ADR 0007 */
             amount: string;
             paymentMethod: string;
             categoryId?: string | null;
@@ -20540,7 +20540,7 @@ export interface components {
             tenantCustomerId?: string | null;
             customerName?: string | null;
             description?: string | null;
-            /** @description Ngày tiền di chuyển, ISO-8601 UTC — mọi lọc/tổng hợp chạy trên cột này */
+            /** @description Ngày tiền di chuyển, ISO-8601 UTC - mọi lọc/tổng hợp chạy trên cột này */
             occurredAt: string;
             /** @description Lúc nhập vào máy, ISO-8601 UTC */
             createdAt: string;
@@ -20563,13 +20563,13 @@ export interface components {
             /** @enum {string} */
             status: "draft" | "pending_approval" | "approved" | "cancelled";
             /**
-             * @description Nguồn sinh phiếu — `manual` mới sửa/huỷ tay được
+             * @description Nguồn sinh phiếu - `manual` mới sửa/huỷ tay được
              * @enum {string}
              */
             source: "manual" | "payment" | "deposit" | "deposit_refund" | "maintenance";
             /** @description Id bản ghi nghiệp vụ gốc */
             sourceRefId?: string | null;
-            /** @description Tiền dạng string — ADR 0007 */
+            /** @description Tiền dạng string - ADR 0007 */
             amount: string;
             paymentMethod: string;
             categoryId?: string | null;
@@ -20582,7 +20582,7 @@ export interface components {
             tenantCustomerId?: string | null;
             customerName?: string | null;
             description?: string | null;
-            /** @description Ngày tiền di chuyển, ISO-8601 UTC — mọi lọc/tổng hợp chạy trên cột này */
+            /** @description Ngày tiền di chuyển, ISO-8601 UTC - mọi lọc/tổng hợp chạy trên cột này */
             occurredAt: string;
             /** @description Lúc nhập vào máy, ISO-8601 UTC */
             createdAt: string;
@@ -20600,7 +20600,7 @@ export interface components {
             total: number;
             /** @example true */
             hasNext: boolean;
-            /** @description Số phiếu KHÔNG gắn xe nên không thuộc chi nhánh nào — chỉ > 0 khi đang lọc */
+            /** @description Số phiếu KHÔNG gắn xe nên không thuộc chi nhánh nào - chỉ > 0 khi đang lọc */
             unassignedCount: number;
         };
         ReceiptSummaryDto: {
@@ -20632,7 +20632,7 @@ export interface components {
             currentBookingId?: string | null;
             currentBookingCode?: string | null;
             currentCustomerName?: string | null;
-            /** @description Còn nợ của chuyến đang chạy — tiền dạng string (ADR 0007) */
+            /** @description Còn nợ của chuyến đang chạy - tiền dạng string (ADR 0007) */
             currentDebtAmount?: string | null;
         };
         ReceiptVehicleOptionListDto: {
@@ -20649,7 +20649,7 @@ export interface components {
             total: number;
             /** @description Tỉnh đã được ưu tiên khi xếp hạng; null nghĩa là xếp theo cả nước */
             nearProvinceCode?: string | null;
-            /** @description Kết quả có lẫn xe ngoài tỉnh được ưu tiên — UI cần nói rõ thay vì ngụ ý */
+            /** @description Kết quả có lẫn xe ngoài tỉnh được ưu tiên - UI cần nói rõ thay vì ngụ ý */
             mixedProvinces: boolean;
         };
         ReconciliationCustodiedDto: {
@@ -20662,10 +20662,10 @@ export interface components {
             walletAvailable: string;
             /** @description Phần đang bị khoá bởi lệnh rút chờ xử lý (hiện tại) */
             walletPending: string;
-            /** @description Hoàn cho khách VÃNG LAI còn chờ chuyển tay — nghĩa vụ chưa vào ví được */
+            /** @description Hoàn cho khách VÃNG LAI còn chờ chuyển tay - nghĩa vụ chưa vào ví được */
             refundsPending: string;
             refundsPendingCount: number;
-            /** @description Tiền vào CHƯA KHỚP được đích — vẫn nằm trong tài khoản và vẫn là tiền của một ai đó. Xếp vào giữ hộ chứ không vào chênh lệch: nó có chủ, chỉ là chưa biết ai. */
+            /** @description Tiền vào CHƯA KHỚP được đích - vẫn nằm trong tài khoản và vẫn là tiền của một ai đó. Xếp vào giữ hộ chứ không vào chênh lệch: nó có chủ, chỉ là chưa biết ai. */
             unmatchedIn: string;
             unmatchedInCount: number;
             /** @description Phí bảo hiểm đã thu chưa quyết toán với hãng. 0 khi cổng bảo hiểm chưa mở (Phase 7). */
@@ -20683,7 +20683,7 @@ export interface components {
             matchedSubscriptions: string;
             /** @description Phần đã khớp khoản giữ chỗ */
             matchedHolds: string;
-            /** @description Chưa khớp — hàng đợi admin */
+            /** @description Chưa khớp - hàng đợi admin */
             unmatched: string;
             unmatchedCount: number;
             /** @description Bị bỏ qua (chuyển nhầm…) */
@@ -20702,7 +20702,7 @@ export interface components {
             total: string;
         };
         ReconciliationPlatformDto: {
-            /** @description Phần XePrime giữ lại từ các hold ĐÃ CHỐT — đọc cột `settled_platform_amount` đã đóng băng. KHÔNG bằng tổng `service_fee_amount`: có hoa hồng `H`, và tài trợ mã khuyến mãi trừ vào phần nền tảng. */
+            /** @description Phần XePrime giữ lại từ các hold ĐÃ CHỐT - đọc cột `settled_platform_amount` đã đóng băng. KHÔNG bằng tổng `service_fee_amount`: có hoa hồng `H`, và tài trợ mã khuyến mãi trừ vào phần nền tảng. */
             serviceFeeRecognized: string;
             /** @description Tiền gói đã thu (subscription_invoices.paid_amount) */
             subscriptionsCollected: string;
@@ -20710,11 +20710,11 @@ export interface components {
             total: string;
         };
         RecordDepositRefundDto: {
-            /** @description Số tiền thực hoàn (chuỗi — ADR 0007) */
+            /** @description Số tiền thực hoàn (chuỗi - ADR 0007) */
             refundAmount: string;
             /** @enum {string} */
             refundMethod: "bank_transfer" | "cash" | "other";
-            /** @description ISO — mặc định hiện tại. Không được ở tương lai. */
+            /** @description ISO - mặc định hiện tại. Không được ở tương lai. */
             refundedAt?: string;
             /** @description Mã giao dịch/tham chiếu */
             reference?: string;
@@ -20722,7 +20722,7 @@ export interface components {
         };
         RecordPaymentDto: {
             /**
-             * @description Số tiền nhận, string thập phân — ADR 0007
+             * @description Số tiền nhận, string thập phân - ADR 0007
              * @example 500000
              */
             amount: string;
@@ -20750,7 +20750,7 @@ export interface components {
             /** @example 0901234567 */
             phone: string;
             /**
-             * @description Chỉ app native gửi — realm theo app (customer ↔ XePrime, partner ↔ XePrime Partner). Web bỏ trống: realm đến từ site.
+             * @description Chỉ app native gửi - realm theo app (customer ↔ XePrime, partner ↔ XePrime Partner). Web bỏ trống: realm đến từ site.
              * @enum {string}
              */
             clientApp?: "customer" | "partner";
@@ -20783,10 +20783,10 @@ export interface components {
             platform: "android" | "ios";
             /** @example 0.1.0 */
             appVersion?: string;
-            /** @description Tên máy do client tự khai — chỉ để người dùng nhận ra thiết bị. */
+            /** @description Tên máy do client tự khai - chỉ để người dùng nhận ra thiết bị. */
             deviceName?: string;
             /**
-             * @description App đã cài token này: `customer` (XePrime) hay `partner` (XePrime Partner). Bỏ trống = app hợp nhất cũ — thiết bị nhận MỌI audience. Chỉ lọc thông báo, không mở quyền gì.
+             * @description App đã cài token này: `customer` (XePrime) hay `partner` (XePrime Partner). Bỏ trống = app hợp nhất cũ - thiết bị nhận MỌI audience. Chỉ lọc thông báo, không mở quyền gì.
              * @enum {string}
              */
             clientApp?: "customer" | "partner";
@@ -20811,14 +20811,14 @@ export interface components {
             addressLine?: string;
             /** @description Mã địa điểm Google khi chọn từ gợi ý */
             placeId?: string;
-            /** @description Vĩ độ ghim đã xác nhận — thắng toạ độ server tự tra */
+            /** @description Vĩ độ ghim đã xác nhận - thắng toạ độ server tự tra */
             latitude?: number;
             longitude?: number;
             /** @enum {string} */
             locationSource?: "google_place" | "map_pin" | "geocoded" | "manual";
             /**
              * @deprecated
-             * @description Cũ — dùng `addressLine`
+             * @description Cũ - dùng `addressLine`
              */
             address?: string;
             /**
@@ -20839,11 +20839,11 @@ export interface components {
             reason?: string;
         };
         RejectRefundDto: {
-            /** @description Lý do từ chối — bắt buộc */
+            /** @description Lý do từ chối - bắt buộc */
             note: string;
         };
         RejectWithdrawalDto: {
-            /** @description Lý do — chủ ví đọc được câu này */
+            /** @description Lý do - chủ ví đọc được câu này */
             reason: string;
         };
         RemoveStaffResultDto: {
@@ -20861,20 +20861,20 @@ export interface components {
             overtimeGraceMinutes?: number | null;
             overtimeRoundingMinutes?: number | null;
             discountEnabled: boolean;
-            /** @description Km/ngày trong giá — null = không giới hạn quãng đường */
+            /** @description Km/ngày trong giá - null = không giới hạn quãng đường */
             includedDistanceKmPerDay?: number | null;
             /** @description VND mỗi km vượt hạn mức (ADR 0007: tiền là chuỗi) */
             excessDistanceFeePerKm?: string | null;
             /** @description Mốc ưu đãi canonical (theo tháng) */
             discountTiers: components["schemas"]["DiscountTierDto"][];
-            /** @description Mốc cũ theo ngày không quy đổi được — chỉ để cảnh báo, KHÔNG tính giá */
+            /** @description Mốc cũ theo ngày không quy đổi được - chỉ để cảnh báo, KHÔNG tính giá */
             legacyDiscountTiers: components["schemas"]["LegacyDiscountTierDto"][];
-            /** @description ISO — mốc phát hiện báo giá/preview cũ */
+            /** @description ISO - mốc phát hiện báo giá/preview cũ */
             updatedAt: string;
         };
         ReorderBannersDto: {
             /**
-             * @description Vị trí đang sắp — thứ tự tính riêng từng vị trí
+             * @description Vị trí đang sắp - thứ tự tính riêng từng vị trí
              * @default hero
              * @enum {string}
              */
@@ -20905,35 +20905,35 @@ export interface components {
              */
             code: string;
             /**
-             * @description Chỉ app native gửi — realm của tài khoản theo app (customer ↔ XePrime, partner ↔ XePrime Partner). Web bỏ trống: realm đến từ site.
+             * @description Chỉ app native gửi - realm của tài khoản theo app (customer ↔ XePrime, partner ↔ XePrime Partner). Web bỏ trống: realm đến từ site.
              * @enum {string}
              */
             clientApp?: "customer" | "partner";
         };
         ResolveHandoverOdometerDto: {
-            /** @description KM đọc trên đồng hồ, 0–2000000 */
+            /** @description KM đọc trên đồng hồ, 0-2000000 */
             odometerKm: number;
             /** @enum {string} */
             reasonCode: "handover_error" | "device_error" | "cluster_replaced" | "data_migration" | "other";
-            /** @description Lý do chi tiết — bắt buộc */
+            /** @description Lý do chi tiết - bắt buộc */
             reason: string;
             /** @description Xác nhận giảm KM có chủ ý */
             confirmDecrease?: boolean;
-            /** @description Bắt buộc — chống sửa đè */
+            /** @description Bắt buộc - chống sửa đè */
             expectedRowVersion: number;
         };
         ResolvePaymentOrderDto: {
-            /** @description Đã làm gì và vì sao — bắt buộc, để lượt đóng còn truy được */
+            /** @description Đã làm gì và vì sao - bắt buộc, để lượt đóng còn truy được */
             note: string;
-            /** @description Mã hoàn tiền phía cổng/ngân hàng nếu đã hoàn cho khách — bằng chứng chiều ra. Không có mã thì không ghi "đã hoàn". */
+            /** @description Mã hoàn tiền phía cổng/ngân hàng nếu đã hoàn cho khách - bằng chứng chiều ra. Không có mã thì không ghi "đã hoàn". */
             refundReference?: string;
         };
         ResolveSupportCaseDto: {
-            /** @description Kết luận — người mở case đọc câu này */
+            /** @description Kết luận - người mở case đọc câu này */
             resolution: string;
         };
         ReturnCollectPaymentDto: {
-            /** @description VND (chuỗi — ADR 0007) — đúng số khách còn phải trả */
+            /** @description VND (chuỗi - ADR 0007) - đúng số khách còn phải trả */
             amount: string;
             /** @enum {string} */
             method: "cash" | "bank_transfer" | "qr" | "card" | "other";
@@ -20959,19 +20959,19 @@ export interface components {
         ReturnSurchargeDraftDto: {
             /** @enum {string} */
             category: "overtime" | "cleaning" | "damage" | "waiting" | "long_distance" | "overnight" | "excess_mileage" | "other";
-            /** @description VND > 0 (chuỗi — ADR 0007) */
+            /** @description VND > 0 (chuỗi - ADR 0007) */
             amount: string;
             /** @description Lý do gửi khách. Trống ⇒ tên loại phụ phí */
             reason?: string;
         };
         ReverseTaxDto: {
-            /** @description Vì sao đảo dòng này — bắt buộc, ghi vào audit và vào sổ */
+            /** @description Vì sao đảo dòng này - bắt buộc, ghi vào audit và vào sổ */
             reason: string;
         };
         ReverseWithdrawalDto: {
-            /** @description Vì sao tiền quay lại (chuyển hụt, sai số tài khoản…) — chủ ví đọc được */
+            /** @description Vì sao tiền quay lại (chuyển hụt, sai số tài khoản…) - chủ ví đọc được */
             reason: string;
-            /** @description Bản ghi đang cầm — bấm hai lần (hay hai admin cùng bấm) thì lần sau nhận 409, không đảo đôi */
+            /** @description Bản ghi đang cầm - bấm hai lần (hay hai admin cùng bấm) thì lần sau nhận 409, không đảo đôi */
             rowVersion: number;
         };
         ReviewActionDto: {
@@ -20993,7 +20993,7 @@ export interface components {
             meta: components["schemas"]["PaginationMetaDto"];
         };
         ReviewSellerProfileDto: {
-            /** @description Lý do — bắt buộc khi yêu cầu bổ sung hoặc từ chối; người bán đọc câu này */
+            /** @description Lý do - bắt buộc khi yêu cầu bổ sung hoặc từ chối; người bán đọc câu này */
             note: string;
         };
         ReviewSummaryDto: {
@@ -21018,7 +21018,7 @@ export interface components {
              */
             bankCode: string;
             /**
-             * @description Số tài khoản — chỉ chữ số
+             * @description Số tài khoản - chỉ chữ số
              * @example 0011001234567
              */
             accountNumber: string;
@@ -21028,7 +21028,7 @@ export interface components {
             label?: string;
             /**
              * @deprecated
-             * @description Bỏ qua — tài khoản vừa khai luôn là tài khoản nhận tiền duy nhất.
+             * @description Bỏ qua - tài khoản vừa khai luôn là tài khoản nhận tiền duy nhất.
              */
             isDefault?: boolean;
         };
@@ -21043,7 +21043,7 @@ export interface components {
              * @example 125000000
              */
             balance: string;
-            /** @description Ghi chú — vì sao con số này, đọc ở đâu */
+            /** @description Ghi chú - vì sao con số này, đọc ở đâu */
             note?: string;
         };
         SaveDailyPricesDto: {
@@ -21083,11 +21083,11 @@ export interface components {
             items: components["schemas"]["SaveDriverSurchargeRuleDto"][];
         };
         SaveHandoverDto: {
-            /** @description KM đọc trên đồng hồ, 0–2000000 */
+            /** @description KM đọc trên đồng hồ, 0-2000000 */
             odometerKm?: number | null;
             /** @enum {string|null} */
             fuelLevel?: "full" | "three_quarter" | "half" | "quarter" | "empty" | null;
-            /** @description % pin xe điện (0–100) */
+            /** @description % pin xe điện (0-100) */
             batteryPercent?: number | null;
             /** @enum {string|null} */
             condition?: "normal" | "attention" | null;
@@ -21107,7 +21107,7 @@ export interface components {
             /** @description YYYY-MM-DD */
             lastServiceAt?: string | null;
             notes?: string | null;
-            /** @description Bắt buộc — chống sửa đè */
+            /** @description Bắt buộc - chống sửa đè */
             expectedRowVersion?: number | null;
         };
         SaveMaintenanceRecordDto: {
@@ -21116,7 +21116,7 @@ export interface components {
             /** @description Chỉ cho loại `other` */
             customTypeName?: string | null;
             title?: string | null;
-            /** @description ISO — ngày dự kiến (chỉ để nhắc, không giữ chỗ lịch xe — ADR 0079) */
+            /** @description ISO - ngày dự kiến (chỉ để nhắc, không giữ chỗ lịch xe - ADR 0079) */
             plannedStartAt?: string | null;
             /**
              * @deprecated
@@ -21125,7 +21125,7 @@ export interface components {
             plannedEndAt?: string | null;
             odometerKm?: number | null;
             providerName?: string | null;
-            /** @description Tiền string — ADR 0007 */
+            /** @description Tiền string - ADR 0007 */
             cost?: string | null;
             receiptCode?: string | null;
             notes?: string | null;
@@ -21136,32 +21136,32 @@ export interface components {
         };
         SaveRentalPolicyDto: {
             /**
-             * @description Hình thức bảo đảm — ba chế độ LOẠI TRỪ nhau. Quan hệ với depositAmount/collateralAssetTypes kiểm ở validatePolicy và ràng bằng CHECK ở DB.
+             * @description Hình thức bảo đảm - ba chế độ LOẠI TRỪ nhau. Quan hệ với depositAmount/collateralAssetTypes kiểm ở validatePolicy và ràng bằng CHECK ở DB.
              * @enum {string}
              */
             collateralMode: "cash" | "asset" | "none";
-            /** @description Loại tài sản nhận thế chấp — chỉ có nghĩa khi collateralMode = asset */
+            /** @description Loại tài sản nhận thế chấp - chỉ có nghĩa khi collateralMode = asset */
             collateralAssetTypes: ("vehicle_registration" | "motorbike" | "passport")[];
             /**
-             * @description Cọc thế chấp cố định VND (chuỗi) — khác 0 CHỈ khi collateralMode = cash
+             * @description Cọc thế chấp cố định VND (chuỗi) - khác 0 CHỈ khi collateralMode = cash
              * @example 5000000
              */
             depositAmount: string;
             deliveryEnabled: boolean;
-            /** @description Bán kính tự báo giá tối đa (km) — bắt buộc khi bật giao nhận, phải bằng mốc "đến" của bậc cuối */
+            /** @description Bán kính tự báo giá tối đa (km) - bắt buộc khi bật giao nhận, phải bằng mốc "đến" của bậc cuối */
             deliveryMaxRadiusKm?: number | null;
             deliveryTiers: components["schemas"]["DeliveryTierDto"][];
-            /** @description Phí mỗi giờ trả trễ (VND) — null = chưa cấu hình */
+            /** @description Phí mỗi giờ trả trễ (VND) - null = chưa cấu hình */
             overtimeFeePerHour?: string | null;
-            /** @description Phút trễ miễn phí tối đa — null = chưa cấu hình */
+            /** @description Phút trễ miễn phí tối đa - null = chưa cấu hình */
             overtimeGraceMinutes?: number | null;
-            /** @description Đơn vị làm tròn tối thiểu (phút) — null = chưa cấu hình */
+            /** @description Đơn vị làm tròn tối thiểu (phút) - null = chưa cấu hình */
             overtimeRoundingMinutes?: number | null;
             discountEnabled: boolean;
             discountTiers: components["schemas"]["DiscountTierDto"][];
-            /** @description Số km/ngày đã nằm trong giá thuê tự lái — null = không giới hạn */
+            /** @description Số km/ngày đã nằm trong giá thuê tự lái - null = không giới hạn */
             includedDistanceKmPerDay?: number | null;
-            /** @description Tiền mỗi km VƯỢT hạn mức (VND) — không cộng vào báo giá lúc đặt, chỉ đề xuất lúc quyết toán */
+            /** @description Tiền mỗi km VƯỢT hạn mức (VND) - không cộng vào báo giá lúc đặt, chỉ đề xuất lúc quyết toán */
             excessDistanceFeePerKm?: string | null;
         };
         SaveSellerProfileDto: {
@@ -21186,9 +21186,9 @@ export interface components {
              * @enum {string}
              */
             category: "overtime" | "cleaning" | "damage" | "waiting" | "long_distance" | "overnight" | "excess_mileage" | "other";
-            /** @description VND, không âm (chuỗi — ADR 0007) */
+            /** @description VND, không âm (chuỗi - ADR 0007) */
             amount: string;
-            /** @description Lý do — bắt buộc, đây là khoản trừ vào tiền của khách */
+            /** @description Lý do - bắt buộc, đây là khoản trừ vào tiền của khách */
             reason: string;
         };
         SaveVehicleDocumentDto: {
@@ -21212,38 +21212,38 @@ export interface components {
         };
         SaveVehicleOperationSettingsDto: {
             turnaroundBufferMinutes: number;
-            /** @description true = bỏ số riêng của xe, theo mặc định gian hàng (`turnaroundBufferMinutes` bị bỏ qua). Bỏ trống = false — app cũ gửi số như trước */
+            /** @description true = bỏ số riêng của xe, theo mặc định gian hàng (`turnaroundBufferMinutes` bị bỏ qua). Bỏ trống = false - app cũ gửi số như trước */
             useShopDefault?: boolean;
             /**
              * @deprecated
-             * @description Bỏ qua (ADR 0078) — chỉ để app cũ gửi lên không bị từ chối
+             * @description Bỏ qua (ADR 0078) - chỉ để app cũ gửi lên không bị từ chối
              */
             pickupWindows?: components["schemas"]["HandoverWindowDto"][];
             /**
              * @deprecated
-             * @description Bỏ qua (ADR 0078) — chỉ để app cũ gửi lên không bị từ chối
+             * @description Bỏ qua (ADR 0078) - chỉ để app cũ gửi lên không bị từ chối
              */
             returnWindows?: components["schemas"]["HandoverWindowDto"][];
         };
         SaveVehiclePricingDto: {
             /**
-             * @description NGUỒN CHÍNH SÁCH của xe — KHÔNG còn khoá phần giá (20/08). shop = xoá bản ghi đè và quay về kế thừa; vehicle = lưu bộ chính sách riêng (phải gửi kèm policy).
+             * @description NGUỒN CHÍNH SÁCH của xe - KHÔNG còn khoá phần giá (20/08). shop = xoá bản ghi đè và quay về kế thừa; vehicle = lưu bộ chính sách riêng (phải gửi kèm policy).
              * @enum {string}
              */
             source: "shop" | "vehicle";
-            /** @description Giá thuê ngày thường VND — độc lập với source (giá luôn sửa được) */
+            /** @description Giá thuê ngày thường VND - độc lập với source (giá luôn sửa được) */
             weekdayPrice?: string;
-            /** @description Giá cuối tuần VND — độc lập với source (giá luôn sửa được); null = xoá (dùng giá thường) */
+            /** @description Giá cuối tuần VND - độc lập với source (giá luôn sửa được); null = xoá (dùng giá thường) */
             weekendPrice?: string | null;
-            /** @description Giá tháng thuê dài hạn — độc lập với source (giá luôn sửa được); null = xoá giá tháng */
+            /** @description Giá tháng thuê dài hạn - độc lập với source (giá luôn sửa được); null = xoá giá tháng */
             monthlyPrice?: string | null;
-            /** @description Giá/ngày đã gồm tài xế (nội thành/cơ bản) — độc lập với source (giá luôn sửa được) */
+            /** @description Giá/ngày đã gồm tài xế (nội thành/cơ bản) - độc lập với source (giá luôn sửa được) */
             withDriverDailyPrice?: string | null;
-            /** @description Giá/ngày có tài xế liên tỉnh — null = xoá (rơi về giá cơ bản) */
+            /** @description Giá/ngày có tài xế liên tỉnh - null = xoá (rơi về giá cơ bản) */
             withDriverInterCityPrice?: string | null;
-            /** @description Giá/ngày có tài xế liên tỉnh 1 chiều — null = xoá */
+            /** @description Giá/ngày có tài xế liên tỉnh 1 chiều - null = xoá */
             withDriverOneWayPrice?: string | null;
-            /** @description Giá thuê theo giờ — null = xe không cho thuê giờ */
+            /** @description Giá thuê theo giờ - null = xe không cho thuê giờ */
             hourlyPrice?: string | null;
             /** @description % khuyến mãi trực tiếp cho dịch vụ tự lái; null = ngừng khuyến mãi */
             discountPercent?: number | null;
@@ -21268,7 +21268,7 @@ export interface components {
             monthlyPrincipal?: string | null;
             /** @description Lãi phải trả mỗi tháng (chuỗi thập phân VND) */
             monthlyInterest?: string | null;
-            /** @description Lãi suất cố định %/năm (chuỗi 0–100) */
+            /** @description Lãi suất cố định %/năm (chuỗi 0-100) */
             interestRatePercent?: string | null;
             /** @description Thời hạn vay (tháng) */
             termMonths?: number | null;
@@ -21276,15 +21276,15 @@ export interface components {
             interestMethod?: "reducing_balance" | "flat";
             /** @description Tên chủ xe / doanh nghiệp (bên cho thuê / đối tác) */
             ownerName?: string | null;
-            /** @description SĐT liên hệ của chủ xe — `0…`/`84…`/`+84…`, chỉ chữ số; lưu `0…` (ADR 0082) */
+            /** @description SĐT liên hệ của chủ xe - `0…`/`84…`/`+84…`, chỉ chữ số; lưu `0…` (ADR 0082) */
             ownerPhone?: string | null;
             /** @description Email chủ xe (tuỳ chọn) */
             ownerEmail?: string | null;
             /** @description Tiền thuê định kỳ hàng tháng (chuỗi thập phân VND) */
             monthlyRent?: string | null;
-            /** @description % doanh thu chia cho CHỦ XE (0–100). Cơ sở: tiền thuê sau giảm giá; không gồm cọc/giao nhận/quá giờ/phạt/bồi thường. */
+            /** @description % doanh thu chia cho CHỦ XE (0-100). Cơ sở: tiền thuê sau giảm giá; không gồm cọc/giao nhận/quá giờ/phạt/bồi thường. */
             commissionPercent?: string | null;
-            /** @description Ngày trong tháng đến hạn đóng tiền (1–31) */
+            /** @description Ngày trong tháng đến hạn đóng tiền (1-31) */
             paymentDay?: number | null;
             /** @description Ngày bắt đầu hợp đồng / giải ngân (YYYY-MM-DD) */
             startDate?: string | null;
@@ -21311,7 +21311,7 @@ export interface components {
             reviewNote?: string | null;
             /** @description Còn sửa được không (đang chờ xác minh thì không) */
             editable: boolean;
-            /** @description Trường còn thiếu để GỬI xác minh — rỗng là gửi được */
+            /** @description Trường còn thiếu để GỬI xác minh - rỗng là gửi được */
             missingFields: string[];
         };
         SendEmailOtpDto: {
@@ -21345,7 +21345,7 @@ export interface components {
             clientApp?: "customer" | "partner";
         };
         SendOtpResultDto: {
-            /** @description ISO-8601 UTC — thời điểm mã hết hạn */
+            /** @description ISO-8601 UTC - thời điểm mã hết hạn */
             expiresAt: string;
             /** @description CHỈ ở dev (OTP_MODE=mock): mã để tự điền/test. Production luôn null. */
             devCode?: string | null;
@@ -21368,7 +21368,7 @@ export interface components {
         };
         SendTestResultDto: {
             /**
-             * @description Email của CHÍNH admin — không nhận địa chỉ từ client.
+             * @description Email của CHÍNH admin - không nhận địa chỉ từ client.
              * @example admin@xeprime.vn
              */
             to: string;
@@ -21403,7 +21403,7 @@ export interface components {
         SettleHoldDto: {
             /** @enum {string} */
             outcome: "kept" | "settled" | "split_late_cancel" | "refunded" | "forfeited" | "released_to_shop";
-            /** @description Lý do — bắt buộc, đây là quyết định về tiền của người khác */
+            /** @description Lý do - bắt buộc, đây là quyết định về tiền của người khác */
             note: string;
         };
         SettlementSurchargeRuleDto: {
@@ -21413,7 +21413,7 @@ export interface components {
             category: string;
             /** @description DRIVER_SURCHARGE_UNIT */
             unit: string;
-            /** @description VND string — ADR 0007 */
+            /** @description VND string - ADR 0007 */
             amount: string;
             thresholdValue?: number | null;
         };
@@ -21427,13 +21427,13 @@ export interface components {
         ShopOperationDefaultsDto: {
             /** @enum {string} */
             vehicleType: "car" | "motorbike";
-            /** @description Phút chuẩn bị giữa hai chuyến — null khi chưa đặt (xe theo mặc định áp 0) */
+            /** @description Phút chuẩn bị giữa hai chuyến - null khi chưa đặt (xe theo mặc định áp 0) */
             turnaroundBufferMinutes?: number | null;
             /** @description Số xe cùng loại đang theo mặc định này (chưa tự đặt riêng) */
             inheritingVehicles: number;
             /** @description Số xe cùng loại đã tự đặt thời gian chết riêng */
             overriddenVehicles: number;
-            /** @description ISO — null khi chưa lưu lần nào */
+            /** @description ISO - null khi chưa lưu lần nào */
             updatedAt?: string | null;
         };
         ShopOwnerAccountDto: {
@@ -21464,7 +21464,7 @@ export interface components {
             customerName: string;
             /** @description ISO-8601 UTC */
             createdAt: string;
-            /** @description Xe đã thuê — để mở trang chi tiết từ đánh giá */
+            /** @description Xe đã thuê - để mở trang chi tiết từ đánh giá */
             vehicleId: string;
             /** @description Tên xe đã thuê */
             vehicleName: string;
@@ -21476,7 +21476,7 @@ export interface components {
         };
         ShopTrustDto: {
             /**
-             * @description Hộ kinh doanh / doanh nghiệp — CHỈ khi hồ sơ người bán đã được nền tảng xác minh VÀ giấy phép kinh doanh đã được duyệt; cá nhân hoặc chưa đủ ⇒ null
+             * @description Hộ kinh doanh / doanh nghiệp - CHỈ khi hồ sơ người bán đã được nền tảng xác minh VÀ giấy phép kinh doanh đã được duyệt; cá nhân hoặc chưa đủ ⇒ null
              * @enum {string|null}
              */
             legalEntityType?: "household_business" | "company" | null;
@@ -21523,34 +21523,34 @@ export interface components {
             overtimeGraceMinutes?: number | null;
             overtimeRoundingMinutes?: number | null;
             discountEnabled: boolean;
-            /** @description Km/ngày trong giá — null = không giới hạn quãng đường */
+            /** @description Km/ngày trong giá - null = không giới hạn quãng đường */
             includedDistanceKmPerDay?: number | null;
             /** @description VND mỗi km vượt hạn mức (ADR 0007: tiền là chuỗi) */
             excessDistanceFeePerKm?: string | null;
             /** @description Mốc ưu đãi canonical (theo tháng) */
             discountTiers: components["schemas"]["DiscountTierDto"][];
-            /** @description Mốc cũ theo ngày không quy đổi được — chỉ để cảnh báo, KHÔNG tính giá */
+            /** @description Mốc cũ theo ngày không quy đổi được - chỉ để cảnh báo, KHÔNG tính giá */
             legacyDiscountTiers: components["schemas"]["LegacyDiscountTierDto"][];
-            /** @description ISO — mốc phát hiện báo giá/preview cũ */
+            /** @description ISO - mốc phát hiện báo giá/preview cũ */
             updatedAt: string;
             /** @enum {string} */
             source: "shop" | "vehicle";
         };
         SourceContractDownloadDto: {
-            /** @description Signed GET URL ngắn hạn — không cache, không lưu */
+            /** @description Signed GET URL ngắn hạn - không cache, không lưu */
             downloadUrl: string;
-            /** @description ISO — thời điểm URL hết hiệu lực */
+            /** @description ISO - thời điểm URL hết hiệu lực */
             expiresAt: string;
         };
         SourceContractPresignDto: {
-            /** @description ID file riêng tư — dùng cho bước hoàn tất + đính vào hồ sơ */
+            /** @description ID file riêng tư - dùng cho bước hoàn tất + đính vào hồ sơ */
             fileId: string;
             /** @description URL PUT lên bucket riêng tư (hết hạn ngắn) */
             uploadUrl: string;
             expiresIn: number;
         };
         StaffDto: {
-            /** @description ID user — dùng cho PATCH/DELETE /platform/staff/:userId */
+            /** @description ID user - dùng cho PATCH/DELETE /platform/staff/:userId */
             userId: string;
             displayName: string;
             email?: string | null;
@@ -21570,7 +21570,7 @@ export interface components {
             /** @enum {string} */
             provider: "momo" | "vnpay";
             /**
-             * @description Mở từ đâu — `native` thì trang quay về hiện nút mở lại ứng dụng. Mặc định `web`. Không phải quyền.
+             * @description Mở từ đâu - `native` thì trang quay về hiện nút mở lại ứng dụng. Mặc định `web`. Không phải quyền.
              * @enum {string}
              */
             client?: "web" | "native";
@@ -21585,15 +21585,15 @@ export interface components {
             tenantId: string;
             /** @description Mã đối soát chuyển khoản, tiền tố XPC (ADR 0083) */
             code: string;
-            /** @description Tổng các hoá đơn con — VND, chuỗi (ADR 0007) */
+            /** @description Tổng các hoá đơn con - VND, chuỗi (ADR 0007) */
             totalAmount: string;
-            /** @description Tiền đã về, cộng dồn — VND, chuỗi */
+            /** @description Tiền đã về, cộng dồn - VND, chuỗi */
             paidAmount: string;
             /** @enum {string} */
             status: "draft" | "issued" | "partially_paid" | "paid" | "void";
             /** @description ISO-8601 UTC */
             paidAt?: string | null;
-            /** @description Hạn chuyển khoản — quá hạn thì phiếu và mọi hoá đơn con cùng void */
+            /** @description Hạn chuyển khoản - quá hạn thì phiếu và mọi hoá đơn con cùng void */
             expiresAt?: string | null;
             /** @description ISO-8601 UTC */
             createdAt: string;
@@ -21611,11 +21611,11 @@ export interface components {
              * @enum {string}
              */
             status: "trial" | "active" | "past_due" | "expired" | "cancelled";
-            /** @description Tiền cả kỳ (snapshot lúc gán), dạng string — ADR 0007 */
+            /** @description Tiền cả kỳ (snapshot lúc gán), dạng string - ADR 0007 */
             price: string;
-            /** @description Kỳ hạn THÁNG LỊCH — null ở dòng lịch sử trước ADR 0015 */
+            /** @description Kỳ hạn THÁNG LỊCH - null ở dòng lịch sử trước ADR 0015 */
             termMonths?: number | null;
-            /** @description SNAPSHOT hạn mức lúc gán (ADR 0041 điều 3) — null ở dòng tuyến hoa hồng và dòng trước ADR 0041 */
+            /** @description SNAPSHOT hạn mức lúc gán (ADR 0041 điều 3) - null ở dòng tuyến hoa hồng và dòng trước ADR 0041 */
             quota?: components["schemas"]["PlanQuotaDto"] | null;
             /**
              * @description SNAPSHOT phạm vi loại xe của bậc lúc gán (ADR 0065)
@@ -21623,7 +21623,7 @@ export interface components {
              */
             vehicleScope: "all" | "car" | "motorbike";
             /**
-             * @description SNAPSHOT lúc gán (ADR 0024 điều 2) — không đọc xuyên qua plans
+             * @description SNAPSHOT lúc gán (ADR 0024 điều 2) - không đọc xuyên qua plans
              * @enum {string|null}
              */
             billingMode?: "commission" | "package" | null;
@@ -21635,7 +21635,7 @@ export interface components {
             endsAt: string;
             note?: string | null;
             /**
-             * @description Trạng thái KỲ chấm bằng đồng hồ server (subscriptionTermStateOf) — đang hiệu lực / chờ đến kỳ / đã hết hạn / đã huỷ. Hiển thị cái này, không hiển thị status lưu trong DB
+             * @description Trạng thái KỲ chấm bằng đồng hồ server (subscriptionTermStateOf) - đang hiệu lực / chờ đến kỳ / đã hết hạn / đã huỷ. Hiển thị cái này, không hiển thị status lưu trong DB
              * @enum {string}
              */
             termState: "current" | "scheduled" | "ended" | "cancelled";
@@ -21650,7 +21650,7 @@ export interface components {
         SubscriptionInvoiceDto: {
             id: string;
             tenantId: string;
-            /** @description NULL tới khi gói được kích hoạt (tiền đã về hoặc admin gán tay — ADR 0026 điều 4) */
+            /** @description NULL tới khi gói được kích hoạt (tiền đã về hoặc admin gán tay - ADR 0026 điều 4) */
             subscriptionId?: string | null;
             /** @description Mã đối soát chuyển khoản, tiền tố XPG (ADR 0022 điều 3) */
             code: string;
@@ -21669,25 +21669,25 @@ export interface components {
             periodFrom: string;
             /** @description ISO-8601 UTC */
             periodTo: string;
-            /** @description VND, chuỗi — ADR 0007 */
+            /** @description VND, chuỗi - ADR 0007 */
             subtotal: string;
-            /** @description VND, chuỗi — ADR 0007 */
+            /** @description VND, chuỗi - ADR 0007 */
             discountAmount: string;
-            /** @description VND, chuỗi — ADR 0007 */
+            /** @description VND, chuỗi - ADR 0007 */
             totalAmount: string;
-            /** @description Tiền đã về, cộng dồn — VND, chuỗi */
+            /** @description Tiền đã về, cộng dồn - VND, chuỗi */
             paidAmount: string;
             /** @enum {string} */
             status: "draft" | "issued" | "partially_paid" | "paid" | "void";
             /** @description ISO-8601 UTC */
             paidAt?: string | null;
-            /** @description Hạn chuyển khoản của hoá đơn issued — quá hạn job lật void */
+            /** @description Hạn chuyển khoản của hoá đơn issued - quá hạn job lật void */
             expiresAt?: string | null;
             /** @description ISO-8601 UTC */
             createdAt: string;
-            /** @description Phiếu thanh toán GỘP chứa hoá đơn này (ADR 0083) — null = hoá đơn trả riêng bằng `code`. Có phiếu thì chuyển khoản bằng `checkoutCode`, không bằng `code` */
+            /** @description Phiếu thanh toán GỘP chứa hoá đơn này (ADR 0083) - null = hoá đơn trả riêng bằng `code`. Có phiếu thì chuyển khoản bằng `checkoutCode`, không bằng `code` */
             checkoutId?: string | null;
-            /** @description Mã đối soát `XPC…` của phiếu gộp — mã để chuyển khoản khi có */
+            /** @description Mã đối soát `XPC…` của phiếu gộp - mã để chuyển khoản khi có */
             checkoutCode?: string | null;
         };
         SubscriptionInvoicePageDto: {
@@ -21715,7 +21715,7 @@ export interface components {
              * @enum {string}
              */
             kind: "new" | "renew" | "upgrade" | "change_next";
-            /** @description Ngày bắt đầu DỰ KIẾN (ISO-8601 UTC). new/upgrade = lúc xem trước — kỳ thật bắt đầu khi tiền về */
+            /** @description Ngày bắt đầu DỰ KIẾN (ISO-8601 UTC). new/upgrade = lúc xem trước - kỳ thật bắt đầu khi tiền về */
             startsAt: string;
             /** @description Ngày kết thúc DỰ KIẾN (ISO-8601 UTC) */
             endsAt: string;
@@ -21751,7 +21751,7 @@ export interface components {
             closedAt?: string | null;
             createdAt: string;
             updatedAt: string;
-            /** @description Dòng thời gian — append-only */
+            /** @description Dòng thời gian - append-only */
             events: components["schemas"]["SupportCaseEventDto"][];
         };
         SupportCaseDto: {
@@ -21829,12 +21829,12 @@ export interface components {
             id: string;
             name: string;
             slug: string;
-            /** @description Vai của PHIÊN trong gian hàng — luôn `shop_viewer` (không cổng chỉ-chủ nào mở). */
+            /** @description Vai của PHIÊN trong gian hàng - luôn `shop_viewer` (không cổng chỉ-chủ nào mở). */
             roleKey: string;
             /** @enum {string} */
             branchScope: "all" | "limited";
             logoUrl: string | null;
-            /** @description % phí dịch vụ đang hiệu lực — chỉ ở tuyến hoa hồng, như `CurrentTenantSummaryDto`. */
+            /** @description % phí dịch vụ đang hiệu lực - chỉ ở tuyến hoa hồng, như `CurrentTenantSummaryDto`. */
             serviceFeePercent: number | null;
             publicVehicleCount: number;
             /** @enum {string} */
@@ -21872,11 +21872,11 @@ export interface components {
         TaxPeriodSummaryDto: {
             /** @example 2026-09 */
             periodKey: string;
-            /** @description Tổng nghĩa vụ của kỳ — đã trừ các bút toán đảo */
+            /** @description Tổng nghĩa vụ của kỳ - đã trừ các bút toán đảo */
             totalAmount: string;
             /** @description Tổng giá trị thuê chịu thuế của kỳ */
             totalTaxableBase: string;
-            /** @description Tổng GTGT của kỳ (ADR 0068) — dòng một-mức trước 22/10/2026 không tách nên không có ở đây */
+            /** @description Tổng GTGT của kỳ (ADR 0068) - dòng một-mức trước 22/10/2026 không tách nên không có ở đây */
             totalVatAmount: string;
             /** @description Tổng TNCN của kỳ (ADR 0068) */
             totalPitAmount: string;
@@ -21895,7 +21895,7 @@ export interface components {
         };
         TaxQueueSummaryDto: {
             count: number;
-            /** @description Tổng tiền của các dòng đang đếm, string — ADR 0007 */
+            /** @description Tổng tiền của các dòng đang đếm, string - ADR 0007 */
             amount: string;
             /**
              * @description Kỳ hiện hành theo giờ VN
@@ -21903,29 +21903,29 @@ export interface components {
              */
             period: string;
             /**
-             * @description Kỳ CŨ NHẤT còn dòng chưa kê khai — null khi không còn dòng nào
+             * @description Kỳ CŨ NHẤT còn dòng chưa kê khai - null khi không còn dòng nào
              * @example 2026-09
              */
             oldestPeriod: string | null;
         };
         TaxRateDto: {
             /**
-             * @description % thuế GTGT khấu trừ thay (0–5)
+             * @description % thuế GTGT khấu trừ thay (0-5)
              * @example 5
              */
             vatPercent: number;
             /**
-             * @description % thuế TNCN khấu trừ thay (0–5)
+             * @description % thuế TNCN khấu trừ thay (0-5)
              * @example 2
              */
             pitPercent: number;
         };
         TaxRatesDto: {
-            /** @description Tự lái — nhóm dịch vụ (NĐ 117: 5% + 2%) */
+            /** @description Tự lái - nhóm dịch vụ (NĐ 117: 5% + 2%) */
             self_drive: components["schemas"]["TaxRateDto"];
-            /** @description Thuê dài hạn — nhóm dịch vụ (NĐ 117: 5% + 2%) */
+            /** @description Thuê dài hạn - nhóm dịch vụ (NĐ 117: 5% + 2%) */
             long_term: components["schemas"]["TaxRateDto"];
-            /** @description Có tài xế — nhóm vận tải (NĐ 117: 3% + 1,5%) */
+            /** @description Có tài xế - nhóm vận tải (NĐ 117: 3% + 1,5%) */
             with_driver: components["schemas"]["TaxRateDto"];
         };
         TaxRowDto: {
@@ -21935,7 +21935,7 @@ export interface components {
             tenantId: string;
             tenantName: string;
             /**
-             * @description Loại chủ thể người bán KHAI trong hồ sơ lúc ghi sổ. `unknown` = gian hàng chưa khai hồ sơ người bán — tờ khai phải thấy khoảng trống đó, không được gộp vào `individual` (dù tiền đã bị khấu trừ theo mức cá nhân — xem `taxSubjectType`).
+             * @description Loại chủ thể người bán KHAI trong hồ sơ lúc ghi sổ. `unknown` = gian hàng chưa khai hồ sơ người bán - tờ khai phải thấy khoảng trống đó, không được gộp vào `individual` (dù tiền đã bị khấu trừ theo mức cá nhân - xem `taxSubjectType`).
              * @enum {string}
              */
             entityType: "individual" | "household_business" | "company" | "unknown";
@@ -21944,13 +21944,13 @@ export interface components {
              * @enum {string|null}
              */
             taxSubjectType?: "individual" | "household_business" | "company" | null;
-            /** @description MST — snapshot lúc ghi sổ */
+            /** @description MST - snapshot lúc ghi sổ */
             taxCode?: string | null;
-            /** @description Tên pháp lý — snapshot */
+            /** @description Tên pháp lý - snapshot */
             legalName?: string | null;
-            /** @description Giá trị thuê chịu thuế `B` — KHÔNG gồm bảo hiểm */
+            /** @description Giá trị thuê chịu thuế `B` - KHÔNG gồm bảo hiểm */
             taxableBase: string;
-            /** @description % tổng đã áp — SNAPSHOT, không phải tỷ lệ hiện hành */
+            /** @description % tổng đã áp - SNAPSHOT, không phải tỷ lệ hiện hành */
             percent: number;
             /** @description % GTGT đã áp (ADR 0068). null ở dòng một-mức trước 22/10/2026 */
             vatPercent?: number | null;
@@ -21961,7 +21961,7 @@ export interface components {
             /** @description Thuế TNCN. ÂM ở dòng đảo */
             pitAmount?: string | null;
             /**
-             * @description Nhóm NĐ 117 — service (5% + 2%) | transport (3% + 1,5%)
+             * @description Nhóm NĐ 117 - service (5% + 2%) | transport (3% + 1,5%)
              * @enum {string|null}
              */
             taxCategory?: "service" | "transport" | null;
@@ -22006,7 +22006,7 @@ export interface components {
             activeBookingCount: number;
             /** @description Số lần khách không tới nhận xe */
             noShowCount: number;
-            /** @description Số chuyến trả xe MUỘN — chỉ đếm khi có `actual_return_at` thật, không suy đoán */
+            /** @description Số chuyến trả xe MUỘN - chỉ đếm khi có `actual_return_at` thật, không suy đoán */
             lateReturnCount: number;
             /** @description ISO-8601 UTC · null = chưa thuê lần nào */
             lastRentalAt?: string | null;
@@ -22019,10 +22019,10 @@ export interface components {
             id: string;
             fullName: string;
             phone: string;
-            /** @description Dạng chuẩn hoá — định danh khách trong gian hàng này */
+            /** @description Dạng chuẩn hoá - định danh khách trong gian hàng này */
             normalizedPhone: string;
             email?: string | null;
-            /** @description Địa chỉ HIỂN THỊ đã ghép sẵn — dùng thẳng, đừng ghép lại ở client */
+            /** @description Địa chỉ HIỂN THỊ đã ghép sẵn - dùng thẳng, đừng ghép lại ở client */
             address?: string | null;
             /** @description Địa chỉ có cấu trúc. null = khách chưa khai địa chỉ. */
             location?: components["schemas"]["AddressViewDto"] | null;
@@ -22030,7 +22030,7 @@ export interface components {
             source: "manual" | "booking" | "marketplace";
             /** @enum {string} */
             riskLevel: "normal" | "watchlist" | "blocked";
-            /** @description Lý do rủi ro — NỘI BỘ, chỉ đi tới người trong gian hàng */
+            /** @description Lý do rủi ro - NỘI BỘ, chỉ đi tới người trong gian hàng */
             riskReason?: string | null;
             hasAccount: boolean;
             archivedAt?: string | null;
@@ -22040,9 +22040,9 @@ export interface components {
             updatedAt: string;
             /** @description Hoạt động gần đây (tối đa 5). Rỗng khi người gọi không có `bookings.view`. */
             recentBookings: components["schemas"]["CustomerBookingItemDto"][];
-            /** @description Đơn đang chạy, hoặc đơn sắp nhận gần nhất — thẻ "Đơn thuê hiện tại" */
+            /** @description Đơn đang chạy, hoặc đơn sắp nhận gần nhất - thẻ "Đơn thuê hiện tại" */
             currentBooking?: components["schemas"]["CustomerBookingItemDto"] | null;
-            /** @description Khoản phải thu đang mở — null khi thiếu finance.view hoặc bookings.view */
+            /** @description Khoản phải thu đang mở - null khi thiếu finance.view hoặc bookings.view */
             receivable?: components["schemas"]["CustomerReceivableDto"] | null;
         };
         TenantCustomerListItemDto: {
@@ -22052,7 +22052,7 @@ export interface components {
             activeBookingCount: number;
             /** @description Số lần khách không tới nhận xe */
             noShowCount: number;
-            /** @description Số chuyến trả xe MUỘN — chỉ đếm khi có `actual_return_at` thật, không suy đoán */
+            /** @description Số chuyến trả xe MUỘN - chỉ đếm khi có `actual_return_at` thật, không suy đoán */
             lateReturnCount: number;
             /** @description ISO-8601 UTC · null = chưa thuê lần nào */
             lastRentalAt?: string | null;
@@ -22073,7 +22073,7 @@ export interface components {
             source: "manual" | "booking" | "marketplace";
             /** @description Đã liên kết tài khoản trên nền tảng */
             hasAccount: boolean;
-            /** @description ISO — null = đang hoạt động */
+            /** @description ISO - null = đang hoạt động */
             archivedAt?: string | null;
         };
         TenantCustomerPageDto: {
@@ -22083,7 +22083,7 @@ export interface components {
         TenantCustomerSummaryDto: {
             /** @description Khách đang hoạt động (chưa lưu trữ) */
             activeCustomers: number;
-            /** @description Khách quen — từ 2 chuyến hoàn tất trở lên */
+            /** @description Khách quen - từ 2 chuyến hoàn tất trở lên */
             returningCustomers: number;
             watchlistCustomers: number;
             blockedCustomers: number;
@@ -22091,9 +22091,9 @@ export interface components {
             totalDebt?: string | null;
             /** @description Tổng số chuyến ĐÃ HOÀN TẤT của mọi khách (02/11/2026) */
             totalRentals: number;
-            /** @description Tổng giá trị đơn (không tính đơn huỷ) — null khi thiếu finance.view */
+            /** @description Tổng giá trị đơn (không tính đơn huỷ) - null khi thiếu finance.view */
             totalRevenue?: string | null;
-            /** @description Số khách còn nợ · null khi thiếu finance.view — FE ẩn hẳn ô, không hiện 0 */
+            /** @description Số khách còn nợ · null khi thiếu finance.view - FE ẩn hẳn ô, không hiện 0 */
             debtCustomers?: number | null;
         };
         TenantFeatureStateDto: {
@@ -22115,7 +22115,7 @@ export interface components {
              * @enum {string}
              */
             billingMode: "commission" | "package";
-            /** @description % hoa hồng — chỉ có ở bậc commission */
+            /** @description % hoa hồng - chỉ có ở bậc commission */
             commissionPercent?: number | null;
             /**
              * @description Phạm vi loại xe (ADR 0065): motorbike | car | all (doanh nghiệp, tuyến hoa hồng)
@@ -22138,14 +22138,14 @@ export interface components {
             plans: components["schemas"]["TenantPlanDto"][];
         };
         TenantProfileDto: {
-            /** @description Tên hiển thị — chính là `tenants.name` (= `MyShopDto.name`), giữ cho tương thích */
+            /** @description Tên hiển thị - chính là `tenants.name` (= `MyShopDto.name`), giữ cho tương thích */
             displayName?: string | null;
             bio?: string | null;
             /** @description Giới thiệu đã định dạng (HTML đã lọc ở server); null = chỉ có bản chữ thuần `bio` */
             bioHtml?: string | null;
             logoUrl?: string | null;
             coverUrl?: string | null;
-            /** @description Địa chỉ HIỂN THỊ đã ghép — bản sao của chi nhánh mặc định */
+            /** @description Địa chỉ HIỂN THỊ đã ghép - bản sao của chi nhánh mặc định */
             address?: string | null;
             provinceCode?: string | null;
             provinceName?: string | null;
@@ -22153,7 +22153,7 @@ export interface components {
             wardName?: string | null;
             /**
              * @deprecated
-             * @description Mã số thuế — chính là `seller_profiles.tax_id` (đọc ở `GET /seller-profile`), giữ cho tương thích
+             * @description Mã số thuế - chính là `seller_profiles.tax_id` (đọc ở `GET /seller-profile`), giữ cho tương thích
              */
             taxCode?: string | null;
             businessLicenseNo?: string | null;
@@ -22177,14 +22177,14 @@ export interface components {
         };
         TransitionBookingDto: {
             /**
-             * @description Trạng thái đích — chỉ hai quyết định bấm tay: huỷ đơn hoặc khách không đến
+             * @description Trạng thái đích - chỉ hai quyết định bấm tay: huỷ đơn hoặc khách không đến
              * @enum {string}
              */
             status: "cancelled" | "no_show";
-            /** @description Lý do — BẮT BUỘC khi status = no_show, hoặc cancelled với reasonCategory = other. Ghi vào audit (afterJson.reason), KHÔNG ghi vào note của đơn. Khi cancelled, câu này cũng vào thông báo huỷ gửi tài khoản khách */
+            /** @description Lý do - BẮT BUỘC khi status = no_show, hoặc cancelled với reasonCategory = other. Ghi vào audit (afterJson.reason), KHÔNG ghi vào note của đơn. Khi cancelled, câu này cũng vào thông báo huỷ gửi tài khoản khách */
             reason?: string;
             /**
-             * @description Nhóm lý do — BẮT BUỘC khi status = cancelled
+             * @description Nhóm lý do - BẮT BUỘC khi status = cancelled
              * @enum {string}
              */
             reasonCategory?: "vehicle_unavailable" | "schedule_conflict" | "customer_requirements" | "customer_unreachable" | "customer_changed_plan" | "driver_unavailable" | "other";
@@ -22200,7 +22200,7 @@ export interface components {
         };
         TripDriverIncidentDto: {
             /**
-             * @description `arranging` "Đang sắp xếp tài xế" · `rearranging` "Đang điều phối lại" · `urgent` còn dưới 2 giờ — cảnh báo + hỗ trợ
+             * @description `arranging` "Đang sắp xếp tài xế" · `rearranging` "Đang điều phối lại" · `urgent` còn dưới 2 giờ - cảnh báo + hỗ trợ
              * @enum {string}
              */
             level: "arranging" | "rearranging" | "urgent";
@@ -22211,7 +22211,7 @@ export interface components {
             branchName?: string | null;
             /** @description "Phường/Xã, Tỉnh/TP" */
             areaLabel?: string | null;
-            /** @description Địa chỉ đầy đủ — chỉ khi exact */
+            /** @description Địa chỉ đầy đủ - chỉ khi exact */
             address?: string | null;
             latitude?: number | null;
             longitude?: number | null;
@@ -22236,11 +22236,11 @@ export interface components {
         };
         UpdateBookingDeliveryFeeDto: {
             /**
-             * @description Phí giao nhận VND (chuỗi — ADR 0007). `0` = miễn phí.
+             * @description Phí giao nhận VND (chuỗi - ADR 0007). `0` = miễn phí.
              * @example 120000
              */
             deliveryFee: string;
-            /** @description Ghi chú NỘI BỘ (lý do, mã tham chiếu) — chỉ vào audit, KHÔNG hiển thị cho khách */
+            /** @description Ghi chú NỘI BỘ (lý do, mã tham chiếu) - chỉ vào audit, KHÔNG hiển thị cho khách */
             note?: string;
         };
         UpdateBookingDto: {
@@ -22265,7 +22265,7 @@ export interface components {
             placeId?: string;
             /**
              * @deprecated
-             * @description Cũ — dùng `addressLine`
+             * @description Cũ - dùng `addressLine`
              */
             address?: string;
             phone?: string;
@@ -22276,12 +22276,12 @@ export interface components {
         };
         UpdateCatalogItemDto: {
             label?: string;
-            /** @description Nhãn tiếng Anh — chuỗi rỗng/null = bỏ bản dịch, dùng lại `label` */
+            /** @description Nhãn tiếng Anh - chuỗi rỗng/null = bỏ bản dịch, dùng lại `label` */
             labelEn?: string | null;
             description?: string | null;
             descriptionEn?: string | null;
             iconUrl?: string | null;
-            /** @description Chỉ kiểu dáng — bật thì bắt buộc có showcaseImageUrl */
+            /** @description Chỉ kiểu dáng - bật thì bắt buộc có showcaseImageUrl */
             showOnHome?: boolean;
             /** @description Chỉ kiểu dáng */
             showcaseImageUrl?: string | null;
@@ -22315,13 +22315,13 @@ export interface components {
         UpdateCustomerDocumentDto: {
             holderName?: string | null;
             documentNumber?: string | null;
-            /** @description YYYY-MM-DD — null = không thời hạn */
+            /** @description YYYY-MM-DD - null = không thời hạn */
             expiresAt?: string | null;
         };
         UpdateCustomerRiskDto: {
             /** @enum {string} */
             riskLevel: "normal" | "watchlist" | "blocked";
-            /** @description Lý do NỘI BỘ — bắt buộc khi khác `normal`. Không bao giờ hiển thị cho khách. */
+            /** @description Lý do NỘI BỘ - bắt buộc khi khác `normal`. Không bao giờ hiển thị cho khách. */
             reason?: string | null;
         };
         UpdateDriverDto: {
@@ -22336,14 +22336,14 @@ export interface components {
             reason?: string;
         };
         UpdateDriverWageSettingsDto: {
-            /** @description Tiền công/ngày mặc định (VND, bội 1.000đ) — null = xoá mức mặc định */
+            /** @description Tiền công/ngày mặc định (VND, bội 1.000đ) - null = xoá mức mặc định */
             dailyWage: string | null;
         };
         UpdateFollowUpDto: {
             /** @enum {string} */
             status: "new" | "contacted" | "rebooked" | "not_interested";
             note?: string | null;
-            /** @description Người phụ trách — tài khoản nền tảng; null để bỏ giao */
+            /** @description Người phụ trách - tài khoản nền tảng; null để bỏ giao */
             assigneeUserId?: string | null;
             /** @description Trạng thái "đã gọi cho khách": `true` ghi mốc liên hệ (giữ mốc cũ nếu đã có), `false` xoá mốc, bỏ trống = không đổi */
             markContacted?: boolean;
@@ -22411,7 +22411,7 @@ export interface components {
         };
         UpdatePlanGuideTemplateDto: {
             name?: string;
-            /** @description Sửa từng nội dung — chỉ nội dung/trường gửi lên mới đổi. */
+            /** @description Sửa từng nội dung - chỉ nội dung/trường gửi lên mới đổi. */
             variants?: components["schemas"]["PlanGuideTemplateVariantPatchDto"][];
             /**
              * @description Khoá lạc quan: gửi `version` đang sửa ⇒ 409 CONFLICT nếu người khác đã lưu trước.
@@ -22439,7 +22439,7 @@ export interface components {
         };
         UpdateSubscriptionDto: {
             /**
-             * @description Giá CẢ KỲ mới — VND, chuỗi. Chỉ kỳ do admin gán (origin=admin); kỳ sinh từ hoá đơn gian hàng đã trả ⇒ 409 SUBSCRIPTION_PRICE_NOT_EDITABLE. Hoá đơn của kỳ được ghi lại theo giá mới
+             * @description Giá CẢ KỲ mới - VND, chuỗi. Chỉ kỳ do admin gán (origin=admin); kỳ sinh từ hoá đơn gian hàng đã trả ⇒ 409 SUBSCRIPTION_PRICE_NOT_EDITABLE. Hoá đơn của kỳ được ghi lại theo giá mới
              * @example 15000000
              */
             price?: string;
@@ -22474,7 +22474,7 @@ export interface components {
             phone?: string;
             /** @description Email liên hệ hiển thị cho khách. Chuỗi rỗng = gỡ. */
             email?: string;
-            /** @description Giới thiệu CHỮ THUẦN. Gửi `bio` mà không kèm `bioHtml` (app native, form cũ) thì bản định dạng bị gỡ — hai bản không bao giờ nói hai điều khác nhau */
+            /** @description Giới thiệu CHỮ THUẦN. Gửi `bio` mà không kèm `bioHtml` (app native, form cũ) thì bản định dạng bị gỡ - hai bản không bao giờ nói hai điều khác nhau */
             bio?: string;
             /** @description Giới thiệu ĐÃ ĐỊNH DẠNG từ editor (đậm · nghiêng · gạch chân · căn lề). Server lọc theo danh sách thẻ cho phép và tự rút chữ thuần ghi vào `bio` (bỏ qua `bio` gửi kèm). Chuỗi rỗng = gỡ */
             bioHtml?: string;
@@ -22482,7 +22482,7 @@ export interface components {
             coverUrl?: string;
             /**
              * @deprecated
-             * @description Cũ — dùng `addressLine`
+             * @description Cũ - dùng `addressLine`
              */
             address?: string;
             /** @description Số nhà, đường, toà nhà của chi nhánh mặc định */
@@ -22506,7 +22506,7 @@ export interface components {
             startAt: string;
             /**
              * Format: date-time
-             * @description Kết thúc khoá, ISO-8601 UTC — phải sau startAt
+             * @description Kết thúc khoá, ISO-8601 UTC - phải sau startAt
              */
             endAt: string;
             /** @enum {string} */
@@ -22534,7 +22534,7 @@ export interface components {
             /** @example 51K-123.45 */
             plateNumber?: string | null;
             /**
-             * @description Key hãng xe thuộc danh mục `vehicle_brand` (GET /catalog) — không phải tên tự do
+             * @description Key hãng xe thuộc danh mục `vehicle_brand` (GET /catalog) - không phải tên tự do
              * @example vinfast
              */
             brand?: string | null;
@@ -22565,12 +22565,12 @@ export interface components {
             /** @description Xe điện: mức tiêu thụ điện (kWh/100km). Gửi null = bỏ khai. */
             electricConsumptionKwhPer100Km?: number | null;
             /**
-             * @description Key kiểu dáng thuộc danh mục `body_type` (GET /catalog) — chỉ với ô tô. Gửi null để xoá.
+             * @description Key kiểu dáng thuộc danh mục `body_type` (GET /catalog) - chỉ với ô tô. Gửi null để xoá.
              * @example suv
              */
             bodyType?: string | null;
             /**
-             * @description Phân khúc — chỉ với xe máy. Gửi null để xoá.
+             * @description Phân khúc - chỉ với xe máy. Gửi null để xoá.
              * @example scooter
              * @enum {string|null}
              */
@@ -22582,41 +22582,41 @@ export interface components {
             description?: string | null;
             /**
              * @deprecated
-             * @description BỊ BỎ QUA — ảnh bìa luôn là ảnh mặt trước trong `media`
+             * @description BỊ BỎ QUA - ảnh bìa luôn là ảnh mặt trước trong `media`
              */
             mainImageUrl?: string | null;
             /**
-             * @description Giá ngày thường, string thập phân — ADR 0007
+             * @description Giá ngày thường, string thập phân - ADR 0007
              * @example 600000
              */
             weekdayPrice?: string;
             /**
-             * @description Giá cuối tuần — gửi null = xoá (dùng giá ngày thường)
+             * @description Giá cuối tuần - gửi null = xoá (dùng giá ngày thường)
              * @example 750000
              */
             weekendPrice?: string | null;
             /**
-             * @description Giá thuê theo giờ, string thập phân — ADR 0007. Gửi null = không cho thuê giờ.
+             * @description Giá thuê theo giờ, string thập phân - ADR 0007. Gửi null = không cho thuê giờ.
              * @example 120000
              */
             hourlyPrice?: string | null;
             /**
-             * @description Giá tháng tham chiếu thuê dài hạn (÷30 ra đơn giá ngày) — chỉ có nghĩa khi serviceTypes chứa long_term. Gửi null = bỏ giá tháng.
+             * @description Giá tháng tham chiếu thuê dài hạn (÷30 ra đơn giá ngày) - chỉ có nghĩa khi serviceTypes chứa long_term. Gửi null = bỏ giá tháng.
              * @example 8000000
              */
             monthlyPrice?: string | null;
             /**
-             * @description Giá/ngày ĐÃ GỒM tài xế — chỉ có nghĩa khi serviceTypes chứa with_driver. Gửi null = shop báo giá khi duyệt.
+             * @description Giá/ngày ĐÃ GỒM tài xế - chỉ có nghĩa khi serviceTypes chứa with_driver. Gửi null = shop báo giá khi duyệt.
              * @example 1500000
              */
             withDriverDailyPrice?: string | null;
             /**
-             * @description Giá/ngày có tài xế liên tỉnh (khứ hồi) — null = rơi về giá cơ bản kèm ghi chú
+             * @description Giá/ngày có tài xế liên tỉnh (khứ hồi) - null = rơi về giá cơ bản kèm ghi chú
              * @example 1600000
              */
             withDriverInterCityPrice?: string | null;
             /**
-             * @description Giá/ngày có tài xế liên tỉnh 1 CHIỀU — null = fallback liên tỉnh → cơ bản
+             * @description Giá/ngày có tài xế liên tỉnh 1 CHIỀU - null = fallback liên tỉnh → cơ bản
              * @example 2000000
              */
             withDriverOneWayPrice?: string | null;
@@ -22628,7 +22628,7 @@ export interface components {
             images?: string[];
             media?: components["schemas"]["VehicleMediaInputDto"][];
             /**
-             * @description Key tiện ích thuộc danh mục `vehicle_feature` (GET /catalog) — thay toàn bộ khi gửi
+             * @description Key tiện ích thuộc danh mục `vehicle_feature` (GET /catalog) - thay toàn bộ khi gửi
              * @example [
              *       "bluetooth",
              *       "gps"
@@ -22647,11 +22647,11 @@ export interface components {
             expiresIn: number;
         };
         UpsertFeePolicyDto: {
-            /** @example Luồng tiền v2 — phí sàn cố định, hoa hồng lũy tiến */
+            /** @example Luồng tiền v2 - phí sàn cố định, hoa hồng lũy tiến */
             name: string;
             note?: string | null;
             /**
-             * @description LEGACY — % phí dịch vụ của mô hình cũ (0–30). Luồng tiền v2 không đọc trường này; vắng mặt ⇒ tạo nháp 0, sửa nháp giữ số cũ.
+             * @description LEGACY - % phí dịch vụ của mô hình cũ (0-30). Luồng tiền v2 không đọc trường này; vắng mặt ⇒ tạo nháp 0, sửa nháp giữ số cũ.
              * @example 0
              */
             serviceFeePercent?: number;
@@ -22661,17 +22661,17 @@ export interface components {
              */
             holdMinAmount: string;
             /**
-             * @description TRẦN của hạn chuyển tiền giữ chỗ (phút). Hạn thật = clamp(round(ΔT × 30%), 15 phút, trần) với ΔT = giờ nhận − lúc duyệt, tính xuôi từ lúc duyệt và kẹp bởi giờ nhận — ADR 0066
+             * @description TRẦN của hạn chuyển tiền giữ chỗ (phút). Hạn thật = clamp(round(ΔT × 30%), 15 phút, trần) với ΔT = giờ nhận − lúc duyệt, tính xuôi từ lúc duyệt và kẹp bởi giờ nhận - ADR 0066
              * @example 120
              */
             holdPaymentWindowMinutes: number;
             /**
-             * @description TRẦN của cửa sổ huỷ miễn phí (giờ). Cửa sổ thật = clamp(round(ΔT × 20%), 15 phút, trần) với ΔT = giờ nhận − lúc duyệt, tính xuôi từ lúc duyệt và kẹp bởi giờ nhận; 0 = tắt huỷ miễn phí — ADR 0066
+             * @description TRẦN của cửa sổ huỷ miễn phí (giờ). Cửa sổ thật = clamp(round(ΔT × 20%), 15 phút, trần) với ΔT = giờ nhận − lúc duyệt, tính xuôi từ lúc duyệt và kẹp bởi giờ nhận; 0 = tắt huỷ miễn phí - ADR 0066
              * @example 2
              */
             freeCancelHours: number;
             /**
-             * @description % phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi trực tiếp của xe, không gồm phí giao xe) — ADR 0066. Phí sàn, hoa hồng và bảo hiểm cộng THÊM trên D
+             * @description % phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi trực tiếp của xe, không gồm phí giao xe) - ADR 0066. Phí sàn, hoa hồng và bảo hiểm cộng THÊM trên D
              * @example 15
              */
             depositPercent: number;
@@ -22687,35 +22687,35 @@ export interface components {
             depositMaxPercent: number;
             /** @description Cổng khấu trừ thuế thay chủ xe (ADR 0068) */
             taxEnabled: boolean;
-            /** @description Bảng mức khấu trừ theo loại dịch vụ, tách GTGT/TNCN — bắt buộc khi taxEnabled (ADR 0068). Áp cho cá nhân và hộ kinh doanh; doanh nghiệp đã xác minh không bị khấu trừ. */
+            /** @description Bảng mức khấu trừ theo loại dịch vụ, tách GTGT/TNCN - bắt buộc khi taxEnabled (ADR 0068). Áp cho cá nhân và hộ kinh doanh; doanh nghiệp đã xác minh không bị khấu trừ. */
             taxRates?: components["schemas"]["TaxRatesDto"] | null;
             /**
-             * @description Căn cứ pháp lý của việc khấu trừ — bắt buộc khi taxEnabled
+             * @description Căn cứ pháp lý của việc khấu trừ - bắt buộc khi taxEnabled
              * @example NĐ 117/2025/NĐ-CP · NĐ 68/2026/NĐ-CP
              */
             taxLegalBasis?: string | null;
             tripInsuranceEnabled: boolean;
-            /** @description LEGACY — bảo hiểm tính theo NGÀY từ luồng tiền v2 (`tripInsuranceDailyAmount`) */
+            /** @description LEGACY - bảo hiểm tính theo NGÀY từ luồng tiền v2 (`tripInsuranceDailyAmount`) */
             tripInsurancePercent?: number | null;
             vehicleProtectionEnabled: boolean;
-            /** @description LEGACY — bảo hiểm tính theo NGÀY từ luồng tiền v2 (`vehicleProtectionDailyAmount`) */
+            /** @description LEGACY - bảo hiểm tính theo NGÀY từ luồng tiền v2 (`vehicleProtectionDailyAmount`) */
             vehicleProtectionPercent?: number | null;
-            /** @description Đối tác bảo hiểm THẬT — chỉ điền khi đã có hợp đồng (ADR 0028 điều 5) */
+            /** @description Đối tác bảo hiểm THẬT - chỉ điền khi đã có hợp đồng (ADR 0028 điều 5) */
             insurancePartnerName?: string | null;
-            /** @description `S` — phí sàn CỐ ĐỊNH mỗi đơn, phía khách, theo loại xe. Áp cho cả hai tuyến. */
+            /** @description `S` - phí sàn CỐ ĐỊNH mỗi đơn, phía khách, theo loại xe. Áp cho cả hai tuyến. */
             customerPlatformFee?: components["schemas"]["PerVehicleTypeAmountDto"];
-            /** @description `H` — nấc hoa hồng lũy tiến theo ngày của tuyến hoa hồng, `fromDay` tăng dần từ 1 */
+            /** @description `H` - nấc hoa hồng lũy tiến theo ngày của tuyến hoa hồng, `fromDay` tăng dần từ 1 */
             ownerCommissionTiers?: components["schemas"]["OwnerCommissionTierDto"][];
-            /** @description `IV` — biểu phí bảo hiểm vật chất xe MỖI NGÀY theo loại xe (khách tích chọn mới tính) */
+            /** @description `IV` - biểu phí bảo hiểm vật chất xe MỖI NGÀY theo loại xe (khách tích chọn mới tính) */
             vehicleProtectionDailyAmount?: components["schemas"]["PerVehicleTypeAmountDto"];
-            /** @description `IP` — biểu phí bảo hiểm tai nạn người MỖI NGÀY theo loại xe (khách tích chọn mới tính) */
+            /** @description `IP` - biểu phí bảo hiểm tai nạn người MỖI NGÀY theo loại xe (khách tích chọn mới tính) */
             tripInsuranceDailyAmount?: components["schemas"]["PerVehicleTypeAmountDto"];
             /** @description Giới hạn chặn số vô lý của chuyến có tài xế (ADR 0075). Vắng ⇒ giữ số của bản nháp (sửa) / mặc định nền tảng (tạo mới). */
             withDriverLimits?: components["schemas"]["WithDriverLimitsDto"];
         };
         UpsertPromoCodeDto: {
             /**
-             * @description Mã khách gõ. Server CHUẨN HOÁ (in hoa, bỏ khoảng trắng) trước khi lưu — client gửi chữ thường vẫn đúng.
+             * @description Mã khách gõ. Server CHUẨN HOÁ (in hoa, bỏ khoảng trắng) trước khi lưu - client gửi chữ thường vẫn đúng.
              * @example BANMOI
              */
             code: string;
@@ -22725,7 +22725,7 @@ export interface components {
             /** @enum {string} */
             discountType: "fixed" | "percent";
             /**
-             * @description Số tiền giảm (VND string) — bắt buộc khi discountType = fixed
+             * @description Số tiền giảm (VND string) - bắt buộc khi discountType = fixed
              * @example 100000
              */
             discountAmount?: string | null;
@@ -22740,7 +22740,7 @@ export interface components {
              */
             maxDiscountAmount?: string | null;
             /**
-             * @description Sàn TIỀN THUÊ đủ điều kiện (VND string) — sau khuyến mãi trực tiếp, chưa gồm phí/bảo hiểm/cọc. "0" = không yêu cầu.
+             * @description Sàn TIỀN THUÊ đủ điều kiện (VND string) - sau khuyến mãi trực tiếp, chưa gồm phí/bảo hiểm/cọc. "0" = không yêu cầu.
              * @example 800000
              */
             minOrderAmount: string;
@@ -22766,7 +22766,7 @@ export interface components {
             startsAt: string;
             /** @description ISO-8601 */
             endsAt: string;
-            /** @description Kích hoạt ngay — mã có hiệu lực trong khoảng thời gian đã chọn */
+            /** @description Kích hoạt ngay - mã có hiệu lực trong khoảng thời gian đã chọn */
             isActive: boolean;
             /** @description Hiện trong danh sách mã khả dụng của khách (false = chỉ gõ tay) */
             listed: boolean;
@@ -22788,7 +22788,7 @@ export interface components {
              */
             notificationsUnread: number;
             /**
-             * @description Mốc máy chủ (epoch ms) lúc đếm. Client so nó với `updatedAt` của bản chiếu realtime để một document cũ không đè lên lượt đọc mới hơn — ví dụ sau một quãng `FIRESTORE_ENABLED=false`.
+             * @description Mốc máy chủ (epoch ms) lúc đếm. Client so nó với `updatedAt` của bản chiếu realtime để một document cũ không đè lên lượt đọc mới hơn - ví dụ sau một quãng `FIRESTORE_ENABLED=false`.
              * @example 1757600000000
              */
             asOf: number;
@@ -22803,16 +22803,16 @@ export interface components {
             emailVerified: boolean;
         };
         VatInvoiceSettingDto: {
-            /** @description Gian hàng / chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê — áp cho mọi xe, khách lọc được trên chợ. XePrime không xuất hoá đơn thay chủ xe. */
+            /** @description Gian hàng / chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê - áp cho mọi xe, khách lọc được trên chợ. XePrime không xuất hoá đơn thay chủ xe. */
             vatInvoiceSupported: boolean;
         };
         Vehicle360SummaryDto: {
             stats: components["schemas"]["VehicleStatsDto"];
-            /** @description Đơn sắp tới/đang chạy (tối đa 3, sớm nhất trước) — chỉ khi có `bookings.view` */
+            /** @description Đơn sắp tới/đang chạy (tối đa 3, sớm nhất trước) - chỉ khi có `bookings.view` */
             upcomingBookings?: components["schemas"]["VehicleBookingBriefDto"][];
-            /** @description Đơn thay đổi gần nhất (tối đa 3, mới nhất trước) — chỉ khi có `bookings.view` */
+            /** @description Đơn thay đổi gần nhất (tối đa 3, mới nhất trước) - chỉ khi có `bookings.view` */
             recentBookings?: components["schemas"]["VehicleBookingBriefDto"][];
-            /** @description KM hiện tại — null = chưa từng ghi nhận, KHÔNG phải 0 km */
+            /** @description KM hiện tại - null = chưa từng ghi nhận, KHÔNG phải 0 km */
             currentOdometerKm?: number | null;
             /** @description @xeprime/types → OdometerSource */
             currentOdometerSource?: string | null;
@@ -22832,7 +22832,7 @@ export interface components {
              * @enum {string}
              */
             severity: "critical" | "warning" | "info";
-            /** @description Câu mô tả việc cần làm — đã lọc dữ liệu nhạy cảm */
+            /** @description Câu mô tả việc cần làm - đã lọc dữ liệu nhạy cảm */
             title: string;
             detail?: string | null;
             /** @description Chỉ ĐẾM, không kèm định danh */
@@ -22882,9 +22882,9 @@ export interface components {
         };
         VehicleApprovalDeliveryTierDto: {
             toKm: number;
-            /** @description Phí trọn gói VND — '0' là miễn phí */
+            /** @description Phí trọn gói VND - '0' là miễn phí */
             fee?: string;
-            /** @description Đơn giá VND mỗi km — bậc tính theo km */
+            /** @description Đơn giá VND mỗi km - bậc tính theo km */
             perKm?: string;
         };
         VehicleApprovalDetailDto: {
@@ -22913,7 +22913,7 @@ export interface components {
             approvalBlockers: components["schemas"]["VehicleApprovalBlockersDto"];
             owner?: components["schemas"]["VehicleApprovalPersonDto"] | null;
             submitter: components["schemas"]["VehicleApprovalPersonDto"];
-            /** @description Đủ năm mục theo thứ tự hiển thị — mục chưa từng đánh dấu là passed=false */
+            /** @description Đủ năm mục theo thứ tự hiển thị - mục chưa từng đánh dấu là passed=false */
             manualChecks: components["schemas"]["VehicleApprovalCheckDto"][];
             internalNote: components["schemas"]["VehicleApprovalInternalNoteDto"];
             logs: components["schemas"]["ApprovalLogEntryDto"][];
@@ -22924,7 +22924,7 @@ export interface components {
         };
         VehicleApprovalInternalNoteDto: {
             note?: string | null;
-            /** @description ISO-8601 UTC — gửi lại ở `expectedUpdatedAt` khi lưu */
+            /** @description ISO-8601 UTC - gửi lại ở `expectedUpdatedAt` khi lưu */
             updatedAt?: string | null;
             updatedByName?: string | null;
         };
@@ -23032,11 +23032,11 @@ export interface components {
             motorbikeCategory?: string | null;
             fuelType?: string | null;
             transmission?: string | null;
-            /** @description lít/100km — Decimal dạng chuỗi */
+            /** @description lít/100km - Decimal dạng chuỗi */
             fuelConsumptionCombined?: string | null;
             engineDisplacementCc?: number | null;
             electricRangeKm?: number | null;
-            /** @description kWh — Decimal dạng chuỗi */
+            /** @description kWh - Decimal dạng chuỗi */
             batteryCapacityKwh?: string | null;
             /** @description kWh/100km */
             electricConsumptionKwhPer100Km?: string | null;
@@ -23064,7 +23064,7 @@ export interface components {
             rowVersion: number;
             /** @description Tên người tạo (đã xoá tài khoản → null) */
             createdByName?: string | null;
-            /** @description Phiên hỗ trợ của nền tảng đã đặt khoá này (ADR 0050 §13) — null = gian hàng tự đặt. */
+            /** @description Phiên hỗ trợ của nền tảng đã đặt khoá này (ADR 0050 §13) - null = gian hàng tự đặt. */
             supportContextId?: string | null;
             /** @description ISO-8601 UTC */
             createdAt: string;
@@ -23081,9 +23081,9 @@ export interface components {
             pickupAt: string;
             /** @description ISO-8601 UTC */
             returnAt: string;
-            /** @description Tiền dạng string — ADR 0007 */
+            /** @description Tiền dạng string - ADR 0007 */
             totalAmount: string;
-            /** @description ISO-8601 UTC — lần thay đổi gần nhất của đơn */
+            /** @description ISO-8601 UTC - lần thay đổi gần nhất của đơn */
             updatedAt: string;
         };
         VehicleBranchSummaryDto: {
@@ -23095,7 +23095,7 @@ export interface components {
         VehicleBusyDayDto: {
             /** @description Ngày local Asia/Ho_Chi_Minh, YYYY-MM-DD */
             date: string;
-            /** @description Bận trọn ngày — ngày này không nhận cũng không trả xe được */
+            /** @description Bận trọn ngày - ngày này không nhận cũng không trả xe được */
             fullyBusy: boolean;
             /** @description Các quãng bận trong ngày (đã gộp, tăng dần). Rỗng khi `fullyBusy` */
             periods: components["schemas"]["VehicleBusyPeriodDto"][];
@@ -23105,7 +23105,7 @@ export interface components {
             days: components["schemas"]["VehicleBusyDayDto"][];
             /** @description Ngày đầu cửa sổ đã áp dụng (YYYY-MM-DD) */
             from: string;
-            /** @description Ngày cuối cửa sổ đã áp dụng (YYYY-MM-DD) — có thể bị kẹp về trần */
+            /** @description Ngày cuối cửa sổ đã áp dụng (YYYY-MM-DD) - có thể bị kẹp về trần */
             to: string;
         };
         VehicleBusyPeriodDto: {
@@ -23141,42 +23141,42 @@ export interface components {
             model?: string | null;
             manufactureYear?: number | null;
             seatCount?: number | null;
-            /** @description Key kiểu dáng — tra nhãn ở danh mục `body_type` (GET /catalog) */
+            /** @description Key kiểu dáng - tra nhãn ở danh mục `body_type` (GET /catalog) */
             bodyType?: string | null;
             /**
-             * @description Phân khúc xe máy — đối xứng với bodyType của ô tô
+             * @description Phân khúc xe máy - đối xứng với bodyType của ô tô
              * @enum {string|null}
              */
             motorbikeCategory?: "scooter" | "underbone" | "naked" | "sport" | "cruiser" | "adventure" | "touring" | "offroad" | "other" | null;
             /** @description Mẫu xe chuẩn đang gắn (GET /catalog/models); null = xe khai tay */
             vehicleCatalogModelId?: string | null;
-            /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái (0–100) */
+            /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái (0-100) */
             discountPercent?: number | null;
             /** @enum {string} */
             operationStatus: "available" | "renting" | "maintenance" | "inactive";
             /**
-             * @description Trục KIỂM DUYỆT của nền tảng — `hidden` = nền tảng gỡ xe xuống, không phải chủ xe tạm ẩn
+             * @description Trục KIỂM DUYỆT của nền tảng - `hidden` = nền tảng gỡ xe xuống, không phải chủ xe tạm ẩn
              * @enum {string}
              */
             publicStatus: "draft" | "pending_public_review" | "approved_public" | "needs_revision" | "rejected" | "hidden" | "archived";
             /** @description LỰA CHỌN của chủ xe: có cho xe hiện ngoài chợ không. Độc lập với publicStatus (ADR 0048) */
             marketplaceEnabled: boolean;
-            /** @description Kết quả hiển thị THỰC TẾ — gộp xoá mềm + trạng thái gian hàng + kiểm duyệt + lựa chọn chủ xe */
+            /** @description Kết quả hiển thị THỰC TẾ - gộp xoá mềm + trạng thái gian hàng + kiểm duyệt + lựa chọn chủ xe */
             isMarketplaceVisible: boolean;
             /**
-             * @description Vì sao xe đang (không) hiện ngoài chợ. Server suy — client KHÔNG tự ghép lại từ nhiều status
+             * @description Vì sao xe đang (không) hiện ngoài chợ. Server suy - client KHÔNG tự ghép lại từ nhiều status
              * @enum {string}
              */
             marketplaceVisibilityReason: "visible" | "owner_paused" | "not_approved" | "platform_hidden" | "shop_inactive" | "archived";
             mainImageUrl?: string | null;
-            /** @description Tiền dạng string — ADR 0007 */
+            /** @description Tiền dạng string - ADR 0007 */
             weekdayPrice?: string | null;
             weekendPrice?: string | null;
             /** @description ISO-8601 UTC */
             updatedAt: string;
             latestPublicReview?: components["schemas"]["VehiclePublicReviewDto"] | null;
             color?: string | null;
-            /** @description Key nhiên liệu — tra nhãn ở danh mục `fuel_type` (GET /catalog) */
+            /** @description Key nhiên liệu - tra nhãn ở danh mục `fuel_type` (GET /catalog) */
             fuelType?: string | null;
             lengthMm?: number | null;
             widthMm?: number | null;
@@ -23199,15 +23199,15 @@ export interface components {
             /** @description L/100km dạng decimal string */
             fuelConsumptionCombined?: string | null;
             description?: string | null;
-            /** @description Giá thuê giờ — string tiền (ADR 0007) */
+            /** @description Giá thuê giờ - string tiền (ADR 0007) */
             hourlyPrice?: string | null;
-            /** @description Giá tháng tham chiếu thuê dài hạn — string tiền (ADR 0007) */
+            /** @description Giá tháng tham chiếu thuê dài hạn - string tiền (ADR 0007) */
             monthlyPrice?: string | null;
-            /** @description Giá/ngày đã gồm tài xế (nội thành/cơ bản) — string tiền (ADR 0007) */
+            /** @description Giá/ngày đã gồm tài xế (nội thành/cơ bản) - string tiền (ADR 0007) */
             withDriverDailyPrice?: string | null;
-            /** @description Giá/ngày có tài xế lộ trình liên tỉnh — string tiền (ADR 0007) */
+            /** @description Giá/ngày có tài xế lộ trình liên tỉnh - string tiền (ADR 0007) */
             withDriverInterCityPrice?: string | null;
-            /** @description Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều — string tiền (ADR 0007) */
+            /** @description Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều - string tiền (ADR 0007) */
             withDriverOneWayPrice?: string | null;
             /** @description Chủ xe hỗ trợ giao xe tận nơi */
             deliveryEnabled: boolean;
@@ -23224,7 +23224,7 @@ export interface components {
             /** @enum {string} */
             type: "registration" | "inspection" | "insurance" | "other";
             customTypeName?: string | null;
-            /** @description YYYY-MM-DD — null = không thời hạn; cần cho cảnh báo hết hạn */
+            /** @description YYYY-MM-DD - null = không thời hạn; cần cho cảnh báo hết hạn */
             expiresAt?: string | null;
             presentation: string;
             warningDays?: number | null;
@@ -23242,7 +23242,7 @@ export interface components {
             /** @description YYYY-MM-DD */
             issuedAt?: string | null;
             notes?: string | null;
-            /** @description Optimistic concurrency — nộp lại khi update */
+            /** @description Optimistic concurrency - nộp lại khi update */
             rowVersion: number;
             activeVersion?: components["schemas"]["VehicleDocumentVersionDto"] | null;
         };
@@ -23260,7 +23260,7 @@ export interface components {
             field: "holderName" | "holderAddress" | "plateNumber" | "chassisNumber" | "engineNumber" | "issuedAt" | "expiresAt" | "documentNumber";
             /** @description Giá trị nhận dạng (đã chuẩn hoá) */
             value: string;
-            /** @description Độ tin cậy 0–100 */
+            /** @description Độ tin cậy 0-100 */
             confidence?: number | null;
             /** @description Bằng chứng nguồn */
             evidence?: string | null;
@@ -23282,7 +23282,7 @@ export interface components {
             /** @enum {string} */
             type: "registration" | "inspection" | "insurance" | "other";
             customTypeName?: string | null;
-            /** @description YYYY-MM-DD — null = không thời hạn; cần cho cảnh báo hết hạn */
+            /** @description YYYY-MM-DD - null = không thời hạn; cần cho cảnh báo hết hạn */
             expiresAt?: string | null;
             presentation: string;
             warningDays?: number | null;
@@ -23298,7 +23298,7 @@ export interface components {
             file: components["schemas"]["VehicleDocumentFileDto"];
             /** @description ISO */
             uploadedAt: string;
-            /** @description ISO — đã bị thay thế lúc */
+            /** @description ISO - đã bị thay thế lúc */
             archivedAt?: string | null;
         };
         VehicleDocumentVersionListDto: {
@@ -23319,35 +23319,35 @@ export interface components {
             model?: string | null;
             manufactureYear?: number | null;
             seatCount?: number | null;
-            /** @description Key kiểu dáng — tra nhãn ở danh mục `body_type` (GET /catalog) */
+            /** @description Key kiểu dáng - tra nhãn ở danh mục `body_type` (GET /catalog) */
             bodyType?: string | null;
             /**
-             * @description Phân khúc xe máy — đối xứng với bodyType của ô tô
+             * @description Phân khúc xe máy - đối xứng với bodyType của ô tô
              * @enum {string|null}
              */
             motorbikeCategory?: "scooter" | "underbone" | "naked" | "sport" | "cruiser" | "adventure" | "touring" | "offroad" | "other" | null;
             /** @description Mẫu xe chuẩn đang gắn (GET /catalog/models); null = xe khai tay */
             vehicleCatalogModelId?: string | null;
-            /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái (0–100) */
+            /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái (0-100) */
             discountPercent?: number | null;
             /** @enum {string} */
             operationStatus: "available" | "renting" | "maintenance" | "inactive";
             /**
-             * @description Trục KIỂM DUYỆT của nền tảng — `hidden` = nền tảng gỡ xe xuống, không phải chủ xe tạm ẩn
+             * @description Trục KIỂM DUYỆT của nền tảng - `hidden` = nền tảng gỡ xe xuống, không phải chủ xe tạm ẩn
              * @enum {string}
              */
             publicStatus: "draft" | "pending_public_review" | "approved_public" | "needs_revision" | "rejected" | "hidden" | "archived";
             /** @description LỰA CHỌN của chủ xe: có cho xe hiện ngoài chợ không. Độc lập với publicStatus (ADR 0048) */
             marketplaceEnabled: boolean;
-            /** @description Kết quả hiển thị THỰC TẾ — gộp xoá mềm + trạng thái gian hàng + kiểm duyệt + lựa chọn chủ xe */
+            /** @description Kết quả hiển thị THỰC TẾ - gộp xoá mềm + trạng thái gian hàng + kiểm duyệt + lựa chọn chủ xe */
             isMarketplaceVisible: boolean;
             /**
-             * @description Vì sao xe đang (không) hiện ngoài chợ. Server suy — client KHÔNG tự ghép lại từ nhiều status
+             * @description Vì sao xe đang (không) hiện ngoài chợ. Server suy - client KHÔNG tự ghép lại từ nhiều status
              * @enum {string}
              */
             marketplaceVisibilityReason: "visible" | "owner_paused" | "not_approved" | "platform_hidden" | "shop_inactive" | "archived";
             mainImageUrl?: string | null;
-            /** @description Tiền dạng string — ADR 0007 */
+            /** @description Tiền dạng string - ADR 0007 */
             weekdayPrice?: string | null;
             weekendPrice?: string | null;
             /** @description ISO-8601 UTC */
@@ -23374,11 +23374,11 @@ export interface components {
             count: number;
         };
         VehicleOperationSettingsDto: {
-            /** @description Phút chuẩn bị giữa hai chuyến — áp cho lịch GIỮ MỚI/DỜI LỊCH kể từ lúc lưu (ADR 0006), không tính lại occupancy đã có */
+            /** @description Phút chuẩn bị giữa hai chuyến - áp cho lịch GIỮ MỚI/DỜI LỊCH kể từ lúc lưu (ADR 0006), không tính lại occupancy đã có */
             turnaroundBufferMinutes: number;
             /** @description true = xe theo thời gian chết MẶC ĐỊNH của gian hàng cho loại xe này (`turnaroundBufferMinutes` là số hiệu lực đọc từ mặc định đó) */
             useShopDefault: boolean;
-            /** @description Mặc định gian hàng của loại xe — null khi gian hàng chưa đặt (áp 0) */
+            /** @description Mặc định gian hàng của loại xe - null khi gian hàng chưa đặt (áp 0) */
             shopDefaultMinutes?: number | null;
             /**
              * @deprecated
@@ -23390,7 +23390,7 @@ export interface components {
              * @description Luôn rỗng (ADR 0078)
              */
             returnWindows: components["schemas"]["HandoverWindowDto"][];
-            /** @description ISO — null khi chưa lưu lần nào */
+            /** @description ISO - null khi chưa lưu lần nào */
             updatedAt?: string | null;
         };
         VehiclePageDto: {
@@ -23411,18 +23411,18 @@ export interface components {
             weekendPrice?: string | null;
             /** @description Giá tháng tham chiếu thuê dài hạn (17/08) */
             monthlyPrice?: string | null;
-            /** @description Giá/ngày đã gồm tài xế — lộ trình nội thành/cơ bản (17/08) */
+            /** @description Giá/ngày đã gồm tài xế - lộ trình nội thành/cơ bản (17/08) */
             withDriverDailyPrice?: string | null;
-            /** @description Giá/ngày có tài xế — liên tỉnh khứ hồi; null = rơi về giá cơ bản */
+            /** @description Giá/ngày có tài xế - liên tỉnh khứ hồi; null = rơi về giá cơ bản */
             withDriverInterCityPrice?: string | null;
-            /** @description Giá/ngày có tài xế — liên tỉnh 1 chiều; null = rơi về liên tỉnh → cơ bản */
+            /** @description Giá/ngày có tài xế - liên tỉnh 1 chiều; null = rơi về liên tỉnh → cơ bản */
             withDriverOneWayPrice?: string | null;
             /** @description Giá thuê theo giờ */
             hourlyPrice?: string | null;
             /** @description % khuyến mãi trực tiếp cho dịch vụ tự lái; null/0 = không khuyến mãi */
             discountPercent?: number | null;
             serviceTypes: ("self_drive" | "with_driver" | "long_term")[];
-            /** @description Xe đã được nền tảng DUYỆT (`public_status = approved_public`) — trục KIỂM DUYỆT, không phải "khách có thấy xe không". Chủ xe có thể đang tạm ẩn xe đã duyệt: xem `marketplaceEnabled`/`isMarketplaceVisible` ở `GET /vehicles/:id` (ADR 0048) */
+            /** @description Xe đã được nền tảng DUYỆT (`public_status = approved_public`) - trục KIỂM DUYỆT, không phải "khách có thấy xe không". Chủ xe có thể đang tạm ẩn xe đã duyệt: xem `marketplaceEnabled`/`isMarketplaceVisible` ở `GET /vehicles/:id` (ADR 0048) */
             isPublic: boolean;
         };
         VehicleProfitItemDto: {
@@ -23457,14 +23457,14 @@ export interface components {
         VehicleServiceSettingDto: {
             /** @enum {string} */
             serviceType: "self_drive" | "with_driver" | "long_term";
-            /** @description Bật là nhận — không còn khoảng đặt trước nào (17/09/2026) */
+            /** @description Bật là nhận - không còn khoảng đặt trước nào (17/09/2026) */
             autoAcceptEnabled: boolean;
             /** @description Chỉ có tài xế */
             minRentalMinutes?: number | null;
             preferredRouteTypes: ("in_city" | "inter_city" | "inter_city_one_way")[];
             /** @description Giấy tờ chủ xe cấu hình (rỗng = bộ tối thiểu theo luật) */
             requiredDocuments: string[];
-            /** @description Bộ giấy tờ HIỆU LỰC = tối thiểu theo luật ∪ cấu hình — thứ khách nhìn thấy */
+            /** @description Bộ giấy tờ HIỆU LỰC = tối thiểu theo luật ∪ cấu hình - thứ khách nhìn thấy */
             effectiveRequiredDocuments: string[];
             /** @enum {string} */
             identityVerifyMethod: "vneid" | "in_person";
@@ -23472,15 +23472,15 @@ export interface components {
             requireTermsAcceptance: boolean;
             /**
              * @deprecated
-             * @description NGỪNG DÙNG (29/10/2026) — tiền giữ chỗ do nền tảng thu cho mọi đơn; giữ cho app đã phát hành
+             * @description NGỪNG DÙNG (29/10/2026) - tiền giữ chỗ do nền tảng thu cho mọi đơn; giữ cho app đã phát hành
              * @enum {string}
              */
             depositMode: "none" | "percent_30" | "percent_50";
-            /** @description Các chế độ cọc hệ thống THU được hôm nay — chế độ khác hiện disabled */
+            /** @description Các chế độ cọc hệ thống THU được hôm nay - chế độ khác hiện disabled */
             supportedDepositModes: ("none" | "percent_30" | "percent_50")[];
-            /** @description Chỉ với with_driver — null ở dịch vụ khác */
+            /** @description Chỉ với with_driver - null ở dịch vụ khác */
             withDriverAutoAccept?: components["schemas"]["WithDriverAutoAcceptCapabilityDto"] | null;
-            /** @description ISO — null khi chưa lưu */
+            /** @description ISO - null khi chưa lưu */
             updatedAt?: string | null;
         };
         VehicleServiceSettingsDto: {
@@ -23511,7 +23511,7 @@ export interface components {
             originalPrincipal?: string | null;
             monthlyPrincipal?: string | null;
             monthlyInterest?: string | null;
-            /** @description Tổng phải đóng mỗi tháng = gốc + lãi — TÍNH RA, không lưu */
+            /** @description Tổng phải đóng mỗi tháng = gốc + lãi - TÍNH RA, không lưu */
             monthlyTotal?: string | null;
             interestRatePercent?: string | null;
             termMonths?: number | null;
@@ -23527,7 +23527,7 @@ export interface components {
             contractFiles: components["schemas"]["VehicleSourceContractFileDto"][];
             notes?: string | null;
             obligationReady: boolean;
-            /** @description ISO — lần cập nhật hồ sơ gần nhất */
+            /** @description ISO - lần cập nhật hồ sơ gần nhất */
             updatedAt: string;
         };
         VehicleSourceDto: {
@@ -23537,15 +23537,15 @@ export interface components {
         };
         VehicleStatsDto: {
             vehicleId: string;
-            /** @description Đơn đang chạy — booking status = active */
+            /** @description Đơn đang chạy - booking status = active */
             activeBookings: number;
-            /** @description Đơn đã hoàn thành — booking status = completed */
+            /** @description Đơn đã hoàn thành - booking status = completed */
             completedBookings: number;
-            /** @description Tổng thu luỹ kế (phiếu thu đã duyệt), dạng string — ADR 0007. CHỈ trả khi người gọi có quyền `finance.view`; thiếu quyền thì trường vắng mặt. */
+            /** @description Tổng thu luỹ kế (phiếu thu đã duyệt), dạng string - ADR 0007. CHỈ trả khi người gọi có quyền `finance.view`; thiếu quyền thì trường vắng mặt. */
             totalIncome?: string;
             /** @description Tổng chi luỹ kế (phiếu chi đã duyệt), dạng string */
             totalExpense?: string;
-            /** @description Điểm đánh giá trung bình của xe (review published) — null khi chưa có */
+            /** @description Điểm đánh giá trung bình của xe (review published) - null khi chưa có */
             ratingAvg?: string | null;
             /** @description Số lượt đánh giá published của xe */
             ratingCount: number;
@@ -23560,29 +23560,29 @@ export interface components {
             kind: "booking" | "request";
             bookingId?: string | null;
             requestId?: string | null;
-            /** @description Mã đơn — chỉ có ở đơn */
+            /** @description Mã đơn - chỉ có ở đơn */
             code?: string | null;
             /** @enum {string|null} */
             bookingStatus?: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show" | null;
             /** @enum {string|null} */
             requestStatus?: "pending_host_approval" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_expired" | "slot_taken" | "cancelled_by_host" | null;
             /**
-             * @description Chặng gộp — cùng phép chiếu với Chuyến của tôi
+             * @description Chặng gộp - cùng phép chiếu với Chuyến của tôi
              * @enum {string}
              */
             stage: "pending_approval" | "awaiting_hold" | "ready" | "active" | "completed" | "cancelled" | "rejected" | "expired" | "slot_taken" | "no_show";
             /** @enum {string} */
             serviceType: "self_drive" | "with_driver" | "long_term";
             routeType?: string | null;
-            /** @description ISO — null với yêu cầu dài hạn chưa chốt */
+            /** @description ISO - null với yêu cầu dài hạn chưa chốt */
             pickupAt?: string | null;
             returnAt?: string | null;
             longTermPackageMonths?: number | null;
-            /** @description VND string — null khi chưa có số chốt */
+            /** @description VND string - null khi chưa có số chốt */
             totalAmount?: string | null;
             customerName: string;
             customerAvatarUrl?: string | null;
-            /** @description ISO — lần xử lý gần nhất (duyệt/từ chối/đổi trạng thái) */
+            /** @description ISO - lần xử lý gần nhất (duyệt/từ chối/đổi trạng thái) */
             happenedAt: string;
             /** @description ISO */
             createdAt: string;
@@ -23596,15 +23596,15 @@ export interface components {
         VehicleTypeQuotaDto: {
             /** @enum {string} */
             kind: "unlimited" | "total" | "scope_required";
-            /** @description Trần — chỉ khi kind = 'total' */
+            /** @description Trần - chỉ khi kind = 'total' */
             limit: number | null;
             /**
-             * @description Trần từ đâu ra — null khi kind = 'scope_required'
+             * @description Trần từ đâu ra - null khi kind = 'scope_required'
              * @enum {string|null}
              */
             reason?: "plan" | "owner_lite" | "billing_unconfigured" | null;
             /**
-             * @description Đếm xe trong phạm vi nào — all = gộp hai loại (trần dùng chung)
+             * @description Đếm xe trong phạm vi nào - all = gộp hai loại (trần dùng chung)
              * @enum {string}
              */
             countedScope: "all" | "car" | "motorbike";
@@ -23673,11 +23673,11 @@ export interface components {
             Message: string;
         };
         VoidInsurancePolicyDto: {
-            /** @description Vì sao thu hồi — bắt buộc, ghi vào audit */
+            /** @description Vì sao thu hồi - bắt buộc, ghi vào audit */
             reason: string;
         };
         VoidSurchargeDto: {
-            /** @description Lý do gỡ — bắt buộc */
+            /** @description Lý do gỡ - bắt buộc */
             reason: string;
         };
         WalletActivityDto: {
@@ -23685,7 +23685,7 @@ export interface components {
             /** @enum {string} */
             source: "entry" | "withdrawal";
             /**
-             * @description Loại bút toán — chỉ dòng sổ
+             * @description Loại bút toán - chỉ dòng sổ
              * @enum {string|null}
              */
             kind?: "hold_forfeit" | "hold_release" | "hold_refund" | "hold_overpay" | "extension_release" | "extension_refund" | "withdrawal" | "withdrawal_reversal" | "adjustment" | null;
@@ -23694,10 +23694,10 @@ export interface components {
             bookingId?: string | null;
             /** @description Dương = vào ví, âm = ra khỏi ví (VND string) */
             amount: string;
-            /** @description Số dư khả dụng sau bút toán — null ở dòng lệnh rút */
+            /** @description Số dư khả dụng sau bút toán - null ở dòng lệnh rút */
             balanceAfter?: string | null;
             occurredAt: string;
-            /** @description Chủ ví tự huỷ được — chỉ lệnh rút còn chờ duyệt */
+            /** @description Chủ ví tự huỷ được - chỉ lệnh rút còn chờ duyệt */
             cancellable: boolean;
             withdrawal?: components["schemas"]["WalletActivityWithdrawalDto"] | null;
         };
@@ -23714,7 +23714,7 @@ export interface components {
             /** @enum {string} */
             status: "pending" | "approved" | "paid" | "rejected" | "cancelled" | "reversed";
             bankCode: string;
-            /** @description Số tài khoản đã che — PII */
+            /** @description Số tài khoản đã che - PII */
             accountNumberMasked: string;
             /** @description Hạn cam kết chuyển */
             dueBy?: string | null;
@@ -23765,9 +23765,9 @@ export interface components {
             ratingCount: number;
             /** @description Số chuyến hoàn thành trong kỳ */
             completedTripCount: number;
-            /** @description Tỉ lệ phản hồi yêu cầu thuê nhận trong kỳ. `null` = chưa đủ mẫu để nói — KHÔNG phải 0. Cùng phép phân loại với chỉ số công khai (ADR 0045 điều 2), chỉ khác cửa sổ. */
+            /** @description Tỉ lệ phản hồi yêu cầu thuê nhận trong kỳ. `null` = chưa đủ mẫu để nói - KHÔNG phải 0. Cùng phép phân loại với chỉ số công khai (ADR 0045 điều 2), chỉ khác cửa sổ. */
             responseRatePercent?: number | null;
-            /** @description Số YÊU CẦU gian hàng phải quyết trong kỳ — mẫu số của hai tỉ lệ trên. Luôn hiện để "chưa đủ dữ liệu" là một câu kiểm chứng được. */
+            /** @description Số YÊU CẦU gian hàng phải quyết trong kỳ - mẫu số của hai tỉ lệ trên. Luôn hiện để "chưa đủ dữ liệu" là một câu kiểm chứng được. */
             responseSampleCount: number;
             /** @description Tỉ lệ NHẬN VÀ GIỮ chuyến trong kỳ (ADR 0045 điều 2). Gian hàng đọc chính con số mà khách đang nhìn thấy trên trang công khai của họ. */
             acceptKeepRatePercent?: number | null;
@@ -23792,33 +23792,33 @@ export interface components {
         };
         WalletStatementTripDto: {
             bookingId: string;
-            /** @description Mã chuyến hiển thị — `XP…` */
+            /** @description Mã chuyến hiển thị - `XP…` */
             code: string;
             /**
              * @description Hình thức thuê
              * @enum {string}
              */
             serviceType: "self_drive" | "with_driver" | "long_term";
-            /** @description Ngày đi — giờ nhận xe theo lịch đơn */
+            /** @description Ngày đi - giờ nhận xe theo lịch đơn */
             pickupAt: string;
-            /** @description Ngày về — giờ trả THỰC TẾ nếu có, không thì theo lịch */
+            /** @description Ngày về - giờ trả THỰC TẾ nếu có, không thì theo lịch */
             returnAt: string;
-            /** @description Đơn giá một đơn vị thuê (ngày hoặc tháng). Theo ngày: CHỈ khi mọi ngày cùng một giá (đặc tả 05 §7.1) — giá khác nhau theo ngày, hoặc snapshot không đủ dữ liệu ⇒ `null`; KHÔNG suy ngược `R / N` từ tổng. */
+            /** @description Đơn giá một đơn vị thuê (ngày hoặc tháng). Theo ngày: CHỈ khi mọi ngày cùng một giá (đặc tả 05 §7.1) - giá khác nhau theo ngày, hoặc snapshot không đủ dữ liệu ⇒ `null`; KHÔNG suy ngược `R / N` từ tổng. */
             unitAmount?: string | null;
             /**
              * @description Đơn vị của `unitAmount`. `null` đi cùng `unitAmount = null`.
              * @enum {string|null}
              */
             unitKind?: "day" | "month" | null;
-            /** @description Doanh thu cho thuê xe `R = B − G` (VND string) — tiền thuê sau khuyến mãi của xe, KHÔNG gồm phí giao xe (`deliveryAmount`). */
+            /** @description Doanh thu cho thuê xe `R = B − G` (VND string) - tiền thuê sau khuyến mãi của xe, KHÔNG gồm phí giao xe (`deliveryAmount`). */
             revenueAmount: string;
-            /** @description Phí dịch vụ – chủ xe `H` XePrime giữ lại — chủ xe chịu (ADR 0064 điều 3). Đọc từ bảng phí đã đóng băng (`ownerPayout`) khi có, không thì từ cột `bookings.owner_commission_amount` (ghi từ cùng snapshot); 0 ở tuyến gói và đơn trước luồng tiền v2. */
+            /** @description Phí dịch vụ - chủ xe `H` XePrime giữ lại - chủ xe chịu (ADR 0064 điều 3). Đọc từ bảng phí đã đóng băng (`ownerPayout`) khi có, không thì từ cột `bookings.owner_commission_amount` (ghi từ cùng snapshot); 0 ở tuyến gói và đơn trước luồng tiền v2. */
             ownerCommissionAmount: string;
-            /** @description Thuế khấu trừ `T` — chủ xe chịu */
+            /** @description Thuế khấu trừ `T` - chủ xe chịu */
             taxAmount: string;
-            /** @description `R − D − H` — phần TIỀN THUÊ khách trả trực tiếp chủ xe lúc nhận xe, không qua ví. KHÔNG gồm phí giao xe (khoản đó ở `deliveryAmount`). */
+            /** @description `R − D − H` - phần TIỀN THUÊ khách trả trực tiếp chủ xe lúc nhận xe, không qua ví. KHÔNG gồm phí giao xe (khoản đó ở `deliveryAmount`). */
             payAtPickupAmount: string;
-            /** @description Phí giao xe `G` — khách trả TẬN TAY chủ xe, chủ xe hưởng trọn, không chịu phí dịch vụ/thuế. Đọc từ `bookings.delivery_fee` (sửa được sau khi đơn ra đời). `0` khi không giao tận nơi. */
+            /** @description Phí giao xe `G` - khách trả TẬN TAY chủ xe, chủ xe hưởng trọn, không chịu phí dịch vụ/thuế. Đọc từ `bookings.delivery_fee` (sửa được sau khi đơn ra đời). `0` khi không giao tận nơi. */
             deliveryAmount: string;
             /** @description Thu nhập chủ xe của chuyến `R − H − T` (ADR 0068 điều 5). `ownerIncomeAmount − payAtPickupAmount = D − T` = phần cộng ví. */
             ownerIncomeAmount: string;
@@ -23830,7 +23830,7 @@ export interface components {
         WalletSummaryDto: {
             /** @description Rút được ngay (VND string) */
             available: string;
-            /** @description Đang chờ chuyển — đã khoá, chưa rời ngân hàng */
+            /** @description Đang chờ chuyển - đã khoá, chưa rời ngân hàng */
             pending: string;
             /** @description Tổng XePrime phải trả = available + pending */
             total: string;
@@ -23872,27 +23872,27 @@ export interface components {
         };
         WithdrawalQueueSummaryDto: {
             count: number;
-            /** @description Tổng tiền của các dòng đang đếm, string — ADR 0007 */
+            /** @description Tổng tiền của các dòng đang đếm, string - ADR 0007 */
             amount: string;
             /** @description Lệnh đã quá hạn cam kết chuyển */
             overdueCount: number;
         };
         WithdrawalRequestDto: {
             id: string;
-            /** @description Mã XPW… — dùng khi hỏi hỗ trợ */
+            /** @description Mã XPW… - dùng khi hỏi hỗ trợ */
             code: string;
             amount: string;
             /** @enum {string} */
             status: "pending" | "approved" | "paid" | "rejected" | "cancelled" | "reversed";
             bankCode: string;
-            /** @description Số tài khoản đã che — PII */
+            /** @description Số tài khoản đã che - PII */
             accountNumberMasked: string;
             accountName: string;
             /** @description Hạn cam kết chuyển */
             dueBy?: string | null;
             paidAt?: string | null;
             rejectReason?: string | null;
-            /** @description Lệnh ĐÃ CHI rồi bị đảo (chuyển hụt / sai tài khoản) — tiền đã về lại số dư */
+            /** @description Lệnh ĐÃ CHI rồi bị đảo (chuyển hụt / sai tài khoản) - tiền đã về lại số dư */
             reversedAt?: string | null;
             /** @description Vì sao chuyển không thành công */
             reverseReason?: string | null;
@@ -23912,7 +23912,7 @@ export interface components {
             /** @description Tiền công tài xế/ngày */
             wageDaily: components["schemas"]["MoneyRangeDto"];
             /**
-             * @description Tiền công/ngày GỢI Ý cho gian hàng chưa đặt mức chung — chỉ là lời nhắc, không tự ghi vào đâu; nằm trong wageDaily
+             * @description Tiền công/ngày GỢI Ý cho gian hàng chưa đặt mức chung - chỉ là lời nhắc, không tự ghi vào đâu; nằm trong wageDaily
              * @example 500000
              */
             wageDailySuggested: string;
@@ -24120,7 +24120,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -24287,7 +24287,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -24458,7 +24458,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -24735,7 +24735,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -25037,7 +25037,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -25338,7 +25338,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -25509,7 +25509,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -25576,7 +25576,7 @@ export interface operations {
     FavoritesController_status: {
         parameters: {
             query: {
-                /** @description Id xe — CSV, tối đa 100 id một lượt. */
+                /** @description Id xe - CSV, tối đa 100 id một lượt. */
                 vehicleIds: string;
             };
             header?: never;
@@ -26070,7 +26070,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -26828,7 +26828,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -26995,7 +26995,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -27211,7 +27211,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -27448,7 +27448,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -27600,7 +27600,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -27727,7 +27727,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -27822,7 +27822,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -27842,7 +27842,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Đăng nhập bằng OTP đã gỡ — dùng SĐT + mật khẩu. */
+            /** @description Đăng nhập bằng OTP đã gỡ - dùng SĐT + mật khẩu. */
             410: {
                 headers: {
                     [name: string]: unknown;
@@ -27981,7 +27981,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -28133,7 +28133,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -28285,7 +28285,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -28412,7 +28412,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -28518,7 +28518,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -28624,7 +28624,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -28751,7 +28751,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -28878,7 +28878,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -28973,7 +28973,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -28993,7 +28993,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Đăng nhập bằng OTP đã gỡ — dùng SĐT + mật khẩu. */
+            /** @description Đăng nhập bằng OTP đã gỡ - dùng SĐT + mật khẩu. */
             410: {
                 headers: {
                     [name: string]: unknown;
@@ -29196,7 +29196,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -29216,7 +29216,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description `purpose=login` — đăng nhập bằng OTP đã gỡ (`OTP_LOGIN_RETIRED`). */
+            /** @description `purpose=login` - đăng nhập bằng OTP đã gỡ (`OTP_LOGIN_RETIRED`). */
             410: {
                 headers: {
                     [name: string]: unknown;
@@ -29334,7 +29334,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -29444,7 +29444,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -29571,7 +29571,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -29652,7 +29652,7 @@ export interface operations {
                 content?: never;
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -29723,7 +29723,7 @@ export interface operations {
                 redirect_uri?: unknown;
                 /** @description PKCE S256 challenge của APP. Chỉ dùng khi `client=native`. */
                 code_challenge?: unknown;
-                /** @description Bỏ trống = web (callback đặt cookie httpOnly). `native` = app (callback trả one-time code về deep link) — khi đó `code_challenge` và `redirect_uri` là BẮT BUỘC. */
+                /** @description Bỏ trống = web (callback đặt cookie httpOnly). `native` = app (callback trả one-time code về deep link) - khi đó `code_challenge` và `redirect_uri` là BẮT BUỘC. */
                 client?: "web" | "native";
                 /** @description Ngôn ngữ cho màn đồng ý của provider (màn đó do Google/Facebook render, không phải XePrime). Giá trị lạ rơi về `vi`. */
                 locale?: "vi" | "en";
@@ -29950,7 +29950,7 @@ export interface operations {
                 /** @description Tìm theo mã đơn / tên khách / SĐT / tên xe / biển số */
                 q?: string;
                 serviceType?: "self_drive" | "with_driver" | "long_term";
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 page?: number;
                 limit?: number;
@@ -30087,7 +30087,7 @@ export interface operations {
                 /** @description Một trạng thái, hoặc nhiều trạng thái nối dấu phẩy */
                 status?: ("pending_host_approval" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_expired" | "slot_taken" | "cancelled_by_host")[];
                 vehicleId?: string;
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 sort?: "newest" | "urgent";
                 page?: number;
@@ -30476,7 +30476,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -30651,7 +30651,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -30822,7 +30822,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -30997,7 +30997,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -31168,7 +31168,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -31238,14 +31238,14 @@ export interface operations {
                 /** @description Tìm theo tên khách/SĐT/mã đơn */
                 q?: string;
                 status?: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
-                /** @description Nhóm việc dựng sẵn — awaiting_pickup: đơn đã tạo nhưng chưa bàn giao xe */
+                /** @description Nhóm việc dựng sẵn - awaiting_pickup: đơn đã tạo nhưng chưa bàn giao xe */
                 preset?: "awaiting_pickup" | "renting" | "completed" | "cancelled";
                 /** @description Lọc theo xe */
                 vehicleId?: string;
                 serviceType?: "self_drive" | "with_driver" | "long_term";
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
-                /** @description Trả xe từ (ISO) — lọc cho panel quá hạn/sắp trả */
+                /** @description Trả xe từ (ISO) - lọc cho panel quá hạn/sắp trả */
                 returnFrom?: string;
                 /** @description Trả xe đến (ISO) */
                 returnTo?: string;
@@ -31463,7 +31463,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -31788,7 +31788,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -32109,7 +32109,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -32284,7 +32284,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -32459,7 +32459,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -32635,7 +32635,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -33260,7 +33260,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -33432,7 +33432,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -33760,7 +33760,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -34086,7 +34086,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -34262,7 +34262,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -34438,7 +34438,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -34614,7 +34614,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -34790,7 +34790,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -35115,7 +35115,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -35291,7 +35291,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -35462,7 +35462,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -36087,7 +36087,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -36412,7 +36412,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -36587,7 +36587,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -36762,7 +36762,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -36937,7 +36937,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -37113,7 +37113,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -37289,7 +37289,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -37464,7 +37464,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -37751,7 +37751,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -38076,7 +38076,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -38247,7 +38247,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -38418,7 +38418,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -38737,7 +38737,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -38811,7 +38811,7 @@ export interface operations {
                 vehicleType?: "car" | "motorbike";
                 /** @description Tìm theo tên xe hoặc biển số */
                 q?: string;
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 sort?: "next_booking" | "name" | "price_asc" | "price_desc";
             };
@@ -39027,7 +39027,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -39094,7 +39094,7 @@ export interface operations {
     BulkDayController_releaseBatch: {
         parameters: {
             query?: {
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
             };
             header?: never;
@@ -39201,7 +39201,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -39274,7 +39274,7 @@ export interface operations {
                 to: string;
                 /** @description Lọc theo loại xe, khớp bộ lọc trên lưới lịch */
                 vehicleType?: string;
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 /** @description Từ khoá tên/biển số/mã xe */
                 q?: string;
@@ -39491,7 +39491,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -39643,7 +39643,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -39714,7 +39714,7 @@ export interface operations {
                 vehicleId: string;
                 /** @description Ngày đầu cửa sổ tra cứu (YYYY-MM-DD, ngày lịch Việt Nam) */
                 from: string;
-                /** @description Ngày cuối cửa sổ (YYYY-MM-DD). Quá 400 ngày kể từ `from` thì bị kẹp về trần — xem `to` trong kết quả */
+                /** @description Ngày cuối cửa sổ (YYYY-MM-DD). Quá 400 ngày kể từ `from` thì bị kẹp về trần - xem `to` trong kết quả */
                 to: string;
             };
             header?: never;
@@ -39929,7 +39929,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -40003,7 +40003,7 @@ export interface operations {
                 vehicleType?: "car" | "motorbike";
                 /** @description Tìm theo tên xe hoặc biển số */
                 q?: string;
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 sort?: "next_booking" | "name" | "price_asc" | "price_desc";
             };
@@ -40141,7 +40141,7 @@ export interface operations {
                 vehicleType?: "car" | "motorbike";
                 /** @description Tìm theo tên xe hoặc biển số */
                 q?: string;
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 sort?: "next_booking" | "name" | "price_asc" | "price_desc";
             };
@@ -40416,7 +40416,7 @@ export interface operations {
                 vehicleType?: "car" | "motorbike";
                 /** @description Tìm theo tên xe hoặc biển số */
                 q?: string;
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 sort?: "next_booking" | "name" | "price_asc" | "price_desc";
             };
@@ -40637,13 +40637,13 @@ export interface operations {
     CatalogController_listModels: {
         parameters: {
             query: {
-                /** @description Bắt buộc — mẫu xe luôn thuộc một loại */
+                /** @description Bắt buộc - mẫu xe luôn thuộc một loại */
                 vehicleType: "car" | "motorbike";
                 /** @description Khoá hãng; bỏ trống = mọi hãng của loại xe đó */
                 brandKey?: string;
-                /** @description Tìm theo tên, bỏ dấu — "civic" khớp "CIVIC" */
+                /** @description Tìm theo tên, bỏ dấu - "civic" khớp "CIVIC" */
                 search?: string;
-                /** @description Id mẫu đang gắn với xe đang sửa. Mẫu đó LUÔN nằm trong kết quả kể cả khi đã tắt — bằng không form sẽ hiện ô rỗng cho một chiếc xe vẫn đang có mẫu. */
+                /** @description Id mẫu đang gắn với xe đang sửa. Mẫu đó LUÔN nằm trong kết quả kể cả khi đã tắt - bằng không form sẽ hiện ô rỗng cho một chiếc xe vẫn đang có mẫu. */
                 includeId?: string;
             };
             header?: never;
@@ -40816,7 +40816,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -40943,7 +40943,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -41379,7 +41379,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -41861,7 +41861,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -42032,7 +42032,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -42467,9 +42467,9 @@ export interface operations {
             query?: {
                 /** @description Tìm theo tên / SĐT (mọi định dạng) / email */
                 q?: string;
-                /** @description Nhóm quan hệ. `has_debt` là bộ lọc tài chính — thiếu `finance.view` sẽ bị từ chối, không âm thầm trả về danh sách đầy đủ. */
+                /** @description Nhóm quan hệ. `has_debt` là bộ lọc tài chính - thiếu `finance.view` sẽ bị từ chối, không âm thầm trả về danh sách đầy đủ. */
                 relationship?: "all" | "returning" | "has_debt" | "watchlist" | "blocked" | "archived";
-                /** @description `total_value` và `debt` là sắp xếp tài chính — gate như bộ lọc trên. */
+                /** @description `total_value` và `debt` là sắp xếp tài chính - gate như bộ lọc trên. */
                 sort?: "last_rental" | "rental_count" | "total_value" | "debt" | "name";
                 page?: number;
                 limit?: number;
@@ -42684,7 +42684,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -43009,7 +43009,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -43180,7 +43180,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -43660,7 +43660,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -43836,7 +43836,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -44008,7 +44008,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -44335,7 +44335,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -44510,7 +44510,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -44836,7 +44836,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -45008,7 +45008,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -45179,7 +45179,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -45506,7 +45506,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -45679,7 +45679,7 @@ export interface operations {
     PartnerDashboardController_overview: {
         parameters: {
             query?: {
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
             };
             header?: never;
@@ -46023,7 +46023,7 @@ export interface operations {
             query?: {
                 /** @description Tìm theo mã đơn / tên khách / SĐT / tên xe / biển số */
                 q?: string;
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 /** @description Trạng thái đơn. Đơn đã huỷ không bao giờ nằm trong công nợ */
                 status?: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
@@ -46159,7 +46159,7 @@ export interface operations {
             query?: {
                 /** @description Tìm theo mã đơn / tên khách / SĐT / tên xe / biển số */
                 q?: string;
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 /** @description Trạng thái đơn. Đơn đã huỷ không bao giờ nằm trong công nợ */
                 status?: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
@@ -46525,7 +46525,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -46696,7 +46696,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -46867,7 +46867,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -47423,7 +47423,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -47594,7 +47594,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -47769,7 +47769,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -47940,7 +47940,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -48017,7 +48017,7 @@ export interface operations {
                 /** @description `needed` = chỉ liên kết còn mở mà bằng lái chưa xác thực còn hạn, hoặc họ tên trên bằng lệch tên mời */
                 licenceCheck?: "needed";
                 sort?: "status" | "newest" | "name_asc";
-                /** @description Tháng YYYY-MM (giờ VN) cho hai cột thống kê tiền công — mặc định tháng hiện tại */
+                /** @description Tháng YYYY-MM (giờ VN) cho hai cột thống kê tiền công - mặc định tháng hiện tại */
                 month?: string;
                 page?: number;
                 limit?: number;
@@ -48232,7 +48232,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -48403,7 +48403,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -48578,7 +48578,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -48645,7 +48645,7 @@ export interface operations {
     DriversController_assignments: {
         parameters: {
             query?: {
-                /** @description Tháng YYYY-MM (giờ VN) — mặc định tháng hiện tại */
+                /** @description Tháng YYYY-MM (giờ VN) - mặc định tháng hiện tại */
                 month?: string;
                 page?: number;
                 limit?: number;
@@ -48798,7 +48798,7 @@ export interface operations {
     DriversController_overview: {
         parameters: {
             query?: {
-                /** @description Tháng YYYY-MM (giờ VN) — mặc định tháng hiện tại */
+                /** @description Tháng YYYY-MM (giờ VN) - mặc định tháng hiện tại */
                 month?: string;
             };
             header?: never;
@@ -49055,7 +49055,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -49226,7 +49226,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -49297,7 +49297,7 @@ export interface operations {
                 pickupAt: string;
                 /** @description Trả xe của đơn (ISO-8601) */
                 returnAt: string;
-                /** @description ID đơn đang gán (ULID) — loại khỏi kiểm tra trùng */
+                /** @description ID đơn đang gán (ULID) - loại khỏi kiểm tra trùng */
                 excludeBookingId?: string;
             };
             header?: never;
@@ -49749,7 +49749,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -49816,15 +49816,15 @@ export interface operations {
     FinanceOverviewController_byCategory: {
         parameters: {
             query: {
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
-                /** @description Từ ngày — `YYYY-MM-DD` hoặc ISO đầy đủ */
+                /** @description Từ ngày - `YYYY-MM-DD` hoặc ISO đầy đủ */
                 from?: string;
                 /** @description Đến ngày */
                 to?: string;
                 /** @description Cơ cấu doanh thu hay cơ cấu chi phí */
                 type: "income" | "expense";
-                /** @description Thu hẹp báo cáo về MỘT chiếc xe. Cùng phép tính với báo cáo toàn gian hàng, chỉ thêm một mệnh đề lọc — nên con số ở hồ sơ xe không thể lệch dòng tương ứng ở bảng tổng quan. */
+                /** @description Thu hẹp báo cáo về MỘT chiếc xe. Cùng phép tính với báo cáo toàn gian hàng, chỉ thêm một mệnh đề lọc - nên con số ở hồ sơ xe không thể lệch dòng tương ứng ở bảng tổng quan. */
                 vehicleId?: string;
                 /** @description Thu hẹp báo cáo về MỘT khách của gian hàng. */
                 tenantCustomerId?: string;
@@ -49956,13 +49956,13 @@ export interface operations {
     FinanceOverviewController_byCustomer: {
         parameters: {
             query?: {
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
-                /** @description Từ ngày — `YYYY-MM-DD` hoặc ISO đầy đủ */
+                /** @description Từ ngày - `YYYY-MM-DD` hoặc ISO đầy đủ */
                 from?: string;
                 /** @description Đến ngày */
                 to?: string;
-                /** @description Luôn giảm dần — câu hỏi của bảng này là "khách nào nhất" */
+                /** @description Luôn giảm dần - câu hỏi của bảng này là "khách nào nhất" */
                 sort?: "revenue" | "trips";
                 page?: number;
                 limit?: number;
@@ -50092,13 +50092,13 @@ export interface operations {
     FinanceOverviewController_byVehicle: {
         parameters: {
             query?: {
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
-                /** @description Từ ngày — `YYYY-MM-DD` hoặc ISO đầy đủ */
+                /** @description Từ ngày - `YYYY-MM-DD` hoặc ISO đầy đủ */
                 from?: string;
                 /** @description Đến ngày */
                 to?: string;
-                /** @description Luôn giảm dần — câu hỏi của bảng này là "xe nào nhất" */
+                /** @description Luôn giảm dần - câu hỏi của bảng này là "xe nào nhất" */
                 sort?: "profit" | "revenue" | "cost" | "trips";
                 page?: number;
                 limit?: number;
@@ -50442,7 +50442,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -50609,7 +50609,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -50784,7 +50784,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -50851,15 +50851,15 @@ export interface operations {
     FinanceOverviewController_series: {
         parameters: {
             query?: {
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
-                /** @description Từ ngày — `YYYY-MM-DD` (trọn ngày giờ VN) hoặc ISO đầy đủ */
+                /** @description Từ ngày - `YYYY-MM-DD` (trọn ngày giờ VN) hoặc ISO đầy đủ */
                 from?: string;
-                /** @description Đến ngày — cùng quy ước với `from` */
+                /** @description Đến ngày - cùng quy ước với `from` */
                 to?: string;
                 /** @description Độ mịn MONG MUỐN. Server tự nâng bậc khi kỳ quá dài và trả lại giá trị đã dùng ở `granularity`. */
                 granularity?: "day" | "week" | "month";
-                /** @description Thu hẹp báo cáo về MỘT chiếc xe. Cùng phép tính với báo cáo toàn gian hàng, chỉ thêm một mệnh đề lọc — nên con số ở hồ sơ xe không thể lệch dòng tương ứng ở bảng tổng quan. */
+                /** @description Thu hẹp báo cáo về MỘT chiếc xe. Cùng phép tính với báo cáo toàn gian hàng, chỉ thêm một mệnh đề lọc - nên con số ở hồ sơ xe không thể lệch dòng tương ứng ở bảng tổng quan. */
                 vehicleId?: string;
                 /** @description Thu hẹp báo cáo về MỘT khách của gian hàng. */
                 tenantCustomerId?: string;
@@ -50991,13 +50991,13 @@ export interface operations {
     FinanceOverviewController_summary: {
         parameters: {
             query?: {
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 /** @description Từ ngày (ISO) */
                 from?: string;
                 /** @description Đến ngày (ISO) */
                 to?: string;
-                /** @description Thu hẹp báo cáo về MỘT chiếc xe. Cùng phép tính với báo cáo toàn gian hàng, chỉ thêm một mệnh đề lọc — nên con số ở hồ sơ xe không thể lệch dòng tương ứng ở bảng tổng quan. */
+                /** @description Thu hẹp báo cáo về MỘT chiếc xe. Cùng phép tính với báo cáo toàn gian hàng, chỉ thêm một mệnh đề lọc - nên con số ở hồ sơ xe không thể lệch dòng tương ứng ở bảng tổng quan. */
                 vehicleId?: string;
                 /** @description Thu hẹp báo cáo về MỘT khách của gian hàng. */
                 tenantCustomerId?: string;
@@ -51131,7 +51131,7 @@ export interface operations {
             query?: {
                 /** @description Tìm theo tên xe, biển số hoặc mã đơn */
                 q?: string;
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 page?: number;
                 limit?: number;
@@ -51362,7 +51362,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Có indicator `down` — chi tiết ở `error`. Ví dụ: mất kết nối PostgreSQL.
+             * @description Có indicator `down` - chi tiết ở `error`. Ví dụ: mất kết nối PostgreSQL.
              *
              *     The Health Check is not successful
              */
@@ -51752,7 +51752,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -51923,7 +51923,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -51995,11 +51995,11 @@ export interface operations {
                 q?: string;
                 /** @description Loại của phiếu liên quan */
                 type?: "oil_change" | "periodic_service" | "repair" | "tire" | "battery" | "other";
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
-                /** @description ISO — lịch từ ngày */
+                /** @description ISO - lịch từ ngày */
                 from?: string;
-                /** @description ISO — lịch đến ngày */
+                /** @description ISO - lịch đến ngày */
                 to?: string;
                 sort?: "remaining_asc" | "remaining_desc" | "name_asc" | "updated_desc";
                 page?: number;
@@ -52130,7 +52130,7 @@ export interface operations {
     MaintenanceBoardController_summary: {
         parameters: {
             query?: {
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
             };
             header?: never;
@@ -52563,7 +52563,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -52888,7 +52888,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -53059,7 +53059,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -53363,7 +53363,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -53538,7 +53538,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -53820,7 +53820,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -53991,7 +53991,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -54250,7 +54250,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -54381,7 +54381,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -54512,7 +54512,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -54618,7 +54618,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -54784,7 +54784,7 @@ export interface operations {
                 content?: never;
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -54975,7 +54975,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -55044,7 +55044,7 @@ export interface operations {
             query: {
                 /** @description Mã địa điểm lấy từ `GET /places/search` */
                 placeId: string;
-                /** @description Tỉnh đã chọn — có thì server gợi ý mã xã khớp trong tỉnh đó */
+                /** @description Tỉnh đã chọn - có thì server gợi ý mã xã khớp trong tỉnh đó */
                 provinceCode?: string;
             };
             header?: never;
@@ -55134,7 +55134,7 @@ export interface operations {
             query: {
                 /** @description Mã địa điểm lấy từ `GET /places/search` */
                 placeId: string;
-                /** @description Tỉnh đã chọn — có thì server gợi ý mã xã khớp trong tỉnh đó */
+                /** @description Tỉnh đã chọn - có thì server gợi ý mã xã khớp trong tỉnh đó */
                 provinceCode?: string;
             };
             header?: never;
@@ -55309,13 +55309,13 @@ export interface operations {
         parameters: {
             query: {
                 q: string;
-                /** @description Vĩ độ để ưu tiên kết quả gần — thường là ghim hiện tại hoặc trung tâm tỉnh */
+                /** @description Vĩ độ để ưu tiên kết quả gần - thường là ghim hiện tại hoặc trung tâm tỉnh */
                 lat?: number;
                 /** @description Kinh độ đi kèm `lat` */
                 lng?: number;
                 /** @description Tỉnh người dùng ĐÃ CHỌN (ADR 0077): server nối tên tỉnh vào truy vấn, ưu tiên quanh tâm tỉnh và LOẠI gợi ý nhận ra được là thuộc tỉnh khác. */
                 provinceCode?: string;
-                /** @description Xã người dùng đã chọn — nối tên xã vào truy vấn. Cần đi kèm `provinceCode`. */
+                /** @description Xã người dùng đã chọn - nối tên xã vào truy vấn. Cần đi kèm `provinceCode`. */
                 wardCode?: string;
             };
             header?: never;
@@ -55726,7 +55726,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -56181,7 +56181,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -56356,7 +56356,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -56531,7 +56531,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -56601,7 +56601,7 @@ export interface operations {
                 actorScope?: "tenant" | "platform" | "customer" | "system";
                 /** @description Khớp chính xác, vd "tenant.lock" */
                 action?: string;
-                /** @description Nhóm hành động — suy từ tiền tố mã (auditActionCategoryOf), lọc ở DB */
+                /** @description Nhóm hành động - suy từ tiền tố mã (auditActionCategoryOf), lọc ở DB */
                 category?: "vehicle" | "vehicle_document" | "maintenance" | "booking" | "booking_request" | "finance" | "branch" | "member" | "subscription" | "profile" | "partner_status" | "customer" | "support_session" | "support_case" | "other";
                 /** @description Tìm kiếm: một ULID khớp chính xác mã dòng / đối tượng / gian hàng / tài khoản; chữ thường khớp tên-email người thực hiện hoặc tên-mã gian hàng */
                 q?: string;
@@ -56895,15 +56895,15 @@ export interface operations {
     BankTransactionsController_list: {
         parameters: {
             query?: {
-                /** @description Bỏ trống = CHƯA KHỚP — hàng đợi việc cần làm, không phải toàn bộ lịch sử */
+                /** @description Bỏ trống = CHƯA KHỚP - hàng đợi việc cần làm, không phải toàn bộ lịch sử */
                 matchStatus?: "unmatched" | "matched" | "manual" | "ignored";
                 /** @description Tìm theo nội dung chuyển khoản hoặc mã đối soát */
                 q?: string;
                 /** @description Mã rút được thuộc luồng nào: hoá đơn gói (`XPG`), giữ chỗ (`XPH`), hoặc không rút được mã */
                 code?: "subscription_invoice" | "booking_hold" | "booking_extension" | "subscription_checkout" | "no_code";
-                /** @description Từ ngày — `YYYY-MM-DD`, trọn ngày giờ VN. Lọc theo thời điểm ngân hàng */
+                /** @description Từ ngày - `YYYY-MM-DD`, trọn ngày giờ VN. Lọc theo thời điểm ngân hàng */
                 from?: string;
-                /** @description Đến hết ngày — cùng quy ước với `from` */
+                /** @description Đến hết ngày - cùng quy ước với `from` */
                 to?: string;
                 page?: number;
                 limit?: number;
@@ -57291,7 +57291,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -57466,7 +57466,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -57748,7 +57748,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -57915,7 +57915,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -58090,7 +58090,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -58242,7 +58242,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -58394,7 +58394,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -58858,7 +58858,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -59144,7 +59144,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -59311,7 +59311,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -59486,7 +59486,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -59553,13 +59553,13 @@ export interface operations {
     PlatformCatalogController_listModels: {
         parameters: {
             query: {
-                /** @description Bắt buộc — mẫu xe luôn thuộc một loại */
+                /** @description Bắt buộc - mẫu xe luôn thuộc một loại */
                 vehicleType: "car" | "motorbike";
                 /** @description Khoá hãng; bỏ trống = mọi hãng của loại xe đó */
                 brandKey?: string;
-                /** @description Tìm theo tên, bỏ dấu — "civic" khớp "CIVIC" */
+                /** @description Tìm theo tên, bỏ dấu - "civic" khớp "CIVIC" */
                 search?: string;
-                /** @description Id mẫu đang gắn với xe đang sửa. Mẫu đó LUÔN nằm trong kết quả kể cả khi đã tắt — bằng không form sẽ hiện ô rỗng cho một chiếc xe vẫn đang có mẫu. */
+                /** @description Id mẫu đang gắn với xe đang sửa. Mẫu đó LUÔN nằm trong kết quả kể cả khi đã tắt - bằng không form sẽ hiện ô rỗng cho một chiếc xe vẫn đang có mẫu. */
                 includeId?: string;
                 /** @description true = kèm mẫu đã tắt */
                 includeInactive?: boolean;
@@ -59776,7 +59776,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -59943,7 +59943,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -60118,7 +60118,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -60399,7 +60399,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -60551,7 +60551,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -61011,7 +61011,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -61911,7 +61911,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -62228,7 +62228,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -62403,7 +62403,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -62574,7 +62574,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -62889,7 +62889,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -63060,7 +63060,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -63447,7 +63447,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -63729,7 +63729,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -63904,7 +63904,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -64209,7 +64209,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -64661,7 +64661,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -64832,7 +64832,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -64984,7 +64984,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -65415,7 +65415,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -65586,7 +65586,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -65991,7 +65991,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -66162,7 +66162,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -66466,7 +66466,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -66897,7 +66897,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -67068,7 +67068,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -67239,7 +67239,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -67410,7 +67410,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -67944,9 +67944,9 @@ export interface operations {
                 q?: string;
                 status?: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
                 serviceType?: "self_drive" | "with_driver" | "long_term";
-                /** @description ISO — lọc theo giờ nhận xe */
+                /** @description ISO - lọc theo giờ nhận xe */
                 dateFrom?: string;
-                /** @description ISO — lọc theo giờ nhận xe */
+                /** @description ISO - lọc theo giờ nhận xe */
                 dateTo?: string;
             };
             header?: never;
@@ -68097,9 +68097,9 @@ export interface operations {
     PlatformPartnersController_bookingSummary: {
         parameters: {
             query?: {
-                /** @description ISO — lọc theo giờ nhận xe */
+                /** @description ISO - lọc theo giờ nhận xe */
                 dateFrom?: string;
-                /** @description ISO — lọc theo giờ nhận xe */
+                /** @description ISO - lọc theo giờ nhận xe */
                 dateTo?: string;
             };
             header?: never;
@@ -68860,7 +68860,7 @@ export interface operations {
                 operationStatus?: "available" | "renting" | "maintenance" | "inactive";
                 publicStatus?: "draft" | "pending_public_review" | "approved_public" | "needs_revision" | "rejected" | "hidden" | "archived";
                 serviceType?: "self_drive" | "with_driver" | "long_term";
-                /** @description Chi nhánh (chỉ gian hàng gói) — id thuộc chính gian hàng */
+                /** @description Chi nhánh (chỉ gian hàng gói) - id thuộc chính gian hàng */
                 branchId?: string;
                 sort?: "updated" | "newest" | "name";
             };
@@ -69012,7 +69012,7 @@ export interface operations {
     PlatformPaymentOrdersController_list: {
         parameters: {
             query?: {
-                /** @description Bỏ trống = `review` (CẦN XỬ LÝ — việc của người trực). `resolved` = đã xử lý; `history` = mọi lượt */
+                /** @description Bỏ trống = `review` (CẦN XỬ LÝ - việc của người trực). `resolved` = đã xử lý; `history` = mọi lượt */
                 view?: "review" | "resolved" | "history";
                 provider?: "momo" | "vnpay";
                 target?: "subscription_invoice" | "booking_hold";
@@ -69405,7 +69405,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -69576,7 +69576,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -69751,7 +69751,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -70033,7 +70033,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -70354,7 +70354,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -70529,7 +70529,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -70700,7 +70700,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -70875,7 +70875,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -71050,7 +71050,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -71225,7 +71225,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -71507,7 +71507,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -71674,7 +71674,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -71849,7 +71849,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -72020,7 +72020,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -72191,7 +72191,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -72261,7 +72261,7 @@ export interface operations {
                 /** @description Tìm theo mã / tên chương trình */
                 q?: string;
                 discountType?: "fixed" | "percent";
-                /** @description Lọc theo trạng thái SUY RA (không phải cột) — server dịch thành điều kiện ngày/bộ đếm tương ứng. */
+                /** @description Lọc theo trạng thái SUY RA (không phải cột) - server dịch thành điều kiện ngày/bộ đếm tương ứng. */
                 state?: "disabled" | "upcoming" | "active" | "ending_soon" | "expired" | "exhausted";
                 /** @description Chiến dịch còn hiệu lực TỪ (ISO-8601) */
                 dateFrom?: string;
@@ -72483,7 +72483,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -72800,7 +72800,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -72975,7 +72975,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -73146,7 +73146,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -73473,7 +73473,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -73930,7 +73930,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -74105,7 +74105,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -74276,7 +74276,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -74559,7 +74559,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -74730,7 +74730,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -74905,7 +74905,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -75363,7 +75363,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -75538,7 +75538,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -75713,7 +75713,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -75888,7 +75888,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -76040,7 +76040,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -76361,7 +76361,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -76428,7 +76428,7 @@ export interface operations {
     PlatformTenantsController_list: {
         parameters: {
             query?: {
-                /** @description Loại đối tác — lọc ở DB TRƯỚC phân trang/đếm. `package_shop` = tuyến gói (gồm cả đang onboarding chờ kích hoạt gói), `individual_owner` = tuyến hoa hồng / Owner Lite. Bỏ trống = mọi gian hàng. */
+                /** @description Loại đối tác - lọc ở DB TRƯỚC phân trang/đếm. `package_shop` = tuyến gói (gồm cả đang onboarding chờ kích hoạt gói), `individual_owner` = tuyến hoa hồng / Owner Lite. Bỏ trống = mọi gian hàng. */
                 partnerKind?: "package_shop" | "individual_owner";
                 sort?: "newest" | "oldest" | "name" | "vehicles";
                 status?: "draft" | "pending_review" | "needs_revision" | "active" | "suspended" | "rejected" | "expired";
@@ -76822,7 +76822,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -76993,7 +76993,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -77060,7 +77060,7 @@ export interface operations {
     SubscriptionsController_list: {
         parameters: {
             query?: {
-                /** @description live = chỉ các kỳ còn hạn (đang chạy + đã xếp lịch), sắp theo ngày bắt đầu — chuỗi kỳ mà màn gia hạn cần, không phụ thuộc trang lịch sử */
+                /** @description live = chỉ các kỳ còn hạn (đang chạy + đã xếp lịch), sắp theo ngày bắt đầu - chuỗi kỳ mà màn gia hạn cần, không phụ thuộc trang lịch sử */
                 state?: "live";
                 page?: number;
                 limit?: number;
@@ -77321,7 +77321,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -77497,7 +77497,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -77669,7 +77669,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -78106,7 +78106,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -78699,7 +78699,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -78875,7 +78875,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -79050,7 +79050,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -79225,7 +79225,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -79400,7 +79400,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -79869,7 +79869,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -80040,7 +80040,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -80458,7 +80458,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -80529,7 +80529,7 @@ export interface operations {
                 vehicleId: string;
                 /** @description Ngày đầu cửa sổ tra cứu (YYYY-MM-DD, ngày lịch Việt Nam) */
                 from: string;
-                /** @description Ngày cuối cửa sổ (YYYY-MM-DD). Quá 400 ngày kể từ `from` thì bị kẹp về trần — xem `to` trong kết quả */
+                /** @description Ngày cuối cửa sổ (YYYY-MM-DD). Quá 400 ngày kể từ `from` thì bị kẹp về trần - xem `to` trong kết quả */
                 to: string;
             };
             header?: never;
@@ -80660,7 +80660,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -80968,19 +80968,19 @@ export interface operations {
                 /** @description car | motorbike */
                 vehicleType?: "car" | "motorbike";
                 serviceType?: "self_drive" | "with_driver" | "long_term";
-                /** @description Hãng xe — CSV, multi-select (vd: Toyota,Kia) */
+                /** @description Hãng xe - CSV, multi-select (vd: Toyota,Kia) */
                 brand?: string;
-                /** @description Kiểu dáng thân xe — CSV (BODY_TYPE) */
+                /** @description Kiểu dáng thân xe - CSV (BODY_TYPE) */
                 bodyType?: string;
-                /** @description Phân khúc xe máy — chiều lọc đối xứng với bodyType của ô tô */
+                /** @description Phân khúc xe máy - chiều lọc đối xứng với bodyType của ô tô */
                 motorbikeCategory?: ("scooter" | "underbone" | "naked" | "sport" | "cruiser" | "adventure" | "touring" | "offroad" | "other")[];
-                /** @description Bucket số chỗ — CSV (4,5,7,8plus) */
+                /** @description Bucket số chỗ - CSV (4,5,7,8plus) */
                 seats?: string;
-                /** @description Nhiên liệu — CSV (FUEL_TYPE) */
+                /** @description Nhiên liệu - CSV (FUEL_TYPE) */
                 fuelType?: string;
-                /** @description Tiện ích xe — CSV (VEHICLE_FEATURE_LABEL); xe phải có ĐỦ các key đã chọn */
+                /** @description Tiện ích xe - CSV (VEHICLE_FEATURE_LABEL); xe phải có ĐỦ các key đã chọn */
                 features?: string;
-                /** @description Hộp số — CSV (TRANSMISSION_TYPE_EXT_VALUES) */
+                /** @description Hộp số - CSV (TRANSMISSION_TYPE_EXT_VALUES) */
                 transmission?: string;
                 /** @description Chỉ xe có giá thuê giờ */
                 hourly?: boolean;
@@ -80990,30 +80990,30 @@ export interface operations {
                 noCollateral?: boolean;
                 /** @description Chỉ xe đang giảm giá */
                 discount?: boolean;
-                /** @description Chỉ xe của gian hàng/chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thiết lập chung của tenant — XePrime không xuất hoá đơn thay chủ xe) */
+                /** @description Chỉ xe của gian hàng/chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thiết lập chung của tenant - XePrime không xuất hoá đơn thay chủ xe) */
                 vatInvoice?: boolean;
                 /** @description Chỉ xe "Đặt ngay" (tự động nhận chuyến). Có serviceType thì xe phải bật Đặt ngay cho đúng dịch vụ đó; không có thì bật cho ít nhất một dịch vụ */
                 instantBook?: boolean;
-                /** @description Điểm đánh giá tối thiểu — chỉ xe có ratingAvg >= mức; xe chưa có điểm bị loại */
+                /** @description Điểm đánh giá tối thiểu - chỉ xe có ratingAvg >= mức; xe chưa có điểm bị loại */
                 minRating?: 4 | 4.5 | 4.8;
-                /** @description Số chỗ tối thiểu (giữ tương thích cũ — mới dùng `seats`) */
+                /** @description Số chỗ tối thiểu (giữ tương thích cũ - mới dùng `seats`) */
                 minSeats?: number;
-                /** @description Từ khoá — khớp tên xe/hãng/model và TÊN CÔNG KHAI của chủ xe/gian hàng. Không phân biệt dấu và hoa thường; mỗi từ phải là đầu một từ ("vf8" khớp "VinFast VF 8"), không cần đúng thứ tự hay cùng một trường. */
+                /** @description Từ khoá - khớp tên xe/hãng/model và TÊN CÔNG KHAI của chủ xe/gian hàng. Không phân biệt dấu và hoa thường; mỗi từ phải là đầu một từ ("vf8" khớp "VinFast VF 8"), không cần đúng thứ tự hay cùng một trường. */
                 q?: string;
-                /** @description Mã tỉnh 2 ký tự — tham số chuẩn (GET /public/destinations) */
+                /** @description Mã tỉnh 2 ký tự - tham số chuẩn (GET /public/destinations) */
                 provinceCode?: string;
                 /**
                  * @deprecated
-                 * @description Tên tỉnh (link cũ) — được quy về provinceCode qua bí danh
+                 * @description Tên tỉnh (link cũ) - được quy về provinceCode qua bí danh
                  */
                 province?: string;
                 /** @description Giá thuê/ngày tối thiểu (VND) */
                 priceMin?: number;
                 /** @description Giá thuê/ngày tối đa (VND) */
                 priceMax?: number;
-                /** @description Nhận xe (ISO-8601) — lọc xe rảnh trong khoảng */
+                /** @description Nhận xe (ISO-8601) - lọc xe rảnh trong khoảng */
                 pickupAt?: string;
-                /** @description Trả xe (ISO-8601) — dùng cùng pickupAt */
+                /** @description Trả xe (ISO-8601) - dùng cùng pickupAt */
                 returnAt?: string;
                 sort?: "recommended" | "newest" | "price_asc" | "price_desc";
                 page?: number;
@@ -81210,7 +81210,7 @@ export interface operations {
     PublicQuoteController_deliveryDistance: {
         parameters: {
             query: {
-                /** @description Địa chỉ khách muốn nhận xe — chuỗi tự do, server tự tra toạ độ */
+                /** @description Địa chỉ khách muốn nhận xe - chuỗi tự do, server tự tra toạ độ */
                 address: string;
                 /** @description Vĩ độ ghim khách đã xác nhận */
                 lat?: number;
@@ -81661,19 +81661,19 @@ export interface operations {
                 /** @description car | motorbike */
                 vehicleType?: "car" | "motorbike";
                 serviceType?: "self_drive" | "with_driver" | "long_term";
-                /** @description Hãng xe — CSV, multi-select (vd: Toyota,Kia) */
+                /** @description Hãng xe - CSV, multi-select (vd: Toyota,Kia) */
                 brand?: string;
-                /** @description Kiểu dáng thân xe — CSV (BODY_TYPE) */
+                /** @description Kiểu dáng thân xe - CSV (BODY_TYPE) */
                 bodyType?: string;
-                /** @description Phân khúc xe máy — chiều lọc đối xứng với bodyType của ô tô */
+                /** @description Phân khúc xe máy - chiều lọc đối xứng với bodyType của ô tô */
                 motorbikeCategory?: ("scooter" | "underbone" | "naked" | "sport" | "cruiser" | "adventure" | "touring" | "offroad" | "other")[];
-                /** @description Bucket số chỗ — CSV (4,5,7,8plus) */
+                /** @description Bucket số chỗ - CSV (4,5,7,8plus) */
                 seats?: string;
-                /** @description Nhiên liệu — CSV (FUEL_TYPE) */
+                /** @description Nhiên liệu - CSV (FUEL_TYPE) */
                 fuelType?: string;
-                /** @description Tiện ích xe — CSV (VEHICLE_FEATURE_LABEL); xe phải có ĐỦ các key đã chọn */
+                /** @description Tiện ích xe - CSV (VEHICLE_FEATURE_LABEL); xe phải có ĐỦ các key đã chọn */
                 features?: string;
-                /** @description Hộp số — CSV (TRANSMISSION_TYPE_EXT_VALUES) */
+                /** @description Hộp số - CSV (TRANSMISSION_TYPE_EXT_VALUES) */
                 transmission?: string;
                 /** @description Chỉ xe có giá thuê giờ */
                 hourly?: boolean;
@@ -81683,30 +81683,30 @@ export interface operations {
                 noCollateral?: boolean;
                 /** @description Chỉ xe đang giảm giá */
                 discount?: boolean;
-                /** @description Chỉ xe của gian hàng/chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thiết lập chung của tenant — XePrime không xuất hoá đơn thay chủ xe) */
+                /** @description Chỉ xe của gian hàng/chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thiết lập chung của tenant - XePrime không xuất hoá đơn thay chủ xe) */
                 vatInvoice?: boolean;
                 /** @description Chỉ xe "Đặt ngay" (tự động nhận chuyến). Có serviceType thì xe phải bật Đặt ngay cho đúng dịch vụ đó; không có thì bật cho ít nhất một dịch vụ */
                 instantBook?: boolean;
-                /** @description Điểm đánh giá tối thiểu — chỉ xe có ratingAvg >= mức; xe chưa có điểm bị loại */
+                /** @description Điểm đánh giá tối thiểu - chỉ xe có ratingAvg >= mức; xe chưa có điểm bị loại */
                 minRating?: 4 | 4.5 | 4.8;
-                /** @description Số chỗ tối thiểu (giữ tương thích cũ — mới dùng `seats`) */
+                /** @description Số chỗ tối thiểu (giữ tương thích cũ - mới dùng `seats`) */
                 minSeats?: number;
-                /** @description Từ khoá — khớp tên xe/hãng/model và TÊN CÔNG KHAI của chủ xe/gian hàng. Không phân biệt dấu và hoa thường; mỗi từ phải là đầu một từ ("vf8" khớp "VinFast VF 8"), không cần đúng thứ tự hay cùng một trường. */
+                /** @description Từ khoá - khớp tên xe/hãng/model và TÊN CÔNG KHAI của chủ xe/gian hàng. Không phân biệt dấu và hoa thường; mỗi từ phải là đầu một từ ("vf8" khớp "VinFast VF 8"), không cần đúng thứ tự hay cùng một trường. */
                 q?: string;
-                /** @description Mã tỉnh 2 ký tự — tham số chuẩn (GET /public/destinations) */
+                /** @description Mã tỉnh 2 ký tự - tham số chuẩn (GET /public/destinations) */
                 provinceCode?: string;
                 /**
                  * @deprecated
-                 * @description Tên tỉnh (link cũ) — được quy về provinceCode qua bí danh
+                 * @description Tên tỉnh (link cũ) - được quy về provinceCode qua bí danh
                  */
                 province?: string;
                 /** @description Giá thuê/ngày tối thiểu (VND) */
                 priceMin?: number;
                 /** @description Giá thuê/ngày tối đa (VND) */
                 priceMax?: number;
-                /** @description Nhận xe (ISO-8601) — lọc xe rảnh trong khoảng */
+                /** @description Nhận xe (ISO-8601) - lọc xe rảnh trong khoảng */
                 pickupAt?: string;
-                /** @description Trả xe (ISO-8601) — dùng cùng pickupAt */
+                /** @description Trả xe (ISO-8601) - dùng cùng pickupAt */
                 returnAt?: string;
             };
             header?: never;
@@ -81795,11 +81795,11 @@ export interface operations {
         parameters: {
             query: {
                 vehicleType: "car" | "motorbike";
-                /** @description Kiểu dáng — chỉ ô tô */
+                /** @description Kiểu dáng - chỉ ô tô */
                 bodyType?: "mini" | "sedan" | "cuv" | "suv" | "mpv" | "pickup" | "van" | "minibus" | "cargo";
-                /** @description Phân khúc — chỉ xe máy */
+                /** @description Phân khúc - chỉ xe máy */
                 motorbikeCategory?: "scooter" | "underbone" | "naked" | "sport" | "cruiser" | "adventure" | "touring" | "offroad" | "other";
-                /** @description Số chỗ — dùng khi ô tô chưa khai kiểu dáng */
+                /** @description Số chỗ - dùng khi ô tô chưa khai kiểu dáng */
                 seatCount?: number;
                 /** @description Mã tỉnh 2 ký tự nơi giữ xe */
                 provinceCode?: string;
@@ -81892,11 +81892,11 @@ export interface operations {
                 /** @description car | motorbike */
                 vehicleType?: "car" | "motorbike";
                 serviceType?: "self_drive" | "with_driver" | "long_term";
-                /** @description Mã tỉnh 2 ký tự khách đang quan tâm — ƯU TIÊN xếp hạng, KHÔNG lọc bỏ xe tỉnh khác */
+                /** @description Mã tỉnh 2 ký tự khách đang quan tâm - ƯU TIÊN xếp hạng, KHÔNG lọc bỏ xe tỉnh khác */
                 nearProvinceCode?: string;
-                /** @description Nhận xe (ISO-8601) — loại xe đã bận trong khoảng */
+                /** @description Nhận xe (ISO-8601) - loại xe đã bận trong khoảng */
                 pickupAt?: string;
-                /** @description Trả xe (ISO-8601) — dùng cùng pickupAt */
+                /** @description Trả xe (ISO-8601) - dùng cùng pickupAt */
                 returnAt?: string;
                 limit?: number;
             };
@@ -82165,7 +82165,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -82321,7 +82321,7 @@ export interface operations {
             query?: {
                 page?: number;
                 limit?: number;
-                /** @description Từ khoá — chỉ giữ chủ xe/gian hàng có TÊN CÔNG KHAI khớp (cùng luật với `q` của `GET /public/listings`: không dấu, khớp đầu từ). */
+                /** @description Từ khoá - chỉ giữ chủ xe/gian hàng có TÊN CÔNG KHAI khớp (cùng luật với `q` của `GET /public/listings`: không dấu, khớp đầu từ). */
                 q?: string;
             };
             header?: never;
@@ -82520,11 +82520,11 @@ export interface operations {
                 delivery?: boolean;
                 /** @description Chỉ xe miễn thế chấp */
                 noCollateral?: boolean;
-                /** @description Chỉ xe của gian hàng/chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thiết lập chung của tenant — XePrime không xuất hoá đơn thay chủ xe) */
+                /** @description Chỉ xe của gian hàng/chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thiết lập chung của tenant - XePrime không xuất hoá đơn thay chủ xe) */
                 vatInvoice?: boolean;
                 /** @description Chỉ xe "Đặt ngay" (tự động nhận chuyến). Có serviceType thì xe phải bật Đặt ngay cho đúng dịch vụ đó; không có thì bật cho ít nhất một dịch vụ */
                 instantBook?: boolean;
-                /** @description Mã tỉnh 2 ký tự — tham số chuẩn (GET /public/destinations) */
+                /** @description Mã tỉnh 2 ký tự - tham số chuẩn (GET /public/destinations) */
                 provinceCode?: string;
                 sort?: "recommended" | "newest" | "price_asc" | "price_desc";
                 page?: number;
@@ -82851,7 +82851,7 @@ export interface operations {
     ReceiptsController_list: {
         parameters: {
             query?: {
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 type?: "income" | "expense";
                 status?: "draft" | "pending_approval" | "approved" | "cancelled";
@@ -82871,9 +82871,9 @@ export interface operations {
                 tenantCustomerId?: string;
                 /** @description Tìm mã phiếu / mã tra soát / diễn giải / mã đơn */
                 q?: string;
-                /** @description Từ ngày — `YYYY-MM-DD` (trọn ngày theo giờ VN) hoặc ISO đầy đủ. Lọc `occurred_at` */
+                /** @description Từ ngày - `YYYY-MM-DD` (trọn ngày theo giờ VN) hoặc ISO đầy đủ. Lọc `occurred_at` */
                 from?: string;
-                /** @description Đến ngày — cùng quy ước với `from` */
+                /** @description Đến ngày - cùng quy ước với `from` */
                 to?: string;
                 page?: number;
                 limit?: number;
@@ -83088,7 +83088,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -83409,7 +83409,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -83584,7 +83584,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -83779,7 +83779,7 @@ export interface operations {
     ReceiptsController_summary: {
         parameters: {
             query?: {
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 type?: "income" | "expense";
                 status?: "draft" | "pending_approval" | "approved" | "cancelled";
@@ -83799,9 +83799,9 @@ export interface operations {
                 tenantCustomerId?: string;
                 /** @description Tìm mã phiếu / mã tra soát / diễn giải / mã đơn */
                 q?: string;
-                /** @description Từ ngày — `YYYY-MM-DD` (trọn ngày theo giờ VN) hoặc ISO đầy đủ. Lọc `occurred_at` */
+                /** @description Từ ngày - `YYYY-MM-DD` (trọn ngày theo giờ VN) hoặc ISO đầy đủ. Lọc `occurred_at` */
                 from?: string;
-                /** @description Đến ngày — cùng quy ước với `from` */
+                /** @description Đến ngày - cùng quy ước với `from` */
                 to?: string;
                 page?: number;
                 limit?: number;
@@ -83935,7 +83935,7 @@ export interface operations {
             query?: {
                 /** @description Tìm theo mã xe / tên xe / biển số */
                 q?: string;
-                /** @description Luôn kèm xe này trong kết quả (ULID) — xe đang chọn sẵn */
+                /** @description Luôn kèm xe này trong kết quả (ULID) - xe đang chọn sẵn */
                 includeId?: string;
             };
             header?: never;
@@ -84148,7 +84148,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -84323,7 +84323,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -84581,7 +84581,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -84708,7 +84708,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -84791,7 +84791,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -85028,7 +85028,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -85195,7 +85195,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -85366,7 +85366,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -85649,7 +85649,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -85907,7 +85907,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -86190,7 +86190,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -87078,7 +87078,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -87245,7 +87245,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -87503,7 +87503,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -87720,7 +87720,7 @@ export interface operations {
     SubscriptionController_invoices: {
         parameters: {
             query?: {
-                /** @description live = chỉ các kỳ còn hạn (đang chạy + đã xếp lịch), sắp theo ngày bắt đầu — chuỗi kỳ mà màn gia hạn cần, không phụ thuộc trang lịch sử */
+                /** @description live = chỉ các kỳ còn hạn (đang chạy + đã xếp lịch), sắp theo ngày bắt đầu - chuỗi kỳ mà màn gia hạn cần, không phụ thuộc trang lịch sử */
                 state?: "live";
                 page?: number;
                 limit?: number;
@@ -88214,7 +88214,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -88940,7 +88940,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -89092,7 +89092,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -89377,7 +89377,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -89702,7 +89702,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -89877,7 +89877,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -90029,7 +90029,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -90181,7 +90181,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -90439,7 +90439,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -90672,7 +90672,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -90930,7 +90930,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -91392,7 +91392,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -91713,7 +91713,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -92340,7 +92340,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -92511,7 +92511,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -92682,7 +92682,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -92919,7 +92919,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -93071,7 +93071,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -93223,7 +93223,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -93375,7 +93375,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -93591,7 +93591,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -93722,7 +93722,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -93853,7 +93853,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -93984,7 +93984,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -94115,7 +94115,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -94267,7 +94267,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -94584,7 +94584,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -94759,7 +94759,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -94832,7 +94832,7 @@ export interface operations {
                 serviceType?: "self_drive" | "with_driver" | "long_term";
                 operationStatus?: "available" | "renting" | "maintenance" | "inactive";
                 publicStatus?: "draft" | "pending_public_review" | "approved_public" | "needs_revision" | "rejected" | "hidden" | "archived";
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 sort?: "newest" | "name_asc" | "code_asc" | "price_asc" | "price_desc";
                 page?: number;
@@ -95048,7 +95048,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -95369,7 +95369,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -95544,7 +95544,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -95874,7 +95874,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -96050,7 +96050,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -96373,7 +96373,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -96700,7 +96700,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -96872,7 +96872,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -97044,7 +97044,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -97221,7 +97221,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -97546,7 +97546,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -97874,7 +97874,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -98199,7 +98199,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -98370,7 +98370,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -98545,7 +98545,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -99021,7 +99021,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -99344,7 +99344,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -99520,7 +99520,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -99692,7 +99692,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -100020,7 +100020,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -100192,7 +100192,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -100368,7 +100368,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -100544,7 +100544,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -100716,7 +100716,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -100891,7 +100891,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -101216,7 +101216,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -101541,7 +101541,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -101867,7 +101867,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -102192,7 +102192,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -102364,7 +102364,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -102690,7 +102690,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -102861,7 +102861,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
@@ -103358,7 +103358,7 @@ export interface operations {
     VehiclesController_fleetSummary: {
         parameters: {
             query?: {
-                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
             };
             header?: never;

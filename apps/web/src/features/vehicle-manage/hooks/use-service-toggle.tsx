@@ -166,7 +166,7 @@ export function useServiceToggle(vehicle: VehicleDetail, canEdit: boolean): Serv
                       {' · '}
                       {domainLabel('serviceType', b.serviceType)}
                       {' · '}
-                      {fmt.shortDateTime(b.pickupAt)}
+                      {fmt.rentalAt(b.pickupAt)}
                     </li>
                   ))}
                 </ul>

@@ -29,7 +29,7 @@ describe('defaultRentalRange', () => {
     expect(stamp(returnAt)).toBe('2026-09-16 09:00');
   });
 
-  it('đúng sát giờ vẫn lấy mốc đó — 4 giờ là "ít nhất", không phải "hơn"', () => {
+  it('đúng sát giờ vẫn lấy mốc đó - 4 giờ là "ít nhất", không phải "hơn"', () => {
     const { pickupAt } = defaultRentalRange(vn('2026-09-14T05:00'));
 
     expect(stamp(pickupAt)).toBe('2026-09-14 09:00');

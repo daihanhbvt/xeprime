@@ -68,8 +68,8 @@ export class TaxRowDto {
     enum: [...SELLER_ENTITY_TYPE_VALUES, 'unknown'],
     description:
       'Loại chủ thể người bán KHAI trong hồ sơ lúc ghi sổ. `unknown` = gian hàng chưa khai hồ sơ ' +
-      'người bán — tờ khai phải thấy khoảng trống đó, không được gộp vào `individual` (dù tiền đã ' +
-      'bị khấu trừ theo mức cá nhân — xem `taxSubjectType`).',
+      'người bán - tờ khai phải thấy khoảng trống đó, không được gộp vào `individual` (dù tiền đã ' +
+      'bị khấu trừ theo mức cá nhân - xem `taxSubjectType`).',
   })
   entityType!: SellerEntityType | 'unknown';
   @ApiPropertyOptional({
@@ -81,14 +81,14 @@ export class TaxRowDto {
       'một-mức trước 22/10/2026',
   })
   taxSubjectType!: SellerEntityType | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'MST — snapshot lúc ghi sổ' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'MST - snapshot lúc ghi sổ' })
   taxCode!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tên pháp lý — snapshot' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tên pháp lý - snapshot' })
   legalName!: string | null;
 
-  @ApiProperty({ description: 'Giá trị thuê chịu thuế `B` — KHÔNG gồm bảo hiểm' })
+  @ApiProperty({ description: 'Giá trị thuê chịu thuế `B` - KHÔNG gồm bảo hiểm' })
   taxableBase!: string;
-  @ApiProperty({ description: '% tổng đã áp — SNAPSHOT, không phải tỷ lệ hiện hành' })
+  @ApiProperty({ description: '% tổng đã áp - SNAPSHOT, không phải tỷ lệ hiện hành' })
   percent!: number;
   @ApiPropertyOptional({
     type: Number,
@@ -109,7 +109,7 @@ export class TaxRowDto {
   @ApiPropertyOptional({
     enum: TAX_CATEGORY_VALUES,
     nullable: true,
-    description: 'Nhóm NĐ 117 — service (5% + 2%) | transport (3% + 1,5%)',
+    description: 'Nhóm NĐ 117 - service (5% + 2%) | transport (3% + 1,5%)',
   })
   taxCategory!: TaxCategory | null;
   @ApiProperty({ example: 'GTGT 5% + TNCN 2%' }) label!: string;
@@ -171,12 +171,12 @@ export class TaxTenantBreakdownDto {
  */
 export class TaxPeriodSummaryDto {
   @ApiProperty({ example: '2026-09' }) periodKey!: string;
-  @ApiProperty({ description: 'Tổng nghĩa vụ của kỳ — đã trừ các bút toán đảo' })
+  @ApiProperty({ description: 'Tổng nghĩa vụ của kỳ - đã trừ các bút toán đảo' })
   totalAmount!: string;
   @ApiProperty({ description: 'Tổng giá trị thuê chịu thuế của kỳ' }) totalTaxableBase!: string;
   @ApiProperty({
     description:
-      'Tổng GTGT của kỳ (ADR 0068) — dòng một-mức trước 22/10/2026 không tách nên không có ở đây',
+      'Tổng GTGT của kỳ (ADR 0068) - dòng một-mức trước 22/10/2026 không tách nên không có ở đây',
   })
   totalVatAmount!: string;
   @ApiProperty({ description: 'Tổng TNCN của kỳ (ADR 0068)' }) totalPitAmount!: string;
@@ -215,7 +215,7 @@ export class TenantTaxSummaryDto {
 
 /** Đảo một dòng — lý do BẮT BUỘC và đi vào audit. */
 export class ReverseTaxDto {
-  @ApiProperty({ description: 'Vì sao đảo dòng này — bắt buộc, ghi vào audit và vào sổ' })
+  @ApiProperty({ description: 'Vì sao đảo dòng này - bắt buộc, ghi vào audit và vào sổ' })
   @IsString()
   @MinLength(5)
   @MaxLength(500)

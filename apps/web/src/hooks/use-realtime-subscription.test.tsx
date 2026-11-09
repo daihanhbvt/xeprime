@@ -39,7 +39,7 @@ afterEach(() => {
 });
 
 describe('useRealtimeSubscription', () => {
-  it('bắt đầu ở connecting — đăng ký được KHÔNG có nghĩa là đang nghe được', async () => {
+  it('bắt đầu ở connecting - đăng ký được KHÔNG có nghĩa là đang nghe được', async () => {
     const { container } = render(<Probe />);
     await waitFor(() => expect(subscribes).toBe(1));
     expect(container.textContent).toBe(REALTIME_STATE.CONNECTING);

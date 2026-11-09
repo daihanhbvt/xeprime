@@ -115,7 +115,7 @@ async function renderBlock(stage: CustomerTripStage, stageAfterApprove?: Custome
  * `pending_approval` (và `pending_approval_paid` LEGACY) còn chờ chủ xe quyết ⇒ Duyệt / Từ chối.
  * `awaiting_hold` thì họ đã nhận rồi, bóng ở chân khách ⇒ lối duy nhất còn lại là HUỶ.
  */
-describe('TripHostDecisions — chuyến còn chờ chủ xe quyết', () => {
+describe('TripHostDecisions - chuyến còn chờ chủ xe quyết', () => {
   it('bày Duyệt và Từ chối', async () => {
     const view = await renderBlock(CUSTOMER_TRIP_STAGE.PENDING_APPROVAL);
 
@@ -139,7 +139,7 @@ describe('TripHostDecisions — chuyến còn chờ chủ xe quyết', () => {
    */
 });
 
-describe('TripHostDecisions — chuyến ĐÃ NHẬN, đang chờ khách thanh toán', () => {
+describe('TripHostDecisions - chuyến ĐÃ NHẬN, đang chờ khách thanh toán', () => {
   it('đổi hẳn sang câu "đã nhận" và chỉ còn nút Huỷ chuyến', async () => {
     const view = await renderBlock(CUSTOMER_TRIP_STAGE.AWAITING_HOLD);
 
@@ -173,7 +173,7 @@ describe('TripHostDecisions — chuyến ĐÃ NHẬN, đang chờ khách thanh t
  * Vì thế ở đây spy thẳng vào `bookingRequestsApi.approve` và khẳng định trên MÀN HÌNH, không
  * khẳng định trên một prop.
  */
-describe('TripHostDecisions — duyệt xong đọc `bookingId` của BẢN GHI SERVER TRẢ VỀ', () => {
+describe('TripHostDecisions - duyệt xong đọc `bookingId` của BẢN GHI SERVER TRẢ VỀ', () => {
   const approved = viBookingRequests.approved;
 
   /** Bản ghi server trả sau lượt duyệt — `bookingId` là thứ DUY NHẤT quyết định câu chuyện. */
@@ -276,7 +276,7 @@ describe('TripHostDecisions — duyệt xong đọc `bookingId` của BẢN GHI 
    * đẩy tấm trở vào trong component, bài kia vẫn xanh. Bài này dựng component TRẦN nên nó đỏ ngay
    * ở đúng lúc ranh giới bị phá.
    */
-  it('component KHÔNG tự dựng tấm kết quả — nó chỉ báo lên màn cha', async () => {
+  it('component KHÔNG tự dựng tấm kết quả - nó chỉ báo lên màn cha', async () => {
     jest
       .spyOn(bookingRequestsApi, 'approve')
       .mockResolvedValue(approvedRecord('01JQZX0000000000000000000B'));

@@ -17,7 +17,8 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
-import { Reveal, listLayoutTransition, useListReveal } from '@/components/motion/Reveal';
+import { listLayoutTransition } from '@/components/motion/Reveal';
+import { ScrollReveal, ScrollRevealProvider, useAppScrollRevealList } from '@/components/motion/ScrollReveal';
 import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { useDomainLabel } from '@/i18n/domain';
@@ -109,15 +110,15 @@ function FavoritesTab({ vehicleType }: { vehicleType: VehicleType }) {
    */
   const pull = usePullRefresh(list.refresh);
 
-  // Thẻ đầu so le khi danh sách về; bỏ thích thì các thẻ còn lại trượt khép lại (`itemLayoutAnimation`).
-  const shouldReveal = useListReveal(!list.isInitialLoading && list.items.length > 0);
+  // Thẻ trượt lên khi cuộn tới; bỏ thích thì các thẻ còn lại trượt khép lại (`itemLayoutAnimation`).
+  const listReveal = useAppScrollRevealList();
   const renderItem = useCallback(
     ({ item, index }: ListRenderItemInfo<FavoriteVehicle>) => (
-      <Reveal index={index} disabled={!shouldReveal(index)}>
+      <ScrollReveal index={index}>
         <FavoriteVehicleCard vehicle={item} />
-      </Reveal>
+      </ScrollReveal>
     ),
-    [shouldReveal],
+    [],
   );
 
   if (list.isInitialLoading) {
@@ -135,9 +136,12 @@ function FavoritesTab({ vehicleType }: { vehicleType: VehicleType }) {
   }
 
   return (
+    <ScrollRevealProvider value={listReveal.ctx}>
     <Animated.FlatList
       data={list.items}
       keyExtractor={keyOf}
+      onScroll={listReveal.onScroll}
+      scrollEventThrottle={16}
       renderItem={renderItem}
       itemLayoutAnimation={listLayoutTransition}
       onEndReached={() => {
@@ -191,5 +195,6 @@ function FavoritesTab({ vehicleType }: { vehicleType: VehicleType }) {
         ) : null
       }
     />
+    </ScrollRevealProvider>
   );
 }

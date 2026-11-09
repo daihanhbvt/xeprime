@@ -65,7 +65,7 @@ beforeEach(() => {
  * Web `AutoAcceptSection` (30/09/2026): công tắc tự nhận LƯU NGAY, chỉ gửi `{autoAcceptEnabled}`;
  * nút Lưu chỉ còn ở có tài xế, gửi đúng hai ô của nó.
  */
-describe('AutoAcceptBody — công tắc lưu ngay như web', () => {
+describe('AutoAcceptBody - công tắc lưu ngay như web', () => {
   it('tự lái: bấm công tắc ⇒ PATCH ngay với ĐÚNG {autoAcceptEnabled}, không có nút Lưu', async () => {
     mockMutate.mockImplementation((_body, opts) => opts.onSuccess());
     const view = await renderBody(SERVICE_TYPE.SELF_DRIVE);

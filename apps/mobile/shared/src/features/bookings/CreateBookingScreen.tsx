@@ -1019,12 +1019,12 @@ function StaffBookingTrip({
                 <FieldBox
                   label={t('trip.pickupTimeField')}
                   icon="calendar-outline"
-                  value={watchedPickup ? fmt.dateTime(appWallClockToIso(watchedPickup)) : ''}
+                  value={watchedPickup ? fmt.rentalAt(appWallClockToIso(watchedPickup)) : ''}
                   placeholder={t('trip.pickupTimeField')}
                   hint={
                     derivedReturnAt
                       ? t('trip.returnDerived', {
-                          date: fmt.dateTime(appWallClockToIso(derivedReturnAt)),
+                          date: fmt.rentalAt(appWallClockToIso(derivedReturnAt)),
                         })
                       : t('trip.returnPending')
                   }

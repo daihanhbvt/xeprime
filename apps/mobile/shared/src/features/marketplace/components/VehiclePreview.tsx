@@ -139,7 +139,7 @@ export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps
         </Card>
       ) : (
         // Băng chuyền thẻ-ở-giữa — đúng trình bày mobile của web v2 (`HomeCarousel` dưới 640px).
-        <HomeCarousel accessibilityLabel={tHome('title')} onActiveChange={setFocused}>
+        <HomeCarousel accessibilityLabel={tHome('title')} onActiveChange={setFocused} coverflow>
           {items.map((listing, index) => (
             <VehicleCard
               key={listing.id}

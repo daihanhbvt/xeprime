@@ -931,7 +931,7 @@ export class BookingRequestsService {
     });
     if (!applied.snapshot) {
       this.logger.warn(
-        `Mã ${frozen.code} không còn áp được cho yêu cầu ${req.id} lúc chốt giá (${applied.reason}) — nhả lượt`,
+        `Mã ${frozen.code} không còn áp được cho yêu cầu ${req.id} lúc chốt giá (${applied.reason}) - nhả lượt`,
       );
       return { fees: baseFees, promoDropped: true };
     }
@@ -1089,7 +1089,7 @@ export class BookingRequestsService {
        * hàng chờ duyệt; ghi log để vận hành thấy vì sao.
        */
       this.logger.warn(
-        `Tự động nhận yêu cầu ${id} thất bại — rơi về chờ duyệt tay: ${err instanceof Error ? err.message : String(err)}`,
+        `Tự động nhận yêu cầu ${id} thất bại - rơi về chờ duyệt tay: ${err instanceof Error ? err.message : String(err)}`,
       );
       return null;
     }
@@ -1340,7 +1340,7 @@ export class BookingRequestsService {
     if (!account || account.realm !== ACCOUNT_REALM.CUSTOMER) {
       throw new ForbiddenException({
         code: API_ERROR_CODE.SHOP_ACCOUNT_CANNOT_BOOK,
-        message: 'Tài khoản này không đặt thuê xe được — hãy dùng tài khoản khách thuê.',
+        message: 'Tài khoản này không đặt thuê xe được - hãy dùng tài khoản khách thuê.',
       });
     }
     if (!account.phone || !account.phoneVerifiedAt) {
@@ -1388,7 +1388,7 @@ export class BookingRequestsService {
       throw new ConflictException({
         code: API_ERROR_CODE.CANNOT_BOOK_OWN_VEHICLE,
         message:
-          'Xe này thuộc gian hàng gắn với số điện thoại của bạn — không đặt thuê xe của chính mình được.',
+          'Xe này thuộc gian hàng gắn với số điện thoại của bạn - không đặt thuê xe của chính mình được.',
         details: { tenantId: ownMember.tenantId },
       });
     }
@@ -2141,7 +2141,7 @@ export class BookingRequestsService {
     if (!isLongTermPackageMonths(packageMonths)) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Yêu cầu thuê dài hạn cũ chưa có gói — chọn gói thuê trước khi duyệt',
+        message: 'Yêu cầu thuê dài hạn cũ chưa có gói - chọn gói thuê trước khi duyệt',
       });
     }
     if (
@@ -2151,7 +2151,7 @@ export class BookingRequestsService {
     ) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Không được đổi gói khách đã chọn — từ chối yêu cầu và mời khách đặt lại gói khác',
+        message: 'Không được đổi gói khách đã chọn - từ chối yêu cầu và mời khách đặt lại gói khác',
       });
     }
 
@@ -2174,7 +2174,7 @@ export class BookingRequestsService {
       if (requested && scheduledDay !== requested) {
         throw new BadRequestException({
           code: API_ERROR_CODE.VALIDATION_FAILED,
-          message: `Khách yêu cầu nhận xe ngày ${requested} — chọn đúng ngày đó hoặc từ chối yêu cầu`,
+          message: `Khách yêu cầu nhận xe ngày ${requested} - chọn đúng ngày đó hoặc từ chối yêu cầu`,
         });
       }
     } else if (req.pickupPreference === PICKUP_PREFERENCE.WITHIN_7_DAYS) {
@@ -2243,7 +2243,7 @@ export class BookingRequestsService {
             title: `Yêu cầu thuê ${req.vehicle.name} không được chấp nhận`,
             body: reason
               ? `Lý do: ${reason}. Bạn chưa bị trừ tiền.`
-              : 'Chủ xe đã từ chối yêu cầu. Bạn chưa bị trừ tiền — hãy chọn xe khác.',
+              : 'Chủ xe đã từ chối yêu cầu. Bạn chưa bị trừ tiền - hãy chọn xe khác.',
             tenantId,
             targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
             targetId: id,
@@ -2439,7 +2439,7 @@ export class BookingRequestsService {
         code: API_ERROR_CODE.BOOKING_CANCEL_NOT_ALLOWED,
         message:
           req.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL
-            ? 'Yêu cầu này chưa được nhận — dùng "Từ chối" thay vì huỷ'
+            ? 'Yêu cầu này chưa được nhận - dùng "Từ chối" thay vì huỷ'
             : 'Chuyến này không còn ở chặng huỷ được từ hộp thư yêu cầu',
         details: { stage: req.status },
       });
@@ -2462,7 +2462,7 @@ export class BookingRequestsService {
       if (claimed.count === 0) {
         throw new ConflictException({
           code: API_ERROR_CODE.CONFLICT,
-          message: 'Chuyến vừa được cập nhật — tải lại rồi thử lại',
+          message: 'Chuyến vừa được cập nhật - tải lại rồi thử lại',
         });
       }
 
@@ -2730,7 +2730,7 @@ export class BookingRequestsService {
            * chiếc xe mà vài giờ sau họ lại đặt được.
            */
           title: `${loser.vehicle.name} vừa được khách khác giữ chỗ`,
-          body: 'Khung giờ bạn chọn tạm hết. Chọn xe khác hoặc đổi giờ — nếu chỗ trống lại, XePrime sẽ báo bạn.',
+          body: 'Khung giờ bạn chọn tạm hết. Chọn xe khác hoặc đổi giờ - nếu chỗ trống lại, XePrime sẽ báo bạn.',
           tenantId,
           targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
           targetId: loser.id,
@@ -3139,7 +3139,7 @@ function reminderTooSoon(availableAt: Date): HttpException {
   return new HttpException(
     {
       code: API_ERROR_CODE.PAYMENT_REMINDER_TOO_SOON,
-      message: 'Khách vừa nhận lời nhắc thanh toán — vui lòng thử lại sau',
+      message: 'Khách vừa nhận lời nhắc thanh toán - vui lòng thử lại sau',
       details: { availableAt: availableAt.toISOString() },
     },
     HttpStatus.TOO_MANY_REQUESTS,
@@ -3163,7 +3163,7 @@ function reminderNotAvailable(stage: string): ConflictException {
 function requestExpired(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.BOOKING_REQUEST_EXPIRED,
-    message: 'Yêu cầu đã quá hạn phản hồi — hãy liên hệ lại với khách',
+    message: 'Yêu cầu đã quá hạn phản hồi - hãy liên hệ lại với khách',
   });
 }
 
@@ -3171,6 +3171,6 @@ function requestExpired(): ConflictException {
 function duplicateRequest(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.BOOKING_REQUEST_DUPLICATE,
-    message: 'Bạn vừa gửi một yêu cầu giống hệt cho xe này — vui lòng chờ shop phản hồi',
+    message: 'Bạn vừa gửi một yêu cầu giống hệt cho xe này - vui lòng chờ shop phản hồi',
   });
 }

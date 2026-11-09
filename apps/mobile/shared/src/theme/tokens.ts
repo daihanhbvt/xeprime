@@ -82,7 +82,7 @@ function resolve(name: XpTokenName, scheme: ColorScheme = 'light'): string {
     if (!alias) {
       if (CSS_FUNCTION.test(value)) {
         throw new Error(
-          `Token '${name}' là hàm CSS ('${value}') — React Native không hiểu. Dùng token khác hoặc thêm giá trị native tương ứng.`,
+          `Token '${name}' là hàm CSS ('${value}') - React Native không hiểu. Dùng token khác hoặc thêm giá trị native tương ứng.`,
         );
       }
       return value;

@@ -25,6 +25,7 @@ import {
 } from '@xeprime/types';
 import { appWallClockToIso, nowInAppTz, toAppTz, type Dayjs } from '@/lib/datetime';
 import { applyDiscountPercent, isZeroMoney } from '@/lib/money';
+import { swapClass } from '@/components/motion/motion-classes';
 import { cx } from '@/lib/cx';
 import { rememberRentalRange, rememberedOrDefaultRentalRange } from '@/lib/rental-range-memory';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -42,6 +43,7 @@ import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
 import { InsuranceOptionList } from '@/features/insurance/components/InsuranceOptionList';
 import { useInsuranceOffer } from '@/features/insurance/hooks';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
+import { InfoHint } from '@/components/data-display/InfoHint';
 import {
   RentalDateTimeRangeField,
   type RentalMode,
@@ -54,6 +56,7 @@ import { readDeliveryAddress } from '@/lib/delivery-address-memory';
 import { DeliveryAddressModal, type ConfirmedDeliveryInfo } from './DeliveryAddressModal';
 import { filterQueryString, formatDateTimeParam } from '../filter-params';
 import type { PublicListingDetail } from '../types';
+import { NumberTicker } from '@/components/motion/NumberTicker';
 import styles from './ListingBookingCard.module.css';
 
 interface ListingBookingCardProps {
@@ -589,7 +592,10 @@ export function ListingBookingCard({
             </div>
           ) : (
             <div className={styles.locationSection}>
-              <h4 className={styles.sectionTitle}>{t('pickup.title')}</h4>
+              <h4 className={cx(styles.sectionTitle, styles.labelWithHint)}>
+                {t('pickup.title')}
+                <InfoHint content={t('pickup.note')} label={t('pickup.noteLabel')} />
+              </h4>
               <div className={styles.deliveryToggle}>
                 <button
                   type="button"
@@ -670,7 +676,6 @@ export function ListingBookingCard({
                 </button>
               )}
 
-              <p className={styles.addressNote}>{t('pickup.note')}</p>
             </div>
           )}
 
@@ -814,8 +819,10 @@ export function ListingBookingCard({
             {cost.holdAmount ? (
               <div className={cx(styles.priceLineTop, styles.holdLine)}>
                 <div className={styles.priceLabel}>
-                  <span>{tPrice('holdAmount')}</span>
-                  <span className={styles.priceSubLabel}>{tPrice('holdHint')}</span>
+                  <span className={styles.labelWithHint}>
+                    {tPrice('holdAmount')}
+                    <InfoHint content={tPrice('holdHint')} label={tPrice('holdHintLabel')} />
+                  </span>
                 </div>
                 <span className={styles.priceValue}>{fmt.money(cost.holdAmount)}</span>
               </div>
@@ -835,12 +842,20 @@ export function ListingBookingCard({
             */}
 
             <div className={styles.totalRow}>
-              <span className={styles.totalLabel}>{cost.total?.label}</span>
-              <span className={styles.totalAmount}>
-                {fmt.money(cost.total?.amount ?? quote.breakdown.totalAmount)}
+              <span className={cx(styles.totalLabel, styles.labelWithHint)}>
+                {cost.total?.label}
+                {cost.costNote ? (
+                  <InfoHint content={cost.costNote} label={tPrice('totalHintLabel')} />
+                ) : null}
+              </span>
+              <span
+                key={cost.total?.amount ?? quote.breakdown.totalAmount}
+                className={cx(styles.totalAmount, swapClass)}
+              >
+                <NumberTicker value={fmt.money(cost.total?.amount ?? quote.breakdown.totalAmount)} />
               </span>
             </div>
-            <p className={styles.costNote}>{cost.costNote}</p>
+            {cost.estimateNote ? <p className={styles.costNote}>{cost.estimateNote}</p> : null}
           </>
         ) : (
           /* Báo giá không về: không bịa số — chủ xe vẫn xác nhận giá khi duyệt, khách vẫn đặt được. */

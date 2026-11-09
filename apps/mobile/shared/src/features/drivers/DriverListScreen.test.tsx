@@ -111,7 +111,7 @@ async function renderScreen(permissions: Permission[], items: Driver[] = [driver
 
 beforeEach(() => jest.restoreAllMocks());
 
-describe('DriverListScreen — quyền', () => {
+describe('DriverListScreen - quyền', () => {
   it('thiếu `drivers.view`: màn thiếu quyền, KHÔNG gọi API', async () => {
     const view = await renderScreen([PERMISSION.BOOKING_VIEW]);
 
@@ -135,7 +135,7 @@ describe('DriverListScreen — quyền', () => {
   });
 });
 
-describe('DriverListScreen — mời và vòng đời liên kết', () => {
+describe('DriverListScreen - mời và vòng đời liên kết', () => {
   const manage: Permission[] = [PERMISSION.DRIVER_VIEW, PERMISSION.DRIVER_MANAGE];
 
   it('thiếu tên/SĐT: chặn ở client, KHÔNG gọi API', async () => {
@@ -205,7 +205,7 @@ describe('DriverListScreen — mời và vòng đời liên kết', () => {
   });
 });
 
-describe('DriverListScreen — bằng lái', () => {
+describe('DriverListScreen - bằng lái', () => {
   it('hiện TRẠNG THÁI bằng lái của tài khoản, kèm hạng + hạn khi đã xác thực', async () => {
     const view = await renderScreen(
       [PERMISSION.DRIVER_VIEW],
@@ -225,8 +225,8 @@ describe('DriverListScreen — bằng lái', () => {
   });
 });
 
-describe('Điểm nối Booking — bộ chọn gán tài xế', () => {
-  it('khả dụng do SERVER chấm — bộ chọn đọc `assignable`, không đọc `list`', async () => {
+describe('Điểm nối Booking - bộ chọn gán tài xế', () => {
+  it('khả dụng do SERVER chấm - bộ chọn đọc `assignable`, không đọc `list`', async () => {
     jest
       .spyOn(authApi, 'fetchCurrentUser')
       .mockResolvedValue(currentUser([PERMISSION.DRIVER_VIEW, PERMISSION.BOOKING_UPDATE]));

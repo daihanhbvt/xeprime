@@ -33,10 +33,10 @@ const ADDRESS_FIELD_NAMES = {
   addressLine: 'addressLine',
 } as const;
 
-/** Bốn trường GHIM — tách riêng vì không phải form nào cũng lưu toạ độ (xem `AddressPinNames`). */
+/** Bốn trường GHIM - tách riêng vì không phải form nào cũng lưu toạ độ (xem `AddressPinNames`). */
 /**
  * Giá trị của hộp thoại = schema chi nhánh dùng chung + MỘT ô của riêng web: "Đặt làm chi nhánh mặc
- * định" (design `23999:112321`). Ô đó không phải một trường của chi nhánh — nó là lượt
+ * định" (design `23999:112321`). Ô đó không phải một trường của chi nhánh - nó là lượt
  * `POST /branches/:id/set-default` chạy SAU khi lưu, cùng đường với mục "Đặt làm mặc định" của menu.
  */
 type BranchDialogValues = BranchFormValues & { makeDefault: boolean };
@@ -49,13 +49,13 @@ const ADDRESS_PIN_NAMES = {
 } as const;
 
 /**
- * Thêm/sửa chi nhánh — dùng `ResponsiveDialog` chung (modal ở desktop, drawer đáy ở mobile), nên
+ * Thêm/sửa chi nhánh - dùng `ResponsiveDialog` chung (modal ở desktop, drawer đáy ở mobile), nên
  * không có một hộp thoại thứ hai trong repo làm cùng việc.
  *
- * Địa chỉ đi qua `AddressField` — tỉnh/thành và xã/phường chọn từ DANH MỤC NHÀ NƯỚC (mô hình
+ * Địa chỉ đi qua `AddressField` - tỉnh/thành và xã/phường chọn từ DANH MỤC NHÀ NƯỚC (mô hình
  * hai cấp từ 01/07/2025), số nhà và đường thì gõ, rồi xác nhận ghim trên bản đồ. Cả ba phần đều
  * bắt buộc ở đây vì chi nhánh là ĐỊA ĐIỂM VẬN HÀNH THẬT: xe nằm ở đó, khách tới đó nhận xe, và
- * toạ độ của nó là điểm xuất phát của mọi phép tính phí giao xe tận nơi — một cái ghim lệch vài
+ * toạ độ của nó là điểm xuất phát của mọi phép tính phí giao xe tận nơi - một cái ghim lệch vài
  * km là mọi đơn giao của chi nhánh đó sai tiền.
  */
 export function BranchFormDialog({
@@ -69,7 +69,7 @@ export function BranchFormDialog({
   branch: Branch | null;
   onClose: () => void;
   /**
-   * Cảnh báo ngữ cảnh đặt trên form — ví dụ màn quản lý MỘT xe nhắc rằng chi nhánh này đang giữ
+   * Cảnh báo ngữ cảnh đặt trên form - ví dụ màn quản lý MỘT xe nhắc rằng chi nhánh này đang giữ
    * nhiều xe và sửa địa chỉ sẽ đổi vị trí của tất cả. Hộp thoại không tự suy điều đó.
    */
   notice?: ReactNode;
@@ -81,12 +81,12 @@ export function BranchFormDialog({
   const update = useUpdateBranch();
   const setDefault = useBranchAction();
   const submitting = create.isPending || update.isPending || setDefault.isPending;
-  // Đổi mặc định là thao tác VÒNG ĐỜI — phiên hỗ trợ không có (ADR 0050 §13), như ở menu "…".
+  // Đổi mặc định là thao tác VÒNG ĐỜI - phiên hỗ trợ không có (ADR 0050 §13), như ở menu "…".
   const lifecycleHidden = useSupportHides(SUPPORT_HIDDEN_AREA.BRANCH_LIFECYCLE);
   const canMakeDefault = !lifecycleHidden && !branch?.isDefault;
   /*
    * Phiên hỗ trợ (ADR 0050 §13): SĐT chi nhánh đến đã bị che (`090****001`). Nạp nó làm GIÁ TRỊ là
-   * vừa trượt validator, vừa có nguy cơ ghi đè số thật bằng số che — nên ô để trống, số che chỉ làm
+   * vừa trượt validator, vừa có nguy cơ ghi đè số thật bằng số che - nên ô để trống, số che chỉ làm
    * placeholder, và chỉ số người thao tác GÕ MỚI mới được gửi (payload bỏ chuỗi rỗng).
    */
   const phoneMasked = useSupportSession() !== null && Boolean(branch?.phone);
@@ -103,7 +103,7 @@ export function BranchFormDialog({
       wardCode: branch?.wardCode ?? '',
       /*
        * Chi nhánh CŨ chưa có `addressLine`: đoán phần "số nhà, đường" từ chuỗi hiển thị bằng
-       * cách cắt các cụm trông như đơn vị hành chính. Chỉ là GỢI Ý cho ô nhập — người dùng nhìn
+       * cách cắt các cụm trông như đơn vị hành chính. Chỉ là GỢI Ý cho ô nhập - người dùng nhìn
        * và sửa trước khi lưu, và đó chính là lý do form này bắt họ xác nhận lại địa chỉ.
        */
       addressLine: branch?.addressLine ?? guessAddressLine(branch?.address),
@@ -122,7 +122,7 @@ export function BranchFormDialog({
       provinceCode: values.provinceCode,
       /*
        * Chuỗi RỖNG không được gửi. DTO khai `@IsOptional()` kèm `@Length(5, 5)`, mà `@IsOptional`
-       * chỉ bỏ qua `null`/`undefined` — một `''` vẫn đi vào `@Length` và bật lỗi 400. Từ ADR 0042
+       * chỉ bỏ qua `null`/`undefined` - một `''` vẫn đi vào `@Length` và bật lỗi 400. Từ ADR 0042
        * form không còn ô Xã/phường nên chi nhánh MỚI luôn để trống trường này; chi nhánh cũ đã có
        * mã thì giữ nguyên mã đó.
        */
@@ -140,7 +140,7 @@ export function BranchFormDialog({
       const saved = branch
         ? await update.mutateAsync({ id: branch.id, ...payload })
         : await create.mutateAsync(payload);
-      // Server tự kiểm (chi nhánh phải đang hoạt động và có tỉnh) — lỗi thì chi nhánh VẪN đã lưu,
+      // Server tự kiểm (chi nhánh phải đang hoạt động và có tỉnh) - lỗi thì chi nhánh VẪN đã lưu,
       // hộp thoại đóng và câu lỗi của lượt đổi mặc định hiện riêng.
       if (values.makeDefault && canMakeDefault) {
         await setDefault.mutateAsync({ id: saved.id, action: 'set-default' }).catch(() => undefined);
@@ -197,7 +197,7 @@ export function BranchFormDialog({
           required
           /*
            * Chỉ TẠO MỚI mới điền sẵn tỉnh đã nhớ. Ở chế độ SỬA, ô tỉnh trống nghĩa là chi nhánh
-           * này có từ trước danh mục hành chính (ADR 0035 điều 7) — điền vào đó tỉnh mà người
+           * này có từ trước danh mục hành chính (ADR 0035 điều 7) - điền vào đó tỉnh mà người
            * dùng vừa xem ở nơi khác sẽ dời một địa điểm vận hành có thật sang tỉnh khác, âm thầm,
            * chỉ vì họ bấm Lưu.
            */

@@ -4,15 +4,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ManageUserCard } from './ManageUserCard';
 
 /**
- * Thẻ ở chân sidebar — danh tính KHU LÀM VIỆC, và lối vào menu tài khoản.
+ * Thẻ ở chân sidebar - danh tính KHU LÀM VIỆC, và lối vào menu tài khoản.
  *
  * Ba điều tuyệt đối:
  *
  *  1. **Hình nổi bật là LOGO GIAN HÀNG**, fallback chữ cái đầu của TÊN GIAN HÀNG (16/09/2026).
- *     Trước đợt này thẻ mang avatar cá nhân còn topbar mang chữ cái đầu tên gian hàng — hai hình
+ *     Trước đợt này thẻ mang avatar cá nhân còn topbar mang chữ cái đầu tên gian hàng - hai hình
  *     đại diện cho hai thứ khác nhau trên cùng một màn hình.
- *  2. **Không lộ dữ liệu liên hệ** — vỏ portal hiện trên mọi trang, kể cả lúc chia sẻ màn hình.
- *  3. **Thu gọn vẫn còn danh tính** — thu gọn xong mà không ai biết mình đang đứng ở gian hàng
+ *  2. **Không lộ dữ liệu liên hệ** - vỏ portal hiện trên mọi trang, kể cả lúc chia sẻ màn hình.
+ *  3. **Thu gọn vẫn còn danh tính** - thu gọn xong mà không ai biết mình đang đứng ở gian hàng
  *     nào thì đó là mất chức năng, không phải tiết kiệm chỗ.
  */
 
@@ -50,10 +50,10 @@ vi.mock('@/features/auth/hooks/use-portal-logout', () => ({
 const zone = vi.hoisted(() => ({ value: 'partner' as 'partner' | 'admin' }));
 vi.mock('@/zones/ZoneProvider', () => ({ useZone: () => zone.value }));
 
-// Menu partner đóng drawer mobile khi đi trang — cần dispatch.
+// Menu partner đóng drawer mobile khi đi trang - cần dispatch.
 vi.mock('@/store/hooks', () => ({ useAppDispatch: () => vi.fn() }));
 
-// Cả hai menu có đổi ngôn ngữ — nó cần router.
+// Cả hai menu có đổi ngôn ngữ - nó cần router.
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }),
 }));
@@ -83,12 +83,12 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('ManageUserCard — danh tính khu làm việc', () => {
+describe('ManageUserCard - danh tính khu làm việc', () => {
   it('hiện TÊN GIAN HÀNG, không phải tên người đăng nhập', () => {
     render(<ManageUserCard />);
 
     expect(screen.getByText('Thuê Xe Minh Anh')).toBeTruthy();
-    // Tên người vẫn còn, nhưng nằm trong menu — xem nhóm test "menu tài khoản".
+    // Tên người vẫn còn, nhưng nằm trong menu - xem nhóm test "menu tài khoản".
     expect(screen.queryByText('Nguyễn Văn A')).toBeNull();
   });
 
@@ -113,7 +113,7 @@ describe('ManageUserCard — danh tính khu làm việc', () => {
     expect(screen.getByText(long).getAttribute('title')).toBe(long);
   });
 
-  /* Nhân sự nền tảng không đứng trong gian hàng nào — khi đó danh tính khu làm việc là họ. */
+  /* Nhân sự nền tảng không đứng trong gian hàng nào - khi đó danh tính khu làm việc là họ. */
   it('không thuộc gian hàng nào thì lùi về tên người, vẫn không rỗng', () => {
     setUser({ tenant: null, platformRole: 'platform_admin' });
     render(<ManageUserCard />);
@@ -122,7 +122,7 @@ describe('ManageUserCard — danh tính khu làm việc', () => {
   });
 });
 
-describe('ManageUserCard — ngữ cảnh vai trò', () => {
+describe('ManageUserCard - ngữ cảnh vai trò', () => {
   it('vai trò gian hàng hiện bằng nhãn tiếng Việt, không phải khoá kỹ thuật', () => {
     render(<ManageUserCard />);
 
@@ -132,7 +132,7 @@ describe('ManageUserCard — ngữ cảnh vai trò', () => {
 
   /**
    * Lỗi thật ngày 16/09/2026: chủ xe cá nhân bị gọi là "Chủ gian hàng" ngay cạnh một viên nhãn
-   * ghi "Chủ xe cá nhân · Hoa hồng 10%". Hai người này CÙNG vai `shop_owner` (ADR 0014) — thứ
+   * ghi "Chủ xe cá nhân · Hoa hồng 10%". Hai người này CÙNG vai `shop_owner` (ADR 0014) - thứ
    * tách họ là TUYẾN, nên nhãn phải đọc tuyến chứ không đọc bảng vai.
    */
   it('cùng vai shop_owner: tuyến hoa hồng là CHỦ XE, không phải chủ gian hàng', () => {
@@ -188,7 +188,7 @@ describe('ManageUserCard — ngữ cảnh vai trò', () => {
   });
 });
 
-describe('ManageUserCard — thu gọn', () => {
+describe('ManageUserCard - thu gọn', () => {
   it('ẩn tên và huy hiệu vai trò để vừa cột 64px', () => {
     render(<ManageUserCard collapsed />);
 
@@ -196,7 +196,7 @@ describe('ManageUserCard — thu gọn', () => {
     expect(screen.queryByText('Chủ gian hàng')).toBeNull();
   });
 
-  it('nhưng danh tính vẫn đọc được — nút mang tên gian hàng và vai trò', () => {
+  it('nhưng danh tính vẫn đọc được - nút mang tên gian hàng và vai trò', () => {
     render(<ManageUserCard collapsed />);
 
     expect(
@@ -205,8 +205,8 @@ describe('ManageUserCard — thu gọn', () => {
   });
 });
 
-describe('ManageUserCard — menu tài khoản', () => {
-  /** Mở menu và chờ nó dựng — menu của AntD chỉ dựng sau khi bấm. */
+describe('ManageUserCard - menu tài khoản', () => {
+  /** Mở menu và chờ nó dựng - menu của AntD chỉ dựng sau khi bấm. */
   async function openMenu(collapsed = false) {
     render(<ManageUserCard collapsed={collapsed} />);
     fireEvent.click(screen.getByRole('button', { name: /^Menu tài khoản/ }));
@@ -219,7 +219,7 @@ describe('ManageUserCard — menu tài khoản', () => {
     expect(screen.getByRole('button', { name: /^Menu tài khoản/ })).toBeTruthy();
   });
 
-  describe('site partner — CÙNG bảng hồ sơ với header (Figma `24051:85101`)', () => {
+  describe('site partner - CÙNG bảng hồ sơ với header (Figma `24051:85101`)', () => {
     beforeEach(() => {
       zone.value = 'partner';
     });
@@ -258,14 +258,14 @@ describe('ManageUserCard — menu tài khoản', () => {
     });
   });
 
-  describe('site quản trị — giữ menu cũ cho tới khi có design', () => {
+  describe('site quản trị - giữ menu cũ cho tới khi có design', () => {
     beforeEach(() => {
       zone.value = 'admin';
       setUser({ tenant: null, platformRole: 'platform_admin' });
     });
 
     /*
-     * Ai đang đăng nhập KHÔNG biến mất khi thẻ mang tên khu làm việc — nó là dòng ngữ cảnh ở đầu
+     * Ai đang đăng nhập KHÔNG biến mất khi thẻ mang tên khu làm việc - nó là dòng ngữ cảnh ở đầu
      * menu, quan trọng khi nhiều người dùng chung một máy.
      */
     it('đầu menu nói rõ đang đăng nhập bằng tài khoản nào', async () => {
@@ -274,7 +274,7 @@ describe('ManageUserCard — menu tài khoản', () => {
       expect(screen.getByText('Đăng nhập: Nguyễn Văn A')).toBeTruthy();
     });
 
-    it('chỉ có bảo mật tài khoản — nhân sự nền tảng không có gian hàng để cài đặt', async () => {
+    it('chỉ có bảo mật tài khoản - nhân sự nền tảng không có gian hàng để cài đặt', async () => {
       await openMenu();
 
       expect(screen.getByRole('link', { name: 'Bảo mật tài khoản' }).getAttribute('href')).toBe(

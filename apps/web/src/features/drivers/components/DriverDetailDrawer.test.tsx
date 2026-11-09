@@ -301,7 +301,7 @@ describe('DriverDetailDrawer', () => {
     state.overview = null;
     state.overviewError = new ApiClientError({ code: 'NOT_FOUND', message: 'x', status: 404 });
     renderDrawer();
-    expect(screen.getByText('Không tìm thấy tài xế này — có thể liên kết đã bị gỡ.')).toBeTruthy();
+    expect(screen.getByText('Không tìm thấy tài xế này - có thể liên kết đã bị gỡ.')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Thử lại/ })).toBeNull();
   });
 });

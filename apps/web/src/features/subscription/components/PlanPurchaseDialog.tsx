@@ -57,7 +57,7 @@ import {
 import { daysLeftOf } from './ShopPlanLaneCard';
 import styles from './PlanPurchaseDialog.module.css';
 
-/** Huy hiệu bậc theo THỨ TỰ trong làn (design: bạc · vàng · đen) — chỉ là hình, không mang nghĩa giá. */
+/** Huy hiệu bậc theo THỨ TỰ trong làn (design: bạc · vàng · đen) - chỉ là hình, không mang nghĩa giá. */
 const TIER_BADGES = [
   '/shops/plans/tier-1.png',
   '/shops/plans/tier-2.png',
@@ -65,13 +65,13 @@ const TIER_BADGES = [
 ];
 
 /**
- * Nhãn bậc theo VỊ TRÍ trong làn (design: TIẾT KIỆM · CƠ BẢN · NÂNG CAO + "Phù hợp cho …") — cùng
+ * Nhãn bậc theo VỊ TRÍ trong làn (design: TIẾT KIỆM · CƠ BẢN · NÂNG CAO + "Phù hợp cho …") - cùng
  * luật với biểu tượng bậc (`planTierIcon`). Bậc thứ tư trở đi (admin mở thêm) dùng tên + mô tả admin.
  */
 const TIER_RANK_KEYS = ['economy', 'basic', 'advanced'] as const;
 
 /**
- * "Mua hoặc gia hạn gói" — design `24024:26537` (06/11/2026): cả hai loại xe trong MỘT hộp, MỘT kỳ hạn
+ * "Mua hoặc gia hạn gói" - design `24024:26537` (06/11/2026): cả hai loại xe trong MỘT hộp, MỘT kỳ hạn
  * và MỘT thời điểm áp dụng cho cả lượt.
  *
  * Chọn một gói ⇒ một hoá đơn (`POST /subscription/purchase`); chọn hai ⇒ một PHIẾU THANH TOÁN GỘP
@@ -79,14 +79,14 @@ const TIER_RANK_KEYS = ['economy', 'basic', 'advanced'] as const;
  * trong khung gian hàng. Gói chỉ bật khi tiền về (ADR 0026 điều 4).
  *
  * Chữ theo design, SỐ theo admin: tên bậc là nhãn theo vị trí, còn giá, trần xe ("Tối đa 5 ô tô"),
- * cờ "Gói đề xuất", tính năng và kỳ bán đọc từ `plans.limits` — không gán cứng 5 xe / 10 xe. Dòng
+ * cờ "Gói đề xuất", tính năng và kỳ bán đọc từ `plans.limits` - không gán cứng 5 xe / 10 xe. Dòng
  * tính năng là tính năng THẬT của bậc (mọi bậc mở cùng bộ), không chép "báo cáo ngắn gọn / chi tiết"
  * của design. Bậc doanh nghiệp bán bằng tư vấn (ADR 0041 điều 5): chỉ có "Liên hệ tư vấn".
  *
- * HAI BƯỚC (người dùng 09/11/2026): (1) chọn gói từng loại xe — được chọn cùng lúc ô tô + xe máy;
+ * HAI BƯỚC (người dùng 09/11/2026): (1) chọn gói từng loại xe - được chọn cùng lúc ô tô + xe máy;
  * (2) kỳ hạn chung + XÁC NHẬN từng gói từ bản xem trước của server. Không có lựa chọn "thời điểm áp
  * dụng" (ADR 0084): cùng bậc = gia hạn nối tiếp, trần cao hơn = nâng ngay (kỳ cũ kết thúc, không
- * bù), còn lại = nối tiếp — server suy, hộp chỉ nói trước.
+ * bù), còn lại = nối tiếp - server suy, hộp chỉ nói trước.
  *
  * Nơi gọi KHÔNG dựng hộp này khi thiếu `subscription.purchase`.
  */
@@ -101,7 +101,7 @@ export function PlanPurchaseDialog({
 }: {
   open: boolean;
   data: MySubscription;
-  /** Làn mở hộp (nút "Gia hạn" / "Nâng cấp ngay" của một thẻ) — chọn sẵn bậc của làn đó. */
+  /** Làn mở hộp (nút "Gia hạn" / "Nâng cấp ngay" của một thẻ) - chọn sẵn bậc của làn đó. */
   initialScope: PlanLaneScope | null;
   onClose: () => void;
 }) {
@@ -125,7 +125,7 @@ export function PlanPurchaseDialog({
   );
   /*
    * Chỉ tạo hoá đơn trên bản xem trước khớp ĐÚNG lựa chọn đang có: vừa đổi kỳ hạn thì
-   * `placeholderData` còn giữ bản của kỳ cũ — bấm lúc đó là xác nhận một con số không phải thứ sẽ mua.
+   * `placeholderData` còn giữ bản của kỳ cũ - bấm lúc đó là xác nhận một con số không phải thứ sẽ mua.
    */
   const previewReady = preview.isSuccess && !preview.isPlaceholderData;
   const submitting = purchase.isPending || checkout.isPending;
@@ -133,7 +133,7 @@ export function PlanPurchaseDialog({
   /*
    * Mở từ một thẻ làn ⇒ chọn sẵn bậc của làn đó MỘT lần mỗi lượt mở (bậc đang dùng để gia hạn,
    * không thì bậc đề xuất). Đóng hộp là dọn lựa chọn: hộp không bị tháo khỏi cây, nên không có lần
-   * remount nào dọn hộ — thiếu dòng đó thì mở lại là một cú bấm tới hoá đơn thứ hai.
+   * remount nào dọn hộ - thiếu dòng đó thì mở lại là một cú bấm tới hoá đơn thứ hai.
    */
   const seeded = useRef(false);
   const laneToSeed = state.lanes.find((lane) => lane.scope === initialScope);
@@ -155,7 +155,7 @@ export function PlanPurchaseDialog({
   }
 
   function submit() {
-    // Enter vẫn gửi khi nút đang quay — không tạo hoá đơn thứ hai trong lúc lượt đầu đang bay.
+    // Enter vẫn gửi khi nút đang quay - không tạo hoá đơn thứ hai trong lúc lượt đầu đang bay.
     if (submitting || !previewReady || state.selections.length === 0) return;
     const onError = (err: unknown) => message.error(errorMessage(err));
     if (state.selections.length === 1) {
@@ -180,7 +180,7 @@ export function PlanPurchaseDialog({
     );
   }
 
-  /** Hoá đơn còn chờ ở loại xe đang chọn — tạo hoá đơn mới sẽ huỷ nó (server void `issued` cũ). */
+  /** Hoá đơn còn chờ ở loại xe đang chọn - tạo hoá đơn mới sẽ huỷ nó (server void `issued` cũ). */
   const replaced = state.selections
     .map((item) => pendingInvoiceForScope(pending.data ?? [], item.scope))
     .filter((invoice): invoice is NonNullable<typeof invoice> => invoice !== null);
@@ -191,7 +191,7 @@ export function PlanPurchaseDialog({
   return (
     <ResponsiveDialog
       open={open}
-      // Khung design 1430 (ba thẻ 450) — rộng hơn `xl` 1180, nên hộp ôm bề rộng tự đặt ở `.dialogBody`.
+      // Khung design 1430 (ba thẻ 450) - rộng hơn `xl` 1180, nên hộp ôm bề rộng tự đặt ở `.dialogBody`.
       size="fit"
       bodyClassName={styles.dialogBody}
       title={<DialogHeading title={t('title')} hint={t('subtitle')} />}
@@ -260,7 +260,7 @@ export function PlanPurchaseDialog({
   );
 }
 
-/** Hai bước của hộp — số tròn vàng nối bằng một vạch; bước đã qua mang dấu tích. */
+/** Hai bước của hộp - số tròn vàng nối bằng một vạch; bước đã qua mang dấu tích. */
 function Stepper({ step }: { step: DialogStep }) {
   const t = useTranslations('Subscription.combined');
   const current = DIALOG_STEPS.indexOf(step);
@@ -287,8 +287,8 @@ function Stepper({ step }: { step: DialogStep }) {
 }
 
 /**
- * Bước 2 — kỳ hạn chung + xác nhận từng gói. Mỗi thẻ đọc bản xem trước của SERVER (ADR 0084): gia
- * hạn / nâng ngay / đổi từ kỳ sau, kỳ dự kiến, và các kỳ sẽ kết thúc — thứ client không tự suy được
+ * Bước 2 - kỳ hạn chung + xác nhận từng gói. Mỗi thẻ đọc bản xem trước của SERVER (ADR 0084): gia
+ * hạn / nâng ngay / đổi từ kỳ sau, kỳ dự kiến, và các kỳ sẽ kết thúc - thứ client không tự suy được
  * vì nó không thấy kỳ đã xếp lịch.
  */
 function ConfirmStep({
@@ -306,9 +306,9 @@ function ConfirmStep({
   const tCommon = useTranslations('Common');
   const tPurchase = useTranslations('Subscription.purchase');
   /*
-   * MỘT gói (đa số lượt mua — người dùng 09/11/2026): kỳ hạn thành danh sách bên trái, mỗi dòng mang
-   * TỔNG TIỀN của kỳ đó (giá tuyệt đối admin đặt — ADR 0041 điều 2), phiếu gói bên phải. Hai gói:
-   * kỳ hạn chung là một hàng nút trên, hai phiếu ngang hàng dưới — tổng theo kỳ của hai gói không
+   * MỘT gói (đa số lượt mua - người dùng 09/11/2026): kỳ hạn thành danh sách bên trái, mỗi dòng mang
+   * TỔNG TIỀN của kỳ đó (giá tuyệt đối admin đặt - ADR 0041 điều 2), phiếu gói bên phải. Hai gói:
+   * kỳ hạn chung là một hàng nút trên, hai phiếu ngang hàng dưới - tổng theo kỳ của hai gói không
    * gói vào một dòng được.
    */
   const single = state.selections.length === 1 ? state.selections[0]! : null;
@@ -391,12 +391,12 @@ function ConfirmStep({
 }
 
 /**
- * "Kỳ hạn thanh toán" — chung cho mọi gói đã chọn.
+ * "Kỳ hạn thanh toán" - chung cho mọi gói đã chọn.
  *
  *  - Một gói (`single`): danh sách dọc, mỗi dòng là kỳ + nhãn tiết kiệm + TỔNG TIỀN kỳ đó của gói.
  *    Tiền đọc từ `tier.terms` (giá tuyệt đối admin đặt); con số sẽ trả vẫn là của bản xem trước ở
  *    phiếu bên phải và ở chân hộp.
- *  - Hai gói: một hàng nút như design — tổng theo kỳ thuộc từng phiếu.
+ *  - Hai gói: một hàng nút như design - tổng theo kỳ thuộc từng phiếu.
  */
 function TermPicker({
   state,
@@ -612,7 +612,7 @@ function LaneBlock({
   );
 }
 
-/** Tên + dòng "Phù hợp cho …" của một bậc theo vị trí — ngoài 3 vị trí của design thì dùng chữ admin. */
+/** Tên + dòng "Phù hợp cho …" của một bậc theo vị trí - ngoài 3 vị trí của design thì dùng chữ admin. */
 function useTierText() {
   const t = useTranslations('Subscription.combined');
   return (tier: PlanTier, rank: number): { name: string; audience: string | null } => {
@@ -709,7 +709,7 @@ function TierCard({
   );
 }
 
-/** Gạch đầu dòng của thẻ bậc — design: trần xe in ĐẬM con số ("Tối đa **5** ô tô"), số từ admin. */
+/** Gạch đầu dòng của thẻ bậc - design: trần xe in ĐẬM con số ("Tối đa **5** ô tô"), số từ admin. */
 function TierBenefitList({ tier }: { tier: PlanTier }) {
   const t = useTranslations('Subscription.combined');
   const tPurchase = useTranslations('Subscription.purchase');
@@ -736,7 +736,7 @@ function TierBenefitList({ tier }: { tier: PlanTier }) {
   );
 }
 
-/** Dải "Doanh nghiệp" — design `24024:26537` (nền tối, nút vàng): bán bằng tư vấn, không chọn được ở đây. */
+/** Dải "Doanh nghiệp" - design `24024:26537` (nền tối, nút vàng): bán bằng tư vấn, không chọn được ở đây. */
 export function EnterpriseOffer({ tier }: { tier?: PlanTier }) {
   const t = useTranslations('Subscription.combined');
   const tEnterprise = useTranslations('Subscription.enterprise');
@@ -765,7 +765,7 @@ export function EnterpriseOffer({ tier }: { tier?: PlanTier }) {
   );
 }
 
-/** "Cơ bản 5 xe" — nhãn vị trí kèm trần xe của admin; bậc thứ tư trở đi dùng tên admin (đã mang số xe). */
+/** "Cơ bản 5 xe" - nhãn vị trí kèm trần xe của admin; bậc thứ tư trở đi dùng tên admin (đã mang số xe). */
 function useSelectionLabel() {
   const t = useTranslations('Subscription.combined');
   const tierText = useTierText();
@@ -857,7 +857,7 @@ function ConfirmFooter({
       <div className={styles.pay}>
         <div className={styles.total} aria-live="polite">
           <span className={styles.totalLabel}>{t('totalLabel')}</span>
-          <strong className={styles.totalAmount}>{total ? fmt.money(total) : '—'}</strong>
+          <strong className={styles.totalAmount}>{total ? fmt.money(total) : '-'}</strong>
         </div>
         <Button
           size="large"

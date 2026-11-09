@@ -1,6 +1,6 @@
 {
   "meta": {
-    "defaultTitle": "XePrime — Thuê xe tự lái & có tài xế",
+    "defaultTitle": "XePrime - Thuê xe tự lái & có tài xế",
     "titleTemplate": "%s · XePrime",
     "defaultDescription": "Nền tảng cho thuê xe: tìm xe, đặt xe và quản lý gian hàng cho thuê."
   },
@@ -91,7 +91,7 @@
     "createdAt": "Ngày tạo",
     "updatedAt": "Cập nhật",
     "comingSoon": "Sắp có",
-    "emptyValue": "—",
+    "emptyValue": "-",
     "selectDate": "Chọn ngày",
     "enabled": "Đang bật",
     "disabled": "Đang tắt"
@@ -115,22 +115,23 @@
     },
     "thousands": "{value} K",
     "range": "{from} → {to}",
-    "shortDateTime": "{time} · {date}",
+    "shortDateTime": "{time}{sep}{date}",
     "rentalPoint": "{weekday}, {date}",
-    "rentalPointWithTime": "{point} · {time}",
-    "rentalPointCompact": "{date} {time}",
+    "rentalPointWithTime": "{point}{sep}{time}",
+    "rentalTime": "{hour}h{minute}",
+    "rentalPointCompact": "{date}{sep}{time}",
     "rentalRangeSummary": "{from} → {to} ({duration})",
     "kmRemaining": "Còn {value} km",
     "kmOverdue": "Quá hạn {value} km",
     "pickupWishDate": "{label}: {date}",
-    "pickupWishWindow": "{label}: {start} – {end}",
+    "pickupWishWindow": "{label}: {start} - {end}",
     "pickupWishShopDecides": "Gian hàng chốt ngày giờ nhận khi duyệt",
-    "dateTime": "{date} {time}",
+    "dateTime": "{date}{sep}{time}",
     "hourAndMinute": "{hours, plural, other {# giờ}} {minutes, plural, other {# phút}}"
   },
   "pagination": {
     "total": "{count, plural, other {# mục}}",
-    "range": "{from}–{to} trên {total}",
+    "range": "{from}-{to} trên {total}",
     "page": "Trang {page}",
     "rowsPerPage": "Số dòng mỗi trang",
     "previous": "Trang trước",
@@ -139,7 +140,7 @@
   },
   "locale": {
     "switchLabel": "Ngôn ngữ",
-    "switchAriaLabel": "Đổi ngôn ngữ giao diện — đang dùng {current}",
+    "switchAriaLabel": "Đổi ngôn ngữ giao diện - đang dùng {current}",
     "vi": "Tiếng Việt",
     "en": "English",
     "viShort": "VI",
@@ -161,13 +162,13 @@
     "6": "T7"
   },
   "components": {
-    "copyFailed": "Trình duyệt không cho phép sao chép — hãy bôi đen và chép tay",
+    "copyFailed": "Trình duyệt không cho phép sao chép - hãy bôi đen và chép tay",
     "loadingNamed": "Đang tải {label}…",
     "moreActions": "Thêm thao tác",
     "discount": "Giảm {percent}%",
     "discountBadge": "Giảm {percent}%",
     "rating": "{value} trên {max} sao",
-    "revealContact": "Xem đầy đủ — thao tác này được ghi vào nhật ký hệ thống",
+    "revealContact": "Xem đầy đủ - thao tác này được ghi vào nhật ký hệ thống",
     "imageUpload": {
       "upload": "Tải ảnh lên",
       "uploading": "Đang tải {percent}%",
@@ -188,7 +189,7 @@
       "ownerNet": "Chủ xe thực nhận",
       "ownerNetHint": "Số chủ xe nhận từ chuyến này. Phí đặt xe do khách trả, KHÔNG trừ vào tiền thuê của chủ xe.",
       "holdAmount": "Tiền giữ chỗ (trả trước)",
-      "holdHint": "Chuyển cho XePrime sau khi chủ xe nhận chuyến, để chốt chuyến. Được trừ vào tiền thuê — phần còn lại trả trực tiếp chủ xe khi nhận xe.",
+      "holdHint": "Chuyển cho XePrime sau khi chủ xe nhận chuyến, để chốt chuyến. Được trừ vào tiền thuê - phần còn lại trả trực tiếp chủ xe khi nhận xe.",
       "payAtHandover": "Trả chủ xe khi nhận xe",
       "feesNote": "Mỗi khoản ghi rõ ai nhận. Số cuối cùng được chốt khi chủ xe nhận chuyến.",
       "noFees": "Chuyến này không có khoản đi kèm nào.",
@@ -196,6 +197,7 @@
       "collapse": "Thu gọn",
       "depositHintLabel": "Cọc thế chấp khi nhận xe là gì",
       "holdHintLabel": "Tiền giữ chỗ là gì",
+      "totalHintLabel": "Tổng bạn trả gồm những gì",
       "dailyRate": "{days, plural, other {# ngày}} × {amount}"
     },
     "filterBar": {
@@ -234,8 +236,8 @@
         "legendFull": "Ngày bận",
         "legendPartial": "Bận một phần",
         "fullTooltip": "Xe đã có lịch cả ngày",
-        "partialTooltip": "Xe bận {ranges} — vẫn nhận hoặc trả được ngoài khung này",
-        "period": "{start}–{end}",
+        "partialTooltip": "Xe bận {ranges} - vẫn nhận hoặc trả được ngoài khung này",
+        "period": "{start}-{end}",
         "conflict": "Khoảng đã chọn trùng giờ xe bận ({period} ngày {date}). Chọn giờ khác giúp bạn.",
         "hourlyUnavailable": "Trùng giờ xe bận"
       }
@@ -250,8 +252,8 @@
       "upload": "Tải lên tài liệu",
       "uploading": "Đang tải lên…",
       "empty": "Chưa có tài liệu nào",
-      "hint": "PDF, JPG, PNG — tối đa 10MB mỗi tệp",
-      "hintImageOnly": "Ảnh JPG, PNG — tối đa 10MB mỗi tệp",
+      "hint": "PDF, JPG, PNG - tối đa 10MB mỗi tệp",
+      "hintImageOnly": "Ảnh JPG, PNG - tối đa 10MB mỗi tệp",
       "maxReached": "Tối đa {count, plural, other {# tệp}}",
       "downloadFile": "Tải xuống {name}",
       "removeFile": "Gỡ tệp {name}",

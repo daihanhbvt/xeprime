@@ -43,12 +43,12 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('FeePolicyFormModal — tạo bản nháp', () => {
+describe('FeePolicyFormModal - tạo bản nháp', () => {
   it('mở với bộ số luồng tiền v2 và ví dụ hoa hồng', () => {
     renderModal();
 
-    expect((screen.getByLabelText('Phí sàn — Ô tô') as HTMLInputElement).value).toBe('50.000');
-    expect((screen.getByLabelText('Phí sàn — Xe máy') as HTMLInputElement).value).toBe('30.000');
+    expect((screen.getByLabelText('Phí sàn - Ô tô') as HTMLInputElement).value).toBe('50.000');
+    expect((screen.getByLabelText('Phí sàn - Xe máy') as HTMLInputElement).value).toBe('30.000');
     expect(
       (
         screen.getByLabelText(
@@ -68,8 +68,8 @@ describe('FeePolicyFormModal — tạo bản nháp', () => {
     fireEvent.change(screen.getByLabelText('Tên'), { target: { value: 'v2' } });
 
     fireEvent.click(screen.getByRole('switch', { name: /^Bảo hiểm vật chất xe \(IV\)/ }));
-    expect((screen.getByLabelText('Phí mỗi ngày — Ô tô') as HTMLInputElement).value).toBe('50.000');
-    expect((screen.getByLabelText('Phí mỗi ngày — Xe máy') as HTMLInputElement).value).toBe(
+    expect((screen.getByLabelText('Phí mỗi ngày - Ô tô') as HTMLInputElement).value).toBe('50.000');
+    expect((screen.getByLabelText('Phí mỗi ngày - Xe máy') as HTMLInputElement).value).toBe(
       '15.000',
     );
 

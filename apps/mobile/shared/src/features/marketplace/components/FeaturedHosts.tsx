@@ -15,6 +15,7 @@ import type { PublicShopSummary } from '../api';
 import { BrandMark } from '../../catalog/components/BrandMark';
 import { HomeCardAvatar } from './home/HomeCardAvatar';
 import { HomeCarousel } from './home/HomeCarousel';
+import { ScrollReveal } from '@/components/motion/ScrollReveal';
 import { STAR_ART } from './home/home-art';
 import { HomeSectionHeading } from './home/HomeSectionHeading';
 import { SectionError } from './SectionError';
@@ -55,6 +56,8 @@ export function FeaturedHosts({ onOpenShop }: { onOpenShop?: (slug: string) => v
           ))}
         </YStack>
       ) : (
+        // Dải thẻ tự hiện khi CHÍNH NÓ cuộn vào màn, không theo tiêu đề khối.
+        <ScrollReveal>
         <HomeCarousel accessibilityLabel={t('title')} overhang onActiveChange={setActive}>
           {shops.map((shop, index) => (
             <HostCard
@@ -65,6 +68,7 @@ export function FeaturedHosts({ onOpenShop }: { onOpenShop?: (slug: string) => v
             />
           ))}
         </HomeCarousel>
+        </ScrollReveal>
       )}
     </YStack>
   );

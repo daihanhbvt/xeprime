@@ -18,7 +18,7 @@ export class MockOtpProvider implements OtpProvider {
   private readonly logger = new Logger('OtpMock');
 
   send(phone: string, code: string): Promise<void> {
-    this.logger.warn(`[OTP→${phone}] mã xác thực: ${code} (dev mock — không gửi SMS)`);
+    this.logger.warn(`[OTP→${phone}] mã xác thực: ${code} (dev mock - không gửi SMS)`);
     return Promise.resolve();
   }
 }

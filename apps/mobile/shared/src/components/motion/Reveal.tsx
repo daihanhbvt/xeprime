@@ -1,6 +1,6 @@
 import { useCallback, useRef, type ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import {
+import Animated, {
   FadeIn,
   FadeInDown,
   LinearTransition,
@@ -59,6 +59,8 @@ interface RevealProps {
   disabled?: boolean;
   /** Chiếm hết chỗ còn lại (`flex: 1`) — cho khối trạng thái tự canh giữa màn. */
   fill?: boolean;
+  /** Mục danh sách đi qua cổng `useListReveal` — chỉ loại này được so le vào màn. */
+  listItem?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -66,13 +68,49 @@ interface RevealProps {
  * Bọc một khối để nó hiện lần lượt. Không bọc ô nhập (`TextInput`) trong thứ này rồi đổi style
  * theo state — xem ghi chú ở `Screen.tsx`; `entering` chỉ chạy lúc mount nên bản thân nó an toàn.
  */
-export function Reveal({ children, fill = false, style }: RevealProps) {
+export function Reveal({
+  children,
+  index,
+  variant = 'rise',
+  disabled = false,
+  listItem = false,
+  fill = false,
+  style,
+}: RevealProps) {
   /*
-   * TẮT hiệu ứng hiện dần (người dùng 04/11/2026: "cảm giác bị lag và render lại"). Giữ component
-   * làm lớp bọc trơn để các màn đang gọi không phải sửa; bật lại thì dựng hiệu ứng ở đây.
+   * Khối tĩnh (không `listItem`) vẫn là lớp bọc trơn — bản hiện-dần cho MỌI khối bị tắt 04/11/2026
+   * ("cảm giác bị lag và render lại"). Chỉ MỤC DANH SÁCH (`listItem`, qua cổng `useListReveal`:
+   * vài mục đầu, lượt dữ liệu đầu) được so le vào màn — 06/11/2026.
+   *
+   * TẮT CẢ `listItem` (09/11/2026): mục danh sách là THẺ có bóng (elevation); làm mờ dần nó lúc
+   * vào màn thì Android vẽ lại bóng từng khung hình ⇒ vùng bóng NHẤP NHÁY ngay lúc chuyển màn,
+   * "trông như bug" (user). Không animate opacity của khối có bóng lúc mở màn. `listItem` giữ
+   * trong API để các chỗ gọi không phải sửa; muốn bật lại phải bỏ bóng của thẻ trước.
    */
-  return <View style={[fill ? styles.fill : null, style]}>{children}</View>;
+  void listItem;
+  void disabled;
+  void index;
+  void variant;
+  if (REVEAL_ON_ENTER_ENABLED === false) {
+    return <View style={[fill ? styles.fill : null, style]}>{children}</View>;
+  }
+  if (!listItem) {
+    return <View style={[fill ? styles.fill : null, style]}>{children}</View>;
+  }
+  return (
+    <Animated.View
+      // Cùng MỘT kiểu view dù cổng đóng hay mở — đổi View↔Animated.View là gắn lại cả thẻ.
+      // `entering` chỉ đọc lúc mount, nên cổng đóng về sau không làm gì mục đã hiện.
+      entering={disabled ? undefined : revealEntering(index ?? 0, variant)}
+      style={[fill ? styles.fill : null, style]}
+    >
+      {children}
+    </Animated.View>
+  );
 }
+
+/** Công tắc hiện-dần lúc vào màn - tắt 09/11/2026 vì nhấp nháy bóng (xem trong `Reveal`). */
+const REVEAL_ON_ENTER_ENABLED = false as boolean;
 
 const styles = StyleSheet.create({ fill: { flex: 1 } });
 

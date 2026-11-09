@@ -36,7 +36,7 @@ async function fillNewPassword(view: View, password = 'Abcd1234') {
 }
 
 describe('ResetPasswordScreen', () => {
-  it('thiếu token: hiện "liên kết không hợp lệ" và mời xin liên kết mới — không có form', async () => {
+  it('thiếu token: hiện "liên kết không hợp lệ" và mời xin liên kết mới - không có form', async () => {
     const onRequestNewLink = jest.fn();
     const { view } = await renderScreen(null, { onRequestNewLink });
 

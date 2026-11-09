@@ -162,7 +162,7 @@ describe('shouldPollGatewayOrder', () => {
     expect(shouldPollGatewayOrder(undefined)).toBe(false);
   });
 
-  it('cổng xác nhận chưa có giao dịch: không còn gì để chờ trên lượt đó — thôi hỏi', () => {
+  it('cổng xác nhận chưa có giao dịch: không còn gì để chờ trên lượt đó - thôi hỏi', () => {
     expect(shouldPollGatewayOrder(makeOrder({ noTransaction: true, checkoutUrl: null }))).toBe(false);
   });
 

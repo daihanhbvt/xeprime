@@ -12,7 +12,7 @@ import { notificationHref, pendingNotificationPath } from './deep-link';
  */
 const ID = '01J8XK2M5N7P9Q1R3S5T7V9W1X';
 
-describe('notificationHref — payload không hợp lệ KHÔNG điều hướng (mọi app)', () => {
+describe('notificationHref - payload không hợp lệ KHÔNG điều hướng (mọi app)', () => {
   it('chặn URL ra ngoài XePrime', () => {
     for (const url of [
       'https://evil.example',
@@ -46,13 +46,13 @@ describe('notificationHref — payload không hợp lệ KHÔNG điều hướng
     }
   });
 
-  it('chặn id không phải id — không ghép chuỗi bẩn vào đường dẫn', () => {
+  it('chặn id không phải id - không ghép chuỗi bẩn vào đường dẫn', () => {
     expect(notificationHref('/trips/has space')).toBeNull();
     expect(notificationHref('/manage/bookings/..')).toBeNull();
   });
 });
 
-describe('pendingNotificationPath — chờ đăng nhập', () => {
+describe('pendingNotificationPath - chờ đăng nhập', () => {
   it('không bao giờ giữ một payload không hợp lệ trong store', () => {
     expect(pendingNotificationPath('https://evil.example')).toBeNull();
     expect(pendingNotificationPath('/settings')).toBeNull();

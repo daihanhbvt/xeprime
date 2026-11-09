@@ -30,14 +30,14 @@ export class PlatformSellerProfilesController {
   constructor(private readonly profiles: SellerProfileService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Hàng đợi hồ sơ — mặc định CHỜ XÁC MINH, cũ nhất trước. PII đã che.' })
+  @ApiOperation({ summary: 'Hàng đợi hồ sơ - mặc định CHỜ XÁC MINH, cũ nhất trước. PII đã che.' })
   @ApiOkResponse({ type: PlatformSellerProfilePageDto })
   list(@Query() query: PlatformSellerListQueryDto): Promise<PlatformSellerProfilePageDto> {
     return this.profiles.listForPlatform(query) as Promise<PlatformSellerProfilePageDto>;
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Chi tiết một hồ sơ — PII đầy đủ để đối chiếu giấy tờ' })
+  @ApiOperation({ summary: 'Chi tiết một hồ sơ - PII đầy đủ để đối chiếu giấy tờ' })
   @ApiOkResponse({ type: PlatformSellerProfileDto })
   getOne(@Param('id') id: string): Promise<PlatformSellerProfileDto> {
     return this.profiles.getForPlatform(id);
@@ -56,7 +56,7 @@ export class PlatformSellerProfilesController {
 
   @Post(':id/request-changes')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Yêu cầu bổ sung — người bán sửa rồi gửi lại' })
+  @ApiOperation({ summary: 'Yêu cầu bổ sung - người bán sửa rồi gửi lại' })
   @ApiOkResponse({ type: PlatformSellerProfileDto })
   requestChanges(
     @Param('id') id: string,

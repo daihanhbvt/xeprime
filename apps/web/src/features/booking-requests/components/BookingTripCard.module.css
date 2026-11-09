@@ -45,6 +45,18 @@
   min-width: 0;
 }
 
+/* Khung cắt cho ảnh xe "thở" chậm (Ken Burns) - `clip` không tạo khung cuộn. */
+.vehicleMedia {
+  display: block;
+  flex: none;
+  overflow: clip;
+  border-radius: var(--xp-border-radius-card);
+}
+
+.receipt .vehicleMedia {
+  border-radius: var(--xp-border-radius-control);
+}
+
 .vehicleImage,
 .vehiclePlaceholder {
   display: block;

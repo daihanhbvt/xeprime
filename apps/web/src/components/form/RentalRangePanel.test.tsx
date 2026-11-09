@@ -47,7 +47,7 @@ function lastChange(onChange: ReturnType<typeof vi.fn>): RentalRangeDraft {
   return calls[calls.length - 1]![0] as RentalRangeDraft;
 }
 
-describe('RentalRangePanel — thuê theo giờ', () => {
+describe('RentalRangePanel - thuê theo giờ', () => {
   const start = toAppTz('2026-09-01T10:00:00.000+07:00');
 
   it('chọn thời lượng → giờ trả = giờ nhận + số giờ, cả hai đều hợp lệ', () => {
@@ -90,7 +90,7 @@ describe('RentalRangePanel — thuê theo giờ', () => {
   });
 });
 
-describe('RentalRangePanel — thuê theo ngày', () => {
+describe('RentalRangePanel - thuê theo ngày', () => {
   it('chưa đủ hai đầu thì KHÔNG cho áp dụng', () => {
     const value: RentalRangeDraft = {
       pickupAt: toAppTz('2026-09-01T10:00:00.000+07:00'),
@@ -143,7 +143,7 @@ describe('RentalRangePanel — thuê theo ngày', () => {
  *   3. khoảng đã chọn chạm giờ bận thì "Áp dụng" tắt kèm lý do đọc được — chặn ở đây tốt hơn
  *      để khách đi hết luồng rồi mới bị từ chối.
  */
-describe('RentalRangePanel — lịch bận của xe', () => {
+describe('RentalRangePanel - lịch bận của xe', () => {
   const isoVn = (local: string) => `${local}:00.000+07:00`;
 
   /**
@@ -204,10 +204,10 @@ describe('RentalRangePanel — lịch bận của xe', () => {
 
     const partial = dayButton('10');
     expect(partial.disabled).toBe(false);
-    expect(partial.title).toContain('08:00–12:00');
+    expect(partial.title).toContain('08:00-12:00');
   });
 
-  it('ngày TRẢ sau một ngày bận trọn bị khoá — khoảng không đi xuyên qua ngày bận được', () => {
+  it('ngày TRẢ sau một ngày bận trọn bị khoá - khoảng không đi xuyên qua ngày bận được', () => {
     renderBusy({ pickupAt: toAppTz(isoVn('2026-09-05T10:00')), returnAt: null });
 
     // 10 (bận một phần) vẫn là ngày trả hợp lệ; 12 nằm SAU ngày bận trọn 11 nên không.
@@ -227,13 +227,13 @@ describe('RentalRangePanel — lịch bận của xe', () => {
       returnAt: toAppTz(isoVn('2026-09-12T09:00')),
     });
 
-    expect(screen.getByRole('alert').textContent).toContain('08:00–12:00');
+    expect(screen.getByRole('alert').textContent).toContain('08:00-12:00');
     expect((screen.getByRole('button', { name: 'Áp dụng' }) as HTMLButtonElement).disabled).toBe(
       true,
     );
   });
 
-  it('nhận xe ngay khi hết giờ bận thì hợp lệ — không cảnh báo, không chặn', () => {
+  it('nhận xe ngay khi hết giờ bận thì hợp lệ - không cảnh báo, không chặn', () => {
     renderBusy({
       pickupAt: toAppTz(isoVn('2026-09-10T12:00')),
       returnAt: toAppTz(isoVn('2026-09-10T20:00')),
@@ -271,7 +271,7 @@ describe('RentalRangePanel — lịch bận của xe', () => {
  * gửi lên server một khung giờ khác thứ khách nhìn thấy. `ci.yml` ghim `TZ` nên bộ test cũ
  * không bao giờ chạm tới chuyện đó; ba múi giờ dưới đây là chỗ nó không trốn được nữa.
  */
-describe('RentalRangePanel — độc lập với múi giờ máy', () => {
+describe('RentalRangePanel - độc lập với múi giờ máy', () => {
   const HOST_TIME_ZONES = ['Asia/Ho_Chi_Minh', 'UTC', 'America/New_York'] as const;
   const ORIGINAL_TZ = process.env.TZ;
 

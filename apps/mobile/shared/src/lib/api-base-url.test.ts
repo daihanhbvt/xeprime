@@ -22,7 +22,7 @@ describe('resolveApiBaseUrl', () => {
     expect(resolveApiBaseUrl()).toBe('http://localhost:4000');
   });
 
-  it('đổi loopback thành 10.0.2.2 trên emulator Android — localhost ở đó là chính máy ảo', () => {
+  it('đổi loopback thành 10.0.2.2 trên emulator Android - localhost ở đó là chính máy ảo', () => {
     constantsMock.expoConfig = { hostUri: 'localhost:8081' };
     jest.replaceProperty(Platform, 'OS', 'android');
 
@@ -42,7 +42,7 @@ describe('resolveApiBaseUrl', () => {
  * (`scripts/stg-proxy-middleware.js`). MỘT giá trị phải chạy đúng ở cả ba nền tảng, nếu không
  * mỗi lần đổi máy lại phải sửa `.env`.
  */
-describe('resolveApiBaseUrl — EXPO_PUBLIC_API_URL dạng đường dẫn', () => {
+describe('resolveApiBaseUrl - EXPO_PUBLIC_API_URL dạng đường dẫn', () => {
   it('web ghép vào origin của trang: trang đang mở CHÍNH LÀ Metro, và chỉ nó bảo đảm same-origin', () => {
     process.env.EXPO_PUBLIC_API_URL = '/api/stg';
     constantsMock.expoConfig = { hostUri: '192.168.1.183:8081' };
@@ -57,7 +57,7 @@ describe('resolveApiBaseUrl — EXPO_PUBLIC_API_URL dạng đường dẫn', () 
     expect(resolveApiBaseUrl()).toBe('http://localhost:8081/api/stg');
   });
 
-  it('native ghép vào host:port của Metro — thiết bị thật đi qua đúng dev server đang phục vụ nó', () => {
+  it('native ghép vào host:port của Metro - thiết bị thật đi qua đúng dev server đang phục vụ nó', () => {
     process.env.EXPO_PUBLIC_API_URL = '/api/stg';
     constantsMock.expoConfig = { hostUri: '192.168.1.183:8081' };
     jest.replaceProperty(Platform, 'OS', 'ios');
@@ -73,7 +73,7 @@ describe('resolveApiBaseUrl — EXPO_PUBLIC_API_URL dạng đường dẫn', () 
     expect(resolveApiBaseUrl()).toBe('http://10.0.2.2:8081/api/stg');
   });
 
-  it('URL tuyệt đối vẫn được dùng nguyên vẹn — native gọi thẳng staging không vướng CORS', () => {
+  it('URL tuyệt đối vẫn được dùng nguyên vẹn - native gọi thẳng staging không vướng CORS', () => {
     process.env.EXPO_PUBLIC_API_URL = 'https://api-stg.xeprime.vn/';
     constantsMock.expoConfig = { hostUri: 'localhost:8081' };
 

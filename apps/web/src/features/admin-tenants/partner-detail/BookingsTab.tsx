@@ -368,7 +368,7 @@ function RequestTable({
       title: t('columns.time'),
       key: 'time',
       width: 190,
-      render: (_, row) => (row.pickupAt ? fmt.shortDateTimeRange(row.pickupAt, row.returnAt) : '—'),
+      render: (_, row) => (row.pickupAt ? fmt.shortDateTimeRange(row.pickupAt, row.returnAt) : '-'),
     },
     {
       title: t('columns.service'),

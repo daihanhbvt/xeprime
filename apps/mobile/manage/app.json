@@ -38,7 +38,18 @@
       ],
       "expo-localization",
       "expo-web-browser",
-      "expo-font",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "../shared/assets/fonts/BeVietnamPro_400Regular.ttf",
+            "../shared/assets/fonts/BeVietnamPro_500Medium.ttf",
+            "../shared/assets/fonts/BeVietnamPro_600SemiBold.ttf",
+            "../shared/assets/fonts/BeVietnamPro_700Bold.ttf",
+            "../shared/assets/fonts/PlayfairDisplay_700Bold.ttf"
+          ]
+        }
+      ],
       "expo-document-picker",
       [
         "expo-image-picker",

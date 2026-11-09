@@ -204,7 +204,7 @@ export function VehicleCreateSuccess({
                 <Pressable
                   key={item.key}
                   accessibilityRole="link"
-                  accessibilityLabel={`${t(item.key)} — ${t(item.link)}`}
+                  accessibilityLabel={`${t(item.key)} - ${t(item.link)}`}
                   onPress={() => router.push(item.href(vehicle.id))}
                   style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
                 >

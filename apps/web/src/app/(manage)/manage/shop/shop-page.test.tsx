@@ -25,21 +25,21 @@ import { makeStore } from '@/store/make-store';
 import ShopPage from './page';
 
 /**
- * TRANG THÔNG TIN CỬA HÀNG — các thẻ của design 06/11/2026 (trước đó: một trang nhiều section).
+ * TRANG THÔNG TIN CỬA HÀNG - các thẻ của design 06/11/2026 (trước đó: một trang nhiều section).
  *
  * Bộ này khoá đúng những gì đợt gộp hứa, và mỗi khẳng định tương ứng với một guard thật ở API:
  *
- *  1. **Bốn section cùng có mặt**, `?section=` chỉ chọn mục đang sáng — KHÔNG phải tab. Nếu
+ *  1. **Bốn section cùng có mặt**, `?section=` chỉ chọn mục đang sáng - KHÔNG phải tab. Nếu
  *     chọn section là tháo khối cũ ra thì người đang gõ dở hồ sơ mà bấm sang "Gói & hạn mức" để
  *     xem hạn sẽ mất sạch thay đổi chưa lưu.
  *  2. **Query rác rơi về `profile`**, không dựng một trang trống.
  *  3. **Chủ gian hàng CHỈ ĐỌC**, đọc từ `ownerAccount` (`tenants.owner_user_id → users`).
- *  4. **"Tài khoản nhận tiền" KHÔNG còn ở đây** — nó về trang "Số dư & rút tiền" ở cả hai tuyến;
+ *  4. **"Tài khoản nhận tiền" KHÔNG còn ở đây** - nó về trang "Số dư & rút tiền" ở cả hai tuyến;
  *     link `?section=payout` cũ đưa CHỦ sang đó, người khác ở lại đầu trang.
  *  5. **"Gói & hạn mức" theo `subscription.view`**, CTA mua theo `subscription.purchase`.
  */
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
-/** Mua gói xong là sang trang thanh toán của hoá đơn — điều hướng ghi lại để kiểm. */
+/** Mua gói xong là sang trang thanh toán của hoá đơn - điều hướng ghi lại để kiểm. */
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', async (importOriginal) => ({
   ...(await importOriginal<typeof import('next/navigation')>()),
@@ -56,7 +56,7 @@ vi.mock('@/hooks/use-permissions', () => ({
 
 const scope = vi.hoisted(() => ({
   roleKey: 'shop_owner' as string,
-  /** Trục đăng ký (ADR 0040) — dải chào mừng đọc nó, xem `isEstablishedPackageShop`. */
+  /** Trục đăng ký (ADR 0040) - dải chào mừng đọc nó, xem `isEstablishedPackageShop`. */
   onboardingState: 'package_active' as string,
 }));
 vi.mock('@/hooks/use-tenant-scope', () => ({
@@ -80,7 +80,7 @@ vi.mock('@/hooks/use-current-user', () => ({
   }),
 }));
 
-/** Lưu hồ sơ — hộp thoại chờ promise của `mutateAsync` rồi mới đóng. */
+/** Lưu hồ sơ - hộp thoại chờ promise của `mutateAsync` rồi mới đóng. */
 const updateProfile = vi.hoisted(() => ({
   mutateAsync: vi.fn((_body: unknown) => Promise.resolve({})),
   isPending: false,
@@ -97,7 +97,7 @@ vi.mock('@/features/shop/hooks/use-shop', () => ({
   useUpdateShopProfile: () => updateProfile,
 }));
 
-/** `?section=` sống ở URL (ADR 0004) — ở đây chặn ở đúng ranh giới đó. */
+/** `?section=` sống ở URL (ADR 0004) - ở đây chặn ở đúng ranh giới đó. */
 const url = vi.hoisted(() => ({
   section: null as string | null,
   welcome: false,
@@ -116,7 +116,7 @@ vi.mock('@/hooks/use-url-filters', async (importOriginal) => {
   };
 });
 
-// Danh mục địa chỉ + bản đồ: stub rỗng — hành vi của ô đó có test riêng.
+// Danh mục địa chỉ + bản đồ: stub rỗng - hành vi của ô đó có test riêng.
 vi.mock('@/features/locations/hooks/use-provinces', () => ({
   useProvinceOptions: () => ({
     options: [{ value: '01', label: 'Hà Nội' }],
@@ -144,7 +144,7 @@ vi.mock('@/features/locations/hooks/use-places', () => ({
 }));
 
 /**
- * Chuyển trang phía client — thay bằng một mốc QUAN SÁT được: bộ này hỏi "có chuyển không, tới
+ * Chuyển trang phía client - thay bằng một mốc QUAN SÁT được: bộ này hỏi "có chuyển không, tới
  * đâu", không kiểm `router.replace` của Next.
  */
 vi.mock('@/features/partner/components/ClientRedirect', () => ({
@@ -161,7 +161,7 @@ const subscription = vi.hoisted(() => ({
 }));
 vi.mock('@/features/subscription/hooks/use-subscription', () => ({
   useMySubscription: () => subscription,
-  // Hoá đơn đang chờ là một lượt đọc riêng — xem `usePendingInvoices` (danh sách, mỗi phạm vi gói một).
+  // Hoá đơn đang chờ là một lượt đọc riêng - xem `usePendingInvoices` (danh sách, mỗi phạm vi gói một).
   usePendingInvoices: () => ({ data: [], isPending: false, isError: false }),
   useSubscriptionInvoices: () => ({
     data: { items: [], meta: { page: 1, limit: 20, total: 0, hasNext: false } },
@@ -185,7 +185,7 @@ vi.mock('@/features/subscription/hooks/use-subscription', () => ({
 }));
 vi.mock('@/hooks/use-feature', () => ({ useFeatureStates: () => ({}) }));
 
-/** Hồ sơ người bán (section "Thông tin khai thuế") — chặn ở tầng hook như các hồ sơ khác. */
+/** Hồ sơ người bán (section "Thông tin khai thuế") - chặn ở tầng hook như các hồ sơ khác. */
 const sellerProfile = vi.hoisted(() => ({
   data: null as unknown,
   isLoading: false,
@@ -200,7 +200,7 @@ vi.mock('@/features/seller-profile/hooks/use-seller-profile', () => ({
 
 /**
  * Dải chào mừng sau lần mua gói đầu (ADR 0040) đếm xe để biết nên mời "đăng xe đầu tiên" hay im.
- * Chặn ở tầng hook: bộ này kiểm trang Cửa hàng, không kiểm dải đó — nó có test riêng — và gọi
+ * Chặn ở tầng hook: bộ này kiểm trang Cửa hàng, không kiểm dải đó - nó có test riêng - và gọi
  * thật thì kéo theo một lượt đọc `/vehicles`.
  */
 const vehicles = vi.hoisted(() => ({
@@ -260,7 +260,7 @@ function grant(...permissions: Permission[]) {
 }
 
 /**
- * `scrollIntoView` không tồn tại trong jsdom — phải tự cấp, và cấp luôn là chỗ để QUAN SÁT:
+ * `scrollIntoView` không tồn tại trong jsdom - phải tự cấp, và cấp luôn là chỗ để QUAN SÁT:
  * "có cuộn không, và tới khối nào" là hai câu hỏi mà bộ này cần trả lời.
  */
 const scrolledIds: string[] = [];
@@ -297,7 +297,7 @@ beforeEach(() => {
   url.setFilters.mockReset();
   vehicles.data = { items: [] };
   vehicles.isLoading = false;
-  // Một gói Ô TÔ trần 10, đã dùng hết 10; xe máy chưa có gói (ADR 0065 — hạn mức theo loại).
+  // Một gói Ô TÔ trần 10, đã dùng hết 10; xe máy chưa có gói (ADR 0065 - hạn mức theo loại).
   const currentPlan = {
     subscriptionId: 'SUB1',
     planId: 'PLAN1',
@@ -374,10 +374,10 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-/** Thẻ theo `id` (đích của `?section=`) — mọi khẳng định khoanh vùng trong đúng thẻ. */
+/** Thẻ theo `id` (đích của `?section=`) - mọi khẳng định khoanh vùng trong đúng thẻ. */
 const card = (id: string) => within(document.querySelector(`#${id}`) as HTMLElement);
 
-describe('Trang Thông tin cửa hàng — bố cục thẻ (design 06/11/2026)', () => {
+describe('Trang Thông tin cửa hàng - bố cục thẻ (design 06/11/2026)', () => {
   it('đủ thẻ: hiển thị · chủ · địa chỉ & pháp lý · khai thuế · gói', () => {
     const { container } = renderPage();
 
@@ -392,7 +392,7 @@ describe('Trang Thông tin cửa hàng — bố cục thẻ (design 06/11/2026)'
     }
   });
 
-  /* Design bỏ mục lục trái — `?section=` chỉ còn là đích cuộn của link/redirect cũ. */
+  /* Design bỏ mục lục trái - `?section=` chỉ còn là đích cuộn của link/redirect cũ. */
   it('không còn mục lục trái', () => {
     renderPage();
     expect(screen.queryByRole('navigation', { name: 'Các mục của trang Cửa hàng' })).toBeNull();
@@ -406,7 +406,7 @@ describe('Trang Thông tin cửa hàng — bố cục thẻ (design 06/11/2026)'
     expect(scrolledIds).toContain('shop-section-plan');
   });
 
-  /* Giá trị lạ (bookmark cũ, gõ tay) rơi về `profile` — không dựng một trang trống. */
+  /* Giá trị lạ (bookmark cũ, gõ tay) rơi về `profile` - không dựng một trang trống. */
   it('`?section=` rác rơi về thẻ "Thông tin hiển thị"', () => {
     url.section = 'khong-ton-tai';
     renderPage();
@@ -414,7 +414,7 @@ describe('Trang Thông tin cửa hàng — bố cục thẻ (design 06/11/2026)'
     expect(scrolledIds).toContain('shop-section-profile');
   });
 
-  /* Vào trang trần thì KHÔNG — một cú nhảy ngay khi trang hiện là trang tự ý đưa đi. */
+  /* Vào trang trần thì KHÔNG - một cú nhảy ngay khi trang hiện là trang tự ý đưa đi. */
   it('mở `/manage/shop` trần: không cuộn đi đâu cả', () => {
     renderPage();
 
@@ -422,7 +422,7 @@ describe('Trang Thông tin cửa hàng — bố cục thẻ (design 06/11/2026)'
   });
 });
 
-describe('Trang Thông tin cửa hàng — chủ gian hàng', () => {
+describe('Trang Thông tin cửa hàng - chủ gian hàng', () => {
   it('hiện tên/email/SĐT từ TÀI KHOẢN CHỦ, kèm cờ đã xác minh', () => {
     renderPage();
 
@@ -436,7 +436,7 @@ describe('Trang Thông tin cửa hàng — chủ gian hàng', () => {
 
   /*
    * Lằn ranh ADR 0038 điều 3: `tenant.update` mở hồ sơ GIAN HÀNG, không mở tài khoản của người
-   * CHỦ. Thẻ này chỉ đọc — kể cả với người có đủ quyền sửa hồ sơ.
+   * CHỦ. Thẻ này chỉ đọc - kể cả với người có đủ quyền sửa hồ sơ.
    */
   it('KHÔNG có ô nhập nào trong thẻ chủ gian hàng', () => {
     renderPage();
@@ -455,7 +455,7 @@ describe('Trang Thông tin cửa hàng — chủ gian hàng', () => {
     ).toBe('/manage/account?section=login');
   });
 
-  it('quản lý gian hàng KHÔNG thấy nút đó — nó sẽ mở tài khoản của chính họ, không phải của chủ', () => {
+  it('quản lý gian hàng KHÔNG thấy nút đó - nó sẽ mở tài khoản của chính họ, không phải của chủ', () => {
     scope.roleKey = TENANT_ROLE.SHOP_MANAGER;
     renderPage();
 
@@ -464,11 +464,11 @@ describe('Trang Thông tin cửa hàng — chủ gian hàng', () => {
 });
 
 /*
- * 07/10/2026 — "Tài khoản nhận tiền" về trang "Số dư & rút tiền", cùng chỗ với tuyến hoa hồng.
+ * 07/10/2026 - "Tài khoản nhận tiền" về trang "Số dư & rút tiền", cùng chỗ với tuyến hoa hồng.
  * Trang Cửa hàng không còn khối đó, nhưng link `?section=payout` cũ (thông báo, bookmark) vẫn phải
- * tới được nơi tiền về — với đúng người section cũ từng hiện cho.
+ * tới được nơi tiền về - với đúng người section cũ từng hiện cho.
  */
-describe('Trang Thông tin cửa hàng — tài khoản nhận tiền đã về trang số dư', () => {
+describe('Trang Thông tin cửa hàng - tài khoản nhận tiền đã về trang số dư', () => {
   it('không còn khối "Tài khoản nhận tiền" trên trang', () => {
     renderPage();
 
@@ -485,7 +485,7 @@ describe('Trang Thông tin cửa hàng — tài khoản nhận tiền đã về 
     );
   });
 
-  /* Quản lý chưa bao giờ thấy section đó, và trang số dư là của CHỦ — ở lại, về đầu trang. */
+  /* Quản lý chưa bao giờ thấy section đó, và trang số dư là của CHỦ - ở lại, về đầu trang. */
   it('quản lý mở `?section=payout` cũ: ở lại trang, không chuyển đi', () => {
     scope.roleKey = TENANT_ROLE.SHOP_MANAGER;
     url.section = 'payout';
@@ -497,10 +497,10 @@ describe('Trang Thông tin cửa hàng — tài khoản nhận tiền đã về 
 });
 
 /*
- * 07/10/2026 — mã số thuế có MỘT nguồn: hồ sơ NGƯỜI BÁN, nơi báo cáo thuế và hợp đồng đọc. Thẻ
+ * 07/10/2026 - mã số thuế có MỘT nguồn: hồ sơ NGƯỜI BÁN, nơi báo cáo thuế và hợp đồng đọc. Thẻ
  * "Địa chỉ & pháp lý" không có MST; thẻ "Thông tin khai thuế" (CÙNG form với "Hồ sơ chủ xe") giữ nó.
  */
-describe('Trang Thông tin cửa hàng — địa chỉ, pháp lý và khai thuế', () => {
+describe('Trang Thông tin cửa hàng - địa chỉ, pháp lý và khai thuế', () => {
   it('thẻ "Địa chỉ & pháp lý" đọc từ chi nhánh mặc định, có giấy phép KD, không có MST', () => {
     renderPage();
 
@@ -552,7 +552,7 @@ describe('Trang Thông tin cửa hàng — địa chỉ, pháp lý và khai thu�
   });
 });
 
-describe('Trang Thông tin cửa hàng — thông tin hiển thị', () => {
+describe('Trang Thông tin cửa hàng - thông tin hiển thị', () => {
   it('thẻ hiển thị tên, giới thiệu đã lưu và lối "Chỉnh sửa thông tin"', () => {
     renderPage();
 
@@ -563,7 +563,7 @@ describe('Trang Thông tin cửa hàng — thông tin hiển thị', () => {
     expect(screen.queryByRole('button', { name: 'Lưu thay đổi' })).toBeNull();
   });
 
-  /* Hộp thoại lưu NGAY đúng nhóm của nó (người dùng chốt 06/11/2026) — không gửi ô địa chỉ. */
+  /* Hộp thoại lưu NGAY đúng nhóm của nó (người dùng chốt 06/11/2026) - không gửi ô địa chỉ. */
   it('"Cập nhật" của hộp hiển thị chỉ lưu nhóm hiển thị, kèm giới thiệu dạng HTML', async () => {
     renderPage();
 
@@ -589,7 +589,7 @@ describe('Trang Thông tin cửa hàng — thông tin hiển thị', () => {
   });
 });
 
-describe('Trang Thông tin cửa hàng — gói & hạn mức', () => {
+describe('Trang Thông tin cửa hàng - gói & hạn mức', () => {
   it('thẻ loại xe: gói đang dùng, số xe / trần, hết suất mời nâng cấp', () => {
     renderPage();
 
@@ -632,7 +632,7 @@ describe('Trang Thông tin cửa hàng — gói & hạn mức', () => {
   });
 });
 
-describe('Trang Thông tin cửa hàng — tiêu đề và quyền', () => {
+describe('Trang Thông tin cửa hàng - tiêu đề và quyền', () => {
   it('tiêu đề mang tên gian hàng, nhãn trạng thái, vai người xem và lối xem trang công khai', () => {
     renderPage();
 
@@ -660,10 +660,10 @@ describe('Trang Thông tin cửa hàng — tiêu đề và quyền', () => {
 });
 
 /**
- * DẢI CHÀO MỪNG sau lần thanh toán gói đầu tiên — `?welcome=1` (ADR 0040).
+ * DẢI CHÀO MỪNG sau lần thanh toán gói đầu tiên - `?welcome=1` (ADR 0040).
  *
  * Nội dung của dải có test riêng (`ShopWelcomeBanner.test.tsx`); ở đây kiểm đúng phần DÂY NỐI, và
- * phần đó có một mệnh đề không hiển nhiên: dải chỉ dựng khi CẢ HAI vế đúng — URL nói vừa thanh
+ * phần đó có một mệnh đề không hiển nhiên: dải chỉ dựng khi CẢ HAI vế đúng - URL nói vừa thanh
  * toán xong, VÀ tenant thật sự đi qua cửa gói. Vế thứ hai chặn một link `?welcome=1` chia sẻ sang
  * tài khoản khác hiện một dòng chào vô nghĩa cho một chủ xe tuyến hoa hồng.
  */

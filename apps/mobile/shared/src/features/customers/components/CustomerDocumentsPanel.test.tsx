@@ -61,7 +61,7 @@ async function renderPanel(
  * Ba mức quyền của giấy tờ khách tách nhau vì mức thiệt hại khác hẳn: THẤY có giấy tờ gì là một
  * chuyện, MỞ ĐƯỢC ảnh CCCD của mọi khách cũ là chuyện khác hẳn.
  */
-describe('CustomerDocumentsPanel — quyền xem TỆP', () => {
+describe('CustomerDocumentsPanel - quyền xem TỆP', () => {
   it('thiếu `customers.documents.view_files`: KHÔNG phát request xin signed URL nào', async () => {
     const view = await renderPanel({ canManage: true, canViewFiles: false });
 
@@ -79,7 +79,7 @@ describe('CustomerDocumentsPanel — quyền xem TỆP', () => {
     expect(view.downloadSpy).toHaveBeenCalledWith(CUSTOMER_ID, '01JQZX0000000000000000000D');
   });
 
-  it('PDF không có ảnh thu nhỏ nên KHÔNG nạp sẵn — chỉ xin URL khi bấm "Mở tệp"', async () => {
+  it('PDF không có ảnh thu nhỏ nên KHÔNG nạp sẵn - chỉ xin URL khi bấm "Mở tệp"', async () => {
     const view = await renderPanel({ canManage: false, canViewFiles: true }, [
       doc({ mimeType: 'application/pdf', originalName: 'cccd.pdf' }),
     ]);
@@ -101,7 +101,7 @@ describe('CustomerDocumentsPanel — quyền xem TỆP', () => {
   });
 });
 
-describe('CustomerDocumentsPanel — quyền QUẢN LÝ', () => {
+describe('CustomerDocumentsPanel - quyền QUẢN LÝ', () => {
   it('thiếu `customers.documents.manage`: không tải lên, không đối chiếu, không gỡ', async () => {
     const view = await renderPanel({ canManage: false, canViewFiles: true });
     await view.findByText(/cccd/);
@@ -142,7 +142,7 @@ describe('CustomerDocumentsPanel — quyền QUẢN LÝ', () => {
   });
 });
 
-describe('CustomerDocumentsPanel — trạng thái dữ liệu', () => {
+describe('CustomerDocumentsPanel - trạng thái dữ liệu', () => {
   it('rỗng thật: nói rõ chưa có giấy tờ nào', async () => {
     const view = await renderPanel({ canManage: false, canViewFiles: false }, []);
     expect(await view.findByText('Chưa có giấy tờ nào của khách này')).toBeTruthy();

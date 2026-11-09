@@ -14,7 +14,7 @@ import {
 import type { PlanTier } from './plan-purchase';
 import type { CurrentPlan, PurchaseSubscriptionInput, TenantPlan } from './types';
 
-/** Một làn loại xe của hộp "Mua hoặc gia hạn gói" — bậc đang bán + kỳ đang chạy của loại đó. */
+/** Một làn loại xe của hộp "Mua hoặc gia hạn gói" - bậc đang bán + kỳ đang chạy của loại đó. */
 export interface CombinedPlanLane {
   scope: PlanLaneScope;
   tiers: readonly PlanTier[];
@@ -23,21 +23,21 @@ export interface CombinedPlanLane {
   selected: PlanTier | null;
 }
 
-/** Một kỳ hạn chọn được — `savingPercent` là phép SO SÁNH hiển thị (ADR 0041 điều 2). */
+/** Một kỳ hạn chọn được - `savingPercent` là phép SO SÁNH hiển thị (ADR 0041 điều 2). */
 export interface CombinedTermOption {
   months: SubscriptionTermMonths;
   savingPercent: number;
 }
 
 /**
- * Một gói sẽ vào hoá đơn — đủ để dựng dòng tóm tắt và body gửi lên. KHÔNG có ngày: mua mới / gia
+ * Một gói sẽ vào hoá đơn - đủ để dựng dòng tóm tắt và body gửi lên. KHÔNG có ngày: mua mới / gia
  * hạn / nâng ngay / đổi từ kỳ sau và kỳ dự kiến là việc của server (`usePurchasePreview`, ADR 0084)
- * — client chỉ thấy kỳ đang chạy, không thấy kỳ đã xếp lịch.
+ * - client chỉ thấy kỳ đang chạy, không thấy kỳ đã xếp lịch.
  */
 export interface CombinedPlanSelection {
   scope: PlanLaneScope;
   tier: PlanTier;
-  /** Vị trí của bậc trong làn (0 = bậc đầu theo `sortOrder` của admin) — nhãn bậc theo vị trí. */
+  /** Vị trí của bậc trong làn (0 = bậc đầu theo `sortOrder` của admin) - nhãn bậc theo vị trí. */
   rank: number;
   body: PurchaseSubscriptionInput;
   total: MoneyString;
@@ -52,7 +52,7 @@ export interface CombinedPlanPurchaseState {
   total: MoneyString | null;
   select: (scope: PlanLaneScope, planId: string) => void;
   setTermMonths: (months: SubscriptionTermMonths) => void;
-  /** Giá MỘT THÁNG của một bậc ở kỳ hạn đang chọn — `null` khi bậc không bán kỳ đó. */
+  /** Giá MỘT THÁNG của một bậc ở kỳ hạn đang chọn - `null` khi bậc không bán kỳ đó. */
   perMonthOf: (tier: PlanTier) => MoneyString | null;
   reset: () => void;
 }
@@ -62,12 +62,12 @@ export interface CombinedPlanPurchaseState {
  * cho cả lượt. Hai bậc ⇒ phiếu thanh toán gộp (ADR 0083); một bậc ⇒ hoá đơn đơn lẻ như cũ.
  *
  * Kỳ hạn chọn được là kỳ mà MỌI bậc đang chọn đều bán (`limits.termPrices` của từng bậc là bảng giá
- * VÀ danh sách kỳ được bán — ADR 0041 điều 2); chưa chọn bậc nào thì là mọi kỳ có bán ở các làn.
- * % tiết kiệm của một kỳ lấy mức THẤP nhất giữa các bậc đang chọn — một nhãn chung không được hứa
+ * VÀ danh sách kỳ được bán - ADR 0041 điều 2); chưa chọn bậc nào thì là mọi kỳ có bán ở các làn.
+ * % tiết kiệm của một kỳ lấy mức THẤP nhất giữa các bậc đang chọn - một nhãn chung không được hứa
  * nhiều hơn bậc nào.
  *
  * Không có lựa chọn "thời điểm áp dụng" (ADR 0084): cùng bậc = gia hạn nối tiếp, trần cao hơn =
- * nâng ngay, còn lại = nối tiếp — server suy.
+ * nâng ngay, còn lại = nối tiếp - server suy.
  */
 export function useCombinedPlanPurchase(
   plans: readonly TenantPlan[],
@@ -129,7 +129,7 @@ export function useCombinedPlanPurchase(
       ),
     }));
 
-  // Kỳ đã chọn không còn hợp lệ (đổi bậc) ⇒ rơi về kỳ ngắn nhất — design chọn sẵn "Gói 1 tháng".
+  // Kỳ đã chọn không còn hợp lệ (đổi bậc) ⇒ rơi về kỳ ngắn nhất - design chọn sẵn "Gói 1 tháng".
   const termMonths =
     chosenTerm != null && termOptions.some((option) => option.months === chosenTerm)
       ? chosenTerm
@@ -159,7 +159,7 @@ export function useCombinedPlanPurchase(
     termMonths,
     selections,
     total: selections.length ? sumMoney(selections.map((item) => item.total)) : null,
-    // Bấm lại đúng bậc đang chọn là BỎ chọn — "không mua gói cho loại xe này lần này".
+    // Bấm lại đúng bậc đang chọn là BỎ chọn - "không mua gói cho loại xe này lần này".
     select: (scope, planId) =>
       setPicked((current) => ({
         ...current,
@@ -177,7 +177,7 @@ export function useCombinedPlanPurchase(
   };
 }
 
-/** Bậc gói CHỌN SẴN khi mở hộp từ một làn: bậc đang dùng (gia hạn) — không thì bậc đề xuất. */
+/** Bậc gói CHỌN SẴN khi mở hộp từ một làn: bậc đang dùng (gia hạn) - không thì bậc đề xuất. */
 export function defaultTierFor(lane: CombinedPlanLane): PlanTier | null {
   const sellable = lane.tiers.filter((tier) => tier.selfServe);
   return (

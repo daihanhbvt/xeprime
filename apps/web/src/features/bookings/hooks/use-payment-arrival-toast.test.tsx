@@ -75,7 +75,7 @@ describe('usePaymentArrivalToast', () => {
     });
   });
 
-  it('lần tải ĐẦU chỉ ghi mốc — không hỏi server, không toast', () => {
+  it('lần tải ĐẦU chỉ ghi mốc - không hỏi server, không toast', () => {
     watch.items = [{ id: 'r1' }];
     mount();
     expect(api.fetchBookingRequest).not.toHaveBeenCalled();

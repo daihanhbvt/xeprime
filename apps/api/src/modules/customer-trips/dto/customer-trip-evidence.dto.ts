@@ -16,11 +16,11 @@ import {
 export class CustomerTripHandoverEvidencePhotoDto {
   @ApiProperty({
     enum: HANDOVER_PHOTO_SLOT_VALUES,
-    description: '@xeprime/types → HandoverPhotoSlot. Mã, không phải nhãn — client tự dịch',
+    description: '@xeprime/types → HandoverPhotoSlot. Mã, không phải nhãn - client tự dịch',
   })
   slot!: string;
 
-  @ApiProperty({ description: 'ISO-8601 UTC — thời điểm ảnh được tải lên' })
+  @ApiProperty({ description: 'ISO-8601 UTC - thời điểm ảnh được tải lên' })
   uploadedAt!: string;
 
   /**
@@ -31,7 +31,7 @@ export class CustomerTripHandoverEvidencePhotoDto {
    * KHÔNG được im lặng: một tấm chụp ba ngày sau không được đọc như hiện trạng lúc bàn giao,
    * nên cờ này đi kèm mọi tấm để giao diện nói thẳng điều đó với khách.
    */
-  @ApiProperty({ description: 'Ảnh thêm sau mốc xác nhận — giao diện phải nói rõ' })
+  @ApiProperty({ description: 'Ảnh thêm sau mốc xác nhận - giao diện phải nói rõ' })
   addedAfterConfirmation!: boolean;
 }
 

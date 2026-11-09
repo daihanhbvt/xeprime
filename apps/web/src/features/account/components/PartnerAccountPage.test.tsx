@@ -122,7 +122,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Tài khoản & bảo mật — bốn section', () => {
+describe('Tài khoản & bảo mật - bốn section', () => {
   it('đúng một h1, bốn h2 theo thứ tự hồ sơ → đăng nhập → mật khẩu → xoá', () => {
     renderPage();
 
@@ -185,7 +185,7 @@ describe('Tài khoản & bảo mật — bốn section', () => {
   });
 });
 
-describe('Tài khoản & bảo mật — xoá tài khoản khép mặc định', () => {
+describe('Tài khoản & bảo mật - xoá tài khoản khép mặc định', () => {
   it('chỉ một dòng giới thiệu + nút; bấm mới hiện ảnh hưởng và form xác nhận', () => {
     renderPage();
 
@@ -220,7 +220,7 @@ describe('Tài khoản & bảo mật — xoá tài khoản khép mặc định',
   });
 });
 
-describe('Tài khoản & bảo mật — tách khỏi gian hàng', () => {
+describe('Tài khoản & bảo mật - tách khỏi gian hàng', () => {
   it('không có hồ sơ gian hàng, gói, ví hay hoá đơn', () => {
     renderPage();
 
@@ -242,7 +242,7 @@ describe('Tài khoản & bảo mật — tách khỏi gian hàng', () => {
   });
 });
 
-describe('Tài khoản & bảo mật — trạng thái tải', () => {
+describe('Tài khoản & bảo mật - trạng thái tải', () => {
   it('đang tải: không dựng section nào', () => {
     profile.isPending = true;
     renderPage();

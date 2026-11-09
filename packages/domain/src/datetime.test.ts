@@ -69,7 +69,7 @@ describe('rentalDurationParts', () => {
     });
   });
 
-  it('23h59 không tụt về 0 — tối thiểu là 1 giờ', () => {
+  it('23h59 không tụt về 0 - tối thiểu là 1 giờ', () => {
     expect(rentalDurationParts(at('2026-08-08T10:00:00'), at('2026-08-08T10:20:00'))).toEqual({
       days: 0,
       hours: 1,
@@ -125,7 +125,7 @@ function onHost<T>(tz: string, fn: () => T): T {
   }
 }
 
-describe('appWallClockToIso — ô chọn → API', () => {
+describe('appWallClockToIso - ô chọn → API', () => {
   it.each(HOST_TIME_ZONES)('máy đặt ở %s: chọn 03/09/2026 12:00 vẫn gửi lên 05:00Z', (hostTz) => {
     onHost(hostTz, () => {
       // Đúng thứ Ant Design đưa ra sau khi người dùng gõ/bấm: một Dayjs theo GIỜ MÁY.
@@ -144,7 +144,7 @@ describe('appWallClockToIso — ô chọn → API', () => {
     });
   });
 
-  it('giữ nguyên mili giây — không cắt cụt khi quy đổi', () => {
+  it('giữ nguyên mili giây - không cắt cụt khi quy đổi', () => {
     expect(appWallClockToIso(dayjs('2026-09-03T12:00:00.123'))).toBe('2026-09-03T05:00:00.123Z');
   });
 
@@ -159,7 +159,7 @@ describe('appWallClockToIso — ô chọn → API', () => {
   });
 });
 
-describe('toAppTz — API → ô chọn', () => {
+describe('toAppTz - API → ô chọn', () => {
   it.each(HOST_TIME_ZONES)('máy đặt ở %s: 05:00Z hiện ra 03/09/2026 12:00', (hostTz) => {
     onHost(hostTz, () => {
       expect(toAppTz('2026-09-03T05:00:00.000Z').format('YYYY-MM-DD HH:mm')).toBe(
@@ -250,7 +250,7 @@ describe('nowInAppTz', () => {
   });
 });
 
-describe('bản nháp tìm kiếm — link chia sẻ không mang múi giờ của người gửi', () => {
+describe('bản nháp tìm kiếm - link chia sẻ không mang múi giờ của người gửi', () => {
   it.each(HOST_TIME_ZONES)('máy đặt ở %s: URL → ô chọn → URL giữ nguyên mốc', (hostTz) => {
     onHost(hostTz, () => {
       const draft = draftFromFilters({

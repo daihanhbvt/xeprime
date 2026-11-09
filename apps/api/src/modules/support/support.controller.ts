@@ -39,7 +39,7 @@ export class SupportController {
   @Get()
   @RequirePermissions(PERMISSION.SUPPORT_VIEW)
   @SupportAction(SUPPORT_CAPABILITY.SUPPORT_CASE_VIEW)
-  @ApiOperation({ summary: 'Case của gian hàng — mặc định chỉ case còn MỞ' })
+  @ApiOperation({ summary: 'Case của gian hàng - mặc định chỉ case còn MỞ' })
   @ApiOkResponse({ type: SupportCasePageDto })
   list(
     @CurrentUser() user: AuthenticatedUser,

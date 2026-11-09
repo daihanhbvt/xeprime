@@ -20,12 +20,12 @@ jest.mock('expo-router', () => ({
 jest.mock('@/features/shell/ManageHeader', () => ({ ManageHeader: () => null }));
 
 /**
- * ĐỒNG HỒ GIẢ — bắt buộc ở mọi file test có RENDER biểu đồ.
+ * ĐỒNG HỒ GIẢ - bắt buộc ở mọi file test có RENDER biểu đồ.
  *
  * `BarChart` hẹn một `setTimeout(labelsAppear, animationDuration)` lúc gắn rồi chạy tiếp một
  * `Animated.timing` 500ms, và không prop nào tắt được (`isAnimated={false}` chỉ tắt animation của
  * cột). Cái hẹn đó sống lâu hơn cả môi trường jest: test xong, môi trường bị dỡ, callback mới
- * chạy — worker chết kèm một stack không trỏ vào test nào, hoặc jest treo không thoát.
+ * chạy - worker chết kèm một stack không trỏ vào test nào, hoặc jest treo không thoát.
  */
 beforeEach(() => jest.useFakeTimers());
 afterEach(() => jest.useRealTimers());
@@ -151,22 +151,22 @@ afterEach(() => {
 });
 
 /**
- * `/manage/finance` — Tổng quan tài chính. Ba thứ phải sống sót qua mọi lần sửa, vì chúng là lý
+ * `/manage/finance` - Tổng quan tài chính. Ba thứ phải sống sót qua mọi lần sửa, vì chúng là lý
  * do màn này đáng tin:
- *  1. **Ba lớp tiền tách rời** — "Lợi nhuận" (của một kỳ) không đứng lẫn với "Cọc đang giữ"
+ *  1. **Ba lớp tiền tách rời** - "Lợi nhuận" (của một kỳ) không đứng lẫn với "Cọc đang giữ"
  *     (tại thời điểm này), và cọc nằm ngoài doanh thu.
- *  2. **Lối đi khớp thẻ** — mỗi ô dẫn ra sổ phải mang `sourceGroup` + `status=approved`, nếu
+ *  2. **Lối đi khớp thẻ** - mỗi ô dẫn ra sổ phải mang `sourceGroup` + `status=approved`, nếu
  *     không thẻ nói một số và danh sách nó dẫn tới nói số khác.
  *  3. **Phần chưa gắn xe / chưa gắn khách không bốc hơi.**
  */
-describe('FinanceOverviewScreen — ba lớp tiền', () => {
+describe('FinanceOverviewScreen - ba lớp tiền', () => {
   it('doanh thu KHÔNG gồm cọc, còn dòng tiền quỹ thì có', async () => {
     const { findByText, findByLabelText } = await renderScreen([PERMISSION.FINANCE_VIEW]);
 
     // Dải thẻ `Finance.overview.tiles` như web: doanh thu (đã trừ cọc) tách khỏi dòng tiền ròng (gồm cọc).
     expect(await findByLabelText(/^Doanh thu: /)).toBeTruthy();
     expect(await findByText('82.500.000 ₫')).toBeTruthy();
-    // Ô dòng tiền ròng (gồm cọc) — tìm theo số của ô, nhãn có dấu ngoặc.
+    // Ô dòng tiền ròng (gồm cọc) - tìm theo số của ô, nhãn có dấu ngoặc.
     expect(await findByLabelText(/: 72\.400\.000 ₫$/)).toBeTruthy();
     // Tiền vào (gồm cọc) nằm ở dòng phụ "Vào … · Ra …" của chính ô đó.
     expect(await findByText(/96\.500\.000 ₫/)).toBeTruthy();
@@ -197,7 +197,7 @@ describe('FinanceOverviewScreen — ba lớp tiền', () => {
   });
 });
 
-describe('FinanceOverviewScreen — lối đi phải khớp thẻ', () => {
+describe('FinanceOverviewScreen - lối đi phải khớp thẻ', () => {
   it('ô Doanh thu mở sổ đã lọc theo nhóm nguồn + đã duyệt + đúng kỳ', async () => {
     const { findByLabelText } = await renderScreen([PERMISSION.FINANCE_VIEW]);
 
@@ -215,7 +215,7 @@ describe('FinanceOverviewScreen — lối đi phải khớp thẻ', () => {
     expect(href.params.to).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it('ô Dòng tiền ròng KHÔNG lọc nhóm nguồn — nó cố ý gồm cả cọc', async () => {
+  it('ô Dòng tiền ròng KHÔNG lọc nhóm nguồn - nó cố ý gồm cả cọc', async () => {
     const { findByLabelText } = await renderScreen([PERMISSION.FINANCE_VIEW]);
 
     await fireEvent.press(await findByLabelText(/: 72\.400\.000 ₫$/));
@@ -244,8 +244,8 @@ describe('FinanceOverviewScreen — lối đi phải khớp thẻ', () => {
   });
 });
 
-describe('FinanceOverviewScreen — hai dải xếp hạng', () => {
-  it('kỳ mặc định luôn có hai đầu — biểu đồ không bao giờ chạy với khoảng rỗng', async () => {
+describe('FinanceOverviewScreen - hai dải xếp hạng', () => {
+  it('kỳ mặc định luôn có hai đầu - biểu đồ không bao giờ chạy với khoảng rỗng', async () => {
     const { byVehicleSpy } = await renderScreen([PERMISSION.FINANCE_VIEW]);
 
     await waitFor(() => expect(byVehicleSpy).toHaveBeenCalled());
@@ -270,22 +270,22 @@ describe('FinanceOverviewScreen — hai dải xếp hạng', () => {
     const { findByText } = await renderScreen([PERMISSION.FINANCE_VIEW], {
       summary: summary({ unassignedRevenue: '900000' }),
     });
-    // Khối "Hiệu suất kinh doanh" mở tab Theo xe — dải khách chỉ tải khi chọn tab của nó (như web).
+    // Khối "Hiệu suất kinh doanh" mở tab Theo xe - dải khách chỉ tải khi chọn tab của nó (như web).
     await fireEvent.press(await findByText('Theo khách'));
     expect(await findByText(/Chưa gắn khách nào: 900\.000 ₫/)).toBeTruthy();
   });
 
-  it('xe chưa có doanh thu: biên là — chứ không phải 0%', async () => {
+  it('xe chưa có doanh thu: biên là - chứ không phải 0%', async () => {
     const { findByText, queryByText } = await renderScreen([PERMISSION.FINANCE_VIEW], {
       vehicles: [{ ...VEHICLE, revenue: '0', cost: '0', profit: '0', profitMarginPercent: null }],
     });
 
     expect(await findByText('Vios')).toBeTruthy();
-    // Không có biên thì KHÔNG có viên biên nào — cái phải tránh là hiện "Biên 0%".
+    // Không có biên thì KHÔNG có viên biên nào - cái phải tránh là hiện "Biên 0%".
     expect(queryByText('Biên 0%')).toBeNull();
   });
 
-  it('hai dải phân trang ĐỘC LẬP — tham số của dải này không rơi vào dải kia', async () => {
+  it('hai dải phân trang ĐỘC LẬP - tham số của dải này không rơi vào dải kia', async () => {
     const { findByText, byVehicleSpy, byCustomerSpy } = await renderScreen([PERMISSION.FINANCE_VIEW]);
 
     await waitFor(() => expect(byVehicleSpy).toHaveBeenCalled());
@@ -298,7 +298,7 @@ describe('FinanceOverviewScreen — hai dải xếp hạng', () => {
   });
 });
 
-describe('FinanceOverviewScreen — quyền', () => {
+describe('FinanceOverviewScreen - quyền', () => {
   it('thiếu `finance.view`: thay TOÀN BỘ nội dung và KHÔNG gọi API nào', async () => {
     const { findByText, queryByText, summarySpy, byVehicleSpy, byCustomerSpy } = await renderScreen(
       [],

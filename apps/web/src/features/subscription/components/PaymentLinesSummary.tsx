@@ -10,12 +10,12 @@ import type { SubscriptionInvoice } from '../types';
 import styles from './PaymentLinesSummary.module.css';
 
 /**
- * Các dòng "Thông tin thanh toán" của trang thanh toán — design `24051:79507`: mỗi gói một dòng
+ * Các dòng "Thông tin thanh toán" của trang thanh toán - design `24051:79507`: mỗi gói một dòng
  * (loại gói · số tiền · tên bậc, hạn mức), rồi thời gian áp dụng + kỳ hạn. Phiếu gộp (ADR 0083) có
  * hai dòng gói; kỳ chung thì in một lần, khác nhau thì in theo từng gói.
  *
  * Tên bậc đọc từ danh mục gói đang bán (cache dùng chung với bảng giá); bậc đã gỡ khỏi danh mục thì
- * rơi về mã bậc ghi trên hoá đơn. Kỳ in ở đây là kỳ DỰ KIẾN trên hoá đơn — kỳ thật chốt lúc tiền về.
+ * rơi về mã bậc ghi trên hoá đơn. Kỳ in ở đây là kỳ DỰ KIẾN trên hoá đơn - kỳ thật chốt lúc tiền về.
  */
 export function PaymentLinesSummary({ invoices }: { invoices: readonly SubscriptionInvoice[] }) {
   const t = useTranslations('Subscription.checkout');

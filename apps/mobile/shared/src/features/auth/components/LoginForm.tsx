@@ -40,7 +40,6 @@ export function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
   const {
     control,
     handleSubmit,
-    formState: { isValid },
   } = useForm<PhoneLoginValues>({
     mode: 'onChange',
     resolver: yupResolver(schema),
@@ -115,7 +114,6 @@ export function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
         icon="log-in-outline"
         onPress={onSubmit}
         loading={login.isPending}
-        disabled={!isValid}
       />
     </YStack>
   );

@@ -58,24 +58,24 @@ export interface ShopWorkspaceProps {
   /**
    * `?section=` CÓ MẶT trong URL hay đây chỉ là giá trị mặc định.
    *
-   * Có mặt ⇒ cuộn tới section đó ngay lần vẽ đầu — đường mà các redirect cũ đi vào
+   * Có mặt ⇒ cuộn tới section đó ngay lần vẽ đầu - đường mà các redirect cũ đi vào
    * (`/manage/subscription` → `?section=plan`, `/shop/branches` → `?section=branches`) và đường một
    * link chia sẻ đi vào. Mặc định thì KHÔNG cuộn: người mở trang trần phải thấy đầu trang.
    */
   sectionInUrl: boolean;
   /**
-   * Gian hàng VỪA thanh toán gói xong — `?welcome=1` và đúng là gian hàng tuyến gói (ADR 0040).
+   * Gian hàng VỪA thanh toán gói xong - `?welcome=1` và đúng là gian hàng tuyến gói (ADR 0040).
    * Route đã kiểm cả hai vế.
    */
   welcome?: boolean;
-  /** Gian hàng đã có xe nào chưa — chỉ dùng cho dải chào mừng; route chỉ hỏi khi `welcome`. */
+  /** Gian hàng đã có xe nào chưa - chỉ dùng cho dải chào mừng; route chỉ hỏi khi `welcome`. */
   hasVehicle?: boolean;
   /** Lưu MỘT nhóm ô của hồ sơ; promise từ chối khi server từ chối (hộp thoại giữ nguyên). */
   onSave: (body: UpdateProfileInput) => Promise<unknown>;
 }
 
 /**
- * TRANG THÔNG TIN CỬA HÀNG — design `23999:111044` (06/11/2026).
+ * TRANG THÔNG TIN CỬA HÀNG - design `23999:111044` (06/11/2026).
  *
  * ## Bố cục
  *
@@ -86,12 +86,12 @@ export interface ShopWorkspaceProps {
  *   ┌ Hoá đơn và thanh toán ──────────────────────────┐   └ giới thiệu ─────────┘
  *
  * Mục lục trái của bản cũ đã bỏ (design không còn): trang giờ là các THẺ ngắn, mỗi thẻ một tiêu đề.
- * `?section=` vẫn sống — các redirect và link cũ cuộn tới đúng thẻ (`shopSectionDomId`).
+ * `?section=` vẫn sống - các redirect và link cũ cuộn tới đúng thẻ (`shopSectionDomId`).
  *
  * ## MỘT form, lưu THEO NHÓM
  *
  * Các thẻ chỉ ĐỌC; sửa trong hộp thoại, và "Cập nhật" của hộp thoại lưu NGAY đúng nhóm ô của nó
- * (`toShopProfilePatch` — người dùng chốt 06/11/2026). Cả trang dùng chung một form hồ sơ để danh
+ * (`toShopProfilePatch` - người dùng chốt 06/11/2026). Cả trang dùng chung một form hồ sơ để danh
  * sách "Hoàn thiện hồ sơ" và bản xem trước ảnh đọc giá trị đang sửa. Đóng hộp thoại = trả nhóm ô đó
  * về bản đã lưu. Logo / ảnh bìa là ngoại lệ có chủ đích: đổi ảnh là xem trước trên thẻ, cặp
  * "Hủy · Lưu thay đổi" dưới thẻ mới lưu.
@@ -116,7 +116,7 @@ export function ShopWorkspace({
   const [editing, setEditing] = useState<ShopProfileGroup | null>(null);
 
   const status = shop.status as TenantStatus;
-  // Phiên hỗ trợ gian hàng (ADR 0050 §12): hồ sơ chỉ đọc — không nút sửa, không lời giải thích quyền.
+  // Phiên hỗ trợ gian hàng (ADR 0050 §12): hồ sơ chỉ đọc - không nút sửa, không lời giải thích quyền.
   const hidesDenied = useSupportHides(SUPPORT_HIDDEN_AREA.DENIED_ACTIONS);
   const readOnlyReason = canEdit || hidesDenied ? null : t('form.readOnly');
 
@@ -142,7 +142,7 @@ export function ShopWorkspace({
   const dirty = form.formState.dirtyFields;
   const mediaDirty = Boolean(dirty.logoUrl || dirty.coverUrl);
 
-  /** Trả các ô của MỘT nhóm về bản đã lưu — đóng hộp thoại, hoặc "Hủy" của ảnh. */
+  /** Trả các ô của MỘT nhóm về bản đã lưu - đóng hộp thoại, hoặc "Hủy" của ảnh. */
   function resetGroup(group: ShopProfileGroup) {
     const saved = toShopProfileValues(shop);
     for (const field of SHOP_PROFILE_GROUP_FIELDS[group]) {
@@ -151,7 +151,7 @@ export function ShopWorkspace({
   }
 
   async function saveGroup(group: ShopProfileGroup) {
-    // Enter vẫn gửi form khi nút đang quay — không gửi lượt thứ hai trong lúc lượt đầu đang bay.
+    // Enter vẫn gửi form khi nút đang quay - không gửi lượt thứ hai trong lúc lượt đầu đang bay.
     if (saving) return;
     const valid = await form.trigger([...SHOP_PROFILE_GROUP_FIELDS[group]]);
     if (!valid) return;
@@ -162,7 +162,7 @@ export function ShopWorkspace({
       // Câu lỗi do nơi gọi báo; giữ nguyên hộp thoại + giá trị đang sửa để sửa và gửi lại.
       return;
     }
-    // Ghi bản vừa lưu làm mốc "chưa sửa" của nhóm — nhóm khác đang sửa dở không bị đụng.
+    // Ghi bản vừa lưu làm mốc "chưa sửa" của nhóm - nhóm khác đang sửa dở không bị đụng.
     for (const field of SHOP_PROFILE_GROUP_FIELDS[group]) {
       form.resetField(field, { defaultValue: values[field] });
     }
@@ -180,7 +180,7 @@ export function ShopWorkspace({
     <>
       <header className={styles.header}>
         <div className={styles.identity}>
-          {/* LOGO gian hàng — danh tính nổi bật của trang là gian hàng, không phải một người. */}
+          {/* LOGO gian hàng - danh tính nổi bật của trang là gian hàng, không phải một người. */}
           <Avatar
             className={styles.logo}
             size={54}
@@ -210,7 +210,7 @@ export function ShopWorkspace({
               {domainLabel('tenantRole', roleKey)}
             </span>
           ) : null}
-          {/* Chỉ shop đang hoạt động mới có trang công khai — link tới 404 là hành động giả. */}
+          {/* Chỉ shop đang hoạt động mới có trang công khai - link tới 404 là hành động giả. */}
           {status === TENANT_STATUS.ACTIVE ? (
             <Link href={shopPath.detail(shop.slug)} target="_blank" rel="noopener noreferrer">
               <Button size="large" icon={<ExportOutlined />}>
@@ -269,9 +269,9 @@ export function ShopWorkspace({
               onMediaSave={() => void saveGroup(SHOP_PROFILE_GROUP.MEDIA)}
             />
             {/*
-              "Hoàn thiện hồ sơ" — design không vẽ; giữ dưới thẻ hiển thị vì nó nói đúng những gì
+              "Hoàn thiện hồ sơ" - design không vẽ; giữ dưới thẻ hiển thị vì nó nói đúng những gì
               thẻ đó còn thiếu. Chỉ cho người SỬA được; tự ẩn khi đủ. Gian hàng tuyến gói: LOGO là
-              mục chặn (`submitForPublicReview` từ chối thật — ADR 0040 điều 7).
+              mục chặn (`submitForPublicReview` từ chối thật - ADR 0040 điều 7).
             */}
             {canEdit ? (
               <ShopProfileChecklist

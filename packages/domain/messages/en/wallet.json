@@ -58,7 +58,7 @@
     "cancel": "Cancel request",
     "cancelConfirm": "Cancel this withdrawal request?",
     "cancelHint": "The money returns to your available balance.",
-    "reversed": "Transfer failed: {reason}. The money is back in your balance — check the payout account and create a new request."
+    "reversed": "Transfer failed: {reason}. The money is back in your balance - check the payout account and create a new request."
   },
   "admin": {
     "title": "Withdrawal requests",
@@ -82,7 +82,7 @@
     },
     "actions": {
       "approve": "Approve",
-      "approved": "Approved — the commitment clock starts now.",
+      "approved": "Approved - the commitment clock starts now.",
       "markPaid": "Mark as transferred",
       "reject": "Reject",
       "reverse": "Transfer failed / wrong account"
@@ -90,7 +90,7 @@
     "paid": {
       "title": "Confirm bank transfer",
       "bankReference": "Bank transaction reference",
-      "bankReferenceHint": "Proof of transfer — required, used for reconciliation later.",
+      "bankReferenceHint": "Proof of transfer - required, used for reconciliation later.",
       "submit": "Confirm transfer",
       "done": "Transfer recorded.",
       "referenceRequired": "Enter the bank transaction reference (at least 3 characters)."
@@ -107,10 +107,10 @@
     "reverse": {
       "title": "Reverse a completed transfer",
       "reason": "Why the money came back",
-      "reasonHint": "The wallet owner reads this — say why the money came back so they can check their account before withdrawing again.",
+      "reasonHint": "The wallet owner reads this - say why the money came back so they can check their account before withdrawing again.",
       "submit": "Reverse entry",
       "done": "Reversed. The money is back in the owner's balance, and both entries stay on the ledger.",
-      "reasonPlaceholder": "e.g. the bank returned it — wrong account number",
+      "reasonPlaceholder": "e.g. the bank returned it - wrong account number",
       "reasonRequired": "Enter a reason (at least 3 characters)."
     },
     "total": "{count, plural, one {# request} other {# requests}} in total",
@@ -158,7 +158,7 @@
       "body": "Pick another month, or come back once a running trip finishes."
     },
     "totals": {
-      "balanceChange": "Total balance change — completed trips",
+      "balanceChange": "Total balance change - completed trips",
       "payAtPickup": "Paid to you directly at pick-up",
       "payAtPickupHint": "The part of the rental the customer hands you; it never passes through XePrime. Excludes the delivery fee.",
       "delivery": "Delivery fees paid to you directly",
@@ -167,11 +167,11 @@
       "commission": "Total owner service fee",
       "tax": "Total tax withheld and paid on your behalf",
       "ownerIncome": "Shop owner income",
-      "ownerIncomeHint": "Rental revenue minus the owner service fee, tax withheld and plan fee — includes what the customer paid you directly, excludes delivery fees.",
+      "ownerIncomeHint": "Rental revenue minus the owner service fee, tax withheld and plan fee - includes what the customer paid you directly, excludes delivery fees.",
       "ownerIncomeCommission": "Car owner income",
       "ownerIncomeGeneric": "Income",
       "appSubscriptionFee": "Platform management & operation fee",
-      "appOwnerIncomeHint": "Rental revenue minus the owner service fee, tax withheld and platform fees — includes what customers paid you directly, excludes delivery fees."
+      "appOwnerIncomeHint": "Rental revenue minus the owner service fee, tax withheld and platform fees - includes what customers paid you directly, excludes delivery fees."
     }
   },
   "pill": {
@@ -207,7 +207,7 @@
     "totalLabel": "{count, plural, one {# transaction} other {# transactions}}",
     "empty": {
       "title": "No activity this month",
-      "body": "Pick another month — trip payouts, compensation and your withdrawals will show up here."
+      "body": "Pick another month - trip payouts, compensation and your withdrawals will show up here."
     },
     "columns": {
       "code": "Transaction code",

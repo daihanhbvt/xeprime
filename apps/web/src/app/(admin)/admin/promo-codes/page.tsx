@@ -275,7 +275,7 @@ export default function AdminPromoCodesPage() {
       width: 180,
       render: (_, p) => (
         <span className={styles.cellSub}>
-          {fmt.date(p.startsAt)} – {fmt.date(p.endsAt)}
+          {fmt.date(p.startsAt)} - {fmt.date(p.endsAt)}
         </span>
       ),
     },

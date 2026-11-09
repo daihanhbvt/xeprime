@@ -117,7 +117,7 @@ afterEach(() => {
  * Nó dùng lại nguyên bộ endpoint của màn Tổng quan doanh thu, chỉ thêm mệnh đề thu hẹp. Đó là
  * điều làm cho con số ở hồ sơ một chiếc xe **không thể lệch** dòng của nó trong bảng tổng quan.
  */
-describe('FinanceEntityPanel — hồ sơ xe', () => {
+describe('FinanceEntityPanel - hồ sơ xe', () => {
   it('phạm vi xe đi xuống CẢ hai truy vấn', async () => {
     const { summarySpy, seriesSpy } = await renderPanel('vehicle', { vehicleId: 'v1' });
 
@@ -170,7 +170,7 @@ describe('FinanceEntityPanel — hồ sơ xe', () => {
   });
 });
 
-describe('FinanceEntityPanel — hồ sơ khách', () => {
+describe('FinanceEntityPanel - hồ sơ khách', () => {
   it('khách hiện doanh thu · còn nợ · số chuyến, KHÔNG hiện chi phí/lợi nhuận', async () => {
     const { findByText, queryByText } = await renderPanel('customer', {
       tenantCustomerId: 'c1',

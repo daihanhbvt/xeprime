@@ -17,14 +17,14 @@ function renderInForm(
   return { ...utils, onSubmit };
 }
 
-describe('StickyFormActions — hành động chính', () => {
+describe('StickyFormActions - hành động chính', () => {
   it('nút gửi mang nhãn của feature', () => {
     renderInForm();
 
     expect(screen.getByRole('button', { name: 'Lưu xe' })).toBeTruthy();
   });
 
-  it('KHÔNG tự gửi form — nó kích hoạt onSubmit của form bao ngoài', () => {
+  it('KHÔNG tự gửi form - nó kích hoạt onSubmit của form bao ngoài', () => {
     const { onSubmit } = renderInForm();
 
     fireEvent.click(screen.getByRole('button', { name: 'Lưu xe' }));
@@ -38,7 +38,7 @@ describe('StickyFormActions — hành động chính', () => {
   });
 });
 
-describe('StickyFormActions — huỷ', () => {
+describe('StickyFormActions - huỷ', () => {
   it('không truyền onCancel thì không có nút huỷ', () => {
     renderInForm();
 
@@ -61,14 +61,14 @@ describe('StickyFormActions — huỷ', () => {
   });
 });
 
-describe('StickyFormActions — đang gửi và vô hiệu', () => {
+describe('StickyFormActions - đang gửi và vô hiệu', () => {
   it('submitting hiện trạng thái đang chạy trên nút gửi', () => {
     const { container } = renderInForm({ submitting: true });
 
     expect(container.querySelector('.ant-btn-loading')).toBeTruthy();
   });
 
-  it('submitting khoá nút huỷ — không bỏ dở giữa chừng', () => {
+  it('submitting khoá nút huỷ - không bỏ dở giữa chừng', () => {
     renderInForm({ onCancel: vi.fn(), submitting: true });
 
     expect((screen.getByRole('button', { name: 'Huỷ' }) as HTMLButtonElement).disabled).toBe(true);
@@ -91,7 +91,7 @@ describe('StickyFormActions — đang gửi và vô hiệu', () => {
   });
 });
 
-describe('StickyFormActions — hành động phá huỷ', () => {
+describe('StickyFormActions - hành động phá huỷ', () => {
   it('không truyền thì không có nút phá huỷ', () => {
     const { container } = renderInForm();
 
@@ -141,7 +141,7 @@ describe('StickyFormActions — hành động phá huỷ', () => {
   });
 });
 
-describe('StickyFormActions — dính hay không dính', () => {
+describe('StickyFormActions - dính hay không dính', () => {
   it('mặc định là thanh dính đáy', () => {
     const { container } = renderInForm();
 
@@ -150,7 +150,7 @@ describe('StickyFormActions — dính hay không dính', () => {
     );
   });
 
-  it('variant="inline" bỏ dính — dùng khi nằm trong ResponsiveDialog/DetailDrawer', () => {
+  it('variant="inline" bỏ dính - dùng khi nằm trong ResponsiveDialog/DetailDrawer', () => {
     const { container } = renderInForm({ variant: 'inline' });
 
     const bar = container.firstElementChild!.firstElementChild as HTMLElement;
@@ -158,7 +158,7 @@ describe('StickyFormActions — dính hay không dính', () => {
     expect(bar.className).not.toContain('sticky');
   });
 
-  it('hai variant cho ra hai class khác nhau — không phải cùng một khối đổi tên', () => {
+  it('hai variant cho ra hai class khác nhau - không phải cùng một khối đổi tên', () => {
     const { container: stickyBar } = renderInForm();
     const stickyClass = (stickyBar.firstElementChild!.firstElementChild as HTMLElement).className;
 
@@ -170,7 +170,7 @@ describe('StickyFormActions — dính hay không dính', () => {
   });
 });
 
-describe('StickyFormActions — ranh giới trách nhiệm', () => {
+describe('StickyFormActions - ranh giới trách nhiệm', () => {
   it('không validate, không gọi API, không đọc quyền: render trần vẫn chạy', () => {
     expect(() => render(<StickyFormActions submitLabel="Lưu" />)).not.toThrow();
   });

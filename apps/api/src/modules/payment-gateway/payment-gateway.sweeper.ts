@@ -119,7 +119,7 @@ export class PaymentGatewaySweeper implements OnApplicationBootstrap, OnApplicat
       return { queried, reapplied };
     } catch (error) {
       this.logger.error(
-        'Quét cổng thanh toán lỗi — vòng sau thử lại',
+        'Quét cổng thanh toán lỗi - vòng sau thử lại',
         error instanceof Error ? error.stack : String(error),
       );
       return { queried: 0, reapplied: 0 };

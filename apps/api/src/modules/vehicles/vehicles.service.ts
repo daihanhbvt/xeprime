@@ -741,7 +741,7 @@ export class VehiclesService {
         if (!target.provinceCode) {
           throw new ConflictException({
             code: API_ERROR_CODE.BRANCH_LOCATION_REQUIRED,
-            message: 'Chi nhánh đích chưa có tỉnh/thành — xe không hiển thị được trên chợ ở đó',
+            message: 'Chi nhánh đích chưa có tỉnh/thành - xe không hiển thị được trên chợ ở đó',
             details: { field: 'branchId' },
           });
         }
@@ -769,7 +769,7 @@ export class VehiclesService {
         if (cleared.length > 0) {
           throw new ForbiddenException({
             code: API_ERROR_CODE.SUPPORT_FIELD_NOT_ALLOWED,
-            message: 'Bỏ dịch vụ này sẽ xoá giá riêng chủ xe đã đặt — phiên hỗ trợ không sửa giá',
+            message: 'Bỏ dịch vụ này sẽ xoá giá riêng chủ xe đã đặt - phiên hỗ trợ không sửa giá',
             details: { fields: ['serviceTypes'], priceFields: cleared },
           });
         }
@@ -950,7 +950,7 @@ export class VehiclesService {
     if (dto.monthlyPrice != null && !current.serviceTypes.includes(SERVICE_TYPE.LONG_TERM)) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Xe không đăng dịch vụ thuê dài hạn — bổ sung dịch vụ trước khi đặt giá tháng',
+        message: 'Xe không đăng dịch vụ thuê dài hạn - bổ sung dịch vụ trước khi đặt giá tháng',
       });
     }
     const driverPriceSet =
@@ -960,7 +960,7 @@ export class VehiclesService {
     if (driverPriceSet && !current.serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER)) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Xe không đăng dịch vụ có tài xế — bổ sung dịch vụ trước khi đặt giá có tài xế',
+        message: 'Xe không đăng dịch vụ có tài xế - bổ sung dịch vụ trước khi đặt giá có tài xế',
       });
     }
 

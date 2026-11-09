@@ -20,7 +20,7 @@ import { InfoCard, InfoRow, InfoRows } from '@/components/layout/InfoCard';
 import styles from './ShopOwnerSection.module.css';
 
 /**
- * CHỦ GIAN HÀNG — tài khoản sở hữu, chỉ ĐỌC.
+ * CHỦ GIAN HÀNG - tài khoản sở hữu, chỉ ĐỌC.
  *
  * ## Vì sao không có ô nhập nào ở đây
  *
@@ -29,13 +29,13 @@ import styles from './ShopOwnerSection.module.css';
  *
  * Nguồn duy nhất giờ là `tenants.owner_user_id → users`, và nó đổi qua đúng luồng của nó:
  * tên và email/SĐT (qua xác minh OTP) đều ở trang Tài khoản & bảo mật (`/manage/account`). Đặt
- * một ô "Họ tên chủ gian hàng" ở đây nghĩa là cho bất kỳ ai có `tenant.update` — gồm cả
- * `shop_manager` — viết lại danh tính của người CHỦ, đúng lằn ranh mà ADR 0038 điều 3 tách ra.
+ * một ô "Họ tên chủ gian hàng" ở đây nghĩa là cho bất kỳ ai có `tenant.update` - gồm cả
+ * `shop_manager` - viết lại danh tính của người CHỦ, đúng lằn ranh mà ADR 0038 điều 3 tách ra.
  *
  * ## Vì sao hiện cờ "đã xác minh"
  *
  * Vì nó là thứ duy nhất ở đây mà một ô chữ không nói được, và là lý do khối này đáng tin hơn
- * bản cũ. Chưa xác minh thì nói thẳng chưa xác minh — không thấy khoảng cách đó thì chủ shop
+ * bản cũ. Chưa xác minh thì nói thẳng chưa xác minh - không thấy khoảng cách đó thì chủ shop
  * tưởng mình đã xong.
  *
  * ## Không gọi chủ tài khoản là "người đại diện pháp luật"
@@ -55,7 +55,7 @@ export function ShopOwnerSection({ shop }: { shop: MyShop }) {
 
   /*
    * Chỉ CHÍNH CHỦ mới thấy lối vào màn bảo mật. Quản lý/nhân viên có màn bảo mật của riêng họ,
-   * nhưng nút ở đây nằm dưới thông tin của NGƯỜI KHÁC — bấm vào nó sẽ mở tài khoản của chính
+   * nhưng nút ở đây nằm dưới thông tin của NGƯỜI KHÁC - bấm vào nó sẽ mở tài khoản của chính
    * mình, tức là một nút nói dối về việc nó làm gì.
    */
   const isOwner = user?.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER && user.id === owner.userId;
@@ -115,7 +115,7 @@ function ContactRow({
       suffix={
         verified ? (
           <Tooltip title={t('verified')}>
-            {/* Màu nằm ở `background`, không ở `color` — `color` kế thừa và bị nuốt mất. */}
+            {/* Màu nằm ở `background`, không ở `color` - `color` kế thừa và bị nuốt mất. */}
             <span className={styles.verifiedMark} role="img" aria-label={t('verified')}>
               <CheckOutlined aria-hidden />
             </span>

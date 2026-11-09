@@ -39,7 +39,7 @@ function links(
   });
 }
 
-describe('vehicleModuleLinks — cổng QUẢN LÝ (web: isManage = true)', () => {
+describe('vehicleModuleLinks - cổng QUẢN LÝ (web: isManage = true)', () => {
   it('đủ quyền: đủ mười mục, đúng thứ tự web', () => {
     expect(links(false).map((link) => link.key)).toEqual([
       'information',
@@ -69,8 +69,8 @@ describe('vehicleModuleLinks — cổng QUẢN LÝ (web: isManage = true)', () =
  * `isManage = false`: không nguồn xe, không bảo dưỡng, không sổ Thu-Chi; lịch ở `paths.calendar`,
  * đơn thuê ở `paths.bookings` (= Chuyến của tôi).
  */
-describe('vehicleModuleLinks — khu TÀI KHOẢN (web: isManage = false)', () => {
-  it('KHÔNG có bảo dưỡng, nguồn xe, Thu-Chi — kể cả khi có quyền', () => {
+describe('vehicleModuleLinks - khu TÀI KHOẢN (web: isManage = false)', () => {
+  it('KHÔNG có bảo dưỡng, nguồn xe, Thu-Chi - kể cả khi có quyền', () => {
     const keys = links(true).map((link) => link.key);
     expect(keys).toEqual(['information', 'media', 'pricing', 'documents', 'calendar', 'bookings']);
     expect(keys).not.toContain('maintenance');
@@ -108,7 +108,7 @@ describe('vehicleModuleLinks — khu TÀI KHOẢN (web: isManage = false)', () =
   });
 });
 
-describe('vehicleModuleLinks — gác bằng NĂNG LỰC (quyền ∧ cờ gói), không chỉ permission', () => {
+describe('vehicleModuleLinks - gác bằng NĂNG LỰC (quyền ∧ cờ gói), không chỉ permission', () => {
   it('đủ permission nhưng gói không có finance/maintenance ⇒ không nguồn xe, bảo dưỡng, Thu-Chi', () => {
     expect(links(false, ALL, true, false).map((link) => link.key)).toEqual([
       'information',
@@ -120,14 +120,14 @@ describe('vehicleModuleLinks — gác bằng NĂNG LỰC (quyền ∧ cờ gói)
     ]);
   });
 
-  it('giấy tờ chỉ cần permission — không cờ gói nào gác', () => {
+  it('giấy tờ chỉ cần permission - không cờ gói nào gác', () => {
     expect(
       links(false, [PERMISSION.VEHICLE_DOCUMENT_VIEW], false, false).map((l) => l.key),
     ).toEqual(['documents']);
   });
 });
 
-describe('vehicleEditPartHref / vehicleProfileHref — đích theo khu', () => {
+describe('vehicleEditPartHref / vehicleProfileHref - đích theo khu', () => {
   const id = VEHICLE.id;
   it('khu tài khoản: bảo dưỡng và nguồn xe KHÔNG có mục ⇒ null', () => {
     expect(vehicleEditPartHref(id, VEHICLE_EDIT_TAB.MAINTENANCE, true)).toBeNull();
@@ -145,7 +145,7 @@ describe('vehicleEditPartHref / vehicleProfileHref — đích theo khu', () => {
   });
 });
 
-describe('overviewViews — tab của Hồ sơ 360 (web Vehicle360Overview)', () => {
+describe('overviewViews - tab của Hồ sơ 360 (web Vehicle360Overview)', () => {
   it('đủ năng lực: Tổng quan · Thông số · Tài chính · Bảo dưỡng, đúng thứ tự', () => {
     expect(overviewViews({ money: true, maintenance: true })).toEqual([
       'overview',

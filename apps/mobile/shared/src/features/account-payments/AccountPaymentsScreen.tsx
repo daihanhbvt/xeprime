@@ -2,11 +2,12 @@ import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   RefreshControl,
   ScrollView,
   type ListRenderItemInfo,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { ScrollReveal, ScrollRevealProvider, useAppScrollRevealList } from '@/components/motion/ScrollReveal';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -94,6 +95,7 @@ export function AccountPaymentsScreen() {
   const rows = (query.data?.pages ?? []).flatMap((page) => page.data);
   // Kéo để làm mới — vòng quay chỉ hiện khi khách kéo, không theo các lượt refetch nền.
   const pull = usePullRefresh(query.refetch);
+  const listReveal = useAppScrollRevealList();
   const filtered = status !== null || from !== '' || to !== '';
   const statusChips: { value: AccountTransactionStatus | null; label: string }[] = [
     { value: null, label: t('filters.all') },
@@ -135,9 +137,12 @@ export function AccountPaymentsScreen() {
         />
       </YStack>
       <Screen edges={['left', 'right', 'bottom']} padded={false} scroll={false}>
-        <FlatList
+        <ScrollRevealProvider value={listReveal.ctx}>
+        <Animated.FlatList
           data={rows}
           keyExtractor={keyOf}
+          onScroll={listReveal.onScroll}
+          scrollEventThrottle={16}
           refreshControl={
             <RefreshControl
               refreshing={pull.refreshing}
@@ -147,8 +152,10 @@ export function AccountPaymentsScreen() {
             />
           }
           contentContainerStyle={{ padding: space.md, gap: space.sm }}
-          renderItem={({ item }: ListRenderItemInfo<AccountTransaction>) => (
-            <TransactionRow row={item} />
+          renderItem={({ item, index }: ListRenderItemInfo<AccountTransaction>) => (
+            <ScrollReveal index={index}>
+              <TransactionRow row={item} />
+            </ScrollReveal>
           )}
           ListEmptyComponent={
             query.isPending ? (
@@ -180,6 +187,7 @@ export function AccountPaymentsScreen() {
           }}
           onEndReachedThreshold={0.4}
         />
+        </ScrollRevealProvider>
       </Screen>
 
     </>

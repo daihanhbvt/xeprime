@@ -185,7 +185,7 @@ describe('AccountVehiclesView', () => {
     expect(screen.queryByRole('button', { name: /Thêm xe mới/ })).toBeNull();
   });
 
-  it('không còn hai thẻ dẫn đường — Cẩm nang và Hợp đồng nằm ở menu Trợ giúp', () => {
+  it('không còn hai thẻ dẫn đường - Cẩm nang và Hợp đồng nằm ở menu Trợ giúp', () => {
     renderView();
     expect(screen.queryByRole('link', { name: /Cẩm nang/ })).toBeNull();
     expect(document.querySelector(`a[href="${ROUTES.MANAGE.HOST_GUIDE}"]`)).toBeNull();

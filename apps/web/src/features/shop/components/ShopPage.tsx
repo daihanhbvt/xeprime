@@ -33,10 +33,10 @@ import styles from './ShopPage.module.css';
  * dùng chung MỘT form hồ sơ, và chỉ form biết nhóm nào đang sửa dở.
  *
  * Không còn nút "Gửi xác minh" (24/09/2026): nền tảng tạm ngừng xác minh gian hàng, và màn duyệt
- * của nền tảng chỉ nhận phiếu XE — một phiếu xác minh gửi lúc này không có ai xử lý.
+ * của nền tảng chỉ nhận phiếu XE - một phiếu xác minh gửi lúc này không có ai xử lý.
  *
  * `?section=` đọc ở ĐÂY (ADR 0004: điều hướng trong trang sống ở URL), rồi truyền xuống như một giá
- * trị đã phân giải — workspace không bao giờ phải nghĩ về chuỗi rác trong query. Trang không còn
+ * trị đã phân giải - workspace không bao giờ phải nghĩ về chuỗi rác trong query. Trang không còn
  * mục lục (design 06/11/2026), nên tham số chỉ còn là ĐÍCH CUỘN của link/redirect cũ.
  */
 export function ShopPage() {
@@ -49,23 +49,23 @@ export function ShopPage() {
 
   const { filters } = useUrlFilters((params) => ({
     section: shopSectionOf(params.get(SECTION_PARAM)),
-    // Dẫn xuất, KHÔNG bao giờ ghi ngược lên URL — xem `ShopWorkspaceProps.sectionInUrl`.
+    // Dẫn xuất, KHÔNG bao giờ ghi ngược lên URL - xem `ShopWorkspaceProps.sectionInUrl`.
     sectionInUrl: params.has(SECTION_PARAM),
     /*
-     * `?welcome=1` — "gian hàng vừa thanh toán gói xong" (ADR 0040). Chỉ điều khiển một dải chào
+     * `?welcome=1` - "gian hàng vừa thanh toán gói xong" (ADR 0040). Chỉ điều khiển một dải chào
      * NHỎ, không mở hay khoá bất cứ thứ gì: quyền đến từ `/auth/me` và cổng logo thật nằm ở
-     * `submitForPublicReview`. Nên nó được phép sống trong URL — kịch bản xấu nhất là ai đó nhận
+     * `submitForPublicReview`. Nên nó được phép sống trong URL - kịch bản xấu nhất là ai đó nhận
      * một link và thấy một dòng chào mừng không dành cho họ.
      */
     welcome: params.get(SHOP_WELCOME_PARAM) === '1',
-    // `?section=payout` CŨ — "Tài khoản nhận tiền" đã về trang số dư (07/10/2026).
+    // `?section=payout` CŨ - "Tài khoản nhận tiền" đã về trang số dư (07/10/2026).
     legacyPayout: params.get(SECTION_PARAM) === SHOP_LEGACY_PAYOUT_SECTION,
   }));
 
   const canView = has(PERMISSION.TENANT_VIEW);
   const canEdit = has(PERMISSION.TENANT_UPDATE);
   /*
-   * Link cũ tới "Tài khoản nhận tiền" (thông báo, bookmark) đi tiếp tới trang số dư — chỉ với CHỦ,
+   * Link cũ tới "Tài khoản nhận tiền" (thông báo, bookmark) đi tiếp tới trang số dư - chỉ với CHỦ,
    * đúng người section cũ từng hiện cho. Người khác (quản lý, nhân sự trong phiên hỗ trợ) chưa bao
    * giờ thấy section đó, nên `shopSectionOf` đưa họ về đầu trang như mọi giá trị lạ.
    */
@@ -79,7 +79,7 @@ export function ShopPage() {
   } = useMyShop(canView && Boolean(tenant) && !redirectToPayout);
   const updateProfile = useUpdateShopProfile();
   /*
-   * "Đã có xe nào chưa" — CHỈ hỏi khi dải chào mừng đang mở.
+   * "Đã có xe nào chưa" - CHỈ hỏi khi dải chào mừng đang mở.
    *
    * `limit: 1` vì câu hỏi là có/không, không phải một danh sách. Và có điều kiện vì đây là một
    * request THÊM trên một trang đã gọi nhiều endpoint: mọi lượt mở `/manage/shop` bình thường
@@ -145,7 +145,7 @@ export function ShopPage() {
         /*
          * `isLoading` tính là ĐÃ CÓ XE, không phải "chưa có".
          *
-         * Trong lúc lượt đếm bay đi, `data` rỗng — và mặc định "chưa có" sẽ nháy dải "Sẵn sàng
+         * Trong lúc lượt đếm bay đi, `data` rỗng - và mặc định "chưa có" sẽ nháy dải "Sẵn sàng
          * rồi · Đăng xe đầu tiên" cho một gian hàng đang có mười xe. Dải này im lặng khi không
          * còn gì để nói (xem `ShopWelcomeBanner`), nên im lặng cũng là mặc định đúng khi CHƯA
          * BIẾT.

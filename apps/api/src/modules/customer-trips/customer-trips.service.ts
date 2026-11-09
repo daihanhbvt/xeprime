@@ -759,7 +759,7 @@ export class CustomerTripsService {
       if (claimed.count === 0) {
         throw new ConflictException({
           code: API_ERROR_CODE.CONFLICT,
-          message: 'Chuyến vừa được cập nhật — tải lại rồi thử lại',
+          message: 'Chuyến vừa được cập nhật - tải lại rồi thử lại',
         });
       }
 

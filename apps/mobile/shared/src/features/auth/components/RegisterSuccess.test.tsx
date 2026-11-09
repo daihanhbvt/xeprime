@@ -30,7 +30,7 @@ describe('RegisterSuccess', () => {
     (APP_PROFILE as { clientApp: string }).clientApp = clientApp;
   }
 
-  it('app KHÁCH: mời tiếp tục việc đang làm, kèm lối mở tài khoản — hai nút như web', async () => {
+  it('app KHÁCH: mời tiếp tục việc đang làm, kèm lối mở tài khoản - hai nút như web', async () => {
     asApp(MOBILE_CLIENT_APP.CUSTOMER);
     const view = await render(
       wrap(<RegisterSuccess onContinue={jest.fn()} onOpenAccount={jest.fn()} />),

@@ -219,7 +219,7 @@ function statLink(label: string): HTMLAnchorElement {
   return within(tiles).getByRole('link', { name: new RegExp(`^${label}`) }) as HTMLAnchorElement;
 }
 
-describe('/manage/finance — sáu thẻ số', () => {
+describe('/manage/finance - sáu thẻ số', () => {
   it('doanh thu KHÔNG gồm cọc, còn dòng tiền ròng thì có (vào · ra)', () => {
     render(<FinancePage />);
 
@@ -275,7 +275,7 @@ describe('/manage/finance — sáu thẻ số', () => {
   });
 });
 
-describe('/manage/finance — drill-down phải khớp thẻ', () => {
+describe('/manage/finance - drill-down phải khớp thẻ', () => {
   it('thẻ Doanh thu dẫn tới sổ đã lọc theo nhóm nguồn + đã duyệt + đúng kỳ', () => {
     nav.params = new URLSearchParams('from=2026-08-01&to=2026-08-31');
     render(<FinancePage />);
@@ -290,7 +290,7 @@ describe('/manage/finance — drill-down phải khớp thẻ', () => {
     expect(href).toContain('to=2026-08-31');
   });
 
-  it('thẻ Dòng tiền ròng KHÔNG lọc nhóm nguồn hay chiều tiền — nó cố ý gồm cả cọc', () => {
+  it('thẻ Dòng tiền ròng KHÔNG lọc nhóm nguồn hay chiều tiền - nó cố ý gồm cả cọc', () => {
     render(<FinancePage />);
 
     const href = statLink('Dòng tiền ròng').getAttribute('href') ?? '';
@@ -299,7 +299,7 @@ describe('/manage/finance — drill-down phải khớp thẻ', () => {
     expect(href).not.toContain('type=');
   });
 
-  it('Lợi nhuận là hiệu của hai thẻ trước — không có tập phiếu riêng nên không bấm được', () => {
+  it('Lợi nhuận là hiệu của hai thẻ trước - không có tập phiếu riêng nên không bấm được', () => {
     render(<FinancePage />);
     const tiles = screen.getByRole('region', { name: 'Số liệu tài chính của kỳ' });
     expect(within(tiles).queryByRole('link', { name: /^Lợi nhuận/ })).toBeFalsy();
@@ -316,7 +316,7 @@ describe('/manage/finance — drill-down phải khớp thẻ', () => {
   });
 });
 
-describe('/manage/finance — kỳ và bảng theo xe', () => {
+describe('/manage/finance - kỳ và bảng theo xe', () => {
   it('bấm một kỳ dựng sẵn ghi from/to lên URL, không đẻ tham số thứ hai', () => {
     render(<FinancePage />);
 
@@ -328,7 +328,7 @@ describe('/manage/finance — kỳ và bảng theo xe', () => {
     expect(url).not.toContain('period=');
   });
 
-  it('URL trống vẫn có kỳ mặc định — biểu đồ không bao giờ chạy với khoảng rỗng', () => {
+  it('URL trống vẫn có kỳ mặc định - biểu đồ không bao giờ chạy với khoảng rỗng', () => {
     render(<FinancePage />);
 
     const filters = vehicleQuery.lastFilters as { from?: string; to?: string };
@@ -347,7 +347,7 @@ describe('/manage/finance — kỳ và bảng theo xe', () => {
     expect(screen.queryByText(/Chi phí chung chưa gắn xe/)).toBeFalsy();
   });
 
-  it('xe có chuyến nhưng chưa có doanh thu vẫn hiện, biên là — chứ không phải 0%', () => {
+  it('xe có chuyến nhưng chưa có doanh thu vẫn hiện, biên là - chứ không phải 0%', () => {
     vehicleQuery.data = {
       items: [vehicle({ revenue: '0', cost: '0', profit: '0', profitMarginPercent: null })],
       meta: { page: 1, limit: 10, total: 1, hasNext: false },
@@ -361,7 +361,7 @@ describe('/manage/finance — kỳ và bảng theo xe', () => {
   });
 });
 
-describe('/manage/finance — quyền', () => {
+describe('/manage/finance - quyền', () => {
   it('thiếu finance.view ⇒ thay TOÀN BỘ nội dung bằng màn báo thiếu quyền', () => {
     perms.granted = new Set<string>();
     render(<FinancePage />);
@@ -372,7 +372,7 @@ describe('/manage/finance — quyền', () => {
   });
 });
 
-describe('/manage/finance — thuế đã khấu trừ (ADR 0032 điều 3)', () => {
+describe('/manage/finance - thuế đã khấu trừ (ADR 0032 điều 3)', () => {
   it('thẻ thuế đứng cùng sổ tài chính, và luôn kèm câu giải thích VÌ SAO', () => {
     render(<FinancePage />);
 
@@ -382,7 +382,7 @@ describe('/manage/finance — thuế đã khấu trừ (ADR 0032 điều 3)', ()
     expect(screen.getByText(/trừ khỏi khoản XePrime phải trả bạn/)).toBeTruthy();
   });
 
-  it('gác theo QUYỀN chứ không theo gian hàng đang chọn — server lấy tenant từ membership', () => {
+  it('gác theo QUYỀN chứ không theo gian hàng đang chọn - server lấy tenant từ membership', () => {
     render(<FinancePage />);
     expect(tax.enabled).toBe(true);
   });
@@ -395,7 +395,7 @@ describe('/manage/finance — thuế đã khấu trừ (ADR 0032 điều 3)', ()
   });
 });
 
-describe('/manage/finance — hiệu suất kinh doanh: hai tab', () => {
+describe('/manage/finance - hiệu suất kinh doanh: hai tab', () => {
   it('mặc định mở tab Theo xe; bấm Theo khách ghi perf=customers lên URL', () => {
     render(<FinancePage />);
 
@@ -406,7 +406,7 @@ describe('/manage/finance — hiệu suất kinh doanh: hai tab', () => {
     expect(lastReplacedUrl()).toContain('perf=customers');
   });
 
-  it('ô sắp xếp đổi theo tab — tab khách không có "Lợi nhuận cao nhất"', () => {
+  it('ô sắp xếp đổi theo tab - tab khách không có "Lợi nhuận cao nhất"', () => {
     nav.params = new URLSearchParams('perf=customers');
     render(<FinancePage />);
 
@@ -415,7 +415,7 @@ describe('/manage/finance — hiệu suất kinh doanh: hai tab', () => {
   });
 });
 
-describe('/manage/finance — doanh thu theo khách', () => {
+describe('/manage/finance - doanh thu theo khách', () => {
   beforeEach(() => {
     nav.params = new URLSearchParams('perf=customers');
   });
@@ -442,7 +442,7 @@ describe('/manage/finance — doanh thu theo khách', () => {
     const table = screen.getByRole('region', { name: 'Doanh thu theo khách' });
     expect(within(table).getByText('0952345678')).toBeTruthy();
     expect(within(table).getByText('Trần Thị B')).toBeTruthy();
-    expect(within(table).queryByText('—')).toBeFalsy();
+    expect(within(table).queryByText('-')).toBeFalsy();
   });
 
   it('doanh thu chưa gắn khách được nói ra, không lặng lẽ biến mất', () => {
@@ -457,7 +457,7 @@ describe('/manage/finance — doanh thu theo khách', () => {
     expect(screen.queryByText(/Chưa gắn khách nào/)).toBeFalsy();
   });
 
-  it('tỷ trọng rỗng hiện — chứ không phải 0%', () => {
+  it('tỷ trọng rỗng hiện - chứ không phải 0%', () => {
     customerQuery.data = {
       items: [customer({ revenue: '0', sharePercent: null })],
       meta: { page: 1, limit: 10, total: 1, hasNext: false },

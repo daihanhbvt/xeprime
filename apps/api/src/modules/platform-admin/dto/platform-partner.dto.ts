@@ -80,7 +80,7 @@ export class PartnerIdentityDto {
   @ApiProperty() slug!: string;
   @ApiProperty({
     enum: PLATFORM_PARTNER_KIND_VALUES,
-    description: 'Server suy từ tuyến (platformPartnerKindOf) — biến thể của drawer',
+    description: 'Server suy từ tuyến (platformPartnerKindOf) - biến thể của drawer',
   })
   partnerKind!: string;
   @ApiProperty({ description: '@xeprime/types → TenantStatus' }) status!: string;
@@ -99,7 +99,7 @@ export class PartnerCountsDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'Số xe có ít nhất một cảnh báo — null khi không có platform.vehicles.view',
+    description: 'Số xe có ít nhất một cảnh báo - null khi không có platform.vehicles.view',
   })
   vehiclesWithAlerts!: number | null;
 }
@@ -126,7 +126,7 @@ export class PartnerQuotaItemDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'Trần đang được cưỡng chế — chỉ khi kind = total',
+    description: 'Trần đang được cưỡng chế - chỉ khi kind = total',
   })
   limit!: number | null;
   @ApiPropertyOptional({
@@ -143,7 +143,7 @@ export class PartnerVehicleTypeQuotasDto {
   @ApiProperty({ type: PartnerQuotaItemDto }) motorbike!: PartnerQuotaItemDto;
   @ApiProperty({
     description:
-      'Hai loại xe đếm chung MỘT trần (gói doanh nghiệp phạm vi all, hoặc Owner Lite tuyến hoa hồng) — car và ' +
+      'Hai loại xe đếm chung MỘT trần (gói doanh nghiệp phạm vi all, hoặc Owner Lite tuyến hoa hồng) - car và ' +
       'motorbike khi đó là CÙNG một con số tổng; hiển thị một dòng, đừng cộng hai dòng',
   })
   combined!: boolean;
@@ -170,7 +170,7 @@ export class PartnerPlanSummaryDto {
   vehicleQuota!: PartnerQuotaItemDto;
   @ApiProperty({
     type: PartnerVehicleTypeQuotasDto,
-    description: 'Trần xe theo LOẠI (ADR 0065) — vehicleQuota ở trên là tổng gộp của hai trần này',
+    description: 'Trần xe theo LOẠI (ADR 0065) - vehicleQuota ở trên là tổng gộp của hai trần này',
   })
   vehicleQuotaByType!: PartnerVehicleTypeQuotasDto;
   @ApiProperty({
@@ -183,7 +183,7 @@ export class PartnerPlanSummaryDto {
   @ApiPropertyOptional({
     type: PlanTermRefDto,
     nullable: true,
-    description: 'Kỳ đã xếp lịch kế tiếp (gia hạn / đổi gói từ kỳ sau) — null nếu chưa có',
+    description: 'Kỳ đã xếp lịch kế tiếp (gia hạn / đổi gói từ kỳ sau) - null nếu chưa có',
   })
   nextTerm!: PlanTermRefDto | null;
 }
@@ -202,7 +202,7 @@ export class PartnerOperatingDto {
     description: 'Gian hàng gói: mục còn thiếu để gửi xe lên chợ (mã). null = không áp dụng',
   })
   listingRequirementsMissing!: string[] | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — dòng nhật ký gần nhất' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO - dòng nhật ký gần nhất' })
   lastActivityAt!: string | null;
   @ApiProperty({ type: [String], description: 'Tỉnh/thành có chi nhánh hoặc điểm nhận xe' })
   areaNames!: string[];
@@ -229,7 +229,7 @@ export class PartnerVehicleDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Khu vực nhận xe — phường/xã, tỉnh/thành của chi nhánh gắn xe',
+    description: 'Khu vực nhận xe - phường/xã, tỉnh/thành của chi nhánh gắn xe',
   })
   pickupAreaName!: string | null;
   @ApiProperty({ type: [PartnerVehicleAlertDto], description: 'Đã sắp theo ưu tiên' })
@@ -253,7 +253,7 @@ export class PartnerBookingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Decimal — null khi người gọi không có platform.money.manage',
+    description: 'Decimal - null khi người gọi không có platform.money.manage',
   })
   totalAmount!: string | null;
 }
@@ -319,7 +319,7 @@ export class PartnerVehicleListQueryDto extends PagedQueryDto {
   @IsIn(SERVICE_TYPE_VALUES)
   serviceType?: string;
 
-  @ApiPropertyOptional({ description: 'Chi nhánh (chỉ gian hàng gói) — id thuộc chính gian hàng' })
+  @ApiPropertyOptional({ description: 'Chi nhánh (chỉ gian hàng gói) - id thuộc chính gian hàng' })
   @IsOptional()
   @IsString()
   @MaxLength(26)
@@ -355,12 +355,12 @@ export class PartnerBookingListQueryDto extends PagedQueryDto {
   @IsIn(SERVICE_TYPE_VALUES)
   serviceType?: string;
 
-  @ApiPropertyOptional({ description: 'ISO — lọc theo giờ nhận xe' })
+  @ApiPropertyOptional({ description: 'ISO - lọc theo giờ nhận xe' })
   @IsOptional()
   @IsISO8601()
   dateFrom?: string;
 
-  @ApiPropertyOptional({ description: 'ISO — lọc theo giờ nhận xe' })
+  @ApiPropertyOptional({ description: 'ISO - lọc theo giờ nhận xe' })
   @IsOptional()
   @IsISO8601()
   dateTo?: string;
@@ -372,12 +372,12 @@ export class PartnerBookingPageDto {
 }
 
 export class PartnerBookingSummaryQueryDto {
-  @ApiPropertyOptional({ description: 'ISO — lọc theo giờ nhận xe' })
+  @ApiPropertyOptional({ description: 'ISO - lọc theo giờ nhận xe' })
   @IsOptional()
   @IsISO8601()
   dateFrom?: string;
 
-  @ApiPropertyOptional({ description: 'ISO — lọc theo giờ nhận xe' })
+  @ApiPropertyOptional({ description: 'ISO - lọc theo giờ nhận xe' })
   @IsOptional()
   @IsISO8601()
   dateTo?: string;
@@ -391,7 +391,7 @@ export class PartnerBookingSummaryDto {
   @ApiProperty({ description: 'Tổng số đơn trong khoảng lọc' }) total!: number;
   @ApiProperty({
     description:
-      'Đơn chưa nhận xe có giờ nhận trong PARTNER_PICKUP_SOON_HOURS tới — không theo khoảng lọc',
+      'Đơn chưa nhận xe có giờ nhận trong PARTNER_PICKUP_SOON_HOURS tới - không theo khoảng lọc',
   })
   pickupSoon!: number;
   @ApiProperty({ description: 'Yêu cầu thuê đang chờ gian hàng duyệt' }) pendingRequests!: number;
@@ -420,7 +420,7 @@ export class PartnerBookingRequestDto {
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })
   returnAt!: string | null;
   @ApiProperty({
-    description: 'ISO — hạn gian hàng phải phản hồi (động 15 phút–4 giờ, ADR 0066)',
+    description: 'ISO - hạn gian hàng phải phản hồi (động 15 phút-4 giờ, ADR 0066)',
   })
   respondBy!: string;
   @ApiProperty({ description: 'ISO' }) createdAt!: string;
@@ -506,7 +506,7 @@ export class PartnerProfileDto {
   @ApiPropertyOptional({
     type: PartnerPublicProfileDto,
     nullable: true,
-    description: 'Mặt tiền — chỉ gian hàng gói',
+    description: 'Mặt tiền - chỉ gian hàng gói',
   })
   publicProfile!: PartnerPublicProfileDto | null;
   @ApiProperty({ type: PartnerOwnerDto }) owner!: PartnerOwnerDto;
@@ -514,7 +514,7 @@ export class PartnerProfileDto {
   @ApiPropertyOptional({ type: String, nullable: true }) publicEmailMasked!: string | null;
   @ApiProperty({
     type: [PartnerBranchDto],
-    description: 'Địa chỉ — chi nhánh (gói) / điểm nhận xe',
+    description: 'Địa chỉ - chi nhánh (gói) / điểm nhận xe',
   })
   addresses!: PartnerBranchDto[];
   @ApiProperty({ type: [String] }) activityAreas!: string[];
@@ -530,13 +530,13 @@ export class PartnerProfileDto {
     type: [PartnerTenantDocumentDto],
     nullable: true,
     description:
-      'Giấy tờ pháp lý — null khi không có platform.sellers.verify. Không bao giờ có file',
+      'Giấy tờ pháp lý - null khi không có platform.sellers.verify. Không bao giờ có file',
   })
   documents!: PartnerTenantDocumentDto[] | null;
   @ApiPropertyOptional({
     type: [PartnerVehicleDocumentDto],
     nullable: true,
-    description: 'Giấy tờ xe (chủ xe cá nhân) — null khi không có platform.vehicles.view',
+    description: 'Giấy tờ xe (chủ xe cá nhân) - null khi không có platform.vehicles.view',
   })
   vehicleDocuments!: PartnerVehicleDocumentDto[] | null;
   @ApiProperty({ type: [PartnerVerificationEventDto] })
@@ -546,7 +546,7 @@ export class PartnerProfileDto {
 /* ─────────────────────────────── Gói & phí (gian hàng gói) ─────────────────────────────── */
 
 export class PartnerQuotaDto {
-  @ApiProperty({ type: PartnerQuotaItemDto, description: 'Trần xe gộp — tổng của vehiclesByType' })
+  @ApiProperty({ type: PartnerQuotaItemDto, description: 'Trần xe gộp - tổng của vehiclesByType' })
   vehicles!: PartnerQuotaItemDto;
   @ApiProperty({ type: PartnerVehicleTypeQuotasDto, description: 'Trần xe theo loại (ADR 0065)' })
   vehiclesByType!: PartnerVehicleTypeQuotasDto;
@@ -565,9 +565,9 @@ export class PartnerFeatureStateDto {
  * `serviceFeePercent` — cột đó chỉ giữ để đọc lại đơn cũ, in nó ra là báo sai phí đang thu.
  */
 export class PartnerFeePolicyDto {
-  @ApiProperty({ description: 'Phí sàn khách trả mỗi đơn ô tô — VND, chuỗi (ADR 0007)' })
+  @ApiProperty({ description: 'Phí sàn khách trả mỗi đơn ô tô - VND, chuỗi (ADR 0007)' })
   platformFeeCar!: string;
-  @ApiProperty({ description: 'Phí sàn khách trả mỗi đơn xe máy — VND, chuỗi' })
+  @ApiProperty({ description: 'Phí sàn khách trả mỗi đơn xe máy - VND, chuỗi' })
   platformFeeMotorbike!: string;
   @ApiProperty({
     type: [OwnerCommissionTierDto],
@@ -583,7 +583,7 @@ export class PartnerInvoiceStatusDto {
   @ApiProperty({ description: 'Hoá đơn còn nợ (đã phát hành / trả một phần)' }) unpaid!: number;
   @ApiProperty({ description: 'Còn nợ, hết hạn trong 7 ngày tới' }) dueSoon!: number;
   @ApiProperty({ description: 'Còn nợ, đã quá hạn' }) overdue!: number;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — hạn gần nhất' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO - hạn gần nhất' })
   nextDueAt!: string | null;
 }
 
@@ -602,7 +602,7 @@ export class PartnerSubscriptionRowDto {
   @ApiProperty({ description: '@xeprime/types → SubscriptionStatus (lưu trữ)' }) status!: string;
   @ApiProperty({
     enum: SUBSCRIPTION_TERM_STATE_VALUES,
-    description: 'Trạng thái KỲ theo đồng hồ server — hiển thị cái này, không phải status',
+    description: 'Trạng thái KỲ theo đồng hồ server - hiển thị cái này, không phải status',
   })
   termState!: string;
   @ApiProperty({ description: 'ISO' }) startsAt!: string;
@@ -625,7 +625,7 @@ export class PartnerInvoiceRowDto {
 
 export class PartnerBillingDto {
   @ApiProperty({ type: PartnerPlanSummaryDto }) plan!: PartnerPlanSummaryDto;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — bắt đầu kỳ hiện hành' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO - bắt đầu kỳ hiện hành' })
   termStartsAt!: string | null;
   @ApiProperty({ type: PartnerQuotaDto }) quota!: PartnerQuotaDto;
   @ApiProperty({ type: [PartnerFeatureStateDto] }) features!: PartnerFeatureStateDto[];
@@ -644,15 +644,15 @@ export class PartnerCommissionMonthDto {
   @ApiProperty({ description: 'YYYY-MM (giờ Việt Nam)' }) period!: string;
   @ApiProperty({ description: 'Tháng đã khép (không còn là tháng hiện tại)' }) closed!: boolean;
   @ApiProperty({ description: 'Số chuyến hoàn tất trong tháng' }) completedCount!: number;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Decimal — Σ total_amount' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Decimal - Σ total_amount' })
   revenue!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Decimal — Σ service_fee_amount (phí dịch vụ XePrime, khách trả)',
+    description: 'Decimal - Σ service_fee_amount (phí dịch vụ XePrime, khách trả)',
   })
   serviceFee!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Decimal — Σ tax_amount' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Decimal - Σ tax_amount' })
   tax!: string | null;
 }
 
@@ -707,7 +707,7 @@ export class PartnerActivityDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Tên người đọc được của đối tượng — cùng nguồn với trang Nhật ký hệ thống',
+    description: 'Tên người đọc được của đối tượng - cùng nguồn với trang Nhật ký hệ thống',
   })
   targetLabel!: string | null;
   @ApiProperty({ description: 'Thao tác thực hiện trong một phiên hỗ trợ' }) viaSupport!: boolean;

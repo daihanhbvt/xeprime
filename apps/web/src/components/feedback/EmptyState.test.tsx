@@ -6,7 +6,7 @@ import { EmptyState } from './EmptyState';
 
 afterEach(cleanup);
 
-describe('EmptyState — ba nguyên nhân, ba cách nói', () => {
+describe('EmptyState - ba nguyên nhân, ba cách nói', () => {
   it('rỗng: hiện tiêu đề và mô tả, không có nút thử lại', () => {
     render(
       <EmptyState
@@ -35,7 +35,7 @@ describe('EmptyState — ba nguyên nhân, ba cách nói', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('lỗi KHÔNG có onRetry thì không dựng nút — Figma 134:2194 R10 cấm retry cho 403/404/409', () => {
+  it('lỗi KHÔNG có onRetry thì không dựng nút - Figma 134:2194 R10 cấm retry cho 403/404/409', () => {
     render(<EmptyState variant="error" title="Yêu cầu này đã được xử lý" />);
 
     expect(screen.queryByRole('button')).toBeNull();
@@ -70,7 +70,7 @@ describe('EmptyState — ba nguyên nhân, ba cách nói', () => {
   });
 });
 
-describe('EmptyState — khả truy cập', () => {
+describe('EmptyState - khả truy cập', () => {
   it('lỗi dùng role="alert" để được đọc ngay', () => {
     render(<EmptyState variant="error" title="Không tải được" />);
 
@@ -87,7 +87,7 @@ describe('EmptyState — khả truy cập', () => {
     expect(screen.getByRole('status')).toBeTruthy();
   });
 
-  it('biểu tượng bị ẩn khỏi trình đọc màn hình — tiêu đề đã nói đủ', () => {
+  it('biểu tượng bị ẩn khỏi trình đọc màn hình - tiêu đề đã nói đủ', () => {
     const { container } = render(<EmptyState variant="empty" title="Trống" />);
 
     const icon = container.querySelector('[aria-hidden="true"]');
@@ -95,7 +95,7 @@ describe('EmptyState — khả truy cập', () => {
   });
 });
 
-describe('EmptyState — hợp đồng màu', () => {
+describe('EmptyState - hợp đồng màu', () => {
   it('người gọi KHÔNG truyền được màu; chỉ variant quyết định tông', () => {
     // Bảo vệ ở tầng kiểu: không có prop `color`/`status`/`tone` nào trong hợp đồng.
     // Nếu ai đó thêm vào, dòng này thành lỗi biên dịch và test phải được cập nhật có chủ ý.

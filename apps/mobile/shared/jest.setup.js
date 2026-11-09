@@ -77,3 +77,22 @@ afterEach(() => {
  * "Unable to find …" và để lại đúng một dòng "Exceeded timeout" không nói được gì.
  */
 require('@testing-library/react-native').configure({ asyncUtilTimeout: 3000 });
+
+/*
+ * Module native của lớp offline (`lib/network.ts`, `queries/query-persist.ts`) — dùng mock
+ * chính chủ của thư viện: không có native module trong jest, import `query-client` sẽ nổ.
+ * NetInfo mock báo online, nên test cũ không đổi hành vi.
+ */
+jest.mock('@react-native-community/netinfo', () =>
+  require('@react-native-community/netinfo/jest/netinfo-mock.js'),
+);
+// Kho cache persist (expo-file-system): file luôn "không tồn tại" ⇒ không khôi phục gì, ghi là no-op.
+jest.mock('expo-file-system', () => ({
+  Paths: { cache: 'file:///cache/' },
+  File: jest.fn().mockImplementation(() => ({
+    exists: false,
+    text: jest.fn(async () => ''),
+    write: jest.fn(),
+    delete: jest.fn(),
+  })),
+}));

@@ -1,5 +1,9 @@
 import type { Href } from 'expo-router';
 import { Pressable } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { usePressScale } from '@/components/motion/PressableScale';
+import { useScrollRevealDefault } from '@/components/motion/ScrollReveal';
+import { useRevealPop } from '@/components/motion/reveal-effects';
 import { Text, XStack, YStack } from 'tamagui';
 import { DetailChevron } from './DetailArrow';
 import { IconDisc } from './IconDisc';
@@ -37,6 +41,9 @@ export function SettingRow({
   const navigateOnce = useNavigateOnce();
   const tone = danger ? colors.danger : colors.primary;
   const surface = danger ? colors.dangerSurface : colors.primaryLight;
+  // App khách: co nhẹ khi nhấn + đĩa icon nảy lên khi thẻ cuộn tới (app Partner giữ tĩnh).
+  const press = usePressScale(useScrollRevealDefault());
+  const iconPop = useRevealPop(120, 0.6, false);
 
   return (
     <Pressable
@@ -44,16 +51,21 @@ export function SettingRow({
       accessibilityLabel={label}
       accessibilityHint={description}
       onPress={() => navigateOnce(href)}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
       style={({ pressed }) =>
         pressed ? { backgroundColor: surface, borderRadius: radius.md } : null
       }
     >
+      <Animated.View style={press.style}>
       <XStack ai="center" gap={space.sm} minHeight={sizing.touchTarget} py={space.sm}>
         {/*
           Đĩa biểu tượng thay cho hình trần: nó phân loại dòng trước khi mắt kịp đọc chữ, và ở
           dòng xoá tài khoản thì chính cái đĩa đỏ là thứ chặn ngón tay lại.
         */}
-        <IconDisc icon={icon} tone={tone} surface={surface} />
+        <Animated.View style={iconPop}>
+          <IconDisc icon={icon} tone={tone} surface={surface} />
+        </Animated.View>
         <YStack f={1} minWidth={0} gap={2}>
           <Text
             col={danger ? colors.danger : colors.text}
@@ -68,6 +80,7 @@ export function SettingRow({
         </YStack>
         <DetailChevron />
       </XStack>
+      </Animated.View>
     </Pressable>
   );
 }

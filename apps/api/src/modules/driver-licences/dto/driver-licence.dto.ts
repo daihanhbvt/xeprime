@@ -49,7 +49,7 @@ export class PresignDriverLicenceDto {
 
 export class DriverLicencePresignDto {
   @ApiProperty() licenceId!: string;
-  @ApiProperty({ description: 'URL PUT riêng tư, sống ngắn — tải ảnh thẳng lên kho lưu trữ.' })
+  @ApiProperty({ description: 'URL PUT riêng tư, sống ngắn - tải ảnh thẳng lên kho lưu trữ.' })
   uploadUrl!: string;
   @ApiProperty() expiresIn!: number;
 }
@@ -85,13 +85,13 @@ export class DriverLicenceDto {
   @ApiProperty({
     type: [String],
     enum: DRIVER_LICENCE_QUALITY_ISSUE_VALUES,
-    description: 'Vấn đề chất lượng ảnh bộ đọc nhận ra — để gợi ý cách chụp lại.',
+    description: 'Vấn đề chất lượng ảnh bộ đọc nhận ra - để gợi ý cách chụp lại.',
   })
   qualityIssues!: string[];
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'LEGACY — lúc khách nhờ xem lại (trước ADR 0070). Không còn writer.',
+    description: 'LEGACY - lúc khách nhờ xem lại (trước ADR 0070). Không còn writer.',
   })
   reviewRequestedAt!: string | null;
   @ApiProperty({ enum: DRIVER_LICENCE_DECISION_SOURCE_VALUES, nullable: true, type: String })
@@ -122,7 +122,7 @@ export class PlatformDriverLicenceOwnerDto {
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'Luôn che — xem đầy đủ qua "Hiện liên hệ" ở màn Khách thuê (quyền PII + audit)',
+    description: 'Luôn che - xem đầy đủ qua "Hiện liên hệ" ở màn Khách thuê (quyền PII + audit)',
   })
   phone!: string | null;
   @ApiProperty({ type: String, nullable: true }) email!: string | null;

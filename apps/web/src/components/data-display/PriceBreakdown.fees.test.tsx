@@ -41,7 +41,7 @@ function renderIt(fees: PriceBreakdownFees | null, audience: 'customer' | 'owner
   );
 }
 
-describe('PriceBreakdown — phụ phí phía khách', () => {
+describe('PriceBreakdown - phụ phí phía khách', () => {
   it('tuyến hoa hồng: hiện phí dịch vụ, tổng khách trả và số giữ chỗ', () => {
     renderIt({
       lines: [{ key: 'service_fee', bearer: 'customer', percent: 10, amount: '100000' }],

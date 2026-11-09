@@ -226,7 +226,7 @@ export class PlanGuideTemplatesService {
       if (dto.expectedVersion !== undefined && dto.expectedVersion !== before.version) {
         throw new ConflictException({
           code: API_ERROR_CODE.CONFLICT,
-          message: 'Bộ mẫu đã được người khác sửa — tải lại rồi sửa tiếp',
+          message: 'Bộ mẫu đã được người khác sửa - tải lại rồi sửa tiếp',
           details: { currentVersion: before.version },
         });
       }
@@ -265,7 +265,7 @@ export class PlanGuideTemplatesService {
           if (!subjectVi || !subjectEn || !bodyVi || !bodyEn) {
             throw new BadRequestException({
               code: API_ERROR_CODE.VALIDATION_FAILED,
-              message: `Nội dung "${patch.variant}" chưa có — gửi đủ tiêu đề và thân hai ngôn ngữ`,
+              message: `Nội dung "${patch.variant}" chưa có - gửi đủ tiêu đề và thân hai ngôn ngữ`,
             });
           }
           await tx.planGuideEmailTemplateVariant.create({
@@ -361,7 +361,7 @@ export class PlanGuideTemplatesService {
       if (row.isActive) {
         throw new ConflictException({
           code: API_ERROR_CODE.PLAN_GUIDE_TEMPLATE_ACTIVE,
-          message: 'Bộ mẫu đang dùng — chọn bộ khác trước khi xoá',
+          message: 'Bộ mẫu đang dùng - chọn bộ khác trước khi xoá',
         });
       }
       await tx.planGuideEmailTemplate.update({

@@ -324,7 +324,7 @@ export class VehicleAlertsService {
       const soleBookingId = bookingIds.length === 1 ? bookingIds[0] : null;
       push(vehicleId, VEHICLE_ALERT_KIND.MISSING_RETURN_ODOMETER, {
         title: 'Thiếu KM trả',
-        detail: 'Biên bản trả xe đã chốt nhưng chưa có số KM — KM của xe chưa được cập nhật',
+        detail: 'Biên bản trả xe đã chốt nhưng chưa có số KM - KM của xe chưa được cập nhật',
         count: bookingIds.length,
         href:
           queueHref && scope.canViewBookings && soleBookingId

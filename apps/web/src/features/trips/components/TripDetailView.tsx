@@ -9,7 +9,7 @@ import {
 import { Alert, Button, Skeleton } from 'antd';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   API_ERROR_CODE,
   CUSTOMER_TRIP_STAGE,
@@ -27,6 +27,7 @@ import {
   type CustomerTripStage,
 } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
+import { Confetti } from '@/components/motion/Confetti';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import { Stars } from '@/components/data-display/Stars';
 import { StatusTag } from '@/components/data-display/StatusTag';
@@ -86,6 +87,9 @@ import { useTranslations } from 'next-intl';
  * đánh giá và liên hệ gian hàng; chủ xe duyệt hoặc từ chối yêu cầu. Bày nhầm phía nghĩa là bày
  * một nút mà server chắc chắn từ chối.
  */
+/** Tiền về trong bấy nhiêu lâu thì lần mở trang đầu còn được chúc mừng (sau đó F5 không bắn lại). */
+const CELEBRATE_FRESH_MS = 2 * 60_000;
+
 export interface TripDetailViewProps {
   tripId: string;
   /**
@@ -111,6 +115,32 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
   const vehicleSpecs = useListingSpecSummary(data?.vehicle ?? null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  /*
+   * Confetti CHỈ khi chính phiên này thấy chuyến lật từ "chờ giữ chỗ" sang "đã xác nhận" — tức đơn
+   * vừa ra đời sau lượt đối soát đủ tiền (ADR 0044). Mở lại trang một chuyến đã xác nhận thì không.
+   */
+  const liveStage = data?.stage;
+  const paidAtIso = data?.hold?.paidAt ?? null;
+  const [celebrateKey, setCelebrateKey] = useState(0);
+  // Chặng đã thấy lần trước (`undefined` = chưa có lần nạp nào). Ref + effect, không đọc
+  // `Date.now()` lúc render (render phải thuần - `react-hooks/purity`).
+  const seenStageRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const seenStage = seenStageRef.current;
+    if (liveStage === seenStage) return;
+    // Hai đường tới "vừa xác nhận": trang này lật tại chỗ, hoặc trang thanh toán vừa `replace` sang
+    // đây ngay sau khi tiền về (lần nạp đầu, `paidAt` còn rất mới).
+    const paidAt = paidAtIso ? new Date(paidAtIso).getTime() : null;
+    const justPaid =
+      seenStage === undefined && paidAt != null && Date.now() - paidAt < CELEBRATE_FRESH_MS;
+    if (
+      liveStage === CUSTOMER_TRIP_STAGE.READY &&
+      (seenStage === CUSTOMER_TRIP_STAGE.AWAITING_HOLD || justPaid)
+    ) {
+      setCelebrateKey((key) => key + 1);
+    }
+    seenStageRef.current = liveStage;
+  }, [liveStage, paidAtIso]);
 
   if (isLoading) {
     return (
@@ -210,7 +240,12 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
   ) : null;
   if (flowView) {
     // Đầu trang của các màn này (`TripPageHeader`) mang sẵn nút quay lại + đường dẫn.
-    return <div className={cx(styles.page, styles.flowPage)}>{flowView}</div>;
+    return (
+      <div className={cx(styles.page, styles.flowPage)}>
+        {flowView}
+        {celebrateKey > 0 ? <Confetti key={celebrateKey} /> : null}
+      </div>
+    );
   }
 
   /*

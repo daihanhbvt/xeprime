@@ -83,7 +83,7 @@ export class AccountPaymentDto {
 export class AccountPaymentTotalsDto {
   @ApiProperty({ description: 'Tổng đã trả (chỉ khoản `succeeded`)' }) paidTotal!: string;
   @ApiProperty({ description: 'Phần là tiền thuê' }) rentalTotal!: string;
-  @ApiProperty({ description: 'Phần là tiền cọc — cọc trả gian hàng, sẽ hoàn khi trả xe' })
+  @ApiProperty({ description: 'Phần là tiền cọc - cọc trả gian hàng, sẽ hoàn khi trả xe' })
   depositTotal!: string;
   @ApiProperty({ description: 'Số chuyến có ít nhất một khoản đã trả' }) tripCount!: number;
 }

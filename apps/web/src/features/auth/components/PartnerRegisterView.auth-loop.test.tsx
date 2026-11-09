@@ -58,7 +58,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('PartnerRegisterView — /auth/me 401 không thành vòng lặp', () => {
+describe('PartnerRegisterView - /auth/me 401 không thành vòng lặp', () => {
   it.each([
     ['trang chọn tuyến', ''],
     ['form tuyến gói', 'track=package'],

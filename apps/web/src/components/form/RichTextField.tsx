@@ -32,12 +32,12 @@ interface RichTextFieldProps<T extends FieldValues> {
   help?: ReactNode;
   required?: boolean;
   disabled?: boolean;
-  /** Trần CHỮ (không tính thẻ) — đếm như server đếm chữ thuần rút từ HTML. */
+  /** Trần CHỮ (không tính thẻ) - đếm như server đếm chữ thuần rút từ HTML. */
   maxLength?: number;
 }
 
 /**
- * Ô soạn văn bản CÓ ĐỊNH DẠNG (TipTap) — đúng thanh công cụ design 06/11/2026: hoàn tác · làm lại ·
+ * Ô soạn văn bản CÓ ĐỊNH DẠNG (TipTap) - đúng thanh công cụ design 06/11/2026: hoàn tác · làm lại ·
  * nghiêng · đậm · gạch chân · căn trái/giữa/phải. Không ảnh, không link, không tiêu đề: server lọc
  * HTML theo đúng tập này (`sanitizeShopBioHtml`), nên thêm một nút ở đây mà không mở ở server là
  * định dạng biến mất ngay sau lần lưu.

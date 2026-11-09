@@ -112,7 +112,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('admin/audit — trạng thái', () => {
+describe('admin/audit - trạng thái', () => {
   it('lỗi khi chưa có dữ liệu: câu chữ riêng của module + Thử lại', () => {
     setQuery({ isError: true });
     renderPage();
@@ -163,7 +163,7 @@ describe('admin/audit — trạng thái', () => {
   });
 });
 
-describe('admin/audit — filter và URL', () => {
+describe('admin/audit - filter và URL', () => {
   it('mặc định ba bộ lọc là "all" và được truyền xuống lớp dữ liệu, KHÔNG kèm `open`', () => {
     setQuery({ data: { items: [log()], meta: META } });
     renderPage();
@@ -235,7 +235,7 @@ describe('admin/audit — filter và URL', () => {
   });
 });
 
-describe('admin/audit — dải ngữ cảnh khi đến từ một đối tượng', () => {
+describe('admin/audit - dải ngữ cảnh khi đến từ một đối tượng', () => {
   it('không có tham số sâu thì không có dải', () => {
     setQuery({ data: { items: [log()], meta: META } });
     renderPage();
@@ -288,8 +288,8 @@ describe('admin/audit — dải ngữ cảnh khi đến từ một đối tượ
   });
 });
 
-describe('admin/audit — dữ liệu và hành động', () => {
-  it('hiện người thực hiện, email, nhãn hành động — KHÔNG in mã hành động thô lên bảng', () => {
+describe('admin/audit - dữ liệu và hành động', () => {
+  it('hiện người thực hiện, email, nhãn hành động - KHÔNG in mã hành động thô lên bảng', () => {
     setQuery({ data: { items: [log({ targetLabel: 'Gian hàng Demo' })], meta: META } });
     renderPage();
 
@@ -345,7 +345,7 @@ describe('admin/audit — dữ liệu và hành động', () => {
     });
     renderPage();
 
-    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('-').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Hệ thống').length).toBeGreaterThan(0);
   });
 
@@ -367,7 +367,7 @@ describe('admin/audit — dữ liệu và hành động', () => {
     expect(lastUrl()).toContain('page=3');
   });
 
-  it('`?open=` trên URL mở panel đúng dòng — link từ tab Nhật ký của đối tác rơi thẳng vào sự kiện', () => {
+  it('`?open=` trên URL mở panel đúng dòng - link từ tab Nhật ký của đối tác rơi thẳng vào sự kiện', () => {
     nav.params = new URLSearchParams('open=l-42');
     setQuery({ data: { items: [log({ id: 'l-42' })], meta: META } });
     renderPage();
@@ -375,7 +375,7 @@ describe('admin/audit — dữ liệu và hành động', () => {
     expect(drawer.logId).toBe('l-42');
   });
 
-  it('bảng chỉ có một hành động — nhật ký là bề mặt chỉ đọc', () => {
+  it('bảng chỉ có một hành động - nhật ký là bề mặt chỉ đọc', () => {
     setQuery({ data: { items: [log()], meta: META } });
     renderPage();
 

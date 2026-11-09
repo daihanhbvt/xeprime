@@ -28,7 +28,7 @@ import {
 
 const initial = (): AppState => appReducer(undefined, { type: '@@INIT' });
 
-describe('app.slice — mặc định', () => {
+describe('app.slice - mặc định', () => {
   it('sidebar mở, drawer đóng, theme sáng', () => {
     expect(initial()).toEqual({
       sidebarCollapsed: false,
@@ -38,13 +38,13 @@ describe('app.slice — mặc định', () => {
     });
   });
 
-  it('store dựng mới luôn ra cùng một state — nền tảng của việc không lệch hydration', () => {
+  it('store dựng mới luôn ra cùng một state - nền tảng của việc không lệch hydration', () => {
     expect(makeStore().getState().app).toEqual(makeStore().getState().app);
     expect(makeStore().getState().app.sidebarCollapsed).toBe(false);
   });
 });
 
-describe('app.slice — thu gọn sidebar', () => {
+describe('app.slice - thu gọn sidebar', () => {
   it('toggleSidebar lật qua lại', () => {
     let state = initial();
 
@@ -79,7 +79,7 @@ describe('app.slice — thu gọn sidebar', () => {
   });
 });
 
-describe('app.slice — gập khối menu', () => {
+describe('app.slice - gập khối menu', () => {
   it('toggleNavSection lật qua lại, lưu ở phía PHỦ ĐỊNH (chỉ khối đã gập)', () => {
     let state = appReducer(initial(), toggleNavSection('settings'));
     expect(state.navSectionsCollapsed).toEqual(['settings']);
@@ -110,7 +110,7 @@ describe('app.slice — gập khối menu', () => {
   });
 });
 
-describe('app.slice — reducer thuần', () => {
+describe('app.slice - reducer thuần', () => {
   it('reducer là hàm thuần: không đọc/ghi storage nào', () => {
     const getItem = globalThis.localStorage?.getItem;
     let touched = false;
@@ -127,7 +127,7 @@ describe('app.slice — reducer thuần', () => {
     expect(touched).toBe(false);
   });
 
-  it('hình dạng state chỉ có 4 field — thêm field mới phải sửa test này', () => {
+  it('hình dạng state chỉ có 4 field - thêm field mới phải sửa test này', () => {
     // Thêm field ở đây là phải trả lời: nó có thuộc bản lưu cookie không, và bản đã lưu của
     // người dùng cũ (thiếu field đó) có còn đọc được không.
     expect(Object.keys(initial()).sort()).toEqual([

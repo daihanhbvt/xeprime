@@ -9,7 +9,7 @@
     "shopViewer": "Shop viewer",
     "shopMember": "Shop member",
     "unconfigured": "Plan not configured",
-    "unconfiguredHint": "Your shop has no active service plan, so the platform can't work out how fees apply. This is a XePrime configuration problem — contact support before taking new bookings.",
+    "unconfiguredHint": "Your shop has no active service plan, so the platform can't work out how fees apply. This is a XePrime configuration problem - contact support before taking new bookings.",
     "verifiedHint": "Verified shop owner",
     "packagePending": "Plan payment pending",
     "packagePendingHint": "Your shop is created but the first plan has not been paid yet. Complete the transfer to unlock the shop management tools.",
@@ -45,7 +45,7 @@
     "signOut": "Sign out",
     "later": "Later",
     "reminderLead": "Add a verified phone number to send rental requests, sign in with a password and let hosts contact you. You can keep browsing vehicles without one.",
-    "bookingLead": "Verify your phone number to send a rental request — the host uses it to contact you about the trip.",
+    "bookingLead": "Verify your phone number to send a rental request - the host uses it to contact you about the trip.",
     "changePhoneTitle": "Change phone number",
     "currentValue": "Currently:",
     "emailLabel": "New email",
@@ -61,7 +61,7 @@
     "resendIn": "Resend in {seconds}s",
     "editEmail": "Edit email",
     "editPhone": "Edit number",
-    "devCode": "Test code: {code} — shown outside production only.",
+    "devCode": "Test code: {code} - shown outside production only.",
     "emailUpdated": "Email updated",
     "phoneUpdated": "Phone number updated",
     "phoneLead": "Enter your phone number to receive a verification code by SMS.",
@@ -76,9 +76,9 @@
   },
   "partnerInvite": {
     "title": "Partner with XePrime",
-    "commissionBadge": "{min}–{max}% fee",
+    "commissionBadge": "{min}-{max}% fee",
     "commissionBadgeFlat": "{percent}% fee",
-    "body": "Turn your vehicle into income of up to {min}–{max} million VND/month with XePrime",
+    "body": "Turn your vehicle into income of up to {min}-{max} million VND/month with XePrime",
     "cta": "Become a partner",
     "dismiss": "Hide invitation"
   },
@@ -130,7 +130,7 @@
     "emailRequired": "Enter an email address",
     "emailInvalid": "That email address isn't valid",
     "emailMax": "Email must be 255 characters or fewer",
-    "avatarRequired": "Please choose a profile photo — renters see it on your host page",
+    "avatarRequired": "Please choose a profile photo - renters see it on your host page",
     "bioMax": "The introduction can be at most 2000 characters"
   },
   "ownerGate": {
@@ -143,11 +143,11 @@
     "registeringTitle": "Your host profile is still under review",
     "registeringBody": "This section opens once you have at least one vehicle approved for the marketplace. Track your profile and vehicles on your home page.",
     "openRegistration": "View registration status",
-    "bodyMemberPartner": "You are a member of {shop}. This shop uses the host toolkit — vehicle, calendar and money screens are open to the shop owner only. Contact the owner if you need access."
+    "bodyMemberPartner": "You are a member of {shop}. This shop uses the host toolkit - vehicle, calendar and money screens are open to the shop owner only. Contact the owner if you need access."
   },
   "vehicles": {
     "title": "My vehicles",
-    "subtitle": "Your vehicles on XePrime — operating status, pricing and things to do.",
+    "subtitle": "Your vehicles on XePrime - operating status, pricing and things to do.",
     "loading": "Loading vehicles…",
     "serviceFilterLabel": "Filter by service",
     "statusFilterLabel": "Filter by operating status",
@@ -249,7 +249,7 @@
       "rights": "You can view, correct and request deletion of your data."
     },
     "commitment": "XePrime is committed to protecting and using personal data transparently, securely and in line with the law.",
-    "consentNote": "This summary is read-only. Per-item consent toggles will arrive once the platform can store your choices — it cannot yet.",
+    "consentNote": "This summary is read-only. Per-item consent toggles will arrive once the platform can store your choices - it cannot yet.",
     "lastUpdated": "Version in force since {date}",
     "readPolicy": "Read the full policy"
   },
@@ -257,7 +257,7 @@
     "title": "Security update",
     "subtitle": "Update your password to keep your account safe.",
     "firstTimeTitle": "Set a password for the first time",
-    "firstTimeBody": "This account was created with Google/Facebook, so it has no password yet. Set one to sign in with your phone number — no current password needed.",
+    "firstTimeBody": "This account was created with Google/Facebook, so it has no password yet. Set one to sign in with your phone number - no current password needed.",
     "currentPassword": "Current password",
     "newPassword": "New password",
     "confirmPassword": "Confirm new password",
@@ -339,7 +339,7 @@
     "retentionHeading": "Data we must keep",
     "retentionBody": "Invoices, tax records and transaction logs may have to be retained for a period set by law before they can be deleted. That is a legal obligation, not a XePrime choice.",
     "inAppHeading": "Can you still sign in?",
-    "inAppBody": "If you can still access your account, send the request from inside the app or from the account area on the web — there you can track its progress and withdraw it if you change your mind.",
+    "inAppBody": "If you can still access your account, send the request from inside the app or from the account area on the web - there you can track its progress and withdraw it if you change your mind.",
     "inAppLink": "Open the account area"
   },
   "registration": {
@@ -350,7 +350,7 @@
     "steps": {
       "profile": {
         "title": "Host profile",
-        "description": "Your name, a verified phone number and a pickup address. Filling these in completes this step — there is nobody to wait for."
+        "description": "Your name, a verified phone number and a pickup address. Filling these in completes this step - there is nobody to wait for."
       },
       "vehicle": {
         "title": "Add a vehicle and submit it",
@@ -359,7 +359,7 @@
       },
       "live": {
         "title": "Live on the marketplace",
-        "description": "XePrime reviews the vehicle — this is the only review step. Once approved, guests can find and book it and all host tools unlock."
+        "description": "XePrime reviews the vehicle - this is the only review step. Once approved, guests can find and book it and all host tools unlock."
       }
     },
     "noVehicle": {
@@ -381,7 +381,7 @@
     "title": "Read this before you send the request",
     "body": "Your account is tied to the shop {shop}. XePrime has to settle the items below before the account can be closed; sending the request does not clear them.",
     "loading": "Checking impact…",
-    "loadError": "Could not check the impact. You can still send the request — XePrime will review it.",
+    "loadError": "Could not check the impact. You can still send the request - XePrime will review it.",
     "shop": "Shop",
     "ownerNote": "You are the shop owner. Closing the owner account does not close the shop, and listed vehicles still need someone responsible for them.",
     "memberNote": "You are a member of this shop, not its owner. This request covers your personal account only.",
@@ -389,7 +389,7 @@
     "pending": "Being transferred",
     "withdrawals": "{count, plural, =0 {No withdrawal requests outstanding} other {# withdrawal requests outstanding}}",
     "openTrips": "{count, plural, =0 {No open rental trips} other {# open rental trips}}",
-    "settleFirst": "Withdraw your balance and let the transfers finish before sending the request — reconciliation is much slower once the account is closed.",
+    "settleFirst": "Withdraw your balance and let the transfers finish before sending the request - reconciliation is much slower once the account is closed.",
     "bodyPersonal": "This request covers your personal account only. XePrime still has to settle the items below before the account can be closed."
   },
   "trackNotice": {
@@ -429,7 +429,7 @@
       "previewLabel": "Profile preview",
       "notShop": "This name and photo belong to your account only. The name, logo and contact phone renters see belong to the shop.",
       "shopSettingsLink": "Open shop settings",
-      "storefrontFallback": "This name and photo are also what renters see on your vehicles — you rent out as an individual, not through a shop."
+      "storefrontFallback": "This name and photo are also what renters see on your vehicles - you rent out as an individual, not through a shop."
     }
   },
   "ownerHub": {

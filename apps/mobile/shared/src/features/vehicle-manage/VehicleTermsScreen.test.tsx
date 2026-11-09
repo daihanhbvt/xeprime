@@ -52,7 +52,7 @@ const t = viVehicleManage.terms;
  * Web `TermsSection` (30/09/2026): ở KHU TÀI KHOẢN khối bảo đảm sửa thẳng — không banner "đang
  * kế thừa chính sách gian hàng", không nút "Tuỳ chỉnh". Cổng quản lý giữ cửa mở khoá.
  */
-describe('TermsBody — khối bảo đảm theo khu', () => {
+describe('TermsBody - khối bảo đảm theo khu', () => {
   it('khu tài khoản: không banner kế thừa, không nút tuỳ chỉnh', async () => {
     expect(POLICY_SOURCE.SHOP).toBe('shop');
     const view = await render(

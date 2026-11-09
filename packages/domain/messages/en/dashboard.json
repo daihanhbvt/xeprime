@@ -54,7 +54,7 @@
     "afternoon": "Good afternoon, {name}",
     "evening": "Good evening, {name}"
   },
-  "ownerSubtitle": "Today's tasks, handover schedule and your money — all in one place.",
+  "ownerSubtitle": "Today's tasks, handover schedule and your money - all in one place.",
   "answer": {
     "busy": "Today: {parts}.",
     "pickups": "{count, plural, one {hand over # car} other {hand over # cars}}",
@@ -104,7 +104,7 @@
       "pickup": "Hand over",
       "return": "Take back"
     },
-    "itemAria": "{kind} {vehicle} — {customer}, {time}"
+    "itemAria": "{kind} {vehicle} - {customer}, {time}"
   },
   "kpi": {
     "title": "This month",
@@ -157,7 +157,7 @@
     "title": "Service plan",
     "daysLeft": "{count, plural, =0 {Expires today} one {# day left} other {# days left}}",
     "endsAt": "Expires {date}",
-    "grace": "Plan expired — grace period until {date}",
+    "grace": "Plan expired - grace period until {date}",
     "vehicles": "Cars used",
     "vehiclesValue": "{used}/{limit} cars",
     "vehiclesUnlimited": "{used} cars · unlimited",
@@ -174,7 +174,7 @@
     "income": "Income this month",
     "incomeHint": "{count, plural, one {# completed trip} other {# completed trips}} · after withheld tax",
     "open": "Balance & withdrawals",
-    "frozen": "Your balance is temporarily frozen — contact XePrime for help.",
+    "frozen": "Your balance is temporarily frozen - contact XePrime for help.",
     "loadError": "Couldn't load your balance."
   },
   "ownerVehicles": {

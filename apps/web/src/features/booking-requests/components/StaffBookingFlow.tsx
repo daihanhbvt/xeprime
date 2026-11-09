@@ -612,7 +612,7 @@ export function StaffBookingFlow({
                 <p className={styles.rangeHint}>
                   {derivedReturnAt
                     ? t('trip.returnDerived', {
-                        date: fmt.dateTime(appWallClockToIso(derivedReturnAt)),
+                        date: fmt.rentalAt(appWallClockToIso(derivedReturnAt)),
                       })
                     : t('trip.returnPending')}
                 </p>

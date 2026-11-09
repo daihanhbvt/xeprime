@@ -368,11 +368,11 @@
       },
       "privacy": {
         "title": "Privacy",
-        "body": "Phone numbers, emails and document numbers are partially masked by the server. This screen never shows full values or document files — those open only on the dedicated screens, behind their own permissions and with audit logging."
+        "body": "Phone numbers, emails and document numbers are partially masked by the server. This screen never shows full values or document files - those open only on the dedicated screens, behind their own permissions and with audit logging."
       }
     },
     "billing": {
-      "permissionNote": "Only people who manage plans & billing can view this tab. It is read-only — assigning, renewing or cancelling a plan lives under “Platform admin actions”.",
+      "permissionNote": "Only people who manage plans & billing can view this tab. It is read-only - assigning, renewing or cancelling a plan lives under “Platform admin actions”.",
       "plan": {
         "title": "Current plan",
         "none": "No active plan",
@@ -399,7 +399,7 @@
         "platformFee": "Platform fee the renter pays per booking",
         "platformFeeValue": "{car} per car · {motorbike} per motorbike",
         "commission": "Owner commission",
-        "commissionNone": "0% — subscription shops pay no commission on trips",
+        "commissionNone": "0% - subscription shops pay no commission on trips",
         "version": "Policy version",
         "effectiveFrom": "Effective from",
         "noteLabel": "Note",
@@ -432,9 +432,9 @@
         "title": "Key dates",
         "joined": "Joined the platform",
         "started": "Started plan {plan}",
-        "renewal": "Current term ends — not renewed",
+        "renewal": "Current term ends - not renewed",
         "scheduled": "{plan} plan starts",
-        "renewed": "Current term ends — next term scheduled"
+        "renewed": "Current term ends - next term scheduled"
       }
     },
     "commission": {
@@ -445,7 +445,7 @@
         "none": "No active fee policy",
         "rate": "Tiered commission by rental day",
         "basis": "Basis",
-        "basisValue": "Each day's rental price — deducted from the owner's payout",
+        "basisValue": "Each day's rental price - deducted from the owner's payout",
         "platformFee": "Platform fee the renter pays per booking",
         "platformFeeValue": "{car} per car · {motorbike} per motorbike",
         "effectiveFrom": "Effective from",
@@ -483,7 +483,7 @@
       "rules": {
         "title": "How fees are calculated",
         "rule1": "The service fee is calculated on the trip rental value, under the fee policy in effect when the booking was confirmed.",
-        "rule2": "Amounts are locked on each booking when it is created — they are not recalculated when the policy changes.",
+        "rule2": "Amounts are locked on each booking when it is created - they are not recalculated when the policy changes.",
         "rule3": "Cancelled and no-show trips are not counted.",
         "rule4": "Withheld tax is borne by the owner and is never added to what the renter pays."
       }
@@ -517,7 +517,7 @@
       "total": "{count, plural, one {# entry} other {# entries}}",
       "ipNote": {
         "title": "IP and device",
-        "body": "IP address and device are not shown here. Use “View details” to open the system audit log — those fields are shown only to accounts allowed to view the log."
+        "body": "IP address and device are not shown here. Use “View details” to open the system audit log - those fields are shown only to accounts allowed to view the log."
       },
       "sessions": {
         "columns": {

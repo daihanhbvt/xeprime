@@ -1,5 +1,12 @@
 import Image from 'next/image';
 import {
+  enterClass,
+  heroParallaxClass,
+  popInClass,
+  seqClass,
+} from '@/components/motion/motion-classes';
+import { NumberTicker } from '@/components/motion/NumberTicker';
+import {
   HOST_METRIC_STATE,
   HOST_METRIC_WINDOW_DAYS,
   STOREFRONT_KIND,
@@ -16,7 +23,7 @@ import type { PublicShop } from '../types';
 import styles from './ShopHeader.module.css';
 
 /**
- * Đầu trang gian hàng công khai — Server Component (không state, không `antd`) để danh tính, giới
+ * Đầu trang gian hàng công khai - Server Component (không state, không `antd`) để danh tính, giới
  * thiệu và số liệu của gian hàng nằm sẵn trong HTML cho công cụ tìm kiếm. Phần client duy nhất là
  * nút nhắn tin (`ShopContactActions`) và dấu "i" của ô "Nhận & giữ chuyến".
  *
@@ -29,18 +36,18 @@ import styles from './ShopHeader.module.css';
  *
  * `shop.storefrontKind` (backend chấm từ tuyến thu tiền hiệu lực) chọn giữa:
  *
- *   `personal` — chủ xe cá nhân: KHÔNG ảnh bìa, thẻ viền xám, hồ sơ đọc như hồ sơ một CON NGƯỜI.
- *   `shop`     — gian hàng tuyến gói: ảnh bìa, thẻ viền vàng đè lên bìa, dấu xác thực, ô "Chi
+ *   `personal` - chủ xe cá nhân: KHÔNG ảnh bìa, thẻ viền xám, hồ sơ đọc như hồ sơ một CON NGƯỜI.
+ *   `shop`     - gian hàng tuyến gói: ảnh bìa, thẻ viền vàng đè lên bìa, dấu xác thực, ô "Chi
  *                nhánh".
  *
  * Chủ xe cá nhân có thể đã tải lên một `coverUrl` (cùng form hồ sơ), nhưng một dải bìa rộng phía
  * trên một người có một chiếc xe là mượn ngôn ngữ thị giác của doanh nghiệp để nói một điều chưa
- * được xác minh — trang công khai không vẽ nó.
+ * được xác minh - trang công khai không vẽ nó.
  *
  * ## Mọi chip và mọi ô đều ĐẾM ĐƯỢC
  *
  * Bản vẽ còn có số điện thoại, chip "Hỗ trợ phí đặt xe" và các khối cam kết (pháp nhân, bảo dưỡng,
- * hỗ trợ 24/7) — chúng cố ý KHÔNG có ở đây: số điện thoại không công khai (`PublicShopDto`), và
+ * hỗ trợ 24/7) - chúng cố ý KHÔNG có ở đây: số điện thoại không công khai (`PublicShopDto`), và
  * một lời hứa chưa có dữ liệu đứng sau là nói dối khách (ADR 0028). Ô thiếu dữ liệu thì BIẾN MẤT,
  * không hiện 0: điểm khi chưa ai chấm không phải "0 sao", và chỉ số uy tín dưới ngưỡng mẫu là
  * "chưa đủ dữ liệu", không phải 0% (ADR 0045 điều 3).
@@ -58,7 +65,7 @@ export async function ShopHeader({ shop }: { shop: PublicShop }) {
    */
   /*
    * Chủ xe TUYẾN HOA HỒNG: cạnh tên là KHU VỰC "Phường/Xã, Tỉnh/TP" (`shop.address` server đã che
-   * về khu vực — ADR 0077), thay cho dòng "Địa chỉ" ở mục Thông tin. Gian hàng tuyến gói giữ danh
+   * về khu vực - ADR 0077), thay cho dòng "Địa chỉ" ở mục Thông tin. Gian hàng tuyến gói giữ danh
    * sách tỉnh đang có xe; địa chỉ đủ của họ nằm ở Thông tin và ở từng thẻ chi nhánh.
    */
   const ownerArea = !isShop && shop.address ? shop.address : null;
@@ -73,7 +80,7 @@ export async function ShopHeader({ shop }: { shop: PublicShop }) {
   /*
    * "Đã xác minh" đọc PHIẾU DUYỆT gian hàng (`trust.shopVerified`), không đọc `verified` (= đang ở
    * tuyến gói): trả tiền gói không đồng nghĩa nền tảng đã xem xét hồ sơ (ADR 0040 điều 5). Dấu
-   * xanh trên logo thì vẫn đọc `verified` — nó là dấu GIAN HÀNG, cùng dấu ở logo trên thẻ xe.
+   * xanh trên logo thì vẫn đọc `verified` - nó là dấu GIAN HÀNG, cùng dấu ở logo trên thẻ xe.
    */
   const highlights = [
     shop.trust.shopVerified ? t('profile.verified') : null,
@@ -86,7 +93,7 @@ export async function ShopHeader({ shop }: { shop: PublicShop }) {
   const responseRate = metricsReady ? shop.metrics.responseRatePercent : null;
   const acceptKeepRate = metricsReady ? shop.metrics.acceptKeepRatePercent : null;
 
-  // "02", "07" như bản vẽ — số đếm nhỏ đứng thẳng hàng với "100%" của ô bên cạnh.
+  // "02", "07" như bản vẽ - số đếm nhỏ đứng thẳng hàng với "100%" của ô bên cạnh.
   const countValue = (value: number) => (value < 10 ? `0${value}` : fmt.count(value));
 
   const statCandidates: (ShopStat | null)[] = [
@@ -150,7 +157,7 @@ export async function ShopHeader({ shop }: { shop: PublicShop }) {
 
           <div className={styles.summary}>
             <div className={styles.identity}>
-              <div className={cx(styles.avatar, isShop && styles.avatarShop)}>
+              <div className={cx(styles.avatar, isShop && styles.avatarShop, popInClass)}>
                 {shop.logoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element -- ảnh từ storage ngoài (R2)
                   <img
@@ -164,7 +171,7 @@ export async function ShopHeader({ shop }: { shop: PublicShop }) {
                   </span>
                 )}
                 {/*
-                  Huy hiệu XANH của bản vẽ (Figma "_Avatar company icon") — cùng file với dấu ở
+                  Huy hiệu XANH của bản vẽ (Figma "_Avatar company icon") - cùng file với dấu ở
                   logo gian hàng trên thẻ xe, để khách thấy một dấu ở cả hai nơi. Không dùng
                   `VerifiedMark` (con dấu vàng của menu tài khoản): ở đây nó là dấu của GIAN HÀNG.
                 */}
@@ -186,7 +193,7 @@ export async function ShopHeader({ shop }: { shop: PublicShop }) {
                 ) : null}
               </div>
 
-              <div className={styles.info}>
+              <div className={cx(styles.info, enterClass(100))}>
                 <div className={styles.nameRow}>
                   <h1 className={styles.name}>{shop.name}</h1>
                   <span className={styles.badge}>
@@ -231,9 +238,9 @@ export async function ShopHeader({ shop }: { shop: PublicShop }) {
             </div>
 
             {highlights.length > 0 ? (
-              <ul className={styles.highlights} aria-label={t('profile.highlightsLabel')}>
+              <ul className={cx(styles.highlights, seqClass)} aria-label={t('profile.highlightsLabel')}>
                 {highlights.map((chip) => (
-                  <li key={chip} className={styles.highlight}>
+                  <li key={chip} className={cx(styles.highlight, popInClass)}>
                     <Image src="/shops/check.svg" alt="" width={12} height={12} unoptimized />
                     {chip}
                   </li>
@@ -243,7 +250,7 @@ export async function ShopHeader({ shop }: { shop: PublicShop }) {
           </div>
 
           {shop.bioHtml || shop.bio || (isShop && shop.address) ? (
-            <section className={styles.about}>
+            <section className={cx(styles.about, enterClass(200))}>
               <h2 className={styles.aboutTitle}>{t('profile.aboutTitle')}</h2>
               {/* Bản định dạng (đã lọc ở server) khi chủ gian hàng soạn bằng editor; không thì chữ thuần. */}
               <RichText html={shop.bioHtml} text={shop.bio} className={styles.bio} />
@@ -253,11 +260,12 @@ export async function ShopHeader({ shop }: { shop: PublicShop }) {
             </section>
           ) : null}
 
-          <ul className={styles.stats} aria-label={t('profile.stats.label')}>
+          <ul className={cx(styles.stats, seqClass)} aria-label={t('profile.stats.label')}>
             {stats.map((stat) => (
-              <li key={stat.key} className={styles.stat}>
+              <li key={stat.key} className={cx(styles.stat, popInClass)}>
                 <span className={styles.statValue}>
-                  {stat.value}
+                  {/* Số nguyên đếm lên và dừng đúng chuỗi gốc; điểm sao (thập phân) đứng yên. */}
+                  {stat.star ? stat.value : <NumberTicker value={stat.value} />}
                   {stat.star ? (
                     <Image src="/shops/star-16.svg" alt="" width={16} height={16} unoptimized />
                   ) : null}
@@ -295,7 +303,7 @@ interface ShopStat {
 }
 
 /**
- * Ô icon 20×20 đứng trước một dòng meta — trang trí thuần, chữ bên cạnh đã mang nghĩa. Kích thước
+ * Ô icon 20×20 đứng trước một dòng meta - trang trí thuần, chữ bên cạnh đã mang nghĩa. Kích thước
  * hình là kích thước GỐC của từng SVG trong bản vẽ (ghim 15×19, biểu đồ 16×16, sao 20×20).
  */
 function MetaIcon({ src, width, height }: { src: string; width: number; height: number }) {
@@ -316,9 +324,9 @@ function ShopCover({ imageUrl, alt }: { imageUrl: string | null | undefined; alt
     <div className={styles.cover}>
       {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- ảnh từ storage ngoài (R2)
-        <img src={imageUrl} alt={alt} className={styles.coverImg} />
+        <img src={imageUrl} alt={alt} className={cx(styles.coverImg, heroParallaxClass)} />
       ) : (
-        <div className={styles.coverFallback} aria-hidden="true" />
+        <div className={cx(styles.coverFallback, heroParallaxClass)} aria-hidden="true" />
       )}
     </div>
   );

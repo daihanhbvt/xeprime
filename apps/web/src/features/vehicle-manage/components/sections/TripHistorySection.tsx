@@ -151,12 +151,12 @@ function TripHistoryCard({ item }: { item: VehicleTripHistoryItem }) {
           <dd>
             {item.pickupAt
               ? fmt.shortDateTime(item.pickupAt)
-              : (fmt.packageLabel(item.longTermPackageMonths) ?? '—')}
+              : (fmt.packageLabel(item.longTermPackageMonths) ?? '-')}
           </dd>
         </div>
         <div className={styles.fact}>
           <dt>{t('end')}</dt>
-          <dd>{item.returnAt ? fmt.shortDateTime(item.returnAt) : '—'}</dd>
+          <dd>{item.returnAt ? fmt.shortDateTime(item.returnAt) : '-'}</dd>
         </div>
         <div className={styles.fact}>
           <dt>{t('total')}</dt>

@@ -35,7 +35,7 @@ export class PlatformInsuranceController {
 
   @Get()
   @ApiOperation({
-    summary: 'Hàng đợi hợp đồng bảo hiểm — mặc định chỉ các hợp đồng ĐANG LỖI',
+    summary: 'Hàng đợi hợp đồng bảo hiểm - mặc định chỉ các hợp đồng ĐANG LỖI',
     description:
       'Phí của hợp đồng chưa quyết toán nằm ở vế GIỮ HỘ của đối soát ba vế: mỗi dòng lỗi là ' +
       'một khoản tiền khách đã trả mà chưa có chứng nhận nào được cấp. Lọc theo trạng thái ' +
@@ -48,7 +48,7 @@ export class PlatformInsuranceController {
 
   @Get(':id')
   @ApiOperation({
-    summary: 'Chi tiết một hợp đồng — kèm yêu cầu/phản hồi nguyên trạng với đối tác',
+    summary: 'Chi tiết một hợp đồng - kèm yêu cầu/phản hồi nguyên trạng với đối tác',
   })
   @ApiOkResponse({ type: PlatformInsurancePolicyDetailDto })
   detail(@Param('id') id: string): Promise<PlatformInsurancePolicyDetailDto> {
@@ -60,7 +60,7 @@ export class PlatformInsuranceController {
   @ApiOperation({
     summary: 'Thử phát hành lại',
     description:
-      'Chỉ đặt lại mốc để worker nhặt ở vòng kế tiếp (≤ 60 giây) — KHÔNG gọi đối tác ngay trong ' +
+      'Chỉ đặt lại mốc để worker nhặt ở vòng kế tiếp (≤ 60 giây) - KHÔNG gọi đối tác ngay trong ' +
       'request, vì một đối tác chậm sẽ treo tab của người trực. Môi trường chưa cắm đối tác trả ' +
       '409 `INSURANCE_PARTNER_NOT_CONFIGURED`.',
   })
@@ -71,7 +71,7 @@ export class PlatformInsuranceController {
 
   @Post(':id/void')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Thu hồi hợp đồng — bắt buộc lý do, có audit' })
+  @ApiOperation({ summary: 'Thu hồi hợp đồng - bắt buộc lý do, có audit' })
   @ApiNoContentResponse()
   async void(
     @Param('id') id: string,

@@ -7,7 +7,7 @@ import { EntityIdentity } from './EntityIdentity';
 
 afterEach(cleanup);
 
-describe('initialOf — gom 9 bản chép tay', () => {
+describe('initialOf - gom 9 bản chép tay', () => {
   it('lấy chữ cái đầu và viết hoa', () => {
     expect(initialOf('honda')).toBe('H');
   });
@@ -33,7 +33,7 @@ describe('initialOf — gom 9 bản chép tay', () => {
   });
 });
 
-describe('EntityIdentity — nhãn', () => {
+describe('EntityIdentity - nhãn', () => {
   it('hiện nhãn chính', () => {
     render(<EntityIdentity name="Honda SH 150i 2023" />);
 
@@ -53,7 +53,7 @@ describe('EntityIdentity — nhãn', () => {
   });
 });
 
-describe('EntityIdentity — ảnh, chữ cái đầu, icon dự phòng', () => {
+describe('EntityIdentity - ảnh, chữ cái đầu, icon dự phòng', () => {
   it('có ảnh thì render ảnh', () => {
     const { container } = render(
       <EntityIdentity name="Honda SH" kind="vehicle" imageUrl="https://cdn.test/xe.png" />,
@@ -95,7 +95,7 @@ describe('EntityIdentity — ảnh, chữ cái đầu, icon dự phòng', () => 
   });
 });
 
-describe('EntityIdentity — hình dạng và cỡ', () => {
+describe('EntityIdentity - hình dạng và cỡ', () => {
   it('người là hình tròn', () => {
     const { container } = render(<EntityIdentity name="An" kind="person" />);
 
@@ -127,7 +127,7 @@ describe('EntityIdentity — hình dạng và cỡ', () => {
   });
 });
 
-describe('EntityIdentity — khả truy cập', () => {
+describe('EntityIdentity - khả truy cập', () => {
   it('avatar chữ-cái bị ẩn khỏi trình đọc màn hình vì tên đã nằm ngay cạnh', () => {
     const { container } = render(<EntityIdentity name="Chủ shop demo" />);
 
@@ -135,7 +135,7 @@ describe('EntityIdentity — khả truy cập', () => {
     expect(avatar?.getAttribute('aria-hidden')).toBe('true');
   });
 
-  it('avatar có ảnh nhận alt rỗng — ảnh minh hoạ, không mang thông tin mới', () => {
+  it('avatar có ảnh nhận alt rỗng - ảnh minh hoạ, không mang thông tin mới', () => {
     const { container } = render(
       <EntityIdentity name="Honda SH" imageUrl="https://cdn.test/x.png" />,
     );

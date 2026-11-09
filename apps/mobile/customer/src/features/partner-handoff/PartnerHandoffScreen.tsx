@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { SvgXml } from 'react-native-svg';
-import { Linking, ScrollView, StyleSheet } from 'react-native';
+import { Linking, StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +11,13 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { PARTNER_HERO_RATIO, images } from '@/assets';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { RevealPop } from '@/components/motion/RevealStack';
+import {
+  RevealText,
+  ScrollReveal,
+  ScrollRevealProvider,
+  useScrollRevealList,
+} from '@/components/motion/ScrollReveal';
 import { Button } from '@/components/ui/Button';
 import { InlineAction } from '@/components/ui/InlineAction';
 import { fireAndForget } from '@/lib/fire-and-forget';
@@ -63,6 +71,8 @@ type OpenState = 'idle' | 'notInstalled';
 export function PartnerHandoffScreen() {
   const colors = useColors();
   const t = useTranslations('MobileShell.partner');
+  /* Khối trượt so le lúc mở + hiện khi cuộn tới (luồng UI, xem `ScrollReveal`). */
+  const reveal = useScrollRevealList();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [openState, setOpenState] = useState<OpenState>('idle');
@@ -101,8 +111,15 @@ export function PartnerHandoffScreen() {
     <YStack f={1} bg={colors.background} pb={insets.bottom + space.md}>
       <AppHeader onBack={leave} title={t('headerTitle')} />
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollRevealProvider value={reveal.ctx}>
+      <Animated.ScrollView
+        contentContainerStyle={styles.content}
+        onScroll={reveal.onScroll}
+        scrollEventThrottle={16}
+      >
         {/* Figma `21943:42616` "Dành cho đối tác": hai dòng tiêu đề, dòng vàng lớn, câu dẫn. */}
+        <ScrollReveal index={0}>
+        <RevealText>
         <YStack gap={space.sm}>
           <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.semibold} accessibilityRole="header">
             {t('landing.headline')}
@@ -114,22 +131,29 @@ export function PartnerHandoffScreen() {
             {t('landing.body')}
           </Text>
         </YStack>
+        </RevealText>
+        </ScrollReveal>
 
+        <ScrollReveal index={1}>
         <Image
           source={images.partnerHero}
           style={[styles.art, { aspectRatio: PARTNER_HERO_RATIO }]}
           contentFit="contain"
           accessible={false}
         />
+        </ScrollReveal>
 
         {/* Bốn lợi ích, lưới 2 × 2: icon Figma trong vòng tròn vàng nhạt + nhãn. */}
         <YStack gap={space.md}>
-          {[PERKS.slice(0, 2), PERKS.slice(2)].map((row) => (
-            <XStack key={row[0]!} gap={20}>
+          {[PERKS.slice(0, 2), PERKS.slice(2)].map((row, rowIndex) => (
+            <ScrollReveal key={row[0]!} index={2 + rowIndex}>
+            <XStack gap={20}>
               {row.map((perk) => (
                 <XStack key={perk} f={1} ai="center" gap={space.sm}>
                   <YStack p={12} br={radius.pill} bg={colors.primarySubtle}>
-                    <SvgXml xml={PARTNER_PERK_ICONS[perk]} width={24} height={24} />
+                    <RevealPop>
+                      <SvgXml xml={PARTNER_PERK_ICONS[perk]} width={24} height={24} />
+                    </RevealPop>
                   </YStack>
                   <Text f={1} col={colors.textMuted} fos={fontSize.body} fow={fontWeight.medium}>
                     {t(`landing.perks.${perk}`)}
@@ -137,9 +161,11 @@ export function PartnerHandoffScreen() {
                 </XStack>
               ))}
             </XStack>
+            </ScrollReveal>
           ))}
         </YStack>
-      </ScrollView>
+      </Animated.ScrollView>
+      </ScrollRevealProvider>
 
       {/* Lối hành động ghim đáy — tài khoản ĐỐI TÁC tách với tài khoản khách (ADR 0053). */}
       <YStack px={layout.screenX} pt={space.sm} gap={space.xs}>
@@ -179,6 +205,8 @@ function NotInstalled({ onRetry, onLater }: { onRetry: () => void; onLater: () =
   const t = useTranslations('MobileShell.partner');
   const insets = useSafeAreaInsets();
   const storeUrl = partnerStoreUrl();
+  /* Màn không cuộn: provider chỉ để các khối so le trượt lên một lần lúc mở. */
+  const reveal = useScrollRevealList();
 
   return (
     <YStack
@@ -188,7 +216,9 @@ function NotInstalled({ onRetry, onLater }: { onRetry: () => void; onLater: () =
       pb={insets.bottom + space.md}
       px={layout.screenX}
     >
+      <ScrollRevealProvider value={reveal.ctx}>
       <YStack f={1} ai="center" jc="center" gap={space.lg}>
+        <ScrollReveal index={0}>
         <YStack
           w={HERO_DISC}
           h={HERO_DISC}
@@ -197,12 +227,17 @@ function NotInstalled({ onRetry, onLater }: { onRetry: () => void; onLater: () =
           jc="center"
           bg={colors.primaryLight}
         >
-          <Ionicons
-            name={storeUrl ? 'download-outline' : 'time-outline'}
-            size={HERO_ICON}
-            color={colors.primaryActive}
-          />
+          <RevealPop>
+            <Ionicons
+              name={storeUrl ? 'download-outline' : 'time-outline'}
+              size={HERO_ICON}
+              color={colors.primaryActive}
+            />
+          </RevealPop>
         </YStack>
+        </ScrollReveal>
+        <ScrollReveal index={1}>
+        <RevealText>
         <YStack gap={space.sm} ai="center" maxWidth={420}>
           <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold} ta="center">
             {storeUrl ? t('notInstalledTitle') : t('comingSoonTitle')}
@@ -211,7 +246,10 @@ function NotInstalled({ onRetry, onLater }: { onRetry: () => void; onLater: () =
             {storeUrl ? t('notInstalledBody') : t('comingSoonBody')}
           </Text>
         </YStack>
+        </RevealText>
+        </ScrollReveal>
       </YStack>
+      <ScrollReveal index={2}>
       <YStack gap={space.xs}>
         {storeUrl ? (
           <Button
@@ -223,6 +261,8 @@ function NotInstalled({ onRetry, onLater }: { onRetry: () => void; onLater: () =
         <Button label={t('retry')} variant="secondary" onPress={onRetry} />
         <Button label={t('later')} variant="ghost" onPress={onLater} />
       </YStack>
+      </ScrollReveal>
+      </ScrollRevealProvider>
     </YStack>
   );
 }

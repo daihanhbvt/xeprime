@@ -30,7 +30,7 @@ import {
   MatchBankTransactionDto,
 } from './dto/bank-transaction.dto';
 
-/** Bao nhiêu hoá đơn đang chờ được gợi ý ở màn chi tiết — đủ để mắt quét, không thành một danh sách thứ hai. */
+/** Bao nhiêu hoá đơn đang chờ được gợi ý ở màn chi tiết - đủ để mắt quét, không thành một danh sách thứ hai. */
 const SUGGESTION_LIMIT = 12;
 
 const SELECT = {
@@ -53,12 +53,12 @@ const SELECT = {
 } satisfies Prisma.BankTransactionSelect;
 
 /**
- * Hàng đợi đối soát của admin nền tảng — mặt ĐỌC và KHỚP TAY của `bank_transactions`.
+ * Hàng đợi đối soát của admin nền tảng - mặt ĐỌC và KHỚP TAY của `bank_transactions`.
  *
  * Tách khỏi `SepayService` (mặt ghi từ webhook) vì hai bề mặt khác nhau hoàn toàn: một bên là
  * endpoint công khai không session, một bên là màn quản trị có quyền và audit. Nhưng **đường
  * tiền thì chỉ có một**: khớp tay cũng gọi đúng `BillingService.applyBankPaymentWithinTx` mà
- * webhook gọi — nếu không, hai đường sẽ trôi khỏi nhau và một trong hai sẽ cộng tiền sai cách.
+ * webhook gọi - nếu không, hai đường sẽ trôi khỏi nhau và một trong hai sẽ cộng tiền sai cách.
  *
  * ADR 0022 điều 4: hệ thống KHÔNG BAO GIỜ tự khớp theo số tiền. `suggestions` chỉ sắp xếp cho
  * mắt người; mọi dòng `manual` đều là một con người chịu trách nhiệm, nên `note` bắt buộc và
@@ -76,7 +76,7 @@ export class BankTransactionsService {
     query: BankTransactionListQueryDto,
   ): Promise<{ data: BankTransactionDto[]; meta: PaginationMeta }> {
     const paging = resolvePaging(query, BANK_TX_DEFAULT_LIMIT, BANK_TX_MAX_LIMIT);
-    // Hai bộ lọc cùng cần `OR` (tìm kiếm, khoảng ngày) — gom vào `AND` để không cái nào ghi đè cái nào.
+    // Hai bộ lọc cùng cần `OR` (tìm kiếm, khoảng ngày) - gom vào `AND` để không cái nào ghi đè cái nào.
     const and: Prisma.BankTransactionWhereInput[] = [];
     if (query.q) {
       and.push({
@@ -89,7 +89,7 @@ export class BankTransactionsService {
     const range = vnDayRange(query.from, query.to);
     if (range) {
       // Thời điểm NGÂN HÀNG là thứ người trực đối chiếu với sao kê; dòng thiếu nó (payload cũ) lấy
-      // lúc webhook tới — lệch vài giây, không lệch ngày.
+      // lúc webhook tới - lệch vài giây, không lệch ngày.
       and.push({ OR: [{ bankTime: range }, { bankTime: null, createdAt: range }] });
     }
     const where: Prisma.BankTransactionWhereInput = {
@@ -146,9 +146,9 @@ export class BankTransactionsService {
    * Khớp TAY một giao dịch vào một hoá đơn gói.
    *
    * Hai chốt chặn, cả hai đều là `updateMany` có điều kiện thay vì đọc-rồi-ghi:
-   *  1. giao dịch phải còn `unmatched` — hai admin cùng bấm thì đúng một người thắng;
+   *  1. giao dịch phải còn `unmatched` - hai admin cùng bấm thì đúng một người thắng;
    *  2. hiệu ứng tiền đi qua `applyBankPaymentWithinTx`, TRONG cùng transaction với cột
-   *     `matched_*` (ADR 0022 điều 2 — hai sổ không được lệch nhau nửa chừng).
+   *     `matched_*` (ADR 0022 điều 2 - hai sổ không được lệch nhau nửa chừng).
    */
   async match(
     id: string,
@@ -232,7 +232,7 @@ export class BankTransactionsService {
   }
 
   /**
-   * Bỏ qua một giao dịch — tiền vào không thuộc luồng nào của nền tảng (chuyển nhầm, hoàn tiền
+   * Bỏ qua một giao dịch - tiền vào không thuộc luồng nào của nền tảng (chuyển nhầm, hoàn tiền
    * về, tiền của việc khác).
    *
    * KHÔNG xoá dòng: sổ ngân hàng là bằng chứng, và một khoản "đã xem xét rồi bỏ qua" khác hẳn
@@ -246,7 +246,7 @@ export class BankTransactionsService {
     await this.loadPending(id);
 
     const now = new Date();
-    // Chỉ ghi "đã trả lại" khi có MÃ giao dịch — CHECK ở DB đòi hai cột đi cặp.
+    // Chỉ ghi "đã trả lại" khi có MÃ giao dịch - CHECK ở DB đòi hai cột đi cặp.
     const refundReference = dto.refundReference?.trim() || null;
 
     await this.prisma.$transaction(async (db) => {
@@ -339,7 +339,7 @@ export class BankTransactionsService {
 
     /*
      * Hoá đơn thuộc PHIẾU GỘP (ADR 0083) nhận tiền qua phiếu, nên gợi ý nói bằng con số của PHIẾU
-     * — mã XPC, tổng và phần còn thiếu của cả cụm — và chỉ MỘT dòng cho mỗi phiếu. `invoiceId` vẫn
+     * - mã XPC, tổng và phần còn thiếu của cả cụm - và chỉ MỘT dòng cho mỗi phiếu. `invoiceId` vẫn
      * là một hoá đơn con: khớp tay vào nó tự chuyển sang phiếu (`applyBankPaymentWithinTx`).
      */
     const seenCheckouts = new Set<string>();
@@ -374,7 +374,7 @@ export class BankTransactionsService {
 
   /**
    * Bù hai trường mà bảng `bank_transactions` cố ý không có khoá ngoại tới (ADR 0022 điều 2):
-   * tên admin đã thao tác, và mã hoá đơn đã khớp. Tra theo LÔ — một vòng lặp `findUnique` cho
+   * tên admin đã thao tác, và mã hoá đơn đã khớp. Tra theo LÔ - một vòng lặp `findUnique` cho
    * 20 dòng là 40 lượt đi database cho một màn danh sách.
    */
   private async decorate(
@@ -413,7 +413,7 @@ export class BankTransactionsService {
         : Promise.resolve([]),
     ]);
     const actorName = new Map(actors.map((a) => [a.id, a.displayName]));
-    // Mã hoá đơn HOẶC mã phiếu gộp — id là ULID nên hai tập không đụng nhau.
+    // Mã hoá đơn HOẶC mã phiếu gộp - id là ULID nên hai tập không đụng nhau.
     const invoiceCode = new Map([...invoices, ...checkouts].map((i) => [i.id, i.code]));
 
     return rows.map((r) => ({
@@ -450,7 +450,7 @@ function vnDayRange(from?: string, to?: string): Prisma.DateTimeFilter | null {
   };
 }
 
-/** Lọc theo LUỒNG của mã rút được — tiền tố quyết định, cùng quy tắc với `referenceCodeTarget`. */
+/** Lọc theo LUỒNG của mã rút được - tiền tố quyết định, cùng quy tắc với `referenceCodeTarget`. */
 function codeFilterWhere(code: BankTxCodeFilter | undefined): Prisma.BankTransactionWhereInput {
   switch (code) {
     case BANK_TX_CODE_FILTER.NO_CODE:
@@ -471,7 +471,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/** Một trường chữ của payload nhà cung cấp — dữ liệu NGOÀI, nên kiểm từng kiểu, rỗng thì `null`. */
+/** Một trường chữ của payload nhà cung cấp - dữ liệu NGOÀI, nên kiểm từng kiểu, rỗng thì `null`. */
 function rawText(raw: Record<string, unknown>, key: string): string | null {
   const value = raw[key];
   if (typeof value === 'string') return value.trim() || null;

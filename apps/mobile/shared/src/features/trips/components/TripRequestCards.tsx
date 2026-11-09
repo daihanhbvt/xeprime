@@ -1,3 +1,4 @@
+import { KenBurns } from '@/components/motion/KenBurns';
 import type { ComponentProps, ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -117,11 +118,17 @@ export function CardTitle({
   children,
   icon,
   hint,
+  hintLabel,
 }: {
   children: string;
   icon?: IoniconName;
   /** Ghi chú phụ gói vào icon ⓘ cạnh tiêu đề thay vì một dòng chữ riêng — tiết kiệm chỗ dọc. */
   hint?: string;
+  /**
+   * TÊN của nút ⓘ cho trình đọc màn hình (vd "Thông tin này dùng để làm gì"). Thiếu thì dùng tiêu
+   * đề thẻ - KHÔNG dùng chính nội dung hint, vì trình đọc sẽ đọc câu đó hai lần.
+   */
+  hintLabel?: string;
 }) {
   const colors = useColors();
   const text = (
@@ -138,7 +145,7 @@ export function CardTitle({
   const title = hint ? (
     <XStack f={icon ? 1 : undefined} ai="center" gap={space.xs}>
       {text}
-      <InfoHint content={hint} label={hint} />
+      <InfoHint content={hint} label={hintLabel ?? children} />
     </XStack>
   ) : icon ? (
     <YStack f={1}>{text}</YStack>
@@ -373,7 +380,7 @@ export function TripRequestProgress({
               ai="flex-start"
               gap={space.sm}
               accessible
-              accessibilityLabel={`${t(`steps.${step}.title`)} — ${t(`state.${state}`)}`}
+              accessibilityLabel={`${t(`steps.${step}.title`)} - ${t(`state.${state}`)}`}
               accessibilityState={{ selected: state === 'current' }}
             >
               <YStack
@@ -538,7 +545,7 @@ export function TripRequestTripCard({
         {
           key: 'package',
           label: t('reviewPage.trip.package'),
-          value: fmt.packageLabel(packageMonths) ?? '—',
+          value: fmt.packageLabel(packageMonths) ?? '-',
         },
         { key: 'wish', label: t('reviewPage.trip.pickupWish'), value: fmt.pickupWish(trip) },
         ...(expectedReturn
@@ -557,12 +564,12 @@ export function TripRequestTripCard({
         {
           key: 'pickup',
           label: t('reviewPage.trip.pickupAt'),
-          value: trip.pickupAt ? fmt.dateTime(trip.pickupAt) : '—',
+          value: trip.pickupAt ? fmt.rentalAt(trip.pickupAt) : '-',
         },
         {
           key: 'return',
           label: t('reviewPage.trip.returnAt'),
-          value: trip.returnAt ? fmt.dateTime(trip.returnAt) : '—',
+          value: trip.returnAt ? fmt.rentalAt(trip.returnAt) : '-',
         },
       ];
 
@@ -576,7 +583,7 @@ export function TripRequestTripCard({
             key: 'driverPickup',
             icon: 'location-outline',
             label: t('reviewPage.trip.driverPickup'),
-            value: trip.pickupAddress || '—',
+            value: trip.pickupAddress || '-',
           },
           ...(trip.routeType !== ROUTE_TYPE.IN_CITY && trip.destination
             ? [
@@ -595,7 +602,7 @@ export function TripRequestTripCard({
               key: 'delivery',
               icon: 'location-outline',
               label: t('reviewPage.trip.delivery'),
-              value: trip.deliveryAddress || '—',
+              value: trip.deliveryAddress || '-',
             },
           ]
         : [
@@ -629,14 +636,19 @@ export function TripRequestTripCard({
 
         <YStack>
           {image ? (
-            <Image
-              source={{ uri: image }}
-              style={VEHICLE_PHOTO_STYLE}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-              transition={150}
-              accessibilityLabel={name}
-            />
+            // Ảnh xe Ken Burns nhẹ (khung bo góc clip phần phóng).
+            <YStack style={VEHICLE_PHOTO_STYLE} ov="hidden">
+              <KenBurns to={1.05} style={{ width: '100%', height: '100%' }}>
+                <Image
+                  source={{ uri: image }}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  transition={150}
+                  accessibilityLabel={name}
+                />
+              </KenBurns>
+            </YStack>
           ) : (
             <YStack style={VEHICLE_PHOTO_STYLE} bg={colors.surfaceMuted} />
           )}
@@ -718,7 +730,7 @@ export function TripRequestTripCard({
                     col={ownerVerified ? colors.shopName : colors.textMuted}
                     fos={fontSize.body}
                     fow={fontWeight.medium}
-                    numberOfLines={1}
+                    numberOfLines={2}
                   >
                     {trip.shop.name}
                   </Text>
@@ -768,12 +780,17 @@ export function TripRequestRenterCard({ trip }: { trip: CustomerTripDetail }) {
   return (
     <Card>
       <YStack gap={space.sm}>
-        <CardTitle icon="person-outline">{t('title')}</CardTitle>
-        <CardLead>{t('readonlyDescription')}</CardLead>
+        <CardTitle
+          icon="person-outline"
+          hint={t('readonlyDescription')}
+          hintLabel={t('infoLabel')}
+        >
+          {t('title')}
+        </CardTitle>
         {contact ? (
           <>
             <DataRow label={t('name')} value={contact.name} />
-            <DataRow label={t('phone')} value={contact.phone || '—'} />
+            <DataRow label={t('phone')} value={contact.phone || '-'} />
             {/* Cùng `usePhoneNote` web: số TRÙNG số đã xác minh ⇒ "Đã xác thực"; KHÁC ⇒ nhắc. */}
             {me && contact.phone ? (
               isSameVnPhone(contact.phone, me.phone) ? (
@@ -799,7 +816,7 @@ export function TripRequestRenterCard({ trip }: { trip: CustomerTripDetail }) {
             {tView('noteLabel')}
           </Text>
           <Text col={colors.text} fos={fontSize.bodySm}>
-            {trip.customerNote?.trim() || '—'}
+            {trip.customerNote?.trim() || '-'}
           </Text>
         </YStack>
       </YStack>

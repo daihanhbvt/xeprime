@@ -2,15 +2,15 @@
   "page": {
     "title": "Banner trang chủ",
     "create": "Tạo banner",
-    "hint": "Có thể tạo không giới hạn; trang chủ hiển thị đầy đủ theo thứ tự từ trên xuống, nhưng tối đa {max} banner được phép trùng thời gian hiển thị. Mỗi cỡ màn một ảnh đúng tỉ lệ: PC {desktop} · tablet {tablet} · mobile {mobile} (hoặc @2x) — sai tỉ lệ sẽ bị chặn lúc tải lên.",
-    "composition": "Banner tự mang thông điệp — trang chủ không đặt chữ nào đè lên ảnh. Riêng ảnh PC ({desktop}) bị thẻ tìm kiếm đè lên khoảng 1/3 phía dưới, nên đặt chữ và chủ thể ở phần trên ảnh.",
+    "hint": "Có thể tạo không giới hạn; trang chủ hiển thị đầy đủ theo thứ tự từ trên xuống, nhưng tối đa {max} banner được phép trùng thời gian hiển thị. Mỗi cỡ màn một ảnh đúng tỉ lệ: PC {desktop} · tablet {tablet} · mobile {mobile} (hoặc @2x) - sai tỉ lệ sẽ bị chặn lúc tải lên.",
+    "composition": "Banner tự mang thông điệp - trang chủ không đặt chữ nào đè lên ảnh. Riêng ảnh PC ({desktop}) bị thẻ tìm kiếm đè lên khoảng 1/3 phía dưới, nên đặt chữ và chủ thể ở phần trên ảnh.",
     "loadError": "Không tải được danh sách banner",
-    "empty": "Chưa có banner đầu trang nào — trang chủ đang dùng dải mặc định",
+    "empty": "Chưa có banner đầu trang nào - trang chủ đang dùng dải mặc định",
     "promoHint": "Banner khuyến mãi nằm ở trang chủ, ngay dưới ô tìm kiếm (mobile: dưới \"Xe tiêu biểu\"). Có thể tạo không giới hạn, nhưng tối đa {max} banner được phép trùng thời gian hiển thị. Khổ khuyến nghị theo thiết kế: máy tính {desktop} (bắt buộc) · tablet {tablet} · mobile {mobile} (tuỳ chọn). Ảnh khác tỉ lệ vẫn tải lên được nhưng sẽ bị cắt cho vừa khung.",
-    "promoComposition": "Chữ, giá và hình nằm sẵn trong ảnh — trang chủ không đặt gì đè lên. Máy tính và tablet hiện hai banner một hàng; mobile trượt từng banner. Không có banner khuyến mãi nào đang hiển thị thì khối này ẩn hẳn khỏi trang chủ.",
-    "emptyPromo": "Chưa có banner khuyến mãi nào — khối khuyến mãi đang ẩn trên trang chủ",
-    "partnerHint": "Ảnh nền của dải \"Đăng ký trở thành đối tác độc quyền\" trên trang chủ. Trang chỉ dùng MỘT ảnh: banner đầu tiên đang hiển thị theo thứ tự; chưa có thì dùng ảnh mặc định. Khổ khuyến nghị: máy tính {desktop} · tablet {tablet} · mobile {mobile}. Ảnh không cần chứa chữ — chữ và nút do trang tự dựng.",
-    "emptyPartner": "Chưa có ảnh nền dải đối tác nào — trang chủ đang dùng ảnh mặc định của thiết kế"
+    "promoComposition": "Chữ, giá và hình nằm sẵn trong ảnh - trang chủ không đặt gì đè lên. Máy tính và tablet hiện hai banner một hàng; mobile trượt từng banner. Không có banner khuyến mãi nào đang hiển thị thì khối này ẩn hẳn khỏi trang chủ.",
+    "emptyPromo": "Chưa có banner khuyến mãi nào - khối khuyến mãi đang ẩn trên trang chủ",
+    "partnerHint": "Ảnh nền của dải \"Đăng ký trở thành đối tác độc quyền\" trên trang chủ. Trang chỉ dùng MỘT ảnh: banner đầu tiên đang hiển thị theo thứ tự; chưa có thì dùng ảnh mặc định. Khổ khuyến nghị: máy tính {desktop} · tablet {tablet} · mobile {mobile}. Ảnh không cần chứa chữ - chữ và nút do trang tự dựng.",
+    "emptyPartner": "Chưa có ảnh nền dải đối tác nào - trang chủ đang dùng ảnh mặc định của thiết kế"
   },
   "columns": {
     "preview": "Ảnh",
@@ -107,7 +107,7 @@
     "titleCreatePromo": "Tạo banner khuyến mãi",
     "mediaDescriptionPromo": "Kích thước khuyến nghị theo thiết kế: máy tính 584×220, tablet 480×180, mobile 340×140. Ảnh khác tỉ lệ vẫn tải lên được nhưng sẽ bị cắt cho vừa khung. Tablet và mobile bỏ trống sẽ dùng ảnh máy tính.",
     "titleCreatePartner": "Thêm ảnh nền dải đối tác",
-    "introPartner": "Ảnh nền của dải \"Đăng ký trở thành đối tác độc quyền\" trên trang chủ. Chữ, nút và lớp phủ tối do trang tự dựng đè lên — ảnh không nên chứa chữ.",
+    "introPartner": "Ảnh nền của dải \"Đăng ký trở thành đối tác độc quyền\" trên trang chủ. Chữ, nút và lớp phủ tối do trang tự dựng đè lên - ảnh không nên chứa chữ.",
     "mediaDescriptionPartner": "Kích thước khuyến nghị theo thiết kế: máy tính 1440×600, tablet 1024×448, mobile 390×448. Ảnh khác tỉ lệ vẫn tải lên được nhưng sẽ bị cắt cho vừa khung. Tablet và mobile bỏ trống sẽ dùng ảnh máy tính."
   },
   "media": {
@@ -118,13 +118,13 @@
     },
     "optional": "Tuỳ chọn",
     "sizeHelp": "{size} · Khuyên dùng {size2x}",
-    "desktopComposition": "Thẻ tìm kiếm trang chủ đè lên khoảng 1/3 phía dưới ảnh PC — đặt chữ và chủ thể ở phần trên.",
+    "desktopComposition": "Thẻ tìm kiếm trang chủ đè lên khoảng 1/3 phía dưới ảnh PC - đặt chữ và chủ thể ở phần trên.",
     "errors": {
-      "unreadable": "Không đọc được file ảnh — file có thể bị hỏng",
+      "unreadable": "Không đọc được file ảnh - file có thể bị hỏng",
       "ratio": "Ảnh {slot, select, desktop {PC} tablet {tablet} other {mobile}} phải theo tỉ lệ {size} (ảnh đang {actual}). Xuất đúng cỡ hoặc @2x ({size2x})."
     },
-    "promoComposition": "Chữ, giá và hình nằm sẵn trong ảnh — trang chủ không đặt gì đè lên.",
-    "partnerComposition": "Nửa trái ảnh bị phủ tối để đặt chữ — đặt chủ thể (xe) về nửa phải.",
+    "promoComposition": "Chữ, giá và hình nằm sẵn trong ảnh - trang chủ không đặt gì đè lên.",
+    "partnerComposition": "Nửa trái ảnh bị phủ tối để đặt chữ - đặt chủ thể (xe) về nửa phải.",
     "sizeRecommended": "Kích thước khuyến nghị: {size}"
   },
   "tabs": {

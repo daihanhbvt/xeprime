@@ -1,3 +1,7 @@
+import type { ReactNode } from 'react';
+import Animated from 'react-native-reanimated';
+import { useRevealPop } from '@/components/motion/reveal-effects';
+import { RevealText, ScrollReveal } from '@/components/motion/ScrollReveal';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
@@ -46,7 +50,10 @@ export function RentalSteps() {
       {/* Lưới 2 × 2 theo Figma mobile; hai ô một hàng cao bằng nhau (stretch của dòng wrap). */}
       <XStack flexWrap="wrap" jc="space-between" rowGap={space.xl}>
         {STEPS.map((step, index) => (
-          <YStack key={step.key} w="47%" gap={space.sm} ai="center">
+          // Mỗi bước tự hiện khi CHÍNH NÓ cuộn vào màn; trễ nhỏ theo cột.
+          <ScrollReveal key={step.key} index={index} style={STEP_CELL}>
+          <YStack gap={space.sm} ai="center">
+            <StepPop index={index % 2}>
             <YStack
               w="100%"
               aspectRatio={ART_RATIO}
@@ -71,6 +78,8 @@ export function RentalSteps() {
                 />
               ) : null}
             </YStack>
+            </StepPop>
+            <RevealText delay={180 + (index % 2) * 90}>
             <YStack gap={space.xs} ai="center">
               <Text col={dark ? colors.primary : colors.text} fos={fontSize.body} fow={fontWeight.semibold} ta="center">
                 {t(`items.${step.key}.title`)}
@@ -79,9 +88,19 @@ export function RentalSteps() {
                 {t(`items.${step.key}.desc`)}
               </Text>
             </YStack>
+            </RevealText>
           </YStack>
+          </ScrollReveal>
         ))}
       </XStack>
     </YStack>
   );
 }
+
+/** Hình minh hoạ bước (không bóng) pop-in lần lượt: scale 0.8→1 lò xo + opacity. */
+function StepPop({ index, children }: { index: number; children: ReactNode }) {
+  const style = useRevealPop(index * 140);
+  return <Animated.View style={[{ width: '100%' }, style]}>{children}</Animated.View>;
+}
+
+const STEP_CELL = { width: '47%' } as const;

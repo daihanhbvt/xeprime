@@ -133,7 +133,7 @@ export function CustomerBookingHistory({
         row.driver || row.serviceType === SERVICE_TYPE.WITH_DRIVER ? (
           <BookingDriverCell booking={row} />
         ) : (
-          <span className={styles.meta}>—</span>
+          <span className={styles.meta}>-</span>
         ),
     },
     {

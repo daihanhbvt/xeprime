@@ -156,7 +156,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('AuthModal — mở/đóng theo URL', () => {
+describe('AuthModal - mở/đóng theo URL', () => {
   it('không có ?auth= thì không hiện gì', () => {
     renderModal('');
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -198,7 +198,7 @@ describe('AuthModal — mở/đóng theo URL', () => {
   });
 });
 
-describe('AuthModal — đăng nhập chỉ bằng số điện thoại (ADR 0060)', () => {
+describe('AuthModal - đăng nhập chỉ bằng số điện thoại (ADR 0060)', () => {
   it('form có SĐT + mật khẩu + "Ghi nhớ tài khoản" + "Quên mật khẩu?", KHÔNG có ô email', async () => {
     renderModal('auth=login');
     await heading('Đăng nhập');
@@ -257,7 +257,7 @@ describe('AuthModal — đăng nhập chỉ bằng số điện thoại (ADR 006
     await waitFor(() => expect(nav.push).toHaveBeenCalledWith('/trips'));
   });
 
-  it('next ra ngoài domain bị bỏ qua — không open redirect', async () => {
+  it('next ra ngoài domain bị bỏ qua - không open redirect', async () => {
     renderModal('auth=login&next=https%3A%2F%2Fevil.example');
     await heading('Đăng nhập');
 
@@ -286,7 +286,7 @@ describe('AuthModal — đăng nhập chỉ bằng số điện thoại (ADR 006
   });
 });
 
-describe('AuthPanel — site quản trị (passwordOnly)', () => {
+describe('AuthPanel - site quản trị (passwordOnly)', () => {
   it('sai định danh/mật khẩu → câu nhắc cả email, vì realm platform nhận email', async () => {
     api.login.mockRejectedValue(apiError(API_ERROR_CODE.INVALID_CREDENTIALS, 401));
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -308,7 +308,7 @@ describe('AuthPanel — site quản trị (passwordOnly)', () => {
   });
 });
 
-describe('AuthModal — "Ghi nhớ tài khoản"', () => {
+describe('AuthModal - "Ghi nhớ tài khoản"', () => {
   it('tick + đăng nhập thành công ⇒ lần mở sau điền sẵn SĐT (không bao giờ mật khẩu)', async () => {
     renderModal('auth=login');
     await heading('Đăng nhập');
@@ -346,7 +346,7 @@ describe('AuthModal — "Ghi nhớ tài khoản"', () => {
   });
 });
 
-describe('AuthModal — đăng ký có xác minh SĐT bằng OTP', () => {
+describe('AuthModal - đăng ký có xác minh SĐT bằng OTP', () => {
   it('form đủ bốn ô + Google/Facebook', async () => {
     renderModal('auth=register');
     await heading('Đăng ký');
@@ -358,7 +358,7 @@ describe('AuthModal — đăng ký có xác minh SĐT bằng OTP', () => {
     expect(screen.getByRole('button', { name: 'Tiếp tục với Facebook' })).toBeTruthy();
   });
 
-  it('bấm "Đăng ký" GỬI MÃ trước rồi mở popup xác minh — chưa tạo tài khoản nào', async () => {
+  it('bấm "Đăng ký" GỬI MÃ trước rồi mở popup xác minh - chưa tạo tài khoản nào', async () => {
     renderModal('auth=register');
     await heading('Đăng ký');
 
@@ -514,7 +514,7 @@ describe('AuthModal — đăng ký có xác minh SĐT bằng OTP', () => {
   });
 });
 
-describe('AuthModal — quên mật khẩu ba bước', () => {
+describe('AuthModal - quên mật khẩu ba bước', () => {
   async function toCodeStep() {
     renderModal('auth=login');
     await heading('Đăng nhập');
@@ -651,7 +651,7 @@ describe('AuthModal — quên mật khẩu ba bước', () => {
   });
 });
 
-describe('AuthModal — mở giữa luồng thuê xe', () => {
+describe('AuthModal - mở giữa luồng thuê xe', () => {
   /** Nút giả lập hộp yêu cầu thuê: mở hộp đăng nhập với ngữ cảnh `booking`. */
   function OpenFromBooking({ mode }: { mode: (typeof AUTH_MODE)[keyof typeof AUTH_MODE] }) {
     const auth = useAuthModal();
@@ -667,7 +667,7 @@ describe('AuthModal — mở giữa luồng thuê xe', () => {
     fireEvent.click(screen.getByRole('button', { name: 'mở từ hộp thuê' }));
     expect(
       await screen.findByText(
-        'Đăng nhập hoặc tạo tài khoản để gửi yêu cầu thuê — thông tin chuyến bạn vừa chọn vẫn được giữ.',
+        'Đăng nhập hoặc tạo tài khoản để gửi yêu cầu thuê - thông tin chuyến bạn vừa chọn vẫn được giữ.',
       ),
     ).toBeTruthy();
   });
@@ -683,7 +683,7 @@ describe('AuthModal — mở giữa luồng thuê xe', () => {
   });
 });
 
-describe('AuthModal — vỏ overlay & ranh giới', () => {
+describe('AuthModal - vỏ overlay & ranh giới', () => {
   it('dialog có tên khả truy cập theo chế độ đang mở', async () => {
     renderModal('auth=login');
     expect(await screen.findByRole('dialog', { name: 'Đăng nhập XePrime' })).toBeTruthy();
@@ -725,7 +725,7 @@ describe('AuthModal — vỏ overlay & ranh giới', () => {
     expect(nav.push).not.toHaveBeenCalledWith('/manage');
   });
 
-  it('theo ngôn ngữ đang đọc — giao diện tiếng Anh báo lỗi bằng tiếng Anh', async () => {
+  it('theo ngôn ngữ đang đọc - giao diện tiếng Anh báo lỗi bằng tiếng Anh', async () => {
     nav.search = 'auth=login';
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     renderWithIntl(

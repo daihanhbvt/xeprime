@@ -46,7 +46,7 @@ export class CatalogItemDto {
     nullable: true,
     example: 'SUV',
     description:
-      'Nhãn tiếng Anh (ADR 0012). NULL = chưa dịch hoặc là tên riêng (hãng xe) — client dùng `label`.',
+      'Nhãn tiếng Anh (ADR 0012). NULL = chưa dịch hoặc là tên riêng (hãng xe) - client dùng `label`.',
   })
   labelEn!: string | null;
 
@@ -137,7 +137,7 @@ export class CreateCatalogItemDto {
 
   @ApiProperty({
     example: 'coupe',
-    description: 'Slug lưu xuống xe và đi vào URL bộ lọc — không đổi được sau khi tạo',
+    description: 'Slug lưu xuống xe và đi vào URL bộ lọc - không đổi được sau khi tạo',
   })
   @IsString()
   @Matches(CATALOG_KEY_PATTERN, {
@@ -155,7 +155,7 @@ export class CreateCatalogItemDto {
     type: String,
     nullable: true,
     example: 'Coupe',
-    description: 'Nhãn tiếng Anh — bỏ trống thì giao diện tiếng Anh dùng `label`',
+    description: 'Nhãn tiếng Anh - bỏ trống thì giao diện tiếng Anh dùng `label`',
   })
   @IsOptional()
   @IsString()
@@ -181,7 +181,7 @@ export class CreateCatalogItemDto {
   @MaxLength(2000)
   iconUrl?: string | null;
 
-  @ApiPropertyOptional({ description: 'Chỉ kiểu dáng — bật thì bắt buộc có showcaseImageUrl' })
+  @ApiPropertyOptional({ description: 'Chỉ kiểu dáng - bật thì bắt buộc có showcaseImageUrl' })
   @IsOptional()
   @IsBoolean()
   showOnHome?: boolean;
@@ -234,7 +234,7 @@ export class UpdateCatalogItemDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Nhãn tiếng Anh — chuỗi rỗng/null = bỏ bản dịch, dùng lại `label`',
+    description: 'Nhãn tiếng Anh - chuỗi rỗng/null = bỏ bản dịch, dùng lại `label`',
   })
   @IsOptional()
   @IsString()
@@ -260,7 +260,7 @@ export class UpdateCatalogItemDto {
   @MaxLength(2000)
   iconUrl?: string | null;
 
-  @ApiPropertyOptional({ description: 'Chỉ kiểu dáng — bật thì bắt buộc có showcaseImageUrl' })
+  @ApiPropertyOptional({ description: 'Chỉ kiểu dáng - bật thì bắt buộc có showcaseImageUrl' })
   @IsOptional()
   @IsBoolean()
   showOnHome?: boolean;
@@ -388,7 +388,7 @@ export class CatalogModelAdminDto extends CatalogModelDto {
 }
 
 export class CatalogModelQueryDto {
-  @ApiProperty({ enum: VEHICLE_TYPE_VALUES, description: 'Bắt buộc — mẫu xe luôn thuộc một loại' })
+  @ApiProperty({ enum: VEHICLE_TYPE_VALUES, description: 'Bắt buộc - mẫu xe luôn thuộc một loại' })
   @IsIn(VEHICLE_TYPE_VALUES)
   vehicleType!: string;
 
@@ -398,7 +398,7 @@ export class CatalogModelQueryDto {
   @MaxLength(80)
   brandKey?: string;
 
-  @ApiPropertyOptional({ description: 'Tìm theo tên, bỏ dấu — "civic" khớp "CIVIC"' })
+  @ApiPropertyOptional({ description: 'Tìm theo tên, bỏ dấu - "civic" khớp "CIVIC"' })
   @IsOptional()
   @IsString()
   @MaxLength(80)
@@ -406,7 +406,7 @@ export class CatalogModelQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Id mẫu đang gắn với xe đang sửa. Mẫu đó LUÔN nằm trong kết quả kể cả khi đã tắt — ' +
+      'Id mẫu đang gắn với xe đang sửa. Mẫu đó LUÔN nằm trong kết quả kể cả khi đã tắt - ' +
       'bằng không form sẽ hiện ô rỗng cho một chiếc xe vẫn đang có mẫu.',
   })
   @IsOptional()
@@ -494,7 +494,7 @@ export class CreateCatalogModelDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Trang sản phẩm chính hãng — nguồn của dữ liệu này',
+    description: 'Trang sản phẩm chính hãng - nguồn của dữ liệu này',
   })
   @IsOptional()
   @IsString()

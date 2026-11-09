@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Seller profile",
-    "subtitle": "Your shop's identity and payout account — required before receiving real customer payments.",
+    "subtitle": "Your shop's identity and payout account - required before receiving real customer payments.",
     "loadError": "Could not load the profile.",
     "noPermissionTitle": "Access denied",
     "noPermission": "You need the permission below to view the shop's seller profile.",
@@ -10,7 +10,7 @@
     "rejected": "Profile rejected",
     "pendingReview": "Awaiting platform verification.",
     "verified": "Profile verified.",
-    "readOnly": "Profile is pending verification — cannot be edited right now."
+    "readOnly": "Profile is pending verification - cannot be edited right now."
   },
   "form": {
     "entityType": "Entity type",

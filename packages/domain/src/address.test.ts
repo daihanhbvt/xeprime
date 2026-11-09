@@ -45,20 +45,20 @@ describe('formatAddress', () => {
     expect(formatAddress({ addressLine: '  ', provinceName: 'Hà Nội' })).toBe('Hà Nội');
   });
 
-  it('không có mảnh nào thì trả null — "chưa có địa chỉ" khác "địa chỉ rỗng"', () => {
+  it('không có mảnh nào thì trả null - "chưa có địa chỉ" khác "địa chỉ rỗng"', () => {
     expect(formatAddress({})).toBeNull();
     expect(formatAddress({ addressLine: '', wardName: null, provinceName: undefined })).toBeNull();
   });
 });
 
 describe('addressGeocodeQuery', () => {
-  it('luôn kèm "Việt Nam" — tên xã/tỉnh là chuỗi toàn cầu với nhà cung cấp bản đồ', () => {
+  it('luôn kèm "Việt Nam" - tên xã/tỉnh là chuỗi toàn cầu với nhà cung cấp bản đồ', () => {
     expect(addressGeocodeQuery({ wardName: 'Phường Tân Hội', provinceName: 'Hà Nội' })).toBe(
       'Phường Tân Hội, Hà Nội, Việt Nam',
     );
   });
 
-  it('không có mảnh nào thì null — không hỏi bản đồ về mỗi chữ "Việt Nam"', () => {
+  it('không có mảnh nào thì null - không hỏi bản đồ về mỗi chữ "Việt Nam"', () => {
     expect(addressGeocodeQuery({})).toBeNull();
   });
 });
@@ -78,11 +78,11 @@ describe('guessAddressLine', () => {
     );
   });
 
-  it('chuỗi toàn địa danh thì không còn gì để giữ — trả rỗng, không đoán bừa', () => {
+  it('chuỗi toàn địa danh thì không còn gì để giữ - trả rỗng, không đoán bừa', () => {
     expect(guessAddressLine('Phường Bến Nghé, Quận 1, TP.HCM')).toBe('');
   });
 
-  it('tên quận/huyện CŨ viết trần thì giữ lại — thà thừa một đoạn còn hơn cắt nhầm số nhà', () => {
+  it('tên quận/huyện CŨ viết trần thì giữ lại - thà thừa một đoạn còn hơn cắt nhầm số nhà', () => {
     // "Cầu Giấy" không còn nằm trong danh mục nào, nên không có cách nào nhận ra nó là địa danh.
     // Người dùng đọc gợi ý này rồi xoá; cắt nhầm thì họ phải gõ lại từ đầu.
     expect(guessAddressLine('88 Trần Thái Tông, Cầu Giấy, Hà Nội')).toBe('88 Trần Thái Tông, Cầu Giấy');

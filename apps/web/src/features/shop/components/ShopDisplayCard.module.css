@@ -1,4 +1,4 @@
-/* Cột phải "Thông tin hiển thị" — design `23999:111471` (thẻ 400 · cặp nút cách 20). */
+/* Cột phải "Thông tin hiển thị" - design `23999:111471` (thẻ 400 · cặp nút cách 20). */
 .column {
   display: flex;
   min-width: 0;
@@ -30,7 +30,7 @@
   outline-offset: 2px;
 }
 
-/* Vệt vàng góc trên — đường viền "Gradient/Special" của design, vẽ bằng gradient thay vì ảnh mặt nạ. */
+/* Vệt vàng góc trên - đường viền "Gradient/Special" của design, vẽ bằng gradient thay vì ảnh mặt nạ. */
 .glow {
   position: absolute;
   inset: 0 0 auto;
@@ -147,7 +147,7 @@
   line-height: var(--xp-line-height-body-sm);
 }
 
-/* Nút gỡ ảnh — góc trên phải của ảnh, chỉ khi có ảnh và sửa được. */
+/* Nút gỡ ảnh - góc trên phải của ảnh, chỉ khi có ảnh và sửa được. */
 .remove {
   position: absolute;
   top: 6px;

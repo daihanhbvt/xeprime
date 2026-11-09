@@ -26,8 +26,8 @@ import { InfoCard, InfoRow, InfoRows } from '@/components/layout/InfoCard';
 import cardStyles from '@/components/layout/InfoCard.module.css';
 
 /**
- * Thẻ "Thông tin khai thuế" — design `23999:111336`: loại hình · tên hộ KD/DN · MST (CCCD với cá nhân)
- * + ghi chú về cách khấu trừ. Sửa trong hộp thoại `23999:112100`, lưu vào hồ sơ NGƯỜI BÁN — nguồn
+ * Thẻ "Thông tin khai thuế" - design `23999:111336`: loại hình · tên hộ KD/DN · MST (CCCD với cá nhân)
+ * + ghi chú về cách khấu trừ. Sửa trong hộp thoại `23999:112100`, lưu vào hồ sơ NGƯỜI BÁN - nguồn
  * duy nhất của mã số thuế (cùng form với "Hồ sơ chủ xe": `useSellerTaxForm`).
  *
  * Bút chì chỉ có khi sửa được (`seller_profile.manage` + hồ sơ không bị khoá duyệt). Trạng thái

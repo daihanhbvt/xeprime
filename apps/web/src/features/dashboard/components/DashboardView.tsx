@@ -121,7 +121,7 @@ export function DashboardView() {
   const fleetCards = has(PERMISSION.VEHICLE_VIEW) ? (
     <StatCard
       label={t('stats.available')}
-      value={fleet.data ? `${fmt.count(fleet.data.available)}/${fmt.count(fleet.data.total)}` : '—'}
+      value={fleet.data ? `${fmt.count(fleet.data.available)}/${fmt.count(fleet.data.total)}` : '-'}
       hint={
         fleet.data
           ? t('kpi.fleetHint', {

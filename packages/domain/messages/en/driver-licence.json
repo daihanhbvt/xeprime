@@ -5,13 +5,13 @@
   },
   "intro": {
     "title": "Verify your driving licence",
-    "body": "Take a photo of the front of your driving licence. You only need to do this once — it usually takes less than a minute.",
-    "bookingBody": "Self-drive rentals need a valid driving licence. Take a photo of the front of your licence — you only do this once for all future trips."
+    "body": "Take a photo of the front of your driving licence. You only need to do this once - it usually takes less than a minute.",
+    "bookingBody": "Self-drive rentals need a valid driving licence. Take a photo of the front of your licence - you only do this once for all future trips."
   },
   "accepted": {
     "title": "Accepted documents",
     "vn": "Vietnamese licence: PET card, the 2025 card or a screenshot from the VNeID app",
-    "idp": "International Driving Permit (IDP): the page with your photo and particulars — bring your original licence at pickup",
+    "idp": "International Driving Permit (IDP): the page with your photo and particulars - bring your original licence at pickup",
     "foreign": "Foreign licence: bring the original (and an IDP under the 1968 Convention) at pickup so the owner can check it"
   },
   "picker": {
@@ -23,13 +23,13 @@
   },
   "prepare": {
     "unsupported": "This photo cannot be opened. Retake it or choose a JPG or PNG photo.",
-    "tooSmall": "The photo is too small to read — move closer.",
-    "tooLarge": "The photo is too large — choose another one."
+    "tooSmall": "The photo is too small to read - move closer.",
+    "tooLarge": "The photo is too large - choose another one."
   },
   "progress": {
     "uploading": "Uploading photo… {percent}%",
     "title": "Verifying your licence",
-    "hint": "This usually takes just a few seconds. Stay on this page — the result appears automatically.",
+    "hint": "This usually takes just a few seconds. Stay on this page - the result appears automatically.",
     "steps": {
       "upload": "Upload photo",
       "read": "Read the licence details",
@@ -66,8 +66,8 @@
     "note": "Message from XePrime: {note}"
   },
   "reasons": {
-    "not_a_licence": "We could not find a driving licence in this photo. Take a clear photo of the front of your licence — not an ID card, passport or other document.",
-    "back_side": "This is the back — photograph the front, the side with your photo and number.",
+    "not_a_licence": "We could not find a driving licence in this photo. Take a clear photo of the front of your licence - not an ID card, passport or other document.",
+    "back_side": "This is the back - photograph the front, the side with your photo and number.",
     "unreadable": "The photo is not clear enough to read the licence details.",
     "missing_fields": "We could not read the number, name, class and expiry date from the photo.",
     "expired": "The driving licence has expired.",
@@ -76,12 +76,12 @@
     "other": "XePrime cannot verify this licence."
   },
   "issues": {
-    "blurry": "The photo is blurry — hold the phone steady and tap the card on screen to focus.",
-    "glare": "There is glare — tilt the card slightly or turn off the flash.",
-    "cropped": "A corner is cut off — move back so all 4 corners show.",
-    "too_dark": "The photo is too dark — shoot somewhere with good light.",
-    "obstructed": "Part of the card is covered — move your fingers or the object away.",
-    "low_resolution": "The photo is too small — move closer."
+    "blurry": "The photo is blurry - hold the phone steady and tap the card on screen to focus.",
+    "glare": "There is glare - tilt the card slightly or turn off the flash.",
+    "cropped": "A corner is cut off - move back so all 4 corners show.",
+    "too_dark": "The photo is too dark - shoot somewhere with good light.",
+    "obstructed": "Part of the card is covered - move your fingers or the object away.",
+    "low_resolution": "The photo is too small - move closer."
   },
   "tripIssue": {
     "expired": "Your licence expires on {date}, before the trip ends. Please update to a valid licence.",

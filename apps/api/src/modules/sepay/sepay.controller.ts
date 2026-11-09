@@ -40,7 +40,7 @@ export class SepayController {
   @SkipThrottle()
   @HttpCode(200)
   @ApiExtension('x-xeprime-raw-response', true)
-  @ApiOperation({ summary: 'Webhook SePay — ghi giao dịch tiền vào và khớp hoá đơn gói' })
+  @ApiOperation({ summary: 'Webhook SePay - ghi giao dịch tiền vào và khớp hoá đơn gói' })
   @ApiOkResponse({ type: SepayWebhookAckDto })
   async webhook(
     @Headers('authorization') authorization: string | undefined,

@@ -258,9 +258,8 @@
 
 .featureLabel {
   font-weight: var(--xp-font-weight-regular);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /*

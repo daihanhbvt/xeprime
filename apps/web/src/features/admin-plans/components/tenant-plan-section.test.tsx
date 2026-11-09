@@ -79,7 +79,7 @@ beforeEach(() => {
 });
 afterEach(() => cleanup());
 
-describe('TenantPlanSection — chỉ đọc khi thiếu quyền quản lý gói', () => {
+describe('TenantPlanSection - chỉ đọc khi thiếu quyền quản lý gói', () => {
   it('không có quyền gói: thấy gói hiện hành, không nút nào, không gọi lịch sử', () => {
     permissions.granted = new Set([PERMISSION.PLATFORM_TENANT_VIEW]);
     renderSection();
@@ -122,7 +122,7 @@ function sub(over: Record<string, unknown>) {
 const DAY = 86_400_000;
 const at = (days: number) => new Date(Date.now() + days * DAY).toISOString();
 
-describe('TenantPlanSection — mỗi lúc chỉ MỘT kỳ hiệu lực', () => {
+describe('TenantPlanSection - mỗi lúc chỉ MỘT kỳ hiệu lực', () => {
   beforeEach(() => {
     permissions.granted = new Set([PERMISSION.PLATFORM_BILLING_MANAGE]);
     hooks.items = [
@@ -242,7 +242,7 @@ describe('TenantPlanSection — mỗi lúc chỉ MỘT kỳ hiệu lực', () =>
   });
 });
 
-describe('TenantPlanSection — kỳ theo PHẠM VI loại xe (ADR 0065)', () => {
+describe('TenantPlanSection - kỳ theo PHẠM VI loại xe (ADR 0065)', () => {
   const carPlan = {
     id: 'p-car',
     code: 'car_5',

@@ -9,12 +9,12 @@
     "title": "Become a host in 4 steps",
     "steps": {
       "create": "Create the profile: name, business type, province and contacts.",
-      "complete": "Fill in whatever is still missing — a complete profile can list vehicles right away.",
+      "complete": "Fill in whatever is still missing - a complete profile can list vehicles right away.",
       "prepare": "Add your first vehicle: photos, documents, rental price.",
       "publish": "Submit the vehicle for review. Once approved it goes live and starts taking bookings.",
       "createShop": "Create the shop: name, contact phone number and address.",
       "pay": "Pick a plan, vehicle slots and term, then transfer using the QR code.",
-      "logo": "Upload your shop logo — required before you can submit a vehicle.",
+      "logo": "Upload your shop logo - required before you can submit a vehicle.",
       "activate": "XePrime reviews and approves your shop account."
     },
     "packageTitle": "Open your shop in 4 steps"
@@ -34,9 +34,9 @@
       "province": {
         "label": "Province / city",
         "placeholder": "Select a province / city",
-        "help": "Where your first branch sits — customers will find your vehicles in this province.",
+        "help": "Where your first branch sits - customers will find your vehicles in this province.",
         "loading": "Loading provinces…",
-        "empty": "No province is open for registration yet — please contact support.",
+        "empty": "No province is open for registration yet - please contact support.",
         "loadError": "Could not load the province list"
       },
       "address": {
@@ -96,7 +96,7 @@
   "packagePage": {
     "title": "Register your shop",
     "subtitle": "Two steps: fill in your shop details, then pick a plan and pay. The shop management tools unlock as soon as XePrime receives the money.",
-    "subtitleApp": "Enter your shop details — XePrime will review and approve your account."
+    "subtitleApp": "Enter your shop details - XePrime will review and approve your account."
   },
   "steps": {
     "label": "Shop registration progress",
@@ -142,7 +142,7 @@
       "commission": "Rental area",
       "package": "Shop details"
     },
-    "accountReady": "Your partner account is ready — just complete the profile below.",
+    "accountReady": "Your partner account is ready - just complete the profile below.",
     "fields": {
       "displayName": {
         "label": "Full name",

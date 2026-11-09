@@ -28,7 +28,7 @@ export class PaginationMetaDto {
 
 /** Thao tác chỉ cần báo "đã xong", không có dữ liệu trả về. */
 export class OkResultDto {
-  @ApiProperty({ example: true, description: 'Luôn `true` — thao tác đã thực hiện xong.' })
+  @ApiProperty({ example: true, description: 'Luôn `true` - thao tác đã thực hiện xong.' })
   ok!: boolean;
 }
 

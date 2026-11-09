@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
+import { RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { ScrollReveal, ScrollRevealProvider, useAppScrollRevealList } from '@/components/motion/ScrollReveal';
 import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { useAppToast } from '@/components/feedback/use-app-toast';
@@ -109,14 +111,18 @@ export function DriverPartnersSection({
 
   const viewTrips = onViewTrips;
 
+  // Hàng trượt lên khi cuộn tới (chỉ transform, một lần) - app Partner giữ tĩnh.
+  const listReveal = useAppScrollRevealList();
   const renderLink = useCallback(
-    ({ item }: ListRenderItemInfo<MyDriverLink>) => (
-      <DriverLinkCard
-        link={item}
-        pending={pendingId === item.id ? pendingIntent : null}
-        onIntent={onIntent}
-        onViewTrips={viewTrips}
-      />
+    ({ item, index }: ListRenderItemInfo<MyDriverLink>) => (
+      <ScrollReveal index={index}>
+        <DriverLinkCard
+          link={item}
+          pending={pendingId === item.id ? pendingIntent : null}
+          onIntent={onIntent}
+          onViewTrips={viewTrips}
+        />
+      </ScrollReveal>
     ),
     [onIntent, pendingId, pendingIntent, viewTrips],
   );
@@ -167,7 +173,10 @@ export function DriverPartnersSection({
             {...(open ? { description: t('emptyOpenBody') } : {})}
           />
         ) : (
-          <FlatList
+          <ScrollRevealProvider value={listReveal.ctx}>
+          <Animated.FlatList
+            onScroll={listReveal.onScroll}
+            scrollEventThrottle={16}
             data={items}
             keyExtractor={linkKey}
             renderItem={renderLink}
@@ -183,6 +192,7 @@ export function DriverPartnersSection({
             ListFooterComponent={isFetchingNextPage ? ActionCardSkeleton : null}
             {...LIST_TUNING}
           />
+          </ScrollRevealProvider>
         )}
       </YStack>
 

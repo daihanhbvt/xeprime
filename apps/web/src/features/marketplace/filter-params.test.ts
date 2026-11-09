@@ -10,7 +10,7 @@ import {
   toListingQueryParams,
 } from './filter-params';
 
-describe('parseFilters — URL searchParams → MarketplaceFilters', () => {
+describe('parseFilters - URL searchParams → MarketplaceFilters', () => {
   it('đọc đủ kiểu: CSV → mảng, "1" → boolean, số → number, string giữ nguyên', () => {
     const params = new URLSearchParams(
       'vehicleType=car&serviceType=with_driver&bodyType=sedan,suv&brand=Toyota,Kia' +
@@ -35,7 +35,7 @@ describe('parseFilters — URL searchParams → MarketplaceFilters', () => {
     });
   });
 
-  it('từ khoá `q` sống trên URL (09/10) — chia sẻ được, F5 không mất', () => {
+  it('từ khoá `q` sống trên URL (09/10) - chia sẻ được, F5 không mất', () => {
     const params = new URLSearchParams('q=Nguy%E1%BB%85n%20VF8&provinceCode=48');
     expect(parseFilters(params)).toEqual({ q: 'Nguyễn VF8', provinceCode: '48' });
   });
@@ -58,7 +58,7 @@ describe('parseFilters — URL searchParams → MarketplaceFilters', () => {
     expect(parseFilters(params)).toEqual({ provinceCode: '48', serviceType: 'long_term', page: 3 });
   });
 
-  it('có mã thì BỎ tham số tên cũ — một URL không mang hai nguồn địa điểm mâu thuẫn', () => {
+  it('có mã thì BỎ tham số tên cũ - một URL không mang hai nguồn địa điểm mâu thuẫn', () => {
     const params = new URLSearchParams('provinceCode=48&province=TP.%20HCM');
     expect(parseFilters(params)).toEqual({ provinceCode: '48' });
   });
@@ -69,7 +69,7 @@ describe('parseFilters — URL searchParams → MarketplaceFilters', () => {
   });
 });
 
-describe('applyFilterPatch — patch → searchParams', () => {
+describe('applyFilterPatch - patch → searchParams', () => {
   it('mảng join CSV; mảng rỗng / false / undefined xoá param', () => {
     const params = new URLSearchParams('bodyType=sedan&hourly=1&serviceType=self_drive');
     applyFilterPatch(params, {
@@ -99,7 +99,7 @@ describe('applyFilterPatch — patch → searchParams', () => {
   });
 });
 
-describe('toListingQueryParams — filter → query API', () => {
+describe('toListingQueryParams - filter → query API', () => {
   it('mảng → CSV, boolean → "1", thiếu → null (api-client tự bỏ null)', () => {
     const q = toListingQueryParams({
       bodyType: ['sedan', 'suv'],
@@ -135,7 +135,7 @@ describe('toListingQueryParams — filter → query API', () => {
     expect(q.delivery).toBe('1');
   });
 
-  it('từ khoá gửi NGUYÊN VĂN — gấp chuỗi là việc của server', () => {
+  it('từ khoá gửi NGUYÊN VĂN - gấp chuỗi là việc của server', () => {
     expect(toListingQueryParams({ q: 'Nguyễn VF8' }).q).toBe('Nguyễn VF8');
     expect(toListingQueryParams({}).q).toBeNull();
   });
@@ -168,7 +168,7 @@ describe('toListingQueryParams — filter → query API', () => {
   });
 });
 
-describe('ngày giờ thuê trên URL — giờ Việt Nam tới phút', () => {
+describe('ngày giờ thuê trên URL - giờ Việt Nam tới phút', () => {
   it('ISO UTC → giờ VN gọn (14:00Z = 21:00 giờ VN)', () => {
     expect(formatDateTimeParam('2026-10-26T14:00:00.000Z')).toBe('2026-10-26T21:00');
     // Qua nửa đêm UTC vẫn đúng ngày lịch Việt Nam.

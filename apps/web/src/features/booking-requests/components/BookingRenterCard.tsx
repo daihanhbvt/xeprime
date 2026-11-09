@@ -9,6 +9,7 @@ import { useFormState, useWatch, type Control } from 'react-hook-form';
 import { isSameVnPhone } from '@xeprime/types';
 import { TextField } from '@/components/form/TextField';
 import type { CurrentUser } from '@/hooks/use-current-user';
+import { InfoHint } from '@/components/data-display/InfoHint';
 import { cx } from '@/lib/cx';
 import type { RequestFormValues } from '../schema';
 import styles from './BookingReviewStep.module.css';
@@ -67,10 +68,16 @@ export function BookingRenterCard({
 
   return (
     <section className={styles.card} aria-label={t('reviewPage.renter.title')}>
-      <Heading className={styles.cardTitle}>{t('reviewPage.renter.title')}</Heading>
-      <p className={styles.cardLead}>
-        {editable ? t('reviewPage.renter.description') : t('reviewPage.renter.readonlyDescription')}
-      </p>
+      <Heading className={cx(styles.cardTitle, styles.labelWithHint)}>
+        {t('reviewPage.renter.title')}
+        {editable ? null : (
+          <InfoHint
+            content={t('reviewPage.renter.readonlyDescription')}
+            label={t('reviewPage.renter.infoLabel')}
+          />
+        )}
+      </Heading>
+      {editable ? <p className={styles.cardLead}>{t('reviewPage.renter.description')}</p> : null}
       {renter ? (
         editable ? (
           <RenterContactFields control={control} renter={renter} />
@@ -218,7 +225,7 @@ function RenterContactValues({
       <div className={styles.contactField}>
         <dt>{t('reviewPage.renter.phone')}</dt>
         <dd className={cx(styles.contactValue, styles.contactPlain)}>
-          <span className={styles.contactText}>{contact.phone ?? '—'}</span>
+          <span className={styles.contactText}>{contact.phone ?? '-'}</span>
           {phoneNote}
         </dd>
       </div>

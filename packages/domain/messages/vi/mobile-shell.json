@@ -60,7 +60,7 @@
   },
   "partner": {
     "title": "Ứng dụng XePrime Partner",
-    "intro": "Cho thuê xe trên XePrime — đăng xe cá nhân hoặc mở gian hàng — diễn ra trong ứng dụng XePrime Partner, với một tài khoản đối tác riêng. Dùng chung số điện thoại cũng được, mật khẩu riêng.",
+    "intro": "Cho thuê xe trên XePrime - đăng xe cá nhân hoặc mở gian hàng - diễn ra trong ứng dụng XePrime Partner, với một tài khoản đối tác riêng. Dùng chung số điện thoại cũng được, mật khẩu riêng.",
     "open": "Mở XePrime Partner",
     "download": "Tải XePrime Partner",
     "later": "Để sau",
@@ -74,7 +74,7 @@
     "slides": {
       "intro": {
         "title": "Cho thuê xe cùng XePrime Partner",
-        "body": "Biến chiếc xe đang để không thành thu nhập. Mọi việc cho thuê — đăng xe, nhận chuyến, quản lý lịch — diễn ra trong ứng dụng XePrime Partner."
+        "body": "Biến chiếc xe đang để không thành thu nhập. Mọi việc cho thuê - đăng xe, nhận chuyến, quản lý lịch - diễn ra trong ứng dụng XePrime Partner."
       },
       "account": {
         "title": "Tạo tài khoản đối tác",
@@ -82,7 +82,7 @@
       },
       "choose": {
         "title": "Chọn cách cho thuê",
-        "body": "Đăng xe cá nhân để bắt đầu nhanh, không phí đăng ký — hoặc mở gian hàng nếu bạn vận hành nhiều xe. Chuyển đổi sau vẫn giữ nguyên xe và dữ liệu."
+        "body": "Đăng xe cá nhân để bắt đầu nhanh, không phí đăng ký - hoặc mở gian hàng nếu bạn vận hành nhiều xe. Chuyển đổi sau vẫn giữ nguyên xe và dữ liệu."
       },
       "publish": {
         "title": "Đăng xe hoặc mở gian hàng",
@@ -112,5 +112,14 @@
   },
   "currentLocation": {
     "denied": "Bạn đang chặn quyền vị trí cho ứng dụng. Hãy cho phép trong Cài đặt của máy rồi thử lại."
+  },
+  "network": {
+    "offline": "Đang offline - một số thao tác tạm khoá",
+    "reconnected": "Đã kết nối lại",
+    "errorTitle": "Không có kết nối mạng",
+    "errorHint": "Kiểm tra Wi-Fi hoặc dữ liệu di động rồi thử lại.",
+    "actionBlocked": "Cần kết nối mạng để thực hiện thao tác này.",
+    "staleAt": "Đang offline · Dữ liệu cập nhật lúc {time}",
+    "staleMoney": "Số tiền và trạng thái thanh toán có thể đã cũ."
   }
 }

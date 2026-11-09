@@ -1,9 +1,11 @@
+import { AutoScrollReveal } from '@/components/motion/ScrollReveal';
 import { useState } from 'react';
 import { Pressable, type ViewStyle } from 'react-native';
 import { CardHighlightOverlay, useCardHighlightBorder } from '@/components/ui/CardHighlight';
 import { CardHighlightContext } from '@/components/ui/HighlightZoom';
 import Animated, {
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withTiming,
   Easing,
@@ -12,7 +14,7 @@ import { YStack } from 'tamagui';
 import type { ReactNode } from 'react';
 import { elevation } from '@/theme/elevation';
 import { layout } from '@/theme/layout';
-import { duration, easing } from '@/theme/motion';
+import { duration, easing, pressScale } from '@/theme/motion';
 import { themed, useAppScheme, useDarkAccentBorder } from '@/theme/ThemeProvider';
 import { radius, space } from '@/theme/tokens';
 
@@ -121,9 +123,11 @@ export function Card({
     </YStack>
   );
 
-  if (!onPress) return body;
+  // Màn bật `scrollReveal`: thẻ trượt lên khi cuộn tới (chỉ transform, không mờ — thẻ có bóng).
+  if (!onPress) return <AutoScrollReveal>{body}</AutoScrollReveal>;
 
   return (
+    <AutoScrollReveal>
     <PressableCard
       onPress={onPress}
       label={accessibilityLabel}
@@ -131,11 +135,13 @@ export function Card({
     >
       {body}
     </PressableCard>
+    </AutoScrollReveal>
   );
 }
 
 /** Thẻ lún xuống bao nhiêu khi bị nhấn — đủ để cảm được, không đủ để thành một cú nảy. */
-const PRESS_SCALE_DELTA = 0.02;
+// Theo `pressScale.card` (0.97) — cùng độ co với `PressableScale` (06/11/2026).
+const PRESS_SCALE_DELTA = 1 - pressScale.card;
 const PRESS_OPACITY_DELTA = 0.12;
 
 /** Lún NHANH hơn lúc bật lại: ấn xuống phải bám ngón tay, thả ra thì thong thả hơn. */
@@ -160,9 +166,11 @@ function PressableCard({
   onPressedChange?: (pressed: boolean) => void;
 }) {
   const pressed = useSharedValue(0);
+  // "Giảm chuyển động": bỏ phần co, giữ phần mờ (phản hồi chạm vẫn còn, không có chuyển động).
+  const reduceMotion = useReducedMotion();
 
   const style = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 - pressed.value * PRESS_SCALE_DELTA }],
+    transform: [{ scale: reduceMotion ? 1 : 1 - pressed.value * PRESS_SCALE_DELTA }],
     opacity: 1 - pressed.value * PRESS_OPACITY_DELTA,
   }));
 

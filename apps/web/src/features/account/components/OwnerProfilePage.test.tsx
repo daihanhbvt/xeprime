@@ -248,7 +248,7 @@ beforeEach(() => {
 
 afterEach(() => cleanup());
 
-describe('/manage/account — một URL, bản theo tuyến', () => {
+describe('/manage/account - một URL, bản theo tuyến', () => {
   it('chủ xe tuyến hoa hồng → Hồ sơ chủ xe', () => {
     renderRoute();
     expect(screen.queryByTestId('partner-account-page')).toBeNull();
@@ -320,8 +320,8 @@ describe('/manage/account — một URL, bản theo tuyến', () => {
   });
 });
 
-describe('Hồ sơ chủ xe — bố cục', () => {
-  it('tám section theo thứ tự — không còn "Trang chủ xe" riêng, không chữ "gian hàng"', () => {
+describe('Hồ sơ chủ xe - bố cục', () => {
+  it('tám section theo thứ tự - không còn "Trang chủ xe" riêng, không chữ "gian hàng"', () => {
     renderRoute();
 
     const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
@@ -353,7 +353,7 @@ describe('Hồ sơ chủ xe — bố cục', () => {
     expect(screen.queryByText('Thuế đã khấu trừ trong kỳ')).toBeNull();
   });
 
-  it('thông tin chủ xe: ảnh + nút Thay đổi, họ tên, lời giới thiệu — KHÔNG có nút xoá ảnh', () => {
+  it('thông tin chủ xe: ảnh + nút Thay đổi, họ tên, lời giới thiệu - KHÔNG có nút xoá ảnh', () => {
     renderRoute();
 
     const owner = section('profile');
@@ -366,7 +366,7 @@ describe('Hồ sơ chủ xe — bố cục', () => {
     expect(owner.queryByRole('link', { name: 'Mở Cài đặt gian hàng' })).toBeNull();
   });
 
-  it('logo cũ từ thời có gói KHÔNG thay ảnh đại diện — cả trang dùng ảnh tài khoản', () => {
+  it('logo cũ từ thời có gói KHÔNG thay ảnh đại diện - cả trang dùng ảnh tài khoản', () => {
     shop.data = makeShop({ logoUrl: 'https://cdn.xeprime.test/logo.png' });
     renderRoute();
 
@@ -394,7 +394,7 @@ describe('Hồ sơ chủ xe — bố cục', () => {
   });
 });
 
-describe('Hồ sơ chủ xe — lưu thông tin chủ xe', () => {
+describe('Hồ sơ chủ xe - lưu thông tin chủ xe', () => {
   const saveButton = () => section('profile').getByRole('button', { name: /Lưu/ });
 
   it('chưa sửa gì: nút lưu mờ', () => {
@@ -433,7 +433,7 @@ describe('Hồ sơ chủ xe — lưu thông tin chủ xe', () => {
     expect(updateShop.mutateAsync).not.toHaveBeenCalled();
   });
 
-  it('chưa có ảnh: không lưu được — ảnh là bắt buộc', async () => {
+  it('chưa có ảnh: không lưu được - ảnh là bắt buộc', async () => {
     profile.data = { ...PROFILE, avatarUrl: null };
     renderRoute();
 
@@ -447,7 +447,7 @@ describe('Hồ sơ chủ xe — lưu thông tin chủ xe', () => {
   });
 });
 
-describe('Hồ sơ chủ xe — khai thuế và gói dịch vụ', () => {
+describe('Hồ sơ chủ xe - khai thuế và gói dịch vụ', () => {
   it('khai thuế: chủ xe cá nhân khai CCCD, không có ô mã số thuế', () => {
     renderRoute();
 
@@ -531,7 +531,7 @@ describe('Hồ sơ chủ xe — khai thuế và gói dịch vụ', () => {
   });
 });
 
-describe('Hồ sơ chủ xe — trạng thái tải', () => {
+describe('Hồ sơ chủ xe - trạng thái tải', () => {
   it('lỗi tải gian hàng: nói rõ và thử lại đúng query hỏng', () => {
     shop.data = null;
     shop.isError = true;

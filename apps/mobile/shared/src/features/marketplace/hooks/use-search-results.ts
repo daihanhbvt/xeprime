@@ -1,6 +1,7 @@
 import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import type { PaginationMeta } from '@xeprime/types';
+import { ApiClientError, CLIENT_ERROR_CODE } from '@/lib/api-client';
 import { queryKeys } from '@/queries/query-keys';
 import {
   marketplaceApi,
@@ -9,6 +10,9 @@ import {
   type PublicListing,
   type PublicListingFacets,
 } from '../api';
+
+/** Lỗi đại diện cho lượt tải đầu bị TẠM DỪNG vì offline — `isOfflineError` nhận ra nó. */
+const OFFLINE_PAUSED = new ApiClientError({ code: CLIENT_ERROR_CODE.NETWORK_ERROR, message: 'offline', status: 0 });
 
 const PAGE_SIZE = 12;
 
@@ -56,6 +60,11 @@ export function useInfinitePublicListings(filters: MarketplaceFilters) {
     },
     initialPageParam: 1,
     getNextPageParam: (last) => (last.meta.hasNext ? last.meta.page + 1 : undefined),
+    /*
+     * Đổi bộ lọc/sắp xếp = key mới. Không giữ kết quả cũ thì danh sách rơi về khung chờ rồi mới
+     * hiện kết quả mới — cú nháy mỗi lần bấm một chip. Giữ trang cũ tới khi trang mới về.
+     */
+    placeholderData: keepPreviousData,
   });
 
   /**
@@ -99,8 +108,20 @@ export function useInfinitePublicListings(filters: MarketplaceFilters) {
     total: query.data?.pages[0]?.meta.total ?? 0,
     /** Đang tải TRANG ĐẦU (chưa có gì hiển thị). */
     isInitialLoading: query.isLoading,
-    /** Lỗi khi CHƯA có trang nào — màn lỗi toàn vùng. */
-    initialError: query.isError && !query.data ? query.error : null,
+    /**
+     * Lỗi khi CHƯA có trang nào — màn lỗi toàn vùng.
+     *
+     * Kể cả lượt TẠM DỪNG vì offline (`isPaused`): TanStack không ném lỗi mà để query nằm chờ
+     * mạng, nên `isLoading` = false và màn rơi xuống trạng thái RỖNG — báo "0 kết quả / chưa có xe
+     * nào" là nói sai. Trả một lỗi mạng để `ScreenError` hiện đúng "Không có kết nối mạng"; mạng
+     * về thì query tự chạy tiếp và màn lỗi tự biến mất.
+     */
+    initialError:
+      query.isError && !query.data
+        ? query.error
+        : query.isPaused && (!query.data || query.isPlaceholderData)
+          ? OFFLINE_PAUSED
+          : null,
     /** Lỗi khi tải TRANG KẾ — kết quả đã có vẫn giữ nguyên, chỉ hiện thử lại ở đáy. */
     appendError: query.isError && query.data ? query.error : null,
     hasNextPage: query.hasNextPage,
@@ -111,7 +132,10 @@ export function useInfinitePublicListings(filters: MarketplaceFilters) {
      * `isRefetching` của TanStack bật cả khi `fetchNextPage` chạy, nên dùng trần thì vòng quay
      * kéo-làm-mới hiện lên mỗi lần cuộn tới đáy.
      */
-    isRefreshing: query.isRefetching && !query.isFetchingNextPage,
+    // Đang hiện kết quả CŨ chờ bộ lọc mới ⇒ không phải kéo-làm-mới, đừng bật vòng quay.
+    isRefreshing: query.isRefetching && !query.isFetchingNextPage && !query.isPlaceholderData,
+    /** Đang hiện kết quả của bộ lọc TRƯỚC trong lúc chờ bộ lọc mới. */
+    isPlaceholderData: query.isPlaceholderData,
     refresh: retryInitial,
     /** Guard sẵn chống gọi trùng — chỗ gọi cứ gọi, hook tự bỏ qua khi đang bay hoặc hết trang. */
     fetchNextPage,

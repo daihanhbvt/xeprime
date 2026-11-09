@@ -21,7 +21,7 @@
     "zalo": "Zalo",
     "zaloPlaceholder": "Ví dụ: 0901234567",
     "zaloHint": "Số này dùng cho link \"Liên hệ tư vấn\" trong email hướng dẫn gói (mở zalo.me).",
-    "contactInvalid": "6–20 ký tự, bắt đầu bằng chữ số hoặc dấu +; chỉ gồm chữ số, dấu cách, dấu chấm và gạch ngang.",
+    "contactInvalid": "6-20 ký tự, bắt đầu bằng chữ số hoặc dấu +; chỉ gồm chữ số, dấu cách, dấu chấm và gạch ngang.",
     "contactTooLong": "Tối đa {max} ký tự.",
     "meta": "Cập nhật {updatedAt}",
     "metaBy": "Cập nhật {updatedAt} bởi {name}",
@@ -31,8 +31,8 @@
     "unsaved": "Có thay đổi chưa lưu.",
     "otpSms": {
       "label": "Gửi SMS mã OTP",
-      "description": "Bật: gửi SMS thật qua nhà mạng (tính phí). Tắt: không gửi SMS, mọi mã OTP là 123456 — chỉ dùng khi phát triển/kiểm thử để tránh phí SMS.",
-      "locked": "Môi trường thật luôn gửi SMS mã OTP — công tắc này chỉ dùng ở môi trường phát triển/kiểm thử."
+      "description": "Bật: gửi SMS thật qua nhà mạng (tính phí). Tắt: không gửi SMS, mọi mã OTP là 123456 - chỉ dùng khi phát triển/kiểm thử để tránh phí SMS.",
+      "locked": "Môi trường thật luôn gửi SMS mã OTP - công tắc này chỉ dùng ở môi trường phát triển/kiểm thử."
     },
     "sections": {
       "shared": {
@@ -107,7 +107,7 @@
     },
     "validation": {
       "codeRequired": "Nhập mã mẫu.",
-      "codeFormat": "Mã 2–60 ký tự: chữ thường, số, gạch dưới hoặc gạch ngang, bắt đầu bằng chữ hoặc số.",
+      "codeFormat": "Mã 2-60 ký tự: chữ thường, số, gạch dưới hoặc gạch ngang, bắt đầu bằng chữ hoặc số.",
       "nameRequired": "Nhập tên mẫu.",
       "nameTooLong": "Tên tối đa {max} ký tự.",
       "subjectRequired": "Nhập tiêu đề cho cả hai ngôn ngữ ở mọi nội dung.",
@@ -158,7 +158,7 @@
     },
     "sendTest": "Gửi thư thử cho tôi",
     "sendTestDone": "Đã xếp hàng thư thử tới {to}.",
-    "sendTestUsesSaved": "Thư thử dùng bản ĐÃ LƯU — lưu trước nếu bạn vừa sửa.",
+    "sendTestUsesSaved": "Thư thử dùng bản ĐÃ LƯU - lưu trước nếu bạn vừa sửa.",
     "variantHelp": "Mỗi bộ mẫu có đủ bốn nội dung, mỗi nội dung có tiêu đề và thân thư bằng hai ngôn ngữ."
   },
   "reason": {

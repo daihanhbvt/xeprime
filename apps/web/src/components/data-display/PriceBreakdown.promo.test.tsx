@@ -57,7 +57,7 @@ const FEES_WITH_PROMO: PriceBreakdownFees = {
   payAtPickupAmount: '1120000',
 };
 
-describe('PriceBreakdown — mã khuyến mãi nền tảng', () => {
+describe('PriceBreakdown - mã khuyến mãi nền tảng', () => {
   it('vẽ dòng TRỪ riêng, có mã và tên chương trình', () => {
     renderIt(FEES_WITH_PROMO);
 
@@ -81,7 +81,7 @@ describe('PriceBreakdown — mã khuyến mãi nền tảng', () => {
     expect(screen.getAllByText(moneyText('320.000 ₫'))[0]).toBeTruthy();
   });
 
-  it('CHỈ có mã, không có dòng phụ phí nào (tuyến gói) — khối tổng vẫn hiện', () => {
+  it('CHỈ có mã, không có dòng phụ phí nào (tuyến gói) - khối tổng vẫn hiện', () => {
     /*
      * Không có phí dịch vụ ở tuyến gói (ADR 0029 điều 2), nhưng `customerTotalAmount` vẫn khác
      * `totalAmount` vì mã đã trừ. Giấu khối đi là hiện tiền thuê như số khách phải trả.
@@ -110,7 +110,7 @@ describe('PriceBreakdown — mã khuyến mãi nền tảng', () => {
     expect(screen.queryByText('Mã khuyến mãi XePrime')).toBeNull();
   });
 
-  it('dòng 0đ KHÔNG VẼ — nhưng dữ liệu không bị đụng tới', () => {
+  it('dòng 0đ KHÔNG VẼ - nhưng dữ liệu không bị đụng tới', () => {
     renderIt(FEES_WITH_PROMO);
 
     // Hai dòng chỗ-đứng của snapshot biến mất khỏi màn hình…
@@ -153,7 +153,7 @@ describe('PriceBreakdown — mã khuyến mãi nền tảng', () => {
  * trả" và "Tiền giữ chỗ" vẫn là con số CHƯA trừ, vì bảng giá đọc `fees` của báo giá gốc còn ô
  * mã đọc kết quả xem trước — hai nguồn cho cùng một chuyến.
  */
-describe('PriceBreakdown — số giảm và tổng phải cùng MỘT bảng phí', () => {
+describe('PriceBreakdown - số giảm và tổng phải cùng MỘT bảng phí', () => {
   it('tổng bạn trả là con số ĐÃ trừ mã, không phải tiền thuê cộng phí', () => {
     renderIt(FEES_WITH_PROMO);
     // 1.400.000 + 140.000 − 100.000 = 1.440.000 ⇒ đúng `customerTotalAmount` của server.

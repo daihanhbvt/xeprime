@@ -1,4 +1,4 @@
-import { toAppTz } from '@xeprime/domain';
+import { DATE_TIME_SEPARATOR, toAppTz } from '@xeprime/domain';
 import { Prisma, type PrismaClient } from '@xeprime/prisma';
 import {
   BOOKING_STATUS,
@@ -17,7 +17,10 @@ const BATCH = 200;
 const MS_PER_MINUTE = 60_000;
 
 const timeOf = (at: Date) => toAppTz(at).format('HH:mm');
-const pointOf = (at: Date) => toAppTz(at).format('HH:mm DD/MM');
+const pointOf = (at: Date) => {
+  const local = toAppTz(at);
+  return `${local.format('HH:mm')}${DATE_TIME_SEPARATOR}${local.format('DD/MM')}`;
+};
 
 export interface TripReminderSweepResult {
   pickupReminders: number;

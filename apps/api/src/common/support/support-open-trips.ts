@@ -58,7 +58,7 @@ export async function assertNoOpenTrips(
   if (bookings + requests > 0) {
     throw new ConflictException({
       code: API_ERROR_CODE.SUPPORT_OPEN_TRIPS,
-      message: 'Có chuyến chưa kết thúc — phiên hỗ trợ không thay đổi điều này',
+      message: 'Có chuyến chưa kết thúc - phiên hỗ trợ không thay đổi điều này',
       details: { openBookings: bookings, openRequests: requests },
     });
   }

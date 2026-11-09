@@ -119,7 +119,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('/manage/customers — sổ khách của gian hàng (S-01)', () => {
+describe('/manage/customers - sổ khách của gian hàng (S-01)', () => {
   it('KHÔNG còn là placeholder: có dải chỉ số, bộ lọc và danh sách thật', () => {
     renderPage();
     // Chuỗi của `PlaceholderPage` cũ phải biến mất hoàn toàn.
@@ -228,7 +228,7 @@ describe('/manage/customers — sổ khách của gian hàng (S-01)', () => {
     expect(screen.getByText(/2\.000\.000/)).toBeTruthy();
   });
 
-  it('KHÔNG có nút "Thêm khách hàng" — khách vào sổ tự động khi đặt xe (chốt 02/11/2026)', () => {
+  it('KHÔNG có nút "Thêm khách hàng" - khách vào sổ tự động khi đặt xe (chốt 02/11/2026)', () => {
     renderPage();
     expect(screen.queryByRole('button', { name: /Thêm khách hàng/ })).toBeNull();
   });

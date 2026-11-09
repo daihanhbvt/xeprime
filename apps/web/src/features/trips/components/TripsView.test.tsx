@@ -244,7 +244,7 @@ describe('Danh sách chuyến', () => {
  * CHỈ chuyến ĐI THUÊ (ADR 0053). Site khách không có phía "cho thuê": tài khoản khách không có gian
  * hàng. Vai gửi lên server luôn là `renter`, kể cả khi URL cũ mang `?role=host`.
  */
-describe('TripsView — chỉ chuyến đi thuê', () => {
+describe('TripsView - chỉ chuyến đi thuê', () => {
   it('không dựng hàng chọn vai nào', () => {
     renderView();
 

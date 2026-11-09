@@ -50,7 +50,7 @@ export class RegisterPushDeviceDto {
 
   @ApiPropertyOptional({
     maxLength: 120,
-    description: 'Tên máy do client tự khai — chỉ để người dùng nhận ra thiết bị.',
+    description: 'Tên máy do client tự khai - chỉ để người dùng nhận ra thiết bị.',
   })
   @IsOptional()
   @IsString()
@@ -61,7 +61,7 @@ export class RegisterPushDeviceDto {
     enum: MOBILE_CLIENT_APP_VALUES,
     description:
       'App đã cài token này: `customer` (XePrime) hay `partner` (XePrime Partner). Bỏ trống = ' +
-      'app hợp nhất cũ — thiết bị nhận MỌI audience. Chỉ lọc thông báo, không mở quyền gì.',
+      'app hợp nhất cũ - thiết bị nhận MỌI audience. Chỉ lọc thông báo, không mở quyền gì.',
   })
   @IsOptional()
   @IsIn(MOBILE_CLIENT_APP_VALUES)

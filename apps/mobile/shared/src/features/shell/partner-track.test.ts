@@ -93,7 +93,7 @@ describe('isCommissionPath', () => {
   });
 });
 
-describe('partnerPathRedirect — "Chuyến cho thuê" (PR #158)', () => {
+describe('partnerPathRedirect - "Chuyến cho thuê" (PR #158)', () => {
   const commissionStaff = me({
     roleKey: TENANT_ROLE.SHOP_STAFF,
     billingMode: BILLING_MODE.COMMISSION,

@@ -17,7 +17,7 @@ const valueOf = (rows: readonly ReviewRow[], label: string) =>
  * Dòng nào hiện trên hồ sơ duyệt — luật đọc từ `vehicleFieldPolicy`, cùng ma trận với form đăng
  * xe và cổng gửi duyệt. Hồ sơ duyệt không được hiện một trường mà form chưa bao giờ hỏi.
  */
-describe('vehicleInfoRows — trường theo loại xe và nguồn năng lượng', () => {
+describe('vehicleInfoRows - trường theo loại xe và nguồn năng lượng', () => {
   it('ô tô xăng: số chỗ + kiểu dáng + mức tiêu thụ; KHÔNG phân khúc, dung tích, thông số điện', () => {
     const rows = vehicleInfoRows(carReview().vehicle);
 
@@ -63,7 +63,7 @@ describe('vehicleInfoRows — trường theo loại xe và nguồn năng lượn
   });
 });
 
-describe('pricingPolicyRows — chỉ giá của dịch vụ xe đăng, chỉ chính sách áp dụng', () => {
+describe('pricingPolicyRows - chỉ giá của dịch vụ xe đăng, chỉ chính sách áp dụng', () => {
   it('tự lái: giá ngày + giảm giá + tự nhận + giao xe + giới hạn km + điều khoản', () => {
     const rows = pricingPolicyRows(carReview());
 
@@ -182,7 +182,7 @@ describe('splitDeliveryTiers', () => {
     });
   });
 
-  it('bậc miễn phí nằm GIỮA vẫn được đánh dấu miễn phí — không in thành 0 ₫', () => {
+  it('bậc miễn phí nằm GIỮA vẫn được đánh dấu miễn phí - không in thành 0 ₫', () => {
     expect(
       splitDeliveryTiers([
         { toKm: 5, fee: '30000' },
@@ -202,7 +202,7 @@ describe('splitDeliveryTiers', () => {
   });
 });
 
-describe('pickupAddress — địa chỉ đầy đủ, không chỉ tên tỉnh', () => {
+describe('pickupAddress - địa chỉ đầy đủ, không chỉ tên tỉnh', () => {
   it('ghép số nhà · phường · tỉnh', () => {
     expect(pickupAddress(carReview().pickup)).toBe(
       '25 Hùng Vương, Phường Phú Nhuận, Thành phố Huế',

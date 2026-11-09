@@ -1,5 +1,7 @@
+import Animated from 'react-native-reanimated';
+import { ScrollReveal, ScrollRevealProvider, useScrollRevealList } from '@/components/motion/ScrollReveal';
 import { memo, useCallback, useMemo, useState, type ReactNode } from 'react';
-import { FlatList, RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
+import { RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
 import type { Href } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/queries/query-keys';
@@ -24,7 +26,7 @@ import { useTabBarInset } from '@/components/layout/tab-bar-inset';
 import { IconButton } from '@/components/ui/IconButton';
 import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
 import { TripCardSkeleton } from '@/components/ui/Skeleton';
-import { Reveal, useListReveal } from '@/components/motion/Reveal';
+import { Reveal } from '@/components/motion/Reveal';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { isUnauthenticated } from '@xeprime/api-client';
@@ -43,6 +45,7 @@ import {
 } from './components/TripHistoryFilters';
 import { UnpaidHoldsReminder } from './components/UnpaidHoldsReminder';
 import { useTripsInfinite } from './hooks/use-trips';
+import { StaleDataNote } from '@/components/network/StaleDataNote';
 import type { CustomerTrip, CustomerTripCounts } from './api';
 
 /** Số khung chờ dựng sẵn — bằng số thẻ vừa một màn, để nội dung về không đẩy trang. */
@@ -190,15 +193,15 @@ export function TripsScreen({
    */
   const rendersList = !query.isPending && !query.isError && items.length > 0;
 
-  // Thẻ chuyến so le khi danh sách về / đổi tab / đổi bộ lọc lịch sử — không chạy lại khi kéo làm mới.
-  const shouldReveal = useListReveal(rendersList, `${filter}|${JSON.stringify(narrow)}`);
+  // Thẻ chuyến (có bóng) CHỈ trượt lên khi cuộn tới — ScrollReveal, luồng UI, không mờ.
+  const listReveal = useScrollRevealList();
   const renderTrip = useCallback(
     ({ item, index }: ListRenderItemInfo<CustomerTrip>) => (
-      <Reveal index={index} disabled={!shouldReveal(index)}>
+      <ScrollReveal index={index}>
         <TripCard trip={item} onPress={openTrip} />
-      </Reveal>
+      </ScrollReveal>
     ),
-    [openTrip, shouldReveal],
+    [openTrip],
   );
 
   return (
@@ -213,6 +216,12 @@ export function TripsScreen({
       <Screen edges={['left', 'right']} scroll={false} padded={false}>
         {header}
         {heading ? <ManagePageTitle title={t('list.heading')} subtitle={t('list.sub')} /> : null}
+        {/* Offline + đang xem bản lưu trên máy ⇒ nói rõ mốc cập nhật (tiền giữ chỗ có thể đã cũ). */}
+        {query.data ? (
+          <YStack px={layout.screenX}>
+            <StaleDataNote dataUpdatedAt={query.dataUpdatedAt} money />
+          </YStack>
+        ) : null}
         {/* Chuyến đang giữ chưa trả — CHỈ ở tab chuyến hiện tại (người dùng chốt 28/10/2026), thu gọn được. */}
         {rendersList || history ? null : (
           <YStack px={layout.screenX} pt={layout.inline}>
@@ -280,8 +289,11 @@ export function TripsScreen({
             </Reveal>
           )
         ) : (
-          <FlatList
+          <ScrollRevealProvider value={listReveal.ctx}>
+          <Animated.FlatList
             data={items}
+            onScroll={listReveal.onScroll}
+            scrollEventThrottle={16}
             keyExtractor={tripKey}
             renderItem={renderTrip}
             contentContainerStyle={listContentStyle}
@@ -296,6 +308,7 @@ export function TripsScreen({
             ListFooterComponent={query.isFetchingNextPage ? TripCardSkeleton : null}
             {...LIST_TUNING}
           />
+          </ScrollRevealProvider>
         )}
       </Screen>
     </>

@@ -59,7 +59,7 @@ export class AccountWalletController {
   }
 
   @Get('entries')
-  @ApiOperation({ summary: 'Sổ ví — phân trang server-side, mới nhất trước' })
+  @ApiOperation({ summary: 'Sổ ví - phân trang server-side, mới nhất trước' })
   @ApiOkResponse({ type: WalletEntryPageDto })
   entries(
     @CurrentUser() user: AuthenticatedUser,
@@ -79,7 +79,7 @@ export class AccountWalletController {
   @ApiOperation({
     summary: 'Tạo yêu cầu rút về tài khoản ngân hàng',
     description:
-      'Đích chuyển phải là một tài khoản ĐÃ LƯU của chính chủ ví — không gõ số tài khoản ngay ' +
+      'Đích chuyển phải là một tài khoản ĐÃ LƯU của chính chủ ví - không gõ số tài khoản ngay ' +
       'tại bước chi tiền. Tiền bị khoá khỏi số dư khả dụng ngay khi tạo.',
   })
   @ApiOkResponse({ type: WithdrawalRequestDto })
@@ -148,7 +148,7 @@ export class ShopWalletController {
     summary: 'Biến động số dư của gian hàng trong một kỳ',
     description:
       'Bút toán sổ ví và lệnh rút của kỳ (giờ Việt Nam) trong MỘT danh sách, mới nhất trước, ' +
-      'phân trang ở server. Bút toán `withdrawal`/`withdrawal_reversal` không lặp lại — lệnh rút ' +
+      'phân trang ở server. Bút toán `withdrawal`/`withdrawal_reversal` không lặp lại - lệnh rút ' +
       'đã là dòng của chính nó, kèm trạng thái, hạn chuyển và lý do.',
   })
   @ApiOkResponse({ type: WalletActivityPageDto })

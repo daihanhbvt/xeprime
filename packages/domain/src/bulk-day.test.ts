@@ -39,7 +39,7 @@ describe('giá gốc của một ngày', () => {
     );
   });
 
-  it('cuối tuần lấy GIÁ CUỐI TUẦN — không thì lệnh tăng giá lại thành giảm giá', () => {
+  it('cuối tuần lấy GIÁ CUỐI TUẦN - không thì lệnh tăng giá lại thành giảm giá', () => {
     expect(listedPriceForDay({ weekdayPrice: '680000', weekendPrice: '780000' }, SATURDAY)).toBe(
       '780000',
     );
@@ -87,7 +87,7 @@ describe('áp phần trăm', () => {
     expect(applyPercentToPrice('500000', -150)).toBe('0');
   });
 
-  it('làm tròn nửa chừng đi LÊN — có lợi cho gian hàng ở thao tác tăng giá lễ', () => {
+  it('làm tròn nửa chừng đi LÊN - có lợi cho gian hàng ở thao tác tăng giá lễ', () => {
     expect(roundPriceTo(15_000, 10_000)).toBe(20_000);
     expect(roundPriceTo(14_999, 10_000)).toBe(10_000);
   });
@@ -125,7 +125,7 @@ describe('planBulkDayPrices', () => {
     expect(orphan?.nextPrice).toBeNull();
   });
 
-  it('chế độ đồng giá đặt cùng một số cho mọi xe — kể cả xe chưa có giá gốc', () => {
+  it('chế độ đồng giá đặt cùng một số cho mọi xe - kể cả xe chưa có giá gốc', () => {
     const rows = planBulkDayPrices(FLEET, MONDAY, {
       mode: BULK_PRICE_MODE.FIXED,
       fixedPrice: '900000',

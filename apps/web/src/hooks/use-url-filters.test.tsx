@@ -66,7 +66,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('useUrlFilters — đọc từ URL', () => {
+describe('useUrlFilters - đọc từ URL', () => {
   it('parse chạy trên searchParams hiện tại', () => {
     nav.params = new URLSearchParams('q=abc&status=draft&page=3&limit=50');
     const api = mount();
@@ -90,7 +90,7 @@ describe('useUrlFilters — đọc từ URL', () => {
   });
 });
 
-describe('useUrlFilters — ghi lên URL', () => {
+describe('useUrlFilters - ghi lên URL', () => {
   it('ghi bằng replace + scroll:false để không tạo mục lịch sử và không nhảy trang', () => {
     const api = mount();
     act(() => api.current.setFilters({ status: 'draft' }));
@@ -125,7 +125,7 @@ describe('useUrlFilters — ghi lên URL', () => {
   });
 });
 
-describe('useUrlFilters — xoá tham số rỗng/mặc định', () => {
+describe('useUrlFilters - xoá tham số rỗng/mặc định', () => {
   it.each([
     ['undefined', undefined],
     ['null', null],
@@ -149,7 +149,7 @@ describe('useUrlFilters — xoá tham số rỗng/mặc định', () => {
   });
 });
 
-describe('useUrlFilters — phân trang', () => {
+describe('useUrlFilters - phân trang', () => {
   it('đổi filter đưa về trang 1 (xoá page)', () => {
     nav.params = new URLSearchParams('status=draft&page=7');
     const api = mount();
@@ -159,7 +159,7 @@ describe('useUrlFilters — phân trang', () => {
     expect(paramsOf(lastUrl()).has('page')).toBe(false);
   });
 
-  it('tự set page thì giữ nguyên — đó chính là hành động phân trang', () => {
+  it('tự set page thì giữ nguyên - đó chính là hành động phân trang', () => {
     const api = mount();
     act(() => api.current.setFilters({ page: 4, limit: 20 }));
 
@@ -194,7 +194,7 @@ describe('useUrlFilters — phân trang', () => {
   });
 });
 
-describe('useUrlFilters — giữ tham số không liên quan', () => {
+describe('useUrlFilters - giữ tham số không liên quan', () => {
   it('tham số ngoài phạm vi filter sống sót qua mỗi lần ghi', () => {
     nav.params = new URLSearchParams('utm_source=zalo&ref=abc&status=draft');
     const api = mount();
@@ -216,7 +216,7 @@ describe('useUrlFilters — giữ tham số không liên quan', () => {
   });
 });
 
-describe('useUrlFilters — back/forward', () => {
+describe('useUrlFilters - back/forward', () => {
   it('filters bám theo searchParams: URL đổi (do back) thì filters đổi theo, không giữ state riêng', () => {
     nav.params = new URLSearchParams('status=draft');
     const api = mount();

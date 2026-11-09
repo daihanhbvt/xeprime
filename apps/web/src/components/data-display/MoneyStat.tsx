@@ -81,7 +81,7 @@ export function MoneyStat({
         <span className={styles.skeleton} aria-hidden />
       ) : (
         <span className={cx(styles.value, size === 'compact' && styles.compact, TONE_CLASS[tone])}>
-          {value ?? '—'}
+          {value ?? '-'}
         </span>
       )}
       {hint && !loading ? <span className={styles.hint}>{hint}</span> : null}

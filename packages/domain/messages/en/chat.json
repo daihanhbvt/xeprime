@@ -4,7 +4,7 @@
   "aboutVehicle": "About",
   "attach": "Attach",
   "attachFile": "PDF file",
-  "attachFileHint": "Contracts, documents — up to {size} MB each",
+  "attachFileHint": "Contracts, documents - up to {size} MB each",
   "attachPhoto": "Photo",
   "attachPhotoHint": "Pick up to {count} photos, compressed before sending",
   "attachment": "Attachment",

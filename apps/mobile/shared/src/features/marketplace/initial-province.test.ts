@@ -46,7 +46,7 @@ describe('resolveInitialProvince', () => {
     expect(resolved).toEqual({ code: '01', source: PROVINCE_SOURCE.GEO_CACHE });
   });
 
-  it('bộ đệm "Toàn quốc" dừng chuỗi — không bật GPS lại trong hạn', async () => {
+  it('bộ đệm "Toàn quốc" dừng chuỗi - không bật GPS lại trong hạn', async () => {
     const readCoords = jest.fn();
     const requestPermission = jest.fn();
     const resolved = await resolveInitialProvince(

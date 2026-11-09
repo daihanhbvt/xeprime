@@ -53,7 +53,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Tài khoản nhận tiền — một tài khoản', () => {
+describe('Tài khoản nhận tiền - một tài khoản', () => {
   it('chưa có: nút "Thêm tài khoản" và lời mời khai, không có nút đổi', () => {
     renderList();
 
@@ -62,7 +62,7 @@ describe('Tài khoản nhận tiền — một tài khoản', () => {
     expect(screen.getByText('Chưa có tài khoản nào. Thêm một tài khoản để nhận tiền.')).toBeTruthy();
   });
 
-  it('đã có: một thẻ và nút "Đổi tài khoản" — không còn mặc định / bỏ dùng', () => {
+  it('đã có: một thẻ và nút "Đổi tài khoản" - không còn mặc định / bỏ dùng', () => {
     query.data = [ACCOUNT];
     renderList();
 
@@ -91,7 +91,7 @@ describe('Tài khoản nhận tiền — một tài khoản', () => {
   it.each([
     ['đang tải', { isPending: true, isError: false }],
     ['tải lỗi', { isPending: false, isError: true }],
-  ] as const)('%s: không hiện nút thêm/đổi — chưa biết mình đang thêm hay đổi', (_, state) => {
+  ] as const)('%s: không hiện nút thêm/đổi - chưa biết mình đang thêm hay đổi', (_, state) => {
     query.data = undefined;
     query.isPending = state.isPending;
     query.isError = state.isError;

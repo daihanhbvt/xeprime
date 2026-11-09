@@ -1,8 +1,11 @@
 import Image from 'next/image';
 import { getTranslations } from 'next-intl/server';
+import { NumberTicker } from '@/components/motion/NumberTicker';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from './SectionHeading';
+import { cx } from '@/lib/cx';
 import styles from './WhyChooseUs.module.css';
+import { bounceInClass, seqClass, viewParallaxClass } from '@/components/motion/motion-classes';
 
 /**
  * Bốn cam kết — icon là asset của Figma "Solutions Section" (`21965:5232`). Kích thước là của NÉT
@@ -45,11 +48,11 @@ export async function WhyChooseUs() {
           </div>
         </div>
 
-        {/* Bốn ý lần lượt trượt lên khi cuộn tới. */}
-        <Reveal as="ul" effect="stagger" className={styles.list}>
+        {/* Mỗi ý là một cổng riêng: hiện khi CHÍNH NÓ cuộn tới (không theo đầu khối). */}
+        <ul className={cx(styles.list, seqClass)}>
           {ITEMS.map((item) => (
-            <li key={item.key} className={styles.item}>
-              <span className={styles.iconWrap} aria-hidden="true">
+            <Reveal as="li" key={item.key} className={styles.item}>
+              <span className={cx(styles.iconWrap, bounceInClass)} aria-hidden="true">
                 <span className={styles.iconBox}>
                   <Image src={item.icon} alt="" width={item.width} height={item.height} unoptimized />
                 </span>
@@ -58,9 +61,9 @@ export async function WhyChooseUs() {
                 <h3 className={styles.title}>{t(`items.${item.key}.title`)}</h3>
                 <p className={styles.desc}>{t(`items.${item.key}.desc`)}</p>
               </div>
-            </li>
+            </Reveal>
           ))}
-        </Reveal>
+        </ul>
       </div>
 
       <Reveal className={styles.media}>
@@ -70,10 +73,12 @@ export async function WhyChooseUs() {
           width={532}
           height={488}
           sizes="(max-width: 1024px) 100vw, 532px"
-          className={styles.image}
+          className={cx(styles.image, viewParallaxClass)}
         />
-        <div className={styles.stat}>
-          <p className={styles.statValue}>{t('statValue')}</p>
+        <div className={cx(styles.stat, viewParallaxClass)}>
+          <p className={styles.statValue}>
+            <NumberTicker value={t('statValue')} />
+          </p>
           <p className={styles.statLabel}>{t('statLabel')}</p>
         </div>
       </Reveal>

@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Account lookup",
-    "subtitle": "One phone number or email can belong to several accounts — renter, partner, platform staff. Each row is a separate account with its own password.",
+    "subtitle": "One phone number or email can belong to several accounts - renter, partner, platform staff. Each row is a separate account with its own password.",
     "tableLabel": "Accounts matching the identifier"
   },
   "form": {

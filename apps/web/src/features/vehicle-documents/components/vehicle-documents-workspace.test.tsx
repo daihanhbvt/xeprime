@@ -228,7 +228,7 @@ describe('Tab Giấy tờ (Wave 5 + 5.1)', () => {
     expect(screen.getByText(/đã hết hiệu lực từ ngày/)).toBeTruthy();
   });
 
-  it('Tải xuống: xin signed URL qua endpoint kiểm quyền (activeVersionId từ summary) — không <a href>', async () => {
+  it('Tải xuống: xin signed URL qua endpoint kiểm quyền (activeVersionId từ summary) - không <a href>', async () => {
     const opened = vi.spyOn(window, 'open').mockImplementation(() => null);
     const view = renderTab();
     expect(view.container.querySelector('a[href]')).toBeNull();
@@ -343,7 +343,7 @@ describe('Tab Giấy tờ (Wave 5 + 5.1)', () => {
     });
   });
 
-  it('Bỏ qua: đánh dấu đối soát với fields rỗng — không áp gì', async () => {
+  it('Bỏ qua: đánh dấu đối soát với fields rỗng - không áp gì', async () => {
     api.requestDocumentOcr.mockResolvedValue({
       id: 'job-1',
       status: 'needs_review',
@@ -472,7 +472,7 @@ describe('Tab Giấy tờ (Wave 5 + 5.1)', () => {
     renderTab();
     fireEvent.click(screen.getByRole('button', { name: /Thêm loại giấy tờ/ }));
     fireEvent.mouseDown(await screen.findByLabelText(/Loại giấy tờ/));
-    fireEvent.click(await screen.findByTitle('Khác — tự đặt tên'));
+    fireEvent.click(await screen.findByTitle('Khác - tự đặt tên'));
 
     const nameInput = await screen.findByLabelText('Tên loại giấy tờ');
     // Bỏ trống thì không gọi API.

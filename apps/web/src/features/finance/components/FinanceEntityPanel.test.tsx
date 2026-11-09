@@ -92,7 +92,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('FinanceEntityPanel — hồ sơ xe', () => {
+describe('FinanceEntityPanel - hồ sơ xe', () => {
   it('phạm vi xe đi xuống CẢ hai truy vấn', () => {
     render(<FinanceEntityPanel scope={{ vehicleId: 'v1' }} kind="vehicle" />);
 
@@ -153,7 +153,7 @@ describe('FinanceEntityPanel — hồ sơ xe', () => {
   });
 });
 
-describe('FinanceEntityPanel — hồ sơ khách', () => {
+describe('FinanceEntityPanel - hồ sơ khách', () => {
   // Một khoản thu/chi gắn thẳng vào KHÁCH không tồn tại trong sổ — tiền của khách luôn đi qua
   // một chuyến, nên lối ghi không có nghĩa ở đây kể cả khi người xem đủ quyền.
   it('khách KHÔNG có lối tạo phiếu, kể cả khi đủ quyền', () => {
@@ -183,7 +183,7 @@ describe('FinanceEntityPanel — hồ sơ khách', () => {
   });
 });
 
-describe('FinanceEntityPanel — trạng thái', () => {
+describe('FinanceEntityPanel - trạng thái', () => {
   it('lỗi tải thẻ tổng: báo lỗi thay vì hiện số rỗng như thật', () => {
     queries.summary.data = undefined;
     queries.summary.isError = true;

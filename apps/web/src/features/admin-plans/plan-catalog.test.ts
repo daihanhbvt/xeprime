@@ -145,7 +145,7 @@ describe('sổ CHƯA MỞ BÁN (draft)', () => {
   });
 });
 
-describe('groupPlans — nhóm theo phạm vi loại xe (ADR 0065)', () => {
+describe('groupPlans - nhóm theo phạm vi loại xe (ADR 0065)', () => {
   it('bốn nhóm: xe máy → ô tô → doanh nghiệp → hoa hồng; bỏ nhóm rỗng; giữ thứ tự trong nhóm', () => {
     const rows = groupPlans([
       plan({ id: 'commission', billingMode: 'commission', vehicleScope: 'all' }),

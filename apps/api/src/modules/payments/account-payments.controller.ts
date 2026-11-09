@@ -26,10 +26,10 @@ export class AccountPaymentsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Các khoản tôi đã trả cho chuyến đã thuê — phân trang server-side',
+    summary: 'Các khoản tôi đã trả cho chuyến đã thuê - phân trang server-side',
     description:
       'Đọc từ `payments`: tiền khách trả cho GIAN HÀNG. KHÔNG phải ví điểm (`/account/balance`) ' +
-      'và không phải khoản giữ chỗ chuyển cho XePrime (`/trips/:id`) — ba bảng, ba chủ nợ, ba ' +
+      'và không phải khoản giữ chỗ chuyển cho XePrime (`/trips/:id`) - ba bảng, ba chủ nợ, ba ' +
       'màn hình. `totals` chỉ cộng khoản `succeeded`.',
   })
   @ApiOkResponse({ type: AccountPaymentPageDto })

@@ -8,11 +8,11 @@ import type { SubscriptionInvoice } from '../types';
 import { InvoiceCheckoutView } from './InvoiceCheckoutView';
 
 /**
- * TRANG THANH TOÁN một hoá đơn gói — `partner.xeprime.vn/payment/:invoiceId` (13/10/2026).
+ * TRANG THANH TOÁN một hoá đơn gói - `partner.xeprime.vn/payment/:invoiceId` (13/10/2026).
  *
- * Điều được khoá: trang nói đúng kết cục của CHÍNH hoá đơn trên đường dẫn — còn chờ thì mời trả
+ * Điều được khoá: trang nói đúng kết cục của CHÍNH hoá đơn trên đường dẫn - còn chờ thì mời trả
  * (không có nút tự khai đã trả), đã trả thì báo gói đã bật, đã huỷ thì mời chọn gói lại ở đúng chỗ
- * theo tuyến — và gói chỉ "đã kích hoạt" khi hoá đơn thật sự `paid` (ADR 0040 điều 3).
+ * theo tuyến - và gói chỉ "đã kích hoạt" khi hoá đơn thật sự `paid` (ADR 0040 điều 3).
  */
 const invoice = vi.hoisted(() => ({
   data: undefined as unknown,
@@ -25,7 +25,7 @@ const user = vi.hoisted(() => ({ data: undefined as unknown }));
 
 vi.mock('../hooks/use-subscription', () => ({
   useSubscriptionInvoice: () => invoice,
-  // Trang hoá đơn lẻ không đọc phiếu gộp — hook vẫn được gọi (tắt) theo luật hooks.
+  // Trang hoá đơn lẻ không đọc phiếu gộp - hook vẫn được gọi (tắt) theo luật hooks.
   useSubscriptionCheckout: () => ({ data: undefined, isPending: false, isError: false }),
   usePaymentInfo: () => ({
     data: {
@@ -101,7 +101,7 @@ describe('InvoiceCheckoutView', () => {
     );
     expect(qr?.getAttribute('src')).toContain('amount=650000');
     expect(qr?.getAttribute('src')).toContain('des=XPGWYZZ8TZY');
-    // Hoá đơn gói KHÔNG có nút tự khai đã trả — gói chỉ bật khi tiền về.
+    // Hoá đơn gói KHÔNG có nút tự khai đã trả - gói chỉ bật khi tiền về.
     expect(screen.queryByRole('button', { name: /đã chuyển khoản/i })).toBeNull();
   });
 

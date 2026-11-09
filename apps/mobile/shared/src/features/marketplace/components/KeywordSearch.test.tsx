@@ -69,7 +69,7 @@ describe('KeywordSearch', () => {
     expect(onApply).toHaveBeenLastCalledWith(undefined);
   });
 
-  it('gợi ý chủ xe khi đang focus — chạm là MỞ gian hàng, không áp thành từ khoá', async () => {
+  it('gợi ý chủ xe khi đang focus - chạm là MỞ gian hàng, không áp thành từ khoá', async () => {
     jest.useRealTimers();
     jest.spyOn(marketplaceApi, 'shopSuggestions').mockResolvedValue({
       items: [

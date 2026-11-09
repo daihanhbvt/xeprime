@@ -36,7 +36,7 @@ export type RecordSheetMode =
   | { mode: 'edit'; record: MaintenanceRecord }
   | { mode: 'complete'; record: MaintenanceRecord };
 
-/** Khoảng đã bị chiếm mà server trả kèm 409 — đúng hình dạng `details.conflicts` bên web. */
+/** Khoảng đã bị chiếm mà server trả kèm 409 - đúng hình dạng `details.conflicts` bên web. */
 interface ScheduleConflict {
   sourceType: string;
   startAt: string;
@@ -45,18 +45,18 @@ interface ScheduleConflict {
 }
 
 /**
- * Tấm trượt phiếu bảo dưỡng — bản native của `MaintenanceRecordDialog` bên web, cùng nhãn và
+ * Tấm trượt phiếu bảo dưỡng - bản native của `MaintenanceRecordDialog` bên web, cùng nhãn và
  * cùng thứ tự ô.
  *
- * **Hoàn tất chỉ hỏi bốn ô** (KM, chi phí, mã chứng từ, ghi chú) — loại hạng mục và khoảng thời
+ * **Hoàn tất chỉ hỏi bốn ô** (KM, chi phí, mã chứng từ, ghi chú) - loại hạng mục và khoảng thời
  * gian đã chốt lúc tạo, hỏi lại là mời người dùng sửa một thứ họ không định sửa.
  *
  * Thời gian đi lên API dạng **ISO UTC** (CLAUDE.md §9: lưu UTC, hiển thị `Asia/Ho_Chi_Minh`), và
- * phải đủ CẶP thì phiếu mới giữ chỗ trên lịch xe (ADR 0006) — schema chặn trước, backend chặn thật.
+ * phải đủ CẶP thì phiếu mới giữ chỗ trên lịch xe (ADR 0006) - schema chặn trước, backend chặn thật.
  *
  * Trùng lịch KHÔNG đẩy ra toast: server trả về chính khoảng bị đụng, nên tấm trượt hiện nguyên
- * khoảng đó và GIỮ dữ liệu đã nhập — lối ra là đổi giờ ngay tại đây, không phải gõ lại từ đầu.
- * Các mã lỗi còn lại đi qua `useErrorMessage()` (ánh xạ từ MÃ — ADR 0012), không gõ câu lỗi tay.
+ * khoảng đó và GIỮ dữ liệu đã nhập - lối ra là đổi giờ ngay tại đây, không phải gõ lại từ đầu.
+ * Các mã lỗi còn lại đi qua `useErrorMessage()` (ánh xạ từ MÃ - ADR 0012), không gõ câu lỗi tay.
  */
 export function MaintenanceRecordSheet({
   vehicleId,
@@ -67,7 +67,7 @@ export function MaintenanceRecordSheet({
   vehicleId: string;
   state: RecordSheetMode;
   /**
-   * `vehicles.maintenance.file.view` — quyền RIÊNG cho chứng từ, không suy từ `manage`.
+   * `vehicles.maintenance.file.view` - quyền RIÊNG cho chứng từ, không suy từ `manage`.
    *
    * Web truyền đúng cờ này vào `MaintenanceRecordDialog` từ CẢ hai lối vào (tab bảo dưỡng của xe
    * và tấm bảo dưỡng trên lịch). Thiếu nó thì người có quyền xem chứng từ vẫn không thấy chúng.
@@ -91,7 +91,7 @@ export function MaintenanceRecordSheet({
   const record = state.mode === 'create' ? null : state.record;
   const completing = state.mode === 'complete';
   /*
-   * Chi phí + mã phiếu chi đi theo `vehicles.maintenance.view_cost` — đúng `MaintenanceRecordDialog`
+   * Chi phí + mã phiếu chi đi theo `vehicles.maintenance.view_cost` - đúng `MaintenanceRecordDialog`
    * bên web: thiếu quyền thì hai ô không có mặt và KHÔNG có trong lệnh gửi (gửi `null` là xoá chi
    * phí đang lưu, và backend từ chối lệnh mang hai trường này từ người không thấy chúng).
    */
@@ -108,7 +108,7 @@ export function MaintenanceRecordSheet({
         : null,
       odometerKm: record?.odometerKm ?? null,
       providerName: record?.providerName ?? '',
-      // `cost` VẮNG MẶT khi thiếu quyền xem tiền — không dựng số 0 giả vào form.
+      // `cost` VẮNG MẶT khi thiếu quyền xem tiền - không dựng số 0 giả vào form.
       cost: record?.cost != null ? Number(record.cost) : null,
       receiptCode: record?.receiptCode ?? '',
       notes: record?.notes ?? '',
@@ -123,7 +123,7 @@ export function MaintenanceRecordSheet({
   const { control, handleSubmit } = useForm<MaintenanceRecordFormValues>({
     resolver,
     defaultValues: defaults,
-    // `values` để RHF tự đồng bộ khi đổi phiếu — không cần effect reset thủ công.
+    // `values` để RHF tự đồng bộ khi đổi phiếu - không cần effect reset thủ công.
     values: defaults,
   });
   const type = useWatch({ control, name: 'type' });
@@ -176,7 +176,7 @@ export function MaintenanceRecordSheet({
         type: values.type,
         customTypeName: values.type === MAINTENANCE_TYPE.OTHER ? text(values.customTypeName) : null,
         title: text(values.title),
-        // 00:00 giờ Việt Nam của ngày chọn — đúng `MaintenanceRecordDialog` bên web. Không gửi
+        // 00:00 giờ Việt Nam của ngày chọn - đúng `MaintenanceRecordDialog` bên web. Không gửi
         // `plannedEndAt`: server bỏ qua nó (ADR 0079).
         plannedStartAt: values.plannedDate ? startOfAppDay(values.plannedDate).toISOString() : null,
         odometerKm: values.odometerKm,
@@ -273,7 +273,7 @@ export function MaintenanceRecordSheet({
               placeholder={t('form.titlePlaceholder')}
             />
 
-            {/* Chỉ để nhắc — không giữ chỗ trên lịch xe (ADR 0079). */}
+            {/* Chỉ để nhắc - không giữ chỗ trên lịch xe (ADR 0079). */}
             <DateField control={control} name="plannedDate" label={tMaintenance('record.plannedDate')} />
 
             <TextField
@@ -317,7 +317,7 @@ export function MaintenanceRecordSheet({
         {completing ? <Callout tone="info" title={tMaintenance('record.completeHint')} /> : null}
 
         {/*
-          Số chứng từ đính kèm — đúng dòng web đặt ở cuối hộp (`MaintenanceRecordDialog`:321).
+          Số chứng từ đính kèm - đúng dòng web đặt ở cuối hộp (`MaintenanceRecordDialog`:321).
           Gác bằng quyền RIÊNG `vehicles.maintenance.file.view`, không suy từ `manage`: người
           sửa được phiếu chưa chắc được xem chứng từ của nó.
         */}

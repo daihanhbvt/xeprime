@@ -289,7 +289,7 @@ export function BookingStatusTransitionDialog({
             </span>
           </p>
           <p className={decision.summaryMeta}>
-            {fmt.shortDateTimeRange(booking.pickupAt, booking.returnAt)}
+            {fmt.rentalRange(booking.pickupAt, booking.returnAt)}
           </p>
         </div>
 

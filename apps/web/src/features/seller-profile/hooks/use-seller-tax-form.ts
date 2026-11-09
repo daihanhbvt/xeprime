@@ -37,9 +37,9 @@ function toValues(profile: SellerProfile): SellerTaxFormValues {
 }
 
 /**
- * Form "Thông tin khai thuế" — MỘT định nghĩa cho hai chỗ: section của "Hồ sơ chủ xe"
+ * Form "Thông tin khai thuế" - MỘT định nghĩa cho hai chỗ: section của "Hồ sơ chủ xe"
  * (`SellerTaxSection`) và hộp thoại của trang Thông tin cửa hàng (`ShopTaxCard`). Cả hai ghi vào
- * hồ sơ NGƯỜI BÁN — nguồn duy nhất của mã số thuế mà hợp đồng và báo cáo thuế đọc.
+ * hồ sơ NGƯỜI BÁN - nguồn duy nhất của mã số thuế mà hợp đồng và báo cáo thuế đọc.
  *
  * Gửi BẢN ĐẦY ĐỦ của hồ sơ rồi đè bốn trường của form: màn này không hiện mọi trường của hồ sơ
  * người bán, và một PUT chỉ có bốn trường sẽ xoá phần còn lại.
@@ -71,7 +71,7 @@ export function useSellerTaxForm(profile: SellerProfile | undefined) {
   /** Lưu; `onSaved` chạy SAU khi server nhận (hộp thoại đóng ở đây, không trước). */
   const submit = (onSaved?: () => void) =>
     form.handleSubmit((values) => {
-      // Enter vẫn submit form khi nút Lưu đang quay — chặn lượt thứ hai ở đây.
+      // Enter vẫn submit form khi nút Lưu đang quay - chặn lượt thứ hai ở đây.
       if (!profile || save.isPending) return;
       save.mutate(
         {

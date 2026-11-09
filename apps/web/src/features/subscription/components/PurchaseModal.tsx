@@ -27,7 +27,7 @@ import styles from './PurchaseModal.module.css';
  * đóng và người dùng sang thẳng TRANG THANH TOÁN của hoá đơn đó (`/payment/:invoiceId`).
  *
  * Kỳ mới bắt đầu lúc nào là việc của SERVER (ADR 0084): cùng bậc = gia hạn nối tiếp, trần cao hơn =
- * nâng ngay, còn lại = nối tiếp — người mua không chọn. Modal đọc bản xem trước của server cho bậc
+ * nâng ngay, còn lại = nối tiếp - người mua không chọn. Modal đọc bản xem trước của server cho bậc
  * đang chọn (`usePurchasePreview`) để NÓI trước điều đó; kỳ thật in trên hoá đơn (`periodFrom`).
  *
  * Bảng giá và toàn bộ phép đọc giá nằm ở `usePlanPurchase` + `PlanPricingTable`. Modal này chỉ còn
@@ -43,7 +43,7 @@ export function PurchaseModal({
   open: boolean;
   /** Làn đang mua. Giữ giá trị cuối khi đóng để hiệu ứng đóng không nháy sang làn khác. */
   scope: PlanLaneScope;
-  /** Kỳ đang chạy CÙNG loại xe — để nói trước kỳ mới nối tiếp lúc nào. */
+  /** Kỳ đang chạy CÙNG loại xe - để nói trước kỳ mới nối tiếp lúc nào. */
   current: CurrentPlan | null;
   onClose: () => void;
 }) {
@@ -65,12 +65,12 @@ export function PurchaseModal({
   const periodText = usePurchasePeriodText();
   const router = useRouter();
 
-  /** Hoá đơn còn chờ ở CÙNG loại xe — tạo hoá đơn mới sẽ huỷ nó (server void hoá đơn `issued` cũ). */
+  /** Hoá đơn còn chờ ở CÙNG loại xe - tạo hoá đơn mới sẽ huỷ nó (server void hoá đơn `issued` cũ). */
   const pendingSameScope = pendingInvoiceForScope(pending.data ?? [], scope);
   const laneTitle = t(`lanes.title.${scope}`);
 
   function submit() {
-    // Enter vẫn gửi form khi nút đang quay — không tạo hoá đơn thứ hai trong lúc lượt đầu đang bay.
+    // Enter vẫn gửi form khi nút đang quay - không tạo hoá đơn thứ hai trong lúc lượt đầu đang bay.
     if (!selection.selection || purchase.isPending) return;
     purchase.mutate(selection.selection.body, {
       onSuccess: (created) => {
@@ -84,7 +84,7 @@ export function PurchaseModal({
   function close() {
     /*
      * Dọn LỰA CHỌN, không chỉ dọn hoá đơn: hộp thoại này không bị tháo khỏi cây khi đóng, nên
-     * không có lần remount nào dọn hộ. Thiếu dòng này thì mở lại thấy một kỳ hạn đã sáng — và
+     * không có lần remount nào dọn hộ. Thiếu dòng này thì mở lại thấy một kỳ hạn đã sáng - và
      * ngay sau một lượt mua thành công, đó là một cú bấm tới hoá đơn thứ hai.
      */
     selection.reset();
@@ -114,7 +114,7 @@ export function PurchaseModal({
       ) : (
         <>
           {/*
-            Lượt mua này làm gì với gói hiện tại — từ bản xem trước của server, không phải một lựa
+            Lượt mua này làm gì với gói hiện tại - từ bản xem trước của server, không phải một lựa
             chọn của người mua (ADR 0084). Chưa chọn bậc thì nói luật chung.
           */}
           {outcome ? (

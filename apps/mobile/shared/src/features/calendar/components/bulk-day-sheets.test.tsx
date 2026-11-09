@@ -105,7 +105,7 @@ beforeEach(() => {
  * SAI ("khoảng quá dài", DailyPriceSheet). Bản sửa truyền `minDate = from` cho `DatePickerSheet`
  * khi đang chọn "to", nên những ngày đó bị khoá NGAY TỪ Ô CHỌN.
  */
-describe('BulkDayBlockSheet — khoảng "to" không được đứng trước "from"', () => {
+describe('BulkDayBlockSheet - khoảng "to" không được đứng trước "from"', () => {
   it('ngày trước `rangeFrom` bị khoá trong ô chọn "to", ngày sau vẫn chọn được', async () => {
     const view = await render(
       wrap(
@@ -137,7 +137,7 @@ describe('BulkDayBlockSheet — khoảng "to" không được đứng trước "
     expect(await view.findByLabelText(/^Kết thúc: .*22/)).toBeTruthy();
   });
 
-  it('ngày trước `rangeFrom` vẫn chọn được ở CHÍNH ô "from" — sàn hẹp chỉ áp cho ô "to"', async () => {
+  it('ngày trước `rangeFrom` vẫn chọn được ở CHÍNH ô "from" - sàn hẹp chỉ áp cho ô "to"', async () => {
     const view = await render(
       wrap(
         <BulkDayBlockSheet
@@ -161,7 +161,7 @@ describe('BulkDayBlockSheet — khoảng "to" không được đứng trước "
   });
 });
 
-describe('BulkDayPriceSheet — cùng ràng buộc "to" ≥ "from"', () => {
+describe('BulkDayPriceSheet - cùng ràng buộc "to" ≥ "from"', () => {
   it('ngày trước `rangeFrom` bị khoá trong ô chọn "to"', async () => {
     const view = await render(
       wrap(
@@ -183,7 +183,7 @@ describe('BulkDayPriceSheet — cùng ràng buộc "to" ≥ "from"', () => {
   });
 });
 
-describe('DailyPriceSheet — cùng ràng buộc "to" ≥ "from"', () => {
+describe('DailyPriceSheet - cùng ràng buộc "to" ≥ "from"', () => {
   it('ngày trước `from` bị khoá trong ô chọn "to"', async () => {
     const view = await render(
       wrap(

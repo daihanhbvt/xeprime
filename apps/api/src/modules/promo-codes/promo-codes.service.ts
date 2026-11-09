@@ -290,7 +290,7 @@ export class PromoCodesService {
         throw new ConflictException({
           code: API_ERROR_CODE.PROMO_CODE_LOCKED,
           message:
-            'Mã đã phát sinh lượt sử dụng — không sửa được mức giảm, điều kiện hay phạm vi. ' +
+            'Mã đã phát sinh lượt sử dụng - không sửa được mức giảm, điều kiện hay phạm vi. ' +
             'Tạo mã mới (dùng nhân bản) nếu cần bộ điều kiện khác.',
           details: { fields: changed },
         });
@@ -506,7 +506,7 @@ export class PromoCodesService {
     }
     throw new ConflictException({
       code: API_ERROR_CODE.PROMO_CODE_DUPLICATE,
-      message: 'Không tìm được mã trống cho bản sao — đặt mã mới bằng tay',
+      message: 'Không tìm được mã trống cho bản sao - đặt mã mới bằng tay',
       details: { base },
     });
   }

@@ -20,6 +20,15 @@
 export const LIST_SEPARATOR = ' · ';
 
 /**
+ * Khoảng cách giữa NGÀY và GIỜ của cùng một mốc: `T7, 07/11  09:00`, `09:00  17/08`.
+ *
+ * Hai dấu cách KHÔNG NGẮT (U+00A0) chứ không phải hai dấu cách thường: HTML gộp khoảng trắng
+ * liên tiếp thành một (web sẽ chỉ còn một khoảng), và NBSP giữ ngày với giờ trên cùng một dòng.
+ * Mọi message ghép ngày + giờ nhận nó qua tham số `{sep}` — đổi kiểu ngăn chỉ sửa ở đây.
+ */
+export const DATE_TIME_SEPARATOR = '  ';
+
+/**
  * Nhãn nhận diện một chiếc xe: `Tên xe (biển số)`.
  *
  * Thiếu biển số thì chỉ tên; thiếu tên thì chỉ biển số; thiếu cả hai → chuỗi rỗng và nơi gọi tự

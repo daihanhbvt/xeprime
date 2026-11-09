@@ -65,7 +65,7 @@ function renderLanding(props: Partial<Parameters<typeof ListYourVehicleLanding>[
   return renderWithIntl(<ListYourVehicleLanding personalHref="/p" shopHref="/s" {...props} />);
 }
 
-describe('Site khách — /list-your-vehicle', () => {
+describe('Site khách - /list-your-vehicle', () => {
   it('mỗi nút dẫn sang trang đăng ký của site partner, mang đúng tuyến của mình', () => {
     renderWithIntl(<ListYourVehiclePage />);
 
@@ -144,7 +144,7 @@ describe('Nội dung landing', () => {
     expect(screen.getByText('Tối đa 3 xe')).toBeTruthy();
   });
 
-  it('mỗi thẻ có hình minh hoạ RIÊNG — không dùng chung một file', () => {
+  it('mỗi thẻ có hình minh hoạ RIÊNG - không dùng chung một file', () => {
     const { container } = renderLanding();
 
     const sources = [...container.querySelectorAll('img')].map((img) => img.getAttribute('src'));

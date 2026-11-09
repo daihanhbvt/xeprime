@@ -318,7 +318,7 @@ describe('Stepper', () => {
   it('đơn huỷ: KHÔNG có thanh bước (design "Details - Failed"), banner nói lý do khi có', () => {
     renderDetail({ ...BOOKING, status: BOOKING_STATUS.CANCELLED, handoverPrep: null });
     expect(screen.queryByRole('list', { name: 'Tiến trình đơn thuê' })).toBeNull();
-    expect(screen.getByText('Đơn đã huỷ — chuyến không diễn ra.')).toBeTruthy();
+    expect(screen.getByText('Đơn đã huỷ - chuyến không diễn ra.')).toBeTruthy();
     cleanup();
 
     renderDetail({

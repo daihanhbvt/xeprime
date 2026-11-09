@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Hồ sơ người bán",
-    "subtitle": "Danh tính và tài khoản nhận tiền của gian hàng — điều kiện trước khi nhận tiền khách thật.",
+    "subtitle": "Danh tính và tài khoản nhận tiền của gian hàng - điều kiện trước khi nhận tiền khách thật.",
     "loadError": "Không tải được hồ sơ.",
     "noPermissionTitle": "Không có quyền truy cập",
     "noPermission": "Bạn cần quyền dưới đây để xem hồ sơ người bán của gian hàng.",
@@ -10,7 +10,7 @@
     "rejected": "Hồ sơ bị từ chối",
     "pendingReview": "Đang chờ nền tảng xác minh.",
     "verified": "Hồ sơ đã được xác minh.",
-    "readOnly": "Hồ sơ đang chờ xác minh — không sửa được lúc này."
+    "readOnly": "Hồ sơ đang chờ xác minh - không sửa được lúc này."
   },
   "form": {
     "entityType": "Loại chủ thể",

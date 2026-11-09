@@ -79,7 +79,7 @@ export function AccountLookupView() {
       const role = dl('tenantRole', row.tenantRoleKey);
       return row.tenantName ? t('roleInTenant', { role, tenant: row.tenantName }) : role;
     }
-    return '—';
+    return '-';
   }
 
   const columns: DataTableColumn<AccountLookupItem>[] = [
@@ -111,8 +111,8 @@ export function AccountLookupView() {
       width: 200,
       render: (_, row) => (
         <div className={styles.contact}>
-          <span>{row.phoneMasked ?? '—'}</span>
-          <span className={styles.muted}>{row.emailMasked ?? '—'}</span>
+          <span>{row.phoneMasked ?? '-'}</span>
+          <span className={styles.muted}>{row.emailMasked ?? '-'}</span>
         </div>
       ),
     },

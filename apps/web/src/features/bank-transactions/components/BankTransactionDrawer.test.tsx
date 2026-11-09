@@ -125,7 +125,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('Khớp tay giao dịch ngân hàng', () => {
-  it('hoá đơn khớp đúng số tiền được gắn nhãn — nhưng KHÔNG chọn sẵn, nút khớp còn khoá', () => {
+  it('hoá đơn khớp đúng số tiền được gắn nhãn - nhưng KHÔNG chọn sẵn, nút khớp còn khoá', () => {
     renderDrawer();
 
     expect(screen.getByText('Khớp đúng số tiền')).toBeTruthy();
@@ -234,7 +234,7 @@ describe('Bỏ qua giao dịch', () => {
 });
 
 describe('Đọc giao dịch', () => {
-  it('bóc sẵn ngân hàng, tài khoản nhận và mã tham chiếu — không bắt đọc JSON', () => {
+  it('bóc sẵn ngân hàng, tài khoản nhận và mã tham chiếu - không bắt đọc JSON', () => {
     renderDrawer();
 
     expect(screen.getByText('Vietcombank')).toBeTruthy();
@@ -263,7 +263,7 @@ describe('Đọc giao dịch', () => {
     expect(screen.getByText(/FT26247999/)).toBeTruthy();
   });
 
-  it('chuyển sang giao dịch kế tiếp ngay trong panel — cùng khuôn màn duyệt xe', () => {
+  it('chuyển sang giao dịch kế tiếp ngay trong panel - cùng khuôn màn duyệt xe', () => {
     renderDrawer({ nextId: 'tx-2' });
 
     expect(

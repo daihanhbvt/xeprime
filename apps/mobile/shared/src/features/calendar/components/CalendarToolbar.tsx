@@ -143,7 +143,7 @@ export function CalendarToolbar({
   const rangeLabel = useMemo(() => {
     const start = startOfAppDay(filters.from);
     const end = start.add(filters.days - 1, 'day');
-    return `${fmt.dayMonth(start.format('YYYY-MM-DD'))} – ${fmt.dateKey(end.format('YYYY-MM-DD'))}`;
+    return `${fmt.dayMonth(start.format('YYYY-MM-DD'))} - ${fmt.dateKey(end.format('YYYY-MM-DD'))}`;
   }, [filters.from, filters.days, fmt]);
 
   /**

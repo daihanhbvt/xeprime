@@ -207,7 +207,7 @@ function ActionTile({
     value = '…';
     lines = [];
   } else if (count === null) {
-    value = '—';
+    value = '-';
     lines = [{ key: 'error', text: errorText, urgent: true }];
   } else {
     value = fmt.count(count);

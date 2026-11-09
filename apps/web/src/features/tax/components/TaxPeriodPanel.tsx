@@ -130,7 +130,7 @@ export function TaxPeriodPanel() {
                 {t('withheldAs', { entity: domainLabel('sellerEntityType', row.taxSubjectType) })}
               </p>
             ) : null}
-            <p className={styles.muted}>{row.taxCode ?? '—'}</p>
+            <p className={styles.muted}>{row.taxCode ?? '-'}</p>
           </div>
         ),
       },

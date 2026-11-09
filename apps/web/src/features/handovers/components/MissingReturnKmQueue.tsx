@@ -26,9 +26,9 @@ const TABLE_MIN_WIDTH = 980;
  *
  * Đây là VIỆC VẬN HÀNH, không phải phiếu bảo dưỡng: biên bản trả xe đã chốt nhưng chưa có KM,
  * nên KM có thẩm quyền của xe đang treo và mốc bảo dưỡng chưa tính được. Giải quyết xong,
- * biên bản tự rời hàng đợi — không có bước "đánh dấu đã xong" thủ công.
+ * biên bản tự rời hàng đợi - không có bước "đánh dấu đã xong" thủ công.
  *
- * Xem việc cần `handovers.view`; BỔ SUNG KM cần `vehicles.odometer.correct` — hàng đợi không
+ * Xem việc cần `handovers.view`; BỔ SUNG KM cần `vehicles.odometer.correct` - hàng đợi không
  * tự cấp thêm quyền nào, và backend vẫn là nơi chặn thật.
  *
  * `requestedBookingId` là đích của nút "Xử lý ngay" ở Hồ sơ xe (`?resolve=<bookingId>`): mở
@@ -162,7 +162,7 @@ export function MissingReturnKmQueue({
       key: 'pickupKm',
       width: 160,
       align: 'end',
-      // Chưa có số thì nói "Chưa có" — KHÔNG dựng 0 km (docs §9).
+      // Chưa có số thì nói "Chưa có" - KHÔNG dựng 0 km (docs §9).
       render: (_, row) => fmt.km(row.pickupOdometerKm),
     },
     {
@@ -176,7 +176,7 @@ export function MissingReturnKmQueue({
             {t('resolve')}
           </Button>
         ) : (
-          // Không có quyền thì KHÔNG hiện nút chết — nói thẳng cần quyền gì.
+          // Không có quyền thì KHÔNG hiện nút chết - nói thẳng cần quyền gì.
           <span className={styles.sub}>{t('needPermission')}</span>
         ),
     },
@@ -251,7 +251,7 @@ export function MissingReturnKmQueue({
 /**
  * Mở hộp bổ sung KM cho một biên bản trả xe, theo `bookingId` của đơn.
  *
- * Tải ngữ cảnh bàn giao của đúng đơn đó rồi dùng LẠI `ResolveOdometerDialog` của Wave 7 — cùng
+ * Tải ngữ cảnh bàn giao của đúng đơn đó rồi dùng LẠI `ResolveOdometerDialog` của Wave 7 - cùng
  * luật lý do bắt buộc, cùng xử lý giảm KM và cùng UX 409. Dựng một hộp thoại thứ hai ở đây là
  * cách để hai chỗ trôi khỏi nhau. Chỉ cần `bookingId` (xe đọc từ ngữ cảnh) để mở được cả biên
  * bản đến từ link "Xử lý ngay", vốn không chắc nằm trong trang hàng đợi đang tải.
@@ -273,11 +273,11 @@ function ResolveQueueItem({
   const handover = data?.return ?? null;
 
   /**
-   * Việc đã được người khác xử lý xong (hoặc biên bản không còn) — CHỈ khi server trả lời
+   * Việc đã được người khác xử lý xong (hoặc biên bản không còn) - CHỈ khi server trả lời
    * thành công mà không còn việc phải làm. Lỗi mạng/500 KHÔNG rơi vào nhánh này.
    *
    * Wave 8.1: trước đây `onClose()`/`onSaved()` được gọi ngay trong thân render, nên React
-   * cảnh báo cập nhật state khi đang render, và một lần rớt mạng bị tính là "đã xử lý xong" —
+   * cảnh báo cập nhật state khi đang render, và một lần rớt mạng bị tính là "đã xử lý xong" -
    * việc biến khỏi hàng đợi dù KM vẫn thiếu.
    */
   const resolvedElsewhere = !isLoading && !isError && (!data || !handover?.odometerMissing);
@@ -288,7 +288,7 @@ function ResolveQueueItem({
   useEffect(() => {
     if (!resolvedElsewhere || notified.current) return;
     notified.current = true;
-    // Nói ra lý do hộp không mở — nhất là khi người dùng đến từ link "Xử lý ngay" cũ.
+    // Nói ra lý do hộp không mở - nhất là khi người dùng đến từ link "Xử lý ngay" cũ.
     message.info(t('alreadyResolved'));
     onClose();
     onSaved();
@@ -297,7 +297,7 @@ function ResolveQueueItem({
   if (isLoading) return <Skeleton active paragraph={{ rows: 2 }} />;
 
   if (isError) {
-    // Thiếu quyền là câu trả lời cuối cùng, không phải sự cố tạm — không mời thử lại.
+    // Thiếu quyền là câu trả lời cuối cùng, không phải sự cố tạm - không mời thử lại.
     if (getErrorCode(error) === 'FORBIDDEN' || getErrorCode(error) === 'MISSING_PERMISSION') {
       return (
         <PermissionState
@@ -307,7 +307,7 @@ function ResolveQueueItem({
         />
       );
     }
-    // Lỗi mạng/máy chủ: GIỮ nguyên bề mặt và cho thử lại — không âm thầm coi việc là đã xong.
+    // Lỗi mạng/máy chủ: GIỮ nguyên bề mặt và cho thử lại - không âm thầm coi việc là đã xong.
     return (
       <EmptyState
         variant="error"
@@ -330,7 +330,7 @@ function ResolveQueueItem({
       onClose={onClose}
       onSaved={() => {
         // `invalidate()` lo các nhánh của đơn/xe; `onSaved()` lo hàng đợi + số đếm ở trang cha.
-        // Hai phạm vi khác nhau, gọi đúng một lần mỗi bên — không có vòng làm mới lặp.
+        // Hai phạm vi khác nhau, gọi đúng một lần mỗi bên - không có vòng làm mới lặp.
         invalidate();
         onSaved();
       }}

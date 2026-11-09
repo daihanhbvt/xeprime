@@ -6,7 +6,7 @@ import '@/lib/crypto-polyfill';
 
 import { patchDayjsTimezone } from '@/i18n/dayjs-timezone-fix';
 
-import { QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { Provider as ReduxProvider } from 'react-redux';
@@ -15,6 +15,7 @@ import 'react-native-reanimated';
 
 import { AppErrorScreen } from '@/components/state/AppErrorScreen';
 import { AppToastProvider } from '@/components/feedback/AppToast';
+import { ScrollRevealDefaultProvider } from '@/components/motion/ScrollReveal';
 import { AccountPhoneReminderProvider } from '@/features/auth/AccountPhoneGate';
 import { SessionBoundary } from '@/features/auth/SessionBoundary';
 import { BadgeRealtimeProvider } from '@/features/badges/BadgeRealtimeProvider';
@@ -24,6 +25,10 @@ import { registerPushBackgroundHandler } from '@/features/notifications/messagin
 import { PushBootstrap } from '@/features/notifications/PushBootstrap';
 import { I18nProvider } from '@/i18n/I18nProvider';
 import { queryClient } from '@/queries/query-client';
+import { queryPersistOptions } from '@/queries/query-persist';
+import { NetworkBanner } from '@/components/network/NetworkBanner';
+import { BrandIntro } from '@/components/motion/BrandIntro';
+import { ConfettiHost } from '@/components/motion/Confetti';
 import { store } from '@/store';
 import { useAppFonts } from '@/theme/fonts';
 import { useColors } from '@/theme/ThemeProvider';
@@ -102,12 +107,15 @@ export default function RootLayout() {
       <AppThemeProvider>
         <ReduxProvider store={store}>
           <I18nProvider>
-            <QueryClientProvider client={queryClient}>
+            {/* Cache chọn lọc ghi xuống máy để offline vẫn xem bản gần nhất — danh sách trắng ở `query-persist.ts`. */}
+            <PersistQueryClientProvider client={queryClient} persistOptions={queryPersistOptions}>
               {/*
                 Trong `SafeAreaProvider` (viewport cần inset thật) và BAO NGOÀI `Stack`: toast
                 phải sống sót qua điều hướng — bắn một thông báo rồi `router.replace` mà provider
                 nằm trong màn hình thì nó bị tháo cùng màn đó và người dùng không kịp đọc gì.
               */}
+              {/* App khách: mọi màn cuộn có "khối hiện khi cuộn tới" (app Partner không bọc ⇒ tĩnh). */}
+              <ScrollRevealDefaultProvider value>
               <AppToastProvider>
                 <PushBootstrap />
                 <ThemeBootstrap />
@@ -177,8 +185,14 @@ export default function RootLayout() {
                     </BadgeRealtimeProvider>
                   </ChatRealtimeProvider>
                 </SessionBoundary>
+                {/* Sau mọi màn để phủ lên trên — dải offline/kết nối lại ở đầu màn. */}
+                <NetworkBanner />
+                <ConfettiHost />
+                {/* Màn chào JS sau splash native, ≤ 900ms, không chặn tải — `BrandIntro`. */}
+                <BrandIntro />
               </AppToastProvider>
-            </QueryClientProvider>
+              </ScrollRevealDefaultProvider>
+            </PersistQueryClientProvider>
           </I18nProvider>
         </ReduxProvider>
       </AppThemeProvider>

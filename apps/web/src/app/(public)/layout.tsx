@@ -6,6 +6,8 @@ import { FavoriteIntentResumer } from '@/features/favorites/components/FavoriteI
 import { MarketHeader } from '@/features/marketplace/components/MarketHeader';
 import { MarketFooterSlot } from '@/features/marketplace/components/MarketFooterSlot';
 import { MobileTabBar } from '@/features/marketplace/components/MobileTabBar';
+import { feedbackScopeClass } from '@/components/motion/motion-classes';
+import { cx } from '@/lib/cx';
 import { ZONE } from '@/zones';
 import { ZoneProvider } from '@/zones/ZoneProvider';
 import styles from './public-layout.module.css';
@@ -35,7 +37,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
           <Suspense fallback={null}>
             <AuthUrlSync />
           </Suspense>
-          <div className={styles.wrapper}>
+          <div className={cx(styles.wrapper, feedbackScopeClass)}>
             <MarketHeader />
             <main className={styles.main}>{children}</main>
             <MarketFooterSlot />

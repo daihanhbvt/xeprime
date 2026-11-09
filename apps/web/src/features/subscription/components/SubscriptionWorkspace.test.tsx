@@ -13,7 +13,7 @@ import type { CurrentPlan, MySubscription, SubscriptionInvoice, TenantPlan } fro
 import { SubscriptionWorkspace } from './SubscriptionWorkspace';
 
 /**
- * Màn "Gói & hạn mức" — section `plan` của trang Cửa hàng (tuyến gói) và của "Hồ sơ chủ xe"
+ * Màn "Gói & hạn mức" - section `plan` của trang Cửa hàng (tuyến gói) và của "Hồ sơ chủ xe"
  * (tuyến hoa hồng).
  *
  * Bộ này khoá ba nhóm điều, cả ba đều là lỗi đã có thật hoặc sẽ có nếu làm sai:
@@ -22,8 +22,8 @@ import { SubscriptionWorkspace } from './SubscriptionWorkspace';
  *     mua riêng; gói doanh nghiệp phủ cả hai thì hai làn đóng lại; loại xe chưa có gói nói thẳng
  *     "chưa đăng lên chợ được" thay vì một con số 0/0.
  *  2. **Giao diện khớp với API về quyền MUA.** `shop_manager` có `subscription.view` nhưng không có
- *     `subscription.purchase` — không CTA mua nào, không modal treo sẵn trong cây.
- *  3. **Không hứa những con số hệ thống không giữ** — phí dịch vụ đọc từ chính sách phí, không từ
+ *     `subscription.purchase` - không CTA mua nào, không modal treo sẵn trong cây.
+ *  3. **Không hứa những con số hệ thống không giữ** - phí dịch vụ đọc từ chính sách phí, không từ
  *     `commissionPercent` của gói; không còn trần chi nhánh.
  */
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
@@ -60,7 +60,7 @@ const invoices = vi.hoisted(() => ({
   isError: false,
   refetch: vi.fn(),
 }));
-/** Hoá đơn ĐANG CHỜ — tối đa một mỗi loại xe, đọc bằng một lượt RIÊNG. */
+/** Hoá đơn ĐANG CHỜ - tối đa một mỗi loại xe, đọc bằng một lượt RIÊNG. */
 const pending = vi.hoisted(() => ({
   data: [] as SubscriptionInvoice[],
   isPending: false,
@@ -111,7 +111,7 @@ vi.mock('@/hooks/use-url-filters', async (importOriginal) => {
 
 vi.mock('@/hooks/use-feature', () => ({ useFeatureStates: () => ({}) }));
 
-/** PHA và TUYẾN đọc từ `/auth/me` (ADR 0038 điều 1) — chặn đúng ở ranh giới đó. */
+/** PHA và TUYẾN đọc từ `/auth/me` (ADR 0038 điều 1) - chặn đúng ở ranh giới đó. */
 const currentUser = vi.hoisted(() => ({ data: undefined as unknown }));
 vi.mock('@/hooks/use-current-user', () => ({
   useCurrentUser: () => currentUser,
@@ -160,7 +160,7 @@ const ENTERPRISE_PLAN: CurrentPlan = {
   quota: { maxVehicles: null, maxBranches: null, maxMembers: null },
 };
 
-/** Gói hoa hồng vẫn là một `currentPlan` — nhưng không bao giờ nằm trong `currentPlans`. */
+/** Gói hoa hồng vẫn là một `currentPlan` - nhưng không bao giờ nằm trong `currentPlans`. */
 const COMMISSION_PLAN: CurrentPlan = {
   subscriptionId: 'SUB2',
   planId: 'PLAN2',
@@ -271,7 +271,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('SubscriptionWorkspace — hai làn theo loại xe (ADR 0065)', () => {
+describe('SubscriptionWorkspace - hai làn theo loại xe (ADR 0065)', () => {
   it('làn có gói: tên gói, mức dùng theo ĐÚNG loại xe, nút gia hạn của chính làn đó', () => {
     renderWorkspace();
 
@@ -285,7 +285,7 @@ describe('SubscriptionWorkspace — hai làn theo loại xe (ADR 0065)', () => {
     renderWorkspace();
 
     const car = lane('Gói ô tô');
-    expect(within(car).getByText('Chưa có gói ô tô — ô tô chưa đăng lên chợ được.')).toBeTruthy();
+    expect(within(car).getByText('Chưa có gói ô tô - ô tô chưa đăng lên chợ được.')).toBeTruthy();
     expect(within(car).getByRole('button', { name: 'Mua gói ô tô' })).toBeTruthy();
     // Ô hạn mức ở đầu trang cũng nói "chưa có gói", không phải "0/0".
     expect(screen.getAllByText('Chưa có gói').length).toBeGreaterThan(0);
@@ -299,7 +299,7 @@ describe('SubscriptionWorkspace — hai làn theo loại xe (ADR 0065)', () => {
     expect(await screen.findByText('Mua / gia hạn Gói ô tô')).toBeTruthy();
   });
 
-  it('hai ô hạn mức theo loại — mỗi ô một trần, không có ô "Tổng số xe"', () => {
+  it('hai ô hạn mức theo loại - mỗi ô một trần, không có ô "Tổng số xe"', () => {
     renderWorkspace();
 
     expect(screen.getByText('2/5')).toBeTruthy();
@@ -407,7 +407,7 @@ describe('SubscriptionWorkspace — hai làn theo loại xe (ADR 0065)', () => {
   });
 });
 
-describe('SubscriptionWorkspace — ý định từ URL (?lane= · ?purchase=1)', () => {
+describe('SubscriptionWorkspace - ý định từ URL (?lane= · ?purchase=1)', () => {
   it('?lane=car&purchase=1 (CTA ở màn xe): mở hộp thoại của làn ô tô và gỡ tham số', async () => {
     url.purchase = true;
     url.lane = 'car';
@@ -438,10 +438,10 @@ describe('SubscriptionWorkspace — ý định từ URL (?lane= · ?purchase=1)'
   });
 });
 
-describe('SubscriptionWorkspace — quyền mua gói', () => {
+describe('SubscriptionWorkspace - quyền mua gói', () => {
   /*
    * `shop_manager` điển hình: xem được hạn mức để điều hành đội xe, nhưng mua là việc của chủ
-   * gian hàng. Không CTA nào được dẫn họ vào luồng đó — kể cả CTA phụ trong danh sách tính năng.
+   * gian hàng. Không CTA nào được dẫn họ vào luồng đó - kể cả CTA phụ trong danh sách tính năng.
    */
   it('chỉ subscription.view: KHÔNG có CTA mua nào, nhưng vẫn xem được gói và hạn mức', () => {
     grant(PERMISSION.SUBSCRIPTION_VIEW);
@@ -463,7 +463,7 @@ describe('SubscriptionWorkspace — quyền mua gói', () => {
   });
 });
 
-describe('SubscriptionWorkspace — hoá đơn', () => {
+describe('SubscriptionWorkspace - hoá đơn', () => {
   it('chưa có hoá đơn nào: một dòng chữ gọn, KHÔNG dựng bảng lịch sử', () => {
     renderWorkspace();
 
@@ -495,7 +495,7 @@ describe('SubscriptionWorkspace — hoá đơn', () => {
   });
 });
 
-describe('SubscriptionWorkspace — tuyến hoa hồng', () => {
+describe('SubscriptionWorkspace - tuyến hoa hồng', () => {
   it('trần CHUNG Owner Lite: MỘT ô "Tổng số xe", không hai ô cùng in "3"', () => {
     me.data = commissionFixture(2);
     currentUser.data = commissionScope({ serviceFeePercent: 7 });
@@ -515,7 +515,7 @@ describe('SubscriptionWorkspace — tuyến hoa hồng', () => {
     expect(screen.queryByText(/10%/)).toBeNull();
   });
 
-  it('chủ xe chưa từng trả: KHÔNG có làn mua — luồng nâng cấp nằm ngay trên trang', () => {
+  it('chủ xe chưa từng trả: KHÔNG có làn mua - luồng nâng cấp nằm ngay trên trang', () => {
     me.data = commissionFixture();
     currentUser.data = commissionScope();
     renderWorkspace();
@@ -535,7 +535,7 @@ describe('SubscriptionWorkspace — tuyến hoa hồng', () => {
   });
 
   /**
-   * Gian hàng đã trả tiền rồi hết gói cũng rơi về tuyến hoa hồng. Họ là khách cũ cần GIA HẠN — mời
+   * Gian hàng đã trả tiền rồi hết gói cũng rơi về tuyến hoa hồng. Họ là khách cũ cần GIA HẠN - mời
    * họ "nâng cấp lên gian hàng" là kể sai câu chuyện của chính họ (ADR 0040 điều 4).
    */
   it('gian hàng hết gói: hai làn để mua lại, không phải luồng nâng cấp', () => {

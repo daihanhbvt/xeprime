@@ -137,7 +137,7 @@
     "on": "On",
     "off": "Off",
     "unlimited": "Unlimited",
-    "tier": "{from}–{to} km: {fee}",
+    "tier": "{from}-{to} km: {fee}",
     "longTermTier": "From {months}: {percent}% off",
     "noPolicy": "The shop hasn't set a rental policy for this vehicle",
     "policySource": {
@@ -180,7 +180,7 @@
     "pending": "To check",
     "auto": {
       "title": "Automatic checks",
-      "hint": "Calculated from the submitted listing — read only.",
+      "hint": "Calculated from the submitted listing - read only.",
       "items": {
         "selfDrivePrice": "Has a self-drive price",
         "longTermPrice": "Has a long-term price",
@@ -203,12 +203,12 @@
         "content_not_misleading": "Content isn't misleading"
       },
       "updatedBy": "{name} · {at}",
-      "locked": "This request has been handled — the checklist is read only."
+      "locked": "This request has been handled - the checklist is read only."
     }
   },
   "note": {
     "title": "Internal note",
-    "hint": "Visible to the operations team only — never sent to the owner.",
+    "hint": "Visible to the operations team only - never sent to the owner.",
     "placeholder": "Add a note for the operations team…",
     "tooLong": "The note can be at most {max} characters.",
     "save": "Save note",
@@ -225,8 +225,8 @@
   "footer": {
     "hint": "Complete the manual checks before approving",
     "ready": "Manual checks complete",
-    "decided": "This request has been handled — no actions left",
-    "blocked": "The vehicle no longer matches its submission — you can only request changes or reject"
+    "decided": "This request has been handled - no actions left",
+    "blocked": "The vehicle no longer matches its submission - you can only request changes or reject"
   },
   "actions": {
     "approve": "Approve",

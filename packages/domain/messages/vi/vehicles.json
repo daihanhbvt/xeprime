@@ -192,7 +192,7 @@
       "branchHelp": "Quyết định xe hiển thị ở tỉnh/thành nào trên marketplace.",
       "vehicleType": "Loại xe",
       "serviceTypes": "Loại dịch vụ",
-      "serviceTypesHelp": "Chọn được nhiều loại — khai giá riêng cho dài hạn/có tài xế ở bước giá thuê"
+      "serviceTypesHelp": "Chọn được nhiều loại - khai giá riêng cho dài hạn/có tài xế ở bước giá thuê"
     },
     "warnings": {
       "typePolicyTitle": "Đổi loại xe sang {label}: xe sẽ kế thừa chính sách thuê mặc định của loại mới",
@@ -249,10 +249,10 @@
       "electricRangeHelp": "Số km đi được trong một lần sạc đầy",
       "batteryCapacity": "Dung lượng pin",
       "batteryCapacityPlaceholder": "42",
-      "batteryCapacityHelp": "kWh — bỏ trống nếu bạn không rõ",
+      "batteryCapacityHelp": "kWh - bỏ trống nếu bạn không rõ",
       "electricConsumption": "Mức tiêu thụ điện",
       "electricConsumptionPlaceholder": "15",
-      "electricConsumptionHelp": "kWh cho quãng đường 100 km — không bắt buộc"
+      "electricConsumptionHelp": "kWh cho quãng đường 100 km - không bắt buộc"
     },
     "specs": {
       "plateNumber": "Biển số xe",
@@ -275,11 +275,11 @@
       "modelHelp": "Chọn đúng mẫu để xe hiện ra khi khách lọc theo dòng xe.",
       "modelPickBrandFirst": "Chọn hãng xe trước để hiện danh sách mẫu.",
       "modelEmpty": "Hãng này chưa có mẫu xe trong danh mục.",
-      "specFromModel": "Theo mẫu {model} — đã điền sẵn.",
+      "specFromModel": "Theo mẫu {model} - đã điền sẵn.",
       "specChoiceFromModel": "Mẫu {model} có các bản: {values}.",
       "motorbikeCategory": "Phân khúc xe",
       "motorbikeCategoryPlaceholder": "Chọn phân khúc",
-      "motorbikeCategoryHelp": "Khách lọc xe máy theo phân khúc — chọn sai thì xe khó được tìm thấy."
+      "motorbikeCategoryHelp": "Khách lọc xe máy theo phân khúc - chọn sai thì xe khó được tìm thấy."
     },
     "prices": {
       "weekday": "Giá ngày thường",
@@ -296,22 +296,22 @@
       "monthly": "Giá tháng (thuê dài hạn)",
       "monthlyPlaceholder": "VD: 9.000.000",
       "monthlyHelp": "Ước tính cho khách = số ngày × giá tháng ÷ 30. Cần có trước khi gửi duyệt.",
-      "withDriverDaily": "Giá/ngày có tài xế — nội thành",
+      "withDriverDaily": "Giá/ngày có tài xế - nội thành",
       "withDriverDailyPlaceholder": "VD: 1.500.000",
       "withDriverDailyHelp": "Đã gồm tài xế (giá cơ bản). Cần có trước khi gửi duyệt.",
-      "withDriverInterCity": "Giá/ngày có tài xế — liên tỉnh",
+      "withDriverInterCity": "Giá/ngày có tài xế - liên tỉnh",
       "withDriverInterCityPlaceholder": "VD: 1.800.000",
       "withDriverInterCityHelp": "Khứ hồi; bỏ trống = tạm tính theo giá nội thành",
-      "withDriverOneWay": "Giá/ngày có tài xế — 1 chiều",
+      "withDriverOneWay": "Giá/ngày có tài xế - 1 chiều",
       "withDriverOneWayPlaceholder": "VD: 2.200.000",
       "withDriverOneWayHelp": "Liên tỉnh một chiều; bỏ trống = tạm tính theo bậc gần nhất"
     },
     "marketPrice": {
-      "range": "Giá tham khảo: {low} – {high}/ngày",
+      "range": "Giá tham khảo: {low} - {high}/ngày",
       "basisProvinceSegment": "Trung vị của {count} xe cùng phân khúc đang cho thuê tại {province}",
       "basisSegment": "Trung vị của {count} xe cùng phân khúc đang cho thuê trên cả nước",
       "basisVehicleType": "Trung vị của {count} xe cùng loại đang cho thuê trên cả nước",
-      "basisBaseline": "Mức khởi điểm gợi ý — chợ chưa đủ xe tương tự để tính giá thị trường",
+      "basisBaseline": "Mức khởi điểm gợi ý - chợ chưa đủ xe tương tự để tính giá thị trường",
       "apply": "Dùng giá {price}",
       "applyBaseline": "Dùng mức khởi điểm {price}"
     },
@@ -580,7 +580,7 @@
       },
       "underReview": {
         "title": "Hồ sơ đang được xét duyệt",
-        "description": "Nền tảng sẽ phản hồi trong thời gian sớm nhất. Bạn vẫn sửa được hồ sơ — mỗi lần lưu, người duyệt sẽ thấy bản mới nhất."
+        "description": "Nền tảng sẽ phản hồi trong thời gian sớm nhất. Bạn vẫn sửa được hồ sơ - mỗi lần lưu, người duyệt sẽ thấy bản mới nhất."
       },
       "needsRevision": {
         "title": "Cần bổ sung thông tin",
@@ -671,7 +671,7 @@
     "documents": {
       "title": "Hồ sơ & Giấy tờ pháp lý",
       "manageLink": "Quản lý giấy tờ",
-      "expired": "{count, plural, other {# giấy tờ}} đã hết hạn — cần xử lý trước khi xe tiếp tục chạy",
+      "expired": "{count, plural, other {# giấy tờ}} đã hết hạn - cần xử lý trước khi xe tiếp tục chạy",
       "expiring": "{count, plural, other {# giấy tờ}} sắp hết hạn",
       "clear": "Không có giấy tờ nào quá hạn hoặc sắp hết hạn.",
       "unknown": "Chưa có thông tin."
@@ -732,7 +732,7 @@
       "sub": "{customer} • {range} • {amount}",
       "bookingRange": "Đơn {code} • {range}"
     },
-    "dateRange": "{from} – {to}",
+    "dateRange": "{from} - {to}",
     "automation": {
       "title": "Tối ưu nhận chuyến",
       "editLink": "Cấu hình",
@@ -744,8 +744,8 @@
     },
     "repairListing": {
       "action": "Đồng bộ lại hiển thị công khai",
-      "fixed": "Đã đồng bộ lại — hiển thị ngoài chợ đã khớp dữ liệu xe",
-      "unchanged": "Hiển thị ngoài chợ vốn đã khớp dữ liệu xe — không có gì thay đổi"
+      "fixed": "Đã đồng bộ lại - hiển thị ngoài chợ đã khớp dữ liệu xe",
+      "unchanged": "Hiển thị ngoài chợ vốn đã khớp dữ liệu xe - không có gì thay đổi"
     },
     "tabs": {
       "overview": "Tổng quan",
@@ -804,7 +804,7 @@
     },
     "advanced": {
       "title": "Thông số kỹ thuật nâng cao",
-      "hint": "Kích thước, động cơ và mức tiêu hao — không bắt buộc"
+      "hint": "Kích thước, động cơ và mức tiêu hao - không bắt buộc"
     },
     "revert": "Hoàn tác",
     "discard": {
@@ -834,7 +834,7 @@
       "information": "Đã lưu thông tin xe",
       "media": "Đã lưu hình ảnh & tiện ích"
     },
-    "lockedNotice": "Xe đang hiển thị trên chợ: biển số, hộp số, nhiên liệu và năm sản xuất đã khoá. Mọi thông tin khác — gồm cả giá — sửa là có hiệu lực ngay.",
+    "lockedNotice": "Xe đang hiển thị trên chợ: biển số, hộp số, nhiên liệu và năm sản xuất đã khoá. Mọi thông tin khác - gồm cả giá - sửa là có hiệu lực ngay.",
     "lockedField": "Đã khoá vì xe đang trên chợ. Gỡ xe khỏi chợ nếu cần đổi.",
     "page": {
       "title": "Chỉnh sửa xe",
@@ -876,7 +876,7 @@
       "perMonth": "{price} / tháng",
       "odometer": "Số KM",
       "statusSaved": "Đã cập nhật trạng thái vận hành",
-      "changeStatus": "Trạng thái vận hành: {status} — bấm để đổi",
+      "changeStatus": "Trạng thái vận hành: {status} - bấm để đổi",
       "editImagesLabel": "Chỉnh sửa hình ảnh xe",
       "prevImage": "Ảnh trước",
       "nextImage": "Ảnh tiếp theo"
@@ -1015,7 +1015,7 @@
       "moneyMin": "Số tiền không được âm"
     },
     "typeCurrent": "Đang áp dụng",
-    "typeChange": "Đổi từ <b>{from}</b> sang <b>{to}</b> — chưa lưu. Bấm “Lưu thay đổi” để áp dụng.",
+    "typeChange": "Đổi từ <b>{from}</b> sang <b>{to}</b> - chưa lưu. Bấm “Lưu thay đổi” để áp dụng.",
     "typeKeep": "Giữ {label}"
   },
   "pricing": {
@@ -1088,9 +1088,9 @@
       "title": "Xe có tài xế",
       "daily": "Nội thành (giá cơ bản)",
       "dailyHint": "Mức giá bắt buộc để công khai dịch vụ có tài xế.",
-      "interCity": "Liên tỉnh — khứ hồi (tuỳ chọn)",
+      "interCity": "Liên tỉnh - khứ hồi (tuỳ chọn)",
       "interCityHint": "Bỏ trống để tạm tính theo giá nội thành; giá chốt được xác nhận khi duyệt.",
-      "oneWay": "Liên tỉnh — 1 chiều (tuỳ chọn)",
+      "oneWay": "Liên tỉnh - 1 chiều (tuỳ chọn)",
       "oneWayHint": "Bỏ trống để tạm tính theo bậc gần nhất: liên tỉnh rồi đến nội thành.",
       "tipLabel": "Giải thích giá xe có tài xế",
       "info": "Các mức dưới đây đã gồm tài xế; giá nội thành là mức cơ sở để hệ thống dự phòng khi thiếu giá khác.",
@@ -1107,9 +1107,9 @@
       "assetTypesHint": "Khách chỉ cần đáp ứng MỘT trong các hình thức đã chọn.",
       "noneTitle": "Không thu cọc và không giữ tài sản",
       "noneBody": "Xe áp dụng chính sách này sẽ hiện nhãn \"Miễn thế chấp\" và lọc được theo tiêu chí đó trên sàn.",
-      "hint": "Bảo đảm là thứ gian hàng giữ để phòng rủi ro: tiền cọc, tài sản/giấy tờ, hoặc không yêu cầu gì. Đây là việc RIÊNG với đối chiếu giấy tờ tuỳ thân — đối chiếu thì lượt thuê nào cũng cần.",
+      "hint": "Bảo đảm là thứ gian hàng giữ để phòng rủi ro: tiền cọc, tài sản/giấy tờ, hoặc không yêu cầu gì. Đây là việc RIÊNG với đối chiếu giấy tờ tuỳ thân - đối chiếu thì lượt thuê nào cũng cần.",
       "modeCash": "Khách đặt một khoản tiền, hoàn lại khi bàn giao xe xong.",
-      "modeAsset": "Khách để lại giấy tờ hoặc tài sản thay cho tiền — gian hàng không giữ tiền.",
+      "modeAsset": "Khách để lại giấy tờ hoặc tài sản thay cho tiền - gian hàng không giữ tiền.",
       "modeNone": "Không yêu cầu bảo đảm. Xe sẽ mang nhãn \"Miễn thế chấp\" trên sàn.",
       "tipLabel": "Giải thích yêu cầu bảo đảm",
       "amountTipLabel": "Giải thích số tiền cọc mặc định"
@@ -1130,7 +1130,7 @@
       "maxRadiusLabel": "Bán kính hỗ trợ tối đa tự giao",
       "maxRadiusHint": "Mốc này phải khớp điểm kết thúc của bậc cuối. Ngoài bán kính, khách thấy \"Liên hệ chủ xe\" và shop báo giá giao nhận thủ công.",
       "previewTitle": "Tiền tối thiểu hiển thị với khách đặt:",
-      "disabledNote": "Đang tắt — khách không thể yêu cầu giao xe tận nơi khi đặt.",
+      "disabledNote": "Đang tắt - khách không thể yêu cầu giao xe tận nơi khi đặt.",
       "tierName": "Bậc {index}",
       "tierRange": "Từ {from} km",
       "tipLabel": "Giải thích phí giao nhận",
@@ -1171,7 +1171,7 @@
       "placeholder": "Cần cấu hình",
       "formulaTitle": "Công thức tính phí phạt trễ hạn tự động:",
       "formula": "Phí quá giờ = (số giờ trễ thực tế) × {fee}. Tính ở bước bàn trả xe.",
-      "formulaNone": "Chưa cấu hình phí mỗi giờ — phí quá giờ sẽ thoả thuận thủ công ở bước bàn trả xe.",
+      "formulaNone": "Chưa cấu hình phí mỗi giờ - phí quá giờ sẽ thoả thuận thủ công ở bước bàn trả xe.",
       "tipLabel": "Giải thích phí quá giờ",
       "feePerHourTipLabel": "Giải thích phí mỗi giờ phát sinh",
       "graceMinutesTipLabel": "Giải thích thời gian miễn phí tối đa",
@@ -1195,7 +1195,7 @@
       "selectPackage": "Chọn gói",
       "formulaTitle": "Công thức tính giá gói:",
       "formula": "giá_gói = giá_tháng × số_tháng − (giá_tháng × số_tháng × phần_trăm_giảm)",
-      "disabledNote": "Đang tắt — mọi lượt đặt tính nguyên giá thuê cơ bản.",
+      "disabledNote": "Đang tắt - mọi lượt đặt tính nguyên giá thuê cơ bản.",
       "legacyTitle": "{count, plural, other {# mốc ưu đãi cũ}} theo NGÀY chưa quy đổi được sang gói",
       "legacyTier": "từ {days} ngày giảm {percent}%",
       "legacyBody": "Các mốc này không còn được tính giá. Chọn lại mốc theo gói rồi lưu; hệ thống không tự quy đổi để tránh thay đổi giá ngoài ý muốn.",
@@ -1243,23 +1243,23 @@
       "publicBody": "{vehicle} đang hiển thị công khai. Đổi giá sẽ đưa xe về trạng thái chờ duyệt lại và tạm ẩn khỏi sàn cho tới khi được nền tảng duyệt. Các đơn thuê đã chốt trước đó vẫn giữ nguyên mốc giá cũ.",
       "publicOk": "Xác nhận thay đổi",
       "overrideTitle": "Lưu chính sách riêng cho xe này?",
-      "overrideBody": "Thay đổi chỉ áp dụng cho {vehicle}, tính từ các lượt đặt mới — không ảnh hưởng các xe khác và các đơn đã chốt.",
+      "overrideBody": "Thay đổi chỉ áp dụng cho {vehicle}, tính từ các lượt đặt mới - không ảnh hưởng các xe khác và các đơn đã chốt.",
       "inheritTitle": "Lưu giá thuê cho xe này?",
       "inheritBody": "Giá mới chỉ áp dụng cho {vehicle}, tính từ các lượt đặt mới. Xe vẫn kế thừa chính sách chung của gian hàng.",
       "ok": "Lưu thay đổi",
       "cancel": "Hủy bỏ",
       "ownerTitle": "Lưu giá & chính sách cho xe này?",
-      "ownerBody": "Thay đổi chỉ áp dụng cho {vehicle}, tính từ các lượt đặt mới — không ảnh hưởng các đơn đã chốt."
+      "ownerBody": "Thay đổi chỉ áp dụng cho {vehicle}, tính từ các lượt đặt mới - không ảnh hưởng các đơn đã chốt."
     },
     "longTermHint": {
-      "suggestion": "Gợi ý {min} – {max}/tháng — thuê theo ngày cả tháng đã là {reference}, giá dài hạn nên thấp hơn để khách có lý do cam kết.",
-      "noMonthly": "Giá tự lái {weekday}/ngày — chưa đặt giá thuê dài hạn",
+      "suggestion": "Gợi ý {min} - {max}/tháng - thuê theo ngày cả tháng đã là {reference}, giá dài hạn nên thấp hơn để khách có lý do cam kết.",
+      "noMonthly": "Giá tự lái {weekday}/ngày - chưa đặt giá thuê dài hạn",
       "notCheaper": "Giá tháng ({monthly}) không rẻ hơn thuê theo ngày cả tháng ({reference})",
       "notCheaperBody": "Khách không có lý do chọn gói dài hạn với mức này.",
       "base": "Giá dài hạn cơ sở {monthly}/tháng",
       "packagesLead": "Khách sẽ thấy các gói sau (đã gồm ưu đãi cam kết thời hạn):",
       "perMonth": "{amount}/tháng",
-      "suggestedLine": "Giá đề xuất: {min} – {max}/tháng",
+      "suggestedLine": "Giá đề xuất: {min} - {max}/tháng",
       "notCheaperShort": "chưa rẻ hơn thuê theo ngày cả tháng ({reference})",
       "suggestTipLabel": "Cách tính giá đề xuất"
     },
@@ -1307,11 +1307,11 @@
       "excessFeeRequired": "Nhập phí cho mỗi km vượt",
       "excessFeeMax": "Phí vượt km quá lớn",
       "moneyThousandStep": "Số tiền phải là bội của 1.000đ",
-      "perKmRequired": "Nhập đơn giá mỗi km lớn hơn 0 — miễn phí thì chọn \"Trọn gói\" 0đ",
+      "perKmRequired": "Nhập đơn giá mỗi km lớn hơn 0 - miễn phí thì chọn \"Trọn gói\" 0đ",
       "overtimeFeeRequired": "Nhập phí mỗi giờ phát sinh, hoặc tắt phí quá giờ"
     },
     "calendarLink": "Tuỳ chỉnh giá theo lịch",
-    "calendarHint": "Giá riêng theo ngày (lễ, cuối tuần, mùa cao điểm) đặt trực tiếp trên lịch xe — một nguồn giá, không có bảng giá mùa vụ thứ hai.",
+    "calendarHint": "Giá riêng theo ngày (lễ, cuối tuần, mùa cao điểm) đặt trực tiếp trên lịch xe - một nguồn giá, không có bảng giá mùa vụ thứ hai.",
     "mileage": {
       "title": "Hạn mức quãng đường",
       "hint": "Số km mỗi ngày đã nằm trong giá thuê. Khách chạy vượt thì phần vượt được đề xuất thành phụ phí lúc quyết toán, không cộng vào báo giá lúc đặt.",
@@ -1327,7 +1327,7 @@
       "previewTitle": "Khách sẽ thấy trên trang xe:",
       "preview": "Bao gồm {km}/ngày. Phụ phí {fee} cho mỗi km vượt giới hạn.",
       "previewIncomplete": "Nhập cả hai ô để khách nhìn thấy hạn mức trên trang xe.",
-      "disabledNote": "Không giới hạn quãng đường — không có phụ phí vượt km."
+      "disabledNote": "Không giới hạn quãng đường - không có phụ phí vượt km."
     },
     "backToVehicle": "Về hồ sơ xe",
     "backToList": "Về danh sách xe",
@@ -1341,7 +1341,7 @@
       "monthlyLabel": "Giá dài hạn cơ sở: {amount}/tháng",
       "featured": "Gói {months}",
       "saving": "Khách tiết kiệm {amount} cho cả gói",
-      "noTiers": "Chưa có mốc ưu đãi — khách trả nguyên giá gói.",
+      "noTiers": "Chưa có mốc ưu đãi - khách trả nguyên giá gói.",
       "exampleEmpty": "Nhập giá tháng ví dụ để xem trước",
       "monthlyEmpty": "Nhập giá dài hạn cơ sở để xem trước giá các gói",
       "exampleNote": "Chỉ là ví dụ. Giá thật của mỗi xe tính từ giá tháng của xe đó."
@@ -1351,11 +1351,11 @@
     "noPermissionTitle": "Không có quyền xem giấy tờ",
     "noPermissionBody": "Bạn không có quyền xem hồ sơ giấy tờ của xe này. Liên hệ chủ gian hàng để được cấp quyền.",
     "loadError": "Không tải được danh mục giấy tờ",
-    "readOnly": "Chế độ xem — Bạn chỉ có quyền xem giấy tờ, không thể chỉnh sửa.",
+    "readOnly": "Chế độ xem - Bạn chỉ có quyền xem giấy tờ, không thể chỉnh sửa.",
     "cardTitle": "Danh mục hồ sơ & giấy tờ xe",
     "addType": "Thêm loại giấy tờ",
     "ocrNoteTitle": "Quy trình trích xuất thông tin tự động bằng AI (OCR Review)",
-    "ocrNoteBody": "Kết quả trích xuất OCR luôn chỉ là bản nháp hỗ trợ nhập liệu — bạn bắt buộc đối soát với tài liệu gốc và tự chọn từng trường trước khi lưu vào hồ sơ xe.",
+    "ocrNoteBody": "Kết quả trích xuất OCR luôn chỉ là bản nháp hỗ trợ nhập liệu - bạn bắt buộc đối soát với tài liệu gốc và tự chọn từng trường trước khi lưu vào hồ sơ xe.",
     "row": {
       "expiry": "Ngày hết hạn: <b>{value}</b>",
       "updatedAt": "Cập nhật: <b>{value}</b>",
@@ -1381,9 +1381,9 @@
       "inProgressAria": "Đang tải {fileName}"
     },
     "ocr": {
-      "unreadable": "Không thể trích xuất do ảnh mờ hoặc không đúng định dạng — nhập thủ công hoặc tải ảnh khác.",
-      "failed": "Trích xuất thất bại — thử lại hoặc nhập thủ công.",
-      "notConfigured": "Trích xuất tự động chưa khả dụng — vui lòng nhập thông tin thủ công."
+      "unreadable": "Không thể trích xuất do ảnh mờ hoặc không đúng định dạng - nhập thủ công hoặc tải ảnh khác.",
+      "failed": "Trích xuất thất bại - thử lại hoặc nhập thủ công.",
+      "notConfigured": "Trích xuất tự động chưa khả dụng - vui lòng nhập thông tin thủ công."
     },
     "remove": {
       "title": "Xoá giấy tờ khỏi danh mục?",
@@ -1392,10 +1392,10 @@
       "done": "Đã xoá giấy tờ khỏi danh mục"
     },
     "metadata": {
-      "editTitle": "Nhập thông tin giấy tờ — {title}",
+      "editTitle": "Nhập thông tin giấy tờ - {title}",
       "save": "Lưu giấy tờ",
       "saved": "Đã lưu thông tin giấy tờ",
-      "conflict": "Giấy tờ vừa được người khác cập nhật — đóng hộp thoại và tải lại trước khi sửa tiếp.",
+      "conflict": "Giấy tờ vừa được người khác cập nhật - đóng hộp thoại và tải lại trước khi sửa tiếp.",
       "noDetailTitle": "Không có quyền xem chi tiết giấy tờ",
       "noDetailBody": "Cần quyền xem chi tiết giấy tờ (vehicles.documents.view_details) để đọc và sửa thông tin nhạy cảm.",
       "plateNumber": "Biển số xe",
@@ -1420,7 +1420,7 @@
       "noPermissionBody": "Cần quyền mở file giấy tờ (vehicles.documents.view_files).",
       "loadError": "Không tải được lịch sử",
       "empty": "Giấy tờ này chưa có phiên bản file nào",
-      "version": "Bản {version} — {fileName}",
+      "version": "Bản {version} - {fileName}",
       "replaced": "Đã thay thế {date}",
       "active": "Đang sử dụng · tải lên {date}",
       "download": "Xem file"
@@ -1428,21 +1428,21 @@
     "review": {
       "title": "Kiểm tra kết quả OCR",
       "success": "Nhận dạng thành công",
-      "successWithConfidence": "Nhận dạng thành công — độ tin cậy trích xuất: {confidence}%",
+      "successWithConfidence": "Nhận dạng thành công - độ tin cậy trích xuất: {confidence}%",
       "warning": "Kết quả OCR chỉ được dùng làm bản nháp hỗ trợ nhập liệu nhanh. Bạn bắt buộc phải đối soát lại với tài liệu gốc trước khi lưu.",
       "colSelect": "Chọn",
       "colField": "Trường",
       "colCurrent": "Hiện tại",
       "colOcr": "Nhận dạng (OCR)",
       "selectField": "Chọn {field}",
-      "empty": "Không đọc được trường nào từ tài liệu — nhập thủ công giúp bạn.",
+      "empty": "Không đọc được trường nào từ tài liệu - nhập thủ công giúp bạn.",
       "apply": "Cập nhật đã chọn",
       "applyCount": "Cập nhật đã chọn ({count})",
       "applied": "Đã cập nhật các trường đã chọn",
       "markedReviewed": "Đã đánh dấu đối soát xong",
-      "conflict": "Kết quả OCR này đã được người khác đối soát — đóng hộp thoại và tải lại.",
+      "conflict": "Kết quả OCR này đã được người khác đối soát - đóng hộp thoại và tải lại.",
       "applyPlateToVehicle": "Cập nhật biển số vào hồ sơ xe (xe đang công khai sẽ về chờ duyệt lại)",
-      "skip": "Bỏ qua — đã đối soát, không cập nhật gì"
+      "skip": "Bỏ qua - đã đối soát, không cập nhật gì"
     },
     "cardSubtitle": "Quản lý các giấy tờ pháp lý và tài liệu liên quan đến xe",
     "cardTitleCompact": "Giấy tờ xe",
@@ -1458,13 +1458,13 @@
       "fileTitle": "File đính kèm",
       "fileNone": "Chưa có file nào được tải lên",
       "fileVersion": "Bản {version} · tải lên {date}",
-      "dialogTitle": "Giấy tờ — {title}"
+      "dialogTitle": "Giấy tờ - {title}"
     },
     "add": {
       "title": "Thêm loại giấy tờ",
       "typeLabel": "Loại giấy tờ",
       "typePlaceholder": "Chọn loại giấy tờ",
-      "customOption": "Khác — tự đặt tên",
+      "customOption": "Khác - tự đặt tên",
       "customLabel": "Tên loại giấy tờ",
       "customPlaceholder": "VD: Phù hiệu xe hợp đồng",
       "fileLabel": "Ảnh hoặc file giấy tờ",
@@ -1485,7 +1485,7 @@
     "title": "Bảo dưỡng",
     "noPermission": "Không có quyền xem bảo dưỡng",
     "loadError": "Không tải được thông tin bảo dưỡng",
-    "readOnly": "Chế độ xem — Bạn chỉ có quyền xem bảo dưỡng, không thể chỉnh sửa.",
+    "readOnly": "Chế độ xem - Bạn chỉ có quyền xem bảo dưỡng, không thể chỉnh sửa.",
     "odometer": {
       "title": "Chỉ số Kilometer hiện tại (Odo)",
       "current": "Chỉ số hiện tại",
@@ -1563,7 +1563,7 @@
         "notes": "Ghi chú",
         "plannedStartAt": "Bắt đầu dự kiến",
         "plannedEndAt": "Kết thúc dự kiến",
-        "scheduleHint": "Nhập đủ cặp thời gian thì lịch sẽ giữ chỗ thật trên lịch xe — khoảng đó không nhận đơn thuê được nữa.",
+        "scheduleHint": "Nhập đủ cặp thời gian thì lịch sẽ giữ chỗ thật trên lịch xe - khoảng đó không nhận đơn thuê được nữa.",
         "completeHint": "Hoàn tất sẽ giải phóng lịch xe và cập nhật KM hiện tại (nếu nhập). Riêng thay nhớt sẽ dời mốc bảo dưỡng tiếp theo.",
         "conflictTitle": "Xe đã có lịch khác trùng khoảng thời gian này",
         "conflictRow": "{label}: {range}"
@@ -1679,7 +1679,7 @@
       "label": "Tóm tắt xe",
       "openMedia": "Mở mục Hình ảnh",
       "statusSaved": "Đã cập nhật trạng thái vận hành",
-      "changeStatus": "Trạng thái vận hành: {status} — bấm để đổi",
+      "changeStatus": "Trạng thái vận hành: {status} - bấm để đổi",
       "operation": "Vận hành",
       "review": "Kiểm duyệt",
       "plate": "Biển số",
@@ -1700,11 +1700,11 @@
     "information": {
       "general": "Thông tin chung",
       "bodyType": "Kiểu dáng xe",
-      "bodyTypeHint": "Chọn đúng kiểu dáng — khách lọc xe theo mục này ngoài chợ.",
+      "bodyTypeHint": "Chọn đúng kiểu dáng - khách lọc xe theo mục này ngoài chợ.",
       "energy": "Động cơ & nhiên liệu",
       "features": "Tiện ích xe",
       "advanced": "Thông số nâng cao",
-      "advancedHint": "Kích thước, khối lượng, công suất và mức tiêu thụ — không bắt buộc.",
+      "advancedHint": "Kích thước, khối lượng, công suất và mức tiêu thụ - không bắt buộc.",
       "dimensions": "Kích thước & khối lượng",
       "engine": "Công suất",
       "consumption": "Mức tiêu thụ theo điều kiện đường",
@@ -1734,7 +1734,7 @@
         },
         "hint": "Bật để nhận {service}. Cọc, giao xe và điều khoản ở mục <conditions>Chính sách thuê</conditions>."
       },
-      "offNote": "Dịch vụ đang tắt — bật ở trên để đặt giá và nhận chuyến cho dịch vụ này.",
+      "offNote": "Dịch vụ đang tắt - bật ở trên để đặt giá và nhận chuyến cho dịch vụ này.",
       "price": {
         "title": "Giá thuê",
         "titlePromo": "Giá thuê & Khuyến mãi"
@@ -1743,7 +1743,7 @@
         "longTermTitle": "Ưu đãi thuê dài hạn (trên 1 tháng)"
       },
       "extras": "Khác",
-      "policyInvalid": "Mục Chính sách thuê còn ô chưa hợp lệ — mở mục đó để sửa rồi lưu lại."
+      "policyInvalid": "Mục Chính sách thuê còn ô chưa hợp lệ - mở mục đó để sửa rồi lưu lại."
     },
     "policy": {
       "useShop": "Áp dụng chính sách của gian hàng",
@@ -1752,7 +1752,7 @@
       "inheritedElsewhere": "Đang theo <policies>chính sách gian hàng</policies>. Muốn sửa riêng cho xe này, tắt công tắc ở đầu mục <switch>Chính sách thuê</switch>.",
       "deliveryTitle": "Giao xe tận nơi",
       "rulesTitle": "Giao xe, cọc & phụ phí",
-      "pricesInvalid": "Mục Dịch vụ & giá còn ô giá chưa hợp lệ (ví dụ chưa có giá ngày thường) — mở mục đó để sửa rồi lưu lại.",
+      "pricesInvalid": "Mục Dịch vụ & giá còn ô giá chưa hợp lệ (ví dụ chưa có giá ngày thường) - mở mục đó để sửa rồi lưu lại.",
       "bufferTipLabel": "Thời gian chuẩn bị áp cho lịch nào"
     },
     "conditions": {

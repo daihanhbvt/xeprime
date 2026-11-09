@@ -43,7 +43,7 @@ export class PartnerAppConfigAdminDto extends PartnerAppConfigDto {
   @ApiProperty({
     example: true,
     description:
-      'Gửi SMS OTP thật. TẮT (chỉ dev/staging): không gọi nhà mạng, mã cố định 123456 — tránh phí SMS khi phát triển.',
+      'Gửi SMS OTP thật. TẮT (chỉ dev/staging): không gọi nhà mạng, mã cố định 123456 - tránh phí SMS khi phát triển.',
   })
   otpSmsEnabled!: boolean;
 
@@ -139,7 +139,7 @@ export class PlanConsultationResultDto {
     nullable: true,
     example: 'chuxe@example.vn, lienhe@gianhang.vn',
     description:
-      'Các địa chỉ THẬT SỰ vừa được xếp email hướng dẫn, cách nhau bởi ", " — email tài khoản (nếu có) và ' +
+      'Các địa chỉ THẬT SỰ vừa được xếp email hướng dẫn, cách nhau bởi ", " - email tài khoản (nếu có) và ' +
       'email liên hệ đã nhập (trùng thì một). `null` khi không xếp thư (`isPlanPromotionEnabled` tắt, ' +
       'hoặc hôm nay đã gửi tới các địa chỉ đó).',
   })

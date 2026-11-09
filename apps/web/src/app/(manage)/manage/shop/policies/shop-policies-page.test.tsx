@@ -68,7 +68,7 @@ vi.mock('@/hooks/use-tenant-scope', () => ({
 vi.mock('@/features/shop/hooks/use-shop', () => ({
   usePaymentSettings: () => paymentQuery,
   useUpdatePaymentSettings: () => updatePayment,
-  // Hoá đơn VAT (ADR 0059) — hành vi riêng ở `VatInvoiceSetting.test.tsx`.
+  // Hoá đơn VAT (ADR 0059) - hành vi riêng ở `VatInvoiceSetting.test.tsx`.
   useVatInvoiceSetting: () => ({
     data: { vatInvoiceSupported: false },
     isError: false,
@@ -182,7 +182,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Chính sách thuê — quyền, tải, loại xe', () => {
+describe('Chính sách thuê - quyền, tải, loại xe', () => {
   it('thiếu tenant.view: thay TOÀN BỘ trang bằng khối quyền', () => {
     grant();
     renderPage();
@@ -228,7 +228,7 @@ describe('Chính sách thuê — quyền, tải, loại xe', () => {
   });
 });
 
-describe('Chính sách thuê — dữ liệu', () => {
+describe('Chính sách thuê - dữ liệu', () => {
   it('giá trị từ API: cọc, số xe dùng mức cọc, bậc giao xe, quá giờ đang bật', () => {
     renderPage();
     expect((screen.getByLabelText('Số tiền cọc mặc định') as HTMLInputElement).value).toBe(
@@ -243,7 +243,7 @@ describe('Chính sách thuê — dữ liệu', () => {
     expect((screen.getByLabelText('Phí mỗi giờ phát sinh') as HTMLInputElement).value).toBe(
       '100.000',
     );
-    // Ô làm tròn đã gỡ — chỉ còn công thức trong ⓘ.
+    // Ô làm tròn đã gỡ - chỉ còn công thức trong ⓘ.
     expect(screen.queryByLabelText('Đơn vị làm tròn tối thiểu')).toBeNull();
   });
 
@@ -263,7 +263,7 @@ describe('Chính sách thuê — dữ liệu', () => {
   });
 });
 
-describe('Chính sách thuê — xem trước giá gói dài hạn', () => {
+describe('Chính sách thuê - xem trước giá gói dài hạn', () => {
   it('áp mốc đang nhập lên giá tháng ví dụ; sửa giá ví dụ thì số đổi theo', () => {
     renderPage();
     const preview = screen.getByRole('complementary', { name: 'Xem trước giá gói thuê dài hạn' });
@@ -274,7 +274,7 @@ describe('Chính sách thuê — xem trước giá gói dài hạn', () => {
   });
 });
 
-describe('Chính sách thuê — lưu', () => {
+describe('Chính sách thuê - lưu', () => {
   it('chưa sửa gì: Hủy và Lưu thay đổi đều khoá', () => {
     renderPage();
     expect(screen.getByRole('button', { name: 'Lưu thay đổi' })).toHaveProperty('disabled', true);
@@ -326,7 +326,7 @@ describe('Chính sách thuê — lưu', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Xoá mốc ưu đãi 1' }));
     expect(
-      screen.getByText('Chưa có mốc ưu đãi — khách thuê dài hạn trả nguyên giá gói.'),
+      screen.getByText('Chưa có mốc ưu đãi - khách thuê dài hạn trả nguyên giá gói.'),
     ).toBeTruthy();
     await saveAndConfirm();
     await waitFor(() => expect(save.mutateAsync).toHaveBeenCalledTimes(1));
@@ -347,7 +347,7 @@ describe('Chính sách thuê — lưu', () => {
     expect(save.mutateAsync).not.toHaveBeenCalled();
   });
 
-  it('thiếu tenant.update: chỉ xem — ô bị khoá, có lời nói rõ', () => {
+  it('thiếu tenant.update: chỉ xem - ô bị khoá, có lời nói rõ', () => {
     grant(PERMISSION.TENANT_VIEW);
     renderPage();
     expect(screen.getByText('Bạn chỉ có quyền xem chính sách thuê của gian hàng.')).toBeTruthy();
@@ -356,7 +356,7 @@ describe('Chính sách thuê — lưu', () => {
   });
 });
 
-describe('Chính sách thuê — thanh toán giữ chỗ (lưu ngay, quyền riêng)', () => {
+describe('Chính sách thuê - thanh toán giữ chỗ (lưu ngay, quyền riêng)', () => {
   it('thẻ có anchor để route cũ /shop/payment-settings tới đúng chỗ', () => {
     const { container } = renderPage();
     const card = container.querySelector('#deposit-collection');

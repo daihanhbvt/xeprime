@@ -293,8 +293,8 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('PackageUpgradeWizard — bảng giá đứng trước form', () => {
-  it('mở màn: thấy bậc, hạn mức và giá — KHÔNG thấy ô nào của hồ sơ gian hàng', () => {
+describe('PackageUpgradeWizard - bảng giá đứng trước form', () => {
+  it('mở màn: thấy bậc, hạn mức và giá - KHÔNG thấy ô nào của hồ sơ gian hàng', () => {
     renderWizard();
 
     expect(screen.getByText('Gói cơ bản')).toBeTruthy();
@@ -442,7 +442,7 @@ describe('PackageUpgradeWizard — bảng giá đứng trước form', () => {
   });
 });
 
-describe('PackageUpgradeWizard — bước thông tin gian hàng', () => {
+describe('PackageUpgradeWizard - bước thông tin gian hàng', () => {
   it('điền sẵn từ hồ sơ và CHI NHÁNH MẶC ĐỊNH đang có', () => {
     renderWizard();
     pickPlanAndContinue();
@@ -567,7 +567,7 @@ describe('PackageUpgradeWizard — bước thông tin gian hàng', () => {
   });
 });
 
-describe('PackageUpgradeWizard — bước thanh toán', () => {
+describe('PackageUpgradeWizard - bước thanh toán', () => {
   /**
    * Hoá đơn chờ đến từ `GET /subscription/invoices/pending`, nên F5 / đổi máy đều rơi thẳng vào
    * màn chuyển khoản với ĐÚNG mã cũ — không ai bị mời tạo hoá đơn thứ hai cho cùng một khoản.
@@ -611,7 +611,7 @@ describe('PackageUpgradeWizard — bước thanh toán', () => {
   });
 });
 
-describe('PackageUpgradeWizard — hai làn theo loại xe (ADR 0065)', () => {
+describe('PackageUpgradeWizard - hai làn theo loại xe (ADR 0065)', () => {
   const CAR_PLAN = makePlan({
     id: 'plan-car',
     code: 'car_5',

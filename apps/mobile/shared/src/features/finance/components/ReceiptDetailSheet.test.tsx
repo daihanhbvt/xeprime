@@ -141,7 +141,7 @@ afterEach(() => {
  * Ba việc thẻ danh sách không làm được và test này khoá lại: đối chiếu được đơn/xe/khách và ĐI
  * SANG được, xem được dấu vết (ai tạo, ai duyệt), và thao tác đúng theo quyền + trạng thái.
  */
-describe('ReceiptDetailSheet — nội dung', () => {
+describe('ReceiptDetailSheet - nội dung', () => {
   it('hiện đủ tiền, loại, nguồn, danh mục, hình thức, mã tra soát và diễn giải', async () => {
     const { findByText } = await renderSheet([PERMISSION.FINANCE_VIEW]);
 
@@ -154,7 +154,7 @@ describe('ReceiptDetailSheet — nội dung', () => {
     expect(await findByText('Rửa xe sau chuyến')).toBeTruthy();
   });
 
-  it('hiện dấu vết người tạo — sổ tiền không có dấu vết là sổ không đối chiếu được', async () => {
+  it('hiện dấu vết người tạo - sổ tiền không có dấu vết là sổ không đối chiếu được', async () => {
     const { findByText } = await renderSheet([PERMISSION.FINANCE_VIEW]);
     expect(await findByText(/Nhân viên A/)).toBeTruthy();
   });
@@ -178,7 +178,7 @@ describe('ReceiptDetailSheet — nội dung', () => {
   });
 });
 
-describe('ReceiptDetailSheet — lối đi liên quan', () => {
+describe('ReceiptDetailSheet - lối đi liên quan', () => {
   /*
    * Giá trị CHÍNH LÀ link (như web), không còn nút "Xem đơn" đứng cạnh — nên phép thử là bấm
    * thẳng vào mã đơn.
@@ -230,7 +230,7 @@ describe('ReceiptDetailSheet — lối đi liên quan', () => {
   });
 });
 
-describe('ReceiptDetailSheet — duyệt và huỷ', () => {
+describe('ReceiptDetailSheet - duyệt và huỷ', () => {
   it('thiếu `receipt.approve`: không có hành động nào', async () => {
     const { findByText, queryByText } = await renderSheet([PERMISSION.FINANCE_VIEW]);
 

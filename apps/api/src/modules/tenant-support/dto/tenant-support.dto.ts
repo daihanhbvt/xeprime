@@ -35,7 +35,7 @@ export class OpenSupportContextDto {
   @ApiProperty({
     minLength: SUPPORT_REASON_LIMITS.min,
     maxLength: SUPPORT_REASON_LIMITS.max,
-    description: 'Lý do hỗ trợ — ghi vào phiên và mọi dòng audit của phiên',
+    description: 'Lý do hỗ trợ - ghi vào phiên và mọi dòng audit của phiên',
     example: 'Chủ xe nhờ cập nhật ảnh xe theo ticket #1234',
   })
   @IsString()
@@ -57,7 +57,7 @@ export class SupportContextTenantDto {
   @ApiProperty() name!: string;
   @ApiProperty() slug!: string;
   @ApiProperty({
-    description: 'Vai của PHIÊN trong gian hàng — luôn `shop_viewer` (không cổng chỉ-chủ nào mở).',
+    description: 'Vai của PHIÊN trong gian hàng - luôn `shop_viewer` (không cổng chỉ-chủ nào mở).',
   })
   roleKey!: string;
   /**
@@ -71,7 +71,7 @@ export class SupportContextTenantDto {
   @ApiProperty({
     nullable: true,
     type: Number,
-    description: '% phí dịch vụ đang hiệu lực — chỉ ở tuyến hoa hồng, như `CurrentTenantSummaryDto`.',
+    description: '% phí dịch vụ đang hiệu lực - chỉ ở tuyến hoa hồng, như `CurrentTenantSummaryDto`.',
   })
   serviceFeePercent!: number | null;
   @ApiProperty() publicVehicleCount!: number;

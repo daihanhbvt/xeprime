@@ -38,7 +38,7 @@ describe('cấu trúc bó message', () => {
     }
   });
 
-  it('không namespace nào rỗng — một namespace rỗng là chuỗi chết trong bundle', () => {
+  it('không namespace nào rỗng - một namespace rỗng là chuỗi chết trong bundle', () => {
     for (const locale of SUPPORTED_LOCALES) {
       const bundle = BUNDLES[locale] as Record<string, Record<string, unknown>>;
       const empty = Object.entries(bundle)
@@ -61,7 +61,7 @@ describe('parity hai chiều vi ↔ en', () => {
     expect(Object.keys(en).filter((key) => !(key in vi))).toEqual([]);
   });
 
-  it('mọi giá trị là chuỗi KHÔNG rỗng — bản dịch thiếu phải đỏ, không phải hiện ô trống', () => {
+  it('mọi giá trị là chuỗi KHÔNG rỗng - bản dịch thiếu phải đỏ, không phải hiện ô trống', () => {
     for (const [name, bundle] of Object.entries({ vi, en })) {
       const bad = Object.entries(bundle)
         .filter(([, value]) => typeof value !== 'string' || value.trim() === '')
@@ -121,7 +121,7 @@ describe('chỉ nạp MỘT ngôn ngữ mỗi lần', () => {
     await expect(loadMessages(locale)).resolves.toBe(BUNDLES[locale]);
   });
 
-  it('hai bó là hai object khác nhau — không có đường nào trộn chúng vào một', async () => {
+  it('hai bó là hai object khác nhau - không có đường nào trộn chúng vào một', async () => {
     const [vi, en] = await Promise.all([loadMessages('vi'), loadMessages('en')]);
     expect(vi).not.toBe(en);
     expect(vi.Common.actions.save).not.toBe(en.Common.actions.save);

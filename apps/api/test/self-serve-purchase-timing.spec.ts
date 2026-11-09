@@ -11,9 +11,9 @@ import type { PrismaService } from '../src/prisma/prisma.service';
 import { makeBillingService } from './helpers/service-factory';
 
 /**
- * Gian hàng TỰ MUA gói — thời điểm áp dụng do server suy (ADR 0084), không do người mua chọn.
+ * Gian hàng TỰ MUA gói - thời điểm áp dụng do server suy (ADR 0084), không do người mua chọn.
  *
- *  1. Cùng bậc ⇒ gia hạn nối tiếp, kể cả khi client gửi `timing: now` — kỳ đang chạy giữ nguyên.
+ *  1. Cùng bậc ⇒ gia hạn nối tiếp, kể cả khi client gửi `timing: now` - kỳ đang chạy giữ nguyên.
  *  2. Trần xe cao hơn mọi kỳ còn hạn ⇒ nâng ngay khi tiền về, các kỳ cũ cùng loại xe kết thúc.
  *  3. Hạ bậc ⇒ nối tiếp sau kỳ cao.
  *  4. Hoá đơn cũ còn mang `timing: now` trong snapshot ⇒ lúc tiền về vẫn suy lại.
@@ -144,7 +144,7 @@ function term(id: string) {
   });
 }
 
-describe('selfServePurchaseTiming — server suy thời điểm (ADR 0084)', () => {
+describe('selfServePurchaseTiming - server suy thời điểm (ADR 0084)', () => {
   maybe(
     'cùng bậc + client gửi timing=now ⇒ vẫn GIA HẠN nối tiếp, kỳ đang chạy giữ nguyên',
     async () => {
@@ -225,7 +225,7 @@ describe('selfServePurchaseTiming — server suy thời điểm (ADR 0084)', () 
 });
 
 describe('previewPurchase', () => {
-  maybe('nói đúng loại lượt mua, kỳ dự kiến và các kỳ sẽ kết thúc — không ghi gì', async () => {
+  maybe('nói đúng loại lượt mua, kỳ dự kiến và các kỳ sẽ kết thúc - không ghi gì', async () => {
     const running = await buyAndPay(car1);
     const runningTerm = await term(running);
 

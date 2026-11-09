@@ -19,11 +19,11 @@ export default function SearchRoute() {
     bodyType?: string;
   }>();
 
-  // Màn tìm xe là TAB thứ hai (người dùng chốt 28/10/2026): tab giữ màn sống giữa các lần mở,
-  // nên `key` theo tham số — trang chủ gửi bộ lọc mới thì màn dựng lại với bộ lọc đó.
+  // Màn tìm xe là TAB thứ hai (người dùng chốt 28/10/2026): tab giữ màn sống giữa các lần mở.
+  // KHÔNG `key` theo tham số nữa — dựng lại cả màn mỗi lần trang chủ gửi bộ lọc là cú nháy lúc bấm
+  // sang; `SearchExperienceProvider` tự áp ngữ cảnh mới khi nội dung `initialFilters` đổi.
   return (
     <SearchResultsScreen
-      key={JSON.stringify(params)}
       initialFilters={{
         ...(params.vehicleType ? { vehicleType: params.vehicleType } : {}),
         ...(params.serviceType ? { serviceType: params.serviceType } : {}),

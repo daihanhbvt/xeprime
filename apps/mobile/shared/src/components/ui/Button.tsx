@@ -1,7 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback } from 'react';
-import { ActivityIndicator, Keyboard, Pressable, StyleSheet } from 'react-native';
+import { ActivityIndicator, Keyboard, StyleSheet } from 'react-native';
+import { PressableScale } from '@/components/motion/PressableScale';
+import { haptics } from '@/lib/haptics';
+import { ShineSweep } from '@/components/motion/ShineSweep';
 import { Text, XStack } from 'tamagui';
 import { themed, useColors } from '@/theme/ThemeProvider';
 import {
@@ -151,6 +154,12 @@ interface ButtonProps {
   accessibilityLabel?: string;
   /** Đệm ngang hẹp (4) cho hàng 3 nút chia đều trên máy hẹp — nhãn đủ chỗ thay vì bị "…". */
   tight?: boolean;
+  /**
+   * Vệt sáng chạy qua định kỳ (`ShineSweep`). Mặc định BẬT cho nút CHÍNH (`primary`/`gradient`)
+   * cỡ `md`/`lg`; tắt cho nút phụ và cỡ `sm` (nút nhỏ trong thẻ danh sách - cả trang lấp lánh
+   * là rối mắt). Truyền `false` để tắt ở một nút chính cụ thể.
+   */
+  shine?: boolean;
 }
 
 export function Button({
@@ -166,6 +175,7 @@ export function Button({
   align = 'start',
   accessibilityLabel,
   tight = false,
+  shine,
 }: ButtonProps) {
   const colors = useColors();
   const VARIANT = useVariant();
@@ -187,8 +197,9 @@ export function Button({
    */
   const press = useCallback(() => {
     Keyboard.dismiss();
+    if (variant === 'gradient' || variant === 'primary') haptics.light();
     onPress();
-  }, [onPress]);
+  }, [onPress, variant]);
   const skin = VARIANT[variant];
   const height = buttonHeight[size];
   const slop = buttonHitSlop(height);
@@ -200,6 +211,8 @@ export function Button({
    * lỗi" thay vì "chưa nhập đủ". Cái phân biệt khoá với bấm được là NỀN, không phải độ mờ chữ.
    */
   const fg = blocked ? colors.textMuted : skin.fg;
+  const isMain = variant === 'gradient' || variant === 'primary';
+  const showShine = (shine ?? (isMain && size !== 'sm')) && !blocked;
 
   return (
     /*
@@ -208,7 +221,7 @@ export function Button({
       không tìm được bằng vai thì trình đọc màn hình cũng không đọc ra là một nút. Bố cục bên
       trong vẫn là Tamagui — Tamagui cho HÌNH, primitive React Native cho THAO TÁC.
     */
-    <Pressable
+    <PressableScale
       onPress={press}
       disabled={blocked}
       accessibilityRole="button"
@@ -221,10 +234,8 @@ export function Button({
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ busy: loading, disabled: blocked }}
       hitSlop={{ top: slop, bottom: slop }}
-      style={({ pressed }) => [
-        block ? { alignSelf: 'stretch' } : { alignSelf: ALIGN_SELF[align] },
-        pressed ? { opacity: 0.85 } : null,
-      ]}
+      // Nhấn: co nhẹ lò xo (luồng UI) thay cho chớp mờ 0.85 — `PressableScale`.
+      style={block ? { alignSelf: 'stretch' } : { alignSelf: ALIGN_SELF[align] }}
     >
       <XStack
         ai="center"
@@ -257,6 +268,7 @@ export function Button({
             style={StyleSheet.absoluteFill}
           />
         ) : null}
+        {showShine ? <ShineSweep /> : null}
         {loading ? (
           <ActivityIndicator color={fg} size="small" />
         ) : (
@@ -283,6 +295,6 @@ export function Button({
           </>
         )}
       </XStack>
-    </Pressable>
+    </PressableScale>
   );
 }

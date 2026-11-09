@@ -41,25 +41,25 @@ import { SubscriptionWorkspace } from './SubscriptionWorkspace';
 import styles from './ShopPlanSection.module.css';
 
 /**
- * "Gói & hạn mức" + "Hóa đơn và thanh toán" của trang Thông tin cửa hàng — design `23999:111391`
+ * "Gói & hạn mức" + "Hóa đơn và thanh toán" của trang Thông tin cửa hàng - design `23999:111391`
  * (gian hàng thường) và `23999:111045` (đang dùng gói doanh nghiệp).
  *
  * ## Quyền
  *
  * `subscription.view` cho xem (nơi gọi đã gác). `subscription.purchase` cho mua: thiếu nó thì KHÔNG
- * có nút "Nâng cấp / Đổi gói", không lối mua trên thẻ, và hộp mua không được dựng — một hộp treo
+ * có nút "Nâng cấp / Đổi gói", không lối mua trên thẻ, và hộp mua không được dựng - một hộp treo
  * sẵn là một đường vào mà API sẽ từ chối ở bước cuối. Phiên hỗ trợ (ADR 0050 §10) chỉ xem.
  *
  * ## Chủ xe tuyến hoa hồng chưa từng trả tiền
  *
- * Màn của họ là LUỒNG NÂNG CẤP (còn một bước hồ sơ ở giữa — `PackageUpgradeWizard`), không phải hộp
+ * Màn của họ là LUỒNG NÂNG CẤP (còn một bước hồ sơ ở giữa - `PackageUpgradeWizard`), không phải hộp
  * mua gói của gian hàng. Gặp ca đó (link cũ) thì dựng nguyên `SubscriptionWorkspace` như trước.
  *
  * ## `?lane=` và `?purchase=1`
  *
  * CTA "mua gói cho loại xe này" ở màn xe (`PLAN_SCOPE_REQUIRED`) dẫn tới đây kèm `?lane=`, email gia
  * hạn kèm `?purchase=1`. Đọc MỘT lần khi dữ liệu gói đã có, cuộn tới làn đó và mở hộp mua (chọn sẵn
- * bậc của làn), rồi gỡ khỏi URL — F5 hay Quay lại không mở lại hộp.
+ * bậc của làn), rồi gỡ khỏi URL - F5 hay Quay lại không mở lại hộp.
  */
 export function ShopPlanSection({ id }: { id: string }) {
   const t = useTranslations('Subscription');
@@ -93,7 +93,7 @@ export function ShopPlanSection({ id }: { id: string }) {
     if ((!purchaseRequested && !laneRequested) || !currentPlans || upgrading) return;
     setIntent({ [PLAN_PURCHASE_PARAM]: false, [PLAN_LANE_PARAM]: undefined }, { resetPage: false });
     /*
-     * Làn đích: `?lane=`, hoặc — với `?purchase=1` trần từ email gia hạn — làn DUY NHẤT đang có gói.
+     * Làn đích: `?lane=`, hoặc - với `?purchase=1` trần từ email gia hạn - làn DUY NHẤT đang có gói.
      * Hai làn đều có (hay đều không) mà không nói làn nào ⇒ hộp mở không chọn sẵn gì, không đoán hộ
      * người dùng loại xe họ muốn mua.
      */
@@ -192,7 +192,7 @@ export function ShopPlanSection({ id }: { id: string }) {
               ))}
             </div>
             {enterpriseTier && !inSupport ? <EnterpriseOffer tier={enterpriseTier} /> : null}
-            {/* "Nâng cấp để mở khoá" — tự biến mất khi không còn tính năng nào bị khoá. */}
+            {/* "Nâng cấp để mở khoá" - tự biến mất khi không còn tính năng nào bị khoá. */}
             {inSupport ? null : (
               <PlanFeatureList onUpgrade={canBuy ? () => openDialog(null) : undefined} />
             )}
@@ -215,9 +215,9 @@ export function ShopPlanSection({ id }: { id: string }) {
 }
 
 /**
- * Gói DOANH NGHIỆP đang dùng — design `23999:111045`. Một gói cho cả đội xe (ADR 0065 điều 2 — không
+ * Gói DOANH NGHIỆP đang dùng - design `23999:111045`. Một gói cho cả đội xe (ADR 0065 điều 2 - không
  * chồng với gói ô tô/xe máy, nên hai thẻ làn vắng hẳn). Bán bằng tư vấn: chỉ có "Liên hệ với XePrime",
- * không có nút "Thanh toán" của design (người dùng chốt 06/11/2026 — không có hoá đơn tự trả).
+ * không có nút "Thanh toán" của design (người dùng chốt 06/11/2026 - không có hoá đơn tự trả).
  */
 function ActiveEnterprise({
   plan,

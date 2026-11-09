@@ -33,7 +33,7 @@ export class PlatformTenantsController {
   @RequirePermissions(PERMISSION.PLATFORM_TENANT_VIEW)
   @ApiOperation({
     summary:
-      'Danh sách đối tác theo loại (gian hàng gói / chủ xe cá nhân) — phân trang, lọc, sắp xếp',
+      'Danh sách đối tác theo loại (gian hàng gói / chủ xe cá nhân) - phân trang, lọc, sắp xếp',
   })
   @ApiOkResponse({ type: PlatformTenantPageDto })
   list(@Query() query: PlatformTenantListQueryDto): Promise<PlatformTenantPageDto> {

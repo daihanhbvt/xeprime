@@ -472,7 +472,7 @@ export class DriversService {
       throw new NotFoundException({
         code: API_ERROR_CODE.DRIVER_ACCOUNT_NOT_FOUND,
         message:
-          'Số điện thoại này chưa có tài khoản XePrime đã xác minh — nhờ tài xế đăng ký trước',
+          'Số điện thoại này chưa có tài khoản XePrime đã xác minh - nhờ tài xế đăng ký trước',
       });
     }
 
@@ -702,7 +702,7 @@ export class DriversService {
       if (committed.length > 0) {
         throw new ConflictException({
           code: API_ERROR_CODE.DRIVER_HAS_ACCEPTED_TRIPS,
-          message: `Bạn còn ${committed.length} chuyến đã nhận — liên hệ bên thuê để đổi tài xế trước khi ngừng`,
+          message: `Bạn còn ${committed.length} chuyến đã nhận - liên hệ bên thuê để đổi tài xế trước khi ngừng`,
           details: {
             count: committed.length,
             trips: committed.map((b) => ({
@@ -719,7 +719,7 @@ export class DriversService {
         {
           type: NOTIFICATION_TYPE.DRIVER_LINK_ENDED,
           title: `${link.name} đã ngừng làm tài xế cho bạn`,
-          body: 'Các chuyến chưa nhận xe của tài xế này đã được gỡ — hãy gán người khác.',
+          body: 'Các chuyến chưa nhận xe của tài xế này đã được gỡ - hãy gán người khác.',
           targetType: NOTIFICATION_TARGET_TYPE.DRIVER_LINK,
           targetId: id,
         },
@@ -867,7 +867,7 @@ export class DriversService {
     if (!REASSIGNABLE.includes(booking.status)) {
       throw new ConflictException({
         code: API_ERROR_CODE.DRIVER_ASSIGNMENT_LOCKED,
-        message: 'Đơn đã giao xe hoặc đã kết thúc — không đổi tài xế được nữa',
+        message: 'Đơn đã giao xe hoặc đã kết thúc - không đổi tài xế được nữa',
       });
     }
 
@@ -887,13 +887,13 @@ export class DriversService {
       if (found.linkStatus !== DRIVER_LINK_STATUS.ACTIVE) {
         throw new ConflictException({
           code: API_ERROR_CODE.DRIVER_NOT_ASSIGNABLE,
-          message: `${found.name} chưa ở trạng thái liên kết — chưa gán được`,
+          message: `${found.name} chưa ở trạng thái liên kết - chưa gán được`,
         });
       }
       if (found.userId === booking.bookingRequest?.customerUserId) {
         throw new ConflictException({
           code: API_ERROR_CODE.DRIVER_IS_TRIP_CUSTOMER,
-          message: `${found.name} là khách của chính chuyến này — chọn tài xế khác`,
+          message: `${found.name} là khách của chính chuyến này - chọn tài xế khác`,
         });
       }
       const busy = await this.busyUserIds(tx, [found.userId], {
@@ -1005,7 +1005,7 @@ export class DriversService {
         link.userId,
         {
           type: NOTIFICATION_TYPE.DRIVER_TRIP_ASSIGNED,
-          title: `Bạn có chuyến mới từ ${employer} — vui lòng xác nhận`,
+          title: `Bạn có chuyến mới từ ${employer} - vui lòng xác nhận`,
           body: `Chuyến ${booking.code} · nhận lúc ${formatVnDateTime(booking.pickupAt)}${wageText} · trả lời trước ${formatVnDateTime(respondBy)}`,
           targetType: NOTIFICATION_TARGET_TYPE.DRIVER_TRIP,
           targetId: booking.id,
@@ -1043,7 +1043,7 @@ export class DriversService {
         if (input.actorUserId === null) return null;
         throw new UnprocessableEntityException({
           code: API_ERROR_CODE.DRIVER_WAGE_REQUIRED,
-          message: 'Gian hàng chưa đặt tiền công tài xế mặc định — nhập tiền công cho chuyến này',
+          message: 'Gian hàng chưa đặt tiền công tài xế mặc định - nhập tiền công cho chuyến này',
         });
       }
       amount = Number(tenant.driverDailyWage) * days;
@@ -1574,7 +1574,7 @@ export class DriversService {
     if (running > 0) {
       throw new ConflictException({
         code: API_ERROR_CODE.DRIVER_HAS_ACTIVE_TRIP,
-        message: `Tài xế đang chạy ${running} chuyến — chờ bàn giao trả xe xong rồi mới kết thúc liên kết`,
+        message: `Tài xế đang chạy ${running} chuyến - chờ bàn giao trả xe xong rồi mới kết thúc liên kết`,
         details: { count: running },
       });
     }
@@ -1861,7 +1861,7 @@ export class DriversService {
       if (stage === DRIVER_WAGE_STAGE.NOT_APPLICABLE) {
         throw new UnprocessableEntityException({
           code: API_ERROR_CODE.DRIVER_WAGE_NOT_APPLICABLE,
-          message: 'Tài xế chưa từng nhận chuyến này — lượt gán không có tiền công',
+          message: 'Tài xế chưa từng nhận chuyến này - lượt gán không có tiền công',
         });
       }
       const editableUntil = driverWageEditableUntil(row.endedAt);
@@ -2257,7 +2257,7 @@ export function driverBusy(name?: string): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.DRIVER_BUSY,
     message: name
-      ? `${name} đã có chuyến khác trong khung giờ này — chọn tài xế khác`
+      ? `${name} đã có chuyến khác trong khung giờ này - chọn tài xế khác`
       : 'Tài xế đã có chuyến khác trong khung giờ này',
   });
 }
@@ -2272,7 +2272,7 @@ function linkNotFound(): NotFoundException {
 function linkStateConflict(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.DRIVER_LINK_STATE_CONFLICT,
-    message: 'Liên kết tài xế đã đổi trạng thái — tải lại rồi thử lại',
+    message: 'Liên kết tài xế đã đổi trạng thái - tải lại rồi thử lại',
   });
 }
 
@@ -2287,7 +2287,7 @@ function assignmentStateConflict(): ConflictException {
 function assignmentExpired(respondBy: Date | null): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.DRIVER_ASSIGNMENT_EXPIRED,
-    message: 'Đã quá hạn xác nhận chuyến này — chuyến được trả lại cho bên thuê',
+    message: 'Đã quá hạn xác nhận chuyến này - chuyến được trả lại cho bên thuê',
     ...(respondBy ? { details: { respondBy: respondBy.toISOString() } } : {}),
   });
 }

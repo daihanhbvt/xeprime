@@ -66,7 +66,7 @@ describe('FilterPanel', () => {
     expect(screen.getByRole('button', { name: /Áp dụng \(14 xe\)/ })).toBeTruthy();
   });
 
-  it('bấm chip chỉ đổi draft — KHÔNG ghi URL; Áp dụng mới gọi setFilters một lần rồi đóng', async () => {
+  it('bấm chip chỉ đổi draft - KHÔNG ghi URL; Áp dụng mới gọi setFilters một lần rồi đóng', async () => {
     const onClose = vi.fn();
     render(<FilterPanel open onClose={onClose} />);
 

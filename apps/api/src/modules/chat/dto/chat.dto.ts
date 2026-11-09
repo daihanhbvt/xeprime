@@ -65,12 +65,12 @@ const toBoolean = () =>
  * câu trả lời đúng cho trường hợp chúng chỉ tới hai gian hàng khác nhau.
  */
 export class CreateConversationDto {
-  @ApiPropertyOptional({ description: 'ID xe (listing) muốn nhắn shop — hoặc dùng `shopSlug`' })
+  @ApiPropertyOptional({ description: 'ID xe (listing) muốn nhắn shop - hoặc dùng `shopSlug`' })
   @ValidateIf((dto: CreateConversationDto) => dto.shopSlug === undefined)
   @IsString()
   vehicleId?: string;
 
-  @ApiPropertyOptional({ description: 'Slug gian hàng muốn nhắn — hoặc dùng `vehicleId`' })
+  @ApiPropertyOptional({ description: 'Slug gian hàng muốn nhắn - hoặc dùng `vehicleId`' })
   @IsOptional()
   @IsString()
   @MaxLength(120)
@@ -314,7 +314,7 @@ export class ConversationSummaryDto {
    * Hai bên gửi tin được không (`chatOpenBetween`, ADR 0073). `false` với chủ xe tuyến hoa hồng khi
    * cặp này chưa có đơn — lịch sử vẫn đọc được, ô soạn tin ẩn; server chặn `POST …/messages`.
    */
-  @ApiProperty({ description: 'Gửi tin được không — tuyến hoa hồng chỉ khi đã có đơn (ADR 0073)' })
+  @ApiProperty({ description: 'Gửi tin được không - tuyến hoa hồng chỉ khi đã có đơn (ADR 0073)' })
   canSend!: boolean;
 }
 
@@ -382,13 +382,13 @@ export class MessageDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Khoá idempotency client gửi kèm — client dùng để khớp tin lạc quan với tin thật',
+    description: 'Khoá idempotency client gửi kèm - client dùng để khớp tin lạc quan với tin thật',
   })
   clientMessageId!: string | null;
   @ApiPropertyOptional({
     type: MessageVehicleDto,
     nullable: true,
-    description: 'Xe tin nhắn này nói về — null khi câu đó không gắn ngữ cảnh nào',
+    description: 'Xe tin nhắn này nói về - null khi câu đó không gắn ngữ cảnh nào',
   })
   vehicle!: MessageVehicleDto | null;
   @ApiPropertyOptional({
@@ -423,7 +423,7 @@ export class ChatUnreadSummaryDto {
   @ApiProperty({ example: 2, description: 'Chưa đọc ở hộp thư KHÁCH' }) customer!: number;
   @ApiProperty({ example: 5, description: 'Chưa đọc ở inbox GIAN HÀNG (0 nếu không thuộc shop nào)' })
   shop!: number;
-  @ApiProperty({ example: 7, description: 'Tổng hai vai — con số cho badge biểu tượng chat' })
+  @ApiProperty({ example: 7, description: 'Tổng hai vai - con số cho badge biểu tượng chat' })
   total!: number;
 }
 

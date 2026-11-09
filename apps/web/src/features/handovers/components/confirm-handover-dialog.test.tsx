@@ -118,7 +118,7 @@ describe('ConfirmHandoverDialog', () => {
     expect(screen.getByText(/Không nhập cũng xác nhận được/)).toBeTruthy();
   });
 
-  it('xác nhận được mà không nhập gì — không gửi Odo rỗng, không tạo biên bản nháp', async () => {
+  it('xác nhận được mà không nhập gì - không gửi Odo rỗng, không tạo biên bản nháp', async () => {
     api.confirmHandover.mockResolvedValue(context());
     const { onClose } = renderDialog();
 

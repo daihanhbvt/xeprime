@@ -133,8 +133,8 @@ function ScheduleCard({
               </div>
               <p className={styles.scheduleRange}>
                 {t('dateRange', {
-                  from: fmt.dateTime(booking.pickupAt),
-                  to: fmt.dateTime(booking.returnAt),
+                  from: fmt.rentalAt(booking.pickupAt),
+                  to: fmt.rentalAt(booking.returnAt),
                 })}
               </p>
             </li>

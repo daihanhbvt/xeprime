@@ -34,20 +34,20 @@ export class PublicBannerDto {
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'Ảnh tablet (1024×450) — null thì client fallback ảnh desktop',
+    description: 'Ảnh tablet (1024×450) - null thì client fallback ảnh desktop',
   })
   tabletImageUrl!: string | null;
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'Ảnh mobile (780×450) — null thì client fallback tablet rồi desktop',
+    description: 'Ảnh mobile (780×450) - null thì client fallback tablet rồi desktop',
   })
   mobileImageUrl!: string | null;
   @ApiProperty() altText!: string;
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'Đích đến khi bấm — null = không bấm được',
+    description: 'Đích đến khi bấm - null = không bấm được',
   })
   linkUrl!: string | null;
 }
@@ -76,7 +76,7 @@ export class CreateBannerDto {
   @ApiPropertyOptional({
     enum: BANNER_PLACEMENT_VALUES,
     default: BANNER_PLACEMENT.HERO,
-    description: 'Vị trí — đặt lúc tạo, KHÔNG đổi được về sau (mỗi vị trí một bộ khổ ảnh)',
+    description: 'Vị trí - đặt lúc tạo, KHÔNG đổi được về sau (mỗi vị trí một bộ khổ ảnh)',
   })
   @IsOptional()
   @IsIn(BANNER_PLACEMENT_VALUES)
@@ -84,7 +84,7 @@ export class CreateBannerDto {
 
   @ApiProperty({
     example: 'Chiến dịch hè 2026',
-    description: 'Tên nội bộ — không hiển thị công khai',
+    description: 'Tên nội bộ - không hiển thị công khai',
   })
   @IsString()
   @Matches(/\S/, { message: 'Nhập tên banner' })
@@ -100,7 +100,7 @@ export class CreateBannerDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'URL ảnh tablet 1024×450 (chỉ banner đầu trang) — bỏ trống dùng ảnh desktop',
+    description: 'URL ảnh tablet 1024×450 (chỉ banner đầu trang) - bỏ trống dùng ảnh desktop',
   })
   @IsOptional()
   @IsString()
@@ -111,7 +111,7 @@ export class CreateBannerDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'URL ảnh mobile — bỏ trống dùng ảnh desktop',
+    description: 'URL ảnh mobile - bỏ trống dùng ảnh desktop',
   })
   @IsOptional()
   @IsString()
@@ -119,7 +119,7 @@ export class CreateBannerDto {
   @MaxLength(2000)
   mobileImageUrl?: string | null;
 
-  @ApiProperty({ description: 'Mô tả ảnh cho screen reader — bắt buộc' })
+  @ApiProperty({ description: 'Mô tả ảnh cho screen reader - bắt buộc' })
   @IsString()
   @Matches(/\S/, { message: 'Nhập mô tả ảnh (alt)' })
   @MaxLength(255)
@@ -147,7 +147,7 @@ export class CreateBannerDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Bắt đầu hiển thị (ISO) — bỏ trống = ngay lập tức',
+    description: 'Bắt đầu hiển thị (ISO) - bỏ trống = ngay lập tức',
   })
   @IsOptional()
   @IsISO8601()
@@ -156,7 +156,7 @@ export class CreateBannerDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Ngừng hiển thị (ISO) — bỏ trống = vô hạn',
+    description: 'Ngừng hiển thị (ISO) - bỏ trống = vô hạn',
   })
   @IsOptional()
   @IsISO8601()
@@ -235,7 +235,7 @@ export class ReorderBannersDto {
   @ApiPropertyOptional({
     enum: BANNER_PLACEMENT_VALUES,
     default: BANNER_PLACEMENT.HERO,
-    description: 'Vị trí đang sắp — thứ tự tính riêng từng vị trí',
+    description: 'Vị trí đang sắp - thứ tự tính riêng từng vị trí',
   })
   @IsOptional()
   @IsIn(BANNER_PLACEMENT_VALUES)

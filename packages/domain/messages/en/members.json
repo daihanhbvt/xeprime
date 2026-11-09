@@ -62,7 +62,7 @@
   },
   "created": {
     "title": "Invitation created",
-    "body": "Send this link to {phone} via Zalo or text message. The link is shown only ONCE — if you lose it, invite this number again to get a new link.",
+    "body": "Send this link to {phone} via Zalo or text message. The link is shown only ONCE - if you lose it, invite this number again to get a new link.",
     "linkLabel": "Invitation link",
     "copy": "Copy link",
     "safety": "Only the partner account with this exact (verified) number can use the link.",
@@ -97,7 +97,7 @@
     "role": "Role offered",
     "invitedEmail": "Sent to",
     "invitedPhone": "Invited number",
-    "signInPartnerPromptPhone": "This invitation is for a PARTNER account — separate from your renter account. Sign in or create a partner account with the invited phone number to respond.",
+    "signInPartnerPromptPhone": "This invitation is for a PARTNER account - separate from your renter account. Sign in or create a partner account with the invited phone number to respond.",
     "expiresAt": "Expires",
     "loadError": "This invitation could not be opened",
     "signInPrompt": "Sign in with the email address that received this invitation to answer it.",
@@ -111,7 +111,7 @@
     "goHome": "Back to home",
     "closedTitle": "This invitation is no longer valid",
     "closedBody": "It has already been answered, revoked, or expired. Ask the shop to send a new one if you still want to join.",
-    "signInPartnerPrompt": "This invitation is for a PARTNER account — separate from your renter account. Sign in or create a partner account with the email that received the invitation to respond.",
+    "signInPartnerPrompt": "This invitation is for a PARTNER account - separate from your renter account. Sign in or create a partner account with the email that received the invitation to respond.",
     "createPartnerAccount": "Create a partner account"
   },
   "branchScope": {

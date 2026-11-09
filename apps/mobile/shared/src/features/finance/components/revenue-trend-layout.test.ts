@@ -23,12 +23,12 @@ const LAYOUT: GroupedBarLayout = { barWidth: 12, barGap: 2, groupGap: 20, initia
  * render bình thường, chỉ có người dùng nhìn thấy nó chỉ vào sai cột. Công thức toạ độ lấy từ
  * `getXForLineInBar` của `gifted-charts-core`; nâng thư viện mà công thức đổi thì test này đỏ.
  */
-describe('chartValue — chuỗi tiền sang số để ĐẶT HÌNH (ADR 0007)', () => {
+describe('chartValue - chuỗi tiền sang số để ĐẶT HÌNH (ADR 0007)', () => {
   it('bỏ phần lẻ trên CHUỖI trước khi quy đổi', () => {
     expect(chartValue('1500000.99')).toBe(1500000);
   });
 
-  it('GIỮ dấu âm — lỗ phải nằm dưới trục 0, không bị lật lên trên', () => {
+  it('GIỮ dấu âm - lỗ phải nằm dưới trục 0, không bị lật lên trên', () => {
     expect(chartValue('-300000')).toBe(-300000);
   });
 
@@ -87,7 +87,7 @@ describe('đường lợi nhuận căn vào tâm cặp cột', () => {
 /**
  * Trải mốc theo bề ngang có được — còn chỗ thì giãn cho đầy khung, hết chỗ thì cuộn.
  */
-describe('fitGroupedBars — bề rộng tối thiểu là trọn khung', () => {
+describe('fitGroupedBars - bề rộng tối thiểu là trọn khung', () => {
   const WIDTH = 330;
 
   it.each([1, 2, 4, 6])('%i mốc: giãn cho phủ đúng khung, không cuộn', (groups) => {
@@ -112,7 +112,7 @@ describe('fitGroupedBars — bề rộng tối thiểu là trọn khung', () => 
    * Bất biến mà LỚP CHẠM dựa vào: tâm hai mốc liền nhau cách đúng `pitch`, nên đặt một ô rộng
    * `pitch` quanh mỗi tâm là phủ kín và không chồng lấn. Sai chỗ này thì chạm cột này ra số cột kia.
    */
-  it.each([1, 3, 6, 30])('tâm hai mốc liền nhau cách đúng một bước — %i mốc', (groups) => {
+  it.each([1, 3, 6, 30])('tâm hai mốc liền nhau cách đúng một bước - %i mốc', (groups) => {
     const layout = fitGroupedBars(groups, WIDTH);
     for (let index = 1; index < groups; index++) {
       expect(groupCenterX(layout, index) - groupCenterX(layout, index - 1)).toBeCloseTo(
@@ -131,7 +131,7 @@ describe('fitGroupedBars — bề rộng tối thiểu là trọn khung', () => 
     expect(fitGroupedBars(1, WIDTH).barWidth).toBe(MAX_BAR_WIDTH);
   });
 
-  it.each([1, 2, 6, 12, 30, 366])('cặp cột không bao giờ tràn khỏi dải — %i mốc', (groups) => {
+  it.each([1, 2, 6, 12, 30, 366])('cặp cột không bao giờ tràn khỏi dải - %i mốc', (groups) => {
     const layout = fitGroupedBars(groups, WIDTH);
     expect(layout.barWidth * 2 + layout.barGap).toBeLessThanOrEqual(layout.pitch);
     expect(layout.barWidth).toBeGreaterThan(0);
@@ -168,7 +168,7 @@ describe('fitGroupedBars — bề rộng tối thiểu là trọn khung', () => 
  * Hai lỗi thật mà phép dịch này chữa: thư viện dựng hộp chữ từ mép trái CỘT ĐẦU của cặp nên chữ
  * lệch phải hơn 20dp so với mốc, và nhãn cuối kỳ (`30/09`) trôi ra ngoài vùng vẽ rồi bị cắt.
  */
-describe('labelShiftX — nhãn trục X căn như `<XAxis>` của web', () => {
+describe('labelShiftX - nhãn trục X căn như `<XAxis>` của web', () => {
   const WIDTH = 330;
 
   /** Tâm chữ THẬT sau khi dịch — chính là thứ người dùng nhìn thấy trên trục. */
@@ -178,18 +178,18 @@ describe('labelShiftX — nhãn trục X căn như `<XAxis>` của web', () => {
     return box + labelShiftX(layout, index);
   }
 
-  it.each([1, 2, 3, 5])('mốc giữa kỳ: chữ nằm đúng tâm cặp cột — mốc %i của 12', (index) => {
+  it.each([1, 2, 3, 5])('mốc giữa kỳ: chữ nằm đúng tâm cặp cột - mốc %i của 12', (index) => {
     const layout = fitGroupedBars(12, WIDTH);
     expect(labelCenter(12, index)).toBeCloseTo(groupCenterX(layout, index), 6);
   });
 
-  it.each([4, 30])('nhãn ĐẦU không thò ra trái dải cột — %i mốc', (groups) => {
+  it.each([4, 30])('nhãn ĐẦU không thò ra trái dải cột - %i mốc', (groups) => {
     const layout = fitGroupedBars(groups, WIDTH);
     expect(labelCenter(groups, 0) - layout.labelWidth / 2).toBeGreaterThanOrEqual(0);
   });
 
   /** Kỳ vừa khung lẫn kỳ phải cuộn: chữ cuối luôn nằm trọn trong dải cột, không bị mép cắt cụt. */
-  it.each([4, 30])('nhãn CUỐI không thò ra phải dải cột — %i mốc', (groups) => {
+  it.each([4, 30])('nhãn CUỐI không thò ra phải dải cột - %i mốc', (groups) => {
     const layout = fitGroupedBars(groups, WIDTH);
     const last = groups - 1;
     expect(labelCenter(groups, last) + layout.labelWidth / 2).toBeLessThanOrEqual(
@@ -203,7 +203,7 @@ describe('labelShiftX — nhãn trục X căn như `<XAxis>` của web', () => {
     expect(labelCenter(30, 15)).toBeGreaterThan(labelCenter(30, 0));
   });
 
-  it('khung hẹp hơn một nhãn thì không kẹp ngược — giữ nguyên tâm mốc', () => {
+  it('khung hẹp hơn một nhãn thì không kẹp ngược - giữ nguyên tâm mốc', () => {
     const narrow = 40;
     const layout = fitGroupedBars(3, narrow);
     expect(labelCenter(3, 1, narrow)).toBeCloseTo(groupCenterX(layout, 1), 6);
@@ -217,7 +217,7 @@ describe('labelShiftX — nhãn trục X căn như `<XAxis>` của web', () => {
  * `cy = 0` và mất nửa chấm. Đây là ca THẬT chứ không phải giả thuyết — thang của `recharts` cho
  * vạch trần bằng đúng đỉnh dữ liệu ở nhiều bộ số tròn.
  */
-describe('axisWithDotHeadroom — chấm cao nhất không bị mép trên cắt', () => {
+describe('axisWithDotHeadroom - chấm cao nhất không bị mép trên cắt', () => {
   const HEIGHT = 160;
   const RADIUS = 6;
 
@@ -259,7 +259,7 @@ describe('axisWithDotHeadroom — chấm cao nhất không bị mép trên cắt
   });
 });
 
-describe('labelledBuckets — bỏ bớt nhãn như `preserveStartEnd` của web', () => {
+describe('labelledBuckets - bỏ bớt nhãn như `preserveStartEnd` của web', () => {
   it('thưa mốc thì in đủ nhãn', () => {
     expect([...labelledBuckets(4, 80, 52)]).toEqual([0, 1, 2, 3]);
   });
@@ -294,7 +294,7 @@ describe('labelledBuckets — bỏ bớt nhãn như `preserveStartEnd` của web
  * chạy trên bộ dữ liệu tương ứng, không phải suy từ công thức trong đầu. Đây là điều kiện để hai
  * client không in hai thang khác nhau cho cùng một kỳ của cùng một cửa hàng.
  */
-describe('niceAxis — cùng thang chia với recharts bên web', () => {
+describe('niceAxis - cùng thang chia với recharts bên web', () => {
   it.each([
     {
       name: 'chỉ có lãi',
@@ -330,13 +330,13 @@ describe('niceAxis — cùng thang chia với recharts bên web', () => {
     expect(niceAxis(values).ticks).toEqual(ticks);
   });
 
-  it('bậc luôn là số NGUYÊN — 0,05 nhị phân sẽ đẻ ra 1500000,0000000002 và in thẳng lên trục', () => {
+  it('bậc luôn là số NGUYÊN - 0,05 nhị phân sẽ đẻ ra 1500000,0000000002 và in thẳng lên trục', () => {
     const axis = niceAxis([0, 2_839_966, -2_839_966]);
     expect(axis.step).toBe(1_500_000);
     expect(Number.isInteger(axis.step)).toBe(true);
   });
 
-  it('luôn PHỦ hết dữ liệu — nửa âm bị cắt là khoản lỗ biến mất khỏi hình', () => {
+  it('luôn PHỦ hết dữ liệu - nửa âm bị cắt là khoản lỗ biến mất khỏi hình', () => {
     const values = [0, 2_839_966, -2_839_966];
     const axis = niceAxis(values);
     for (const value of values) {
@@ -346,7 +346,7 @@ describe('niceAxis — cùng thang chia với recharts bên web', () => {
     expect(axis.sectionsBelow).toBe(2);
   });
 
-  it('kỳ có lãi không chừa nấc âm nào — nửa dưới trống là mất một nửa chiều cao', () => {
+  it('kỳ có lãi không chừa nấc âm nào - nửa dưới trống là mất một nửa chiều cao', () => {
     expect(niceAxis([0, 1_732_914]).sectionsBelow).toBe(0);
   });
 
@@ -364,7 +364,7 @@ describe('niceAxis — cùng thang chia với recharts bên web', () => {
   });
 });
 
-describe('positiveHeight — khối biểu đồ cao cố định dù kỳ có lỗ hay không', () => {
+describe('positiveHeight - khối biểu đồ cao cố định dù kỳ có lỗ hay không', () => {
   it('chia chiều cao theo tỉ lệ hai nửa trục', () => {
     const axis = niceAxis([0, 2_839_966, -2_839_966]); // 2 nấc trên, 2 nấc dưới
     expect(positiveHeight(axis, 160)).toBe(80);

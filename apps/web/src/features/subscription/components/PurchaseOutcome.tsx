@@ -17,7 +17,7 @@ import type { SubscriptionPurchasePreviewItem } from '../types';
 import styles from './PurchaseOutcome.module.css';
 
 /**
- * Một lượt mua sẽ LÀM GÌ với gói hiện tại — đọc từ bản xem trước của server (ADR 0084), không suy ở
+ * Một lượt mua sẽ LÀM GÌ với gói hiện tại - đọc từ bản xem trước của server (ADR 0084), không suy ở
  * client. Dùng chung cho bước xác nhận của hộp mua gói và `PurchaseModal`.
  */
 const KIND_COLOR: Record<PlanPurchaseKind, StatusColor> = {
@@ -49,7 +49,7 @@ export function usePurchasePeriodText() {
 }
 
 /**
- * Ba câu của một lượt mua: điều sẽ xảy ra, kỳ cũ bị kết thúc sớm (nâng ngay — không bù), và số xe
+ * Ba câu của một lượt mua: điều sẽ xảy ra, kỳ cũ bị kết thúc sớm (nâng ngay - không bù), và số xe
  * vượt trần mới (hạ bậc). `null` = không áp dụng cho lượt này.
  */
 function usePurchaseOutcomeText(
@@ -88,14 +88,14 @@ function usePurchaseOutcomeText(
 
 /**
  * Câu nói trước điều sẽ xảy ra + cảnh báo khi có mất mát: nâng ngay làm các kỳ cũ kết thúc (không
- * bù), hạ bậc làm số xe đang có vượt trần mới. Bản ĐẦY ĐỦ — `PurchaseModal`.
+ * bù), hạ bậc làm số xe đang có vượt trần mới. Bản ĐẦY ĐỦ - `PurchaseModal`.
  */
 export function PurchaseOutcomeNotes({
   item,
   usedVehicles,
 }: {
   item: SubscriptionPurchasePreviewItem;
-  /** Số xe đang có ở loại xe này — để cảnh báo khi trần mới thấp hơn. */
+  /** Số xe đang có ở loại xe này - để cảnh báo khi trần mới thấp hơn. */
   usedVehicles: number | null;
 }) {
   const text = usePurchaseOutcomeText(item, usedVehicles);
@@ -111,7 +111,7 @@ export function PurchaseOutcomeNotes({
 
 /**
  * Bản GỌN cho thẻ xác nhận của hộp mua gói (người dùng 09/11/2026: bỏ hộp ghi chú dưới thẻ). Câu
- * "điều sẽ xảy ra" và câu "kỳ cũ kết thúc, không hoàn" vào dấu ⓘ đặt cạnh nhãn lượt mua — nhãn
+ * "điều sẽ xảy ra" và câu "kỳ cũ kết thúc, không hoàn" vào dấu ⓘ đặt cạnh nhãn lượt mua - nhãn
  * "Nâng cấp ngay" đã nói điều chính, ⓘ nói phần hệ quả cho ai muốn đọc.
  */
 export function PurchaseOutcomeHint({ item }: { item: SubscriptionPurchasePreviewItem }) {
@@ -137,7 +137,7 @@ export function PurchaseOutcomeHint({ item }: { item: SubscriptionPurchasePrevie
 }
 
 /**
- * Hạ bậc mà số xe đang có vượt trần mới — vẫn là một cảnh báo hiện hẳn (hiếm, và nó đổi điều gian
+ * Hạ bậc mà số xe đang có vượt trần mới - vẫn là một cảnh báo hiện hẳn (hiếm, và nó đổi điều gian
  * hàng làm được ngay sau khi trả tiền). Không có gì để nói thì không dựng gì.
  */
 export function PurchaseOverCapAlert({

@@ -102,7 +102,7 @@ describe('Điền sẵn thông số theo mẫu xe', () => {
     await waitFor(() => expect(form().getValues('seatCount')).toBe(5));
     expect(form().getValues('fuelType')).toBe(FUEL_TYPE.ELECTRIC);
     await waitFor(() => expect(seatInput().disabled).toBe(true));
-    expect(screen.getByText('Theo mẫu VF 5 — đã điền sẵn.')).toBeTruthy();
+    expect(screen.getByText('Theo mẫu VF 5 - đã điền sẵn.')).toBeTruthy();
   });
 
   it('mẫu nhiều cấu hình ⇒ bỏ số chỗ không thuộc mẫu và chỉ cho chọn 6 hoặc 7', async () => {
@@ -128,7 +128,7 @@ describe('Điền sẵn thông số theo mẫu xe', () => {
   });
 });
 
-describe('Điền sẵn — hộp số và giá trị lệch mẫu', () => {
+describe('Điền sẵn - hộp số và giá trị lệch mẫu', () => {
   it('hộp số lấy phần của mẫu ỨNG VỚI nguồn năng lượng (hybrid ⇒ e-CVT, không phải CVT)', async () => {
     renderWithIntl(<Harness initial={{ brand: 'vinfast', vehicleCatalogModelId: null }} />);
     act(() => form().setValue('vehicleCatalogModelId', 'hev'));

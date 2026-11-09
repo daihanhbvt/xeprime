@@ -145,7 +145,7 @@ function CommissionContent({ data }: { data: PartnerCommission }) {
                   label: t('policy.effectiveFrom'),
                   value: data.feePolicy.effectiveFrom
                     ? fmt.date(data.feePolicy.effectiveFrom)
-                    : '—',
+                    : '-',
                 },
                 { key: 'version', label: t('policy.version'), value: data.feePolicy.version },
               ]}

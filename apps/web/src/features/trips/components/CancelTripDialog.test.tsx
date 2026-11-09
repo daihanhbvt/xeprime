@@ -86,7 +86,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('CancelTripDialog — huỷ muộn', () => {
+describe('CancelTripDialog - huỷ muộn', () => {
   it('có bảo hiểm hoàn lại: kể đủ ba con số và câu bảo hiểm', () => {
     state.preview.data = preview({});
     renderDialog();
@@ -129,7 +129,7 @@ describe('CancelTripDialog — huỷ muộn', () => {
   });
 });
 
-describe('CancelTripDialog — trạng thái xem trước', () => {
+describe('CancelTripDialog - trạng thái xem trước', () => {
   it('đang tải: chưa hiện số tiền nào', () => {
     state.preview.isLoading = true;
     const { container } = renderDialog();
@@ -185,7 +185,7 @@ describe('CancelTripDialog — trạng thái xem trước', () => {
   });
 });
 
-describe('CancelTripDialog — huỷ do sự cố tài xế (ADR 0074)', () => {
+describe('CancelTripDialog - huỷ do sự cố tài xế (ADR 0074)', () => {
   it('server báo driverIncident: nói rõ hoàn 100%, không kể khung huỷ muộn', () => {
     state.preview.data = preview({
       kind: CUSTOMER_CANCEL_PREVIEW_KIND.FULL_REFUND,

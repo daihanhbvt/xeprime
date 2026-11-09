@@ -40,10 +40,10 @@ export class PlatformTaxController {
 
   @Get('summary')
   @ApiOperation({
-    summary: 'Tờ khai một kỳ — tổng, chia theo loại chủ thể, chia theo gian hàng',
+    summary: 'Tờ khai một kỳ - tổng, chia theo loại chủ thể, chia theo gian hàng',
     description:
       'Chia theo `entityType` vì cá nhân / hộ kinh doanh / doanh nghiệp có nghĩa vụ khác nhau. ' +
-      'Nhóm `unknown` là gian hàng CHƯA khai hồ sơ người bán — nó hiện ra thay vì bị gộp vào ' +
+      'Nhóm `unknown` là gian hàng CHƯA khai hồ sơ người bán - nó hiện ra thay vì bị gộp vào ' +
       '`individual`, vì gộp là đoán hộ họ một nghĩa vụ pháp lý.',
   })
   @ApiOkResponse({ type: TaxPeriodSummaryDto })
@@ -53,7 +53,7 @@ export class PlatformTaxController {
 
   @Get('rows')
   @ApiOperation({
-    summary: 'Từng dòng nghĩa vụ — phân trang server-side',
+    summary: 'Từng dòng nghĩa vụ - phân trang server-side',
     description: '`amount` ÂM là bút toán ĐẢO; nó nằm cùng kỳ với dòng gốc.',
   })
   @ApiOkResponse({ type: TaxRowPageDto })
@@ -83,7 +83,7 @@ export class PlatformTaxController {
   @Post('periods/:period/declared')
   @ApiOperation({
     summary: 'Đánh dấu CẢ KỲ đã kê khai (`accrued → declared`)',
-    description: 'Chạy lại chỉ đụng dòng còn `accrued` — bấm hai lần không đẩy sang `remitted`.',
+    description: 'Chạy lại chỉ đụng dòng còn `accrued` - bấm hai lần không đẩy sang `remitted`.',
   })
   @ApiOkResponse({ type: TaxPeriodAdvancedDto })
   async markDeclared(
@@ -121,10 +121,10 @@ export class PlatformTaxController {
   @Post('rows/:id/reverse')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'ĐẢO một dòng — bắt buộc lý do, có audit',
+    summary: 'ĐẢO một dòng - bắt buộc lý do, có audit',
     description:
       'Ghi một dòng ÂM trỏ về dòng gốc, KHÔNG sửa `amount` của dòng cũ (sổ chỉ-ghi-thêm). Dòng ' +
-      '`remitted` không đảo được — tiền đã nộp thì sửa bằng tờ khai điều chỉnh.',
+      '`remitted` không đảo được - tiền đã nộp thì sửa bằng tờ khai điều chỉnh.',
   })
   @ApiNoContentResponse()
   async reverse(

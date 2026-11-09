@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Customers",
-    "subtitle": "Your shop's customer book: rental history, debt, notes and documents — visible only to your shop.",
+    "subtitle": "Your shop's customer book: rental history, debt, notes and documents - visible only to your shop.",
     "add": "Add customer",
     "totalLabel": "{count, plural, one {# customer} other {# customers}}",
     "listTitle": "Customers",
@@ -34,7 +34,7 @@
   "hints": {
     "relationship": "\"Returning\" means a customer who has completed 2 or more trips. \"Archived\" sits outside every other group.",
     "riskLevel": "\"Watchlist\" only warns whoever is on duty, it blocks nothing. \"Refused service\" blocks NEW requests and bookings at this shop; existing bookings are untouched.",
-    "notes": "Notes are visible only inside your shop — the customer never sees them.",
+    "notes": "Notes are visible only inside your shop - the customer never sees them.",
     "documents": "Files live in private storage. Every time one is opened it is written to the audit log, and it needs the file-view permission.",
     "debt": "Outstanding = booking total − amount collected, ignoring cancelled bookings."
   },
@@ -86,12 +86,12 @@
     "blockedBannerTitle": "This shop is refusing service to this customer",
     "blockedBannerBody": "NEW requests and bookings are blocked at this shop. The customer only receives a neutral message and never learns the internal reason.",
     "watchlistBannerTitle": "This customer is flagged for attention",
-    "watchlistBannerBody": "This is only a reminder for whoever is on duty — nothing is blocked."
+    "watchlistBannerBody": "This is only a reminder for whoever is on duty - nothing is blocked."
   },
   "actions": {
     "edit": "Edit profile",
     "createBooking": "Create booking",
-    "createBookingBlocked": "This customer is refused service — change the risk level before creating a new booking",
+    "createBookingBlocked": "This customer is refused service - change the risk level before creating a new booking",
     "addNote": "Add note",
     "risk": "Risk level",
     "archive": "Archive",
@@ -147,7 +147,7 @@
     "fullNamePlaceholder": "Jane Doe",
     "phone": "Phone number",
     "phonePlaceholder": "0901234567",
-    "phoneHelp": "This is how the system recognises a returning customer — one number means one profile within the shop.",
+    "phoneHelp": "This is how the system recognises a returning customer - one number means one profile within the shop.",
     "email": "Email (optional)",
     "address": "Address (optional)",
     "submitAdd": "Add customer",
@@ -188,7 +188,7 @@
     "expiresTag": "Expires {date}",
     "upload": "Upload document",
     "uploaded": "Document uploaded to private storage",
-    "uploadsNotConfigured": "Private document storage is not configured — contact the system administrator",
+    "uploadsNotConfigured": "Private document storage is not configured - contact the system administrator",
     "errorTitle": "Could not load the document list",
     "emptyTitle": "No documents for this customer yet",
     "unknownUploader": "Uploader unknown",

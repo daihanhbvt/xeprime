@@ -53,7 +53,7 @@ export class PlatformMoneyController {
 
   @Get('summary')
   @ApiOperation({
-    summary: 'Số đếm các hàng đợi tiền — dải thẻ đầu màn Tài chính',
+    summary: 'Số đếm các hàng đợi tiền - dải thẻ đầu màn Tài chính',
     description:
       'Trạng thái HIỆN TẠI của sáu hàng đợi (tiền vào chưa khớp, giữ chỗ chờ chốt, hoàn chờ ' +
       'chuyển, rút tiền, bảo hiểm lỗi, thuế kỳ này chờ kê khai). Mỗi nhóm đếm đúng tập mà danh ' +
@@ -66,7 +66,7 @@ export class PlatformMoneyController {
 
   @Get('holds')
   @ApiOperation({
-    summary: 'Hàng đợi khoản giữ chỗ — lọc trạng thái, hoặc chỉ hold chưa chốt kết cục',
+    summary: 'Hàng đợi khoản giữ chỗ - lọc trạng thái, hoặc chỉ hold chưa chốt kết cục',
   })
   @ApiOkResponse({ type: PlatformHoldPageDto })
   listHolds(@Query() query: PlatformHoldListQueryDto): Promise<PlatformHoldPageDto> {
@@ -77,7 +77,7 @@ export class PlatformMoneyController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary:
-      'Chốt tay kết cục một hold đang chờ (thường sau tranh chấp) — bắt buộc lý do, có audit',
+      'Chốt tay kết cục một hold đang chờ (thường sau tranh chấp) - bắt buộc lý do, có audit',
   })
   @ApiNoContentResponse()
   async settle(
@@ -92,7 +92,7 @@ export class PlatformMoneyController {
   }
 
   @Get('refunds')
-  @ApiOperation({ summary: 'Hàng đợi chuyển trả khoản giữ chỗ — mặc định chỉ CHỜ CHUYỂN' })
+  @ApiOperation({ summary: 'Hàng đợi chuyển trả khoản giữ chỗ - mặc định chỉ CHỜ CHUYỂN' })
   @ApiOkResponse({ type: PlatformHoldRefundPageDto })
   listRefunds(@Query() query: PlatformHoldRefundListQueryDto): Promise<PlatformHoldRefundPageDto> {
     return this.holds.listRefundsForPlatform(query) as Promise<PlatformHoldRefundPageDto>;
@@ -100,7 +100,7 @@ export class PlatformMoneyController {
 
   @Post('refunds/:id/paid')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Đã chuyển trả — ghi mã giao dịch ngân hàng, báo khách' })
+  @ApiOperation({ summary: 'Đã chuyển trả - ghi mã giao dịch ngân hàng, báo khách' })
   @ApiNoContentResponse()
   async refundPaid(
     @Param('id') id: string,
@@ -112,7 +112,7 @@ export class PlatformMoneyController {
 
   @Post('refunds/:id/reject')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Từ chối hoàn — bắt buộc lý do, có audit' })
+  @ApiOperation({ summary: 'Từ chối hoàn - bắt buộc lý do, có audit' })
   @ApiNoContentResponse()
   async refundReject(
     @Param('id') id: string,
@@ -127,7 +127,7 @@ export class PlatformMoneyController {
     summary: 'Đối soát BA VẾ một ngày (giờ VN)',
     description:
       'Số dư ngân hàng cuối ngày = tiền CỦA NỀN TẢNG + tiền GIỮ HỘ + chênh lệch (ADR 0025 ' +
-      'điều 6). Chưa nhập số dư ⇒ `bankBalanceEod` và `variance` trả `null` — chênh lệch CHƯA ' +
+      'điều 6). Chưa nhập số dư ⇒ `bankBalanceEod` và `variance` trả `null` - chênh lệch CHƯA ' +
       'TÍNH ĐƯỢC, không phải bằng 0.',
   })
   @ApiQuery({ name: 'date', example: '2026-09-14', description: 'YYYY-MM-DD, giờ Việt Nam' })

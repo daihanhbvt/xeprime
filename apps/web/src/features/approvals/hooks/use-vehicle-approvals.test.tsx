@@ -142,7 +142,7 @@ describe('Đánh dấu kiểm tra thủ công', () => {
     ).toBe(false);
   });
 
-  it('hai ô lưu song song, ô ĐẦU lỗi: chỉ ô đó trả về — dấu tick của ô sau còn nguyên', async () => {
+  it('hai ô lưu song song, ô ĐẦU lỗi: chỉ ô đó trả về - dấu tick của ô sau còn nguyên', async () => {
     let rejectFirst!: (reason: unknown) => void;
     api.setVehicleApprovalCheck
       .mockReturnValueOnce(new Promise((_, reject) => (rejectFirst = reject)))
@@ -162,7 +162,7 @@ describe('Đánh dấu kiểm tra thủ công', () => {
     expect(passedOf('plate_visible')).toBe(true);
   });
 
-  it('lỗi: ô trở về trạng thái cũ — không để một dấu tick mà server không có', async () => {
+  it('lỗi: ô trở về trạng thái cũ - không để một dấu tick mà server không có', async () => {
     api.setVehicleApprovalCheck.mockRejectedValue(new Error('network'));
     const { result } = renderHook(() => useSetVehicleApprovalCheck(), { wrapper });
 

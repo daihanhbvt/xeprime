@@ -1,3 +1,5 @@
+import Animated from 'react-native-reanimated';
+import { ScrollReveal, ScrollRevealProvider, useScrollRevealList } from '@/components/motion/ScrollReveal';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Platform, Pressable, RefreshControl } from 'react-native';
@@ -21,7 +23,7 @@ import { images } from '@/assets';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { Button } from '@/components/ui/Button';
 import { VehicleCardSkeleton } from '@/components/ui/Skeleton';
-import { Reveal, useListReveal } from '@/components/motion/Reveal';
+import { Reveal } from '@/components/motion/Reveal';
 import { useCatalog, useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -38,13 +40,11 @@ import { SearchContextSheet } from './components/SearchContextSheet';
 import { KeywordSearch } from './components/KeywordSearch';
 import { LocationPicker } from './components/LocationPicker';
 import { RentalRangeSheet } from './components/RentalRangeSheet';
-import { SortMenu } from './components/SortMenu';
 import { VehicleCard } from './components/VehicleCard';
 import { QuickFilterPills } from './components/QuickFilterPills';
 import { useRentalRangeLabel } from './use-rental-range-label';
 import { SERVICE_LABEL_KEY } from './search-items';
 import { ROUTES } from '@/navigation/routes';
-import { getSecureItem, SECURE_KEY, setSecureItem } from '@/lib/secure-storage';
 
 type ViewMode = 'grid' | 'list';
 
@@ -113,12 +113,21 @@ export function SearchResultsScreen({
 }) {
   return (
     <SearchExperienceProvider initial={initialFilters}>
-      <ResultsBody onBack={onBack} embedded={embedded} />
+      <ResultsBody onBack={onBack} embedded={embedded} contextKey={JSON.stringify(initialFilters)} />
     </SearchExperienceProvider>
   );
 }
 
-function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boolean }) {
+function ResultsBody({
+  onBack,
+  embedded,
+  contextKey,
+}: {
+  onBack: () => void;
+  embedded: boolean;
+  /** Nội dung ngữ cảnh màn trước gửi sang — đổi ⇒ kết quả mới, cuộn về đầu. */
+  contextKey: string;
+}) {
   const colors = useColors();
   const t = useTranslations('Marketplace.results');
   const compactRangeLabel = useRentalRangeLabel(true);
@@ -148,6 +157,16 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
   /** Tấm "Tìm xe" (bộ chọn của thẻ tìm kiếm trang chủ) — Figma `19973:49063`. */
   const [contextOpen, setContextOpen] = useState(false);
   const listRef = useRef<FlatList<PublicListing>>(null);
+  /*
+   * Trang chủ gửi ngữ cảnh MỚI (màn không dựng lại nữa) ⇒ về đầu danh sách: kết quả mới mà giữ vị
+   * trí cuộn cũ là đọc giữa chừng một danh sách khác. Đổi lọc TRONG màn không đi qua đây.
+   */
+  const contextKeyRef = useRef(contextKey);
+  useEffect(() => {
+    if (contextKeyRef.current === contextKey) return;
+    contextKeyRef.current = contextKey;
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [contextKey]);
   const [locationOpen, setLocationOpen] = useState(false);
   const [rangeOpen, setRangeOpen] = useState(false);
   /**
@@ -196,35 +215,22 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
   );
 
   /*
-   * Chế độ xem: lưới (thẻ đầy đủ) hoặc danh sách (thẻ ngang gọn) — NHỚ trên thiết bị như web
-   * (người dùng chốt 27/10/2026).
+   * Chế độ xem CỐ ĐỊNH dạng lưới (09/11/2026): bỏ nút chuyển lưới/danh sách và hàng Sắp xếp cho
+   * trang kết quả gọn - sắp xếp chuyển vào tấm Bộ lọc. Không đọc lựa chọn cũ đã lưu, để máy từng
+   * chọn "danh sách" không bị kẹt ở đó mà không còn nút đổi lại.
    */
-  const [viewMode, setViewModeState] = useState<ViewMode>('grid');
-  useEffect(() => {
-    void getSecureItem(SECURE_KEY.MARKETPLACE_VIEW_MODE).then((saved) => {
-      if (saved === 'grid' || saved === 'list') setViewModeState(saved);
-    });
-  }, []);
-  const setViewMode = (next: ViewMode) => {
-    setViewModeState(next);
-    void setSecureItem(SECURE_KEY.MARKETPLACE_VIEW_MODE, next);
-  };
+  const viewMode = 'grid' as ViewMode;
 
-  /*
-   * Thẻ đầu tiên so le khi kết quả về (và khi đổi bộ lọc). Thẻ cuộn tới / trang kế / kéo làm mới
-   * hiện ngay — `useListReveal`.
-   */
-  const shouldReveal = useListReveal(
-    !results.isInitialLoading && !results.initialError && results.listings.length > 0,
-    JSON.stringify(filters),
-  );
+  // Thẻ trượt lên khi cuộn tới — ScrollReveal đo vị trí thật trên luồng UI.
+  const listReveal = useScrollRevealList();
   const renderItem = useCallback(
     ({ item, index }: { item: PublicListing; index: number }) => (
-      <Reveal index={index} disabled={!shouldReveal(index)}>
+      // Thẻ có bóng: CHỈ trượt lên khi cuộn tới (ScrollReveal), không mờ.
+      <ScrollReveal index={index}>
         <VehicleCard listing={item} onPress={openListing} variant={viewMode === 'list' ? 'row' : 'grid'} />
-      </Reveal>
+      </ScrollReveal>
     ),
-    [openListing, viewMode, shouldReveal],
+    [openListing, viewMode],
   );
 
   const tabBarInset = useTabBarInset();
@@ -378,14 +384,6 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
         </XStack>
       ) : null}
 
-      <XStack ai="center" gap={space.sm}>
-        <Text col={colors.placeholder} fos={fontSize.body}>
-          {t('sortLabel')}
-        </Text>
-        <SortMenu value={filters.sort} onChange={(sort) => setFilters({ sort })} />
-        <YStack f={1} />
-        <ViewModeToggle value={viewMode} onChange={setViewMode} />
-      </XStack>
     </YStack>
   );
 
@@ -480,8 +478,11 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
         </Pressable>
       </XStack>
 
-      <FlatList
-        ref={listRef}
+      <ScrollRevealProvider value={listReveal.ctx}>
+      <Animated.FlatList
+        ref={listRef as never}
+        onScroll={listReveal.onScroll}
+        scrollEventThrottle={16}
         data={showList ? results.listings : []}
         keyExtractor={keyExtractor}
         {...MEDIA_LIST_TUNING}
@@ -531,6 +532,7 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
           ) : null
         }
       />
+      </ScrollRevealProvider>
 
       <FilterSheet
         open={filterOpen}
@@ -660,65 +662,3 @@ function Empty({
   );
 }
 
-/**
- * Cặp nút "Dạng thẻ · Dạng danh sách" bên phải ô Sắp xếp — `.viewModeGroup` web: khung viền
- * `border`, nền gray-50, bo 12, đệm 2; nút đang chọn cao 40 nền trắng viền `border-strong` (Figma List).
- */
-function ViewModeToggle({
-  value,
-  onChange,
-}: {
-  value: ViewMode;
-  onChange: (next: ViewMode) => void;
-}) {
-  const colors = useColors();
-  const t = useTranslations('Marketplace.results');
-  const options = [
-    { mode: 'grid' as const, icon: 'grid-outline' as const, label: t('viewGrid') },
-    { mode: 'list' as const, icon: 'list-outline' as const, label: t('viewList') },
-  ];
-  return (
-    <XStack
-      p={2}
-      gap={2}
-      ai="center"
-      br={radius.control}
-      bw={1}
-      bc={colors.border}
-      bg={colors.background}
-      accessibilityRole="radiogroup"
-      accessibilityLabel={t('viewMode')}
-    >
-      {options.map((option) => {
-        const active = value === option.mode;
-        return (
-          <Pressable
-            key={option.mode}
-            onPress={() => onChange(option.mode)}
-            accessibilityRole="radio"
-            accessibilityState={{ selected: active }}
-            accessibilityLabel={option.label}
-            hitSlop={space.xs}
-          >
-            <YStack
-              w={40}
-              h={active ? 40 : 32}
-              ai="center"
-              jc="center"
-              br={radius.control}
-              bw={1}
-              bc={active ? colors.borderInput : 'transparent'}
-              bg={active ? colors.surface : 'transparent'}
-            >
-              <Ionicons
-                name={option.icon}
-                size={24}
-                color={active ? colors.text : colors.textMuted}
-              />
-            </YStack>
-          </Pressable>
-        );
-      })}
-    </XStack>
-  );
-}

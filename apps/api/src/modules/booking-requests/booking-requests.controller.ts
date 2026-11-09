@@ -77,7 +77,7 @@ export class BookingRequestsController {
     description:
       'Có tiền giữ chỗ: request chuyển sang `awaiting_hold`, KHÔNG có Booking nào được tạo ở ' +
       'bước này. Không thu tiền giữ chỗ: Booking được tạo ngay trong cùng transaction. ' +
-      'Thuê dài hạn: body bắt buộc scheduledPickupAt — gian hàng chốt giờ nhận, server tính ' +
+      'Thuê dài hạn: body bắt buộc scheduledPickupAt - gian hàng chốt giờ nhận, server tính ' +
       'giờ trả theo gói tháng lịch (ADR 0011). Trùng lịch → 409, yêu cầu vẫn chờ duyệt.',
   })
   @ApiOkResponse({ type: BookingRequestDto })
@@ -177,7 +177,7 @@ export class BookingRequestsController {
   @ApiOperation({
     summary: 'Mở/lấy hội thoại với khách của yêu cầu (phía gian hàng)',
     description:
-      'Idempotent theo (khách, xe) — mở lại đúng thread cũ. Khách vãng lai chưa có tài khoản ' +
+      'Idempotent theo (khách, xe) - mở lại đúng thread cũ. Khách vãng lai chưa có tài khoản ' +
       'trả CHAT_CUSTOMER_UNAVAILABLE.',
   })
   @ApiCreatedResponse({ type: ConversationSummaryDto })

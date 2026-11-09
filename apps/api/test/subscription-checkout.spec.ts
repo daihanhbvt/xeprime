@@ -11,7 +11,7 @@ import type { PrismaService } from '../src/prisma/prisma.service';
 import { makeBillingService } from './helpers/service-factory';
 
 /**
- * Phiếu thanh toán GỘP (ADR 0083) — gói ô tô + gói xe máy trong MỘT lần chuyển khoản.
+ * Phiếu thanh toán GỘP (ADR 0083) - gói ô tô + gói xe máy trong MỘT lần chuyển khoản.
  *
  * Bất biến khoá ở đây:
  *  1. Phiếu = hai hoá đơn (mỗi loại xe một hoá đơn), tổng phiếu = tổng hai hoá đơn.
@@ -135,7 +135,7 @@ function liveSubscriptions() {
   });
 }
 
-describe('createCheckout — một phiếu, mỗi loại xe một hoá đơn', () => {
+describe('createCheckout - một phiếu, mỗi loại xe một hoá đơn', () => {
   maybe(
     'tổng phiếu = tổng hai hoá đơn; hoá đơn con mang mã phiếu, theo thứ tự hiển thị loại xe',
     async () => {
@@ -186,7 +186,7 @@ describe('createCheckout — một phiếu, mỗi loại xe một hoá đơn', (
   });
 });
 
-describe('applyCheckoutPaymentWithinTx — tiền đi qua phiếu', () => {
+describe('applyCheckoutPaymentWithinTx - tiền đi qua phiếu', () => {
   maybe('thiếu ⇒ cả cụm partially_paid, mua lại bị chặn bằng MÃ PHIẾU', async () => {
     await resetBilling();
     const created = await checkout();

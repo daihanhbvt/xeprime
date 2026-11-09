@@ -296,3 +296,10 @@
   color: var(--xp-color-text-tertiary);
   overflow-wrap: anywhere;
 }
+
+/* Nhãn + dấu "i" (InfoHint) cùng một hàng. */
+.labelWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

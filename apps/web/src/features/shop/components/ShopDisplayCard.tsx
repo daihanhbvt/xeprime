@@ -22,16 +22,16 @@ import { ShopMediaButton } from './ShopMediaButton';
 import cardStyles from '@/components/layout/InfoCard.module.css';
 import styles from './ShopDisplayCard.module.css';
 
-/** Trần chữ của giới thiệu — cùng con số server đếm trên chữ thuần (`SHOP_BIO_TEXT_MAX_LENGTH`). */
+/** Trần chữ của giới thiệu - cùng con số server đếm trên chữ thuần (`SHOP_BIO_TEXT_MAX_LENGTH`). */
 const BIO_MAX_LENGTH = 2000;
 
 /**
- * Thẻ "Thông tin hiển thị" ở cột phải — design `23999:111472`: ảnh bìa + logo chồng lên, cặp nút
+ * Thẻ "Thông tin hiển thị" ở cột phải - design `23999:111472`: ảnh bìa + logo chồng lên, cặp nút
  * đổi ảnh, rồi bốn dòng khách nhìn thấy trên chợ (tên · SĐT · email · giới thiệu có định dạng) và
  * nút "Chỉnh sửa thông tin".
  *
  * Ảnh là BẢN XEM TRƯỚC của form trang (`logoUrl`/`coverUrl` đang sửa): đổi ảnh chưa lưu gì, cặp
- * "Hủy · Lưu thay đổi" dưới thẻ mới lưu (người dùng chốt 06/11/2026). Phần chữ đọc từ bản ĐÃ LƯU —
+ * "Hủy · Lưu thay đổi" dưới thẻ mới lưu (người dùng chốt 06/11/2026). Phần chữ đọc từ bản ĐÃ LƯU -
  * nó chỉ đổi qua hộp thoại, và hộp thoại lưu ngay khi bấm "Cập nhật".
  */
 export function ShopDisplayCard({
@@ -209,7 +209,7 @@ function RemoveButton({ label, onClick }: { label: string; onClick: () => void }
   );
 }
 
-/** Hộp "Chỉnh sửa thông tin hiển thị" — design `24047:78679`: ba ô một hàng + editor giới thiệu. */
+/** Hộp "Chỉnh sửa thông tin hiển thị" - design `24047:78679`: ba ô một hàng + editor giới thiệu. */
 export function ShopDisplayDialog({
   open,
   control,

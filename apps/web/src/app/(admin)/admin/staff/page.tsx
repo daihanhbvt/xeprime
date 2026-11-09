@@ -111,7 +111,7 @@ export default function AdminStaffPage() {
               {row.userId === me?.id ? <span className={styles.you}> {t('page.you')}</span> : null}
             </>
           }
-          subtitle={row.email ?? '—'}
+          subtitle={row.email ?? '-'}
         />
       ),
     },

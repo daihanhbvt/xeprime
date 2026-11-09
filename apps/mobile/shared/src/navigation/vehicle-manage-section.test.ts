@@ -67,11 +67,11 @@ describe('VEHICLE_MANAGE_NAV', () => {
     ]);
   });
 
-  it('nhóm thuê dài hạn chỉ mang công tắc — không mục nào (giá tháng ở Giá & chính sách)', () => {
+  it('nhóm thuê dài hạn chỉ mang công tắc - không mục nào (giá tháng ở Giá & chính sách)', () => {
     expect(VEHICLE_MANAGE_NAV.find((g) => g.key === 'longTerm')?.items).toEqual([]);
   });
 
-  it('giá và giờ giao nhận áp cho CẢ xe — không khoá theo dịch vụ', () => {
+  it('giá và giờ giao nhận áp cho CẢ xe - không khoá theo dịch vụ', () => {
     expect(sectionServiceType(VEHICLE_MANAGE_SECTION.PRICING)).toBeNull();
     expect(sectionServiceType(VEHICLE_MANAGE_SECTION.HANDOVER_TIME)).toBeNull();
     expect(sectionServiceType(VEHICLE_MANAGE_SECTION.INFORMATION)).toBeNull();
@@ -99,14 +99,14 @@ const describePartnerOnly =
 const describeCustomerOnly =
   APP_PROFILE.clientApp === MOBILE_CLIENT_APP.CUSTOMER ? describe : describe.skip;
 
-describeCustomerOnly('app XePrime — không còn không gian Quản lý xe', () => {
+describeCustomerOnly('app XePrime - không còn không gian Quản lý xe', () => {
   it('mọi mục đổ về màn handoff sang app Partner', () => {
     for (const section of ALL_SECTIONS) expect(pathOf(section)).toBe('/partner');
   });
 });
 
 describePartnerOnly('ROUTES.account.vehicleManageSection (app Partner)', () => {
-  it('mỗi mục một địa chỉ RIÊNG — không mục nào rơi về mặc định', () => {
+  it('mỗi mục một địa chỉ RIÊNG - không mục nào rơi về mặc định', () => {
     const paths = ALL_SECTIONS.map(pathOf);
     expect(new Set(paths).size).toBe(paths.length);
   });

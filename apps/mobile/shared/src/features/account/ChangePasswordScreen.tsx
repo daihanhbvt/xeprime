@@ -18,6 +18,7 @@ import {
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
+import { RevealStack } from '@/components/motion/RevealStack';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
@@ -192,7 +193,8 @@ export function ChangePasswordScreen({
         subtitle={isSecurity ? tSecurity('customerSubtitle') : t('subtitle')}
       />
       <Screen edges={['left', 'right', 'bottom']}>
-        <YStack gap={space.md}>
+        {/* Mỗi khối trượt so le lúc mở / hiện khi cuộn tới (app khách; Partner tĩnh). */}
+        <RevealStack gap={space.md}>
           {!hasPassword ? (
             <Callout tone="info" title={t('firstTimeTitle')}>
               {t('firstTimeBody')}
@@ -276,7 +278,7 @@ export function ChangePasswordScreen({
                       col={met ? colors.text : colors.textMuted}
                       fos={fontSize.bodySm}
                       // Trình đọc màn hình không "thấy" được biểu tượng tick — nói ra bằng chữ.
-                      accessibilityLabel={`${label} — ${
+                      accessibilityLabel={`${label} - ${
                         met ? t('requirementMet') : t('requirementUnmet')
                       }`}
                     >
@@ -312,7 +314,7 @@ export function ChangePasswordScreen({
               </YStack>
             </Card>
           ) : null}
-        </YStack>
+        </RevealStack>
       </Screen>
 
       {/*

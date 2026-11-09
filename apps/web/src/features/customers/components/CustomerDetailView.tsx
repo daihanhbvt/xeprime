@@ -257,7 +257,7 @@ export function CustomerDetailView({
     {
       key: 'last',
       label: t('stats.lastRental'),
-      value: data.lastRentalAt ? fmt.date(data.lastRentalAt) : '—',
+      value: data.lastRentalAt ? fmt.date(data.lastRentalAt) : '-',
     },
   ];
 

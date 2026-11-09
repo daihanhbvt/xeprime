@@ -27,13 +27,13 @@ export class PaymentGatewayMethodDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Số tiền tối thiểu cổng công bố (VND, chuỗi) — null khi tài liệu không công bố',
+    description: 'Số tiền tối thiểu cổng công bố (VND, chuỗi) - null khi tài liệu không công bố',
   })
   minAmount!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Số tiền tối đa cổng công bố (VND, chuỗi) — null khi tài liệu không công bố',
+    description: 'Số tiền tối đa cổng công bố (VND, chuỗi) - null khi tài liệu không công bố',
   })
   maxAmount!: string | null;
 }
@@ -46,7 +46,7 @@ export class PaymentGatewayMethodsDto {
   @ApiProperty({ enum: PAYMENT_ORDER_TARGET_VALUES }) target!: string;
   @ApiProperty({
     description:
-      'Cổng đang ở môi trường thử (sandbox) — giao diện gắn nhãn để người thử không tưởng mình trả tiền thật',
+      'Cổng đang ở môi trường thử (sandbox) - giao diện gắn nhãn để người thử không tưởng mình trả tiền thật',
   })
   sandbox!: boolean;
   @ApiProperty({ type: [PaymentGatewayMethodDto] }) methods!: PaymentGatewayMethodDto[];
@@ -64,7 +64,7 @@ export class StartGatewayCheckoutDto {
   @ApiPropertyOptional({
     enum: PAYMENT_GATEWAY_CLIENT_VALUES,
     description:
-      'Mở từ đâu — `native` thì trang quay về hiện nút mở lại ứng dụng. Mặc định `web`. Không phải quyền.',
+      'Mở từ đâu - `native` thì trang quay về hiện nút mở lại ứng dụng. Mặc định `web`. Không phải quyền.',
   })
   @IsOptional()
   @IsIn(PAYMENT_GATEWAY_CLIENT_VALUES)
@@ -93,21 +93,21 @@ export class PaymentOrderDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Chuyến (id yêu cầu thuê) — chỉ có ở lượt trả tiền giữ chỗ',
+    description: 'Chuyến (id yêu cầu thuê) - chỉ có ở lượt trả tiền giữ chỗ',
   })
   tripId!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Hoá đơn gói — chỉ có ở lượt trả hoá đơn gói',
+    description: 'Hoá đơn gói - chỉ có ở lượt trả hoá đơn gói',
   })
   invoiceId!: string | null;
-  @ApiProperty({ description: 'Số tiền đã gửi sang cổng — VND, chuỗi (ADR 0007)' }) amount!: string;
+  @ApiProperty({ description: 'Số tiền đã gửi sang cổng - VND, chuỗi (ADR 0007)' }) amount!: string;
   @ApiProperty({ enum: PAYMENT_ORDER_STATUS_VALUES }) status!: string;
   @ApiProperty({
     enum: PAYMENT_ORDER_VIEW_STATE_VALUES,
     description:
-      'Chặng nhìn từ phía người trả — awaiting · confirming · completed · ' +
+      'Chặng nhìn từ phía người trả - awaiting · confirming · completed · ' +
       'duplicate_refunded (trả trùng, đã ghi hoàn vào Ví điểm) · failed · needs_support',
   })
   viewState!: string;
@@ -117,17 +117,17 @@ export class PaymentOrderDto {
     type: String,
     nullable: true,
     description:
-      'Liên kết thanh toán — chỉ có khi lượt còn chờ và chưa quá hạn dùng lại; mở lại để trả tiếp',
+      'Liên kết thanh toán - chỉ có khi lượt còn chờ và chưa quá hạn dùng lại; mở lại để trả tiếp',
   })
   checkoutUrl!: string | null;
   @ApiProperty({
     description:
-      'Lượt còn chờ nhưng cổng đã KÝ XÁC NHẬN chưa có giao dịch nào (khách huỷ ở cổng / chưa trả) — ' +
+      'Lượt còn chờ nhưng cổng đã KÝ XÁC NHẬN chưa có giao dịch nào (khách huỷ ở cổng / chưa trả) - ' +
       'thôi hiện "đang chờ", mời chọn lại phương thức; trạng thái vẫn `pending` (ADR 0058)',
   })
   noTransaction!: boolean;
-  @ApiProperty({ description: 'Hạn dùng lại liên kết — ISO-8601 UTC' }) expiresAt!: string;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Lúc cổng báo đã thu — ISO' })
+  @ApiProperty({ description: 'Hạn dùng lại liên kết - ISO-8601 UTC' }) expiresAt!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Lúc cổng báo đã thu - ISO' })
   paidAt!: string | null;
   @ApiProperty({ description: 'Cổng đang ở môi trường thử' }) sandbox!: boolean;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;

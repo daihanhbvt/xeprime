@@ -30,12 +30,12 @@ const TABS = ['general', 'documents', 'collateral', 'cancellation'] as const;
 type PolicyTab = (typeof TABS)[number];
 
 /**
- * "Quy định & Chính sách" — bản native của `ListingPoliciesTabs` bên web (#212): bốn tab Quy định
+ * "Quy định & Chính sách" - bản native của `ListingPoliciesTabs` bên web (#212): bốn tab Quy định
  * chung · Giấy tờ thuê xe · Tài sản thế chấp · Điều khoản huỷ, CÙNG khoá với web
  * (`Listings.detail.policies.general/documents/collateral/cancellation.*`). Dịch vụ có tài xế hiện
- * ghi chú "giá trọn gói" (ADR 0075 — không còn phụ phí tài xế). Cùng điều kiện hiện từng khối với web.
+ * ghi chú "giá trọn gói" (ADR 0075 - không còn phụ phí tài xế). Cùng điều kiện hiện từng khối với web.
  *
- * Hai mốc giữ chỗ đọc từ hằng số dùng chung với server như web — đây là mức TRẦN của chính sách
+ * Hai mốc giữ chỗ đọc từ hằng số dùng chung với server như web - đây là mức TRẦN của chính sách
  * (cửa sổ thật của từng chuyến co lại khi đặt sát giờ, `holdWindowsFor`, và hiện ở màn chuyến).
  */
 export function ListingPoliciesTabs({
@@ -99,7 +99,7 @@ export function ListingPoliciesTabs({
       </Text>
 
       {/*
-        Tab TRƯỢT NGANG như web ≤640px (`.tabList` cuộn ngang, đệm 10 × 12, chữ 14) — người dùng chốt
+        Tab TRƯỢT NGANG như web ≤640px (`.tabList` cuộn ngang, đệm 10 × 12, chữ 14) - người dùng chốt
         27/10/2026: xuống dòng làm "Điều khoản huỷ" rơi một mình xuống hàng dưới.
       */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -156,17 +156,17 @@ export function ListingPoliciesTabs({
                 </Sub>
               ) : null}
 
-              {/* Khung giờ giao nhận đã gỡ (ADR 0078) — xe nhận và trả mọi giờ, không có gì để công bố. */}
+              {/* Khung giờ giao nhận đã gỡ (ADR 0078) - xe nhận và trả mọi giờ, không có gì để công bố. */}
 
               {activeService === SERVICE_TYPE.WITH_DRIVER ? (
-                // Giá có tài xế là giá TRỌN GÓI (ADR 0075) — khách chỉ trả thêm phí cầu đường.
+                // Giá có tài xế là giá TRỌN GÓI (ADR 0075) - khách chỉ trả thêm phí cầu đường.
                 <Sub title={tDetail('withDriverPrice.title')}>
                   <Rule>{tDetail('withDriverPrice.included')}</Rule>
                   <Rule>{tDetail('withDriverPrice.excluded')}</Rule>
                 </Sub>
               ) : null}
 
-              {/* Hoá đơn VAT (ADR 0059) — chỉ khi chủ xe đã công bố. */}
+              {/* Hoá đơn VAT (ADR 0059) - chỉ khi chủ xe đã công bố. */}
               {listing.vatInvoiceSupported ? (
                 <Sub title={tDetail('vatInvoice.title')}>
                   <Rule>{tDetail('vatInvoice.body')}</Rule>
@@ -242,7 +242,7 @@ export function ListingPoliciesTabs({
               <SubTitle text={t('cancellation.title')} />
               {/* Huỷ miễn phí tính XUÔI từ lúc chủ xe nhận chuyến (ADR 0032 điều 2 · ADR 0044 điều 3). */}
               <Rule>
-                {/* Hai cửa sổ của khoản giữ chỗ theo tỉ lệ ΔT, sàn, trần (ADR 0066) — đọc hằng dùng chung. */}
+                {/* Hai cửa sổ của khoản giữ chỗ theo tỉ lệ ΔT, sàn, trần (ADR 0066) - đọc hằng dùng chung. */}
                 {t.rich('cancellation.free', {
                   strong,
                   percent: Math.round(HOLD_DYNAMIC_WINDOW.FREE_CANCEL_SHARE * 100),

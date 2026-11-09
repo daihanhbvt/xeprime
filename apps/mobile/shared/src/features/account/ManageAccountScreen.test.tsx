@@ -105,8 +105,8 @@ beforeEach(() => {
  * Bộ test dưới đây trước ở `AccountScreen.test.tsx`: chúng theo chân chế độ sửa khi nó chuyển
  * sang màn này, chứ không phải viết mới — luật không đổi, chỉ đổi chỗ đứng.
  */
-describe('ManageAccountScreen — hồ sơ con người', () => {
-  it('đọc hồ sơ từ `GET /users/me` — chỉ ở đó mới có SĐT và tình trạng xác thực', async () => {
+describe('ManageAccountScreen - hồ sơ con người', () => {
+  it('đọc hồ sơ từ `GET /users/me` - chỉ ở đó mới có SĐT và tình trạng xác thực', async () => {
     const view = await renderScreen();
 
     expect(await view.findByRole('button', { name: EDIT_PROFILE })).toBeTruthy();
@@ -122,7 +122,7 @@ describe('ManageAccountScreen — hồ sơ con người', () => {
     expect(view.getAllByRole('button', { name: 'Thay đổi' })).toHaveLength(2);
   });
 
-  it('còn trống: nút đổi thành "Thêm" — cùng một luồng, khác chữ theo việc', async () => {
+  it('còn trống: nút đổi thành "Thêm" - cùng một luồng, khác chữ theo việc', async () => {
     const view = await renderScreen({ ...PROFILE, email: null, phone: null });
     await view.findByRole('button', { name: EDIT_PROFILE });
     expect(view.getAllByRole('button', { name: 'Thêm' })).toHaveLength(2);
@@ -154,7 +154,7 @@ describe('ManageAccountScreen — hồ sơ con người', () => {
   });
 });
 
-describe('ManageAccountScreen — chỉnh sửa hồ sơ', () => {
+describe('ManageAccountScreen - chỉnh sửa hồ sơ', () => {
   it('mở chế độ sửa thì hiện ĐÚNG hai trường backend nhận', async () => {
     const view = await renderScreen();
     await view.findByRole('button', { name: EDIT_PROFILE });
@@ -179,7 +179,7 @@ describe('ManageAccountScreen — chỉnh sửa hồ sơ', () => {
     expect(view.queryByText('Tên gõ dở')).toBeNull();
   });
 
-  it('tên rỗng bị chặn NGAY ở client — không gửi request', async () => {
+  it('tên rỗng bị chặn NGAY ở client - không gửi request', async () => {
     const update = jest.spyOn(accountApi, 'updateMe');
     const view = await renderScreen();
     await view.findByRole('button', { name: EDIT_PROFILE });
@@ -225,7 +225,7 @@ describe('ManageAccountScreen — chỉnh sửa hồ sơ', () => {
  * Hai LỐI ĐI còn lại của màn. Chúng là dòng dẫn sang màn đã có, không phải bản sao thứ hai của
  * biểu mẫu đổi mật khẩu / xoá tài khoản — xem docblock của màn.
  */
-describe('ManageAccountScreen — lối đi bảo mật', () => {
+describe('ManageAccountScreen - lối đi bảo mật', () => {
   it('mở đúng màn đổi mật khẩu và màn yêu cầu xoá tài khoản', async () => {
     const view = await renderScreen();
     await view.findByRole('button', { name: EDIT_PROFILE });

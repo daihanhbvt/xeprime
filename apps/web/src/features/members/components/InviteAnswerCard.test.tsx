@@ -79,7 +79,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Lời mời — người được mời xem', () => {
+describe('Lời mời - người được mời xem', () => {
   it('nói ai mời, vai gì, và KHÔNG lộ nguyên email', () => {
     renderCard();
 

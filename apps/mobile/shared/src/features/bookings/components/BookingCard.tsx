@@ -220,7 +220,7 @@ function BookingCardImpl({
                 */}
                 <FactLine icon="time-outline">
                   <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium} f={1}>
-                    {fmt.shortDateTime(booking.pickupAt)}
+                    {fmt.rentalAt(booking.pickupAt)}
                   </Text>
                 </FactLine>
                 <HandoverPlaceLine booking={booking} />
@@ -228,7 +228,7 @@ function BookingCardImpl({
             ) : (
               <FactLine icon="time-outline">
                 <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1} f={1}>
-                  {fmt.shortDateTimeRange(booking.pickupAt, booking.returnAt)}
+                  {fmt.rentalRange(booking.pickupAt, booking.returnAt)}
                 </Text>
               </FactLine>
             )}

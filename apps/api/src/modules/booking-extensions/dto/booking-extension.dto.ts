@@ -26,8 +26,8 @@ export class BookingExtensionQuoteQueryDto extends CreateBookingExtensionDto {}
  */
 export class BookingExtensionQuoteDto {
   @ApiProperty() months!: number;
-  @ApiProperty({ description: 'ISO — bắt đầu phụ lục = giờ trả hiện tại của đơn' }) fromAt!: string;
-  @ApiProperty({ description: 'ISO — giờ trả mới (tháng lịch, giờ Việt Nam)' }) toAt!: string;
+  @ApiProperty({ description: 'ISO - bắt đầu phụ lục = giờ trả hiện tại của đơn' }) fromAt!: string;
+  @ApiProperty({ description: 'ISO - giờ trả mới (tháng lịch, giờ Việt Nam)' }) toAt!: string;
   @ApiProperty({ description: 'Số ngày lịch của phụ lục' }) rentalDays!: number;
   @ApiProperty({ description: 'Đơn giá tháng hiện hành của xe (VND string)' })
   monthlyPrice!: string;
@@ -35,8 +35,8 @@ export class BookingExtensionQuoteDto {
   @ApiPropertyOptional({ type: Number, nullable: true, description: '% ưu đãi cam kết của mốc' })
   durationDiscountPercent!: number | null;
   @ApiProperty({ description: 'Ưu đãi cam kết (VND string)' }) durationDiscountAmount!: string;
-  @ApiProperty({ description: '`B_ext` — tiền thuê phụ lục (VND string)' }) rentalAmount!: string;
-  @ApiProperty({ description: '`T_ext` — thuế khấu trừ khỏi tiền chủ xe (VND string)' })
+  @ApiProperty({ description: '`B_ext` - tiền thuê phụ lục (VND string)' }) rentalAmount!: string;
+  @ApiProperty({ description: '`T_ext` - thuế khấu trừ khỏi tiền chủ xe (VND string)' })
   taxAmount!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) vatAmount!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) pitAmount!: string | null;
@@ -51,12 +51,12 @@ export class BookingExtensionQuoteDto {
   ownerNetAmount!: string;
   @ApiProperty({ enum: BILLING_MODE_VALUES, description: 'Tuyến lúc gia hạn' })
   billingMode!: string;
-  @ApiProperty({ description: 'Xe trống trong khoảng gia hạn (xem trước — DB vẫn quyết lúc tạo)' })
+  @ApiProperty({ description: 'Xe trống trong khoảng gia hạn (xem trước - DB vẫn quyết lúc tạo)' })
   available!: boolean;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'ISO — xe bận từ mốc này nếu không trống',
+    description: 'ISO - xe bận từ mốc này nếu không trống',
   })
   busyFrom!: string | null;
 }
@@ -64,7 +64,7 @@ export class BookingExtensionQuoteDto {
 /** Một phụ lục gia hạn — dùng cho bề mặt đối tác. */
 export class BookingExtensionDto {
   @ApiProperty() id!: string;
-  @ApiProperty({ description: 'Mã đối soát XPE… — NỘI DUNG chuyển khoản' }) code!: string;
+  @ApiProperty({ description: 'Mã đối soát XPE… - NỘI DUNG chuyển khoản' }) code!: string;
   @ApiProperty() bookingId!: string;
   @ApiProperty() months!: number;
   @ApiProperty() fromAt!: string;
@@ -90,7 +90,7 @@ export class BookingExtensionDto {
 /** Phụ lục nhìn từ phía KHÁCH — không có dòng phía chủ xe (ADR 0064 điều 11). */
 export class CustomerBookingExtensionDto {
   @ApiProperty() id!: string;
-  @ApiProperty({ description: 'Mã đối soát XPE… — NỘI DUNG chuyển khoản' }) code!: string;
+  @ApiProperty({ description: 'Mã đối soát XPE… - NỘI DUNG chuyển khoản' }) code!: string;
   @ApiProperty() months!: number;
   @ApiProperty() fromAt!: string;
   @ApiProperty() toAt!: string;

@@ -142,7 +142,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('ReceiptFormDialog — chọn cái gì để gắn', () => {
+describe('ReceiptFormDialog - chọn cái gì để gắn', () => {
   it('mặc định KHÔNG gắn gì: gửi lên không có đơn lẫn xe', async () => {
     renderForm();
 
@@ -214,7 +214,7 @@ describe('ReceiptFormDialog — chọn cái gì để gắn', () => {
   });
 });
 
-describe('ReceiptFormDialog — phần điền và nút gửi', () => {
+describe('ReceiptFormDialog - phần điền và nút gửi', () => {
   /*
    * Diễn giải BẮT BUỘC là ràng buộc của phiếu NHẬP TAY, không phải của DTO (backend vẫn nhận
    * null cho phiếu tự động). Một dòng sổ "500.000 · Tiền mặt · chi" không nói được nó là xăng
@@ -255,7 +255,7 @@ describe('ReceiptFormDialog — phần điền và nút gửi', () => {
   });
 });
 
-describe('ReceiptFormDialog — bố cục', () => {
+describe('ReceiptFormDialog - bố cục', () => {
   /*
    * NHÃN NẰM TRÊN Ô NHẬP.
    *
@@ -284,7 +284,7 @@ describe('ReceiptFormDialog — bố cục', () => {
   });
 });
 
-describe('ReceiptLinkCard — đọc lại đối tượng trước khi ghi tiền', () => {
+describe('ReceiptLinkCard - đọc lại đối tượng trước khi ghi tiền', () => {
   it('xe đang có khách: thẻ hiện trạng thái, khách và số còn nợ của chuyến', () => {
     hooks.vehicles = {
       data: [
@@ -317,7 +317,7 @@ describe('ReceiptLinkCard — đọc lại đối tượng trước khi ghi ti�
     expect(screen.getByText('Chi nhánh Quận 1')).toBeTruthy();
   });
 
-  it('mở hồ sơ xe ở tab mới — form đang điền dở không bị bỏ lại', () => {
+  it('mở hồ sơ xe ở tab mới - form đang điền dở không bị bỏ lại', () => {
     renderForm('v-9');
 
     const link = screen.getByRole('link', { name: /Xem chi tiết/ });
@@ -326,7 +326,7 @@ describe('ReceiptLinkCard — đọc lại đối tượng trước khi ghi ti�
   });
 });
 
-describe('ReceiptFormDialog — trạng thái của ô chọn xe', () => {
+describe('ReceiptFormDialog - trạng thái của ô chọn xe', () => {
   it('xe đang chọn không còn thuộc gian hàng: nói ngay tại form', () => {
     // Server có `includeId` mà vẫn không trả xe đó về ⇒ nó đã bị xoá hoặc đã chuyển đi.
     hooks.vehicles = { data: [], isFetching: false, isError: false };

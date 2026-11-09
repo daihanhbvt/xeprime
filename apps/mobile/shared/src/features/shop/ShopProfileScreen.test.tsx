@@ -178,7 +178,7 @@ const COMPLETE_PROFILE = {
 
 beforeEach(() => jest.restoreAllMocks());
 
-describe('ShopProfileScreen — quyền', () => {
+describe('ShopProfileScreen - quyền', () => {
   it('thiếu `tenant.view`: màn thiếu quyền và KHÔNG gọi API hồ sơ', async () => {
     const view = await renderScreen([PERMISSION.VEHICLE_VIEW]);
 
@@ -196,10 +196,10 @@ describe('ShopProfileScreen — quyền', () => {
   });
 });
 
-describe('ShopProfileScreen — dải trạng thái chỉ nói về trạng thái VẬN HÀNH', () => {
+describe('ShopProfileScreen - dải trạng thái chỉ nói về trạng thái VẬN HÀNH', () => {
   const all: Permission[] = [PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE];
 
-  it('suspended: dải cảnh báo vẫn hiện — xe đang rời chợ ngay lúc này', async () => {
+  it('suspended: dải cảnh báo vẫn hiện - xe đang rời chợ ngay lúc này', async () => {
     const view = await renderScreen(
       all,
       shop({ status: TENANT_STATUS.SUSPENDED }),
@@ -229,7 +229,7 @@ describe('ShopProfileScreen — dải trạng thái chỉ nói về trạng thá
  * XE, nên một phiếu gửi đi không có ai ở đầu kia. Backend gỡ luôn cái khoá "đang chờ" ở
  * `TenantsService.updateProfile`. App theo đúng như vậy.
  */
-describe('ShopProfileScreen — không còn luồng xin xác minh gian hàng', () => {
+describe('ShopProfileScreen - không còn luồng xin xác minh gian hàng', () => {
   const all: Permission[] = [
     PERMISSION.TENANT_VIEW,
     PERMISSION.TENANT_UPDATE,
@@ -281,7 +281,7 @@ describe('ShopProfileScreen — không còn luồng xin xác minh gian hàng', (
     expect(view.updateSpy.mock.calls[0]?.[0]).toMatchObject({ displayName: 'Bình Minh Xe' });
   });
 
-  it('đang hoạt động: KHÔNG dựng dải nào — nhãn cạnh tên gian hàng đã nói điều đó', async () => {
+  it('đang hoạt động: KHÔNG dựng dải nào - nhãn cạnh tên gian hàng đã nói điều đó', async () => {
     const view = await renderScreen(all, shop(ACTIVE), TENANT_STATUS.ACTIVE);
 
     expect(await view.findByLabelText('Tên hiển thị')).toBeTruthy();
@@ -290,7 +290,7 @@ describe('ShopProfileScreen — không còn luồng xin xác minh gian hàng', (
   });
 });
 
-describe('ShopProfileScreen — checklist "Hoàn thiện hồ sơ"', () => {
+describe('ShopProfileScreen - checklist "Hoàn thiện hồ sơ"', () => {
   const all: Permission[] = [PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE];
 
   it('còn thiếu: hiện bảng, chữ KHÔNG nhắc tới "gửi duyệt"', async () => {
@@ -333,7 +333,7 @@ describe('ShopProfileScreen — checklist "Hoàn thiện hồ sơ"', () => {
  * Hai khu, hai câu — đúng như web: `/manage/shop` nói về gian hàng, còn "Hồ sơ chủ xe" ở khu tài
  * khoản (`OwnerRegistrationView`) nói `Account.registration.loadError`.
  */
-describe('ShopProfileScreen — lỗi tải theo khu đang đứng', () => {
+describe('ShopProfileScreen - lỗi tải theo khu đang đứng', () => {
   it('trang Cửa hàng: câu về GIAN HÀNG', async () => {
     const view = await renderScreen(
       [PERMISSION.TENANT_VIEW],
@@ -361,7 +361,7 @@ describe('ShopProfileScreen — lỗi tải theo khu đang đứng', () => {
   });
 });
 
-describe('ShopProfileScreen — tỉnh của gian hàng', () => {
+describe('ShopProfileScreen - tỉnh của gian hàng', () => {
   it('tỉnh hiển thị lấy từ CHI NHÁNH MẶC ĐỊNH, không phải bản sao trên hồ sơ', async () => {
     const view = await renderScreen(
       [PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE],

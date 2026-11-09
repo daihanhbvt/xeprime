@@ -197,7 +197,7 @@ export function EditBookingSheet({
                 : ''}
             </Text>
             <Text col={colors.text} fos={fontSize.bodySm}>
-              {fmt.shortDateTimeRange(booking.pickupAt, booking.returnAt)}
+              {fmt.rentalRange(booking.pickupAt, booking.returnAt)}
             </Text>
             <Text col={colors.price} fos={fontSize.body} fow={fontWeight.bold}>
               {fmt.money(booking.totalAmount)}
