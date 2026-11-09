@@ -51,6 +51,12 @@ model User {
   avatarUrl       String?   @map("avatar_url") @db.Text
   /// Bcrypt hash cho đăng nhập email/mật khẩu. Null với user chỉ đăng nhập Google/Facebook.
   passwordHash    String?   @map("password_hash") @db.VarChar(255)
+  /// Tên đăng nhập của TÀI KHOẢN NHÂN VIÊN do chủ gian hàng cấp (ADR 0087) — chữ thường, unique
+  /// trong realm, CHECK `users_username_format_check`. NULL với mọi tài khoản tự đăng ký.
+  username        String?   @db.VarChar(32)
+  /// Gian hàng đã TẠO tài khoản này (ADR 0087). Khác null ⇒ tài khoản nhân viên do chủ quản lý: chủ
+  /// đặt lại mật khẩu, gỡ khỏi gian hàng là vô hiệu hoá tài khoản, không qua cổng xác minh SĐT.
+  managedByTenantId String? @map("managed_by_tenant_id") @db.Char(26)
   /// @xeprime/types → UserStatus
   status          String    @default("active") @db.VarChar(50)
   lastLoginAt     DateTime? @map("last_login_at") @db.Timestamptz(3)
@@ -129,10 +135,13 @@ model User {
   assignedSalesFollowUps       SalesFollowUp[]           @relation("sales_follow_up_assignee")
   updatedSalesFollowUps        SalesFollowUp[]           @relation("sales_follow_up_updater")
   updatedAppConfigs            PlatformAppConfig[]       @relation("app_config_updated_by")
+  managedByTenant              Tenant?                   @relation("tenant_managed_users", fields: [managedByTenantId], references: [id], onDelete: SetNull)
 
   /// ADR 0053: định danh đăng nhập unique TRONG realm, không unique toàn hệ thống.
   @@unique([realm, email], map: "users_realm_email_key")
   @@unique([realm, phone], map: "users_realm_phone_key")
+  @@unique([realm, username], map: "users_realm_username_key")
+  @@index([managedByTenantId])
   /// Đích của FK tổ hợp `(user_id, realm)` từ `user_identities` — giữ định danh social cùng realm
   /// với tài khoản của nó.
   @@unique([id, realm], map: "users_id_realm_key")
@@ -250,6 +259,8 @@ model Tenant {
   deletedAt           DateTime? @map("deleted_at") @db.Timestamptz(3)
 
   owner                         User                           @relation("tenant_owner", fields: [ownerUserId], references: [id])
+  /// Tài khoản nhân viên gian hàng đã cấp (ADR 0087).
+  managedUsers                  User[]                         @relation("tenant_managed_users")
   profile                       TenantProfile?
   branches                      TenantBranch[]
   memberships                   TenantMembership[]
@@ -351,6 +362,8 @@ model TenantMembership {
   /// có dòng nào thì KHÔNG thấy gì, chứ không phải thấy tất cả.
   branchScope         String    @default("all") @map("branch_scope") @db.VarChar(20)
   displayNameInTenant String?   @map("display_name_in_tenant") @db.VarChar(255)
+  /// SĐT LIÊN HỆ chủ ghi cho nhân viên (ADR 0087) — không xác minh, KHÔNG dùng đăng nhập.
+  contactPhone        String?   @map("contact_phone") @db.VarChar(30)
   invitedBy           String?   @map("invited_by") @db.Char(26)
   joinedAt            DateTime? @map("joined_at") @db.Timestamptz(3)
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -797,11 +810,16 @@ model WebSession {
   /// `logout` | `password_changed` | `password_reset` | `user_disabled` —
   /// CHECK `web_sessions_revoked_reason_check`.
   revokedReason String?   @map("revoked_reason") @db.VarChar(50)
+  /// Lần cuối phiên được DÙNG — ghi theo nhịp 2,5 phút (`SessionService`), nuôi "Hoạt động gần nhất"
+  /// của màn Nhân sự (ADR 0086). Không dùng cho quyết định bảo mật nào.
+  lastSeenAt    DateTime? @map("last_seen_at") @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   /// Thu hồi mọi phiên còn sống của một user (đổi/đặt lại mật khẩu).
   @@index([userId])
+  /// Màn Nhân sự: hoạt động cuối của một nhóm user.
+  @@index([userId, lastSeenAt(sort: Desc)], map: "web_sessions_user_last_seen_idx")
   /// Worker dọn hàng hết hạn theo lô.
   @@index([expiresAt])
   @@map("web_sessions")
@@ -1186,6 +1204,8 @@ model TenantInvite {
   branchScope String   @default("all") @map("branch_scope") @db.VarChar(20)
   /// Mảng chứ không bảng nối: lời mời là bản ghi tạm — xem header migration 20260929120000.
   branchIds   String[] @default([]) @map("branch_ids") @db.Char(26)
+  /// "Tên gợi nhớ" người mời đặt (ADR 0086) — chép sang `tenant_memberships.display_name_in_tenant` khi nhận.
+  displayName String?  @map("display_name") @db.VarChar(60)
   tokenHash   String   @map("token_hash") @db.VarChar(255)
   /// @xeprime/types → InviteStatus
   status      String   @default("pending") @db.VarChar(50)

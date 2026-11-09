@@ -1,49 +1,42 @@
-.filters {
+/* Nhân viên & Phân quyền — design `24035:69458` (Partner-XePrime, 09/11/2026). */
+.page {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.headerActions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.search {
-  flex: 1 1 260px;
-  min-width: 200px;
-}
-
-.roleFilter {
-  width: 200px;
-}
-
-.cell {
-  display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.name {
-  font-weight: 600;
-  color: var(--xp-color-text);
+  gap: var(--xp-space-12);
 }
 
 .you {
-  font-weight: 400;
+  font-weight: var(--xp-font-weight-regular);
   color: var(--xp-color-text-tertiary);
 }
 
-.meta {
-  font-size: 12.5px;
+/* Mỗi chi nhánh một dòng, như design ("Chi nhánh Quận 5" / "Chi nhánh Bình Chánh"). */
+.branchList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.status {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.statusNote {
   color: var(--xp-color-text-tertiary);
-}
-
-.roleSelect {
-  min-width: 160px;
-}
-
-.state {
-  margin-top: 48px;
-}
-
-.branchSelect {
-  width: 100%;
-  min-width: 180px;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
 }

@@ -60,7 +60,7 @@ Design: Header `23649:27690` (biến thể Default) · `23661:22492` (Details, c
 | Cửa hàng · `/shop` | Gian hàng › Cửa hàng | **Cấu hình › Thông tin cửa hàng** | menu | — |
 | Chi nhánh · `/shop/branches` | Cấu hình › Chi nhánh | **Thẻ "Chi nhánh"** trong Thông tin cửa hàng (`/shop?section=branches`); route cũ chuyển tiếp | thẻ của trang Cửa hàng | — (06/11: bảng gọn 7 cột, thao tác bút chì + "…", xem §3.13) |
 | Chính sách thuê · `/shop/policies` | Cấu hình › Chính sách thuê | **Cấu hình › Chính sách thuê** | menu | — |
-| Thành viên · `/members` | Cấu hình › Người dùng & phân quyền | **Cấu hình › Nhân viên & Phân quyền** | menu | — |
+| Thành viên · `/members` | Cấu hình › Người dùng & phân quyền | **Cấu hình › Nhân viên & Phân quyền** (+ trang con "Vai trò & quyền" `/members/roles`) | menu; nút đầu trang | — (ráp xong 09/11, §3.14) |
 | Trung tâm hỗ trợ · `/support` | Hỗ trợ › Trung tâm hỗ trợ | **Trợ giúp › Trung tâm hỗ trợ** | menu | — |
 | Hỗ trợ & khiếu nại · `/support/cases` | Hỗ trợ › Yêu cầu hỗ trợ | **Trợ giúp › Yêu cầu hỗ trợ** (Trợ giúp thành dropdown 2 dòng — lệch design, đã chốt) | menu | — |
 | Tài khoản & bảo mật · `/account` | menu tài khoản ở thẻ người dùng | **Dòng đầu menu hồ sơ** + bấm thẻ đầu menu (icon bánh răng ở header ĐÃ BỎ 09/11) | header | — |
@@ -166,6 +166,7 @@ Mỗi màn: route · node design · trạng thái · tính năng phải có mặ
 | Danh sách bảo dưỡng | `/maintenance` (cả phiên hỗ trợ) | `23733:41941` | **Xong** 04/11/2026 | Xem §3.8 |
 | Chính sách thuê | `/shop/policies` (`?type=motorbike`; `/shop/payment-settings` chuyển hướng tới `#deposit-collection`) | `23874:63907` | **Xong** 06/11/2026 | Xem §3.12 (link "Gói & hạn mức" của P3 trỏ `/shop?section=plan` — đã đúng chỗ) |
 | Thông tin cửa hàng | `/shop` (+ thanh toán trong khung `/shop/payment/:id`, `/shop/payment/checkout/:id`) | section `23999:111044` (9 frame) | **Xong** 06/11/2026 | Xem §3.13 — kèm hoá đơn gộp (ADR 0083) và giới thiệu có định dạng |
+| Nhân viên & Phân quyền | `/members` (+ `/members/roles`; cả phiên hỗ trợ) | section `24035:71005` (3 frame) | **Xong** 09/11/2026 | Xem §3.14 — ADR 0086 |
 
 ### 3.1 Yêu cầu đặt xe — kiểm kê và quyết định (02/11/2026)
 
@@ -801,6 +802,49 @@ số xe vượt trần khi hạ bậc vẫn hiện hẳn (`PurchaseOverCapAlert`
 kỳ đó (giá tuyệt đối `tier.terms`, ADR 0041 điều 2), phải là phiếu gói; hết nửa hộp trống. Hai gói giữ bố cục
 cũ (hàng 4 nút kỳ hạn + hai phiếu ngang hàng). Màn ≤720px: một cột.
 
+### 3.14 Nhân viên & Phân quyền — kiểm kê và quyết định (09/11/2026)
+
+Code: `features/members/components/` — `MembersPage` (danh sách gộp) · `InviteMemberModal` (+ "Mời lại"
+điền sẵn) · `MemberEditDialog` · `MemberDetailDrawer` · `RolePermissionsPage` (ma trận) · `RolePill` ·
+`LastActiveText`. Bộ lọc trên URL: `use-roster-filters`. Luật ô ma trận + vai được mời: `@xeprime/types`
+(`ROLE_MATRIX_ROWS`, `roleMatrixLevel`, `invitableTenantRoles`). API: `GET /members/roster`,
+`GET /members/roles`, `POST /members/:userId/lock|unlock`, `nickname` ở PATCH và lời mời. Toàn bộ quyết
+định: ADR 0086; bộ BA: `SPEC-BUS-09` (Drive `01_BUSINESS_ANALYSIS_BA/06_Staff_Roles_Permissions`).
+
+| # | Hạng mục | Mark | Quyết định |
+| --- | --- | --- | --- |
+| M1 | Bảng: Nhân viên · SĐT · Vai trò (viên màu) · Chi nhánh phụ trách (tên) · Trạng thái · Hoạt động gần nhất · Xem chi tiết + "…" | ✅/🆕 | Theo design. SĐT, hoạt động gần nhất, tên chi nhánh là dữ liệu MỚI của `GET /members/roster` |
+| M2 | Lọc Trạng thái | 🆕→✅ | Đang hoạt động · Chờ xác nhận · Đã khoá — lọc ở server. Bộ lọc dời từ state cục bộ lên URL (ADR 0004) |
+| M3 | Bảng "Lời mời đang chờ" riêng (bản cũ) | 🟡 | **Gộp vào bảng chính** — dòng "Chờ xác nhận", "Đã mời lúc …"; "…" có Mời lại · Thu hồi lời mời. `PendingInvitesPanel` đã gỡ |
+| M4 | Đổi vai / chi nhánh bằng ô chọn ngay trên dòng (bản cũ) | 🟡 | Dời vào hộp **Chỉnh sửa** (design chỉ vẽ dòng menu) — kèm tên gợi nhớ; chỉ gửi trường thật sự đổi |
+| M5 | "Tạm khoá" | 🆕→✅ | `POST /members/:userId/lock|unlock`, quyền `members.update_role`. Khoá vì hết gói (`plan_lapsed`) không mở tay — ghi chú dưới viên trạng thái |
+| M6 | "Gỡ thành viên" (bản cũ) | 🟡 | Giữ — dòng "Gỡ khỏi gian hàng" trong "…" |
+| M7 | "Xem chi tiết" | 🆕→✅ | Ngăn chi tiết chuẩn (`DetailDrawer md`, `?open=`), chỉ đọc — design không vẽ |
+| M8 | Dòng của chủ gian hàng | 🟡 | Vẫn hiện, đứng đầu, không thao tác (design không vẽ) |
+| M9 | Hộp mời: ô Email + "Gửi lời mời qua SMS" | ⚠️ | **Bỏ** (ADR 0060 điều 8). Giữ bước "sao chép liên kết" sau khi gửi. Thêm "Tên gợi nhớ"; mô tả ngắn cạnh tên vai; quản lý chỉ thấy vai Nhân viên |
+| M10 | "+ Vai trò & quyền" (gợi ý tạo vai) | ⚠️ | Nút KHÔNG dấu + ; trang là ma trận CHỈ XEM tính từ quyền thật — không tick, không tạo vai (ADR 0086 điều 1) |
+| M11 | "Admin gian hàng" | ⚠️ | Giữ "Chủ gian hàng"; "Nhân viên gian hàng" → "Nhân viên", "Chỉ xem" → "Quan sát viên" (nhãn dùng chung cả app) |
+| M12 | Ô "Chi nhánh được giao" chỉ ở cột Nhân viên | ⚠️ | Thành một dòng chú thích chung dưới bảng — mọi vai trừ chủ đều giới hạn chi nhánh được |
+| M13 | Ma trận thiếu dòng | 🆕 | Thêm Khách hàng · Bảo dưỡng & KM · Chính sách thuê · Quản lý ví (chỉ chủ) · Yêu cầu hỗ trợ |
+| M14 | Ô lệch design có chủ đích | ⚠️ | Nhân viên: "Huỷ đơn, hoàn cọc, phụ phí" + "Sổ thu chi" = Có giới hạn (giữ thu tiền khi giao/nhận xe); Quan sát viên: "Doanh thu & báo cáo" = ✓ (dòng không có thao tác) — khoá ở `role-matrix.test.ts` |
+
+**Đổi lại 09/11/2026 (người dùng chốt — ADR 0087, ghi đè M3/M9 phần mời):** chủ **CẤP tài khoản** cho nhân
+viên thay cho mời bằng SĐT. Nút đầu trang là "Thêm nhân viên" (`StaffAccountDialog`: họ tên · tên đăng nhập
+tự do, duy nhất toàn site · mật khẩu có "Tạo ngẫu nhiên" · vai · chi nhánh · SĐT liên hệ) → tạo xong hiện
+khối thông tin đăng nhập một lần (`StaffCredentials`, có "Sao chép tất cả"). Lời mời cũ còn hạn vẫn là dòng
+"Chờ xác nhận", chỉ còn Thu hồi (không Mời lại). Menu "…" thêm **Đặt lại mật khẩu** (chỉ tài khoản do gian
+hàng cấp — `ResetPasswordDialog`). Hộp Chỉnh sửa: họ tên (tài khoản do gian hàng cấp) · vai · chi nhánh · SĐT
+liên hệ — tên gợi nhớ bỏ khỏi giao diện. **Ngăn chi tiết làm lại** (người dùng chê thiếu): thẻ người · Quyền
+truy cập (công tắc khoá/mở có xác nhận, vai + mô tả, chi nhánh, loại tài khoản, tên đăng nhập) · Liên hệ ·
+Quyền của vai (cùng phép tính với ma trận) · Hoạt động · Hoạt động gần đây (`GET /members/:userId/activity`);
+chân ngăn Chỉnh sửa / Đặt lại mật khẩu / Gỡ. Đăng nhập site partner: một ô "Số điện thoại hoặc tên đăng nhập"
+(`PartnerPasswordForm`); tài khoản do gian hàng cấp không qua `AccountPhoneGate`.
+
+Trạng thái tự dựng: đang tải / lỗi + thử lại (bảng và ma trận) · rỗng (có lối mời) · không khớp bộ lọc ·
+chỉ xem khi gói hết hạn (không menu ghi) · người bị giới hạn chi nhánh chỉ thao tác dòng nằm gọn trong
+phần mình · phiên hỗ trợ (chỉ xem; ma trận mở ở `/admin/tenant-support/:id/members/roles`) · ma trận cuộn
+ngang trong khung khi hẹp. Frame danh sách tô menu "Doanh thu" là vẽ nhầm — khối đúng là Cấu hình.
+
 ## 4. Node Figma đã dùng
 
 Ghi lại để phiên sau khỏi tốn lượt đọc lại.
@@ -833,6 +877,7 @@ Ghi lại để phiên sau khỏi tốn lượt đọc lại.
 | `23874:63907` | Chính sách thuê: page header `23874:64498` (tab loại xe) · Thanh toán & hóa đơn `23874:68740` · Thủ tục & điều khoản `23979:96566` · Giao nhận xe + thời gian chết `24047:77366` · Ưu đãi dài hạn `24047:77588` · cột phải `24051:80740` |
 | `24051:85101` | Menu hồ sơ: biến thể gian hàng `24051:85100` · cá nhân `24051:85102` (tên biến thể trong Figma ĐẢO: "Personal" là gian hàng, "Pro" là cá nhân — đọc theo chữ). Nền vàng thẻ gian hàng → `public/partner/account-card-bg.webp`, dấu tích → `public/partner/verified-shop.svg`. Dòng "Nâng cấp gian hàng" `24051:85746` (icon Award 2 → `public/icons/menu/award.svg`, `LineIcon` `award`) |
 | `23999:111044` | Section Thông tin cửa hàng: thường `23999:111274` (tiêu đề `23999:111277`, ba thẻ `23999:111298`, chi nhánh `23999:111349`, gói `23999:111391`, hoá đơn `23999:111432`, cột hiển thị `23999:111472`) · doanh nghiệp `23999:111045` · nhân viên `23999:111476` · hộp mua gói `24024:26537` (trong `23999:115279`) · hộp địa chỉ `23999:111878` · hộp thuế `23999:112100` · hộp chi nhánh `23999:112321` · hộp hiển thị `24047:78679` · trang thanh toán `24051:79507`. Huy hiệu bậc + nền doanh nghiệp đã tải về `public/shops/plans/` |
+| `24035:71005` | Section Nhân viên & Phân quyền: danh sách `24035:69458` (menu "…" `24035:69512`) · hộp Mời thành viên `24035:69694` (trong frame `24035:69639`) · Vai trò & quyền `24035:69513` |
 | `23874:63125` | Section Lịch sử giao dịch / Công nợ: danh sách `23857:58932` · chi tiết công nợ đơn `23872:60137` (hộp `23872:60767`) · thu tiền đơn `23872:61964` (hộp `23872:62755`) |
 
 Icon menu: tải từ các node trên, chuẩn hoá về khung 24px (cấp 1, dòng dropdown), 20px (nút header),

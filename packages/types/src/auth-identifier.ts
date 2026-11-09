@@ -37,9 +37,28 @@ const PHONE_SEPARATORS = /[\s.\-()]/g;
 /** "Trông như một lần gõ SĐT": chỉ chữ số và dấu phân tách, mở đầu bằng `0`, `+` hoặc chữ số. */
 const PHONE_SHAPE = /^\+?[\d\s.\-()]+$/;
 
+/**
+ * Tên đăng nhập của TÀI KHOẢN NHÂN VIÊN do chủ gian hàng cấp (ADR 0087): chữ thường, BẮT ĐẦU bằng
+ * chữ cái, 4–32 ký tự `a-z 0-9 . _`, không kết thúc bằng `.`/`_`. Khớp CHECK
+ * `users_username_format_check` của DB.
+ *
+ * Bắt đầu bằng chữ cái để không chuỗi nào vừa là tên đăng nhập vừa "trông như SĐT" — ô đăng nhập
+ * phân nhánh theo hình dạng, nên hai tập phải rời nhau.
+ */
+export const STAFF_USERNAME_PATTERN = /^[a-z][a-z0-9._]{2,30}[a-z0-9]$/;
+export const STAFF_USERNAME_MIN = 4;
+export const STAFF_USERNAME_MAX = 32;
+
+/** Dạng lưu của tên đăng nhập: bỏ khoảng trắng hai đầu, chữ thường. */
+export function normalizeStaffUsername(raw: string): string {
+  return raw.trim().toLowerCase();
+}
+
 export const LOGIN_IDENTIFIER_KIND = {
   EMAIL: 'email',
   PHONE: 'phone',
+  /** Tên đăng nhập của tài khoản nhân viên (ADR 0087) — chỉ site partner nhận. */
+  USERNAME: 'username',
   /** Không đoán được người dùng định nhập gì (vd `nguyenvana`). */
   UNKNOWN: 'unknown',
 } as const;
@@ -61,6 +80,9 @@ export function detectLoginIdentifierKind(raw: string): LoginIdentifierKind {
   const trimmed = raw.trim();
   if (trimmed.includes('@')) return LOGIN_IDENTIFIER_KIND.EMAIL;
   if (PHONE_SHAPE.test(trimmed)) return LOGIN_IDENTIFIER_KIND.PHONE;
+  if (STAFF_USERNAME_PATTERN.test(normalizeStaffUsername(trimmed))) {
+    return LOGIN_IDENTIFIER_KIND.USERNAME;
+  }
   return LOGIN_IDENTIFIER_KIND.UNKNOWN;
 }
 
@@ -85,6 +107,9 @@ export function isValidLoginIdentifier(raw: string): boolean {
       return EMAIL_PATTERN.test(trimmed);
     case LOGIN_IDENTIFIER_KIND.PHONE:
       return VN_MOBILE_PHONE_PATTERN.test(trimmed);
+    case LOGIN_IDENTIFIER_KIND.USERNAME:
+      // Hình dạng đã khớp ở bước phân loại; site nào nhận tên đăng nhập là việc của backend.
+      return true;
     default:
       return false;
   }

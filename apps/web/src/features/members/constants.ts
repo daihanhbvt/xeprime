@@ -1,7 +1,7 @@
 import {
+  ASSIGNABLE_TENANT_ROLES,
   MEMBERSHIP_STATUS,
   STATUS_COLOR,
-  TENANT_ROLE,
   TENANT_ROLE_VALUES,
   type MembershipStatus,
   type StatusMeta,
@@ -15,12 +15,13 @@ import {
  * module scope: giao diện tiếng Anh vẫn hiện "Nhân viên gian hàng", và module scope chạy một lần
  * cho cả tiến trình nên nó còn đóng băng ngôn ngữ của request ĐẦU TIÊN ở SSR.
  */
-export const ASSIGNABLE_ROLES: readonly TenantRole[] = TENANT_ROLE_VALUES.filter(
-  (role) => role !== TENANT_ROLE.SHOP_OWNER,
-);
+export const ASSIGNABLE_ROLES: readonly TenantRole[] = ASSIGNABLE_TENANT_ROLES;
 
 /** Toàn bộ vai trò (kèm owner) — dùng cho bộ lọc. */
 export const ALL_ROLES: readonly TenantRole[] = TENANT_ROLE_VALUES;
+
+/** Trần "Tên gợi nhớ" — khớp `MEMBER_NICKNAME_MAX` của API và cột `varchar(60)`. */
+export const MEMBER_NICKNAME_MAX = 60;
 
 /** Meta trạng thái thành viên (chưa có trong @xeprime/types) — gói ở FE để StatusTag dùng chung. */
 export const MEMBERSHIP_STATUS_META: Readonly<Record<MembershipStatus, StatusMeta>> = {

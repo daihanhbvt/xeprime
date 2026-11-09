@@ -50,6 +50,10 @@ export interface AuthSchemaLabels extends PhoneSchemaLabels {
    */
   nameLength?: string;
   nameInvalid?: string;
+  /** Ô "SĐT hoặc tên đăng nhập" của site partner (ADR 0087) bỏ trống. Tuỳ chọn như trên. */
+  partnerIdentifierRequired?: string;
+  /** Ô "SĐT hoặc tên đăng nhập" nhận một chuỗi không phải cả hai (vd một email). Tuỳ chọn. */
+  partnerIdentifierInvalid?: string;
 }
 
 /** Câu lỗi mặc định - TIẾNG VIỆT, cho client nào chưa cấp bản dịch của mình. */
@@ -69,6 +73,8 @@ const VI: Required<AuthSchemaLabels> = {
   nameInvalid: 'Tên chỉ gồm chữ cái, chữ số và khoảng trắng',
   confirmRequired: 'Vui lòng nhập lại mật khẩu',
   confirmMismatch: 'Mật khẩu nhập lại không khớp',
+  partnerIdentifierRequired: 'Vui lòng nhập số điện thoại hoặc tên đăng nhập',
+  partnerIdentifierInvalid: 'Nhập số điện thoại (vd 0901234567) hoặc tên đăng nhập nhân viên',
 };
 
 /** Khoá của từng quy tắc mật khẩu - trùng tên với khoá câu lỗi trong `AuthSchemaLabels`. */
@@ -159,7 +165,34 @@ export const buildLoginSchema = (labels: AuthSchemaLabels) =>
  */
 export const buildLoginPhoneSchema = (labels: AuthSchemaLabels) => buildRequiredMobilePhoneSchema(labels);
 
-/** Đăng nhập site khách / site partner: SĐT + mật khẩu (ADR 0060). Site quản trị dùng `buildLoginSchema`. */
+/**
+ * Đăng nhập SITE PARTNER: SĐT HOẶC tên đăng nhập của tài khoản nhân viên do gian hàng cấp (ADR 0087)
+ * + mật khẩu. Email bị từ chối như trước (ADR 0060) — câu lỗi nói đúng hai lựa chọn còn lại.
+ */
+export const buildPartnerLoginSchema = (labels: AuthSchemaLabels) =>
+  yup.object({
+    identifier: yup
+      .string()
+      .trim()
+      .required(labels.partnerIdentifierRequired ?? VI.partnerIdentifierRequired)
+      .test({
+        name: 'partner-login-identifier',
+        test(value, ctx) {
+          if (!value) return true;
+          const kind = detectLoginIdentifierKind(value);
+          if (kind === LOGIN_IDENTIFIER_KIND.USERNAME) return true;
+          if (kind === LOGIN_IDENTIFIER_KIND.PHONE) {
+            return isValidLoginIdentifier(value) || ctx.createError({ message: labels.invalid });
+          }
+          return ctx.createError({
+            message: labels.partnerIdentifierInvalid ?? VI.partnerIdentifierInvalid,
+          });
+        },
+      }),
+    password: yup.string().required(labels.passwordRequired),
+  });
+
+/** Đăng nhập site khách: SĐT + mật khẩu (ADR 0060). Site partner dùng `buildPartnerLoginSchema`, quản trị `buildLoginSchema`. */
 export const buildPhoneLoginSchema = (labels: AuthSchemaLabels) =>
   yup.object({
     phone: buildLoginPhoneSchema(labels),
@@ -224,6 +257,9 @@ export const loginIdentifierSchema = buildLoginIdentifierSchema(VI);
 
 export const loginSchema = buildLoginSchema(VI);
 export type LoginValues = yup.InferType<typeof loginSchema>;
+
+export const partnerLoginSchema = buildPartnerLoginSchema(VI);
+export type PartnerLoginValues = yup.InferType<typeof partnerLoginSchema>;
 
 export const phoneLoginSchema = buildPhoneLoginSchema(VI);
 export type PhoneLoginValues = yup.InferType<typeof phoneLoginSchema>;

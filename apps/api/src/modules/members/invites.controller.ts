@@ -1,7 +1,13 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Controller, Get, GoneException, Param, Post, Query } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ACCOUNT_REALM, PERMISSION, PLAN_FEATURE, SUPPORT_CAPABILITY } from '@xeprime/types';
+import {
+  ACCOUNT_REALM,
+  API_ERROR_CODE,
+  PERMISSION,
+  PLAN_FEATURE,
+  SUPPORT_CAPABILITY,
+} from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
@@ -14,7 +20,6 @@ import {
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
-  CreateInviteDto,
   CreateInviteResultDto,
   InviteDto,
   InviteListQueryDto,
@@ -52,24 +57,24 @@ export class InvitesController {
   }
 
   /**
-   * Hạn mức chặt hơn mức chung 120/phút: mỗi lời gọi ở đây sinh một token mời mới (và thu hồi
-   * token cũ của cùng số). Không gửi thư hay SMS nữa (ADR 0060), nhưng một vòng lặp gọi không giới
-   * hạn vẫn là cách đổ đầy bảng lời mời và nhật ký audit của gian hàng.
+   * ĐÃ GỠ (ADR 0087): gian hàng CẤP tài khoản cho nhân viên (`POST /members/accounts`) thay vì mời
+   * họ tự đăng ký bằng SĐT. Route giữ lại và trả 410 `MEMBER_INVITE_RETIRED` để app cũ nhận một câu
+   * rõ ràng thay vì 404; lời mời đã gửi vẫn nhận / thu hồi được tới khi hết hạn 7 ngày.
+   * `InvitesService.create` còn đó cho các spec dựng lời mời cũ để kiểm luồng nhận.
    */
   @Post()
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @RequirePermissions(PERMISSION.MEMBER_INVITE)
   @ApiOperation({
-    summary:
-      'Tạo lời mời tham gia gian hàng (SĐT + vai trò) - trả link một lần để người mời tự gửi (ADR 0060)',
+    summary: 'ĐÃ NGỪNG - luôn trả 410 MEMBER_INVITE_RETIRED; dùng POST /members/accounts (ADR 0087)',
+    deprecated: true,
   })
   @ApiCreatedResponse({ type: CreateInviteResultDto })
-  create(
-    @CurrentTenant() tenant: TenantContext,
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: CreateInviteDto,
-  ): Promise<CreateInviteResultDto> {
-    return this.invites.create(tenant.tenantId, user.id, dto, tenant.allowedBranchIds);
+  create(): never {
+    throw new GoneException({
+      code: API_ERROR_CODE.MEMBER_INVITE_RETIRED,
+      message: 'Mời bằng số điện thoại đã ngừng - hãy cấp tài khoản cho nhân viên',
+    });
   }
 
   @Post(':id/revoke')

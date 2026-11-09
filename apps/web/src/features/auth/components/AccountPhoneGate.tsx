@@ -46,9 +46,14 @@ export function AccountPhoneGate({ signOutTo }: { signOutTo: string }) {
    * là chốt: chưa có SĐT đã xác minh thì không mở được gian hàng.
    */
   const onRegisterPage = pathname === ROUTES.MANAGE.REGISTER;
+  /*
+   * Tài khoản nhân viên do gian hàng CẤP (ADR 0087) đăng nhập bằng tên đăng nhập, không có SĐT và
+   * không cần: họ không mở gian hàng, không nhận lời mời, không làm việc với khách bằng số riêng.
+   */
   const needsPhone =
     user != null &&
     user.realm !== ACCOUNT_REALM.PLATFORM &&
+    !user.managedAccount &&
     !user.phoneVerified &&
     !onRegisterPage;
   if (!needsPhone) return null;

@@ -1,0 +1,48 @@
+/* Viên vai — khuôn "_Badge" 14/20 của site partner (cùng nhịp `StatusTag appearance="pill"`). */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: 16px;
+  background: var(--xp-color-neutral-bg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+  white-space: nowrap;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Chủ gian hàng: viên đen, chữ vàng — cùng cặp với viên vai ở trang Cửa hàng. */
+.owner {
+  border-color: var(--xp-color-text);
+  background: var(--xp-color-text);
+  color: var(--xp-color-gold-on-dark);
+}
+
+.manager {
+  border-color: var(--xp-color-info-border);
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info-strong);
+}
+
+.staff {
+  border-color: var(--xp-color-warning-border);
+  background: var(--xp-color-warning-subtle);
+  color: var(--xp-color-warning-strong);
+}
+
+.viewer {
+  border-color: var(--xp-color-purple-border);
+  background: var(--xp-color-purple-bg);
+  color: var(--xp-color-purple);
+}

@@ -351,6 +351,11 @@
     "locked": "Locked",
     "removed": "Removed"
   },
+  "memberRosterStatus": {
+    "active": "Active",
+    "pending": "Awaiting acceptance",
+    "locked": "Locked"
+  },
   "notificationType": {
     "booking_created": "New booking",
     "booking_status_changed": "Booking updated",
@@ -585,8 +590,8 @@
   "tenantRole": {
     "shop_owner": "Shop owner",
     "shop_manager": "Shop manager",
-    "shop_staff": "Shop staff",
-    "shop_viewer": "View only"
+    "shop_staff": "Staff",
+    "shop_viewer": "Observer"
   },
   "tenantStatus": {
     "draft": "Draft",
@@ -1309,7 +1314,11 @@
       "invite_decline": "Decline invitation",
       "invite_revoke": "Revoke invitation",
       "update_role": "Change member role",
-      "remove": "Remove member"
+      "remove": "Remove member",
+      "lock": "Lock member",
+      "unlock": "Unlock member",
+      "create_account": "Create staff account",
+      "reset_password": "Reset staff password"
     },
     "membership": {
       "lock_after_plan_lapse": "Lock members after the shop plan lapsed",

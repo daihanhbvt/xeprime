@@ -534,9 +534,20 @@ describe('nav - vai trò gian hàng nhìn thấy gì', () => {
     );
   });
 
-  it('shop_viewer thấy ĐÚNG BẰNG shop_staff - menu không phân biệt được hai vai trò này', () => {
-    // Khác biệt thật nằm ở quyền GHI (`booking.create`…), không ở quyền XEM.
-    expect(labelsOfRole(TENANT_ROLE.SHOP_VIEWER)).toEqual(labelsOfRole(TENANT_ROLE.SHOP_STAFF));
+  /*
+   * ADR 0086 điều 2: Quan sát viên là vai của kế toán / đối tác — có `finance.view`, nên thấy thêm
+   * Tổng quan doanh thu và Lịch sử giao dịch. Ngoài khối đó, menu của hai vai như nhau: khác biệt
+   * còn lại nằm ở quyền GHI (`bookings.create`…), không ở quyền XEM.
+   */
+  it('shop_viewer thấy menu của shop_staff CỘNG khối doanh thu, và vẫn không thấy ví', () => {
+    const viewer = labelsOfRole(TENANT_ROLE.SHOP_VIEWER);
+    const staff = labelsOfRole(TENANT_ROLE.SHOP_STAFF);
+    const finance = ['manage.financeOverview', 'manage.transactionHistory'];
+
+    expect(viewer).toEqual(expect.arrayContaining(finance));
+    expect(viewer.filter((label) => !finance.includes(label))).toEqual(staff);
+    expect(viewer).not.toContain('manage.wallet');
+    expect(viewer).not.toContain('manage.staffPermissions');
   });
 });
 
