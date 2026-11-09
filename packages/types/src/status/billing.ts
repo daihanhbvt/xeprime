@@ -1,11 +1,11 @@
 /**
- * Chế độ thu phí, hoá đơn gói, và sổ giao dịch ngân hàng — ADR 0020 / 0022 / 0024.
+ * Chế độ thu phí, hoá đơn gói, và sổ giao dịch ngân hàng - ADR 0020 / 0022 / 0024.
  *
  * Hai điều đóng đinh ở tầng từ vựng này:
  *
  *  - **Chế độ thu phí đọc từ GÓI, không bao giờ từ `tenants.tenant_type`.** ADR 0014 điều 2 giữ
  *    `tenant_type` là nhãn hiển thị. Ở đâu cần biết "tenant này ăn hoa hồng hay đã mua gói",
- *    câu trả lời là `subscription.billingMode` — cột snapshot, không đọc xuyên qua `plans`.
+ *    câu trả lời là `subscription.billingMode` - cột snapshot, không đọc xuyên qua `plans`.
  *  - **Một sổ giao dịch ngân hàng, hai loại đích.** ADR 0022 điều 2: webhook phải ghi được một
  *    giao dịch TRƯỚC khi biết nó khớp vào đâu, nếu không giao dịch lạ sẽ bị bỏ và lần retry sau
  *    chèn lại lần nữa. Loại đích suy từ TIỀN TỐ của mã, không đoán.
@@ -16,7 +16,7 @@ import { STATUS_COLOR, type StatusMeta } from './meta';
 // ── Chế độ thu phí ──────────────────────────────────────────────────────────
 
 /**
- * Nền tảng thu tiền của một tenant bằng cách nào — ADR 0020.
+ * Nền tảng thu tiền của một tenant bằng cách nào - ADR 0020.
  *
  * `COMMISSION` là mặc định của tenant chưa mua gói. `PACKAGE` là tenant đã mua chỗ xe và
  * KHÔNG trả đồng nào trên chuyến.
@@ -39,7 +39,7 @@ export function isBillingMode(value: unknown): value is BillingMode {
 }
 
 /**
- * Nhãn trên card chợ — nói về CÁCH ĐẶT, không nói về đẳng cấp gian hàng (ADR 0020 ràng buộc 2).
+ * Nhãn trên card chợ - nói về CÁCH ĐẶT, không nói về đẳng cấp gian hàng (ADR 0020 ràng buộc 2).
  * Xe tuyến `PACKAGE` là nhóm trả tiền nhiều nhất; không được thiết kế nhãn khiến họ trông kém
  * tin cậy hơn.
  */
@@ -56,7 +56,7 @@ export function chargesCommission(mode: BillingMode): boolean {
 // ── Năng lực theo gói ───────────────────────────────────────────────────────
 
 /**
- * Nhóm tính năng NÂNG CAO, mở ra khi tenant mua gói — ADR 0027 điều 1.
+ * Nhóm tính năng NÂNG CAO, mở ra khi tenant mua gói - ADR 0027 điều 1.
  *
  * ⚠️ **Đây là TRỤC THỨ HAI, độc lập với `PERMISSION`.** Hai câu hỏi khác nhau và phải trả lời
  * riêng, rồi kiểm tra nối tiếp nhau:
@@ -90,10 +90,10 @@ export const PLAN_FEATURE = {
   /** Sinh và quản lý hợp đồng thuê. */
   CONTRACTS: 'contracts',
   /**
-   * Được phép BẬT công tắc thu cọc của khách qua sàn — ADR 0025 điều 2, ADR 0032 điều 2.
+   * Được phép BẬT công tắc thu cọc của khách qua sàn - ADR 0025 điều 2, ADR 0032 điều 2.
    *
    * Chỉ có nghĩa với tuyến GÓI: tuyến hoa hồng luôn thu cọc theo quy tắc nền tảng và không đi
-   * qua cờ này. Cờ mở QUYỀN bật, không tự bật — công tắc thật nằm ở `tenant_payment_settings`
+   * qua cờ này. Cờ mở QUYỀN bật, không tự bật - công tắc thật nằm ở `tenant_payment_settings`
    * và mặc định tắt.
    */
   ESCROW_HOLD: 'escrow_hold',
@@ -103,12 +103,12 @@ export type PlanFeature = (typeof PLAN_FEATURE)[keyof typeof PLAN_FEATURE];
 export const PLAN_FEATURE_VALUES = Object.values(PLAN_FEATURE) as PlanFeature[];
 
 /**
- * RANH GIỚI HAI BẬC — "một danh sách tường minh" mà ADR 0027 điều 1 đòi.
+ * RANH GIỚI HAI BẬC - "một danh sách tường minh" mà ADR 0027 điều 1 đòi.
  *
  * ADR 0027 nói thẳng vì sao danh sách này phải tồn tại ở một chỗ có tên: *"thiếu danh sách đó thì
  * mỗi màn mới lại tự quyết định lấy, và sáu tháng sau không ai trả lời được «gian hàng trả tiền
  * để được thêm cái gì»"*. Trước đợt này ranh giới chỉ sống trong một mảng cục bộ của seed, và
- * mảng đó cấp ĐỦ CẢ BẢY cờ cho cả gói hoa hồng lẫn gói thuê bao — nghĩa là hai bậc năng lực của
+ * mảng đó cấp ĐỦ CẢ BẢY cờ cho cả gói hoa hồng lẫn gói thuê bao - nghĩa là hai bậc năng lực của
  * ADR 0027 **chưa hề tồn tại trên dữ liệu**, dù toàn bộ guard, hook và menu đã đúng.
  *
  * Đây là DỮ LIỆU MẶC ĐỊNH của bậc gói, không phải quy tắc: admin vẫn sửa
@@ -117,11 +117,11 @@ export const PLAN_FEATURE_VALUES = Object.values(PLAN_FEATURE) as PlanFeature[];
  */
 
 /**
- * Gian hàng thuê bao — mở toàn bộ bộ quản lý (cột phải của bảng ở ADR 0027 điều 1).
+ * Gian hàng thuê bao - mở toàn bộ bộ quản lý (cột phải của bảng ở ADR 0027 điều 1).
  *
  * `escrow_hold` nằm ở đây từ 14/09/2026: công tắc thu cọc của gian hàng
  * (`PATCH /shop/payment-settings`) và `DepositPolicyService` đã thi công, nên cờ này không còn
- * là lời hứa suông. Nó là **năng lực**, không phải quyết định — bật cờ mới chỉ cho gian hàng
+ * là lời hứa suông. Nó là **năng lực**, không phải quyết định - bật cờ mới chỉ cho gian hàng
  * QUYỀN bật công tắc; công tắc mặc định vẫn TẮT (`tenant_payment_settings`).
  *
  * Tuyến hoa hồng KHÔNG cần cờ này: ở đó cọc là bắt buộc theo ADR 0032 điều 2, không đi qua trục
@@ -139,13 +139,13 @@ export const FULL_MANAGE_FEATURES: readonly PlanFeature[] = [
 ];
 
 /**
- * Chủ xe cơ bản (Owner Lite) — **rỗng có chủ đích**, không phải "chưa khai".
+ * Chủ xe cơ bản (Owner Lite) - **rỗng có chủ đích**, không phải "chưa khai".
  *
  * Bộ cơ bản không nằm trong `PLAN_FEATURE` chút nào: xe, lịch, yêu cầu thuê, đơn thuê, giao/nhận,
  * sổ khách, đánh giá, chat, hồ sơ gian hàng đều KHÔNG có cờ gác nên chủ xe nào cũng dùng được
  * (xem docblock của `PLAN_FEATURE`). Vì vậy "Owner Lite" đúng nghĩa là **không cờ nâng cao nào**.
  *
- * Chủ xe vẫn thấy tiền của TỪNG đơn — nó nằm trên chính đơn thuê, không bị cờ nào gác. Thứ họ
+ * Chủ xe vẫn thấy tiền của TỪNG đơn - nó nằm trên chính đơn thuê, không bị cờ nào gác. Thứ họ
  * không có là **sổ tổng hợp** (ADR 0027 điều 1).
  */
 export const OWNER_LITE_FEATURES: readonly PlanFeature[] = [];
@@ -154,7 +154,7 @@ export function isPlanFeature(value: unknown): value is PlanFeature {
   return typeof value === 'string' && (PLAN_FEATURE_VALUES as string[]).includes(value);
 }
 
-/** Nhãn cho màn "Gói của tôi" — viết bằng ngôn ngữ người dùng, không phải tên module. */
+/** Nhãn cho màn "Gói của tôi" - viết bằng ngôn ngữ người dùng, không phải tên module. */
 export const PLAN_FEATURE_LABEL: Readonly<Record<PlanFeature, string>> = {
   [PLAN_FEATURE.FINANCE]: 'Sổ thu chi và báo cáo',
   [PLAN_FEATURE.DEBTS]: 'Theo dõi công nợ',
@@ -167,18 +167,18 @@ export const PLAN_FEATURE_LABEL: Readonly<Record<PlanFeature, string>> = {
 };
 
 /**
- * Ba trạng thái của một tính năng với một tenant — ADR 0027 điều 3.
+ * Ba trạng thái của một tính năng với một tenant - ADR 0027 điều 3.
  *
  * Trạng thái giữa là điều quan trọng nhất: **hết hạn gói KHÔNG BAO GIỜ được làm người ta mất
  * quyền xem sổ sách của chính mình.** Ẩn hẳn thì dữ liệu vẫn còn nhưng người dùng tin là đã mất,
  * và việc đầu tiên họ làm là gọi hỗ trợ chứ không phải gia hạn.
  */
 export const FEATURE_STATE = {
-  /** Gói hiện hành có cờ — dùng bình thường. */
+  /** Gói hiện hành có cờ - dùng bình thường. */
   ENABLED: 'enabled',
-  /** Không có cờ nhưng tenant ĐÃ CÓ dữ liệu từ kỳ trước — xem được hết, ghi bị chặn. */
+  /** Không có cờ nhưng tenant ĐÃ CÓ dữ liệu từ kỳ trước - xem được hết, ghi bị chặn. */
   READ_ONLY: 'read_only',
-  /** Không có cờ và chưa bao giờ có dữ liệu — không hiện menu, sản phẩm trông gọn chứ không cụt. */
+  /** Không có cờ và chưa bao giờ có dữ liệu - không hiện menu, sản phẩm trông gọn chứ không cụt. */
   HIDDEN: 'hidden',
 } as const;
 
@@ -190,7 +190,7 @@ export function canWriteFeature(state: FeatureState): boolean {
   return state === FEATURE_STATE.ENABLED;
 }
 
-/** Có hiện menu không — `read_only` vẫn hiện, kèm băng báo hết hạn và nút gia hạn. */
+/** Có hiện menu không - `read_only` vẫn hiện, kèm băng báo hết hạn và nút gia hạn. */
 export function isFeatureVisible(state: FeatureState): boolean {
   return state !== FEATURE_STATE.HIDDEN;
 }
@@ -199,7 +199,7 @@ export function isFeatureVisible(state: FeatureState): boolean {
  * Suy trạng thái từ hai dữ kiện. Tách thành hàm thuần để api, web và mobile không tự diễn giải
  * mỗi nơi một kiểu.
  *
- * `hasLegacyData` là câu hỏi "tenant này đã từng dùng tính năng đó chưa" — mỗi module tự trả lời
+ * `hasLegacyData` là câu hỏi "tenant này đã từng dùng tính năng đó chưa" - mỗi module tự trả lời
  * bằng một phép đếm rẻ trên bảng của mình.
  */
 export function featureState(enabled: boolean, hasLegacyData: boolean): FeatureState {
@@ -210,7 +210,7 @@ export function featureState(enabled: boolean, hasLegacyData: boolean): FeatureS
 // ── Hoá đơn gói ─────────────────────────────────────────────────────────────
 
 /**
- * Vòng đời một hoá đơn gói — ADR 0015 điều 5.
+ * Vòng đời một hoá đơn gói - ADR 0015 điều 5.
  *
  * `PARTIALLY_PAID` là trạng thái ADR 0016 điều 6 bắt buộc phải có: chuyển thiếu thì ghi nhận
  * số đã về nhưng **không kích hoạt gói**. Gộp nó vào `ISSUED` là mất dấu tiền đã nhận; gộp vào
@@ -251,7 +251,7 @@ export const SUBSCRIPTION_INVOICE_STATUS_META: Readonly<
 };
 
 /**
- * Hoá đơn gói còn NHẬN tiền — một danh sách cho mọi đường tiền vào (SePay, cổng, gợi ý khớp tay).
+ * Hoá đơn gói còn NHẬN tiền - một danh sách cho mọi đường tiền vào (SePay, cổng, gợi ý khớp tay).
  * `paid` không nằm đây: tiền về cho hoá đơn đã đủ là tiền thừa, đi nhánh riêng.
  */
 export const SUBSCRIPTION_INVOICE_PAYABLE_STATUSES: readonly SubscriptionInvoiceStatus[] = [
@@ -266,10 +266,10 @@ export function isSubscriptionInvoicePayable(status: string): boolean {
 // ── Sổ giao dịch ngân hàng ──────────────────────────────────────────────────
 
 /**
- * Trạng thái KHỚP của một giao dịch tiền vào — ADR 0022 điều 2.
+ * Trạng thái KHỚP của một giao dịch tiền vào - ADR 0022 điều 2.
  *
  * Mặc định `UNMATCHED`: webhook ghi thô trước, khớp sau. `MANUAL` khác `MATCHED` vì admin khớp
- * tay là một sự kiện cần truy được về sau — ADR 0022 điều 4 cấm khớp tự động theo số tiền, nên
+ * tay là một sự kiện cần truy được về sau - ADR 0022 điều 4 cấm khớp tự động theo số tiền, nên
  * mọi dòng `MANUAL` đều là một lần con người chịu trách nhiệm.
  */
 export const BANK_MATCH_STATUS = {
@@ -298,17 +298,17 @@ export const BANK_MATCH_STATUS_META: Readonly<Record<BankMatchStatus, StatusMeta
  *
  * Hai đích đầu là chiều VÀO (tiền khách chuyển tới XePrime); `withdrawal_request` là chiều RA
  * (XePrime chuyển đi). Cùng một bảng `bank_transactions` và cùng một không gian tên mã
- * (`REFERENCE_CODE_PREFIX`) cho cả hai chiều — tách sổ theo chiều là mời hai bản đối soát trôi
+ * (`REFERENCE_CODE_PREFIX`) cho cả hai chiều - tách sổ theo chiều là mời hai bản đối soát trôi
  * khỏi nhau đúng ở chỗ chúng phải khớp nhau.
  */
 export const BANK_MATCH_TARGET_TYPE = {
   SUBSCRIPTION_INVOICE: 'subscription_invoice',
   BOOKING_HOLD: 'booking_hold',
   WITHDRAWAL_REQUEST: 'withdrawal_request',
-  /** Khoản online của một phụ lục gia hạn đơn dài hạn — mã `XPE…` (ADR 0077). */
+  /** Khoản online của một phụ lục gia hạn đơn dài hạn - mã `XPE…` (ADR 0077). */
   BOOKING_EXTENSION: 'booking_extension',
   /**
-   * PHIẾU THANH TOÁN GỘP nhiều hoá đơn gói (ô tô + xe máy trong một lần chuyển) — mã `XPC…`
+   * PHIẾU THANH TOÁN GỘP nhiều hoá đơn gói (ô tô + xe máy trong một lần chuyển) - mã `XPC…`
    * (ADR 0083). Đủ tổng thì mọi hoá đơn con kích hoạt cùng lúc.
    */
   SUBSCRIPTION_CHECKOUT: 'subscription_checkout',
@@ -324,32 +324,32 @@ export const BANK_MATCH_TARGET_TYPE_VALUES = Object.values(
 // ── Mã đối soát ─────────────────────────────────────────────────────────────
 
 /**
- * TIỀN TỐ quyết định loại đích, không có bước đoán — ADR 0022 điều 3.
+ * TIỀN TỐ quyết định loại đích, không có bước đoán - ADR 0022 điều 3.
  *
  * Mã **unique toàn sàn** (không unique theo tenant): webhook chỉ có chuỗi nội dung chuyển khoản,
- * không có ngữ cảnh tenant nào để thu hẹp. Hai bảng dùng CHUNG không gian tên này — mã trùng
+ * không có ngữ cảnh tenant nào để thu hẹp. Hai bảng dùng CHUNG không gian tên này - mã trùng
  * nhau giữa `subscription_invoices` và `booking_holds` là khớp nhầm tiền.
  */
 export const REFERENCE_CODE_PREFIX = {
   [BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE]: 'XPG',
   [BANK_MATCH_TARGET_TYPE.BOOKING_HOLD]: 'XPH',
   /**
-   * Lệnh RÚT TIỀN — chiều ra. `WithdrawalService` đã sinh mã `XPW…` từ Phase 5 nhưng bằng một
+   * Lệnh RÚT TIỀN - chiều ra. `WithdrawalService` đã sinh mã `XPW…` từ Phase 5 nhưng bằng một
    * hằng cục bộ và một bảng chữ cái chép lại; đưa về đây để mã chiều ra nằm CÙNG không gian tên
    * với chiều vào (ADR 0022 điều 3) và `referenceCodeTarget` nhận ra nó khi SePay mở webhook
    * chiều ra.
    */
   [BANK_MATCH_TARGET_TYPE.WITHDRAWAL_REQUEST]: 'XPW',
-  /** Phụ lục gia hạn đơn dài hạn (ADR 0077) — cùng không gian tên, unique toàn sàn. */
+  /** Phụ lục gia hạn đơn dài hạn (ADR 0077) - cùng không gian tên, unique toàn sàn. */
   [BANK_MATCH_TARGET_TYPE.BOOKING_EXTENSION]: 'XPE',
-  /** Phiếu thanh toán gộp gói (ADR 0083) — CHECK ở DB đòi đúng tiền tố này. */
+  /** Phiếu thanh toán gộp gói (ADR 0083) - CHECK ở DB đòi đúng tiền tố này. */
   [BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_CHECKOUT]: 'XPC',
 } as const;
 
 /**
  * Bộ lọc "mã rút được thuộc luồng nào" của hàng đợi tiền vào (màn Tài chính).
  *
- * Hai luồng VÀO theo tiền tố mã, cộng `no_code` — khoản mà ngân hàng cắt mất nội dung hoặc khách
+ * Hai luồng VÀO theo tiền tố mã, cộng `no_code` - khoản mà ngân hàng cắt mất nội dung hoặc khách
  * quên ghi mã. Nhóm cuối mới là phần lớn việc tay: khoản có mã mà vẫn nằm hàng đợi là khoản đến
  * muộn hoặc lệch tiền, còn khoản không mã là khoản chưa ai biết thuộc về đâu.
  */
@@ -372,9 +372,9 @@ export const BANK_TX_CODE_FILTER_VALUES = Object.values(BANK_TX_CODE_FILTER) as 
  * phép `SUM()` sau này phải nhớ xử lý. Hai cột + một CHECK thì không ai phải nhớ gì.
  */
 export const BANK_DIRECTION = {
-  /** Tiền VÀO tài khoản XePrime — `amount_in > 0`, `amount_out = 0`. */
+  /** Tiền VÀO tài khoản XePrime - `amount_in > 0`, `amount_out = 0`. */
   IN: 'in',
-  /** Tiền RA khỏi tài khoản XePrime — `amount_out > 0`, `amount_in = 0`. */
+  /** Tiền RA khỏi tài khoản XePrime - `amount_out > 0`, `amount_in = 0`. */
   OUT: 'out',
 } as const;
 
@@ -386,7 +386,7 @@ export function isBankDirection(value: unknown): value is BankDirection {
 }
 
 /**
- * Bảng chữ cái sinh mã — ADR 0016 điều 5: không dấu, **bỏ `0`/`O` và `1`/`I`** vì người đọc lại
+ * Bảng chữ cái sinh mã - ADR 0016 điều 5: không dấu, **bỏ `0`/`O` và `1`/`I`** vì người đọc lại
  * mã từ màn hình ngân hàng sẽ nhầm, và một ký tự sai là một khoản tiền không khớp được.
  */
 export const REFERENCE_CODE_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -395,7 +395,7 @@ export const REFERENCE_CODE_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 export const REFERENCE_CODE_BODY_LENGTH = 8;
 
 /**
- * Loại đích của một mã đối soát — `null` khi không nhận ra tiền tố.
+ * Loại đích của một mã đối soát - `null` khi không nhận ra tiền tố.
  *
  * `null` **không phải lỗi**: nó là đường dẫn tới hàng đợi khớp tay của admin (ADR 0022 điều 4).
  */

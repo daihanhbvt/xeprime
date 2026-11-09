@@ -93,7 +93,7 @@ function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joined
       title: t('columns.period'),
       key: 'period',
       width: 200,
-      render: (_, row) => `${fmt.date(row.startsAt)} – ${fmt.date(row.endsAt)}`,
+      render: (_, row) => `${fmt.date(row.startsAt)} - ${fmt.date(row.endsAt)}`,
     },
     {
       title: t('columns.plan'),
@@ -132,7 +132,7 @@ function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joined
       title: t('columns.period'),
       key: 'period',
       width: 200,
-      render: (_, row) => `${fmt.date(row.periodFrom)} – ${fmt.date(row.periodTo)}`,
+      render: (_, row) => `${fmt.date(row.periodFrom)} - ${fmt.date(row.periodTo)}`,
     },
     {
       title: t('columns.total'),
@@ -157,7 +157,7 @@ function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joined
       title: t('columns.paidAt'),
       key: 'paidAt',
       width: 130,
-      render: (_, row) => (row.paidAt ? fmt.date(row.paidAt) : '—'),
+      render: (_, row) => (row.paidAt ? fmt.date(row.paidAt) : '-'),
     },
   ];
 
@@ -229,13 +229,13 @@ function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joined
                   label: t('plan.term'),
                   value:
                     billing.termStartsAt && plan.endsAt
-                      ? `${fmt.date(billing.termStartsAt)} – ${fmt.date(plan.endsAt)}`
-                      : '—',
+                      ? `${fmt.date(billing.termStartsAt)} - ${fmt.date(plan.endsAt)}`
+                      : '-',
                 },
                 {
                   key: 'renewal',
                   label: t('plan.renewal'),
-                  value: daysLeft !== null ? t('plan.daysLeft', { days: daysLeft }) : '—',
+                  value: daysLeft !== null ? t('plan.daysLeft', { days: daysLeft }) : '-',
                 },
                 {
                   key: 'next',
@@ -319,7 +319,7 @@ function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joined
                   label: t('fee.effectiveFrom'),
                   value: billing.feePolicy.effectiveFrom
                     ? fmt.date(billing.feePolicy.effectiveFrom)
-                    : '—',
+                    : '-',
                 },
                 {
                   key: 'note',

@@ -1,5 +1,5 @@
 /*
- * Phần RIÊNG của menu tài khoản site khách (Figma "Homepage - Dropdown" `20063:57521`) — thẻ danh
+ * Phần RIÊNG của menu tài khoản site khách (Figma "Homepage - Dropdown" `20063:57521`) - thẻ danh
  * tính và nút mở trên thanh. Vỏ, dòng, nút gạt, đăng xuất ở
  * `components/account-menu/AccountMenuParts.module.css`.
  */
@@ -52,7 +52,7 @@
 }
 
 /*
- * Tên và email là DỮ LIỆU người dùng nhập — không có trần độ dài nào bảo vệ bố cục, nên cắt bằng
+ * Tên và email là DỮ LIỆU người dùng nhập - không có trần độ dài nào bảo vệ bố cục, nên cắt bằng
  * ellipsis thay vì để chúng đẩy mũi tên ra khỏi menu.
  */
 .identityName,

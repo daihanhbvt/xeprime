@@ -190,7 +190,7 @@ describe('useThread (native)', () => {
     expect(result.current.entries[0]?.message.text).toBe('Không đi được');
   });
 
-  it('gửi lại dùng ĐÚNG clientMessageId cũ — server nhận ra là một lần gửi', async () => {
+  it('gửi lại dùng ĐÚNG clientMessageId cũ - server nhận ra là một lần gửi', async () => {
     api.send.mockRejectedValueOnce(new Error('mạng rớt'));
 
     const { result } = await renderHook(() => useThread('c1', CHAT_SIDE.CUSTOMER), { wrapper });
@@ -278,7 +278,7 @@ describe('useThread (native)', () => {
  * Đường ĐƯA TIN VỀ: realtime và đồng hồ chạy SONG SONG, và cả hai chỉ kích hoạt đúng một lượt
  * đọc REST (`refreshLatest`). Đây là chỗ ADR 0009 sống: Firestore không bao giờ vẽ ra màn hình.
  */
-describe('useThread — realtime + poll dự phòng', () => {
+describe('useThread - realtime + poll dự phòng', () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
 
@@ -398,7 +398,7 @@ describe('useThread — realtime + poll dự phòng', () => {
     expect(api.messages.mock.calls.length).toBe(before + 1);
   });
 
-  it('dừng đồng hồ khi unmount — không để một request bay sau khi rời màn', async () => {
+  it('dừng đồng hồ khi unmount - không để một request bay sau khi rời màn', async () => {
     const { unmount } = await renderHook(() => useThread('c1', CHAT_SIDE.CUSTOMER), { wrapper });
     await flush();
 

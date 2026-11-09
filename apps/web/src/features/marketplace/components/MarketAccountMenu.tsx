@@ -23,12 +23,12 @@ import { initialOf } from '@/lib/initials';
 import styles from './MarketAccountMenu.module.css';
 
 /**
- * Menu tài khoản của site khách — avatar trên thanh + bảng thả xuống, dựng lại 26/10/2026 theo
+ * Menu tài khoản của site khách - avatar trên thanh + bảng thả xuống, dựng lại 26/10/2026 theo
  * Figma "Homepage - Dropdown" (`20063:57521`).
  *
  * ## Bố cục
  *
- *   ┌ thẻ danh tính (avatar · tên · email/SĐT · ›) — bấm vào là hồ sơ ┐
+ *   ┌ thẻ danh tính (avatar · tên · email/SĐT · ›) - bấm vào là hồ sơ ┐
  *   │ Chuyến của tôi · Xe yêu thích · Tin nhắn · Giao diện [☀|☾]     │  ← mặt trắng
  *   │ Trở thành chủ xe →                                               │
  *   └──────────────────────────────────────────────────────────────────┘
@@ -38,7 +38,7 @@ import styles from './MarketAccountMenu.module.css';
  * đặt sát nhau là một lối thừa.
  *
  * Vỏ, dòng, nút gạt và đăng xuất là khuôn chung với menu hồ sơ site partner
- * (`components/account-menu/AccountMenuParts` — vì sao không dùng `menu.items` của AntD cũng ghi
+ * (`components/account-menu/AccountMenuParts` - vì sao không dùng `menu.items` của AntD cũng ghi
  * ở đó).
  */
 export function MarketAccountMenu({
@@ -47,7 +47,7 @@ export function MarketAccountMenu({
   onLogout,
 }: {
   user: CurrentUser;
-  /** Đích hộp thư + số chưa đọc, lấy từ `useChatBadge` — cùng con số với biểu tượng trên thanh. */
+  /** Đích hộp thư + số chưa đọc, lấy từ `useChatBadge` - cùng con số với biểu tượng trên thanh. */
   chat: { href: string; count: number };
   onLogout: () => void;
 }) {
@@ -110,7 +110,7 @@ export function MarketAccountMenu({
 
       <AccountMenuSection divider>
         {/*
-          Lối sang SITE PARTNER (ADR 0051 điều 3) — đăng ký cho thuê xe là một tài khoản riêng ở
+          Lối sang SITE PARTNER (ADR 0051 điều 3) - đăng ký cho thuê xe là một tài khoản riêng ở
           đó (ADR 0053). Link khác site: URL tuyệt đối ở chế độ `host`.
         */}
         <AccountMenuLink

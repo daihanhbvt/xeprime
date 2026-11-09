@@ -1,10 +1,10 @@
+import { ScrollReveal } from '@/components/motion/ScrollReveal';
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Image } from 'expo-image';
 import {
   Linking,
   Pressable,
-  ScrollView,
   Share,
   useWindowDimensions,
   type NativeScrollEvent,
@@ -12,6 +12,17 @@ import {
 } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  type SharedValue,
+} from 'react-native-reanimated';
+import { PressableScale } from '@/components/motion/PressableScale';
+import { pressScale, scrollThrottle } from '@/theme/motion';
 import { MapPreview } from '@/components/map/MapPreview';
 import { pickupMapUri } from '@/lib/map-static';
 import {
@@ -34,7 +45,7 @@ import {
 import { rememberedOrDefaultRentalRange } from '@/lib/rental-range-memory';
 import { resolveWebBaseUrl } from '@/lib/web-base-url';
 import { catalogLabel } from '@/api/catalog';
-import { AppHeader } from '@/components/layout/AppHeader';
+import { APP_HEADER_HEIGHT, AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenError } from '@/components/state/ScreenError';
 import { Avatar } from '@/components/ui/Avatar';
@@ -105,6 +116,19 @@ const BODY_TEXT = 13;
 /** Khe giữa hai ảnh khi trượt — `.grid { gap: space-sm }` của web ≤640px. */
 const SLIDE_GAP = space.sm;
 
+/*
+ * Hiệu ứng theo cuộn của trang chi tiết (hằng cục bộ 06/11/2026 — hợp nhất vào `theme/motion` sau):
+ * - Ảnh: kéo quá đỉnh thì giãn (scale 1 + kéo/cao ảnh, tối đa `GALLERY_MAX_STRETCH`); cuộn xuống thì
+ *   trôi chậm hơn nội dung (`GALLERY_PARALLAX`) và mờ dần.
+ * - Thanh trên: tên xe hiện dần trong dải `TITLE_REVEAL_DISTANCE` cuối cùng trước khi ảnh khuất.
+ * - (Thanh CTA đáy KHÔNG còn trồi lên lúc vào màn - tắt 09/11/2026, nhấp nháy bóng.)
+ */
+const GALLERY_PARALLAX = 0.4;
+const GALLERY_MAX_STRETCH = 0.35;
+const TITLE_REVEAL_DISTANCE = 48;
+/** Lề trái/phải của tên xe trên thanh trên — chừa nút Lui (vùng chạm 44 + đệm). */
+const COLLAPSED_TITLE_INSET = 56;
+
 /** Mô tả dài hơn chừng này thì thu gọn còn 4 dòng, kèm "Xem tiếp" — như `ListingDescription` web. */
 const DESCRIPTION_CLAMP_CHARS = 220;
 
@@ -140,6 +164,18 @@ export function ListingDetailScreen({
   const colors = useColors();
   const tDetail = useTranslations('Listings.detail');
   const listing = useListing(vehicleId);
+  const scrollOffset = useSharedValue(0);
+  const { width: screenWidth } = useWindowDimensions();
+  // Ảnh khuất khi đã cuộn qua chiều cao ảnh + đệm 12 trên của `.wrap`.
+  const galleryBottom = (screenWidth - layout.screenX * 2) / PHOTO_RATIO + 12;
+  const collapsedTitleStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollOffset.value,
+      [galleryBottom - TITLE_REVEAL_DISTANCE, galleryBottom],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
+  }));
   /*
    * Chuyến khách đang cấu hình sống ở VỎ, không trong `DetailBody`: thanh "Thuê xe" đáy màn nằm
    * ngoài vùng cuộn và phải mang ĐÚNG chuyến đó sang luồng gửi yêu cầu (prefill — web #205).
@@ -177,6 +213,36 @@ export function ListingDetailScreen({
    * Cùng một header ở cả ba trạng thái: đổi kiểu giữa chừng làm nút Lui nhảy chỗ.
    */
   const header = <AppHeader onBack={onBack} title={tDetail('breadcrumb.current')} />;
+  /*
+   * Collapsing header: tên xe phủ dần lên đúng dải tiêu đề khi ảnh cuộn khuất — lớp phủ cùng nền
+   * thanh, chỉ đổi opacity (luồng UI). Không bắt sự kiện chạm: nút Lui bên dưới vẫn bấm được.
+   */
+  const collapsingHeader = listing.data ? (
+    <YStack>
+      {header}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          {
+            position: 'absolute',
+            left: COLLAPSED_TITLE_INSET,
+            right: COLLAPSED_TITLE_INSET,
+            bottom: 0,
+            height: APP_HEADER_HEIGHT,
+            justifyContent: 'center',
+            backgroundColor: colors.background,
+          },
+          collapsedTitleStyle,
+        ]}
+      >
+        <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={1}>
+          {listing.data.name}
+        </Text>
+      </Animated.View>
+    </YStack>
+  ) : (
+    header
+  );
 
   if (listing.isError) {
     return (
@@ -218,7 +284,7 @@ export function ListingDetailScreen({
 
   return (
     <YStack f={1} bg={colors.background}>
-      {header}
+      {collapsingHeader}
       {/*
         `Screen` giữ vùng cuộn + BÀN PHÍM (ô "Điểm đến" của thẻ đặt xe nằm sâu dưới màn — gõ vào
         là được đẩy lên trên bàn phím, cùng cơ chế các màn form của app Partner; người dùng chốt
@@ -234,7 +300,13 @@ export function ListingDetailScreen({
         hideFooterWhileTyping
         refreshing={listing.isRefetching}
         onRefresh={() => void listing.refetch()}
+        scrollOffset={scrollOffset}
+        scrollReveal
         footer={
+          <Animated.View
+            // Thanh CTA có bóng: trượt + mờ lúc vào màn làm bóng nhấp nháy (Android) - tắt 09/11/2026.
+            entering={undefined}
+          >
           <RequestBar
             vehicleId={listing.data.id}
             shopSlug={listing.data.shopSlug}
@@ -243,6 +315,7 @@ export function ListingDetailScreen({
             onNeedInput={(kind) => setInputRequest({ kind, nonce: Date.now() })}
             {...(listing.data.provinceCode ? { provinceCode: listing.data.provinceCode } : {})}
           />
+          </Animated.View>
         }
       >
         <DetailBody
@@ -250,6 +323,7 @@ export function ListingDetailScreen({
           trip={current}
           onTripChange={patchTrip}
           inputRequest={inputRequest}
+          scrollOffset={scrollOffset}
         />
       </Screen>
     </YStack>
@@ -387,6 +461,7 @@ function RequestBar({
           <GradientButton
             label={t('cta')}
             iconStart="car-sport-outline"
+            shine
             radius={toPx(XP_TOKENS['border-radius-control'])}
             onPress={() => {
               /*
@@ -410,11 +485,14 @@ function DetailBody({
   trip,
   onTripChange,
   inputRequest,
+  scrollOffset,
 }: {
   listing: PublicListingDetail;
   trip: ListingTripDraft;
   onTripChange: (patch: Partial<ListingTripDraft>) => void;
   inputRequest: TripInputRequest | null;
+  /** Offset cuộn dọc của trang (luồng UI) — ảnh đầu trang giãn/parallax theo nó. */
+  scrollOffset?: SharedValue<number>;
 }) {
   const colors = useColors();
   const { scheme } = useAppScheme();
@@ -486,14 +564,19 @@ function DetailBody({
 
   const share = () => {
     void Share.share({
-      message: `${listing.name} — ${resolveWebBaseUrl()}/listings/${listing.id}`,
+      message: `${listing.name} - ${resolveWebBaseUrl()}/listings/${listing.id}`,
     }).catch(() => {});
   };
 
   // Vùng cuộn + bàn phím do `Screen` giữ (vỏ màn) — ở đây chỉ còn nội dung.
   return (
     <YStack pb={layout.section}>
-      <Gallery name={listing.name} mainImageUrl={listing.mainImageUrl} images={listing.images} />
+      <Gallery
+        name={listing.name}
+        mainImageUrl={listing.mainImageUrl}
+        images={listing.images}
+        {...(scrollOffset ? { scrollOffset } : {})}
+      />
 
       {/*
         Thứ tự khối = bản vẽ mobile v2 (Figma `19771:71482`) + nội dung của `ListingDetailView` web:
@@ -593,7 +676,9 @@ function DetailBody({
           ) : null}
         </YStack>
 
-        <ListingBenefitsCard listing={listing} activeService={activeService} />
+        <ScrollReveal>
+          <ListingBenefitsCard listing={listing} activeService={activeService} />
+        </ScrollReveal>
 
         <ListingBookingCard
           listing={listing}
@@ -610,6 +695,7 @@ function DetailBody({
           }
         />
 
+        <ScrollReveal>
         <YStack gap={space.sm}>
           <MarketSectionTitle>{t('description')}</MarketSectionTitle>
           {/* Hãng + màu đầu khối mô tả (Figma `19771:72580`): một hàng, khe 8 × 40, chữ 16. */}
@@ -664,8 +750,10 @@ function DetailBody({
             </Pressable>
           ) : null}
         </YStack>
+        </ScrollReveal>
 
         {listing.features.length > 0 ? (
+          <ScrollReveal>
           <YStack gap={space.sm}>
             <MarketSectionTitle>{t('featuresTitle')}</MarketSectionTitle>
             {/* Lưới 2 cột, khe 12 (Figma `19771:72667`). */}
@@ -680,6 +768,7 @@ function DetailBody({
               ))}
             </XStack>
           </YStack>
+          </ScrollReveal>
         ) : null}
 
         {/*
@@ -687,13 +776,16 @@ function DetailBody({
           ≤1024px: location `order: 4`, host `order: 5`; Figma mobile `19771:71482`).
         */}
         {listing.pickupPoint ? (
-          <PickupPointCard listingId={listing.id} point={listing.pickupPoint} />
+          <ScrollReveal>
+            <PickupPointCard listingId={listing.id} point={listing.pickupPoint} />
+          </ScrollReveal>
         ) : null}
 
         {/*
           Thẻ gian hàng + ba chỉ số uy tín (ADR 0045 điều 3) — số của GIAN HÀNG (`shopRatingAvg`,
           `shopRatingCount`, `shopCompletedTripCount`), không phải của riêng chiếc xe.
         */}
+        <ScrollReveal>
         <YStack gap={space.sm}>
           <MarketSectionTitle>{t('hostTitle')}</MarketSectionTitle>
           <ShopQuickInfoCard
@@ -712,11 +804,16 @@ function DetailBody({
             variant="inline"
           />
         </YStack>
+        </ScrollReveal>
 
         {/* Figma `21636:82908`: Đánh giá đứng TRƯỚC Thông tin thêm (tabs điều khoản/huỷ/phí). */}
-        <Reviews vehicleId={listing.id} />
+        <ScrollReveal>
+          <Reviews vehicleId={listing.id} />
+        </ScrollReveal>
 
-        <ListingPoliciesTabs listing={listing} activeService={activeService} />
+        <ScrollReveal>
+          <ListingPoliciesTabs listing={listing} activeService={activeService} />
+        </ScrollReveal>
       </YStack>
     </YStack>
   );
@@ -801,21 +898,60 @@ function PriceRow({ amount, unit }: { amount: string; unit: string }) {
   );
 }
 
+/** Ảnh lệch khỏi tâm co về tỉ lệ này. */
+const SLIDE_SIDE_SCALE = 0.92;
+const SLIDE_SIDE_OPACITY = 0.6;
+
+/** Một ảnh của băng chuyền: co + mờ theo khoảng cách tới tâm (chỉ transform/opacity). */
+function GallerySlide({
+  index,
+  step,
+  scrollX,
+  still,
+  children,
+}: {
+  index: number;
+  step: number;
+  scrollX: SharedValue<number>;
+  still: boolean;
+  children: ReactNode;
+}) {
+  const style = useAnimatedStyle(() => {
+    if (still) return { opacity: 1, transform: [{ scale: 1 }] };
+    const range = [(index - 1) * step, index * step, (index + 1) * step];
+    return {
+      opacity: interpolate(scrollX.value, range, [SLIDE_SIDE_OPACITY, 1, SLIDE_SIDE_OPACITY], Extrapolation.CLAMP),
+      transform: [
+        { scale: interpolate(scrollX.value, range, [SLIDE_SIDE_SCALE, 1, SLIDE_SIDE_SCALE], Extrapolation.CLAMP) },
+      ],
+    };
+  });
+  return <Animated.View style={style}>{children}</Animated.View>;
+}
+
 /** Dịch vụ chưa niêm yết giá — nói rõ phải liên hệ, không trưng giá của dịch vụ khác thay. */
 function Gallery({
   name,
   mainImageUrl,
   images,
+  scrollOffset,
 }: {
   name: string;
   mainImageUrl?: string | null;
   images: string[];
+  scrollOffset?: SharedValue<number>;
 }) {
   const colors = useColors();
   const { width } = useWindowDimensions();
   const [active, setActive] = useState(0);
   const [viewing, setViewing] = useState<string | null>(null);
-  const pagerRef = useRef<ScrollView>(null);
+  const pagerRef = useRef<Animated.ScrollView>(null);
+  // Vị trí cuộn ngang trên luồng UI — ảnh hai bên co nhẹ + mờ đi (hiệu ứng thẻ băng chuyền).
+  const scrollX = useSharedValue(0);
+  const reduceMotion = useReducedMotion();
+  const onPagerScroll = useAnimatedScrollHandler((event) => {
+    scrollX.value = event.contentOffset.x;
+  });
   const tGallery = useTranslations('Listings.detail.gallery');
   const tStates = useTranslations('Common.states');
 
@@ -827,6 +963,24 @@ function Gallery({
   const height = slideWidth / PHOTO_RATIO;
   // Mỗi trang cuộn = một ảnh + khe giữa hai ảnh.
   const step = slideWidth + SLIDE_GAP;
+
+  const verticalStyle = useAnimatedStyle(() => {
+    if (!scrollOffset || reduceMotion) return {};
+    const y = scrollOffset.value;
+    if (y < 0) {
+      // Giãn khi kéo quá đỉnh — dịch nửa quãng kéo để mép trên ảnh bám theo ngón tay.
+      return {
+        transform: [
+          { translateY: y / 2 },
+          { scale: 1 + Math.min(-y / Math.max(height, 1), GALLERY_MAX_STRETCH) },
+        ],
+      };
+    }
+    return {
+      opacity: interpolate(y, [0, height], [1, 0.4], Extrapolation.CLAMP),
+      transform: [{ translateY: y * GALLERY_PARALLAX }],
+    };
+  });
 
   const onScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -856,10 +1010,12 @@ function Gallery({
   return (
     // `.wrap` ≤640px: đệm 12 trên/dưới; dải ảnh nhỏ cách ảnh 8.
     <YStack py={12} gap={space.sm}>
-      <YStack>
-        <ScrollView
+      <Animated.View style={verticalStyle}>
+        <Animated.ScrollView
           ref={pagerRef}
           horizontal
+          onScroll={onPagerScroll}
+          scrollEventThrottle={scrollThrottle.frame}
           showsHorizontalScrollIndicator={false}
           snapToInterval={step}
           decelerationRate="fast"
@@ -868,8 +1024,15 @@ function Gallery({
           onMomentumScrollEnd={onScroll}
         >
           {unique.map((url, index) => (
-            <Pressable
+            <GallerySlide
               key={url}
+              index={index}
+              step={step}
+              scrollX={scrollX}
+              still={reduceMotion || unique.length < 2}
+            >
+            <PressableScale
+              scaleTo={pressScale.card}
               onPress={() => setViewing(url)}
               accessibilityRole="imagebutton"
               accessibilityLabel={tGallery('photoAlt', { name, index: index + 1 })}
@@ -882,9 +1045,10 @@ function Gallery({
                 recyclingKey={url}
                 transition={150}
               />
-            </Pressable>
+            </PressableScale>
+            </GallerySlide>
           ))}
-        </ScrollView>
+        </Animated.ScrollView>
 
         {/*
           Bộ đếm "n/N" nổi góc dưới-phải ảnh — `.counter` web ≤640px: nền đen 55% CỐ ĐỊNH (nó nằm
@@ -905,7 +1069,7 @@ function Gallery({
             </Text>
           </XStack>
         ) : null}
-      </YStack>
+      </Animated.View>
 
       {unique.length > 1 ? (
         <ListingGalleryThumbs urls={unique} active={active} onSelect={jumpTo} />

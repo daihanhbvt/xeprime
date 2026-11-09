@@ -3,7 +3,7 @@ import { ceilToThousand, type MoneyString } from '@xeprime/types';
 export const CURRENCY_SUFFIX = '₫';
 
 /**
- * Dấu phân tách theo ngôn ngữ — `vi-VN` dùng `.` cho nhóm và `,` cho thập phân, `en-US` ngược
+ * Dấu phân tách theo ngôn ngữ - `vi-VN` dùng `.` cho nhóm và `,` cho thập phân, `en-US` ngược
  * lại. Suy ra từ `Intl` ở `useAppFormat`, KHÔNG gõ tay ở đây: file này không biết locale, nó
  * chỉ biết chèn ký tự vào đúng chỗ.
  */
@@ -13,10 +13,10 @@ export interface MoneySeparators {
 }
 
 /**
- * Format tiền để HIỂN THỊ, không parse sang `number` — ADR 0007.
+ * Format tiền để HIỂN THỊ, không parse sang `number` - ADR 0007.
  *
  * `Number('12345678901234.56')` mất chính xác; cộng nhiều khoản bằng float thì sai lệch
- * tích luỹ. Ở đây chỉ chèn dấu phân cách nhóm vào chuỗi, không đụng tới giá trị — nên đổi
+ * tích luỹ. Ở đây chỉ chèn dấu phân cách nhóm vào chuỗi, không đụng tới giá trị - nên đổi
  * ngôn ngữ chỉ đổi KÝ TỰ ngăn cách, con số vẫn nguyên vẹn từng chữ số một.
  *
  * `Intl.NumberFormat` cố ý KHÔNG dùng ở đây vì nó buộc phải nhận `number`.
@@ -42,7 +42,7 @@ export function formatMoneyVnd(
 /**
  * Quy một chuỗi tiền về **số nguyên đơn vị xu** dạng `bigint`.
  *
- * Cột tiền là `Decimal(14,2)` nên hai chữ số thập phân là đủ và không bao giờ mất chính xác —
+ * Cột tiền là `Decimal(14,2)` nên hai chữ số thập phân là đủ và không bao giờ mất chính xác -
  * khác hẳn `Number(value)`, thứ ADR 0007 cấm vì float làm sai lệch từ 2^53 trở lên.
  */
 function toCents(value: MoneyString): bigint {
@@ -75,7 +75,7 @@ export function subtractMoney(
 }
 
 /**
- * Tổng nhiều số tiền, cùng phép `bigint` đơn vị xu như `subtractMoney` — không đi qua `Number`
+ * Tổng nhiều số tiền, cùng phép `bigint` đơn vị xu như `subtractMoney` - không đi qua `Number`
  * (ADR 0007). Rỗng/null coi như 0; danh sách rỗng ⇒ `'0'`.
  *
  * Dùng cho mọi tổng HIỂN THỊ ghép từ các khoản trên dây (vd tổng hoá đơn của nhiều làn gói): cộng
@@ -86,8 +86,8 @@ export function sumMoney(values: readonly (MoneyString | null | undefined)[]): M
 }
 
 /**
- * Số tiền QUY RA MỖI PHẦN — chỉ để HIỂN THỊ (vd giá một kỳ nhiều tháng quy ra "/tháng" trên bảng
- * giá gói). Phép `bigint` trên xu như `sumMoney`, làm tròn tới ĐỒNG (nửa lên — ADR 0069: khoản tính
+ * Số tiền QUY RA MỖI PHẦN - chỉ để HIỂN THỊ (vd giá một kỳ nhiều tháng quy ra "/tháng" trên bảng
+ * giá gói). Phép `bigint` trên xu như `sumMoney`, làm tròn tới ĐỒNG (nửa lên - ADR 0069: khoản tính
  * ra đúng tới đồng, không tới 1.000đ). Không bao giờ vào một dòng tiền: hoá đơn ghi giá cả kỳ.
  */
 export function moneyPerPart(value: MoneyString, parts: number): MoneyString {
@@ -100,16 +100,16 @@ export function moneyPerPart(value: MoneyString, parts: number): MoneyString {
   return fromCents((negative ? -dong : dong) * 100n);
 }
 
-/** Số tiền có âm không — đọc trên chuỗi, cùng lý do như `isZeroMoney`. */
+/** Số tiền có âm không - đọc trên chuỗi, cùng lý do như `isZeroMoney`. */
 export function isNegativeMoney(value: MoneyString | null | undefined): boolean {
   return Boolean(value) && toCents(value as MoneyString) < 0n;
 }
 
 /**
- * Số tiền có DƯƠNG thật sự không (> 0) — đọc trên chuỗi, không qua `Number` (ADR 0007).
+ * Số tiền có DƯƠNG thật sự không (> 0) - đọc trên chuỗi, không qua `Number` (ADR 0007).
  *
  * Dùng để quyết định hiện một dòng tiền / một cột / một lựa chọn có phí: `Number(x) > 0` sai với
- * số lớn và âm thầm coi chuỗi rác là `NaN` (⇒ false) — ở đây chuỗi không đúng hình dạng tiền trên
+ * số lớn và âm thầm coi chuỗi rác là `NaN` (⇒ false) - ở đây chuỗi không đúng hình dạng tiền trên
  * dây cũng trả `false`, nhưng tường minh. Rỗng/null ⇒ `false`.
  */
 export function isPositiveMoney(value: MoneyString | null | undefined): boolean {
@@ -119,7 +119,7 @@ export function isPositiveMoney(value: MoneyString | null | undefined): boolean 
 }
 
 /**
- * Trị tuyệt đối của số tiền — dùng khi **nhãn đã mang dấu** ("Lỗ luỹ kế", "Còn nợ").
+ * Trị tuyệt đối của số tiền - dùng khi **nhãn đã mang dấu** ("Lỗ luỹ kế", "Còn nợ").
  * Hiện cả nhãn "Lỗ" lẫn dấu trừ là phủ định hai lần.
  */
 export function absoluteMoney(value: MoneyString | null | undefined): MoneyString | null {
@@ -142,22 +142,22 @@ export interface CompactMoneyParts {
  * Trả về PHẦN, không phải câu: hậu tố (`tr` / `M`) là chữ theo ngôn ngữ nên do message ghép.
  * `null` = số quá nhỏ để rút gọn ⇒ nơi gọi hiện dạng đầy đủ.
  *
- * Chỉ dùng khi bề rộng thật sự không chứa nổi con số đầy đủ — Figma `186:2417` là trường hợp
+ * Chỉ dùng khi bề rộng thật sự không chứa nổi con số đầy đủ - Figma `186:2417` là trường hợp
  * đó. Mọi chỗ còn lại dùng dạng đầy đủ vì rút gọn là **làm mất thông tin**.
  *
- * ## `fractionDigits` — vì sao một con số thôi là không đủ
+ * ## `fractionDigits` - vì sao một con số thôi là không đủ
  *
  * Bao nhiêu chữ số lẻ là ĐỦ phụ thuộc con số đó dùng để làm gì, và ở đây có đúng hai việc:
  *
  *  - **Trục biểu đồ, ô thống kê** (mặc định `1`): người đọc cần ĐỘ LỚN, không cần con số
- *    chính xác — họ có bảng bên dưới cho việc đó. Thêm chữ số lẻ chỉ làm trục rối.
+ *    chính xác - họ có bảng bên dưới cho việc đó. Thêm chữ số lẻ chỉ làm trục rối.
  *  - **GIÁ khách phải trả** (`2`): đây là con số người ta quyết định mua bằng nó. Một chữ số
- *    lẻ biến `1.050.000` thành `1tr` và `1.350.000` thành `1,3tr` — sai lần lượt 50.000 và
+ *    lẻ biến `1.050.000` thành `1tr` và `1.350.000` thành `1,3tr` - sai lần lượt 50.000 và
  *    50.000 đồng, trên chính cái số mà khách so giữa hai chiếc xe. Hai chữ số lẻ cho bậc triệu
  *    tức là làm tròn tới 10.000đ, mà giá thuê thực tế luôn là bội của 10.000đ ⇒ KHÔNG mất gì.
  *
  * Bậc nghìn không bị ảnh hưởng: `600.000` có phần nguyên `600` ≥ 100 nên vốn đã bỏ hết chữ
- * số lẻ ở mọi mức — `600k` là chính xác tuyệt đối, không phải làm tròn.
+ * số lẻ ở mọi mức - `600k` là chính xác tuyệt đối, không phải làm tròn.
  */
 export function compactMoneyParts(
   value: MoneyString,
@@ -177,7 +177,7 @@ export function compactMoneyParts(
     { scale: 100_000n, unit: 'thousand' },
   ] as const;
 
-  // `10n ** 1n` / `10n ** 2n` — bậc chia lấy phần lẻ, vẫn nguyên bigint nên không có bước nào
+  // `10n ** 1n` / `10n ** 2n` - bậc chia lấy phần lẻ, vẫn nguyên bigint nên không có bước nào
   // đi qua `number` (ADR 0007).
   const fractionScale = 10n ** BigInt(fractionDigits);
 
@@ -196,13 +196,13 @@ export function compactMoneyParts(
   return null;
 }
 
-/** Hình dạng một số tiền hợp lệ trên dây — kiểm TRƯỚC `toCents`, vì `BigInt` ném lỗi với chuỗi rác. */
+/** Hình dạng một số tiền hợp lệ trên dây - kiểm TRƯỚC `toCents`, vì `BigInt` ném lỗi với chuỗi rác. */
 const MONEY_WIRE_SHAPE = /^-?\d+(\.\d+)?$/;
 
 /**
- * Số tiền tính bằng NGHÌN đồng, có nhóm chữ số — `1350000` → `1.350` (vi) · `1,350` (en); giao
+ * Số tiền tính bằng NGHÌN đồng, có nhóm chữ số - `1350000` → `1.350` (vi) · `1,350` (en); giao
  * diện gắn đơn vị "K" (thẻ chuyến, Figma `19879:71581`). Làm tròn nửa-xa-0 tới nghìn chỉ để HIỂN
- * THỊ, toàn bộ trên `bigint` (ADR 0007). Dưới 1.000đ trả `null` — "0 K" nói sai số tiền, người gọi
+ * THỊ, toàn bộ trên `bigint` (ADR 0007). Dưới 1.000đ trả `null` - "0 K" nói sai số tiền, người gọi
  * rơi về dạng đầy đủ.
  */
 export function moneyInThousands(value: MoneyString, separators: MoneySeparators): string | null {
@@ -217,13 +217,13 @@ export function moneyInThousands(value: MoneyString, separators: MoneySeparators
 }
 
 /**
- * Thay đổi của một số tiền so với kỳ trước, tính bằng PHẦN TRĂM NGUYÊN — mũi tên tăng/giảm trên
+ * Thay đổi của một số tiền so với kỳ trước, tính bằng PHẦN TRĂM NGUYÊN - mũi tên tăng/giảm trên
  * thẻ KPI ("+12% so với cùng kỳ tháng trước").
  *
  * Tính hoàn toàn trên `bigint` (ADR 0007): doanh thu một tháng của cả nền tảng vượt xa 2^53 xu là
  * chuyện bình thường, và một phép chia float ở đó cho ra con số lệch mà không ai nhìn thấy.
  *
- * `null` — KHÔNG phải 0 — khi không có gì để so: kỳ trước bằng 0 ("tăng vô hạn" không phải một con
+ * `null` - KHÔNG phải 0 - khi không có gì để so: kỳ trước bằng 0 ("tăng vô hạn" không phải một con
  * số), hoặc một vế không phải số tiền hợp lệ. Giao diện hiện "chưa có kỳ để so", không hiện 0%.
  * Làm tròn nửa-xa-0 để +0,5% và −0,5% đối xứng nhau.
  */
@@ -243,7 +243,7 @@ export function moneyChangePercent(
   return Number(rounded);
 }
 
-/** Số tiền còn lại sau khi bỏ phần lẻ — dùng cho nhánh "quá nhỏ để rút gọn". */
+/** Số tiền còn lại sau khi bỏ phần lẻ - dùng cho nhánh "quá nhỏ để rút gọn". */
 export function wholeUnits(value: MoneyString): MoneyString {
   const cents = toCents(value);
   const negative = cents < 0n;
@@ -252,7 +252,7 @@ export function wholeUnits(value: MoneyString): MoneyString {
 }
 
 /**
- * Số tiền có bằng 0 không, kiểm tra TRÊN CHUỖI — `Number(value) === 0` là đúng thứ ADR 0007
+ * Số tiền có bằng 0 không, kiểm tra TRÊN CHUỖI - `Number(value) === 0` là đúng thứ ADR 0007
  * cấm (mất chính xác với số lớn). Dùng để quyết định tô đậm "còn nợ", ẩn dòng phí bằng 0…
  * Rỗng/null coi như 0.
  */
@@ -266,7 +266,7 @@ export function isZeroMoney(value: MoneyString | null | undefined): boolean {
  * chốt báo giá bằng cùng công thức; helper này không dùng để cộng dồn kế toán.
  * Giá thuê VND là số nguyên ≤ 14 chữ số nên `Number` ở đây không mất chính xác (ADR 0007).
  *
- * Khoản GIẢM theo % làm tròn LÊN 1.000đ rồi kẹp ≤ giá gốc (ADR 0069 điều 2 — cùng luật
+ * Khoản GIẢM theo % làm tròn LÊN 1.000đ rồi kẹp ≤ giá gốc (ADR 0069 điều 2 - cùng luật
  * `ceilDecimalToThousand` của server): 10% × 652.000đ ⇒ giảm 66.000đ ⇒ 586.000đ. Khách không bao
  * giờ được giảm ít hơn % đã công bố, và thẻ xe khớp đúng báo giá server.
  */
@@ -317,13 +317,13 @@ function readTriple(value: number, full: boolean): string {
 }
 
 /**
- * Số tiền ĐỌC BẰNG CHỮ tiếng Việt — "15950000" → "Mười lăm triệu chín trăm năm mươi nghìn đồng".
+ * Số tiền ĐỌC BẰNG CHỮ tiếng Việt - "15950000" → "Mười lăm triệu chín trăm năm mươi nghìn đồng".
  *
  * Vì sao có: trên một ô nhập tiền, dòng chữ bên dưới là cách duy nhất người dùng bắt được lỗi
  * thừa/thiếu một số 0. `15.000.000` và `150.000.000` nhìn gần như nhau khi gõ vội; "mười lăm
  * triệu" và "một trăm năm mươi triệu" thì không.
  *
- * Cố ý là hàm THUẦN trên chuỗi (ADR 0007 — tiền không bao giờ đi qua `number`): `Number()` một số
+ * Cố ý là hàm THUẦN trên chuỗi (ADR 0007 - tiền không bao giờ đi qua `number`): `Number()` một số
  * 12 chữ số vẫn an toàn, nhưng để tiền chạm `number` ở một chỗ là mở đường cho chỗ thứ hai.
  *
  * Ba quy tắc chính tả tiếng Việt phải đúng, và cả ba đều là lỗi kinh điển khi tự viết:
@@ -385,7 +385,7 @@ function readTripleEn(value: number): string {
 }
 
 /**
- * Số tiền đọc bằng chữ TIẾNG ANH — "15950000" → "Fifteen million nine hundred fifty thousand
+ * Số tiền đọc bằng chữ TIẾNG ANH - "15950000" → "Fifteen million nine hundred fifty thousand
  * dong". Bản đối xứng của `moneyToVietnameseWords` cho giao diện `en` (ADR 0012: tiền luôn VND,
  * chỉ chữ đổi theo ngôn ngữ). Cùng hợp đồng: hàm thuần trên chuỗi, bỏ phần lẻ, rác ⇒ chuỗi rỗng.
  */
@@ -418,7 +418,7 @@ export function moneyToEnglishWords(value: MoneyString | null | undefined): stri
  * Format số tiền ĐANG NHẬP theo quy ước Việt Nam: `1000000` → `1.000.000`.
  *
  * Khác `formatMoneyVnd` ở hai chỗ, và cả hai đều cố ý: không gắn đơn vị vào chuỗi giá trị (đơn
- * vị là trang trí của ô nhập, không phải nội dung của nó), và chỉ giữ CHỮ SỐ — gõ giữa chuỗi,
+ * vị là trang trí của ô nhập, không phải nội dung của nó), và chỉ giữ CHỮ SỐ - gõ giữa chuỗi,
  * dán một giá trị đã có dấu chấm, hay bấm nhầm dấu phẩy đều quy về cùng một kết quả.
  *
  * Đây là bản dùng chung cho web (`MoneyInput`) và app native (`MoneyField`): định dạng tiền lúc
@@ -443,18 +443,18 @@ export function parseMoneyInput(value: string | null | undefined): number | null
 export const NUMBER_GROUP_SEPARATOR = '.';
 export const NUMBER_DECIMAL_SEPARATOR = ',';
 
-/** Dấu phân cách của tiếng Việt — `1.234.567,89`. */
+/** Dấu phân cách của tiếng Việt - `1.234.567,89`. */
 export const VI_MONEY_SEPARATORS: MoneySeparators = {
   group: NUMBER_GROUP_SEPARATOR,
   decimal: NUMBER_DECIMAL_SEPARATOR,
 };
 
 /**
- * Tiền trong một câu chữ do SERVER sinh — thông báo, email, tin nhắn hệ thống.
+ * Tiền trong một câu chữ do SERVER sinh - thông báo, email, tin nhắn hệ thống.
  *
  * Tồn tại vì server không có ngữ cảnh locale của người đọc như web/native (`useAppFormat`), mà
  * vẫn phải viết ra một con số đọc được. Trước đây mỗi nơi phát thông báo tự xoay xở:
- * `Number(x).toLocaleString('vi-VN')` ở ba chỗ và `x.toFixed(0)` ở chỗ thứ tư — chỗ cuối in ra
+ * `Number(x).toLocaleString('vi-VN')` ở ba chỗ và `x.toFixed(0)` ở chỗ thứ tư - chỗ cuối in ra
  * `500000đ` không dấu phân cách, giữa những thông báo khác in `500.000đ`.
  *
  * Đi qua `formatMoneyVnd` nên KHÔNG bao giờ ép tiền sang `number` (ADR 0007): `Decimal` chỉ cần
@@ -465,13 +465,13 @@ export function formatMoneyVndVi(value: MoneyString | null | undefined): string 
 }
 
 /**
- * Chuỗi hiển thị của một SỐ ĐO trong ô nhập — `12.500`, `2,8`, `2019`.
+ * Chuỗi hiển thị của một SỐ ĐO trong ô nhập - `12.500`, `2,8`, `2019`.
  *
  * `grouped: false` cho những con số KHÔNG phải số lượng: năm sản xuất phải đọc là `2019` chứ
  * không phải `2.019`. Đây đúng là lý do `NumberField` tách khỏi `MoneyField` ngay từ đầu.
  *
  * Không dùng `Intl.NumberFormat`: nó bám `locale` (xem hằng ở trên), và với số thập phân nó còn
- * tự làm tròn theo `maximumFractionDigits` mặc định — một ô nhập không được phép sửa số người
+ * tự làm tròn theo `maximumFractionDigits` mặc định - một ô nhập không được phép sửa số người
  * dùng vừa gõ.
  */
 export function formatNumberInput(
@@ -490,11 +490,11 @@ export function formatNumberInput(
 }
 
 /**
- * Chuẩn hoá thứ người dùng vừa gõ vào ô SỐ ĐO — giữ chữ số và ĐÚNG MỘT dấu thập phân.
+ * Chuẩn hoá thứ người dùng vừa gõ vào ô SỐ ĐO - giữ chữ số và ĐÚNG MỘT dấu thập phân.
  *
  * Nhận cả `,` lẫn `.` làm dấu thập phân dù quy ước hiển thị là `,`: bàn phím số của hai nền tảng
  * cho hai dấu khác nhau, và người dùng dán số từ chỗ khác vào thì kiểu gì cũng gặp cả hai. Dấu
- * ngăn nhóm bị bỏ luôn ở đây — nó là trang trí, không phải giá trị.
+ * ngăn nhóm bị bỏ luôn ở đây - nó là trang trí, không phải giá trị.
  *
  * Trả về CHUỖI chứ không phải số, vì trạng thái nửa chừng `2,` là hợp lệ trong lúc gõ mà không
  * có số nào biểu diễn được nó.
@@ -508,7 +508,7 @@ export function normalizeNumberInput(text: string, options: { integer?: boolean 
 }
 
 /**
- * Số của một chuỗi đã chuẩn hoá. `''` và `','` đều là **chưa nhập** (`null`), không phải `0` —
+ * Số của một chuỗi đã chuẩn hoá. `''` và `','` đều là **chưa nhập** (`null`), không phải `0` -
  * cùng luật với `parseMoneyInput`.
  */
 export function parseNumberInput(text: string): number | null {
@@ -524,7 +524,7 @@ export function parseNumberInput(text: string): number | null {
  * chỗ`. Không có tiền giữ chỗ thì không có khái niệm "phần còn lại" ⇒ `null`.
  *
  * Ở package dùng chung vì web (`customer-price-view`) và app native (bảng giá, màn chuyến, khối
- * thanh toán thành công) cùng cần đúng phép này — ba bản chép tay là ba chỗ để lệch nhau.
+ * thanh toán thành công) cùng cần đúng phép này - ba bản chép tay là ba chỗ để lệch nhau.
  */
 export function payAtPickupAmount(
   fees:

@@ -1,18 +1,20 @@
-import { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   cancelAnimation,
   Easing,
   makeMutable,
   useAnimatedStyle,
+  useReducedMotion,
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
 import { XStack, YStack } from 'tamagui';
 import { SHOP_LOGO, useShopCoverHeight } from './ShopCover';
-import { useColors } from '@/theme/ThemeProvider';
+import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { radius, space } from '@/theme/tokens';
-import { duration } from '@/theme/motion';
+import { motionMs } from '@/theme/motion';
 
 interface SkeletonProps {
   width?: number | `${number}%`;
@@ -49,7 +51,7 @@ interface SkeletonProps {
  * `makeMutable` chứ không phải `useSharedValue`: giá trị này không thuộc về lượt gắn kết của
  * component nào cả — nó sống lâu hơn mọi khung chờ đã dựng nó.
  */
-const pulse = makeMutable(0.5);
+const pulse = makeMutable(0);
 
 /**
  * Số khung chờ ĐANG gắn kết. Hoạt cảnh chạy khi con số này rời 0, và DỪNG khi nó về 0.
@@ -68,10 +70,12 @@ let mounted = 0;
 function acquirePulse(): void {
   mounted += 1;
   if (mounted > 1) return;
+  // Quét MỘT chiều (trái → phải) rồi lặp — shimmer, thay cho nhịp thở mờ/đậm (06/11/2026).
+  pulse.value = 0;
   pulse.value = withRepeat(
-    withTiming(1, { duration: duration.pulse, easing: Easing.inOut(Easing.ease) }),
+    withTiming(1, { duration: motionMs.shimmer, easing: Easing.inOut(Easing.ease) }),
     -1,
-    true,
+    false,
   );
 }
 
@@ -84,7 +88,7 @@ function releasePulse(): void {
    * nhảy vào ở nửa nhịp.
    */
   cancelAnimation(pulse);
-  pulse.value = 0.5;
+  pulse.value = 0;
 }
 
 /**
@@ -101,28 +105,62 @@ export function Skeleton({
   const colors = useColors();
   /*
    * Giữ nhịp sống đúng bằng vòng đời của khung chờ. Effect chạy SAU khung hình đầu, nên khung
-   * hình đó vẽ ở `opacity: 0.5` — đứng yên một nhịp rồi mới thở, thay vì nhấp nháy.
+   * hình đó vẽ khối xám tĩnh — đứng yên một nhịp rồi mới quét, thay vì nhấp nháy.
    */
   useEffect(() => {
     acquirePulse();
     return releasePulse;
   }, []);
 
-  const style = useAnimatedStyle(() => ({ opacity: pulse.value }));
+  const dark = useAppScheme().scheme === 'dark';
+  const reduceMotion = useReducedMotion();
+  // Bề rộng thật của khối — dải sáng quét từ ngoài mép trái tới ngoài mép phải.
+  const [boxWidth, setBoxWidth] = useState(0);
+  const band = Math.max(boxWidth * SHIMMER_BAND_RATIO, SHIMMER_BAND_MIN);
+  const bandStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: -band + pulse.value * (boxWidth + band) }],
+  }));
+  const onLayout = (event: LayoutChangeEvent) => {
+    const next = Math.round(event.nativeEvent.layout.width);
+    if (next !== boxWidth) setBoxWidth(next);
+  };
 
   return (
     /* `alignSelf: stretch` là thứ cho khối theo tỉ lệ một bề rộng để mà suy ra chiều cao. */
-    <Animated.View style={fill ? [style, absoluteFill] : aspectRatio ? [style, stretch] : style}>
+    <View style={fill ? absoluteFill : aspectRatio ? stretch : undefined}>
       <YStack
         {...(fill ? { f: 1 } : { w: width, ...(aspectRatio ? { aspectRatio } : { h: height }) })}
         br={round ? radius.pill : radius.sm}
         bg={colors.surfaceMuted}
-      />
-    </Animated.View>
+        ov="hidden"
+        onLayout={onLayout}
+      >
+        {/* "Giảm chuyển động": khối xám tĩnh, không quét. */}
+        {boxWidth > 0 && !reduceMotion ? (
+          <Animated.View pointerEvents="none" style={[styles.band, { width: band }, bandStyle]}>
+            <LinearGradient
+              colors={dark ? SHIMMER_DARK : SHIMMER_LIGHT}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
+        ) : null}
+      </YStack>
+    </View>
   );
 }
 
 const stretch = { alignSelf: 'stretch' } as const;
+/** Dải sáng rộng bằng tỉ lệ này của khối (có sàn cho khối nhỏ). */
+const SHIMMER_BAND_RATIO = 0.6;
+const SHIMMER_BAND_MIN = 48;
+// Ánh sáng quét: trong suốt → trắng mờ → trong suốt. Tối thì nhạt hơn nhiều để không loá.
+const SHIMMER_LIGHT = ['rgba(255,255,255,0)', 'rgba(255,255,255,0.55)', 'rgba(255,255,255,0)'] as const;
+const SHIMMER_DARK = ['rgba(255,255,255,0)', 'rgba(255,255,255,0.08)', 'rgba(255,255,255,0)'] as const;
+const styles = StyleSheet.create({
+  band: { position: 'absolute', top: 0, bottom: 0, left: 0 },
+});
 const absoluteFill = StyleSheet.absoluteFillObject;
 
 /** Mấy dòng chữ giả, dòng cuối ngắn lại — các dòng bằng nhau trông như bảng, không như đoạn văn. */

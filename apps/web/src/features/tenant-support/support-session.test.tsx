@@ -30,7 +30,7 @@ function wrapperFor(capabilities: SupportCapability[] | null) {
   };
 }
 
-describe('useSupportPinnedField — trường có điều kiện', () => {
+describe('useSupportPinnedField - trường có điều kiện', () => {
   it('ngoài phiên: không khoá ô nào', () => {
     const { result } = renderHook(() => useSupportPinnedField(), { wrapper: wrapperFor(null) });
     expect(result.current('branchId')).toBe(false);
@@ -110,7 +110,7 @@ describe('mục / tab của xe theo capability', () => {
   });
 });
 
-describe('supportCanTouchBlock — khoá lịch của chính phiên', () => {
+describe('supportCanTouchBlock - khoá lịch của chính phiên', () => {
   const future = new Date(Date.now() + 86400_000).toISOString();
   const past = new Date(Date.now() - 86400_000).toISOString();
   const session = sessionWith([SUPPORT_CAPABILITY.VEHICLE_SCHEDULE_BLOCK_MANAGE]);

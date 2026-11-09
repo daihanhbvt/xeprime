@@ -82,7 +82,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('StaffBookingDialog — một hộp thoại cho mọi lối tạo đơn thủ công', () => {
+describe('StaffBookingDialog - một hộp thoại cho mọi lối tạo đơn thủ công', () => {
   it('chưa biết xe: mở ở bước CHỌN XE, chọn xong mới vào luồng đặt', () => {
     renderDialog();
     expect(screen.getByText('Chọn xe cho đơn thuê')).toBeTruthy();
@@ -118,7 +118,7 @@ describe('StaffBookingDialog — một hộp thoại cho mọi lối tạo đơn
    * `height: 100%`. Chèn bất cứ khối nào làm ANH EM của luồng sẽ đẩy hàng nút ở đáy cột phải ra
    * khỏi vùng thấy được — đúng lỗi "chọn xe, chọn giờ rồi mà không có nút nào để bấm".
    */
-  it('luồng đặt là con DUY NHẤT của thân overlay — không khối nào ăn mất chiều cao của nó', () => {
+  it('luồng đặt là con DUY NHẤT của thân overlay - không khối nào ăn mất chiều cao của nó', () => {
     renderDialog({ vehicleId: 'veh-9' });
     const body = document.querySelector('.ant-modal-body');
     expect(body).toBeTruthy();
@@ -127,7 +127,7 @@ describe('StaffBookingDialog — một hộp thoại cho mọi lối tạo đơn
   });
 });
 
-describe('StaffVehiclePicker — tải dần theo cuộn', () => {
+describe('StaffVehiclePicker - tải dần theo cuộn', () => {
   it('ô tìm kiếm đẩy từ khoá xuống hook (lọc ở server, không lọc trên mảng đã tải)', async () => {
     renderDialog();
     fireEvent.change(screen.getByLabelText('Tìm xe để đặt'), { target: { value: '59X1' } });
@@ -143,7 +143,7 @@ describe('StaffVehiclePicker — tải dần theo cuộn', () => {
     expect(screen.getByRole('button', { name: /Honda PCX 160 2022/ })).toBeTruthy();
   });
 
-  it('lỗi TRANG KẾ chỉ hiện dòng thử lại — không nuốt mất xe đã hiện', () => {
+  it('lỗi TRANG KẾ chỉ hiện dòng thử lại - không nuốt mất xe đã hiện', () => {
     list.appendError = new Error('network');
     renderDialog();
     expect(screen.getByRole('button', { name: /Honda PCX 160 2022/ })).toBeTruthy();

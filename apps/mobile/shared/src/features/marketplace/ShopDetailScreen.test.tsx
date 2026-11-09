@@ -129,7 +129,7 @@ function mockListings(items: PublicListing[], total = items.length) {
   });
 }
 
-describe('ShopDetailScreen — hồ sơ công khai', () => {
+describe('ShopDetailScreen - hồ sơ công khai', () => {
   it('hiện đủ hồ sơ gian hàng: tên, tỉnh, đánh giá, giới thiệu, địa chỉ, nhắn tin', async () => {
     mockShop();
     mockListings([listing()]);
@@ -183,7 +183,7 @@ describe('ShopDetailScreen — hồ sơ công khai', () => {
     expect(await view.findByRole('button', { name: 'Nhắn tin' })).toBeTruthy();
   });
 
-  it('hồ sơ hỏng: cả màn báo lỗi — không còn gì để nói về gian hàng', async () => {
+  it('hồ sơ hỏng: cả màn báo lỗi - không còn gì để nói về gian hàng', async () => {
     jest.spyOn(marketplaceApi, 'shop').mockRejectedValue(
       new ApiClientError({
         status: 404,
@@ -200,7 +200,7 @@ describe('ShopDetailScreen — hồ sơ công khai', () => {
   });
 });
 
-describe('ShopDetailScreen — xe của gian hàng', () => {
+describe('ShopDetailScreen - xe của gian hàng', () => {
   it('có xe: tiêu đề kèm số đếm và thẻ xe', async () => {
     mockShop();
     mockListings([listing()], 1);

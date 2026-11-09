@@ -70,7 +70,7 @@ describe('CustomerTripTimeline', () => {
    * vì bỏ qua: `flex-wrap` là dòng CSS duy nhất có thể biến hai mốc thành hai hàng ở 390px, và
    * nó rất dễ bị thêm vào một cách vô tình khi ai đó sửa khoảng cách.
    */
-  it('CSS không chứa `flex-wrap` — hai mốc luôn ở một hàng, kể cả 390px', () => {
+  it('CSS không chứa `flex-wrap` - hai mốc luôn ở một hàng, kể cả 390px', () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const css = readFileSync(join(here, 'CustomerTripTimeline.module.css'), 'utf8');
     // Bỏ chú thích trước khi soi: điều bị cấm là KHAI BÁO `flex-wrap`, còn đoạn văn giải thích

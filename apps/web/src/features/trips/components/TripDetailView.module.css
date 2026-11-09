@@ -509,8 +509,7 @@
   max-width: 100%;
   color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 /* Một câu giải thích hệ quả của việc bấm Duyệt — nó giữ chỗ một chiếc xe thật. */

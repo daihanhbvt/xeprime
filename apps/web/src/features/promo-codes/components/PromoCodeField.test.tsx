@@ -70,7 +70,7 @@ function renderIt(props: Partial<Parameters<typeof PromoCodeField>[0]> = {}) {
 }
 
 describe('PromoCodeField', () => {
-  it('chuẩn hoá mã trước khi gửi lên — chữ thường và khoảng trắng đều áp được', () => {
+  it('chuẩn hoá mã trước khi gửi lên - chữ thường và khoảng trắng đều áp được', () => {
     const { onApply } = renderIt();
 
     fireEvent.change(screen.getByLabelText('Mã khuyến mãi'), { target: { value: '  ban moi ' } });
@@ -90,7 +90,7 @@ describe('PromoCodeField', () => {
     expect(screen.getByLabelText('Mã khuyến mãi')).toHaveProperty('disabled', true);
   });
 
-  it('lý do hiện thành CHỮ, dịch từ MÃ — không hiện mã kỹ thuật cho khách', () => {
+  it('lý do hiện thành CHỮ, dịch từ MÃ - không hiện mã kỹ thuật cho khách', () => {
     renderIt({ reason: PROMO_INELIGIBLE_REASON.MIN_ORDER_NOT_MET });
     expect(screen.getByText('Chuyến chưa đạt giá trị tối thiểu của mã')).toBeTruthy();
     expect(screen.queryByText(/min_order_not_met/)).toBeNull();

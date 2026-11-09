@@ -54,7 +54,7 @@ import { PlatformInsuranceController } from './platform-insurance.controller';
         });
         if (partner.configured) {
           logger.warn(
-            'INSURANCE_PARTNER=mic_mock — GCN bảo hiểm là GIẢ LẬP (TEST-…), không có hiệu lực bảo hiểm thật',
+            'INSURANCE_PARTNER=mic_mock - GCN bảo hiểm là GIẢ LẬP (TEST-…), không có hiệu lực bảo hiểm thật',
           );
         }
         return partner;

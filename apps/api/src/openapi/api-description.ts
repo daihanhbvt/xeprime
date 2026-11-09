@@ -16,7 +16,7 @@ const ALL_ERROR_CODES = Object.values(API_ERROR_CODE)
   .join(' · ');
 
 export const API_DESCRIPTION = `
-API của XePrime — nền tảng cho thuê xe nhiều gian hàng (multi-tenant).
+API của XePrime - nền tảng cho thuê xe nhiều gian hàng (multi-tenant).
 
 ## Lớp bọc response
 
@@ -47,20 +47,20 @@ log và có thể đổi câu chữ bất cứ lúc nào; giao diện tiếng An
 
 **Hai đường vận chuyển, một nguồn sự thật về quyền.**
 
-**Web** — mọi đường đăng nhập đều kết thúc bằng **httpOnly session cookie** (ADR 0002). Không có
+**Web** - mọi đường đăng nhập đều kết thúc bằng **httpOnly session cookie** (ADR 0002). Không có
 gì đọc được từ JavaScript.
 
 - \`POST /auth/login\` (email/SĐT + mật khẩu) · \`POST /auth/register\` · \`POST /auth/phone/login\`
   (SĐT + OTP, passwordless).
 - **Google/Facebook**: trình duyệt điều hướng tới \`GET /auth/social/{provider}\`; vòng OAuth chạy
   hoàn toàn ở SERVER và callback tự đặt cookie rồi redirect về web (ADR 0019). Hai route đó trả
-  **302**, không trả JSON — đừng gọi chúng bằng XHR.
+  **302**, không trả JSON - đừng gọi chúng bằng XHR.
 - Từ trình duyệt: đặt \`credentials: 'include'\`, và origin phải nằm trong \`CORS_ORIGINS\`.
 - Từ curl/Postman: giữ cookie jar (\`curl -c jar.txt -b jar.txt\`).
 - Ngay trong trang này: cứ gọi \`POST /auth/login\` một lần, các endpoint sau dùng lại cookie đó.
 
-**App native** — \`Authorization: Bearer <accessToken>\` (ADR 0017). Lấy token ở
-\`POST /auth/mobile/login\` (mật khẩu). Đăng nhập mạng xã hội cho native chưa làm — xem ADR 0019
+**App native** - \`Authorization: Bearer <accessToken>\` (ADR 0017). Lấy token ở
+\`POST /auth/mobile/login\` (mật khẩu). Đăng nhập mạng xã hội cho native chưa làm - xem ADR 0019
 mục "Chỗ cắm cho app native".
 
 - Access token sống **15 phút**. Hết hạn trả \`SESSION_EXPIRED\` → gọi \`POST /auth/mobile/refresh\`.
@@ -68,14 +68,14 @@ mục "Chỗ cắm cho app native".
   đã dùng ⇒ coi là bị đánh cắp ⇒ thu hồi cả phiên của thiết bị đó.
 - \`POST /auth/mobile/logout\` thu hồi phiên phía server. Chỉ xoá token ở máy là chưa đăng xuất.
 
-**Đừng gửi cả cookie lẫn Bearer trong một request** — API trả 401 thay vì đoán bên nào thắng.
+**Đừng gửi cả cookie lẫn Bearer trong một request** - API trả 401 thay vì đoán bên nào thắng.
 
-Quyền **không** nằm trong token — mỗi request đọc lại vai trò/quyền từ DB. Ổ khoá trên mỗi
+Quyền **không** nằm trong token - mỗi request đọc lại vai trò/quyền từ DB. Ổ khoá trên mỗi
 endpoint cho biết endpoint đó có cần đăng nhập không; phần **Truy cập / Phạm vi / Quyền yêu cầu**
 trong mô tả endpoint cho biết cần chính xác quyền nào.
 
 Endpoint có phạm vi gian hàng lấy \`tenantId\` từ membership của phiên đăng nhập. **Không endpoint
-nào nhận \`tenantId\` từ body hoặc query** — gửi lên cũng bị bỏ qua hoặc bị từ chối.
+nào nhận \`tenantId\` từ body hoặc query** - gửi lên cũng bị bỏ qua hoặc bị từ chối.
 
 ## Phân trang, lọc, sắp xếp
 
@@ -86,18 +86,18 @@ Bộ lọc riêng của từng endpoint mô tả tại chính endpoint đó.
 
 | Loại | Trên dây | Ghi chú |
 | --- | --- | --- |
-| Tiền | \`string\` | Ví dụ \`"1250000.00"\`. **Không bao giờ là \`number\`** — tránh sai số dấu phẩy động (ADR 0007). Đơn vị luôn là VND. |
+| Tiền | \`string\` | Ví dụ \`"1250000.00"\`. **Không bao giờ là \`number\`** - tránh sai số dấu phẩy động (ADR 0007). Đơn vị luôn là VND. |
 | Thời điểm | \`string\` ISO-8601 UTC | Ví dụ \`"2026-08-21T03:00:00.000Z"\`. Hiển thị thì đổi sang \`Asia/Ho_Chi_Minh\`. |
 | Ngày (không giờ) | \`string\` \`YYYY-MM-DD\` | Dùng cho ngày nhận/trả theo lịch. |
 | ID | \`string\` 26 ký tự | ULID. |
 | Trạng thái, vai trò, quyền | \`string\` mã ổn định | Mã là DỮ LIỆU, chỉ nhãn hiển thị mới dịch. |
 
-Thuê dài hạn là gói cố định 1/2/3/6/9/12 **tháng lịch**; server tự tính ngày trả từ ngày nhận —
+Thuê dài hạn là gói cố định 1/2/3/6/9/12 **tháng lịch**; server tự tính ngày trả từ ngày nhận -
 client không gửi lên và không được suy bằng \`số tháng × 30\` (ADR 0011).
 
 Tiền thuê xe của khách **chưa đi qua nền tảng**: thu/chi của đơn vẫn là ghi sổ thủ công. Đường
 tiền tự động duy nhất đang chạy là **hoá đơn gói của gian hàng**, đối soát bằng webhook SePay
-(ADR 0016/0022) — nền tảng không giữ tiền hộ ai ở luồng đó. Lệnh cấm cũ của ADR 0013 đã được
+(ADR 0016/0022) - nền tảng không giữ tiền hộ ai ở luồng đó. Lệnh cấm cũ của ADR 0013 đã được
 ADR 0028 thay bằng một lộ trình có release gate.
 
 ## Mã lỗi
@@ -112,8 +112,8 @@ Mã dùng chung ở mọi endpoint:
 | 403 | \`${API_ERROR_CODE.NO_TENANT_SCOPE}\` | Tài khoản không thuộc gian hàng nào. |
 | 404 | \`${API_ERROR_CODE.NOT_FOUND}\` | Không có bản ghi, hoặc có nhưng thuộc gian hàng khác. |
 | 409 | \`${API_ERROR_CODE.CONFLICT}\` | Trùng bản ghi đã tồn tại. |
-| 409 | \`${API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT}\` | Xe đã có lịch trùng khoảng thời gian. Chặn bằng ràng buộc \`EXCLUDE USING gist\` ở DB (ADR 0006) — kiểm tra phía client chỉ là gợi ý UX, luôn phải xử lý mã này. |
-| 429 | \`${API_ERROR_CODE.RATE_LIMITED}\` | Vượt hạn mức. Mức chung là 120 request / 60 giây, nhưng các cửa dò (đăng nhập, đăng ký, quên mật khẩu, OTP, báo giá công khai) siết chặt hơn — con số THẬT của từng endpoint nằm ở mô tả nhánh 429 của chính endpoint đó. \`error.details.retryAfterSeconds\` (cùng giá trị header \`Retry-After\`) là số giây còn phải chờ — giao diện hiện con số này, không đoán. |
+| 409 | \`${API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT}\` | Xe đã có lịch trùng khoảng thời gian. Chặn bằng ràng buộc \`EXCLUDE USING gist\` ở DB (ADR 0006) - kiểm tra phía client chỉ là gợi ý UX, luôn phải xử lý mã này. |
+| 429 | \`${API_ERROR_CODE.RATE_LIMITED}\` | Vượt hạn mức. Mức chung là 120 request / 60 giây, nhưng các cửa dò (đăng nhập, đăng ký, quên mật khẩu, OTP, báo giá công khai) siết chặt hơn - con số THẬT của từng endpoint nằm ở mô tả nhánh 429 của chính endpoint đó. \`error.details.retryAfterSeconds\` (cùng giá trị header \`Retry-After\`) là số giây còn phải chờ - giao diện hiện con số này, không đoán. |
 | 500 | \`${API_ERROR_CODE.INTERNAL_ERROR}\` | Lỗi server. Ở production \`message\` được che, tra log theo request-id. |
 
 Toàn bộ mã (gồm cả mã nghiệp vụ riêng của từng luồng):

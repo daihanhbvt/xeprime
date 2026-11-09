@@ -78,7 +78,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('useBranchFilter — dựng ô chọn', () => {
+describe('useBranchFilter - dựng ô chọn', () => {
   it('gian hàng nhiều chi nhánh: dựng field kèm mục "Tất cả" đứng đầu', () => {
     const r = mount();
 
@@ -88,7 +88,7 @@ describe('useBranchFilter — dựng ô chọn', () => {
     expect(options.map((o) => o.value)).toEqual(['all', 'B1', 'B2']);
   });
 
-  it('gian hàng MỘT chi nhánh: không dựng ô nào — dropdown một mục là điều khiển chết', () => {
+  it('gian hàng MỘT chi nhánh: không dựng ô nào - dropdown một mục là điều khiển chết', () => {
     state.branches = [HCM];
     const r = mount();
 
@@ -126,7 +126,7 @@ describe('useBranchFilter — dựng ô chọn', () => {
  * hướng mang theo (`branch-link.ts`), nên đường dẫn đích đã đúng ngay từ request đầu và không có
  * lượt hỏi "tất cả chi nhánh" thừa nào để nhấp nháy.
  */
-describe('useBranchFilter — chỉ đọc URL, không có bộ nhớ nào ở client', () => {
+describe('useBranchFilter - chỉ đọc URL, không có bộ nhớ nào ở client', () => {
   it('URL trống: KHÔNG tự điền gì', async () => {
     const r = mount();
 
@@ -162,7 +162,7 @@ describe('useBranchFilter — chỉ đọc URL, không có bộ nhớ nào ở c
  * Bốn đường đều có thật, và điểm chung là: không nhả thì người dùng nhìn một bảng rỗng mà không
  * có cách nào biết vì sao, cũng không có cách nào mở rộng lại.
  */
-describe('useBranchFilter — branchId không dùng được thì tự về Tất cả', () => {
+describe('useBranchFilter - branchId không dùng được thì tự về Tất cả', () => {
   it('người dùng sửa tay URL thành id rác', async () => {
     mount('KHONG_TON_TAI');
 

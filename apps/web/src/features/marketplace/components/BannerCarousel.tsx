@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { kenBurnsClass } from '@/components/motion/motion-classes';
+import { heroParallaxClass, kenBurnsClass } from '@/components/motion/motion-classes';
 import { cx } from '@/lib/cx';
 import { BannerLink } from '@/features/banners/components/BannerLink';
 import type { PublicBanner } from '@/features/banners/types';
@@ -81,7 +81,7 @@ export function BannerCarousel({
       onTouchEnd={(e) => onTouchEnd(e.changedTouches[0]?.clientX ?? 0)}
     >
       {/* Khung "thở" chứa mọi slide (không theo từng slide — đổi slide không làm ảnh giật). */}
-      <div className={cx(styles.stage, kenBurnsClass)}>
+      <div className={cx(styles.stage, kenBurnsClass, heroParallaxClass)}>
         {slides.map((banner, i) => {
           /*
            * Ba nguồn theo ba slot tỉ lệ chuẩn (xem `banner-media.ts`) — khung chứa cũng đặt

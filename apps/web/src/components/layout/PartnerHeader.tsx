@@ -21,17 +21,17 @@ import { PartnerTopNav } from './PartnerTopNav';
 import styles from './PartnerHeader.module.css';
 
 /**
- * Header site partner — Figma Partner-XePrime Header `23649:27690` (biến thể Default).
+ * Header site partner - Figma Partner-XePrime Header `23649:27690` (biến thể Default).
  *
  * Trái → phải: logo · menu ngang (`PartnerTopNav`) · hai nút (tin nhắn · thông báo) · vạch ngăn ·
  * ảnh đại diện mở menu hồ sơ. Dải breadcrumb (biến thể Details) là
  * `PartnerBreadcrumb`, đứng NGOÀI phần dính để không ăn thêm chiều cao khi cuộn.
  *
  * Quyết định đã chốt với người dùng (`docs/design/09_PARTNER_REDESIGN.md` §2.3):
- *  - nút bánh răng ĐÃ BỎ (09/11/2026) — "Tài khoản & bảo mật" là dòng đầu của menu hồ sơ;
+ *  - nút bánh răng ĐÃ BỎ (09/11/2026) - "Tài khoản & bảo mật" là dòng đầu của menu hồ sơ;
  *  - lối vào hồ sơ CHỈ là ảnh đại diện, rê chuột là mở (09/11/2026). Tên người và "Gian hàng · Vai"
- *    (không phải email — header nằm trên mọi trang, kể cả lúc chia sẻ màn hình) ở thẻ đầu menu;
- *  - menu hồ sơ là `PartnerAccountMenu` (Figma `24051:85101`) — cùng bảng với thẻ người dùng ở
+ *    (không phải email - header nằm trên mọi trang, kể cả lúc chia sẻ màn hình) ở thẻ đầu menu;
+ *  - menu hồ sơ là `PartnerAccountMenu` (Figma `24051:85101`) - cùng bảng với thẻ người dùng ở
  *    drawer mobile.
  *
  * Dưới ranh vỏ 1024px menu ngang nhường chỗ cho nút mở drawer (`MobileNav` dựng drawer + thanh tab
@@ -45,7 +45,7 @@ export function PartnerHeader({ user }: { user: CurrentUser }) {
   const { paths } = useWorkspace();
   const ownerProfile = isCommissionOwner(user);
 
-  const personName = user.displayName || '—';
+  const personName = user.displayName || '-';
   const workspaceLine = partnerWorkspaceLine(user, identityLabel(user));
 
   return (

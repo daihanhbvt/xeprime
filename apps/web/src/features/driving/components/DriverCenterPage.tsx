@@ -20,6 +20,8 @@ import { SegmentTabs } from './DriverCenterParts';
 import { DriverLinkCard } from './DriverLinkCard';
 import { DrivingTripCard } from './DrivingTripCard';
 import styles from './DriverCenter.module.css';
+import { staggerFastClass } from '@/components/motion/motion-classes';
+import { cx } from '@/lib/cx';
 
 /** Tham số URL của tab con và trang — đổi khu thì cả hai về mặc định. */
 const TAB_PARAM = 'tab';
@@ -258,7 +260,7 @@ function ListState<T extends { id: string }>({
   }
   return (
     <>
-      <ul className={styles.list}>
+      <ul className={cx(styles.list, staggerFastClass)}>
         {items.map((item) => (
           <li key={item.id}>{render(item)}</li>
         ))}

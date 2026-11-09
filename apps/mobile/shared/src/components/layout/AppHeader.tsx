@@ -11,7 +11,7 @@ import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { layout } from '@/theme/layout';
 
-const APP_HEADER_HEIGHT = 56;
+export const APP_HEADER_HEIGHT = 56;
 const APP_HEADER_COMPACT_HEIGHT = 44;
 /** Nhãn cạnh tiêu đề chiếm tối đa ngần này bề ngang hàng tiêu đề — phần còn lại luôn để cho tên. */
 const BADGE_MAX_WIDTH = '60%';

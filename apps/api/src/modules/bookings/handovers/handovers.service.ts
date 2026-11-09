@@ -238,7 +238,7 @@ export class HandoversService {
     if (dto.expectedRowVersion == null) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Thiếu expectedRowVersion — cần cho phát hiện sửa đè',
+        message: 'Thiếu expectedRowVersion - cần cho phát hiện sửa đè',
       });
     }
 
@@ -618,7 +618,7 @@ export class HandoversService {
     if (!due.equals(new Prisma.Decimal(dto.collectPayment.amount))) {
       throw new ConflictException({
         code: API_ERROR_CODE.HANDOVER_COLLECT_AMOUNT_CHANGED,
-        message: 'Số tiền còn phải thu vừa thay đổi — kiểm tra lại rồi xác nhận',
+        message: 'Số tiền còn phải thu vừa thay đổi - kiểm tra lại rồi xác nhận',
         details: { collectableAmount: due.toFixed(2) },
       });
     }
@@ -821,7 +821,7 @@ export class HandoversService {
     if (handover.status !== HANDOVER_STATUS.CONFIRMED) {
       throw new ConflictException({
         code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message: 'Chỉ biên bản đã xác nhận mới cần bổ sung KM — bản nháp thì sửa trực tiếp',
+        message: 'Chỉ biên bản đã xác nhận mới cần bổ sung KM - bản nháp thì sửa trực tiếp',
       });
     }
 
@@ -840,7 +840,7 @@ export class HandoversService {
       if (!opts.canDecrease) {
         throw new ForbiddenException({
           code: API_ERROR_CODE.ODOMETER_DECREASE_FORBIDDEN,
-          message: `KM mới (${dto.odometerKm}) thấp hơn KM hiện tại (${currentKm}) — thao tác này cần quyền quản trị viên`,
+          message: `KM mới (${dto.odometerKm}) thấp hơn KM hiện tại (${currentKm}) - thao tác này cần quyền quản trị viên`,
           details: {
             currentKm,
             nextKm: dto.odometerKm,
@@ -851,7 +851,7 @@ export class HandoversService {
       if (!dto.confirmDecrease) {
         throw new ConflictException({
           code: API_ERROR_CODE.ODOMETER_DECREASE_FORBIDDEN,
-          message: 'KM mới thấp hơn KM hiện tại — cần xác nhận trước khi giảm',
+          message: 'KM mới thấp hơn KM hiện tại - cần xác nhận trước khi giảm',
           details: { currentKm, nextKm: dto.odometerKm, requiresConfirmation: true },
         });
       }
@@ -1265,9 +1265,9 @@ export class HandoversService {
 
     const resolution =
       input.by === 'customer'
-        ? `Tự động kết luận: khách đã xác nhận nhận xe của chuyến ${input.bookingCode} — ` +
+        ? `Tự động kết luận: khách đã xác nhận nhận xe của chuyến ${input.bookingCode} - ` +
           'chuyến đã diễn ra, không còn việc chờ xác minh bàn giao.'
-        : `Tự động kết luận: chủ xe đã xác nhận biên bản giao xe của chuyến ${input.bookingCode} — ` +
+        : `Tự động kết luận: chủ xe đã xác nhận biên bản giao xe của chuyến ${input.bookingCode} - ` +
           'chuyến đã diễn ra, không còn việc chờ xác minh bàn giao.';
     const party = input.by === 'customer' ? SUPPORT_PARTY.CUSTOMER : SUPPORT_PARTY.TENANT;
     const auditScope =
@@ -1551,7 +1551,7 @@ function notEligible(type: HandoverType, bookingStatus: string): ConflictExcepti
 function readOnly(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-    message: 'Biên bản đã xác nhận — chỉ đọc. Sai số KM thì dùng chức năng điều chỉnh có lý do.',
+    message: 'Biên bản đã xác nhận - chỉ đọc. Sai số KM thì dùng chức năng điều chỉnh có lý do.',
   });
 }
 
@@ -1562,14 +1562,14 @@ function readOnly(): ConflictException {
 function photoLocked(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-    message: 'Biên bản đã huỷ — không đính thêm ảnh được',
+    message: 'Biên bản đã huỷ - không đính thêm ảnh được',
   });
 }
 
 function stale(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.CONFLICT,
-    message: 'Biên bản vừa được người khác cập nhật — tải lại rồi thử lại',
+    message: 'Biên bản vừa được người khác cập nhật - tải lại rồi thử lại',
   });
 }
 

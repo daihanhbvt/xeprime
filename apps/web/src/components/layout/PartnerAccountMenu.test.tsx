@@ -5,7 +5,7 @@ import type { CurrentUser } from '@/hooks/use-current-user';
 import { PartnerAccountMenu } from './PartnerAccountMenu';
 
 /**
- * Menu hồ sơ site partner — Figma `24051:85101`. Design vẽ hai biến thể (gian hàng · cá nhân); các
+ * Menu hồ sơ site partner - Figma `24051:85101`. Design vẽ hai biến thể (gian hàng · cá nhân); các
  * ca còn lại (nhân viên không có quyền cửa hàng, thành viên của chủ xe cá nhân) phải không có
  * lối nào dẫn tới một trang 403.
  */
@@ -64,14 +64,14 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('PartnerAccountMenu — gian hàng tuyến gói', () => {
+describe('PartnerAccountMenu - gian hàng tuyến gói', () => {
   it('thẻ vàng: tên người · vai, dòng "Gian hàng" mang tên cửa hàng, có dấu tích', async () => {
     const dialog = await open(makeUser({ roleKey: 'shop_manager' }));
 
     expect(screen.getByText('Trần Quốc Bảo')).toBeTruthy();
     expect(screen.getByText('Gian hàng')).toBeTruthy();
     expect(screen.getByText('XePrime Sài Gòn')).toBeTruthy();
-    // Dòng dưới tên chỉ còn VAI — tên gian hàng đã có dòng riêng.
+    // Dòng dưới tên chỉ còn VAI - tên gian hàng đã có dòng riêng.
     expect(screen.queryByText(/XePrime Sài Gòn ·/)).toBeNull();
     expect(dialog.querySelector('[class*="shopMark"]')).toBeTruthy();
   });
@@ -87,7 +87,7 @@ describe('PartnerAccountMenu — gian hàng tuyến gói', () => {
     expect(screen.queryByText('Quản lý cho thuê')).toBeNull();
   });
 
-  it('bấm một dòng thì đóng cả drawer mobile — không để nó che trang vừa mở', async () => {
+  it('bấm một dòng thì đóng cả drawer mobile - không để nó che trang vừa mở', async () => {
     await open(makeUser({}));
 
     fireEvent.click(screen.getByRole('link', { name: 'Quản lý gian hàng' }));
@@ -110,7 +110,7 @@ describe('PartnerAccountMenu — gian hàng tuyến gói', () => {
   });
 });
 
-describe('PartnerAccountMenu — chủ xe cá nhân (tuyến hoa hồng)', () => {
+describe('PartnerAccountMenu - chủ xe cá nhân (tuyến hoa hồng)', () => {
   const owner = () => makeUser({ billingMode: 'commission', serviceFeePercent: 10 });
 
   it('không có thẻ vàng, dòng "Gian hàng" hay dấu tích', async () => {
@@ -153,7 +153,7 @@ describe('PartnerAccountMenu — chủ xe cá nhân (tuyến hoa hồng)', () =>
   });
 });
 
-describe('PartnerAccountMenu — gian hàng không có lối nâng cấp', () => {
+describe('PartnerAccountMenu - gian hàng không có lối nâng cấp', () => {
   it('đã là gian hàng thì không mời nâng cấp', async () => {
     await open(makeUser({}));
 
@@ -161,7 +161,7 @@ describe('PartnerAccountMenu — gian hàng không có lối nâng cấp', () =>
   });
 });
 
-describe('PartnerAccountMenu — mở bằng rê chuột (header)', () => {
+describe('PartnerAccountMenu - mở bằng rê chuột (header)', () => {
   function renderHover() {
     const user = makeUser({});
     current.value = user;
@@ -189,7 +189,7 @@ describe('PartnerAccountMenu — mở bằng rê chuột (header)', () => {
   });
 });
 
-describe('PartnerAccountMenu — chân menu', () => {
+describe('PartnerAccountMenu - chân menu', () => {
   it('có đổi ngôn ngữ VI|EN, chưa có đổi giao diện (chờ dark mode)', async () => {
     await open(makeUser({}));
 

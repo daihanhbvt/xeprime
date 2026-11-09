@@ -20,7 +20,7 @@ describe('keyboardTopInWindow', () => {
     expect(keyboardTopInWindow(550, 853, 883)).toBe(520);
   });
 
-  it('chiều cao bàn phím giữ nguyên qua phép quy đổi — đó là bất biến của phép tính này', () => {
+  it('chiều cao bàn phím giữ nguyên qua phép quy đổi - đó là bất biến của phép tính này', () => {
     const screenY = 550;
     const windowH = 853;
     const screenH = 883;
@@ -38,7 +38,7 @@ describe('keyboardTopInWindow', () => {
     expect(keyboardTopInWindow(550, 853, 0)).toBe(550);
   });
 
-  it('giữ nguyên khi màn hình BÉ HƠN cửa sổ — số liệu vô lý, không phải một phép bù', () => {
+  it('giữ nguyên khi màn hình BÉ HƠN cửa sổ - số liệu vô lý, không phải một phép bù', () => {
     expect(keyboardTopInWindow(550, 914, 853)).toBe(550);
   });
 });

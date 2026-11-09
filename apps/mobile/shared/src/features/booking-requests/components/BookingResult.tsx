@@ -179,6 +179,8 @@ export function BookingResultTotal({
         fos={variant === 'sent' ? fontSize.h3 : fontSize.h1}
         fow={fontWeight.semibold}
         numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
       >
         {fmt.money(amount)}
       </Text>

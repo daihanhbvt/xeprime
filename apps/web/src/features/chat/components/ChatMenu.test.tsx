@@ -54,7 +54,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('ChatMenu — desktop', () => {
+describe('ChatMenu - desktop', () => {
   it('là một nút mở popup, kèm số tin chưa đọc', () => {
     render(<ChatMenu side={CHAT_SIDE.CUSTOMER} />);
 
@@ -95,7 +95,7 @@ describe('ChatMenu — desktop', () => {
   });
 });
 
-describe('ChatMenu — mobile', () => {
+describe('ChatMenu - mobile', () => {
   it('là một LIÊN KẾT đi thẳng tới trang tin nhắn, không popup', async () => {
     state.mobile = true;
     render(<ChatMenu side={CHAT_SIDE.CUSTOMER} />);

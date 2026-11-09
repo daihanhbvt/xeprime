@@ -81,7 +81,7 @@ describe('useAppActive', () => {
 });
 
 describe('useRefetchOnForeground', () => {
-  it('KHÔNG gọi ở lần dựng đầu — lượt tải đầu tiên đã có sẵn', async () => {
+  it('KHÔNG gọi ở lần dựng đầu - lượt tải đầu tiên đã có sẵn', async () => {
     const onForeground = jest.fn();
     await renderHook(() => useRefetchOnForeground(onForeground));
 

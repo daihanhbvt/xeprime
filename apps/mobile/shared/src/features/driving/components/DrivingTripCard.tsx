@@ -281,7 +281,7 @@ function DrivingTripCardImpl({
             </Fact>
             <Fact label={t('time')}>
               <Text col={colors.text} fos={fontSize.body} ta="right" flexShrink={1}>
-                {fmt.dateTimeRange(trip.pickupAt, trip.returnAt)}
+                {fmt.rentalRange(trip.pickupAt, trip.returnAt)}
                 <Text col={colors.placeholder}>{` ${t('days', { count: days })}`}</Text>
               </Text>
             </Fact>

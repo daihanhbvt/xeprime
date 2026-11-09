@@ -54,7 +54,7 @@ export function registerInAppCameraHost(next: Host | null): void {
  */
 export function captureInAppPhoto(): Promise<CapturedPhoto | null> {
   if (!host) {
-    throw new Error('InAppCameraProvider chưa được mount — xem app/_layout.tsx');
+    throw new Error('InAppCameraProvider chưa được mount - xem app/_layout.tsx');
   }
   return host();
 }

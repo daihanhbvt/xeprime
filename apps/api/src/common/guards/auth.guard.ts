@@ -72,7 +72,7 @@ export class AuthGuard implements CanActivate {
     if (cookieToken && bearerToken) {
       throw new UnauthorizedException({
         code: API_ERROR_CODE.UNAUTHENTICATED,
-        message: 'Request mang cả session cookie và Bearer token — chỉ dùng một cách xác thực',
+        message: 'Request mang cả session cookie và Bearer token - chỉ dùng một cách xác thực',
       });
     }
 

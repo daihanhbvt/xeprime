@@ -1,3 +1,4 @@
+import { celebrate } from '@/components/motion/Confetti';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useRef } from 'react';
 import { BackHandler } from 'react-native';
@@ -272,6 +273,13 @@ function DoneResult({
   const hold = tripQ.data?.hold;
   const awaitingPayment = hold != null && isAwaitingPayment(hold.status as BookingHoldStatus);
   const redirected = useRef(false);
+  // Kết quả THẬT từ server (receipt đã về) mới bắn confetti — một lần (ADR 0044).
+  const celebrated = useRef(false);
+  useEffect(() => {
+    if (!receipt?.id || celebrated.current) return;
+    celebrated.current = true;
+    celebrate();
+  }, [receipt?.id]);
   const { refetch } = tripQ;
   useEffect(() => {
     if (!tripId || awaitingPayment) return;

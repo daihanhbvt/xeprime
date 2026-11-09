@@ -27,14 +27,14 @@ import type { Zone } from '@/zones';
  * Chỉ NẠP ĐỊNH NGHĨA locale của Day.js, KHÔNG gọi `dayjs.locale(...)`.
  *
  * `dayjs.locale('vi')` đổi trạng thái TOÀN TIẾN TRÌNH. File này có `'use client'` nhưng vẫn
- * chạy trên server lúc SSR, nơi một tiến trình phục vụ nhiều request song song — một request
+ * chạy trên server lúc SSR, nơi một tiến trình phục vụ nhiều request song song - một request
  * tiếng Anh sẽ đổi locale của request tiếng Việt đang render dở. Chỗ nào cần chữ theo ngôn ngữ
  * thì dùng formatter của next-intl (`useFormatter`), chỗ nào buộc phải qua Day.js thì gọi
  * `.locale(x)` trên từng instance. Phép tính ngày giờ của Day.js không phụ thuộc locale nên
  * không có gì đổi.
  */
 
-/** Locale của Ant Design theo ngôn ngữ giao diện — DatePicker, Table, Pagination, Empty… */
+/** Locale của Ant Design theo ngôn ngữ giao diện - DatePicker, Table, Pagination, Empty… */
 const ANTD_LOCALE: Readonly<Record<AppLocale, AntdLocale>> = {
   vi: viVN,
   en: enUS,
@@ -58,12 +58,12 @@ export interface ProvidersProps {
   children: ReactNode;
   /**
    * Tuỳ chọn giao diện của vỏ quản lý, đọc từ cookie phía server (`getServerNavPreferences`).
-   * Đi thẳng vào store lúc TẠO để lần render đầu trên server và trên client khớp nhau — dispatch
+   * Đi thẳng vào store lúc TẠO để lần render đầu trên server và trên client khớp nhau - dispatch
    * sau khi hydrate sẽ làm sidebar nhấp nháy ở mọi lần tải trang.
    */
   navPreferences?: NavPreferences;
   /**
-   * Khu theo HOST của request (root layout đọc header) — chế độ `host` dùng nó để chọn QueryClient
+   * Khu theo HOST của request (root layout đọc header) - chế độ `host` dùng nó để chọn QueryClient
    * của khu (`useZoneQueryClient`); chế độ `path` đọc khu từ đường dẫn.
    */
   hostZone: Zone;
@@ -94,7 +94,7 @@ function ProvidersInner({
   // makeStore tạo trong state chứ không phải module scope: module scope là singleton dùng chung
   // giữa các request trên server, tức là rò dữ liệu giữa người dùng.
   const [store] = useState(() => makeStore(navPreferences));
-  // MỘT QueryClient cho MỖI khu — mỗi site là một tài khoản riêng (ADR 0053), xem `useZoneQueryClient`.
+  // MỘT QueryClient cho MỖI khu - mỗi site là một tài khoản riêng (ADR 0053), xem `useZoneQueryClient`.
   const queryClient = useZoneQueryClient(hostZone);
   // Tắt motion của AntD bằng token thay vì ép thời lượng animation trong CSS (xem `globals.css`).
   const reduceMotion = usePrefersReducedMotion();

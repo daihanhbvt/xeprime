@@ -31,7 +31,7 @@ export class CustomerPaymentGatewayController {
 
   @Get('methods')
   @ApiOperation({
-    summary: 'Cổng thanh toán đang mở cho tiền giữ chỗ — rỗng khi chưa cấu hình hoặc chưa bật',
+    summary: 'Cổng thanh toán đang mở cho tiền giữ chỗ - rỗng khi chưa cấu hình hoặc chưa bật',
   })
   @ApiOkResponse({ type: PaymentGatewayMethodsDto })
   methods(): PaymentGatewayMethodsDto {
@@ -44,7 +44,7 @@ export class CustomerPaymentGatewayController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({
     summary:
-      'Mở phiên thanh toán tiền giữ chỗ qua cổng — số tiền và mã đọc từ DB; dùng lại phiên còn hạn',
+      'Mở phiên thanh toán tiền giữ chỗ qua cổng - số tiền và mã đọc từ DB; dùng lại phiên còn hạn',
   })
   @ApiOkResponse({ type: PaymentOrderDto })
   checkout(
@@ -59,7 +59,7 @@ export class CustomerPaymentGatewayController {
   @Get('orders/:orderId')
   @ApiOperation({
     summary:
-      'Trạng thái MỘT lượt thanh toán qua cổng (trang quay về) — server tự hỏi cổng khi còn chờ quá lâu',
+      'Trạng thái MỘT lượt thanh toán qua cổng (trang quay về) - server tự hỏi cổng khi còn chờ quá lâu',
   })
   @ApiOkResponse({ type: PaymentOrderDto })
   order(

@@ -234,11 +234,11 @@ export function DrivingTripDetailView({ bookingId }: { bookingId: string }) {
         <dl className={styles.rows}>
           <div className={styles.row}>
             <dt>{t('pickupAt')}</dt>
-            <dd>{fmt.dateTime(trip.pickupAt)}</dd>
+            <dd>{fmt.rentalAt(trip.pickupAt)}</dd>
           </div>
           <div className={styles.row}>
             <dt>{t('returnAt')}</dt>
-            <dd>{fmt.dateTime(trip.returnAt)}</dd>
+            <dd>{fmt.rentalAt(trip.returnAt)}</dd>
           </div>
           {trip.actualPickupAt ? (
             <div className={styles.meta}>

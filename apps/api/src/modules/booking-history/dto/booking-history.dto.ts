@@ -73,7 +73,7 @@ export class BookingHistoryItemDto {
   /** Mã đơn — yêu cầu chưa từng thành đơn thì không có mã. */
   @ApiPropertyOptional({ type: String, nullable: true }) code!: string | null;
   @ApiProperty({ enum: BOOKING_HISTORY_OUTCOME_VALUES }) outcome!: string;
-  @ApiProperty({ description: 'ISO-8601 UTC — lúc chuyến kết thúc / yêu cầu đóng' })
+  @ApiProperty({ description: 'ISO-8601 UTC - lúc chuyến kết thúc / yêu cầu đóng' })
   endedAt!: string;
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
   @ApiPropertyOptional({

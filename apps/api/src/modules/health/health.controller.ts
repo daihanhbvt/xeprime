@@ -36,13 +36,13 @@ export class HealthController {
   @ApiOperation({
     summary: 'Liveness + readiness (có ping PostgreSQL)',
     description:
-      'Khác mọi endpoint còn lại: response KHÔNG có lớp bọc `{ data }` — trả thẳng kết quả ' +
+      'Khác mọi endpoint còn lại: response KHÔNG có lớp bọc `{ data }` - trả thẳng kết quả ' +
       'Terminus để uptime monitor đọc `status` mà không phải bóc lớp.',
   })
   @ApiOkResponse({ type: HealthCheckResultDto, description: 'Mọi indicator đều `up`' })
   @ApiServiceUnavailableResponse({
     type: HealthCheckResultDto,
-    description: 'Có indicator `down` — chi tiết ở `error`. Ví dụ: mất kết nối PostgreSQL.',
+    description: 'Có indicator `down` - chi tiết ở `error`. Ví dụ: mất kết nối PostgreSQL.',
   })
   check() {
     return this.health.check([() => this.db.pingCheck('database', this.prisma)]);

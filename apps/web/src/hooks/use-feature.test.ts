@@ -28,7 +28,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('useFeature — nhánh thiếu dữ liệu KHÔNG được khoá ai', () => {
+describe('useFeature - nhánh thiếu dữ liệu KHÔNG được khoá ai', () => {
   it('chưa đăng nhập / chưa nạp xong ⇒ nhìn thấy + ghi được', () => {
     const { result } = renderHook(() => useFeature(PLAN_FEATURE.FINANCE));
 
@@ -56,7 +56,7 @@ describe('useFeature — nhánh thiếu dữ liệu KHÔNG được khoá ai', (
   });
 });
 
-describe('useFeature — ba trạng thái (ADR 0027 điều 3)', () => {
+describe('useFeature - ba trạng thái (ADR 0027 điều 3)', () => {
   function withState(featureState: string) {
     state.user = {
       tenant: {
@@ -73,7 +73,7 @@ describe('useFeature — ba trạng thái (ADR 0027 điều 3)', () => {
     expect(access.canWrite).toBe(true);
   });
 
-  it('read_only: VẪN thấy, KHÔNG ghi được — và có ngày hết hạn để hiện băng', () => {
+  it('read_only: VẪN thấy, KHÔNG ghi được - và có ngày hết hạn để hiện băng', () => {
     const access = withState(FEATURE_STATE.READ_ONLY);
     expect(access.isVisible).toBe(true);
     expect(access.canWrite).toBe(false);

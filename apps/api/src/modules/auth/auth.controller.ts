@@ -78,7 +78,7 @@ export class AuthController {
   @Throttle(AUTH_THROTTLE.REGISTER)
   @ApiOperation({
     summary:
-      'Đăng ký bằng số điện thoại + mật khẩu + mã OTP `purpose=register` — tài khoản thuộc realm của site đang gọi',
+      'Đăng ký bằng số điện thoại + mật khẩu + mã OTP `purpose=register` - tài khoản thuộc realm của site đang gọi',
   })
   @ApiOkResponse({ type: MeDto })
   async register(
@@ -126,7 +126,7 @@ export class AuthController {
   @Throttle(AUTH_THROTTLE.LOGIN)
   @ApiOperation({
     summary:
-      'Đăng nhập bằng số điện thoại + mật khẩu (site quản trị: email hoặc số điện thoại) — ADR 0060',
+      'Đăng nhập bằng số điện thoại + mật khẩu (site quản trị: email hoặc số điện thoại) - ADR 0060',
   })
   @ApiOkResponse({ type: MeDto })
   async login(
@@ -160,7 +160,7 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({
     summary:
-      'Đổi mật khẩu — cần mật khẩu hiện tại; tài khoản chưa có thì dùng password/set. Mọi phiên KHÁC (web + app) bị đăng xuất',
+      'Đổi mật khẩu - cần mật khẩu hiện tại; tài khoản chưa có thì dùng password/set. Mọi phiên KHÁC (web + app) bị đăng xuất',
   })
   @ApiNoContentResponse()
   async changePassword(

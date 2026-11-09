@@ -11,7 +11,7 @@ const PATHS = { bookings: '/manage/bookings', ended: '/manage/bookings/ended' };
  * Link CŨ sau khi gộp "Yêu cầu đặt xe" + "Quản lý đơn thuê xe" (05/11/2026) — email, thông báo,
  * bookmark không được chết, và bộ lọc người dùng đã chọn đi theo.
  */
-describe('legacyRequestsTarget — hộp thư yêu cầu cũ', () => {
+describe('legacyRequestsTarget - hộp thư yêu cầu cũ', () => {
   it('không tham số / tab "Cần xử lý" ⇒ nhóm Cần xử lý', () => {
     expect(legacyRequestsTarget({}, PATHS)).toBe('/manage/bookings?preset=needs_action');
     expect(legacyRequestsTarget({ status: 'needs_action' }, PATHS)).toBe(
@@ -31,14 +31,14 @@ describe('legacyRequestsTarget — hộp thư yêu cầu cũ', () => {
     );
   });
 
-  it('mã lạ (`status=all` của link rất cũ) không làm vỡ — về Cần xử lý', () => {
+  it('mã lạ (`status=all` của link rất cũ) không làm vỡ - về Cần xử lý', () => {
     expect(legacyRequestsTarget({ status: 'all' }, PATHS)).toBe(
       '/manage/bookings?preset=needs_action',
     );
   });
 });
 
-describe('legacyEndedBookingsTarget — ngăn đã kết thúc của bảng đơn cũ', () => {
+describe('legacyEndedBookingsTarget - ngăn đã kết thúc của bảng đơn cũ', () => {
   it('`preset=completed|cancelled` ⇒ ngăn tương ứng của màn Đơn đã kết thúc', () => {
     expect(legacyEndedBookingsTarget({ preset: 'completed', q: 'An' }, PATHS)).toBe(
       '/manage/bookings/ended?q=An&tab=completed',
@@ -62,7 +62,7 @@ describe('legacyEndedBookingsTarget — ngăn đã kết thúc của bảng đơ
 });
 
 /** "Chuyến cho thuê" cũ của chủ xe tuyến hoa hồng (`/trips`) → màn "Đơn thuê xe" (06/11/2026). */
-describe('legacyOwnerTripsTarget — "Chuyến cho thuê" cũ', () => {
+describe('legacyOwnerTripsTarget - "Chuyến cho thuê" cũ', () => {
   it('tab hiện tại (hoặc không tham số) ⇒ màn Đơn thuê xe, mang theo từ khoá', () => {
     expect(legacyOwnerTripsTarget({}, PATHS)).toBe('/manage/bookings');
     expect(legacyOwnerTripsTarget({ filter: 'current', page: '2', q: 'Vios' }, PATHS)).toBe(

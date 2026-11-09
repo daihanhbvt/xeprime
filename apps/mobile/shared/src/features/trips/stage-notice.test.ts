@@ -28,7 +28,7 @@ describe('stageNotice', () => {
     );
   });
 
-  it('chờ duyệt là `warning` — một việc CHƯA XONG, không phải một thông báo đã ổn', () => {
+  it('chờ duyệt là `warning` - một việc CHƯA XONG, không phải một thông báo đã ổn', () => {
     expect(stageNotice(CUSTOMER_TRIP_STAGE.PENDING_APPROVAL)?.tone).toBe('warning');
   });
 
@@ -60,8 +60,8 @@ describe('stageNotice', () => {
   });
 });
 
-describe('stageNotice — chủ xe không phản hồi kịp (PR #158)', () => {
-  it('`expired` có khối giải thích riêng, tông `info` như web — không mượn câu của `rejected`', () => {
+describe('stageNotice - chủ xe không phản hồi kịp (PR #158)', () => {
+  it('`expired` có khối giải thích riêng, tông `info` như web - không mượn câu của `rejected`', () => {
     expect(stageNotice(CUSTOMER_TRIP_STAGE.EXPIRED)).toEqual({
       tone: 'info',
       titleKey: 'expiredTitle',
@@ -72,7 +72,7 @@ describe('stageNotice — chủ xe không phản hồi kịp (PR #158)', () => {
   });
 });
 
-describe('closedNotice — chuyến đã khép (cùng câu chữ với TripClosedView của web)', () => {
+describe('closedNotice - chuyến đã khép (cùng câu chữ với TripClosedView của web)', () => {
   it('hoàn thành ⇒ xanh; hỏng do một bên ⇒ đỏ; không ai có lỗi ⇒ vàng', () => {
     expect(closedNotice(CUSTOMER_TRIP_STAGE.COMPLETED)?.tone).toBe('success');
     expect(closedNotice(CUSTOMER_TRIP_STAGE.CANCELLED)?.tone).toBe('danger');

@@ -4,6 +4,7 @@ import { byPalette, useColors } from '@/theme/ThemeProvider';
 import type { AppColors } from '@/theme/tokens';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { estimateTextWidth } from './text-fit';
+import { PulseDot } from '@/components/motion/PulseDot';
 
 /**
  * Nhãn trạng thái dùng chung — bản native của `<Tag color>` bên web.
@@ -161,6 +162,7 @@ export function StatusBadge({
       px={PADDING_X[size]}
       py={PADDING_Y}
     >
+      {color === STATUS_COLOR.WAITING ? <PulseDot color={tone.fg} /> : null}
       {/*
         `flexShrink` + `numberOfLines` = cắt bằng dấu "…" thay vì tràn ra ngoài khung.
         Chỉ ăn khi nơi gọi cho khung một bề rộng XÁC ĐỊNH: `maxWidth: '100%'` quy theo bề rộng đã

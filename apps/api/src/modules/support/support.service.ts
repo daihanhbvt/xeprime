@@ -246,10 +246,10 @@ export class SupportService {
       openedByScope: SUPPORT_PARTY.CUSTOMER,
       category: SUPPORT_CASE_CATEGORY.DISPUTE,
       priority: SUPPORT_CASE_PRIORITY.URGENT,
-      subject: `Khách chưa nhận được xe — chuyến ${booking.code}`,
+      subject: `Khách chưa nhận được xe - chuyến ${booking.code}`,
       description:
         'Khách báo CHƯA NHẬN ĐƯỢC XE trong thời hạn ân hạn bàn giao. XePrime tạm giữ toàn bộ ' +
-        'tiền của chuyến cho tới khi xác minh xong — cần liên hệ cả khách lẫn chủ xe.',
+        'tiền của chuyến cho tới khi xác minh xong - cần liên hệ cả khách lẫn chủ xe.',
     });
     // Dòng audit này MANG dấu `reason` — `findOpenTripNotReceivedReport` đọc nó để phân biệt lời
     // báo "chưa nhận được xe" với mọi tranh chấp khác trên cùng đơn. Cùng transaction với case.
@@ -275,7 +275,7 @@ export class SupportService {
       booking.tenantId,
       {
         type: NOTIFICATION_TYPE.SUPPORT_CASE_UPDATED,
-        title: `Khách báo chưa nhận được xe — chuyến ${booking.code}`,
+        title: `Khách báo chưa nhận được xe - chuyến ${booking.code}`,
         body: 'XePrime tạm giữ tiền của chuyến và sẽ liên hệ hai bên để xác minh.',
         tenantId: booking.tenantId,
         targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
@@ -337,7 +337,7 @@ export class SupportService {
           openedByScope: scope,
           category: SUPPORT_CASE_CATEGORY.PLAN_CONSULTATION,
           status: SUPPORT_CASE_STATUS.OPEN,
-          subject: `Tư vấn gói — ${dto.fullName}`.slice(0, 255),
+          subject: `Tư vấn gói - ${dto.fullName}`.slice(0, 255),
           description,
         },
       });
@@ -681,7 +681,7 @@ export class SupportService {
       ) {
         throw new ForbiddenException({
           code: API_ERROR_CODE.SUPPORT_CASE_PLATFORM_RESOLVE_ONLY,
-          message: 'Case này giữ tiền của chuyến — chỉ nhân sự XePrime được kết luận/đóng',
+          message: 'Case này giữ tiền của chuyến - chỉ nhân sự XePrime được kết luận/đóng',
         });
       }
       const ownCase = row.openedByUserId === actor.userId;
@@ -874,7 +874,7 @@ export class SupportService {
     if (!isSupportCaseOpen(row.status as SupportCaseStatus)) {
       throw new ConflictException({
         code: API_ERROR_CODE.SUPPORT_CASE_CLOSED,
-        message: 'Case đã đóng — mở case mới thay vì viết tiếp vào lịch sử',
+        message: 'Case đã đóng - mở case mới thay vì viết tiếp vào lịch sử',
         details: { status: row.status },
       });
     }

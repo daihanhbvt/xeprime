@@ -19,7 +19,7 @@ import {
 } from './money';
 
 /**
- * Số học tiền tệ — bất biến của ADR 0007: **không đi qua `number`**.
+ * Số học tiền tệ - bất biến của ADR 0007: **không đi qua `number`**.
  *
  * Trước khi module này thành package dùng chung, chỉ `moneyToVietnameseWords` có test. Phần còn
  * lại không được kiểm ở đâu, mà nó mới là phần dễ sai âm thầm: `Number('12345678901234.56')` mất
@@ -31,7 +31,7 @@ import {
 const VI: MoneySeparators = { group: '.', decimal: ',' };
 const EN: MoneySeparators = { group: ',', decimal: '.' };
 
-describe('subtractMoney — số nguyên xu, không float', () => {
+describe('subtractMoney - số nguyên xu, không float', () => {
   it('trừ số thường', () => {
     expect(subtractMoney('12750000', '3200000')).toBe('9550000');
   });
@@ -47,7 +47,7 @@ describe('subtractMoney — số nguyên xu, không float', () => {
   });
 
   it('số vượt Number.MAX_SAFE_INTEGER vẫn đúng từng chữ số', () => {
-    // 9.007.199.254.740.993 > 2^53 — `Number` sẽ nuốt mất chữ số cuối.
+    // 9.007.199.254.740.993 > 2^53 - `Number` sẽ nuốt mất chữ số cuối.
     expect(subtractMoney('9007199254740993', '1')).toBe('9007199254740992');
   });
 
@@ -58,7 +58,7 @@ describe('subtractMoney — số nguyên xu, không float', () => {
   });
 });
 
-describe('sumMoney — tổng trên bigint xu', () => {
+describe('sumMoney - tổng trên bigint xu', () => {
   it('cộng nhiều khoản, kể cả số lẻ và số lớn', () => {
     expect(sumMoney(['199000', '900000'])).toBe('1099000');
     expect(sumMoney(['0.10', '0.20'])).toBe('0.30');
@@ -121,32 +121,32 @@ describe('isNegativeMoney · absoluteMoney · isZeroMoney · wholeUnits', () => 
   });
 });
 
-describe('formatMoneyVnd — chèn dấu, KHÔNG đổi giá trị', () => {
+describe('formatMoneyVnd - chèn dấu, KHÔNG đổi giá trị', () => {
   it('nhóm ba chữ số theo ngôn ngữ', () => {
-    expect(formatMoneyVnd('12750000', VI, '—')).toBe('12.750.000 ₫');
-    expect(formatMoneyVnd('12750000', EN, '—')).toBe('12,750,000 ₫');
+    expect(formatMoneyVnd('12750000', VI, '-')).toBe('12.750.000 ₫');
+    expect(formatMoneyVnd('12750000', EN, '-')).toBe('12,750,000 ₫');
   });
 
   it('phần lẻ bằng 0 thì không hiện', () => {
-    expect(formatMoneyVnd('500000.00', VI, '—')).toBe('500.000 ₫');
+    expect(formatMoneyVnd('500000.00', VI, '-')).toBe('500.000 ₫');
   });
 
   it('phần lẻ khác 0 thì giữ, theo dấu thập phân của ngôn ngữ', () => {
-    expect(formatMoneyVnd('1234.50', VI, '—')).toBe('1.234,50 ₫');
-    expect(formatMoneyVnd('1234.50', EN, '—')).toBe('1,234.50 ₫');
+    expect(formatMoneyVnd('1234.50', VI, '-')).toBe('1.234,50 ₫');
+    expect(formatMoneyVnd('1234.50', EN, '-')).toBe('1,234.50 ₫');
   });
 
   it('giá trị vắng dùng placeholder do nơi gọi truyền vào', () => {
     expect(formatMoneyVnd(null, VI, 'Chưa có')).toBe('Chưa có');
-    expect(formatMoneyVnd('', VI, '—')).toBe('—');
+    expect(formatMoneyVnd('', VI, '-')).toBe('-');
   });
 
   it('số dài hơn 2^53 in ra nguyên vẹn từng chữ số', () => {
-    expect(formatMoneyVnd('9007199254740993', VI, '—')).toBe('9.007.199.254.740.993 ₫');
+    expect(formatMoneyVnd('9007199254740993', VI, '-')).toBe('9.007.199.254.740.993 ₫');
   });
 });
 
-describe('compactMoneyParts — rút gọn cho chỗ hẹp', () => {
+describe('compactMoneyParts - rút gọn cho chỗ hẹp', () => {
   it('chọn đúng bậc theo ngưỡng nghìn/triệu/tỷ', () => {
     expect(compactMoneyParts('12750000', VI)).toEqual({ value: '12,7', unit: 'million' });
     expect(compactMoneyParts('2500000000', VI)).toEqual({ value: '2,5', unit: 'billion' });
@@ -175,7 +175,7 @@ describe('compactMoneyParts — rút gọn cho chỗ hẹp', () => {
   });
 
   /*
-   * Hai chữ số lẻ là bậc dành cho GIÁ — con số khách quyết định mua bằng nó. Ở một chữ số,
+   * Hai chữ số lẻ là bậc dành cho GIÁ - con số khách quyết định mua bằng nó. Ở một chữ số,
    * `1.050.000` in ra `1tr` và `1.350.000` in ra `1,3tr`: cùng sai 50.000đ trên đúng cái số
    * mà khách dùng để so hai chiếc xe.
    */
@@ -187,26 +187,26 @@ describe('compactMoneyParts — rút gọn cho chỗ hẹp', () => {
   });
 
   it('2 chữ số lẻ vẫn cắt số 0 thừa ở đuôi', () => {
-    // `30` phần trăm triệu là `,3` — `1,30tr` là hai ký tự thừa ở chỗ vốn đã hẹp.
+    // `30` phần trăm triệu là `,3` - `1,30tr` là hai ký tự thừa ở chỗ vốn đã hẹp.
     expect(compactMoneyParts('1300000', VI, 2)).toEqual({ value: '1,3', unit: 'million' });
     expect(compactMoneyParts('12000000', VI, 2)).toEqual({ value: '12', unit: 'million' });
   });
 
-  it('bậc nghìn không đổi theo số chữ số lẻ — phần nguyên ≥ 100 vốn đã bỏ phần lẻ', () => {
+  it('bậc nghìn không đổi theo số chữ số lẻ - phần nguyên ≥ 100 vốn đã bỏ phần lẻ', () => {
     expect(compactMoneyParts('600000', VI, 1)).toEqual({ value: '600', unit: 'thousand' });
     expect(compactMoneyParts('600000', VI, 2)).toEqual({ value: '600', unit: 'thousand' });
   });
 
-  it('mặc định vẫn là 1 chữ số lẻ — trục biểu đồ không tự nhiên dài ra', () => {
+  it('mặc định vẫn là 1 chữ số lẻ - trục biểu đồ không tự nhiên dài ra', () => {
     expect(compactMoneyParts('1350000', VI)).toEqual({ value: '1,3', unit: 'million' });
   });
 });
 
 /*
- * Ô nhập SỐ ĐO — quy ước Việt Nam: `.` ngăn nhóm nghìn, `,` ngăn thập phân.
+ * Ô nhập SỐ ĐO - quy ước Việt Nam: `.` ngăn nhóm nghìn, `,` ngăn thập phân.
  *
  * Có test vì lỗi ở đây KHÔNG hiện ra: bản đầu lọc mọi thứ không phải chữ số, nên gõ `2.8` cho ra
- * `28` — ô vẫn xanh, form vẫn hợp lệ, và mức tiêu thụ nhiên liệu lặng lẽ gấp mười lần.
+ * `28` - ô vẫn xanh, form vẫn hợp lệ, và mức tiêu thụ nhiên liệu lặng lẽ gấp mười lần.
  */
 describe('formatNumberInput', () => {
   it('ngăn nhóm nghìn bằng dấu chấm', () => {
@@ -219,7 +219,7 @@ describe('formatNumberInput', () => {
     expect(formatNumberInput(1234.56)).toBe('1.234,56');
   });
 
-  it('grouped: false cho năm sản xuất — 2019 chứ không phải 2.019', () => {
+  it('grouped: false cho năm sản xuất - 2019 chứ không phải 2.019', () => {
     expect(formatNumberInput(2019, { grouped: false })).toBe('2019');
   });
 
@@ -276,13 +276,13 @@ describe('parseNumberInput', () => {
 });
 
 /**
- * Câu chữ do SERVER sinh (thông báo đẩy, email) — nơi không có ngữ cảnh locale của người đọc.
+ * Câu chữ do SERVER sinh (thông báo đẩy, email) - nơi không có ngữ cảnh locale của người đọc.
  *
  * Có bài test riêng vì trước đây mỗi nơi phát thông báo tự xoay xở: ba chỗ dùng
  * `Number(x).toLocaleString('vi-VN')`, chỗ thứ tư dùng `x.toFixed(0)` và in ra `500000đ` không
  * dấu phân cách. Cột mốc ở đây là để một con số KHÔNG dấu phân cách không lọt lại lần nữa.
  */
-describe('formatMoneyVndVi — tiền trong câu chữ server sinh', () => {
+describe('formatMoneyVndVi - tiền trong câu chữ server sinh', () => {
   it('luôn có dấu phân cách nghìn kiểu Việt', () => {
     expect(formatMoneyVndVi('500000')).toBe('500.000 ₫');
     expect(formatMoneyVndVi('1234567')).toBe('1.234.567 ₫');
@@ -293,14 +293,14 @@ describe('formatMoneyVndVi — tiền trong câu chữ server sinh', () => {
     expect(formatMoneyVndVi('1234.50')).toBe('1.234,50 ₫');
   });
 
-  it('rỗng/null ra chuỗi rỗng — câu chữ tự lo phần còn lại', () => {
+  it('rỗng/null ra chuỗi rỗng - câu chữ tự lo phần còn lại', () => {
     expect(formatMoneyVndVi(null)).toBe('');
     expect(formatMoneyVndVi(undefined)).toBe('');
   });
 });
 
-describe('applyDiscountPercent — khoản giảm làm tròn LÊN 1.000đ (ADR 0069 điều 2)', () => {
-  it('10% × 652.000đ ⇒ giảm 66.000đ ⇒ 586.000đ — khớp báo giá server', () => {
+describe('applyDiscountPercent - khoản giảm làm tròn LÊN 1.000đ (ADR 0069 điều 2)', () => {
+  it('10% × 652.000đ ⇒ giảm 66.000đ ⇒ 586.000đ - khớp báo giá server', () => {
     expect(applyDiscountPercent('652000', 10)).toBe('586000');
   });
 

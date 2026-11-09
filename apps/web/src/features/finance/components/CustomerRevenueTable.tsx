@@ -59,7 +59,7 @@ export function CustomerRevenueTable({
    * tổng của TRANG làm mẫu số còn tệ hơn, vì nó cho ra bộ % cộng tròn 100% ở mọi trang.
    */
   const shareLabel = (value: number | null | undefined) =>
-    value == null ? '—' : t('share', { value });
+    value == null ? '-' : t('share', { value });
 
   const identity = (row: CustomerRevenue) => (
     <EntityIdentity

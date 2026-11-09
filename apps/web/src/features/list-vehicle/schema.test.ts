@@ -5,7 +5,7 @@ import { quickVehicleSchema } from './schema';
  * Bước giá 1.000đ ở wizard đăng xe nhanh — cùng luật `@IsMoneyStep` của API (ADR 0064). Báo ngay
  * dưới ô bằng MÃ (`useValidationResolver` dịch), không để chủ xe bấm lưu rồi nhận lỗi chung.
  */
-describe('quickVehicleSchema — bước giá 1.000đ', () => {
+describe('quickVehicleSchema - bước giá 1.000đ', () => {
   const at = (path: 'weekdayPrice' | 'deliveryFee', value: unknown) =>
     quickVehicleSchema.validateAt(path, { [path]: value, deliveryEnabled: true });
 

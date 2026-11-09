@@ -62,7 +62,7 @@ beforeEach(() => {
  * `/account/subscription` trước đây dựng `ManageHeader` — hook của nó ném lỗi ngoài
  * `ManageDrawerHost`, nên chủ xe tuyến hoa hồng mở "Gói dịch vụ" là gặp màn lỗi.
  */
-describe('SubscriptionScreen — vỏ khu tài khoản', () => {
+describe('SubscriptionScreen - vỏ khu tài khoản', () => {
   it('dựng được KHÔNG cần sidebar quản lý, tiêu đề "Gói & hạn mức" đứng một lần ở thanh trên', async () => {
     const view = await renderScreen();
 
@@ -82,7 +82,7 @@ describe('SubscriptionScreen — vỏ khu tài khoản', () => {
  * App Partner không bán gói (không IAP): màn chỉ còn THÔNG TIN; danh sách gói + "Liên hệ tư vấn"
  * theo cờ `isPlanPromotionEnabled`.
  */
-describe('SubscriptionWorkspace — Gói & hạn mức', () => {
+describe('SubscriptionWorkspace - Gói & hạn mức', () => {
   const COMMISSION_USER = {
     id: '01JQZX00000000000000000USR',
     displayName: 'Chủ xe Hương',
@@ -159,7 +159,7 @@ describe('SubscriptionWorkspace — Gói & hạn mức', () => {
     expect(view.queryByText(/QR|Hoá đơn/)).toBeNull();
   });
 
-  it('cờ BẬT: CHỈ thêm "Liên hệ tư vấn" — không danh sách gói, không khối mở khoá tính năng', async () => {
+  it('cờ BẬT: CHỈ thêm "Liên hệ tư vấn" - không danh sách gói, không khối mở khoá tính năng', async () => {
     const view = await renderWorkspace(true);
 
     expect(await view.findByRole('button', { name: 'Liên hệ tư vấn' })).toBeTruthy();

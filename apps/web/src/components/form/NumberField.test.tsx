@@ -30,7 +30,7 @@ function input(): HTMLInputElement {
   return screen.getByLabelText('Số tiền') as HTMLInputElement;
 }
 
-describe('NumberField — khả truy cập', () => {
+describe('NumberField - khả truy cập', () => {
   it('nhãn nối vào ô nhập (vá nợ D14.4)', () => {
     render(<Harness />);
 
@@ -40,7 +40,7 @@ describe('NumberField — khả truy cập', () => {
   });
 });
 
-describe('NumberField — số thường', () => {
+describe('NumberField - số thường', () => {
   it('nhập số và giữ nguyên giá trị trong payload', async () => {
     const onValues = vi.fn();
     render(<Harness onValues={onValues} />);
@@ -60,7 +60,7 @@ describe('NumberField — số thường', () => {
   });
 });
 
-describe('NumberField — tiền', () => {
+describe('NumberField - tiền', () => {
   it('hiện hậu tố ₫', () => {
     render(<Harness money />);
 
@@ -85,7 +85,7 @@ describe('NumberField — tiền', () => {
     expect(onValues.mock.calls[0]![0].amount).toBe(350000);
   });
 
-  it('gõ kèm dấu phân nhóm vẫn ra đúng số — KHÔNG bị parseFloat cắt ở dấu chấm đầu', async () => {
+  it('gõ kèm dấu phân nhóm vẫn ra đúng số - KHÔNG bị parseFloat cắt ở dấu chấm đầu', async () => {
     // `parseFloat('1.000.000')` trả về 1. Đây là ca hỏng mà parser chỉ-giữ-chữ-số phải chặn.
     const onValues = vi.fn();
     render(<Harness money onValues={onValues} />);
@@ -117,14 +117,14 @@ describe('NumberField — tiền', () => {
   });
 });
 
-describe('NumberField — phần trăm', () => {
+describe('NumberField - phần trăm', () => {
   it('hiện hậu tố %', () => {
     render(<Harness percent />);
 
     expect(screen.getByText('%')).toBeTruthy();
   });
 
-  it('kẹp mặc định 0–100', () => {
+  it('kẹp mặc định 0-100', () => {
     render(<Harness percent />);
 
     expect(input().getAttribute('aria-valuemin')).toBe('0');
@@ -138,7 +138,7 @@ describe('NumberField — phần trăm', () => {
     expect(input().getAttribute('aria-valuemax')).toBe('50');
   });
 
-  it('giá trị là SỐ PHẦN TRĂM (12), không phải tỉ lệ 0–1', async () => {
+  it('giá trị là SỐ PHẦN TRĂM (12), không phải tỉ lệ 0-1', async () => {
     const onValues = vi.fn();
     render(<Harness percent onValues={onValues} />);
 
@@ -157,7 +157,7 @@ describe('NumberField — phần trăm', () => {
   });
 });
 
-describe('NumberField — precision', () => {
+describe('NumberField - precision', () => {
   it('tiền mặc định 0 chữ số thập phân', () => {
     render(<Harness money />);
 
@@ -178,7 +178,7 @@ describe('NumberField — precision', () => {
   });
 });
 
-describe('NumberField — tương thích ngược', () => {
+describe('NumberField - tương thích ngược', () => {
   it('addonAfter tuỳ ý vẫn thắng hậu tố mặc định', () => {
     render(<Harness money addonAfter="VNĐ" />);
 
@@ -193,7 +193,7 @@ describe('NumberField — tương thích ngược', () => {
  * Được thêm vào tầng chung (không phải trong Fleet) vì mọi form đều cần đánh dấu trường bắt buộc
  * và gắn gợi ý; Fleet chỉ là consumer đầu tiên. Không có gì thuộc nghiệp vụ xe ở đây.
  */
-describe('NumberField — dấu bắt buộc và gợi ý', () => {
+describe('NumberField - dấu bắt buộc và gợi ý', () => {
   it('không truyền `help`: không dựng phần mô tả thừa', () => {
     render(<Harness />);
     expect(input().getAttribute('aria-describedby')).toBeNull();
@@ -207,7 +207,7 @@ describe('NumberField — dấu bắt buộc và gợi ý', () => {
     expect(document.getElementById(describedBy!)?.textContent).toBe('Nhập theo đơn vị đồng');
   });
 
-  it('`required` đánh dấu trường mà KHÔNG tự thêm ràng buộc — validate vẫn của schema', () => {
+  it('`required` đánh dấu trường mà KHÔNG tự thêm ràng buộc - validate vẫn của schema', () => {
     const onValues = vi.fn();
     render(<Harness required onValues={onValues} />);
 

@@ -10,7 +10,7 @@ import { BranchesView } from './BranchesView';
  * Bốn thứ test này khoá, đều là chỗ dễ hỏng âm thầm:
  *  1. mọi TRẠNG THÁI đều có màn hình riêng (đang tải / rỗng / lỗi / thiếu quyền);
  *  2. chi nhánh MẶC ĐỊNH không ngừng được, và nút bị khoá phải NÓI LÝ DO;
- *  3. chi nhánh chưa có tỉnh được cảnh báo rõ — xe của nó không lên chợ;
+ *  3. chi nhánh chưa có tỉnh được cảnh báo rõ - xe của nó không lên chợ;
  *  4. thiếu quyền `branches.manage` thì không dựng được đường tạo/sửa.
  */
 const state = vi.hoisted(() => ({
@@ -21,7 +21,7 @@ const state = vi.hoisted(() => ({
 }));
 
 // Nút/hành động ghi bọc theo cờ năng lực (ADR 0027), và hook cờ đọc `/auth/me` qua TanStack
-// Query. Màn này không KIỂM cờ — nó chỉ dùng — nên chặn ở đúng ranh giới đó thay vì dựng
+// Query. Màn này không KIỂM cờ - nó chỉ dùng - nên chặn ở đúng ranh giới đó thay vì dựng
 // QueryClient giả. `enabled` = gian hàng đang có gói, tức là hành vi mặc định.
 vi.mock('@/hooks/use-feature', () => ({
   useFeature: () => ({ state: 'enabled', canWrite: true, isVisible: true, planEndsAt: null }),
@@ -128,7 +128,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('BranchesView — trạng thái', () => {
+describe('BranchesView - trạng thái', () => {
   it('đang tải: không dựng bảng rỗng gây hiểu nhầm "chưa có chi nhánh"', () => {
     state.data = undefined;
     state.isLoading = true;
@@ -162,7 +162,7 @@ describe('BranchesView — trạng thái', () => {
 });
 
 /**
- * Design 06/11/2026: cột thao tác là bút chì + menu "…" — đổi mặc định / ngưng / mở lại nằm trong
+ * Design 06/11/2026: cột thao tác là bút chì + menu "…" - đổi mặc định / ngưng / mở lại nằm trong
  * menu. Mở menu của hàng thứ `index` (theo thứ tự trong bảng) rồi trả các mục của nó.
  */
 async function openRowMenu(index: number) {
@@ -170,7 +170,7 @@ async function openRowMenu(index: number) {
   return screen.findAllByRole('menuitem');
 }
 
-describe('BranchesView — luật nghiệp vụ hiển thị', () => {
+describe('BranchesView - luật nghiệp vụ hiển thị', () => {
   it('chi nhánh mặc định có nhãn riêng và KHÔNG có hành động ngừng hoạt động khả dụng', async () => {
     renderView();
 
@@ -183,7 +183,7 @@ describe('BranchesView — luật nghiệp vụ hiển thị', () => {
     expect(stop?.getAttribute('aria-disabled')).toBe('true');
   });
 
-  it('cảnh báo khi có chi nhánh chưa gán tỉnh — xe ở đó không lên chợ', () => {
+  it('cảnh báo khi có chi nhánh chưa gán tỉnh - xe ở đó không lên chợ', () => {
     state.data = listOf(
       [{ ...DEFAULT_BRANCH, provinceCode: null, provinceName: null, needsLocationReview: true }],
       { needsReviewCount: 1 },
@@ -209,7 +209,7 @@ describe('BranchesView — luật nghiệp vụ hiển thị', () => {
     perms.granted = new Set<string>([PERMISSION.BRANCH_VIEW]);
     renderView();
 
-    // Tên truy cập được gồm cả nhãn của icon (`plus`) — khớp bằng regex thay vì chuỗi tuyệt đối.
+    // Tên truy cập được gồm cả nhãn của icon (`plus`) - khớp bằng regex thay vì chuỗi tuyệt đối.
     const add = screen.getByRole('button', { name: /Thêm chi nhánh/ });
     expect((add as HTMLButtonElement).disabled).toBe(true);
   });

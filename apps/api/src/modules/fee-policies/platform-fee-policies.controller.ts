@@ -35,7 +35,7 @@ export class PlatformFeePoliciesController {
   constructor(private readonly policies: FeePoliciesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Mọi phiên bản chính sách phí — mới nhất trước' })
+  @ApiOperation({ summary: 'Mọi phiên bản chính sách phí - mới nhất trước' })
   @ApiOkResponse({ type: [FeePolicyDto] })
   list(): Promise<FeePolicyDto[]> {
     return this.policies.list();
@@ -60,7 +60,7 @@ export class PlatformFeePoliciesController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Sửa bản nháp — bản đã hiệu lực là bất biến' })
+  @ApiOperation({ summary: 'Sửa bản nháp - bản đã hiệu lực là bất biến' })
   @ApiOkResponse({ type: FeePolicyDto })
   update(
     @Param('id') id: string,
@@ -73,7 +73,7 @@ export class PlatformFeePoliciesController {
   @Post(':id/activate')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Kích hoạt bản nháp — lưu trữ bản đang hiệu lực trong cùng transaction, không hồi tố',
+    summary: 'Kích hoạt bản nháp - lưu trữ bản đang hiệu lực trong cùng transaction, không hồi tố',
   })
   @ApiOkResponse({ type: FeePolicyDto })
   activate(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser): Promise<FeePolicyDto> {

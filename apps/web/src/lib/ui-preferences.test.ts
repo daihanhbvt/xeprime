@@ -20,7 +20,7 @@ afterEach(() => {
   document.cookie = `${UI_PREFERENCES_COOKIE}=; path=/; max-age=0`;
 });
 
-describe('ui-preferences — đọc/ghi', () => {
+describe('ui-preferences - đọc/ghi', () => {
   it('ghi rồi đọc lại ra đúng thứ đã ghi', () => {
     const value = { sidebarCollapsed: true, navSectionsCollapsed: ['business', 'settings'] };
 
@@ -72,7 +72,7 @@ describe('ui-preferences — đọc/ghi', () => {
     });
   });
 
-  it('KHÔNG mang gì cần bảo vệ — chỉ hai tuỳ chọn giao diện', () => {
+  it('KHÔNG mang gì cần bảo vệ - chỉ hai tuỳ chọn giao diện', () => {
     // Cookie này đọc được bằng JavaScript (client phải tự ghi). Ghi lại đây để không ai nhét
     // danh tính, quyền hay phạm vi dữ liệu vào — những thứ đó thuộc `XP_SESSION` httpOnly.
     const serialized = serializeNavPreferences({

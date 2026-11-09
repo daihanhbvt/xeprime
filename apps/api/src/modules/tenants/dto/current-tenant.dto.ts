@@ -11,7 +11,7 @@ export class CurrentTenantDto {
   @ApiPropertyOptional({ nullable: true }) phone!: string | null;
   @ApiPropertyOptional({ nullable: true }) email!: string | null;
 
-  @ApiProperty({ description: 'Decimal trả về dạng string — ADR 0007', example: '4.75' })
+  @ApiProperty({ description: 'Decimal trả về dạng string - ADR 0007', example: '4.75' })
   ratingAvg!: string;
 
   @ApiProperty() ratingCount!: number;

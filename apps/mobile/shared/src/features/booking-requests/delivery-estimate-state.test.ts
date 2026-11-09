@@ -50,7 +50,7 @@ describe('deliveryEstimateState', () => {
     expect(s.current).toBe(true);
   });
 
-  it('CHỮ CHƯA CHỐT (nguồn khác manual, không ghim) ⇒ không hỏi, không spinner — y như web', () => {
+  it('CHỮ CHƯA CHỐT (nguồn khác manual, không ghim) ⇒ không hỏi, không spinner - y như web', () => {
     // Tra một dòng chữ chưa xác nhận là hai giao dịch Vietmap có tính tiền (ADR 0061).
     const s = S({ typed: LONG, debounced: LONG, manual: false });
     expect(s.queryable).toBe(false);

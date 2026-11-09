@@ -2,7 +2,7 @@ import { sanitizeShopBioHtml, shopBioPlainText } from '../src/common/shop-bio-ht
 
 /**
  * Giới thiệu gian hàng hiện trên trang CÔNG KHAI của sàn, nên HTML từ editor đi qua bộ lọc ở
- * server — client chỉ là một trong nhiều đường ghi (app native, gọi API thẳng).
+ * server - client chỉ là một trong nhiều đường ghi (app native, gọi API thẳng).
  */
 describe('sanitizeShopBioHtml', () => {
   it('giữ đúng thanh công cụ của editor: đậm, nghiêng, gạch chân, căn lề', () => {

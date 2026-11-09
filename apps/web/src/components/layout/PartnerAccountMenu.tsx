@@ -44,10 +44,10 @@ import styles from './PartnerAccountMenu.module.css';
 const PARTNER_THEME_SWITCH_ENABLED = false;
 
 /**
- * Dòng thứ hai dưới tên người — "Gian hàng · Vai", không phải email (header và menu nằm trên mọi
+ * Dòng thứ hai dưới tên người - "Gian hàng · Vai", không phải email (header và menu nằm trên mọi
  * trang, kể cả lúc chia sẻ màn hình; đăng nhập site partner là SĐT).
  *
- * Chủ xe cá nhân: gian hàng mang chính tên họ — "Nguyễn Văn A · Chủ xe cá nhân" dưới "Nguyễn Văn A"
+ * Chủ xe cá nhân: gian hàng mang chính tên họ - "Nguyễn Văn A · Chủ xe cá nhân" dưới "Nguyễn Văn A"
  * là nói một điều hai lần. Họ chỉ cần vai.
  */
 export function partnerWorkspaceLine(user: CurrentUser, role: string): string {
@@ -55,7 +55,7 @@ export function partnerWorkspaceLine(user: CurrentUser, role: string): string {
 }
 
 /**
- * Menu HỒ SƠ site partner — Figma Partner-XePrime `24051:85101` (06/11/2026), hai biến thể:
+ * Menu HỒ SƠ site partner - Figma Partner-XePrime `24051:85101` (06/11/2026), hai biến thể:
  *
  *   gian hàng (tuyến gói)                     cá nhân (tuyến hoa hồng)
  *   ┌ [logo✓] Tên người · Vai           › ┐   ┌ [ảnh] Tên người · Vai            › ┐
@@ -63,7 +63,7 @@ export function partnerWorkspaceLine(user: CurrentUser, role: string): string {
  *   └──────────── nền vàng ─────────────────┘
  *     Tài khoản & bảo mật                       Tài khoản & bảo mật
  *     Quản lý gian hàng                         Quản lý cho thuê
- *     (Giao diện ☀|☾ — chờ dark mode)           (Giao diện ☀|☾ — chờ dark mode)
+ *     (Giao diện ☀|☾ - chờ dark mode)           (Giao diện ☀|☾ - chờ dark mode)
  *                                               Nâng cấp gian hàng →   (vàng)
  *   ── chân xám: Ngôn ngữ VI|EN · Đăng xuất ──
  *
@@ -71,16 +71,16 @@ export function partnerWorkspaceLine(user: CurrentUser, role: string): string {
  *  - dấu tích xanh trên logo = MỌI gian hàng tuyến gói; tài khoản cá nhân không có. Nó là dấu nhận
  *    diện "đây là gian hàng", không phải kết quả xác minh pháp nhân;
  *  - bấm thẻ danh tính = "Tài khoản & bảo mật" (cùng đích với dòng ngay dưới);
- *  - nhãn tuyến/gói của menu cũ (`AccountTrackBadge`) đã bỏ — gói xem ở Thông tin cửa hàng / Hồ sơ
+ *  - nhãn tuyến/gói của menu cũ (`AccountTrackBadge`) đã bỏ - gói xem ở Thông tin cửa hàng / Hồ sơ
  *    chủ xe › Gói dịch vụ, băng "chờ thanh toán / hết hạn" vẫn ở đầu trang.
  *
- * Ai thấy dòng nào — cùng điều kiện với trang đích, không lối nào dẫn tới 403:
- *  - "Quản lý gian hàng" (`/shop`) chỉ khi `useShopSettingsAccess` — nhân viên không có
+ * Ai thấy dòng nào - cùng điều kiện với trang đích, không lối nào dẫn tới 403:
+ *  - "Quản lý gian hàng" (`/shop`) chỉ khi `useShopSettingsAccess` - nhân viên không có
  *    `tenant.view` không thấy;
- *  - "Quản lý cho thuê" là "Hồ sơ chủ xe" (`/account`) — chỉ CHỦ xe tuyến hoa hồng. Với họ cùng
+ *  - "Quản lý cho thuê" là "Hồ sơ chủ xe" (`/account`) - chỉ CHỦ xe tuyến hoa hồng. Với họ cùng
  *    URL đó là hồ sơ chủ xe, nên "Tài khoản & bảo mật" trỏ thẳng vào phần đăng nhập/mật khẩu;
  *  - "Nâng cấp gian hàng" (09/11/2026) = phễu nâng cấp có sẵn ở Hồ sơ chủ xe › Gói dịch vụ
- *    (`/account?section=plan`) — cũng chỉ CHỦ xe tuyến hoa hồng, vì section đó chỉ họ có;
+ *    (`/account?section=plan`) - cũng chỉ CHỦ xe tuyến hoa hồng, vì section đó chỉ họ có;
  *  - thành viên của chủ xe tuyến hoa hồng và tài khoản chưa có gói: chỉ "Tài khoản & bảo mật".
  *
  * Bảng tự dựng trên `AccountMenuParts` (cùng khuôn với menu site khách), không phải `menu.items`.
@@ -96,7 +96,7 @@ export function PartnerAccountMenu({
   placement?: DropdownProps['placement'];
   /** Header: rê chuột là mở. Thẻ người dùng trong drawer mobile (màn chạm) giữ bấm-để-mở. */
   openOnHover?: boolean;
-  /** Nút mở — Dropdown gắn sự kiện vào nó. */
+  /** Nút mở - Dropdown gắn sự kiện vào nó. */
   children: ReactElement<HTMLAttributes<HTMLElement>>;
 }) {
   const t = useTranslations('ManageCommon');
@@ -106,7 +106,7 @@ export function PartnerAccountMenu({
   const dispatch = useAppDispatch();
   const [open, setOpen] = useState(false);
   // Mở từ thẻ người dùng trong drawer mobile: đi trang thì drawer cũng phải đóng, không thì nó
-  // che trang vừa mở. Trên desktop drawer vốn đóng — lệnh này không làm gì.
+  // che trang vừa mở. Trên desktop drawer vốn đóng - lệnh này không làm gì.
   const close = () => {
     setOpen(false);
     dispatch(setMobileNavOpen(false));
@@ -114,9 +114,9 @@ export function PartnerAccountMenu({
 
   const isShop = resolvePartnerTrack(user) === PARTNER_TRACK.PACKAGE;
   const ownerProfile = isCommissionOwner(user);
-  const personName = user.displayName || '—';
+  const personName = user.displayName || '-';
   const role = identityLabel(user);
-  // Thẻ gian hàng đã có dòng "Gian hàng · Tên" riêng — dòng dưới tên chỉ còn vai.
+  // Thẻ gian hàng đã có dòng "Gian hàng · Tên" riêng - dòng dưới tên chỉ còn vai.
   const subtitle = isShop ? role : partnerWorkspaceLine(user, role);
   const shopName = user.tenant?.name ?? '';
   const accountHref = ownerProfile

@@ -223,7 +223,7 @@ function ContactCard({ item }: { item: FollowUp }) {
       <h3 className={styles.cardTitle}>{t('title')}</h3>
       <div className={styles.contactName}>{item.customerName}</div>
       <div className={styles.contactPhone}>
-        <span className={styles.phoneValue}>{phone ?? item.customerPhoneMasked ?? '—'}</span>
+        <span className={styles.phoneValue}>{phone ?? item.customerPhoneMasked ?? '-'}</span>
         {phone ? <CopyButton value={phone} label={t('copy')} copiedLabel={t('copied')} /> : null}
       </div>
       {email ? <div className={styles.meta}>{email}</div> : null}

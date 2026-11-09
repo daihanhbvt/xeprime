@@ -67,7 +67,7 @@ describe('VehicleCard', () => {
     expect(getByText(/Lãi:/)).toBeTruthy();
   });
 
-  it('LỖ ăn nhãn riêng — không phải một con số âm để người đọc tự suy', async () => {
+  it('LỖ ăn nhãn riêng - không phải một con số âm để người đọc tự suy', async () => {
     const { getByText, queryByText } = await renderCard({
       stats: { ...stats, totalIncome: '10000000.00', totalExpense: '17300000.00' },
     });
@@ -87,7 +87,7 @@ describe('VehicleCard', () => {
     expect(getByText(/Đơn:/)).toBeTruthy();
   });
 
-  it('giá hiện là giá ĐÃ giảm, kèm viên -N% (khuyến mãi chỉ áp cho tự lái — ADR 0011)', async () => {
+  it('giá hiện là giá ĐÃ giảm, kèm viên -N% (khuyến mãi chỉ áp cho tự lái - ADR 0011)', async () => {
     const { getByText } = await renderCard();
 
     // 850.000 − 10% = 765.000
@@ -112,7 +112,7 @@ describe('VehicleCard', () => {
  * lý và áp nó lên mọi nơi, nên danh sách xe trong hồ sơ khách hàng không có "Quản lý xe" — thứ
  * web đặt làm thao tác CHÍNH ở màn đó.
  */
-describe('VehicleCard — thao tác do màn truyền vào', () => {
+describe('VehicleCard - thao tác do màn truyền vào', () => {
   it('dựng đúng bộ thao tác của nơi gọi, không có bộ mặc định nào', async () => {
     const onManage = jest.fn();
 

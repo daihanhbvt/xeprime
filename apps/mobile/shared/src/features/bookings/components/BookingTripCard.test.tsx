@@ -36,7 +36,7 @@ beforeEach(() => {
   mockGranted = ['handovers.view', 'handovers.confirm'];
 });
 
-describe('BookingTripCard — bám BookingOperationPanel bên web', () => {
+describe('BookingTripCard - bám BookingOperationPanel bên web', () => {
   it('thiếu handovers.view: GIỮ thẻ và nói thiếu quyền gì, không gọi API', async () => {
     mockGranted = [];
     const spy = jest.spyOn(handoversApi, 'context');

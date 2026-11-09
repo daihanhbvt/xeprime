@@ -101,6 +101,7 @@ export function TripHoldPanel({
           </Text>
           <Countdown
             deadline={hold.expiresAt}
+            ring
             urgentMs={HOLD_COUNTDOWN_URGENT_MINUTES * 60_000}
             labels={{
               remaining: t('countdownRemaining'),

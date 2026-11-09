@@ -1,5 +1,6 @@
 import { RATING_MAX } from '@xeprime/types';
 import { cx } from '@/lib/cx';
+import { seqClass, starPopClass } from '@/components/motion/motion-classes';
 import styles from './Stars.module.css';
 import { useTranslations } from 'next-intl';
 
@@ -13,13 +14,22 @@ const SIZE_PX = { sm: 14, md: 16, lg: 20, xl: 28 } as const;
  * Dãy sao (chỉ đọc). Ảnh SVG thuần (không AntD) nên render được ở cả Server Component (trang chi
  * tiết marketplace SEO) lẫn Client. Số sao tối đa lấy từ @xeprime/types.
  */
-export function Stars({ value, size = 'md' }: { value: number; size?: 'sm' | 'md' | 'lg' | 'xl' }) {
+export function Stars({
+  value,
+  size = 'md',
+  animated = false,
+}: {
+  value: number;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  /** Sao bật lần lượt khi được vẽ (site khách) - mặc định đứng yên. */
+  animated?: boolean;
+}) {
   const tCommon = useTranslations('Common');
   const filled = Math.round(value);
   const px = SIZE_PX[size];
   return (
     <span
-      className={cx(styles.stars, styles[size])}
+      className={cx(styles.stars, styles[size], animated && seqClass)}
       role="img"
       aria-label={tCommon('components.rating', { value, max: RATING_MAX })}
     >
@@ -31,7 +41,7 @@ export function Stars({ value, size = 'md' }: { value: number; size?: 'sm' | 'md
           alt=""
           width={px}
           height={px}
-          className={styles.star}
+          className={cx(styles.star, animated && starPopClass)}
         />
       ))}
     </span>

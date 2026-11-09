@@ -59,13 +59,13 @@ export type BookingSort = (typeof BOOKING_SORT)[number];
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
-/** Tiền nhập vào dạng chuỗi thập phân tối đa 2 số lẻ (ADR 0007 — không dùng number). */
+/** Tiền nhập vào dạng chuỗi thập phân tối đa 2 số lẻ (ADR 0007 - không dùng number). */
 const MONEY_PATTERN = /^\d{1,12}(\.\d{1,2})?$/;
 
 export { DEFAULT_LIMIT as BOOKING_DEFAULT_LIMIT, MAX_LIMIT as BOOKING_MAX_LIMIT };
 
 /**
- * Query danh sách đơn — luôn phân trang + filter + sort ở tầng DB (skill backend-endpoint).
+ * Query danh sách đơn - luôn phân trang + filter + sort ở tầng DB (skill backend-endpoint).
  * Một gian hàng có thể có hàng chục nghìn đơn/năm, client không kéo cả bảng.
  */
 export class BookingListQueryDto {
@@ -81,7 +81,7 @@ export class BookingListQueryDto {
   status?: string;
 
   /**
-   * Nhóm việc dựng sẵn — CỘNG THÊM vào các bộ lọc khác, không thay thế chúng.
+   * Nhóm việc dựng sẵn - CỘNG THÊM vào các bộ lọc khác, không thay thế chúng.
    *
    * `awaiting_pickup` là một câu ba vế (trạng thái đơn + chưa có mốc giao thật + chưa có biên
    * bản giao đã xác nhận) mà `status` không diễn đạt nổi. Nó ở server để mọi client hỏi cùng
@@ -89,7 +89,7 @@ export class BookingListQueryDto {
    */
   @ApiPropertyOptional({
     enum: BOOKING_LIST_PRESET_VALUES,
-    description: 'Nhóm việc dựng sẵn — awaiting_pickup: đơn đã tạo nhưng chưa bàn giao xe',
+    description: 'Nhóm việc dựng sẵn - awaiting_pickup: đơn đã tạo nhưng chưa bàn giao xe',
   })
   @IsOptional()
   @IsIn(BOOKING_LIST_PRESET_VALUES)
@@ -101,17 +101,17 @@ export class BookingListQueryDto {
   @Length(26, 26)
   vehicleId?: string;
 
-  /** Lọc theo loại dịch vụ của ĐƠN (đóng băng lúc tạo) — ô "Loại dịch vụ" của hai bảng đơn. */
+  /** Lọc theo loại dịch vụ của ĐƠN (đóng băng lúc tạo) - ô "Loại dịch vụ" của hai bảng đơn. */
   @ApiPropertyOptional({ enum: SERVICE_TYPE_VALUES })
   @IsOptional()
   @IsIn(SERVICE_TYPE_VALUES)
   serviceType?: string;
 
-  /** Lọc theo chi nhánh của XE trong đơn — ô "Chi nhánh" trong thanh bộ lọc của danh sách đơn. */
+  /** Lọc theo chi nhánh của XE trong đơn - ô "Chi nhánh" trong thanh bộ lọc của danh sách đơn. */
   @BranchIdQuery()
   branchId?: string;
 
-  @ApiPropertyOptional({ description: 'Trả xe từ (ISO) — lọc cho panel quá hạn/sắp trả' })
+  @ApiPropertyOptional({ description: 'Trả xe từ (ISO) - lọc cho panel quá hạn/sắp trả' })
   @IsOptional()
   @IsDateString()
   returnFrom?: string;
@@ -142,7 +142,7 @@ export class BookingListQueryDto {
   limit?: number;
 }
 
-/** Một dòng trong bảng đơn thuê — đủ cho bảng, không kéo note dài. */
+/** Một dòng trong bảng đơn thuê - đủ cho bảng, không kéo note dài. */
 export class BookingListItemDto {
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;
@@ -154,14 +154,14 @@ export class BookingListItemDto {
   @ApiProperty() customerName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) customerPhone!: string | null;
   /**
-   * SĐT ĐÃ XÁC MINH của tài khoản khách đặt đơn này — CHỈ có khi nó khác `customerPhone` (khách để
-   * lại số liên hệ khác lúc gửi yêu cầu, hoặc gian hàng đã sửa số trên đơn — ADR 0063). `null` với
+   * SĐT ĐÃ XÁC MINH của tài khoản khách đặt đơn này - CHỈ có khi nó khác `customerPhone` (khách để
+   * lại số liên hệ khác lúc gửi yêu cầu, hoặc gian hàng đã sửa số trên đơn - ADR 0063). `null` với
    * đơn gian hàng tự lập (không có tài khoản khách).
    */
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'SĐT tài khoản khách — chỉ khi khác SĐT liên hệ của đơn',
+    description: 'SĐT tài khoản khách - chỉ khi khác SĐT liên hệ của đơn',
   })
   customerAccountPhone!: string | null;
   @ApiProperty({ enum: BOOKING_STATUS_VALUES }) status!: string;
@@ -170,11 +170,11 @@ export class BookingListItemDto {
     type: Number,
     nullable: true,
     enum: LONG_TERM_PACKAGE_MONTHS_VALUES,
-    description: 'Gói thuê dài hạn (tháng lịch) — null với dịch vụ khác và đơn dài hạn LEGACY',
+    description: 'Gói thuê dài hạn (tháng lịch) - null với dịch vụ khác và đơn dài hạn LEGACY',
   })
   longTermPackageMonths!: number | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) pickupAt!: string;
-  @ApiProperty({ description: 'ISO-8601 UTC — với thuê dài hạn do SERVER tính từ gói' })
+  @ApiProperty({ description: 'ISO-8601 UTC - với thuê dài hạn do SERVER tính từ gói' })
   returnAt!: string;
   /*
    * Ba trường BÀN GIAO bên dưới phục vụ nhóm việc "Chờ giao xe". Chúng nằm ở danh sách chứ
@@ -182,7 +182,7 @@ export class BookingListItemDto {
    * cho một câu hỏi mà cùng một truy vấn đã trả lời được.
    *
    * `required: true` + `nullable`: contract sinh ra `string | null` chứ không phải `| undefined`
-   * — mọi đơn đều có ba trường này, chỉ là giá trị có thể trống (ADR 0007).
+   * - mọi đơn đều có ba trường này, chỉ là giá trị có thể trống (ADR 0007).
    */
   @ApiProperty({
     required: true,
@@ -198,42 +198,42 @@ export class BookingListItemDto {
     type: String,
     nullable: true,
     enum: BOOKING_HANDOVER_PLACE_VALUES,
-    description: 'Chỗ xe đổi tay — MÃ; nhãn do client dịch',
+    description: 'Chỗ xe đổi tay - MÃ; nhãn do client dịch',
   })
   handoverPlaceKind!: string | null;
   @ApiProperty({
     required: true,
     type: String,
     nullable: true,
-    description: 'Địa chỉ hoặc tên chi nhánh đi kèm `handoverPlaceKind` — chuỗi thô, không dịch',
+    description: 'Địa chỉ hoặc tên chi nhánh đi kèm `handoverPlaceKind` - chuỗi thô, không dịch',
   })
   handoverPlace!: string | null;
-  @ApiProperty({ description: 'Giá thuê đã chốt, KHÔNG gồm phụ phí. Tiền dạng string — ADR 0007' })
+  @ApiProperty({ description: 'Giá thuê đã chốt, KHÔNG gồm phụ phí. Tiền dạng string - ADR 0007' })
   totalAmount!: string;
   @ApiProperty({
-    description: 'Tiền thuê đã thu (`payments`) — writer duy nhất là PaymentsService',
+    description: 'Tiền thuê đã thu (`payments`) - writer duy nhất là PaymentsService',
   })
   paidAmount!: string;
   @ApiProperty({ description: 'Tổng phụ phí còn hiệu lực (quá giờ, vệ sinh, hư hại)' })
   surchargeTotal!: string;
-  @ApiProperty({ description: 'PHẢI THU = tiền thuê + phụ phí — con số khách nợ tính trên nó' })
+  @ApiProperty({ description: 'PHẢI THU = tiền thuê + phụ phí - con số khách nợ tính trên nó' })
   amountDue!: string;
   @ApiProperty({ description: 'Thu thêm bằng phiếu NHẬP TAY đã duyệt gắn đơn' })
   otherCollected!: string;
   @ApiProperty({ description: 'ĐÃ THU = tiền thuê + phiếu tay + phần phụ phí cọc đã gánh' })
   collectedAmount!: string;
-  @ApiProperty({ description: 'Công nợ = max(0, phải thu − đã thu) — common/booking-money.ts' })
+  @ApiProperty({ description: 'Công nợ = max(0, phải thu − đã thu) - common/booking-money.ts' })
   debtAmount!: string;
   @ApiProperty() depositAmount!: string;
-  /** Tài xế được gán (chủ yếu đơn with_driver) — null = chưa phân công. */
+  /** Tài xế được gán (chủ yếu đơn with_driver) - null = chưa phân công. */
   @ApiPropertyOptional({ type: BookingDriverSummaryDto, nullable: true })
   driver!: BookingDriverSummaryDto | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
-  /** Ảnh đại diện xe (`vehicles.main_image_url`) — null = xe chưa có ảnh, UI không dựng ảnh giả. */
+  /** Ảnh đại diện xe (`vehicles.main_image_url`) - null = xe chưa có ảnh, UI không dựng ảnh giả. */
   @ApiPropertyOptional({ type: String, nullable: true }) vehicleImageUrl!: string | null;
   /**
-   * Bốn trường của dòng thông số "4 chỗ · Số tự động · Điện" trên thẻ đơn — MÃ, nhãn do client
-   * dịch (ADR 0012). Thiếu trường nào thì client bỏ mục đó, không in "—".
+   * Bốn trường của dòng thông số "4 chỗ · Số tự động · Điện" trên thẻ đơn - MÃ, nhãn do client
+   * dịch (ADR 0012). Thiếu trường nào thì client bỏ mục đó, không in "-".
    */
   @ApiProperty({ enum: VEHICLE_TYPE_VALUES }) vehicleType!: string;
   @ApiPropertyOptional({ type: String, nullable: true, enum: MOTORBIKE_CATEGORY_VALUES })
@@ -241,10 +241,10 @@ export class BookingListItemDto {
   @ApiPropertyOptional({ type: Number, nullable: true }) seatCount!: number | null;
   @ApiPropertyOptional({ type: String, nullable: true }) transmission!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) fuelType!: string | null;
-  /** Ảnh đại diện tài khoản khách — null với đơn gian hàng tự lập hoặc khách chưa có ảnh. */
+  /** Ảnh đại diện tài khoản khách - null với đơn gian hàng tự lập hoặc khách chưa có ảnh. */
   @ApiPropertyOptional({ type: String, nullable: true }) customerAvatarUrl!: string | null;
   /**
-   * Yêu cầu đã sinh ra đơn này — đường nhắn tin với khách của đơn đi qua hội thoại của yêu cầu
+   * Yêu cầu đã sinh ra đơn này - đường nhắn tin với khách của đơn đi qua hội thoại của yêu cầu
    * (`POST /booking-requests/:id/conversation`). null = đơn gian hàng tự lập.
    */
   @ApiPropertyOptional({ type: String, nullable: true }) bookingRequestId!: string | null;
@@ -253,12 +253,12 @@ export class BookingListItemDto {
    * (ADR 0073), nên cờ này chỉ còn nói "có phía bên kia hay không".
    */
   @ApiProperty() canMessageOnPlatform!: boolean;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Giao xe thật — ISO-8601 UTC' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Giao xe thật - ISO-8601 UTC' })
   actualPickupAt!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Trả xe thật — ISO-8601 UTC' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Trả xe thật - ISO-8601 UTC' })
   actualReturnAt!: string | null;
   /**
-   * Khách đã báo "Đã trả xe" ở trang chuyến (ADR 0081) và gian hàng chưa trả lời — ISO-8601 UTC.
+   * Khách đã báo "Đã trả xe" ở trang chuyến (ADR 0081) và gian hàng chưa trả lời - ISO-8601 UTC.
    * Đi cùng `returnAutoCompleteAt`: quá mốc đó mà gian hàng vẫn im lặng thì đơn tự hoàn thành.
    */
   @ApiPropertyOptional({ type: String, nullable: true })
@@ -266,14 +266,14 @@ export class BookingListItemDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Hạn gian hàng xác nhận — ISO-8601 UTC',
+    description: 'Hạn gian hàng xác nhận - ISO-8601 UTC',
   })
   returnAutoCompleteAt!: string | null;
-  /** Phía chịu trách nhiệm của lượt huỷ (`booking_cancellations`, ADR 0045) — null khi đơn không bị huỷ. */
+  /** Phía chịu trách nhiệm của lượt huỷ (`booking_cancellations`, ADR 0045) - null khi đơn không bị huỷ. */
   @ApiPropertyOptional({ type: String, nullable: true, enum: CANCELLATION_PARTY_VALUES })
   cancellationParty!: string | null;
   /*
-   * Ba dòng tiền của ô "Thanh toán" trên thẻ đơn (màn "Đơn thuê xe" gộp, 05/11/2026) — trước chỉ
+   * Ba dòng tiền của ô "Thanh toán" trên thẻ đơn (màn "Đơn thuê xe" gộp, 05/11/2026) - trước chỉ
    * chi tiết đơn có. Ở DANH SÁCH vì thẻ của cả bốn nhóm cùng một khuôn: tiền thuê · khách trả ·
    * đã giữ chỗ · trả chủ xe khi nhận xe.
    */
@@ -289,12 +289,12 @@ export class BookingListItemDto {
    */
   @ApiPropertyOptional({ type: String, nullable: true })
   holdPaidAmount!: string | null;
-  /** B − D — phần khách còn trả trực tiếp chủ xe khi nhận xe, do server đóng băng trong snapshot. */
+  /** B − D - phần khách còn trả trực tiếp chủ xe khi nhận xe, do server đóng băng trong snapshot. */
   @ApiPropertyOptional({ type: String, nullable: true })
   payAtPickupAmount!: string | null;
   @ApiProperty({
     description:
-      'Phần tiền thuê CỦA CHỦ XE (`D`) khách đã trả trước trong tiền giữ chỗ, đang ở XePrime — vào ví ' +
+      'Phần tiền thuê CỦA CHỦ XE (`D`) khách đã trả trước trong tiền giữ chỗ, đang ở XePrime - vào ví ' +
       'khi chuyến xong. KHÁC `holdPaidAmount` (gồm cả phí sàn `S` và bảo hiểm). 0 với đơn lập tay / ' +
       'chưa thu giữ chỗ (VND string)',
   })
@@ -308,11 +308,11 @@ export class BookingListItemDto {
 }
 
 /**
- * "CHUẨN BỊ BÀN GIAO" (Figma Partner `23768:29928`, 02/11/2026) — từng việc trước khi giao xe, SUY
- * từ dữ liệu đã có (không có bảng tick riêng — chốt 02/11). Server là nơi suy duy nhất: web chỉ
+ * "CHUẨN BỊ BÀN GIAO" (Figma Partner `23768:29928`, 02/11/2026) - từng việc trước khi giao xe, SUY
+ * từ dữ liệu đã có (không có bảng tick riêng - chốt 02/11). Server là nơi suy duy nhất: web chỉ
  * vẽ, không tự đếm lại từ năm truy vấn khác nhau.
  */
-/** Một việc đang được đánh dấu TAY — ai, lúc nào (03/11/2026). */
+/** Một việc đang được đánh dấu TAY - ai, lúc nào (03/11/2026). */
 export class BookingHandoverManualCheckDto {
   @ApiProperty({ enum: HANDOVER_PREP_ITEM_VALUES }) item!: HandoverPrepItem;
   @ApiProperty({ description: 'Thời điểm đánh dấu (ISO)' }) checkedAt!: string;
@@ -334,12 +334,12 @@ export class SetHandoverPrepCheckDto {
 export class BookingHandoverPrepDto {
   @ApiProperty({
     description:
-      'Khách có CCCD/GPLX/hộ chiếu ĐÃ ĐỐI CHIẾU trong sổ khách, hoặc GPLX tài khoản đã xác thực (ADR 0057) — và còn hạn tới hết ngày cuối chuyến',
+      'Khách có CCCD/GPLX/hộ chiếu ĐÃ ĐỐI CHIẾU trong sổ khách, hoặc GPLX tài khoản đã xác thực (ADR 0057) - và còn hạn tới hết ngày cuối chuyến',
   })
   documentsReady!: boolean;
   @ApiProperty({
     description:
-      'Khách còn phải đưa TAY lúc nhận xe (VND string) = công nợ − phần D chủ xe đã có trong tiền giữ chỗ online — 0 ⇒ xong việc thu tiền thuê',
+      'Khách còn phải đưa TAY lúc nhận xe (VND string) = công nợ − phần D chủ xe đã có trong tiền giữ chỗ online - 0 ⇒ xong việc thu tiền thuê',
   })
   rentDueAmount!: string;
   @ApiProperty({ description: 'Cọc theo đơn (VND string)' }) depositRequired!: string;
@@ -353,7 +353,7 @@ export class BookingHandoverPrepDto {
   @ApiPropertyOptional({
     type: Boolean,
     nullable: true,
-    description: 'Tài xế đã nhận chuyến — null khi đơn không có tài xế',
+    description: 'Tài xế đã nhận chuyến - null khi đơn không có tài xế',
   })
   driverReady!: boolean | null;
   @ApiProperty({
@@ -364,27 +364,27 @@ export class BookingHandoverPrepDto {
   manualChecks!: BookingHandoverManualCheckDto[];
 }
 
-/** Chi tiết một đơn — dùng cho trang chi tiết đơn. */
+/** Chi tiết một đơn - dùng cho trang chi tiết đơn. */
 export class BookingDetailDto extends BookingListItemDto {
-  /** Sự cố tài xế đang mở (ADR 0074) — null khi không có. */
+  /** Sự cố tài xế đang mở (ADR 0074) - null khi không có. */
   @ApiPropertyOptional({ type: BookingDriverIncidentDto, nullable: true })
   driverIncident!: BookingDriverIncidentDto | null;
   /**
-   * Khách trong SỔ KHÁCH của gian hàng — mở hồ sơ/giấy tờ từ màn đơn. NULL với đơn cũ không
+   * Khách trong SỔ KHÁCH của gian hàng - mở hồ sơ/giấy tờ từ màn đơn. NULL với đơn cũ không
    * khớp được khách (không có SĐT dùng được).
    *
    * CỐ Ý không lộ `customer_user_id`: đó là định danh XUYÊN TENANT, gian hàng không được cầm
    * (đối xứng `BookingRequestDetailDto`).
    */
   @ApiPropertyOptional({ type: String, nullable: true }) tenantCustomerId!: string | null;
-  /** Hành trình chuyến CÓ TÀI XẾ — null với dịch vụ khác (CHECK DB giữ luật này). */
+  /** Hành trình chuyến CÓ TÀI XẾ - null với dịch vụ khác (CHECK DB giữ luật này). */
   @ApiPropertyOptional({ enum: ROUTE_TYPE_VALUES, type: String, nullable: true })
   routeType!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) pickupAddress!: string | null;
   @ApiPropertyOptional({
     type: AddressViewDto,
     nullable: true,
-    description: 'Điểm đón có cấu trúc — SNAPSHOT của đơn, không viết lại khi danh mục đổi',
+    description: 'Điểm đón có cấu trúc - SNAPSHOT của đơn, không viết lại khi danh mục đổi',
   })
   pickupLocation!: AddressViewDto | null;
   @ApiPropertyOptional({ type: String, nullable: true }) destination!: string | null;
@@ -393,49 +393,49 @@ export class BookingDetailDto extends BookingListItemDto {
   @ApiProperty() baseAmount!: string;
   @ApiProperty() deliveryFee!: string;
   @ApiProperty() discountAmount!: string;
-  /** Snapshot giá bất biến chốt lúc tạo đơn (Wave 2) — null với đơn tạo trước khi có tính năng. */
+  /** Snapshot giá bất biến chốt lúc tạo đơn (Wave 2) - null với đơn tạo trước khi có tính năng. */
   @ApiPropertyOptional({ type: BookingPriceSnapshotDto, nullable: true })
   priceSnapshot!: BookingPriceSnapshotDto | null;
   /**
-   * Kinh tế của CHỦ XE, đóng băng trong snapshot lúc đặt (ADR 0024) — DTO nội bộ của gian hàng nên
+   * Kinh tế của CHỦ XE, đóng băng trong snapshot lúc đặt (ADR 0024) - DTO nội bộ của gian hàng nên
    * hiện ở đây là đúng chỗ (ADR 0064). `null` với đơn lập tay/đơn cũ không đi qua chính sách phí.
    */
-  /** @deprecated Đọc `ownerPayout.ownerCommissionAmount` — trường phẳng giữ cho app native cũ. */
+  /** @deprecated Đọc `ownerPayout.ownerCommissionAmount` - trường phẳng giữ cho app native cũ. */
   @ApiPropertyOptional({
     type: String,
     nullable: true,
     deprecated: true,
     description:
-      'DEPRECATED — đọc `ownerPayout.ownerCommissionAmount`. `H` — phí dịch vụ – chủ xe (lũy ' +
+      'DEPRECATED - đọc `ownerPayout.ownerCommissionAmount`. `H` - phí dịch vụ - chủ xe (lũy ' +
       'tiến theo ngày), XePrime giữ lại từ phần của chủ xe',
   })
   ownerCommissionAmount!: string | null;
-  /** @deprecated Đọc `ownerPayout.taxAmount` (kèm GTGT/TNCN tách riêng) — giữ cho app native cũ. */
+  /** @deprecated Đọc `ownerPayout.taxAmount` (kèm GTGT/TNCN tách riêng) - giữ cho app native cũ. */
   @ApiPropertyOptional({
     type: String,
     nullable: true,
     deprecated: true,
-    description: 'DEPRECATED — đọc `ownerPayout.taxAmount`. `T` — thuế khấu trừ khỏi tiền chủ xe',
+    description: 'DEPRECATED - đọc `ownerPayout.taxAmount`. `T` - thuế khấu trừ khỏi tiền chủ xe',
   })
   ownerTaxAmount!: string | null;
-  /** @deprecated Đọc `ownerPayout.ownerNetAmount` — trường phẳng giữ cho app native cũ. */
+  /** @deprecated Đọc `ownerPayout.ownerNetAmount` - trường phẳng giữ cho app native cũ. */
   @ApiPropertyOptional({
     type: String,
     nullable: true,
     deprecated: true,
     description:
-      'DEPRECATED — đọc `ownerPayout.ownerNetAmount`. `B − H − T` — chủ xe thực nhận cả chuyến',
+      'DEPRECATED - đọc `ownerPayout.ownerNetAmount`. `B − H − T` - chủ xe thực nhận cả chuyến',
   })
   ownerNetAmount!: string | null;
   /**
-   * Bảng cộng ví chủ xe (ADR 0068 điều 5) dựng từ snapshot đã đóng băng — cùng hình dạng, cùng hàm
+   * Bảng cộng ví chủ xe (ADR 0068 điều 5) dựng từ snapshot đã đóng băng - cùng hình dạng, cùng hàm
    * dựng với hộp duyệt yêu cầu. `null` với đơn lập tay/đơn cũ không đi qua chính sách phí.
    */
   @ApiPropertyOptional({
     type: OwnerPayoutDto,
     nullable: true,
     description:
-      'Bảng cộng ví chủ xe — doanh thu, phí dịch vụ – chủ xe, thuế tách GTGT/TNCN, thu nhập (a), ' +
+      'Bảng cộng ví chủ xe - doanh thu, phí dịch vụ - chủ xe, thuế tách GTGT/TNCN, thu nhập (a), ' +
       'khách trả trực tiếp (b), cộng ví (a − b). null = đơn không có bảng phí',
   })
   ownerPayout!: OwnerPayoutDto | null;
@@ -444,7 +444,7 @@ export class BookingDetailDto extends BookingListItemDto {
   @ApiPropertyOptional({
     type: BookingHandoverPrepDto,
     nullable: true,
-    description: 'Việc chuẩn bị bàn giao — chỉ có khi đơn còn chờ giao xe, null ở mọi chặng khác',
+    description: 'Việc chuẩn bị bàn giao - chỉ có khi đơn còn chờ giao xe, null ở mọi chặng khác',
   })
   handoverPrep?: BookingHandoverPrepDto | null;
 
@@ -457,12 +457,12 @@ export class BookingDetailDto extends BookingListItemDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Lúc tiền giữ chỗ về ĐỦ (ADR 0044) — null với đơn không qua giữ chỗ',
+    description: 'Lúc tiền giữ chỗ về ĐỦ (ADR 0044) - null với đơn không qua giữ chỗ',
   })
   holdPaidAt!: string | null;
 
   /**
-   * Nhóm lý do + câu gửi khách của lượt huỷ (`booking_cancellations`, ADR 0045) — banner "Đơn hàng
+   * Nhóm lý do + câu gửi khách của lượt huỷ (`booking_cancellations`, ADR 0045) - banner "Đơn hàng
    * đã huỷ. Lý do: …" của chi tiết đơn (Figma "Details - Failed", 05/11/2026). `null` khi đơn không
    * bị huỷ hoặc đơn cũ không có dòng trách nhiệm.
    */
@@ -475,12 +475,12 @@ export class BookingDetailDto extends BookingListItemDto {
     type: Number,
     nullable: true,
     description:
-      'Số chuyến ĐÃ HOÀN TẤT của khách này tại gian hàng (sổ khách) — để gắn nhãn "Khách quen"; null khi đơn không gắn hồ sơ khách. Chỉ có ở GET chi tiết',
+      'Số chuyến ĐÃ HOÀN TẤT của khách này tại gian hàng (sổ khách) - để gắn nhãn "Khách quen"; null khi đơn không gắn hồ sơ khách. Chỉ có ở GET chi tiết',
   })
   customerCompletedRentals?: number | null;
 }
 
-/** Bọc phân trang cho danh sách đơn (ADR 0007 — shape phải khai báo để FE sinh đúng type). */
+/** Bọc phân trang cho danh sách đơn (ADR 0007 - shape phải khai báo để FE sinh đúng type). */
 /** Số đơn của một nhóm việc dưới CÙNG bộ lọc (tìm kiếm · chi nhánh · dịch vụ) với trang đang xem. */
 export class BookingPresetCountDto {
   @ApiProperty({ enum: BOOKING_LIST_PRESET_VALUES }) preset!: string;
@@ -489,7 +489,7 @@ export class BookingPresetCountDto {
 
 export class BookingPageMetaDto extends PaginationMetaDto {
   /**
-   * Bốn nhóm việc của cột trái (02/11/2026) — đếm KHÔNG theo `preset`/`status` đang chọn, để cột
+   * Bốn nhóm việc của cột trái (02/11/2026) - đếm KHÔNG theo `preset`/`status` đang chọn, để cột
    * trái nói được mỗi ngăn còn bao nhiêu khi người dùng đang đứng ở một ngăn khác.
    */
   @ApiProperty({ type: [BookingPresetCountDto] }) presetCounts!: BookingPresetCountDto[];
@@ -527,7 +527,7 @@ export class CreateBookingDto {
   serviceType?: string;
 
   /**
-   * Hành trình — bắt buộc khi `serviceType = with_driver` (kiểm chéo ở service qua
+   * Hành trình - bắt buộc khi `serviceType = with_driver` (kiểm chéo ở service qua
    * `normalizeRouteContext`, class-validator không mô tả được điều kiện chéo này).
    */
   @ApiPropertyOptional({ enum: ROUTE_TYPE_VALUES })
@@ -607,7 +607,7 @@ export class CreateBookingDto {
   pickupAt!: string;
 
   /**
-   * Gói thuê dài hạn (tháng lịch) — BẮT BUỘC khi serviceType = long_term. Ngày trả suy ra từ
+   * Gói thuê dài hạn (tháng lịch) - BẮT BUỘC khi serviceType = long_term. Ngày trả suy ra từ
    * gói ở SERVER; giá trị `returnAt` client gửi kèm bị BỎ QUA cho dịch vụ này (ADR 0011).
    */
   @ApiPropertyOptional({ enum: LONG_TERM_PACKAGE_MONTHS_VALUES })
@@ -616,14 +616,14 @@ export class CreateBookingDto {
   @IsIn(LONG_TERM_PACKAGE_MONTHS_VALUES)
   longTermPackageMonths?: number;
 
-  /** Bỏ trống với thuê dài hạn — server suy ngày trả từ gói (giá trị gửi kèm bị bỏ qua). */
-  @ApiPropertyOptional({ description: 'Trả xe (ISO-8601) — không dùng cho long_term' })
+  /** Bỏ trống với thuê dài hạn - server suy ngày trả từ gói (giá trị gửi kèm bị bỏ qua). */
+  @ApiPropertyOptional({ description: 'Trả xe (ISO-8601) - không dùng cho long_term' })
   @ValidateIf((o: CreateBookingDto) => o.serviceType !== SERVICE_TYPE.LONG_TERM)
   @IsDateString()
   returnAt?: string;
 
   @ApiPropertyOptional({
-    description: 'Tiền thuê gốc, string thập phân — ADR 0007',
+    description: 'Tiền thuê gốc, string thập phân - ADR 0007',
     example: '600000',
   })
   @IsOptional()
@@ -653,14 +653,14 @@ export class CreateBookingDto {
 }
 
 /**
- * Sửa đơn — CHỈ thông tin liên hệ, cọc tài sản và ghi chú (quyết định sản phẩm 19/10/2026).
+ * Sửa đơn - CHỈ thông tin liên hệ, cọc tài sản và ghi chú (quyết định sản phẩm 19/10/2026).
  *
  * Loại dịch vụ, lịch, lộ trình và tiền thuê ĐÓNG BĂNG lúc tạo đơn (ADR 0024): sửa chúng sau khi
- * khách đã đặt (có thể đã trả giữ chỗ) là viết lại thoả thuận một phía — và từng mở đường đổi đơn
+ * khách đã đặt (có thể đã trả giữ chỗ) là viết lại thoả thuận một phía - và từng mở đường đổi đơn
  * sang một dịch vụ xe không chào, hay gỡ ngầm tài xế đã nhận chuyến. Muốn khác thì huỷ đơn theo
  * luồng huỷ có trách nhiệm rồi lập lại. Phí giao nhận có endpoint riêng (`PATCH …/delivery-fee`),
  * phát sinh ghi ở mục Phát sinh, tài xế gán ở `PATCH …/driver`. Trường lạ bị pipe từ chối.
- * KHÔNG cho đổi `status` ở đây — chuyển trạng thái đi qua endpoint transition.
+ * KHÔNG cho đổi `status` ở đây - chuyển trạng thái đi qua endpoint transition.
  */
 export class UpdateBookingDto {
   @ApiPropertyOptional({ example: 'Nguyễn Văn A' })
@@ -690,7 +690,7 @@ export class UpdateBookingDto {
 }
 
 /**
- * Cập nhật phí giao nhận của đơn — hành động ngữ nghĩa riêng (Wave 9).
+ * Cập nhật phí giao nhận của đơn - hành động ngữ nghĩa riêng (Wave 9).
  *
  * Vì sao không dùng thẳng `PATCH /bookings/:id` (đã nhận `deliveryFee`): đường chung đó không
  * ghi audit và trộn chung với sửa tiền thuê/cọc, nên không phân biệt được "chủ xe chốt phí giao
@@ -702,14 +702,14 @@ export class UpdateBookingDto {
  */
 export class UpdateBookingDeliveryFeeDto {
   @ApiProperty({
-    description: 'Phí giao nhận VND (chuỗi — ADR 0007). `0` = miễn phí.',
+    description: 'Phí giao nhận VND (chuỗi - ADR 0007). `0` = miễn phí.',
     example: '120000',
   })
   @Matches(MONEY_PATTERN, { message: 'Phí giao nhận không hợp lệ (số VND không âm)' })
   deliveryFee!: string;
 
   @ApiPropertyOptional({
-    description: 'Ghi chú NỘI BỘ (lý do, mã tham chiếu) — chỉ vào audit, KHÔNG hiển thị cho khách',
+    description: 'Ghi chú NỘI BỘ (lý do, mã tham chiếu) - chỉ vào audit, KHÔNG hiển thị cho khách',
   })
   @IsOptional()
   @IsString()
@@ -717,13 +717,13 @@ export class UpdateBookingDeliveryFeeDto {
   note?: string;
 }
 
-/** Tài xế NGOÀI HỆ THỐNG ghi trên đơn (ADR 0067) — tên + SĐT di động VN, không tài khoản. */
+/** Tài xế NGOÀI HỆ THỐNG ghi trên đơn (ADR 0067) - tên + SĐT di động VN, không tài khoản. */
 export class ExternalDriverInputDto {
   @ApiProperty({
     example: 'Nguyễn Văn Tài',
     minLength: EXTERNAL_DRIVER_NAME_LENGTH.MIN,
     maxLength: EXTERNAL_DRIVER_NAME_LENGTH.MAX,
-    description: 'Tên tài xế — cắt khoảng trắng hai đầu trước khi kiểm',
+    description: 'Tên tài xế - cắt khoảng trắng hai đầu trước khi kiểm',
   })
   @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
@@ -734,7 +734,7 @@ export class ExternalDriverInputDto {
     example: '0901234567',
     pattern: VN_PHONE_PATTERN.source,
     description:
-      'SĐT di động VN (`0xxxxxxxxx` / `84xxxxxxxxx` / `+84xxxxxxxxx`; dấu cách, chấm, gạch bị bỏ qua; lưu `0…`) — khách gọi số này để gặp người đón',
+      'SĐT di động VN (`0xxxxxxxxx` / `84xxxxxxxxx` / `+84xxxxxxxxx`; dấu cách, chấm, gạch bị bỏ qua; lưu `0…`) - khách gọi số này để gặp người đón',
   })
   @PhoneInput()
   @IsString()
@@ -743,11 +743,11 @@ export class ExternalDriverInputDto {
 }
 
 /**
- * Gán/bỏ gán tài xế cho đơn — gửi ĐÚNG MỘT trong hai khoá:
+ * Gán/bỏ gán tài xế cho đơn - gửi ĐÚNG MỘT trong hai khoá:
  *
  *  - `driverId` (ADR 0063): id LIÊN KẾT tài xế (`drivers.id`); `null` là BỎ GÁN tường minh (gỡ cả
- *    tài xế liên kết lẫn tài xế ngoài hệ thống) — để không lẫn "không gửi gì" với "gỡ tài xế".
- *  - `externalDriver` (ADR 0067): ĐÃ BỎ ở ADR 0074 điều 4 — controller trả 422
+ *    tài xế liên kết lẫn tài xế ngoài hệ thống) - để không lẫn "không gửi gì" với "gỡ tài xế".
+ *  - `externalDriver` (ADR 0067): ĐÃ BỎ ở ADR 0074 điều 4 - controller trả 422
  *    `EXTERNAL_DRIVER_NOT_SUPPORTED`. Khoá còn trong DTO để app cũ nhận đúng mã lỗi thay vì 400.
  *
  * Luật ở `DriversService` (writer duy nhất); CHECK ở DB chặn nốt trường hợp service quên.
@@ -756,9 +756,9 @@ export class AssignBookingDriverDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'ID liên kết tài xế (ULID) — null để bỏ gán. Không gửi cùng `externalDriver`.',
+    description: 'ID liên kết tài xế (ULID) - null để bỏ gán. Không gửi cùng `externalDriver`.',
   })
-  // Kiểm cả khi VẮNG nếu `externalDriver` cũng vắng — để body rỗng bị `ExactlyOneOf` từ chối.
+  // Kiểm cả khi VẮNG nếu `externalDriver` cũng vắng - để body rỗng bị `ExactlyOneOf` từ chối.
   @ValidateIf(
     (o: AssignBookingDriverDto) => o.driverId !== undefined || o.externalDriver === undefined,
   )
@@ -777,7 +777,7 @@ export class AssignBookingDriverDto {
     type: ExternalDriverInputDto,
     deprecated: true,
     description:
-      'ĐÃ BỎ (ADR 0074 điều 4) — có mặt là 422 `EXTERNAL_DRIVER_NOT_SUPPORTED`. Giữ trong contract để app cũ nhận đúng mã lỗi.',
+      'ĐÃ BỎ (ADR 0074 điều 4) - có mặt là 422 `EXTERNAL_DRIVER_NOT_SUPPORTED`. Giữ trong contract để app cũ nhận đúng mã lỗi.',
   })
   @ValidateIf((o: AssignBookingDriverDto) => o.externalDriver !== undefined)
   @IsObject()
@@ -788,7 +788,7 @@ export class AssignBookingDriverDto {
   @ApiPropertyOptional({
     type: String,
     description:
-      'Tiền công của lượt gán (VND, bội 1.000đ — ADR 0075). Bỏ trống = tiền công/ngày mặc định của gian hàng × số ngày; bắt buộc khi gian hàng chưa đặt mức mặc định (422 `DRIVER_WAGE_REQUIRED`). Chỉ áp khi gán một tài xế.',
+      'Tiền công của lượt gán (VND, bội 1.000đ - ADR 0075). Bỏ trống = tiền công/ngày mặc định của gian hàng × số ngày; bắt buộc khi gian hàng chưa đặt mức mặc định (422 `DRIVER_WAGE_REQUIRED`). Chỉ áp khi gán một tài xế.',
   })
   @IsOptional()
   @Matches(/^\d{1,12}$/, { message: 'Tiền công không hợp lệ (số VND nguyên không âm)' })
@@ -798,15 +798,15 @@ export class AssignBookingDriverDto {
 
 /**
  * Trạng thái đích mà ENDPOINT CÔNG KHAI `POST /bookings/:id/transition` được phép nhận (ADR
- * 0047) — đây là một quyết định BẤM TAY khép đơn, không phải một bộ chọn trạng thái tự do.
+ * 0047) - đây là một quyết định BẤM TAY khép đơn, không phải một bộ chọn trạng thái tự do.
  *
  * `active`/`completed` KHÔNG có mặt: chúng chỉ đến từ một biên bản bàn giao thật, do
- * `HandoversService` gọi `transitionWithinTx` NỘI BỘ — cho client tự đặt `active` là cho phép
+ * `HandoversService` gọi `transitionWithinTx` NỘI BỘ - cho client tự đặt `active` là cho phép
  * bỏ qua bằng chứng bàn giao (số KM, ảnh hiện trạng) hoàn toàn. `confirmed` (deprecated) cũng
- * không có mặt — không còn ai "xác nhận đơn" thủ công (xem `BookingStatusActions`): duyệt yêu
+ * không có mặt - không còn ai "xác nhận đơn" thủ công (xem `BookingStatusActions`): duyệt yêu
  * cầu ở `Duyệt & giữ xe` CHÍNH LÀ sự xác nhận.
  *
- * Cả hai giá trị còn lại đều là kết thúc tiêu cực, khép đơn vĩnh viễn và nhả lịch xe ngay — sáu
+ * Cả hai giá trị còn lại đều là kết thúc tiêu cực, khép đơn vĩnh viễn và nhả lịch xe ngay - sáu
  * tháng sau, khi khách gọi hỏi "vì sao đơn của tôi bị huỷ", thứ duy nhất còn lại là dòng audit.
  * Nên cả hai đều phải nói được VÌ SAO (`transitionNeedsReason`).
  */
@@ -817,8 +817,8 @@ const BOOKING_TRANSITION_ALLOWED_VALUES: readonly string[] = [
 
 /**
  * Khi nào chữ tự do BẮT BUỘC (người dùng chốt 06/11/2026):
- *  - `no_show` — luôn: nó không có nhóm lý do, chữ là lời giải thích duy nhất;
- *  - `cancelled` — chỉ khi nhóm là "Lý do khác": các nhóm còn lại đã tự nói vì sao, và ép gõ thêm
+ *  - `no_show` - luôn: nó không có nhóm lý do, chữ là lời giải thích duy nhất;
+ *  - `cancelled` - chỉ khi nhóm là "Lý do khác": các nhóm còn lại đã tự nói vì sao, và ép gõ thêm
  *    chỉ sinh ra chữ cho có. Cùng luật với lượt huỷ ở chặng chờ thanh toán
  *    (`BookingRequestsService.cancelByHost`).
  */
@@ -831,24 +831,24 @@ function transitionNeedsReason(o: TransitionBookingDto): boolean {
   );
 }
 
-/** Chuyển trạng thái đơn — server validate bằng canTransitionBooking(), không tin client. */
+/** Chuyển trạng thái đơn - server validate bằng canTransitionBooking(), không tin client. */
 export class TransitionBookingDto {
   @ApiProperty({
     enum: BOOKING_TRANSITION_ALLOWED_VALUES,
-    description: 'Trạng thái đích — chỉ hai quyết định bấm tay: huỷ đơn hoặc khách không đến',
+    description: 'Trạng thái đích - chỉ hai quyết định bấm tay: huỷ đơn hoặc khách không đến',
   })
   @IsIn(BOOKING_TRANSITION_ALLOWED_VALUES)
   status!: string;
 
   /**
-   * Lý do — BẮT BUỘC khi ghi nhận khách không đến, và khi huỷ với nhóm "Lý do khác"
+   * Lý do - BẮT BUỘC khi ghi nhận khách không đến, và khi huỷ với nhóm "Lý do khác"
    * (`transitionNeedsReason`); tuỳ chọn ở các ca còn lại.
    *
    * Trim TRƯỚC khi kiểm: một ô toàn dấu cách là ô trống, và để nó lọt qua thì luật này chỉ còn
    * chặn được người dùng cẩu thả chứ không chặn được cái nó sinh ra để chặn. Ở ca tuỳ chọn, chuỗi
-   * rỗng sau trim là "không ghi" — bỏ qua, service nhận như vắng mặt.
+   * rỗng sau trim là "không ghi" - bỏ qua, service nhận như vắng mặt.
    *
-   * Điều kiện "có chữ" giữ trần 500 ký tự có hiệu lực cả ở ca KHÔNG bắt buộc — `@ValidateIf`
+   * Điều kiện "có chữ" giữ trần 500 ký tự có hiệu lực cả ở ca KHÔNG bắt buộc - `@ValidateIf`
    * sai là bỏ qua TOÀN BỘ validator của trường, nên nếu chỉ đặt điều kiện bắt buộc thì một
    * `reason` dài 100k ký tự đi kèm nhóm "xe hỏng" sẽ không ai kiểm.
    *
@@ -861,7 +861,7 @@ export class TransitionBookingDto {
    */
   @ApiPropertyOptional({
     description:
-      'Lý do — BẮT BUỘC khi status = no_show, hoặc cancelled với reasonCategory = other. Ghi vào audit (afterJson.reason), KHÔNG ghi vào note của đơn. Khi cancelled, câu này cũng vào thông báo huỷ gửi tài khoản khách',
+      'Lý do - BẮT BUỘC khi status = no_show, hoặc cancelled với reasonCategory = other. Ghi vào audit (afterJson.reason), KHÔNG ghi vào note của đơn. Khi cancelled, câu này cũng vào thông báo huỷ gửi tài khoản khách',
     maxLength: 500,
   })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
@@ -875,7 +875,7 @@ export class TransitionBookingDto {
   reason?: string;
 
   /**
-   * NHÓM lý do — bắt buộc khi `status = cancelled` (ADR 0045 điều 1).
+   * NHÓM lý do - bắt buộc khi `status = cancelled` (ADR 0045 điều 1).
    *
    * Có nhóm vì ô văn xuôi không thống kê được: vận hành cần biết "xe hỏng" chiếm bao nhiêu phần
    * trăm để sửa đúng chỗ, và chỉ số uy tín cần một khoá để lọc. Ô chữ tự do (`reason`) đứng CẠNH
@@ -886,7 +886,7 @@ export class TransitionBookingDto {
    */
   @ApiPropertyOptional({
     enum: CANCELLATION_REASON_CATEGORY_VALUES,
-    description: 'Nhóm lý do — BẮT BUỘC khi status = cancelled',
+    description: 'Nhóm lý do - BẮT BUỘC khi status = cancelled',
   })
   @ValidateIf((o: TransitionBookingDto) => o.status === BOOKING_STATUS.CANCELLED)
   @IsIn(CANCELLATION_REASON_CATEGORY_VALUES, { message: 'Chọn nhóm lý do khi huỷ đơn' })

@@ -4,6 +4,8 @@ import { ExclamationCircleOutlined, InboxOutlined, SearchOutlined } from '@ant-d
 import { Button } from 'antd';
 import type { ReactNode } from 'react';
 
+import { floatClass } from '@/components/motion/motion-classes';
+import { cx } from '@/lib/cx';
 import styles from './EmptyState.module.css';
 import { useTranslations } from 'next-intl';
 
@@ -67,7 +69,10 @@ export function EmptyState({
 
   return (
     <div className={styles.root} role={isError ? 'alert' : 'status'}>
-      <span className={isError ? styles.iconError : styles.icon} aria-hidden="true">
+      <span
+        className={cx(isError ? styles.iconError : styles.icon, floatClass)}
+        aria-hidden="true"
+      >
         {ICON[variant]}
       </span>
       <p className={styles.title}>{title}</p>

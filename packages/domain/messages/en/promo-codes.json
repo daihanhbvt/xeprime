@@ -12,7 +12,7 @@
     "applied": "Code {code} applied",
     "clamped": "This code discounts at most {amount} for this trip.",
     "unavailableForTrip": "This trip has no confirmed price yet, so a promo code cannot be applied.",
-    "revalidating": "Rental details changed — rechecking the code…",
+    "revalidating": "Rental details changed - rechecking the code…",
     "dropped": "Code {code} no longer applies to the updated trip. The total has been refreshed."
   },
   "picker": {
@@ -134,7 +134,7 @@
       "updated": "Code {code} saved",
       "enabled": "Code {code} enabled",
       "disabled": "Code {code} paused",
-      "duplicated": "Copy {code} created — it is paused, review it before enabling",
+      "duplicated": "Copy {code} created - it is paused, review it before enabling",
       "deleted": "Code {code} deleted"
     },
     "form": {
@@ -182,7 +182,7 @@
       "submitCreate": "Create promo code",
       "submitEdit": "Save changes",
       "cancel": "Cancel",
-      "lockedNotice": "This code has been used. Its discount, conditions and scope can no longer change — use Duplicate if you need a different set.",
+      "lockedNotice": "This code has been used. Its discount, conditions and scope can no longer change - use Duplicate if you need a different set.",
       "redeemedFinalNotice": "A booking that was created and then cancelled does NOT return the code use.",
       "preview": {
         "title": "Promo code preview",
@@ -196,12 +196,12 @@
         "noteLimit": "You can cap total uses and set conditions.",
         "noteVisibility": "Customers only see the code while it is valid.",
         "noteToggle": "You can pause or delete a code at any time.",
-        "noteSponsored": "XePrime funds the discount — the host still receives the full rental."
+        "noteSponsored": "XePrime funds the discount - the host still receives the full rental."
       }
     },
     "validation": {
       "codeRequired": "Enter a promo code",
-      "codeFormat": "Letters and digits only, {min}–{max} characters",
+      "codeFormat": "Letters and digits only, {min}-{max} characters",
       "nameRequired": "Enter a campaign name",
       "amountRequired": "Enter a discount amount",
       "amountRange": "The discount must be above 0 and at most {max}",

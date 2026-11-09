@@ -151,7 +151,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Công nợ — bộ lọc ở URL', () => {
+describe('Công nợ - bộ lọc ở URL', () => {
   it('đọc `q` và `filter` từ URL rồi truyền thẳng xuống hook', () => {
     nav.params = new URLSearchParams('q=51A&filter=overdue');
     renderPage();
@@ -193,7 +193,7 @@ describe('Công nợ — bộ lọc ở URL', () => {
   });
 });
 
-describe('Công nợ — rỗng vì chưa nợ vs rỗng vì lọc', () => {
+describe('Công nợ - rỗng vì chưa nợ vs rỗng vì lọc', () => {
   it('không lọc và rỗng: "chưa ai còn nợ"', () => {
     setQuery({ data: { items: [], meta: { ...META, total: 0 } } });
     renderPage();
@@ -213,7 +213,7 @@ describe('Công nợ — rỗng vì chưa nợ vs rỗng vì lọc', () => {
   });
 });
 
-describe('Công nợ — bảng', () => {
+describe('Công nợ - bảng', () => {
   it('lỗi khi chưa có dữ liệu: nút thử lại gọi refetch', () => {
     setQuery({ isError: true });
     renderPage();
@@ -237,7 +237,7 @@ describe('Công nợ — bảng', () => {
   });
 });
 
-describe('Công nợ — thẻ, chip và bảng theo design', () => {
+describe('Công nợ - thẻ, chip và bảng theo design', () => {
   it('chip nhóm hạn mang số đếm của TỪNG nhóm, đọc từ dải thẻ', () => {
     renderPage();
     const group = screen.getByRole('radiogroup', { name: 'Nhóm theo hạn trả' });

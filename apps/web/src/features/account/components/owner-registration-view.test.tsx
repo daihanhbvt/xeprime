@@ -180,7 +180,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Tiến trình đăng ký — một cổng duyệt', () => {
+describe('Tiến trình đăng ký - một cổng duyệt', () => {
   it('không còn bước "chờ nền tảng duyệt hồ sơ gian hàng"', () => {
     render();
 
@@ -197,7 +197,7 @@ describe('Tiến trình đăng ký — một cổng duyệt', () => {
     expect(screen.getByRole('link', { name: /Đăng xe đầu tiên/ })).toBeTruthy();
   });
 
-  it('xe NHÁP vẫn hiện trong danh sách tiến trình — không biến mất', () => {
+  it('xe NHÁP vẫn hiện trong danh sách tiến trình - không biến mất', () => {
     vehicles.data = { items: [makeVehicle({ name: 'Vios nháp' })] };
     render();
 

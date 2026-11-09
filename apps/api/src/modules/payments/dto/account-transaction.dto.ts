@@ -68,7 +68,7 @@ export class AccountTransactionDto {
   @ApiProperty({ enum: ACCOUNT_TRANSACTION_KIND_VALUES }) kind!: AccountTransactionKind;
   @ApiProperty({
     enum: ACCOUNT_TRANSACTION_TITLE_VALUES,
-    description: 'Khoá tiêu đề — client dịch, không tự suy',
+    description: 'Khoá tiêu đề - client dịch, không tự suy',
   })
   title!: AccountTransactionTitle;
   @ApiPropertyOptional({
@@ -88,7 +88,7 @@ export class AccountTransactionDto {
   })
   tripId!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) bookingCode!: string | null;
-  @ApiProperty({ description: 'Lệnh rút còn chờ duyệt — khách tự huỷ được' })
+  @ApiProperty({ description: 'Lệnh rút còn chờ duyệt - khách tự huỷ được' })
   cancellable!: boolean;
 }
 

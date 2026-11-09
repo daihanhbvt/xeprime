@@ -64,7 +64,7 @@ describe('leaveApp', () => {
     expect(router.replace).toHaveBeenCalledWith(GUEST_HOME);
   });
 
-  it('nuốt lỗi khi cây điều hướng chưa mount — listener đứng sau vẫn phải chạy', () => {
+  it('nuốt lỗi khi cây điều hướng chưa mount - listener đứng sau vẫn phải chạy', () => {
     const router = fakeRouter({
       replace: jest.fn(() => {
         throw new Error('assertIsReady');

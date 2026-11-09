@@ -1,4 +1,4 @@
-/* Trang trần — cùng thanh trên cùng với onboarding để người đang trả bước đầu thấy liền mạch. */
+/* Trang trần - cùng thanh trên cùng với onboarding để người đang trả bước đầu thấy liền mạch. */
 .page {
   display: flex;
   min-height: 100dvh;
@@ -40,7 +40,7 @@
   color: var(--xp-color-warning);
 }
 
-/* Bản trong khung site partner — design `24051:79507` (page header có nút quay lại). */
+/* Bản trong khung site partner - design `24051:79507` (page header có nút quay lại). */
 .shellPage {
   display: flex;
   width: 100%;

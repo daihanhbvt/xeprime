@@ -57,7 +57,7 @@ export class CustomerSupportController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Yêu cầu hỗ trợ của tôi — mặc định chỉ case còn mở' })
+  @ApiOperation({ summary: 'Yêu cầu hỗ trợ của tôi - mặc định chỉ case còn mở' })
   @ApiOkResponse({ type: SupportCasePageDto })
   list(
     @CurrentUser() user: AuthenticatedUser,

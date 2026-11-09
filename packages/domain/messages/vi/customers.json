@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Khách hàng",
-    "subtitle": "Sổ khách của gian hàng: lịch sử thuê, công nợ, ghi chú và giấy tờ — chỉ gian hàng của bạn nhìn thấy.",
+    "subtitle": "Sổ khách của gian hàng: lịch sử thuê, công nợ, ghi chú và giấy tờ - chỉ gian hàng của bạn nhìn thấy.",
     "add": "Thêm khách hàng",
     "totalLabel": "{count, plural, other {# khách}}",
     "listTitle": "Danh sách khách hàng",
@@ -34,7 +34,7 @@
   "hints": {
     "relationship": "\"Khách quen\" là khách đã hoàn tất từ 2 chuyến trở lên. \"Đã lưu trữ\" nằm ngoài mọi nhóm khác.",
     "riskLevel": "\"Cần lưu ý\" chỉ nhắc người trực, không chặn gì. \"Từ chối phục vụ\" chặn yêu cầu và đơn MỚI ở gian hàng này; đơn đang có giữ nguyên.",
-    "notes": "Ghi chú chỉ hiển thị trong gian hàng của bạn — khách không bao giờ nhìn thấy.",
+    "notes": "Ghi chú chỉ hiển thị trong gian hàng của bạn - khách không bao giờ nhìn thấy.",
     "documents": "Tệp nằm trong kho riêng tư. Mỗi lần mở đều được ghi vào nhật ký hệ thống và cần quyền xem tệp.",
     "debt": "Còn nợ = tổng tiền đơn − đã thu, bỏ qua đơn đã huỷ."
   },
@@ -86,12 +86,12 @@
     "blockedBannerTitle": "Gian hàng đang từ chối phục vụ khách này",
     "blockedBannerBody": "Yêu cầu và đơn MỚI bị chặn ở gian hàng này. Khách chỉ nhận được thông báo trung tính, không biết lý do nội bộ.",
     "watchlistBannerTitle": "Khách được đánh dấu cần lưu ý",
-    "watchlistBannerBody": "Đây chỉ là lời nhắc cho người trực — không thao tác nào bị chặn."
+    "watchlistBannerBody": "Đây chỉ là lời nhắc cho người trực - không thao tác nào bị chặn."
   },
   "actions": {
     "edit": "Sửa hồ sơ",
     "createBooking": "Tạo đơn thuê",
-    "createBookingBlocked": "Khách đang bị từ chối phục vụ — đổi mức rủi ro trước khi lập đơn mới",
+    "createBookingBlocked": "Khách đang bị từ chối phục vụ - đổi mức rủi ro trước khi lập đơn mới",
     "addNote": "Thêm ghi chú",
     "risk": "Mức rủi ro",
     "archive": "Lưu trữ",
@@ -147,7 +147,7 @@
     "fullNamePlaceholder": "Nguyễn Văn An",
     "phone": "Số điện thoại",
     "phonePlaceholder": "0901234567",
-    "phoneHelp": "Đây là cách hệ thống nhận ra khách quen — cùng một số chỉ có một hồ sơ trong gian hàng.",
+    "phoneHelp": "Đây là cách hệ thống nhận ra khách quen - cùng một số chỉ có một hồ sơ trong gian hàng.",
     "email": "Email (không bắt buộc)",
     "address": "Địa chỉ (không bắt buộc)",
     "submitAdd": "Thêm khách",
@@ -188,7 +188,7 @@
     "expiresTag": "Hạn {date}",
     "upload": "Tải giấy tờ lên",
     "uploaded": "Đã tải giấy tờ lên kho riêng tư",
-    "uploadsNotConfigured": "Kho tài liệu riêng tư chưa được cấu hình — liên hệ quản trị hệ thống",
+    "uploadsNotConfigured": "Kho tài liệu riêng tư chưa được cấu hình - liên hệ quản trị hệ thống",
     "errorTitle": "Không tải được danh sách giấy tờ",
     "emptyTitle": "Chưa có giấy tờ nào của khách này",
     "unknownUploader": "Không rõ người tải",

@@ -88,10 +88,10 @@ export function DriverDailyWageFields({
       />
       <XStack ai="center" jc="space-between" gap={space.sm}>
         <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
-          {t('total', { daily: valid ? fmt.money(String(daily)) : '—', days: quote.days })}
+          {t('total', { daily: valid ? fmt.money(String(daily)) : '-', days: quote.days })}
         </Text>
         <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-          {total === null ? '—' : fmt.money(String(total))}
+          {total === null ? '-' : fmt.money(String(total))}
         </Text>
       </XStack>
       {total !== null && total > Number(quote.rentAmount) ? (

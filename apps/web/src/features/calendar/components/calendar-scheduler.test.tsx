@@ -224,7 +224,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('CalendarScheduler — lưới điều phối đội xe', () => {
+describe('CalendarScheduler - lưới điều phối đội xe', () => {
   it('cột xe hiện đủ nhận diện: tên, biển số, giá ngày', () => {
     renderScheduler();
     expect(screen.getByText('Toyota Vios 2023')).toBeTruthy();
@@ -239,7 +239,7 @@ describe('CalendarScheduler — lưới điều phối đội xe', () => {
     expect(screen.getByLabelText('Ngày 14: 5 xe còn trống')).toBeTruthy();
   });
 
-  it('bấm ô trống mở bộ chọn hành động với ĐỦ ba lựa chọn khi đủ quyền — chưa chạy gì cả', () => {
+  it('bấm ô trống mở bộ chọn hành động với ĐỦ ba lựa chọn khi đủ quyền - chưa chạy gì cả', () => {
     renderScheduler();
     fireEvent.click(screen.getByLabelText(/Tạo lịch cho Toyota Vios 2023 ngày 12\/10/));
 
@@ -263,7 +263,7 @@ describe('CalendarScheduler — lưới điều phối đội xe', () => {
     expect(within(menu).queryByText('Đặt giá')).toBeNull();
   });
 
-  it('chủ xe tuyến HOA HỒNG không lập đơn tay — ô chỉ mời Khóa xe/Đặt giá dù có bookings.create', () => {
+  it('chủ xe tuyến HOA HỒNG không lập đơn tay - ô chỉ mời Khóa xe/Đặt giá dù có bookings.create', () => {
     // Đơn lập tay không mang phí sàn lẫn hoa hồng; chuyến ngoài chợ giữ lịch bằng khoá xe.
     me.billingMode = BILLING_MODE.COMMISSION;
     renderScheduler();
@@ -275,7 +275,7 @@ describe('CalendarScheduler — lưới điều phối đội xe', () => {
     expect(within(menu).getByText('Đặt giá')).toBeTruthy();
   });
 
-  it('không còn quyền thao tác nào thì ô KHÔNG phải nút — người chỉ xem không bị mời bấm', () => {
+  it('không còn quyền thao tác nào thì ô KHÔNG phải nút - người chỉ xem không bị mời bấm', () => {
     permissions.granted = new Set([PERMISSION.CALENDAR_VIEW]);
     renderScheduler();
     expect(screen.queryByLabelText(/Tạo lịch cho Toyota Vios 2023/)).toBeNull();
@@ -335,7 +335,7 @@ describe('CalendarScheduler — lưới điều phối đội xe', () => {
     expect(screen.getByTestId('maintenance-dialog').textContent).toBe('mnt-7');
   });
 
-  it('đơn chỉ vài tiếng vẫn có thanh đủ rộng để đọc/bấm — sàn bề rộng, không phải vệt vài px', () => {
+  it('đơn chỉ vài tiếng vẫn có thanh đủ rộng để đọc/bấm - sàn bề rộng, không phải vệt vài px', () => {
     data.eventsByResource = new Map([
       [
         'veh-1',
@@ -352,7 +352,7 @@ describe('CalendarScheduler — lưới điều phối đội xe', () => {
     expect(parseFloat(bar.style.getPropertyValue('--xp-bar-width'))).toBeGreaterThanOrEqual(46);
   });
 
-  it('event dưới 24h vẽ theo THANG 12H (nhân đôi, cặp 1 ngày) — 11 tiếng chiếm gần trọn ô', () => {
+  it('event dưới 24h vẽ theo THANG 12H (nhân đôi, cặp 1 ngày) - 11 tiếng chiếm gần trọn ô', () => {
     data.eventsByResource = new Map([
       [
         'veh-1',
@@ -404,7 +404,7 @@ describe('CalendarScheduler — lưới điều phối đội xe', () => {
     expect(screen.getByLabelText(/Tạo lịch cho Toyota Vios 2023 ngày 12\/10/)).toBeTruthy();
   });
 
-  it('ô có giá riêng nói ra trong nhãn trợ năng — không chỉ là một chấm màu', () => {
+  it('ô có giá riêng nói ra trong nhãn trợ năng - không chỉ là một chấm màu', () => {
     data.priceMarkers = new Map([
       ['veh-1:2026-10-12', { dailyPrice: '1200000', hourlyPrice: null }],
     ]);
@@ -428,7 +428,7 @@ describe('CalendarScheduler — lưới điều phối đội xe', () => {
  *  - ngày lễ phải nhận ra được bằng thứ KHÁC màu nền (nhãn trợ năng + cờ), vì nền cột cố ý rất nhạt;
  *  - ngày lễ KHÔNG được chặn bất cứ thao tác nào — ô vẫn mở bộ chọn hành động như mọi ngày khác.
  */
-describe('CalendarScheduler — lớp ngày lễ', () => {
+describe('CalendarScheduler - lớp ngày lễ', () => {
   const QUOC_KHANH = {
     id: 'hol-1',
     startDate: '2026-10-13',
@@ -453,7 +453,7 @@ describe('CalendarScheduler — lớp ngày lễ', () => {
     expect(screen.queryByLabelText(/^Ngày lễ:/)).toBeNull();
   });
 
-  it('thẻ ngày lễ chỉ còn TÊN và LOẠI — ngày/nguồn/thời điểm đồng bộ đã bỏ theo thiết kế mới', async () => {
+  it('thẻ ngày lễ chỉ còn TÊN và LOẠI - ngày/nguồn/thời điểm đồng bộ đã bỏ theo thiết kế mới', async () => {
     holidays.byDay = new Map([['2026-10-13', QUOC_KHANH]]);
     renderScheduler();
 
@@ -577,7 +577,7 @@ describe('CalendarScheduler — lớp ngày lễ', () => {
  *  - không còn nút "Xem chi tiết";
  *  - hai hành động đi theo QUYỀN, và ngày thường cũng bấm được (khoá/đặt giá là việc quanh năm).
  */
-describe('CalendarScheduler — bảng hành động của một ngày', () => {
+describe('CalendarScheduler - bảng hành động của một ngày', () => {
   const HOLIDAY = {
     id: 'hol-1',
     startDate: '2026-10-13',
@@ -589,7 +589,7 @@ describe('CalendarScheduler — bảng hành động của một ngày', () => {
     syncedAt: '2026-10-12T01:00:00.000Z',
   };
 
-  it('bấm header ngày lễ mở bảng — HOVER thì không', async () => {
+  it('bấm header ngày lễ mở bảng - HOVER thì không', async () => {
     holidays.byDay = new Map([['2026-10-13', HOLIDAY]]);
     renderScheduler();
 
@@ -601,7 +601,7 @@ describe('CalendarScheduler — bảng hành động của một ngày', () => {
     expect(await screen.findByText('Khóa xe nhanh')).toBeTruthy();
   });
 
-  it('chỉ hiện TÊN và LOẠI lễ — không mô tả, nguồn, thời điểm đồng bộ, không nút Xem chi tiết', async () => {
+  it('chỉ hiện TÊN và LOẠI lễ - không mô tả, nguồn, thời điểm đồng bộ, không nút Xem chi tiết', async () => {
     holidays.byDay = new Map([['2026-10-13', HOLIDAY]]);
     renderScheduler();
     fireEvent.click(screen.getByLabelText(/^Ngày lễ: Ngày lễ thử/));
@@ -614,7 +614,7 @@ describe('CalendarScheduler — bảng hành động của một ngày', () => {
     expect(screen.queryByText('Xem chi tiết')).toBeNull();
   });
 
-  it('NGÀY THƯỜNG cũng mở được bảng — khoá xe và đặt giá là việc quanh năm', async () => {
+  it('NGÀY THƯỜNG cũng mở được bảng - khoá xe và đặt giá là việc quanh năm', async () => {
     renderScheduler();
 
     fireEvent.click(screen.getByLabelText('Thao tác cho ngày 12/10/2026'));
@@ -632,7 +632,7 @@ describe('CalendarScheduler — bảng hành động của một ngày', () => {
     expect(screen.getByTestId('bulk-price-dialog').textContent).toBe('2026-10-12');
   });
 
-  it('gạt công tắc KHOÁ NGAY — không bắt đi qua modal', async () => {
+  it('gạt công tắc KHOÁ NGAY - không bắt đi qua modal', async () => {
     renderScheduler();
     fireEvent.click(screen.getByLabelText('Thao tác cho ngày 12/10/2026'));
 
@@ -688,7 +688,7 @@ describe('CalendarScheduler — bảng hành động của một ngày', () => {
   });
 });
 
-describe('CalendarScheduler — bản tiếng Anh', () => {
+describe('CalendarScheduler - bản tiếng Anh', () => {
   function renderEnglish() {
     return renderWithIntl(
       <App>
@@ -757,7 +757,7 @@ describe('CalendarScheduler — bản tiếng Anh', () => {
  * quay về ĐÚNG chỗ vừa rời — kèm tab và trang đang lọc. `?back=` mang đường đó, và vì nó trở
  * thành `href` của một nút nên nó phải đi qua đúng bộ kiểm chống open-redirect của `?next=`.
  */
-describe('CalendarToolbar — đường quay lại', () => {
+describe('CalendarToolbar - đường quay lại', () => {
   it('có `?back=` hợp lệ ⇒ hiện nút quay lại trỏ đúng chỗ vừa rời', () => {
     nav.params = new URLSearchParams(
       'q=51A-123.45&back=%2Fmanage%2Fbooking-requests%3Fstatus%3Dall%26page%3D3',
@@ -774,7 +774,7 @@ describe('CalendarToolbar — đường quay lại', () => {
     expect(screen.queryByRole('link', { name: 'Quay lại' })).toBeNull();
   });
 
-  it('`back` trỏ ra ngoài miền bị bỏ — không biến lịch thành bàn đạp phishing', () => {
+  it('`back` trỏ ra ngoài miền bị bỏ - không biến lịch thành bàn đạp phishing', () => {
     // `/\evil.example` — vài trình duyệt coi `\` như `/`, nên nó cũng là một đích ngoài miền.
     for (const hostile of ['https://evil.example', '//evil.example', '/\\evil.example']) {
       nav.params = new URLSearchParams({ back: hostile });

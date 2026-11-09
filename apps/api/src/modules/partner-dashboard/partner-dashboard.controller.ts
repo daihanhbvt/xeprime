@@ -64,7 +64,7 @@ export class PartnerDashboardController {
   @Get('today')
   @RequirePermissions(PERMISSION.BOOKING_VIEW)
   @SupportAction(SUPPORT_CAPABILITY.BOOKING_VIEW)
-  @ApiOperation({ summary: 'Việc giao/nhận xe hôm nay — số trên menu site partner' })
+  @ApiOperation({ summary: 'Việc giao/nhận xe hôm nay - số trên menu site partner' })
   @ApiOkResponse({ type: PartnerDashboardTodayDto })
   today(@CurrentTenant() tenant: TenantContext): Promise<PartnerDashboardTodayDto> {
     return this.dashboard.todayCounts(tenant);
@@ -78,7 +78,7 @@ export class PartnerDashboardController {
   @Get('requests')
   @RequirePermissions(PERMISSION.BOOKING_REQUEST_VIEW)
   @SupportAction(SUPPORT_CAPABILITY.BOOKING_REQUEST_VIEW)
-  @ApiOperation({ summary: 'Yêu cầu đặt xe chờ duyệt và sắp hết hạn — số trên menu site partner' })
+  @ApiOperation({ summary: 'Yêu cầu đặt xe chờ duyệt và sắp hết hạn - số trên menu site partner' })
   @ApiOkResponse({ type: PartnerDashboardRequestsDto })
   requests(@CurrentTenant() tenant: TenantContext): Promise<PartnerDashboardRequestsDto> {
     return this.dashboard.requestCounts(tenant);

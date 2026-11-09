@@ -324,7 +324,7 @@ export class VietmapGeoProvider implements GeoProvider {
     );
     if (!hit?.ref_id) {
       this.logger.debug(
-        `Không dòng Search nào khớp "${address}" (dòng đầu: "${results[0]?.name ?? '—'}", ${results.length} dòng)`,
+        `Không dòng Search nào khớp "${address}" (dòng đầu: "${results[0]?.name ?? '-'}", ${results.length} dòng)`,
       );
       return null;
     }

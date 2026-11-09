@@ -456,3 +456,10 @@
     padding: var(--xp-space-md);
   }
 }
+
+/* Nhãn + dấu "i" (InfoHint) cùng một hàng. */
+.labelWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

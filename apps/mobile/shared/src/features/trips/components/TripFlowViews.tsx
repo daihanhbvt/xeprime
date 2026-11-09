@@ -49,7 +49,6 @@ import { TripNotReceivedReport } from './TripNotReceivedReport';
 import { TripOwnerActions } from './TripOutcomeViews';
 import { TripHoldPanel } from './TripHoldPanel';
 import {
-  CardLead,
   CardTitle,
   TripCostsCard,
   TripPlanChangeCard,
@@ -570,8 +569,9 @@ function PickupChecklist({
   return (
     <Card>
       <YStack gap={space.sm}>
-        <CardTitle icon="checkbox-outline">{t('title')}</CardTitle>
-        <CardLead>{t('lead')}</CardLead>
+        <CardTitle icon="checkbox-outline" hint={t('lead')} hintLabel={t('leadLabel')}>
+          {t('title')}
+        </CardTitle>
         <YStack gap={space.sm}>
           {items.map((item) => {
             const text = textOf(item);

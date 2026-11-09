@@ -19,7 +19,7 @@ export class AppConfigController {
   @Get('partner')
   @Public()
   @Header('Cache-Control', NO_STORE_CACHE_CONTROL)
-  @ApiOperation({ summary: 'Cấu hình app Partner (isPlanPromotionEnabled + version) — không cache, không cần đăng nhập' })
+  @ApiOperation({ summary: 'Cấu hình app Partner (isPlanPromotionEnabled + version) - không cache, không cần đăng nhập' })
   @ApiOkResponse({ type: PartnerAppConfigDto })
   partner(): Promise<PartnerAppConfigDto> {
     return this.appConfig.getPartner();

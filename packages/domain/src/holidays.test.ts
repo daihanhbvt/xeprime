@@ -157,7 +157,7 @@ describe('phân loại theo mô tả của Google', () => {
     expect(classifyHolidayEventType('Season')).toBe(HOLIDAY_EVENT_TYPE.SEASON);
   });
 
-  it('không đọc được thì là OTHER — KHÔNG đoán thành ngày nghỉ chính thức', () => {
+  it('không đọc được thì là OTHER - KHÔNG đoán thành ngày nghỉ chính thức', () => {
     expect(classifyHolidayEventType(null)).toBe(HOLIDAY_EVENT_TYPE.OTHER);
     expect(classifyHolidayEventType('   ')).toBe(HOLIDAY_EVENT_TYPE.OTHER);
     expect(classifyHolidayEventType('Một mô tả lạ')).toBe(HOLIDAY_EVENT_TYPE.OTHER);
@@ -171,7 +171,7 @@ describe('bỏ qua event không dùng được', () => {
     expect(normalizeGoogleHolidayEvent(allDay({ start: null, end: null }))).toHaveProperty('reason');
   });
 
-  it('dải kéo dài cả mùa bị chặn — nó sẽ tô trọn một quý trên lưới điều phối', () => {
+  it('dải kéo dài cả mùa bị chặn - nó sẽ tô trọn một quý trên lưới điều phối', () => {
     const result = normalizeGoogleHolidayEvent(
       allDay({ id: 'evt-mua', start: { date: '2026-06-01' }, end: { date: '2026-09-01' } }),
     );
@@ -194,7 +194,7 @@ describe('bỏ qua event không dùng được', () => {
   });
 });
 
-describe('planHolidaySync — idempotent', () => {
+describe('planHolidaySync - idempotent', () => {
   it('lần đầu: chưa có gì trong DB → tất cả là toCreate', () => {
     const plan = planHolidaySync([], normalizeGoogleHolidayEvents([allDay()]));
 
@@ -241,7 +241,7 @@ describe('planHolidaySync — idempotent', () => {
   });
 });
 
-describe('planHolidaySync — xoá', () => {
+describe('planHolidaySync - xoá', () => {
   it('Google trả status=cancelled → dòng đó vào toDelete', () => {
     const plan = planHolidaySync(
       [existingRow()],
@@ -317,7 +317,7 @@ describe('expandHolidaysByDay', () => {
 });
 
 describe('holidaySyncWindow', () => {
-  it('phủ năm trước, năm nay và năm sau — đủ cho lịch 30 ngày vắt qua giao thừa', () => {
+  it('phủ năm trước, năm nay và năm sau - đủ cho lịch 30 ngày vắt qua giao thừa', () => {
     const window = holidaySyncWindow(new Date('2026-12-20T10:00:00.000Z'));
 
     expect(window.fromDate).toBe('2025-01-01');

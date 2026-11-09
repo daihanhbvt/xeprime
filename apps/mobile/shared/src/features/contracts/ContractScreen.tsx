@@ -155,7 +155,7 @@ function ContractBody({
             <YStack gap={space.xs}>
               <SectionTitle>{t('vehicleHeading')}</SectionTitle>
               <DataRow label={t('vehicleName')} value={s.vehicle.name} />
-              <DataRow label={t('plateNumber')} value={s.vehicle.plateNumber ?? '—'} />
+              <DataRow label={t('plateNumber')} value={s.vehicle.plateNumber ?? '-'} />
               <DataRow
                 label={t('vehicleType')}
                 value={domainLabel('vehicleType', s.vehicle.vehicleType as VehicleType)}

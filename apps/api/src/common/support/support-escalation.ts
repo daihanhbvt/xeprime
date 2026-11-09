@@ -23,7 +23,7 @@ export function supportReasonRequired(
     {
       code: API_ERROR_CODE.SUPPORT_REASON_REQUIRED,
       message: invalid
-        ? 'Lý do chưa đủ cụ thể — ghi rõ vì sao hoặc mã yêu cầu của chủ xe'
+        ? 'Lý do chưa đủ cụ thể - ghi rõ vì sao hoặc mã yêu cầu của chủ xe'
         : 'Thao tác này cần lý do riêng',
       details: { capabilities: [...capabilities], invalid },
     },

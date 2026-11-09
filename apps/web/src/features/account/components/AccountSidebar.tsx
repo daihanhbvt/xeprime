@@ -15,6 +15,7 @@ import { cx } from '@/lib/cx';
 import { initialOf } from '@/lib/initials';
 
 import { PartnerInviteCard } from './PartnerInviteCard';
+import { staggerFastClass } from '@/components/motion/motion-classes';
 import styles from './AccountSidebar.module.css';
 
 /**
@@ -62,7 +63,7 @@ export function AccountSidebar({ user }: { user: CurrentUser }) {
             aria-label={group.labelKey ? t(group.labelKey) : undefined}
           >
             {group.labelKey ? <h2 className={styles.groupTitle}>{t(group.labelKey)}</h2> : null}
-            <ul className={styles.list}>
+            <ul className={cx(styles.list, staggerFastClass)}>
               {group.items.map((item) => {
                 const Icon = item.icon;
                 const active = item.key === activeKey;

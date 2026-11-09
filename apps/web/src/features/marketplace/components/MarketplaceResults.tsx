@@ -35,6 +35,7 @@ import { SearchHeroBanner } from '../search/SearchHeroBanner';
 import { StickySearchHeader } from '../search/StickySearchHeader';
 import { FilterModal } from './FilterModal';
 import { SearchDialog } from './SearchDialog';
+import { staggerFastClass, viewEnterClass } from '@/components/motion/motion-classes';
 import { VehicleCard } from './VehicleCard';
 import styles from './MarketplaceResults.module.css';
 import { useTranslations } from 'next-intl';
@@ -401,7 +402,7 @@ function MarketplaceResultsContent() {
           <>
             {/* Hiển thị danh sách xe theo dạng Thẻ (Grid) hoặc Danh sách (List) */}
             {viewMode === 'grid' ? (
-              <ul className={styles.grid}>
+              <ul className={cx(styles.grid, staggerFastClass, viewEnterClass)}>
                 {listings.map((listing) => (
                   <li key={listing.id} className={styles.cell}>
                     <VehicleCard listing={listing} variant="grid" />
@@ -416,7 +417,7 @@ function MarketplaceResultsContent() {
                   : null}
               </ul>
             ) : (
-              <ul className={styles.list}>
+              <ul className={cx(styles.list, staggerFastClass, viewEnterClass)}>
                 {listings.map((listing) => (
                   <li key={listing.id}>
                     <VehicleCard listing={listing} variant="list" />

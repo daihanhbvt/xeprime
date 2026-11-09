@@ -47,7 +47,7 @@ describe('roundedCount', () => {
    * ⇒ Đã ghi vào sổ đồng bộ như một khe hở của WEB cần một issue riêng, không phải việc của đợt
    * đồng bộ này.
    */
-  it('KHÔNG chặn NaN/Infinity — cố ý giống hệt bản web', () => {
+  it('KHÔNG chặn NaN/Infinity - cố ý giống hệt bản web', () => {
     expect(roundedCount(Number.NaN).display).toBeNaN();
     expect(roundedCount(Number.POSITIVE_INFINITY).display).toBe(Number.POSITIVE_INFINITY);
   });

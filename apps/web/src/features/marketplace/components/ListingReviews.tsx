@@ -48,7 +48,7 @@ export async function ListingReviews({ vehicleId }: { vehicleId: string }) {
                   <span className={styles.name}>{r.customerName}</span>
                   <span className={styles.date}>{fmt.date(r.createdAt)}</span>
                 </span>
-                <Stars value={r.rating} size="lg" />
+                <Stars value={r.rating} size="lg" animated />
               </div>
               {r.comment ? <p className={styles.comment}>{r.comment}</p> : null}
             </li>

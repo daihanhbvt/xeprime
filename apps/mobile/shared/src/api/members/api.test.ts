@@ -42,7 +42,7 @@ describe('inviteFiltersToParams', () => {
 });
 
 describe('branchFiltersToParams', () => {
-  it('gọi không tham số cũng ra đúng hình dạng — bộ chọn ở thanh trên dựa vào điều này', () => {
+  it('gọi không tham số cũng ra đúng hình dạng - bộ chọn ở thanh trên dựa vào điều này', () => {
     expect(branchFiltersToParams()).toEqual({ q: null, status: null });
   });
 

@@ -1,8 +1,8 @@
-/* Hộp "Mua hoặc gia hạn gói" — design `24024:26537` (1430 × 986, thẻ bậc 450, cách 20). */
+/* Hộp "Mua hoặc gia hạn gói" - design `24024:26537` (1430 × 986, thẻ bậc 450, cách 20). */
 
 /*
  * Bề rộng NỘI DUNG của hộp `size="fit"`: 1430 trừ lề 2 × 24 của AntD, co theo màn hình (AntD giữ
- * hộp trong `100vw − 32px`). Chỉ desktop — trên mobile hộp là drawer toàn màn hình.
+ * hộp trong `100vw − 32px`). Chỉ desktop - trên mobile hộp là drawer toàn màn hình.
  */
 @media (min-width: 641px) {
   .dialogBody {
@@ -107,7 +107,7 @@
   background: var(--xp-gradient-card-highlight, var(--xp-color-primary-subtle));
 }
 
-/* Viên "Gói đề xuất" — xanh, đè lên mép trên của thẻ (design: top −13, right 21). */
+/* Viên "Gói đề xuất" - xanh, đè lên mép trên của thẻ (design: top −13, right 21). */
 .recommended {
   position: absolute;
   top: -13px;
@@ -173,7 +173,7 @@
   line-height: 32px;
 }
 
-/* Giá của bậc đề xuất — chữ vàng chuyển sắc như design (#e3b85c → #d2a70a). */
+/* Giá của bậc đề xuất - chữ vàng chuyển sắc như design (#e3b85c → #d2a70a). */
 .priceRecommended {
   background: var(--xp-gradient-text-gold);
   background-clip: text;
@@ -236,7 +236,7 @@
   color: var(--xp-color-text);
 }
 
-/* "Gói hiện tại" — nhạt như design, vẫn là nút (gia hạn đúng bậc đang dùng). */
+/* "Gói hiện tại" - nhạt như design, vẫn là nút (gia hạn đúng bậc đang dùng). */
 .tierActionCurrent {
   border-color: var(--xp-color-border);
   color: var(--xp-color-text-placeholder);
@@ -344,7 +344,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-/* Đang tải bản xem trước của kỳ hạn mới — số cũ còn hiện nhưng nhạt đi, nút tạo hoá đơn đã khoá. */
+/* Đang tải bản xem trước của kỳ hạn mới - số cũ còn hiện nhưng nhạt đi, nút tạo hoá đơn đã khoá. */
 .stale {
   opacity: 0.55;
 }
@@ -673,7 +673,7 @@
   }
 }
 
-/* Gạch đầu dòng của thẻ bậc — 14/20 xám vừa, dấu tích vàng 16px cách 6. */
+/* Gạch đầu dòng của thẻ bậc - 14/20 xám vừa, dấu tích vàng 16px cách 6. */
 .benefits {
   display: flex;
   min-width: 0;

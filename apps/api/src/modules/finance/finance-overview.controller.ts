@@ -56,7 +56,7 @@ export class FinanceOverviewController {
   @RequirePermissions(PERMISSION.FINANCE_VIEW)
   @ApiOperation({
     summary:
-      'Dải thẻ + số đếm chip của màn Công nợ (tổng · quá hạn · trong hạn · sắp đến hạn · chưa thu) — ' +
+      'Dải thẻ + số đếm chip của màn Công nợ (tổng · quá hạn · trong hạn · sắp đến hạn · chưa thu) - ' +
       'cùng phạm vi tìm kiếm/chi nhánh/trạng thái với danh sách, không theo nhóm hạn đang mở',
   })
   @ApiOkResponse({ type: DebtSummaryDto })
@@ -85,7 +85,7 @@ export class FinanceOverviewController {
   @RequiresFeature(PLAN_FEATURE.FINANCE)
   @RequirePermissions(PERMISSION.FINANCE_VIEW)
   @ApiOperation({
-    summary: 'Chuỗi thu-chi theo ngày/tuần/tháng — đã điền bucket rỗng, gộp theo giờ VN',
+    summary: 'Chuỗi thu-chi theo ngày/tuần/tháng - đã điền bucket rỗng, gộp theo giờ VN',
   })
   @ApiOkResponse({ type: FinanceSeriesDto })
   series(
@@ -113,7 +113,7 @@ export class FinanceOverviewController {
   @ApiOperation({
     summary:
       'Lãi/lỗ theo từng xe trong kỳ. Chi phí chung chưa gắn xe nằm ở `/finance/summary` ' +
-      '(`unassignedCost`) — nó là số của KỲ, không đổi theo trang',
+      '(`unassignedCost`) - nó là số của KỲ, không đổi theo trang',
   })
   @ApiOkResponse({ type: VehicleProfitPageDto })
   byVehicle(
@@ -128,7 +128,7 @@ export class FinanceOverviewController {
   @RequirePermissions(PERMISSION.FINANCE_VIEW)
   @ApiOperation({
     summary:
-      'Doanh thu theo từng khách trong kỳ — tiền THẬT đã thu. Phần không gắn khách nào nằm ở ' +
+      'Doanh thu theo từng khách trong kỳ - tiền THẬT đã thu. Phần không gắn khách nào nằm ở ' +
       '`/finance/summary` (`unassignedRevenue`)',
   })
   @ApiOkResponse({ type: CustomerRevenuePageDto })

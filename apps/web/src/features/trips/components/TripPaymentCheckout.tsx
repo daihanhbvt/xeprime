@@ -41,6 +41,7 @@ import { PAYMENT_SURFACE } from '@/features/payment-gateway/types';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { InfoHint } from '@/components/data-display/InfoHint';
 import { cx } from '@/lib/cx';
 import { payAtPickupAmount } from '@/lib/customer-price-view';
 import { dayjs } from '@/lib/datetime';
@@ -248,8 +249,8 @@ export function TripPaymentCheckout({
                           <span className={styles.walletLimit}>
                             {tCheckout('wallet.outOfRange', {
                               provider: providerLabel(value),
-                              min: method.minAmount ? fmt.money(method.minAmount) : '—',
-                              max: method.maxAmount ? fmt.money(method.maxAmount) : '—',
+                              min: method.minAmount ? fmt.money(method.minAmount) : '-',
+                              max: method.maxAmount ? fmt.money(method.maxAmount) : '-',
                             })}
                           </span>
                         ) : null}
@@ -444,7 +445,7 @@ function PaymentSummaryCard({
           <>
             <div className={styles.row}>
               <dt>{t('summary.package')}</dt>
-              <dd>{fmt.packageLabel(trip.longTermPackageMonths) ?? '—'}</dd>
+              <dd>{fmt.packageLabel(trip.longTermPackageMonths) ?? '-'}</dd>
             </div>
             <div className={styles.row}>
               <dt>{t('summary.pickupWish')}</dt>
@@ -461,10 +462,15 @@ function PaymentSummaryCard({
         {payOwner ? (
           <div className={styles.rowGroup}>
             <div className={styles.row}>
-              <dt>{t('summary.payOwner')}</dt>
+              <dt>
+                {t('summary.payOwner')}{' '}
+                <InfoHint
+                  content={t('summary.payOwnerNote')}
+                  label={t('summary.payOwnerNoteLabel')}
+                />
+              </dt>
               <dd className={styles.payOwner}>{fmt.money(payOwner)}</dd>
             </div>
-            <p className={styles.rowNote}>{t('summary.payOwnerNote')}</p>
           </div>
         ) : null}
       </dl>

@@ -171,7 +171,7 @@ export function BookingStatusSheet({
           <Line label={t('vehicle')} value={booking.vehicleName} />
           <Line
             label={t('period')}
-            value={fmt.shortDateTimeRange(booking.pickupAt, booking.returnAt)}
+            value={fmt.rentalRange(booking.pickupAt, booking.returnAt)}
           />
         </YStack>
       </Card>

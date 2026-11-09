@@ -439,7 +439,7 @@ export class SettlementService {
     if (existing) {
       throw new ConflictException({
         code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message: 'Đơn này đã có bản ghi hoàn cọc — dùng chức năng điều chỉnh nếu cần sửa',
+        message: 'Đơn này đã có bản ghi hoàn cọc - dùng chức năng điều chỉnh nếu cần sửa',
       });
     }
 
@@ -558,7 +558,7 @@ export class SettlementService {
       if (updated.count === 0) {
         throw new ConflictException({
           code: API_ERROR_CODE.CONFLICT,
-          message: 'Bản ghi đã thay đổi ở nơi khác — tải lại rồi thử lại',
+          message: 'Bản ghi đã thay đổi ở nơi khác - tải lại rồi thử lại',
         });
       }
 
@@ -792,7 +792,7 @@ export class SettlementService {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
       return new ConflictException({
         code: API_ERROR_CODE.SURCHARGE_CATEGORY_DUPLICATE,
-        message: 'Đơn này đã có khoản phụ phí vượt km — sửa khoản đang có thay vì ghi thêm',
+        message: 'Đơn này đã có khoản phụ phí vượt km - sửa khoản đang có thay vì ghi thêm',
       });
     }
     return err;
@@ -1072,7 +1072,7 @@ export class SettlementService {
     if (depositReceived.lessThanOrEqualTo(0)) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Đơn này chưa ghi nhận thu cọc — không có gì để hoàn',
+        message: 'Đơn này chưa ghi nhận thu cọc - không có gì để hoàn',
       });
     }
     if (amount.greaterThan(depositReceived)) {
@@ -1189,7 +1189,7 @@ function draftSurchargeTotal(items: readonly ReturnSurchargeDraftDto[]): Prisma.
 function duplicateCategory(category: string, surchargeId?: string): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.SURCHARGE_CATEGORY_DUPLICATE,
-    message: 'Đơn này đã có khoản phụ phí vượt km — sửa khoản đang có thay vì ghi thêm',
+    message: 'Đơn này đã có khoản phụ phí vượt km - sửa khoản đang có thay vì ghi thêm',
     details: { category, ...(surchargeId ? { surchargeId } : {}) },
   });
 }
@@ -1203,13 +1203,13 @@ function assertSurchargeCategoryAllowed(category: string, serviceType: string): 
   if (block === 'retired') {
     throw new UnprocessableEntityException({
       code: API_ERROR_CODE.SURCHARGE_CATEGORY_RETIRED,
-      message: 'Danh mục phụ phí này đã gỡ — giá có tài xế là giá trọn gói',
+      message: 'Danh mục phụ phí này đã gỡ - giá có tài xế là giá trọn gói',
     });
   }
   if (block === 'with_driver') {
     throw new UnprocessableEntityException({
       code: API_ERROR_CODE.SURCHARGE_NOT_ALLOWED_WITH_DRIVER,
-      message: 'Chuyến có tài xế không ghi phụ phí quá giờ / vượt km — khách trả một giá trọn gói',
+      message: 'Chuyến có tài xế không ghi phụ phí quá giờ / vượt km - khách trả một giá trọn gói',
     });
   }
 }

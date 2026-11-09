@@ -13,7 +13,7 @@ const base = {
  * Luật "có ghi bộ chính sách riêng không" — chép nguyên `sendPolicy` của web
  * `VehiclePricingWorkspace`: `overriding || (showPolicy && (direct ? policyDirty : editMode))`.
  */
-describe('shouldSendPolicy — đúng luật của web', () => {
+describe('shouldSendPolicy - đúng luật của web', () => {
   it('direct (khu tài khoản): sửa MỖI giá ⇒ không ghi chính sách', () => {
     expect(shouldSendPolicy({ ...base, direct: true })).toBe(false);
   });
@@ -22,7 +22,7 @@ describe('shouldSendPolicy — đúng luật của web', () => {
     expect(shouldSendPolicy({ ...base, direct: true, policyDirty: true })).toBe(true);
   });
 
-  it('direct: editMode không có nghĩa — chỉ ô bẩn mới quyết', () => {
+  it('direct: editMode không có nghĩa - chỉ ô bẩn mới quyết', () => {
     expect(shouldSendPolicy({ ...base, direct: true, editMode: true })).toBe(false);
   });
 

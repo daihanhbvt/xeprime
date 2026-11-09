@@ -34,17 +34,17 @@
   "feature": {
     "expiredTitle": "{feature}: plan expired, now view-only",
     "expiredBody": "All of your existing data is untouched and still readable. Renew your plan to keep adding and editing.",
-    "expiredBodyWithDate": "Your plan expired on {date}. All existing data is untouched and still readable — renew to keep adding and editing.",
+    "expiredBodyWithDate": "Your plan expired on {date}. All existing data is untouched and still readable - renew to keep adding and editing.",
     "renewCta": "Renew plan",
-    "refreshCta": "I've renewed — refresh",
+    "refreshCta": "I've renewed - refresh",
     "readOnlyTooltip": "Your plan expired, so this feature is view-only. Renew to continue.",
     "upsellTitle": "{feature} is part of a paid plan",
-    "upsellBody": "Your shop doesn't have this feature yet. Browse the plans to unlock it — nothing you use today is affected.",
+    "upsellBody": "Your shop doesn't have this feature yet. Browse the plans to unlock it - nothing you use today is affected.",
     "viewPlansCta": "View plans",
     "viewPlanCta": "View account & limits",
     "appExpiredTitle": "{feature}: now view-only",
     "appExpiredBody": "All of your existing data is untouched and still readable. Contact XePrime to keep adding and editing.",
-    "appExpiredBodyWithDate": "Usage period ended on {date}. All existing data is untouched and still readable — contact XePrime to keep adding and editing.",
+    "appExpiredBodyWithDate": "Usage period ended on {date}. All existing data is untouched and still readable - contact XePrime to keep adding and editing.",
     "appRefreshCta": "Refresh",
     "appReadOnlyTooltip": "This feature is view-only for now. Contact XePrime to continue."
   },
@@ -108,7 +108,7 @@
     "contact": {
       "title": "Still stuck?",
       "body": "Reach out to your shop owner or administrator for access and further guidance.",
-      "casesBody": "For anything XePrime has to handle — trip disputes, incidents, money — open a support request so it gets a tracking code.",
+      "casesBody": "For anything XePrime has to handle - trip disputes, incidents, money - open a support request so it gets a tracking code.",
       "casesCta": "Open a support request"
     },
     "legal": {

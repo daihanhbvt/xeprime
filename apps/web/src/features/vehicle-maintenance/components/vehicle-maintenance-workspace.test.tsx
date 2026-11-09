@@ -353,7 +353,7 @@ describe('Tab Bảo dưỡng & KM (Wave 6)', () => {
  * CÙNG tab, trong phiên hỗ trợ gian hàng (ADR 0050): phiên chỉ TẠO và SỬA phiếu. Hoàn tất phiếu
  * (ghi KM, dời mốc, sinh phiếu chi) và sửa chu kỳ nằm ngoài Đợt 1 — backend cũng chặn.
  */
-describe('Tab Bảo dưỡng & KM — trong phiên hỗ trợ', () => {
+describe('Tab Bảo dưỡng & KM - trong phiên hỗ trợ', () => {
   function renderInSupport() {
     const context = supportContextFixture({ workspace: SUPPORT_WORKSPACE.MANAGE });
     return render(
@@ -381,7 +381,7 @@ describe('Tab Bảo dưỡng & KM — trong phiên hỗ trợ', () => {
  * riêng phiên hỗ trợ. Trước đây form luôn gửi `cost: null`, nên một nhân viên thiếu quyền tiền sửa
  * ghi chú là xoá chi phí của phiếu.
  */
-describe('Phiếu bảo dưỡng — chi phí và lịch theo quyền', () => {
+describe('Phiếu bảo dưỡng - chi phí và lịch theo quyền', () => {
   async function saveEdit(render: () => unknown) {
     queries.records = {
       data: [recordOf({ cost: '500000', receiptCode: 'PC-01' } as Partial<MaintenanceRecord>)],

@@ -223,7 +223,7 @@ beforeEach(() => {
   state.receiptCalls = 0;
 });
 
-describe('Tổng quan gian hàng — việc cần làm', () => {
+describe('Tổng quan gian hàng - việc cần làm', () => {
   it('câu trả lời đầu trang dựng từ chính các ô: quá giờ → yêu cầu → giao xe', async () => {
     await renderView();
     expect(
@@ -295,7 +295,7 @@ describe('Tổng quan gian hàng — việc cần làm', () => {
   });
 });
 
-describe('Tổng quan gian hàng — KPI tháng này', () => {
+describe('Tổng quan gian hàng - KPI tháng này', () => {
   it('đếm so cùng kỳ theo %, tỉ lệ lấp đầy theo ĐIỂM; kỳ trước bằng 0 thì nói không có gì để so', async () => {
     await renderView();
 
@@ -307,14 +307,14 @@ describe('Tổng quan gian hàng — KPI tháng này', () => {
     expect(screen.getAllByText('Chưa có số cùng kỳ để so').length).toBeGreaterThan(0);
   });
 
-  it('trend chỉ có ở tuyến gói có sổ tổng hợp — server trả null thì không dựng biểu đồ', async () => {
+  it('trend chỉ có ở tuyến gói có sổ tổng hợp - server trả null thì không dựng biểu đồ', async () => {
     await renderView();
     await screen.findByText('Chờ giao xe');
     expect(screen.queryByTestId('trend-chart')).toBeNull();
   });
 });
 
-describe('Tổng quan gian hàng — khối tiền dùng dữ liệu thật', () => {
+describe('Tổng quan gian hàng - khối tiền dùng dữ liệu thật', () => {
   it('có gói và có quyền: doanh thu và cọc là SỐ THẬT, kèm kỳ, mẫu số và so cùng kỳ', async () => {
     await renderView();
 
@@ -342,7 +342,7 @@ describe('Tổng quan gian hàng — khối tiền dùng dữ liệu thật', ()
     expect(screen.getByText('−200.000 ₫')).toBeTruthy();
   });
 
-  it('gói hết hạn (read_only): VẪN xem được sổ của chính mình — ADR 0027 điều 3', async () => {
+  it('gói hết hạn (read_only): VẪN xem được sổ của chính mình - ADR 0027 điều 3', async () => {
     state.featureState = FEATURE_STATE.READ_ONLY;
     await renderView();
 

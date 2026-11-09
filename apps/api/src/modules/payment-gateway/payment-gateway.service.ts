@@ -59,9 +59,9 @@ import { VNPAY_IPN_RESPONSE, type VnpayIpnResponse } from './providers/vnpay.pro
 import { VnpayAdapter } from './providers/vnpay.adapter';
 
 const MINUTE_MS = 60_000;
-/** Liên kết còn ít hơn chừng này thì không đưa lại cho khách — họ mở ra là đã hết hạn. */
+/** Liên kết còn ít hơn chừng này thì không đưa lại cho khách - họ mở ra là đã hết hạn. */
 const REUSE_MIN_REMAINING_MS = MINUTE_MS;
-/** Cho IPN một nhịp để tới trước khi server tự hỏi cổng — khách thường quay về cùng lúc với IPN. */
+/** Cho IPN một nhịp để tới trước khi server tự hỏi cổng - khách thường quay về cùng lúc với IPN. */
 const QUERY_MIN_AGE_MS = 10_000;
 
 /** Những gì cần để đối chiếu một lượt với cổng / áp lại một lượt đã thu. */
@@ -92,14 +92,14 @@ export interface CheckoutRequest {
   actorUserId: string;
 }
 
-/** Đích đã đọc và kiểm dưới khoá — mọi con số ở đây đến từ DB. */
+/** Đích đã đọc và kiểm dưới khoá - mọi con số ở đây đến từ DB. */
 interface PreparedTarget {
   targetType: PaymentOrderTarget;
   subscriptionInvoiceId: string | null;
   bookingHoldId: string | null;
   targetCode: string;
   tenantId: string;
-  /** Phần còn thiếu của đích — số tiền DUY NHẤT được gửi sang cổng. */
+  /** Phần còn thiếu của đích - số tiền DUY NHẤT được gửi sang cổng. */
   amount: Prisma.Decimal;
   orderInfo: string;
   expiresAt: Date;
@@ -107,14 +107,14 @@ interface PreparedTarget {
 }
 
 /**
- * Hệ thống đã làm gì với MỘT kết quả của cổng — đủ để IPN chọn đúng câu trả lời và để nhật ký sự
+ * Hệ thống đã làm gì với MỘT kết quả của cổng - đủ để IPN chọn đúng câu trả lời và để nhật ký sự
  * kiện ghi lại hệ quả.
  */
 export type RecordOutcome =
   | 'order_not_found'
   | 'amount_mismatch'
   | 'pending'
-  /** Cổng ký xác nhận chưa có giao dịch (VNPAY `91`) — trạng thái giữ nguyên, ghi `no_transaction_at`. */
+  /** Cổng ký xác nhận chưa có giao dịch (VNPAY `91`) - trạng thái giữ nguyên, ghi `no_transaction_at`. */
   | 'no_transaction'
   | 'recorded_failure'
   | 'already_final'
@@ -123,10 +123,10 @@ export type RecordOutcome =
   | 'flagged'
   | 'duplicate_provider_tx';
 
-/** Kết quả một lượt đối chiếu (`settle`) — người trực và bộ quét cần biết đã có gì đổi không. */
+/** Kết quả một lượt đối chiếu (`settle`) - người trực và bộ quét cần biết đã có gì đổi không. */
 export type SettleResult = 'applied' | 'recorded' | 'no_change' | 'unreachable' | 'skipped';
 
-/** Kết quả "đã đổi trạng thái" — mọi giá trị còn lại là không có gì mới. */
+/** Kết quả "đã đổi trạng thái" - mọi giá trị còn lại là không có gì mới. */
 const CHANGING_OUTCOMES: readonly RecordOutcome[] = [
   'succeeded',
   'no_transaction',
@@ -137,7 +137,7 @@ const CHANGING_OUTCOMES: readonly RecordOutcome[] = [
 ];
 
 /**
- * Điều phối thanh toán qua cổng MoMo · VNPAY — ADR 0058 (Proposed). Writer DUY NHẤT của
+ * Điều phối thanh toán qua cổng MoMo · VNPAY - ADR 0058 (Proposed). Writer DUY NHẤT của
  * `payment_gateway_orders` và `payment_gateway_order_events`.
  *
  * Năm điều đóng đinh, xếp theo thứ tự sống còn:
@@ -145,12 +145,12 @@ const CHANGING_OUTCOMES: readonly RecordOutcome[] = [
  *  1. **Chỉ kết quả ĐÃ XÁC MINH phía server đổi được tiền.** IPN (chữ ký của cổng) hoặc truy vấn mà
  *     chính server gửi đi. Trình duyệt quay về chỉ mang ID của lượt.
  *  2. **Một đường tiền.** Hiệu ứng lên hoá đơn gói / khoản giữ chỗ đi qua ĐÚNG hai hàm mà webhook
- *     SePay gọi (`applyBankPaymentWithinTx`) — mọi luật đã có (thiếu, thừa, hold quá hạn theo MỐC)
+ *     SePay gọi (`applyBankPaymentWithinTx`) - mọi luật đã có (thiếu, thừa, hold quá hạn theo MỐC)
  *     áp nguyên.
- *  3. **Ghi nhận trước, áp sau — hai transaction.** Kết quả của cổng được ghi (dưới khoá dòng, kèm một
+ *  3. **Ghi nhận trước, áp sau - hai transaction.** Kết quả của cổng được ghi (dưới khoá dòng, kèm một
  *     dòng nhật ký) và COMMIT trước khi áp; lượt áp hỏng không cuốn mất bằng chứng tiền đã về.
  *     `applied_at` ghi CÙNG transaction với hiệu ứng tiền, nên `NULL` chứng minh chưa có gì được áp.
- *  4. **Người trực thắng máy.** Lượt đã được ĐÓNG ở hàng đợi không bao giờ được máy tự áp tiền nữa —
+ *  4. **Người trực thắng máy.** Lượt đã được ĐÓNG ở hàng đợi không bao giờ được máy tự áp tiền nữa -
  *     người trực có thể đã hoàn tay. Kết quả tới sau chỉ mở lại hàng đợi; áp là việc của người, có audit.
  *  5. **Idempotent bằng DB.** Unique `(provider, provider_order_ref)` + `(provider, provider_tx_id)`;
  *     mọi lượt ghi khoá dòng (`FOR UPDATE`) rồi đọc lại.
@@ -208,7 +208,7 @@ export class PaymentGatewayService {
     );
   }
 
-  /** Khách trả tiền giữ chỗ của CHÍNH chuyến mình — quyền sở hữu nằm trong câu truy vấn. */
+  /** Khách trả tiền giữ chỗ của CHÍNH chuyến mình - quyền sở hữu nằm trong câu truy vấn. */
   startHoldCheckout(
     customerUserId: string,
     tripId: string,
@@ -271,7 +271,7 @@ export class PaymentGatewayService {
           client: request.client,
           amount: p.amount,
           checkoutUrl: { not: null },
-          // Cổng đã xác nhận phiên này không có giao dịch (khách bấm Huỷ ở cổng) — không đưa lại
+          // Cổng đã xác nhận phiên này không có giao dịch (khách bấm Huỷ ở cổng) - không đưa lại
           // đúng liên kết vừa bị huỷ; mở phiên MỚI.
           noTransactionAt: null,
           expiresAt: { gt: new Date(now.getTime() + REUSE_MIN_REMAINING_MS) },
@@ -292,7 +292,7 @@ export class PaymentGatewayService {
           targetCode: p.targetCode,
           tenantId: p.tenantId,
           initiatedBy: request.actorUserId,
-          // ULID — chỉ chữ số và chữ in hoa, khớp `orderId` của MoMo và `vnp_TxnRef` của VNPAY.
+          // ULID - chỉ chữ số và chữ in hoa, khớp `orderId` của MoMo và `vnp_TxnRef` của VNPAY.
           providerOrderRef: id,
           amount: p.amount,
           client: request.client,
@@ -334,7 +334,7 @@ export class PaymentGatewayService {
         }
         /*
          * Đánh dấu thất bại CHỈ khi lượt chưa có kết quả nào của cổng. Không có liên kết thì khách
-         * không trả được — nhưng nếu một IPN thành công vẫn tới (cổng tạo phiên rồi mới timeout),
+         * không trả được - nhưng nếu một IPN thành công vẫn tới (cổng tạo phiên rồi mới timeout),
          * `recordProviderResult` vẫn nhận nó từ trạng thái này: tiền về là tiền về.
          */
         await this.prisma.paymentGatewayOrder.updateMany({
@@ -347,7 +347,7 @@ export class PaymentGatewayService {
         });
         throw new BadGatewayException({
           code: API_ERROR_CODE.PAYMENT_GATEWAY_PROVIDER_ERROR,
-          message: 'Không mở được phiên thanh toán của cổng — chưa có khoản tiền nào bị trừ',
+          message: 'Không mở được phiên thanh toán của cổng - chưa có khoản tiền nào bị trừ',
           details: { provider: request.provider },
         });
       }
@@ -385,14 +385,14 @@ export class PaymentGatewayService {
       });
     }
     /*
-     * Hoá đơn thuộc PHIẾU GỘP (ADR 0083) chỉ nhận tiền qua phiếu — một phiên cổng cho riêng nó sẽ
+     * Hoá đơn thuộc PHIẾU GỘP (ADR 0083) chỉ nhận tiền qua phiếu - một phiên cổng cho riêng nó sẽ
      * trả một nửa lượt mua. Phiếu gộp chưa có đường cổng (ADR 0058 còn Proposed), nên chặn hẳn.
      */
     if (invoice.checkoutId) {
       throw new ConflictException({
         code: API_ERROR_CODE.PAYMENT_TARGET_NOT_PAYABLE,
         message:
-          'Hoá đơn này thanh toán chung trong một phiếu gộp — chuyển khoản theo mã của phiếu',
+          'Hoá đơn này thanh toán chung trong một phiếu gộp - chuyển khoản theo mã của phiếu',
         details: { status: invoice.status, checkoutId: invoice.checkoutId },
       });
     }
@@ -401,7 +401,7 @@ export class PaymentGatewayService {
       throw notPayable(invoice.status);
     }
 
-    // Hạn của phiên kết thúc trước hạn hoá đơn — hoá đơn quá hạn bị lật `void` và không nhận tiền nữa.
+    // Hạn của phiên kết thúc trước hạn hoá đơn - hoá đơn quá hạn bị lật `void` và không nhận tiền nữa.
     const expiresAt = capExpiry(now, invoice.expiresAt);
     if (expiresAt.getTime() - now.getTime() < MINUTE_MS) throw notPayable(invoice.status);
 
@@ -412,10 +412,10 @@ export class PaymentGatewayService {
       targetCode: invoice.code,
       tenantId: invoice.tenantId,
       amount: remaining,
-      // Không dấu, không ký tự đặc biệt — yêu cầu của VNPAY cho `vnp_OrderInfo`.
+      // Không dấu, không ký tự đặc biệt - yêu cầu của VNPAY cho `vnp_OrderInfo`.
       orderInfo: `Thanh toan goi XePrime ${invoice.code}`,
       expiresAt,
-      // Lưu ý: trang thanh toán `/payment/:invoiceId` cần phiên partner — trình duyệt của app native không có cookie.
+      // Lưu ý: trang thanh toán `/payment/:invoiceId` cần phiên partner - trình duyệt của app native không có cookie.
       // App Partner trả gói bằng IAP, không mở cổng; nếu sau này mở thì cần trang quay về công khai
       // như `PAYMENT_NATIVE_TRIP_RETURN_PATH` của site khách.
       returnUrl: (orderId) =>
@@ -463,7 +463,7 @@ export class PaymentGatewayService {
     });
 
     const remaining = hold.amount.sub(hold.paidAmount);
-    // Theo MỐC, không theo cột status — cùng kỷ luật `applyBankPaymentWithinTx` (ADR 0044 điều 7).
+    // Theo MỐC, không theo cột status - cùng kỷ luật `applyBankPaymentWithinTx` (ADR 0044 điều 7).
     if (
       !isAwaitingPayment(hold.status as BookingHoldStatus) ||
       isHoldPastDue(hold.expiresAt, now) ||
@@ -474,7 +474,7 @@ export class PaymentGatewayService {
     if (hold.expiresAt.getTime() - now.getTime() < PAYMENT_GATEWAY_MIN_HOLD_WINDOW_MINUTES * MINUTE_MS) {
       throw new ConflictException({
         code: API_ERROR_CODE.PAYMENT_HOLD_WINDOW_TOO_SHORT,
-        message: 'Thời hạn giữ chỗ còn quá ngắn để thanh toán qua cổng — vui lòng chuyển khoản',
+        message: 'Thời hạn giữ chỗ còn quá ngắn để thanh toán qua cổng - vui lòng chuyển khoản',
         details: {
           expiresAt: hold.expiresAt.toISOString(),
           minWindowMinutes: PAYMENT_GATEWAY_MIN_HOLD_WINDOW_MINUTES,
@@ -490,10 +490,10 @@ export class PaymentGatewayService {
       tenantId: hold.tenantId,
       amount: remaining,
       orderInfo: `Tien giu cho XePrime ${hold.code}`,
-      // Phiên của cổng kết thúc TRƯỚC hạn giữ chỗ — VNPAY tự từ chối một lượt trả sau khi chỗ đã nhả.
+      // Phiên của cổng kết thúc TRƯỚC hạn giữ chỗ - VNPAY tự từ chối một lượt trả sau khi chỗ đã nhả.
       expiresAt: capExpiry(now, hold.expiresAt),
       /*
-       * Web: quay về TRANG THANH TOÁN của chuyến (`/payment/:id`) — nơi khách vừa chọn kênh trả.
+       * Web: quay về TRANG THANH TOÁN của chuyến (`/payment/:id`) - nơi khách vừa chọn kênh trả.
        * App native: trình duyệt của app không có cookie phiên ⇒ trang thanh toán (cần đăng nhập) kẹt.
        * Quay về trang CÔNG KHAI chỉ chuyển tiếp sang deep link của app.
        */
@@ -508,14 +508,14 @@ export class PaymentGatewayService {
   }
 
   /**
-   * Khoá theo ĐÍCH cho tới hết transaction — hai cú bấm song song không mở hai phiên cho cùng một
+   * Khoá theo ĐÍCH cho tới hết transaction - hai cú bấm song song không mở hai phiên cho cùng một
    * khoản. `pgw:` giữ không gian khoá riêng (cùng cách `bank-account:` ở `BankAccountsService`).
    */
   private async lockTarget(tx: Prisma.TransactionClient, targetId: string): Promise<void> {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`pgw:${targetId}`}))`;
   }
 
-  /** Khoá DÒNG của một lượt tới hết transaction — mọi lượt ghi lên một lượt đi qua đây. */
+  /** Khoá DÒNG của một lượt tới hết transaction - mọi lượt ghi lên một lượt đi qua đây. */
   private async lockOrder(tx: Prisma.TransactionClient, orderId: string): Promise<boolean> {
     const locked = await tx.$queryRaw<Array<{ id: string }>>`
       SELECT id FROM payment_gateway_orders WHERE id = ${orderId} FOR UPDATE`;
@@ -536,7 +536,7 @@ export class PaymentGatewayService {
     return this.adapters[provider];
   }
 
-  /** VND nguyên, trong hạn mức cổng công bố — ngoài hạn mức thì cổng từ chối trên trang của nó. */
+  /** VND nguyên, trong hạn mức cổng công bố - ngoài hạn mức thì cổng từ chối trên trang của nó. */
   private assertAmountInRange(provider: PaymentGatewayProvider, amount: Prisma.Decimal): void {
     const limits = PAYMENT_GATEWAY_AMOUNT_LIMITS[provider];
     const outOfRange =
@@ -561,7 +561,7 @@ export class PaymentGatewayService {
 
   // ── Đọc trạng thái (trang quay về) ──────────────────────────────────────────
 
-  /** Lượt trả tiền giữ chỗ của CHÍNH khách này — chủ sở hữu là chủ của khoản giữ chỗ. */
+  /** Lượt trả tiền giữ chỗ của CHÍNH khách này - chủ sở hữu là chủ của khoản giữ chỗ. */
   async orderForCustomer(customerUserId: string, orderId: string): Promise<PaymentOrderDto> {
     const owned = await this.prisma.paymentGatewayOrder.findFirst({
       where: {
@@ -591,7 +591,7 @@ export class PaymentGatewayService {
    * Đưa một lượt tới gần sự thật nhất có thể: lượt đã thu mà chưa áp thì áp lại; lượt còn chờ thì hỏi
    * cổng (giới hạn nhịp, trừ khi `force`). Dùng bởi trang quay về, bộ quét định kỳ và người trực.
    *
-   * Lượt đã ĐÓNG ở hàng đợi thì bỏ qua hoàn toàn — không hỏi cổng, không áp: người trực có thể đã hoàn
+   * Lượt đã ĐÓNG ở hàng đợi thì bỏ qua hoàn toàn - không hỏi cổng, không áp: người trực có thể đã hoàn
    * tay, và một kết quả "đã thu" tới sau cho CÙNG giao dịch đó không được biến thành một lần áp tiền.
    *
    * Không bao giờ ném: lỗi ở đây không làm hỏng lượt đọc của người đang chờ.
@@ -620,10 +620,10 @@ export class PaymentGatewayService {
   }
 
   /**
-   * Hỏi cổng trạng thái của một lượt còn chờ — server gọi đi, phản hồi xác minh ở adapter.
+   * Hỏi cổng trạng thái của một lượt còn chờ - server gọi đi, phản hồi xác minh ở adapter.
    *
    * Nhịp được CLAIM bằng `updateMany` có điều kiện trên `last_queried_at`: hai tab, bộ quét và người
-   * trực cùng hỏi vẫn chỉ ra một request sang cổng mỗi `queryMinIntervalMs` — nhịp do TỪNG CỔNG đặt
+   * trực cùng hỏi vẫn chỉ ra một request sang cổng mỗi `queryMinIntervalMs` - nhịp do TỪNG CỔNG đặt
    * (VNPAY từ chối lượt hỏi trùng trong 5 phút; hỏi dày hơn là không bao giờ nhận được câu trả lời).
    */
   private async refreshFromProvider(order: SettleRow, force: boolean): Promise<SettleResult> {
@@ -656,7 +656,7 @@ export class PaymentGatewayService {
   // ── Kết quả của cổng (IPN + truy vấn) ──────────────────────────────────────
 
   /**
-   * Ghi MỘT kết quả đã xác minh của cổng — BƯỚC 1 của hai bước, trong transaction riêng có khoá dòng
+   * Ghi MỘT kết quả đã xác minh của cổng - BƯỚC 1 của hai bước, trong transaction riêng có khoá dòng
    * và một dòng nhật ký; bước 2 (áp tiền) chạy ở `applyPending` sau khi bước 1 đã commit.
    */
   async recordProviderResult(
@@ -670,7 +670,7 @@ export class PaymentGatewayService {
     });
     if (!order) {
       // Đã xác minh chữ ký mà không có đơn: mã của môi trường khác, hoặc một đơn đã bị gỡ. Một khoản
-      // "đã thu" như vậy phải có người nhìn — ghi ở mức error để cảnh báo bắt được.
+      // "đã thu" như vậy phải có người nhìn - ghi ở mức error để cảnh báo bắt được.
       const log = result.outcome === 'succeeded' ? this.logger.error : this.logger.warn;
       log.call(this.logger, `${provider}: kết quả đã xác minh cho đơn không tồn tại ${result.orderRef}`);
       return 'order_not_found';
@@ -685,7 +685,7 @@ export class PaymentGatewayService {
       if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') {
         throw error;
       }
-      // Cùng một giao dịch của cổng đã nằm trên một lượt KHÁC — không thể có ở luồng đúng. Transaction
+      // Cùng một giao dịch của cổng đã nằm trên một lượt KHÁC - không thể có ở luồng đúng. Transaction
       // trên đã quay đầu; ghi bằng chứng và mở hàng đợi trong một transaction mới.
       outcome = await this.prisma.$transaction(async (tx): Promise<RecordOutcome> => {
         await this.lockOrder(tx, order.id);
@@ -710,7 +710,7 @@ export class PaymentGatewayService {
     }
 
     if (outcome === 'succeeded' || outcome === 'already_succeeded') {
-      // Đã thu (lần đầu hay lần gửi lại): thử áp — lượt trước có thể đã hỏng ở bước 2, và
+      // Đã thu (lần đầu hay lần gửi lại): thử áp - lượt trước có thể đã hỏng ở bước 2, và
       // `applyPending` không làm gì với lượt đã áp hoặc lượt người trực đang giữ.
       await this.applyPending(order.id);
     }
@@ -720,7 +720,7 @@ export class PaymentGatewayService {
   /**
    * Luật chuyển trạng thái, dưới khoá dòng:
    *  - lệch số tiền / cổng nghi ngờ ⇒ KHÔNG áp, mở hàng đợi (không đụng lượt đã đóng);
-   *  - thành công thắng mọi thứ chưa thành công (kể cả một lượt mình đã tự đánh `failed`) — nhưng
+   *  - thành công thắng mọi thứ chưa thành công (kể cả một lượt mình đã tự đánh `failed`) - nhưng
    *    trên một lượt người trực ĐÃ ĐÓNG thì chỉ ghi bằng chứng và mở lại hàng đợi, không áp;
    *  - thất bại/huỷ/hết hạn chỉ đổi được lượt còn `pending`; không bao giờ hạ cấp một lượt đã thu;
    *  - "không có giao dịch" (VNPAY `91`) chỉ thành hết hạn khi phiên đã quá hạn đủ lâu.
@@ -745,7 +745,7 @@ export class PaymentGatewayService {
     const now = new Date();
     const resolved = current.reviewStatus === PAYMENT_ORDER_REVIEW_STATUS.RESOLVED;
     const done = async (outcome: RecordOutcome): Promise<RecordOutcome> => {
-      // Truy vấn trả "chưa có gì" lặp lại mỗi nhịp và không mang thông tin — không ghi nhật ký.
+      // Truy vấn trả "chưa có gì" lặp lại mỗi nhịp và không mang thông tin - không ghi nhật ký.
       if (!(source === PAYMENT_ORDER_RESULT_SOURCE.QUERY && outcome === 'pending')) {
         await this.recordEvent(tx, orderId, result, source, outcome);
       }
@@ -755,7 +755,7 @@ export class PaymentGatewayService {
     switch (result.outcome) {
       case 'pending':
         /*
-         * Cổng đã THẤY giao dịch (đang dở — vd khách mở lại liên kết và đang nhập OTP): lời xác nhận
+         * Cổng đã THẤY giao dịch (đang dở - vd khách mở lại liên kết và đang nhập OTP): lời xác nhận
          * "không có giao dịch" trước đó hết đúng, trang phải quay lại chờ thay vì mời mở phiên mới.
          */
         if (current.noTransactionAt) {
@@ -773,7 +773,7 @@ export class PaymentGatewayService {
         if (current.status !== PAYMENT_ORDER_STATUS.PENDING) return 'pending';
         if (!graceOver) {
           /*
-           * Cổng KÝ XÁC NHẬN chưa có giao dịch nào — khách đã huỷ ở trang cổng, hoặc chưa trả. ADR 0058
+           * Cổng KÝ XÁC NHẬN chưa có giao dịch nào - khách đã huỷ ở trang cổng, hoặc chưa trả. ADR 0058
            * chỉ cho lượt hết hạn sau ân hạn, nên trạng thái GIỮ NGUYÊN; chỉ ghi lại lời xác nhận để
            * trang thanh toán thôi quay "đang chờ" và cho mở phiên mới (`no_transaction_at`). Tiền tới
            * muộn trên lượt này vẫn đi đúng đường: thành công thắng mọi thứ chưa thành công.
@@ -803,7 +803,7 @@ export class PaymentGatewayService {
             ? PAYMENT_ORDER_REVIEW_REASON.AMOUNT_MISMATCH
             : PAYMENT_ORDER_REVIEW_REASON.PROVIDER_FLAGGED;
           if (current.status !== PAYMENT_ORDER_STATUS.SUCCEEDED && !resolved) {
-            // Tiền CÓ THỂ đã chuyển — không áp, không đoán; người trực đối chiếu với portal của cổng.
+            // Tiền CÓ THỂ đã chuyển - không áp, không đoán; người trực đối chiếu với portal của cổng.
             await tx.paymentGatewayOrder.update({
               where: { id: orderId },
               data: {
@@ -818,7 +818,7 @@ export class PaymentGatewayService {
         }
         if (current.status === PAYMENT_ORDER_STATUS.SUCCEEDED) return done('already_succeeded');
 
-        // Có thể ném P2002 (mã giao dịch của cổng đã nằm ở lượt khác) — cả transaction quay đầu.
+        // Có thể ném P2002 (mã giao dịch của cổng đã nằm ở lượt khác) - cả transaction quay đầu.
         await tx.paymentGatewayOrder.update({
           where: { id: orderId },
           data: {
@@ -830,9 +830,9 @@ export class PaymentGatewayService {
             providerPaidAt: result.paidAt ?? now,
             resultAt: now,
             /*
-             * Người trực đã ĐÓNG lượt này (thường sau một IPN lệch số tiền — và có thể đã hoàn tay)
+             * Người trực đã ĐÓNG lượt này (thường sau một IPN lệch số tiền - và có thể đã hoàn tay)
              * mà giờ cổng mới báo đã thu đúng số. Một đơn ở cổng là MỘT giao dịch, nên đây gần như
-             * chắc chắn là cùng khoản tiền đó: ghi bằng chứng, MỞ LẠI hàng đợi, và KHÔNG tự áp —
+             * chắc chắn là cùng khoản tiền đó: ghi bằng chứng, MỞ LẠI hàng đợi, và KHÔNG tự áp -
              * `applyPending` từ chối lý do này; áp là quyết định của người, có audit.
              */
             ...(resolved
@@ -886,11 +886,11 @@ export class PaymentGatewayService {
   }
 
   /**
-   * BƯỚC 2 — áp tiền của một lượt đã thu vào đích, TRONG transaction riêng.
+   * BƯỚC 2 - áp tiền của một lượt đã thu vào đích, TRONG transaction riêng.
    *
    * Khoá dòng (`FOR UPDATE`) rồi đọc lại: lượt thứ hai chờ, rồi thấy `applied_at` đã có và dừng. Cột
    * `applied_at` + `apply_outcome` ghi CÙNG transaction với hiệu ứng tiền (CHECK ở DB đòi hai cột đi
-   * cặp) — nên một lượt áp hỏng để lại `applied_at = NULL`, và lượt sau áp lại an toàn.
+   * cặp) - nên một lượt áp hỏng để lại `applied_at = NULL`, và lượt sau áp lại an toàn.
    *
    * Không áp khi: lượt đã ĐÓNG; hoặc lượt mang lý do `result_after_resolution` mà không phải người
    * trực đang tự tay ghi nhận (`manual`). `manual` ghi audit trong CHÍNH transaction áp tiền.
@@ -935,7 +935,7 @@ export class PaymentGatewayService {
           return null;
         }
 
-        // Mã tham chiếu đi vào ghi chú hoàn tiền/audit của hàm áp — mang tên cổng để người đọc biết nguồn.
+        // Mã tham chiếu đi vào ghi chú hoàn tiền/audit của hàm áp - mang tên cổng để người đọc biết nguồn.
         const reference = `${order.provider}:${order.providerTxId}`;
         const applied =
           order.targetType === PAYMENT_ORDER_TARGET.SUBSCRIPTION_INVOICE
@@ -964,7 +964,7 @@ export class PaymentGatewayService {
             applyOutcome: outcome,
             applyError: null,
             /*
-             * Đích đã đóng ⇒ TIỀN VỀ MUỘN (ADR 0044 điều 7): không tạo đơn, không bật gói — vào hàng
+             * Đích đã đóng ⇒ TIỀN VỀ MUỘN (ADR 0044 điều 7): không tạo đơn, không bật gói - vào hàng
              * đợi. Đích đã đủ từ trước ⇒ TIỀN TRẢ TRÙNG: vào hàng đợi cổng, trừ khi khoản giữ chỗ
              * đã ghi yêu cầu hoàn cho chính phần này (xem `reviewReasonFor`). Người trực tự tay ghi nhận
              * xong ⇒ lượt đóng với ghi chú của họ. Áp được tự động ⇒ gỡ cờ `apply_failed` (nếu có);
@@ -980,7 +980,7 @@ export class PaymentGatewayService {
                     reviewedAt: now,
                     /*
                      * Mã hoàn của lần đóng TRƯỚC không còn đúng với kết luận này ("đã ghi nhận, chưa
-                     * hoàn") — để nó cạnh ghi chú mới là đọc thành "vừa ghi nhận vừa hoàn". Lần đóng
+                     * hoàn") - để nó cạnh ghi chú mới là đọc thành "vừa ghi nhận vừa hoàn". Lần đóng
                      * trước sống nguyên vẹn ở `before` của audit bên dưới.
                      */
                     refundReference: null,
@@ -1017,7 +1017,7 @@ export class PaymentGatewayService {
       });
     } catch (error) {
       this.logger.error(
-        `Lượt ${orderId}: áp tiền thất bại — tiền đã ghi nhận, chưa áp`,
+        `Lượt ${orderId}: áp tiền thất bại - tiền đã ghi nhận, chưa áp`,
         error instanceof Error ? error.stack : String(error),
       );
       const message = (error instanceof Error ? error.message : String(error)).slice(0, 1000);
@@ -1025,7 +1025,7 @@ export class PaymentGatewayService {
         where: { id: orderId, appliedAt: null },
         data: { applyError: message },
       });
-      // Chỉ mở hàng đợi với lý do `apply_failed` khi chưa có lý do nào — không xoá lý do người trực
+      // Chỉ mở hàng đợi với lý do `apply_failed` khi chưa có lý do nào - không xoá lý do người trực
       // đang dựa vào (lệch tiền, kết quả sau khi đóng…).
       await this.prisma.paymentGatewayOrder.updateMany({
         where: { id: orderId, appliedAt: null, reviewStatus: PAYMENT_ORDER_REVIEW_STATUS.NONE },
@@ -1043,7 +1043,7 @@ export class PaymentGatewayService {
 
   /**
    * Người trực tự tay GHI NHẬN một lượt đã thu mà máy không tự áp (vd kết quả tới sau khi đã đóng,
-   * hoặc áp hỏng nhiều lần) — cùng đường tiền, có audit trong cùng transaction.
+   * hoặc áp hỏng nhiều lần) - cùng đường tiền, có audit trong cùng transaction.
    */
   async applyManually(
     orderId: string,
@@ -1068,7 +1068,7 @@ export class PaymentGatewayService {
   }
 
   /**
-   * ĐÓNG một lượt ở hàng đợi — ghi lại việc đã làm bên ngoài (thường là hoàn tay qua portal của cổng).
+   * ĐÓNG một lượt ở hàng đợi - ghi lại việc đã làm bên ngoài (thường là hoàn tay qua portal của cổng).
    * Không di chuyển tiền. Khoá dòng: hai người trực cùng bấm thì đúng một người thắng.
    */
   async resolveReview(
@@ -1120,7 +1120,7 @@ export class PaymentGatewayService {
 
   /**
    * IPN của MoMo. `not_configured` ⇒ controller trả 503 (MoMo gửi lại, tiền không mất); `invalid` ⇒
-   * 401, không xác nhận gì; mọi kết cục còn lại là "đã nhận" (204 — tài liệu IPN của MoMo).
+   * 401, không xác nhận gì; mọi kết cục còn lại là "đã nhận" (204 - tài liệu IPN của MoMo).
    */
   async handleMomoIpn(payload: unknown): Promise<'not_configured' | 'invalid' | RecordOutcome> {
     if (!this.config.isConfigured(PAYMENT_GATEWAY_PROVIDER.MOMO)) return 'not_configured';
@@ -1139,7 +1139,7 @@ export class PaymentGatewayService {
   }
 
   /**
-   * IPN của VNPAY — trả ĐÚNG mã phản hồi tài liệu quy định; VNPAY đọc mã đó để quyết có gọi lại.
+   * IPN của VNPAY - trả ĐÚNG mã phản hồi tài liệu quy định; VNPAY đọc mã đó để quyết có gọi lại.
    * Thứ tự kiểm theo tài liệu: chữ ký → đơn tồn tại → số tiền → trạng thái đã cập nhật chưa.
    */
   async handleVnpayIpn(query: unknown): Promise<VnpayIpnResponse> {
@@ -1170,14 +1170,14 @@ export class PaymentGatewayService {
         case 'already_succeeded':
           return VNPAY_IPN_RESPONSE.ALREADY_CONFIRMED;
         case 'pending':
-          // Chưa phải kết quả cuối — xin VNPAY gửi lại thay vì xác nhận một thứ chưa xong.
+          // Chưa phải kết quả cuối - xin VNPAY gửi lại thay vì xác nhận một thứ chưa xong.
           return VNPAY_IPN_RESPONSE.UNKNOWN_ERROR;
         default:
           return VNPAY_IPN_RESPONSE.CONFIRMED;
       }
     } catch (error) {
       this.logger.error(
-        `IPN VNPAY ${verified.result.orderRef}: lỗi xử lý — VNPAY sẽ gọi lại`,
+        `IPN VNPAY ${verified.result.orderRef}: lỗi xử lý - VNPAY sẽ gọi lại`,
         error instanceof Error ? error.stack : String(error),
       );
       return VNPAY_IPN_RESPONSE.UNKNOWN_ERROR;
@@ -1193,10 +1193,10 @@ export class PaymentGatewayService {
   }
 }
 
-/** Bằng chứng gần nhất trên dòng lượt — lịch sử đầy đủ nằm ở `payment_gateway_order_events`. */
+/** Bằng chứng gần nhất trên dòng lượt - lịch sử đầy đủ nằm ở `payment_gateway_order_events`. */
 /**
  * Bằng chứng của MỘT kết quả cổng. Xoá luôn `no_transaction_at`: mọi kết quả khác "không có giao
- * dịch" đều làm lời xác nhận đó hết đúng — và CHECK ở DB đòi lượt rời `pending` phải không mang nó.
+ * dịch" đều làm lời xác nhận đó hết đúng - và CHECK ở DB đòi lượt rời `pending` phải không mang nó.
  */
 function evidenceOf(result: ProviderPaymentResult, source: PaymentOrderResultSource) {
   return {
@@ -1265,13 +1265,13 @@ function fromHold(result: HoldPaymentOutcome): AppliedResult {
 }
 
 /**
- * Kết cục cần người xem — đích đã đóng, không còn, hay đã đủ tiền từ trước (tiền trả trùng).
+ * Kết cục cần người xem - đích đã đóng, không còn, hay đã đủ tiền từ trước (tiền trả trùng).
  *
  * Trả trùng mà phần thừa ĐÃ vào hàng đợi hoàn của khoản giữ chỗ (`hold_refunds`, lý do
  * `overpaid`, ghi trong CHÍNH transaction áp tiền) thì KHÔNG mở hàng đợi cổng: hàng đợi hoàn là chủ
  * duy nhất của khoản đó, hai hàng đợi cho cùng một đồng là mời người trực hoàn hai lần. Mọi trường
- * hợp khác — hoá đơn gói (không có hàng đợi hoàn), hay hold đã có khoản hoàn ĐÓNG từ trước nên phần
- * thừa không được ghi ở đâu — vào hàng đợi cổng `overpaid`: tiền không bao giờ nằm ngoài mọi hàng đợi.
+ * hợp khác - hoá đơn gói (không có hàng đợi hoàn), hay hold đã có khoản hoàn ĐÓNG từ trước nên phần
+ * thừa không được ghi ở đâu - vào hàng đợi cổng `overpaid`: tiền không bao giờ nằm ngoài mọi hàng đợi.
  */
 function reviewReasonFor(applied: AppliedResult): PaymentOrderReviewReason | null {
   switch (applied.outcome) {

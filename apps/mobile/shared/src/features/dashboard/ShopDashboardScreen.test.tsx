@@ -260,7 +260,7 @@ const FULL: Permission[] = [
   PERMISSION.FINANCE_VIEW,
 ];
 
-describe('ShopDashboardScreen — không gọi API cho khối thiếu quyền', () => {
+describe('ShopDashboardScreen - không gọi API cho khối thiếu quyền', () => {
   it('thiếu `finance.view`: KHÔNG có thẻ tiền và KHÔNG gọi endpoint tiền', async () => {
     const view = await renderScreen([PERMISSION.VEHICLE_VIEW, PERMISSION.BOOKING_VIEW]);
 
@@ -307,7 +307,7 @@ describe('ShopDashboardScreen — không gọi API cho khối thiếu quyền', 
   });
 });
 
-describe('ShopDashboardScreen — lỗi KHÔNG được hoá thành số 0', () => {
+describe('ShopDashboardScreen - lỗi KHÔNG được hoá thành số 0', () => {
   it('một khối lỗi không kéo cả màn thành màn lỗi', async () => {
     const view = await renderScreen(FULL, { summaryError: true });
 
@@ -325,7 +325,7 @@ describe('ShopDashboardScreen — lỗi KHÔNG được hoá thành số 0', () 
     expect(view.getAllByText('Không rõ').length).toBeGreaterThan(0);
   });
 
-  it('tổng quan lỗi: ô việc nói lỗi, lịch có "Thử lại" — không ô nào in 0', async () => {
+  it('tổng quan lỗi: ô việc nói lỗi, lịch có "Thử lại" - không ô nào in 0', async () => {
     const view = await renderScreen(FULL, { overviewError: true });
 
     await waitFor(() =>
@@ -342,7 +342,7 @@ describe('ShopDashboardScreen — lỗi KHÔNG được hoá thành số 0', () 
   });
 });
 
-describe('ShopDashboardScreen — việc cần làm, KPI tháng và đích của thẻ', () => {
+describe('ShopDashboardScreen - việc cần làm, KPI tháng và đích của thẻ', () => {
   it('câu trả lời đầu trang dựng từ chính các ô việc', async () => {
     const view = await renderScreen(FULL);
     expect(
@@ -363,14 +363,14 @@ describe('ShopDashboardScreen — việc cần làm, KPI tháng và đích của
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/manage/bookings/awaiting-pickup'));
   });
 
-  it('chủ gian hàng thấy khối ví (CHỈ chủ — `@ShopOwnerOnly`)', async () => {
+  it('chủ gian hàng thấy khối ví (CHỈ chủ - `@ShopOwnerOnly`)', async () => {
     const view = await renderScreen(FULL);
     expect(await view.findByText('Tiền của bạn')).toBeTruthy();
     expect(await view.findByText('1.500.000 ₫')).toBeTruthy();
   });
 });
 
-describe('ShopDashboardScreen — số liệu dùng CHUNG với module nguồn', () => {
+describe('ShopDashboardScreen - số liệu dùng CHUNG với module nguồn', () => {
   it('thẻ tiền đọc từ `/finance/summary`, không tự cộng', async () => {
     const view = await renderScreen(FULL);
 
@@ -399,7 +399,7 @@ describe('ShopDashboardScreen — số liệu dùng CHUNG với module nguồn',
     expect(target.params.to).toBeTruthy();
   });
 
-  it('thẻ Cọc KHÔNG mang kỳ — đó là số TẠI THỜI ĐIỂM NÀY', async () => {
+  it('thẻ Cọc KHÔNG mang kỳ - đó là số TẠI THỜI ĐIỂM NÀY', async () => {
     const view = await renderScreen(FULL);
 
     await fireEvent.press(await view.findByText('Tiền cọc đang giữ'));
@@ -415,7 +415,7 @@ describe('ShopDashboardScreen — số liệu dùng CHUNG với module nguồn',
   });
 });
 
-describe('ShopDashboardScreen — dải trạng thái và ba bước mở gian hàng', () => {
+describe('ShopDashboardScreen - dải trạng thái và ba bước mở gian hàng', () => {
   it('gian hàng đang hoạt động + đã có xe: không dải trạng thái, không thẻ ba bước', async () => {
     const view = await renderScreen(FULL);
 

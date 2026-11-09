@@ -167,7 +167,7 @@ describe('CustomerFinancePanel', () => {
     expect(summarySpy.mock.calls[0]![1]).toEqual({ tenantCustomerId: CUSTOMER_ID });
   });
 
-  it('khách hiện Doanh thu · Còn nợ · Số chuyến — KHÔNG hiện chi phí/lợi nhuận', async () => {
+  it('khách hiện Doanh thu · Còn nợ · Số chuyến - KHÔNG hiện chi phí/lợi nhuận', async () => {
     const { findByText, queryByText } = await renderPanel();
 
     expect(await findByText('Doanh thu')).toBeTruthy();
@@ -182,7 +182,7 @@ describe('CustomerFinancePanel', () => {
     expect(await findByText(/Tổng giá trị thuê/)).toBeTruthy();
   });
 
-  it('thẻ phiếu mở CHI TIẾT dùng chung — không dựng màn chi tiết riêng cho khách', async () => {
+  it('thẻ phiếu mở CHI TIẾT dùng chung - không dựng màn chi tiết riêng cho khách', async () => {
     const { findByLabelText, detailSpy, findByText } = await renderPanel();
 
     await fireEvent.press(await findByLabelText('PT-0009 · + 2.000.000 ₫'));
@@ -216,7 +216,7 @@ describe('CustomerFinancePanel', () => {
     expect(href.params.granularity).toBeUndefined();
   });
 
-  it('hồ sơ khách KHÔNG có lối tạo phiếu — tiền của khách luôn đi qua một chuyến', async () => {
+  it('hồ sơ khách KHÔNG có lối tạo phiếu - tiền của khách luôn đi qua một chuyến', async () => {
     const { queryByText, findByText } = await renderPanel();
 
     await findByText('Doanh thu');

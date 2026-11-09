@@ -283,7 +283,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('Ô "Tất cả" — bốn truy vấn nhỏ, đúng thứ tự một chuyến', () => {
+describe('Ô "Tất cả" - bốn truy vấn nhỏ, đúng thứ tự một chuyến', () => {
   it('hai nhóm YÊU CẦU xếp theo hạn đang chạy, hai nhóm ĐƠN theo ngăn; mỗi nhóm 3 chuyến, đều làm mới nền', () => {
     renderPage();
     expect(enabledRequestCalls().map((f) => f.status)).toEqual([
@@ -376,7 +376,7 @@ describe('Cột trái + nút "Đơn đã kết thúc"', () => {
   });
 });
 
-describe('Một nhóm — danh sách đầy đủ', () => {
+describe('Một nhóm - danh sách đầy đủ', () => {
   it('nhóm yêu cầu: một truy vấn có trang; truy vấn đơn chỉ còn một-dòng để đọc số đếm', () => {
     renderPage('preset=needs_action&page=2');
     const [call] = enabledRequestCalls();
@@ -405,7 +405,7 @@ describe('Một nhóm — danh sách đầy đủ', () => {
   });
 });
 
-describe('Thẻ yêu cầu — Cần xử lý', () => {
+describe('Thẻ yêu cầu - Cần xử lý', () => {
   beforeEach(() => seedRequests(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL, [request()]));
 
   it('chưa có đơn ⇒ KHÔNG có mã #…, dải đầu là mốc "Gửi lúc"; có Từ chối + Xác nhận', () => {
@@ -544,7 +544,7 @@ describe('Thẻ yêu cầu — Cần xử lý', () => {
   });
 });
 
-describe('Thẻ yêu cầu — Chờ khách thanh toán', () => {
+describe('Thẻ yêu cầu - Chờ khách thanh toán', () => {
   const awaiting = (over: Partial<BookingRequestItem> = {}) =>
     request({
       status: BOOKING_REQUEST_STATUS.AWAITING_HOLD,
@@ -625,7 +625,7 @@ describe('Thẻ yêu cầu — Chờ khách thanh toán', () => {
   });
 });
 
-describe('Thẻ đơn — Chờ giao xe / Đang thuê', () => {
+describe('Thẻ đơn - Chờ giao xe / Đang thuê', () => {
   it('Chờ giao: "Xử lý giao xe" mở TRANG chi tiết; thiếu quyền bàn giao thì chỉ "Chi tiết"', () => {
     permissions.granted.add(PERMISSION.HANDOVER_CONFIRM);
     seedBookings(BOOKING_LIST_PRESET.AWAITING_PICKUP, [booking({ id: 'A1' })]);

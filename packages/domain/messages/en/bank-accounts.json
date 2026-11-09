@@ -12,7 +12,7 @@
     "number": "Account number",
     "holder": "Beneficiary",
     "label": "Nickname",
-    "noLabel": "—"
+    "noLabel": "-"
   },
   "actions": {
     "add": "Add account",
@@ -30,7 +30,7 @@
     "bankCodePlaceholder": "Choose a bank",
     "accountNumber": "Account number",
     "accountName": "Beneficiary full name",
-    "accountNameHint": "Type it exactly as registered with your bank — a wrong name gets the transfer bounced.",
+    "accountNameHint": "Type it exactly as registered with your bank - a wrong name gets the transfer bounced.",
     "label": "Nickname",
     "labelPlaceholder": "Optional",
     "isDefault": "Make this my default payout account",

@@ -15,11 +15,11 @@ describe('toChartValue', () => {
     expect(toChartValue('1500000.99')).toBe(1500000);
   });
 
-  it('giữ nguyên dấu âm — lợi nhuận âm phải nằm dưới đường 0', () => {
+  it('giữ nguyên dấu âm - lợi nhuận âm phải nằm dưới đường 0', () => {
     expect(toChartValue('-2300000')).toBe(-2300000);
   });
 
-  it('thiếu giá trị là 0, không phải NaN — NaN làm recharts bỏ trắng cả cột', () => {
+  it('thiếu giá trị là 0, không phải NaN - NaN làm recharts bỏ trắng cả cột', () => {
     expect(toChartValue(null)).toBe(0);
     expect(toChartValue(undefined)).toBe(0);
     expect(toChartValue('')).toBe(0);

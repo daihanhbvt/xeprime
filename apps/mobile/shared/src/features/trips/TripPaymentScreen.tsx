@@ -1,3 +1,5 @@
+import { CountUpText } from '@/components/motion/use-count-up';
+import { celebrate } from '@/components/motion/Confetti';
 import { APP_FEATURES } from '@/lib/app-features';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView } from 'react-native';
@@ -23,6 +25,7 @@ import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { Countdown } from '@/components/ui/Countdown';
 import { DataRow, Divider } from '@/components/ui/DataRow';
+import { InfoHint } from '@/components/ui/InfoHint';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
@@ -367,7 +370,7 @@ function AwaitingHold({
           <>
             <DataRow
               label={t('summary.package')}
-              value={fmt.packageLabel(trip.longTermPackageMonths) ?? '—'}
+              value={fmt.packageLabel(trip.longTermPackageMonths) ?? '-'}
             />
             <DataRow label={t('summary.pickupWish')} value={fmt.pickupWish(trip)} />
           </>
@@ -379,17 +382,20 @@ function AwaitingHold({
         {payAtPickup ? (
           <YStack gap={2}>
             <XStack ai="center" jc="space-between" gap={space.sm}>
-              <Text f={1} col={colors.textMuted} fos={fontSize.body}>
-                {t('summary.payOwner')}
-              </Text>
+              <XStack f={1} ai="center" gap={4}>
+                <Text col={colors.textMuted} fos={fontSize.body}>
+                  {t('summary.payOwner')}
+                </Text>
+                <InfoHint
+                  content={t('summary.payOwnerNote')}
+                  label={t('summary.payOwnerNoteLabel')}
+                />
+              </XStack>
               {/* Figma: "Trả chủ xe" tô xanh — tiền mặt trả tay chủ xe, XePrime không thu hộ. */}
               <Text col={colors.success} fos={fontSize.body} fow={fontWeight.semibold}>
                 {fmt.money(payAtPickup)}
               </Text>
             </XStack>
-            <Text col={colors.placeholder} fos={fontSize.bodySm}>
-              {t('summary.payOwnerNote')}
-            </Text>
           </YStack>
         ) : null}
         <DataRow label={tCheckout('summary.code')} value={hold.code} strong />
@@ -399,10 +405,11 @@ function AwaitingHold({
             {underpaid ? t('summary.remainingLabel') : t('summary.amountLabel')}
           </Text>
           <Text col={colors.primary} fos={fontSize.h3} lh={28} fow={fontWeight.semibold}>
-            {fmt.money(hold.remainingAmount)}
+            <CountUpText amount={hold.remainingAmount} format={fmt.money} />
           </Text>
           <Countdown
             deadline={hold.expiresAt}
+            ring
             urgentMs={HOLD_COUNTDOWN_URGENT_MINUTES * 60_000}
             labels={{
               remaining: t('summary.countdown'),
@@ -475,6 +482,7 @@ function HoldSettled({ trip, hold }: { trip: CustomerTripDetail; hold: Hold | nu
   useEffect(() => {
     if (!paid || !successFresh || !hold || announced.current) return;
     announced.current = true;
+    celebrate();
     const amount = fmt.money(hold.paidAmount);
     toast.showSuccess(
       hold.paidVia

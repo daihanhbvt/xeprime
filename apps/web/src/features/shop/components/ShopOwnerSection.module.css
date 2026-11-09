@@ -1,4 +1,4 @@
-/* Thẻ "Chủ gian hàng" — design `23999:111299`: ảnh tài khoản + tên, hai dòng liên hệ, nút tài khoản. */
+/* Thẻ "Chủ gian hàng" - design `23999:111299`: ảnh tài khoản + tên, hai dòng liên hệ, nút tài khoản. */
 .identity {
   display: flex;
   min-width: 0;

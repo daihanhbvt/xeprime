@@ -48,7 +48,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('AddStaffModal — hành vi hiện tại', () => {
+describe('AddStaffModal - hành vi hiện tại', () => {
   it('tiêu đề là "Thêm nhân sự nền tảng"', () => {
     renderModal();
     expect(screen.getByText('Thêm nhân sự nền tảng')).toBeTruthy();
@@ -75,7 +75,7 @@ describe('AddStaffModal — hành vi hiện tại', () => {
     expect(mutation.mutate).not.toHaveBeenCalled();
   });
 
-  it('tên hiển thị rỗng thì không gọi mutation — API bắt buộc nó để tạo tài khoản mới', async () => {
+  it('tên hiển thị rỗng thì không gọi mutation - API bắt buộc nó để tạo tài khoản mới', async () => {
     renderModal();
     fillForm('nhanvien@xeprime.vn', '');
     fireEvent.click(screen.getByRole('button', { name: 'Thêm' }));

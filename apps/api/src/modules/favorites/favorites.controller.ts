@@ -32,7 +32,7 @@ export class FavoritesController {
 
   @Get()
   @ApiOperation({
-    summary: 'Xe yêu thích của tôi — một tab Ô tô/Xe máy, phân trang, dữ liệu chợ hiện hành',
+    summary: 'Xe yêu thích của tôi - một tab Ô tô/Xe máy, phân trang, dữ liệu chợ hiện hành',
     description:
       'Xe đang bị ẩn/gỡ/đình chỉ hoặc không còn dịch vụ nào không hiện (mục yêu thích vẫn giữ, ' +
       'mở bán lại là hiện lại). Mới lưu lên trước.',
@@ -47,7 +47,7 @@ export class FavoritesController {
 
   @Get('status')
   @ApiOperation({
-    summary: 'Trong các xe này, xe nào tôi đã thích — trái tim ở kết quả tìm kiếm/chi tiết',
+    summary: 'Trong các xe này, xe nào tôi đã thích - trái tim ở kết quả tìm kiếm/chi tiết',
   })
   @ApiOkResponse({ type: FavoriteStatusDto })
   status(
@@ -62,7 +62,7 @@ export class FavoritesController {
   @ApiOperation({
     summary: 'Lưu một xe vào yêu thích (idempotent)',
     description:
-      'Chỉ xe đang niêm yết công khai — không thì 404 `FAVORITE_VEHICLE_UNAVAILABLE`. Thích lại ' +
+      'Chỉ xe đang niêm yết công khai - không thì 404 `FAVORITE_VEHICLE_UNAVAILABLE`. Thích lại ' +
       'một xe đã thích trả 200 như lần đầu.',
   })
   @ApiOkResponse({ type: FavoriteToggleResultDto })
@@ -74,7 +74,7 @@ export class FavoritesController {
   }
 
   @Delete(':vehicleId')
-  @ApiOperation({ summary: 'Bỏ một xe khỏi yêu thích (idempotent — chưa lưu cũng trả 200)' })
+  @ApiOperation({ summary: 'Bỏ một xe khỏi yêu thích (idempotent - chưa lưu cũng trả 200)' })
   @ApiOkResponse({ type: FavoriteToggleResultDto })
   remove(
     @CurrentUser() user: AuthenticatedUser,

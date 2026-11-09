@@ -1,7 +1,8 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -12,6 +13,9 @@ import {
   hostMetricState,
 } from '@xeprime/types';
 import { images } from '@/assets';
+import { RevealText, ScrollReveal, useRevealFadeUp } from '@/components/motion/ScrollReveal';
+import { useRevealPop } from '@/components/motion/reveal-effects';
+import { RevealCountUp } from '@/components/motion/use-count-up';
 import { InfoHint } from '@/components/ui/InfoHint';
 import { ShopCover, useImageLoadFailure } from '@/components/ui/ShopCover';
 import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
@@ -63,7 +67,14 @@ interface ShopStat {
  * viền vàng đè lên bìa, vương miện, ô "Chi nhánh". Ô thiếu dữ liệu thì BIẾN MẤT, không hiện 0
  * (điểm khi chưa ai chấm; chỉ số uy tín dưới ngưỡng mẫu — ADR 0045 điều 3).
  */
-export function ShopHeader({ shop }: { shop: PublicShop }) {
+export function ShopHeader({
+  shop,
+  coverStyle,
+}: {
+  shop: PublicShop;
+  /** Style động của ảnh bìa (parallax `useParallaxHeader` từ màn chứa). */
+  coverStyle?: StyleProp<ViewStyle>;
+}) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const t = useTranslations('Shops');
@@ -146,7 +157,9 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
   return (
     <YStack>
       {isShop ? (
-        <ShopCover url={shop.coverUrl} />
+        <Animated.View style={coverStyle}>
+          <ShopCover url={shop.coverUrl} />
+        </Animated.View>
       ) : (
         /*
           Chủ xe cá nhân KHÔNG có ảnh bìa (như web), nhưng thẻ hồ sơ đứng sát đỉnh thì thanh trạng thái
@@ -184,6 +197,8 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
         </YStack>
       )}
 
+      {/* Thẻ hồ sơ trượt lên khi mở trang; phần tử con (avatar, tên, chip, số liệu) nối tiếp. */}
+      <ScrollReveal>
       <YStack px={layout.screenX} mt={-CARD_OVERLAP}>
         <YStack
           p={space.md}
@@ -229,8 +244,11 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
             borderBottomColor={isShop ? colors.primary : colors.border}
           >
             <XStack ai="flex-start" gap={space.sm + space.xs}>
-              <ShopAvatar shop={shop} isShop={isShop} verifiedLabel={t('header.verified')} />
+              <RevealPop delay={80} from={0.7}>
+                <ShopAvatar shop={shop} isShop={isShop} verifiedLabel={t('header.verified')} />
+              </RevealPop>
 
+              <RevealFadeUp delay={160}>
               <YStack f={1} minWidth={0} gap={isShop ? space.sm : 6}>
                 <XStack
                   ai="center"
@@ -283,6 +301,7 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
                   </MetaRow>
                 </YStack>
               </YStack>
+              </RevealFadeUp>
 
               {/*
                 Nút nhắn tin tròn ở mép phải hàng danh tính (web `.chat`); tự ẩn khi hộp thư tắt.
@@ -307,9 +326,9 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
                 rowGap={space.sm}
                 accessibilityLabel={t('profile.highlightsLabel')}
               >
-                {highlights.map((chip) => (
+                {highlights.map((chip, i) => (
+                  <RevealPop key={chip} delay={240 + Math.min(i, 5) * 60}>
                   <XStack
-                    key={chip}
                     ai="center"
                     gap={6}
                     px={space.sm}
@@ -322,12 +341,14 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
                       {chip}
                     </Text>
                   </XStack>
+                  </RevealPop>
                 ))}
               </XStack>
             ) : null}
           </YStack>
 
           {shop.bio || (isShop && shop.address) ? (
+            <RevealText delay={280}>
             <YStack gap={space.xs}>
               <Text
                 col={colors.text}
@@ -348,14 +369,15 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
                 </Text>
               ) : null}
             </YStack>
+            </RevealText>
           ) : null}
 
           <YStack gap={space.sm + space.xs} accessibilityLabel={t('profile.stats.label')}>
-            {statRows.map((row) => (
+            {statRows.map((row, rowIndex) => (
               <XStack key={row[0]?.key} gap={space.sm + space.xs}>
-                {row.map((stat) => (
+                {row.map((stat, col) => (
+                  <RevealPop key={stat.key} delay={320 + Math.min(rowIndex * 2 + col, 5) * 70} from={0.85} flex>
                   <YStack
-                    key={stat.key}
                     f={1}
                     minWidth={0}
                     ai="center"
@@ -368,7 +390,8 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
                   >
                     <XStack ai="center" gap={space.xs}>
                       <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.semibold}>
-                        {stat.value}
+                        {/* Số nguyên đếm lên, khung cuối đúng chuỗi gốc; điểm sao (thập phân) đứng yên. */}
+                        {stat.star ? stat.value : <RevealCountUp text={stat.value} />}
                       </Text>
                       {stat.star ? <ShopStarIcon size={16} /> : null}
                     </XStack>
@@ -381,6 +404,7 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
                       ) : null}
                     </XStack>
                   </YStack>
+                  </RevealPop>
                 ))}
                 {/* Hàng lẻ: một ô rỗng giữ ô thật ở đúng nửa bề ngang, như lưới 2 cột của web. */}
                 {row.length < 2 ? <YStack f={1} /> : null}
@@ -388,17 +412,44 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
             ))}
           </YStack>
 
+          <RevealText delay={420}>
           <XStack ai="center" gap={space.sm}>
             <ShopInfoIcon color={colors.textPlaceholder} />
             <Text col={colors.textPlaceholder} fos={fontSize.body} fontStyle="italic" f={1}>
               {t('profile.joined', { date: fmt.monthYear(new Date(shop.joinedAt)) })}
             </Text>
           </XStack>
+          </RevealText>
         </YStack>
       </YStack>
+      </ScrollReveal>
     </YStack>
   );
 }
+
+/** Pop-in (scale + fade) cho phần tử con KHÔNG bóng của thẻ hồ sơ; `flex` khi là ô lưới số liệu. */
+function RevealPop({
+  children,
+  delay,
+  from = 0.8,
+  flex = false,
+}: {
+  children: ReactNode;
+  delay: number;
+  from?: number;
+  flex?: boolean;
+}) {
+  const style = useRevealPop(delay, from);
+  return <Animated.View style={[flex ? FLEX_CELL : null, style]}>{children}</Animated.View>;
+}
+
+/** Khối chữ tên + meta: fade + trượt lên, giữ `flex: 1` của cột danh tính. */
+function RevealFadeUp({ children, delay }: { children: ReactNode; delay: number }) {
+  const style = useRevealFadeUp(delay);
+  return <Animated.View style={[FLEX_CELL, style]}>{children}</Animated.View>;
+}
+
+const FLEX_CELL = { flex: 1, minWidth: 0 } as const;
 
 /** Một dòng meta có ô icon 20×20 đứng trước (web `.metaItem` + `.metaIcon`). */
 function MetaRow({ icon, children }: { icon: ReactNode | null; children: ReactNode }) {

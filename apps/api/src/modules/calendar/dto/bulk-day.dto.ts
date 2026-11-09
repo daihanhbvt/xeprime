@@ -94,7 +94,7 @@ export class BulkDayVehicleDto {
 
   @ApiProperty({
     type: [String],
-    description: 'Những ngày (YYYY-MM-DD) xe đang BẬN trong khoảng — không khoá được',
+    description: 'Những ngày (YYYY-MM-DD) xe đang BẬN trong khoảng - không khoá được',
   })
   busyDates!: string[];
 }
@@ -109,7 +109,7 @@ export class BulkDayPreviewDto {
     type: String,
     nullable: true,
     description:
-      'Mã lô khoá hàng loạt đang phủ ĐÚNG khoảng này — công tắc trên lịch đang BẬT nếu khác null',
+      'Mã lô khoá hàng loạt đang phủ ĐÚNG khoảng này - công tắc trên lịch đang BẬT nếu khác null',
   })
   activeBlockBatchId!: string | null;
 }
@@ -151,7 +151,7 @@ export class BulkDayBlockDto extends BulkDayTargetDto {
 }
 
 export class BulkDayBlockResultDto {
-  @ApiProperty({ description: 'Mã lô — dùng để GỠ lại đúng những dòng vừa tạo' })
+  @ApiProperty({ description: 'Mã lô - dùng để GỠ lại đúng những dòng vừa tạo' })
   batchId!: string;
   @ApiProperty({ description: 'Số dòng khoá đã tạo (một dòng cho mỗi cặp xe × ngày)' })
   blockedDays!: number;
@@ -172,7 +172,7 @@ export class BulkDayPriceDto extends BulkDayTargetDto {
     enum: BULK_PRICE_MODES,
     description:
       '`percent` = tăng/giảm theo giá niêm yết của TỪNG xe (mặc định của giao diện). ' +
-      '`fixed` = một con số cho mọi xe — chỉ hợp lý khi nhóm chọn hẹp.',
+      '`fixed` = một con số cho mọi xe - chỉ hợp lý khi nhóm chọn hẹp.',
   })
   @IsIn(BULK_PRICE_MODES)
   mode!: string;

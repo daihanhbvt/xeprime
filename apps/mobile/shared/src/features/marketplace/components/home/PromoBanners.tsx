@@ -1,3 +1,4 @@
+import { KenBurns } from '@/components/motion/KenBurns';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import { useWindowDimensions } from 'react-native';
@@ -54,6 +55,8 @@ export function PromoBanners({ banners }: { banners: PublicBanner[] }) {
           ov="hidden"
           bg={colors.surfaceMuted}
         >
+          {/* Ken Burns chậm như hero — chỉ transform, khung ngoài clip. */}
+          <KenBurns style={{ width: '100%', height: '100%' }}>
           <Image
             source={{ uri: webAssetUrl(banner.mobileImageUrl ?? banner.imageUrl) }}
             style={{ width: '100%', height: '100%' }}
@@ -63,6 +66,7 @@ export function PromoBanners({ banners }: { banners: PublicBanner[] }) {
             accessibilityLabel={banner.altText}
             onError={() => setBroken((prev) => new Set(prev).add(banner.id))}
           />
+          </KenBurns>
         </YStack>
         </YStack>
       ))}

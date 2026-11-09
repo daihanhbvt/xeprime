@@ -280,13 +280,13 @@ export function PartnerVehicleTable({
           title: t('columns.branch'),
           key: 'branch',
           width: 140,
-          render: (_, row) => row.branchName ?? '—',
+          render: (_, row) => row.branchName ?? '-',
         }
       : {
           title: t('columns.pickupArea'),
           key: 'pickupArea',
           width: 160,
-          render: (_, row) => row.pickupAreaName ?? '—',
+          render: (_, row) => row.pickupAreaName ?? '-',
         },
     ...(compact
       ? []

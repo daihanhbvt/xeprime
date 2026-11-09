@@ -63,7 +63,7 @@ describe('TripEstimateCard', () => {
     expect(screen.queryByText(/thực nhận/i)).toBeNull();
   });
 
-  it('CHỦ XE thấy số thực nhận ở chân thẻ — server trả riêng cho vai chủ xe', () => {
+  it('CHỦ XE thấy số thực nhận ở chân thẻ - server trả riêng cho vai chủ xe', () => {
     renderCard({ isHost: true });
 
     expect(screen.getAllByText(/thực nhận/i).length).toBeGreaterThanOrEqual(1);
@@ -88,7 +88,7 @@ describe('TripEstimateCard', () => {
     expect(screen.queryByText('Tạm tính')).toBeNull();
   });
 
-  it('chưa thanh toán ⇒ vẫn là "Tạm tính" — số chốt chỉ sinh ra khi tiền về', () => {
+  it('chưa thanh toán ⇒ vẫn là "Tạm tính" - số chốt chỉ sinh ra khi tiền về', () => {
     renderCard();
 
     expect(screen.getByText('Tạm tính')).toBeTruthy();

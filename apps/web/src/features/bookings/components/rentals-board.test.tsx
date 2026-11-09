@@ -262,7 +262,7 @@ describe('Dạng xem nào được hiện', () => {
     expect(window.localStorage.getItem('xp.rentals.view')).toBe('list');
   });
 
-  it('điện thoại LUÔN là List, không có nút chuyển — kể cả link `?view=board`', () => {
+  it('điện thoại LUÔN là List, không có nút chuyển - kể cả link `?view=board`', () => {
     media.mobile = true;
     renderPage('view=board');
     expect(screen.queryByRole('region', { name: 'Bảng đơn thuê theo chặng' })).toBeNull();
@@ -270,7 +270,7 @@ describe('Dạng xem nào được hiện', () => {
   });
 });
 
-describe('Bốn cột — truy vấn cuộn vô hạn, đúng phạm vi', () => {
+describe('Bốn cột - truy vấn cuộn vô hạn, đúng phạm vi', () => {
   it('hai cột YÊU CẦU xếp theo hạn đang chạy, hai cột ĐƠN theo ngăn; trang 10 thẻ; truy vấn dạng List tắt hết', () => {
     renderPage('q=Kia&branchId=b-1');
     const requestCalls = columns.requestCalls.filter((c) => c.enabled);
@@ -335,7 +335,7 @@ describe('Bốn cột — truy vấn cuộn vô hạn, đúng phạm vi', () => 
   });
 });
 
-describe('Tay nắm kéo — chỉ ở thẻ có bước kế mà người xem làm được', () => {
+describe('Tay nắm kéo - chỉ ở thẻ có bước kế mà người xem làm được', () => {
   function seedAll() {
     seed(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL, [
       request({ id: 'r-open', vehicleName: 'Kia Carnival' }),

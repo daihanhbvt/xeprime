@@ -61,7 +61,7 @@ function errorsOf(values: FeePolicyFormValues): Record<string, string> {
   }
 }
 
-describe('feePolicyFormDefaults — tạo mới', () => {
+describe('feePolicyFormDefaults - tạo mới', () => {
   it('lấy bộ số luồng tiền v2', () => {
     const d = feePolicyFormDefaults(null);
     expect(d.depositPercent).toBe(15); // ADR 0066: 15% tiền thuê
@@ -74,7 +74,7 @@ describe('feePolicyFormDefaults — tạo mới', () => {
     expect(d.tripInsuranceEnabled).toBe(false);
   });
 
-  it('mặc định hợp lệ ngay — admin chỉ cần đặt tên', () => {
+  it('mặc định hợp lệ ngay - admin chỉ cần đặt tên', () => {
     expect(errorsOf(valid())).toEqual({});
   });
 });
@@ -209,7 +209,7 @@ describe('tiền cấu hình & luật nhiều ô', () => {
 });
 
 describe('thuế khấu trừ theo loại dịch vụ (ADR 0068)', () => {
-  it('bản mới mặc định bảng mức NĐ 117 + căn cứ — bật công tắc là hợp lệ ngay', () => {
+  it('bản mới mặc định bảng mức NĐ 117 + căn cứ - bật công tắc là hợp lệ ngay', () => {
     const d = feePolicyFormDefaults(null);
     expect(d.taxRates).toEqual(TAX_RATES_DEFAULTS);
     expect(d.taxLegalBasis).toBe(TAX_LEGAL_BASIS_DEFAULT);

@@ -19,7 +19,7 @@ describe('telHref / zaloHref', () => {
     expect(telHref('090-123-4567')).toBe('tel:0901234567');
   });
 
-  it('Zalo định danh bằng SĐT NỘI ĐỊA — `+84` mở ra trang tìm kiếm rỗng', () => {
+  it('Zalo định danh bằng SĐT NỘI ĐỊA - `+84` mở ra trang tìm kiếm rỗng', () => {
     expect(zaloHref('0901234567')).toBe('https://zalo.me/0901234567');
     expect(zaloHref('+84901234567')).toBe('https://zalo.me/0901234567');
   });

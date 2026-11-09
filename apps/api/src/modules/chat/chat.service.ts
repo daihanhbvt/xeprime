@@ -325,7 +325,7 @@ export class ChatService {
     if (!request.customerUserId) {
       throw new BadRequestException({
         code: API_ERROR_CODE.CHAT_CUSTOMER_UNAVAILABLE,
-        message: 'Khách chưa có tài khoản trên nền tảng — hãy gọi điện hoặc nhắn Zalo',
+        message: 'Khách chưa có tài khoản trên nền tảng - hãy gọi điện hoặc nhắn Zalo',
       });
     }
     /*

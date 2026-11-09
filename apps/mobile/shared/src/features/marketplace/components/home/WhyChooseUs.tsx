@@ -1,5 +1,10 @@
+import type { ReactNode } from 'react';
+import { RevealText, ScrollReveal } from '@/components/motion/ScrollReveal';
+import { RevealCountUp } from '@/components/motion/use-count-up';
 import { Image } from 'expo-image';
-import { ImageBackground, useWindowDimensions } from 'react-native';
+import { ImageBackground, StyleSheet, useWindowDimensions } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { useRevealPop, useScrollParallax } from '@/components/motion/reveal-effects';
 import { SvgXml } from 'react-native-svg';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -34,6 +39,8 @@ const STAT_RATIO = { width: 173 / 532, height: 124 / 488 };
  */
 export function WhyChooseUs() {
   const colors = useColors();
+  // Ảnh ghép có khoét chỗ cho ô "100+": ảnh và ô phải trôi CÙNG NHAU, không phóng - tách rời là vỡ hình.
+  const parallax = useScrollParallax(0.15, 24, 1);
   // Figma dark: tiêu đề mục vàng, mô tả xám sáng (`21965:6841`, `19879:66279`).
   const dark = useAppScheme().scheme === 'dark';
   const onDarkMuted = XP_TOKENS['color-text-on-dark-muted'];
@@ -51,6 +58,7 @@ export function WhyChooseUs() {
             accent: (chunks) => <Text col={colors.primary}>{chunks}</Text>,
           })}
         />
+        <RevealText delay={300}>
         <YStack gap={space.sm}>
           <Text col={dark ? onDarkMuted : colors.textMuted} fos={fontSize.bodyLg} lh={24} ta="center">
             {t('intro')}
@@ -59,11 +67,15 @@ export function WhyChooseUs() {
             {t('closing')}
           </Text>
         </YStack>
+        </RevealText>
       </YStack>
 
       <XStack flexWrap="wrap" rowGap={space.md} columnGap={space.md}>
-        {ITEMS.map((item) => (
-          <YStack key={item.key} flexBasis="40%" flexGrow={1} ai="center" gap={12}>
+        {ITEMS.map((item, index) => (
+          // Mỗi ô tự hiện khi CHÍNH NÓ cuộn vào màn (không theo đầu khối); trễ nhỏ theo cột.
+          <ScrollReveal key={item.key} index={index} style={styles.cell}>
+          <YStack ai="center" gap={12}>
+            <IconBounce index={index % 2}>
             <YStack p={12} br={radius.pill} bg={colors.primarySubtle}>
               <YStack w={ICON_BOX} h={ICON_BOX} ai="center" jc="center">
                 <SvgXml
@@ -73,6 +85,8 @@ export function WhyChooseUs() {
                 />
               </YStack>
             </YStack>
+            </IconBounce>
+            <RevealText delay={160 + (index % 2) * 80}>
             <YStack gap={2} ai="center">
               <Text col={dark ? colors.primary : colors.text} fos={fontSize.bodyLg} lh={24} fow={fontWeight.semibold} ta="center">
                 {t(`items.${item.key}.title`)}
@@ -81,11 +95,17 @@ export function WhyChooseUs() {
                 {t(`items.${item.key}.desc`)}
               </Text>
             </YStack>
+            </RevealText>
           </YStack>
+          </ScrollReveal>
         ))}
       </XStack>
 
+      {/* Parallax nhẹ khi cuộn: cả khối ảnh + ô "100+" trôi chậm - đo ở khung ngoài đứng yên. */}
+      <Animated.View ref={parallax.ref} collapsable={false}>
+      <Animated.View style={parallax.style}>
       <YStack w="100%" aspectRatio={IMAGE_RATIO}>
+        <Animated.View style={StyleSheet.absoluteFill} pointerEvents="box-none">
         <ImageBackground
           source={require('../../../../../assets/images/home/why-stat-bg.png')}
           resizeMode="cover"
@@ -101,19 +121,35 @@ export function WhyChooseUs() {
           }}
         >
           <Text col={market.onDark} fos={fontSize.h1} lh={38} fow={fontWeight.semibold}>
-            {t('statValue')}
+            <RevealCountUp text={t('statValue')} />
           </Text>
           <Text col={market.onDark} fos={fontSize.bodySm} lh={18} fow={fontWeight.medium}>
             {t('statLabel')}
           </Text>
         </ImageBackground>
+        </Animated.View>
+        <Animated.View style={styles.fill}>
         <Image
           source={require('../../../../../assets/images/home/why-image.png')}
           accessibilityLabel={t('imageAlt')}
           contentFit="contain"
           style={{ width: '100%', height: '100%' }}
         />
+        </Animated.View>
       </YStack>
+      </Animated.View>
+      </Animated.View>
     </YStack>
   );
 }
+
+/** Icon tròn (không bóng) bounce-in lần lượt khi khối hiện. */
+function IconBounce({ index, children }: { index: number; children: ReactNode }) {
+  const style = useRevealPop(index * 110, 0.6);
+  return <Animated.View style={style}>{children}</Animated.View>;
+}
+
+const styles = StyleSheet.create({
+  fill: { width: '100%', height: '100%' },
+  cell: { flexBasis: '40%', flexGrow: 1 },
+});

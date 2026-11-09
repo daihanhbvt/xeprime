@@ -33,7 +33,7 @@ describe('computeEventPosition', () => {
     });
   });
 
-  it('bỏ event kết thúc ĐÚNG lúc khoảng bắt đầu — biên nửa mở [start, end) như ADR 0006', () => {
+  it('bỏ event kết thúc ĐÚNG lúc khoảng bắt đầu - biên nửa mở [start, end) như ADR 0006', () => {
     expect(
       computeEventPosition({ startAt: '2026-07-10T00:00:00.000Z', endAt: DAY0 }, range),
     ).toBeNull();
@@ -50,7 +50,7 @@ describe('computeEventPosition', () => {
     expect(computeEventPosition({ startAt: 'không-phải-ngày', endAt: DAY0 }, range)).toBeNull();
   });
 
-  it('tính offset theo giờ VN — event 12:00 trưa nằm ở NỬA ngày, không lệch 7 tiếng', () => {
+  it('tính offset theo giờ VN - event 12:00 trưa nằm ở NỬA ngày, không lệch 7 tiếng', () => {
     const position = computeEventPosition(
       { startAt: '2026-07-12T05:00:00.000Z', endAt: '2026-07-12T17:00:00.000Z' },
       range,
@@ -100,7 +100,7 @@ describe('layoutEventBars', () => {
     expect(bar!.width).toBeGreaterThanOrEqual(44);
   });
 
-  it('dùng thang 12 GIỜ cho event ngắn hơn một ngày — thuê 6 tiếng chiếm NỬA ô', () => {
+  it('dùng thang 12 GIỜ cho event ngắn hơn một ngày - thuê 6 tiếng chiếm NỬA ô', () => {
     /*
      * Ô rộng để thang hiển thị lộ ra: ở `dayWidth` hẹp thì SÀN 44px thắng và cả hai thang cho
      * cùng một con số, nên phép so sánh không nói lên điều gì.

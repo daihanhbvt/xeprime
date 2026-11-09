@@ -6,7 +6,7 @@
     },
     "page": {
       "title": "Thu chi",
-      "subtitle": "Mọi khoản tiền của gian hàng — thu tiền đơn, cọc, hoàn cọc và chi phí xe đều tự lên sổ."
+      "subtitle": "Mọi khoản tiền của gian hàng - thu tiền đơn, cọc, hoàn cọc và chi phí xe đều tự lên sổ."
     },
     "periods": {
       "label": "Kỳ xem nhanh",
@@ -79,7 +79,7 @@
       "errorTitle": "Không tải được phiếu",
       "auto": {
         "title": "Phiếu tự động",
-        "body": "Phiếu này sinh từ {source} nên không sửa/huỷ trực tiếp được — sổ sẽ lệch với đơn. Muốn đảo thì thao tác ở chính nghiệp vụ đó",
+        "body": "Phiếu này sinh từ {source} nên không sửa/huỷ trực tiếp được - sổ sẽ lệch với đơn. Muốn đảo thì thao tác ở chính nghiệp vụ đó",
         "openBooking": "mở đơn thuê",
         "openVehicle": "mở hồ sơ xe"
       },
@@ -147,7 +147,7 @@
         "income": "Tạo phiếu thu",
         "expense": "Tạo phiếu chi"
       },
-      "success": "Đã tạo phiếu — chờ duyệt",
+      "success": "Đã tạo phiếu - chờ duyệt",
       "linkMode": {
         "label": "Liên kết với",
         "none": "Khoản chung",
@@ -191,7 +191,7 @@
       "descriptionPlaceholder": "Nhập nội dung"
     },
     "summary": {
-      "error": "Không tải được số tổng — danh sách bên dưới vẫn đúng",
+      "error": "Không tải được số tổng - danh sách bên dưới vẫn đúng",
       "income": "Tổng thu",
       "expense": "Tổng chi",
       "balance": "Cân đối (thu − chi)",
@@ -223,7 +223,7 @@
       "renamed": "Đã đổi tên danh mục",
       "deleted": "Đã xoá danh mục",
       "deleteConfirm": "Xoá danh mục \"{name}\"?",
-      "systemHint": "Danh mục hệ thống — không sửa hoặc xoá được",
+      "systemHint": "Danh mục hệ thống - không sửa hoặc xoá được",
       "empty": "Chưa có danh mục nào",
       "done": "Đóng"
     },
@@ -245,8 +245,8 @@
       "debt": "Công nợ khách hàng",
       "debtHint": "{count, plural, =0 {Không có đơn còn nợ} other {# đơn còn nợ}}",
       "infoLabel": "Cách tính tổng thu chi",
-      "infoFiltered": "Chỉ cộng phiếu ĐÃ DUYỆT trong bộ lọc đang xem — phiếu chờ duyệt chưa là tiền thật.",
-      "infoWhole": "Chỉ cộng phiếu ĐÃ DUYỆT của toàn bộ sổ — phiếu chờ duyệt chưa là tiền thật.",
+      "infoFiltered": "Chỉ cộng phiếu ĐÃ DUYỆT trong bộ lọc đang xem - phiếu chờ duyệt chưa là tiền thật.",
+      "infoWhole": "Chỉ cộng phiếu ĐÃ DUYỆT của toàn bộ sổ - phiếu chờ duyệt chưa là tiền thật.",
       "debtInfoLabel": "Về công nợ khách hàng",
       "debtInfo": "Số tại thời điểm này, không phụ thuộc kỳ đang lọc. Bấm để mở tab Công nợ."
     }
@@ -377,14 +377,14 @@
         "margin": "Biên {value}%",
         "marginUnknown": "Chưa có doanh thu để tính biên",
         "unassigned": "Trong đó {value} chưa gắn xe",
-        "note": "Đã loại tiền cọc ra khỏi cả hai vế. Đây là lãi tiền mặt theo sổ — chưa trừ khấu hao, lãi vay hay tiền thuê xe của chủ."
+        "note": "Đã loại tiền cọc ra khỏi cả hai vế. Đây là lãi tiền mặt theo sổ - chưa trừ khấu hao, lãi vay hay tiền thuê xe của chủ."
       },
       "cash": {
         "title": "Dòng tiền quỹ",
         "in": "Tiền vào",
         "out": "Tiền ra",
         "balance": "Cân đối",
-        "note": "Gồm cả tiền cọc thu và hoàn — đây là số tiền thực sự đi qua tay trong kỳ."
+        "note": "Gồm cả tiền cọc thu và hoàn - đây là số tiền thực sự đi qua tay trong kỳ."
       },
       "now": {
         "title": "Tại thời điểm này",
@@ -410,9 +410,9 @@
       "bookingsNow": "{count, plural, other {# đơn}} · hiện tại",
       "bookings": "{count, plural, other {# đơn}}",
       "businessInfoLabel": "Giải thích về doanh thu và chi phí",
-      "businessNote": "Đã loại tiền cọc ra khỏi cả hai vế. Đây là lãi tiền mặt theo sổ — chưa trừ khấu hao, lãi vay hay tiền thuê xe của chủ.",
+      "businessNote": "Đã loại tiền cọc ra khỏi cả hai vế. Đây là lãi tiền mặt theo sổ - chưa trừ khấu hao, lãi vay hay tiền thuê xe của chủ.",
       "cashInfoLabel": "Giải thích về dòng tiền ròng",
-      "cashNote": "Tiền vào trừ tiền ra của mọi phiếu đã duyệt, gồm cả tiền cọc thu và hoàn — đây là số tiền thực sự đi qua tay trong kỳ."
+      "cashNote": "Tiền vào trừ tiền ra của mọi phiếu đã duyệt, gồm cả tiền cọc thu và hoàn - đây là số tiền thực sự đi qua tay trong kỳ."
     },
     "chart": {
       "title": "Dòng tiền & Lợi nhuận theo thời gian",
@@ -431,7 +431,7 @@
       "tapHint": "Chạm vào một mốc trên biểu đồ để xem số của mốc đó.",
       "yAxisUnit": "Đơn vị: triệu đồng",
       "legend": "Chú giải biểu đồ",
-      "weekRange": "{from} – {to}",
+      "weekRange": "{from} - {to}",
       "description": "Cột là doanh thu và chi phí, đường là lợi nhuận. Đã loại tiền cọc."
     },
     "categories": {
@@ -517,7 +517,7 @@
     },
     "note": {
       "vehicle": "Cộng trên phiếu đã duyệt, đã loại tiền cọc. Chưa trừ khấu hao, lãi vay hay tiền thuê xe của chủ.",
-      "customer": "Cộng trên tiền THẬT đã thu trong kỳ — khác \"Tổng giá trị thuê\" ở đầu hồ sơ, vốn tính trên giá trị đơn đã chốt."
+      "customer": "Cộng trên tiền THẬT đã thu trong kỳ - khác \"Tổng giá trị thuê\" ở đầu hồ sơ, vốn tính trên giá trị đơn đã chốt."
     },
     "periods": {
       "label": "Kỳ xem nhanh",
@@ -576,7 +576,7 @@
       "index": "STT"
     },
     "ratePair": "GTGT {vat, number}% + TNCN {pit, number}%",
-    "notSplit": "Dòng cũ — không tách",
+    "notSplit": "Dòng cũ - không tách",
     "monthValue": "Tháng {month}"
   },
   "history": {

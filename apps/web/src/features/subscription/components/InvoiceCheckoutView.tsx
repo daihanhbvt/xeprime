@@ -45,9 +45,9 @@ const PAYMENT_URGENT_MS = 15 * 60_000;
 
 /**
  * Khung của trang thanh toán:
- *  - `bare` — trang TRẦN (không khung — xem `isPartnerPaymentPage`): người trả có thể là gian hàng
+ *  - `bare` - trang TRẦN (không khung - xem `isPartnerPaymentPage`): người trả có thể là gian hàng
  *    đang nợ bước thanh toán đầu tiên, chưa có cổng quản lý nào để dựng khung (ADR 0040);
- *  - `shell` — NGAY TRONG khung site partner, breadcrumb "Thông tin cửa hàng › Thanh toán hoá đơn"
+ *  - `shell` - NGAY TRONG khung site partner, breadcrumb "Thông tin cửa hàng › Thanh toán hoá đơn"
  *    (design `24051:79507`): gian hàng tuyến gói mua / gia hạn từ trang Cửa hàng.
  */
 export type PaymentViewVariant = 'bare' | 'shell';
@@ -55,7 +55,7 @@ export type PaymentViewVariant = 'bare' | 'shell';
 /** Thứ được trả: MỘT hoá đơn, hoặc MỘT phiếu gộp nhiều hoá đơn (ADR 0083). */
 type PaymentTarget = { kind: 'invoice'; id: string } | { kind: 'checkout'; id: string };
 
-/** Hình dạng chung của khoản cần trả — hoá đơn lẻ và phiếu gộp nói cùng một ngôn ngữ ở đây. */
+/** Hình dạng chung của khoản cần trả - hoá đơn lẻ và phiếu gộp nói cùng một ngôn ngữ ở đây. */
 interface Payable {
   code: string;
   status: string;
@@ -91,7 +91,7 @@ function payableOfCheckout(checkout: SubscriptionCheckout): Payable {
   };
 }
 
-/** Một hoá đơn gói — `/payment/:invoiceId` (trần) và `/shop/payment/:invoiceId` (trong khung). */
+/** Một hoá đơn gói - `/payment/:invoiceId` (trần) và `/shop/payment/:invoiceId` (trong khung). */
 export function InvoiceCheckoutView({
   invoiceId,
   variant = 'bare',
@@ -102,7 +102,7 @@ export function InvoiceCheckoutView({
   return <SubscriptionPaymentView target={{ kind: 'invoice', id: invoiceId }} variant={variant} />;
 }
 
-/** Một phiếu gộp nhiều gói — `/payment/checkout/:id` và `/shop/payment/checkout/:id` (ADR 0083). */
+/** Một phiếu gộp nhiều gói - `/payment/checkout/:id` và `/shop/payment/checkout/:id` (ADR 0083). */
 export function CheckoutPaymentView({
   checkoutId,
   variant = 'bare',
@@ -118,13 +118,13 @@ export function CheckoutPaymentView({
  *
  * Mọi lối mua gói dẫn tới đây ngay khi hoá đơn / phiếu tạo xong: hộp "Mua hoặc gia hạn gói" của
  * trang Cửa hàng, bước thanh toán của onboarding gian hàng trả phí, bước cuối của luồng nâng cấp từ
- * tuyến hoa hồng. Đây cũng là trang cổng MoMo/VNPAY chuyển người trả về (`returnUrl` do server dựng —
+ * tuyến hoa hồng. Đây cũng là trang cổng MoMo/VNPAY chuyển người trả về (`returnUrl` do server dựng -
  * `PAYMENT_PAGE_PATH`).
  *
- * Gói bật khi tiền về — việc của webhook SePay hoặc IPN cổng, trong CÙNG transaction với hoá đơn
+ * Gói bật khi tiền về - việc của webhook SePay hoặc IPN cổng, trong CÙNG transaction với hoá đơn
  * `paid` (ADR 0022 · ADR 0040 điều 3 · ADR 0083 điều 3 cho phiếu gộp). Trang biết điều đó khi chính
  * khoản cần trả đổi trạng thái: thông báo `subscription_activated` đẩy qua bản chiếu realtime làm mới
- * nó ngay, nhịp hỏi lại là lưới an toàn. KHÔNG có nút "Tôi đã chuyển khoản" — một nút tự khai đã trả
+ * nó ngay, nhịp hỏi lại là lưới an toàn. KHÔNG có nút "Tôi đã chuyển khoản" - một nút tự khai đã trả
  * là một lời hứa mở cổng quản lý không qua tiền.
  */
 function SubscriptionPaymentView({
@@ -282,7 +282,7 @@ function PaymentBody({
   const paymentInfo = usePaymentInfo(awaiting);
   /*
    * Vừa quay về từ cổng với một lượt còn dùng được / đang ghi nhận ⇒ KHÔNG mời mở phiên mới (xem
-   * `canStartAnotherCheckout`). Cùng khoá cache với `GatewayOrderNotice` — không request thứ hai.
+   * `canStartAnotherCheckout`). Cùng khoá cache với `GatewayOrderNotice` - không request thứ hai.
    */
   const order = useGatewayOrder(PAYMENT_SURFACE.PARTNER, awaiting ? orderId : null);
   const gatewayEnabled =
@@ -312,7 +312,7 @@ function PaymentBody({
   }
 
   if (!awaiting) {
-    // Đã huỷ/hết hạn: chọn gói lại — gian hàng đang nợ bước đầu thì ở onboarding, còn lại ở trang gói.
+    // Đã huỷ/hết hạn: chọn gói lại - gian hàng đang nợ bước đầu thì ở onboarding, còn lại ở trang gói.
     const againHref = shell
       ? shopSectionPath(SHOP_SECTION.PLAN)
       : resolvePartnerTrack(user) === PARTNER_TRACK.PACKAGE_PENDING
@@ -368,7 +368,7 @@ function PaymentBody({
       }
       notes={
         <ul className={styles.notes}>
-          {/* "Tự xác nhận khi tiền về" đã do `CheckoutPanel` nói ngay trên — không lặp. */}
+          {/* "Tự xác nhận khi tiền về" đã do `CheckoutPanel` nói ngay trên - không lặp. */}
           {payable.expiresAt ? (
             <li>{tPayment('expires', { date: fmt.dateTime(payable.expiresAt) })}</li>
           ) : null}

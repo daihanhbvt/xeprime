@@ -109,7 +109,7 @@ afterEach(() => {
  *  2. TRẠNG THÁI ĐƠN đọc được TRƯỚC các con số — một đơn `reserved` còn nợ không phải nợ quá hạn;
  *  3. hai hành động gác bằng HAI quyền khác nhau, và "Thu tiền" mở đúng luồng FIN-05 đã có.
  */
-describe('DebtListScreen — quyền', () => {
+describe('DebtListScreen - quyền', () => {
   it('thiếu `finance.view`: màn thiếu quyền, KHÔNG gọi API', async () => {
     const { findByText, listSpy } = await renderScreen([]);
 
@@ -137,7 +137,7 @@ describe('DebtListScreen — quyền', () => {
   });
 });
 
-describe('DebtListScreen — thẻ và hành động', () => {
+describe('DebtListScreen - thẻ và hành động', () => {
   it('trạng thái đơn hiện ra, và ba con số tiền đọc được', async () => {
     const { findByText } = await renderScreen([PERMISSION.FINANCE_VIEW]);
 
@@ -193,7 +193,7 @@ describe('DebtListScreen — thẻ và hành động', () => {
   });
 });
 
-describe('DebtListScreen — rỗng', () => {
+describe('DebtListScreen - rỗng', () => {
   it('chưa ai còn nợ: câu chữ riêng, không phải "không khớp bộ lọc"', async () => {
     const { findByText } = await renderScreen([PERMISSION.FINANCE_VIEW], {
       items: [],

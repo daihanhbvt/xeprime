@@ -2,6 +2,8 @@
 
 import { CheckCircleFilled } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
+import { popInClass, seqClass } from '@/components/motion/motion-classes';
+import { cx } from '@/lib/cx';
 import styles from './CustomerTripTimeline.module.css';
 
 interface CustomerTripTimelineProps {
@@ -30,11 +32,11 @@ export function CustomerTripTimeline({ confirmedDone, completedDone }: CustomerT
 
   return (
     <ol
-      className={styles.timeline}
+      className={cx(styles.timeline, seqClass)}
       aria-label={completedDone ? t('ariaDone') : t('ariaPending')}
     >
       {milestones.map((milestone, index) => (
-        <li key={milestone.key} className={styles.item}>
+        <li key={milestone.key} className={cx(styles.item, popInClass)}>
           {index > 0 ? (
             <span
               className={done[index] ? styles.connectorDone : styles.connector}

@@ -13,27 +13,27 @@ import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import type { MyShop, UpdateProfileInput } from './types';
 
 /**
- * Form hồ sơ gian hàng — MỘT định nghĩa cho hai màn hình.
+ * Form hồ sơ gian hàng - MỘT định nghĩa cho hai màn hình.
  *
  * `/manage/shop` (trang Cửa hàng, năm section) và "Hồ sơ chủ xe" (`/manage/account` của chủ xe
- * tuyến hoa hồng — `OwnerProfilePage`) hỏi CÙNG một bộ trường và ghi vào CÙNG một endpoint. Hai
- * màn khác bố cục (năm section của gian hàng ↔ hồ sơ cá nhân gộp trang chủ xe) — nên phần KHÔNG
+ * tuyến hoa hồng - `OwnerProfilePage`) hỏi CÙNG một bộ trường và ghi vào CÙNG một endpoint. Hai
+ * màn khác bố cục (năm section của gian hàng ↔ hồ sơ cá nhân gộp trang chủ xe) - nên phần KHÔNG
  * phải bố cục tách ra đây. Đây cũng là lý do lên gói / hết gói không phải chép dữ liệu: hai màn
  * đọc và ghi đúng một bản ghi.
  *
  * Tách ở mức này, không thấp hơn: hai màn chia sẻ *giá trị khởi tạo*, *schema* và *cách dựng
- * thân request* — đúng ba thứ mà lệch nhau là một trong hai màn gửi lên thứ khác với thứ nó
+ * thân request* - đúng ba thứ mà lệch nhau là một trong hai màn gửi lên thứ khác với thứ nó
  * hiển thị. Bố cục thì mỗi màn tự lo.
  */
 
-/** Tên ba trường địa chỉ trong `shopProfileSchema` — hằng ngoài component, định danh ổn định. */
+/** Tên ba trường địa chỉ trong `shopProfileSchema` - hằng ngoài component, định danh ổn định. */
 export const SHOP_ADDRESS_FIELD_NAMES = {
   provinceCode: 'provinceCode',
   wardCode: 'wardCode',
   addressLine: 'addressLine',
 } as const;
 
-/** Bốn trường GHIM — tách riêng vì không phải form nào cũng lưu toạ độ (xem `AddressPinNames`). */
+/** Bốn trường GHIM - tách riêng vì không phải form nào cũng lưu toạ độ (xem `AddressPinNames`). */
 export const SHOP_ADDRESS_PIN_NAMES = {
   placeId: 'placeId',
   latitude: 'latitude',
@@ -45,13 +45,13 @@ export const SHOP_ADDRESS_PIN_NAMES = {
  * Giá trị khởi tạo của form.
  *
  * Tỉnh/thành lấy từ CHI NHÁNH MẶC ĐỊNH trước, hai cột trên hồ sơ chỉ là bản sao dự phòng cho dữ
- * liệu cũ (xem `syncProfileFromDefaultBranch` ở backend) — đọc ngược lại sẽ hiện tỉnh cũ sau khi
+ * liệu cũ (xem `syncProfileFromDefaultBranch` ở backend) - đọc ngược lại sẽ hiện tỉnh cũ sau khi
  * chủ shop vừa đổi chi nhánh.
  */
 export function toShopProfileValues(shop: MyShop): ShopProfileWithContactValues {
   const p = shop.profile;
   return {
-    // Tên, SĐT, email của GIAN HÀNG nằm trên `tenants` — thứ khách đọc. SĐT/email đăng nhập của
+    // Tên, SĐT, email của GIAN HÀNG nằm trên `tenants` - thứ khách đọc. SĐT/email đăng nhập của
     // chủ là `ownerAccount`, một bộ khác hẳn và không sửa ở form này (ADR 0053).
     displayName: shop.name,
     phone: shop.phone ? toLocalVnPhone(shop.phone) : '',
@@ -63,14 +63,14 @@ export function toShopProfileValues(shop: MyShop): ShopProfileWithContactValues 
     wardCode: shop.defaultBranch?.wardCode ?? p.wardCode ?? '',
     /*
      * Hồ sơ CŨ chưa có phần "số nhà, đường" tách riêng: đoán từ chuỗi hiển thị bằng cách cắt
-     * các cụm trông như đơn vị hành chính. Chỉ là GỢI Ý — chủ shop nhìn và sửa trước khi lưu.
+     * các cụm trông như đơn vị hành chính. Chỉ là GỢI Ý - chủ shop nhìn và sửa trước khi lưu.
      */
     addressLine: guessAddressLine(shop.defaultBranch?.address ?? p.address),
     placeId: null,
     latitude: null,
     longitude: null,
     locationSource: null,
-    // KHÔNG có mã số thuế (07/10/2026): nó ở hồ sơ người bán — section "Thông tin khai thuế".
+    // KHÔNG có mã số thuế (07/10/2026): nó ở hồ sơ người bán - section "Thông tin khai thuế".
     businessLicenseNo: p.businessLicenseNo ?? '',
     logoUrl: p.logoUrl ?? null,
     coverUrl: p.coverUrl ?? null,
@@ -81,11 +81,11 @@ export function toShopProfileValues(shop: MyShop): ShopProfileWithContactValues 
 export function toShopProfileBody(v: ShopProfileWithContactValues): UpdateProfileInput {
   return {
     displayName: v.displayName,
-    // Chuỗi rỗng là GỠ liên hệ của gian hàng — server lưu NULL.
+    // Chuỗi rỗng là GỠ liên hệ của gian hàng - server lưu NULL.
     phone: v.phone,
     email: v.email,
     bio: v.bio,
-    // Chỉ gửi MÃ + phần chi tiết — tên tỉnh/xã và chuỗi hiển thị do server ghép. Backend
+    // Chỉ gửi MÃ + phần chi tiết - tên tỉnh/xã và chuỗi hiển thị do server ghép. Backend
     // chuyển tiếp cả cụm cho chi nhánh mặc định (writer duy nhất của địa chỉ vận hành).
     provinceCode: v.provinceCode,
     /*
@@ -96,7 +96,7 @@ export function toShopProfileBody(v: ShopProfileWithContactValues): UpdateProfil
     wardCode: v.wardCode || undefined,
     addressLine: v.addressLine,
     /*
-     * KHÔNG gửi `taxCode`: API còn nhận nó cho client cũ và ghi vào hồ sơ NGƯỜI BÁN — gửi kèm mỗi
+     * KHÔNG gửi `taxCode`: API còn nhận nó cho client cũ và ghi vào hồ sơ NGƯỜI BÁN - gửi kèm mỗi
      * lần lưu hồ sơ gian hàng là đụng vào bản khai thuế (và quyền `seller_profile.manage`) cho
      * một lần sửa tên hay địa chỉ. Web khai MST ở `SellerTaxSection`.
      */
@@ -109,7 +109,7 @@ export function toShopProfileBody(v: ShopProfileWithContactValues): UpdateProfil
 /**
  * React Hook Form đã nối sẵn schema và giá trị của một gian hàng.
  *
- * `values` (không phải `defaultValues`): sau khi lưu, query trả hồ sơ mới và form phải theo —
+ * `values` (không phải `defaultValues`): sau khi lưu, query trả hồ sơ mới và form phải theo -
  * nếu không, "Huỷ bỏ" mời người dùng hoàn tác thứ đã lưu xong rồi.
  */
 export function useShopProfileForm(shop: MyShop): UseFormReturn<ShopProfileWithContactValues> {
@@ -129,7 +129,7 @@ export function useShopProfileForm(shop: MyShop): UseFormReturn<ShopProfileWithC
 }
 
 /**
- * NHÓM Ô của trang Thông tin cửa hàng (design 06/11/2026) — mỗi hộp thoại "Cập nhật" lưu đúng nhóm
+ * NHÓM Ô của trang Thông tin cửa hàng (design 06/11/2026) - mỗi hộp thoại "Cập nhật" lưu đúng nhóm
  * của nó, không gửi lại ô của hộp khác (một lượt lưu địa chỉ không được viết lại tên hiển thị mà
  * người khác vừa đổi ở tab khác).
  */
@@ -148,7 +148,7 @@ export const SHOP_PROFILE_GROUP_FIELDS = {
   [SHOP_PROFILE_GROUP.MEDIA]: ['logoUrl', 'coverUrl'],
 } as const satisfies Record<ShopProfileGroup, readonly (keyof ShopProfileWithContactValues)[]>;
 
-/** Thân request của MỘT nhóm — cùng quy ước rỗng/gỡ với `toShopProfileBody`. */
+/** Thân request của MỘT nhóm - cùng quy ước rỗng/gỡ với `toShopProfileBody`. */
 export function toShopProfilePatch(
   v: ShopProfileWithContactValues,
   group: ShopProfileGroup,

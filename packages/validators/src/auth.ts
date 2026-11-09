@@ -23,7 +23,7 @@ import { buildRequiredMobilePhoneSchema, type PhoneSchemaLabels } from './phone'
 
 export const PASSWORD_MIN = 8;
 
-/** Câu lỗi cho các schema xác thực — app native truyền bản đã dịch. */
+/** Câu lỗi cho các schema xác thực - app native truyền bản đã dịch. */
 export interface AuthSchemaLabels extends PhoneSchemaLabels {
   passwordRequired: string;
   passwordTooShort: string;
@@ -38,8 +38,8 @@ export interface AuthSchemaLabels extends PhoneSchemaLabels {
   /**
    * Ô "email hoặc SĐT" mà không đoán được người dùng định nhập gì (vd `nguyenvana`).
    *
-   * Tuỳ chọn — thiếu thì rơi về câu tiếng Việt mặc định. Hai trường hợp còn lại KHÔNG cần khoá
-   * mới: gõ có `@` thì dùng `emailInvalid`, gõ ra dáng số thì dùng `invalid` (câu lỗi SĐT) —
+   * Tuỳ chọn - thiếu thì rơi về câu tiếng Việt mặc định. Hai trường hợp còn lại KHÔNG cần khoá
+   * mới: gõ có `@` thì dùng `emailInvalid`, gõ ra dáng số thì dùng `invalid` (câu lỗi SĐT) -
    * đúng câu người dùng sẽ thấy ở ô email và ô SĐT riêng lẻ, nên không có bản dịch thứ hai cho
    * cùng một ý.
    */
@@ -52,7 +52,7 @@ export interface AuthSchemaLabels extends PhoneSchemaLabels {
   nameInvalid?: string;
 }
 
-/** Câu lỗi mặc định — TIẾNG VIỆT, cho client nào chưa cấp bản dịch của mình. */
+/** Câu lỗi mặc định - TIẾNG VIỆT, cho client nào chưa cấp bản dịch của mình. */
 const VI: Required<AuthSchemaLabels> = {
   invalid: 'Số điện thoại không hợp lệ',
   required: 'Vui lòng nhập số điện thoại',
@@ -71,16 +71,16 @@ const VI: Required<AuthSchemaLabels> = {
   confirmMismatch: 'Mật khẩu nhập lại không khớp',
 };
 
-/** Khoá của từng quy tắc mật khẩu — trùng tên với khoá câu lỗi trong `AuthSchemaLabels`. */
+/** Khoá của từng quy tắc mật khẩu - trùng tên với khoá câu lỗi trong `AuthSchemaLabels`. */
 export type PasswordRuleKey = 'passwordTooShort' | 'passwordNeedsLetter' | 'passwordNeedsDigit';
 
 /**
- * Ba quy tắc mật khẩu ở dạng ĐỌC ĐƯỢC TỪNG CÁI — nguồn duy nhất cho cả schema lẫn bảng "Yêu cầu
+ * Ba quy tắc mật khẩu ở dạng ĐỌC ĐƯỢC TỪNG CÁI - nguồn duy nhất cho cả schema lẫn bảng "Yêu cầu
  * của mật khẩu" trên màn đổi mật khẩu.
  *
  * Bảng tick ✓/✗ theo từng quy tắc phải đánh giá đúng thứ schema sẽ từ chối. Nếu bảng tự viết lại
  * ba biểu thức của riêng nó thì sớm muộn hai bên lệch nhau, và người dùng thấy cả ba dòng xanh
- * nhưng bấm Lưu vẫn đỏ — lỗi khó chịu nhất vì màn hình đang nói dối họ.
+ * nhưng bấm Lưu vẫn đỏ - lỗi khó chịu nhất vì màn hình đang nói dối họ.
  *
  * THỨ TỰ là thứ tự báo lỗi: form chỉ hiện lỗi ĐẦU TIÊN, nên mật khẩu sai nhiều luật báo theo
  * độ dài → có số → có chữ (đặc tả BR-AUTH-03; `!!!!!!!!` báo "cần có số", không báo "cần có chữ").
@@ -109,7 +109,7 @@ export const buildPasswordSchema = (labels: AuthSchemaLabels) =>
 export const buildRequiredEmailSchema = (labels: AuthSchemaLabels) =>
   yup.string().trim().email(labels.emailInvalid).required(labels.emailRequired);
 
-/** Ô "nhập lại mật khẩu" — luôn đi kèm một ô `password` cùng form. */
+/** Ô "nhập lại mật khẩu" - luôn đi kèm một ô `password` cùng form. */
 const buildConfirmSchema = (labels: AuthSchemaLabels) =>
   yup
     .string()
@@ -132,7 +132,7 @@ export const buildLoginIdentifierSchema = (labels: AuthSchemaLabels) =>
     .test({
       name: 'login-identifier',
       test(value, ctx) {
-        // Bỏ trống đã có `required()` lo — chạy tiếp ở đây chỉ tạo hai câu lỗi cho một ô trống.
+        // Bỏ trống đã có `required()` lo - chạy tiếp ở đây chỉ tạo hai câu lỗi cho một ô trống.
         if (!value) return true;
         if (isValidLoginIdentifier(value)) return true;
 
@@ -154,8 +154,8 @@ export const buildLoginSchema = (labels: AuthSchemaLabels) =>
   });
 
 /**
- * Ô "Số điện thoại" của màn đăng nhập site khách / site partner — ADR 0060: định danh đăng nhập
- * CHỈ là SĐT. ADR 0082: di động 10 số, chỉ chữ số và `+` đầu — cùng luật với lúc đăng ký.
+ * Ô "Số điện thoại" của màn đăng nhập site khách / site partner - ADR 0060: định danh đăng nhập
+ * CHỈ là SĐT. ADR 0082: di động 10 số, chỉ chữ số và `+` đầu - cùng luật với lúc đăng ký.
  */
 export const buildLoginPhoneSchema = (labels: AuthSchemaLabels) => buildRequiredMobilePhoneSchema(labels);
 
@@ -170,9 +170,9 @@ export const buildOtpLoginSchema = (labels: AuthSchemaLabels) =>
   yup.object({ phone: buildRequiredMobilePhoneSchema(labels) });
 
 /**
- * Ô tên của form đăng ký — `DISPLAY_NAME_POLICY`, cùng luật với `RegisterFields` của API. Chuẩn hoá
+ * Ô tên của form đăng ký - `DISPLAY_NAME_POLICY`, cùng luật với `RegisterFields` của API. Chuẩn hoá
  * (NFC + bỏ khoảng trắng đầu/cuối) TRƯỚC khi kiểm, nên "   A   " là một chữ và bị báo ngắn, còn
- * "      " là ô trống. Thứ tự báo: trống → độ dài → ký tự — mỗi lần một câu.
+ * "      " là ô trống. Thứ tự báo: trống → độ dài → ký tự - mỗi lần một câu.
  */
 export const buildDisplayNameSchema = (labels: AuthSchemaLabels) => {
   const lengthMessage = labels.nameLength ?? VI.nameLength;
@@ -199,7 +199,7 @@ export const buildForgotPasswordSchema = (labels: AuthSchemaLabels) =>
   yup.object({ email: buildRequiredEmailSchema(labels) });
 
 /**
- * Quên mật khẩu bằng SĐT (ADR 0060) — bước 1, số nhận mã. Bước 2 là mã 6 số (ô OTP riêng) +
+ * Quên mật khẩu bằng SĐT (ADR 0060) - bước 1, số nhận mã. Bước 2 là mã 6 số (ô OTP riêng) +
  * `buildResetPasswordSchema`. Không giả định tài khoản có email.
  */
 export const buildForgotPasswordPhoneSchema = (labels: AuthSchemaLabels) =>
@@ -212,7 +212,7 @@ export const buildResetPasswordSchema = (labels: AuthSchemaLabels) =>
   });
 
 /**
- * Quên mật khẩu bằng SĐT — MỘT màn (web + app): SĐT · mật khẩu mới · nhập lại. Bấm "Xác nhận" thì gửi
+ * Quên mật khẩu bằng SĐT - MỘT màn (web + app): SĐT · mật khẩu mới · nhập lại. Bấm "Xác nhận" thì gửi
  * mã `password_reset` và mở popup nhập mã; đúng mã ⇒ `POST /auth/password/reset-otp` (ADR 0060).
  */
 export const buildResetPasswordByPhoneSchema = (labels: AuthSchemaLabels) =>

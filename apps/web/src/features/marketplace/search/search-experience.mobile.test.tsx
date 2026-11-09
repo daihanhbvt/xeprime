@@ -70,7 +70,7 @@ describe('hero mobile', () => {
     expect(within(hero()).getByRole('button', { name: 'Tìm kiếm' })).toBeTruthy();
   });
 
-  it('nhãn dịch vụ dùng bản NGẮN — không nhồi chữ dài rồi cắt cụt', async () => {
+  it('nhãn dịch vụ dùng bản NGẮN - không nhồi chữ dài rồi cắt cụt', async () => {
     await renderExperience();
     const services = screen.getByRole('tablist', { name: 'Loại dịch vụ thuê xe' });
 

@@ -2,6 +2,7 @@ import { focusManager, QueryClient } from '@tanstack/react-query';
 import { AppState } from 'react-native';
 import { STALE_TIME } from '@xeprime/api-client';
 import { isRetriableError } from '@/lib/api-client';
+import { notifyOffline, wireOnlineManager } from '@/lib/network';
 
 const MAX_RETRIES = 2;
 
@@ -21,6 +22,9 @@ focusManager.setEventListener((handleFocus) => {
   return () => subscription.remove();
 });
 
+// Offline ⇒ query tạm dừng và tự chạy lại khi có mạng — xem docblock ở `lib/network.ts`.
+wireOnlineManager();
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -35,4 +39,17 @@ export const queryClient = new QueryClient({
       retry: false,
     },
   },
+});
+
+/*
+ * Lượt TẠM DỪNG vì offline (query lẫn mutation) ⇒ báo `NetworkBanner` hiện hộp "Không có kết nối
+ * mạng". Chỉ bắt hành động `pause` — query đang ngủ ở cache không phát gì, nên hộp chỉ hiện khi
+ * thật sự có một request vừa định đi. `NetworkBanner` tự giãn nhịp để vài query song song không
+ * bật hộp nhiều lần.
+ */
+queryClient.getQueryCache().subscribe((event) => {
+  if (event.type === 'updated' && event.action.type === 'pause') notifyOffline();
+});
+queryClient.getMutationCache().subscribe((event) => {
+  if (event.type === 'updated' && event.action.type === 'pause') notifyOffline();
 });

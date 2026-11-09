@@ -74,7 +74,7 @@ export function DriverOverviewTab({
         />
         <StatCard
           label={t('stats.averageDaily')}
-          value={month.averageDailyWage == null ? '—' : fmt.money(month.averageDailyWage)}
+          value={month.averageDailyWage == null ? '-' : fmt.money(month.averageDailyWage)}
           hint={
             shopDaily
               ? t('stats.shopDaily', { amount: fmt.money(shopDaily) })
@@ -114,7 +114,7 @@ export function DriverOverviewTab({
                   ) : null}
                 </span>
                 <span className={styles.muted}>
-                  {fmt.shortDateTimeRange(trip.pickupAt, trip.returnAt)}
+                  {fmt.rentalRange(trip.pickupAt, trip.returnAt)}
                 </span>
                 <span className={styles.currentBadges}>
                   <StatusBadge
@@ -193,7 +193,7 @@ export function DriverOverviewTab({
                 label: t('reliability.response'),
                 value:
                   reliability.medianResponseMinutes == null
-                    ? '—'
+                    ? '-'
                     : reliability.medianResponseMinutes === 0
                       ? t('reliability.underMinute')
                       : fmt.minutesDuration(reliability.medianResponseMinutes),

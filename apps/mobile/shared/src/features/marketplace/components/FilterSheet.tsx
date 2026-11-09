@@ -6,6 +6,8 @@ import { Modal, Pressable, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import type { ListingSort } from '@xeprime/types';
+import { SortMenu } from './SortMenu';
 import {
   CATALOG_TYPE,
   FUEL_TYPE_LABEL,
@@ -68,6 +70,8 @@ interface FilterDraft {
   discount?: boolean;
   instantBook?: boolean;
   minRating?: number;
+  /** Thứ tự sắp xếp - đưa vào tấm lọc (09/11/2026), áp cùng lượt "Áp dụng". `undefined` = mặc định. */
+  sort?: ListingSort;
 }
 
 type ListField =
@@ -100,6 +104,7 @@ function initDraft(filters: MarketplaceFilters): FilterDraft {
     ...(filters.discount ? { discount: true } : {}),
     ...(filters.instantBook ? { instantBook: true } : {}),
     ...(filters.minRating === undefined ? {} : { minRating: filters.minRating }),
+    ...(filters.sort === undefined ? {} : { sort: filters.sort }),
   };
 }
 
@@ -149,6 +154,7 @@ export function FilterSheet({
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const t = useTranslations('Marketplace.filterPanel');
+  const tResults = useTranslations('Marketplace.results');
   const tService = useTranslations('HomeSearch.service');
   const tCommon = useTranslations('Common');
   const domainLabel = useDomainLabel();
@@ -260,6 +266,7 @@ export function FilterSheet({
       discount: draft.discount,
       instantBook: draft.instantBook,
       minRating: draft.minRating,
+      sort: draft.sort,
     });
     onClose();
   };
@@ -275,6 +282,8 @@ export function FilterSheet({
       fuelType: [],
       features: [],
       transmission: [],
+      // "Xoá bộ lọc" xoá TIÊU CHÍ lọc, không đổi thứ tự sắp xếp khách đã chọn.
+      sort: draft.sort,
     });
 
   // Dải "Đang chọn" — MỌI tiêu chí đang bật trong nháp; chỉ chiều thuộc loại xe đang chọn.
@@ -427,6 +436,16 @@ export function FilterSheet({
             value={rentalLabel}
             onPress={onPickRentalTime}
           />
+
+          {/* Sắp xếp - chuyển từ hàng trên danh sách vào đây (09/11/2026), giữ trang kết quả gọn. */}
+          <YStack gap={space.sm}>
+            <GroupTitle>{tResults('sortLabel')}</GroupTitle>
+            <SortMenu
+              block
+              value={draft.sort}
+              onChange={(sort) => setDraft((p) => ({ ...p, sort }))}
+            />
+          </YStack>
 
           {/* Thứ tự nhóm theo Figma 19771:70427 (nội dung nhóm theo web FilterModal). */}
           <FilterGroup title={t('brand')} hint={t('multiple')}>

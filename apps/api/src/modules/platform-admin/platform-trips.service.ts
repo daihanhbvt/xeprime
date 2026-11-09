@@ -266,7 +266,7 @@ export class PlatformTripsService {
         throw new HttpException(
           {
             code: API_ERROR_CODE.TRIP_REMIND_TOO_SOON,
-            message: `Vừa nhắc chủ xe lúc ${last.createdAt.toISOString()} — đợi ${TRIP_PLATFORM_REMIND_COOLDOWN_MINUTES} phút rồi nhắc lại`,
+            message: `Vừa nhắc chủ xe lúc ${last.createdAt.toISOString()} - đợi ${TRIP_PLATFORM_REMIND_COOLDOWN_MINUTES} phút rồi nhắc lại`,
             details: { retryAt: new Date(last.createdAt.getTime() + cooldownMs).toISOString() },
           },
           HttpStatus.TOO_MANY_REQUESTS,

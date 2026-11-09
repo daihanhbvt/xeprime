@@ -79,7 +79,7 @@ export class SubscriptionsController {
   @Post(':id/cancel')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Huỷ sớm một kỳ còn hạn — các kỳ xếp sau trong chuỗi bị huỷ kèm (ADR 0080)',
+    summary: 'Huỷ sớm một kỳ còn hạn - các kỳ xếp sau trong chuỗi bị huỷ kèm (ADR 0080)',
   })
   @ApiOkResponse({ type: SubscriptionDto })
   cancel(

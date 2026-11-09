@@ -1,5 +1,5 @@
 /*
- * Trang Thông tin cửa hàng — design `23999:111274` (frame 1920: nội dung 1140 · cột phải 400, cách
+ * Trang Thông tin cửa hàng - design `23999:111274` (frame 1920: nội dung 1140 · cột phải 400, cách
  * 20). Bố cục đo BỀ RỘNG THẬT của vùng nội dung (`@container`), không đo viewport: trang chạy dưới
  * khung partner và cả khung phiên hỗ trợ của site quản trị.
  */
@@ -23,7 +23,7 @@
 
 /*
  * `.identity .logo` chứ không phải class đơn: AntD đặt nền của `.ant-avatar` ở
- * `:where(.css-<hash>).ant-avatar`, độ đặc hiệu (0,1,0) — bằng đúng một class CSS Module, và AntD
+ * `:where(.css-<hash>).ant-avatar`, độ đặc hiệu (0,1,0) - bằng đúng một class CSS Module, và AntD
  * chèn `<style>` lúc chạy nên luôn thắng khi hoà. Hai class nâng lên (0,2,0).
  */
 .identity .logo {
@@ -69,7 +69,7 @@
   gap: 12px;
 }
 
-/* Vai của người xem — viên đen design `23999:111292` ("Chủ gian hàng"). Chỉ để đọc, không bấm. */
+/* Vai của người xem - viên đen design `23999:111292` ("Chủ gian hàng"). Chỉ để đọc, không bấm. */
 .roleChip {
   display: inline-flex;
   height: 40px;
@@ -112,7 +112,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-/* Cột phải dính khi cuộn — thẻ hiển thị luôn trong tầm mắt lúc chủ gian hàng sửa phần còn lại. */
+/* Cột phải dính khi cuộn - thẻ hiển thị luôn trong tầm mắt lúc chủ gian hàng sửa phần còn lại. */
 .aside {
   position: sticky;
   top: calc(var(--xp-shell-header-offset, var(--xp-shell-topbar-height)) + 16px);

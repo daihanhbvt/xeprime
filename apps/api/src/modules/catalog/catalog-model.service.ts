@@ -340,7 +340,7 @@ export class CatalogModelService {
       if (used > 0) {
         throw new ConflictException({
           code: API_ERROR_CODE.CATALOG_MODEL_IN_USE,
-          message: `Đang có ${used} xe gắn mẫu này — hãy tắt thay vì xoá để xe cũ vẫn giữ liên kết`,
+          message: `Đang có ${used} xe gắn mẫu này - hãy tắt thay vì xoá để xe cũ vẫn giữ liên kết`,
         });
       }
       await tx.vehicleCatalogModel.update({
@@ -391,7 +391,7 @@ export class CatalogModelService {
     }
     if (model.vehicleType !== vehicleType) {
       throw new BadRequestException(
-        `Mẫu xe "${model.label}" thuộc loại phương tiện khác — chọn lại mẫu cho loại xe đang khai`,
+        `Mẫu xe "${model.label}" thuộc loại phương tiện khác - chọn lại mẫu cho loại xe đang khai`,
       );
     }
 
@@ -484,7 +484,7 @@ export class CatalogModelService {
     }
     if (brand.vehicleTypes.length > 0 && !brand.vehicleTypes.includes(vehicleType)) {
       throw new BadRequestException(
-        `Hãng ${brand.label} không được đánh dấu là có bán loại xe này — sửa chiều áp dụng của hãng trước`,
+        `Hãng ${brand.label} không được đánh dấu là có bán loại xe này - sửa chiều áp dụng của hãng trước`,
       );
     }
   }

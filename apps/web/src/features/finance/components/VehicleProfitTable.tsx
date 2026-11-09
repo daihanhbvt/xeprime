@@ -64,7 +64,7 @@ export function VehicleProfitTable({
           size="sm"
           imageUrl={row.mainImageUrl}
           name={row.vehicleName}
-          subtitle={row.plateNumber ?? '—'}
+          subtitle={row.plateNumber ?? '-'}
         />
       ),
     },
@@ -102,7 +102,7 @@ export function VehicleProfitTable({
       width: 110,
       // `null` là "xe chưa có doanh thu để tính biên" — khác hẳn "biên 0%" (hoà vốn).
       render: (_v, row) =>
-        row.profitMarginPercent == null ? '—' : t('marginValue', { value: row.profitMarginPercent }),
+        row.profitMarginPercent == null ? '-' : t('marginValue', { value: row.profitMarginPercent }),
     },
   ];
 
@@ -125,7 +125,7 @@ export function VehicleProfitTable({
               size="sm"
               imageUrl={row.mainImageUrl}
               name={row.vehicleName}
-              subtitle={row.plateNumber ?? '—'}
+              subtitle={row.plateNumber ?? '-'}
             />
             <div className={styles.cardMoney}>
               <span

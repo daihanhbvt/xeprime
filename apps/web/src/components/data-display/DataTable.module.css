@@ -10,12 +10,12 @@
 }
 
 /*
- * Cột hành động dính phải phải ĐỤC (Figma 127:2060 R3) — trong suốt thì cột dữ liệu chạy bên dưới
+ * Cột hành động dính phải phải ĐỤC (Figma 127:2060 R3) - trong suốt thì cột dữ liệu chạy bên dưới
  * sẽ lộ ra khi cuộn ngang. AntD có tô nền mặc định, nhưng hàng đang hover lấy màu khác, nên khai
  * lại cả hai trạng thái để không có kẽ hở.
  *
  * ⚠️ Tên class là `-fix-end`, KHÔNG phải `-fix-right`: AntD 6 đổi sang thuật ngữ logical
- * (start/end) để hợp hướng viết RTL. Đã xác minh bằng cách đọc DOM thật trong test — bản đầu của
+ * (start/end) để hợp hướng viết RTL. Đã xác minh bằng cách đọc DOM thật trong test - bản đầu của
  * file này viết `-fix-right` và không khớp gì cả.
  *
  * Đây là một trong số ít chỗ được `:global` vào class của AntD: không token nào chạm tới ô fixed,
@@ -31,7 +31,7 @@
 
 /* ---------------------------------------------------------------- zebra hàng (mặc định bật)
  *
- * Nền dẫn xuất từ token bằng color-mix (không hex tự chế — ADR 0003) và là MÀU ĐỤC, nên ô
+ * Nền dẫn xuất từ token bằng color-mix (không hex tự chế - ADR 0003) và là MÀU ĐỤC, nên ô
  * hành động dính phải kế thừa đúng nền của hàng mình mà không hở cột chạy phía dưới khi cuộn
  * ngang. Hover khai SAU zebra (cùng specificity) để trạng thái tương tác luôn thắng; các nền
  * chọn/lỗi của AntD nằm trên `td` với specificity cao hơn nên không bị đụng. */
@@ -51,7 +51,7 @@
   background: var(--xp-table-zebra-bg);
 }
 
-/* Hover thắng zebra — khai sau để cùng specificity vẫn đè theo thứ tự nguồn. */
+/* Hover thắng zebra - khai sau để cùng specificity vẫn đè theo thứ tự nguồn. */
 .tableRoot :global(.ant-table-tbody) .rowStriped > :global(td.ant-table-cell-row-hover),
 .tableRoot .rowStriped:global(.ant-table-row:hover) :global(.ant-table-cell-fix-end) {
   background: var(--xp-color-bg-hover);
@@ -59,10 +59,10 @@
 
 /* ---------------------------------------------------------------- hàng đang mở ở panel
  *
- * Nền chọn (vàng rất nhạt) + vạch vàng ở mép trái — kể cả khi chuột đang nằm trên chính hàng đó,
+ * Nền chọn (vàng rất nhạt) + vạch vàng ở mép trái - kể cả khi chuột đang nằm trên chính hàng đó,
  * người dùng vẫn phải thấy "đây là dòng đang mở". Chữ `tr` trong selector là CỐ Ý: nó đẩy độ
- * ưu tiên lên (0,4,2) — cao hơn zebra (0,4,1), zebra-hover (0,4,1) và ô dính phải lúc hover
- * (0,4,0) — nên thắng bằng độ ưu tiên chứ không nhờ thứ tự khai báo. Bản `:hover` (0,6,2) thắng
+ * ưu tiên lên (0,4,2) - cao hơn zebra (0,4,1), zebra-hover (0,4,1) và ô dính phải lúc hover
+ * (0,4,0) - nên thắng bằng độ ưu tiên chứ không nhờ thứ tự khai báo. Bản `:hover` (0,6,2) thắng
  * cả luật hover của hàng zebra ở ô dính phải (0,5,0).
  * Vạch vẽ bằng `box-shadow inset` ở ô ĐẦU TIÊN thay vì `border-left` của `tr`: AntD để
  * `border-collapse: separate`, viền của `tr` không hiển thị. */
@@ -80,7 +80,7 @@
 
 /* ---------------------------------------------------------------- khung (`framed`)
  *
- * Khung trắng viền `--xp-color-border` bo 12 quanh `.ant-table` (không phải wrapper — phân trang
+ * Khung trắng viền `--xp-color-border` bo 12 quanh `.ant-table` (không phải wrapper - phân trang
  * nằm ngoài khung như Figma `23777:53061`). `overflow: hidden` làm việc bo góc, nên ô tiêu đề bỏ
  * bo riêng của AntD (selector của AntD nặng hơn mọi selector module hợp lý ⇒ `!important`);
  * thanh cuộn ngang nằm ở `.ant-table-content` bên trong nên không bị cắt. Đường kẻ hàng dùng
@@ -206,7 +206,7 @@
   border-top: 1px solid var(--xp-color-border-subtle);
 }
 
-/* Chi tiết một dòng trên thẻ mobile (`expandable`) — đóng mặc định, mở ngay trong thẻ. */
+/* Chi tiết một dòng trên thẻ mobile (`expandable`) - đóng mặc định, mở ngay trong thẻ. */
 .cardExpand {
   margin-top: var(--xp-space-sm);
   padding-top: var(--xp-space-sm);
@@ -234,9 +234,9 @@
 }
 
 /*
- * Ô tiêu đề cột — component "Table header cell" của design partner (mọi bảng redesign 11/2026,
+ * Ô tiêu đề cột - component "Table header cell" của design partner (mọi bảng redesign 11/2026,
  * vd Thông tin cửa hàng `23999:111355`): `12px/Medium`, `Text/Gray/medium`. Mặc định AntD là chữ
- * thân 14px đậm 600 màu chữ chính — to và nặng hơn design. Thêm `.ant-table-container` để độ đặc
+ * thân 14px đậm 600 màu chữ chính - to và nặng hơn design. Thêm `.ant-table-container` để độ đặc
  * hiệu (0,3,2) thắng luật (0,2,2) của AntD mà không phụ thuộc thứ tự chèn style.
  */
 .tableRoot :global(.ant-table-container) :global(.ant-table-thead) > tr > th {

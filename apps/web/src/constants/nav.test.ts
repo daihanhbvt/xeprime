@@ -118,7 +118,7 @@ function hrefsOf(sections: typeof SHOP_NAV): string[] {
   return flattenLeaves(sections).map((leaf) => leaf.href);
 }
 
-describe('nav — cấu trúc khối', () => {
+describe('nav - cấu trúc khối', () => {
   /*
    * 02/11/2026 — menu NGANG của design Partner-XePrime: sáu mục cấp 1, đúng thứ tự design. Bản đồ
    * cũ → mới ở `docs/design/09_PARTNER_REDESIGN.md` §2.
@@ -140,7 +140,7 @@ describe('nav — cấu trúc khối', () => {
     expect(SHOP_NAV.every((section) => section.icon)).toBe(true);
   });
 
-  it('chủ xe tuyến hoa hồng dùng CÙNG khung sáu khối — nâng gói thấy mọi thứ ở đúng chỗ cũ', () => {
+  it('chủ xe tuyến hoa hồng dùng CÙNG khung sáu khối - nâng gói thấy mọi thứ ở đúng chỗ cũ', () => {
     expect(OWNER_LITE_NAV.map((section) => section.labelKey)).toEqual(
       SHOP_NAV.map((section) => section.labelKey),
     );
@@ -224,7 +224,7 @@ describe('nav — cấu trúc khối', () => {
    * một công tắc, nên nó về làm một section của "Chính sách thuê". Route cũ vẫn sống (redirect),
    * nhưng KHÔNG được quay lại menu: đây đúng là loại mục làm sidebar phình ra.
    */
-  it('"Thanh toán giữ chỗ" KHÔNG còn là mục điều hướng — nó nằm trong Chính sách thuê', () => {
+  it('"Thanh toán giữ chỗ" KHÔNG còn là mục điều hướng - nó nằm trong Chính sách thuê', () => {
     const leaves = flattenLeaves(SHOP_NAV);
     expect(leaves.map((leaf) => leaf.key)).not.toContain('shop-payment-settings');
     expect(leaves.map((leaf) => leaf.href)).not.toContain(ROUTES.MANAGE.SHOP_PAYMENT_SETTINGS);
@@ -243,7 +243,7 @@ describe('nav — cấu trúc khối', () => {
    * Cả ba route cũ vẫn sống dưới dạng redirect (xem `app/(manage)/manage/*`), nhưng KHÔNG được
    * quay lại menu.
    */
-  it('KHÔNG còn mục riêng cho gói, hồ sơ người bán hay tài khoản — chúng đã gộp', () => {
+  it('KHÔNG còn mục riêng cho gói, hồ sơ người bán hay tài khoản - chúng đã gộp', () => {
     const hrefs = hrefsOf(SHOP_NAV);
 
     expect(hrefs).not.toContain(ROUTES.MANAGE.SUBSCRIPTION);
@@ -263,7 +263,7 @@ describe('nav — cấu trúc khối', () => {
       .map((leaf) => leaf.href);
   }
 
-  it('menu ngang không còn mục cha (submenu) — mỗi khối là một dropdown phẳng', () => {
+  it('menu ngang không còn mục cha (submenu) - mỗi khối là một dropdown phẳng', () => {
     expect(SHOP_NAV.flatMap((section) => section.children).filter(isNavBranch)).toEqual([]);
   });
 
@@ -299,7 +299,7 @@ describe('nav — cấu trúc khối', () => {
    * mất đường vào một trang đang sống. Từ menu ngang (02/11/2026) một số trang rời dòng menu — mỗi
    * trang như vậy phải có lối vào ghi ở `docs/design/09_PARTNER_REDESIGN.md` §2, và test chốt lối đó.
    */
-  it('mọi route quan trọng vẫn có lối vào — trên menu, hoặc ở chỗ đã ghi', () => {
+  it('mọi route quan trọng vẫn có lối vào - trên menu, hoặc ở chỗ đã ghi', () => {
     const inTree = hrefsOf(SHOP_NAV);
     for (const href of [
       ROUTES.MANAGE.BALANCE,
@@ -336,7 +336,7 @@ describe('nav — cấu trúc khối', () => {
     expect(inTree).not.toContain(ROUTES.MANAGE.CHAT);
   });
 
-  it('không còn mục ẨN nào — Công nợ đã về tab của "Lịch sử giao dịch" (04/11/2026)', () => {
+  it('không còn mục ẨN nào - Công nợ đã về tab của "Lịch sử giao dịch" (04/11/2026)', () => {
     const leaves = flattenLeaves(SHOP_NAV);
     expect(leaves.filter((leaf) => leaf.hidden)).toEqual([]);
     expect(leaves.map((leaf) => leaf.href)).not.toContain(ROUTES.MANAGE.DEBTS);
@@ -350,12 +350,12 @@ describe('nav — cấu trúc khối', () => {
    * không `hidden` (ADR 0027 điều 3), và tiền thì không thuộc về gói — ẩn nó đi nghĩa là giữ
    * tiền của người khác mà không cho họ thấy.
    */
-  it('Ví điểm KHÔNG bị gác bằng cờ tính năng — tiền của gian hàng không thuộc về gói', () => {
+  it('Ví điểm KHÔNG bị gác bằng cờ tính năng - tiền của gian hàng không thuộc về gói', () => {
     const balance = flattenLeaves(SHOP_NAV).find((leaf) => leaf.href === ROUTES.MANAGE.BALANCE)!;
     expect(balance.feature).toBeUndefined();
   });
 
-  it('mọi mục lá có href riêng — không hai mục cùng đích', () => {
+  it('mọi mục lá có href riêng - không hai mục cùng đích', () => {
     for (const sections of [SHOP_NAV, PLATFORM_NAV, OWNER_LITE_NAV]) {
       const hrefs = hrefsOf(sections);
       expect(new Set(hrefs).size).toBe(hrefs.length);
@@ -390,7 +390,7 @@ describe('nav — cấu trúc khối', () => {
     expect(keys).not.toContain('trash');
   });
 
-  it('chỉ mục "cần xử lý" mang huy hiệu — không đếm tổng xe/tài xế (chốt 04/11/2026)', () => {
+  it('chỉ mục "cần xử lý" mang huy hiệu - không đếm tổng xe/tài xế (chốt 04/11/2026)', () => {
     const badged = flattenLeaves(SHOP_NAV)
       .filter((leaf) => leaf.badge)
       .map((leaf) => [leaf.href, leaf.badge]);
@@ -408,7 +408,7 @@ describe('nav — cấu trúc khối', () => {
   });
 });
 
-describe('nav — ranh giới site quản trị ↔ site partner', () => {
+describe('nav - ranh giới site quản trị ↔ site partner', () => {
   it('site quản trị → CHỈ cây nền tảng, bất kể tuyến', () => {
     for (const track of Object.values(PARTNER_TRACK)) {
       expect(navForZone(ZONE.ADMIN, track)).toBe(PLATFORM_NAV);
@@ -440,14 +440,14 @@ describe('nav — ranh giới site quản trị ↔ site partner', () => {
     ).toBe(true);
   });
 
-  it('"Tài chính" hiện với người CHỈ có quyền gói — khớp hàng đợi tiền vào trong màn', () => {
+  it('"Tài chính" hiện với người CHỈ có quyền gói - khớp hàng đợi tiền vào trong màn', () => {
     expect(visibleLabels([PERMISSION.PLATFORM_BILLING_MANAGE], true)).toContain('platform.money');
     expect(visibleLabels([PERMISSION.PLATFORM_MONEY_MANAGE], true)).toContain('platform.money');
     expect(visibleLabels([PERMISSION.PLATFORM_AUDIT_VIEW], true)).not.toContain('platform.money');
   });
 });
 
-describe('nav — vai trò gian hàng nhìn thấy gì', () => {
+describe('nav - vai trò gian hàng nhìn thấy gì', () => {
   /** Nhãn mà một vai trò thấy, với ĐÚNG vai đó trên trục sở hữu. */
   function labelsOfRole(role: TenantRole): string[] {
     return visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[role], false, { roleKey: role });
@@ -528,14 +528,14 @@ describe('nav — vai trò gian hàng nhìn thấy gì', () => {
     );
   });
 
-  it('shop_viewer thấy ĐÚNG BẰNG shop_staff — menu không phân biệt được hai vai trò này', () => {
+  it('shop_viewer thấy ĐÚNG BẰNG shop_staff - menu không phân biệt được hai vai trò này', () => {
     // Khác biệt thật nằm ở quyền GHI (`booking.create`…), không ở quyền XEM.
     expect(labelsOfRole(TENANT_ROLE.SHOP_VIEWER)).toEqual(labelsOfRole(TENANT_ROLE.SHOP_STAFF));
   });
 });
 
-describe('nav — vai trò nền tảng nhìn thấy gì', () => {
-  it('platform_admin thấy TOÀN BỘ cây nền tảng — không mục nào ngoài tầm với', () => {
+describe('nav - vai trò nền tảng nhìn thấy gì', () => {
+  it('platform_admin thấy TOÀN BỘ cây nền tảng - không mục nào ngoài tầm với', () => {
     // Khẳng định theo TẬP, không theo tổng số: super admin ôm mọi quyền nên tập mục họ thấy
     // đúng bằng cây. Thêm một mục nền tảng mới thì test này vẫn đúng mà không phải sửa số.
     expect(
@@ -608,7 +608,7 @@ describe('nav — vai trò nền tảng nhìn thấy gì', () => {
   });
 });
 
-describe('matchSelectedKey — quy tắc mục đang mở', () => {
+describe('matchSelectedKey - quy tắc mục đang mở', () => {
   const shopLeaves = flattenLeaves(SHOP_NAV);
   const platformLeaves = flattenLeaves(PLATFORM_NAV);
 
@@ -622,7 +622,7 @@ describe('matchSelectedKey — quy tắc mục đang mở', () => {
    * có href là tiền tố của đường dẫn phiên). Trong phiên, sidebar là cây của gian hàng — xem
    * `supportNavSections` ở cuối file.
    */
-  it('phiên hỗ trợ gian hàng KHÔNG sáng mục nền tảng nào — không Kiểm duyệt, không hỗ trợ/tranh chấp (ADR 0050)', () => {
+  it('phiên hỗ trợ gian hàng KHÔNG sáng mục nền tảng nào - không Kiểm duyệt, không hỗ trợ/tranh chấp (ADR 0050)', () => {
     const session = adminTenantSupportPath.vehicleEdit('A1B2C3D4E5F6G7H8J9K0M1N2P3', 'v1');
     expect(matchSelectedKey(session, platformLeaves)).toBeUndefined();
     // Hàng đợi hỗ trợ/tranh chấp của chính nó vẫn sáng đúng mục.
@@ -634,7 +634,7 @@ describe('matchSelectedKey — quy tắc mục đang mở', () => {
     expect(matchSelectedKey('/manage/vehicles/01H/edit', shopLeaves)).toBe('/manage/vehicles');
   });
 
-  it('`/manage` CHỈ khớp tuyệt đối — nếu không thì mọi trang đều sáng "Tổng quan"', () => {
+  it('`/manage` CHỈ khớp tuyệt đối - nếu không thì mọi trang đều sáng "Tổng quan"', () => {
     expect(matchSelectedKey('/manage', shopLeaves)).toBe('/manage');
     expect(matchSelectedKey('/manage/receipts', shopLeaves)).toBe('/manage/receipts');
   });
@@ -658,7 +658,7 @@ describe('matchSelectedKey — quy tắc mục đang mở', () => {
     );
   });
 
-  it('`/manage/shop` không nuốt `/manage/shop/policies` — tiền tố dài nhất thắng', () => {
+  it('`/manage/shop` không nuốt `/manage/shop/policies` - tiền tố dài nhất thắng', () => {
     expect(matchSelectedKey('/manage/shop', shopLeaves)).toBe('/manage/shop');
     expect(matchSelectedKey('/manage/shop/policies', shopLeaves)).toBe('/manage/shop/policies');
     // Chi nhánh là section của Thông tin cửa hàng (02/11/2026) — route cũ thuộc về trang đó.
@@ -679,7 +679,7 @@ describe('matchSelectedKey — quy tắc mục đang mở', () => {
    * đúng ở đó; một trang admin không có mục riêng (URL cũ đang chuyển tiếp, gốc khối Đối tác) không
    * được sáng nhầm nó.
    */
-  it('"Kiểm duyệt xe" chỉ khớp tuyệt đối — không nhận route con nào', () => {
+  it('"Kiểm duyệt xe" chỉ khớp tuyệt đối - không nhận route con nào', () => {
     expect(matchSelectedKey(ROUTES.ADMIN.ROOT, platformLeaves)).toBe(ROUTES.ADMIN.ROOT);
     expect(matchSelectedKey(ROUTES.ADMIN.TENANTS, platformLeaves)).toBeUndefined();
     expect(matchSelectedKey(ROUTES.ADMIN.PARTNERS, platformLeaves)).toBeUndefined();
@@ -709,12 +709,12 @@ describe('matchSelectedKey — quy tắc mục đang mở', () => {
     expect(matchSelectedKey('/listings/01H', shopLeaves)).toBeUndefined();
   });
 
-  it('chỉ dò trong cây được truyền vào — không rò mục nền tảng sang gian hàng', () => {
+  it('chỉ dò trong cây được truyền vào - không rò mục nền tảng sang gian hàng', () => {
     expect(matchSelectedKey('/manage/admin/staff', shopLeaves)).toBeUndefined();
   });
 });
 
-describe('sectionKeyOf / branchKeyOf — bung đúng khối và đúng mục cha', () => {
+describe('sectionKeyOf / branchKeyOf - bung đúng khối và đúng mục cha', () => {
   it('khối chứa mục đang chọn', () => {
     expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.RECEIPTS)).toBe('revenue');
     expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.BALANCE)).toBe('revenue');
@@ -737,7 +737,7 @@ describe('sectionKeyOf / branchKeyOf — bung đúng khối và đúng mục cha
   });
 });
 
-describe('mobileTabsForZone — 4 tab dưới đáy', () => {
+describe('mobileTabsForZone - 4 tab dưới đáy', () => {
   it('mỗi cây đúng 4 tab, tab đầu là trang chủ của site', () => {
     expect(tabsFor(false)).toHaveLength(4);
     expect(tabsFor(false)[0]!.href).toBe(ROUTES.MANAGE.ROOT);
@@ -784,7 +784,7 @@ describe('mobileTabsForZone — 4 tab dưới đáy', () => {
  * hoa hồng thấy Owner Lite. Trang chỉ của tuyến gói KHÔNG được xuất hiện trong menu hoa hồng — bấm
  * vào là bị `partnerPageRedirect` đá về trang chủ, tức là một mục menu chết.
  */
-describe('navForZone — menu theo tuyến ở site partner', () => {
+describe('navForZone - menu theo tuyến ở site partner', () => {
   const commissionNav = navForZone(ZONE.PARTNER, PARTNER_TRACK.COMMISSION);
 
   it('tuyến hoa hồng → cây Owner Lite; chưa có tuyến → không menu', () => {
@@ -903,7 +903,7 @@ describe('navForZone — menu theo tuyến ở site partner', () => {
  * Thiếu một khoá thì mục menu hiện ra chính chuỗi khoá đó trên production, và không có
  * typecheck nào bắt được vì `NavLabelKey` chỉ suy từ bó TIẾNG VIỆT.
  */
-describe('nav — mọi khoá nhãn đều có bản dịch ở cả hai ngôn ngữ', () => {
+describe('nav - mọi khoá nhãn đều có bản dịch ở cả hai ngôn ngữ', () => {
   const lookup = (bundle: Record<string, unknown>, key: string): unknown =>
     key
       .split('.')
@@ -939,7 +939,7 @@ describe('nav — mọi khoá nhãn đều có bản dịch ở cả hai ngôn n
  * Menu của một phiên hỗ trợ gian hàng (ADR 0050 §12): CHÍNH cây của gian hàng, href trong phiên,
  * không một mục nào dẫn ra ngoài phiên hay vào khu bị ẩn (tài chính, ví, chat, tài khoản…).
  */
-describe('supportNavSections — menu của phiên hỗ trợ', () => {
+describe('supportNavSections - menu của phiên hỗ trợ', () => {
   const CTX = 'A1B2C3D4E5F6G7H8J9K0M1N2P3';
   const base = adminTenantSupportPath.root(CTX);
   const manage = flattenLeaves(supportNavSections(CTX, SUPPORT_WORKSPACE.MANAGE));
@@ -983,7 +983,7 @@ describe('supportNavSections — menu của phiên hỗ trợ', () => {
     expect(manage.some((leaf) => leaf.ownerOnly)).toBe(false);
   });
 
-  it('Owner Lite: chỉ công việc cho thuê — không Tổng quan, không sổ khách, không khu tài khoản', () => {
+  it('Owner Lite: chỉ công việc cho thuê - không Tổng quan, không sổ khách, không khu tài khoản', () => {
     const rel = lite.map((leaf) => leaf.href.slice(base.length + 1));
     expect(rel).toEqual(['vehicles', 'calendar', 'bookings', 'support/cases']);
   });

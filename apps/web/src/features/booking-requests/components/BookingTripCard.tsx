@@ -32,6 +32,7 @@ import { initialOf } from '@/lib/initials';
 import { appWallClockToIso, type Dayjs } from '@/lib/datetime';
 import { useListingSpecSummary, type ListingSpecSource } from '../hooks/use-listing-spec-summary';
 import { pickupPointText } from '../pickup-point';
+import { kenBurnsSlowClass } from '@/components/motion/motion-classes';
 import styles from './BookingTripCard.module.css';
 
 /** Chuyến khách đã chọn — giá trị THÔ của form, thẻ tự quyết dòng nào hiện. */
@@ -195,12 +196,12 @@ export function BookingTripCard({
     {
       key: 'pickup',
       label: t('reviewPage.trip.pickupAt'),
-      value: trip.pickupAt ? fmt.dateTime(appWallClockToIso(trip.pickupAt)) : '—',
+      value: trip.pickupAt ? fmt.rentalAt(appWallClockToIso(trip.pickupAt)) : '-',
     },
     {
       key: 'return',
       label: t('reviewPage.trip.returnAt'),
-      value: trip.returnAt ? fmt.dateTime(appWallClockToIso(trip.returnAt)) : '—',
+      value: trip.returnAt ? fmt.rentalAt(appWallClockToIso(trip.returnAt)) : '-',
     },
   ];
   const timeRows: Array<{ key: string; label: string; value: string }> = !isLongTerm
@@ -210,7 +211,7 @@ export function BookingTripCard({
           {
             key: 'package',
             label: t('reviewPage.trip.package'),
-            value: fmt.packageLabel(trip.packageMonths) ?? '—',
+            value: fmt.packageLabel(trip.packageMonths) ?? '-',
           },
           ...exactRows,
         ]
@@ -218,7 +219,7 @@ export function BookingTripCard({
           {
             key: 'package',
             label: t('reviewPage.trip.package'),
-            value: fmt.packageLabel(trip.packageMonths) ?? '—',
+            value: fmt.packageLabel(trip.packageMonths) ?? '-',
           },
           {
             key: 'wish',
@@ -254,7 +255,7 @@ export function BookingTripCard({
             key: 'driverPickup',
             icon: <EnvironmentOutlined />,
             title: t('reviewPage.trip.driverPickup'),
-            body: trip.driverPickupAddress ?? '—',
+            body: trip.driverPickupAddress ?? '-',
           },
           ...(trip.routeType !== ROUTE_TYPE.IN_CITY && trip.destination
             ? [
@@ -273,7 +274,7 @@ export function BookingTripCard({
               key: 'delivery',
               icon: <EnvironmentOutlined />,
               title: t('reviewPage.trip.delivery'),
-              body: trip.deliveryAddress ?? '—',
+              body: trip.deliveryAddress ?? '-',
             },
           ]
         : [
@@ -325,7 +326,13 @@ export function BookingTripCard({
       <div className={styles.body}>
         <div className={styles.vehicle}>
           {image ? (
-            <PreviewImage src={image} alt={name} className={styles.vehicleImage} />
+            <span className={styles.vehicleMedia}>
+              <PreviewImage
+                src={image}
+                alt={name}
+                className={cx(styles.vehicleImage, kenBurnsSlowClass)}
+              />
+            </span>
           ) : (
             <div className={styles.vehiclePlaceholder} aria-hidden="true" />
           )}

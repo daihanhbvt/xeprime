@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Linking, Text as NativeText, Pressable, StyleSheet } from 'react-native';
+import { Linking, Text as NativeText, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import Animated, { useSharedValue, type SharedValue } from 'react-native-reanimated';
+import { useParallaxHeader } from '@/components/motion/use-parallax-header';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { SUPPORT_HOTLINE } from '@xeprime/types';
@@ -14,6 +16,10 @@ import { FONT_FAMILY } from '@/theme/fonts';
 import { fontSize, fontWeight, gradients, market, space } from '@/theme/tokens';
 
 const BENEFITS = ['income', 'support', 'customers'] as const;
+/** Lề tràn của ảnh nền = trần trôi parallax (dp). */
+const BACKDROP_OVERSCAN = 160;
+/** Trôi chậm hơn banner đầu trang — khối giữa trang, ảnh nền cố định trong khung. */
+const BACKDROP_PARALLAX = 0.4;
 /** Logo rộng 164 (Figma MB `22059:15628`). */
 const LOGO_WIDTH = 164;
 const logoRatio = logoWidth(1000) / 1000;
@@ -32,6 +38,14 @@ const CTA_TEXT = XP_TOKENS['color-primary-contrast'];
 
 const styles = StyleSheet.create({
   backdrop: { ...StyleSheet.absoluteFillObject },
+  /** Ảnh nền tràn lề trên/dưới `BACKDROP_OVERSCAN` để trôi parallax không hở mép. */
+  backdropParallax: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: -BACKDROP_OVERSCAN,
+    bottom: -BACKDROP_OVERSCAN,
+  },
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -57,12 +71,35 @@ const styles = StyleSheet.create({
 export function PartnerBanner({
   onRegister,
   banner,
+  parallax,
 }: {
+  /**
+   * Hiệu ứng banner Home theo VỊ TRÍ khối: `offset` (+ `baseOffset`) = đỉnh khối trong nội dung
+   * cuộn, đo `onLayout` ở màn chứa. Vắng ⇒ ảnh đứng yên.
+   */
+  parallax?: {
+    scrollY: SharedValue<number>;
+    offset: SharedValue<number>;
+    baseOffset?: SharedValue<number>;
+  };
   onRegister?: () => void;
   /** Ảnh nền do admin cấu hình (vị trí `partner`) — vắng thì dùng ảnh mặc định của bản vẽ MB. */
   banner?: PublicBanner | null;
 } = {}) {
   const t = useTranslations('Home.partner');
+  const { height: windowHeight } = useWindowDimensions();
+  const fallbackScroll = useSharedValue(0);
+  const fallbackOffset = useSharedValue(0);
+  const backdropStyle = useParallaxHeader(parallax?.scrollY ?? fallbackScroll, {
+    offset: parallax?.offset ?? fallbackOffset,
+    baseOffset: parallax?.baseOffset,
+    factor: BACKDROP_PARALLAX,
+    enterDistance: windowHeight,
+    maxShift: BACKDROP_OVERSCAN,
+    // PHÓNG lên chứ không co: ảnh co còn 0.92 lộ dải nền ở hai mép (khối tràn hết bề ngang,
+    // không có lề che). Phóng 1 → 1.06 giữ cảm giác chuyển động mà ảnh luôn phủ kín khung.
+    minScale: 1.1,
+  });
 
   /*
    * Web ≤1024px: dải TRÀN hết bề ngang (không bo góc), đệm 40/16, các khối cách 24, thứ tự
@@ -79,16 +116,19 @@ export function PartnerBanner({
       gap={space.md}
       ai="flex-start"
     >
-      <Image
-        source={
-          banner
-            ? { uri: webAssetUrl(banner.mobileImageUrl ?? banner.tabletImageUrl ?? banner.imageUrl) }
-            : images.homePartnerBackdrop
-        }
-        style={styles.backdrop}
-        contentFit="cover"
-        accessibilityElementsHidden
-      />
+      {/* Ảnh nền trôi chậm + co/mờ khi cuộn qua (UI thread, `useParallaxHeader`); lớp phủ tối ở trên giữ chữ đọc được. */}
+      <Animated.View style={[styles.backdropParallax, parallax ? backdropStyle : null]} pointerEvents="none">
+        <Image
+          source={
+            banner
+              ? { uri: webAssetUrl(banner.mobileImageUrl ?? banner.tabletImageUrl ?? banner.imageUrl) }
+              : images.homePartnerBackdrop
+          }
+          style={styles.backdrop}
+          contentFit="cover"
+          accessibilityElementsHidden
+        />
+      </Animated.View>
       {/* `gradient-partner-shade` (Figma `21965:5338`): đen 90% ở mép trái nhạt dần tới 8% mép phải. */}
       <LinearGradient
         colors={['rgba(0, 0, 0, 0.9)', 'rgba(64, 64, 64, 0)']}

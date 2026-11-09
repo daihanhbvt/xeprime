@@ -1,6 +1,9 @@
+import Animated from 'react-native-reanimated';
+import { useFloatLoop, useRevealSlideIn } from '@/components/motion/reveal-effects';
+import { ScrollReveal } from '@/components/motion/ScrollReveal';
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { Pressable, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { CardHighlightContext, HighlightZoom } from '@/components/ui/HighlightZoom';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -57,13 +60,16 @@ export function VehicleTypes({ items, onOpenSearch }: VehicleTypesProps) {
     <YStack gap={layout.section}>
       <HomeSectionHeading kicker={t('kicker')} title={t('title')} />
       <XStack flexWrap="wrap" gap={GRID_GAP} accessibilityLabel={t('title')}>
-        {items.map((item) => (
-          <VehicleTypeTile
-            key={item.key}
-            item={item}
-            width={tileWidth}
-            onPress={() => onOpenSearch(typeSearchParams(item))}
-          />
+        {items.map((item, index) => (
+          // Mỗi ô tự hiện khi CHÍNH NÓ cuộn vào màn (lưới có thể dài hơn một màn).
+          <ScrollReveal key={item.key} index={index}>
+            <VehicleTypeTile
+              index={index}
+              item={item}
+              width={tileWidth}
+              onPress={() => onOpenSearch(typeSearchParams(item))}
+            />
+          </ScrollReveal>
         ))}
       </XStack>
       <OutlineAction
@@ -77,15 +83,20 @@ export function VehicleTypes({ items, onOpenSearch }: VehicleTypesProps) {
 /** Một ô loại xe — trạng thái nhấn = hover của web: ảnh phóng nhẹ + tên vàng, không nền/viền. */
 function VehicleTypeTile({
   item,
+  index,
   width,
   onPress,
 }: {
   item: CatalogItem;
+  index: number;
   width: number;
   onPress: () => void;
 }) {
   const colors = useColors();
   const [pressed, setPressed] = useState(false);
+  // Ảnh xe (không bóng) trượt vào xen kẽ trái/phải + fade khi khối hiện, rồi bồng bềnh so le.
+  const slideStyle = useRevealSlideIn((index % 2) * 90, index % 2 === 0 ? -TILE_SLIDE_X : TILE_SLIDE_X);
+  const floatStyle = useFloatLoop(3, 3500, index * 450);
   return (
     <Pressable
       onPress={onPress}
@@ -98,6 +109,8 @@ function VehicleTypeTile({
       <YStack w="100%" aspectRatio={MEDIA_RATIO} ov="hidden">
         {/* = web `.card:hover .image { scale(1.08) }`: nhấn thì ảnh xe to lên nhẹ, không nền/viền. */}
         <CardHighlightContext.Provider value={pressed}>
+          <Animated.View style={[styles.fill, slideStyle]}>
+          <Animated.View style={[styles.fill, floatStyle]}>
           <HighlightZoom scale={1.08}>
             <Image
               source={{ uri: webAssetUrl(item.showcaseImageUrl) }}
@@ -107,6 +120,8 @@ function VehicleTypeTile({
               transition={150}
             />
           </HighlightZoom>
+          </Animated.View>
+          </Animated.View>
         </CardHighlightContext.Provider>
       </YStack>
       <YStack ai="center" gap={space.xs} pt={space.sm}>
@@ -128,3 +143,8 @@ function VehicleTypeTile({
     </Pressable>
   );
 }
+
+/** Quãng trượt vào của ảnh loại xe (dp). */
+const TILE_SLIDE_X = 28;
+
+const styles = StyleSheet.create({ fill: { width: '100%', height: '100%' } });

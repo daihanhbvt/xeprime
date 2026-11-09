@@ -12,7 +12,7 @@
     "applied": "Đã áp dụng mã {code}",
     "clamped": "Mã giảm tối đa {amount} cho chuyến này.",
     "unavailableForTrip": "Chuyến này chưa chốt giá nên chưa áp được mã khuyến mãi.",
-    "revalidating": "Điều kiện thuê vừa đổi — đang kiểm tra lại mã…",
+    "revalidating": "Điều kiện thuê vừa đổi - đang kiểm tra lại mã…",
     "dropped": "Mã {code} không còn áp dụng được cho chuyến đã đổi. Tổng tiền đã được cập nhật."
   },
   "picker": {
@@ -134,7 +134,7 @@
       "updated": "Đã lưu mã {code}",
       "enabled": "Đã bật mã {code}",
       "disabled": "Đã tạm dừng mã {code}",
-      "duplicated": "Đã tạo bản sao {code} — đang tắt, hãy soát lại rồi bật",
+      "duplicated": "Đã tạo bản sao {code} - đang tắt, hãy soát lại rồi bật",
       "deleted": "Đã xoá mã {code}"
     },
     "form": {
@@ -182,7 +182,7 @@
       "submitCreate": "Tạo mã khuyến mãi",
       "submitEdit": "Lưu thay đổi",
       "cancel": "Huỷ",
-      "lockedNotice": "Mã đã phát sinh lượt sử dụng. Mức giảm, điều kiện và phạm vi không sửa được nữa — dùng Nhân bản nếu cần bộ điều kiện khác.",
+      "lockedNotice": "Mã đã phát sinh lượt sử dụng. Mức giảm, điều kiện và phạm vi không sửa được nữa - dùng Nhân bản nếu cần bộ điều kiện khác.",
       "redeemedFinalNotice": "Đơn đã hình thành rồi bị huỷ KHÔNG hoàn lại lượt dùng mã.",
       "preview": {
         "title": "Xem trước mã khuyến mãi",
@@ -196,12 +196,12 @@
         "noteLimit": "Bạn có thể giới hạn số lượt sử dụng và điều kiện áp dụng.",
         "noteVisibility": "Mã chỉ hiển thị với người dùng khi còn hiệu lực.",
         "noteToggle": "Có thể tạm dừng hoặc xoá mã bất kỳ lúc nào.",
-        "noteSponsored": "Số giảm do XePrime tài trợ — gian hàng vẫn nhận đủ tiền thuê."
+        "noteSponsored": "Số giảm do XePrime tài trợ - gian hàng vẫn nhận đủ tiền thuê."
       }
     },
     "validation": {
       "codeRequired": "Nhập mã khuyến mãi",
-      "codeFormat": "Mã chỉ gồm chữ và số, {min}–{max} ký tự",
+      "codeFormat": "Mã chỉ gồm chữ và số, {min}-{max} ký tự",
       "nameRequired": "Nhập tên chương trình",
       "amountRequired": "Nhập số tiền giảm",
       "amountRange": "Số tiền giảm phải lớn hơn 0 và không quá {max}",

@@ -57,7 +57,7 @@ export class HandoverWindowDto {
   @Matches(TIME_PATTERN, { message: 'Giờ bắt đầu phải có dạng HH:mm' })
   start!: string;
 
-  @ApiProperty({ example: '22:00', description: 'HH:mm giờ Việt Nam — 24:00 là hết ngày' })
+  @ApiProperty({ example: '22:00', description: 'HH:mm giờ Việt Nam - 24:00 là hết ngày' })
   @IsString()
   @Matches(TIME_PATTERN, { message: 'Giờ kết thúc phải có dạng HH:mm' })
   end!: string;
@@ -67,7 +67,7 @@ export class HandoverWindowDto {
 export class VehicleOperationSettingsDto {
   @ApiProperty({
     description:
-      'Phút chuẩn bị giữa hai chuyến — áp cho lịch GIỮ MỚI/DỜI LỊCH kể từ lúc lưu (ADR 0006), ' +
+      'Phút chuẩn bị giữa hai chuyến - áp cho lịch GIỮ MỚI/DỜI LỊCH kể từ lúc lưu (ADR 0006), ' +
       'không tính lại occupancy đã có',
   })
   turnaroundBufferMinutes!: number;
@@ -95,7 +95,7 @@ export class VehicleOperationSettingsDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'ISO — null khi chưa lưu lần nào',
+    description: 'ISO - null khi chưa lưu lần nào',
   })
   updatedAt!: string | null;
 }
@@ -120,7 +120,7 @@ export class SaveVehicleOperationSettingsDto {
   @ApiPropertyOptional({
     type: [HandoverWindowDto],
     deprecated: true,
-    description: 'Bỏ qua (ADR 0078) — chỉ để app cũ gửi lên không bị từ chối',
+    description: 'Bỏ qua (ADR 0078) - chỉ để app cũ gửi lên không bị từ chối',
   })
   @IsOptional()
   @IsArray()
@@ -132,7 +132,7 @@ export class SaveVehicleOperationSettingsDto {
   @ApiPropertyOptional({
     type: [HandoverWindowDto],
     deprecated: true,
-    description: 'Bỏ qua (ADR 0078) — chỉ để app cũ gửi lên không bị từ chối',
+    description: 'Bỏ qua (ADR 0078) - chỉ để app cũ gửi lên không bị từ chối',
   })
   @IsOptional()
   @IsArray()
@@ -207,7 +207,7 @@ export class WithDriverAutoAcceptCapabilityDto {
 
 export class VehicleServiceSettingDto {
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
-  @ApiProperty({ description: 'Bật là nhận — không còn khoảng đặt trước nào (17/09/2026)' })
+  @ApiProperty({ description: 'Bật là nhận - không còn khoảng đặt trước nào (17/09/2026)' })
   autoAcceptEnabled!: boolean;
   @ApiPropertyOptional({ type: Number, nullable: true, description: 'Chỉ có tài xế' })
   minRentalMinutes!: number | null;
@@ -219,7 +219,7 @@ export class VehicleServiceSettingDto {
   requiredDocuments!: string[];
   @ApiProperty({
     type: [String],
-    description: 'Bộ giấy tờ HIỆU LỰC = tối thiểu theo luật ∪ cấu hình — thứ khách nhìn thấy',
+    description: 'Bộ giấy tờ HIỆU LỰC = tối thiểu theo luật ∪ cấu hình - thứ khách nhìn thấy',
   })
   effectiveRequiredDocuments!: string[];
   @ApiProperty({ enum: IDENTITY_VERIFY_METHOD_VALUES }) identityVerifyMethod!: string;
@@ -228,22 +228,22 @@ export class VehicleServiceSettingDto {
   @ApiProperty({
     enum: DRIVER_DEPOSIT_MODE_VALUES,
     deprecated: true,
-    description: 'NGỪNG DÙNG (29/10/2026) — tiền giữ chỗ do nền tảng thu cho mọi đơn; giữ cho app đã phát hành',
+    description: 'NGỪNG DÙNG (29/10/2026) - tiền giữ chỗ do nền tảng thu cho mọi đơn; giữ cho app đã phát hành',
   })
   depositMode!: string;
   @ApiProperty({
     enum: DRIVER_DEPOSIT_MODE_VALUES,
     isArray: true,
-    description: 'Các chế độ cọc hệ thống THU được hôm nay — chế độ khác hiện disabled',
+    description: 'Các chế độ cọc hệ thống THU được hôm nay - chế độ khác hiện disabled',
   })
   supportedDepositModes!: string[];
   @ApiPropertyOptional({
     type: WithDriverAutoAcceptCapabilityDto,
     nullable: true,
-    description: 'Chỉ với with_driver — null ở dịch vụ khác',
+    description: 'Chỉ với with_driver - null ở dịch vụ khác',
   })
   withDriverAutoAccept!: WithDriverAutoAcceptCapabilityDto | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — null khi chưa lưu' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO - null khi chưa lưu' })
   updatedAt!: string | null;
 }
 
@@ -266,7 +266,7 @@ export class PatchVehicleServiceSettingDto {
     nullable: true,
     minimum: MIN_RENTAL_MINUTES_RANGE.min,
     maximum: MIN_RENTAL_MINUTES_RANGE.max,
-    description: 'Phút — null = không giới hạn; chỉ có nghĩa với with_driver',
+    description: 'Phút - null = không giới hạn; chỉ có nghĩa với with_driver',
   })
   @IsOptional()
   @IsInt()
@@ -324,7 +324,7 @@ export class DriverSurchargeRuleDto {
   @ApiProperty({ enum: DRIVER_SURCHARGE_UNIT_VALUES, description: 'Cố định theo loại' })
   unit!: string;
   @ApiProperty() enabled!: boolean;
-  @ApiProperty({ description: 'VND string — ADR 0007' }) amount!: string;
+  @ApiProperty({ description: 'VND string - ADR 0007' }) amount!: string;
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
@@ -419,7 +419,7 @@ export class VehicleTripHistoryItemDto {
   @ApiProperty({ enum: VEHICLE_TRIP_HISTORY_KIND_VALUES }) kind!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) bookingId!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) requestId!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Mã đơn — chỉ có ở đơn' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Mã đơn - chỉ có ở đơn' })
   code!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, enum: BOOKING_STATUS_VALUES })
   bookingStatus!: string | null;
@@ -427,7 +427,7 @@ export class VehicleTripHistoryItemDto {
   requestStatus!: string | null;
   @ApiProperty({
     enum: CUSTOMER_TRIP_STAGE_LIVE_VALUES,
-    description: 'Chặng gộp — cùng phép chiếu với Chuyến của tôi',
+    description: 'Chặng gộp - cùng phép chiếu với Chuyến của tôi',
   })
   stage!: string;
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
@@ -435,7 +435,7 @@ export class VehicleTripHistoryItemDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'ISO — null với yêu cầu dài hạn chưa chốt',
+    description: 'ISO - null với yêu cầu dài hạn chưa chốt',
   })
   pickupAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) returnAt!: string | null;
@@ -443,12 +443,12 @@ export class VehicleTripHistoryItemDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'VND string — null khi chưa có số chốt',
+    description: 'VND string - null khi chưa có số chốt',
   })
   totalAmount!: string | null;
   @ApiProperty() customerName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) customerAvatarUrl!: string | null;
-  @ApiProperty({ description: 'ISO — lần xử lý gần nhất (duyệt/từ chối/đổi trạng thái)' })
+  @ApiProperty({ description: 'ISO - lần xử lý gần nhất (duyệt/từ chối/đổi trạng thái)' })
   happenedAt!: string;
   @ApiProperty({ description: 'ISO' }) createdAt!: string;
   @ApiPropertyOptional({

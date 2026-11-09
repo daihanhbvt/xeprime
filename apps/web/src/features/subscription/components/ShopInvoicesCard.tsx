@@ -28,12 +28,12 @@ import styles from './ShopPlanSection.module.css';
 const INVOICE_TABLE_MIN_WIDTH = 960;
 
 /**
- * "Hóa đơn và thanh toán" — design `23999:111432`: bảng lịch sử hoá đơn gói luôn mở (bản cũ là khối
+ * "Hóa đơn và thanh toán" - design `23999:111432`: bảng lịch sử hoá đơn gói luôn mở (bản cũ là khối
  * gập), phân trang SERVER theo `?page=` (ADR 0004).
  *
  * Mã đối soát là mã mà khoản tiền khớp vào: hoá đơn thuộc phiếu gộp hiện mã `XPC…` của phiếu (ADR
- * 0083) — khách chuyển khoản theo mã đó, không theo mã con. Hoá đơn còn nhận tiền có nút "Thanh
- * toán" (design không vẽ cột này — giữ lối trả của khối "hoá đơn chờ" cũ); phiên hỗ trợ không có.
+ * 0083) - khách chuyển khoản theo mã đó, không theo mã con. Hoá đơn còn nhận tiền có nút "Thanh
+ * toán" (design không vẽ cột này - giữ lối trả của khối "hoá đơn chờ" cũ); phiên hỗ trợ không có.
  */
 export function ShopInvoicesCard() {
   const t = useTranslations('Subscription');

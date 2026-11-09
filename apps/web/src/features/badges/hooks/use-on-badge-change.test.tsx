@@ -20,7 +20,7 @@ function Probe({ value, onChange }: { value: number | null; onChange: () => void
 afterEach(cleanup);
 
 describe('useOnBadgeChange', () => {
-  it('KHÔNG chạy ở lần render đầu — query đứng sau đã tự tải rồi', () => {
+  it('KHÔNG chạy ở lần render đầu - query đứng sau đã tự tải rồi', () => {
     const onChange = vi.fn();
     render(<Probe value={3} onChange={onChange} />);
     expect(onChange).not.toHaveBeenCalled();
@@ -46,7 +46,7 @@ describe('useOnBadgeChange', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('con số về 0 cũng là một thay đổi — đọc hết thông báo phải làm mới danh sách', () => {
+  it('con số về 0 cũng là một thay đổi - đọc hết thông báo phải làm mới danh sách', () => {
     const onChange = vi.fn();
     const view = render(<Probe value={4} onChange={onChange} />);
 
@@ -95,7 +95,7 @@ describe('useOnBadgeChange', () => {
  * mà listener Firestore vẫn sống trong tab nền. Không có luật này thì một tab quản lý để quên sẽ
  * tải lại danh sách theo từng thông báo, cho một màn hình không ai nhìn.
  */
-describe('useOnBadgeChange — tab bị ẩn', () => {
+describe('useOnBadgeChange - tab bị ẩn', () => {
   const setVisibility = (state: 'visible' | 'hidden') => {
     Object.defineProperty(document, 'visibilityState', {
       configurable: true,

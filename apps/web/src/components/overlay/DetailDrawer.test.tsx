@@ -49,7 +49,7 @@ describe('DetailDrawer', () => {
       expect(screen.queryByText('Nội dung thật')).toBeNull();
     });
 
-    it('error thắng loading — refetch nền không che mất lỗi đang hiện', () => {
+    it('error thắng loading - refetch nền không che mất lỗi đang hiện', () => {
       render(
         <DetailDrawer open title="Đơn XP-001" error loading onClose={vi.fn()}>
           <p>Nội dung thật</p>
@@ -149,7 +149,7 @@ describe('DetailDrawer', () => {
   });
 
   describe('mask', () => {
-    it('luôn có mask tối che trang — mọi panel cùng một hình thái (07/10/2026 gỡ biến thể modeless)', () => {
+    it('luôn có mask tối che trang - mọi panel cùng một hình thái (07/10/2026 gỡ biến thể modeless)', () => {
       render(
         <DetailDrawer open title="T" onClose={vi.fn()}>
           <p>N</p>

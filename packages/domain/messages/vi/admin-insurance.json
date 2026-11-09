@@ -33,7 +33,7 @@
   "form": {
     "title": "Sửa sản phẩm · {name}",
     "submit": "Lưu thay đổi",
-    "intro": "Hợp đồng đã bán giữ bản chụp sản phẩm của riêng nó — sửa ở đây chỉ áp cho các chuyến từ nay về sau.",
+    "intro": "Hợp đồng đã bán giữ bản chụp sản phẩm của riêng nó - sửa ở đây chỉ áp cho các chuyến từ nay về sau.",
     "sections": {
       "naming": "Tên hiển thị",
       "coverage": "Quyền lợi",
@@ -45,10 +45,10 @@
       "nameEn": "Tên (tiếng Anh)",
       "coverageVi": "Phạm vi bảo vệ (tiếng Việt)",
       "coverageEn": "Phạm vi bảo vệ (tiếng Anh)",
-      "deductibleCar": "Khấu trừ / vụ — ô tô",
-      "deductibleMotorbike": "Khấu trừ / vụ — xe máy",
-      "maxPayoutCar": "Bồi thường tối đa — ô tô",
-      "maxPayoutMotorbike": "Bồi thường tối đa — xe máy",
+      "deductibleCar": "Khấu trừ / vụ - ô tô",
+      "deductibleMotorbike": "Khấu trừ / vụ - xe máy",
+      "maxPayoutCar": "Bồi thường tối đa - ô tô",
+      "maxPayoutMotorbike": "Bồi thường tối đa - xe máy",
       "maxPayoutNoteVi": "Ghi chú bồi thường (tiếng Việt)",
       "maxPayoutNoteEn": "Ghi chú bồi thường (tiếng Anh)",
       "partnerProductCode": "Mã sản phẩm đối tác",
@@ -60,7 +60,7 @@
     "help": {
       "amountEmpty": "Để trống nếu không áp dụng.",
       "maxPayoutNote": "Ví dụ: “Theo giá trị thực tế của xe”, “Mỗi người, mỗi vụ”.",
-      "certificateUrlTemplate": "Bắt đầu bằng https:// và chứa '{certCode}' — chỗ thay số chứng nhận."
+      "certificateUrlTemplate": "Bắt đầu bằng https:// và chứa '{certCode}' - chỗ thay số chứng nhận."
     },
     "validation": {
       "required": "Bắt buộc nhập.",
@@ -82,7 +82,7 @@
       "status": "Trạng thái",
       "productKind": "Sản phẩm"
     },
-    "defaultViewHint": "Đang xem hợp đồng LỖI — việc cần xử lý. Chuyển sang \"Tất cả\" để xem lịch sử.",
+    "defaultViewHint": "Đang xem hợp đồng LỖI - việc cần xử lý. Chuyển sang \"Tất cả\" để xem lịch sử.",
     "columns": {
       "booking": "Đơn",
       "tenant": "Gian hàng · xe",
@@ -153,7 +153,7 @@
       "product": "Bản chụp sản phẩm lúc bán",
       "empty": "Chưa có"
     },
-    "testNote": "Giấy chứng nhận THỬ NGHIỆM do adapter giả lập cấp — không có hiệu lực bảo hiểm.",
+    "testNote": "Giấy chứng nhận THỬ NGHIỆM do adapter giả lập cấp - không có hiệu lực bảo hiểm.",
     "copy": "Sao chép",
     "openBooking": "Mở đơn",
     "viewCertificate": "Xem giấy chứng nhận",
@@ -163,7 +163,7 @@
       "other": "Không có thao tác nào cho trạng thái này."
     },
     "retry": "Thử phát hành lại",
-    "retryQueued": "Đã xếp lượt phát hành lại — worker xử lý trong khoảng một phút.",
+    "retryQueued": "Đã xếp lượt phát hành lại - worker xử lý trong khoảng một phút.",
     "void": "Thu hồi",
     "voidDialog": {
       "title": "Thu hồi hợp đồng bảo hiểm",

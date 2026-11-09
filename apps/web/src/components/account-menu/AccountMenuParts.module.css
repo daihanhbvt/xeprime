@@ -1,9 +1,9 @@
 /*
- * Khung chung của menu TÀI KHOẢN dạng bảng (264px) — site khách (Figma "Homepage - Dropdown"
+ * Khung chung của menu TÀI KHOẢN dạng bảng (264px) - site khách (Figma "Homepage - Dropdown"
  * `20063:57521`) và site partner (Partner-XePrime `24051:85101`) vẽ cùng một khuôn.
  *
  * Hai lớp: vỏ ngoài nền xám nhạt chứa chân menu (Ngôn ngữ · Đăng xuất), và một MẶT trắng nổi bên
- * trong chứa thẻ danh tính + các lối đi. Mặt trong bo 12 ở trên, 16 ở dưới — góc dưới lớn hơn để
+ * trong chứa thẻ danh tính + các lối đi. Mặt trong bo 12 ở trên, 16 ở dưới - góc dưới lớn hơn để
  * nó trông như tấm thẻ đặt lên vỏ, đúng bản vẽ.
  */
 .menu {
@@ -42,7 +42,7 @@
   gap: var(--xp-space-2);
 }
 
-/* Lề 6px hai bên của MỌI dòng — vùng hover không chạm mép menu. */
+/* Lề 6px hai bên của MỌI dòng - vùng hover không chạm mép menu. */
 .item {
   padding: 0 var(--xp-space-6);
 }
@@ -62,7 +62,7 @@
     color 0.15s ease;
 }
 
-/* Chỉ dòng là LIÊN KẾT mới sáng lên khi rê — dòng mang nút gạt không phải chỗ để bấm cả dòng. */
+/* Chỉ dòng là LIÊN KẾT mới sáng lên khi rê - dòng mang nút gạt không phải chỗ để bấm cả dòng. */
 a.row:hover {
   background: var(--xp-color-bg-hover);
   color: var(--xp-color-primary);
@@ -78,7 +78,7 @@ a.row:hover {
   font-size: 20px;
 }
 
-/* Dòng mời gọi — Figma "Nâng cấp gian hàng" (`24051:85746`): cả icon, nhãn, mũi tên đều vàng. */
+/* Dòng mời gọi - Figma "Nâng cấp gian hàng" (`24051:85746`): cả icon, nhãn, mũi tên đều vàng. */
 .rowAccent,
 .rowAccent .rowLabel {
   color: var(--xp-color-primary);

@@ -17,9 +17,9 @@ import { SellerTaxFields } from './SellerTaxFields';
 import styles from './SellerTaxSection.module.css';
 
 /**
- * "Thông tin khai thuế" — MỘT section, dựng ở trang hồ sơ của CẢ hai tuyến (07/10/2026): "Hồ sơ chủ
+ * "Thông tin khai thuế" - MỘT section, dựng ở trang hồ sơ của CẢ hai tuyến (07/10/2026): "Hồ sơ chủ
  * xe" (tuyến hoa hồng, trước là trang `/tax`) và trang Cửa hàng (tuyến gói, thay ô MST cũ ở "Địa chỉ
- * & pháp lý" — ô đó ghi vào một bản sao mà không phép tính thuế nào đọc, nay đã gỡ).
+ * & pháp lý" - ô đó ghi vào một bản sao mà không phép tính thuế nào đọc, nay đã gỡ).
  *
  * Đây là nơi DUY NHẤT khai mã số thuế: `seller_profiles.tax_id` là thứ hợp đồng, màn quản trị và báo
  * cáo thuế đọc. Thuế ĐÃ khấu trừ theo kỳ là chuyện tiền, nên nó ở trang "Số dư & rút tiền".
@@ -29,14 +29,14 @@ import styles from './SellerTaxSection.module.css';
  * (hộ kinh doanh / doanh nghiệp).
  *
  * Hai điều cố ý:
- *  - `PUT /seller-profile` là ghi toàn phần — trường không gửi thành `null`. Payload vì thế bắt
+ *  - `PUT /seller-profile` là ghi toàn phần - trường không gửi thành `null`. Payload vì thế bắt
  *    đầu từ `profileToSaveInput(profile)` rồi mới ghi đè bốn trường ở đây, để lưu tên không xoá
  *    phần hồ sơ màn này không hiện.
  *  - KHÔNG có gì về "loại hình cư trú" và KHÔNG có tỷ lệ thuế nào: model chưa có trường cư trú,
  *    và phân loại/tỷ lệ production còn chờ tư vấn thuế (ADR 0028 điều 4). Đoạn giải thích cư trú
  *    cũng đã bỏ (07/10/2026): một khối chữ nói về thứ chưa tồn tại chỉ làm form dài thêm.
  *
- * Trang gọi CHỈ dựng section này khi có `seller_profile.view` — thiếu quyền thì section vắng khỏi
+ * Trang gọi CHỈ dựng section này khi có `seller_profile.view` - thiếu quyền thì section vắng khỏi
  * cả trang lẫn mục lục, thay vì một khối "không có quyền" giữa một trang hồ sơ.
  *
  * Một nút lưu RIÊNG ở đáy khối, giống "Thông tin chủ xe": nó nằm trong đúng vùng mà nó lưu.
@@ -136,7 +136,7 @@ export function SellerTaxSection({ id }: { id: string }) {
 
         {!readOnly ? (
           <div className={styles.actions}>
-            {/* Chưa sửa gì thì không có gì để huỷ — nút không tồn tại, chứ không phải mờ đi. */}
+            {/* Chưa sửa gì thì không có gì để huỷ - nút không tồn tại, chứ không phải mờ đi. */}
             {dirty ? (
               <Button onClick={() => form.reset()} disabled={saving}>
                 {tCommon('actions.cancel')}

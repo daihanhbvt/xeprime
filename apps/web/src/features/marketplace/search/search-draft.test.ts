@@ -37,7 +37,7 @@ function queryOf(draft: SearchDraft): URLSearchParams {
   return new URLSearchParams(buildSearchHref(draft).split('?')[1] ?? '');
 }
 
-describe('draftFromFilters — URL → bản nháp', () => {
+describe('draftFromFilters - URL → bản nháp', () => {
   it('URL rỗng cho mặc định dùng được ngay: ô tô, tự lái, toàn quốc, thuê 1 ngày tròn', () => {
     const draft = draftFromFilters({}, NOW);
 
@@ -71,7 +71,7 @@ describe('draftFromFilters — URL → bản nháp', () => {
     expect(draft.rental.pickupAt?.toISOString()).toBe('2026-09-01T03:00:00.000Z');
   });
 
-  it('xe máy KHÔNG có dịch vụ có tài xế — link như vậy rơi về tự lái, không mở tab không tồn tại', () => {
+  it('xe máy KHÔNG có dịch vụ có tài xế - link như vậy rơi về tự lái, không mở tab không tồn tại', () => {
     const draft = draftFromFilters(
       { vehicleType: VEHICLE_TYPE.MOTORBIKE, serviceType: SERVICE_TYPE.WITH_DRIVER },
       NOW,
@@ -81,7 +81,7 @@ describe('draftFromFilters — URL → bản nháp', () => {
     expect(draft.serviceType).toBe(SERVICE_TYPE.SELF_DRIVE);
   });
 
-  it('xe máy VẪN có thuê dài hạn — chỉ đúng một dịch vụ bị loại', () => {
+  it('xe máy VẪN có thuê dài hạn - chỉ đúng một dịch vụ bị loại', () => {
     const draft = draftFromFilters(
       { vehicleType: VEHICLE_TYPE.MOTORBIKE, serviceType: SERVICE_TYPE.LONG_TERM },
       NOW,
@@ -101,7 +101,7 @@ describe('draftFromFilters — URL → bản nháp', () => {
   });
 });
 
-describe('draftToFilterPatch — tự lái và có tài xế', () => {
+describe('draftToFilterPatch - tự lái và có tài xế', () => {
   it('tự lái phát địa điểm + khoảng thuê, KHÔNG phát lộ trình', () => {
     const draft = makeDraft({ provinceCode: '48' });
     const query = queryOf(draft);
@@ -114,7 +114,7 @@ describe('draftToFilterPatch — tự lái và có tài xế', () => {
     expect(query.has('routeType')).toBe(false);
   });
 
-  it('xe máy chỉ đổi `vehicleType` — địa điểm và khoảng thuê đi nguyên vẹn theo', () => {
+  it('xe máy chỉ đổi `vehicleType` - địa điểm và khoảng thuê đi nguyên vẹn theo', () => {
     const base = makeDraft({ provinceCode: '79' });
     const query = queryOf({ ...base, vehicleType: VEHICLE_TYPE.MOTORBIKE });
 
@@ -128,7 +128,7 @@ describe('draftToFilterPatch — tự lái và có tài xế', () => {
     expect(queryOf(draft).get('hourly')).toBe('1');
   });
 
-  it('có tài xế phát lộ trình — nhưng chỉ những lộ trình đang tồn tại trong hợp đồng', () => {
+  it('có tài xế phát lộ trình - nhưng chỉ những lộ trình đang tồn tại trong hợp đồng', () => {
     const query = queryOf(
       makeDraft({ serviceType: SERVICE_TYPE.WITH_DRIVER, routeType: ROUTE_TYPE.INTER_CITY }),
     );
@@ -143,7 +143,7 @@ describe('draftToFilterPatch — tự lái và có tài xế', () => {
   });
 });
 
-describe('draftToFilterPatch — thuê dài hạn (ADR 0011)', () => {
+describe('draftToFilterPatch - thuê dài hạn (ADR 0011)', () => {
   const longTermQuery = queryOf(
     makeDraft({
       serviceType: SERVICE_TYPE.LONG_TERM,
@@ -184,7 +184,7 @@ describe('draftToFilterPatch — thuê dài hạn (ADR 0011)', () => {
   });
 });
 
-describe('đổi dịch vụ — patch XOÁ đúng những tham số hết nghĩa', () => {
+describe('đổi dịch vụ - patch XOÁ đúng những tham số hết nghĩa', () => {
   it('tự lái → dài hạn: khoá lịch bị đánh dấu xoá khỏi URL, không nằm lại như tham số ma', () => {
     const patch = draftToFilterPatch(makeDraft({ serviceType: SERVICE_TYPE.LONG_TERM }));
 
@@ -214,7 +214,7 @@ describe('đổi dịch vụ — patch XOÁ đúng những tham số hết nghĩ
   });
 });
 
-describe('searchContextSignature — so URL với nháp mà không so từng trường', () => {
+describe('searchContextSignature - so URL với nháp mà không so từng trường', () => {
   it('URL và nháp cùng ngữ cảnh cho cùng chữ ký, bất kể thứ tự tham số', () => {
     const draft = makeDraft({ serviceType: SERVICE_TYPE.LONG_TERM, provinceCode: '48' });
     const fromUrl = Object.fromEntries(queryOf(draft)) as MarketplaceFilters;
@@ -222,7 +222,7 @@ describe('searchContextSignature — so URL với nháp mà không so từng tr�
     expect(searchContextSignature(fromUrl)).toBe(searchContextSignature(draftToFilterPatch(draft)));
   });
 
-  it('bỏ qua các key KHÔNG thuộc thẻ tìm kiếm — đổi facet không làm nháp bị nạp lại', () => {
+  it('bỏ qua các key KHÔNG thuộc thẻ tìm kiếm - đổi facet không làm nháp bị nạp lại', () => {
     const base: MarketplaceFilters = { vehicleType: VEHICLE_TYPE.CAR };
     expect(searchContextSignature({ ...base, sort: 'price_asc', page: 3 })).toBe(
       searchContextSignature(base),

@@ -175,7 +175,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('AdminVehicleDetailDrawer — hình dạng panel làm việc', () => {
+describe('AdminVehicleDetailDrawer - hình dạng panel làm việc', () => {
   it('tiêu đề cố định + mã xe + trạng thái kiểm duyệt; tên xe là h2 trong hồ sơ', () => {
     renderDrawer();
 
@@ -241,7 +241,7 @@ describe('AdminVehicleDetailDrawer — hình dạng panel làm việc', () => {
   });
 });
 
-describe('AdminVehicleDetailDrawer — ba trục hiển thị (ADR 0048)', () => {
+describe('AdminVehicleDetailDrawer - ba trục hiển thị (ADR 0048)', () => {
   it('xe đang bán: chủ xe Bật, kết quả Đang hiển thị, có link ra trang xe ở site khách', () => {
     renderDrawer();
     const card = marketplaceCard();
@@ -279,7 +279,7 @@ describe('AdminVehicleDetailDrawer — ba trục hiển thị (ADR 0048)', () =>
     expect(within(marketplaceCard()).getByText('Gian hàng ngừng hoạt động')).toBeTruthy();
   });
 
-  it('lựa chọn của chủ xe là CHỈ ĐỌC — không có công tắc nào cho admin, có dấu "i" giải thích', () => {
+  it('lựa chọn của chủ xe là CHỈ ĐỌC - không có công tắc nào cho admin, có dấu "i" giải thích', () => {
     renderDrawer();
 
     expect(screen.queryByRole('switch')).toBeNull();
@@ -312,7 +312,7 @@ describe('AdminVehicleDetailDrawer — ba trục hiển thị (ADR 0048)', () =>
   });
 });
 
-describe('AdminVehicleDetailDrawer — ẩn xe', () => {
+describe('AdminVehicleDetailDrawer - ẩn xe', () => {
   it('bắt buộc lý do; gửi đúng id xe + lý do, toast xác nhận', async () => {
     moderation.mutate.mockImplementation((_a: unknown, opts: { onSuccess?: () => void }) =>
       opts.onSuccess?.(),
@@ -341,7 +341,7 @@ describe('AdminVehicleDetailDrawer — ẩn xe', () => {
   });
 });
 
-describe('AdminVehicleDetailDrawer — gỡ ẩn của nền tảng', () => {
+describe('AdminVehicleDetailDrawer - gỡ ẩn của nền tảng', () => {
   it('xe bị nền tảng ẩn: cảnh báo kể ai ẩn, lúc nào, vì sao; nút là "Gỡ ẩn của nền tảng"', () => {
     renderDrawer(platformHidden);
 

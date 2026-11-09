@@ -60,7 +60,7 @@
   },
   "partner": {
     "title": "XePrime Partner app",
-    "intro": "Renting out on XePrime — listing your own car or opening a shop — happens in the XePrime Partner app, with a separate partner account. You can reuse the same phone number, with its own password.",
+    "intro": "Renting out on XePrime - listing your own car or opening a shop - happens in the XePrime Partner app, with a separate partner account. You can reuse the same phone number, with its own password.",
     "open": "Open XePrime Partner",
     "download": "Get XePrime Partner",
     "later": "Later",
@@ -74,7 +74,7 @@
     "slides": {
       "intro": {
         "title": "Rent out with XePrime Partner",
-        "body": "Turn an idle vehicle into income. Everything about renting out — listing, accepting trips, managing the calendar — happens in the XePrime Partner app."
+        "body": "Turn an idle vehicle into income. Everything about renting out - listing, accepting trips, managing the calendar - happens in the XePrime Partner app."
       },
       "account": {
         "title": "Create a partner account",
@@ -82,7 +82,7 @@
       },
       "choose": {
         "title": "Choose how to rent out",
-        "body": "List a personal vehicle to start fast with no sign-up fee — or open a shop if you run several vehicles. Switching later keeps your vehicles and data."
+        "body": "List a personal vehicle to start fast with no sign-up fee - or open a shop if you run several vehicles. Switching later keeps your vehicles and data."
       },
       "publish": {
         "title": "List a vehicle or open a shop",
@@ -112,5 +112,14 @@
   },
   "currentLocation": {
     "denied": "Location access is blocked for this app. Allow it in your device Settings, then try again."
+  },
+  "network": {
+    "offline": "You are offline - some actions are paused",
+    "reconnected": "Back online",
+    "errorTitle": "No internet connection",
+    "errorHint": "Check your Wi-Fi or mobile data and try again.",
+    "actionBlocked": "You need an internet connection to do this.",
+    "staleAt": "Offline · Data last updated {time}",
+    "staleMoney": "Amounts and payment status may be out of date."
   }
 }

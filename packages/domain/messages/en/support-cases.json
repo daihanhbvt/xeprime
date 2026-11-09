@@ -5,7 +5,7 @@
     "tenantTitle": "Support requests",
     "tenantSubtitle": "Support and disputes about your shop's trips.",
     "platformTitle": "Support / disputes",
-    "platformSubtitle": "Marketplace-wide queue — highest priority first. Resolving a dispute unlocks settling its booking hold.",
+    "platformSubtitle": "Marketplace-wide queue - highest priority first. Resolving a dispute unlocks settling its booking hold.",
     "tableLabel": "Support requests",
     "openButton": "Open a request",
     "loadError": "Could not load the list.",

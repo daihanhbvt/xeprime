@@ -157,8 +157,8 @@ function BookingTimeline({
       tone: 'warning',
       title: renting ? t('renting') : t('awaiting'),
       body: renting
-        ? t('rentingBody', { time: fmt.shortDateTime(booking.pickupAt) })
-        : t('awaitingBody', { time: fmt.shortDateTime(booking.pickupAt) }),
+        ? t('rentingBody', { time: fmt.rentalAt(booking.pickupAt) })
+        : t('awaitingBody', { time: fmt.rentalAt(booking.pickupAt) }),
     },
     ...(canViewFinance && debt != null
       ? [
@@ -178,7 +178,7 @@ function BookingTimeline({
       icon: <CalendarOutlined />,
       tone: 'neutral',
       title: t('returnPlan'),
-      body: t('returnPlanBody', { time: fmt.shortDateTime(booking.returnAt) }),
+      body: t('returnPlanBody', { time: fmt.rentalAt(booking.returnAt) }),
     },
   ];
 

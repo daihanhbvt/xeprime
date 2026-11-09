@@ -102,7 +102,7 @@ const SEGMENTED_FIELDS: FilterField[] = [
   },
 ];
 
-describe('FilterBar — nhóm nút chọn-một', () => {
+describe('FilterBar - nhóm nút chọn-một', () => {
   it('hiện hết lựa chọn, không giấu trong dropdown', () => {
     render(<FilterBar fields={SEGMENTED_FIELDS} values={{}} onChange={vi.fn()} />);
 
@@ -157,7 +157,7 @@ describe('FilterBar — nhóm nút chọn-một', () => {
 
 /* ------------------------------------------------------------------ tìm kiếm + debounce */
 
-describe('FilterBar — ô tìm kiếm', () => {
+describe('FilterBar - ô tìm kiếm', () => {
   it('debounce trước khi báo ra ngoài, không bắn theo từng phím', () => {
     vi.useFakeTimers();
     try {
@@ -207,7 +207,7 @@ describe('FilterBar — ô tìm kiếm', () => {
     }
   });
 
-  it('HUỶ debounce khi unmount — không ghi URL sau khi rời trang', () => {
+  it('HUỶ debounce khi unmount - không ghi URL sau khi rời trang', () => {
     vi.useFakeTimers();
     try {
       const { onChange, unmount } = renderBar();
@@ -249,7 +249,7 @@ describe('FilterBar — ô tìm kiếm', () => {
 
 /* ------------------------------------------------------------------ xoá lọc + hành động */
 
-describe('FilterBar — xoá bộ lọc', () => {
+describe('FilterBar - xoá bộ lọc', () => {
   it('không có filter nào bật thì không hiện nút xoá', () => {
     renderBar({ onClear: vi.fn() });
 
@@ -279,7 +279,7 @@ describe('FilterBar — xoá bộ lọc', () => {
 
 /* ------------------------------------------------------------------ khả truy cập */
 
-describe('FilterBar — khả truy cập và bàn phím', () => {
+describe('FilterBar - khả truy cập và bàn phím', () => {
   it('cả cụm là landmark search có tên', () => {
     renderBar();
 
@@ -313,7 +313,7 @@ describe('FilterBar — khả truy cập và bàn phím', () => {
 
 /* ------------------------------------------------------------------ khoảng ngày */
 
-describe('FilterBar — khoảng ngày', () => {
+describe('FilterBar - khoảng ngày', () => {
   it('đọc YYYY-MM-DD từ URL nhưng HIỂN THỊ theo quy ước Việt Nam', () => {
     // Hai định dạng khác nhau là có chủ đích: URL giữ `YYYY-MM-DD` (sắp xếp được, chuẩn ISO),
     // màn hình hiện `DD/MM/YYYY` (CLAUDE.md §9). Đây cũng là cách `/manage/admin/audit` đang
@@ -350,7 +350,7 @@ describe('FilterBar — khoảng ngày', () => {
 
 /* ------------------------------------------------------------------ mobile */
 
-describe('FilterBar — mobile', () => {
+describe('FilterBar - mobile', () => {
   beforeEach(() => {
     viewport.mobile = true;
   });

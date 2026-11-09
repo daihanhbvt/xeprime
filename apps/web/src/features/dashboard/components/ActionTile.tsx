@@ -76,7 +76,7 @@ export function ActionTile({
         <Skeleton active title={false} paragraph={{ rows: 2, width: ['40%', '80%'] }} />
       ) : (
         <>
-          <span className={styles.count}>{failed ? '—' : fmt.count(count)}</span>
+          <span className={styles.count}>{failed ? '-' : fmt.count(count)}</span>
           <span className={styles.meta}>
             {failed ? (
               <span className={styles.metaLine}>{errorText}</span>

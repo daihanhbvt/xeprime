@@ -22,7 +22,7 @@ export class VehicleAlertDto {
   })
   severity!: string;
 
-  @ApiProperty({ description: 'Câu mô tả việc cần làm — đã lọc dữ liệu nhạy cảm' })
+  @ApiProperty({ description: 'Câu mô tả việc cần làm - đã lọc dữ liệu nhạy cảm' })
   title!: string;
 
   @ApiPropertyOptional({ type: String, nullable: true })

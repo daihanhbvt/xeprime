@@ -87,7 +87,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('useThread — nhịp làm mới', () => {
+describe('useThread - nhịp làm mới', () => {
   it('KHÔNG có realtime: hỏi lại nhanh', async () => {
     render(wrapper(<Probe conversationId="c1" />));
     await waitFor(() => expect(chat.messages).toHaveBeenCalledTimes(1));
@@ -110,7 +110,7 @@ describe('useThread — nhịp làm mới', () => {
     expect(chat.messages.mock.calls.length).toBeGreaterThan(afterMount);
   });
 
-  it('rời thread thì dừng hẳn — không để đồng hồ chạy mồ côi', async () => {
+  it('rời thread thì dừng hẳn - không để đồng hồ chạy mồ côi', async () => {
     const view = render(wrapper(<Probe conversationId="c1" />));
     await waitFor(() => expect(chat.messages).toHaveBeenCalledTimes(1));
 
@@ -130,7 +130,7 @@ describe('useThread — nhịp làm mới', () => {
  * ngay từ đầu và sẽ không bao giờ có snapshot nào. Người gửi thấy tin của mình ngay (bản lạc
  * quan), người nhận đợi 25 giây. Không cờ nào ở tầng xác thực phân biệt được hai tình huống này.
  */
-describe('useThread — trạng thái listener quyết định nhịp, không phải trạng thái đăng nhập', () => {
+describe('useThread - trạng thái listener quyết định nhịp, không phải trạng thái đăng nhập', () => {
   it('auth THÀNH CÔNG nhưng listener bị từ chối: rơi về nhịp dày NGAY, không đợi 25 giây', async () => {
     realtime.db = {};
     realtime.ready = true;

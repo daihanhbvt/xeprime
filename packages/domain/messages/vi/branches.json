@@ -38,7 +38,7 @@
     "manage": "Bạn không có quyền quản lý chi nhánh",
     "inactive": "Chi nhánh đang ngừng hoạt động",
     "noProvince": "Chi nhánh chưa có tỉnh/thành",
-    "isDefault": "Chi nhánh mặc định không thể ngừng — đặt chi nhánh khác làm mặc định trước"
+    "isDefault": "Chi nhánh mặc định không thể ngừng - đặt chi nhánh khác làm mặc định trước"
   },
   "confirmDeactivate": {
     "title": "Ngừng hoạt động chi nhánh?",

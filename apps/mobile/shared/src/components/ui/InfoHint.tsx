@@ -4,7 +4,7 @@ import { Pressable } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { BottomSheet } from './BottomSheet';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, iconSize, space } from '@/theme/tokens';
+import { fontSize, space } from '@/theme/tokens';
 
 /**
  * Dấu "i" mở một lời giải thích BỔ SUNG — bản native của `InfoHint` bên web.
@@ -23,10 +23,13 @@ import { fontSize, iconSize, space } from '@/theme/tokens';
 export function InfoHint({
   content,
   label,
+  size = fontSize.body,
 }: {
   /** Chuỗi ⇒ một đoạn chữ; ReactNode ⇒ nơi gọi tự dựng (nhiều đoạn, kèm liên kết) như web. */
   content: ReactNode;
   label: string;
+  /** Cỡ dấu "i" — BẰNG cỡ chữ của nhãn đứng cạnh (mặc định cỡ chữ thân bài). */
+  size?: number;
 }) {
   const colors = useColors();
   const [open, setOpen] = useState(false);
@@ -39,11 +42,11 @@ export function InfoHint({
         accessibilityLabel={label}
         hitSlop={12}
       >
-        <Ionicons name="information-circle-outline" size={iconSize.sm} color={colors.textMuted} />
+        <Ionicons name="information-circle-outline" size={size} color={colors.textMuted} />
       </Pressable>
       {/* Chỉ dựng khi ĐÃ mở: một màn có năm dấu "i" không nên mang theo năm `Modal` ngủ đông. */}
       {open ? (
-        <BottomSheet open onClose={() => setOpen(false)} title={label} scroll={false}>
+        <BottomSheet open onClose={() => setOpen(false)} title={label}>
           <YStack pb={space.md} gap={space.sm}>
             {typeof content === 'string' ? (
               <Text col={colors.text} fos={fontSize.body}>

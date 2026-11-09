@@ -12,7 +12,7 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import styles from './AccountMenu.module.css';
 
 /**
- * Menu TÀI KHOẢN của khung SITE QUẢN TRỊ — avatar ở thanh trên (`Topbar`) và thẻ người dùng ở
+ * Menu TÀI KHOẢN của khung SITE QUẢN TRỊ - avatar ở thanh trên (`Topbar`) và thẻ người dùng ở
  * drawer mobile (`ManageUserCard`). Một bộ mục cho cả hai lối vào.
  *
  * Site partner đã có menu hồ sơ riêng theo design (`PartnerAccountMenu`, Figma `24051:85101`,
@@ -30,8 +30,8 @@ export function useAccountMenuItems(): NonNullable<MenuProps['items']> {
 
   if (!user) return [];
 
-  const workspaceName = user.tenant?.name ?? (user.displayName || user.email || '—');
-  const signedInAs = user.displayName || user.email || '—';
+  const workspaceName = user.tenant?.name ?? (user.displayName || user.email || '-');
+  const signedInAs = user.displayName || user.email || '-';
 
   return [
     {

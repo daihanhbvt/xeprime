@@ -127,7 +127,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Thẻ ba bước — chấm theo dữ liệu thật', () => {
+describe('Thẻ ba bước - chấm theo dữ liệu thật', () => {
   it('hồ sơ còn thiếu mục bắt buộc: bước hồ sơ CHƯA xong, mời điền', () => {
     state.shop = makeShop({}, { phone: null });
     render(<ShopOnboardingCard vehicleCount={0} />);

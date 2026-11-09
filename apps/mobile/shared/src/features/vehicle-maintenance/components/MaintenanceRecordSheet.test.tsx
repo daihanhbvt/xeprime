@@ -26,7 +26,7 @@ async function renderSheet() {
 }
 
 /** Bám `MaintenanceRecordDialog` bên web: chi phí + mã phiếu chi đi theo quyền xem chi phí. */
-describe('MaintenanceRecordSheet — chi phí theo vehicles.maintenance.view_cost', () => {
+describe('MaintenanceRecordSheet - chi phí theo vehicles.maintenance.view_cost', () => {
   it('thiếu quyền xem chi phí: không có ô chi phí và mã phiếu chi', async () => {
     mockGranted = [PERMISSION.VEHICLE_MAINTENANCE_MANAGE];
     await renderSheet();

@@ -173,6 +173,27 @@ export function SearchExperienceProvider({
    * `applied` ở trên đang tránh.
    */
   const userEditedRef = useRef(false);
+  /*
+   * Ngữ cảnh MỚI từ màn trước khi provider vẫn sống — tab "Tìm xe" nhận tham số mới từ trang chủ.
+   *
+   * Trước đây route dựng lại cả màn (`key` theo tham số) để nhận ngữ cảnh mới: cả màn gắn lại từ
+   * đầu, query mới chưa có dữ liệu ⇒ cú nháy đúng lúc bấm sang. Ở đây áp như một lần mount mới —
+   * bản nháp + bộ lọc lấy lại từ `initial`, cờ đã-sửa gỡ — rồi chạy lại đúng phép điền khoảng thuê
+   * đã nhớ (effect dưới), cùng điều kiện. So theo NỘI DUNG để object mới mỗi render không áp oan.
+   */
+  const initialKey = initial ? JSON.stringify(initial) : '';
+  const appliedInitialKeyRef = useRef(initialKey);
+  const [restoreTick, setRestoreTick] = useState(0);
+  useEffect(() => {
+    if (appliedInitialKeyRef.current === initialKey) return;
+    appliedInitialKeyRef.current = initialKey;
+    initialRef.current = initial;
+    userEditedRef.current = false;
+    setDraft(draftFromFilters(initial ?? {}));
+    setFiltersState(initial ?? {});
+    setRestoreTick((n) => n + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initialKey đại diện trọn `initial`
+  }, [initialKey]);
   useEffect(() => {
     if (userEditedRef.current) return;
     if (initialRef.current?.pickupAt && initialRef.current?.returnAt) return;
@@ -192,7 +213,7 @@ export function SearchExperienceProvider({
     return () => {
       alive = false;
     };
-  }, []);
+  }, [restoreTick]);
 
   /**
    * Loại xe khách đã TỰ CHỌN ở lượt trước → điền vào BẢN NHÁP — bản native của khối khôi phục loại

@@ -394,10 +394,10 @@ export function DeliveryPolicySection<T extends PolicyFormValues>({
               <div key={field.id} className={styles.tierRow}>
                 <div className={styles.distanceCell}>
                   <span className={styles.tierFrom}>
-                    {index === 0 ? '0' : `> ${tiers[index - 1]?.toKm ?? '—'}`}
+                    {index === 0 ? '0' : `> ${tiers[index - 1]?.toKm ?? '-'}`}
                   </span>
                   <span className={styles.distanceSeparator} aria-hidden="true">
-                    –
+                    -
                   </span>
                   <div className={styles.tierTo}>
                     <NumberField

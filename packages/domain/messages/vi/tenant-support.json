@@ -14,8 +14,8 @@
     "actor": "Người thao tác: {name}",
     "expiresAt": "Hết hạn lúc {time}",
     "restriction": {
-      "tenant_locked": "Gian hàng đang bị khoá — phiên chỉ còn xem được.",
-      "assist_permission_revoked": "Tài khoản của bạn không còn quyền hỗ trợ thao tác — phiên chỉ còn xem được."
+      "tenant_locked": "Gian hàng đang bị khoá - phiên chỉ còn xem được.",
+      "assist_permission_revoked": "Tài khoản của bạn không còn quyền hỗ trợ thao tác - phiên chỉ còn xem được."
     },
     "exit": "Thoát chế độ hỗ trợ"
   },
@@ -38,7 +38,7 @@
   },
   "start": {
     "title": "Mở không gian hỗ trợ · {tenant}",
-    "lead": "Bạn vào khu làm việc của gian hàng bằng chính tài khoản của mình — không đăng nhập thay chủ xe. Phiên hết hạn sau {minutes} phút, mọi thao tác đều ghi nhật ký kèm lý do dưới đây.",
+    "lead": "Bạn vào khu làm việc của gian hàng bằng chính tài khoản của mình - không đăng nhập thay chủ xe. Phiên hết hạn sau {minutes} phút, mọi thao tác đều ghi nhật ký kèm lý do dưới đây.",
     "modeLabel": "Chế độ",
     "mode": {
       "view": {
@@ -60,7 +60,7 @@
       "reasonRequired": "Nhập lý do hỗ trợ",
       "reasonMin": "Lý do cần ít nhất 10 ký tự",
       "reasonMax": "Lý do tối đa 500 ký tự",
-      "reasonGeneric": "Lý do chưa đủ cụ thể — \"hỗ trợ\", \"admin sửa\", \"theo yêu cầu\" chưa nói vì sao"
+      "reasonGeneric": "Lý do chưa đủ cụ thể - \"hỗ trợ\", \"admin sửa\", \"theo yêu cầu\" chưa nói vì sao"
     }
   },
   "home": {
@@ -90,15 +90,15 @@
   "reason": {
     "title": "Xác nhận thao tác hỗ trợ",
     "label": "Lý do cho thao tác này",
-    "placeholder": "VD: Chủ xe gọi hotline 14h nhờ chuyển xe sang chi nhánh Thủ Đức — ticket #5521",
+    "placeholder": "VD: Chủ xe gọi hotline 14h nhờ chuyển xe sang chi nhánh Thủ Đức - ticket #5521",
     "help": "Ghi rõ vì sao, hoặc mã yêu cầu của chủ xe. Lý do được ghi vào nhật ký cùng thay đổi.",
     "submit": "Xác nhận và thực hiện",
-    "invalid": "Lý do vừa nhập chưa đủ cụ thể — ghi rõ vì sao hoặc mã yêu cầu của chủ xe.",
+    "invalid": "Lý do vừa nhập chưa đủ cụ thể - ghi rõ vì sao hoặc mã yêu cầu của chủ xe.",
     "ownerRequested": "Tôi xác nhận chính chủ xe đã yêu cầu gửi xe đi duyệt.",
     "validation": {
       "reasonRequired": "Nhập lý do cho thao tác này",
       "reasonMax": "Lý do tối đa 500 ký tự",
-      "reasonGeneric": "Lý do chưa đủ cụ thể — \"hỗ trợ\", \"admin sửa\", \"theo yêu cầu\" chưa nói vì sao",
+      "reasonGeneric": "Lý do chưa đủ cụ thể - \"hỗ trợ\", \"admin sửa\", \"theo yêu cầu\" chưa nói vì sao",
       "ownerRequestRequired": "Cần xác nhận chủ xe đã yêu cầu"
     },
     "consequence": {
@@ -128,7 +128,7 @@
       },
       "submitReview": {
         "title": "Gửi xe đi duyệt thay chủ xe",
-        "body": "Xe sẽ vào hàng đợi duyệt của nền tảng dưới tên bạn. Người duyệt là người khác — thao tác này không duyệt xe."
+        "body": "Xe sẽ vào hàng đợi duyệt của nền tảng dưới tên bạn. Người duyệt là người khác - thao tác này không duyệt xe."
       },
       "listingRepair": {
         "title": "Đồng bộ lại hiển thị công khai",

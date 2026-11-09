@@ -78,7 +78,7 @@ export function ContractDocument({ contract }: { contract: Contract }) {
       <Section title="Thông tin xe">
         <dl className={styles.grid}>
           <Field label="Tên xe" value={s.vehicle.name} />
-          <Field label="Biển số" value={s.vehicle.plateNumber ?? '—'} />
+          <Field label="Biển số" value={s.vehicle.plateNumber ?? '-'} />
           <Field label="Loại xe" value={vehicleTypeLabel(s.vehicle.vehicleType)} />
           <Field
             label="Hình thức"

@@ -83,7 +83,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('MarketplaceVisibilitySwitch — xe đã duyệt', () => {
+describe('MarketplaceVisibilitySwitch - xe đã duyệt', () => {
   it('nhãn "Trên chợ" luôn hiện cạnh công tắc, kèm trạng thái "Đang hiển thị"', () => {
     renderSwitch();
 
@@ -148,7 +148,7 @@ describe('MarketplaceVisibilitySwitch — xe đã duyệt', () => {
       opts.onError?.(
         new ApiClientError({
           code: API_ERROR_CODE.SHOP_NOT_ACTIVE,
-          message: 'MESSAGE TIẾNG VIỆT CỦA BACKEND — KHÔNG ĐƯỢC HIỆN',
+          message: 'MESSAGE TIẾNG VIỆT CỦA BACKEND - KHÔNG ĐƯỢC HIỆN',
           status: 409,
         }),
       ),
@@ -228,7 +228,7 @@ describe('MarketplaceVisibilitySwitch — xe đã duyệt', () => {
   });
 });
 
-describe('MarketplaceVisibilitySwitch — xe chưa duyệt thì không có công tắc', () => {
+describe('MarketplaceVisibilitySwitch - xe chưa duyệt thì không có công tắc', () => {
   it.each([
     [VEHICLE_PUBLIC_STATUS.DRAFT, 'Chưa hiển thị'],
     [VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW, 'Đang chờ duyệt'],
@@ -250,7 +250,7 @@ describe('MarketplaceVisibilitySwitch — xe chưa duyệt thì không có công
   });
 });
 
-describe('MarketplaceVisibilitySwitch — khả truy cập', () => {
+describe('MarketplaceVisibilitySwitch - khả truy cập', () => {
   it('là một <button> thật (nhận focus, bàn phím dùng được), aria-label mang tên xe', () => {
     renderSwitch();
     const el = theSwitch();

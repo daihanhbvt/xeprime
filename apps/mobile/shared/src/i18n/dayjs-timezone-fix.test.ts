@@ -40,7 +40,7 @@ describe('patchDayjsTimezone', () => {
     );
   });
 
-  it('offset luôn +420 phút — Việt Nam không có giờ mùa hè', () => {
+  it('offset luôn +420 phút - Việt Nam không có giờ mùa hè', () => {
     expect(dayjs('2026-06-15T12:00:00.000Z').tz(APP_TIME_ZONE).utcOffset()).toBe(420);
     expect(dayjs('2026-12-15T12:00:00.000Z').tz(APP_TIME_ZONE).utcOffset()).toBe(420);
   });
@@ -83,7 +83,7 @@ describe('patchDayjsTimezone', () => {
     expect((wallClockAsUtc - probe.getTime()) / 60_000).toBe(FALLBACK_OFFSET_MINUTES);
   });
 
-  it('KHÔNG gọi `Date.prototype.toLocaleString` — đó là đường Hermes làm hỏng', () => {
+  it('KHÔNG gọi `Date.prototype.toLocaleString` - đó là đường Hermes làm hỏng', () => {
     const spy = jest.spyOn(Date.prototype, 'toLocaleString');
     try {
       expect(dayjs('2026-08-30T17:00:00.000Z').tz(APP_TIME_ZONE).format('HH:mm')).toBe('00:00');

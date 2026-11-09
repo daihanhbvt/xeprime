@@ -60,7 +60,7 @@ export class VerifyOtpDto {
 }
 
 export class SendOtpResultDto {
-  @ApiProperty({ description: 'ISO-8601 UTC — thời điểm mã hết hạn' })
+  @ApiProperty({ description: 'ISO-8601 UTC - thời điểm mã hết hạn' })
   expiresAt!: string;
 
   @ApiPropertyOptional({
@@ -80,7 +80,7 @@ export class OtpConfigDto {
   @ApiProperty({
     description:
       'Môi trường nhận mã OTP test (dev/staging): giao diện hiện ô nhập mã ngay, không bắt gửi ' +
-      'SMS trước. Chỉ là CỜ — bản thân mã không bao giờ đi trên dây. Production luôn false.',
+      'SMS trước. Chỉ là CỜ - bản thân mã không bao giờ đi trên dây. Production luôn false.',
   })
   testCodeEnabled!: boolean;
 }

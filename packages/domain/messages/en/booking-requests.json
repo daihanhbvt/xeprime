@@ -48,7 +48,7 @@
   "customer": {
     "heading": "Customer",
     "noProfile": "Not in your customer book yet",
-    "riskWarning": "{level} — double-check before approving",
+    "riskWarning": "{level} - double-check before approving",
     "accountPhone": "Account phone: {phone}",
     "accountPhoneAria": "Call {name} on their account number {phone}"
   },
@@ -74,14 +74,14 @@
     "heading": "Pricing",
     "zoneHeading": "Payment details",
     "estimateBadge": "Estimate",
-    "estimateHint": "Estimated under the current policy — locked in once you approve.",
+    "estimateHint": "Estimated under the current policy - locked in once you approve.",
     "rentalTotal": "Rental",
     "customerTotal": "Guest pays",
     "paidViaPlatform": "Held via platform",
     "payAtHandover": "Pay the host at pickup"
   },
   "awaitingHold": {
-    "footerHint": "The car is held — waiting for the guest to pay. The booking opens when the money arrives.",
+    "footerHint": "The car is held - waiting for the guest to pay. The booking opens when the money arrives.",
     "deadline": "Guest must pay by:"
   },
   "note": {
@@ -117,7 +117,7 @@
     "reject": "Reject",
     "message": "Message",
     "messageAria": "Message {name} on XePrime",
-    "messageUnavailable": "This guest requested by phone and has no XePrime account — call them or reach out on Zalo instead.",
+    "messageUnavailable": "This guest requested by phone and has no XePrime account - call them or reach out on Zalo instead.",
     "call": "Call",
     "callAria": "Call {name} at {phone}",
     "zalo": "Zalo",
@@ -132,40 +132,40 @@
     "rentalTotal": "Rental amount",
     "customerTotal": "Trip total",
     "effect": "Approving holds the vehicle calendar and locks in the price. The booking is created once the customer pays in full; a trip with no hold payment is created right away.",
-    "deliveryNote": "This request asks for delivery. The booking starts with a 0₫ delivery fee — update it on the booking once you agree with the guest.",
+    "deliveryNote": "This request asks for delivery. The booking starts with a 0₫ delivery fee - update it on the booking once you agree with the guest.",
     "confirm": "Confirm request",
-    "success": "Vehicle held — booking created",
-    "successLongTerm": "Vehicle held — long-term booking created",
-    "scheduleConflict": "The vehicle is already booked for this period — pick another pickup time or reject the request.",
+    "success": "Vehicle held - booking created",
+    "successLongTerm": "Vehicle held - long-term booking created",
+    "scheduleConflict": "The vehicle is already booked for this period - pick another pickup time or reject the request.",
     "expired": "This request passed its response deadline and can no longer be approved. Call the customer.",
     "subtitleHold": "Once confirmed, the request moves to <b>Awaiting payment</b>.",
     "subtitleNoHold": "Once confirmed, the rental is created right away and moves to <b>Awaiting pickup</b>.",
     "back": "Back",
     "profitHeading": "Trip earnings",
     "stillOut": {
-      "title": "Vehicle not back from trip #{code} — {duration} past return time",
+      "title": "Vehicle not back from trip #{code} - {duration} past return time",
       "body": "The calendar only blocks the vehicle until the booked return time, so this trip can still be approved. Approve only if you are sure the vehicle will be back in time; instant booking is paused for this vehicle.",
       "open": "Open the overdue trip"
     }
   },
   "longTerm": {
-    "title": "Approve & hold — long-term rental",
+    "title": "Approve & hold - long-term rental",
     "customer": "Customer",
     "vehicle": "Vehicle",
     "pickupWish": "Preferred pickup",
     "legacyPackageLabel": "Package (legacy request has none)",
     "legacyPackagePlaceholder": "Choose a package",
-    "legacyPackageHint": "This request was submitted before packages existed, so it carries none. Pick the package you agreed with the guest — the system deliberately does not infer one from the old date range.",
+    "legacyPackageHint": "This request was submitted before packages existed, so it carries none. Pick the package you agreed with the guest - the system deliberately does not infer one from the old date range.",
     "chosenPackageLabel": "Package chosen by the guest",
     "pickupLabel": "Pickup date and time (required)",
     "pickupPlaceholder": "Choose the pickup date and time",
     "pickupHint": "You can only pick within what the guest asked for. For any other date, reject the request and agree on a new one with them.",
     "returnLabel": "Return date (calculated in calendar months)",
-    "returnHint": "The booking lasts exactly as long as the package the guest bought — it cannot be edited by hand.",
+    "returnHint": "The booking lasts exactly as long as the package the guest bought - it cannot be edited by hand.",
     "quoteTitle": "{package} package price",
-    "quoteUnavailable": "Could not load the package price — check this vehicle's long-term pricing before approving.",
+    "quoteUnavailable": "Could not load the package price - check this vehicle's long-term pricing before approving.",
     "confirm": "Approve & hold vehicle",
-    "wishLegacy": "Legacy request — the guest did not state a preference"
+    "wishLegacy": "Legacy request - the guest did not state a preference"
   },
   "reject": {
     "title": "Decline booking request",
@@ -227,7 +227,7 @@
       "feeFree": "Free",
       "feeNote": "If any extra cost applies, the host will discuss it with you before updating the booking.",
       "estimating": "Calculating the distance…",
-      "estimatedDistance": "The delivery distance is about {distance} one way. The fee above is an ESTIMATE from the shop's price list — the owner confirms it when approving your request.",
+      "estimatedDistance": "The delivery distance is about {distance} one way. The fee above is an ESTIMATE from the shop's price list - the owner confirms it when approving your request.",
       "manualWithDistance": "Your address is about {distance} one way from the pickup point, outside the automatic quote range. The owner will discuss the delivery fee with you directly.",
       "addressNotFound": "We could not locate this address on the map. Try adding more detail (street number, street name, ward) to see the estimated delivery fee.",
       "resolvedAddress": "The map reads this as: {address}",
@@ -238,14 +238,14 @@
       "outsideRadiusUnknown": "Your address is outside the host’s automatic quote range.",
       "routeUnavailableTitle": "We could not estimate the distance",
       "routeUnavailableBody": "The map could not find a driving route to this address, so there is no estimated distance or fee yet.",
-      "stillCanSubmit": "You can still send the request — the host will contact you to confirm whether they can deliver and at what cost."
+      "stillCanSubmit": "You can still send the request - the host will contact you to confirm whether they can deliver and at what cost."
     },
     "driver": {
       "pickupAddressLabel": "Pick-up address",
       "pickupAddressPlaceholder": "123 Nguyen Van Linh, Hai Chau, Da Nang",
       "destinationLabel": "Destination",
       "destinationPlaceholder": "e.g. Da Lat, Lam Dong",
-      "note": "Route: {route} — {description}. Any surcharge is agreed with the host before the booking is confirmed."
+      "note": "Route: {route} - {description}. Any surcharge is agreed with the host before the booking is confirmed."
     },
     "insurance": {
       "title": "Trip Insurance (MIC)",
@@ -263,15 +263,15 @@
     "otp": {
       "title": "Enter the verification code",
       "hint": "We sent a 6-digit code to {phone}. XePrime uses this number so the host can reach you and you can track your request.",
-      "devCode": "Dev code: {code} — shown in development only.",
+      "devCode": "Dev code: {code} - shown in development only.",
       "editPhone": "Change phone number",
       "resend": "Resend code",
       "resendIn": "Resend ({seconds}s)",
       "sessionExpired": "Your session has expired. Please verify your phone number again.",
       "editPhoneShort": "Change number",
-      "loginHint": "A 6-digit code has been sent to {phone}. Enter it to sign in — your account keeps your verified licence for all future trips.",
+      "loginHint": "A 6-digit code has been sent to {phone}. Enter it to sign in - your account keeps your verified licence for all future trips.",
       "notSentHint": "Tap “Send code” to receive a 6-digit code by SMS at {phone}.",
-      "testCodeHint": "Test environment — enter the test code to verify without sending an SMS.",
+      "testCodeHint": "Test environment - enter the test code to verify without sending an SMS.",
       "send": "Send code"
     },
     "review": {
@@ -332,19 +332,19 @@
       "requestCode": "Request code: {code}",
       "requestCodeLabel": "Request code:",
       "body": "The host is reviewing it. You'll get a notification as soon as they reply.",
-      "pendingBody": "The host is reviewing it and will reply within {hours} hours at most — the closer the pick-up time, the shorter the response deadline. You'll get a notification as soon as there's an answer!",
+      "pendingBody": "The host is reviewing it and will reply within {hours} hours at most - the closer the pick-up time, the shorter the response deadline. You'll get a notification as soon as there's an answer!",
       "time": "Period",
       "pickupMethod": "Getting the car",
       "driverPickup": "Pick-up at: {address}",
-      "notReserved": "The car is not held yet — the host has to accept your request first.",
+      "notReserved": "The car is not held yet - the host has to accept your request first.",
       "myTrips": "My trips",
       "viewDetail": "View details",
       "chatShop": "Message the host",
       "chatHost": "Message the host",
       "close": "Back",
-      "autoAccepted": "Your trip was accepted automatically — the vehicle is reserved for you.",
+      "autoAccepted": "Your trip was accepted automatically - the vehicle is reserved for you.",
       "openHold": "Pay the reservation",
-      "holdLoadFailed": "Could not load the payment code. Open the trip under My trips to get it — your slot is still held.",
+      "holdLoadFailed": "Could not load the payment code. Open the trip under My trips to get it - your slot is still held.",
       "heldTitle": "The host accepted your trip",
       "heldSubtitle": "Pay the reservation amount before the timer runs out to lock it in.",
       "copyRequestCode": "Copy request code"
@@ -377,14 +377,14 @@
       "description": {
         "in_city": "Driving within the city or nearby, route up to you",
         "inter_city": "Travel to another province and return to the pick-up point (round trip)",
-        "inter_city_one_way": "One way to another province — the host may add a surcharge"
+        "inter_city_one_way": "One way to another province - the host may add a surcharge"
       }
     },
     "longTerm": {
       "chooseTitle": "Choose a package",
       "chooseLabel": "Choose your rental length",
       "groupLabel": "Long-term packages",
-      "noPrice": "This car has no long-term price listed yet — the host will quote after receiving your request.",
+      "noPrice": "This car has no long-term price listed yet - the host will quote after receiving your request.",
       "wishTitle": "When would you like to collect the car?",
       "wishGroupLabel": "Preferred pick-up",
       "wishValueLabel": "{preference}: {date}",
@@ -401,7 +401,7 @@
         "supportTitle": "24/7 support",
         "supportDesc": "Help whenever you need it"
       },
-      "windowValue": "{start} – {end}",
+      "windowValue": "{start} - {end}",
       "datePlaceholder": "Pick your preferred pickup date"
     },
     "cta": "Select this car",
@@ -419,7 +419,7 @@
       "close": "Close",
       "shopAccount": {
         "title": "Shop accounts cannot book vehicles",
-        "body": "You are signed in to a shop account. To rent a vehicle, sign in with a renter account using a DIFFERENT PHONE NUMBER — each phone number belongs to exactly one account.",
+        "body": "You are signed in to a shop account. To rent a vehicle, sign in with a renter account using a DIFFERENT PHONE NUMBER - each phone number belongs to exactly one account.",
         "manage": "Go to shop management"
       },
       "ownVehicle": {
@@ -472,16 +472,17 @@
       },
       "renter": {
         "title": "Renter details",
-        "description": "Filled in from your account — tap the pencil icon to change the name or contact phone for this trip.",
+        "description": "Filled in from your account - tap the pencil icon to change the name or contact phone for this trip.",
         "name": "Full name",
         "phone": "Phone number",
         "email": "Email",
         "noteLabel": "Message to the owner (optional)",
         "notePlaceholder": "E.g. I need directions for picking up the car",
         "readonlyDescription": "The name and phone number the owner uses to contact you about this trip.",
+        "infoLabel": "How renter details are used",
         "namePlaceholder": "Enter the renter's full name",
         "phonePlaceholder": "Enter a contact phone number",
-        "phoneDifferent": "This contact number is not verified — the owner will also see your account number {accountPhone}.",
+        "phoneDifferent": "This contact number is not verified - the owner will also see your account number {accountPhone}.",
         "edit": "Edit {field}"
       },
       "requirements": {
@@ -501,7 +502,7 @@
       "costs": {
         "title": "Rental cost",
         "totalNote": "Includes the items above. The holding payment is deducted from this total; the security deposit is paid separately at pick-up.",
-        "listedNote": "We couldn't load the price for this trip — these are the listed rates. The owner confirms the price when approving the request.",
+        "listedNote": "We couldn't load the price for this trip - these are the listed rates. The owner confirms the price when approving the request.",
         "paid": "Paid",
         "remaining": "Remaining",
         "remainingNote": "Pay the remaining amount to the owner before pickup!",
@@ -522,8 +523,8 @@
       "next": {
         "title": "After you send the request",
         "instant": "This car supports Instant Book: your request is accepted automatically and you go straight to paying the holding amount to lock in the trip.",
-        "instantConfirmed": "This car supports Instant Book: your request is accepted automatically and the trip is confirmed as soon as you send it — there is no online payment step.",
-        "hold": "The owner reviews and responds to your request. Once they accept, you have up to {minutes} minutes to pay the holding amount (less if pick-up is soon) — the trip is confirmed only when XePrime receives it in full.",
+        "instantConfirmed": "This car supports Instant Book: your request is accepted automatically and the trip is confirmed as soon as you send it - there is no online payment step.",
+        "hold": "The owner reviews and responds to your request. Once they accept, you have up to {minutes} minutes to pay the holding amount (less if pick-up is soon) - the trip is confirmed only when XePrime receives it in full.",
         "general": "XePrime or the owner will contact you to check your details, confirm the car's condition and guide you through the next step. The trip is confirmed only after those steps are completed."
       }
     },
@@ -532,19 +533,19 @@
       "noFreeCancelTitle": "This trip has no free-cancellation window",
       "short": "If the owner accepts right away, you will have about {payment} to pay the reservation payment. Once your payment succeeds, you can cancel for free for about {freeCancel}. The closer to pick-up you pay, the shorter the free-cancellation window.",
       "noFreeCancel": "If the owner accepts right away, you will have about {payment} to pay the reservation payment and there is no free-cancellation window: cancelling after you pay only refunds the insurance (if any).",
-      "tooShort": "Pickup is too close to pay the reservation payment through XePrime in time — the owner may not be able to accept this trip. Please pick a later pickup time.",
+      "tooShort": "Pickup is too close to pay the reservation payment through XePrime in time - the owner may not be able to accept this trip. Please pick a later pickup time.",
       "estimate": "This is an estimate; the exact payment deadline appears as soon as the owner accepts, and the free-cancellation deadline once you have paid."
     },
     "check": {
       "signInTitle": "Sign in to send your request",
-      "signInBody": "Your trip is kept as is — sign in or create an account to review and send your rental request.",
+      "signInBody": "Your trip is kept as is - sign in or create an account to review and send your rental request.",
       "signIn": "Sign in",
       "issueTitle": "Can't continue with this trip",
       "retry": "Try again",
       "chooseAgain": "Choose again",
       "invalid": "The trip details are not valid. Please choose again on the car page."
     },
-    "tripNeedsFix": "These rental dates can’t be used — please adjust them and tap Rent again."
+    "tripNeedsFix": "These rental dates can’t be used - please adjust them and tap Rent again."
   },
   "approved": {
     "title": "Booking created",
@@ -553,7 +554,7 @@
     "next": "Next: contact the renter to agree on a pick-up time, collect the deposit if any, then confirm handover right on the booking.",
     "viewBooking": "View booking",
     "close": "Close",
-    "holdTitle": "Trip accepted — waiting for payment",
+    "holdTitle": "Trip accepted - waiting for payment",
     "holdLead": "The schedule is held and the payment code has been sent to the guest. The booking opens automatically once XePrime receives the reservation amount.",
     "holdNext": "The guest has up to 2 hours to transfer (less if pick-up is soon). If the money does not arrive, the slot is released and you get a notification.",
     "holdClose": "Back to requests",
@@ -598,7 +599,7 @@
       "money": "Any reservation payment the guest has made is refunded in full.",
       "metrics": "This cancellation counts against your accepted-and-kept rate.",
       "metricsHintLabel": "Effect on your public metrics",
-      "metricsHint": "A trip you accepted and then cancelled is taken back out of the accepted-and-kept rate shown on your public page. Declining a request within the deadline does not cost you that way — it simply does not count as accepting. A guest who does not pay, or who cancels, does not affect you at all."
+      "metricsHint": "A trip you accepted and then cancelled is taken back out of the accepted-and-kept rate shown on your public page. Declining a request within the deadline does not cost you that way - it simply does not count as accepting. A guest who does not pay, or who cancels, does not affect you at all."
     },
     "categoryLabel": "Reason for cancelling",
     "categoryRequired": "Pick a reason",
@@ -609,10 +610,10 @@
     "reasonRequired": "Add a note so the customer knows why the trip was cancelled",
     "confirm": "Cancel booking request",
     "success": "Trip cancelled and the dates released",
-    "raceLost": "The guest has just paid, so this is now a booking — it can no longer be cancelled from here. Open the booking to continue.",
+    "raceLost": "The guest has just paid, so this is now a booking - it can no longer be cancelled from here. Open the booking to continue.",
     "notAllowed": "This trip is no longer at a stage you can cancel from the request inbox.",
     "subtitle": "This trip is <b>Awaiting payment</b>. If you cancel, the request moves to the Ended list and the vehicle becomes available again.",
-    "subtitleWithDeadline": "This trip is <b>Awaiting payment</b> — the customer has until {time} to pay, otherwise it is cancelled automatically. If you cancel, the request moves to the Ended list and the vehicle becomes available again.",
+    "subtitleWithDeadline": "This trip is <b>Awaiting payment</b> - the customer has until {time} to pay, otherwise it is cancelled automatically. If you cancel, the request moves to the Ended list and the vehicle becomes available again.",
     "back": "Back",
     "categoryPlaceholder": "Choose a reason",
     "warning": "Cancelling at this step <b>lowers your reliability score</b> and moves the request to the Ended list."
@@ -627,12 +628,12 @@
   "approvalPreview": {
     "title": "If you approve now",
     "estimate": "Estimate",
-    "noHold": "This trip has no online reservation payment — the booking is created as soon as you approve, with no QR code.",
+    "noHold": "This trip has no online reservation payment - the booking is created as soon as you approve, with no QR code.",
     "paymentWindow": "The customer has {duration} to transfer the reservation payment (until about {time}); after that the slot is released automatically.",
     "freeCancel": "The customer can cancel for free for {duration} from the moment their payment succeeds (until about {time} if they pay as soon as you approve).",
     "noFreeCancel": "The customer gets no free-cancellation window on this trip.",
     "lateCancel": "If the customer cancels after the free window, the whole owner's share of the reservation payment (the holding commitment calculated on the rental) goes to your Points wallet as compensation. If you cancel, the customer is refunded 100%.",
-    "tooShort": "Pickup is too close for the customer to transfer the reservation payment in time — approval will fail. Contact the customer to arrange it directly.",
+    "tooShort": "Pickup is too close for the customer to transfer the reservation payment in time - approval will fail. Contact the customer to arrange it directly.",
     "longTermPickPickup": "Pick a pickup time to see how long the customer has to pay. The reservation QR code is only sent to the customer after you confirm the schedule and approve."
   },
   "staffFlow": {
@@ -650,7 +651,7 @@
       "packageHint": "Choose a package to get a price.",
       "pickupTimeLabel": "Pick-up time",
       "pickupTimeField": "Pick-up date and time",
-      "returnDerived": "Return: {date} — counted in calendar months.",
+      "returnDerived": "Return: {date} - counted in calendar months.",
       "returnPending": "Choose a package and pick-up time to see the return date.",
       "selfHint": "The customer picks the vehicle up at your location",
       "deliveryHint": "Bring the vehicle to the customer's address",
@@ -663,7 +664,7 @@
       "driverPickupPlaceholder": "123 Le Loi, District 1, HCMC",
       "destinationLabel": "Destination",
       "destinationPlaceholder": "Da Lat, Lam Dong",
-      "noPrice": "This vehicle has no daily price yet — you will enter the rental amount in the next step.",
+      "noPrice": "This vehicle has no daily price yet - you will enter the rental amount in the next step.",
       "priceTitle": "Estimate for the selected period",
       "packagePriceTitle": "{months, plural, one {# month} other {# months}} package price",
       "barTotal": "Rental total",
@@ -679,7 +680,7 @@
       "selfPickupBranch": "At the branch holding the vehicle",
       "customer": {
         "title": "Customer details",
-        "description": "The name and phone number on the booking — used for contact and the contract.",
+        "description": "The name and phone number on the booking - used for contact and the contract.",
         "name": "Full name",
         "namePlaceholder": "Nguyen Van A",
         "phone": "Phone number",
@@ -690,7 +691,7 @@
       "costs": {
         "title": "Rental",
         "systemNote": "Calculated by the system (includes per-day prices and long-term discounts, if any).",
-        "noPrice": "This vehicle has no daily price yet — enter the amount agreed with the customer.",
+        "noPrice": "This vehicle has no daily price yet - enter the amount agreed with the customer.",
         "baseAmount": "Rental amount (whole period)",
         "deposit": "Deposit collected directly",
         "depositHint": "What the customer leaves with you at pick-up, recorded on the booking to check at return."
@@ -718,7 +719,7 @@
       "addressMax": "Address can be at most {max} characters",
       "noteMax": "Note can be at most {max} characters",
       "amountMin": "Amount cannot be negative",
-      "baseAmountRequired": "This vehicle has no price — enter the rental amount before creating the booking."
+      "baseAmountRequired": "This vehicle has no price - enter the rental amount before creating the booking."
     },
     "scheduleConflict": "The vehicle was just booked for this time. Click “Edit” to choose another period.",
     "deliveryNoteLine": "Delivery to: {address}",
@@ -766,7 +767,7 @@
     "paymentExpired": "Payment window expired",
     "openDetail": "View request details for {vehicle}",
     "remind": "Remind customer",
-    "remindAvailableAt": "The customer was just reminded — you can remind again at {time}",
+    "remindAvailableAt": "The customer was just reminded - you can remind again at {time}",
     "customerInfo": "More about this customer",
     "handoverInfo": "Handover details"
   },

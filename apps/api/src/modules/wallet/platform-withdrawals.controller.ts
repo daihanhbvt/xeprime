@@ -39,7 +39,7 @@ export class PlatformWithdrawalsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Hàng đợi yêu cầu rút — mặc định VIỆC CẦN LÀM, cũ nhất trước',
+    summary: 'Hàng đợi yêu cầu rút - mặc định VIỆC CẦN LÀM, cũ nhất trước',
     description:
       'Không lọc thì chỉ hiện `pending` + `approved` (những lệnh còn phải làm gì đó). ' +
       '`overdue=true` lọc riêng các lệnh đã quá hạn cam kết.',
@@ -52,7 +52,7 @@ export class PlatformWithdrawalsController {
   @Post(':id/approve')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Duyệt — bắt đầu đếm hạn cam kết',
+    summary: 'Duyệt - bắt đầu đếm hạn cam kết',
     description: 'Tiền VẪN bị khoá, chưa rời ngân hàng. Duyệt và chi là hai việc, đôi khi hai người.',
   })
   @ApiNoContentResponse()
@@ -63,7 +63,7 @@ export class PlatformWithdrawalsController {
   @Post(':id/paid')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Đã chuyển khoản — ghi bút toán âm',
+    summary: 'Đã chuyển khoản - ghi bút toán âm',
     description:
       'Bắt buộc có mã giao dịch ngân hàng: đây là đầu duy nhất của đối soát chiều RA, và DB ' +
       'cũng chặn một lệnh `paid` không có bằng chứng. `rowVersion` chặn hai admin cùng bấm.',
@@ -80,7 +80,7 @@ export class PlatformWithdrawalsController {
   @Post(':id/reject')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Từ chối — nhả khoá, tiền về số dư khả dụng',
+    summary: 'Từ chối - nhả khoá, tiền về số dư khả dụng',
     description: 'Không sinh bút toán nào: tiền chưa bao giờ rời ví, nó chỉ bị treo.',
   })
   @ApiNoContentResponse()
@@ -95,7 +95,7 @@ export class PlatformWithdrawalsController {
   @Post(':id/reverse')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Chuyển hụt / sai tài khoản — đảo bút toán đã chi',
+    summary: 'Chuyển hụt / sai tài khoản - đảo bút toán đã chi',
     description:
       'Tiền quay lại ví bằng một dòng MỚI trỏ về dòng cũ, không phải bằng cách sửa dòng cũ ' +
       '(ADR 0023 điều 4). Người đọc sổ thấy cả hai sự kiện.',

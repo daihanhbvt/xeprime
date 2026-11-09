@@ -83,7 +83,7 @@ describe('buildBookingTimeline', () => {
 });
 
 describe('isDebtOverdue', () => {
-  it('chuyến chưa kết thúc còn nợ là bình thường — không cảnh báo', () => {
+  it('chuyến chưa kết thúc còn nợ là bình thường - không cảnh báo', () => {
     expect(isDebtOverdue({ status: BOOKING_STATUS.RESERVED, debtAmount: '500000' })).toBe(false);
     expect(isDebtOverdue({ status: BOOKING_STATUS.ACTIVE, debtAmount: '500000' })).toBe(false);
   });

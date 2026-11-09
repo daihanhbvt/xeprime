@@ -168,7 +168,7 @@ export class DriverLicencesService implements OnApplicationBootstrap, OnModuleDe
       throw new HttpException(
         {
           code: API_ERROR_CODE.DRIVER_LICENCE_SUBMISSION_LIMIT,
-          message: 'Bạn đã nộp ảnh bằng lái nhiều lần trong 24 giờ qua — vui lòng thử lại sau.',
+          message: 'Bạn đã nộp ảnh bằng lái nhiều lần trong 24 giờ qua - vui lòng thử lại sau.',
           details: { limit: MAX_SUBMISSIONS_PER_DAY },
         },
         HttpStatus.TOO_MANY_REQUESTS,
@@ -187,7 +187,7 @@ export class DriverLicencesService implements OnApplicationBootstrap, OnModuleDe
         });
         if (open?.status === DRIVER_LICENCE_STATUS.PROCESSING) {
           // Lượt trước đang được đọc (chưa quá hạn — `recoverStaleProcessing` vừa chạy).
-          throw stateConflict('Ảnh trước đang được đọc — vui lòng đợi vài giây.');
+          throw stateConflict('Ảnh trước đang được đọc - vui lòng đợi vài giây.');
         }
         if (open) {
           await tx.customerDriverLicence.updateMany({
@@ -209,7 +209,7 @@ export class DriverLicencesService implements OnApplicationBootstrap, OnModuleDe
       });
     } catch (error) {
       // Hai lượt presign cùng lúc của cùng một người — partial unique "một lượt đang dở" chặn.
-      if (isUniqueViolation(error)) throw stateConflict('Đang có một lượt nộp khác — thử lại.');
+      if (isUniqueViolation(error)) throw stateConflict('Đang có một lượt nộp khác - thử lại.');
       throw error;
     }
     // Ảnh của lượt vừa bị thay không còn ai cần — xoá ngay, không đợi.
@@ -234,14 +234,14 @@ export class DriverLicencesService implements OnApplicationBootstrap, OnModuleDe
     if (!row) throw licenceNotFound();
     if (row.status !== DRIVER_LICENCE_STATUS.UPLOADING) {
       if (row.uploadedAt) return toDto(row);
-      throw stateConflict('Lượt nộp này không còn hiệu lực — vui lòng chọn lại ảnh.');
+      throw stateConflict('Lượt nộp này không còn hiệu lực - vui lòng chọn lại ảnh.');
     }
 
     const head = await this.r2.headPrivateObject(row.objectKey);
     if (!head) {
       throw new BadRequestException({
         code: API_ERROR_CODE.DRIVER_LICENCE_IMAGE_INVALID,
-        message: 'Chưa nhận được ảnh — vui lòng tải lên lại.',
+        message: 'Chưa nhận được ảnh - vui lòng tải lên lại.',
       });
     }
     const prefix = await this.r2.readPrivateObjectPrefix(
@@ -256,7 +256,7 @@ export class DriverLicencesService implements OnApplicationBootstrap, OnModuleDe
     ) {
       throw new BadRequestException({
         code: API_ERROR_CODE.DRIVER_LICENCE_IMAGE_INVALID,
-        message: 'Tệp tải lên không phải ảnh hợp lệ — hãy chọn ảnh JPG, PNG hoặc WEBP.',
+        message: 'Tệp tải lên không phải ảnh hợp lệ - hãy chọn ảnh JPG, PNG hoặc WEBP.',
       });
     }
 
@@ -273,7 +273,7 @@ export class DriverLicencesService implements OnApplicationBootstrap, OnModuleDe
     if (claimed.count === 0) {
       const again = await this.prisma.customerDriverLicence.findUniqueOrThrow({ where: { id } });
       if (again.uploadedAt) return toDto(again);
-      throw stateConflict('Lượt nộp này không còn hiệu lực — vui lòng chọn lại ảnh.');
+      throw stateConflict('Lượt nộp này không còn hiệu lực - vui lòng chọn lại ảnh.');
     }
 
     // Giấy tờ tuỳ thân vào hệ thống — để lại vết. KHÔNG ghi object key / nội dung đọc được.
@@ -333,12 +333,12 @@ export class DriverLicencesService implements OnApplicationBootstrap, OnModuleDe
       case DRIVER_LICENCE_TRIP_GATE.PENDING_REVIEW:
         throw new ForbiddenException({
           code: DRIVER_LICENCE_GATE_ERROR_CODE[gate],
-          message: 'Bằng lái của bạn đang được đọc — thử lại sau ít giây.',
+          message: 'Bằng lái của bạn đang được đọc - thử lại sau ít giây.',
         });
       case DRIVER_LICENCE_TRIP_GATE.EXPIRED:
         throw new ForbiddenException({
           code: DRIVER_LICENCE_GATE_ERROR_CODE[gate],
-          message: 'Bằng lái hết hạn trước khi chuyến kết thúc — vui lòng cập nhật bằng còn hạn.',
+          message: 'Bằng lái hết hạn trước khi chuyến kết thúc - vui lòng cập nhật bằng còn hạn.',
           details: { expiresOn: fromDateOnly(current.verified?.expiresOn ?? null) },
         });
       case DRIVER_LICENCE_TRIP_GATE.CLASS_MISMATCH:

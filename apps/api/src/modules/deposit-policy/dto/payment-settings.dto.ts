@@ -50,7 +50,7 @@ export class PaymentSettingsDto {
 
   @ApiProperty({
     enum: DEPOSIT_POLICY_REASON_VALUES,
-    description: 'Vì sao — client ánh xạ sang câu giải thích, KHÔNG hiện mã này ra màn hình',
+    description: 'Vì sao - client ánh xạ sang câu giải thích, KHÔNG hiện mã này ra màn hình',
   })
   reason!: DepositPolicyReason;
 }

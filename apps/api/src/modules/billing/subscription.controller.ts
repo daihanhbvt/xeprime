@@ -25,10 +25,10 @@ import {
 } from './dto/billing.dto';
 
 /**
- * "Gói của tôi" — gian hàng tự xem gói/hạn mức/lượt miễn phí và TỰ MUA gói (W2, ADR 0015/0026).
+ * "Gói của tôi" - gian hàng tự xem gói/hạn mức/lượt miễn phí và TỰ MUA gói (W2, ADR 0015/0026).
  *
  * Mua ở đây = sinh hoá đơn `issued` + mã đối soát `XPG…`; gói CHỈ kích hoạt khi tiền đã về
- * (webhook SePay — W4) hoặc admin gán tay. Không có đường nào mở gói chưa trả tiền.
+ * (webhook SePay - W4) hoặc admin gán tay. Không có đường nào mở gói chưa trả tiền.
  */
 @ApiTags('subscription')
 @Controller('subscription')
@@ -55,13 +55,13 @@ export class SubscriptionController {
   }
 
   /**
-   * Bảng giá NHÓM THEO PHẠM VI loại xe (ADR 0065) — màn chọn gói mới đọc endpoint này. `plans`
+   * Bảng giá NHÓM THEO PHẠM VI loại xe (ADR 0065) - màn chọn gói mới đọc endpoint này. `plans`
    * ở trên giữ hình mảng phẳng cho app native đã phát hành (mỗi phần tử mang `vehicleScope`).
    */
   @Get('plan-catalog')
   @RequirePermissions(PERMISSION.SUBSCRIPTION_VIEW)
   @ApiOperation({
-    summary: 'Bảng giá gói nhóm theo loại xe: motorbike · car · all (doanh nghiệp) — ADR 0065',
+    summary: 'Bảng giá gói nhóm theo loại xe: motorbike · car · all (doanh nghiệp) - ADR 0065',
   })
   @ApiOkResponse({ type: TenantPlanCatalogDto })
   planCatalog(): Promise<TenantPlanCatalogDto> {
@@ -71,7 +71,7 @@ export class SubscriptionController {
   @Get('payment-info')
   @RequirePermissions(PERMISSION.SUBSCRIPTION_VIEW)
   @ApiOperation({
-    summary: 'Thông tin nhận chuyển khoản của nền tảng — web dựng VietQR từ đây (ADR 0016 điều 5)',
+    summary: 'Thông tin nhận chuyển khoản của nền tảng - web dựng VietQR từ đây (ADR 0016 điều 5)',
   })
   @ApiOkResponse({ type: PaymentInfoDto })
   paymentInfo(): PaymentInfoDto {
@@ -94,7 +94,7 @@ export class SubscriptionController {
   }
 
   /**
-   * HOÁ ĐƠN ĐANG CHỜ TIỀN — `data: null` khi không có.
+   * HOÁ ĐƠN ĐANG CHỜ TIỀN - `data: null` khi không có.
    *
    * Tồn tại vì màn onboarding gian hàng phải PHỤC HỒI sau một lần F5: người dùng tạo hoá đơn,
    * đóng trình duyệt, đăng nhập lại và phải thấy lại đúng mã + đúng QR đó thay vì một form mua
@@ -114,7 +114,7 @@ export class SubscriptionController {
   }
 
   /**
-   * MỘT hoá đơn của chính gian hàng — trang thanh toán `/payment/:invoiceId` đọc nó để nói đúng
+   * MỘT hoá đơn của chính gian hàng - trang thanh toán `/payment/:invoiceId` đọc nó để nói đúng
    * kết cục (chờ / đã trả / đã huỷ). Khai SAU `invoices/pending` để đường tĩnh đó không bị
    * `:id` nuốt mất.
    */
@@ -132,13 +132,13 @@ export class SubscriptionController {
 
   /**
    * Bước xác nhận của hộp mua gói (ADR 0084): mỗi gói là mua mới / gia hạn / nâng ngay / đổi từ kỳ
-   * sau, kỳ dự kiến và các kỳ sẽ kết thúc. Không ghi gì — cùng quyền với lượt mua thật.
+   * sau, kỳ dự kiến và các kỳ sẽ kết thúc. Không ghi gì - cùng quyền với lượt mua thật.
    */
   @Post('purchase/preview')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.SUBSCRIPTION_PURCHASE)
   @ApiOperation({
-    summary: 'Xem trước một lượt mua gói — loại lượt mua, kỳ dự kiến, kỳ bị thay (ADR 0084)',
+    summary: 'Xem trước một lượt mua gói - loại lượt mua, kỳ dự kiến, kỳ bị thay (ADR 0084)',
   })
   @ApiOkResponse({ type: SubscriptionPurchasePreviewDto })
   previewPurchase(
@@ -153,7 +153,7 @@ export class SubscriptionController {
   @RequirePermissions(PERMISSION.SUBSCRIPTION_PURCHASE)
   @ApiOperation({
     summary:
-      'Mua / gia hạn gói — sinh hoá đơn + mã đối soát, gói bật khi tiền về (ADR 0026 điều 4 · 0084)',
+      'Mua / gia hạn gói - sinh hoá đơn + mã đối soát, gói bật khi tiền về (ADR 0026 điều 4 · 0084)',
   })
   @ApiOkResponse({ type: SubscriptionInvoiceDto })
   purchase(
@@ -165,14 +165,14 @@ export class SubscriptionController {
   }
 
   /**
-   * Mua gói ô tô + gói xe máy trong MỘT lần chuyển khoản (ADR 0083) — hai hoá đơn gom dưới một
+   * Mua gói ô tô + gói xe máy trong MỘT lần chuyển khoản (ADR 0083) - hai hoá đơn gom dưới một
    * phiếu `XPC…`; đủ tổng thì cả hai gói bật cùng lúc. Cùng quyền mua với `purchase`.
    */
   @Post('checkouts')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.SUBSCRIPTION_PURCHASE)
   @ApiOperation({
-    summary: 'Mua nhiều gói một lần — sinh phiếu thanh toán gộp + hoá đơn mỗi loại xe (ADR 0083)',
+    summary: 'Mua nhiều gói một lần - sinh phiếu thanh toán gộp + hoá đơn mỗi loại xe (ADR 0083)',
   })
   @ApiOkResponse({ type: SubscriptionCheckoutDto })
   createCheckout(
@@ -183,7 +183,7 @@ export class SubscriptionController {
     return this.billing.createCheckout(tenant.tenantId, user.id, dto);
   }
 
-  /** Một phiếu thanh toán gộp của gian hàng — trang `/payment/checkout/:id` đọc nó. */
+  /** Một phiếu thanh toán gộp của gian hàng - trang `/payment/checkout/:id` đọc nó. */
   @Get('checkouts/:id')
   @RequirePermissions(PERMISSION.SUBSCRIPTION_VIEW)
   @SupportAction(SUPPORT_CAPABILITY.SUBSCRIPTION_STATUS_VIEW)

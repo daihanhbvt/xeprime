@@ -73,14 +73,14 @@ const PROFILE_SELECT = {
 } satisfies Prisma.TenantProfileSelect;
 
 /**
- * Mã số thuế của gian hàng — `seller_profiles.tax_id`, nguồn DUY NHẤT từ 07/10/2026 (cột
+ * Mã số thuế của gian hàng - `seller_profiles.tax_id`, nguồn DUY NHẤT từ 07/10/2026 (cột
  * `tenant_profiles.tax_code` đã gỡ). `TenantProfileDto.taxCode` vẫn trên dây cho client cũ và đọc
  * từ đây.
  */
 const SELLER_TAX_SELECT = { taxId: true } satisfies Prisma.SellerProfileSelect;
 
 /**
- * Tài khoản CHỦ gian hàng — nguồn DUY NHẤT của "chủ gian hàng là ai" (16/09/2026).
+ * Tài khoản CHỦ gian hàng - nguồn DUY NHẤT của "chủ gian hàng là ai" (16/09/2026).
  *
  * Thay cho ba cột text `owner_*` trên `tenant_profiles` (đã drop): ở đây email và SĐT là thứ
  * đã đi qua luồng xác minh OTP, nên hai cờ `*Verified` nói được điều mà một ô chữ gõ tay không
@@ -128,7 +128,7 @@ export class TenantsService {
    * Đăng ký gian hàng cho user chưa thuộc tenant nào.
    *
    * MỘT transaction cho bốn thứ: tenant + membership chủ shop + hồ sơ + CHI NHÁNH MẶC ĐỊNH.
-   * Nửa vời là hỏng theo nhiều kiểu khác nhau — có tenant mà không có membership thì chủ shop
+   * Nửa vời là hỏng theo nhiều kiểu khác nhau - có tenant mà không có membership thì chủ shop
    * không vào được; có tenant mà không có chi nhánh thì không tạo được xe nào.
    *
    * ## Vì sao tenant mở thẳng ở `active` (14/09/2026)
@@ -137,7 +137,7 @@ export class TenantsService {
    * `active`. Ghép hai luật đó lại thì chủ xe CÁ NHÂN tuyến hoa hồng phải đi qua HAI cổng duyệt
    * cho chiếc xe đầu tiên: duyệt gian hàng rồi mới duyệt xe. Cổng thứ nhất không hỏi thêm được
    * gì mà cổng duyệt xe không hỏi (họ tên, SĐT, địa chỉ đều đã nằm trong chính phiếu duyệt xe),
-   * và nó là chỗ rơi rụng lớn nhất của phễu chủ xe — xem [ADR 0036].
+   * và nó là chỗ rơi rụng lớn nhất của phễu chủ xe - xem [ADR 0036].
    *
    * `active` ở đây KHÔNG có nghĩa "gian hàng đã được xác minh". Nó chỉ có nghĩa "chưa bị khoá":
    * cột này là trục VẬN HÀNH (`TENANT_STATUS_PUBLISHABLE`, khoá/mở khoá của nền tảng), còn việc
@@ -151,7 +151,7 @@ export class TenantsService {
    * Tỉnh kiểm TRƯỚC transaction: sai mã là lỗi nhập liệu của người dùng, không đáng để mở
    * transaction rồi rollback.
    *
-   * ## HAI TUYẾN, một endpoint (16/09/2026 — ADR 0040)
+   * ## HAI TUYẾN, một endpoint (16/09/2026 - ADR 0040)
    *
    * `dto.registrationTrack` là thứ tách hai cửa vào, và nó được LƯU (`onboarding_state`) chứ
    * không chỉ dùng một lần rồi bỏ:
@@ -163,18 +163,18 @@ export class TenantsService {
    * | `onboarding_state` | `commission` | `package_pending` |
    * | Đi đâu sau khi tạo | Owner Lite ở site partner | bước 2 của onboarding (chọn gói → chuyển khoản) |
    *
-   * Người gọi luôn là tài khoản realm `partner` (route chỉ khai `partner` — ADR 0053), và trigger
+   * Người gọi luôn là tài khoản realm `partner` (route chỉ khai `partner` - ADR 0053), và trigger
    * `tenants_owner_realm_check` / `tenant_memberships_user_realm_check` giữ điều đó ở DB.
    *
    * Vì sao tuyến gói KHÔNG nhận một gói hoa hồng tạm: dòng thuê bao là thứ `/auth/me` đọc để
    * chọn KHU làm việc, nên gán nó nghĩa là người vừa bấm "Đăng ký gian hàng" trở thành chủ xe
-   * tuyến hoa hồng về mặt sản phẩm — đúng lỗi đang sửa. Hệ quả đi kèm là đúng: pha của họ là
+   * tuyến hoa hồng về mặt sản phẩm - đúng lỗi đang sửa. Hệ quả đi kèm là đúng: pha của họ là
    * `unconfigured`, nên `billingModeForMoneyOrThrow` từ chối mọi đường ghi tiền cho tới khi gói
    * bật. Một gian hàng chưa trả tiền thì cũng chưa được nhận đơn.
    *
    * `subscription.purchase` KHÔNG cần một dòng thuê bao nào: quyền đến từ VAI
    * (`permissionsForTenantMember`), và `/subscription/*` cố ý không mang `@SubscriptionTrackOnly`
-   * — đó là phễu nâng cấp. Nên tuyến gói mua được gói ngay mà không cần quyền tạm nào.
+   * - đó là phễu nâng cấp. Nên tuyến gói mua được gói ngay mà không cần quyền tạm nào.
    */
   async registerShop(userId: string, dto: RegisterShopDto): Promise<MyShopDto> {
     const existing = await this.prisma.tenantMembership.findFirst({
@@ -190,11 +190,11 @@ export class TenantsService {
      * Bộ trường của tuyến GÓI kiểm ở đây, không bằng `@ValidateIf` trong DTO.
      *
      * Quy tắc sống ở `@xeprime/types` và dùng CHUNG với cổng đăng xe
-     * (`missingPackageShopListingRequirements` trừ logo) — một định nghĩa, hai điểm thi hành.
+     * (`missingPackageShopListingRequirements` trừ logo) - một định nghĩa, hai điểm thi hành.
      * Diễn đạt lại nó bằng bốn decorator có điều kiện là bản sao thứ hai sẽ lệch ở lần đổi quy
      * tắc tiếp theo, và lúc đó người dùng trả tiền xong mới bị cổng đăng xe từ chối.
      *
-     * Trả `details.missing` là danh sách MÃ (ADR 0012) — web dựng nhãn theo ngôn ngữ đang dùng.
+     * Trả `details.missing` là danh sách MÃ (ADR 0012) - web dựng nhãn theo ngôn ngữ đang dùng.
      */
     if (isPackageTrack) {
       const missing = missingPackageShopRegistrationFields({
@@ -218,7 +218,7 @@ export class TenantsService {
      * bên ngoài thành một hàng đợi khoá bên trong.
      *
      * `requireWard: true` ở CẢ HAI tuyến (ADR 0077 ghi đè ADR 0042): địa chỉ này thành CHI NHÁNH
-     * MẶC ĐỊNH — nơi khách tới nhận xe — nên phải có phường/xã chọn từ danh mục, kể cả khi đã có
+     * MẶC ĐỊNH - nơi khách tới nhận xe - nên phải có phường/xã chọn từ danh mục, kể cả khi đã có
      * ghim bản đồ. Tỉnh/xã là lựa chọn của người dùng; ghim chỉ là toạ độ.
      */
     const address = await this.address.resolve(
@@ -246,7 +246,7 @@ export class TenantsService {
             name: dto.name,
             tenantType,
             status: TENANT_STATUS.ACTIVE,
-            // Cửa vào, lưu bền vững — xem docblock của hàm và `shop-onboarding.ts`.
+            // Cửa vào, lưu bền vững - xem docblock của hàm và `shop-onboarding.ts`.
             onboardingState: shopOnboardingStateForTrack(track),
             ownerUserId: userId,
             phone: dto.phone ?? null,
@@ -263,12 +263,12 @@ export class TenantsService {
             joinedAt: new Date(),
           },
         });
-        // Từ giây này người dùng có thêm một hộp thư công việc — huy hiệu phải biết (ADR 0034).
+        // Từ giây này người dùng có thêm một hộp thư công việc - huy hiệu phải biết (ADR 0034).
         await markBadgesDirty(tx, [userId]);
         await tx.tenantProfile.create({
           data: {
             tenantId: id,
-            // Tên hiển thị KHÔNG ở đây — nó là `tenants.name` vừa ghi ở trên (nguồn duy nhất).
+            // Tên hiển thị KHÔNG ở đây - nó là `tenants.name` vừa ghi ở trên (nguồn duy nhất).
             // Bốn cột dưới là bản SAO tương thích ngược của chi nhánh mặc định; nguồn sự thật vận
             // hành là `tenant_branches`. Đồng bộ về sau đi qua `syncProfileFromDefaultBranch`.
             address: address.displayAddress,
@@ -280,7 +280,7 @@ export class TenantsService {
              * KHÔNG còn ba cột chủ gian hàng ở đây (16/09/2026).
              *
              * `missingShopProfileRequirements` vẫn đòi họ tên + SĐT chủ mới cho gửi duyệt, nhưng
-             * nó đọc chúng từ `tenants.owner_user_id → users` — tức từ chính tài khoản vừa gọi
+             * nó đọc chúng từ `tenants.owner_user_id → users` - tức từ chính tài khoản vừa gọi
              * endpoint này. Không có bước ghi nào ở đây thì cũng không có bản sao nào trôi khỏi
              * bản gốc, và một chủ xe đổi SĐT trong hồ sơ cá nhân không còn để lại một số cũ trên
              * phiếu duyệt.
@@ -294,24 +294,24 @@ export class TenantsService {
           phone: dto.phone ?? null,
         });
         /*
-         * Gói mặc định trong CÙNG transaction (ADR 0015 điều 9) — cùng lý do với chi nhánh và
+         * Gói mặc định trong CÙNG transaction (ADR 0015 điều 9) - cùng lý do với chi nhánh và
          * membership ở trên: một gian hàng nửa vời hỏng theo nhiều kiểu khác nhau.
          *
          * Ở đây kiểu hỏng là: từ ADR 0027, cờ năng lực đọc từ gói hiện hành, nên tenant không gói
          * có tập cờ RỖNG và mất sạch tính năng nâng cao ngày cổng chặn bật. Ghi qua
-         * `BillingService` chứ không tự `tx.tenantSubscription.create` — nó là writer duy nhất của
+         * `BillingService` chứ không tự `tx.tenantSubscription.create` - nó là writer duy nhất của
          * bảng đó (ADR 0010).
          *
          * ⚠️ CHỈ tuyến hoa hồng (ADR 0040). Gán một dòng hoa hồng cho người vừa bấm "Đăng ký gian
-         * hàng" là biến họ thành chủ xe tuyến hoa hồng ở mọi nơi đọc `billingMode` — khu làm việc,
-         * nhãn tài khoản, trần 3 xe của Owner Lite — và đó chính là lỗi ADR 0040 sửa. Họ nhận gói
+         * hàng" là biến họ thành chủ xe tuyến hoa hồng ở mọi nơi đọc `billingMode` - khu làm việc,
+         * nhãn tài khoản, trần 3 xe của Owner Lite - và đó chính là lỗi ADR 0040 sửa. Họ nhận gói
          * THẬT ở `activateFromInvoiceWithinTx`, khi tiền đã về.
          */
         if (!isPackageTrack) await this.billing.assignDefaultPlanWithinTx(tx, id);
 
         /*
          * Tuyến GÓI: xếp hàng email "Hướng dẫn đăng ký và gia hạn gói trên website" trong CÙNG
-         * transaction — chỉ khi nền tảng bật `isPlanPromotionEnabled` (đọc trong tx), trùng thì DB bỏ qua
+         * transaction - chỉ khi nền tảng bật `isPlanPromotionEnabled` (đọc trong tx), trùng thì DB bỏ qua
          * (`email_outbox.dedupe_key`). Thư GỬI ở `EmailOutboxDispatcher`, không ở request này.
          */
         const owner = await tx.user.findUnique({
@@ -332,7 +332,7 @@ export class TenantsService {
           });
         }
         if (isPackageTrack) {
-          // Email TÀI KHOẢN chủ VÀ email liên hệ gõ ở form — chủ đăng ký bằng SĐT chỉ có email liên hệ.
+          // Email TÀI KHOẢN chủ VÀ email liên hệ gõ ở form - chủ đăng ký bằng SĐT chỉ có email liên hệ.
           // RegisterShopDto không mang locale ⇒ bỏ trống, outbox mặc định `vi`.
           await this.appConfig.enqueuePlanGuideToOwnerAndContact(tx, {
             accountEmail: owner?.email,
@@ -345,7 +345,7 @@ export class TenantsService {
         }
 
         /*
-         * KHÔNG còn bước "nhận ví cá nhân về tenant" (ADR 0053 điều 8 — bỏ ADR 0038 điều 2). Ví cá
+         * KHÔNG còn bước "nhận ví cá nhân về tenant" (ADR 0053 điều 8 - bỏ ADR 0038 điều 2). Ví cá
          * nhân thuộc TÀI KHOẢN KHÁCH, một tài khoản khác hẳn với tài khoản partner đang mở gian hàng
          * này; tiền hoàn của khách không bao giờ đổi chủ sang ví gian hàng. Ví của tenant được tạo
          * khi có khoản ghi có đầu tiên, như mọi tenant khác.
@@ -414,13 +414,13 @@ export class TenantsService {
       phone: tenant.phone,
       email: tenant.email,
       /*
-       * Trục THỨ HAI, độc lập với `status` — xem `shop-verification.ts`. `status` trả lời "còn
+       * Trục THỨ HAI, độc lập với `status` - xem `shop-verification.ts`. `status` trả lời "còn
        * được hoạt động không", trường này trả lời "nền tảng đã xem xét pháp nhân chưa", và chỉ
        * trường này mới là cổng của việc mua gói thuê bao.
        */
       verification: resolveShopVerification(latest?.status),
       /*
-       * Trục THỨ TƯ (ADR 0040) — cửa vào của gian hàng này. Trang Cửa hàng đọc nó để biết cổng
+       * Trục THỨ TƯ (ADR 0040) - cửa vào của gian hàng này. Trang Cửa hàng đọc nó để biết cổng
        * logo có áp hay không; suy từ `billingMode` là sai ở cả hai đầu (gian hàng hết gói vẫn là
        * gian hàng; chủ xe hoa hồng vừa mua gói thì chưa từng đi qua cửa gian hàng).
        */
@@ -429,7 +429,7 @@ export class TenantsService {
       /*
        * Chủ gian hàng đọc từ TÀI KHOẢN, không từ hồ sơ (16/09/2026). Đây là lý do khối này là
        * một object riêng chứ không phải ba trường nữa nằm trong `profile`: `profile` là thứ
-       * `tenant.update` sửa được, còn khối này thì không — nó chỉ đổi khi chính người chủ đổi
+       * `tenant.update` sửa được, còn khối này thì không - nó chỉ đổi khi chính người chủ đổi
        * tài khoản của họ.
        */
       ownerAccount: toOwnerAccount(tenant.owner),
@@ -464,7 +464,7 @@ export class TenantsService {
    *
    * 1. **KHÔNG còn khoá khi đang chờ xác minh (24/09/2026).** Tới ngày này hồ sơ bị khoá suốt
    *    thời gian phiếu xác minh gian hàng còn `pending` (`SHOP_VERIFICATION_PENDING`). Nền tảng đã
-   *    tạm ngừng xác minh gian hàng: web không còn nút gửi, và màn "Duyệt xe" chỉ nhận phiếu XE —
+   *    tạm ngừng xác minh gian hàng: web không còn nút gửi, và màn "Duyệt xe" chỉ nhận phiếu XE -
    *    nên một phiếu gian hàng còn chờ không bao giờ được ai xử lý, và cái khoá thành vĩnh viễn
    *    mà người dùng không có đường nào tự gỡ.
    * 2. **Tỉnh/thành đi qua `BranchesService`.** Hai cột tỉnh trên hồ sơ là BẢN SAO của chi nhánh
@@ -477,10 +477,10 @@ export class TenantsService {
    *    đăng ký. Chúng là của GIAN HÀNG, độc lập với SĐT/email đăng nhập của tài khoản chủ.
    * 4. **Mã số thuế đi vào hồ sơ NGƯỜI BÁN (07/10/2026).** `taxCode` còn trên DTO cho client cũ
    *    (app native), nhưng cột trên `tenant_profiles` đã gỡ: nó ghi `seller_profiles.tax_id` qua
-   *    `SellerProfileService.setTaxIdWithinTx` — cùng luật khoá khi đang/đã xác minh. Và vì đó là
+   *    `SellerProfileService.setTaxIdWithinTx` - cùng luật khoá khi đang/đã xác minh. Và vì đó là
    *    hồ sơ người bán, ĐỔI nó cần `seller_profile.manage`, không phải `tenant.update`: một quản lý
    *    được sửa mặt tiền gian hàng không vì thế mà được sửa bản khai thuế. Gửi lại nguyên giá trị
-   *    cũ (client cũ làm vậy mỗi lần lưu) thì không cần quyền đó — không có gì đổi.
+   *    cũ (client cũ làm vậy mỗi lần lưu) thì không cần quyền đó - không có gì đổi.
    */
   async updateProfile(
     tenantId: string,
@@ -496,7 +496,7 @@ export class TenantsService {
 
     /*
      * MỌI mảnh địa chỉ đi qua chi nhánh mặc định, không chỉ mã tỉnh như trước. Bốn cột địa chỉ
-     * trên `tenant_profiles` là BẢN SAO (`syncProfileFromDefaultBranch`) — ghi thẳng vào chúng
+     * trên `tenant_profiles` là BẢN SAO (`syncProfileFromDefaultBranch`) - ghi thẳng vào chúng
      * sẽ đúng cho tới lần chạm chi nhánh kế tiếp rồi âm thầm bị ghi đè, trong khi xe vẫn hiển
      * thị ở địa chỉ cũ trên marketplace vì `public_listings` không hề biết có thay đổi.
      */
@@ -528,7 +528,7 @@ export class TenantsService {
       }
     }
 
-    // Ô trống ở SĐT/email liên hệ nghĩa là GỠ (→ NULL). Tên thì không gỡ được: DTO đòi 2–255 ký
+    // Ô trống ở SĐT/email liên hệ nghĩa là GỠ (→ NULL). Tên thì không gỡ được: DTO đòi 2-255 ký
     // tự, vì `tenants.name` NOT NULL và là thứ khách nhìn thấy đầu tiên.
     const contact = normalizeProfileWrite({ phone, email });
     const tenantData: Prisma.TenantUpdateInput = {
@@ -537,7 +537,7 @@ export class TenantsService {
       ...(contact.email === undefined ? {} : { email: contact.email }),
     };
 
-    // Tra địa chỉ (có gọi mạng) TRƯỚC transaction — rồi dời chi nhánh mặc định và lưu hồ sơ trong
+    // Tra địa chỉ (có gọi mạng) TRƯỚC transaction - rồi dời chi nhánh mặc định và lưu hồ sơ trong
     // MỘT transaction: không còn trạng thái "chi nhánh đã dời mà hồ sơ chưa lưu".
     const branchPlan =
       provinceCode !== undefined ||
@@ -572,7 +572,7 @@ export class TenantsService {
   }
 
   /**
-   * Đổi tỉnh của chi nhánh mặc định — hệ quả (đồng bộ `public_listings`, đồng bộ lại hai cột
+   * Đổi tỉnh của chi nhánh mặc định - hệ quả (đồng bộ `public_listings`, đồng bộ lại hai cột
    * sao chép trên hồ sơ, ghi audit) nằm trọn trong `BranchesService.applyUpdate`.
    */
   private async planDefaultBranchMove(
@@ -584,7 +584,7 @@ export class TenantsService {
       select: { id: true, provinceCode: true, wardCode: true, addressLine: true },
     });
     // Dữ liệu cũ chưa qua migration chi nhánh: không có gì để dời, và tuyệt đối không tự ghi các
-    // cột sao chép — làm vậy là tạo ra đúng cái lệch mà hàm này sinh ra để tránh.
+    // cột sao chép - làm vậy là tạo ra đúng cái lệch mà hàm này sinh ra để tránh.
     if (!branch) return null;
 
     const unchanged =
@@ -602,20 +602,20 @@ export class TenantsService {
    * ## Đây KHÔNG còn là cổng để đăng xe
    *
    * Từ 14/09/2026 ([ADR 0036]) tuyến hoa hồng chỉ có MỘT cổng kiểm duyệt: phiếu duyệt XE. Hàm
-   * này phục vụ tuyến THUÊ BAO — gian hàng muốn mua gói phải có pháp nhân đã được nền tảng xem
+   * này phục vụ tuyến THUÊ BAO - gian hàng muốn mua gói phải có pháp nhân đã được nền tảng xem
    * xét (`BillingService.purchase`). Gọi nó không bắt buộc, và không gọi cũng không cản trở việc
    * đưa xe lên chợ.
    *
    * ## Hai thay đổi so với bản cũ, và lý do
    *
    * 1. **Không hạ `tenants.status` nữa.** Bản cũ đặt tenant về `pending_review`, mà
-   *    `TENANT_STATUS_PUBLISHABLE` chỉ nhận `active` — nghĩa là một gian hàng đang bán tốt mà
+   *    `TENANT_STATUS_PUBLISHABLE` chỉ nhận `active` - nghĩa là một gian hàng đang bán tốt mà
    *    xin xác minh để mua gói thì TOÀN BỘ xe của họ biến khỏi marketplace trong lúc chờ. Đó là
    *    hình phạt cho việc muốn trả tiền. Hai trục tách ra thì việc này không xảy ra được nữa.
    * 2. **Cổng chống trùng đọc từ PHIẾU, không từ `status`.** Nguồn sự thật của "đang chờ xác
    *    minh" là phiếu `pending`; hỏi `status` là hỏi một bản sao.
    *
-   * Vẫn giữ nguyên: cổng hồ sơ ĐỦ (`missingShopProfileRequirements`) — reviewer không được nhận
+   * Vẫn giữ nguyên: cổng hồ sơ ĐỦ (`missingShopProfileRequirements`) - reviewer không được nhận
    * một hồ sơ trắng làm bằng chứng để duyệt. Nút mờ ở web là gợi ý; chặn thật nằm ở đây.
    */
   async submitForReview(tenantId: string, userId: string): Promise<MyShopDto> {
@@ -684,7 +684,7 @@ export class TenantsService {
       throw new ConflictException({
         code: API_ERROR_CODE.PROFILE_INCOMPLETE,
         message: 'Hồ sơ gian hàng còn thiếu thông tin bắt buộc nên chưa gửi duyệt được.',
-        // Danh sách MÃ, không phải câu tiếng Việt — web tự dựng nhãn theo ngôn ngữ đang dùng.
+        // Danh sách MÃ, không phải câu tiếng Việt - web tự dựng nhãn theo ngôn ngữ đang dùng.
         details: { missing },
       });
     }
@@ -693,7 +693,7 @@ export class TenantsService {
 
     await this.prisma.$transaction(async (tx) => {
       /*
-       * KHÔNG đụng `tenants.status` — xem docblock của hàm. Xin xác minh không được phép gỡ xe
+       * KHÔNG đụng `tenants.status` - xem docblock của hàm. Xin xác minh không được phép gỡ xe
        * của chính mình khỏi marketplace trong lúc chờ.
        */
       const task = await tx.approvalTask.create({
@@ -708,17 +708,17 @@ export class TenantsService {
            * SNAPSHOT = hồ sơ + DANH TÍNH CHỦ tại thời điểm gửi (16/09/2026).
            *
            * Reviewer phải duyệt đúng bản người gửi đã gửi. Đọc `users` LIVE lúc mở phiếu nghĩa
-           * là chủ shop đổi tên/SĐT trong lúc chờ thì hồ sơ đang duyệt âm thầm đổi theo — và
+           * là chủ shop đổi tên/SĐT trong lúc chờ thì hồ sơ đang duyệt âm thầm đổi theo - và
            * phiếu đã duyệt xong cũng không còn kể được nó đã duyệt cái gì.
            *
            * Ba khoá giữ NGUYÊN TÊN `ownerFullName`/`ownerPhone`/`ownerEmail`: phiếu cũ trong
-           * DB mang đúng ba khoá đó. Snapshot là jsonb đông cứng, không migrate — đổi tên khoá
-           * là làm mù mọi phiếu đã lưu. (Từ 24/09/2026 web không còn màn duyệt phiếu gian hàng —
+           * DB mang đúng ba khoá đó. Snapshot là jsonb đông cứng, không migrate - đổi tên khoá
+           * là làm mù mọi phiếu đã lưu. (Từ 24/09/2026 web không còn màn duyệt phiếu gian hàng -
            * xác minh gian hàng tạm ngừng, ADR 0049 điều 7.)
            */
           snapshot: {
             ...(tenant.profile ?? {}),
-            // Khoá `displayName` giữ nguyên trong snapshot như phiếu cũ — chỉ đổi nguồn đọc.
+            // Khoá `displayName` giữ nguyên trong snapshot như phiếu cũ - chỉ đổi nguồn đọc.
             displayName: tenant.name,
             // Cùng lý do với khoá `taxCode` (07/10/2026): nguồn nay là hồ sơ người bán.
             taxCode: tenant.sellerProfile?.taxId ?? null,
@@ -734,7 +734,7 @@ export class TenantsService {
           id: newId(),
           approvalTaskId: task.id,
           action: isResubmit ? APPROVAL_ACTION.RESUBMIT : APPROVAL_ACTION.SUBMIT,
-          // Hai cột này theo dõi trục XÁC MINH, không phải `tenants.status` — cột đó không đổi.
+          // Hai cột này theo dõi trục XÁC MINH, không phải `tenants.status` - cột đó không đổi.
           fromStatus: verification,
           toStatus: SHOP_VERIFICATION.PENDING,
           actorUserId: userId,
@@ -773,14 +773,14 @@ export class TenantsService {
    * Bật/tắt "Có hỗ trợ xuất hoá đơn VAT" cho MỌI xe của gian hàng / chủ xe (ADR 0059).
    *
    * THÔNG TIN công bố cho khách, không phải một chức năng hoá đơn: không cổng nào ngoài quyền
-   * (controller), áp như nhau hai tuyến — chủ xe cá nhân có thể xuất qua doanh nghiệp hoặc bên thứ
-   * ba, họ tự quyết — và không chạm giá, phí, thuế khấu trừ (ADR 0028 §4), xe, yêu cầu hay đơn.
+   * (controller), áp như nhau hai tuyến - chủ xe cá nhân có thể xuất qua doanh nghiệp hoặc bên thứ
+   * ba, họ tự quyết - và không chạm giá, phí, thuế khấu trừ (ADR 0028 §4), xe, yêu cầu hay đơn.
    *
    * Đúng MỘT dòng đổi: `tenants`. Chợ JOIN cột này (ADR 0008 §3) nên không có snapshot nào phải
-   * đồng bộ — cả đội xe đổi cùng lúc trong một UPDATE.
+   * đồng bộ - cả đội xe đổi cùng lúc trong một UPDATE.
    *
    * Compare-and-set: `where` mang giá trị CŨ, nên gửi lại đúng giá trị đang có là no-op và hai lượt
-   * bấm song song chỉ một lượt ghi — một dòng audit cho một lần đổi thật.
+   * bấm song song chỉ một lượt ghi - một dòng audit cho một lần đổi thật.
    */
   async setVatInvoiceSupport(
     tenantId: string,
@@ -795,7 +795,7 @@ export class TenantsService {
         where: { id: tenantId, deletedAt: null, vatInvoiceSupported: !supported },
         data: { vatInvoiceSupported: supported },
       });
-      // Không ghi được nghĩa là ai đó đã đổi trước — trạng thái thật đọc lại bên dưới.
+      // Không ghi được nghĩa là ai đó đã đổi trước - trạng thái thật đọc lại bên dưới.
       if (res.count !== 1) return;
 
       await this.audit.record(
@@ -855,7 +855,7 @@ function slugify(value: string): string {
 /**
  * Hai bản giới thiệu (chữ thuần `bio` + HTML `bio_html`) đi CÙNG nhau ở mọi lượt ghi:
  *  - có `bioHtml` ⇒ lọc ở server, chữ thuần RÚT TỪ HTML đã lọc (bỏ qua `bio` gửi kèm);
- *  - chỉ có `bio` (app native, form chủ xe) ⇒ bản HTML bị gỡ — không thì trang công khai hiện
+ *  - chỉ có `bio` (app native, form chủ xe) ⇒ bản HTML bị gỡ - không thì trang công khai hiện
  *    đoạn văn cũ trong khi chủ vừa sửa sang đoạn mới;
  *  - không có cả hai ⇒ không đụng.
  * Chữ thuần rút ra vượt trần cột `bio` ⇒ 400 thay vì cắt ngầm.
@@ -890,7 +890,7 @@ function normalizeProfileWrite<T extends Record<string, string | undefined>>(
 }
 
 /**
- * `displayName` của DTO là `tenants.name` — giữ trên dây để client cũ (web, app native) đọc
+ * `displayName` của DTO là `tenants.name` - giữ trên dây để client cũ (web, app native) đọc
  * `profile.displayName` không vỡ, nhưng không còn cột nào trên `tenant_profiles` mang nó.
  *
  * `taxCode` cùng một kiểu (07/10/2026): là `seller_profiles.tax_id`, nguồn duy nhất của MST.
@@ -924,12 +924,12 @@ function notFound(): NotFoundException {
 }
 
 /** Một tài khoản partner thuộc tối đa MỘT gian hàng (ADR 0053 điều 6). */
-/** Unique index một phần của migration `account_realms` — một membership active cho mỗi tài khoản. */
+/** Unique index một phần của migration `account_realms` - một membership active cho mỗi tài khoản. */
 const ONE_ACTIVE_MEMBERSHIP_INDEX = 'tenant_memberships_one_active_per_user';
 
 function alreadyInTenant(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.MEMBER_ALREADY_IN_OTHER_TENANT,
-    message: 'Tài khoản đã thuộc một gian hàng — mỗi tài khoản chỉ thuộc một gian hàng.',
+    message: 'Tài khoản đã thuộc một gian hàng - mỗi tài khoản chỉ thuộc một gian hàng.',
   });
 }

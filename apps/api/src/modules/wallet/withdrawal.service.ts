@@ -190,7 +190,7 @@ export class WithdrawalService {
       if (claimed.count === 0) {
         throw new ConflictException({
           code: API_ERROR_CODE.WITHDRAWAL_ALREADY_HANDLED,
-          message: 'Yêu cầu này đã được xử lý — không huỷ được nữa',
+          message: 'Yêu cầu này đã được xử lý - không huỷ được nữa',
           details: { status: row.status },
         });
       }

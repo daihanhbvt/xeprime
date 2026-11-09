@@ -39,7 +39,7 @@ interface BankInUrlFilters {
   to?: string;
   page?: number;
   limit?: number;
-  /** Giao dịch đang mở ở panel chi tiết — trên URL để link tới đúng một khoản. */
+  /** Giao dịch đang mở ở panel chi tiết - trên URL để link tới đúng một khoản. */
   open?: string;
 }
 
@@ -47,7 +47,7 @@ function isDayParam(value: string | null): value is string {
   return Boolean(value) && dayjs(value, DAY_PARAM_FORMAT, true).isValid();
 }
 
-/** Lúc tiền tới — theo NGÂN HÀNG; dòng thiếu mốc đó (payload cũ) lấy lúc webhook về. */
+/** Lúc tiền tới - theo NGÂN HÀNG; dòng thiếu mốc đó (payload cũ) lấy lúc webhook về. */
 function arrivedAt(row: BankTransaction): string {
   return row.bankTime ?? row.createdAt;
 }
@@ -73,10 +73,10 @@ function parse(params: URLSearchParams): BankInUrlFilters {
 }
 
 /**
- * Hàng đợi TIỀN VÀO CHƯA KHỚP của màn Tài chính — ADR 0022 điều 4.
+ * Hàng đợi TIỀN VÀO CHƯA KHỚP của màn Tài chính - ADR 0022 điều 4.
  *
  * Đây là đường để một khoản "về mà khách quên ghi mã" thành một gói được mở mà không ai phải sửa
- * database. Mặc định chỉ hiện khoản CHƯA KHỚP — màn này là việc-cần-làm; lịch sử (đã khớp, khớp
+ * database. Mặc định chỉ hiện khoản CHƯA KHỚP - màn này là việc-cần-làm; lịch sử (đã khớp, khớp
  * tay, bỏ qua) vẫn xem được qua nhóm nút trạng thái.
  */
 export function BankInQueue() {
@@ -196,7 +196,7 @@ export function BankInQueue() {
     },
   ];
 
-  /** Thẻ riêng cho điện thoại — số tiền và đã chờ bao lâu là hai thứ người trực nhìn đầu tiên. */
+  /** Thẻ riêng cho điện thoại - số tiền và đã chờ bao lâu là hai thứ người trực nhìn đầu tiên. */
   function renderCard(row: BankTransaction) {
     const age = waitingAge(arrivedAt(row));
     return (
@@ -237,7 +237,7 @@ export function BankInQueue() {
           to: filters.to,
           code: filters.code,
         }}
-        // `FilterBar` gửi đúng TRƯỜNG vừa đổi — ghi thẳng bản vá đó. Dựng lại cả bộ từ bản vá là
+        // `FilterBar` gửi đúng TRƯỜNG vừa đổi - ghi thẳng bản vá đó. Dựng lại cả bộ từ bản vá là
         // xoá mất các bộ lọc kia: chọn mã thì mất khoảng ngày, gõ tìm thì mất mã.
         onChange={(patch) => setFilters(patch as Partial<BankInUrlFilters>)}
         onClear={() =>
@@ -247,14 +247,14 @@ export function BankInQueue() {
 
       {/*
         Trạng thái đứng RIÊNG một hàng, ngoài thanh lọc: nó là bốn GÓC NHÌN của cùng một sổ (việc
-        cần làm ↔ lịch sử), không phải một bộ lọc — để trong thanh lọc thì nút "Xoá bộ lọc" sáng
+        cần làm ↔ lịch sử), không phải một bộ lọc - để trong thanh lọc thì nút "Xoá bộ lọc" sáng
         ngay cả khi người dùng chưa lọc gì.
       */}
       <QueueViewSwitch<BankMatchStatus>
         label={t('filters.status')}
         value={status}
         onChange={(value) =>
-          // Chưa khớp là mặc định — không ghi lên URL.
+          // Chưa khớp là mặc định - không ghi lên URL.
           setFilters({ status: value === BANK_MATCH_STATUS.UNMATCHED ? undefined : value })
         }
         options={BANK_MATCH_STATUS_VALUES.map((value) => ({

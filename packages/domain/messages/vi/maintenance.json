@@ -39,8 +39,8 @@
     "canceled": "Đã hủy lịch bảo dưỡng",
     "updated": "Đã cập nhật phiếu bảo dưỡng",
     "created": "Đã tạo lịch bảo dưỡng",
-    "staleRecord": "Phiếu vừa được người khác cập nhật — đóng hộp thoại và tải lại trang.",
-    "odometerTooLow": "Số KM nhập vào thấp hơn KM hiện tại của xe — kiểm tra lại chỉ số."
+    "staleRecord": "Phiếu vừa được người khác cập nhật - đóng hộp thoại và tải lại trang.",
+    "odometerTooLow": "Số KM nhập vào thấp hơn KM hiện tại của xe - kiểm tra lại chỉ số."
   },
   "table": {
     "columns": {
@@ -96,7 +96,7 @@
   "odometer": {
     "updated": "Đã cập nhật số KM",
     "decreaseForbidden": "Giảm KM cần quyền quản trị viên. Hãy liên hệ chủ gian hàng để được cấp quyền hoặc nhờ duyệt thay.",
-    "stale": "Số KM vừa được người khác cập nhật — đóng hộp thoại và tải lại trang.",
+    "stale": "Số KM vừa được người khác cập nhật - đóng hộp thoại và tải lại trang.",
     "title": "Điều chỉnh công số",
     "okRequest": "Gửi yêu cầu phê duyệt",
     "okUpdate": "Cập nhật KM",
@@ -123,8 +123,8 @@
     "title": "Bảo dưỡng & Số KM",
     "loadError": "Không tải được dữ liệu bảo dưỡng",
     "manage": "Quản lý",
-    "overdue": "Quá hạn bảo dưỡng — {value}",
-    "dueSoon": "Sắp đến hạn bảo dưỡng — {value}",
+    "overdue": "Quá hạn bảo dưỡng - {value}",
+    "dueSoon": "Sắp đến hạn bảo dưỡng - {value}",
     "noOdometer": "Chưa có dữ liệu KM",
     "noOdometerHint": "Nhập số KM hiện tại để theo dõi được lịch bảo dưỡng.",
     "currentKm": "KM hiện tại",
@@ -137,8 +137,8 @@
     "noPermissionHint": "Bạn không có quyền xem thông tin bảo dưỡng và số KM của xe này. Liên hệ chủ gian hàng để được cấp quyền.",
     "loadError": "Không tải được thông tin bảo dưỡng",
     "profileSaved": "Đã lưu cấu hình bảo dưỡng",
-    "profileStale": "Thông tin vừa được người khác cập nhật — tải lại trang trước khi lưu tiếp.",
-    "readOnlyBanner": "Chế độ xem — Bạn chỉ có quyền xem bảo dưỡng, không thể chỉnh sửa.",
+    "profileStale": "Thông tin vừa được người khác cập nhật - tải lại trang trước khi lưu tiếp.",
+    "readOnlyBanner": "Chế độ xem - Bạn chỉ có quyền xem bảo dưỡng, không thể chỉnh sửa.",
     "odometerCard": "Chỉ số Kilometer hiện tại (Odo)",
     "adjustManually": "Điều chỉnh thủ công",
     "updatedAt": "Cập nhật {at}",
@@ -218,7 +218,7 @@
     "loadError": "Không tải được danh sách việc thiếu KM",
     "loadErrorHint": "Kết nối có thể bị gián đoạn. Thử lại để xem việc còn tồn đọng.",
     "empty": "Không còn việc thiếu KM trả",
-    "emptyHint": "Mọi biên bản trả xe đã có chỉ số KM — số KM của đội xe đang đầy đủ.",
+    "emptyHint": "Mọi biên bản trả xe đã có chỉ số KM - số KM của đội xe đang đầy đủ.",
     "columns": {
       "vehicle": "Xe",
       "booking": "Đơn thuê",
@@ -235,6 +235,6 @@
     "resolveForbiddenHint": "Bổ sung KM cần quyền xem bàn giao của đơn tương ứng.",
     "resolveLoadError": "Không tải được biên bản để bổ sung KM",
     "resolveLoadErrorHint": "Kết nối có thể bị gián đoạn. Việc này vẫn còn trong hàng đợi.",
-    "alreadyResolved": "Biên bản này đã có số KM — không còn việc phải làm."
+    "alreadyResolved": "Biên bản này đã có số KM - không còn việc phải làm."
   }
 }

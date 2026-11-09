@@ -36,7 +36,7 @@ describe('listDays', () => {
     expect(days.map((day) => day.dayOfMonth)).toEqual([12, 13, 14]);
   });
 
-  it('đánh dấu cuối tuần đúng — 12/07/2026 là Chủ nhật, 13/07 là Thứ hai', () => {
+  it('đánh dấu cuối tuần đúng - 12/07/2026 là Chủ nhật, 13/07 là Thứ hai', () => {
     const days = listDays(buildRange('2026-07-12', 3));
     expect(days.map((day) => day.isWeekend)).toEqual([true, false, false]);
   });
@@ -56,7 +56,7 @@ describe('listDays', () => {
     }
   });
 
-  it('nhận diện "hôm nay" theo giờ VN — 22:00 UTC vẫn là NGÀY HÔM SAU ở Việt Nam', () => {
+  it('nhận diện "hôm nay" theo giờ VN - 22:00 UTC vẫn là NGÀY HÔM SAU ở Việt Nam', () => {
     // 2026-07-12T22:00Z = 2026-07-13 05:00 giờ VN.
     jest.useFakeTimers().setSystemTime(new Date('2026-07-12T22:00:00.000Z'));
     try {

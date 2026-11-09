@@ -156,7 +156,7 @@ describe('ResponsiveDialog', () => {
     });
   });
 
-  describe('đường đóng — bật/tắt được', () => {
+  describe('đường đóng - bật/tắt được', () => {
     it('nút đóng gọi onClose', () => {
       const onClose = vi.fn();
       render(

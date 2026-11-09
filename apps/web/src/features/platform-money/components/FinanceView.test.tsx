@@ -294,7 +294,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Tài chính — hàng đợi theo quyền và URL', () => {
+describe('Tài chính - hàng đợi theo quyền và URL', () => {
   it('đủ quyền: mặc định mở hàng đợi tiền vào chưa khớp', () => {
     renderView();
 
@@ -339,7 +339,7 @@ describe('Tài chính — hàng đợi theo quyền và URL', () => {
     });
   });
 
-  it('chỉ có quyền GÓI: không gọi tóm tắt tiền, không hiện dải thẻ — chỉ hàng đợi tiền vào', () => {
+  it('chỉ có quyền GÓI: không gọi tóm tắt tiền, không hiện dải thẻ - chỉ hàng đợi tiền vào', () => {
     perms.granted = new Set([PERMISSION.PLATFORM_BILLING_MANAGE]);
     renderView();
 
@@ -347,7 +347,7 @@ describe('Tài chính — hàng đợi theo quyền và URL', () => {
     expect(screen.getByRole('heading', { name: 'Tiền vào chưa khớp' })).toBeTruthy();
   });
 
-  it('đổi hàng đợi chỉ giữ lại ngày đối soát — bộ lọc của hàng đợi cũ bị bỏ', () => {
+  it('đổi hàng đợi chỉ giữ lại ngày đối soát - bộ lọc của hàng đợi cũ bị bỏ', () => {
     renderView('queue=holds&q=abc&page=3&date=2026-09-30');
 
     fireEvent.click(within(rail()).getByRole('button', { name: /Hoàn cho khách/ }));
@@ -374,7 +374,7 @@ describe('Tài chính — hàng đợi theo quyền và URL', () => {
   });
 });
 
-describe('Tài chính — kết luận đối soát', () => {
+describe('Tài chính - kết luận đối soát', () => {
   it('khớp: nói "Khớp"', () => {
     renderView();
     expect(screen.getByText('Khớp')).toBeTruthy();
@@ -439,7 +439,7 @@ describe('Tài chính — kết luận đối soát', () => {
   });
 });
 
-describe('Tài chính — giữ chỗ chờ chốt', () => {
+describe('Tài chính - giữ chỗ chờ chốt', () => {
   it('hold ĐÃ TRẢ mà chưa chốt: có lối chốt kết cục; tranh chấp được đánh dấu trên hàng', () => {
     holds.data = {
       items: [hold({ disputeOpen: true })],
@@ -464,7 +464,7 @@ describe('Tài chính — giữ chỗ chờ chốt', () => {
     expect(queryButtonByText('Chốt kết cục')).toBeNull();
   });
 
-  it('góc nhìn "Tất cả" lên được URL — không bị nuốt như giá trị lọc "all"', () => {
+  it('góc nhìn "Tất cả" lên được URL - không bị nuốt như giá trị lọc "all"', () => {
     renderView('queue=holds');
     fireEvent.click(screen.getByText('Tất cả'));
     expect(nav.replace).toHaveBeenCalledWith('/manage/admin/money?queue=holds&scope=any', {
@@ -502,7 +502,7 @@ describe('Tài chính — giữ chỗ chờ chốt', () => {
     expect(within(drawer).queryByText('Đã dùng cho chuyến')).toBeNull();
     expect(within(drawer).queryByText('Bồi thường chủ xe')).toBeNull();
     expect(within(drawer).getByText('Đã quyết toán')).toBeTruthy();
-    expect(within(drawer).getByText('Huỷ muộn — đền giữ chỗ')).toBeTruthy();
+    expect(within(drawer).getByText('Huỷ muộn - đền giữ chỗ')).toBeTruthy();
     expect(within(drawer).getByText('Đã hoàn khách')).toBeTruthy();
 
     // Mỗi kết cục nói tiền đi đâu NGAY trên thẻ chọn — và dòng đó là mô tả của chính nút đó.
@@ -535,7 +535,7 @@ describe('Tài chính — giữ chỗ chờ chốt', () => {
   });
 });
 
-describe('Tài chính — rút tiền', () => {
+describe('Tài chính - rút tiền', () => {
   it('từ chối: bắt nhập lý do, và gửi ĐÚNG lý do người gõ', async () => {
     renderView('queue=withdrawals');
 
@@ -563,7 +563,7 @@ describe('Tài chính — rút tiền', () => {
     });
   });
 
-  it('xác nhận đã chuyển: mở lệnh KHÁC thì ô mã giao dịch trống — không mang bằng chứng của lệnh trước', async () => {
+  it('xác nhận đã chuyển: mở lệnh KHÁC thì ô mã giao dịch trống - không mang bằng chứng của lệnh trước', async () => {
     markWithdrawalPaid.mutate.mockReset();
     withdrawals.data = {
       items: [

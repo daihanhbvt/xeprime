@@ -42,7 +42,7 @@ export class AddressViewDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Chuỗi hiển thị đã ghép sẵn — dùng thẳng, đừng ghép lại ở client',
+    description: 'Chuỗi hiển thị đã ghép sẵn - dùng thẳng, đừng ghép lại ở client',
   })
   displayAddress!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) placeId!: string | null;
@@ -53,7 +53,7 @@ export class AddressViewDto {
   locationSource!: string | null;
   @ApiProperty({
     description:
-      'Địa chỉ chưa khớp danh mục hành chính hiện hành — cần người dùng mở ra chọn lại và xác nhận',
+      'Địa chỉ chưa khớp danh mục hành chính hiện hành - cần người dùng mở ra chọn lại và xác nhận',
   })
   needsAddressReview!: boolean;
 }

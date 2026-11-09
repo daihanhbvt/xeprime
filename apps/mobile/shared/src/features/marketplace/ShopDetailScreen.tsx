@@ -1,12 +1,13 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import {
-  FlatList,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
-} from 'react-native';
+import { RevealText, ScrollReveal, ScrollRevealProvider } from '@/components/motion/ScrollReveal';
+import { Pressable, RefreshControl, ScrollView } from 'react-native';
+import Animated, {
+  runOnJS,
+  useAnimatedScrollHandler,
+  useSharedValue,
+  type SharedValue,
+} from 'react-native-reanimated';
+import { useParallaxHeader } from '@/components/motion/use-parallax-header';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -47,6 +48,7 @@ const SERVICE_CHIPS = [
 const TOGGLE_CHIPS = ['delivery', 'instantBook', 'noCollateral', 'vatInvoice'] as const;
 
 const keyExtractor = (item: PublicListing) => item.id;
+const ITEM_GUTTER = { paddingHorizontal: layout.screenX };
 const Separator = () => <YStack h={layout.block} />;
 
 /**
@@ -67,12 +69,21 @@ export function ShopDetailScreen({ slug, onBack }: { slug: string; onBack: () =>
   const colors = useColors();
   const shop = usePublicShop(slug);
   const [scrolled, setScrolled] = useState(false);
+  /** Offset cuộn trên luồng UI — ảnh bìa parallax theo nó (`useParallaxHeader`). */
+  const scrollY = useSharedValue(0);
+  const passedShared = useSharedValue(false);
 
-  const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const passed = event.nativeEvent.contentOffset.y > TITLE_REVEAL;
-    // `onScroll` bắn liên tục — chỉ set khi giá trị thật sự đổi.
-    setScrolled((prev) => (prev === passed ? prev : passed));
-  }, []);
+  // Worklet: chỉ nhảy sang JS khi vượt ngưỡng tiêu đề (không setState mỗi khung hình).
+  const onScroll = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+      const passed = event.contentOffset.y > TITLE_REVEAL;
+      if (passed !== passedShared.value) {
+        passedShared.value = passed;
+        runOnJS(setScrolled)(passed);
+      }
+    },
+  });
 
   if (shop.isError) {
     return (
@@ -101,7 +112,12 @@ export function ShopDetailScreen({ slug, onBack }: { slug: string; onBack: () =>
         hồ sơ như web (`ShopHeader`), không còn ở thanh trên.
       */}
       <AppHeader variant="overlay" onBack={onBack} title={shop.data.name} showTitle={scrolled} />
-      <ShopBody shop={shop.data} onScroll={onScroll} onRefreshShop={shop.refetch} />
+      <ShopBody
+        shop={shop.data}
+        onScroll={onScroll}
+        scrollY={scrollY}
+        onRefreshShop={shop.refetch}
+      />
     </YStack>
   );
 }
@@ -109,10 +125,12 @@ export function ShopDetailScreen({ slug, onBack }: { slug: string; onBack: () =>
 function ShopBody({
   shop,
   onScroll,
+  scrollY,
   onRefreshShop,
 }: {
   shop: PublicShop;
-  onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onScroll: ReturnType<typeof useAnimatedScrollHandler>;
+  scrollY: SharedValue<number>;
   /** Làm mới hồ sơ gian hàng — đi cùng danh sách xe trong một lượt kéo. */
   onRefreshShop: () => Promise<unknown>;
 }) {
@@ -121,6 +139,7 @@ function ShopBody({
   const tResults = useTranslations('Marketplace.results');
   const insets = useSafeAreaInsets();
   const navigateOnce = useNavigateOnce();
+  const coverStyle = useParallaxHeader(scrollY);
 
   const isShop = shop.storefrontKind === STOREFRONT_KIND.SHOP;
   const layoutKind = shop.vehicleCount <= SHOP_LIST_LAYOUT_MAX_VEHICLES ? 'list' : 'grid';
@@ -155,16 +174,17 @@ function ShopBody({
   // Chip dịch vụ đang bật đổi giá / "Đặt ngay" / link chi tiết của thẻ — như web, nơi thẻ đọc URL
   // của chính trang gian hàng.
   const activeService = activeFilters.serviceType;
+  // Thẻ xe trượt lên khi cuộn tới (ScrollReveal, chỉ transform).
   const renderItem = useCallback(
-    ({ item }: { item: PublicListing }) => (
-      <YStack px={layout.screenX}>
+    ({ item, index }: { item: PublicListing; index: number }) => (
+      <ScrollReveal index={index} style={ITEM_GUTTER}>
         <VehicleCard
           listing={item}
           onPress={openListing}
           {...(activeService ? { serviceType: activeService } : {})}
           {...(metrics ? { variant: 'list' as const, hostMetrics: metrics } : {})}
         />
-      </YStack>
+      </ScrollReveal>
     ),
     [openListing, metrics, activeService],
   );
@@ -174,8 +194,12 @@ function ShopBody({
     [insets.bottom],
   );
 
+  // Thẻ xe hiện khi cuộn tới — cùng offset cuộn (luồng UI) đang chạy ảnh bìa parallax.
+  const revealCtx = useMemo(() => ({ scrollY }), [scrollY]);
+
   return (
-    <FlatList
+    <ScrollRevealProvider value={revealCtx}>
+    <Animated.FlatList
       data={listings.listings}
       keyExtractor={keyExtractor}
       {...MEDIA_LIST_TUNING}
@@ -194,7 +218,7 @@ function ShopBody({
       renderItem={renderItem}
       ListHeaderComponent={
         <YStack gap={layout.block} pb={layout.block}>
-          <ShopHeader shop={shop} />
+          <ShopHeader shop={shop} coverStyle={coverStyle} />
 
           {isShop ? (
             <YStack px={layout.screenX}>
@@ -212,18 +236,20 @@ function ShopBody({
           ) : null}
 
           <YStack gap={space.md}>
-            <YStack px={layout.screenX}>
-              <Text
-                col={colors.text}
-                fos={fontSize.lead}
-                fow={fontWeight.semibold}
-                accessibilityRole="header"
-              >
-                {listings.total > 0
-                  ? t('vehicles.titleWithCount', { count: listings.total })
-                  : t('vehicles.title')}
-              </Text>
-            </YStack>
+            <ScrollReveal style={ITEM_GUTTER}>
+              <RevealText>
+                <Text
+                  col={colors.text}
+                  fos={fontSize.lead}
+                  fow={fontWeight.semibold}
+                  accessibilityRole="header"
+                >
+                  {listings.total > 0
+                    ? t('vehicles.titleWithCount', { count: listings.total })
+                    : t('vehicles.title')}
+                </Text>
+              </RevealText>
+            </ScrollReveal>
 
             {showProvinceTabs ? (
               <ChipRow label={t('vehicleFilters.provinceLabel')}>
@@ -353,6 +379,7 @@ function ShopBody({
         </YStack>
       }
     />
+    </ScrollRevealProvider>
   );
 }
 

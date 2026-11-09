@@ -148,7 +148,13 @@ export function HomeCarousel({
       >
         <ul className={styles.container}>
           {children.map((child, index) => (
-            <li key={index} className={styles.slide}>
+            <li
+              key={index}
+              className={styles.slide}
+              // Coverflow mobile: thẻ đang ở giữa nổi, hai thẻ kề nhỏ + mờ (CSS, chỉ ≤ 640px nơi mỗi
+              // trang đúng một thẻ nên chỉ số trang = chỉ số thẻ).
+              data-active={index === selected ? '' : undefined}
+            >
               {child}
             </li>
           ))}

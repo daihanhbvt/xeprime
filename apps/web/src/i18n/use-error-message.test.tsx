@@ -24,14 +24,14 @@ function messageFor(error: unknown, locale: AppLocale = 'vi'): string {
 const apiError = (code: string, details?: unknown) =>
   new ApiClientError({ code, message: 'x', status: 429, details });
 
-describe('useErrorMessage — thời gian chờ', () => {
+describe('useErrorMessage - thời gian chờ', () => {
   it('dưới một phút: đếm giây', () => {
     expect(messageFor(apiError(API_ERROR_CODE.RATE_LIMITED, { retryAfterSeconds: 42 }))).toBe(
       'Bạn thao tác hơi nhanh. Vui lòng thử lại sau 42 giây.',
     );
   });
 
-  it('khoá đăng nhập: làm tròn LÊN tới phút — khớp câu QC chờ ("thử lại sau 5 phút")', () => {
+  it('khoá đăng nhập: làm tròn LÊN tới phút - khớp câu QC chờ ("thử lại sau 5 phút")', () => {
     expect(
       messageFor(apiError(API_ERROR_CODE.LOGIN_TEMPORARILY_LOCKED, { retryAfterSeconds: 290 })),
     ).toBe('Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau 5 phút hoặc dùng "Quên mật khẩu".');

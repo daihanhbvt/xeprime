@@ -35,7 +35,7 @@ function renderLoginForm(onSuccess = jest.fn()) {
 }
 
 describe('LoginForm', () => {
-  it('khoá nút khi form chưa hợp lệ, mở ra khi đã đủ — không gọi API ở giữa', async () => {
+  it('khoá nút khi form chưa hợp lệ, mở ra khi đã đủ - không gọi API ở giữa', async () => {
     const login = jest.spyOn(authApi, 'loginWithPassword');
     const view = await renderLoginForm();
 
@@ -122,7 +122,7 @@ describe('LoginForm', () => {
     expect(view.queryByText(/Request to/)).toBeNull();
   });
 
-  it('sai mật khẩu: hiện câu theo MÃ lỗi — giống useErrorMessage của web (AuthPanel)', async () => {
+  it('sai mật khẩu: hiện câu theo MÃ lỗi - giống useErrorMessage của web (AuthPanel)', async () => {
     jest.spyOn(authApi, 'loginWithPassword').mockRejectedValue(
       new ApiClientError({
         code: API_ERROR_CODE.INVALID_CREDENTIALS,

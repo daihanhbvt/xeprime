@@ -183,7 +183,7 @@ describe('ConfirmedPlaceField', () => {
     expect(input.props.value).toBe('');
   });
 
-  it('"dùng đúng địa chỉ đã nhập" chốt chữ khách gõ, không toạ độ — rời ô không xoá nó (ADR 0061)', async () => {
+  it('"dùng đúng địa chỉ đã nhập" chốt chữ khách gõ, không toạ độ - rời ô không xoá nó (ADR 0061)', async () => {
     const view = await renderHarness({
       initial: { addressLine: '', latitude: 16.4, longitude: 107.5, placeId: 'old', locationSource: 'map_pin' },
     });
@@ -213,7 +213,7 @@ describe('ConfirmedPlaceField', () => {
     expect(view.queryByText('Chưa lấy được vị trí của địa điểm này. Hãy chọn lại.')).toBeNull();
   });
 
-  it('điền sẵn từ BÊN NGOÀI (bộ nhớ địa chỉ giao xe) được coi là đã xác nhận — không tự xoá ở lần rời ô đầu tiên', async () => {
+  it('điền sẵn từ BÊN NGOÀI (bộ nhớ địa chỉ giao xe) được coi là đã xác nhận - không tự xoá ở lần rời ô đầu tiên', async () => {
     const view = await renderHarness({
       initial: {
         addressLine: '12 Nguyễn Thái Học',
@@ -306,7 +306,7 @@ describe('ConfirmedPlaceField', () => {
     expect(stateOf(view)).toMatchObject({ latitude: null, placeId: null });
   });
 
-  it('không hỏi gợi ý cho chữ trùng địa chỉ đã xác nhận (except — ADR 0061 §3)', async () => {
+  it('không hỏi gợi ý cho chữ trùng địa chỉ đã xác nhận (except - ADR 0061 §3)', async () => {
     await renderHarness({
       initial: { addressLine: '12 Nguyễn Thái Học', latitude: 16.46, longitude: 107.59, locationSource: 'google_place' },
     });

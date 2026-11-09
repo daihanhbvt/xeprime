@@ -1,5 +1,6 @@
 'use client';
 
+import { InfoHint } from '@/components/data-display/InfoHint';
 import { Alert } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useId, useMemo, useSyncExternalStore } from 'react';
@@ -308,9 +309,8 @@ function PickupChecklist({
   return (
     <section id={anchorId} className={layout.card} aria-labelledby={titleId}>
       <h2 id={titleId} className={layout.cardTitle}>
-        {t('title')}
+        {t('title')} <InfoHint content={t('lead')} label={t('leadLabel')} />
       </h2>
-      <p className={layout.cardLead}>{t('lead')}</p>
       <ul className={styles.checklist}>
         {items.map((item) => (
           <li key={item.key}>

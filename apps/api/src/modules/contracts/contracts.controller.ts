@@ -26,7 +26,7 @@ export class ContractsController {
   @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
   @Post('bookings/:id/contract')
   @RequirePermissions(PERMISSION.CONTRACT_MANAGE)
-  @ApiOperation({ summary: 'Tạo (hoặc lấy) hợp đồng từ một đơn thuê — idempotent' })
+  @ApiOperation({ summary: 'Tạo (hoặc lấy) hợp đồng từ một đơn thuê - idempotent' })
   @ApiCreatedResponse({ type: ContractDto })
   create(
     @CurrentTenant() tenant: TenantContext,

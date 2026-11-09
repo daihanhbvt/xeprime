@@ -1,5 +1,5 @@
 /**
- * Mã LOẠI ĐỐI TƯỢNG của `audit_logs.target_type` — một danh sách cho api (ghi + tra tên), web
+ * Mã LOẠI ĐỐI TƯỢNG của `audit_logs.target_type` - một danh sách cho api (ghi + tra tên), web
  * (nhãn, lọc, link sâu) và test phủ nhãn. Mã là dữ liệu đối soát: thêm mã mới ở đây cùng lúc với
  * dòng `audit.record` đầu tiên ghi nó, và thêm nhãn ở `Domain.auditTargetType` (vi + en).
  *

@@ -12,7 +12,7 @@ import {
  * giao xe của chủ xe và màn duyệt xe của nền tảng.
  */
 describe('isFreeDeliveryFee', () => {
-  it('rỗng hoặc 0 là miễn phí — dạng số (form) lẫn chuỗi (API)', () => {
+  it('rỗng hoặc 0 là miễn phí - dạng số (form) lẫn chuỗi (API)', () => {
     for (const fee of [null, undefined, 0, '0', '0.00', '']) {
       expect(isFreeDeliveryFee(fee)).toBe(true);
     }
@@ -51,7 +51,7 @@ describe('deliveryTierRanges', () => {
   });
 });
 
-describe('deliveryTierFee — phí của một bậc ở một khoảng cách', () => {
+describe('deliveryTierFee - phí của một bậc ở một khoảng cách', () => {
   it('bậc trọn gói trả nguyên phí, không phụ thuộc khoảng cách', () => {
     expect(deliveryTierFee({ fee: '100000' }, 7.3)).toBe('100000');
     expect(deliveryTierFee({ fee: '0' }, 2)).toBe('0');
@@ -93,8 +93,8 @@ describe('deliverySummaryText', () => {
       },
       { money: (v) => `${v}đ`, free: 'Miễn phí', quote: 'Báo giá', perKm: (m) => `${m}/km` },
     );
-    expect(text).toContain('0–5 km: Miễn phí');
-    expect(text).toContain('>5–15 km: 10000đ/km');
+    expect(text).toContain('0-5 km: Miễn phí');
+    expect(text).toContain('>5-15 km: 10000đ/km');
     expect(text).toContain('>15 km: Báo giá');
   });
 });

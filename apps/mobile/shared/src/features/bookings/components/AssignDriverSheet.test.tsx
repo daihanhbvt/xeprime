@@ -69,7 +69,7 @@ function manyDrivers(): AssignableDriver[] {
 
 beforeEach(() => jest.restoreAllMocks());
 
-describe('AssignDriverSheet — cửa sổ hỏi', () => {
+describe('AssignDriverSheet - cửa sổ hỏi', () => {
   it('hỏi theo khung giờ CỦA ĐƠN và trừ chính đơn đó ra', async () => {
     const view = await renderSheet([driver()]);
 
@@ -83,7 +83,7 @@ describe('AssignDriverSheet — cửa sổ hỏi', () => {
   });
 });
 
-describe('AssignDriverSheet — người không khả dụng', () => {
+describe('AssignDriverSheet - người không khả dụng', () => {
   it('bận: VẪN hiện kèm lý do, nhưng không chọn được', async () => {
     const view = await renderSheet([driver({ busy: true })]);
 
@@ -106,7 +106,7 @@ describe('AssignDriverSheet — người không khả dụng', () => {
   });
 });
 
-describe('AssignDriverSheet — tìm trong danh sách', () => {
+describe('AssignDriverSheet - tìm trong danh sách', () => {
   it('ít tài xế: KHÔNG dựng ô tìm', async () => {
     const view = await renderSheet([driver()]);
 
@@ -124,7 +124,7 @@ describe('AssignDriverSheet — tìm trong danh sách', () => {
     expect(view.queryByText('Nguyễn Văn Tuấn')).toBeNull();
   });
 
-  it('lọc được theo SỐ ĐIỆN THOẠI — người trực nhớ số trước khi nhớ tên', async () => {
+  it('lọc được theo SỐ ĐIỆN THOẠI - người trực nhớ số trước khi nhớ tên', async () => {
     const view = await renderSheet(manyDrivers());
 
     await fireEvent.changeText(await view.findByLabelText('Tìm tài xế'), '0903');
@@ -143,7 +143,7 @@ describe('AssignDriverSheet — tìm trong danh sách', () => {
   });
 });
 
-describe('AssignDriverSheet — chỉ là nơi CHỌN người', () => {
+describe('AssignDriverSheet - chỉ là nơi CHỌN người', () => {
   /*
    * "Bỏ gán" sống ở hàng tài xế trên màn đơn, cạnh "Đổi" — đúng như web. Ở cả hai nơi thì cùng
    * một việc có hai lối, và lối nằm trong tấm chọn là lối không ai nghĩ tới khi muốn GỠ người.

@@ -385,7 +385,7 @@ export function BookingPriceSummary({
           ))}
         </dl>
         <p className={cx(styles.note, styles.unitNote)}>
-          {isWithDriver ? `${dl('routeType', routeType)} — ${hint}.` : `${hint}.`}{' '}
+          {isWithDriver ? `${dl('routeType', routeType)} - ${hint}.` : `${hint}.`}{' '}
           {t('price.finalNote')}
         </p>
       </section>

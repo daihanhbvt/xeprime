@@ -33,7 +33,7 @@ export class ShopPaymentSettingsController {
   @Get()
   @RequirePermissions(PERMISSION.SELLER_PROFILE_VIEW)
   @ApiOperation({
-    summary: 'Công tắc thu cọc của gian hàng — kèm lý do bật/tắt/khoá',
+    summary: 'Công tắc thu cọc của gian hàng - kèm lý do bật/tắt/khoá',
     description:
       'Tuyến hoa hồng trả `depositRequired = true`, `editable = false`: công tắc hiện ở trạng ' +
       'thái bật và khoá, không ẩn (ADR 0027 điều 4).',
@@ -50,7 +50,7 @@ export class ShopPaymentSettingsController {
     summary: 'Bật/tắt thu cọc qua XePrime (chỉ tuyến gói)',
     description:
       'Tuyến hoa hồng → 403 `DEPOSIT_ALWAYS_REQUIRED`. Gói thiếu `escrow_hold` → 403 ' +
-      '`FEATURE_NOT_IN_PLAN`. Đổi công tắc KHÔNG đụng đơn đã tạo — `deposit_collection_mode` ' +
+      '`FEATURE_NOT_IN_PLAN`. Đổi công tắc KHÔNG đụng đơn đã tạo - `deposit_collection_mode` ' +
       'đóng băng lúc tạo đơn (ADR 0025 ràng buộc 4).',
   })
   @ApiOkResponse({ type: PaymentSettingsDto })

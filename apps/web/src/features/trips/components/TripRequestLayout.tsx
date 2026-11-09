@@ -22,6 +22,7 @@ import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import { useListingDetail } from '@/features/marketplace/hooks/use-listing-detail';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { cx } from '@/lib/cx';
+import { staggerFastClass } from '@/components/motion/motion-classes';
 import { hasHoldStage } from '@/lib/customer-price-view';
 import { tripEstimateBreakdown, tripToBookingTrip } from '../booking-trip-view';
 import type { CustomerTripDetail } from '../types';
@@ -216,12 +217,12 @@ export function TripColumns({
       {header}
       <div className={styles.columns}>
         <div className={styles.main}>
-          {lead ? <div className={cx(styles.group, styles.lead)}>{lead}</div> : null}
-          <div className={cx(styles.group, styles.body)}>{main}</div>
+          {lead ? <div className={cx(styles.group, styles.lead, staggerFastClass)}>{lead}</div> : null}
+          <div className={cx(styles.group, styles.body, staggerFastClass)}>{main}</div>
         </div>
         <div className={styles.aside}>
-          {priority ? <div className={cx(styles.group, styles.priority)}>{priority}</div> : null}
-          <div className={cx(styles.group, styles.asideBody)}>{aside}</div>
+          {priority ? <div className={cx(styles.group, styles.priority, staggerFastClass)}>{priority}</div> : null}
+          <div className={cx(styles.group, styles.asideBody, staggerFastClass)}>{aside}</div>
         </div>
       </div>
     </div>
@@ -293,7 +294,7 @@ export function TripRequestRenterCard({ trip }: { trip: CustomerTripDetail }) {
     <BookingRenterCard renter={me} contact={trip.contact ?? null} headingLevel={2}>
       <div className={styles.noteField}>
         <span className={styles.noteLabel}>{t('noteLabel')}</span>
-        <p className={styles.noteValue}>{trip.customerNote?.trim() || '—'}</p>
+        <p className={styles.noteValue}>{trip.customerNote?.trim() || '-'}</p>
       </div>
     </BookingRenterCard>
   );

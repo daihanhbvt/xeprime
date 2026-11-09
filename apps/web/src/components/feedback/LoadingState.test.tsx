@@ -5,7 +5,7 @@ import { LoadingState } from './LoadingState';
 
 afterEach(cleanup);
 
-describe('LoadingState — chọn hình thức chờ theo cái đang tải', () => {
+describe('LoadingState - chọn hình thức chờ theo cái đang tải', () => {
   it('page: spinner cho bố cục chưa biết trước (Figma 134:2011 R2)', () => {
     const { container } = render(<LoadingState variant="page" />);
 
@@ -47,7 +47,7 @@ describe('LoadingState — chọn hình thức chờ theo cái đang tải', () 
   });
 });
 
-describe('LoadingState — khả truy cập', () => {
+describe('LoadingState - khả truy cập', () => {
   it('có role="status" và aria-busy để trình đọc màn hình biết đang chờ', () => {
     render(<LoadingState variant="table" />);
 
@@ -77,7 +77,7 @@ describe('LoadingState — khả truy cập', () => {
   });
 });
 
-describe('LoadingState — không co sập bố cục', () => {
+describe('LoadingState - không co sập bố cục', () => {
   it('mọi biến thể đều render một khối bao, không trả về null', () => {
     for (const variant of ['page', 'table', 'cards', 'inline'] as const) {
       cleanup();

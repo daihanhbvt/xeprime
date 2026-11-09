@@ -101,16 +101,16 @@ describe('WalletMonthSummary', () => {
     expect(screen.getByText('Thu nhập chủ gian hàng')).toBeTruthy();
   });
 
-  it('kỳ có hoa hồng ⇒ dòng tổng phí dịch vụ – chủ xe, hiện như khoản TRỪ', () => {
+  it('kỳ có hoa hồng ⇒ dòng tổng phí dịch vụ - chủ xe, hiện như khoản TRỪ', () => {
     query.data = statement({ ownerCommissionTotal: '140000' });
     render();
-    expect(screen.getByText('Tổng phí dịch vụ – Chủ xe')).toBeTruthy();
+    expect(screen.getByText('Tổng phí dịch vụ - Chủ xe')).toBeTruthy();
     expect(screen.getAllByText(/^−140\.000\s*₫$/).length).toBe(1);
   });
 
   it('kỳ không có hoa hồng ⇒ không có dòng 0đ', () => {
     render();
-    expect(screen.queryByText('Tổng phí dịch vụ – Chủ xe')).toBeNull();
+    expect(screen.queryByText('Tổng phí dịch vụ - Chủ xe')).toBeNull();
   });
 
   it('kỳ có phí giao xe ⇒ dòng riêng kèm ghi chú; không có ⇒ giấu', () => {

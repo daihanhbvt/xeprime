@@ -44,10 +44,10 @@ interface Copy {
 
 const COPY: Readonly<Record<AppLocale, Copy>> = {
   vi: {
-    subject: 'Chào mừng bạn đến với XePrime — đăng chiếc xe đầu tiên',
+    subject: 'Chào mừng bạn đến với XePrime - đăng chiếc xe đầu tiên',
     greeting: (name) => `Chào ${name},`,
     lead: (shop) =>
-      `Cảm ơn bạn đã đăng ký chủ xe <strong>${shop}</strong> trên XePrime. Tài khoản đã sẵn sàng — bạn có thể đăng xe và nhận khách ngay.`,
+      `Cảm ơn bạn đã đăng ký chủ xe <strong>${shop}</strong> trên XePrime. Tài khoản đã sẵn sàng - bạn có thể đăng xe và nhận khách ngay.`,
     stepsTitle: 'Bắt đầu trong ba bước',
     steps: [
       'Đăng chiếc xe đầu tiên: ảnh, giá thuê, khu vực giao xe.',
@@ -55,11 +55,11 @@ const COPY: Readonly<Record<AppLocale, Copy>> = {
       'Nhận yêu cầu đặt xe, duyệt và giao xe cho khách.',
     ],
     fee: (freeTrips, percent) =>
-      `${freeTrips} chuyến đầu tiên không tính phí dịch vụ – chủ xe. Từ chuyến tiếp theo, XePrime thu phí dịch vụ – chủ xe${percent ? ` ${percent}` : ''} trên mỗi chuyến hoàn thành — không có phí thuê bao.`,
+      `${freeTrips} chuyến đầu tiên không tính phí dịch vụ - chủ xe. Từ chuyến tiếp theo, XePrime thu phí dịch vụ - chủ xe${percent ? ` ${percent}` : ''} trên mỗi chuyến hoàn thành - không có phí thuê bao.`,
     cta: 'Đăng xe ngay',
     planTitle: 'Có nhiều xe? Nâng lên gói gian hàng',
     planBody: (p) =>
-      `Gói gian hàng tính phí dịch vụ – chủ xe${p ? ` ${p}` : ''} mỗi chuyến thay cho mức theo chuyến của tuyến hoa hồng, kèm bộ quản lý đầy đủ: lịch xe, đơn thuê, thu chi, nhân viên. Chọn gói và thanh toán trên website đối tác — gói tự kích hoạt khi tiền về.`,
+      `Gói gian hàng tính phí dịch vụ - chủ xe${p ? ` ${p}` : ''} mỗi chuyến thay cho mức theo chuyến của tuyến hoa hồng, kèm bộ quản lý đầy đủ: lịch xe, đơn thuê, thu chi, nhân viên. Chọn gói và thanh toán trên website đối tác - gói tự kích hoạt khi tiền về.`,
     planCta: 'Xem các gói',
     help: (hotline) =>
       `Cần hỗ trợ? Gửi yêu cầu ở trang hỗ trợ${hotline ? ` hoặc gọi ${hotline}` : ''}.`,
@@ -67,10 +67,10 @@ const COPY: Readonly<Record<AppLocale, Copy>> = {
     intlLocale: 'vi-VN',
   },
   en: {
-    subject: 'Welcome to XePrime — list your first vehicle',
+    subject: 'Welcome to XePrime - list your first vehicle',
     greeting: (name) => `Hi ${name},`,
     lead: (shop) =>
-      `Thank you for registering <strong>${shop}</strong> as a vehicle owner on XePrime. Your account is ready — you can list vehicles and take bookings right away.`,
+      `Thank you for registering <strong>${shop}</strong> as a vehicle owner on XePrime. Your account is ready - you can list vehicles and take bookings right away.`,
     stepsTitle: 'Get started in three steps',
     steps: [
       'List your first vehicle: photos, rental price, delivery area.',
@@ -78,11 +78,11 @@ const COPY: Readonly<Record<AppLocale, Copy>> = {
       'Receive booking requests, approve them and hand over the vehicle.',
     ],
     fee: (freeTrips, percent) =>
-      `Your first ${freeTrips} trips carry no owner service fee. After that, XePrime charges a${percent ? ` ${percent}` : ''} owner service fee on each completed trip — no subscription fee.`,
+      `Your first ${freeTrips} trips carry no owner service fee. After that, XePrime charges a${percent ? ` ${percent}` : ''} owner service fee on each completed trip - no subscription fee.`,
     cta: 'List a vehicle',
     planTitle: 'Have more vehicles? Upgrade to a shop plan',
     planBody: (p) =>
-      `A shop plan charges${p ? ` ${p}` : ''} owner service fee per trip instead of the commission-track rate, with the full management suite: vehicle calendar, bookings, finances, staff. Pick and pay for a plan on the partner website — it activates as soon as the payment arrives.`,
+      `A shop plan charges${p ? ` ${p}` : ''} owner service fee per trip instead of the commission-track rate, with the full management suite: vehicle calendar, bookings, finances, staff. Pick and pay for a plan on the partner website - it activates as soon as the payment arrives.`,
     planCta: 'See plans',
     help: (hotline) => `Need help? Send a request on the support page${hotline ? ` or call ${hotline}` : ''}.`,
     friend: 'there',

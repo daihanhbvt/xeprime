@@ -101,7 +101,7 @@ export function VehicleApprovalTable({
       title: t('submittedBy'),
       key: 'submittedBy',
       width: 160,
-      render: (_, row) => <span className={styles.clamp}>{row.submittedByName ?? '—'}</span>,
+      render: (_, row) => <span className={styles.clamp}>{row.submittedByName ?? '-'}</span>,
     },
     {
       title: t('submittedAt'),

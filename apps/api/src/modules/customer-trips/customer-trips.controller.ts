@@ -80,7 +80,7 @@ export class CustomerTripsController {
   @ApiOperation({
     summary: 'Chi tiết một chuyến của tôi',
     description:
-      'Nhận id YÊU CẦU thuê hoặc id ĐƠN thuê — thông báo trỏ vào cả hai loại. Không phải chuyến ' +
+      'Nhận id YÊU CẦU thuê hoặc id ĐƠN thuê - thông báo trỏ vào cả hai loại. Không phải chuyến ' +
       'của mình thì trả 404 (không tiết lộ id có tồn tại hay không).',
   })
   @ApiOkResponse({ type: CustomerTripDetailDto })
@@ -121,7 +121,7 @@ export class CustomerTripsController {
     description:
       'Chỉ biên bản ĐÃ XÁC NHẬN (nháp / chờ xác nhận / đã huỷ không bao giờ ra tới đây). Trả ' +
       'tối đa hai bản theo thứ tự giao xe → nhận lại; chuyến chưa được duyệt thì mảng rỗng. ' +
-      'Ảnh mở qua endpoint download theo GÓC CHỤP — không có `fileId` nào trong payload này.',
+      'Ảnh mở qua endpoint download theo GÓC CHỤP - không có `fileId` nào trong payload này.',
   })
   @ApiOkResponse({ type: CustomerTripHandoverEvidenceDto, isArray: true })
   handoverEvidence(
@@ -140,7 +140,7 @@ export class CustomerTripsController {
   @ApiOperation({
     summary: 'Phát signed URL ngắn hạn xem một ảnh hiện trạng của chuyến mình',
     description:
-      'Khoá là (chuyến của tôi, chiều bàn giao, góc chụp) — không phải id file, nên không có ' +
+      'Khoá là (chuyến của tôi, chiều bàn giao, góc chụp) - không phải id file, nên không có ' +
       'định danh nào cầm đi thử ở chuyến khác được.',
   })
   @ApiOkResponse({ type: SourceContractDownloadDto })
@@ -184,7 +184,7 @@ export class CustomerTripsController {
     summary: 'Khách tự huỷ chuyến của mình',
     description:
       'Huỷ được khi yêu cầu còn chờ gian hàng trả lời, hoặc khi đơn đã duyệt nhưng CHƯA giao ' +
-      'xe. Đã giao xe rồi thì 409 `TRIP_CANCEL_NOT_ALLOWED` — việc cần làm lúc đó là liên hệ ' +
+      'xe. Đã giao xe rồi thì 409 `TRIP_CANCEL_NOT_ALLOWED` - việc cần làm lúc đó là liên hệ ' +
       'chủ xe. Trả về chính chuyến đó sau khi huỷ để giao diện không phải gọi thêm một lượt.',
   })
   @ApiOkResponse({ type: CustomerTripDetailDto })
@@ -209,7 +209,7 @@ export class CustomerTripsController {
   @Realms(ACCOUNT_REALM.CUSTOMER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Khách báo chưa nhận được xe — mở tranh chấp khẩn, tạm giữ tiền của chuyến',
+    summary: 'Khách báo chưa nhận được xe - mở tranh chấp khẩn, tạm giữ tiền của chuyến',
     description:
       'Mở được trong `[pickupAt, pickupAt + 120′]` khi đơn `reserved` hoặc `active`. Mở MỘT case ' +
       '`dispute` mức `urgent` gắn đơn (vào hàng đợi hỗ trợ của nền tảng, báo gian hàng); tranh chấp ' +
@@ -233,7 +233,7 @@ export class CustomerTripsController {
   @Realms(ACCOUNT_REALM.CUSTOMER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Khách xác nhận đã nhận xe — đơn chuyển sang đang thuê',
+    summary: 'Khách xác nhận đã nhận xe - đơn chuyển sang đang thuê',
     description:
       'Được khi đơn `reserved`, chuyến tự lái/dài hạn, chưa có biên bản giao xe đã xác nhận và đã ' +
       'tới `pickupAt − CUSTOMER_PICKUP_CONFIRM_LEAD_MINUTES`. Lập biên bản giao xe nguồn `customer` ' +
@@ -259,7 +259,7 @@ export class CustomerTripsController {
   @Realms(ACCOUNT_REALM.CUSTOMER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Khách báo đã trả xe — chủ xe xác nhận trong hạn, quá hạn tự hoàn thành',
+    summary: 'Khách báo đã trả xe - chủ xe xác nhận trong hạn, quá hạn tự hoàn thành',
     description:
       'Được khi đơn `active`, chuyến tự lái/dài hạn, chưa có biên bản trả xe và chưa báo lần nào. ' +
       'Ghi `customerReturnedAt` + `returnAutoCompleteAt` (server tính), báo gian hàng. Lỗi: 409 ' +
@@ -279,7 +279,7 @@ export class CustomerTripsController {
     summary: 'Khách khai tài khoản nhận hoàn khoản giữ chỗ',
     description:
       'Bắt buộc trước khi admin chuyển được: `markRefundPaid` từ chối một lệnh chuyển không ' +
-      'có đích. Chọn một tài khoản đã lưu bằng `bankAccountId`, hoặc khai ba ô — khai mới thì ' +
+      'có đích. Chọn một tài khoản đã lưu bằng `bankAccountId`, hoặc khai ba ô - khai mới thì ' +
       'tài khoản được LƯU LẠI để lần sau không phải gõ. Trả về chính chuyến đó sau khi khai.',
   })
   @ApiOkResponse({ type: CustomerTripDetailDto })

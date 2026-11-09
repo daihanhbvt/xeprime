@@ -66,7 +66,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('AuthPanel — bấm nút mạng xã hội', () => {
+describe('AuthPanel - bấm nút mạng xã hội', () => {
   it('rời trang sang backend với `next` đã bỏ tham số điều khiển hộp đăng nhập', async () => {
     window.history.replaceState(null, '', '/xe/01HZX9?auth=login&from=home');
     renderModal('auth=login&from=home');
@@ -126,7 +126,7 @@ function pageShow(persisted: boolean): Event {
   return event;
 }
 
-describe('AuthPanel — lỗi mang về từ ?authError=', () => {
+describe('AuthPanel - lỗi mang về từ ?authError=', () => {
   it('hiện câu đã dịch, không phải mã thô', async () => {
     renderModal('auth=login&authError=SOCIAL_CANCELLED');
 

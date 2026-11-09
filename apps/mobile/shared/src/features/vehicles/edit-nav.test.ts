@@ -15,7 +15,7 @@ const shape = (groups: ReturnType<typeof vehicleEditNavGroups>) =>
   groups.map((g) => [g.key, g.items.map((i) => i.tab)]);
 
 /** Web `vehicle-edit-nav.ts` → `editNavGroups`: sáu nhóm, đúng thứ tự, đúng nhãn. */
-describe('vehicleEditNavGroups — menu sửa xe như web', () => {
+describe('vehicleEditNavGroups - menu sửa xe như web', () => {
   it('đủ năng lực: bảy nhóm, mười một mục, đúng thứ tự', () => {
     const groups = vehicleEditNavGroups({ enabled: () => true, services: ALL_SERVICES });
     expect(shape(groups)).toEqual([
@@ -109,7 +109,7 @@ describe('vehicleEditNavGroups — menu sửa xe như web', () => {
   });
 });
 
-describe('VEHICLE_EDIT_TAB — bí danh như web resolveEditTab', () => {
+describe('VEHICLE_EDIT_TAB - bí danh như web resolveEditTab', () => {
   it('giá trị chuỗi khớp web', () => {
     expect(VEHICLE_EDIT_TAB).toMatchObject({
       HANDOVER_TIME: 'handover-time',
@@ -138,12 +138,12 @@ describe('VEHICLE_EDIT_TAB — bí danh như web resolveEditTab', () => {
 
 /*
  * Ở app Customer mọi đích `/manage` đổ về handoff, nên phép so dạng đường dẫn chỉ có nghĩa ở app
- * Partner — đọc qua builder chứ không viết chuỗi literal.
+ * Partner - đọc qua builder chứ không viết chuỗi literal.
  */
 const describePartnerOnly =
   APP_PROFILE.clientApp === MOBILE_CLIENT_APP.PARTNER ? describe : describe.skip;
 
-describePartnerOnly('ROUTES.manage.vehicleEditTab — mục và bí danh', () => {
+describePartnerOnly('ROUTES.manage.vehicleEditTab - mục và bí danh', () => {
   const ID = '01JQZX0000000000000000000V';
   it('bí danh đi thẳng tới mục thật', () => {
     expect(ROUTES.manage.vehicleEditTab(ID, VEHICLE_EDIT_TAB.OPERATIONS)).toEqual(

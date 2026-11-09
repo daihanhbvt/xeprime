@@ -206,7 +206,7 @@ export class VehicleDocumentsService {
     if (dto.expectedRowVersion == null) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Thiếu expectedRowVersion — cần cho phát hiện sửa đè',
+        message: 'Thiếu expectedRowVersion - cần cho phát hiện sửa đè',
       });
     }
     const expectedRowVersion = dto.expectedRowVersion;
@@ -218,7 +218,7 @@ export class VehicleDocumentsService {
     if (current.type !== dto.type) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Không đổi được loại giấy tờ — tạo bản ghi mới cho loại khác',
+        message: 'Không đổi được loại giấy tờ - tạo bản ghi mới cho loại khác',
       });
     }
 
@@ -236,7 +236,7 @@ export class VehicleDocumentsService {
       if (result.count === 0) {
         throw new ConflictException({
           code: API_ERROR_CODE.CONFLICT,
-          message: 'Giấy tờ vừa được người khác cập nhật — tải lại rồi sửa tiếp',
+          message: 'Giấy tờ vừa được người khác cập nhật - tải lại rồi sửa tiếp',
         });
       }
 
@@ -411,7 +411,7 @@ export class VehicleDocumentsService {
       if (isUniqueViolation(err)) {
         throw new ConflictException({
           code: API_ERROR_CODE.CONFLICT,
-          message: 'Một lượt gắn file khác vừa hoàn tất trên giấy tờ này — tải lại rồi thử lại',
+          message: 'Một lượt gắn file khác vừa hoàn tất trên giấy tờ này - tải lại rồi thử lại',
         });
       }
       throw err;
@@ -457,7 +457,7 @@ export class VehicleDocumentsService {
     if (!this.ocr.enabled) {
       throw new ServiceUnavailableException({
         code: API_ERROR_CODE.OCR_NOT_CONFIGURED,
-        message: 'Trích xuất tự động chưa khả dụng — vui lòng nhập thông tin thủ công',
+        message: 'Trích xuất tự động chưa khả dụng - vui lòng nhập thông tin thủ công',
       });
     }
     if (!document.activeVersionId) {
@@ -900,7 +900,7 @@ function docNotFound(): NotFoundException {
 function docTypeConflict(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.CONFLICT,
-    message: 'Xe đã có giấy tờ loại này — hãy cập nhật hoặc thay file bản hiện có',
+    message: 'Xe đã có giấy tờ loại này - hãy cập nhật hoặc thay file bản hiện có',
   });
 }
 
@@ -916,6 +916,6 @@ function ocrStaleConflict(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.CONFLICT,
     message:
-      'Kết quả OCR này đã được đối soát hoặc không còn hiệu lực — tải lại rồi chạy lại nếu cần',
+      'Kết quả OCR này đã được đối soát hoặc không còn hiệu lực - tải lại rồi chạy lại nếu cần',
   });
 }

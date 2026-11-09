@@ -10,7 +10,7 @@ import { getErrorMessage } from '@/services/api-client';
 import { presignShopMedia, uploadImage, validateImageFile } from '@/services/upload';
 
 /**
- * Nút "Đổi logo" / "Đổi ảnh bìa" của thẻ Thông tin hiển thị — chọn ảnh, tải thẳng lên R2 (cùng
+ * Nút "Đổi logo" / "Đổi ảnh bìa" của thẻ Thông tin hiển thị - chọn ảnh, tải thẳng lên R2 (cùng
  * đường `presignShopMedia` của ô ảnh cũ), rồi trao URL cho nơi gọi. Ảnh CHƯA lưu vào hồ sơ: thẻ
  * hiện bản xem trước, cặp "Hủy · Lưu thay đổi" quyết định (design 06/11/2026).
  */
@@ -21,7 +21,7 @@ export function ShopMediaButton({
   disabled,
   onUploaded,
 }: {
-  /** `SHOP_LOGO_TRIGGER_ID` cho nút logo — dải chào mừng và lỗi thiếu logo nhắm vào nó. */
+  /** `SHOP_LOGO_TRIGGER_ID` cho nút logo - dải chào mừng và lỗi thiếu logo nhắm vào nó. */
   id?: string;
   icon: ReactNode;
   label: string;
@@ -44,7 +44,7 @@ export function ShopMediaButton({
       .then(onUploaded)
       .catch((err: unknown) => message.error(getErrorMessage(err)))
       .finally(() => setProgress(null));
-    // Chặn upload mặc định của AntD — mình tự PUT lên R2.
+    // Chặn upload mặc định của AntD - mình tự PUT lên R2.
     return false;
   }
 

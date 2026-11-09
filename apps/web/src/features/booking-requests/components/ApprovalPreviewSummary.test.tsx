@@ -57,7 +57,7 @@ afterEach(cleanup);
 describe('ApprovalPreviewSummary', () => {
   it('thu tiền giữ chỗ: bảng cộng ví, khoản trừ có dấu trừ, thuế 0 bị ẩn, hai cửa sổ', () => {
     renderWithIntl(<ApprovalPreviewSummary preview={PREVIEW} />);
-    expect(screen.getByText('Phí dịch vụ – Chủ xe')).toBeTruthy();
+    expect(screen.getByText('Phí dịch vụ - Chủ xe')).toBeTruthy();
     expect(screen.getByText(/^−200\.000\s*₫$/)).toBeTruthy();
     expect(screen.queryByText(/^Thuế khấu trừ/)).toBeNull();
     expect(screen.getByText('Thu nhập chủ xe (a)')).toBeTruthy();

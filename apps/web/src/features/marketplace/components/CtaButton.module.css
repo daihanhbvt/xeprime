@@ -15,8 +15,14 @@
     filter 0.15s ease,
     background-color 0.15s ease,
     border-color 0.15s ease,
-    color 0.15s ease;
+    color 0.15s ease,
+    transform var(--xp-motion-duration-press) var(--xp-motion-ease-out);
   white-space: nowrap;
+}
+
+/* Nhấn: lún nhẹ (chỉ transform — không đẩy bố cục). */
+.button:active:not(:disabled) {
+  transform: scale(var(--xp-motion-scale-press));
 }
 
 .button:focus-visible {
@@ -67,6 +73,38 @@
 
 .gradient:active {
   filter: brightness(0.92);
+}
+
+/*
+ * Vệt sáng quét chéo qua nút chính khi rê chuột (≈ "shine button" của 21st.dev). Lớp giả nằm trên
+ * nền, dưới chữ nhờ isolation; chỉ animate transform.
+ */
+.gradient {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.gradient::after {
+  position: absolute;
+  z-index: -1;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 70%
+  );
+  content: '';
+  inset: 0;
+  pointer-events: none;
+  transform: translateX(-120%);
+}
+
+@media (hover: hover) {
+  .gradient:hover:not(:disabled)::after {
+    transform: translateX(120%);
+    transition: transform var(--xp-motion-duration-shine) var(--xp-motion-ease-out);
+  }
 }
 
 /* ─── Nút xám: nền trắng, viền xám, chữ xám đậm (đăng nhập Google/Facebook) ── */
@@ -184,6 +222,14 @@
 @media (prefers-reduced-motion: reduce) {
   .button {
     transition: none;
+  }
+
+  .button:active:not(:disabled) {
+    transform: none;
+  }
+
+  .gradient::after {
+    display: none;
   }
 
   .spinner {

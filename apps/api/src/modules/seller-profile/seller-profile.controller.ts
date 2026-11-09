@@ -49,7 +49,7 @@ export class SellerProfileController {
   @Post('submit')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.SELLER_PROFILE_MANAGE)
-  @ApiOperation({ summary: 'Gửi xác minh — vào hàng đợi duyệt của nền tảng' })
+  @ApiOperation({ summary: 'Gửi xác minh - vào hàng đợi duyệt của nền tảng' })
   @ApiOkResponse({ type: SellerProfileDto })
   submit(
     @CurrentTenant() tenant: TenantContext,

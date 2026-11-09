@@ -216,7 +216,7 @@ describe('publicationEditTab', () => {
   });
 });
 
-describe('todoLeadAlert — nút "Xử lý ngay" (web TodoCard 02/10/2026)', () => {
+describe('todoLeadAlert - nút "Xử lý ngay" (web TodoCard 02/10/2026)', () => {
   const critical = { kind: 'a', severity: VEHICLE_ALERT_SEVERITY.CRITICAL, target: '/x' };
   const info = { kind: 'b', severity: VEHICLE_ALERT_SEVERITY.INFO, target: '/y' };
 

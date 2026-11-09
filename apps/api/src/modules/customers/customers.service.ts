@@ -737,7 +737,7 @@ export class CustomersService {
     if (!id) {
       throw new ConflictException({
         code: API_ERROR_CODE.CONFLICT,
-        message: 'Không gắn được hồ sơ khách cho giao dịch này — thử lại',
+        message: 'Không gắn được hồ sơ khách cho giao dịch này - thử lại',
       });
     }
 
@@ -816,7 +816,7 @@ export class CustomersService {
     if (archivedAt) {
       throw new ConflictException({
         code: API_ERROR_CODE.CUSTOMER_ARCHIVED,
-        message: 'Hồ sơ khách đang lưu trữ — khôi phục trước khi chỉnh sửa',
+        message: 'Hồ sơ khách đang lưu trữ - khôi phục trước khi chỉnh sửa',
       });
     }
   }
@@ -1366,7 +1366,7 @@ function blockedCustomer(mode: 'internal' | 'public'): ConflictException {
     ? new ConflictException({
         code: API_ERROR_CODE.CUSTOMER_BLOCKED,
         message:
-          'Khách đang bị đánh dấu từ chối phục vụ — chủ hoặc quản lý gian hàng cần đổi mức rủi ro trước',
+          'Khách đang bị đánh dấu từ chối phục vụ - chủ hoặc quản lý gian hàng cần đổi mức rủi ro trước',
       })
     : new ConflictException({
         code: API_ERROR_CODE.SHOP_NOT_ACCEPTING_CUSTOMER,

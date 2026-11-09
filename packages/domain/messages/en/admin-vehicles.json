@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "All vehicles",
-    "subtitle": "Every vehicle from shops and individual owners — check marketplace status, hide violations.",
+    "subtitle": "Every vehicle from shops and individual owners - check marketplace status, hide violations.",
     "loading": "Loading platform vehicles…"
   },
   "views": {
@@ -112,7 +112,7 @@
     "ownerVisibilityOn": "On",
     "ownerVisibilityOff": "Off",
     "ownerVisibilityHintLabel": "Why XePrime cannot change this",
-    "ownerVisibilityHint": "This is the owner's own choice. XePrime can only read it — unhiding does not turn this switch back on.",
+    "ownerVisibilityHint": "This is the owner's own choice. XePrime can only read it - unhiding does not turn this switch back on.",
     "shopStatus": "Shop",
     "effective": "Marketplace result",
     "effectiveVisible": "Live",

@@ -97,7 +97,7 @@ function renderCard() {
   );
 }
 
-describe('SettlementCard — trạng thái cọc', () => {
+describe('SettlementCard - trạng thái cọc', () => {
   it('đang thuê + đã thu cọc: `Đã nhận cọc`, không phải `Không có cọc`', () => {
     renderCard();
     expect(screen.getByText('Đã nhận cọc')).toBeTruthy();
@@ -161,7 +161,7 @@ describe('SettlementCard — trạng thái cọc', () => {
  * Điều được khoá ở đây: thẻ không được tự dựng một con số nào, và không được biến một chuyến
  * thiếu dữ liệu thành một chuyến "chạy trong hạn mức".
  */
-describe('SettlementCard — vượt hạn mức km', () => {
+describe('SettlementCard - vượt hạn mức km', () => {
   it('xe không đặt hạn mức: không có khối quãng đường nào', () => {
     renderCard();
     expect(screen.queryByText('Quãng đường đã chạy')).toBeNull();

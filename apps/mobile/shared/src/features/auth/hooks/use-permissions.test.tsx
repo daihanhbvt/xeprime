@@ -61,7 +61,7 @@ describe('usePermissions', () => {
     expect(result.current.hasAny(PERMISSION.VEHICLE_DELETE)).toBe(false);
   });
 
-  it('chưa đăng nhập (401) thì không có quyền nào — mặc định là ĐÓNG', async () => {
+  it('chưa đăng nhập (401) thì không có quyền nào - mặc định là ĐÓNG', async () => {
     jest.spyOn(authApi, 'fetchCurrentUser').mockRejectedValue(new Error('401'));
     const { result } = await renderHook(() => usePermissions(), { wrapper });
 

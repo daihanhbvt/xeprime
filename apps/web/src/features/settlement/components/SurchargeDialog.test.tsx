@@ -107,7 +107,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('SurchargeDialog — đề xuất phí vượt km', () => {
+describe('SurchargeDialog - đề xuất phí vượt km', () => {
   it('mở hộp thoại KHÔNG tạo khoản nào, kể cả khi đã có đề xuất', () => {
     renderDialog({ ...BASE, excessMileage: EXCEEDED });
     expect(add.mutate).not.toHaveBeenCalled();
@@ -135,7 +135,7 @@ describe('SurchargeDialog — đề xuất phí vượt km', () => {
     expect(screen.getByText('400 km')).toBeTruthy();
   });
 
-  it('chủ xe sửa số tiền và lý do trước khi xác nhận — số gửi đi là số họ gõ', () => {
+  it('chủ xe sửa số tiền và lý do trước khi xác nhận - số gửi đi là số họ gõ', () => {
     renderDialog({ ...BASE, excessMileage: EXCEEDED });
     chooseCategory('Vượt số km cho phép');
 

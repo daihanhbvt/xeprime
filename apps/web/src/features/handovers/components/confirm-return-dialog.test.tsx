@@ -318,7 +318,7 @@ describe('ConfirmReturnDialog', () => {
     ]);
   });
 
-  it('trả trễ: gợi ý phí quá giờ của server — bấm Thêm là một dòng kèm lý do', async () => {
+  it('trả trễ: gợi ý phí quá giờ của server - bấm Thêm là một dòng kèm lý do', async () => {
     state.preview = preview({
       overtime: {
         available: true,

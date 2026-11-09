@@ -37,7 +37,7 @@ async function renderSheet(overrides: Partial<BookingRequestDecisionTarget> = {}
   );
 }
 
-describe('ApproveSuccessSheet — chuyến CÓ thu tiền giữ chỗ (chưa có đơn)', () => {
+describe('ApproveSuccessSheet - chuyến CÓ thu tiền giữ chỗ (chưa có đơn)', () => {
   it('nói đã NHẬN chuyến và đang chờ khách thanh toán, không phải "đã tạo đơn thuê"', async () => {
     const view = await renderSheet({ bookingId: null });
 
@@ -60,7 +60,7 @@ describe('ApproveSuccessSheet — chuyến CÓ thu tiền giữ chỗ (chưa có
   });
 });
 
-describe('ApproveSuccessSheet — chuyến KHÔNG thu (đơn ra đời ngay lúc duyệt)', () => {
+describe('ApproveSuccessSheet - chuyến KHÔNG thu (đơn ra đời ngay lúc duyệt)', () => {
   it('nói đã tạo đơn và mở được đơn đó', async () => {
     const view = await renderSheet({ bookingId: '01JQZX0000000000000000000B' });
 

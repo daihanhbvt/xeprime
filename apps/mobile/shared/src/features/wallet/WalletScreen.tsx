@@ -10,7 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Chip } from '@/components/ui/Chip';
 import { IconButton } from '@/components/ui/IconButton';
-import { Reveal } from '@/components/motion/Reveal';
+import { ScrollReveal } from '@/components/motion/ScrollReveal';
 import { BANK_ACCOUNT_SCOPE } from '@/api/bank-accounts/api';
 import { PayoutNotes } from '@/features/account-payments/components/PayoutNotes';
 import { BankAccountList } from '@/features/bank-accounts/components/BankAccountList';
@@ -29,28 +29,28 @@ import { WalletSummaryCard } from './components/WalletSummaryCard';
 import { WithdrawSheet } from './components/WithdrawSheet';
 import { useWalletSummary } from './hooks/use-wallet';
 
-/** Kỳ mặc định của bảng tổng hợp: tháng đang chạy, theo giờ Việt Nam — đúng như web. */
+/** Kỳ mặc định của bảng tổng hợp: tháng đang chạy, theo giờ Việt Nam - đúng như web. */
 const STATEMENT_PERIOD_FORMAT = 'YYYY-MM';
 
 /**
- * Ví điểm — bản native của `WalletView`. Dùng chung khu cá nhân và khu gian hàng, khác nhau đúng ở
+ * Ví điểm - bản native của `WalletView`. Dùng chung khu cá nhân và khu gian hàng, khác nhau đúng ở
  * `scope` (ADR 0023 điều 7: một bộ cho cả hai phía).
  *
  * Ba khối theo đúng thứ tự câu hỏi: *tôi có bao nhiêu* → *tiền đang đi tới đâu* → *nó đến từ đâu*.
  * Sổ phân trang ở SERVER: một chủ xe chạy vài trăm chuyến một năm có sổ dài hàng nghìn dòng, và
  * cuộn vô hạn ở đây là bắt người ta cuộn mãi để tìm một dòng họ biết là nằm ở tháng nào.
  *
- * ADR 0033: đây là SỔ CÔNG NỢ XePrime phải trả, KHÔNG phải ví điện tử — không nạp, không chuyển
+ * ADR 0033: đây là SỔ CÔNG NỢ XePrime phải trả, KHÔNG phải ví điện tử - không nạp, không chuyển
  * ngang, không thanh toán nội bộ. Ba thao tác duy nhất: xem, rút, huỷ lệnh rút.
  */
 /**
- * VỎ của màn — tách khỏi `scope`. Khu quản lý của XePrime Partner có thanh quản lý (`ManageHeader`,
- * cần `ManageDrawerHost`); khu TÀI KHOẢN của app XePrime (`/account/balance`) không có drawer —
+ * VỎ của màn - tách khỏi `scope`. Khu quản lý của XePrime Partner có thanh quản lý (`ManageHeader`,
+ * cần `ManageDrawerHost`); khu TÀI KHOẢN của app XePrime (`/account/balance`) không có drawer -
  * dựng `ManageHeader` ở đó là sập màn. Từ ADR 0053 sổ tenant chỉ còn ở khu quản lý.
  */
 export type WalletShell = 'manage' | 'account';
 
-/** Hai bảng của trang Số dư gian hàng — mã cũng là hậu tố khoá dịch `Wallet.tabs.*`. */
+/** Hai bảng của trang Số dư gian hàng - mã cũng là hậu tố khoá dịch `Wallet.tabs.*`. */
 const BALANCE_TAB = { STATEMENT: 'statement', ACTIVITY: 'activity' } as const;
 type BalanceTab = (typeof BALANCE_TAB)[keyof typeof BALANCE_TAB];
 const BALANCE_TABS: readonly BalanceTab[] = [BALANCE_TAB.STATEMENT, BALANCE_TAB.ACTIVITY];
@@ -73,7 +73,7 @@ export function WalletScreen({
   const tBank = useTranslations('BankAccounts');
   const tTax = useTranslations('Finance.taxWithheld');
   /*
-   * Cuộn tới khối payout MỘT lần, khi đã đo được vị trí — cùng cách `ShopProfileScreen` cuộn tới
+   * Cuộn tới khối payout MỘT lần, khi đã đo được vị trí - cùng cách `ShopProfileScreen` cuộn tới
    * `?section=`. Toạ độ khối là tương đối với cột nội dung, nên cộng thêm vị trí của cột.
    */
   const scrollRef = useRef<ScrollView | null>(null);
@@ -81,7 +81,7 @@ export function WalletScreen({
   const payoutY = useRef<number | null>(null);
   const scrolled = useRef(false);
   /*
-   * Chỉ cuộn khi thẻ số dư phía trên ĐÃ có dữ liệu — như web (`summary.isSuccess`,
+   * Chỉ cuộn khi thẻ số dư phía trên ĐÃ có dữ liệu - như web (`summary.isSuccess`,
    * `AccountBalanceView`): đo lúc thẻ còn là khung chờ thì skeleton thấp hơn thẻ thật, khối đích
    * bị đẩy xuống sau đó và lượt cuộn duy nhất dừng phía trên nó.
    */
@@ -119,12 +119,12 @@ export function WalletScreen({
    * sách phân trang cùng một biến sẽ kéo nhau mỗi lần một bên lật trang.
    *
    * Web giữ chúng trên URL (ADR 0004) để "gửi kế toán đường dẫn tháng 10" chạy được; native không
-   * có thanh địa chỉ, nên state màn là chỗ tương đương gần nhất — và nó vẫn sống qua một lần đi
+   * có thanh địa chỉ, nên state màn là chỗ tương đương gần nhất - và nó vẫn sống qua một lần đi
    * sang màn khác rồi lui lại, vì màn không bị tháo.
    */
   /*
    * Hai bảng của trang Số dư gian hàng (web `PartnerBalanceView`, PR #276): "Tổng hợp giao dịch"
-   * và "Biến động số dư". Biến động số dư thay cho hai khối "Lệnh rút" + "Sổ giao dịch" cũ — lệnh
+   * và "Biến động số dư". Biến động số dư thay cho hai khối "Lệnh rút" + "Sổ giao dịch" cũ - lệnh
    * rút là một dòng của chính nó. Hai bảng dùng CHUNG một kỳ.
    */
   const [tab, setTab] = useState<BalanceTab>(BALANCE_TAB.STATEMENT);
@@ -135,7 +135,7 @@ export function WalletScreen({
 
   /*
    * Phía TÀI KHOẢN KHÁCH: lệnh rút và sổ ví là các dòng của tab "Lịch sử giao dịch"
-   * (`GET /account/transactions`) — tab số dư chỉ còn thẻ số dư + tài khoản nhận tiền, như web.
+   * (`GET /account/transactions`) - tab số dư chỉ còn thẻ số dư + tài khoản nhận tiền, như web.
    */
   /*
    * Hàng tiêu đề của khu quản lý đặt hành động chính cạnh tên trang, cùng khuôn với màn
@@ -151,7 +151,7 @@ export function WalletScreen({
       () =>
         Promise.all([
           walletSummary.refetch(),
-          // Bảng đang mở (tổng hợp / biến động) đọc dưới `wallet` — làm mới cả nhánh.
+          // Bảng đang mở (tổng hợp / biến động) đọc dưới `wallet` - làm mới cả nhánh.
           queryClient.invalidateQueries({ queryKey: queryKeys.wallet.all }),
         ]),
       [walletSummary, queryClient],
@@ -169,12 +169,12 @@ export function WalletScreen({
 
   /*
    * Hai VỎ cho cùng một màn: khu gian hàng có thanh quản lý + tiêu đề trang, khu tài khoản có nút
-   * lui về menu. Cùng khuôn mà `CalendarScreen` đang dùng — thân màn không biết mình đang ở đâu.
+   * lui về menu. Cùng khuôn mà `CalendarScreen` đang dùng - thân màn không biết mình đang ở đâu.
    */
   const manageShell = shell === 'manage';
   /*
    * Khu tài khoản: màn này là tab "Tài khoản thanh toán" của mục Quản lý thanh toán (web
-   * `AccountPaymentsHub`, design Account 22/10/2026) — tiêu đề là của MỤC, bộ chuyển tab ngay dưới.
+   * `AccountPaymentsHub`, design Account 22/10/2026) - tiêu đề là của MỤC, bộ chuyển tab ngay dưới.
    */
   // Khu tài khoản: header + dải tab do `AccountPaymentsHub` dựng (đổi tab tại chỗ, 29/10/2026).
   const header = manageShell ? <ManageHeader /> : null;
@@ -190,7 +190,7 @@ export function WalletScreen({
         onRefresh={pull.onRefresh}
       >
         {/*
-          Câu mô tả trang nói ĐÂY LÀ KHOẢN PHẢI TRẢ, không phải ví điện tử (ADR 0033 điều 1) — cùng
+          Câu mô tả trang nói ĐÂY LÀ KHOẢN PHẢI TRẢ, không phải ví điện tử (ADR 0033 điều 1) - cùng
           khe `subtitle` mà `/manage/balance` bên web dùng. Nó thay cho dòng "1 điểm = 1đ" đã bị gỡ
           khi ví đổi tên từ "Ví điểm" sang "Số dư".
         */}
@@ -226,22 +226,23 @@ export function WalletScreen({
           pb={manageShell ? layout.section : 0}
           onLayout={onColumnLayout}
         >
-          <Reveal>
+          <ScrollReveal index={0}>
             <WalletSummaryCard
               scope={scope}
               onWithdraw={() => setWithdrawOpen(true)}
               pageVariant={manageShell}
             />
-          </Reveal>
+          </ScrollReveal>
 
           {/*
-            TÀI KHOẢN NHẬN TIỀN — khối của trang số dư ở CẢ HAI phía: gian hàng từ PR #159 (web
+            TÀI KHOẢN NHẬN TIỀN - khối của trang số dư ở CẢ HAI phía: gian hàng từ PR #159 (web
             `PartnerBalanceView`), tài khoản khách từ design Account 22/10/2026 (web
             `AccountBalanceView`). Rút tiền và nơi tiền về là một việc, người bấm "Rút" mà chưa có
             tài khoản phải thấy chỗ khai ngay trên cùng màn. Sổ đi theo ĐÚNG chủ ví (`scope`); phía
             gian hàng chỉ dựng cho CHỦ (route gác), đúng `@ShopOwnerOnly` của `/shop/bank-accounts`.
           */}
           <YStack onLayout={onPayoutLayout}>
+            <ScrollReveal index={1}>
             {isShop ? (
               <BankAccountList
                 scope={BANK_ACCOUNT_SCOPE.SHOP}
@@ -251,7 +252,7 @@ export function WalletScreen({
             ) : (
               /*
                * Tab "Tài khoản thanh toán" (web `AccountBalanceView`, Figma `19879:74829`): khối là
-               * MỘT thẻ — tiêu đề, mô tả, thẻ tài khoản hình `detail`, rồi khối lưu ý.
+               * MỘT thẻ - tiêu đề, mô tả, thẻ tài khoản hình `detail`, rồi khối lưu ý.
                */
               <SectionCard>
                 <BankAccountList
@@ -263,15 +264,16 @@ export function WalletScreen({
                 />
               </SectionCard>
             )}
+            </ScrollReveal>
           </YStack>
 
           {/*
-            Bảng tổng hợp chỉ có ở phía GIAN HÀNG — khách thuê thuần không có chuyến nào ở phía bán,
+            Bảng tổng hợp chỉ có ở phía GIAN HÀNG - khách thuê thuần không có chuyến nào ở phía bán,
             và một bảng rỗng vĩnh viễn là một câu hỏi không lời đáp.
           */}
           {isShop ? (
             <SectionCard>
-              {/* Thẻ Tổng hợp tháng — hiện ở CẢ HAI tab, như cột bên của web. */}
+              {/* Thẻ Tổng hợp tháng - hiện ở CẢ HAI tab, như cột bên của web. */}
               <WalletMonthSummary
                 filters={
                   tab === BALANCE_TAB.STATEMENT
@@ -319,7 +321,7 @@ export function WalletScreen({
           {isShop ? (
             /*
               Ghi chú thuế (web `TaxNote`, PR #276): một câu tóm mức khấu trừ, "Chi tiết" mở bảng
-              thuế đã khấu trừ của kỳ trong tấm trượt — thay cho khối bảng đầy đủ ở cuối trang.
+              thuế đã khấu trừ của kỳ trong tấm trượt - thay cho khối bảng đầy đủ ở cuối trang.
             */
             <Text col={colors.textMuted} fos={fontSize.label}>
               {t('taxNote.body')}{' '}
@@ -348,7 +350,7 @@ export function WalletScreen({
 }
 
 /**
- * Thẻ bọc một KHỐI của trang (tổng hợp, lệnh rút, sổ, thuế) — mỗi khối một mặt phẳng,
+ * Thẻ bọc một KHỐI của trang (tổng hợp, lệnh rút, sổ, thuế) - mỗi khối một mặt phẳng,
  * thay vì các cụm chữ thả trên nền trang.
  */
 function SectionCard({ children }: { children: ReactNode }) {

@@ -24,7 +24,7 @@ describe('pickupWishParts', () => {
     ).toEqual({ kind: 'specificDate', date: '2026-09-01' });
   });
 
-  it('khách chọn "trong 7 ngày tới" — server đã tính sẵn khoảng', () => {
+  it('khách chọn "trong 7 ngày tới" - server đã tính sẵn khoảng', () => {
     expect(
       pickupWishParts({
         pickupPreference: 'within_7_days',

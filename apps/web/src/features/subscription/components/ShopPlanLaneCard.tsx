@@ -22,16 +22,16 @@ import {
 import type { CurrentPlan, SubscriptionInvoice, VehicleTypeQuota } from '../types';
 import styles from './ShopPlanSection.module.css';
 
-/** Số ngày còn lại của một kỳ — đồng hồ máy khách, chỉ để ĐỌC (quyền dùng đọc `phase` của server). */
+/** Số ngày còn lại của một kỳ - đồng hồ máy khách, chỉ để ĐỌC (quyền dùng đọc `phase` của server). */
 export function daysLeftOf(endsAt: string): number {
   return Math.max(0, toAppTz(endsAt).diff(nowInAppTz(), 'day'));
 }
 
 /**
- * Thẻ MỘT loại xe trong "Gói & hạn mức" — design `23999:111394`: gói đang dùng + hạn, số xe đã kích
+ * Thẻ MỘT loại xe trong "Gói & hạn mức" - design `23999:111394`: gói đang dùng + hạn, số xe đã kích
  * hoạt / trần kèm thanh tiến độ, câu tình trạng suất và một lối mua (Gia hạn · Nâng cấp ngay · Mua gói).
  *
- * Hoá đơn đang chờ tiền của loại xe này hiện ngay trong thẻ (design không vẽ — giữ từ bản cũ): nó
+ * Hoá đơn đang chờ tiền của loại xe này hiện ngay trong thẻ (design không vẽ - giữ từ bản cũ): nó
  * là việc dang dở có tiền thật đi kèm, và lối "Thanh toán" dẫn về đúng phiếu (gộp hay đơn lẻ).
  */
 export function ShopPlanLaneCard({
@@ -79,7 +79,7 @@ export function ShopPlanLaneCard({
         </span>
         <div className={styles.laneText}>
           <h3 className={styles.laneTitle}>
-            {/* Tên bậc của admin đã mang loại xe ("Ô tô · 5 xe") — không ghép thêm lần nữa. */}
+            {/* Tên bậc của admin đã mang loại xe ("Ô tô · 5 xe") - không ghép thêm lần nữa. */}
             {current ? current.planName : scopeLabel}
           </h3>
           <p className={styles.laneMeta}>
@@ -124,7 +124,7 @@ export function ShopPlanLaneCard({
             aria-valuemax={quota.limit ?? 0}
             aria-valuenow={quota.used}
             aria-label={t('progressLabel', { scope: scopeLabel })}
-            // Bề rộng thanh chỉ biết lúc chạy — ngoại lệ CSS custom property của CLAUDE.md §5.
+            // Bề rộng thanh chỉ biết lúc chạy - ngoại lệ CSS custom property của CLAUDE.md §5.
             style={{ '--xp-plan-progress': `${percent}%` } as CSSProperties}
           >
             <span className={styles.progressBar} />

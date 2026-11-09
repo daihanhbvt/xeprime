@@ -36,6 +36,8 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { Reveal } from '@/components/motion/Reveal';
+import { useParallaxHeader } from '@/components/motion/use-parallax-header';
+import Animated, { useSharedValue } from 'react-native-reanimated';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -78,7 +80,11 @@ import { hasHoldStage, TRIP_FLOW_VIEW, tripFlowView, type TripFlowView } from '.
 import { closedNotice, stageNotice } from './stage-notice';
 import { TripNotReceivedReport } from './components/TripNotReceivedReport';
 import { useCancelTrip, useTrip } from './hooks/use-trips';
+import { StaleDataNote } from '@/components/network/StaleDataNote';
 import type { CustomerTripDetail } from './api';
+
+/** Đầu trang chuyến (chữ, không ảnh): nhẹ hơn banner — trôi 0.3×, co 0.96, mờ 0.5. */
+const HEADING_PARALLAX = { factor: 0.3, minScale: 0.96, minOpacity: 0.5, distance: 200, stretch: false } as const;
 
 /**
  * Chi tiết một chuyến của khách (BKG-15, 16).
@@ -159,6 +165,7 @@ export function TripDetailScreen({
   return (
     <TripDetailBody
       trip={query.data}
+      dataUpdatedAt={query.dataUpdatedAt}
       listHref={listHref}
       refreshing={pull.refreshing}
       onRefresh={pull.onRefresh}
@@ -168,11 +175,14 @@ export function TripDetailScreen({
 
 function TripDetailBody({
   trip,
+  dataUpdatedAt,
   listHref,
   refreshing,
   onRefresh,
 }: {
   trip: CustomerTripDetail;
+  /** Mốc dữ liệu của query — offline thì hiện "Dữ liệu cập nhật lúc …" (StaleDataNote). */
+  dataUpdatedAt: number;
   listHref: Href;
   /** Vuốt xuống ⇒ đọc lại chuyến (chặng, tiền giữ chỗ, quyết định của chủ xe). */
   refreshing: boolean;
@@ -207,6 +217,9 @@ function TripDetailBody({
    */
   const gateway = useTripGateway(trip.id);
   const scrollRef = useRef<ScrollView>(null);
+  /** Đầu trang chuyến trôi chậm + co/mờ nhẹ khi cuộn (UI thread, cùng ngôn ngữ banner Home). */
+  const scrollY = useSharedValue(0);
+  const headingStyle = useParallaxHeader(scrollY, HEADING_PARALLAX);
 
   const stage = trip.stage as CustomerTripStage;
   const meta = CUSTOMER_TRIP_STAGE_META[stage];
@@ -256,6 +269,7 @@ function TripDetailBody({
           refreshing={refreshing}
           onRefresh={onRefresh}
           scrollRef={scrollRef}
+          scrollReveal
           // "Huỷ chuyến" DÍNH ĐÁY khi chặng còn huỷ được (người dùng chốt 28/10/2026) — không vẽ khung
           // đáy rỗng khi không huỷ được.
           {...(canCustomerCancelTrip(trip.stage)
@@ -263,6 +277,7 @@ function TripDetailBody({
             : {})}
         >
           <YStack gap={space.md}>
+            <StaleDataNote dataUpdatedAt={dataUpdatedAt} money />
             {/* Lượt MoMo/VNPAY mở trước đó — trạng thái là câu trả lời người vừa quay về đang tìm. */}
             <TripGatewayNotice
               gateway={gateway}
@@ -319,8 +334,9 @@ function TripDetailBody({
           // các màn chuyến khác (người dùng chốt 28/10/2026). Huỷ/từ chối: không có dải.
           {...(timeline.visible ? { below: <TripTimeline stage={stage} bare /> } : {})}
         />
-        <Screen edges={['left', 'right', 'bottom']} refreshing={refreshing} onRefresh={onRefresh}>
+        <Screen edges={['left', 'right', 'bottom']} refreshing={refreshing} onRefresh={onRefresh} scrollReveal>
           <YStack gap={layout.section}>
+            <StaleDataNote dataUpdatedAt={dataUpdatedAt} money />
             {/* Quay về từ MoMo/VNPAY bằng liên kết CŨ (ADR 0058) — không có lượt nào thì im lặng. */}
             <TripGatewayNotice
               gateway={gateway}
@@ -347,11 +363,19 @@ function TripDetailBody({
         chừng 100px.
       */}
       <AppHeader onBack={() => goBackOr(router, listHref)} />
-      <Screen edges={['left', 'right', 'bottom']} refreshing={refreshing} onRefresh={onRefresh}>
+      <Screen
+        edges={['left', 'right', 'bottom']}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        scrollOffset={scrollY}
+        scrollReveal
+      >
         <YStack gap={layout.section}>
+          <StaleDataNote dataUpdatedAt={dataUpdatedAt} money />
           {/* Tiêu đề trang + câu phụ + nhãn chặng — `header` của `TripDetailView` web. */}
           {/* Khách đang thuê / đã khép có màn riêng ở trên (`TripActiveView`/`TripClosedView`). */}
-          <Reveal variant="fade">
+          <Reveal listItem variant="fade">
+          <Animated.View style={headingStyle}>
           <TripPageHeading
             title={
               trip.code ? t('detail.headingWithCode', { code: trip.code }) : t('detail.heading')
@@ -365,6 +389,7 @@ function TripDetailBody({
               />
             }
           />
+          </Animated.View>
           </Reveal>
           {/*
             Thẻ còn đúng việc của nó: vẽ chuyến đang ở chặng nào trên cả hành trình.
@@ -375,14 +400,16 @@ function TripDetailBody({
             Chặng đó đã có `StageNotice` ngay dưới nói rõ đang chờ gì.
           */}
           {customerTripTimeline(stage).visible ? (
-            <Reveal index={1}>
+            <Reveal listItem index={1}>
               <Card>
                 <TripTimeline stage={stage} />
               </Card>
             </Reveal>
           ) : null}
 
-          <StageNotice stage={stage} rejectReason={trip.rejectReason} />
+          <Reveal listItem index={2}>
+            <StageNotice stage={stage} rejectReason={trip.rejectReason} />
+          </Reveal>
 
           {/*
             "Chưa nhận được xe" (ADR 0066, lớp 1) — đứng ngay sau thông báo chặng như web: trong 120′
@@ -866,12 +893,12 @@ function ShopBlock({
               col={isShop ? colors.shopName : colors.text}
               fos={fontSize.body}
               fow={fontWeight.semibold}
-              numberOfLines={1}
+              numberOfLines={2}
             >
               {shop.name}
             </Text>
           ) : (
-            <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={1}>
+            <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={2}>
               {shop.name}
             </Text>
           )}

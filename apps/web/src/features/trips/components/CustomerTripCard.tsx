@@ -90,8 +90,8 @@ export function CustomerTripCard({ trip }: { trip: CustomerTrip }) {
         <dl className={styles.schedule}>
           {trip.pickupAt && trip.returnAt ? (
             <>
-              <ScheduleRow label={t('detail.pickupAt')} value={fmt.dateTime(trip.pickupAt)} />
-              <ScheduleRow label={t('detail.returnAt')} value={fmt.dateTime(trip.returnAt)} />
+              <ScheduleRow label={t('detail.pickupAt')} value={fmt.rentalAt(trip.pickupAt)} />
+              <ScheduleRow label={t('detail.returnAt')} value={fmt.rentalAt(trip.returnAt)} />
             </>
           ) : (
             /*
@@ -103,7 +103,7 @@ export function CustomerTripCard({ trip }: { trip: CustomerTrip }) {
               {packageLabel ? (
                 <ScheduleRow label={t('detail.package')} value={packageLabel} />
               ) : null}
-              <ScheduleRow label={t('detail.pickupWish')} value={wish || '—'} stacked />
+              <ScheduleRow label={t('detail.pickupWish')} value={wish || '-'} stacked />
             </>
           )}
         </dl>
@@ -133,6 +133,10 @@ export function CustomerTripCard({ trip }: { trip: CustomerTrip }) {
                     value={stage}
                     meta={CUSTOMER_TRIP_STAGE_META}
                     group="customerTripStage"
+                    pulse={
+                      stage === CUSTOMER_TRIP_STAGE.PENDING_APPROVAL ||
+                      stage === CUSTOMER_TRIP_STAGE.AWAITING_HOLD
+                    }
                   />
                 )}
               </div>
@@ -201,11 +205,11 @@ export function CustomerTripCard({ trip }: { trip: CustomerTrip }) {
             )}
           </MoneyCell>
           <MoneyCell label={t('card.paid')}>
-            {trip.totalAmount ? fmt.moneyThousands(paid) : '—'}
+            {trip.totalAmount ? fmt.moneyThousands(paid) : '-'}
           </MoneyCell>
           <span className={styles.moneyDivider} aria-hidden="true" />
           <MoneyCell label={t('card.remaining')} highlight>
-            {trip.totalAmount ? fmt.moneyThousands(remaining) : '—'}
+            {trip.totalAmount ? fmt.moneyThousands(remaining) : '-'}
           </MoneyCell>
         </dl>
       </div>

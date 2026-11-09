@@ -49,7 +49,7 @@ describe('Bảng giá trước chuyến', () => {
     expect(screen.getByText('Miễn phí')).toBeTruthy();
   });
 
-  it('không có bất kỳ nút duyệt/từ chối nào — khách đọc, không phê duyệt', () => {
+  it('không có bất kỳ nút duyệt/từ chối nào - khách đọc, không phê duyệt', () => {
     render(
       <TripFinanceCard
         finance={{

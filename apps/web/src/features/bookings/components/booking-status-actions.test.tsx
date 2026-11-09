@@ -144,7 +144,7 @@ describe('Hành động theo trạng thái đơn', () => {
    * (qua biên bản bàn giao). Nếu ở đây mọc ra một nút đổi trạng thái thì một chuyến kết thúc mà
    * không có giờ nhận thực tế lẫn KM trả — và `Hủy đơn` sẽ nhả lịch một chiếc xe đang chạy.
    */
-  it('đơn đang thuê: KHÔNG có nút nào — không hủy, không đổi trạng thái', () => {
+  it('đơn đang thuê: KHÔNG có nút nào - không hủy, không đổi trạng thái', () => {
     const { container } = renderActions(booking({ status: BOOKING_STATUS.ACTIVE }));
 
     expect(container.querySelectorAll('button')).toHaveLength(0);

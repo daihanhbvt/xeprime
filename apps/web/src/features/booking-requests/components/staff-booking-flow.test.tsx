@@ -95,7 +95,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('StaffBookingFlow — bước Chuyến đi', () => {
+describe('StaffBookingFlow - bước Chuyến đi', () => {
   it('thanh tiến trình là của luồng đặt hộ: 3 chặng, đứng ở "Chọn chuyến"', () => {
     renderFlow();
     expect(screen.getByText('Bước 1 / 3 · Chọn chuyến')).toBeTruthy();
@@ -108,14 +108,14 @@ describe('StaffBookingFlow — bước Chuyến đi', () => {
     expect(amount.parentElement?.textContent).toContain('Tổng tiền thuê');
   });
 
-  it('xe NỘI BỘ (không có tin đăng) vẫn nạp lịch bận — qua cửa của gian hàng, không qua cửa công khai', async () => {
+  it('xe NỘI BỘ (không có tin đăng) vẫn nạp lịch bận - qua cửa của gian hàng, không qua cửa công khai', async () => {
     // Bản trước chỉ hỏi cửa công khai khi xe có tin đăng ⇒ xe nội bộ không có ngày nào bị khoá.
     renderFlow();
     await waitFor(() => expect(api.busyDays).toHaveBeenCalled());
     expect(api.busyDays.mock.calls[0]![0]).toBe('veh-1');
   });
 
-  it('không chào hàng gian hàng cho chính gian hàng — không có "Xem gian hàng"', () => {
+  it('không chào hàng gian hàng cho chính gian hàng - không có "Xem gian hàng"', () => {
     renderFlow();
     expect(screen.queryByText('Xem gian hàng')).toBeNull();
   });
@@ -132,7 +132,7 @@ describe('StaffBookingFlow — bước Chuyến đi', () => {
   });
 });
 
-describe('StaffBookingFlow — màn Xem lại và tạo đơn', () => {
+describe('StaffBookingFlow - màn Xem lại và tạo đơn', () => {
   it('đứng ở chặng 2/3, không có ô đồng ý điều khoản của khách', async () => {
     await goToReview();
     expect(screen.getByText('Bước 2 / 3 · Khách & xác nhận')).toBeTruthy();
@@ -197,8 +197,8 @@ describe('StaffBookingFlow — màn Xem lại và tạo đơn', () => {
   });
 });
 
-describe('StaffBookingFlow — xe chưa cấu hình giá', () => {
-  it('bắt nhập tiền thuê tay trước khi tạo đơn — không tạo đơn 0đ âm thầm', async () => {
+describe('StaffBookingFlow - xe chưa cấu hình giá', () => {
+  it('bắt nhập tiền thuê tay trước khi tạo đơn - không tạo đơn 0đ âm thầm', async () => {
     api.quote.mockRejectedValue(
       new ApiClientError({ status: 400, code: API_ERROR_CODE.VALIDATION_FAILED, message: 'x' }),
     );
@@ -207,7 +207,7 @@ describe('StaffBookingFlow — xe chưa cấu hình giá', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
     await screen.findByText('Xem lại và tạo đơn thuê');
     expect(
-      screen.getByText('Xe chưa cấu hình giá ngày — nhập tiền thuê đã thoả thuận với khách.'),
+      screen.getByText('Xe chưa cấu hình giá ngày - nhập tiền thuê đã thoả thuận với khách.'),
     ).toBeTruthy();
 
     fireEvent.change(screen.getByPlaceholderText('Nguyễn Văn A'), { target: { value: 'B' } });
@@ -216,7 +216,7 @@ describe('StaffBookingFlow — xe chưa cấu hình giá', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Tạo đơn thuê' }));
     expect(
-      await screen.findByText('Xe chưa cấu hình giá — nhập tiền thuê trước khi tạo đơn.'),
+      await screen.findByText('Xe chưa cấu hình giá - nhập tiền thuê trước khi tạo đơn.'),
     ).toBeTruthy();
     expect(api.create).not.toHaveBeenCalled();
   });

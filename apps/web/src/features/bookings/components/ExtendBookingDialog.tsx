@@ -126,7 +126,7 @@ function ChooseStep({
           <div>
             <dt>{t('rentalPeriod')}</dt>
             <dd>
-              {fmt.shortDateTime(booking.pickupAt)} → {fmt.shortDateTime(booking.returnAt)}
+              {fmt.rentalRange(booking.pickupAt, booking.returnAt)}
             </dd>
           </div>
           <div>
@@ -181,15 +181,15 @@ function ChooseStep({
         <div className={styles.period}>
           <div className={styles.periodCell}>
             <span className={styles.periodLabel}>{t('fromLabel')}</span>
-            <span className={styles.periodValue}>{fmt.shortDateTime(booking.returnAt)}</span>
+            <span className={styles.periodValue}>{fmt.rentalAt(booking.returnAt)}</span>
           </div>
           <span className={styles.periodDash} aria-hidden="true">
-            –
+            -
           </span>
           <div className={styles.periodCell}>
             <span className={styles.periodLabel}>{t('toLabel')}</span>
             <span className={cx(styles.periodValue, styles.periodNew)}>
-              {q ? fmt.shortDateTime(q.toAt) : '—'}
+              {q ? fmt.shortDateTime(q.toAt) : '-'}
             </span>
           </div>
         </div>

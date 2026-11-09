@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { toAppTz } from '@xeprime/domain';
+import { DATE_TIME_SEPARATOR, toAppTz } from '@xeprime/domain';
 import { createSupportCaseWithinTx, openSupportCaseWhere, type Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
@@ -32,7 +32,10 @@ import { HandoversService } from './handovers.service';
 const AUTO_COMPLETE_BATCH = 50;
 
 const timeOf = (at: Date) => toAppTz(at).format('HH:mm');
-const pointOf = (at: Date) => toAppTz(at).format('HH:mm DD/MM');
+const pointOf = (at: Date) => {
+  const local = toAppTz(at);
+  return `${local.format('HH:mm')}${DATE_TIME_SEPARATOR}${local.format('DD/MM')}`;
+};
 
 /** Những gì mọi lượt dưới đây đọc về đơn SAU khi đã khoá dòng. */
 const LOCKED_SELECT = {
@@ -244,7 +247,7 @@ export class CustomerHandoverService {
         openedByScope: SUPPORT_PARTY.TENANT,
         category: SUPPORT_CASE_CATEGORY.DISPUTE,
         priority: SUPPORT_CASE_PRIORITY.URGENT,
-        subject: `Khách báo đã trả xe nhưng gian hàng chưa nhận lại — chuyến ${booking.code}`,
+        subject: `Khách báo đã trả xe nhưng gian hàng chưa nhận lại - chuyến ${booking.code}`,
         description:
           `Khách báo đã trả xe lúc ${pointOf(reportedAt)}; gian hàng báo chưa nhận lại được xe. ` +
           'Liên hệ cả hai bên để xác minh. Tiền của chuyến được tạm giữ cho tới khi case đóng.',

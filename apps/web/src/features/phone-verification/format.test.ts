@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { formatOtpCooldown } from './format-cooldown';
 import { maskPhone, maskPhoneStars } from './mask';
 
-describe('maskPhoneStars — kiểu che của hộp tài khoản design v2', () => {
+describe('maskPhoneStars - kiểu che của hộp tài khoản design v2', () => {
   it('ba số đầu, ba số cuối', () => {
     expect(maskPhoneStars('0379123789')).toBe('037 *** *789');
   });

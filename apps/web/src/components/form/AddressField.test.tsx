@@ -146,7 +146,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('AddressField — hai cấp hành chính', () => {
+describe('AddressField - hai cấp hành chính', () => {
   /**
    * Ô CÓ GHIM không hỏi xã/phường (ADR 0042).
    *
@@ -221,7 +221,7 @@ describe('AddressField — hai cấp hành chính', () => {
     expect(onValues.mock.calls[0]?.[0]).toMatchObject({ provinceCode: '' });
   });
 
-  it('đổi tỉnh thì XOÁ mã xã cũ — không gửi lên một cặp mã DB sẽ từ chối', async () => {
+  it('đổi tỉnh thì XOÁ mã xã cũ - không gửi lên một cặp mã DB sẽ từ chối', async () => {
     const onValues = vi.fn();
     render(<Harness defaults={{ provinceCode: '01', wardCode: '00004' }} onValues={onValues} />);
 
@@ -233,7 +233,7 @@ describe('AddressField — hai cấp hành chính', () => {
     expect(onValues.mock.calls[0]?.[0]).toMatchObject({ provinceCode: '79', wardCode: '' });
   });
 
-  it('mở form SỬA không bị coi là "vừa đổi tỉnh" — xã đã lưu còn nguyên', async () => {
+  it('mở form SỬA không bị coi là "vừa đổi tỉnh" - xã đã lưu còn nguyên', async () => {
     const onValues = vi.fn();
     render(<Harness defaults={{ provinceCode: '01', wardCode: '00004' }} onValues={onValues} />);
 
@@ -244,7 +244,7 @@ describe('AddressField — hai cấp hành chính', () => {
   });
 });
 
-describe('AddressField — trạng thái của danh mục', () => {
+describe('AddressField - trạng thái của danh mục', () => {
   it('đang tải: ô chọn bị khoá và nói rõ đang tải', () => {
     provinces.options = [];
     provinces.isLoading = true;

@@ -616,7 +616,7 @@ export function BookingOutcomeBanner() {
       booking.cancellationReason?.trim() || null,
     ]
       .filter(Boolean)
-      .join(' — ');
+      .join(' - ');
     return (
       <Alert
         type="error"

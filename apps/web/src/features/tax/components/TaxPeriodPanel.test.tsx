@@ -154,7 +154,7 @@ beforeEach(() => {
   rows.isError = false;
 });
 
-describe('TaxPeriodPanel — kỳ đang xem nằm trên URL', () => {
+describe('TaxPeriodPanel - kỳ đang xem nằm trên URL', () => {
   it('`?period=` mở đúng kỳ đó (thẻ "Thuế chưa kê khai" dẫn tới kỳ cũ nhất còn nợ)', () => {
     renderPanel('queue=tax&period=2001-01&page=2');
     expect(asked.summary.at(-1)).toBe('2001-01');
@@ -243,7 +243,7 @@ describe('TaxPeriodPanel', () => {
     expect(screen.queryByText('Dòng cũ chưa tách GTGT/TNCN')).toBeNull();
   });
 
-  it('nhóm `unknown` bằng 0 thì KHÔNG cảnh báo — không làm ồn khi không có việc', () => {
+  it('nhóm `unknown` bằng 0 thì KHÔNG cảnh báo - không làm ồn khi không có việc', () => {
     summary.data = makeSummary({
       byEntityType: [{ entityType: 'unknown', amount: '0', vatAmount: '0', pitAmount: '0', rows: 0 }],
     });
@@ -278,7 +278,7 @@ describe('TaxPeriodPanel', () => {
     expect(screen.getByText('Nhóm dịch vụ')).toBeTruthy();
     expect(screen.getAllByText(/^15[.,]600/).length).toBeGreaterThan(0);
     // Dòng một-mức cũ không bịa phép tách.
-    expect(screen.getAllByText('Dòng cũ — không tách')).toHaveLength(2);
+    expect(screen.getAllByText('Dòng cũ - không tách')).toHaveLength(2);
   });
 
   it('bút toán ĐẢO hiện số âm, và KHÔNG cho đảo lần nữa', () => {
@@ -302,7 +302,7 @@ describe('TaxPeriodPanel', () => {
     expect(screen.getByRole('button', { name: 'Đảo' })).toHaveProperty('disabled', true);
   });
 
-  it('dòng ĐÃ NỘP không cho đảo — sửa bằng tờ khai điều chỉnh', () => {
+  it('dòng ĐÃ NỘP không cho đảo - sửa bằng tờ khai điều chỉnh', () => {
     rows.data = {
       data: [
         makeRow({

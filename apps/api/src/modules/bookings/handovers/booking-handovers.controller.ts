@@ -107,7 +107,7 @@ export class BookingHandoversController {
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.HANDOVER_CONFIRM)
   @ApiOperation({
-    summary: 'Xác nhận bàn giao — ghi KM + chuyển trạng thái đơn + lịch + audit, một transaction',
+    summary: 'Xác nhận bàn giao - ghi KM + chuyển trạng thái đơn + lịch + audit, một transaction',
   })
   @ApiOkResponse({ type: HandoverContextDto })
   confirm(
@@ -137,7 +137,7 @@ export class BookingHandoversController {
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.HANDOVER_CONFIRM)
   @ApiOperation({
-    summary: 'Gian hàng báo khách chưa trả xe — huỷ lời báo, mở tranh chấp khẩn',
+    summary: 'Gian hàng báo khách chưa trả xe - huỷ lời báo, mở tranh chấp khẩn',
     description:
       'Xoá `customerReturnedAt`/`returnAutoCompleteAt` (chuyến không tự hoàn thành nữa), mở MỘT case ' +
       '`dispute` khẩn cho CSKH xác minh (giữ quyết toán), báo khách. Lỗi: 409 ' +

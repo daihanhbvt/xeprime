@@ -30,14 +30,14 @@ describe('refreshNotificationAffected', () => {
    * Cùng một tài khoản có thể đang mở bất kỳ bề mặt nào — chủ xe tự thuê xe của người khác là
    * chuyện bình thường — nên không suy bề mặt từ vai người dùng.
    */
-  it('làm mới chuyến của KHÁCH và đơn của GIAN HÀNG — hai bề mặt, cùng vòng đời', () => {
+  it('làm mới chuyến của KHÁCH và đơn của GIAN HÀNG - hai bề mặt, cùng vòng đời', () => {
     refreshNotificationAffected(client);
 
     expect(invalidated).toContainEqual(key(queryKeys.trips.all));
     expect(invalidated).toContainEqual(key(queryKeys.bookings.all));
   });
 
-  it('làm mới hộp thư yêu cầu — vừa là danh sách, vừa là con số trên menu', () => {
+  it('làm mới hộp thư yêu cầu - vừa là danh sách, vừa là con số trên menu', () => {
     refreshNotificationAffected(client);
 
     expect(invalidated).toContainEqual(key(queryKeys.bookingRequests.all));
@@ -101,7 +101,7 @@ describe('refreshNotificationAffected', () => {
  * Dùng `QueryClient` THẬT với một observer thật, không mock `invalidateQueries`: thứ đang được
  * kiểm là hành vi khớp tiền tố của TanStack Query, và mock đi thì không còn gì để kiểm.
  */
-describe('refreshNotificationAffected — màn chi tiết chuyến đang mở', () => {
+describe('refreshNotificationAffected - màn chi tiết chuyến đang mở', () => {
   it('kéo lại CHI TIẾT chuyến đang mở, không chỉ danh sách', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
     const tripId = '01J0TRIPDETAIL0000000000';

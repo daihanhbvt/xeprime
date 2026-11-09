@@ -36,12 +36,12 @@ async function firstError(values: Record<string, unknown>): Promise<string | nul
 }
 
 /* Cùng bộ ràng buộc với `requestFormSchema` bên web (`apps/web/src/features/booking-requests/schema.ts`). */
-describe('buildBookingRequestSchema — khớp schema web', () => {
+describe('buildBookingRequestSchema - khớp schema web', () => {
   it('hợp lệ với giá trị mặc định mà web chọn sẵn (7 ngày · nội thành)', async () => {
     expect(await firstError({})).toBeNull();
   });
 
-  it('địa chỉ giao xe / đón chỉ có CHỮ, không toạ độ ("dùng đúng địa chỉ đã nhập") vẫn hợp lệ — ADR 0061 điều 6', async () => {
+  it('địa chỉ giao xe / đón chỉ có CHỮ, không toạ độ ("dùng đúng địa chỉ đã nhập") vẫn hợp lệ - ADR 0061 điều 6', async () => {
     expect(
       await firstError({
         deliveryRequested: true,

@@ -1,4 +1,4 @@
-/* Khối "Gói & hạn mức" — design `23999:111391` (hai thẻ làn 540, cách 20; thẻ doanh nghiệp nền tối). */
+/* Khối "Gói & hạn mức" - design `23999:111391` (hai thẻ làn 540, cách 20; thẻ doanh nghiệp nền tối). */
 .lanes {
   display: grid;
   gap: 20px;
@@ -21,7 +21,7 @@
   outline: none;
 }
 
-/* Làn đích của `?lane=` — viền vàng cho tới khi người dùng rời đi. */
+/* Làn đích của `?lane=` - viền vàng cho tới khi người dùng rời đi. */
 .laneHighlighted {
   border-color: var(--xp-color-primary-glow);
   box-shadow: 0 0 0 3px var(--xp-color-primary-glow);
@@ -196,7 +196,7 @@
   font-weight: var(--xp-font-weight-semibold);
 }
 
-/* ── Gói doanh nghiệp đang dùng — design `23999:111045` ──────────────────── */
+/* ── Gói doanh nghiệp đang dùng - design `23999:111045` ──────────────────── */
 
 .enterpriseActive {
   display: flex;
@@ -349,7 +349,7 @@
   letter-spacing: 0.5px;
 }
 
-/* Ô dữ liệu phụ của bảng hoá đơn — Text/Gray/medium, đậm vừa (design `23999:111434`). */
+/* Ô dữ liệu phụ của bảng hoá đơn - Text/Gray/medium, đậm vừa (design `23999:111434`). */
 .cellMuted {
   color: var(--xp-color-text-secondary);
   font-weight: var(--xp-font-weight-medium);

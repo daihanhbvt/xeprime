@@ -38,14 +38,14 @@ export class VehicleDocumentVersionDto {
   @ApiProperty() version!: number;
   @ApiProperty({ type: VehicleDocumentFileDto }) file!: VehicleDocumentFileDto;
   @ApiProperty({ description: 'ISO' }) uploadedAt!: string;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — đã bị thay thế lúc' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO - đã bị thay thế lúc' })
   archivedAt!: string | null;
 }
 
 export class VehicleDocumentOcrFieldDto {
   @ApiProperty({ enum: VEHICLE_DOCUMENT_OCR_FIELD_VALUES }) field!: string;
   @ApiProperty({ description: 'Giá trị nhận dạng (đã chuẩn hoá)' }) value!: string;
-  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Độ tin cậy 0–100' })
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Độ tin cậy 0-100' })
   confidence!: number | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Bằng chứng nguồn' })
   evidence!: string | null;
@@ -76,7 +76,7 @@ export class VehicleDocumentSummaryDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'YYYY-MM-DD — null = không thời hạn; cần cho cảnh báo hết hạn',
+    description: 'YYYY-MM-DD - null = không thời hạn; cần cho cảnh báo hết hạn',
   })
   expiresAt!: string | null;
   /**
@@ -112,7 +112,7 @@ export class VehicleDocumentDetailDto extends VehicleDocumentSummaryDto {
   @ApiPropertyOptional({ type: String, nullable: true, description: 'YYYY-MM-DD' })
   issuedAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) notes!: string | null;
-  @ApiProperty({ description: 'Optimistic concurrency — nộp lại khi update' })
+  @ApiProperty({ description: 'Optimistic concurrency - nộp lại khi update' })
   rowVersion!: number;
   @ApiPropertyOptional({ type: VehicleDocumentVersionDto, nullable: true })
   activeVersion!: VehicleDocumentVersionDto | null;

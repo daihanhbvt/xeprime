@@ -100,7 +100,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('PlanFormModal — chế độ tạo', () => {
+describe('PlanFormModal - chế độ tạo', () => {
   /*
    * Danh mục chỉ được có ĐÚNG MỘT bậc `commission` và nó đã tồn tại từ seed
    * (`COMMISSION_PLAN_IS_SINGLETON` — ADR 0038 điều 13). Mở form ở chế độ đó là mở sẵn con đường
@@ -225,7 +225,7 @@ describe('PlanFormModal — chế độ tạo', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Tạo gói' }));
 
     await waitFor(() =>
-      expect(screen.getByText('Mã gói cần 2–50 ký tự (chữ, số, gạch nối)')).toBeTruthy(),
+      expect(screen.getByText('Mã gói cần 2-50 ký tự (chữ, số, gạch nối)')).toBeTruthy(),
     );
     expect(create.mutate).not.toHaveBeenCalled();
   });
@@ -265,7 +265,7 @@ describe('PlanFormModal — chế độ tạo', () => {
   });
 });
 
-describe('PlanFormModal — nhân bản', () => {
+describe('PlanFormModal - nhân bản', () => {
   it('TẠO MỚI điền sẵn từ gói gốc: mã trống, tên "(bản sao)", bỏ nhãn đề xuất', async () => {
     renderModal(null, { template: PLAN });
 
@@ -289,7 +289,7 @@ describe('PlanFormModal — nhân bản', () => {
   });
 });
 
-describe('PlanFormModal — chế độ sửa', () => {
+describe('PlanFormModal - chế độ sửa', () => {
   it('tiêu đề sửa, KHÔNG có ô mã gói, loại gói bị khoá, điền sẵn trần + bảng giá', () => {
     renderModal(PLAN);
     expect(screen.getByText('Sửa gói dịch vụ')).toBeTruthy();
@@ -320,7 +320,7 @@ describe('PlanFormModal — chế độ sửa', () => {
   });
 });
 
-describe('PlanFormModal — xoá gói nháp', () => {
+describe('PlanFormModal - xoá gói nháp', () => {
   const DRAFT = {
     ...PLAN,
     id: 'P-draft',
@@ -376,7 +376,7 @@ describe('PlanFormModal — xoá gói nháp', () => {
   });
 });
 
-describe('PlanFormModal — tuyến hoa hồng', () => {
+describe('PlanFormModal - tuyến hoa hồng', () => {
   /*
    * Hoa hồng theo chuyến là nấc của chính sách phí hiệu lực (ADR 0064 điều 3) — `commissionPercent`
    * của bậc là cột di sản backend không đọc, nên form không còn ô nhập nào cho nó.
@@ -414,7 +414,7 @@ describe('PlanFormModal — tuyến hoa hồng', () => {
    * default của form sẽ lặng lẽ xoá cờ năng lực và số ngày ân hạn mà seed đã đặt. Bỏ trống
    * `limits` là cách nói "giữ nguyên" với `updatePlan`.
    */
-  it('KHÔNG gửi limits — giữ nguyên cờ năng lực và ân hạn đang lưu', async () => {
+  it('KHÔNG gửi limits - giữ nguyên cờ năng lực và ân hạn đang lưu', async () => {
     renderModal(COMMISSION_PLAN);
     fireEvent.click(screen.getByRole('button', { name: 'Lưu' }));
 
@@ -426,7 +426,7 @@ describe('PlanFormModal — tuyến hoa hồng', () => {
   });
 });
 
-describe('PlanFormModal — lỗi', () => {
+describe('PlanFormModal - lỗi', () => {
   it('lỗi thường: toast theo MÃ (fallback khi không có mã) và KHÔNG đóng', async () => {
     const { onClose } = renderModal(PLAN);
     fireEvent.click(screen.getByRole('button', { name: 'Lưu' }));
@@ -440,7 +440,7 @@ describe('PlanFormModal — lỗi', () => {
   });
 });
 
-describe('PlanFormModal — vỏ dialog', () => {
+describe('PlanFormModal - vỏ dialog', () => {
   it('đang gửi thì nút chính loading và nút Huỷ bị khoá', () => {
     update.isPending = true;
     renderModal(PLAN);
@@ -455,7 +455,7 @@ describe('PlanFormModal — vỏ dialog', () => {
   });
 });
 
-describe('PlanFormModal — phạm vi loại xe (ADR 0065)', () => {
+describe('PlanFormModal - phạm vi loại xe (ADR 0065)', () => {
   it('tạo mới: có ô "Loại xe áp dụng" chọn được, KHÔNG có ô chi nhánh', () => {
     renderModal(null);
     const scope = byLabel('Loại xe áp dụng');

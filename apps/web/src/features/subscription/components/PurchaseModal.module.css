@@ -2,7 +2,7 @@
  * VỎ của hộp thoại mua gói.
  *
  * Bộ ô nhập (số chỗ, thẻ kỳ hạn, tổng tiền, đơn giá chỗ) đã sang
- * `PlanPurchaseFields.module.css` cùng lúc với component — nó dùng chung với bước 2 của
+ * `PlanPurchaseFields.module.css` cùng lúc với component - nó dùng chung với bước 2 của
  * onboarding gian hàng (ADR 0040). Ở đây chỉ còn những gì thuộc riêng hộp thoại này.
  */
 
@@ -40,7 +40,7 @@
   color: var(--xp-color-text);
 }
 
-/* Kỳ mới bắt đầu lúc nào — một dòng trên bảng giá, trước khi người dùng chọn. */
+/* Kỳ mới bắt đầu lúc nào - một dòng trên bảng giá, trước khi người dùng chọn. */
 .context {
   margin: 0 0 var(--xp-space-sm);
   color: var(--xp-color-text-secondary);
@@ -48,7 +48,7 @@
   line-height: var(--xp-line-height-body-sm);
 }
 
-/* Lượt mua này làm gì với gói hiện tại — bản xem trước của server (ADR 0084). */
+/* Lượt mua này làm gì với gói hiện tại - bản xem trước của server (ADR 0084). */
 .outcome {
   display: flex;
   flex-direction: column;

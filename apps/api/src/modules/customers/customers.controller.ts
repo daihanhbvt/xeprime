@@ -91,7 +91,7 @@ export class CustomersController {
   @ApiOperation({
     summary: 'Thêm khách vào sổ',
     description:
-      'SĐT bắt buộc và là định danh — trùng với khách khác trả 409 CUSTOMER_PHONE_DUPLICATE.',
+      'SĐT bắt buộc và là định danh - trùng với khách khác trả 409 CUSTOMER_PHONE_DUPLICATE.',
   })
   @ApiCreatedResponse({ type: TenantCustomerDetailDto })
   create(
@@ -125,7 +125,7 @@ export class CustomersController {
   @ApiOperation({
     summary: 'Sửa hồ sơ khách',
     description:
-      'Không đụng tới snapshot tên/SĐT trên đơn thuê và yêu cầu cũ — đó là sự thật của giao dịch.',
+      'Không đụng tới snapshot tên/SĐT trên đơn thuê và yêu cầu cũ - đó là sự thật của giao dịch.',
   })
   @ApiOkResponse({ type: TenantCustomerDetailDto })
   update(
@@ -139,7 +139,7 @@ export class CustomersController {
 
   @Post(':id/archive')
   @RequirePermissions(PERMISSION.CUSTOMER_MANAGE)
-  @ApiOperation({ summary: 'Lưu trữ hồ sơ khách (soft — lịch sử đơn giữ nguyên)' })
+  @ApiOperation({ summary: 'Lưu trữ hồ sơ khách (soft - lịch sử đơn giữ nguyên)' })
   @ApiOkResponse({ type: TenantCustomerDetailDto })
   archive(
     @CurrentTenant() tenant: TenantContext,

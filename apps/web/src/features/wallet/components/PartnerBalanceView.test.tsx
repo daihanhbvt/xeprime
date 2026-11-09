@@ -103,7 +103,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Quản lý ví — tài khoản nhận tiền ở trong trang', () => {
+describe('Quản lý ví - tài khoản nhận tiền ở trong trang', () => {
   it.each(['commission', 'package'] as const)(
     'tuyến %s: khối "Tài khoản nhận tiền" nằm trong màn ví, có nút thêm tài khoản',
     (track) => {
@@ -152,7 +152,7 @@ describe('Quản lý ví — tài khoản nhận tiền ở trong trang', () => 
  * "Vì sao tôi nhận ít hơn" là câu hỏi của trang tiền, ở cả hai tuyến. Tuyến gói còn có thẻ đó ở sổ
  * Tài chính, nhưng sổ ấy gác bằng cờ tính năng — trang này thì không bao giờ (ADR 0027 điều 3).
  */
-describe('Quản lý ví — thuế đã khấu trừ', () => {
+describe('Quản lý ví - thuế đã khấu trừ', () => {
   it.each(['commission', 'package'] as const)(
     'tuyến %s: "Chi tiết" của ô ghi chú thuế mở thẻ thuế đầy đủ',
     (track) => {
@@ -165,7 +165,7 @@ describe('Quản lý ví — thuế đã khấu trừ', () => {
   );
 });
 
-describe('Quản lý ví — hai tab', () => {
+describe('Quản lý ví - hai tab', () => {
   it('mặc định là bảng tổng hợp giao dịch', () => {
     renderView();
     expect(screen.getByTestId('statement-panel')).toBeTruthy();
@@ -173,7 +173,7 @@ describe('Quản lý ví — hai tab', () => {
     expect(screen.getByTestId('month-summary')).toBeTruthy();
   });
 
-  it('`?tab=activity` mở biến động số dư — thẻ tổng hợp tháng vẫn ở cột phải', () => {
+  it('`?tab=activity` mở biến động số dư - thẻ tổng hợp tháng vẫn ở cột phải', () => {
     search.value = 'tab=activity&period=2026-10';
     renderView();
     expect(screen.getByTestId('activity-panel')).toBeTruthy();
@@ -182,7 +182,7 @@ describe('Quản lý ví — hai tab', () => {
   });
 });
 
-describe('Quản lý ví — chỉ chủ', () => {
+describe('Quản lý ví - chỉ chủ', () => {
   it.each([TENANT_ROLE.SHOP_MANAGER, TENANT_ROLE.SHOP_STAFF])(
     '%s gõ URL: lời giải thích, không màn ví nào được dựng',
     (role) => {

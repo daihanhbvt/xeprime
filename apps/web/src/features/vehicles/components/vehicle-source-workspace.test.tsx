@@ -123,7 +123,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('VehicleSourceWorkspace — Wave 4 tab Nguồn xe & tài chính', () => {
+describe('VehicleSourceWorkspace - Wave 4 tab Nguồn xe & tài chính', () => {
   it('thiếu finance.view: hiện màn không có quyền và KHÔNG bật query', () => {
     permissions.granted = new Set([PERMISSION.VEHICLE_UPDATE]);
     renderTab();

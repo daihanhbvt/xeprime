@@ -19,7 +19,7 @@ afterEach(() => {
   nav.pathname = '/';
 });
 
-describe('useZoneQueryClient — chế độ path', () => {
+describe('useZoneQueryClient - chế độ path', () => {
   it('site khách và site partner dùng HAI cache khác nhau', () => {
     const { result, rerender } = renderHook(() => useZoneQueryClient(ZONE.MARKET));
     const market = result.current;
@@ -58,7 +58,7 @@ describe('useZoneQueryClient — chế độ path', () => {
   });
 });
 
-describe('useZoneQueryClient — chế độ host', () => {
+describe('useZoneQueryClient - chế độ host', () => {
   it('khu cố định theo host của request, không suy từ đường dẫn', () => {
     vi.stubEnv('NEXT_PUBLIC_XP_ZONE_MODE', 'host');
     nav.pathname = '/vehicles';

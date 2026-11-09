@@ -11,14 +11,14 @@ import { useTheme, type ThemeMode } from '@/lib/theme';
 import styles from './AccountMenuParts.module.css';
 
 /**
- * Các mảnh của menu TÀI KHOẢN dạng bảng — một khuôn cho site khách (`MarketAccountMenu`) và site
+ * Các mảnh của menu TÀI KHOẢN dạng bảng - một khuôn cho site khách (`MarketAccountMenu`) và site
  * partner (`PartnerAccountMenu`). Mỗi site chỉ tự vẽ thẻ danh tính và chọn dòng nào có mặt; vỏ,
  * dòng, hai nút gạt và nút đăng xuất là của chung, để hai menu không lệch nhau từng px.
  *
  * ## Vì sao là bảng tự dựng chứ không phải `menu.items` của AntD
  *
  * Hai dòng "Giao diện" và "Ngôn ngữ" mang một nút gạt NGAY TRONG dòng. Trong `Menu` của AntD mỗi
- * dòng là một mục bấm được và bấm là đóng menu — người dùng đổi sáng/tối sẽ thấy menu sập ngay
+ * dòng là một mục bấm được và bấm là đóng menu - người dùng đổi sáng/tối sẽ thấy menu sập ngay
  * dưới tay. Ở đây dòng điều hướng là `<Link>` thật (mở tab mới, sao chép địa chỉ vẫn được) và
  * đóng menu khi bấm; nút gạt là `<button aria-pressed>` và giữ menu mở để thấy kết quả.
  */
@@ -53,7 +53,7 @@ export function AccountMenuSection({
   return <div className={cx(styles.section, divider && styles.divider)}>{children}</div>;
 }
 
-/** Lề hai bên của một dòng — bọc cả những khối không phải dòng (thẻ danh tính). */
+/** Lề hai bên của một dòng - bọc cả những khối không phải dòng (thẻ danh tính). */
 export function AccountMenuItem({ children }: { children: ReactNode }) {
   return <div className={styles.item}>{children}</div>;
 }
@@ -117,13 +117,13 @@ function ToggleRow({
   );
 }
 
-/** Hai lựa chọn giao diện của nút gạt — thứ tự và icon theo Figma. */
+/** Hai lựa chọn giao diện của nút gạt - thứ tự và icon theo Figma. */
 const THEME_OPTIONS: readonly { mode: ThemeMode; icon: LineIconName }[] = [
   { mode: 'light', icon: 'sun' },
   { mode: 'dark', icon: 'moon' },
 ];
 
-/** "Giao diện ☀|☾" — đổi qua `useTheme` (cookie `XP_THEME` + `data-theme`). */
+/** "Giao diện ☀|☾" - đổi qua `useTheme` (cookie `XP_THEME` + `data-theme`). */
 export function AccountMenuThemeRow() {
   const t = useTranslations('Common.theme');
   const { theme, setTheme } = useTheme();
@@ -147,7 +147,7 @@ export function AccountMenuThemeRow() {
   );
 }
 
-/** "Ngôn ngữ VI|EN" — cùng hành vi đổi ngôn ngữ với mọi bề mặt khác (`useLocaleChoice`). */
+/** "Ngôn ngữ VI|EN" - cùng hành vi đổi ngôn ngữ với mọi bề mặt khác (`useLocaleChoice`). */
 export function AccountMenuLocaleRow() {
   const t = useTranslations('Common.locale');
   const choice = useLocaleChoice();

@@ -272,7 +272,7 @@ export class CatalogService {
     const used = await this.usageOf(current.type as CatalogType, current.key);
     if (used > 0) {
       throw new ConflictException(
-        `Đang có ${used} xe dùng mục này — hãy tắt thay vì xoá để xe cũ vẫn hiển thị đúng tên`,
+        `Đang có ${used} xe dùng mục này - hãy tắt thay vì xoá để xe cũ vẫn hiển thị đúng tên`,
       );
     }
 

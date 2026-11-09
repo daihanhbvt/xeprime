@@ -32,7 +32,7 @@ export function useChatRealtime(): ChatRealtime {
  */
 function warnRealtimeOff(reason: unknown): void {
   if (process.env.NODE_ENV === 'production') return;
-  console.warn('[XePrime] Chat realtime KHÔNG bật — chat và huy hiệu chạy trên REST:', reason);
+  console.warn('[XePrime] Chat realtime KHÔNG bật - chat và huy hiệu chạy trên REST:', reason);
 }
 
 export function ChatRealtimeProvider({ children }: { children: ReactNode }) {

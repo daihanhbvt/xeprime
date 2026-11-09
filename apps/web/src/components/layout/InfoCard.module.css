@@ -1,4 +1,4 @@
-/* Thẻ của trang Thông tin cửa hàng — design `23999:111299` (padding 20, bo 16, viền xám nhạt). */
+/* Thẻ của trang Thông tin cửa hàng - design `23999:111299` (padding 20, bo 16, viền xám nhạt). */
 .card {
   display: flex;
   min-width: 0;
@@ -47,7 +47,7 @@
 
 .hint {
   margin: 0;
-  /* Text/Gray/low — dòng phụ dưới tiêu đề thẻ. */
+  /* Text/Gray/low - dòng phụ dưới tiêu đề thẻ. */
   color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size);
   line-height: 20px;
@@ -111,7 +111,7 @@
   font-weight: var(--xp-font-weight-regular);
 }
 
-/* Ghi chú cuối thẻ (in nghiêng, chữ nhỏ) — dồn xuống đáy để ba thẻ cùng hàng thẳng chân. */
+/* Ghi chú cuối thẻ (in nghiêng, chữ nhỏ) - dồn xuống đáy để ba thẻ cùng hàng thẳng chân. */
 .footer {
   margin-top: auto;
   /* Text/Gray/very-low, 12/18 nghiêng. */
@@ -131,7 +131,7 @@
   color: var(--xp-color-primary-hover);
 }
 
-/* `fieldset[disabled]` của hộp thoại — không viền, không lề mặc định của trình duyệt. */
+/* `fieldset[disabled]` của hộp thoại - không viền, không lề mặc định của trình duyệt. */
 .fieldset {
   min-width: 0;
   margin: 0;

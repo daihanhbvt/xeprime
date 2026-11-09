@@ -9,10 +9,10 @@ import { cx } from '@/lib/cx';
 import styles from './InfoCard.module.css';
 
 /**
- * Khung THẺ có tiêu đề + dòng phụ + bút chì — sinh cho trang Thông tin cửa hàng (design `23999:111274` — "Chủ gian hàng", "Địa chỉ & pháp
+ * Khung THẺ có tiêu đề + dòng phụ + bút chì - sinh cho trang Thông tin cửa hàng (design `23999:111274` - "Chủ gian hàng", "Địa chỉ & pháp
  * lý", "Thông tin khai thuế"…): tiêu đề + dòng phụ, nút bút chì ở góc khi sửa được, ghi chú cuối thẻ.
  *
- * `id` là đích của `?section=` (cuộn tới + nhận tiêu điểm) — cùng hợp đồng với `SectionCard`.
+ * `id` là đích của `?section=` (cuộn tới + nhận tiêu điểm) - cùng hợp đồng với `SectionCard`.
  */
 export function InfoCard({
   id,
@@ -70,7 +70,7 @@ export function InfoCard({
   );
 }
 
-/** Một hàng nhãn ↔ giá trị (căn phải) của thẻ — `value` rỗng hiện `emptyLabel`. */
+/** Một hàng nhãn ↔ giá trị (căn phải) của thẻ - `value` rỗng hiện `emptyLabel`. */
 export function InfoRow({
   label,
   value,

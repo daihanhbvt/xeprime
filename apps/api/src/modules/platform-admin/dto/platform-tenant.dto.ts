@@ -28,7 +28,7 @@ export class PlatformTenantListQueryDto {
   @ApiPropertyOptional({
     enum: PLATFORM_PARTNER_KIND_VALUES,
     description:
-      'Loại đối tác — lọc ở DB TRƯỚC phân trang/đếm. `package_shop` = tuyến gói (gồm cả đang ' +
+      'Loại đối tác - lọc ở DB TRƯỚC phân trang/đếm. `package_shop` = tuyến gói (gồm cả đang ' +
       'onboarding chờ kích hoạt gói), `individual_owner` = tuyến hoa hồng / Owner Lite. Bỏ trống ' +
       '= mọi gian hàng.',
   })
@@ -102,9 +102,9 @@ export class PlatformTenantPlanTermDto {
   @ApiProperty() planName!: string;
   @ApiProperty({ enum: Object.values(BILLING_PHASE), description: 'current | grace' })
   phase!: string;
-  @ApiProperty({ description: 'ISO — bắt đầu kỳ' }) startsAt!: string;
-  @ApiProperty({ description: 'ISO — kết thúc kỳ' }) endsAt!: string;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — hết ân hạn' })
+  @ApiProperty({ description: 'ISO - bắt đầu kỳ' }) startsAt!: string;
+  @ApiProperty({ description: 'ISO - kết thúc kỳ' }) endsAt!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO - hết ân hạn' })
   graceEndsAt!: string | null;
   @ApiProperty({ enum: PARTNER_QUOTA_KIND_VALUES, description: 'Trần xe snapshot của KỲ này' })
   vehicleLimitKind!: string;
@@ -132,16 +132,16 @@ export class PlatformTenantPlanDto {
   billingMode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) planName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) planCode!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — bắt đầu kỳ đang xét' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO - bắt đầu kỳ đang xét' })
   termStartsAt!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — kết thúc kỳ đang xét' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO - kết thúc kỳ đang xét' })
   endsAt!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — hết ân hạn' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO - hết ân hạn' })
   graceEndsAt!: string | null;
   @ApiProperty({
     enum: PARTNER_QUOTA_KIND_VALUES,
     description:
-      'Trần xe của KỲ GÓI đang xét (snapshot — ADR 0041 điều 3). not_applicable khi không ở tuyến gói',
+      'Trần xe của KỲ GÓI đang xét (snapshot - ADR 0041 điều 3). not_applicable khi không ở tuyến gói',
   })
   vehicleLimitKind!: string;
   @ApiPropertyOptional({
@@ -153,14 +153,14 @@ export class PlatformTenantPlanDto {
   @ApiProperty({
     type: [PlatformTenantPlanTermDto],
     description:
-      'Mọi kỳ gói đang hiệu lực, mỗi phạm vi loại xe một kỳ (ADR 0065) — all → car → motorbike. ' +
+      'Mọi kỳ gói đang hiệu lực, mỗi phạm vi loại xe một kỳ (ADR 0065) - all → car → motorbike. ' +
       'Rỗng khi không ở tuyến gói. vehicleLimit ở trên là TỔNG trần các kỳ này',
   })
   terms!: PlatformTenantPlanTermDto[];
   @ApiPropertyOptional({
     type: PlanTermRefDto,
     nullable: true,
-    description: 'Kỳ đã xếp lịch kế tiếp (gia hạn / đổi gói từ kỳ sau) — null nếu chưa có',
+    description: 'Kỳ đã xếp lịch kế tiếp (gia hạn / đổi gói từ kỳ sau) - null nếu chưa có',
   })
   nextTerm!: PlanTermRefDto | null;
 }
@@ -175,7 +175,7 @@ export class PlatformTenantDto {
   @ApiProperty({ enum: TENANT_STATUS_VALUES }) status!: string;
   @ApiProperty({
     enum: PLATFORM_PARTNER_KIND_VALUES,
-    description: 'Danh sách đối tác chứa gian hàng này — server suy từ tuyến, không nhận từ client',
+    description: 'Danh sách đối tác chứa gian hàng này - server suy từ tuyến, không nhận từ client',
   })
   partnerKind!: PlatformPartnerKind;
   @ApiPropertyOptional({ type: String, nullable: true }) phone!: string | null;
@@ -203,7 +203,7 @@ export class PlatformTenantDetailDto extends PlatformTenantDto {
   @ApiPropertyOptional({
     type: CurrentPlanDto,
     nullable: true,
-    description: 'Gói hiện hành (ADR 0010) — null = chưa có gói (không giới hạn)',
+    description: 'Gói hiện hành (ADR 0010) - null = chưa có gói (không giới hạn)',
   })
   currentPlan!: CurrentPlanDto | null;
 }

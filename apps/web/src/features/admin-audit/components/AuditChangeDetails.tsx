@@ -144,7 +144,7 @@ function SubscriptionDetails({ log }: { log: AuditLogDetail }) {
     const fallback = asRecord(after.fallbackTerm);
     const items: WorkDrawerFact[] = [
       { key: 'plan', label: t('cancelledTerm'), value: <strong>{planName}</strong> },
-      { key: 'period', label: t('validity'), value: period(term?.startsAt, term?.endsAt) ?? '—' },
+      { key: 'period', label: t('validity'), value: period(term?.startsAt, term?.endsAt) ?? '-' },
       {
         key: 'status',
         label: t('status'),
@@ -168,7 +168,7 @@ function SubscriptionDetails({ log }: { log: AuditLogDetail }) {
             {
               key: 'fallback',
               label: t('fallbackTerm'),
-              value: termText(fallback) ?? '—',
+              value: termText(fallback) ?? '-',
               wide: true,
             },
           ]
@@ -211,7 +211,7 @@ function SubscriptionDetails({ log }: { log: AuditLogDetail }) {
         .join(LIST_SEPARATOR)
     : null;
 
-  let priceValue: ReactNode = price ? fmt.money(price) : '—';
+  let priceValue: ReactNode = price ? fmt.money(price) : '-';
   if (price && overridden) {
     priceValue = (
       <span className={styles.inline}>
@@ -231,7 +231,7 @@ function SubscriptionDetails({ log }: { log: AuditLogDetail }) {
 
   const items: WorkDrawerFact[] = [
     { key: 'plan', label: t('plan'), value: <strong>{planName}</strong> },
-    { key: 'period', label: t('validity'), value: period(after.startsAt, after.endsAt) ?? '—' },
+    { key: 'period', label: t('validity'), value: period(after.startsAt, after.endsAt) ?? '-' },
     ...(months !== null
       ? [{ key: 'term', label: t('term'), value: t('months', { count: months }) }]
       : []),
@@ -250,7 +250,7 @@ function SubscriptionDetails({ log }: { log: AuditLogDetail }) {
         ]
       : []),
     ...(previous
-      ? [{ key: 'previous', label: t('previousTerm'), value: termText(previous) ?? '—', wide: true }]
+      ? [{ key: 'previous', label: t('previousTerm'), value: termText(previous) ?? '-', wide: true }]
       : []),
     ...(replaced.length > 0
       ? [
