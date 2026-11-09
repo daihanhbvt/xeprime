@@ -119,7 +119,7 @@ function BookingDetailBody({
   renderHeader?: (booking: BookingDetail, actions: React.ReactNode) => React.ReactNode;
 }) {
   const t = useTranslations('Bookings');
-  const { booking } = useBookingDetailActions();
+  const { booking, moneyClosed } = useBookingDetailActions();
   const actions = <HeaderActions />;
 
   return (
@@ -137,6 +137,7 @@ function BookingDetailBody({
               bookingId={booking.id}
               canView
               serviceType={booking.serviceType}
+              moneyClosed={moneyClosed}
               className={styles.fillCard}
             />
           </div>

@@ -58,6 +58,8 @@ const scope = vi.hoisted(() => ({
   roleKey: 'shop_owner' as string,
   /** Trục đăng ký (ADR 0040) - dải chào mừng đọc nó, xem `isEstablishedPackageShop`. */
   onboardingState: 'package_active' as string,
+  /** Tuyến hiệu lực - chủ xe tuyến hoa hồng thấy mặt tiền CÁ NHÂN của trang (ADR 0085 điều 2). */
+  billingMode: 'package' as string,
 }));
 vi.mock('@/hooks/use-tenant-scope', () => ({
   useTenantScope: () => ({
@@ -66,6 +68,7 @@ vi.mock('@/hooks/use-tenant-scope', () => ({
       name: 'Việt Car Hà Nội',
       roleKey: scope.roleKey,
       onboardingState: scope.onboardingState,
+      billingMode: scope.billingMode,
     },
     hasNoTenant: false,
   }),
@@ -75,7 +78,12 @@ vi.mock('@/hooks/use-current-user', () => ({
     data: {
       id: '01HUSER000000000000000000',
       displayName: 'Phạm Đức Việt',
-      tenant: { roleKey: scope.roleKey, billingPhase: 'current' },
+      tenant: {
+        roleKey: scope.roleKey,
+        onboardingState: scope.onboardingState,
+        billingMode: scope.billingMode,
+        billingPhase: 'current',
+      },
     },
   }),
 }));
@@ -95,6 +103,24 @@ const shopQuery = vi.hoisted(() => ({
 vi.mock('@/features/shop/hooks/use-shop', () => ({
   useMyShop: () => shopQuery,
   useUpdateShopProfile: () => updateProfile,
+}));
+
+/** Tài khoản chủ - mặt tiền cá nhân đọc ảnh + họ tên từ đây (ADR 0054). */
+const profileQuery = vi.hoisted(() => ({
+  data: undefined as unknown,
+  isError: false,
+  refetch: vi.fn(),
+  calls: [] as boolean[],
+}));
+vi.mock('@/features/account/hooks/use-account', () => ({
+  useMyProfile: (options: { enabled?: boolean } = {}) => {
+    profileQuery.calls.push(options.enabled ?? true);
+    return profileQuery;
+  },
+  useUpdateMyProfile: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+vi.mock('@/features/shop/components/VatInvoiceSetting', () => ({
+  VatInvoiceSetting: () => <div data-testid="vat-setting" />,
 }));
 
 /** `?section=` sống ở URL (ADR 0004) - ở đây chặn ở đúng ranh giới đó. */
@@ -289,6 +315,10 @@ beforeEach(() => {
   scrolledIds.length = 0;
   scope.roleKey = TENANT_ROLE.SHOP_OWNER;
   scope.onboardingState = SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE;
+  scope.billingMode = BILLING_MODE.PACKAGE;
+  profileQuery.data = undefined;
+  profileQuery.isError = false;
+  profileQuery.calls = [];
   shopQuery.data = makeShop();
   shopQuery.isLoading = false;
   shopQuery.isError = false;
@@ -689,6 +719,8 @@ describe('Dải chào mừng sau khi mua gói', () => {
   it('chủ xe tuyến hoa hồng nhận link `?welcome=1`: không dựng dải', () => {
     url.welcome = true;
     scope.onboardingState = SHOP_ONBOARDING_STATE.COMMISSION;
+    scope.billingMode = BILLING_MODE.COMMISSION;
+    profileQuery.data = OWNER_PROFILE;
     grant(PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE);
     renderPage();
 
@@ -722,5 +754,71 @@ describe('Dải chào mừng sau khi mua gói', () => {
 
     expect(screen.queryByText('Còn 1 bước để đăng xe')).toBeNull();
     expect(screen.queryByText('Gian hàng đã sẵn sàng')).toBeNull();
+  });
+});
+
+const OWNER_PROFILE = {
+  id: '01HUSER000000000000000000',
+  displayName: 'Trần Hương',
+  phone: '0903000001',
+  phoneVerified: true,
+  email: 'chuxe.huong@xeprime.test',
+  emailVerified: true,
+  avatarUrl: 'https://img.example/huong.png',
+};
+
+/**
+ * "Hồ sơ chủ xe" của chủ xe tuyến hoa hồng LÀ trang này, mặt tiền cá nhân (ADR 0085 điều 2): danh
+ * tính là TÀI KHOẢN chủ, không có thẻ của gian hàng nhiều người, thêm thẻ hoá đơn VAT.
+ */
+describe('Trang Thông tin - mặt tiền cá nhân (chủ xe tuyến hoa hồng)', () => {
+  beforeEach(() => {
+    scope.billingMode = BILLING_MODE.COMMISSION;
+    scope.onboardingState = SHOP_ONBOARDING_STATE.COMMISSION;
+    profileQuery.data = OWNER_PROFILE;
+    grant(PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE, PERMISSION.SELLER_PROFILE_VIEW);
+  });
+
+  it('đầu trang là họ tên tài khoản; có thẻ thông tin chủ xe, địa chỉ nhận xe, hoá đơn VAT', () => {
+    renderPage();
+
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Trần Hương');
+    expect(screen.getByText('Thông tin chủ xe')).toBeTruthy();
+    expect(screen.getAllByText('Địa chỉ nhận xe').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('vat-setting')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Xem trang chủ xe/ })).toBeTruthy();
+  });
+
+  it('không thẻ của gian hàng: chủ gian hàng, ảnh bìa/logo, số giấy phép KD, vai', () => {
+    renderPage();
+
+    expect(screen.queryByText('Chủ gian hàng')).toBeNull();
+    expect(screen.queryByText(/giấy phép/i)).toBeNull();
+    expect(screen.queryByText('Thông tin hiển thị')).toBeNull();
+  });
+
+  it('gian hàng tuyến gói KHÔNG nạp hồ sơ tài khoản và không có thẻ VAT ở đây', () => {
+    scope.billingMode = BILLING_MODE.PACKAGE;
+    scope.onboardingState = SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE;
+    renderPage();
+
+    expect(profileQuery.calls.every((enabled) => enabled === false)).toBe(true);
+    expect(screen.queryByTestId('vat-setting')).toBeNull();
+    expect(screen.queryByText('Thông tin chủ xe')).toBeNull();
+  });
+
+  it('THÀNH VIÊN của chủ xe cá nhân: bản gian hàng, không sửa tài khoản của chính họ dưới nhãn chủ xe', () => {
+    scope.roleKey = TENANT_ROLE.SHOP_MANAGER;
+    renderPage();
+
+    expect(screen.queryByText('Thông tin chủ xe')).toBeNull();
+    expect(profileQuery.calls.every((enabled) => enabled === false)).toBe(true);
+  });
+
+  it('hồ sơ tài khoản đang tải: khung xương, chưa dựng thẻ nào', () => {
+    profileQuery.data = undefined;
+    renderPage();
+
+    expect(screen.queryByText('Thông tin chủ xe')).toBeNull();
   });
 });

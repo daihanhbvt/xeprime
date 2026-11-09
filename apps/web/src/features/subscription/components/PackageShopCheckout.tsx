@@ -8,6 +8,7 @@ import { paymentPath } from '@/constants/routes';
 
 import { usePurchaseErrorMessage } from '../use-plan-quota-gate-message';
 
+import { onePerPaymentTarget } from '../payable';
 import { PLAN_LANE_SCOPES, pendingInvoiceForScope } from '../plan-lanes';
 import { useScopedPlanPurchase } from '../plan-purchase';
 import {
@@ -118,7 +119,7 @@ export function PackageShopCheckout() {
   return (
     <div className={styles.wrap}>
       {/* Dải chờ tiền dùng CHUNG với luồng nâng cấp — cùng một trạng thái thì cùng một câu chữ. */}
-      {invoices.map((invoice) => (
+      {onePerPaymentTarget(invoices).map((invoice) => (
         <InvoiceWaitingPanel key={invoice.id} invoice={invoice} />
       ))}
 

@@ -716,6 +716,7 @@
   "marketplaceVisibility": {
     "visible": "Đang hiển thị",
     "owner_paused": "Chủ xe tạm ẩn",
+    "plan_paused": "Tạm ẩn - hết suất gói",
     "not_approved": "Chưa được duyệt",
     "platform_hidden": "Bị nền tảng ẩn",
     "shop_inactive": "Gian hàng ngừng hoạt động",

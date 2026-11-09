@@ -32,6 +32,7 @@ import {
   makeBookingExtensionsService,
 } from './helpers/service-factory';
 import { requiredVehicleImageRows } from './helpers/vehicle-media';
+import { giveTenantPlan } from './helpers/billing-fixture';
 
 /**
  * ADR 0065 — gói gian hàng theo LOẠI XE, trên PostgreSQL THẬT.
@@ -52,6 +53,8 @@ let dbAvailable = false;
 let actorId: string;
 const planIds: string[] = [];
 const tenantIds: string[] = [];
+/** Người dùng thành viên của ca mở lại nhân viên (ADR 0085 điều 6). */
+const memberUserIds: string[] = [];
 
 type Plans = Record<'car5' | 'car1' | 'moto1' | 'moto5' | 'moto10' | 'enterprise', { id: string }>;
 let plans: Plans;
@@ -179,13 +182,16 @@ afterAll(async () => {
     await prisma.subscriptionInvoice.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenantSubscription.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.vehicleImage.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    // Lượt áp suất (ADR 0085) đồng bộ listing của xe nó tạm ẩn.
+    await prisma.publicListing.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.vehicle.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenantBranch.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenantProfile.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.notification.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    await prisma.tenantMembership.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
     await prisma.plan.deleteMany({ where: { id: { in: planIds } } });
-    await prisma.user.deleteMany({ where: { id: actorId } });
+    await prisma.user.deleteMany({ where: { id: { in: [actorId, ...memberUserIds] } } });
   }
   await prisma.$disconnect();
 });
@@ -497,6 +503,215 @@ function rawInvoice(tenantId: string, scope: string, status: string) {
     },
   });
 }
+
+/** Xe ĐÃ duyệt công khai, công tắc hiển thị theo tham số — để đếm suất trên chợ. */
+async function mkListedVehicle(
+  tenantId: string,
+  type: string,
+  marketplaceEnabled: boolean,
+  publicStatus = 'approved_public',
+) {
+  const id = newId();
+  await prisma.vehicle.create({
+    data: {
+      id,
+      tenantId,
+      code: `SL-${id.slice(-8)}`,
+      name: `Xe chợ ${type}`,
+      vehicleType: type,
+      publicStatus,
+      marketplaceEnabled,
+    } as Prisma.VehicleUncheckedCreateInput,
+  });
+  return id;
+}
+
+/**
+ * ADR 0085 điều 4 — suất gói là xe đang CHIẾM chỗ trên chợ (chờ duyệt hoặc đã duyệt, công tắc BẬT),
+ * gác ở điểm chợ cho MỌI nguồn trần. Xe chủ tự tạm ẩn thì nhả suất.
+ */
+describe('ADR 0085 — suất là xe đang chiếm chỗ trên chợ', () => {
+  maybe('gói 1 ô tô: xe đang hiện giữ suất; xe tạm ẩn / nháp KHÔNG giữ suất', async () => {
+    const tenantId = await mkTenant('slot-car1');
+    await billing.assign(tenantId, actorId, { planId: plans.car1.id, termMonths: 1 });
+    const hidden = await mkListedVehicle(tenantId, VEHICLE_TYPE.CAR, false);
+    await mkListedVehicle(tenantId, VEHICLE_TYPE.CAR, false, 'draft');
+
+    // Chỉ có xe tạm ẩn + xe nháp ⇒ còn suất cho chiếc tạm ẩn bật lại.
+    await expect(
+      billing.assertVehicleQuota(tenantId, VEHICLE_TYPE.CAR, {
+        scope: 'marketplace',
+        excludeVehicleId: hidden,
+      }),
+    ).resolves.toBeUndefined();
+
+    // Một chiếc ĐANG hiện ⇒ hết suất cho chiếc thứ hai.
+    await mkListedVehicle(tenantId, VEHICLE_TYPE.CAR, true);
+    await expect(
+      billing.assertVehicleQuota(tenantId, VEHICLE_TYPE.CAR, {
+        scope: 'marketplace',
+        excludeVehicleId: hidden,
+      }),
+    ).rejects.toMatchObject({
+      response: {
+        code: API_ERROR_CODE.PLAN_LIMIT_REACHED,
+        details: { scope: 'marketplace', used: 1, limit: 1 },
+      },
+    });
+
+    // Thẻ "Gói của tôi" đếm CÙNG một điều kiện với cổng chặn.
+    const mine = await billing.mySubscription(tenantId);
+    expect(mine.vehicleQuotas.car).toMatchObject({ onMarketplace: 1 });
+  });
+
+  /** Trả đủ một hoá đơn qua đúng đường của webhook — kích hoạt + áp suất trong CÙNG transaction. */
+  async function payInvoice(code: string, amount: string) {
+    return prisma.$transaction((tx) =>
+      billing.applyBankPaymentWithinTx(tx, {
+        code,
+        amount: new Prisma.Decimal(amount),
+        providerTxId: `slot-${code}`,
+      }),
+    );
+  }
+
+  const marketState = (id: string) =>
+    prisma.vehicle.findUniqueOrThrow({
+      where: { id },
+      select: { marketplaceEnabled: true, marketplacePausedReason: true },
+    });
+
+  maybe('chủ xe cá nhân có ô tô + xe máy mua gói ô tô: phải xác nhận; tiền về ẩn xe máy, giữ ô tô', async () => {
+    const tenantId = await mkTenant('slot-upgrade');
+    await giveTenantPlan(prisma, tenantId, { billingMode: BILLING_MODE.COMMISSION });
+    const car = await mkListedVehicle(tenantId, VEHICLE_TYPE.CAR, true);
+    const moto = await mkListedVehicle(tenantId, VEHICLE_TYPE.MOTORBIKE, true);
+    const item = { planId: plans.car1.id, termMonths: 1 };
+
+    // Xem trước nói trước: xe máy không có gói ⇒ nhóm trần 0.
+    const preview = await billing.previewPurchase(tenantId, { items: [item] });
+    expect(preview.vehicleSlots).toEqual([
+      expect.objectContaining({ countedScope: 'motorbike', limit: 0, occupyingCount: 1 }),
+    ]);
+
+    // Không xác nhận ⇒ không phát hành hoá đơn.
+    await expect(billing.purchase(tenantId, actorId, item)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.PLAN_VEHICLE_SELECTION_REQUIRED },
+    });
+
+    const invoice = await billing.purchase(tenantId, actorId, {
+      ...item,
+      acceptVehicleHiding: true,
+      keepVehicleIds: [],
+    });
+    const row = await prisma.subscriptionInvoice.findUniqueOrThrow({ where: { id: invoice.id } });
+    expect(row.linesJson).toMatchObject({ vehicleSlots: { keepVehicleIds: [] } });
+
+    // Chưa trả tiền thì chưa ẩn gì.
+    expect(await marketState(moto)).toEqual({ marketplaceEnabled: true, marketplacePausedReason: null });
+
+    const paid = await payInvoice(invoice.code, invoice.totalAmount);
+    expect(paid.outcome).toBe('activated');
+    expect(await marketState(moto)).toEqual({
+      marketplaceEnabled: false,
+      marketplacePausedReason: 'plan_limit',
+    });
+    expect(await marketState(car)).toEqual({ marketplaceEnabled: true, marketplacePausedReason: null });
+    const audits = await prisma.auditLog.findMany({
+      where: { tenantId, action: 'vehicle.marketplace_paused_by_plan' },
+    });
+    expect(audits).toHaveLength(1);
+    expect(audits[0]!.afterJson).toMatchObject({ vehicleIds: [moto], source: 'subscription_activation' });
+  });
+
+  maybe('vượt suất cùng loại: giữ quá trần ⇒ 400; giữ đúng một xe ⇒ tiền về ẩn xe còn lại', async () => {
+    const tenantId = await mkTenant('slot-same-type');
+    const first = await mkListedVehicle(tenantId, VEHICLE_TYPE.CAR, true);
+    const second = await mkListedVehicle(tenantId, VEHICLE_TYPE.CAR, true);
+    const item = { planId: plans.car1.id, termMonths: 1 };
+
+    await expect(
+      billing.purchase(tenantId, actorId, {
+        ...item,
+        acceptVehicleHiding: true,
+        keepVehicleIds: [first, second],
+      }),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
+
+    const invoice = await billing.purchase(tenantId, actorId, {
+      ...item,
+      acceptVehicleHiding: true,
+      keepVehicleIds: [first],
+    });
+    await payInvoice(invoice.code, invoice.totalAmount);
+    expect((await marketState(first)).marketplaceEnabled).toBe(true);
+    expect(await marketState(second)).toEqual({
+      marketplaceEnabled: false,
+      marketplacePausedReason: 'plan_limit',
+    });
+  });
+
+  maybe('gói kích hoạt lại ⇒ mở đúng nhân viên bị khoá vì hết gói; khoá tay của chủ giữ nguyên', async () => {
+    const tenantId = await mkTenant('slot-restore');
+    const mkMember = async (lockedReason: string | null) => {
+      const userId = newId();
+      await prisma.user.create({
+        data: {
+          id: userId,
+          realm: ACCOUNT_REALM.PARTNER,
+          displayName: 'NV',
+          email: `nv-${userId.slice(-8).toLowerCase()}-${RUN}@xeprime.test`,
+        },
+      });
+      memberUserIds.push(userId);
+      const id = newId();
+      await prisma.tenantMembership.create({
+        data: { id, tenantId, userId, roleKey: 'shop_staff', status: 'locked', lockedReason },
+      });
+      return id;
+    };
+    const lapsed = await mkMember('plan_lapsed');
+    const manual = await mkMember(null);
+
+    const invoice = await billing.purchase(tenantId, actorId, { planId: plans.car5.id, termMonths: 1 });
+    await payInvoice(invoice.code, invoice.totalAmount);
+
+    const rows = await prisma.tenantMembership.findMany({
+      where: { id: { in: [lapsed, manual] } },
+      select: { id: true, status: true, lockedReason: true },
+    });
+    expect(rows.find((r) => r.id === lapsed)).toMatchObject({ status: 'active', lockedReason: null });
+    expect(rows.find((r) => r.id === manual)).toMatchObject({ status: 'locked', lockedReason: null });
+  });
+
+  maybe('không vượt suất: không cần chọn, hoá đơn không mang lựa chọn, tiền về không ẩn gì', async () => {
+    const tenantId = await mkTenant('slot-fits');
+    const car = await mkListedVehicle(tenantId, VEHICLE_TYPE.CAR, true);
+    const item = { planId: plans.car5.id, termMonths: 1 };
+
+    expect((await billing.previewPurchase(tenantId, { items: [item] })).vehicleSlots).toEqual([]);
+    const invoice = await billing.purchase(tenantId, actorId, item);
+    const row = await prisma.subscriptionInvoice.findUniqueOrThrow({ where: { id: invoice.id } });
+    expect(row.linesJson).not.toHaveProperty('vehicleSlots');
+    await payInvoice(invoice.code, invoice.totalAmount);
+    expect((await marketState(car)).marketplaceEnabled).toBe(true);
+  });
+
+  maybe('trần KHÔNG trả tiền (chưa cấu hình gói) cũng gác điểm chợ — tổng hai loại', async () => {
+    const tenantId = await mkTenant('slot-unpaid');
+    await mkListedVehicle(tenantId, VEHICLE_TYPE.CAR, true);
+    await mkListedVehicle(tenantId, VEHICLE_TYPE.CAR, true);
+    await mkListedVehicle(tenantId, VEHICLE_TYPE.MOTORBIKE, true, 'pending_public_review');
+    const fourth = await mkListedVehicle(tenantId, VEHICLE_TYPE.MOTORBIKE, false);
+
+    await expect(
+      billing.assertVehicleQuota(tenantId, VEHICLE_TYPE.MOTORBIKE, {
+        scope: 'marketplace',
+        excludeVehicleId: fourth,
+      }),
+    ).rejects.toMatchObject({ response: { details: { scope: 'marketplace', used: 3, limit: 3 } } });
+  });
+});
 
 describe('ADR 0065 — vòng review', () => {
   maybe('M2: EXCLUDE chuỗi kỳ ⇒ 409 SUBSCRIPTION_TERM_CONFLICT; trigger phạm vi ⇒ 400 VALIDATION_FAILED', async () => {

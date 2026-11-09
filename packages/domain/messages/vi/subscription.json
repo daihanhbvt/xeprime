@@ -309,6 +309,7 @@
       "car": "Mua gói ô tô"
     },
     "ownerLite": "Chủ xe cá nhân đăng tối đa {limit} xe (tính chung ô tô và xe máy) - bạn đang có {used} xe.",
+    "ownerLiteMarketplace": "Chủ xe cá nhân hiển thị tối đa {limit} xe trên chợ (tính chung ô tô và xe máy) - bạn đang hiển thị {used} xe. Tạm ẩn một xe khác hoặc nâng cấp lên gian hàng.",
     "upgradeToShop": "Nâng cấp lên gian hàng",
     "shared": {
       "fleet": "Gói hiện tại đã dùng hết {used}/{limit} xe - chưa thêm được xe mới.",
@@ -439,5 +440,22 @@
     "upgradeWarning": "{terms} sẽ kết thúc ngay khi thanh toán xong - phần thời gian còn lại không được hoàn.",
     "overCap": "Từ {date}, hạn mức còn {cap} xe trong khi bạn đang có {used} xe - xe vượt hạn mức vẫn chạy nhưng không gửi thêm lên chợ được.",
     "hintLabel": "Lượt mua này làm gì với gói hiện tại"
+  },
+  "slots": {
+    "title": "Số xe trên chợ vượt suất của gói",
+    "hint": "Gói chỉ hiển thị được số xe bằng số suất. Chọn xe giữ lại; các xe còn lại sẽ tạm ẩn khỏi chợ khi gói kích hoạt - vẫn giữ nguyên hồ sơ, đơn và lịch. Bạn tự bật lại khi gói còn suất trống.",
+    "overLimit": "{scope} có {limit, plural, other {# suất}} - bạn đang hiển thị {count, plural, other {# xe}}. Chọn tối đa {limit, plural, other {# xe}} giữ lại.",
+    "noPlan": "Gói đã chọn không gồm {vehicles} - {count, plural, other {# xe}} sẽ tạm ẩn khi gói kích hoạt.",
+    "noPlanHint": "Muốn giữ chúng trên chợ? Quay lại chọn thêm gói cho loại xe này.",
+    "vehicles": {
+      "car": "ô tô",
+      "motorbike": "xe máy",
+      "all": "xe"
+    },
+    "selected": "Đã chọn {selected}/{limit}",
+    "more": "Và {count, plural, other {# xe}} khác cũng sẽ tạm ẩn.",
+    "listLabel": "Xe giữ lại trên chợ",
+    "accept": "Tôi đồng ý tạm ẩn các xe không được chọn khi gói kích hoạt.",
+    "pickBigger": "Muốn giữ tất cả? Quay lại chọn gói lớn hơn."
   }
 }

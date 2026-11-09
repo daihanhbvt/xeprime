@@ -11,12 +11,7 @@ import {
 } from '@xeprime/types';
 
 export { VEHICLE_QUOTA_KIND };
-import {
-  ACCOUNT_SECTION,
-  SHOP_SECTION,
-  accountSectionPath,
-  shopSectionPath,
-} from '@/constants/routes';
+import { SHOP_SECTION, shopSectionPath } from '@/constants/routes';
 
 import type {
   CurrentPlan,
@@ -148,9 +143,12 @@ export function planLaneHref(scope: PlanLaneScope): string {
   return `${path}${path.includes('?') ? '&' : '?'}${PLAN_LANE_PARAM}=${encodeURIComponent(scope)}`;
 }
 
-/** Section gói của chủ xe tuyến hoa hồng - nơi luồng nâng cấp sống. */
+/**
+ * Section gói của chủ xe tuyến hoa hồng - nơi luồng nâng cấp sống. CÙNG section với gian hàng từ
+ * ADR 0085 (trang Thông tin `/shop` của cả hai tuyến); giữ hàm để nơi gọi nói rõ ý định.
+ */
 export function commissionPlanHref(): string {
-  return accountSectionPath(ACCOUNT_SECTION.PLAN);
+  return shopSectionPath(SHOP_SECTION.PLAN);
 }
 
 /** Id DOM của một làn - đích cuộn/tiêu điểm của `?lane=`. */

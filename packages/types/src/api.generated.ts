@@ -14709,6 +14709,10 @@ export interface components {
             comment?: string;
         };
         CreateSubscriptionCheckoutDto: {
+            /** @description Xe GIỮ LẠI trên chợ (ULID) - mỗi nhóm vượt suất tối đa đúng số suất của nó. Xe khác của nhóm vượt tạm ẩn khi gói kích hoạt (hạ bậc: khi kỳ mới bắt đầu). Có thể rỗng */
+            keepVehicleIds?: string[];
+            /** @description Người mua XÁC NHẬN các xe không giữ lại sẽ tạm ẩn - bắt buộc true khi có nhóm vượt suất */
+            acceptVehicleHiding?: boolean;
             /** @description Hai gói của HAI loại xe khác nhau (ô tô + xe máy). Gói doanh nghiệp không mua ở đây */
             items: components["schemas"]["PurchaseSubscriptionDto"][];
         };
@@ -17185,7 +17189,7 @@ export interface components {
             clientMessageId?: string | null;
             /** @description Xe tin nhắn này nói về - null khi câu đó không gắn ngữ cảnh nào */
             vehicle?: components["schemas"]["MessageVehicleDto"] | null;
-            /** @description Chuyến tin nhắn này nói về - null khi câu đó không gắn chuyến nào */
+            /** @description Chuyến tin nhắn này nói về — null khi câu đó không gắn chuyến nào */
             trip?: components["schemas"]["MessageTripDto"] | null;
             attachments: components["schemas"]["MessageAttachmentDto"][];
             /** @description ISO-8601 UTC */
@@ -17200,15 +17204,15 @@ export interface components {
             nextBeforeId?: string | null;
         };
         MessageTripDto: {
-            /** @description ID yêu cầu thuê - định danh chuyến (`/trips/:id` phía khách) */
+            /** @description ID yêu cầu thuê — định danh chuyến (`/trips/:id` phía khách) */
             id: string;
-            /** @description Đơn thuê - có khi đã thành đơn */
+            /** @description Đơn thuê — có khi đã thành đơn */
             bookingId?: string | null;
-            /** @description Mã đơn - có khi đã thành đơn */
+            /** @description Mã đơn — có khi đã thành đơn */
             code?: string | null;
-            /** @description ISO-8601 UTC - giờ nhận (của đơn nếu có; dài hạn chưa chốt lịch là null) */
+            /** @description ISO-8601 UTC — giờ nhận (của đơn nếu có; dài hạn chưa chốt lịch là null) */
             pickupAt?: string | null;
-            /** @description ISO-8601 UTC - giờ trả */
+            /** @description ISO-8601 UTC — giờ trả */
             returnAt?: string | null;
         };
         MessageVehicleDto: {
@@ -18580,6 +18584,31 @@ export interface components {
             maxBranches?: number | null;
             maxMembers?: number | null;
         };
+        PlanSlotOverflowDto: {
+            /**
+             * @description Phạm vi đếm: một loại xe, hoặc all khi trần dùng chung
+             * @enum {string}
+             */
+            countedScope: "all" | "car" | "motorbike";
+            /** @description Số suất sau lượt mua; 0 = loại xe này không có gói */
+            limit: number;
+            /** @description Số xe đang chiếm suất của nhóm (có thể nhiều hơn danh sách) */
+            occupyingCount: number;
+            vehicles: components["schemas"]["PlanSlotVehicleDto"][];
+        };
+        PlanSlotVehicleDto: {
+            id: string;
+            name: string;
+            plateNumber?: string | null;
+            /** @enum {string} */
+            vehicleType: "car" | "motorbike";
+            mainImageUrl?: string | null;
+            /**
+             * @description Chờ duyệt hoặc đã công khai
+             * @enum {string}
+             */
+            publicStatus: "draft" | "pending_public_review" | "approved_public" | "needs_revision" | "rejected" | "hidden" | "archived";
+        };
         PlanTermPriceDto: {
             /**
              * @description Kỳ hạn THÁNG LỊCH
@@ -19581,7 +19610,7 @@ export interface components {
              * @description Vì sao xe đang (không) hiện ngoài chợ
              * @enum {string}
              */
-            marketplaceVisibilityReason: "visible" | "owner_paused" | "not_approved" | "platform_hidden" | "shop_inactive" | "archived";
+            marketplaceVisibilityReason: "visible" | "owner_paused" | "plan_paused" | "not_approved" | "platform_hidden" | "shop_inactive" | "archived";
             /** @description ISO-8601 UTC */
             createdAt: string;
             /** @description ISO-8601 UTC */
@@ -19650,7 +19679,7 @@ export interface components {
              * @description Vì sao xe đang (không) hiện ngoài chợ
              * @enum {string}
              */
-            marketplaceVisibilityReason: "visible" | "owner_paused" | "not_approved" | "platform_hidden" | "shop_inactive" | "archived";
+            marketplaceVisibilityReason: "visible" | "owner_paused" | "plan_paused" | "not_approved" | "platform_hidden" | "shop_inactive" | "archived";
             /** @description ISO-8601 UTC */
             createdAt: string;
             /** @description ISO-8601 UTC */
@@ -20459,6 +20488,25 @@ export interface components {
              */
             timing?: "next_term" | "now";
         };
+        PurchaseSubscriptionRequestDto: {
+            /** @description ID gói (ULID) */
+            planId: string;
+            /**
+             * @description Kỳ hạn THÁNG LỊCH (ADR 0015)
+             * @enum {number}
+             */
+            termMonths: 1 | 3 | 6 | 12;
+            /**
+             * @deprecated
+             * @description Bị bỏ qua - server tự suy thời điểm áp dụng theo bậc được chọn (ADR 0084)
+             * @enum {string}
+             */
+            timing?: "next_term" | "now";
+            /** @description Xe GIỮ LẠI trên chợ (ULID) - mỗi nhóm vượt suất tối đa đúng số suất của nó. Xe khác của nhóm vượt tạm ẩn khi gói kích hoạt (hạ bậc: khi kỳ mới bắt đầu). Có thể rỗng */
+            keepVehicleIds?: string[];
+            /** @description Người mua XÁC NHẬN các xe không giữ lại sẽ tạm ẩn - bắt buộc true khi có nhóm vượt suất */
+            acceptVehicleHiding?: boolean;
+        };
         PushDeviceDto: {
             id: string;
             /** @enum {string} */
@@ -21212,7 +21260,7 @@ export interface components {
         };
         SaveVehicleOperationSettingsDto: {
             turnaroundBufferMinutes: number;
-            /** @description true = bỏ số riêng của xe, theo mặc định gian hàng (`turnaroundBufferMinutes` bị bỏ qua). Bỏ trống = false - app cũ gửi số như trước */
+            /** @description true = bỏ số riêng của xe, theo mặc định gian hàng (`turnaroundBufferMinutes` bị bỏ qua). Bỏ trống = false — app cũ gửi số như trước */
             useShopDefault?: boolean;
             /**
              * @deprecated
@@ -21276,7 +21324,7 @@ export interface components {
             interestMethod?: "reducing_balance" | "flat";
             /** @description Tên chủ xe / doanh nghiệp (bên cho thuê / đối tác) */
             ownerName?: string | null;
-            /** @description SĐT liên hệ của chủ xe - `0…`/`84…`/`+84…`, chỉ chữ số; lưu `0…` (ADR 0082) */
+            /** @description SĐT liên hệ của chủ xe — `0…`/`84…`/`+84…`, chỉ chữ số; lưu `0…` (ADR 0082) */
             ownerPhone?: string | null;
             /** @description Email chủ xe (tuỳ chọn) */
             ownerEmail?: string | null;
@@ -21427,13 +21475,13 @@ export interface components {
         ShopOperationDefaultsDto: {
             /** @enum {string} */
             vehicleType: "car" | "motorbike";
-            /** @description Phút chuẩn bị giữa hai chuyến - null khi chưa đặt (xe theo mặc định áp 0) */
+            /** @description Phút chuẩn bị giữa hai chuyến — null khi chưa đặt (xe theo mặc định áp 0) */
             turnaroundBufferMinutes?: number | null;
             /** @description Số xe cùng loại đang theo mặc định này (chưa tự đặt riêng) */
             inheritingVehicles: number;
             /** @description Số xe cùng loại đã tự đặt thời gian chết riêng */
             overriddenVehicles: number;
-            /** @description ISO - null khi chưa lưu lần nào */
+            /** @description ISO — null khi chưa lưu lần nào */
             updatedAt?: string | null;
         };
         ShopOwnerAccountDto: {
@@ -21702,6 +21750,8 @@ export interface components {
             items: components["schemas"]["SubscriptionPurchasePreviewItemDto"][];
             /** @description Tổng phải trả (VND, chuỗi) */
             total: string;
+            /** @description Nhóm suất sẽ VƯỢT sau lượt mua (ADR 0085). Không rỗng ⇒ lượt mua phải kèm keepVehicleIds + acceptVehicleHiding, hoặc chọn gói khác */
+            vehicleSlots: components["schemas"]["PlanSlotOverflowDto"][];
         };
         SubscriptionPurchasePreviewItemDto: {
             planId: string;
@@ -23167,7 +23217,7 @@ export interface components {
              * @description Vì sao xe đang (không) hiện ngoài chợ. Server suy - client KHÔNG tự ghép lại từ nhiều status
              * @enum {string}
              */
-            marketplaceVisibilityReason: "visible" | "owner_paused" | "not_approved" | "platform_hidden" | "shop_inactive" | "archived";
+            marketplaceVisibilityReason: "visible" | "owner_paused" | "plan_paused" | "not_approved" | "platform_hidden" | "shop_inactive" | "archived";
             mainImageUrl?: string | null;
             /** @description Tiền dạng string - ADR 0007 */
             weekdayPrice?: string | null;
@@ -23345,7 +23395,7 @@ export interface components {
              * @description Vì sao xe đang (không) hiện ngoài chợ. Server suy - client KHÔNG tự ghép lại từ nhiều status
              * @enum {string}
              */
-            marketplaceVisibilityReason: "visible" | "owner_paused" | "not_approved" | "platform_hidden" | "shop_inactive" | "archived";
+            marketplaceVisibilityReason: "visible" | "owner_paused" | "plan_paused" | "not_approved" | "platform_hidden" | "shop_inactive" | "archived";
             mainImageUrl?: string | null;
             /** @description Tiền dạng string - ADR 0007 */
             weekdayPrice?: string | null;
@@ -23378,7 +23428,7 @@ export interface components {
             turnaroundBufferMinutes: number;
             /** @description true = xe theo thời gian chết MẶC ĐỊNH của gian hàng cho loại xe này (`turnaroundBufferMinutes` là số hiệu lực đọc từ mặc định đó) */
             useShopDefault: boolean;
-            /** @description Mặc định gian hàng của loại xe - null khi gian hàng chưa đặt (áp 0) */
+            /** @description Mặc định gian hàng của loại xe — null khi gian hàng chưa đặt (áp 0) */
             shopDefaultMinutes?: number | null;
             /**
              * @deprecated
@@ -88861,7 +88911,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PurchaseSubscriptionDto"];
+                "application/json": components["schemas"]["PurchaseSubscriptionRequestDto"];
             };
         };
         responses: {

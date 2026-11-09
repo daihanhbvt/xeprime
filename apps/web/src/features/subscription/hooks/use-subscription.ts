@@ -21,6 +21,7 @@ import {
 import type {
   CreateSubscriptionCheckoutInput,
   PurchaseSubscriptionInput,
+  PurchaseSubscriptionRequest,
   SubscriptionCheckout,
   SubscriptionInvoice,
 } from '../types';
@@ -184,7 +185,7 @@ export function useSubscriptionInvoices(page: number) {
 export function usePurchaseSubscription() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: PurchaseSubscriptionInput) => purchaseSubscription(body),
+    mutationFn: (body: PurchaseSubscriptionRequest) => purchaseSubscription(body),
     onSuccess: (invoice) => {
       const scope = planVehicleScopeOf(invoice.vehicleScope);
       queryClient.setQueryData<SubscriptionInvoice[]>(

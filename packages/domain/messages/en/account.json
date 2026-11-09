@@ -429,12 +429,15 @@
       "previewLabel": "Profile preview",
       "notShop": "This name and photo belong to your account only. The name, logo and contact phone renters see belong to the shop.",
       "shopSettingsLink": "Open shop settings",
+      "personalStorefront": "This photo and name are exactly what renters see on your host page.",
+      "ownerProfileLink": "Open host profile",
       "storefrontFallback": "This name and photo are also what renters see on your vehicles - you rent out as an individual, not through a shop."
     }
   },
   "ownerHub": {
     "title": "Host profile",
     "subtitle": "What renters see, your tax details, your plan and how you sign in.",
+    "pageSubtitle": "What renters see, your pickup address, tax details and plan.",
     "appSubtitle": "What renters see, tax details and how you sign in.",
     "navTitle": "On this page",
     "navLabel": "Host profile sections",

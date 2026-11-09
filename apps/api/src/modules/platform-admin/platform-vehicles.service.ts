@@ -48,6 +48,7 @@ const LIST_SELECT = {
   // `deletedAt` đi kèm vì phép gộp hiển thị cần nó; truy vấn ở đây lọc `deletedAt: null`, nhưng
   // luật thì không được dựa vào điều đó.
   marketplaceEnabled: true,
+  marketplacePausedReason: true,
   deletedAt: true,
   mainImageUrl: true,
   weekdayPrice: true,
@@ -419,6 +420,7 @@ function toListItem(r: VehicleRow): PlatformVehicleDto {
     deletedAt: r.deletedAt,
     publicStatus: r.publicStatus,
     marketplaceEnabled: r.marketplaceEnabled,
+    marketplacePausedReason: r.marketplacePausedReason,
     shopActive: r.tenant.status === TENANT_STATUS.ACTIVE && r.tenant.deletedAt == null,
   });
 

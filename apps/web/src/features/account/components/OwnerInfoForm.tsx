@@ -12,6 +12,7 @@ import { TextField } from '@/components/form/TextField';
 import { useUpdateShopProfile } from '@/features/shop/hooks/use-shop';
 import type { MyShop } from '@/features/shop/types';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { cx } from '@/lib/cx';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { presignAvatar } from '@/services/upload';
 
@@ -47,11 +48,14 @@ export function OwnerInfoForm({
   profile,
   shop,
   canEditBio,
+  stacked = false,
 }: {
   profile: UserProfile;
   shop: MyShop;
   /** `tenant.update` — lời giới thiệu là của trang chủ xe. Họ tên/ảnh là của chính người dùng. */
   canEditBio: boolean;
+  /** Ảnh trên, ô dưới — cột hẹp bên phải của trang Thông tin (`ShopWorkspace`). */
+  stacked?: boolean;
 }) {
   const t = useTranslations('Account.ownerHub.info');
   const tAccount = useTranslations('Account');
@@ -104,7 +108,7 @@ export function OwnerInfoForm({
   });
 
   return (
-    <form onSubmit={submit} noValidate className={styles.layout}>
+    <form onSubmit={submit} noValidate className={cx(styles.layout, stacked && styles.stacked)}>
       <div className={styles.avatar}>
         <AvatarUploadField
           control={control}

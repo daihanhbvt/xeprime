@@ -9,7 +9,7 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   appliesExcessMileage,
-  BOOKING_STATUS,
+  isBookingFinal,
   DEPOSIT_STATUS,
   DRIVER_SURCHARGE_KIND_SPEC,
   HANDOVER_TYPE,
@@ -39,6 +39,7 @@ import {
   loadBookingMoneySides,
   ownerShareHeldOnline,
 } from '../../../common/booking-money';
+import { assertBookingMoneyOpenWithinTx } from '../../../common/booking-money-gate';
 import { formatVnd } from '../../../common/money';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditService } from '../../audit/audit.service';
@@ -126,6 +127,8 @@ export class SettlementService {
      */
     await this.prisma
       .$transaction(async (tx) => {
+        // Đơn huỷ / khách không đến: xe chưa lăn bánh thì không có phát sinh nào để ghi.
+        await assertBookingMoneyOpenWithinTx(tx, bookingId);
         await tx.bookingSurcharge.create({
           data: {
             id,
@@ -186,6 +189,8 @@ export class SettlementService {
     }
 
     await this.prisma.$transaction(async (tx) => {
+      // Sửa số là ghi tiền mới; GỠ khoản lỡ ghi (`voidSurcharge`) thì vẫn mở trên đơn huỷ.
+      await assertBookingMoneyOpenWithinTx(tx, bookingId);
       await tx.bookingSurcharge.update({
         where: { id: current.id },
         data: {
@@ -1170,9 +1175,11 @@ function depositStatusOf(input: {
   }
 
   // Chuyến chưa kết thúc: cọc đang được GIỮ, chưa tới lúc nói chuyện hoàn lại.
-  if (input.bookingStatus !== BOOKING_STATUS.COMPLETED) return DEPOSIT_STATUS.RECEIVED;
+  if (!isBookingFinal(input.bookingStatus)) return DEPOSIT_STATUS.RECEIVED;
 
-  // Xong chuyến: còn gì để trả thì chờ hoàn, hết sạch vào phát sinh thì coi như đã quyết toán.
+  // Đơn đã khép — xong chuyến, hoặc huỷ / khách không đến mà cọc đã lỡ ghi thu (09/11/2026: trước
+  // đó hai đơn này kẹt ở `RECEIVED` mãi, không mở được việc hoàn cọc). Còn gì để trả thì chờ hoàn,
+  // hết sạch vào phát sinh thì coi như đã quyết toán.
   return input.proposedRefund.greaterThan(0)
     ? DEPOSIT_STATUS.AWAITING_REFUND
     : DEPOSIT_STATUS.SETTLED;

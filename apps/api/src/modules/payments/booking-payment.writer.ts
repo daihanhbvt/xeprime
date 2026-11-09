@@ -9,6 +9,7 @@ import {
   type PaymentKind,
   type PaymentMethod,
 } from '@xeprime/types';
+import { assertBookingMoneyOpenWithinTx } from '../../common/booking-money-gate';
 import { AuditService } from '../audit/audit.service';
 import { ReceiptsService } from '../finance/receipts.service';
 
@@ -49,6 +50,10 @@ export class BookingPaymentWriter {
   ): Promise<string> {
     const { tenantId, userId, booking, amount, method, kind, paidAt } = input;
     const isDeposit = kind === PAYMENT_KIND.DEPOSIT;
+
+    // Đơn huỷ / khách không đến không nhận tiền thuê hay cọc mới — chặn ở writer DUY NHẤT nên mọi
+    // đường thu (hộp Thu tiền, Thu cọc, lượt nhận lại xe) cùng một luật.
+    await assertBookingMoneyOpenWithinTx(tx, booking.id);
 
     // Id payment sinh TRƯỚC phiếu: phiếu cần nó làm `sourceRefId` (đường lần ngược từ sổ về giao
     // dịch), còn payment cần `receiptId` — hai chiều, nên một đầu phải có id trước.

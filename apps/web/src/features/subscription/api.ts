@@ -6,6 +6,7 @@ import type {
   PaymentInfo,
   PendingSubscriptionInvoice,
   PurchaseSubscriptionInput,
+  PurchaseSubscriptionRequest,
   SubscriptionCheckout,
   SubscriptionPurchasePreview,
   SubscriptionInvoice,
@@ -60,7 +61,7 @@ export const fetchInvoices = (page = 1): Promise<InvoiceListResult> =>
 
 /** Mua/gia hạn: trả về HOÁ ĐƠN (mã đối soát) - gói chỉ kích hoạt khi tiền về (ADR 0026 điều 4). */
 export const purchaseSubscription = (
-  body: PurchaseSubscriptionInput,
+  body: PurchaseSubscriptionRequest,
 ): Promise<SubscriptionInvoice> => apiPost<SubscriptionInvoice>('/subscription/purchase', body);
 
 /** Mua gói ô tô + gói xe máy trong MỘT lần chuyển khoản - phiếu `XPC…` (ADR 0083). */

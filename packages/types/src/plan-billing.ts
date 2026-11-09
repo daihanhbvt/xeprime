@@ -318,6 +318,19 @@ export interface PlanInvoiceSnapshot {
   /** Hạn mức sẽ ghi lên dòng thuê bao khi hoá đơn này kích hoạt gói (ADR 0041 điều 3). */
   quota: PlanQuotaSnapshot;
   lines: PlanInvoiceLine[];
+  /**
+   * Lựa chọn "xe giữ lại" của người mua khi lượt mua làm số xe đang hiện trên chợ vượt suất của gói
+   * (ADR 0085 điều 5). CHỈ có mặt khi lúc phát hành có nhóm vượt suất VÀ người mua đã xác nhận ẩn phần
+   * còn lại; vắng = không có gì để áp (hoá đơn cũ, admin gán, hay lượt mua không vượt suất) — hệ thống
+   * không bao giờ tự chọn xe thay người bán.
+   */
+  vehicleSlots?: PlanInvoiceVehicleSlots;
+}
+
+/** Lựa chọn xe giữ lại trên hoá đơn gói (ADR 0085 điều 5). */
+export interface PlanInvoiceVehicleSlots {
+  /** Xe người mua giữ lại trên chợ; mọi xe khác đang vượt suất lúc áp sẽ tạm ẩn. Có thể rỗng. */
+  keepVehicleIds: string[];
 }
 
 // ── Parser phòng thủ ────────────────────────────────────────────────────────
@@ -477,7 +490,21 @@ export function parsePlanInvoiceSnapshot(value: unknown): PlanInvoiceSnapshot | 
         : SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM,
     quota: invoiceQuota(raw),
     lines,
+    ...invoiceVehicleSlots(raw),
   };
+}
+
+/**
+ * `vehicleSlots` của hoá đơn — chỉ trả khi khoá có mặt và đúng hình. Hỏng thì VẮNG (không áp gì),
+ * không đoán: một danh sách giữ lại sai là ẩn nhầm xe đang bán của người ta.
+ */
+function invoiceVehicleSlots(raw: Record<string, unknown>): { vehicleSlots?: PlanInvoiceVehicleSlots } {
+  const slots = asRecord(raw['vehicleSlots']);
+  if (!slots || !Array.isArray(slots['keepVehicleIds'])) return {};
+  const ids = (slots['keepVehicleIds'] as unknown[]).filter(
+    (id): id is string => typeof id === 'string' && id.length > 0,
+  );
+  return { vehicleSlots: { keepVehicleIds: [...new Set(ids)] } };
 }
 
 /** `quota` của hoá đơn mới; hoá đơn trước ADR 0041 suy từ `slots` cũ. */

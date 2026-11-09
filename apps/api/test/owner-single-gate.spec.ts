@@ -449,7 +449,23 @@ describe('3. Xe thiếu điều kiện: vẫn là nháp, nói rõ thiếu gì', 
   });
 });
 
+
+/**
+ * Chủ xe tuyến hoa hồng hiển thị tối đa 3 xe trên chợ (ADR 0085 điều 4 — trần Owner Lite gác cả
+ * điểm chợ). Fixture này tạo xe thẳng bằng Prisma qua nhiều nhóm test trên CÙNG một gian hàng, nên
+ * trước một nhóm mới thì các xe của nhóm trước nhả suất (tắt hiển thị) — nhóm sau không nói về trần.
+ */
+async function freeOwnerLiteSlots(): Promise<void> {
+  if (!dbAvailable) return;
+  await prisma.vehicle.updateMany({
+    where: { tenantId: tenantId },
+    data: { marketplaceEnabled: false },
+  });
+}
+
 describe('4. Từ chối / yêu cầu bổ sung: chủ xe thấy lý do và gửi lại được', () => {
+  beforeAll(freeOwnerLiteSlots);
+
   maybe('yêu cầu bổ sung → xe về tay chủ xe, CÓ thông báo riêng, lý do đi kèm', async () => {
     const vehicleId = await seedVehicle();
     await vehicles.submitForPublicReview(tenantId, vehicleId, ownerId);

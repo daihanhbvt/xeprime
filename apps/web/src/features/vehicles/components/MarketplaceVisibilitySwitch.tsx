@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { isLogoOnlyGate, packageShopListingGateFrom } from '@xeprime/domain';
 import {
+  MARKETPLACE_VISIBILITY_REASON,
   MARKETPLACE_VISIBILITY_REASON_META,
   PERMISSION,
   VEHICLE_PUBLIC_STATUS,
@@ -173,7 +174,13 @@ function MarketplaceState({ vehicle }: { vehicle: VehicleDetail }) {
   const t = useTranslations('Vehicles.publish.visibility');
   const reason = vehicle.marketplaceVisibilityReason as MarketplaceVisibilityReason;
 
-  if (!vehicle.marketplaceEnabled) return <span className={styles.state}>{t('off')}</span>;
+  /*
+   * Tắt vì HẾT SUẤT GÓI (ADR 0085 điều 5) không phải "Đang tắt" của chủ xe: nói đúng lý do để họ biết
+   * bật lại cần một suất trống, không phải chỉ một cú bấm.
+   */
+  if (!vehicle.marketplaceEnabled && reason !== MARKETPLACE_VISIBILITY_REASON.PLAN_PAUSED) {
+    return <span className={styles.state}>{t('off')}</span>;
+  }
   if (vehicle.isMarketplaceVisible) {
     return <span className={`${styles.state} ${styles.live}`}>{t('on')}</span>;
   }

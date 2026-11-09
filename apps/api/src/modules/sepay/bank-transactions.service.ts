@@ -159,7 +159,7 @@ export class BankTransactionsService {
 
     const invoice = await this.prisma.subscriptionInvoice.findUnique({
       where: { id: dto.invoiceId },
-      select: { id: true, code: true, status: true },
+      select: { id: true, code: true, status: true, checkout: { select: { code: true } } },
     });
     if (!invoice) {
       throw new NotFoundException({
@@ -219,6 +219,8 @@ export class BankTransactionsService {
             matchStatus: BANK_MATCH_STATUS.MANUAL,
             invoiceId: invoice.id,
             invoiceCode: invoice.code,
+            // Hoá đơn con của phiếu gộp: tiền vào PHIẾU (ADR 0083) - ghi mã phiếu để đối chiếu.
+            ...(invoice.checkout ? { checkoutCode: invoice.checkout.code } : {}),
             amount: tx.amountIn.toString(),
             outcome: applied.outcome,
             note: dto.note,
@@ -402,7 +404,7 @@ export class BankTransactionsService {
       invoiceIds.length
         ? this.prisma.subscriptionInvoice.findMany({
             where: { id: { in: invoiceIds } },
-            select: { id: true, code: true },
+            select: { id: true, code: true, checkout: { select: { code: true } } },
           })
         : Promise.resolve([]),
       checkoutIds.length
@@ -413,8 +415,16 @@ export class BankTransactionsService {
         : Promise.resolve([]),
     ]);
     const actorName = new Map(actors.map((a) => [a.id, a.displayName]));
-    // Mã hoá đơn HOẶC mã phiếu gộp - id là ULID nên hai tập không đụng nhau.
-    const invoiceCode = new Map([...invoices, ...checkouts].map((i) => [i.id, i.code]));
+    /*
+     * Mã hoá đơn HOẶC mã phiếu gộp - id là ULID nên hai tập không đụng nhau. Hoá đơn con của phiếu
+     * (ADR 0083) in mã PHIẾU: tiền gửi theo mã con (webhook) hay khớp tay vào con đều được chuyển
+     * sang phiếu (`BillingService.applyBankPaymentWithinTx`), nên "đã khớp vào" phải là nơi tiền
+     * thật sự nằm. Mã khách gõ vẫn đọc được ở `referenceCode`.
+     */
+    const invoiceCode = new Map([
+      ...invoices.map((i) => [i.id, i.checkout?.code ?? i.code] as const),
+      ...checkouts.map((c) => [c.id, c.code] as const),
+    ]);
 
     return rows.map((r) => ({
       id: r.id,

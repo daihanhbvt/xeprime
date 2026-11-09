@@ -7,10 +7,8 @@ import {
   TENANT_STATUS,
 } from '@xeprime/types';
 import {
-  ACCOUNT_SECTION,
   ROUTES,
   SHOP_SECTION,
-  accountSectionPath,
   partnerTrackStartHref,
   balancePayoutPath,
   shopSectionPath,
@@ -202,13 +200,15 @@ describe('B1 - partner đăng nhập xong vào đâu', () => {
   });
 
   /*
-   * Trang Cửa hàng có bản tương đương ở tuyến hoa hồng: "Hồ sơ chủ xe" đọc CÙNG bản ghi gian hàng.
-   * Một gian hàng vừa hết gói bấm bookmark /shop phải rơi vào đúng hồ sơ của mình, không về trang chủ.
+   * Trang Thông tin `/shop` LÀ "Hồ sơ chủ xe" của chủ xe tuyến hoa hồng (ADR 0085 điều 2) — cùng
+   * trang, mặt tiền cá nhân. Một gian hàng vừa hết gói bấm bookmark /shop ở lại đúng hồ sơ của mình.
    */
-  it('trang Cửa hàng ở tuyến hoa hồng → section "Thông tin chủ xe" của Hồ sơ chủ xe', () => {
+  it('CHỦ xe tuyến hoa hồng ở lại trang Thông tin /shop (mặt tiền cá nhân)', () => {
     for (const user of [commission, lapsed, unconfigured]) {
-      expect(partnerPageRedirect(user, M.SHOP)).toBe(`${M.ACCOUNT}?section=profile`);
+      expect(partnerPageRedirect(user, M.SHOP)).toBeNull();
     }
+    // Trang con của Cửa hàng là năng lực gói — vẫn về trang chủ.
+    expect(partnerPageRedirect(commission, M.SHOP_POLICIES)).toBe(M.ROOT);
   });
 
   it('THÀNH VIÊN của gian hàng hết gói mở /shop → trang chủ (trang tài khoản của họ không có section đó)', () => {
@@ -246,9 +246,9 @@ describe('B1 - partner đăng nhập xong vào đâu', () => {
    * của trang số dư. Giải ở MỘT chỗ — cùng luật cho gõ URL lẫn `next` — và chuyển THẲNG tới section.
    */
   it('chủ xe tuyến hoa hồng mở alias cũ → thẳng tới section đích', () => {
-    expect(partnerPageRedirect(commission, M.TAX)).toBe(accountSectionPath(ACCOUNT_SECTION.TAX));
+    expect(partnerPageRedirect(commission, M.TAX)).toBe(shopSectionPath(SHOP_SECTION.TAX));
     expect(partnerPageRedirect(commission, M.SUBSCRIPTION)).toBe(
-      withPlanPurchaseIntent(accountSectionPath(ACCOUNT_SECTION.PLAN)),
+      withPlanPurchaseIntent(shopSectionPath(SHOP_SECTION.PLAN)),
     );
     expect(partnerPageRedirect(commission, M.BANK_ACCOUNTS)).toBe(balancePayoutPath());
   });
@@ -448,7 +448,7 @@ describe('/subscription - bảng quyết định của link email gói', () => {
       withPlanPurchaseIntent(shopSectionPath(SHOP_SECTION.PLAN)),
     );
     expect(resolvePartnerDestination({ user: commission, next: M.SUBSCRIPTION })).toBe(
-      withPlanPurchaseIntent(accountSectionPath(ACCOUNT_SECTION.PLAN)),
+      withPlanPurchaseIntent(shopSectionPath(SHOP_SECTION.PLAN)),
     );
     expect(resolvePartnerDestination({ user: packagePending, next: M.SUBSCRIPTION })).toBe(
       M.ONBOARDING,

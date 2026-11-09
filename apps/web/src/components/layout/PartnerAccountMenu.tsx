@@ -21,7 +21,7 @@ import {
   AccountMenuThemeRow,
 } from '@/components/account-menu/AccountMenuParts';
 import { LineIcon } from '@/components/icons/LineIcon';
-import { ACCOUNT_SECTION, ROUTES, accountSectionPath } from '@/constants/routes';
+import { ROUTES, SHOP_SECTION, shopSectionPath } from '@/constants/routes';
 import { useAccountIdentityLabel } from '@/features/account/hooks/use-account-identity-label';
 import { usePortalLogout } from '@/features/auth/hooks/use-portal-logout';
 import {
@@ -77,10 +77,11 @@ export function partnerWorkspaceLine(user: CurrentUser, role: string): string {
  * Ai thấy dòng nào - cùng điều kiện với trang đích, không lối nào dẫn tới 403:
  *  - "Quản lý gian hàng" (`/shop`) chỉ khi `useShopSettingsAccess` - nhân viên không có
  *    `tenant.view` không thấy;
- *  - "Quản lý cho thuê" là "Hồ sơ chủ xe" (`/account`) - chỉ CHỦ xe tuyến hoa hồng. Với họ cùng
- *    URL đó là hồ sơ chủ xe, nên "Tài khoản & bảo mật" trỏ thẳng vào phần đăng nhập/mật khẩu;
- *  - "Nâng cấp gian hàng" (09/11/2026) = phễu nâng cấp có sẵn ở Hồ sơ chủ xe › Gói dịch vụ
- *    (`/account?section=plan`) - cũng chỉ CHỦ xe tuyến hoa hồng, vì section đó chỉ họ có;
+ *  - "Quản lý cho thuê" là "Hồ sơ chủ xe" - CÙNG trang `/shop` với gian hàng, mặt tiền cá nhân
+ *    (ADR 0085 điều 2) - chỉ CHỦ xe tuyến hoa hồng. `/account` là "Tài khoản & bảo mật" của MỌI
+ *    tài khoản partner;
+ *  - "Nâng cấp gian hàng" (09/11/2026) = phễu nâng cấp ở thẻ Gói của trang đó
+ *    (`/shop?section=plan`) - cũng chỉ CHỦ xe tuyến hoa hồng;
  *  - thành viên của chủ xe tuyến hoa hồng và tài khoản chưa có gói: chỉ "Tài khoản & bảo mật".
  *
  * Bảng tự dựng trên `AccountMenuParts` (cùng khuôn với menu site khách), không phải `menu.items`.
@@ -119,9 +120,7 @@ export function PartnerAccountMenu({
   // Thẻ gian hàng đã có dòng "Gian hàng · Tên" riêng - dòng dưới tên chỉ còn vai.
   const subtitle = isShop ? role : partnerWorkspaceLine(user, role);
   const shopName = user.tenant?.name ?? '';
-  const accountHref = ownerProfile
-    ? accountSectionPath(ACCOUNT_SECTION.LOGIN)
-    : ROUTES.MANAGE.ACCOUNT;
+  const accountHref = ROUTES.MANAGE.ACCOUNT;
 
   const avatar = isShop ? (
     <span className={styles.avatarWrap}>
@@ -200,7 +199,7 @@ export function PartnerAccountMenu({
         ) : null}
         {ownerProfile ? (
           <AccountMenuLink
-            href={ROUTES.MANAGE.ACCOUNT}
+            href={ROUTES.MANAGE.SHOP}
             icon="bag"
             label={t('shell.rentalManage')}
             onNavigate={close}
@@ -213,7 +212,7 @@ export function PartnerAccountMenu({
           {PARTNER_THEME_SWITCH_ENABLED ? <AccountMenuThemeRow /> : null}
           {ownerProfile ? (
             <AccountMenuLink
-              href={accountSectionPath(ACCOUNT_SECTION.PLAN)}
+              href={shopSectionPath(SHOP_SECTION.PLAN)}
               icon="award"
               label={t('shell.upgradeToShop')}
               onNavigate={close}

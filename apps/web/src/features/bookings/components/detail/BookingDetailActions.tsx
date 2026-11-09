@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import {
   HANDOVER_TYPE,
+  isBookingClosedWithoutTrip,
   isBookingFinal,
   PAYMENT_KIND,
   PERMISSION,
@@ -59,8 +60,13 @@ interface BookingDetailActionsValue {
   handover: HandoverContext | undefined;
   /** Đơn đã khép — mọi đường ghi bị server từ chối (Wave 12). */
   closed: boolean;
+  /**
+   * Đơn huỷ / khách không đến — chuyến không diễn ra nên không thu tiền, thu cọc hay ghi phát sinh
+   * mới (server: `BOOKING_MONEY_CLOSED`). Lịch sử tiền và hoàn lại phần đã thu vẫn mở.
+   */
+  moneyClosed: boolean;
   can: {
-    /** Thu tiền thuộc gói (ADR 0028 7A) + quyền ghi thu. */
+    /** Thu tiền thuộc gói (ADR 0028 7A) + quyền ghi thu + đơn còn nhận tiền (`moneyClosed`). */
     collect: boolean;
     history: boolean;
     contract: boolean;
@@ -139,6 +145,7 @@ export function BookingDetailActionsProvider({
   const { data: handover } = useHandoverContext(booking.id, canViewHandover);
   const createContract = useCreateContract();
   const closed = isBookingFinal(booking.status as BookingStatus);
+  const moneyClosed = isBookingClosedWithoutTrip(booking.status as BookingStatus);
 
   const [dialogType, setDialogType] = useState<HandoverType | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -157,7 +164,7 @@ export function BookingDetailActionsProvider({
         : null;
 
   const can: BookingDetailActionsValue['can'] = {
-    collect: has(PERMISSION.PAYMENT_RECORD) && financeFeature.isVisible,
+    collect: has(PERMISSION.PAYMENT_RECORD) && financeFeature.isVisible && !moneyClosed,
     history: financeFeature.isVisible,
     contract: has(PERMISSION.CONTRACT_MANAGE) && contractsFeature.isVisible,
     edit: has(PERMISSION.BOOKING_UPDATE) && !closed,
@@ -224,6 +231,7 @@ export function BookingDetailActionsProvider({
     booking,
     handover,
     closed,
+    moneyClosed,
     can,
     primary,
     contractPending: createContract.isPending,

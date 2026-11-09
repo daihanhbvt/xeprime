@@ -27,6 +27,11 @@ export const MARKETPLACE_VISIBILITY_REASON = {
   VISIBLE: 'visible',
   /** Chủ xe tự tắt công tắc hiển thị. Bật lại được ngay, không cần duyệt lại. */
   OWNER_PAUSED: 'owner_paused',
+  /**
+   * HỆ THỐNG tắt công tắc vì xe vượt suất gói lúc đổi tuyến / đổi gói (ADR 0085 điều 5). Chủ xe tự bật
+   * lại được khi còn suất — không cần duyệt lại; hệ thống không bao giờ tự hiện lại xe.
+   */
+  PLAN_PAUSED: 'plan_paused',
   /** Chưa qua cổng duyệt: nháp, đang chờ duyệt, cần bổ sung, bị từ chối, hoặc đã lưu trữ. */
   NOT_APPROVED: 'not_approved',
   /** Nền tảng ẩn xe (`public_status = hidden`). Chỉ nền tảng bỏ ẩn được. */
@@ -55,6 +60,10 @@ export const MARKETPLACE_VISIBILITY_REASON_META: Readonly<
     label: 'Chủ xe tạm ẩn',
     color: STATUS_COLOR.NEUTRAL,
   },
+  [MARKETPLACE_VISIBILITY_REASON.PLAN_PAUSED]: {
+    label: 'Tạm ẩn - hết suất gói',
+    color: STATUS_COLOR.WARNING,
+  },
   [MARKETPLACE_VISIBILITY_REASON.NOT_APPROVED]: {
     label: 'Chưa được duyệt',
     color: STATUS_COLOR.WAITING,
@@ -73,6 +82,18 @@ export const MARKETPLACE_VISIBILITY_REASON_META: Readonly<
   },
 };
 
+/**
+ * Vì sao HỆ THỐNG tắt công tắc hiển thị của chủ xe (`vehicles.marketplace_paused_reason`, ADR 0085
+ * điều 5). Vắng (NULL) = chủ xe tự tắt. Mọi lượt bật xoá về NULL.
+ */
+export const MARKETPLACE_PAUSE_REASON = {
+  /** Xe vượt suất gói ở một lần đổi tuyến / đổi gói. */
+  PLAN_LIMIT: 'plan_limit',
+} as const;
+
+export type MarketplacePauseReason =
+  (typeof MARKETPLACE_PAUSE_REASON)[keyof typeof MARKETPLACE_PAUSE_REASON];
+
 /** Lát cắt của một chiếc xe mà phép gộp cần — không phụ thuộc Prisma hay DTO nào. */
 export interface MarketplaceVisibilityInput {
   /** Xoá mềm. `null` = còn sống. */
@@ -81,6 +102,8 @@ export interface MarketplaceVisibilityInput {
   publicStatus: VehiclePublicStatus | string;
   /** Trục LỰA CHỌN CỦA CHỦ XE (`vehicles.marketplace_enabled`). */
   marketplaceEnabled: boolean;
+  /** Ai tắt công tắc (`vehicles.marketplace_paused_reason`) — vắng/NULL = chủ xe tự tắt. */
+  marketplacePausedReason?: string | null;
   /** Gian hàng đang hoạt động và chưa xoá. */
   shopActive: boolean;
 }
@@ -101,7 +124,7 @@ export interface MarketplaceVisibility {
  * Nên thứ tự đi từ rào KHÔNG THỂ vượt bằng thao tác trên chính chiếc xe, xuống dần tới rào chủ
  * xe tự gỡ được bằng một cú bấm:
  *
- *   xoá mềm → gian hàng bị khoá → nền tảng ẩn → chưa duyệt → chủ xe tạm ẩn
+ *   xoá mềm → gian hàng bị khoá → nền tảng ẩn → chưa duyệt → hết suất gói / chủ xe tạm ẩn
  *
  * Nói "bạn đang tắt hiển thị" với một người mà gian hàng của họ vừa bị khoá là chỉ sai chỗ: họ
  * bật lại công tắc, không có gì xảy ra, và không ai giải thích tại sao.
@@ -122,7 +145,13 @@ export function resolveMarketplaceVisibility(
   if (input.publicStatus !== VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC) {
     return hidden(MARKETPLACE_VISIBILITY_REASON.NOT_APPROVED);
   }
-  if (!input.marketplaceEnabled) return hidden(MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED);
+  if (!input.marketplaceEnabled) {
+    return hidden(
+      input.marketplacePausedReason === MARKETPLACE_PAUSE_REASON.PLAN_LIMIT
+        ? MARKETPLACE_VISIBILITY_REASON.PLAN_PAUSED
+        : MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED,
+    );
+  }
 
   return { visible: true, reason: MARKETPLACE_VISIBILITY_REASON.VISIBLE };
 }

@@ -21,6 +21,7 @@ import {
   SQL_AMOUNT_DUE,
   SQL_COLLECTED,
   SQL_DEBT,
+  SQL_BOOKING_SCOPE,
   SQL_DEBT_SCOPE,
   SQL_HAS_DEBT,
 } from '../../common/booking-money';
@@ -373,7 +374,7 @@ export class FinanceOverviewService {
       this.prisma.$queryRaw<{ cnt: bigint }[]>(Prisma.sql`
         SELECT COUNT(*)::bigint AS cnt
         FROM bookings b
-        WHERE b.tenant_id = ${tenantId} AND ${SQL_DEBT_SCOPE}
+        WHERE b.tenant_id = ${tenantId} AND ${SQL_BOOKING_SCOPE}
           ${bookingScope}
           ${fromAt ? Prisma.sql`AND b.pickup_at >= ${fromAt}` : Prisma.empty}
           ${toAt ? Prisma.sql`AND b.pickup_at <= ${toAt}` : Prisma.empty}
@@ -410,7 +411,7 @@ export class FinanceOverviewService {
    * Cọc ĐANG CẦM — không lọc theo kỳ, vì câu hỏi là "lúc này tôi đang giữ hộ khách bao nhiêu".
    *
    * Kẹp sàn 0 TỪNG ĐƠN (`GREATEST(…, 0)`) chứ không kẹp ở tổng: một đơn lỡ ghi hoàn dư không được
-   * phép ăn bớt cọc đang giữ của đơn khác. Đơn huỷ/đã xoá nằm ngoài phép tính (`SQL_DEBT_SCOPE`).
+   * phép ăn bớt cọc đang giữ của đơn khác. Đơn huỷ/đã xoá nằm ngoài phép tính (`SQL_BOOKING_SCOPE`).
    */
   private async depositHeld(
     tenantId: string,
@@ -430,7 +431,7 @@ export class FinanceOverviewService {
             AND p.status = ${PAYMENT_STATUS.SUCCEEDED}
         ) dep ON TRUE
         LEFT JOIN booking_deposit_settlements s ON s.booking_id = b.id
-        WHERE b.tenant_id = ${tenantId} AND ${SQL_DEBT_SCOPE} ${bookingScope}
+        WHERE b.tenant_id = ${tenantId} AND ${SQL_BOOKING_SCOPE} ${bookingScope}
       ) x
     `);
     return { amount: rows[0]?.total ?? '0', bookings: Number(rows[0]?.cnt ?? 0) };
@@ -598,7 +599,7 @@ export class FinanceOverviewService {
         trips AS (
           SELECT b.vehicle_id, COUNT(*)::bigint AS trips
           FROM bookings b
-          WHERE b.tenant_id = ${tenantId} AND ${SQL_DEBT_SCOPE}
+          WHERE b.tenant_id = ${tenantId} AND ${SQL_BOOKING_SCOPE}
             ${sqlBookingScope(scopeOf(query, allowedBranchIds))}
             ${tripRange}
           GROUP BY b.vehicle_id
@@ -696,7 +697,7 @@ export class FinanceOverviewService {
       trips AS (
         SELECT b.tenant_customer_id, COUNT(*)::bigint AS trips
         FROM bookings b
-        WHERE b.tenant_id = ${tenantId} AND ${SQL_DEBT_SCOPE}
+        WHERE b.tenant_id = ${tenantId} AND ${SQL_BOOKING_SCOPE}
           AND b.tenant_customer_id IS NOT NULL
           ${sqlBookingScope(scopeOf(query, allowedBranchIds))}
           ${tripRange}
@@ -852,7 +853,7 @@ function upcomingBoundOf(now: Date): Date {
  *
  * "Quá hạn" = đã qua hạn trả xe, BẤT KỂ trạng thái (từ 04/11/2026 — trước đó loại đơn đã hoàn
  * thành): đây là màn đi đòi tiền, và một chuyến đã trả xe xong mà chưa trả đủ tiền chính là khoản
- * nợ quá hạn rõ nhất. Đơn huỷ đã nằm ngoài `SQL_DEBT_SCOPE`.
+ * nợ quá hạn rõ nhất. Đơn huỷ / khách không đến đã nằm ngoài `SQL_DEBT_SCOPE`.
  */
 function debtGroupSql(filter: string | undefined, now: Date, soon: Date): Prisma.Sql | null {
   switch (filter) {

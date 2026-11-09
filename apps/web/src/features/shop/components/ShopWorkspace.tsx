@@ -12,6 +12,8 @@ import {
   isPackageShopTrack,
   PERMISSION,
   PLAN_FEATURE,
+  STOREFRONT_KIND,
+  storefrontIdentity,
   TENANT_STATUS,
   TENANT_STATUS_META,
   type TenantStatus,
@@ -19,6 +21,9 @@ import {
 
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { trailingRequiredMark } from '@/components/form/required-mark';
+import { InfoCard } from '@/components/layout/InfoCard';
+import { OwnerInfoForm } from '@/features/account/components/OwnerInfoForm';
+import type { UserProfile } from '@/features/account/types';
 import { BranchesView } from '@/features/branches/components/BranchesView';
 import { ShopPlanSection } from '@/features/subscription/components/ShopPlanSection';
 import { shopPath, shopSectionDomId, SHOP_SECTION, type ShopSection } from '@/constants/routes';
@@ -46,10 +51,16 @@ import { ShopProfileChecklist } from './ShopProfileChecklist';
 import { ShopStatusBanner } from './ShopStatusBanner';
 import { ShopTaxCard } from './ShopTaxCard';
 import { ShopWelcomeBanner } from './ShopWelcomeBanner';
+import { VatInvoiceSetting } from './VatInvoiceSetting';
 import styles from './ShopWorkspace.module.css';
 
 export interface ShopWorkspaceProps {
   shop: MyShop;
+  /**
+   * Tài khoản của CHỦ xe tuyến hoa hồng đang xem — có mặt ⇔ trang dựng mặt tiền CÁ NHÂN (ADR 0085
+   * điều 2): ở đó tên, ảnh khách thấy là của tài khoản chủ (ADR 0054). Route quyết và nạp nó.
+   */
+  ownerProfile?: UserProfile;
   /** Quyền `tenant.update`. Thiếu quyền thì chỉ-xem. */
   canEdit: boolean;
   saving: boolean;
@@ -97,9 +108,29 @@ export interface ShopWorkspaceProps {
  * "Hủy · Lưu thay đổi" dưới thẻ mới lưu.
  *
  * "Thông tin khai thuế" lưu vào hồ sơ NGƯỜI BÁN (endpoint khác) bằng form riêng (`ShopTaxCard`).
+ *
+ * ## Mặt tiền CÁ NHÂN — "Hồ sơ chủ xe" (ADR 0085 điều 2)
+ *
+ * Chủ xe tuyến hoa hồng dùng CHÍNH trang này (thay trang "Hồ sơ chủ xe" kiểu cũ). Route chọn bản theo
+ * tuyến của người đăng nhập (`isCommissionOwner`), nên lên gói hay hết gói thì trang tự đổi bản ở lần
+ * tải kế tiếp. Khác bản gian hàng đúng ở chỗ khác nghĩa:
+ *
+ *   Ảnh · họ tên · trạng thái                                              [Xem trang chủ xe]
+ *   ┌ Địa chỉ nhận xe ┐┌ Khai thuế ┐┌ Hoá đơn VAT ┐                       ┌ Thông tin chủ xe ┐
+ *   ┌ Gói dịch vụ (phễu nâng cấp) ─────────────────┐                       │ ảnh · họ tên      │
+ *                                                                         └ giới thiệu ───────┘
+ *
+ *  - danh tính là TÀI KHOẢN chủ (ảnh tròn, họ tên) — thẻ "Thông tin chủ xe" lưu tài khoản + lời giới
+ *    thiệu (`OwnerInfoForm`), không có logo/ảnh bìa/SĐT/email riêng của gian hàng;
+ *  - không thẻ Chủ gian hàng (chính là họ), không Chi nhánh (một chi nhánh mặc định), không vai;
+ *  - thêm thẻ Hoá đơn VAT — gian hàng đặt thiết lập này ở "Chính sách thuê", chủ xe không có trang đó.
+ *
+ * Bộ riêng của gian hàng (`tenants.name/phone/email`, logo, ảnh bìa) nằm yên trong DB: lên gói là
+ * chúng hiện lại ở bản gian hàng (ADR 0054 điều 2).
  */
 export function ShopWorkspace({
   shop,
+  ownerProfile,
   canEdit,
   saving,
   section,
@@ -109,6 +140,8 @@ export function ShopWorkspace({
   onSave,
 }: ShopWorkspaceProps) {
   const t = useTranslations('Shop');
+  const tOwner = useTranslations('Account.ownerHub');
+  const tVat = useTranslations('Shop.vatInvoice');
   const domainLabel = useDomainLabel();
   const { has } = usePermissions();
   const { tenant } = useTenantScope();
@@ -116,6 +149,7 @@ export function ShopWorkspace({
   const [editing, setEditing] = useState<ShopProfileGroup | null>(null);
 
   const status = shop.status as TenantStatus;
+  const personal = Boolean(ownerProfile);
   // Phiên hỗ trợ gian hàng (ADR 0050 §12): hồ sơ chỉ đọc - không nút sửa, không lời giải thích quyền.
   const hidesDenied = useSupportHides(SUPPORT_HIDDEN_AREA.DENIED_ACTIONS);
   const readOnlyReason = canEdit || hidesDenied ? null : t('form.readOnly');
@@ -133,6 +167,7 @@ export function ShopWorkspace({
   const canSeePlan = has(PERMISSION.SUBSCRIPTION_VIEW);
   const featureStates = useFeatureStates();
   const canSeeBranches =
+    !personal &&
     has(PERMISSION.BRANCH_VIEW) &&
     isFeatureVisible(featureStates[PLAN_FEATURE.BRANCHES] ?? FEATURE_STATE.ENABLED);
 
@@ -175,23 +210,52 @@ export function ShopWorkspace({
   }
 
   const roleKey = tenant?.roleKey;
+  /*
+   * Thứ khách thấy về CHỦ XE CÁ NHÂN - cùng hàm với API (`storefrontIdentity`), nên đầu trang không
+   * thể nói khác trang công khai. Gian hàng thì là tên + logo của `tenants`.
+   */
+  const identity =
+    personal && ownerProfile
+      ? storefrontIdentity(
+          STOREFRONT_KIND.PERSONAL,
+          {
+            name: shop.name,
+            phone: shop.phone ?? null,
+            email: shop.email ?? null,
+            logoUrl: shop.profile.logoUrl ?? null,
+          },
+          {
+            displayName: ownerProfile.displayName,
+            phone: ownerProfile.phone,
+            phoneVerified: ownerProfile.phoneVerified,
+            email: ownerProfile.email,
+            emailVerified: ownerProfile.emailVerified,
+            avatarUrl: ownerProfile.avatarUrl,
+          },
+        )
+      : null;
+  const headName = identity?.name ?? shop.name;
+  const kind = personal ? STOREFRONT_KIND.PERSONAL : STOREFRONT_KIND.SHOP;
 
   return (
     <>
       <header className={styles.header}>
         <div className={styles.identity}>
-          {/* LOGO gian hàng - danh tính nổi bật của trang là gian hàng, không phải một người. */}
+          {/*
+            Gian hàng: LOGO vuông - danh tính nổi bật của trang là gian hàng, không phải một người.
+            Chủ xe cá nhân: ảnh TRÒN của chính họ - khách đang thuê xe của một con người.
+          */}
           <Avatar
             className={styles.logo}
             size={54}
-            shape="square"
-            src={shop.profile.logoUrl ?? undefined}
+            shape={identity ? 'circle' : 'square'}
+            src={(identity ? identity.avatarUrl : shop.profile.logoUrl) ?? undefined}
           >
-            {initialOf(shop.name)}
+            {initialOf(headName)}
           </Avatar>
           <div className={styles.headText}>
             <h1 className={styles.shopName}>
-              {shop.name}
+              {headName}
               <StatusTag
                 value={status}
                 meta={TENANT_STATUS_META}
@@ -199,12 +263,15 @@ export function ShopWorkspace({
                 appearance="pill"
               />
             </h1>
-            <p className={styles.subtitle}>{t('page.subtitle')}</p>
+            <p className={styles.subtitle}>
+              {personal ? tOwner('pageSubtitle') : t('page.subtitle')}
+            </p>
           </div>
         </div>
 
         <div className={styles.actions}>
-          {roleKey ? (
+          {/* Vai chỉ có nghĩa ở gian hàng nhiều người - chủ xe cá nhân là chính họ. */}
+          {roleKey && !personal ? (
             <span className={styles.roleChip}>
               <SafetyCertificateOutlined aria-hidden />
               {domainLabel('tenantRole', roleKey)}
@@ -214,7 +281,7 @@ export function ShopWorkspace({
           {status === TENANT_STATUS.ACTIVE ? (
             <Link href={shopPath.detail(shop.slug)} target="_blank" rel="noopener noreferrer">
               <Button size="large" icon={<ExportOutlined />}>
-                {t('page.viewPublicPage')}
+                {personal ? tOwner('viewPublicPage') : t('page.viewPublicPage')}
               </Button>
             </Link>
           ) : null}
@@ -225,7 +292,7 @@ export function ShopWorkspace({
         Dải CHÀO MỪNG đứng TRƯỚC dải trạng thái: người vừa trả tiền cần biết việc còn lại của mình
         trước khi đọc bất cứ tin gì khác. Nó tự im lặng khi không còn gì để nói.
       */}
-      {welcome ? (
+      {welcome && !personal ? (
         <ShopWelcomeBanner missingLogo={!shop.profile.logoUrl} hasVehicle={hasVehicle} />
       ) : null}
       <ShopStatusBanner shop={shop} />
@@ -238,12 +305,26 @@ export function ShopWorkspace({
         <div className={styles.layout}>
           <div className={styles.main}>
             <div className={styles.topCards}>
-              <ShopOwnerSection shop={shop} />
+              {personal ? null : <ShopOwnerSection shop={shop} />}
               <ShopLegalCard
                 shop={shop}
+                kind={kind}
                 onEdit={canEdit ? () => setEditing(SHOP_PROFILE_GROUP.LEGAL) : undefined}
               />
               {canSeeTax ? <ShopTaxCard /> : null}
+              {/*
+                Hoá đơn VAT (ADR 0059) - MỘT thiết lập cho mọi xe. Gian hàng đặt nó ở "Chính sách thuê";
+                chủ xe cá nhân không có trang đó, nên nó là một thẻ ở đây. Lưu ngay khi bấm.
+              */}
+              {personal ? (
+                <InfoCard
+                  id={shopSectionDomId(SHOP_SECTION.VAT_INVOICE)}
+                  title={tVat('title')}
+                  hint={tVat('subtitle')}
+                >
+                  <VatInvoiceSetting canEdit={canEdit} />
+                </InfoCard>
+              ) : null}
             </div>
 
             {canSeeBranches ? (
@@ -254,31 +335,52 @@ export function ShopWorkspace({
           </div>
 
           <aside className={styles.aside}>
-            <ShopDisplayCard
-              shop={shop}
-              logoUrl={logoUrl ?? null}
-              coverUrl={coverUrl ?? null}
-              canEdit={canEdit}
-              mediaDirty={mediaDirty}
-              saving={saving}
-              onEdit={() => setEditing(SHOP_PROFILE_GROUP.DISPLAY)}
-              onMediaChange={(field, url) =>
-                form.setValue(field, url, { shouldDirty: true, shouldValidate: true })
-              }
-              onMediaCancel={() => resetGroup(SHOP_PROFILE_GROUP.MEDIA)}
-              onMediaSave={() => void saveGroup(SHOP_PROFILE_GROUP.MEDIA)}
-            />
+            {personal && ownerProfile ? (
+              <InfoCard
+                id={shopSectionDomId(SHOP_SECTION.PROFILE)}
+                title={tOwner('sections.profile')}
+                hint={tOwner('sections.profileHint')}
+              >
+                <OwnerInfoForm profile={ownerProfile} shop={shop} canEditBio={canEdit} stacked />
+              </InfoCard>
+            ) : (
+              <ShopDisplayCard
+                shop={shop}
+                logoUrl={logoUrl ?? null}
+                coverUrl={coverUrl ?? null}
+                canEdit={canEdit}
+                mediaDirty={mediaDirty}
+                saving={saving}
+                onEdit={() => setEditing(SHOP_PROFILE_GROUP.DISPLAY)}
+                onMediaChange={(field, url) =>
+                  form.setValue(field, url, { shouldDirty: true, shouldValidate: true })
+                }
+                onMediaCancel={() => resetGroup(SHOP_PROFILE_GROUP.MEDIA)}
+                onMediaSave={() => void saveGroup(SHOP_PROFILE_GROUP.MEDIA)}
+              />
+            )}
             {/*
               "Hoàn thiện hồ sơ" - design không vẽ; giữ dưới thẻ hiển thị vì nó nói đúng những gì
               thẻ đó còn thiếu. Chỉ cho người SỬA được; tự ẩn khi đủ. Gian hàng tuyến gói: LOGO là
-              mục chặn (`submitForPublicReview` từ chối thật - ADR 0040 điều 7).
+              mục chặn (`submitForPublicReview` từ chối thật - ADR 0040 điều 7). Chủ xe cá nhân: ẢNH
+              ĐẠI DIỆN là mục bắt buộc - đó là ảnh khách thấy (ADR 0054).
             */}
             {canEdit ? (
-              <ShopProfileChecklist
-                control={form.control}
-                ownerAccount={shop.ownerAccount}
-                logoRequired={isPackageShopTrack(tenant)}
-              />
+              personal ? (
+                <ShopProfileChecklist
+                  control={form.control}
+                  ownerAccount={shop.ownerAccount}
+                  kind={STOREFRONT_KIND.PERSONAL}
+                  ownerAvatarUrl={ownerProfile?.avatarUrl ?? null}
+                  logoRequired
+                />
+              ) : (
+                <ShopProfileChecklist
+                  control={form.control}
+                  ownerAccount={shop.ownerAccount}
+                  logoRequired={isPackageShopTrack(tenant)}
+                />
+              )
             ) : null}
           </aside>
         </div>
@@ -289,16 +391,19 @@ export function ShopWorkspace({
               open={editing === SHOP_PROFILE_GROUP.LEGAL}
               control={form.control}
               saving={saving}
+              kind={kind}
               onCancel={closeDialog}
               onSubmit={() => void saveGroup(SHOP_PROFILE_GROUP.LEGAL)}
             />
-            <ShopDisplayDialog
-              open={editing === SHOP_PROFILE_GROUP.DISPLAY}
-              control={form.control}
-              saving={saving}
-              onCancel={closeDialog}
-              onSubmit={() => void saveGroup(SHOP_PROFILE_GROUP.DISPLAY)}
-            />
+            {personal ? null : (
+              <ShopDisplayDialog
+                open={editing === SHOP_PROFILE_GROUP.DISPLAY}
+                control={form.control}
+                saving={saving}
+                onCancel={closeDialog}
+                onSubmit={() => void saveGroup(SHOP_PROFILE_GROUP.DISPLAY)}
+              />
+            )}
           </>
         ) : null}
       </Form>

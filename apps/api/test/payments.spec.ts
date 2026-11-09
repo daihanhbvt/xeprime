@@ -568,3 +568,136 @@ describe('Booking money — phụ phí và phiếu tay vào cùng một con số
     expect(String(after.debtAmount)).toBe('0');
   });
 });
+
+/**
+ * 09/11/2026 — đơn huỷ / khách không đến là chuyến KHÔNG diễn ra (đơn đang chạy không huỷ được,
+ * ADR 0045 điều 1): không nhận tiền thuê hay cọc mới, không nằm trong công nợ. Hoàn lại phần đã
+ * thu thì vẫn mở.
+ */
+describe('Payments — đơn huỷ / khách không đến', () => {
+  async function closeBooking(id: string, status: string) {
+    await prisma.booking.update({ where: { id }, data: { status } });
+  }
+
+  maybe('đơn HUỶ: từ chối thu tiền thuê, không sinh payment hay phiếu thu', async () => {
+    const b = await makeBooking('1000000');
+    await closeBooking(b.id, BOOKING_STATUS.CANCELLED);
+
+    await expect(
+      payments.recordForBooking(tenantId, ownerId, b.id, {
+        amount: '400000',
+        method: PAYMENT_METHOD.CASH,
+      }),
+    ).rejects.toMatchObject({
+      status: 409,
+      response: { code: API_ERROR_CODE.BOOKING_MONEY_CLOSED },
+    });
+
+    expect(await prisma.payment.count({ where: { bookingId: b.id } })).toBe(0);
+    expect(await prisma.receipt.count({ where: { bookingId: b.id } })).toBe(0);
+    const fresh = await prisma.booking.findUniqueOrThrow({
+      where: { id: b.id },
+      select: { paidAmount: true },
+    });
+    expect(fresh.paidAmount.toString()).toBe('0');
+  });
+
+  maybe('đơn KHÁCH KHÔNG ĐẾN: từ chối cả thu cọc', async () => {
+    const b = await makeBooking('1000000');
+    await closeBooking(b.id, BOOKING_STATUS.NO_SHOW);
+
+    await expect(
+      payments.recordForBooking(tenantId, ownerId, b.id, {
+        amount: '2000000',
+        method: PAYMENT_METHOD.CASH,
+        kind: PAYMENT_KIND.DEPOSIT,
+      }),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.BOOKING_MONEY_CLOSED } });
+    expect(await prisma.payment.count({ where: { bookingId: b.id } })).toBe(0);
+  });
+
+  maybe('đơn HOÀN TẤT vẫn thu nốt được — chỉ chuyến không diễn ra mới bị khoá', async () => {
+    const b = await makeBooking('1000000');
+    await closeBooking(b.id, BOOKING_STATUS.COMPLETED);
+    const after = await payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '1000000',
+      method: PAYMENT_METHOD.CASH,
+    });
+    expect(String(after.debtAmount)).toBe('0');
+  });
+
+  maybe('đã thu rồi mới huỷ: HOÀN (huỷ giao dịch) vẫn làm được', async () => {
+    const b = await makeBooking('1000000');
+    await payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '300000',
+      method: PAYMENT_METHOD.CASH,
+    });
+    await closeBooking(b.id, BOOKING_STATUS.CANCELLED);
+    const payment = await prisma.payment.findFirstOrThrow({ where: { bookingId: b.id } });
+
+    const voided = await payments.voidPayment(tenantId, ownerId, payment.id);
+    expect(voided.status).toBe(PAYMENT_STATUS.REFUNDED);
+  });
+
+  maybe('lượt huỷ đang chạy giữ dòng đơn: lượt thu song song chờ rồi bị từ chối', async () => {
+    const b = await makeBooking('1000000');
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let locked!: () => void;
+    const lockTaken = new Promise<void>((resolve) => {
+      locked = resolve;
+    });
+
+    // Lượt huỷ: đổi trạng thái rồi GIỮ transaction mở cho tới khi lượt thu đã xếp hàng chờ khoá.
+    const cancelling = prisma.$transaction(
+      async (tx) => {
+        await tx.booking.update({
+          where: { id: b.id },
+          data: { status: BOOKING_STATUS.CANCELLED },
+        });
+        locked();
+        await gate;
+      },
+      { timeout: 15_000 },
+    );
+    await lockTaken;
+
+    const recording = payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '400000',
+      method: PAYMENT_METHOD.CASH,
+    });
+    const settled = recording.then(
+      () => 'recorded',
+      (err: unknown) => err,
+    );
+    // Cho lượt thu kịp chạm `FOR UPDATE` trước khi lượt huỷ commit.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    release();
+    await cancelling;
+
+    await expect(settled).resolves.toMatchObject({
+      response: { code: API_ERROR_CODE.BOOKING_MONEY_CLOSED },
+    });
+    expect(await prisma.payment.count({ where: { bookingId: b.id } })).toBe(0);
+  });
+
+  maybe('đơn KHÁCH KHÔNG ĐẾN rời công nợ: danh sách, tổng hợp và sổ khách', async () => {
+    const owing = await makeBooking('1000000');
+    const before = await overview.debtSummary(tenantId, {}, null);
+    expect(
+      (await overview.debts(tenantId, { limit: 100 }, null)).data.map((d) => d.bookingId),
+    ).toContain(owing.id);
+
+    await closeBooking(owing.id, BOOKING_STATUS.NO_SHOW);
+
+    const ids = (await overview.debts(tenantId, { limit: 100 }, null)).data.map((d) => d.bookingId);
+    expect(ids).not.toContain(owing.id);
+    const after = await overview.debtSummary(tenantId, {}, null);
+    expect(after.totalCount).toBe(before.totalCount - 1);
+    expect(new Prisma.Decimal(before.totalAmount).minus(after.totalAmount).toString()).toBe(
+      '1000000',
+    );
+  });
+});

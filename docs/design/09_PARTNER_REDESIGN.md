@@ -75,19 +75,41 @@ trạng thái **tạm**, mỗi mục ẩn phải được gỡ khi màn đích c
 
 ### 2.2 Chủ xe tuyến hoa hồng (Owner Lite)
 
-Design chưa vẽ riêng. Đã chốt: **cùng header, cùng sáu khối**, mỗi khối ít dòng hơn. Khối không còn
-dòng nào với người đang xem (vd. Doanh thu với thành viên không phải chủ) thì vắng hẳn.
+**Không có design riêng — dùng CHÍNH các màn của gian hàng, ẩn phần không áp dụng** (người dùng chốt
+09/11/2026, [ADR 0085](../decisions/0085-unified-partner-ui-and-plan-slot-transitions.md)). Menu là MỘT
+cây (`PARTNER_NAV` ở `constants/nav.ts`); cây của tuyến hoa hồng (`COMMISSION_NAV`) SUY từ nó bằng dấu
+`tracks` trên từng mục, không viết tay lần hai. Khối không còn dòng nào với người đang xem (vd. Doanh
+thu với thành viên không phải chủ) thì vắng hẳn.
 
 | Khối | Dòng | Route |
 | --- | --- | --- |
-| Tổng quan | (liên kết thẳng) | `/` |
+| Tổng quan | (liên kết thẳng) — CÙNG màn `DashboardView` (09/11/2026), xem dưới | `/` |
 | Vận hành | Đơn thuê xe · Lịch thuê xe (CÙNG màn với gian hàng, cho chủ lẫn thành viên — 06/11/2026; `/trips` "Chuyến cho thuê" cũ chỉ còn chuyển tiếp) | `/calendar`, `/bookings` |
 | Xe & Tài xế | Danh sách xe · Quản lý tài xế | `/vehicles`, `/drivers` |
 | Doanh thu | Quản lý ví (chỉ CHỦ) | `/balance` |
-| Cấu hình | Hồ sơ chủ xe (chỉ CHỦ — gộp hồ sơ, trang chủ xe, khai thuế, gói) | `/account` |
-| Trợ giúp | Cẩm nang cho thuê xe · Hợp đồng & Chứng từ · Chính sách bảo vệ dữ liệu · Yêu cầu hỗ trợ | `/host-guide`, `/contracts-documents`, `/data-protection`, `/support/cases` |
+| Cấu hình | Hồ sơ chủ xe (chỉ CHỦ) = CÙNG trang Thông tin cửa hàng, mặt tiền cá nhân (09/11/2026) | `/shop` |
+| Trợ giúp | Cẩm nang cho thuê xe · Hợp đồng & Chứng từ · Chính sách bảo vệ dữ liệu · Yêu cầu hỗ trợ (ba mục đầu chỉ tuyến này — giữ để không mất tính năng; "Trung tâm hỗ trợ" của gian hàng trỏ vào trang chỉ tuyến gói nên vắng) | `/host-guide`, `/contracts-documents`, `/data-protection`, `/support/cases` |
+
+Vắng ở tuyến này (server chặn bằng `@SubscriptionTrackOnly`): Khách hàng · Bảo dưỡng · Tổng quan doanh
+thu · Lịch sử giao dịch · Chính sách thuê (chủ xe cấu hình chính sách trên TỪNG xe — ADR 0085 điều 3) ·
+Nhân viên & phân quyền · Trung tâm hỗ trợ. Bốn tab mobile web dùng chung với gian hàng.
 
 Tin nhắn là icon ở header như tuyến gói.
+
+**Trang Thông tin `/shop` — mặt tiền cá nhân** (thay trang "Hồ sơ chủ xe" kiểu cũ ở `/account`, mục lục
+trái + tám section — đã gỡ): đầu trang là ảnh tròn + họ tên TÀI KHOẢN (ADR 0054) + "Xem trang chủ xe";
+thẻ Địa chỉ nhận xe (không ô giấy phép KD, không link Chi nhánh) · Khai thuế · **Hoá đơn VAT** (gian hàng
+đặt nó ở Chính sách thuê) · Gói dịch vụ (phễu nâng cấp); cột phải "Thông tin chủ xe" (ảnh bắt buộc, họ
+tên, giới thiệu — `OwnerInfoForm`) + "Hoàn thiện hồ sơ". Vắng: Chủ gian hàng, Chi nhánh, vai, ảnh bìa/logo.
+Chỉ CHỦ (`isCommissionOwner`); thành viên và phiên hỗ trợ luôn thấy bản gian hàng. Đăng nhập · mật khẩu ·
+xoá tài khoản về "Tài khoản & bảo mật" (`/account`) như mọi tài khoản partner; link cũ
+`/account?section=address|vat-invoice|tax|plan` chuyển sang section cùng vai của `/shop`. Menu hồ sơ:
+"Quản lý cho thuê" và "Nâng cấp gian hàng" trỏ `/shop` · `/shop?section=plan`.
+
+**Tổng quan** — `DashboardView` cho cả hai tuyến: thẻ doanh thu, biểu đồ, sổ quỹ vắng theo cờ `finance`;
+giữ ba thứ của Tổng quan riêng cũ (`OwnerDashboardView`, đã gỡ): "Xe của bạn" thay "Xe trên chợ", ví hiện
+thu nhập tháng, lời chào theo tên. Vắng thẻ Gói và thẻ ba bước mở gian hàng. Chủ xe đang đăng ký vẫn thấy
+màn tiến trình đăng ký (`OwnerRegistrationView`).
 
 Danh sách xe của tuyến này dùng CHUNG màn với gian hàng từ 03/11/2026 (§3.5). Hai thẻ dẫn đường
 "Cẩm nang cho thuê xe" / "Hợp đồng & chứng từ mẫu" đầu màn đã gỡ — cả hai là dòng của khối Trợ giúp.
@@ -344,6 +366,7 @@ ngôn ngữ design.**
 | 17 | "Lợi nhuận chuyến" thêm dòng "XePrime hoàn về ví (C)" | ⚠️ | Chốt 03/11: GIỮ bảng hiện tại (A − B = số cộng ví, ADR 0068) — số mẫu của design tự mâu thuẫn; báo designer |
 | 18 | Nhãn "Khách quen" trên thẻ khách | 🆕 | API `customerCompletedRentals`; cùng ngưỡng `TENANT_CUSTOMER_RETURNING_MIN_RENTALS` của sổ khách |
 | 19 | Hộp "Hủy đơn" / "Ghi nhận khách không đến" theo khuôn "Huỷ yêu cầu thuê xe" (`23930:44688`) | 🟡⚠️ | Chốt 06/11: cùng bộ style `DecisionReasonDialog.module.css` với hai hộp của chặng yêu cầu: hậu quả lên phụ đề, nhãn trên ô, hai nút "Quay lại" · nút đỏ. Viên tóm tắt **giữ biển số + dòng khung giờ** (design chỉ có "khách • xe"). Ô 2 "**Ghi chú cho khách**": huỷ đơn QUA CHỢ thì thông báo huỷ gửi khách mang nguyên câu này (API: `transitionWithinTx`, trước đây chỉ vào audit); đơn tự lập là "Ghi chú nội bộ", no-show là "Lý do". ⚠️ Design đánh `*` cả hai ô — chốt 06/11: **ghi chú chỉ bắt buộc khi chọn "Lý do khác"** (no-show vẫn bắt buộc vì chỉ có mỗi ô đó), áp cả hộp huỷ yêu cầu; API `TransitionBookingDto.reason` theo đúng luật đó, không ghi chú thì khách nhận câu chung. Bỏ mọi dòng gợi ý dưới ô chữ và dưới ô nhóm lý do (nhãn đã nói ai đọc; giải thích chỉ số nằm ở dấu ⓘ của ô đỏ). Ô đỏ "trừ điểm uy tín" + hoàn giữ chỗ chỉ hiện với đơn qua chợ (đơn tự lập không vào mẫu số chỉ số — ADR 0045 điều 3). Giữ cảnh báo "đã thu … không tự hoàn". Viên tóm tắt không gói hàng: tên xe dài xuống dòng trong cột của nó, dấu chấm không bị bỏ lại cuối dòng |
+| 20 | Đơn huỷ / khách không đến: "Thu tiền" (header) · "Ghi nhận phát sinh" · "Xác nhận đã thu cọc" · ô "Còn phải thu của khách" | 🟡 | Chốt 09/11: chuyến không diễn ra (đơn đang chạy không huỷ được — ADR 0045 điều 1) nên **ẩn hẳn** cả bốn; "Lịch sử thu tiền" và hoàn lại phần đã thu giữ nguyên. Server chặn ở writer duy nhất `BookingPaymentWriter` + thêm/sửa phát sinh (`assertBookingMoneyOpenWithinTx`, khoá dòng đơn `FOR UPDATE`, 409 `BOOKING_MONEY_CLOSED`); gỡ phát sinh và ghi hoàn cọc vẫn mở. Cọc lỡ thu trên đơn huỷ chuyển "Chờ hoàn cọc" (trước đó kẹt "Đã nhận cọc"). Đơn hoàn tất KHÔNG đổi: thu nốt, phát sinh sau trả xe, ghi bù cọc vẫn làm được. Cùng đợt: sổ công nợ (`SQL_DEBT_SCOPE`) loại cả đơn khách không đến (trước chỉ loại đơn huỷ); số chuyến theo xe/khách và cọc đang cầm giữ phạm vi cũ (`SQL_BOOKING_SCOPE`) |
 
 ### 3.4 Khách hàng — kiểm kê và quyết định (02/11/2026)
 

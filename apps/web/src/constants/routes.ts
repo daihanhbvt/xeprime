@@ -623,12 +623,12 @@ export function workspacePaths(workspace: Workspace): {
     chat: ROUTES.MANAGE.CHAT,
     bookings: ROUTES.MANAGE.BOOKINGS,
     bookingRequests: rentalStagePath(RENTAL_STAGE.NEEDS_ACTION),
-    // Hồ sơ chủ xe = trang tài khoản của họ. Chủ xe tuyến hoa hồng chỉ có chi nhánh mặc định,
-    // và địa chỉ của nó sửa ở section "Địa chỉ nhận xe" của chính trang đó.
-    ownerProfile: accountSectionPath(ACCOUNT_SECTION.PROFILE),
-    branches: accountSectionPath(ACCOUNT_SECTION.ADDRESS),
-    subscription: accountSectionPath(ACCOUNT_SECTION.PLAN),
-    sellerProfile: accountSectionPath(ACCOUNT_SECTION.TAX),
+    // Hồ sơ chủ xe = trang Thông tin `/shop`, mặt tiền cá nhân (ADR 0085 điều 2). Chủ xe tuyến hoa
+    // hồng chỉ có chi nhánh mặc định, và địa chỉ của nó sửa ở thẻ "Địa chỉ" của chính trang đó.
+    ownerProfile: ROUTES.MANAGE.SHOP,
+    branches: shopSectionPath(SHOP_SECTION.LEGAL),
+    subscription: shopSectionPath(SHOP_SECTION.PLAN),
+    sellerProfile: shopSectionPath(SHOP_SECTION.TAX),
     support: ROUTES.MANAGE.SUPPORT_CASES,
   };
 }
@@ -1182,6 +1182,11 @@ export const SHOP_SECTION = {
   BRANCHES: 'branches',
   /** Gói hiện hành, hạn mức chỗ, và hoá đơn thanh toán. */
   PLAN: 'plan',
+  /**
+   * Hỗ trợ xuất hoá đơn VAT cho mọi xe (ADR 0059) - CHỈ mặt tiền cá nhân: chủ xe tuyến hoa hồng không
+   * có trang "Chính sách thuê", nơi gian hàng đặt cùng thiết lập này (ADR 0085 điều 2).
+   */
+  VAT_INVOICE: 'vat-invoice',
 } as const;
 
 /**
@@ -1283,31 +1288,22 @@ export function accountDeletionPath(): string {
  * khoản" vốn là hai trang lặp nhau (cả hai đều hiện email/SĐT). Cùng khuôn với trang Cửa hàng:
  * section xếp dọc, mục lục dính, `?section=` ở URL để link/F5/Quay lại đúng chỗ.
  *
- * `ADDRESS`, `TAX`, `PLAN` CHỈ có ở bản "Hồ sơ chủ xe" (chủ xe tuyến hoa hồng). Ở tuyến gói, ba thứ
- * đó là section của `SHOP` (địa chỉ & pháp lý, gói & hạn mức) - trang của họ bỏ qua các giá trị
- * này (`PERSONAL_ACCOUNT_SECTIONS`). Bookmark cũ `?section=storefront` (trước 07/10/2026) rơi về
- * `PROFILE` - nơi lời giới thiệu đã chuyển tới.
+ * Từ ADR 0085 đây là "Tài khoản & bảo mật" của MỌI tài khoản partner, kể cả chủ xe tuyến hoa hồng
+ * (hồ sơ chủ xe của họ là trang Thông tin `/shop`). `ADDRESS`, `VAT_INVOICE`, `TAX`, `PLAN` chỉ còn
+ * là BÍ DANH của bản "Hồ sơ chủ xe" cũ: `PartnerAccountRoute` chuyển chúng sang section cùng vai của
+ * `/shop` (`shopSectionForAccountSection`). Bookmark cũ `?section=storefront` (trước 07/10/2026) rơi
+ * về `PROFILE`.
  */
 export const ACCOUNT_SECTION = {
-  /**
-   * Tên và ảnh đại diện của tài khoản - với chủ xe hoa hồng là "Thông tin chủ xe": họ tên, ảnh
-   * và lời giới thiệu, tức TOÀN BỘ thứ khách thấy về họ (ADR 0054).
-   */
+  /** Tên và ảnh đại diện của tài khoản - với chủ xe cá nhân cũng là thứ khách thấy (ADR 0054). */
   PROFILE: 'profile',
-  /** Địa chỉ nhận xe (chi nhánh mặc định) + MST/giấy phép tuỳ chọn (chỉ chủ xe hoa hồng). */
+  /** Bí danh → `/shop?section=legal` (địa chỉ nhận xe). */
   ADDRESS: 'address',
-  /**
-   * Hỗ trợ xuất hoá đơn VAT cho mọi xe (chỉ chủ xe hoa hồng - tuyến gói đặt nó ở "Chính sách thuê";
-   * cùng `VatInvoiceSettingCard`, cùng `PATCH /tenants/current/vat-invoice`, ADR 0059).
-   */
+  /** Bí danh → `/shop?section=vat-invoice` (hoá đơn VAT của chủ xe cá nhân, ADR 0059). */
   VAT_INVOICE: 'vat-invoice',
-  /**
-   * Thông tin khai thuế - loại chủ thể, tên pháp lý, CCCD/MST của hồ sơ người bán (chỉ chủ xe hoa
-   * hồng; trước 07/10/2026 là trang riêng `/tax`). Thuế ĐÃ khấu trừ là chuyện tiền, nên nó ở trang
-   * "Số dư & rút tiền", không ở đây.
-   */
+  /** Bí danh → `/shop?section=tax` (thông tin khai thuế). */
   TAX: 'tax',
-  /** Gói dịch vụ + phễu nâng cấp lên gian hàng (chỉ chủ xe hoa hồng; trước là trang `/subscription`). */
+  /** Bí danh → `/shop?section=plan` (gói + phễu nâng cấp lên gian hàng). */
   PLAN: 'plan',
   /** Email và SĐT đăng nhập - đổi qua OTP. */
   LOGIN: 'login',
@@ -1346,9 +1342,10 @@ export function accountSectionDomId(section: AccountSection): string {
 }
 
 /**
- * Section của "Hồ sơ chủ xe" → section CÙNG VAI ở trang Cửa hàng, cho người nay đã ở tuyến gói:
- * chủ xe vừa thanh toán nâng cấp ngay trên section "Gói dịch vụ", hay một bookmark cũ của gian hàng
- * hết gói rồi gia hạn. `null` = section của CON NGƯỜI (đăng nhập, mật khẩu…) - vẫn ở trang tài khoản.
+ * Section CŨ của "Hồ sơ chủ xe" ở `/account` → section CÙNG VAI ở trang Thông tin `/shop`. Từ
+ * ADR 0085 trang hồ sơ của chủ xe cá nhân CHÍNH LÀ `/shop`, nên mọi link cũ (thông báo, bookmark,
+ * gian hàng hết gói rồi gia hạn) đi qua đây. `null` = section của CON NGƯỜI (hồ sơ tài khoản, đăng
+ * nhập, mật khẩu…) - vẫn ở trang tài khoản.
  *
  * Nhận chuỗi thô của `?section=` (không qua `accountSectionOf`): giá trị vắng/lạ không phải là lời
  * mời sang trang khác.
@@ -1361,6 +1358,8 @@ export function shopSectionForAccountSection(value: string | null | undefined): 
       return SHOP_SECTION.TAX;
     case ACCOUNT_SECTION.ADDRESS:
       return SHOP_SECTION.LEGAL;
+    case ACCOUNT_SECTION.VAT_INVOICE:
+      return SHOP_SECTION.VAT_INVOICE;
     default:
       return null;
   }

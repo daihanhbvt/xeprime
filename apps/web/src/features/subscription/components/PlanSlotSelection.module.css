@@ -1,0 +1,65 @@
+/* Khối chọn xe giữ lại khi lượt mua vượt suất (ADR 0085) — một cột, mỗi nhóm suất một thẻ viền nhạt. */
+.panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.group {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  gap: var(--xp-space-xs);
+}
+
+.groupHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.groupTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.counter {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  white-space: nowrap;
+}
+
+.pickList,
+.hiddenList {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  gap: var(--xp-space-xs);
+  list-style: none;
+}
+
+.hiddenList {
+  padding-left: var(--xp-space-md);
+  color: var(--xp-color-text-secondary);
+  list-style: disc;
+}
+
+.note {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.accept {
+  font-weight: var(--xp-font-weight-semibold);
+}

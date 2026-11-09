@@ -19,6 +19,7 @@ import { cx } from '@/lib/cx';
 
 import { usePendingInvoices, useSubscriptionInvoices } from '../hooks/use-subscription';
 import type { SubscriptionInvoice } from '../types';
+import { onePerPaymentTarget } from '../payable';
 import { InvoicePaymentPanel } from './InvoicePaymentPanel';
 import styles from './SubscriptionInvoicesPanel.module.css';
 
@@ -146,9 +147,12 @@ export function SubscriptionInvoicesPanel({
         />
       ) : null}
 
-      {/* Tối đa MỘT hoá đơn chờ mỗi loại xe (ADR 0065) — mỗi mã một thẻ, mỗi thẻ một nút thanh toán. */}
+      {/*
+        Tối đa MỘT hoá đơn chờ mỗi loại xe (ADR 0065); hai hoá đơn cùng một phiếu gộp là MỘT khoản
+        cần trả (ADR 0083) — mỗi khoản một thẻ, mỗi thẻ một nút thanh toán.
+      */}
       {showPending
-        ? pendingInvoices.map((invoice) => (
+        ? onePerPaymentTarget(pendingInvoices).map((invoice) => (
             <InvoicePaymentPanel key={invoice.id} invoice={invoice} />
           ))
         : null}

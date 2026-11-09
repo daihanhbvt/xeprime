@@ -81,6 +81,14 @@ import {
   type PlanInvoiceSnapshot,
   type PlanLimitsJson,
   type PlanQuotaSnapshot,
+  type PlanInvoiceVehicleSlots,
+  MARKETPLACE_PAUSE_REASON,
+  MEMBERSHIP_LOCK_REASON,
+  MEMBERSHIP_STATUS,
+  PLAN_PURCHASE_KIND,
+  checkSlotSelection,
+  planSlotGroups,
+  slotScopeVehicleType,
 } from '@xeprime/types';
 import { ListingsService } from '../public-listings/listings.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -96,8 +104,10 @@ import {
   PendingSubscriptionInvoiceDto,
   PlanDto,
   PlanListQueryDto,
+  PlanSlotOverflowDto,
   PreviewSubscriptionPurchaseDto,
   PurchaseSubscriptionDto,
+  PurchaseSubscriptionRequestDto,
   SUBSCRIPTION_DEFAULT_LIMIT,
   SUBSCRIPTION_MAX_LIMIT,
   SubscriptionCheckoutDto,
@@ -812,6 +822,9 @@ export class BillingService {
           commissionPercent: plan.commissionPercent,
           startsAt,
           endsAt,
+          // Admin gán không mang lựa chọn xe (giá đàm phán, ADR 0085): kỳ bắt đầu ngay thì không còn gì
+          // để job áp; kỳ nối sau để job đóng claim lúc nó bắt đầu.
+          slotsAppliedAt: startsAt.getTime() <= Date.now() ? new Date() : null,
           note: dto.note ?? null,
           createdBy: actorUserId,
         },
@@ -824,6 +837,7 @@ export class BillingService {
        * tiền lần thứ hai. Cùng transaction, cùng lý do với đường webhook.
        */
       await this.completePackageOnboardingWithinTx(tx, tenantId, plan.billingMode);
+      await this.restorePlanLapsedMembersWithinTx(tx, tenantId, plan.billingMode);
       await this.voidInvoicesSupersededByScopeWithinTx(tx, tenantId, plan);
 
       // Hoá đơn gói cho lượt gán tay (ADR 0015 điều 5): admin gán = đã thu tiền ngoài luồng
@@ -1491,6 +1505,41 @@ export class BillingService {
    * Chỉ áp với gói `package`: một dòng hoa hồng (kể cả dòng hệ thống 0đ) không hoàn tất được
    * onboarding của tuyến trả phí.
    */
+  /**
+   * Gói KÍCH HOẠT LẠI ⇒ mở đúng các thành viên mà job vòng đời đã khoá vì hết ân hạn (ADR 0085 điều 6).
+   *
+   * Chỉ dòng mang lý do `plan_lapsed`: khoá TAY của chủ (lý do NULL) là quyết định của họ, gia hạn gói
+   * không được lật nó. Cùng transaction với lượt bật gói — gói sống thì nhân viên sống, không có khe
+   * hở nào trong đó gian hàng đã trả tiền mà nhân viên vẫn bị chặn.
+   */
+  private async restorePlanLapsedMembersWithinTx(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    billingMode: string,
+  ): Promise<void> {
+    if (billingMode !== BILLING_MODE.PACKAGE) return;
+    const restored = await tx.tenantMembership.updateMany({
+      where: {
+        tenantId,
+        status: MEMBERSHIP_STATUS.LOCKED,
+        lockedReason: MEMBERSHIP_LOCK_REASON.PLAN_LAPSED,
+      },
+      data: { status: MEMBERSHIP_STATUS.ACTIVE, lockedReason: null },
+    });
+    if (restored.count === 0) return;
+    await this.audit.record(
+      {
+        tenantId,
+        actorScope: AUDIT_ACTOR_SCOPE.SYSTEM,
+        action: 'membership.restore_after_plan',
+        targetType: AUDIT_TARGET_TYPE.TENANT,
+        targetId: tenantId,
+        after: { restoredCount: restored.count, reason: MEMBERSHIP_LOCK_REASON.PLAN_LAPSED },
+      },
+      tx,
+    );
+  }
+
   private async completePackageOnboardingWithinTx(
     tx: Prisma.TransactionClient,
     tenantId: string,
@@ -1587,7 +1636,7 @@ export class BillingService {
       }),
       this.prisma.vehicle.groupBy({
         by: ['vehicleType'],
-        where: { tenantId, deletedAt: null, publicStatus: { in: [...MARKETPLACE_SLOT_STATUSES] } },
+        where: { tenantId, deletedAt: null, ...MARKETPLACE_SLOT_WHERE },
         _count: { _all: true },
       }),
     ]);
@@ -1788,13 +1837,14 @@ export class BillingService {
   async purchase(
     tenantId: string,
     actorUserId: string,
-    dto: PurchaseSubscriptionDto,
+    dto: PurchaseSubscriptionRequestDto,
   ): Promise<SubscriptionInvoiceDto> {
     await this.assertTenant(tenantId);
     const prepared = await this.preparePurchase(dto);
     const now = new Date();
     const live = await this.liveTermsOf(tenantId, now);
     const expiresAt = new Date(now.getTime() + SUBSCRIPTION_INVOICE_TTL_HOURS * 60 * 60 * 1000);
+    const vehicleSlots = await this.resolvePurchaseSlotSelection(tenantId, [prepared], dto, now);
 
     const row = await this.prisma.$transaction(async (tx) => {
       await this.lockTenantPurchasesWithinTx(tx, tenantId);
@@ -1806,6 +1856,7 @@ export class BillingService {
         now,
         expiresAt,
         checkoutId: null,
+        vehicleSlots,
       });
     });
     return toInvoiceDto(row);
@@ -1837,6 +1888,8 @@ export class BillingService {
     const now = new Date();
     const live = await this.liveTermsOf(tenantId, now);
     const expiresAt = new Date(now.getTime() + SUBSCRIPTION_INVOICE_TTL_HOURS * 60 * 60 * 1000);
+    // Lựa chọn xe giữ lại là của CẢ lượt (ADR 0085) — suất sau khi CẢ HAI gói kích hoạt.
+    const vehicleSlots = await this.resolvePurchaseSlotSelection(tenantId, prepared, dto, now);
     const total = prepared.reduce(
       (sum, item) => sum.add(item.pricing.total),
       new Prisma.Decimal(0),
@@ -1869,6 +1922,7 @@ export class BillingService {
           now,
           expiresAt,
           checkoutId: checkout.id,
+          vehicleSlots,
         });
         invoiceIds.push(invoice.id);
       }
@@ -1957,7 +2011,151 @@ export class BillingService {
       total: prepared
         .reduce((sum, item) => sum.add(item.pricing.total), new Prisma.Decimal(0))
         .toString(),
+      vehicleSlots: await this.purchaseSlotOverflow(tenantId, prepared, now),
     };
+  }
+
+  /**
+   * Nhóm suất sẽ VƯỢT sau một lượt mua (ADR 0085 điều 5) — mô phỏng dòng hiệu lực SAU lượt mua rồi hỏi
+   * CÙNG phép suy hạn mức với cổng chặn (`quotaForVehicleType`):
+   *
+   *  - bỏ các kỳ lượt mua thay thế (`planSubscriptionChain.cancel` — nâng bậc kết thúc kỳ cũ, mua gói
+   *    đầu tiên huỷ dòng hoa hồng 0đ), và mọi dòng hoa hồng (tenant sẽ ở tuyến gói);
+   *  - thêm một kỳ gói mới cho mỗi phạm vi mua. Hạ bậc (`change_next`) thay kỳ cùng phạm vi: trần của
+   *    nó là trần áp khi kỳ mới BẮT ĐẦU; gia hạn cùng bậc không đổi trần nên bỏ qua.
+   *
+   * Không ghi gì. Xe đếm theo `MARKETPLACE_SLOT_WHERE` của HÔM NAY — lượt áp lúc tiền về đếm lại.
+   */
+  private async purchaseSlotOverflow(
+    tenantId: string,
+    prepared: readonly PreparedPurchase[],
+    now: Date,
+  ): Promise<PlanSlotOverflowDto[]> {
+    const [rows, live] = await Promise.all([
+      this.loadEffectiveRows(tenantId, now),
+      this.liveTermsOf(tenantId, now),
+    ]);
+    const replaced = new Set<string>();
+    const added: EffectiveSubscriptionRowWithQuota[] = [];
+    for (const item of prepared) {
+      const decision = selfServePurchaseTiming(
+        live,
+        { planId: item.plan.id, vehicleScope: item.vehicleScope, maxVehicles: item.limits.maxVehicles },
+        now,
+      );
+      if (decision.kind === PLAN_PURCHASE_KIND.RENEW) continue;
+      const chain = planSubscriptionChain(
+        live,
+        { planId: item.plan.id, vehicleScope: item.vehicleScope, timing: decision.timing },
+        now,
+      );
+      for (const term of chain.cancel) replaced.add(term.id);
+      if (decision.kind === PLAN_PURCHASE_KIND.CHANGE_NEXT) {
+        for (const term of live) {
+          if (planScopesConflict(planVehicleScopeOf(term.vehicleScope), item.vehicleScope)) {
+            replaced.add(term.id);
+          }
+        }
+      }
+      added.push({
+        id: `purchase:${item.vehicleScope}`,
+        billingMode: BILLING_MODE.PACKAGE,
+        endsAt: addCalendarMonthsVn(now, item.termMonths),
+        vehicleScope: item.vehicleScope,
+        quotaJson: quotaOf(item.limits) as unknown as Prisma.JsonValue,
+        plan: { code: item.plan.code, name: item.plan.name, limitsJson: item.plan.limitsJson },
+      });
+    }
+    if (added.length === 0) return [];
+    const simulated: EffectiveSubscriptionRowWithQuota[] = [
+      ...rows.filter((row) => !replaced.has(row.id) && row.billingMode !== BILLING_MODE.COMMISSION),
+      ...added,
+    ];
+    return this.slotOverflowWithin(this.prisma, tenantId, simulated, now);
+  }
+
+  /**
+   * Nhóm suất VƯỢT với một tập dòng hiệu lực: mỗi nhóm (`planSlotGroups`) đếm xe đang chiếm suất của
+   * nó; vượt trần thì trả nhóm kèm danh sách xe (giới hạn `PLAN_SLOT_VEHICLE_LIST_MAX`, đủ cho mọi
+   * gói tự mua). Dùng chung cho xem trước, phát hành hoá đơn và lượt áp lúc tiền về.
+   */
+  private async slotOverflowWithin(
+    client: Prisma.TransactionClient | PrismaService,
+    tenantId: string,
+    rows: readonly EffectiveSubscriptionRowWithQuota[],
+    now: Date,
+  ): Promise<PlanSlotOverflowDto[]> {
+    const billing = resolveEffectiveBilling(rows, now);
+    const groups = planSlotGroups({
+      [VEHICLE_TYPE.CAR]: quotaForVehicleType(rows, billing, VEHICLE_TYPE.CAR, now),
+      [VEHICLE_TYPE.MOTORBIKE]: quotaForVehicleType(rows, billing, VEHICLE_TYPE.MOTORBIKE, now),
+    } as Record<VehicleType, VehicleTypeQuota>);
+    const overflow: PlanSlotOverflowDto[] = [];
+    for (const group of groups) {
+      const vehicleType = slotScopeVehicleType(group.countedScope);
+      const where: Prisma.VehicleWhereInput = {
+        tenantId,
+        deletedAt: null,
+        ...MARKETPLACE_SLOT_WHERE,
+        ...(vehicleType ? { vehicleType } : {}),
+      };
+      const occupyingCount = await client.vehicle.count({ where });
+      if (occupyingCount <= group.limit) continue;
+      const vehicles = await client.vehicle.findMany({
+        where,
+        orderBy: [{ name: 'asc' }, { id: 'asc' }],
+        take: PLAN_SLOT_VEHICLE_LIST_MAX,
+        select: {
+          id: true,
+          name: true,
+          plateNumber: true,
+          vehicleType: true,
+          mainImageUrl: true,
+          publicStatus: true,
+        },
+      });
+      overflow.push({ countedScope: group.countedScope, limit: group.limit, occupyingCount, vehicles });
+    }
+    return overflow;
+  }
+
+  /**
+   * Lựa chọn "xe giữ lại" của một lượt mua (ADR 0085 điều 5) — lớp chặn THẬT của bước xác nhận.
+   *
+   * Không vượt suất ⇒ `null` (bỏ qua mọi trường gửi lên). Vượt ⇒ bắt buộc `acceptVehicleHiding`
+   * (`PLAN_VEHICLE_SELECTION_REQUIRED` kèm từng nhóm), và mỗi nhóm giữ tối đa đúng số suất của nó.
+   * Hệ thống không chọn thay: danh sách giữ lại có thể rỗng, xe không được giữ tạm ẩn lúc áp.
+   */
+  private async resolvePurchaseSlotSelection(
+    tenantId: string,
+    prepared: readonly PreparedPurchase[],
+    dto: { keepVehicleIds?: string[]; acceptVehicleHiding?: boolean },
+    now: Date,
+  ): Promise<PlanInvoiceVehicleSlots | null> {
+    const overflow = await this.purchaseSlotOverflow(tenantId, prepared, now);
+    if (overflow.length === 0) return null;
+    const groups = overflow.map((group) => ({
+      countedScope: group.countedScope as PlanVehicleScope,
+      limit: group.limit,
+      vehicleIds: group.vehicles.map((vehicle) => vehicle.id),
+    }));
+    if (dto.acceptVehicleHiding !== true) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.PLAN_VEHICLE_SELECTION_REQUIRED,
+        message:
+          'Gói đã chọn có ít suất hơn số xe đang hiển thị trên chợ - chọn xe giữ lại và xác nhận tạm ẩn phần còn lại, hoặc chọn gói lớn hơn',
+        details: { groups },
+      });
+    }
+    const check = checkSlotSelection(groups, dto.keepVehicleIds ?? []);
+    if (check.overLimitScopes.length > 0) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Số xe giữ lại vượt số suất của gói',
+        details: { field: 'keepVehicleIds', scopes: check.overLimitScopes },
+      });
+    }
+    return { keepVehicleIds: check.keepVehicleIds };
   }
 
   /**
@@ -2147,6 +2345,8 @@ export class BillingService {
       now: Date;
       expiresAt: Date;
       checkoutId: string | null;
+      /** Lựa chọn xe giữ lại của lượt mua (ADR 0085) — chụp lên hoá đơn để lượt áp đọc lại. */
+      vehicleSlots: PlanInvoiceVehicleSlots | null;
     },
   ) {
     const { tenantId, actorUserId, now, expiresAt } = args;
@@ -2243,6 +2443,7 @@ export class BillingService {
           timing,
           quota: quotaOf(limits),
           lines: pricing.lines,
+          ...(args.vehicleSlots ? { vehicleSlots: args.vehicleSlots } : {}),
         },
         subtotal: pricing.subtotal,
         discountAmount: pricing.discountAmount,
@@ -2518,6 +2719,8 @@ export class BillingService {
       linesJson: invoice.linesJson,
       providerTxId: args.providerTxId,
     });
+    // Suất trên chợ sau khi gói bật (ADR 0085 điều 5) — CÙNG transaction với lượt kích hoạt.
+    await this.applyPurchaseSlotsWithinTx(tx, invoice.tenantId, [invoice]);
     return {
       outcome: 'activated',
       invoiceId: invoice.id,
@@ -2657,7 +2860,109 @@ export class BillingService {
         }),
       );
     }
+    // Áp SAU khi MỌI gói của phiếu đã bật — áp giữa chừng là ẩn nhầm xe của loại sắp có gói.
+    await this.applyPurchaseSlotsWithinTx(tx, checkout.tenantId, members);
     return { outcome: 'activated', ...base, subscriptionIds };
+  }
+
+  /**
+   * ÁP lựa chọn "xe giữ lại" lúc tiền về (ADR 0085 điều 5), sau khi mọi gói của lượt thanh toán đã bật.
+   *
+   * Chỉ áp khi ÍT NHẤT một hoá đơn mang `vehicleSlots` — tức người mua đã thấy nhóm vượt suất và xác
+   * nhận ẩn phần còn lại. Vắng (hoá đơn cũ, lượt không vượt suất) ⇒ không đụng gì: hệ thống không tự
+   * chọn xe thay người bán. Có lựa chọn ⇒ đếm LẠI theo suất THẬT sau kích hoạt (sau khoá suất), và mọi
+   * xe đang chiếm suất của nhóm vượt mà không thuộc danh sách giữ thì tạm ẩn — kể cả xe mới lên chợ
+   * sau lúc phát hành hoá đơn. Xe đã chọn mà nay không còn (đã xoá, bị nền tảng ẩn) để trống suất.
+   *
+   * Hạ bậc (`change_next`) bật kỳ ở TƯƠNG LAI nên lúc này chưa vượt gì — lựa chọn nằm trên hoá đơn
+   * chờ job vòng đời áp khi kỳ mới bắt đầu.
+   */
+  private async applyPurchaseSlotsWithinTx(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    invoices: readonly { id: string; linesJson: Prisma.JsonValue }[],
+  ): Promise<void> {
+    const selections = invoices
+      .map((invoice) => parsePlanInvoiceSnapshot(invoice.linesJson)?.vehicleSlots)
+      .filter((slots): slots is PlanInvoiceVehicleSlots => slots !== undefined);
+    if (selections.length === 0) return;
+    const keep = new Set(selections.flatMap((slots) => slots.keepVehicleIds));
+
+    const now = new Date();
+    await this.lockVehicleSlotsWithinTx(tx, tenantId);
+    const rows = await this.loadEffectiveRows(tenantId, now, tx);
+    const overflow = await this.slotOverflowWithin(tx, tenantId, rows, now);
+    const hide = overflow
+      .flatMap((group) => group.vehicles.map((vehicle) => vehicle.id))
+      .filter((id) => !keep.has(id));
+    await this.pauseVehiclesForPlanWithinTx(tx, tenantId, hide, {
+      source: 'subscription_activation',
+      invoiceIds: invoices.map((invoice) => invoice.id),
+      notification: NOTIFICATION_TYPE.SUBSCRIPTION_ACTIVATED,
+    });
+  }
+
+  /**
+   * WRITER DUY NHẤT của lượt HỆ THỐNG tạm ẩn xe vì suất gói (ADR 0085 điều 5) — lượt áp lúc tiền về
+   * và job vòng đời cùng đi qua đây, trong transaction của nơi gọi (đã giữ khoá suất).
+   *
+   * Tắt công tắc hiển thị kèm lý do `plan_limit` (thẻ xe nói "Tạm ẩn - hết suất gói", và mọi lượt bật
+   * lại của chủ xe xoá lý do). Không đụng `public_status`, đơn, yêu cầu, lịch hay tiền — ẩn ≠ khoá ≠
+   * huỷ. `public_listings` ghi qua `ListingsService` (ADR 0008). Một dòng audit cho cả lượt, một tin
+   * tóm tắt cho thành viên gian hàng. Trả id các xe thật sự vừa bị ẩn.
+   */
+  async pauseVehiclesForPlanWithinTx(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    vehicleIds: readonly string[],
+    context: {
+      source: 'subscription_activation' | 'plan_term_start' | 'scope_lapsed' | 'track_lapsed';
+      invoiceIds?: string[];
+      notification:
+        | typeof NOTIFICATION_TYPE.SUBSCRIPTION_ACTIVATED
+        | typeof NOTIFICATION_TYPE.SUBSCRIPTION_LAPSED;
+    },
+  ): Promise<string[]> {
+    if (vehicleIds.length === 0) return [];
+    const targets = await tx.vehicle.findMany({
+      where: { tenantId, id: { in: [...vehicleIds] }, deletedAt: null, marketplaceEnabled: true },
+      select: { id: true },
+    });
+    if (targets.length === 0) return [];
+    const ids = targets.map((vehicle) => vehicle.id);
+    await tx.vehicle.updateMany({
+      where: { tenantId, id: { in: ids }, marketplaceEnabled: true },
+      data: { marketplaceEnabled: false, marketplacePausedReason: MARKETPLACE_PAUSE_REASON.PLAN_LIMIT },
+    });
+    for (const id of ids) await this.listings.syncFromVehicle(id, tx);
+
+    await this.audit.record(
+      {
+        tenantId,
+        actorScope: AUDIT_ACTOR_SCOPE.SYSTEM,
+        action: 'vehicle.marketplace_paused_by_plan',
+        targetType: AUDIT_TARGET_TYPE.TENANT,
+        targetId: tenantId,
+        after: {
+          vehicleIds: ids,
+          reason: MARKETPLACE_PAUSE_REASON.PLAN_LIMIT,
+          source: context.source,
+          ...(context.invoiceIds ? { invoiceIds: context.invoiceIds } : {}),
+        },
+      },
+      tx,
+    );
+    await this.notifications.emitToTenantMembers(
+      tenantId,
+      {
+        type: context.notification,
+        title: `${ids.length} xe đã tạm ẩn vì vượt suất gói`,
+        body: 'Các xe vẫn giữ nguyên hồ sơ, đơn và lịch. Bật lại hiển thị ở Danh sách xe khi gói còn suất trống.',
+        tenantId,
+      },
+      tx,
+    );
+    return ids;
   }
 
   /**
@@ -2745,6 +3050,9 @@ export class BillingService {
         commissionPercent: plan.commissionPercent,
         startsAt,
         endsAt,
+        // Kỳ bắt đầu NGAY: suất áp trong CHÍNH transaction này (`applyPurchaseSlotsWithinTx`). Kỳ hạ bậc
+        // nối sau: job vòng đời áp lựa chọn trên hoá đơn khi kỳ bắt đầu (ADR 0085 điều 5).
+        slotsAppliedAt: startsAt.getTime() <= now.getTime() ? now : null,
         // Người tạo là HỆ THỐNG (webhook) - cột NULL, dấu vết nằm ở audit + bank_transactions.
         createdBy: null,
       },
@@ -2767,6 +3075,7 @@ export class BillingService {
      * tuyến nào cả.
      */
     await this.completePackageOnboardingWithinTx(tx, args.tenantId, plan.billingMode);
+    await this.restorePlanLapsedMembersWithinTx(tx, args.tenantId, plan.billingMode);
     await this.voidInvoicesSupersededByScopeWithinTx(tx, args.tenantId, plan);
 
     await this.audit.record(
@@ -2837,18 +3146,27 @@ export class BillingService {
    *
    * ## Hai điểm thi hành, và vì sao chúng khác nhau
    *
-   * `scope: 'fleet'` (mặc định) - tạo xe. `scope: 'marketplace'` - gửi xe lên chợ; chỉ đếm xe
-   * đang chiếm suất và TRỪ chính chiếc đang gửi, để tenant tụt bậc vẫn chọn được xe nào ở lại.
-   * Trần KHÔNG trả tiền (Owner Lite, `unconfigured`) chỉ gác điểm TẠO (ADR 0038 điều 12); trần
-   * ĐÃ TRẢ TIỀN gác cả hai, vì đó là cửa duy nhất còn lại của một lần HẠ BẬC.
+   * `scope: 'fleet'` (mặc định) - tạo xe; đếm MỌI xe chưa xoá. `scope: 'marketplace'` - gửi xe
+   * duyệt lên chợ VÀ bật công tắc hiển thị; chỉ đếm xe đang CHIẾM SUẤT (`MARKETPLACE_SLOT_WHERE`:
+   * đang chờ duyệt, hoặc đã duyệt mà chủ xe đang bật) và TRỪ chính chiếc đang thao tác, để tenant
+   * tụt bậc vẫn chọn được xe nào ở lại. Từ ADR 0085 điều 4 điểm chợ gác MỌI nguồn trần — kể cả
+   * Owner Lite (3 xe, tổng) và `unconfigured` — vì suất là chỗ trên chợ, không phải số hồ sơ xe.
    *
-   * ⚠️ Cổng này CHẶN THÊM MỚI, không gỡ thứ đang có (ADR 0038 · ADR 0041 điều 4). Xe ở nguyên
-   * trên chợ, chuyến chạy tiếp, tiền về ví bình thường; chỉ chiếc TIẾP THEO bị từ chối.
+   * Cổng này chỉ CHẶN THÊM MỚI. Việc đưa số xe đang hiển thị về trong suất ở một lần đổi tuyến /
+   * đổi gói là việc của lượt áp gói và job vòng đời (ADR 0085 điều 5), không phải của cổng này.
    */
   async assertVehicleQuota(
     tenantId: string,
     vehicleType: VehicleType,
-    opts: { scope?: PlanQuotaGatePoint; excludeVehicleId?: string } = {},
+    opts: {
+      scope?: PlanQuotaGatePoint;
+      excludeVehicleId?: string;
+      /**
+       * Đếm TRONG transaction của nơi gọi — nơi gọi đã giữ khoá suất của gian hàng
+       * (`lockVehicleSlotsWithinTx`) để hai lượt đưa xe ra chợ song song không cùng đọc "còn 1 suất".
+       */
+      tx?: Prisma.TransactionClient;
+    } = {},
   ): Promise<void> {
     const quota = await this.vehicleQuotaFor(tenantId, vehicleType, new Date());
     if (quota.kind === VEHICLE_QUOTA_KIND.SCOPE_REQUIRED) {
@@ -2864,18 +3182,17 @@ export class BillingService {
     if (quota.kind === VEHICLE_QUOTA_KIND.UNLIMITED || quota.limit === null) return;
 
     const scope = opts.scope ?? PLAN_QUOTA_GATE_POINT.FLEET;
-    if (scope === PLAN_QUOTA_GATE_POINT.MARKETPLACE && quota.reason !== QUOTA_LIMIT_REASON.PLAN) return;
 
     const where: Prisma.VehicleWhereInput = {
       tenantId,
       deletedAt: null,
       // Bậc `all` (và Owner Lite) đếm GỘP hai loại; bậc theo loại chỉ đếm đúng loại đó.
       ...(quota.countedScope === PLAN_VEHICLE_SCOPE.ALL ? {} : { vehicleType: quota.countedScope }),
-      ...(scope === PLAN_QUOTA_GATE_POINT.MARKETPLACE ? { publicStatus: { in: [...MARKETPLACE_SLOT_STATUSES] } } : {}),
+      ...(scope === PLAN_QUOTA_GATE_POINT.MARKETPLACE ? MARKETPLACE_SLOT_WHERE : {}),
       // Trừ chính chiếc đang gửi lại / đang đổi loại - để thao tác trên xe đã có không tự chặn mình.
       ...(opts.excludeVehicleId ? { id: { not: opts.excludeVehicleId } } : {}),
     };
-    const used = await this.prisma.vehicle.count({ where });
+    const used = await (opts.tx ?? this.prisma).vehicle.count({ where });
     if (used < quota.limit) return;
 
     const details = {
@@ -2918,6 +3235,17 @@ export class BillingService {
             'Mua gói gian hàng để đăng thêm xe.',
       details,
     });
+  }
+
+  /**
+   * Tuần tự hoá MỌI lượt đưa xe ra chợ / áp suất của MỘT gian hàng trong transaction đang chạy.
+   *
+   * Trần suất là một phép ĐẾM, không biểu diễn được bằng constraint, nên thứ còn lại là khoá theo
+   * gian hàng (cùng khuôn `hold:` của `BookingHoldsService`): lượt bật hiển thị, lượt áp gói lúc tiền
+   * về và job vòng đời đều đếm SAU khoá này, nên hai lượt song song không cùng đọc "còn 1 suất".
+   */
+  async lockVehicleSlotsWithinTx(tx: Prisma.TransactionClient, tenantId: string): Promise<void> {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'vehicle-slots:' + tenantId}))`;
   }
 
   /**
@@ -3308,11 +3636,22 @@ function assertCombinableScopes(prepared: readonly PreparedPurchase[]): void {
   }
 }
 
-/** Xe đang chiếm suất trên chợ - chờ duyệt công khai hoặc đã công khai. */
-const MARKETPLACE_SLOT_STATUSES = [
-  VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW,
-  VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
-] as const;
+/**
+ * Xe đang CHIẾM SUẤT trên chợ (ADR 0085 điều 4): đang chờ duyệt công khai hoặc đã công khai, VÀ công
+ * tắc hiển thị đang BẬT (ADR 0048). Tắt công tắc ⇒ nhả suất — kể cả xe đang chờ duyệt, vì duyệt xong
+ * nó vẫn nằm ngoài chợ cho tới khi chủ xe bật (và lượt bật đó đi qua cổng suất). Trước ADR 0085 chiếc
+ * xe tạm ẩn vẫn nằm trong phép đếm, nên công tắc không gác được trần. Một điều kiện cho cổng chặn,
+ * thẻ "Gói của tôi" và lượt áp suất — ba nơi không được đếm khác nhau.
+ */
+/** Trần danh sách xe trả về cho MỘT nhóm vượt suất — dư cho mọi gói tự mua (trần bậc ≤ 10 xe/loại). */
+const PLAN_SLOT_VEHICLE_LIST_MAX = 200;
+
+export const MARKETPLACE_SLOT_WHERE: Prisma.VehicleWhereInput = {
+  marketplaceEnabled: true,
+  publicStatus: {
+    in: [VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW, VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC],
+  },
+};
 
 /**
  * Hạn mức đang áp cho MỘT loại xe (ADR 0065) - hình dạng chung của cổng chặn, "Gói của tôi" và

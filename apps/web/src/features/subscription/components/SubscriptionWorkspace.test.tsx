@@ -89,6 +89,7 @@ vi.mock('../hooks/use-subscription', () => ({
     refetch: vi.fn(),
   }),
   usePurchaseSubscription: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }),
+  useCreateSubscriptionCheckout: () => ({ mutate: vi.fn(), isPending: false }),
   usePaymentInfo: () => ({ data: undefined, isLoading: false, isError: false }),
   useSyncScopeWhenInvoiceSettles: () => undefined,
 }));

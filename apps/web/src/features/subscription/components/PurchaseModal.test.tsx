@@ -126,8 +126,13 @@ function pickTier(name: string) {
 beforeEach(() => {
   plans.data = [makePlan()];
   pending.data = [];
-  preview.data = undefined;
-  preview.isSuccess = false;
+  /*
+   * Mặc định: bản xem trước KHỚP lựa chọn, không nói gì riêng và không vượt suất — nút tạo hoá đơn chờ
+   * đúng bản này (ADR 0085). Ca nào cần nội dung xem trước tự đặt `items` / `vehicleSlots`.
+   */
+  preview.data = { total: '0', items: [], vehicleSlots: [] };
+  preview.isSuccess = true;
+  preview.isPlaceholderData = false;
   purchase.mutate.mockReset();
   nav.push.mockReset();
 });
@@ -207,6 +212,43 @@ describe('PurchaseModal - bậc nào được bán', () => {
 
     expect(onClose).toHaveBeenCalled();
     expect(nav.push).toHaveBeenCalledWith('/manage/payment/INV-NEW');
+  });
+
+  /*
+   * ADR 0085 điều 5 — hạ bậc / gói ít suất hơn số xe đang hiện: người mua tự chọn xe giữ lại và xác
+   * nhận ẩn phần còn lại; chưa xác nhận thì không có hoá đơn.
+   */
+  it('vượt suất: chưa xác nhận thì không tạo hoá đơn; xác nhận ⇒ body mang lựa chọn xe giữ lại', () => {
+    preview.data = {
+      total: '0',
+      items: [],
+      vehicleSlots: [
+        {
+          countedScope: 'motorbike',
+          limit: 1,
+          occupyingCount: 2,
+          vehicles: [
+            { id: 'V1', name: 'Vision', plateNumber: null, vehicleType: 'motorbike', mainImageUrl: null, publicStatus: 'approved_public' },
+            { id: 'V2', name: 'Lead', plateNumber: null, vehicleType: 'motorbike', mainImageUrl: null, publicStatus: 'approved_public' },
+          ],
+        },
+      ],
+    };
+    renderModal();
+    pickTier('Chọn gói');
+    fireEvent.click(termCards()[1]!);
+    const submit = screen.getByRole('button', { name: /Tạo hoá đơn/ }) as HTMLButtonElement;
+    expect(submit.disabled).toBe(true);
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Vision' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Tôi đồng ý tạm ẩn/ }));
+    expect(submit.disabled).toBe(false);
+    fireEvent.click(submit);
+    expect(purchase.mutate.mock.calls[0]![0]).toMatchObject({
+      planId: 'plan-basic',
+      keepVehicleIds: ['V1'],
+      acceptVehicleHiding: true,
+    });
   });
 
   it('gói tuyến hoa hồng KHÔNG lọt vào bảng giá', () => {

@@ -4,13 +4,13 @@ import { Segmented, Select } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import {
-  BOOKING_STATUS,
   BOOKING_STATUS_SELECTABLE_VALUES,
   DEBT_FILTER,
   DEBT_FILTER_VALUES,
   DEBT_SORT_VALUES,
   DEFAULT_DEBT_SORT,
   PERMISSION,
+  isBookingClosedWithoutTrip,
   type DebtFilter,
 } from '@xeprime/types';
 import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
@@ -45,9 +45,12 @@ function groupCount(summary: DebtSummary | undefined, group: DebtFilter): number
   }
 }
 
-/** Trạng thái đơn chọn được: đơn huỷ không bao giờ nằm trong công nợ, nên không có trong ô. */
+/**
+ * Trạng thái đơn chọn được: đơn huỷ / khách không đến không bao giờ nằm trong công nợ (chuyến
+ * không diễn ra — `SQL_DEBT_SCOPE`), nên không có trong ô.
+ */
 const DEBT_STATUS_OPTIONS = BOOKING_STATUS_SELECTABLE_VALUES.filter(
-  (status) => status !== BOOKING_STATUS.CANCELLED,
+  (status) => !isBookingClosedWithoutTrip(status),
 );
 
 /**

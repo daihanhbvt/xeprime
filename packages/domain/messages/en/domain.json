@@ -716,6 +716,7 @@
   "marketplaceVisibility": {
     "visible": "Live on marketplace",
     "owner_paused": "Paused by you",
+    "plan_paused": "Paused - no plan slot",
     "not_approved": "Not approved yet",
     "platform_hidden": "Hidden by XePrime",
     "shop_inactive": "Shop not active",

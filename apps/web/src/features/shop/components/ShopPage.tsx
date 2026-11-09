@@ -15,8 +15,11 @@ import {
   balancePayoutPath,
   shopSectionOf,
 } from '@/constants/routes';
+import { useMyProfile } from '@/features/account/hooks/use-account';
+import { isCommissionOwner } from '@/features/auth/post-auth-destination';
 import { ClientRedirect } from '@/features/partner/components/ClientRedirect';
 import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useTenantScope } from '@/hooks/use-tenant-scope';
 import { useUrlFilters } from '@/hooks/use-url-filters';
@@ -79,6 +82,15 @@ export function ShopPage() {
   } = useMyShop(canView && Boolean(tenant) && !redirectToPayout);
   const updateProfile = useUpdateShopProfile();
   /*
+   * Mặt tiền CÁ NHÂN — "Hồ sơ chủ xe" (ADR 0085 điều 2): tên, ảnh khách thấy là của TÀI KHOẢN chủ
+   * (ADR 0054), nên trang nạp thêm hồ sơ tài khoản. Đọc từ NGƯỜI ĐĂNG NHẬP, không từ tenant đang
+   * xem: bản này sửa tài khoản của chính người xem, nên chỉ CHỦ xe tuyến hoa hồng mới có nó. Phiên
+   * hỗ trợ (người xem là nhân sự nền tảng) và thành viên luôn ở bản gian hàng.
+   */
+  const { data: user } = useCurrentUser();
+  const personal = isCommissionOwner(user);
+  const ownerProfile = useMyProfile({ enabled: personal && canView && !redirectToPayout });
+  /*
    * "Đã có xe nào chưa" - CHỈ hỏi khi dải chào mừng đang mở.
    *
    * `limit: 1` vì câu hỏi là có/không, không phải một danh sách. Và có điều kiện vì đây là một
@@ -105,13 +117,19 @@ export function ShopPage() {
     );
   }
 
-  if (isError && !shop) {
+  if ((isError && !shop) || (personal && ownerProfile.isError && !ownerProfile.data)) {
     return (
       <Result
         status="error"
         title={t('page.loadError')}
         extra={
-          <Button type="primary" onClick={() => void refetch()}>
+          <Button
+            type="primary"
+            onClick={() => {
+              if (isError) void refetch();
+              if (ownerProfile.isError) void ownerProfile.refetch();
+            }}
+          >
             {tCommon('actions.retry')}
           </Button>
         }
@@ -119,7 +137,7 @@ export function ShopPage() {
     );
   }
 
-  if (isLoading || !shop) {
+  if (isLoading || !shop || (personal && !ownerProfile.data)) {
     return (
       <div className={styles.page}>
         <ManagePageHeader title={tenant?.name ?? ''} subtitle={t('page.subtitle')} />
@@ -132,6 +150,7 @@ export function ShopPage() {
     <div className={styles.page}>
       <ShopWorkspace
         shop={shop}
+        ownerProfile={personal ? ownerProfile.data : undefined}
         canEdit={canEdit}
         saving={updateProfile.isPending}
         section={filters.section}
