@@ -82,7 +82,7 @@ describe('RevenueTrendChart', () => {
     expect(getByText('Lợi nhuận')).toBeTruthy();
   });
 
-  it('dựng được khi có LỖ — nửa dưới trục 0 phải mở ra, không nổ', async () => {
+  it('dựng được khi có LỖ - nửa dưới trục 0 phải mở ra, không nổ', async () => {
     const { getByText } = await render(
       withIntl(
         <RevenueTrendChart
@@ -96,7 +96,7 @@ describe('RevenueTrendChart', () => {
     expect(getByText('Lợi nhuận')).toBeTruthy();
   });
 
-  it('dựng được khi MỌI giá trị bằng 0 — không chia cho 0 khi dựng trục', async () => {
+  it('dựng được khi MỌI giá trị bằng 0 - không chia cho 0 khi dựng trục', async () => {
     const { getByText } = await render(
       withIntl(
         <RevenueTrendChart
@@ -110,7 +110,7 @@ describe('RevenueTrendChart', () => {
     expect(getByText('Doanh thu')).toBeTruthy();
   });
 
-  it('một mốc duy nhất vẫn dựng được — đường lợi nhuận chỉ có một điểm', async () => {
+  it('một mốc duy nhất vẫn dựng được - đường lợi nhuận chỉ có một điểm', async () => {
     const { getByText } = await render(
       withIntl(<RevenueTrendChart buckets={[bucket()]} labelOf={LABEL} titleOf={TITLE} />),
     );
@@ -180,7 +180,7 @@ describe('RevenueTrendChart', () => {
     expect(getByText('01/09')).toBeTruthy();
   });
 
-  it('chạm lại chính mốc đang mở thì đóng thẻ — không kẹt ở một mốc cũ', async () => {
+  it('chạm lại chính mốc đang mở thì đóng thẻ - không kẹt ở một mốc cũ', async () => {
     const { getByLabelText, getByText, queryByText } = await render(
       withIntl(<RevenueTrendChart buckets={[bucket()]} labelOf={LABEL} titleOf={TITLE} />),
     );

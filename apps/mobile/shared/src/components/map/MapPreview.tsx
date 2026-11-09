@@ -68,7 +68,7 @@ export function MapPreview({
       accessibilityRole="progressbar"
       accessibilityLabel={busyLabel}
     >
-      <ActivityIndicator color={colors.primaryActive} />
+      <ActivityIndicator color={colors.accentText} />
     </YStack>
   );
 

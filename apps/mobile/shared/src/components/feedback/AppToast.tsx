@@ -9,6 +9,7 @@ import { dwell } from '@/theme/motion';
 import { themed, useColors, useFloatingBorderColor } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { IconName } from '@/components/ui/Chip';
+import { ToastGlyph } from '@/components/motion/ToastGlyph';
 
 /**
  * Ba loại thông báo, và CHỈ ba. Thêm loại thứ tư nghĩa là người dùng phải học thêm một màu —
@@ -143,7 +144,18 @@ function AppToast() {
             : elevation.card
         }
       >
-        <Ionicons name={skin.icon} size={iconSize.lg} color={skin.accent} />
+        <ToastGlyph
+          kind={
+            (toast.customData?.preset ?? TOAST_PRESET.INFO) === TOAST_PRESET.SUCCESS
+              ? 'success'
+              : (toast.customData?.preset ?? TOAST_PRESET.INFO) === TOAST_PRESET.ERROR
+                ? 'error'
+                : 'other'
+          }
+          name={skin.icon}
+          size={iconSize.lg}
+          color={skin.accent}
+        />
         {/*
           Hai dòng khi có `message` (push lúc app đang mở): TIÊU ĐỀ đậm nói chuyện gì xảy ra, THÂN
           nói hệ quả — bản cũ chỉ hiện thân nên mất đúng phần quan trọng (người dùng báo 28/10/2026).

@@ -118,6 +118,20 @@ export function chargedDays(from: Dayjs, to: Dayjs): number {
   return Math.max(1, Math.ceil(to.diff(from, 'minute') / MINUTES_PER_DAY));
 }
 
+/**
+ * Đã quá hạn bao nhiêu ngày — "Quá 3 ngày" ở màn Công nợ.
+ *
+ * Cùng mốc với server: quá hạn khi hạn đã TRÔI QUA (`dueAt < now`, so tức thời, không so ngày
+ * lịch), và phần ngày lẻ tính tròn lên — trễ 2 giờ đã là "Quá 1 ngày", không phải "0 ngày". Chưa
+ * tới hạn ⇒ 0. Hạn không đọc được ⇒ 0 (không bịa ra một khoản trễ).
+ */
+export function overdueDays(dueAt: IsoDateTimeString, now: Date = new Date()): number {
+  const due = new Date(dueAt).getTime();
+  if (!Number.isFinite(due)) return 0;
+  const late = now.getTime() - due;
+  return late > 0 ? Math.ceil(late / (MINUTES_PER_DAY * 60_000)) : 0;
+}
+
 /** Phần ngày/giờ của một thời lượng thuê — con số thuần, chưa có chữ. */
 export interface RentalDurationParts {
   readonly days: number;

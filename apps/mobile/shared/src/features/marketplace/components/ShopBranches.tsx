@@ -1,4 +1,5 @@
 import { Text, XStack, YStack } from 'tamagui';
+import { RevealText, ScrollReveal } from '@/components/motion/ScrollReveal';
 import { useTranslations } from 'use-intl';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
@@ -24,22 +25,26 @@ export function ShopBranches({ branches }: { branches: PublicShop['branches'] })
 
   return (
     <YStack gap={space.md}>
-      <Text
-        col={colors.text}
-        fos={fontSize.lead}
-        fow={fontWeight.semibold}
-        accessibilityRole="header"
-      >
-        {t('title')}
-      </Text>
+      <ScrollReveal>
+        <RevealText>
+          <Text
+            col={colors.text}
+            fos={fontSize.lead}
+            fow={fontWeight.semibold}
+            accessibilityRole="header"
+          >
+            {t('title')}
+          </Text>
+        </RevealText>
+      </ScrollReveal>
       {/* Bề ngang điện thoại: một cột (web @760px `grid-template-columns: minmax(0, 1fr)`). */}
       <YStack gap={space.md}>
-        {branches.map((branch) => {
+        {branches.map((branch, i) => {
           const rating = branch.ratingAvg == null ? null : Number(branch.ratingAvg);
           const showRating = rating !== null && Number.isFinite(rating);
           return (
+            <ScrollReveal key={branch.id} index={i}>
             <XStack
-              key={branch.id}
               ai="center"
               gap={space.sm + space.xs}
               p={space.md}
@@ -94,6 +99,7 @@ export function ShopBranches({ branches }: { branches: PublicShop['branches'] })
                 </XStack>
               ) : null}
             </XStack>
+            </ScrollReveal>
           );
         })}
       </YStack>

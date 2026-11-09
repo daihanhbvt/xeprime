@@ -272,7 +272,7 @@ export class BookingExtensionsService {
         // Đơn `active` luôn chiếm lịch; mất dòng nghĩa là dữ liệu đã lệch — không tự vá ở đây.
         throw new ConflictException({
           code: API_ERROR_CODE.CONFLICT,
-          message: 'Đơn không còn giữ lịch xe — tải lại rồi thử lại',
+          message: 'Đơn không còn giữ lịch xe - tải lại rồi thử lại',
         });
       }
       await this.occupancy.reschedule(
@@ -355,7 +355,7 @@ export class BookingExtensionsService {
           {
             type: NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED,
             title: `Gia hạn đơn ${booking.code}: chờ thanh toán`,
-            body: `${booking.vehicle.name} · thêm ${months} tháng — chuyển khoản trước ${formatVnTime(expiresAt)} để giữ lịch`,
+            body: `${booking.vehicle.name} · thêm ${months} tháng - chuyển khoản trước ${formatVnTime(expiresAt)} để giữ lịch`,
             tenantId,
             targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
             targetId: booking.id,
@@ -416,8 +416,8 @@ export class BookingExtensionsService {
             type: NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED,
             title: 'Gia hạn đã được huỷ',
             body: closed.paidAmount.gt(0)
-              ? `Chủ xe huỷ phụ lục gia hạn — ${closed.paidAmount.toFixed(0)}đ đã hoàn vào Ví điểm`
-              : 'Chủ xe huỷ phụ lục gia hạn — giờ trả xe giữ nguyên',
+              ? `Chủ xe huỷ phụ lục gia hạn - ${closed.paidAmount.toFixed(0)}đ đã hoàn vào Ví điểm`
+              : 'Chủ xe huỷ phụ lục gia hạn - giờ trả xe giữ nguyên',
             tenantId,
             targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
             targetId: bookingId,
@@ -608,7 +608,7 @@ export class BookingExtensionsService {
     if (moved.count !== 1) {
       throw new ConflictException({
         code: API_ERROR_CODE.CONFLICT,
-        message: 'Giờ trả của đơn đã đổi sau khi tạo phụ lục — không áp được phụ lục',
+        message: 'Giờ trả của đơn đã đổi sau khi tạo phụ lục - không áp được phụ lục',
       });
     }
     const activated = await tx.bookingExtension.update({
@@ -909,8 +909,8 @@ function unpriced(reason: 'no_monthly_price' | 'no_fee_policy'): UnprocessableEn
     code: API_ERROR_CODE.BOOKING_EXTENSION_UNPRICED,
     message:
       reason === 'no_monthly_price'
-        ? 'Xe chưa có giá thuê tháng — cấu hình giá dài hạn trước khi gia hạn'
-        : 'Chưa có chính sách phí hiệu lực — không định giá được phần gia hạn',
+        ? 'Xe chưa có giá thuê tháng - cấu hình giá dài hạn trước khi gia hạn'
+        : 'Chưa có chính sách phí hiệu lực - không định giá được phần gia hạn',
     details: { reason },
   });
 }

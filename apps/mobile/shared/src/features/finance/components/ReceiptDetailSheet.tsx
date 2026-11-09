@@ -187,7 +187,7 @@ export function ReceiptDetailSheet({
     <BottomSheet
       open={receiptId !== null && focused}
       onClose={onClose}
-      title={data?.receiptNo ?? t('title')}
+      title={data?.receiptNo ? t('titleWithNo', { no: data.receiptNo }) : t('title')}
       footer={
         showFooter ? (
           <XStack gap={space.sm}>
@@ -212,7 +212,7 @@ export function ReceiptDetailSheet({
             {actions?.approve ? (
               <YStack f={1}>
                 <Button
-                  label={tActions('approve')}
+                  label={t('approveAction')}
                   icon="checkmark-circle-outline"
                   loading={pending}
                   disabled={!finance.canWrite}

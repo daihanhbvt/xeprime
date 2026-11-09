@@ -36,7 +36,7 @@ import {
 } from 'class-validator';
 
 /**
- * Query param dạng CSV (`sedan,suv`) → mảng để validate `each` — URL searchParams thân thiện
+ * Query param dạng CSV (`sedan,suv`) → mảng để validate `each` - URL searchParams thân thiện
  * hơn repeated param, FE join(',') một chỗ.
  */
 const splitCsv = ({ value }: { value: unknown }): unknown =>
@@ -55,7 +55,7 @@ const toBool = ({ value }: { value: unknown }): unknown => {
 };
 
 /**
- * Query trang marketplace — luôn phân trang, filter và scope ở tầng DB (skill backend-endpoint).
+ * Query trang marketplace - luôn phân trang, filter và scope ở tầng DB (skill backend-endpoint).
  * `limit` có trần cứng để client không kéo cả bảng. Các chiều facet nhận CSV multi-select;
  * wire type khai là String (CSV) để contract FE sinh ra đúng thứ đi trên URL.
  */
@@ -65,7 +65,7 @@ export class PublicListingQueryDto {
   @IsIn(VEHICLE_TYPE_VALUES)
   vehicleType?: string;
 
-  /** Lọc "xe PHỤC VỤ ĐƯỢC dịch vụ X" — `has` trên mảng `service_types` (tab/chip dịch vụ). */
+  /** Lọc "xe PHỤC VỤ ĐƯỢC dịch vụ X" - `has` trên mảng `service_types` (tab/chip dịch vụ). */
   @ApiPropertyOptional({ enum: SERVICE_TYPE_VALUES })
   @IsOptional()
   @IsIn(SERVICE_TYPE_VALUES)
@@ -73,7 +73,7 @@ export class PublicListingQueryDto {
 
   @ApiPropertyOptional({
     type: String,
-    description: 'Hãng xe — CSV, multi-select (vd: Toyota,Kia)',
+    description: 'Hãng xe - CSV, multi-select (vd: Toyota,Kia)',
   })
   @IsOptional()
   @Transform(splitCsv)
@@ -82,7 +82,7 @@ export class PublicListingQueryDto {
   @IsString({ each: true })
   brand?: string[];
 
-  @ApiPropertyOptional({ type: String, description: 'Kiểu dáng thân xe — CSV (BODY_TYPE)' })
+  @ApiPropertyOptional({ type: String, description: 'Kiểu dáng thân xe - CSV (BODY_TYPE)' })
   @IsOptional()
   @Transform(splitCsv)
   @IsArray()
@@ -92,7 +92,7 @@ export class PublicListingQueryDto {
   @ApiPropertyOptional({
     type: [String],
     enum: MOTORBIKE_CATEGORY_VALUES,
-    description: 'Phân khúc xe máy — chiều lọc đối xứng với bodyType của ô tô',
+    description: 'Phân khúc xe máy - chiều lọc đối xứng với bodyType của ô tô',
   })
   @IsOptional()
   @Transform(splitCsv)
@@ -100,14 +100,14 @@ export class PublicListingQueryDto {
   @IsIn(MOTORBIKE_CATEGORY_VALUES, { each: true })
   motorbikeCategory?: string[];
 
-  @ApiPropertyOptional({ type: String, description: 'Bucket số chỗ — CSV (4,5,7,8plus)' })
+  @ApiPropertyOptional({ type: String, description: 'Bucket số chỗ - CSV (4,5,7,8plus)' })
   @IsOptional()
   @Transform(splitCsv)
   @IsArray()
   @IsIn(SEAT_BUCKET_VALUES, { each: true })
   seats?: string[];
 
-  @ApiPropertyOptional({ type: String, description: 'Nhiên liệu — CSV (FUEL_TYPE)' })
+  @ApiPropertyOptional({ type: String, description: 'Nhiên liệu - CSV (FUEL_TYPE)' })
   @IsOptional()
   @Transform(splitCsv)
   @IsArray()
@@ -116,7 +116,7 @@ export class PublicListingQueryDto {
 
   @ApiPropertyOptional({
     type: String,
-    description: 'Tiện ích xe — CSV (VEHICLE_FEATURE_LABEL); xe phải có ĐỦ các key đã chọn',
+    description: 'Tiện ích xe - CSV (VEHICLE_FEATURE_LABEL); xe phải có ĐỦ các key đã chọn',
   })
   @IsOptional()
   @Transform(splitCsv)
@@ -126,7 +126,7 @@ export class PublicListingQueryDto {
 
   @ApiPropertyOptional({
     type: String,
-    description: 'Hộp số — CSV (TRANSMISSION_TYPE_EXT_VALUES)',
+    description: 'Hộp số - CSV (TRANSMISSION_TYPE_EXT_VALUES)',
   })
   @IsOptional()
   @Transform(splitCsv)
@@ -162,7 +162,7 @@ export class PublicListingQueryDto {
     type: Boolean,
     description:
       'Chỉ xe của gian hàng/chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thiết lập chung của ' +
-      'tenant — XePrime không xuất hoá đơn thay chủ xe)',
+      'tenant - XePrime không xuất hoá đơn thay chủ xe)',
   })
   @IsOptional()
   @Transform(toBool)
@@ -183,14 +183,14 @@ export class PublicListingQueryDto {
   @ApiPropertyOptional({
     type: Number,
     enum: LISTING_MIN_RATING_VALUES,
-    description: 'Điểm đánh giá tối thiểu — chỉ xe có ratingAvg >= mức; xe chưa có điểm bị loại',
+    description: 'Điểm đánh giá tối thiểu - chỉ xe có ratingAvg >= mức; xe chưa có điểm bị loại',
   })
   @IsOptional()
   @Type(() => Number)
   @IsIn(LISTING_MIN_RATING_VALUES)
   minRating?: number;
 
-  @ApiPropertyOptional({ description: 'Số chỗ tối thiểu (giữ tương thích cũ — mới dùng `seats`)' })
+  @ApiPropertyOptional({ description: 'Số chỗ tối thiểu (giữ tương thích cũ - mới dùng `seats`)' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -202,7 +202,7 @@ export class PublicListingQueryDto {
   // (facets dùng query làm khoá) vừa là chi phí LIKE vô ích. Luật khớp: `keywordTokenWhere`.
   @ApiPropertyOptional({
     description:
-      'Từ khoá — khớp tên xe/hãng/model và TÊN CÔNG KHAI của chủ xe/gian hàng. Không phân biệt ' +
+      'Từ khoá - khớp tên xe/hãng/model và TÊN CÔNG KHAI của chủ xe/gian hàng. Không phân biệt ' +
       'dấu và hoa thường; mỗi từ phải là đầu một từ ("vf8" khớp "VinFast VF 8"), không cần đúng ' +
       'thứ tự hay cùng một trường.',
     maxLength: SEARCH_QUERY_MAX_LENGTH,
@@ -219,7 +219,7 @@ export class PublicListingQueryDto {
    * ("TP.HCM"/"Hồ Chí Minh"), còn URL đã phát ra ngoài thì sống rất lâu.
    */
   @ApiPropertyOptional({
-    description: 'Mã tỉnh 2 ký tự — tham số chuẩn (GET /public/destinations)',
+    description: 'Mã tỉnh 2 ký tự - tham số chuẩn (GET /public/destinations)',
   })
   @IsOptional()
   @IsString()
@@ -234,7 +234,7 @@ export class PublicListingQueryDto {
    */
   @ApiPropertyOptional({
     deprecated: true,
-    description: 'Tên tỉnh (link cũ) — được quy về provinceCode qua bí danh',
+    description: 'Tên tỉnh (link cũ) - được quy về provinceCode qua bí danh',
   })
   @IsOptional()
   @IsString()
@@ -254,12 +254,12 @@ export class PublicListingQueryDto {
   @Min(0)
   priceMax?: number;
 
-  @ApiPropertyOptional({ description: 'Nhận xe (ISO-8601) — lọc xe rảnh trong khoảng' })
+  @ApiPropertyOptional({ description: 'Nhận xe (ISO-8601) - lọc xe rảnh trong khoảng' })
   @IsOptional()
   @IsISO8601()
   pickupAt?: string;
 
-  @ApiPropertyOptional({ description: 'Trả xe (ISO-8601) — dùng cùng pickupAt' })
+  @ApiPropertyOptional({ description: 'Trả xe (ISO-8601) - dùng cùng pickupAt' })
   @IsOptional()
   @IsISO8601()
   returnAt?: string;
@@ -286,19 +286,19 @@ export class PublicListingQueryDto {
 }
 
 /**
- * Query khối "Xe phù hợp với bạn" ở trang chủ — một danh sách GỢI Ý, không phải một lần tìm kiếm.
+ * Query khối "Xe phù hợp với bạn" ở trang chủ - một danh sách GỢI Ý, không phải một lần tìm kiếm.
  *
  * Vì sao không dùng lại `PublicListingQueryDto`: hai bề mặt hỏi hai câu khác nhau.
  *
- *   · Trang kết quả hỏi "cho tôi đúng những xe thoả điều kiện này" — tỉnh là bộ lọc CỨNG, và
+ *   · Trang kết quả hỏi "cho tôi đúng những xe thoả điều kiện này" - tỉnh là bộ lọc CỨNG, và
  *     không có xe nào thoả thì câu trả lời đúng là danh sách rỗng.
- *   · Trang chủ hỏi "xe nào hợp với tôi nhất" — tỉnh là ƯU TIÊN. Một trang chủ trống vì tỉnh
+ *   · Trang chủ hỏi "xe nào hợp với tôi nhất" - tỉnh là ƯU TIÊN. Một trang chủ trống vì tỉnh
  *     của khách chưa có xe là tệ hơn một trang chủ nói "ưu tiên Hà Nội" rồi bù bằng xe nơi khác,
- *     vì khách còn chưa nói họ sẽ chỉ thuê ở Hà Nội — họ mới chỉ mở trang chủ.
+ *     vì khách còn chưa nói họ sẽ chỉ thuê ở Hà Nội - họ mới chỉ mở trang chủ.
  *
  * Đó là lý do tham số ở đây tên `nearProvinceCode` chứ không phải `provinceCode`: đổi tên là
  * cách duy nhất để không ai vô tình đọc nó như một bộ lọc. Các chiều facet (hãng, tiện ích,
- * khoảng giá…) cố ý KHÔNG có mặt — chúng thuộc về trang kết quả.
+ * khoảng giá…) cố ý KHÔNG có mặt - chúng thuộc về trang kết quả.
  */
 export class RecommendedListingQueryDto {
   @ApiPropertyOptional({ enum: VEHICLE_TYPE_VALUES, description: 'car | motorbike' })
@@ -313,19 +313,19 @@ export class RecommendedListingQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Mã tỉnh 2 ký tự khách đang quan tâm — ƯU TIÊN xếp hạng, KHÔNG lọc bỏ xe tỉnh khác',
+      'Mã tỉnh 2 ký tự khách đang quan tâm - ƯU TIÊN xếp hạng, KHÔNG lọc bỏ xe tỉnh khác',
   })
   @IsOptional()
   @IsString()
   @IsIn(PROVINCE_CODES)
   nearProvinceCode?: string;
 
-  @ApiPropertyOptional({ description: 'Nhận xe (ISO-8601) — loại xe đã bận trong khoảng' })
+  @ApiPropertyOptional({ description: 'Nhận xe (ISO-8601) - loại xe đã bận trong khoảng' })
   @IsOptional()
   @IsISO8601()
   pickupAt?: string;
 
-  @ApiPropertyOptional({ description: 'Trả xe (ISO-8601) — dùng cùng pickupAt' })
+  @ApiPropertyOptional({ description: 'Trả xe (ISO-8601) - dùng cùng pickupAt' })
   @IsOptional()
   @IsISO8601()
   returnAt?: string;
@@ -340,15 +340,15 @@ export class RecommendedListingQueryDto {
 }
 
 /**
- * BA CHỈ SỐ CÔNG KHAI của một gian hàng/chủ xe — ADR 0045 điều 2.
+ * BA CHỈ SỐ CÔNG KHAI của một gian hàng/chủ xe - ADR 0045 điều 2.
  *
  * Xuất hiện ở HAI chỗ với cùng một hình dạng: trang gian hàng, và khối chủ xe trên trang chi
- * tiết xe. Một DTO cho cả hai là có chủ đích — hai hình dạng khác nhau sẽ thành hai component
+ * tiết xe. Một DTO cho cả hai là có chủ đích - hai hình dạng khác nhau sẽ thành hai component
  * khác nhau, rồi thành hai câu giải thích khác nhau cho cùng một con số.
  *
  * ⚠️ Ba trường phần trăm đều `null` được, và `null` mang đúng MỘT nghĩa: **chưa đủ dữ liệu để
  * nói** (dưới `HOST_METRIC_MIN_SAMPLES` mẫu trong cửa sổ 90 ngày). Giao diện phải phân biệt nó
- * với 0 — một gian hàng mới mở không phải một gian hàng không bao giờ trả lời. `sampleCount`
+ * với 0 - một gian hàng mới mở không phải một gian hàng không bao giờ trả lời. `sampleCount`
  * luôn có mặt để câu "chưa đủ dữ liệu" là một câu kiểm chứng được.
  */
 export class HostMetricsDto {
@@ -364,7 +364,7 @@ export class HostMetricsDto {
     required: true,
     type: Number,
     nullable: true,
-    description: 'Tỉ lệ phản hồi trong hạn (0–100). Null = chưa đủ mẫu, KHÔNG phải 0.',
+    description: 'Tỉ lệ phản hồi trong hạn (0-100). Null = chưa đủ mẫu, KHÔNG phải 0.',
   })
   responseRatePercent!: number | null;
 
@@ -373,7 +373,7 @@ export class HostMetricsDto {
     type: Number,
     nullable: true,
     description:
-      'Tỉ lệ NHẬN VÀ GIỮ chuyến (0–100). Từ chối trong hạn KHÔNG nằm trong tử số; gian hàng ' +
+      'Tỉ lệ NHẬN VÀ GIỮ chuyến (0-100). Từ chối trong hạn KHÔNG nằm trong tử số; gian hàng ' +
       'huỷ sau khi đã nhận thì mẫu đó rời tử số. Null = chưa đủ mẫu.',
   })
   acceptKeepRatePercent!: number | null;
@@ -383,20 +383,20 @@ export class HostMetricsDto {
     type: Number,
     nullable: true,
     description:
-      'Trung vị số PHÚT tới quyết định của NGƯỜI. Lượt tự nhận không vào phép tính này — xem ' +
+      'Trung vị số PHÚT tới quyết định của NGƯỜI. Lượt tự nhận không vào phép tính này - xem ' +
       'instantBook. Null = chưa đủ mẫu do người quyết.',
   })
   responseMinutesMedian!: number | null;
 
   @ApiProperty({
     description:
-      'Gian hàng có xe bật "Đặt ngay" trong cửa sổ — giao diện hiện nhãn thay cho số phút, ' +
+      'Gian hàng có xe bật "Đặt ngay" trong cửa sổ - giao diện hiện nhãn thay cho số phút, ' +
       'thay vì quảng cáo một tốc độ trả lời thủ công không có thật.',
   })
   instantBook!: boolean;
 }
 
-/** Query facets — cùng bộ filter với search; sort/paging vô nghĩa với đếm nên bỏ. */
+/** Query facets - cùng bộ filter với search; sort/paging vô nghĩa với đếm nên bỏ. */
 export class ListingFacetsQueryDto extends OmitType(PublicListingQueryDto, [
   'sort',
   'page',
@@ -420,12 +420,12 @@ export class PublicListingDto {
     type: String,
     nullable: true,
     enum: MOTORBIKE_CATEGORY_VALUES,
-    description: 'Phân khúc — chỉ xe máy',
+    description: 'Phân khúc - chỉ xe máy',
   })
   motorbikeCategory!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) mainImageUrl!: string | null;
 
-  @ApiProperty({ description: 'Tổng số ảnh của xe — thẻ hiện "+N" ảnh', minimum: 0 })
+  @ApiProperty({ description: 'Tổng số ảnh của xe - thẻ hiện "+N" ảnh', minimum: 0 })
   imageCount!: number;
 
   @ApiProperty({
@@ -433,7 +433,7 @@ export class PublicListingDto {
     nullable: true,
     enum: TRANSMISSION_TYPE_EXT_VALUES,
     description:
-      'Hộp số (TRANSMISSION_TYPE_EXT — cùng bộ mã với hồ sơ xe) — null khi chủ xe chưa khai',
+      'Hộp số (TRANSMISSION_TYPE_EXT - cùng bộ mã với hồ sơ xe) - null khi chủ xe chưa khai',
   })
   transmission!: string | null;
 
@@ -441,12 +441,12 @@ export class PublicListingDto {
     enum: SERVICE_TYPE_VALUES,
     isArray: true,
     description:
-      'Dịch vụ đang bật tự động nhận chuyến — thẻ hiện "Không cần xác nhận" khi dịch vụ khách ' +
+      'Dịch vụ đang bật tự động nhận chuyến - thẻ hiện "Không cần xác nhận" khi dịch vụ khách ' +
       'đang xem nằm trong mảng này',
   })
   instantBookServiceTypes!: string[];
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền dạng string — ADR 0007' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền dạng string - ADR 0007' })
   weekdayPrice!: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
@@ -455,35 +455,35 @@ export class PublicListingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá thuê giờ (string — ADR 0007). Null = xe không cho thuê theo giờ.',
+    description: 'Giá thuê giờ (string - ADR 0007). Null = xe không cho thuê theo giờ.',
   })
   hourlyPrice!: string | null;
 
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá tháng tham chiếu thuê dài hạn (string — ADR 0007).',
+    description: 'Giá tháng tham chiếu thuê dài hạn (string - ADR 0007).',
   })
   monthlyPrice!: string | null;
 
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá/ngày đã gồm tài xế (string — ADR 0007). Null = gian hàng báo khi duyệt.',
+    description: 'Giá/ngày đã gồm tài xế (string - ADR 0007). Null = gian hàng báo khi duyệt.',
   })
   withDriverDailyPrice!: string | null;
 
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá/ngày có tài xế lộ trình liên tỉnh — string tiền (ADR 0007)',
+    description: 'Giá/ngày có tài xế lộ trình liên tỉnh - string tiền (ADR 0007)',
   })
   withDriverInterCityPrice!: string | null;
 
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều — string tiền (ADR 0007)',
+    description: 'Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều - string tiền (ADR 0007)',
   })
   withDriverOneWayPrice!: string | null;
 
@@ -491,15 +491,15 @@ export class PublicListingDto {
   @ApiProperty({ description: 'Miễn thế chấp (không cần cọc tài sản)' }) noCollateral!: boolean;
 
   /*
-   * Cam kết của CHỦ XE — thiết lập chung của gian hàng, áp cho mọi xe — không phải dịch vụ của
+   * Cam kết của CHỦ XE - thiết lập chung của gian hàng, áp cho mọi xe - không phải dịch vụ của
    * XePrime (ADR 0059): hai bên tự thoả thuận và
    * xác nhận trực tiếp; XePrime không xuất hoá đơn thay chủ xe, và hoá đơn đó chỉ phủ tiền thuê trả
-   * cho chủ xe — không phủ khoản khách trả cho XePrime (phí dịch vụ). Giao diện chỉ gắn dấu
-   * khi `true` — `false` nghĩa là "chủ xe chưa công bố", không phải "chủ xe từ chối".
+   * cho chủ xe - không phủ khoản khách trả cho XePrime (phí dịch vụ). Giao diện chỉ gắn dấu
+   * khi `true` - `false` nghĩa là "chủ xe chưa công bố", không phải "chủ xe từ chối".
    */
   @ApiProperty({
     description:
-      'Chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê xe theo thoả thuận trực tiếp với khách — XePrime ' +
+      'Chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê xe theo thoả thuận trực tiếp với khách - XePrime ' +
       'không xuất hoá đơn thay chủ xe',
   })
   vatInvoiceSupported!: boolean;
@@ -507,7 +507,7 @@ export class PublicListingDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: '% khuyến mãi trực tiếp cho tiền thuê tự lái (0–100)',
+    description: '% khuyến mãi trực tiếp cho tiền thuê tự lái (0-100)',
   })
   discountPercent!: number | null;
 
@@ -519,7 +519,7 @@ export class PublicListingDto {
   shopProvince!: string | null;
 
   /*
-   * Thẻ xe phải phân biệt được HAI TUYẾN (ADR 0028) — cùng một luật với `PublicShopDto.verified`
+   * Thẻ xe phải phân biệt được HAI TUYẾN (ADR 0028) - cùng một luật với `PublicShopDto.verified`
    * và với dấu cạnh tên người đang đăng nhập, cố ý: nếu thẻ xe đeo dấu cho mọi gian hàng còn
    * trang gian hàng chỉ đeo cho tuyến gói thì dấu đó không còn phân biệt được gì.
    *
@@ -528,17 +528,17 @@ export class PublicListingDto {
    * thì có ngày lệch nhau.
    */
   @ApiProperty({
-    description: 'Gian hàng tuyến gói — đeo dấu xác thực XePrime (hasVerifiedStorefront)',
+    description: 'Gian hàng tuyến gói - đeo dấu xác thực XePrime (hasVerifiedStorefront)',
   })
   shopVerified!: boolean;
 
   /*
    * ⚠️ THẺ KẾT QUẢ CỐ Ý KHÔNG MANG BA CHỈ SỐ của chủ xe (ADR 0045 điều 2).
    *
-   * Một trang kết quả hiện 12–48 thẻ, và mỗi chỉ số là một phép gộp 90 ngày trên
+   * Một trang kết quả hiện 12-48 thẻ, và mỗi chỉ số là một phép gộp 90 ngày trên
    * `booking_requests`. Gắn chúng vào thẻ nghĩa là hoặc 48 lượt gộp mỗi lần mở trang (đúng cái
    * N+1 mà ADR cấm), hoặc một phép gộp khổng lồ cho dữ liệu mà phần lớn người xem lướt qua.
-   * Chúng sống ở TRANG CHI TIẾT (`PublicListingDetailDto.shopMetrics`) và TRANG GIAN HÀNG —
+   * Chúng sống ở TRANG CHI TIẾT (`PublicListingDetailDto.shopMetrics`) và TRANG GIAN HÀNG -
    * hai nơi khách thật sự đang cân nhắc một người bán cụ thể.
    */
 
@@ -548,14 +548,14 @@ export class PublicListingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Mã tỉnh nơi xe đang đỗ (theo chi nhánh) — dùng để lọc/điều hướng',
+    description: 'Mã tỉnh nơi xe đang đỗ (theo chi nhánh) - dùng để lọc/điều hướng',
   })
   provinceCode!: string | null;
 
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Tên xã/phường của chi nhánh đang giữ xe — chỉ để HIỂN THỊ',
+    description: 'Tên xã/phường của chi nhánh đang giữ xe - chỉ để HIỂN THỊ',
   })
   wardName!: string | null;
 
@@ -570,11 +570,11 @@ export class PublicListingDto {
 }
 
 /**
- * Chỗ khách tới nhận xe khi chọn "Nhận tại điểm hẹn" — là CHI NHÁNH đang giữ xe, không phải
+ * Chỗ khách tới nhận xe khi chọn "Nhận tại điểm hẹn" - là CHI NHÁNH đang giữ xe, không phải
  * địa chỉ chung của gian hàng: shop nhiều chi nhánh thì mỗi xe đỗ một nơi khác nhau.
  *
  * Địa chỉ rơi về hồ sơ gian hàng khi chi nhánh chưa điền (`tenant_branches.address` là optional).
- * Không có địa chỉ nào ⇒ cả object là `null`, FE hiện câu gợi ý chung — KHÔNG dựng địa chỉ giả.
+ * Không có địa chỉ nào ⇒ cả object là `null`, FE hiện câu gợi ý chung - KHÔNG dựng địa chỉ giả.
  */
 export class PickupPointDto {
   @ApiPropertyOptional({
@@ -587,7 +587,7 @@ export class PickupPointDto {
   @ApiProperty({
     description:
       'Gian hàng tuyến gói: địa chỉ đầy đủ. Chủ xe tuyến hoa hồng: chỉ KHU VỰC "Phường/Xã, Tỉnh/TP" ' +
-      '— địa chỉ chính xác trả ở chi tiết chuyến khi đã có đơn (ADR 0077, customerSeesPickupAddress).',
+      '- địa chỉ chính xác trả ở chi tiết chuyến khi đã có đơn (ADR 0077, customerSeesPickupAddress).',
   })
   address!: string;
 
@@ -598,7 +598,7 @@ export class PickupPointDto {
   phone!: string | null;
 
   /**
-   * Toạ độ XẤP XỈ (làm tròn ~1km) của khu vực nhận xe — vẽ vòng khu vực, không ghim cửa (ADR 0077).
+   * Toạ độ XẤP XỈ (làm tròn ~1km) của khu vực nhận xe - vẽ vòng khu vực, không ghim cửa (ADR 0077).
    * Null khi chi nhánh chưa có toạ độ hoặc khi địa chỉ rơi về hồ sơ gian hàng.
    */
   @ApiPropertyOptional({ type: Number, nullable: true })
@@ -614,27 +614,27 @@ export class PickupPointDto {
   isApproximate!: boolean;
 }
 
-/** Chi tiết một xe trên marketplace — cho trang `/listings/[id]`. */
+/** Chi tiết một xe trên marketplace - cho trang `/listings/[id]`. */
 /**
  * Điều kiện BẢO ĐẢM công bố cho khách (gap C-04). Mã đi trên dây; nhãn do FE dịch (ADR 0012).
  */
 export class ListingCollateralDto {
   @ApiProperty({ enum: COLLATERAL_MODE_VALUES }) mode!: string;
   @ApiProperty({ enum: COLLATERAL_ASSET_TYPE_VALUES, isArray: true }) assetTypes!: string[];
-  @ApiProperty({ description: 'VND string — chỉ khác 0 khi mode = cash' }) depositAmount!: string;
+  @ApiProperty({ description: 'VND string - chỉ khác 0 khi mode = cash' }) depositAmount!: string;
 }
 
 /**
- * Điều kiện thuê CÔNG BỐ cho khách theo từng dịch vụ (08/09/2026) — giấy tờ phải xuất trình,
+ * Điều kiện thuê CÔNG BỐ cho khách theo từng dịch vụ (08/09/2026) - giấy tờ phải xuất trình,
  * cách đối chiếu (luôn thủ công), điều khoản, cọc giữ chuyến có tài xế và "đặt nhanh".
  * Mã đi trên dây, FE dịch nhãn (ADR 0012). KHÔNG có dữ liệu nội bộ nào ở đây.
  */
 export class ListingRentalTermsDto {
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
-  @ApiProperty({ type: [String], description: 'CUSTOMER_DOCUMENT_TYPE — bộ HIỆU LỰC' })
+  @ApiProperty({ type: [String], description: 'CUSTOMER_DOCUMENT_TYPE - bộ HIỆU LỰC' })
   requiredDocuments!: string[];
   @ApiProperty({
-    description: 'IDENTITY_VERIFY_METHOD — đối chiếu TAY, kể cả qua app VNeID của khách',
+    description: 'IDENTITY_VERIFY_METHOD - đối chiếu TAY, kể cả qua app VNeID của khách',
   })
   identityVerifyMethod!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) termsText!: string | null;
@@ -644,7 +644,7 @@ export class ListingRentalTermsDto {
     nullable: true,
     deprecated: true,
     description:
-      'NGỪNG DÙNG (29/10/2026) — DRIVER_DEPOSIT_MODE, chỉ with_driver; tiền giữ chỗ do nền tảng thu, đừng hiển thị',
+      'NGỪNG DÙNG (29/10/2026) - DRIVER_DEPOSIT_MODE, chỉ with_driver; tiền giữ chỗ do nền tảng thu, đừng hiển thị',
   })
   depositMode!: string | null;
   @ApiProperty({
@@ -660,7 +660,7 @@ export class ListingHandoverWindowDto {
 }
 
 /**
- * Khung giờ giao/nhận — ĐÃ GỠ (ADR 0078), xe nhận/trả mọi giờ. Hai mảng luôn rỗng; giữ trường để
+ * Khung giờ giao/nhận - ĐÃ GỠ (ADR 0078), xe nhận/trả mọi giờ. Hai mảng luôn rỗng; giữ trường để
  * app phát hành trước đó không vỡ.
  */
 export class ListingHandoverDto {
@@ -678,18 +678,18 @@ export class ListingHandoverDto {
   returnWindows!: ListingHandoverWindowDto[];
 }
 
-/** Một khoản phụ phí MẶC ĐỊNH đang bật của chuyến có tài xế — công bố trước, ghi nhận sau. */
+/** Một khoản phụ phí MẶC ĐỊNH đang bật của chuyến có tài xế - công bố trước, ghi nhận sau. */
 export class ListingDriverSurchargeRuleDto {
   @ApiProperty({ description: 'DRIVER_SURCHARGE_KIND' }) kind!: string;
   @ApiProperty({ description: 'DRIVER_SURCHARGE_UNIT' }) unit!: string;
-  @ApiProperty({ description: 'VND string — ADR 0007' }) amount!: string;
+  @ApiProperty({ description: 'VND string - ADR 0007' }) amount!: string;
   @ApiPropertyOptional({ type: Number, nullable: true }) thresholdValue!: number | null;
 }
 
 /** Hạn mức km/ngày đã công bố + tiền mỗi km vượt (ADR 0007: tiền là chuỗi). */
 export class ListingMileagePolicyDto {
   @ApiProperty({ description: 'Số km/ngày đã nằm trong giá thuê' }) includedKmPerDay!: number;
-  @ApiProperty({ description: 'VND mỗi km vượt — ghi nhận lúc quyết toán, không cộng vào báo giá' })
+  @ApiProperty({ description: 'VND mỗi km vượt - ghi nhận lúc quyết toán, không cộng vào báo giá' })
   excessFeePerKm!: string;
 }
 
@@ -697,12 +697,12 @@ export class PublicListingDetailDto extends PublicListingDto {
   /**
    * Ba chỉ số của CHỦ XE, ngay trong trang chi tiết xe (ADR 0045 điều 2).
    *
-   * Ở đây chứ không chỉ ở trang gian hàng vì đây là nơi khách thật sự quyết định gửi yêu cầu —
+   * Ở đây chứ không chỉ ở trang gian hàng vì đây là nơi khách thật sự quyết định gửi yêu cầu -
    * bắt họ mở thêm một trang nữa để biết người này có hay trả lời không là bắt họ làm việc mà
    * phần lớn sẽ không làm.
    *
    * MỘT truy vấn gộp cho MỘT tenant (trang chi tiết chỉ có một chủ xe), nên không có N+1 nào ở
-   * đây — khác hẳn thẻ kết quả, xem docblock `PublicListingDto`.
+   * đây - khác hẳn thẻ kết quả, xem docblock `PublicListingDto`.
    */
   @ApiProperty({ type: HostMetricsDto })
   shopMetrics!: HostMetricsDto;
@@ -710,13 +710,13 @@ export class PublicListingDetailDto extends PublicListingDto {
   /**
    * Gian hàng này có nhận tin nhắn từ khách CHƯA đặt xe không.
    *
-   * Nằm ở DTO chi tiết chứ không ở thẻ xe vì chỉ trang này có nút "Nhắn shop" — thẻ trong lưới
+   * Nằm ở DTO chi tiết chứ không ở thẻ xe vì chỉ trang này có nút "Nhắn shop" - thẻ trong lưới
    * không có, và một cờ không ai đọc trên mọi thẻ của mọi trang kết quả là chi phí không đổi
    * lấy gì.
    *
    * Là cờ CHÍNH SÁCH, không phải `shopVerified` gọi bằng tên khác: hôm nay cả hai cùng đúng với
    * tuyến gói, nhưng "đeo dấu xác thực" và "mở hộp thư công khai" là hai quyết định rời nhau
-   * được (xem `storefrontAllowsPublicChat`). Ẩn nút theo cờ này chỉ là lịch sự với người dùng —
+   * được (xem `storefrontAllowsPublicChat`). Ẩn nút theo cờ này chỉ là lịch sự với người dùng -
    * chặn thật nằm ở `ChatService` (`CHAT_REQUIRES_BOOKING`).
    */
   @ApiProperty({
@@ -732,14 +732,14 @@ export class PublicListingDetailDto extends PublicListingDto {
 
   /**
    * Ba số CỦA CẢ GIAN HÀNG (toàn bộ xe), khác `ratingAvg`/`ratingCount`/`completedTripCount` kế
-   * thừa từ `PublicListingDto` — những trường đó chỉ đếm RIÊNG chiếc xe đang xem. Thẻ gian hàng ở
+   * thừa từ `PublicListingDto` - những trường đó chỉ đếm RIÊNG chiếc xe đang xem. Thẻ gian hàng ở
    * trang chi tiết xe nói về NGƯỜI BÁN, không phải một chiếc xe, nên nó cần số của người bán.
    *
    * Cùng cột `tenants.rating_avg`/`rating_count` mà `PublicShopDto` đã dùng cho trang gian hàng
-   * (không phải một truy vấn tổng hợp mới) — `ratingCount === 0` nghĩa là chưa có đánh giá, đọc
+   * (không phải một truy vấn tổng hợp mới) - `ratingCount === 0` nghĩa là chưa có đánh giá, đọc
    * `shopRatingAvg` (mặc định 0) lúc đó là bịa một điểm số.
    */
-  @ApiProperty({ description: 'Điểm đánh giá trung bình CỦA GIAN HÀNG, string — ADR 0007' })
+  @ApiProperty({ description: 'Điểm đánh giá trung bình CỦA GIAN HÀNG, string - ADR 0007' })
   shopRatingAvg!: string;
 
   @ApiProperty({ description: 'Số lượt đánh giá của gian hàng' })
@@ -757,7 +757,7 @@ export class PublicListingDetailDto extends PublicListingDto {
   /**
    * Giá SÁU gói thuê dài hạn của xe, do server tính (ADR 0011): mỗi gói kèm giá cuối và giá
    * bình quân tháng, đủ để bảng chọn gói hiển thị TIỀN THẬT thay vì badge phần trăm. Rỗng khi
-   * xe không đăng dài hạn hoặc chưa niêm yết giá tháng — FE hiện "liên hệ báo giá".
+   * xe không đăng dài hạn hoặc chưa niêm yết giá tháng - FE hiện "liên hệ báo giá".
    */
   @ApiProperty({ type: [LongTermPackageOptionDto] })
   longTermPackages!: LongTermPackageOptionDto[];
@@ -765,12 +765,12 @@ export class PublicListingDetailDto extends PublicListingDto {
   @ApiPropertyOptional({
     type: PickupPointDto,
     nullable: true,
-    description: 'Chỗ nhận xe khi khách tự tới lấy — chi nhánh giữ xe, fallback hồ sơ gian hàng.',
+    description: 'Chỗ nhận xe khi khách tự tới lấy - chi nhánh giữ xe, fallback hồ sơ gian hàng.',
   })
   pickupPoint!: PickupPointDto | null;
 
   /**
-   * KHÁC `deliveryEnabled`, và hai giá trị này lệch nhau được — đừng gộp:
+   * KHÁC `deliveryEnabled`, và hai giá trị này lệch nhau được - đừng gộp:
    *   - `deliveryEnabled` là TIỆN ÍCH khai trên hồ sơ xe, chỉ để gắn chip trên thẻ/trang xe;
    *   - `deliveryAvailable` là CHÍNH SÁCH HIỆU LỰC (`rental_policies`), tức đúng thứ
    *     `BookingRequestsService` dùng để chấp nhận hay từ chối `deliveryRequested`.
@@ -781,13 +781,13 @@ export class PublicListingDetailDto extends PublicListingDto {
   deliveryAvailable!: boolean;
 
   /**
-   * Điều kiện BẢO ĐẢM khách phải đáp ứng (gap C-04) — null khi gian hàng chưa cấu hình chính
+   * Điều kiện BẢO ĐẢM khách phải đáp ứng (gap C-04) - null khi gian hàng chưa cấu hình chính
    * sách. Mã đi trên dây, FE tự map nhãn theo ngôn ngữ (ADR 0012).
    */
   @ApiPropertyOptional({ type: ListingCollateralDto, nullable: true })
   collateral!: ListingCollateralDto | null;
 
-  /** Một mục cho mỗi dịch vụ xe đăng có thiết lập riêng (tự lái, có tài xế) — 08/09/2026. */
+  /** Một mục cho mỗi dịch vụ xe đăng có thiết lập riêng (tự lái, có tài xế) - 08/09/2026. */
   @ApiProperty({ type: [ListingRentalTermsDto] })
   rentalTerms!: ListingRentalTermsDto[];
 
@@ -799,7 +799,7 @@ export class PublicListingDetailDto extends PublicListingDto {
   driverSurchargeRules!: ListingDriverSurchargeRuleDto[];
 
   /**
-   * Hạn mức quãng đường của chuyến tự lái (09/09/2026) — null = không giới hạn. Khách phải thấy
+   * Hạn mức quãng đường của chuyến tự lái (09/09/2026) - null = không giới hạn. Khách phải thấy
    * TRƯỚC khi đặt: phí vượt km chỉ xuất hiện lúc quyết toán, nên nó phải được công bố từ đây.
    */
   @ApiPropertyOptional({ type: ListingMileagePolicyDto, nullable: true })
@@ -818,7 +818,7 @@ export class PublicListingDetailDto extends PublicListingDto {
   batteryCapacityKwh!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'kWh/100km' })
   electricConsumptionKwhPer100Km!: string | null;
-  // `transmission` khai ở `PublicListingDto` (thẻ xe cũng mang nó từ design v2) — không khai lại.
+  // `transmission` khai ở `PublicListingDto` (thẻ xe cũng mang nó từ design v2) - không khai lại.
 }
 
 export class PublicListingPageMetaDto {
@@ -828,7 +828,7 @@ export class PublicListingPageMetaDto {
   @ApiProperty() hasNext!: boolean;
 }
 
-/** Một option trong một chiều facet — key giá trị + số listing khớp. */
+/** Một option trong một chiều facet - key giá trị + số listing khớp. */
 export class FacetBucketDto {
   @ApiProperty({ description: 'Giá trị của option (body type key, tên hãng, bucket số chỗ…)' })
   key!: string;
@@ -837,19 +837,19 @@ export class FacetBucketDto {
   count!: number;
 }
 
-/** Biên giá thuê/ngày của tập listing khớp filter (bỏ qua chính filter giá) — nuôi slider. */
+/** Biên giá thuê/ngày của tập listing khớp filter (bỏ qua chính filter giá) - nuôi slider. */
 export class PriceBoundsDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá thấp nhất — string tiền (ADR 0007)',
+    description: 'Giá thấp nhất - string tiền (ADR 0007)',
   })
   min!: string | null;
 
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá cao nhất — string tiền (ADR 0007)',
+    description: 'Giá cao nhất - string tiền (ADR 0007)',
   })
   max!: string | null;
 }
@@ -864,12 +864,12 @@ export class AmenityFacetsDto {
 }
 
 /**
- * Facet counts cho panel Bộ lọc — semantics chuẩn faceted search: MỖI chiều được đếm với toàn
+ * Facet counts cho panel Bộ lọc - semantics chuẩn faceted search: MỖI chiều được đếm với toàn
  * bộ filter đang chọn TRỪ chính chiều đó (chọn SUV vẫn thấy Sedan còn bao nhiêu xe).
- * `total` là số xe khớp TẤT CẢ filter — nuôi nút "Áp dụng (N xe)".
+ * `total` là số xe khớp TẤT CẢ filter - nuôi nút "Áp dụng (N xe)".
  */
 export class ListingFacetsDto {
-  @ApiProperty({ description: 'Số xe khớp toàn bộ filter — nút "Áp dụng (N xe)"' }) total!: number;
+  @ApiProperty({ description: 'Số xe khớp toàn bộ filter - nút "Áp dụng (N xe)"' }) total!: number;
   @ApiProperty({ type: PriceBoundsDto }) price!: PriceBoundsDto;
   @ApiProperty({ type: [FacetBucketDto], description: 'Theo kiểu dáng (BODY_TYPE key)' })
   bodyType!: FacetBucketDto[];
@@ -888,7 +888,7 @@ export class ListingFacetsDto {
 }
 
 /**
- * Ngữ cảnh của khối gợi ý — có mặt để giao diện KHÔNG phải đoán.
+ * Ngữ cảnh của khối gợi ý - có mặt để giao diện KHÔNG phải đoán.
  *
  * `nearProvinceCode` được TRẢ LẠI (chứ không chỉ nhận vào) vì server là nơi quyết định mã đó
  * có dùng được hay không; `mixedProvinces` cho phép màn hình nói "ưu tiên Hà Nội" một cách
@@ -909,7 +909,7 @@ export class RecommendedListingsMetaDto {
   nearProvinceCode!: string | null;
 
   @ApiProperty({
-    description: 'Kết quả có lẫn xe ngoài tỉnh được ưu tiên — UI cần nói rõ thay vì ngụ ý',
+    description: 'Kết quả có lẫn xe ngoài tỉnh được ưu tiên - UI cần nói rõ thay vì ngụ ý',
   })
   mixedProvinces!: boolean;
 }
@@ -927,9 +927,9 @@ export class PublicListingPageDto {
   @ApiProperty({ type: PublicListingPageMetaDto }) meta!: PublicListingPageMetaDto;
 }
 
-/** Một tỉnh/thành gian hàng đang có xe công khai — tab lọc "Xe đang cho thuê". */
+/** Một tỉnh/thành gian hàng đang có xe công khai - tab lọc "Xe đang cho thuê". */
 export class PublicShopProvinceDto {
-  @ApiProperty({ description: 'Mã tỉnh 2 ký tự — giá trị của tham số `provinceCode`' })
+  @ApiProperty({ description: 'Mã tỉnh 2 ký tự - giá trị của tham số `provinceCode`' })
   code!: string;
   @ApiProperty() name!: string;
   @ApiProperty() vehicleCount!: number;
@@ -938,7 +938,7 @@ export class PublicShopProvinceDto {
 /**
  * Một chi nhánh đang giữ xe công khai của gian hàng.
  *
- * Điểm là trung bình CÓ TRỌNG SỐ theo số đánh giá của các xe thuộc chi nhánh — cùng cách cộng với
+ * Điểm là trung bình CÓ TRỌNG SỐ theo số đánh giá của các xe thuộc chi nhánh - cùng cách cộng với
  * điểm gian hàng; chi nhánh chưa có xe nào được đánh giá thì `ratingAvg = null`, không phải 0.
  */
 export class PublicShopBranchDto {
@@ -949,21 +949,21 @@ export class PublicShopBranchDto {
     type: String,
     nullable: true,
     description:
-      'Địa chỉ đầy đủ của chi nhánh — CHỈ gian hàng tuyến gói; chủ xe tuyến hoa hồng luôn null (ADR 0077)',
+      'Địa chỉ đầy đủ của chi nhánh - CHỈ gian hàng tuyến gói; chủ xe tuyến hoa hồng luôn null (ADR 0077)',
   })
   address!: string | null;
   @ApiProperty({ description: 'Số xe công khai đang ở chi nhánh' }) vehicleCount!: number;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Điểm trung bình (string — ADR 0007); null khi chưa có đánh giá',
+    description: 'Điểm trung bình (string - ADR 0007); null khi chưa có đánh giá',
   })
   ratingAvg!: string | null;
   @ApiProperty() ratingCount!: number;
 }
 
 /**
- * Số xe công khai thoả từng chip lọc của trang gian hàng — đếm bằng CHÍNH `buildListingWhere` mà
+ * Số xe công khai thoả từng chip lọc của trang gian hàng - đếm bằng CHÍNH `buildListingWhere` mà
  * danh sách dùng, nên chip nào hiện ra thì bấm vào không bao giờ ra trang rỗng.
  */
 export class ShopVehicleFilterCountsDto {
@@ -976,13 +976,13 @@ export class ShopVehicleFilterCountsDto {
 }
 
 /**
- * Dấu hiệu UY TÍN đã được kiểm chứng của một gian hàng — khối "Xác thực XePrime" và các ô cam kết
+ * Dấu hiệu UY TÍN đã được kiểm chứng của một gian hàng - khối "Xác thực XePrime" và các ô cam kết
  * ở trang gian hàng.
  *
  * Mỗi trường là một sự thật có người chịu trách nhiệm đứng sau: nhân sự nền tảng đã duyệt (hồ sơ
  * người bán, giấy phép, phiếu duyệt gian hàng), hệ thống đã xác minh (OTP), hoặc gian hàng tự CAM
  * KẾT và có dòng audit (hoá đơn VAT, ADR 0059). Không trường nào là lời hứa của XePrime thay chủ
- * xe (ADR 0028) — "đã ký hợp đồng chất lượng", "đội xe dự phòng", "cứu hộ 24/7" chưa có dữ liệu
+ * xe (ADR 0028) - "đã ký hợp đồng chất lượng", "đội xe dự phòng", "cứu hộ 24/7" chưa có dữ liệu
  * thì không có mặt ở đây.
  */
 export class ShopTrustDto {
@@ -990,7 +990,7 @@ export class ShopTrustDto {
     enum: [SELLER_ENTITY_TYPE.HOUSEHOLD_BUSINESS, SELLER_ENTITY_TYPE.COMPANY],
     nullable: true,
     description:
-      'Hộ kinh doanh / doanh nghiệp — CHỈ khi hồ sơ người bán đã được nền tảng xác minh VÀ giấy ' +
+      'Hộ kinh doanh / doanh nghiệp - CHỈ khi hồ sơ người bán đã được nền tảng xác minh VÀ giấy ' +
       'phép kinh doanh đã được duyệt; cá nhân hoặc chưa đủ ⇒ null',
   })
   legalEntityType!: string | null;
@@ -1025,14 +1025,14 @@ export class ShopTrustDto {
 }
 
 /**
- * Hồ sơ công khai của một gian hàng — cho trang `/shops/[slug]`. Chỉ dữ liệu công khai.
+ * Hồ sơ công khai của một gian hàng - cho trang `/shops/[slug]`. Chỉ dữ liệu công khai.
  *
  * ## Vì sao một DTO gánh cả HAI mặt tiền thay vì hai endpoint
  *
  * Chủ xe cá nhân và gian hàng tuyến gói được vẽ rất khác nhau (ảnh bìa, dấu xác thực, số chi
  * nhánh), nhưng chúng là cùng một THỰC THỂ ở cùng một URL, và mặt tiền thì đổi được trong đời
  * một tenant: mua gói là thành gian hàng, hết ân hạn là về lại cá nhân (ADR 0038 điều 5). Hai
- * endpoint nghĩa là mỗi lần tuyến đổi thì link cũ trả 404 — và là hai chỗ để luật hiển thị
+ * endpoint nghĩa là mỗi lần tuyến đổi thì link cũ trả 404 - và là hai chỗ để luật hiển thị
  * công khai (`publicListingScope`) trôi khỏi nhau.
  *
  * `storefrontKind` chọn cách VẼ; mọi số liệu bên dưới đều có nghĩa với cả hai mặt tiền.
@@ -1049,12 +1049,12 @@ export class PublicShopDto {
 
   @ApiProperty({
     enum: STOREFRONT_KIND_VALUES,
-    description: 'Mặt tiền cần vẽ — suy từ tuyến thu tiền hiệu lực (resolveStorefrontKind)',
+    description: 'Mặt tiền cần vẽ - suy từ tuyến thu tiền hiệu lực (resolveStorefrontKind)',
   })
   storefrontKind!: string;
 
   @ApiProperty({
-    description: 'Đeo dấu xác thực XePrime — CHỈ gian hàng tuyến gói (hasVerifiedStorefront)',
+    description: 'Đeo dấu xác thực XePrime - CHỈ gian hàng tuyến gói (hasVerifiedStorefront)',
   })
   verified!: boolean;
 
@@ -1062,17 +1062,24 @@ export class PublicShopDto {
   @ApiPropertyOptional({ type: String, nullable: true }) logoUrl!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) coverUrl!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) bio!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Giới thiệu ĐÃ ĐỊNH DẠNG - HTML đã lọc ở server (danh sách thẻ cho phép); null thì hiện `bio`',
+  })
+  bioHtml!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) address!: string | null;
 
   /*
    * KHÔNG có `phone` ở đây, và đó là một quyết định chứ không phải một thiếu sót.
    *
-   * Số điện thoại từng được trả ra để trang vẽ nút "Gọi 09xxxxxxxx" — tức là đăng số của chủ xe
+   * Số điện thoại từng được trả ra để trang vẽ nút "Gọi 09xxxxxxxx" - tức là đăng số của chủ xe
    * lên một trang không cần đăng nhập, nơi mọi trình thu thập đều đọc được. Với chủ xe cá nhân
    * đó là số riêng của họ; với gian hàng đó là đường dây tổng bị bỏ ngoài mọi thống kê liên hệ.
    *
    * Liên hệ đi qua hộp thư trong ứng dụng: có danh tính hai đầu, có lịch sử, và có cổng
-   * `CHAT_REQUIRES_BOOKING` cho tuyến hoa hồng. Số điện thoại vẫn tới tay khách — ở bước bàn
+   * `CHAT_REQUIRES_BOOKING` cho tuyến hoa hồng. Số điện thoại vẫn tới tay khách - ở bước bàn
    * giao, sau khi đã có một chuyến thật.
    */
 
@@ -1081,10 +1088,10 @@ export class PublicShopDto {
   })
   chatOpen!: boolean;
 
-  @ApiProperty({ description: 'Ngày mở gian hàng (ISO-8601 UTC) — "Tham gia từ …"' })
+  @ApiProperty({ description: 'Ngày mở gian hàng (ISO-8601 UTC) - "Tham gia từ …"' })
   joinedAt!: string;
 
-  @ApiProperty({ description: 'Điểm đánh giá trung bình, string — ADR 0007' })
+  @ApiProperty({ description: 'Điểm đánh giá trung bình, string - ADR 0007' })
   ratingAvg!: string;
 
   @ApiProperty() ratingCount!: number;
@@ -1096,7 +1103,7 @@ export class PublicShopDto {
   completedTripCount!: number;
 
   /**
-   * BA CHỈ SỐ công khai — thay cho `responseRatePercent` đứng một mình (ADR 0045 điều 2).
+   * BA CHỈ SỐ công khai - thay cho `responseRatePercent` đứng một mình (ADR 0045 điều 2).
    *
    * Gộp thành một object chứ không ba trường phẳng: chúng phải được đọc CÙNG NHAU (một tỉ lệ
    * phản hồi 100% trên hai mẫu không nói được gì nếu không thấy `sampleCount`), và một object
@@ -1110,19 +1117,19 @@ export class PublicShopDto {
 
   @ApiProperty({
     type: [String],
-    description: 'Tên các tỉnh/thành đang có xe công khai — theo số xe giảm dần',
+    description: 'Tên các tỉnh/thành đang có xe công khai - theo số xe giảm dần',
   })
   serviceProvinceNames!: string[];
 
   @ApiProperty({
     type: [PublicShopProvinceDto],
-    description: 'Các tỉnh/thành đang có xe công khai, kèm MÃ để lọc — theo số xe giảm dần',
+    description: 'Các tỉnh/thành đang có xe công khai, kèm MÃ để lọc - theo số xe giảm dần',
   })
   serviceProvinces!: PublicShopProvinceDto[];
 
   @ApiProperty({
     type: [PublicShopBranchDto],
-    description: 'Chi nhánh đang giữ xe công khai — theo số xe giảm dần',
+    description: 'Chi nhánh đang giữ xe công khai - theo số xe giảm dần',
   })
   branches!: PublicShopBranchDto[];
 
@@ -1137,14 +1144,14 @@ export class PublicShopDto {
 }
 
 /**
- * Một tỉnh/thành có xe đang cho thuê — "Địa điểm nổi bật" ở trang chủ. Số liệu tính từ snapshot
+ * Một tỉnh/thành có xe đang cho thuê - "Địa điểm nổi bật" ở trang chủ. Số liệu tính từ snapshot
  * `public_listings` (không hardcode danh sách tỉnh ở FE).
  */
 export class PublicDestinationDto {
-  @ApiProperty({ description: 'Mã tỉnh — giá trị đi vào URL và bộ lọc `provinceCode`' })
+  @ApiProperty({ description: 'Mã tỉnh - giá trị đi vào URL và bộ lọc `provinceCode`' })
   provinceCode!: string;
 
-  @ApiProperty({ description: 'Tên tỉnh chuẩn — chỉ để HIỂN THỊ, không dùng để lọc' })
+  @ApiProperty({ description: 'Tên tỉnh chuẩn - chỉ để HIỂN THỊ, không dùng để lọc' })
   provinceName!: string;
 
   @ApiProperty({ description: 'Số xe đang hiển thị công khai ở tỉnh/thành này' })
@@ -1157,13 +1164,13 @@ export class PublicDestinationDto {
     type: String,
     nullable: true,
     description:
-      'Giá thuê TỰ LÁI theo ngày thấp nhất (đã trừ khuyến mãi của chủ xe), string — ADR 0007. ' +
+      'Giá thuê TỰ LÁI theo ngày thấp nhất (đã trừ khuyến mãi của chủ xe), string - ADR 0007. ' +
       'Null khi tỉnh không có xe tự lái nào có giá ngày.',
   })
   minDailyPrice!: string | null;
 }
 
-/** Query "địa điểm nổi bật" — chỉ cần giới hạn số lượng (63 tỉnh/thành là trần tự nhiên). */
+/** Query "địa điểm nổi bật" - chỉ cần giới hạn số lượng (63 tỉnh/thành là trần tự nhiên). */
 export class PublicDestinationQueryDto {
   @ApiPropertyOptional({ default: 6, minimum: 1, maximum: 63 })
   @IsOptional()
@@ -1174,7 +1181,7 @@ export class PublicDestinationQueryDto {
   limit?: number;
 }
 
-/** Gian hàng trong danh sách công khai — "Gian hàng nổi bật" ở trang chủ. */
+/** Gian hàng trong danh sách công khai - "Gian hàng nổi bật" ở trang chủ. */
 export class PublicShopSummaryDto {
   @ApiProperty() name!: string;
   @ApiProperty() slug!: string;
@@ -1182,14 +1189,14 @@ export class PublicShopSummaryDto {
   @ApiPropertyOptional({ type: String, nullable: true }) provinceName!: string | null;
   @ApiProperty({ description: 'Số xe đang hiển thị công khai' }) vehicleCount!: number;
 
-  @ApiProperty({ description: 'Điểm đánh giá trung bình, string — ADR 0007' })
+  @ApiProperty({ description: 'Điểm đánh giá trung bình, string - ADR 0007' })
   ratingAvg!: string;
 
   @ApiProperty() ratingCount!: number;
 
   @ApiProperty({
     description:
-      'Gian hàng tuyến gói — đeo dấu xác thực XePrime (hasVerifiedStorefront). Cùng phép suy ' +
+      'Gian hàng tuyến gói - đeo dấu xác thực XePrime (hasVerifiedStorefront). Cùng phép suy ' +
       'với `shopVerified` của thẻ xe: false là mặt tiền chủ xe cá nhân.',
   })
   verified!: boolean;
@@ -1197,7 +1204,7 @@ export class PublicShopSummaryDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Lời giới thiệu ngắn của gian hàng (hồ sơ) — null khi chưa viết',
+    description: 'Lời giới thiệu ngắn của gian hàng (hồ sơ) - null khi chưa viết',
   })
   bio!: string | null;
 
@@ -1207,19 +1214,19 @@ export class PublicShopSummaryDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Ảnh của xe xếp hạng cao nhất đang hiển thị công khai — ảnh đại diện trên thẻ',
+    description: 'Ảnh của xe xếp hạng cao nhất đang hiển thị công khai - ảnh đại diện trên thẻ',
   })
   featuredVehicleImageUrl!: string | null;
 
   @ApiProperty({
     type: () => [PublicShopBrandDto],
     description:
-      'Tối đa 3 hãng có nhiều xe công khai nhất của gian hàng — dãy logo trên thẻ "Gian hàng nổi bật"',
+      'Tối đa 3 hãng có nhiều xe công khai nhất của gian hàng - dãy logo trên thẻ "Gian hàng nổi bật"',
   })
   brands!: PublicShopBrandDto[];
 
   @ApiProperty({
-    description: 'Tổng số hãng xe đang công khai — phần dư so với `brands` hiện "+N"',
+    description: 'Tổng số hãng xe đang công khai - phần dư so với `brands` hiện "+N"',
   })
   brandCount!: number;
 }
@@ -1234,7 +1241,7 @@ export class PublicShopBrandDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Logo hãng từ danh mục `vehicle_brand` — null khi hãng không có trong danh mục',
+    description: 'Logo hãng từ danh mục `vehicle_brand` - null khi hãng không có trong danh mục',
   })
   iconUrl!: string | null;
 }
@@ -1244,7 +1251,7 @@ export class PublicShopPageDto {
   @ApiProperty({ type: PublicListingPageMetaDto }) meta!: PublicListingPageMetaDto;
 }
 
-/** Query danh sách gian hàng công khai — phân trang, sắp theo điểm đánh giá. */
+/** Query danh sách gian hàng công khai - phân trang, sắp theo điểm đánh giá. */
 export class PublicShopListQueryDto {
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
@@ -1261,10 +1268,10 @@ export class PublicShopListQueryDto {
   @Max(48)
   limit?: number;
 
-  /** Gợi ý chủ xe ở ô từ khoá của `/search` — CÙNG luật tên công khai với `q` của danh sách xe. */
+  /** Gợi ý chủ xe ở ô từ khoá của `/search` - CÙNG luật tên công khai với `q` của danh sách xe. */
   @ApiPropertyOptional({
     description:
-      'Từ khoá — chỉ giữ chủ xe/gian hàng có TÊN CÔNG KHAI khớp (cùng luật với `q` của ' +
+      'Từ khoá - chỉ giữ chủ xe/gian hàng có TÊN CÔNG KHAI khớp (cùng luật với `q` của ' +
       '`GET /public/listings`: không dấu, khớp đầu từ).',
     maxLength: SEARCH_QUERY_MAX_LENGTH,
   })
@@ -1275,11 +1282,11 @@ export class PublicShopListQueryDto {
 }
 
 /**
- * Query danh sách xe của một gian hàng — phân trang + sort + bộ lọc của trang gian hàng (tab tỉnh,
+ * Query danh sách xe của một gian hàng - phân trang + sort + bộ lọc của trang gian hàng (tab tỉnh,
  * chip dịch vụ/tiện ích). Không nhận slug qua body.
  *
  * `PickType` từ query chợ chứ không khai lại: cùng tên tham số, cùng validator, và đi qua CÙNG
- * `buildListingWhere` — chip "Giao xe tận nơi" ở trang gian hàng không thể nghĩa khác chip cùng
+ * `buildListingWhere` - chip "Giao xe tận nơi" ở trang gian hàng không thể nghĩa khác chip cùng
  * tên ở trang tìm kiếm.
  */
 export class ShopListingQueryDto extends PickType(PublicListingQueryDto, [

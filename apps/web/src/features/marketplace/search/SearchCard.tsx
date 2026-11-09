@@ -174,8 +174,6 @@ export function SearchCard() {
                   mode={draft.rental.mode}
                   onModeChange={setRentalMode}
                   placeholder={t('rental.placeholder')}
-                  formatPoint={(d) => d.format('HH:mm DD/MM/YYYY')}
-                  separator=" - "
                   suffix={
                     <span className={styles.boxIcon}>
                       <Image

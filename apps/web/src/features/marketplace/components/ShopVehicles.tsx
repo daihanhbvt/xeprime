@@ -4,6 +4,7 @@ import { Alert, Button, Empty, Pagination, Skeleton } from 'antd';
 import { SERVICE_TYPE, type HostMetrics } from '@xeprime/types';
 import { useTranslations } from 'next-intl';
 import { cx } from '@/lib/cx';
+import { staggerFastClass, viewEnterClass } from '@/components/motion/motion-classes';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { SHOP_LIST_LAYOUT_MAX_VEHICLES } from '../constants';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
@@ -189,14 +190,14 @@ export function ShopVehicles({
           <Empty className={styles.empty} description={t('vehicles.empty')} />
         )
       ) : layout === 'list' ? (
-        <div className={styles.list}>
+        <div className={cx(styles.list, staggerFastClass, viewEnterClass)}>
           {data?.listings.map((listing) => (
             <VehicleCard key={listing.id} listing={listing} variant="list" hostMetrics={metrics} />
           ))}
         </div>
       ) : (
         <>
-          <div className={styles.grid}>
+          <div key={page} className={cx(styles.grid, staggerFastClass, viewEnterClass)}>
             {data?.listings.map((listing) => (
               <VehicleCard key={listing.id} listing={listing} />
             ))}

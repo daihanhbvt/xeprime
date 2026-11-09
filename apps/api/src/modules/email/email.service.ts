@@ -53,13 +53,13 @@ export class EmailService implements OnModuleDestroy {
         this.logger.log(`Email qua SMTP ${host} (đăng nhập bằng ${user})`);
       } else {
         this.logger.warn(
-          `Email qua SMTP ${host} KHÔNG đăng nhập — thiếu ${!user ? 'SMTP_USER' : 'SMTP_PASS'}. ` +
+          `Email qua SMTP ${host} KHÔNG đăng nhập - thiếu ${!user ? 'SMTP_USER' : 'SMTP_PASS'}. ` +
             'Đúng với hộp thư dev (Mailpit); nhà cung cấp thật sẽ từ chối gửi.',
         );
       }
     } else {
       this.transporter = null;
-      this.logger.warn('Chưa cấu hình SMTP — email sẽ in ra log thay vì gửi thật (dev).');
+      this.logger.warn('Chưa cấu hình SMTP - email sẽ in ra log thay vì gửi thật (dev).');
     }
   }
 
@@ -102,7 +102,7 @@ export class EmailService implements OnModuleDestroy {
         <p style="text-align:center;margin:28px 0">
           <a href="${resetUrl}" style="background:#d6a02c;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600">Đặt lại mật khẩu</a>
         </p>
-        <p style="color:#6f6450;font-size:13px">Nếu bạn không yêu cầu, hãy bỏ qua email này — mật khẩu của bạn không thay đổi.</p>
+        <p style="color:#6f6450;font-size:13px">Nếu bạn không yêu cầu, hãy bỏ qua email này - mật khẩu của bạn không thay đổi.</p>
       </div>`;
     await this.send(to, subject, html, `Link đặt lại mật khẩu: ${resetUrl}`);
   }
@@ -134,7 +134,7 @@ export class EmailService implements OnModuleDestroy {
           <a href="${inviteUrl}" style="background:#d6a02c;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600">Xem lời mời</a>
         </p>
         <p style="color:#6f6450;font-size:13px">Liên kết hết hạn ngày ${escapeHtml(formatVnDate(expiresAt))}. Nếu bạn không muốn tham gia, hãy mở liên kết và bấm Từ chối để ${shop} biết mà không phải chờ.</p>
-        <p style="color:#6f6450;font-size:13px">Không quen ${shop}? Bỏ qua email này — không có gì xảy ra với tài khoản của bạn.</p>
+        <p style="color:#6f6450;font-size:13px">Không quen ${shop}? Bỏ qua email này - không có gì xảy ra với tài khoản của bạn.</p>
       </div>`;
     await this.send(to, subject, html, `Link lời mời: ${inviteUrl}`);
   }
@@ -163,7 +163,7 @@ export class EmailService implements OnModuleDestroy {
           <span style="display:inline-block;background:#fdf6e3;border:1px solid #d6a02c;border-radius:10px;padding:14px 28px;font-size:30px;font-weight:700;letter-spacing:8px;color:#a9761a">${escapeHtml(code)}</span>
         </p>
         <p style="color:#6f6450;font-size:13px">Mã hết hạn sau ${ttlMinutes} phút và chỉ dùng được một lần.</p>
-        <p style="color:#6f6450;font-size:13px">Nếu bạn không yêu cầu, hãy bỏ qua email này — tài khoản của bạn không thay đổi gì.</p>
+        <p style="color:#6f6450;font-size:13px">Nếu bạn không yêu cầu, hãy bỏ qua email này - tài khoản của bạn không thay đổi gì.</p>
       </div>`;
     await this.send(to, subject, html, `Mã xác thực email: ${code}`);
   }
@@ -187,7 +187,7 @@ export class EmailService implements OnModuleDestroy {
         <h2 style="color:#a9761a">Email đăng nhập đã thay đổi</h2>
         <p>Chào ${escapeHtml(displayName)},</p>
         <p>Email đăng nhập của tài khoản XePrime này vừa được đổi sang <strong>${escapeHtml(newEmail)}</strong>. Từ giờ hãy dùng địa chỉ mới để đăng nhập.</p>
-        <p style="color:#6f6450;font-size:13px">Nếu KHÔNG phải bạn thực hiện, hãy liên hệ hỗ trợ XePrime ngay — tài khoản của bạn có thể đang bị người khác truy cập.</p>
+        <p style="color:#6f6450;font-size:13px">Nếu KHÔNG phải bạn thực hiện, hãy liên hệ hỗ trợ XePrime ngay - tài khoản của bạn có thể đang bị người khác truy cập.</p>
       </div>`;
     await this.send(to, subject, html, `Email đăng nhập đổi sang: ${newEmail}`);
   }

@@ -62,7 +62,7 @@
     "provider_flagged": "Gateway flagged the transaction",
     "duplicate_provider_tx": "Gateway transaction already used on another payment",
     "result_after_resolution": "Gateway confirmed payment after the case was closed",
-    "overpaid": "Duplicate payment — the item was already fully paid"
+    "overpaid": "Duplicate payment - the item was already fully paid"
   },
   "paymentOrderQueueView": {
     "review": "Needs action",
@@ -384,7 +384,7 @@
     "hold_paid": "Reservation payment received",
     "hold_expiring": "Payment window closing",
     "hold_expired": "Payment window closed",
-    "hold_refunded": "Trip fell through — refunded",
+    "hold_refunded": "Trip fell through - refunded",
     "hold_refund_paid": "Reservation payment refunded",
     "booking_request_slot_reopened": "That car is free again",
     "booking_cancelled_by_host": "Host cancelled the trip",
@@ -502,7 +502,7 @@
   "routeTypeDescription": {
     "in_city": "Travel within the city or nearby, with a free itinerary",
     "inter_city": "Travel to another province and return to the pickup point (round trip)",
-    "inter_city_one_way": "One-way travel to another province — the shop may add a surcharge"
+    "inter_city_one_way": "One-way travel to another province - the shop may add a surcharge"
   },
   "seatBucket": {
     "4": "4 seats",
@@ -716,6 +716,7 @@
   "marketplaceVisibility": {
     "visible": "Live on marketplace",
     "owner_paused": "Paused by you",
+    "plan_paused": "Paused - no plan slot",
     "not_approved": "Not approved yet",
     "platform_hidden": "Hidden by XePrime",
     "shop_inactive": "Shop not active",
@@ -811,7 +812,7 @@
   "feePolicyActivationBlocker": {
     "service_fee_out_of_range": "Service fee % is out of the allowed range",
     "tax_requires_rates_and_basis": "Tax needs a full rate table by service type and a legal basis",
-    "tax_rate_out_of_range": "A VAT or PIT rate is out of range (0–5%, at most two decimals)",
+    "tax_rate_out_of_range": "A VAT or PIT rate is out of range (0-5%, at most two decimals)",
     "insurance_requires_partner": "Insurance needs a real partner name",
     "trip_insurance_requires_rate": "Passenger accident insurance needs a daily rate for every vehicle type",
     "vehicle_protection_requires_rate": "Vehicle damage insurance needs a daily rate for every vehicle type",
@@ -835,7 +836,7 @@
   "bookingHoldOutcome": {
     "kept": "Used for the trip",
     "settled": "Settled",
-    "split_late_cancel": "Late cancellation — hold forfeited",
+    "split_late_cancel": "Late cancellation - hold forfeited",
     "refunded": "Refunded to customer",
     "forfeited": "Compensated to owner",
     "released_to_shop": "Released to shop"
@@ -928,7 +929,8 @@
     "no_driver": "No driver is available for this window",
     "hold_required_with_driver": "Chauffeured trips need host confirmation before a hold",
     "terms_not_accepted": "The renter has not accepted the rental terms",
-    "billing_not_configured": "The shop has no effective billing mode"
+    "billing_not_configured": "The shop has no effective billing mode",
+    "vehicle_still_out": "The vehicle is not back from an overdue trip"
   },
   "bookingRequestDecisionSource": {
     "host": "Decided by host",
@@ -965,7 +967,7 @@
   },
   "catalogTypeHint": {
     "vehicle_brand": "Shown in the \"Brand\" field when adding a vehicle, and in marketplace filters.",
-    "body_type": "Shown as picture cards when adding a vehicle, in the marketplace \"Type\" filter and — when \"Show on home page\" is on — in the home page \"Vehicle types\" section.",
+    "body_type": "Shown as picture cards when adding a vehicle, in the marketplace \"Type\" filter and - when \"Show on home page\" is on - in the home page \"Vehicle types\" section.",
     "fuel_type": "Shown in the \"Energy source\" field when adding a vehicle, and in filters.",
     "vehicle_feature": "Shown under \"Features\" when adding a vehicle, and in marketplace filters.",
     "vehicle_model": "Shown in the \"Model\" field once a brand is picked. Each model belongs to one brand and one vehicle type."
@@ -976,7 +978,7 @@
     "hold_refund": "Deposit refund",
     "hold_overpay": "Overpayment refund",
     "withdrawal": "Bank withdrawal",
-    "withdrawal_reversal": "Returned — transfer failed",
+    "withdrawal_reversal": "Returned - transfer failed",
     "adjustment": "Adjustment",
     "extension_release": "Extension reservation payout",
     "extension_refund": "Extension refund"
@@ -1206,7 +1208,11 @@
         "void": "Void booking surcharge"
       },
       "driver_accept": "Driver accepted trip",
-      "driver_decline": "Driver declined trip"
+      "driver_decline": "Driver declined trip",
+      "customer_return": {
+        "report": "Customer reported vehicle returned",
+        "reject": "Shop disputed return report"
+      }
     },
     "booking_hold": {
       "create": "Create booking hold",
@@ -1224,7 +1230,8 @@
       "expire": "Booking request expired",
       "slot_taken": "Closed: slot taken",
       "auto_accept_skipped": "Auto-accept skipped",
-      "platform_remind": "Platform reminded host"
+      "platform_remind": "Platform reminded host",
+      "remind_payment": "Host reminded customer to pay the hold"
     },
     "branch": {
       "create": "Create branch",
@@ -1354,7 +1361,9 @@
       "activate_from_payment": "Activate plan from payment",
       "lapse_to_commission": "Lapsed to commission track",
       "schedule_change": "Change plan from next term",
-      "change_now": "Change plan now"
+      "change_now": "Change plan now",
+      "update": "Edit subscription term",
+      "shift": "Shift queued subscription term"
     },
     "subscription_invoice": {
       "issue": "Issue subscription invoice"
@@ -1379,6 +1388,9 @@
       "free_trips_exhausted": "Free trips exhausted",
       "vat_invoice": {
         "update": "Change VAT invoice support (all vehicles)"
+      },
+      "operation_defaults": {
+        "update": "Change default turnaround time between trips"
       }
     },
     "tenant_customer": {
@@ -1503,6 +1515,9 @@
       "activate": "Rental extension took effect",
       "cancel": "Cancel rental extension",
       "expire": "Rental extension payment expired"
+    },
+    "subscription_checkout": {
+      "issue": "Issue combined payment"
     }
   },
   "auditTargetType": {
@@ -1557,7 +1572,8 @@
     "vehicle_handover": "Handover record",
     "vehicle_maintenance_record": "Maintenance record",
     "vehicle_private_file": "Vehicle private file",
-    "withdrawal_request": "Withdrawal request"
+    "withdrawal_request": "Withdrawal request",
+    "subscription_checkout": "Combined payment"
   },
   "auditField": {
     "planCode": "Plan code",
@@ -1669,7 +1685,20 @@
   "driverDropZone": {
     "grace": "Within the free release window",
     "far": "More than 12 hours ahead",
-    "same_day": "Same day (2–12 hours)",
+    "same_day": "Same day (2-12 hours)",
     "critical": "Last minute (under 2 hours)"
+  },
+  "bookingHistoryOutcome": {
+    "completed": "Completed",
+    "cancelled_by_customer": "Cancelled by customer",
+    "cancelled_by_host": "Cancelled by you",
+    "cancelled_other": "Cancelled",
+    "no_show": "Customer no-show",
+    "request_rejected": "Declined by you",
+    "request_expired": "No response in time",
+    "request_withdrawn": "Withdrawn by customer",
+    "request_hold_expired": "Payment expired",
+    "request_slot_taken": "Taken by another customer",
+    "request_cancelled_by_host": "Cancelled by you before payment"
   }
 }

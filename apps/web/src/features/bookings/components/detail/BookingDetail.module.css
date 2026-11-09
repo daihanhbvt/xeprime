@@ -617,10 +617,55 @@ a.vehicleName:hover {
   font-weight: var(--xp-font-weight-semibold);
 }
 
-.moneyRemaining dd {
-  color: var(--xp-color-primary-strong);
-  font-size: var(--xp-font-size-body-lg);
+.moneyLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-4);
+}
+
+/*
+ * Ô "Còn phải thu của khách" — con số người dùng cần nhất trên thẻ (06/11/2026), nên tách khỏi
+ * các dòng chi tiết: nền vàng nhạt, số lớn, câu nói rõ thu lúc nào. Thu đủ rồi ⇒ nền xanh.
+ */
+.moneyDue {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: var(--xp-space-4) var(--xp-space-md);
+  margin-top: var(--xp-space-md);
+  padding: var(--xp-space-12) var(--xp-space-md);
+  border: 1px solid var(--xp-color-primary-border);
+  border-radius: var(--xp-border-radius-md);
+  background: var(--xp-color-primary-bg);
+}
+
+.moneyDueLabel {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-semibold);
+}
+
+.moneyDueAmount {
+  color: var(--xp-color-primary-strong);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-bold);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.moneyDueHint {
+  grid-column: 1 / -1;
+  color: var(--xp-color-text-secondary);
+  font-size: 12px;
+}
+
+.moneyDueSettled {
+  border-color: var(--xp-color-success-border);
+  background: var(--xp-color-success-subtle);
+}
+
+.moneyDueSettled .moneyDueAmount {
+  color: var(--xp-color-success);
 }
 
 .negative {
@@ -653,9 +698,27 @@ a.vehicleName:hover {
   gap: var(--xp-space-12);
 }
 
+/* Lời báo trả xe của khách đang chờ (ADR 0081) — ngay trên nút nhận xe. */
+.customerReturn {
+  border-radius: var(--xp-border-radius-control);
+}
+
+.customerReturnBody {
+  margin: 0 0 var(--xp-space-sm);
+}
+
+/*
+ * Hai nút chia đều MỘT hàng, cùng cỡ `large`. Nút bàn giao luôn ở ô phải hàng đầu; nút còn lại
+ * ("Hủy đơn") lấp ô trái, "Khách không đến" nếu có xuống hàng dưới. Một nút duy nhất ⇒ cả hàng.
+ */
 .sideActionsRow {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  /*
+   * 1 : 2, không chia đôi: cột phải ~395px chia đôi thì nhãn "Xác nhận đã giao xe" / "Xác nhận
+   * đã nhận lại xe" (kèm biểu tượng) không vừa một dòng và nút vỡ thành hai dòng. Cùng hàng, cùng
+   * chiều cao, chữ một dòng.
+   */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
   gap: var(--xp-space-sm);
 }
 
@@ -663,13 +726,23 @@ a.vehicleName:hover {
   display: none;
 }
 
-.sideActionsRow > * {
-  flex: 1;
+.sideActionsRow > :only-child {
+  grid-column: 1 / -1;
+}
+
+.sideActionsRow :global(.ant-btn) {
+  min-width: 0;
+  padding-inline: var(--xp-space-12);
 }
 
 .primaryCta {
-  height: 44px;
+  grid-row: 1;
+  grid-column: 2;
   font-weight: var(--xp-font-weight-semibold);
+}
+
+.primaryCta:only-child {
+  grid-column: 1 / -1;
 }
 
 .ledgerLink {

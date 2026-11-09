@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
+import { RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { ScrollReveal, ScrollRevealProvider, useAppScrollRevealList } from '@/components/motion/ScrollReveal';
 import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { DRIVER_TRIP_TAB, type DriverTripTab } from '@xeprime/types';
@@ -63,9 +65,13 @@ export function DrivingTripsList({
     (trip: DriverTrip) => navigateOnce(ROUTES.driving.tripDetail(trip.id)),
     [navigateOnce],
   );
+  // Hàng trượt lên khi cuộn tới (chỉ transform, một lần) - app Partner giữ tĩnh.
+  const listReveal = useAppScrollRevealList();
   const renderTrip = useCallback(
-    ({ item }: ListRenderItemInfo<DriverTrip>) => (
-      <DrivingTripCard trip={item} onPress={openTrip} />
+    ({ item, index }: ListRenderItemInfo<DriverTrip>) => (
+      <ScrollReveal index={index}>
+        <DrivingTripCard trip={item} onPress={openTrip} />
+      </ScrollReveal>
     ),
     [openTrip],
   );
@@ -121,7 +127,10 @@ export function DrivingTripsList({
           {...(upcoming ? { description: t('emptyUpcomingBody') } : {})}
         />
       ) : (
-        <FlatList
+        <ScrollRevealProvider value={listReveal.ctx}>
+        <Animated.FlatList
+          onScroll={listReveal.onScroll}
+          scrollEventThrottle={16}
           data={items}
           keyExtractor={tripKey}
           renderItem={renderTrip}
@@ -131,12 +140,13 @@ export function DrivingTripsList({
             <RefreshControl
               refreshing={isRefetching}
               onRefresh={onRefresh}
-              tintColor={colors.primaryActive}
+              tintColor={colors.accentText}
             />
           }
           ListFooterComponent={isFetchingNextPage ? TripCardSkeleton : null}
           {...LIST_TUNING}
         />
+        </ScrollRevealProvider>
       )}
     </YStack>
   );

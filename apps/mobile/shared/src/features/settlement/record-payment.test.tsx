@@ -91,7 +91,7 @@ afterEach(() => jest.restoreAllMocks());
  * cộng gì cả — nó chỉ gửi đúng `kind`, và server phân biệt. Một client gửi nhầm `kind` là báo
  * cho chủ xe rằng khách đã trả một khoản họ chưa trả.
  */
-describe('RecordPaymentSheet — tiền thuê và tiền cọc là hai loại tiền', () => {
+describe('RecordPaymentSheet - tiền thuê và tiền cọc là hai loại tiền', () => {
   it('mặc định ghi TIỀN THUÊ: gửi `kind = rental`', async () => {
     const recordSpy = jest.spyOn(paymentsApi, 'record').mockResolvedValue({} as never);
 
@@ -151,7 +151,7 @@ describe('RecordPaymentSheet — tiền thuê và tiền cọc là hai loại ti
     await waitFor(() => expect(recordSpy).not.toHaveBeenCalled());
   });
 
-  it('lỗi từ server thì GIỮ tấm mở và hiện lỗi — không nuốt mất thao tác', async () => {
+  it('lỗi từ server thì GIỮ tấm mở và hiện lỗi - không nuốt mất thao tác', async () => {
     jest
       .spyOn(paymentsApi, 'record')
       .mockRejectedValue(
@@ -178,7 +178,7 @@ describe('RecordPaymentSheet — tiền thuê và tiền cọc là hai loại ti
  * `depositReceived` đúng tại thời điểm ghi. Client hiện con số đó ngay đầu tấm để người nhập
  * thấy trần trước khi gõ, và khi server từ chối thì tấm PHẢI ở lại kèm câu lỗi.
  */
-describe('RefundSheet — hoàn cọc', () => {
+describe('RefundSheet - hoàn cọc', () => {
   it('mặc định là số ĐỀ XUẤT do server tính, không phải một phép trừ ở client', async () => {
     const recordSpy = jest.spyOn(settlementApi, 'recordRefund').mockResolvedValue({} as never);
 
@@ -208,7 +208,7 @@ describe('RefundSheet — hoàn cọc', () => {
     );
   });
 
-  it('hiện CỌC ĐÃ THU ngay đầu tấm — đó là trần của khoản hoàn', async () => {
+  it('hiện CỌC ĐÃ THU ngay đầu tấm - đó là trần của khoản hoàn', async () => {
     const { findByText } = await render(
       wrap(
         <RefundSheet

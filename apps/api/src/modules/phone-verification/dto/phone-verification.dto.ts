@@ -1,18 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PhoneInput } from '../../../common/phone';
 import {
   MOBILE_CLIENT_APP_VALUES,
   PHONE_VERIFICATION_PURPOSE_VALUES,
   type MobileClientApp,
+  VN_MOBILE_PHONE_PATTERN,
 } from '@xeprime/types';
 import { IsIn, IsOptional, IsString, Length, Matches } from 'class-validator';
 
-/** SĐT Việt Nam: `0` + 9 số hoặc `+84` + 9 số. Server chuẩn hoá về `84xxxxxxxxx`. */
-const VN_PHONE = /^(0|\+84)\d{9}$/;
-
 export class SendOtpDto {
   @ApiProperty({ example: '0901234567' })
+  @PhoneInput()
   @IsString()
-  @Matches(VN_PHONE, { message: 'Số điện thoại không hợp lệ' })
+  @Matches(VN_MOBILE_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
   phone!: string;
 
   @ApiProperty({ enum: PHONE_VERIFICATION_PURPOSE_VALUES, example: 'register' })
@@ -35,8 +35,9 @@ export class SendOtpDto {
 
 export class VerifyOtpDto {
   @ApiProperty({ example: '0901234567' })
+  @PhoneInput()
   @IsString()
-  @Matches(VN_PHONE, { message: 'Số điện thoại không hợp lệ' })
+  @Matches(VN_MOBILE_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
   phone!: string;
 
   @ApiProperty({ enum: PHONE_VERIFICATION_PURPOSE_VALUES, example: 'booking' })
@@ -59,7 +60,7 @@ export class VerifyOtpDto {
 }
 
 export class SendOtpResultDto {
-  @ApiProperty({ description: 'ISO-8601 UTC — thời điểm mã hết hạn' })
+  @ApiProperty({ description: 'ISO-8601 UTC - thời điểm mã hết hạn' })
   expiresAt!: string;
 
   @ApiPropertyOptional({
@@ -79,7 +80,7 @@ export class OtpConfigDto {
   @ApiProperty({
     description:
       'Môi trường nhận mã OTP test (dev/staging): giao diện hiện ô nhập mã ngay, không bắt gửi ' +
-      'SMS trước. Chỉ là CỜ — bản thân mã không bao giờ đi trên dây. Production luôn false.',
+      'SMS trước. Chỉ là CỜ - bản thân mã không bao giờ đi trên dây. Production luôn false.',
   })
   testCodeEnabled!: boolean;
 }

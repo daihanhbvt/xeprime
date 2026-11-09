@@ -12,7 +12,7 @@ export function useAuthenticatedUser(): CurrentUser {
   const { data } = useCurrentUser();
 
   if (!data) {
-    throw new Error('useAuthenticatedUser dùng ngoài RequireSession — không có phiên đăng nhập');
+    throw new Error('useAuthenticatedUser dùng ngoài RequireSession - không có phiên đăng nhập');
   }
 
   return data;

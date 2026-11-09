@@ -122,7 +122,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('MobileNav — thanh tab dưới đáy', () => {
+describe('MobileNav - thanh tab dưới đáy', () => {
   it('gian hàng: 4 tab điều hướng + nút "Thêm"', () => {
     const { container } = renderNav();
     const bar = bottomBar(container);
@@ -131,7 +131,7 @@ describe('MobileNav — thanh tab dưới đáy', () => {
       within(bar)
         .getAllByRole('link')
         .map((a) => a.textContent),
-    ).toEqual(['Tổng quan', 'Lịch xe', 'Yêu cầu', 'Đơn thuê']);
+    ).toEqual(['Tổng quan', 'Lịch xe', 'Đơn thuê', 'Xe']);
     expect(within(bar).getByRole('button', { name: /Thêm$/ })).toBeTruthy();
   });
 
@@ -197,7 +197,7 @@ describe('MobileNav — thanh tab dưới đáy', () => {
     expect(screen.getByRole('navigation', { name: 'Điều hướng nhanh' })).toBeTruthy();
   });
 
-  it('tab luôn mount — ẩn/hiện là việc của CSS, không phải của JS', () => {
+  it('tab luôn mount - ẩn/hiện là việc của CSS, không phải của JS', () => {
     // Hiện trạng: `MobileNav` không gọi `useIsMobile`. Thanh tab được `display:none` trên
     // desktop trong `.module.css`. Wave 1D đổi ranh 992→1024 là đổi ở CSS đó, không ở đây.
     const matchMedia = vi.spyOn(window, 'matchMedia');
@@ -208,7 +208,7 @@ describe('MobileNav — thanh tab dưới đáy', () => {
   });
 });
 
-describe('MobileNav — tab đang sáng', () => {
+describe('MobileNav - tab đang sáng', () => {
   it('route đúng bằng href → tab đó sáng, "Thêm" không sáng', () => {
     nav.pathname = '/manage/calendar';
     const { container } = renderNav();
@@ -226,11 +226,11 @@ describe('MobileNav — tab đang sáng', () => {
   });
 
   it('/manage chỉ sáng "Tổng quan" khi ở ĐÚNG /manage', () => {
-    nav.pathname = '/manage/vehicles';
+    nav.pathname = '/manage/customers';
     const { container } = renderNav();
     const bar = bottomBar(container);
 
-    // `/manage/vehicles` không thuộc tab chính nào → "Thêm" mới là mục sáng.
+    // `/manage/customers` không thuộc tab chính nào → "Thêm" mới là mục sáng.
     expect(moreButton().className).not.toBe(tab(bar, 'Tổng quan').className);
   });
 
@@ -248,7 +248,7 @@ describe('MobileNav — tab đang sáng', () => {
   });
 
   it('route ngoài mọi tab chính → không tab nào mang aria-current', () => {
-    nav.pathname = '/manage/vehicles';
+    nav.pathname = '/manage/customers';
     const { container } = renderNav();
 
     for (const link of within(bottomBar(container)).getAllByRole('link')) {
@@ -296,7 +296,7 @@ describe('MobileNav — tab đang sáng', () => {
   });
 });
 
-describe('MobileNav — Drawer menu đầy đủ', () => {
+describe('MobileNav - Drawer menu đầy đủ', () => {
   it('mặc định đóng: nội dung menu chưa có trong tài liệu', () => {
     renderNav();
 
@@ -334,7 +334,7 @@ describe('MobileNav — Drawer menu đầy đủ', () => {
     expect(screen.queryByRole('link', { name: 'Thông tin cửa hàng' })).toBeNull();
   });
 
-  it('chọn một mục trong Drawer thì Drawer ĐÓNG — không để lại lớp phủ che trang mới', () => {
+  it('chọn một mục trong Drawer thì Drawer ĐÓNG - không để lại lớp phủ che trang mới', () => {
     renderNav();
     openDrawer();
     expect(store.getState().app.mobileNavOpen).toBe(true);
@@ -423,7 +423,7 @@ describe('MobileNav — Drawer menu đầy đủ', () => {
  * được mắc vào. Bốn tab thật đều thuộc bậc cơ bản nên không lộ ra, nên spec này DỰNG một tab có
  * cờ để kiểm chính bộ lọc, thay vì chờ tới ngày ai đó thêm tab thật rồi mới phát hiện.
  */
-describe('MobileNav — lọc theo cờ tính năng (ADR 0027)', () => {
+describe('MobileNav - lọc theo cờ tính năng (ADR 0027)', () => {
   /** Tab thứ năm mang cờ `finance` — chèn vào đúng nguồn mà `MobileNav` đọc. */
   function withGatedTab() {
     vi.doMock('@/constants/nav', async (importOriginal) => {
@@ -491,7 +491,7 @@ describe('MobileNav — lọc theo cờ tính năng (ADR 0027)', () => {
     expect(within(bottomBar(container)).queryByRole('link', { name: 'Tài chính' })).toBeNull();
   });
 
-  it('cache CŨ (chưa có `features`) KHÔNG khoá ai — mặc định là cho qua', async () => {
+  it('cache CŨ (chưa có `features`) KHÔNG khoá ai - mặc định là cho qua', async () => {
     grant(...SHOP_TAB_PERMISSIONS, PERMISSION.FINANCE_VIEW);
     features.states = {};
 

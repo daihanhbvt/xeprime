@@ -20,7 +20,7 @@ export class CreateVehicleBlockDto {
   @IsDate()
   startAt!: Date;
 
-  @ApiProperty({ description: 'Kết thúc khoá, ISO-8601 UTC — phải sau startAt' })
+  @ApiProperty({ description: 'Kết thúc khoá, ISO-8601 UTC - phải sau startAt' })
   @Type(() => Date)
   @IsDate()
   endAt!: Date;
@@ -42,7 +42,7 @@ export class UpdateVehicleBlockDto {
   @IsDate()
   startAt!: Date;
 
-  @ApiProperty({ description: 'Kết thúc khoá, ISO-8601 UTC — phải sau startAt' })
+  @ApiProperty({ description: 'Kết thúc khoá, ISO-8601 UTC - phải sau startAt' })
   @Type(() => Date)
   @IsDate()
   endAt!: Date;
@@ -85,7 +85,7 @@ export class VehicleBlockDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Phiên hỗ trợ của nền tảng đã đặt khoá này (ADR 0050 §13) — null = gian hàng tự đặt.',
+    description: 'Phiên hỗ trợ của nền tảng đã đặt khoá này (ADR 0050 §13) - null = gian hàng tự đặt.',
   })
   supportContextId!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;

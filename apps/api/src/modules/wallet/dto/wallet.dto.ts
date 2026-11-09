@@ -2,11 +2,13 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   SERVICE_TYPE_VALUES,
   TAX_PERIOD_KEY_PATTERN,
+  WALLET_ACTIVITY_SOURCE_VALUES,
   WALLET_ENTRY_KIND_VALUES,
   WALLET_STATEMENT_UNIT_VALUES,
   WALLET_STATUS_VALUES,
   WITHDRAWAL_STATUS_VALUES,
   type ServiceType,
+  type WalletActivitySource,
   type WalletEntryKind,
   type WalletStatementUnit,
   type WalletStatus,
@@ -25,7 +27,7 @@ import { OwnerPayoutDto } from '../../../common/dto/owner-payout.dto';
  */
 export class WalletSummaryDto {
   @ApiProperty({ description: 'Rút được ngay (VND string)' }) available!: string;
-  @ApiProperty({ description: 'Đang chờ chuyển — đã khoá, chưa rời ngân hàng' }) pending!: string;
+  @ApiProperty({ description: 'Đang chờ chuyển - đã khoá, chưa rời ngân hàng' }) pending!: string;
   @ApiProperty({ description: 'Tổng XePrime phải trả = available + pending' }) total!: string;
   @ApiProperty({ enum: WALLET_STATUS_VALUES }) status!: WalletStatus;
   @ApiProperty({ description: 'Số tiền rút tối thiểu mỗi lần' }) minWithdrawAmount!: string;
@@ -69,6 +71,92 @@ export class WalletEntryQueryDto {
   limit?: number;
 }
 
+export const ACTIVITY_DEFAULT_LIMIT = 20;
+export const ACTIVITY_MAX_LIMIT = 100;
+
+/** "Biến động số dư" — một kỳ `YYYY-MM` giờ Việt Nam, phân trang ở server. */
+export class WalletActivityQueryDto {
+  @ApiPropertyOptional({
+    example: '2026-10',
+    description: 'Kỳ `YYYY-MM` theo giờ Việt Nam. Bỏ trống = kỳ hiện tại.',
+  })
+  @IsOptional()
+  @Matches(TAX_PERIOD_KEY_PATTERN, { message: 'Kỳ phải có dạng YYYY-MM' })
+  period?: string;
+
+  @ApiPropertyOptional({ minimum: 1, default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: ACTIVITY_MAX_LIMIT, default: ACTIVITY_DEFAULT_LIMIT })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(ACTIVITY_MAX_LIMIT)
+  limit?: number;
+}
+
+/** Phần riêng của một dòng LỆNH RÚT — số tài khoản đã che (PII). */
+export class WalletActivityWithdrawalDto {
+  @ApiProperty({ enum: WITHDRAWAL_STATUS_VALUES }) status!: WithdrawalStatus;
+  @ApiProperty() bankCode!: string;
+  @ApiProperty({ description: 'Số tài khoản đã che - PII' }) accountNumberMasked!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Hạn cam kết chuyển' })
+  dueBy!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) paidAt!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) rejectReason!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) reverseReason!: string | null;
+}
+
+/**
+ * Một dòng "Biến động số dư": hoặc một bút toán sổ ví, hoặc một lệnh rút.
+ *
+ * `balanceAfter` chỉ có ở dòng SỔ — lệnh rút khoá tiền khỏi số dư khả dụng chứ không ghi bút
+ * toán, nên không có "số dư sau" nào để kể mà không bịa.
+ */
+export class WalletActivityDto {
+  @ApiProperty() id!: string;
+  @ApiProperty({ enum: WALLET_ACTIVITY_SOURCE_VALUES }) source!: WalletActivitySource;
+  @ApiPropertyOptional({
+    enum: WALLET_ENTRY_KIND_VALUES,
+    nullable: true,
+    description: 'Loại bút toán - chỉ dòng sổ',
+  })
+  kind!: WalletEntryKind | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Mã lệnh rút (XPW…) hoặc mã chuyến của bút toán',
+  })
+  code!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) bookingId!: string | null;
+  @ApiProperty({ description: 'Dương = vào ví, âm = ra khỏi ví (VND string)' }) amount!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Số dư khả dụng sau bút toán - null ở dòng lệnh rút',
+  })
+  balanceAfter!: string | null;
+  @ApiProperty() occurredAt!: string;
+  @ApiProperty({ description: 'Chủ ví tự huỷ được - chỉ lệnh rút còn chờ duyệt' })
+  cancellable!: boolean;
+  @ApiPropertyOptional({ type: WalletActivityWithdrawalDto, nullable: true })
+  withdrawal!: WalletActivityWithdrawalDto | null;
+}
+
+export class WalletActivityPageDto {
+  @ApiProperty({ type: [WalletActivityDto] }) items!: WalletActivityDto[];
+  @ApiProperty({ example: '2026-10' }) period!: string;
+  @ApiProperty() total!: number;
+  @ApiProperty() page!: number;
+  @ApiProperty() limit!: number;
+  @ApiProperty() hasNext!: boolean;
+}
+
 /**
  * Yêu cầu rút tiền.
  *
@@ -81,7 +169,7 @@ export class CreateWithdrawalDto {
   @IsNumberString()
   amount!: string;
 
-  @ApiProperty({ description: 'Tài khoản nhận — phải thuộc chính chủ ví' })
+  @ApiProperty({ description: 'Tài khoản nhận - phải thuộc chính chủ ví' })
   @IsString()
   bankAccountId!: string;
 }
@@ -89,11 +177,11 @@ export class CreateWithdrawalDto {
 /** Yêu cầu rút nhìn từ phía chủ ví. Số tài khoản ĐÃ CHE. */
 export class WithdrawalRequestDto {
   @ApiProperty() id!: string;
-  @ApiProperty({ description: 'Mã XPW… — dùng khi hỏi hỗ trợ' }) code!: string;
+  @ApiProperty({ description: 'Mã XPW… - dùng khi hỏi hỗ trợ' }) code!: string;
   @ApiProperty() amount!: string;
   @ApiProperty({ enum: WITHDRAWAL_STATUS_VALUES }) status!: WithdrawalStatus;
   @ApiProperty() bankCode!: string;
-  @ApiProperty({ description: 'Số tài khoản đã che — PII' }) accountNumberMasked!: string;
+  @ApiProperty({ description: 'Số tài khoản đã che - PII' }) accountNumberMasked!: string;
   @ApiProperty() accountName!: string;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Hạn cam kết chuyển' })
   dueBy!: string | null;
@@ -102,7 +190,7 @@ export class WithdrawalRequestDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Lệnh ĐÃ CHI rồi bị đảo (chuyển hụt / sai tài khoản) — tiền đã về lại số dư',
+    description: 'Lệnh ĐÃ CHI rồi bị đảo (chuyển hụt / sai tài khoản) - tiền đã về lại số dư',
   })
   reversedAt!: string | null;
   @ApiPropertyOptional({
@@ -144,11 +232,11 @@ export const STATEMENT_MAX_LIMIT = 100;
  */
 export class WalletStatementTripDto {
   @ApiProperty() bookingId!: string;
-  @ApiProperty({ description: 'Mã chuyến hiển thị — `XP…`' }) code!: string;
+  @ApiProperty({ description: 'Mã chuyến hiển thị - `XP…`' }) code!: string;
   @ApiProperty({ enum: SERVICE_TYPE_VALUES, description: 'Hình thức thuê' })
   serviceType!: ServiceType;
-  @ApiProperty({ description: 'Ngày đi — giờ nhận xe theo lịch đơn' }) pickupAt!: string;
-  @ApiProperty({ description: 'Ngày về — giờ trả THỰC TẾ nếu có, không thì theo lịch' })
+  @ApiProperty({ description: 'Ngày đi - giờ nhận xe theo lịch đơn' }) pickupAt!: string;
+  @ApiProperty({ description: 'Ngày về - giờ trả THỰC TẾ nếu có, không thì theo lịch' })
   returnAt!: string;
 
   @ApiPropertyOptional({
@@ -156,7 +244,7 @@ export class WalletStatementTripDto {
     nullable: true,
     description:
       'Đơn giá một đơn vị thuê (ngày hoặc tháng). Theo ngày: CHỈ khi mọi ngày cùng một giá (đặc tả ' +
-      '05 §7.1) — giá khác nhau theo ngày, hoặc snapshot không đủ dữ liệu ⇒ `null`; KHÔNG suy ' +
+      '05 §7.1) - giá khác nhau theo ngày, hoặc snapshot không đủ dữ liệu ⇒ `null`; KHÔNG suy ' +
       'ngược `R / N` từ tổng.',
   })
   unitAmount!: string | null;
@@ -169,27 +257,27 @@ export class WalletStatementTripDto {
 
   @ApiProperty({
     description:
-      'Doanh thu cho thuê xe `R = B − G` (VND string) — tiền thuê sau khuyến mãi của xe, KHÔNG gồm ' +
+      'Doanh thu cho thuê xe `R = B − G` (VND string) - tiền thuê sau khuyến mãi của xe, KHÔNG gồm ' +
       'phí giao xe (`deliveryAmount`).',
   })
   revenueAmount!: string;
   @ApiProperty({
     description:
-      'Phí dịch vụ – chủ xe `H` XePrime giữ lại — chủ xe chịu (ADR 0064 điều 3). Đọc từ bảng phí đã ' +
+      'Phí dịch vụ - chủ xe `H` XePrime giữ lại - chủ xe chịu (ADR 0064 điều 3). Đọc từ bảng phí đã ' +
       'đóng băng (`ownerPayout`) khi có, không thì từ cột `bookings.owner_commission_amount` (ghi ' +
       'từ cùng snapshot); 0 ở tuyến gói và đơn trước luồng tiền v2.',
   })
   ownerCommissionAmount!: string;
-  @ApiProperty({ description: 'Thuế khấu trừ `T` — chủ xe chịu' }) taxAmount!: string;
+  @ApiProperty({ description: 'Thuế khấu trừ `T` - chủ xe chịu' }) taxAmount!: string;
   @ApiProperty({
     description:
-      '`R − D − H` — phần TIỀN THUÊ khách trả trực tiếp chủ xe lúc nhận xe, không qua ví. KHÔNG ' +
+      '`R − D − H` - phần TIỀN THUÊ khách trả trực tiếp chủ xe lúc nhận xe, không qua ví. KHÔNG ' +
       'gồm phí giao xe (khoản đó ở `deliveryAmount`).',
   })
   payAtPickupAmount!: string;
   @ApiProperty({
     description:
-      'Phí giao xe `G` — khách trả TẬN TAY chủ xe, chủ xe hưởng trọn, không chịu phí dịch vụ/thuế. ' +
+      'Phí giao xe `G` - khách trả TẬN TAY chủ xe, chủ xe hưởng trọn, không chịu phí dịch vụ/thuế. ' +
       'Đọc từ `bookings.delivery_fee` (sửa được sau khi đơn ra đời). `0` khi không giao tận nơi.',
   })
   deliveryAmount!: string;
@@ -232,14 +320,14 @@ export class WalletStatementStatsDto {
     type: Number,
     nullable: true,
     description:
-      'Tỉ lệ phản hồi yêu cầu thuê nhận trong kỳ. `null` = chưa đủ mẫu để nói — KHÔNG phải 0. ' +
+      'Tỉ lệ phản hồi yêu cầu thuê nhận trong kỳ. `null` = chưa đủ mẫu để nói - KHÔNG phải 0. ' +
       'Cùng phép phân loại với chỉ số công khai (ADR 0045 điều 2), chỉ khác cửa sổ.',
   })
   responseRatePercent!: number | null;
 
   @ApiProperty({
     description:
-      'Số YÊU CẦU gian hàng phải quyết trong kỳ — mẫu số của hai tỉ lệ trên. Luôn hiện để ' +
+      'Số YÊU CẦU gian hàng phải quyết trong kỳ - mẫu số của hai tỉ lệ trên. Luôn hiện để ' +
       '"chưa đủ dữ liệu" là một câu kiểm chứng được.',
   })
   responseSampleCount!: number;

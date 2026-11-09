@@ -16,7 +16,7 @@ import { CUSTOMERS_DEFAULT_LIMIT, customerFiltersToParams, duplicateCustomerId }
  * một `invalidateQueries` chỉ làm mới đúng một nửa số màn, và để một bên im lặng gửi thiếu tham số.
  */
 describe('customerFiltersToParams', () => {
-  it('bộ lọc rỗng vẫn gửi trang 1 và limit mặc định — không để server tự đoán', () => {
+  it('bộ lọc rỗng vẫn gửi trang 1 và limit mặc định - không để server tự đoán', () => {
     expect(customerFiltersToParams({})).toEqual({
       q: null,
       relationship: null,
@@ -71,7 +71,7 @@ describe('gate tài chính của bộ lọc / sắp xếp', () => {
     expect(isAllowedSort('debt', true)).toBe(true);
   });
 
-  it('giá trị lạ bị từ chối kể cả khi có quyền — không gửi rác xuống backend', () => {
+  it('giá trị lạ bị từ chối kể cả khi có quyền - không gửi rác xuống backend', () => {
     expect(isAllowedRelationship('vip', true)).toBe(false);
     expect(isAllowedSort('fortnight', true)).toBe(false);
     expect(isAllowedRelationship(undefined, true)).toBe(false);
@@ -93,7 +93,7 @@ describe('duplicateCustomerId', () => {
     expect(duplicateCustomerId(error)).toBe('01JQZX0000000000000000000C');
   });
 
-  it('409 KHÔNG kèm id: trả `null` — nơi gọi vẫn giải thích, chỉ không có lối mở nhanh', () => {
+  it('409 KHÔNG kèm id: trả `null` - nơi gọi vẫn giải thích, chỉ không có lối mở nhanh', () => {
     const error = new ApiClientError({
       code: 'CUSTOMER_PHONE_DUPLICATE',
       message: 'x',

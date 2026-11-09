@@ -16,6 +16,9 @@ import { HostMetricsService } from '../../src/modules/host-metrics/host-metrics.
 import { BookingHoldsService } from '../../src/modules/holds/booking-holds.service';
 import { BookingRequestsService } from '../../src/modules/booking-requests/booking-requests.service';
 import { BookingsService } from '../../src/modules/bookings/bookings.service';
+import { SettlementService } from '../../src/modules/bookings/settlement/settlement.service';
+import { ReceiptsService } from '../../src/modules/finance/receipts.service';
+import { BookingPaymentWriter } from '../../src/modules/payments/booking-payment.writer';
 import { BookingExtensionsService } from '../../src/modules/booking-extensions/booking-extensions.service';
 import { OccupancyService } from '../../src/modules/calendar/occupancy.service';
 import { CustomersService } from '../../src/modules/customers/customers.service';
@@ -636,4 +639,24 @@ export async function giveShopStorefront(
     create: { tenantId, ...data },
     update: data,
   });
+}
+
+/**
+ * Hai dependency TIỀN của `HandoversService` (06/11/2026): lượt nhận lại xe ghi phụ phí qua
+ * `SettlementService` và phiếu thu qua `BookingPaymentWriter`, cùng transaction với biên bản. Gom ở
+ * đây để các spec dựng tay `HandoversService` không mỗi nơi tự lắp một bộ — rải vào bằng `...`.
+ */
+export function makeHandoverMoneyServices(
+  prisma: PrismaService,
+  audit: AuditService,
+): [SettlementService, BookingPaymentWriter] {
+  const receipts = new ReceiptsService(prisma, audit);
+  const settlement = new SettlementService(
+    prisma,
+    audit,
+    makePricingService(prisma),
+    makeNotificationService(prisma),
+    receipts,
+  );
+  return [settlement, new BookingPaymentWriter(audit, receipts)];
 }

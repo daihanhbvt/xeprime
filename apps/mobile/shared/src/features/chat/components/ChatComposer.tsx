@@ -36,6 +36,8 @@ import {
   space,
 } from '@/theme/tokens';
 import { FONT_FAMILY } from '@/theme/fonts';
+import { useIsOnline } from '@/hooks/use-is-online';
+import { OfflineActionHint } from '@/components/network/OfflineActionHint';
 import type { SendAttachment } from '../hooks/use-thread';
 import type { PendingVehicleContext } from '../hooks/use-vehicle-context';
 
@@ -97,6 +99,8 @@ export function ChatComposer({
   const colors = useColors();
   const styles = useStyles();
   const t = useTranslations('Chat');
+  // Gửi tin phải tới server — offline thì khoá nút gửi (vẫn gõ được) và nói lý do.
+  const online = useIsOnline();
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
   // Thiếu quyền thư viện ảnh cần một câu KHÁC câu lỗi chung — người dùng phải biết bật gì.
@@ -117,12 +121,12 @@ export function ChatComposer({
 
   const uploading = attachments.some((a) => a.uploaded === null && !a.failed);
   const ready = attachments.flatMap((a) => (a.uploaded ? [a.uploaded] : []));
-  const canSend = !disabled && !busy && !uploading && (text.trim().length > 0 || ready.length > 0);
+  const canSend = online && !disabled && !busy && !uploading && (text.trim().length > 0 || ready.length > 0);
 
   const submit = async () => {
     if (inFlight.current) return;
     const trimmed = text.trim();
-    if (disabled || uploading || (!trimmed && ready.length === 0)) return;
+    if (!online || disabled || uploading || (!trimmed && ready.length === 0)) return;
 
     inFlight.current = true;
     setBusy(true);
@@ -344,7 +348,7 @@ export function ChatComposer({
           <Ionicons
             name="add-circle-outline"
             size={iconSize.lg}
-            color={disabled ? colors.textDisabled : colors.primaryActive}
+            color={disabled ? colors.textDisabled : colors.accentText}
           />
         </Pressable>
 
@@ -388,6 +392,7 @@ export function ChatComposer({
           />
         </Pressable>
       </XStack>
+      <OfflineActionHint />
 
       {/*
         Web có MỘT nút mở hộp thoại tệp của hệ điều hành với `accept` gồm cả ảnh lẫn PDF. Native
@@ -447,7 +452,7 @@ function PickerOption({
       <XStack ai="center" gap={space.md}>
         {/* Ô tròn gold: cùng ngôn ngữ hình với nút gửi, nên hai thứ đọc ra là cùng một bộ. */}
         <YStack style={styles.optionIcon}>
-          <Ionicons name={icon} size={iconSize.md} color={colors.primaryActive} />
+          <Ionicons name={icon} size={iconSize.md} color={colors.accentText} />
         </YStack>
 
         <YStack f={1} gap={1}>

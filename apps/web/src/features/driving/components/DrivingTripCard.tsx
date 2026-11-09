@@ -114,7 +114,7 @@ export function DrivingTripCard({ trip }: { trip: DriverTrip }) {
               ) : null}
             </Fact>
             <Fact label={t('time')}>
-              {fmt.dateTimeRange(trip.pickupAt, trip.returnAt)}
+              {fmt.rentalRange(trip.pickupAt, trip.returnAt)}
               <span className={styles.muted}> {t('days', { count: days })}</span>
             </Fact>
             {trip.pickupAddress ? <Fact label={t('pickup')}>{trip.pickupAddress}</Fact> : null}

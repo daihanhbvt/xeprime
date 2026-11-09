@@ -37,6 +37,7 @@ const GATED: Readonly<Record<string, PlanFeature>> = {
 const PER_ROUTE: Readonly<Record<string, Readonly<Record<string, PlanFeature>>>> = {
   FinanceOverviewController: {
     debts: PLAN_FEATURE.DEBTS,
+    debtSummary: PLAN_FEATURE.DEBTS,
     summary: PLAN_FEATURE.FINANCE,
     series: PLAN_FEATURE.FINANCE,
     byCategory: PLAN_FEATURE.FINANCE,

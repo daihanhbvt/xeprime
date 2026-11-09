@@ -174,7 +174,7 @@ afterEach(cleanup);
 
 /* ------------------------------------------------------------------ loại đối tác */
 
-describe('danh sách đối tác — loại cố định theo route', () => {
+describe('danh sách đối tác - loại cố định theo route', () => {
   it('"Gian hàng gói" gửi partnerKind=package_shop, tiêu đề và câu chữ của gian hàng', () => {
     setQuery({ data: { items: [tenant()], meta: { ...META, total: 245 } } });
     renderPage(PACKAGE_SHOP);
@@ -239,7 +239,7 @@ describe('danh sách đối tác — loại cố định theo route', () => {
 
 /* ------------------------------------------------------------------ tải / lỗi */
 
-describe('danh sách đối tác — tải và lỗi', () => {
+describe('danh sách đối tác - tải và lỗi', () => {
   it('lần tải đầu hiện trạng thái chờ, chưa hiện câu "chưa có gian hàng"', () => {
     setQuery({ isFetching: true });
     renderPage();
@@ -269,7 +269,7 @@ describe('danh sách đối tác — tải và lỗi', () => {
 
 /* ------------------------------------------------------------------ rỗng vs không-kết-quả */
 
-describe('danh sách đối tác — rỗng và không có kết quả', () => {
+describe('danh sách đối tác - rỗng và không có kết quả', () => {
   it('không lọc và rỗng: "Chưa có gian hàng nào", không có nút xoá lọc, không có nút tạo', () => {
     setQuery({ data: { items: [], meta: { ...META, total: 0 } } });
     renderPage();
@@ -300,7 +300,7 @@ describe('danh sách đối tác — rỗng và không có kết quả', () => {
 
 /* ------------------------------------------------------------------ filter + URL */
 
-describe('danh sách đối tác — filter, sắp xếp và URL', () => {
+describe('danh sách đối tác - filter, sắp xếp và URL', () => {
   it('mặc định: mọi trạng thái, sort mặc định của server, không có panel mở', () => {
     setQuery({ data: { items: [tenant()], meta: META } });
     renderPage();
@@ -317,7 +317,7 @@ describe('danh sách đối tác — filter, sắp xếp và URL', () => {
     expect(screen.getByText('Mới tạo gần nhất')).toBeTruthy();
   });
 
-  it('đọc q, status, sort, page, limit từ URL — `tenant` KHÔNG lọt xuống lớp dữ liệu', () => {
+  it('đọc q, status, sort, page, limit từ URL - `tenant` KHÔNG lọt xuống lớp dữ liệu', () => {
     nav.params = new URLSearchParams(
       'q=demo&status=active&sort=vehicles&page=3&limit=50&tenant=t9',
     );
@@ -406,7 +406,7 @@ describe('danh sách đối tác — filter, sắp xếp và URL', () => {
     }
   });
 
-  it('ô tìm kiếm được kiểm soát — filter đổi từ ngoài thì ô nhập đồng bộ theo', () => {
+  it('ô tìm kiếm được kiểm soát - filter đổi từ ngoài thì ô nhập đồng bộ theo', () => {
     nav.params = new URLSearchParams('q=demo');
     setQuery({ data: { items: [tenant()], meta: META } });
     const { rerender } = renderPage();
@@ -428,7 +428,7 @@ describe('danh sách đối tác — filter, sắp xếp và URL', () => {
 
 /* ------------------------------------------------------------------ dữ liệu, hàng, phân trang */
 
-describe('danh sách đối tác — dữ liệu và hành động', () => {
+describe('danh sách đối tác - dữ liệu và hành động', () => {
   it('hiện tên, mã, tỉnh và chủ shop; thiếu chủ shop thì gạch ngang', () => {
     setQuery({
       data: { items: [tenant(), tenant({ id: 't2', ownerName: null, phone: null })], meta: META },
@@ -438,7 +438,7 @@ describe('danh sách đối tác — dữ liệu và hành động', () => {
     expect(screen.getAllByText('Gian hàng Demo XePrime')).toHaveLength(2);
     expect(screen.getAllByText('GH-001 · TP. Hồ Chí Minh').length).toBeGreaterThan(0);
     expect(screen.getByText('Chủ shop demo')).toBeTruthy();
-    expect(screen.getByText('—')).toBeTruthy();
+    expect(screen.getByText('-')).toBeTruthy();
   });
 
   it('"Xem chi tiết" ghi ?tenant= lên URL, GIỮ trang hiện tại, không điều hướng trang', () => {
@@ -528,7 +528,7 @@ describe('danh sách đối tác — dữ liệu và hành động', () => {
   });
 });
 
-describe('danh sách gian hàng gói — gói hiện tại', () => {
+describe('danh sách gian hàng gói - gói hiện tại', () => {
   it('cột "Gói hiện tại": tên gói, ngày hết hạn và số ngày còn lại', () => {
     setQuery({
       data: {

@@ -377,7 +377,7 @@ export function RequestTripStep({
               ai="center"
               jc="center"
             >
-              <Ionicons name="business-outline" size={iconSize.md} color={colors.primaryActive} />
+              <Ionicons name="business-outline" size={iconSize.md} color={colors.accentText} />
             </YStack>
             <YStack f={1} gap={1}>
               <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
@@ -466,7 +466,7 @@ export function PickupOption({
           <Ionicons
             name={icon}
             size={iconSize.md}
-            color={selected ? colors.primaryActive : colors.textMuted}
+            color={selected ? colors.accentText : colors.textMuted}
           />
         </YStack>
         <YStack f={1} gap={1}>
@@ -478,7 +478,7 @@ export function PickupOption({
           </Text>
         </YStack>
         {selected ? (
-          <Ionicons name="checkmark-circle" size={iconSize.lg} color={colors.primaryActive} />
+          <Ionicons name="checkmark-circle" size={iconSize.lg} color={colors.accentText} />
         ) : null}
       </XStack>
     </Pressable>
@@ -878,7 +878,7 @@ function TrustPoints() {
               ai="center"
               jc="center"
             >
-              <Ionicons name={point.icon} size={iconSize.md} color={colors.primaryActive} />
+              <Ionicons name={point.icon} size={iconSize.md} color={colors.accentText} />
             </YStack>
             <YStack f={1} gap={2}>
               <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>

@@ -13,6 +13,8 @@ import type { ManageNavBadgeCounts } from './use-manage-nav-badges';
 const ALL_BADGES: ManageNavBadgeCounts = {
   [MANAGE_NAV_BADGE.BOOKING_REQUESTS_PENDING]: 3,
   [MANAGE_NAV_BADGE.CHAT_UNREAD]: 0,
+  [MANAGE_NAV_BADGE.HANDOVERS_DUE]: 0,
+  [MANAGE_NAV_BADGE.VEHICLES_NEEDS_ACTION]: 0,
 };
 
 function branches(badges: ManageNavBadgeCounts) {
@@ -41,6 +43,8 @@ describe('dồn huy hiệu lên mục cha', () => {
     const quiet: ManageNavBadgeCounts = {
       [MANAGE_NAV_BADGE.BOOKING_REQUESTS_PENDING]: 0,
       [MANAGE_NAV_BADGE.CHAT_UNREAD]: 0,
+      [MANAGE_NAV_BADGE.HANDOVERS_DUE]: 0,
+      [MANAGE_NAV_BADGE.VEHICLES_NEEDS_ACTION]: 0,
     };
 
     for (const node of branches(quiet)) {

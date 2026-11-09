@@ -65,7 +65,7 @@ export class PublicListingsController {
   @Public()
   @Get('recommended')
   @PublicCache(PUBLIC_CACHE_SECONDS.listing)
-  @ApiOperation({ summary: 'Xe phù hợp với bạn — gợi ý trang chủ, ưu tiên theo tỉnh của khách' })
+  @ApiOperation({ summary: 'Xe phù hợp với bạn - gợi ý trang chủ, ưu tiên theo tỉnh của khách' })
   @ApiOkResponse({ type: RecommendedListingsDto })
   recommended(@Query() query: RecommendedListingQueryDto): Promise<RecommendedListingsDto> {
     return this.listings.recommended(query);

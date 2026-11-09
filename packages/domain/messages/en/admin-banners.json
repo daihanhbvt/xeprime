@@ -2,15 +2,15 @@
   "page": {
     "title": "Home page banners",
     "create": "Create banner",
-    "hint": "There's no limit on how many you create; the home page shows them all in order from top to bottom, but at most {max} banners may overlap in display time. Each screen size takes one image at the right ratio: desktop {desktop} · tablet {tablet} · mobile {mobile} (or @2x) — images at the wrong ratio are blocked on upload.",
-    "composition": "Banners carry their own message — the home page puts no text over the image. Only the desktop image ({desktop}) has the search card over roughly its bottom third, so keep text and subject in the upper part.",
+    "hint": "There's no limit on how many you create; the home page shows them all in order from top to bottom, but at most {max} banners may overlap in display time. Each screen size takes one image at the right ratio: desktop {desktop} · tablet {tablet} · mobile {mobile} (or @2x) - images at the wrong ratio are blocked on upload.",
+    "composition": "Banners carry their own message - the home page puts no text over the image. Only the desktop image ({desktop}) has the search card over roughly its bottom third, so keep text and subject in the upper part.",
     "loadError": "Couldn't load the banner list",
-    "empty": "No top banners yet — the home page is showing the default strip",
+    "empty": "No top banners yet - the home page is showing the default strip",
     "promoHint": "Promo banners sit on the home page, right below the search box (mobile: below \"Featured cars\"). You can create any number, but at most {max} may be scheduled to show at the same time. Recommended sizes from the design: desktop {desktop} (required) · tablet {tablet} · mobile {mobile} (optional). Images with a different ratio can still be uploaded but will be cropped to fit.",
-    "promoComposition": "Text, price and artwork live inside the image — the home page puts nothing on top. Desktop and tablet show two banners per row; mobile swipes one at a time. With no promo banner currently showing, the section is hidden from the home page.",
-    "emptyPromo": "No promo banners yet — the promo section is hidden on the home page",
-    "partnerHint": "Background image of the \"Become an exclusive partner\" band on the home page. The page uses ONE image: the first banner currently showing in order; with none, the default image is used. Recommended sizes: desktop {desktop} · tablet {tablet} · mobile {mobile}. The image should not contain text — the page draws its own text and button.",
-    "emptyPartner": "No partner band background yet — the home page uses the default design image"
+    "promoComposition": "Text, price and artwork live inside the image - the home page puts nothing on top. Desktop and tablet show two banners per row; mobile swipes one at a time. With no promo banner currently showing, the section is hidden from the home page.",
+    "emptyPromo": "No promo banners yet - the promo section is hidden on the home page",
+    "partnerHint": "Background image of the \"Become an exclusive partner\" band on the home page. The page uses ONE image: the first banner currently showing in order; with none, the default image is used. Recommended sizes: desktop {desktop} · tablet {tablet} · mobile {mobile}. The image should not contain text - the page draws its own text and button.",
+    "emptyPartner": "No partner band background yet - the home page uses the default design image"
   },
   "columns": {
     "preview": "Image",
@@ -107,7 +107,7 @@
     "titleCreatePromo": "Create promo banner",
     "mediaDescriptionPromo": "Recommended sizes from the design: desktop 584×220, tablet 480×180, mobile 340×140. Images with a different ratio can still be uploaded but will be cropped to fit. Leave tablet and mobile empty to use the desktop image.",
     "titleCreatePartner": "Add partner band background",
-    "introPartner": "Background image of the \"Become an exclusive partner\" band on the home page. The page draws its own text, button and dark overlay on top — the image should not contain text.",
+    "introPartner": "Background image of the \"Become an exclusive partner\" band on the home page. The page draws its own text, button and dark overlay on top - the image should not contain text.",
     "mediaDescriptionPartner": "Recommended sizes from the design: desktop 1440×600, tablet 1024×448, mobile 390×448. Images with a different ratio can still be uploaded but will be cropped to fit. Leave tablet and mobile empty to use the desktop image."
   },
   "media": {
@@ -118,13 +118,13 @@
     },
     "optional": "Optional",
     "sizeHelp": "{size} · Recommended {size2x}",
-    "desktopComposition": "The home search card covers roughly the bottom third of the desktop image — keep text and subject in the upper part.",
+    "desktopComposition": "The home search card covers roughly the bottom third of the desktop image - keep text and subject in the upper part.",
     "errors": {
-      "unreadable": "Couldn't read the image file — it may be corrupted",
+      "unreadable": "Couldn't read the image file - it may be corrupted",
       "ratio": "The {slot, select, desktop {desktop} tablet {tablet} other {mobile}} image must have a {size} ratio (this one is {actual}). Export it at that size or @2x ({size2x})."
     },
-    "promoComposition": "Text, price and artwork live in the image — the home page puts nothing on top.",
-    "partnerComposition": "The left half is darkened for the text — keep the subject (cars) on the right half.",
+    "promoComposition": "Text, price and artwork live in the image - the home page puts nothing on top.",
+    "partnerComposition": "The left half is darkened for the text - keep the subject (cars) on the right half.",
     "sizeRecommended": "Recommended size: {size}"
   },
   "tabs": {

@@ -10,7 +10,7 @@ import { BranchesView } from './BranchesView';
  * Bốn thứ test này khoá, đều là chỗ dễ hỏng âm thầm:
  *  1. mọi TRẠNG THÁI đều có màn hình riêng (đang tải / rỗng / lỗi / thiếu quyền);
  *  2. chi nhánh MẶC ĐỊNH không ngừng được, và nút bị khoá phải NÓI LÝ DO;
- *  3. chi nhánh chưa có tỉnh được cảnh báo rõ — xe của nó không lên chợ;
+ *  3. chi nhánh chưa có tỉnh được cảnh báo rõ - xe của nó không lên chợ;
  *  4. thiếu quyền `branches.manage` thì không dựng được đường tạo/sửa.
  */
 const state = vi.hoisted(() => ({
@@ -21,7 +21,7 @@ const state = vi.hoisted(() => ({
 }));
 
 // Nút/hành động ghi bọc theo cờ năng lực (ADR 0027), và hook cờ đọc `/auth/me` qua TanStack
-// Query. Màn này không KIỂM cờ — nó chỉ dùng — nên chặn ở đúng ranh giới đó thay vì dựng
+// Query. Màn này không KIỂM cờ - nó chỉ dùng - nên chặn ở đúng ranh giới đó thay vì dựng
 // QueryClient giả. `enabled` = gian hàng đang có gói, tức là hành vi mặc định.
 vi.mock('@/hooks/use-feature', () => ({
   useFeature: () => ({ state: 'enabled', canWrite: true, isVisible: true, planEndsAt: null }),
@@ -128,7 +128,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('BranchesView — trạng thái', () => {
+describe('BranchesView - trạng thái', () => {
   it('đang tải: không dựng bảng rỗng gây hiểu nhầm "chưa có chi nhánh"', () => {
     state.data = undefined;
     state.isLoading = true;
@@ -161,33 +161,46 @@ describe('BranchesView — trạng thái', () => {
   });
 });
 
-describe('BranchesView — luật nghiệp vụ hiển thị', () => {
+/**
+ * Design 06/11/2026: cột thao tác là bút chì + menu "…" - đổi mặc định / ngưng / mở lại nằm trong
+ * menu. Mở menu của hàng thứ `index` (theo thứ tự trong bảng) rồi trả các mục của nó.
+ */
+async function openRowMenu(index: number) {
+  fireEvent.click(screen.getAllByRole('button', { name: 'Thêm thao tác' })[index]!);
+  return screen.findAllByRole('menuitem');
+}
+
+describe('BranchesView - luật nghiệp vụ hiển thị', () => {
   it('chi nhánh mặc định có nhãn riêng và KHÔNG có hành động ngừng hoạt động khả dụng', async () => {
     renderView();
 
     expect(screen.getByText('Mặc định')).toBeTruthy();
 
-    // Nút "Ngừng hoạt động" của chi nhánh mặc định phải bị khoá (luật: gian hàng luôn có một
+    // Mục "Ngừng hoạt động" của chi nhánh mặc định phải bị khoá (luật: gian hàng luôn có một
     // chi nhánh mặc định đang chạy).
-    const stopButtons = screen.getAllByRole('button', { name: /Ngừng hoạt động/ });
-    expect(stopButtons.some((b) => (b as HTMLButtonElement).disabled)).toBe(true);
+    const items = await openRowMenu(0);
+    const stop = items.find((item) => /Ngừng hoạt động/.test(item.textContent ?? ''));
+    expect(stop?.getAttribute('aria-disabled')).toBe('true');
   });
 
-  it('cảnh báo khi có chi nhánh chưa gán tỉnh — xe ở đó không lên chợ', () => {
+  it('cảnh báo khi có chi nhánh chưa gán tỉnh - xe ở đó không lên chợ', () => {
     state.data = listOf(
       [{ ...DEFAULT_BRANCH, provinceCode: null, provinceName: null, needsLocationReview: true }],
       { needsReviewCount: 1 },
     );
     renderView();
 
-    expect(screen.getByText('1 chi nhánh chưa có tỉnh/thành')).toBeTruthy();
+    expect(screen.getByText(/1 chi nhánh chưa có tỉnh\/thành/)).toBeTruthy();
+    // Lối "Bổ sung ngay" mở đúng chi nhánh cần sửa.
+    expect(screen.getByRole('button', { name: 'Bổ sung ngay' })).toBeTruthy();
     expect(screen.getByText('Chưa có tỉnh/thành')).toBeTruthy();
   });
 
   it('đặt mặc định gọi đúng hành động cho ĐÚNG chi nhánh', async () => {
     renderView();
 
-    fireEvent.click(screen.getByRole('button', { name: /Đặt làm mặc định/ }));
+    const items = await openRowMenu(1);
+    fireEvent.click(items.find((item) => /Đặt làm mặc định/.test(item.textContent ?? ''))!);
     await waitFor(() => expect(action.mutate).toHaveBeenCalledTimes(1));
     expect(action.mutate).toHaveBeenCalledWith({ id: 'b2', action: 'set-default' });
   });
@@ -196,7 +209,7 @@ describe('BranchesView — luật nghiệp vụ hiển thị', () => {
     perms.granted = new Set<string>([PERMISSION.BRANCH_VIEW]);
     renderView();
 
-    // Tên truy cập được gồm cả nhãn của icon (`plus`) — khớp bằng regex thay vì chuỗi tuyệt đối.
+    // Tên truy cập được gồm cả nhãn của icon (`plus`) - khớp bằng regex thay vì chuỗi tuyệt đối.
     const add = screen.getByRole('button', { name: /Thêm chi nhánh/ });
     expect((add as HTMLButtonElement).disabled).toBe(true);
   });

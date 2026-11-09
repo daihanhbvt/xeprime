@@ -13,8 +13,14 @@ import {
   createPlan,
   deletePlan,
   updatePlan,
+  updateSubscription,
 } from '../api';
-import type { AssignSubscriptionInput, CreatePlanInput, UpdatePlanInput } from '../types';
+import type {
+  AssignSubscriptionInput,
+  CreatePlanInput,
+  UpdatePlanInput,
+  UpdateSubscriptionInput,
+} from '../types';
 
 /**
  * Mọi thay đổi billing invalidate cả nhánh; gán/huỷ thuê bao làm mới thêm chi tiết gian hàng VÀ
@@ -91,6 +97,16 @@ export function useCancelSubscription(tenantId: string) {
   const invalidate = useInvalidateBilling();
   return useMutation({
     mutationFn: (id: string) => cancelSubscription(tenantId, id),
+    onSuccess: () => invalidate(tenantId),
+  });
+}
+
+/** Sửa một kỳ — làm mới cả chuỗi kỳ: các kỳ xếp sau có thể đã dời theo (ADR 0080 điều 2). */
+export function useUpdateSubscription(tenantId: string) {
+  const invalidate = useInvalidateBilling();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: UpdateSubscriptionInput }) =>
+      updateSubscription(tenantId, id, body),
     onSuccess: () => invalidate(tenantId),
   });
 }

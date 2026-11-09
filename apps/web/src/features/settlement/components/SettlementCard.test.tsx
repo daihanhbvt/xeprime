@@ -89,15 +89,15 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-function renderCard() {
+function renderCard(props: { moneyClosed?: boolean } = {}) {
   return render(
     <App>
-      <SettlementCard bookingId="BK1" canView />
+      <SettlementCard bookingId="BK1" canView {...props} />
     </App>,
   );
 }
 
-describe('SettlementCard — trạng thái cọc', () => {
+describe('SettlementCard - trạng thái cọc', () => {
   it('đang thuê + đã thu cọc: `Đã nhận cọc`, không phải `Không có cọc`', () => {
     renderCard();
     expect(screen.getByText('Đã nhận cọc')).toBeTruthy();
@@ -156,12 +156,38 @@ describe('SettlementCard — trạng thái cọc', () => {
 });
 
 /**
+ * Đơn huỷ / khách không đến (09/11/2026): xe chưa lăn bánh nên không ghi phát sinh hay thu cọc mới —
+ * hai link vắng hẳn. Cọc lỡ thu thì vẫn phải hoàn được.
+ */
+describe('SettlementCard - đơn huỷ / khách không đến', () => {
+  it('đơn còn nhận tiền: có Ghi nhận phát sinh và Xác nhận đã thu cọc', () => {
+    query.data = { ...BASE, depositReceived: '0.00', depositStatus: DEPOSIT_STATUS.NOT_RECEIVED };
+    renderCard();
+    expect(screen.getByRole('button', { name: 'Ghi nhận phát sinh' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Xác nhận đã thu cọc' })).toBeTruthy();
+  });
+
+  it('moneyClosed: không có hai link ghi tiền mới', () => {
+    query.data = { ...BASE, depositReceived: '0.00', depositStatus: DEPOSIT_STATUS.NOT_RECEIVED };
+    renderCard({ moneyClosed: true });
+    expect(screen.queryByRole('button', { name: 'Ghi nhận phát sinh' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Xác nhận đã thu cọc' })).toBeNull();
+  });
+
+  it('moneyClosed mà cọc đã lỡ thu: vẫn mở hoàn cọc', () => {
+    query.data = { ...BASE, depositStatus: DEPOSIT_STATUS.AWAITING_REFUND };
+    renderCard({ moneyClosed: true });
+    expect(screen.getByRole('button', { name: 'Đánh dấu đã hoàn cọc' })).toBeTruthy();
+  });
+});
+
+/**
  * Vượt hạn mức km (21/09/2026) — thẻ chỉ ĐỌC lại con số của server.
  *
  * Điều được khoá ở đây: thẻ không được tự dựng một con số nào, và không được biến một chuyến
  * thiếu dữ liệu thành một chuyến "chạy trong hạn mức".
  */
-describe('SettlementCard — vượt hạn mức km', () => {
+describe('SettlementCard - vượt hạn mức km', () => {
   it('xe không đặt hạn mức: không có khối quãng đường nào', () => {
     renderCard();
     expect(screen.queryByText('Quãng đường đã chạy')).toBeNull();

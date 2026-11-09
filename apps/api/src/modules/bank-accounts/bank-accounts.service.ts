@@ -141,7 +141,7 @@ export class BankAccountsService {
         throw new ConflictException({
           code: API_ERROR_CODE.BANK_ACCOUNT_REPLACE_NOT_CONFIRMED,
           message:
-            'Mỗi chủ chỉ có một tài khoản nhận tiền — bật "đặt làm mặc định" để đổi sang tài khoản này',
+            'Mỗi chủ chỉ có một tài khoản nhận tiền - bật "đặt làm mặc định" để đổi sang tài khoản này',
         });
       }
 

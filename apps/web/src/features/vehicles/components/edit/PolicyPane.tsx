@@ -28,13 +28,17 @@ import { TermsCards } from './TermsCards';
 import { TurnaroundCard } from './TurnaroundCard';
 import styles from './EditPanes.module.css';
 
-/** Cọc · hạn mức km · quá giờ — chủ xe tuyến hoa hồng không có phí quá giờ (như develop). */
+/**
+ * Cọc · hạn mức km · quá giờ — CẢ HAI tuyến (ADR 0085 điều 3). Trước đây chủ xe tuyến hoa hồng không
+ * thấy khối quá giờ, trong khi quyết toán vẫn đọc nó từ chính sách hiệu lực của xe
+ * (`SettlementService.overtimeSuggestion`): hộp trả xe gợi ý một khoản phí họ không thấy, không sửa
+ * được. Server đọc gì thì màn hình phải cho thấy và sửa được cái đó; để trống = không gợi ý thu.
+ */
 const RULE_BLOCKS: readonly PolicyBlock[] = [
   POLICY_BLOCK.COLLATERAL,
   POLICY_BLOCK.MILEAGE,
   POLICY_BLOCK.OVERTIME,
 ];
-const OWNER_RULE_BLOCKS: readonly PolicyBlock[] = [POLICY_BLOCK.COLLATERAL, POLICY_BLOCK.MILEAGE];
 
 /**
  * Ô của form giá-và-chính-sách mà mục NÀY vẽ. Lưu là MỘT lệnh trọn gói, nên một ô giá lỗi ở mục
@@ -136,7 +140,7 @@ function PolicyCards({ priced, canUpdate }: { priced: PricedFormProps; canUpdate
             <PolicySections
               control={control}
               numbered={false}
-              blocks={isManage ? RULE_BLOCKS : OWNER_RULE_BLOCKS}
+              blocks={RULE_BLOCKS}
               disabled={disabled}
             />
           </div>

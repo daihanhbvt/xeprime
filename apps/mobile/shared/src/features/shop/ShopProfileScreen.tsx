@@ -102,7 +102,7 @@ function toBody(v: ShopProfileWithContactValues): UpdateShopProfileInput {
  * liệu cũ (`syncProfileFromDefaultBranch` ở backend). Đọc ngược lại sẽ hiện tỉnh cũ ngay sau khi
  * chủ shop vừa đổi chi nhánh — hai nguồn tỉnh lệch nhau là đúng thứ SHP-02 phải tránh.
  *
- * SĐT đổi về dạng `09…` để nhập/đọc; backend lưu `84…` và tự chuẩn hoá lại khi nhận.
+ * SĐT đổi về dạng `09…` để nhập/đọc; backend lưu `0…` (ADR 0082) và tự chuẩn hoá lại khi nhận.
  */
 export function toValues(shop: MyShop): ShopProfileWithContactValues {
   const p = shop.profile;

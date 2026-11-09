@@ -1,0 +1,81 @@
+/*
+ * Dải tiêu đề một NHÓM của màn "Đơn thuê xe" — dùng chung cho dạng List (đầu mỗi nhóm) và Kanban
+ * (đầu mỗi cột). Design "Kanban Assets": cao 40, nền nhạt cùng sắc, vạch 4×20 bên trái, tên
+ * 14/600 cùng sắc + viên số đếm. Sắc đến từ class tone (`danger` · `warning` · `info` · `success`).
+ */
+.groupHead {
+  --tone: var(--xp-color-text-tertiary);
+  --tone-bg: var(--xp-color-bg-layout);
+  --tone-border: var(--xp-color-border);
+
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  min-height: 40px;
+  margin-bottom: var(--xp-space-12);
+  padding: var(--xp-space-xs) var(--xp-space-12) var(--xp-space-xs) 16px;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--tone-bg);
+}
+
+.groupHead::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 4px;
+  height: 20px;
+  border-radius: 0 var(--xp-border-radius-control) var(--xp-border-radius-control) 0;
+  background: var(--tone);
+  transform: translateY(-50%);
+}
+
+.groupTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  color: var(--tone);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+}
+
+.groupCount {
+  min-width: 22px;
+  padding: 0 var(--xp-space-sm);
+  border: 1px solid var(--tone-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  color: var(--tone);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+  text-align: center;
+}
+
+.danger {
+  --tone: var(--xp-color-error);
+  --tone-bg: var(--xp-color-error-bg);
+  --tone-border: var(--xp-color-error-border);
+}
+
+.warning {
+  --tone: var(--xp-color-warning-strong);
+  --tone-bg: var(--xp-color-warning-bg);
+  --tone-border: var(--xp-color-warning-border);
+}
+
+.info {
+  --tone: var(--xp-color-info-strong);
+  --tone-bg: var(--xp-color-info-bg);
+  --tone-border: var(--xp-color-info-border);
+}
+
+.success {
+  --tone: var(--xp-color-success);
+  --tone-bg: var(--xp-color-success-bg);
+  --tone-border: var(--xp-color-success-border);
+}

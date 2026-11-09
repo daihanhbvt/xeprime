@@ -6,7 +6,7 @@ import { ListingGallery } from './ListingGallery';
 
 afterEach(cleanup);
 
-describe('ListingGallery — dải ảnh nhỏ (mobile)', () => {
+describe('ListingGallery - dải ảnh nhỏ (mobile)', () => {
   it('bấm ảnh nhỏ thì chọn đúng tấm và cập nhật bộ đếm', () => {
     renderWithIntl(
       <ListingGallery

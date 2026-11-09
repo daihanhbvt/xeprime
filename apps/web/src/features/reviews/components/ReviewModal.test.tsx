@@ -45,7 +45,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('ReviewModal — hành vi hiện tại', () => {
+describe('ReviewModal - hành vi hiện tại', () => {
   it('tiêu đề kèm tên xe của chuyến', () => {
     renderModal();
     expect(screen.getByText('Đánh giá · Toyota Vios')).toBeTruthy();

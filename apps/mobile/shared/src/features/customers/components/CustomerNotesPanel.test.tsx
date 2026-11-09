@@ -49,7 +49,7 @@ async function renderPanel(
  * Ghi chú là DÒNG THỜI GIAN bất biến có tác giả + thời điểm, không phải một ô văn bản bị ghi đè.
  * Nội dung tuyệt đối nội bộ — khách không bao giờ đọc được.
  */
-describe('CustomerNotesPanel — đọc', () => {
+describe('CustomerNotesPanel - đọc', () => {
   it('hiện nội dung, loại ghi chú và tác giả + thời điểm', async () => {
     const view = await renderPanel({ canManage: false });
 
@@ -84,8 +84,8 @@ describe('CustomerNotesPanel — đọc', () => {
   });
 });
 
-describe('CustomerNotesPanel — quyền ghi', () => {
-  it('thiếu `customers.manage`: CHỈ ĐỌC — không ô soạn, không nút gỡ', async () => {
+describe('CustomerNotesPanel - quyền ghi', () => {
+  it('thiếu `customers.manage`: CHỈ ĐỌC - không ô soạn, không nút gỡ', async () => {
     const view = await renderPanel({ canManage: false });
     await view.findByText('Khách quen, luôn trả xe đúng giờ');
 
@@ -109,7 +109,7 @@ describe('CustomerNotesPanel — quyền ghi', () => {
 
     expect(
       view.getByText(
-        'Ghi chú chỉ hiển thị trong gian hàng của bạn — khách không bao giờ nhìn thấy.',
+        'Ghi chú chỉ hiển thị trong gian hàng của bạn - khách không bao giờ nhìn thấy.',
       ),
     ).toBeTruthy();
 
@@ -127,7 +127,7 @@ describe('CustomerNotesPanel — quyền ghi', () => {
     );
   });
 
-  it('nội dung rỗng bị chặn NGAY ở client — không gửi request', async () => {
+  it('nội dung rỗng bị chặn NGAY ở client - không gửi request', async () => {
     const add = jest.spyOn(customersApi, 'addNote');
     const view = await renderPanel({ canManage: true });
     await view.findByText('Khách quen, luôn trả xe đúng giờ');

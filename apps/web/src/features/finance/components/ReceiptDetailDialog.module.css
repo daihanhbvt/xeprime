@@ -1,0 +1,130 @@
+/* Tiêu đề hai dòng (design `23845:40261`): "Chi tiết phiếu #…" + trạng thái, ngày ngay dưới. */
+.head {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.titleRow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.subtitle {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.words {
+  margin: var(--xp-space-xs) 0 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  font-style: italic;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-12) 0;
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.rowLabel {
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+}
+
+.rowValue {
+  margin: 0;
+  min-width: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.strong {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.muted {
+  color: var(--xp-color-text-tertiary);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.link {
+  color: var(--xp-color-info-strong);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.attachments {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: var(--xp-space-sm);
+}
+
+.thumb {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--xp-border-radius-sm);
+  border: 1px solid var(--xp-color-border);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-12);
+}

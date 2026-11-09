@@ -1,6 +1,7 @@
 import { useId, type ReactNode } from 'react';
 
 import { cx } from '@/lib/cx';
+import { enterClass } from '@/components/motion/motion-classes';
 
 import styles from './AccountPanel.module.css';
 
@@ -46,7 +47,7 @@ export function AccountPanel({
   return (
     <section
       id={id}
-      className={cx(styles.panel, spacious && styles.spacious, className)}
+      className={cx(styles.panel, spacious && styles.spacious, enterClass(), className)}
       aria-labelledby={headingId}
     >
       <header className={styles.head}>

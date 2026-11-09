@@ -50,7 +50,7 @@ export function ShopEntryCard() {
           ai="center"
           jc="center"
         >
-          <Ionicons name="storefront-outline" size={20} color={colors.primaryHover} />
+          <Ionicons name="storefront-outline" size={20} color={colors.brandText} />
         </YStack>
         <YStack f={1} minWidth={0} gap={space.xs}>
           <Text

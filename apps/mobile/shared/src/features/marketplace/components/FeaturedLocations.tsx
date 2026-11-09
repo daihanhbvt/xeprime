@@ -1,3 +1,4 @@
+import { KenBurns } from '@/components/motion/KenBurns';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, useWindowDimensions } from 'react-native';
@@ -21,6 +22,7 @@ import { fontSize, fontWeight, market, space } from '@/theme/tokens';
 import { useSearchExperience } from '../search-context';
 import { GradientButton } from './home/GradientButton';
 import { HomeCarousel, homeCarouselItemWidth } from './home/HomeCarousel';
+import { ScrollReveal } from '@/components/motion/ScrollReveal';
 import { HomeSectionHeading } from './home/HomeSectionHeading';
 
 /**
@@ -182,6 +184,8 @@ export function FeaturedLocations({
   return (
     <YStack gap={layout.section}>
       <HomeSectionHeading kicker={t('kicker')} title={t('title')} />
+      {/* Dải thẻ tự hiện khi CHÍNH NÓ cuộn vào màn, không theo tiêu đề khối. */}
+      <ScrollReveal>
       <HomeCarousel accessibilityLabel={t('title')}>
         {CITIES.map((city) => {
           const name = t(`cities.${city.key}`);
@@ -224,9 +228,9 @@ export function FeaturedLocations({
                     accessibilityElementsHidden
                   />
                 ) : null}
-                <Image
-                  source={images.homeDestCities}
-                  contentFit="fill"
+                {/* Ảnh minh hoạ Ken Burns chậm (scale 1→1.04, 12s) — khung ngoài clip (`ov="hidden"`). */}
+                <KenBurns
+                  to={1.04}
                   style={{
                     position: 'absolute',
                     width: cardWidth * ART_SCALE.width,
@@ -234,8 +238,14 @@ export function FeaturedLocations({
                     top: cardHeight * city.top,
                     left: cardWidth * city.left,
                   }}
-                  accessibilityElementsHidden
-                />
+                >
+                  <Image
+                    source={images.homeDestCities}
+                    contentFit="fill"
+                    style={{ width: '100%', height: '100%' }}
+                    accessibilityElementsHidden
+                  />
+                </KenBurns>
 
                 {/* Khối chữ phía trên (`.details` web): dải màu nhạt dần cao 297, tên + số liệu căn phải. */}
                 <LinearGradient
@@ -283,6 +293,7 @@ export function FeaturedLocations({
                     <GradientButton
                       label={t('explore')}
                       iconEnd="chevron-forward"
+                      shine
                       onPress={open}
                       accessibilityLabel={t('exploreAria', { city: name })}
                     />
@@ -293,6 +304,7 @@ export function FeaturedLocations({
           );
         })}
       </HomeCarousel>
+      </ScrollReveal>
     </YStack>
   );
 }

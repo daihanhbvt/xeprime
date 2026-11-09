@@ -1,6 +1,7 @@
 import { useCallback, useState, type ReactNode } from 'react';
 import { useTranslations } from 'use-intl';
 import { useAppToast } from '@/components/feedback/use-app-toast';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { getErrorCode } from '@/lib/api-client';
 import type {
@@ -47,6 +48,8 @@ export interface BookingRequestDecisions {
 export function useBookingRequestDecisions(): BookingRequestDecisions {
   const t = useTranslations('BookingRequests');
   const toast = useAppToast();
+  const tApproved = useTranslations('BookingRequests.approved');
+  const fmtApproved = useAppFormat();
   const errorMessage = useErrorMessage();
 
   const approve = useApproveBookingRequest();
@@ -71,7 +74,23 @@ export function useBookingRequestDecisions(): BookingRequestDecisions {
       {
         onSuccess: (result) => {
           setApproving(null);
-          setApproved(result);
+          /*
+           * Web 05/11/2026 ("Confirm Step 1 - Done"): có thu tiền giữ chỗ ⇒ chỉ một THÔNG BÁO kèm
+           * hạn khách trả (thẻ tự sang nhóm "Chờ thanh toán"); đơn có ngay ⇒ giữ tấm kết quả vì
+           * nó mang lối sang đơn vừa tạo.
+           */
+          if (result.bookingId) {
+            setApproved(result);
+          } else {
+            toast.showSuccess(
+              result.holdExpiresAt
+                ? tApproved('toastHold', {
+                    customer: result.customerName,
+                    time: fmtApproved.dateTime(result.holdExpiresAt),
+                  })
+                : tApproved('toastHoldNoDeadline', { customer: result.customerName }),
+            );
+          }
         },
         onError: (error) => toast.showError(decisionError(error)),
       },

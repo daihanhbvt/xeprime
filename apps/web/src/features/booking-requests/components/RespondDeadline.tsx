@@ -8,7 +8,7 @@ import {
   bookingRequestRemainingMs,
   longClockText,
 } from '@xeprime/types';
-import { LineIcon } from '@/components/icons/LineIcon';
+import { CountdownClock } from './CountdownClock';
 import styles from './RespondDeadline.module.css';
 
 /** Dưới mốc này thì đồng hồ chuyển sang sắc thái cảnh báo — cùng con số với lần nhắc cuối. */
@@ -46,16 +46,36 @@ export function respondDeadlineState(remainingMs: number): RespondDeadlineState 
 export function RespondDeadline({
   respondBy,
   variant = 'chip',
+  compact = false,
 }: {
   respondBy: string;
   /**
    * `chip` — dòng nhỏ dưới nhãn trạng thái (thẻ chuyến của chủ xe). `header` — "Chờ xác nhận:
-   * 59:39" trên dải đầu thẻ yêu cầu site partner (Figma Partner-XePrime 02/11/2026).
+   * 59:39" trên dải đầu thẻ chuyến site partner (Figma Partner-XePrime 02/11/2026) — cùng đồng hồ
+   * `CountdownClock` với hạn thanh toán của khách.
    */
   variant?: 'chip' | 'header';
+  /** `header` ở chân thẻ Kanban — xem `CountdownClock.compact`. */
+  compact?: boolean;
 }) {
   const t = useTranslations('BookingRequests.deadline');
   const tCard = useTranslations('BookingRequests.card');
+  if (variant === 'header') {
+    return (
+      <CountdownClock
+        deadline={respondBy}
+        label={tCard('awaitingConfirm')}
+        expiredLabel={t('expired')}
+        urgentMinutes={BOOKING_REQUEST_REMINDER_REMAINING_MINUTES.FINAL}
+        compact={compact}
+      />
+    );
+  }
+  return <RespondDeadlineChip respondBy={respondBy} />;
+}
+
+function RespondDeadlineChip({ respondBy }: { respondBy: string }) {
+  const t = useTranslations('BookingRequests.deadline');
   /*
    * State là "BÂY GIỜ", không phải "còn bao lâu".
    *
@@ -81,35 +101,6 @@ export function RespondDeadline({
   }, [respondBy]);
 
   const state = respondDeadlineState(remaining);
-
-  if (variant === 'header') {
-    return (
-      <p
-        className={
-          state === 'expired'
-            ? styles.headerExpired
-            : state === 'urgent'
-              ? styles.headerUrgent
-              : styles.header
-        }
-        role="status"
-        aria-live="polite"
-        suppressHydrationWarning
-      >
-        <LineIcon name="time-circle" className={styles.headerIcon} />
-        {state === 'expired' ? (
-          t('expired')
-        ) : (
-          <>
-            {tCard('awaitingConfirm')}{' '}
-            <span className={styles.headerClock} suppressHydrationWarning>
-              {longClockText(remaining)}
-            </span>
-          </>
-        )}
-      </p>
-    );
-  }
 
   return (
     <p

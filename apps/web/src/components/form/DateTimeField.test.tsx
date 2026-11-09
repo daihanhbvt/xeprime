@@ -52,7 +52,7 @@ function RangeHarness({
   );
 }
 
-describe('DateTimeField — ngày giờ đơn', () => {
+describe('DateTimeField - ngày giờ đơn', () => {
   it('nhãn nối vào ô nhập (vá nợ D14.4)', () => {
     render(<SingleHarness />);
 
@@ -71,7 +71,7 @@ describe('DateTimeField — ngày giờ đơn', () => {
     expect((screen.getByLabelText('Nhận xe') as HTMLInputElement).value).toBe('');
   });
 
-  it('giá trị đưa ra payload vẫn là Dayjs — KHÔNG tự hoá chuỗi hay UTC', async () => {
+  it('giá trị đưa ra payload vẫn là Dayjs - KHÔNG tự hoá chuỗi hay UTC', async () => {
     const onValues = vi.fn();
     const value = dayjs('2026-08-07T09:30:00');
     render(<SingleHarness defaultValue={value} onValues={onValues} />);
@@ -101,7 +101,7 @@ describe('DateTimeField — ngày giờ đơn', () => {
   });
 });
 
-describe('DateTimeField — khoảng thời gian', () => {
+describe('DateTimeField - khoảng thời gian', () => {
   it('range dựng hai ô nhập', () => {
     const { container } = render(<RangeHarness />);
 
@@ -149,7 +149,7 @@ describe('DateTimeField — khoảng thời gian', () => {
   });
 });
 
-describe('DateTimeField — hợp đồng kiểu', () => {
+describe('DateTimeField - hợp đồng kiểu', () => {
   it('cùng một component phục vụ hai kiểu giá trị khác nhau, phân biệt bằng prop range', () => {
     // Nếu union bị phá (ví dụ ai đó đổi `range` thành boolean rời), một trong hai harness dưới
     // đây sẽ không còn biên dịch được — đó chính là cái chặn.

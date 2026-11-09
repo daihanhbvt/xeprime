@@ -2,6 +2,8 @@ import Image from 'next/image';
 import { SELLER_ENTITY_TYPE } from '@xeprime/types';
 import { getTranslations } from 'next-intl/server';
 import type { PublicShop } from '../types';
+import { popInClass, seqClass, staggerFastClass, viewEnterClass } from '@/components/motion/motion-classes';
+import { cx } from '@/lib/cx';
 import styles from './ShopTrust.module.css';
 
 /**
@@ -95,9 +97,9 @@ export async function ShopTrust({
               </span>
             ) : null}
           </div>
-          <ul className={styles.checks}>
+          <ul className={cx(styles.checks, seqClass)}>
             {checks.map((line) => (
-              <li key={line} className={styles.check}>
+              <li key={line} className={cx(styles.check, popInClass)}>
                 <span className={styles.checkIcon} aria-hidden="true">
                   <Image src="/shops/check-gold.svg" alt="" width={12} height={12} unoptimized />
                 </span>
@@ -108,7 +110,7 @@ export async function ShopTrust({
         </div>
       ) : null}
 
-      <ul className={styles.tiles}>
+      <ul className={cx(styles.tiles, staggerFastClass, viewEnterClass)}>
         {tiles.map((tile) => (
           <li key={tile.key} className={styles.tile}>
             <Image

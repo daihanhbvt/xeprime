@@ -1,4 +1,4 @@
-import type { components, PaginationMeta, PickupPreference } from '@xeprime/types';
+import type { components, PaginationMeta, paths, PickupPreference } from '@xeprime/types';
 import type { Dayjs } from 'dayjs';
 import type { RentalMode } from '@/components/form/RentalDateTimeRangeField';
 import type { PickupMethod } from './schema';
@@ -138,4 +138,16 @@ export interface BookingRequestFilters {
   branchId?: string;
   page?: number;
   limit?: number;
+  /**
+   * `urgent` = hạn đang chạy gần nhất trước (hạn phản hồi; riêng nhóm chờ khách trả là hạn thanh
+   * toán) — màn "Đơn thuê xe" là một ca trực (05/11/2026). Vắng = mới gửi trước, như hộp thư cũ.
+   */
+  sort?: BookingRequestSort;
 }
+
+export type BookingRequestSort = NonNullable<
+  NonNullable<paths['/booking-requests']['get']['parameters']['query']>['sort']
+>;
+
+/** Kết quả lượt gian hàng nhắc khách thanh toán tiền giữ chỗ. */
+export type PaymentReminderResult = Schemas['PaymentReminderResultDto'];

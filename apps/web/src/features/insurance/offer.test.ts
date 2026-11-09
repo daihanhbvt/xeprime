@@ -37,7 +37,7 @@ const product = (kind: (typeof INSURANCE_PRODUCT_KIND)[keyof typeof INSURANCE_PR
     maxPayoutNoteEn: null,
   }) as PublicInsuranceProduct;
 
-describe('insuranceOfferItems — ADR 0064', () => {
+describe('insuranceOfferItems - ADR 0064', () => {
   it('chưa có báo giá ⇒ CHƯA BIẾT (null), không phải "không bán"', () => {
     expect(insuranceOfferItems(undefined, VEHICLE_TYPE.CAR, undefined)).toBeNull();
   });

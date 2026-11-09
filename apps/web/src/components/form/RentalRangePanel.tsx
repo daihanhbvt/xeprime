@@ -519,7 +519,7 @@ export function RentalRangePanel({
             {complete && ordered ? (
               <>
                 <span>
-                  {fmt.rentalPoint(value.pickupAt!)} – {fmt.rentalPoint(value.returnAt!)}
+                  {fmt.rentalPoint(value.pickupAt!)} → {fmt.rentalPoint(value.returnAt!)}
                 </span>
                 <span className={styles.duration}>
                   {t.rich('components.rentalRange.summaryDuration', {

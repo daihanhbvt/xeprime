@@ -1,18 +1,16 @@
 /*
- * Trang Cửa hàng: tiêu đề full-width, rồi hai cột (mục lục | nội dung).
- *
- * Bề rộng tối đa đặt ở trang (`page.module.css`), không ở đây — component này có thể nằm trong
- * vỏ khác sau này, và một `max-width` nằm sâu trong cây là thứ không ai tìm ra khi cần đổi.
+ * Trang Thông tin cửa hàng - design `23999:111274` (frame 1920: nội dung 1140 · cột phải 400, cách
+ * 20). Bố cục đo BỀ RỘNG THẬT của vùng nội dung (`@container`), không đo viewport: trang chạy dưới
+ * khung partner và cả khung phiên hỗ trợ của site quản trị.
  */
-
 .header {
   display: flex;
   min-width: 0;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--xp-space-md);
-  gap: var(--xp-space-md);
+  margin-bottom: 20px;
+  gap: 16px;
 }
 
 .identity {
@@ -20,25 +18,27 @@
   min-width: 0;
   flex: 1 1 320px;
   align-items: center;
-  gap: var(--xp-space-md);
+  gap: 12px;
 }
 
 /*
- * Logo 52px — đủ để nhận ra, không đủ để tranh chỗ với tên gian hàng.
- *
  * `.identity .logo` chứ không phải class đơn: AntD đặt nền của `.ant-avatar` ở
- * `:where(.css-<hash>).ant-avatar`, độ đặc hiệu (0,1,0) — bằng đúng một class CSS Module, và
- * AntD chèn `<style>` lúc chạy nên luôn thắng khi hoà. Hai class nâng lên (0,2,0).
+ * `:where(.css-<hash>).ant-avatar`, độ đặc hiệu (0,1,0) - bằng đúng một class CSS Module, và AntD
+ * chèn `<style>` lúc chạy nên luôn thắng khi hoà. Hai class nâng lên (0,2,0).
  */
 .identity .logo {
   flex: none;
+  border-radius: var(--xp-border-radius-control);
   background: linear-gradient(150deg, var(--xp-color-primary), var(--xp-gold-deep));
   color: var(--xp-color-primary-contrast);
   font-weight: var(--xp-font-weight-bold);
 }
 
 .headText {
+  display: flex;
   min-width: 0;
+  flex-direction: column;
+  gap: 0;
 }
 
 .shopName {
@@ -48,102 +48,103 @@
   align-items: center;
   margin: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h2);
-  font-weight: var(--xp-font-weight-bold);
-  line-height: var(--xp-line-height-h2);
-  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-lead);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-lead);
+  gap: 8px;
   overflow-wrap: anywhere;
 }
 
 .subtitle {
-  margin: var(--xp-space-xs) 0 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--xp-space-sm);
+  gap: 12px;
 }
 
-/*
- * "Chưa lưu" đứng ngay cạnh nút Lưu vừa sáng lên — nút đổi trạng thái là tín hiệu, dòng này là
- * lời giải thích. Chỉ hiện khi form thật sự có thay đổi, nên nó không bao giờ là chữ trang trí.
- */
-.dirtyHint {
+/* Vai của người xem - viên đen design `23999:111292` ("Chủ gian hàng"). Chỉ để đọc, không bấm. */
+.roleChip {
   display: inline-flex;
+  height: 40px;
   align-items: center;
-  color: var(--xp-color-warning);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-medium);
   gap: 6px;
+  padding: 0 12px;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-inverse);
+  color: var(--xp-color-gold-on-dark);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
   white-space: nowrap;
 }
 
-.dirtyDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentcolor;
-}
-
 .alert {
-  margin-bottom: var(--xp-space-md);
+  margin-bottom: 20px;
 }
 
-/* Mục lục trái 220px, nội dung chiếm phần còn lại. */
 .layout {
   display: grid;
-  min-width: 0;
   align-items: start;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: var(--xp-space-lg);
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  grid-template-areas: 'main aside';
 }
 
-.content {
-  min-width: 0;
-}
-
-/*
- * Cột các section: form hồ sơ (ba section đầu) rồi hai section có form/điều khiển riêng. Cùng một
- * khoảng cách ở cả hai cấp, để ranh giới giữa `<form>` và phần ngoài nó không lộ ra thành một
- * khoảng trắng khác thường.
- */
-.sections,
-.form {
+.main {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: var(--xp-space-lg);
+  gap: 20px;
+  grid-area: main;
+  container: shop-main / inline-size;
 }
 
-/* `fieldset` chỉ để KHOÁ, không để trang trí — gỡ hết mặc định của trình duyệt. */
-.fieldset {
+.topCards {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Cột phải dính khi cuộn - thẻ hiển thị luôn trong tầm mắt lúc chủ gian hàng sửa phần còn lại. */
+.aside {
+  position: sticky;
+  top: calc(var(--xp-shell-header-offset, var(--xp-shell-topbar-height)) + 16px);
+  display: flex;
   min-width: 0;
-  padding: 0;
-  border: 0;
-  margin: 0;
+  flex-direction: column;
+  gap: 20px;
+  grid-area: aside;
 }
 
-@media (max-width: 1024px) {
-  /* Mục lục thành ô chọn dính ở đầu nội dung — xem `ShopSectionNav.module.css`. */
+@container shop-main (max-width: 900px) {
+  .topCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container shop-main (max-width: 560px) {
+  .topCards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Hẹp: cột hiển thị lên ĐẦU (thứ khách thấy), không dính. */
+@media (max-width: 1200px) {
   .layout {
     grid-template-columns: minmax(0, 1fr);
-    gap: var(--xp-space-md);
-  }
-}
-
-@media (max-width: 640px) {
-  .shopName {
-    font-size: var(--xp-font-size-h3);
-    line-height: 1.3;
+    grid-template-areas:
+      'aside'
+      'main';
   }
 
-  /* Nút Lưu chiếm trọn hàng ở điện thoại thay vì chen với hai nút khác thành ba cụm chật. */
-  .actions {
-    width: 100%;
+  .aside {
+    position: static;
   }
 }

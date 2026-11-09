@@ -1,7 +1,7 @@
 'use client';
 
 import { yupResolver } from '@hookform/resolvers/yup';
-import { Alert, App } from 'antd';
+import { Alert, App, Button } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
@@ -12,16 +12,21 @@ import {
   cancellationReasonNeedsText,
   type CancellationReasonCategory,
 } from '@xeprime/types';
+import { InfoHint } from '@/components/data-display/InfoHint';
 import { DialogForm } from '@/components/form/DialogForm';
+import { trailingRequiredMark } from '@/components/form/required-mark';
 import { SelectField } from '@/components/form/SelectField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+// Cùng khuôn với hai hộp có lý do của chặng yêu cầu (Figma `23930:44688`) — một bộ style, ba hộp.
+import decision from '@/features/booking-requests/components/DecisionReasonDialog.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { cx } from '@/lib/cx';
 import { isZeroMoney } from '@/lib/money';
 import { useTransitionBooking } from '../hooks/use-booking-mutations';
-import type { BookingDetail } from '../types';
+import type { BookingListItem } from '../types';
 import styles from './BookingStatusTransitionDialog.module.css';
 
 /** Trần lý do — cùng con số với `TransitionBookingDto.reason` ở backend. */
@@ -34,8 +39,20 @@ const REASON_MAX = 500;
  */
 export type BookingClosingTarget = typeof BOOKING_STATUS.CANCELLED | typeof BOOKING_STATUS.NO_SHOW;
 
+/**
+ * Khi nào ô chữ BẮT BUỘC — cùng luật với `transitionNeedsReason` của DTO (người dùng chốt
+ * 06/11/2026): no-show luôn cần (hộp chỉ có mỗi ô đó); huỷ chỉ khi nhóm là "Lý do khác".
+ */
+function closingNeedsText(target: BookingClosingTarget, category: string): boolean {
+  return (
+    target === BOOKING_STATUS.NO_SHOW ||
+    cancellationReasonNeedsText(category as CancellationReasonCategory)
+  );
+}
+
 interface BookingStatusTransitionDialogProps {
-  booking: BookingDetail;
+  /** Dòng danh sách là đủ (chi tiết đơn kế thừa nó) — thẻ "Chờ giao xe" mở hộp này thẳng (05/11/2026). */
+  booking: BookingListItem;
   target: BookingClosingTarget;
   open: boolean;
   onClose: () => void;
@@ -53,10 +70,17 @@ interface BookingStatusTransitionDialogProps {
  * lại vĩnh viễn (`isBookingFinal`) và **nhả lịch xe ngay trong cùng transaction** (ADR 0006) —
  * khung giờ vừa mở ra có thể bị đơn khác chiếm trong vài giây, nên không có đường lùi. UX
  * guidelines §3 buộc hành động không hoàn tác phải nêu rõ hậu quả và phạm vi, và bắt chọn lý do
- * khi nó đụng tới tiền; ở đây lý do là BẮT BUỘC, backend cũng từ chối nếu thiếu.
+ * khi nó đụng tới tiền. Nhóm lý do (huỷ) luôn bắt buộc; ô chữ bắt buộc khi no-show hoặc khi nhóm
+ * là "Lý do khác" (`closingNeedsText`) — backend kiểm đúng luật đó.
  *
  * Lý do đi vào audit (`afterJson.reason`), KHÔNG vào `booking.note`: note là nội dung của đơn,
- * người sau sửa đè được; lời giải thích cho một quyết định thì không được phép mất.
+ * người sau sửa đè được; lời giải thích cho một quyết định thì không được phép mất. Huỷ một đơn
+ * đặt qua CHỢ thì câu đó còn là "Ghi chú cho khách" — thông báo huỷ gửi khách mang nguyên nó.
+ *
+ * Khuôn hình theo Figma Partner-XePrime "Huỷ yêu cầu thuê xe" (`23930:44688`, 06/11/2026), cùng
+ * khuôn với hộp huỷ ở chặng chờ thanh toán: hậu quả ở phụ đề; viên tóm tắt khách · xe, thêm biển
+ * số và khung giờ (người dùng chốt — để chắc đang huỷ đúng chuyến); nhãn trên ô; ô cảnh báo đỏ
+ * (chỉ đơn qua chợ); hai nút cuối.
  *
  * Tiền đã thu KHÔNG bị đụng tới. XePrime không có cổng thanh toán (ADR 0013) nên không có gì để
  * hoàn tự động — hộp này nói thẳng điều đó TRƯỚC khi bấm, thay vì để nhân viên phát hiện ra khi
@@ -82,6 +106,8 @@ export function BookingStatusTransitionDialog({
   defaultReasonCategory,
 }: BookingStatusTransitionDialogProps) {
   const t = useTranslations('Bookings.statusActions.dialog');
+  // Giải thích chỉ số uy tín dùng chung với hộp huỷ yêu cầu — một câu, một bản dịch.
+  const tRequestCancel = useTranslations('BookingRequests.cancel');
   const { message } = App.useApp();
   const fmt = useAppFormat();
   const errorMessage = useErrorMessage();
@@ -89,6 +115,13 @@ export function BookingStatusTransitionDialog({
   const transition = useTransitionBooking(booking.id);
 
   const isCancel = target === BOOKING_STATUS.CANCELLED;
+  /** Đơn sinh ra từ một yêu cầu trên chợ — có tài khoản khách, có chỉ số uy tín, có giữ chỗ. */
+  const fromMarketplace = booking.bookingRequestId != null;
+  /**
+   * Lượt HUỶ đơn qua chợ gửi nguyên ghi chú này cho khách trong thông báo huỷ (06/11/2026). Lý do
+   * no-show và lý do huỷ đơn tự lập chỉ vào nhật ký — nhãn phải nói đúng ai sẽ đọc nó.
+   */
+  const noteForCustomer = isCancel && fromMarketplace;
 
   /*
    * Schema dựng TRONG component vì thông điệp lỗi phải theo ngôn ngữ đang dùng (ADR 0012), mà
@@ -101,9 +134,16 @@ export function BookingStatusTransitionDialog({
         reason: yup
           .string()
           .trim()
-          .required(t('reasonRequired'))
           .max(REASON_MAX, t('reasonTooLong'))
-          .default(''),
+          .default('')
+          .test(
+            'reason-required',
+            noteForCustomer ? t('customerNoteRequired') : t('reasonRequired'),
+            function (value) {
+              const { reasonCategory } = this.parent as { reasonCategory: string };
+              return !closingNeedsText(target, reasonCategory) || value.length > 0;
+            },
+          ),
         /*
          * Bắt buộc CHỈ khi huỷ. `no_show` đi qua cùng hộp này nhưng không phải một lượt huỷ,
          * và backend cũng chỉ đòi nhóm lý do khi `status = cancelled` — hai phía phải hỏi
@@ -119,13 +159,13 @@ export function BookingStatusTransitionDialog({
           .default('')
           .test(
             'category-required-on-cancel',
-            t('categoryRequired'),
+            t('cancelReasonRequired'),
             (value) =>
               !isCancel ||
               (CANCELLATION_REASON_CATEGORY_VALUES as readonly string[]).includes(value),
           ),
       }),
-    [t, isCancel],
+    [t, isCancel, noteForCustomer, target],
   );
 
   /*
@@ -142,13 +182,8 @@ export function BookingStatusTransitionDialog({
     defaultValues: { reason: '', reasonCategory: defaultReasonCategory ?? '' },
   });
 
-  /*
-   * "Lý do khác" thì ô chữ phải nói được điều mà nhóm không nói. Nó vốn đã bắt buộc ở hộp này,
-   * nên chỗ này chỉ đổi GỢI Ý dưới ô — một câu nhắc đúng lúc rẻ hơn một lỗi đỏ sau khi gửi.
-   */
-  const needsText = cancellationReasonNeedsText(
-    watch('reasonCategory') as CancellationReasonCategory,
-  );
+  // Dấu `*` của ô chữ đi theo nhóm đang chọn — chọn "Lý do khác" là ô thành bắt buộc ngay.
+  const textRequired = closingNeedsText(target, watch('reasonCategory'));
 
   const categoryOptions = CANCELLATION_REASON_CATEGORY_VALUES.map((value) => ({
     value,
@@ -163,10 +198,12 @@ export function BookingStatusTransitionDialog({
   const hasCollected = !isZeroMoney(booking.collectedAmount);
 
   function submit(values: { reason: string; reasonCategory: string }) {
+    const reason = values.reason.trim();
     transition.mutate(
       {
         status: target,
-        reason: values.reason.trim(),
+        // Ghi chú tuỳ chọn để trống thì không gửi — không có "lý do rỗng" trong audit.
+        ...(reason ? { reason } : {}),
         /*
          * `no_show` không gửi nhóm lý do — DTO chỉ đòi nó khi huỷ, và gửi thừa là nói dối dữ
          * liệu. Ép kiểu ở đây là chỗ DUY NHẤT hợp lệ: ô chọn chỉ dựng được từ
@@ -195,47 +232,116 @@ export function BookingStatusTransitionDialog({
   return (
     <ResponsiveDialog
       title={
-        isCancel
-          ? t('cancelTitle', { code: booking.code })
-          : t('noShowTitle', { code: booking.code })
+        <span className={decision.titleBlock}>
+          <span>
+            {isCancel
+              ? t('cancelTitle', { code: booking.code })
+              : t('noShowTitle', { code: booking.code })}
+          </span>
+          <span className={decision.subtitle}>
+            {isCancel
+              ? t.rich('cancelSubtitle', {
+                  b: (chunks) => <strong>{chunks}</strong>,
+                  status: domainLabel('bookingStatus', booking.status),
+                })
+              : t('noShowLead')}
+          </span>
+        </span>
       }
       open={open}
       onClose={onClose}
       size="sm"
       // Form ⇒ bàn phím ảo cần chỗ: quy tắc 5 của ResponsiveDialog (sheet 85dvh bị che mất ô nhập).
       mobileMode="fullscreen"
-      destructive
-      okText={isCancel ? t('cancelOk') : t('noShowOk')}
-      cancelText={t('keep')}
-      onOk={() => void handleSubmit(submit)()}
-      // Chống bấm lặp: AntD khoá nút, ResponsiveDialog khoá luôn Esc và nền khi đang gửi.
+      // Chống bấm lặp: ResponsiveDialog khoá Esc và nền khi đang gửi; nút chính tự quay.
       confirmLoading={transition.isPending}
+      footer={
+        <div className={decision.footer}>
+          <Button size="large" onClick={onClose} disabled={transition.isPending}>
+            {t('back')}
+          </Button>
+          <Button
+            size="large"
+            type="primary"
+            danger
+            loading={transition.isPending}
+            onClick={() => void handleSubmit(submit)()}
+          >
+            {isCancel ? t('cancelOk') : t('noShowOk')}
+          </Button>
+        </div>
+      }
     >
       <DialogForm
-        className={styles.body}
-        labelWidth="sm"
+        className={styles.form}
+        labelPosition="top"
+        requiredMark={trailingRequiredMark}
         onSubmit={(event) => void handleSubmit(submit)(event)}
       >
-        <p className={styles.lead}>{isCancel ? t('cancelLead') : t('noShowLead')}</p>
-
-        {/* Nói rõ đang đụng vào ĐƠN NÀO: mã đơn, khách, xe, khung giờ (UX guidelines §3). */}
-        <dl className={styles.summary}>
-          <div className={styles.row}>
-            <dt>{t('customer')}</dt>
-            <dd>{booking.customerName}</dd>
-          </div>
-          <div className={styles.row}>
-            <dt>{t('vehicle')}</dt>
-            <dd>
+        {/* Nói rõ đang đụng vào ĐƠN NÀO: khách · xe · biển số, rồi khung giờ (UX guidelines §3). */}
+        <div className={cx(decision.summary, decision.summaryStack)}>
+          <p className={decision.summaryLine}>
+            <span className={decision.summaryName}>{booking.customerName}</span>
+            <span className={decision.summaryDot} aria-hidden="true" />
+            <span className={decision.summaryVehicle}>
               {booking.vehicleName}
               {booking.vehiclePlate ? ` · ${booking.vehiclePlate}` : ''}
-            </dd>
+            </span>
+          </p>
+          <p className={decision.summaryMeta}>
+            {fmt.rentalRange(booking.pickupAt, booking.returnAt)}
+          </p>
+        </div>
+
+        {isCancel ? (
+          <SelectField
+            control={control}
+            name="reasonCategory"
+            label={t('cancelReasonLabel')}
+            options={categoryOptions}
+            placeholder={t('cancelReasonPlaceholder')}
+            required
+          />
+        ) : null}
+
+        {/*
+         * Nhãn nói đúng AI đọc ô này — không cần thêm dòng giải thích dưới ô (người dùng bỏ
+         * 06/11/2026): huỷ đơn qua chợ → khách đọc; huỷ đơn tự lập → chỉ nhật ký; no-show → lý do.
+         */}
+        <TextAreaField
+          control={control}
+          name="reason"
+          label={
+            noteForCustomer
+              ? t('customerNoteLabel')
+              : isCancel
+                ? t('internalNoteLabel')
+                : t('reasonLabel')
+          }
+          placeholder={noteForCustomer ? t('customerNotePlaceholder') : t('reasonPlaceholder')}
+          maxLength={REASON_MAX}
+          rows={3}
+          required={textRequired}
+        />
+
+        {/*
+         * Hệ quả là chữ chính, không nằm trong tooltip — người bấm nút đỏ cần biết uy tín và tiền
+         * đi đâu TRƯỚC khi bấm. Chỉ đơn đặt qua CHỢ: đơn tự lập không có yêu cầu nào nên không vào
+         * mẫu số chỉ số uy tín (ADR 0045 điều 3), và cũng không có tiền giữ chỗ để hoàn.
+         */}
+        {isCancel && fromMarketplace ? (
+          <div className={decision.warning} role="note">
+            <p>
+              {t.rich('cancelWarning', { b: (chunks) => <strong>{chunks}</strong> })}
+              <InfoHint
+                className={decision.infoHint}
+                label={tRequestCancel('effects.metricsHintLabel')}
+                content={tRequestCancel('effects.metricsHint')}
+              />
+            </p>
+            <p>{t('cancelWarningMoney')}</p>
           </div>
-          <div className={styles.row}>
-            <dt>{t('period')}</dt>
-            <dd>{fmt.shortDateTimeRange(booking.pickupAt, booking.returnAt)}</dd>
-          </div>
-        </dl>
+        ) : null}
 
         {hasCollected ? (
           <Alert
@@ -245,29 +351,6 @@ export function BookingStatusTransitionDialog({
             description={t('paidDescription')}
           />
         ) : null}
-
-        {isCancel ? (
-          <SelectField
-            control={control}
-            name="reasonCategory"
-            label={t('categoryLabel')}
-            options={categoryOptions}
-            placeholder={t('categoryPlaceholder')}
-            help={t('categoryHelp')}
-            required
-          />
-        ) : null}
-
-        <TextAreaField
-          control={control}
-          name="reason"
-          label={t('reasonLabel')}
-          placeholder={t('reasonPlaceholder')}
-          help={needsText ? t('reasonHelpOther') : t('reasonHelp')}
-          maxLength={REASON_MAX}
-          rows={3}
-          required
-        />
 
         {transition.isError ? (
           <Alert type="error" showIcon role="alert" title={errorMessage(transition.error)} />

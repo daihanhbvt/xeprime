@@ -1,11 +1,45 @@
 /*
- * "Quản lý đơn thuê xe" — Figma Partner-XePrime All Request (`23790:45293`): cột trạng thái 280
- * bên trái, danh sách bên phải cách 20; nhóm cách nhau 20, thẻ cách 12. Màn hẹp (≤1024): cột
- * trạng thái thành một hàng cuộn ngang phía trên (xem `StatusRail.module.css`).
+ * "Đơn thuê xe" gộp — Figma Partner-XePrime "Rental Request - List" (`23973:51952`, 05/11/2026):
+ * cột trạng thái 280 bên trái, danh sách bên phải cách 20; nhóm cách nhau 20, thẻ cách 12. Màn hẹp
+ * (≤1024): cột trạng thái thành một hàng cuộn ngang phía trên (xem `StatusRail.module.css`).
  */
 .page {
   width: 100%;
   min-width: 0;
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-12);
+}
+
+/* "Đơn đã kết thúc (17)" — nút viền xám cao 40, chữ 14/600 (design). */
+.endedLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  height: 40px;
+  padding: 0 var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.endedLink:hover {
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-text);
+}
+
+.endedLink:focus-visible {
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
 }
 
 .layout {
@@ -26,68 +60,16 @@
   gap: 20px;
 }
 
-.groupHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--xp-space-sm);
-  margin-bottom: var(--xp-space-12);
-}
-
-/* "● Chờ giao xe" — Figma "Activity Indicator": chấm 8 + chữ 14/400 cùng sắc. */
-.groupTitle {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--xp-space-6);
-  margin: 0;
-  font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-regular);
-  line-height: 20px;
-}
-
-.groupTitle::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.warning {
-  color: var(--xp-color-warning-strong);
-}
-
-.info {
-  color: var(--xp-color-info-strong);
-}
-
-.success {
-  color: var(--xp-color-success);
-}
-
-.danger {
-  color: var(--xp-color-error);
-}
-
-.neutral {
-  color: var(--xp-color-text-tertiary);
-}
-
-.recent {
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body);
-  line-height: 20px;
-}
-
 .viewAll {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--xp-color-primary);
+  color: var(--xp-color-primary-active);
   font: inherit;
   font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-semibold);
   line-height: 20px;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -110,7 +92,10 @@
   list-style: none;
 }
 
-/* Làm mới NỀN: giữ các thẻ đang đọc, chỉ mờ nhẹ và chặn bấm — không thay bằng skeleton. */
+/*
+ * Đang hiện dữ liệu CŨ trong lúc tải bộ lọc mới: mờ nhẹ, chặn bấm. Làm mới NỀN (30 giây) KHÔNG
+ * vào đây — người trực đang bấm một thẻ không được bị khoá tay giữa chừng.
+ */
 .listBusy {
   composes: list;
   opacity: 0.6;
@@ -134,5 +119,15 @@
 @media (max-width: 640px) {
   .pagination {
     justify-content: center;
+  }
+
+  .headerActions {
+    width: 100%;
+  }
+
+  .headerActions > * {
+    flex: 1;
+    justify-content: center;
+    min-height: 44px;
   }
 }

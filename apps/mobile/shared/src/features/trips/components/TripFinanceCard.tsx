@@ -1,3 +1,4 @@
+import { CountUpText } from '@/components/motion/use-count-up';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, type ReactNode } from 'react';
 import { Pressable } from 'react-native';
@@ -16,6 +17,7 @@ import {
 import { isZeroMoney } from '@xeprime/domain';
 import { Card } from '@/components/ui/Card';
 import { DataRow, Divider } from '@/components/ui/DataRow';
+import { InfoHint } from '@/components/ui/InfoHint';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
@@ -149,7 +151,7 @@ function OpenFinanceCard({ finance }: { finance: CustomerTripFinance }) {
             {t('total')}
           </Text>
           <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
-            {fmt.money(finance.finalTotal)}
+            <CountUpText amount={finance.finalTotal} format={fmt.money} />
           </Text>
         </XStack>
 
@@ -227,21 +229,36 @@ function DepositBlock({
           finance.refundReference ? t('refundRef', { reference: finance.refundReference }) : '',
           t('refundedTail'),
         ].join('')
+      : null;
+  /* Lời giải thích theo trạng thái cọc - vào dấu "i" cạnh tiêu đề (giống web); câu "đã hoàn" mang mã tham chiếu nên giữ hiện thẳng. */
+  const explain = [
+    status === DEPOSIT_STATUS.NOT_RECEIVED
+      ? t('depositNotReceived', { amount: fmt.money(finance.depositRequired) })
+      : null,
+    isZeroMoney(finance.depositDeducted) ? null : t('deductNote'),
+    refunded
+      ? null
       : status === DEPOSIT_STATUS.AWAITING_REFUND
         ? t('awaitingRefund')
         : status === DEPOSIT_STATUS.RECEIVED
           ? t('holding')
           : status === DEPOSIT_STATUS.SETTLED
             ? t('settled')
-            : null;
+            : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <YStack gap={space.xs} pt={space.sm}>
       <Divider />
       <XStack ai="center" jc="space-between" gap={space.sm}>
-        <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-          {t('depositTitle')}
-        </Text>
+        <XStack f={1} ai="center" gap={4}>
+          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+            {t('depositTitle')}
+          </Text>
+          {explain ? <InfoHint content={explain} label={t('depositHintLabel')} /> : null}
+        </XStack>
         <StatusBadge
           label={domainLabel('depositStatus', status, meta.label)}
           color={meta.color}
@@ -249,11 +266,7 @@ function DepositBlock({
         />
       </XStack>
 
-      {status === DEPOSIT_STATUS.NOT_RECEIVED ? (
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {t('depositNotReceived', { amount: fmt.money(finance.depositRequired) })}
-        </Text>
-      ) : (
+      {status === DEPOSIT_STATUS.NOT_RECEIVED ? null : (
         <>
           <DataRow label={t('depositReceived')} value={fmt.money(finance.depositReceived)} />
           {isZeroMoney(finance.depositDeducted) ? null : (
@@ -280,11 +293,6 @@ function DepositBlock({
         </>
       )}
 
-      {isZeroMoney(finance.depositDeducted) ? null : (
-        <Text col={colors.textMuted} fos={fontSize.label}>
-          {t('deductNote')}
-        </Text>
-      )}
       {tail ? (
         <Text col={colors.textMuted} fos={fontSize.label}>
           {tail}
@@ -609,6 +617,8 @@ function InvoiceRow({
         fos={fontSize.bodyLg}
         fow={fontWeight.medium}
         numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
       >
         {value}
       </Text>

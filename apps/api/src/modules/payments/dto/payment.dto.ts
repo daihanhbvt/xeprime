@@ -15,7 +15,7 @@ const MONEY_PATTERN = /^\d{1,12}(\.\d{1,2})?$/;
  * Không nhận `status`/`bookingId` từ body: đơn lấy từ URL, payment ghi nhận luôn là succeeded.
  */
 export class RecordPaymentDto {
-  @ApiProperty({ description: 'Số tiền nhận, string thập phân — ADR 0007', example: '500000' })
+  @ApiProperty({ description: 'Số tiền nhận, string thập phân - ADR 0007', example: '500000' })
   @Matches(MONEY_PATTERN, { message: 'amount phải là số tiền hợp lệ' })
   amount!: string;
 
@@ -60,7 +60,7 @@ export class RecordPaymentDto {
 
 export class PaymentDto {
   @ApiProperty() id!: string;
-  @ApiProperty({ description: 'Tiền dạng string — ADR 0007' }) amount!: string;
+  @ApiProperty({ description: 'Tiền dạng string - ADR 0007' }) amount!: string;
   @ApiProperty({ enum: PAYMENT_KIND_VALUES, description: 'Tiền thuê hay tiền cọc' }) kind!: string;
   @ApiProperty({ enum: PAYMENT_METHOD_VALUES }) method!: string;
   @ApiProperty({ enum: PAYMENT_STATUS_VALUES }) status!: string;

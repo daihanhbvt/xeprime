@@ -13,3 +13,7 @@ export type CorrectRefundInput = Schemas['CorrectDepositRefundDto'];
 export type OvertimeSuggestion = Schemas['OvertimeSuggestionDto'];
 /** Đề xuất phí vượt km — SERVER tính từ hạn mức đã đóng băng trên đơn + hai chỉ số đồng hồ. */
 export type ExcessMileageSuggestion = Schemas['ExcessMileageSuggestionDto'];
+/** Hộp "Xác nhận đã nhận lại xe" (06/11/2026): khoản phát sinh nháp + quyết toán xem trước. */
+export type ReturnSurchargeDraft = Schemas['ReturnSurchargeDraftDto'];
+export type PreviewReturnSettlementInput = Schemas['PreviewReturnSettlementDto'];
+export type ReturnSettlementPreview = Schemas['ReturnSettlementPreviewDto'];

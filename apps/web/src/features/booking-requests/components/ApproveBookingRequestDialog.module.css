@@ -1,45 +1,264 @@
-/* Xác nhận duyệt yêu cầu theo ngày — cùng nhịp với ApproveLongTermDialog. */
+/*
+ * Hộp "Phê duyệt yêu cầu thuê xe" — Figma Partner-XePrime `23898:25444` (05/11/2026): rộng 874,
+ * thân đệm 20, hai cột (thẻ xe 410 · cột phải 400) cách nhau, ô ghi chú nền xanh nhạt, chân hộp có
+ * viên đồng hồ đỏ bên trái và hai nút bên phải. Hẹp (< 900) thì hai cột chồng lên nhau.
+ */
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.subtitle {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: 20px;
+}
+
+.subtitle strong {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/*
+ * Bề rộng TƯỜNG MINH: hộp dùng `size="fit"`, mà bề rộng nội tại của ô ghi chú (câu dài một dòng)
+ * lớn hơn 834 — để `min(…, 100%)` thì hộp phình theo câu đó và dư một khoảng trắng bên phải.
+ */
 .body {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-md);
+  gap: 20px;
+  width: 834px;
+  max-width: calc(100vw - 88px);
 }
 
-.facts {
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 410fr) minmax(0, 400fr);
+  gap: 20px;
+}
+
+.side {
   display: flex;
   flex-direction: column;
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border-radius: var(--xp-border-radius-sm);
+  gap: 20px;
+  min-width: 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  margin-bottom: var(--xp-space-sm);
+}
+
+.cardTitle {
   margin: 0;
+  color: var(--xp-color-text);
+  font-size: 18px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 28px;
+}
+
+.estimate {
+  padding: 0 var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+}
+
+.vehicle {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.thumb {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  width: 126px;
+  height: 80px;
+  border-radius: var(--xp-border-radius-control);
   background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-placeholder);
+  font-size: 28px;
+}
+
+.thumbImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vehicleText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.vehicleName {
+  overflow: hidden;
+  max-width: 100%;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: 18px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 28px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plate {
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-layout);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+}
+
+.textLink {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: var(--xp-space-6);
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+}
+
+.textLink:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+.buttonIcon {
+  font-size: 20px;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
 }
 
 .row {
   display: flex;
-  gap: var(--xp-space-sm);
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-lg);
+  padding: var(--xp-space-12) 0;
+  border-bottom: 1px solid var(--xp-color-bg-layout);
   font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  line-height: 20px;
 }
 
-.row dt {
-  width: 96px;
+.row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.rowLabel {
   flex: none;
-  margin: 0;
   color: var(--xp-color-text-tertiary);
 }
 
-.row dd {
+.rowValue {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
   min-width: 0;
   margin: 0;
+  text-align: right;
+}
+
+.strong {
   color: var(--xp-color-text);
   font-weight: var(--xp-font-weight-medium);
+}
+
+.sub {
+  color: var(--xp-color-text-secondary);
   overflow-wrap: anywhere;
 }
 
-.effect {
-  margin: 0;
-  color: var(--xp-color-text-secondary);
+.regular {
+  padding: 0 var(--xp-space-sm);
+  border: 1px solid var(--xp-color-success-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
   font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+}
+
+/* Ô ghi chú hai cửa sổ — nền xanh nhạt, bo 12, chữ 14 (design). */
+.notes {
+  padding: var(--xp-space-12);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-text-secondary);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+  width: 100%;
+}
+
+/* Viên đồng hồ "Chờ xác nhận: 59:39" — nền đỏ nhạt, bo 12. */
+.deadline {
+  display: inline-flex;
+  padding: var(--xp-space-sm) var(--xp-space-12);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-error-bg);
+}
+
+.footerButtons {
+  display: flex;
+  gap: var(--xp-space-12);
+  margin-left: auto;
+}
+
+@media (max-width: 900px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .footerButtons {
+    width: 100%;
+  }
+
+  .footerButtons > * {
+    flex: 1;
+  }
 }

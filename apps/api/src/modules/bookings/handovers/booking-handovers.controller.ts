@@ -17,7 +17,16 @@ import {
   type HandoverPhotoSlot,
   SUPPORT_CAPABILITY,
 } from '@xeprime/types';
-import { BRANCH_SCOPED_RESOURCE, BranchScoped, CurrentTenant, CurrentUser, Realms, RequirePermissions, SupportAction, TenantScoped } from '../../../common/decorators';
+import {
+  BRANCH_SCOPED_RESOURCE,
+  BranchScoped,
+  CurrentTenant,
+  CurrentUser,
+  Realms,
+  RequirePermissions,
+  SupportAction,
+  TenantScoped,
+} from '../../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../../common/types/request-context';
 import {
   SourceContractDownloadDto,
@@ -34,6 +43,7 @@ import {
   SaveHandoverDto,
 } from './dto/handover.dto';
 import { handoverPhotoSlotParam, handoverTypeParam } from './handover-params';
+import { CustomerHandoverService } from './customer-handover.service';
 import { HandoversService, type HandoverViewScope } from './handovers.service';
 
 /**
@@ -55,7 +65,10 @@ import { HandoversService, type HandoverViewScope } from './handovers.service';
 @TenantScoped()
 @Realms(ACCOUNT_REALM.PARTNER)
 export class BookingHandoversController {
-  constructor(private readonly handovers: HandoversService) {}
+  constructor(
+    private readonly handovers: HandoversService,
+    private readonly customerHandover: CustomerHandoverService,
+  ) {}
 
   @Get()
   @RequirePermissions(PERMISSION.HANDOVER_VIEW)
@@ -94,7 +107,7 @@ export class BookingHandoversController {
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.HANDOVER_CONFIRM)
   @ApiOperation({
-    summary: 'Xác nhận bàn giao — ghi KM + chuyển trạng thái đơn + lịch + audit, một transaction',
+    summary: 'Xác nhận bàn giao - ghi KM + chuyển trạng thái đơn + lịch + audit, một transaction',
   })
   @ApiOkResponse({ type: HandoverContextDto })
   confirm(
@@ -111,7 +124,33 @@ export class BookingHandoversController {
       user.id,
       dto,
       scopeOf(tenant),
+      // Phụ phí + "Đã thu tiền" của lượt nhận lại xe là TIỀN — cùng quyền với hộp Thu tiền.
+      { canRecordPayment: tenant.permissions.includes(PERMISSION.PAYMENT_RECORD) },
     );
+  }
+
+  /**
+   * "Khách chưa trả xe" — gian hàng phản đối lời báo trả xe của khách (ADR 0081). Cùng quyền với xác
+   * nhận bàn giao: đây là câu trả lời cho đúng câu hỏi "xe đã về chưa".
+   */
+  @Post('return/customer-report/reject')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions(PERMISSION.HANDOVER_CONFIRM)
+  @ApiOperation({
+    summary: 'Gian hàng báo khách chưa trả xe - huỷ lời báo, mở tranh chấp khẩn',
+    description:
+      'Xoá `customerReturnedAt`/`returnAutoCompleteAt` (chuyến không tự hoàn thành nữa), mở MỘT case ' +
+      '`dispute` khẩn cho CSKH xác minh (giữ quyết toán), báo khách. Lỗi: 409 ' +
+      '`BOOKING_RETURN_REPORT_NOT_PENDING` khi không còn lời báo nào đang chờ. Trả về ngữ cảnh bàn giao.',
+  })
+  @ApiOkResponse({ type: HandoverContextDto })
+  async rejectCustomerReturn(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') bookingId: string,
+  ): Promise<HandoverContextDto> {
+    await this.customerHandover.rejectReturnReport(tenant.tenantId, bookingId, user.id);
+    return this.handovers.context(tenant.tenantId, bookingId, scopeOf(tenant));
   }
 
   @Post(':type/cancel')

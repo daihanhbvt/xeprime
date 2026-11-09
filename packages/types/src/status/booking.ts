@@ -127,6 +127,18 @@ export function isBookingFinal(status: BookingStatus): boolean {
   return BOOKING_STATUS_TRANSITIONS[status].length === 0;
 }
 
+/**
+ * Đơn đã khép mà chuyến KHÔNG diễn ra — `cancelled` / `no_show` (mọi trạng thái cuối trừ
+ * `completed`).
+ *
+ * Đơn đang chạy không huỷ được (ADR 0045 điều 1), nên hai trạng thái này luôn là chuyến chưa từng
+ * giao xe: không còn tiền thuê để thu tiếp, không có phát sinh, không có cọc thế chấp. Dùng để khoá
+ * GHI TIỀN MỚI và để loại đơn khỏi công nợ — hoàn lại phần đã thu thì vẫn mở.
+ */
+export function isBookingClosedWithoutTrip(status: BookingStatus): boolean {
+  return isBookingFinal(status) && status !== BOOKING_STATUS.COMPLETED;
+}
+
 export const BOOKING_STATUS_META: Readonly<Record<BookingStatus, StatusMeta>> = {
   // "Chờ giao xe" (đổi từ "Đã giữ xe" — ADR 0047), không phải "Đã đặt trước": đơn `reserved`
   // sinh ra ở đúng một chỗ — gian hàng bấm `Duyệt & giữ xe` — và tác dụng thật của nó là CHIẾM

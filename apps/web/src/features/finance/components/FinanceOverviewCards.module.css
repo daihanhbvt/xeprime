@@ -1,59 +1,27 @@
-.layers {
+/*
+ * Sáu thẻ một hàng (design `23813:32225`): ba thẻ hẹp của KỲ (tối thiểu 180px, nở theo số tiền —
+ * thêm mũi tên thì 180px không còn chứa nổi "11.730.000 ₫" trên một dòng), ba thẻ còn lại chia đều
+ * phần dư. Màn hẹp hơn thì ba cột đều, điện thoại hai cột — số tiền dài không được ép xuống dòng giữa
+ * chừng trong một ô 120px.
+ */
+.tiles {
   display: grid;
-  /* Lớp "kết quả kinh doanh" chiếm phần rộng; hai lớp phụ xếp cột bên. */
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  gap: var(--xp-space-md);
-  margin-bottom: var(--xp-space-lg);
-}
-
-.side {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-md);
-  min-width: 0;
-}
-
-.layer {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-sm);
-  min-width: 0;
-}
-
-.layerTitle {
-  margin: 0;
-  font-size: var(--xp-font-size-label);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--xp-color-text-secondary);
-}
-
-.lead {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--xp-space-md);
-}
-
-.compact {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: var(--xp-space-sm);
-}
-
-.note {
-  margin: 0;
-  font-size: var(--xp-font-size-body-sm);
-  color: var(--xp-color-text-tertiary);
+  grid-template-columns: repeat(3, minmax(180px, max-content)) repeat(3, minmax(0, 1fr));
+  gap: var(--xp-space-12);
 }
 
 .alert {
   margin-bottom: var(--xp-space-md);
 }
 
-/* Dưới 1100px ba lớp xếp dọc — ép chúng cạnh nhau là ép số tiền xuống dòng giữa chừng. */
-@media (max-width: 1100px) {
-  .layers {
-    grid-template-columns: minmax(0, 1fr);
+@media (max-width: 1280px) {
+  .tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

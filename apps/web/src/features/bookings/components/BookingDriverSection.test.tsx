@@ -178,7 +178,7 @@ describe('BookingDriverSection', () => {
       </Harness>,
     );
     expect(screen.getByText('Tài xế Lê Rút đã rút khỏi chuyến')).toBeTruthy();
-    expect(screen.getByText(/Lý do: Sức khoẻ — “Sốt cao”/)).toBeTruthy();
+    expect(screen.getByText(/Lý do: Sức khoẻ - “Sốt cao”/)).toBeTruthy();
     expect(screen.getByText(/Gán tài xế liên kết khác trước/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Huỷ chuyến do thiếu tài xế' }));
@@ -237,7 +237,7 @@ describe('BookingDriverSection', () => {
   });
 });
 
-describe('BookingDriverSection — tiền công tài xế (ADR 0075)', () => {
+describe('BookingDriverSection - tiền công tài xế (ADR 0075)', () => {
   const LINKED = {
     source: DRIVER_SOURCE.LINKED,
     id: 'drv-1',

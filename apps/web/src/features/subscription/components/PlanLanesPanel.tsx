@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { BILLING_PHASE, type BillingPhase } from '@xeprime/types';
 
 import { VEHICLE_TYPE_ICON } from '@/components/data-display/VehicleTypeIcon';
-import { paymentPath } from '@/constants/routes';
+import { invoicePaymentHref } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { cx } from '@/lib/cx';
 
@@ -30,7 +30,7 @@ import { TermPill } from './PlanSummaryPanel';
 import styles from './PlanLanesPanel.module.css';
 
 /**
- * HAI LÀN GÓI — xe máy và ô tô, mỗi làn một gói riêng (ADR 0065 điều 2), cộng thẻ doanh nghiệp.
+ * HAI LÀN GÓI - xe máy và ô tô, mỗi làn một gói riêng (ADR 0065 điều 2), cộng thẻ doanh nghiệp.
  *
  * Mỗi làn trả lời ba câu cho ĐÚNG loại xe của nó: đang có gói gì, tới khi nào; đang dùng bao nhiêu
  * suất; và việc tiếp theo là gì (gia hạn / nâng bậc, mua gói, hay trả nốt hoá đơn đang chờ). Không
@@ -39,12 +39,12 @@ import styles from './PlanLanesPanel.module.css';
  * ## Doanh nghiệp phủ cả hai làn
  *
  * Kỳ `all` đang chạy ⇒ hai làn ĐÓNG: không nút mua nào. Mua gói xe máy lúc đó không bắt đầu ngay mà
- * nối SAU kỳ doanh nghiệp (chồng phạm vi — EXCLUDE ở DB), tức là trả tiền cho một thứ chưa dùng tới
- * — không phải điều ai muốn khi bấm "Mua". Thẻ doanh nghiệp nói nó phủ cả hai loại xe và chỉ lối
+ * nối SAU kỳ doanh nghiệp (chồng phạm vi - EXCLUDE ở DB), tức là trả tiền cho một thứ chưa dùng tới
+ * - không phải điều ai muốn khi bấm "Mua". Thẻ doanh nghiệp nói nó phủ cả hai loại xe và chỉ lối
  * liên hệ tư vấn.
  *
  * Thiếu `subscription.purchase` (hoặc trong phiên hỗ trợ) ⇒ `onPurchase` vắng mặt và không làn nào
- * có nút mua — chỉ còn thông tin.
+ * có nút mua - chỉ còn thông tin.
  */
 export function PlanLanesPanel({
   data,
@@ -54,7 +54,7 @@ export function PlanLanesPanel({
 }: {
   data: MySubscription;
   pendingInvoices: readonly SubscriptionInvoice[];
-  /** Làn vừa được trỏ tới từ `?lane=` — viền nổi để mắt tìm ra ngay. */
+  /** Làn vừa được trỏ tới từ `?lane=` - viền nổi để mắt tìm ra ngay. */
   highlightedLane: PlanLaneScope | null;
   onPurchase?: (scope: PlanLaneScope) => void;
 }) {
@@ -171,8 +171,8 @@ function PlanLaneCard({
 
       {pendingInvoice ? (
         <div className={styles.pending}>
-          <span>{t('pendingInvoice', { code: pendingInvoice.code })}</span>
-          <Link href={paymentPath.invoice(pendingInvoice.id)}>
+          <span>{t('pendingInvoice', { code: pendingInvoice.checkoutCode ?? pendingInvoice.code })}</span>
+          <Link href={invoicePaymentHref(pendingInvoice)}>
             <Button size="small" icon={<CreditCardOutlined aria-hidden />}>
               {tPayment('payNow')}
             </Button>

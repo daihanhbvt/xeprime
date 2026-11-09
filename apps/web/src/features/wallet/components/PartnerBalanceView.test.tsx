@@ -1,21 +1,22 @@
 import { App } from 'antd';
 import type { ReactNode } from 'react';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ACCOUNT_REALM, BILLING_MODE, SHOP_ONBOARDING_STATE, TENANT_ROLE } from '@xeprime/types';
 
 import { PartnerBalanceView } from './PartnerBalanceView';
 
 /**
- * "SỐ DƯ & RÚT TIỀN" của site partner (07/10/2026) — MỘT trang tiền cho cả hai tuyến.
+ * "QUẢN LÝ VÍ" của site partner (ráp theo design 04/11/2026) — MỘT trang tiền cho cả hai tuyến.
  *
- * Bộ này khoá ba lời hứa của đợt đồng bộ:
+ * Bộ này khoá bốn lời hứa:
  *
- *  1. **Tài khoản nhận tiền nằm TRONG trang số dư** ở cả hai tuyến — ngay dưới nút Rút (slot
- *     `payout` của `WalletView`), không còn là trang/section riêng.
- *  2. **Thuế đã khấu trừ ở CẢ hai tuyến** — trang này không nằm sau cờ tính năng nào (ADR 0027
- *     điều 3), còn sổ Tài chính của tuyến gói thì có (`PLAN_FEATURE.FINANCE`).
- *  3. **Chỉ CHỦ** — ví và sổ ngân hàng là `@ShopOwnerOnly()`; thành viên gõ URL thấy lời giải thích,
+ *  1. **Tài khoản nhận tiền nằm TRONG trang** ở cả hai tuyến — cột phải, ngay dưới thẻ số dư;
+ *     `?section=payout` (đích của hai route cũ) cuộn tới đúng khối đó.
+ *  2. **Hai tab trên URL** — mặc định bảng tổng hợp; `?tab=activity` là biến động số dư.
+ *  3. **Thuế đã khấu trừ ở CẢ hai tuyến** — "Chi tiết" của ô ghi chú thuế mở thẻ thuế đầy đủ;
+ *     trang này không nằm sau cờ tính năng nào (ADR 0027 điều 3).
+ *  4. **Chỉ CHỦ** — ví và sổ ngân hàng là `@ShopOwnerOnly()`; thành viên gõ URL thấy lời giải thích,
  *     không có query ví nào bay đi.
  */
 
@@ -25,20 +26,31 @@ vi.mock('@/hooks/use-current-user', () => ({
 }));
 
 const search = vi.hoisted(() => ({ value: '' }));
+const router = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn() }));
 vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(search.value),
+  useRouter: () => router,
+  usePathname: () => '/manage/balance',
 }));
 
-/*
- * `WalletView` (thẻ số dư, sổ, lệnh rút) có test riêng ở từng khối — ở đây chỉ cần biết trang đặt
- * khối tài khoản nhận tiền VÀO đúng slot của nó.
- */
-vi.mock('./WalletView', () => ({
-  WalletView: ({ scope, payout }: { scope: string; payout?: ReactNode }) => (
-    <div data-testid="wallet-view" data-scope={scope}>
-      {payout}
-    </div>
+/* Các khối con có test riêng — ở đây chỉ cần biết trang đặt đúng khối vào đúng chỗ. */
+vi.mock('./WalletStatementPanel', () => ({
+  WalletStatementPanel: () => <div data-testid="statement-panel" />,
+}));
+vi.mock('./WalletActivityPanel', () => ({
+  WalletActivityPanel: () => <div data-testid="activity-panel" />,
+}));
+vi.mock('./WalletMonthSummary', () => ({
+  WalletMonthSummary: () => <div data-testid="month-summary" />,
+}));
+vi.mock('./WalletSummaryCard', () => ({
+  WalletSummaryCard: ({ action }: { action?: ReactNode }) => (
+    <div data-testid="wallet-summary">{action}</div>
   ),
+}));
+vi.mock('./WithdrawDialog', () => ({ WithdrawDialog: () => null }));
+vi.mock('../hooks', () => ({
+  useWithdrawGate: () => ({ canWithdraw: true, hint: null }),
 }));
 
 vi.mock('@/features/tax/components/ShopTaxWithheldCard', () => ({
@@ -91,17 +103,17 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Số dư & rút tiền — tài khoản nhận tiền ở trong trang', () => {
+describe('Quản lý ví - tài khoản nhận tiền ở trong trang', () => {
   it.each(['commission', 'package'] as const)(
     'tuyến %s: khối "Tài khoản nhận tiền" nằm trong màn ví, có nút thêm tài khoản',
     (track) => {
       setUser({ track });
       renderView();
 
-      const wallet = screen.getByTestId('wallet-view');
-      expect(wallet.getAttribute('data-scope')).toBe('shop');
+      const aside = screen.getByRole('complementary', { name: 'Số dư và tài khoản nhận tiền' });
+      expect(within(aside).getByTestId('wallet-summary')).toBeTruthy();
+      expect(aside.contains(payoutBlock())).toBe(true);
       const block = within(payoutBlock() as HTMLElement);
-      expect(wallet.contains(payoutBlock())).toBe(true);
       expect(block.getByRole('heading', { name: 'Tài khoản nhận tiền' })).toBeTruthy();
       expect(block.getByRole('button', { name: /Thêm tài khoản/ })).toBeTruthy();
     },
@@ -140,15 +152,37 @@ describe('Số dư & rút tiền — tài khoản nhận tiền ở trong trang'
  * "Vì sao tôi nhận ít hơn" là câu hỏi của trang tiền, ở cả hai tuyến. Tuyến gói còn có thẻ đó ở sổ
  * Tài chính, nhưng sổ ấy gác bằng cờ tính năng — trang này thì không bao giờ (ADR 0027 điều 3).
  */
-describe('Số dư & rút tiền — thuế đã khấu trừ', () => {
-  it.each(['commission', 'package'] as const)('tuyến %s: có thẻ thuế đã khấu trừ', (track) => {
-    setUser({ track });
+describe('Quản lý ví - thuế đã khấu trừ', () => {
+  it.each(['commission', 'package'] as const)(
+    'tuyến %s: "Chi tiết" của ô ghi chú thuế mở thẻ thuế đầy đủ',
+    (track) => {
+      setUser({ track });
+      renderView();
+      expect(screen.queryByTestId('tax-withheld')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Chi tiết' }));
+      expect(screen.getByTestId('tax-withheld')).toBeTruthy();
+    },
+  );
+});
+
+describe('Quản lý ví - hai tab', () => {
+  it('mặc định là bảng tổng hợp giao dịch', () => {
     renderView();
-    expect(screen.getByTestId('tax-withheld')).toBeTruthy();
+    expect(screen.getByTestId('statement-panel')).toBeTruthy();
+    expect(screen.queryByTestId('activity-panel')).toBeNull();
+    expect(screen.getByTestId('month-summary')).toBeTruthy();
+  });
+
+  it('`?tab=activity` mở biến động số dư - thẻ tổng hợp tháng vẫn ở cột phải', () => {
+    search.value = 'tab=activity&period=2026-10';
+    renderView();
+    expect(screen.getByTestId('activity-panel')).toBeTruthy();
+    expect(screen.queryByTestId('statement-panel')).toBeNull();
+    expect(screen.getByTestId('month-summary')).toBeTruthy();
   });
 });
 
-describe('Số dư & rút tiền — chỉ chủ', () => {
+describe('Quản lý ví - chỉ chủ', () => {
   it.each([TENANT_ROLE.SHOP_MANAGER, TENANT_ROLE.SHOP_STAFF])(
     '%s gõ URL: lời giải thích, không màn ví nào được dựng',
     (role) => {
@@ -156,7 +190,7 @@ describe('Số dư & rút tiền — chỉ chủ', () => {
       renderView();
 
       expect(screen.getByText('Chỉ chủ sở hữu xem được số dư')).toBeTruthy();
-      expect(screen.queryByTestId('wallet-view')).toBeNull();
+      expect(screen.queryByTestId('wallet-summary')).toBeNull();
       expect(payoutBlock()).toBeNull();
     },
   );
@@ -166,7 +200,7 @@ describe('Số dư & rút tiền — chỉ chủ', () => {
     user.value = undefined;
     renderView();
 
-    expect(screen.queryByTestId('wallet-view')).toBeNull();
+    expect(screen.queryByTestId('wallet-summary')).toBeNull();
     expect(screen.queryByText('Chỉ chủ sở hữu xem được số dư')).toBeNull();
   });
 });

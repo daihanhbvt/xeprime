@@ -17,6 +17,7 @@ import { ROUTES } from '@/constants/routes';
 import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { popInClass, staggerFastClass } from '@/components/motion/motion-classes';
 import { cx } from '@/lib/cx';
 
 import {
@@ -126,9 +127,9 @@ export function AccountDeletionDialog({ open, onClose }: { open: boolean; onClos
           retryLabel={tCommon('actions.retry')}
         />
       ) : pending ? (
-        <div className={styles.body} aria-live="polite">
+        <div className={cx(styles.body, staggerFastClass)} aria-live="polite">
           <section className={styles.processing}>
-            <span className={styles.processingIcon} aria-hidden="true">
+            <span className={cx(styles.processingIcon, popInClass)} aria-hidden="true">
               <LoadingOutlined />
             </span>
             <h3 className={styles.processingTitle}>{t('pendingTitle')}</h3>
@@ -140,11 +141,11 @@ export function AccountDeletionDialog({ open, onClose }: { open: boolean; onClos
           <DeletedData />
         </div>
       ) : (
-        <form onSubmit={onSubmit} noValidate className={styles.body}>
+        <form onSubmit={onSubmit} noValidate className={cx(styles.body, staggerFastClass)}>
           <Conditions />
 
           <section className={styles.process} role="note">
-            <span className={styles.processIcon} aria-hidden="true">
+            <span className={cx(styles.processIcon, popInClass)} aria-hidden="true">
               <ExclamationCircleOutlined />
             </span>
             <div className={styles.processText}>

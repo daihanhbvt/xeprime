@@ -630,7 +630,7 @@ export function RentalRangeSheet({
                   {/* Dòng mốc là kết quả của cả thao tác chọn — đậm vừa (600) để nổi hơn nhãn
                       quanh nó mà không tranh chỗ với con số thời lượng bên dưới. */}
                   <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                    {fmt.rentalPoint(value.pickupAt!)} – {fmt.rentalPoint(value.returnAt!)}
+                    {fmt.rentalPoint(value.pickupAt!)} → {fmt.rentalPoint(value.returnAt!)}
                   </Text>
                   <XStack gap={space.xs}>
                     <Text col={colors.textMuted} fos={fontSize.bodySm}>

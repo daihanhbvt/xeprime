@@ -15,6 +15,7 @@ import { Tag } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import {
+  BILLING_MODE,
   FEATURE_STATE,
   PERMISSION,
   SUBSCRIPTION_INVOICE_STATUS_META,
@@ -30,6 +31,7 @@ import { StatusTag } from '@/components/data-display/StatusTag';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
 import { StatCard } from '@/features/dashboard/components/StatCard';
+import { useCommissionTierSummary } from '@/features/fee-policies/hooks/use-tier-range-label';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -77,6 +79,8 @@ export function BillingTab({ overview }: { overview: PartnerOverview }) {
 function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joinedAt: string }) {
   const t = useTranslations('AdminTenants.partnerDetail.billing');
   const tPlanScope = useTranslations('AdminTenants.partnerDetail.quota');
+  const tCommon = useTranslations('Common');
+  const tierSummary = useCommissionTierSummary();
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const { plan, quota, invoiceStatus } = billing;
@@ -89,7 +93,7 @@ function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joined
       title: t('columns.period'),
       key: 'period',
       width: 200,
-      render: (_, row) => `${fmt.date(row.startsAt)} – ${fmt.date(row.endsAt)}`,
+      render: (_, row) => `${fmt.date(row.startsAt)} - ${fmt.date(row.endsAt)}`,
     },
     {
       title: t('columns.plan'),
@@ -128,7 +132,7 @@ function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joined
       title: t('columns.period'),
       key: 'period',
       width: 200,
-      render: (_, row) => `${fmt.date(row.periodFrom)} – ${fmt.date(row.periodTo)}`,
+      render: (_, row) => `${fmt.date(row.periodFrom)} - ${fmt.date(row.periodTo)}`,
     },
     {
       title: t('columns.total'),
@@ -153,7 +157,7 @@ function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joined
       title: t('columns.paidAt'),
       key: 'paidAt',
       width: 130,
-      render: (_, row) => (row.paidAt ? fmt.date(row.paidAt) : '—'),
+      render: (_, row) => (row.paidAt ? fmt.date(row.paidAt) : '-'),
     },
   ];
 
@@ -225,13 +229,13 @@ function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joined
                   label: t('plan.term'),
                   value:
                     billing.termStartsAt && plan.endsAt
-                      ? `${fmt.date(billing.termStartsAt)} – ${fmt.date(plan.endsAt)}`
-                      : '—',
+                      ? `${fmt.date(billing.termStartsAt)} - ${fmt.date(plan.endsAt)}`
+                      : '-',
                 },
                 {
                   key: 'renewal',
                   label: t('plan.renewal'),
-                  value: daysLeft !== null ? t('plan.daysLeft', { days: daysLeft }) : '—',
+                  value: daysLeft !== null ? t('plan.daysLeft', { days: daysLeft }) : '-',
                 },
                 {
                   key: 'next',
@@ -292,9 +296,22 @@ function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joined
             <KeyValues
               items={[
                 {
-                  key: 'fee',
-                  label: t('fee.serviceFee'),
-                  value: t('fee.percent', { value: Number(billing.feePolicy.serviceFeePercent) }),
+                  key: 'platformFee',
+                  label: t('fee.platformFee'),
+                  value: t('fee.platformFeeValue', {
+                    car: fmt.money(billing.feePolicy.platformFeeCar),
+                    motorbike: fmt.money(billing.feePolicy.platformFeeMotorbike),
+                  }),
+                },
+                {
+                  // Tuyến gói không bị trừ hoa hồng (ADR 0064); tuyến hoa hồng đọc nấc lũy tiến.
+                  key: 'commission',
+                  label: t('fee.commission'),
+                  value:
+                    plan.billingMode === BILLING_MODE.PACKAGE
+                      ? t('fee.commissionNone')
+                      : tierSummary(billing.feePolicy.ownerCommissionTiers) ||
+                        tCommon('labels.emptyValue'),
                 },
                 { key: 'version', label: t('fee.version'), value: billing.feePolicy.version },
                 {
@@ -302,7 +319,7 @@ function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joined
                   label: t('fee.effectiveFrom'),
                   value: billing.feePolicy.effectiveFrom
                     ? fmt.date(billing.feePolicy.effectiveFrom)
-                    : '—',
+                    : '-',
                 },
                 {
                   key: 'note',

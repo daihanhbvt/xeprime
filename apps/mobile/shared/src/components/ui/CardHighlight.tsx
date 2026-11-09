@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet } from 'react-native';
-import { useColors } from '@/theme/ThemeProvider';
+import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { gradient } from '@/theme/tokens';
 
 /**
@@ -23,6 +23,14 @@ const CARD_HOVER = {
   colors: CARD_HOVER_ALL.colors.slice(0, 2) as [string, string],
   locations: CARD_HOVER_ALL.locations.slice(0, 2) as [number, number],
 };
+/*
+ * Bản TỐI của `--xp-gradient-card-hover` (tokens.css khối `[data-theme=dark]`, Figma dark 19879:66185):
+ * vàng trầm 20% trên nền thẻ tối. Dùng lớp sáng ở giao diện tối là phủ be 20% lên #0e0f12 ⇒ thẻ xám đục.
+ */
+const CARD_HOVER_DARK = {
+  colors: ['rgba(56, 41, 17, 0.2)', 'rgba(36, 30, 11, 0.2)'] as [string, string],
+  locations: [0.24208, 0.88612] as [number, number],
+};
 const START = { x: 0.45, y: 0 };
 const END = { x: 0.55, y: 1 };
 
@@ -36,10 +44,11 @@ export function useCardHighlightBorder(): string {
  * hoặc truyền `radius` cho khớp bo góc). Không nhận chạm.
  */
 export function CardHighlightOverlay({ radius }: { radius?: number }) {
+  const g = useAppScheme().scheme === 'dark' ? CARD_HOVER_DARK : CARD_HOVER;
   return (
     <LinearGradient
-      colors={CARD_HOVER.colors}
-      locations={CARD_HOVER.locations}
+      colors={g.colors}
+      locations={g.locations}
       start={START}
       end={END}
       style={[StyleSheet.absoluteFill, radius != null ? { borderRadius: radius } : null]}

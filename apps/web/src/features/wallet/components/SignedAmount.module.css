@@ -1,0 +1,16 @@
+.muted {
+  color: var(--xp-color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.positive {
+  color: var(--xp-color-success);
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.negative {
+  color: var(--xp-color-error);
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}

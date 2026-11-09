@@ -8,12 +8,12 @@ import { XP_BREAKPOINTS, XP_DARK_TOKENS, XP_TOKENS, antdDarkTokens, antdTheme } 
 
 /**
  * ADR 0003: `theme.ts` và `tokens.css` là hai bản của cùng một bộ token. Không có test này
- * thì một bên đổi mà bên kia quên là lỗi im lặng — CSS chỉ fallback về giá trị trình duyệt.
+ * thì một bên đổi mà bên kia quên là lỗi im lặng - CSS chỉ fallback về giá trị trình duyệt.
  *
  * Dùng cwd (= apps/web khi vitest chạy) thay cho import.meta.url: Turbopack/vitest có thể
  * không cấp URL scheme `file:` cho import.meta.url, làm fileURLToPath ném lỗi.
  */
-// tokens.css đã theo XP_TOKENS sang packages/ui (24/08/2026) — test ở lại web vì nó còn kiểm
+// tokens.css đã theo XP_TOKENS sang packages/ui (24/08/2026) - test ở lại web vì nó còn kiểm
 // cả `antdTheme` (phần buộc phải biết antd, không vào package dùng chung được).
 const CSS_PATH = resolve(process.cwd(), '../../packages/ui/src/styles/tokens.css');
 const DECLARATION_RE = /^\s*(--xp-[a-z0-9-]+)\s*:\s*([^;]+);/gm;
@@ -44,7 +44,7 @@ function contrastRatio(a: string, b: string): number {
  *
  * So sánh chuỗi thô không dùng được: Prettier xuống dòng những giá trị dài (`color-mix(...)`
  * của sidebar tối), tạo ra `color-mix( in srgb, …` trong CSS trong khi TS viết liền. Hai bên
- * vẫn là CÙNG một giá trị CSS — cái cần khoá là giá trị, không phải cách xuống dòng.
+ * vẫn là CÙNG một giá trị CSS - cái cần khoá là giá trị, không phải cách xuống dòng.
  */
 function normalize(value: string): string {
   return value
@@ -60,10 +60,10 @@ function readCssTokens(): Map<string, string> {
    * Chỉ đọc khối `:root` GỐC, cắt tại `@media` đầu tiên.
    *
    * Từ Wave 3B-R2, `tokens.css` có một khối ghi đè mật độ ở ≤640px. Đọc cả file thì giá trị
-   * mobile (khai sau) đè lên giá trị desktop trong Map và test đỏ oan — trong khi hợp đồng mà
+   * mobile (khai sau) đè lên giá trị desktop trong Map và test đỏ oan - trong khi hợp đồng mà
    * test này khoá là "`theme.ts` khớp token DESKTOP".
    */
-  // Cắt tại at-rule THẬT (`@media` đầu dòng) — có một comment nhắc tới chữ "@media" ở giữa
+  // Cắt tại at-rule THẬT (`@media` đầu dòng) - có một comment nhắc tới chữ "@media" ở giữa
   // dòng, cắt theo chuỗi trần sẽ nuốt luôn phần token khai sau comment đó.
   const css = readFileSync(CSS_PATH, 'utf8').split(/^@media/m)[0]!;
   const tokens = new Map<string, string>();
@@ -79,7 +79,7 @@ function readCssTokens(): Map<string, string> {
   return tokens;
 }
 
-/** Khối `[data-theme="dark"] { … }` của tokens.css — khai báo ĐẦU TIÊN có selector đó. */
+/** Khối `[data-theme="dark"] { … }` của tokens.css - khai báo ĐẦU TIÊN có selector đó. */
 function readDarkCssTokens(): Map<string, string> {
   const css = readFileSync(CSS_PATH, 'utf8');
   const start = css.indexOf('[data-theme="dark"] {');
@@ -124,7 +124,7 @@ describe('design token', () => {
 
   it('bí danh deprecated trỏ về token canonical, không nhân đôi giá trị', () => {
     // Nếu một bí danh được gán giá trị thật thay vì var(), hai nguồn sẽ trôi khỏi nhau
-    // đúng vào lúc token canonical đổi — đây là thứ test này chặn.
+    // đúng vào lúc token canonical đổi - đây là thứ test này chặn.
     const aliases = [
       'color-bg-layout',
       'color-border-secondary',
@@ -174,7 +174,7 @@ describe('design token', () => {
   });
 
   it('nút đang nhấn lấy bậc AntD dẫn xuất từ gold v2, không phải bậc nhấn của bộ cũ', () => {
-    // `color-primary-active` (bộ cũ) chỉ đạt 4.47:1 với chữ v2 — ADR 0062 điều 6.
+    // `color-primary-active` (bộ cũ) chỉ đạt 4.47:1 với chữ v2 - ADR 0062 điều 6.
     expect(antdTheme.token?.colorPrimaryActive).toBeUndefined();
     const derived = theme.getDesignToken(antdTheme);
     expect(
@@ -185,7 +185,7 @@ describe('design token', () => {
   /**
    * Thứ tự TẦNG Z. Các lớp dính của lịch (header ngày, cột xe, hàng "Xe còn trống") và popover
    * neo trong canvas là ANH EM cùng một stacking context, nên thứ tự giữa chúng do đúng những
-   * con số này quyết định — không phải do thứ tự DOM.
+   * con số này quyết định - không phải do thứ tự DOM.
    *
    * Lỗi đã gặp: popover ô lịch để `z-index: 7` trong khi hàng "Xe còn trống" dùng
    * `--xp-z-calendar-header` (30), nên menu bị che mất nửa dưới. Test khoá lại quan hệ để một
@@ -217,7 +217,7 @@ describe('design token', () => {
   });
   /**
    * Tương phản màu. Brief 00 §16 ghi mức tuân thủ WCAG là `Unknown` (câu hỏi mở Q7) và
-   * "contrast ratios unverified" là khoảng trống đã biết — nên test này KHÔNG ép AA lên
+   * "contrast ratios unverified" là khoảng trống đã biết - nên test này KHÔNG ép AA lên
    * toàn bộ bảng màu (làm vậy là tự quyết thay thiết kế). Nó chốt con số ĐANG CÓ để một
    * lần đổi token sau này không âm thầm làm tệ đi.
    */
@@ -230,7 +230,7 @@ describe('design token', () => {
       ['text-secondary trên nền trang', 'color-bg', 'color-text-secondary', 4.5],
       ['text-secondary trên container', 'color-bg-container', 'color-text-secondary', 4.5],
       ['chữ trên nút primary', 'color-primary', 'color-primary-contrast', 4.5],
-      // Chữ 12px trên thanh event của lịch — bậc này sinh ra sau Foundations nên KHÔNG được
+      // Chữ 12px trên thanh event của lịch - bậc này sinh ra sau Foundations nên KHÔNG được
       // phép trượt như bộ success/warning cũ: chọn tông đậm ngay từ đầu để qua AA.
       ['processing trên processing-bg', 'color-processing-bg', 'color-processing', 4.5],
       ['chữ trên sidebar tối', 'shell-sidebar-bg', 'shell-sidebar-text', 4.5],
@@ -242,7 +242,7 @@ describe('design token', () => {
     /**
      * Các cặp CHƯA đạt AA, đã đo và ghi nhận (xem docs/design-token-map.md §17 và §21 P18).
      * Ngưỡng dưới ở đây là chốt chặn ở mức v2 (15/10/2026): giảm thêm là test đỏ.
-     * `text-tertiary` lên 4.37 với dải xám v2 (bộ cũ 2.72) — sát AA nhưng chưa qua trên nền trang;
+     * `text-tertiary` lên 4.37 với dải xám v2 (bộ cũ 2.72) - sát AA nhưng chưa qua trên nền trang;
      * trên nền trắng nó đạt 4.56.
      */
     it.each([
@@ -258,14 +258,14 @@ describe('design token', () => {
 
     /**
      * Bốn bậc trạng thái của sidebar tối là giá trị DẪN XUẤT bằng `color-mix`, không phải màu
-     * đọc từ Figma — nên tỉ lệ trộn là một lựa chọn, và lựa chọn đó phải được ĐO chứ không
+     * đọc từ Figma - nên tỉ lệ trộn là một lựa chọn, và lựa chọn đó phải được ĐO chứ không
      * ước lượng. Đây là chỗ đo.
      *
      * Có thật một cái bẫy ở đây: bộ token nền sáng KHÔNG dùng lại được trên nền tối.
      * `--xp-color-text-secondary` chỉ đạt 1.81 (v2; bộ cũ 2.99) và `--xp-gold-deep` 4.33 trên
-     * `--xp-shell-sidebar-bg` — cả hai từng là màu chữ menu trước Wave 1D-B.
+     * `--xp-shell-sidebar-bg` - cả hai từng là màu chữ menu trước Wave 1D-B.
      */
-    describe('sidebar tối — bậc trạng thái dẫn xuất', () => {
+    describe('sidebar tối - bậc trạng thái dẫn xuất', () => {
       /** Giải `color-mix(in srgb, <token> N%, <token>)` ra hex để đo được. */
       function resolveMix(value: string): string {
         const match = value.match(
@@ -303,7 +303,7 @@ describe('design token', () => {
         expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
       });
 
-      it('hai token nền SÁNG thật sự trượt trên nền tối — nên việc thay chúng là cần thiết', () => {
+      it('hai token nền SÁNG thật sự trượt trên nền tối - nên việc thay chúng là cần thiết', () => {
         expect(contrast(XP_TOKENS['color-text-secondary'], BG)).toBeLessThan(4.5);
         expect(contrast(XP_TOKENS['color-primary-active'], BG)).toBeLessThan(4.5);
       });
@@ -316,14 +316,14 @@ describe('design token', () => {
 
     /**
      * Vỏ portal cũng có bề mặt SÁNG (topbar, thanh tab dưới đáy). Đo tương phản ở 1D-C phát
-     * hiện ba cặp trượt AA tại đây — không phải trên nền tối như dự đoán.
+     * hiện ba cặp trượt AA tại đây - không phải trên nền tối như dự đoán.
      *
-     * Bài học ghi lại kèm số: **gold không dùng làm màu CHỮ nhỏ trên nền sáng được** — trừ bậc
+     * Bài học ghi lại kèm số: **gold không dùng làm màu CHỮ nhỏ trên nền sáng được** - trừ bậc
      * `--xp-color-primary-strong` (v2 Brand/high), bậc duy nhất của dải gold đạt AA ở đó. Gold v2
      * `#e9ac29` chỉ 2.02 trên trắng, hover 2.76, bậc nhấn `--xp-gold-deep` 3.97. Chúng hợp lệ khi
      * là NỀN (chữ `--xp-color-primary-contrast` lên trên) hoặc thành phần đồ hoạ (ngưỡng 3:1).
      */
-    describe('vỏ portal — bề mặt sáng', () => {
+    describe('vỏ portal - bề mặt sáng', () => {
       const WHITE = XP_TOKENS['color-bg-container'];
 
       it.each([
@@ -357,7 +357,7 @@ describe('design token', () => {
         expect(contrast(XP_TOKENS['color-primary-strong'], bg)).toBeGreaterThanOrEqual(4.5);
       });
 
-      it('primary-strong KHÔNG làm nền dưới chữ tối — lý do bậc nhấn không đổi sang nó', () => {
+      it('primary-strong KHÔNG làm nền dưới chữ tối - lý do bậc nhấn không đổi sang nó', () => {
         // Nếu ai đó trỏ `color-primary-active` (đang là nền dưới chữ tối ở web + native) về
         // Brand/high, chữ trên nền đó rơi xuống ~2.4:1.
         expect(
@@ -379,9 +379,14 @@ describe('design token', () => {
       expect(antdTheme.components?.Button?.primaryColor).toBe(XP_TOKENS['color-primary-contrast']);
     });
 
-    it('là ngoại lệ DUY NHẤT — không có override component nào khác', () => {
+    it('là ngoại lệ DUY NHẤT - không có override component nào khác', () => {
       expect(Object.keys(antdTheme.components ?? {})).toEqual(['Button']);
-      expect(Object.keys(antdTheme.components?.Button ?? {})).toEqual(['primaryColor']);
+      expect(Object.keys(antdTheme.components?.Button ?? {})).toEqual([
+        'primaryColor',
+        // Bảng nút v2: chữ 14px/Semibold, nút viền chữ Text/Gray/medium (partner redesign 11/2026).
+        'fontWeight',
+        'defaultColor',
+      ]);
     });
 
     it('mặc định của AntD (chữ trắng) thật sự trượt AA nên ngoại lệ là cần thiết', () => {
@@ -398,7 +403,7 @@ describe('design token', () => {
 
   /**
    * Giao diện tối: khối `[data-theme="dark"]` của tokens.css (CSS Module đọc) và `XP_DARK_TOKENS`
-   * (AntD đọc) là hai bản của cùng một bộ màu — lệch nhau là nút AntD một màu, thẻ bên cạnh
+   * (AntD đọc) là hai bản của cùng một bộ màu - lệch nhau là nút AntD một màu, thẻ bên cạnh
    * một màu.
    */
   describe('giao diện tối', () => {

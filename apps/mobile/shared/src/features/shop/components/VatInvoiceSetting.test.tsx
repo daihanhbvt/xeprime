@@ -62,7 +62,7 @@ describe('VatInvoiceSetting', () => {
     jest.spyOn(tenantsApi, 'updateVatInvoiceSetting').mockRejectedValue(
       new ApiClientError({
         code: API_ERROR_CODE.FORBIDDEN,
-        message: 'MESSAGE BACKEND — KHÔNG ĐƯỢC HIỆN',
+        message: 'MESSAGE BACKEND - KHÔNG ĐƯỢC HIỆN',
         status: 403,
       }),
     );

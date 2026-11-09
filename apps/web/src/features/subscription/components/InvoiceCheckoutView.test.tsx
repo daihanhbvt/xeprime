@@ -8,11 +8,11 @@ import type { SubscriptionInvoice } from '../types';
 import { InvoiceCheckoutView } from './InvoiceCheckoutView';
 
 /**
- * TRANG THANH TOÁN một hoá đơn gói — `partner.xeprime.vn/payment/:invoiceId` (13/10/2026).
+ * TRANG THANH TOÁN một hoá đơn gói - `partner.xeprime.vn/payment/:invoiceId` (13/10/2026).
  *
- * Điều được khoá: trang nói đúng kết cục của CHÍNH hoá đơn trên đường dẫn — còn chờ thì mời trả
+ * Điều được khoá: trang nói đúng kết cục của CHÍNH hoá đơn trên đường dẫn - còn chờ thì mời trả
  * (không có nút tự khai đã trả), đã trả thì báo gói đã bật, đã huỷ thì mời chọn gói lại ở đúng chỗ
- * theo tuyến — và gói chỉ "đã kích hoạt" khi hoá đơn thật sự `paid` (ADR 0040 điều 3).
+ * theo tuyến - và gói chỉ "đã kích hoạt" khi hoá đơn thật sự `paid` (ADR 0040 điều 3).
  */
 const invoice = vi.hoisted(() => ({
   data: undefined as unknown,
@@ -22,9 +22,12 @@ const invoice = vi.hoisted(() => ({
   refetch: vi.fn(),
 }));
 const user = vi.hoisted(() => ({ data: undefined as unknown }));
+const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }));
 
 vi.mock('../hooks/use-subscription', () => ({
   useSubscriptionInvoice: () => invoice,
+  // Trang hoá đơn lẻ không đọc phiếu gộp - hook vẫn được gọi (tắt) theo luật hooks.
+  useSubscriptionCheckout: () => ({ data: undefined, isPending: false, isError: false }),
   usePaymentInfo: () => ({
     data: {
       configured: true,
@@ -37,7 +40,10 @@ vi.mock('../hooks/use-subscription', () => ({
 }));
 vi.mock('@/hooks/use-current-user', () => ({ useCurrentUser: () => user }));
 vi.mock('@/hooks/use-permissions', () => ({ usePermissions: () => ({ has: () => true }) }));
-vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams() }));
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => router,
+}));
 vi.mock('@/features/payment-gateway/api', () => ({
   fetchGatewayMethods: vi
     .fn()
@@ -81,6 +87,7 @@ beforeEach(() => {
   invoice.isError = false;
   invoice.error = null;
   user.data = undefined;
+  router.replace.mockClear();
 });
 
 describe('InvoiceCheckoutView', () => {
@@ -89,14 +96,14 @@ describe('InvoiceCheckoutView', () => {
     const { container } = renderPage();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Thanh toán gói dịch vụ' })).toBeTruthy();
-    expect(screen.getByText('Gói nâng cao')).toBeTruthy();
+    expect(screen.getByText(/Gói nâng cao/)).toBeTruthy();
     expect(screen.getAllByText('XPGWYZZ8TZY').length).toBeGreaterThan(0);
     const qr = Array.from(container.querySelectorAll('img')).find((img) =>
       img.getAttribute('src')?.includes('qr.sepay.vn'),
     );
     expect(qr?.getAttribute('src')).toContain('amount=650000');
     expect(qr?.getAttribute('src')).toContain('des=XPGWYZZ8TZY');
-    // Hoá đơn gói KHÔNG có nút tự khai đã trả — gói chỉ bật khi tiền về.
+    // Hoá đơn gói KHÔNG có nút tự khai đã trả - gói chỉ bật khi tiền về.
     expect(screen.queryByRole('button', { name: /đã chuyển khoản/i })).toBeNull();
   });
 
@@ -141,6 +148,15 @@ describe('InvoiceCheckoutView', () => {
     expect(screen.getByRole('link', { name: 'Chọn gói' }).getAttribute('href')).toBe(
       '/manage/onboarding',
     );
+  });
+
+  it('hoá đơn nằm trong PHIẾU GỘP ⇒ chuyển sang trang phiếu, không hiện mã XPG hay số của một gói', () => {
+    invoice.data = makeInvoice({ checkoutId: '01HCHECKOUT', checkoutCode: 'XPCABCDEFGH' });
+    renderPage();
+
+    expect(router.replace).toHaveBeenCalledWith('/manage/payment/checkout/01HCHECKOUT');
+    expect(screen.queryByText('XPGWYZZ8TZY')).toBeNull();
+    expect(screen.queryByText(/650.000/)).toBeNull();
   });
 
   it('hoá đơn không thuộc gian hàng này ⇒ không tìm thấy, không thử lại', () => {

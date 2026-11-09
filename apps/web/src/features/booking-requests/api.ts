@@ -17,6 +17,7 @@ import type {
   CheckAvailabilityInput,
   CheckAvailabilityResult,
   CreateBookingRequestInput,
+  PaymentReminderResult,
   VehicleBusyDays,
 } from './types';
 
@@ -61,6 +62,7 @@ export function filtersToParams(filters: BookingRequestFilters): QueryParams {
     serviceType: filters.serviceType ?? null,
     vehicleId: filters.vehicleId ?? null,
     branchId: filters.branchId ?? null,
+    sort: filters.sort ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? BOOKING_REQUESTS_DEFAULT_LIMIT,
   };
@@ -130,6 +132,10 @@ export const cancelBookingRequest = (
  * KHÔNG dùng `startConversation(vehicleId)` của `features/chat`: endpoint đó lấy người đang
  * đăng nhập làm KHÁCH, nên nhân viên gian hàng gọi vào sẽ tự mở một thread với chính mình.
  */
+/** Nhắc khách chuyển tiền giữ chỗ — chỉ là một thông báo, server chặn khoảng lặng (429). */
+export const remindBookingRequestPayment = (id: string): Promise<PaymentReminderResult> =>
+  apiPost<PaymentReminderResult>(`/booking-requests/${id}/remind-payment`, {});
+
 export const startBookingRequestConversation = (id: string): Promise<BookingRequestConversation> =>
   apiPost<BookingRequestConversation>(`/booking-requests/${id}/conversation`, {});
 

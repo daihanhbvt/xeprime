@@ -149,7 +149,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Xe toàn hệ thống — trạng thái', () => {
+describe('Xe toàn hệ thống - trạng thái', () => {
   it('tiêu đề + mô tả', () => {
     setItems([vehicle()]);
     renderPage();
@@ -213,7 +213,7 @@ describe('Xe toàn hệ thống — trạng thái', () => {
   });
 });
 
-describe('Xe toàn hệ thống — bộ lọc, sắp xếp và URL', () => {
+describe('Xe toàn hệ thống - bộ lọc, sắp xếp và URL', () => {
   it('mặc định mọi chiều là "all", sort mặc định không gửi, `open` KHÔNG đi vào truy vấn', () => {
     nav.params = new URLSearchParams('open=v1');
     setItems([vehicle()]);
@@ -285,7 +285,7 @@ describe('Xe toàn hệ thống — bộ lọc, sắp xếp và URL', () => {
     expect(screen.getByRole('tab', { name: /Nền tảng đã ẩn/ }).textContent).toContain('3');
   });
 
-  it('tab sáng suy từ BA tham số cùng lúc — một tham số đúng là chưa đủ', () => {
+  it('tab sáng suy từ BA tham số cùng lúc - một tham số đúng là chưa đủ', () => {
     nav.params = new URLSearchParams('tenantStatus=suspended');
     setItems([vehicle()]);
     renderPage();
@@ -365,7 +365,7 @@ describe('filterBarPatch', () => {
   });
 });
 
-describe('Xe toàn hệ thống — dữ liệu và panel chi tiết', () => {
+describe('Xe toàn hệ thống - dữ liệu và panel chi tiết', () => {
   it('ô định danh gộp mã, biển số và loại xe', () => {
     setItems([vehicle()]);
     renderPage();
@@ -400,7 +400,7 @@ describe('Xe toàn hệ thống — dữ liệu và panel chi tiết', () => {
     expect(screen.getByText('245 xe')).toBeTruthy();
   });
 
-  it('mỗi hàng đúng một hành động — bề mặt giám sát, không sửa tại chỗ', () => {
+  it('mỗi hàng đúng một hành động - bề mặt giám sát, không sửa tại chỗ', () => {
     setItems([vehicle()]);
     renderPage();
 

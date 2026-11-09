@@ -87,3 +87,20 @@ export const FINANCE_OVERVIEW_DEFAULT_PERIOD: PeriodKey = RECEIPT_PERIOD.THIS_MO
 
 /** Số dòng mỗi trang của bảng hiệu quả theo xe — một đội xe vài chục chiếc vừa đúng một trang. */
 export const VEHICLE_PROFIT_PAGE_SIZE = 10;
+
+/**
+ * Hai góc nhìn của khối "Hiệu suất kinh doanh" (design `23813:37081`) — tab trên URL (`?perf=`),
+ * để gửi link "xem theo khách" cho đồng nghiệp ra đúng tab đó. Mã giao diện, không đi xuống API.
+ */
+export const FINANCE_PERFORMANCE_VIEW = {
+  VEHICLES: 'vehicles',
+  CUSTOMERS: 'customers',
+} as const;
+
+export type FinancePerformanceView =
+  (typeof FINANCE_PERFORMANCE_VIEW)[keyof typeof FINANCE_PERFORMANCE_VIEW];
+
+export const FINANCE_PERFORMANCE_VIEW_VALUES = [
+  FINANCE_PERFORMANCE_VIEW.VEHICLES,
+  FINANCE_PERFORMANCE_VIEW.CUSTOMERS,
+] as const satisfies readonly FinancePerformanceView[];

@@ -6,6 +6,7 @@ import { StatusTag } from '@/components/data-display/StatusTag';
 import { useAppFormat } from '@/i18n/use-app-format';
 import type { AdminBookingDetail } from '../../types';
 import styles from './BookingDetail.module.css';
+import { DATE_TIME_SEPARATOR } from '@xeprime/domain';
 
 /**
  * Tiêu đề panel: mã đơn + trạng thái cạnh nhau, dòng phụ là giờ tạo.
@@ -29,7 +30,7 @@ export function BookingDrawerHeader({ booking }: { booking: AdminBookingDetail }
         />
       </div>
       <div className={styles.headerMeta}>
-        {t('createdAt', { time: fmt.time(booking.createdAt), date: fmt.date(booking.createdAt) })}
+        {t('createdAt', { sep: DATE_TIME_SEPARATOR, time: fmt.time(booking.createdAt), date: fmt.date(booking.createdAt) })}
       </div>
     </div>
   );

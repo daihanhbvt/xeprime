@@ -4,6 +4,7 @@ import { cx } from '@/lib/cx';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from './SectionHeading';
 import styles from './RentalSteps.module.css';
+import { nudgeXClass, popInClass, seqClass } from '@/components/motion/motion-classes';
 
 /**
  * Bốn bước theo thứ tự đặt xe thật (ADR 0044: gửi yêu cầu → duyệt → giữ chỗ → nhận xe). Hình minh
@@ -44,17 +45,17 @@ export async function RentalSteps() {
         align="center"
         divider
       />
-      {/* Các bước lần lượt trượt lên khi cuộn tới (≈ `.single-process-item wow fadeInUp`). */}
-      <Reveal as="ol" effect="stagger" className={styles.steps}>
+      {/* Mỗi bước là một cổng riêng: trượt lên khi CHÍNH NÓ cuộn tới (mobile xếp dọc). */}
+      <ol className={cx(styles.steps, seqClass)}>
         {STEPS.map((step, index) => (
-          <li key={step.key} className={styles.step}>
+          <Reveal as="li" key={step.key} className={styles.step}>
             <span className={styles.artFrame} aria-hidden="true">
-              <span className={styles.art}>
+              <span className={cx(styles.art, popInClass)}>
                 <SpriteCrop className={step.artClass} sizes="1300px" />
               </span>
               {/* Mũi tên nối từ bước trước — trang trí, nằm giữa khe hai bước. */}
               {index > 0 ? (
-                <span className={styles.arrow}>
+                <span className={cx(styles.arrow, nudgeXClass)}>
                   <SpriteCrop className={styles.artArrow} sizes="1100px" />
                 </span>
               ) : null}
@@ -63,9 +64,9 @@ export async function RentalSteps() {
               <h3 className={styles.stepTitle}>{t(`items.${step.key}.title`)}</h3>
               <p className={styles.desc}>{t(`items.${step.key}.desc`)}</p>
             </div>
-          </li>
+          </Reveal>
         ))}
-      </Reveal>
+      </ol>
     </section>
   );
 }

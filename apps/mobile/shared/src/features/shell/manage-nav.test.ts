@@ -38,7 +38,7 @@ function labelAt(messages: object, key: string): unknown {
   }, messages);
 }
 
-describe('manage-nav — nhãn', () => {
+describe('manage-nav - nhãn', () => {
   it.each(['vi', 'en'] as const)('mọi labelKey có bản dịch (%s)', (locale) => {
     const missing = [
       ...new Set(
@@ -71,7 +71,7 @@ describe('manage-nav — nhãn', () => {
  * "ẩn dead link và menu placeholder chưa có luồng"). App giữ lại chúng lâu hơn web, và vì chúng
  * chưa bao giờ có nhãn nên khu quản lý nổ ngay khi mở menu.
  */
-describe('manage-nav — không mục nào trỏ tới chỗ chưa dựng', () => {
+describe('manage-nav - không mục nào trỏ tới chỗ chưa dựng', () => {
   it('không còn "Khu vực nhận xe" và "Thùng rác"', () => {
     const keys = ALL_LEAVES.map((leaf) => leaf.key);
     expect(keys).not.toContain('pickup-areas');
@@ -86,7 +86,7 @@ describe('manage-nav — không mục nào trỏ tới chỗ chưa dựng', () =
  * `/manage/shop`. Web không dính vì `matchSelectedKey` chọn tiền tố DÀI NHẤT; app nay dùng đúng
  * luật đó.
  */
-describe('matchActiveHref — đúng MỘT mục sáng', () => {
+describe('matchActiveHref - đúng MỘT mục sáng', () => {
   const LEAVES = leavesOf(SHOP);
   const HOME = '/manage';
   const active = (pathname: string) => matchActiveHref(pathname, LEAVES, HOME);
@@ -107,7 +107,7 @@ describe('matchActiveHref — đúng MỘT mục sáng', () => {
     expect(active('/manage/vehicles/new')).toBe('/manage/vehicles');
   });
 
-  it('Tổng quan chỉ khớp tuyệt đối — nếu không thì trang nào cũng làm nó sáng', () => {
+  it('Tổng quan chỉ khớp tuyệt đối - nếu không thì trang nào cũng làm nó sáng', () => {
     expect(active('/manage')).toBe('/manage');
     expect(active('/manage/vehicles')).not.toBe('/manage');
   });
@@ -126,7 +126,7 @@ describe('matchActiveHref — đúng MỘT mục sáng', () => {
  * hồng có menu Owner Lite riêng, KHÔNG chứa trang nào của Full Manage; hai tuyến chưa vào được khu
  * quản lý không có menu.
  */
-describe('manageNavForTrack — menu theo tuyến', () => {
+describe('manageNavForTrack - menu theo tuyến', () => {
   const hrefs = (sections: ReturnType<typeof manageNavForTrack>) =>
     leavesOf(sections).map((leaf) => String(leaf.href));
 

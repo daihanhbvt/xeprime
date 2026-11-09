@@ -545,7 +545,7 @@ export class ReceiptsService {
     if (dto.branchId && vehicleId) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Phiếu đã gắn xe thì chi nhánh lấy theo xe — không chọn riêng',
+        message: 'Phiếu đã gắn xe thì chi nhánh lấy theo xe - không chọn riêng',
       });
     }
     /*
@@ -562,7 +562,7 @@ export class ReceiptsService {
       if (category?.requiresVehicle) {
         throw new BadRequestException({
           code: API_ERROR_CODE.VALIDATION_FAILED,
-          message: `Danh mục "${category.name}" là chi phí của một chiếc xe — hãy chọn xe hoặc đơn thuê`,
+          message: `Danh mục "${category.name}" là chi phí của một chiếc xe - hãy chọn xe hoặc đơn thuê`,
         });
       }
     }
@@ -681,7 +681,7 @@ export class ReceiptsService {
     if (isAutoReceipt(receipt.source)) {
       throw new ConflictException({
         code: API_ERROR_CODE.RECEIPT_SOURCE_LOCKED,
-        message: 'Phiếu tự động — huỷ ở chính nghiệp vụ đã sinh ra nó, không huỷ trực tiếp',
+        message: 'Phiếu tự động - huỷ ở chính nghiệp vụ đã sinh ra nó, không huỷ trực tiếp',
         details: {
           source: receipt.source,
           sourceRefId: receipt.sourceRefId,

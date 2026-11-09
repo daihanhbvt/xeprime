@@ -90,7 +90,7 @@ export function ResolveOdometerDialog({
       if (code === 'ODOMETER_DECREASE_FORBIDDEN') {
         setDecreaseWarning(getErrorMessage(err));
       } else if (code === 'CONFLICT') {
-        message.error('Biên bản vừa được người khác cập nhật — đóng và mở lại.');
+        message.error('Biên bản vừa được người khác cập nhật - đóng và mở lại.');
         onSaved();
       } else {
         message.error(getErrorMessage(err));

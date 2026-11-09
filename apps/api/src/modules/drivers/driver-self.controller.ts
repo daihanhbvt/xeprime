@@ -33,7 +33,7 @@ export class DriverSelfController {
   ) {}
 
   @Get('links')
-  @ApiOperation({ summary: 'Nơi tôi làm tài xế — lời mời + liên kết (hoặc lịch sử)' })
+  @ApiOperation({ summary: 'Nơi tôi làm tài xế - lời mời + liên kết (hoặc lịch sử)' })
   @ApiOkResponse({ type: MyDriverLinkPageDto })
   links(
     @CurrentUser() user: AuthenticatedUser,
@@ -110,7 +110,7 @@ export class DriverSelfController {
   @ApiOperation({
     summary: 'Nhận chuyến được gán',
     description:
-      'Chỉ trước hạn `respondBy` (ADR 0066). Quá hạn ⇒ 409 `DRIVER_ASSIGNMENT_EXPIRED` — chuyến được trả về bên thuê.',
+      'Chỉ trước hạn `respondBy` (ADR 0066). Quá hạn ⇒ 409 `DRIVER_ASSIGNMENT_EXPIRED` - chuyến được trả về bên thuê.',
   })
   @ApiOkResponse({ type: DriverTripDetailDto })
   async acceptTrip(
@@ -125,7 +125,7 @@ export class DriverSelfController {
   @ApiOperation({
     summary: 'Từ chối chuyến được gán',
     description:
-      'Đơn quay về chưa có tài xế và bên thuê được báo. Chuyến biến khỏi danh sách của tôi. Từ chối sau hạn `respondBy` (ADR 0066) được coi là quá hạn: lượt khép với kết cục `expired`, vẫn trả thành công — kể cả khi hệ thống đã trả lượt về trước đó.',
+      'Đơn quay về chưa có tài xế và bên thuê được báo. Chuyến biến khỏi danh sách của tôi. Từ chối sau hạn `respondBy` (ADR 0066) được coi là quá hạn: lượt khép với kết cục `expired`, vẫn trả thành công - kể cả khi hệ thống đã trả lượt về trước đó.',
   })
   @ApiOkResponse({ type: OkResultDto })
   async declineTrip(
@@ -140,7 +140,7 @@ export class DriverSelfController {
   @ApiOperation({
     summary: 'Trả lại chuyến đã nhận',
     description:
-      'Chỉ khi đơn còn `reserved` và trước `releaseUntil` (= clamp(20%·ΔT, 15′, 2h) tính xuôi từ lúc nhận, kẹp bởi giờ nhận — cùng công thức huỷ miễn phí của khách). Đơn KHÔNG bị huỷ: quay về chưa có tài xế, bên thuê được báo khẩn để gán người khác. Lượt khép với kết cục `declined` (có `acceptedAt`). Khác điều kiện ⇒ 409 `CONFLICT`.',
+      'Chỉ khi đơn còn `reserved` và trước `releaseUntil` (= clamp(20%·ΔT, 15′, 2h) tính xuôi từ lúc nhận, kẹp bởi giờ nhận - cùng công thức huỷ miễn phí của khách). Đơn KHÔNG bị huỷ: quay về chưa có tài xế, bên thuê được báo khẩn để gán người khác. Lượt khép với kết cục `declined` (có `acceptedAt`). Khác điều kiện ⇒ 409 `CONFLICT`.',
   })
   @ApiOkResponse({ type: OkResultDto })
   async releaseTrip(
@@ -156,7 +156,7 @@ export class DriverSelfController {
     summary: 'Báo sự cố / rút khỏi chuyến đã nhận',
     description:
       'ADR 0074. Chỉ chuyến của tôi đã nhận, đơn chưa giao xe (`canDrop`). Đơn KHÔNG bị huỷ: về chưa có tài xế, bên thuê được báo khẩn kèm hạn điều phối lại. ' +
-      'Vùng theo độ sát giờ nhận: trước `releaseUntil` không phạt; ≥ 12h vi phạm nhẹ; 2–12h cooldown "Đặt ngay" 24h; < 2h cooldown 48h. ' +
+      'Vùng theo độ sát giờ nhận: trước `releaseUntil` không phạt; ≥ 12h vi phạm nhẹ; 2-12h cooldown "Đặt ngay" 24h; < 2h cooldown 48h. ' +
       '`other` thiếu ghi chú ⇒ 422 `DRIVER_DROP_NOTE_REQUIRED`; lượt không còn của tôi / chưa nhận ⇒ 409 `DRIVER_ASSIGNMENT_STATE_CONFLICT`.',
   })
   @ApiOkResponse({ type: OkResultDto })

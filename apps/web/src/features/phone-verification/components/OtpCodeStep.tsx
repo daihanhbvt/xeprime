@@ -4,6 +4,7 @@ import { Alert, Button, Form } from 'antd';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { OTP_POLICY } from '@xeprime/types';
+import { formatOtpCooldown } from '../format-cooldown';
 import type { usePhoneVerify } from '../hooks/use-phone-verify';
 import { maskPhone } from '../mask';
 import { OtpCodeInput } from './OtpCodeInput';
@@ -36,6 +37,11 @@ interface OtpCodeStepProps {
   children?: ReactNode;
   /** Nút chính chỉ mở khi phần phụ cũng sẵn sàng. */
   canSubmit?: boolean;
+  /**
+   * "Gửi lại mã" — nơi gọi xoá câu lỗi của mã cũ (`error`) rồi gửi. Bỏ trống thì gửi thẳng qua
+   * `verify.send`, và câu lỗi cũ (nếu có) do nơi gọi tự dọn.
+   */
+  onResend?: () => void;
 }
 
 /**
@@ -61,10 +67,13 @@ export function OtpCodeStep({
   error,
   children,
   canSubmit = true,
+  onResend,
 }: OtpCodeStepProps) {
   const t = useTranslations('Auth.otp');
   const sent = verify.status === 'code_sent';
-  const ready = code.length === OTP_LENGTH && canSubmit && !submitting;
+  // Mã đã bị server huỷ (khoá / hết hạn): khoá ô mã và nút chính, chỉ còn "Gửi lại mã".
+  const locked = verify.codeDead;
+  const ready = code.length === OTP_LENGTH && canSubmit && !submitting && !locked;
   const displayError = error ?? verify.error;
 
   return (
@@ -89,10 +98,10 @@ export function OtpCodeStep({
           onChange={onCodeChange}
           // Gõ đủ 6 số thì tự gửi — trừ khi bước còn ô khác (mật khẩu mới) chưa điền.
           onComplete={(full) => {
-            if (!children && canSubmit && !submitting) onSubmit(full);
+            if (!children && canSubmit && !submitting && !locked) onSubmit(full);
           }}
           autoFocus
-          disabled={submitting}
+          disabled={submitting || locked}
         />
       </Form.Item>
 
@@ -122,10 +131,10 @@ export function OtpCodeStep({
           type="button"
           className={styles.linkBtn}
           disabled={verify.cooldown > 0 || verify.sending || submitting}
-          onClick={() => verify.send(phone)}
+          onClick={onResend ?? (() => verify.send(phone))}
         >
           {verify.cooldown > 0
-            ? t('resendIn', { seconds: verify.cooldown })
+            ? t('resendInTime', { time: formatOtpCooldown(verify.cooldown) })
             : sent
               ? t('resend')
               : t('sendCode')}

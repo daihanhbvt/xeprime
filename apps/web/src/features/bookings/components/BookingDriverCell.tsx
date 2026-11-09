@@ -41,5 +41,5 @@ export function BookingDriverCell({
   if (booking.serviceType === SERVICE_TYPE.WITH_DRIVER) {
     return <span className={styles.missing}>{t('none')}</span>;
   }
-  return <span className={styles.muted}>—</span>;
+  return <span className={styles.muted}>-</span>;
 }

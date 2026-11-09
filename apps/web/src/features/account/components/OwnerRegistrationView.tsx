@@ -21,9 +21,10 @@ import { StatusTag } from '@/components/data-display/StatusTag';
 import {
   ACCOUNT_SECTION,
   ROUTES,
+  SHOP_SECTION,
   accountSectionPath,
   ownerVehiclePath,
-  type AccountSection,
+  shopSectionPath,
 } from '@/constants/routes';
 import { useMyShop } from '@/features/shop/hooks/use-shop';
 import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
@@ -51,16 +52,16 @@ const IN_FLIGHT: readonly VehiclePublicStatus[] = [
 ];
 
 /**
- * Mục bắt buộc còn thiếu → section của "Hồ sơ chủ xe" nơi điền nó. Họ tên ở khối thông tin chủ xe,
- * SĐT là SĐT ĐĂNG NHẬP đã xác thực (đổi qua OTP), tỉnh ở địa chỉ. Tên trên chợ CHÍNH LÀ họ tên
- * chủ xe (ADR 0054) — nên mục đó cũng dẫn về khối thông tin chủ xe.
+ * Mục bắt buộc còn thiếu → chỗ điền nó. Họ tên ở thẻ thông tin chủ xe của trang "Hồ sơ chủ xe"
+ * (`/shop`, ADR 0085), SĐT là SĐT ĐĂNG NHẬP đã xác thực (đổi qua OTP, ở "Tài khoản & bảo mật"), tỉnh
+ * ở thẻ địa chỉ. Tên trên chợ CHÍNH LÀ họ tên chủ xe (ADR 0054) — nên mục đó cũng dẫn về thẻ thông tin.
  * `Record` đầy đủ: thêm một mục bắt buộc mà quên chỗ điền sẽ đỏ ngay ở đây.
  */
-const REQUIREMENT_SECTION: Readonly<Record<ShopProfileRequirement, AccountSection>> = {
-  [SHOP_PROFILE_REQUIREMENT.OWNER_NAME]: ACCOUNT_SECTION.PROFILE,
-  [SHOP_PROFILE_REQUIREMENT.OWNER_PHONE]: ACCOUNT_SECTION.LOGIN,
-  [SHOP_PROFILE_REQUIREMENT.DISPLAY_NAME]: ACCOUNT_SECTION.PROFILE,
-  [SHOP_PROFILE_REQUIREMENT.PROVINCE]: ACCOUNT_SECTION.ADDRESS,
+const REQUIREMENT_HREF: Readonly<Record<ShopProfileRequirement, string>> = {
+  [SHOP_PROFILE_REQUIREMENT.OWNER_NAME]: shopSectionPath(SHOP_SECTION.PROFILE),
+  [SHOP_PROFILE_REQUIREMENT.OWNER_PHONE]: accountSectionPath(ACCOUNT_SECTION.LOGIN),
+  [SHOP_PROFILE_REQUIREMENT.DISPLAY_NAME]: shopSectionPath(SHOP_SECTION.PROFILE),
+  [SHOP_PROFILE_REQUIREMENT.PROVINCE]: shopSectionPath(SHOP_SECTION.LEGAL),
 };
 
 /**
@@ -172,9 +173,7 @@ export function OwnerRegistrationView() {
   const profileDone = missing.length === 0;
   // CTA đưa thẳng tới mục ĐẦU TIÊN còn thiếu, không bắt người dùng đi tìm trong sáu section.
   const firstMissing = missing[0];
-  const profileCtaHref = firstMissing
-    ? accountSectionPath(REQUIREMENT_SECTION[firstMissing])
-    : ROUTES.MANAGE.ACCOUNT;
+  const profileCtaHref = firstMissing ? REQUIREMENT_HREF[firstMissing] : ROUTES.MANAGE.SHOP;
   const hasVehicle = items.length > 0;
   /*
    * Bước ĐANG mở, không phải "số bước đã xong": chừng nào chưa có xe nào trên chợ thì việc của
@@ -189,7 +188,7 @@ export function OwnerRegistrationView() {
         subtitle={t('subtitle')}
         extra={
           <>
-            <Link href={ROUTES.MANAGE.ACCOUNT}>
+            <Link href={ROUTES.MANAGE.SHOP}>
               <Button icon={<SolutionOutlined />}>{t('editProfile')}</Button>
             </Link>
             {hasVehicle ? (

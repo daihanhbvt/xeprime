@@ -26,6 +26,8 @@ interface VerifyAccountDialogProps {
   onCodeChange: (code: string) => void;
   /** Bấm "Xác minh" hoặc gõ đủ 6 số. */
   onSubmit: (code: string) => void;
+  /** "Gửi lại mã" — nơi gọi xoá câu lỗi của mã cũ rồi gửi qua `verify`. */
+  onResend: () => void;
   submitting: boolean;
   /** Lỗi của lượt tạo tài khoản (mã sai, hết hạn…) — đã dịch từ MÃ lỗi. */
   error: string | null;
@@ -47,6 +49,7 @@ export function VerifyAccountDialog({
   code,
   onCodeChange,
   onSubmit,
+  onResend,
   submitting,
   error,
   onClose,
@@ -98,6 +101,7 @@ export function VerifyAccountDialog({
           onChange={onCodeChange}
           onComplete={onSubmit}
           submitting={submitting}
+          locked={verify.codeDead}
           error={error ?? verify.error}
           devCode={verify.devCode}
         />
@@ -107,7 +111,7 @@ export function VerifyAccountDialog({
             type="button"
             className={styles.resendButton}
             disabled={verify.cooldown > 0 || verify.sending || submitting}
-            onClick={() => verify.send(phone)}
+            onClick={onResend}
           >
             {verify.cooldown > 0
               ? t('resendIn', { time: formatOtpCooldown(verify.cooldown) })
@@ -120,6 +124,7 @@ export function VerifyAccountDialog({
             size="form"
             block
             loading={submitting}
+            disabled={verify.codeDead}
             onClick={() => submitCodeOrFocus(code, codeRef, onSubmit)}
           >
             {t('submit')}

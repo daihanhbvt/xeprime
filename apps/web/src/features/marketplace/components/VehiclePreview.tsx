@@ -14,6 +14,7 @@ import {
 } from '../hooks/use-recommended-listings';
 import { provinceLabelOf } from '../province-options';
 import { CtaButton } from './CtaButton';
+import { Magnetic } from '@/components/motion/Magnetic';
 import { HomeCarousel } from './HomeCarousel';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from './SectionHeading';
@@ -88,11 +89,14 @@ export function VehiclePreview() {
       <SectionHeading
         id="home-vehicles"
         kicker={tHome('kicker')}
-        title={serviceLabel ? t('titleWithService', { service: serviceLabel }) : tHome('title')}
+        // Người dùng 04/11/2026: bỏ dòng "Xe phù hợp cho mọi hành trình" — chỉ giữ dòng nhỏ "Xe tiêu biểu".
+        {...(serviceLabel ? { title: t('titleWithService', { service: serviceLabel }) } : {})}
         action={
-          <CtaButton href={exploreHref} variant="outline">
-            {tHome('viewAll')}
-          </CtaButton>
+          <Magnetic>
+            <CtaButton href={exploreHref} variant="outline">
+              {tHome('viewAll')}
+            </CtaButton>
+          </Magnetic>
         }
       />
       {/*

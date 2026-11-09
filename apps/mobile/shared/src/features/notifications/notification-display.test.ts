@@ -32,7 +32,7 @@ const manageOnly = (href: Href): Href | null => (IS_CUSTOMER ? null : href);
 const BOOKING_ID = '01JB9ZK2QW3E4R5T6Y7U8I9O0P';
 const CONVERSATION_ID = '01JB9ZCONV000000000000000A';
 
-describe('notificationHref — phía KHÁCH', () => {
+describe('notificationHref - phía KHÁCH', () => {
   it('`booking` và `booking_request` đều về ĐÚNG chuyến', () => {
     for (const targetType of [
       NOTIFICATION_TARGET_TYPE.BOOKING,
@@ -66,7 +66,7 @@ describe('notificationHref — phía KHÁCH', () => {
     ).toEqual(customerOnly(ROUTES.booking.list()));
   });
 
-  it('loại không có đích hợp lý thì trả null — chạm vào chỉ đánh dấu đã đọc', () => {
+  it('loại không có đích hợp lý thì trả null - chạm vào chỉ đánh dấu đã đọc', () => {
     for (const targetType of [
       NOTIFICATION_TARGET_TYPE.TENANT,
       NOTIFICATION_TARGET_TYPE.VEHICLE,
@@ -86,7 +86,7 @@ describe('notificationHref — phía KHÁCH', () => {
  * bỏ qua nhánh membership khi `expected === customer`). Đây cũng là luật mà `notificationDeepLink`
  * dùng cho `data.url` của thông báo đẩy — hai đường phải nói cùng một thứ.
  */
-describe('notificationHref — hội thoại', () => {
+describe('notificationHref - hội thoại', () => {
   it('khách mở hộp thư khách, gian hàng mở inbox gian hàng', () => {
     expect(
       notificationHref(
@@ -120,7 +120,7 @@ describe('notificationHref — hội thoại', () => {
   });
 });
 
-describe('notificationHref — khu QUẢN LÝ', () => {
+describe('notificationHref - khu QUẢN LÝ', () => {
   /**
    * `targetId` phải ĐI TỚI NƠI, không bị vứt dọc đường.
    *
@@ -216,7 +216,7 @@ describe('notificationIcon', () => {
   });
 });
 
-describe('notificationHref — CHỦ xe tuyến hoa hồng (Owner Lite, PR #158)', () => {
+describe('notificationHref - CHỦ xe tuyến hoa hồng (Owner Lite, PR #158)', () => {
   it('`booking` mở thẳng chi tiết ĐƠN đó', () => {
     expect(
       notificationHref(

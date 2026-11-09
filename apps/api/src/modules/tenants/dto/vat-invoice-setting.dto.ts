@@ -10,7 +10,7 @@ import { IsBoolean } from 'class-validator';
 export class VatInvoiceSettingDto {
   @ApiProperty({
     description:
-      'Gian hàng / chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê — áp cho mọi xe, khách lọc được ' +
+      'Gian hàng / chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê - áp cho mọi xe, khách lọc được ' +
       'trên chợ. XePrime không xuất hoá đơn thay chủ xe.',
   })
   vatInvoiceSupported!: boolean;

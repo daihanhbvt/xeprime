@@ -19,6 +19,12 @@
 }
 
 .card {
+  /*
+   * Chiều cao MỌI ô của thẻ (loại xe · địa điểm · thời gian · nút Tìm kiếm) - một số cho cả hàng.
+   * Hạ 44 → 40 (06/11/2026). App khớp ở `SEARCH_FIELD_HEIGHT` (search-card-metrics.ts).
+   */
+  --search-field-h: 40px;
+
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -120,7 +126,7 @@
 
 /* Ô nhập địa điểm dạng pill */
 .locationField {
-  height: 44px !important;
+  height: var(--search-field-h) !important;
   padding: 0 16px !important;
   border: 1px solid var(--xp-color-border) !important;
   border-radius: var(--xp-border-radius-pill) !important;
@@ -135,7 +141,7 @@
 
 /* Ô thời gian dạng pill */
 .box {
-  height: 44px !important;
+  height: var(--search-field-h) !important;
   padding: 0 16px !important;
   border: 1px solid var(--xp-color-border) !important;
   border-radius: var(--xp-border-radius-pill) !important;
@@ -167,7 +173,7 @@
 
 .submit {
   flex: none;
-  height: 44px;
+  height: var(--search-field-h);
   padding: 0 24px;
   font-size: 15px;
 }
@@ -262,4 +268,10 @@
   .submit {
     width: 100%;
   }
+}
+
+/* ─── Giao diện tối (Figma `21965:6765`): ô nhập nổi một bậc trên nền panel. ── */
+:global([data-theme='dark']) .locationField,
+:global([data-theme='dark']) .box {
+  background: var(--xp-color-bg-elevated) !important;
 }

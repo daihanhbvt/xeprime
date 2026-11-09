@@ -4,14 +4,18 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   API_ERROR_CODE,
+  BOOKING_STATUS_META,
   DRIVER_ASSIGNMENT_OUTCOME_META,
+  DRIVER_ASSIGNMENT_STATUS_META,
   DRIVER_LINK_END_PARTY,
   DRIVER_LINK_OPEN_STATUSES,
   DRIVER_LINK_STATUS,
   DRIVER_LINK_STATUS_META,
   PERMISSION,
   STATUS_COLOR,
+  type BookingStatus,
   type DriverAssignmentOutcome,
+  type DriverAssignmentStatus,
 } from '@xeprime/types';
 import { dayjs, driverWageLine, nowInAppTz } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -215,7 +219,9 @@ function DriverOverviewSection({ overview }: { overview: DriverOverview }) {
   const t = useTranslations('Drivers.detail.overview');
   const fmt = useAppFormat();
   const settings = useDriverWageSettings();
-  const { driver, month, upcoming, reliability, trend } = overview;
+  const { driver, month, upcoming, reliability, trend, current } = overview;
+  const domainLabel = useDomainLabel();
+  const navigateOnce = useNavigateOnce();
   const monthLabel = fmt.monthYear(dayjs(month.month, MONTH_PERIOD_FORMAT).toDate());
   const shopDaily = settings.data?.dailyWage ?? null;
   const hasTrend = trend.some((p) => p.trips > 0 || Number(p.wageTotal) > 0);
@@ -245,7 +251,7 @@ function DriverOverviewSection({ overview }: { overview: DriverOverview }) {
         key: 'averageDaily',
         icon: 'calendar-outline',
         label: t('stats.averageDaily'),
-        value: month.averageDailyWage == null ? '—' : fmt.money(month.averageDailyWage),
+        value: month.averageDailyWage == null ? '-' : fmt.money(month.averageDailyWage),
         hint: shopDaily
           ? t('stats.shopDaily', { amount: fmt.money(shopDaily) })
           : t('stats.noShopDaily'),
@@ -274,6 +280,66 @@ function DriverOverviewSection({ overview }: { overview: DriverOverview }) {
         {t('period', { month: monthLabel })}
       </Text>
       <StatGrid cells={cells} />
+
+      {/* Chuyến đang gán, sớm nhất trước — như khối "Chuyến đang gán" của web `DriverOverviewTab`. */}
+      {driver.activeBookingCount > 0 ? (
+        <Card>
+          <YStack gap={space.sm}>
+            <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
+              {t('current.title', { count: driver.activeBookingCount })}
+            </Text>
+            {current.map((trip) => {
+              const bookingMeta = BOOKING_STATUS_META[trip.bookingStatus as BookingStatus];
+              const assignmentMeta = trip.assignmentStatus
+                ? DRIVER_ASSIGNMENT_STATUS_META[trip.assignmentStatus as DriverAssignmentStatus]
+                : null;
+              return (
+                <Card
+                  key={trip.bookingId}
+                  tone="muted"
+                  lift="flat"
+                  onPress={() => navigateOnce(ROUTES.manage.bookingDetail(trip.bookingId))}
+                >
+                  <YStack gap={space.xs}>
+                    <XStack ai="center" jc="space-between" gap={space.sm}>
+                      <Text f={1} col={colors.primaryActive} fos={fontSize.body} fow={fontWeight.semibold}>
+                        {trip.bookingCode}
+                      </Text>
+                      {bookingMeta ? (
+                        <StatusBadge
+                          label={domainLabel('bookingStatus', trip.bookingStatus, bookingMeta.label)}
+                          color={bookingMeta.color}
+                          size="sm"
+                        />
+                      ) : null}
+                    </XStack>
+                    <Text col={colors.text} fos={fontSize.bodySm}>
+                      {trip.vehiclePlate ? `${trip.vehicleName} · ${trip.vehiclePlate}` : trip.vehicleName}
+                    </Text>
+                    <XStack ai="center" jc="space-between" gap={space.sm}>
+                      <Text f={1} col={colors.textMuted} fos={fontSize.label}>
+                        {fmt.shortDateTimeRange(trip.pickupAt, trip.returnAt)}
+                      </Text>
+                      {assignmentMeta && trip.assignmentStatus ? (
+                        <StatusBadge
+                          label={domainLabel('driverAssignmentStatus', trip.assignmentStatus, assignmentMeta.label)}
+                          color={assignmentMeta.color}
+                          size="sm"
+                        />
+                      ) : null}
+                    </XStack>
+                  </YStack>
+                </Card>
+              );
+            })}
+            {driver.activeBookingCount > current.length ? (
+              <Text col={colors.textMuted} fos={fontSize.label}>
+                {t('current.more', { shown: current.length })}
+              </Text>
+            ) : null}
+          </YStack>
+        </Card>
+      ) : null}
 
       <Card>
         <YStack gap={space.sm}>
@@ -320,7 +386,7 @@ function DriverOverviewSection({ overview }: { overview: DriverOverview }) {
             label={t('reliability.response')}
             value={
               reliability.medianResponseMinutes == null
-                ? '—'
+                ? '-'
                 : reliability.medianResponseMinutes === 0
                   ? t('reliability.underMinute')
                   : fmt.minutesDuration(reliability.medianResponseMinutes)
@@ -451,7 +517,7 @@ function DriverTripsSection({ driver, month }: { driver: Driver; month: string }
                       {[row.vehicleName, row.vehiclePlate].filter(Boolean).join(' · ')}
                     </Text>
                     <Text col={colors.textMuted} fos={fontSize.label}>
-                      {fmt.shortDateTimeRange(row.pickupAt, row.returnAt)}
+                      {fmt.rentalRange(row.pickupAt, row.returnAt)}
                     </Text>
                     <Text
                       col={!line || line.kind === 'none' ? colors.textMuted : colors.text}
@@ -459,7 +525,7 @@ function DriverTripsSection({ driver, month }: { driver: Driver; month: string }
                       fow={!line || line.kind === 'none' ? fontWeight.regular : fontWeight.semibold}
                     >
                       {!line
-                        ? '—'
+                        ? '-'
                         : line.kind === 'none'
                           ? tLine('none')
                           : tLine(line.kind, {

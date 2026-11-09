@@ -592,7 +592,7 @@ export function CalendarScheduler() {
                           : t('grid.availableCell', { day: day.dayOfMonth, count })
                       }
                     >
-                      {count ?? '—'}
+                      {count ?? '-'}
                     </div>
                   );
                 })}

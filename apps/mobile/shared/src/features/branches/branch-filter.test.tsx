@@ -6,7 +6,6 @@ import type { Href } from 'expo-router';
 import { getApiClient } from '@xeprime/api-client';
 import { BRANCH_STATUS, PERMISSION, type Permission } from '@xeprime/types';
 import * as authApi from '@/features/auth/api';
-import { bookingRequestsApi } from '@/features/booking-requests/api';
 import { calendarApi } from '@/features/calendar/api';
 import { vehiclesApi } from '@/features/vehicles/api';
 import { useFleetSummary, useInfiniteVehicles } from '@/features/vehicles/hooks/use-vehicles';
@@ -133,7 +132,7 @@ beforeEach(() => {
   jest.restoreAllMocks();
 });
 
-describe('useBranchFilter — hiện / khoá', () => {
+describe('useBranchFilter - hiện / khoá', () => {
   it('thiếu `branches.view`: không gọi API, không hiện', async () => {
     jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue(currentUser([PERMISSION.TENANT_VIEW]));
     const listSpy = jest.spyOn(branchesApi, 'list').mockResolvedValue(list([branch(), SECOND]));
@@ -199,7 +198,7 @@ describe('useBranchFilter — hiện / khoá', () => {
   });
 });
 
-describe('useBranchFilter — nhả giá trị không dùng được', () => {
+describe('useBranchFilter - nhả giá trị không dùng được', () => {
   it('chi nhánh không còn trong danh sách ⇒ nhả về "Tất cả" sau khi tải XONG', async () => {
     jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue(currentUser([PERMISSION.BRANCH_VIEW]));
     jest.spyOn(branchesApi, 'list').mockResolvedValue(list([branch(), SECOND]));
@@ -292,23 +291,28 @@ describe('Dữ liệu đi theo chi nhánh của MÀN', () => {
     await waitFor(() => expect(spy).toHaveBeenCalledWith({ branchId: SECOND.id }));
   });
 
-  it('huy hiệu "chờ duyệt" đếm TOÀN gian hàng — không mang `branchId`', async () => {
+  it('huy hiệu "chờ duyệt" đếm TOÀN gian hàng - không mang `branchId`', async () => {
     jest
       .spyOn(authApi, 'fetchCurrentUser')
       .mockResolvedValue(currentUser([PERMISSION.BOOKING_REQUEST_VIEW]));
-    const spy = jest.spyOn(bookingRequestsApi, 'list').mockResolvedValue({
-      ...EMPTY_PAGE,
-      meta: { ...EMPTY_PAGE.meta, statusCounts: [] },
+    // Huy hiệu đọc `/dashboard/requests` như web `useNavBadges` — endpoint không nhận tham số nào.
+    const get = jest.spyOn(getApiClient(), 'get').mockResolvedValue({
+      pending: 0,
+      pendingUrgent: 0,
+      nextRespondBy: null,
+      awaitingPayment: 0,
     } as never);
     const client = makeClient();
     await renderHook(() => useManageNavBadges(), {
       wrapper: ({ children }) => wrap(children, client),
     });
-    await waitFor(() => expect(spy).toHaveBeenCalled());
-    expect(spy.mock.calls[0]?.[0]).not.toHaveProperty('branchId');
+    await waitFor(() =>
+      expect(get.mock.calls.some(([path]) => path === '/dashboard/requests')).toBe(true),
+    );
+    for (const [path] of get.mock.calls) expect(String(path)).not.toContain('branchId');
   });
 
-  it('gỡ lô khoá hàng loạt mang `?branchId=` — chỉ gỡ phần của chi nhánh đang xem', async () => {
+  it('gỡ lô khoá hàng loạt mang `?branchId=` - chỉ gỡ phần của chi nhánh đang xem', async () => {
     const del = jest.spyOn(getApiClient(), 'delete').mockResolvedValue({ released: 1 } as never);
     await calendarApi.releaseBulkBlockBatch('BATCH1', SECOND.id);
     expect(del).toHaveBeenCalledWith(`/calendar/bulk-day/blocks/BATCH1?branchId=${SECOND.id}`);

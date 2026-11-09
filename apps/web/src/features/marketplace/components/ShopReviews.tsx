@@ -5,6 +5,8 @@ import { initialOf } from '@/lib/initials';
 import { getAppFormat } from '@/i18n/server-format';
 import { getTranslations } from 'next-intl/server';
 import { fetchShopReviews } from '../api';
+import { staggerFastClass, viewEnterClass } from '@/components/motion/motion-classes';
+import { cx } from '@/lib/cx';
 import styles from './ShopReviews.module.css';
 
 /**
@@ -39,7 +41,7 @@ export async function ShopReviews({ slug }: { slug: string }) {
       {page.data.length === 0 ? (
         <p className={styles.empty}>{t('empty')}</p>
       ) : (
-        <ul className={styles.list}>
+        <ul className={cx(styles.list, staggerFastClass, viewEnterClass)}>
           {page.data.map((review) => (
             <li key={review.id} className={styles.item}>
               <div className={styles.head}>

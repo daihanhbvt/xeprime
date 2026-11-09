@@ -68,7 +68,7 @@ beforeEach(() => {
   api.startGatewayCheckout.mockReset();
 });
 
-describe('CheckoutPanel — chuyển khoản VietQR', () => {
+describe('CheckoutPanel - chuyển khoản VietQR', () => {
   it('mở sẵn chuyển khoản: QR mang sẵn số tiền + nội dung, mã hiện cả ở thẻ tóm tắt', () => {
     const { container } = renderPanel();
 
@@ -107,21 +107,21 @@ describe('CheckoutPanel — chuyển khoản VietQR', () => {
    * lật trang ngay khi tiền về. Một nút "Tôi đã chuyển khoản" chỉ là lời mời hiểu nhầm rằng bấm nó
    * thay được cho tiền.
    */
-  it('chuyển khoản KHÔNG có nút "Tôi đã chuyển khoản" — chỉ nói hệ thống tự xác nhận', () => {
+  it('chuyển khoản KHÔNG có nút "Tôi đã chuyển khoản" - chỉ nói hệ thống tự xác nhận', () => {
     renderPanel();
     expect(screen.queryByRole('button', { name: /đã chuyển khoản/i })).toBeNull();
     expect(screen.getByText(/tự xác nhận ngay khi tiền về/i)).toBeTruthy();
   });
 });
 
-describe('CheckoutPanel — ví điện tử', () => {
+describe('CheckoutPanel - ví điện tử', () => {
   it('server không mở kênh nào ⇒ KHÔNG có nhóm ví điện tử', async () => {
     renderPanel();
     await waitFor(() => expect(api.fetchGatewayMethods).toHaveBeenCalled());
     expect(screen.queryByRole('button', { name: /ví điện tử/i })).toBeNull();
   });
 
-  it('có VNPAY ⇒ chọn ví rồi bấm — chỉ gửi KÊNH, không gửi số tiền hay mã', async () => {
+  it('có VNPAY ⇒ chọn ví rồi bấm - chỉ gửi KÊNH, không gửi số tiền hay mã', async () => {
     api.fetchGatewayMethods.mockResolvedValue(VNPAY);
     api.startGatewayCheckout.mockResolvedValue({ id: 'ORDER1', checkoutUrl: null });
     renderPanel();

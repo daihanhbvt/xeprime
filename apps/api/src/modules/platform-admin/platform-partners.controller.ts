@@ -49,7 +49,7 @@ export class PlatformPartnersController {
 
   @Get('overview')
   @RequirePermissions(PERMISSION.PLATFORM_TENANT_VIEW)
-  @ApiOperation({ summary: 'Chi tiết đối tác — đầu drawer + tab Tổng quan (chỉ đọc)' })
+  @ApiOperation({ summary: 'Chi tiết đối tác - đầu drawer + tab Tổng quan (chỉ đọc)' })
   @ApiOkResponse({ type: PartnerOverviewDto })
   overview(
     @Param('tenantId') tenantId: string,
@@ -60,7 +60,7 @@ export class PlatformPartnersController {
 
   @Get('vehicles')
   @RequirePermissions(PERMISSION.PLATFORM_TENANT_VIEW, PERMISSION.PLATFORM_VEHICLE_VIEW)
-  @ApiOperation({ summary: 'Xe của đối tác — phân trang, lọc, sắp xếp, kèm cảnh báo (chỉ đọc)' })
+  @ApiOperation({ summary: 'Xe của đối tác - phân trang, lọc, sắp xếp, kèm cảnh báo (chỉ đọc)' })
   @ApiOkResponse({ type: PartnerVehiclePageDto })
   vehicles(
     @Param('tenantId') tenantId: string,
@@ -72,7 +72,7 @@ export class PlatformPartnersController {
   @Get('bookings')
   @RequirePermissions(PERMISSION.PLATFORM_TENANT_VIEW, PERMISSION.PLATFORM_BOOKING_VIEW)
   @ApiOperation({
-    summary: 'Đơn thuê của đối tác — khách đã che; tổng tiền chỉ khi có platform.money.manage',
+    summary: 'Đơn thuê của đối tác - khách đã che; tổng tiền chỉ khi có platform.money.manage',
   })
   @ApiOkResponse({ type: PartnerBookingPageDto })
   bookings(
@@ -96,7 +96,7 @@ export class PlatformPartnersController {
 
   @Get('booking-requests')
   @RequirePermissions(PERMISSION.PLATFORM_TENANT_VIEW, PERMISSION.PLATFORM_BOOKING_VIEW)
-  @ApiOperation({ summary: 'Yêu cầu thuê của đối tác — khách đã che (chỉ đọc)' })
+  @ApiOperation({ summary: 'Yêu cầu thuê của đối tác - khách đã che (chỉ đọc)' })
   @ApiOkResponse({ type: PartnerBookingRequestPageDto })
   bookingRequests(
     @Param('tenantId') tenantId: string,
@@ -108,7 +108,7 @@ export class PlatformPartnersController {
   @Get('profile')
   @RequirePermissions(PERMISSION.PLATFORM_TENANT_VIEW)
   @ApiOperation({
-    summary: 'Hồ sơ đối tác — PII đã che; giấy tờ pháp lý chỉ khi có platform.sellers.verify',
+    summary: 'Hồ sơ đối tác - PII đã che; giấy tờ pháp lý chỉ khi có platform.sellers.verify',
   })
   @ApiOkResponse({ type: PartnerProfileDto })
   profile(
@@ -120,7 +120,7 @@ export class PlatformPartnersController {
 
   @Get('billing')
   @RequirePermissions(PERMISSION.PLATFORM_TENANT_VIEW, PERMISSION.PLATFORM_BILLING_MANAGE)
-  @ApiOperation({ summary: 'Gói & phí của gian hàng gói — gói, hạn mức, hoá đơn (chỉ đọc)' })
+  @ApiOperation({ summary: 'Gói & phí của gian hàng gói - gói, hạn mức, hoá đơn (chỉ đọc)' })
   @ApiOkResponse({ type: PartnerBillingDto })
   billing(@Param('tenantId') tenantId: string): Promise<PartnerBillingDto> {
     return this.detail.billing(tenantId);
@@ -130,7 +130,7 @@ export class PlatformPartnersController {
   @RequirePermissions(PERMISSION.PLATFORM_TENANT_VIEW)
   @ApiOperation({
     summary:
-      'Phí dịch vụ & số liệu theo tháng của chủ xe cá nhân — số tiền theo platform.money.manage',
+      'Phí dịch vụ & số liệu theo tháng của chủ xe cá nhân - số tiền theo platform.money.manage',
   })
   @ApiOkResponse({ type: PartnerCommissionDto })
   commission(
@@ -142,7 +142,7 @@ export class PlatformPartnersController {
 
   @Get('activity')
   @RequirePermissions(PERMISSION.PLATFORM_TENANT_VIEW, PERMISSION.PLATFORM_AUDIT_VIEW)
-  @ApiOperation({ summary: 'Nhật ký hoạt động của đối tác — không kèm IP/thiết bị (chỉ đọc)' })
+  @ApiOperation({ summary: 'Nhật ký hoạt động của đối tác - không kèm IP/thiết bị (chỉ đọc)' })
   @ApiOkResponse({ type: PartnerActivityPageDto })
   activity(
     @Param('tenantId') tenantId: string,

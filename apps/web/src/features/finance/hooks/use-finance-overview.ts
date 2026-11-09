@@ -56,16 +56,19 @@ export function useFinanceByCategory(
   });
 }
 
-export function useVehicleProfit(filters: FinanceOverviewFilters) {
+/** `enabled` — chỉ tab đang mở của khối "Hiệu suất kinh doanh" mới cần gọi API. */
+export function useVehicleProfit(filters: FinanceOverviewFilters, enabled = true) {
   return useQuery({
     queryKey: queryKeys.finance.byVehicle(vehicleProfitParams(filters)),
     queryFn: () => fetchVehicleProfit(filters),
+    enabled,
   });
 }
 
-export function useCustomerRevenue(filters: FinanceOverviewFilters) {
+export function useCustomerRevenue(filters: FinanceOverviewFilters, enabled = true) {
   return useQuery({
     queryKey: queryKeys.finance.byCustomer(customerRevenueParams(filters)),
     queryFn: () => fetchCustomerRevenue(filters),
+    enabled,
   });
 }

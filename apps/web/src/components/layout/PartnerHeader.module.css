@@ -1,5 +1,5 @@
 /*
- * Header site partner — Figma Partner-XePrime `23649:27690`: nền trắng, kẻ dưới, bóng 4px rất nhẹ;
+ * Header site partner - Figma Partner-XePrime `23649:27690`: nền trắng, kẻ dưới, bóng 4px rất nhẹ;
  * thanh trong cùng cột 1560px với vùng nội dung, khoảng cách các khối 48px, đệm dọc 16px.
  */
 .header {
@@ -19,7 +19,7 @@
   padding-inline: max(var(--xp-space-lg), calc((100% - var(--xp-shell-partner-max-width)) / 2));
 }
 
-/* `.bar .hamburger`: `display` của AntD Button là (0,1,0) — một class đơn sẽ thua (xem Topbar). */
+/* `.bar .hamburger`: `display` của AntD Button là (0,1,0) - một class đơn sẽ thua (xem Topbar). */
 .bar .hamburger {
   display: none;
 }
@@ -55,22 +55,16 @@
 }
 
 /*
- * User Info (`23649:27591`): ảnh 40px tròn + chấm trực tuyến, tên 14px/Medium, dòng phụ 14px/Regular
- * xám, mũi tên 16px. Cả khối là MỘT nút mở menu tài khoản.
+ * Nút mở menu hồ sơ: CHỈ ảnh 40px tròn + chấm trực tuyến (09/11/2026, người dùng chốt - tên và
+ * "Gian hàng · Vai" đã nằm ở thẻ đầu menu `PartnerAccountMenu`). Rê chuột là menu mở.
  */
 .profile {
   display: inline-flex;
   flex: none;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
   padding: 0;
   border: none;
-  border-radius: var(--xp-border-radius-control);
+  border-radius: var(--xp-border-radius-pill);
   background: none;
-  color: inherit;
-  font: inherit;
-  text-align: start;
   cursor: pointer;
 }
 
@@ -102,44 +96,9 @@
   background: var(--xp-color-success-accent);
 }
 
-.identity {
-  display: flex;
-  min-width: 0;
-  max-width: 240px;
-  flex-direction: column;
-  gap: 2px;
-  font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
-}
-
-.name,
-.workspace {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.name {
-  color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-medium);
-}
-
-.workspace {
-  color: var(--xp-color-text-tertiary);
-}
-
-.caret {
-  color: var(--xp-color-text-tertiary);
-  font-size: 16px;
-}
-
-.profile:hover .caret {
-  color: var(--xp-color-primary);
-}
-
 /*
- * Bề ngang: design vẽ ở 1920. Hẹp dần thì bớt chi tiết của khối PHẢI trước (chữ hồ sơ, khoảng cách)
- * để menu giữ đủ nhãn — xem các bậc tương ứng ở `PartnerTopNav.module.css`.
+ * Bề ngang: design vẽ ở 1920. Hẹp dần thì bớt khoảng cách của khối PHẢI trước để menu giữ đủ nhãn -
+ * xem các bậc tương ứng ở `PartnerTopNav.module.css`.
  */
 @media (max-width: 1536px) {
   .bar {
@@ -148,10 +107,6 @@
 
   .right {
     gap: var(--xp-space-md);
-  }
-
-  .identity {
-    display: none;
   }
 }
 
@@ -174,13 +129,5 @@
   .right,
   .actions {
     gap: var(--xp-space-sm);
-  }
-}
-
-/* Điện thoại: "Tài khoản & bảo mật" đã có trong menu hồ sơ — nhường chỗ cho tin nhắn/thông báo. */
-@media (max-width: 640px) {
-  .settings,
-  .caret {
-    display: none;
   }
 }

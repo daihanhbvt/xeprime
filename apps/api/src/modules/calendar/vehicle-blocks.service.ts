@@ -171,7 +171,7 @@ export class VehicleBlocksService {
       if (claimed.count === 0) {
         throw new ConflictException({
           code: API_ERROR_CODE.CONFLICT,
-          message: 'Lịch khoá vừa được người khác cập nhật — tải lại rồi thử lại',
+          message: 'Lịch khoá vừa được người khác cập nhật - tải lại rồi thử lại',
         });
       }
 

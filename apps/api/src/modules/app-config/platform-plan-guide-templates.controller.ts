@@ -67,7 +67,7 @@ export class PlatformPlanGuideTemplatesController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Sửa mẫu — version +1; `expectedVersion` lệch ⇒ 409' })
+  @ApiOperation({ summary: 'Sửa mẫu - version +1; `expectedVersion` lệch ⇒ 409' })
   @ApiOkResponse({ type: PlanGuideTemplateDto })
   update(
     @CurrentUser() user: AuthenticatedUser,
@@ -91,7 +91,7 @@ export class PlatformPlanGuideTemplatesController {
 
   @Post(':id/activate')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Bật mẫu này (mẫu đang bật trước đó tự tắt — đúng một mẫu bật)' })
+  @ApiOperation({ summary: 'Bật mẫu này (mẫu đang bật trước đó tự tắt - đúng một mẫu bật)' })
   @ApiOkResponse({ type: PlanGuideTemplateDto })
   activate(
     @CurrentUser() user: AuthenticatedUser,
@@ -101,7 +101,7 @@ export class PlatformPlanGuideTemplatesController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Xoá mềm mẫu — mẫu đang bật không xoá được' })
+  @ApiOperation({ summary: 'Xoá mềm mẫu - mẫu đang bật không xoá được' })
   @ApiOkResponse({ type: OkResultDto })
   async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<OkResultDto> {
     await this.templates.remove(user.id, id);
@@ -111,7 +111,7 @@ export class PlatformPlanGuideTemplatesController {
   @Post(':id/preview')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Dựng tiêu đề + HTML bằng dữ liệu mẫu (có thể gửi bản nháp chưa lưu) — không ghi gì',
+    summary: 'Dựng tiêu đề + HTML bằng dữ liệu mẫu (có thể gửi bản nháp chưa lưu) - không ghi gì',
   })
   @ApiOkResponse({ type: PlanGuideTemplatePreviewDto })
   preview(

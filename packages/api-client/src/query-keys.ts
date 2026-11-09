@@ -3,11 +3,11 @@ import type { QueryParams } from './url';
 /**
  * Query key tập trung một chỗ để `invalidateQueries` không phải đoán chuỗi.
  *
- * Quy ước: key luôn bắt đầu bằng tên domain, tham số nằm ở phần tử cuối dạng object —
+ * Quy ước: key luôn bắt đầu bằng tên domain, tham số nằm ở phần tử cuối dạng object -
  * nhờ vậy `invalidateQueries({ queryKey: queryKeys.calendar.all })` xoá được cả nhánh.
  */
 export const queryKeys = {
-  /** Cấu hình app bật/tắt từ xa — `GET /app-config/partner` (+ SSE) và bản quản trị. */
+  /** Cấu hình app bật/tắt từ xa - `GET /app-config/partner` (+ SSE) và bản quản trị. */
   appConfig: {
     all: ['app-config'] as const,
     partner: ['app-config', 'partner'] as const,
@@ -22,10 +22,10 @@ export const queryKeys = {
   auth: {
     all: ['auth'] as const,
     me: () => ['auth', 'me'] as const,
-    /** Cấu hình OTP của môi trường — `GET /auth/phone/otp-config` (có nhận mã test hay không). */
+    /** Cấu hình OTP của môi trường - `GET /auth/phone/otp-config` (có nhận mã test hay không). */
     otpConfig: () => ['auth', 'otp-config'] as const,
   },
-  /** Hồ sơ tài khoản khách (`/users/me`) — khác `auth.me` (scope + quyền của phiên). */
+  /** Hồ sơ tài khoản khách (`/users/me`) - khác `auth.me` (scope + quyền của phiên). */
   account: {
     all: ['account'] as const,
     profile: () => ['account', 'profile'] as const,
@@ -45,25 +45,25 @@ export const queryKeys = {
   shop: {
     all: ['shop'] as const,
     current: () => ['shop', 'current'] as const,
-    /** Công tắc thu cọc của gian hàng — `GET /shop/payment-settings` (Phase 6). */
+    /** Công tắc thu cọc của gian hàng - `GET /shop/payment-settings` (Phase 6). */
     paymentSettings: () => ['shop', 'payment-settings'] as const,
-    /** Hỗ trợ xuất hoá đơn VAT cho mọi xe — `GET /tenants/current/vat-invoice` (ADR 0059). */
+    /** Hỗ trợ xuất hoá đơn VAT cho mọi xe - `GET /tenants/current/vat-invoice` (ADR 0059). */
     vatInvoice: () => ['shop', 'vat-invoice'] as const,
   },
-  /** Màn "Duyệt xe" của nền tảng — `/platform/vehicle-approvals` (chỉ phiếu xe). */
+  /** Màn "Duyệt xe" của nền tảng - `/platform/vehicle-approvals` (chỉ phiếu xe). */
   vehicleApprovals: {
     all: ['vehicle-approvals'] as const,
     list: (params: QueryParams) => ['vehicle-approvals', 'list', params] as const,
     detail: (id: string) => ['vehicle-approvals', 'detail', id] as const,
   },
-  /** Màn "Vận hành chuyến" của nền tảng — `/platform/trips` (bốn hàng đợi + nhắc chủ xe). */
+  /** Màn "Vận hành chuyến" của nền tảng - `/platform/trips` (bốn hàng đợi + nhắc chủ xe). */
   platformTrips: {
     all: ['platform-trips'] as const,
     summary: (params: QueryParams) => ['platform-trips', 'summary', params] as const,
     requests: (params: QueryParams) => ['platform-trips', 'requests', params] as const,
     bookings: (params: QueryParams) => ['platform-trips', 'bookings', params] as const,
   },
-  /** Màn "Xe toàn hệ thống" của nền tảng — `/platform/vehicles` (giám sát + ẩn/gỡ ẩn). */
+  /** Màn "Xe toàn hệ thống" của nền tảng - `/platform/vehicles` (giám sát + ẩn/gỡ ẩn). */
   platformVehicles: {
     all: ['platform-vehicles'] as const,
     list: (params: QueryParams) => ['platform-vehicles', 'list', params] as const,
@@ -73,11 +73,11 @@ export const queryKeys = {
     all: ['calendar'] as const,
     resources: (params: QueryParams) => ['calendar', 'resources', params] as const,
     events: (params: QueryParams) => ['calendar', 'events', params] as const,
-    /** Hàng "Xe còn trống" — đếm ở backend trên toàn đội xe đã lọc. */
+    /** Hàng "Xe còn trống" - đếm ở backend trên toàn đội xe đã lọc. */
     availability: (params: QueryParams) => ['calendar', 'availability', params] as const,
     /** Dấu "giá riêng" theo ô (mọi xe đang lọc, một request cho cả lưới). */
     dailyPrices: (params: QueryParams) => ['calendar', 'daily-prices', params] as const,
-    /** Chi tiết một lịch khoá xe — mở khi bấm vào event `blocked_range`. */
+    /** Chi tiết một lịch khoá xe - mở khi bấm vào event `blocked_range`. */
     block: (id: string) => ['calendar', 'block', id] as const,
     /** Báo giá nội bộ cho luồng Đặt xe trên lịch. */
     quote: (params: QueryParams) => ['calendar', 'quote', params] as const,
@@ -93,13 +93,13 @@ export const queryKeys = {
     /**
      * Xem trước thao tác hàng loạt cho một khoảng ngày (khoá / đặt giá cả đội xe).
      *
-     * Nằm DƯỚI nhánh `calendar` — khác hẳn `holidays`: nội dung của nó (xe nào bận ngày nào)
+     * Nằm DƯỚI nhánh `calendar` - khác hẳn `holidays`: nội dung của nó (xe nào bận ngày nào)
      * đổi ngay sau mỗi lần tạo đơn hay khoá xe, nên nó PHẢI được làm mới cùng lưới lịch.
      */
     bulkDayPreview: (params: QueryParams) => ['calendar', 'bulk-day-preview', params] as const,
   },
   /**
-   * Lịch nghỉ lễ Việt Nam — nhánh RIÊNG, cố ý không nằm dưới `calendar.*`.
+   * Lịch nghỉ lễ Việt Nam - nhánh RIÊNG, cố ý không nằm dưới `calendar.*`.
    *
    * Ngày lễ là dữ liệu TOÀN NỀN TẢNG, không thuộc gian hàng nào và không đổi khi ai đó tạo đơn
    * hay khoá xe. Nhét nó vào nhánh `calendar` nghĩa là mỗi lần
@@ -121,49 +121,49 @@ export const queryKeys = {
     /**
      * Xã/phường/đặc khu của MỘT tỉnh, kèm chữ đang tìm.
      *
-     * `q` nằm trong khoá vì tìm kiếm chạy ở SERVER (bỏ dấu, bỏ tiền tố loại đơn vị) — gộp mọi
+     * `q` nằm trong khoá vì tìm kiếm chạy ở SERVER (bỏ dấu, bỏ tiền tố loại đơn vị) - gộp mọi
      * lần gõ vào một khoá là để kết quả của lần gõ trước đè lên lần sau.
      */
     wards: (provinceCode: string, q?: string) =>
       ['locations', 'wards', provinceCode, q ?? ''] as const,
-    /** Tra NHÃN theo danh sách mã đã lưu — màn hiển thị dùng, không phải bộ chọn. */
+    /** Tra NHÃN theo danh sách mã đã lưu - màn hiển thị dùng, không phải bộ chọn. */
     wardLookup: (codes: readonly string[]) =>
       ['locations', 'ward-lookup', [...codes].sort()] as const,
     admin: (params: QueryParams) => ['locations', 'admin', params] as const,
   },
   /**
-   * Gợi ý địa điểm / tra địa chỉ ngược — proxy qua backend để khoá bản đồ không rời server.
+   * Gợi ý địa điểm / tra địa chỉ ngược - proxy qua backend để khoá bản đồ không rời server.
    *
    * Tách khỏi `locations` vì vòng đời khác hẳn: danh mục hành chính gần như bất động (cache 30
    * phút), còn gợi ý địa điểm đổi theo từng ký tự và chỉ sống vài giây.
    */
   places: {
     all: ['places'] as const,
-    /** `scope` = "tỉnh/xã" đã chọn (ADR 0077) — kết quả lọc theo tỉnh nên phải nằm trong khoá. */
+    /** `scope` = "tỉnh/xã" đã chọn (ADR 0077) - kết quả lọc theo tỉnh nên phải nằm trong khoá. */
     search: (q: string, bias?: { lat: number; lng: number } | null, scope = '') =>
       ['places', 'search', q, bias ? `${bias.lat},${bias.lng}` : '', scope] as const,
     detail: (placeId: string) => ['places', 'detail', placeId] as const,
     reverse: (lat: number, lng: number) => ['places', 'reverse', lat, lng] as const,
   },
-  /** Tài xế của gian hàng (17/08) — danh sách CRUD + bộ chọn gán vào đơn đọc chung. */
+  /** Tài xế của gian hàng (17/08) - danh sách CRUD + bộ chọn gán vào đơn đọc chung. */
   drivers: {
     all: ['drivers'] as const,
     list: (params: QueryParams) => ['drivers', 'list', params] as const,
-    /** Dải số đếm đầu màn Tài xế (04/11/2026) — theo bộ lọc chung đang áp. */
+    /** Dải số đếm đầu màn Tài xế (04/11/2026) - theo bộ lọc chung đang áp. */
     summary: (params: QueryParams) => ['drivers', 'summary', params] as const,
-    /** Bộ chọn gán đơn theo khung giờ (17/08) — cache riêng theo cửa sổ thời gian. */
+    /** Bộ chọn gán đơn theo khung giờ (17/08) - cache riêng theo cửa sổ thời gian. */
     assignable: (window: { pickupAt: string; returnAt: string; excludeBookingId?: string }) =>
       ['drivers', 'assignable', window] as const,
     /** Tiền công/ngày mặc định của gian hàng + giới hạn nền tảng (ADR 0075). */
     wageSettings: ['drivers', 'wage-settings'] as const,
-    /** Các chuyến một tài xế đã nhận, kết thúc trong tháng — ngăn kéo tiền công (ADR 0075). */
+    /** Các chuyến một tài xế đã nhận, kết thúc trong tháng - ngăn kéo tiền công (ADR 0075). */
     assignments: (id: string, params: QueryParams) =>
       ['drivers', 'assignments', id, params] as const,
     /** Ngăn chi tiết một tài xế: tiền công tháng, việc đang treo, độ tin cậy, xu hướng (ADR 0075). */
     overview: (id: string, params: QueryParams) => ['drivers', 'overview', id, params] as const,
   },
   /**
-   * Phía TÀI XẾ ở tài khoản khách (`/driver/*`, ADR 0063) — lời mời/liên kết, huy hiệu chờ trả
+   * Phía TÀI XẾ ở tài khoản khách (`/driver/*`, ADR 0063) - lời mời/liên kết, huy hiệu chờ trả
    * lời và chuyến được gán. Mọi thao tác tài xế làm mới cả nhánh `all`.
    */
   driving: {
@@ -174,57 +174,57 @@ export const queryKeys = {
     trips: (tab: string, page: number) => ['driving', 'trips', tab, page] as const,
     trip: (id: string) => ['driving', 'trip', id] as const,
   },
-  /** Chi nhánh gian hàng — mọi màn có bộ chọn chi nhánh đọc chung nhánh này. */
+  /** Chi nhánh gian hàng - mọi màn có bộ chọn chi nhánh đọc chung nhánh này. */
   branches: {
     all: ['branches'] as const,
     list: (params: QueryParams) => ['branches', 'list', params] as const,
     detail: (id: string) => ['branches', 'detail', id] as const,
   },
-  /** Banner hero trang chủ — public + bản quản trị chung một nhánh để mutation invalidate cả hai. */
+  /** Banner hero trang chủ - public + bản quản trị chung một nhánh để mutation invalidate cả hai. */
   banners: {
     all: ['banners'] as const,
-    /** Banner công khai của MỘT vị trí (`hero` | `promo`) — mỗi vị trí một ô cache. */
+    /** Banner công khai của MỘT vị trí (`hero` | `promo`) - mỗi vị trí một ô cache. */
     list: (placement: string = 'hero') => ['banners', 'public', placement] as const,
-    /** Danh sách quản trị của MỘT vị trí (`hero` | `promo`) — mặc định dải banner đầu trang. */
+    /** Danh sách quản trị của MỘT vị trí (`hero` | `promo`) - mặc định dải banner đầu trang. */
     admin: (placement: string = 'hero') => ['banners', 'admin', placement] as const,
   },
-  /** Danh mục lọc dùng chung (hãng/kiểu dáng/nhiên liệu/tiện ích) — một key cho cả app. */
+  /** Danh mục lọc dùng chung (hãng/kiểu dáng/nhiên liệu/tiện ích) - một key cho cả app. */
   catalog: {
     all: ['catalog'] as const,
     list: () => ['catalog', 'list'] as const,
     admin: (params: QueryParams) => ['catalog', 'admin', params] as const,
-    /** Mẫu xe: khoá theo (loại xe, hãng) — đổi hãng là một cache khác, không hiện nhầm. */
+    /** Mẫu xe: khoá theo (loại xe, hãng) - đổi hãng là một cache khác, không hiện nhầm. */
     models: (vehicleType: string, brandKey: string, includeId: string) =>
       ['catalog', 'models', vehicleType, brandKey, includeId] as const,
-    /** Số mẫu xe theo hãng — cột hãng của màn quản trị mẫu xe. */
+    /** Số mẫu xe theo hãng - cột hãng của màn quản trị mẫu xe. */
     modelBrands: (vehicleType: string) => ['catalog', 'model-brands', vehicleType] as const,
   },
   vehicles: {
     all: ['vehicles'] as const,
     list: (params: QueryParams) => ['vehicles', 'list', params] as const,
-    /** Bộ chọn xe tải-dần theo cuộn — key KHÔNG chứa page (page là pageParam của TanStack). */
+    /** Bộ chọn xe tải-dần theo cuộn - key KHÔNG chứa page (page là pageParam của TanStack). */
     infinite: (params: QueryParams) => ['vehicles', 'list-infinite', params] as const,
     detail: (id: string) => ['vehicles', 'detail', id] as const,
-    /** Chỉ số thẻ xe theo nhóm id — nằm dưới nhánh `vehicles` để mutation xe tự invalidate luôn. */
+    /** Chỉ số thẻ xe theo nhóm id - nằm dưới nhánh `vehicles` để mutation xe tự invalidate luôn. */
     stats: (ids: readonly string[]) => ['vehicles', 'stats', ids] as const,
-    /** Đếm đội xe theo trạng thái vận hành — dải chỉ số đầu danh sách. */
+    /** Đếm đội xe theo trạng thái vận hành - dải chỉ số đầu danh sách. */
     fleetSummary: (params: QueryParams = {}) => ['vehicles', 'fleet-summary', params] as const,
     /**
      * Việc cần làm + KM hiện tại theo lô xe (Wave 8). Nằm dưới nhánh `vehicles` để mọi mutation
      * xe tự làm mới luôn; các miền khác (bàn giao, bảo dưỡng, giấy tờ) invalidate nhánh này khi
-     * dữ liệu của chúng đổi — xem `useInvalidateVehicleSurfaces`.
+     * dữ liệu của chúng đổi - xem `useInvalidateVehicleSurfaces`.
      */
     alerts: (ids: readonly string[]) => ['vehicles', 'alerts', ids] as const,
-    /** Tiền tố của mọi lô cảnh báo — invalidate một phát là mọi trang đang mở đều làm mới. */
+    /** Tiền tố của mọi lô cảnh báo - invalidate một phát là mọi trang đang mở đều làm mới. */
     alertsAll: () => ['vehicles', 'alerts'] as const,
     /**
-     * Số xe có việc "cần xử lý" — huy hiệu menu Danh sách xe. Nằm DƯỚI tiền tố `alerts` để mọi
+     * Số xe có việc "cần xử lý" - huy hiệu menu Danh sách xe. Nằm DƯỚI tiền tố `alerts` để mọi
      * chỗ đang làm mới cảnh báo (giấy tờ, bảo dưỡng, bàn giao) kéo theo con số trên menu.
      */
     needsActionCount: () => ['vehicles', 'alerts', 'needs-action-count'] as const,
     /** Tổng hợp Hồ sơ 360 của một xe (chỉ số + đơn thuê theo quyền). */
     summary: (id: string) => ['vehicles', 'summary', id] as const,
-    /** Giá & chính sách theo xe (nguồn kế thừa/ghi đè) — nằm dưới nhánh vehicles để mutation xe invalidate luôn. */
+    /** Giá & chính sách theo xe (nguồn kế thừa/ghi đè) - nằm dưới nhánh vehicles để mutation xe invalidate luôn. */
     pricing: (id: string) => ['vehicles', 'pricing', id] as const,
     /** Hồ sơ nguồn xe & tài chính (Wave 4). */
     source: (id: string) => ['vehicles', 'source', id] as const,
@@ -232,35 +232,35 @@ export const queryKeys = {
     documents: (id: string) => ['vehicles', 'documents', id] as const,
     document: (id: string, documentId: string) =>
       ['vehicles', 'documents', id, documentId] as const,
-    /** Lịch sử phiên bản file — endpoint riêng sau quyền `view_files` (Wave 5.1). */
+    /** Lịch sử phiên bản file - endpoint riêng sau quyền `view_files` (Wave 5.1). */
     documentVersions: (id: string, documentId: string) =>
       ['vehicles', 'documents', id, documentId, 'versions'] as const,
-    /** Bảo dưỡng & KM của một xe (Wave 6) — nhánh gốc để invalidate cả cụm sau mutation. */
+    /** Bảo dưỡng & KM của một xe (Wave 6) - nhánh gốc để invalidate cả cụm sau mutation. */
     maintenance: (id: string) => ['vehicles', 'maintenance', id] as const,
     maintenanceProfile: (id: string) => ['vehicles', 'maintenance', id, 'profile'] as const,
     maintenanceRecords: (id: string) => ['vehicles', 'maintenance', id, 'records'] as const,
     odometerHistory: (id: string, page: number) =>
       ['vehicles', 'maintenance', id, 'odometer', page] as const,
-    /** Thiết lập vận hành theo xe (08/09/2026) — khung giờ giao nhận + thời gian chết. */
+    /** Thiết lập vận hành theo xe (08/09/2026) - khung giờ giao nhận + thời gian chết. */
     operationSettings: (id: string) => ['vehicles', 'operation-settings', id] as const,
     /** Thiết lập theo dịch vụ (tự động nhận, giấy tờ, điều khoản, cọc giữ chuyến). */
     serviceSettings: (id: string) => ['vehicles', 'service-settings', id] as const,
     /** Phụ phí mặc định có tài xế. */
     driverSurchargeRules: (id: string) => ['vehicles', 'driver-surcharge-rules', id] as const,
     /**
-     * Lịch sử chuyến của MỘT xe — đơn + yêu cầu trộn ở server. Dưới nhánh `vehicles` để mọi
+     * Lịch sử chuyến của MỘT xe - đơn + yêu cầu trộn ở server. Dưới nhánh `vehicles` để mọi
      * mutation của xe làm mới; duyệt/từ chối yêu cầu cũng phải invalidate nhánh này.
      */
     tripHistory: (id: string, params: QueryParams) =>
       ['vehicles', 'trip-history', id, params] as const,
   },
-  /** Trung tâm bảo dưỡng toàn đội xe (Wave 6) — domain riêng vì không thuộc một xe nào. */
+  /** Trung tâm bảo dưỡng toàn đội xe (Wave 6) - domain riêng vì không thuộc một xe nào. */
   maintenance: {
     all: ['maintenance'] as const,
     board: (params: QueryParams) => ['maintenance', 'board', params] as const,
     summary: (params: QueryParams = {}) => ['maintenance', 'summary', params] as const,
     /**
-     * Hàng đợi "Thiếu KM trả" (Wave 8) — nằm dưới nhánh `maintenance` vì nó là một nhóm việc
+     * Hàng đợi "Thiếu KM trả" (Wave 8) - nằm dưới nhánh `maintenance` vì nó là một nhóm việc
      * của Trung tâm bảo dưỡng, dù dữ liệu đến từ bàn giao.
      */
     missingReturnKm: (params: QueryParams) => ['maintenance', 'missing-return-km', params] as const,
@@ -268,14 +268,24 @@ export const queryKeys = {
   /** Chính sách thuê mặc định của gian hàng (Wave 2). */
   rentalPolicies: {
     all: ['rental-policies'] as const,
-    /** Mặc định theo LOẠI XE (17/08) — hai tab Ô tô/Xe máy là hai cache riêng. */
+    /** Mặc định theo LOẠI XE (17/08) - hai tab Ô tô/Xe máy là hai cache riêng. */
     shop: (vehicleType: string) => ['rental-policies', 'shop', vehicleType] as const,
+    /** Thời gian chết mặc định của gian hàng theo loại xe (06/11/2026). */
+    operationDefaults: (vehicleType: string) =>
+      ['rental-policies', 'operation-defaults', vehicleType] as const,
   },
   bookings: {
     all: ['bookings'] as const,
     list: (params: QueryParams) => ['bookings', 'list', params] as const,
+    /**
+     * "Đơn đã kết thúc" - đơn đã đóng + yêu cầu không thành đơn (`GET /booking-history`, 05/11/2026).
+     * Dưới nhánh `bookings` để mọi lượt đổi đơn làm mới theo; lượt đóng YÊU CẦU (từ chối/huỷ) làm
+     * mới riêng tiền tố `historyAll`.
+     */
+    historyAll: ['bookings', 'history'] as const,
+    history: (params: QueryParams) => ['bookings', 'history', params] as const,
     detail: (id: string) => ['bookings', 'detail', id] as const,
-    /** Bàn giao xe của một đơn (Wave 7) — nằm dưới nhánh `bookings` vì xác nhận bàn giao
+    /** Bàn giao xe của một đơn (Wave 7) - nằm dưới nhánh `bookings` vì xác nhận bàn giao
      *  đổi luôn trạng thái đơn, invalidate một chỗ là đủ. */
     handovers: (id: string) => ['bookings', 'handovers', id] as const,
     /**
@@ -290,12 +300,18 @@ export const queryKeys = {
      */
     settlement: (id: string) => ['bookings', 'settlement', id] as const,
     /**
+     * Quyết toán XEM TRƯỚC của hộp "Xác nhận đã nhận lại xe" (06/11/2026) - khoá theo nguyên bộ số
+     * đang gõ (giờ, Odo, phụ phí nháp): mỗi bộ một câu trả lời của server, client không tự tính.
+     */
+    returnPreview: (id: string, input: unknown) =>
+      ['bookings', 'return-preview', id, input] as const,
+    /**
      * Báo giá NỘI BỘ cho luồng đặt hộ tại quầy. Khoá theo nguyên bộ tham số vì giá đổi theo
-     * xe, dịch vụ, lộ trình VÀ khoảng thời gian — bỏ sót một chiều là hiện lại giá của lần
+     * xe, dịch vụ, lộ trình VÀ khoảng thời gian - bỏ sót một chiều là hiện lại giá của lần
      * chọn trước.
      */
     quote: (params: QueryParams) => ['bookings', 'quote', params] as const,
-    /** Phụ lục gia hạn của một đơn dài hạn (ADR 0077) — dưới nhánh `bookings` để mọi đổi đơn làm mới theo. */
+    /** Phụ lục gia hạn của một đơn dài hạn (ADR 0077) - dưới nhánh `bookings` để mọi đổi đơn làm mới theo. */
     extensions: (id: string) => ['bookings', 'extensions', id] as const,
     extensionQuote: (id: string, months: number) =>
       ['bookings', 'extensions', id, 'quote', months] as const,
@@ -306,7 +322,7 @@ export const queryKeys = {
     handoverPhotoUrl: (id: string, type: string, fileId: string) =>
       ['bookings', 'handovers', id, 'photo-url', type, fileId] as const,
   },
-  /** Hợp đồng là BẢN CHỤP đông cứng — nhánh riêng, không invalidate theo đơn. */
+  /** Hợp đồng là BẢN CHỤP đông cứng - nhánh riêng, không invalidate theo đơn. */
   contracts: {
     all: ['contracts'] as const,
     detail: (id: string) => ['contracts', 'detail', id] as const,
@@ -317,13 +333,13 @@ export const queryKeys = {
     detail: (id: string) => ['booking-requests', 'detail', id] as const,
     /**
      * Lịch bận của MỘT xe, dùng để tô/khoá ô trên hộp chọn thời gian thuê. Cửa sổ nằm trong
-     * khoá vì đổi cửa sổ là đổi dữ liệu — không phải cùng một kết quả cắt nhỏ.
+     * khoá vì đổi cửa sổ là đổi dữ liệu - không phải cùng một kết quả cắt nhỏ.
      */
     busyDays: (vehicleId: string, from: string, to: string) =>
       ['booking-requests', 'busy-days', vehicleId, from, to] as const,
   },
   /**
-   * Sổ khách của GIAN HÀNG (S-01) — khác hẳn `/manage/admin/customers` của nền tảng, nên nhánh
+   * Sổ khách của GIAN HÀNG (S-01) - khác hẳn `/manage/admin/customers` của nền tảng, nên nhánh
    * riêng: invalidate một bên không được kéo theo bên kia.
    *
    * Mọi thứ thuộc một khách nằm DƯỚI `detail(id)` (lịch sử thuê, ghi chú, giấy tờ): đổi mức rủi
@@ -337,11 +353,12 @@ export const queryKeys = {
     bookings: (id: string, page: number) => ['customers', 'detail', id, 'bookings', page] as const,
     notes: (id: string, page: number) => ['customers', 'detail', id, 'notes', page] as const,
     documents: (id: string) => ['customers', 'detail', id, 'documents'] as const,
-    /** Lịch sử thuê CÓ LỌC của hồ sơ khách (02/11/2026) — khoá theo nguyên bộ tham số. */
+    /** Lịch sử thuê CÓ LỌC của hồ sơ khách (02/11/2026) - khoá theo nguyên bộ tham số. */
     bookingHistory: (id: string, params: QueryParams) =>
       ['customers', 'detail', id, 'booking-history', params] as const,
-    /** Tab "Thu chi" của hồ sơ khách — doanh thu theo kỳ + khoản phải thu. */
-    revenue: (id: string, period: string) => ['customers', 'detail', id, 'revenue', period] as const,
+    /** Tab "Thu chi" của hồ sơ khách - doanh thu theo kỳ + khoản phải thu. */
+    revenue: (id: string, period: string) =>
+      ['customers', 'detail', id, 'revenue', period] as const,
     /**
      * URL ký để hiện ẢNH THU NHỎ của giấy tờ. Tách khỏi `documents` vì vòng đời khác hẳn:
      * metadata giấy tờ ổn định, còn URL ký sống ~2 phút nên phải tự làm mới.
@@ -358,7 +375,7 @@ export const queryKeys = {
      * phải quét được cả hai. Tách nhánh là để lọt đúng một nửa.
      */
     invites: (params: QueryParams) => ['members', 'invites', params] as const,
-    /** Xem trước lời mời — khoá theo token vì đây là dữ liệu của MỘT lời mời cụ thể. */
+    /** Xem trước lời mời - khoá theo token vì đây là dữ liệu của MỘT lời mời cụ thể. */
     invitePreview: (token: string) => ['members', 'invite-preview', token] as const,
   },
   receipts: {
@@ -377,11 +394,13 @@ export const queryKeys = {
   debts: {
     all: ['debts'] as const,
     list: (params: QueryParams) => ['debts', 'list', params] as const,
+    /** Dải thẻ + số đếm chip - dưới `debts` nên mọi lượt thu tiền làm mới luôn cả nó. */
+    summary: (params: QueryParams) => ['debts', 'summary', params] as const,
   },
   finance: {
     all: ['finance'] as const,
     summary: (params: QueryParams) => ['finance', 'summary', params] as const,
-    /** Chuỗi thu-chi theo thời gian — khoá mang cả độ mịn vì đổi độ mịn là đổi dữ liệu. */
+    /** Chuỗi thu-chi theo thời gian - khoá mang cả độ mịn vì đổi độ mịn là đổi dữ liệu. */
     series: (params: QueryParams) => ['finance', 'series', params] as const,
     byCategory: (params: QueryParams) => ['finance', 'by-category', params] as const,
     byVehicle: (params: QueryParams) => ['finance', 'by-vehicle', params] as const,
@@ -389,11 +408,11 @@ export const queryKeys = {
   },
   dashboard: {
     all: ['dashboard'] as const,
-    /** `GET /dashboard/overview` — khoá mang tham số (chi nhánh) vì đổi ô lọc là đổi dữ liệu. */
+    /** `GET /dashboard/overview` - khoá mang tham số (chi nhánh) vì đổi ô lọc là đổi dữ liệu. */
     overview: (params: QueryParams) => ['dashboard', 'overview', params] as const,
-    /** `GET /dashboard/today` — số trên menu site partner (lượt giao/trả đến hạn, quá giờ). */
+    /** `GET /dashboard/today` - số trên menu site partner (lượt giao/trả đến hạn, quá giờ). */
     today: ['dashboard', 'today'] as const,
-    /** `GET /dashboard/requests` — số trên menu site partner (yêu cầu chờ duyệt, sắp hết hạn). */
+    /** `GET /dashboard/requests` - số trên menu site partner (yêu cầu chờ duyệt, sắp hết hạn). */
     requests: ['dashboard', 'requests'] as const,
   },
   platformDashboard: {
@@ -401,7 +420,7 @@ export const queryKeys = {
     summary: () => ['platform-dashboard', 'summary'] as const,
     overview: () => ['platform-dashboard', 'overview'] as const,
   },
-  /** Sổ giao dịch ngân hàng của nền tảng (R2 — ADR 0022). */
+  /** Sổ giao dịch ngân hàng của nền tảng (R2 - ADR 0022). */
   bankTransactions: {
     all: ['bank-transactions'] as const,
     list: (params: QueryParams) => ['bank-transactions', 'list', params] as const,
@@ -416,39 +435,51 @@ export const queryKeys = {
     plans: (status: string) => ['billing', 'plans', status] as const,
     subscriptions: (tenantId: string, page: number) =>
       ['billing', 'subscriptions', tenantId, page] as const,
-    /** Chuỗi kỳ CÒN HẠN của một gian hàng (`state=live`) — tách khỏi trang lịch sử. */
+    /** Chuỗi kỳ CÒN HẠN của một gian hàng (`state=live`) - tách khỏi trang lịch sử. */
     liveSubscriptions: (tenantId: string) =>
       ['billing', 'subscriptions', tenantId, 'live'] as const,
   },
-  /** "Gói của tôi" — tenant-scoped (W2, ADR 0015/0026). Tách nhánh khỏi `billing` (platform). */
+  /** "Gói của tôi" - tenant-scoped (W2, ADR 0015/0026). Tách nhánh khỏi `billing` (platform). */
   subscription: {
     all: ['subscription'] as const,
     me: () => ['subscription', 'me'] as const,
     plans: () => ['subscription', 'plans'] as const,
     invoices: (page: number) => ['subscription', 'invoices', page] as const,
     /**
-     * Hoá đơn gói ĐANG chờ tiền — `GET /subscription/invoices/pending` (ADR 0040).
+     * Hoá đơn gói ĐANG chờ tiền - `GET /subscription/invoices/pending` (ADR 0040).
      *
      * Key RIÊNG, không phải một trang của `invoices(page)`: màn onboarding và dải QR ở trang "Gói
      * của tôi" polling nó trong lúc chờ đối soát, và gộp vào key có `page` nghĩa là mỗi nhịp
      * polling ghi đè cache của bảng lịch sử đang mở ngay bên dưới.
      *
-     * Nó VẪN dùng chung tiền tố `['subscription','invoices']` — có chủ đích: một lượt ghi vào hoá
+     * Nó VẪN dùng chung tiền tố `['subscription','invoices']` - có chủ đích: một lượt ghi vào hoá
      * đơn (mua gói, tiền về) phải làm mới cả hai, và một lần `invalidateQueries` theo tiền tố đó
      * là cách nói điều này ngắn nhất.
      */
     pendingInvoice: () => ['subscription', 'invoices', 'pending'] as const,
     /**
-     * MỘT hoá đơn — `GET /subscription/invoices/:id`, nguồn của trang thanh toán `/payment/:id`.
+     * MỘT hoá đơn - `GET /subscription/invoices/:id`, nguồn của trang thanh toán `/payment/:id`.
      * Cùng tiền tố `['subscription','invoices']` vì cùng lý do với `pendingInvoice`: tiền về thì
      * một lượt làm mới theo tiền tố đó phải lật cả trang thanh toán đang mở.
      */
     invoice: (id: string) => ['subscription', 'invoices', 'detail', id] as const,
-    /** Thông tin nhận chuyển khoản của nền tảng — gần như tĩnh, cache dài. */
+    /**
+     * MỘT phiếu thanh toán gộp nhiều gói (ADR 0083) - `GET /subscription/checkouts/:id`. Cùng tiền
+     * tố `['subscription','invoices']` vì cùng lý do với `invoice`: tiền về lật cả hoá đơn con lẫn
+     * phiếu, và một lượt làm mới theo tiền tố đó phải tới được trang thanh toán của phiếu.
+     */
+    checkout: (id: string) => ['subscription', 'invoices', 'checkout', id] as const,
+    /** Thông tin nhận chuyển khoản của nền tảng - gần như tĩnh, cache dài. */
     paymentInfo: () => ['subscription', 'payment-info'] as const,
+    /**
+     * Xem trước một lượt mua (ADR 0084) - khoá theo đúng các gói + kỳ hạn đang chọn. Nằm dưới
+     * `['subscription']`, nên tiền về / mua xong (làm mới cả nhánh) cũng tính lại bản xem trước.
+     */
+    purchasePreview: (items: readonly { planId: string; termMonths: number }[]) =>
+      ['subscription', 'purchase-preview', items] as const,
   },
   /**
-   * Xe yêu thích của tài khoản khách — `/account/favorites`. Trạng thái trái tim khoá THEO TỪNG XE
+   * Xe yêu thích của tài khoản khách - `/account/favorites`. Trạng thái trái tim khoá THEO TỪNG XE
    * (`status(vehicleId)`), không theo một tập: cập nhật lạc quan và hoàn tác của xe này không bao
    * giờ ghi đè trạng thái của xe khác đang có thao tác song song.
    */
@@ -462,13 +493,13 @@ export const queryKeys = {
   marketplace: {
     all: ['marketplace'] as const,
     listings: (params: QueryParams) => ['marketplace', 'listings', params] as const,
-    /** /search tải vô hạn — key KHÔNG chứa page (page là pageParam của TanStack). */
+    /** /search tải vô hạn - key KHÔNG chứa page (page là pageParam của TanStack). */
     listingsInfinite: (params: QueryParams) =>
       ['marketplace', 'listings-infinite', params] as const,
     facets: (params: QueryParams) => ['marketplace', 'facets', params] as const,
     /**
      * Khối gợi ý trang chủ. Khoá TÁCH khỏi `listings` vì hai bên hỏi hai endpoint khác nhau và
-     * hiểu tham số tỉnh theo hai nghĩa khác nhau (lọc cứng ↔ ưu tiên) — dùng chung tiền tố sẽ
+     * hiểu tham số tỉnh theo hai nghĩa khác nhau (lọc cứng ↔ ưu tiên) - dùng chung tiền tố sẽ
      * khiến một lần `invalidateQueries` xoá luôn thứ không liên quan.
      */
     recommended: (params: QueryParams) => ['marketplace', 'recommended', params] as const,
@@ -481,21 +512,21 @@ export const queryKeys = {
       ['marketplace', 'reviews', vehicleId, params] as const,
     /** Hồ sơ gian hàng công khai. Web render server-side cho SEO; app fetch như mọi màn khác. */
     shop: (slug: string) => ['marketplace', 'shop', slug] as const,
-    /** Đánh giá của CẢ gian hàng — khác `reviews` (một chiếc xe) ngay trên. */
+    /** Đánh giá của CẢ gian hàng - khác `reviews` (một chiếc xe) ngay trên. */
     shopReviews: (slug: string, limit: number) =>
       ['marketplace', 'shop-reviews', slug, limit] as const,
     shopListings: (slug: string, params: QueryParams) =>
       ['marketplace', 'shop-listings', slug, params] as const,
-    /** Bản tải VÔ HẠN của danh sách trên — key KHÔNG chứa page (page là pageParam của TanStack). */
+    /** Bản tải VÔ HẠN của danh sách trên - key KHÔNG chứa page (page là pageParam của TanStack). */
     shopListingsInfinite: (slug: string, params: QueryParams) =>
       ['marketplace', 'shop-listings-infinite', slug, params] as const,
-    /** Báo giá công khai theo khoảng ngày — nguồn PricingService, FE không tự cộng trừ. */
+    /** Báo giá công khai theo khoảng ngày - nguồn PricingService, FE không tự cộng trừ. */
     quote: (vehicleId: string, params: QueryParams) =>
       ['marketplace', 'quote', vehicleId, params] as const,
     /**
      * Khoảng cách giao xe tới một địa chỉ. Địa chỉ nằm TRONG key có chủ đích: mỗi địa chỉ là một
      * câu trả lời riêng, và cache của TanStack Query ở đây là lớp chắn thứ hai (sau cache ở
-     * backend) cho hạn mức bản đồ — khách sửa qua sửa lại rồi quay về địa chỉ cũ không tốn gì.
+     * backend) cho hạn mức bản đồ - khách sửa qua sửa lại rồi quay về địa chỉ cũ không tốn gì.
      */
     deliveryDistance: (vehicleId: string, address: string) =>
       ['marketplace', 'delivery-distance', vehicleId, address] as const,
@@ -511,21 +542,21 @@ export const queryKeys = {
       ['marketplace', 'shop-suggestions', q, limit] as const,
     /**
      * Khoảng giá tham khảo khi chủ xe đặt giá. Nằm dưới `marketplace` vì nguồn của nó là mặt
-     * bằng giá CỦA CHỢ, không phải hồ sơ chiếc xe đang khai — và nó dùng chung cho web lẫn app.
+     * bằng giá CỦA CHỢ, không phải hồ sơ chiếc xe đang khai - và nó dùng chung cho web lẫn app.
      */
     priceSuggestion: (params: QueryParams) => ['marketplace', 'price-suggestion', params] as const,
     /**
-     * MÃ KHUYẾN MÃI khả dụng cho một chuyến (ADR 0046) — danh sách đã công bố, kèm lý do với
+     * MÃ KHUYẾN MÃI khả dụng cho một chuyến (ADR 0046) - danh sách đã công bố, kèm lý do với
      * từng mã không áp được.
      *
      * Tham số chuyến nằm TRONG key: một chuyến khác là một câu trả lời khác (đơn tối thiểu, loại
-     * xe, dịch vụ đều tham gia phép kiểm). Lượt XEM TRƯỚC một mã cụ thể KHÔNG có khoá ở đây —
+     * xe, dịch vụ đều tham gia phép kiểm). Lượt XEM TRƯỚC một mã cụ thể KHÔNG có khoá ở đây -
      * nó là một `POST` theo hành động của khách, không phải dữ liệu để cache.
      */
     promoCodes: (params: QueryParams) => ['marketplace', 'promo-codes', params] as const,
   },
   /**
-   * Huy hiệu của khung ứng dụng (chuông + hai hộp thư chat) — MỘT khoá cho MỘT request.
+   * Huy hiệu của khung ứng dụng (chuông + hai hộp thư chat) - MỘT khoá cho MỘT request.
    *
    * Cố ý KHÔNG nằm dưới `notifications` hay `chat`: nó là dữ liệu của cả hai, và đặt nó dưới
    * một trong hai nghĩa là mọi lần invalidate nhánh đó kéo theo cả con số của nhánh kia. Đây
@@ -552,13 +583,13 @@ export const queryKeys = {
     list: (params: QueryParams) => ['trips', 'list', params] as const,
     detail: (id: string) => ['trips', 'detail', id] as const,
     /**
-     * Chuyến khách đang GIỮ mà chưa trả + đã chạm trần chưa — `GET /trips/unpaid-holds`. Dưới nhánh
+     * Chuyến khách đang GIỮ mà chưa trả + đã chạm trần chưa - `GET /trips/unpaid-holds`. Dưới nhánh
      * `trips` có chủ đích: thông báo tiền về / hết hạn làm mới `trips.all`, và lời nhắc phải đổi theo.
      */
     unpaidHolds: () => ['trips', 'unpaid-holds'] as const,
-    /** Biên bản bàn giao của MỘT chuyến — nhánh con của chi tiết, huỷ chuyến cũng dọn theo. */
+    /** Biên bản bàn giao của MỘT chuyến - nhánh con của chi tiết, huỷ chuyến cũng dọn theo. */
     handoverEvidence: (id: string) => ['trips', 'detail', id, 'handover-evidence'] as const,
-    /** Phụ lục gia hạn của MỘT chuyến (ADR 0077) — nhánh con của chi tiết. */
+    /** Phụ lục gia hạn của MỘT chuyến (ADR 0077) - nhánh con của chi tiết. */
     extensions: (id: string) => ['trips', 'detail', id, 'extensions'] as const,
     /**
      * URL ký để hiện ẢNH THU NHỎ của biên bản. Tách khỏi `handoverEvidence` vì vòng đời khác
@@ -569,7 +600,7 @@ export const queryKeys = {
   },
   /**
    * `side` nằm TRONG khoá, không phải ngoài lề: hộp thư khách và inbox gian hàng là hai tập dữ
-   * liệu khác nhau, và một khoá chung nghĩa là mở `/manage/chat` sẽ ghi đè cache của `/chat` —
+   * liệu khác nhau, và một khoá chung nghĩa là mở `/manage/chat` sẽ ghi đè cache của `/chat` -
    * người dùng quay lại thấy danh sách của vai kia trong lúc request mới đang bay.
    */
   chat: {
@@ -580,68 +611,71 @@ export const queryKeys = {
         : (['chat', 'conversations', side] as const),
     conversation: (side: string, id: string) => ['chat', 'conversation', side, id] as const,
     unreadCount: (side: string) => ['chat', 'unread-count', side] as const,
-    /** Chưa đọc CẢ HAI vai — badge biểu tượng chat, không thuộc bề mặt nào. */
+    /** Chưa đọc CẢ HAI vai - badge biểu tượng chat, không thuộc bề mặt nào. */
     unreadSummary: () => ['chat', 'unread-summary'] as const,
     /**
-     * "Tôi nhắn được cho gian hàng này chưa" — PER-USER, nên khoá mang slug chứ không gộp vào
+     * "Tôi nhắn được cho gian hàng này chưa" - PER-USER, nên khoá mang slug chứ không gộp vào
      * cache của hồ sơ gian hàng (hồ sơ là dữ liệu công khai, dùng chung mọi người xem).
      */
     eligibility: (shopSlug: string) => ['chat', 'eligibility', shopSlug] as const,
   },
-  /** Hồ sơ người bán do CHÍNH gian hàng khai (R3 — ADR 0028 release gate 1). */
+  /** Hồ sơ người bán do CHÍNH gian hàng khai (R3 - ADR 0028 release gate 1). */
   sellerProfile: {
     all: ['seller-profile'] as const,
     me: () => ['seller-profile', 'me'] as const,
   },
   /**
    * Tài khoản ngân hàng NHẬN TIỀN (ADR 0033). Khoá mang `scope` vì một chủ gian hàng có HAI
-   * danh sách — của cá nhân họ và của gian hàng — và hai danh sách đó không được trộn cache.
+   * danh sách - của cá nhân họ và của gian hàng - và hai danh sách đó không được trộn cache.
    */
   /**
-   * Ví điểm (ADR 0033). Khoá mang `scope` vì một chủ gian hàng có HAI ví — cá nhân và gian
-   * hàng — và hai số dư đó không bao giờ được trộn cache.
+   * Ví điểm (ADR 0033). Khoá mang `scope` vì một chủ gian hàng có HAI ví - cá nhân và gian
+   * hàng - và hai số dư đó không bao giờ được trộn cache.
    */
   wallet: {
     all: ['wallet'] as const,
     summary: (scope: string) => ['wallet', scope, 'summary'] as const,
     entries: (scope: string, params: QueryParams) => ['wallet', scope, 'entries', params] as const,
     withdrawals: (scope: string) => ['wallet', scope, 'withdrawals'] as const,
-    /** Bảng tổng hợp giao dịch theo kỳ — chỉ có ở scope `shop`. */
+    /** Biến động số dư theo kỳ - sổ ví + lệnh rút trong một danh sách (chỉ gian hàng). */
+    activity: (scope: string, params: QueryParams) =>
+      ['wallet', scope, 'activity', params] as const,
+    /** Bảng tổng hợp giao dịch theo kỳ - chỉ có ở scope `shop`. */
     statement: (scope: string, params: QueryParams) =>
       ['wallet', scope, 'statement', params] as const,
   },
-  /** Hàng đợi rút tiền của nền tảng — tách khỏi `wallet` (phạm vi khác, quyền khác). */
+  /** Hàng đợi rút tiền của nền tảng - tách khỏi `wallet` (phạm vi khác, quyền khác). */
   platformWithdrawals: {
     all: ['platform-withdrawals'] as const,
     list: (params: QueryParams) => ['platform-withdrawals', 'list', params] as const,
   },
-  /** Lịch sử giao dịch HỢP NHẤT của khách — `GET /account/transactions`. */
+  /** Lịch sử giao dịch HỢP NHẤT của khách - `GET /account/transactions`. */
   accountTransactions: {
     all: ['account-transactions'] as const,
     list: (params: QueryParams) => ['account-transactions', 'list', params] as const,
-    /** Native cuộn vô hạn — `page` là `pageParam`, không nằm trong khoá. */
+    /** Native cuộn vô hạn - `page` là `pageParam`, không nằm trong khoá. */
     listInfinite: (params: QueryParams) =>
       ['account-transactions', 'list-infinite', params] as const,
   },
-  /** Tiền KHÁCH đã trả cho chuyến đã thuê — `payments`, KHÔNG phải ví (PROMPT 5). */
+  /** Tiền KHÁCH đã trả cho chuyến đã thuê - `payments`, KHÔNG phải ví (PROMPT 5). */
   accountPayments: {
     all: ['account-payments'] as const,
     list: (params: QueryParams) => ['account-payments', 'list', params] as const,
     /**
-     * Bản CUỘN VÔ HẠN của native — `page` KHÔNG nằm trong khoá (nó là `pageParam` của TanStack),
+     * Bản CUỘN VÔ HẠN của native - `page` KHÔNG nằm trong khoá (nó là `pageParam` của TanStack),
      * đúng quy ước của các nhánh `*Infinite` khác. Có `page` trong khoá thì mỗi trang là một
      * cache riêng và danh sách không bao giờ nối lại được.
      */
     listInfinite: (params: QueryParams) => ['account-payments', 'list-infinite', params] as const,
   },
-  /** Sổ thuế của nền tảng + bản của gian hàng — Phase 8. Một nhánh để đảo một dòng làm mới cả hai. */
+  /** Sổ thuế của nền tảng + bản của gian hàng - Phase 8. Một nhánh để đảo một dòng làm mới cả hai. */
   tax: {
     all: ['tax'] as const,
     periodSummary: (period: string) => ['tax', 'period-summary', period] as const,
     rows: (params: QueryParams) => ['tax', 'rows', params] as const,
     shopSummary: (period: string) => ['tax', 'shop-summary', period] as const,
   },
-  /** Hàng đợi hợp đồng bảo hiểm của nền tảng — Phase 7. */
+  /** Hàng đợi hợp đồng bảo hiểm của nền tảng - Phase 7. */
   platformInsurance: {
     all: ['platform-insurance'] as const,
     list: (params: QueryParams) => ['platform-insurance', 'list', params] as const,
@@ -650,13 +684,13 @@ export const queryKeys = {
     /** Danh mục sản phẩm phía quản trị (ADR 0064). */
     products: ['platform-insurance', 'products'] as const,
   },
-  /** Bảo hiểm phía khách/gian hàng — danh mục công khai + GCN của một đơn (ADR 0064). */
+  /** Bảo hiểm phía khách/gian hàng - danh mục công khai + GCN của một đơn (ADR 0064). */
   insurance: {
     all: ['insurance'] as const,
     publicProducts: (vehicleType: string) => ['insurance', 'public-products', vehicleType] as const,
     bookingCertificates: (bookingId: string) =>
       ['insurance', 'booking-certificates', bookingId] as const,
-    /** Tình trạng bảo hiểm theo từng sản phẩm của một đơn — phía gian hàng. */
+    /** Tình trạng bảo hiểm theo từng sản phẩm của một đơn - phía gian hàng. */
     bookingCoverage: (bookingId: string) => ['insurance', 'booking-coverage', bookingId] as const,
   },
   bankAccounts: {
@@ -664,7 +698,7 @@ export const queryKeys = {
     list: (scope: string) => ['bank-accounts', scope] as const,
   },
   /**
-   * Bằng lái của TÀI KHOẢN khách (ADR 0057) — trang Giấy tờ và bước "Xác thực bằng lái" khi đặt
+   * Bằng lái của TÀI KHOẢN khách (ADR 0057) - trang Giấy tờ và bước "Xác thực bằng lái" khi đặt
    * xe đọc CÙNG khoá, nên nộp ở chỗ này thì chỗ kia thấy ngay.
    */
   driverLicence: {
@@ -673,7 +707,7 @@ export const queryKeys = {
     image: (id: string) => ['driver-licence', 'image', id] as const,
   },
   /**
-   * Bằng lái của khách nhìn từ hồ sơ khách thuê (ADR 0070) — tách khỏi `driverLicence` (phạm vi
+   * Bằng lái của khách nhìn từ hồ sơ khách thuê (ADR 0070) - tách khỏi `driverLicence` (phạm vi
    * khác, quyền khác).
    */
   platformDriverLicences: {
@@ -687,7 +721,7 @@ export const queryKeys = {
     list: (params: QueryParams) => ['platform-follow-ups', 'list', params] as const,
     assignees: ['platform-follow-ups', 'assignees'] as const,
   },
-  /** Hàng đợi xác minh người bán của nền tảng — tách khỏi `sellerProfile` (phạm vi tenant). */
+  /** Hàng đợi xác minh người bán của nền tảng - tách khỏi `sellerProfile` (phạm vi tenant). */
   platformSellers: {
     all: ['platform-sellers'] as const,
     list: (params: QueryParams) => ['platform-sellers', 'list', params] as const,
@@ -696,11 +730,11 @@ export const queryKeys = {
   feePolicies: {
     all: ['fee-policies'] as const,
     list: () => ['fee-policies', 'list'] as const,
-    /** `/public/fee-policies/partner-offer` — % hoa hồng trần cho lời mời hợp tác. */
+    /** `/public/fee-policies/partner-offer` - % hoa hồng trần cho lời mời hợp tác. */
     partnerOffer: () => ['fee-policies', 'partner-offer'] as const,
   },
   /**
-   * MÃ KHUYẾN MÃI nền tảng — màn QUẢN TRỊ (ADR 0046).
+   * MÃ KHUYẾN MÃI nền tảng - màn QUẢN TRỊ (ADR 0046).
    *
    * Tách khỏi `marketplace.promoCodes` (danh sách khả dụng của KHÁCH) có chủ đích: hai bên hỏi
    * hai endpoint khác nhau với hai bộ quyền khác nhau, và một lượt `invalidate` sau khi admin
@@ -711,15 +745,15 @@ export const queryKeys = {
     list: (params: QueryParams) => ['promo-codes', 'list', params] as const,
     redemptions: (id: string, page: number) => ['promo-codes', 'redemptions', id, page] as const,
   },
-  /** Khoản giữ chỗ + hoàn tiền + đối soát ngày, phạm vi nền tảng (R3 — ADR 0028). */
+  /** Khoản giữ chỗ + hoàn tiền + đối soát ngày, phạm vi nền tảng (R3 - ADR 0028). */
   platformMoney: {
     all: ['platform-money'] as const,
     holds: (params: QueryParams) => ['platform-money', 'holds', params] as const,
     refunds: (params: QueryParams) => ['platform-money', 'refunds', params] as const,
     reconciliation: (date: string) => ['platform-money', 'reconciliation', date] as const,
-    /** Số đếm các hàng đợi — dải thẻ đầu màn Tài chính. Nằm dưới `all` để mọi thao tác tiền làm mới nó. */
+    /** Số đếm các hàng đợi - dải thẻ đầu màn Tài chính. Nằm dưới `all` để mọi thao tác tiền làm mới nó. */
     summary: ['platform-money', 'summary'] as const,
-    /** Hàng đợi lượt thanh toán qua cổng MoMo/VNPAY (ADR 0058) — nằm dưới `all` cùng lý do với `summary`. */
+    /** Hàng đợi lượt thanh toán qua cổng MoMo/VNPAY (ADR 0058) - nằm dưới `all` cùng lý do với `summary`. */
     gatewayOrders: (params: QueryParams) => ['platform-money', 'gateway-orders', params] as const,
     gatewayOrder: (id: string) => ['platform-money', 'gateway-order', id] as const,
   },
@@ -733,7 +767,7 @@ export const queryKeys = {
     methods: (surface: string) => ['payment-gateway', 'methods', surface] as const,
     order: (surface: string, id: string) => ['payment-gateway', 'order', surface, id] as const,
   },
-  /** Support case — ba bề mặt (khách/gian hàng/nền tảng) cùng dùng chung nhánh dữ liệu. */
+  /** Support case - ba bề mặt (khách/gian hàng/nền tảng) cùng dùng chung nhánh dữ liệu. */
   supportCases: {
     all: ['support-cases'] as const,
     list: (params: QueryParams) => ['support-cases', 'list', params] as const,

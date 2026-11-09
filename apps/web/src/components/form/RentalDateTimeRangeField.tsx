@@ -59,11 +59,8 @@ interface RentalDateTimeRangeFieldProps {
    */
   variant?: 'compact' | 'labelled' | 'stacked';
   /**
-   * Bỏ THỨ trong tuần ở trạng thái đóng: `19/08 10:00` thay vì `T4, 19/08 · 10:00`.
-   *
-   * Dành cho ô rất hẹp (thanh tìm kiếm thu gọn) — ở đó bản đầy đủ bị cắt cụt thành `T4, 19/08 ·
-   * 10:…`, mà giờ nhận mới là thứ người dùng cần đọc. Chỗ rộng vẫn giữ thứ: "T7" nói được nhiều
-   * hơn "22/08" khi đang cân nhắc cuối tuần.
+   * @deprecated Không còn tác dụng (09/11/2026): mọi mốc nhận/trả hiện đúng MỘT định dạng, kể cả
+   * ô hẹp — xem ghi chú ở `pointText`. Prop giữ để các chỗ gọi không vỡ.
    */
   compactPoint?: boolean;
   /**
@@ -104,7 +101,6 @@ export function RentalDateTimeRangeField({
   busyDays,
   busyLoading,
   variant = 'compact',
-  compactPoint = false,
   getPopupContainer,
   formatPoint,
   separator,
@@ -138,8 +134,9 @@ export function RentalDateTimeRangeField({
    * `T6, 08/08 · 10:00` — có THỨ, không có năm (xem `formatRentalPoint`). Chế độ theo ngày vẫn
    * hiện giờ vì giờ nhận/trả là thứ quyết định ngày tính tiền, không phải chi tiết phụ.
    *
-   * `compactPoint` bỏ thứ cho ô hẹp; GIỜ thì không bao giờ bỏ — cắt mất giờ nhận là cắt đúng
-   * thông tin quyết định số ngày tính tiền.
+   * `compactPoint` KHÔNG còn rút gọn chữ (09/11/2026, user: mọi mốc nhận/trả đúng MỘT định dạng
+   * `T4, 04/11  15h35`, kể cả thanh tìm kiếm gọn). Ô hẹp phải tự xếp lại bố cục (xuống hàng riêng)
+   * thay vì bỏ thứ hay giờ. Prop giữ để các chỗ gọi không vỡ.
    *
    * Bản gọn đi qua `fmt.rentalPointCompact` chứ không phải `format('DD/MM HH:mm')` gõ tay: mẫu
    * ngày đổi theo ngôn ngữ (`MM/DD` ở tiếng Anh), và dòng tóm tắt ở trang kết quả dựng từ CÙNG
@@ -149,9 +146,7 @@ export function RentalDateTimeRangeField({
     d
       ? formatPoint
         ? formatPoint(d)
-        : compactPoint
-          ? fmt.rentalPointCompact(d)
-          : fmt.rentalPoint(d)
+        : fmt.rentalPoint(d)
       : fallback;
 
   const complete = Boolean(value.pickupAt && value.returnAt);

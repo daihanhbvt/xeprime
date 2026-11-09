@@ -12,10 +12,11 @@ import { Alert, Button, Form, Input } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useController, useWatch, type Control, type FieldValues, type Path } from 'react-hook-form';
-import { PHONE_VERIFICATION_PURPOSE, VN_PHONE_PATTERN } from '@xeprime/types';
+import { PHONE_VERIFICATION_PURPOSE, sanitizePhoneInput, VN_MOBILE_PHONE_PATTERN } from '@xeprime/types';
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { OtpCodeInput } from '@/features/phone-verification/components/OtpCodeInput';
+import { formatOtpCooldown } from '@/features/phone-verification/format-cooldown';
 import { usePhoneVerify } from '@/features/phone-verification/hooks/use-phone-verify';
 import { useContactVerify } from '@/features/account/hooks/use-contact-verify';
 import { CONTACT_CHANNEL } from '@/features/account/types';
@@ -120,7 +121,7 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
   const continueAfterVerify = useRef(false);
 
   const phone = String(useWatch({ control, name: name('phone') }) ?? '').trim();
-  const phoneValid = VN_PHONE_PATTERN.test(phone);
+  const phoneValid = VN_MOBILE_PHONE_PATTERN.test(phone.trim());
   const code = String(otpField.value ?? '');
   const verified = verifiedField.value === true;
 
@@ -256,7 +257,7 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
               ref={phoneInputRef}
               name={phoneInput.name}
               value={String(phoneInput.value ?? '')}
-              onChange={(event) => phoneInput.onChange(event.target.value)}
+              onChange={(event) => phoneInput.onChange(sanitizePhoneInput(event.target.value))}
               onBlur={phoneInput.onBlur}
               type="tel"
               autoComplete="tel"
@@ -345,7 +346,7 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
               onClick={() => void resend()}
             >
               {otp.cooldown > 0
-                ? t('signup.fields.otpCode.resendIn', { seconds: otp.cooldown })
+                ? t('signup.fields.otpCode.resendInTime', { time: formatOtpCooldown(otp.cooldown) })
                 : t('signup.fields.otpCode.resend')}
             </Button>
           </div>

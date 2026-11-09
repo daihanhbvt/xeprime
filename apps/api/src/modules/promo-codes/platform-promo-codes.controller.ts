@@ -48,7 +48,7 @@ export class PlatformPromoCodesController {
 
   @Get()
   @ApiOperation({
-    summary: 'Danh sách mã khuyến mãi — lọc/tìm/sắp/phân trang ở SERVER, kèm thẻ thống kê',
+    summary: 'Danh sách mã khuyến mãi - lọc/tìm/sắp/phân trang ở SERVER, kèm thẻ thống kê',
   })
   @ApiOkResponse({ type: PromoCodePageDto })
   list(@Query() query: PromoCodeListQueryDto): Promise<PromoCodePageDto> {
@@ -86,7 +86,7 @@ export class PlatformPromoCodesController {
   @Patch(':id')
   @ApiOperation({
     summary:
-      'Sửa mã — mã đã phát sinh lượt thì mức giảm/điều kiện/phạm vi bị khoá (PROMO_CODE_LOCKED)',
+      'Sửa mã - mã đã phát sinh lượt thì mức giảm/điều kiện/phạm vi bị khoá (PROMO_CODE_LOCKED)',
   })
   @ApiOkResponse({ type: PromoCodeDto })
   update(
@@ -99,7 +99,7 @@ export class PlatformPromoCodesController {
 
   @Post(':id/toggle')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Bật/tắt — thao tác duy nhất còn dùng được khi mã đã có lượt dùng' })
+  @ApiOperation({ summary: 'Bật/tắt - thao tác duy nhất còn dùng được khi mã đã có lượt dùng' })
   @ApiOkResponse({ type: PromoCodeDto })
   toggle(
     @Param('id') id: string,
@@ -111,7 +111,7 @@ export class PlatformPromoCodesController {
 
   @Post(':id/duplicate')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Nhân bản — mã mới TẮT sẵn để soát lại số trước khi chạy' })
+  @ApiOperation({ summary: 'Nhân bản - mã mới TẮT sẵn để soát lại số trước khi chạy' })
   @ApiOkResponse({ type: PromoCodeDto })
   duplicate(
     @Param('id') id: string,
@@ -123,7 +123,7 @@ export class PlatformPromoCodesController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Xoá MỀM — mã đã dùng vẫn giải thích được giá của đơn cũ (RESTRICT ở DB)',
+    summary: 'Xoá MỀM - mã đã dùng vẫn giải thích được giá của đơn cũ (RESTRICT ở DB)',
   })
   @ApiNoContentResponse()
   remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser): Promise<void> {

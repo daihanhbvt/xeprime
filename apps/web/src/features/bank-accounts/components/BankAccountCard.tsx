@@ -23,6 +23,10 @@ import { BankLogo } from './BankLogo';
  * `19879:74829`): ô biểu trưng lớn bên trái, bên phải là nhãn đối chiếu và bảng bốn dòng ngân
  * hàng · số tài khoản · người thụ hưởng · tên gợi nhớ. Cùng dữ liệu với hình một dòng.
  *
+ * `variant="compact"` là hình ở cột phải trang Quản lý ví của site partner (Figma `23813:55449`):
+ * ô biểu trưng 80px, tên người thụ hưởng đậm, số đã che, tên đầy đủ của ngân hàng — không khung
+ * (khối chứa nó đã là thẻ).
+ *
  * Bản vẽ có nút SAO CHÉP số tài khoản — bỏ: số ở đây là số ĐÃ CHE (server không trả số đầy đủ ra
  * bề mặt này), chép "••••4567" không giúp được ai.
  */
@@ -35,9 +39,32 @@ export function BankAccountCard({
   account: BankAccount;
   action?: ReactNode;
   emphasis?: boolean;
-  variant?: 'row' | 'detail';
+  variant?: 'row' | 'detail' | 'compact';
 }) {
   const t = useTranslations('BankAccounts');
+
+  if (variant === 'compact') {
+    const bank = findBank(account.bankCode);
+    return (
+      <div className={styles.compact}>
+        <BankLogo code={account.bankCode} size="md" />
+        <span className={styles.text}>
+          <span className={styles.compactHolder}>{account.accountName}</span>
+          <span className={styles.number}>{account.accountNumberMasked}</span>
+          {/* Tên ngân hàng là tên riêng — không dịch (ADR 0012). */}
+          <span className={styles.compactBank}>
+            {bank ? `${bank.fullName} (${bank.shortName})` : bankAccountTitle(account)}
+          </span>
+          {account.verifiedAt ? (
+            <span className={styles.verified}>
+              <SafetyCertificateOutlined aria-hidden="true" />
+              {t('verifiedTag')}
+            </span>
+          ) : null}
+        </span>
+      </div>
+    );
+  }
 
   if (variant === 'detail') {
     const bank = findBank(account.bankCode);

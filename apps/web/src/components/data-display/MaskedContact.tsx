@@ -31,7 +31,7 @@ export function MaskedContact({
   onReveal,
 }: MaskedContactProps) {
   const tCommon = useTranslations('Common');
-  if (!masked && !revealed) return <span>—</span>;
+  if (!masked && !revealed) return <span>-</span>;
 
   if (revealed != null) {
     return <span className={styles.revealed}>{revealed}</span>;

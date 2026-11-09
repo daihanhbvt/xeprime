@@ -182,6 +182,8 @@ export function BookingMoneyCard({
             <DataRow
               label={t('holdPaymentPlan.holdPaid')}
               value={fmt.money(booking.holdPaidAmount as string)}
+              // Lúc tiền giữ chỗ về đủ (đơn ra đời) — web hiện ở chặng "Đã giữ chỗ".
+              {...(booking.holdPaidAt ? { valueHint: fmt.shortDateTime(booking.holdPaidAt) } : {})}
             />
             {/* Số CÒN LẠI khách đưa tận tay lúc nhận xe — con số người trực cần đọc to. */}
             <DataRow

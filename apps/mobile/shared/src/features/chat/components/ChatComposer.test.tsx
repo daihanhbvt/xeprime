@@ -137,7 +137,7 @@ describe('ChatComposer', () => {
     });
   });
 
-  it('`disabled` chặn cả gõ lẫn gửi — thread đang lỗi thì không soạn tin vào hư không', async () => {
+  it('`disabled` chặn cả gõ lẫn gửi - thread đang lỗi thì không soạn tin vào hư không', async () => {
     const onSend = jest.fn();
     const view = await render(withIntl(<ChatComposer onSend={onSend} disabled />));
 
@@ -147,7 +147,7 @@ describe('ChatComposer', () => {
   });
 });
 
-describe('ChatComposer — đính kèm (COM-03)', () => {
+describe('ChatComposer - đính kèm (COM-03)', () => {
   it('chọn ẢNH: tải lên rồi gửi kèm metadata ĐẦY ĐỦ, với số byte THẬT', async () => {
     const onSend = jest.fn().mockResolvedValue(undefined);
     pick.mockResolvedValue([PHOTO]);
@@ -309,7 +309,7 @@ describe('ChatComposer — đính kèm (COM-03)', () => {
   });
 });
 
-describe('ChatComposer — ngữ cảnh xe', () => {
+describe('ChatComposer - ngữ cảnh xe', () => {
   const VEHICLE = { id: 'veh-1', name: 'VinFast VF8', imageUrl: null };
 
   it('gắn `vehicleId` vào câu ĐẦU TIÊN rồi gọi dọn thẻ', async () => {
@@ -332,7 +332,7 @@ describe('ChatComposer — ngữ cảnh xe', () => {
     expect(onClear).toHaveBeenCalledTimes(1);
   });
 
-  it('gửi HỎNG thì GIỮ thẻ lại — câu sau vẫn nói về đúng chiếc xe đó', async () => {
+  it('gửi HỎNG thì GIỮ thẻ lại - câu sau vẫn nói về đúng chiếc xe đó', async () => {
     const onSend = jest.fn().mockRejectedValue(new Error('mạng rớt'));
     const onClear = jest.fn();
 

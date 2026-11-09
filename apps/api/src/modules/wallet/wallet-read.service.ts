@@ -1,8 +1,31 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
-import { WITHDRAWAL_TERMS, type WalletEntryKind, type WalletStatus } from '@xeprime/types';
+import {
+  WALLET_ACTIVITY_SOURCE,
+  WALLET_ENTRY_KIND,
+  WITHDRAWAL_STATUS,
+  WITHDRAWAL_TERMS,
+  isTaxPeriodKey,
+  maskAccountNumber,
+  taxPeriodKeyVn,
+  taxPeriodRangeVn,
+  type WalletActivitySource,
+  type WalletEntryKind,
+  type WalletStatus,
+  type WithdrawalStatus,
+} from '@xeprime/types';
+import { resolvePaging } from '../../common/pagination';
 import { PrismaService } from '../../prisma/prisma.service';
-import type { WalletEntryPageDto, WalletEntryQueryDto, WalletSummaryDto } from './dto/wallet.dto';
+import {
+  ACTIVITY_DEFAULT_LIMIT,
+  ACTIVITY_MAX_LIMIT,
+  type WalletActivityDto,
+  type WalletActivityPageDto,
+  type WalletActivityQueryDto,
+  type WalletEntryPageDto,
+  type WalletEntryQueryDto,
+  type WalletSummaryDto,
+} from './dto/wallet.dto';
 import { WalletService, type WalletOwner } from './wallet.service';
 
 const DEFAULT_LIMIT = 20;
@@ -85,4 +108,121 @@ export class WalletReadService {
       hasNext: page * limit < total,
     };
   }
+
+  /**
+   * "Biến động số dư" của một kỳ — bút toán sổ ví và lệnh rút trong MỘT danh sách.
+   *
+   * `UNION ALL` ngay trong Postgres để đếm và phân trang đúng trên cả kỳ, không trên một trang đã
+   * kéo về (cùng khuôn với `/account/transactions` của khách). Hai bút toán của lệnh rút
+   * (`withdrawal`, `withdrawal_reversal`) bị loại: lệnh rút đã là dòng của chính nó, kể lại chúng
+   * là đếm một khoản hai lần. Cả hai nhánh lọc theo `wallet_id` + `created_at` — index
+   * `(wallet_id, created_at)` có sẵn ở cả hai bảng.
+   */
+  async activity(
+    owner: WalletOwner,
+    query: WalletActivityQueryDto,
+  ): Promise<WalletActivityPageDto> {
+    const period =
+      query.period && isTaxPeriodKey(query.period) ? query.period : taxPeriodKeyVn(new Date());
+    const paging = resolvePaging(query, ACTIVITY_DEFAULT_LIMIT, ACTIVITY_MAX_LIMIT);
+    const empty = {
+      items: [],
+      period,
+      total: 0,
+      page: paging.page,
+      limit: paging.limit,
+      hasNext: false,
+    };
+
+    const walletId = await this.wallet.findWalletId(owner);
+    if (!walletId) return empty;
+
+    const { start, end } = taxPeriodRangeVn(period);
+    const E = WALLET_ENTRY_KIND;
+    const union = Prisma.sql`
+      SELECT wr.id::text AS id, ${WALLET_ACTIVITY_SOURCE.WITHDRAWAL}::text AS source,
+             NULL::text AS kind, wr.code::text AS code, NULL::text AS booking_id,
+             (-wr.amount) AS amount, NULL::numeric AS balance_after, wr.created_at AS occurred_at,
+             wr.status::text AS w_status, wr.bank_code::text AS bank_code,
+             wr.bank_account_number::text AS bank_account_number, wr.due_by, wr.paid_at,
+             wr.reject_reason, wr.reverse_reason
+        FROM withdrawal_requests wr
+       WHERE wr.wallet_id = ${walletId}
+         AND wr.created_at >= ${start} AND wr.created_at < ${end}
+
+      UNION ALL
+      SELECT we.id::text, ${WALLET_ACTIVITY_SOURCE.ENTRY}::text, we.kind::text, b.code::text,
+             b.id::text, we.amount, we.balance_after, we.created_at,
+             NULL::text, NULL::text, NULL::text, NULL::timestamptz, NULL::timestamptz,
+             NULL::text, NULL::text
+        FROM wallet_entries we
+        LEFT JOIN booking_holds h ON h.id = we.hold_id
+        LEFT JOIN bookings b ON b.id = COALESCE(we.booking_id, h.booking_id)
+       WHERE we.wallet_id = ${walletId}
+         AND we.kind NOT IN (${E.WITHDRAWAL}, ${E.WITHDRAWAL_REVERSAL})
+         AND we.created_at >= ${start} AND we.created_at < ${end}
+    `;
+
+    const [countRows, rows] = await Promise.all([
+      this.prisma.$queryRaw<{ total: bigint }[]>`
+        SELECT COUNT(*)::bigint AS total FROM (${union}) t`,
+      this.prisma.$queryRaw<ActivityRow[]>`
+        SELECT * FROM (${union}) t
+        ORDER BY t.occurred_at DESC, t.id DESC
+        LIMIT ${paging.take} OFFSET ${paging.skip}`,
+    ]);
+    const total = Number(countRows[0]?.total ?? 0);
+
+    return {
+      ...empty,
+      items: rows.map(toActivityDto),
+      total,
+      hasNext: paging.page * paging.limit < total,
+    };
+  }
+}
+
+interface ActivityRow {
+  id: string;
+  source: string;
+  kind: string | null;
+  code: string | null;
+  booking_id: string | null;
+  amount: Prisma.Decimal | string;
+  balance_after: Prisma.Decimal | string | null;
+  occurred_at: Date;
+  w_status: string | null;
+  bank_code: string | null;
+  bank_account_number: string | null;
+  due_by: Date | null;
+  paid_at: Date | null;
+  reject_reason: string | null;
+  reverse_reason: string | null;
+}
+
+function toActivityDto(r: ActivityRow): WalletActivityDto {
+  const isWithdrawal = r.source === WALLET_ACTIVITY_SOURCE.WITHDRAWAL;
+  return {
+    id: r.id.trim(),
+    source: r.source as WalletActivitySource,
+    kind: (r.kind as WalletEntryKind | null) ?? null,
+    code: r.code,
+    bookingId: r.booking_id?.trim() ?? null,
+    amount: new Prisma.Decimal(r.amount).toFixed(0),
+    balanceAfter: r.balance_after == null ? null : new Prisma.Decimal(r.balance_after).toFixed(0),
+    occurredAt: r.occurred_at.toISOString(),
+    cancellable: isWithdrawal && r.w_status === WITHDRAWAL_STATUS.PENDING,
+    withdrawal: isWithdrawal
+      ? {
+          status: r.w_status as WithdrawalStatus,
+          bankCode: r.bank_code ?? '',
+          // PII: chủ ví chỉ cần nhận ra tài khoản, không cần đọc lại số.
+          accountNumberMasked: maskAccountNumber(r.bank_account_number) ?? '',
+          dueBy: r.due_by?.toISOString() ?? null,
+          paidAt: r.paid_at?.toISOString() ?? null,
+          rejectReason: r.reject_reason,
+          reverseReason: r.reverse_reason,
+        }
+      : null,
+  };
 }

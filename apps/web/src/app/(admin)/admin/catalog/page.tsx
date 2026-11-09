@@ -151,7 +151,7 @@ export default function AdminCatalogPage() {
       align: 'right',
       width: 110,
       render: (_, item) =>
-        item.usageCount > 0 ? tCol('usageValue', { count: item.usageCount }) : '—',
+        item.usageCount > 0 ? tCol('usageValue', { count: item.usageCount }) : '-',
     },
     {
       title: tCol('vehicleTypes'),
@@ -172,7 +172,7 @@ export default function AdminCatalogPage() {
             key: 'home',
             width: 110,
             render: (_: unknown, item: CatalogItemAdmin) =>
-              item.showOnHome ? <Tag color={STATUS_COLOR.SUCCESS}>{tCol('onHome')}</Tag> : '—',
+              item.showOnHome ? <Tag color={STATUS_COLOR.SUCCESS}>{tCol('onHome')}</Tag> : '-',
           } satisfies DataTableColumn<CatalogItemAdmin>,
         ]
       : []),

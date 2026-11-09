@@ -306,11 +306,13 @@ export class VehicleAlertsService {
       ]);
     }
     /**
+     * Việc này chỉ GIẢI QUYẾT được ở một chỗ: hàng đợi "Thiếu KM trả" của Trung tâm bảo dưỡng
+     * (hộp "Bổ sung KM"). Màn đơn thuê không có thao tác đó, nên link không bao giờ trỏ về đơn.
      * Đường đi tiếp phải là chỗ người này VÀO ĐƯỢC, và không được mang định danh họ không có
      * quyền biết:
-     *  - có `bookings.view` và đúng một biên bản → đi thẳng đơn đó (kèm `bookingId`);
-     *  - không có quyền đơn → về hàng đợi chung, nhưng chỉ khi hàng đợi đó vào được
-     *    (Trung tâm bảo dưỡng đòi `vehicles.maintenance.view`, tab đòi `handovers.view`);
+     *  - hàng đợi đòi `vehicles.maintenance.view` (Trung tâm) + `handovers.view` (tab);
+     *  - có `bookings.view` và đúng một biên bản → kèm `resolve=<bookingId>` để màn mở thẳng
+     *    hộp bổ sung KM của biên bản đó (web tự bỏ qua nếu thiếu quyền chỉnh KM);
      *  - không có đích nào hợp lệ → `href: null`. Thà không có lối đi còn hơn một link 403
      *    hoặc một `bookingId` rò ra ngoài.
      */
@@ -322,11 +324,11 @@ export class VehicleAlertsService {
       const soleBookingId = bookingIds.length === 1 ? bookingIds[0] : null;
       push(vehicleId, VEHICLE_ALERT_KIND.MISSING_RETURN_ODOMETER, {
         title: 'Thiếu KM trả',
-        detail: 'Biên bản trả xe đã chốt nhưng chưa có số KM — KM của xe chưa được cập nhật',
+        detail: 'Biên bản trả xe đã chốt nhưng chưa có số KM - KM của xe chưa được cập nhật',
         count: bookingIds.length,
         href:
-          scope.canViewBookings && soleBookingId
-            ? `/manage/bookings?booking=${soleBookingId}`
+          queueHref && scope.canViewBookings && soleBookingId
+            ? `${queueHref}&resolve=${soleBookingId}`
             : queueHref,
       });
     }

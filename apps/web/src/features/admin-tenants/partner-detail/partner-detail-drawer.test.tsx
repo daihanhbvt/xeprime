@@ -129,6 +129,7 @@ function overview(
           vehicleQuotaByType: {
             car: { used: 24, kind: 'total', limit: 30, reason: 'plan' },
             motorbike: { used: 0, kind: 'not_covered' },
+            combined: false,
           },
           packageScopes: ['car'],
         }
@@ -151,7 +152,16 @@ function overview(
 }
 
 const COMMISSION: PartnerCommission = {
-  feePolicy: { serviceFeePercent: '10.00', version: 3, effectiveFrom: null },
+  feePolicy: {
+    platformFeeCar: '50000.00',
+    platformFeeMotorbike: '30000.00',
+    ownerCommissionTiers: [
+      { fromDay: 1, percent: 10 },
+      { fromDay: 3, percent: 7 },
+    ],
+    version: 3,
+    effectiveFrom: null,
+  },
   amountsVisible: false,
   openBookings: 1,
   openDisputes: 0,
@@ -180,6 +190,7 @@ const BILLING: PartnerBilling = {
     vehicleQuotaByType: {
       car: { used: 24, kind: 'total', limit: 30, reason: 'plan' },
       motorbike: { used: 0, kind: 'not_covered' },
+      combined: false,
     },
     packageScopes: ['car'],
   },
@@ -189,12 +200,13 @@ const BILLING: PartnerBilling = {
     vehiclesByType: {
       car: { used: 24, kind: 'total', limit: 30, reason: 'plan' },
       motorbike: { used: 0, kind: 'not_covered' },
+      combined: false,
     },
     branches: { used: 1, kind: 'total', limit: 3 },
     members: { used: 2, kind: 'unlimited' },
   },
   features: [{ feature: PLAN_FEATURE.FINANCE, state: FEATURE_STATE.ENABLED }],
-  feePolicy: null,
+  feePolicy: COMMISSION.feePolicy,
   invoiceStatus: { unpaid: 1, dueSoon: 1, overdue: 0, nextDueAt: '2099-08-05T00:00:00.000Z' },
   subscriptions: [
     {
@@ -328,7 +340,7 @@ afterEach(cleanup);
 
 /* ─────────────────────────────── biến thể & tab ─────────────────────────────── */
 
-describe('Drawer chi tiết đối tác — biến thể', () => {
+describe('Drawer chi tiết đối tác - biến thể', () => {
   it('gian hàng gói: đúng sáu tab, có "Gói & phí", không có "Hoa hồng & đối soát"', async () => {
     renderDrawer({ tenantId: 't-shop' });
     await screen.findAllByText('Việt Car Hà Nội');
@@ -396,7 +408,7 @@ const READ_ONLY_CASES = (
   ] as const
 ).flatMap(([tenantId, kind]) => PARTNER_DETAIL_TABS[kind].map((tab) => ({ tenantId, tab })));
 
-describe('Drawer chi tiết đối tác — chỉ đọc', () => {
+describe('Drawer chi tiết đối tác - chỉ đọc', () => {
   it.each(READ_ONLY_CASES)(
     '$tenantId · tab $tab: không nút mutation nào, không lời gọi ghi nào',
     async ({ tenantId, tab }) => {
@@ -440,6 +452,20 @@ describe('Drawer chi tiết đối tác — chỉ đọc', () => {
     ).toBeTruthy();
   });
 
+  it('chính sách phí đọc luồng tiền v2: phí sàn theo loại xe + nấc hoa hồng, không còn % phẳng', async () => {
+    renderDrawer({ tenantId: 't-lite', tab: 'commission' });
+    await screen.findByText('Chính sách phí dịch vụ');
+    expect(screen.getByText(/Ngày 1-2: 10%/)).toBeTruthy();
+    expect(screen.getByText(/50\.000.*ô tô · 30\.000.*xe máy/)).toBeTruthy();
+
+    cleanup();
+    permissions.granted.add(PERMISSION.PLATFORM_BILLING_MANAGE);
+    renderDrawer({ tenantId: 't-shop', tab: 'billing' });
+    // Gian hàng gói: hoa hồng 0%, không in nấc của tuyến hoa hồng.
+    expect(await screen.findByText(/^0% - gian hàng gói/)).toBeTruthy();
+    expect(screen.queryByText('Phí dịch vụ XePrime')).toBeNull();
+  });
+
   it('thiếu quyền Gói & thanh toán: tab Gói & phí là "không có quyền" và KHÔNG gọi API', async () => {
     renderDrawer({ tenantId: 't-shop', tab: 'billing' });
     await screen.findByText('Bạn không có quyền xem mục này');
@@ -456,7 +482,7 @@ describe('Drawer chi tiết đối tác — chỉ đọc', () => {
 
 /* ─────────────────────────────── hỗ trợ ─────────────────────────────── */
 
-describe('Drawer chi tiết đối tác — mở chế độ hỗ trợ', () => {
+describe('Drawer chi tiết đối tác - mở chế độ hỗ trợ', () => {
   it('có quyền: nút mở ĐÚNG luồng phiên hỗ trợ hiện có, với đúng đối tác', async () => {
     renderDrawer({ tenantId: 't-shop' });
     fireEvent.click(await screen.findByRole('button', { name: /Mở chế độ hỗ trợ/ }));
@@ -474,7 +500,7 @@ describe('Drawer chi tiết đối tác — mở chế độ hỗ trợ', () => 
 
 /* ─────────────────────────────── tab URL & cache ─────────────────────────────── */
 
-describe('Drawer chi tiết đối tác — dữ liệu theo quyền và luật', () => {
+describe('Drawer chi tiết đối tác - dữ liệu theo quyền và luật', () => {
   it('gian hàng hết gói: hạn mức là trần Owner Lite đang cưỡng chế, KHÔNG "không giới hạn"', async () => {
     const lapsed = overview(PLATFORM_PARTNER_KIND.PACKAGE_SHOP);
     lapsed.plan = {
@@ -484,14 +510,16 @@ describe('Drawer chi tiết đối tác — dữ liệu theo quyền và luật'
       vehicleQuotaByType: {
         car: { used: 5, kind: 'total', limit: 3, reason: 'owner_lite' },
         motorbike: { used: 5, kind: 'total', limit: 3, reason: 'owner_lite' },
+        combined: true,
       },
       packageScopes: [],
     };
     overviews['t-shop'] = lapsed;
     renderDrawer({ tenantId: 't-shop' });
 
-    // Trần TỔNG Owner Lite ⇒ cả hai dòng theo loại cùng nói đúng con số đang cưỡng chế.
-    expect(await screen.findAllByText('5 / 3 xe')).toHaveLength(2);
+    // Trần TỔNG Owner Lite ⇒ MỘT dòng "Mọi loại xe" — hai dòng cùng con số đọc thành gấp đôi số xe.
+    expect(await screen.findAllByText('5 / 3 xe')).toHaveLength(1);
+    expect(screen.getByText('Mọi loại xe')).toBeTruthy();
     expect(screen.getAllByText(/trần Owner Lite/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/không giới hạn/)).toBeNull();
   });
@@ -531,7 +559,7 @@ describe('Drawer chi tiết đối tác — dữ liệu theo quyền và luật'
   });
 });
 
-describe('Drawer chi tiết đối tác — tab và cache', () => {
+describe('Drawer chi tiết đối tác - tab và cache', () => {
   it('deep-link tab hợp lệ mở đúng tab; tab không thuộc biến thể rơi về Tổng quan', async () => {
     const shop = renderDrawer({ tenantId: 't-shop', tab: 'bookings' });
     await screen.findByText('Sắp nhận xe');
@@ -560,7 +588,7 @@ describe('Drawer chi tiết đối tác — tab và cache', () => {
   });
 });
 
-describe('Drawer chi tiết đối tác — tiếng Anh', () => {
+describe('Drawer chi tiết đối tác - tiếng Anh', () => {
   it('tab, huy hiệu và nút đều đã dịch', async () => {
     renderWithIntl(
       <QueryClientProvider

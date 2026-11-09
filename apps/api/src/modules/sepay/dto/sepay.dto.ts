@@ -21,7 +21,7 @@ export class SepayWebhookResultDto {
   @ApiProperty() received!: boolean;
   @ApiProperty({
     description:
-      'Giao dịch này đã nhận trước đó — dòng `bank_transactions` không được ghi lần nữa. ' +
+      'Giao dịch này đã nhận trước đó - dòng `bank_transactions` không được ghi lần nữa. ' +
       'Vẫn có thể `matched: true` nếu dòng cũ còn chưa khớp và lần này khớp được.',
   })
   duplicate!: boolean;
@@ -32,7 +32,7 @@ export class SepayWebhookResultDto {
     nullable: true,
     description:
       'Chú thích máy đọc được (partial | activated | already_paid | hold_… | invoice_… | ' +
-      'match_failed — giao dịch đã ghi nhưng lượt khớp lỗi, đang nằm ở hàng đợi đối soát)',
+      'match_failed - giao dịch đã ghi nhưng lượt khớp lỗi, đang nằm ở hàng đợi đối soát)',
   })
   note!: string | null;
 }

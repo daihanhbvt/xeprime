@@ -62,7 +62,7 @@ function returnToForeground() {
   focusManager.setFocused(true);
 }
 
-describe('useTripsInfinite — quay lại tiền cảnh', () => {
+describe('useTripsInfinite - quay lại tiền cảnh', () => {
   it('đọc lại khi danh sách có chuyến chờ tiền giữ chỗ', async () => {
     listMock.mockResolvedValueOnce(page(CUSTOMER_TRIP_STAGE.AWAITING_HOLD));
     listMock.mockResolvedValueOnce(page(CUSTOMER_TRIP_STAGE.READY));

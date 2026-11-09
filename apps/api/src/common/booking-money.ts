@@ -82,6 +82,33 @@ export function bookingMoney(input: BookingMoneyInput): BookingMoney {
 }
 
 /**
+ * Phần `D` của chủ xe ĐANG NẰM ở XePrime — khoản online của đơn qua chợ (ADR 0064), sẽ vào ví chủ xe
+ * khi chuyến xong. Đơn lập tay (không có hold) là 0.
+ */
+export function ownerShareHeldOnline(input: {
+  /** Đơn có khoản giữ chỗ đã thu (`bookings.hold.paid_amount` khác null). */
+  holdPaid: boolean;
+  priceSnapshot: { fees?: { depositAmount?: string | number | null } | null } | null | undefined;
+}): Prisma.Decimal {
+  if (!input.holdPaid) return new Prisma.Decimal(0);
+  return new Prisma.Decimal(input.priceSnapshot?.fees?.depositAmount ?? 0);
+}
+
+/**
+ * Số khách còn phải đưa TẬN TAY gian hàng — công nợ của đơn trừ `D`.
+ *
+ * Công nợ (`bookingMoney`) vẫn tính `D` vì đó là sổ chung với /debts, nhưng `D` đã ở XePrime: đòi
+ * khách lần nữa ở quầy là thu hai lần. Dùng cho dòng "Thu tiền thuê" của Chuẩn bị bàn giao và cho
+ * phiếu thu tự ghi lúc nhận lại xe — hai chỗ phải nói cùng một số.
+ */
+export function counterDueAmount(
+  debtAmount: Prisma.Decimal | string | number,
+  ownerShareOnline: Prisma.Decimal,
+): Prisma.Decimal {
+  return Prisma.Decimal.max(0, new Prisma.Decimal(debtAmount).minus(ownerShareOnline));
+}
+
+/**
  * Bản SQL của đúng công thức trên, cho các danh sách phải so cột-với-cột (`/manage/debts`, sổ
  * khách, dashboard). Prisma không so được cột với cột nên chúng buộc phải là raw SQL — và nếu
  * mỗi câu tự viết lại phép tính thì ba màn sẽ trôi khỏi nhau đúng như trước.
@@ -124,8 +151,20 @@ export const SQL_DEBT = Prisma.sql`GREATEST(${SQL_AMOUNT_DUE} - ${SQL_COLLECTED}
 /** Vị từ "đơn này còn nợ" — dùng cho `WHERE` và cho bộ đếm. */
 export const SQL_HAS_DEBT = Prisma.sql`${SQL_AMOUNT_DUE} > ${SQL_COLLECTED}`;
 
-/** Đơn bị huỷ không nằm trong bất kỳ phép tính công nợ nào. */
-export const SQL_DEBT_SCOPE = Prisma.sql`b.deleted_at IS NULL AND b.status <> ${BOOKING_STATUS.CANCELLED}`;
+/**
+ * Đơn bị huỷ HOẶC khách không đến không nằm trong bất kỳ phép tính công nợ nào
+ * (`isBookingClosedWithoutTrip`): chuyến không diễn ra thì khách không nợ phần tiền thuê còn lại —
+ * với đơn qua chợ, chủ xe đã nhận trọn phần giữ chỗ (ADR 0066 điều 2). Trước 09/11/2026 đơn
+ * `no_show` vẫn hiện nợ trọn tiền thuê ở sổ công nợ và hồ sơ khách.
+ */
+export const SQL_DEBT_SCOPE = Prisma.sql`b.deleted_at IS NULL AND b.status NOT IN (${BOOKING_STATUS.CANCELLED}, ${BOOKING_STATUS.NO_SHOW})`;
+
+/**
+ * Đơn còn được TÍNH là một chuyến của gian hàng — chỉ loại đơn huỷ. Dùng cho số chuyến theo
+ * xe/khách và cọc đang cầm; KHÁC `SQL_DEBT_SCOPE` ở đúng đơn `no_show` (vẫn đếm, vì đó là một lượt
+ * khách đã đặt rồi bỏ — mất ở công nợ không có nghĩa là mất khỏi lịch sử).
+ */
+export const SQL_BOOKING_SCOPE = Prisma.sql`b.deleted_at IS NULL AND b.status <> ${BOOKING_STATUS.CANCELLED}`;
 
 /** Ba tổng phụ của một đơn — thứ `bookings` không tự mang trong cột nào. */
 export interface BookingMoneySides {

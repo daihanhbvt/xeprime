@@ -169,7 +169,7 @@ Không phải dòng menu nhưng vẫn có lối vào (chi tiết ở `09` §2.1)
 
 - **Chờ giao xe / Đang thuê / Hoàn thành / Đã hủy** — các ngăn ở cột trái của "Quản lý đơn thuê xe"
   (`/bookings?preset=`, 02/11/2026); `/bookings/awaiting-pickup` chuyển tiếp về ngăn Chờ giao xe.
-- **Công nợ** (`/debts`) — mục ẩn, vào từ Tổng quan doanh thu; sẽ thành khối trong màn Doanh thu khi có design.
+- **Công nợ** — tab "Công nợ" của Lịch sử giao dịch (`/receipts?view=debts`, 04/11/2026); `/debts` cũ chuyển tiếp về đó.
 - **Chi nhánh** — section của Thông tin cửa hàng; `/shop/branches` chuyển tiếp.
 - **Tin nhắn** (`/chat`) và **Thông báo** — hai icon ở header.
 
@@ -192,7 +192,7 @@ CÙNG header và sáu khối với tuyến gói (02/11/2026); khối không còn
 | Khối | Mục | Route |
 | --- | --- | --- |
 | Tổng quan (liên kết thẳng) | Tổng quan | `/` |
-| Vận hành | Lịch thuê xe · Chuyến cho thuê (chủ; thành viên thấy Yêu cầu đặt xe + Quản lý đơn thuê xe) | `/calendar`, `/trips` (`/booking-requests`, `/bookings`) |
+| Vận hành | Lịch thuê xe · Đơn thuê xe (CÙNG màn với gian hàng, cho chủ lẫn thành viên — 06/11/2026; `/trips` "Chuyến cho thuê" cũ chỉ còn chuyển tiếp) | `/calendar`, `/bookings` |
 | Xe & Tài xế | Danh sách xe · Quản lý tài xế | `/vehicles`, `/drivers` |
 | Doanh thu | Quản lý ví — số dư, rút tiền, tài khoản nhận tiền, thuế đã khấu trừ | `/balance` |
 | Cấu hình | Hồ sơ chủ xe — hồ sơ, trang chủ xe, khai thuế, gói (phễu nâng cấp) | `/account` |

@@ -75,7 +75,7 @@ const MAX_KM = 500;
  */
 export class DeliveryTierDto {
   @ApiProperty({
-    description: 'Mốc "đến" (km) — các bậc phải tăng dần nghiêm ngặt',
+    description: 'Mốc "đến" (km) - các bậc phải tăng dần nghiêm ngặt',
     maximum: MAX_KM,
   })
   @IsNumber({ maxDecimalPlaces: 1 })
@@ -86,7 +86,7 @@ export class DeliveryTierDto {
   @ApiPropertyOptional({
     type: String,
     description:
-      "Phí TRỌN GÓI cho cả bậc (VND chuỗi, bội 1.000đ) — '0' = miễn phí",
+      "Phí TRỌN GÓI cho cả bậc (VND chuỗi, bội 1.000đ) - '0' = miễn phí",
     example: '30000',
   })
   @ValidateIf((o: DeliveryTierDto) => o.perKm == null)
@@ -98,7 +98,7 @@ export class DeliveryTierDto {
   @ApiPropertyOptional({
     type: String,
     deprecated: true,
-    description: 'ĐÃ GỠ (ADR 0078) — gửi lên bị từ chối; mỗi bậc chỉ có phí trọn gói',
+    description: 'ĐÃ GỠ (ADR 0078) - gửi lên bị từ chối; mỗi bậc chỉ có phí trọn gói',
   })
   @IsOptional()
   @IsString()
@@ -115,14 +115,14 @@ export class DeliveryTierDto {
  */
 export class DiscountTierDto {
   @ApiProperty({
-    description: 'Số tháng cam kết tối thiểu — phải là một gói thuê hợp lệ',
+    description: 'Số tháng cam kết tối thiểu - phải là một gói thuê hợp lệ',
     enum: LONG_TERM_PACKAGE_MONTHS_VALUES,
   })
   @IsInt()
   @IsIn(LONG_TERM_PACKAGE_MONTHS_VALUES)
   minMonths!: LongTermPackageMonths;
 
-  @ApiProperty({ description: 'Mức giảm % (1–100), CHỈ áp lên giá cơ sở của gói dài hạn' })
+  @ApiProperty({ description: 'Mức giảm % (1-100), CHỈ áp lên giá cơ sở của gói dài hạn' })
   @IsInt()
   @Min(1)
   @Max(100)
@@ -144,7 +144,7 @@ export class LegacyDiscountTierDto {
   @ApiProperty({ description: 'Số ngày của mốc cũ' }) minDays!: number;
   @ApiProperty() percent!: number;
   @ApiPropertyOptional({ type: String, nullable: true }) note?: string;
-  @ApiProperty({ description: 'Luôn true — cờ nhận diện mốc cũ chưa quy đổi' }) legacy!: true;
+  @ApiProperty({ description: 'Luôn true - cờ nhận diện mốc cũ chưa quy đổi' }) legacy!: true;
 }
 
 /**
@@ -156,7 +156,7 @@ export class SaveRentalPolicyDto {
   @ApiProperty({
     enum: COLLATERAL_MODE_VALUES,
     description:
-      'Hình thức bảo đảm — ba chế độ LOẠI TRỪ nhau. Quan hệ với depositAmount/collateralAssetTypes ' +
+      'Hình thức bảo đảm - ba chế độ LOẠI TRỪ nhau. Quan hệ với depositAmount/collateralAssetTypes ' +
       'kiểm ở validatePolicy và ràng bằng CHECK ở DB.',
   })
   @IsIn(COLLATERAL_MODE_VALUES)
@@ -165,7 +165,7 @@ export class SaveRentalPolicyDto {
   @ApiProperty({
     enum: COLLATERAL_ASSET_TYPE_VALUES,
     isArray: true,
-    description: 'Loại tài sản nhận thế chấp — chỉ có nghĩa khi collateralMode = asset',
+    description: 'Loại tài sản nhận thế chấp - chỉ có nghĩa khi collateralMode = asset',
   })
   @IsArray()
   @ArrayMaxSize(COLLATERAL_ASSET_TYPE_VALUES.length)
@@ -173,7 +173,7 @@ export class SaveRentalPolicyDto {
   collateralAssetTypes!: string[];
 
   @ApiProperty({
-    description: 'Cọc thế chấp cố định VND (chuỗi) — khác 0 CHỈ khi collateralMode = cash',
+    description: 'Cọc thế chấp cố định VND (chuỗi) - khác 0 CHỈ khi collateralMode = cash',
     example: '5000000',
   })
   @IsString()
@@ -188,7 +188,7 @@ export class SaveRentalPolicyDto {
     type: Number,
     nullable: true,
     description:
-      'Bán kính tự báo giá tối đa (km) — bắt buộc khi bật giao nhận, phải bằng mốc "đến" của bậc cuối',
+      'Bán kính tự báo giá tối đa (km) - bắt buộc khi bật giao nhận, phải bằng mốc "đến" của bậc cuối',
   })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 1 })
@@ -206,7 +206,7 @@ export class SaveRentalPolicyDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Phí mỗi giờ trả trễ (VND) — null = chưa cấu hình',
+    description: 'Phí mỗi giờ trả trễ (VND) - null = chưa cấu hình',
   })
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'Phí quá giờ không hợp lệ (số VND không âm)' })
@@ -215,7 +215,7 @@ export class SaveRentalPolicyDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'Phút trễ miễn phí tối đa — null = chưa cấu hình',
+    description: 'Phút trễ miễn phí tối đa - null = chưa cấu hình',
   })
   @IsOptional()
   @IsInt()
@@ -226,7 +226,7 @@ export class SaveRentalPolicyDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'Đơn vị làm tròn tối thiểu (phút) — null = chưa cấu hình',
+    description: 'Đơn vị làm tròn tối thiểu (phút) - null = chưa cấu hình',
   })
   @IsOptional()
   @IsInt()
@@ -254,7 +254,7 @@ export class SaveRentalPolicyDto {
     nullable: true,
     minimum: MILEAGE_LIMIT.minKmPerDay,
     maximum: MILEAGE_LIMIT.maxKmPerDay,
-    description: 'Số km/ngày đã nằm trong giá thuê tự lái — null = không giới hạn',
+    description: 'Số km/ngày đã nằm trong giá thuê tự lái - null = không giới hạn',
   })
   @IsOptional()
   @IsInt()
@@ -266,7 +266,7 @@ export class SaveRentalPolicyDto {
     type: String,
     nullable: true,
     description:
-      'Tiền mỗi km VƯỢT hạn mức (VND) — không cộng vào báo giá lúc đặt, chỉ đề xuất lúc quyết toán',
+      'Tiền mỗi km VƯỢT hạn mức (VND) - không cộng vào báo giá lúc đặt, chỉ đề xuất lúc quyết toán',
   })
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'Phí vượt km không hợp lệ (số VND không âm)' })
@@ -290,7 +290,7 @@ export class RentalPolicyValuesDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'Km/ngày trong giá — null = không giới hạn quãng đường',
+    description: 'Km/ngày trong giá - null = không giới hạn quãng đường',
   })
   includedDistanceKmPerDay!: number | null;
   @ApiPropertyOptional({
@@ -303,10 +303,10 @@ export class RentalPolicyValuesDto {
   discountTiers!: DiscountTierDto[];
   @ApiProperty({
     type: [LegacyDiscountTierDto],
-    description: 'Mốc cũ theo ngày không quy đổi được — chỉ để cảnh báo, KHÔNG tính giá',
+    description: 'Mốc cũ theo ngày không quy đổi được - chỉ để cảnh báo, KHÔNG tính giá',
   })
   legacyDiscountTiers!: LegacyDiscountTierDto[];
-  @ApiProperty({ description: 'ISO — mốc phát hiện báo giá/preview cũ' }) updatedAt!: string;
+  @ApiProperty({ description: 'ISO - mốc phát hiện báo giá/preview cũ' }) updatedAt!: string;
 }
 
 /** GET/PUT /shop/rental-policies — chính sách mặc định + số xe kế thừa/ghi đè. */
@@ -375,19 +375,19 @@ export class VehiclePricingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá/ngày đã gồm tài xế — lộ trình nội thành/cơ bản (17/08)',
+    description: 'Giá/ngày đã gồm tài xế - lộ trình nội thành/cơ bản (17/08)',
   })
   withDriverDailyPrice!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá/ngày có tài xế — liên tỉnh khứ hồi; null = rơi về giá cơ bản',
+    description: 'Giá/ngày có tài xế - liên tỉnh khứ hồi; null = rơi về giá cơ bản',
   })
   withDriverInterCityPrice!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá/ngày có tài xế — liên tỉnh 1 chiều; null = rơi về liên tỉnh → cơ bản',
+    description: 'Giá/ngày có tài xế - liên tỉnh 1 chiều; null = rơi về liên tỉnh → cơ bản',
   })
   withDriverOneWayPrice!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Giá thuê theo giờ' })
@@ -408,7 +408,7 @@ export class VehiclePricingDto {
 
   @ApiProperty({
     description:
-      'Xe đã được nền tảng DUYỆT (`public_status = approved_public`) — trục KIỂM DUYỆT, ' +
+      'Xe đã được nền tảng DUYỆT (`public_status = approved_public`) - trục KIỂM DUYỆT, ' +
       'không phải "khách có thấy xe không". Chủ xe có thể đang tạm ẩn xe đã duyệt: xem ' +
       '`marketplaceEnabled`/`isMarketplaceVisible` ở `GET /vehicles/:id` (ADR 0048)',
   })
@@ -425,14 +425,14 @@ export class SaveVehiclePricingDto {
   @ApiProperty({
     enum: POLICY_SOURCE_VALUES,
     description:
-      'NGUỒN CHÍNH SÁCH của xe — KHÔNG còn khoá phần giá (20/08). shop = xoá bản ghi đè và ' +
+      'NGUỒN CHÍNH SÁCH của xe - KHÔNG còn khoá phần giá (20/08). shop = xoá bản ghi đè và ' +
       'quay về kế thừa; vehicle = lưu bộ chính sách riêng (phải gửi kèm policy).',
   })
   @IsIn(POLICY_SOURCE_VALUES)
   source!: string;
 
   @ApiPropertyOptional({
-    description: 'Giá thuê ngày thường VND — độc lập với source (giá luôn sửa được)',
+    description: 'Giá thuê ngày thường VND - độc lập với source (giá luôn sửa được)',
   })
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'Giá thuê không hợp lệ (số VND không âm)' })
@@ -442,7 +442,7 @@ export class SaveVehiclePricingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá cuối tuần VND — độc lập với source (giá luôn sửa được); null = xoá (dùng giá thường)',
+    description: 'Giá cuối tuần VND - độc lập với source (giá luôn sửa được); null = xoá (dùng giá thường)',
   })
   @IsOptional()
   @ValidateIf((o: SaveVehiclePricingDto) => o.weekendPrice !== null)
@@ -453,7 +453,7 @@ export class SaveVehiclePricingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá tháng thuê dài hạn — độc lập với source (giá luôn sửa được); null = xoá giá tháng',
+    description: 'Giá tháng thuê dài hạn - độc lập với source (giá luôn sửa được); null = xoá giá tháng',
   })
   @IsOptional()
   @ValidateIf((o: SaveVehiclePricingDto) => o.monthlyPrice !== null)
@@ -464,7 +464,7 @@ export class SaveVehiclePricingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá/ngày đã gồm tài xế (nội thành/cơ bản) — độc lập với source (giá luôn sửa được)',
+    description: 'Giá/ngày đã gồm tài xế (nội thành/cơ bản) - độc lập với source (giá luôn sửa được)',
   })
   @IsOptional()
   @ValidateIf((o: SaveVehiclePricingDto) => o.withDriverDailyPrice !== null)
@@ -475,7 +475,7 @@ export class SaveVehiclePricingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá/ngày có tài xế liên tỉnh — null = xoá (rơi về giá cơ bản)',
+    description: 'Giá/ngày có tài xế liên tỉnh - null = xoá (rơi về giá cơ bản)',
   })
   @IsOptional()
   @ValidateIf((o: SaveVehiclePricingDto) => o.withDriverInterCityPrice !== null)
@@ -486,7 +486,7 @@ export class SaveVehiclePricingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá/ngày có tài xế liên tỉnh 1 chiều — null = xoá',
+    description: 'Giá/ngày có tài xế liên tỉnh 1 chiều - null = xoá',
   })
   @IsOptional()
   @ValidateIf((o: SaveVehiclePricingDto) => o.withDriverOneWayPrice !== null)
@@ -497,7 +497,7 @@ export class SaveVehiclePricingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá thuê theo giờ — null = xe không cho thuê giờ',
+    description: 'Giá thuê theo giờ - null = xe không cho thuê giờ',
   })
   @IsOptional()
   @ValidateIf((o: SaveVehiclePricingDto) => o.hourlyPrice !== null)
@@ -546,11 +546,11 @@ export class LongTermPackageOptionDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: '% mốc cam kết đang áp — null = không mốc nào áp cho gói này',
+    description: '% mốc cam kết đang áp - null = không mốc nào áp cho gói này',
   })
   durationDiscountPercent!: number | null;
   @ApiProperty() durationDiscountAmount!: string;
-  @ApiProperty({ description: 'Giá gói sau ưu đãi — số khách thực trả (trước cọc)' })
+  @ApiProperty({ description: 'Giá gói sau ưu đãi - số khách thực trả (trước cọc)' })
   finalPackageAmount!: string;
   @ApiProperty({ description: 'finalPackageAmount ÷ packageMonths' })
   effectiveMonthlyAmount!: string;
@@ -560,18 +560,18 @@ export class QuoteBreakdownDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'Số ngày tính tiền — null với báo giá theo GÓI dài hạn (không tính theo ngày)',
+    description: 'Số ngày tính tiền - null với báo giá theo GÓI dài hạn (không tính theo ngày)',
   })
   days!: number | null;
   @ApiPropertyOptional({
     type: LongTermPackageOptionDto,
     nullable: true,
-    description: 'Cấu tạo giá gói — khác null ⇒ đây là báo giá THUÊ DÀI HẠN theo gói tháng lịch',
+    description: 'Cấu tạo giá gói - khác null ⇒ đây là báo giá THUÊ DÀI HẠN theo gói tháng lịch',
   })
   longTerm!: LongTermPackageOptionDto | null;
   @ApiProperty({ type: [PriceBreakdownRowDto] }) rows!: PriceBreakdownRowDto[];
   @ApiProperty({ description: 'Tổng khách trả TRƯỚC cọc' }) totalAmount!: string;
-  @ApiProperty({ description: 'Cọc thế chấp hoàn trả — không nằm trong tổng' })
+  @ApiProperty({ description: 'Cọc thế chấp hoàn trả - không nằm trong tổng' })
   depositAmount!: string;
   @ApiProperty({ enum: POLICY_SOURCE_VALUES, nullable: true, type: String })
   policySource!: string | null;
@@ -617,12 +617,12 @@ export class FeeLineDto {
    * hiểm theo ngày (`unitAmount × quantity`) và hoa hồng lũy tiến (nấc nằm ở `policy`).
    */
   @ApiProperty({ type: Number, nullable: true }) percent!: number | null;
-  @ApiPropertyOptional({ type: String, description: 'Đơn giá MỖI NGÀY (VND) — dòng tính theo ngày' })
+  @ApiPropertyOptional({ type: String, description: 'Đơn giá MỖI NGÀY (VND) - dòng tính theo ngày' })
   unitAmount?: string;
   @ApiPropertyOptional({ type: Number, description: 'Số ngày đã nhân với `unitAmount`' })
   quantity?: number;
   @ApiProperty({
-    description: 'VND string nguyên — khoản tính từ tỷ lệ đúng tới đồng (ADR 0069)',
+    description: 'VND string nguyên - khoản tính từ tỷ lệ đúng tới đồng (ADR 0069)',
   })
   amount!: string;
   @ApiPropertyOptional({ type: String }) partnerName?: string;
@@ -631,12 +631,12 @@ export class FeeLineDto {
 export class FeePolicySnapshotDto {
   @ApiProperty() policyId!: string;
   @ApiProperty() version!: number;
-  @ApiProperty({ description: 'LEGACY — luồng tiền v2 không đọc trường này' })
+  @ApiProperty({ description: 'LEGACY - luồng tiền v2 không đọc trường này' })
   serviceFeePercent!: number;
   @ApiProperty() holdMinAmount!: string;
-  @ApiProperty({ description: 'Cửa sổ thanh toán khi đặt xa — trần của cửa sổ động' })
+  @ApiProperty({ description: 'Cửa sổ thanh toán khi đặt xa - trần của cửa sổ động' })
   holdPaymentWindowMinutes!: number;
-  @ApiProperty({ description: 'Cửa sổ huỷ miễn phí (giờ) khi đặt xa — trần của cửa sổ động' })
+  @ApiProperty({ description: 'Cửa sổ huỷ miễn phí (giờ) khi đặt xa - trần của cửa sổ động' })
   freeCancelHours!: number;
   @ApiProperty() taxEnabled!: boolean;
   @ApiPropertyOptional({
@@ -647,7 +647,7 @@ export class FeePolicySnapshotDto {
   taxRates?: TaxRatesDto | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Căn cứ pháp lý khấu trừ' })
   taxLegalBasis?: string | null;
-  @ApiPropertyOptional({ type: Number, nullable: true, description: 'LEGACY (≤ v8) — một mức' })
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'LEGACY (≤ v8) - một mức' })
   taxPercent!: number | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'LEGACY (≤ v8)' })
   taxLabel!: string | null;
@@ -659,19 +659,19 @@ export class FeePolicySnapshotDto {
   @ApiProperty({
     description:
       '% phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi của xe, không gồm ' +
-      'phí giao xe) — ADR 0066',
+      'phí giao xe) - ADR 0066',
   })
   depositPercent!: number;
   @ApiProperty({ description: 'Sàn của `D` (VND): D = max(% × tiền thuê, sàn)' })
   depositMinAmount!: string;
   @ApiProperty({ description: 'Trần % của `D` ở chính sách này' }) depositMaxPercent!: number;
-  @ApiProperty({ type: PerVehicleTypeAmountDto, description: '`S` — phí sàn cố định mỗi đơn' })
+  @ApiProperty({ type: PerVehicleTypeAmountDto, description: '`S` - phí sàn cố định mỗi đơn' })
   customerPlatformFee!: PerVehicleTypeAmountDto;
-  @ApiProperty({ type: [OwnerCommissionTierDto], description: '`H` — nấc hoa hồng lũy tiến' })
+  @ApiProperty({ type: [OwnerCommissionTierDto], description: '`H` - nấc hoa hồng lũy tiến' })
   ownerCommissionTiers!: readonly OwnerCommissionTierDto[];
-  @ApiProperty({ type: PerVehicleTypeAmountDto, description: '`IV` — biểu phí mỗi ngày' })
+  @ApiProperty({ type: PerVehicleTypeAmountDto, description: '`IV` - biểu phí mỗi ngày' })
   vehicleProtectionDailyAmount!: PerVehicleTypeAmountDto;
-  @ApiProperty({ type: PerVehicleTypeAmountDto, description: '`IP` — biểu phí mỗi ngày' })
+  @ApiProperty({ type: PerVehicleTypeAmountDto, description: '`IP` - biểu phí mỗi ngày' })
   tripInsuranceDailyAmount!: PerVehicleTypeAmountDto;
 }
 
@@ -687,7 +687,7 @@ export class PromoCodeSnapshotDto {
   @ApiProperty() promoCodeId!: string;
   @ApiProperty({ description: 'Mã đã chuẩn hoá (in hoa)' }) code!: string;
   @ApiProperty({ description: 'Tên chương trình lúc khách áp mã' }) name!: string;
-  @ApiProperty({ description: 'Số giảm ĐÃ ÁP (VND string — ADR 0007)' }) discountApplied!: string;
+  @ApiProperty({ description: 'Số giảm ĐÃ ÁP (VND string - ADR 0007)' }) discountApplied!: string;
   @ApiProperty({ enum: PROMO_DISCOUNT_TYPE_VALUES }) discountType!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) discountAmount!: string | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) discountPercent!: number | null;
@@ -718,22 +718,22 @@ export class PromoCodeSnapshotDto {
 export class CustomerFeeBreakdownDto {
   @ApiProperty({ enum: BILLING_MODE_VALUES }) billingMode!: string;
   @ApiProperty({ type: FeePolicySnapshotDto }) policy!: FeePolicySnapshotDto;
-  @ApiProperty({ enum: VEHICLE_TYPE_VALUES, description: 'Loại xe — quyết định mức S và biểu phí bảo hiểm' })
+  @ApiProperty({ enum: VEHICLE_TYPE_VALUES, description: 'Loại xe - quyết định mức S và biểu phí bảo hiểm' })
   vehicleType!: string;
-  @ApiProperty({ description: 'Số ngày thuê tính phí — nhân biểu phí bảo hiểm, chia nấc hoa hồng' })
+  @ApiProperty({ description: 'Số ngày thuê tính phí - nhân biểu phí bảo hiểm, chia nấc hoa hồng' })
   rentalDays!: number;
   @ApiPropertyOptional({
     type: [String],
     description:
-      'Giá thuê TỪNG ngày (ngày 1 trước, sau khuyến mãi trực tiếp, không gồm phí giao) — đúng mảng ' +
+      'Giá thuê TỪNG ngày (ngày 1 trước, sau khuyến mãi trực tiếp, không gồm phí giao) - đúng mảng ' +
       'đã làm mẫu số hoa hồng H. Vắng = không biết (H chia đều, hoặc snapshot trước 22/10/2026)',
   })
   dayAmounts?: string[];
-  @ApiProperty({ description: 'B — tổng bảng kê giá thuê (gồm giao nhận)' }) baseAmount!: string;
+  @ApiProperty({ description: 'B - tổng bảng kê giá thuê (gồm giao nhận)' }) baseAmount!: string;
   @ApiPropertyOptional({
     type: String,
     description:
-      'G — phí giao nhận nằm trong B, khách trả TẬN TAY chủ xe: không vào tiền giữ chỗ online, không chịu ' +
+      'G - phí giao nhận nằm trong B, khách trả TẬN TAY chủ xe: không vào tiền giữ chỗ online, không chịu ' +
       'hoa hồng hay thuế (ADR 0064). Vắng mặt ở snapshot trước 21/10/2026 = "0"',
   })
   deliveryAmount?: string;
@@ -742,27 +742,27 @@ export class CustomerFeeBreakdownDto {
   @ApiProperty({ description: 'Số KHÁCH TRẢ cả chuyến (chưa gồm cọc thế chấp)' })
   customerTotalAmount!: string;
   @ApiProperty({
-    description: 'D — phần của CHỦ XE trong tiền giữ chỗ online (cam kết giữ xe); "0" khi chuyến không thu online',
+    description: 'D - phần của CHỦ XE trong tiền giữ chỗ online (cam kết giữ xe); "0" khi chuyến không thu online',
   })
   depositAmount!: string;
   @ApiProperty({
-    description: 'H — hoa hồng lũy tiến trừ vào tiền chủ xe (tính trên tiền thuê, KHÔNG trên phí giao xe). "0" ở tuyến gói',
+    description: 'H - hoa hồng lũy tiến trừ vào tiền chủ xe (tính trên tiền thuê, KHÔNG trên phí giao xe). "0" ở tuyến gói',
   })
   ownerCommissionAmount!: string;
-  @ApiProperty({ description: 'S + H — phần XePrime giữ lại từ tiền giữ chỗ online (trước tài trợ mã)' })
+  @ApiProperty({ description: 'S + H - phần XePrime giữ lại từ tiền giữ chỗ online (trước tài trợ mã)' })
   platformRetainedAmount!: string;
   @ApiProperty({
     description:
-      'Tiền giữ chỗ online TRƯỚC tài trợ mã khuyến mãi = D + S + H + IV + IP — con số phân bổ quyền lợi làm việc trên',
+      'Tiền giữ chỗ online TRƯỚC tài trợ mã khuyến mãi = D + S + H + IV + IP - con số phân bổ quyền lợi làm việc trên',
   })
   grossOnlineAmount!: string;
   @ApiProperty({
-    description: 'D + S + H — phần tiền giữ chỗ online XePrime được phép tài trợ bằng mã (không gồm bảo hiểm)',
+    description: 'D + S + H - phần tiền giữ chỗ online XePrime được phép tài trợ bằng mã (không gồm bảo hiểm)',
   })
   sponsorableAmount!: string;
   @ApiProperty({
     description:
-      'P — số XePrime TÀI TRỢ qua mã khuyến mãi (ADR 0046). "0" khi không có mã. Không đụng tiền gian hàng.',
+      'P - số XePrime TÀI TRỢ qua mã khuyến mãi (ADR 0046). "0" khi không có mã. Không đụng tiền gian hàng.',
   })
   promoDiscountAmount!: string;
   @ApiPropertyOptional({
@@ -771,15 +771,15 @@ export class CustomerFeeBreakdownDto {
     description: 'Mã đã áp + điều kiện đóng băng. null khi chuyến không dùng mã.',
   })
   promo!: PromoCodeSnapshotDto | null;
-  @ApiProperty({ description: 'Tiền giữ chỗ − P — số quét QR trả ngay' })
+  @ApiProperty({ description: 'Tiền giữ chỗ − P - số quét QR trả ngay' })
   onlineAmount!: string;
   @ApiProperty({
-    description: 'Tổng khách trả trước mã − tiền giữ chỗ — khách trả TRỰC TIẾP chủ xe lúc nhận xe',
+    description: 'Tổng khách trả trước mã − tiền giữ chỗ - khách trả TRỰC TIẾP chủ xe lúc nhận xe',
   })
   payAtPickupAmount!: string;
   @ApiProperty({
     description:
-      'T = GTGT + TNCN — thuế khấu trừ khỏi tiền chủ xe, KHÔNG cộng vào tổng khách. "0" khi cổng ' +
+      'T = GTGT + TNCN - thuế khấu trừ khỏi tiền chủ xe, KHÔNG cộng vào tổng khách. "0" khi cổng ' +
       'thuế tắt hoặc người bán được miễn (taxExemptReason)',
   })
   taxAmount!: string;
@@ -788,7 +788,7 @@ export class CustomerFeeBreakdownDto {
    */
   @ApiPropertyOptional({
     type: String,
-    description: 'R = B − G — tiền THUÊ: mẫu số của hoa hồng, thuế và phần giữ chỗ D',
+    description: 'R = B − G - tiền THUÊ: mẫu số của hoa hồng, thuế và phần giữ chỗ D',
   })
   rentAmount?: string;
   @ApiPropertyOptional({ type: String, description: 'Thuế GTGT khấu trừ = roundVnd(vat% × R)' })
@@ -816,13 +816,13 @@ export class CustomerFeeBreakdownDto {
   @ApiPropertyOptional({
     enum: Object.values(TAX_EXEMPT_REASON),
     nullable: true,
-    description: 'Vì sao không khấu trừ dù cổng thuế mở — company (doanh nghiệp đã xác minh)',
+    description: 'Vì sao không khấu trừ dù cổng thuế mở - company (doanh nghiệp đã xác minh)',
   })
   taxExemptReason?: string | null;
   @ApiPropertyOptional({
     enum: SERVICE_TYPE_VALUES,
     nullable: true,
-    description: 'Loại dịch vụ đã đóng băng — chọn cặp tỷ lệ thuế',
+    description: 'Loại dịch vụ đã đóng băng - chọn cặp tỷ lệ thuế',
   })
   serviceType?: string | null;
   @ApiPropertyOptional({
@@ -830,13 +830,13 @@ export class CustomerFeeBreakdownDto {
     description: 'Chủ thể ÁP THUẾ đã đóng băng lúc nhận chuyến (chỉ doanh nghiệp đã xác minh = company)',
   })
   sellerEntityType?: string;
-  @ApiProperty({ description: 'D − T — khoản XePrime chuyển vào ví chủ xe khi chuyến hoàn thành' })
+  @ApiProperty({ description: 'D − T - khoản XePrime chuyển vào ví chủ xe khi chuyến hoàn thành' })
   ownerPayableAmount!: string;
   @ApiProperty({ description: 'Chủ xe THỰC NHẬN cả chuyến = B − H − T' }) ownerNetAmount!: string;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Khoản giữ chỗ khách chuyển XePrime — null khi không cần (tuyến gói, báo giá tạm tính)',
+    description: 'Khoản giữ chỗ khách chuyển XePrime - null khi không cần (tuyến gói, báo giá tạm tính)',
   })
   holdAmount!: string | null;
 }
@@ -901,8 +901,8 @@ export class DeliverySummaryDto {
 
 /** Bảo hiểm nào đang được bán, theo từng sản phẩm (ADR 0064). */
 export class InsuranceOfferedByKindDto {
-  @ApiProperty({ description: '`IV` — bảo hiểm vật chất xe' }) vehicleProtection!: boolean;
-  @ApiProperty({ description: '`IP` — bảo hiểm tai nạn người trên xe' }) tripInsurance!: boolean;
+  @ApiProperty({ description: '`IV` - bảo hiểm vật chất xe' }) vehicleProtection!: boolean;
+  @ApiProperty({ description: '`IP` - bảo hiểm tai nạn người trên xe' }) tripInsurance!: boolean;
 }
 
 /** GET /public/listings/:id/quote — báo giá công khai (chưa gồm phí giao nhận). */
@@ -916,7 +916,7 @@ export class PublicQuoteDto {
    */
   @ApiProperty({
     description:
-      'Nền tảng có đối tác bảo hiểm phát hành thật — false thì ẩn ô chọn bảo hiểm, server không thu IV/IP',
+      'Nền tảng có đối tác bảo hiểm phát hành thật - false thì ẩn ô chọn bảo hiểm, server không thu IV/IP',
   })
   insuranceOffered!: boolean;
   /**
@@ -1047,7 +1047,7 @@ export class GeoPointDto {
 
 export class DeliveryDistanceQueryDto {
   @ApiProperty({
-    description: 'Địa chỉ khách muốn nhận xe — chuỗi tự do, server tự tra toạ độ',
+    description: 'Địa chỉ khách muốn nhận xe - chuỗi tự do, server tự tra toạ độ',
     example: '12 Nguyễn Huệ, Phường Sài Gòn, Hồ Chí Minh',
   })
   @IsString()
@@ -1098,7 +1098,7 @@ export class DeliveryDistanceDto {
   @ApiPropertyOptional({
     enum: DELIVERY_MANUAL_REASON_VALUES,
     nullable: true,
-    description: "Nguyên nhân báo giá thủ công — chỉ khác null khi status = 'manual'",
+    description: "Nguyên nhân báo giá thủ công - chỉ khác null khi status = 'manual'",
   })
   manualReason!: DeliveryManualReason | null;
 
@@ -1116,14 +1116,14 @@ export class DeliveryDistanceDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'Khoảng cách đường chim bay (km) — chỉ có ở ca ngoài bán kính, không phải đường lái',
+    description: 'Khoảng cách đường chim bay (km) - chỉ có ở ca ngoài bán kính, không phải đường lái',
   })
   straightLineKm!: number | null;
 
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'Bán kính tự báo giá của chính sách hiệu lực (km) — để giao diện nói đúng con số',
+    description: 'Bán kính tự báo giá của chính sách hiệu lực (km) - để giao diện nói đúng con số',
   })
   maxRadiusKm!: number | null;
 
@@ -1137,7 +1137,7 @@ export class DeliveryDistanceDto {
   @ApiPropertyOptional({
     type: GeoPointDto,
     nullable: true,
-    description: 'Điểm giao xe đi — chi nhánh giữ xe, toạ độ XẤP XỈ ~1km (ADR 0077). Null khi chi nhánh chưa có toạ độ.',
+    description: 'Điểm giao xe đi - chi nhánh giữ xe, toạ độ XẤP XỈ ~1km (ADR 0077). Null khi chi nhánh chưa có toạ độ.',
   })
   origin!: GeoPointDto | null;
 
@@ -1147,7 +1147,7 @@ export class DeliveryDistanceDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Địa chỉ bản đồ hiểu ra — hiện lại để khách xác nhận đúng chỗ',
+    description: 'Địa chỉ bản đồ hiểu ra - hiện lại để khách xác nhận đúng chỗ',
   })
   formattedAddress!: string | null;
 }

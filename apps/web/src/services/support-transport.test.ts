@@ -24,7 +24,7 @@ describe('supportAwareWebTransport', () => {
     }
   });
 
-  it('không gắn gì ở mọi trang khác — kể cả hàng đợi hỗ trợ/tranh chấp', async () => {
+  it('không gắn gì ở mọi trang khác - kể cả hàng đợi hỗ trợ/tranh chấp', async () => {
     for (const path of [
       '/manage/admin/support',
       // Hàng đợi tranh chấp với một đoạn có DÁNG id phiên vẫn không phải phiên hỗ trợ gian hàng.

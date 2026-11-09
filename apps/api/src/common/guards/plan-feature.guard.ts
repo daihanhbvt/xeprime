@@ -72,7 +72,7 @@ export class PlanFeatureGuard implements CanActivate {
       state === FEATURE_STATE.READ_ONLY
         ? {
             code: API_ERROR_CODE.FEATURE_READ_ONLY,
-            message: `Gói đã hết hạn — "${PLAN_FEATURE_LABEL[feature]}" đang ở chế độ chỉ xem`,
+            message: `Gói đã hết hạn - "${PLAN_FEATURE_LABEL[feature]}" đang ở chế độ chỉ xem`,
             details: { feature, planEndsAt: req.tenant.planEndsAt },
           }
         : {

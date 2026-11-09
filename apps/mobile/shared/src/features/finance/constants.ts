@@ -84,3 +84,17 @@ export const RECEIPT_ATTACHMENTS_MAX = 10;
 
 /** Giữ lối import cũ của khu Finance — nguồn nằm ở `@/constants/filters`. */
 export { FILTER_ALL } from '@/constants/filters';
+
+/** Hai tab của khối "Hiệu suất kinh doanh" (web `FINANCE_PERFORMANCE_VIEW`, PR #276). */
+export const FINANCE_PERFORMANCE_VIEW = {
+  VEHICLES: 'vehicles',
+  CUSTOMERS: 'customers',
+} as const;
+
+export type FinancePerformanceView =
+  (typeof FINANCE_PERFORMANCE_VIEW)[keyof typeof FINANCE_PERFORMANCE_VIEW];
+
+export const FINANCE_PERFORMANCE_VIEW_VALUES = [
+  FINANCE_PERFORMANCE_VIEW.VEHICLES,
+  FINANCE_PERFORMANCE_VIEW.CUSTOMERS,
+] as const satisfies readonly FinancePerformanceView[];

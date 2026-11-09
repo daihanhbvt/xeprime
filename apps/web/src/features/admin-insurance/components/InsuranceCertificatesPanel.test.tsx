@@ -50,7 +50,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('InsuranceCertificatesPanel — góc nhìn', () => {
+describe('InsuranceCertificatesPanel - góc nhìn', () => {
   it('mặc định "Cần xử lý": có gợi ý hàng đợi lỗi, không có ô lọc trạng thái', () => {
     renderPanel();
     expect(screen.getByText(/Đang xem hợp đồng LỖI/)).toBeTruthy();

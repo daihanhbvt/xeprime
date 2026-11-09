@@ -57,7 +57,7 @@ export class VehicleDocumentsController {
   @RequirePermissions(PERMISSION.VEHICLE_DOCUMENT_VIEW)
   // Danh sách TRẠNG THÁI (không chi tiết/file) — chỉ phiên hỗ trợ thao tác giấy tờ mới cần đọc nó.
   @SupportAction(SUPPORT_CAPABILITY.VEHICLE_DOCUMENT_MANAGE)
-  @ApiOperation({ summary: 'Danh sách TRẠNG THÁI giấy tờ của một xe (summary — không PII)' })
+  @ApiOperation({ summary: 'Danh sách TRẠNG THÁI giấy tờ của một xe (summary - không PII)' })
   @ApiOkResponse({ type: VehicleDocumentListDto })
   async list(
     @CurrentTenant() tenant: TenantContext,
@@ -95,7 +95,7 @@ export class VehicleDocumentsController {
   @Post()
   @RequirePermissions(PERMISSION.VEHICLE_DOCUMENT_MANAGE)
   @SupportAction(supportDocumentCreateCapabilities)
-  @ApiOperation({ summary: 'Tạo hồ sơ giấy tờ (metadata — file gắn sau)' })
+  @ApiOperation({ summary: 'Tạo hồ sơ giấy tờ (metadata - file gắn sau)' })
   @ApiCreatedResponse({ type: VehicleDocumentDetailDto })
   create(
     @CurrentTenant() tenant: TenantContext,

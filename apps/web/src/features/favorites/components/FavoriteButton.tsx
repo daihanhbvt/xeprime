@@ -2,9 +2,10 @@
 
 import { HeartFilled, HeartOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
-import type { MouseEvent } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { cx } from '@/lib/cx';
 import { useFavoriteToggle } from '../hooks/use-favorite';
+import styles from './FavoriteButton.module.css';
 
 /**
  * Nút trái tim của một xe — thẻ kết quả tìm kiếm và trang chi tiết. Hình dáng do nơi gọi quyết
@@ -30,9 +31,20 @@ export function FavoriteButton({
   const { isFavorite, toggle } = useFavoriteToggle(vehicleId);
   const label = isFavorite ? t('remove', { name: vehicleName }) : t('save', { name: vehicleName });
 
+  // Hiệu ứng "pop" + vòng lan toả chỉ khi CHÍNH người dùng vừa bấm và tim thật sự chuyển sang
+  // đã lưu (chưa đăng nhập thì toggle mở hộp đăng nhập, tim không đổi ⇒ không nổ). Tim đỏ sẵn lúc
+  // tải trang không nổ. `burst` đổi `key` để chạy lại animation mỗi lần.
+  const armedRef = useRef(false);
+  const [burst, setBurst] = useState(0);
+  useEffect(() => {
+    if (isFavorite && armedRef.current) setBurst((n) => n + 1);
+    armedRef.current = false;
+  }, [isFavorite]);
+
   function onClick(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     event.stopPropagation();
+    armedRef.current = !isFavorite;
     toggle();
   }
 
@@ -45,7 +57,10 @@ export function FavoriteButton({
       title={label}
       onClick={onClick}
     >
-      {isFavorite ? <HeartFilled aria-hidden /> : <HeartOutlined aria-hidden />}
+      <span key={burst} className={cx(styles.icon, burst > 0 && isFavorite && styles.pop)}>
+        {isFavorite ? <HeartFilled aria-hidden /> : <HeartOutlined aria-hidden />}
+        {burst > 0 && isFavorite ? <span className={styles.ring} aria-hidden="true" /> : null}
+      </span>
     </button>
   );
 }

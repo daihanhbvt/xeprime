@@ -242,3 +242,7 @@
     width: 100%;
   }
 }
+
+/* Dark mode (Figma "Homepage - Dark Mode" 19879:66136): vàng đậm primary-active/strong chìm trên nền
+   tối ⇒ chữ/icon nhấn dùng primary; thẻ dùng viền border thay bóng. */
+:global([data-theme='dark']) .dialog.dialog :global(.ant-modal-container) { border: 1px solid var(--xp-color-border); box-shadow: var(--xp-elevation-panel); }

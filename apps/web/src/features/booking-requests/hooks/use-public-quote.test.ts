@@ -11,7 +11,7 @@ const pickupAt = toAppTz('2026-11-01T01:00:00.000Z');
 const returnAt = toAppTz('2026-11-03T01:00:00.000Z');
 
 describe('publicQuoteParams', () => {
-  it('tự lái: gửi khoảng nhận–trả, KHÔNG gửi lộ trình', () => {
+  it('tự lái: gửi khoảng nhận-trả, KHÔNG gửi lộ trình', () => {
     expect(
       publicQuoteParams({
         serviceType: SERVICE_TYPE.SELF_DRIVE,

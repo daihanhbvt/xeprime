@@ -126,6 +126,8 @@ const TRIP: CustomerTripDetail = {
   // Lưới "Chưa nhận được xe" (ADR 0066 điều 5) — fixture chưa tới giờ nhận, chưa có khiếu nại.
   openDispute: false,
   canReportNotReceived: false,
+  canConfirmPickup: false,
+  canReportReturn: false,
   notReceivedReportUntil: null,
   // GCN bảo hiểm (ADR 0064) — chuyến này chưa bàn giao nên chưa có giấy nào.
   insuranceCertificates: [],
@@ -488,7 +490,7 @@ describe('Đã được nhận, chờ giữ chỗ (khách)', () => {
     expect(steps[2]?.getAttribute('aria-current')).toBe('step');
   });
 
-  it('thẻ giữ chỗ: số tiền, đồng hồ, phần còn lại trả tay chủ xe — không có QR nào', () => {
+  it('thẻ giữ chỗ: số tiền, đồng hồ, phần còn lại trả tay chủ xe - không có QR nào', () => {
     renderView();
     const card = payCard();
     // Số tiền đứng riêng một dòng (nhãn nút cũng mang số này, nhưng bắt đầu bằng "Thanh toán").
@@ -592,7 +594,7 @@ describe('Đã được nhận, chờ giữ chỗ (khách)', () => {
     ).toBeTruthy();
   });
 
-  it('huỷ: nói đúng hệ quả của chặng — nhả xe đang giữ, không phải "huỷ đơn"', () => {
+  it('huỷ: nói đúng hệ quả của chặng - nhả xe đang giữ, không phải "huỷ đơn"', () => {
     renderView();
     fireEvent.click(screen.getByRole('button', { name: CANCEL_TRIP }));
     expect(screen.getByRole('dialog', { name: 'Hủy chuyến đi' })).toBeTruthy();
@@ -856,7 +858,7 @@ describe('Đang thuê (phía khách)', () => {
   });
 });
 
-describe('Chủ xe mở chuyến — bố cục cũ', () => {
+describe('Chủ xe mở chuyến - bố cục cũ', () => {
   it('chủ xe mở chuyến sẵn sàng ⇒ vẫn bố cục cũ với dòng thời gian hai mốc', () => {
     setTrip({ role: TRIP_ROLE.HOST });
     renderView();
@@ -1130,7 +1132,7 @@ describe('Huỷ chuyến', () => {
   });
 });
 
-describe('Tài xế của chuyến có tài xế (khách — ADR 0067)', () => {
+describe('Tài xế của chuyến có tài xế (khách - ADR 0067)', () => {
   it('đã có đơn mà chưa có ai đến đón ⇒ "Đang sắp xếp tài xế"', () => {
     setTrip({ serviceType: SERVICE_TYPE.WITH_DRIVER, bookingId: 'BK1', driver: null });
     renderView();
@@ -1166,7 +1168,7 @@ describe('Tài xế của chuyến có tài xế (khách — ADR 0067)', () => {
   });
 });
 
-describe('Tài xế trên bố cục chuyến đang thuê (khách — ADR 0067)', () => {
+describe('Tài xế trên bố cục chuyến đang thuê (khách - ADR 0067)', () => {
   it('đang thuê: hàng "Tài xế" trong lịch trình, gọi được', () => {
     setTrip({
       stage: CUSTOMER_TRIP_STAGE.ACTIVE,

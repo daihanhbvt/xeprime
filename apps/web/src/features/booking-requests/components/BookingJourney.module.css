@@ -42,7 +42,26 @@
 }
 
 /* Chấm ĐANG đứng: nền vàng nhạt, viền vàng, số vàng sẫm. */
+.dot {
+  transition:
+    background-color var(--xp-motion-duration-fast) var(--xp-motion-ease-standard),
+    border-color var(--xp-motion-duration-fast) var(--xp-motion-ease-standard),
+    color var(--xp-motion-duration-fast) var(--xp-motion-ease-standard);
+}
+
+/* Bước hiện hành "nảy" nhẹ khi vừa tới (chỉ transform). */
+@keyframes xpStepPop {
+  0% {
+    transform: scale(0.8);
+  }
+
+  100% {
+    transform: none;
+  }
+}
+
 .active {
+  animation: xpStepPop var(--xp-motion-duration-overlay) var(--xp-motion-ease-overshoot) both;
   border-color: var(--xp-color-primary);
   background: var(--xp-color-bg-selected);
   color: var(--xp-color-primary-hover);
@@ -62,4 +81,12 @@
   height: 1px;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot,
+  .active {
+    animation: none;
+    transition: none;
+  }
 }

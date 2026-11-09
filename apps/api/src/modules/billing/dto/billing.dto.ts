@@ -1,26 +1,32 @@
-import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, IntersectionType, OmitType } from '@nestjs/swagger';
 import {
   BILLING_MODE_VALUES,
   FREE_TRIP_ALLOWANCE,
   BILLING_PHASE,
   PLAN_FEATURE_VALUES,
+  PLAN_PURCHASE_KIND_VALUES,
   PLAN_STATUS_VALUES,
   PLAN_VEHICLE_SCOPE_VALUES,
   SUBSCRIPTION_CHANGE_TIMING_VALUES,
   SUBSCRIPTION_ORIGIN_VALUES,
   SUBSCRIPTION_TERM_STATE_VALUES,
+  type PlanPurchaseKind,
   type SubscriptionChangeTiming,
   SUBSCRIPTION_INVOICE_STATUS_VALUES,
   SUBSCRIPTION_STATUS_VALUES,
   SUBSCRIPTION_TERM_MONTHS,
+  VEHICLE_PUBLIC_STATUS_VALUES,
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsIn,
   IsInt,
+  IsISO8601,
   IsNumber,
   IsOptional,
   IsString,
@@ -40,13 +46,13 @@ const MAX_LIMIT = 100;
 export { DEFAULT_LIMIT as SUBSCRIPTION_DEFAULT_LIMIT, MAX_LIMIT as SUBSCRIPTION_MAX_LIMIT };
 
 // ---------------------------------------------------------------------------
-// Núm vặn bậc gói (ADR 0015 điều 4) — input validate chặt, response luôn đủ hình
+// Núm vặn bậc gói (ADR 0015 điều 4) - input validate chặt, response luôn đủ hình
 // ---------------------------------------------------------------------------
 
 /**
  * MỘT lựa chọn mua của bậc gói: kỳ hạn + tiền CẢ KỲ (ADR 0041 điều 2).
  *
- * `price` là số TUYỆT ĐỐI admin gõ. Không có `discountPercent` nào được lưu — % tiết kiệm trên
+ * `price` là số TUYỆT ĐỐI admin gõ. Không có `discountPercent` nào được lưu - % tiết kiệm trên
  * bảng giá được TÍNH RA từ chính bảng này (`planTermSavingPercent`) và không bao giờ đi vào một
  * dòng tiền.
  */
@@ -56,13 +62,13 @@ export class PlanTermPriceDto {
   @IsIn([...SUBSCRIPTION_TERM_MONTHS])
   months!: number;
 
-  @ApiProperty({ description: 'Tiền CẢ KỲ — VND, chuỗi — ADR 0007', example: '250000' })
+  @ApiProperty({ description: 'Tiền CẢ KỲ - VND, chuỗi - ADR 0007', example: '250000' })
   @Matches(MONEY_PATTERN, { message: 'termPrices[].price phải là số tiền hợp lệ' })
   price!: string;
 }
 
 /**
- * `plans.limits_json` — mọi field optional ở INPUT (thiếu = giá trị an toàn: không giới hạn,
+ * `plans.limits_json` - mọi field optional ở INPUT (thiếu = giá trị an toàn: không giới hạn,
  * không bán, không cờ); service chuẩn hoá về đủ hình trước khi ghi DB.
  */
 export class PlanLimitsInputDto {
@@ -102,7 +108,7 @@ export class PlanLimitsInputDto {
   termPrices?: PlanTermPriceDto[];
 
   @ApiPropertyOptional({
-    description: 'Bậc bán bằng TƯ VẤN — tenant không tự mua được (ADR 0041 điều 5)',
+    description: 'Bậc bán bằng TƯ VẤN - tenant không tự mua được (ADR 0041 điều 5)',
   })
   @IsOptional()
   @IsBoolean()
@@ -144,7 +150,7 @@ export class PlanLimitsDto {
 }
 
 /**
- * Hạn mức ĐÃ MUA, chụp lại trên dòng thuê bao (ADR 0041 điều 3) — `null` ở một trường là KHÔNG
+ * Hạn mức ĐÃ MUA, chụp lại trên dòng thuê bao (ADR 0041 điều 3) - `null` ở một trường là KHÔNG
  * GIỚI HẠN tường minh, không phải "chưa khai".
  */
 export class PlanQuotaDto {
@@ -168,7 +174,7 @@ export class CreatePlanDto {
   @ApiProperty({
     example: 'basic',
     description:
-      'Mã gói — unique, không đổi sau khi tạo. Chữ hoa được nhận và chuẩn hoá về chữ thường, để ' +
+      'Mã gói - unique, không đổi sau khi tạo. Chữ hoa được nhận và chuẩn hoá về chữ thường, để ' +
       '"BASIC" và "basic" không thành hai gói khác nhau (unique ở DB phân biệt hoa/thường).',
   })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
@@ -209,7 +215,7 @@ export class CreatePlanDto {
   @ApiPropertyOptional({
     enum: [...PLAN_VEHICLE_SCOPE_VALUES],
     description:
-      'Phạm vi loại xe của bậc (ADR 0065) — bỏ trống = all. KHÔNG sửa được sau khi tạo. Bậc ' +
+      'Phạm vi loại xe của bậc (ADR 0065) - bỏ trống = all. KHÔNG sửa được sau khi tạo. Bậc ' +
       'commission chỉ được là all',
   })
   @IsOptional()
@@ -231,7 +237,7 @@ export class CreatePlanDto {
   sortOrder?: number;
 }
 
-/** Sửa gói — không đổi `code` (định danh); giá mới chỉ áp cho lượt gán sau (price snapshot). */
+/** Sửa gói - không đổi `code` (định danh); giá mới chỉ áp cho lượt gán sau (price snapshot). */
 export class UpdatePlanDto {
   @ApiPropertyOptional()
   @IsOptional()
@@ -280,7 +286,7 @@ export class PlanDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: '% hoa hồng — chỉ có ở bậc commission',
+    description: '% hoa hồng - chỉ có ở bậc commission',
   })
   commissionPercent!: number | null;
   @ApiProperty({
@@ -315,7 +321,7 @@ export class SubscriptionListQueryDto {
   @ApiPropertyOptional({
     enum: SUBSCRIPTION_LIST_STATE_VALUES,
     description:
-      'live = chỉ các kỳ còn hạn (đang chạy + đã xếp lịch), sắp theo ngày bắt đầu — chuỗi kỳ ' +
+      'live = chỉ các kỳ còn hạn (đang chạy + đã xếp lịch), sắp theo ngày bắt đầu - chuỗi kỳ ' +
       'mà màn gia hạn cần, không phụ thuộc trang lịch sử',
   })
   @IsOptional()
@@ -347,21 +353,21 @@ export class AssignSubscriptionDto {
 
   @ApiProperty({
     enum: SUBSCRIPTION_TERM_MONTHS,
-    description: 'Kỳ hạn THÁNG LỊCH (ADR 0015 điều 2) — ends_at = starts_at + N tháng lịch',
+    description: 'Kỳ hạn THÁNG LỊCH (ADR 0015 điều 2) - ends_at = starts_at + N tháng lịch',
   })
   @Type(() => Number)
   @IsIn([...SUBSCRIPTION_TERM_MONTHS])
   termMonths!: number;
 
   /**
-   * Giá ĐÀM PHÁN cả kỳ — ADR 0041 điều 5.
+   * Giá ĐÀM PHÁN cả kỳ - ADR 0041 điều 5.
    *
    * Bỏ trống = lấy giá niêm yết của kỳ hạn (`limits.termPrices`). **BẮT BUỘC** với bậc
    * `salesOnly`: bậc đó không có bảng giá để rơi về, và mặc định 0đ ở một đường ghi tiền là
    * tặng một gói doanh nghiệp vì admin quên một ô.
    */
   @ApiPropertyOptional({
-    description: 'Giá đàm phán CẢ KỲ — VND, chuỗi. Bắt buộc với bậc salesOnly (ADR 0041 điều 5)',
+    description: 'Giá đàm phán CẢ KỲ - VND, chuỗi. Bắt buộc với bậc salesOnly (ADR 0041 điều 5)',
     example: '5000000',
   })
   @IsOptional()
@@ -375,7 +381,7 @@ export class AssignSubscriptionDto {
   note?: string;
 
   /**
-   * Kỳ mới bắt đầu lúc nào khi gian hàng còn kỳ trả phí — xem `SUBSCRIPTION_CHANGE_TIMING`.
+   * Kỳ mới bắt đầu lúc nào khi gian hàng còn kỳ trả phí - xem `SUBSCRIPTION_CHANGE_TIMING`.
    * `now` huỷ mọi kỳ còn hạn trong cùng transaction (ADR 0041 điều 6); phần còn lại KHÔNG tự hoàn.
    */
   @ApiPropertyOptional({
@@ -390,6 +396,49 @@ export class AssignSubscriptionDto {
   timing?: SubscriptionChangeTiming;
 }
 
+/**
+ * Sửa một kỳ còn hạn (ADR 0080 điều 2). Trường VẮNG = giữ nguyên; `null` ở `maxVehicles` = không
+ * giới hạn, ở `note` = xoá ghi chú. Phải có ít nhất một trường.
+ */
+export class UpdateSubscriptionDto {
+  @ApiPropertyOptional({
+    description:
+      'Giá CẢ KỲ mới - VND, chuỗi. Chỉ kỳ do admin gán (origin=admin); kỳ sinh từ hoá đơn gian ' +
+      'hàng đã trả ⇒ 409 SUBSCRIPTION_PRICE_NOT_EDITABLE. Hoá đơn của kỳ được ghi lại theo giá mới',
+    example: '15000000',
+  })
+  @IsOptional()
+  @Matches(MONEY_PATTERN, { message: 'price phải là số tiền hợp lệ' })
+  price?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Ngày kết thúc mới (ISO-8601). Phải sau ngày bắt đầu, sau bây giờ và trong 36 tháng tới. ' +
+      'Các kỳ xếp sau trong chuỗi dời theo cùng khoảng, giữ nguyên độ dài',
+  })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  endsAt?: string;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Trần số xe của kỳ (snapshot quota). null = không giới hạn',
+  })
+  // Không `@Type(() => Number)`: body JSON đã là số, và ép kiểu sẽ biến `null` (không giới hạn) thành 0.
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100_000)
+  maxVehicles?: number | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Ghi chú; null = xoá' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  note?: string | null;
+}
+
 export class SubscriptionDto {
   @ApiProperty() id!: string;
   @ApiProperty() tenantId!: string;
@@ -401,19 +450,19 @@ export class SubscriptionDto {
     description: 'Lưu active|cancelled; expired suy ra từ endsAt (ADR 0010)',
   })
   status!: string;
-  @ApiProperty({ description: 'Tiền cả kỳ (snapshot lúc gán), dạng string — ADR 0007' })
+  @ApiProperty({ description: 'Tiền cả kỳ (snapshot lúc gán), dạng string - ADR 0007' })
   price!: string;
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'Kỳ hạn THÁNG LỊCH — null ở dòng lịch sử trước ADR 0015',
+    description: 'Kỳ hạn THÁNG LỊCH - null ở dòng lịch sử trước ADR 0015',
   })
   termMonths!: number | null;
   @ApiPropertyOptional({
     type: PlanQuotaDto,
     nullable: true,
     description:
-      'SNAPSHOT hạn mức lúc gán (ADR 0041 điều 3) — null ở dòng tuyến hoa hồng và dòng trước ADR 0041',
+      'SNAPSHOT hạn mức lúc gán (ADR 0041 điều 3) - null ở dòng tuyến hoa hồng và dòng trước ADR 0041',
   })
   quota!: PlanQuotaDto | null;
   @ApiProperty({
@@ -425,7 +474,7 @@ export class SubscriptionDto {
     type: String,
     nullable: true,
     enum: BILLING_MODE_VALUES,
-    description: 'SNAPSHOT lúc gán (ADR 0024 điều 2) — không đọc xuyên qua plans',
+    description: 'SNAPSHOT lúc gán (ADR 0024 điều 2) - không đọc xuyên qua plans',
   })
   billingMode!: string | null;
   @ApiPropertyOptional({ type: Number, nullable: true, description: 'SNAPSHOT lúc gán' })
@@ -436,7 +485,7 @@ export class SubscriptionDto {
   @ApiProperty({
     enum: SUBSCRIPTION_TERM_STATE_VALUES,
     description:
-      'Trạng thái KỲ chấm bằng đồng hồ server (subscriptionTermStateOf) — đang hiệu lực / chờ đến ' +
+      'Trạng thái KỲ chấm bằng đồng hồ server (subscriptionTermStateOf) - đang hiệu lực / chờ đến ' +
       'kỳ / đã hết hạn / đã huỷ. Hiển thị cái này, không hiển thị status lưu trong DB',
   })
   termState!: string;
@@ -458,7 +507,7 @@ export class SubscriptionPageDto {
 // ---------------------------------------------------------------------------
 
 /**
- * Một dòng snapshot của hoá đơn — hoá đơn tự giải thích được, không cần join.
+ * Một dòng snapshot của hoá đơn - hoá đơn tự giải thích được, không cần join.
  *
  * Chỉ `package` được GHI từ ADR 0041; ba giá trị còn lại là hoá đơn phát hành TRƯỚC đó theo mô
  * hình chỗ xe, giữ trong enum để chứng từ cũ còn hiển thị đúng.
@@ -472,19 +521,19 @@ export class PlanInvoiceLineDto {
   vehicleType?: string;
   @ApiProperty() quantity!: number;
   @ApiProperty() months!: number;
-  @ApiProperty({ description: 'VND, chuỗi — ADR 0007' }) unitPrice!: string;
-  @ApiProperty({ description: 'VND, chuỗi — ADR 0007' }) amount!: string;
+  @ApiProperty({ description: 'VND, chuỗi - ADR 0007' }) unitPrice!: string;
+  @ApiProperty({ description: 'VND, chuỗi - ADR 0007' }) amount!: string;
 }
 
 /**
- * Thông tin nhận chuyển khoản của NỀN TẢNG — web dựng ảnh VietQR (của SePay, `qr.sepay.vn`) từ đây.
+ * Thông tin nhận chuyển khoản của NỀN TẢNG - web dựng ảnh VietQR (của SePay, `qr.sepay.vn`) từ đây.
  *
  * `configured: false` khi nhóm SEPAY_* chưa khai: màn thanh toán rơi về mã + số tiền như
  * trước R2, không hiện một QR trỏ vào tài khoản rỗng. Đây là thông tin CÔNG KHAI của nền tảng
- * (in trên mọi lệnh chuyển tiền), không phải PII — trả về nguyên văn là đúng.
+ * (in trên mọi lệnh chuyển tiền), không phải PII - trả về nguyên văn là đúng.
  */
 export class PaymentInfoDto {
-  @ApiProperty({ description: 'Nhóm SEPAY_* đã khai đủ chưa — false thì ba trường dưới là null' })
+  @ApiProperty({ description: 'Nhóm SEPAY_* đã khai đủ chưa - false thì ba trường dưới là null' })
   configured!: boolean;
   @ApiPropertyOptional({
     type: String,
@@ -498,7 +547,7 @@ export class PaymentInfoDto {
     type: String,
     nullable: true,
     description:
-      'Từ khoá ngân hàng nhận bắt buộc có trong nội dung (vd SEVQR) — nội dung chuyển khoản là ' +
+      'Từ khoá ngân hàng nhận bắt buộc có trong nội dung (vd SEVQR) - nội dung chuyển khoản là ' +
       '`<transferPrefix> <mã>`; null thì chỉ là mã. Dựng bằng `transferContent` của @xeprime/domain',
   })
   transferPrefix!: string | null;
@@ -511,7 +560,7 @@ export class SubscriptionInvoiceDto {
     type: String,
     nullable: true,
     description:
-      'NULL tới khi gói được kích hoạt (tiền đã về hoặc admin gán tay — ADR 0026 điều 4)',
+      'NULL tới khi gói được kích hoạt (tiền đã về hoặc admin gán tay - ADR 0026 điều 4)',
   })
   subscriptionId!: string | null;
   @ApiProperty({ description: 'Mã đối soát chuyển khoản, tiền tố XPG (ADR 0022 điều 3)' })
@@ -531,27 +580,69 @@ export class SubscriptionInvoiceDto {
   @ApiProperty({ type: [PlanInvoiceLineDto] }) lines!: PlanInvoiceLineDto[];
   @ApiProperty({ description: 'ISO-8601 UTC' }) periodFrom!: string;
   @ApiProperty({ description: 'ISO-8601 UTC' }) periodTo!: string;
-  @ApiProperty({ description: 'VND, chuỗi — ADR 0007' }) subtotal!: string;
-  @ApiProperty({ description: 'VND, chuỗi — ADR 0007' }) discountAmount!: string;
-  @ApiProperty({ description: 'VND, chuỗi — ADR 0007' }) totalAmount!: string;
-  @ApiProperty({ description: 'Tiền đã về, cộng dồn — VND, chuỗi' }) paidAmount!: string;
+  @ApiProperty({ description: 'VND, chuỗi - ADR 0007' }) subtotal!: string;
+  @ApiProperty({ description: 'VND, chuỗi - ADR 0007' }) discountAmount!: string;
+  @ApiProperty({ description: 'VND, chuỗi - ADR 0007' }) totalAmount!: string;
+  @ApiProperty({ description: 'Tiền đã về, cộng dồn - VND, chuỗi' }) paidAmount!: string;
   @ApiProperty({ enum: SUBSCRIPTION_INVOICE_STATUS_VALUES }) status!: string;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC' })
   paidAt!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Hạn chuyển khoản của hoá đơn issued — quá hạn job lật void',
+    description: 'Hạn chuyển khoản của hoá đơn issued - quá hạn job lật void',
   })
   expiresAt!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Phiếu thanh toán GỘP chứa hoá đơn này (ADR 0083) - null = hoá đơn trả riêng bằng `code`. ' +
+      'Có phiếu thì chuyển khoản bằng `checkoutCode`, không bằng `code`',
+  })
+  checkoutId!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Mã đối soát `XPC…` của phiếu gộp - mã để chuyển khoản khi có',
+  })
+  checkoutCode!: string | null;
 }
 
 /**
- * HOÁ ĐƠN GÓI ĐANG CHỜ TIỀN — bọc trong một object vì nó **có thật là null** (ADR 0040).
+ * PHIẾU THANH TOÁN GỘP (ADR 0083) - một mã `XPC…`, một số tiền, nhiều hoá đơn gói (mỗi loại xe
+ * một hoá đơn). Đủ tổng thì mọi hoá đơn con kích hoạt cùng lúc.
+ */
+export class SubscriptionCheckoutDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() tenantId!: string;
+  @ApiProperty({ description: 'Mã đối soát chuyển khoản, tiền tố XPC (ADR 0083)' }) code!: string;
+  @ApiProperty({ description: 'Tổng các hoá đơn con - VND, chuỗi (ADR 0007)' })
+  totalAmount!: string;
+  @ApiProperty({ description: 'Tiền đã về, cộng dồn - VND, chuỗi' }) paidAmount!: string;
+  @ApiProperty({ enum: SUBSCRIPTION_INVOICE_STATUS_VALUES }) status!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC' })
+  paidAt!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Hạn chuyển khoản - quá hạn thì phiếu và mọi hoá đơn con cùng void',
+  })
+  expiresAt!: string | null;
+  @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
+  @ApiProperty({
+    type: [SubscriptionInvoiceDto],
+    description: 'Hoá đơn con, theo thứ tự hiển thị loại xe (PLAN_VEHICLE_SCOPE_DISPLAY_ORDER)',
+  })
+  invoices!: SubscriptionInvoiceDto[];
+}
+
+/**
+ * HOÁ ĐƠN GÓI ĐANG CHỜ TIỀN - bọc trong một object vì nó **có thật là null** (ADR 0040).
  *
  * Vì sao không trả thẳng `SubscriptionInvoiceDto | null`: `@ApiOkResponse({ type: X })` sinh ra
- * một schema KHÔNG nullable, nên type sinh cho client sẽ hứa luôn có hoá đơn — và ca thường gặp
+ * một schema KHÔNG nullable, nên type sinh cho client sẽ hứa luôn có hoá đơn - và ca thường gặp
  * nhất của endpoint này lại là không có. App native lấy type thẳng từ `components['schemas']`
  * (ADR 0031), nên lời hứa sai đó thành một `null` lúc chạy ở chỗ không ai kiểm.
  *
@@ -569,7 +660,7 @@ export class PendingSubscriptionInvoiceDto {
   @ApiProperty({
     type: [SubscriptionInvoiceDto],
     description:
-      'MỌI hoá đơn còn nhận được tiền, mới nhất trước — tối đa một cho mỗi phạm vi loại xe ' +
+      'MỌI hoá đơn còn nhận được tiền, mới nhất trước - tối đa một cho mỗi phạm vi loại xe ' +
       '(ADR 0065). `invoice` ở trên là phần tử đầu, giữ cho client cũ',
   })
   invoices!: SubscriptionInvoiceDto[];
@@ -580,7 +671,7 @@ export class SubscriptionInvoicePageDto {
   @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
 }
 
-/** Gian hàng tự mua / gia hạn gói — sinh hoá đơn `issued` + mã đối soát, CHƯA kích hoạt. */
+/** Gian hàng tự mua / gia hạn gói - sinh hoá đơn `issued` + mã đối soát, CHƯA kích hoạt. */
 export class PurchaseSubscriptionDto {
   @ApiProperty({ description: 'ID gói (ULID)' })
   @IsString()
@@ -592,18 +683,156 @@ export class PurchaseSubscriptionDto {
   @IsIn([...SUBSCRIPTION_TERM_MONTHS])
   termMonths!: number;
 
+  /**
+   * Còn nhận để app cũ không vỡ validate, nhưng KHÔNG đọc nữa (ADR 0084): thời điểm áp dụng do server
+   * suy từ bậc được chọn - cùng bậc = gia hạn nối tiếp, trần cao hơn = nâng ngay, còn lại = nối tiếp.
+   */
   @ApiPropertyOptional({
     enum: SUBSCRIPTION_CHANGE_TIMING_VALUES,
-    description:
-      'Bỏ trống hoặc next_term = nối đuôi kỳ còn hạn; now = huỷ các kỳ còn hạn và bắt đầu ngay',
+    deprecated: true,
+    description: 'Bị bỏ qua - server tự suy thời điểm áp dụng theo bậc được chọn (ADR 0084)',
   })
   @IsOptional()
   @IsIn(SUBSCRIPTION_CHANGE_TIMING_VALUES)
   timing?: SubscriptionChangeTiming;
 }
 
+/** Trần danh sách xe giữ lại gửi lên một lượt mua - dư cho mọi gói tự mua (trần bậc ≤ 10 xe/loại). */
+const PLAN_SLOT_KEEP_MAX = 500;
+
 /**
- * Mức dùng xe của MỘT loại — con số để HIỂN THỊ.
+ * Lựa chọn "xe giữ lại" khi lượt mua làm số xe đang hiện trên chợ vượt suất của gói (ADR 0085 điều 5).
+ * Chỉ bắt buộc khi bản xem trước báo nhóm vượt suất; không vượt thì server bỏ qua cả hai trường.
+ */
+export class PlanSlotSelectionFields {
+  @ApiPropertyOptional({
+    type: [String],
+    maxItems: PLAN_SLOT_KEEP_MAX,
+    description:
+      'Xe GIỮ LẠI trên chợ (ULID) - mỗi nhóm vượt suất tối đa đúng số suất của nó. Xe khác của nhóm vượt ' +
+      'tạm ẩn khi gói kích hoạt (hạ bậc: khi kỳ mới bắt đầu). Có thể rỗng',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(PLAN_SLOT_KEEP_MAX)
+  @IsString({ each: true })
+  @Length(26, 26, { each: true })
+  keepVehicleIds?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Người mua XÁC NHẬN các xe không giữ lại sẽ tạm ẩn - bắt buộc true khi có nhóm vượt suất',
+  })
+  @IsOptional()
+  @IsBoolean()
+  acceptVehicleHiding?: boolean;
+}
+
+/** `POST /subscription/purchase` - một gói + lựa chọn xe giữ lại (ADR 0085). */
+export class PurchaseSubscriptionRequestDto extends IntersectionType(
+  PurchaseSubscriptionDto,
+  PlanSlotSelectionFields,
+) {}
+
+/**
+ * Mua NHIỀU gói trong một lần chuyển khoản (ADR 0083) - mỗi phần tử là một lượt mua như
+ * `PurchaseSubscriptionDto`, mỗi loại xe tối đa một phần tử. Một gói thì dùng `POST /purchase`.
+ * Lựa chọn xe giữ lại là của CẢ lượt (ADR 0085), không của từng phần tử.
+ */
+export class CreateSubscriptionCheckoutDto extends PlanSlotSelectionFields {
+  @ApiProperty({
+    type: [PurchaseSubscriptionDto],
+    minItems: 2,
+    maxItems: 2,
+    description:
+      'Hai gói của HAI loại xe khác nhau (ô tô + xe máy). Gói doanh nghiệp không mua ở đây',
+  })
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(2)
+  @ValidateNested({ each: true })
+  @Type(() => PurchaseSubscriptionDto)
+  items!: PurchaseSubscriptionDto[];
+}
+
+/** Xem trước một lượt mua (ADR 0084) - một hoặc hai gói, mỗi loại xe tối đa một gói. */
+export class PreviewSubscriptionPurchaseDto {
+  @ApiProperty({ type: [PurchaseSubscriptionDto], minItems: 1, maxItems: 2 })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(2)
+  @ValidateNested({ each: true })
+  @Type(() => PurchaseSubscriptionDto)
+  items!: PurchaseSubscriptionDto[];
+}
+
+/** Một kỳ trả phí sẽ KẾT THÚC khi lượt nâng bậc kích hoạt (phần còn lại không bù - ADR 0084). */
+export class PurchaseReplacedTermDto {
+  @ApiProperty() planName!: string;
+  @ApiProperty({ description: 'ISO-8601 UTC' }) startsAt!: string;
+  @ApiProperty({ description: 'ISO-8601 UTC' }) endsAt!: string;
+}
+
+export class SubscriptionPurchasePreviewItemDto {
+  @ApiProperty() planId!: string;
+  @ApiProperty() planName!: string;
+  @ApiProperty({ enum: [...PLAN_VEHICLE_SCOPE_VALUES] }) vehicleScope!: string;
+  @ApiProperty({ enum: SUBSCRIPTION_TERM_MONTHS }) termMonths!: number;
+  @ApiProperty({
+    enum: PLAN_PURCHASE_KIND_VALUES,
+    description: 'new = mua mới · renew = gia hạn nối tiếp · upgrade = nâng ngay · change_next = đổi gói từ kỳ sau',
+  })
+  kind!: PlanPurchaseKind;
+  @ApiProperty({
+    description:
+      'Ngày bắt đầu DỰ KIẾN (ISO-8601 UTC). new/upgrade = lúc xem trước - kỳ thật bắt đầu khi tiền về',
+  })
+  startsAt!: string;
+  @ApiProperty({ description: 'Ngày kết thúc DỰ KIẾN (ISO-8601 UTC)' }) endsAt!: string;
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Trần xe; null = không giới hạn' })
+  maxVehicles!: number | null;
+  @ApiProperty({ description: 'Số tiền của gói này (VND, chuỗi)' }) amount!: string;
+  @ApiProperty({ type: [PurchaseReplacedTermDto] }) replacedTerms!: PurchaseReplacedTermDto[];
+}
+
+/** Một xe đang chiếm suất trên chợ - đủ để người mua nhận ra và chọn giữ lại (ADR 0085). */
+export class PlanSlotVehicleDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() name!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
+  @ApiProperty({ enum: [...VEHICLE_TYPE_VALUES] }) vehicleType!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) mainImageUrl!: string | null;
+  @ApiProperty({ enum: [...VEHICLE_PUBLIC_STATUS_VALUES], description: 'Chờ duyệt hoặc đã công khai' })
+  publicStatus!: string;
+}
+
+/** MỘT nhóm suất sẽ VƯỢT sau lượt mua (ADR 0085 điều 5). */
+export class PlanSlotOverflowDto {
+  @ApiProperty({
+    enum: [...PLAN_VEHICLE_SCOPE_VALUES],
+    description: 'Phạm vi đếm: một loại xe, hoặc all khi trần dùng chung',
+  })
+  countedScope!: string;
+  @ApiProperty({ description: 'Số suất sau lượt mua; 0 = loại xe này không có gói' }) limit!: number;
+  @ApiProperty({ description: 'Số xe đang chiếm suất của nhóm (có thể nhiều hơn danh sách)' })
+  occupyingCount!: number;
+  @ApiProperty({ type: [PlanSlotVehicleDto] }) vehicles!: PlanSlotVehicleDto[];
+}
+
+export class SubscriptionPurchasePreviewDto {
+  @ApiProperty({ type: [SubscriptionPurchasePreviewItemDto] })
+  items!: SubscriptionPurchasePreviewItemDto[];
+  @ApiProperty({ description: 'Tổng phải trả (VND, chuỗi)' }) total!: string;
+  @ApiProperty({
+    type: [PlanSlotOverflowDto],
+    description:
+      'Nhóm suất sẽ VƯỢT sau lượt mua (ADR 0085). Không rỗng ⇒ lượt mua phải kèm keepVehicleIds + ' +
+      'acceptVehicleHiding, hoặc chọn gói khác',
+  })
+  vehicleSlots!: PlanSlotOverflowDto[];
+}
+
+/**
+ * Mức dùng xe của MỘT loại - con số để HIỂN THỊ.
  *
  * Không còn `limit` ở đây từ ADR 0041: trần là MỘT con số cho cả đội xe và nó ở `fleetQuota`.
  * Viết trần tổng vào ô của từng loại là màn hình nói "3 ô tô" trong khi luật là "3 xe".
@@ -619,7 +848,7 @@ export class VehicleSlotUsageDto {
   @ApiProperty({ type: SlotUsageDto }) motorbike!: SlotUsageDto;
 }
 
-/** Lượt miễn phí (ADR 0026) — màn "Gói của tôi" phải nói trước điều gì xảy ra ở đơn thứ ba. */
+/** Lượt miễn phí (ADR 0026) - màn "Gói của tôi" phải nói trước điều gì xảy ra ở đơn thứ ba. */
 export class FreeTripsDto {
   @ApiProperty({ example: FREE_TRIP_ALLOWANCE }) allowance!: number;
   @ApiProperty() used!: number;
@@ -627,14 +856,14 @@ export class FreeTripsDto {
 }
 
 /**
- * Hạn mức ĐỘI XE đang áp — ADR 0041 điều 4.
+ * Hạn mức ĐỘI XE đang áp - ADR 0041 điều 4.
  *
  * Một con số cho cả đội xe ở CẢ HAI tuyến: `quota.maxVehicles` của bậc đã mua, hoặc
  * `OWNER_LITE_VEHICLE_LIMIT` khi không có gói. `usage` ngay bên cạnh vẫn trả mức dùng THEO LOẠI
- * vì giao diện cần con số đó, nhưng nó không mang trần nào — trần chỉ có ĐÚNG MỘT nơi.
+ * vì giao diện cần con số đó, nhưng nó không mang trần nào - trần chỉ có ĐÚNG MỘT nơi.
  *
  * `reason` để màn hình nói đúng lối đi tiếp: chạm trần của bậc đã mua thì việc cần làm là NÂNG
- * BẬC; chạm trần Owner Lite thì là MUA GÓI; `billing_unconfigured` thì là liên hệ hỗ trợ — đó
+ * BẬC; chạm trần Owner Lite thì là MUA GÓI; `billing_unconfigured` thì là liên hệ hỗ trợ - đó
  * là lỗi cấu hình phía nền tảng, không phải hạn mức của người dùng (ADR 0038 điều 1).
  */
 export class FleetQuotaDto {
@@ -644,7 +873,7 @@ export class FleetQuotaDto {
   @ApiProperty({
     type: Number,
     nullable: true,
-    description: "Trần TỔNG số xe — chỉ có giá trị khi kind = 'total'",
+    description: "Trần TỔNG số xe - chỉ có giá trị khi kind = 'total'",
   })
   totalLimit!: number | null;
 
@@ -652,7 +881,7 @@ export class FleetQuotaDto {
     type: String,
     nullable: true,
     enum: ['plan', 'owner_lite', 'billing_unconfigured'],
-    description: "Trần này từ đâu ra — null khi kind = 'unlimited'",
+    description: "Trần này từ đâu ra - null khi kind = 'unlimited'",
   })
   reason!: 'plan' | 'owner_lite' | 'billing_unconfigured' | null;
 
@@ -661,29 +890,29 @@ export class FleetQuotaDto {
 }
 
 /**
- * Hạn mức đang áp cho MỘT loại xe — ADR 0065. CÙNG phép suy với cổng chặn
+ * Hạn mức đang áp cho MỘT loại xe - ADR 0065. CÙNG phép suy với cổng chặn
  * (`BillingService.assertVehicleQuota`), nên màn hình không bao giờ nói khác con số bị chặn.
  *
- *  - `kind = scope_required`: gian hàng TUYẾN GÓI chưa có gói cho loại xe này — tạo xe / đưa lên
+ *  - `kind = scope_required`: gian hàng TUYẾN GÓI chưa có gói cho loại xe này - tạo xe / đưa lên
  *    chợ trả `PLAN_SCOPE_REQUIRED`. Lối đi tiếp: mua gói của loại đó.
  *  - `countedScope = all`: trần dùng CHUNG với loại xe kia (bậc doanh nghiệp/bậc cũ có trần, Owner
- *    Lite) — `used` khi đó là tổng hai loại.
+ *    Lite) - `used` khi đó là tổng hai loại.
  */
 export class VehicleTypeQuotaDto {
   @ApiProperty({ enum: ['unlimited', 'total', 'scope_required'] })
   kind!: 'unlimited' | 'total' | 'scope_required';
-  @ApiProperty({ type: Number, nullable: true, description: "Trần — chỉ khi kind = 'total'" })
+  @ApiProperty({ type: Number, nullable: true, description: "Trần - chỉ khi kind = 'total'" })
   limit!: number | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
     enum: ['plan', 'owner_lite', 'billing_unconfigured'],
-    description: "Trần từ đâu ra — null khi kind = 'scope_required'",
+    description: "Trần từ đâu ra - null khi kind = 'scope_required'",
   })
   reason!: 'plan' | 'owner_lite' | 'billing_unconfigured' | null;
   @ApiProperty({
     enum: [...PLAN_VEHICLE_SCOPE_VALUES],
-    description: 'Đếm xe trong phạm vi nào — all = gộp hai loại (trần dùng chung)',
+    description: 'Đếm xe trong phạm vi nào - all = gộp hai loại (trần dùng chung)',
   })
   countedScope!: string;
   @ApiProperty({ description: 'Số xe chưa xoá đếm vào trần này (điểm chặn tạo xe)' }) used!: number;
@@ -730,24 +959,24 @@ export class MySubscriptionDto {
   @ApiProperty({ type: VehicleSlotUsageDto }) usage!: VehicleSlotUsageDto;
   @ApiProperty({
     type: VehicleTypeQuotasDto,
-    description: 'Hạn mức THEO LOẠI xe (ADR 0065) — nguồn chính cho màn hình',
+    description: 'Hạn mức THEO LOẠI xe (ADR 0065) - nguồn chính cho màn hình',
   })
   vehicleQuotas!: VehicleTypeQuotasDto;
   @ApiProperty({
     type: FleetQuotaDto,
-    description: 'Trần GỘP (hình dạng trước ADR 0065) — suy từ vehicleQuotas, giữ cho client cũ',
+    description: 'Trần GỘP (hình dạng trước ADR 0065) - suy từ vehicleQuotas, giữ cho client cũ',
   })
   fleetQuota!: FleetQuotaDto;
   @ApiProperty({ type: FreeTripsDto }) freeTrips!: FreeTripsDto;
 }
 
 /**
- * Gói cho GIAN HÀNG chọn mua: như PlanDto nhưng không lộ `subscriptionCount` — số liệu vận hành
+ * Gói cho GIAN HÀNG chọn mua: như PlanDto nhưng không lộ `subscriptionCount` - số liệu vận hành
  * của nền tảng, không phải thông tin của người đang chọn gói.
  */
 export class TenantPlanDto extends OmitType(PlanDto, ['subscriptionCount', 'deletable'] as const) {}
 
-/** Một nhóm của bảng giá — các bậc đang bán của MỘT phạm vi loại xe (ADR 0065). */
+/** Một nhóm của bảng giá - các bậc đang bán của MỘT phạm vi loại xe (ADR 0065). */
 export class TenantPlanGroupDto {
   @ApiProperty({ enum: [...PLAN_VEHICLE_SCOPE_VALUES] }) vehicleScope!: string;
   @ApiProperty({ type: [TenantPlanDto], description: 'Theo sortOrder; rỗng = chưa bán gì' })
@@ -755,16 +984,16 @@ export class TenantPlanGroupDto {
 }
 
 /**
- * Bảng giá gian hàng NHÓM THEO PHẠM VI loại xe — luôn đủ ba nhóm theo thứ tự motorbike, car, all.
+ * Bảng giá gian hàng NHÓM THEO PHẠM VI loại xe - luôn đủ ba nhóm theo thứ tự motorbike, car, all.
  * Gian hàng giữ tối đa một gói xe máy VÀ một gói ô tô cùng lúc; gói all (doanh nghiệp) thay cả hai.
  */
 export class TenantPlanCatalogDto {
   @ApiProperty({ type: [TenantPlanGroupDto] }) groups!: TenantPlanGroupDto[];
 }
 
-/** Gói hiện hành của tenant — nhúng vào PlatformTenantDetailDto. */
+/** Gói hiện hành của tenant - nhúng vào PlatformTenantDetailDto. */
 /**
- * Một KỲ thuê bao được nhắc tới từ chỗ khác — kỳ kế tiếp đã xếp lịch, kỳ được nối đuôi. Đủ để nói
+ * Một KỲ thuê bao được nhắc tới từ chỗ khác - kỳ kế tiếp đã xếp lịch, kỳ được nối đuôi. Đủ để nói
  * "Gói nâng cao, từ 08/01/2027 đến 08/02/2027" mà không kéo cả dòng thuê bao.
  */
 export class PlanTermRefDto {
@@ -795,7 +1024,7 @@ export class CurrentPlanDto {
     type: String,
     nullable: true,
     enum: BILLING_MODE_VALUES,
-    description: 'SNAPSHOT trên dòng thuê bao (ADR 0024 điều 2) — null ở dòng trước ADR 0015',
+    description: 'SNAPSHOT trên dòng thuê bao (ADR 0024 điều 2) - null ở dòng trước ADR 0015',
   })
   billingMode!: string | null;
   @ApiPropertyOptional({ type: Number, nullable: true, description: 'SNAPSHOT lúc gán' })
@@ -803,7 +1032,7 @@ export class CurrentPlanDto {
   @ApiPropertyOptional({
     type: PlanQuotaDto,
     nullable: true,
-    description: 'SNAPSHOT hạn mức (ADR 0041 điều 3) — null ở tuyến hoa hồng và dòng cũ',
+    description: 'SNAPSHOT hạn mức (ADR 0041 điều 3) - null ở tuyến hoa hồng và dòng cũ',
   })
   quota!: PlanQuotaDto | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) endsAt!: string;

@@ -362,7 +362,7 @@ const Row = memo(function Row({
         <Ionicons
           name={icon}
           size={17}
-          color={selected ? colors.primaryActive : colors.textMuted}
+          color={selected ? colors.accentText : colors.textMuted}
         />
         <Text
           f={1}
@@ -383,7 +383,7 @@ const Row = memo(function Row({
             {count}
           </Text>
         ) : null}
-        {selected ? <Ionicons name="checkmark" size={17} color={colors.primaryActive} /> : null}
+        {selected ? <Ionicons name="checkmark" size={17} color={colors.accentText} /> : null}
       </XStack>
     </Pressable>
   );

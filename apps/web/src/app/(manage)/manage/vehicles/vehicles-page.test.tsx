@@ -230,7 +230,7 @@ afterEach(cleanup);
 
 /* ------------------------------------------------------------------ trạng thái tải */
 
-describe('/manage/vehicles — trạng thái tải', () => {
+describe('/manage/vehicles - trạng thái tải', () => {
   it('lần tải đầu hiện skeleton, chưa nói "chưa có xe"', () => {
     // ĐỔI CÓ CHỦ ĐÍCH ở Wave 1C-E: trước đây dựng bảng rỗng kèm spinner; nay là skeleton
     // (Figma `134:2011` R1 — bố cục đã biết thì dùng skeleton).
@@ -251,7 +251,7 @@ describe('/manage/vehicles — trạng thái tải', () => {
 
 /* ------------------------------------------------------------------ lỗi + thử lại */
 
-describe('/manage/vehicles — lỗi và khôi phục', () => {
+describe('/manage/vehicles - lỗi và khôi phục', () => {
   it('lỗi khi chưa có dữ liệu thì hiện thông báo lỗi kèm nút Thử lại', () => {
     setQuery({ isError: true });
     renderPage();
@@ -284,7 +284,7 @@ describe('/manage/vehicles — lỗi và khôi phục', () => {
 
 /* ------------------------------------------------------------------ rỗng vs không-kết-quả */
 
-describe('/manage/vehicles — rỗng và không có kết quả', () => {
+describe('/manage/vehicles - rỗng và không có kết quả', () => {
   it('không có xe và KHÔNG lọc: câu chữ "chưa có", không phải "không tìm thấy"', () => {
     setQuery({ data: { items: [], meta: { ...META, total: 0 } } });
     renderPage();
@@ -354,7 +354,7 @@ describe('/manage/vehicles — rỗng và không có kết quả', () => {
 
 /* ------------------------------------------------------------------ dữ liệu + quyền */
 
-describe('/manage/vehicles — dữ liệu và quyền', () => {
+describe('/manage/vehicles - dữ liệu và quyền', () => {
   it('hiện tên, mã và biển số của xe', () => {
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
@@ -364,7 +364,7 @@ describe('/manage/vehicles — dữ liệu và quyền', () => {
     expect(screen.getByText('59X1-333.44')).toBeTruthy();
   });
 
-  it('thẻ hiện giá thuê qua bộ format — bố cục Figma `236:1778` mang giá về thẻ', () => {
+  it('thẻ hiện giá thuê qua bộ format - bố cục Figma `236:1778` mang giá về thẻ', () => {
     setQuery({ data: { items: [vehicle({ weekdayPrice: '350000' })], meta: META } });
     renderPage();
 
@@ -380,7 +380,7 @@ describe('/manage/vehicles — dữ liệu và quyền', () => {
     expect(within(row).getAllByRole('button')).toHaveLength(2);
   });
 
-  it('có quyền sửa: thêm nút Sửa — nhưng KHÔNG có Xoá (xoá chỉ ở Hồ sơ 360)', () => {
+  it('có quyền sửa: thêm nút Sửa - nhưng KHÔNG có Xoá (xoá chỉ ở Hồ sơ 360)', () => {
     grant(PERMISSION.VEHICLE_UPDATE, PERMISSION.VEHICLE_DELETE);
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
@@ -432,7 +432,7 @@ describe('/manage/vehicles — dữ liệu và quyền', () => {
 
 /* ------------------------------------------------------------------ lọc, tìm, phân trang */
 
-describe('/manage/vehicles — lọc, tìm kiếm, phân trang', () => {
+describe('/manage/vehicles - lọc, tìm kiếm, phân trang', () => {
   it('filter từ URL được truyền nguyên vẹn xuống lớp dữ liệu', () => {
     nav.params = new URLSearchParams(
       'q=sh&vehicleType=motorbike&serviceType=self_drive&operationStatus=available&publicStatus=hidden&sort=price_asc&page=2&limit=50',
@@ -519,7 +519,7 @@ describe('/manage/vehicles — lọc, tìm kiếm, phân trang', () => {
 
 /* ------------------------------------------------------------------ thanh lọc dùng chung */
 
-describe('/manage/vehicles — dùng FilterBar dùng chung', () => {
+describe('/manage/vehicles - dùng FilterBar dùng chung', () => {
   it('thanh lọc là landmark search dùng chung, không phải bản dựng riêng của Fleet', () => {
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
@@ -567,7 +567,7 @@ describe('/manage/vehicles — dùng FilterBar dùng chung', () => {
 
 /* ------------------------------------------------------------------ quyền cấp trang */
 
-describe('/manage/vehicles — thiếu quyền xem', () => {
+describe('/manage/vehicles - thiếu quyền xem', () => {
   it('không có `vehicles.view`: thay TOÀN BỘ nội dung bằng màn 403 (Figma `188:2290`)', () => {
     revokeAll();
     setQuery({ data: { items: [vehicle()], meta: META } });
@@ -616,7 +616,7 @@ describe('/manage/vehicles — thiếu quyền xem', () => {
  * xe là lưới thẻ hoặc danh sách hàng ngang theo `?view=`. Tổng đến từ `fleet-summary`, không từ
  * trang hiện tại — gõ tìm kiếm còn 1 kết quả không biến lưới thành thẻ to.
  */
-describe('/manage/vehicles — bố cục ít xe / nhiều xe', () => {
+describe('/manage/vehicles - bố cục ít xe / nhiều xe', () => {
   const listItems = () => screen.getByRole('list', { name: 'Danh sách xe' });
 
   it('dưới 3 xe: thẻ ngang to, không có nút chuyển kiểu xem', () => {

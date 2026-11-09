@@ -8,7 +8,7 @@
   "loadErrorBody": "Something went wrong while fetching data. Please try again.",
   "forbiddenTitle": "No permission to manage vehicles",
   "forbiddenBody": "You need permission to view and edit vehicles to use this workspace.",
-  "readOnlyNotice": "You have view-only access — changes made here will not be saved.",
+  "readOnlyNotice": "You have view-only access - changes made here will not be saved.",
   "header": {
     "brand": "Xe Prime",
     "portal": "Partner portal",
@@ -16,7 +16,7 @@
     "noRating": "No ratings yet",
     "trips": "{count, plural, =0 {No trips yet} one {# trip} other {# trips}}",
     "viewListing": "View listing",
-    "viewListingDisabled": "This vehicle is not public yet — the listing page exists only after marketplace approval.",
+    "viewListingDisabled": "This vehicle is not public yet - the listing page exists only after marketplace approval.",
     "viewProfile": "View vehicle profile"
   },
   "nav": {
@@ -39,7 +39,7 @@
     "withDriverTerms": "Rental terms (chauffeured)",
     "toggleLabel": "Turn {service} on or off",
     "toggleNotAllowed": "Motorbikes do not offer chauffeured rental.",
-    "toggleLastService": "The vehicle must keep at least one service — enable another one before turning this off.",
+    "toggleLastService": "The vehicle must keep at least one service - enable another one before turning this off.",
     "toggleNoPermission": "You do not have permission to edit vehicles."
   },
   "serviceToggle": {
@@ -82,13 +82,13 @@
     "addressTitle": "Current vehicle address",
     "addressEdit": "Edit",
     "addressMissing": "This vehicle is not assigned to a branch yet. Pick a branch in the management portal to give it a public location.",
-    "addressNoStreet": "The branch has no street address yet — click Edit to add one.",
+    "addressNoStreet": "The branch has no street address yet - click Edit to add one.",
     "addressMapPending": "This address could not be located on the map yet. The text address is still used; the location becomes available once coordinates are resolved.",
     "addressMapTitle": "Vehicle location map",
     "addressSharedTitle": "This branch holds {count, plural, one {# vehicle} other {# vehicles}}",
     "addressSharedBody": "Editing the branch address changes the public location of all of them. To place this vehicle elsewhere, create or pick another branch in the management portal.",
     "saved": "Vehicle details saved",
-    "lockedNotice": "This vehicle is live on the marketplace: plate number, transmission, fuel type and manufacture year are locked. Everything else — pricing included — takes effect immediately.",
+    "lockedNotice": "This vehicle is live on the marketplace: plate number, transmission, fuel type and manufacture year are locked. Everything else - pricing included - takes effect immediately.",
     "lockedField": "Locked while the vehicle is on the marketplace. Remove it from the marketplace to change this.",
     "addressBranchHint": "The branch address decides where this vehicle appears on the marketplace, and is the starting point for delivery fee calculation."
   },
@@ -97,7 +97,7 @@
     "reorderLabel": "Enable drag-and-drop reordering",
     "minimumHint": "Each slot holds one photo and none may be left empty (up to {max} gallery photos).",
     "galleryTitle": "Vehicle photos",
-    "coverFromFront": "The front photo is used as the cover on the vehicle card and listing — pick your sharpest shot.",
+    "coverFromFront": "The front photo is used as the cover on the vehicle card and listing - pick your sharpest shot.",
     "choose": "Choose photo",
     "uploaded": "Uploaded",
     "missing": "Not uploaded",
@@ -115,13 +115,13 @@
     "dropRemove": "Drop {name}",
     "uploading": "Uploading {name}",
     "maxReached": "At most {max} gallery photos",
-    "legacyNotice": "{count, plural, one {# photo} other {# photos}} uploaded earlier have no slot yet — shown under \"Other photos\". Drag them into a slot or keep them and save.",
+    "legacyNotice": "{count, plural, one {# photo} other {# photos}} uploaded earlier have no slot yet - shown under \"Other photos\". Drag them into a slot or keep them and save.",
     "saved": "Vehicle photos saved",
     "alt": "{slot} photo of {vehicle}"
   },
   "documents": {
     "title": "Vehicle documents",
-    "subtitle": "Registration, inspection, insurance and other papers — stored privately, opened only by people with permission."
+    "subtitle": "Registration, inspection, insurance and other papers - stored privately, opened only by people with permission."
   },
   "tripHistory": {
     "title": "Trip history",
@@ -143,7 +143,7 @@
   },
   "pricing": {
     "title": "Prices & policy",
-    "subtitle": "Rental prices for each service of this vehicle, plus deposit, delivery and mileage limit — saved together.",
+    "subtitle": "Rental prices for each service of this vehicle, plus deposit, delivery and mileage limit - saved together.",
     "selfDriveTitle": "Default rental price",
     "selfDriveSubtitle": "The default price applies to any day without a custom price.",
     "withDriverTitle": "Chauffeured service price list",
@@ -155,7 +155,7 @@
     "activeTitle": "Instant booking is active",
     "activeBody": "Qualifying rental requests are confirmed straight away, with no manual approval from you.",
     "inactiveTitle": "Manual approval",
-    "inactiveBody": "Every rental request waits for your decision — you have from 15 minutes up to 4 hours to answer, depending on how soon pick-up is.",
+    "inactiveBody": "Every rental request waits for your decision - you have from 15 minutes up to 4 hours to answer, depending on how soon pick-up is.",
     "toggleTitle": "Auto-accept trips",
     "toggleBody": "Save response time and increase your conversion rate.",
     "toggleLabel": "Auto-accept trips",
@@ -163,14 +163,14 @@
     "instantBody": "Renters do not wait for manual approval. The system confirms automatically when a driver is free.",
     "withDriverTitle": "Chauffeured-trip conditions",
     "minRental": "Minimum rental duration",
-    "minRentalHint": "Supported range: 1 – 24 hours",
+    "minRentalHint": "Supported range: 1 - 24 hours",
     "routesTitle": "Preferred trip types",
     "routesHint": "For your prioritisation only; the system still accepts every route the vehicle serves.",
     "rulesTitle": "Conditions for auto-acceptance",
     "rules": {
       "schedule": "The vehicle is free for the whole period, including the turnaround buffer.",
       "window": "Pickup and return fall inside the vehicle's handover hours.",
-      "quote": "The price is final — estimates still wait for you.",
+      "quote": "The price is final - estimates still wait for you.",
       "longTerm": "Long-term rentals are never auto-accepted: you always confirm the schedule.",
       "driver": "An active driver with a valid licence is free for the window.",
       "hold": "Chauffeured trips on the commission track still wait for your approval before the renter pays the hold.",
@@ -178,12 +178,12 @@
     },
     "policyTitle": "* Cancellation policy note for auto-accepted trips:",
     "policyBody": "Auto-confirmed requests follow the standard Xe Prime cancellation policy. Cancelling a trip after it was auto-confirmed may lower your reliability score or limit your vehicle's visibility.",
-    "capabilityNoFeature": "Your current plan does not include Drivers — chauffeured auto-acceptance cannot be enabled yet.",
+    "capabilityNoFeature": "Your current plan does not include Drivers - chauffeured auto-acceptance cannot be enabled yet.",
     "capabilityNoDriver": "No active drivers yet. Add a driver in the management portal before enabling.",
-    "capabilityOk": "{count, plural, one {# active driver} other {# active drivers}} — the system assigns a free driver on acceptance.",
+    "capabilityOk": "{count, plural, one {# active driver} other {# active drivers}} - the system assigns a free driver on acceptance.",
     "openDrivers": "Manage drivers",
     "saved": "Instant booking settings saved",
-    "appCapabilityNoFeature": "Your account does not include the Drivers feature yet — auto-accept for chauffeured trips cannot be turned on."
+    "appCapabilityNoFeature": "Your account does not include the Drivers feature yet - auto-accept for chauffeured trips cannot be turned on."
   },
   "delivery": {
     "title": "Home delivery",
@@ -196,14 +196,14 @@
     "noShopPolicyTitle": "The shop has no rental policy yet",
     "noShopPolicyBody": "You can enable delivery for this vehicle; the remaining sections (collateral, overtime, discounts) take safe defaults and are editable under Rental terms.",
     "radiusTitle": "Maximum delivery distance",
-    "radiusHint": "Beyond this radius renters see \"The host will discuss the fee directly\" — you quote manually on the booking.",
+    "radiusHint": "Beyond this radius renters see \"The host will discuss the fee directly\" - you quote manually on the booking.",
     "tiersTitle": "Fee tiers by distance (one way)",
     "tiersHint": "Enter 0 for a free distance. Fees are not per km: each tier is a fixed amount so renters see the number up front.",
     "freeWithin": "Free within the first {km} km",
     "manualBeyond": "Beyond {km} km: manual quote",
     "estimateNote": "The number shown to renters is an ESTIMATE from road distance; you still confirm the fee on the booking.",
     "saved": "Delivery settings saved",
-    "offNote": "Off — renters cannot request home delivery when booking."
+    "offNote": "Off - renters cannot request home delivery when booking."
   },
   "handover": {
     "title": "Handover hours",
@@ -217,7 +217,7 @@
     "maxWindows": "At most {max} slots per type",
     "allDay": "No slots = any time of day.",
     "bufferTitle": "Turnaround buffer between trips",
-    "bufferHint": "Preparation time (cleaning, charging, checks) added to the calendar after each trip — two trips cannot be closer than this.",
+    "bufferHint": "Preparation time (cleaning, charging, checks) added to the calendar after each trip - two trips cannot be closer than this.",
     "bufferNone": "None",
     "bufferCustom": "Custom",
     "bufferCustomLabel": "Minutes",
@@ -228,7 +228,9 @@
       "overlap": "Time slots must not overlap",
       "bufferRange": "Buffer must be between 0 and 1440 minutes",
       "maxWindows": "At most 4 slots per type"
-    }
+    },
+    "bufferUnit": "min",
+    "bufferShop": "Shop default ({value})"
   },
   "terms": {
     "selfDriveTitle": "Rental procedure & terms",
@@ -236,7 +238,7 @@
     "withDriverTitle": "Chauffeured handover procedure & rules",
     "withDriverSubtitle": "The process binding host, driver and renter to keep the service safe.",
     "collateralTitle": "Collateral",
-    "collateralInherited": "Inherited from the shop policy — changing it here creates a vehicle-specific policy.",
+    "collateralInherited": "Inherited from the shop policy - changing it here creates a vehicle-specific policy.",
     "collateralNoneHint": "* Makes it as easy as possible for renters to book quickly.",
     "collateralOption": {
       "none": "No cash or motorbike collateral required",
@@ -268,9 +270,9 @@
     "termsPlaceholder": "E.g. No smoking in the car; no pets without a carrier; return on time with the agreed battery/fuel level…",
     "termsHint": "Shown to renters on the listing and in the booking confirmation step. Confirmed bookings keep the terms as of booking time.",
     "depositTitle": "Trip deposit",
-    "depositUnsupported": "Not collectable through the system yet — available once wired to the hold and reconciliation flow.",
+    "depositUnsupported": "Not collectable through the system yet - available once wired to the hold and reconciliation flow.",
     "depositNote": "Different from self-drive collateral: this is an advance payment for the trip itself.",
-    "publicNotice": "This vehicle is public — changing collateral only updates the marketplace label, no re-review needed.",
+    "publicNotice": "This vehicle is public - changing collateral only updates the marketplace label, no re-review needed.",
     "saved": "Rental terms saved",
     "collateralCustomize": "Customize for this vehicle",
     "mileageTitle": "Mileage allowance"
@@ -289,7 +291,7 @@
       "longDistanceField": "Km per day before the surcharge applies",
       "overnight": "Covers the driver's overnight stay on out-of-town trips"
     },
-    "flowNote": "These rates are published to renters before they send a request and frozen on the booking. Actual charges are recorded at trip settlement — never added to the initial price automatically.",
+    "flowNote": "These rates are published to renters before they send a request and frozen on the booking. Actual charges are recorded at trip settlement - never added to the initial price automatically.",
     "saved": "Default surcharges saved",
     "validation": {
       "amountRequired": "An enabled surcharge needs an amount above 0",
@@ -311,7 +313,9 @@
       "selfDrive": "Self-drive rental",
       "withDriver": "Rental with driver",
       "longTerm": "Long-term rental",
-      "advanced": "Advanced"
+      "advanced": "Advanced",
+      "services": "Services & prices",
+      "policy": "Rental policy"
     },
     "items": {
       "information": "Vehicle info & features",
@@ -323,7 +327,9 @@
       "bookingTerms": "Booking & rental terms",
       "surcharges": "Surcharges",
       "source": "Vehicle source & finance",
-      "maintenance": "Maintenance & odometer"
+      "maintenance": "Maintenance & odometer",
+      "services": "Services & prices",
+      "turnaround": "Turnaround buffer between trips"
     },
     "longTermNote": "Monthly price is under Prices & policy"
   }

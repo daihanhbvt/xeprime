@@ -245,3 +245,35 @@
     transition: none;
   }
 }
+
+/*
+ * Giao diện tối (Figma `19879:66323`): banner là thẻ TỐI viền vàng trầm, vệt sáng vàng phía sau,
+ * chữ trắng; nút cửa hàng là kính mờ viền trắng. Ảnh nền vàng của giao diện sáng bị ẩn — giữ nó thì
+ * chữ trắng (token `text` đảo sang trắng) nằm trên nền vàng sáng, không đọc được.
+ */
+:global([data-theme='dark']) .banner {
+  border-color: var(--xp-color-primary-muted);
+}
+
+:global([data-theme='dark']) .surface {
+  background: linear-gradient(135deg, #1a1408 0%, var(--xp-color-bg) 70%);
+}
+
+:global([data-theme='dark']) .cover {
+  display: none;
+}
+
+:global([data-theme='dark']) .title,
+:global([data-theme='dark']) .badge,
+:global([data-theme='dark']) .badge:hover {
+  color: #ffffff;
+}
+
+:global([data-theme='dark']) .badge {
+  border-color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+:global([data-theme='dark']) .badge:hover {
+  background: rgba(255, 255, 255, 0.12);
+}

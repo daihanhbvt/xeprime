@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Audit log",
-    "subtitle": "Who did what, to which record, and when — across the platform. Read-only.",
+    "subtitle": "Who did what, to which record, and when - across the platform. Read-only.",
     "loading": "Loading audit log…"
   },
   "filters": {
@@ -111,9 +111,9 @@
       "summary": {
         "assign": "Assigned {plan}, effective from {date}.",
         "renew": "Renewed {plan}: the new term starts {date}, right after the current one.",
-        "activate": "Activated {plan} after the invoice was paid in full — effective from {date}.",
+        "activate": "Activated {plan} after the invoice was paid in full - effective from {date}.",
         "cancel": "Cancelled the {plan} term.",
-        "schedule_change": "Changing from {previous} to {plan} from the next term — starts {date}.",
+        "schedule_change": "Changing from {previous} to {plan} from the next term - starts {date}.",
         "change_now": "Changed to {plan} immediately ({date}); {count, plural, =0 {no term was ended} one {# remaining term was ended} other {# remaining terms were ended}}."
       },
       "fallbackTerm": "Moved to"

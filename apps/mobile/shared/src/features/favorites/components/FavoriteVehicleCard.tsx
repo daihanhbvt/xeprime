@@ -2,6 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
+import { SvgXml } from 'react-native-svg';
+import { CARD_ICON_XML } from '@/features/marketplace/components/cardIcons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { XP_TOKENS, toPx } from '@xeprime/ui';
@@ -17,7 +19,7 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useDomainLabel } from '@/i18n/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
-import { useColors } from '@/theme/ThemeProvider';
+import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import {
   PALETTES,
   fontSize,
@@ -30,6 +32,7 @@ import {
 } from '@/theme/tokens';
 import { useFavoriteToggle } from '../hooks/use-favorite';
 import { FavoriteButton } from './FavoriteButton';
+import { NewVehicleBadge } from '@/features/marketplace/components/NewVehicleBadge';
 
 /** Ảnh 16:9 — `.media { aspect-ratio: 16 / 9 }` của web khi thẻ hẹp (< 640px, tức mọi điện thoại). */
 const PHOTO_RATIO = 16 / 9;
@@ -43,6 +46,11 @@ const ACTION_HEIGHT = 36;
  * màu sáng cố định ở cả hai giao diện nên chữ lấy màu chữ của bảng SÁNG (như thẻ chợ).
  */
 const INSTANT_BADGE = gradient('gradient-instant-badge');
+/* Tối: gradient gốc trông bạc màu trên nền tối — đậm sắc hơn (= web [data-theme=dark] .badgeInstant). */
+const INSTANT_BADGE_DARK = {
+  colors: ['#53b1fd', '#a4dded'] as [string, string],
+  locations: [0, 1] as [number, number],
+};
 const INSTANT_TEXT = PALETTES.light.colors.text;
 
 const styles = StyleSheet.create({
@@ -65,6 +73,10 @@ const styles = StyleSheet.create({
  */
 function FavoriteVehicleCardImpl({ vehicle }: { vehicle: FavoriteVehicle }) {
   const colors = useColors();
+  // Giao diện tối: ô số ảnh đảo màu (nền trắng, chữ đen) như thẻ xe trang chủ (VehicleCard).
+  const dark = useAppScheme().scheme === 'dark';
+  const photoChipBg = dark ? XP_TOKENS['color-bg-container'] : market.inverse;
+  const photoChipFg = dark ? XP_TOKENS['color-text'] : market.onDark;
   const t = useTranslations('Favorites.card');
   const tCard = useTranslations('Listings.card');
   const dl = useDomainLabel();
@@ -84,11 +96,16 @@ function FavoriteVehicleCardImpl({ vehicle }: { vehicle: FavoriteVehicle }) {
       : vehicle.shopProvince
     : null;
 
+  // Cùng viên tiện ích của thẻ chợ native (`VehicleCard`): bo tròn, icon xanh `CARD_ICON_XML`.
   const amenities = [
-    vehicle.deliveryEnabled ? tCard('delivery') : null,
-    vehicle.noCollateral ? tCard('noCollateral') : null,
-    vehicle.vatInvoiceSupported ? tCard('vatInvoice') : null,
-  ].filter((label): label is string => label !== null);
+    vehicle.deliveryEnabled ? { label: tCard('delivery'), icon: CARD_ICON_XML.check } : null,
+    vehicle.noCollateral ? { label: tCard('noCollateral'), icon: CARD_ICON_XML.money } : null,
+    vehicle.vatInvoiceSupported
+      ? { label: tCard('vatInvoice'), icon: CARD_ICON_XML.invoice }
+      : null,
+  ].filter((item): item is NonNullable<typeof item> => item !== null);
+  const amenityBg = dark ? colors.border : colors.surfaceMuted;
+  const amenityBorder = dark ? XP_TOKENS['color-text-tertiary'] : colors.border;
 
   // Cùng bộ icon với thẻ chợ native (`VehicleCard`) — bản thay cho các SVG `/home/card-*.svg` web.
   const specs = [
@@ -129,8 +146,8 @@ function FavoriteVehicleCardImpl({ vehicle }: { vehicle: FavoriteVehicle }) {
         {instantBook ? (
           <XStack pos="absolute" top={space.sm} left={space.sm} pointerEvents="none">
             <LinearGradient
-              colors={INSTANT_BADGE.colors}
-              locations={INSTANT_BADGE.locations}
+              colors={dark ? INSTANT_BADGE_DARK.colors : INSTANT_BADGE.colors}
+              locations={dark ? INSTANT_BADGE_DARK.locations : INSTANT_BADGE.locations}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.badge}
@@ -156,13 +173,13 @@ function FavoriteVehicleCardImpl({ vehicle }: { vehicle: FavoriteVehicle }) {
             px={space.xs}
             py={2}
             br={radius.sm}
-            bg={market.inverse}
+            bg={photoChipBg}
             pointerEvents="none"
             accessible
             accessibilityLabel={tCard('photoCountAria', { count: vehicle.imageCount ?? 0 })}
           >
-            <Ionicons name="images-outline" size={iconSize.xs} color={market.onDark} />
-            <Text col={market.onDark} fos={fontSize.label}>
+            <Ionicons name="images-outline" size={iconSize.xs} color={photoChipFg} />
+            <Text col={photoChipFg} fos={fontSize.label}>
               {tCard('photoCount', { count: extraPhotos })}
             </Text>
           </XStack>
@@ -182,13 +199,7 @@ function FavoriteVehicleCardImpl({ vehicle }: { vehicle: FavoriteVehicle }) {
                 {vehicle.name}
               </Text>
             </Pressable>
-            {!hasRating ? (
-              <XStack bg={colors.successSurface} br={radius.card} px={space.sm} py={2}>
-                <Text col={colors.success} fos={fontSize.label} fow={fontWeight.medium}>
-                  {tCard('newVehicle')}
-                </Text>
-              </XStack>
-            ) : null}
+            {!hasRating ? <NewVehicleBadge /> : null}
             {/* "Đã lưu …" — web `.savedAt` nằm CÙNG `.nameRow` với tên + nhãn mới, xuống dòng khi hẹp. */}
             <XStack ai="center" gap={space.xs}>
               <Ionicons name="time-outline" size={iconSize.xs} color={colors.placeholder} />
@@ -227,7 +238,7 @@ function FavoriteVehicleCardImpl({ vehicle }: { vehicle: FavoriteVehicle }) {
                     accessibilityLabel={t('serviceLinkAria', { name: vehicle.name, service: label })}
                   >
                     <XStack bg={colors.primarySubtle} br={radius.card} px={space.sm} py={2}>
-                      <Text col={colors.primaryActive} fos={fontSize.label} fow={fontWeight.medium}>
+                      <Text col={colors.accentText} fos={fontSize.label} fow={fontWeight.medium}>
                         {label}
                       </Text>
                     </XStack>
@@ -243,10 +254,23 @@ function FavoriteVehicleCardImpl({ vehicle }: { vehicle: FavoriteVehicle }) {
                 accessibilityRole="list"
                 accessibilityLabel={t('highlightsLabel')}
               >
-              {amenities.map((label) => (
-                <XStack key={label} bg={colors.surfaceMuted} br={radius.card} px={space.sm} py={2}>
-                  <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.medium}>
-                    {label}
+              {amenities.map((item) => (
+                <XStack
+                  key={item.label}
+                  ai="center"
+                  gap={2}
+                  bg={amenityBg}
+                  bw={1}
+                  bc={amenityBorder}
+                  br={radius.pill}
+                  px={6}
+                  py={2}
+                >
+                  <YStack w={12} h={12} ai="center" jc="center">
+                    <SvgXml xml={item.icon} width="100%" height="100%" />
+                  </YStack>
+                  <Text col={colors.textMuted} fos={10} lh={14} numberOfLines={1}>
+                    {item.label}
                   </Text>
                 </XStack>
               ))}
@@ -305,7 +329,7 @@ function FavoriteVehicleCardImpl({ vehicle }: { vehicle: FavoriteVehicle }) {
                     {tCard(isShopTrack ? 'shop' : 'owner')}
                   </Text>
                   <Text
-                    col={isShopTrack ? colors.primaryHover : colors.textMuted}
+                    col={isShopTrack ? colors.shopName : colors.textMuted}
                     fos={fontSize.body}
                     fow={fontWeight.medium}
                     numberOfLines={1}

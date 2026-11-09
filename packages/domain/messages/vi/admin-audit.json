@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Nhật ký hệ thống",
-    "subtitle": "Ai đã làm gì, với đối tượng nào, lúc nào — trên toàn nền tảng. Chỉ đọc.",
+    "subtitle": "Ai đã làm gì, với đối tượng nào, lúc nào - trên toàn nền tảng. Chỉ đọc.",
     "loading": "Đang tải nhật ký hệ thống…"
   },
   "filters": {
@@ -111,9 +111,9 @@
       "summary": {
         "assign": "Gán {plan}, hiệu lực từ {date}.",
         "renew": "Gia hạn {plan}: kỳ mới bắt đầu {date}, nối tiếp ngay sau kỳ đang chạy.",
-        "activate": "Kích hoạt {plan} sau khi nhận đủ tiền hoá đơn — hiệu lực từ {date}.",
+        "activate": "Kích hoạt {plan} sau khi nhận đủ tiền hoá đơn - hiệu lực từ {date}.",
         "cancel": "Huỷ kỳ {plan}.",
-        "schedule_change": "Đổi từ {previous} sang {plan} kể từ kỳ sau — bắt đầu {date}.",
+        "schedule_change": "Đổi từ {previous} sang {plan} kể từ kỳ sau - bắt đầu {date}.",
         "change_now": "Đổi sang {plan} ngay ({date}); {count, plural, =0 {không có kỳ nào bị kết thúc} other {# kỳ còn hạn đã kết thúc}}."
       },
       "fallbackTerm": "Chuyển về"

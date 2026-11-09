@@ -19,7 +19,7 @@ import {
  *
  * Đây là phép kiểm THUẦN — không render, không mock — vì luật nằm trọn trong bảng đường dẫn.
  */
-describe('workspaceVehiclePaths — mỗi khu dẫn về chính nó', () => {
+describe('workspaceVehiclePaths - mỗi khu dẫn về chính nó', () => {
   const manage = workspaceVehiclePaths(WORKSPACE.MANAGE);
   const account = workspaceVehiclePaths(WORKSPACE.ACCOUNT);
   const ID = '01M0GSW2002RRX9QAAPZ4WM9VB';
@@ -49,7 +49,7 @@ describe('workspaceVehiclePaths — mỗi khu dẫn về chính nó', () => {
     }
   });
 
-  it('cổng quản lý giữ nguyên hành vi cũ — tab của màn sửa xe', () => {
+  it('cổng quản lý giữ nguyên hành vi cũ - tab của màn sửa xe', () => {
     expect(manage.detail(ID)).toBe(`/manage/vehicles/${ID}`);
     // `profile` là Ý ĐỊNH "nơi sửa hồ sơ xe"; ở cổng quản lý nó vẫn là route sửa trần, không
     // kèm `?tab=` — link cũ và bookmark cũ không đổi.
@@ -79,7 +79,7 @@ describe('workspaceVehiclePaths — mỗi khu dẫn về chính nó', () => {
     );
   });
 
-  it('giá và tối ưu nhận chuyến có ở CẢ HAI khu — không khu nào mất tính năng', () => {
+  it('giá và tối ưu nhận chuyến có ở CẢ HAI khu - không khu nào mất tính năng', () => {
     expect(account.pricing(ID)).toBe(manage.pricing(ID));
     expect(account.optimization(ID)).toBe(manage.optimization(ID));
     // Phần chỉ tuyến gói có (nguồn xe) vẫn không có lối vào ở tuyến hoa hồng.

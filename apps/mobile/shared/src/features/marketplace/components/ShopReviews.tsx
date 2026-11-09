@@ -5,6 +5,9 @@ import { useTranslations } from 'use-intl';
 import { STALE_TIME } from '@xeprime/api-client';
 import { XP_TOKENS, toPx } from '@xeprime/ui';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
+import Animated from 'react-native-reanimated';
+import { RevealText, ScrollReveal } from '@/components/motion/ScrollReveal';
+import { useRevealPop } from '@/components/motion/reveal-effects';
 import { Stars } from '@/components/ui/Stars';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -66,9 +69,13 @@ export function ShopReviews({ slug }: { slug: string }) {
     /* Vùng `.section` web: cột, gap `space-md`. */
     <YStack gap={space.md} accessibilityLabel={t('sectionLabel')}>
       {/* `.title` web: `font-size-lead` (20) semibold, màu `text`. */}
-      <Text col={colors.text} fos={fontSize.lead} fow={fontWeight.semibold} accessibilityRole="header">
-        {total > 0 ? t('titleWithCount', { count: total }) : t('title')}
-      </Text>
+      <ScrollReveal>
+        <RevealText>
+          <Text col={colors.text} fos={fontSize.lead} fow={fontWeight.semibold} accessibilityRole="header">
+            {total > 0 ? t('titleWithCount', { count: total }) : t('title')}
+          </Text>
+        </RevealText>
+      </ScrollReveal>
 
       {data.length === 0 ? (
         /* `.empty` web: đệm lg, viền `border` 1px NÉT ĐỨT, bo `radius-card`, chữ `text-secondary` giữa. */
@@ -87,14 +94,15 @@ export function ShopReviews({ slug }: { slug: string }) {
       ) : (
         /* `.list` web ≤760px: một cột, gap `space-md`. */
         <YStack gap={space.md}>
-          {data.map((review) => (
+          {data.map((review, i) => (
+            <ScrollReveal key={review.id} index={i}>
             <ReviewCard
-              key={review.id}
               review={review}
               date={fmt.date(review.createdAt)}
               vehicleLabel={t('vehicle', { name: review.vehicleName })}
               onOpenVehicle={() => navigateOnce(ROUTES.explore.listingDetail(review.vehicleId))}
             />
+            </ScrollReveal>
           ))}
         </YStack>
       )}
@@ -136,7 +144,7 @@ function ReviewCard({
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
-          <Text col={colors.primaryStrong} fos={fontSize.body} fow={fontWeight.semibold}>
+          <Text col={colors.accentStrongText} fos={fontSize.body} fow={fontWeight.semibold}>
             {initialOf(review.customerName)}
           </Text>
         </YStack>
@@ -151,13 +159,14 @@ function ReviewCard({
           </Text>
         </YStack>
 
-        <Stars value={review.rating} size={STAR_SIZE} />
+        {/* Hàng sao bật vào khi thẻ đánh giá hiện (icon, không bóng). */}
+        <ReviewStars rating={review.rating} />
       </XStack>
 
       {/* `.comment` web: body `text-secondary`, line-height 22, cắt 4 dòng. */}
       {review.comment ? (
         <Text
-          col={colors.textMuted}
+          col={colors.textBody}
           fos={fontSize.body}
           lineHeight={BODY_LINE}
           numberOfLines={COMMENT_LINES}
@@ -173,7 +182,7 @@ function ReviewCard({
         accessibilityLabel={vehicleLabel}
         style={{ alignSelf: 'flex-start', maxWidth: '100%' }}
       >
-        <Text col={colors.primaryHover} fos={fontSize.bodySm} fow={fontWeight.medium} numberOfLines={1}>
+        <Text col={colors.brandText} fos={fontSize.bodySm} fow={fontWeight.medium} numberOfLines={1}>
           {vehicleLabel}
         </Text>
       </Pressable>
@@ -182,6 +191,15 @@ function ReviewCard({
 }
 
 /** Chữ cái đầu cho avatar — cùng luật `initialOf` của web (`[...value]` để không cắt đôi ký tự). */
+function ReviewStars({ rating }: { rating: number }) {
+  const pop = useRevealPop(160, 0.6);
+  return (
+    <Animated.View style={pop}>
+      <Stars value={rating} size={STAR_SIZE} />
+    </Animated.View>
+  );
+}
+
 function initialOf(value: string | null | undefined): string {
   const trimmed = value?.trim();
   if (!trimmed) return '?';

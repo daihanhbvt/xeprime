@@ -85,7 +85,7 @@ async function renderResult(quote: PublicQuote | null) {
  * Bản trước tự gọi lại BÁO GIÁ CÔNG KHAI ở màn này — báo giá đó không nhận mã khuyến mãi, nên tổng
  * ở màn "đã gửi" là nguyên giá trong khi bảng giá khách vừa bấm qua đã trừ mã.
  */
-describe('RequestResultStep — tổng dự kiến đọc báo giá ĐÃ ÁP MÃ', () => {
+describe('RequestResultStep - tổng dự kiến đọc báo giá ĐÃ ÁP MÃ', () => {
   it('hiện customerTotalAmount của bảng phí đã áp mã, không phải tiền thuê B', async () => {
     const view = await renderResult(quoteWithPromo);
 
@@ -109,7 +109,7 @@ describe('RequestResultStep — tổng dự kiến đọc báo giá ĐÃ ÁP MÃ
   });
 });
 
-describe('RequestResultStep — chạm trần giữ chỗ (HOLD_LIMIT_REACHED)', () => {
+describe('RequestResultStep - chạm trần giữ chỗ (HOLD_LIMIT_REACHED)', () => {
   function renderLimit(
     unpaid?: Parameters<typeof RequestResultStep>[0]['unpaidHolds'],
     onLeave?: () => void,
@@ -137,7 +137,7 @@ describe('RequestResultStep — chạm trần giữ chỗ (HOLD_LIMIT_REACHED)',
     );
   }
 
-  it('"Thanh toán" THAY luồng đặt xe bị chặn (replace) — nút lui không quay về form', async () => {
+  it('"Thanh toán" THAY luồng đặt xe bị chặn (replace) - nút lui không quay về form', async () => {
     mockRouter.push.mockClear();
     mockRouter.replace.mockClear();
     const onLeave = jest.fn();

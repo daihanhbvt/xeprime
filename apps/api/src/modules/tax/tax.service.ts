@@ -197,8 +197,8 @@ export class TaxService {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         this.logger.warn(
           input.bookingExtensionId
-            ? `Phụ lục ${input.bookingExtensionId} đã có dòng thuế còn hiệu lực — bỏ qua`
-            : `Đơn ${input.bookingId} đã có dòng thuế còn hiệu lực — bỏ qua`,
+            ? `Phụ lục ${input.bookingExtensionId} đã có dòng thuế còn hiệu lực - bỏ qua`
+            : `Đơn ${input.bookingId} đã có dòng thuế còn hiệu lực - bỏ qua`,
         );
         return null;
       }
@@ -254,13 +254,13 @@ export class TaxService {
     if (row.reversalOfId !== null) {
       throw new ConflictException({
         code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message: 'Đây đã là một dòng đảo — không đảo một bút toán đảo',
+        message: 'Đây đã là một dòng đảo - không đảo một bút toán đảo',
       });
     }
     if (!canTransitionTax(row.status as TaxWithholdingStatus, TAX_WITHHOLDING_STATUS.REVERSED)) {
       throw new ConflictException({
         code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message: 'Dòng thuế này không đảo được — tiền đã nộp thì sửa bằng tờ khai điều chỉnh',
+        message: 'Dòng thuế này không đảo được - tiền đã nộp thì sửa bằng tờ khai điều chỉnh',
         details: { status: row.status },
       });
     }
@@ -279,7 +279,7 @@ export class TaxService {
       if (claimed.count === 0) {
         throw new ConflictException({
           code: API_ERROR_CODE.CONFLICT,
-          message: 'Dòng thuế vừa được người khác xử lý — tải lại rồi thử lại',
+          message: 'Dòng thuế vừa được người khác xử lý - tải lại rồi thử lại',
         });
       }
 

@@ -90,7 +90,7 @@ export class SellerProfileDto {
   editable!: boolean;
   @ApiProperty({
     type: [String],
-    description: 'Trường còn thiếu để GỬI xác minh — rỗng là gửi được',
+    description: 'Trường còn thiếu để GỬI xác minh - rỗng là gửi được',
   })
   missingFields!: string[];
 }
@@ -151,7 +151,7 @@ export class PlatformSellerListQueryDto {
 
 export class ReviewSellerProfileDto {
   @ApiProperty({
-    description: 'Lý do — bắt buộc khi yêu cầu bổ sung hoặc từ chối; người bán đọc câu này',
+    description: 'Lý do - bắt buộc khi yêu cầu bổ sung hoặc từ chối; người bán đọc câu này',
   })
   @IsString()
   @MinLength(5)

@@ -57,7 +57,7 @@ describe('RequireSession', () => {
     expect(await view.findByText(SECRET)).toBeTruthy();
   });
 
-  it('401 thì mời đăng nhập và KHÔNG render nội dung — deep link không lách qua được', async () => {
+  it('401 thì mời đăng nhập và KHÔNG render nội dung - deep link không lách qua được', async () => {
     /*
      * Thanh tab đã ẩn các mục cần đăng nhập, nhưng ẩn không phải chặn: `xeprime://trips` hay
      * một thông báo đẩy mở thẳng màn đó. Đây là chốt chặn cho đúng đường vòng ấy.
@@ -75,7 +75,7 @@ describe('RequireSession', () => {
     expect(view.queryByText(SECRET)).toBeNull();
   });
 
-  it('mất mạng KHÔNG bị coi là hết phiên — cho thử lại thay vì bắt đăng nhập lại', async () => {
+  it('mất mạng KHÔNG bị coi là hết phiên - cho thử lại thay vì bắt đăng nhập lại', async () => {
     jest.spyOn(authApi, 'fetchCurrentUser').mockRejectedValue(
       new ApiClientError({
         code: CLIENT_ERROR_CODE.NETWORK_ERROR,

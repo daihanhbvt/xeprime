@@ -37,7 +37,7 @@ export class CustomerDocumentsController {
 
   @Get()
   @RequirePermissions(PERMISSION.CUSTOMER_VIEW)
-  @ApiOperation({ summary: 'Giấy tờ của khách (metadata — không có đường dẫn file)' })
+  @ApiOperation({ summary: 'Giấy tờ của khách (metadata - không có đường dẫn file)' })
   @ApiOkResponse({ type: [CustomerDocumentDto] })
   list(
     @CurrentTenant() tenant: TenantContext,
@@ -48,7 +48,7 @@ export class CustomerDocumentsController {
 
   @Post('presign')
   @RequirePermissions(PERMISSION.CUSTOMER_DOCUMENT_MANAGE)
-  @ApiOperation({ summary: 'Bước 1 — xin URL PUT lên bucket riêng tư (tạo bản ghi `pending`)' })
+  @ApiOperation({ summary: 'Bước 1 - xin URL PUT lên bucket riêng tư (tạo bản ghi `pending`)' })
   @ApiCreatedResponse({ type: CustomerDocumentPresignDto })
   presign(
     @CurrentTenant() tenant: TenantContext,
@@ -62,7 +62,7 @@ export class CustomerDocumentsController {
   @Post(':documentId/complete')
   @RequirePermissions(PERMISSION.CUSTOMER_DOCUMENT_MANAGE)
   @ApiOperation({
-    summary: 'Bước 2 — xác minh tệp đã tải lên (HEAD + chữ ký byte đầu) rồi chuyển `ready`',
+    summary: 'Bước 2 - xác minh tệp đã tải lên (HEAD + chữ ký byte đầu) rồi chuyển `ready`',
   })
   @ApiCreatedResponse({ type: CustomerDocumentDto })
   complete(
@@ -76,7 +76,7 @@ export class CustomerDocumentsController {
 
   @Get(':documentId/download')
   @RequirePermissions(PERMISSION.CUSTOMER_DOCUMENT_FILE_VIEW)
-  @ApiOperation({ summary: 'Signed GET ngắn hạn để mở giấy tờ — ghi audit từng lần' })
+  @ApiOperation({ summary: 'Signed GET ngắn hạn để mở giấy tờ - ghi audit từng lần' })
   @ApiOkResponse({ type: CustomerDocumentDownloadDto })
   download(
     @CurrentTenant() tenant: TenantContext,
@@ -90,7 +90,7 @@ export class CustomerDocumentsController {
   @Post(':documentId/verify')
   @RequirePermissions(PERMISSION.CUSTOMER_DOCUMENT_MANAGE)
   @ApiOperation({
-    summary: 'Ghi nhận đã đối chiếu giấy tờ (thủ công — VNeID/bản gốc), có audit',
+    summary: 'Ghi nhận đã đối chiếu giấy tờ (thủ công - VNeID/bản gốc), có audit',
   })
   // 201 là mặc định của `@Post` trong Nest, không có gì được tạo mới ở đây — giữ nguyên mã cũ
   // để không phá client đang chạy, nhưng nói rõ trong tài liệu.

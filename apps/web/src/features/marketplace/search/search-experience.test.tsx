@@ -294,7 +294,7 @@ describe('có tài xế', () => {
   });
 });
 
-describe('thuê dài hạn — chỉ tìm XE (ADR 0011)', () => {
+describe('thuê dài hạn - chỉ tìm XE (ADR 0011)', () => {
   async function openLongTerm() {
     await renderExperience();
     clickTab(
@@ -344,7 +344,7 @@ describe('thuê dài hạn — chỉ tìm XE (ADR 0011)', () => {
     }
   });
 
-  it('URL trang chủ cũng sạch lịch — khối "Xe phù hợp với bạn" bên dưới không đọc phải ngày cũ', async () => {
+  it('URL trang chủ cũng sạch lịch - khối "Xe phù hợp với bạn" bên dưới không đọc phải ngày cũ', async () => {
     await openLongTerm();
 
     const query = homeUrlQuery();
@@ -543,7 +543,7 @@ describe('vị trí hiện tại', () => {
 });
 
 describe('URL bị KHỐI KHÁC trên trang chủ đổi', () => {
-  it('thẻ tìm kiếm đi theo — không để hero và "Địa điểm nổi bật" nói hai địa điểm khác nhau', async () => {
+  it('thẻ tìm kiếm đi theo - không để hero và "Địa điểm nổi bật" nói hai địa điểm khác nhau', async () => {
     const { changeUrlExternally } = await renderExperience();
     expect(within(hero()).getByRole('button', { name: /Toàn quốc/ })).toBeTruthy();
 

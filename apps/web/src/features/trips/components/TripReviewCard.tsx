@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useId, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { RATING_MAX, RATING_MIN, REVIEW_COMMENT_MAX } from '@xeprime/types';
+import { InfoHint } from '@/components/data-display/InfoHint';
 import { Stars } from '@/components/data-display/Stars';
 import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import { useCreateReview } from '@/features/reviews/hooks/use-create-review';
@@ -47,6 +48,8 @@ export function TripReviewCard({ trip }: { trip: CustomerTripDetail }) {
       <section className={layout.card} aria-labelledby={titleId}>
         <h2 id={titleId} className={layout.cardTitle}>
           {t('title')}
+          {/* Ghi chú "chỉ sửa 1 lần" gói vào ⓘ cạnh tiêu đề thay vì một dòng riêng dưới nút. */}
+          {review.canEdit ? <InfoHint content={t('editHint')} label={t('editHint')} /> : null}
         </h2>
         <div className={styles.readHead}>
           <Stars value={review.rating} size="xl" />
@@ -58,7 +61,6 @@ export function TripReviewCard({ trip }: { trip: CustomerTripDetail }) {
             <CtaButton className={styles.editButton} onClick={() => setEditing(true)}>
               {t('edit')}
             </CtaButton>
-            <span className={styles.hint}>{t('editHint')}</span>
           </div>
         ) : null}
       </section>
@@ -133,6 +135,7 @@ function ReviewForm({ bookingId, titleId, edit, onDone }: ReviewFormProps) {
     <section className={layout.card} aria-labelledby={titleId}>
       <h2 id={titleId} className={layout.cardTitle}>
         {t('title')}
+        {edit ? <InfoHint content={t('editHint')} label={t('editHint')} /> : null}
       </h2>
       <form className={styles.form} onSubmit={onSubmit} noValidate>
         <Controller
@@ -176,7 +179,6 @@ function ReviewForm({ bookingId, titleId, edit, onDone }: ReviewFormProps) {
             </div>
           )}
         />
-        {edit ? <span className={styles.hint}>{t('editHint')}</span> : null}
         <div className={styles.actions}>
           <CtaButton type="submit" className={styles.submit} loading={pending}>
             {edit ? t('saveEdit') : t('submit')}

@@ -51,7 +51,7 @@ describe('Ghi chú nội bộ', () => {
 
     expect(textarea().value).toBe('Đã gọi chủ xe');
     expect(screen.getByText(/Cập nhật lần cuối: .* · Reviewer A/)).toBeTruthy();
-    expect(screen.getByText('Chỉ đội vận hành thấy — không gửi cho chủ xe.')).toBeTruthy();
+    expect(screen.getByText('Chỉ đội vận hành thấy - không gửi cho chủ xe.')).toBeTruthy();
     expect(saveButton()).toHaveProperty('disabled', true);
   });
 

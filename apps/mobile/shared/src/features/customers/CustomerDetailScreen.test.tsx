@@ -119,7 +119,7 @@ beforeEach(() => {
   mockReplace.mockClear();
 });
 
-describe('CustomerDetailScreen — quyền', () => {
+describe('CustomerDetailScreen - quyền', () => {
   it('thiếu `customers.view`: hiện màn thiếu quyền và KHÔNG gọi API hồ sơ', async () => {
     const view = await renderScreen([PERMISSION.BOOKING_VIEW]);
 
@@ -181,7 +181,7 @@ describe('CustomerDetailScreen — quyền', () => {
   });
 });
 
-describe('CustomerDetailScreen — mức rủi ro (CUS-03)', () => {
+describe('CustomerDetailScreen - mức rủi ro (CUS-03)', () => {
   it('`blocked`: cảnh báo nêu hệ quả và KHÔNG lập được đơn mới', async () => {
     const view = await renderScreen(
       [PERMISSION.CUSTOMER_VIEW, PERMISSION.BOOKING_CREATE],
@@ -215,7 +215,7 @@ describe('CustomerDetailScreen — mức rủi ro (CUS-03)', () => {
 
     expect(view.getByText('Khách được đánh dấu cần lưu ý')).toBeTruthy();
     expect(
-      view.getByText('Đây chỉ là lời nhắc cho người trực — không thao tác nào bị chặn.'),
+      view.getByText('Đây chỉ là lời nhắc cho người trực - không thao tác nào bị chặn.'),
     ).toBeTruthy();
 
     const create = await view.findByRole('button', { name: new RegExp('Tạo đơn thuê$') });
@@ -238,7 +238,7 @@ describe('CustomerDetailScreen — mức rủi ro (CUS-03)', () => {
   });
 });
 
-describe('CustomerDetailScreen — hồ sơ lưu trữ', () => {
+describe('CustomerDetailScreen - hồ sơ lưu trữ', () => {
   it('báo rõ đang lưu trữ, đổi hành động thành Khôi phục, và chặn sửa + tạo đơn', async () => {
     const view = await renderScreen(
       [PERMISSION.CUSTOMER_VIEW, PERMISSION.CUSTOMER_MANAGE, PERMISSION.BOOKING_CREATE],
@@ -262,8 +262,8 @@ describe('CustomerDetailScreen — hồ sơ lưu trữ', () => {
   });
 });
 
-describe('CustomerDetailScreen — tạo đơn thuê', () => {
-  it('đi tới LUỒNG ĐƠN ĐÃ CÓ kèm khách điền sẵn — không dựng form thứ hai', async () => {
+describe('CustomerDetailScreen - tạo đơn thuê', () => {
+  it('đi tới LUỒNG ĐƠN ĐÃ CÓ kèm khách điền sẵn - không dựng form thứ hai', async () => {
     const view = await renderScreen([PERMISSION.CUSTOMER_VIEW, PERMISSION.BOOKING_CREATE]);
     await view.findAllByText('Nguyễn Văn An');
 

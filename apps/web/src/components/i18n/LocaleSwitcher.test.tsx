@@ -47,7 +47,7 @@ async function openMenu() {
   return screen.findByRole('menu');
 }
 
-describe('LocaleSwitcher — hiển thị', () => {
+describe('LocaleSwitcher - hiển thị', () => {
   it('hiện mã ngôn ngữ đang dùng và nêu tên đầy đủ trong nhãn khả truy cập', () => {
     renderSwitcher('vi');
     const trigger = screen.getByRole('button', { name: triggerName });
@@ -61,7 +61,7 @@ describe('LocaleSwitcher — hiển thị', () => {
     expect(trigger.textContent).toContain('EN');
   });
 
-  it('có mặt khi CHƯA đăng nhập — không nằm sau một cổng đăng nhập nào', () => {
+  it('có mặt khi CHƯA đăng nhập - không nằm sau một cổng đăng nhập nào', () => {
     // Component không nhận `user` và không gọi hook auth nào. Nếu ai đó thêm cổng đăng nhập
     // vào đây, render này sẽ nổ vì thiếu provider — đó chính là tín hiệu cần.
     renderSwitcher('vi');
@@ -82,7 +82,7 @@ describe('LocaleSwitcher — hiển thị', () => {
   });
 });
 
-describe('LocaleSwitcher — đổi ngôn ngữ', () => {
+describe('LocaleSwitcher - đổi ngôn ngữ', () => {
   it('gọi Server Action rồi MỚI router.refresh(); không điều hướng', async () => {
     renderSwitcher('vi');
     const menu = await openMenu();
@@ -94,7 +94,7 @@ describe('LocaleSwitcher — đổi ngôn ngữ', () => {
     expect(mocks.replace).not.toHaveBeenCalled();
   });
 
-  it('KHÔNG làm mới khi Server Action từ chối — tránh render lại bằng ngôn ngữ cũ', async () => {
+  it('KHÔNG làm mới khi Server Action từ chối - tránh render lại bằng ngôn ngữ cũ', async () => {
     mocks.setLocale.mockResolvedValue({ ok: false, locale: null });
     renderSwitcher('vi');
     const menu = await openMenu();
@@ -104,7 +104,7 @@ describe('LocaleSwitcher — đổi ngôn ngữ', () => {
     expect(mocks.refresh).not.toHaveBeenCalled();
   });
 
-  it('giữ NGUYÊN đường dẫn, query và hash — trạng thái tìm kiếm không mất', async () => {
+  it('giữ NGUYÊN đường dẫn, query và hash - trạng thái tìm kiếm không mất', async () => {
     renderSwitcher('vi');
     const menu = await openMenu();
     fireEvent.click(within(menu).getByText('English'));
@@ -115,7 +115,7 @@ describe('LocaleSwitcher — đổi ngôn ngữ', () => {
     );
   });
 
-  it('không thêm entry lịch sử — nút Back vẫn về đúng trang trước', async () => {
+  it('không thêm entry lịch sử - nút Back vẫn về đúng trang trước', async () => {
     const lengthBefore = window.history.length;
     renderSwitcher('vi');
     const menu = await openMenu();

@@ -33,6 +33,9 @@ const SUPPORT_ALLOWLIST = [
   'VehiclesController.update',
   // ── Đợt 2A: CHỈ ĐỌC, mỗi lĩnh vực một capability ──
   'BookingHandoversController.context',
+  // "Đơn đã kết thúc" (05/11/2026) — chỉ đọc, cùng capability xem đơn; dòng yêu cầu tự ẩn khi
+  // phiên không có `booking_request.view`.
+  'BookingHistoryController.list',
   // Giấy chứng nhận + tình trạng bảo hiểm của đơn (ADR 0064 điều 10) — chỉ đọc, cùng capability xem đơn.
   'BookingInsuranceController.coverage',
   'BookingInsuranceController.list',
@@ -72,7 +75,13 @@ const SUPPORT_ALLOWLIST = [
   'PartnerDashboardController.requests',
   'PartnerDashboardController.today',
   'VehiclesController.needsActionCount',
+  // Thời gian chết mặc định (06/11/2026) đứng cạnh chính sách thuê, cùng capability chỉ đọc.
+  // `ShopOperationDefaultsController.save` (PUT) CỐ Ý không vào phiên.
+  'ShopOperationDefaultsController.get',
   'ShopPoliciesController.get',
+  // Một phiếu thanh toán gộp theo id (ADR 0083) — CHỈ ĐỌC, cùng `subscription_status.view` với
+  // hoá đơn. Lối MUA (`purchase` · `createCheckout`) CỐ Ý không vào phiên.
+  'SubscriptionController.checkout',
   // Một hoá đơn theo id — cùng dữ liệu với danh sách, cùng `subscription_status.view` (ADR 0050).
   'SubscriptionController.invoice',
   'SubscriptionController.invoices',

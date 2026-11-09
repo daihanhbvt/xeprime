@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { cx } from '@/lib/cx';
+import { SplitText } from '@/components/motion/SplitText';
+import { enterClass } from '@/components/motion/motion-classes';
 import styles from './PageHero.module.css';
 
 export interface PageHeroCrumb {
@@ -78,13 +80,15 @@ export function PageHero({
             </nav>
           )}
 
-          {eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}
-          <h1 className={styles.title}>{title}</h1>
-          {lead && <p className={styles.lead}>{lead}</p>}
-          {meta && <p className={styles.meta}>{meta}</p>}
+          {eyebrow && <p className={cx(styles.eyebrow, enterClass())}>{eyebrow}</p>}
+          <h1 className={styles.title}>
+            <SplitText text={title} />
+          </h1>
+          {lead && <p className={cx(styles.lead, enterClass(200))}>{lead}</p>}
+          {meta && <p className={cx(styles.meta, enterClass(400))}>{meta}</p>}
         </div>
 
-        {aside && <div className={styles.aside}>{aside}</div>}
+        {aside && <div className={cx(styles.aside, enterClass(400))}>{aside}</div>}
       </div>
     </header>
   );

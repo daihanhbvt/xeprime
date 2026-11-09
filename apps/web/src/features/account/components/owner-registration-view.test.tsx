@@ -180,7 +180,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Tiến trình đăng ký — một cổng duyệt', () => {
+describe('Tiến trình đăng ký - một cổng duyệt', () => {
   it('không còn bước "chờ nền tảng duyệt hồ sơ gian hàng"', () => {
     render();
 
@@ -197,7 +197,7 @@ describe('Tiến trình đăng ký — một cổng duyệt', () => {
     expect(screen.getByRole('link', { name: /Đăng xe đầu tiên/ })).toBeTruthy();
   });
 
-  it('xe NHÁP vẫn hiện trong danh sách tiến trình — không biến mất', () => {
+  it('xe NHÁP vẫn hiện trong danh sách tiến trình - không biến mất', () => {
     vehicles.data = { items: [makeVehicle({ name: 'Vios nháp' })] };
     render();
 
@@ -302,8 +302,9 @@ describe('Lối vào Hồ sơ chủ xe', () => {
     render();
 
     expect(screen.queryByText('Hồ sơ chủ xe còn thiếu thông tin')).toBeNull();
+    // "Hồ sơ chủ xe" là trang Thông tin `/shop`, mặt tiền cá nhân (ADR 0085 điều 2).
     expect(screen.getByRole('link', { name: /Hồ sơ chủ xe/ }).getAttribute('href')).toBe(
-      '/manage/account',
+      '/manage/shop',
     );
   });
 });

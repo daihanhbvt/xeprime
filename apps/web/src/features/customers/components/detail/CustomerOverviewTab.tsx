@@ -82,6 +82,7 @@ export function CustomerOverviewTab({
       {canViewBookings ? (
         current ? (
           <BookingPreview
+            className={styles.sectionCard}
             booking={current}
             canViewFinance={canViewFinance}
             canOpen={canViewBookings}
@@ -93,7 +94,7 @@ export function CustomerOverviewTab({
             }
           />
         ) : (
-          <SectionCard title={t('current.title')}>
+          <SectionCard className={styles.sectionCard} title={t('current.title')}>
             <p className={styles.muted}>{t('current.empty')}</p>
           </SectionCard>
         )
@@ -102,6 +103,7 @@ export function CustomerOverviewTab({
       <div className={cx(styles.twoCols, !(current && canViewBookings) && styles.oneCol)}>
         {current && canViewBookings ? (
           <SectionCard
+            className={styles.sectionCard}
             title={t('timeline.title')}
             extra={<span className={styles.muted}>#{current.code}</span>}
           >
@@ -110,6 +112,7 @@ export function CustomerOverviewTab({
         ) : null}
         {showNotes ? (
           <SectionCard
+            className={styles.sectionCard}
             title={t('notes.title')}
             extra={<span className={styles.muted}>{t('notes.internal')}</span>}
           >
@@ -154,8 +157,8 @@ function BookingTimeline({
       tone: 'warning',
       title: renting ? t('renting') : t('awaiting'),
       body: renting
-        ? t('rentingBody', { time: fmt.shortDateTime(booking.pickupAt) })
-        : t('awaitingBody', { time: fmt.shortDateTime(booking.pickupAt) }),
+        ? t('rentingBody', { time: fmt.rentalAt(booking.pickupAt) })
+        : t('awaitingBody', { time: fmt.rentalAt(booking.pickupAt) }),
     },
     ...(canViewFinance && debt != null
       ? [
@@ -175,7 +178,7 @@ function BookingTimeline({
       icon: <CalendarOutlined />,
       tone: 'neutral',
       title: t('returnPlan'),
-      body: t('returnPlanBody', { time: fmt.shortDateTime(booking.returnAt) }),
+      body: t('returnPlanBody', { time: fmt.rentalAt(booking.returnAt) }),
     },
   ];
 

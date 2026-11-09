@@ -133,7 +133,7 @@ export function CustomerBookingHistory({
         row.driver || row.serviceType === SERVICE_TYPE.WITH_DRIVER ? (
           <BookingDriverCell booking={row} />
         ) : (
-          <span className={styles.meta}>—</span>
+          <span className={styles.meta}>-</span>
         ),
     },
     {
@@ -233,6 +233,7 @@ export function BookingPreview({
   canOpen,
   title,
   extra,
+  className,
 }: {
   booking: CustomerBooking;
   canViewFinance: boolean;
@@ -240,6 +241,7 @@ export function BookingPreview({
   /** Mặc định "Chi tiết đơn {mã}". */
   title?: string;
   extra?: React.ReactNode;
+  className?: string;
 }) {
   const t = useTranslations('Customers.profile.history');
   const tCurrent = useTranslations('Customers.profile.current');
@@ -251,6 +253,7 @@ export function BookingPreview({
 
   return (
     <SectionCard
+      className={className}
       title={title ?? t('previewTitle', { code: booking.code })}
       extra={extra ?? <span className={styles.meta}>{t('previewHint')}</span>}
     >

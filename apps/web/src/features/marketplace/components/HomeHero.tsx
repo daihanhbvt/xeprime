@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import { getTranslations } from 'next-intl/server';
-import { enterClass, kenBurnsClass } from '@/components/motion/motion-classes';
+import { enterClass, heroParallaxClass, kenBurnsClass } from '@/components/motion/motion-classes';
 import { SplitText } from '@/components/motion/SplitText';
 import type { PublicBanner } from '@/features/banners/types';
 import { cx } from '@/lib/cx';
@@ -29,7 +29,7 @@ export async function HomeHero({ banners }: { banners: PublicBanner[] }) {
         fill
         priority
         sizes="100vw"
-        className={cx(styles.fallbackImage, kenBurnsClass)}
+        className={cx(styles.fallbackImage, kenBurnsClass, heroParallaxClass)}
       />
       <span className={styles.fog} aria-hidden="true" />
       {/* Chữ vào so le như trang mẫu: tiêu đề tách ký tự → dòng nhấn → mô tả (0.9s). Chữ nhấn là

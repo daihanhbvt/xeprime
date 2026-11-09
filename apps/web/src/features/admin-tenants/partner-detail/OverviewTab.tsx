@@ -146,7 +146,7 @@ export function OverviewTab({
                       {
                         key: 'area',
                         label: t('info.area'),
-                        value: operating.areaNames.join(', ') || '—',
+                        value: operating.areaNames.join(', ') || '-',
                       },
                       {
                         key: 'joined',
@@ -156,24 +156,24 @@ export function OverviewTab({
                       {
                         key: 'address',
                         label: t('info.publicAddress'),
-                        value: operating.publicAddress ?? '—',
+                        value: operating.publicAddress ?? '-',
                       },
                     ]
                   : [
-                      { key: 'name', label: t('info.ownerName'), value: owner.name ?? '—' },
+                      { key: 'name', label: t('info.ownerName'), value: owner.name ?? '-' },
                       { key: 'code', label: t('info.ownerCode'), value: identity.code },
                       {
                         key: 'area',
                         label: t('info.area'),
-                        value: operating.areaNames.join(', ') || '—',
+                        value: operating.areaNames.join(', ') || '-',
                       },
                       {
                         key: 'joined',
                         label: t('info.joined'),
                         value: fmt.date(identity.createdAt),
                       },
-                      { key: 'phone', label: t('info.phone'), value: owner.phoneMasked ?? '—' },
-                      { key: 'email', label: t('info.email'), value: owner.emailMasked ?? '—' },
+                      { key: 'phone', label: t('info.phone'), value: owner.phoneMasked ?? '-' },
+                      { key: 'email', label: t('info.email'), value: owner.emailMasked ?? '-' },
                     ]
               }
             />
@@ -212,7 +212,7 @@ export function OverviewTab({
                         {branch.isDefault ? (
                           <Tag className={styles.small}>{t('branches.default')}</Tag>
                         ) : null}
-                        <div className={styles.muted}>{branch.address ?? '—'}</div>
+                        <div className={styles.muted}>{branch.address ?? '-'}</div>
                       </span>
                       <span>{t('branches.vehicles', { count: branch.vehicleCount })}</span>
                     </li>
@@ -289,7 +289,7 @@ export function OverviewTab({
                             group="userStatus"
                           />
                         ) : (
-                          '—'
+                          '-'
                         ),
                       },
                     ]),
@@ -341,9 +341,9 @@ export function OverviewTab({
             <DashboardPanel title={t('owner.title')} icon={<UserOutlined />}>
               <KeyValues
                 items={[
-                  { key: 'name', label: t('info.ownerName'), value: owner.name ?? '—' },
-                  { key: 'phone', label: t('info.phone'), value: owner.phoneMasked ?? '—' },
-                  { key: 'email', label: t('info.email'), value: owner.emailMasked ?? '—' },
+                  { key: 'name', label: t('info.ownerName'), value: owner.name ?? '-' },
+                  { key: 'phone', label: t('info.phone'), value: owner.phoneMasked ?? '-' },
+                  { key: 'email', label: t('info.email'), value: owner.emailMasked ?? '-' },
                 ]}
               />
             </DashboardPanel>
@@ -395,7 +395,7 @@ function PlanSummary({ plan }: { plan: NonNullable<PartnerOverview['plan']> }) {
               ) : null}
             </>
           ) : (
-            '—'
+            '-'
           ),
         },
         ...(plan.nextTerm

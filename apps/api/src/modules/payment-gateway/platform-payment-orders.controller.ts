@@ -30,7 +30,7 @@ export class PlatformPaymentOrdersController {
 
   @Get()
   @ApiOperation({
-    summary: 'Lượt thanh toán qua cổng — mặc định chỉ những lượt CẦN NGƯỜI XỬ LÝ, cũ nhất trước',
+    summary: 'Lượt thanh toán qua cổng - mặc định chỉ những lượt CẦN NGƯỜI XỬ LÝ, cũ nhất trước',
   })
   @ApiOkResponse({ type: PlatformPaymentOrderPageDto })
   list(@Query() query: PlatformPaymentOrderListQueryDto): Promise<PlatformPaymentOrderPageDto> {
@@ -47,7 +47,7 @@ export class PlatformPaymentOrdersController {
   @Post(':id/resolve')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Đóng một lượt ở hàng đợi sau khi đã xử lý bên ngoài (vd hoàn tay) — kèm ghi chú và audit',
+    summary: 'Đóng một lượt ở hàng đợi sau khi đã xử lý bên ngoài (vd hoàn tay) - kèm ghi chú và audit',
   })
   @ApiOkResponse({ type: PlatformPaymentOrderDetailDto })
   resolve(
@@ -62,7 +62,7 @@ export class PlatformPaymentOrdersController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
-      'Ghi nhận TAY một lượt cổng đã thu mà máy không tự áp (vd kết quả tới sau khi đã đóng) — cùng đường tiền, có audit',
+      'Ghi nhận TAY một lượt cổng đã thu mà máy không tự áp (vd kết quả tới sau khi đã đóng) - cùng đường tiền, có audit',
   })
   @ApiOkResponse({ type: PlatformPaymentOrderDetailDto })
   apply(
@@ -76,7 +76,7 @@ export class PlatformPaymentOrdersController {
   @Post(':id/requery')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Hỏi lại cổng ngay và thử áp tiền nếu cổng đã thu — trả kèm kết quả của lượt hỏi',
+    summary: 'Hỏi lại cổng ngay và thử áp tiền nếu cổng đã thu - trả kèm kết quả của lượt hỏi',
   })
   @ApiOkResponse({ type: PlatformPaymentOrderRequeryDto })
   requery(

@@ -61,7 +61,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('AccountSidebar — tài khoản khách', () => {
+describe('AccountSidebar - tài khoản khách', () => {
   it('hiện menu cá nhân, KHÔNG có mục quản lý xe nào', () => {
     render(<AccountSidebar user={user()} />);
 
@@ -97,8 +97,8 @@ describe('AccountSidebar — tài khoản khách', () => {
   });
 });
 
-describe('AccountSidebar — hành vi chung', () => {
-  it('mọi mục trong menu đều là liên kết bấm được — không có mục "Sắp có"', () => {
+describe('AccountSidebar - hành vi chung', () => {
+  it('mọi mục trong menu đều là liên kết bấm được - không có mục "Sắp có"', () => {
     const { container } = render(<AccountSidebar user={user()} />);
 
     const items = container.querySelectorAll('nav li');
@@ -142,7 +142,7 @@ describe('AccountSidebar — hành vi chung', () => {
    * ĐĂNG XUẤT KHÔNG ở menu này — nó ở menu avatar trên header, thứ đứng trên mọi trang của khu
    * này. Hai nút đăng xuất trên cùng một màn là hai luồng phải giữ cho giống nhau.
    */
-  it('KHÔNG có nút đăng xuất — lối đó nằm ở menu avatar trên header', () => {
+  it('KHÔNG có nút đăng xuất - lối đó nằm ở menu avatar trên header', () => {
     render(<AccountSidebar user={user()} />);
 
     expect(screen.queryByText('Đăng xuất')).toBeNull();

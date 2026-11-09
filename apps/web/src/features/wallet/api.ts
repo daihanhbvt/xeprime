@@ -1,7 +1,8 @@
 import { apiGet, apiPost, type QueryParams } from '@/services/api-client';
 import type {
   CreateWithdrawalInput,
-  WalletEntryPage,
+  WalletActivityFilters,
+  WalletActivityPage,
   WalletScope,
   WalletStatement,
   WalletStatementFilters,
@@ -21,25 +22,16 @@ const base = (scope: WalletScope) => `/${scope}/wallet`;
 export const fetchWalletSummary = (scope: WalletScope): Promise<WalletSummary> =>
   apiGet<WalletSummary>(base(scope));
 
-export const fetchWalletEntries = (
-  scope: WalletScope,
-  params: QueryParams,
-): Promise<WalletEntryPage> => apiGet<WalletEntryPage>(`${base(scope)}/entries`, params);
-
 export const fetchWithdrawals = (scope: WalletScope): Promise<WithdrawalRequest[]> =>
   apiGet<WithdrawalRequest[]>(`${base(scope)}/withdrawals`);
 
 export const createWithdrawal = (
   scope: WalletScope,
   body: CreateWithdrawalInput,
-): Promise<WithdrawalRequest> =>
-  apiPost<WithdrawalRequest>(`${base(scope)}/withdrawals`, body);
+): Promise<WithdrawalRequest> => apiPost<WithdrawalRequest>(`${base(scope)}/withdrawals`, body);
 
 export const cancelWithdrawal = (scope: WalletScope, id: string): Promise<void> =>
   apiPost<void>(`${base(scope)}/withdrawals/${id}/cancel`);
-
-/** Tham số phân trang sổ — `page` sống trên URL (ADR 0004). */
-export const walletEntriesParams = (page: number): QueryParams => ({ page, limit: 20 });
 
 /**
  * Bảng tổng hợp giao dịch của gian hàng trong một kỳ.
@@ -55,4 +47,16 @@ export const walletStatementParams = (filters: WalletStatementFilters): QueryPar
   period: filters.period,
   page: filters.page,
   limit: WALLET_STATEMENT_PAGE_SIZE,
+});
+
+export const WALLET_ACTIVITY_PAGE_SIZE = 20;
+
+/** Biến động số dư của gian hàng trong một kỳ — chỉ khu partner có. */
+export const fetchWalletActivity = (params: QueryParams): Promise<WalletActivityPage> =>
+  apiGet<WalletActivityPage>('/shop/wallet/activity', params);
+
+export const walletActivityParams = (filters: WalletActivityFilters): QueryParams => ({
+  period: filters.period,
+  page: filters.page,
+  limit: WALLET_ACTIVITY_PAGE_SIZE,
 });

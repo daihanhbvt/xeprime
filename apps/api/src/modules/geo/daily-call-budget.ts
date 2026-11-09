@@ -33,7 +33,7 @@ export class DailyCallBudget {
       if (!this.usage.warned) {
         this.usage.warned = true;
         this.logger.warn(
-          `${this.label} chạm trần ${limit} lượt/ngày (${day}) — bản đồ coi như không hỏi được tới hết ngày.`,
+          `${this.label} chạm trần ${limit} lượt/ngày (${day}) - bản đồ coi như không hỏi được tới hết ngày.`,
         );
       }
       throw new GeoQuotaExceededError(`${api}: đã chạm trần GEO_DAILY_CALL_BUDGET`);

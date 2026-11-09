@@ -1,5 +1,5 @@
 /**
- * `@xeprime/domain` — luật nghiệp vụ THUẦN, dùng chung cho web và app native.
+ * `@xeprime/domain` - luật nghiệp vụ THUẦN, dùng chung cho web và app native.
  *
  * Điều kiện để một thứ được vào đây: nó không biết mình đang chạy ở đâu. Không React, không
  * Ant Design, không CSS, không `next/*`, không `File`/`XMLHttpRequest`, không đọc `process.env`.
@@ -12,9 +12,9 @@
  * client sẽ nói hai điều khác nhau về cùng một chiếc xe.
  *
  * Cái KHÔNG bao giờ vào đây (`docs/mobile-readiness-audit.md` §14.3):
- *  - hook filter sống ở URL — mobile không có URL, nó cần bản khác cùng interface (ADR 0004);
- *  - `uploadToR2` — dùng `File` + `XMLHttpRequest`; chỉ phần gọi presign là dùng chung được;
- *  - `apps/api/src/common/booking-money.ts` — server là nơi DUY NHẤT tính tiền có thẩm quyền,
+ *  - hook filter sống ở URL - mobile không có URL, nó cần bản khác cùng interface (ADR 0004);
+ *  - `uploadToR2` - dùng `File` + `XMLHttpRequest`; chỉ phần gọi presign là dùng chung được;
+ *  - `apps/api/src/common/booking-money.ts` - server là nơi DUY NHẤT tính tiền có thẩm quyền,
  *    và nó dùng `Prisma.Decimal`/`Prisma.sql`.
  */
 
@@ -32,6 +32,7 @@ export {
   subtractMoney,
   payAtPickupAmount,
   sumMoney,
+  moneyPerPart,
   absoluteMoney,
   isNegativeMoney,
   isPositiveMoney,
@@ -51,6 +52,7 @@ export {
   NUMBER_GROUP_SEPARATOR,
   NUMBER_DECIMAL_SEPARATOR,
   VI_MONEY_SEPARATORS,
+  moneyToEnglishWords,
   moneyToVietnameseWords,
   type CompactMoneyParts,
   type MoneyCompactUnit,
@@ -58,6 +60,7 @@ export {
 } from './money';
 
 export {
+  overdueDays,
   APP_TIME_ZONE,
   chargedDays,
   TIME_FORMAT,
@@ -89,7 +92,7 @@ export {
 export { isSafeNextPath, safeNextPath } from './safe-path';
 
 /**
- * Từ khoá tìm xe ở chợ — gấp chuỗi (bỏ dấu, tách chữ ↔ số) và tô phần khớp. Server dùng để dựng
+ * Từ khoá tìm xe ở chợ - gấp chuỗi (bỏ dấu, tách chữ ↔ số) và tô phần khớp. Server dùng để dựng
  * điều kiện lọc, client dùng để tô kết quả; bản sinh đôi SQL là `xeprime_search_fold()`.
  */
 export {
@@ -105,7 +108,7 @@ export {
 /**
  * Thông báo đẩy: một thông báo dẫn đi đâu, gộp với tin nào, ồn tới mức nào.
  *
- * Ở domain vì server ĐÓNG GÓI đường dẫn vào payload còn app native ĐIỀU HƯỚNG theo nó — hai
+ * Ở domain vì server ĐÓNG GÓI đường dẫn vào payload còn app native ĐIỀU HƯỚNG theo nó - hai
  * bảng route khác nhau một dấu gạch chéo là một thông báo mở ra màn trắng.
  */
 export {
@@ -122,7 +125,7 @@ export {
   type PushDataInput,
 } from './notification-delivery';
 
-/** Câu thông báo khi lượt gán tài xế rơi về bên thuê — API và worker phát chung (ADR 0066). */
+/** Câu thông báo khi lượt gán tài xế rơi về bên thuê - API và worker phát chung (ADR 0066). */
 export {
   driverDisplayName,
   driverMissingEmployerCopy,
@@ -240,7 +243,7 @@ export {
   type VehicleDayBasePrice,
 } from './bulk-day';
 /**
- * Ngữ cảnh tìm kiếm marketplace — luật "dịch vụ nào phát tham số nào", dùng chung web ↔ native.
+ * Ngữ cảnh tìm kiếm marketplace - luật "dịch vụ nào phát tham số nào", dùng chung web ↔ native.
  * Nằm ở domain vì nó là NGHIỆP VỤ (ADR 0011 nằm trong đó), không phải chuyện gọi HTTP.
  */
 export {
@@ -259,8 +262,8 @@ export {
   type SearchFilterPatch,
 } from './search-draft';
 
-/** Ký hiệu trình bày dùng chung — không phải chữ, nên không nằm trong bó message. */
-export { LIST_SEPARATOR, vehicleLabel } from './display';
+/** Ký hiệu trình bày dùng chung - không phải chữ, nên không nằm trong bó message. */
+export { DATE_TIME_SEPARATOR, LIST_SEPARATOR, vehicleLabel } from './display';
 
 export {
   deliverySummaryText,
@@ -295,7 +298,7 @@ export {
 } from './banks';
 
 /**
- * Hợp nhất tin nhắn của một thread chat — dùng chung web ↔ native.
+ * Hợp nhất tin nhắn của một thread chat - dùng chung web ↔ native.
  *
  * Nằm ở domain vì đây là LUẬT chứ không phải trình bày: ba nguồn không đồng bộ (REST, tin lạc
  * quan, tín hiệu realtime) đến theo thứ tự bất kỳ, và "tin nào là trùng" phải có đúng một câu
@@ -319,7 +322,7 @@ export {
 } from './chat-thread';
 
 /**
- * Bốn văn bản pháp lý công khai của sàn — slug, ngày hiệu lực, thứ tự điều khoản.
+ * Bốn văn bản pháp lý công khai của sàn - slug, ngày hiệu lực, thứ tự điều khoản.
  *
  * Dùng chung vì cả hai client viện dẫn cùng bộ văn bản: web render tại `/legal/<slug>`, app
  * native mở đúng địa chỉ đó trong trình duyệt trong-app (ADR 0028 điều 9).
@@ -337,11 +340,11 @@ export {
 } from './legal';
 
 /**
- * Giá thuê THAM KHẢO cho chủ xe đang đặt giá lần đầu — mức khởi điểm theo phân khúc, dùng khi
+ * Giá thuê THAM KHẢO cho chủ xe đang đặt giá lần đầu - mức khởi điểm theo phân khúc, dùng khi
  * chợ chưa đủ xe tương tự để nói lên một con số thật.
  *
  * Nằm ở domain vì đây là chính sách sản phẩm dùng chung (app native có cùng màn đăng xe) và nó
- * phải chạy được ở chỗ không có React lẫn Prisma — backend đọc chính bảng này khi mẫu quá nhỏ.
+ * phải chạy được ở chỗ không có React lẫn Prisma - backend đọc chính bảng này khi mẫu quá nhỏ.
  */
 export {
   BASELINE_REVIEWED_ON,
@@ -357,7 +360,7 @@ export {
 } from './market-price';
 
 /**
- * Thư viện PDF của chủ xe — cẩm nang, hợp đồng mẫu, chứng từ quyết toán.
+ * Thư viện PDF của chủ xe - cẩm nang, hợp đồng mẫu, chứng từ quyết toán.
  *
  * Dùng chung vì cả hai client trưng CÙNG bộ tài liệu: web phục vụ file tĩnh tại
  * `/owner-resources/<file>`, app native mở đúng địa chỉ đó qua `resolveWebBaseUrl()`.
@@ -373,7 +376,7 @@ export {
 } from './owner-resources';
 
 /**
- * Bằng lái của khách (ADR 0057) — hạng nào lái được loại xe nào, và bằng có dùng được cho một
+ * Bằng lái của khách (ADR 0057) - hạng nào lái được loại xe nào, và bằng có dùng được cho một
  * chuyến không. API soát ở cổng gửi yêu cầu; client soát trước để chỉ cho khách bước còn thiếu.
  */
 export {
@@ -393,7 +396,7 @@ export {
   type LicenceCoverage,
 } from './driver-licence';
 
-/** So kỳ này với kỳ trước — mũi tên tăng/giảm của thẻ KPI trên Tổng quan (web + app native). */
+/** So kỳ này với kỳ trước - mũi tên tăng/giảm của thẻ KPI trên Tổng quan (web + app native). */
 export { countChangePercent } from './period-change';
 
 export {

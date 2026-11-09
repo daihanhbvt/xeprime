@@ -105,10 +105,10 @@ const C = ACCOUNT_REALM.CUSTOMER;
 const P = ACCOUNT_REALM.PARTNER;
 
 describe('Phone verification OTP (Phase 4)', () => {
-  maybe('normalizePhone: 0.. / +84.. / 84.. → 84xxxxxxxxx', async () => {
-    expect(normalizePhone('0901234567')).toBe('84901234567');
-    expect(normalizePhone('+84901234567')).toBe('84901234567');
-    expect(normalizePhone('84901234567')).toBe('84901234567');
+  maybe('normalizePhone: 0.. / +84.. / 84.. → 0xxxxxxxxx (ADR 0082)', async () => {
+    expect(normalizePhone('0901234567')).toBe('0901234567');
+    expect(normalizePhone('+84901234567')).toBe('0901234567');
+    expect(normalizePhone('84901234567')).toBe('0901234567');
   });
 
   maybe('gửi → verify happy path (devCode ở mock)', async () => {
@@ -269,6 +269,65 @@ describe('Mã OTP test (OTP_BYPASS_CODE — dev/staging)', () => {
     expect(rows).toEqual([{ status: PHONE_VERIFICATION_STATUS.VERIFIED, provider: 'mock' }]);
   });
 
+  maybe('mã đã gửi mà HẾT HẠN: mã test cũng nhận OTP_EXPIRED, như production', async () => {
+    const phone = mkPhone();
+    await service.sendOtp(phone, BOOKING, C);
+    await prisma.phoneVerification.updateMany({
+      where: { phone: normalizePhone(phone), status: PHONE_VERIFICATION_STATUS.PENDING },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+    await withEnv({ OTP_BYPASS_CODE: BYPASS }, async () => {
+      await expect(service.verifyOtp(phone, BOOKING, BYPASS, C)).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.OTP_EXPIRED },
+      });
+    });
+  });
+
+  maybe(
+    'mã vừa bị KHOÁ vì đoán sai: mã test không mở lại được, cho tới khi gửi mã mới',
+    async () => {
+      const phone = mkPhone();
+      await service.sendOtp(phone, BOOKING, C);
+      await withEnv({ OTP_BYPASS_CODE: BYPASS }, async () => {
+        for (let i = 0; i < 4; i++) {
+          await expect(service.verifyOtp(phone, BOOKING, '000000', C)).rejects.toMatchObject({
+            response: { code: API_ERROR_CODE.OTP_INVALID },
+          });
+        }
+        await expect(service.verifyOtp(phone, BOOKING, '000000', C)).rejects.toMatchObject({
+          response: { code: API_ERROR_CODE.OTP_LOCKED },
+        });
+        await expect(service.verifyOtp(phone, BOOKING, BYPASS, C)).rejects.toMatchObject({
+          response: { code: API_ERROR_CODE.OTP_INVALID },
+        });
+
+        // Qua cooldown rồi gửi mã mới ⇒ mã test lại nhận được.
+        await prisma.phoneVerification.updateMany({
+          where: { phone: normalizePhone(phone) },
+          data: { createdAt: new Date(Date.now() - 2 * 60 * 1000) },
+        });
+        await service.sendOtp(phone, BOOKING, C);
+        await expect(service.verifyOtp(phone, BOOKING, BYPASS, C)).resolves.toEqual(
+          expect.any(String),
+        );
+      });
+    },
+  );
+
+  maybe(
+    'mã KHÔNG nhắn đi (quên mật khẩu, số chưa có tài khoản): mã test cũng không mở',
+    async () => {
+      const phone = mkPhone();
+      const RESET = PHONE_VERIFICATION_PURPOSE.PASSWORD_RESET;
+      await service.sendOtp(phone, RESET, C, { deliver: false });
+      await withEnv({ OTP_BYPASS_CODE: BYPASS }, async () => {
+        await expect(service.verifyOtp(phone, RESET, BYPASS, C)).rejects.toMatchObject({
+          response: { code: API_ERROR_CODE.OTP_INVALID },
+        });
+      });
+    },
+  );
+
   maybe('mã thật vẫn qua khi đang bật mã test', async () => {
     const phone = mkPhone();
     await withEnv({ OTP_BYPASS_CODE: BYPASS }, async () => {
@@ -317,12 +376,24 @@ describe('Công tắc gửi SMS OTP (admin — chỉ dev/staging)', () => {
 
     expect(devCode).toBeNull();
     expect(provider.sentTo.length).toBe(before);
-    // Hàng mã không tính vào cooldown/trần gửi (provider `bypass`).
     expect((await latestRow(phone))?.provider).toBe('bypass');
     await expect(off.verifyOtp(phone, BOOKING, '000000', C)).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.OTP_INVALID },
     });
     await expect(off.verifyOtp(phone, BOOKING, '123456', C)).resolves.toEqual(expect.any(String));
+  });
+
+  maybe('TẮT: cooldown gửi lại vẫn áp y production, kèm số giây còn chờ', async () => {
+    const off = new PhoneVerificationService(asService, config, provider);
+    jest.spyOn(off, 'isSmsDisabled').mockResolvedValue(true);
+    const phone = mkPhone();
+    await off.sendOtp(phone, BOOKING, C);
+    const error = await off.sendOtp(phone, BOOKING, C).catch((e: unknown) => e);
+    expect(error).toMatchObject({ response: { code: API_ERROR_CODE.OTP_COOLDOWN } });
+    const wait = (error as { response: { details: { retryAfterSeconds: number } } }).response
+      .details.retryAfterSeconds;
+    expect(wait).toBeGreaterThan(55);
+    expect(wait).toBeLessThanOrEqual(60);
   });
 
   maybe('BẬT: gửi qua nhà mạng như thường', async () => {
@@ -356,4 +427,34 @@ describe('Công tắc gửi SMS OTP (admin — chỉ dev/staging)', () => {
     );
     await expect(prod.isSmsDisabled()).resolves.toBe(false);
   });
+});
+
+describe('Trần gửi mã mỗi giờ (OTP_POLICY.MAX_SENDS_PER_HOUR)', () => {
+  maybe(
+    'chạm trần ⇒ OTP_TOO_MANY kèm đúng số giây tới lúc lượt cũ nhất ra khỏi cửa sổ',
+    async () => {
+      const phone = mkPhone();
+      // Năm lượt gửi, mỗi lượt cách nhau 2 phút (lùi giờ thay vì chờ cooldown): -10′ … -2′.
+      for (let i = 0; i < 5; i++) {
+        await service.sendOtp(phone, BOOKING, C);
+        const rows = await prisma.phoneVerification.findMany({
+          where: { phone: normalizePhone(phone) },
+          select: { id: true, createdAt: true },
+        });
+        for (const row of rows) {
+          await prisma.phoneVerification.update({
+            where: { id: row.id },
+            data: { createdAt: new Date(row.createdAt.getTime() - 2 * 60 * 1000) },
+          });
+        }
+      }
+      const error = await service.sendOtp(phone, BOOKING, C).catch((e: unknown) => e);
+      expect(error).toMatchObject({ response: { code: API_ERROR_CODE.OTP_TOO_MANY } });
+      // Lượt cũ nhất cách đây ~10 phút ⇒ còn ~50 phút nữa mới gửi lại được.
+      const wait = (error as { response: { details: { retryAfterSeconds: number } } }).response
+        .details.retryAfterSeconds;
+      expect(wait).toBeGreaterThan(50 * 60 - 30);
+      expect(wait).toBeLessThanOrEqual(50 * 60);
+    },
+  );
 });

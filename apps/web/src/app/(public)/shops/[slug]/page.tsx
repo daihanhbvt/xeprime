@@ -11,6 +11,7 @@ import { ShopHeader } from '@/features/marketplace/components/ShopHeader';
 import { ShopReviews } from '@/features/marketplace/components/ShopReviews';
 import { ShopTrust } from '@/features/marketplace/components/ShopTrust';
 import { ShopVehicles } from '@/features/marketplace/components/ShopVehicles';
+import { Reveal } from '@/components/motion/Reveal';
 import styles from './page.module.css';
 
 interface PageProps {
@@ -78,13 +79,19 @@ export default async function ShopPage({ params }: PageProps) {
 
       <div className={styles.body}>
         {isShop ? (
-          <ShopTrust
-            trust={shop.trust}
-            vehicleCount={shop.vehicleCount}
-            noCollateralCount={shop.vehicleFilterCounts.noCollateral}
-          />
+          <Reveal>
+            <ShopTrust
+              trust={shop.trust}
+              vehicleCount={shop.vehicleCount}
+              noCollateralCount={shop.vehicleFilterCounts.noCollateral}
+            />
+          </Reveal>
         ) : null}
-        {isShop ? <ShopBranches branches={shop.branches} /> : null}
+        {isShop ? (
+          <Reveal>
+            <ShopBranches branches={shop.branches} />
+          </Reveal>
+        ) : null}
         <ShopVehicles
           slug={slug}
           vehicleCount={shop.vehicleCount}
@@ -92,7 +99,9 @@ export default async function ShopPage({ params }: PageProps) {
           provinces={shop.serviceProvinces}
           filterCounts={shop.vehicleFilterCounts}
         />
-        <ShopReviews slug={slug} />
+        <Reveal>
+          <ShopReviews slug={slug} />
+        </Reveal>
       </div>
     </div>
   );

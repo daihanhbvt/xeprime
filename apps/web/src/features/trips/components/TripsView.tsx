@@ -28,12 +28,12 @@ import { AccountPanel } from '@/features/account/components/AccountPanel';
  * Tab lịch sử có ô "Tìm kiếm chuyến đi" + "Chọn khoảng thời gian" (`TripHistoryFilters`) — lọc ở
  * server qua `GET /trips?q=&dateFrom=&dateTo=`; số trên tab vẫn là tổng của tab.
  *
- * Bộ lọc và trang sống ở **URL searchParams** (ADR 0004) qua `useTripListUrl`; khung tab + lọc
- * chặng + phân trang là `TripList`, dùng chung với danh sách chuyến cho thuê của chủ xe.
+ * Bộ lọc và trang sống ở **URL searchParams** (ADR 0004) qua `useTripListUrl`; thẻ + phân trang
+ * là `TripList`.
  *
  * **CHỈ chuyến ĐI THUÊ** (ADR 0053). Đây là site KHÁCH: tài khoản khách không có gian hàng nào, nên
- * không có phía "cho thuê" để trộn vào — chuyến cho thuê của chủ xe sống ở site partner
- * (`/trips` của chủ xe tuyến hoa hồng, `/bookings` + `/booking-requests` của gian hàng gói). Vai gửi
+ * không có phía "cho thuê" để trộn vào — chuyến cho thuê sống ở màn "Đơn thuê xe" (`/bookings`) của
+ * site partner, cả gian hàng gói lẫn chủ xe tuyến hoa hồng. Vai gửi
  * lên server luôn là `renter`; `?role=` cũ trên URL (bookmark, thông báo trước ADR 0053) bị bỏ qua.
  */
 export function TripsView() {
@@ -111,10 +111,6 @@ export function TripsView() {
         ) : null}
 
         <TripList
-          /* Dựng lại theo tab: bộ lọc chặng của tab kia không mang sang (xem `TripList.tabs`). */
-          key={filter}
-          tabs="external"
-          filter={filter}
           data={data}
           isLoading={isLoading}
           isFetching={isFetching}

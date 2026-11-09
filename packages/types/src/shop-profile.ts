@@ -67,7 +67,7 @@ export interface ShopProfileCompletenessInput {
   provinceCode?: string | null;
   /** Tên hiển thị của user chủ gian hàng. */
   ownerFullName?: string | null;
-  /** SĐT của user chủ gian hàng (dạng lưu `84…`). */
+  /** SĐT của user chủ gian hàng (dạng lưu `0…`, ADR 0082). */
   ownerPhone?: string | null;
   logoUrl?: string | null;
   coverUrl?: string | null;
@@ -185,7 +185,7 @@ export const PACKAGE_SHOP_LISTING_REQUIREMENT_VALUES = Object.values(
  */
 export interface PackageShopListingInput {
   displayName?: string | null;
-  /** SĐT liên hệ của CHI NHÁNH MẶC ĐỊNH (dạng lưu `84…` hoặc `0…`; hàm chỉ hỏi có hay không). */
+  /** SĐT liên hệ của CHI NHÁNH MẶC ĐỊNH (dạng lưu `0…`; hàm chỉ hỏi có hay không). */
   contactPhone?: string | null;
   provinceCode?: string | null;
   /** Số nhà/đường của chi nhánh mặc định — KHÔNG phải chuỗi hiển thị đã ghép. */

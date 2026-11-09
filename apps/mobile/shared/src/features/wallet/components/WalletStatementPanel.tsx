@@ -73,16 +73,6 @@ export function WalletStatementPanel({
   const t = useTranslations('Wallet.statement');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
-  const { data: user } = useCurrentUser();
-  /*
-   * Dòng thu nhập gọi người đọc bằng ĐÚNG tên của họ.
-   *
-   * Cùng một bảng phục vụ hai người: chủ gian hàng tuyến gói ở khu quản lý, và chủ xe cá nhân tuyến
-   * hoa hồng ở khu tài khoản. Gọi một chủ xe có đúng một chiếc xe là "chủ gian hàng" ngay trên dòng
-   * nói về thu nhập của chính họ là sai về con người. Suy từ TUYẾN, dùng chung phép suy với nhãn
-   * tài khoản và với web.
-   */
-  const incomeLabelKey = ownerIncomeKeyFor(user?.tenant);
 
   /*
    * Luôn hiện và luôn tải — đúng web (25/09/2026). Bản trước thu gọn khối này mặc định và chỉ tải
@@ -209,11 +199,67 @@ export function WalletStatementPanel({
         </YStack>
       ) : null}
 
-      {totals ? (
+    </YStack>
+  );
+}
+
+/**
+ * Thẻ "Tổng hợp tháng" — bản native của `WalletMonthSummary` (web, PR #276).
+ *
+ * Web tách phần cộng dồn của kỳ ra khỏi bảng tổng hợp, đứng ở cột bên và hiện ở CẢ HAI tab (Tổng
+ * hợp giao dịch · Biến động số dư). Đọc cùng `GET /shop/wallet/statement` với bảng — cùng khoá
+ * cache, nên không tốn thêm một lượt gọi khi đang ở tab tổng hợp.
+ */
+export function WalletMonthSummary({ filters }: { filters: WalletStatementFilters }) {
+  const colors = useColors();
+  const t = useTranslations('Wallet.statement');
+  const tWallet = useTranslations('Wallet');
+  const tCommon = useTranslations('Common');
+  const fmt = useAppFormat();
+  const query = useWalletStatement(filters, true);
+  const totals = query.data?.totals;
+  const stats = query.data?.stats;
+  const showCommission = isPositiveMoney(totals?.ownerCommissionTotal);
+  const { data: user } = useCurrentUser();
+  /*
+   * Dòng thu nhập gọi người đọc bằng ĐÚNG tên của họ.
+   *
+   * Cùng một bảng phục vụ hai người: chủ gian hàng tuyến gói ở khu quản lý, và chủ xe cá nhân tuyến
+   * hoa hồng ở khu tài khoản. Gọi một chủ xe có đúng một chiếc xe là "chủ gian hàng" ngay trên dòng
+   * nói về thu nhập của chính họ là sai về con người. Suy từ TUYẾN, dùng chung phép suy với nhãn
+   * tài khoản và với web.
+   */
+  const incomeLabelKey = ownerIncomeKeyFor(user?.tenant);
+  const [year, month] = filters.period.split('-');
+
+  return (
+    <YStack gap={space.sm}>
+      <BlockTitle>{tWallet('month.title', { month: `${month}/${year}` })}</BlockTitle>
+      {query.isPending && !query.data ? <MiniRowsSkeleton rows={4} /> : null}
+      {query.isError && !query.data ? (
+        <Callout tone="danger" title={t('loadError')}>
+          <Button
+            label={tCommon('actions.retry')}
+            variant="secondary"
+            size="sm"
+            block={false}
+            onPress={() => void query.refetch()}
+          />
+        </Callout>
+      ) : null}
+      {totals && stats ? (
         <Card padded={false}>
           <YStack p={space.md} gap={space.sm}>
             <SummaryRow
-              label={t('totals.balanceChange')}
+              label={t('stats.trips')}
+              value={
+                <Text col={colors.text} fos={fontSize.bodySm}>
+                  {t('stats.tripsValue', { count: stats.completedTripCount })}
+                </Text>
+              }
+            />
+            <SummaryRow
+              label={tWallet('month.balanceChange')}
               value={<SignedAmount value={totals.balanceChangeTotal} strong />}
             />
             {/*
@@ -275,7 +321,7 @@ export function WalletStatementPanel({
               hint={t('totals.appOwnerIncomeHint')}
               highlight
               value={
-                <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
+                <Text col={colors.accentText} fos={fontSize.h4} fow={fontWeight.semibold}>
                   {fmt.money(totals.ownerIncome)}
                 </Text>
               }
@@ -325,7 +371,7 @@ function TripCard({
         <YStack f={1} minWidth={0} p={space.md} gap={space.sm}>
           <XStack ai="flex-start" gap={space.sm}>
             <YStack f={1} minWidth={0} gap={space.xs}>
-              <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold} numberOfLines={1}>
+              <Text col={colors.accentText} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={1}>
                 {trip.code}
               </Text>
               <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
@@ -514,7 +560,7 @@ function MetricDivider() {
  * Dấu đứng trước và có màu riêng: trên một sổ tiền, hướng dòng tiền là thứ mắt phải bắt được trước
  * giá trị. Dùng cả dấu lẫn màu để không phụ thuộc khả năng phân biệt màu.
  */
-function SignedAmount({
+export function SignedAmount({
   value,
   prominent = false,
   strong = false,

@@ -144,7 +144,7 @@ const COPY: Readonly<Record<AppLocale, Copy>> = {
       [PLAN_GUIDE_REASON.REGISTERED]: () =>
         'Cảm ơn bạn đã đăng ký gian hàng trên XePrime. Gian hàng sẽ mở ngay khi gói được thanh toán trên website.',
       [PLAN_GUIDE_REASON.CONSULTATION]: () =>
-        'XePrime đã nhận yêu cầu tư vấn gói của bạn — nhân viên sẽ liên hệ sớm. Trong lúc chờ, bạn có thể xem và chọn gói ngay trên website.',
+        'XePrime đã nhận yêu cầu tư vấn gói của bạn - nhân viên sẽ liên hệ sớm. Trong lúc chờ, bạn có thể xem và chọn gói ngay trên website.',
       [PLAN_GUIDE_REASON.EXPIRING]: (v) =>
         `Gói của bạn sẽ hết hạn ngày ${v.expiresAt}. Gia hạn trên website để giữ ${v.packageCommissionPercent ? `mức hoa hồng ${v.packageCommissionPercent}` : 'quyền lợi gói'} trên mỗi chuyến.`,
       [PLAN_GUIDE_REASON.EXPIRED]: (v) =>
@@ -163,7 +163,7 @@ const COPY: Readonly<Record<AppLocale, Copy>> = {
       [PLAN_GUIDE_REASON.REGISTERED]: () =>
         'Thank you for registering a shop on XePrime. Your shop opens as soon as a plan is paid on the website.',
       [PLAN_GUIDE_REASON.CONSULTATION]: () =>
-        'XePrime has received your plan consultation request — our team will contact you shortly. Meanwhile you can review and choose a plan on the website.',
+        'XePrime has received your plan consultation request - our team will contact you shortly. Meanwhile you can review and choose a plan on the website.',
       [PLAN_GUIDE_REASON.EXPIRING]: (v) =>
         `Your plan expires on ${v.expiresAt}. Renew on the website to keep ${v.packageCommissionPercent ? `${v.packageCommissionPercent} commission` : 'your plan benefits'} on every trip.`,
       [PLAN_GUIDE_REASON.EXPIRED]: (v) =>

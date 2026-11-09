@@ -1,5 +1,5 @@
 /*
- * Cỡ theo `font-size` của chỗ đặt (1em) — cùng cách icon AntD nhận cỡ, nên thay được cho nhau
+ * Cỡ theo `font-size` của chỗ đặt (1em) - cùng cách icon AntD nhận cỡ, nên thay được cho nhau
  * trong `HeaderIconButton` hay một dòng menu mà không phải sửa CSS của nơi đó.
  */
 .icon {
@@ -184,4 +184,9 @@
 
 .arrow-sm {
   mask-image: url('/icons/menu/arrow-sm.svg');
+}
+
+/* Huy chương "Award 2" - dòng "Nâng cấp gian hàng" của menu hồ sơ partner (`24051:85746`). */
+.award {
+  mask-image: url('/icons/menu/award.svg');
 }

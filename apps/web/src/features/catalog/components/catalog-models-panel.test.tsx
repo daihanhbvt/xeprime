@@ -194,7 +194,7 @@ describe('CatalogModelFormModal', () => {
       expect((screen.getByRole('checkbox', { name: '1 cấp (EV)' }) as HTMLInputElement).checked).toBe(true),
     );
     expect(screen.queryByRole('checkbox', { name: 'Số sàn (MT)' })).toBeNull();
-    expect(screen.getByText(/Điện — tự điền, khoá/)).toBeTruthy();
+    expect(screen.getByText(/Điện - tự điền, khoá/)).toBeTruthy();
   });
 
   it('nhiều cấu hình chỗ ngồi ⇒ chủ xe chọn trong các giá trị đó', () => {

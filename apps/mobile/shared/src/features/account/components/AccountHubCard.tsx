@@ -1,4 +1,8 @@
 import { Pressable } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { usePressScale } from '@/components/motion/PressableScale';
+import { useScrollRevealDefault } from '@/components/motion/ScrollReveal';
+import { useRevealPop } from '@/components/motion/reveal-effects';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { LineIcon } from '@/components/icons/LineIcon';
@@ -21,6 +25,9 @@ export function AccountHubCard() {
   const navigateOnce = useNavigateOnce();
   const { data: user } = useCurrentUser();
   const identityLabel = useAccountIdentityLabel();
+  // Ảnh đại diện nảy lên khi thẻ hiện + thẻ co nhẹ khi nhấn (app khách; Partner giữ tĩnh).
+  const avatarPop = useRevealPop(140, 0.7, false);
+  const press = usePressScale(useScrollRevealDefault(), 0.98);
   if (!user) return null;
 
   const name = user.displayName || user.email || t('profile.accountLabel');
@@ -30,7 +37,10 @@ export function AccountHubCard() {
       onPress={() => navigateOnce(ROUTES.account.profile())}
       accessibilityRole="button"
       accessibilityLabel={tNav('account.profile')}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
     >
+      <Animated.View style={press.style}>
       <XStack
         ai="center"
         gap={12}
@@ -40,7 +50,9 @@ export function AccountHubCard() {
         bc={colors.borderSubtle}
         bg={colors.surface}
       >
-        <Avatar name={name} url={user.avatarUrl ?? null} size={56} />
+        <Animated.View style={avatarPop}>
+          <Avatar name={name} url={user.avatarUrl ?? null} size={56} />
+        </Animated.View>
         <YStack f={1} minWidth={0} gap={2}>
           <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.semibold} numberOfLines={1}>
             {name}
@@ -51,6 +63,7 @@ export function AccountHubCard() {
         </YStack>
         <LineIcon name="edit" size={iconSize.md} color={colors.textMuted} />
       </XStack>
+      </Animated.View>
     </Pressable>
   );
 }

@@ -17,6 +17,7 @@ import {
   API_ERROR_CODE,
   EMAIL_VERIFICATION_PURPOSE,
   PHONE_VERIFICATION_PURPOSE,
+  VN_MOBILE_PHONE_PATTERN,
 } from '@xeprime/types';
 import {
   IsEmail,
@@ -28,7 +29,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { CurrentUser, Realms } from '../../common/decorators';
-import { normalizePhone } from '../../common/phone';
+import { normalizePhone, PhoneInput } from '../../common/phone';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
@@ -39,8 +40,6 @@ import {
 import { SendOtpResultDto } from '../phone-verification/dto/phone-verification.dto';
 import { PhoneVerificationService } from '../phone-verification/phone-verification.service';
 
-/** SĐT Việt Nam: `0` + 9 số hoặc `+84` + 9 số. Server chuẩn hoá về `84xxxxxxxxx`. */
-const VN_PHONE = /^(0|\+84)\d{9}$/;
 
 export class UpdateMeDto {
   @ApiPropertyOptional({ maxLength: 255 })
@@ -63,8 +62,9 @@ export class UpdateMeDto {
 
 export class SendPhoneOtpDto {
   @ApiProperty({ example: '0901234567' })
+  @PhoneInput()
   @IsString()
-  @Matches(VN_PHONE, { message: 'Số điện thoại không hợp lệ' })
+  @Matches(VN_MOBILE_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
   phone!: string;
 }
 

@@ -38,7 +38,7 @@ async function fillForm(view: View, confirm = 'Abcd1234') {
   await fireEvent.changeText(view.getByPlaceholderText('Nhập lại mật khẩu'), confirm);
 }
 
-describe('ForgotPasswordScreen — một màn + sheet OTP (ADR 0060, giống web)', () => {
+describe('ForgotPasswordScreen - một màn + sheet OTP (ADR 0060, giống web)', () => {
   it('khoá "Xác nhận" tới khi SĐT + mật khẩu mới + nhập lại đều hợp lệ', async () => {
     const view = await renderScreen();
     const submit = () => view.getByRole('button', { name: 'Xác nhận' });

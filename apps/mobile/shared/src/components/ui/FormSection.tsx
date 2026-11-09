@@ -23,7 +23,7 @@ export function FormSection({
   return (
     <YStack gap={space.sm}>
       <XStack ai="center" gap={space.xs}>
-        {icon ? <Ionicons name={icon} size={iconSize.sm} color={colors.primaryActive} /> : null}
+        {icon ? <Ionicons name={icon} size={iconSize.sm} color={colors.accentText} /> : null}
         <Text f={1} col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.semibold}>
           {title}
         </Text>

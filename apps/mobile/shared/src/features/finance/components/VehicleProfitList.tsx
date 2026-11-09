@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { RemoteImage } from '@/components/ui/RemoteImage';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -155,14 +156,23 @@ export function VehicleProfitList({
                         w={TILE_SIZE}
                         h={TILE_SIZE}
                         br={radius.md}
+                        ov="hidden"
                         ai="center"
                         jc="center"
                         bg={colors.primaryLight}
                       >
-                        <Ionicons
-                          name="car-sport-outline"
-                          size={iconSize.md}
-                          color={colors.primaryActive}
+                        {/* Ảnh đại diện của xe (PR #276) — thiếu ảnh thì về biểu tượng. */}
+                        <RemoteImage
+                          uri={row.mainImageUrl}
+                          recyclingKey={row.vehicleId}
+                          radius={radius.md}
+                          fallback={
+                            <Ionicons
+                              name="car-sport-outline"
+                              size={iconSize.md}
+                              color={colors.primaryActive}
+                            />
+                          }
                         />
                       </YStack>
 

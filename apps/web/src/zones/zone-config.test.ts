@@ -46,7 +46,7 @@ afterEach(() => {
 });
 
 describe('zoneMode', () => {
-  it('mặc định path — thiếu biến thì máy dev vẫn đúng', () => {
+  it('mặc định path - thiếu biến thì máy dev vẫn đúng', () => {
     vi.stubEnv('NEXT_PUBLIC_XP_ZONE_MODE', '');
     expect(zoneMode()).toBe(PATH);
     vi.stubEnv('NEXT_PUBLIC_XP_ZONE_MODE', 'bogus');

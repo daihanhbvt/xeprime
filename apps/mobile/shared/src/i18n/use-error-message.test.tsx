@@ -19,7 +19,7 @@ async function errorMessageFor(locale: AppLocale) {
  * tiếng Việt của backend. Bản trước của app làm ngược — ở giao diện tiếng Anh, mọi lỗi có
  * response hiện một câu tiếng Việt.
  */
-describe('useErrorMessage — nguồn chữ là MÃ lỗi, như web', () => {
+describe('useErrorMessage - nguồn chữ là MÃ lỗi, như web', () => {
   const invalidCredentials = new ApiClientError({
     code: API_ERROR_CODE.INVALID_CREDENTIALS,
     message: 'Sai thông tin đăng nhập',
@@ -33,7 +33,7 @@ describe('useErrorMessage — nguồn chữ là MÃ lỗi, như web', () => {
     expect(toMessage(invalidCredentials)).not.toBe('Sai thông tin đăng nhập');
   });
 
-  it('tiếng Anh: câu tiếng Anh cho cùng mã — không lọt tiếng Việt của backend', async () => {
+  it('tiếng Anh: câu tiếng Anh cho cùng mã - không lọt tiếng Việt của backend', async () => {
     const toMessage = await errorMessageFor('en');
 
     expect(toMessage(invalidCredentials)).toBe(enErrors.code.INVALID_CREDENTIALS);

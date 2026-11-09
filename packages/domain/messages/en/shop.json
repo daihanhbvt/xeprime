@@ -19,7 +19,7 @@
     "submit": "Submit for review",
     "resubmit": "Resubmit for review",
     "submitted": "Profile submitted for review",
-    "incomplete": "{count, plural, one {# item still needs attention} other {# items still need attention}} — we moved the cursor to the first one.",
+    "incomplete": "{count, plural, one {# item still needs attention} other {# items still need attention}} - we moved the cursor to the first one.",
     "reason": "The review team wrote: {reason}",
     "submitConfirm": {
       "title": "Submit this profile for review?",
@@ -52,7 +52,7 @@
     },
     "rejected": {
       "title": "Profile rejected",
-      "body": "Fix what the reason below mentions and send it again — you can still resubmit.",
+      "body": "Fix what the reason below mentions and send it again - you can still resubmit.",
       "shell": "Your shop profile was not approved. Read the reason, fix it and submit again."
     },
     "active": {
@@ -97,7 +97,7 @@
         "label": "Shop contact email",
         "placeholder": "contact@yourshop.vn"
       },
-      "contactHint": "Renters see this phone and email when they book. They are separate from the phone and email on your sign-in account — changing one does not change the other.",
+      "contactHint": "Renters see this phone and email when they book. They are separate from the phone and email on your sign-in account - changing one does not change the other.",
       "bio": {
         "label": "About the shop",
         "placeholder": "A short description of your shop…"
@@ -122,7 +122,7 @@
         "placeholder": "Select a province or city",
         "loading": "Loading provinces…",
         "loadError": "Couldn't load the list of provinces",
-        "help": "Where your default branch sits — vehicles at that branch are listed in this province.",
+        "help": "Where your default branch sits - vehicles at that branch are listed in this province.",
         "branchLink": "Manage branches"
       },
       "taxCode": {
@@ -141,7 +141,7 @@
     "requiredDone": "Ready to submit for review",
     "profileRequiredTitle": "Required details",
     "profileRequiredDone": "All required details are filled in",
-    "suggestedTitle": "Recommended — helps renters pick your shop",
+    "suggestedTitle": "Recommended - helps renters pick your shop",
     "goToField": "Fill in",
     "items": {
       "displayName": "Shop display name",
@@ -191,7 +191,67 @@
       "ok": "Apply changes"
     },
     "appliedTipLabel": "How this policy applies",
-    "dirtyDiscard": "Discard"
+    "dirtyDiscard": "Discard",
+    "workspace": {
+      "title": "Rental policies",
+      "subtitle": "Applied as the default rules for the whole shop. You can still set a custom policy for any vehicle when needed.",
+      "vehicleTabsLabel": "Policies by vehicle type",
+      "nav": {
+        "label": "Rental policy sections",
+        "rules": "Rental policies & rules",
+        "delivery": "Vehicle delivery",
+        "longTerm": "Long-term discounts"
+      },
+      "actionsLabel": "Save rental policies",
+      "switchType": {
+        "title": "Discard unsaved changes?",
+        "body": "The {vehicle} policy has unsaved changes. Switching to {next} will discard them.",
+        "ok": "Discard and switch"
+      },
+      "payment": {
+        "title": "Payments & invoices",
+        "subtitle": "How customers pay the booking hold and how invoices are issued.",
+        "tipLabel": "About the booking hold"
+      },
+      "procedures": {
+        "title": "Rental procedures & terms"
+      },
+      "collateral": {
+        "title": "Collateral",
+        "modeCash": "The customer leaves a sum of money, refunded by the owner once the vehicle is handed back.",
+        "modeNone": "Makes booking as easy as possible to attract more customers.",
+        "overriddenTipLabel": "Vehicles with their own policy"
+      },
+      "mileage": {
+        "hint": "Daily km limit and the fee for going over it."
+      },
+      "overtime": {
+        "title": "Late return limit & fee",
+        "hint": "Return grace time and the fee for late returns.",
+        "grace": "Free grace time"
+      },
+      "delivery": {
+        "title": "Vehicle delivery",
+        "serviceTitle": "Door-to-door delivery",
+        "serviceHint": "Set the delivery range and the two-way delivery fee for bookings",
+        "from": "From",
+        "to": "To",
+        "fee": "Fee",
+        "ok": "No overlapping distances",
+        "empty": "No distance yet - add at least one band so customers can request delivery."
+      },
+      "turnaround": {
+        "title": "Turnaround time between trips",
+        "hint": "Preparation time (cleaning, charging, checks…) added to the vehicle calendar after every trip.",
+        "applies": "{count, plural, one {# vehicle follows} other {# vehicles follow}} this default. Vehicles with their own setting on the vehicle edit page keep it.",
+        "tipLabel": "About when the turnaround time applies"
+      },
+      "longTerm": {
+        "title": "Long-term discounts (over 1 month)",
+        "empty": "No discount tiers yet - long-term customers pay the full package price.",
+        "inactive": "The tiers below are switched off, so customers cannot see them. Saving will switch them on; delete them if you do not want them."
+      }
+    }
   },
   "vatInvoice": {
     "title": "VAT invoice",
@@ -200,14 +260,15 @@
     "ariaLabel": "Turn VAT invoice support on or off for all vehicles",
     "on": "On for all vehicles",
     "off": "Off",
-    "note": "You issue the invoice for the rental — yourself, or through your company or a party you arrange — under a direct agreement with the renter. XePrime does not issue invoices on your behalf, and this setting does not change prices, fees, taxes or booking conditions.",
+    "note": "You issue the invoice for the rental - yourself, or through your company or a party you arrange - under a direct agreement with the renter. XePrime does not issue invoices on your behalf, and this setting does not change prices, fees, taxes or booking conditions.",
     "enabled": "VAT invoice support turned on for all vehicles",
     "disabled": "VAT invoice support turned off",
-    "loadError": "Could not load the VAT invoice setting"
+    "loadError": "Could not load the VAT invoice setting",
+    "rowHint": "When on, your vehicles show a VAT-invoice badge on their card and detail page and appear in the search filter. You issue the invoice yourself as agreed with the customer; XePrime does not issue it for you or change prices, fees or taxes."
   },
   "paymentSettings": {
     "title": "Reservation payment through XePrime",
-    "subtitle": "During this phase, every trip on XePrime collects the reservation amount from the customer before the trip is confirmed. This is NOT the security deposit you take at handover — that one you collect, hold and refund yourself, and it lives in the per-vehicle policy below.",
+    "subtitle": "During this phase, every trip on XePrime collects the reservation amount from the customer before the trip is confirmed. This is NOT the security deposit you take at handover - that one you collect, hold and refund yourself, and it lives in the per-vehicle policy below.",
     "loadError": "Could not load reservation payment settings",
     "readOnly": "You can only view this setting. The shop owner is the one who turns it on or off.",
     "forbidden": {
@@ -224,12 +285,12 @@
       "onTitle": "Guests pay the reservation hold amount after you approve",
       "onBody": "After you approve the booking request, the customer scans a VietQR transfer to pay the reservation hold amount (platform fee + insurance + 15% rental hold) within the dynamic payment window. The booking is confirmed as soon as XePrime receives full payment. If you cancel after accepting, the guest receives a 100% refund and your reliability score is penalized.",
       "offTitle": "You arrange it with the guest yourself",
-      "offBody": "Approving creates the booking straight away, with no wait for money. You contact the guest to arrange the security deposit at pickup — XePrime neither collects nor reconciles it, so if a dispute arises XePrime has no record to support you."
+      "offBody": "Approving creates the booking straight away, with no wait for money. You contact the guest to arrange the security deposit at pickup - XePrime neither collects nor reconciles it, so if a dispute arises XePrime has no record to support you."
     },
     "locked": {
       "platform": {
-        "title": "XePrime collects the reservation amount for every shop",
-        "body": "During this phase every trip on XePrime collects the reservation amount from the customer up front, regardless of plan. The switch is locked for now and will reopen later; your saved choice is kept and will apply again then."
+        "title": "XePrime is collecting booking holds for every shop",
+        "body": "Right now every trip on XePrime requires the customer to pay a booking hold first, whatever the plan. The on/off switch is temporarily locked and will reopen later. Your current choice is kept and applies again once the switch is back."
       },
       "commission": {
         "title": "Your shop always collects deposits through XePrime",
@@ -302,7 +363,8 @@
     "noPhone": "No phone number yet",
     "verified": "Verified",
     "unverified": "Not verified",
-    "manageLogin": "Manage sign-in details"
+    "manageLogin": "Manage sign-in details",
+    "manageAccount": "Manage account"
   },
   "welcome": {
     "logo": {
@@ -330,9 +392,9 @@
     }
   },
   "personal": {
-    "provinceHelp": "Where renters pick up — your vehicles are listed in this province.",
+    "provinceHelp": "Where renters pick up - your vehicles are listed in this province.",
     "checklist": {
-      "suggestedTitle": "Recommended — helps renters feel confident choosing your cars",
+      "suggestedTitle": "Recommended - helps renters feel confident choosing your cars",
       "items": {
         "displayName": "Name shown on the marketplace",
         "province": "Pickup province",
@@ -343,6 +405,44 @@
         "address": "Pickup address",
         "cover": "Cover image"
       }
+    }
+  },
+  "info": {
+    "legal": {
+      "title": "Address & legal",
+      "hint": "Vehicle pickup location & legal details",
+      "dialogHint": "Update the vehicle pickup location & legal details",
+      "edit": "Edit address & legal details",
+      "province": "Province/City",
+      "ward": "Ward/Commune",
+      "address": "Address",
+      "businessLicenseNo": "Business licence no.",
+      "defaultBranchNote": "Taken from the default branch.",
+      "manageBranches": "Manage"
+    },
+    "tax": {
+      "hint": "Information used for tax filing",
+      "edit": "Edit tax information",
+      "entityType": "Entity type",
+      "legalNameBusiness": "Household business / company name",
+      "note": "How tax is paid or withheld depends on your entity type and current tax advice. Rates will be announced before they apply."
+    },
+    "display": {
+      "title": "Display information",
+      "hint": "What customers see on the marketplace",
+      "mediaHint": "Logo 800x800px · Cover 1600x600",
+      "changeLogo": "Change logo",
+      "changeCover": "Change cover",
+      "removeLogo": "Remove logo",
+      "removeCover": "Remove cover",
+      "edit": "Edit information",
+      "dialogTitle": "Edit display information",
+      "displayName": "Display name",
+      "phone": "Contact phone",
+      "phoneField": "Displayed phone number",
+      "email": "Contact email",
+      "bio": "About",
+      "bioPlaceholder": "Introduce your shop"
     }
   }
 }

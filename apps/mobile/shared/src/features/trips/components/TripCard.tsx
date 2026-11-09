@@ -262,10 +262,10 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
             )}
           </MoneyCell>
           <MoneyCell label={t('card.paid')}>
-            {trip.totalAmount ? fmt.moneyThousands(paid) : '—'}
+            {trip.totalAmount ? fmt.moneyThousands(paid) : '-'}
           </MoneyCell>
           <MoneyCell label={t('card.remaining')} highlight>
-            {trip.totalAmount ? fmt.moneyThousands(remaining) : '—'}
+            {trip.totalAmount ? fmt.moneyThousands(remaining) : '-'}
           </MoneyCell>
         </XStack>
 
@@ -370,8 +370,8 @@ function ScheduleLine({ trip }: { trip: CustomerTrip }) {
   if (trip.pickupAt && trip.returnAt) {
     return (
       <YStack gap={space.xs}>
-        <SchedulePoint label={t('pickupAt')} value={fmt.dateTime(trip.pickupAt)} />
-        <SchedulePoint label={t('returnAt')} value={fmt.dateTime(trip.returnAt)} />
+        <SchedulePoint label={t('pickupAt')} value={fmt.rentalAt(trip.pickupAt)} />
+        <SchedulePoint label={t('returnAt')} value={fmt.rentalAt(trip.returnAt)} />
       </YStack>
     );
   }
@@ -386,7 +386,7 @@ function ScheduleLine({ trip }: { trip: CustomerTrip }) {
     return (
       <YStack gap={space.xs}>
         {packageLabel ? <SchedulePoint label={t('package')} value={packageLabel} /> : null}
-        <SchedulePoint label={t('pickupWish')} value={fmt.pickupWish(trip) || '—'} wrap />
+        <SchedulePoint label={t('pickupWish')} value={fmt.pickupWish(trip) || '-'} wrap />
       </YStack>
     );
   }
@@ -465,7 +465,7 @@ function TripHost({ trip }: { trip: CustomerTrip }) {
           {t(isShop ? 'shop' : 'owner')}
         </Text>
         <Text
-          col={isShop ? colors.primaryHover : colors.textMuted}
+          col={isShop ? colors.shopName : colors.textMuted}
           fos={fontSize.body}
           fow={isShop ? fontWeight.semibold : fontWeight.medium}
           numberOfLines={1}

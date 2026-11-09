@@ -1,12 +1,9 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { newId, Prisma } from '@xeprime/prisma';
+import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   PAYMENT_KIND,
   PAYMENT_STATUS,
-  RECEIPT_SOURCE,
-  RECEIPT_TYPE,
-  SYSTEM_FINANCE_CATEGORY,
   type PaymentKind,
   type PaymentMethod,
 } from '@xeprime/types';
@@ -15,6 +12,7 @@ import { AuditService } from '../audit/audit.service';
 import { BookingsService } from '../bookings/bookings.service';
 import { ReceiptsService } from '../finance/receipts.service';
 import { BookingDetailDto } from '../bookings/dto/booking.dto';
+import { BookingPaymentWriter } from './booking-payment.writer';
 import { PaymentDto, RecordPaymentDto } from './dto/payment.dto';
 
 const SELECT = {
@@ -51,6 +49,7 @@ export class PaymentsService {
     private readonly audit: AuditService,
     private readonly bookings: BookingsService,
     private readonly receipts: ReceiptsService,
+    private readonly writer: BookingPaymentWriter,
   ) {}
 
   /** Ghi nhận một lần thu tiền cho đơn; trả về đơn với paid/debt đã cập nhật. */
@@ -71,75 +70,21 @@ export class PaymentsService {
       });
     }
 
-    const amount = new Prisma.Decimal(dto.amount);
-    const paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
-    const kind = (dto.kind ?? PAYMENT_KIND.RENTAL) as PaymentKind;
-    const isDeposit = kind === PAYMENT_KIND.DEPOSIT;
-
-    // Id payment sinh TRƯỚC phiếu: phiếu cần nó làm `sourceRefId` (đường lần ngược từ sổ về giao
-    // dịch), còn payment cần `receiptId` — hai chiều, nên một đầu phải có id trước.
-    const paymentId = newId();
-
-    await this.prisma.$transaction(async (tx) => {
-      // Phiếu thu đã-duyệt lên sổ Thu-Chi + dashboard (khỏi nhập tay 2 lần).
-      const receipt = await this.receipts.createApprovedWithinTx(tx, tenantId, userId, {
-        type: RECEIPT_TYPE.INCOME,
-        amount: dto.amount,
-        paymentMethod: dto.method as PaymentMethod,
-        source: isDeposit ? RECEIPT_SOURCE.DEPOSIT : RECEIPT_SOURCE.PAYMENT,
-        sourceRefId: paymentId,
-        categoryKey: isDeposit
-          ? SYSTEM_FINANCE_CATEGORY.DEPOSIT
-          : SYSTEM_FINANCE_CATEGORY.BOOKING_PAYMENT,
-        bookingId,
-        vehicleId: booking.vehicleId,
-        tenantCustomerId: booking.tenantCustomerId,
-        occurredAt: paidAt,
-        description:
-          dto.description ??
-          (isDeposit ? `Thu cọc đơn ${booking.code}` : `Thu tiền đơn ${booking.code}`),
+    // Lõi ghi (phiếu thu + payment + `paid_amount` + audit) ở `BookingPaymentWriter` — lượt nhận
+    // lại xe dùng CHÍNH nó trong transaction của biên bản, nên hai đường không thể ghi hai kiểu.
+    await this.prisma.$transaction((tx) =>
+      this.writer.recordWithinTx(tx, {
+        tenantId,
+        userId,
+        booking,
+        amount: new Prisma.Decimal(dto.amount),
+        method: dto.method as PaymentMethod,
+        kind: (dto.kind ?? PAYMENT_KIND.RENTAL) as PaymentKind,
+        paidAt: dto.paidAt ? new Date(dto.paidAt) : new Date(),
+        ...(dto.description !== undefined ? { description: dto.description } : {}),
         referenceCode: dto.referenceCode ?? null,
-      });
-
-      await tx.payment.create({
-        data: {
-          id: paymentId,
-          tenantId,
-          bookingId,
-          receiptId: receipt.id,
-          payerUserId: userId,
-          amount,
-          kind,
-          method: dto.method as PaymentMethod,
-          status: PAYMENT_STATUS.SUCCEEDED,
-          paidAt,
-        },
-      });
-
-      // CHỈ tiền thuê mới cộng vào `paid_amount`. Cọc là tài sản giữ hộ sẽ trả lại khách —
-      // cộng nó vào đây làm công nợ tụt giả và đơn biến mất khỏi /manage/debts trong khi khách
-      // chưa trả một đồng tiền thuê nào. Cọc đã thu đọc qua `payments.kind = 'deposit'`.
-      if (!isDeposit) {
-        // Cộng dồn ở DB — chống lost-update khi 2 lần thu chạy song song.
-        await tx.booking.update({
-          where: { id: bookingId },
-          data: { paidAmount: { increment: amount } },
-        });
-      }
-
-      await this.audit.record(
-        {
-          tenantId,
-          actorUserId: userId,
-          actorScope: 'tenant',
-          action: 'payment.record',
-          targetType: 'booking',
-          targetId: bookingId,
-          after: { amount: dto.amount, method: dto.method, kind },
-        },
-        tx,
-      );
-    });
+      }),
+    );
 
     return this.bookings.getOne(tenantId, bookingId);
   }

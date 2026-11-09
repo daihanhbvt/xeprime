@@ -21,6 +21,7 @@ export {
   calendarDateToAppWallClock,
   dayjs,
   nowInAppTz,
+  overdueDays,
   rentalDurationParts,
   startOfAppDay,
   toAppTz,

@@ -41,7 +41,7 @@ export class BulkDayController {
     summary: 'Xem trước tập xe bị ảnh hưởng bởi một thao tác hàng loạt',
     description:
       'Trả giá NIÊM YẾT của từng xe và những ngày xe đang bận. Phép tính giá mới nằm ở hàm ' +
-      'thuần `planBulkDayPrices` của @xeprime/domain — client và server dùng chung, nên bảng ' +
+      'thuần `planBulkDayPrices` của @xeprime/domain - client và server dùng chung, nên bảng ' +
       'xem trước và dòng ghi xuống DB không thể lệch nhau.',
   })
   @ApiOkResponse({ type: BulkDayPreviewDto })
@@ -57,7 +57,7 @@ export class BulkDayController {
   @ApiOperation({
     summary: 'Khoá mọi xe được chọn trong khoảng ngày',
     description:
-      'Chỉ khoá những cặp (xe, ngày) đang RẢNH — xe có đơn thì bỏ qua đúng ngày đó (ADR 0006). ' +
+      'Chỉ khoá những cặp (xe, ngày) đang RẢNH - xe có đơn thì bỏ qua đúng ngày đó (ADR 0006). ' +
       'Kết quả nói rõ bao nhiêu xe khoá đủ, khoá một phần, hoặc không khoá được ngày nào. ' +
       'Mọi dòng mang chung một `batchId` để gỡ lại được.',
   })
@@ -100,7 +100,7 @@ export class BulkDayController {
     summary: 'Đặt giá riêng cho mọi xe được chọn trong khoảng ngày',
     description:
       '`percent` tính trên giá niêm yết của TỪNG xe cho ĐÚNG ngày đó (giá cuối tuần nếu là ' +
-      'T7/CN), và luôn lấy giá niêm yết làm gốc — nên bấm nhiều lần không cộng dồn. Xe chưa ' +
+      'T7/CN), và luôn lấy giá niêm yết làm gốc - nên bấm nhiều lần không cộng dồn. Xe chưa ' +
       'cấu hình giá bị bỏ qua thay vì bị đặt thành 0₫.',
   })
   @ApiOkResponse({ type: BulkDayPriceResultDto })

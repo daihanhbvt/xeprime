@@ -141,7 +141,7 @@ afterEach(() => {
  * Ba việc thẻ danh sách không làm được và test này khoá lại: đối chiếu được đơn/xe/khách và ĐI
  * SANG được, xem được dấu vết (ai tạo, ai duyệt), và thao tác đúng theo quyền + trạng thái.
  */
-describe('ReceiptDetailSheet — nội dung', () => {
+describe('ReceiptDetailSheet - nội dung', () => {
   it('hiện đủ tiền, loại, nguồn, danh mục, hình thức, mã tra soát và diễn giải', async () => {
     const { findByText } = await renderSheet([PERMISSION.FINANCE_VIEW]);
 
@@ -154,7 +154,7 @@ describe('ReceiptDetailSheet — nội dung', () => {
     expect(await findByText('Rửa xe sau chuyến')).toBeTruthy();
   });
 
-  it('hiện dấu vết người tạo — sổ tiền không có dấu vết là sổ không đối chiếu được', async () => {
+  it('hiện dấu vết người tạo - sổ tiền không có dấu vết là sổ không đối chiếu được', async () => {
     const { findByText } = await renderSheet([PERMISSION.FINANCE_VIEW]);
     expect(await findByText(/Nhân viên A/)).toBeTruthy();
   });
@@ -178,7 +178,7 @@ describe('ReceiptDetailSheet — nội dung', () => {
   });
 });
 
-describe('ReceiptDetailSheet — lối đi liên quan', () => {
+describe('ReceiptDetailSheet - lối đi liên quan', () => {
   /*
    * Giá trị CHÍNH LÀ link (như web), không còn nút "Xem đơn" đứng cạnh — nên phép thử là bấm
    * thẳng vào mã đơn.
@@ -230,12 +230,12 @@ describe('ReceiptDetailSheet — lối đi liên quan', () => {
   });
 });
 
-describe('ReceiptDetailSheet — duyệt và huỷ', () => {
+describe('ReceiptDetailSheet - duyệt và huỷ', () => {
   it('thiếu `receipt.approve`: không có hành động nào', async () => {
     const { findByText, queryByText } = await renderSheet([PERMISSION.FINANCE_VIEW]);
 
     await findByText('− 450.000 ₫');
-    expect(queryByText('Duyệt')).toBeNull();
+    expect(queryByText('Duyệt phiếu')).toBeNull();
     expect(queryByText('Huỷ phiếu')).toBeNull();
   });
 
@@ -245,13 +245,13 @@ describe('ReceiptDetailSheet — duyệt và huỷ', () => {
       PERMISSION.RECEIPT_APPROVE,
     ]);
 
-    await fireEvent.press(await findByText('Duyệt'));
+    await fireEvent.press(await findByText('Duyệt phiếu'));
     expect(await findByText('Duyệt phiếu này?')).toBeTruthy();
     expect(approveSpy).not.toHaveBeenCalled();
 
     /*
      * Hộp thoại nằm TRONG thân tấm trượt, còn nút mở nằm ở chân — nên nút xác nhận là lần xuất
-     * hiện ĐẦU TIÊN của nhãn 'Duyệt' trong cây. Bấm nhầm cái cuối là bấm lại chính nút mở.
+     * hiện ĐẦU TIÊN của nhãn 'Duyệt' trong cây (nút mở ở chân giờ ghi 'Duyệt phiếu' như web). Bấm nhầm cái cuối là bấm lại chính nút mở.
      */
     const confirms = await findAllByText('Duyệt');
     await fireEvent.press(confirms[0]!);
@@ -266,7 +266,7 @@ describe('ReceiptDetailSheet — duyệt và huỷ', () => {
     );
 
     expect(await findByText('Huỷ phiếu')).toBeTruthy();
-    expect(queryByText('Duyệt')).toBeNull();
+    expect(queryByText('Duyệt phiếu')).toBeNull();
   });
 
   it('phiếu ĐÃ HUỶ: không còn hành động nào', async () => {
@@ -277,7 +277,7 @@ describe('ReceiptDetailSheet — duyệt và huỷ', () => {
 
     await findByText('− 450.000 ₫');
     expect(queryByText('Huỷ phiếu')).toBeNull();
-    expect(queryByText('Duyệt')).toBeNull();
+    expect(queryByText('Duyệt phiếu')).toBeNull();
   });
 
   it('phiếu TỰ ĐỘNG: không thao tác tay được, và nói rõ phải đảo ở nghiệp vụ gốc', async () => {
@@ -288,7 +288,7 @@ describe('ReceiptDetailSheet — duyệt và huỷ', () => {
 
     expect(await findByText('Phiếu tự động')).toBeTruthy();
     expect(queryByText('Huỷ phiếu')).toBeNull();
-    expect(queryByText('Duyệt')).toBeNull();
+    expect(queryByText('Duyệt phiếu')).toBeNull();
   });
 
   it('gói hết hạn: vẫn ĐỌC được, nút duyệt bị khoá và nói rõ lý do', async () => {
@@ -314,7 +314,7 @@ describe('ReceiptDetailSheet — duyệt và huỷ', () => {
     });
 
     await fireEvent.press(await view.findByText('Huỷ phiếu'));
-    await fireEvent.press(await view.findByText('Duyệt'));
+    await fireEvent.press(await view.findByText('Duyệt phiếu'));
 
     /* Không hộp xác nhận NÀO mở ra — cả hai nút đều không nhận được cú chạm. */
     expect(view.queryByText('Huỷ phiếu này?')).toBeNull();

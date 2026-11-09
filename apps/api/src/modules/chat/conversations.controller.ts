@@ -98,14 +98,14 @@ export class ConversationsController {
    * `unread-summary` sẽ bị nuốt thành một `:id`.
    */
   @Get('unread-summary')
-  @ApiOperation({ summary: 'Chưa đọc của cả hai vai — cho badge biểu tượng chat ở mọi trang' })
+  @ApiOperation({ summary: 'Chưa đọc của cả hai vai - cho badge biểu tượng chat ở mọi trang' })
   @ApiOkResponse({ type: ChatUnreadSummaryDto })
   unreadSummary(@CurrentUser() user: AuthenticatedUser): Promise<ChatUnreadSummaryDto> {
     return this.chat.unreadSummary(user.id);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Một hội thoại theo id — mở deep link không nằm ở trang đầu' })
+  @ApiOperation({ summary: 'Một hội thoại theo id - mở deep link không nằm ở trang đầu' })
   @ApiOkResponse({ type: ConversationSummaryDto })
   detail(
     @CurrentUser() user: AuthenticatedUser,

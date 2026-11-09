@@ -113,18 +113,3 @@
   min-width: 0;
 }
 
-.advancedLinks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--xp-space-md);
-}
-
-.linkBtn {
-  padding: var(--xp-space-xs) 0;
-  border: none;
-  background: none;
-  color: var(--xp-gold-deep);
-  font-size: var(--xp-font-size-sm);
-  font-weight: 600;
-  cursor: pointer;
-}

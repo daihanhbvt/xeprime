@@ -25,7 +25,7 @@ describe('foldSearchText', () => {
     expect(foldSearchText(decomposed)).toBe(foldSearchText('Nguyễn'));
   });
 
-  it('tách ranh giới chữ ↔ số — VF8, VF-8, VF 8 là một', () => {
+  it('tách ranh giới chữ ↔ số - VF8, VF-8, VF 8 là một', () => {
     expect(foldSearchText('VinFast VF8')).toBe('vinfast vf 8');
     expect(foldSearchText('VinFast VF-8')).toBe('vinfast vf 8');
     expect(foldSearchText('Mazda CX5')).toBe('mazda cx 5');
@@ -44,7 +44,7 @@ describe('foldSearchText', () => {
     expect(foldSearchText('Ölçü')).toBe('l');
   });
 
-  it('bảng translate 1:1 — mỗi ký tự nguồn có đúng một ký tự đích', () => {
+  it('bảng translate 1:1 - mỗi ký tự nguồn có đúng một ký tự đích', () => {
     const [from, to] = searchFoldTranslateTable();
     expect([...from]).toHaveLength([...to].length);
     expect(new Set(from).size).toBe([...from].length);
@@ -80,7 +80,7 @@ describe('highlightSearchMatch', () => {
     expect(marked('Nguyễn Văn Tuấn', ['ng'])).toEqual(['Ng']);
   });
 
-  it('không tô giữa từ — "an" không khớp "Tuấn"', () => {
+  it('không tô giữa từ - "an" không khớp "Tuấn"', () => {
     expect(marked('Nguyễn Văn Tuấn', ['an'])).toEqual([]);
   });
 

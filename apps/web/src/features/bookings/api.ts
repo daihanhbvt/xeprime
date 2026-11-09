@@ -16,6 +16,9 @@ import type {
   BookingDriverHistoryItem,
   BookingFilters,
   BookingHandoverPrep,
+  BookingHistoryFilters,
+  BookingHistoryItem,
+  BookingHistoryMeta,
   BookingListItem,
   BookingListMeta,
   CheckConflictInput,
@@ -55,6 +58,31 @@ export const fetchBookings = (filters: BookingFilters): Promise<BookingListResul
     '/bookings',
     filtersToParams(filters),
     BOOKINGS_DEFAULT_LIMIT,
+  );
+
+/** "Đơn đã kết thúc" mặc định 10 dòng/trang — đúng ô "10 dòng" của design `23948:99426`. */
+export const BOOKING_HISTORY_DEFAULT_LIMIT = 10;
+
+export type BookingHistoryResult = Paged<BookingHistoryItem, BookingHistoryMeta>;
+
+export function historyFiltersToParams(filters: BookingHistoryFilters): QueryParams {
+  return {
+    tab: filters.tab ?? null,
+    outcome: filters.outcome ?? null,
+    q: filters.q ?? null,
+    serviceType: filters.serviceType ?? null,
+    branchId: filters.branchId ?? null,
+    page: filters.page ?? 1,
+    limit: filters.limit ?? BOOKING_HISTORY_DEFAULT_LIMIT,
+  };
+}
+
+/** Đơn đã đóng + yêu cầu không thành đơn, MỘT danh sách xếp theo lúc kết thúc (05/11/2026). */
+export const fetchBookingHistory = (filters: BookingHistoryFilters): Promise<BookingHistoryResult> =>
+  fetchPage<BookingHistoryItem, BookingHistoryMeta>(
+    '/booking-history',
+    historyFiltersToParams(filters),
+    BOOKING_HISTORY_DEFAULT_LIMIT,
   );
 
 export const fetchBooking = (id: string): Promise<BookingDetail> =>

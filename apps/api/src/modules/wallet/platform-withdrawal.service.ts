@@ -328,7 +328,7 @@ export class PlatformWithdrawalService {
        */
       const notice = {
         type: NOTIFICATION_TYPE.HOLD_REFUND_PAID,
-        title: 'Lệnh rút chuyển không thành công — tiền đã về ví',
+        title: 'Lệnh rút chuyển không thành công - tiền đã về ví',
         body: `${formatMoneyVndVi(row.amount.toString())} · mã ${row.code} · ${reason}. Kiểm tra tài khoản nhận rồi tạo lệnh rút mới.`,
         targetType: NOTIFICATION_TARGET_TYPE.TENANT,
         targetId: row.id,

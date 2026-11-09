@@ -1,3 +1,4 @@
+import { GrowFill } from '@/components/motion/GrowFill';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -50,8 +51,12 @@ export function TripTimeline({
           h={2}
           mx={space.xs}
           br={radius.pill}
-          bg={state.confirmedDone ? colors.success : colors.border}
-        />
+          bg={colors.border}
+          ov="hidden"
+        >
+          {/* Đường nối chạy dần khi mốc "đã xác nhận" đạt — chỉ lớp hình, mốc do server. */}
+          <GrowFill fraction={state.confirmedDone ? 1 : 0} color={colors.success} />
+        </YStack>
         <Dot done={state.completedDone} current={state.confirmedDone && !state.completedDone} />
         <StepLabel label={t('completed')} on={state.completedDone} />
       </XStack>

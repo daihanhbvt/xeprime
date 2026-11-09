@@ -10,13 +10,16 @@ import { InfoHint } from '@/components/ui/InfoHint';
 import { useCopy } from '@/hooks/use-copy';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
-import { fontSize, radius, space } from '@/theme/tokens';
+import { PALETTES, fontSize, radius, space } from '@/theme/tokens';
 
 export type TransferAccount = components['schemas']['HoldPaymentInfoDto'];
 
 /** Ảnh QR do `qr.sepay.vn` sinh (#201, `template=compact`) — ảnh VUÔNG. */
 const QR_WIDTH = 260;
 const QR_HEIGHT = QR_WIDTH;
+
+// Ô QR luôn nền TRẮNG ở cả hai giao diện — máy quét ngân hàng cần nền sáng quanh mã.
+const QR_BOX_BG = PALETTES.light.colors.surface;
 
 const useStyles = makeStyles((colors) => ({
   qr: {
@@ -64,7 +67,7 @@ export function BankTransferDetails({
       {qrUrl && !qrFailed ? (
         <YStack ai="center" gap={space.sm}>
           {/* Khung trắng có viền: QR nổi khỏi nền thẻ và đủ lề trắng cho máy quét bắt góc. */}
-          <YStack p={space.sm} br={radius.lg} bw={1} bc={colors.borderSubtle} bg={colors.surface}>
+          <YStack p={space.sm} br={radius.lg} bw={1} bc={colors.borderSubtle} bg={QR_BOX_BG}>
             <Image
               source={{ uri: qrUrl }}
               style={styles.qr}

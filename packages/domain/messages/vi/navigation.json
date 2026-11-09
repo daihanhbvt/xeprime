@@ -26,7 +26,6 @@
     "themeDark": "Giao diện tối",
     "toggleTheme": "Đổi giao diện sáng/tối",
     "favorites": "Xe yêu thích",
-    "appearance": "Giao diện",
     "accountSubtitle": "Tài khoản XePrime"
   },
   "account": {
@@ -107,7 +106,10 @@
     "wallet": "Quản lý ví",
     "transactionHistory": "Lịch sử giao dịch",
     "shopInfo": "Thông tin cửa hàng",
-    "staffPermissions": "Nhân viên & Phân quyền"
+    "staffPermissions": "Nhân viên & Phân quyền",
+    "rentals": "Đơn thuê xe",
+    "bookingsEnded": "Đơn đã kết thúc",
+    "vehiclesShort": "Xe"
   },
   "manageGroups": {
     "overview": "Tổng quan",

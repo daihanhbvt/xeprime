@@ -1,0 +1,53 @@
+/*
+ * Biến thể `pill` của `StatusTag` - Figma "_Badge" của site partner (Thông tin cửa hàng
+ * `23999:111274`, 11/2026): bo 16, đệm 2/8, chữ 14/20 medium, nền nhạt + viền cùng sắc. Bản mặc
+ * định (AntD `Tag` 12px) giữ cho các màn chưa redesign, gồm site quản trị.
+ */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: 16px;
+  background: var(--xp-color-neutral-bg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+  white-space: nowrap;
+}
+
+.success {
+  border-color: var(--xp-color-success-border);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.danger {
+  border-color: var(--xp-color-error-border);
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+.warning {
+  border-color: var(--xp-color-warning-border);
+  background: var(--xp-color-warning-subtle);
+  color: var(--xp-color-warning);
+}
+
+.waiting {
+  border-color: var(--xp-color-primary-border);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary-hover);
+}
+
+.info {
+  border-color: var(--xp-color-info-border);
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info);
+}
+
+.processing {
+  background: var(--xp-color-processing-bg);
+  color: var(--xp-color-processing);
+}

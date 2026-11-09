@@ -14,8 +14,8 @@ afterEach(() => {
   window.history.replaceState(null, '', '/');
 });
 
-describe('useMarketplaceFilters — ghi URL', () => {
-  it('hai lần ghi liền nhau CỘNG DỒN — lần sau không xoá lần trước', () => {
+describe('useMarketplaceFilters - ghi URL', () => {
+  it('hai lần ghi liền nhau CỘNG DỒN - lần sau không xoá lần trước', () => {
     window.history.replaceState(null, '', '/search?vehicleType=car');
     const { result } = renderHook(() => useMarketplaceFilters());
 

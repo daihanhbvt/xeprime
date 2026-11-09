@@ -6,7 +6,7 @@ import '@/lib/crypto-polyfill';
 
 import { patchDayjsTimezone } from '@/i18n/dayjs-timezone-fix';
 
-import { QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { Provider as ReduxProvider } from 'react-redux';
@@ -24,6 +24,8 @@ import { registerPushBackgroundHandler } from '@/features/notifications/messagin
 import { PushBootstrap } from '@/features/notifications/PushBootstrap';
 import { I18nProvider } from '@/i18n/I18nProvider';
 import { queryClient } from '@/queries/query-client';
+import { queryPersistOptions } from '@/queries/query-persist';
+import { NetworkBanner } from '@/components/network/NetworkBanner';
 import { store } from '@/store';
 import { useAppFonts } from '@/theme/fonts';
 import { useColors } from '@/theme/ThemeProvider';
@@ -80,7 +82,8 @@ export default function RootLayout() {
       <AppThemeProvider>
         <ReduxProvider store={store}>
           <I18nProvider>
-            <QueryClientProvider client={queryClient}>
+            {/* Cache chọn lọc ghi xuống máy để offline vẫn xem bản gần nhất — danh sách trắng ở `query-persist.ts`. */}
+            <PersistQueryClientProvider client={queryClient} persistOptions={queryPersistOptions}>
               <AppToastProvider>
                 <PushBootstrap />
                 <ThemeBootstrap />
@@ -104,8 +107,10 @@ export default function RootLayout() {
                     </BadgeRealtimeProvider>
                   </ChatRealtimeProvider>
                 </SessionBoundary>
+                {/* Sau mọi màn để phủ lên trên — dải offline/kết nối lại ở đầu màn. */}
+                <NetworkBanner />
               </AppToastProvider>
-            </QueryClientProvider>
+            </PersistQueryClientProvider>
           </I18nProvider>
         </ReduxProvider>
       </AppThemeProvider>

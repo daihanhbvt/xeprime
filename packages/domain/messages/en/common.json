@@ -1,6 +1,6 @@
 {
   "meta": {
-    "defaultTitle": "XePrime — Self-drive & chauffeured car rental",
+    "defaultTitle": "XePrime - Self-drive & chauffeured car rental",
     "titleTemplate": "%s · XePrime",
     "defaultDescription": "A car rental platform: find a vehicle, book it, and run your rental shop."
   },
@@ -91,7 +91,7 @@
     "createdAt": "Created",
     "updatedAt": "Updated",
     "comingSoon": "Coming soon",
-    "emptyValue": "—",
+    "emptyValue": "-",
     "selectDate": "Select date",
     "enabled": "On",
     "disabled": "Off"
@@ -115,22 +115,23 @@
     },
     "thousands": "{value} K",
     "range": "{from} → {to}",
-    "shortDateTime": "{time} · {date}",
+    "shortDateTime": "{time}{sep}{date}",
     "rentalPoint": "{weekday}, {date}",
-    "rentalPointWithTime": "{point} · {time}",
-    "rentalPointCompact": "{date} {time}",
+    "rentalPointWithTime": "{point}{sep}{time}",
+    "rentalTime": "{hour}:{minute}",
+    "rentalPointCompact": "{date}{sep}{time}",
     "rentalRangeSummary": "{from} → {to} ({duration})",
     "kmRemaining": "{value} km left",
     "kmOverdue": "{value} km overdue",
     "pickupWishDate": "{label}: {date}",
-    "pickupWishWindow": "{label}: {start} – {end}",
+    "pickupWishWindow": "{label}: {start} - {end}",
     "pickupWishShopDecides": "The shop confirms the pickup date and time on approval",
-    "dateTime": "{date} {time}",
+    "dateTime": "{date}{sep}{time}",
     "hourAndMinute": "{hours, plural, one {# hour} other {# hours}} {minutes, plural, one {# minute} other {# minutes}}"
   },
   "pagination": {
     "total": "{count, plural, one {# item} other {# items}}",
-    "range": "{from}–{to} of {total}",
+    "range": "{from}-{to} of {total}",
     "page": "Page {page}",
     "rowsPerPage": "Rows per page",
     "previous": "Previous page",
@@ -139,11 +140,17 @@
   },
   "locale": {
     "switchLabel": "Language",
-    "switchAriaLabel": "Change interface language — currently {current}",
+    "switchAriaLabel": "Change interface language - currently {current}",
     "vi": "Tiếng Việt",
     "en": "English",
     "viShort": "VI",
     "enShort": "EN"
+  },
+  "theme": {
+    "label": "Appearance",
+    "switchLabel": "Switch light/dark theme",
+    "light": "Light mode",
+    "dark": "Dark mode"
   },
   "weekdayShort": {
     "0": "Sun",
@@ -155,13 +162,13 @@
     "6": "Sat"
   },
   "components": {
-    "copyFailed": "Your browser blocked copying — please select the text and copy it manually",
+    "copyFailed": "Your browser blocked copying - please select the text and copy it manually",
     "loadingNamed": "Loading {label}…",
     "moreActions": "More actions",
     "discount": "{percent}% off",
     "discountBadge": "{percent}% off",
     "rating": "{value} out of {max} stars",
-    "revealContact": "Reveal in full — this action is recorded in the audit log",
+    "revealContact": "Reveal in full - this action is recorded in the audit log",
     "imageUpload": {
       "upload": "Upload image",
       "uploading": "Uploading {percent}%",
@@ -182,7 +189,7 @@
       "ownerNet": "Host receives",
       "ownerNetHint": "What the host earns from this trip. The booking fee is paid by the guest and is NOT deducted from the host's rental income.",
       "holdAmount": "Reservation payment (upfront)",
-      "holdHint": "Transferred to XePrime once the host accepts, to lock in the trip. It counts towards the rental — the rest is paid directly to the host at pickup.",
+      "holdHint": "Transferred to XePrime once the host accepts, to lock in the trip. It counts towards the rental - the rest is paid directly to the host at pickup.",
       "payAtHandover": "Pay the host at pickup",
       "feesNote": "Every line names who receives it. Final amounts are locked when the host accepts.",
       "noFees": "No extra charges on this trip.",
@@ -190,6 +197,7 @@
       "collapse": "Collapse",
       "depositHintLabel": "What the security deposit is",
       "holdHintLabel": "What the reservation payment is",
+      "totalHintLabel": "What the total includes",
       "dailyRate": "{days, plural, one {# day} other {# days}} × {amount}"
     },
     "filterBar": {
@@ -228,8 +236,8 @@
         "legendFull": "Unavailable",
         "legendPartial": "Partly booked",
         "fullTooltip": "This vehicle is booked for the whole day",
-        "partialTooltip": "Booked {ranges} — you can still pick up or return outside those hours",
-        "period": "{start}–{end}",
+        "partialTooltip": "Booked {ranges} - you can still pick up or return outside those hours",
+        "period": "{start}-{end}",
         "conflict": "Your selection overlaps a booked slot ({period} on {date}). Please pick different hours.",
         "hourlyUnavailable": "Overlaps a booked slot"
       }
@@ -244,8 +252,8 @@
       "upload": "Upload document",
       "uploading": "Uploading…",
       "empty": "No documents yet",
-      "hint": "PDF, JPG, PNG — up to 10MB per file",
-      "hintImageOnly": "JPG, PNG images — up to 10MB per file",
+      "hint": "PDF, JPG, PNG - up to 10MB per file",
+      "hintImageOnly": "JPG, PNG images - up to 10MB per file",
       "maxReached": "{count, plural, one {# file} other {# files}} maximum",
       "downloadFile": "Download {name}",
       "removeFile": "Remove file {name}",
@@ -257,6 +265,18 @@
     "dateRange": {
       "fromDate": "From date",
       "toDate": "To date"
+    },
+    "richText": {
+      "toolbar": "Text formatting",
+      "undo": "Undo",
+      "redo": "Redo",
+      "italic": "Italic",
+      "bold": "Bold",
+      "underline": "Underline",
+      "alignLeft": "Align left",
+      "alignCenter": "Align centre",
+      "alignRight": "Align right",
+      "count": "{count}/{max}"
     }
   },
   "filters": {

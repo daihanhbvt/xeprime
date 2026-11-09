@@ -26,7 +26,7 @@
     "declineConfirm": "Decline this invitation?",
     "leave": "Stop driving",
     "leaveConfirm": "Stop driving for them? Upcoming trips assigned to you will be removed.",
-    "suspendedHint": "The employer has suspended you — you won't be assigned new trips.",
+    "suspendedHint": "The employer has suspended you - you won't be assigned new trips.",
     "viewTrips": "View trips I drive"
   },
   "trips": {
@@ -72,11 +72,11 @@
     "actualPickupAt": "Picked up {time}",
     "actualReturnAt": "Finished {time}",
     "pendingTitle": "You've been assigned to this trip",
-    "pendingBody": "Accept to confirm you'll drive. If you decline — or don't answer in time — the trip goes back to the employer to assign another driver.",
+    "pendingBody": "Accept to confirm you'll drive. If you decline - or don't answer in time - the trip goes back to the employer to assign another driver.",
     "accept": "Accept trip",
     "decline": "Decline",
     "declineConfirm": "Decline this trip?",
-    "emptyValue": "—",
+    "emptyValue": "-",
     "dropFreeUntil": "You can withdraw without penalty until {time}."
   },
   "toast": {
@@ -86,7 +86,7 @@
     "tripAccepted": "Trip accepted",
     "tripDeclined": "Trip declined",
     "tripReleased": "Trip handed back to the owner",
-    "tripDropped": "Problem reported — the owner will arrange another driver"
+    "tripDropped": "Problem reported - the owner will arrange another driver"
   },
   "outcome": {
     "declined": "You declined",
@@ -181,7 +181,7 @@
   },
   "respond": {
     "remaining": "Answer within",
-    "expired": "Time to answer has passed — the trip goes back to the employer"
+    "expired": "Time to answer has passed - the trip goes back to the employer"
   },
   "drop": {
     "title": "Report a problem with trip {code}",
@@ -191,8 +191,8 @@
     "notePlaceholder": "For example: high fever, unable to drive safely",
     "keepsBooking": "The customer's booking is NOT cancelled. The owner gets an urgent alert to assign another driver.",
     "penalty": {
-      "grace": "You are still within the free release window — no violation is recorded.",
-      "far": "Pickup is more than 12 hours away — this counts as a minor violation, with no pause on trips.",
+      "grace": "You are still within the free release window - no violation is recorded.",
+      "far": "Pickup is more than 12 hours away - this counts as a minor violation, with no pause on trips.",
       "cooldown": "This withdrawal is recorded as a violation and you will not be auto-assigned \"Instant book\" trips for {hours} hours."
     },
     "errors": {

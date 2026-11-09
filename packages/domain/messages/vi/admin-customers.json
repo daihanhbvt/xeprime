@@ -2,7 +2,7 @@
   "page": {
     "title": "Khách thuê",
     "loading": "Đang tải danh sách khách…",
-    "privacyNote": "SĐT và email hiển thị ở dạng đã che. Mở chi tiết để xem đầy đủ nếu bạn có quyền — mỗi lần xem được ghi vào nhật ký hệ thống."
+    "privacyNote": "SĐT và email hiển thị ở dạng đã che. Mở chi tiết để xem đầy đủ nếu bạn có quyền - mỗi lần xem được ghi vào nhật ký hệ thống."
   },
   "filters": {
     "searchPlaceholder": "Tìm theo tên",

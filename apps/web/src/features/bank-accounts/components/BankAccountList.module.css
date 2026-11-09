@@ -60,6 +60,48 @@
   line-height: var(--xp-line-height-body);
 }
 
+/*
+ * Dáng `partner` — cột phải trang Quản lý ví (Figma `23813:39558`): tiêu đề 18px, "Đổi tài khoản"
+ * là chữ-nút gold sát lề phải, không mô tả.
+ */
+.partner .head {
+  align-items: center;
+}
+
+.partner .title {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+}
+
+.linkAction.linkAction {
+  height: auto;
+  padding: 0;
+  color: var(--xp-color-primary);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.linkAction.linkAction:hover {
+  color: var(--xp-color-primary-active);
+}
+
+.empty {
+  margin-block: var(--xp-space-sm);
+}
+
+.emptyTitle {
+  display: block;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.emptyHint {
+  display: block;
+  margin-top: var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+}
+
 /* Máy hẹp: nút Thêm/Đổi đứng cạnh tiêu đề thay vì rơi xuống dòng riêng. */
 @media (max-width: 640px) {
   .head {

@@ -48,7 +48,7 @@ export class MaintenanceBoardController {
   @Get('summary')
   @RequirePermissions(PERMISSION.VEHICLE_MAINTENANCE_VIEW)
   @SupportAction(SUPPORT_CAPABILITY.MAINTENANCE_VIEW)
-  @ApiOperation({ summary: 'Đếm theo từng nhóm việc — độc lập với trang/bộ lọc hiện tại' })
+  @ApiOperation({ summary: 'Đếm theo từng nhóm việc - độc lập với trang/bộ lọc hiện tại' })
   @ApiOkResponse({ type: MaintenanceBoardSummaryDto })
   summary(
     @CurrentTenant() tenant: TenantContext,

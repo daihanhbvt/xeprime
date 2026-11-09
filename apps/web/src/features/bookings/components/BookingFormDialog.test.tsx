@@ -66,7 +66,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('BookingFormDialog — sửa đơn', () => {
+describe('BookingFormDialog - sửa đơn', () => {
   it('chỉ gửi tên, SĐT, cọc, ghi chú; không gọi gán tài xế khi đơn tự lái', async () => {
     render(
       <Harness>

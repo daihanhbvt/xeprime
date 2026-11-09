@@ -17,7 +17,7 @@ import { ROUTES } from '@/constants/routes';
 const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../app');
 
 describe('đường quay về từ cổng thanh toán', () => {
-  it('trang thanh toán `/payment/:id` có thật ở CẢ HAI site — server quay về đó', () => {
+  it('trang thanh toán `/payment/:id` có thật ở CẢ HAI site - server quay về đó', () => {
     expect(ROUTES.PAYMENT).toBe(PAYMENT_PAGE_PATH);
     expect(existsSync(join(APP_DIR, `(public)${PAYMENT_PAGE_PATH}/[id]/page.tsx`))).toBe(true);
     expect(existsSync(join(APP_DIR, `(manage)/manage${PAYMENT_PAGE_PATH}/[id]/page.tsx`))).toBe(

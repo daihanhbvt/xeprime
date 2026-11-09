@@ -1,0 +1,140 @@
+/* Thẻ của trang Thông tin cửa hàng - design `23999:111299` (padding 20, bo 16, viền xám nhạt). */
+.card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 0 6px 0 rgba(10, 13, 18, 0.04);
+  scroll-margin-top: calc(var(--xp-shell-header-offset, var(--xp-shell-topbar-height)) + 16px);
+}
+
+.card:focus {
+  outline: none;
+}
+
+.card:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.head {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.headText {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 200px;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+}
+
+.hint {
+  margin: 0;
+  /* Text/Gray/low - dòng phụ dưới tiêu đề thẻ. */
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.extra {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+}
+
+.edit {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: var(--xp-border-radius-control);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.rowLabel {
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.rowValue {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.empty {
+  color: var(--xp-color-text-tertiary);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+/* Ghi chú cuối thẻ (in nghiêng, chữ nhỏ) - dồn xuống đáy để ba thẻ cùng hàng thẳng chân. */
+.footer {
+  margin-top: auto;
+  /* Text/Gray/very-low, 12/18 nghiêng. */
+  color: var(--xp-color-text-placeholder);
+  font-size: var(--xp-font-size-body-sm);
+  font-style: italic;
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.footerLink {
+  color: var(--xp-color-primary);
+  font-style: italic;
+  text-decoration: underline;
+}
+
+.footerLink:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+/* `fieldset[disabled]` của hộp thoại - không viền, không lề mặc định của trình duyệt. */
+.fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}

@@ -9,6 +9,7 @@ import { ListingDescription, type ListingAttribute } from './ListingDescription'
 import { VehicleFeatureIcon } from './VehicleFeatureIcons';
 import { ROUTES } from '@/constants/routes';
 import { cx } from '@/lib/cx';
+import { Reveal } from '@/components/motion/Reveal';
 import { pickupMapSrc } from '../api';
 import { marketplaceSearchHref } from '../filter-params';
 import type { PublicListingDetail } from '../types';
@@ -18,6 +19,7 @@ import { ListingSpecsCard, type ListingSpecItem } from './ListingSpecsCard';
 import { ListingBenefitsCard } from './ListingBenefitsCard';
 import { ListingBookingCard } from './ListingBookingCard';
 import { ListingPoliciesTabs } from './ListingPoliciesTabs';
+import { popInClass, seqClass } from '@/components/motion/motion-classes';
 import styles from './ListingDetailView.module.css';
 import { getTranslations } from 'next-intl/server';
 
@@ -212,29 +214,31 @@ export async function ListingDetailView({
 
           {/* Tiện ích trên xe (features) */}
           {listing.features && listing.features.length > 0 ? (
-            <section
+            <Reveal
+              as="section"
               className={cx(styles.sectionCard, styles.featuresSection)}
               aria-labelledby="features-heading"
             >
               <h2 id="features-heading" className={styles.sectionTitle}>
                 {t('featuresTitle')}
               </h2>
-              <div className={styles.featuresGrid}>
+              <div className={cx(styles.featuresGrid, seqClass)}>
                 {listing.features.map((key) => {
                   const label = catalogLabel(catalog[CATALOG_TYPE.VEHICLE_FEATURE], key) || key;
                   return (
-                    <div key={key} className={styles.featureItem}>
+                    <div key={key} className={cx(styles.featureItem, popInClass)}>
                       <VehicleFeatureIcon featureKey={key} className={styles.featureIcon} />
                       <span className={styles.featureLabel}>{label}</span>
                     </div>
                   );
                 })}
               </div>
-            </section>
+            </Reveal>
           ) : null}
 
           {/* Thẻ gian hàng / chủ xe với 3 chỉ số uy tín inline (ADR 0045) */}
-          <section
+          <Reveal
+            as="section"
             className={cx(styles.sectionCard, styles.hostSection)}
             aria-labelledby="host-heading"
           >
@@ -263,11 +267,12 @@ export async function ListingDetailView({
                 variant="inline"
               />
             </div>
-          </section>
+          </Reveal>
 
           {/* Điểm nhận xe & Bản đồ tĩnh */}
           {listing.pickupPoint ? (
-            <section
+            <Reveal
+              as="section"
               className={cx(styles.sectionCard, styles.locationSection)}
               aria-labelledby="pickup-point-heading"
             >
@@ -337,18 +342,18 @@ export async function ListingDetailView({
                   className={styles.pickupMap}
                 />
               ) : null}
-            </section>
+            </Reveal>
           ) : null}
 
-          {/* Quy định & Chính sách dạng tab theo Figma v2 (node 19707:83494) */}
-          <div className={styles.policiesSection}>
-            <ListingPoliciesTabs listing={listing} activeService={activeService} />
-          </div>
-
-          {/* Đánh giá xe */}
-          <section className={cx(styles.sectionCard, styles.reviewsSection)}>
+          {/* Đánh giá xe — Figma 21621:62130: ngay sau Vị trí xe, trước Thông tin thêm */}
+          <Reveal as="section" className={cx(styles.sectionCard, styles.reviewsSection)}>
             <ListingReviews vehicleId={listing.id} />
-          </section>
+          </Reveal>
+
+          {/* Quy định & Chính sách dạng tab theo Figma v2 (node 19707:83494) */}
+          <Reveal className={styles.policiesSection}>
+            <ListingPoliciesTabs listing={listing} activeService={activeService} />
+          </Reveal>
         </div>
 
         {/* CỘT PHẢI (440px sticky) — một cột thì đứng ngay sau tên + thông số */}

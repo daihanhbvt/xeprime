@@ -94,7 +94,7 @@ describe('RequestBookingButton', () => {
   });
 });
 
-describe('RequestBookingButton — quay về sau đăng nhập (ADR 0060)', () => {
+describe('RequestBookingButton - quay về sau đăng nhập (ADR 0060)', () => {
   it('có bản nháp của xe này + đã có phiên ⇒ hộp tự mở lại', () => {
     seedDraft('V1');
     session.user = { id: 'U1' };
@@ -102,7 +102,7 @@ describe('RequestBookingButton — quay về sau đăng nhập (ADR 0060)', () =
     expect(screen.getByRole('dialog')).toBeTruthy();
   });
 
-  it('chưa đăng nhập thì KHÔNG tự mở — khách tự bấm "Chọn thuê"', () => {
+  it('chưa đăng nhập thì KHÔNG tự mở - khách tự bấm "Chọn thuê"', () => {
     seedDraft('V1');
     renderCta('V1');
     expect(screen.queryByRole('dialog')).toBeNull();

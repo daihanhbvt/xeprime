@@ -29,7 +29,7 @@ function walk(dir: string): string[] {
 
 afterEach(cleanup);
 
-describe('ManagePageHeader — nội dung', () => {
+describe('ManagePageHeader - nội dung', () => {
   it('hiện tiêu đề', () => {
     render(<ManagePageHeader title="Danh sách xe" />);
 
@@ -82,7 +82,7 @@ describe('ManagePageHeader — nội dung', () => {
   });
 });
 
-describe('ManagePageHeader — nút quay lại', () => {
+describe('ManagePageHeader - nút quay lại', () => {
   it('chỉ dựng nút khi có `onBack`', () => {
     const { unmount } = render(<ManagePageHeader title="Xe" />);
     expect(screen.queryByRole('button', { name: 'Quay lại' })).toBeNull();
@@ -101,7 +101,7 @@ describe('ManagePageHeader — nút quay lại', () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  it('KHÔNG tự điều hướng — trang chủ động quyết định đi đâu', () => {
+  it('KHÔNG tự điều hướng - trang chủ động quyết định đi đâu', () => {
     render(<ManagePageHeader title="Chi tiết xe" onBack={() => {}} />);
 
     // Là <button>, không phải <a href>: không có đích cứng nào nhúng trong component chung.
@@ -109,7 +109,7 @@ describe('ManagePageHeader — nút quay lại', () => {
   });
 });
 
-describe('ManagePageHeader — cấp heading (P6, đã giải ở 1D-B)', () => {
+describe('ManagePageHeader - cấp heading (P6, đã giải ở 1D-B)', () => {
   it('tiêu đề trang là <h1>', () => {
     render(<ManagePageHeader title="Danh sách xe" />);
 
@@ -137,7 +137,7 @@ describe('ManagePageHeader — cấp heading (P6, đã giải ở 1D-B)', () => 
   });
 });
 
-describe('ManagePageHeader — không sinh h1 trùng ở trang thật', () => {
+describe('ManagePageHeader - không sinh h1 trùng ở trang thật', () => {
   it('trang placeholder chỉ có đúng một h1, đến từ header chung', () => {
     render(<PlaceholderPage title="Tài xế" />);
 
@@ -183,8 +183,8 @@ describe('ManagePageHeader — không sinh h1 trùng ở trang thật', () => {
   });
 });
 
-describe('ManagePageHeader — hành vi responsive', () => {
-  it('KHÔNG có nhánh JS theo breakpoint — bố cục do CSS xuống dòng', () => {
+describe('ManagePageHeader - hành vi responsive', () => {
+  it('KHÔNG có nhánh JS theo breakpoint - bố cục do CSS xuống dòng', () => {
     // Component không gọi `useIsMobile`/`useIsTablet`/`useMediaQuery`. Nếu Wave 1D thêm nhánh
     // JS, test này phải được sửa CÓ CHỦ Ý. Hiện trạng: cùng một DOM ở mọi bề rộng, phần
     // `extra` xuống dòng nhờ `flex-wrap` trong `.module.css`.

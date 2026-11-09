@@ -21,7 +21,7 @@ import type { IconName } from './Chip';
 type ActionTone = 'accent' | 'success' | 'danger';
 
 const useTone = themed<Readonly<Record<ActionTone, string>>>((colors) => ({
-  accent: colors.primaryActive,
+  accent: colors.accentText,
   success: colors.success,
   danger: colors.danger,
 }));

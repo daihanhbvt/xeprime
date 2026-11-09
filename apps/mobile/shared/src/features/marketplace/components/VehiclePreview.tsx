@@ -92,7 +92,8 @@ export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps
     <YStack gap={layout.section}>
       <HomeSectionHeading
         kicker={tHome('kicker')}
-        title={serviceLabel ? t('titleWithService', { service: serviceLabel }) : tHome('title')}
+        // Người dùng 04/11/2026: bỏ dòng "Xe phù hợp cho mọi hành trình" — chỉ giữ dòng "Xe tiêu biểu".
+        {...(serviceLabel ? { title: t('titleWithService', { service: serviceLabel }) } : {})}
       />
 
       {/*
@@ -112,7 +113,7 @@ export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps
           <Ionicons
             name="location-outline"
             size={iconSize.sm}
-            color={colors.primaryActive}
+            color={colors.accentText}
             accessibilityElementsHidden
           />
           <Text f={1} col={colors.textMuted} fos={fontSize.label}>
@@ -138,7 +139,7 @@ export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps
         </Card>
       ) : (
         // Băng chuyền thẻ-ở-giữa — đúng trình bày mobile của web v2 (`HomeCarousel` dưới 640px).
-        <HomeCarousel accessibilityLabel={tHome('title')} onActiveChange={setFocused}>
+        <HomeCarousel accessibilityLabel={tHome('title')} onActiveChange={setFocused} coverflow>
           {items.map((listing, index) => (
             <VehicleCard
               key={listing.id}

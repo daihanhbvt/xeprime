@@ -18,7 +18,7 @@ describe('carSeatBucketOf', () => {
 });
 
 describe('baselinePriceBand', () => {
-  it('ô tô: kiểu dáng THẮNG số chỗ — nó là chiều khách thật sự so sánh', () => {
+  it('ô tô: kiểu dáng THẮNG số chỗ - nó là chiều khách thật sự so sánh', () => {
     const bySuv = baselinePriceBand({ vehicleType: 'car', bodyType: 'suv', seatCount: 5 });
     const bySeat = baselinePriceBand({ vehicleType: 'car', seatCount: 5 });
     expect(bySuv.median).not.toBe(bySeat.median);
@@ -33,7 +33,7 @@ describe('baselinePriceBand', () => {
     expect(touring.median).toBeGreaterThan(underbone.median * 3);
   });
 
-  it('không khai gì vẫn trả về một khoảng đọc được — ô gợi ý không được rỗng', () => {
+  it('không khai gì vẫn trả về một khoảng đọc được - ô gợi ý không được rỗng', () => {
     for (const vehicleType of ['car', 'motorbike']) {
       const band = baselinePriceBand({ vehicleType });
       expect(band.low).toBeGreaterThan(0);
@@ -59,7 +59,7 @@ describe('baselinePriceBand', () => {
 });
 
 describe('roundPriceBand', () => {
-  it('làm tròn về bội của mười nghìn — giá thuê ngoài đời không có số lẻ', () => {
+  it('làm tròn về bội của mười nghìn - giá thuê ngoài đời không có số lẻ', () => {
     expect(roundPriceBand({ low: 643_219, median: 747_777, high: 902_401 })).toEqual({
       low: 640_000,
       median: 750_000,
@@ -77,7 +77,7 @@ describe('roundPriceBand', () => {
     expect(band.median).toBeLessThanOrEqual(band.high);
   });
 
-  it('số rất nhỏ không tròn về 0 — gợi ý "0đ/ngày" là một lời khuyên sai', () => {
+  it('số rất nhỏ không tròn về 0 - gợi ý "0đ/ngày" là một lời khuyên sai', () => {
     expect(roundPriceBand({ low: 1, median: 2, high: 3 }).low).toBe(10_000);
   });
 });

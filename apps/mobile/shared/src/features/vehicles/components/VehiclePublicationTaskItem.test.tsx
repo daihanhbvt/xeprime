@@ -99,7 +99,7 @@ beforeEach(() => {
  * Bản native của hai liên kết `#anchor` bên web. Trước 25/09/2026 app KHÔNG vẽ hai nút này (lý do
  * cũ: "Screen không phơi ref cuộn") — nay màn hồ sơ xe truyền hàm cuộn vào.
  */
-describe('VehiclePublicationTaskItem — hai nút neo trong cùng màn', () => {
+describe('VehiclePublicationTaskItem - hai nút neo trong cùng màn', () => {
   it('đang chờ duyệt: "Cập nhật hồ sơ" mở màn sửa, KHÔNG vẽ "Xem trạng thái" (web: thẻ xét duyệt đã rời 360)', async () => {
     const view = await renderItem(
       vehicle({ publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW }),
@@ -126,7 +126,7 @@ describe('VehiclePublicationTaskItem — hai nút neo trong cùng màn', () => {
  * phải ở lại khu đó. Web tra đích theo `useWorkspace().paths`; chủ xe tuyến hoa hồng không vào
  * được cổng quản lý (ADR 0038 điều 4), nên một lối đóng cứng vào `/manage` là ngõ cụt.
  */
-describe('VehiclePublicationTaskItem — đích theo khu làm việc', () => {
+describe('VehiclePublicationTaskItem - đích theo khu làm việc', () => {
   it('xe bị nền tảng ẩn, khu tài khoản: "Liên hệ hỗ trợ" mở /account/support', async () => {
     const view = await renderItem(vehicle({ publicStatus: VEHICLE_PUBLIC_STATUS.HIDDEN }), {
       customerScope: true,

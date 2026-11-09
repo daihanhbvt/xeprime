@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import {
   HANDOVER_TYPE,
+  isBookingClosedWithoutTrip,
   isBookingFinal,
   PAYMENT_KIND,
   PERMISSION,
@@ -20,6 +21,7 @@ import { contractPath, receiptsPath } from '@/constants/routes';
 import { useCreateContract } from '@/features/contracts/hooks/use-contract';
 import { BookingReceiptList } from '@/features/finance/components/BookingReceiptList';
 import { ConfirmHandoverDialog } from '@/features/handovers/components/ConfirmHandoverDialog';
+import { ConfirmReturnDialog } from '@/features/handovers/components/ConfirmReturnDialog';
 import { useHandoverContext } from '@/features/handovers/hooks';
 import type { HandoverContext } from '@/features/handovers/types';
 import { PaymentHistory } from '@/features/payments/components/PaymentHistory';
@@ -58,8 +60,13 @@ interface BookingDetailActionsValue {
   handover: HandoverContext | undefined;
   /** Đơn đã khép — mọi đường ghi bị server từ chối (Wave 12). */
   closed: boolean;
+  /**
+   * Đơn huỷ / khách không đến — chuyến không diễn ra nên không thu tiền, thu cọc hay ghi phát sinh
+   * mới (server: `BOOKING_MONEY_CLOSED`). Lịch sử tiền và hoàn lại phần đã thu vẫn mở.
+   */
+  moneyClosed: boolean;
   can: {
-    /** Thu tiền thuộc gói (ADR 0028 7A) + quyền ghi thu. */
+    /** Thu tiền thuộc gói (ADR 0028 7A) + quyền ghi thu + đơn còn nhận tiền (`moneyClosed`). */
     collect: boolean;
     history: boolean;
     contract: boolean;
@@ -138,6 +145,7 @@ export function BookingDetailActionsProvider({
   const { data: handover } = useHandoverContext(booking.id, canViewHandover);
   const createContract = useCreateContract();
   const closed = isBookingFinal(booking.status as BookingStatus);
+  const moneyClosed = isBookingClosedWithoutTrip(booking.status as BookingStatus);
 
   const [dialogType, setDialogType] = useState<HandoverType | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -156,7 +164,7 @@ export function BookingDetailActionsProvider({
         : null;
 
   const can: BookingDetailActionsValue['can'] = {
-    collect: has(PERMISSION.PAYMENT_RECORD) && financeFeature.isVisible,
+    collect: has(PERMISSION.PAYMENT_RECORD) && financeFeature.isVisible && !moneyClosed,
     history: financeFeature.isVisible,
     contract: has(PERMISSION.CONTRACT_MANAGE) && contractsFeature.isVisible,
     edit: has(PERMISSION.BOOKING_UPDATE) && !closed,
@@ -168,16 +176,21 @@ export function BookingDetailActionsProvider({
   };
 
   function requestHandover(type: HandoverType) {
-    const prep =
-      type === HANDOVER_TYPE.PICKUP && booking.handoverPrep
-        ? prepRowStates(booking.handoverPrep, can)
-            .filter((row) => !row.done)
-            .map((row) => row.key)
-        : [];
-    const slots = missingPhotoSlots(
-      type === HANDOVER_TYPE.PICKUP ? handover?.pickup?.photos : handover?.return?.photos,
-      booking.vehicleType,
-    );
+    /*
+     * Nhận lại xe (06/11/2026): hộp "Xác nhận đã nhận lại xe" tự chụp ảnh và đếm x/N ảnh ngay trong
+     * thân — cảnh báo "còn thiếu" của trang chỉ còn cho chiều giao xe.
+     */
+    if (type === HANDOVER_TYPE.RETURN) {
+      setAlert(null);
+      setDialogType(type);
+      return;
+    }
+    const prep = booking.handoverPrep
+      ? prepRowStates(booking.handoverPrep, can)
+          .filter((row) => !row.done)
+          .map((row) => row.key)
+      : [];
+    const slots = missingPhotoSlots(handover?.pickup?.photos, booking.vehicleType);
     if (prep.length === 0 && slots.length === 0) {
       setAlert(null);
       setDialogType(type);
@@ -192,7 +205,7 @@ export function BookingDetailActionsProvider({
       className: styles.alertNotice,
       duration: 10,
       title: tAlert('title'),
-      description: tAlert(type === HANDOVER_TYPE.PICKUP ? 'bodyPickup' : 'bodyReturn'),
+      description: tAlert('bodyPickup'),
       actions: (
         <Button
           type="link"
@@ -218,6 +231,7 @@ export function BookingDetailActionsProvider({
     booking,
     handover,
     closed,
+    moneyClosed,
     can,
     primary,
     contractPending: createContract.isPending,
@@ -244,13 +258,11 @@ export function BookingDetailActionsProvider({
         Dựng CÓ ĐIỀU KIỆN: mỗi lần mở là một instance mới, không mang state của lần trước. Hộp chỉ
         mở qua `requestHandover` (nút xác nhận) — vào trang, kể cả từ thẻ danh sách, không mở sẵn.
       */}
-      {dialogType && handover ? (
-        <ConfirmHandoverDialog
-          context={handover}
-          type={dialogType}
-          open
-          onClose={() => setDialogType(null)}
-        />
+      {dialogType === HANDOVER_TYPE.PICKUP && handover ? (
+        <ConfirmHandoverDialog context={handover} open onClose={() => setDialogType(null)} />
+      ) : null}
+      {dialogType === HANDOVER_TYPE.RETURN ? (
+        <ConfirmReturnDialog booking={booking} onClose={() => setDialogType(null)} />
       ) : null}
 
       <ResponsiveDialog

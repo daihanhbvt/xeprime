@@ -34,7 +34,7 @@ export class PlanGuideTemplateSummaryDto {
   @ApiProperty({ example: '01J8XK2M5N7P9Q1R3S5T7V9W1X' }) id!: string;
   @ApiProperty({ example: 'clean_minimal' }) code!: string;
   @ApiProperty({ example: 'Tối giản' }) name!: string;
-  @ApiProperty({ description: 'Đúng MỘT bộ đang dùng — DB gác bằng partial unique index.' })
+  @ApiProperty({ description: 'Đúng MỘT bộ đang dùng - DB gác bằng partial unique index.' })
   isActive!: boolean;
   @ApiProperty({ example: 1, description: 'Tăng 1 mỗi lần sửa.' }) version!: number;
   @ApiProperty({ example: '2026-10-12T03:00:00.000Z' }) createdAt!: string;
@@ -48,7 +48,7 @@ export class PlanGuideTemplateVariantDto {
   @ApiProperty({ enum: PLAN_GUIDE_VARIANT_VALUES, example: 'welcome' }) variant!: string;
   @ApiProperty({ example: 'Hướng dẫn đăng ký gói gian hàng trên website XePrime' }) subjectVi!: string;
   @ApiProperty({ example: 'How to subscribe to a shop plan on the XePrime website' }) subjectEn!: string;
-  @ApiProperty({ description: 'HTML có biến {{name}} — xem PLAN_GUIDE_PLACEHOLDER.' }) bodyVi!: string;
+  @ApiProperty({ description: 'HTML có biến {{name}} - xem PLAN_GUIDE_PLACEHOLDER.' }) bodyVi!: string;
   @ApiProperty() bodyEn!: string;
 }
 
@@ -199,7 +199,7 @@ export class UpdatePlanGuideTemplateDto {
 
   @ApiPropertyOptional({
     type: [PlanGuideTemplateVariantPatchDto],
-    description: 'Sửa từng nội dung — chỉ nội dung/trường gửi lên mới đổi.',
+    description: 'Sửa từng nội dung - chỉ nội dung/trường gửi lên mới đổi.',
   })
   @IsOptional()
   @IsArray()
@@ -281,7 +281,7 @@ export class SendTestPlanGuideTemplateDto {
 }
 
 export class SendTestResultDto {
-  @ApiProperty({ example: 'admin@xeprime.vn', description: 'Email của CHÍNH admin — không nhận địa chỉ từ client.' })
+  @ApiProperty({ example: 'admin@xeprime.vn', description: 'Email của CHÍNH admin - không nhận địa chỉ từ client.' })
   to!: string;
   @ApiProperty({ example: '01J8XK2M5N7P9Q1R3S5T7V9W1X', description: 'Dòng `email_outbox` vừa xếp hàng.' })
   outboxId!: string;

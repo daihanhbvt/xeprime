@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { cx } from '@/lib/cx';
+import { Reveal } from '@/components/motion/Reveal';
 import styles from './ContentSection.module.css';
 
 export interface ContentSectionProps {
@@ -25,7 +26,13 @@ export interface ContentSectionProps {
  */
 export function ContentSection({ id, heading, lead, children, className }: ContentSectionProps) {
   return (
-    <section id={id} className={cx(styles.section, className)} aria-labelledby={`${id}-title`}>
+    // Hiện dần khi cuộn tới (Reveal) — HTML server không ẩn gì, chỉ JS mới gắn trạng thái chờ.
+    <Reveal
+      as="section"
+      id={id}
+      className={cx(styles.section, className)}
+      aria-labelledby={`${id}-title`}
+    >
       <div className={styles.head}>
         <h2 id={`${id}-title`} className={styles.heading}>
           {heading}
@@ -33,6 +40,6 @@ export function ContentSection({ id, heading, lead, children, className }: Conte
         {lead && <p className={styles.lead}>{lead}</p>}
       </div>
       {children}
-    </section>
+    </Reveal>
   );
 }

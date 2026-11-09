@@ -8,13 +8,14 @@ import {
   PlayCircleOutlined,
   PlusOutlined,
 } from '@ant-design/icons';
-import { Alert, Button, Tag } from 'antd';
+import { Button, Select, Tag } from 'antd';
 import { useTranslations } from 'next-intl';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { useMemo, useState } from 'react';
 import {
   BRANCH_STATUS,
   BRANCH_STATUS_META,
+  BRANCH_STATUS_VALUES,
   PERMISSION,
   PLAN_FEATURE,
   STATUS_COLOR,
@@ -25,10 +26,12 @@ import { FeatureWriteTooltip } from '@/components/feedback/FeatureWriteTooltip';
 import { AutoSearchInput } from '@/components/filter/AutoSearchInput';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
-import { StatusTag } from '@/components/data-display/StatusTag';
+import { StatusPill, StatusTag } from '@/components/data-display/StatusTag';
+import { InfoCard } from '@/components/layout/InfoCard';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useBranchAction, useBranches } from '../hooks/use-branches';
 import type { Branch } from '../types';
@@ -43,21 +46,29 @@ import styles from './BranchesView.module.css';
  * lấy tỉnh từ đó).
  *
  * Dùng `DataTable` chung: bảng ở desktop, thẻ ở ≤640px, và toàn bộ trạng thái (đang tải / rỗng /
- * lỗi / thiếu quyền / lọc không ra) đã nằm trong component đó — không dựng lại ở đây.
+ * lỗi / thiếu quyền / lọc không ra) đã nằm trong component đó - không dựng lại ở đây.
  *
  * Hai cách đặt (`variant`):
- *  - `page` — màn riêng, có tiêu đề trang. Còn dùng ở phiên hỗ trợ gian hàng (ADR 0050).
- *  - `section` — một section của "Thông tin cửa hàng" ở site partner (menu mới 02/11/2026,
- *    `docs/design/09_PARTNER_REDESIGN.md` §2): tiêu đề do `SectionCard` của trang đó lo, nút "Thêm
- *    chi nhánh" về đứng đầu thanh công cụ.
+ *  - `page` - màn riêng, có tiêu đề trang. Còn dùng ở phiên hỗ trợ gian hàng (ADR 0050).
+ *  - `section` - thẻ "Chi nhánh" của "Thông tin cửa hàng" ở site partner (design `23999:111349`,
+ *    06/11/2026): tiêu đề + dòng đếm ở đầu thẻ, ô tìm · lọc trạng thái · "Thêm chi nhánh" ở góc phải,
+ *    dải "chưa có tỉnh/thành" kèm lối "Bổ sung ngay" mở đúng chi nhánh cần sửa.
  */
-export function BranchesView({ variant = 'page' }: { variant?: 'page' | 'section' }) {
+export function BranchesView({
+  variant = 'page',
+  sectionId,
+}: {
+  variant?: 'page' | 'section';
+  /** `id` của thẻ ở chế độ `section` - đích của `?section=branches`. */
+  sectionId?: string;
+}) {
   const t = useTranslations('Branches');
   const tc = useTranslations('Common');
   const tAddr = useTranslations('Address');
+  const domainLabel = useDomainLabel();
   const fmt = useAppFormat();
   const errorMessage = useErrorMessage();
-  // Chỉ ẩn/hiện UI — guard backend mới là lớp chặn thật (CLAUDE.md mục 6).
+  // Chỉ ẩn/hiện UI - guard backend mới là lớp chặn thật (CLAUDE.md mục 6).
   const permissions = usePermissions();
   const canManage = permissions.has(PERMISSION.BRANCH_MANAGE);
   const canView = permissions.has(PERMISSION.BRANCH_VIEW);
@@ -90,7 +101,7 @@ export function BranchesView({ variant = 'page' }: { variant?: 'page' | 'section
   }
 
   /**
-   * Hành động theo hàng. Nút bị khoá luôn kèm LÝ DO — một nút mờ không giải thích là ngõ cụt
+   * Hành động theo hàng. Nút bị khoá luôn kèm LÝ DO - một nút mờ không giải thích là ngõ cụt
    * (và ở đây lý do là luật nghiệp vụ thật: gian hàng phải luôn có một chi nhánh mặc định).
    */
   function actionsOf(branch: Branch): RowAction[] {
@@ -100,6 +111,9 @@ export function BranchesView({ variant = 'page' }: { variant?: 'page' | 'section
         key: 'edit',
         label: tc('actions.edit'),
         icon: <EditOutlined />,
+        showLabel: false,
+        // Bút chì viền như design - không phải nút chính tô vàng.
+        primary: false,
         disabled: !canManage,
         disabledReason: t('blocked.edit'),
         onClick: () => openEdit(branch),
@@ -156,62 +170,73 @@ export function BranchesView({ variant = 'page' }: { variant?: 'page' | 'section
     {
       title: t('columns.branch'),
       dataIndex: 'name',
-      width: 220,
+      width: 230,
       render: (_v, row) => (
-        <div className={styles.identity}>
+        <div className={styles.stackedCell}>
           <span className={styles.name}>{row.name}</span>
-          <span className={styles.code}>{row.code}</span>
-          {row.isDefault ? <Tag color={STATUS_COLOR.WAITING}>{t('labels.default')}</Tag> : null}
+          <span className={styles.cellSub}>
+            {row.code}
+            {row.isDefault ? (
+              <>
+                {' · '}
+                <span className={styles.defaultMark}>{t('labels.default')}</span>
+              </>
+            ) : null}
+          </span>
         </div>
       ),
     },
     {
       title: t('columns.province'),
       dataIndex: 'provinceName',
-      width: 200,
+      width: 190,
       /*
        * Hai dòng: tỉnh ở trên, xã/phường ở dưới. Mô hình hành chính hai cấp (từ 01/07/2025)
-       * nên xã/phường là cấp thứ hai thật sự chứ không phải chi tiết phụ — chi nhánh thiếu nó
+       * nên xã/phường là cấp thứ hai thật sự chứ không phải chi tiết phụ - chi nhánh thiếu nó
        * là chi nhánh chưa khai đủ địa chỉ, và cột này phải nói ra điều đó.
        */
       render: (_v, row) =>
         row.provinceName ? (
           <div className={styles.stackedCell}>
-            <span>{row.provinceName}</span>
+            <span className={styles.cellProvince}>{row.provinceName}</span>
             {row.wardName ? (
               <span className={styles.cellSub}>{row.wardName}</span>
             ) : (
-              <Tag color={STATUS_COLOR.WARNING}>{tAddr('review.badge')}</Tag>
+              <StatusPill color={STATUS_COLOR.WARNING}>{tAddr('review.badge')}</StatusPill>
             )}
           </div>
         ) : (
-          <Tag color={STATUS_COLOR.WARNING}>{t('labels.noProvince')}</Tag>
+          <StatusPill color={STATUS_COLOR.WARNING}>{t('labels.noProvince')}</StatusPill>
         ),
     },
     {
       title: t('columns.address'),
       dataIndex: 'address',
-      width: 280,
-      render: (v: string | null) => v || tc('labels.emptyValue'),
+      width: 204,
+      render: (v: string | null) => (
+        <span className={styles.cellSecondary}>{v || tc('labels.emptyValue')}</span>
+      ),
     },
     {
       title: t('columns.phone'),
       dataIndex: 'phone',
-      width: 140,
-      render: (v: string | null) => v || tc('labels.emptyValue'),
+      width: 128,
+      render: (v: string | null) => (
+        <span className={styles.cellSecondary}>{v || tc('labels.emptyValue')}</span>
+      ),
     },
     {
       title: t('columns.vehicleCount'),
       dataIndex: 'vehicleCount',
-      width: 90,
-      align: 'right',
+      width: 80,
+      render: (v: number) => <span className={styles.cellSecondary}>{v}</span>,
     },
     {
       title: tc('labels.status'),
       dataIndex: 'status',
-      width: 150,
+      width: 158,
       render: (v: BranchStatus) => (
-        <StatusTag value={v} meta={BRANCH_STATUS_META} group="branchStatus" />
+        <StatusTag value={v} meta={BRANCH_STATUS_META} group="branchStatus" appearance="pill" />
       ),
     },
     ...(hideWrites
@@ -220,18 +245,18 @@ export function BranchesView({ variant = 'page' }: { variant?: 'page' | 'section
           {
             title: tc('labels.actions'),
             key: 'actions',
-            width: 420,
+            width: 100,
             // Cột hành động ghim mép phải: bảng cuộn ngang thì nút vẫn ở trong tầm với.
             fixed: 'right' as const,
-            // Desktop để ba thao tác thường dùng có nhãn rõ; thẻ mobile vẫn chỉ giữ hai icon rồi gom dư.
+            // Design `23999:111355`: bút chì + "…" - đổi mặc định / ngưng / mở lại nằm trong menu.
             render: (_v: unknown, row: Branch) => (
-              <RowActions actions={actionsOf(row)} maxInline={3} variant="filled" />
+              <RowActions actions={actionsOf(row)} maxInline={1} variant="standard" />
             ),
           },
         ]),
   ];
 
-  /* Nhiều chi nhánh là tính năng của GÓI (ADR 0027) — hết hạn thì xem/sửa chi nhánh hiện có được,
+  /* Nhiều chi nhánh là tính năng của GÓI (ADR 0027) - hết hạn thì xem/sửa chi nhánh hiện có được,
      không mở thêm chi nhánh mới. Server chặn ở POST /branches. */
   const addButton = hideWrites ? null : (
     <FeatureWriteTooltip feature={PLAN_FEATURE.BRANCHES}>
@@ -248,58 +273,68 @@ export function BranchesView({ variant = 'page' }: { variant?: 'page' | 'section
     </FeatureWriteTooltip>
   );
   const isSection = variant === 'section';
+  // Design: "Tổng N chi nhánh · M đang hoạt động", phần "đang hoạt động" xanh.
+  const summary = t.rich('toolbar.summaryTotal', {
+    total: query.data?.total ?? 0,
+    active: fmt.count(query.data?.activeCount ?? 0),
+    ok: (chunks) => <span className={styles.summaryActive}>{chunks}</span>,
+  });
+  /** Chi nhánh đầu tiên cần bổ sung địa điểm - đích của "Bổ sung ngay". */
+  const firstToReview = items.find((row) => !row.provinceCode || row.needsLocationReview) ?? null;
 
-  return (
-    <div className={styles.page}>
-      {isSection ? null : (
-        <ManagePageHeader title={t('page.title')} subtitle={t('page.subtitle')} extra={addButton} />
-      )}
+  const toolbar = (
+    <div className={styles.toolbar}>
+      <AutoSearchInput
+        placeholder={t('toolbar.searchPlaceholder')}
+        value={search}
+        onSearch={setSearch}
+        className={styles.search}
+        aria-label={t('toolbar.searchLabel')}
+      />
+      <Select<BranchStatus | ''>
+        className={styles.statusFilter}
+        value={statusFilter}
+        onChange={setStatusFilter}
+        aria-label={t('toolbar.statusLabel')}
+        options={[
+          { value: '', label: t('toolbar.allStatuses') },
+          ...BRANCH_STATUS_VALUES.map((value) => ({
+            value,
+            label: domainLabel('branchStatus', value),
+          })),
+        ]}
+      />
+      {isSection ? addButton : null}
+    </div>
+  );
 
+  const body = (
+    <>
       {needsReview > 0 ? (
-        <Alert
-          type="warning"
-          showIcon
-          className={styles.alert}
-          icon={<EnvironmentOutlined />}
-          title={t('page.needsReview', { count: needsReview })}
-          description={t('page.needsReviewHint')}
-        />
-      ) : null}
-
-      <div className={styles.toolbar}>
-        <AutoSearchInput
-          placeholder={t('toolbar.searchPlaceholder')}
-          value={search}
-          onSearch={setSearch}
-          className={styles.search}
-          aria-label={t('toolbar.searchLabel')}
-        />
-        <div className={styles.summary}>
-          <span>
-            {t('toolbar.summary', {
-              total: query.data?.total ?? 0,
-              active: fmt.count(query.data?.activeCount ?? 0),
-            })}
-          </span>
-          <Button
-            size="small"
-            type={statusFilter === BRANCH_STATUS.ACTIVE ? 'primary' : 'default'}
-            onClick={() =>
-              setStatusFilter((v) => (v === BRANCH_STATUS.ACTIVE ? '' : BRANCH_STATUS.ACTIVE))
-            }
-          >
-            {t('toolbar.activeOnly')}
-          </Button>
-          {isSection ? addButton : null}
+        <div className={styles.reviewBanner} role="status">
+          <EnvironmentOutlined className={styles.reviewIcon} aria-hidden />
+          <p className={styles.reviewText}>
+            <strong>{t('page.needsReview', { count: needsReview })}.</strong>{' '}
+            {t('page.needsReviewHint')}
+          </p>
+          {canManage && !hideWrites && firstToReview ? (
+            <button
+              type="button"
+              className={styles.reviewAction}
+              onClick={() => openEdit(firstToReview)}
+            >
+              {t('page.fixNow')}
+            </button>
+          ) : null}
         </div>
-      </div>
+      ) : null}
 
       <DataTable<Branch>
         label={t('table.label')}
         columns={columns}
         items={items}
         onRowClick={canManage ? openEdit : undefined}
-        minWidth={1200}
+        minWidth={1090}
         loading={query.isLoading}
         error={
           query.isError && !query.data
@@ -380,6 +415,30 @@ export function BranchesView({ variant = 'page' }: { variant?: 'page' | 'section
           onClose={() => setFormOpen(false)}
         />
       ) : null}
+    </>
+  );
+
+  if (isSection) {
+    return (
+      <InfoCard
+        id={sectionId}
+        title={t('page.title')}
+        hint={<span className={styles.summaryText}>{summary}</span>}
+        extra={toolbar}
+      >
+        {body}
+      </InfoCard>
+    );
+  }
+
+  return (
+    <div className={styles.page}>
+      <ManagePageHeader title={t('page.title')} subtitle={t('page.subtitle')} extra={addButton} />
+      <div className={styles.pageToolbar}>
+        <span className={styles.summaryText}>{summary}</span>
+        {toolbar}
+      </div>
+      {body}
     </div>
   );
 }

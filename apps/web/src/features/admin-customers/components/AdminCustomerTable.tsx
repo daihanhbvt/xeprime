@@ -55,7 +55,7 @@ export function AdminCustomerTable({
         <div>
           <div className={styles.name}>{r.displayName}</div>
           {/* Email LUÔN che ở danh sách — bỏ che chỉ xảy ra trong panel chi tiết và có ghi audit. */}
-          <div className={styles.meta}>{r.emailMasked ?? '—'}</div>
+          <div className={styles.meta}>{r.emailMasked ?? '-'}</div>
         </div>
       ),
     },
@@ -65,7 +65,7 @@ export function AdminCustomerTable({
       width: 150,
       render: (_, r) => (
         <span className={styles.phoneCell}>
-          <span className={styles.masked}>{r.phoneMasked ?? '—'}</span>
+          <span className={styles.masked}>{r.phoneMasked ?? '-'}</span>
           {r.phoneVerified ? (
             <Tooltip title={t('table.phoneVerified')}>
               {/* Màu lấy từ token (ADR 0003), không hard-code hex trong component. */}

@@ -28,9 +28,9 @@ export class DriverLicencesController {
 
   @Get()
   @ApiOperation({
-    summary: 'Bằng lái của tôi — bằng đang dùng và lượt nộp gần nhất',
+    summary: 'Bằng lái của tôi - bằng đang dùng và lượt nộp gần nhất',
     description:
-      'Lượt nộp đang `processing` thì hỏi lại sau 1–2 giây: đọc ảnh chạy nền và thường xong ' +
+      'Lượt nộp đang `processing` thì hỏi lại sau 1-2 giây: đọc ảnh chạy nền và thường xong ' +
       'trong vài chục giây.',
   })
   @ApiOkResponse({ type: DriverLicenceOverviewDto })
@@ -41,7 +41,7 @@ export class DriverLicencesController {
   @Post('presign')
   @Throttle({ default: { limit: 6, ttl: 60_000 } })
   @ApiOperation({
-    summary: 'Bắt đầu nộp ảnh mặt trước bằng lái — trả URL PUT riêng tư',
+    summary: 'Bắt đầu nộp ảnh mặt trước bằng lái - trả URL PUT riêng tư',
     description:
       'Bắt buộc `consent: true`. Lượt nộp đang chờ duyệt (nếu có) bị thay bằng lượt mới. ' +
       'Đang có một ảnh được đọc dở thì 409 `DRIVER_LICENCE_STATE_CONFLICT`.',
@@ -57,7 +57,7 @@ export class DriverLicencesController {
   @Post(':id/complete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Xác nhận đã tải ảnh — kiểm ảnh rồi bắt đầu đọc (chạy nền)',
+    summary: 'Xác nhận đã tải ảnh - kiểm ảnh rồi bắt đầu đọc (chạy nền)',
     description:
       'Trả về lượt nộp ở trạng thái `processing`. Gọi lại sau khi đã xong là idempotent.',
   })
@@ -70,7 +70,7 @@ export class DriverLicencesController {
   }
 
   @Get(':id/image')
-  @ApiOperation({ summary: 'Xem ảnh bằng lái đã nộp — URL sống ngắn' })
+  @ApiOperation({ summary: 'Xem ảnh bằng lái đã nộp - URL sống ngắn' })
   @ApiOkResponse({ type: DriverLicenceImageDto })
   image(
     @CurrentUser() user: AuthenticatedUser,

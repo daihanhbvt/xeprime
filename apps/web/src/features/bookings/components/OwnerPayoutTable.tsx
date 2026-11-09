@@ -70,14 +70,19 @@ export function OwnerPayoutTable({
 
   return (
     <dl className={cx(styles.root, className)} aria-label={label}>
-      {payout.unitAmount != null ? (
+      {payout.unitAmount != null && payout.rentalDays > 0 ? (
         <>
           <Row label={t('unitPrice')} value={fmt.pricePerDay(payout.unitAmount)} />
           <Row label={t('rentalDays')} value={t('rentalDaysValue', { count: payout.rentalDays })} />
         </>
       ) : (
         <Row
-          label={t('rentForDays', { count: payout.rentalDays })}
+          // `0` = server không biết số ngày (bảng phí rất cũ) ⇒ không in "0 ngày" hay "NaN ngày".
+          label={
+            payout.rentalDays > 0
+              ? t('rentForDays', { count: payout.rentalDays })
+              : t('rentPlain')
+          }
           value={<span className={styles.muted}>{t('variesByDay')}</span>}
         />
       )}

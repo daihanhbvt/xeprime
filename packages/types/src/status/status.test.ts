@@ -5,6 +5,7 @@ import {
   BOOKING_STATUS_META,
   BOOKING_STATUS_OCCUPYING,
   canTransitionBooking,
+  isBookingClosedWithoutTrip,
   isBookingFinal,
   occupiesSchedule,
   isBookingStatus,
@@ -225,6 +226,13 @@ describe('booking state machine', () => {
     for (const status of BOOKING_STATUS_VALUES) {
       const hasExit = BOOKING_STATUS_VALUES.some((to) => canTransitionBooking(status, to));
       expect(isBookingFinal(status)).toBe(!hasExit);
+    }
+  });
+
+  it('khép mà chuyến không diễn ra = huỷ / khách không đến, KHÔNG gồm hoàn tất', () => {
+    for (const status of BOOKING_STATUS_VALUES) {
+      const expected = status === BOOKING_STATUS.CANCELLED || status === BOOKING_STATUS.NO_SHOW;
+      expect(isBookingClosedWithoutTrip(status)).toBe(expected);
     }
   });
 });

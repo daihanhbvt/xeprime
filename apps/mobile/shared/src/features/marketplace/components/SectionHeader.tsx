@@ -48,10 +48,10 @@ export function SectionHeader({ title, count, subtitle, action }: SectionHeaderP
           style={{ minHeight: sizing.touchTarget, justifyContent: 'center', flexShrink: 0 }}
         >
           <XStack ai="center" gap={2}>
-            <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+            <Text col={colors.accentText} fos={fontSize.bodySm} fow={fontWeight.semibold}>
               {action.label}
             </Text>
-            <Ionicons name="chevron-forward" size={14} color={colors.primaryActive} />
+            <Ionicons name="chevron-forward" size={14} color={colors.accentText} />
           </XStack>
         </Pressable>
       ) : null}

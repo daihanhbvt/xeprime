@@ -3,6 +3,7 @@
 import { Alert, App, Button, Skeleton, Switch, Tag, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
 
+import { SettingRow } from '@/components/form/SettingRow';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useUpdateVatInvoiceSetting, useVatInvoiceSetting } from '../hooks/use-shop';
@@ -29,7 +30,14 @@ const { Paragraph } = Typography;
  * Thiếu quyền sửa (`canEdit`) hoặc đang trong phiên hỗ trợ của nền tảng (backend không khai
  * `@SupportAction`): chỉ còn trạng thái bằng chữ — không vẽ công tắc cho một hành động không mở.
  */
-export function VatInvoiceSetting({ canEdit }: { canEdit: boolean }) {
+export function VatInvoiceSetting({
+  canEdit,
+  variant = 'card',
+}: {
+  canEdit: boolean;
+  /** `row`: hàng công tắc có khung của trang "Chính sách thuê" (design `23979:96540`). */
+  variant?: 'card' | 'row';
+}) {
   const t = useTranslations('Shop.vatInvoice');
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
@@ -63,6 +71,28 @@ export function VatInvoiceSetting({ canEdit }: { canEdit: boolean }) {
       onSuccess: () => message.success(next ? t('enabled') : t('disabled')),
       onError: (err) => message.error(errorMessage(err)),
     });
+  }
+
+  if (variant === 'row') {
+    return (
+      <SettingRow
+        boxed
+        title={t('label')}
+        description={t('rowHint')}
+        control={
+          canToggle ? (
+            <Switch
+              checked={on}
+              loading={update.isPending}
+              onChange={(checked) => onChange(checked)}
+              aria-label={t('ariaLabel')}
+            />
+          ) : (
+            <Tag color={on ? 'green' : 'default'}>{on ? t('on') : t('off')}</Tag>
+          )
+        }
+      />
+    );
   }
 
   return (

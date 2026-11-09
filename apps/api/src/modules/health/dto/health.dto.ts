@@ -25,7 +25,7 @@ export class HealthCheckResultDto {
   @ApiProperty({
     enum: ['ok', 'error', 'shutting_down'],
     example: 'ok',
-    description: '`error` khi có indicator nào đó `down` — kèm HTTP 503.',
+    description: '`error` khi có indicator nào đó `down` - kèm HTTP 503.',
   })
   status!: 'ok' | 'error' | 'shutting_down';
 

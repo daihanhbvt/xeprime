@@ -57,9 +57,9 @@
     "noShow": "Ghi nhận khách không đến",
     "dialog": {
       "cancelTitle": "Hủy đơn {code}",
-      "noShowTitle": "Ghi nhận khách không đến — đơn {code}",
+      "noShowTitle": "Ghi nhận khách không đến - đơn {code}",
       "cancelLead": "Đơn đã hủy không mở lại được. Xe được nhả lịch ngay, nên khung giờ này có thể bị người khác đặt mất. Tiền giữ chỗ khách đã chuyển qua XePrime (nếu có) được hoàn 100% vào Ví điểm của khách.",
-      "noShowLead": "Ghi nhận khách không đến sẽ khép đơn lại và không mở lại được. Xe được nhả lịch ngay, nên khung giờ này có thể bị người khác đặt mất. Tiền bảo hiểm (nếu có) hoàn cho khách; bạn nhận trọn phần giữ chỗ dành cho chủ xe, còn phí đặt xe và phí dịch vụ – chủ xe thuộc XePrime.",
+      "noShowLead": "Ghi nhận khách không đến sẽ khép đơn lại và không mở lại được. Xe được nhả lịch ngay, nên khung giờ này có thể bị người khác đặt mất. Tiền bảo hiểm (nếu có) hoàn cho khách; bạn nhận trọn phần giữ chỗ dành cho chủ xe, còn phí đặt xe và phí dịch vụ - chủ xe thuộc XePrime.",
       "cancelOk": "Hủy đơn",
       "noShowOk": "Ghi nhận không đến",
       "keep": "Giữ nguyên đơn",
@@ -79,14 +79,25 @@
       "categoryPlaceholder": "Chọn nhóm lý do huỷ",
       "categoryHelp": "Dùng để thống kê vận hành và tính chỉ số uy tín của gian hàng.",
       "categoryRequired": "Chọn một nhóm lý do",
-      "reasonHelpOther": "Chọn “Lý do khác” thì đây là chỗ duy nhất nói rõ chuyện gì đã xảy ra."
+      "reasonHelpOther": "Chọn “Lý do khác” thì đây là chỗ duy nhất nói rõ chuyện gì đã xảy ra.",
+      "back": "Quay lại",
+      "cancelSubtitle": "Đơn đang ở trạng thái <b>{status}</b>. Nếu bạn hủy, đơn chuyển sang danh sách Đã kết thúc và không mở lại được; xe được nhả lịch ngay, khung giờ này mở cho khách khác đặt.",
+      "cancelReasonLabel": "Lý do hủy đơn",
+      "cancelReasonPlaceholder": "Chọn lý do",
+      "cancelReasonRequired": "Chọn lý do hủy đơn",
+      "customerNoteLabel": "Ghi chú cho khách",
+      "customerNotePlaceholder": "Ví dụ: xe vừa bị va chạm sáng nay, đang ở gara.",
+      "internalNoteLabel": "Ghi chú nội bộ",
+      "customerNoteRequired": "Nhập ghi chú để khách biết vì sao đơn bị hủy",
+      "cancelWarning": "Hủy ở bước này, cửa hàng sẽ bị <b>trừ điểm uy tín</b> và đơn chuyển sang danh sách Đã kết thúc.",
+      "cancelWarningMoney": "Tiền giữ chỗ khách đã chuyển qua XePrime được hoàn 100% vào Ví điểm của khách."
     },
     "noShowHint": "Chỉ ghi nhận được sau giờ nhận xe {minutes} phút, và chỉ khi chưa giao xe."
   },
   "list": {
     "title": "Tất cả đơn thuê",
     "searchLabel": "Tìm đơn thuê",
-    "searchPlaceholder": "Tìm theo tên khách, SĐT, mã đơn",
+    "searchPlaceholder": "Tìm kiếm mã đơn, khách hàng, tên xe, biển số,...",
     "statusAll": "Tất cả trạng thái",
     "sortLabel": "Sắp xếp",
     "sort": {
@@ -150,7 +161,7 @@
     "debtAmount": "Còn nợ",
     "depositAmount": "Đặt cọc tài sản",
     "free": "Miễn phí",
-    "note": "Mọi con số do hệ thống tính từ phiếu thu và phụ phí — không sửa trực tiếp được.",
+    "note": "Mọi con số do hệ thống tính từ phiếu thu và phụ phí - không sửa trực tiếp được.",
     "overCollected": "Thu vượt",
     "holdPaymentPlan": {
       "title": "Thanh toán giữ chỗ",
@@ -161,7 +172,7 @@
     },
     "ownerEconomics": {
       "title": "Phần của bạn",
-      "note": "Số đã chốt lúc đặt. Phí dịch vụ – chủ xe và thuế được giữ lại từ tiền giữ chỗ trước khi phần còn lại vào Ví điểm của bạn khi chuyến hoàn thành."
+      "note": "Số đã chốt lúc đặt. Phí dịch vụ - chủ xe và thuế được giữ lại từ tiền giữ chỗ trước khi phần còn lại vào Ví điểm của bạn khi chuyến hoàn thành."
     }
   },
   "driver": {
@@ -174,7 +185,7 @@
     "sheetTitle": "Chọn tài xế khả dụng trong khung giờ đơn",
     "unassignSuccess": "Đã bỏ gán tài xế",
     "call": "Gọi",
-    "noneWithDriver": "Đơn có tài xế — chưa phân công",
+    "noneWithDriver": "Đơn có tài xế - chưa phân công",
     "routePickup": "Đón: {address}",
     "routeDestination": "→ {address}",
     "searchLabel": "Tìm tài xế",
@@ -185,16 +196,16 @@
     "title": "Phí giao nhận",
     "edit": "Chốt phí giao nhận",
     "label": "Phí giao nhận (VNĐ)",
-    "hint": "Số bản đồ chỉ là ước lượng — bạn là người chốt phí sau khi thoả thuận với khách.",
+    "hint": "Số bản đồ chỉ là ước lượng - bạn là người chốt phí sau khi thoả thuận với khách.",
     "noteLabel": "Ghi chú nội bộ",
     "notePlaceholder": "Ví dụ: đã thống nhất qua điện thoại, giao tận Thủ Đức",
-    "noteHint": "Chỉ lưu vào nhật ký của đơn để đối chiếu — khách không nhìn thấy.",
+    "noteHint": "Chỉ lưu vào nhật ký của đơn để đối chiếu - khách không nhìn thấy.",
     "success": "Đã cập nhật phí giao nhận"
   },
   "handover": {
     "titlePickup": "Biên bản giao xe",
     "titleReturn": "Biên bản nhận lại xe",
-    "readOnly": "Biên bản đã xác nhận — chỉ đọc. Sửa số KM phải đi đường điều chỉnh có lý do.",
+    "readOnly": "Biên bản đã xác nhận - chỉ đọc. Sửa số KM phải đi đường điều chỉnh có lý do.",
     "notEligible": "Trạng thái đơn hiện tại không mở được chiều bàn giao này.",
     "errorTitle": "Không tải được biên bản bàn giao",
     "odometer": {
@@ -213,7 +224,7 @@
     },
     "condition": {
       "label": "Tình trạng xe",
-      "normalOption": "Bình thường — xe không có dấu hiệu hư hại mới",
+      "normalOption": "Bình thường - xe không có dấu hiệu hư hại mới",
       "attentionOption": "Có điểm cần lưu ý"
     },
     "notes": {
@@ -226,11 +237,11 @@
       "library": "Chọn từ thư viện",
       "remove": "Gỡ ảnh",
       "uploading": "Đang tải ảnh…",
-      "removeConfirm": "Gỡ ảnh này khỏi biên bản? Ảnh hiện trạng là bằng chứng — gỡ rồi thì phải chụp lại.",
+      "removeConfirm": "Gỡ ảnh này khỏi biên bản? Ảnh hiện trạng là bằng chứng - gỡ rồi thì phải chụp lại.",
       "keep": "Giữ ảnh",
       "sourceHint": "Chụp mới hoặc chọn ảnh có sẵn. Ảnh được nén trước khi tải lên để đi được cả khi sóng yếu.",
-      "unavailable": "Không mở được ảnh. Liên kết xem ảnh chỉ sống vài phút — chạm lại để xin liên kết mới.",
-      "optional": "Không bắt buộc — một chuyến bình thường xong bằng đúng hai lần bấm.",
+      "unavailable": "Không mở được ảnh. Liên kết xem ảnh chỉ sống vài phút - chạm lại để xin liên kết mới.",
+      "optional": "Không bắt buộc - một chuyến bình thường xong bằng đúng hai lần bấm.",
       "afterConfirm": "Vẫn bổ sung được ảnh sau khi đã xác nhận.",
       "view": "Xem ảnh",
       "upload": "Tải ảnh lên",
@@ -259,7 +270,7 @@
     },
     "conflict": {
       "title": "Biên bản vừa bị người khác sửa",
-      "body": "Ai đó đã lưu biên bản này trong lúc bạn đang nhập. Dữ liệu mới đã được tải lại — kiểm tra rồi thao tác lại."
+      "body": "Ai đó đã lưu biên bản này trong lúc bạn đang nhập. Dữ liệu mới đã được tải lại - kiểm tra rồi thao tác lại."
     },
     "odometerFix": {
       "openMissing": "Bổ sung KM còn thiếu",
@@ -268,7 +279,7 @@
       "reasonCodeLabel": "Lý do",
       "reasonLabel": "Diễn giải chi tiết",
       "reasonPlaceholder": "VD: Đọc lại từ ảnh đồng hồ đính kèm biên bản",
-      "reasonHint": "Bắt buộc và được ghi vào nhật ký — một số KM đổi mà không ai biết vì sao là thứ không được phép tồn tại.",
+      "reasonHint": "Bắt buộc và được ghi vào nhật ký - một số KM đổi mà không ai biết vì sao là thứ không được phép tồn tại.",
       "confirm": "Lưu chỉ số KM",
       "success": "Đã cập nhật chỉ số KM của biên bản",
       "missingTitle": "Biên bản này đang thiếu chỉ số KM",
@@ -278,11 +289,11 @@
       "decreaseTitle": "Số KM mới thấp hơn KM hiện tại",
       "decreaseOverride": "Tôi có thẩm quyền, vẫn giảm"
     },
-    "advancedPickup": "Thêm thông tin bàn giao — Không bắt buộc",
-    "advancedReturn": "Thêm thông tin khi nhận xe — Không bắt buộc",
-    "photosHint": "Chụp ảnh hiện trạng xe và công tơ mét để bảo vệ quyền lợi bồi thường khi có tranh chấp. Không bắt buộc — bỏ qua vẫn xác nhận được.",
+    "advancedPickup": "Thêm thông tin bàn giao - Không bắt buộc",
+    "advancedReturn": "Thêm thông tin khi nhận xe - Không bắt buộc",
+    "photosHint": "Chụp ảnh hiện trạng xe và công tơ mét để bảo vệ quyền lợi bồi thường khi có tranh chấp. Không bắt buộc - bỏ qua vẫn xác nhận được.",
     "evidenceAdvisory": "Chụp ảnh hiện trạng xe và công tơ mét để bảo vệ quyền lợi bồi thường khi có tranh chấp.",
-    "photosOptional": "Không bắt buộc — bỏ qua vẫn xác nhận được.",
+    "photosOptional": "Không bắt buộc - bỏ qua vẫn xác nhận được.",
     "confirmDialog": {
       "titlePickup": "Xác nhận đã giao xe",
       "titleReturn": "Xác nhận đã nhận lại xe",
@@ -290,22 +301,18 @@
       "booking": "Đơn",
       "successPickup": "Đã xác nhận giao xe",
       "successReturn": "Đã xác nhận nhận lại xe",
-      "openSurcharge": "Ghi nhận phát sinh",
       "readyTitlePickup": "Sẵn sàng giao xe",
-      "readyTitleReturn": "Sẵn sàng nhận lại xe",
       "readyBodyPickup": "Bạn xác nhận đã hoàn tất việc bàn giao xe và các giấy tờ liên quan cho khách thuê. Vui lòng kiểm tra tình trạng xe, thông tin cần thiết trước khi xác nhận.",
-      "readyBodyReturn": "Bạn xác nhận đã nhận lại xe từ khách thuê. Vui lòng kiểm tra tình trạng xe, số km và các phát sinh trước khi xác nhận.",
       "nextPickup": "Sau khi xác nhận, trạng thái chuyến thuê sẽ được cập nhật thành <b>Đang thuê</b>.",
-      "nextReturn": "Sau khi xác nhận, trạng thái chuyến thuê sẽ được cập nhật thành <b>Hoàn thành</b>.",
       "back": "Quay lại",
       "confirm": "Xác nhận"
     },
-    "returnDepositNotice": "Nếu không có phát sinh, hệ thống đề xuất hoàn đủ tiền cọc đã nhận. Việc hoàn tiền được chủ xe thực hiện bên ngoài và đánh dấu lại sau — không chặn hoàn tất chuyến.",
+    "returnDepositNotice": "Nếu không có phát sinh, hệ thống đề xuất hoàn đủ tiền cọc đã nhận. Việc hoàn tiền được chủ xe thực hiện bên ngoài và đánh dấu lại sau - không chặn hoàn tất chuyến.",
     "odometerBelowPickup": "Odo khi nhận ({entered} km) không được nhỏ hơn Odo lúc giao ({pickup} km).",
     "occurredAt": {
       "labelPickup": "Thời gian giao xe thực tế",
       "labelReturn": "Thời gian nhận xe thực tế",
-      "hint": "{time} — mặc định theo giờ hẹn trên đơn, chỉnh lại nếu giao/nhận lệch giờ."
+      "hint": "{time} - mặc định theo giờ hẹn trên đơn, chỉnh lại nếu giao/nhận lệch giờ."
     },
     "supplement": {
       "title": "Bổ sung thông tin bàn giao",
@@ -314,6 +321,59 @@
       "emptyBody": "Bổ sung ảnh được sau khi đã xác nhận giao hoặc nhận xe.",
       "confirmedTitle": "Biên bản đã xác nhận lúc {time}",
       "confirmedBody": "Ảnh thêm từ bây giờ được ghi nhận là bổ sung sau, kèm đúng thời điểm tải lên. Số KM và thời gian bàn giao không sửa ở đây."
+    },
+    "returnDialog": {
+      "title": "Xác nhận đã nhận lại xe #{code}",
+      "subtitle": "Kiểm tra nhanh và hoàn tất chuyến đi",
+      "loadError": "Không tải được thông tin bàn giao của đơn này.",
+      "scheduledReturn": "Hẹn trả <b>{time}</b>",
+      "onTime": "Đúng giờ",
+      "late": "Trễ {duration}",
+      "lateHint": "Trễ {duration} so với giờ hẹn",
+      "timeLabel": "Thời gian nhận thực tế",
+      "useNow": "Hiện tại",
+      "useScheduled": "Đúng giờ",
+      "useScheduledAria": "Đặt về giờ hẹn trả ({time})",
+      "useNowAria": "Đặt về giờ hiện tại",
+      "odoLabel": "Chỉ số Odo (km)",
+      "odoPlaceholder": "Số km trên đồng hồ",
+      "odoUnit": "km",
+      "odoDriven": "Lúc giao: {pickup}. <b>Đã chạy {driven}</b>",
+      "odoPickup": "Lúc giao: {pickup}.",
+      "odoBelow": "Nhỏ hơn số lúc giao ({pickup}).",
+      "odoCurrent": "KM hệ thống đang ghi: {km}.",
+      "odoOptional": "Không bắt buộc - bỏ trống thì KM của xe giữ nguyên.",
+      "detailsTitle": "Tình trạng, ảnh & ghi chú",
+      "optional": "Không bắt buộc",
+      "photoCount": "{done}/{total} ảnh",
+      "conditionNormal": "Bình thường, không có dấu hiệu hư hại",
+      "photosLabel": "Ảnh hiện trạng & Odo",
+      "notesPlaceholder": "Ví dụ: xe trả tại bãi, khách gửi lại chìa khoá phụ",
+      "surchargeLabel": "Phụ phí phát sinh",
+      "surchargeCategory": "Loại phụ phí",
+      "surchargeAmountPlaceholder": "Nhập phụ phí phát sinh",
+      "surchargeRemove": "Bỏ dòng phụ phí {index}",
+      "surchargeAdd": "Thêm phụ phí",
+      "surchargeRecorded": "Đã ghi trước đó",
+      "surchargeIncomplete": "Mỗi dòng phụ phí cần loại và số tiền lớn hơn 0 - điền đủ hoặc bỏ dòng đó.",
+      "overtimeSuggestion": "Trả trễ - gợi ý phí quá giờ {amount}",
+      "mileageSuggestion": "Vượt {excess} - gợi ý phí vượt km {amount}",
+      "suggestionApply": "Thêm",
+      "overtimeReason": "Trả xe trễ {late} - tính {hours, plural, other {# giờ}} × {fee}/giờ.",
+      "depositReceived": "Tiền cọc đã nhận",
+      "surchargeTotal": "Phụ phí phát sinh",
+      "proposedRefund": "Đề xuất hoàn cọc",
+      "refundInfoLabel": "Về hoàn cọc",
+      "refundInfo": "Chủ xe hoàn cọc cho khách bên ngoài hệ thống, rồi đánh dấu đã hoàn ở thẻ Phát sinh của trang đơn. Việc này không chặn hoàn tất chuyến.",
+      "collectLabel": "Đã thu {amount} của khách",
+      "collectHint": "Tiền thuê còn lại và phần phụ phí vượt tiền cọc - ghi thành phiếu thu khi xác nhận.",
+      "collectOffHint": "Đơn sẽ hoàn thành với khoản còn nợ {amount}. Thu sau bằng nút Thu tiền ở trang đơn.",
+      "collectMethod": "Hình thức thu",
+      "previewError": "Chưa tính được tiền quyết toán. Thử lại, hoặc bỏ chọn ô đã thu tiền để xác nhận.",
+      "collectChanged": "Số tiền còn phải thu vừa đổi thành {amount}. Kiểm tra lại rồi bấm xác nhận.",
+      "suspicious": "Quãng đường {delta} trong {days, plural, other {# ngày}} thấp bất thường (dưới {threshold}/ngày). Kiểm tra lại số Odo.",
+      "suspiciousConfirm": "Số Odo đúng, vẫn xác nhận",
+      "confirm": "Xác nhận đã nhận xe"
     }
   },
   "settlement": {
@@ -321,7 +381,7 @@
     "open": "Quyết toán & phụ phí",
     "errorTitle": "Không tải được quyết toán",
     "depositRequired": "Cọc theo đơn",
-    "depositRequiredHint": "Đây là mức cọc đơn khai — chưa chắc đã thu.",
+    "depositRequiredHint": "Đây là mức cọc đơn khai - chưa chắc đã thu.",
     "depositReceived": "Cọc đã nhận",
     "surchargeTotal": "Tổng phát sinh",
     "proposedRefund": "Đề xuất hoàn lại",
@@ -337,18 +397,18 @@
       "amountLabel": "Số tiền (đ)",
       "reasonLabel": "Lý do chi tiết",
       "reasonPlaceholder": "Ví dụ: khách trả muộn 6 tiếng do kẹt xe ngoài tỉnh",
-      "reasonHint": "Đây là khoản trừ vào tiền của khách — lý do là bắt buộc và khách đọc được.",
+      "reasonHint": "Đây là khoản trừ vào tiền của khách - lý do là bắt buộc và khách đọc được.",
       "addSuccess": "Đã ghi nhận khoản phát sinh",
       "removeSuccess": "Đã gỡ khoản phát sinh",
       "recordedBy": "{name} · {time}",
       "removeReason": "Gỡ khỏi quyết toán",
       "amountRequired": "Nhập số tiền lớn hơn 0.",
-      "reasonRequired": "Nhập lý do — đây là khoản trừ vào tiền cọc của khách.",
+      "reasonRequired": "Nhập lý do - đây là khoản trừ vào tiền cọc của khách.",
       "removeAria": "Gỡ khoản {category}",
       "overtimeSuggestion": "Đề xuất từ chính sách quá giờ: {amount}",
       "ruleSuggestion": "Bảng phụ phí đã công bố: {kind} {amount} {unit}",
       "ruleThreshold": "Áp dụng từ ngưỡng {value} theo quy tắc chủ xe đã công bố lúc đặt.",
-      "ruleHint": "Quy tắc chủ xe đã công bố lúc đặt — nhập số thực tế theo chuyến.",
+      "ruleHint": "Quy tắc chủ xe đã công bố lúc đặt - nhập số thực tế theo chuyến.",
       "addButton": "Thêm phí phát sinh",
       "operationalNote": "Các con số trên là ghi nhận vận hành. Hệ thống không tạo giao dịch ngân hàng và không yêu cầu khách xác nhận.",
       "mileageSuggestion": "Đề xuất từ hạn mức quãng đường: {amount}"
@@ -399,7 +459,7 @@
     "needsMoreBody": "Phát sinh vượt quá tiền cọc đã nhận. Phần chênh lệch thu trực tiếp với khách.",
     "noticeNotReceived": "Chưa có ghi nhận thu cọc cho đơn này nên không có việc hoàn cọc. Ghi nhận khoản thu cọc ở mục Thanh toán nếu đã nhận tiền.",
     "noticeReceived": "Đang giữ tiền cọc của khách. Việc hoàn cọc mở ra sau khi nhận lại xe và chốt phát sinh.",
-    "noticeSettled": "Phát sinh đã bù trọn phần cọc đã thu — không còn khoản nào phải hoàn lại cho khách.",
+    "noticeSettled": "Phát sinh đã bù trọn phần cọc đã thu - không còn khoản nào phải hoàn lại cho khách.",
     "markRefunded": "Đánh dấu đã hoàn cọc",
     "correctRefund": "Điều chỉnh thông tin hoàn cọc",
     "refundMethod": "Phương thức",
@@ -416,11 +476,11 @@
       "excess": "Vượt hạn mức",
       "feePerKm": "Phí mỗi km vượt",
       "suggestedAmount": "Phụ phí đề xuất",
-      "withinLimit": "Chuyến này chạy trong hạn mức — không có phụ phí vượt km.",
+      "withinLimit": "Chuyến này chạy trong hạn mức - không có phụ phí vượt km.",
       "noPolicy": "Chuyến này không đặt hạn mức quãng đường.",
       "missingOdometer": "Chưa đủ dữ liệu: cần chỉ số đồng hồ km ở cả biên bản giao xe và biên bản nhận lại xe.",
-      "odometerReversed": "Chỉ số đồng hồ lúc nhận lại nhỏ hơn lúc giao — kiểm tra lại hai biên bản bàn giao trước khi ghi phụ phí.",
-      "defaultReason": "Chạy {actual}, hạn mức {allowed} — vượt {excess}, tính {fee} mỗi km vượt.",
+      "odometerReversed": "Chỉ số đồng hồ lúc nhận lại nhỏ hơn lúc giao - kiểm tra lại hai biên bản bàn giao trước khi ghi phụ phí.",
+      "defaultReason": "Chạy {actual}, hạn mức {allowed} - vượt {excess}, tính {fee} mỗi km vượt.",
       "noChargedDays": "Chuyến này không có số ngày tính phí để suy ra hạn mức, nên không đề xuất phí vượt km."
     },
     "surchargeNone": "Không có",
@@ -436,7 +496,7 @@
     "methodLabel": "Hình thức",
     "referenceLabel": "Mã tra soát (tuỳ chọn)",
     "referencePlaceholder": "VD: mã giao dịch CK",
-    "depositHint": "Tiền cọc là tài sản GIỮ HỘ — nó không cộng vào \"đã trả\" của đơn.",
+    "depositHint": "Tiền cọc là tài sản GIỮ HỘ - nó không cộng vào \"đã trả\" của đơn.",
     "recordSuccess": "Đã ghi nhận thu tiền",
     "void": "Hoàn",
     "voidConfirm": "Hoàn giao dịch này? Số đã trả sẽ bị trừ lại.",
@@ -448,7 +508,7 @@
     "debtLead": "Còn nợ",
     "depositLead": "Cọc còn phải thu",
     "depositNoticeTitle": "Cọc không trừ vào công nợ",
-    "depositNoticeBody": "Tiền cọc là tài sản giữ hộ khách, sẽ hoàn lại khi kết thúc chuyến — nên nó lên sổ Thu-Chi nhưng không làm giảm số tiền thuê khách còn nợ.",
+    "depositNoticeBody": "Tiền cọc là tài sản giữ hộ khách, sẽ hoàn lại khi kết thúc chuyến - nên nó lên sổ Thu-Chi nhưng không làm giảm số tiền thuê khách còn nợ.",
     "descriptionLabel": "Ghi chú (tuỳ chọn)",
     "recordDepositSuccess": "Đã ghi nhận thu cọc"
   },
@@ -492,7 +552,7 @@
       "deliveryFee": "Phí giao nhận",
       "discountAmount": "Giảm giá",
       "depositAmount": "Tiền cọc",
-      "depositHint": "Cọc là tài sản giữ hộ — nó không phải tiền thuê đã thu.",
+      "depositHint": "Cọc là tài sản giữ hộ - nó không phải tiền thuê đã thu.",
       "note": "Ghi số đã thoả thuận với khách. Bỏ trống thì hệ thống dùng chính sách giá của gian hàng."
     },
     "submit": "Tạo đơn",
@@ -511,14 +571,14 @@
     "resolveForbiddenBody": "Bổ sung KM cần quyền xem bàn giao của đơn tương ứng.",
     "resolveErrorTitle": "Không tải được biên bản để bổ sung KM",
     "resolveErrorBody": "Kết nối có thể bị gián đoạn. Việc này vẫn còn trong hàng đợi.",
-    "emptyBody": "Mọi biên bản trả xe đã có chỉ số KM — số KM của đội xe đang đầy đủ."
+    "emptyBody": "Mọi biên bản trả xe đã có chỉ số KM - số KM của đội xe đang đầy đủ."
   },
   "edit": {
     "title": "Sửa đơn thuê",
     "open": "Sửa đơn",
     "vehicleLocked": "Không đổi được xe của đơn đã tạo. Cần xe khác thì huỷ đơn này và tạo đơn mới.",
     "closedHint": "Đơn đã kết thúc nên không sửa được nữa.",
-    "scheduleNote": "Đổi thời gian là đổi chỗ đơn chiếm trên lịch xe — hệ thống kiểm lại lúc lưu.",
+    "scheduleNote": "Đổi thời gian là đổi chỗ đơn chiếm trên lịch xe - hệ thống kiểm lại lúc lưu.",
     "success": "Đã cập nhật đơn",
     "total": "Tổng tiền",
     "serviceTypeLabel": "Loại dịch vụ",
@@ -528,7 +588,7 @@
     "destinationLabel": "Điểm đến",
     "destinationPlaceholder": "TP. Đà Lạt, Lâm Đồng",
     "scheduleLabel": "Thời gian thuê",
-    "deliveryFeeNote": "Phí giao nhận sửa ở khối \"Tổng hợp chi phí\" — sửa ở đó mới ghi được lý do vào nhật ký.",
+    "deliveryFeeNote": "Phí giao nhận sửa ở khối \"Tổng hợp chi phí\" - sửa ở đó mới ghi được lý do vào nhật ký.",
     "conflictTitle": "Xe đã bận trong khung giờ này",
     "conflictBody": "Chọn xe khác hoặc đổi thời gian nhận/trả.",
     "frozenNote": "Loại dịch vụ, thời gian thuê, lộ trình và giá đã chốt lúc tạo đơn nên không sửa được nữa. Phí giao nhận chốt ở khối \"Tổng hợp chi phí\".",
@@ -547,7 +607,7 @@
     "loadError": "Không tải được thông tin bàn giao",
     "notStarted": "Chuyến chưa bắt đầu. Bấm “Xác nhận đã giao xe” khi bàn giao xe cho khách.",
     "inProgress": "Xe đang ở với khách. Bấm “Xác nhận đã nhận xe” khi khách trả xe.",
-    "ended": "Đơn đã kết thúc sớm — lịch sử bàn giao chỉ để xem lại.",
+    "ended": "Đơn đã kết thúc sớm - lịch sử bàn giao chỉ để xem lại.",
     "pickedUp": "Đã giao xe",
     "returned": "Đã nhận lại xe",
     "noOdometer": "Không ghi nhận chỉ số Odo.",
@@ -617,11 +677,11 @@
     "serviceLabel": "Dịch vụ",
     "packageLabel": "Gói thuê dài hạn",
     "packageRequired": "Chọn gói thuê dài hạn trước khi tiếp tục.",
-    "derivedReturn": "Ngày trả: {value} — server tính theo tháng lịch.",
+    "derivedReturn": "Ngày trả: {value} - server tính theo tháng lịch.",
     "deliveryLabel": "Giao xe tận nơi",
     "deliveryAddressLabel": "Địa chỉ giao xe",
     "deliveryAddressPlaceholder": "123 Lê Lợi, Q.1, TP.HCM",
-    "deliveryFeeNote": "Phí giao nhận để 0 lúc tạo — chủ xe chốt phí đã thoả thuận sau.",
+    "deliveryFeeNote": "Phí giao nhận để 0 lúc tạo - chủ xe chốt phí đã thoả thuận sau.",
     "routeLabel": "Lộ trình",
     "pickupAddressLabel": "Địa chỉ đón khách",
     "destinationLabel": "Điểm đến",
@@ -630,8 +690,8 @@
     "checking": "Đang kiểm tra…",
     "continue": "Tiếp tục",
     "back": "Quay lại",
-    "quoteUnavailable": "Xe chưa cấu hình giá — nhập tiền thuê và cọc trước khi tạo đơn.",
-    "manualBaseRequired": "Xe chưa cấu hình giá — nhập tiền thuê trước khi tạo đơn.",
+    "quoteUnavailable": "Xe chưa cấu hình giá - nhập tiền thuê và cọc trước khi tạo đơn.",
+    "manualBaseRequired": "Xe chưa cấu hình giá - nhập tiền thuê trước khi tạo đơn.",
     "submit": "Tạo đơn",
     "doneTitle": "Đã tạo đơn thuê",
     "viewBooking": "Mở chi tiết đơn",
@@ -639,10 +699,10 @@
     "quoteTitle": "Tạm tính cho khoảng thời gian đã chọn",
     "quoteEstimate": "Tạm tính",
     "quoteSavings": "Tiết kiệm {amount} nhờ ưu đãi thời hạn {package}.",
-    "quoteUnavailableAtTime": "Xe chưa cấu hình giá ngày — bạn sẽ nhập tiền thuê ở bước Xác nhận.",
+    "quoteUnavailableAtTime": "Xe chưa cấu hình giá ngày - bạn sẽ nhập tiền thuê ở bước Xác nhận.",
     "packageHint": "Chọn gói để hệ thống báo giá.",
     "changeTime": "Đổi thời gian",
-    "routeNote": "Lộ trình: {route} — đổi ở bước Thời gian nếu cần.",
+    "routeNote": "Lộ trình: {route} - đổi ở bước Thời gian nếu cần.",
     "pickupMethodLabel": "Hình thức nhận xe",
     "pickupSelf": "Nhận tại điểm hẹn",
     "pickupSelfHint": "Khách tới nhận xe tại địa điểm của gian hàng",
@@ -667,10 +727,11 @@
     "rentalDays": "Số ngày thuê",
     "rentalDaysValue": "{count, plural, other {# ngày}}",
     "rentForDays": "Tiền thuê {count, plural, other {# ngày}}",
+    "rentPlain": "Tiền thuê",
     "variesByDay": "Giá khác nhau theo ngày",
     "revenue": "Doanh thu cho thuê xe",
     "revenueHint": "Tiền thuê sau khuyến mãi bạn đặt cho xe. Không gồm phí giao xe, phí đặt xe khách trả cho XePrime và bảo hiểm.",
-    "commission": "Phí dịch vụ – Chủ xe",
+    "commission": "Phí dịch vụ - Chủ xe",
     "commissionHintTiers": "Tính lũy tiến theo ngày thuê theo chính sách phí áp cho chuyến này: {tiers}.",
     "commissionHintGeneric": "Tính theo nấc lũy tiến của chính sách phí áp cho chuyến này.",
     "commissionHintBody": "Gian hàng có gói: 0đ. Khoản này giúp XePrime vận hành chợ, chăm sóc khách, xử lý hoàn/huỷ, hỗ trợ tranh chấp và bảo hiểm.",
@@ -689,29 +750,19 @@
   },
   "board": {
     "title": "Đơn thuê xe",
-    "subtitle": "Quản lý tập trung các đơn thuê tự lái, có tài xế và thuê dài hạn; kiểm soát lịch nhận - trả xe và doanh thu từng chuyến",
+    "subtitle": "Quản lý toàn bộ yêu cầu đặt xe và đơn thuê trên một luồng. Nhấn vào thẻ để xem chi tiết.",
     "create": "Tạo đơn thuê",
     "railLabel": "Lọc đơn thuê theo trạng thái",
     "all": "Tất cả",
-    "groupNeedsAction": "CẦN XỬ LÝ",
-    "groupEnded": "ĐÃ KẾT THÚC",
-    "preset": {
-      "awaiting_pickup": "Chờ giao xe",
-      "renting": "Đang thuê",
-      "completed": "Hoàn thành",
-      "cancelled": "Đã hủy"
-    },
-    "recent": "{count, plural, other {# chuyến gần nhất}}",
     "viewAll": "Xem tất cả ({count})",
     "customer": "Khách hàng",
     "handlePickup": "Xử lý giao xe",
     "receiveBack": "Nhận xe",
-    "viewDetail": "Xem chi tiết",
-    "progress": "Đã đi {percent}% · còn {remaining}",
     "overdueReturn": "Quá giờ trả xe {duration}",
     "pickupToday": "Giao xe hôm nay · {time}",
     "pickupOverdue": "Quá giờ giao xe · {time}",
-    "pickupUpcoming": "Giao xe {date} · {time}",
+    "pickupNeverConfirmed": "Quá cả giờ trả xe ({date}) - chưa xác nhận giao xe",
+    "pickupUpcoming": "Giao xe {date}{sep}{time}",
     "returnedOnTime": "Đã trả xe đúng hạn",
     "returnedLate": "Trả xe trễ hạn",
     "cancelledBy": {
@@ -722,12 +773,107 @@
     },
     "cancelled": "Đã hủy",
     "noShow": "Khách không đến",
+    "noShowAction": "Khách không đến",
+    "customerReturned": "Khách báo đã trả xe · {time} - tự hoàn thành {deadline}",
     "listLabel": "Danh sách đơn {group}",
-    "emptyGroupTitle": "Chưa có đơn nào ở mục này",
-    "emptyGroupBody": "Đơn xuất hiện ở đây khi chuyển sang trạng thái tương ứng.",
     "emptyAllTitle": "Gian hàng chưa có đơn thuê nào",
     "groupError": "Không tải được nhóm đơn này",
-    "plate": "Biển số {plate}"
+    "plate": "Biển số {plate}",
+    "ended": "Đơn đã kết thúc",
+    "endedWithCount": "Đơn đã kết thúc ({count})",
+    "stage": {
+      "needs_action": "Cần xử lý",
+      "awaiting_payment": "Chờ khách thanh toán",
+      "awaiting_pickup": "Chờ giao xe",
+      "renting": "Đang thuê"
+    },
+    "stageEmpty": {
+      "needs_action": {
+        "title": "Không còn yêu cầu nào cần xử lý",
+        "body": "Yêu cầu mới của khách sẽ hiện ở đây để bạn xác nhận hoặc từ chối."
+      },
+      "awaiting_payment": {
+        "title": "Không có chuyến nào đang chờ khách thanh toán",
+        "body": "Chuyến bạn đã xác nhận hiện ở đây cho tới khi khách thanh toán đủ tiền giữ chỗ."
+      },
+      "awaiting_pickup": {
+        "title": "Không có chuyến nào chờ giao xe",
+        "body": "Chuyến đã được khách thanh toán giữ chỗ sẽ hiện ở đây để chuẩn bị bàn giao."
+      },
+      "renting": {
+        "title": "Không có xe nào đang cho thuê",
+        "body": "Chuyến đã giao xe cho khách sẽ hiện ở đây cho tới khi bạn nhận xe về."
+      }
+    },
+    "emptyAllBody": "Yêu cầu đặt xe của khách và đơn bạn tạo sẽ hiện ở đây theo từng chặng.",
+    "emptyAllMarketTitle": "Chưa có chuyến thuê nào",
+    "emptyAllMarketBody": "Khi khách gửi yêu cầu thuê xe của bạn, chuyến sẽ hiện ở đây theo từng chặng để bạn duyệt và bàn giao.",
+    "viewVehicles": "Xem xe của tôi",
+    "noAccessTitle": "Bạn chưa có quyền xem đơn thuê",
+    "noAccessBody": "Liên hệ chủ gian hàng để được cấp quyền xem yêu cầu đặt xe hoặc đơn thuê.",
+    "openDetail": "Xem chi tiết đơn {code}",
+    "viewDetailShort": "Chi tiết",
+    "remaining": "Còn lại: {remaining}",
+    "money": {
+      "rental": "Tiền thuê:",
+      "customerTotal": "Khách trả:",
+      "holdPaid": "Đã giữ chỗ:",
+      "payAtPickup": "Trả chủ xe khi nhận xe:",
+      "collected": "Đã thu:",
+      "debt": "Còn phải thu:"
+    },
+    "view": {
+      "label": "Dạng xem",
+      "board": "Xem dạng bảng Kanban",
+      "list": "Xem dạng danh sách"
+    },
+    "kanban": {
+      "label": "Bảng đơn thuê theo chặng",
+      "dragHint": "Chỉ kéo được sang bước tiếp theo",
+      "handle": "Kéo thẻ {vehicle} sang bước tiếp theo",
+      "drop": {
+        "approve": "Thả vào đây để xác nhận yêu cầu",
+        "pickup": "Thả vào đây để mở bước giao xe",
+        "locked": "Thẻ tự sang cột này khi khách thanh toán đủ tiền giữ chỗ",
+        "notNext": "Chỉ kéo được sang bước tiếp theo"
+      },
+      "dropped": {
+        "locked": "Chuyến chỉ sang \"Chờ giao xe\" khi khách thanh toán đủ tiền giữ chỗ.",
+        "notNext": "Chỉ kéo được thẻ sang bước tiếp theo."
+      },
+      "columnError": "Không tải được cột này",
+      "retry": "Thử lại",
+      "loadMore": "Tải thêm",
+      "loadingMore": "Đang tải thêm…",
+      "loadMoreError": "Không tải thêm được",
+      "dnd": {
+        "instructions": "Nhấn Space hoặc Enter để nhấc thẻ. Dùng phím mũi tên trái, phải để chọn cột, nhấn Space hoặc Enter để thả, Esc để huỷ.",
+        "pickedUp": "Đã nhấc thẻ {item} ở cột {from}.",
+        "over": "Thẻ {item} đang ở trên cột {to}.",
+        "overNone": "Thẻ {item} không ở trên cột nào.",
+        "dropped": "Đã thả thẻ {item} vào cột {to}.",
+        "droppedNone": "Đã thả thẻ {item}, không có gì thay đổi.",
+        "cancelled": "Đã huỷ kéo thẻ {item}."
+      },
+      "money": {
+        "customerTotal": "Khách trả",
+        "payAtPickup": "Trả khi nhận xe",
+        "hold": "Giữ chỗ",
+        "collected": "Đã thu",
+        "debt": "Còn phải thu"
+      },
+      "holdState": {
+        "expected": "Dự kiến",
+        "unpaid": "Chưa thanh toán",
+        "paid": "Đã thanh toán"
+      }
+    },
+    "paymentArrived": {
+      "title": "Ghi nhận thanh toán",
+      "body": "Khách đã thanh toán cho đơn hàng #{code}. Vui lòng kiểm tra các bước trước khi tiến hành giao xe!",
+      "bodyNoCode": "Khách đã thanh toán đủ tiền giữ chỗ cho chuyến {vehicle}. Vui lòng kiểm tra các bước trước khi tiến hành giao xe!",
+      "action": "Xem đơn hàng"
+    }
   },
   "extension": {
     "close": "Huỷ",
@@ -748,7 +894,7 @@
     "toLabel": "Trả xe mới",
     "checking": "Đang kiểm tra lịch xe…",
     "available": "Xe đang trống trong khoảng thời gian gia hạn!",
-    "busy": "Xe đã có lịch từ {date} — chọn thời gian ngắn hơn",
+    "busy": "Xe đã có lịch từ {date} - chọn thời gian ngắn hơn",
     "durationLabel": "Thời gian gia hạn",
     "durationValue": "{months} tháng",
     "feeLabel": "Phí gia hạn",
@@ -763,12 +909,12 @@
     "payTitle": "Thanh toán",
     "paySubtitle": "Gửi thông tin chuyển khoản này cho khách hàng.",
     "payMethod": "Chuyển khoản nhanh (VietQR)",
-    "payHint": "Quét mã bằng ứng dụng ngân hàng bất kỳ — KHÔNG thay đổi số tiền hoặc nội dung chuyển khoản!",
+    "payHint": "Quét mã bằng ứng dụng ngân hàng bất kỳ - KHÔNG thay đổi số tiền hoặc nội dung chuyển khoản!",
     "payDeadline": "Hạn thanh toán {time}. Quá hạn, phụ lục tự huỷ và giờ trả xe giữ nguyên.",
-    "payWaiting": "Đang chờ khách chuyển khoản — gia hạn có hiệu lực ngay khi tiền về đủ.",
+    "payWaiting": "Đang chờ khách chuyển khoản - gia hạn có hiệu lực ngay khi tiền về đủ.",
     "payProgress": "Đã nhận {paid} / {total}",
     "payDirect": "Phần còn lại {amount} khách trả trực tiếp cho bạn.",
-    "activated": "Đã gia hạn — trả xe mới {date}",
+    "activated": "Đã gia hạn - trả xe mới {date}",
     "closedNotice": "Phụ lục này không còn chờ thanh toán.",
     "cancelExtension": "Huỷ gia hạn",
     "cancelConfirmTitle": "Huỷ phụ lục gia hạn?",
@@ -799,8 +945,8 @@
     },
     "completedBanner": "Đơn đã hoàn thành. Số tiền {amount} đã được cộng vào ví điểm của bạn!",
     "completedBannerPlain": "Đơn đã hoàn thành.",
-    "cancelledBanner": "Đơn đã huỷ — chuyến không diễn ra.",
-    "noShowBanner": "Khách không đến nhận xe — đơn đã khép.",
+    "cancelledBanner": "Đơn đã huỷ - chuyến không diễn ra.",
+    "noShowBanner": "Khách không đến nhận xe - đơn đã khép.",
     "actions": {
       "viewContract": "Xem hợp đồng",
       "createContract": "Tạo hợp đồng",
@@ -865,7 +1011,7 @@
       "hintBefore": "Tải lên hình ảnh xe trước khi giao xe cho khách (PNG, JPEG, JPG. Tối đa 10MB)",
       "hintAfter": "Tải lên hình ảnh xe khi nhận lại từ khách (PNG, JPEG, JPG. Tối đa 10MB)",
       "afterLocked": "Mở sau khi đã giao xe cho khách.",
-      "readOnly": "Đơn đã khép — ảnh bàn giao chỉ để xem lại.",
+      "readOnly": "Đơn đã khép - ảnh bàn giao chỉ để xem lại.",
       "loadError": "Không tải được ảnh bàn giao"
     },
     "profit": {
@@ -899,30 +1045,45 @@
       "deliveryFee": "Phí giao nhận",
       "free": "Miễn phí",
       "surcharge": "Phát sinh",
-      "amountDue": "Tổng phải thu",
-      "holdPaid": "Giữ chỗ (XePrime đã thu)",
-      "payAtPickup": "Khách trả khi nhận xe",
-      "collected": "Đã thu",
+      "amountDue": "Tổng tiền chuyến",
+      "collected": "Gian hàng đã thu",
       "otherCollected": "trong đó thu ở sổ Thu-Chi",
-      "deposit": "Đặt cọc tài sản",
       "overCollected": "Thu vượt",
-      "remaining": "Còn lại (phải thu)",
-      "holdNote": "Khoản giữ chỗ do XePrime thu nên không nằm trong dòng “Đã thu” của gian hàng.",
+      "prepaidOnline": "Khách trả trước qua XePrime",
+      "prepaidOnlineHint": "Khách đã chuyển {hold} tiền giữ chỗ cho XePrime. Trong đó {share} là tiền thuê của bạn - XePrime giữ hộ và cộng vào Ví điểm khi chuyến hoàn thành, nên không thu lại của khách. Phần còn lại là phí đặt xe và bảo hiểm, không thuộc tiền thuê.",
+      "prepaidOnlineHintShort": "Phần tiền thuê khách đã trả trước trong tiền giữ chỗ - XePrime giữ hộ và cộng vào Ví điểm khi chuyến hoàn thành, nên không thu lại của khách.",
+      "dueTitle": "Còn phải thu của khách",
+      "dueAtPickup": "Thu trực tiếp khi giao xe cho khách.",
+      "dueAfterPickup": "Thu trực tiếp của khách, trước khi nhận lại xe.",
+      "dueSettled": "Khách đã thanh toán đủ tiền thuê.",
+      "depositNote": "Chưa gồm cọc tài sản {amount} - khoản giữ rồi trả lại khách khi nhận lại xe.",
       "returningCustomer": "Khách quen"
     },
     "stepAt": {
       "confirmed": "Đã xác nhận lúc {time}",
       "holdPaid": "Đã nhận tiền giữ chỗ lúc {time}",
+      "holdPaidAmount": "Đã nhận {amount} tiền giữ chỗ lúc {time}",
       "pickupDue": "Cần giao xe lúc {time}",
       "pickedUp": "Đã giao xe lúc {time}",
       "returnDue": "Khách trả xe lúc {time}",
-      "returned": "Đã nhận lại xe lúc {time}"
+      "returned": "Đã nhận lại xe lúc {time}",
+      "pickedUpByCustomer": "Khách đã nhận xe lúc {time} (khách xác nhận)",
+      "returnedAuto": "Đã nhận lại xe lúc {time} (tự hoàn thành theo lời báo của khách)"
     },
     "handoverAlert": {
       "title": "Có thông tin chưa bổ sung",
       "bodyPickup": "Vui lòng bổ sung đầy đủ thông tin trước khi bàn giao xe để đảm bảo quá trình cho thuê diễn ra thuận lợi!",
-      "bodyReturn": "Vui lòng bổ sung đủ ảnh hiện trạng khi nhận lại xe để có căn cứ đối chiếu nếu phát sinh tranh chấp.",
       "continue": "Vẫn tiếp tục"
+    },
+    "cancelledBannerWithReason": "Đơn hàng đã huỷ. Lý do: {reason}.",
+    "customerReturn": {
+      "title": "Khách báo đã trả xe lúc {time}",
+      "body": "Xác nhận biên bản nhận xe trước {deadline}. Quá hạn mà gian hàng chưa trả lời, chuyến tự hoàn thành theo lời báo của khách.",
+      "reject": "Khách chưa trả xe",
+      "confirmTitle": "Báo khách chưa trả xe?",
+      "confirmBody": "Lời báo trả xe của khách sẽ bị huỷ và XePrime mở một hồ sơ tranh chấp để xác minh với cả hai bên. Tiền của chuyến được tạm giữ cho tới khi hồ sơ đóng.",
+      "confirmOk": "Báo chưa trả xe",
+      "rejected": "Đã báo khách chưa trả xe - XePrime sẽ liên hệ xác minh"
     }
   },
   "documentsDialog": {
@@ -940,5 +1101,58 @@
     "tooLarge": "Số tiền quá lớn",
     "required": "Nhập phí giao nhận",
     "noteMax": "Tối đa 500 ký tự"
+  },
+  "history": {
+    "title": "Đơn đã kết thúc",
+    "subtitle": "Tổng hợp các đơn thuê đã hoàn thành, bị huỷ và các yêu cầu không thành đơn.",
+    "tabsLabel": "Lọc theo kết thúc",
+    "tabs": {
+      "all": "Tất cả",
+      "completed": "Hoàn thành",
+      "cancelled": "Đã huỷ",
+      "not_converted": "Không thành đơn"
+    },
+    "searchLabel": "Tìm kiếm",
+    "searchPlaceholder": "Tìm kiếm mã đơn, khách hàng, tên xe, biển số,...",
+    "serviceLabel": "Dịch vụ",
+    "serviceAll": "Tất cả dịch vụ",
+    "outcomeLabel": "Trạng thái",
+    "outcomeAll": "Tất cả trạng thái",
+    "tableLabel": "Danh sách đơn đã kết thúc",
+    "columns": {
+      "code": "Mã đơn",
+      "vehicle": "Xe",
+      "service": "Dịch vụ",
+      "customer": "Khách hàng",
+      "period": "Thời gian thuê",
+      "outcome": "Trạng thái",
+      "endedAt": "Kết thúc lúc",
+      "actions": "Thao tác"
+    },
+    "noCode": "Yêu cầu",
+    "open": "Xem chi tiết",
+    "noSchedule": "Chưa chốt lịch",
+    "errorTitle": "Không tải được danh sách đơn đã kết thúc",
+    "empty": {
+      "all": {
+        "title": "Chưa có chuyến nào kết thúc",
+        "body": "Đơn hoàn thành, bị huỷ và yêu cầu không thành đơn sẽ được lưu ở đây."
+      },
+      "completed": {
+        "title": "Chưa có đơn nào hoàn thành",
+        "body": "Đơn đã nhận xe về sẽ hiện ở đây."
+      },
+      "cancelled": {
+        "title": "Chưa có đơn nào bị huỷ",
+        "body": "Đơn bị huỷ hoặc khách không đến sẽ hiện ở đây."
+      },
+      "not_converted": {
+        "title": "Chưa có yêu cầu nào không thành đơn",
+        "body": "Yêu cầu bị từ chối, quá hạn, khách rút hoặc hết hạn thanh toán sẽ hiện ở đây."
+      }
+    },
+    "noResultsTitle": "Không có chuyến nào khớp bộ lọc",
+    "noResultsBody": "Thử đổi từ khoá hoặc bỏ bớt bộ lọc.",
+    "totalLabel": "{count, plural, other {# chuyến}}"
   }
 }

@@ -1,9 +1,9 @@
 import type { useFormatter, useTranslations } from 'use-intl';
 import { PICKUP_PREFERENCE, type IsoDateTimeString, type MoneyString } from '@xeprime/types';
 import {
+  DATE_TIME_SEPARATOR,
   compactMoneyParts,
   formatMoneyVnd,
-  nowInAppTz,
   pickupWishParts,
   remainingKm as remainingKmParts,
   rentalDurationParts,
@@ -98,6 +98,14 @@ export interface AppFormat {
    * Một hàm dựng cho cả hai bề mặt: đó là cách duy nhất để chúng nói về CÙNG một khoảng mà không
    * viết nó theo hai kiểu. Web có cùng hàm này trong `apps/web/src/i18n/app-format.ts`.
    */
+  /** {@link rentalPoint} cho một mốc ISO từ API (đổi sang giờ Việt Nam); rỗng ⇒ ký hiệu trống. */
+  rentalAt: (value: IsoDateTimeString | null | undefined) => string;
+  /** Khoảng nhận → trả bằng định dạng chuẩn: `T4, 04/11  15h35 → T5, 05/11  15h35`. */
+  rentalRange: (
+    from: IsoDateTimeString | null | undefined,
+    to: IsoDateTimeString | null | undefined,
+  ) => string;
+  /** @deprecated Nay trả CHÍNH định dạng chuẩn của {@link rentalPoint}; `withYear` bị bỏ qua. */
   rentalPointCompact: (value: Dayjs, opts?: { withYear?: boolean }) => string;
   rentalDuration: (from: Dayjs, to: Dayjs) => string;
   /**
@@ -223,6 +231,7 @@ export function createAppFormat(
       ? t('units.dateTime', {
           date: format.dateTime(asDate(value), 'short'),
           time: format.dateTime(asDate(value), 'time'),
+          sep: DATE_TIME_SEPARATOR,
         })
       : empty;
 
@@ -232,11 +241,26 @@ export function createAppFormat(
    * Một hàm dựng cho cả ô chọn thời gian lẫn dòng tóm tắt kết quả: đó là cách duy nhất để hai bề
    * mặt nói về cùng một khoảng mà không viết nó theo hai kiểu. Cùng hàm với web.
    */
-  const compactPoint = (value: Dayjs, withYear: boolean) =>
-    t('units.rentalPointCompact', {
-      date: value.format(withYear ? pattern.date : pattern.dayMonth),
-      time: value.format('HH:mm'),
+  /**
+   * MỘT định dạng chuẩn cho mọi mốc NHẬN / TRẢ xe và bộ chọn thời gian thuê: `T4, 04/11  15h35`
+   * (vi) · `Wed, 11/04  15:35` (en). Giờ đi qua message `units.rentalTime` để vi/en khác nhau
+   * được mà không gõ cứng chữ "h" trong mã.
+   */
+  const rentalPointText = (value: Dayjs, withTime: boolean) => {
+    const base = t('units.rentalPoint', {
+      weekday: weekday(value),
+      date: value.format(pattern.dayMonth),
     });
+    if (!withTime) return base;
+    return t('units.rentalPointWithTime', {
+      point: base,
+      time: t('units.rentalTime', { hour: value.format('HH'), minute: value.format('mm') }),
+      sep: DATE_TIME_SEPARATOR,
+    });
+  };
+
+  /** Bản "gọn" nay dùng CHÍNH định dạng chuẩn - mọi mốc nhận/trả viết một kiểu. */
+  const compactPoint = (value: Dayjs) => rentalPointText(value, true);
 
   const duration = (from: Dayjs, to: Dayjs) => {
     const { days, hours } = rentalDurationParts(from, to);
@@ -258,6 +282,7 @@ export function createAppFormat(
     return t('units.shortDateTime', {
       time: toAppTz(value).format('HH:mm'),
       date: toAppTz(value).format(pattern.dayMonth),
+      sep: DATE_TIME_SEPARATOR,
     });
   };
 
@@ -295,32 +320,22 @@ export function createAppFormat(
 
     weekdayShort: (value) => weekday(value),
     weekdayLong: (value) => format.dateTime(value.toDate(), 'weekdayLong'),
-    rentalPoint: (value, opts) => {
-      const base = t('units.rentalPoint', {
-        weekday: weekday(value),
-        date: value.format(pattern.dayMonth),
-      });
-      return opts?.withTime === false
-        ? base
-        : t('units.rentalPointWithTime', { point: base, time: value.format('HH:mm') });
-    },
-    rentalPointCompact: (value, opts) => compactPoint(value, opts?.withYear === true),
+    rentalPoint: (value, opts) => rentalPointText(value, opts?.withTime !== false),
+    rentalPointCompact: (value) => compactPoint(value),
+    rentalAt: (value) => (value ? rentalPointText(toAppTz(value), true) : empty),
+    rentalRange: (from, to) =>
+      t('units.range', {
+        from: from ? rentalPointText(toAppTz(from), true) : empty,
+        to: to ? rentalPointText(toAppTz(to), true) : empty,
+      }),
     rentalDuration: duration,
     minutesDuration,
-    rentalRangeSummary: (from, to) => {
-      /*
-       * Năm chỉ xuất hiện khi nó PHÂN BIỆT được điều gì: khoảng thuê không nằm trọn trong năm
-       * hiện tại (chuyến đón giao thừa, hoặc một ngữ cảnh cũ mở lại sang năm sau). Mọi chuyến
-       * còn lại — gần như toàn bộ — giữ dòng ngắn.
-       */
-      const thisYear = nowInAppTz().year();
-      const withYear = from.year() !== thisYear || to.year() !== thisYear;
-      return t('units.rentalRangeSummary', {
-        from: compactPoint(from, withYear),
-        to: compactPoint(to, withYear),
+    rentalRangeSummary: (from, to) =>
+      t('units.rentalRangeSummary', {
+        from: compactPoint(from),
+        to: compactPoint(to),
         duration: duration(from, to),
-      });
-    },
+      }),
 
     km: (value) =>
       value == null

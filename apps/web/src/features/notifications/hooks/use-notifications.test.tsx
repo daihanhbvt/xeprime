@@ -67,7 +67,7 @@ describe('useNotifications', () => {
     );
   });
 
-  it('mở lại chuông là tải lại — không phục vụ bản cache trong 30 giây', async () => {
+  it('mở lại chuông là tải lại - không phục vụ bản cache trong 30 giây', async () => {
     const view = render(wrapper(<Probe open />));
     await waitFor(() => expect(notificationsApi.fetchNotifications).toHaveBeenCalledTimes(1));
 

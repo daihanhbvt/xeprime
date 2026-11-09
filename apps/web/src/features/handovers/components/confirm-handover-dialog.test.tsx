@@ -77,7 +77,7 @@ function renderDialog(ctx: HandoverContext = context()) {
   const onClose = vi.fn();
   render(
     <App>
-      <ConfirmHandoverDialog context={ctx} type={HANDOVER_TYPE.PICKUP} open onClose={onClose} />
+      <ConfirmHandoverDialog context={ctx} open onClose={onClose} />
     </App>,
   );
   return { onClose };
@@ -118,7 +118,7 @@ describe('ConfirmHandoverDialog', () => {
     expect(screen.getByText(/Không nhập cũng xác nhận được/)).toBeTruthy();
   });
 
-  it('xác nhận được mà không nhập gì — không gửi Odo rỗng, không tạo biên bản nháp', async () => {
+  it('xác nhận được mà không nhập gì - không gửi Odo rỗng, không tạo biên bản nháp', async () => {
     api.confirmHandover.mockResolvedValue(context());
     const { onClose } = renderDialog();
 

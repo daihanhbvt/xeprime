@@ -33,7 +33,7 @@ describe('chargedDays', () => {
     expect(chargedDays(a, b)).toBe(3);
   });
 
-  it('làm tròn LÊN — quá một phút cũng tính thêm một ngày', () => {
+  it('làm tròn LÊN - quá một phút cũng tính thêm một ngày', () => {
     const a = dayjs('2026-08-26T10:00:00+07:00');
     expect(chargedDays(a, dayjs('2026-08-29T10:01:00+07:00'))).toBe(4);
   });
@@ -74,7 +74,7 @@ describe('hourlyDuration', () => {
     expect(hourlyDurationOf(a, a.add(24, 'hour'))).toBe(24);
   });
 
-  it('ngoài dải 1–24h thì rơi về mặc định — tab giờ không hiển thị một lựa chọn không có', () => {
+  it('ngoài dải 1-24h thì rơi về mặc định - tab giờ không hiển thị một lựa chọn không có', () => {
     const a = dayjs('2026-08-26T10:00:00+07:00');
     expect(hourlyDurationOf(a, a.add(25, 'hour'))).toBe(DEFAULT_HOURLY_DURATION);
     expect(hourlyDurationOf(a, a)).toBe(DEFAULT_HOURLY_DURATION);

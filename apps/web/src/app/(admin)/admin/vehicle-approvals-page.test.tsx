@@ -204,7 +204,7 @@ describe('Bảng', () => {
     expect(screen.getAllByText('Chờ duyệt').length).toBeGreaterThan(0);
   });
 
-  it('KHÔNG có nút Phê duyệt / Từ chối trên dòng — phải mở chi tiết trước', () => {
+  it('KHÔNG có nút Phê duyệt / Từ chối trên dòng - phải mở chi tiết trước', () => {
     setData([row()]);
     renderPage();
 
@@ -229,7 +229,7 @@ describe('Bảng', () => {
     expect(drawer).toMatchObject({ taskId: 'T2', previousId: 'T1', nextId: 'T3' });
   });
 
-  it('duyệt xong, phiếu rời trang: trước/sau vẫn theo thứ tự lúc mở — không tắt cả hai nút', () => {
+  it('duyệt xong, phiếu rời trang: trước/sau vẫn theo thứ tự lúc mở - không tắt cả hai nút', () => {
     setData([row(), row({ approvalTaskId: 'T2' }), row({ approvalTaskId: 'T3' })]);
     const { rerender } = renderPage();
 

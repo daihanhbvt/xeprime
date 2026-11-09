@@ -420,13 +420,13 @@ export class HoldSettlementService {
       if (refund.settlementMode === REFUND_SETTLEMENT_MODE.BALANCE) {
         throw new ConflictException({
           code: API_ERROR_CODE.REFUND_ALREADY_HANDLED,
-          message: 'Khoản này đã vào ví điểm của khách — không chuyển khoản lần nữa',
+          message: 'Khoản này đã vào ví điểm của khách - không chuyển khoản lần nữa',
         });
       }
       if (!refund.bankAccountNumber) {
         throw new ConflictException({
           code: API_ERROR_CODE.REFUND_ACCOUNT_REQUIRED,
-          message: 'Khách chưa khai tài khoản nhận hoàn — không có gì để chuyển',
+          message: 'Khách chưa khai tài khoản nhận hoàn - không có gì để chuyển',
         });
       }
       const now = new Date();

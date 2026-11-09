@@ -217,8 +217,8 @@ export function CheckoutPanel({
                           <span className={styles.walletLimit}>
                             {t('wallet.outOfRange', {
                               provider: providerLabel(method.provider),
-                              min: method.minAmount ? fmt.money(method.minAmount) : '—',
-                              max: method.maxAmount ? fmt.money(method.maxAmount) : '—',
+                              min: method.minAmount ? fmt.money(method.minAmount) : '-',
+                              max: method.maxAmount ? fmt.money(method.maxAmount) : '-',
                             })}
                           </span>
                         ) : null}

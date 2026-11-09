@@ -1,6 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
+import { StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { Text, XStack } from 'tamagui';
+import { useFieldFeedback } from '@/components/motion/use-field-feedback';
 import { useTranslations } from 'use-intl';
 import { useColors } from '@/theme/ThemeProvider';
 import { fieldFontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
@@ -103,6 +106,13 @@ export function FieldShell({
 }) {
   const colors = useColors();
   const active = invalid ? colors.danger : colors.primary;
+  // Lắc khi vừa lỗi + viền đổi màu mượt: lớp viền phủ animate màu, khung trong giữ viền nghỉ.
+  const feedback = useFieldFeedback({
+    invalid,
+    highlighted: focused || invalid,
+    restColor: colors.border,
+    activeColor: active,
+  });
 
   /*
    * Nền TRẮNG + viền thấy được — không phải một mảng xám.
@@ -120,13 +130,14 @@ export function FieldShell({
    * nội dung nhảy 1px mỗi lần chạm vào ô.
    */
   return (
+    <Animated.View style={feedback.shake}>
     <XStack
       ai={align}
       gap={space.sm}
       bg={disabled ? colors.surfaceMuted : colors.surface}
       br={radius.md}
       bw={1}
-      bc={focused || invalid ? active : colors.border}
+      bc={colors.border}
       px={space.sm}
       minHeight={sizing.touchTarget}
       {...(onPress ? { onPress } : {})}
@@ -135,5 +146,10 @@ export function FieldShell({
     >
       {children}
     </XStack>
+    <Animated.View
+      pointerEvents="none"
+      style={[StyleSheet.absoluteFill, { borderWidth: 1, borderRadius: radius.md }, feedback.border]}
+    />
+    </Animated.View>
   );
 }

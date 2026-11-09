@@ -4,8 +4,13 @@ import { Button, Segmented, Spin } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Suspense, useMemo } from 'react';
-import { FINANCE_GRANULARITY_VALUES, PERMISSION, RECEIPT_TYPE } from '@xeprime/types';
-import { RevenueTrendChart } from '@/components/chart/RevenueTrendChart';
+import {
+  FINANCE_GRANULARITY,
+  FINANCE_GRANULARITY_VALUES,
+  PERMISSION,
+  RECEIPT_TYPE,
+} from '@xeprime/types';
+import { RevenueTrendChart, RevenueTrendLegend } from '@/components/chart/RevenueTrendChart';
 import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
 import { ALL_FILTER } from '@/constants/filters';
 import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
@@ -13,25 +18,19 @@ import { PermissionState } from '@/components/feedback/PermissionState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ROUTES } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
-import { buildPeriodRange, type PeriodKey } from '@/lib/datetime';
+import { DAY_PARAM_FORMAT, buildPeriodRange, dayjs, type PeriodKey } from '@/lib/datetime';
+import { BusinessPerformanceCard } from '@/features/finance/components/BusinessPerformanceCard';
 import { CategoryBreakdown } from '@/features/finance/components/CategoryBreakdown';
-import { CustomerRevenueTable } from '@/features/finance/components/CustomerRevenueTable';
 import { FinanceOverviewCards } from '@/features/finance/components/FinanceOverviewCards';
-import { VehicleProfitTable } from '@/features/finance/components/VehicleProfitTable';
+import { FINANCE_OVERVIEW_PERIOD_VALUES } from '@/features/finance/constants';
 import {
-  FINANCE_OVERVIEW_PERIOD_VALUES,
-  VEHICLE_PROFIT_PAGE_SIZE,
-} from '@/features/finance/constants';
-import {
-  useCustomerRevenue,
   useFinanceByCategory,
   useFinanceSeries,
   useFinanceSummaryOverview,
-  useVehicleProfit,
 } from '@/features/finance/hooks/use-finance-overview';
 import { useFinanceOverviewFilters } from '@/features/finance/hooks/use-finance-overview-filters';
 import { useAppFormat } from '@/i18n/use-app-format';
-import type { FinanceOverviewFilters } from '@/features/finance/types';
+import type { FinanceCategoryBreakdown, FinanceOverviewFilters } from '@/features/finance/types';
 import { ShopTaxWithheldCard } from '@/features/tax/components/ShopTaxWithheldCard';
 import styles from './finance-page.module.css';
 
@@ -44,6 +43,12 @@ export default function FinancePage() {
   );
 }
 
+/**
+ * Tổng quan doanh thu — design Partner-XePrime "Revenue Overview" (`23813:30723`, `23813:38107`):
+ * kỳ xem nhanh + chi nhánh + khoảng ngày · sáu thẻ số · dòng tiền & lợi nhuận theo thời gian ·
+ * cơ cấu thu/chi · hiệu suất theo xe/khách · thuế đã khấu trừ. Kiểm kê và quyết định:
+ * `docs/design/09_PARTNER_REDESIGN.md` §3.9.
+ */
 function FinanceOverviewView() {
   const t = useTranslations('Finance.overview');
   const fmt = useAppFormat();
@@ -58,8 +63,6 @@ function FinanceOverviewView() {
   const series = useFinanceSeries(filters);
   const income = useFinanceByCategory(filters, RECEIPT_TYPE.INCOME);
   const expense = useFinanceByCategory(filters, RECEIPT_TYPE.EXPENSE);
-  const vehicles = useVehicleProfit(filters);
-  const customers = useCustomerRevenue(filters);
 
   const periodOptions = useMemo(
     () => FINANCE_OVERVIEW_PERIOD_VALUES.map((value) => ({ value, label: t(`periods.${value}`) })),
@@ -105,60 +108,75 @@ function FinanceOverviewView() {
   /**
    * Nhãn cột theo ĐỘ MỊN THẬT mà server đã dùng, không theo thứ client xin: kỳ dài bị server hạ
    * xuống `month` mà nhãn vẫn in ngày thì mỗi cột nói dối về khoảng nó đại diện.
+   *
+   * Cột tuần ghi cả KHOẢNG ngày ("06/10 – 12/10", như design), cắt theo hai đầu kỳ đang xem: tuần
+   * đầu của "Tháng này" bắt đầu từ ngày 1 chứ không từ thứ Hai của tháng trước.
    */
   const granularity = series.data?.granularity ?? filters.granularity;
-  const labelOf = (bucket: string) =>
-    granularity === 'month'
-      ? fmt.monthYear(new Date(`${bucket}T12:00:00Z`))
-      : fmt.dateKey(bucket);
+  const dayMonthOf = (key: string) => fmt.dayMonth(`${key}T12:00:00+07:00`);
+  const labelOf = (bucket: string) => {
+    if (granularity === FINANCE_GRANULARITY.MONTH) {
+      return fmt.monthYear(new Date(`${bucket}T12:00:00Z`));
+    }
+    if (granularity === FINANCE_GRANULARITY.WEEK) {
+      const weekEnd = dayjs(bucket).add(6, 'day').format(DAY_PARAM_FORMAT);
+      const from = filters.from && filters.from > bucket ? filters.from : bucket;
+      const to = filters.to && filters.to < weekEnd ? filters.to : weekEnd;
+      return t('chart.weekRange', { from: dayMonthOf(from), to: dayMonthOf(to) });
+    }
+    return fmt.dateKey(bucket);
+  };
 
   const seriesEmpty =
     series.data !== undefined &&
     series.data.buckets.every((b) => b.revenue === '0' && b.cost === '0');
 
-  const emptyMeta = { page: 1, limit: VEHICLE_PROFIT_PAGE_SIZE, total: 0, hasNext: false };
-  const vehicleMeta = vehicles.data?.meta ?? emptyMeta;
-  const customerMeta = customers.data?.meta ?? emptyMeta;
-
   return (
     <div className={styles.page}>
       <ManagePageHeader title={t('page.title')} subtitle={t('page.subtitle')} />
 
-      <div className={styles.periods}>
-        <Segmented
-          options={periodOptions}
-          // Không kỳ nào khớp (khoảng ngày tự chọn) → không tô sáng nút nào.
-          value={activePeriod ?? ''}
-          onChange={(value) => setFilters(buildPeriodRange(value as PeriodKey))}
-          aria-label={t('periods.label')}
+      <div className={styles.toolbar}>
+        <div className={styles.periods}>
+          <Segmented
+            size="large"
+            options={periodOptions}
+            // Không kỳ nào khớp (khoảng ngày tự chọn) → không tô sáng nút nào.
+            value={activePeriod ?? ''}
+            onChange={(value) => setFilters(buildPeriodRange(value as PeriodKey))}
+            aria-label={t('periods.label')}
+          />
+        </div>
+        <FilterBar
+          className={styles.filters}
+          fields={filterFields}
+          values={{ ...(filters as FilterValues), branchId: filters.branchId ?? ALL_FILTER }}
+          onChange={(patch) =>
+            setFilters(
+              ('branchId' in patch
+                ? { ...patch, branchId: patch.branchId === ALL_FILTER ? undefined : patch.branchId }
+                : patch) as Partial<FinanceOverviewFilters>,
+            )
+          }
         />
       </div>
-
-      <FilterBar
-        fields={filterFields}
-        values={{ ...(filters as FilterValues), branchId: filters.branchId ?? ALL_FILTER }}
-        onChange={(patch) =>
-          setFilters(
-            ('branchId' in patch
-              ? { ...patch, branchId: patch.branchId === ALL_FILTER ? undefined : patch.branchId }
-              : patch) as Partial<FinanceOverviewFilters>,
-          )
-        }
-        compactFields
-      />
 
       <FinanceOverviewCards
         data={summary.data}
         filters={filters}
+        revenueReceipts={receiptCountOf(income.data)}
+        costReceipts={receiptCountOf(expense.data)}
         loading={summary.isFetching}
         error={summary.isError}
       />
 
       <RevenueTrendChart
+        className={styles.card}
         points={series.data?.buckets ?? []}
         labelOf={labelOf}
         title={t('chart.title')}
-        description={t('chart.description')}
+        legend="none"
+        yAxis="million"
+        height={260}
         loading={series.isFetching && !series.data}
         error={
           series.isError && !series.data
@@ -167,13 +185,18 @@ function FinanceOverviewView() {
         }
         empty={seriesEmpty ? { title: t('chart.empty'), description: t('chart.emptyHint') } : null}
         actions={
-          <Segmented
-            size="small"
-            options={granularityOptions}
-            value={granularity ?? FINANCE_GRANULARITY_VALUES[0]}
-            onChange={(value) => setFilters({ granularity: String(value) })}
-            aria-label={t('chart.every.label')}
-          />
+          <div className={styles.chartActions}>
+            {/* Chú giải đứng cạnh nút độ mịn (chốt 04/11/2026) — design không vẽ, nhưng ba series
+                không chú giải thì màu là thứ người đọc phải tự đoán. */}
+            <RevenueTrendLegend />
+            <Segmented
+              size="large"
+              options={granularityOptions}
+              value={granularity ?? FINANCE_GRANULARITY_VALUES[0]}
+              onChange={(value) => setFilters({ granularity: String(value) })}
+              aria-label={t('chart.every.label')}
+            />
+          </div>
         }
       />
 
@@ -198,26 +221,10 @@ function FinanceOverviewView() {
         />
       </div>
 
-      <VehicleProfitTable
-        items={vehicles.data?.items ?? []}
-        meta={vehicleMeta}
+      <BusinessPerformanceCard
         filters={filters}
         unassignedCost={summary.data?.unassignedCost}
-        loading={vehicles.isFetching}
-        // Chỉ coi là lỗi khi KHÔNG còn dữ liệu cũ — refetch nền hỏng thì giữ bảng đang đọc.
-        error={vehicles.isError && !vehicles.data ? { onRetry: () => void vehicles.refetch() } : null}
-        onChange={setFilters}
-      />
-
-      <CustomerRevenueTable
-        items={customers.data?.items ?? []}
-        meta={customerMeta}
         unassignedRevenue={summary.data?.unassignedRevenue}
-        sort={filters.customerSort}
-        loading={customers.isFetching}
-        error={
-          customers.isError && !customers.data ? { onRetry: () => void customers.refetch() } : null
-        }
         onChange={setFilters}
       />
 
@@ -228,4 +235,12 @@ function FinanceOverviewView() {
       <ShopTaxWithheldCard />
     </div>
   );
+}
+
+/**
+ * Số phiếu của một chiều tiền trong kỳ — cộng từ cơ cấu theo danh mục (đã loại cọc, cùng bộ lọc
+ * với thẻ Doanh thu/Chi phí). Đếm phiếu là số nguyên, không phải tiền, nên cộng ở client là đúng.
+ */
+function receiptCountOf(data: FinanceCategoryBreakdown | undefined): number | undefined {
+  return data?.items.reduce((sum, item) => sum + item.count, 0);
 }

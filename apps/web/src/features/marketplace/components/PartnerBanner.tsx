@@ -4,6 +4,8 @@ import { SUPPORT_HOTLINE } from '@/constants/contact';
 import { resolveOwnerCtaHref } from '@/features/auth/post-auth-destination';
 import type { PublicBanner } from '@/features/banners/types';
 import { CtaButton } from './CtaButton';
+import { Magnetic } from '@/components/motion/Magnetic';
+import { sectionParallaxClass } from '@/components/motion/motion-classes';
 import { cx } from '@/lib/cx';
 import styles from './PartnerBanner.module.css';
 
@@ -25,7 +27,8 @@ export async function PartnerBanner({ banner }: { banner?: PublicBanner | null }
 
   return (
     <section className={styles.banner} aria-labelledby="home-partner">
-      <span className={styles.backdrop} aria-hidden="true">
+      {/* Ảnh nền trôi theo vị trí của dải (parallax `view()`), CSS thuần nên an toàn với SSR. */}
+      <span className={cx(styles.backdrop, sectionParallaxClass)} aria-hidden="true">
         {banner ? (
           // Không dùng next/image: host R2/URL do admin nhập không nằm trong remotePatterns.
           <picture>
@@ -74,19 +77,20 @@ export async function PartnerBanner({ banner }: { banner?: PublicBanner | null }
           <span className={styles.titleAccent}>{t('titleAccent')}</span>
         </h2>
 
-        <CtaButton
-          href={resolveOwnerCtaHref()}
-          size="xl"
-          shape="pill"
-          className={styles.cta}
-          iconEnd={
-            <span className={styles.ctaIcon}>
-              <Image src="/home/partner-arrow.svg" alt="" width={6} height={12} unoptimized />
-            </span>
-          }
-        >
-          {t('cta')}
-        </CtaButton>
+        <Magnetic className={styles.cta}>
+          <CtaButton
+            href={resolveOwnerCtaHref()}
+            size="xl"
+            shape="pill"
+            iconEnd={
+              <span className={styles.ctaIcon}>
+                <Image src="/home/partner-arrow.svg" alt="" width={6} height={12} unoptimized />
+              </span>
+            }
+          >
+            {t('cta')}
+          </CtaButton>
+        </Magnetic>
 
         <ul className={styles.benefits} aria-label={t('benefitsLabel')}>
           {BENEFITS.map((key) => (

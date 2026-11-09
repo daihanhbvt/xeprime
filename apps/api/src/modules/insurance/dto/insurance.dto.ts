@@ -106,14 +106,14 @@ export class PlatformInsurancePolicyDto {
     type: String,
     nullable: true,
     description:
-      'Tên sản phẩm đã bán (snapshot, tiếng Việt) — `null` với hợp đồng tạo trước danh mục',
+      'Tên sản phẩm đã bán (snapshot, tiếng Việt) - `null` với hợp đồng tạo trước danh mục',
   })
   productNameVi!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) productNameEn!: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true }) certificateNumber!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) certificateUrl!: string | null;
-  @ApiProperty({ description: 'GCN do adapter GIẢ LẬP cấp — không có hiệu lực bảo hiểm' })
+  @ApiProperty({ description: 'GCN do adapter GIẢ LẬP cấp - không có hiệu lực bảo hiểm' })
   isTest!: boolean;
   @ApiPropertyOptional({ type: String, nullable: true }) coverageFrom!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) coverageTo!: string | null;
@@ -124,7 +124,7 @@ export class PlatformInsurancePolicyDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: '`null` ở trạng thái lỗi nghĩa là KHÔNG tự thử lại — cần người xử lý',
+    description: '`null` ở trạng thái lỗi nghĩa là KHÔNG tự thử lại - cần người xử lý',
   })
   nextAttemptAt!: string | null;
 
@@ -178,7 +178,7 @@ export class PlatformInsurancePolicyDetailDto extends PlatformInsurancePolicyDto
 
 /** Thu hồi một hợp đồng — lý do BẮT BUỘC, nó đi vào audit và vào hồ sơ làm việc với đối tác. */
 export class VoidInsurancePolicyDto {
-  @ApiProperty({ description: 'Vì sao thu hồi — bắt buộc, ghi vào audit' })
+  @ApiProperty({ description: 'Vì sao thu hồi - bắt buộc, ghi vào audit' })
   @IsString()
   @MinLength(5)
   @MaxLength(500)
@@ -200,18 +200,18 @@ export class InsuranceProductDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Khấu trừ/vụ — ô tô. `null` = không áp dụng',
+    description: 'Khấu trừ/vụ - ô tô. `null` = không áp dụng',
   })
   deductibleCar!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Khấu trừ/vụ — xe máy' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Khấu trừ/vụ - xe máy' })
   deductibleMotorbike!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Bồi thường tối đa — ô tô. `null` = xem ghi chú',
+    description: 'Bồi thường tối đa - ô tô. `null` = xem ghi chú',
   })
   maxPayoutCar!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Bồi thường tối đa — xe máy' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Bồi thường tối đa - xe máy' })
   maxPayoutMotorbike!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) maxPayoutNoteVi!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) maxPayoutNoteEn!: string | null;
@@ -373,7 +373,7 @@ export class InsuranceCertificateDto {
   @ApiPropertyOptional({ type: String, nullable: true }) certificateUrl!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) coverageFrom!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) coverageTo!: string | null;
-  @ApiProperty({ description: 'GCN THỬ NGHIỆM (adapter giả lập) — không có hiệu lực bảo hiểm' })
+  @ApiProperty({ description: 'GCN THỬ NGHIỆM (adapter giả lập) - không có hiệu lực bảo hiểm' })
   isTest!: boolean;
   @ApiProperty() issuedAt!: string;
 }
@@ -396,7 +396,7 @@ export class InsuranceCoverageDto {
   @ApiPropertyOptional({
     type: InsuranceCertificateDto,
     nullable: true,
-    description: 'GCN — chỉ có khi `status = issued`',
+    description: 'GCN - chỉ có khi `status = issued`',
   })
   certificate!: InsuranceCertificateDto | null;
 }

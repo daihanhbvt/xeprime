@@ -659,6 +659,7 @@ function RentedSection({ control, disabled }: SectionProps) {
             <TextField
               control={control}
               name="ownerPhone"
+              type="tel"
               label={t('ownerPhone')}
               placeholder={t('ownerPhonePlaceholder')}
               disabled={disabled}
@@ -738,6 +739,7 @@ function PartnershipSection({
             <TextField
               control={control}
               name="ownerPhone"
+              type="tel"
               label={t('ownerPhone')}
               placeholder={t('ownerPhonePlaceholder')}
               disabled={disabled}

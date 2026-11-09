@@ -158,6 +158,18 @@ export function QuotaValue({
  */
 export function VehicleQuotaByType({ quotas }: { quotas: PartnerVehicleTypeQuotas }) {
   const t = useTranslations('AdminTenants.partnerDetail.quota');
+  // Hai loại đếm chung một trần (gói doanh nghiệp, Owner Lite): hai mục là CÙNG con số tổng —
+  // in hai dòng là đọc thành gấp đôi số xe.
+  if (quotas.combined) {
+    return (
+      <span className={styles.quotaByType}>
+        <span className={styles.quotaByTypeRow}>
+          <span className={styles.muted}>{t('type.all')}</span>
+          <QuotaValue quota={quotas.car} unit="vehicles" />
+        </span>
+      </span>
+    );
+  }
   return (
     <span className={styles.quotaByType}>
       {(
@@ -268,13 +280,13 @@ export function PartnerVehicleTable({
           title: t('columns.branch'),
           key: 'branch',
           width: 140,
-          render: (_, row) => row.branchName ?? '—',
+          render: (_, row) => row.branchName ?? '-',
         }
       : {
           title: t('columns.pickupArea'),
           key: 'pickupArea',
           width: 160,
-          render: (_, row) => row.pickupAreaName ?? '—',
+          render: (_, row) => row.pickupAreaName ?? '-',
         },
     ...(compact
       ? []

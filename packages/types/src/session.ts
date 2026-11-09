@@ -62,14 +62,16 @@ export const OTP_POLICY = {
  * mật khẩu) bị từ chối `LOGIN_TEMPORARILY_LOCKED`. Định danh không có tài khoản bị đếm y hệt — câu
  * trả lời không tố cáo ai có tài khoản.
  *
- * Site quản trị chặt hơn: tài khoản nền tảng đọc/ghi dữ liệu của mọi gian hàng.
+ * Site khách/partner (05/11/2026, theo đặc tả QC BR-AUTH-08): sai 5 lần ⇒ khoá 5 phút — khoá sớm
+ * nhưng nhả nhanh, và "Quên mật khẩu" mở khoá ngay. Site quản trị khoá lâu hơn: tài khoản nền tảng
+ * đọc/ghi dữ liệu của mọi gian hàng.
  */
 export const LOGIN_LOCKOUT_POLICY = {
   WINDOW_MINUTES: 15,
-  LOCK_MINUTES: 15,
-  MAX_FAILURES: { customer: 10, partner: 10, platform: 5 },
+  LOCK_MINUTES: { customer: 5, partner: 5, platform: 15 },
+  MAX_FAILURES: { customer: 5, partner: 5, platform: 5 },
 } as const satisfies {
   WINDOW_MINUTES: number;
-  LOCK_MINUTES: number;
+  LOCK_MINUTES: Record<AccountRealm, number>;
   MAX_FAILURES: Record<AccountRealm, number>;
 };

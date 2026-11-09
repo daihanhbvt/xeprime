@@ -3,7 +3,9 @@ import type {
   DeliveryDistance,
   PublicQuote,
   SaveRentalPolicyInput,
+  SaveShopOperationDefaultsInput,
   SaveVehiclePricingInput,
+  ShopOperationDefaults,
   ShopRentalPolicy,
   VehiclePricing,
 } from './types';
@@ -17,6 +19,16 @@ export const saveShopPolicy = (
   vehicleType: string,
 ): Promise<ShopRentalPolicy> =>
   apiPut<ShopRentalPolicy>(`/shop/rental-policies?vehicleType=${vehicleType}`, body);
+
+/** Thời gian chết mặc định theo loại xe — đứng cạnh chính sách thuê trên cùng một trang. */
+export const fetchShopOperationDefaults = (vehicleType: string): Promise<ShopOperationDefaults> =>
+  apiGet<ShopOperationDefaults>('/shop/operation-defaults', { vehicleType });
+
+export const saveShopOperationDefaults = (
+  body: SaveShopOperationDefaultsInput,
+  vehicleType: string,
+): Promise<ShopOperationDefaults> =>
+  apiPut<ShopOperationDefaults>(`/shop/operation-defaults?vehicleType=${vehicleType}`, body);
 
 export const fetchVehiclePricing = (vehicleId: string): Promise<VehiclePricing> =>
   apiGet<VehiclePricing>(`/vehicles/${vehicleId}/pricing`);

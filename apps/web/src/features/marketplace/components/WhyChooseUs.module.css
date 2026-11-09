@@ -127,6 +127,8 @@
   max-width: 100%;
   flex: none;
   aspect-ratio: 532 / 488;
+  /* Khung của hai lớp parallax `view()` (ảnh + ô số) — `clip` cắt phần trôi ra mà không tạo khung cuộn. */
+  overflow: clip;
 }
 
 .image {
@@ -135,6 +137,8 @@
   display: block;
   width: 100%;
   height: auto;
+  /* Parallax nhẹ theo cuộn: ảnh trôi 2%, ô số trôi ngược chiều (xem `.stat`). */
+  --parallax-shift: 2%;
 }
 
 .stat {
@@ -150,6 +154,7 @@
   padding: var(--xp-space-20);
   background: url('/home/why-stat-bg.png') center / cover no-repeat;
   border-radius: var(--xp-border-radius-banner);
+  --parallax-shift: -6%;
 }
 
 .statValue {
@@ -235,4 +240,18 @@
   .stat {
     padding: var(--xp-space-12);
   }
+}
+
+/* Figma dark (`21965:6841`): tiêu đề mục vàng, mô tả xám sáng, vòng icon nền vàng tối. */
+:global([data-theme='dark']) .title {
+  color: var(--xp-color-primary);
+}
+
+:global([data-theme='dark']) .desc,
+:global([data-theme='dark']) .description {
+  color: var(--xp-color-text-on-dark-muted);
+}
+
+:global([data-theme='dark']) .iconWrap {
+  background: color-mix(in srgb, var(--xp-color-primary) 14%, var(--xp-color-bg));
 }

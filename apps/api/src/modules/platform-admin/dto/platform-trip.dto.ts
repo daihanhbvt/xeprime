@@ -94,7 +94,7 @@ export class PlatformTripTodayDto {
 
 export class PlatformTripSummaryDto {
   @ApiProperty({
-    description: 'ISO-8601 UTC — mốc server tính; web đếm ngược từ các mốc, không từ đây',
+    description: 'ISO-8601 UTC - mốc server tính; web đếm ngược từ các mốc, không từ đây',
   })
   generatedAt!: string;
   @ApiProperty({ type: PlatformTripTodayDto }) today!: PlatformTripTodayDto;
@@ -130,13 +130,13 @@ export class PlatformTripRequestDto {
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
   @ApiProperty({
     description:
-      'ISO-8601 UTC — hạn gian hàng phải trả lời (ADR 0044; độ dài động 15 phút–4 giờ, ADR 0066)',
+      'ISO-8601 UTC - hạn gian hàng phải trả lời (ADR 0044; độ dài động 15 phút-4 giờ, ADR 0066)',
   })
   respondBy!: string;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Worker đã nhắc lần 1 (khi còn 60 phút tới hạn — bỏ qua nếu cửa sổ ngắn hơn)',
+    description: 'Worker đã nhắc lần 1 (khi còn 60 phút tới hạn - bỏ qua nếu cửa sổ ngắn hơn)',
   })
   firstRemindedAt!: string | null;
   @ApiPropertyOptional({
@@ -150,7 +150,7 @@ export class PlatformTripRequestDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Hạn khách chuyển tiền giữ chỗ — chỉ có ở `awaiting_hold`',
+    description: 'Hạn khách chuyển tiền giữ chỗ - chỉ có ở `awaiting_hold`',
   })
   holdExpiresAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Số tiền giữ chỗ (string)' })
@@ -159,7 +159,7 @@ export class PlatformTripRequestDto {
   @ApiProperty() tenantName!: string;
   @ApiProperty({ enum: TENANT_STATUS_VALUES }) tenantStatus!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) ownerName!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'SĐT chủ xe — để gọi' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'SĐT chủ xe - để gọi' })
   ownerPhone!: string | null;
   @ApiProperty() vehicleId!: string;
   @ApiProperty() vehicleName!: string;

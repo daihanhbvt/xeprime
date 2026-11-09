@@ -82,10 +82,13 @@ vi.mock('@/hooks/use-feature', () => ({
 vi.mock('./use-nav-badges', () => ({
   useNavBadges: () => ({
     counts: {
-      [NAV_BADGE.BOOKING_REQUESTS_PENDING]: badges.bookingRequestsPending,
+      // "Đơn thuê xe" gộp (05/11/2026) mang số "cần xử lý" của cả chuyến.
+      [NAV_BADGE.RENTALS_WORK]: badges.bookingRequestsPending,
       [NAV_BADGE.CHAT_UNREAD]: badges.chatUnread,
     },
-    urgent: { [NAV_BADGE.BOOKING_REQUESTS_PENDING]: badges.bookingRequestsUrgent },
+    urgent: {
+      [NAV_BADGE.RENTALS_WORK]: badges.bookingRequestsUrgent,
+    },
   }),
 }));
 
@@ -153,7 +156,7 @@ afterEach(cleanup);
  * Cây gian hàng từ 02/11/2026 là menu NGANG sáu khối (`docs/design/09_PARTNER_REDESIGN.md` §2). Drawer
  * mobile vẽ CÙNG cây đó qua `useManageNav`: khối là nhóm gập được, không còn mục cha (submenu).
  */
-describe('useManageNav — hiển thị theo quyền (gian hàng)', () => {
+describe('useManageNav - hiển thị theo quyền (gian hàng)', () => {
   it('không có quyền nào → menu rỗng, không mục lá nào và không nhãn khối nào', () => {
     renderMenu();
 
@@ -176,7 +179,7 @@ describe('useManageNav — hiển thị theo quyền (gian hàng)', () => {
     expect(labels).not.toContain('Trò chuyện');
   });
 
-  it('khối Doanh thu biến mất khi mọi mục bị lọc — nhân viên không có quyền sổ sách', () => {
+  it('khối Doanh thu biến mất khi mọi mục bị lọc - nhân viên không có quyền sổ sách', () => {
     grant(PERMISSION.TENANT_VIEW);
     /*
      * NHÂN VIÊN, không phải chủ: khối Doanh thu có hai loại mục — sổ sách gác bằng QUYỀN, và ví gác
@@ -189,7 +192,7 @@ describe('useManageNav — hiển thị theo quyền (gian hàng)', () => {
     expect(screen.queryByText('Doanh thu')).toBeNull();
   });
 
-  it('FINANCE_VIEW mở các mục sổ sách của Doanh thu — mục Công nợ ẨN thì không vẽ', () => {
+  it('FINANCE_VIEW mở các mục sổ sách của Doanh thu - mục Công nợ ẨN thì không vẽ', () => {
     grant(PERMISSION.TENANT_VIEW, PERMISSION.FINANCE_VIEW);
     renderMenu();
 
@@ -212,7 +215,7 @@ describe('useManageNav — hiển thị theo quyền (gian hàng)', () => {
     expect(itemLabels()).toContain('Nhân viên & Phân quyền');
   });
 
-  it('khối biến mất khi mọi mục con bị lọc — không để lại nhãn khối rỗng', () => {
+  it('khối biến mất khi mọi mục con bị lọc - không để lại nhãn khối rỗng', () => {
     // Chỉ VEHICLE_VIEW: khối "Xe & Tài xế" còn danh sách xe, khối "Cấu hình" không còn mục nào.
     grant(PERMISSION.VEHICLE_VIEW);
     renderMenu();
@@ -232,7 +235,7 @@ describe('useManageNav — hiển thị theo quyền (gian hàng)', () => {
   });
 });
 
-describe('useManageNav — gom nhóm KHÔNG làm mất lối vào', () => {
+describe('useManageNav - gom nhóm KHÔNG làm mất lối vào', () => {
   beforeEach(() => {
     grant(
       PERMISSION.TENANT_VIEW,
@@ -255,9 +258,8 @@ describe('useManageNav — gom nhóm KHÔNG làm mất lối vào', () => {
 
     expect(itemLabels()).toEqual([
       'Tổng quan',
+      'Đơn thuê xe',
       'Lịch thuê xe',
-      'Yêu cầu đặt xe',
-      'Quản lý đơn thuê xe',
       'Danh sách khách hàng',
       'Danh sách xe',
       'Quản lý tài xế',
@@ -273,29 +275,27 @@ describe('useManageNav — gom nhóm KHÔNG làm mất lối vào', () => {
     ]);
   });
 
-  it('Bảo dưỡng và Yêu cầu đặt xe giữ NGUYÊN route riêng', () => {
+  it('Bảo dưỡng giữ route riêng; yêu cầu + đơn là MỘT mục "Đơn thuê xe" (05/11/2026)', () => {
     renderMenu();
 
     expect(screen.getByRole('link', { name: 'Bảo dưỡng' }).getAttribute('href')).toBe(
       '/manage/maintenance',
     );
-    expect(screen.getByRole('link', { name: 'Yêu cầu đặt xe' }).getAttribute('href')).toBe(
-      '/manage/booking-requests',
-    );
-    expect(screen.getByRole('link', { name: 'Quản lý đơn thuê xe' }).getAttribute('href')).toBe(
+    expect(screen.getByRole('link', { name: 'Đơn thuê xe' }).getAttribute('href')).toBe(
       '/manage/bookings',
     );
+    expect(screen.queryByRole('link', { name: 'Yêu cầu đặt xe' })).toBeNull();
   });
 
-  it('mục ẨN không thành dòng — nhưng đứng ở trang của nó thì khối của nó vẫn bung', () => {
+  it('mục ẨN không thành dòng - nhưng đứng ở trang của nó thì khối của nó vẫn bung', () => {
     nav.pathname = '/manage/bookings/awaiting-pickup';
     renderMenu();
 
     expect(itemLabels()).not.toContain('Chờ giao xe');
-    expect(itemLabels()).toContain('Quản lý đơn thuê xe');
+    expect(itemLabels()).toContain('Đơn thuê xe');
   });
 
-  it('mọi link trong menu đều trỏ vào /manage — không có link chết', () => {
+  it('mọi link trong menu đều trỏ vào /manage - không có link chết', () => {
     renderMenu();
 
     for (const link of screen.getAllByRole('link')) {
@@ -304,7 +304,7 @@ describe('useManageNav — gom nhóm KHÔNG làm mất lối vào', () => {
   });
 });
 
-describe('useManageNav — khối gập được', () => {
+describe('useManageNav - khối gập được', () => {
   beforeEach(() => {
     grant(PERMISSION.TENANT_VIEW, PERMISSION.VEHICLE_VIEW, PERMISSION.CALENDAR_VIEW);
   });
@@ -338,7 +338,7 @@ describe('useManageNav — khối gập được', () => {
     expect(sectionToggle('Vận hành').getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('khối CHỨA trang đang mở luôn bung — không giấu mất trang đang xem', () => {
+  it('khối CHỨA trang đang mở luôn bung - không giấu mất trang đang xem', () => {
     nav.pathname = '/manage/calendar';
     renderMenu();
 
@@ -347,14 +347,14 @@ describe('useManageNav — khối gập được', () => {
     expect(itemLabels()).toContain('Lịch thuê xe');
   });
 
-  it('Tổng quan và Trợ giúp không có nút gập — chúng luôn hiện', () => {
+  it('Tổng quan và Trợ giúp không có nút gập - chúng luôn hiện', () => {
     renderMenu();
 
     expect(screen.queryByRole('button', { name: /nhóm Tổng quan$/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /nhóm Trợ giúp$/ })).toBeNull();
   });
 
-  it('thu gọn còn icon thì MỌI khối bung — không có mục nào mất lối vào', () => {
+  it('thu gọn còn icon thì MỌI khối bung - không có mục nào mất lối vào', () => {
     renderMenu();
     fireEvent.click(sectionToggle('Vận hành'));
     cleanup();
@@ -367,7 +367,7 @@ describe('useManageNav — khối gập được', () => {
   });
 });
 
-describe('useManageNav — huy hiệu cần xử lý', () => {
+describe('useManageNav - huy hiệu cần xử lý', () => {
   beforeEach(() => {
     grant(PERMISSION.TENANT_VIEW, PERMISSION.BOOKING_VIEW, PERMISSION.BOOKING_REQUEST_VIEW);
   });
@@ -376,8 +376,8 @@ describe('useManageNav — huy hiệu cần xử lý', () => {
     badges.bookingRequestsPending = 2;
     renderMenu();
 
-    const requests = screen.getByRole('link', { name: /^Yêu cầu đặt xe/ });
-    expect(requests.getAttribute('aria-label')).toBe('Yêu cầu đặt xe, 2 việc cần xử lý');
+    const requests = screen.getByRole('link', { name: /^Đơn thuê xe/ });
+    expect(requests.getAttribute('aria-label')).toBe('Đơn thuê xe, 2 việc cần xử lý');
     expect(requests.textContent).toContain('2');
   });
 
@@ -386,9 +386,9 @@ describe('useManageNav — huy hiệu cần xử lý', () => {
     badges.bookingRequestsUrgent = true;
     renderMenu();
 
-    const requests = screen.getByRole('link', { name: /^Yêu cầu đặt xe/ });
+    const requests = screen.getByRole('link', { name: /^Đơn thuê xe/ });
     expect(requests.getAttribute('aria-label')).toBe(
-      'Yêu cầu đặt xe, 2 việc cần xử lý, có việc gấp',
+      'Đơn thuê xe, 2 việc cần xử lý, có việc gấp',
     );
     expect(requests.querySelector('[class*="urgent"]')).toBeTruthy();
   });
@@ -397,7 +397,7 @@ describe('useManageNav — huy hiệu cần xử lý', () => {
     badges.bookingRequestsPending = 2;
     renderMenu();
 
-    const requests = screen.getByRole('link', { name: /^Yêu cầu đặt xe/ });
+    const requests = screen.getByRole('link', { name: /^Đơn thuê xe/ });
     expect(requests.querySelector('[class*="badge"]')).toBeTruthy();
     expect(requests.querySelector('[class*="urgent"]')).toBeNull();
   });
@@ -417,7 +417,7 @@ describe('useManageNav — huy hiệu cần xử lý', () => {
   it('không có việc gì chờ → KHÔNG dựng huy hiệu rỗng', () => {
     renderMenu();
 
-    expect(screen.getByRole('link', { name: 'Yêu cầu đặt xe' }).textContent).toBe('Yêu cầu đặt xe');
+    expect(screen.getByRole('link', { name: 'Đơn thuê xe' }).textContent).toBe('Đơn thuê xe');
   });
 
   it('việc nằm trong khối đang GẬP thì con số dồn lên nhãn khối', () => {
@@ -426,20 +426,20 @@ describe('useManageNav — huy hiệu cần xử lý', () => {
 
     fireEvent.click(sectionToggle('Vận hành'));
 
-    expect(screen.queryByRole('link', { name: /^Yêu cầu đặt xe/ })).toBeNull();
+    expect(screen.queryByRole('link', { name: /^Đơn thuê xe/ })).toBeNull();
     // Tên truy cập được của nút gập lúc này mang cả số việc — tìm theo tiền tố.
     const toggle = screen.getByRole('button', { name: /nhóm Vận hành/ });
     expect(toggle.closest('li')?.textContent).toContain('3');
   });
 
-  it('thu gọn còn icon: việc cần xử lý vẫn báo được — chấm trên biểu tượng', () => {
+  it('thu gọn còn icon: việc cần xử lý vẫn báo được - chấm trên biểu tượng', () => {
     // AntD làm mờ hẳn phần chữ khi thu gọn, nên con số nằm trong đó sẽ biến mất. Tín hiệu
     // chuyển sang biểu tượng; con số đầy đủ vẫn còn ở tên truy cập được.
     badges.bookingRequestsPending = 2;
     const { container } = renderMenu(true);
 
     expect(container.querySelector('[class*="iconDotted"]')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Yêu cầu đặt xe, 2 việc cần xử lý' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Đơn thuê xe, 2 việc cần xử lý' })).toBeTruthy();
   });
 
   it('thu gọn mà không có việc gì chờ → không có chấm nào', () => {
@@ -452,11 +452,11 @@ describe('useManageNav — huy hiệu cần xử lý', () => {
     badges.bookingRequestsPending = 120;
     renderMenu();
 
-    expect(screen.getByRole('link', { name: /^Yêu cầu đặt xe/ }).textContent).toContain('99+');
+    expect(screen.getByRole('link', { name: /^Đơn thuê xe/ }).textContent).toContain('99+');
   });
 });
 
-describe('useManageNav — hiển thị theo quyền (nền tảng)', () => {
+describe('useManageNav - hiển thị theo quyền (nền tảng)', () => {
   it('platformRole → cây nền tảng, KHÔNG có mục gian hàng nào', () => {
     user.platformRole = 'platform_admin';
     grant(PERMISSION.PLATFORM_DASHBOARD_VIEW, PERMISSION.PLATFORM_TENANT_VIEW);
@@ -558,7 +558,7 @@ describe('useManageNav — hiển thị theo quyền (nền tảng)', () => {
   });
 });
 
-describe('useManageNav — mục đang sáng', () => {
+describe('useManageNav - mục đang sáng', () => {
   beforeEach(() => {
     grant(
       PERMISSION.TENANT_VIEW,
@@ -586,11 +586,11 @@ describe('useManageNav — mục đang sáng', () => {
     expect(selectedLabel(container)).toBe('Danh sách xe');
   });
 
-  it('tiền tố gần giống KHÔNG chọn nhầm: booking-requests ≠ bookings', () => {
-    nav.pathname = '/manage/booking-requests';
+  it('"Đơn đã kết thúc" (/bookings/ended) vẫn sáng mục "Đơn thuê xe"', () => {
+    nav.pathname = '/manage/bookings/ended';
     const { container } = renderMenu();
 
-    expect(selectedLabel(container)).toBe('Yêu cầu đặt xe');
+    expect(selectedLabel(container)).toBe('Đơn thuê xe');
   });
 
   it('/manage chỉ sáng Tổng quan khi ở ĐÚNG /manage', () => {
@@ -645,7 +645,7 @@ describe('useManageNav — mục đang sáng', () => {
   });
 });
 
-describe('useManageNav — mục đang sáng (nền tảng)', () => {
+describe('useManageNav - mục đang sáng (nền tảng)', () => {
   beforeEach(() => {
     user.platformRole = 'platform_admin';
     grant(
@@ -690,15 +690,15 @@ describe('useManageNav — mục đang sáng (nền tảng)', () => {
   });
 });
 
-describe('ManageMenu — trình bày', () => {
-  it('nhãn khối KHÔNG phải link bấm để đi đâu — nó chỉ gập/mở', () => {
+describe('ManageMenu - trình bày', () => {
+  it('nhãn khối KHÔNG phải link bấm để đi đâu - nó chỉ gập/mở', () => {
     grant(PERMISSION.TENANT_VIEW, PERMISSION.VEHICLE_VIEW);
     renderMenu();
 
     expect(screen.getByText('Xe & Tài xế').closest('a')).toBeNull();
   });
 
-  it('mục cha (menu nền tảng) KHÔNG phải link — bấm vào nó là mở danh sách, không phải điều hướng', () => {
+  it('mục cha (menu nền tảng) KHÔNG phải link - bấm vào nó là mở danh sách, không phải điều hướng', () => {
     user.platformRole = 'platform_admin';
     grant(PERMISSION.PLATFORM_BILLING_MANAGE);
     renderMenu();
@@ -725,8 +725,8 @@ describe('ManageMenu — trình bày', () => {
   });
 });
 
-describe('useManageNav — trục NĂNG LỰC theo gói (ADR 0027)', () => {
-  it('cache CŨ (chưa có `features`) KHÔNG khoá ai — mọi mục vẫn hiện', () => {
+describe('useManageNav - trục NĂNG LỰC theo gói (ADR 0027)', () => {
+  it('cache CŨ (chưa có `features`) KHÔNG khoá ai - mọi mục vẫn hiện', () => {
     grant(PERMISSION.FINANCE_VIEW, PERMISSION.DRIVER_VIEW, PERMISSION.MEMBER_VIEW);
     features.states = {};
     renderMenu();
@@ -736,7 +736,7 @@ describe('useManageNav — trục NĂNG LỰC theo gói (ADR 0027)', () => {
     expect(itemLabels()).toContain('Tổng quan doanh thu');
   });
 
-  it('hidden ⇒ mục VẮNG khỏi menu dù có đủ quyền — hai trục kiểm nối tiếp nhau', () => {
+  it('hidden ⇒ mục VẮNG khỏi menu dù có đủ quyền - hai trục kiểm nối tiếp nhau', () => {
     grant(PERMISSION.DRIVER_VIEW, PERMISSION.MEMBER_VIEW);
     features.states = { drivers: FEATURE_STATE.HIDDEN, members: FEATURE_STATE.HIDDEN };
     renderMenu();
@@ -745,7 +745,7 @@ describe('useManageNav — trục NĂNG LỰC theo gói (ADR 0027)', () => {
     expect(itemLabels()).not.toContain('Nhân viên & Phân quyền');
   });
 
-  it('read_only VẪN hiện — không ai mất lối vào sổ sách của chính mình', () => {
+  it('read_only VẪN hiện - không ai mất lối vào sổ sách của chính mình', () => {
     grant(PERMISSION.FINANCE_VIEW);
     features.states = { finance: FEATURE_STATE.READ_ONLY };
     renderMenu();
@@ -781,7 +781,7 @@ describe('useManageNav — trục NĂNG LỰC theo gói (ADR 0027)', () => {
  * ngược lại: nới guard cho khớp menu sẽ làm test đỏ, vì tiền trong ví là nghĩa vụ với một người cụ
  * thể chứ không phải một tài nguyên của gian hàng mà quyền cấp phát được.
  */
-describe('useManageNav — ví gian hàng chỉ dành cho CHỦ', () => {
+describe('useManageNav - ví gian hàng chỉ dành cho CHỦ', () => {
   /** Mọi quyền của gian hàng: chứng minh trục quyền KHÔNG mở được mục này. */
   function grantEverything() {
     grant(...(Object.values(PERMISSION) as Permission[]));
@@ -797,7 +797,7 @@ describe('useManageNav — ví gian hàng chỉ dành cho CHỦ', () => {
     );
   });
 
-  it('quản lý, nhân viên và người xem KHÔNG thấy — dù có đủ mọi quyền', () => {
+  it('quản lý, nhân viên và người xem KHÔNG thấy - dù có đủ mọi quyền', () => {
     for (const roleKey of [
       TENANT_ROLE.SHOP_MANAGER,
       TENANT_ROLE.SHOP_STAFF,
@@ -838,7 +838,7 @@ describe('useManageNav — ví gian hàng chỉ dành cho CHỦ', () => {
  * HAI menu ở site partner (ADR 0051 điều 3): tuyến hoa hồng thấy Owner Lite — kể cả khi có đủ mọi
  * quyền, vì ranh giới tuyến KHÔNG đi qua trục quyền (ADR 0038 điều 4).
  */
-describe('useManageNav — menu theo tuyến ở site partner', () => {
+describe('useManageNav - menu theo tuyến ở site partner', () => {
   it('chủ xe tuyến hoa hồng: menu Owner Lite, không có sổ sách của tuyến gói', () => {
     grant(...(Object.values(PERMISSION) as Permission[]));
     user.tenant = { roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.COMMISSION };
@@ -861,8 +861,8 @@ describe('useManageNav — menu theo tuyến ở site partner', () => {
 
     expect(itemLabels()).toEqual([
       'Tổng quan',
+      'Đơn thuê xe',
       'Lịch thuê xe',
-      'Chuyến cho thuê',
       'Danh sách xe',
       // Tài xế mở cho cả chủ xe tuyến hoa hồng (ADR 0063).
       'Quản lý tài xế',
@@ -876,29 +876,27 @@ describe('useManageNav — menu theo tuyến ở site partner', () => {
   });
 
   /*
-   * Chủ xe cá nhân (1–3 xe) đọc yêu cầu + đơn gộp ở MỘT danh sách thẻ. Thành viên của gian hàng
-   * hoa hồng (nhân viên của shop vừa hết gói) không có danh sách đó — `/trips` chỉ dựng phía chủ
-   * xe cho CHỦ — nên giữ hộp thư + bảng đơn để còn bàn giao chuyến đang chạy.
+   * 06/11/2026: chủ xe tuyến hoa hồng dùng CHUNG màn "Đơn thuê xe" với gian hàng — "Chuyến cho
+   * thuê" riêng đã gỡ. Đúng MỘT mục, không phải hai mục cùng tên.
    */
-  it('chủ xe tuyến hoa hồng: "Chuyến cho thuê" thay cho hộp thư + bảng đơn', () => {
+  it('chủ xe tuyến hoa hồng: đúng một mục "Đơn thuê xe", không còn "Chuyến cho thuê"', () => {
     grant(...(Object.values(PERMISSION) as Permission[]));
     user.tenant = { roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.COMMISSION };
     renderMenu();
 
     const labels = itemLabels();
-    expect(labels).toContain('Chuyến cho thuê');
-    expect(labels).not.toContain('Yêu cầu đặt xe');
-    expect(labels).not.toContain('Quản lý đơn thuê xe');
+    expect(labels.filter((label) => label === 'Đơn thuê xe')).toHaveLength(1);
+    expect(labels).not.toContain('Chuyến cho thuê');
   });
 
-  it('thành viên gian hàng tuyến hoa hồng: giữ hộp thư + bảng đơn, không có "Chuyến cho thuê"', () => {
+  it('thành viên gian hàng tuyến hoa hồng: cùng mục "Đơn thuê xe" với chủ', () => {
     grant(...(Object.values(PERMISSION) as Permission[]));
     user.tenant = { roleKey: TENANT_ROLE.SHOP_STAFF, billingMode: BILLING_MODE.COMMISSION };
     renderMenu();
 
     const labels = itemLabels();
     expect(labels).not.toContain('Chuyến cho thuê');
-    expect(labels).toEqual(expect.arrayContaining(['Yêu cầu đặt xe', 'Quản lý đơn thuê xe']));
+    expect(labels).toEqual(expect.arrayContaining(['Đơn thuê xe']));
     // Ví và Hồ sơ chủ xe là của CHỦ — hai khối đó vắng hẳn, không còn nhãn khối rỗng.
     expect(screen.queryByText('Doanh thu')).toBeNull();
   });

@@ -10,7 +10,7 @@ function action(over: Partial<RowAction> = {}): RowAction {
   return { key: 'view', label: 'Xem', icon: <EyeOutlined />, onClick: vi.fn(), ...over };
 }
 
-describe('RowActions — tên khả truy cập', () => {
+describe('RowActions - tên khả truy cập', () => {
   it('mặc định hiện nhãn rõ trên desktop và vẫn lấy aria-label từ label', () => {
     render(<RowActions actions={[action({ key: 'view', label: 'Xem chi tiết' })]} />);
 
@@ -18,7 +18,7 @@ describe('RowActions — tên khả truy cập', () => {
     expect(button.textContent).toContain('Xem chi tiết');
   });
 
-  it('KHÔNG có nút icon nào thiếu tên — đây là lỗ a11y D15.2 mà component này sinh ra để vá', () => {
+  it('KHÔNG có nút icon nào thiếu tên - đây là lỗ a11y D15.2 mà component này sinh ra để vá', () => {
     render(
       <RowActions
         actions={[
@@ -44,7 +44,7 @@ describe('RowActions — tên khả truy cập', () => {
   });
 });
 
-describe('RowActions — chạy hành động', () => {
+describe('RowActions - chạy hành động', () => {
   it('variant filled tạo hình nút rõ và tự nhấn hành động đầu tiên', () => {
     render(
       <RowActions
@@ -61,6 +61,26 @@ describe('RowActions — chạy hành động', () => {
     expect(screen.getByRole('button', { name: 'Xem chi tiết' }).className).toContain('tonePrimary');
     expect(screen.getByRole('button', { name: 'Chỉnh sửa' }).className).toContain('toneNeutral');
     expect(screen.getByRole('button', { name: 'Xoá' }).className).toContain('toneDanger');
+  });
+
+  it('variant standard: hành động chính là nút primary đặc, hành động khác là nút viền', () => {
+    render(
+      <RowActions
+        variant="standard"
+        maxInline={2}
+        actions={[
+          action({ key: 'view', label: 'Xem đơn', primary: false }),
+          action({ key: 'collect', label: 'Thu tiền', primary: true }),
+        ]}
+      />,
+    );
+
+    const view = screen.getByRole('button', { name: 'Xem đơn' });
+    const collect = screen.getByRole('button', { name: 'Thu tiền' });
+    expect(view.className).toContain('ant-btn-default');
+    expect(view.className).not.toContain('toneNeutral');
+    expect(collect.className).toContain('ant-btn-primary');
+    expect(collect.className).not.toContain('tonePrimary');
   });
 
   it('bấm gọi onClick đúng một lần', () => {
@@ -97,7 +117,7 @@ describe('RowActions — chạy hành động', () => {
     expect(screen.queryByRole('button', { name: 'Xoá' })).toBeNull();
   });
 
-  it('chặn sự kiện nổi bọt lên hàng — sửa lỗi D15.7 (bấm nút cũng mở luôn chi tiết)', () => {
+  it('chặn sự kiện nổi bọt lên hàng - sửa lỗi D15.7 (bấm nút cũng mở luôn chi tiết)', () => {
     const onRowClick = vi.fn();
     const onAction = vi.fn();
 
@@ -120,7 +140,7 @@ describe('RowActions — chạy hành động', () => {
   });
 });
 
-describe('RowActions — trạng thái vô hiệu và đang chạy', () => {
+describe('RowActions - trạng thái vô hiệu và đang chạy', () => {
   it('hành động disabled không gọi onClick', () => {
     const onClick = vi.fn();
     render(<RowActions actions={[action({ disabled: true, onClick })]} />);
@@ -153,7 +173,7 @@ describe('RowActions — trạng thái vô hiệu và đang chạy', () => {
   });
 });
 
-describe('RowActions — hành động phá huỷ', () => {
+describe('RowActions - hành động phá huỷ', () => {
   it('danger đánh dấu nút là nguy hiểm', () => {
     const { container } = render(<RowActions actions={[action({ label: 'Xoá', danger: true })]} />);
 
@@ -191,7 +211,7 @@ describe('RowActions — hành động phá huỷ', () => {
     await waitFor(() => expect(onClick).toHaveBeenCalledTimes(1));
   });
 
-  it('disabled thắng confirm — không mở hộp xác nhận', () => {
+  it('disabled thắng confirm - không mở hộp xác nhận', () => {
     const onClick = vi.fn();
     render(
       <RowActions
@@ -207,7 +227,7 @@ describe('RowActions — hành động phá huỷ', () => {
   });
 });
 
-describe('RowActions — menu tràn', () => {
+describe('RowActions - menu tràn', () => {
   it('dưới ngưỡng thì không có nút ⋮', () => {
     render(
       <RowActions actions={[action({ key: 'a', label: 'A' }), action({ key: 'b', label: 'B' })]} />,
@@ -314,7 +334,7 @@ describe('RowActions — menu tràn', () => {
     await waitFor(() => expect(onView).toHaveBeenCalledTimes(1));
   });
 
-  it('maxInline={0} đẩy TOÀN BỘ hành động vào menu — hình thái của thẻ mobile', () => {
+  it('maxInline={0} đẩy TOÀN BỘ hành động vào menu - hình thái của thẻ mobile', () => {
     render(
       <RowActions
         maxInline={0}
@@ -358,7 +378,7 @@ describe('RowActions — menu tràn', () => {
   });
 });
 
-describe('RowActions — ranh giới trách nhiệm', () => {
+describe('RowActions - ranh giới trách nhiệm', () => {
   it('không đọc quyền: chỉ dựng đúng những gì được truyền', () => {
     // Hợp đồng không có prop permission nào; feature lọc trước bằng `hidden`.
     const { container } = render(

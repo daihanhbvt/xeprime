@@ -54,14 +54,14 @@ export class PlatformPeriodCountDto {
 
 /** Như `PlatformPeriodCountDto` nhưng cho TIỀN — chuỗi VND (ADR 0007). */
 export class PlatformPeriodMoneyDto {
-  @ApiProperty({ description: 'Từ đầu tháng (giờ VN) tới hiện tại — VND string' }) current!: string;
-  @ApiProperty({ description: 'Cùng số ngày, tháng trước — VND string' }) previous!: string;
+  @ApiProperty({ description: 'Từ đầu tháng (giờ VN) tới hiện tại - VND string' }) current!: string;
+  @ApiProperty({ description: 'Cùng số ngày, tháng trước - VND string' }) previous!: string;
 }
 
 export class PlatformDashboardDayDto {
   @ApiProperty({ description: 'Ngày lịch `YYYY-MM-DD` giờ VN' }) date!: string;
   @ApiProperty({ description: 'Đơn thuê ra đời trong ngày (mọi trạng thái)' }) bookings!: number;
-  @ApiProperty({ description: 'GMV của các đơn đó — VND string, cùng định nghĩa với `gmv`' })
+  @ApiProperty({ description: 'GMV của các đơn đó - VND string, cùng định nghĩa với `gmv`' })
   gmv!: string;
 }
 
@@ -69,13 +69,13 @@ export class PlatformDashboardDayDto {
 export class PlatformDashboardActivityDto {
   @ApiProperty({
     type: PlatformPeriodCountDto,
-    description: 'Đơn thuê RA ĐỜI trong kỳ, mọi trạng thái — cùng phép đếm `bookingThisMonth`.',
+    description: 'Đơn thuê RA ĐỜI trong kỳ, mọi trạng thái - cùng phép đếm `bookingThisMonth`.',
   })
   bookings!: PlatformPeriodCountDto;
 
   @ApiProperty({
     type: PlatformPeriodCountDto,
-    description: 'Trong `bookings`: đơn đã huỷ hoặc khách không đến — phần không vào GMV.',
+    description: 'Trong `bookings`: đơn đã huỷ hoặc khách không đến - phần không vào GMV.',
   })
   cancelled!: PlatformPeriodCountDto;
 
@@ -103,7 +103,7 @@ export class PlatformDashboardGrowthDto {
 
   @ApiProperty({
     type: PlatformPeriodCountDto,
-    description: 'Đối tác mới — gian hàng/chủ xe (tenant) được tạo trong kỳ, cả hai tuyến.',
+    description: 'Đối tác mới - gian hàng/chủ xe (tenant) được tạo trong kỳ, cả hai tuyến.',
   })
   newPartners!: PlatformPeriodCountDto;
 }
@@ -117,7 +117,7 @@ export class PlatformDashboardRevenueDto {
     type: PlatformPeriodMoneyDto,
     description:
       'Phí dịch vụ GHI NHẬN: Σ `settled_platform_amount` của khoản giữ chỗ đã chốt (`released_at` ' +
-      'trong kỳ). Là số RÒNG sau tài trợ mã khuyến mãi — âm được (ADR 0046).',
+      'trong kỳ). Là số RÒNG sau tài trợ mã khuyến mãi - âm được (ADR 0046).',
   })
   serviceFee!: PlatformPeriodMoneyDto;
 
@@ -149,7 +149,7 @@ export class PlatformDashboardFunnelDto {
  * đây: mỗi hàng đợi đã có endpoint đếm của chính nó, gác bằng quyền của chính nó.
  */
 export class PlatformDashboardOverviewDto {
-  @ApiProperty({ description: 'Thời điểm tính — ISO-8601 UTC' }) generatedAt!: string;
+  @ApiProperty({ description: 'Thời điểm tính - ISO-8601 UTC' }) generatedAt!: string;
   @ApiProperty({ description: 'Tháng lịch hiện tại `YYYY-MM` giờ VN' }) period!: string;
 
   @ApiProperty({

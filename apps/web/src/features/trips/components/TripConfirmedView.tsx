@@ -1,5 +1,6 @@
 'use client';
 
+import { InfoHint } from '@/components/data-display/InfoHint';
 import { Alert } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useId, useMemo, useSyncExternalStore } from 'react';
@@ -28,6 +29,7 @@ import type { CustomerTripDetail } from '../types';
 import { TripDriverCard } from './TripDriverCard';
 import { TripFinanceCard } from './TripFinanceCard';
 import { TripHoldPanel } from './TripHoldPanel';
+import { TripHandoverWord } from './TripHandoverWord';
 import { TripNotReceivedReport } from './TripNotReceivedReport';
 import { TripOwnerActions } from './TripOwnerActions';
 import { TripPageHeader, useTripDetailCrumbs } from './TripPageHeader';
@@ -143,6 +145,9 @@ export function TripConfirmedView({
             "Chưa nhận được xe" (ADR 0066, lớp 1) — chặng `ready` là đúng lúc khách cần nó nhất: đã
             quá giờ hẹn mà chưa ai bàn giao. Ngoài cửa sổ 120′ (do server tính) khối tự im lặng.
           */}
+          {/* "Đã nhận xe" (ADR 0081) — khách tự khép mốc giao xe khi chủ xe quên bấm. Ngoài cửa sổ server cho thì khối tự im lặng. */}
+          <TripHandoverWord trip={trip} />
+
           <TripNotReceivedReport trip={trip} />
 
           {/*
@@ -303,10 +308,11 @@ function PickupChecklist({
 
   return (
     <section id={anchorId} className={layout.card} aria-labelledby={titleId}>
-      <h2 id={titleId} className={layout.cardTitle}>
-        {t('title')}
+      {/* Tên vùng chỉ là chữ tiêu đề — nhãn của nút gợi ý không lẫn vào. */}
+      <h2 className={layout.cardTitle}>
+        <span id={titleId}>{t('title')}</span>{' '}
+        <InfoHint content={t('lead')} label={t('leadLabel')} />
       </h2>
-      <p className={layout.cardLead}>{t('lead')}</p>
       <ul className={styles.checklist}>
         {items.map((item) => (
           <li key={item.key}>

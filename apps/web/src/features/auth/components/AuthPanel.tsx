@@ -97,6 +97,7 @@ export function AuthPanel({
             code={flow.code}
             onCodeChange={flow.changeCode}
             onSubmit={(submitted) => void flow.confirmRegistration(submitted)}
+            onResend={flow.resendRegistrationCode}
             submitLabel={t('register.verifySubmit')}
             submitting={pending === 'register'}
             onEdit={flow.editRegistration}

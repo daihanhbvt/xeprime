@@ -26,7 +26,8 @@ export function SupportWorkspaceGate({
   children,
 }: {
   workspace?: SupportWorkspace | readonly SupportWorkspace[];
-  requires?: SupportCapability;
+  /** Một capability, hoặc một DANH SÁCH = chỉ cần MỘT trong số đó (màn "Đơn thuê xe" gộp yêu cầu + đơn). */
+  requires?: SupportCapability | readonly SupportCapability[];
   children: ReactNode;
 }) {
   const session = useSupportSession();
@@ -36,7 +37,9 @@ export function SupportWorkspaceGate({
 
   const workspaces = workspace === undefined ? null : ([] as SupportWorkspace[]).concat(workspace);
   const workspaceOk = workspaces === null || workspaces.includes(session.context.workspace);
-  const capabilityOk = requires === undefined || session.can(requires);
+  const capabilityOk =
+    requires === undefined ||
+    ([] as SupportCapability[]).concat(requires).some((capability) => session.can(capability));
   if (workspaceOk && capabilityOk) return <>{children}</>;
 
   return (

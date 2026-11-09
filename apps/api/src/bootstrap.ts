@@ -166,7 +166,7 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
       name: SESSION_COOKIE_NAME_DEFAULT,
       description:
         'Cookie phiên do `POST /auth/login`, `POST /auth/register`, `POST /auth/phone/login` ' +
-        'hoặc callback OAuth (`GET /auth/social/{provider}/callback`) phát. httpOnly — ' +
+        'hoặc callback OAuth (`GET /auth/social/{provider}/callback`) phát. httpOnly - ' +
         'JavaScript KHÔNG đọc được, trình duyệt tự đính kèm. Gọi từ máy khác origin thì cần ' +
         '`credentials: "include"`.',
     })

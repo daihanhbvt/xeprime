@@ -160,7 +160,7 @@ const OWNER: Permission[] = [PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE];
 
 beforeEach(() => jest.restoreAllMocks());
 
-describe('OwnerProfileScreen — "Hồ sơ chủ xe" của chủ xe tuyến hoa hồng (PR #156)', () => {
+describe('OwnerProfileScreen - "Hồ sơ chủ xe" của chủ xe tuyến hoa hồng (PR #156)', () => {
   it('chủ xe hoa hồng có tenant.view: dựng hồ sơ chủ xe, không có ô tên/SĐT/email của gian hàng', async () => {
     const view = await renderScreen(OWNER);
 

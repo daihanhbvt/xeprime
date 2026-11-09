@@ -737,7 +737,7 @@ export class CustomersService {
     if (!id) {
       throw new ConflictException({
         code: API_ERROR_CODE.CONFLICT,
-        message: 'Không gắn được hồ sơ khách cho giao dịch này — thử lại',
+        message: 'Không gắn được hồ sơ khách cho giao dịch này - thử lại',
       });
     }
 
@@ -816,7 +816,7 @@ export class CustomersService {
     if (archivedAt) {
       throw new ConflictException({
         code: API_ERROR_CODE.CUSTOMER_ARCHIVED,
-        message: 'Hồ sơ khách đang lưu trữ — khôi phục trước khi chỉnh sửa',
+        message: 'Hồ sơ khách đang lưu trữ - khôi phục trước khi chỉnh sửa',
       });
     }
   }
@@ -1193,7 +1193,9 @@ function searchSql(raw: string | undefined): Prisma.Sql | null {
   const phoneParts: Prisma.Sql[] = [];
   if (digits.length >= 3) {
     // Cả dạng đã chuẩn hoá (gõ `0901…`) lẫn dãy số thô (gõ đuôi số `234567`).
-    for (const pattern of new Set([`%${normalizePhone(digits)}%`, `%${digits}%`])) {
+    // Gõ dở theo kiểu quốc tế (`84901…`) — dạng lưu là `0901…` (ADR 0082).
+    const local = digits.startsWith('84') ? `0${digits.slice(2)}` : digits;
+    for (const pattern of new Set([`%${normalizePhone(digits)}%`, `%${local}%`, `%${digits}%`])) {
       phoneParts.push(Prisma.sql`c.normalized_phone LIKE ${pattern}`);
     }
   }
@@ -1331,7 +1333,7 @@ function toListItem(row: CustomerListRow, canViewFinance: boolean): TenantCustom
 function normalizeVnPhoneOrNull(raw: string | null | undefined): string | null {
   if (!raw?.trim()) return null;
   const normalized = normalizePhone(raw);
-  return /^84\d{8,12}$/.test(normalized) ? normalized : null;
+  return /^0\d{8,12}$/.test(normalized) ? normalized : null;
 }
 
 function customerNotFound(): NotFoundException {
@@ -1364,7 +1366,7 @@ function blockedCustomer(mode: 'internal' | 'public'): ConflictException {
     ? new ConflictException({
         code: API_ERROR_CODE.CUSTOMER_BLOCKED,
         message:
-          'Khách đang bị đánh dấu từ chối phục vụ — chủ hoặc quản lý gian hàng cần đổi mức rủi ro trước',
+          'Khách đang bị đánh dấu từ chối phục vụ - chủ hoặc quản lý gian hàng cần đổi mức rủi ro trước',
       })
     : new ConflictException({
         code: API_ERROR_CODE.SHOP_NOT_ACCEPTING_CUSTOMER,

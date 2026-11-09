@@ -96,7 +96,11 @@ describe('planQuotaGateHref', () => {
     expect(href).toContain('purchase=1');
   });
 
-  it('Owner Lite ⇒ luồng nâng cấp của tuyến hoa hồng, không phải trang Cửa hàng', () => {
+  /*
+   * ADR 0085 điều 2: "Hồ sơ chủ xe" của tuyến hoa hồng LÀ trang Thông tin `/shop` — thẻ Gói ở đó dựng
+   * luồng nâng cấp (`ShopPlanSection` → `SubscriptionWorkspace`), không mở hộp mua của gian hàng.
+   */
+  it('Owner Lite ⇒ thẻ Gói của trang Thông tin (luồng nâng cấp), không mở hộp mua của gian hàng', () => {
     const href = planQuotaGateHref({
       kind: PLAN_QUOTA_GATE_KIND.LIMIT_REACHED,
       vehicleType: 'car',
@@ -105,13 +109,13 @@ describe('planQuotaGateHref', () => {
       used: 3,
       limit: 3,
     });
-    expect(href).not.toContain('/shop');
-    expect(href).toContain('section=plan');
+    expect(href).toBe('/manage/shop?section=plan');
+    expect(href).not.toContain('purchase=1');
   });
 });
 
 describe('plan-lanes', () => {
-  it('?lane= chỉ nhận hai làn tự mua — `all` và rác rơi về null', () => {
+  it('?lane= chỉ nhận hai làn tự mua - `all` và rác rơi về null', () => {
     expect(parsePlanLane('motorbike')).toBe('motorbike');
     expect(parsePlanLane('car')).toBe('car');
     expect(parsePlanLane('all')).toBeNull();

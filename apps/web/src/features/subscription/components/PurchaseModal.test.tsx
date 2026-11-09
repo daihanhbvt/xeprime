@@ -11,7 +11,7 @@ import { PurchaseModal } from './PurchaseModal';
  * Hộp thoại mua / gia hạn gói.
  *
  * Bộ này tồn tại vì một lỗi THẬT đã lọt qua: một bản cũ lọc gói bán được bằng
- * `basePriceMonthly > 0`, đúng chừng nào mọi gói còn có phí nền — rồi mô hình định giá đổi và vị
+ * `basePriceMonthly > 0`, đúng chừng nào mọi gói còn có phí nền - rồi mô hình định giá đổi và vị
  * từ đó lập tức loại đúng gói đang bán. Danh sách rỗng, không ai mua được gì, mà không test nào
  * đỏ.
  *
@@ -29,10 +29,10 @@ const plans = vi.hoisted(() => ({
 }));
 
 const purchase = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
-/** Hoá đơn còn chờ — để hộp thoại cảnh báo khi tạo mã mới sẽ huỷ mã cùng loại xe. */
+/** Hoá đơn còn chờ - để hộp thoại cảnh báo khi tạo mã mới sẽ huỷ mã cùng loại xe. */
 const pending = vi.hoisted(() => ({ data: [] as unknown[] }));
 
-/** Mua gói xong là sang trang thanh toán của hoá đơn — điều hướng ghi lại để kiểm. */
+/** Mua gói xong là sang trang thanh toán của hoá đơn - điều hướng ghi lại để kiểm. */
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', async (importOriginal) => ({
   ...(await importOriginal<typeof import('next/navigation')>()),
@@ -45,9 +45,20 @@ vi.mock('next/navigation', async (importOriginal) => ({
   }),
 }));
 
+/** Bản xem trước của server (ADR 0084) - loại lượt mua do SERVER suy, hộp chỉ nói lại. */
+const preview = vi.hoisted(() => ({
+  data: undefined as unknown,
+  isSuccess: false,
+  isPlaceholderData: false,
+  isFetching: false,
+  isError: false,
+  refetch: vi.fn(),
+}));
+
 vi.mock('../hooks/use-subscription', () => ({
   useTenantPlans: () => plans,
   usePendingInvoices: () => pending,
+  usePurchasePreview: () => preview,
   usePurchaseSubscription: () => purchase,
   usePaymentInfo: () => ({ data: undefined, isLoading: false, isError: false }),
 }));
@@ -115,19 +126,26 @@ function pickTier(name: string) {
 beforeEach(() => {
   plans.data = [makePlan()];
   pending.data = [];
+  /*
+   * Mặc định: bản xem trước KHỚP lựa chọn, không nói gì riêng và không vượt suất — nút tạo hoá đơn chờ
+   * đúng bản này (ADR 0085). Ca nào cần nội dung xem trước tự đặt `items` / `vehicleSlots`.
+   */
+  preview.data = { total: '0', items: [], vehicleSlots: [] };
+  preview.isSuccess = true;
+  preview.isPlaceholderData = false;
   purchase.mutate.mockReset();
   nav.push.mockReset();
 });
 
 afterEach(cleanup);
 
-describe('PurchaseModal — bậc nào được bán', () => {
+describe('PurchaseModal - bậc nào được bán', () => {
   it('bậc gian hàng hiện thẻ kèm trần xe và giá tháng', () => {
     renderModal();
     expect(screen.queryByText(/đang bán/)).toBeNull();
     expect(screen.getByText('Gói cơ bản')).toBeTruthy();
     expect(screen.getByText('Tối đa 3 xe máy')).toBeTruthy();
-    // Trần chi nhánh thôi là hạn mức (ADR 0065 điều 1) — không in nữa.
+    // Trần chi nhánh thôi là hạn mức (ADR 0065 điều 1) - không in nữa.
     expect(screen.queryByText(/chi nhánh/)).toBeNull();
   });
 
@@ -162,7 +180,7 @@ describe('PurchaseModal — bậc nào được bán', () => {
     expect(terms[2]!.textContent).toContain('Tiết kiệm 33%');
   });
 
-  it('chưa chọn kỳ hạn thì không tạo được hoá đơn — không mặc định sẵn một cam kết', () => {
+  it('chưa chọn kỳ hạn thì không tạo được hoá đơn - không mặc định sẵn một cam kết', () => {
     renderModal();
     const submit = screen.getByRole('button', { name: /Tạo hoá đơn/ });
     expect(submit.getAttribute('disabled')).not.toBeNull();
@@ -180,7 +198,7 @@ describe('PurchaseModal — bậc nào được bán', () => {
   });
 
   /**
-   * Hoá đơn tạo xong ⇒ hộp thoại đóng và người dùng sang TRANG THANH TOÁN của đúng hoá đơn đó —
+   * Hoá đơn tạo xong ⇒ hộp thoại đóng và người dùng sang TRANG THANH TOÁN của đúng hoá đơn đó -
    * nơi có cả chuyển khoản VietQR lẫn ví điện tử, sống qua F5 và là trang cổng quay về.
    */
   it('tạo hoá đơn xong ⇒ đóng hộp thoại, sang trang thanh toán của hoá đơn vừa tạo', () => {
@@ -194,6 +212,43 @@ describe('PurchaseModal — bậc nào được bán', () => {
 
     expect(onClose).toHaveBeenCalled();
     expect(nav.push).toHaveBeenCalledWith('/manage/payment/INV-NEW');
+  });
+
+  /*
+   * ADR 0085 điều 5 — hạ bậc / gói ít suất hơn số xe đang hiện: người mua tự chọn xe giữ lại và xác
+   * nhận ẩn phần còn lại; chưa xác nhận thì không có hoá đơn.
+   */
+  it('vượt suất: chưa xác nhận thì không tạo hoá đơn; xác nhận ⇒ body mang lựa chọn xe giữ lại', () => {
+    preview.data = {
+      total: '0',
+      items: [],
+      vehicleSlots: [
+        {
+          countedScope: 'motorbike',
+          limit: 1,
+          occupyingCount: 2,
+          vehicles: [
+            { id: 'V1', name: 'Vision', plateNumber: null, vehicleType: 'motorbike', mainImageUrl: null, publicStatus: 'approved_public' },
+            { id: 'V2', name: 'Lead', plateNumber: null, vehicleType: 'motorbike', mainImageUrl: null, publicStatus: 'approved_public' },
+          ],
+        },
+      ],
+    };
+    renderModal();
+    pickTier('Chọn gói');
+    fireEvent.click(termCards()[1]!);
+    const submit = screen.getByRole('button', { name: /Tạo hoá đơn/ }) as HTMLButtonElement;
+    expect(submit.disabled).toBe(true);
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Vision' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Tôi đồng ý tạm ẩn/ }));
+    expect(submit.disabled).toBe(false);
+    fireEvent.click(submit);
+    expect(purchase.mutate.mock.calls[0]![0]).toMatchObject({
+      planId: 'plan-basic',
+      keepVehicleIds: ['V1'],
+      acceptVehicleHiding: true,
+    });
   });
 
   it('gói tuyến hoa hồng KHÔNG lọt vào bảng giá', () => {
@@ -211,7 +266,7 @@ describe('PurchaseModal — bậc nào được bán', () => {
   });
 });
 
-describe('PurchaseModal — bậc bán qua tư vấn', () => {
+describe('PurchaseModal - bậc bán qua tư vấn', () => {
   /*
    * Giấu hẳn bậc doanh nghiệp là giấu luôn lối nâng cấp của gian hàng lớn nhất, và một bảng giá
    * dừng ở "10 xe" nói rằng nền tảng không phục vụ được đội xe lớn hơn (ADR 0041 điều 5).
@@ -246,7 +301,7 @@ describe('PurchaseModal — bậc bán qua tư vấn', () => {
     expect(contact.getAttribute('href')).toBe('/support');
   });
 
-  it('không có thẻ radio nào cho bậc tư vấn — nó không chọn mua được', () => {
+  it('không có thẻ radio nào cho bậc tư vấn - nó không chọn mua được', () => {
     plans.data = [
       makePlan({
         id: 'plan-pro',
@@ -273,8 +328,8 @@ describe('PurchaseModal — bậc bán qua tư vấn', () => {
   });
 });
 
-describe('PurchaseModal — một loại xe mỗi lần mua (ADR 0065)', () => {
-  it('chỉ bày bậc CỦA ĐÚNG loại xe đang mua — bậc ô tô không lọt vào hộp xe máy', () => {
+describe('PurchaseModal - một loại xe mỗi lần mua (ADR 0065)', () => {
+  it('chỉ bày bậc CỦA ĐÚNG loại xe đang mua - bậc ô tô không lọt vào hộp xe máy', () => {
     plans.data = [
       makePlan(),
       makePlan({ id: 'plan-car', code: 'car_5', name: 'Ô tô 5 xe', vehicleScope: 'car' }),
@@ -314,51 +369,67 @@ describe('PurchaseModal — một loại xe mỗi lần mua (ADR 0065)', () => {
   });
 });
 
-describe('PurchaseModal — Phương án B (Nâng gói ngay)', () => {
-  it('đang có kỳ cùng loại xe: chọn nâng gói ngay hiển thị cảnh báo huỷ ngày còn lại và gửi timing: now', () => {
-    renderModal(vi.fn(), {
-      subscriptionId: 'S1',
-      planId: 'plan-basic',
-      planCode: 'moto_5',
-      planName: 'Xe máy 5 xe',
-      vehicleScope: 'motorbike',
-      phase: 'current',
-      endsAt: '2026-12-01T00:00:00.000Z',
-    });
+describe('PurchaseModal - thời điểm áp dụng do server suy (ADR 0084)', () => {
+  const current = {
+    subscriptionId: 'S1',
+    planId: 'plan-small',
+    planCode: 'moto_1',
+    planName: 'Xe máy 1 xe',
+    vehicleScope: 'motorbike',
+    phase: 'current',
+    endsAt: '2026-12-01T00:00:00.000Z',
+  } as const;
+
+  it('không còn lựa chọn "nối tiếp / nâng ngay" - body gửi lên không mang timing', () => {
+    renderModal(vi.fn(), current);
+    expect(screen.queryByRole('radio', { name: /ngay hôm nay/ })).toBeNull();
 
     pickTier('Chọn gói');
     fireEvent.click(termCards()[1]!);
-
-    // Ban đầu mặc định nối tiếp sau khi hết hạn, nút ghi "Tạo hoá đơn"
-    expect(screen.queryByText(/Kỳ hiện tại kết thúc ngay hôm nay/)).toBeNull();
-    expect(screen.getByRole('button', { name: /Tạo hoá đơn/ })).toBeTruthy();
-
-    // Chọn "Nâng gói ngay hôm nay"
-    const radioNow = screen.getByRole('radio', { name: /Nâng gói ngay hôm nay/ });
-    fireEvent.click(radioNow);
-
-    // Cảnh báo không hoàn tiền ngày còn lại xuất hiện
-    expect(
-      screen.getByText(
-        /Kỳ hiện tại kết thúc ngay hôm nay. Bạn thanh toán đầy đủ giá gói mới, không hoàn tiền ngày còn lại./,
-      ),
-    ).toBeTruthy();
-
-    // Nút đổi thành "Nâng gói ngay"
-    const submitBtn = screen.getByRole('button', { name: /Nâng gói ngay/ });
-    expect(submitBtn).toBeTruthy();
-
-    fireEvent.click(submitBtn);
-
-    // Gửi đúng body kèm timing: 'now'
+    fireEvent.click(screen.getByRole('button', { name: /Tạo hoá đơn/ }));
     expect(purchase.mutate).toHaveBeenCalledWith(
-      { planId: 'plan-basic', termMonths: 3, timing: 'now' },
+      { planId: 'plan-basic', termMonths: 3 },
       expect.anything(),
     );
   });
+
+  it('server báo nâng bậc ⇒ nhãn "Nâng cấp ngay" + cảnh báo kỳ cũ kết thúc, không hoàn', () => {
+    preview.isSuccess = true;
+    preview.data = {
+      total: '250000',
+      items: [
+        {
+          planId: 'plan-basic',
+          planName: 'Gói cơ bản',
+          vehicleScope: 'motorbike',
+          termMonths: 3,
+          kind: 'upgrade',
+          startsAt: '2026-11-09T00:00:00.000Z',
+          endsAt: '2027-02-09T00:00:00.000Z',
+          maxVehicles: 3,
+          amount: '250000',
+          replacedTerms: [
+            {
+              planName: 'Xe máy 1 xe',
+              startsAt: '2026-11-01T00:00:00.000Z',
+              endsAt: '2026-12-01T00:00:00.000Z',
+            },
+          ],
+        },
+      ],
+    };
+    renderModal(vi.fn(), current);
+    pickTier('Chọn gói');
+    fireEvent.click(termCards()[1]!);
+
+    expect(screen.getByText('Nâng cấp ngay')).toBeTruthy();
+    expect(
+      screen.getByText(/Xe máy 1 xe \(đến .*\) sẽ kết thúc ngay khi thanh toán xong/),
+    ).toBeTruthy();
+  });
 });
 
-describe('PurchaseModal — lỗi khi tạo hoá đơn', () => {
+describe('PurchaseModal - lỗi khi tạo hoá đơn', () => {
   it('bậc vừa về "chưa mở bán" (CONFLICT · planStatus=draft) ⇒ câu riêng mời chọn bậc khác', async () => {
     purchase.mutate.mockImplementation((_b: unknown, opts: { onError?: (e: unknown) => void }) =>
       opts.onError?.(

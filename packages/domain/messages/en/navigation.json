@@ -26,7 +26,6 @@
     "themeDark": "Dark mode",
     "toggleTheme": "Toggle light/dark theme",
     "favorites": "Saved vehicles",
-    "appearance": "Appearance",
     "accountSubtitle": "XePrime account"
   },
   "account": {
@@ -107,7 +106,10 @@
     "wallet": "Wallet",
     "transactionHistory": "Transaction history",
     "shopInfo": "Shop information",
-    "staffPermissions": "Staff & permissions"
+    "staffPermissions": "Staff & permissions",
+    "rentals": "Rentals",
+    "bookingsEnded": "Ended bookings",
+    "vehiclesShort": "Vehicles"
   },
   "manageGroups": {
     "overview": "Overview",

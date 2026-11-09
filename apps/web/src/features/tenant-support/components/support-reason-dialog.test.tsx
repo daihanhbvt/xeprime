@@ -48,12 +48,12 @@ describe('SupportReasonDialog', () => {
     await screen.findByText(/Lý do chưa đủ cụ thể/);
 
     fireEvent.change(input, {
-      target: { value: 'Chủ xe gọi hotline nhờ chuyển xe — ticket #5521' },
+      target: { value: 'Chủ xe gọi hotline nhờ chuyển xe - ticket #5521' },
     });
     fireEvent.click(screen.getByRole('button', { name: /Xác nhận và thực hiện/ }));
     await expect(pending).resolves.toEqual({
       [SUPPORT_REASON_HEADER]: encodeURIComponent(
-        'Chủ xe gọi hotline nhờ chuyển xe — ticket #5521',
+        'Chủ xe gọi hotline nhờ chuyển xe - ticket #5521',
       ),
     });
   });
@@ -66,7 +66,7 @@ describe('SupportReasonDialog', () => {
     );
     await screen.findByText('Gửi xe đi duyệt thay chủ xe');
     fireEvent.change(screen.getByRole('textbox'), {
-      target: { value: 'Chủ xe nhờ gửi duyệt xe Vios — ticket #88' },
+      target: { value: 'Chủ xe nhờ gửi duyệt xe Vios - ticket #88' },
     });
     fireEvent.click(screen.getByRole('button', { name: /Xác nhận và thực hiện/ }));
     await screen.findByText('Cần xác nhận chủ xe đã yêu cầu');

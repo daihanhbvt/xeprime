@@ -51,7 +51,7 @@ export { DEFAULT_LIMIT as PROMO_CODE_DEFAULT_LIMIT, MAX_LIMIT as PROMO_CODE_MAX_
  */
 export class UpsertPromoCodeDto {
   @ApiProperty({
-    description: `Mã khách gõ. Server CHUẨN HOÁ (in hoa, bỏ khoảng trắng) trước khi lưu — client gửi chữ thường vẫn đúng.`,
+    description: `Mã khách gõ. Server CHUẨN HOÁ (in hoa, bỏ khoảng trắng) trước khi lưu - client gửi chữ thường vẫn đúng.`,
     example: 'BANMOI',
     minLength: PROMO_CODE_MIN_LENGTH,
     maxLength: PROMO_CODE_MAX_LENGTH,
@@ -78,7 +78,7 @@ export class UpsertPromoCodeDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Số tiền giảm (VND string) — bắt buộc khi discountType = fixed',
+    description: 'Số tiền giảm (VND string) - bắt buộc khi discountType = fixed',
     example: '100000',
   })
   @ValidateIf((o: UpsertPromoCodeDto) => o.discountType === PROMO_DISCOUNT_TYPE.FIXED)
@@ -113,7 +113,7 @@ export class UpsertPromoCodeDto {
 
   @ApiProperty({
     description:
-      'Sàn TIỀN THUÊ đủ điều kiện (VND string) — sau khuyến mãi trực tiếp, chưa gồm phí/bảo hiểm/cọc. "0" = không yêu cầu.',
+      'Sàn TIỀN THUÊ đủ điều kiện (VND string) - sau khuyến mãi trực tiếp, chưa gồm phí/bảo hiểm/cọc. "0" = không yêu cầu.',
     example: '800000',
   })
   @IsNumberString()
@@ -170,7 +170,7 @@ export class UpsertPromoCodeDto {
   @IsISO8601()
   endsAt!: string;
 
-  @ApiProperty({ description: 'Kích hoạt ngay — mã có hiệu lực trong khoảng thời gian đã chọn' })
+  @ApiProperty({ description: 'Kích hoạt ngay - mã có hiệu lực trong khoảng thời gian đã chọn' })
   @IsBoolean()
   isActive!: boolean;
 
@@ -201,7 +201,7 @@ export class PromoCodeListQueryDto {
   @ApiPropertyOptional({
     enum: PROMO_CODE_STATE_VALUES,
     description:
-      'Lọc theo trạng thái SUY RA (không phải cột) — server dịch thành điều kiện ngày/bộ đếm tương ứng.',
+      'Lọc theo trạng thái SUY RA (không phải cột) - server dịch thành điều kiện ngày/bộ đếm tương ứng.',
   })
   @IsOptional()
   @IsIn(PROMO_CODE_STATE_VALUES)
@@ -264,12 +264,12 @@ export class PromoCodeDto {
   @ApiProperty({ type: [String] }) provinceCodes!: string[];
   @ApiPropertyOptional({ type: Number, nullable: true }) totalUsageLimit!: number | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) perCustomerLimit!: number | null;
-  @ApiProperty({ description: 'Lượt đang giữ + đã chốt — con số mà trần tổng so sánh' })
+  @ApiProperty({ description: 'Lượt đang giữ + đã chốt - con số mà trần tổng so sánh' })
   reservedCount!: number;
   @ApiProperty({ description: 'Lượt đã thành đơn' }) redeemedCount!: number;
   @ApiProperty({ description: 'ISO-8601' }) startsAt!: string;
   @ApiProperty({ description: 'ISO-8601' }) endsAt!: string;
-  @ApiProperty({ description: 'Công tắc admin — trạng thái duy nhất được LƯU' }) isActive!: boolean;
+  @ApiProperty({ description: 'Công tắc admin - trạng thái duy nhất được LƯU' }) isActive!: boolean;
   @ApiProperty() listed!: boolean;
   @ApiProperty({
     enum: PROMO_CODE_STATE_VALUES,
@@ -292,7 +292,7 @@ export class PromoCodeDto {
 /** Thẻ thống kê đầu trang admin — đếm trên TOÀN BỘ chiến dịch, không theo trang đang xem. */
 export class PromoCodeStatsDto {
   @ApiProperty() total!: number;
-  @ApiProperty({ description: 'Thêm mới trong 30 ngày qua — cho chỉ số "so với tháng trước"' })
+  @ApiProperty({ description: 'Thêm mới trong 30 ngày qua - cho chỉ số "so với tháng trước"' })
   createdLast30Days!: number;
   @ApiProperty() active!: number;
   @ApiProperty({ description: 'Hết hạn trong PROMO_ENDING_SOON_DAYS ngày tới' })
@@ -316,7 +316,7 @@ export class PromoRedemptionDto {
   @ApiProperty() bookingRequestId!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) bookingId!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) bookingCode!: string | null;
-  @ApiProperty({ description: 'ĐÃ CHE — admin xem danh sách không cần PII' })
+  @ApiProperty({ description: 'ĐÃ CHE - admin xem danh sách không cần PII' })
   customerNameMasked!: string;
   @ApiProperty({ description: 'ISO-8601' }) reservedAt!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) redeemedAt!: string | null;
@@ -360,7 +360,7 @@ export class PromoRedemptionListQueryDto {
  * đã từng thuê xe" — đúng thứ ADR 0046 điều 9 cấm.
  */
 export class PreviewPromoCodeDto {
-  @ApiProperty({ description: 'Mã khách gõ — server tự chuẩn hoá' })
+  @ApiProperty({ description: 'Mã khách gõ - server tự chuẩn hoá' })
   @IsString()
   @MaxLength(64)
   code!: string;
@@ -375,12 +375,12 @@ export class PreviewPromoCodeDto {
   @IsIn(SERVICE_TYPE_VALUES)
   serviceType?: string;
 
-  @ApiPropertyOptional({ description: 'ISO-8601 — bắt buộc với dịch vụ theo ngày' })
+  @ApiPropertyOptional({ description: 'ISO-8601 - bắt buộc với dịch vụ theo ngày' })
   @IsOptional()
   @IsISO8601()
   pickupAt?: string;
 
-  @ApiPropertyOptional({ description: 'ISO-8601 — bắt buộc với dịch vụ theo ngày' })
+  @ApiPropertyOptional({ description: 'ISO-8601 - bắt buộc với dịch vụ theo ngày' })
   @IsOptional()
   @IsISO8601()
   returnAt?: string;
@@ -422,7 +422,7 @@ export class PromoPreviewDto {
     type: String,
     nullable: true,
     enum: PROMO_INELIGIBLE_REASON_VALUES,
-    description: 'Mã lý do ổn định — giao diện dịch từ MÃ, không hiện message của server',
+    description: 'Mã lý do ổn định - giao diện dịch từ MÃ, không hiện message của server',
   })
   reason!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'VND string (ADR 0007)' })
@@ -430,13 +430,13 @@ export class PromoPreviewDto {
   @ApiPropertyOptional({
     type: Boolean,
     nullable: true,
-    description: 'Số giảm đã bị một trần nào đó kẹp xuống — giao diện nói rõ để khách không tự trừ',
+    description: 'Số giảm đã bị một trần nào đó kẹp xuống - giao diện nói rõ để khách không tự trừ',
   })
   clamped!: boolean | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Tổng khách trả SAU khi áp mã (VND string) — số duy nhất giao diện được hiện',
+    description: 'Tổng khách trả SAU khi áp mã (VND string) - số duy nhất giao diện được hiện',
   })
   customerTotalAmount!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền giữ chỗ sau khi áp mã' })

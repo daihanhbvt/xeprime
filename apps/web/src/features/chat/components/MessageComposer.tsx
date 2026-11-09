@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { newClientMessageId } from '@xeprime/domain';
 import { CHAT_ATTACHMENT_MAX_COUNT } from '@xeprime/types';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { cx } from '@/lib/cx';
 import {
@@ -15,7 +16,7 @@ import {
   type UploadedChatAttachment,
 } from '../api';
 import type { SendAttachment } from '../hooks/use-thread';
-import type { PendingVehicleContext } from '../hooks/use-vehicle-context';
+import type { PendingChatContext } from '../hooks/use-vehicle-context';
 import styles from './ChatView.module.css';
 
 const MAX_ATTACHMENTS = CHAT_ATTACHMENT_MAX_COUNT;
@@ -41,22 +42,24 @@ interface PendingAttachment {
 export function MessageComposer({
   onSend,
   disabled,
-  vehicleContext,
-  onClearVehicleContext,
+  context,
+  onClearContext,
 }: {
   onSend: (input: {
     text?: string;
     attachments?: SendAttachment[];
     vehicleId?: string;
+    bookingRequestId?: string;
   }) => Promise<void>;
   disabled?: boolean;
-  /** Xe vừa mở chat từ tin đăng của nó — gắn vào câu ĐẦU TIÊN rồi thôi. */
-  vehicleContext?: PendingVehicleContext | null;
-  onClearVehicleContext?: () => void;
+  /** Xe / chuyến vừa mở chat từ đó — gắn vào câu ĐẦU TIÊN rồi thôi. */
+  context?: PendingChatContext | null;
+  onClearContext?: () => void;
 }) {
   const t = useTranslations('Chat');
   const { message } = App.useApp();
   const errorMessage = useErrorMessage();
+  const fmt = useAppFormat();
 
   const [text, setText] = useState('');
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
@@ -98,11 +101,12 @@ export function MessageComposer({
       await onSend({
         ...(trimmed ? { text: trimmed } : {}),
         ...(ready.length ? { attachments: ready } : {}),
-        ...(vehicleContext ? { vehicleId: vehicleContext.id } : {}),
+        ...(context?.kind === 'trip' ? { bookingRequestId: context.id } : {}),
+        ...(context?.kind === 'vehicle' ? { vehicleId: context.id } : {}),
       });
       // Thẻ chỉ đi kèm câu ĐẦU TIÊN: những câu sau vẫn trong cùng chủ đề, lặp thẻ ở mỗi bong
       // bóng chỉ làm dòng hội thoại rối chứ không thêm thông tin.
-      onClearVehicleContext?.();
+      onClearContext?.();
     } catch (err) {
       // Tin đã chuyển sang `failed` trong danh sách với đủ nội dung để bấm gửi lại — nên chỗ này
       // chỉ cần nói ra, không cần dựng lại ô nhập.
@@ -187,22 +191,31 @@ export function MessageComposer({
 
   return (
     <div className={styles.composer}>
-      {vehicleContext ? (
+      {context ? (
         <div className={styles.contextChip}>
-          {vehicleContext.imageUrl ? (
+          {context.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- ảnh R2, không qua loader của Next
-            <img src={vehicleContext.imageUrl} alt={vehicleContext.name} className={styles.contextThumb} />
+            <img src={context.imageUrl} alt={context.name} className={styles.contextThumb} />
           ) : null}
           <span className={styles.contextBody}>
-            <span className={styles.contextLabel}>{t('aboutVehicle')}</span>
-            <span className={styles.contextName}>{vehicleContext.name}</span>
+            <span className={styles.contextLabel}>
+              {context.kind === 'trip' ? t('aboutTrip') : t('aboutVehicle')}
+            </span>
+            <span className={styles.contextName}>{context.name}</span>
+            {context.kind === 'trip' && context.pickupAt ? (
+              <span className={styles.contextDetail}>
+                {fmt.shortDateTimeRange(context.pickupAt, context.returnAt)}
+              </span>
+            ) : null}
           </span>
           <Button
             type="text"
             size="small"
             icon={<CloseOutlined />}
-            aria-label={t('clearVehicleContext')}
-            onClick={onClearVehicleContext}
+            aria-label={
+              context.kind === 'trip' ? t('clearTripContext') : t('clearVehicleContext')
+            }
+            onClick={onClearContext}
           />
         </div>
       ) : null}

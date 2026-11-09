@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
+import { DISPLAY_NAME_POLICY } from '@xeprime/types';
 import { PASSWORD_MIN, type AuthSchemaLabels } from '@xeprime/validators';
 
 /**
@@ -31,6 +32,11 @@ export function useAuthSchemaLabels(): AuthSchemaLabels {
       identifierRequired: t('identifierRequired'),
       identifierInvalid: t('identifierInvalid'),
       nameRequired: t('nameRequired'),
+      nameLength: t('nameLength', {
+        min: DISPLAY_NAME_POLICY.MIN_LENGTH,
+        max: DISPLAY_NAME_POLICY.MAX_LENGTH,
+      }),
+      nameInvalid: t('nameInvalid'),
       confirmRequired: t('confirmRequired'),
       confirmMismatch: t('confirmMismatch'),
     }),

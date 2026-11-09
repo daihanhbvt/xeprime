@@ -15,6 +15,7 @@ export {
   isNegativeMoney,
   isPositiveMoney,
   isZeroMoney,
+  moneyToEnglishWords,
   moneyToVietnameseWords,
   subtractMoney,
   wholeUnits,

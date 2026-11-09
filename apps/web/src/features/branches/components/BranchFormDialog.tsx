@@ -7,12 +7,19 @@ import { useForm } from 'react-hook-form';
 import { guessAddressLine } from '@xeprime/domain';
 import { branchFormSchema, type BranchFormValues } from '@xeprime/validators';
 import { AddressField } from '@/components/form/AddressField';
+import { CheckboxField } from '@/components/form/CheckboxField';
+import { trailingRequiredMark } from '@/components/form/required-mark';
 import { TextField } from '@/components/form/TextField';
 import { DialogForm } from '@/components/form/DialogForm';
+import { DialogHeading } from '@/components/overlay/DialogHeading';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { useSupportSession } from '@/features/tenant-support/support-session';
+import {
+  SUPPORT_HIDDEN_AREA,
+  useSupportHides,
+  useSupportSession,
+} from '@/features/tenant-support/support-session';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { useCreateBranch, useUpdateBranch } from '../hooks/use-branches';
+import { useBranchAction, useCreateBranch, useUpdateBranch } from '../hooks/use-branches';
 import type { Branch } from '../types';
 import styles from './BranchFormDialog.module.css';
 
@@ -26,7 +33,14 @@ const ADDRESS_FIELD_NAMES = {
   addressLine: 'addressLine',
 } as const;
 
-/** Bốn trường GHIM — tách riêng vì không phải form nào cũng lưu toạ độ (xem `AddressPinNames`). */
+/** Bốn trường GHIM - tách riêng vì không phải form nào cũng lưu toạ độ (xem `AddressPinNames`). */
+/**
+ * Giá trị của hộp thoại = schema chi nhánh dùng chung + MỘT ô của riêng web: "Đặt làm chi nhánh mặc
+ * định" (design `23999:112321`). Ô đó không phải một trường của chi nhánh - nó là lượt
+ * `POST /branches/:id/set-default` chạy SAU khi lưu, cùng đường với mục "Đặt làm mặc định" của menu.
+ */
+type BranchDialogValues = BranchFormValues & { makeDefault: boolean };
+
 const ADDRESS_PIN_NAMES = {
   placeId: 'placeId',
   latitude: 'latitude',
@@ -35,13 +49,13 @@ const ADDRESS_PIN_NAMES = {
 } as const;
 
 /**
- * Thêm/sửa chi nhánh — dùng `ResponsiveDialog` chung (modal ở desktop, drawer đáy ở mobile), nên
+ * Thêm/sửa chi nhánh - dùng `ResponsiveDialog` chung (modal ở desktop, drawer đáy ở mobile), nên
  * không có một hộp thoại thứ hai trong repo làm cùng việc.
  *
- * Địa chỉ đi qua `AddressField` — tỉnh/thành và xã/phường chọn từ DANH MỤC NHÀ NƯỚC (mô hình
+ * Địa chỉ đi qua `AddressField` - tỉnh/thành và xã/phường chọn từ DANH MỤC NHÀ NƯỚC (mô hình
  * hai cấp từ 01/07/2025), số nhà và đường thì gõ, rồi xác nhận ghim trên bản đồ. Cả ba phần đều
  * bắt buộc ở đây vì chi nhánh là ĐỊA ĐIỂM VẬN HÀNH THẬT: xe nằm ở đó, khách tới đó nhận xe, và
- * toạ độ của nó là điểm xuất phát của mọi phép tính phí giao xe tận nơi — một cái ghim lệch vài
+ * toạ độ của nó là điểm xuất phát của mọi phép tính phí giao xe tận nơi - một cái ghim lệch vài
  * km là mọi đơn giao của chi nhánh đó sai tiền.
  */
 export function BranchFormDialog({
@@ -55,7 +69,7 @@ export function BranchFormDialog({
   branch: Branch | null;
   onClose: () => void;
   /**
-   * Cảnh báo ngữ cảnh đặt trên form — ví dụ màn quản lý MỘT xe nhắc rằng chi nhánh này đang giữ
+   * Cảnh báo ngữ cảnh đặt trên form - ví dụ màn quản lý MỘT xe nhắc rằng chi nhánh này đang giữ
    * nhiều xe và sửa địa chỉ sẽ đổi vị trí của tất cả. Hộp thoại không tự suy điều đó.
    */
   notice?: ReactNode;
@@ -65,16 +79,23 @@ export function BranchFormDialog({
   const tc = useTranslations('Common');
   const create = useCreateBranch();
   const update = useUpdateBranch();
-  const submitting = create.isPending || update.isPending;
+  const setDefault = useBranchAction();
+  const submitting = create.isPending || update.isPending || setDefault.isPending;
+  // Đổi mặc định là thao tác VÒNG ĐỜI - phiên hỗ trợ không có (ADR 0050 §13), như ở menu "…".
+  const lifecycleHidden = useSupportHides(SUPPORT_HIDDEN_AREA.BRANCH_LIFECYCLE);
+  const canMakeDefault = !lifecycleHidden && !branch?.isDefault;
   /*
    * Phiên hỗ trợ (ADR 0050 §13): SĐT chi nhánh đến đã bị che (`090****001`). Nạp nó làm GIÁ TRỊ là
-   * vừa trượt validator, vừa có nguy cơ ghi đè số thật bằng số che — nên ô để trống, số che chỉ làm
+   * vừa trượt validator, vừa có nguy cơ ghi đè số thật bằng số che - nên ô để trống, số che chỉ làm
    * placeholder, và chỉ số người thao tác GÕ MỚI mới được gửi (payload bỏ chuỗi rỗng).
    */
   const phoneMasked = useSupportSession() !== null && Boolean(branch?.phone);
 
-  const resolver = useValidationResolver<BranchFormValues>(branchFormSchema, 'Branches.validation');
-  const { control, handleSubmit } = useForm<BranchFormValues>({
+  const resolver = useValidationResolver<BranchDialogValues>(
+    branchFormSchema,
+    'Branches.validation',
+  );
+  const { control, handleSubmit } = useForm<BranchDialogValues>({
     resolver,
     defaultValues: {
       name: branch?.name ?? '',
@@ -82,7 +103,7 @@ export function BranchFormDialog({
       wardCode: branch?.wardCode ?? '',
       /*
        * Chi nhánh CŨ chưa có `addressLine`: đoán phần "số nhà, đường" từ chuỗi hiển thị bằng
-       * cách cắt các cụm trông như đơn vị hành chính. Chỉ là GỢI Ý cho ô nhập — người dùng nhìn
+       * cách cắt các cụm trông như đơn vị hành chính. Chỉ là GỢI Ý cho ô nhập - người dùng nhìn
        * và sửa trước khi lưu, và đó chính là lý do form này bắt họ xác nhận lại địa chỉ.
        */
       addressLine: branch?.addressLine ?? guessAddressLine(branch?.address),
@@ -91,6 +112,7 @@ export function BranchFormDialog({
       longitude: branch?.longitude == null ? null : Number(branch.longitude),
       locationSource: branch?.locationSource ?? null,
       phone: phoneMasked ? '' : (branch?.phone ?? ''),
+      makeDefault: false,
     },
   });
 
@@ -100,7 +122,7 @@ export function BranchFormDialog({
       provinceCode: values.provinceCode,
       /*
        * Chuỗi RỖNG không được gửi. DTO khai `@IsOptional()` kèm `@Length(5, 5)`, mà `@IsOptional`
-       * chỉ bỏ qua `null`/`undefined` — một `''` vẫn đi vào `@Length` và bật lỗi 400. Từ ADR 0042
+       * chỉ bỏ qua `null`/`undefined` - một `''` vẫn đi vào `@Length` và bật lỗi 400. Từ ADR 0042
        * form không còn ô Xã/phường nên chi nhánh MỚI luôn để trống trường này; chi nhánh cũ đã có
        * mã thì giữ nguyên mã đó.
        */
@@ -115,8 +137,14 @@ export function BranchFormDialog({
     // `mutateAsync` + try/catch: đóng hộp thoại CHỈ khi lưu thành công. Đóng trước rồi báo lỗi
     // sau là người dùng mất hết dữ liệu vừa nhập.
     try {
-      if (branch) await update.mutateAsync({ id: branch.id, ...payload });
-      else await create.mutateAsync(payload);
+      const saved = branch
+        ? await update.mutateAsync({ id: branch.id, ...payload })
+        : await create.mutateAsync(payload);
+      // Server tự kiểm (chi nhánh phải đang hoạt động và có tỉnh) - lỗi thì chi nhánh VẪN đã lưu,
+      // hộp thoại đóng và câu lỗi của lượt đổi mặc định hiện riêng.
+      if (values.makeDefault && canMakeDefault) {
+        await setDefault.mutateAsync({ id: saved.id, action: 'set-default' }).catch(() => undefined);
+      }
       onClose();
     } catch {
       // Thông báo lỗi do hook mutation hiển thị; giữ nguyên form để sửa và gửi lại.
@@ -125,10 +153,15 @@ export function BranchFormDialog({
 
   return (
     <ResponsiveDialog
-      title={branch ? t('form.editTitle', { name: branch.name }) : t('form.createTitle')}
+      title={
+        <DialogHeading
+          title={branch ? t('form.editTitle', { name: branch.name }) : t('form.createTitle')}
+        />
+      }
+      ariaLabel={branch ? t('form.editTitle', { name: branch.name }) : t('form.createTitle')}
       open={open}
       onClose={onClose}
-      okText={branch ? tc('actions.save') : t('form.createOk')}
+      okText={branch ? tc('actions.update') : t('form.createOk')}
       onOk={() => void onSubmit()}
       confirmLoading={submitting}
     >
@@ -148,11 +181,12 @@ export function BranchFormDialog({
 
       {notice}
 
-      <DialogForm onSubmit={onSubmit} labelWidth="md">
+      <DialogForm onSubmit={onSubmit} labelPosition="top" requiredMark={trailingRequiredMark}>
         <TextField
           control={control}
           name="name"
           label={t('form.nameLabel')}
+          required
           placeholder={t('form.namePlaceholder')}
           autoFocus
         />
@@ -163,7 +197,7 @@ export function BranchFormDialog({
           required
           /*
            * Chỉ TẠO MỚI mới điền sẵn tỉnh đã nhớ. Ở chế độ SỬA, ô tỉnh trống nghĩa là chi nhánh
-           * này có từ trước danh mục hành chính (ADR 0035 điều 7) — điền vào đó tỉnh mà người
+           * này có từ trước danh mục hành chính (ADR 0035 điều 7) - điền vào đó tỉnh mà người
            * dùng vừa xem ở nơi khác sẽ dời một địa điểm vận hành có thật sang tỉnh khác, âm thầm,
            * chỉ vì họ bấm Lưu.
            */
@@ -172,9 +206,15 @@ export function BranchFormDialog({
         <TextField
           control={control}
           name="phone"
+          type="tel"
           label={t('form.phoneLabel')}
           placeholder={phoneMasked ? (branch?.phone ?? undefined) : t('form.phonePlaceholder')}
         />
+        {canMakeDefault ? (
+          <CheckboxField control={control} name="makeDefault" disabled={submitting}>
+            {t('form.makeDefault')}
+          </CheckboxField>
+        ) : null}
       </DialogForm>
     </ResponsiveDialog>
   );

@@ -2,7 +2,7 @@
   "page": {
     "title": "Renters",
     "loading": "Loading renters…",
-    "privacyNote": "Phone numbers and emails are masked. Open the details to see them in full if you have permission — every view is recorded in the system log."
+    "privacyNote": "Phone numbers and emails are masked. Open the details to see them in full if you have permission - every view is recorded in the system log."
   },
   "filters": {
     "searchPlaceholder": "Search by name",

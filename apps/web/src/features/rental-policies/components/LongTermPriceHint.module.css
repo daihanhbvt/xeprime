@@ -36,3 +36,17 @@
   color: var(--xp-color-text-tertiary);
   font-variant-numeric: tabular-nums;
 }
+
+/* Dòng gợi ý gọn dưới ô giá tháng (màn đã có khung xem trước giá gói riêng). */
+.suggestLine {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--xp-color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.suggestWarning {
+  color: var(--xp-color-warning-strong);
+}

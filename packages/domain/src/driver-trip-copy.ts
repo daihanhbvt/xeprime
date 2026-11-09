@@ -38,8 +38,8 @@ export function driverResponseExpiredEmployerCopy(input: DriverTripReleasedCopyI
   body: string;
 } {
   return {
-    title: `Tài xế ${input.driverName} không phản hồi chuyến ${input.bookingCode} — gán tài xế khác trong ${DRIVER_REASSIGN_TARGET_MINUTES} phút`,
-    body: 'Đơn hiện chưa có tài xế. Chuyến của khách vẫn giữ nguyên — hãy gán người khác sớm.',
+    title: `Tài xế ${input.driverName} không phản hồi chuyến ${input.bookingCode} - gán tài xế khác trong ${DRIVER_REASSIGN_TARGET_MINUTES} phút`,
+    body: 'Đơn hiện chưa có tài xế. Chuyến của khách vẫn giữ nguyên - hãy gán người khác sớm.',
   };
 }
 
@@ -50,7 +50,7 @@ export function driverTripDeclinedEmployerCopy(input: DriverTripReleasedCopyInpu
 } {
   return {
     title: `${input.driverName} từ chối chuyến ${input.bookingCode}`,
-    body: `Đơn chưa có tài xế — hãy gán tài xế khác trong ${DRIVER_REASSIGN_TARGET_MINUTES} phút.`,
+    body: `Đơn chưa có tài xế - hãy gán tài xế khác trong ${DRIVER_REASSIGN_TARGET_MINUTES} phút.`,
   };
 }
 
@@ -92,7 +92,7 @@ export function driverTripDroppedEmployerCopy(input: {
 }): { title: string; body: string } {
   return {
     title: `🚨 KHẨN CẤP: Tài xế ${input.driverName} vừa huỷ chuyến ${input.bookingCode}!`,
-    body: `Lý do: ${input.reasonLabel}. Gán tài xế liên kết khác trước ${input.reassignByText} — quá hạn khách được huỷ hoàn 100% và lượt huỷ tính cho bên thuê.`,
+    body: `Lý do: ${input.reasonLabel}. Gán tài xế liên kết khác trước ${input.reassignByText} - quá hạn khách được huỷ hoàn 100% và lượt huỷ tính cho bên thuê.`,
   };
 }
 

@@ -1,4 +1,6 @@
+import { Floating } from '@/components/motion/Floating';
 import { Ionicons } from '@expo/vector-icons';
+import { Image, type ImageSourcePropType } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { Button } from '@/components/ui/Button';
 import type { IconName } from '@/components/ui/Chip';
@@ -6,12 +8,15 @@ import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /**
- * Đường kính đĩa nền và cỡ biểu tượng bên trong — cố ý NHỎ: đĩa xám to là thứ nặng nhất trên một
+ * Đường kính đĩa nền và cỡ biểu tượng bên trong - cố ý NHỎ: đĩa xám to là thứ nặng nhất trên một
  * màn không có gì, nó hút mắt về phía một biểu tượng không mang thông tin thay vì về câu chữ và
  * lối đi tiếp ngay dưới.
  */
 const DISC = 56;
 const GLYPH = 24;
+/** Cỡ tranh minh hoạ khi có `art` - 160px như hộp rỗng của Figma. */
+const ART = 160;
+const ART_STYLE = { width: ART, height: ART };
 
 /**
  * Bề ngang tối đa của khối chữ.
@@ -25,8 +30,10 @@ interface ScreenMessageProps {
   title: string;
   description?: string;
   icon?: IconName;
+  /** Tranh minh hoạ thay cho đĩa biểu tượng (vd hộp rỗng 160px của Figma ở màn tìm xe). */
+  art?: ImageSourcePropType;
   actionLabel?: string;
-  /** Biểu tượng cho nút hành động — mặc định không có, đặt khi hành động là một ĐỘNG TÁC rõ ràng. */
+  /** Biểu tượng cho nút hành động - mặc định không có, đặt khi hành động là một ĐỘNG TÁC rõ ràng. */
   actionIcon?: IconName;
   onAction?: () => void;
 }
@@ -36,6 +43,7 @@ export function ScreenMessage({
   title,
   description,
   icon = 'file-tray-outline',
+  art,
   actionLabel,
   actionIcon,
   onAction,
@@ -45,12 +53,18 @@ export function ScreenMessage({
     <YStack f={1} ai="center" jc="center" gap={space.lg} p={space.lg}>
       {/*
         Biểu tượng và chữ là MỘT cụm nên dính nhau (`space.sm`) và cách hành động một khoảng rộng
-        hơn hẳn (`space.lg`) — cách đều cả ba thì nút trôi lơ lửng như phần tử thứ ba.
+        hơn hẳn (`space.lg`) - cách đều cả ba thì nút trôi lơ lửng như phần tử thứ ba.
       */}
       <YStack ai="center" gap={space.sm}>
-        <YStack w={DISC} h={DISC} br={radius.pill} bg={colors.surfaceMuted} ai="center" jc="center">
-          <Ionicons name={icon} size={GLYPH} color={colors.textMuted} />
-        </YStack>
+        <Floating>
+        {art ? (
+          <Image source={art} style={ART_STYLE} resizeMode="contain" accessible={false} />
+        ) : (
+          <YStack w={DISC} h={DISC} br={radius.pill} bg={colors.surfaceMuted} ai="center" jc="center">
+            <Ionicons name={icon} size={GLYPH} color={colors.textMuted} />
+          </YStack>
+        )}
+        </Floating>
 
         <YStack ai="center" gap={space.xs} maxWidth={TEXT_MAX_WIDTH}>
           <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold} ta="center">

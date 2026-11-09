@@ -19,7 +19,7 @@ import {
  * một `invalidateQueries` chỉ làm mới đúng một nửa số màn, và để một bên im lặng gửi thiếu tham số.
  */
 describe('receiptFiltersToParams', () => {
-  it('bộ lọc rỗng vẫn gửi trang 1 và limit mặc định — không để server tự đoán', () => {
+  it('bộ lọc rỗng vẫn gửi trang 1 và limit mặc định - không để server tự đoán', () => {
     expect(receiptFiltersToParams({})).toEqual({
       type: null,
       status: null,
@@ -39,7 +39,7 @@ describe('receiptFiltersToParams', () => {
     });
   });
 
-  it('mã đi thẳng, không bị dịch — status/type/sourceGroup là DỮ LIỆU', () => {
+  it('mã đi thẳng, không bị dịch - status/type/sourceGroup là DỮ LIỆU', () => {
     const params = receiptFiltersToParams({
       type: RECEIPT_TYPE.INCOME,
       status: RECEIPT_STATUS.APPROVED,
@@ -135,7 +135,7 @@ describe('financeRangeParams · financeSeriesParams · financeByCategoryParams',
     );
   });
 
-  it('độ mịn chỉ có ở chuỗi thời gian — thẻ tổng không hiểu nó', () => {
+  it('độ mịn chỉ có ở chuỗi thời gian - thẻ tổng không hiểu nó', () => {
     const period = { from: '2026-09-01', to: '2026-09-30', granularity: 'week' };
     expect(financeSeriesParams(period).granularity).toBe('week');
     expect(financeRangeParams(period)).not.toHaveProperty('granularity');
@@ -174,7 +174,7 @@ describe('vehicleProfitParams · customerRevenueParams', () => {
     );
   });
 
-  it('bảng theo khách KHÔNG gửi phạm vi thực thể — nó vốn là bảng của cả kỳ', () => {
+  it('bảng theo khách KHÔNG gửi phạm vi thực thể - nó vốn là bảng của cả kỳ', () => {
     expect(customerRevenueParams({ from: '2026-09-01' })).not.toHaveProperty('tenantCustomerId');
   });
 });
@@ -183,7 +183,9 @@ describe('debtFiltersToParams', () => {
   it('bộ lọc rỗng vẫn gửi trang 1 và limit mặc định', () => {
     expect(debtFiltersToParams({})).toEqual({
       q: null,
+      status: null,
       filter: null,
+      sort: null,
       branchId: null,
       page: 1,
       limit: RECEIPTS_DEFAULT_LIMIT,

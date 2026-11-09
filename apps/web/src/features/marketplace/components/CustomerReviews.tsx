@@ -13,6 +13,7 @@ import { HomeCarousel } from './HomeCarousel';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from './SectionHeading';
 import styles from './CustomerReviews.module.css';
+import { seqClass, starPopClass } from '@/components/motion/motion-classes';
 
 /** Ba trang băng chuyền (thẻ 387px, khung 722px). Trần của server là 12. */
 const LIMIT = 6;
@@ -66,7 +67,7 @@ function ReviewCard({ review }: { review: FeaturedReview }) {
   return (
     <figure className={styles.card}>
       <span
-        className={styles.stars}
+        className={cx(styles.stars, seqClass)}
         role="img"
         aria-label={t('ratingAria', { rating: fmt.rating(review.rating) })}
       >
@@ -78,7 +79,7 @@ function ReviewCard({ review }: { review: FeaturedReview }) {
             width={24}
             height={24}
             unoptimized
-            className={cx(styles.star, n > review.rating && styles.starEmpty)}
+            className={cx(styles.star, n > review.rating && styles.starEmpty, starPopClass)}
           />
         ))}
       </span>

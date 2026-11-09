@@ -14,28 +14,32 @@ import {
   type Permission,
 } from '@xeprime/types';
 
-import { toShopProfileBody, toShopProfileValues } from '@/features/shop/shop-profile-form';
+import {
+  SHOP_PROFILE_GROUP,
+  toShopProfilePatch,
+  toShopProfileValues,
+} from '@/features/shop/shop-profile-form';
 import type { MyShop } from '@/features/shop/types';
 import { makeStore } from '@/store/make-store';
 
 import ShopPage from './page';
 
 /**
- * TRANG CỬA HÀNG — một trang nhiều section (năm từ 16/09/2026, bốn từ 07/10/2026).
+ * TRANG THÔNG TIN CỬA HÀNG - các thẻ của design 06/11/2026 (trước đó: một trang nhiều section).
  *
  * Bộ này khoá đúng những gì đợt gộp hứa, và mỗi khẳng định tương ứng với một guard thật ở API:
  *
- *  1. **Bốn section cùng có mặt**, `?section=` chỉ chọn mục đang sáng — KHÔNG phải tab. Nếu
+ *  1. **Bốn section cùng có mặt**, `?section=` chỉ chọn mục đang sáng - KHÔNG phải tab. Nếu
  *     chọn section là tháo khối cũ ra thì người đang gõ dở hồ sơ mà bấm sang "Gói & hạn mức" để
  *     xem hạn sẽ mất sạch thay đổi chưa lưu.
  *  2. **Query rác rơi về `profile`**, không dựng một trang trống.
  *  3. **Chủ gian hàng CHỈ ĐỌC**, đọc từ `ownerAccount` (`tenants.owner_user_id → users`).
- *  4. **"Tài khoản nhận tiền" KHÔNG còn ở đây** — nó về trang "Số dư & rút tiền" ở cả hai tuyến;
+ *  4. **"Tài khoản nhận tiền" KHÔNG còn ở đây** - nó về trang "Số dư & rút tiền" ở cả hai tuyến;
  *     link `?section=payout` cũ đưa CHỦ sang đó, người khác ở lại đầu trang.
  *  5. **"Gói & hạn mức" theo `subscription.view`**, CTA mua theo `subscription.purchase`.
  */
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
-/** Mua gói xong là sang trang thanh toán của hoá đơn — điều hướng ghi lại để kiểm. */
+/** Mua gói xong là sang trang thanh toán của hoá đơn - điều hướng ghi lại để kiểm. */
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', async (importOriginal) => ({
   ...(await importOriginal<typeof import('next/navigation')>()),
@@ -52,8 +56,10 @@ vi.mock('@/hooks/use-permissions', () => ({
 
 const scope = vi.hoisted(() => ({
   roleKey: 'shop_owner' as string,
-  /** Trục đăng ký (ADR 0040) — dải chào mừng đọc nó, xem `isEstablishedPackageShop`. */
+  /** Trục đăng ký (ADR 0040) - dải chào mừng đọc nó, xem `isEstablishedPackageShop`. */
   onboardingState: 'package_active' as string,
+  /** Tuyến hiệu lực - chủ xe tuyến hoa hồng thấy mặt tiền CÁ NHÂN của trang (ADR 0085 điều 2). */
+  billingMode: 'package' as string,
 }));
 vi.mock('@/hooks/use-tenant-scope', () => ({
   useTenantScope: () => ({
@@ -62,6 +68,7 @@ vi.mock('@/hooks/use-tenant-scope', () => ({
       name: 'Việt Car Hà Nội',
       roleKey: scope.roleKey,
       onboardingState: scope.onboardingState,
+      billingMode: scope.billingMode,
     },
     hasNoTenant: false,
   }),
@@ -71,11 +78,22 @@ vi.mock('@/hooks/use-current-user', () => ({
     data: {
       id: '01HUSER000000000000000000',
       displayName: 'Phạm Đức Việt',
-      tenant: { roleKey: scope.roleKey, billingPhase: 'current' },
+      tenant: {
+        roleKey: scope.roleKey,
+        onboardingState: scope.onboardingState,
+        billingMode: scope.billingMode,
+        billingPhase: 'current',
+      },
     },
   }),
 }));
 
+/** Lưu hồ sơ - hộp thoại chờ promise của `mutateAsync` rồi mới đóng. */
+const updateProfile = vi.hoisted(() => ({
+  mutateAsync: vi.fn((_body: unknown) => Promise.resolve({})),
+  isPending: false,
+  isError: false,
+}));
 const shopQuery = vi.hoisted(() => ({
   data: undefined as unknown,
   isLoading: false,
@@ -84,10 +102,28 @@ const shopQuery = vi.hoisted(() => ({
 }));
 vi.mock('@/features/shop/hooks/use-shop', () => ({
   useMyShop: () => shopQuery,
-  useUpdateShopProfile: () => ({ mutate: vi.fn(), isPending: false, isError: false }),
+  useUpdateShopProfile: () => updateProfile,
 }));
 
-/** `?section=` sống ở URL (ADR 0004) — ở đây chặn ở đúng ranh giới đó. */
+/** Tài khoản chủ - mặt tiền cá nhân đọc ảnh + họ tên từ đây (ADR 0054). */
+const profileQuery = vi.hoisted(() => ({
+  data: undefined as unknown,
+  isError: false,
+  refetch: vi.fn(),
+  calls: [] as boolean[],
+}));
+vi.mock('@/features/account/hooks/use-account', () => ({
+  useMyProfile: (options: { enabled?: boolean } = {}) => {
+    profileQuery.calls.push(options.enabled ?? true);
+    return profileQuery;
+  },
+  useUpdateMyProfile: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+vi.mock('@/features/shop/components/VatInvoiceSetting', () => ({
+  VatInvoiceSetting: () => <div data-testid="vat-setting" />,
+}));
+
+/** `?section=` sống ở URL (ADR 0004) - ở đây chặn ở đúng ranh giới đó. */
 const url = vi.hoisted(() => ({
   section: null as string | null,
   welcome: false,
@@ -106,7 +142,7 @@ vi.mock('@/hooks/use-url-filters', async (importOriginal) => {
   };
 });
 
-// Danh mục địa chỉ + bản đồ: stub rỗng — hành vi của ô đó có test riêng.
+// Danh mục địa chỉ + bản đồ: stub rỗng - hành vi của ô đó có test riêng.
 vi.mock('@/features/locations/hooks/use-provinces', () => ({
   useProvinceOptions: () => ({
     options: [{ value: '01', label: 'Hà Nội' }],
@@ -134,7 +170,7 @@ vi.mock('@/features/locations/hooks/use-places', () => ({
 }));
 
 /**
- * Chuyển trang phía client — thay bằng một mốc QUAN SÁT được: bộ này hỏi "có chuyển không, tới
+ * Chuyển trang phía client - thay bằng một mốc QUAN SÁT được: bộ này hỏi "có chuyển không, tới
  * đâu", không kiểm `router.replace` của Next.
  */
 vi.mock('@/features/partner/components/ClientRedirect', () => ({
@@ -151,7 +187,7 @@ const subscription = vi.hoisted(() => ({
 }));
 vi.mock('@/features/subscription/hooks/use-subscription', () => ({
   useMySubscription: () => subscription,
-  // Hoá đơn đang chờ là một lượt đọc riêng — xem `usePendingInvoices` (danh sách, mỗi phạm vi gói một).
+  // Hoá đơn đang chờ là một lượt đọc riêng - xem `usePendingInvoices` (danh sách, mỗi phạm vi gói một).
   usePendingInvoices: () => ({ data: [], isPending: false, isError: false }),
   useSubscriptionInvoices: () => ({
     data: { items: [], meta: { page: 1, limit: 20, total: 0, hasNext: false } },
@@ -161,12 +197,21 @@ vi.mock('@/features/subscription/hooks/use-subscription', () => ({
     refetch: vi.fn(),
   }),
   useTenantPlans: () => ({ data: [], isLoading: false, isError: false, refetch: vi.fn() }),
+  usePurchasePreview: () => ({
+    data: undefined,
+    isSuccess: false,
+    isPlaceholderData: false,
+    isFetching: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
   usePurchaseSubscription: () => ({ mutate: vi.fn(), isPending: false }),
+  useCreateSubscriptionCheckout: () => ({ mutate: vi.fn(), isPending: false }),
   usePaymentInfo: () => ({ data: undefined, isLoading: false, isError: false }),
 }));
 vi.mock('@/hooks/use-feature', () => ({ useFeatureStates: () => ({}) }));
 
-/** Hồ sơ người bán (section "Thông tin khai thuế") — chặn ở tầng hook như các hồ sơ khác. */
+/** Hồ sơ người bán (section "Thông tin khai thuế") - chặn ở tầng hook như các hồ sơ khác. */
 const sellerProfile = vi.hoisted(() => ({
   data: null as unknown,
   isLoading: false,
@@ -181,7 +226,7 @@ vi.mock('@/features/seller-profile/hooks/use-seller-profile', () => ({
 
 /**
  * Dải chào mừng sau lần mua gói đầu (ADR 0040) đếm xe để biết nên mời "đăng xe đầu tiên" hay im.
- * Chặn ở tầng hook: bộ này kiểm trang Cửa hàng, không kiểm dải đó — nó có test riêng — và gọi
+ * Chặn ở tầng hook: bộ này kiểm trang Cửa hàng, không kiểm dải đó - nó có test riêng - và gọi
  * thật thì kéo theo một lượt đọc `/vehicles`.
  */
 const vehicles = vi.hoisted(() => ({
@@ -241,7 +286,7 @@ function grant(...permissions: Permission[]) {
 }
 
 /**
- * `scrollIntoView` không tồn tại trong jsdom — phải tự cấp, và cấp luôn là chỗ để QUAN SÁT:
+ * `scrollIntoView` không tồn tại trong jsdom - phải tự cấp, và cấp luôn là chỗ để QUAN SÁT:
  * "có cuộn không, và tới khối nào" là hai câu hỏi mà bộ này cần trả lời.
  */
 const scrolledIds: string[] = [];
@@ -265,15 +310,15 @@ function renderPage() {
   );
 }
 
-/** Cột mục lục bên trái — nhãn ở đây TRÙNG tiêu đề section, nên mọi khẳng định phải khoanh vùng. */
-const sectionNav = () =>
-  within(screen.getByRole('navigation', { name: 'Các mục của trang Cửa hàng' }));
-
 beforeEach(() => {
   scrollIntoView.mockClear();
   scrolledIds.length = 0;
   scope.roleKey = TENANT_ROLE.SHOP_OWNER;
   scope.onboardingState = SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE;
+  scope.billingMode = BILLING_MODE.PACKAGE;
+  profileQuery.data = undefined;
+  profileQuery.isError = false;
+  profileQuery.calls = [];
   shopQuery.data = makeShop();
   shopQuery.isLoading = false;
   shopQuery.isError = false;
@@ -282,7 +327,7 @@ beforeEach(() => {
   url.setFilters.mockReset();
   vehicles.data = { items: [] };
   vehicles.isLoading = false;
-  // Một gói Ô TÔ trần 10, đã dùng hết 10; xe máy chưa có gói (ADR 0065 — hạn mức theo loại).
+  // Một gói Ô TÔ trần 10, đã dùng hết 10; xe máy chưa có gói (ADR 0065 - hạn mức theo loại).
   const currentPlan = {
     subscriptionId: 'SUB1',
     planId: 'PLAN1',
@@ -354,33 +399,16 @@ beforeEach(() => {
     reviewNote: null,
   };
   saveSeller.mutate.mockReset();
+  updateProfile.mutateAsync.mockClear();
 });
 
 afterEach(cleanup);
 
-describe('Trang Cửa hàng — bốn section trong một trang', () => {
-  it('chủ gian hàng thấy đủ bốn mục trong mục lục, đúng thứ tự', () => {
-    renderPage();
+/** Thẻ theo `id` (đích của `?section=`) - mọi khẳng định khoanh vùng trong đúng thẻ. */
+const card = (id: string) => within(document.querySelector(`#${id}`) as HTMLElement);
 
-    expect(
-      sectionNav()
-        .getAllByRole('link')
-        .map((el) => el.textContent),
-    ).toEqual([
-      'Thông tin hiển thị',
-      'Chủ gian hàng',
-      'Địa chỉ & pháp lý',
-      'Thông tin khai thuế',
-      'Gói & hạn mức',
-    ]);
-  });
-
-  /*
-   * Đây là khẳng định quan trọng nhất của bố cục: KHÔNG phải tab. Cả bốn khối cùng nằm trong
-   * DOM, `?section=` chỉ quyết định mục nào sáng và cuộn tới đâu — nếu không thì form hồ sơ bị
-   * tháo ra mỗi lần người dùng bấm sang xem hạn gói.
-   */
-  it('cả bốn khối cùng nằm trong DOM — chọn section không tháo khối nào ra', () => {
+describe('Trang Thông tin cửa hàng - bố cục thẻ (design 06/11/2026)', () => {
+  it('đủ thẻ: hiển thị · chủ · địa chỉ & pháp lý · khai thuế · gói', () => {
     const { container } = renderPage();
 
     for (const id of [
@@ -394,38 +422,13 @@ describe('Trang Cửa hàng — bốn section trong một trang', () => {
     }
   });
 
-  it('bấm một mục ghi `?section=` vào URL, và KHÔNG reset phân trang của bảng bên dưới', () => {
+  /* Design bỏ mục lục trái - `?section=` chỉ còn là đích cuộn của link/redirect cũ. */
+  it('không còn mục lục trái', () => {
     renderPage();
-
-    fireEvent.click(sectionNav().getByRole('link', { name: 'Gói & hạn mức' }));
-
-    expect(url.setFilters).toHaveBeenCalledWith({ section: 'plan' }, { resetPage: false });
+    expect(screen.queryByRole('navigation', { name: 'Các mục của trang Cửa hàng' })).toBeNull();
   });
 
-  it('`?section=plan` làm sáng đúng mục đó', () => {
-    url.section = 'plan';
-    renderPage();
-
-    expect(
-      sectionNav().getByRole('link', { name: 'Gói & hạn mức' }).getAttribute('aria-current'),
-    ).toBe('true');
-  });
-
-  /* Giá trị lạ (bookmark cũ, gõ tay) rơi về `profile` — không dựng một trang trống. */
-  it('`?section=` rác rơi về "Thông tin hiển thị"', () => {
-    url.section = 'khong-ton-tai';
-    renderPage();
-
-    expect(
-      sectionNav().getByRole('link', { name: 'Thông tin hiển thị' }).getAttribute('aria-current'),
-    ).toBe('true');
-  });
-
-  /*
-   * Ba route cũ redirect vào `?section=…`, và link chia sẻ cũng vậy. Cả hai hứa "mở ra ở đúng
-   * phần này", nên chỉ làm sáng mục lục là chưa giữ lời: phải cuộn tới nơi ngay lần vẽ đầu.
-   */
-  it('mở thẳng `?section=plan`: cuộn tới đúng khối ngay lần vẽ đầu', () => {
+  it('mở thẳng `?section=plan`: cuộn tới đúng thẻ ngay lần vẽ đầu', () => {
     url.section = 'plan';
     renderPage();
 
@@ -433,7 +436,15 @@ describe('Trang Cửa hàng — bốn section trong một trang', () => {
     expect(scrolledIds).toContain('shop-section-plan');
   });
 
-  /* Vào `/manage/shop` trần thì KHÔNG — một cú nhảy ngay khi trang hiện là trang tự ý đưa đi. */
+  /* Giá trị lạ (bookmark cũ, gõ tay) rơi về `profile` - không dựng một trang trống. */
+  it('`?section=` rác rơi về thẻ "Thông tin hiển thị"', () => {
+    url.section = 'khong-ton-tai';
+    renderPage();
+
+    expect(scrolledIds).toContain('shop-section-profile');
+  });
+
+  /* Vào trang trần thì KHÔNG - một cú nhảy ngay khi trang hiện là trang tự ý đưa đi. */
   it('mở `/manage/shop` trần: không cuộn đi đâu cả', () => {
     renderPage();
 
@@ -441,11 +452,11 @@ describe('Trang Cửa hàng — bốn section trong một trang', () => {
   });
 });
 
-describe('Trang Cửa hàng — chủ gian hàng', () => {
+describe('Trang Thông tin cửa hàng - chủ gian hàng', () => {
   it('hiện tên/email/SĐT từ TÀI KHOẢN CHỦ, kèm cờ đã xác minh', () => {
     renderPage();
 
-    const section = within(document.querySelector('#shop-section-owner') as HTMLElement);
+    const section = card('shop-section-owner');
     expect(section.getByText('Phạm Đức Việt')).toBeTruthy();
     expect(section.getByText('owner.hanoi@xeprime.test')).toBeTruthy();
     // SĐT lưu `84…`, đọc lên dạng `09…` như người Việt vẫn đọc số của mình.
@@ -455,9 +466,9 @@ describe('Trang Cửa hàng — chủ gian hàng', () => {
 
   /*
    * Lằn ranh ADR 0038 điều 3: `tenant.update` mở hồ sơ GIAN HÀNG, không mở tài khoản của người
-   * CHỦ. Khối này chỉ đọc — kể cả với người có đủ quyền sửa hồ sơ.
+   * CHỦ. Thẻ này chỉ đọc - kể cả với người có đủ quyền sửa hồ sơ.
    */
-  it('KHÔNG có ô nhập nào trong khối chủ gian hàng', () => {
+  it('KHÔNG có ô nhập nào trong thẻ chủ gian hàng', () => {
     renderPage();
 
     const section = document.querySelector('#shop-section-owner') as HTMLElement;
@@ -467,31 +478,31 @@ describe('Trang Cửa hàng — chủ gian hàng', () => {
   it('chủ gian hàng có lối vào phần Thông tin đăng nhập để tự đổi email/SĐT', () => {
     renderPage();
 
-    const section = within(document.querySelector('#shop-section-owner') as HTMLElement);
     expect(
-      section.getByRole('link', { name: 'Quản lý thông tin đăng nhập' }).getAttribute('href'),
+      card('shop-section-owner')
+        .getByRole('link', { name: /Quản lý tài khoản/ })
+        .getAttribute('href'),
     ).toBe('/manage/account?section=login');
   });
 
-  it('quản lý gian hàng KHÔNG thấy nút đó — nó sẽ mở tài khoản của chính họ, không phải của chủ', () => {
+  it('quản lý gian hàng KHÔNG thấy nút đó - nó sẽ mở tài khoản của chính họ, không phải của chủ', () => {
     scope.roleKey = TENANT_ROLE.SHOP_MANAGER;
     renderPage();
 
-    expect(screen.queryByRole('link', { name: 'Quản lý thông tin đăng nhập' })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Quản lý tài khoản/ })).toBeNull();
   });
 });
 
 /*
- * 07/10/2026 — "Tài khoản nhận tiền" về trang "Số dư & rút tiền", cùng chỗ với tuyến hoa hồng.
+ * 07/10/2026 - "Tài khoản nhận tiền" về trang "Số dư & rút tiền", cùng chỗ với tuyến hoa hồng.
  * Trang Cửa hàng không còn khối đó, nhưng link `?section=payout` cũ (thông báo, bookmark) vẫn phải
- * tới được nơi tiền về — với đúng người section cũ từng hiện cho.
+ * tới được nơi tiền về - với đúng người section cũ từng hiện cho.
  */
-describe('Trang Cửa hàng — tài khoản nhận tiền đã về trang số dư', () => {
-  it('không còn khối hay mục lục "Tài khoản nhận tiền" trên trang Cửa hàng', () => {
+describe('Trang Thông tin cửa hàng - tài khoản nhận tiền đã về trang số dư', () => {
+  it('không còn khối "Tài khoản nhận tiền" trên trang', () => {
     renderPage();
 
     expect(document.querySelector('#shop-section-payout')).toBeNull();
-    expect(sectionNav().queryByRole('link', { name: 'Tài khoản nhận tiền' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Thêm tài khoản/ })).toBeNull();
   });
 
@@ -504,118 +515,159 @@ describe('Trang Cửa hàng — tài khoản nhận tiền đã về trang số 
     );
   });
 
-  /* Quản lý chưa bao giờ thấy section đó, và trang số dư là của CHỦ — ở lại, về đầu trang. */
-  it('quản lý mở `?section=payout` cũ: ở lại trang Cửa hàng, rơi về "Thông tin hiển thị"', () => {
+  /* Quản lý chưa bao giờ thấy section đó, và trang số dư là của CHỦ - ở lại, về đầu trang. */
+  it('quản lý mở `?section=payout` cũ: ở lại trang, không chuyển đi', () => {
     scope.roleKey = TENANT_ROLE.SHOP_MANAGER;
     url.section = 'payout';
     renderPage();
 
     expect(screen.queryByTestId('client-redirect')).toBeNull();
-    expect(
-      sectionNav().getByRole('link', { name: 'Thông tin hiển thị' }).getAttribute('aria-current'),
-    ).toBe('true');
+    expect(document.querySelector('#shop-section-profile')).toBeTruthy();
   });
 });
 
 /*
- * 07/10/2026 — mã số thuế có MỘT nguồn: hồ sơ NGƯỜI BÁN, nơi báo cáo thuế và hợp đồng đọc. Ô MST cũ
- * ở "Địa chỉ & pháp lý" ghi vào một bản sao không ai tính thuế từ đó — nó rời trang, và section
- * "Thông tin khai thuế" (CÙNG component với "Hồ sơ chủ xe") vào thay.
+ * 07/10/2026 - mã số thuế có MỘT nguồn: hồ sơ NGƯỜI BÁN, nơi báo cáo thuế và hợp đồng đọc. Thẻ
+ * "Địa chỉ & pháp lý" không có MST; thẻ "Thông tin khai thuế" (CÙNG form với "Hồ sơ chủ xe") giữ nó.
  */
-describe('Trang Cửa hàng — thông tin khai thuế', () => {
-  it('"Địa chỉ & pháp lý" không còn ô mã số thuế; giấy phép kinh doanh vẫn ở đó', () => {
+describe('Trang Thông tin cửa hàng - địa chỉ, pháp lý và khai thuế', () => {
+  it('thẻ "Địa chỉ & pháp lý" đọc từ chi nhánh mặc định, có giấy phép KD, không có MST', () => {
     renderPage();
 
-    const legal = within(document.querySelector('#shop-section-legal') as HTMLElement);
-    expect(legal.queryByLabelText(/Mã số thuế/)).toBeNull();
-    expect(legal.getByLabelText(/Số giấy phép KD/)).toBeTruthy();
+    const legal = card('shop-section-legal');
+    expect(legal.getByText('Hà Nội')).toBeTruthy();
+    expect(legal.getByText('Số giấy phép KD')).toBeTruthy();
+    expect(legal.queryByText(/Mã số thuế/)).toBeNull();
   });
 
-  it('MST khai ở section khai thuế, đọc từ hồ sơ người bán', () => {
+  it('MST đọc từ hồ sơ người bán, sửa trong hộp thoại của thẻ khai thuế', async () => {
     renderPage();
 
-    const tax = within(document.querySelector('#shop-section-tax') as HTMLElement);
-    expect((tax.getByLabelText(/Mã số thuế/) as HTMLInputElement).value).toBe('0108987654');
+    const tax = card('shop-section-tax');
+    expect(tax.getByText('0108987654')).toBeTruthy();
+    fireEvent.click(tax.getByRole('button', { name: 'Sửa thông tin khai thuế' }));
+
+    const input = (await screen.findByLabelText(/Mã số thuế/)) as HTMLInputElement;
+    expect(input.value).toBe('0108987654');
   });
 
   /*
    * API còn nhận `taxCode` cho client cũ và ghi nó vào hồ sơ NGƯỜI BÁN. Web gửi kèm mỗi lần lưu hồ
-   * sơ gian hàng là đụng vào bản khai thuế (và đòi `seller_profile.manage`) cho một lần sửa tên.
+   * sơ gian hàng là đụng vào bản khai thuế (và đòi `seller_profile.manage`) cho một lần sửa địa chỉ.
    */
-  it('thân request lưu hồ sơ gian hàng KHÔNG mang mã số thuế', () => {
-    const body = toShopProfileBody(toShopProfileValues(makeShop()));
+  it('thân request lưu "Địa chỉ & pháp lý" KHÔNG mang mã số thuế, cũng không mang tên hiển thị', () => {
+    const body = toShopProfilePatch(toShopProfileValues(makeShop()), SHOP_PROFILE_GROUP.LEGAL);
     expect(body).not.toHaveProperty('taxCode');
+    expect(body).not.toHaveProperty('displayName');
     expect(body.businessLicenseNo).toBe('');
   });
 
-  it('thiếu `seller_profile.view`: section khai thuế vắng khỏi trang và mục lục', () => {
+  it('thiếu `seller_profile.view`: thẻ khai thuế vắng khỏi trang', () => {
     grant(PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE, PERMISSION.SUBSCRIPTION_VIEW);
     renderPage();
 
     expect(document.querySelector('#shop-section-tax')).toBeNull();
-    expect(sectionNav().queryByRole('link', { name: 'Thông tin khai thuế' })).toBeNull();
+  });
+
+  it('thiếu `seller_profile.manage`: thẻ khai thuế chỉ đọc, không có bút chì', () => {
+    grant(
+      PERMISSION.TENANT_VIEW,
+      PERMISSION.TENANT_UPDATE,
+      PERMISSION.SUBSCRIPTION_VIEW,
+      PERMISSION.SELLER_PROFILE_VIEW,
+    );
+    renderPage();
+
+    expect(card('shop-section-tax').queryByRole('button', { name: 'Sửa thông tin khai thuế' })).toBeNull();
   });
 });
 
-describe('Trang Cửa hàng — gói & hạn mức', () => {
-  it('hiện gói hiện hành, hạn và trần của loại xe gói phủ', () => {
+describe('Trang Thông tin cửa hàng - thông tin hiển thị', () => {
+  it('thẻ hiển thị tên, giới thiệu đã lưu và lối "Chỉnh sửa thông tin"', () => {
     renderPage();
 
-    const section = within(document.querySelector('#shop-section-plan') as HTMLElement);
+    const display = card('shop-section-profile');
+    expect(display.getByText('Cho thuê xe tự lái')).toBeTruthy();
+    expect(display.getByRole('button', { name: /Chỉnh sửa thông tin/ })).toBeTruthy();
+    // Chưa đổi ảnh thì không có cặp "Hủy · Lưu thay đổi".
+    expect(screen.queryByRole('button', { name: 'Lưu thay đổi' })).toBeNull();
+  });
+
+  /* Hộp thoại lưu NGAY đúng nhóm của nó (người dùng chốt 06/11/2026) - không gửi ô địa chỉ. */
+  it('"Cập nhật" của hộp hiển thị chỉ lưu nhóm hiển thị, kèm giới thiệu dạng HTML', async () => {
+    renderPage();
+
+    fireEvent.click(card('shop-section-profile').getByRole('button', { name: /Chỉnh sửa thông tin/ }));
+    const name = (await screen.findByLabelText(/Tên hiển thị/)) as HTMLInputElement;
+    fireEvent.change(name, { target: { value: 'Tên mới' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cập nhật' }));
+
+    await waitFor(() => expect(updateProfile.mutateAsync).toHaveBeenCalledTimes(1));
+    const body = updateProfile.mutateAsync.mock.calls[0]![0] as Record<string, unknown>;
+    expect(body).toMatchObject({ displayName: 'Tên mới', bioHtml: '<p>Cho thuê xe tự lái</p>' });
+    expect(body).not.toHaveProperty('provinceCode');
+    expect(body).not.toHaveProperty('bio');
+  });
+
+  it('thiếu `tenant.update`: không có lối sửa hay đổi ảnh', () => {
+    grant(PERMISSION.TENANT_VIEW, PERMISSION.SUBSCRIPTION_VIEW, PERMISSION.SELLER_PROFILE_VIEW);
+    renderPage();
+
+    expect(screen.queryByRole('button', { name: /Chỉnh sửa thông tin/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Đổi logo/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Sửa địa chỉ & pháp lý' })).toBeNull();
+  });
+});
+
+describe('Trang Thông tin cửa hàng - gói & hạn mức', () => {
+  it('thẻ loại xe: gói đang dùng, số xe / trần, hết suất mời nâng cấp', () => {
+    renderPage();
+
+    const section = card('shop-section-plan');
     expect(section.getByText('Gói nâng cao')).toBeTruthy();
     // Trần đếm THEO LOẠI trong phạm vi của gói (ADR 0065 điều 3).
-    expect(section.getByText('10/10')).toBeTruthy();
-    expect(section.getByText('Gói ô tô')).toBeTruthy();
-    expect(section.getByText('Gói xe máy')).toBeTruthy();
+    expect(section.getByText('Đã hết suất cho ô tô!')).toBeTruthy();
+    expect(section.getByRole('button', { name: 'Nâng cấp ngay' })).toBeTruthy();
+    expect(section.getByText('Xe máy')).toBeTruthy();
   });
 
-  it('đã dùng hết trần: một dòng cảnh báo, KHÔNG phải một dải đỏ', () => {
+  it('có `subscription.purchase`: nút "Nâng cấp / Đổi gói" có mặt', () => {
     renderPage();
 
-    const warning = screen.getByText(/Đã dùng hết 10 suất ô tô/);
-    expect(warning.closest('.ant-alert-warning')).toBeTruthy();
-    expect(warning.closest('.ant-alert-error')).toBeNull();
+    expect(screen.getByRole('button', { name: /Nâng cấp \/ Đổi gói/ })).toBeTruthy();
   });
 
-  it('có `subscription.purchase`: CTA gia hạn/đổi gói có mặt', () => {
-    renderPage();
-
-    expect(screen.getByRole('button', { name: /Gia hạn \/ đổi gói/ })).toBeTruthy();
-  });
-
-  it('thiếu `subscription.purchase`: KHÔNG CTA nào, và modal mua không nằm trong cây', () => {
+  it('thiếu `subscription.purchase`: KHÔNG lối mua nào, và hộp mua không nằm trong cây', () => {
     grant(PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE, PERMISSION.SUBSCRIPTION_VIEW);
     renderPage();
 
-    expect(screen.queryByRole('button', { name: /Gia hạn \/ đổi gói/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Nâng cấp \/ Đổi gói/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Nâng cấp ngay' })).toBeNull();
     expect(document.querySelector('.ant-modal-root')).toBeNull();
     // …nhưng vẫn XEM được gói: hạn mức là việc điều hành đội xe.
     expect(screen.getByText('Gói nâng cao')).toBeTruthy();
   });
 
-  it('thiếu `subscription.view`: khối đó vắng hẳn khỏi trang và khỏi mục lục', () => {
+  it('thiếu `subscription.view`: thẻ gói vắng hẳn', () => {
     grant(PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE);
     renderPage();
 
     expect(document.querySelector('#shop-section-plan')).toBeNull();
-    expect(sectionNav().queryByRole('link', { name: 'Gói & hạn mức' })).toBeNull();
   });
-});
 
-describe('Trang Cửa hàng — hoá đơn thanh toán', () => {
-  it('chưa có hoá đơn: một dòng chữ gọn, KHÔNG dựng bảng lịch sử', () => {
+  it('chưa có hoá đơn: bảng hoá đơn nói rõ là chưa có', () => {
     renderPage();
 
     expect(screen.getByText('Chưa phát sinh hoá đơn.')).toBeTruthy();
-    expect(screen.queryByRole('table')).toBeNull();
   });
 });
 
-describe('Trang Cửa hàng — tiêu đề và quyền', () => {
-  it('tiêu đề mang tên gian hàng, nhãn trạng thái và lối xem trang công khai', () => {
+describe('Trang Thông tin cửa hàng - tiêu đề và quyền', () => {
+  it('tiêu đề mang tên gian hàng, nhãn trạng thái, vai người xem và lối xem trang công khai', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Việt Car Hà Nội');
+    expect(screen.getByText('Chủ gian hàng', { selector: 'span' })).toBeTruthy();
     expect(screen.getByRole('link', { name: /Xem gian hàng/ }).getAttribute('href')).toBe(
       '/shops/viet-car-ha-noi',
     );
@@ -628,19 +680,7 @@ describe('Trang Cửa hàng — tiêu đề và quyền', () => {
     expect(screen.queryByText('Gian hàng đã được xác minh')).toBeNull();
   });
 
-  it('nút Lưu chỉ sáng khi hồ sơ có thay đổi', async () => {
-    renderPage();
-
-    // Nút lưu HỒ SƠ ở tiêu đề — không phải nút 'Lưu thông tin thuế' của section khai thuế.
-    const save = screen.getByRole('button', { name: /(Lưu thay đổi|Lưu thông tin)$/ });
-    expect(save).toHaveProperty('disabled', true);
-
-    fireEvent.change(screen.getByLabelText(/Tên hiển thị/), { target: { value: 'Tên mới' } });
-
-    await waitFor(() => expect(save).toHaveProperty('disabled', false));
-  });
-
-  it('thiếu `tenant.view`: trang nói thiếu quyền, không dựng section nào', () => {
+  it('thiếu `tenant.view`: trang nói thiếu quyền, không dựng thẻ nào', () => {
     grant();
     renderPage();
 
@@ -650,10 +690,10 @@ describe('Trang Cửa hàng — tiêu đề và quyền', () => {
 });
 
 /**
- * DẢI CHÀO MỪNG sau lần thanh toán gói đầu tiên — `?welcome=1` (ADR 0040).
+ * DẢI CHÀO MỪNG sau lần thanh toán gói đầu tiên - `?welcome=1` (ADR 0040).
  *
  * Nội dung của dải có test riêng (`ShopWelcomeBanner.test.tsx`); ở đây kiểm đúng phần DÂY NỐI, và
- * phần đó có một mệnh đề không hiển nhiên: dải chỉ dựng khi CẢ HAI vế đúng — URL nói vừa thanh
+ * phần đó có một mệnh đề không hiển nhiên: dải chỉ dựng khi CẢ HAI vế đúng - URL nói vừa thanh
  * toán xong, VÀ tenant thật sự đi qua cửa gói. Vế thứ hai chặn một link `?welcome=1` chia sẻ sang
  * tài khoản khác hiện một dòng chào vô nghĩa cho một chủ xe tuyến hoa hồng.
  */
@@ -679,6 +719,8 @@ describe('Dải chào mừng sau khi mua gói', () => {
   it('chủ xe tuyến hoa hồng nhận link `?welcome=1`: không dựng dải', () => {
     url.welcome = true;
     scope.onboardingState = SHOP_ONBOARDING_STATE.COMMISSION;
+    scope.billingMode = BILLING_MODE.COMMISSION;
+    profileQuery.data = OWNER_PROFILE;
     grant(PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE);
     renderPage();
 
@@ -712,5 +754,71 @@ describe('Dải chào mừng sau khi mua gói', () => {
 
     expect(screen.queryByText('Còn 1 bước để đăng xe')).toBeNull();
     expect(screen.queryByText('Gian hàng đã sẵn sàng')).toBeNull();
+  });
+});
+
+const OWNER_PROFILE = {
+  id: '01HUSER000000000000000000',
+  displayName: 'Trần Hương',
+  phone: '0903000001',
+  phoneVerified: true,
+  email: 'chuxe.huong@xeprime.test',
+  emailVerified: true,
+  avatarUrl: 'https://img.example/huong.png',
+};
+
+/**
+ * "Hồ sơ chủ xe" của chủ xe tuyến hoa hồng LÀ trang này, mặt tiền cá nhân (ADR 0085 điều 2): danh
+ * tính là TÀI KHOẢN chủ, không có thẻ của gian hàng nhiều người, thêm thẻ hoá đơn VAT.
+ */
+describe('Trang Thông tin - mặt tiền cá nhân (chủ xe tuyến hoa hồng)', () => {
+  beforeEach(() => {
+    scope.billingMode = BILLING_MODE.COMMISSION;
+    scope.onboardingState = SHOP_ONBOARDING_STATE.COMMISSION;
+    profileQuery.data = OWNER_PROFILE;
+    grant(PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE, PERMISSION.SELLER_PROFILE_VIEW);
+  });
+
+  it('đầu trang là họ tên tài khoản; có thẻ thông tin chủ xe, địa chỉ nhận xe, hoá đơn VAT', () => {
+    renderPage();
+
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Trần Hương');
+    expect(screen.getByText('Thông tin chủ xe')).toBeTruthy();
+    expect(screen.getAllByText('Địa chỉ nhận xe').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('vat-setting')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Xem trang chủ xe/ })).toBeTruthy();
+  });
+
+  it('không thẻ của gian hàng: chủ gian hàng, ảnh bìa/logo, số giấy phép KD, vai', () => {
+    renderPage();
+
+    expect(screen.queryByText('Chủ gian hàng')).toBeNull();
+    expect(screen.queryByText(/giấy phép/i)).toBeNull();
+    expect(screen.queryByText('Thông tin hiển thị')).toBeNull();
+  });
+
+  it('gian hàng tuyến gói KHÔNG nạp hồ sơ tài khoản và không có thẻ VAT ở đây', () => {
+    scope.billingMode = BILLING_MODE.PACKAGE;
+    scope.onboardingState = SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE;
+    renderPage();
+
+    expect(profileQuery.calls.every((enabled) => enabled === false)).toBe(true);
+    expect(screen.queryByTestId('vat-setting')).toBeNull();
+    expect(screen.queryByText('Thông tin chủ xe')).toBeNull();
+  });
+
+  it('THÀNH VIÊN của chủ xe cá nhân: bản gian hàng, không sửa tài khoản của chính họ dưới nhãn chủ xe', () => {
+    scope.roleKey = TENANT_ROLE.SHOP_MANAGER;
+    renderPage();
+
+    expect(screen.queryByText('Thông tin chủ xe')).toBeNull();
+    expect(profileQuery.calls.every((enabled) => enabled === false)).toBe(true);
+  });
+
+  it('hồ sơ tài khoản đang tải: khung xương, chưa dựng thẻ nào', () => {
+    profileQuery.data = undefined;
+    renderPage();
+
+    expect(screen.queryByText('Thông tin chủ xe')).toBeNull();
   });
 });

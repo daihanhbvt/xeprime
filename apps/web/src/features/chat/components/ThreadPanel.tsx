@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl';
 import { useCallback } from 'react';
 import { initialOf } from '@/lib/initials';
 import { useThread } from '../hooks/use-thread';
-import { useVehicleContext } from '../hooks/use-vehicle-context';
+import { useTripContext, useVehicleContext } from '../hooks/use-vehicle-context';
 import { useThreadScroll } from '../hooks/use-thread-scroll';
 import type { ConversationSummary } from '../types';
 import { MessageComposer } from './MessageComposer';
@@ -27,20 +27,24 @@ export function ThreadPanel({
   conversation,
   onBack,
   pendingVehicleId,
-  onClearPendingVehicle,
+  pendingTripId,
+  onClearPendingContext,
 }: {
   conversation: ConversationSummary;
   onBack?: () => void;
   /** Xe vừa mở chat từ tin đăng của nó — chờ gắn vào câu nhắn đầu tiên. */
   pendingVehicleId?: string | null;
-  onClearPendingVehicle?: () => void;
+  /** Chuyến (id yêu cầu) vừa mở chat từ chuyến đi / đơn thuê — thắng `pendingVehicleId`. */
+  pendingTripId?: string | null;
+  onClearPendingContext?: () => void;
 }) {
   const t = useTranslations('Chat');
   const thread = useThread(conversation.id);
-  const vehicleContext = useVehicleContext(pendingVehicleId ?? null);
+  const viewerSide = conversation.side;
+  const tripContext = useTripContext(viewerSide, pendingTripId ?? null);
+  const vehicleContext = useVehicleContext(pendingTripId ? null : (pendingVehicleId ?? null));
 
   const last = thread.entries[thread.entries.length - 1];
-  const viewerSide = conversation.side;
 
   const scroll = useThreadScroll({
     conversationId: conversation.id,
@@ -121,8 +125,8 @@ export function ThreadPanel({
         <MessageComposer
           onSend={thread.send}
           disabled={thread.loading || thread.error !== null}
-          vehicleContext={vehicleContext}
-          {...(onClearPendingVehicle ? { onClearVehicleContext: onClearPendingVehicle } : {})}
+          context={tripContext ?? vehicleContext}
+          {...(onClearPendingContext ? { onClearContext: onClearPendingContext } : {})}
         />
       ) : null}
     </div>

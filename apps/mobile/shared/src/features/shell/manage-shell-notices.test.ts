@@ -13,7 +13,7 @@ const receipts = String(ROUTES.manage.receipts());
  */
 const describeManage = APP_PROFILE.clientApp === MOBILE_CLIENT_APP.PARTNER ? describe : describe.skip;
 
-describeManage('expiredFeatureForPath — bản native của expiredFeature trong AppShell web', () => {
+describeManage('expiredFeatureForPath - bản native của expiredFeature trong AppShell web', () => {
   it('trang thuộc tính năng read_only → trả tính năng đó', () => {
     expect(
       expiredFeatureForPath(receipts, { [PLAN_FEATURE.FINANCE]: FEATURE_STATE.READ_ONLY }),

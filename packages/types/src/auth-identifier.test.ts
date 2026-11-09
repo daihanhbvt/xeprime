@@ -47,14 +47,20 @@ describe('isValidLoginIdentifier', () => {
     }
   });
 
-  it('nhận SĐT đúng luật hệ thống, bỏ qua dấu cách/chấm/gạch người ta chép từ danh bạ', () => {
-    for (const value of ['0901234567', '+84901234567', '090 123 4567', '090-123-4567']) {
+  it('nhận SĐT di động đúng luật hệ thống (ADR 0082)', () => {
+    for (const value of ['0901234567', '84901234567', '+84901234567']) {
       expect(isValidLoginIdentifier(value)).toBe(true);
     }
   });
 
+  it('từ chối SĐT có ký tự lạ — ô nhập đã tự lọc, chuỗi còn dấu tới đây là không qua ô nhập', () => {
+    for (const value of ['090 123 4567', '090-123-4567', '090.123.4567', '+84 90 123 4567']) {
+      expect(isValidLoginIdentifier(value)).toBe(false);
+    }
+  });
+
   it('từ chối SĐT sai độ dài hoặc sai đầu số — cùng luật với ô SĐT lúc đăng ký', () => {
-    for (const value of ['0901', '09012345678', '84901234567', '1901234567']) {
+    for (const value of ['0901', '09012345678', '02438123456', '0123456789', '8490123456', '84012345678', '+840901234567']) {
       expect(isValidLoginIdentifier(value)).toBe(false);
     }
   });

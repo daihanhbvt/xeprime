@@ -6,6 +6,7 @@ import type {
   Plan,
   Subscription,
   UpdatePlanInput,
+  UpdateSubscriptionInput,
 } from './types';
 
 export const SUBSCRIPTIONS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
@@ -62,5 +63,14 @@ export const assignSubscription = (
 ): Promise<Subscription> =>
   apiPost<Subscription>(`/platform/tenants/${tenantId}/subscriptions`, body);
 
+/** Huỷ một kỳ — các kỳ xếp sau trong chuỗi bị huỷ kèm (ADR 0080 điều 1). */
 export const cancelSubscription = (tenantId: string, id: string): Promise<Subscription> =>
   apiPost<Subscription>(`/platform/tenants/${tenantId}/subscriptions/${id}/cancel`);
+
+/** Sửa giá / ngày kết thúc / trần xe / ghi chú của một kỳ còn hạn (ADR 0080 điều 2). */
+export const updateSubscription = (
+  tenantId: string,
+  id: string,
+  body: UpdateSubscriptionInput,
+): Promise<Subscription> =>
+  apiPatch<Subscription>(`/platform/tenants/${tenantId}/subscriptions/${id}`, body);

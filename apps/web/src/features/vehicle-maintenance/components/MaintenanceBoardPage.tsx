@@ -51,6 +51,7 @@ const CLEARED = {
   type: 'all',
   from: undefined,
   to: undefined,
+  resolve: undefined,
 } as const;
 
 const SORT_VALUES = MAINTENANCE_BOARD_SORT_VALUES;
@@ -271,7 +272,8 @@ function MaintenanceView() {
           summary={summary.data}
           loading={summary.isLoading}
           canViewHandovers={canViewHandovers}
-          onChange={(filter) => setFilters({ filter })}
+          // Rời tab thì bỏ luôn biên bản đang chờ mở — quay lại tab không được tự bật hộp cũ.
+          onChange={(filter) => setFilters({ filter, resolve: undefined })}
         />
       ) : null}
 
@@ -286,6 +288,8 @@ function MaintenanceView() {
           loading={queue.isFetching && !queue.data}
           error={queue.isError && !queue.data ? { onRetry: () => void queue.refetch() } : null}
           onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
+          requestedBookingId={filters.resolve}
+          onRequestHandled={() => setFilters({ resolve: undefined }, { resetPage: false })}
           onResolved={() => {
             void queue.refetch();
             void summary.refetch();

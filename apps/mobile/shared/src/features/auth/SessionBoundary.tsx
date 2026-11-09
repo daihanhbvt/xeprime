@@ -52,7 +52,7 @@ export function SessionBoundary({ children }: { children: ReactNode }) {
   useEffect(
     () =>
       subscribeSessionEnded(() => {
-        logger.warn('Phiên kết thúc — dọn dữ liệu của phiên');
+        logger.warn('Phiên kết thúc - dọn dữ liệu của phiên');
         resetSessionScopedCache(queryClient);
         forgetBranchMemory();
         dispatch(shellScopeReset());

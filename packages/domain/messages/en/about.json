@@ -6,7 +6,7 @@
   "hero": {
     "eyebrow": "About us",
     "title": "Renting a vehicle without the guesswork",
-    "lead": "XePrime connects people who need a vehicle with the people who own one, across Vietnam. We do not own a single vehicle — our job is to make the price, the calendar and each side's responsibilities clear before anyone pays."
+    "lead": "XePrime connects people who need a vehicle with the people who own one, across Vietnam. We do not own a single vehicle - our job is to make the price, the calendar and each side's responsibilities clear before anyone pays."
   },
   "services": {
     "heading": "Three ways to rent",
@@ -16,7 +16,7 @@
     },
     "withDriver": {
       "title": "With driver",
-      "desc": "Intercity trips, airport runs or half-day hire — the shop assigns the driver and the route is agreed up front."
+      "desc": "Intercity trips, airport runs or half-day hire - the shop assigns the driver and the route is agreed up front."
     },
     "longTerm": {
       "title": "Long-term",
@@ -52,7 +52,7 @@
     },
     "pickup": {
       "title": "Paid at pick-up",
-      "desc": "The rest of the rental goes directly to the owner when you collect the vehicle — XePrime does not collect it on their behalf."
+      "desc": "The rest of the rental goes directly to the owner when you collect the vehicle - XePrime does not collect it on their behalf."
     },
     "lines": {
       "title": "Nothing bundled",
@@ -61,7 +61,7 @@
   },
   "owners": {
     "heading": "If you own a vehicle",
-    "lead": "Two ways to join the same marketplace — pick by scale, switch later.",
+    "lead": "Two ways to join the same marketplace - pick by scale, switch later.",
     "basic": {
       "title": "Individual owner",
       "desc": "A few vehicles, no subscription. You only pay a service fee on trips that actually happen.",
@@ -82,7 +82,7 @@
     },
     "calendar": {
       "title": "No double bookings",
-      "desc": "One vehicle cannot be booked twice for the same window — the rule lives in the database, not in a screen."
+      "desc": "One vehicle cannot be booked twice for the same window - the rule lives in the database, not in a screen."
     },
     "metrics": {
       "title": "Reputation measured from behaviour",

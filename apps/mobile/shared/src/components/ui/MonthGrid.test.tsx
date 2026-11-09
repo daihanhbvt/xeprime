@@ -72,7 +72,7 @@ describe('visibleDays', () => {
 });
 
 describe('MonthGrid', () => {
-  it('vẽ cả ngày của tháng KỀ và cho bấm — cùng luật `showOutsideDays` của web', async () => {
+  it('vẽ cả ngày của tháng KỀ và cho bấm - cùng luật `showOutsideDays` của web', async () => {
     const onDayPress = jest.fn();
     const view = await render(withIntl(<Harness onDayPress={onDayPress} />));
 

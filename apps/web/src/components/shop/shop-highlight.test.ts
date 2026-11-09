@@ -28,7 +28,7 @@ const NOT_ENOUGH: HostMetricsShape = {
 };
 
 describe('shopHighlightOf', () => {
-  it('luôn trả về một câu — không bao giờ để trống chỗ ghi chú', () => {
+  it('luôn trả về một câu - không bao giờ để trống chỗ ghi chú', () => {
     const highlight = shopHighlightOf({ metrics: null, ratingAvg: null });
     expect(highlight.key).toBe('newHost');
   });
@@ -64,7 +64,7 @@ describe('shopHighlightOf', () => {
     expect(highlight).toEqual({ key: 'wellRated', rating: 4.56, count: 9 });
   });
 
-  it('chưa đủ mẫu thì KHÔNG đọc tỉ lệ — rơi xuống câu theo số chuyến', () => {
+  it('chưa đủ mẫu thì KHÔNG đọc tỉ lệ - rơi xuống câu theo số chuyến', () => {
     const highlight = shopHighlightOf({
       metrics: NOT_ENOUGH,
       ratingAvg: 4.67,

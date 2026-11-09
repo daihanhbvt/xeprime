@@ -43,27 +43,28 @@ Design: Header `23649:27690` (biến thể Default) · `23661:22492` (Details, c
 | --- | --- | --- | --- | --- |
 | Tổng quan · `/` | Tổng quan | **Tổng quan** (liên kết thẳng) | menu | — |
 | Lịch thuê · `/calendar` | Quản lý › Lịch thuê | **Vận hành › Lịch thuê xe** | menu | — |
-| Yêu cầu đặt xe · `/booking-requests` | Quản lý › Đơn thuê › Yêu cầu đặt xe | **Vận hành › Yêu cầu đặt xe** (huy hiệu số chờ duyệt) | menu | — (ráp xong 02/11, §3.1) |
-| Tất cả đơn thuê · `/bookings` | Quản lý › Đơn thuê › Tất cả đơn thuê | **Vận hành › Quản lý đơn thuê xe** | menu | Danh sách xong (02/11). Còn trang chi tiết `/bookings/[id]` — chờ design |
-| Chờ giao xe · `/bookings/awaiting-pickup` | Quản lý › Đơn thuê › Chờ giao xe | **Ngăn "Chờ giao xe"** ở cột trái của "Quản lý đơn thuê xe" (`/bookings?preset=awaiting_pickup`); route cũ chuyển tiếp (cả trong phiên hỗ trợ); mục ẩn đã gỡ (02/11) | cột trái màn đơn; thẻ Tổng quan | — |
+| Yêu cầu đặt xe · `/booking-requests` | Quản lý › Đơn thuê › Yêu cầu đặt xe | **Gộp vào "Đơn thuê xe"** (05/11): nhóm Cần xử lý · Chờ khách thanh toán; tab "Đã kết thúc" cũ → ngăn "Không thành đơn" của "Đơn đã kết thúc". Route cũ CHUYỂN TIẾP (`?status=` → nhóm), cả trong phiên hỗ trợ | cột trái "Đơn thuê xe"; thẻ Tổng quan | — (§3.2b) |
+| Tất cả đơn thuê · `/bookings` | Quản lý › Đơn thuê › Tất cả đơn thuê | **Vận hành › Đơn thuê xe** — MỘT mục cho cả chuyến (05/11), huy hiệu = chờ duyệt + giao/trả đến hạn | menu; tab mobile "Đơn thuê" | — (§3.2b List · §3.2c Kanban) |
+| Đơn đã kết thúc · `/bookings/ended` | — (ngăn Hoàn thành/Đã huỷ của bảng đơn + tab "Đã kết thúc" của hộp thư) | **Nút "Đơn đã kết thúc (n)"** ở đầu "Đơn thuê xe" (05/11); `/bookings?preset=completed|cancelled` và `?status=closed` cũ chuyển tiếp | nút đầu trang; thẻ Tổng quan "Hoàn thành" | — (§3.2b) |
+| Chờ giao xe · `/bookings/awaiting-pickup` | Quản lý › Đơn thuê › Chờ giao xe | **Nhóm "Chờ giao xe"** ở cột trái của "Đơn thuê xe" (`/bookings?preset=awaiting_pickup`); route cũ chuyển tiếp (cả trong phiên hỗ trợ); mục ẩn đã gỡ (02/11) | cột trái màn đơn; thẻ Tổng quan | — |
 | Khách hàng · `/customers` | Quản lý › Khách hàng | **Vận hành › Danh sách khách hàng** | menu | — |
 | Danh sách xe · `/vehicles` | Quản lý › Xe của tôi › Danh sách xe | **Xe & Tài xế › Danh sách xe** (huy hiệu số xe có việc chặn) | menu | Danh sách xong (03/11, §3.5). Chi tiết `/vehicles/[id]` và Chỉnh sửa `/vehicles/[id]/edit` xong (03/11, §3.6) — cả hai tuyến |
 | Đăng nhanh xe tự lái (gian hàng) · `/vehicles/register?from=manage` | Menu phụ cạnh nút thêm xe ở Danh sách xe | **Gỡ khỏi Danh sách xe** (chốt 03/11) — màn chỉ còn "Thêm xe mới" → wizard đầy đủ. Route vẫn sống (chủ xe tuyến hoa hồng dùng `?from=account`) | URL | — |
 | Tài xế · `/drivers` | Cấu hình › Tài xế | **Xe & Tài xế › Quản lý tài xế** | menu | — (ráp xong 04/11, §3.7) |
 | Bảo dưỡng · `/maintenance` | Quản lý › Xe của tôi › Bảo dưỡng | **Xe & Tài xế › Bảo dưỡng** | menu | — (ráp xong 04/11, §3.8) |
-| Doanh thu · `/finance` | Kinh doanh › Tài chính › Tổng quan doanh thu | **Doanh thu › Tổng quan doanh thu** | menu | — |
+| Doanh thu · `/finance` | Kinh doanh › Tài chính › Tổng quan doanh thu | **Doanh thu › Tổng quan doanh thu** | menu | — (ráp xong 04/11, §3.9) |
 | Số dư & rút tiền · `/balance` (chỉ CHỦ) | Kinh doanh › Tài chính › Số dư & rút tiền | **Doanh thu › Quản lý ví** | menu | — |
-| Thu chi · `/receipts` | Kinh doanh › Tài chính › Giao dịch thu chi | **Doanh thu › Lịch sử giao dịch** | menu | — |
-| Công nợ · `/debts` | Kinh doanh › Tài chính › Công nợ | Mục **ẨN** của khối Doanh thu; sẽ nằm TRONG một màn Doanh thu theo design mới | thẻ "Công nợ" trên Tổng quan doanh thu; URL; breadcrumb | Chờ design. Khi ráp: đặt đúng chỗ design, gỡ mục ẩn |
+| Thu chi · `/receipts` | Kinh doanh › Tài chính › Giao dịch thu chi | **Doanh thu › Lịch sử giao dịch** — tab "Giao dịch thu chi" | menu | — (ráp xong 04/11, §3.11) |
+| Công nợ · `/debts` | Kinh doanh › Tài chính › Công nợ | **Doanh thu › Lịch sử giao dịch** — tab "Công nợ" (`/receipts?view=debts`); `/debts` chuyển tiếp, giữ tham số lọc; mục ẩn đã gỡ (04/11) | nút chuyển đầu màn Lịch sử giao dịch; thẻ "Công nợ khách hàng" (tab Thu chi); thẻ "Khách còn nợ" (Tổng quan doanh thu) | — (ráp xong 04/11, §3.11) |
 | Trò chuyện · `/chat` | Kinh doanh › Trò chuyện | **Icon tin nhắn** ở header (popup + "xem tất cả"; số tin chưa đọc trên icon) | header | — |
 | Cửa hàng · `/shop` | Gian hàng › Cửa hàng | **Cấu hình › Thông tin cửa hàng** | menu | — |
-| Chi nhánh · `/shop/branches` | Cấu hình › Chi nhánh | **Section "Chi nhánh"** trong Thông tin cửa hàng (`/shop?section=branches`); route cũ chuyển tiếp | section của trang Cửa hàng | Khi ráp màn Thông tin cửa hàng: bảng chi nhánh đang hẹp trong cột trang (phải cuộn ngang mới thấy Số xe/Trạng thái) |
+| Chi nhánh · `/shop/branches` | Cấu hình › Chi nhánh | **Thẻ "Chi nhánh"** trong Thông tin cửa hàng (`/shop?section=branches`); route cũ chuyển tiếp | thẻ của trang Cửa hàng | — (06/11: bảng gọn 7 cột, thao tác bút chì + "…", xem §3.13) |
 | Chính sách thuê · `/shop/policies` | Cấu hình › Chính sách thuê | **Cấu hình › Chính sách thuê** | menu | — |
 | Thành viên · `/members` | Cấu hình › Người dùng & phân quyền | **Cấu hình › Nhân viên & Phân quyền** | menu | — |
 | Trung tâm hỗ trợ · `/support` | Hỗ trợ › Trung tâm hỗ trợ | **Trợ giúp › Trung tâm hỗ trợ** | menu | — |
 | Hỗ trợ & khiếu nại · `/support/cases` | Hỗ trợ › Yêu cầu hỗ trợ | **Trợ giúp › Yêu cầu hỗ trợ** (Trợ giúp thành dropdown 2 dòng — lệch design, đã chốt) | menu | — |
-| Tài khoản & bảo mật · `/account` | menu tài khoản ở thẻ người dùng | **Icon bánh răng** ở header + menu hồ sơ | header | — |
-| Cài đặt gian hàng · `/shop` | menu tài khoản | menu hồ sơ (giữ nguyên) | header | — |
+| Tài khoản & bảo mật · `/account` | menu tài khoản ở thẻ người dùng | **Dòng đầu menu hồ sơ** + bấm thẻ đầu menu (icon bánh răng ở header ĐÃ BỎ 09/11) | header | — |
+| Cài đặt gian hàng · `/shop` | menu tài khoản | menu hồ sơ, dòng **"Quản lý gian hàng"** (06/11) | header | — |
 | Đổi ngôn ngữ | menu tài khoản ở topbar | menu hồ sơ | header | — |
 | Đăng xuất | menu tài khoản | menu hồ sơ | header | — |
 | Thông báo | chuông ở topbar | **Icon chuông** ở header | header | — |
@@ -74,35 +75,73 @@ trạng thái **tạm**, mỗi mục ẩn phải được gỡ khi màn đích c
 
 ### 2.2 Chủ xe tuyến hoa hồng (Owner Lite)
 
-Design chưa vẽ riêng. Đã chốt: **cùng header, cùng sáu khối**, mỗi khối ít dòng hơn. Khối không còn
-dòng nào với người đang xem (vd. Doanh thu với thành viên không phải chủ) thì vắng hẳn.
+**Không có design riêng — dùng CHÍNH các màn của gian hàng, ẩn phần không áp dụng** (người dùng chốt
+09/11/2026, [ADR 0085](../decisions/0085-unified-partner-ui-and-plan-slot-transitions.md)). Menu là MỘT
+cây (`PARTNER_NAV` ở `constants/nav.ts`); cây của tuyến hoa hồng (`COMMISSION_NAV`) SUY từ nó bằng dấu
+`tracks` trên từng mục, không viết tay lần hai. Khối không còn dòng nào với người đang xem (vd. Doanh
+thu với thành viên không phải chủ) thì vắng hẳn.
 
 | Khối | Dòng | Route |
 | --- | --- | --- |
-| Tổng quan | (liên kết thẳng) | `/` |
-| Vận hành | Lịch thuê xe · Chuyến cho thuê (chỉ CHỦ; thành viên thấy Yêu cầu đặt xe + Quản lý đơn thuê xe) | `/calendar`, `/trips` (`/booking-requests`, `/bookings`) |
+| Tổng quan | (liên kết thẳng) — CÙNG màn `DashboardView` (09/11/2026), xem dưới | `/` |
+| Vận hành | Đơn thuê xe · Lịch thuê xe (CÙNG màn với gian hàng, cho chủ lẫn thành viên — 06/11/2026; `/trips` "Chuyến cho thuê" cũ chỉ còn chuyển tiếp) | `/calendar`, `/bookings` |
 | Xe & Tài xế | Danh sách xe · Quản lý tài xế | `/vehicles`, `/drivers` |
 | Doanh thu | Quản lý ví (chỉ CHỦ) | `/balance` |
-| Cấu hình | Hồ sơ chủ xe (chỉ CHỦ — gộp hồ sơ, trang chủ xe, khai thuế, gói) | `/account` |
-| Trợ giúp | Cẩm nang cho thuê xe · Hợp đồng & Chứng từ · Chính sách bảo vệ dữ liệu · Yêu cầu hỗ trợ | `/host-guide`, `/contracts-documents`, `/data-protection`, `/support/cases` |
+| Cấu hình | Hồ sơ chủ xe (chỉ CHỦ) = CÙNG trang Thông tin cửa hàng, mặt tiền cá nhân (09/11/2026) | `/shop` |
+| Trợ giúp | Cẩm nang cho thuê xe · Hợp đồng & Chứng từ · Chính sách bảo vệ dữ liệu · Yêu cầu hỗ trợ (ba mục đầu chỉ tuyến này — giữ để không mất tính năng; "Trung tâm hỗ trợ" của gian hàng trỏ vào trang chỉ tuyến gói nên vắng) | `/host-guide`, `/contracts-documents`, `/data-protection`, `/support/cases` |
+
+Vắng ở tuyến này (server chặn bằng `@SubscriptionTrackOnly`): Khách hàng · Bảo dưỡng · Tổng quan doanh
+thu · Lịch sử giao dịch · Chính sách thuê (chủ xe cấu hình chính sách trên TỪNG xe — ADR 0085 điều 3) ·
+Nhân viên & phân quyền · Trung tâm hỗ trợ. Bốn tab mobile web dùng chung với gian hàng.
 
 Tin nhắn là icon ở header như tuyến gói.
 
+**Trang Thông tin `/shop` — mặt tiền cá nhân** (thay trang "Hồ sơ chủ xe" kiểu cũ ở `/account`, mục lục
+trái + tám section — đã gỡ): đầu trang là ảnh tròn + họ tên TÀI KHOẢN (ADR 0054) + "Xem trang chủ xe";
+thẻ Địa chỉ nhận xe (không ô giấy phép KD, không link Chi nhánh) · Khai thuế · **Hoá đơn VAT** (gian hàng
+đặt nó ở Chính sách thuê) · Gói dịch vụ (phễu nâng cấp); cột phải "Thông tin chủ xe" (ảnh bắt buộc, họ
+tên, giới thiệu — `OwnerInfoForm`) + "Hoàn thiện hồ sơ". Vắng: Chủ gian hàng, Chi nhánh, vai, ảnh bìa/logo.
+Chỉ CHỦ (`isCommissionOwner`); thành viên và phiên hỗ trợ luôn thấy bản gian hàng. Đăng nhập · mật khẩu ·
+xoá tài khoản về "Tài khoản & bảo mật" (`/account`) như mọi tài khoản partner; link cũ
+`/account?section=address|vat-invoice|tax|plan` chuyển sang section cùng vai của `/shop`. Menu hồ sơ:
+"Quản lý cho thuê" và "Nâng cấp gian hàng" trỏ `/shop` · `/shop?section=plan`.
+
+**Tổng quan** — `DashboardView` cho cả hai tuyến: thẻ doanh thu, biểu đồ, sổ quỹ vắng theo cờ `finance`;
+giữ ba thứ của Tổng quan riêng cũ (`OwnerDashboardView`, đã gỡ): "Xe của bạn" thay "Xe trên chợ", ví hiện
+thu nhập tháng, lời chào theo tên. Vắng thẻ Gói và thẻ ba bước mở gian hàng. Chủ xe đang đăng ký vẫn thấy
+màn tiến trình đăng ký (`OwnerRegistrationView`).
+
 Danh sách xe của tuyến này dùng CHUNG màn với gian hàng từ 03/11/2026 (§3.5). Hai thẻ dẫn đường
 "Cẩm nang cho thuê xe" / "Hợp đồng & chứng từ mẫu" đầu màn đã gỡ — cả hai là dòng của khối Trợ giúp.
+
+**"Đơn thuê xe" dùng CHUNG với gian hàng từ 06/11/2026** (chốt với người dùng), thay danh sách thẻ
+"Chuyến cho thuê" riêng của chủ xe (07/10/2026, `OwnerTripsView` — đã gỡ). Lý do màn riêng — gian hàng
+khi đó có hai màn hộp thư + bảng đơn — mất từ lúc §3.2b gộp chúng. Chủ và thành viên cùng một mục,
+cùng List/Kanban, cùng trang chi tiết `/bookings/[id]` (không còn popup).
+
+| Điểm | Quyết định |
+| --- | --- |
+| Dạng xem mặc định | **List** cho tuyến hoa hồng (1–3 xe — bốn cột Kanban phần lớn trống); nút chuyển giữ nguyên, lựa chọn đã nhớ / `?view=` vẫn thắng (`useRentalsView`) |
+| Menu · tab mobile | Mục "Đơn thuê xe" / ô "Đơn thuê" như gian hàng, huy hiệu `RENTALS_WORK`; **Lịch xe hết mang số** (lượt giao/trả đến hạn đã nằm trong số của Đơn). `NAV_BADGE.BOOKING_REQUESTS_PENDING`, `HANDOVERS_DUE` và trục `memberOnly` không còn ai dùng — đã gỡ |
+| Link cũ | `/trips` là route CHUYỂN TIẾP ở server (`legacyOwnerTripsTarget`): `?filter=history` → "Đơn đã kết thúc", còn lại → "Đơn thuê xe", từ khoá đi theo. Thông báo, thẻ Tổng quan trỏ thẳng vào nhóm của màn mới |
+| Màn trống | Câu của chuyến từ chợ ("Chưa có chuyến thuê nào") + nút "Xem xe của tôi" thay "Tạo đơn thuê" |
+| Tự vắng ở tuyến này (đã có từ trước, server chặn thật) | Tạo đơn thuê (`@SubscriptionTrackOnly` ở `POST /bookings`) · mở sổ khách · ô "Đã thu" trong hộp nhận xe + Thu tiền · hai dòng tiền của Chuẩn bị bàn giao · ô chi nhánh (một chi nhánh). SĐT/Zalo/Chat chỉ khi đã có đơn — theo dữ liệu server (ADR 0056 · 0073) |
+
+App Partner (mobile) vẫn có `OwnerTripsScreen` đọc `GET /trips?role=host` — API giữ nguyên, đợt này chỉ đổi web.
 
 ### 2.3 Header — các quyết định đã chốt
 
 | Phần | Quyết định |
 | --- | --- |
-| Icon bánh răng | Mở **Tài khoản & bảo mật** của NGƯỜI đăng nhập (`/account`; chủ xe tuyến hoa hồng: "Hồ sơ chủ xe"). "Cấu hình" trên menu là cài đặt của CỬA HÀNG. Điện thoại: ẩn icon, vào qua menu hồ sơ |
-| Khối hồ sơ | Bố cục design (ảnh tròn + chấm trực tuyến · tên người · mũi tên), nhưng **dòng 2 là "Gian hàng · Vai"** thay cho email: không lộ liên hệ khi chia sẻ màn hình, và đăng nhập site partner là SĐT. Chủ xe cá nhân chỉ hiện vai |
-| Menu hồ sơ | `useAccountMenuItems` — một bộ cho header, drawer mobile và topbar site quản trị: danh tính · Tài khoản & bảo mật · Cài đặt gian hàng (tuyến gói) · Ngôn ngữ · Đăng xuất |
-| Số đếm trên menu | **Chỉ số "cần xử lý"** — việc ĐẾN HẠN, không phải thống kê (chốt lại 04/11, thay bản 02/11): **Yêu cầu đặt xe** = chờ duyệt, đỏ khi có yêu cầu sắp hết hạn trả lời (`GET /dashboard/requests`, `pendingUrgent`) · **Quản lý đơn thuê xe** = lượt giao + trả hẹn tới hết hôm nay, gồm cả lượt quá giờ, mỗi đơn một lần (`pickupsDue + returnsDue` của `GET /dashboard/today`), đỏ khi có lượt quá giờ — KHÔNG còn đếm mọi đơn chờ giao / đang thuê · **Lịch thuê xe** của gian hàng KHÔNG mang số (trùng với Đơn ⇒ khối "Vận hành" đếm đôi); chủ xe tuyến hoa hồng không có bảng đơn nên số giao/trả đến hạn gắn ở Lịch xe · **Danh sách xe** = số XE có ít nhất một việc chặn: giấy tờ quá hạn, quá hạn bảo dưỡng, bị trả về/từ chối/ẩn khi đăng chợ, thiếu KM trả (chốt 03/11; `VEHICLE_ALERT_NEEDS_ACTION_KINDS`, nguồn `GET /vehicles/needs-action-count` — cùng phép tính với chip trên thẻ xe). Tài xế, Bảo dưỡng **chưa làm** — cần định nghĩa "cần xử lý" trước. Không đếm tổng xe/tài xế |
+| Icon bánh răng | **ĐÃ BỎ (09/11/2026, người dùng chốt).** Trước đó mở Tài khoản & bảo mật (02/11); nay lối đó là dòng đầu của menu hồ sơ. Header phải còn: tin nhắn · thông báo · vạch ngăn · ảnh đại diện |
+| Khối hồ sơ | **09/11/2026: CHỈ ảnh đại diện tròn 40px + chấm trực tuyến** (bỏ tên người, dòng "Gian hàng · Vai", mũi tên — chúng đã nằm ở thẻ đầu menu). **Rê chuột là mở menu**; bấm / Enter / Space / ↓ cũng mở (không bật-tắt), Esc đóng. Tên truy cập của nút vẫn mang tên người · "Gian hàng · Vai" (không email). Thẻ người dùng trong drawer mobile giữ bấm-để-mở |
+| Menu hồ sơ | **06/11/2026 — design `24051:85101`** (`PartnerAccountMenu`, header + drawer mobile; khung chung với menu site khách ở `components/account-menu/AccountMenuParts`). Hai biến thể: **gian hàng tuyến gói** — thẻ nền vàng: logo + **dấu tích xanh** (MỌI gian hàng có, tài khoản cá nhân không — dấu nhận diện, KHÔNG phải kết quả xác minh pháp nhân), tên người · vai, dòng "Gian hàng — tên cửa hàng"; dòng "Quản lý gian hàng" (`/shop`, chỉ khi `useShopSettingsAccess`). **Cá nhân (tuyến hoa hồng)** — thẻ xám: ảnh · tên · vai; dòng "Quản lý cho thuê" = Hồ sơ chủ xe (`/account`, chỉ CHỦ), và "Tài khoản & bảo mật" trỏ `/account?section=login`. Bấm thẻ = Tài khoản & bảo mật. Thành viên của chủ xe cá nhân / tài khoản chưa có gói: chỉ "Tài khoản & bảo mật". Dòng **"Giao diện ☀|☾" dựng sẵn nhưng TẮT** (`PARTNER_THEME_SWITCH_ENABLED`) cho tới khi làm dark mode site partner. Chân: Ngôn ngữ VI|EN · Đăng xuất. **Nhãn tuyến/gói** (`AccountTrackBadge`) của menu cũ **đã bỏ** (người dùng chốt) — gói xem ở Thông tin cửa hàng / Hồ sơ chủ xe › Gói dịch vụ; dòng **"Nâng cấp gian hàng →"** (vàng, icon huy chương — 09/11) chỉ cho CHỦ xe tuyến hoa hồng, trỏ vào phễu nâng cấp có sẵn ở Hồ sơ chủ xe › Gói dịch vụ (`/account?section=plan`); đứng trong nhóm có vạch cùng dòng Giao diện. Site quản trị giữ `useAccountMenuItems` (danh tính · Bảo mật · Ngôn ngữ · Đăng xuất) |
+| Số đếm trên menu | **Chỉ số "cần xử lý"** — việc ĐẾN HẠN, không phải thống kê (chốt lại 04/11, thay bản 02/11): **05/11 — "Đơn thuê xe" gộp mang MỘT số = chờ duyệt + lượt giao/trả đến hạn (`RENTALS_WORK`), đỏ khi có cái gấp; hai mô tả dưới đây (Yêu cầu / Quản lý đơn) nay là hai thành phần của số đó.** **Yêu cầu đặt xe** = chờ duyệt, đỏ khi có yêu cầu sắp hết hạn trả lời (`GET /dashboard/requests`, `pendingUrgent`) · **Quản lý đơn thuê xe** = lượt giao + trả hẹn tới hết hôm nay, gồm cả lượt quá giờ, mỗi đơn một lần (`pickupsDue + returnsDue` của `GET /dashboard/today`), đỏ khi có lượt quá giờ — KHÔNG còn đếm mọi đơn chờ giao / đang thuê · **Lịch thuê xe** KHÔNG mang số (trùng với Đơn ⇒ khối "Vận hành" đếm đôi) — ở cả hai tuyến từ 06/11, khi tuyến hoa hồng dùng chung màn Đơn · **Danh sách xe** = số XE có ít nhất một việc chặn: giấy tờ quá hạn, quá hạn bảo dưỡng, bị trả về/từ chối/ẩn khi đăng chợ, thiếu KM trả (chốt 03/11; `VEHICLE_ALERT_NEEDS_ACTION_KINDS`, nguồn `GET /vehicles/needs-action-count` — cùng phép tính với chip trên thẻ xe). Tài xế, Bảo dưỡng **chưa làm** — cần định nghĩa "cần xử lý" trước. Không đếm tổng xe/tài xế |
 | Số trên mục cấp 1 | Khi dropdown ĐÓNG, tổng số "cần xử lý" của khối hiện cạnh nhãn khối (khuôn `_Badge` của design) — để yêu cầu đang chờ không bị khuất. Màu CẢNH BÁO thay xám của design (04/11, người dùng chốt): cam = chờ xử lý, đỏ = có mục trễ / sắp trễ; tên truy cập được nói thêm "có việc gấp" để màu không là tín hiệu duy nhất. Áp chung cho huy hiệu sidebar/drawer/tab bar (`NavBadge`) |
 | Breadcrumb | Dải dưới header (biến thể Details) chỉ ở **trang con** của một mục (`/vehicles/:id`…) và ở **trang của mục ẩn**: biểu tượng khối › mục menu › `<h1>` của trang |
-| Màn hẹp | ≤1536: ẩn chữ khối hồ sơ · ≤1366: bỏ dấu +/− · ≤1280: bỏ biểu tượng mục cấp 1 · ≤1024: menu ngang nhường cho nút mở drawer + thanh tab dưới đáy (cùng cây menu) |
-| Mục cấp 1 đang chứa trang hiện tại | Design không tô (biến thể Details để "Vận hành" ở trạng thái thường) — làm theo design; vị trí trang nói bằng dòng sáng trong dropdown và breadcrumb |
+| Màn hẹp | ≤1536: thu khoảng cách khối phải · ≤1366: bỏ dấu +/− · ≤1280: bỏ biểu tượng mục cấp 1 · ≤1024: menu ngang nhường cho nút mở drawer + thanh tab dưới đáy (cùng cây menu) |
+| Mục cấp 1 đang chứa trang hiện tại | **Tô như trạng thái Active** (nền vàng nhạt, chữ vàng đậm — 06/11, người dùng chốt, LỆCH design vốn để thường), kể cả ở trang con (`/bookings/:id`…); `aria-current` = `page` khi đúng trang đích của nhãn khối, `true` khi ở trang khác trong khối |
+| Bấm nhãn khối | **Đi tới mục đầu tiên còn hiện của khối** (06/11) — "Vận hành" → "Đơn thuê xe" (nên "Đơn thuê xe" đứng đầu dropdown, trên "Lịch thuê xe"). Rê chuột vẫn mở dropdown; bàn phím: Enter đi, ↓ mở dropdown |
 
 ## 3. Sổ theo màn
 
@@ -111,16 +150,22 @@ Mỗi màn: route · node design · trạng thái · tính năng phải có mặ
 | Màn | Route | Design | Trạng thái | Phải có khi xong / ghi chú |
 | --- | --- | --- | --- | --- |
 | Khung chung: header, menu, breadcrumb | — | `23649:27690`, `23661:22492`, `23661:27362`, `23649:11528` | **Xong** 02/11/2026 | Xem §2 |
-| Yêu cầu đặt xe | `/booking-requests` | Request `23649:25560` (cập nhật 02/11: chip dịch vụ, đồng hồ, nút Từ chối) | **Xong** 02/11/2026 | Xem §3.1 |
-| Quản lý đơn thuê xe | `/bookings` (+ `/bookings/awaiting-pickup`) | All Request `23790:45293` (ô "Tất cả", nhóm theo trạng thái) · All Request - Done `23797:49689` (một trạng thái, phân trang). Chi tiết đơn: section `23777:53056` | **Xong** 02/11/2026 (danh sách + chi tiết) | Xem §3.2, §3.3 |
-| Một màn Doanh thu (chưa rõ màn nào) | `/finance` hoặc `/receipts` | chờ design | Chưa làm | Nhận **Công nợ** (`/debts`); gỡ mục ẩn `debts`; giữ thao tác thu nợ |
+| Menu hồ sơ (dropdown khối tài khoản ở header) | — | `24051:85101` | **Xong** 06/11/2026, sửa 09/11 (chỉ ảnh + rê chuột, bỏ bánh răng, thêm Nâng cấp gian hàng) | Xem §2.3 "Menu hồ sơ" / "Khối hồ sơ". Còn: bật dòng Giao diện khi làm dark mode |
+| Yêu cầu đặt xe | `/booking-requests` → chuyển tiếp | Request `23649:25560` (02/11) | **Gộp** 05/11/2026 vào "Đơn thuê xe" | Xem §3.1 (thẻ/popup còn hiệu lực), §3.2b |
+| Đơn thuê xe (gộp) | `/bookings` (+ `/bookings/awaiting-pickup`, `/booking-requests` chuyển tiếp) | section `23874:79920`: List `23973:51952` · Kanban `23895:15181` · Đơn đã kết thúc `23948:87473` · các bước `23898:28955`. Chi tiết đơn: section `23777:53056` | **List + Kanban xong** 05/11/2026 | Xem §3.2b (List), §3.2c (Kanban), §3.3 |
+| Đơn đã kết thúc | `/bookings/ended` | Order Done `23948:87473` | **Xong** 05/11/2026 | Xem §3.2b |
+| Đơn thuê xe — tuyến hoa hồng | `/bookings` (`/trips` chuyển tiếp) | dùng chung List/Kanban của gian hàng | **Xong** 06/11/2026 | Xem §2.2 — mặc định List, màn trống riêng |
+| Tổng quan doanh thu | `/finance` | section `23857:58927`: Theo xe `23813:30723` · Theo khách `23813:38107` | **Xong** 04/11/2026 | Xem §3.9 |
+| Quản lý ví | `/balance` (chỉ CHỦ, cả hai tuyến) · `?tab=activity` | section `23948:93534`: `23813:39558` (bảng tổng hợp giao dịch) · `23813:55449` (biến động số dư) · hộp thêm `23948:96973` · hộp đổi `23948:97512` · toast `23948:98047` | **Xong** 04/11/2026 | Xem §3.10 |
+| Lịch sử giao dịch (+ Công nợ) | `/receipts`, `/receipts?view=debts` (`/debts` chuyển hướng) | Thu chi `23857:58928` (danh sách `23813:58308` + 4 hộp) · Công nợ `23874:63125` (danh sách `23857:58932` + 2 hộp) | **Xong** 04/11/2026 | Xem §3.11 |
 | Khách hàng | `/customers`, `/customers/[id]` | section `23777:54974` (5 frame) | **Xong** 02/11/2026 | Xem §3.4 |
 | Danh sách xe | `/vehicles` (cả hai tuyến) | section `23672:25620`: ít xe `23655:38521` · lưới `23649:29724` · danh sách `23655:36959` | **Xong** 03/11/2026 (danh sách) | Xem §3.5 |
 | Chi tiết xe | `/vehicles/[id]` (cả hai tuyến, cả modal hồ sơ xe) | section `23672:25621` | **Xong** 03/11/2026 | Xem §3.6 |
 | Chỉnh sửa xe | `/vehicles/[id]/edit` (cả hai tuyến; `/vehicles/[id]/manage/<mục>` cũ chuyển hướng) | section `23731:37932` (13 frame) | **Xong** 03/11/2026 | Xem §3.6 |
 | Quản lý tài xế | `/drivers` (cả hai tuyến, cả phiên hỗ trợ) | `23737:45750` (3 frame) | **Xong** 04/11/2026 | Xem §3.7 |
 | Danh sách bảo dưỡng | `/maintenance` (cả phiên hỗ trợ) | `23733:41941` | **Xong** 04/11/2026 | Xem §3.8 |
-| Thông tin cửa hàng | `/shop` | chờ design | Chưa làm | Đã nhận section **Chi nhánh** (02/11). Giữ mọi section: hiển thị · chủ gian hàng · địa chỉ & pháp lý · khai thuế · chi nhánh · gói & hạn mức |
+| Chính sách thuê | `/shop/policies` (`?type=motorbike`; `/shop/payment-settings` chuyển hướng tới `#deposit-collection`) | `23874:63907` | **Xong** 06/11/2026 | Xem §3.12 (link "Gói & hạn mức" của P3 trỏ `/shop?section=plan` — đã đúng chỗ) |
+| Thông tin cửa hàng | `/shop` (+ thanh toán trong khung `/shop/payment/:id`, `/shop/payment/checkout/:id`) | section `23999:111044` (9 frame) | **Xong** 06/11/2026 | Xem §3.13 — kèm hoá đơn gộp (ADR 0083) và giới thiệu có định dạng |
 
 ### 3.1 Yêu cầu đặt xe — kiểm kê và quyết định (02/11/2026)
 
@@ -162,7 +207,7 @@ Code: `features/bookings/components/BookingsListView` (+ `BookingTable` → th�
 | 5 | Khách không đến (`no_show`) | 🟡 | Trong nhóm "Đã huỷ", nhãn "Khách không đến" — chốt 02/11 |
 | 6 | Tìm kiếm · chi nhánh · dịch vụ · sắp xếp · phân trang · nút Tạo đơn thuê · `?create=1` từ hồ sơ khách | ✅ | Giữ |
 | 7 | "Xử lý giao xe" (Chờ giao) · "Xem chi tiết" | ✅ | Mở trang chi tiết |
-| 8 | "Nhận xe" (Đang thuê) | ✅ | Mở trang chi tiết ở bước bàn giao trả xe — không dựng luồng thứ hai |
+| 8 | "Nhận xe" (Đang thuê) | ✅ | ~~Mở trang chi tiết~~ — **06/11: mở thẳng hộp "Xác nhận đã nhận lại xe"** (§3.2d), cùng hộp với nút trên trang chi tiết; vẫn một luồng |
 | 9 | Thanh tiến độ "Đã đi 60% · còn 1 giờ" · "Giao xe hôm nay · 17:00" · "Đã trả xe đúng hạn" · "Khách đã huỷ / Đã quá giờ giao xe" | 🆕 | Backend bổ sung giờ trả thực tế + lý do huỷ |
 | 10 | Ảnh xe, thông số, ảnh khách · Nhắn tin/Gọi/Zalo | 🆕 | Backend bổ sung; liên hệ theo dữ liệu server |
 | 11 | Tổng tiền + đã thu/còn nợ · tài xế đã gán · nơi giao + tiến độ chuẩn bị bàn giao | 🟡 | **Chỉ trong trang chi tiết** — chốt 02/11. Khi ráp trang chi tiết phải kiểm đủ ba thứ này ở đó |
@@ -172,10 +217,120 @@ Code: `features/bookings/components/BookingsListView` (+ `BookingTable` → th�
 
 Tự dựng thêm (design không vẽ): ngăn rỗng / lỗi tải từng nhóm / lỗi cả màn; đơn quá giờ trả (thanh đỏ,
 "Quá giờ trả xe …"); trả trễ ("Trả xe trễ hạn"); chờ giao chưa tới ngày ("Giao xe dd/mm · hh:mm");
-điện thoại (cột trái thành hàng cuộn ngang, nút cao 44px). "Xử lý giao xe"/"Nhận xe" mở trang chi tiết
-đơn; hộp "Sẵn sàng giao/nhận xe" CHỈ mở khi bấm nút xác nhận trên trang (03/11 — bỏ lời mời
-`?handover=` mở sẵn hộp; tham số đó trên link cũ giờ bị bỏ qua). Link cũ
+điện thoại (cột trái thành hàng cuộn ngang, nút cao 44px). "Xử lý giao xe" mở trang chi tiết
+đơn; hộp "Sẵn sàng giao xe" CHỈ mở khi bấm nút xác nhận trên trang (03/11 — bỏ lời mời
+`?handover=` mở sẵn hộp; tham số đó trên link cũ giờ bị bỏ qua). "Nhận xe" mở thẳng hộp "Xác nhận đã
+nhận lại xe" ngay trên thẻ (06/11, §3.2d). Link cũ
 `/bookings?status=…` được quy về ngăn tương ứng. `BookingTable` (bảng cũ) đã gỡ.
+
+### 3.2b "Đơn thuê xe" gộp + "Đơn đã kết thúc" — dạng LIST (05/11/2026)
+
+Design: section `23874:79920` (List `23973:51952`, Kanban `23895:15181`, Order Done `23948:87473`, các
+bước `23898:28955`: Phê duyệt `23898:25444` · Từ chối `23919:39682` · Huỷ khi chờ thanh toán
+`23930:44688` · toast duyệt xong `23930:42529` · Nhận xe `23941:65305` · Gia hạn `23941:62236`).
+
+Code: `features/bookings/components/BookingsListView` (màn gộp) · `BookingHistoryView` (đã kết thúc) ·
+khung thẻ chung `rental-card/RentalCard` dùng cho CẢ `BookingRequestCard` (nhóm 1–2) lẫn `BookingCard`
+(nhóm 3–4) · `constants/rental-stages.ts` (bốn nhóm) · `rentals-redirect.ts` (link cũ). Backend:
+`GET /booking-history` (module `booking-history`, SQL gộp hai bảng xếp theo lúc kết thúc),
+`POST /booking-requests/:id/remind-payment`, `GET /booking-requests?sort=urgent`, ba dòng tiền
+(`customerTotalAmount`, `holdPaidAmount`, `payAtPickupAmount`) lên DTO danh sách đơn, tìm đơn theo tên xe
+/ biển số. Chốt với người dùng 05/11: **làm list trước, kanban đợt sau**.
+
+| # | Hạng mục | Dấu | Quyết định |
+| --- | --- | --- | --- |
+| 1 | Cột trái: Tất cả · Cần xử lý · Chờ khách thanh toán · Chờ giao xe · Đang thuê + số đếm | ✅ | Hai nhóm đầu đọc YÊU CẦU, hai nhóm sau đọc ĐƠN; số đếm từ server của cả hai thực thể (một truy vấn một-dòng khi đang xem nhóm của thực thể kia). Thiếu quyền của thực thể nào thì nhóm đó vắng |
+| 2 | Ô "Tất cả": bốn nhóm, mỗi nhóm 3 chuyến + "Xem tất cả (n)" | ✅ | Nhóm yêu cầu xếp theo hạn đang chạy (`sort=urgent`), nhóm đơn theo thứ tự ca trực của server |
+| 3 | Dải tiêu đề nhóm "6.250.000 đ" (tổng tiền) | — | **Bỏ** (chốt 05/11): hai nhóm yêu cầu chưa lưu giá — phải báo giá từng yêu cầu khi đếm, và chỉ là tạm tính |
+| 4 | Nút "Đơn đã kết thúc (n)" + "Tạo đơn thuê" | ✅ | n = đơn hoàn thành + huỷ + yêu cầu không thành đơn, cùng bộ lọc; link mang theo tìm kiếm/chi nhánh/dịch vụ |
+| 5 | Nút chuyển List/Kanban · câu "Chỉ kéo được sang bước tiếp theo" | ✅ | Có từ đợt kanban — xem §3.2c |
+| 6 | Thẻ: MỘT khuôn cho bốn nhóm (xe · khách · ô lịch · ô tiền) | ✅ | Dải đầu nhóm yêu cầu KHÔNG có `#DH…` (yêu cầu chưa có mã — §3.1 dòng 3) mà là "Gửi lúc"; bấm vào thẻ (chỗ trống) mở chi tiết; mã / "Gửi lúc" là lối vào bằng bàn phím |
+| 7 | Ô tiền thẻ đơn | ✅ | Đơn qua chợ: tiền thuê · khách trả · đã giữ chỗ · trả chủ xe khi nhận xe. Đơn tự lập: tiền thuê · đã thu · còn phải thu |
+| 8 | "Giữ chỗ · Chưa thanh toán" chép ở cả bốn cột | ⚠️ | Đổi nhãn theo chặng (ADR 0044): dự kiến (chưa duyệt) · chờ khách trả · đã giữ chỗ |
+| 9 | Đồng hồ "59:39" ở nhóm Chờ giao xe | ⚠️ | Chặng này không có hạn chót ⇒ câu "Giao xe hôm nay · 17:00" / "Quá giờ giao xe" / "Giao xe 07/11 · 10:00" |
+| 10 | Nhóm Chờ khách thanh toán: đồng hồ "Chờ thanh toán" + Huỷ chuyến + **Nhắc khách** | 🆕→✅ | Nhắc khách = thông báo app/web (không SMS), khoảng lặng 15′ tính từ lời nhắc GẦN NHẤT khách nhận (lúc có QR, hai mốc worker, lượt bấm trước), chặn ngay trong câu UPDATE; audit `booking_request.remind_payment`. Trong khoảng lặng nút mờ kèm giờ mở lại. Phiên hỗ trợ không có nút |
+| 11 | Hộp Phê duyệt (2 cột + Lợi nhuận chuyến + ô ghi chú + đồng hồ) | ✅ | Lệch có chủ đích: cửa sổ thanh toán ĐỘNG do server tính; huỷ miễn phí tính từ lúc khách TRẢ ĐỦ (ADR 0072); thuế/hoa hồng đọc bảng cộng ví chung (`OwnerPayoutTable`); không có "Chỉnh sửa thông tin khách" (ADR 0060). Dài hạn vẫn đi hộp CHỐT LỊCH riêng |
+| 12 | Duyệt xong → toast (thay hộp kết quả cũ) | ✅ | Có QR: "khách có đến {hạn} để thanh toán"; không thu: đơn có ngay + "Xem chi tiết đơn". Bỏ "Nhắc khách" trong toast — khách vừa nhận QR, server sẽ từ chối (khoảng lặng) |
+| 13 | Hộp Từ chối: chọn lý do + ghi chú cho khách (bắt buộc) | ✅ | Backend giữ MỘT câu `reason`: chọn lý do là điền sẵn câu mẫu để sửa tiếp |
+| 14 | Hộp Huỷ khi chờ thanh toán: nhóm lý do + ghi chú (bắt buộc) + ô đỏ "trừ điểm uy tín" | ✅ | Kèm câu hoàn tiền đã chuyển; dấu "i" giải thích chỉ số |
+| 15 | "Xử lý giao xe" / "Nhận xe" | ✅ | "Xử lý giao xe" giữ đường 03/11: mở TRANG chi tiết (Chuẩn bị bàn giao + popup sẵn sàng) — ở CẢ List lẫn Kanban (chốt 05/11). **"Nhận xe" đổi 06/11**: mở thẳng hộp "Xác nhận đã nhận lại xe" (`23941:65305`) ở CẢ List lẫn Kanban — xem §3.2d (thay quyết định "không dựng" của 05/11) |
+| 16 | Gia hạn +7/+15 ngày (`23941:62236`) | ⚠️ | Giữ `ExtendBookingDialog` (chỉ +tháng — ADR 0077) |
+| 17 | Làm mới nền 30 giây khi tab đang mở | 🆕 | Thẻ tự sang "Chờ giao xe" khi tiền về; làm mới nền không làm mờ/khoá thẻ đang đọc |
+| 18 | Menu: hai mục → MỘT "Đơn thuê xe" | ✅ | Huy hiệu `RENTALS_WORK` = chờ duyệt + lượt giao/trả đến hạn (đỏ khi có cái gấp); tuyến hoa hồng dùng cùng huy hiệu từ 06/11 (§2.2). Tab mobile gian hàng: Tổng quan · Lịch xe · Đơn thuê · **Xe** |
+| 19 | "Đơn đã kết thúc": Tất cả · Hoàn thành · Đã huỷ · **Không thành đơn** | ✅ | Chốt 05/11: thêm ngăn riêng cho yêu cầu không thành đơn; "Tất cả" gộp hai bảng ở SERVER. Kết cục do server suy (khách huỷ / bạn huỷ / khách không đến / bạn từ chối / quá hạn phản hồi / khách rút / hết hạn thanh toán / xe đã có khách khác nhận / bạn huỷ khi chờ thanh toán). Ô "Trạng thái" mời kết cục của ngăn đang mở. Dòng đơn mở trang chi tiết; dòng yêu cầu mở popup chi tiết yêu cầu (chỉ đọc) |
+| 20 | "Xuất Excel" | — | **Ẩn** (chốt 05/11) — chưa làm |
+
+Tự dựng thêm: rỗng từng nhóm / rỗng cả màn / lỗi từng nhóm; khổ hẹp (dải đầu: đồng hồ một dòng, nút chia đều cao 44);
+không quyền xem cả hai thực thể ⇒ câu riêng. Link cũ: `/booking-requests?status=…` → nhóm; `?status=closed` →
+"Không thành đơn"; `/bookings?preset=completed|cancelled`, `?status=completed|cancelled|no_show` → "Đơn đã kết thúc".
+
+### 3.2c "Đơn thuê xe" — dạng KANBAN (05/11/2026)
+
+Design: Kanban `23895:15181` · các bước `23898:28955` (Step 1 duyệt → toast, Step 3 toast "Ghi nhận thanh
+toán", Step 4 nhận xe / gia hạn). Code: `features/bookings/components/board/RentalsBoard` (DnD `@dnd-kit/core`)
+· `board/RentalsViewToggle` · luật thả `features/bookings/rentals-board-rules.ts` · dạng xem
+`hooks/use-rentals-view.ts` + `lib/rentals-view-memory.ts` · toast tiền về `hooks/use-payment-arrival-toast.tsx`.
+Thẻ: CÙNG `BookingRequestCard` / `BookingCard` (cùng hành động, quyền, hộp thoại với List) nhưng khung RIÊNG
+`rental-card/RentalBoardCard` dựng theo số đo "_Kanban Item" (`23895:15196`, `23895:15208`): dải đầu ⋮⋮ · mã ·
+viên dịch vụ phải; xe ảnh 76×48 + biển số và thông số một dòng; nét đứt; khách ảnh 32 + ba nút liên hệ; ô lịch
+nền xám (nhận · trả · hình thức nhận, dài hạn thêm gói); MỘT hàng tiền (Khách trả · Trả khi nhận xe · Giữ chỗ
+với viên Dự kiến / Chưa thanh toán / Đã thanh toán theo chặng ngay dưới số — đơn tự lập: Khách trả · Đã thu ·
+Còn phải thu; dòng 12); thanh tiến độ 8px; chân thẻ đồng hồ nghiêng trái, nút phải. Sửa 05/11 sau phản hồi
+"xấu hơn design": bản đầu dùng lại khung List co hẹp. Thẻ Kanban KHÔNG mang (vẫn ở List + chi tiết): "Xem lịch
+xe", nhãn "Khách hàng", dòng thời lượng thuê, mốc "Đã xử lý lúc", dải thông tin thêm. Cái cần biết khi quyết
+định vào ⓘ: cạnh tên khách (rủi ro — ⓘ đỏ, khách quen, ghi chú, SĐT tài khoản/email, chưa có hồ sơ) và cạnh
+"Hình thức nhận xe" (địa chỉ giao + câu phí giao, lộ trình/điểm đón/điểm đến có tài xế).
+
+| # | Hạng mục | Dấu | Quyết định |
+| --- | --- | --- | --- |
+| 1 | Bốn cột Cần xử lý · Chờ khách thanh toán · Chờ giao xe · Đang thuê | ✅ | Mỗi cột một truy vấn CUỘN VÔ HẠN (`useInfiniteQuery`, 10 thẻ/trang, server-side), cùng bộ lọc, thứ tự tự nhiên của server; gộp trang bỏ trùng. Thiếu quyền của thực thể nào thì cột đó vắng. Không có cột trạng thái trái, không có ô sắp xếp |
+| 2 | Tổng tiền đầu cột | — | Bỏ (như §3.2b dòng 3) |
+| 3 | Kéo thả thật | ✅ | Chốt 05/11: **1→2** mở hộp Phê duyệt; **3→4** mở trang chi tiết để giao xe (y nút "Xử lý giao xe"); **2→3 KHOÁ** (đơn chỉ ra đời khi đối soát đủ tiền — ADR 0044), kéo qua thì cột hiện câu giải thích; nhảy cóc / đi lùi không làm gì. Thả KHÔNG đổi trạng thái — thẻ ở nguyên cột cho tới khi server xác nhận, bấm Huỷ là thẻ vẫn đó. Không sắp xếp tay trong cột |
+| 4 | Tay nắm ⋮⋮ | ✅ | Chỉ ở thẻ có bước kế mà người xem làm được: yêu cầu còn hạn phản hồi + quyền duyệt; thẻ chờ thanh toán + quyền duyệt (để thấy cột kế bị khoá); thẻ chờ giao + quyền bàn giao, ngoài phiên hỗ trợ. Thẻ Đang thuê là cột cuối — không có tay nắm (nhận xe bằng nút) |
+| 5 | Bàn phím + trình đọc màn hình | 🆕 | Space/Enter nhấc · ←/→ nhảy thẳng sang cột kế · Space/Enter thả · Esc huỷ; lời thông báo tiếng Việt/Anh |
+| 6 | Câu "Kéo thả thẻ để cập nhật trạng thái" ở phụ đề | ⚠️ | Giữ phụ đề chung (kéo chỉ MỞ hộp xác nhận); dòng "⋮⋮ Chỉ kéo được sang bước tiếp theo" cạnh nút chuyển dạng xem, chỉ ở Kanban và chỉ khi có thẻ kéo được |
+| 7 | Nút chuyển Kanban / List | ✅ | Chốt 05/11: `?view=` thắng; không có thì lựa chọn GẦN NHẤT của trình duyệt (`localStorage`); chưa chọn bao giờ ⇒ Kanban. Điện thoại (≤640px) LUÔN List, không có nút; tablet cuộn ngang các cột |
+| 8 | Toast "Ghi nhận thanh toán" (Step 3) | 🆕→✅ | Chốt 05/11, cho CẢ List lẫn Kanban, chỉ ở trình duyệt: một truy vấn nền theo dõi tối đa 100 yêu cầu `awaiting_hold`; yêu cầu rời nhóm ⇒ hỏi server, chỉ `converted_to_booking` mới có toast "Khách đã thanh toán cho đơn hàng #…" + "Xem đơn hàng" (cần `bookings.view`); lần tải đầu chỉ ghi mốc; hết hạn/huỷ thì im |
+| 9 | Đồng hồ "59:39" / "1d 12:09" ở chân thẻ | ⚠️ | Cột 1–2: đồng hồ hạn của chặng, nhãn chỉ cho trình đọc màn hình. Cột 3–4: câu tình trạng như List (không có hạn chót ở chặng chờ giao) |
+| 10 | Hộp Nhận xe trong Kanban (`23941:65305`) · Gia hạn +7/+15 ngày | ✅ / ⚠️ | Hộp Nhận xe đã dựng 06/11 (§3.2d). Gia hạn: như §3.2b dòng 16 |
+| 11 | Chuyến kẹt ở một cột (rà luồng 05/11, ADR 0081) | 🟡→✅ | Chốt 05/11, áp cho CẢ List lẫn Kanban — design không vẽ, dựng theo ngôn ngữ thẻ: (a) "Cần xử lý" / "Chờ khách thanh toán" không còn thẻ đã chết theo đồng hồ (server lọc theo mốc, huy hiệu menu đếm cùng điều kiện); (b) thẻ "Chờ giao xe" đã qua ân hạn mà chưa giao có nút **"Khách không đến"** cạnh "Xử lý giao xe" (mở cùng hộp với trang chi tiết); quá cả giờ trả mà chưa xác nhận giao thì câu đỏ "Quá cả giờ trả xe (…) — chưa xác nhận giao xe"; (c) thẻ "Đang thuê" khách đã báo trả xe nói "Khách báo đã trả xe · … — tự hoàn thành …" thay cho "Quá giờ trả"; trang chi tiết có khối cảnh báo + nút **"Khách chưa trả xe"**; (d) hộp Phê duyệt (theo ngày và dài hạn) cảnh báo "Xe chưa về từ chuyến #… — đã quá giờ trả …" kèm link chuyến đang trễ. Gia hạn trên thẻ quá giờ trả: giữ như cũ — chỉ đơn dài hạn qua chợ (ADR 0077), đơn theo ngày không có phụ lục gia hạn |
+| 12 | Lưới tiền ba cột + hàng "Giữ chỗ" riêng (design) | ⚠️ | Chốt 05/11 theo phản hồi "text tràn": bỏ ô **Tiền thuê** trên thẻ Kanban (còn ở thẻ List, popup và trang chi tiết), gộp Giữ chỗ + viên trạng thái lên CÙNG hàng với Khách trả · Trả khi nhận xe; ô rộng theo nội dung, thẻ quá hẹp thì ô cuối xuống hàng. Chân thẻ: câu tình trạng không vừa cùng hàng với nút (câu dài, hoặc hai nút "Khách không đến" + "Xử lý giao xe") thì cụm nút xuống hàng dưới, canh phải — không bóp câu thành cột chữ |
+
+Tự dựng thêm: cột trống (câu của chặng) · lỗi từng cột (thử lại) · tải thêm / lỗi tải thêm · lỗi cả bảng · lọc
+không ra gì ⇒ một câu chung + "Xoá bộ lọc" · làm mới nền 30 giây TẮT trong lúc đang cầm thẻ · bóng thẻ gọn khi
+kéo · cột nhận được viền gold + câu nổi "Thả vào đây để…", cột khoá viền xám, cột khác mờ.
+
+### 3.2d Hộp "Xác nhận đã nhận lại xe" (06/11/2026)
+
+Design: thu gọn `23941:64008` · mở rộng `23941:65305` (rộng 556 — **nới lên 720** (`size="lg"`)
+theo phản hồi 06/11 "to hơn cho thoáng, đỡ dài"). Code:
+`features/handovers/components/ConfirmReturnDialog` — mở từ nút "Nhận xe" ở thẻ (List + Kanban, host ở
+`BookingsListView`) và từ nút "Xác nhận đã nhận xe" ở trang chi tiết (`BookingDetailActions`). Backend:
+`POST /bookings/:id/settlement/return-preview` (xem trước, không ghi) + `ConfirmHandoverDto.surcharges` /
+`collectPayment` (chỉ chiều trả, cần `payments.record`). `ConfirmHandoverDialog` chỉ còn chiều giao.
+
+Chốt với người dùng 06/11: **bấm Xác nhận là coi như đã thu tiền** — ô "Đã thu tiền" BẬT SẴN, bỏ tick là
+chưa thu; chỉ áp cho hộp NHẬN lại xe (giao xe giữ như cũ); có ô chọn hình thức thu; phụ phí lưu cùng lượt
+xác nhận; hộp mở thẳng từ thẻ.
+
+| # | Hạng mục | Dấu | Quyết định |
+| --- | --- | --- | --- |
+| 1 | Tiêu đề "Xác nhận đã nhận lại xe #mã" + phụ đề · thẻ xe (ảnh, tên, biển số, "Hẹn trả …", viên "Đúng giờ") | ✅ | Viên đổi "Trễ {thời lượng}" (đỏ) khi giờ nhận thực tế sau giờ hẹn |
+| 2 | "Thời gian nhận thực tế" + câu "Đúng giờ" | ✅ | **Chốt lại 06/11 (người dùng):** mặc định = lúc khách báo "Đã trả xe" (ADR 0081) nếu có, không thì **giờ hẹn trả trên đơn** (như chiều giao); giờ hẹn còn ở tương lai ⇒ bây giờ. Nút chữ cạnh nhãn **bật qua lại**: đang ở giờ hẹn ⇒ **"Hiện tại"** (về bây giờ); đã lệch giờ hẹn ⇒ **"Đúng giờ"** (về lại giờ hẹn — chỉ khi giờ hẹn đã qua) — thay bản đầu (mặc định bây giờ). Hệ quả đã biết: xe về trễ mà người nhận không bấm "Hiện tại" / không sửa giờ thì hộp báo "Đúng giờ" và không gợi ý phí quá giờ. Không chọn được ngày tương lai; trễ ⇒ viên + câu đỏ "Trễ … so với giờ hẹn" |
+| 3 | "Chỉ số Odo (km)" + "Lúc giao: … Đã chạy …" | ✅ | Tuỳ chọn; nhỏ hơn số lúc giao ⇒ câu đỏ ngay dưới ô (server vẫn chặn `HANDOVER_ODOMETER_BELOW_PICKUP`); không có số lúc giao ⇒ KM hệ thống / "không bắt buộc". **Thêm** (design không vẽ): KM thấp bất thường ⇒ cảnh báo + "Số Odo đúng, vẫn xác nhận" (`acknowledgeSuspicious`) — hộp cũ không có lối này |
+| 4 | Vùng "Tình trạng, ảnh & ghi chú" · "Không bắt buộc" · "x/N ảnh" — thu gọn sẵn | ✅ | Tự mở khi server có gợi ý quá giờ / vượt km hoặc đã có dòng phụ phí; người dùng bấm thì lựa chọn của họ thắng. N = bộ góc của loại xe (ô tô 5, xe máy 3). **06/11:** người dùng tự đổi giờ nhận (ô giờ, nút Hiện tại / Đúng giờ) thì vùng GIỮ trạng thái đang thấy — không tự bung vì gợi ý quá giờ vừa hiện |
+| 5 | "Tình trạng xe": hai ô chọn | ✅ | Bấm lại ô đang chọn là bỏ chọn (tuỳ chọn) |
+| 6 | "Ảnh hiện trạng & Odo" — lưới 3 cột | ✅ | Hộp rộng 720 ⇒ mọi góc trên MỘT hàng (`HandoverPhotoGrid variant="row"`, như trang chi tiết) thay cho 3 cột hai hàng — tải ngay vào biên bản trả (presign → R2), cùng luật ảnh với trang; cần `handovers.manage`, thiếu thì chỉ xem |
+| 7 | Ghi chú | 🟡→✅ | Design không vẽ ô (tiêu đề có "ghi chú") — ô ghi chú ở cuối vùng, như hộp cũ |
+| 8 | "Phụ phí phát sinh": dòng Loại + Số tiền + ✕, "Thêm phụ phí" | ✅ | Ghi CÙNG transaction với biên bản (`SettlementService.addSurchargesWithinTx`); lý do = tên loại (hoặc câu công thức khi lấy từ gợi ý) — sửa câu chi tiết ở thẻ "Phát sinh". Danh mục theo luật cũ (ADR 0075: đơn có tài không có quá giờ / vượt km; một-khoản không trùng). Khoản đã ghi trước đó hiện chỉ-đọc. Tối đa `RETURN_SURCHARGE_DRAFT_MAX` = 10 dòng. Dòng thiếu số tiền chặn gửi. Cần `payments.record` — thiếu thì cả khối ẩn |
+| 9 | Gợi ý quá giờ / vượt km | 🆕→✅ | Design không vẽ — server tính theo giờ và Odo ĐANG nhập (`return-preview`), một dòng gợi ý + "Thêm" |
+| 10 | Khối tiền: cọc đã nhận · phụ phí phát sinh · đề xuất hoàn cọc | ✅ | Số của SERVER (`return-preview`, ADR 0007) — các khoản nháp cộng vào như đã ghi. Câu "chủ xe hoàn cọc ngoài hệ thống, đánh dấu ở thẻ Phát sinh" (hộp cũ là Alert) chuyển vào ⓘ cạnh "Đề xuất hoàn cọc". Đánh dấu ĐÃ hoàn cọc vẫn ở thẻ Phát sinh |
+| 11 | Ô "Đã thu {số} của khách" + hình thức thu | 🆕→✅ | Số = `collectableAmount` = công nợ (gồm phụ phí vượt cọc) trừ `D` đã ở XePrime (`counterDueAmount`, cùng phép với dòng "Thu tiền thuê" của Chuẩn bị bàn giao). Bật sẵn; nộp đúng số đang hiện, server tính lại trong transaction (khoá dòng đơn) — lệch ⇒ 409 `HANDOVER_COLLECT_AMOUNT_CHANGED` kèm số mới, không ghi gì. Ghi qua `BookingPaymentWriter` (lõi chung với hộp Thu tiền), `paidAt` = giờ nhận thực tế, audit `via: return_confirm`. Ẩn khi không còn gì phải thu, thiếu `payments.record`, hoặc gói không có Thu chi (tuyến hoa hồng). Bỏ tick ⇒ câu "đơn hoàn thành với khoản còn nợ …, thu sau bằng nút Thu tiền" |
+| 12 | Chân hộp "Hủy" · "Xác nhận đã nhận xe" | ✅ | Nút xác nhận chờ khi số tiền đang được tính lại (ô thu tiền không nộp số cũ) |
+
+Tự dựng thêm: đang tải (khung xương) · lỗi tải ngữ cảnh (thử lại) · lỗi tính quyết toán (cảnh báo + thử lại,
+nút chờ nếu có ô thu tiền) · ảnh xe trống · điện thoại (một cột, dòng phụ phí xuống hàng, nút chia đều).
+Cảnh báo "Có thông tin chưa bổ sung" của trang chi tiết không còn chạy ở chiều nhận — hộp đã đếm ảnh.
 
 ### 3.3 Chi tiết đơn thuê — kiểm kê và quyết định (02/11/2026)
 
@@ -188,7 +343,7 @@ ngôn ngữ design.**
 | # | Hạng mục | Dấu | Quyết định |
 | --- | --- | --- | --- |
 | 1 | Header: mã + chip trạng thái + "Tạo lúc"; "Xem hợp đồng" · "Lịch sử thu tiền" · "Thu tiền" | ✅ | Chưa có hợp đồng ⇒ nút "Tạo hợp đồng" (đường cũ). "Thu tiền" giữ cổng gói (ADR 0028 7A) |
-| 2 | Stepper Đã xác nhận → Chờ giao → Đang thuê → Hoàn thành | 🆕 | Đơn huỷ / khách không đến: bước cuối đỏ "Đã huỷ"/"Khách không đến" + banner lý do (tự dựng) |
+| 2 | Stepper Đã xác nhận → Chờ giao → Đang thuê → Hoàn thành | 🆕 | **05/11 — theo "Details - Failed" `23948:99504`:** đơn huỷ / khách không đến KHÔNG có thanh bước; viên tiêu đề nói ai huỷ ("Khách hàng đã huỷ" / "Bạn đã huỷ"); banner "Đơn hàng đã huỷ. Lý do: {nhóm lý do — câu gửi khách}" (API thêm `cancellationReasonCategory`, `cancellationReason`) |
 | 3 | "Chuẩn bị bàn giao" x/N | 🆕 | SERVER suy từ dữ liệu có sẵn, không bảng mới: giấy tờ (CCCD/GPLX đã đối chiếu, hoặc GPLX tài khoản đã xác thực) · thu tiền thuê (còn phải thu = 0) · cọc (đã ghi nhận) · hợp đồng (đã tạo) · ảnh (biên bản giao nháp đủ 5 ảnh) · tài xế (đơn có tài, đã nhận). Tuyến hoa hồng ẩn 2 dòng tiền. Chỉ hiện trước khi giao xe. **03/11 — tự động + tay:** giấy tờ · hợp đồng · ảnh · tài xế đánh dấu tay được bằng vòng tròn của dòng (bảng `booking_handover_checks`, `PUT /bookings/:id/handover-prep`, quyền `handovers.manage`, audit `booking.prep_check/uncheck`, ghi "Đánh dấu tay · ai · lúc nào"); hai dòng TIỀN không đánh dấu tay — "Xác nhận đã thu" ghi phiếu thu thật (dòng cọc có nút thu cọc riêng). Sửa suy tự động: giấy tờ phải còn hạn tới ngày cuối chuyến; cọc xong khi thu ĐỦ; ảnh chỉ đếm 5 ô chuẩn; tiền thuê = công nợ − `D` (phần chủ xe đã có trong tiền giữ chỗ online) |
 | 4 | "Chuyến đi & thời gian thuê" + tiến độ + câu tình trạng | ✅ | Dùng `rentalProgress` như thẻ danh sách |
 | 5 | "Phát sinh": chi phí phát sinh + "Ghi nhận phát sinh" · cọc theo đơn · cọc đã nhận + "Xác nhận đã thu cọc" | ✅ | = `SettlementCard` dựng lại; danh sách phụ phí, KM vượt, đề xuất/đánh dấu hoàn cọc, sửa hoàn cọc ở cùng thẻ |
@@ -207,9 +362,11 @@ ngôn ngữ design.**
 | 13 | Stepper có mốc giờ dưới mỗi bước | 🆕 | API thêm `confirmedAt` (lượt nhận yêu cầu / lúc lập đơn) + `holdPaidAt`. ⚠️ Design ghi "Đã nhận cọc lúc…" ⇒ dựng "Đã nhận tiền giữ chỗ lúc…" (ADR 0044 điều 9: khoản QR không phải cọc). Bước 3/4: "Cần giao/Đã giao lúc", "Khách trả/Đã nhận lại lúc". Stepper vào cột chính |
 | 14 | Chuẩn bị bàn giao 2 cột; Chuyến đi \| Phát sinh cạnh nhau; ảnh bàn giao 1 hàng có ảnh thu nhỏ, tab ở đầu khối | ✅ | `SettlementCard` gọn thành "Phát sinh" (link "Ghi nhận phát sinh" · "Xác nhận đã thu cọc"), giữ danh sách phát sinh, vượt km, hoàn cọc khi có dữ liệu; `HandoverPhotoGrid variant="row"` + URL ký tự làm mới; nhãn góc theo design (Mặt trước/Mặt sau/Bên trái/Bên phải) |
 | 15 | Bấm "Xác nhận đã giao/nhận xe" khi còn thiếu → toast "Có thông tin chưa bổ sung" + "Vẫn tiếp tục", nháy viền đỏ chỗ thiếu | 🆕 | Một nguồn đếm thiếu `handover-readiness.ts` (checklist + góc ảnh trống). Giao: việc chưa xong + góc ảnh trước giao; nhận: góc ảnh sau nhận. Không chặn — "Vẫn tiếp tục" mở popup. Popup chỉ mở qua nút xác nhận, vào trang (kể cả từ thẻ danh sách) không mở sẵn |
-| 16 | Popup "Sẵn sàng giao xe" thay hộp xác nhận cũ | 🟡 | Chốt 03/11: khung design + ô **Odo** (tuỳ chọn) + vùng "Thêm thông tin" thu gọn (giờ thực tế, tình trạng, ghi chú, link phát sinh khi nhận). Ảnh bỏ khỏi popup (đã chụp trên trang). Nhận xe dùng cùng khuôn "Sẵn sàng nhận lại xe" |
+| 16 | Popup "Sẵn sàng giao xe" thay hộp xác nhận cũ | 🟡 | Chốt 03/11: khung design + ô **Odo** (tuỳ chọn) + vùng "Thêm thông tin" thu gọn (giờ thực tế, tình trạng, ghi chú, link phát sinh khi nhận). Ảnh bỏ khỏi popup (đã chụp trên trang). ~~Nhận xe dùng cùng khuôn "Sẵn sàng nhận lại xe"~~ — **06/11: nhận xe có hộp riêng** "Xác nhận đã nhận lại xe" (§3.2d); popup "Sẵn sàng" chỉ còn cho giao xe, cảnh báo "còn thiếu" của trang cũng chỉ còn ở chiều giao |
 | 17 | "Lợi nhuận chuyến" thêm dòng "XePrime hoàn về ví (C)" | ⚠️ | Chốt 03/11: GIỮ bảng hiện tại (A − B = số cộng ví, ADR 0068) — số mẫu của design tự mâu thuẫn; báo designer |
 | 18 | Nhãn "Khách quen" trên thẻ khách | 🆕 | API `customerCompletedRentals`; cùng ngưỡng `TENANT_CUSTOMER_RETURNING_MIN_RENTALS` của sổ khách |
+| 19 | Hộp "Hủy đơn" / "Ghi nhận khách không đến" theo khuôn "Huỷ yêu cầu thuê xe" (`23930:44688`) | 🟡⚠️ | Chốt 06/11: cùng bộ style `DecisionReasonDialog.module.css` với hai hộp của chặng yêu cầu: hậu quả lên phụ đề, nhãn trên ô, hai nút "Quay lại" · nút đỏ. Viên tóm tắt **giữ biển số + dòng khung giờ** (design chỉ có "khách • xe"). Ô 2 "**Ghi chú cho khách**": huỷ đơn QUA CHỢ thì thông báo huỷ gửi khách mang nguyên câu này (API: `transitionWithinTx`, trước đây chỉ vào audit); đơn tự lập là "Ghi chú nội bộ", no-show là "Lý do". ⚠️ Design đánh `*` cả hai ô — chốt 06/11: **ghi chú chỉ bắt buộc khi chọn "Lý do khác"** (no-show vẫn bắt buộc vì chỉ có mỗi ô đó), áp cả hộp huỷ yêu cầu; API `TransitionBookingDto.reason` theo đúng luật đó, không ghi chú thì khách nhận câu chung. Bỏ mọi dòng gợi ý dưới ô chữ và dưới ô nhóm lý do (nhãn đã nói ai đọc; giải thích chỉ số nằm ở dấu ⓘ của ô đỏ). Ô đỏ "trừ điểm uy tín" + hoàn giữ chỗ chỉ hiện với đơn qua chợ (đơn tự lập không vào mẫu số chỉ số — ADR 0045 điều 3). Giữ cảnh báo "đã thu … không tự hoàn". Viên tóm tắt không gói hàng: tên xe dài xuống dòng trong cột của nó, dấu chấm không bị bỏ lại cuối dòng |
+| 20 | Đơn huỷ / khách không đến: "Thu tiền" (header) · "Ghi nhận phát sinh" · "Xác nhận đã thu cọc" · ô "Còn phải thu của khách" | 🟡 | Chốt 09/11: chuyến không diễn ra (đơn đang chạy không huỷ được — ADR 0045 điều 1) nên **ẩn hẳn** cả bốn; "Lịch sử thu tiền" và hoàn lại phần đã thu giữ nguyên. Server chặn ở writer duy nhất `BookingPaymentWriter` + thêm/sửa phát sinh (`assertBookingMoneyOpenWithinTx`, khoá dòng đơn `FOR UPDATE`, 409 `BOOKING_MONEY_CLOSED`); gỡ phát sinh và ghi hoàn cọc vẫn mở. Cọc lỡ thu trên đơn huỷ chuyển "Chờ hoàn cọc" (trước đó kẹt "Đã nhận cọc"). Đơn hoàn tất KHÔNG đổi: thu nốt, phát sinh sau trả xe, ghi bù cọc vẫn làm được. Cùng đợt: sổ công nợ (`SQL_DEBT_SCOPE`) loại cả đơn khách không đến (trước chỉ loại đơn huỷ); số chuyến theo xe/khách và cọc đang cầm giữ phạm vi cũ (`SQL_BOOKING_SCOPE`) |
 
 ### 3.4 Khách hàng — kiểm kê và quyết định (02/11/2026)
 
@@ -226,6 +383,7 @@ Design: Users List `23777:53057` · Details Overview `23777:54975` · History `2
 | 6 | Lịch sử thuê: tìm · trạng thái · thời gian + xem nhanh đơn dưới bảng | 🆕 | Bộ lọc ở server |
 | 7 | Thu chi: biểu đồ doanh thu Tuần/Tháng/Quý/Năm · khoản phải thu · bảng chi tiết phải thu · "Xem sổ Thu/Chi" | 🆕 | API tổng hợp mới; danh sách phiếu thu cũ giữ dưới |
 | 8 | Giấy tờ: thẻ theo loại (CCCD, GPLX, Hộ chiếu, Khác) · Chủ thẻ · Số · Thời hạn · Trạng thái · Xoá / Xác nhận đối chiếu / Thay / Tải lên | 🆕 | Migration thêm "chủ thẻ" + "số giấy tờ". 03/11: tải lên là MỘT cú bấm — bấm/kéo ảnh vào ô ảnh của thẻ (AntD `Upload.Dragger`) là tải ngay đúng loại, không hộp nhập thông tin; chủ thẻ/số/hạn điền sau qua "Sửa thông tin"; "Thay" mang theo chủ thẻ + số, bỏ thời hạn |
+| 9 | Nền/khung (rà lại 04/11) | ✅ | Bảng danh sách trong khung trắng viền `--xp-color-border` bo 12, hàng trắng không zebra (`DataTable framed striped={false}`), phân trang ngoài khung. Chi tiết: dải số liệu không viền + `--xp-elevation-ambient`; thẻ Tổng quan bo 16 + bóng tản; thẻ hồ sơ viền `--xp-color-border`; khối lịch nhận/trả, ô soạn và từng ghi chú nền `--xp-color-bg` (gray-50) bo 10, không viền |
 
 ### 3.5 Danh sách xe — kiểm kê và quyết định (03/11/2026)
 
@@ -433,6 +591,216 @@ mốc / chưa đặt chu kỳ; rỗng / không kết quả / lỗi / không quy�
 "Hiển thị x-y của N xe" + phân trang; 1280–1440 vẫn một hàng (thu khoảng cách cột, ảnh 112×64),
 ≤1180 xếp ba tầng, điện thoại một cột. Huy hiệu menu "Bảo dưỡng" vẫn **chưa làm** (§2.3).
 
+### 3.9 Tổng quan doanh thu — kiểm kê và quyết định (04/11/2026)
+
+Code: `app/(manage)/manage/finance/page.tsx` + `features/finance/components/*` (sửa tại chỗ). Thẻ số
+dùng biến thể `tile` mới của `MoneyStat` (`components/data-display`) — sổ Thu-Chi sẽ dùng lại khi
+ráp. Biểu đồ vẫn là `RevenueTrendChart` (recharts đã có, không thêm thư viện).
+
+| # | Hạng mục | Dấu | Quyết định |
+| --- | --- | --- | --- |
+| 1 | Tiêu đề + dòng phụ; sáu kỳ xem nhanh (Hôm nay … Năm nay); chi nhánh; khoảng ngày | ✅ | Theo design. Kỳ và chi nhánh vẫn trên URL |
+| 2 | Sáu thẻ một hàng: Doanh thu · Chi phí · Lợi nhuận · Dòng tiền ròng (gồm cọc) · Cọc đang giữ · Khách còn nợ | ✅ | Thay ba khối "Kết quả kinh doanh / Dòng tiền quỹ / Tại thời điểm này". Tiền vào/ra gộp thành dòng phụ "Vào … · Ra …" của Dòng tiền ròng. Số phiếu dưới Doanh thu/Chi phí cộng từ cơ cấu theo danh mục (cùng bộ lọc đã loại cọc); chưa về thì chỉ "Đã trừ cọc" |
+| 3 | Thẻ bấm được ra sổ đã lọc (Doanh thu, Chi phí, Tiền vào/ra) | 🟡 | **Giữ liên kết + mũi tên** (chốt 04/11): Doanh thu, Chi phí, Dòng tiền ròng (mọi phiếu đã duyệt trong kỳ), Cọc đang giữ, Khách còn nợ. Lợi nhuận không bấm (không có tập phiếu riêng) |
+| 4 | Ba dòng ghi chú dưới các khối cũ | 🟡 | Vào dấu ⓘ cạnh nhãn (luật "note thừa bỏ, note cần vào icon"): "lãi tiền mặt theo sổ, chưa trừ khấu hao…" ở Doanh thu, "gồm cọc thu và hoàn" ở Dòng tiền ròng; "không phụ thuộc kỳ" thành chữ "· hiện tại" trên thẻ Cọc. Thẻ vừa bấm được vừa có ⓘ dùng liên kết phủ thẻ (nút không lồng trong `<a>`) |
+| 5 | Biểu đồ "Dòng tiền & Lợi nhuận theo thời gian", Ngày/Tuần/Tháng, trục "Đơn vị: triệu đồng" | ✅ | Theo design: cột gradient, trục Y ghi số triệu. Cột tuần ghi khoảng ngày (cắt theo hai đầu kỳ). Màu vai đổi theo design ở `@xeprime/ui`: doanh thu xanh dương · chi phí đỏ · lợi nhuận xanh lá — áp chung mọi biểu đồ tài chính (dashboard, khối tiền hồ sơ xe/khách, app native) |
+| 6 | Chú giải màu biểu đồ | 🟡 | **Giữ, gọn** (chốt 04/11): ba chấm màu cạnh nút độ mịn (`RevenueTrendLegend`) |
+| 7 | Cơ cấu doanh thu / Cơ cấu chi phí: "Tên · n phiếu  x%" + số tiền + thanh 8px | ✅ | Theo design (thu xanh dương, chi tím như design). Mỗi dòng vẫn là liên kết ra sổ đã lọc đúng danh mục (giữ, chỉ lộ khi rê chuột) |
+| 8 | "Hiệu suất kinh doanh": MỘT thẻ, tab Theo xe / Theo khách, "Sắp xếp: …", STT, phân trang | ✅ | Tab trên URL (`?perf=customers`); sắp xếp/trang mỗi tab giữ tham số riêng; chỉ tab đang mở gọi API. Ô sắp xếp đổi theo tab (khách: Doanh thu · Nhiều chuyến — không có "Lợi nhuận" vì bảng khách không có chi phí). **Sửa lỗi cũ**: ô số dòng không có tác dụng (`limit` bị ghim cứng) — nay đọc `limit`/`customerLimit` từ URL |
+| 9 | Ảnh xe (tab Theo xe); ảnh + SĐT khách (tab Theo khách) | 🆕 | **Làm** (chốt 04/11): `GET /finance/by-vehicle` trả `mainImageUrl`; `GET /finance/by-customer` trả `phone` + `avatarUrl` **chỉ khi người xem có `customer.view`** (chỉ có `finance.view` thì `null`, dòng phụ vắng hẳn). Route chỉ mở cho tuyến gói nên không vướng ADR 0056. Khách không có ảnh ⇒ chữ cái đầu |
+| 10 | Chú thích "Chi phí chung chưa gắn xe" / "Chưa gắn khách nào" | 🟡 | **Giữ** (chốt 04/11): một dòng chữ xám dưới bảng, chỉ khi khác 0 |
+| 11 | Bấm dòng xe → hồ sơ xe; tên khách → hồ sơ khách (khi có `customer.view`); thẻ mobile của hai bảng | 🟡 | Giữ nguyên (không đổi hình) |
+| 12 | Thuế đã khấu trừ: chọn tháng · dải sáu số · bảng (STT, Mã chuyến, …) · ô giải thích xanh ở cuối | ✅ | Theo design; ô giải thích chuyển từ đầu xuống cuối thẻ, luôn hiện. Thẻ này dùng chung với trang Ví (`PartnerBalanceView`) nên đổi hình ở cả hai. **Sửa lỗi cũ**: các cột viết `render: (row)` làm thẻ mobile của `DataTable` sập (`undefined.bookingCode`) trên điện thoại |
+
+Tự dựng: đang tải (khung chờ trong từng thẻ/khối), lỗi (cảnh báo + thử lại), kỳ không có số liệu
+(trạng thái rỗng trong biểu đồ/cơ cấu/bảng), thiếu `finance.view` (thay toàn màn), ≤1280px ba thẻ
+một hàng, điện thoại hai thẻ một hàng (dòng phụ được xuống dòng), bảng thành thẻ.
+
+Còn lệch design có chủ ý: phân trang là `DataTable` chuẩn (AntD) như màn Khách hàng; ảnh xe vuông
+(`EntityIdentity` của xe), design vẽ tròn.
+
+Khoá mobile: app native dùng chung namespace `Finance.overview` — khoá cũ (`cards.business.*`,
+`chart.description`) giữ nguyên, khoá mới của web nằm ở `overview.tiles`/`overview.performance`.
+
+### 3.10 Quản lý ví — kiểm kê và quyết định (04/11/2026)
+
+Code: `app/(manage)/manage/balance/page.tsx` · `features/wallet/components/` —
+`PartnerBalanceView` (hai tab trên URL `?tab=`, kỳ `?period=` dùng chung hai tab + thẻ tổng hợp
+tháng, trang `?page=`), `WalletStatementPanel` (tab 1), `WalletActivityPanel` (tab 2, mới),
+`WalletMonthSummary` (cột phải, mới — các dòng cộng dồn chuyển từ đáy bảng tổng hợp sang),
+`WalletSummaryCard` dáng `hero`, `BankAccountList`/`BankAccountForm`/`BankAccountCard` dáng
+`partner`/`compact`. API mới: `GET /shop/wallet/activity` (UNION sổ ví + lệnh rút theo kỳ, phân
+trang server). `WalletView` từ nay chỉ còn phục vụ khu khách (`/account/balance`).
+
+| # | Hạng mục | Mark | Quyết định |
+| --- | --- | --- | --- |
+| 1 | Thẻ "Rút được ngay" + nút "Rút về ngân hàng" trong thẻ, nền gold loang | ✅ | Theo khung design, nhưng **MỘT con số** (chốt 04/11): bỏ ô "Tổng XePrime phải trả" (chỉ là tổng hai ô kia, bị đọc nhầm); "Đang chờ" thành dòng "… đang được chuyển về ngân hàng" chỉ hiện khi khác 0; ⓘ giải thích số dư gồm gì. Nền: `public/illustrations/wallet/balance-glow.webp` (cắt từ ảnh design, ~2KB); giao diện tối dùng nền gold nhạt |
+| 2 | Dòng "Rút tối thiểu …" khi nút khoá · huy hiệu "Đã xác minh" · cảnh báo ví bị khoá | 🟡 | Giữ (chốt 04/11): dòng tối thiểu dưới nút, huy hiệu dưới số, cảnh báo đầu thẻ |
+| 3 | Tài khoản nhận tiền: logo 80 · tên · số · ngân hàng; "Đổi tài khoản" gold; ô trống + "Thêm tài khoản" | ✅ | Số tài khoản là số ĐÃ CHE (API không trả số đầy đủ) ⇒ không có nút sao chép (chốt 04/11). Hộp thêm/đổi theo `23948:96973`/`23948:97512`, lưu xong là thông báo góc "Thành công!" (`23948:98047`) |
+| 4 | Tab "Tổng hợp giao dịch": chỉ số uy tín · bảng theo chuyến · dòng mở rộng (bảng cộng ví) | ✅ | Giữ bảng cộng ví hiện có (`OwnerPayoutTable`, chốt 03/11). Cột "Thiếu khấu trừ" của design là lỗi chữ ⇒ "Thuế khấu trừ". Cột phí dịch vụ – chủ xe / phí giao xe chỉ hiện khi kỳ có. Bảng hẹp (1024–1440px) cuộn ngang trong thẻ, không xuống dòng giữa số |
+| 5 | "Tổng hợp tháng này" ở cột phải | ✅ | Đọc tổng của KỲ đang chọn (tiêu đề "Tổng hợp tháng MM/YYYY"). Bốn dòng design + các dòng chỉ-khi-khác-0 giữ từ bảng cũ (chốt 04/11): khách trả trực tiếp, phí giao xe, phí gói, phí dịch vụ – chủ xe; lời giải thích vào ⓘ |
+| 6 | Tab "Biến động số dư": bảng theo tháng, cột trạng thái | 🆕 | API mới `GET /shop/wallet/activity` (chốt 04/11). Thay hai khối cũ "Yêu cầu rút" + "Lịch sử giao dịch": dòng lệnh rút giữ đích chuyển, hạn chuyển / lúc đã chuyển, lý do từ chối / chuyển hụt và nút **Huỷ** khi còn chờ duyệt. Trạng thái của lệnh rút là trạng thái THẬT (6 giá trị), dòng sổ là "Thành công" |
+| 7 | Ô ghi chú thuế + "Chi tiết" | 🟡 | "Chi tiết" mở hộp thoại chứa nguyên thẻ "Thuế đã khấu trừ" (`ShopTaxWithheldCard embedded`), mở đúng tháng đang xem (chốt 04/11) — trang này vẫn là chỗ duy nhất không gác theo gói để xem thuế |
+| 8 | Tiêu đề trang "Quản lý ví" + mô tả | ✅ | `Wallet.manage.*` (khoá `title.tenant` "Số dư & rút tiền" giữ cho app native) |
+
+Trạng thái tự dựng: đang tải (khung chờ từng khối), lỗi (thông báo + thử lại ở từng thẻ), rỗng (kỳ
+chưa có chuyến / chưa có biến động), chỉ-chủ (thành viên gõ URL), máy hẹp (cột phải lên trước rồi
+tới tab). `?section=payout` vẫn cuộn tới khối tài khoản nhận tiền.
+
+### 3.11 Lịch sử giao dịch · Công nợ — kiểm kê và quyết định (04/11/2026)
+
+Code: `app/(manage)/manage/receipts/page.tsx` (hai tab) · `features/finance/components/` —
+`ReceiptSummaryCards`, `ReceiptTable`, `ReceiptDetailDialog` (thay `ReceiptDetailDrawer`),
+`ReceiptFormDialog` (thay `ReceiptFormDrawer`), `CategoryManagerModal`, `FinanceBoard` (khung
+"Bảng tổng hợp …" dùng chung hai tab), `DebtsView`, `DebtSummaryCards`, `DebtTable`,
+`DebtDetailDialog`. `/debts` chỉ còn `redirect`.
+
+**Tab "Giao dịch thu chi"**
+
+| # | Hạng mục | Dấu | Quyết định |
+| --- | --- | --- | --- |
+| 1 | Tiêu đề "Lịch sử giao dịch" + nút chuyển "Giao dịch thu chi \| Công nợ" | ✅ | MỘT route (chốt 04/11). Đổi tab đi tới URL sạch của tab kia (hai tab lọc khác nhau). Tab Công nợ gác bằng cờ gói `DEBTS` riêng: gói không có ⇒ nút chuyển vắng, `?view=debts` rơi về sổ; chỉ-xem ⇒ băng gia hạn ngay trong tab |
+| 2 | Bốn thẻ: Tổng thu (Tiền mặt · CK) · Tổng chi · Cân đối (Thu - Chi) · Công nợ khách hàng | 🟡→✅ | **Bỏ thẻ "Số phiếu đã duyệt"** (chốt 04/11) — tổng số dòng có ở chân bảng. Thẻ Công nợ bấm sang tab Công nợ (theo chi nhánh đang lọc); câu "chỉ cộng phiếu đã duyệt" vào ⓘ |
+| 3 | Kỳ nhanh · tìm · Loại · Chi nhánh · "Bộ lọc" (Trạng thái/Danh mục/Nguồn/Hình thức/Khoảng ngày) · chip đang lọc · "Xoá bộ lọc" | ✅ | Trên hàng: Loại + Chi nhánh như design; phần còn lại trong popover. Dòng "chưa gồm N khoản chung" khi lọc chi nhánh (ADR 0052) giữ |
+| 4 | Bảng: Phiếu · Loại · Nguồn · Danh mục · Khách hàng · Số tiền · Hình thức · Trạng thái · Thao tác | 🟡→✅ | **Bỏ cột Diễn giải** (chốt 04/11) — đọc ở hộp chi tiết, ô tìm kiếm vẫn tìm theo nó. Thẻ mobile giữ |
+| 5 | Thao tác trên dòng | 🟡→✅ | Phiếu chờ duyệt: Huỷ + Duyệt (xác nhận trước); phiếu khác: "Xem chi tiết". **Huỷ phiếu tay ĐÃ duyệt chuyển vào chân hộp chi tiết** (chốt 04/11) — không mất thao tác |
+| 6 | Hộp chi tiết phiếu (560px): số tiền + bằng chữ · Thông tin phiếu · Thông tin liên kết · Lịch sử thao tác · Huỷ phiếu + Duyệt phiếu | ✅ | Drawer → hộp giữa màn. Giữ thứ design không vẽ (chốt 04/11): cảnh báo phiếu tự động + lối về đơn/xe, ảnh chứng từ, người huỷ, trạng thái cạnh tiêu đề. Số tiền bằng chữ theo NGÔN NGỮ (`fmt.moneyWords`, thêm `moneyToEnglishWords` ở `@xeprime/domain`) — trước đây giao diện en vẫn đọc tiếng Việt |
+| 7 | Hộp tạo phiếu (720px): Phiếu thu \| Phiếu chi · Liên kết với (3 thẻ) · lưới 2 cột · Diễn giải · chứng từ · "Tạo và giữ form để nhập tiếp" | ✅ | Drawer → hộp; toàn bộ nghiệp vụ giữ (chế độ liên kết quyết dữ liệu gửi, chi nhánh chỉ hỏi ở Khoản chung, thẻ đọc lại xe/đơn, tự điền số còn nợ, số tiền bằng chữ dưới ô). Nút gửi nói đúng "Tạo phiếu thu/chi" (design ghi ngược ở frame phiếu thu) |
+| 8 | Hộp Danh mục: bảng · sửa/xoá trên dòng · dòng thêm mới · "+ Thêm danh mục" | 🆕→✅ | **Thêm đổi tên** (API `PATCH /finance/categories/:id` đã có). **Lưu từng dòng** bằng ✓, chân hộp chỉ "Đóng" (chốt 04/11). Xoá giờ có xác nhận. Danh mục hệ thống: nhãn "Hệ thống", không nút |
+| 9 | Chính tả "Hủy" của design | — | Giữ "Huỷ" như mọi chỗ khác của sản phẩm |
+
+**Tab "Công nợ"**
+
+| # | Hạng mục | Dấu | Quyết định |
+| --- | --- | --- | --- |
+| 1 | Bốn thẻ: Tổng công nợ (N đơn · M khách) · Nợ quá hạn · Trong hạn thanh toán · Chưa thanh toán | 🆕→✅ | API mới `GET /debts/summary` (`DebtSummaryDto`) — cùng phạm vi tìm/chi nhánh/trạng thái với bảng, KHÔNG theo nhóm hạn đang mở; Quá hạn + Trong hạn = Tổng |
+| 2 | Chip Tất cả · Quá hạn · Sắp đến hạn · Chưa thu có số đếm | 🆕→✅ | Số đếm từ `/debts/summary`, chung vị từ với danh sách (`debtGroupSql`) — chip "Quá hạn 11" mở đúng 11 dòng (có test) |
+| 3 | Lọc "Trạng thái đơn" · "Sắp xếp: Trễ nhất / Nợ nhiều nhất / Mới nhất" | 🆕→✅ | Tham số `status`, `sort` mới (`DEBT_SORT` ở `@xeprime/types`); sắp xếp không vào huy hiệu lọc, "Xoá bộ lọc" giữ nó |
+| 4 | **Định nghĩa "Quá hạn"** | ⚠️→✅ | Trước: chỉ đơn CHƯA hoàn thành qua hạn trả. Nay: **mọi đơn còn nợ đã qua hạn trả**, kể cả đã hoàn thành (design vẽ "Hoàn thành · Quá 19 ngày") — chuyến đã trả xe mà chưa trả đủ tiền là nợ quá hạn rõ nhất. "Quá N ngày" ở client dùng cùng mốc (`overdueDays`, `@xeprime/domain`) |
+| 5 | Bảng: Khách (tên + SĐT) · Đơn hàng · Trạng thái đơn · Phương tiện (tên + biển) · Hạn trả (+ "Quá N ngày") · Còn nợ (+ vạch + "Đã trả X / Y") · Xem đơn · Thu tiền | 🆕→✅ | `DebtItemDto.plateNumber` mới. SĐT: route chỉ tuyến gói nên không vướng ADR 0056. Bỏ ba cột Tổng/Đã trả/Còn nợ rời — gộp vào ô Còn nợ như design |
+| 6 | "Xem đơn" → hộp CÔNG NỢ gọn (băng còn nợ + Thu tiền · Thanh toán · Xe · Lịch sử thu tiền · Khách + Gọi/Zalo/Nhắn tin · Hợp đồng · Chi tiết đơn thuê) | 🆕→✅ | Thay hộp chi tiết đơn đầy đủ (chốt 04/11). GHÉP từ chính thẻ của trang đơn (`BookingDetailActionsProvider`, `PaymentSideCard`, `VehicleSideCard`, `CustomerSideCard`, `ContactButtons` — nay xuất được, có biến thể có chữ) ⇒ cùng quyền, cổng gói, hộp thu tiền/hợp đồng. Hoàn một khoản thu vẫn ở trang đơn |
+| 7 | "Thu tiền" | ✅ | Hộp thu tiền đơn đã ráp (`RecordPaymentModal`) |
+
+Tự dựng: tải (khung chờ trong thẻ, bảng), lỗi (cảnh báo, thử lại — giữ bảng cũ khi refetch hỏng),
+rỗng vì chưa có vs rỗng vì lọc, thiếu `finance.view` (thay cả màn), gói không có Công nợ, điện thoại
+(thẻ hai cột, chip cuộn ngang, bảng thành thẻ, hộp toàn màn).
+
+**Sửa kèm**: ô số dòng của bảng công nợ không có tác dụng (`limit` không đọc từ URL) — nay đọc.
+
+Nút thao tác trên dòng (cả hai tab) theo design: `actionColumn(..., { variant: 'standard' })` —
+nút thường viền nền trắng, nút chính vàng đặc (`Button` mặc định/`primary`); bảng chưa ráp giữ
+`'filled'`. Segmented (chuyển tab, kỳ, nhóm công nợ) có khung viền: `components/filter/segmented.module.css`.
+
+Còn lệch design có chủ ý: phân trang là `DataTable` chuẩn; chứng từ trong hộp tạo phiếu
+giữ ô tải lên hiện có (`ReceiptAttachmentsField`); hộp chi tiết phiếu chưa có SĐT khách (API chi
+tiết phiếu chưa trả — cần cổng `customer.view` như bảng theo khách nếu muốn thêm).
+
+### 3.12 Chính sách thuê — kiểm kê và quyết định (06/11/2026)
+
+Code: `features/rental-policies/components/` — `ShopPoliciesPage` (tab loại xe ở `?type=`) ·
+`ShopPolicyForm` (một form, hai API, nút ở cột phải) · `ShopPolicyBlocks` · `ShopPaymentCard` ·
+`PoliciesLayout` (cột phải: mục lục + nút) · `TurnaroundBufferField` (dùng chung với màn sửa xe).
+Hàng công tắc chung: `components/form/SettingRow`.
+
+| # | Hạng mục | Mark | Quyết định |
+| --- | --- | --- | --- |
+| P1 | Tab Ô tô · Xe máy ở đầu trang, số = tổng xe của loại | ✅ | `SegmentedTabs`; loại xe ở URL `?type=`. Đang sửa dở mà đổi tab thì hỏi bỏ thay đổi. Xe máy cùng bố cục (xe máy chỉ có Tự lái + Dài hạn — cả bốn khối đều áp) |
+| P2 | Mục lục cột phải + "Hủy · Lưu thay đổi" | ✅ | Design cập nhật 06/11 dời cột sang PHẢI. Mục lục là anchor, sáng theo vị trí cuộn. Hẹp: cột phải lên đầu, nút bám đáy |
+| P3 | Thanh toán & hóa đơn: giữ chỗ · VAT | ✅ | Hai công tắc lưu ngay (không thuộc nút Lưu). **Khoá theo giai đoạn nền tảng ⇒ ẩn hẳn hàng giữ chỗ** (người dùng chốt 06/11 — hiện lại khi nền tảng mở công tắc). Khoá vì tuyến/gói/cấu hình thì tiêu đề + mô tả là lý do khoá; tuyến hoa hồng/thiếu gói kèm link tới **Gói & hạn mức** của trang Thông tin cửa hàng (cập nhật khi ráp trang đó). Câu "khoản giữ chỗ KHÔNG phải tiền cọc" + phạm vi áp dụng vào ⓘ. Thiếu `seller_profile.view` ⇒ vắng hàng giữ chỗ |
+| P4 | Thế chấp: lựa chọn thứ 3 design ghi "Cọc tiền" | ⚠️→✅ | Nhãn đúng **Miễn thế chấp** (người dùng xác nhận) |
+| P5 | Danh mục tài sản khi chọn Cọc tài sản | 🟡 | Thay chỗ ô tiền cọc |
+| P6 | "N xe đang dùng mức cọc này"; số xe dùng chính sách riêng | ✅/🟡 | Số riêng vào ⓘ cạnh dòng đó |
+| P7 | Quá giờ: công tắc + phí/giờ + miễn phí tối đa | 🆕→✅ | Công tắc của FORM (`overtimeEnabled` tuỳ chọn trong schema dùng chung — app native không có thì không đổi gì); tắt ⇒ gửi null. **Ô làm tròn bỏ** (người dùng chốt): web luôn gửi `overtimeRoundingMinutes = null` ⇒ quyết toán làm tròn LÊN theo giờ, công thức trong ⓘ. Áp cả màn sửa xe. Số làm tròn cũ còn hiệu lực tới lần lưu kế tiếp; app Partner vẫn còn ô này (dev mobile) |
+| P8 | Bảng phí giao xe: bút chì / ✓✗ từng dòng | 🆕 | Không làm — ô sửa thẳng + thùng rác (chốt) |
+| P9 | Bán kính giao tối đa | 🟡 | Dưới bảng (như E17) |
+| P10 | Thời gian chết giữa hai chuyến ở cấp GIAN HÀNG | 🆕→✅ | **Mặc định gian hàng theo loại xe** (người dùng chốt): bảng `tenant_operation_defaults` (writer `VehicleSettingsService`), `GET/PUT /shop/operation-defaults?vehicleType=` (`tenant.view`/`tenant.update`, phiên hỗ trợ chỉ đọc). `vehicle_operation_settings.turnaround_buffer_minutes` NULL = theo mặc định; dòng cũ giữ số riêng. Màn sửa xe (gian hàng) thêm lựa chọn "Theo gian hàng (X)"; tuyến hoa hồng không có. Chỉ áp lịch giữ MỚI (ADR 0006) |
+| P11 | Ưu đãi dài hạn: công tắc "Áp dụng chính sách của gian hàng" | ⚠️ | Design bản cuối đã gỡ ⇒ không công tắc: **có mốc = bật**, xoá hết = tắt (`discountEnabled` theo số mốc). Dữ liệu cũ đang tắt mà còn mốc ⇒ dải cảnh báo "lưu sẽ bật" |
+| P12 | Mức giảm %/đ/tháng | ⚠️ | Chỉ % (ADR 0011, như E12) |
+| P13 | Hộp "Công thức tính giá gói" + gợi ý giá tháng | ⚠️→✅ | Bỏ hộp; công thức vào ⓘ tiêu đề. **Thay bằng khung "Khách sẽ thấy trên sàn" bên phải** (người dùng chốt 06/11, khuôn khuyến mãi trực tiếp): `LongTermPackagePreview` áp mốc đang nhập lên một giá tháng VÍ DỤ sửa được (mặc định theo loại xe, không lưu). Cùng khung ở màn sửa xe › Dài hạn (gian hàng) với giá tháng THẬT của xe; bảng gói trong hộp gợi ý xanh vì thế chỉ còn ở tuyến hoa hồng. Ở màn sửa xe (gian hàng): hộp gợi ý xanh rút thành MỘT dòng "Giá đề xuất: min – max/tháng" ngay dưới ô (lý do vào ⓘ, giá không rẻ hơn thuê ngày ⇒ dòng đổi màu cảnh báo), hộp công thức dưới bảng mốc bỏ, công thức vào ⓘ tiêu đề (người dùng chốt 06/11) |
+| P13b | Thời gian chết: dải xanh "chỉ áp lịch giữ MỚI" + dòng số xe | 🟡 | Vào ⓘ cạnh tiêu đề (người dùng chốt 06/11) |
+| P14 | Mốc cũ theo ngày chưa quy đổi | 🟡 | Dải cảnh báo dưới bảng (như cũ) |
+| P15 | Thanh "thay đổi chưa lưu" + Hủy bỏ | 🟡 | Thay bằng nút Hủy/Lưu chỉ sáng khi có thay đổi (như màn sửa xe); xác nhận phạm vi trước khi lưu giữ nguyên |
+
+Trạng thái tự dựng: đang tải · lỗi (thẻ thanh toán vẫn dùng được) · chưa có chính sách · chỉ xem
+(thiếu `tenant.update`) · phiên hỗ trợ (không nút) · bảng trống · màn hẹp/điện thoại. Lưu: mỗi API chỉ
+gửi khi PAYLOAD của nó đổi; lỗi một nửa thì nửa kia vẫn lưu, ô đang sửa giữ nguyên.
+
+### 3.13 Thông tin cửa hàng — kiểm kê và quyết định (06/11/2026)
+
+Code: `features/shop/components/` — `ShopWorkspace` (một form hồ sơ cho cả trang, lưu THEO NHÓM —
+`toShopProfilePatch`) · `ShopOwnerSection` · `ShopLegalCard` (+ hộp) · `ShopTaxCard` (+ hộp, form
+chung `useSellerTaxForm` với "Hồ sơ chủ xe") · `ShopDisplayCard` (+ hộp, editor) · `ShopMediaButton`.
+Gói: `features/subscription/components/ShopPlanSection` · `ShopPlanLaneCard` · `PlanPurchaseDialog`
+(hook `useCombinedPlanPurchase`) · `ShopInvoicesCard` · trang thanh toán `InvoiceCheckoutView` /
+`CheckoutPaymentView` (`variant: bare | shell`). Khung thẻ chung: `components/layout/InfoCard`.
+Editor: `components/form/RichTextField` (TipTap 3.32) · hiển thị `components/data-display/RichText`.
+
+| # | Hạng mục | Mark | Quyết định |
+| --- | --- | --- | --- |
+| S1 | Bố cục: ba thẻ đầu (chủ · địa chỉ & pháp lý · khai thuế) + chi nhánh + gói + hoá đơn; cột phải "Thông tin hiển thị" | ✅ | Theo design. Cột phải dính khi cuộn; ≤1200px lên ĐẦU trang (thứ khách thấy) |
+| S2 | Mục lục trái + nút Lưu ở tiêu đề (bản cũ) | 🟡 | Mục lục bỏ (design không còn); `?section=` vẫn cuộn tới đúng thẻ cho link/redirect cũ |
+| S3 | Sửa bằng hộp thoại "Cập nhật" | ✅ | **Hộp thoại lưu ngay** đúng nhóm ô của nó (người dùng chốt). Đóng hộp = trả nhóm đó về bản đã lưu |
+| S4 | "Hủy · Lưu thay đổi" dưới thẻ hiển thị | ✅ | **Chỉ cho logo/ảnh bìa**: đổi ảnh là xem trước trên thẻ, cặp nút chỉ hiện khi có ảnh chưa lưu (người dùng chốt) |
+| S5 | Gỡ logo / ảnh bìa (bản cũ có "Xoá") | 🟡 | Nút ✕ nhỏ trên ảnh khi sửa được — vào cùng luồng "Lưu thay đổi" |
+| S6 | Giới thiệu = editor | 🆕→✅ | TipTap, thanh công cụ đúng design (hoàn tác · làm lại · nghiêng · đậm · gạch chân · căn trái/giữa/phải). **Không chèn ảnh** — ảnh dưới đoạn giới thiệu của design bỏ (người dùng chốt). Lưu `tenant_profiles.bio_html` (HTML lọc ở server, `sanitizeShopBioHtml`); `bio` giữ chữ thuần rút từ HTML cho app native / thẻ chủ xe / SEO. Gửi `bio` không kèm `bioHtml` (app, form chủ xe) ⇒ gỡ bản HTML. Site khách (`ShopHeader`) hiện bản định dạng |
+| S7 | SĐT / email hiển thị đánh dấu bắt buộc (*) | ⚠️ | Giữ TUỲ CHỌN như luật hiện hành (bỏ trống = gỡ — `shopProfileWithContactSchema`); bắt buộc sẽ chặn gian hàng cũ chưa khai. Chưa đổi — cần chốt nếu muốn bắt buộc |
+| S8 | Viên đen "Chủ gian hàng" ở tiêu đề | 🆕→✅ | Hiện **vai của người xem** (`tenantRole`) — frame Staff cũng vẽ "Chủ gian hàng" là chép nhầm; chỉ để đọc |
+| S9 | Thẻ Chủ gian hàng: ảnh đại diện | 🆕→✅ | `ShopOwnerAccountDto.avatarUrl` (ảnh tài khoản chủ). "Quản lý tài khoản" chỉ CHÍNH CHỦ thấy (như cũ) |
+| S10 | Thẻ Khai thuế: "Tên hộ KD/DN" + MST | ✅ | Cá nhân hiện Tên đầy đủ + Số CCCD (đúng model). Nhãn trạng thái duyệt ở góc khi khác "nháp"; yêu cầu sửa / từ chối kèm ghi chú |
+| S11 | Hộp Địa chỉ & pháp lý | ✅ | Giữ `AddressField` (bộ chọn hành chính + gợi ý bản đồ, ADR 0077) và câu "đổi ở đây là đổi chi nhánh mặc định" |
+| S12 | "Hoàn thiện hồ sơ" (checklist) | 🟡 | Design không vẽ — đặt dưới thẻ hiển thị, chỉ người sửa được, tự ẩn khi đủ. Logo vẫn là mục CHẶN của tuyến gói |
+| S13 | Chi nhánh: tìm · lọc trạng thái · Thêm; dải "chưa có tỉnh/thành · Bổ sung ngay"; cột thao tác bút chì + "…" | ✅ | Lọc trạng thái thành ô chọn (Tất cả · từng trạng thái) thay nút "Chỉ đang hoạt động". "Bổ sung ngay" mở chi nhánh đầu tiên cần sửa |
+| S14 | Hộp chi nhánh: "Đặt làm chi nhánh mặc định" | 🆕→✅ | Ô của riêng web, chạy `POST /branches/:id/set-default` SAU khi lưu (cùng đường menu "…"). Vắng trong phiên hỗ trợ. Điện thoại vẫn một số (design vẽ hai dòng — model một số) |
+| S15 | Gói: thẻ từng loại xe (đang dùng · hạn · X/Y xe · thanh tiến độ · Gia hạn / Nâng cấp ngay) | ✅ | Hoá đơn đang chờ của loại xe hiện trong thẻ kèm "Thanh toán" (🟡 giữ từ bản cũ) |
+| S16 | Bậc TIẾT KIỆM / CƠ BẢN / NÂNG CAO + tính năng khác nhau theo bậc | ⚠️ | **Theo dữ liệu thật** (người dùng chốt): tên + mô tả bậc của admin; gạch đầu dòng = "Tối đa N xe" + tính năng thật. Huy hiệu bạc/vàng/đen theo thứ tự trong làn (chỉ là hình) |
+| S17 | Doanh nghiệp: nút "Thanh toán"; Doanh nghiệp + gói ô tô cùng "Đang dùng" | ⚠️ | Không nút Thanh toán (bán bằng tư vấn — ADR 0041 điều 5); đang dùng doanh nghiệp thì hai thẻ làn vắng (ADR 0065). Ô "Kỳ tiếp theo · giá" bỏ — không có dữ liệu giá kỳ |
+| S18 | Hộp mua gộp ô tô + xe máy, một kỳ hạn, một thời điểm, MỘT hoá đơn / QR | 🆕→✅ | **Backend phiếu gộp** (người dùng chốt) — ADR 0083: `subscription_checkouts`, mã `XPC…`, `POST/GET /subscription/checkouts`. Một gói ⇒ hoá đơn lẻ như cũ. "Thời điểm áp dụng" chỉ hiện khi loại xe đang chọn có kỳ chạy; `now` chỉ gửi cho loại có kỳ chạy. "Gói hiện tại" vẫn chọn được (để gia hạn đúng bậc) |
+| S19 | Trang "Thanh toán hóa đơn" trong khung + breadcrumb | 🆕→✅ | Route mới `/shop/payment/:id` và `/shop/payment/checkout/:id` (dưới lá "Thông tin cửa hàng" ⇒ breadcrumb tự có). Bản trần `/payment/…` giữ cho onboarding (ADR 0040). "Ví điện tử" chỉ có với hoá đơn lẻ (ADR 0058 chưa có đích phiếu gộp). Đếm ngược "Hạn thanh toán" theo `expiresAt` |
+| S20 | Bảng "Hóa đơn và thanh toán" | ✅ | Luôn mở (bản cũ gập), phân trang server `?page=`. Mã đối soát của hoá đơn thuộc phiếu = mã `XPC` của phiếu. Cột "Thanh toán" cho hoá đơn còn nhận tiền (🟡) |
+
+Trạng thái tự dựng: đang tải / lỗi cho từng thẻ (thử lại tại chỗ) · chỉ xem (thiếu `tenant.update`:
+không bút chì, không đổi ảnh; thiếu `seller_profile.manage`: thẻ thuế không bút chì; thiếu
+`subscription.purchase`: không "Nâng cấp / Đổi gói") · phiên hỗ trợ (không nút sửa, không thuế, không
+giấy phép KD, không mua gói / hoá đơn chờ) · chủ xe tuyến hoa hồng lạc vào (dựng `SubscriptionWorkspace`
+nâng cấp) · gói hết hạn / ân hạn (nhãn đỏ trên thẻ làn) · hẹp (ba thẻ đầu 3 → 2 → 1 cột; cột hiển thị
+lên đầu; hộp mua và hộp sửa toàn màn trên điện thoại).
+
+**Soát chữ theo design (09/11/2026)** — sửa ở COMMON để màn sau dùng lại: nút AntD `14px/Semibold`, nút
+viền chữ `Text/Gray/medium` (`styles/theme.ts`, có bản tối) · tiêu đề cột `DataTable` `12/18 Medium`
+`Text/Gray/medium` · `StatusTag appearance="pill"` + `StatusPill` = viên "_Badge" 14/20 · `InfoCard`/`DialogHeading`: dòng
+phụ và nhãn `Text/Gray/low` (`--xp-color-text-tertiary`), chú thích 12/18 `Text/Gray/very-low` · token mới
+`--xp-color-warning-high` (`#dc6803`) và `--xp-color-gold-on-dark` (`#fcd34d`). Lưu ý cho màn sau: dòng phụ của design
+là `#717680` (tertiary), KHÔNG phải `#414651`; `--xp-font-size-caption` là 10px — chữ 12px dùng `body-sm`.
+
+**Hộp "Mua hoặc gia hạn gói" sửa lại (09/11/2026, người dùng)** — (1) chữ theo design, SỐ theo admin: tên bậc
+TIẾT KIỆM · CƠ BẢN · NÂNG CAO + "Phù hợp cho …" là nhãn THEO VỊ TRÍ trong làn (bậc thứ 4+ do admin mở thêm thì
+dùng tên/mô tả admin); "Tối đa **N** ô tô", giá, "Gói đề xuất", tính năng, kỳ bán đọc từ `plans.limits`; dòng
+tóm tắt "Ô tô - **Cơ bản 5 xe**" ghép nhãn vị trí + `maxVehicles`. Giữ khác design có chủ đích: dòng tính năng
+là tính năng thật (không "báo cáo ngắn gọn / chi tiết"); kỳ 1 tháng ghi "Giá gốc" (không "Cơ bản" — trùng tên
+bậc); nút "Gói hiện tại" nhạt nhưng VẪN bấm được (đường gia hạn đúng bậc). (2) Lỗi không cuộn tới kỳ hạn: hộp đặt
+`bodyScroll="content"` (chế độ cho bố cục nhiều cột tự cuộn) ⇒ thân bị `overflow: hidden`; bỏ đi. Hộp `size="fit"`
+rộng 1430 như khung design (`xl` chỉ 1180). (3) Hai BƯỚC đánh số — "1 Chọn gói cho từng loại xe" (gợi ý chọn
+được cùng lúc ô tô + xe máy, bấm "Đang chọn" để bỏ) → "2 Chọn kỳ hạn và thời điểm áp dụng"; dải Doanh nghiệp
+dời xuống CUỐI (giữa hai bước nó cắt ngang luồng chọn).
+
+**Hộp mua gói thành HAI BƯỚC THẬT (09/11/2026, người dùng · ADR 0084)** — thanh bước "① Chọn gói ─ ② Kỳ hạn
+và xác nhận". Bước 1: hai làn + dải Doanh nghiệp, chân hộp tóm tắt gói đã chọn + "Tiếp tục". Bước 2: kỳ hạn
+chung (4 thẻ) → "Xác nhận gói": mỗi gói một thẻ (nhãn Mua mới / Gia hạn / Nâng cấp ngay / Đổi gói từ kỳ sau,
+hạn mức, thời gian áp dụng, đơn giá × số tháng, thành tiền, cảnh báo kỳ cũ kết thúc khi nâng ngay / số xe
+vượt trần khi hạ bậc) — đọc từ `POST /subscription/purchase/preview`, không suy ở client → dòng "Thanh toán
+bằng chuyển khoản QR" + cảnh báo thay mã chờ + điều khoản; chân hộp "Quay lại chọn gói" · tổng (của server) ·
+"Tạo hoá đơn" (khoá tới khi bản xem trước khớp lựa chọn). BỎ hẳn khối "Thời điểm áp dụng" của design: server
+suy (cùng bậc = gia hạn nối tiếp, cao hơn = nâng ngay không bù, thấp hơn = nối tiếp). `PurchaseModal` (một
+loại xe, `SubscriptionWorkspace`) bỏ radio thời điểm, hiện cùng kết quả xem trước (`PurchaseOutcome.tsx`).
+
+**Bước 2 gọn lại (09/11/2026, người dùng)** — (1) BỎ hộp ghi chú dưới phiếu ("Hạn mức mới có hiệu lực…" +
+cảnh báo "… sẽ kết thúc ngay khi thanh toán xong — phần thời gian còn lại không được hoàn"). Cả hai câu chuyển
+vào dấu ⓘ cạnh nhãn lượt mua (`PurchaseOutcomeHint`) — hệ quả về tiền không mất, chỉ không chiếm chỗ. Cảnh báo
+số xe vượt trần khi hạ bậc vẫn hiện hẳn (`PurchaseOverCapAlert`, hiếm). `PurchaseModal` giữ bản đầy đủ.
+(2) MỘT gói (đa số lượt mua): hai cột — trái "Kỳ hạn thanh toán" thành danh sách ◉ kỳ · tiết kiệm · TỔNG TIỀN
+kỳ đó (giá tuyệt đối `tier.terms`, ADR 0041 điều 2), phải là phiếu gói; hết nửa hộp trống. Hai gói giữ bố cục
+cũ (hàng 4 nút kỳ hạn + hai phiếu ngang hàng). Màn ≤720px: một cột.
+
 ## 4. Node Figma đã dùng
 
 Ghi lại để phiên sau khỏi tốn lượt đọc lại.
@@ -447,6 +815,8 @@ Ghi lại để phiên sau khỏi tốn lượt đọc lại.
 | `23790:45293` | Màn Đơn thuê xe, ô "Tất cả" — cột trái `23790:46261`, page header `23790:45296`, thẻ đang thuê `23797:48619` |
 | `23797:49689` | Màn Đơn thuê xe, một ngăn (Hoàn thành) có phân trang `23797:50995` |
 | `23746:51015` | Tab List/Kanban của màn Yêu cầu (frame chốt 02/11 không còn dùng) |
+| `23874:79920` | Section "Đơn thuê xe" gộp: List `23973:51952` (nhóm `23973:82735`, thẻ `23978:92713`) · Kanban `23895:15181` (nội dung `23898:24586`; thẻ "_Kanban Item" chờ duyệt `23895:15196`, đang thuê `23895:15208`) · Kanban + Tạo đơn `23948:84908` · Đơn đã kết thúc `23948:87473` · các bước `23898:28955` (Phê duyệt `23898:25444`, Từ chối `23919:39682`, Huỷ khi chờ trả `23930:44688`, toast duyệt `23930:42529`, Gia hạn `23941:62236`, Nhận xe `23941:64008` / modal `23941:65305`) |
+| `23948:99504` | Chi tiết đơn — đơn đã huỷ (Failed) · `23930:45292` đang thuê + toast |
 | `23777:53056` | Section Chi tiết đơn: chờ giao `23845:49956` (03/11, thay `23768:29928`) · cảnh báo thiếu `23845:51599` · popup sẵn sàng giao `23845:53852` (modal `23845:54382`) · chờ giao có tài xế `23807:73143` · hộp Thông tin khách `23777:49485` · hộp Thu tiền đơn `23777:52010` · đang thuê `23777:48710` · hoàn thành `23777:52626` |
 | `23777:54974` | Section Khách hàng: danh sách `23777:53057` (dải số liệu `23777:53832`) · Tổng quan `23777:54975` · Lịch sử thuê `23797:54015` · Thu chi `23797:55706` · Giấy tờ `23797:62633` |
 | `23807:68543` · `23807:70054` | Hộp Gia hạn thuê xe · Thanh toán gia hạn (ADR 0077) |
@@ -457,6 +827,13 @@ Ghi lại để phiên sau khỏi tốn lượt đọc lại.
 | `23737:45750` | Section Quản lý tài xế: danh sách `23737:41945` (thẻ `23737:43826`, dải số `23737:44163`; menu "…" đang mở vẽ ngay trong frame này) · hộp Mời tài xế mới `23737:45751` |
 | `23733:41941` | Section Danh sách bảo dưỡng: frame `23754:28662`, hàng xe `23754:29574` |
 | `I23661:27390;23649:28221` | Icon xe của dòng "Danh sách xe" — xuất qua instance cha trả nhầm icon tài liệu |
+| `23857:58927` | Section Doanh thu / Tài chính: Tổng quan doanh thu theo xe `23813:30723` (page header `23813:30726`, sáu thẻ `23813:32225`, biểu đồ `23813:32266`, cơ cấu `23813:37042`, hiệu suất `23813:37081`, thuế `23813:38909`) · theo khách `23813:38107` (bảng `23813:38176`) · Quản lý ví `23813:39558` · `23813:55449` |
+| `23948:93534` | Section Quản lý ví: tổng hợp `23813:39558` · biến động `23813:55449` · cột phải `23948:94510` (thẻ ví `23948:94474`, tổng hợp tháng `23948:94282`, ghi chú thuế `23948:94298`) · hộp thêm tài khoản `23948:96973` · hộp đổi `23948:97512` · toast `23948:98047` |
+| `23857:58928` | Section Lịch sử giao dịch / Thu Chi: danh sách `23813:58308` · chi tiết phiếu `23845:39621` (hộp `23845:40261`) · danh mục `23845:41048` (hộp `23845:41185`) · tạo phiếu thu `23845:42715` (hộp `23845:43494`) · tạo phiếu chi `23857:57950` (hộp `23857:58087`) |
+| `23874:63907` | Chính sách thuê: page header `23874:64498` (tab loại xe) · Thanh toán & hóa đơn `23874:68740` · Thủ tục & điều khoản `23979:96566` · Giao nhận xe + thời gian chết `24047:77366` · Ưu đãi dài hạn `24047:77588` · cột phải `24051:80740` |
+| `24051:85101` | Menu hồ sơ: biến thể gian hàng `24051:85100` · cá nhân `24051:85102` (tên biến thể trong Figma ĐẢO: "Personal" là gian hàng, "Pro" là cá nhân — đọc theo chữ). Nền vàng thẻ gian hàng → `public/partner/account-card-bg.webp`, dấu tích → `public/partner/verified-shop.svg`. Dòng "Nâng cấp gian hàng" `24051:85746` (icon Award 2 → `public/icons/menu/award.svg`, `LineIcon` `award`) |
+| `23999:111044` | Section Thông tin cửa hàng: thường `23999:111274` (tiêu đề `23999:111277`, ba thẻ `23999:111298`, chi nhánh `23999:111349`, gói `23999:111391`, hoá đơn `23999:111432`, cột hiển thị `23999:111472`) · doanh nghiệp `23999:111045` · nhân viên `23999:111476` · hộp mua gói `24024:26537` (trong `23999:115279`) · hộp địa chỉ `23999:111878` · hộp thuế `23999:112100` · hộp chi nhánh `23999:112321` · hộp hiển thị `24047:78679` · trang thanh toán `24051:79507`. Huy hiệu bậc + nền doanh nghiệp đã tải về `public/shops/plans/` |
+| `23874:63125` | Section Lịch sử giao dịch / Công nợ: danh sách `23857:58932` · chi tiết công nợ đơn `23872:60137` (hộp `23872:60767`) · thu tiền đơn `23872:61964` (hộp `23872:62755`) |
 
 Icon menu: tải từ các node trên, chuẩn hoá về khung 24px (cấp 1, dòng dropdown), 20px (nút header),
 12px (+/−), 16px (mũi tên) ở `apps/web/public/icons/menu/`, vẽ qua `LineIcon`. Mục chưa có icon trong
@@ -484,8 +861,9 @@ Route của site partner (02/11/2026, từ `apps/web/src/app/(manage)/manage`):
 /  account  balance  bank-accounts→balance  booking-requests  bookings(?preset=)  bookings/[id]
 bookings/awaiting-pickup→bookings?preset=awaiting_pickup  calendar  chat  contracts-documents  contracts/[id]  customers  customers/[id]
 data-protection  debts  drivers  finance  host-guide  invites/[token]  maintenance  members
-onboarding  payment/[id]  payment-return  receipts  registration  security→account  shop
-shop/branches→shop  shop/payment-settings→shop/policies  shop/policies  shop/seller-profile→shop
+onboarding  payment/[id]  payment/checkout/[id]  payment-return  receipts  registration  security→account  shop
+shop/branches→shop  shop/payment/[id]  shop/payment/checkout/[id]  shop/payment-settings→shop/policies
+shop/policies  shop/seller-profile→shop
 subscription  support  support/cases  tax  trips  vehicles  vehicles/new  vehicles/register
 vehicles/[id]  vehicles/[id]/edit  vehicles/[id]/optimization  vehicles/[id]/pricing
 vehicles/[id]/manage/…  (information · images · documents · pricing · handover-time · trip-history ·

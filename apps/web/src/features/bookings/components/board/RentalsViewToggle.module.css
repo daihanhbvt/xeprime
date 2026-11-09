@@ -1,0 +1,63 @@
+/* Figma `23895:15181`: hai nút vuông 40 liền nhau trong một khung viền xám bo 8; nút đang chọn nền
+   trắng + biểu tượng gold, nút kia biểu tượng xám. Dòng gợi ý kéo thả chữ nghiêng xám 14. */
+.root {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--xp-space-md);
+}
+
+.hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  font-style: italic;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.group {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-muted);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--xp-border-radius-control) - 2px);
+  background: transparent;
+  color: var(--xp-color-text-tertiary);
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.button:hover {
+  color: var(--xp-color-text);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 1px;
+}
+
+.buttonActive {
+  composes: button;
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 1px 2px rgba(10, 13, 18, 0.08);
+  color: var(--xp-color-primary-active);
+}
+
+.buttonActive:hover {
+  color: var(--xp-color-primary-active);
+}

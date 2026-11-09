@@ -17,6 +17,7 @@ import { useTranslations } from 'next-intl';
 import {
   MARKETPLACE_VISIBILITY_REASON,
   MARKETPLACE_VISIBILITY_REASON_META,
+  type MarketplaceVisibilityReason,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
@@ -50,6 +51,12 @@ import styles from './VehicleCardParts.module.css';
 export const NEEDS_OWNER_ACTION: readonly VehiclePublicStatus[] = [
   VEHICLE_PUBLIC_STATUS.NEEDS_REVISION,
   VEHICLE_PUBLIC_STATUS.REJECTED,
+];
+
+/** Hai lý do "đã duyệt nhưng công tắc đang tắt" — chủ xe tự cất, hoặc hệ thống ẩn vì hết suất gói. */
+const PAUSED_REASONS: readonly MarketplaceVisibilityReason[] = [
+  MARKETPLACE_VISIBILITY_REASON.PLAN_PAUSED,
+  MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED,
 ];
 
 /** Biểu tượng đứng trước nhãn kiểm duyệt ở thẻ ít xe (Figma "Kiểm duyệt" `23664:31874`). */
@@ -164,9 +171,10 @@ function SeparatedLine({
  *  - `detailed`: nhãn kiểm duyệt có biểu tượng tròn + viên vận hành nhãn dài ("Sẵn sàng vận
  *    hành") — thẻ ít xe và thẻ đầu Hồ sơ xe.
  *
- * Chip tạm ẩn CHỈ khi chủ xe đang tự cất xe khỏi chợ (ADR 0048): mọi lý do ẩn khác đã đọc được từ
- * trạng thái kiểm duyệt, còn "đã duyệt nhưng chủ xe tắt" thì không đọc được từ chỗ nào khác —
- * thiếu nó thì một chiếc xe đang cất đi trông y hệt một chiếc đang bán.
+ * Chip tạm ẩn CHỈ khi công tắc hiển thị đang tắt trên một xe đã duyệt (ADR 0048): mọi lý do ẩn khác
+ * đã đọc được từ trạng thái kiểm duyệt, còn "đã duyệt nhưng đang tắt" thì không đọc được từ chỗ nào
+ * khác — thiếu nó thì một chiếc xe đang cất đi trông y hệt một chiếc đang bán. Chip nói AI tắt: chủ
+ * xe tự cất, hay hệ thống tạm ẩn vì hết suất gói lúc đổi tuyến/đổi gói (ADR 0085 điều 5).
  */
 export function VehicleStatusBadges({
   vehicle,
@@ -187,15 +195,14 @@ export function VehicleStatusBadges({
   const review = vehicle.publicStatus as VehiclePublicStatus;
   const operationColor = VEHICLE_OPERATION_STATUS_META[operation]?.color;
   const reviewColor = VEHICLE_PUBLIC_STATUS_META[review]?.color;
-  const paused =
-    vehicle.marketplaceVisibilityReason === MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED ? (
-      <ToneDotBadge
-        compact
-        color={MARKETPLACE_VISIBILITY_REASON_META[MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED].color}
-      >
-        {domainLabel('marketplaceVisibility', MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED)}
-      </ToneDotBadge>
-    ) : null;
+  const pausedReason = PAUSED_REASONS.find(
+    (reason) => reason === vehicle.marketplaceVisibilityReason,
+  );
+  const paused = pausedReason ? (
+    <ToneDotBadge compact color={MARKETPLACE_VISIBILITY_REASON_META[pausedReason].color}>
+      {domainLabel('marketplaceVisibility', pausedReason)}
+    </ToneDotBadge>
+  ) : null;
 
   if (variant === 'short') {
     return (

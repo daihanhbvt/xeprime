@@ -7,10 +7,8 @@ import {
   TENANT_STATUS,
 } from '@xeprime/types';
 import {
-  ACCOUNT_SECTION,
   ROUTES,
   SHOP_SECTION,
-  accountSectionPath,
   partnerTrackStartHref,
   balancePayoutPath,
   shopSectionPath,
@@ -114,7 +112,7 @@ const unconfigured: AuthScope = {
 const M = ROUTES.MANAGE;
 
 // ── B1: một test mỗi dòng của bảng ──────────────────────────────────────────────────────────────
-describe('B1 — partner đăng nhập xong vào đâu', () => {
+describe('B1 - partner đăng nhập xong vào đâu', () => {
   it('chưa có gian hàng → /register (trang chọn cách cho thuê)', () => {
     expect(resolvePartnerTrack(noShop)).toBe(PARTNER_TRACK.NONE);
     expect(resolvePartnerDestination({ user: noShop })).toBe(M.REGISTER);
@@ -202,13 +200,15 @@ describe('B1 — partner đăng nhập xong vào đâu', () => {
   });
 
   /*
-   * Trang Cửa hàng có bản tương đương ở tuyến hoa hồng: "Hồ sơ chủ xe" đọc CÙNG bản ghi gian hàng.
-   * Một gian hàng vừa hết gói bấm bookmark /shop phải rơi vào đúng hồ sơ của mình, không về trang chủ.
+   * Trang Thông tin `/shop` LÀ "Hồ sơ chủ xe" của chủ xe tuyến hoa hồng (ADR 0085 điều 2) — cùng
+   * trang, mặt tiền cá nhân. Một gian hàng vừa hết gói bấm bookmark /shop ở lại đúng hồ sơ của mình.
    */
-  it('trang Cửa hàng ở tuyến hoa hồng → section "Thông tin chủ xe" của Hồ sơ chủ xe', () => {
+  it('CHỦ xe tuyến hoa hồng ở lại trang Thông tin /shop (mặt tiền cá nhân)', () => {
     for (const user of [commission, lapsed, unconfigured]) {
-      expect(partnerPageRedirect(user, M.SHOP)).toBe(`${M.ACCOUNT}?section=profile`);
+      expect(partnerPageRedirect(user, M.SHOP)).toBeNull();
     }
+    // Trang con của Cửa hàng là năng lực gói — vẫn về trang chủ.
+    expect(partnerPageRedirect(commission, M.SHOP_POLICIES)).toBe(M.ROOT);
   });
 
   it('THÀNH VIÊN của gian hàng hết gói mở /shop → trang chủ (trang tài khoản của họ không có section đó)', () => {
@@ -246,9 +246,9 @@ describe('B1 — partner đăng nhập xong vào đâu', () => {
    * của trang số dư. Giải ở MỘT chỗ — cùng luật cho gõ URL lẫn `next` — và chuyển THẲNG tới section.
    */
   it('chủ xe tuyến hoa hồng mở alias cũ → thẳng tới section đích', () => {
-    expect(partnerPageRedirect(commission, M.TAX)).toBe(accountSectionPath(ACCOUNT_SECTION.TAX));
+    expect(partnerPageRedirect(commission, M.TAX)).toBe(shopSectionPath(SHOP_SECTION.TAX));
     expect(partnerPageRedirect(commission, M.SUBSCRIPTION)).toBe(
-      withPlanPurchaseIntent(accountSectionPath(ACCOUNT_SECTION.PLAN)),
+      withPlanPurchaseIntent(shopSectionPath(SHOP_SECTION.PLAN)),
     );
     expect(partnerPageRedirect(commission, M.BANK_ACCOUNTS)).toBe(balancePayoutPath());
   });
@@ -272,37 +272,42 @@ describe('B1 — partner đăng nhập xong vào đâu', () => {
   });
 
   /*
-   * "Chuyến cho thuê" (07/10/2026): CHỦ xe tuyến hoa hồng đọc yêu cầu + đơn gộp ở một danh sách
-   * thẻ. Hộp thư và bảng đơn vẫn là trang của tuyến — cho THÀNH VIÊN, những người `/trips` không
-   * dựng phía chủ xe cho — và chi tiết đơn là màn dùng chung, nơi bàn giao.
+   * 06/11/2026: "Đơn thuê xe" là màn của CẢ hai tuyến, cho chủ lẫn thành viên. `/trips` ("Chuyến
+   * cho thuê" cũ) và hộp thư cũ là ALIAS mà CHÍNH trang của chúng chuyển tiếp ở server (giữ tab /
+   * nhóm) — cổng tuyến để chúng đi qua, không tự chuyển rồi đánh rơi tham số.
    */
-  it('chủ xe tuyến hoa hồng: hộp thư + bảng đơn → "Chuyến cho thuê"; chi tiết đơn ở lại', () => {
-    for (const user of [commission, lapsed, unconfigured]) {
-      for (const path of [M.BOOKING_REQUESTS, M.BOOKINGS, M.BOOKINGS_AWAITING_PICKUP]) {
-        expect(partnerPageRedirect(user, `${path}?status=closed`), path).toBe(M.TRIPS);
-      }
-      expect(partnerPageRedirect(user, M.TRIPS)).toBeNull();
-      expect(partnerPageRedirect(user, `${M.BOOKINGS}/01B`)).toBeNull();
-    }
-  });
-
-  it('THÀNH VIÊN của gian hàng hết gói giữ hộp thư + bảng đơn, /trips đưa về hộp thư', () => {
+  it('tuyến hoa hồng - chủ lẫn thành viên - ở lại "Đơn thuê xe", chi tiết đơn và đơn đã kết thúc', () => {
     const staff: AuthScope = {
       tenant: { ...lapsed.tenant!, roleKey: TENANT_ROLE.SHOP_STAFF },
     };
-    expect(partnerPageRedirect(staff, M.BOOKING_REQUESTS)).toBeNull();
-    expect(partnerPageRedirect(staff, M.BOOKINGS)).toBeNull();
-    expect(partnerPageRedirect(staff, M.TRIPS)).toBe(M.BOOKING_REQUESTS);
+    for (const user of [commission, lapsed, unconfigured, staff]) {
+      for (const path of [
+        M.BOOKINGS,
+        `${M.BOOKINGS}?preset=awaiting_pickup`,
+        `${M.BOOKINGS}/01B`,
+        M.BOOKINGS_ENDED,
+        M.BOOKINGS_AWAITING_PICKUP,
+        `${M.BOOKING_REQUESTS}?status=closed`,
+        `${M.TRIPS}?filter=history`,
+      ]) {
+        expect(partnerPageRedirect(user, path), path).toBeNull();
+      }
+    }
   });
 
-  it('tuyến gói mở /trips → hộp thư yêu cầu (họ có hộp thư + bảng đơn đầy đủ)', () => {
-    expect(partnerPageRedirect(packageCurrent, M.TRIPS)).toBe(M.BOOKING_REQUESTS);
+  it('tuyến gói: /trips và hộp thư cũ cũng để trang tự chuyển tiếp', () => {
+    expect(partnerPageRedirect(packageCurrent, M.TRIPS)).toBeNull();
     expect(partnerPageRedirect(packageCurrent, M.BOOKING_REQUESTS)).toBeNull();
     expect(partnerPageRedirect(packageCurrent, M.BOOKINGS)).toBeNull();
   });
+
+  it('next=/trips cũ sau đăng nhập không bị đá về trang chủ - trang tự chuyển tiếp kèm tab', () => {
+    const next = `${M.TRIPS}?filter=history`;
+    expect(resolvePartnerDestination({ user: commission, next })).toBe(next);
+  });
 });
 
-describe('resolvePartnerDestination — next', () => {
+describe('resolvePartnerDestination - next', () => {
   it('next an toàn trong site partner được tôn trọng (qua cùng luật tuyến)', () => {
     expect(resolvePartnerDestination({ user: packageCurrent, next: `${M.BOOKINGS}?s=1` })).toBe(
       `${M.BOOKINGS}?s=1`,
@@ -431,7 +436,7 @@ describe('khu làm việc dùng chung với app native', () => {
  * Lối vào ỔN ĐỊNH của email hướng dẫn gói (`PARTNER_PLAN_PURCHASE_PATH` = `/subscription`): server-side
  * dữ liệu tuyến (`/auth/me`) quyết đích, và đích mang `?purchase=1` để section gói mở luồng mua.
  */
-describe('/subscription — bảng quyết định của link email gói', () => {
+describe('/subscription - bảng quyết định của link email gói', () => {
   it('chưa đăng nhập → trang đăng nhập partner, quay lại đúng /subscription', () => {
     expect(portalLoginWithNext(M.SUBSCRIPTION)).toBe(
       `${M.LOGIN}?next=${encodeURIComponent(M.SUBSCRIPTION)}`,
@@ -443,7 +448,7 @@ describe('/subscription — bảng quyết định của link email gói', () =>
       withPlanPurchaseIntent(shopSectionPath(SHOP_SECTION.PLAN)),
     );
     expect(resolvePartnerDestination({ user: commission, next: M.SUBSCRIPTION })).toBe(
-      withPlanPurchaseIntent(accountSectionPath(ACCOUNT_SECTION.PLAN)),
+      withPlanPurchaseIntent(shopSectionPath(SHOP_SECTION.PLAN)),
     );
     expect(resolvePartnerDestination({ user: packagePending, next: M.SUBSCRIPTION })).toBe(
       M.ONBOARDING,
@@ -458,12 +463,12 @@ describe('/subscription — bảng quyết định của link email gói', () =>
     expect(partnerPageRedirect(packagePending, M.SUBSCRIPTION)).toBe(M.ONBOARDING);
   });
 
-  it('chỉ /subscription mang ý định mua — section gói mở trực tiếp thì không', () => {
+  it('chỉ /subscription mang ý định mua - section gói mở trực tiếp thì không', () => {
     expect(partnerPageRedirect(packageCurrent, shopSectionPath(SHOP_SECTION.PLAN))).toBeNull();
   });
 });
 
-describe('partnerSignupContinueHref — /register?track= khi đã có gian hàng', () => {
+describe('partnerSignupContinueHref - /register?track= khi đã có gian hàng', () => {
   it('hoa hồng vừa tạo ⇒ thẳng vào Tổng quan, không chạy wizard đăng xe', () => {
     expect(partnerSignupContinueHref(commission, REGISTRATION_TRACK.COMMISSION)).toBe(
       partnerTrackStartHref(REGISTRATION_TRACK.COMMISSION),

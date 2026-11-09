@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from 'antd';
+import { Button, type ButtonProps } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import {
@@ -44,9 +44,12 @@ export function BookingStatusActions({
    * ra một nút chắc chắn nhận 409.
    */
   pickupConfirmed = false,
+  /** Cỡ nút — cột phải chi tiết đơn đặt CÙNG cỡ với nút bàn giao đứng cạnh. */
+  size,
 }: {
   booking: BookingDetail;
   pickupConfirmed?: boolean;
+  size?: ButtonProps['size'];
 }) {
   const t = useTranslations('Bookings.statusActions');
   const { has } = usePermissions();
@@ -72,7 +75,7 @@ export function BookingStatusActions({
   return (
     <>
       {canCancel ? (
-        <Button danger onClick={() => setClosing(BOOKING_STATUS.CANCELLED)}>
+        <Button danger size={size} onClick={() => setClosing(BOOKING_STATUS.CANCELLED)}>
           {t('cancel')}
         </Button>
       ) : null}
@@ -82,6 +85,7 @@ export function BookingStatusActions({
         // cũng không được giấu đi — quầy cần nó đúng lúc khách trễ hẹn quá giờ.
         <Button
           type="text"
+          size={size}
           className={styles.tertiary}
           title={t('noShowHint', { minutes: BOOKING_NO_SHOW_GRACE_MINUTES })}
           onClick={() => setClosing(BOOKING_STATUS.NO_SHOW)}

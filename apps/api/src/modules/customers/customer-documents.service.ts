@@ -245,7 +245,7 @@ export class CustomerDocumentsService {
     if (customer.archivedAt) {
       throw new BadRequestException({
         code: API_ERROR_CODE.CUSTOMER_ARCHIVED,
-        message: 'Hồ sơ khách đang lưu trữ — khôi phục trước khi thêm giấy tờ',
+        message: 'Hồ sơ khách đang lưu trữ - khôi phục trước khi thêm giấy tờ',
       });
     }
     const customTypeName =
@@ -314,7 +314,7 @@ export class CustomerDocumentsService {
     if (!head) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Chưa nhận được tệp trên kho lưu trữ — hãy tải lên rồi thử lại',
+        message: 'Chưa nhận được tệp trên kho lưu trữ - hãy tải lên rồi thử lại',
       });
     }
     if (
@@ -498,6 +498,6 @@ function documentNotFound(): NotFoundException {
 function invalidObject(): BadRequestException {
   return new BadRequestException({
     code: API_ERROR_CODE.VALIDATION_FAILED,
-    message: 'Tệp tải lên không khớp khai báo (loại hoặc dung lượng) — hãy tải lên lại',
+    message: 'Tệp tải lên không khớp khai báo (loại hoặc dung lượng) - hãy tải lên lại',
   });
 }

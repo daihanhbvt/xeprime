@@ -9,7 +9,10 @@
  */
 .banner {
   position: relative;
-  overflow: hidden;
+  /* `clip` chứ không `hidden`: `hidden` biến khung thành vùng cuộn riêng, và `animation-timeline:
+     view()` của ảnh nền (`sectionParallaxClass`) bám vào khung KHÔNG cuộn này ⇒ hiệu ứng đứng yên.
+     `clip` vẫn cắt ảnh dư mép nhưng để timeline bám theo cuộn của trang. */
+  overflow: clip;
   background: var(--xp-color-bg-inverse);
   color: var(--xp-color-text-on-dark);
   isolation: isolate;
@@ -20,6 +23,17 @@
   position: absolute;
   z-index: -2;
   inset: 0;
+}
+
+/* Ảnh nền trôi theo cuộn (`sectionParallaxClass`): lớp ảnh DƯ 34% trên/dưới khung để quãng trôi
+   20% (của chính lớp ảnh, ≈ 33% khung) không bao giờ lộ nền. Chỉ khi trình duyệt chạy được hiệu ứng - không
+   hỗ trợ thì giữ khít khung như cũ. Khung `.banner` cắt phần dư (`overflow: clip`). */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .backdrop {
+      inset: -34% 0;
+    }
+  }
 }
 
 .backdropImage {
@@ -121,7 +135,8 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg-container);
+  /* Dải đối tác LUÔN là tranh tối ⇒ đĩa mũi tên luôn trắng (không đảo theo giao diện tối). */
+  background: var(--xp-color-text-on-dark);
 }
 
 .benefit {

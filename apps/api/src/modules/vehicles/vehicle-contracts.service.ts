@@ -147,7 +147,7 @@ export class VehicleContractsService {
     if (!head) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Chưa nhận được tệp trên kho lưu trữ — hãy tải lên rồi thử lại',
+        message: 'Chưa nhận được tệp trên kho lưu trữ - hãy tải lên rồi thử lại',
       });
     }
     const allowedMime = file.mimeType as DocumentUploadMimeType;
@@ -350,6 +350,6 @@ function fileNotFound(): NotFoundException {
 function invalidObject(): BadRequestException {
   return new BadRequestException({
     code: API_ERROR_CODE.VALIDATION_FAILED,
-    message: 'Tệp tải lên không khớp khai báo (loại hoặc dung lượng) — hãy tải lên lại',
+    message: 'Tệp tải lên không khớp khai báo (loại hoặc dung lượng) - hãy tải lên lại',
   });
 }

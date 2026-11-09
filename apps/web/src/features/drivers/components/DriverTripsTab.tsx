@@ -98,7 +98,7 @@ export function DriverTripsTab({
       key: 'period',
       width: 210,
       render: (_, row) => (
-        <span className={styles.muted}>{fmt.shortDateTimeRange(row.pickupAt, row.returnAt)}</span>
+        <span className={styles.muted}>{fmt.rentalRange(row.pickupAt, row.returnAt)}</span>
       ),
     },
     {
@@ -118,7 +118,7 @@ export function DriverTripsTab({
       align: 'right',
       render: (_, row) => {
         const line = driverWageLine({ amount: row.wageAmount, stage: row.stage });
-        if (!line) return <span className={styles.muted}>—</span>;
+        if (!line) return <span className={styles.muted}>-</span>;
         return line.kind === 'none' ? (
           <span className={styles.muted}>{tLine('none')}</span>
         ) : (

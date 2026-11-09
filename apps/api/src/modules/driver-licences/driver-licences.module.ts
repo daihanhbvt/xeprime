@@ -33,7 +33,7 @@ import { TesseractDriverLicenceReader } from './reader/tesseract-driver-licence-
         const missing = TesseractDriverLicenceReader.unavailableReason();
         if (missing) {
           new Logger(DriverLicencesModule.name).error(
-            `Tesseract không dùng được (${missing}) — bằng lái sẽ chờ duyệt tay`,
+            `Tesseract không dùng được (${missing}) - bằng lái sẽ chờ duyệt tay`,
           );
           return new NotConfiguredDriverLicenceReader();
         }

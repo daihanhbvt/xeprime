@@ -194,6 +194,18 @@ export type MembershipStatus = (typeof MEMBERSHIP_STATUS)[keyof typeof MEMBERSHI
 export const MEMBERSHIP_STATUS_VALUES = Object.values(MEMBERSHIP_STATUS) as MembershipStatus[];
 
 /**
+ * Vì sao HỆ THỐNG khoá một thành viên (`tenant_memberships.locked_reason`, ADR 0085 điều 6). Vắng
+ * (NULL) = không khoá, hoặc chủ khoá tay. Gói kích hoạt lại chỉ mở đúng các dòng mang lý do này.
+ */
+export const MEMBERSHIP_LOCK_REASON = {
+  /** Gian hàng hết ân hạn mọi gói, về tuyến hoa hồng — Owner Lite không có nhân viên. */
+  PLAN_LAPSED: 'plan_lapsed',
+} as const;
+
+export type MembershipLockReason =
+  (typeof MEMBERSHIP_LOCK_REASON)[keyof typeof MEMBERSHIP_LOCK_REASON];
+
+/**
  * Nhãn + màu cho nhãn trạng thái dùng chung.
  *
  * Ở đây chứ không ở từng app: web và app native cùng vẽ nhãn này trên màn Nhân sự, và hai bảng

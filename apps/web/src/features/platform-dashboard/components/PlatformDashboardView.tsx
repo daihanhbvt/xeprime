@@ -95,7 +95,7 @@ export function PlatformDashboardView() {
   const loadingOverview = overview.isLoading;
   const overviewFailed = overview.isError && !data;
   const kpiValue = (render: () => string): string =>
-    overviewFailed ? tCommon('states.error') : data ? render() : '—';
+    overviewFailed ? tCommon('states.error') : data ? render() : '-';
 
   const activity = data?.activity ?? null;
   const revenue = data?.revenue ?? null;
@@ -208,7 +208,7 @@ export function PlatformDashboardView() {
                 ? fmt.count(summary.data.listingActive)
                 : summary.isError
                   ? tCommon('states.error')
-                  : '—'
+                  : '-'
             }
             hint={summary.data ? tKpi('listingsHint', { total: summary.data.listingTotal }) : undefined}
             icon={CarOutlined}

@@ -394,10 +394,10 @@ export function DeliveryPolicySection<T extends PolicyFormValues>({
               <div key={field.id} className={styles.tierRow}>
                 <div className={styles.distanceCell}>
                   <span className={styles.tierFrom}>
-                    {index === 0 ? '0' : `> ${tiers[index - 1]?.toKm ?? '—'}`}
+                    {index === 0 ? '0' : `> ${tiers[index - 1]?.toKm ?? '-'}`}
                   </span>
                   <span className={styles.distanceSeparator} aria-hidden="true">
-                    –
+                    -
                   </span>
                   <div className={styles.tierTo}>
                     <NumberField
@@ -605,12 +605,14 @@ function OvertimeSection({
 
   const fee = useWatch({ control, name: 'overtimeFeePerHour' });
   const flat = useContext(FlatLayout);
-  const formula = fee != null ? t('formula', { fee: fmt.money(String(fee)) }) : t('formulaNone');
+  // Không còn ô làm tròn (06/11/2026): quyết toán luôn làm tròn LÊN theo giờ — công thức nói thẳng ra.
+  const formula =
+    fee != null ? t('formulaRounded', { fee: fmt.money(String(fee)) }) : t('formulaNone');
 
   return (
     <section className={cx(styles.card, flat && styles.flat)} aria-label={title}>
       <SectionTitle title={title} infoLabel={t('tipLabel')}>
-        {t('hint')}
+        {t('hintRounded')}
         {flat ? <TipPreview title={t('formulaTitle')} text={formula} /> : null}
       </SectionTitle>
       <div className={styles.fieldRow}>
@@ -640,22 +642,6 @@ function OvertimeSection({
             }
             addonAfter={t('unitMinutes')}
             min={0}
-            placeholder={t('placeholder')}
-            disabled={disabled}
-          />
-        </div>
-        <div className={styles.overtimeField}>
-          <NumberField
-            control={control}
-            name="overtimeRoundingMinutes"
-            label={t('roundingMinutes')}
-            labelAccessory={
-              <PolicyInfoTip label={t('roundingMinutesTipLabel')}>
-                {t('roundingMinutesHint')}
-              </PolicyInfoTip>
-            }
-            addonAfter={t('unitMinutes')}
-            min={1}
             placeholder={t('placeholder')}
             disabled={disabled}
           />
@@ -712,6 +698,8 @@ function DiscountSection({
       <div className={styles.cardHeader}>
         <SectionTitle title={title} infoLabel={t('tipLabel')}>
           {t('hint')}
+          {/* Phẳng: đã có khung xem trước giá gói đứng cạnh — công thức chỉ còn trong ⓘ. */}
+          {flat ? <TipPreview title={t('formulaTitle')} text={t('formula')} /> : null}
         </SectionTitle>
         <SwitchField
           control={control}
@@ -812,10 +800,12 @@ function DiscountSection({
               }
             />
           ) : null}
-          <div className={styles.formulaCard}>
-            <span className={styles.previewTitle}>{t('formulaTitle')}</span>
-            <span className={styles.previewText}>{t('formula')}</span>
-          </div>
+          {flat ? null : (
+            <div className={styles.formulaCard}>
+              <span className={styles.previewTitle}>{t('formulaTitle')}</span>
+              <span className={styles.previewText}>{t('formula')}</span>
+            </div>
+          )}
         </>
       ) : (
         <p className={styles.disabledNote}>{t('disabledNote')}</p>

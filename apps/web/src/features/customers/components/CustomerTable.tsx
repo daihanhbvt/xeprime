@@ -11,6 +11,7 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { customerStatusOf } from '../constants';
 import { isZeroMoney } from '@/lib/money';
 import { cx } from '@/lib/cx';
+import { rowNumberOf } from '@/lib/pagination';
 import type { TenantCustomer } from '../types';
 import styles from './CustomerTable.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -38,7 +39,7 @@ function DebtValue({ value }: { value: string | null | undefined }) {
   const fmt = useAppFormat();
 
   // `null` = KHÔNG được xem tiền (server quyết). Khác hẳn 0 đồng — nên hiện gạch, không hiện 0.
-  if (value === null || value === undefined) return <span className={styles.muted}>—</span>;
+  if (value === null || value === undefined) return <span className={styles.muted}>-</span>;
   return (
     <span className={cx(styles.money, !isZeroMoney(value) && styles.debt)}>
       {fmt.money(value)}
@@ -85,7 +86,7 @@ export function CustomerTable({
       key: 'index',
       width: 64,
       align: 'center',
-      render: (_, __, index) => (meta.page - 1) * meta.limit + index + 1,
+      render: (_, __, index) => rowNumberOf(meta, index),
     },
     {
       title: t('card.identity'),
@@ -194,7 +195,7 @@ export function CustomerTable({
         </div>
         <div>
           <dt>{t('card.lastRentalShort')}</dt>
-          <dd>{row.lastRentalAt ? fmt.date(row.lastRentalAt) : '—'}</dd>
+          <dd>{row.lastRentalAt ? fmt.date(row.lastRentalAt) : '-'}</dd>
         </div>
         {canViewFinance ? (
           <div>
@@ -218,6 +219,8 @@ export function CustomerTable({
       columns={columns}
       items={items}
       minWidth={MIN_TABLE_WIDTH}
+      framed
+      striped={false}
       loading={loading}
       error={error ? { title: t('list.errorTitle'), onRetry: error.onRetry } : null}
       permission={

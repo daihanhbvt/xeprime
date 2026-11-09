@@ -112,7 +112,7 @@ export class VehicleSettingsController {
   @Get(':id/driver-surcharge-rules')
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
   @ApiOperation({
-    summary: 'ĐÃ GỠ — phụ phí tài xế (ADR 0075): luôn trả bốn loại đều tắt',
+    summary: 'ĐÃ GỠ - phụ phí tài xế (ADR 0075): luôn trả bốn loại đều tắt',
     deprecated: true,
   })
   @ApiOkResponse({ type: DriverSurchargeRulesDto })
@@ -126,7 +126,7 @@ export class VehicleSettingsController {
   @Put(':id/driver-surcharge-rules')
   @RequirePermissions(PERMISSION.VEHICLE_UPDATE)
   @ApiOperation({
-    summary: 'ĐÃ GỠ — phụ phí tài xế (ADR 0075): luôn 422 `DRIVER_SURCHARGE_RETIRED`',
+    summary: 'ĐÃ GỠ - phụ phí tài xế (ADR 0075): luôn 422 `DRIVER_SURCHARGE_RETIRED`',
     deprecated: true,
   })
   @ApiOkResponse({ type: DriverSurchargeRulesDto })
@@ -143,7 +143,7 @@ export class VehicleSettingsController {
   @RequirePermissions(PERMISSION.BOOKING_VIEW, PERMISSION.BOOKING_REQUEST_VIEW)
   @ApiOperation({
     summary:
-      'Lịch sử chuyến của một xe — đơn thuê + yêu cầu chưa thành đơn, trộn và phân trang ở DB',
+      'Lịch sử chuyến của một xe - đơn thuê + yêu cầu chưa thành đơn, trộn và phân trang ở DB',
   })
   @ApiOkResponse({ type: VehicleTripHistoryPageDto })
   tripHistory(

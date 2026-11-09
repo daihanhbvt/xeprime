@@ -2,9 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet } from 'react-native';
 import { Text, XStack } from 'tamagui';
+import { PressableScale } from '@/components/motion/PressableScale';
+import { haptics } from '@/lib/haptics';
+import { ShineSweep } from '@/components/motion/ShineSweep';
 import type { IconName } from '@/components/ui/Chip';
 import { elevation } from '@/theme/elevation';
-import { useColors } from '@/theme/ThemeProvider';
+import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import {
   buttonHeight,
   buttonHitSlop,
@@ -15,7 +18,6 @@ import {
   space,
 } from '@/theme/tokens';
 
-const SLOP_LG = buttonHitSlop(buttonHeight.lg);
 const SLOP_MD = buttonHitSlop(buttonHeight.md);
 
 const styles = StyleSheet.create({
@@ -23,6 +25,8 @@ const styles = StyleSheet.create({
 });
 
 interface GradientButtonProps {
+  /** Vệt sáng chạy qua định kỳ — chỉ cho nút CHÍNH của màn (Tìm kiếm, Chọn thuê). */
+  shine?: boolean;
   label: string;
   onPress: () => void;
   /** Biểu tượng đứng SAU nhãn — mũi tên của các nút mời trên trang chủ v2. */
@@ -31,6 +35,11 @@ interface GradientButtonProps {
   iconStart?: IconName;
   /** Bo góc — mặc định `border-radius-control` 12, chuẩn nút chung của app (chốt 28/10/2026). */
   radius?: number;
+  /**
+   * Chiều cao nút - mặc định `buttonHeight.lg` (44). Thẻ tìm kiếm truyền `SEARCH_FIELD_HEIGHT`
+   * để nút thẳng hàng với các ô. Vùng chạm vẫn nới lên tối thiểu 44 bằng `hitSlop`.
+   */
+  height?: number;
   accessibilityLabel?: string;
 }
 
@@ -47,18 +56,22 @@ export function GradientButton({
   iconStart,
   radius: corner = radius.control,
   accessibilityLabel,
+  shine = false,
+  height = buttonHeight.lg,
 }: GradientButtonProps) {
+  const slop = buttonHitSlop(height);
   const colors = useColors();
   return (
-    <Pressable
-      onPress={onPress}
+    // Nhấn: co nhẹ lò xo như `Button` chung (`PressableScale`), thay cho chớp mờ.
+    <PressableScale
+      onPress={() => {
+        haptics.light();
+        onPress();
+      }}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      hitSlop={{ top: SLOP_LG, bottom: SLOP_LG }}
-      style={({ pressed }) => [
-        elevation.card,
-        { borderRadius: corner, opacity: pressed ? 0.88 : 1 },
-      ]}
+      hitSlop={{ top: slop, bottom: slop }}
+      style={[elevation.card, { borderRadius: corner }]}
     >
       <LinearGradient
         colors={gradients.primary.colors}
@@ -67,7 +80,8 @@ export function GradientButton({
         end={{ x: 1, y: 0.5 }}
         style={[styles.fill, { borderRadius: corner }]}
       >
-        <XStack ai="center" jc="center" gap={space.sm} minHeight={buttonHeight.lg} px={space.lg}>
+        {shine ? <ShineSweep /> : null}
+        <XStack ai="center" jc="center" gap={space.sm} h={height} px={space.lg}>
           {iconStart ? <Ionicons name={iconStart} size={19} color={colors.onPrimary} /> : null}
           <Text col={colors.onPrimary} fos={fontSize.body} fow={fontWeight.semibold}>
             {label}
@@ -75,7 +89,7 @@ export function GradientButton({
           {iconEnd ? <Ionicons name={iconEnd} size={16} color={colors.onPrimary} /> : null}
         </XStack>
       </LinearGradient>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -90,6 +104,9 @@ export function OutlineAction({
   fullWidth?: boolean;
 }) {
   const colors = useColors();
+  // Figma dark (`19879:66181`): nền than #232323, viền xám #717680, chữ gold chính — khớp
+  // `CtaButton .outline` tối bên web. Chưa có token tối cho hai màu này.
+  const dark = useAppScheme().scheme === 'dark';
   return (
     <Pressable
       onPress={onPress}
@@ -107,10 +124,10 @@ export function OutlineAction({
         px={space.md}
         br={radius.control}
         bw={1}
-        bc={colors.primaryLight}
-        bg={colors.surface}
+        bc={dark ? '#717680' : colors.primaryLight}
+        bg={dark ? '#232323' : colors.surface}
       >
-        <Text col={colors.primaryActive} fos={fontSize.body} fow={fontWeight.semibold}>
+        <Text col={dark ? colors.primary : colors.primaryActive} fos={fontSize.body} fow={fontWeight.semibold}>
           {label}
         </Text>
       </XStack>

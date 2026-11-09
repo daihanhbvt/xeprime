@@ -24,6 +24,11 @@ import { remindDuringGrace, sweepSubscriptionLifecycle } from '../src/jobs/subsc
  *    nhiêu lần cũng vậy (UNIQUE `email_outbox.dedupe_key`, không phải check ở app).
  *
  * ⚠️ Công tắc là một dòng toàn hệ thống — giữ giá trị đầu, trả lại ở `after`.
+ *
+ * ⚠️ Job vòng đời quét TOÀN BẢNG thuê bao, không theo tenant: một file test khác chạy song song
+ * (`subscription-lifecycle.test.ts`) nhận mốc ân hạn của thuê bao ở đây giữa lúc claim và lúc xếp
+ * thư, và phép đếm ra 0. Vì vậy script `test` của worker chạy từng file một
+ * (`--test-concurrency=1`) — đừng gỡ cờ đó để "chạy nhanh hơn".
  */
 const prisma = createPrismaClient();
 const DAY = 86_400_000;

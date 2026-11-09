@@ -22,7 +22,7 @@ export const CATALOG_ITEMS: CatalogItem[] = [
   item(CATALOG_TYPE.BODY_TYPE, 'suv', 'SUV', 1, '7 chỗ · gầm cao', '/body-types/suv.png', true, [
     'car',
   ]),
-  item(CATALOG_TYPE.BODY_TYPE, 'cargo', 'Xe tải – Cargo', 2, 'Xe tải', null, false, ['car']),
+  item(CATALOG_TYPE.BODY_TYPE, 'cargo', 'Xe tải - Cargo', 2, 'Xe tải', null, false, ['car']),
   item(CATALOG_TYPE.FUEL_TYPE, 'gasoline', 'Xăng', 0),
   item(CATALOG_TYPE.FUEL_TYPE, 'electric', 'Điện', 1),
   item(CATALOG_TYPE.VEHICLE_FEATURE, 'bluetooth', 'Bluetooth', 0),

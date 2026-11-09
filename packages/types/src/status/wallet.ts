@@ -244,3 +244,21 @@ export type WalletStatementUnit =
 export const WALLET_STATEMENT_UNIT_VALUES = Object.values(
   WALLET_STATEMENT_UNIT,
 ) as WalletStatementUnit[];
+
+/**
+ * Nguồn của một dòng "Biến động số dư" (`GET /shop/wallet/activity`).
+ *
+ * Hai bảng, một danh sách: dòng SỔ (`wallet_entries`, đã ghi — luôn xong) và LỆNH RÚT
+ * (`withdrawal_requests`, có vòng đời riêng). Lệnh rút là dòng của chính nó chứ không qua bút toán
+ * `withdrawal`/`withdrawal_reversal`: lệnh đang chờ hay bị từ chối chưa từng có bút toán nào.
+ */
+export const WALLET_ACTIVITY_SOURCE = {
+  ENTRY: 'entry',
+  WITHDRAWAL: 'withdrawal',
+} as const;
+
+export type WalletActivitySource =
+  (typeof WALLET_ACTIVITY_SOURCE)[keyof typeof WALLET_ACTIVITY_SOURCE];
+export const WALLET_ACTIVITY_SOURCE_VALUES = Object.values(
+  WALLET_ACTIVITY_SOURCE,
+) as WalletActivitySource[];

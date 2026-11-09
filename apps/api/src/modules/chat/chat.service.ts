@@ -104,6 +104,14 @@ const MESSAGE_SELECT = {
   sentAt: true,
   sender: { select: { displayName: true } },
   vehicle: { select: { id: true, name: true, mainImageUrl: true } },
+  bookingRequest: {
+    select: {
+      id: true,
+      pickupAt: true,
+      returnAt: true,
+      booking: { select: { id: true, code: true, pickupAt: true, returnAt: true } },
+    },
+  },
   attachments: {
     select: { fileUrl: true, fileType: true, fileName: true, fileSize: true },
   },
@@ -317,7 +325,7 @@ export class ChatService {
     if (!request.customerUserId) {
       throw new BadRequestException({
         code: API_ERROR_CODE.CHAT_CUSTOMER_UNAVAILABLE,
-        message: 'Khách chưa có tài khoản trên nền tảng — hãy gọi điện hoặc nhắn Zalo',
+        message: 'Khách chưa có tài khoản trên nền tảng - hãy gọi điện hoặc nhắn Zalo',
       });
     }
     /*
@@ -584,7 +592,10 @@ export class ChatService {
       if (replayed) return replayed;
     }
 
-    const vehicleId = await this.resolveVehicleContext(conversation.tenantId, dto.vehicleId);
+    // Có chuyến thì thẻ xe là xe CỦA chuyến — không để client ghép một chuyến với một xe khác.
+    const trip = await this.resolveTripContext(conversation, dto.bookingRequestId);
+    const vehicleId =
+      trip?.vehicleId ?? (await this.resolveVehicleContext(conversation.tenantId, dto.vehicleId));
 
     const senderType: SenderType =
       side === CHAT_SIDE.CUSTOMER ? SENDER_TYPE.CUSTOMER : SENDER_TYPE.SHOP_MEMBER;
@@ -606,6 +617,7 @@ export class ChatService {
             text,
             clientMessageId,
             vehicleId,
+            bookingRequestId: trip?.id ?? null,
             sentAt: now,
             ...(attachments.length
               ? {
@@ -1033,6 +1045,28 @@ export class ChatService {
     return vehicle?.id ?? null;
   }
 
+  /**
+   * Chuyến gắn kèm một tin nhắn phải là chuyến CỦA CHÍNH CẶP (khách, gian hàng) của hội thoại.
+   *
+   * Chỉ kiểm gian hàng thì nhân viên gắn được chuyến của một khách khác vào thread này — thẻ sẽ lộ
+   * lịch thuê của người thứ ba cho khách đang chat. Không hợp lệ thì BỎ thẻ, không chặn tin (cùng
+   * kỷ luật với `resolveVehicleContext`).
+   */
+  private async resolveTripContext(
+    conversation: Pick<ConversationAccessRow, 'tenantId' | 'customerUserId'>,
+    requestId: string | undefined,
+  ): Promise<{ id: string; vehicleId: string } | null> {
+    if (!requestId || !conversation.customerUserId) return null;
+    return this.prisma.bookingRequest.findFirst({
+      where: {
+        id: requestId,
+        tenantId: conversation.tenantId,
+        customerUserId: conversation.customerUserId,
+      },
+      select: { id: true, vehicleId: true },
+    });
+  }
+
   /** Đính kèm phải là URL R2 công khai của mình — chặn nhét link bừa làm "đính kèm". */
   private assertAttachmentUrls(attachments: { url: string }[]): void {
     if (attachments.length === 0) return;
@@ -1141,6 +1175,7 @@ function toMessageDto(m: MessageRow): MessageDto {
     vehicle: m.vehicle
       ? { id: m.vehicle.id, name: m.vehicle.name, imageUrl: m.vehicle.mainImageUrl }
       : null,
+    trip: toMessageTrip(m.bookingRequest),
     attachments: m.attachments.map((a) => ({
       url: a.fileUrl,
       fileType: a.fileType,
@@ -1148,6 +1183,22 @@ function toMessageDto(m: MessageRow): MessageDto {
       fileSize: a.fileSize,
     })),
     sentAt: m.sentAt as unknown as string,
+  };
+}
+
+/**
+ * Thẻ chuyến — lịch của ĐƠN thắng lịch của yêu cầu: dài hạn chỉ có giờ nhận sau khi gian hàng chốt,
+ * và lượt duyệt có thể đã dời giờ so với lúc khách gửi.
+ */
+function toMessageTrip(request: MessageRow['bookingRequest']): MessageDto['trip'] {
+  if (!request) return null;
+  const booking = request.booking;
+  return {
+    id: request.id,
+    bookingId: booking?.id ?? null,
+    code: booking?.code ?? null,
+    pickupAt: ((booking?.pickupAt ?? request.pickupAt) as unknown as string | null) ?? null,
+    returnAt: ((booking?.returnAt ?? request.returnAt) as unknown as string | null) ?? null,
   };
 }
 

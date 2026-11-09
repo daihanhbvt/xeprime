@@ -16,9 +16,12 @@
     "account": "Tài khoản & bảo mật",
     "renterTrips": "Chuyến tôi đi thuê",
     "partnerHome": "Về trang chủ XePrime Partner",
-    "ownerProfile": "Hồ sơ chủ xe",
     "breadcrumb": "Vị trí trang",
-    "homeLink": "Về Tổng quan"
+    "homeLink": "Về Tổng quan",
+    "shopManage": "Quản lý gian hàng",
+    "rentalManage": "Quản lý cho thuê",
+    "workspace": "Gian hàng",
+    "upgradeToShop": "Nâng cấp gian hàng"
   },
   "permission": {
     "deniedTitle": "Bạn không có quyền truy cập",
@@ -31,17 +34,17 @@
   "feature": {
     "expiredTitle": "{feature}: gói đã hết hạn, đang ở chế độ chỉ xem",
     "expiredBody": "Toàn bộ dữ liệu cũ vẫn còn nguyên và xem lại được. Gia hạn gói để nhập và chỉnh sửa tiếp.",
-    "expiredBodyWithDate": "Gói hết hạn ngày {date}. Toàn bộ dữ liệu cũ vẫn còn nguyên và xem lại được — gia hạn để nhập và chỉnh sửa tiếp.",
+    "expiredBodyWithDate": "Gói hết hạn ngày {date}. Toàn bộ dữ liệu cũ vẫn còn nguyên và xem lại được - gia hạn để nhập và chỉnh sửa tiếp.",
     "renewCta": "Gia hạn gói",
-    "refreshCta": "Tôi đã gia hạn — tải lại",
+    "refreshCta": "Tôi đã gia hạn - tải lại",
     "readOnlyTooltip": "Gói đã hết hạn nên tính năng này chỉ xem được. Gia hạn để thao tác tiếp.",
     "upsellTitle": "{feature} thuộc gói dịch vụ",
-    "upsellBody": "Gian hàng của bạn chưa có tính năng này. Xem các gói để mở khoá — dữ liệu và thao tác hiện tại không bị ảnh hưởng.",
+    "upsellBody": "Gian hàng của bạn chưa có tính năng này. Xem các gói để mở khoá - dữ liệu và thao tác hiện tại không bị ảnh hưởng.",
     "viewPlansCta": "Xem các gói",
     "viewPlanCta": "Xem tài khoản & hạn mức",
     "appExpiredTitle": "{feature}: đang ở chế độ chỉ xem",
     "appExpiredBody": "Toàn bộ dữ liệu cũ vẫn còn nguyên và xem lại được. Liên hệ XePrime để tiếp tục nhập và chỉnh sửa.",
-    "appExpiredBodyWithDate": "Hết thời hạn sử dụng ngày {date}. Toàn bộ dữ liệu cũ vẫn còn nguyên và xem lại được — liên hệ XePrime để tiếp tục nhập và chỉnh sửa.",
+    "appExpiredBodyWithDate": "Hết thời hạn sử dụng ngày {date}. Toàn bộ dữ liệu cũ vẫn còn nguyên và xem lại được - liên hệ XePrime để tiếp tục nhập và chỉnh sửa.",
     "appRefreshCta": "Tải lại",
     "appReadOnlyTooltip": "Tính năng này đang ở chế độ chỉ xem. Liên hệ XePrime để tiếp tục thao tác."
   },
@@ -105,7 +108,7 @@
     "contact": {
       "title": "Chưa tìm thấy câu trả lời?",
       "body": "Liên hệ chủ gian hàng hoặc quản trị viên của bạn để được cấp quyền và hướng dẫn thêm.",
-      "casesBody": "Việc cần XePrime xử lý — tranh chấp chuyến, sự cố, tiền nong — thì mở một yêu cầu hỗ trợ để có mã theo dõi.",
+      "casesBody": "Việc cần XePrime xử lý - tranh chấp chuyến, sự cố, tiền nong - thì mở một yêu cầu hỗ trợ để có mã theo dõi.",
       "casesCta": "Mở yêu cầu hỗ trợ"
     },
     "legal": {

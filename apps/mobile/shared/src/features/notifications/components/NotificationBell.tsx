@@ -199,7 +199,7 @@ export function NotificationBell({
             hitSlop={space.xs}
           >
             <Text
-              col={unreadCount === 0 ? colors.textDisabled : colors.primaryActive}
+              col={unreadCount === 0 ? colors.textDisabled : colors.accentText}
               fos={fontSize.bodySm}
               fow={fontWeight.semibold}
             >
@@ -302,7 +302,7 @@ function NotificationRow({
           <Ionicons
             name={notificationIcon(item.type)}
             size={iconSize.sm}
-            color={colors.primaryActive}
+            color={colors.accentText}
           />
         </YStack>
 

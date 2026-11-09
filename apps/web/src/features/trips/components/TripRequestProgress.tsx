@@ -4,6 +4,7 @@ import { CheckOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { useId } from 'react';
 import { cx } from '@/lib/cx';
+import { popInClass, seqClass, staggerFastClass } from '@/components/motion/motion-classes';
 import styles from './TripRequestProgress.module.css';
 
 /** Các mốc của một YÊU CẦU thuê, từ phía khách — ADR 0044: gửi → duyệt → giữ chỗ → xác nhận. */
@@ -45,7 +46,7 @@ export function TripRequestProgress({ current, hasHoldStage, className }: TripRe
       <h2 id={titleId} className={styles.title}>
         {t('title')}
       </h2>
-      <ol className={styles.steps}>
+      <ol className={cx(styles.steps, staggerFastClass, seqClass)}>
         {steps.map((step, index) => {
           const state = index < currentIndex ? 'done' : index === currentIndex ? 'current' : 'todo';
           return (
@@ -54,13 +55,13 @@ export function TripRequestProgress({ current, hasHoldStage, className }: TripRe
               className={styles.step}
               aria-current={state === 'current' ? 'step' : undefined}
             >
-              <span className={cx(styles.marker, styles[state])} aria-hidden="true">
+              <span className={cx(styles.marker, styles[state], popInClass)} aria-hidden="true">
                 {state === 'done' ? <CheckOutlined /> : <span className={styles.dot} />}
               </span>
               <div className={styles.text}>
                 <p className={styles.stepTitle}>
                   {t(`steps.${step}.title`)}
-                  <span className={styles.srOnly}>{` — ${t(`state.${state}`)}`}</span>
+                  <span className={styles.srOnly}>{` - ${t(`state.${state}`)}`}</span>
                 </p>
                 <p className={styles.stepBody}>
                   {/*

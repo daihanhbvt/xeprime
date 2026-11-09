@@ -63,7 +63,7 @@ export function MenuOption({
         {leading ?? null}
         <YStack f={1} gap={2}>
           <Text
-            col={selected ? colors.primaryActive : colors.text}
+            col={selected ? colors.accentText : colors.text}
             fos={fieldFontSize.value}
             fow={selected ? fontWeight.semibold : fontWeight.regular}
           >
@@ -81,7 +81,7 @@ export function MenuOption({
           </Text>
         ) : null}
         {selected ? (
-          <Ionicons name="checkmark" size={iconSize.md} color={colors.primaryActive} />
+          <Ionicons name="checkmark" size={iconSize.md} color={colors.accentText} />
         ) : null}
       </XStack>
     </Pressable>

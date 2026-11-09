@@ -102,7 +102,7 @@ export class UpdateMemberRoleDto extends MemberBranchScopeDto {
 }
 
 export class MemberDto {
-  @ApiProperty({ description: 'ID user — dùng cho PATCH/DELETE /members/:userId' }) userId!: string;
+  @ApiProperty({ description: 'ID user - dùng cho PATCH/DELETE /members/:userId' }) userId!: string;
   @ApiProperty() displayName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) email!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) avatarUrl!: string | null;
@@ -111,7 +111,7 @@ export class MemberDto {
   @ApiProperty({ enum: MEMBERSHIP_BRANCH_SCOPE_VALUES }) branchScope!: string;
   @ApiProperty({
     type: [String],
-    description: "Rỗng khi `branchScope = 'all'` — lúc đó thành viên thấy mọi chi nhánh",
+    description: "Rỗng khi `branchScope = 'all'` - lúc đó thành viên thấy mọi chi nhánh",
   })
   branchIds!: string[];
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC' })

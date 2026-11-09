@@ -10,6 +10,8 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useFavoriteTab, useFavoritesList } from '../hooks/use-favorites-list';
 import { FavoriteVehicleCard, FavoriteVehicleCardSkeleton } from './FavoriteVehicleCard';
+import { cx } from '@/lib/cx';
+import { staggerFastClass } from '@/components/motion/motion-classes';
 import styles from './FavoritesView.module.css';
 
 const SKELETON_CARDS = 3;
@@ -129,7 +131,7 @@ function FavoritesTab({
 
   return (
     <>
-      <ul className={styles.list}>
+      <ul className={cx(styles.list, staggerFastClass)}>
         {list.items.map((vehicle) => (
           <li key={vehicle.id} className={styles.item}>
             <FavoriteVehicleCard vehicle={vehicle} />

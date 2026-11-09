@@ -188,7 +188,7 @@ export class OdometerService {
         if (!dto.confirmDecrease) {
           throw new ConflictException({
             code: API_ERROR_CODE.ODOMETER_DECREASE_FORBIDDEN,
-            message: 'KM mới thấp hơn KM hiện tại — cần xác nhận trước khi giảm',
+            message: 'KM mới thấp hơn KM hiện tại - cần xác nhận trước khi giảm',
             details: { currentKm, nextKm: dto.odometerKm, requiresConfirmation: true },
           });
         }
@@ -281,7 +281,7 @@ function assertKmBounds(km: number): void {
   if (!Number.isInteger(km) || km < 0 || km > ODOMETER_MAX_KM) {
     throw new BadRequestException({
       code: API_ERROR_CODE.VALIDATION_FAILED,
-      message: `Số KM phải là số nguyên trong khoảng 0–${ODOMETER_MAX_KM}`,
+      message: `Số KM phải là số nguyên trong khoảng 0-${ODOMETER_MAX_KM}`,
       details: { fields: [{ field: 'odometerKm', message: 'Giá trị KM không hợp lệ' }] },
     });
   }
@@ -291,7 +291,7 @@ function assertKmBounds(km: number): void {
 function decreaseForbidden(currentKm: number, nextKm: number): ForbiddenException {
   return new ForbiddenException({
     code: API_ERROR_CODE.ODOMETER_DECREASE_FORBIDDEN,
-    message: `KM mới (${nextKm}) thấp hơn KM hiện tại (${currentKm}) — thao tác này cần quyền quản trị viên`,
+    message: `KM mới (${nextKm}) thấp hơn KM hiện tại (${currentKm}) - thao tác này cần quyền quản trị viên`,
     details: { currentKm, nextKm, requiredPermission: 'vehicles.odometer.decrease' },
   });
 }
@@ -299,6 +299,6 @@ function decreaseForbidden(currentKm: number, nextKm: number): ForbiddenExceptio
 function staleProfile(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.CONFLICT,
-    message: 'Hồ sơ bảo dưỡng vừa được người khác cập nhật — tải lại rồi thử lại',
+    message: 'Hồ sơ bảo dưỡng vừa được người khác cập nhật - tải lại rồi thử lại',
   });
 }

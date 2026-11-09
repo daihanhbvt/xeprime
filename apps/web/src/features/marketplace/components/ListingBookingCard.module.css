@@ -26,11 +26,15 @@
   display: flex;
   background: var(--xp-color-bg, #fafafa);
   border-bottom: 1px solid var(--xp-color-border, #e9eaeb);
-  height: 50px;
+  min-height: 50px;
 }
 
+/* Chia bề ngang theo độ dài nhãn (không 3 phần bằng nhau); thiếu chỗ thì xuống dòng căn giữa. */
 .serviceTab {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  overflow-wrap: anywhere;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -43,7 +47,7 @@
   border-bottom: 2px solid transparent;
   cursor: pointer;
   transition: all 0.15s ease;
-  padding: 0 8px;
+  padding: 6px 8px;
 }
 
 .serviceTab:hover {
@@ -311,15 +315,6 @@
   margin-top: 1px;
 }
 
-/* 14/22 Light nghiêng `Text/Gray/low` — Light (300) chưa có token trọng lượng. */
-.addressNote {
-  margin: 0;
-  font-size: var(--xp-font-size-body);
-  font-weight: 300;
-  line-height: var(--bk-line-height-14);
-  color: var(--xp-color-text-tertiary, #717680);
-  font-style: italic;
-}
 
 /* Bảo hiểm chuyến đi MIC */
 .insuranceSection {
@@ -547,13 +542,32 @@
   transform: translateY(-1px);
 }
 
-/* Nút nhắn shop đi sát nút chính (gap 16 của thẻ − 8). */
+/* Figma `22110:55767`: Nhắn shop (148px) + Thuê xe (phần còn lại) chung một hàng, cách 16px. */
+.actionsRow {
+  display: flex;
+  align-items: stretch;
+  gap: var(--xp-space-md);
+}
+
 .chatBtnWrapper {
-  margin-top: calc(-1 * var(--xp-space-sm));
+  flex: 0 0 148px;
+  min-width: 0;
+}
+
+/* Chat đóng thì ShopChatButton không vẽ gì — nút chính chiếm trọn hàng. */
+.chatBtnWrapper:empty {
+  display: none;
 }
 
 .chatBtnWrapper :global(.ant-btn) {
   width: 100%;
+  height: 48px;
+  border-radius: var(--xp-border-radius-control);
+}
+
+.actionsRow .ctaBtnWrapper {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* Lộ trình (Có tài xế) */
@@ -914,7 +928,7 @@
   }
 
   .serviceTab {
-    padding: 0 var(--xp-space-12);
+    padding: 6px var(--xp-space-12);
     border-radius: var(--xp-space-12) var(--xp-space-12) 0 0;
     font-size: var(--xp-font-size-body);
     line-height: var(--bk-line-height-14);
@@ -1031,4 +1045,35 @@
   font-weight: var(--xp-font-weight-semibold);
   line-height: var(--xp-line-height-h3);
   color: var(--xp-color-text-secondary);
+}
+
+/* Nút đổi/chọn địa chỉ: `--xp-color-primary-dark` không được khai nên rơi về #cb9115 — trên nền
+   tối đổi sang gold chính; hover viết riêng vì quy tắc tối mạnh hơn `:hover`. */
+:global([data-theme='dark']) .changeAddressBtn,
+:global([data-theme='dark']) .chooseAddressBtn {
+  color: var(--xp-color-primary);
+}
+
+:global([data-theme='dark']) .changeAddressBtn:hover {
+  color: var(--xp-color-primary-bright);
+}
+
+:global([data-theme='dark']) .chooseAddressBtn:hover {
+  border-color: var(--xp-color-primary-hover);
+}
+
+:global([data-theme='dark']) .timeDivider {
+  color: var(--xp-color-text-placeholder);
+}
+
+:global([data-theme='dark']) .ctaBtnWrapper :global(.ant-btn),
+:global([data-theme='dark']) .routeBtnActive {
+  box-shadow: none;
+}
+
+/* Nhãn + dấu "i" (InfoHint) cùng một hàng — ghi chú giải thích nằm trong tooltip. */
+.labelWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }

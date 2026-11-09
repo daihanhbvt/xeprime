@@ -248,7 +248,7 @@ describe('Định danh khách theo SĐT đã chuẩn hoá', () => {
 
     const rows = await prisma.tenantCustomer.findMany({ where: { tenantId } });
     expect(rows).toHaveLength(1);
-    expect(rows[0]!.normalizedPhone).toBe('84901234567');
+    expect(rows[0]!.normalizedPhone).toBe('0901234567');
     // Dạng hiển thị luôn là dạng nội địa, dù người nhập gõ kiểu gì.
     expect(rows[0]!.phone).toBe('0901234567');
   });
@@ -292,7 +292,7 @@ describe('Định danh khách theo SĐT đã chuẩn hoá', () => {
           tenantId,
           fullName: 'Bản sao',
           phone: '0901234567',
-          normalizedPhone: '84901234567',
+          normalizedPhone: '0901234567',
         },
       }),
     ).rejects.toMatchObject({ code: 'P2002' });
@@ -387,7 +387,7 @@ describe('Nối với đơn thuê và yêu cầu thuê', () => {
     const customer = await prisma.tenantCustomer.findUniqueOrThrow({
       where: { id: row.tenantCustomerId! },
     });
-    expect(customer.normalizedPhone).toBe('84901234567');
+    expect(customer.normalizedPhone).toBe('0901234567');
     expect(customer.source).toBe(TENANT_CUSTOMER_SOURCE.BOOKING);
   });
 
@@ -1001,7 +1001,7 @@ describe('Trùng SĐT', () => {
 
     const rows = await prisma.tenantCustomer.findMany({ where: { tenantId } });
     expect(rows).toHaveLength(2);
-    expect(rows.find((r) => r.id === b.id)!.normalizedPhone).toBe('84902222222');
+    expect(rows.find((r) => r.id === b.id)!.normalizedPhone).toBe('0902222222');
   });
 
   maybe('giữ nguyên SĐT của chính mình khi sửa các trường khác', async () => {

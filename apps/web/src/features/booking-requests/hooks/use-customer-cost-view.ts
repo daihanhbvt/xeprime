@@ -133,8 +133,10 @@ export function useCustomerCostView({
 
   /* Có phụ phí hoặc mã ⇒ số cuối là TỔNG BẠN TRẢ, không còn là tiền thuê — cùng luật `PriceBreakdown`. */
   const total = useQuoteTotal(breakdown, { frozen });
+  /** Câu "tạm tính" — luôn hiện thẳng cạnh tổng, KHÔNG vào hint (người dùng phải thấy). */
+  const estimateNote = breakdown?.estimateNote ? `${breakdown.estimateNote}.` : null;
+  /** Phần giải thích thuần của tổng — nằm trong dấu "i". */
   const costNote = [
-    breakdown?.estimateNote ? `${breakdown.estimateNote}.` : null,
     t('reviewPage.costs.totalNote'),
     /*
      * Phí giao nhận "chưa nằm trong tổng" chỉ đúng khi bảng chưa có dòng đó. Bảng đã CHỐT mà có dòng
@@ -161,5 +163,6 @@ export function useCustomerCostView({
     deposit,
     total,
     costNote,
+    estimateNote,
   };
 }

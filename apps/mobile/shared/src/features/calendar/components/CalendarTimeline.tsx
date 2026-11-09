@@ -427,7 +427,7 @@ export function CalendarTimeline({
                     fos={fontSize.meta}
                     fow={fontWeight.semibold}
                   >
-                    {count ?? '—'}
+                    {count ?? '-'}
                   </Text>
                 </YStack>
               );

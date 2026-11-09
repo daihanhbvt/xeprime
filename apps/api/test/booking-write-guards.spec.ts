@@ -331,7 +331,7 @@ describe('Liên hệ của chuyến khác tài khoản (ADR 0063)', () => {
     expect(row.customerPhone).toBe('0912345678');
     expect(row.tenantCustomer).toEqual({
       fullName: 'Chủ tài khoản',
-      normalizedPhone: '84906667788',
+      normalizedPhone: '0906667788',
     });
   });
 

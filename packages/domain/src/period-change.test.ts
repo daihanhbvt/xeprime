@@ -33,12 +33,12 @@ describe('moneyChangePercent', () => {
     expect(moneyChangePercent('90071992547409930', '45035996273704965')).toBe(100);
   });
 
-  it('kỳ trước âm (phí ròng âm vì tài trợ khuyến mãi) — so theo độ lớn', () => {
+  it('kỳ trước âm (phí ròng âm vì tài trợ khuyến mãi) - so theo độ lớn', () => {
     expect(moneyChangePercent('-50', '-100')).toBe(50);
     expect(moneyChangePercent('100', '-100')).toBe(200);
   });
 
-  it('kỳ trước bằng 0, rỗng, hoặc chuỗi rác ⇒ null — không ném lỗi giữa lúc render', () => {
+  it('kỳ trước bằng 0, rỗng, hoặc chuỗi rác ⇒ null - không ném lỗi giữa lúc render', () => {
     expect(moneyChangePercent('100', '0')).toBeNull();
     expect(moneyChangePercent('100', '0.00')).toBeNull();
     expect(moneyChangePercent(null, '100')).toBeNull();

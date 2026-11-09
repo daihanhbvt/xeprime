@@ -529,3 +529,46 @@
   font-size: var(--xp-font-size-body);
   line-height: var(--xp-line-height-body);
 }
+
+/* ─── Chuyển bước: mờ dần + trượt ngang ngắn theo hướng tiến/lùi ─────────────────────────── */
+.stepEnter {
+  animation-duration: var(--xp-motion-duration-overlay);
+  animation-timing-function: var(--xp-motion-ease-out);
+  animation-fill-mode: both;
+}
+
+.stepEnterForward {
+  animation-name: stepInFromRight;
+}
+
+.stepEnterBack {
+  animation-name: stepInFromLeft;
+}
+
+@keyframes stepInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(var(--xp-motion-distance-step));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes stepInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(calc(-1 * var(--xp-motion-distance-step)));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stepEnter {
+    animation: none;
+  }
+}

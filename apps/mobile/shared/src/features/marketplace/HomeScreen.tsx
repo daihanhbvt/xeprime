@@ -1,7 +1,11 @@
 import { draftToFilterPatch } from '@xeprime/domain';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigation } from 'expo-router';
-import Animated, { useAnimatedScrollHandler, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedScrollHandler,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { RefreshControl, useWindowDimensions } from 'react-native';
 import { BANNER_PLACEMENT } from '@xeprime/types';
 import { useTabBarHide, useTabBarInset } from '@/components/layout/tab-bar-inset';
@@ -28,12 +32,15 @@ import { SearchCard } from './components/SearchCard';
 import { StickySearchBar, stickyThreshold } from './components/StickySearchBar';
 import { VehiclePreview } from './components/VehiclePreview';
 import { ROUTES } from '@/navigation/routes';
+import { Reveal } from '@/components/motion/Reveal';
+import { useParallaxHeader } from '@/components/motion/use-parallax-header';
 import type { ExploreSearchParams } from '@/navigation/routes-base';
 import { XP_TOKENS, toPx } from '@xeprime/ui';
 import { CustomerReviews } from './components/home/CustomerReviews';
 import { PartnerBanner } from './components/home/PartnerBanner';
 import { PromoBanners, PromoBannersSkeleton } from './components/home/PromoBanners';
 import { VehicleTypes, homeShowcaseBodyTypes } from './components/home/VehicleTypes';
+import { ScrollReveal, ScrollRevealProvider } from '@/components/motion/ScrollReveal';
 import { WhyChooseUs } from './components/home/WhyChooseUs';
 
 /** Nhịp giữa các khối lớn của trang chủ v2 — rộng hơn `layout.section` vì mỗi khối có tiêu đề riêng. */
@@ -107,6 +114,20 @@ function HomeContent() {
    * hình, đẩy qua React là render lại cả trang chủ suốt quãng cuộn và thanh giật theo.
    */
   const progress = useSharedValue(0);
+  /** Offset cuộn dọc trên luồng UI — banner đầu trang parallax theo nó. */
+  const scrollY = useSharedValue(0);
+  /*
+   * Parallax banner: hook dùng chung `useParallaxHeader` (trôi 0.45×, co 0.92, mờ 0.35 trong
+   * 280dp đầu; kéo quá đỉnh thì phóng nhẹ) — cùng công thức cho mọi đầu trang có ảnh lớn.
+   */
+  const heroStyle = useParallaxHeader(scrollY);
+  /** Đỉnh vùng khối nội dung + đỉnh dải đối tác trong vùng đó (đo `onLayout`) — xem `PartnerBanner`. */
+  // -1 = CHƯA đo. `ScrollReveal` chờ mốc này có thật mới xét "khối đã vào màn": các khối con đo vị
+  // trí TRƯỚC vùng cha, nếu mốc mặc định 0 thì mọi khối gần đầu bị coi là đã hiện ngay lúc mở trang
+  // (hiệu ứng chạy hết khi chưa cuộn tới, "100+" đếm xong sẵn) - lỗi 09/11/2026.
+  const sectionsY = useSharedValue(-1);
+  const partnerY = useSharedValue(0);
+  const revealCtx = useMemo(() => ({ scrollY, baseOffset: sectionsY }), [scrollY, sectionsY]);
   const tabBarHide = useTabBarHide();
   const lastScrollY = useSharedValue(0);
   const tabBarTarget = useSharedValue(0);
@@ -155,6 +176,7 @@ function HomeContent() {
 
   const onScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
       const past = event.contentOffset.y - threshold;
       // Gán THẲNG, không `withTiming`: mỗi sự kiện cuộn khởi động lại một hoạt cảnh 120ms từ
       // vị trí hiện tại, nên thanh chỉ tiệm cận 0/1 chứ không bao giờ tới — nó đứng lưng chừng,
@@ -235,51 +257,95 @@ function HomeContent() {
         onScroll={onScroll}
         scrollEventThrottle={scrollThrottle.frame}
       >
-        <HomeHero banners={banners ?? []} isLoading={bannersLoading} />
+        {/* Các khối hiện lần lượt lúc mở trang (một lần — kéo làm mới không chạy lại). */}
+        <Reveal variant="fade">
+          <Animated.View style={heroStyle}>
+            <HomeHero banners={banners ?? []} isLoading={bannersLoading} />
+          </Animated.View>
+        </Reveal>
 
         {/*
           Web: thẻ tìm kiếm nằm ngay dưới banner, không đè lên ảnh (`HomeHero.module.css`).
           Lề hai bên = `.cardOuter { padding: 0 space-12 }` của `SearchCard` web ở ≤640px.
         */}
-        <YStack px={SEARCH_CARD_GUTTER}>
-          <SearchCard onSearch={openSearch} />
-        </YStack>
+        <Reveal index={1}>
+          <YStack px={SEARCH_CARD_GUTTER}>
+            <SearchCard onSearch={openSearch} />
+          </YStack>
+        </Reveal>
 
         {/*
-          Thứ tự khối = `app/(public)/page.tsx` bên web (trang chủ v2, ADR 0062): Xe tiêu biểu →
-          Banner khuyến mãi → Lý do chọn XePrime → Loại xe → Điểm đến → Gian hàng → Đối tác → Các bước →
+          Thứ tự khối = `app/(public)/page.tsx` bên web (trang chủ v2, ADR 0062): Banner khuyến mãi →
+          Xe tiêu biểu → Lý do chọn XePrime → Loại xe → Điểm đến → Gian hàng → Đối tác → Các bước →
           Đánh giá. KHÔNG mang sang: khối "Tải ứng dụng" (người xem đang ở trong chính ứng dụng đó) và
           chân trang — liên kết, pháp lý, bản quyền (người dùng chốt 29/10/2026 bỏ khỏi app).
         */}
-        <YStack px={layout.screenX} pt={layout.section} gap={HOME_SECTION_GAP}>
-          <VehiclePreview
-            onExplore={openSearch}
-            onOpenListing={(listing, serviceType) =>
-              // Mang ngữ cảnh dịch vụ sang, cùng vai trò `?serviceType=` bên web.
-              navigateOnce(ROUTES.explore.listingDetail(listing.id, serviceType))
-            }
-          />
-          {/* Dưới "Xe tiêu biểu" như web mobile (người dùng chốt 03/11/2026). Chưa có banner thì không dựng khối. */}
+        <YStack
+          px={layout.screenX}
+          pt={layout.section}
+          gap={HOME_SECTION_GAP}
+          onLayout={(e) => {
+            sectionsY.value = e.nativeEvent.layout.y;
+          }}
+        >
+          {/* Khối hiện ra khi cuộn tới (luồng UI, chỉ trượt — không mờ khối có bóng). */}
+          <ScrollRevealProvider value={revealCtx}>
+          {/* TRÊN "Xe tiêu biểu" như web (người dùng chốt 04/11/2026). Chưa có banner thì không dựng khối. */}
           {promoLoading ? (
             <PromoBannersSkeleton />
           ) : promoBanners && promoBanners.length > 0 ? (
-            <PromoBanners banners={promoBanners} />
+            <ScrollReveal>
+              <PromoBanners banners={promoBanners} />
+            </ScrollReveal>
           ) : null}
-          <WhyChooseUs />
+          <ScrollReveal index={0}>
+            <VehiclePreview
+              onExplore={openSearch}
+              onOpenListing={(listing, serviceType) =>
+                // Mang ngữ cảnh dịch vụ sang, cùng vai trò `?serviceType=` bên web.
+                navigateOnce(ROUTES.explore.listingDetail(listing.id, serviceType))
+              }
+            />
+          </ScrollReveal>
+          <ScrollReveal index={1}>
+            <WhyChooseUs />
+          </ScrollReveal>
           {/* Kiểu dáng bật "Hiện ở trang chủ" — chưa có mục nào thì không dựng khối. */}
           {showcaseTypes.length > 0 ? (
-            <HomeBand muted>
-              <VehicleTypes items={showcaseTypes} onOpenSearch={openSearchWith} />
-            </HomeBand>
+            <ScrollReveal index={2}>
+              <HomeBand muted>
+                <VehicleTypes items={showcaseTypes} onOpenSearch={openSearchWith} />
+              </HomeBand>
+            </ScrollReveal>
           ) : null}
-          <FeaturedLocations onOpenSearch={openSearchWith} />
-          <FeaturedHosts onOpenShop={(slug) => navigateOnce(ROUTES.explore.shopDetail(slug))} />
+          <ScrollReveal index={3}>
+            <FeaturedLocations onOpenSearch={openSearchWith} />
+          </ScrollReveal>
+          <ScrollReveal index={4}>
+            <FeaturedHosts onOpenShop={(slug) => navigateOnce(ROUTES.explore.shopDetail(slug))} />
+          </ScrollReveal>
           {/* Không có nút "Đăng ký ngay" trên app (người dùng chốt 29/10/2026). */}
-          <PartnerBanner banner={partnerBanners?.[0] ?? null} />
-          <RentalSteps />
-          <HomeBand>
-            <CustomerReviews />
-          </HomeBand>
+          {/* Đo dải đối tác qua `onLayout` của ScrollReveal: nó là con trực tiếp của vùng khối nên toạ độ đúng cho parallax. */}
+          <ScrollReveal
+            index={5}
+            onLayout={(e) => {
+              partnerY.value = e.nativeEvent.layout.y;
+            }}
+          >
+            <PartnerBanner
+              banner={partnerBanners?.[0] ?? null}
+              parallax={{ scrollY, offset: partnerY, baseOffset: sectionsY }}
+            />
+          </ScrollReveal>
+          <ScrollReveal index={6}>
+            <RentalSteps />
+          </ScrollReveal>
+          <ScrollReveal index={6}>
+            <HomeBand>
+              <CustomerReviews />
+            </HomeBand>
+          </ScrollReveal>
+          </ScrollRevealProvider>
         </YStack>
       </Animated.ScrollView>
     </YStack>

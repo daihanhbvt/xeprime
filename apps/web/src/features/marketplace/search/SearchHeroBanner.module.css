@@ -114,8 +114,10 @@
   min-width: 130px;
 }
 
+/* Ô ngày KHÔNG co: định dạng chuẩn mốc nhận/trả (`T2, 09/11  17h00 → …`) phải hiện đủ, cắt mất giờ
+   là mất thông tin tính tiền. Phần co là ô từ khoá (`.inputGroup`, `flex: 1`). */
 .dateWrap {
-  flex: 1.2;
+  flex: none;
   min-width: 180px;
 }
 
@@ -262,9 +264,33 @@
     color: var(--xp-color-text-secondary);
   }
 
+  /* Ô ngày xuống HÀNG RIÊNG, rộng hết thanh (09/11/2026): định dạng chuẩn `T2, 09/11  17h00 → …`
+     dài hơn bản gọn cũ, chen chung hàng với loại xe + địa điểm thì cả ba bị cắt "…". */
   .dateWrap {
-    flex: 1 1 0;
-    overflow: hidden;
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  /* Loại xe không co: "Ô tô / Xe máy" là hai nhãn ngắn, cắt thành "Xe …" là mất lựa chọn. Hàng
+     này giờ chỉ còn loại xe + địa điểm - phần co là ô địa điểm. */
+  .vehicleTypeWrap {
+    flex: none;
+  }
+
+  /* `SegmentedTabs` ≤640px chia tab ĐỀU (`flex: 1 1 0`) và kéo khung `width: 100%` - trong một ô co
+     theo nội dung, hai luật đó ép khung bé lại và cắt "Xe máy". Ở hàng này: khung co theo chữ,
+     mỗi tab rộng đúng nhãn của nó (tab là `button` của component con nên chọn theo thẻ). */
+  .vehicleTypeWrap .inlinePicker {
+    display: inline-flex;
+    width: auto;
+  }
+
+  .vehicleTypeWrap .inlinePicker button {
+    flex: none;
+  }
+
+  .locationWrap + .divider {
+    display: none;
   }
 
   .searchSubmitBtn {

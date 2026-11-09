@@ -19,7 +19,7 @@ describe('missingPhotoSlots', () => {
     ]);
   });
 
-  it('xe máy chỉ cần trước · sau · Odo — không bao giờ thiếu trái/phải', () => {
+  it('xe máy chỉ cần trước · sau · Odo - không bao giờ thiếu trái/phải', () => {
     expect(missingPhotoSlots([], VEHICLE_TYPE.MOTORBIKE)).toEqual([
       HANDOVER_PHOTO_SLOT.FRONT,
       HANDOVER_PHOTO_SLOT.REAR,
