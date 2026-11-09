@@ -21,7 +21,7 @@ describe('VehicleStillOutAlert', () => {
         }}
       />,
     );
-    expect(screen.getByText(/Xe chưa về từ chuyến #DHX1 — đã quá giờ trả 3 giờ/)).toBeTruthy();
+    expect(screen.getByText(/Xe chưa về từ chuyến #DHX1 - đã quá giờ trả 3 giờ/)).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Mở chuyến đang trễ' }).getAttribute('href')).toBe(
       bookingPath.detail('BK1'),
     );

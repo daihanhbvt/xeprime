@@ -308,8 +308,10 @@ function PickupChecklist({
 
   return (
     <section id={anchorId} className={layout.card} aria-labelledby={titleId}>
-      <h2 id={titleId} className={layout.cardTitle}>
-        {t('title')} <InfoHint content={t('lead')} label={t('leadLabel')} />
+      {/* Tên vùng chỉ là chữ tiêu đề — nhãn của nút gợi ý không lẫn vào. */}
+      <h2 className={layout.cardTitle}>
+        <span id={titleId}>{t('title')}</span>{' '}
+        <InfoHint content={t('lead')} label={t('leadLabel')} />
       </h2>
       <ul className={styles.checklist}>
         {items.map((item) => (

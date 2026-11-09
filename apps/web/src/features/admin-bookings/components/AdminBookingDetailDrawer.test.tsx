@@ -129,7 +129,8 @@ describe('AdminBookingDetailDrawer - vỏ panel', () => {
     const header = document.querySelector('.ant-drawer-header') as HTMLElement;
     expect(within(header).getByText('Đang thuê')).toBeTruthy();
     // 02:00Z = 09:00 giờ VN.
-    expect(within(header).getByText('Tạo lúc 09:00 · 01/08/2026')).toBeTruthy();
+    // getByText gộp khoảng trắng: hai NBSP của DATE_TIME_SEPARATOR khớp một dấu cách.
+    expect(within(header).getByText('Tạo lúc 09:00 01/08/2026')).toBeTruthy();
   });
 
   it('drawer chuẩn như màn Kiểm duyệt xe: có mask, bấm vào mask là đóng', () => {

@@ -13,6 +13,14 @@ vi.mock('@/features/favorites/components/FavoriteButton', () => ({
 }));
 
 /**
+ * Bấm thẻ đẩy trang qua router khi trình duyệt có View Transitions — jsdom không có API đó nên
+ * thẻ rơi về `<Link>` thường; router chỉ cần tồn tại.
+ */
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
+/**
  * Thẻ xe trên marketplace (Wave 11.1).
  *
  * Điều được khoá: thẻ **không** mở luồng thuê. Thẻ chỉ mang dữ liệu tóm tắt, trong khi quyết

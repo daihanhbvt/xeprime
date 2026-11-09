@@ -149,7 +149,8 @@ beforeAll(async () => {
   // Reads đọc từ public_listings (ADR 0008) → sync mọi xe seed vào snapshot.
   for (const id of [vCheap, vMid, vHigh, vBusy, vProvB, vDriver, vBothSvc, vLongTerm])
     await listings.syncFromVehicle(id);
-});
+  // 8 xe + 8 lượt sync tuần tự: chạy chung 4 worker trên một DB thì vượt mức 5s mặc định của hook.
+}, 60_000);
 
 afterAll(async () => {
   if (dbAvailable) {

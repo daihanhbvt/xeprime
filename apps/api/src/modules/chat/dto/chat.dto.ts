@@ -351,19 +351,19 @@ export class MessageVehicleDto {
  * chờ duyệt, về sau thành đơn thì thẻ dẫn thẳng tới đơn.
  */
 export class MessageTripDto {
-  @ApiProperty({ description: 'ID yêu cầu thuê — định danh chuyến (`/trips/:id` phía khách)' })
+  @ApiProperty({ description: 'ID yêu cầu thuê - định danh chuyến (`/trips/:id` phía khách)' })
   id!: string;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Đơn thuê — có khi đã thành đơn' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Đơn thuê - có khi đã thành đơn' })
   bookingId!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Mã đơn — có khi đã thành đơn' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Mã đơn - có khi đã thành đơn' })
   code!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'ISO-8601 UTC — giờ nhận (của đơn nếu có; dài hạn chưa chốt lịch là null)',
+    description: 'ISO-8601 UTC - giờ nhận (của đơn nếu có; dài hạn chưa chốt lịch là null)',
   })
   pickupAt!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC — giờ trả' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC - giờ trả' })
   returnAt!: string | null;
 }
 
@@ -394,7 +394,7 @@ export class MessageDto {
   @ApiPropertyOptional({
     type: MessageTripDto,
     nullable: true,
-    description: 'Chuyến tin nhắn này nói về — null khi câu đó không gắn chuyến nào',
+    description: 'Chuyến tin nhắn này nói về - null khi câu đó không gắn chuyến nào',
   })
   trip!: MessageTripDto | null;
   @ApiProperty({ type: [MessageAttachmentDto] }) attachments!: MessageAttachmentDto[];

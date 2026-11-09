@@ -424,20 +424,31 @@ describe('Cửa vào tài khoản qua HTTP (ADR 0060)', () => {
 
     /*
      * Liên hệ của chuyến (ADR 0063): khách sửa được họ tên + SĐT, số khác tài khoản không cần OTP.
-     * SĐT chép từ danh bạ (có dấu cách) được gọn lại trước khi so mẫu; ô xoá trắng nghĩa là "dùng
-     * của tài khoản" — không phải một lỗi 400 cho trường không bắt buộc.
+     * SĐT quy về dạng lưu `0…` ở mép DTO; dấu cách/chấm/gạch bị CHẶN chứ không được gọn — ô nhập
+     * tự lọc lúc gõ/dán, server chỉ nhận chữ số và một `+` ở đầu (ADR 0082 điều 2). Ô xoá trắng
+     * nghĩa là "dùng của tài khoản" — không phải một lỗi 400 cho trường không bắt buộc.
      */
-    it('liên hệ của chuyến: cắt khoảng trắng, gọn SĐT, rỗng ⇒ bỏ trường', async () => {
+    it('liên hệ của chuyến: cắt khoảng trắng tên, quy SĐT về 0…, rỗng ⇒ bỏ trường', async () => {
       const edited = await http()
         .post('/public/booking-requests')
         .set(site(ACCOUNT_REALM.CUSTOMER))
         .set('Cookie', await cookieOf('U_CUSTOMER', ACCOUNT_REALM.CUSTOMER))
-        .send({ ...BODY, customerName: '  Người nhà  ', customerPhone: '091 234 5678' });
+        .send({ ...BODY, customerName: '  Người nhà  ', customerPhone: '+84912345678' });
       expect(edited.status).toBe(201);
       expect(requests.submitPublic).toHaveBeenLastCalledWith(
         expect.objectContaining({ customerName: 'Người nhà', customerPhone: '0912345678' }),
         'U_CUSTOMER',
       );
+
+      (requests.submitPublic as jest.Mock).mockClear();
+      const spaced = await http()
+        .post('/public/booking-requests')
+        .set(site(ACCOUNT_REALM.CUSTOMER))
+        .set('Cookie', await cookieOf('U_CUSTOMER', ACCOUNT_REALM.CUSTOMER))
+        .send({ ...BODY, customerPhone: '091 234 5678' });
+      expect(spaced.status).toBe(400);
+      expect(spaced.body.error.code).toBe(API_ERROR_CODE.VALIDATION_FAILED);
+      expect(requests.submitPublic).not.toHaveBeenCalled();
 
       const blank = await http()
         .post('/public/booking-requests')

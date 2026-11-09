@@ -310,7 +310,7 @@ describe('TenantPlanSection - kỳ theo PHẠM VI loại xe (ADR 0065)', () => {
   it('gán DOANH NGHIỆP: cảnh báo phủ cả hai loại, giá đàm phán bắt buộc, hỏi thời điểm', () => {
     renderSection();
     fireEvent.click(screen.getByRole('button', { name: 'Gia hạn / đổi gói' }));
-    choosePlan(/Doanh nghiệp — bán qua tư vấn/);
+    choosePlan(/Doanh nghiệp - bán qua tư vấn/);
 
     expect(screen.getByText(/phủ cả xe máy lẫn ô tô/)).toBeTruthy();
     expect(screen.getByText('Thời điểm áp dụng')).toBeTruthy();
@@ -326,7 +326,7 @@ describe('TenantPlanSection - kỳ theo PHẠM VI loại xe (ADR 0065)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Gia hạn / đổi gói' }));
     choosePlan(/Ô tô 10 xe.*chưa mở bán/);
 
-    expect(screen.getByText(/Gói này chưa mở bán — nhập giá/)).toBeTruthy();
+    expect(screen.getByText(/Gói này chưa mở bán - nhập giá/)).toBeTruthy();
     const submit = within(screen.getByRole('dialog'))
       .getAllByRole('button')
       .at(-1) as HTMLButtonElement;

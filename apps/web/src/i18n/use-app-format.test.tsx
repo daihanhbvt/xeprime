@@ -1,6 +1,8 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import { DATE_TIME_SEPARATOR as SEP } from '@xeprime/domain';
+
 import { dayjs } from '@/lib/datetime';
 import { intlWrapper } from './test-utils';
 import { useAppFormat } from './use-app-format';
@@ -65,14 +67,18 @@ describe('ngày giờ', () => {
    * canh. Ngày-trước-giờ và đồng hồ 24 giờ đều là quy ước đã chốt của sản phẩm.
    */
   it('ngày ĐỨNG TRƯỚC giờ, đồng hồ 24 giờ, và luôn là giờ Việt Nam', () => {
-    expect(format('vi').dateTime(iso)).toBe('17/08/2026 08:00');
-    expect(format('en').dateTime(iso)).toBe('08/17/2026 08:00');
+    expect(format('vi').dateTime(iso)).toBe(`17/08/2026${SEP}08:00`);
+    expect(format('en').dateTime(iso)).toBe(`08/17/2026${SEP}08:00`);
   });
 
   it('khoảng ngày giờ dùng lại đúng cách đọc đó ở hai đầu', () => {
     const to = '2026-08-18T07:30:00.000Z';
-    expect(format('vi').dateTimeRange(iso, to)).toBe('17/08/2026 08:00 → 18/08/2026 14:30');
-    expect(format('en').dateTimeRange(iso, to)).toBe('08/17/2026 08:00 → 08/18/2026 14:30');
+    expect(format('vi').dateTimeRange(iso, to)).toBe(
+      `17/08/2026${SEP}08:00 → 18/08/2026${SEP}14:30`,
+    );
+    expect(format('en').dateTimeRange(iso, to)).toBe(
+      `08/17/2026${SEP}08:00 → 08/18/2026${SEP}14:30`,
+    );
   });
 
   it('giờ đơn lẻ cũng 24 giờ - không có AM/PM lạc giữa các ô 24 giờ khác', () => {
@@ -99,7 +105,8 @@ describe('ngày giờ', () => {
 
   it('mốc thuê có THỨ và giờ, không có năm', () => {
     const point = format('vi').rentalPoint(dayjs('2026-08-08T10:00:00'));
-    expect(point).toBe('T7, 08/08 · 10:00');
+    expect(point).toBe(`T7, 08/08${SEP}10h00`);
+    expect(format('en').rentalPoint(dayjs('2026-08-08T10:00:00'))).toBe(`Sat, 08/08${SEP}10:00`);
     expect(point).not.toContain('2026');
     expect(format('vi').rentalPoint(dayjs('2026-08-09T10:00:00'), { withTime: false })).toBe(
       'CN, 09/08',

@@ -8,7 +8,7 @@
     "start": "node dist/main.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "dotenv -e ../../.env -- node --import tsx --test \"test/**/*.test.ts\"",
+    "test": "dotenv -e ../../.env -- node --import tsx --test --test-concurrency=1 \"test/**/*.test.ts\"",
     "holidays:sync": "dotenv -e ../../.env -- tsx src/scripts/sync-holidays.ts",
     "push:smoke": "dotenv -e ../../.env -- tsx src/scripts/push-smoke.ts"
   },

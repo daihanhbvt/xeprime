@@ -1207,7 +1207,11 @@
         "void": "Huỷ phụ phí đơn thuê"
       },
       "driver_accept": "Tài xế nhận chuyến",
-      "driver_decline": "Tài xế từ chối chuyến"
+      "driver_decline": "Tài xế từ chối chuyến",
+      "customer_return": {
+        "report": "Khách báo đã trả xe",
+        "reject": "Gian hàng phản đối lời báo trả xe"
+      }
     },
     "booking_hold": {
       "create": "Tạo khoản giữ chỗ",
@@ -1225,7 +1229,8 @@
       "expire": "Yêu cầu quá hạn phản hồi",
       "slot_taken": "Đóng yêu cầu vì khung giờ đã có người",
       "auto_accept_skipped": "Bỏ qua tự nhận chuyến",
-      "platform_remind": "Nền tảng nhắc chủ xe phản hồi"
+      "platform_remind": "Nền tảng nhắc chủ xe phản hồi",
+      "remind_payment": "Chủ xe nhắc khách chuyển tiền giữ chỗ"
     },
     "branch": {
       "create": "Tạo chi nhánh",
@@ -1355,7 +1360,9 @@
       "activate_from_payment": "Kích hoạt gói từ thanh toán",
       "lapse_to_commission": "Hết gói, chuyển tuyến hoa hồng",
       "schedule_change": "Đổi gói từ kỳ sau",
-      "change_now": "Đổi gói ngay"
+      "change_now": "Đổi gói ngay",
+      "update": "Sửa kỳ gói dịch vụ",
+      "shift": "Dời kỳ gói xếp sau"
     },
     "subscription_invoice": {
       "issue": "Phát hành hoá đơn gói"
@@ -1380,6 +1387,9 @@
       "free_trips_exhausted": "Hết lượt chuyến miễn phí",
       "vat_invoice": {
         "update": "Đổi hỗ trợ xuất hoá đơn VAT (mọi xe)"
+      },
+      "operation_defaults": {
+        "update": "Đổi thời gian chuẩn bị mặc định giữa hai chuyến"
       }
     },
     "tenant_customer": {

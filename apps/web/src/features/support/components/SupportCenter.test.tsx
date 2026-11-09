@@ -46,8 +46,9 @@ describe('SupportCenter - hướng dẫn nhanh', () => {
     expect(screen.getByRole('link', { name: /Thêm xe cho thuê/ }).getAttribute('href')).toBe(
       '/manage/vehicles/new',
     );
+    // Yêu cầu đặt xe nằm chung bảng kanban của trang Đơn thuê (05/11/2026).
     expect(screen.getByRole('link', { name: /Duyệt yêu cầu đặt xe/ }).getAttribute('href')).toBe(
-      '/manage/booking-requests',
+      '/manage/bookings',
     );
   });
 

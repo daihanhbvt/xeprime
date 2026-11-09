@@ -213,14 +213,16 @@ describe('WalletStatementPanel', () => {
 
   /**
    * Giờ nhận/trả quyết định số ngày tính tiền, nên cột ngày phải mang GIỜ — `fmt.date` cắt mất
-   * nó. Định dạng là `HH:mm · dd/MM`, bỏ năm vì cả bảng đã nằm trong một kỳ người dùng tự chọn.
+   * nó. Định dạng là `HH:mm  dd/MM` (`DATE_TIME_SEPARATOR`), bỏ năm vì cả bảng đã nằm trong
+   * một kỳ người dùng tự chọn.
    */
   it('cột ngày đi/ngày về hiện GIỜ trước rồi tới ngày, không có năm', () => {
     renderWithIntl(<WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} />);
 
     // 2026-10-12T03:00:00Z = 10:00 ngày 12/10 giờ Việt Nam.
-    expect(screen.getAllByText('10:00 · 12/10').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('10:00 · 15/10').length).toBeGreaterThan(0);
+    // getByText gộp khoảng trắng: hai NBSP của DATE_TIME_SEPARATOR khớp một dấu cách.
+    expect(screen.getAllByText('10:00 12/10').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('10:00 15/10').length).toBeGreaterThan(0);
     expect(screen.queryByText(/2026/)).toBeNull();
   });
 

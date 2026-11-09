@@ -226,7 +226,12 @@ describe('AuthModal - đăng nhập chỉ bằng số điện thoại (ADR 0060)
     renderModal('auth=login');
     await heading('Đăng nhập');
 
+    // Ô SĐT chỉ nhận chữ số + một `+` đầu (ADR 0082 điều 2): email bị lọc sạch ngay lúc gõ.
     submitLogin('khach@xeprime.test');
+    expect((screen.getByLabelText('Số điện thoại') as HTMLInputElement).value).toBe('');
+    expect(await screen.findByText('Vui lòng nhập số điện thoại')).toBeTruthy();
+
+    submitLogin('12345');
     expect(await screen.findByText('Số điện thoại không hợp lệ')).toBeTruthy();
     expect(api.login).not.toHaveBeenCalled();
   });

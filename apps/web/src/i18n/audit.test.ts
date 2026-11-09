@@ -52,8 +52,9 @@ describe('i18n:audit - dò được chuỗi giao diện thô', () => {
      */
     // `booking-requests` rời danh sách ngày 26/10/2026 (luồng đặt hộ đã i18n hoá) — canary thứ hai
     // chuyển sang `contracts`, khu còn nguyên chuỗi thô. Khu nào sạch thì đổi canary, đừng xoá nó.
-    expect(audit.stdout).toContain('  handovers -');
-    expect(audit.stdout).toContain('  contracts -');
+    // Script in `tên — số`: output dev, không phải chữ giao diện nên không theo luật gạch ngắn.
+    expect(audit.stdout).toContain('  handovers —');
+    expect(audit.stdout).toContain('  contracts —');
   });
 
   it('phân loại được vị trí, không chỉ nói "có chữ tiếng Việt"', () => {
