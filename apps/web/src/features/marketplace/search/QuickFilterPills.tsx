@@ -74,7 +74,7 @@ export function QuickFilterPills({
 
   // Local state for popovers to control open/close
   const [openKey, setOpenKey] = useState<string | null>(null);
-  const containerScroll = useScrollMore<HTMLDivElement>();
+  const { ref: containerRef, canLeft, canRight, scrollBy } = useScrollMore<HTMLDivElement>();
 
   /*
    * Chỉ mở bằng `click` (đồng nhất với LocationPicker và RentalDateTimeRangeField):
@@ -101,11 +101,11 @@ export function QuickFilterPills({
   };
 
   return (
-    <div ref={containerScroll.ref} className={cx(styles.container, className)}>
+    <div ref={containerRef} className={cx(styles.container, className)}>
       <ScrollHint
         direction="left"
-        visible={containerScroll.canLeft}
-        onScroll={containerScroll.scrollBy}
+        visible={canLeft}
+        onScroll={scrollBy}
         label={t('quickPills.scrollPrev')}
       />
       {/* 1. Nhu cầu (Service Type) */}
@@ -507,8 +507,8 @@ export function QuickFilterPills({
       {/* Điện thoại: cả khung là MỘT dòng cuộn ngang - mũi tên "còn nữa" ở mép phải (trước nút lọc nếu có). */}
       <ScrollHint
         direction="right"
-        visible={containerScroll.canRight}
-        onScroll={containerScroll.scrollBy}
+        visible={canRight}
+        onScroll={scrollBy}
         label={t('quickPills.scrollMore')}
       />
 

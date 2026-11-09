@@ -48,7 +48,9 @@ export default defineConfig({
      * `getByRole(..., { name })` phải tính accessible name trên toàn cây con. Khi chạy cả bộ
      * song song, vài test chạm 5–7s và fail vì TIMEOUT chứ không phải vì sai — chúng vẫn xanh
      * khi chạy riêng. Nới một lần ở đây thay vì bẻ cong từng test cho vừa đồng hồ.
+     * 20s → 40s (09/11/2026): máy CI (2 nhân) vẫn có test trang nặng chạm 20s vì máy bận
+     * (`receipts-page.test.tsx`), dù chạy riêng thì xanh.
      */
-    testTimeout: 20_000,
+    testTimeout: 40_000,
   },
 });
