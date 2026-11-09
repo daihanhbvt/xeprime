@@ -95121,7 +95121,7 @@
           },
           "trip": {
             "nullable": true,
-            "description": "Chuyến tin nhắn này nói về — null khi câu đó không gắn chuyến nào",
+            "description": "Chuyến tin nhắn này nói về - null khi câu đó không gắn chuyến nào",
             "type": "object",
             "allOf": [
               {
@@ -95179,27 +95179,27 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "ID yêu cầu thuê — định danh chuyến (`/trips/:id` phía khách)"
+            "description": "ID yêu cầu thuê - định danh chuyến (`/trips/:id` phía khách)"
           },
           "bookingId": {
             "type": "string",
             "nullable": true,
-            "description": "Đơn thuê — có khi đã thành đơn"
+            "description": "Đơn thuê - có khi đã thành đơn"
           },
           "code": {
             "type": "string",
             "nullable": true,
-            "description": "Mã đơn — có khi đã thành đơn"
+            "description": "Mã đơn - có khi đã thành đơn"
           },
           "pickupAt": {
             "type": "string",
             "nullable": true,
-            "description": "ISO-8601 UTC — giờ nhận (của đơn nếu có; dài hạn chưa chốt lịch là null)"
+            "description": "ISO-8601 UTC - giờ nhận (của đơn nếu có; dài hạn chưa chốt lịch là null)"
           },
           "returnAt": {
             "type": "string",
             "nullable": true,
-            "description": "ISO-8601 UTC — giờ trả"
+            "description": "ISO-8601 UTC - giờ trả"
           }
         },
         "required": [
@@ -108295,7 +108295,7 @@
           },
           "useShopDefault": {
             "type": "boolean",
-            "description": "true = bỏ số riêng của xe, theo mặc định gian hàng (`turnaroundBufferMinutes` bị bỏ qua). Bỏ trống = false — app cũ gửi số như trước"
+            "description": "true = bỏ số riêng của xe, theo mặc định gian hàng (`turnaroundBufferMinutes` bị bỏ qua). Bỏ trống = false - app cũ gửi số như trước"
           },
           "pickupWindows": {
             "deprecated": true,
@@ -108454,7 +108454,7 @@
           },
           "ownerPhone": {
             "type": "string",
-            "description": "SĐT liên hệ của chủ xe — `0…`/`84…`/`+84…`, chỉ chữ số; lưu `0…` (ADR 0082)",
+            "description": "SĐT liên hệ của chủ xe - `0…`/`84…`/`+84…`, chỉ chữ số; lưu `0…` (ADR 0082)",
             "nullable": true
           },
           "ownerEmail": {
@@ -108890,7 +108890,7 @@
           "turnaroundBufferMinutes": {
             "type": "number",
             "nullable": true,
-            "description": "Phút chuẩn bị giữa hai chuyến — null khi chưa đặt (xe theo mặc định áp 0)"
+            "description": "Phút chuẩn bị giữa hai chuyến - null khi chưa đặt (xe theo mặc định áp 0)"
           },
           "inheritingVehicles": {
             "type": "number",
@@ -108903,7 +108903,7 @@
           "updatedAt": {
             "type": "string",
             "nullable": true,
-            "description": "ISO — null khi chưa lưu lần nào"
+            "description": "ISO - null khi chưa lưu lần nào"
           }
         },
         "required": [
@@ -115118,7 +115118,7 @@
           "shopDefaultMinutes": {
             "type": "number",
             "nullable": true,
-            "description": "Mặc định gian hàng của loại xe — null khi gian hàng chưa đặt (áp 0)"
+            "description": "Mặc định gian hàng của loại xe - null khi gian hàng chưa đặt (áp 0)"
           },
           "pickupWindows": {
             "deprecated": true,
