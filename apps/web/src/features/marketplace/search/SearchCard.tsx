@@ -12,7 +12,6 @@ import {
 } from '@xeprime/types';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { RentalDateTimeRangeField } from '@/components/form/RentalDateTimeRangeField';
-import { enterClass } from '@/components/motion/motion-classes';
 import { cx } from '@/lib/cx';
 import { CtaButton } from '../components/CtaButton';
 import { LocationPicker } from './LocationPicker';
@@ -78,13 +77,9 @@ export function SearchCard() {
 
   return (
     <div className={styles.cardOuter}>
-      {/* Trượt lên khi gắn (≈ `.banner-btn-area wow fadeInUp` của trang mẫu). Trễ 0.2s thay vì
-          1.2s: đây là ô tìm kiếm chính, không phải nút trang trí — người dùng không phải chờ. */}
-      <div
-        role="search"
-        aria-label={t('card.searchLabel')}
-        className={cx(styles.card, enterClass(200))}
-      >
+      {/* KHÔNG hoạt cảnh vào: thẻ là nội dung chính có sẵn trong HTML SSR. `enter` bắt đầu ở
+          opacity 0 + lệch dọc, nên sau F5 thẻ hiện thành ô trắng rỗng rồi mờ dần và trượt lên. */}
+      <div role="search" aria-label={t('card.searchLabel')} className={styles.card}>
         {/*
           Dải tab dịch vụ theo thiết kế mới: nằm liền trên viên tìm kiếm trắng với góc lượn ngược ở hai bên.
         */}

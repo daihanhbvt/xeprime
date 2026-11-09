@@ -24,7 +24,7 @@ import { market, radius, space } from '@/theme/tokens';
 const DOT = 10;
 const DOT_ACTIVE = 32;
 /** Web ở bề rộng điện thoại: 1.3 thẻ mỗi khung, cách 16px, thẻ đang xem ở GIỮA. */
-const PER_VIEW = 1.3;
+const PER_VIEW = 1.15;
 const MOBILE_GAP = 16;
 const OVERHANG = 20;
 /** Chừa chỗ dưới cho bóng/viền đáy thẻ — ScrollView ngang cắt mọi thứ tràn khỏi khung của nó. */

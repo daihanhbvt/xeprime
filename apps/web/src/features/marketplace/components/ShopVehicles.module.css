@@ -73,11 +73,30 @@
   gap: var(--xp-space-md);
 }
 
-/* Bốn cột ở khung 1200 (thẻ ~285px, khe 20) — tự rút cột khi hẹp. */
+/* Cùng lưới thẻ với "Xe tiêu biểu" trang chủ: 4 cột trong khung 1320 (thẻ ~315px) - `auto-fill` cũ
+   ra 5 cột hẹp, hàng thông số dính chữ (09/11/2026). Tablet 2 cột, điện thoại 1 cột. */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--xp-space-20);
+}
+
+@media (max-width: 1200px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .skeleton {

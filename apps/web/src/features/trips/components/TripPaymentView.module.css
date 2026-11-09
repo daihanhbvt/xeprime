@@ -9,7 +9,7 @@
   gap: var(--xp-space-md);
   width: 100%;
   min-width: 0;
-  max-width: calc(var(--xp-market-container-max-width, 1200px) + 2 * var(--xp-space-md));
+  max-width: calc(var(--xp-market-container-max-width, 1320px) + 2 * var(--xp-space-md));
   margin-inline: auto;
   padding: 0 var(--xp-space-md) var(--xp-space-xl);
 }

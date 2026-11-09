@@ -1,0 +1,84 @@
+/* Figma "Statut du véhicule" (22226:29545 · 22226:30001): viên trắng viền gray-200, bo 16. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 0;
+  margin: 0;
+  gap: var(--xp-space-sm) var(--xp-space-12);
+  list-style: none;
+}
+
+/* Thẻ lưới: một hàng đè góc dưới-trái ảnh, tối đa hai hàng, dư thì giấu. */
+.overlay {
+  position: absolute;
+  z-index: 2;
+  right: var(--xp-space-sm);
+  bottom: var(--xp-space-sm);
+  left: var(--xp-space-sm);
+  max-height: calc(2 * (14px + 4px) + var(--xp-space-6));
+  overflow: hidden;
+  gap: var(--xp-space-6);
+  pointer-events: none;
+}
+
+.chip {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: 16px;
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-medium);
+  gap: var(--xp-space-6);
+  line-height: var(--xp-line-height-label);
+  white-space: nowrap;
+}
+
+.chip svg {
+  flex: none;
+}
+
+.text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* "Hỗ trợ xuất hoá đơn VAT" (22226:30033): nền information-low, viền + chữ information-high. */
+.vat {
+  border-color: var(--xp-color-info-strong);
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info-strong);
+}
+
+/* Viên kính trên ảnh thẻ lưới - Figma 22185:88916 "Vehicle Benefits": blur 6px, chữ trắng 10/14,
+   mỗi nhãn một sắc kính nhạt riêng. */
+.pill {
+  overflow: hidden;
+  max-width: 100%;
+  padding: 2px var(--xp-space-6);
+  border-radius: 9999px;
+  backdrop-filter: blur(6px);
+  background: rgba(16, 24, 40, 0.55); /* gray-900 - nền mặc định */
+  color: var(--xp-color-text-on-dark);
+  font-size: 10px;
+  font-weight: var(--xp-font-weight-regular);
+  line-height: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.glass_delivery {
+  background: rgba(68, 86, 66, 0.6);
+}
+
+.glass_noCollateral {
+  background: rgba(111, 105, 105, 0.4);
+}
+
+.glass_instant {
+  background: rgba(97, 96, 124, 0.6);
+}

@@ -202,7 +202,8 @@
  */
 @media (max-width: 640px) {
   .root {
-    --per-view: 1.3;
+    /* 1.15 (09/11/2026, trước 1.3): thẻ rộng hơn, hai thẻ kề chỉ ló mép. */
+    --per-view: 1.15;
     --gap: 16px;
   }
 
@@ -213,7 +214,7 @@
   .per6,
   .peek,
   .tablet1 {
-    --per-view: 1.3;
+    --per-view: 1.15;
   }
 
   /*

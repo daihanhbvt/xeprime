@@ -1,6 +1,5 @@
 'use client';
 
-import { CalendarOutlined, SearchOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { LineIcon } from '@/components/icons/LineIcon';
@@ -46,7 +45,7 @@ export function SearchHeroBanner({
 
           <div className={styles.searchBar}>
             <div className={styles.inputGroup}>
-              <SearchOutlined className={styles.searchIcon} aria-hidden />
+              <LineIcon name="search" className={styles.searchIcon} />
               <input
                 type="text"
                 className={styles.keywordInput}
@@ -60,8 +59,11 @@ export function SearchHeroBanner({
 
             <span className={styles.divider} aria-hidden />
 
+            {/* Điện thoại (Figma MB 22185:115224): hàng 2 mở đầu bằng MỘT icon địa điểm vàng. */}
+            <LineIcon name="location" className={styles.mobileRowIcon} />
+
             <div className={styles.vehicleTypeWrap}>
-              <VehicleTypePicker className={styles.inlinePicker} />
+              <VehicleTypePicker variant="select" className={styles.inlinePicker} />
             </div>
 
             <span className={styles.divider} aria-hidden />
@@ -78,7 +80,7 @@ export function SearchHeroBanner({
                 onChange={setRentalRange}
                 mode={draft.rental.mode}
                 onModeChange={setRentalMode}
-                prefix={<CalendarOutlined className={styles.calendarIcon} aria-hidden />}
+                prefix={<LineIcon name="calendar-2" className={styles.calendarIcon} />}
                 compactPoint
                 className={styles.inlinePicker}
               />
@@ -90,7 +92,7 @@ export function SearchHeroBanner({
               onClick={handleSearchSubmit}
               aria-label={t('title')}
             >
-              <SearchOutlined />
+              <LineIcon name="search" />
             </button>
           </div>
 
@@ -110,6 +112,7 @@ export function SearchHeroBanner({
           <QuickFilterPills
             onOpenFilterModal={onOpenFilterModal}
             appliedCount={appliedCount}
+            showViewToggle
             filterButtonClassName={styles.pillsFilterBtn}
           />
         </div>

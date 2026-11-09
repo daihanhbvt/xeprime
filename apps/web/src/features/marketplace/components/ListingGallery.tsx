@@ -14,7 +14,7 @@ const MOSAIC_SIZE = 5;
  * Gallery của trang chi tiết listing — MỘT danh sách ảnh, hai cách bày:
  *
  * - PC (Figma `19707:83366`): khảm 1200 × 309 — ảnh chính 650px bên trái, 2 cột ảnh nhỏ bên phải,
- *   ô thứ năm phủ "+N" khi còn ảnh. Ít hơn 5 ảnh thì ảnh nhỏ giãn ra lấp chỗ (xem CSS `data-count`).
+ *   không phủ "+N" (bấm ảnh mở trình xem đủ bộ). Ít hơn 5 ảnh thì ảnh nhỏ giãn ra lấp chỗ (xem CSS `data-count`).
  * - Mobile (Figma `19771:71515`): ảnh trượt ngang từng tấm (358 × 170, bo 12), bộ đếm "n / N" ở góc
  *   ảnh + dải ảnh nhỏ 4:3 bên dưới — 5 ô vừa khít bề rộng nội dung, kẹp 56–88px (khớp app native `ListingGalleryThumbs`): bấm ảnh nhỏ nhảy tới
  *   tấm đó; trượt ảnh chính thì ảnh nhỏ đang xem sáng viền và tự cuộn vào tầm nhìn.
@@ -42,7 +42,6 @@ export function ListingGallery({
     ...images.filter((img) => img !== mainImageUrl),
   ];
   const total = allImages.length;
-  const extraCount = total > MOSAIC_SIZE ? total - MOSAIC_SIZE : 0;
 
   /** Bước trượt = bề rộng một tấm + khe — đọc từ DOM vì khe là của CSS. */
   const slideStep = useCallback((track: HTMLDivElement) => {
@@ -109,11 +108,6 @@ export function ListingGallery({
                   className={styles.photo}
                   loading={index === 0 ? 'eager' : 'lazy'}
                 />
-                {index === MOSAIC_SIZE - 1 && extraCount > 0 ? (
-                  <div className={styles.overlay} aria-hidden="true">
-                    <span>+{extraCount}</span>
-                  </div>
-                ) : null}
               </div>
             ))}
           </div>

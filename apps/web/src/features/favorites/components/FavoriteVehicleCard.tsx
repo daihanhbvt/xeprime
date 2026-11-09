@@ -1,6 +1,7 @@
 'use client';
 
-import { CarOutlined, ClockCircleOutlined, EyeOutlined, HeartFilled } from '@ant-design/icons';
+import { HeartIcon } from '@/components/icons/HeartIcon';
+import { CarOutlined, ClockCircleOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button, Skeleton } from 'antd';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -65,7 +66,6 @@ export function FavoriteVehicleCard({ vehicle }: { vehicle: FavoriteVehicle }) {
   const amenities = [
     vehicle.deliveryEnabled ? tCard('delivery') : null,
     vehicle.noCollateral ? tCard('noCollateral') : null,
-    vehicle.vatInvoiceSupported ? tCard('vatInvoice') : null,
   ].filter((label): label is string => label !== null);
 
   const specs = [
@@ -279,7 +279,7 @@ export function FavoriteVehicleCard({ vehicle }: { vehicle: FavoriteVehicle }) {
             <div className={styles.actions}>
               <Button
                 className={styles.removeBtn}
-                icon={<HeartFilled aria-hidden />}
+                icon={<HeartIcon filled />}
                 aria-label={t('removeAria', { name: vehicle.name })}
                 onClick={() => apply(false)}
               >

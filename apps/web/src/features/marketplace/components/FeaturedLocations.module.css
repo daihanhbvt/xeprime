@@ -227,3 +227,21 @@
   color: #ffffff;
 }
 
+
+/* Ảnh minh hoạ trôi RẤT nhẹ (1 → 1.025, 20s) - bản Ken Burns chung (1.06/12s) quá mạnh cho thẻ
+   điểm đến (user chốt 09/11/2026). Giảm chuyển động ⇒ tĩnh. */
+@keyframes xpDestDrift {
+  from {
+    scale: 1;
+  }
+
+  to {
+    scale: 1.025;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .drift {
+    animation: xpDestDrift 20s ease-in-out infinite alternate;
+  }
+}

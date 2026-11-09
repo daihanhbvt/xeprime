@@ -12,7 +12,10 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   CATALOG_TYPE,
+  DEFAULT_LISTING_SORT,
   FUEL_TYPE_LABEL,
+  LISTING_SORT_LABEL,
+  LISTING_SORT_VALUES,
   LISTING_MIN_RATING_VALUES,
   MOTORBIKE_CATEGORY_VALUES,
   SEAT_BUCKET_LABEL,
@@ -20,6 +23,7 @@ import {
   SERVICE_TYPE,
   TRANSMISSION_TYPE_EXT_LABEL,
   VEHICLE_TYPE,
+  type ListingSort,
   vehicleFuelTypesFor,
   type ServiceType,
   type TransmissionTypeExt,
@@ -30,6 +34,7 @@ import { catalogItemAppliesTo } from '@/features/catalog/types';
 import { useCatalog } from '@/features/catalog/use-catalog';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useIsMobile } from '@/hooks/use-media-query';
 import { cx } from '@/lib/cx';
 import {
   isPriceBandSelected,
@@ -70,6 +75,8 @@ interface ModalDraft {
   discount?: boolean;
   instantBook?: boolean;
   minRating?: number;
+  /** Thứ tự kết quả - chỉ HIỆN ở điện thoại (desktop có ô Sắp xếp trên thanh công cụ). */
+  sort: ListingSort;
 }
 
 type ListField =
@@ -105,6 +112,7 @@ function initDraft(filters: MarketplaceFilters): ModalDraft {
     discount: filters.discount,
     instantBook: filters.instantBook,
     minRating: filters.minRating,
+    sort: (filters.sort as ListingSort | undefined) ?? DEFAULT_LISTING_SORT,
   };
 }
 
@@ -125,6 +133,8 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
   const tService = useTranslations('HomeSearch.service');
   const tCommon = useTranslations('Common');
   const domainLabel = useDomainLabel();
+  const tResults = useTranslations('Marketplace.results');
+  const isMobile = useIsMobile();
   const fmt = useAppFormat();
   const priceBandLabel = usePriceBandLabel();
   const { filters, setFilters } = useMarketplaceFilters();
@@ -246,6 +256,7 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
       discount: draft.discount,
       instantBook: draft.instantBook,
       minRating: draft.minRating,
+      sort: draft.sort === DEFAULT_LISTING_SORT ? undefined : draft.sort,
     });
     onClose();
   };
@@ -261,6 +272,7 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
       fuelType: [],
       features: [],
       transmission: [],
+      sort: draft.sort,
     });
   };
 
@@ -479,6 +491,30 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
             <div className={styles.columns}>
               {/* CỘT TRÁI: hãng · kiểu xe · giá · nhận xe · ưu đãi · đặt ngay */}
               <div className={styles.column}>
+                {/* Điện thoại: thanh "Sắp xếp" bị gỡ khỏi đầu danh sách (Figma "List - MB"), thứ tự
+                    kết quả chọn ở đây và ghi cùng lượt "Áp dụng" vào CÙNG tham số URL `sort`. */}
+                {isMobile ? (
+                  <>
+                    <FilterGroup title={tResults('sortLabel')} hint={t('single')}>
+                      <div className={styles.options}>
+                        {LISTING_SORT_VALUES.map((value) => (
+                          <label key={value} className={styles.option}>
+                            <Radio
+                              checked={draft.sort === value}
+                              onChange={() => setDraft((p) => ({ ...p, sort: value }))}
+                            />
+                            <span className={styles.optionText}>
+                              {domainLabel('listingSort', value, LISTING_SORT_LABEL[value])}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </FilterGroup>
+
+                    <hr className={styles.divider} />
+                  </>
+                ) : null}
+
                 <FilterGroup title={t('brand')} hint={t('multiple')}>
                   {brandItems.length > 0 ? (
                     <div className={styles.options}>

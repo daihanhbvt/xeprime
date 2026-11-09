@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
-import { Pressable, ScrollView } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { Pressable, ScrollView, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -20,13 +20,13 @@ import { serviceTypesFor } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { CheckOption, RadioOption } from '@/components/ui/RadioOption';
-import type { IconName } from '@/components/ui/Chip';
+import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
 import { catalogItemAppliesTo } from '@/api/catalog';
 import { useCatalog } from '@/features/catalog/use-catalog';
 import { useDomainLabel } from '@/i18n/domain';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import {
   isPriceBandSelected,
   priceBandsFor,
@@ -60,8 +60,10 @@ type PillKey =
   | 'amenities'
   | 'rating';
 
-/** Figma "List - MB" (`20043:57771`): hàng đầu 4 viên (Nhu cầu · Hãng xe · Kiểu xe · Khoảng giá), phần còn lại hàng hai. */
-const FIRST_ROW = 4;
+/** Phần khuất bên phải nhỏ hơn mức này coi như đã tới cuối. */
+const END_TOLERANCE = 4;
+/** Một lần chạm mũi tên cuộn ~70% bề rộng khung. */
+const SCROLL_STEP_RATIO = 0.7;
 type ArrayField = 'brand' | 'bodyType' | 'motorbikeCategory' | 'seats';
 
 /**
@@ -85,6 +87,28 @@ export function QuickFilterPills({
   const colors = useColors();
   const { catalog } = useCatalog();
   const [open, setOpen] = useState<PillKey | null>(null);
+  /*
+   * Mũi tên "còn nữa" ở mép phải: chỉ một boolean - setState cùng giá trị thì không render lại,
+   * nên cuộn không gây render mỗi khung hình.
+   */
+  const scrollRef = useRef<ScrollView>(null);
+  const metrics = useRef({ x: 0, viewport: 0, content: 0 });
+  const [canLeft, setCanLeft] = useState(false);
+  const [canRight, setCanRight] = useState(false);
+  const updateHasMore = () => {
+    const m = metrics.current;
+    setCanLeft(m.x > END_TOLERANCE);
+    setCanRight(m.content - m.viewport - m.x > END_TOLERANCE);
+  };
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    metrics.current.x = e.nativeEvent.contentOffset.x;
+    updateHasMore();
+  };
+  const scrollStep = (direction: 1 | -1) => {
+    const m = metrics.current;
+    const x = Math.max(0, m.x + direction * m.viewport * SCROLL_STEP_RATIO);
+    scrollRef.current?.scrollTo({ x, animated: true });
+  };
 
   const isMotorbike = filters.vehicleType === VEHICLE_TYPE.MOTORBIKE;
   const brandItems = catalog[CATALOG_TYPE.VEHICLE_BRAND];
@@ -113,38 +137,38 @@ export function QuickFilterPills({
   };
   const close = () => setOpen(null);
 
-  // Icon theo Figma (bộ nét riêng) — dịch sang Ionicons gần nghĩa nhất.
-  const pills: { key: PillKey; icon: IconName; label: string; active: boolean }[] = [
+  // Icon đúng nét Figma (19707:80489 / 22185:115213) - SVG gốc trong `LineIcon`.
+  const pills: { key: PillKey; icon: LineIconName; label: string; active: boolean }[] = [
     {
       key: 'demand',
-      icon: 'stats-chart-outline',
+      icon: 'chart',
       label: filters.serviceType ? domainLabel('serviceType', filters.serviceType) : t('demand'),
       active: Boolean(filters.serviceType),
     },
     {
       key: 'brand',
-      icon: 'apps-outline',
+      icon: 'category',
       label: withCount(tf('brand'), filters.brand?.length),
       active: Boolean(filters.brand?.length),
     },
     {
       key: 'bodyType',
-      icon: 'car-outline',
+      icon: 'car-profile',
       label: withCount(
-        tf('bodyType'),
+        t('quickPills.bodyType'),
         isMotorbike ? filters.motorbikeCategory?.length : filters.bodyType?.length,
       ),
       active: Boolean(filters.bodyType?.length || filters.motorbikeCategory?.length),
     },
     {
       key: 'price',
-      icon: 'cash-outline',
-      label: tf('priceRange'),
+      icon: 'dollar-circle',
+      label: t('quickPills.priceRange'),
       active: filters.priceMin != null || filters.priceMax != null,
     },
     {
       key: 'transmission',
-      icon: 'grid-outline',
+      icon: 'filter-4',
       label: tf('transmission'),
       active: Boolean(filters.transmission?.length),
     },
@@ -153,20 +177,20 @@ export function QuickFilterPills({
       : [
           {
             key: 'seats' as const,
-            icon: 'people-outline' as IconName,
-            label: tf('seats'),
+            icon: 'users-2' as LineIconName,
+            label: t('quickPills.seats'),
             active: Boolean(filters.seats?.length),
           },
         ]),
     {
       key: 'amenities',
-      icon: 'pie-chart-outline',
+      icon: 'graph',
       label: tf('amenities'),
       active: QUICK_AMENITIES.some((key) => filters[key]),
     },
     {
       key: 'rating',
-      icon: 'thumbs-up-outline',
+      icon: 'like',
       label:
         filters.minRating != null
           ? tf('modal.ratingFrom', { rating: filters.minRating })
@@ -174,28 +198,34 @@ export function QuickFilterPills({
       active: filters.minRating != null,
     },
   ];
-  const rows = [pills.slice(0, FIRST_ROW), pills.slice(FIRST_ROW)];
 
   const title = pills.find((pill) => pill.key === open)?.label ?? '';
 
   return (
     <>
       {/*
-        Vùng viên lọc — Figma `20043:57771`: hai hàng, MỖI hàng một khung cuộn ngang RIÊNG (người dùng chốt
-        29/10/2026: vuốt hàng trên không kéo hàng dưới),
-        khe 8 giữa viên và giữa hai hàng. Viên: nền `bg-container`, viền `color-border` 1px, bo pill,
-        cao 32, đệm ngang 12, icon 16 `text-tertiary` + chữ body 14 `text-secondary`; đang áp thì viền
-        `primary`, nền `primary-subtle`, chữ `primary-strong` semibold.
+        Vùng viên lọc - MỘT dòng cuộn ngang (người dùng chốt 09/11/2026, thay bản hai hàng của Figma
+        `22185:115235`), khe 12. Viên: icon 16 #a4a7ae + chữ 12/18 medium #414651, đệm 6/8, bo pill;
+        đang áp thì viền + chữ `primary`. Mũi tên "‹" / "›" ở hai mép khi còn viên khuất phía đó.
       */}
-      <YStack gap={space.sm}>
-          {rows.map((row, index) => (
-            <ScrollView
-              key={index}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: space.sm, paddingRight: layout.screenX }}
-            >
-              {row.map((pill) => (
+      <YStack position="relative">
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 12, paddingRight: layout.screenX }}
+          scrollEventThrottle={32}
+          onScroll={onScroll}
+          onLayout={(e) => {
+            metrics.current.viewport = e.nativeEvent.layout.width;
+            updateHasMore();
+          }}
+          onContentSizeChange={(width) => {
+            metrics.current.content = width;
+            updateHasMore();
+          }}
+        >
+              {pills.map((pill) => (
                 <Pressable
                   key={pill.key}
                   onPress={() => setOpen(pill.key)}
@@ -212,10 +242,10 @@ export function QuickFilterPills({
                     bc={pill.active ? colors.primary : colors.border}
                     bg={pill.active ? colors.primarySubtle : colors.surface}
                   >
-                    <Ionicons
+                    <LineIcon
                       name={pill.icon}
                       size={16}
-                      color={pill.active ? colors.primary : colors.placeholder}
+                      color={pill.active ? colors.primary : colors.textPlaceholder}
                     />
                     <Text
                       col={pill.active ? colors.primary : colors.textMuted}
@@ -224,17 +254,36 @@ export function QuickFilterPills({
                     >
                       {pill.label}
                     </Text>
-                    {/* Mũi tên xổ xuống: báo viên này MỞ một danh sách chọn (người dùng chốt 27/10/2026). */}
-                    <Ionicons
-                      name="chevron-down"
-                      size={iconSize.xs}
-                      color={pill.active ? colors.primary : colors.placeholder}
-                    />
                   </XStack>
                 </Pressable>
               ))}
-            </ScrollView>
-          ))}
+        </ScrollView>
+        {canLeft ? (
+          <Pressable
+            onPress={() => scrollStep(-1)}
+            accessibilityRole="button"
+            accessibilityLabel={t('quickPills.scrollPrev')}
+            hitSlop={8}
+            style={{ position: 'absolute', left: 0, top: 0, bottom: 0, justifyContent: 'center' }}
+          >
+            <XStack h="100%" w={20} ai="center" jc="center" bg={colors.surface}>
+              <Ionicons name="chevron-back" size={16} color={colors.textMuted} />
+            </XStack>
+          </Pressable>
+        ) : null}
+        {canRight ? (
+          <Pressable
+            onPress={() => scrollStep(1)}
+            accessibilityRole="button"
+            accessibilityLabel={t('quickPills.scrollMore')}
+            hitSlop={8}
+            style={{ position: 'absolute', right: 0, top: 0, bottom: 0, justifyContent: 'center' }}
+          >
+            <XStack h="100%" w={20} ai="center" jc="center" bg={colors.surface}>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            </XStack>
+          </Pressable>
+        ) : null}
       </YStack>
 
       <BottomSheet

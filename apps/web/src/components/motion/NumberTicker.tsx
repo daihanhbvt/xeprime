@@ -36,7 +36,16 @@ function tickerMs(node: HTMLElement): number {
  * trả về chuỗi gốc — tắt JS hay giảm chuyển động thì số đứng yên, không bao giờ kẹt ở 0. Trình đọc
  * màn hình đọc `aria-label` cố định, không nghe từng bước đếm.
  */
-export function NumberTicker({ value, className }: { value: string; className?: string }) {
+export function NumberTicker({
+  value,
+  className,
+  durationMs,
+}: {
+  value: string;
+  className?: string;
+  /** Ghi đè thời lượng token (ms) - vd. số tiền ở thẻ đặt xe cần nhanh (~0.55s). */
+  durationMs?: number;
+}) {
   const ref = useCallback(
     (node: HTMLSpanElement | null) => {
       const parsed = parse(value);
@@ -45,7 +54,7 @@ export function NumberTicker({ value, className }: { value: string; className?: 
 
       let frame = 0;
       const run = () => {
-        const duration = tickerMs(node);
+        const duration = durationMs ?? tickerMs(node);
         const start = performance.now();
         const step = (now: number) => {
           const t = Math.min(1, (now - start) / duration);
@@ -69,7 +78,7 @@ export function NumberTicker({ value, className }: { value: string; className?: 
         node.textContent = value;
       };
     },
-    [value],
+    [value, durationMs],
   );
 
   return (

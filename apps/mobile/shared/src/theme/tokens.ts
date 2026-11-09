@@ -156,6 +156,8 @@ function buildColors(scheme: ColorScheme) {
     primaryHover: r('color-primary-hover'),
     primaryActive: r('color-primary-active'),
     primaryLight: r('color-primary-light'),
+    /** `--xp-color-primary-bright` #edbb4f - viền chip "Điều kiện đang chọn" (Figma 19707:80634). */
+    primaryBright: r('color-primary-bright'),
     /** Nền gold nhạt nhất (ô avatar, mảng nền) — v2 BG/primary-25. */
     primarySubtle: r('color-primary-subtle'),
     /** Chữ gold đậm trên nền nhạt (chữ cái avatar). */
@@ -199,6 +201,8 @@ function buildColors(scheme: ColorScheme) {
     infoSurface: r('color-info-bg'),
     /** `--xp-color-info-strong` — chữ/biểu tượng xanh đậm trên nền `infoSurface` (ghi chú đăng nhập). */
     infoStrong: cssOnly.infoStrong,
+    /** `--xp-color-pink` — chữ/icon viên "Đặt ngay" trên thẻ xe (Figma `22185:87230`). */
+    pink: r('color-pink'),
     /** `--xp-color-success-border` — viền viên nhãn xanh (đã xác minh). */
     successBorder: r('color-success-border'),
     /** `--xp-color-warning-border` / `--xp-color-warning-strong` — viên nhãn cam (chưa xác minh). */

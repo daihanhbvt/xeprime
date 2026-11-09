@@ -21,7 +21,7 @@ const ITEMS = [
 /**
  * "Lý do nên chọn XePrime" — Figma "Homepage - Updated" › Solutions Section (`21965:5232`, ADR 0062).
  *
- * Hai cột: trái là tiêu đề + hai đoạn giới thiệu + lưới 2 × 2 cam kết; phải là ảnh tĩnh 532×488
+ * Hai cột: trái là tiêu đề + hai đoạn giới thiệu + lưới 2 × 2 cam kết; phải là ảnh tĩnh tỉ lệ 532:488 (co theo cột)
  * kèm ô "100+ xe đang cho thuê". Con số là CHỮ TĨNH trong bản dịch (người dùng chốt 02/11/2026),
  * không đếm từ API.
  *
@@ -72,7 +72,7 @@ export async function WhyChooseUs() {
           alt={t('imageAlt')}
           width={532}
           height={488}
-          sizes="(max-width: 1024px) 100vw, 532px"
+          sizes="(max-width: 1024px) min(100vw, 640px), 46vw"
           className={cx(styles.image, viewParallaxClass)}
         />
         <div className={cx(styles.stat, viewParallaxClass)}>

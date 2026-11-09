@@ -348,6 +348,7 @@ export const XP_TOKENS = {
   'market-footer-bg': '#060403', // nền footer chợ - đen ấm, đi cùng lớp ánh vàng phía trên
   // Nút chính v2 ("Tìm kiếm", "Trở thành chủ xe", "Đăng ký ngay"…) - ADR 0062 Q1 đã có điểm màu.
   'gradient-primary': 'linear-gradient(90deg, #e9c336 0%, #e8c664 48.077%, #e3b012 100%)',
+  'gradient-special': 'linear-gradient(90deg, #e9c336 0%, #f0d073 48.077%, #f9ce31 100%)',
   // Chữ nhấn gradient: hero ("Trong tầm tay bạn!"), vàng đậm (VF3+, "ĐỐI TÁC ĐỘC QUYỀN"),
   // vàng nhạt (badge "% off", "20%"), tên điểm đến.
   'gradient-text-hero': 'linear-gradient(90deg, #eeb924 0%, #ba8b26 100%)',
@@ -391,7 +392,7 @@ export const XP_TOKENS = {
   'space-80': '80px',
   // Lề hai bên của khung nội dung chợ v2 (1440 − 1200) / 2.
   'market-gutter': '120px',
-  'market-container-max-width': '1200px',
+  'market-container-max-width': '1320px',
   'letter-spacing-snug': '-0.01em',
   // Lớp sương trắng phía trái hero - giữ tiêu đề đọc được trên mọi ảnh nền.
   'hero-fog':

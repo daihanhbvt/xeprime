@@ -1,0 +1,88 @@
+/* Figma 19707:80489 › "Vehicle Location" (20037:23976): icon 20 vàng + chữ 16/24 regular, gap 6,
+   không viền/nền - nằm phẳng giữa hai vạch ngăn của thanh tìm kiếm. */
+.trigger {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--xp-space-6);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--xp-color-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: var(--xp-line-height-body-lg);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.trigger:focus-visible {
+  border-radius: var(--xp-border-radius-sm);
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.triggerIcon {
+  font-size: 20px;
+  color: var(--xp-color-primary);
+}
+
+.triggerValue {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+.list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  padding: 0 var(--xp-space-sm);
+  border: none;
+  border-radius: var(--xp-border-radius-sm);
+  background: none;
+  color: var(--xp-color-text);
+  cursor: pointer;
+  font: inherit;
+  gap: var(--xp-space-sm);
+  text-align: left;
+}
+
+.row:hover {
+  background: var(--xp-color-bg-hover);
+}
+
+.row:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: -2px;
+}
+
+.rowActive {
+  background: var(--xp-color-bg-selected);
+}
+
+.rowIcon {
+  display: inline-flex;
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+  font-size: 20px;
+}
+
+.rowLabel {
+  flex: 1;
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.rowCheck {
+  flex: none;
+  color: var(--xp-color-primary);
+}

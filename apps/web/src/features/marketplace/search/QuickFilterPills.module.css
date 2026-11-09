@@ -1,5 +1,9 @@
+/* Rộng hết hàng để nút "Bộ lọc" (`margin-left: auto`) dạt về mép PHẢI - Update Note 09/11/2026. */
 .container {
   display: flex;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
   align-items: center;
   gap: var(--xp-space-12);
   flex-wrap: wrap;
@@ -9,8 +13,9 @@
   display: inline-flex;
   align-items: center;
   gap: var(--xp-space-6);
+  /* Cao 38 (người dùng chốt 09/11/2026, Figma 40): chữ 22 + đệm 7 + viền 1. */
   min-height: 38px;
-  padding: var(--xp-space-sm) var(--xp-space-12);
+  padding: 7px var(--xp-space-12);
   border-radius: 9999px;
   border: 1px solid var(--xp-color-border);
   background: var(--xp-color-bg-container);
@@ -44,9 +49,10 @@
   color: var(--xp-color-primary);
 }
 
+/* Figma "Icon / …" 20px, màu text/gray/very-low (#a4a7ae). */
 .pillIcon {
   font-size: 20px;
-  color: var(--xp-color-text-tertiary);
+  color: var(--xp-color-text-placeholder);
   display: inline-flex;
   align-items: center;
 }
@@ -55,25 +61,21 @@
   color: var(--xp-color-primary);
 }
 
-.pillArrow {
-  font-size: 10px;
-  color: var(--xp-color-text-placeholder);
-  margin-left: 2px;
-}
-
 .filterBtn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 16px;
+  gap: var(--xp-space-6);
+  align-self: stretch;
+  min-height: 38px;
+  padding: var(--xp-space-6) var(--xp-space-12);
   border-radius: 12px;
   border: 1px solid var(--xp-color-text-tertiary);
   background: var(--xp-color-bg-muted);
   box-shadow: var(--xp-elevation-xs);
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-label);
-  font-weight: var(--xp-font-weight-semibold);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-relaxed);
   cursor: pointer;
   margin-left: auto;
   transition: all 0.16s ease;
@@ -169,9 +171,69 @@
 
 .filterIcon {
   font-size: 20px;
+  color: var(--xp-color-text-secondary);
 }
 
 /* Figma "_Filter Tab" bản MB: chữ 12/18, icon 16, đệm 6/8, khoảng cách 4. */
+/* Mũi tên "còn nữa" - chỉ dựng khi khung thật sự cuộn được (xem `useScrollMore`), nên desktop không có. */
+.moreHint {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  display: inline-flex;
+  flex: none;
+  align-self: stretch;
+  align-items: center;
+  justify-content: center;
+  /* Chỉ rộng bằng mũi tên (09/11/2026) - không che viên lọc bằng một khối rộng. */
+  width: 20px;
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.moreHint:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: -2px;
+}
+
+/* "‹": dính mép TRÁI, chiếm chỗ 0 trong dòng (margin âm) để không đẩy viên đầu. */
+.moreHintLeft {
+  left: 0;
+  right: auto;
+  justify-content: center;
+  margin-left: 0;
+  /* 20 bề rộng + khe 12: hiện/ẩn không làm dòng viên xê dịch. */
+  margin-right: -32px;
+  background: var(--xp-color-bg-container);
+}
+
+.chevronLeft {
+  transform: scaleX(-1);
+}
+
+@media (max-width: 640px) {
+  /* Điện thoại: MỘT dòng viên cuộn ngang (người dùng chốt, thay bản hai hàng của Figma MB). */
+  .container {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-block: 1px 2px;
+    scrollbar-width: none;
+  }
+
+  .container::-webkit-scrollbar {
+    display: none;
+  }
+
+  .container > * {
+    flex: none;
+  }
+}
+
 @media (max-width: 640px) {
   .pill {
     gap: var(--xp-space-xs);
@@ -183,6 +245,31 @@
 
   .pillIcon {
     font-size: 16px;
+  }
+
+  /* Nút "Bộ lọc" (thanh cố định điện thoại) cùng khuôn viên lọc: cao 32, đệm 6/8, bo pill, chữ 12/18,
+     icon 16; huy hiệu số nằm trong nút. */
+  .filterBtn {
+    align-self: auto;
+    gap: var(--xp-space-xs);
+    min-height: 32px;
+    padding: 6px var(--xp-space-sm);
+    border-color: var(--xp-color-border);
+    border-radius: 9999px;
+    background: var(--xp-color-bg-container);
+    color: var(--xp-color-text-secondary);
+    font-size: var(--xp-font-size-label);
+    line-height: var(--xp-line-height-label);
+  }
+
+  .filterIcon {
+    font-size: 16px;
+  }
+
+  .filterBadge {
+    min-width: 16px;
+    height: 16px;
+    font-size: 10px;
   }
 }
 

@@ -12,9 +12,6 @@ import driverLicenceEmpty from '../assets/images/driver-licence-empty.png';
 import listEmpty from '../assets/images/list-empty.png';
 // Ảnh CHỤP THẬT từ app XePrime Partner cho màn hướng dẫn đăng ký ở app khách. Chụp lại khi giao
 // diện ba màn đó đổi: form tạo tài khoản đối tác, màn chọn cách cho thuê, wizard đăng xe.
-import partnerGuideAccount from '../assets/images/partner-guide/step-account.png';
-import partnerGuideChoose from '../assets/images/partner-guide/step-choose.png';
-import partnerGuidePublish from '../assets/images/partner-guide/step-publish.png';
 // Tranh minh hoạ trang chủ v2 — CHÉP NGUYÊN từ `apps/web/public/home/` (ADR 0062). Hai tấm là
 // SPRITE: mỗi thẻ cắt một ô bằng khung `overflow: hidden`, cùng vị trí cắt với CSS bên web.
 import homeHeroFallback from '../assets/images/home/hero-fallback.webp';
@@ -61,9 +58,6 @@ export const images = {
   ownerShopShowroom,
   driverLicenceEmpty,
   listEmpty,
-  partnerGuideAccount,
-  partnerGuideChoose,
-  partnerGuidePublish,
   homeHeroFallback,
   homeDestCities,
   homeDestBg,

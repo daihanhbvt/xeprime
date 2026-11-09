@@ -245,6 +245,8 @@
   --xp-color-warning-subtle: #fffaeb;
   --xp-market-footer-bg: #060403;
   --xp-gradient-primary: linear-gradient(90deg, #e9c336 0%, #e8c664 48.077%, #e3b012 100%);
+  /* Figma "Gradient/Special" - nút tìm kiếm tròn ở banner trang kết quả (19956:44103). */
+  --xp-gradient-special: linear-gradient(90deg, #e9c336 0%, #f0d073 48.077%, #f9ce31 100%);
   --xp-gradient-text-hero: linear-gradient(90deg, #eeb924 0%, #ba8b26 100%);
   --xp-gradient-text-gold: linear-gradient(90deg, #d3a94d 0%, #cb9c03 100%);
   --xp-gradient-gold-soft: linear-gradient(90deg, #edd3a4 0.89%, #d6a439 100.89%);
@@ -284,7 +286,7 @@
   --xp-space-64: 64px;
   --xp-space-80: 80px;
   --xp-market-gutter: 120px;
-  --xp-market-container-max-width: 1200px;
+  --xp-market-container-max-width: 1320px;
   --xp-letter-spacing-snug: -0.01em;
   --xp-hero-fog: linear-gradient(
     to left,
@@ -461,7 +463,7 @@
 
 /*
  * ─── Màn hình lớn (≥2000px, ≥2400px - màn 27" 2K/4K) ──────────────────────
- * Màn 24" Full HD (1920px) giữ nguyên khung chuẩn 1200px (4 cột vừa đẹp).
+ * Màn 24" Full HD (1920px) giữ nguyên khung chuẩn 1320px (4 cột vừa đẹp).
  * Màn 27" 2K (≥2000px) và 4K (≥2400px) mới nới rộng khung và tăng số cột.
  */
 @media (min-width: 2000px) {
