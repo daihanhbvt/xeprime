@@ -9,6 +9,7 @@ import { useWatch } from 'react-hook-form';
 import { ImageUploadField } from '@/components/form/ImageUploadField';
 import { TextField } from '@/components/form/TextField';
 import { ROUTES } from '@/constants/routes';
+import { isCommissionOwner } from '@/features/auth/post-auth-destination';
 import { useShopSettingsAccess } from '@/features/shop/hooks/use-shop-settings-access';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { initialOf } from '@/lib/initials';
@@ -31,9 +32,9 @@ import styles from './AccountProfileForm.module.css';
  * được gì.
  *
  * Dòng cuối phân biệt tài khoản với GIAN HÀNG: tên/ảnh ở đây là của con người đang đăng nhập; tên,
- * logo, SĐT liên hệ mà khách thấy là của gian hàng và sửa ở Cài đặt gian hàng. Chủ xe tuyến hoa
- * hồng KHÔNG dùng khối này: với họ ảnh + họ tên là thứ khách thấy, nên trang của họ có khối riêng
- * (`OwnerInfoForm` — ảnh bắt buộc, kèm lời giới thiệu; ADR 0054).
+ * logo, SĐT liên hệ mà khách thấy là của gian hàng và sửa ở Cài đặt gian hàng. Với CHỦ xe tuyến
+ * hoa hồng thì ngược lại: ảnh + họ tên này CHÍNH LÀ thứ khách thấy (ADR 0054), nên dòng cuối nói
+ * điều đó và dẫn sang "Hồ sơ chủ xe" (`/shop` — nơi có ảnh bắt buộc và lời giới thiệu, ADR 0085).
  */
 export function AccountProfileForm({ profile }: { profile: UserProfile }) {
   const t = useTranslations('Account');
@@ -42,6 +43,7 @@ export function AccountProfileForm({ profile }: { profile: UserProfile }) {
   const { data: user } = useCurrentUser();
   const identityLabel = useAccountIdentityLabel();
   const canOpenShopSettings = useShopSettingsAccess();
+  const commissionOwner = isCommissionOwner(user);
 
   const { form, submit, revert, saving } = useAccountProfileForm(profile);
   const { control, formState } = form;
@@ -91,12 +93,19 @@ export function AccountProfileForm({ profile }: { profile: UserProfile }) {
 
         <p className={styles.note}>
           <InfoCircleOutlined aria-hidden className={styles.noteIcon} />
-          <span>
-            {tHub('profile.notShop')}{' '}
-            {canOpenShopSettings ? (
-              <Link href={ROUTES.MANAGE.SHOP}>{tHub('profile.shopSettingsLink')}</Link>
-            ) : null}
-          </span>
+          {commissionOwner ? (
+            <span>
+              {tHub('profile.personalStorefront')}{' '}
+              <Link href={ROUTES.MANAGE.SHOP}>{tHub('profile.ownerProfileLink')}</Link>
+            </span>
+          ) : (
+            <span>
+              {tHub('profile.notShop')}{' '}
+              {canOpenShopSettings ? (
+                <Link href={ROUTES.MANAGE.SHOP}>{tHub('profile.shopSettingsLink')}</Link>
+              ) : null}
+            </span>
+          )}
         </p>
 
         <div className={styles.actions}>

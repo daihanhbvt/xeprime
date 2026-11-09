@@ -10,7 +10,14 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 
-import { VEHICLE_EDIT_TAB, editTabOfLegacyManageSection } from '@/constants/routes';
+import {
+  VEHICLE_EDIT_TAB,
+  WORKSPACE,
+  editTabOfLegacyManageSection,
+  workspacePaths,
+  workspaceVehiclePaths,
+} from '@/constants/routes';
+import { WorkspaceScope } from '@/hooks/use-workspace';
 import type { VehicleDetail } from '@/features/vehicles/types';
 import { renderWithIntl } from '@/i18n/test-utils';
 
@@ -507,6 +514,30 @@ describe('Chính sách thuê - mọi thứ áp cho cả xe', () => {
     fireEvent.change(textarea, { target: { value: 'Sửa dở' } });
     fireEvent.click(screen.getByRole('button', { name: 'Hoàn tác ở cột phải' }));
     await waitFor(() => expect((textarea as HTMLTextAreaElement).value).toBe('Điều khoản gốc'));
+  });
+});
+
+/**
+ * Chủ xe tuyến hoa hồng cấu hình chính sách trên TỪNG xe (ADR 0085 điều 3): không công tắc chính sách
+ * gian hàng, nhưng ĐỦ khối như gian hàng — kể cả phí quá giờ, thứ quyết toán đọc từ chính sách của xe.
+ */
+describe('Chính sách thuê - chủ xe tuyến hoa hồng', () => {
+  const ownerWorkspace = {
+    workspace: WORKSPACE.ACCOUNT,
+    paths: workspacePaths(WORKSPACE.ACCOUNT),
+    vehicles: workspaceVehiclePaths(WORKSPACE.ACCOUNT),
+    isManage: false,
+  };
+
+  it('không công tắc chính sách gian hàng; có khối phí quá giờ như gian hàng', () => {
+    renderPane(
+      <WorkspaceScope value={ownerWorkspace}>
+        <PolicyPane vehicle={vehicle()} canUpdate canEditOperations scrollTo={null} />
+      </WorkspaceScope>,
+    );
+    expect(screen.queryByRole('switch', { name: 'Áp dụng chính sách của gian hàng' })).toBeNull();
+    expect(screen.getByRole('region', { name: 'Yêu cầu bảo đảm (thế chấp)' })).toBeTruthy();
+    expect(screen.getAllByRole('region', { name: /quá giờ/i }).length).toBeGreaterThan(0);
   });
 });
 

@@ -9,7 +9,7 @@ import {
   type BillingPhase,
 } from '@xeprime/types';
 
-import { OWNER_LITE_NAV, SHOP_NAV, flattenLeaves, navForZone } from '@/constants/nav';
+import { COMMISSION_NAV, SHOP_NAV, flattenLeaves, navForZone } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
 import {
   PARTNER_TRACK,
@@ -75,6 +75,8 @@ const DAILY_PAGES = [
   ROUTES.MANAGE.BOOKINGS_ENDED,
   ROUTES.MANAGE.CHAT,
   ROUTES.MANAGE.BALANCE,
+  // "Hồ sơ chủ xe" là trang Thông tin `/shop` của CHỦ (ADR 0085 điều 2).
+  ROUTES.MANAGE.SHOP,
 ];
 
 describe('Tuyến hoa hồng - đi qua mốc hết kỳ không đổi gì', () => {
@@ -82,7 +84,7 @@ describe('Tuyến hoa hồng - đi qua mốc hết kỳ không đổi gì', () =
     for (const phase of PHASES) {
       const track = resolvePartnerTrack(ownerAt(phase));
       expect(track, phase).toBe(PARTNER_TRACK.COMMISSION);
-      expect(navForZone(ZONE.PARTNER, track)).toBe(OWNER_LITE_NAV);
+      expect(navForZone(ZONE.PARTNER, track)).toBe(COMMISSION_NAV);
     }
   });
 
@@ -126,13 +128,13 @@ describe('Đối chứng - tuyến gói VẪN đổi khi hết ân hạn', () =>
     }
 
     const lapsed = ownerAt(BILLING_PHASE.LAPSED, BILLING_MODE.COMMISSION);
-    expect(navForZone(ZONE.PARTNER, resolvePartnerTrack(lapsed))).toBe(OWNER_LITE_NAV);
+    expect(navForZone(ZONE.PARTNER, resolvePartnerTrack(lapsed))).toBe(COMMISSION_NAV);
     expect(partnerPageRedirect(lapsed, ROUTES.MANAGE.CUSTOMERS)).toBe(ROUTES.MANAGE.ROOT);
     expect(walletScopeFor(lapsed)).toBe('shop');
   });
 
   it('menu Owner Lite không chứa trang nào của Full Manage', () => {
-    const ownerLite = new Set(flattenLeaves(OWNER_LITE_NAV).map((leaf) => leaf.href));
+    const ownerLite = new Set(flattenLeaves(COMMISSION_NAV).map((leaf) => leaf.href));
     expect(ownerLite.has(ROUTES.MANAGE.CUSTOMERS)).toBe(false);
     expect(ownerLite.has(ROUTES.MANAGE.FINANCE)).toBe(false);
   });

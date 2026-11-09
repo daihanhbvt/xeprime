@@ -72,7 +72,12 @@ vi.mock('./BookingExtensionsPanel', () => ({ BookingExtensionsPanel: () => null 
 vi.mock('./BookingInsuranceCertificatesPanel', () => ({
   BookingInsuranceCertificatesPanel: () => null,
 }));
-vi.mock('@/features/settlement/components/SettlementCard', () => ({ SettlementCard: () => null }));
+// Thẻ Phát sinh có test riêng; ở đây chỉ cần biết trang báo cho nó đơn còn nhận tiền hay không.
+vi.mock('@/features/settlement/components/SettlementCard', () => ({
+  SettlementCard: ({ moneyClosed }: { moneyClosed?: boolean }) => (
+    <div data-testid="settlement-card" data-money-closed={moneyClosed ? 'true' : 'false'} />
+  ),
+}));
 
 const BOOKING: BookingDetail = {
   id: 'BK1',
@@ -329,6 +334,38 @@ describe('Stepper', () => {
       cancellationReason: 'Có việc đột xuất',
     });
     expect(screen.getByText(/Đơn hàng đã huỷ. Lý do: .*Có việc đột xuất./)).toBeTruthy();
+  });
+});
+
+/**
+ * 09/11/2026 — đơn huỷ / khách không đến là chuyến không diễn ra: không còn gì để thu, nên "Thu
+ * tiền", ô "Còn phải thu" và hai link ghi tiền của thẻ Phát sinh vắng hẳn (server cũng từ chối —
+ * `BOOKING_MONEY_CLOSED`). "Lịch sử thu tiền" vẫn còn để xem và hoàn phần đã thu.
+ */
+describe('Đơn huỷ / khách không đến: không ghi tiền mới', () => {
+  it.each([BOOKING_STATUS.CANCELLED, BOOKING_STATUS.NO_SHOW])(
+    '%s: không có Thu tiền, ô còn phải thu',
+    (status) => {
+      renderDetail({ ...BOOKING, status, handoverPrep: null });
+      expect(screen.queryByRole('button', { name: 'Thu tiền' })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Lịch sử thu tiền' })).toBeTruthy();
+      const card = screen.getByRole('region', { name: 'Thanh toán' });
+      expect(within(card).queryByRole('status', { name: /Còn phải thu của khách/ })).toBeNull();
+      // Các dòng tiền vẫn là bản ghi của đơn.
+      expect(within(card).getByText('Tổng tiền chuyến')).toBeTruthy();
+      expect(screen.getByTestId('settlement-card').dataset.moneyClosed).toBe('true');
+    },
+  );
+
+  it('đơn còn chạy và đơn hoàn tất vẫn thu được', () => {
+    renderDetail();
+    expect(screen.getByRole('button', { name: 'Thu tiền' })).toBeTruthy();
+    expect(screen.getByTestId('settlement-card').dataset.moneyClosed).toBe('false');
+    cleanup();
+
+    renderDetail({ ...BOOKING, status: BOOKING_STATUS.COMPLETED, handoverPrep: null });
+    expect(screen.getByRole('button', { name: 'Thu tiền' })).toBeTruthy();
+    expect(screen.getByTestId('settlement-card').dataset.moneyClosed).toBe('false');
   });
 });
 

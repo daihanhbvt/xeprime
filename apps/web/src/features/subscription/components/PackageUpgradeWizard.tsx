@@ -13,16 +13,26 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { usePurchaseErrorMessage } from '../use-plan-quota-gate-message';
 import { cx } from '@/lib/cx';
 
+import { onePerPaymentTarget } from '../payable';
 import { useScopedPlanPurchase } from '../plan-purchase';
 import { useCreateScopedInvoices } from '../use-create-scoped-invoices';
 import {
+  useCreateSubscriptionCheckout,
   usePendingInvoices,
+  usePurchasePreview,
   usePurchaseSubscription,
   useSyncScopeWhenInvoiceSettles,
   useTenantPlans,
 } from '../hooks/use-subscription';
 import { InvoiceWaitingPanel } from './InvoiceWaitingPanel';
 import { PlanPickerPanel } from './PlanPickerPanel';
+import {
+  EMPTY_PLAN_SLOT_CHOICE,
+  PlanSlotSelection,
+  planSlotChoiceReady,
+  planSlotSelectionBody,
+  type PlanSlotChoice,
+} from './PlanSlotSelection';
 import { UpgradeShopInfoStep } from './UpgradeShopInfoStep';
 import styles from './PackageUpgradeWizard.module.css';
 
@@ -42,6 +52,14 @@ export const UPGRADE_TITLE_ID = 'xp-package-upgrade';
  * của "Hồ sơ chủ xe" (`/account?section=plan` — ADR 0028 điều 1 · ADR 0040).
  *
  *   1. chọn bậc + kỳ hạn   2. hoàn thiện thông tin gian hàng   3. chuyển khoản
+ *
+ * ## Xe vượt suất (ADR 0085 điều 5)
+ *
+ * Chủ xe đang có ô tô + xe máy mà chỉ chọn gói ô tô (hay gói ít suất hơn số xe đang hiện): bước 1
+ * đọc bản xem trước của server và dựng `PlanSlotSelection` — chọn thêm gói, hoặc tự chọn xe giữ lại
+ * và xác nhận ẩn phần còn lại. Chưa xác nhận thì không sang bước 2. Hai gói thì tạo MỘT phiếu gộp
+ * (ADR 0083): suất được tính cho cả hai gói cùng lúc và cả hai bật cùng một lần tiền về — hai hoá
+ * đơn rời sẽ để lượt trả đầu tiên ẩn nhầm xe của loại sắp có gói.
  *
  * ## Vì sao BẢNG GIÁ đứng trước FORM
  *
@@ -96,8 +114,23 @@ export function PackageUpgradeWizard() {
   const selection = useScopedPlanPurchase(plans.data ?? []);
   const purchase = usePurchaseSubscription();
   const create = useCreateScopedInvoices(purchase);
+  const checkout = useCreateSubscriptionCheckout();
+  const [checkoutError, setCheckoutError] = useState<unknown>(null);
   /** Đã chọn đủ ít nhất một làn và không làn nào chọn dở. */
-  const readyToContinue = selection.selections.length > 0 && !selection.incomplete;
+  const pickedPlans = selection.selections.length > 0 && !selection.incomplete;
+  /*
+   * Bản xem trước của server cho đúng lựa chọn đang có — nguồn của nhóm vượt suất. Chỉ đọc bản KHỚP
+   * lựa chọn (`placeholderData` còn giữ bản cũ ngay sau khi đổi gói / kỳ hạn).
+   */
+  const preview = usePurchasePreview(
+    selection.selections.map((item) => item.body),
+    pickedPlans && (!hasInvoices || editing),
+  );
+  const previewReady = pickedPlans && preview.isSuccess && !preview.isPlaceholderData;
+  const [slotChoice, setSlotChoice] = useState<PlanSlotChoice>(EMPTY_PLAN_SLOT_CHOICE);
+  const slotGroups = previewReady ? preview.data!.vehicleSlots : undefined;
+  const readyToContinue = previewReady && planSlotChoiceReady(slotGroups, slotChoice);
+  const creating = create.running || checkout.isPending;
   const router = useRouter();
 
   /*
@@ -116,7 +149,7 @@ export function PackageUpgradeWizard() {
    *    ở một form mà nút cuối cùng không có gì để mua.
    */
   const step: UpgradeStep =
-    hasInvoices && !editing ? 'payment' : reachedShopInfo && readyToContinue ? 'shopInfo' : 'plan';
+    hasInvoices && !editing ? 'payment' : reachedShopInfo && pickedPlans ? 'shopInfo' : 'plan';
 
   /**
    * Được phép quay lại SỬA khi đang chờ chuyển khoản.
@@ -268,8 +301,11 @@ export function PackageUpgradeWizard() {
     if (step === 'payment' && hasInvoices) {
       return (
         <div className={styles.stepCard}>
-          {/* Mỗi loại xe đã chọn một hoá đơn (ADR 0065) — trả xong MỘT là đã lên tuyến gói. */}
-          {invoices.map((item) => (
+          {/*
+            Mỗi loại xe một hoá đơn (ADR 0065). Hai gói mua cùng lượt nằm trong MỘT phiếu gộp
+            (ADR 0083 · 0085) và là MỘT khoản cần trả: một thẻ mang mã `XPC`, tổng của cả phiếu.
+          */}
+          {onePerPaymentTarget(invoices).map((item) => (
             <InvoiceWaitingPanel key={item.id} invoice={item} />
           ))}
           {create.failed ? (
@@ -312,8 +348,14 @@ export function PackageUpgradeWizard() {
                 .join(' · '),
               amount: fmt.money(String(selection.total ?? 0)),
             })}
-            submitting={create.running}
-            purchaseError={create.failed && !hasInvoices ? errorMessage(create.failed.error) : null}
+            submitting={creating}
+            purchaseError={
+              checkoutError
+                ? errorMessage(checkoutError)
+                : create.failed && !hasInvoices
+                  ? errorMessage(create.failed.error)
+                  : null
+            }
             onBack={() => setReachedShopInfo(false)}
             /*
              * Hoá đơn tạo SAU khi cả hồ sơ lẫn chi nhánh đã lưu xong — `onSaved` chỉ chạy ở nhánh
@@ -328,12 +370,32 @@ export function PackageUpgradeWizard() {
              * cờ sửa còn bật sẽ che mất bước thanh toán của mã vừa tạo.
              */
             onSaved={() => {
-              if (create.running) return;
-              void create.run(chosen).then((result) => {
-                if (result.created.length === 0) return;
+              if (creating) return;
+              setCheckoutError(null);
+              const slots = planSlotSelectionBody(slotGroups, slotChoice);
+              const done = () => {
                 setEditing(false);
                 selection.reset();
+                setSlotChoice(EMPTY_PLAN_SLOT_CHOICE);
                 setReachedShopInfo(false);
+              };
+              if (chosen.length > 1) {
+                // Hai gói ⇒ MỘT phiếu gộp, một mã QR, cả hai bật cùng lúc (ADR 0083 · ADR 0085).
+                checkout.mutate(
+                  { items: chosen.map((item) => item.body), ...slots },
+                  {
+                    onSuccess: (created) => {
+                      done();
+                      router.push(paymentPath.checkout(created.id));
+                    },
+                    onError: setCheckoutError,
+                  },
+                );
+                return;
+              }
+              void create.run(chosen, slots).then((result) => {
+                if (result.created.length === 0) return;
+                done();
                 const [only] = result.created;
                 if (result.created.length === 1 && only && !result.failed) {
                   router.push(paymentPath.invoice(only.id));
@@ -400,6 +462,7 @@ export function PackageUpgradeWizard() {
                 type="primary"
                 size="large"
                 disabled={!readyToContinue}
+                loading={pickedPlans && preview.isFetching && !previewReady}
                 onClick={() => setReachedShopInfo(true)}
               >
                 {t('upgrade.continue')} <ArrowRightOutlined aria-hidden="true" />
@@ -407,6 +470,10 @@ export function PackageUpgradeWizard() {
               <span className={styles.nextStep}>{t('upgrade.nextStep')}</span>
             </div>
           </div>
+        ) : null}
+
+        {slotGroups ? (
+          <PlanSlotSelection groups={slotGroups} value={slotChoice} onChange={setSlotChoice} />
         ) : null}
       </div>
     );

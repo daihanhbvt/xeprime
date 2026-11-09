@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
-import { subtractMoney } from '@xeprime/domain';
 import {
   API_ERROR_CODE,
   MOBILE_APP_SCHEME,
@@ -19,7 +18,7 @@ import {
 import { Logo } from '@/components/brand/Logo';
 import { Countdown } from '@/components/data-display/Countdown';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
-import { ROUTES, SHOP_SECTION, shopSectionPath } from '@/constants/routes';
+import { ROUTES, SHOP_SECTION, invoicePaymentHref, shopSectionPath } from '@/constants/routes';
 import { PARTNER_TRACK, partnerHomeHref, resolvePartnerTrack } from '@/features/auth/post-auth-destination';
 import { CheckoutFrame } from '@/features/payment-gateway/components/CheckoutFrame';
 import { CheckoutPanel } from '@/features/payment-gateway/components/CheckoutPanel';
@@ -36,7 +35,12 @@ import {
   useSubscriptionCheckout,
   useSubscriptionInvoice,
 } from '../hooks/use-subscription';
-import type { SubscriptionCheckout, SubscriptionInvoice } from '../types';
+import {
+  payableOfCheckout,
+  payableOfInvoice,
+  payableRemainingAmount,
+  type Payable,
+} from '../payable';
 import { PaymentLinesSummary } from './PaymentLinesSummary';
 import styles from './InvoiceCheckoutView.module.css';
 
@@ -54,42 +58,6 @@ export type PaymentViewVariant = 'bare' | 'shell';
 
 /** Thứ được trả: MỘT hoá đơn, hoặc MỘT phiếu gộp nhiều hoá đơn (ADR 0083). */
 type PaymentTarget = { kind: 'invoice'; id: string } | { kind: 'checkout'; id: string };
-
-/** Hình dạng chung của khoản cần trả - hoá đơn lẻ và phiếu gộp nói cùng một ngôn ngữ ở đây. */
-interface Payable {
-  code: string;
-  status: string;
-  totalAmount: string;
-  paidAmount: string;
-  expiresAt: string | null;
-  invoices: readonly SubscriptionInvoice[];
-  /** Phiên cổng ví chỉ có cho hoá đơn lẻ (ADR 0083 điều 6). */
-  gatewayInvoiceId: string | null;
-}
-
-function payableOfInvoice(invoice: SubscriptionInvoice): Payable {
-  return {
-    code: invoice.code,
-    status: invoice.status,
-    totalAmount: invoice.totalAmount,
-    paidAmount: invoice.paidAmount,
-    expiresAt: invoice.expiresAt ?? null,
-    invoices: [invoice],
-    gatewayInvoiceId: invoice.id,
-  };
-}
-
-function payableOfCheckout(checkout: SubscriptionCheckout): Payable {
-  return {
-    code: checkout.code,
-    status: checkout.status,
-    totalAmount: checkout.totalAmount,
-    paidAmount: checkout.paidAmount,
-    expiresAt: checkout.expiresAt ?? null,
-    invoices: checkout.invoices,
-    gatewayInvoiceId: null,
-  };
-}
 
 /** Một hoá đơn gói - `/payment/:invoiceId` (trần) và `/shop/payment/:invoiceId` (trong khung). */
 export function InvoiceCheckoutView({
@@ -144,9 +112,16 @@ function SubscriptionPaymentView({
   const invoiceQuery = useSubscriptionInvoice(target.kind === 'invoice' ? target.id : '');
   const checkoutQuery = useSubscriptionCheckout(target.kind === 'checkout' ? target.id : '');
   const query = target.kind === 'invoice' ? invoiceQuery : checkoutQuery;
+  /*
+   * Hoá đơn nằm trong PHIẾU GỘP (ADR 0083) không phải một khoản trả riêng - mở nó bằng id (link cũ,
+   * app gửi sang) thì chuyển sang trang của phiếu, giữ nguyên query. Dựng trang hoá đơn lẻ ở đây là
+   * hiện mã `XPG` với số tiền của MỘT gói trong khi khách đã mua hai.
+   */
+  const memberOf =
+    target.kind === 'invoice' && invoiceQuery.data?.checkoutId ? invoiceQuery.data : null;
   const payable: Payable | null =
     target.kind === 'invoice'
-      ? invoiceQuery.data
+      ? invoiceQuery.data && !memberOf
         ? payableOfInvoice(invoiceQuery.data)
         : null
       : checkoutQuery.data
@@ -156,6 +131,13 @@ function SubscriptionPaymentView({
   const orderId = params?.get(PAYMENT_RETURN_PARAM.ORDER) ?? null;
   const fromApp = params?.get(PAYMENT_RETURN_PARAM.NATIVE) === '1';
   const shell = variant === 'shell';
+  const search = params?.toString();
+  const checkoutHref = memberOf
+    ? `${invoicePaymentHref(memberOf, { inShop: shell })}${search ? `?${search}` : ''}`
+    : null;
+  useEffect(() => {
+    if (checkoutHref) router.replace(checkoutHref);
+  }, [checkoutHref, router]);
   const homeHref = shell
     ? shopSectionPath(SHOP_SECTION.PLAN)
     : user
@@ -195,7 +177,7 @@ function SubscriptionPaymentView({
   }, [status, queryClient]);
 
   let body: ReactNode;
-  if (query.isPending) {
+  if (query.isPending || checkoutHref) {
     body = <Skeleton active paragraph={{ rows: 8 }} />;
   } else if (query.isError || !payable) {
     const notFound = getErrorCode(query.error) === API_ERROR_CODE.NOT_FOUND;
@@ -335,9 +317,7 @@ function PaymentBody({
   }
 
   const partial = payable.status === SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID;
-  const amount = partial
-    ? (subtractMoney(payable.totalAmount, payable.paidAmount) ?? payable.totalAmount)
-    : payable.totalAmount;
+  const amount = payableRemainingAmount(payable);
 
   return (
     <CheckoutPanel

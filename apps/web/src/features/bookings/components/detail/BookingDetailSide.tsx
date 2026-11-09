@@ -195,7 +195,7 @@ export function PaymentSideCard() {
   const t = useTranslations('Bookings.detailPage.side');
   const fmt = useAppFormat();
   const { has } = usePermissions();
-  const { booking, closed, openFee } = useBookingDetailActions();
+  const { booking, closed, moneyClosed, openFee } = useBookingDetailActions();
   const excess = subtractMoney(booking.collectedAmount, booking.amountDue);
   const overCollected = isNegativeMoney(excess) || isZeroMoney(excess) ? null : excess;
   const prepaid = isZeroMoney(booking.ownerShareOnlineAmount)
@@ -292,21 +292,27 @@ export function PaymentSideCard() {
           </div>
         ) : null}
       </dl>
-      <div
-        className={cx(styles.moneyDue, settled && styles.moneyDueSettled)}
-        role="status"
-        aria-label={`${t('dueTitle')}: ${fmt.money(booking.counterDueAmount)}`}
-      >
-        <span className={styles.moneyDueLabel}>{t('dueTitle')}</span>
-        <strong className={styles.moneyDueAmount}>{fmt.money(booking.counterDueAmount)}</strong>
-        <span className={styles.moneyDueHint}>
-          {settled
-            ? t('dueSettled')
-            : booking.actualPickupAt
-              ? t('dueAfterPickup')
-              : t('dueAtPickup')}
-        </span>
-      </div>
+      {/*
+        Đơn huỷ / khách không đến: không còn gì để thu (ADR 0045 điều 1 — đơn đang chạy không huỷ
+        được), nên ô "Còn phải thu" vắng hẳn; các dòng trên vẫn là bản ghi số tiền của đơn.
+      */}
+      {moneyClosed ? null : (
+        <div
+          className={cx(styles.moneyDue, settled && styles.moneyDueSettled)}
+          role="status"
+          aria-label={`${t('dueTitle')}: ${fmt.money(booking.counterDueAmount)}`}
+        >
+          <span className={styles.moneyDueLabel}>{t('dueTitle')}</span>
+          <strong className={styles.moneyDueAmount}>{fmt.money(booking.counterDueAmount)}</strong>
+          <span className={styles.moneyDueHint}>
+            {settled
+              ? t('dueSettled')
+              : booking.actualPickupAt
+                ? t('dueAfterPickup')
+                : t('dueAtPickup')}
+          </span>
+        </div>
+      )}
       {/* Cọc tài sản là tiền GIỮ rồi trả lại — không cộng vào số phải thu ở trên. */}
       {!isZeroMoney(booking.depositAmount) ? (
         <p className={styles.moneyNote}>

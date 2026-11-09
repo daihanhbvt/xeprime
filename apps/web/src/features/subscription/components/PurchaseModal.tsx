@@ -3,6 +3,7 @@
 import { Alert, App, Button, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { paymentPath } from '@/constants/routes';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
@@ -18,6 +19,13 @@ import {
   useTenantPlans,
 } from '../hooks/use-subscription';
 import type { CurrentPlan } from '../types';
+import {
+  EMPTY_PLAN_SLOT_CHOICE,
+  PlanSlotSelection,
+  planSlotChoiceReady,
+  planSlotSelectionBody,
+  type PlanSlotChoice,
+} from './PlanSlotSelection';
 import { PurchaseKindTag, PurchaseOutcomeNotes, usePurchasePeriodText } from './PurchaseOutcome';
 import styles from './PurchaseModal.module.css';
 
@@ -62,6 +70,14 @@ export function PurchaseModal({
     open && Boolean(selection.selection),
   );
   const outcome = selection.selection ? preview.data?.items[0] : undefined;
+  /*
+   * Xe giữ lại khi lượt mua vượt suất (ADR 0085 điều 5) — chỉ đọc bản xem trước KHỚP bậc/kỳ đang chọn
+   * (`placeholderData` còn giữ bản cũ lúc vừa đổi lựa chọn). Chưa có bản khớp thì chưa cho tạo hoá đơn.
+   */
+  const previewReady = Boolean(selection.selection) && preview.isSuccess && !preview.isPlaceholderData;
+  const [slotChoice, setSlotChoice] = useState<PlanSlotChoice>(EMPTY_PLAN_SLOT_CHOICE);
+  const slotGroups = previewReady ? preview.data!.vehicleSlots : undefined;
+  const slotsReady = previewReady && planSlotChoiceReady(slotGroups, slotChoice);
   const periodText = usePurchasePeriodText();
   const router = useRouter();
 
@@ -71,8 +87,8 @@ export function PurchaseModal({
 
   function submit() {
     // Enter vẫn gửi form khi nút đang quay - không tạo hoá đơn thứ hai trong lúc lượt đầu đang bay.
-    if (!selection.selection || purchase.isPending) return;
-    purchase.mutate(selection.selection.body, {
+    if (!selection.selection || purchase.isPending || !slotsReady) return;
+    purchase.mutate({ ...selection.selection.body, ...planSlotSelectionBody(slotGroups, slotChoice) }, {
       onSuccess: (created) => {
         close();
         router.push(paymentPath.invoice(created.id));
@@ -88,6 +104,7 @@ export function PurchaseModal({
      * ngay sau một lượt mua thành công, đó là một cú bấm tới hoá đơn thứ hai.
      */
     selection.reset();
+    setSlotChoice(EMPTY_PLAN_SLOT_CHOICE);
     onClose();
   }
 
@@ -146,6 +163,10 @@ export function PurchaseModal({
 
           <PlanPricingTable state={selection} label={laneTitle} />
 
+          {slotGroups ? (
+            <PlanSlotSelection groups={slotGroups} value={slotChoice} onChange={setSlotChoice} />
+          ) : null}
+
           {/*
             Đây là lần duy nhất gian hàng trả tiền cho XePrime, và quy chế sàn là văn bản quy
             định phí dịch vụ với thứ tự hiển thị mà họ đang mua.
@@ -166,7 +187,7 @@ export function PurchaseModal({
             <Button
               type="primary"
               loading={purchase.isPending}
-              disabled={!selection.selection}
+              disabled={!slotsReady}
               onClick={submit}
             >
               {t('purchase.submit')}

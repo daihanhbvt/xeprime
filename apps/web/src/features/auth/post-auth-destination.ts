@@ -10,10 +10,8 @@ import {
 } from '@xeprime/types';
 
 import {
-  ACCOUNT_SECTION,
   ROUTES,
   SHOP_SECTION,
-  accountSectionPath,
   partnerTrackStartHref,
   balancePayoutPath,
   shopSectionPath,
@@ -251,27 +249,19 @@ function packageEquivalent(pathname: string): string | null {
 }
 
 /**
- * CHỦ xe tuyến hoa hồng mở trang Cửa hàng (bookmark, thông báo, link từ thời còn gói) → phần tương
- * đương trong "Hồ sơ chủ xe". Cùng một bản ghi gian hàng ở cả hai trang, nên đây là chuyển chỗ đọc,
- * không phải chuyển dữ liệu. Thành viên không có section đó (trang tài khoản của họ là bản thường)
- * ⇒ về trang chủ. Trang con của Cửa hàng (chi nhánh, chính sách…) là năng lực của gói ⇒ về trang
- * chủ như mọi trang tuyến gói khác.
- *
- * Ba ALIAS của chính tuyến hoa hồng (07/10/2026) cũng giải ở đây: khai thuế + gói về section của
- * "Hồ sơ chủ xe", tài khoản nhận tiền về trang số dư. Thành viên không có các section đó (và không có
- * ví) ⇒ trang tài khoản của họ / trang chủ.
+ * Ba ALIAS của tuyến hoa hồng (07/10/2026) → đích hiện hành: khai thuế + gói về section của trang
+ * Thông tin `/shop` (hồ sơ chủ xe từ ADR 0085), tài khoản nhận tiền về trang số dư. Thành viên không
+ * có các section đó (và không có ví) ⇒ trang tài khoản của họ / trang chủ. Trang con của Cửa hàng
+ * (chi nhánh, chính sách…) là năng lực của gói ⇒ về trang chủ như mọi trang tuyến gói khác.
  */
 function commissionEquivalent(user: AuthScope | null | undefined, pathname: string): string | null {
   const owner = isCommissionOwner(user);
-  if (pathname === ROUTES.MANAGE.SHOP && owner) {
-    return accountSectionPath(ACCOUNT_SECTION.PROFILE);
-  }
   if (pathname === ROUTES.MANAGE.TAX) {
-    return owner ? accountSectionPath(ACCOUNT_SECTION.TAX) : ROUTES.MANAGE.ACCOUNT;
+    return owner ? shopSectionPath(SHOP_SECTION.TAX) : ROUTES.MANAGE.ACCOUNT;
   }
   if (pathname === ROUTES.MANAGE.SUBSCRIPTION) {
     return owner
-      ? withPlanPurchaseIntent(accountSectionPath(ACCOUNT_SECTION.PLAN))
+      ? withPlanPurchaseIntent(shopSectionPath(SHOP_SECTION.PLAN))
       : ROUTES.MANAGE.ACCOUNT;
   }
   if (pathname === ROUTES.MANAGE.BANK_ACCOUNTS && owner) return balancePayoutPath();
@@ -320,6 +310,8 @@ export function partnerPageRedirect(
     case PARTNER_TRACK.COMMISSION: {
       // Onboarding tự đưa gian hàng hoa hồng về tiến trình đăng ký của nó.
       if (pathname === ROUTES.MANAGE.ONBOARDING) return null;
+      // Trang Thông tin `/shop` là "Hồ sơ chủ xe" của CHỦ (ADR 0085 điều 2) - thành viên không có nó.
+      if (pathname === ROUTES.MANAGE.SHOP && isCommissionOwner(user)) return null;
       if (isCommissionPage(pathname)) return null;
       return commissionEquivalent(user, pathname) ?? ROUTES.MANAGE.ROOT;
     }

@@ -429,12 +429,15 @@
       "previewLabel": "Xem trước hồ sơ",
       "notShop": "Tên và ảnh này là của riêng tài khoản bạn. Tên, logo và số điện thoại liên hệ mà khách thấy thuộc về gian hàng.",
       "shopSettingsLink": "Mở Cài đặt gian hàng",
+      "personalStorefront": "Ảnh và họ tên này chính là thứ khách thấy trên trang chủ xe của bạn.",
+      "ownerProfileLink": "Mở Hồ sơ chủ xe",
       "storefrontFallback": "Tên và ảnh này cũng là thứ khách thấy khi xem xe của bạn - bạn cho thuê với tư cách cá nhân, không qua gian hàng."
     }
   },
   "ownerHub": {
     "title": "Hồ sơ chủ xe",
     "subtitle": "Thông tin khách thấy, khai thuế, gói dịch vụ và cách bạn đăng nhập.",
+    "pageSubtitle": "Thông tin khách thấy, địa chỉ nhận xe, khai thuế và gói dịch vụ.",
     "appSubtitle": "Thông tin khách thấy, khai thuế và cách bạn đăng nhập.",
     "navTitle": "Trên trang này",
     "navLabel": "Các phần của hồ sơ chủ xe",

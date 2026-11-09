@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { NAV_BADGE, SHOP_NAV, type NavLeaf } from '@/constants/nav';
@@ -112,5 +112,31 @@ describe('PartnerTopNav — nhãn khối là liên kết, khối của trang đa
     render(<PartnerTopNav />);
     expect(active(screen.getByRole('link', { name: 'Tổng quan' }))).toBe(true);
     expect(active(operations())).toBe(false);
+  });
+});
+
+describe('PartnerTopNav - tiêu điểm khi mở dropdown', () => {
+  const settings = () => screen.getByRole('link', { name: 'Cấu hình' });
+  const focusInMenu = () => document.activeElement?.closest('[role="menu"]') ?? null;
+
+  it('rê chuột mở dropdown KHÔNG kéo tiêu điểm vào dòng đầu (lỗi viền "Thông tin cửa hàng")', async () => {
+    nav.pathname = ROUTES.MANAGE.SHOP_POLICIES;
+    render(<PartnerTopNav />);
+
+    fireEvent.mouseEnter(settings());
+    await screen.findByRole('menu');
+    // AntD dời lượt focus qua vài khung `raf` — chờ qua chúng rồi mới kết luận.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 100)));
+
+    expect(focusInMenu()).toBeNull();
+  });
+
+  it('phím ↓ trên nhãn khối mở dropdown và đưa tiêu điểm vào menu', async () => {
+    render(<PartnerTopNav />);
+
+    settings().focus();
+    fireEvent.keyDown(settings(), { key: 'ArrowDown' });
+
+    await waitFor(() => expect(focusInMenu()).not.toBeNull());
   });
 });

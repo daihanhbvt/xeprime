@@ -19,6 +19,11 @@ export type SubscriptionInvoice = Schemas['SubscriptionInvoiceDto'];
  */
 export type PendingSubscriptionInvoice = Schemas['PendingSubscriptionInvoiceDto'];
 export type PurchaseSubscriptionInput = Schemas['PurchaseSubscriptionDto'];
+/** `POST /subscription/purchase` - một gói + lựa chọn xe giữ lại khi vượt suất (ADR 0085). */
+export type PurchaseSubscriptionRequest = Schemas['PurchaseSubscriptionRequestDto'];
+/** Một nhóm suất sẽ vượt sau lượt mua + các xe đang chiếm suất của nhóm (ADR 0085). */
+export type PlanSlotOverflow = Schemas['PlanSlotOverflowDto'];
+export type PlanSlotVehicle = Schemas['PlanSlotVehicleDto'];
 /** Phiếu thanh toán gộp nhiều gói (ADR 0083). */
 export type SubscriptionCheckout = Schemas['SubscriptionCheckoutDto'];
 export type CreateSubscriptionCheckoutInput = Schemas['CreateSubscriptionCheckoutDto'];

@@ -302,8 +302,9 @@ describe('Lối vào Hồ sơ chủ xe', () => {
     render();
 
     expect(screen.queryByText('Hồ sơ chủ xe còn thiếu thông tin')).toBeNull();
+    // "Hồ sơ chủ xe" là trang Thông tin `/shop`, mặt tiền cá nhân (ADR 0085 điều 2).
     expect(screen.getByRole('link', { name: /Hồ sơ chủ xe/ }).getAttribute('href')).toBe(
-      '/manage/account',
+      '/manage/shop',
     );
   });
 });

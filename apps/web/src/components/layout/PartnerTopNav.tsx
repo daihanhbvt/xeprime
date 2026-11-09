@@ -39,7 +39,7 @@ import styles from './PartnerTopNav.module.css';
  *
  * Dropdown dựng bằng `Dropdown` + `menu` của AntD (không tự dựng popup) để có sẵn điều hướng bàn
  * phím, vai `menu`/`menuitem` và trả tiêu điểm. Mở bằng rê chuột; bàn phím mở bằng phím ↓ (Enter
- * thuộc về liên kết).
+ * thuộc về liên kết) — chỉ lối này mới đưa tiêu điểm vào dòng đầu.
  */
 export function PartnerTopNav() {
   const t = useTranslations('Navigation');
@@ -109,6 +109,12 @@ function TopNavGroup({
   const t = useTranslations('Navigation');
   const tShell = useTranslations('ManageCommon');
   const [open, setOpen] = useState(false);
+  /*
+   * Chỉ đưa tiêu điểm vào dropdown khi mở bằng phím ↓. Mở bằng rê chuột mà vẫn `autoFocus` thì AntD
+   * focus dòng ĐẦU TIÊN — dòng đó nhận viền focus + màu active dù trang đang mở là dòng khác
+   * (09/11/2026: ở "Chính sách thuê" rê "Cấu hình" thì "Thông tin cửa hàng" bị viền vàng).
+   */
+  const [focusOnOpen, setFocusOnOpen] = useState(false);
 
   /*
    * Việc "cần xử lý" trong khối phải nhìn thấy được khi dropdown ĐÓNG — nếu không, yêu cầu đặt xe
@@ -121,7 +127,14 @@ function TopNavGroup({
   function openWithKeyboard(event: KeyboardEvent<HTMLAnchorElement>) {
     if (event.key !== 'ArrowDown') return;
     event.preventDefault();
+    setFocusOnOpen(true);
     setOpen(true);
+  }
+
+  /** Rê chuột vào/ra (AntD báo) — không bao giờ kéo tiêu điểm khỏi chỗ người dùng đang đứng. */
+  function changeOpen(next: boolean) {
+    setFocusOnOpen(false);
+    setOpen(next);
   }
 
   const items: MenuProps['items'] = leaves.map((leaf) => {
@@ -152,21 +165,21 @@ function TopNavGroup({
       trigger={['hover']}
       placement="bottomLeft"
       arrow
-      autoFocus
+      autoFocus={focusOnOpen}
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={changeOpen}
       classNames={{ root: styles.dropdown }}
       menu={{
         items,
         selectedKeys: selectedKey ? [selectedKey] : [],
-        onClick: () => setOpen(false),
+        onClick: () => changeOpen(false),
       }}
     >
       <Link
         href={access.hrefOf(first)}
         className={cx(styles.item, active && styles.itemActive, open && styles.itemOpen)}
         onKeyDown={openWithKeyboard}
-        onClick={() => setOpen(false)}
+        onClick={() => changeOpen(false)}
         // Đang ở ĐÚNG trang đích của nhãn khối thì là "page"; ở trang khác trong khối thì là "true".
         aria-current={first.href === selectedKey ? 'page' : active ? 'true' : undefined}
         aria-haspopup="menu"

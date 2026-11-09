@@ -309,6 +309,7 @@
       "car": "Buy car plan"
     },
     "ownerLite": "Individual owners can list up to {limit} vehicles (cars and motorbikes combined). You have {used}.",
+    "ownerLiteMarketplace": "Individual owners can show up to {limit} vehicles on the marketplace (cars and motorbikes combined). You are showing {used}. Pause another vehicle or upgrade to a shop.",
     "upgradeToShop": "Upgrade to a shop",
     "shared": {
       "fleet": "Your current plan has used {used}/{limit} vehicles, so no new vehicle can be added.",
@@ -439,5 +440,22 @@
     "upgradeWarning": "{terms} will end as soon as payment completes - the remaining time is not refunded.",
     "overCap": "From {date} the limit drops to {cap} vehicles while you have {used} - vehicles over the limit keep running but cannot be submitted to the marketplace.",
     "hintLabel": "What this purchase does to your current plan"
+  },
+  "slots": {
+    "title": "You are showing more vehicles than the plan allows",
+    "hint": "A plan can show as many vehicles as it has slots. Choose which vehicles to keep; the rest will be paused on the marketplace when the plan activates - their details, bookings and calendar stay as they are. Turn them back on yourself when a slot frees up.",
+    "overLimit": "{scope} has {limit, plural, one {# slot} other {# slots}} - you are showing {count, plural, one {# vehicle} other {# vehicles}}. Choose up to {limit, plural, one {# vehicle} other {# vehicles}} to keep.",
+    "noPlan": "The selected plan does not cover {vehicles} - {count, plural, one {# vehicle} other {# vehicles}} will be paused when the plan activates.",
+    "noPlanHint": "Want to keep them listed? Go back and add a plan for this vehicle type.",
+    "vehicles": {
+      "car": "cars",
+      "motorbike": "motorbikes",
+      "all": "vehicles"
+    },
+    "selected": "{selected}/{limit} selected",
+    "more": "{count, plural, one {# more vehicle} other {# more vehicles}} will also be paused.",
+    "listLabel": "Vehicles to keep on the marketplace",
+    "accept": "I agree that vehicles I do not keep will be paused when the plan activates.",
+    "pickBigger": "Want to keep them all? Go back and choose a bigger plan."
   }
 }

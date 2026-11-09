@@ -1,6 +1,7 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
+  API_ERROR_CODE,
   BOOKING_STATUS,
   bookingRequestRespondBy,
   DEPOSIT_STATUS,
@@ -814,5 +815,77 @@ describe('Hoàn cọc → sửa về 0 rồi sửa lại thành số dương', (
     // Phiếu đã duyệt mà vẫn mang dấu vết huỷ là một trạng thái tự mâu thuẫn.
     expect(rows[0]!.cancelledAt).toBeNull();
     expect(rows[0]!.cancelledBy).toBeNull();
+  });
+});
+
+/**
+ * 09/11/2026 — đơn huỷ / khách không đến: xe chưa lăn bánh nên không ghi hay sửa phát sinh, nhưng
+ * gỡ khoản lỡ ghi và hoàn cọc lỡ thu vẫn phải làm được.
+ */
+describe('Đơn huỷ / khách không đến', () => {
+  maybe('từ chối ghi phát sinh mới — cả HUỶ lẫn KHÁCH KHÔNG ĐẾN', async () => {
+    for (const status of [BOOKING_STATUS.CANCELLED, BOOKING_STATUS.NO_SHOW]) {
+      const bookingId = await createBooking({ status });
+      await expect(
+        settlement.addSurcharge(tenantId, bookingId, ownerId, {
+          category: SURCHARGE_CATEGORY.CLEANING,
+          amount: '150000',
+          reason: 'Ghế sau bẩn',
+        }),
+      ).rejects.toMatchObject({
+        status: 409,
+        response: { code: API_ERROR_CODE.BOOKING_MONEY_CLOSED },
+      });
+      expect(await prisma.bookingSurcharge.count({ where: { bookingId } })).toBe(0);
+    }
+  });
+
+  maybe('khoản đã ghi trước khi huỷ: KHÔNG sửa số được, nhưng GỠ được', async () => {
+    const bookingId = await createBooking({ status: BOOKING_STATUS.RESERVED });
+    const added = await settlement.addSurcharge(tenantId, bookingId, ownerId, {
+      category: SURCHARGE_CATEGORY.CLEANING,
+      amount: '150000',
+      reason: 'Ghi nhầm đơn',
+    });
+    const surchargeId = added.surcharges[0]!.id;
+    await prisma.booking.update({
+      where: { id: bookingId },
+      data: { status: BOOKING_STATUS.CANCELLED },
+    });
+
+    await expect(
+      settlement.updateSurcharge(tenantId, bookingId, surchargeId, ownerId, {
+        category: SURCHARGE_CATEGORY.CLEANING,
+        amount: '200000',
+        reason: 'Ghi nhầm đơn',
+      }),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.BOOKING_MONEY_CLOSED } });
+
+    const result = await settlement.voidSurcharge(tenantId, bookingId, surchargeId, ownerId, {
+      reason: 'Đơn đã huỷ',
+    });
+    expect(result.surcharges).toHaveLength(0);
+  });
+
+  maybe('cọc đã thu rồi đơn huỷ: chờ hoàn trọn cọc, ghi nhận hoàn được', async () => {
+    const bookingId = await createBooking({ status: BOOKING_STATUS.CANCELLED, deposit: '3000000' });
+    await receiveDeposit(bookingId, '3000000');
+
+    const before = await settlement.get(tenantId, bookingId);
+    expect(before.depositStatus).toBe(DEPOSIT_STATUS.AWAITING_REFUND);
+    expect(before.proposedRefund).toBe('3000000.00');
+
+    const after = await settlement.recordRefund(tenantId, bookingId, ownerId, {
+      refundAmount: '3000000',
+      refundMethod: REFUND_METHOD.CASH,
+    });
+    expect(after.depositStatus).toBe(DEPOSIT_STATUS.REFUNDED);
+  });
+
+  maybe('chuyến còn chạy: cọc đã thu vẫn là ĐANG GIỮ, chưa mời hoàn', async () => {
+    const bookingId = await createBooking({ status: BOOKING_STATUS.ACTIVE, deposit: '3000000' });
+    await receiveDeposit(bookingId, '3000000');
+    const result = await settlement.get(tenantId, bookingId);
+    expect(result.depositStatus).toBe(DEPOSIT_STATUS.RECEIVED);
   });
 });

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 import { LoadingState } from '@/components/feedback/LoadingState';
-import { ACCOUNT_SECTION, ROUTES, accountSectionPath } from '@/constants/routes';
+import { ROUTES } from '@/constants/routes';
 import { partnerPageRedirect } from '@/features/auth/post-auth-destination';
 import { useCurrentUser } from '@/hooks/use-current-user';
 
@@ -25,8 +25,7 @@ export function OwnerRegistrationRedirect() {
   useEffect(() => {
     if (isPending) return;
     router.replace(
-      partnerPageRedirect(user, ROUTES.MANAGE.REGISTRATION) ??
-        accountSectionPath(ACCOUNT_SECTION.PROFILE),
+      partnerPageRedirect(user, ROUTES.MANAGE.REGISTRATION) ?? ROUTES.MANAGE.SHOP,
     );
   }, [isPending, user, router]);
 

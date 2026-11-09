@@ -152,6 +152,9 @@ after(async () => {
     await prisma.auditLog.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.subscriptionInvoice.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenantSubscription.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    // Xe của các ca suất trên chợ (ADR 0085).
+    await prisma.publicListing.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    await prisma.vehicle.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
     await prisma.plan.deleteMany({
       where: { id: { in: [commissionPlanId, packagePlanId, ...extraPlanIds] } },
@@ -615,4 +618,165 @@ test('gói bán qua tư vấn sắp hết hạn ⇒ lời nhắc chỉ lối li�
   assert.ok(notes.length > 0);
   assert.match(notes[0]!.body ?? '', /liên hệ XePrime/);
   assert.doesNotMatch(notes[0]!.body ?? '', /Gói của tôi/);
+});
+
+// ─────────────────────── ADR 0085 — suất trên chợ khi đổi tuyến / đổi gói ───────────────────────
+
+/** Xe đã duyệt; `marketplaceEnabled` = đang chiếm suất hay không. */
+async function mkVehicle(tenantId: string, opts: { listed: boolean; publicStatus?: string }) {
+  const id = newId();
+  await prisma.vehicle.create({
+    data: {
+      id,
+      tenantId,
+      code: `SLV-${id.slice(-8)}`,
+      name: `Xe ${id.slice(-4)}`,
+      vehicleType: 'car',
+      publicStatus: opts.publicStatus ?? 'approved_public',
+      marketplaceEnabled: opts.listed,
+    } as never,
+  });
+  return id;
+}
+
+const marketOf = (id: string) =>
+  prisma.vehicle.findUniqueOrThrow({
+    where: { id },
+    select: { marketplaceEnabled: true, marketplacePausedReason: true },
+  });
+
+/** Thành viên KHÔNG phải chủ — người sẽ bị khoá khi gian hàng về tuyến hoa hồng. */
+async function addStaff(tenantId: string): Promise<string> {
+  const userId = newId();
+  await prisma.user.create({
+    data: {
+      id: userId,
+      realm: ACCOUNT_REALM.PARTNER,
+      displayName: 'Nhân viên vòng đời',
+      email: `sl-s-${userId.slice(-8).toLowerCase()}-${RUN}@xeprime.test`,
+    },
+  });
+  memberUserIds.push(userId);
+  const membershipId = newId();
+  await prisma.tenantMembership.create({
+    data: { id: membershipId, tenantId, userId, roleKey: 'shop_staff', status: 'active' },
+  });
+  return membershipId;
+}
+
+test('ADR 0085: hết ân hạn mọi gói ⇒ toàn bộ xe đang hiện tạm ẩn, nhân viên tạm khoá, chủ thì không', async () => {
+  if (!dbAvailable) return;
+  const tenantId = await mkTenant('slot-lapse');
+  await addMember(tenantId); // chủ
+  const staff = await addStaff(tenantId);
+  const shown = [await mkVehicle(tenantId, { listed: true }), await mkVehicle(tenantId, { listed: true })];
+  const paused = await mkVehicle(tenantId, { listed: false });
+  await subscribe(tenantId, packagePlanId, BILLING_MODE.PACKAGE, new Date(Date.now() - 9 * DAY));
+
+  await sweepSubscriptionLifecycle(prisma, new Date());
+
+  for (const id of shown) {
+    assert.deepEqual(await marketOf(id), { marketplaceEnabled: false, marketplacePausedReason: 'plan_limit' });
+  }
+  // Xe chủ đã tự tạm ẩn từ trước: giữ nguyên lý do của chủ (NULL), không bị đổi thành "hết suất".
+  assert.deepEqual(await marketOf(paused), { marketplaceEnabled: false, marketplacePausedReason: null });
+
+  const members = await prisma.tenantMembership.findMany({
+    where: { tenantId },
+    select: { id: true, roleKey: true, status: true, lockedReason: true },
+  });
+  const staffRow = members.find((m) => m.id === staff)!;
+  assert.equal(staffRow.status, 'locked');
+  assert.equal(staffRow.lockedReason, 'plan_lapsed');
+  const owner = members.find((m) => m.roleKey === 'shop_owner')!;
+  assert.equal(owner.status, 'active');
+
+  const notes = await notesOf(tenantId, 'subscription_lapsed');
+  assert.ok(notes.length > 0);
+  assert.match(notes[0]!.body ?? '', /2 xe đã tạm ẩn/);
+  assert.doesNotMatch(notes[0]!.body ?? '', /VẪN Ở TRÊN CHỢ/);
+});
+
+test('ADR 0085: kỳ hạ bậc vừa bắt đầu ⇒ áp lựa chọn xe giữ lại trên hoá đơn, đúng MỘT lần', async () => {
+  if (!dbAvailable) return;
+  const tenantId = await mkTenant('slot-term-start');
+  const keep = await mkVehicle(tenantId, { listed: true });
+  const drop = await mkVehicle(tenantId, { listed: true });
+  const subId = newId();
+  await prisma.tenantSubscription.create({
+    data: {
+      id: subId,
+      tenantId,
+      planId: packagePlanId,
+      status: SUBSCRIPTION_STATUS.ACTIVE,
+      price: 100000,
+      termMonths: 1,
+      billingMode: BILLING_MODE.PACKAGE,
+      quotaJson: { maxVehicles: 1, maxBranches: null, maxMembers: null },
+      startsAt: new Date(Date.now() - HOUR),
+      endsAt: new Date(Date.now() + 30 * DAY),
+    },
+  });
+  const now = new Date();
+  await prisma.subscriptionInvoice.create({
+    data: {
+      id: newId(),
+      tenantId,
+      subscriptionId: subId,
+      code: `XPG${newId().slice(-8)}`,
+      periodFrom: now,
+      periodTo: new Date(now.getTime() + 30 * DAY),
+      linesJson: {
+        planId: packagePlanId,
+        planCode: `sl-package-${RUN}`,
+        termMonths: 1,
+        vehicleScope: 'all',
+        quota: { maxVehicles: 1, maxBranches: null, maxMembers: null },
+        lines: [{ kind: 'package', quantity: 1, months: 1, unitPrice: '100000', amount: '100000' }],
+        vehicleSlots: { keepVehicleIds: [keep] },
+      },
+      subtotal: 100000,
+      totalAmount: 100000,
+      paidAmount: 100000,
+      status: 'paid',
+    },
+  });
+
+  await sweepSubscriptionLifecycle(prisma, new Date());
+  await sweepSubscriptionLifecycle(prisma, new Date());
+
+  assert.equal((await marketOf(keep)).marketplaceEnabled, true);
+  assert.deepEqual(await marketOf(drop), { marketplaceEnabled: false, marketplacePausedReason: 'plan_limit' });
+  const sub = await prisma.tenantSubscription.findUniqueOrThrow({
+    where: { id: subId },
+    select: { slotsAppliedAt: true },
+  });
+  assert.ok(sub.slotsAppliedAt, 'kỳ đã áp suất phải được claim');
+  const audits = await prisma.auditLog.count({
+    where: { tenantId, action: 'vehicle.marketplace_paused_by_plan' },
+  });
+  assert.equal(audits, 1, 'chạy lại job không áp lần hai');
+});
+
+test('ADR 0085: còn chưa tới 1 ngày ân hạn ⇒ nhắc lần cuối MỘT lần, nói rõ hậu quả', async () => {
+  if (!dbAvailable) return;
+  const tenantId = await mkTenant('slot-final-reminder');
+  await addMember(tenantId);
+  // Ân hạn 7 ngày ⇒ kết thúc sau 12 giờ nữa.
+  await subscribe(tenantId, packagePlanId, BILLING_MODE.PACKAGE, new Date(Date.now() - 7 * DAY + 12 * HOUR));
+
+  await sweepSubscriptionLifecycle(prisma, new Date());
+  await sweepSubscriptionLifecycle(prisma, new Date());
+
+  const finals = (await notesOf(tenantId, 'subscription_expired')).filter((n) =>
+    /toàn bộ xe sẽ tạm ẩn/.test(n.body ?? ''),
+  );
+  assert.equal(finals.length >= 1, true);
+  const titles = await prisma.notification.findMany({
+    where: { tenantId, title: { startsWith: 'Còn 1 ngày ân hạn' } },
+    select: { userId: true },
+  });
+  // Một tin mỗi người nhận, không lặp ở lượt chạy thứ hai.
+  assert.equal(new Set(titles.map((t) => t.userId)).size, titles.length);
+  assert.ok(titles.length > 0);
 });

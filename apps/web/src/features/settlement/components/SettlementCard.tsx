@@ -46,10 +46,17 @@ export function SettlementCard({
   bookingId,
   canView,
   serviceType = null,
+  moneyClosed = false,
   className,
 }: {
   bookingId: string;
   canView: boolean;
+  /**
+   * Đơn huỷ / khách không đến (`isBookingClosedWithoutTrip`): xe chưa lăn bánh nên không ghi phát
+   * sinh hay thu cọc mới — hai link vắng hẳn, server cũng từ chối (`BOOKING_MONEY_CLOSED`). Hoàn
+   * cọc đã thu vẫn mở.
+   */
+  moneyClosed?: boolean;
   /** Lớp của nơi đặt thẻ (vd. kéo cao bằng thẻ bên cạnh trong một hàng hai thẻ). */
   className?: string;
   /** Loại dịch vụ của đơn — hộp phụ phí bỏ danh mục không ghi được cho loại này (ADR 0075). */
@@ -62,6 +69,8 @@ export function SettlementCard({
 
   const { has } = usePermissions();
   const canRecord = has(PERMISSION.PAYMENT_RECORD);
+  // Ghi tiền MỚI (phát sinh, thu cọc) — hoàn cọc dùng `canRecord` trần, vẫn mở trên đơn huỷ.
+  const canRecordNew = canRecord && !moneyClosed;
   const canCorrect = has(PERMISSION.PAYMENT_VOID);
   const inSupport = useSupportHides(SUPPORT_HIDDEN_AREA.SETTLEMENT);
   const visible = canView && !inSupport;
@@ -145,7 +154,7 @@ export function SettlementCard({
               ) : (
                 <span>{tSettlement('surchargeNone')}</span>
               )}
-              {canRecord ? (
+              {canRecordNew ? (
                 <button
                   type="button"
                   className={styles.inlineLink}
@@ -204,7 +213,7 @@ export function SettlementCard({
                 <b className={styles.money}>{fmt.money(data.depositReceived)}</b>
               )}
               {/* Chỉ mở khi còn thiếu so với cọc theo đơn và chưa bước sang giai đoạn hoàn. */}
-              {canRecord && canTakeDeposit ? (
+              {canRecordNew && canTakeDeposit ? (
                 <button
                   type="button"
                   className={styles.inlineLink}

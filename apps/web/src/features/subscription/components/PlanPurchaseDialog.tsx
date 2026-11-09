@@ -49,6 +49,13 @@ import type { MySubscription, SubscriptionPurchasePreviewItem } from '../types';
 import { usePurchaseErrorMessage } from '../use-plan-quota-gate-message';
 import { CONTACT_SALES_HREF } from './PlanPricingTable';
 import {
+  EMPTY_PLAN_SLOT_CHOICE,
+  PlanSlotSelection,
+  planSlotChoiceReady,
+  planSlotSelectionBody,
+  type PlanSlotChoice,
+} from './PlanSlotSelection';
+import {
   PurchaseKindTag,
   PurchaseOutcomeHint,
   PurchaseOverCapAlert,
@@ -129,6 +136,13 @@ export function PlanPurchaseDialog({
    */
   const previewReady = preview.isSuccess && !preview.isPlaceholderData;
   const submitting = purchase.isPending || checkout.isPending;
+  /*
+   * Xe giữ lại khi lượt mua vượt suất (ADR 0085 điều 5) — đọc nhóm vượt từ CHÍNH bản xem trước đang
+   * khớp lựa chọn. Quay lại bước chọn gói hay đóng hộp là dọn lựa chọn: gói khác là nhóm vượt khác.
+   */
+  const [slotChoice, setSlotChoice] = useState<PlanSlotChoice>(EMPTY_PLAN_SLOT_CHOICE);
+  const slotGroups = previewReady ? preview.data!.vehicleSlots : undefined;
+  const slotsReady = planSlotChoiceReady(slotGroups, slotChoice);
 
   /*
    * Mở từ một thẻ làn ⇒ chọn sẵn bậc của làn đó MỘT lần mỗi lượt mở (bậc đang dùng để gia hạn,
@@ -151,15 +165,22 @@ export function PlanPurchaseDialog({
   function close() {
     state.reset();
     setStep('plans');
+    setSlotChoice(EMPTY_PLAN_SLOT_CHOICE);
     onClose();
+  }
+
+  function backToPlans() {
+    setStep('plans');
+    setSlotChoice(EMPTY_PLAN_SLOT_CHOICE);
   }
 
   function submit() {
     // Enter vẫn gửi khi nút đang quay - không tạo hoá đơn thứ hai trong lúc lượt đầu đang bay.
-    if (submitting || !previewReady || state.selections.length === 0) return;
+    if (submitting || !previewReady || !slotsReady || state.selections.length === 0) return;
     const onError = (err: unknown) => message.error(errorMessage(err));
+    const slots = planSlotSelectionBody(slotGroups, slotChoice);
     if (state.selections.length === 1) {
-      purchase.mutate(state.selections[0]!.body, {
+      purchase.mutate({ ...state.selections[0]!.body, ...slots }, {
         onSuccess: (invoice) => {
           close();
           router.push(shopPaymentPath.invoice(invoice.id));
@@ -169,7 +190,7 @@ export function PlanPurchaseDialog({
       return;
     }
     checkout.mutate(
-      { items: state.selections.map((item) => item.body) },
+      { items: state.selections.map((item) => item.body), ...slots },
       {
         onSuccess: (created) => {
           close();
@@ -210,8 +231,8 @@ export function PlanPurchaseDialog({
           <ConfirmFooter
             total={previewReady ? preview.data!.total : state.total}
             submitting={submitting}
-            canSubmit={previewReady}
-            onBack={() => setStep('plans')}
+            canSubmit={previewReady && slotsReady}
+            onBack={backToPlans}
             onSubmit={submit}
           />
         )
@@ -247,12 +268,21 @@ export function PlanPurchaseDialog({
               {enterprise ? <EnterpriseOffer tier={enterprise} /> : null}
             </>
           ) : (
-            <ConfirmStep
-              state={state}
-              data={data}
-              preview={preview}
-              replacedCodes={replacedCodes}
-            />
+            <>
+              <ConfirmStep
+                state={state}
+                data={data}
+                preview={preview}
+                replacedCodes={replacedCodes}
+              />
+              {slotGroups ? (
+                <PlanSlotSelection
+                  groups={slotGroups}
+                  value={slotChoice}
+                  onChange={setSlotChoice}
+                />
+              ) : null}
+            </>
           )}
         </div>
       )}

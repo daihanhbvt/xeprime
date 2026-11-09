@@ -5,7 +5,7 @@ import { useState } from 'react';
 import type { usePurchaseSubscription } from './hooks/use-subscription';
 import type { PlanLaneScope } from './plan-lanes';
 import type { ScopedPlanSelection } from './plan-purchase';
-import type { SubscriptionInvoice } from './types';
+import type { PurchaseSubscriptionRequest, SubscriptionInvoice } from './types';
 
 export interface ScopedInvoiceFailure {
   scope: PlanLaneScope;
@@ -33,7 +33,11 @@ export function useCreateScopedInvoices(purchase: ReturnType<typeof usePurchaseS
   const [running, setRunning] = useState(false);
   const [failed, setFailed] = useState<ScopedInvoiceFailure | null>(null);
 
-  async function run(selections: readonly ScopedPlanSelection[]): Promise<ScopedInvoiceResult> {
+  async function run(
+    selections: readonly ScopedPlanSelection[],
+    /** Lựa chọn xe giữ lại khi vượt suất (ADR 0085) — gửi kèm MỖI lượt mua. */
+    extra: Pick<PurchaseSubscriptionRequest, 'keepVehicleIds' | 'acceptVehicleHiding'> = {},
+  ): Promise<ScopedInvoiceResult> {
     setRunning(true);
     setFailed(null);
     const created: SubscriptionInvoice[] = [];
@@ -41,7 +45,7 @@ export function useCreateScopedInvoices(purchase: ReturnType<typeof usePurchaseS
     try {
       for (const selection of selections) {
         try {
-          created.push(await purchase.mutateAsync(selection.body));
+          created.push(await purchase.mutateAsync({ ...selection.body, ...extra }));
         } catch (error) {
           failure = { scope: selection.scope, error };
           break;

@@ -1,14 +1,24 @@
+import { ConfigService } from '@nestjs/config';
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
+  BANK_MATCH_STATUS,
+  BANK_MATCH_TARGET_TYPE,
   BILLING_MODE,
   PLAN_VEHICLE_SCOPE,
   SUBSCRIPTION_INVOICE_STATUS,
   SUBSCRIPTION_STATUS,
 } from '@xeprime/types';
+import { AuditService } from '../src/modules/audit/audit.service';
+import { BankTransactionsService } from '../src/modules/sepay/bank-transactions.service';
+import { SepayService } from '../src/modules/sepay/sepay.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBillingService } from './helpers/service-factory';
+import {
+  makeBillingService,
+  makeBookingExtensionsService,
+  makeBookingHoldsService,
+} from './helpers/service-factory';
 
 /**
  * Phiếu thanh toán GỘP (ADR 0083) - gói ô tô + gói xe máy trong MỘT lần chuyển khoản.
@@ -25,6 +35,16 @@ import { makeBillingService } from './helpers/service-factory';
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const billing = makeBillingService(asService);
+const sepay = new SepayService(
+  asService,
+  billing,
+  makeBookingHoldsService(asService),
+  { get: () => undefined } as unknown as ConfigService,
+  makeBookingExtensionsService(asService),
+);
+const bankAdmin = new BankTransactionsService(asService, new AuditService(asService), billing);
+/** `bank_transactions` là bảng toàn sàn - mọi dòng của spec này mang tiền tố riêng để dọn. */
+const TX_PREFIX = 'checkout-spec-';
 
 const RUN = newId().slice(-8).toLowerCase();
 
@@ -89,6 +109,7 @@ beforeAll(async () => {
 afterAll(async () => {
   if (dbAvailable) {
     await resetBilling();
+    await prisma.bankTransaction.deleteMany({ where: { providerTxId: { startsWith: TX_PREFIX } } });
     await prisma.auditLog.deleteMany({ where: { tenantId } });
     await prisma.plan.deleteMany({ where: { id: { in: planIds } } });
     await prisma.tenant.deleteMany({ where: { id: tenantId } });
@@ -274,5 +295,59 @@ describe('applyCheckoutPaymentWithinTx - tiền đi qua phiếu', () => {
     ]);
     expect(results.map((r) => r.outcome).sort()).toEqual(['activated', 'already_paid']);
     expect(await liveSubscriptions()).toHaveLength(2);
+  });
+});
+
+/**
+ * ĐƯỜNG WEBHOOK SePay với mã của HOÁ ĐƠN CON (ADR 0083). Khách nhìn nhầm thẻ, chuyển từng khoản theo
+ * mã `XPG` của từng gói: tiền phải dồn vào PHIẾU (không bật lẻ một gói khi khách mua hai), đủ tổng
+ * thì cả hai bật, và sổ ngân hàng của admin nói "đã khớp vào" mã PHIẾU - nơi tiền thật sự nằm.
+ */
+describe('webhook SePay - chuyển theo mã hoá đơn con', () => {
+  maybe('hai khoản theo hai mã con: khoản đầu dồn vào phiếu (chưa bật gì), khoản sau đủ ⇒ bật cả hai', async () => {
+    await resetBilling();
+    const created = await checkout();
+    const car = created.invoices.find((i) => i.vehicleScope === PLAN_VEHICLE_SCOPE.CAR)!;
+    const moto = created.invoices.find((i) => i.vehicleScope === PLAN_VEHICLE_SCOPE.MOTORBIKE)!;
+    const ingest = (code: string, amount: number) =>
+      sepay.ingest({
+        id: `${TX_PREFIX}${newId()}`,
+        gateway: 'MBBank',
+        transactionDate: '2026-11-09 10:15:00',
+        accountNumber: '0000111122',
+        content: `CK ${code} thanh toan`,
+        transferType: 'in',
+        transferAmount: amount,
+        accumulated: 0,
+        referenceCode: 'FT123',
+      });
+
+    const first = await ingest(car.code, CAR_PRICE);
+    expect(first).toMatchObject({ matched: true, note: 'partial' });
+    expect(await liveSubscriptions()).toHaveLength(0);
+    const partial = await prisma.subscriptionCheckout.findUniqueOrThrow({ where: { id: created.id } });
+    expect(partial.status).toBe(SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID);
+    expect(partial.paidAmount.toNumber()).toBe(CAR_PRICE);
+    // Hoá đơn con chỉ đổi trạng thái - số đã nhận nằm ở PHIẾU (thẻ chờ phía web đọc từ phiếu).
+    const carRow = await prisma.subscriptionInvoice.findUniqueOrThrow({ where: { id: car.id } });
+    expect(carRow.paidAmount.toNumber()).toBe(0);
+
+    const second = await ingest(moto.code, MOTO_PRICE);
+    expect(second).toMatchObject({ matched: true, note: 'activated' });
+    expect(await liveSubscriptions()).toHaveLength(2);
+
+    const rows = await prisma.bankTransaction.findMany({
+      where: { providerTxId: { startsWith: TX_PREFIX } },
+      select: { id: true, matchStatus: true, matchedType: true, referenceCode: true },
+    });
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row.matchStatus).toBe(BANK_MATCH_STATUS.MATCHED);
+      expect(row.matchedType).toBe(BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE);
+      // Sổ admin: mã khách gõ giữ nguyên, "đã khớp vào" là mã PHIẾU.
+      const detail = await bankAdmin.getOne(row.id);
+      expect([car.code, moto.code]).toContain(detail.referenceCode);
+      expect(detail.matchedInvoiceCode).toBe(created.code);
+    }
   });
 });

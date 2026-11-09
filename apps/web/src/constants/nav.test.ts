@@ -16,8 +16,8 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import {
+  COMMISSION_NAV,
   NAV_BADGE,
-  OWNER_LITE_NAV,
   PLATFORM_NAV,
   SHOP_NAV,
   branchKeyOf,
@@ -35,7 +35,8 @@ import {
 } from './nav';
 import enNavigation from '@xeprime/domain/messages/en/navigation.json';
 import viNavigation from '@xeprime/domain/messages/vi/navigation.json';
-import { PARTNER_TRACK, isCommissionPage } from '@/features/auth/post-auth-destination';
+import { PARTNER_TRACK, partnerPageRedirect } from '@/features/auth/post-auth-destination';
+import type { CurrentUser } from '@/hooks/use-current-user';
 import { ZONE } from '@/zones';
 import { ROUTES, SHOP_SECTION, SHOP_SECTION_VALUES, adminTenantSupportPath } from './routes';
 
@@ -140,10 +141,15 @@ describe('nav - cấu trúc khối', () => {
     expect(SHOP_NAV.every((section) => section.icon)).toBe(true);
   });
 
-  it('chủ xe tuyến hoa hồng dùng CÙNG khung sáu khối - nâng gói thấy mọi thứ ở đúng chỗ cũ', () => {
-    expect(OWNER_LITE_NAV.map((section) => section.labelKey)).toEqual(
-      SHOP_NAV.map((section) => section.labelKey),
+  it('chủ xe tuyến hoa hồng dùng CÙNG cây sáu khối - nâng gói thấy mọi thứ ở đúng chỗ cũ', () => {
+    expect(COMMISSION_NAV.map((section) => section.key)).toEqual(
+      SHOP_NAV.map((section) => section.key),
     );
+    // Cùng một khai báo (ADR 0085 điều 1): mục chung của hai cây là CÙNG đối tượng, không bản chép.
+    const shopLeaves = new Map(flattenLeaves(SHOP_NAV).map((leaf) => [leaf.href, leaf]));
+    for (const leaf of flattenLeaves(COMMISSION_NAV)) {
+      if (!leaf.commission) expect(leaf, leaf.href).toBe(shopLeaves.get(leaf.href) ?? leaf);
+    }
   });
 
   it('Tổng quan và Hỗ trợ luôn hiện (`pinned`), các khối giữa gập được', () => {
@@ -356,7 +362,7 @@ describe('nav - cấu trúc khối', () => {
   });
 
   it('mọi mục lá có href riêng - không hai mục cùng đích', () => {
-    for (const sections of [SHOP_NAV, PLATFORM_NAV, OWNER_LITE_NAV]) {
+    for (const sections of [SHOP_NAV, PLATFORM_NAV, COMMISSION_NAV]) {
       const hrefs = hrefsOf(sections);
       expect(new Set(hrefs).size).toBe(hrefs.length);
     }
@@ -370,7 +376,7 @@ describe('nav - cấu trúc khối', () => {
     for (const leaf of [
       ...flattenLeaves(SHOP_NAV),
       ...flattenLeaves(PLATFORM_NAV),
-      ...flattenLeaves(OWNER_LITE_NAV),
+      ...flattenLeaves(COMMISSION_NAV),
     ]) {
       expect(known.has(leaf.href), leaf.href).toBe(true);
     }
@@ -780,22 +786,36 @@ describe('mobileTabsForZone - 4 tab dưới đáy', () => {
 });
 
 /**
- * Site partner có HAI menu theo tuyến (ADR 0051 điều 3 · ADR 0053): tuyến gói thấy Full Manage, tuyến
- * hoa hồng thấy Owner Lite. Trang chỉ của tuyến gói KHÔNG được xuất hiện trong menu hoa hồng — bấm
- * vào là bị `partnerPageRedirect` đá về trang chủ, tức là một mục menu chết.
+ * Site partner có MỘT cây menu, cắt theo tuyến (ADR 0085 điều 1 — thay hai cây viết tay của ADR 0051
+ * điều 3): tuyến gói thấy Full Manage, tuyến hoa hồng thấy CÙNG cây ít mục hơn. Trang chỉ của tuyến
+ * gói KHÔNG được xuất hiện trong menu hoa hồng — bấm vào là bị `partnerPageRedirect` đá về trang
+ * chủ, tức là một mục menu chết.
  */
 describe('navForZone - menu theo tuyến ở site partner', () => {
   const commissionNav = navForZone(ZONE.PARTNER, PARTNER_TRACK.COMMISSION);
+  /** Chủ xe tuyến hoa hồng — người thấy mọi mục `ownerOnly` của cây. */
+  const commissionOwner = {
+    id: 'U1',
+    displayName: 'Chủ xe',
+    tenant: {
+      id: 'T1',
+      name: 'Chủ xe',
+      roleKey: TENANT_ROLE.SHOP_OWNER,
+      status: 'active',
+      billingMode: 'commission',
+      publicVehicleCount: 1,
+    },
+  } as unknown as CurrentUser;
 
-  it('tuyến hoa hồng → cây Owner Lite; chưa có tuyến → không menu', () => {
-    expect(commissionNav).toBe(OWNER_LITE_NAV);
+  it('tuyến hoa hồng → cây hoa hồng suy từ cùng cây; chưa có tuyến → không menu', () => {
+    expect(commissionNav).toBe(COMMISSION_NAV);
     expect(navForZone(ZONE.PARTNER, PARTNER_TRACK.NONE)).toEqual([]);
     expect(navForZone(ZONE.PARTNER, PARTNER_TRACK.PACKAGE_PENDING)).toEqual([]);
   });
 
-  it('mọi mục của menu hoa hồng là trang tuyến hoa hồng được ở', () => {
+  it('mọi mục của menu hoa hồng là trang CHỦ xe tuyến hoa hồng được ở', () => {
     for (const leaf of flattenLeaves(commissionNav)) {
-      expect(isCommissionPage(leaf.href), leaf.href).toBe(true);
+      expect(partnerPageRedirect(commissionOwner, leaf.href), leaf.href).toBeNull();
     }
   });
 
@@ -807,12 +827,31 @@ describe('navForZone - menu theo tuyến ở site partner', () => {
       ROUTES.MANAGE.RECEIPTS,
       ROUTES.MANAGE.DEBTS,
       ROUTES.MANAGE.MEMBERS,
-      ROUTES.MANAGE.SHOP,
+      ROUTES.MANAGE.SHOP_POLICIES,
+      ROUTES.MANAGE.SUPPORT,
       ROUTES.MANAGE.MAINTENANCE,
       ROUTES.MANAGE.VEHICLE_NEW,
     ]) {
       expect(hrefs.has(href), href).toBe(false);
     }
+  });
+
+  it('"Hồ sơ chủ xe" là trang Thông tin `/shop`, chỉ CHỦ, đổi nhãn - không còn ở `/account`', () => {
+    const leaves = flattenLeaves(commissionNav);
+    const profile = leaves.find((leaf) => leaf.href === ROUTES.MANAGE.SHOP);
+    expect(profile?.labelKey).toBe('account.ownerProfile');
+    expect(profile?.ownerOnly).toBe(true);
+    expect(leaves.some((leaf) => leaf.href === ROUTES.MANAGE.ACCOUNT)).toBe(false);
+    // Bản gian hàng không đổi: nhãn của gian hàng, mọi thành viên có `tenant.view`.
+    const shopInfo = flattenLeaves(SHOP_NAV).find((leaf) => leaf.href === ROUTES.MANAGE.SHOP);
+    expect(shopInfo?.labelKey).toBe('manage.shopInfo');
+    expect(shopInfo?.ownerOnly).toBeUndefined();
+  });
+
+  it('hai tuyến dùng CHUNG bốn tab dưới đáy', () => {
+    expect(mobileTabsForZone(ZONE.PARTNER, PARTNER_TRACK.COMMISSION)).toBe(
+      mobileTabsForZone(ZONE.PARTNER, PARTNER_TRACK.PACKAGE),
+    );
   });
 
   it('menu hoa hồng có đủ việc cho thuê + tiền + hồ sơ chủ xe + tài liệu', () => {
@@ -826,7 +865,7 @@ describe('navForZone - menu theo tuyến ở site partner', () => {
       ROUTES.MANAGE.CALENDAR,
       ROUTES.MANAGE.BOOKINGS,
       ROUTES.MANAGE.BALANCE,
-      ROUTES.MANAGE.ACCOUNT,
+      ROUTES.MANAGE.SHOP,
       ROUTES.MANAGE.HOST_GUIDE,
       ROUTES.MANAGE.CONTRACTS_DOCUMENTS,
       ROUTES.MANAGE.DATA_PROTECTION,
@@ -909,7 +948,7 @@ describe('nav - mọi khoá nhãn đều có bản dịch ở cả hai ngôn ng�
       .split('.')
       .reduce<unknown>((node, part) => (node as Record<string, unknown>)?.[part], bundle);
 
-  const allSections = [...SHOP_NAV, ...PLATFORM_NAV, ...OWNER_LITE_NAV];
+  const allSections = [...SHOP_NAV, ...PLATFORM_NAV, ...COMMISSION_NAV];
   const allKeys = [
     ...allSections.map((section) => section.labelKey),
     ...allSections

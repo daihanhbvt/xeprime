@@ -337,6 +337,11 @@ model TenantMembership {
   roleId              String?   @map("role_id") @db.Char(26)
   /// @xeprime/types → MembershipStatus
   status              String    @default("active") @db.VarChar(50)
+  /// Vì sao HỆ THỐNG khoá thành viên này (ADR 0085 điều 6) — NULL = không khoá, hoặc chủ khoá tay.
+  /// @xeprime/types → MembershipLockReason (`plan_lapsed`: gian hàng hết ân hạn, về tuyến hoa hồng).
+  /// Gói kích hoạt lại thì ĐÚNG các dòng mang lý do này trở về `active`; khoá tay của chủ giữ nguyên.
+  /// CHECK ở migration: chỉ có giá trị khi `status = 'locked'`.
+  lockedReason        String?   @map("locked_reason") @db.VarChar(30)
   /// @xeprime/types → MembershipBranchScope (`all` | `limited`) — ADR 0051.
   ///
   /// `all` (mặc định) = thấy toàn gian hàng. `limited` = chỉ các chi nhánh ở `membership_branches`.
@@ -1434,6 +1439,13 @@ model Vehicle {
   /// `true` mặc định, và migration backfill toàn bộ dữ liệu cũ thành `true`: trước ADR 0048 mọi
   /// xe đã duyệt đều đang hiện, nên giá trị nào khác cũng là âm thầm gỡ cả chợ xuống.
   marketplaceEnabled             Boolean   @default(true) @map("marketplace_enabled")
+  /// Vì sao HỆ THỐNG tắt `marketplace_enabled` (ADR 0085 điều 5) — NULL = chủ xe tự tắt, hoặc đang bật.
+  /// @xeprime/types → MarketplacePauseReason (`plan_limit`: vượt suất gói lúc đổi tuyến/đổi gói).
+  ///
+  /// Ghi CÙNG lệnh với lượt tắt của hệ thống; MỌI lượt bật (luôn do chủ xe — hệ thống không tự hiện
+  /// lại xe) xoá về NULL. Chỉ để nói đúng lý do trên thẻ xe; KHÔNG quyết định gì về tiền hay lịch.
+  /// CHECK ở migration: chỉ có giá trị khi công tắc đang tắt.
+  marketplacePausedReason        String?   @map("marketplace_paused_reason") @db.VarChar(30)
   description                    String?   @db.Text
   mainImageUrl                   String?   @map("main_image_url") @db.Text
   /// Giá tham chiếu Phase 0 (bảng vehicle_pricing riêng trong design §9.6 KHÔNG tách nữa —
@@ -4257,6 +4269,11 @@ model TenantSubscription {
   /// Mốc email "đang ân hạn" đã qua (đánh dấu cả khi cờ quảng bá gói tắt — không gửi bù).
   graceGuideNotifiedAt DateTime? @map("grace_guide_notified_at") @db.Timestamptz(3)
   lapseHandledAt       DateTime? @map("lapse_handled_at") @db.Timestamptz(3)
+  /// Lời nhắc CUỐI "còn 1 ngày ân hạn" đã gửi (ADR 0085 điều 7) — claim của job vòng đời.
+  graceFinalRemindedAt DateTime? @map("grace_final_reminded_at") @db.Timestamptz(3)
+  /// Suất trên chợ đã được áp cho kỳ này khi nó BẮT ĐẦU (ADR 0085 điều 5) — claim của job vòng đời
+  /// cho kỳ hạ bậc nối sau; lượt kích hoạt kỳ bắt đầu ngay (đã áp trong cùng transaction) ghi luôn.
+  slotsAppliedAt       DateTime? @map("slots_applied_at") @db.Timestamptz(3)
   note                 String?   @db.Text
   createdBy            String?   @map("created_by") @db.Char(26)
   createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)

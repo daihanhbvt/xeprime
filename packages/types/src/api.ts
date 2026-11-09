@@ -323,6 +323,13 @@ export const API_ERROR_CODE = {
    */
   PLAN_SCOPE_REQUIRED: 'PLAN_SCOPE_REQUIRED',
   /**
+   * Lượt mua gói làm số xe đang hiện trên chợ VƯỢT suất của gói sau khi áp (ADR 0085 điều 5) mà người
+   * mua chưa chọn xe giữ lại + xác nhận ẩn phần còn lại. `details.groups` mang từng nhóm vượt
+   * `{ countedScope, limit, vehicleIds }`. Lối đi tiếp: chọn gói lớn hơn / mua thêm gói loại kia, hoặc
+   * chọn xe giữ lại. Hệ thống không tự chọn thay.
+   */
+  PLAN_VEHICLE_SELECTION_REQUIRED: 'PLAN_VEHICLE_SELECTION_REQUIRED',
+  /**
    * Lượt ghi đụng EXCLUDE `tenant_subscriptions_package_scope_no_overlap` (ADR 0065): hai kỳ gói
    * chồng thời gian ở phạm vi xung đột (cùng loại xe, hoặc một bên là `all`). Chuỗi kỳ ở
    * `BillingService` không bao giờ đề xuất điều đó — mã này là lưới cuối của DB, không phải luồng
@@ -481,6 +488,11 @@ export const API_ERROR_CODE = {
    * (đã bàn giao thì phải đi quyết toán, đã kết thúc thì chỉ còn lịch sử).
    */
   BOOKING_CANCEL_NOT_ALLOWED: 'BOOKING_CANCEL_NOT_ALLOWED',
+  /**
+   * Đơn đã huỷ / khách không đến — chuyến không diễn ra nên không ghi thu tiền thuê, thu cọc hay
+   * ghi/sửa phát sinh MỚI được nữa (`isBookingClosedWithoutTrip`). Hoàn phần đã thu vẫn mở.
+   */
+  BOOKING_MONEY_CLOSED: 'BOOKING_MONEY_CLOSED',
   /** Khoản giữ chỗ đang bị TẠM GIỮ vì có tranh chấp mở — không chốt kết cục được (R3). */
   HOLD_LOCKED_BY_DISPUTE: 'HOLD_LOCKED_BY_DISPUTE',
   /**

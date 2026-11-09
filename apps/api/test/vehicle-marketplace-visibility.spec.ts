@@ -21,6 +21,7 @@ import { PlatformApprovalService } from '../src/modules/platform-admin/platform-
 import { PlatformVehiclesService } from '../src/modules/platform-admin/platform-vehicles.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
+  giveShopStorefront,
   makeNotificationService,
   makePublicListingsService,
   makeVehiclesService,
@@ -60,6 +61,7 @@ let tenantId: string;
 let otherTenantId: string;
 let otherOwnerId: string;
 let branchId: string;
+let planId: string;
 
 /** Xe đủ điều kiện lên chợ (ảnh ≥4 URL khác nhau, danh tính + thông số năng lượng đầy đủ). */
 async function seedVehicle(over: { tenantId?: string; branchId?: string } = {}): Promise<string> {
@@ -209,6 +211,39 @@ beforeAll(async () => {
     ],
   });
   branchId = await seedBranch(asService, { tenantId, provinceCode: PROV });
+  /*
+   * Gian hàng TUYẾN GÓI không giới hạn xe: bộ này nói về CÔNG TẮC, không về trần suất. Từ ADR 0085
+   * điều 4 trần của gian hàng chưa có gói (3 xe) gác cả điểm chợ, và bộ này duyệt hơn ba chiếc trên
+   * cùng một gian hàng — trần suất có spec riêng (`per-vehicle-type-plans.spec`).
+   */
+  planId = newId();
+  await prisma.plan.create({
+    data: {
+      id: planId,
+      code: `vis-unlimited-${planId.slice(-8).toLowerCase()}`,
+      name: 'Gói không giới hạn (test)',
+      billingMode: 'package',
+      status: 'archived',
+      sortOrder: 990,
+      limitsJson: { maxVehicles: null, graceDays: 7, termPrices: [], features: [] },
+    },
+  });
+  await prisma.tenantSubscription.create({
+    data: {
+      id: newId(),
+      tenantId,
+      planId,
+      status: 'active',
+      price: 0,
+      termMonths: 1,
+      billingMode: 'package',
+      vehicleScope: 'all',
+      quotaJson: { maxVehicles: null, maxBranches: null, maxMembers: null },
+      startsAt: new Date(Date.now() - 86_400_000),
+      endsAt: new Date(Date.now() + 30 * 86_400_000),
+    },
+  });
+  await giveShopStorefront(asService, tenantId);
   await prisma.tenantMembership.create({
     data: {
       id: newId(),
@@ -243,7 +278,9 @@ afterAll(async () => {
     await prisma.tenantProfile.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenantMembership.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenantBranch.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    await prisma.tenantSubscription.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
+    await prisma.plan.deleteMany({ where: { id: planId } });
     await prisma.user.deleteMany({
       where: { id: { in: [ownerId, reviewerId, customerId, otherOwnerId] } },
     });

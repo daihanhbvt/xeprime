@@ -5,7 +5,8 @@ import { BILLING_MODE, SHOP_ONBOARDING_STATE, TENANT_ROLE, TENANT_STATUS } from 
 import { OwnerRegistrationRedirect } from './OwnerRegistrationRedirect';
 
 /**
- * Route cũ `/registration` (06/10/2026: "Hồ sơ chủ xe" gộp vào `/account`) — đích THEO TUYẾN.
+ * Route cũ `/registration` — đích THEO TUYẾN. "Hồ sơ chủ xe" của tuyến hoa hồng là trang Thông tin
+ * `/shop` (ADR 0085 điều 2; trước đó là `/account`, 06/10/2026).
  * Một redirect ở server không biết tuyến; bản này chọn bằng đúng luật `AppShell` dùng.
  */
 
@@ -36,10 +37,10 @@ afterEach(() => {
 });
 
 describe('/registration → đích theo tuyến', () => {
-  it('chủ xe tuyến hoa hồng → section "Thông tin chủ xe" của Hồ sơ chủ xe', async () => {
+  it('chủ xe tuyến hoa hồng → Hồ sơ chủ xe (trang Thông tin /shop)', async () => {
     user.value = tenant(BILLING_MODE.COMMISSION, SHOP_ONBOARDING_STATE.COMMISSION);
     render(<OwnerRegistrationRedirect />);
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/manage/account?section=profile'));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/manage/shop'));
   });
 
   it('tuyến gói → trang Cửa hàng', async () => {

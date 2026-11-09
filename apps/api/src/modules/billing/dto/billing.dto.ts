@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, IntersectionType, OmitType } from '@nestjs/swagger';
 import {
   BILLING_MODE_VALUES,
   FREE_TRIP_ALLOWANCE,
@@ -15,6 +15,7 @@ import {
   SUBSCRIPTION_INVOICE_STATUS_VALUES,
   SUBSCRIPTION_STATUS_VALUES,
   SUBSCRIPTION_TERM_MONTHS,
+  VEHICLE_PUBLIC_STATUS_VALUES,
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
@@ -696,11 +697,48 @@ export class PurchaseSubscriptionDto {
   timing?: SubscriptionChangeTiming;
 }
 
+/** Trần danh sách xe giữ lại gửi lên một lượt mua - dư cho mọi gói tự mua (trần bậc ≤ 10 xe/loại). */
+const PLAN_SLOT_KEEP_MAX = 500;
+
+/**
+ * Lựa chọn "xe giữ lại" khi lượt mua làm số xe đang hiện trên chợ vượt suất của gói (ADR 0085 điều 5).
+ * Chỉ bắt buộc khi bản xem trước báo nhóm vượt suất; không vượt thì server bỏ qua cả hai trường.
+ */
+export class PlanSlotSelectionFields {
+  @ApiPropertyOptional({
+    type: [String],
+    maxItems: PLAN_SLOT_KEEP_MAX,
+    description:
+      'Xe GIỮ LẠI trên chợ (ULID) - mỗi nhóm vượt suất tối đa đúng số suất của nó. Xe khác của nhóm vượt ' +
+      'tạm ẩn khi gói kích hoạt (hạ bậc: khi kỳ mới bắt đầu). Có thể rỗng',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(PLAN_SLOT_KEEP_MAX)
+  @IsString({ each: true })
+  @Length(26, 26, { each: true })
+  keepVehicleIds?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Người mua XÁC NHẬN các xe không giữ lại sẽ tạm ẩn - bắt buộc true khi có nhóm vượt suất',
+  })
+  @IsOptional()
+  @IsBoolean()
+  acceptVehicleHiding?: boolean;
+}
+
+/** `POST /subscription/purchase` - một gói + lựa chọn xe giữ lại (ADR 0085). */
+export class PurchaseSubscriptionRequestDto extends IntersectionType(
+  PurchaseSubscriptionDto,
+  PlanSlotSelectionFields,
+) {}
+
 /**
  * Mua NHIỀU gói trong một lần chuyển khoản (ADR 0083) - mỗi phần tử là một lượt mua như
  * `PurchaseSubscriptionDto`, mỗi loại xe tối đa một phần tử. Một gói thì dùng `POST /purchase`.
+ * Lựa chọn xe giữ lại là của CẢ lượt (ADR 0085), không của từng phần tử.
  */
-export class CreateSubscriptionCheckoutDto {
+export class CreateSubscriptionCheckoutDto extends PlanSlotSelectionFields {
   @ApiProperty({
     type: [PurchaseSubscriptionDto],
     minItems: 2,
@@ -756,10 +794,41 @@ export class SubscriptionPurchasePreviewItemDto {
   @ApiProperty({ type: [PurchaseReplacedTermDto] }) replacedTerms!: PurchaseReplacedTermDto[];
 }
 
+/** Một xe đang chiếm suất trên chợ - đủ để người mua nhận ra và chọn giữ lại (ADR 0085). */
+export class PlanSlotVehicleDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() name!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
+  @ApiProperty({ enum: [...VEHICLE_TYPE_VALUES] }) vehicleType!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) mainImageUrl!: string | null;
+  @ApiProperty({ enum: [...VEHICLE_PUBLIC_STATUS_VALUES], description: 'Chờ duyệt hoặc đã công khai' })
+  publicStatus!: string;
+}
+
+/** MỘT nhóm suất sẽ VƯỢT sau lượt mua (ADR 0085 điều 5). */
+export class PlanSlotOverflowDto {
+  @ApiProperty({
+    enum: [...PLAN_VEHICLE_SCOPE_VALUES],
+    description: 'Phạm vi đếm: một loại xe, hoặc all khi trần dùng chung',
+  })
+  countedScope!: string;
+  @ApiProperty({ description: 'Số suất sau lượt mua; 0 = loại xe này không có gói' }) limit!: number;
+  @ApiProperty({ description: 'Số xe đang chiếm suất của nhóm (có thể nhiều hơn danh sách)' })
+  occupyingCount!: number;
+  @ApiProperty({ type: [PlanSlotVehicleDto] }) vehicles!: PlanSlotVehicleDto[];
+}
+
 export class SubscriptionPurchasePreviewDto {
   @ApiProperty({ type: [SubscriptionPurchasePreviewItemDto] })
   items!: SubscriptionPurchasePreviewItemDto[];
   @ApiProperty({ description: 'Tổng phải trả (VND, chuỗi)' }) total!: string;
+  @ApiProperty({
+    type: [PlanSlotOverflowDto],
+    description:
+      'Nhóm suất sẽ VƯỢT sau lượt mua (ADR 0085). Không rỗng ⇒ lượt mua phải kèm keepVehicleIds + ' +
+      'acceptVehicleHiding, hoặc chọn gói khác',
+  })
+  vehicleSlots!: PlanSlotOverflowDto[];
 }
 
 /**

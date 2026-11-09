@@ -22,6 +22,7 @@ const invoice = vi.hoisted(() => ({
   refetch: vi.fn(),
 }));
 const user = vi.hoisted(() => ({ data: undefined as unknown }));
+const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }));
 
 vi.mock('../hooks/use-subscription', () => ({
   useSubscriptionInvoice: () => invoice,
@@ -41,7 +42,7 @@ vi.mock('@/hooks/use-current-user', () => ({ useCurrentUser: () => user }));
 vi.mock('@/hooks/use-permissions', () => ({ usePermissions: () => ({ has: () => true }) }));
 vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
+  useRouter: () => router,
 }));
 vi.mock('@/features/payment-gateway/api', () => ({
   fetchGatewayMethods: vi
@@ -86,6 +87,7 @@ beforeEach(() => {
   invoice.isError = false;
   invoice.error = null;
   user.data = undefined;
+  router.replace.mockClear();
 });
 
 describe('InvoiceCheckoutView', () => {
@@ -146,6 +148,15 @@ describe('InvoiceCheckoutView', () => {
     expect(screen.getByRole('link', { name: 'Chọn gói' }).getAttribute('href')).toBe(
       '/manage/onboarding',
     );
+  });
+
+  it('hoá đơn nằm trong PHIẾU GỘP ⇒ chuyển sang trang phiếu, không hiện mã XPG hay số của một gói', () => {
+    invoice.data = makeInvoice({ checkoutId: '01HCHECKOUT', checkoutCode: 'XPCABCDEFGH' });
+    renderPage();
+
+    expect(router.replace).toHaveBeenCalledWith('/manage/payment/checkout/01HCHECKOUT');
+    expect(screen.queryByText('XPGWYZZ8TZY')).toBeNull();
+    expect(screen.queryByText(/650.000/)).toBeNull();
   });
 
   it('hoá đơn không thuộc gian hàng này ⇒ không tìm thấy, không thử lại', () => {

@@ -71,6 +71,7 @@ const VEHICLE_SELECT = {
   operationStatus: true,
   publicStatus: true,
   marketplaceEnabled: true,
+  marketplacePausedReason: true,
   deletedAt: true,
   updatedAt: true,
   branch: {
@@ -518,6 +519,7 @@ function toVehicle(
     deletedAt: row.deletedAt,
     publicStatus: row.publicStatus,
     marketplaceEnabled: row.marketplaceEnabled,
+    marketplacePausedReason: row.marketplacePausedReason,
     shopActive,
   });
   const area = [row.branch?.ward?.name, row.branch?.province?.name].filter(Boolean).join(', ');

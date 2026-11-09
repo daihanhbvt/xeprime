@@ -15,7 +15,7 @@ import {
   PaymentInfoDto,
   PendingSubscriptionInvoiceDto,
   PreviewSubscriptionPurchaseDto,
-  PurchaseSubscriptionDto,
+  PurchaseSubscriptionRequestDto,
   SubscriptionInvoiceDto,
   SubscriptionPurchasePreviewDto,
   SubscriptionInvoicePageDto,
@@ -159,7 +159,7 @@ export class SubscriptionController {
   purchase(
     @CurrentTenant() tenant: TenantContext,
     @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: PurchaseSubscriptionDto,
+    @Body() dto: PurchaseSubscriptionRequestDto,
   ): Promise<SubscriptionInvoiceDto> {
     return this.billing.purchase(tenant.tenantId, user.id, dto);
   }
