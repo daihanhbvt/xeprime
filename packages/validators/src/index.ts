@@ -1154,7 +1154,24 @@ export type ShopProfileValues = yup.InferType<typeof shopProfileSchema>;
 export const shopProfileWithContactSchema = shopProfileSchema.shape({
   phone: contactPhoneRule,
   email: yup.string().trim().default('').email('emailInvalid').max(255, 'emailMax'),
+  /**
+   * Giới thiệu ĐÃ ĐỊNH DẠNG từ editor (06/11/2026). Trần đếm trên CHỮ (bỏ thẻ) — cùng con số và
+   * cùng cách đếm mà server áp lên chữ thuần rút từ HTML (`SHOP_BIO_TEXT_MAX_LENGTH`). Server mới
+   * là nơi lọc thẻ; ở đây chỉ chặn sớm cho UX.
+   */
+  bioHtml: yup
+    .string()
+    .default('')
+    .test('bioMax', 'bioMax', (value) => htmlTextLength(value ?? '') <= 2000),
 });
+
+/** Số ký tự CHỮ của một đoạn HTML — bỏ thẻ, mỗi thực thể tính một ký tự. */
+function htmlTextLength(html: string): number {
+  return html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&[a-z]+;|&#\d+;/gi, ' ')
+    .trim().length;
+}
 
 export type ShopProfileWithContactValues = yup.InferType<typeof shopProfileWithContactSchema>;
 

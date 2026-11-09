@@ -19,5 +19,11 @@ export type SubscriptionInvoice = Schemas['SubscriptionInvoiceDto'];
  */
 export type PendingSubscriptionInvoice = Schemas['PendingSubscriptionInvoiceDto'];
 export type PurchaseSubscriptionInput = Schemas['PurchaseSubscriptionDto'];
+/** Phiếu thanh toán gộp nhiều gói (ADR 0083). */
+export type SubscriptionCheckout = Schemas['SubscriptionCheckoutDto'];
+export type CreateSubscriptionCheckoutInput = Schemas['CreateSubscriptionCheckoutDto'];
+/** Xem trước một lượt mua — loại lượt mua, kỳ dự kiến, kỳ sẽ kết thúc (ADR 0084). */
+export type SubscriptionPurchasePreview = Schemas['SubscriptionPurchasePreviewDto'];
+export type SubscriptionPurchasePreviewItem = Schemas['SubscriptionPurchasePreviewItemDto'];
 export type SlotUsage = Schemas['SlotUsageDto'];
 export type PaymentInfo = Schemas['PaymentInfoDto'];

@@ -13,9 +13,17 @@ import {
   fetchMySubscription,
   fetchPendingInvoices,
   fetchTenantPlans,
+  createSubscriptionCheckout,
+  fetchSubscriptionCheckout,
+  previewSubscriptionPurchase,
   purchaseSubscription,
 } from '../api';
-import type { PurchaseSubscriptionInput, SubscriptionInvoice } from '../types';
+import type {
+  CreateSubscriptionCheckoutInput,
+  PurchaseSubscriptionInput,
+  SubscriptionCheckout,
+  SubscriptionInvoice,
+} from '../types';
 
 /**
  * Nhịp hỏi lại hoá đơn đang chờ tiền — chỉ là LƯỚI AN TOÀN, không phải đường chính.
@@ -38,8 +46,8 @@ import type { PurchaseSubscriptionInput, SubscriptionInvoice } from '../types';
 const INVOICE_POLL_LIVE_MS = 120_000;
 const INVOICE_POLL_FALLBACK_MS = 20_000;
 
-/** Hoá đơn còn có thể nhận thêm tiền ⇒ còn đáng hỏi lại. */
-function isAwaitingPayment(invoice: SubscriptionInvoice | null | undefined): boolean {
+/** Hoá đơn (hay phiếu gộp) còn có thể nhận thêm tiền ⇒ còn đáng hỏi lại. */
+function isAwaitingPayment(invoice: { status: string } | null | undefined): boolean {
   return (
     invoice?.status === SUBSCRIPTION_INVOICE_STATUS.ISSUED ||
     invoice?.status === SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID
@@ -188,6 +196,61 @@ export function usePurchaseSubscription() {
       );
       // Nơi gọi có thể chuyển ngay sang trang thanh toán của hoá đơn này — trang đó mở ra có sẵn dữ liệu.
       queryClient.setQueryData(queryKeys.subscription.invoice(invoice.id), invoice);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.subscription.all });
+    },
+  });
+}
+
+/**
+ * MỘT phiếu thanh toán gộp (ADR 0083) — trang thanh toán của phiếu. Cùng nhịp hỏi lại và cùng
+ * điểm dừng với `useSubscriptionInvoice`: phiếu tới `paid` / `void` là thôi hỏi.
+ */
+/**
+ * Bản xem trước của bước "Kỳ hạn & xác nhận" (ADR 0084). Giữ dữ liệu cũ khi đổi kỳ hạn để khung xác
+ * nhận không nhấp nháy về khung xương mỗi lần bấm.
+ */
+export function usePurchasePreview(items: readonly PurchaseSubscriptionInput[], enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.subscription.purchasePreview(items),
+    queryFn: () => previewSubscriptionPurchase(items),
+    enabled: enabled && items.length > 0,
+    placeholderData: (previous) => previous,
+    staleTime: 30_000,
+  });
+}
+
+export function useSubscriptionCheckout(id: string) {
+  const { live } = useBadgeRealtime();
+  const pollMs = live ? INVOICE_POLL_LIVE_MS : INVOICE_POLL_FALLBACK_MS;
+  return useQuery({
+    queryKey: queryKeys.subscription.checkout(id),
+    queryFn: () => fetchSubscriptionCheckout(id),
+    enabled: Boolean(id),
+    refetchInterval: (query) => (isAwaitingPayment(query.state.data) ? pollMs : false),
+    retry: (failureCount, error) =>
+      getErrorCode(error) !== API_ERROR_CODE.NOT_FOUND && failureCount < 2,
+  });
+}
+
+/**
+ * Mua gói ô tô + gói xe máy trong MỘT lần (ADR 0083). Server void hoá đơn chờ cũ của cả hai loại xe
+ * (kèm phiếu chứa chúng), nên danh sách chờ được THAY bằng đúng hai hoá đơn con của phiếu mới —
+ * cùng lý do `setQueryData` với `usePurchaseSubscription`.
+ */
+export function useCreateSubscriptionCheckout() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateSubscriptionCheckoutInput) => createSubscriptionCheckout(body),
+    onSuccess: (checkout: SubscriptionCheckout) => {
+      const scopes = new Set(checkout.invoices.map((i) => planVehicleScopeOf(i.vehicleScope)));
+      queryClient.setQueryData<SubscriptionInvoice[]>(
+        queryKeys.subscription.pendingInvoice(),
+        (current) => [
+          ...checkout.invoices,
+          ...(current ?? []).filter((other) => !scopes.has(planVehicleScopeOf(other.vehicleScope))),
+        ],
+      );
+      queryClient.setQueryData(queryKeys.subscription.checkout(checkout.id), checkout);
       void queryClient.invalidateQueries({ queryKey: queryKeys.subscription.all });
     },
   });

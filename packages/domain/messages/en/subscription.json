@@ -103,16 +103,10 @@
     "emptyFor": "No {scope} is on sale yet.",
     "limitMotorbikes": "{count, plural, one {Up to # motorbike} other {Up to # motorbikes}}",
     "limitCars": "{count, plural, one {Up to # car} other {Up to # cars}}",
-    "chainsAfter": "You are on {plan} until {date}. The new plan starts right after that, so you lose no days of the current term.",
     "startsOnPayment": "The plan starts as soon as XePrime receives your payment.",
     "replacesPending": "Invoice {code} for this vehicle type is awaiting payment. Creating a new invoice cancels that code. If you already transferred with the old code, do not create a new one.",
     "planNotOnSale": "This plan has just stopped taking new purchases. Choose another plan or reload the price list.",
-    "submitNow": "Upgrade now",
-    "timingLabel": "Effective timing",
-    "timingNextTerm": "Queue after current term",
-    "timingNow": "Upgrade immediately today",
-    "timingNowDesc": "Starts as soon as payment is confirmed",
-    "timingNowWarning": "The current term ends today. You pay the full price of the new tier, with no refund for remaining days."
+    "currentPlanRule": "You are on {plan} until {date}. Pick the same plan to renew after that date; a higher plan applies as soon as you pay; a lower plan applies after that date."
   },
   "payment": {
     "title": "Transfer to activate your plan",
@@ -241,7 +235,17 @@
     "enterManage": "Go to management",
     "voidTitle": "This invoice no longer accepts payment",
     "voidBody": "Invoice {code} has expired or was replaced by a newer one. Please choose a plan again.",
-    "pickAgain": "Choose a plan"
+    "pickAgain": "Choose a plan",
+    "backToShop": "Back to shop information",
+    "shellTitle": "Pay invoice",
+    "shellSubtitle": "Pay for your shop’s rental service plans.",
+    "paidTitleMany": "Your plans are active",
+    "deadline": "Pay by:",
+    "deadlinePassed": "The payment deadline has passed",
+    "pendingNote": "Unpaid invoices stay as Awaiting payment; if the full amount has not arrived by the deadline, the invoice is cancelled.",
+    "termMonths": "{months, plural, one {# month plan} other {# month plan}}",
+    "periodLabel": "Term",
+    "periodLabelFor": "Term · {scope}"
   },
   "lanes": {
     "title": {
@@ -325,5 +329,115 @@
       "motorbike": "Upgrade motorbike plan",
       "car": "Upgrade car plan"
     }
+  },
+  "shopPlan": {
+    "title": "Plans & limits",
+    "hint": "Manage your service plans and usage limits.",
+    "change": "Upgrade / Change plan",
+    "buy": "Buy a plan",
+    "upgradeNow": "Upgrade now",
+    "activated": "vehicles activated",
+    "activatedUnlimited": "vehicles activated · unlimited",
+    "progressLabel": "{scope} slots used",
+    "full": "No {scope} slots left!",
+    "free": "{free, plural, one {# slot free} other {# slots free}} · {market}",
+    "noneOnMarket": "none on the marketplace yet",
+    "contactXePrime": "Contact XePrime",
+    "totalVehicles": "Total vehicles",
+    "unlimited": "unlimited",
+    "validUntil": "Valid until",
+    "daysRemaining": "{days, plural, one {# day left} other {# days left}}",
+    "invoicesTitle": "Invoices & payments",
+    "invoicesHint": "Your plan invoices and payment history.",
+    "renew": "Renew"
+  },
+  "combined": {
+    "title": "Buy or renew a plan",
+    "subtitle": "Subscribe to a new plan or renew your current one.",
+    "scope": {
+      "car": "Cars",
+      "motorbike": "Motorbikes"
+    },
+    "noPlan": {
+      "car": "No car plan yet",
+      "motorbike": "No motorbike plan yet"
+    },
+    "inUse": "{used}/{limit} in use",
+    "recommended": "Recommended",
+    "perMonth": "/month",
+    "termNotSold": "Not sold for this term",
+    "select": "Choose plan",
+    "selected": "Selected",
+    "currentTier": "Current plan",
+    "enterpriseTitle": "Enterprise · Unlimited cars, motorbikes & branches",
+    "enterpriseQuote": "Custom quote by fleet size",
+    "termTitle": "Billing term",
+    "termOption": "{months, plural, =1 {1-month plan} other {# months}}",
+    "termBase": "Base price",
+    "pickAtLeastOne": "Choose at least one plan to create an invoice.",
+    "totalLabel": "Total due",
+    "submit": "Create invoice",
+    "tierRank": {
+      "economy": {
+        "name": "Economy",
+        "audience": "For individual owners"
+      },
+      "basic": {
+        "name": "Basic",
+        "audience": "For small shops"
+      },
+      "advanced": {
+        "name": "Advanced",
+        "audience": "For mid-sized shops"
+      }
+    },
+    "limit": {
+      "car": "Up to <b>{count}</b> cars",
+      "motorbike": "Up to <b>{count}</b> motorbikes",
+      "all": "Up to <b>{count}</b> vehicles"
+    },
+    "tierWithCap": "{tier} {count} vehicles",
+    "summaryPlan": "{scope} - <b>{tier}</b> <muted>{amount}/month</muted>",
+    "stepPlansHint": "You can pick one car plan and one motorbike plan together — they share one invoice. Click “Selected” again to deselect.",
+    "steps": {
+      "plans": "Choose plans",
+      "confirm": "Term & confirm"
+    },
+    "stepsLabel": "Plan purchase steps",
+    "next": "Continue",
+    "back": "Back to plans",
+    "confirmTitle": "Confirm your plans",
+    "confirmHint": "Check each plan before creating the invoice.",
+    "termHint": "Applies to every plan you picked.",
+    "row": {
+      "limit": "Limit",
+      "period": "Active period",
+      "price": "Unit price",
+      "amount": "Amount"
+    },
+    "priceLine": "{perMonth}/month × {months} months",
+    "paymentNote": "Pay by QR bank transfer{count, plural, =1 {} other { — # plans share one QR code}}. Plans activate automatically once the money arrives.",
+    "previewError": "Could not load the plan confirmation.",
+    "confirmCardTitle": "{scope} · {tier}"
+  },
+  "purchaseOutcome": {
+    "kind": {
+      "new": "New plan",
+      "renew": "Renewal",
+      "upgrade": "Upgrade now",
+      "change_next": "Change from next term"
+    },
+    "periodRange": "{from} → {to}",
+    "periodOnPayment": "Once paid → {to} (estimated)",
+    "note": {
+      "new": "The plan starts as soon as the money arrives.",
+      "renew": "Continues after {date} — your existing terms run to their end dates.",
+      "upgrade": "The new limit applies as soon as the money arrives.",
+      "change_next": "Your existing terms run until {date}, then switch to this plan."
+    },
+    "replacedTerm": "{plan} (until {date})",
+    "upgradeWarning": "{terms} will end as soon as payment completes — the remaining time is not refunded.",
+    "overCap": "From {date} the limit drops to {cap} vehicles while you have {used} — vehicles over the limit keep running but cannot be submitted to the marketplace.",
+    "hintLabel": "What this purchase does to your current plan"
   }
 }

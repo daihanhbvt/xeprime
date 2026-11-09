@@ -375,12 +375,25 @@ export class PaymentGatewayService {
         totalAmount: true,
         paidAmount: true,
         expiresAt: true,
+        checkoutId: true,
       },
     });
     if (!invoice) {
       throw new NotFoundException({
         code: API_ERROR_CODE.NOT_FOUND,
         message: 'Không tìm thấy hoá đơn',
+      });
+    }
+    /*
+     * Hoá đơn thuộc PHIẾU GỘP (ADR 0083) chỉ nhận tiền qua phiếu — một phiên cổng cho riêng nó sẽ
+     * trả một nửa lượt mua. Phiếu gộp chưa có đường cổng (ADR 0058 còn Proposed), nên chặn hẳn.
+     */
+    if (invoice.checkoutId) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.PAYMENT_TARGET_NOT_PAYABLE,
+        message:
+          'Hoá đơn này thanh toán chung trong một phiếu gộp — chuyển khoản theo mã của phiếu',
+        details: { status: invoice.status, checkoutId: invoice.checkoutId },
       });
     }
     const remaining = invoice.totalAmount.sub(invoice.paidAmount);

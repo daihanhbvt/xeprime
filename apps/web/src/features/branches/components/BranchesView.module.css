@@ -12,12 +12,12 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--xp-space-sm);
+  justify-content: flex-end;
+  gap: 16px;
 }
 
 .search {
-  max-width: 320px;
+  max-width: 266px;
   flex: 1 1 220px;
 }
 
@@ -37,7 +37,8 @@
 }
 
 .name {
-  font-weight: 600;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
 }
 
 .code {
@@ -73,8 +74,10 @@
     align-items: stretch;
   }
 
+  /* Xếp cột: `flex-basis` 220px thành CHIỀU CAO — bỏ nó đi. */
   .search {
     max-width: 100%;
+    flex: none;
   }
 }
 
@@ -87,6 +90,100 @@
 }
 
 .cellSub {
-  font-size: var(--xp-font-size-sm);
+  font-size: var(--xp-font-size-body);
   color: var(--xp-color-text-secondary);
+}
+
+/* Ô dữ liệu phụ (địa chỉ, SĐT, số xe) — Text/Gray/medium như design. */
+.cellSecondary {
+  color: var(--xp-color-text-secondary);
+}
+
+/* ── Thẻ "Chi nhánh" của trang Thông tin cửa hàng — design `23999:111349` ─────────── */
+
+.statusFilter {
+  min-width: 160px;
+}
+
+.toolbar :global(.ant-select),
+.toolbar :global(.ant-input-affix-wrapper),
+.toolbar :global(.ant-btn) {
+  height: 40px;
+}
+
+.pageToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+/* "Tổng N chi nhánh · M đang hoạt động" — phần "đang hoạt động" xanh như design. */
+.summaryText {
+  color: var(--xp-color-text-tertiary);
+}
+
+/* "N đang hoạt động" — Status/success-high như design. */
+.summaryActive {
+  color: var(--xp-color-success);
+}
+
+.defaultMark {
+  color: var(--xp-color-primary);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Dải "chưa có tỉnh/thành" — nền vàng nhạt, chữ cam, lối "Bổ sung ngay" ở mép phải. */
+.reviewBanner {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-warning-subtle);
+  color: var(--xp-color-warning-high);
+}
+
+.reviewIcon {
+  flex: none;
+  font-size: 18px;
+}
+
+.reviewText {
+  min-width: 0;
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.reviewText strong {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.reviewAction {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-color-warning-high);
+  cursor: pointer;
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+  text-decoration: underline;
+}
+
+.reviewAction:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Dòng tỉnh/thành — Text/Gray/medium, đậm vừa (design `23999:111355`). */
+.cellProvince {
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-medium);
 }

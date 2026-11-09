@@ -25,6 +25,8 @@ const user = vi.hoisted(() => ({ data: undefined as unknown }));
 
 vi.mock('../hooks/use-subscription', () => ({
   useSubscriptionInvoice: () => invoice,
+  // Trang hoá đơn lẻ không đọc phiếu gộp — hook vẫn được gọi (tắt) theo luật hooks.
+  useSubscriptionCheckout: () => ({ data: undefined, isPending: false, isError: false }),
   usePaymentInfo: () => ({
     data: {
       configured: true,
@@ -37,7 +39,10 @@ vi.mock('../hooks/use-subscription', () => ({
 }));
 vi.mock('@/hooks/use-current-user', () => ({ useCurrentUser: () => user }));
 vi.mock('@/hooks/use-permissions', () => ({ usePermissions: () => ({ has: () => true }) }));
-vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams() }));
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
+}));
 vi.mock('@/features/payment-gateway/api', () => ({
   fetchGatewayMethods: vi
     .fn()
@@ -89,7 +94,7 @@ describe('InvoiceCheckoutView', () => {
     const { container } = renderPage();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Thanh toán gói dịch vụ' })).toBeTruthy();
-    expect(screen.getByText('Gói nâng cao')).toBeTruthy();
+    expect(screen.getByText(/Gói nâng cao/)).toBeTruthy();
     expect(screen.getAllByText('XPGWYZZ8TZY').length).toBeGreaterThan(0);
     const qr = Array.from(container.querySelectorAll('img')).find((img) =>
       img.getAttribute('src')?.includes('qr.sepay.vn'),

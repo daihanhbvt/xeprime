@@ -255,6 +255,13 @@ export const ROUTES = {
     SHOP_BRANCHES: partner('/shop/branches'),
     /** Chính sách thuê mặc định của gian hàng (Wave 2 — cọc/giao nhận/quá giờ/ưu đãi). */
     SHOP_POLICIES: partner('/shop/policies'),
+    /**
+     * Trang thanh toán hoá đơn gói NGAY TRONG khung site partner (design 06/11/2026: breadcrumb
+     * Thông tin cửa hàng › Thanh toán hoá đơn) — cho gian hàng đang ở tuyến gói, mua từ trang Cửa
+     * hàng. Bản TRẦN `PAYMENT` giữ cho gian hàng đang nợ bước thanh toán đầu tiên (ADR 0040).
+     * Dựng link bằng `shopPaymentPath`.
+     */
+    SHOP_PAYMENT: partner('/shop/payment'),
     /** ALIAS CHUYỂN TIẾP (16/09/2026) — đích thật: `SHOP_POLICIES#deposit-collection`. */
     SHOP_PAYMENT_SETTINGS: partner('/shop/payment-settings'),
     /** ALIAS CHUYỂN TIẾP (16/09/2026) — đích thật: `SHOP?section=tax` (07/10/2026). */
@@ -1094,7 +1101,30 @@ export const paymentPath = {
   /** Một hoá đơn gói — site partner. */
   invoice: (invoiceId: string): string =>
     `${ROUTES.MANAGE.PAYMENT}/${encodeURIComponent(invoiceId)}`,
+  /** Một phiếu thanh toán gộp nhiều gói (ADR 0083) — site partner. */
+  checkout: (checkoutId: string): string =>
+    `${ROUTES.MANAGE.PAYMENT}/checkout/${encodeURIComponent(checkoutId)}`,
 };
+
+/** Trang thanh toán hoá đơn gói TRONG khung site partner — xem `ROUTES.MANAGE.SHOP_PAYMENT`. */
+export const shopPaymentPath = {
+  invoice: (invoiceId: string): string =>
+    `${ROUTES.MANAGE.SHOP_PAYMENT}/${encodeURIComponent(invoiceId)}`,
+  checkout: (checkoutId: string): string =>
+    `${ROUTES.MANAGE.SHOP_PAYMENT}/checkout/${encodeURIComponent(checkoutId)}`,
+};
+
+/**
+ * Lối "Thanh toán" của MỘT hoá đơn gói: hoá đơn thuộc phiếu gộp (ADR 0083) chỉ trả được qua phiếu,
+ * nên link đi thẳng tới trang của phiếu. `inShop` chọn bản trong khung (trang Cửa hàng) hay bản trần.
+ */
+export function invoicePaymentHref(
+  invoice: { id: string; checkoutId?: string | null },
+  { inShop = false }: { inShop?: boolean } = {},
+): string {
+  const paths = inShop ? shopPaymentPath : paymentPath;
+  return invoice.checkoutId ? paths.checkout(invoice.checkoutId) : paths.invoice(invoice.id);
+}
 
 /** Đường dẫn xe công khai trên Marketplace. */
 export const listingPath = {

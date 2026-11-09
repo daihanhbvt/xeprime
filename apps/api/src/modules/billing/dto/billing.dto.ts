@@ -4,11 +4,13 @@ import {
   FREE_TRIP_ALLOWANCE,
   BILLING_PHASE,
   PLAN_FEATURE_VALUES,
+  PLAN_PURCHASE_KIND_VALUES,
   PLAN_STATUS_VALUES,
   PLAN_VEHICLE_SCOPE_VALUES,
   SUBSCRIPTION_CHANGE_TIMING_VALUES,
   SUBSCRIPTION_ORIGIN_VALUES,
   SUBSCRIPTION_TERM_STATE_VALUES,
+  type PlanPurchaseKind,
   type SubscriptionChangeTiming,
   SUBSCRIPTION_INVOICE_STATUS_VALUES,
   SUBSCRIPTION_STATUS_VALUES,
@@ -17,6 +19,8 @@ import {
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsIn,
@@ -589,6 +593,48 @@ export class SubscriptionInvoiceDto {
   })
   expiresAt!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Phiếu thanh toán GỘP chứa hoá đơn này (ADR 0083) — null = hoá đơn trả riêng bằng `code`. ' +
+      'Có phiếu thì chuyển khoản bằng `checkoutCode`, không bằng `code`',
+  })
+  checkoutId!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Mã đối soát `XPC…` của phiếu gộp — mã để chuyển khoản khi có',
+  })
+  checkoutCode!: string | null;
+}
+
+/**
+ * PHIẾU THANH TOÁN GỘP (ADR 0083) — một mã `XPC…`, một số tiền, nhiều hoá đơn gói (mỗi loại xe
+ * một hoá đơn). Đủ tổng thì mọi hoá đơn con kích hoạt cùng lúc.
+ */
+export class SubscriptionCheckoutDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() tenantId!: string;
+  @ApiProperty({ description: 'Mã đối soát chuyển khoản, tiền tố XPC (ADR 0083)' }) code!: string;
+  @ApiProperty({ description: 'Tổng các hoá đơn con — VND, chuỗi (ADR 0007)' })
+  totalAmount!: string;
+  @ApiProperty({ description: 'Tiền đã về, cộng dồn — VND, chuỗi' }) paidAmount!: string;
+  @ApiProperty({ enum: SUBSCRIPTION_INVOICE_STATUS_VALUES }) status!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC' })
+  paidAt!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Hạn chuyển khoản — quá hạn thì phiếu và mọi hoá đơn con cùng void',
+  })
+  expiresAt!: string | null;
+  @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
+  @ApiProperty({
+    type: [SubscriptionInvoiceDto],
+    description: 'Hoá đơn con, theo thứ tự hiển thị loại xe (PLAN_VEHICLE_SCOPE_DISPLAY_ORDER)',
+  })
+  invoices!: SubscriptionInvoiceDto[];
 }
 
 /**
@@ -636,14 +682,84 @@ export class PurchaseSubscriptionDto {
   @IsIn([...SUBSCRIPTION_TERM_MONTHS])
   termMonths!: number;
 
+  /**
+   * Còn nhận để app cũ không vỡ validate, nhưng KHÔNG đọc nữa (ADR 0084): thời điểm áp dụng do server
+   * suy từ bậc được chọn — cùng bậc = gia hạn nối tiếp, trần cao hơn = nâng ngay, còn lại = nối tiếp.
+   */
   @ApiPropertyOptional({
     enum: SUBSCRIPTION_CHANGE_TIMING_VALUES,
-    description:
-      'Bỏ trống hoặc next_term = nối đuôi kỳ còn hạn; now = huỷ các kỳ còn hạn và bắt đầu ngay',
+    deprecated: true,
+    description: 'Bị bỏ qua — server tự suy thời điểm áp dụng theo bậc được chọn (ADR 0084)',
   })
   @IsOptional()
   @IsIn(SUBSCRIPTION_CHANGE_TIMING_VALUES)
   timing?: SubscriptionChangeTiming;
+}
+
+/**
+ * Mua NHIỀU gói trong một lần chuyển khoản (ADR 0083) — mỗi phần tử là một lượt mua như
+ * `PurchaseSubscriptionDto`, mỗi loại xe tối đa một phần tử. Một gói thì dùng `POST /purchase`.
+ */
+export class CreateSubscriptionCheckoutDto {
+  @ApiProperty({
+    type: [PurchaseSubscriptionDto],
+    minItems: 2,
+    maxItems: 2,
+    description:
+      'Hai gói của HAI loại xe khác nhau (ô tô + xe máy). Gói doanh nghiệp không mua ở đây',
+  })
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(2)
+  @ValidateNested({ each: true })
+  @Type(() => PurchaseSubscriptionDto)
+  items!: PurchaseSubscriptionDto[];
+}
+
+/** Xem trước một lượt mua (ADR 0084) — một hoặc hai gói, mỗi loại xe tối đa một gói. */
+export class PreviewSubscriptionPurchaseDto {
+  @ApiProperty({ type: [PurchaseSubscriptionDto], minItems: 1, maxItems: 2 })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(2)
+  @ValidateNested({ each: true })
+  @Type(() => PurchaseSubscriptionDto)
+  items!: PurchaseSubscriptionDto[];
+}
+
+/** Một kỳ trả phí sẽ KẾT THÚC khi lượt nâng bậc kích hoạt (phần còn lại không bù — ADR 0084). */
+export class PurchaseReplacedTermDto {
+  @ApiProperty() planName!: string;
+  @ApiProperty({ description: 'ISO-8601 UTC' }) startsAt!: string;
+  @ApiProperty({ description: 'ISO-8601 UTC' }) endsAt!: string;
+}
+
+export class SubscriptionPurchasePreviewItemDto {
+  @ApiProperty() planId!: string;
+  @ApiProperty() planName!: string;
+  @ApiProperty({ enum: [...PLAN_VEHICLE_SCOPE_VALUES] }) vehicleScope!: string;
+  @ApiProperty({ enum: SUBSCRIPTION_TERM_MONTHS }) termMonths!: number;
+  @ApiProperty({
+    enum: PLAN_PURCHASE_KIND_VALUES,
+    description: 'new = mua mới · renew = gia hạn nối tiếp · upgrade = nâng ngay · change_next = đổi gói từ kỳ sau',
+  })
+  kind!: PlanPurchaseKind;
+  @ApiProperty({
+    description:
+      'Ngày bắt đầu DỰ KIẾN (ISO-8601 UTC). new/upgrade = lúc xem trước — kỳ thật bắt đầu khi tiền về',
+  })
+  startsAt!: string;
+  @ApiProperty({ description: 'Ngày kết thúc DỰ KIẾN (ISO-8601 UTC)' }) endsAt!: string;
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Trần xe; null = không giới hạn' })
+  maxVehicles!: number | null;
+  @ApiProperty({ description: 'Số tiền của gói này (VND, chuỗi)' }) amount!: string;
+  @ApiProperty({ type: [PurchaseReplacedTermDto] }) replacedTerms!: PurchaseReplacedTermDto[];
+}
+
+export class SubscriptionPurchasePreviewDto {
+  @ApiProperty({ type: [SubscriptionPurchasePreviewItemDto] })
+  items!: SubscriptionPurchasePreviewItemDto[];
+  @ApiProperty({ description: 'Tổng phải trả (VND, chuỗi)' }) total!: string;
 }
 
 /**

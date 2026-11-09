@@ -244,6 +244,74 @@ export function planSubscriptionChain<T extends SubscriptionChainTerm>(
 }
 
 /**
+ * Một lượt gian hàng TỰ MUA gói là gì so với các kỳ đang có (ADR 0084) — thứ quyết định thời điểm
+ * áp dụng thay cho lựa chọn "nối tiếp / áp dụng ngay" của người mua.
+ */
+export const PLAN_PURCHASE_KIND = {
+  /** Loại xe này chưa có kỳ trả phí còn hạn — bắt đầu khi tiền về. */
+  NEW: 'new',
+  /** Cùng bậc với kỳ cuối — nối tiếp sau kỳ cuối, không huỷ gì. */
+  RENEW: 'renew',
+  /** Trần xe CAO HƠN mọi kỳ còn hạn — áp dụng ngay khi tiền về, các kỳ cũ cùng loại xe kết thúc. */
+  UPGRADE: 'upgrade',
+  /** Bậc khác nhưng không cao hơn mọi kỳ còn hạn (hạ bậc) — nối tiếp, hết kỳ cũ mới đổi. */
+  CHANGE_NEXT: 'change_next',
+} as const;
+
+export type PlanPurchaseKind = (typeof PLAN_PURCHASE_KIND)[keyof typeof PLAN_PURCHASE_KIND];
+
+export const PLAN_PURCHASE_KIND_VALUES = Object.values(PLAN_PURCHASE_KIND) as PlanPurchaseKind[];
+
+/** Một kỳ kèm TRẦN XE của nó (`quota_json` trước, bậc gói sau — ADR 0041 điều 3). `null` = không giới hạn. */
+export interface SubscriptionCapTerm extends SubscriptionChainTerm {
+  maxVehicles: number | null;
+}
+
+/** `a` cao hơn hẳn `b` — `null` là không giới hạn, cao hơn mọi con số. */
+function capAbove(a: number | null, b: number | null): boolean {
+  if (a === null) return b !== null;
+  return b !== null && a > b;
+}
+
+/**
+ * Lượt gian hàng TỰ MUA đặt vào chuỗi kỳ thế nào (ADR 0084) — server suy, người mua không chọn:
+ *
+ * | Bậc được chọn so với các kỳ TRẢ PHÍ còn hạn cùng loại xe | Loại | Thời điểm |
+ * | --- | --- | --- |
+ * | Không có kỳ nào | `new` | bắt đầu khi tiền về |
+ * | Trần xe cao hơn MỌI kỳ (đang chạy + đã xếp lịch) | `upgrade` | `now` — các kỳ cũ kết thúc, không bù |
+ * | Cùng bậc với kỳ cuối | `renew` | `next_term` — nối sau kỳ cuối |
+ * | Còn lại (hạ bậc, hoặc thấp hơn một kỳ đã xếp lịch) | `change_next` | `next_term` |
+ *
+ * So với MỌI kỳ chứ không chỉ kỳ đang chạy: đang chạy 1 xe, đã trả trước kỳ sau 10 xe, giờ mua 5 xe
+ * thì "áp dụng ngay" sẽ huỷ luôn kỳ 10 xe đã trả — nên lượt đó phải nối tiếp. Trả `timing` để đưa
+ * thẳng vào `planSubscriptionChain` — một bảng quyết định, cả lúc phát hành hoá đơn lẫn lúc tiền về.
+ */
+export function selfServePurchaseTiming<T extends SubscriptionCapTerm>(
+  terms: readonly T[],
+  input: { planId: string; vehicleScope?: string | null; maxVehicles: number | null },
+  now: Date,
+): { kind: PlanPurchaseKind; timing: SubscriptionChangeTiming } {
+  const at = now.getTime();
+  const paidLive = termsConflictingWith(terms, input.vehicleScope).filter(
+    (term) => isLiveTerm(term, at) && isPaidTerm(term),
+  );
+  if (paidLive.length === 0) {
+    return { kind: PLAN_PURCHASE_KIND.NEW, timing: SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM };
+  }
+  if (paidLive.every((term) => capAbove(input.maxVehicles, term.maxVehicles))) {
+    return { kind: PLAN_PURCHASE_KIND.UPGRADE, timing: SUBSCRIPTION_CHANGE_TIMING.NOW };
+  }
+  const tail = paidLive.reduce((best, term) =>
+    toMs(term.endsAt) > toMs(best.endsAt) ? term : best,
+  );
+  return {
+    kind: tail.planId === input.planId ? PLAN_PURCHASE_KIND.RENEW : PLAN_PURCHASE_KIND.CHANGE_NEXT,
+    timing: SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM,
+  };
+}
+
+/**
  * Các kỳ còn hạn XẾP SAU `term` trong chuỗi của nó — thứ đi cùng nó khi nó bị huỷ hoặc bị dời
  * ngày kết thúc (ADR 0080 điều 1–2).
  *

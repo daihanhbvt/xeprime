@@ -325,6 +325,7 @@ export const XP_TOKENS = {
   'color-text-on-dark': '#ffffff', // v2 Text/Gray/white
   'color-text-on-dark-muted': '#d5d7da', // v2 Text/Gray/disable trên nền tối (footer, banner)
   'color-primary-bright': '#edbb4f', // v2 Text/Brand/low — tiêu đề cột footer trên nền tối
+  'color-gold-on-dark': '#fcd34d', // chữ vàng trên viên đen (vai người xem — trang Cửa hàng partner)
   'color-primary-pale': '#f0ddb7', // v2 Text/Brand/disable — chữ thương hiệu mờ trên nền tối
   'color-primary-accent': '#d3a94d', // gạch tab đang chọn, viền thẻ khi rê chuột (điểm đầu gradient chữ)
   'color-primary-glow': '#e9c336', // vành avatar gian hàng — điểm đầu gradient nút chính
@@ -341,6 +342,7 @@ export const XP_TOKENS = {
   'color-pink-bg': '#fdf2fa', // v2 Status/pink-low — nền viên "Thuê xe dài hạn"
   'color-pink-border': '#faa7e0', // v2 Status/pink-300 — viền viên "Thuê xe dài hạn"
   'color-warning-strong': '#ec4a0a', // v2 Status/warning-600 — chữ nhãn trạng thái cam
+  'color-warning-high': '#dc6803', // v2 Status/warning-high — chữ/thanh cảnh báo (dải thiếu tỉnh, thanh suất gói)
   'color-info-strong': '#1570ef',
   'color-star': '#fec84b', // sao đánh giá — một màu cho mọi chỗ chấm sao (web + app), cả hai giao diện // v2 Status/info-600 — chữ nhãn trạng thái xanh dương
   'market-footer-bg': '#060403', // nền footer chợ — đen ấm, đi cùng lớp ánh vàng phía trên

@@ -4,13 +4,17 @@
     "subtitle": "Where your vehicles are parked. A branch decides which province your vehicles appear in on the marketplace.",
     "add": "Add branch",
     "needsReview": "{count, plural, one {# branch has} other {# branches have}} no province",
-    "needsReviewHint": "Vehicles at these branches are NOT shown on the marketplace until you add a province."
+    "needsReviewHint": "Vehicles at these branches are NOT shown on the marketplace until you add a province.",
+    "fixNow": "Fix now"
   },
   "toolbar": {
     "searchPlaceholder": "Search by name, code or address",
     "searchLabel": "Search branches",
     "summary": "{total, plural, one {# branch} other {# branches}} · {active} active",
-    "activeOnly": "Active only"
+    "activeOnly": "Active only",
+    "statusLabel": "Filter by status",
+    "allStatuses": "All statuses",
+    "summaryTotal": "{total, plural, one {# branch} other {# branches}} in total · <ok>{active} active</ok>"
   },
   "columns": {
     "branch": "Branch",
@@ -52,12 +56,13 @@
   },
   "form": {
     "createTitle": "Add branch",
-    "editTitle": "Edit {name}",
+    "editTitle": "Edit branch",
     "createOk": "Create branch",
     "nameLabel": "Branch name",
     "namePlaceholder": "e.g. Da Nang branch",
     "phoneLabel": "Phone number",
-    "phonePlaceholder": "0901234567"
+    "phonePlaceholder": "0901234567",
+    "makeDefault": "Set as default branch"
   },
   "scope": {
     "all": "All branches",

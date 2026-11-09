@@ -39,3 +39,13 @@
 .notes li::marker {
   color: var(--xp-color-warning);
 }
+
+/* Bản trong khung site partner — design `24051:79507` (page header có nút quay lại). */
+.shellPage {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: var(--xp-space-lg);
+}

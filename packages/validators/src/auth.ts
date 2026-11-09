@@ -189,7 +189,8 @@ export const buildDisplayNameSchema = (labels: AuthSchemaLabels) => {
 
 export const buildRegisterSchema = (labels: AuthSchemaLabels) =>
   yup.object({
-    displayName: buildDisplayNameSchema(labels),\n    phone: buildRequiredMobilePhoneSchema(labels),
+    displayName: buildDisplayNameSchema(labels),
+    phone: buildRequiredMobilePhoneSchema(labels),
     password: buildPasswordSchema(labels),
     confirmPassword: buildConfirmSchema(labels),
   });

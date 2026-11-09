@@ -107,6 +107,7 @@ export function BankInQueue() {
     [BANK_TX_CODE_FILTER.SUBSCRIPTION_INVOICE]: t('code.subscription_invoice'),
     [BANK_TX_CODE_FILTER.BOOKING_HOLD]: t('code.booking_hold'),
     [BANK_TX_CODE_FILTER.BOOKING_EXTENSION]: t('code.booking_extension'),
+    [BANK_TX_CODE_FILTER.SUBSCRIPTION_CHECKOUT]: t('code.subscription_checkout'),
     [BANK_TX_CODE_FILTER.NO_CODE]: t('code.no_code'),
   };
 

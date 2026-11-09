@@ -53,6 +53,15 @@ export const PLAN_LANE_SCOPES: readonly PlanLaneScope[] =
   PLAN_VEHICLE_SCOPE_DISPLAY_ORDER.filter(isPlanLaneScope);
 
 /** Làn đầu tiên — đích mặc định khi không nói làn nào (hộp thoại đóng, "Xem gói cao hơn"). */
+/**
+ * Thứ tự làn của trang Thông tin cửa hàng + hộp "Mua hoặc gia hạn gói" — design 06/11/2026 đặt Ô TÔ
+ * trước. Các màn khác giữ `PLAN_LANE_SCOPES` (xe máy trước).
+ */
+export const SHOP_PLAN_LANE_ORDER: readonly PlanLaneScope[] = [
+  PLAN_VEHICLE_SCOPE.CAR,
+  PLAN_VEHICLE_SCOPE.MOTORBIKE,
+];
+
 export const FIRST_PLAN_LANE: PlanLaneScope = PLAN_LANE_SCOPES[0] ?? PLAN_VEHICLE_SCOPE.MOTORBIKE;
 
 /** Loại xe của một làn — hai mã trùng nhau có chủ đích (`car`/`motorbike`). */

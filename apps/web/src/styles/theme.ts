@@ -125,6 +125,13 @@ export const antdTheme: ThemeConfig = {
   components: {
     Button: {
       primaryColor: XP_TOKENS['color-primary-contrast'],
+      /*
+       * Bảng nút v2 (Figma `8636:8263`, cùng mọi màn partner redesign 11/2026): chữ nút là
+       * `14px/Semibold`, nút viền ("Xem gian hàng", "Hủy", "Quản lý tài khoản"…) chữ
+       * `Text/Gray/medium`. Mặc định AntD là 400 + `colorText` — đậm màu hơn và mảnh hơn design.
+       */
+      fontWeight: Number(XP_TOKENS['font-weight-semibold']),
+      defaultColor: XP_TOKENS['color-text-secondary'],
     },
   },
 };
@@ -208,4 +215,15 @@ export const antdDarkTokens: NonNullable<ThemeConfig['token']> = {
 
   colorBorder: XP_DARK_TOKENS['color-border'],
   colorBorderSecondary: XP_DARK_TOKENS['color-border-subtle'],
+};
+
+/**
+ * Phần `components` GHI ĐÈ khi giao diện tối — chỉ những token component mang MÀU (màu tường minh
+ * của component thắng cả thuật toán lẫn token tối, y như `antdDarkTokens`).
+ */
+export const antdDarkComponents: NonNullable<ThemeConfig['components']> = {
+  Button: {
+    ...antdTheme.components?.Button,
+    defaultColor: XP_DARK_TOKENS['color-text-secondary'],
+  },
 };

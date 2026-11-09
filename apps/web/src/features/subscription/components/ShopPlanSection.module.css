@@ -1,0 +1,356 @@
+/* Khối "Gói & hạn mức" — design `23999:111391` (hai thẻ làn 540, cách 20; thẻ doanh nghiệp nền tối). */
+.lanes {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.lane {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  scroll-margin-top: calc(var(--xp-shell-header-offset, var(--xp-shell-topbar-height)) + 16px);
+}
+
+.lane:focus {
+  outline: none;
+}
+
+/* Làn đích của `?lane=` — viền vàng cho tới khi người dùng rời đi. */
+.laneHighlighted {
+  border-color: var(--xp-color-primary-glow);
+  box-shadow: 0 0 0 3px var(--xp-color-primary-glow);
+}
+
+.laneHead {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.laneIcon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 8px;
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-strong);
+  font-size: 22px;
+  place-items: center;
+}
+
+.laneText {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.laneTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: 16px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 24px;
+  overflow-wrap: anywhere;
+}
+
+.laneMeta {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.badge {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 16px;
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.badgeWarn {
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning-strong);
+}
+
+.usage {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.usageText {
+  margin: 0;
+}
+
+.usageUsed,
+.usageLimit {
+  font-size: 30px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 38px;
+}
+
+.usageUsed {
+  color: var(--xp-color-text);
+}
+
+.usageLimit {
+  color: var(--xp-color-text-placeholder);
+}
+
+.usageUnit {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.progress {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--xp-color-warning-subtle);
+}
+
+.progressBar {
+  display: block;
+  width: var(--xp-plan-progress, 0%);
+  height: 100%;
+  border-radius: 4px;
+  background: var(--xp-color-warning-high);
+}
+
+.progressFull .progressBar {
+  background: var(--xp-color-error);
+}
+
+.laneFoot {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.availability {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.availabilityFull {
+  color: var(--xp-color-error);
+}
+
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-color-primary);
+  cursor: pointer;
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+}
+
+.linkButton:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+.linkButton:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.pending {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-warning-subtle);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.payLink {
+  color: var(--xp-color-primary-strong);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* ── Gói doanh nghiệp đang dùng — design `23999:111045` ──────────────────── */
+
+.enterpriseActive {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--xp-color-primary-glow);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-inverse) url('/shops/plans/enterprise-bg.png') center / cover
+    no-repeat;
+}
+
+.enterpriseHead {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.enterpriseIcon {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: var(--xp-border-radius-control);
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--xp-color-primary-bright);
+  font-size: 28px;
+  place-items: center;
+}
+
+.enterpriseText {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 260px;
+  flex-direction: column;
+}
+
+.enterpriseTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--xp-color-text-on-dark);
+  font-size: 16px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 24px;
+}
+
+.activeTag {
+  padding: 0 8px;
+  border: 1px solid var(--xp-color-success-border);
+  border-radius: 16px;
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+}
+
+.enterpriseHint {
+  margin: 0;
+  color: var(--xp-color-text-on-dark-muted);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.enterpriseStats {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+}
+
+.statLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.statValue {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--xp-color-text);
+  font-size: 24px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 32px;
+}
+
+.statSub {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: 20px;
+}
+
+.enterpriseFeatures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  margin: 0;
+  padding: 0;
+  color: var(--xp-color-text-on-dark);
+  list-style: none;
+}
+
+.enterpriseFeatures li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.enterpriseFeatures :global(.anticon) {
+  color: var(--xp-color-primary);
+}
+
+.enterpriseNote {
+  margin: 0;
+  color: var(--xp-color-text-on-dark-muted);
+  font-size: var(--xp-font-size);
+  font-style: italic;
+  line-height: 20px;
+}
+
+/* ── Bảng hoá đơn ─────────────────────────────────────────────────────────── */
+
+.codeCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Mã đối soát đọc lại được từng ký tự. */
+.code {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  letter-spacing: 0.5px;
+}
+
+/* Ô dữ liệu phụ của bảng hoá đơn — Text/Gray/medium, đậm vừa (design `23999:111434`). */
+.cellMuted {
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-medium);
+}

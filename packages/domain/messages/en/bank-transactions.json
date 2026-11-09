@@ -74,7 +74,8 @@
     "subscription_invoice": "Plan (XPG)",
     "booking_hold": "Booking hold (XPH)",
     "no_code": "No code",
-    "booking_extension": "Extension (XPE)"
+    "booking_extension": "Extension (XPE)",
+    "subscription_checkout": "Combined plan payment (XPC)"
   },
   "handle": {
     "reasonLabel": "Reason",

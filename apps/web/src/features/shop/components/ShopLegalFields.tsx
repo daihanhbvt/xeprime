@@ -29,6 +29,7 @@ export function ShopLegalFields({
   control,
   readOnly,
   kind = STOREFRONT_KIND.SHOP,
+  stacked = false,
 }: {
   control: Control<ShopProfileWithContactValues>;
   /** Truyền xuống các ô CHỌN — `fieldset[disabled]` không với tới combobox dựng bằng div. */
@@ -38,6 +39,8 @@ export function ShopLegalFields({
    * chỉ nhận xe đang sửa ở đây, nên câu gợi ý nói đúng điều đó.
    */
   kind?: StorefrontKind;
+  /** Một cột (hộp thoại hẹp của trang Thông tin cửa hàng) thay cho hàng hai ô. */
+  stacked?: boolean;
 }) {
   const t = useTranslations('Shop');
   const { paths, isManage } = useWorkspace();
@@ -81,7 +84,7 @@ export function ShopLegalFields({
         }
       />
       {legalHidden ? null : (
-        <div className={styles.pairRow}>
+        <div className={stacked ? undefined : styles.pairRow}>
           <TextField
             control={control}
             name="businessLicenseNo"

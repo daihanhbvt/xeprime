@@ -58,13 +58,13 @@ Design: Header `23649:27690` (biến thể Default) · `23661:22492` (Details, c
 | Công nợ · `/debts` | Kinh doanh › Tài chính › Công nợ | **Doanh thu › Lịch sử giao dịch** — tab "Công nợ" (`/receipts?view=debts`); `/debts` chuyển tiếp, giữ tham số lọc; mục ẩn đã gỡ (04/11) | nút chuyển đầu màn Lịch sử giao dịch; thẻ "Công nợ khách hàng" (tab Thu chi); thẻ "Khách còn nợ" (Tổng quan doanh thu) | — (ráp xong 04/11, §3.11) |
 | Trò chuyện · `/chat` | Kinh doanh › Trò chuyện | **Icon tin nhắn** ở header (popup + "xem tất cả"; số tin chưa đọc trên icon) | header | — |
 | Cửa hàng · `/shop` | Gian hàng › Cửa hàng | **Cấu hình › Thông tin cửa hàng** | menu | — |
-| Chi nhánh · `/shop/branches` | Cấu hình › Chi nhánh | **Section "Chi nhánh"** trong Thông tin cửa hàng (`/shop?section=branches`); route cũ chuyển tiếp | section của trang Cửa hàng | Khi ráp màn Thông tin cửa hàng: bảng chi nhánh đang hẹp trong cột trang (phải cuộn ngang mới thấy Số xe/Trạng thái) |
+| Chi nhánh · `/shop/branches` | Cấu hình › Chi nhánh | **Thẻ "Chi nhánh"** trong Thông tin cửa hàng (`/shop?section=branches`); route cũ chuyển tiếp | thẻ của trang Cửa hàng | — (06/11: bảng gọn 7 cột, thao tác bút chì + "…", xem §3.13) |
 | Chính sách thuê · `/shop/policies` | Cấu hình › Chính sách thuê | **Cấu hình › Chính sách thuê** | menu | — |
 | Thành viên · `/members` | Cấu hình › Người dùng & phân quyền | **Cấu hình › Nhân viên & Phân quyền** | menu | — |
 | Trung tâm hỗ trợ · `/support` | Hỗ trợ › Trung tâm hỗ trợ | **Trợ giúp › Trung tâm hỗ trợ** | menu | — |
 | Hỗ trợ & khiếu nại · `/support/cases` | Hỗ trợ › Yêu cầu hỗ trợ | **Trợ giúp › Yêu cầu hỗ trợ** (Trợ giúp thành dropdown 2 dòng — lệch design, đã chốt) | menu | — |
-| Tài khoản & bảo mật · `/account` | menu tài khoản ở thẻ người dùng | **Icon bánh răng** ở header + menu hồ sơ | header | — |
-| Cài đặt gian hàng · `/shop` | menu tài khoản | menu hồ sơ (giữ nguyên) | header | — |
+| Tài khoản & bảo mật · `/account` | menu tài khoản ở thẻ người dùng | **Dòng đầu menu hồ sơ** + bấm thẻ đầu menu (icon bánh răng ở header ĐÃ BỎ 09/11) | header | — |
+| Cài đặt gian hàng · `/shop` | menu tài khoản | menu hồ sơ, dòng **"Quản lý gian hàng"** (06/11) | header | — |
 | Đổi ngôn ngữ | menu tài khoản ở topbar | menu hồ sơ | header | — |
 | Đăng xuất | menu tài khoản | menu hồ sơ | header | — |
 | Thông báo | chuông ở topbar | **Icon chuông** ở header | header | — |
@@ -111,13 +111,13 @@ App Partner (mobile) vẫn có `OwnerTripsScreen` đọc `GET /trips?role=host` 
 
 | Phần | Quyết định |
 | --- | --- |
-| Icon bánh răng | Mở **Tài khoản & bảo mật** của NGƯỜI đăng nhập (`/account`; chủ xe tuyến hoa hồng: "Hồ sơ chủ xe"). "Cấu hình" trên menu là cài đặt của CỬA HÀNG. Điện thoại: ẩn icon, vào qua menu hồ sơ |
-| Khối hồ sơ | Bố cục design (ảnh tròn + chấm trực tuyến · tên người · mũi tên), nhưng **dòng 2 là "Gian hàng · Vai"** thay cho email: không lộ liên hệ khi chia sẻ màn hình, và đăng nhập site partner là SĐT. Chủ xe cá nhân chỉ hiện vai |
-| Menu hồ sơ | `useAccountMenuItems` — một bộ cho header, drawer mobile và topbar site quản trị: danh tính · Tài khoản & bảo mật · Cài đặt gian hàng (tuyến gói) · Ngôn ngữ · Đăng xuất |
+| Icon bánh răng | **ĐÃ BỎ (09/11/2026, người dùng chốt).** Trước đó mở Tài khoản & bảo mật (02/11); nay lối đó là dòng đầu của menu hồ sơ. Header phải còn: tin nhắn · thông báo · vạch ngăn · ảnh đại diện |
+| Khối hồ sơ | **09/11/2026: CHỈ ảnh đại diện tròn 40px + chấm trực tuyến** (bỏ tên người, dòng "Gian hàng · Vai", mũi tên — chúng đã nằm ở thẻ đầu menu). **Rê chuột là mở menu**; bấm / Enter / Space / ↓ cũng mở (không bật-tắt), Esc đóng. Tên truy cập của nút vẫn mang tên người · "Gian hàng · Vai" (không email). Thẻ người dùng trong drawer mobile giữ bấm-để-mở |
+| Menu hồ sơ | **06/11/2026 — design `24051:85101`** (`PartnerAccountMenu`, header + drawer mobile; khung chung với menu site khách ở `components/account-menu/AccountMenuParts`). Hai biến thể: **gian hàng tuyến gói** — thẻ nền vàng: logo + **dấu tích xanh** (MỌI gian hàng có, tài khoản cá nhân không — dấu nhận diện, KHÔNG phải kết quả xác minh pháp nhân), tên người · vai, dòng "Gian hàng — tên cửa hàng"; dòng "Quản lý gian hàng" (`/shop`, chỉ khi `useShopSettingsAccess`). **Cá nhân (tuyến hoa hồng)** — thẻ xám: ảnh · tên · vai; dòng "Quản lý cho thuê" = Hồ sơ chủ xe (`/account`, chỉ CHỦ), và "Tài khoản & bảo mật" trỏ `/account?section=login`. Bấm thẻ = Tài khoản & bảo mật. Thành viên của chủ xe cá nhân / tài khoản chưa có gói: chỉ "Tài khoản & bảo mật". Dòng **"Giao diện ☀|☾" dựng sẵn nhưng TẮT** (`PARTNER_THEME_SWITCH_ENABLED`) cho tới khi làm dark mode site partner. Chân: Ngôn ngữ VI|EN · Đăng xuất. **Nhãn tuyến/gói** (`AccountTrackBadge`) của menu cũ **đã bỏ** (người dùng chốt) — gói xem ở Thông tin cửa hàng / Hồ sơ chủ xe › Gói dịch vụ; dòng **"Nâng cấp gian hàng →"** (vàng, icon huy chương — 09/11) chỉ cho CHỦ xe tuyến hoa hồng, trỏ vào phễu nâng cấp có sẵn ở Hồ sơ chủ xe › Gói dịch vụ (`/account?section=plan`); đứng trong nhóm có vạch cùng dòng Giao diện. Site quản trị giữ `useAccountMenuItems` (danh tính · Bảo mật · Ngôn ngữ · Đăng xuất) |
 | Số đếm trên menu | **Chỉ số "cần xử lý"** — việc ĐẾN HẠN, không phải thống kê (chốt lại 04/11, thay bản 02/11): **05/11 — "Đơn thuê xe" gộp mang MỘT số = chờ duyệt + lượt giao/trả đến hạn (`RENTALS_WORK`), đỏ khi có cái gấp; hai mô tả dưới đây (Yêu cầu / Quản lý đơn) nay là hai thành phần của số đó.** **Yêu cầu đặt xe** = chờ duyệt, đỏ khi có yêu cầu sắp hết hạn trả lời (`GET /dashboard/requests`, `pendingUrgent`) · **Quản lý đơn thuê xe** = lượt giao + trả hẹn tới hết hôm nay, gồm cả lượt quá giờ, mỗi đơn một lần (`pickupsDue + returnsDue` của `GET /dashboard/today`), đỏ khi có lượt quá giờ — KHÔNG còn đếm mọi đơn chờ giao / đang thuê · **Lịch thuê xe** KHÔNG mang số (trùng với Đơn ⇒ khối "Vận hành" đếm đôi) — ở cả hai tuyến từ 06/11, khi tuyến hoa hồng dùng chung màn Đơn · **Danh sách xe** = số XE có ít nhất một việc chặn: giấy tờ quá hạn, quá hạn bảo dưỡng, bị trả về/từ chối/ẩn khi đăng chợ, thiếu KM trả (chốt 03/11; `VEHICLE_ALERT_NEEDS_ACTION_KINDS`, nguồn `GET /vehicles/needs-action-count` — cùng phép tính với chip trên thẻ xe). Tài xế, Bảo dưỡng **chưa làm** — cần định nghĩa "cần xử lý" trước. Không đếm tổng xe/tài xế |
 | Số trên mục cấp 1 | Khi dropdown ĐÓNG, tổng số "cần xử lý" của khối hiện cạnh nhãn khối (khuôn `_Badge` của design) — để yêu cầu đang chờ không bị khuất. Màu CẢNH BÁO thay xám của design (04/11, người dùng chốt): cam = chờ xử lý, đỏ = có mục trễ / sắp trễ; tên truy cập được nói thêm "có việc gấp" để màu không là tín hiệu duy nhất. Áp chung cho huy hiệu sidebar/drawer/tab bar (`NavBadge`) |
 | Breadcrumb | Dải dưới header (biến thể Details) chỉ ở **trang con** của một mục (`/vehicles/:id`…) và ở **trang của mục ẩn**: biểu tượng khối › mục menu › `<h1>` của trang |
-| Màn hẹp | ≤1536: ẩn chữ khối hồ sơ · ≤1366: bỏ dấu +/− · ≤1280: bỏ biểu tượng mục cấp 1 · ≤1024: menu ngang nhường cho nút mở drawer + thanh tab dưới đáy (cùng cây menu) |
+| Màn hẹp | ≤1536: thu khoảng cách khối phải · ≤1366: bỏ dấu +/− · ≤1280: bỏ biểu tượng mục cấp 1 · ≤1024: menu ngang nhường cho nút mở drawer + thanh tab dưới đáy (cùng cây menu) |
 | Mục cấp 1 đang chứa trang hiện tại | **Tô như trạng thái Active** (nền vàng nhạt, chữ vàng đậm — 06/11, người dùng chốt, LỆCH design vốn để thường), kể cả ở trang con (`/bookings/:id`…); `aria-current` = `page` khi đúng trang đích của nhãn khối, `true` khi ở trang khác trong khối |
 | Bấm nhãn khối | **Đi tới mục đầu tiên còn hiện của khối** (06/11) — "Vận hành" → "Đơn thuê xe" (nên "Đơn thuê xe" đứng đầu dropdown, trên "Lịch thuê xe"). Rê chuột vẫn mở dropdown; bàn phím: Enter đi, ↓ mở dropdown |
 
@@ -128,6 +128,7 @@ Mỗi màn: route · node design · trạng thái · tính năng phải có mặ
 | Màn | Route | Design | Trạng thái | Phải có khi xong / ghi chú |
 | --- | --- | --- | --- | --- |
 | Khung chung: header, menu, breadcrumb | — | `23649:27690`, `23661:22492`, `23661:27362`, `23649:11528` | **Xong** 02/11/2026 | Xem §2 |
+| Menu hồ sơ (dropdown khối tài khoản ở header) | — | `24051:85101` | **Xong** 06/11/2026, sửa 09/11 (chỉ ảnh + rê chuột, bỏ bánh răng, thêm Nâng cấp gian hàng) | Xem §2.3 "Menu hồ sơ" / "Khối hồ sơ". Còn: bật dòng Giao diện khi làm dark mode |
 | Yêu cầu đặt xe | `/booking-requests` → chuyển tiếp | Request `23649:25560` (02/11) | **Gộp** 05/11/2026 vào "Đơn thuê xe" | Xem §3.1 (thẻ/popup còn hiệu lực), §3.2b |
 | Đơn thuê xe (gộp) | `/bookings` (+ `/bookings/awaiting-pickup`, `/booking-requests` chuyển tiếp) | section `23874:79920`: List `23973:51952` · Kanban `23895:15181` · Đơn đã kết thúc `23948:87473` · các bước `23898:28955`. Chi tiết đơn: section `23777:53056` | **List + Kanban xong** 05/11/2026 | Xem §3.2b (List), §3.2c (Kanban), §3.3 |
 | Đơn đã kết thúc | `/bookings/ended` | Order Done `23948:87473` | **Xong** 05/11/2026 | Xem §3.2b |
@@ -141,8 +142,8 @@ Mỗi màn: route · node design · trạng thái · tính năng phải có mặ
 | Chỉnh sửa xe | `/vehicles/[id]/edit` (cả hai tuyến; `/vehicles/[id]/manage/<mục>` cũ chuyển hướng) | section `23731:37932` (13 frame) | **Xong** 03/11/2026 | Xem §3.6 |
 | Quản lý tài xế | `/drivers` (cả hai tuyến, cả phiên hỗ trợ) | `23737:45750` (3 frame) | **Xong** 04/11/2026 | Xem §3.7 |
 | Danh sách bảo dưỡng | `/maintenance` (cả phiên hỗ trợ) | `23733:41941` | **Xong** 04/11/2026 | Xem §3.8 |
-| Chính sách thuê | `/shop/policies` (`?type=motorbike`; `/shop/payment-settings` chuyển hướng tới `#deposit-collection`) | `23874:63907` | **Xong** 06/11/2026 | Xem §3.12 |
-| Thông tin cửa hàng | `/shop` | chờ design | Chưa làm | Đã nhận section **Chi nhánh** (02/11). Giữ mọi section: hiển thị · chủ gian hàng · địa chỉ & pháp lý · khai thuế · chi nhánh · gói & hạn mức |
+| Chính sách thuê | `/shop/policies` (`?type=motorbike`; `/shop/payment-settings` chuyển hướng tới `#deposit-collection`) | `23874:63907` | **Xong** 06/11/2026 | Xem §3.12 (link "Gói & hạn mức" của P3 trỏ `/shop?section=plan` — đã đúng chỗ) |
+| Thông tin cửa hàng | `/shop` (+ thanh toán trong khung `/shop/payment/:id`, `/shop/payment/checkout/:id`) | section `23999:111044` (9 frame) | **Xong** 06/11/2026 | Xem §3.13 — kèm hoá đơn gộp (ADR 0083) và giới thiệu có định dạng |
 
 ### 3.1 Yêu cầu đặt xe — kiểm kê và quyết định (02/11/2026)
 
@@ -701,6 +702,82 @@ Trạng thái tự dựng: đang tải · lỗi (thẻ thanh toán vẫn dùng �
 (thiếu `tenant.update`) · phiên hỗ trợ (không nút) · bảng trống · màn hẹp/điện thoại. Lưu: mỗi API chỉ
 gửi khi PAYLOAD của nó đổi; lỗi một nửa thì nửa kia vẫn lưu, ô đang sửa giữ nguyên.
 
+### 3.13 Thông tin cửa hàng — kiểm kê và quyết định (06/11/2026)
+
+Code: `features/shop/components/` — `ShopWorkspace` (một form hồ sơ cho cả trang, lưu THEO NHÓM —
+`toShopProfilePatch`) · `ShopOwnerSection` · `ShopLegalCard` (+ hộp) · `ShopTaxCard` (+ hộp, form
+chung `useSellerTaxForm` với "Hồ sơ chủ xe") · `ShopDisplayCard` (+ hộp, editor) · `ShopMediaButton`.
+Gói: `features/subscription/components/ShopPlanSection` · `ShopPlanLaneCard` · `PlanPurchaseDialog`
+(hook `useCombinedPlanPurchase`) · `ShopInvoicesCard` · trang thanh toán `InvoiceCheckoutView` /
+`CheckoutPaymentView` (`variant: bare | shell`). Khung thẻ chung: `components/layout/InfoCard`.
+Editor: `components/form/RichTextField` (TipTap 3.32) · hiển thị `components/data-display/RichText`.
+
+| # | Hạng mục | Mark | Quyết định |
+| --- | --- | --- | --- |
+| S1 | Bố cục: ba thẻ đầu (chủ · địa chỉ & pháp lý · khai thuế) + chi nhánh + gói + hoá đơn; cột phải "Thông tin hiển thị" | ✅ | Theo design. Cột phải dính khi cuộn; ≤1200px lên ĐẦU trang (thứ khách thấy) |
+| S2 | Mục lục trái + nút Lưu ở tiêu đề (bản cũ) | 🟡 | Mục lục bỏ (design không còn); `?section=` vẫn cuộn tới đúng thẻ cho link/redirect cũ |
+| S3 | Sửa bằng hộp thoại "Cập nhật" | ✅ | **Hộp thoại lưu ngay** đúng nhóm ô của nó (người dùng chốt). Đóng hộp = trả nhóm đó về bản đã lưu |
+| S4 | "Hủy · Lưu thay đổi" dưới thẻ hiển thị | ✅ | **Chỉ cho logo/ảnh bìa**: đổi ảnh là xem trước trên thẻ, cặp nút chỉ hiện khi có ảnh chưa lưu (người dùng chốt) |
+| S5 | Gỡ logo / ảnh bìa (bản cũ có "Xoá") | 🟡 | Nút ✕ nhỏ trên ảnh khi sửa được — vào cùng luồng "Lưu thay đổi" |
+| S6 | Giới thiệu = editor | 🆕→✅ | TipTap, thanh công cụ đúng design (hoàn tác · làm lại · nghiêng · đậm · gạch chân · căn trái/giữa/phải). **Không chèn ảnh** — ảnh dưới đoạn giới thiệu của design bỏ (người dùng chốt). Lưu `tenant_profiles.bio_html` (HTML lọc ở server, `sanitizeShopBioHtml`); `bio` giữ chữ thuần rút từ HTML cho app native / thẻ chủ xe / SEO. Gửi `bio` không kèm `bioHtml` (app, form chủ xe) ⇒ gỡ bản HTML. Site khách (`ShopHeader`) hiện bản định dạng |
+| S7 | SĐT / email hiển thị đánh dấu bắt buộc (*) | ⚠️ | Giữ TUỲ CHỌN như luật hiện hành (bỏ trống = gỡ — `shopProfileWithContactSchema`); bắt buộc sẽ chặn gian hàng cũ chưa khai. Chưa đổi — cần chốt nếu muốn bắt buộc |
+| S8 | Viên đen "Chủ gian hàng" ở tiêu đề | 🆕→✅ | Hiện **vai của người xem** (`tenantRole`) — frame Staff cũng vẽ "Chủ gian hàng" là chép nhầm; chỉ để đọc |
+| S9 | Thẻ Chủ gian hàng: ảnh đại diện | 🆕→✅ | `ShopOwnerAccountDto.avatarUrl` (ảnh tài khoản chủ). "Quản lý tài khoản" chỉ CHÍNH CHỦ thấy (như cũ) |
+| S10 | Thẻ Khai thuế: "Tên hộ KD/DN" + MST | ✅ | Cá nhân hiện Tên đầy đủ + Số CCCD (đúng model). Nhãn trạng thái duyệt ở góc khi khác "nháp"; yêu cầu sửa / từ chối kèm ghi chú |
+| S11 | Hộp Địa chỉ & pháp lý | ✅ | Giữ `AddressField` (bộ chọn hành chính + gợi ý bản đồ, ADR 0077) và câu "đổi ở đây là đổi chi nhánh mặc định" |
+| S12 | "Hoàn thiện hồ sơ" (checklist) | 🟡 | Design không vẽ — đặt dưới thẻ hiển thị, chỉ người sửa được, tự ẩn khi đủ. Logo vẫn là mục CHẶN của tuyến gói |
+| S13 | Chi nhánh: tìm · lọc trạng thái · Thêm; dải "chưa có tỉnh/thành · Bổ sung ngay"; cột thao tác bút chì + "…" | ✅ | Lọc trạng thái thành ô chọn (Tất cả · từng trạng thái) thay nút "Chỉ đang hoạt động". "Bổ sung ngay" mở chi nhánh đầu tiên cần sửa |
+| S14 | Hộp chi nhánh: "Đặt làm chi nhánh mặc định" | 🆕→✅ | Ô của riêng web, chạy `POST /branches/:id/set-default` SAU khi lưu (cùng đường menu "…"). Vắng trong phiên hỗ trợ. Điện thoại vẫn một số (design vẽ hai dòng — model một số) |
+| S15 | Gói: thẻ từng loại xe (đang dùng · hạn · X/Y xe · thanh tiến độ · Gia hạn / Nâng cấp ngay) | ✅ | Hoá đơn đang chờ của loại xe hiện trong thẻ kèm "Thanh toán" (🟡 giữ từ bản cũ) |
+| S16 | Bậc TIẾT KIỆM / CƠ BẢN / NÂNG CAO + tính năng khác nhau theo bậc | ⚠️ | **Theo dữ liệu thật** (người dùng chốt): tên + mô tả bậc của admin; gạch đầu dòng = "Tối đa N xe" + tính năng thật. Huy hiệu bạc/vàng/đen theo thứ tự trong làn (chỉ là hình) |
+| S17 | Doanh nghiệp: nút "Thanh toán"; Doanh nghiệp + gói ô tô cùng "Đang dùng" | ⚠️ | Không nút Thanh toán (bán bằng tư vấn — ADR 0041 điều 5); đang dùng doanh nghiệp thì hai thẻ làn vắng (ADR 0065). Ô "Kỳ tiếp theo · giá" bỏ — không có dữ liệu giá kỳ |
+| S18 | Hộp mua gộp ô tô + xe máy, một kỳ hạn, một thời điểm, MỘT hoá đơn / QR | 🆕→✅ | **Backend phiếu gộp** (người dùng chốt) — ADR 0083: `subscription_checkouts`, mã `XPC…`, `POST/GET /subscription/checkouts`. Một gói ⇒ hoá đơn lẻ như cũ. "Thời điểm áp dụng" chỉ hiện khi loại xe đang chọn có kỳ chạy; `now` chỉ gửi cho loại có kỳ chạy. "Gói hiện tại" vẫn chọn được (để gia hạn đúng bậc) |
+| S19 | Trang "Thanh toán hóa đơn" trong khung + breadcrumb | 🆕→✅ | Route mới `/shop/payment/:id` và `/shop/payment/checkout/:id` (dưới lá "Thông tin cửa hàng" ⇒ breadcrumb tự có). Bản trần `/payment/…` giữ cho onboarding (ADR 0040). "Ví điện tử" chỉ có với hoá đơn lẻ (ADR 0058 chưa có đích phiếu gộp). Đếm ngược "Hạn thanh toán" theo `expiresAt` |
+| S20 | Bảng "Hóa đơn và thanh toán" | ✅ | Luôn mở (bản cũ gập), phân trang server `?page=`. Mã đối soát của hoá đơn thuộc phiếu = mã `XPC` của phiếu. Cột "Thanh toán" cho hoá đơn còn nhận tiền (🟡) |
+
+Trạng thái tự dựng: đang tải / lỗi cho từng thẻ (thử lại tại chỗ) · chỉ xem (thiếu `tenant.update`:
+không bút chì, không đổi ảnh; thiếu `seller_profile.manage`: thẻ thuế không bút chì; thiếu
+`subscription.purchase`: không "Nâng cấp / Đổi gói") · phiên hỗ trợ (không nút sửa, không thuế, không
+giấy phép KD, không mua gói / hoá đơn chờ) · chủ xe tuyến hoa hồng lạc vào (dựng `SubscriptionWorkspace`
+nâng cấp) · gói hết hạn / ân hạn (nhãn đỏ trên thẻ làn) · hẹp (ba thẻ đầu 3 → 2 → 1 cột; cột hiển thị
+lên đầu; hộp mua và hộp sửa toàn màn trên điện thoại).
+
+**Soát chữ theo design (09/11/2026)** — sửa ở COMMON để màn sau dùng lại: nút AntD `14px/Semibold`, nút
+viền chữ `Text/Gray/medium` (`styles/theme.ts`, có bản tối) · tiêu đề cột `DataTable` `12/18 Medium`
+`Text/Gray/medium` · `StatusTag appearance="pill"` + `StatusPill` = viên "_Badge" 14/20 · `InfoCard`/`DialogHeading`: dòng
+phụ và nhãn `Text/Gray/low` (`--xp-color-text-tertiary`), chú thích 12/18 `Text/Gray/very-low` · token mới
+`--xp-color-warning-high` (`#dc6803`) và `--xp-color-gold-on-dark` (`#fcd34d`). Lưu ý cho màn sau: dòng phụ của design
+là `#717680` (tertiary), KHÔNG phải `#414651`; `--xp-font-size-caption` là 10px — chữ 12px dùng `body-sm`.
+
+**Hộp "Mua hoặc gia hạn gói" sửa lại (09/11/2026, người dùng)** — (1) chữ theo design, SỐ theo admin: tên bậc
+TIẾT KIỆM · CƠ BẢN · NÂNG CAO + "Phù hợp cho …" là nhãn THEO VỊ TRÍ trong làn (bậc thứ 4+ do admin mở thêm thì
+dùng tên/mô tả admin); "Tối đa **N** ô tô", giá, "Gói đề xuất", tính năng, kỳ bán đọc từ `plans.limits`; dòng
+tóm tắt "Ô tô - **Cơ bản 5 xe**" ghép nhãn vị trí + `maxVehicles`. Giữ khác design có chủ đích: dòng tính năng
+là tính năng thật (không "báo cáo ngắn gọn / chi tiết"); kỳ 1 tháng ghi "Giá gốc" (không "Cơ bản" — trùng tên
+bậc); nút "Gói hiện tại" nhạt nhưng VẪN bấm được (đường gia hạn đúng bậc). (2) Lỗi không cuộn tới kỳ hạn: hộp đặt
+`bodyScroll="content"` (chế độ cho bố cục nhiều cột tự cuộn) ⇒ thân bị `overflow: hidden`; bỏ đi. Hộp `size="fit"`
+rộng 1430 như khung design (`xl` chỉ 1180). (3) Hai BƯỚC đánh số — "1 Chọn gói cho từng loại xe" (gợi ý chọn
+được cùng lúc ô tô + xe máy, bấm "Đang chọn" để bỏ) → "2 Chọn kỳ hạn và thời điểm áp dụng"; dải Doanh nghiệp
+dời xuống CUỐI (giữa hai bước nó cắt ngang luồng chọn).
+
+**Hộp mua gói thành HAI BƯỚC THẬT (09/11/2026, người dùng · ADR 0084)** — thanh bước "① Chọn gói ─ ② Kỳ hạn
+và xác nhận". Bước 1: hai làn + dải Doanh nghiệp, chân hộp tóm tắt gói đã chọn + "Tiếp tục". Bước 2: kỳ hạn
+chung (4 thẻ) → "Xác nhận gói": mỗi gói một thẻ (nhãn Mua mới / Gia hạn / Nâng cấp ngay / Đổi gói từ kỳ sau,
+hạn mức, thời gian áp dụng, đơn giá × số tháng, thành tiền, cảnh báo kỳ cũ kết thúc khi nâng ngay / số xe
+vượt trần khi hạ bậc) — đọc từ `POST /subscription/purchase/preview`, không suy ở client → dòng "Thanh toán
+bằng chuyển khoản QR" + cảnh báo thay mã chờ + điều khoản; chân hộp "Quay lại chọn gói" · tổng (của server) ·
+"Tạo hoá đơn" (khoá tới khi bản xem trước khớp lựa chọn). BỎ hẳn khối "Thời điểm áp dụng" của design: server
+suy (cùng bậc = gia hạn nối tiếp, cao hơn = nâng ngay không bù, thấp hơn = nối tiếp). `PurchaseModal` (một
+loại xe, `SubscriptionWorkspace`) bỏ radio thời điểm, hiện cùng kết quả xem trước (`PurchaseOutcome.tsx`).
+
+**Bước 2 gọn lại (09/11/2026, người dùng)** — (1) BỎ hộp ghi chú dưới phiếu ("Hạn mức mới có hiệu lực…" +
+cảnh báo "… sẽ kết thúc ngay khi thanh toán xong — phần thời gian còn lại không được hoàn"). Cả hai câu chuyển
+vào dấu ⓘ cạnh nhãn lượt mua (`PurchaseOutcomeHint`) — hệ quả về tiền không mất, chỉ không chiếm chỗ. Cảnh báo
+số xe vượt trần khi hạ bậc vẫn hiện hẳn (`PurchaseOverCapAlert`, hiếm). `PurchaseModal` giữ bản đầy đủ.
+(2) MỘT gói (đa số lượt mua): hai cột — trái "Kỳ hạn thanh toán" thành danh sách ◉ kỳ · tiết kiệm · TỔNG TIỀN
+kỳ đó (giá tuyệt đối `tier.terms`, ADR 0041 điều 2), phải là phiếu gói; hết nửa hộp trống. Hai gói giữ bố cục
+cũ (hàng 4 nút kỳ hạn + hai phiếu ngang hàng). Màn ≤720px: một cột.
+
 ## 4. Node Figma đã dùng
 
 Ghi lại để phiên sau khỏi tốn lượt đọc lại.
@@ -731,6 +808,8 @@ Ghi lại để phiên sau khỏi tốn lượt đọc lại.
 | `23948:93534` | Section Quản lý ví: tổng hợp `23813:39558` · biến động `23813:55449` · cột phải `23948:94510` (thẻ ví `23948:94474`, tổng hợp tháng `23948:94282`, ghi chú thuế `23948:94298`) · hộp thêm tài khoản `23948:96973` · hộp đổi `23948:97512` · toast `23948:98047` |
 | `23857:58928` | Section Lịch sử giao dịch / Thu Chi: danh sách `23813:58308` · chi tiết phiếu `23845:39621` (hộp `23845:40261`) · danh mục `23845:41048` (hộp `23845:41185`) · tạo phiếu thu `23845:42715` (hộp `23845:43494`) · tạo phiếu chi `23857:57950` (hộp `23857:58087`) |
 | `23874:63907` | Chính sách thuê: page header `23874:64498` (tab loại xe) · Thanh toán & hóa đơn `23874:68740` · Thủ tục & điều khoản `23979:96566` · Giao nhận xe + thời gian chết `24047:77366` · Ưu đãi dài hạn `24047:77588` · cột phải `24051:80740` |
+| `24051:85101` | Menu hồ sơ: biến thể gian hàng `24051:85100` · cá nhân `24051:85102` (tên biến thể trong Figma ĐẢO: "Personal" là gian hàng, "Pro" là cá nhân — đọc theo chữ). Nền vàng thẻ gian hàng → `public/partner/account-card-bg.webp`, dấu tích → `public/partner/verified-shop.svg`. Dòng "Nâng cấp gian hàng" `24051:85746` (icon Award 2 → `public/icons/menu/award.svg`, `LineIcon` `award`) |
+| `23999:111044` | Section Thông tin cửa hàng: thường `23999:111274` (tiêu đề `23999:111277`, ba thẻ `23999:111298`, chi nhánh `23999:111349`, gói `23999:111391`, hoá đơn `23999:111432`, cột hiển thị `23999:111472`) · doanh nghiệp `23999:111045` · nhân viên `23999:111476` · hộp mua gói `24024:26537` (trong `23999:115279`) · hộp địa chỉ `23999:111878` · hộp thuế `23999:112100` · hộp chi nhánh `23999:112321` · hộp hiển thị `24047:78679` · trang thanh toán `24051:79507`. Huy hiệu bậc + nền doanh nghiệp đã tải về `public/shops/plans/` |
 | `23874:63125` | Section Lịch sử giao dịch / Công nợ: danh sách `23857:58932` · chi tiết công nợ đơn `23872:60137` (hộp `23872:60767`) · thu tiền đơn `23872:61964` (hộp `23872:62755`) |
 
 Icon menu: tải từ các node trên, chuẩn hoá về khung 24px (cấp 1, dòng dropdown), 20px (nút header),
@@ -759,8 +838,9 @@ Route của site partner (02/11/2026, từ `apps/web/src/app/(manage)/manage`):
 /  account  balance  bank-accounts→balance  booking-requests  bookings(?preset=)  bookings/[id]
 bookings/awaiting-pickup→bookings?preset=awaiting_pickup  calendar  chat  contracts-documents  contracts/[id]  customers  customers/[id]
 data-protection  debts  drivers  finance  host-guide  invites/[token]  maintenance  members
-onboarding  payment/[id]  payment-return  receipts  registration  security→account  shop
-shop/branches→shop  shop/payment-settings→shop/policies  shop/policies  shop/seller-profile→shop
+onboarding  payment/[id]  payment/checkout/[id]  payment-return  receipts  registration  security→account  shop
+shop/branches→shop  shop/payment/[id]  shop/payment/checkout/[id]  shop/payment-settings→shop/policies
+shop/policies  shop/seller-profile→shop
 subscription  support  support/cases  tax  trips  vehicles  vehicles/new  vehicles/register
 vehicles/[id]  vehicles/[id]/edit  vehicles/[id]/optimization  vehicles/[id]/pricing
 vehicles/[id]/manage/…  (information · images · documents · pricing · handover-time · trip-history ·
