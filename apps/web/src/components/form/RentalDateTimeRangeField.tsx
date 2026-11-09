@@ -59,11 +59,8 @@ interface RentalDateTimeRangeFieldProps {
    */
   variant?: 'compact' | 'labelled' | 'stacked';
   /**
-   * Bỏ THỨ trong tuần ở trạng thái đóng: `19/08 10:00` thay vì `T4, 19/08 · 10:00`.
-   *
-   * Dành cho ô rất hẹp (thanh tìm kiếm thu gọn) — ở đó bản đầy đủ bị cắt cụt thành `T4, 19/08 ·
-   * 10:…`, mà giờ nhận mới là thứ người dùng cần đọc. Chỗ rộng vẫn giữ thứ: "T7" nói được nhiều
-   * hơn "22/08" khi đang cân nhắc cuối tuần.
+   * @deprecated Không còn tác dụng (09/11/2026): mọi mốc nhận/trả hiện đúng MỘT định dạng, kể cả
+   * ô hẹp — xem ghi chú ở `pointText`. Prop giữ để các chỗ gọi không vỡ.
    */
   compactPoint?: boolean;
   /**
@@ -104,7 +101,6 @@ export function RentalDateTimeRangeField({
   busyDays,
   busyLoading,
   variant = 'compact',
-  compactPoint = false,
   getPopupContainer,
   formatPoint,
   separator,

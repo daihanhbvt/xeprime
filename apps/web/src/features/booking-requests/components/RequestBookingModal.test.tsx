@@ -737,7 +737,8 @@ describe('RequestBookingModal - luồng đặt xe', () => {
     });
 
     /**
-     * Thẻ chuyến của màn Xem lại (Figma `19727:55974`): xe, mốc nhận/trả có NĂM, nơi nhận xe, chủ xe
+     * Thẻ chuyến của màn Xem lại (Figma `19727:55974`): xe, mốc nhận/trả theo định dạng chuẩn
+     * (`T3, 01/09  09h00` — `fmt.rentalAt`, như mọi mốc nhận/trả khác), nơi nhận xe, chủ xe
      * + thời lượng — và "Chỉnh sửa" đưa về bước Chuyến đi, giữ nguyên mọi thứ đã chọn.
      */
     it('thẻ chuyến đi: xe + mốc nhận/trả + chủ xe; KHÔNG có lối "Chỉnh sửa"', async () => {
@@ -747,8 +748,9 @@ describe('RequestBookingModal - luồng đặt xe', () => {
 
       const trip = screen.getByRole('region', { name: 'Thông tin chuyến đi' });
       expect(within(trip).getByText('Toyota Vios 2022')).toBeTruthy();
-      expect(within(trip).getByText('01/09/2026 09:00')).toBeTruthy();
-      expect(within(trip).getByText('03/09/2026 09:00')).toBeTruthy();
+      // getByText gộp khoảng trắng: hai NBSP của DATE_TIME_SEPARATOR khớp một dấu cách.
+      expect(within(trip).getByText('T3, 01/09 09h00')).toBeTruthy();
+      expect(within(trip).getByText('T5, 03/09 09h00')).toBeTruthy();
       expect(within(trip).getByText('Tự nhận và trả xe tại chủ xe')).toBeTruthy();
       expect(within(trip).getByText('Gian hàng Demo XePrime')).toBeTruthy();
       expect(within(trip).getByText('Thuê theo ngày · 2 ngày')).toBeTruthy();
@@ -831,7 +833,7 @@ describe('RequestBookingModal - luồng đặt xe', () => {
 
       // Nhập số khác số tài khoản ⇒ báo khách rằng chủ xe sẽ thấy thêm số tài khoản.
       expect(
-        within(renter).getByText(/Số liên hệ chưa xác thực — chủ xe sẽ thấy thêm số tài khoản/i),
+        within(renter).getByText(/Số liên hệ chưa xác thực - chủ xe sẽ thấy thêm số tài khoản/i),
       ).toBeTruthy();
 
       api.submitBookingRequest.mockResolvedValue({ id: 'R1', status: 'pending_host_approval' });

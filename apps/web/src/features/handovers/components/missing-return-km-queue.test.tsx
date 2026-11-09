@@ -356,7 +356,7 @@ describe('Bổ sung KM - trạng thái tải, lỗi và việc đã xử lý (Wa
     renderQueue([item()], { requestedBookingId: 'booking-1', onRequestHandled, onResolved });
 
     expect(
-      await screen.findByText('Biên bản này đã có số KM — không còn việc phải làm.'),
+      await screen.findByText('Biên bản này đã có số KM - không còn việc phải làm.'),
     ).toBeTruthy();
     expect(onRequestHandled).toHaveBeenCalledTimes(1);
     expect(onResolved).toHaveBeenCalledTimes(1);

@@ -455,14 +455,14 @@ describe('Drawer chi tiết đối tác - chỉ đọc', () => {
   it('chính sách phí đọc luồng tiền v2: phí sàn theo loại xe + nấc hoa hồng, không còn % phẳng', async () => {
     renderDrawer({ tenantId: 't-lite', tab: 'commission' });
     await screen.findByText('Chính sách phí dịch vụ');
-    expect(screen.getByText(/Ngày 1–2: 10%/)).toBeTruthy();
+    expect(screen.getByText(/Ngày 1-2: 10%/)).toBeTruthy();
     expect(screen.getByText(/50\.000.*ô tô · 30\.000.*xe máy/)).toBeTruthy();
 
     cleanup();
     permissions.granted.add(PERMISSION.PLATFORM_BILLING_MANAGE);
     renderDrawer({ tenantId: 't-shop', tab: 'billing' });
     // Gian hàng gói: hoa hồng 0%, không in nấc của tuyến hoa hồng.
-    expect(await screen.findByText(/^0% — gian hàng gói/)).toBeTruthy();
+    expect(await screen.findByText(/^0% - gian hàng gói/)).toBeTruthy();
     expect(screen.queryByText('Phí dịch vụ XePrime')).toBeNull();
   });
 

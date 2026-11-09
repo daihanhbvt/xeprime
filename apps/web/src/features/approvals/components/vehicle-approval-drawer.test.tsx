@@ -225,7 +225,7 @@ describe('Hồ sơ theo loại xe / nguồn năng lượng', () => {
     expect(valueFor('Giao xe tận nơi')).toBe('Bật');
     expect(valueFor('Bán kính giao xe tối đa')).toBe('30 km');
     expect(valueFor('Miễn phí giao xe')).toBe('Trong 5 km');
-    expect(valueFor('Phí giao xe')).toMatch(/5–30 km: 150\.000/);
+    expect(valueFor('Phí giao xe')).toMatch(/5-30 km: 150\.000/);
     expect(valueFor('Giới hạn quãng đường')).toBe('300 km/ngày');
     expect(valueFor('Phí vượt giới hạn')).toMatch(/3\.000.*\/km/);
     expect(valueFor('Điều khoản riêng')).toBe('Xuất trình giấy phép lái xe khi nhận xe');

@@ -82,7 +82,7 @@ export class VehicleOperationSettingsDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'Mặc định gian hàng của loại xe — null khi gian hàng chưa đặt (áp 0)',
+    description: 'Mặc định gian hàng của loại xe - null khi gian hàng chưa đặt (áp 0)',
   })
   shopDefaultMinutes!: number | null;
 
@@ -111,7 +111,7 @@ export class SaveVehicleOperationSettingsDto {
   @ApiPropertyOptional({
     description:
       'true = bỏ số riêng của xe, theo mặc định gian hàng (`turnaroundBufferMinutes` bị bỏ qua). ' +
-      'Bỏ trống = false — app cũ gửi số như trước',
+      'Bỏ trống = false - app cũ gửi số như trước',
   })
   @IsOptional()
   @IsBoolean()
@@ -159,7 +159,7 @@ export class ShopOperationDefaultsDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'Phút chuẩn bị giữa hai chuyến — null khi chưa đặt (xe theo mặc định áp 0)',
+    description: 'Phút chuẩn bị giữa hai chuyến - null khi chưa đặt (xe theo mặc định áp 0)',
   })
   turnaroundBufferMinutes!: number | null;
 
@@ -172,7 +172,7 @@ export class ShopOperationDefaultsDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'ISO — null khi chưa lưu lần nào',
+    description: 'ISO - null khi chưa lưu lần nào',
   })
   updatedAt!: string | null;
 }

@@ -110,7 +110,11 @@ describe('InviteMemberModal', () => {
 
   it('số điện thoại sai định dạng (kể cả một email) thì không gọi mutation', async () => {
     renderModal();
+    // Ô SĐT chỉ nhận chữ số + một `+` đầu (ADR 0082 điều 2): email bị lọc sạch ngay lúc gõ.
     fillForm('nhanvien@congty.vn');
+    expect((screen.getByLabelText('Số điện thoại') as HTMLInputElement).value).toBe('');
+
+    fillForm('12345');
     fireEvent.click(screen.getByRole('button', { name: 'Tạo lời mời' }));
     await waitFor(() => expect(screen.getByText('Số điện thoại không hợp lệ')).toBeTruthy());
     expect(mutation.mutate).not.toHaveBeenCalled();

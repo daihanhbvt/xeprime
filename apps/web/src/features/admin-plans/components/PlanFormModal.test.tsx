@@ -371,7 +371,7 @@ describe('PlanFormModal - xoá gói nháp', () => {
       new ApiClientError({ status: 409, code: 'PLAN_IN_USE', message: 'x' }),
     );
 
-    expect(await screen.findByText(/không xoá được — hãy tắt gói thay vì xoá/)).toBeTruthy();
+    expect(await screen.findByText(/không xoá được - hãy tắt gói thay vì xoá/)).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
   });
 });

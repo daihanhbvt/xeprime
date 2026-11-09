@@ -358,7 +358,7 @@ describe('Tab Giấy tờ (Wave 5 + 5.1)', () => {
     renderTab();
     await openRowMenu(REGISTRATION);
     fireEvent.click(screen.getByRole('menuitem', { name: /Nhập từ OCR/ }));
-    fireEvent.click(await screen.findByRole('button', { name: /Bỏ qua — đã đối soát/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Bỏ qua - đã đối soát/ }));
     await waitFor(() =>
       expect(api.applyDocumentOcr).toHaveBeenCalledWith('vehicle-1', 'doc-1', 'job-1', {
         fields: [],

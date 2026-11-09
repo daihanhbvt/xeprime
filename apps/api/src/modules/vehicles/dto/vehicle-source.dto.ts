@@ -175,7 +175,7 @@ export class SaveVehicleSourceDto {
   ownerName?: string | null;
 
   @ApiPropertyOptional({
-    description: 'SĐT liên hệ của chủ xe — `0…`/`84…`/`+84…`, chỉ chữ số; lưu `0…` (ADR 0082)',
+    description: 'SĐT liên hệ của chủ xe - `0…`/`84…`/`+84…`, chỉ chữ số; lưu `0…` (ADR 0082)',
     type: String,
     nullable: true,
   })

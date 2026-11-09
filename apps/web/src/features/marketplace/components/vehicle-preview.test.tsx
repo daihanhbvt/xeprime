@@ -10,6 +10,11 @@ vi.mock('@/features/favorites/components/FavoriteButton', () => ({
   ),
 }));
 
+/** Thẻ xe giữ router cho lượt chuyển trang có View Transitions — ở đây chỉ cần nó tồn tại. */
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 /**
  * Khối "Xe phù hợp với bạn" ở trang chủ.
  *

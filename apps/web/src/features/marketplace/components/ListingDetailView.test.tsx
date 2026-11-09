@@ -292,7 +292,7 @@ describe('ListingDetailView - điều kiện thuê công bố', () => {
     driverSurchargeRules: [],
   } as unknown as PublicListingDetail;
 
-  it('tự lái: hiện giấy tờ, cách đối chiếu, điều khoản và nhãn Đặt ngay', async () => {
+  it('tự lái: hiện giấy tờ, cách đối chiếu, điều khoản và nhãn Tự động duyệt', async () => {
     renderWithIntl(await ListingDetailView({ listing: WITH_TERMS, catalog: EMPTY_CATALOG }));
     fireEvent.click(screen.getByRole('tab', { name: 'Giấy tờ thuê xe' }));
 
@@ -304,7 +304,8 @@ describe('ListingDetailView - điều kiện thuê công bố', () => {
           el?.tagName === 'SPAN' && /Giấy tờ cần có: Giấy phép lái xe/.test(el.textContent ?? ''),
       ),
     ).toBeTruthy();
-    expect(screen.getByText('Đặt ngay')).toBeTruthy();
+    // "Đặt ngay" hiện cho khách dưới nhãn "Tự động duyệt" (Figma, 04/11/2026).
+    expect(screen.getByText('Tự động duyệt')).toBeTruthy();
     expect(screen.getByText('Không hút thuốc trong xe.')).toBeTruthy();
     // "Đối chiếu VNeID" là người xem app của khách — không hứa gọi API định danh.
     expect(screen.queryByText(/tự động (tra cứu|xác thực|định danh)/i)).toBeNull();
@@ -379,7 +380,7 @@ describe('ListingDetailView - điều kiện thuê công bố', () => {
 
 /**
  * Thẻ gian hàng dùng chung (`ShopQuickInfoCard`) — số của GIAN HÀNG, không phải của riêng chiếc
- * xe đang xem, và dòng "Chủ xe … sao" chỉ được phép nói khi số liệu thật sự đủ tốt.
+ * xe đang xem. Dòng ghi chú "Chủ xe …" đã gỡ theo yêu cầu người dùng (04/11/2026).
  */
 describe('ListingDetailView - thẻ gian hàng', () => {
   const READY_GOOD_METRICS = {
@@ -394,12 +395,12 @@ describe('ListingDetailView - thẻ gian hàng', () => {
     renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
 
     // LISTING: shopRatingAvg 4.9, shopCompletedTripCount 1234 → làm tròn xuống 1200, kèm dấu +.
-    // Điểm đánh giá hiện ở CẢ dòng tóm tắt lẫn dòng ghi chú bên dưới.
+    // "1.200+" còn ở dòng "Đã cho thuê … lần" đầu trang — so theo chữ "chuyến" của thẻ gian hàng.
     expect(screen.getAllByText(/4[.,]9/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/1[.,]?200\+/)).toBeTruthy();
+    expect(screen.getByText(/1[.,]?200\+ chuyến/)).toBeTruthy();
   });
 
-  it('đủ mẫu và số liệu tốt: dòng ghi chú dùng câu mạnh nhất', async () => {
+  it('không còn dòng ghi chú "Chủ xe …", kể cả khi số liệu đủ tốt', async () => {
     const goodHost = {
       ...LISTING,
       shopMetrics: READY_GOOD_METRICS,
@@ -408,24 +409,9 @@ describe('ListingDetailView - thẻ gian hàng', () => {
     } as unknown as PublicListingDetail;
     renderWithIntl(await ListingDetailView({ listing: goodHost, catalog: EMPTY_CATALOG }));
 
-    expect(screen.getByText(/Chủ xe .* sao có thời gian phản hồi nhanh/)).toBeTruthy();
-  });
-
-  /*
-   * Dòng ghi chú KHÔNG biến mất khi gian hàng kém nổi bật — nó đổi sang câu chỉ nói đúng thứ
-   * số liệu cho phép. Một khoảng trống ở đây làm thẻ trông như thiếu mất một phần.
-   */
-  it('tỉ lệ phản hồi thấp: đổi sang câu chỉ nói về điểm đánh giá, không bỏ trống', async () => {
-    const mediocreHost = {
-      ...LISTING,
-      shopMetrics: { ...READY_GOOD_METRICS, responseRatePercent: 60 },
-      shopRatingAvg: '4.9',
-      shopRatingCount: 120,
-    } as unknown as PublicListingDetail;
-    renderWithIntl(await ListingDetailView({ listing: mediocreHost, catalog: EMPTY_CATALOG }));
-
-    expect(screen.queryByText(/Chủ xe .* sao có thời gian phản hồi nhanh/)).toBeNull();
-    expect(screen.getByText(/được khách đánh giá .* sao qua/)).toBeTruthy();
+    expect(
+      screen.queryByText(/được khách đánh giá|thời gian phản hồi nhanh|giữ đúng cam kết/),
+    ).toBeNull();
   });
 
   it('bỏ hẳn dòng "Tính trên N yêu cầu trong 90 ngày gần nhất"', async () => {

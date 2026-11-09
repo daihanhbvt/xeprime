@@ -735,7 +735,8 @@ describe('/manage/vehicles/[id] - khối tổng hợp (summary)', () => {
     const schedule = panel('Lịch thuê sắp tới');
     expect(within(schedule).getByText('Anh Tuấn')).toBeTruthy();
     expect(within(schedule).getByText(/1\.700\.000 ₫ • Đã xác nhận/)).toBeTruthy();
-    expect(within(schedule).getByText(/25\/10\/2026.*27\/10\/2026/)).toBeTruthy();
+    // getByText gộp khoảng trắng: hai NBSP của DATE_TIME_SEPARATOR khớp một dấu cách.
+    expect(within(schedule).getByText('CN, 25/10 08h00 - T3, 27/10 08h00')).toBeTruthy();
     // Dòng thời gian (02/10/2026): tên khách là tiêu đề, mã đơn + khoảng ngày ở dòng phụ.
     const activity = panel('Hoạt động gần đây');
     expect(within(activity).getByText('Chị Thảo')).toBeTruthy();

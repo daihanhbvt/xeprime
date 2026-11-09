@@ -1207,7 +1207,11 @@
         "void": "Void booking surcharge"
       },
       "driver_accept": "Driver accepted trip",
-      "driver_decline": "Driver declined trip"
+      "driver_decline": "Driver declined trip",
+      "customer_return": {
+        "report": "Customer reported vehicle returned",
+        "reject": "Shop disputed return report"
+      }
     },
     "booking_hold": {
       "create": "Create booking hold",
@@ -1225,7 +1229,8 @@
       "expire": "Booking request expired",
       "slot_taken": "Closed: slot taken",
       "auto_accept_skipped": "Auto-accept skipped",
-      "platform_remind": "Platform reminded host"
+      "platform_remind": "Platform reminded host",
+      "remind_payment": "Host reminded customer to pay the hold"
     },
     "branch": {
       "create": "Create branch",
@@ -1355,7 +1360,9 @@
       "activate_from_payment": "Activate plan from payment",
       "lapse_to_commission": "Lapsed to commission track",
       "schedule_change": "Change plan from next term",
-      "change_now": "Change plan now"
+      "change_now": "Change plan now",
+      "update": "Edit subscription term",
+      "shift": "Shift queued subscription term"
     },
     "subscription_invoice": {
       "issue": "Issue subscription invoice"
@@ -1380,6 +1387,9 @@
       "free_trips_exhausted": "Free trips exhausted",
       "vat_invoice": {
         "update": "Change VAT invoice support (all vehicles)"
+      },
+      "operation_defaults": {
+        "update": "Change default turnaround time between trips"
       }
     },
     "tenant_customer": {
