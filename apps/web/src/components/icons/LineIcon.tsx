@@ -15,6 +15,7 @@ export const LINE_ICON = [
   'add-category',
   'arrow-right',
   'arrow-sm',
+  'award',
   'bag',
   'bell',
   'calendar',

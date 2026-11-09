@@ -3,27 +3,24 @@
 import { Avatar, Badge, Dropdown } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useState, type ReactNode } from 'react';
-import { useLocaleChoice } from '@/components/i18n/locale-menu';
-import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
+import { useState } from 'react';
+import {
+  AccountMenuArrow,
+  AccountMenuItem,
+  AccountMenuLink,
+  AccountMenuLocaleRow,
+  AccountMenuLogout,
+  AccountMenuPanel,
+  AccountMenuSection,
+  AccountMenuThemeRow,
+} from '@/components/account-menu/AccountMenuParts';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { ROUTES } from '@/constants/routes';
 import { resolveOwnerCtaHref } from '@/features/auth/post-auth-destination';
-import { SUPPORTED_LOCALES } from '@/i18n/config';
 import type { CurrentUser } from '@/hooks/use-current-user';
 import { cx } from '@/lib/cx';
 import { initialOf } from '@/lib/initials';
-import { useTheme, type ThemeMode } from '@/lib/theme';
 import styles from './MarketAccountMenu.module.css';
-
-/** Hai lựa chọn giao diện của nút gạt trong menu — thứ tự và icon theo Figma. */
-const THEME_OPTIONS: readonly {
-  mode: ThemeMode;
-  icon: LineIconName;
-  labelKey: 'themeLight' | 'themeDark';
-}[] = [
-  { mode: 'light', icon: 'sun', labelKey: 'themeLight' },
-  { mode: 'dark', icon: 'moon', labelKey: 'themeDark' },
-];
 
 /**
  * Menu tài khoản của site khách — avatar trên thanh + bảng thả xuống, dựng lại 26/10/2026 theo
@@ -40,12 +37,9 @@ const THEME_OPTIONS: readonly {
  * Dòng "Tài khoản của tôi" của bản trước đã GỘP vào thẻ danh tính: hai lối cùng tới `/account`
  * đặt sát nhau là một lối thừa.
  *
- * ## Vì sao là bảng tự dựng chứ không phải `menu.items` của AntD
- *
- * Hai dòng "Giao diện" và "Ngôn ngữ" mang một nút gạt NGAY TRONG dòng. Trong `Menu` của AntD mỗi
- * dòng là một mục bấm được và bấm là đóng menu — người dùng đổi sáng/tối sẽ thấy menu sập ngay
- * dưới tay. Ở đây dòng điều hướng là `<Link>` thật (mở tab mới, sao chép địa chỉ vẫn được) và
- * đóng menu khi bấm; nút gạt là `<button aria-pressed>` và giữ menu mở để thấy kết quả.
+ * Vỏ, dòng, nút gạt và đăng xuất là khuôn chung với menu hồ sơ site partner
+ * (`components/account-menu/AccountMenuParts` — vì sao không dùng `menu.items` của AntD cũng ghi
+ * ở đó).
  */
 export function MarketAccountMenu({
   user,
@@ -59,139 +53,75 @@ export function MarketAccountMenu({
 }) {
   const t = useTranslations('Navigation.public');
   const tAccount = useTranslations('Navigation.account');
-  const tLocale = useTranslations('Common.locale');
-  const { theme, setTheme } = useTheme();
-  const localeChoice = useLocaleChoice();
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
-
-  /** Một dòng điều hướng: icon + nhãn, huy hiệu và mũi tên (nếu có) ở bên phải. */
-  const row = (
-    href: string,
-    icon: LineIconName,
-    label: string,
-    trailing?: ReactNode,
-  ): ReactNode => (
-    <Link href={href} className={styles.row} onClick={close}>
-      <LineIcon name={icon} className={styles.rowIcon} />
-      <span className={styles.rowLabel}>{label}</span>
-      {trailing}
-    </Link>
-  );
 
   // Email phân biệt hai tài khoản trùng tên (khách ↔ đối tác, ADR 0053); thiếu email thì SĐT.
   const contact = user.email ?? user.phone ?? t('accountSubtitle');
 
   const panel = (
-    <div className={styles.menu} role="dialog" aria-label={tAccount('menuLabel')}>
-      <div className={styles.surface}>
-        <div className={styles.section}>
-          <div className={styles.item}>
-            <Link href={ROUTES.ACCOUNT.ROOT} className={styles.identity} onClick={close}>
-              <Avatar size={40} src={user.avatarUrl ?? undefined} className={styles.avatar}>
-                {initialOf(user.displayName)}
-              </Avatar>
-              <span className={styles.identityText}>
-                <span className={styles.identityName}>{user.displayName}</span>
-                <span className={styles.identityContact}>{contact}</span>
-              </span>
-              <LineIcon name="chevron-right" className={styles.rowIcon} />
-            </Link>
-          </div>
-
-          <div className={styles.item}>{row(ROUTES.TRIPS, 'calendar', t('trips'))}</div>
-          <div className={styles.item}>
-            {row(ROUTES.ACCOUNT.FAVORITES, 'heart', t('favorites'))}
-          </div>
-          <div className={styles.item}>
-            {row(
-              chat.href,
-              'message',
-              t('chat'),
-              chat.count ? <Badge count={chat.count} overflowCount={99} size="small" /> : null,
-            )}
-          </div>
-          <div className={styles.item}>
-            <div className={styles.row}>
-              <LineIcon name="palette" className={styles.rowIcon} />
-              <span className={styles.rowLabel}>{t('appearance')}</span>
-              <span className={styles.toggle} role="group" aria-label={t('toggleTheme')}>
-                {THEME_OPTIONS.map((option) => (
-                  <button
-                    key={option.mode}
-                    type="button"
-                    className={cx(
-                      styles.toggleButton,
-                      theme === option.mode && styles.toggleActive,
-                    )}
-                    aria-pressed={theme === option.mode}
-                    aria-label={t(option.labelKey)}
-                    title={t(option.labelKey)}
-                    onClick={() => setTheme(option.mode)}
-                  >
-                    <LineIcon name={option.icon} className={styles.toggleIcon} />
-                  </button>
-                ))}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.section}>
-          {/*
-            Lối sang SITE PARTNER (ADR 0051 điều 3) — đăng ký cho thuê xe là một tài khoản riêng ở
-            đó (ADR 0053). Link khác site: URL tuyệt đối ở chế độ `host`.
-          */}
-          <div className={styles.item}>
-            {row(
-              resolveOwnerCtaHref(),
-              'work',
-              t('becomeOwner'),
-              <LineIcon name="arrow-right" className={styles.rowIcon} />,
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className={styles.footer}>
-        <div className={styles.item}>
-          <div className={styles.row}>
-            <LineIcon name="globe" className={styles.rowIcon} />
-            <span className={styles.rowLabel}>{tLocale('switchLabel')}</span>
-            <span className={styles.toggle} role="group" aria-label={tLocale('switchLabel')}>
-              {SUPPORTED_LOCALES.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={cx(
-                    styles.toggleButton,
-                    styles.toggleText,
-                    value === localeChoice.locale && styles.toggleActive,
-                  )}
-                  aria-pressed={value === localeChoice.locale}
-                  aria-label={tLocale(value)}
-                  disabled={localeChoice.pending}
-                  onClick={() => localeChoice.choose(value)}
-                >
-                  {tLocale(`${value}Short`)}
-                </button>
-              ))}
+    <AccountMenuPanel
+      label={tAccount('menuLabel')}
+      footer={
+        <>
+          <AccountMenuLocaleRow />
+          <AccountMenuLogout
+            label={t('logout')}
+            onClick={() => {
+              close();
+              onLogout();
+            }}
+          />
+        </>
+      }
+    >
+      <AccountMenuSection>
+        <AccountMenuItem>
+          <Link href={ROUTES.ACCOUNT.ROOT} className={styles.identity} onClick={close}>
+            <Avatar size={40} src={user.avatarUrl ?? undefined} className={styles.avatar}>
+              {initialOf(user.displayName)}
+            </Avatar>
+            <span className={styles.identityText}>
+              <span className={styles.identityName}>{user.displayName}</span>
+              <span className={styles.identityContact}>{contact}</span>
             </span>
-          </div>
-        </div>
-        <button
-          type="button"
-          className={styles.logout}
-          onClick={() => {
-            close();
-            onLogout();
-          }}
-        >
-          <LineIcon name="logout" className={styles.rowIcon} />
-          {t('logout')}
-        </button>
-      </div>
-    </div>
+            <LineIcon name="chevron-right" className={styles.identityIcon} />
+          </Link>
+        </AccountMenuItem>
+
+        <AccountMenuLink href={ROUTES.TRIPS} icon="calendar" label={t('trips')} onNavigate={close} />
+        <AccountMenuLink
+          href={ROUTES.ACCOUNT.FAVORITES}
+          icon="heart"
+          label={t('favorites')}
+          onNavigate={close}
+        />
+        <AccountMenuLink
+          href={chat.href}
+          icon="message"
+          label={t('chat')}
+          onNavigate={close}
+          trailing={
+            chat.count ? <Badge count={chat.count} overflowCount={99} size="small" /> : null
+          }
+        />
+        <AccountMenuThemeRow />
+      </AccountMenuSection>
+
+      <AccountMenuSection divider>
+        {/*
+          Lối sang SITE PARTNER (ADR 0051 điều 3) — đăng ký cho thuê xe là một tài khoản riêng ở
+          đó (ADR 0053). Link khác site: URL tuyệt đối ở chế độ `host`.
+        */}
+        <AccountMenuLink
+          href={resolveOwnerCtaHref()}
+          icon="work"
+          label={t('becomeOwner')}
+          onNavigate={close}
+          trailing={<AccountMenuArrow />}
+        />
+      </AccountMenuSection>
+    </AccountMenuPanel>
   );
 
   return (

@@ -46,7 +46,14 @@ vi.mock('@/features/auth/hooks/use-portal-logout', () => ({
   usePortalLogout: () => logout,
 }));
 
-// Menu tài khoản dùng chung (`useAccountMenuItems`) có nhóm đổi ngôn ngữ — nó cần router.
+// Menu theo SITE: partner là `PartnerAccountMenu`, quản trị là `useAccountMenuItems`.
+const zone = vi.hoisted(() => ({ value: 'partner' as 'partner' | 'admin' }));
+vi.mock('@/zones/ZoneProvider', () => ({ useZone: () => zone.value }));
+
+// Menu partner đóng drawer mobile khi đi trang — cần dispatch.
+vi.mock('@/store/hooks', () => ({ useAppDispatch: () => vi.fn() }));
+
+// Cả hai menu có đổi ngôn ngữ — nó cần router.
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }),
 }));
@@ -70,6 +77,7 @@ function setUser(over: Partial<NonNullable<typeof user.value>> = {}) {
 
 beforeEach(() => {
   logout.mockReset();
+  zone.value = 'partner';
   setUser();
 });
 
@@ -211,71 +219,77 @@ describe('ManageUserCard — menu tài khoản', () => {
     expect(screen.getByRole('button', { name: /^Menu tài khoản/ })).toBeTruthy();
   });
 
-  /*
-   * Ai đang đăng nhập KHÔNG biến mất khi thẻ chuyển sang mang tên gian hàng — nó về đúng chỗ
-   * cần thiết: dòng ngữ cảnh ở đầu menu, quan trọng khi nhiều nhân viên dùng chung một máy.
-   */
-  it('đầu menu nói rõ đang đăng nhập bằng tài khoản nào', async () => {
-    await openMenu();
+  describe('site partner — CÙNG bảng hồ sơ với header (Figma `24051:85101`)', () => {
+    beforeEach(() => {
+      zone.value = 'partner';
+    });
 
-    expect(screen.getByText('Đăng nhập: Nguyễn Văn A')).toBeTruthy();
+    it('chứa tài khoản & bảo mật, quản lý gian hàng và đăng xuất', async () => {
+      await openMenu();
+
+      expect(screen.getAllByRole('link', { name: /Tài khoản & bảo mật/ })[0]).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'Quản lý gian hàng' }).getAttribute('href')).toBe(
+        '/manage/shop',
+      );
+      expect(screen.getByText('Đăng xuất')).toBeTruthy();
+    });
+
+    /*
+     * Tài khoản đối tác là tài khoản RIÊNG (ADR 0053), không bao giờ đứng tên một chuyến đi thuê.
+     */
+    it('KHÔNG có mục chuyến đi thuê', async () => {
+      await openMenu();
+
+      expect(screen.queryByText('Chuyến tôi đi thuê')).toBeNull();
+    });
+
+    it('đăng xuất gọi ĐÚNG luồng dùng chung, không tự dựng lại ba bước', async () => {
+      await openMenu();
+
+      fireEvent.click(screen.getByText('Đăng xuất'));
+
+      await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
+    });
+
+    it('bản thu gọn dùng CÙNG một menu', async () => {
+      await openMenu(true);
+
+      expect(screen.getByRole('link', { name: 'Quản lý gian hàng' })).toBeTruthy();
+    });
   });
 
-  it('menu chứa tài khoản & bảo mật, cài đặt gian hàng và đăng xuất', async () => {
-    await openMenu();
+  describe('site quản trị — giữ menu cũ cho tới khi có design', () => {
+    beforeEach(() => {
+      zone.value = 'admin';
+      setUser({ tenant: null, platformRole: 'platform_admin' });
+    });
 
-    // Tài khoản của người đang ở trong cổng quản lý nằm TRONG cổng đó — MỘT trang gộp hồ sơ cá
-    // nhân và bảo mật (05/10/2026), không phải hai mục cùng hiện email/SĐT.
-    expect(screen.getByRole('link', { name: 'Tài khoản & bảo mật' }).getAttribute('href')).toBe(
-      '/manage/account',
-    );
-    expect(screen.getByRole('link', { name: 'Cài đặt gian hàng' }).getAttribute('href')).toBe(
-      '/manage/shop',
-    );
-    expect(screen.getByText('Đăng xuất')).toBeTruthy();
-  });
+    /*
+     * Ai đang đăng nhập KHÔNG biến mất khi thẻ mang tên khu làm việc — nó là dòng ngữ cảnh ở đầu
+     * menu, quan trọng khi nhiều người dùng chung một máy.
+     */
+    it('đầu menu nói rõ đang đăng nhập bằng tài khoản nào', async () => {
+      await openMenu();
 
-  it('không thuộc gian hàng nào → không có mục "Cài đặt gian hàng" dẫn tới 403', async () => {
-    setUser({ tenant: null, platformRole: 'platform_admin' });
-    await openMenu();
+      expect(screen.getByText('Đăng nhập: Nguyễn Văn A')).toBeTruthy();
+    });
 
-    expect(screen.queryByRole('link', { name: 'Cài đặt gian hàng' })).toBeNull();
-  });
+    it('chỉ có bảo mật tài khoản — nhân sự nền tảng không có gian hàng để cài đặt', async () => {
+      await openMenu();
 
-  /*
-   * Tài khoản đối tác là tài khoản RIÊNG (ADR 0053), không bao giờ đứng tên một chuyến đi thuê —
-   * không còn mục "Chuyến tôi đi thuê" nào ở site partner.
-   */
-  it('KHÔNG có mục chuyến đi thuê', async () => {
-    await openMenu();
+      expect(screen.getByRole('link', { name: 'Bảo mật tài khoản' }).getAttribute('href')).toBe(
+        '/admin/security',
+      );
+      expect(screen.queryByRole('link', { name: 'Quản lý gian hàng' })).toBeNull();
+      expect(screen.queryByRole('link', { name: 'Cài đặt gian hàng' })).toBeNull();
+    });
 
-    expect(screen.queryByText('Chuyến tôi đi thuê')).toBeNull();
-  });
+    it('đăng xuất gọi ĐÚNG luồng dùng chung', async () => {
+      await openMenu();
 
-  /*
-   * Hai mục cũ "Hồ sơ cá nhân" và "Bảo mật tài khoản" trỏ tới hai trang cùng hiện email/SĐT —
-   * người dùng phải đoán đổi số ở cửa nào. Nay chỉ còn MỘT lối vào.
-   */
-  it('KHÔNG còn hai mục rời "Hồ sơ cá nhân" và "Bảo mật tài khoản"', async () => {
-    await openMenu();
+      fireEvent.click(screen.getByText('Đăng xuất'));
 
-    expect(screen.queryByRole('link', { name: 'Hồ sơ cá nhân' })).toBeNull();
-    expect(screen.queryByRole('link', { name: 'Bảo mật tài khoản' })).toBeNull();
-  });
-
-  it('đăng xuất gọi ĐÚNG luồng dùng chung, không tự dựng lại ba bước', async () => {
-    await openMenu();
-
-    fireEvent.click(screen.getByText('Đăng xuất'));
-
-    await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
-  });
-
-  it('bản thu gọn dùng CÙNG một menu', async () => {
-    await openMenu(true);
-
-    fireEvent.click(screen.getByText('Đăng xuất'));
-
-    await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
+    });
   });
 });

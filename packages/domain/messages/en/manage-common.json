@@ -16,9 +16,12 @@
     "account": "Account & security",
     "renterTrips": "Trips I rented",
     "partnerHome": "Go to XePrime Partner home",
-    "ownerProfile": "Host profile",
     "breadcrumb": "Page location",
-    "homeLink": "Go to overview"
+    "homeLink": "Go to overview",
+    "shopManage": "Manage shop",
+    "rentalManage": "Manage rentals",
+    "workspace": "Shop",
+    "upgradeToShop": "Upgrade to a shop"
   },
   "permission": {
     "deniedTitle": "You don't have access",
