@@ -95,8 +95,8 @@ export interface MarketplaceFilters {
  * Vị trí của một banner trang chủ (`marketplace_banners.placement`):
  *   · `hero` — dải banner đầu trang (PC 1440×300 · tablet 1024×320 · mobile 780×390);
  *   · `promo` — banner khuyến mãi giữa trang (PC 584×220 · tablet 480×180 · mobile 340×140 — khuyến nghị, không chặn);
- *   · `partner` — ẢNH NỀN dải "Đăng ký trở thành đối tác" (PC 1440×600 · tablet 1024×448 · mobile
- *     390×448 — khuyến nghị, không chặn). Chữ/nút của dải vẫn do trang dựng; chỉ ảnh là của admin.
+ *   · `partner` — ẢNH NỀN dải "Đăng ký trở thành đối tác" (PC 1440×1500 · tablet 1024×1400 · mobile
+ *     390×1300 — khuyến nghị, không chặn). Chữ/nút của dải vẫn do trang dựng; chỉ ảnh là của admin.
  * Hai vị trí dùng chung một bảng, một đường ghi (`BannersService`); trần banner hiển thị cùng lúc,
  * thứ tự và lịch tính RIÊNG cho từng vị trí.
  */

@@ -4,6 +4,7 @@ import { Pressable, TextInput } from 'react-native';
 import { XStack } from 'tamagui';
 import { FONT_FAMILY } from '@/theme/fonts';
 import { useColors } from '@/theme/ThemeProvider';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { fieldFontSize, fontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 /**
@@ -63,8 +64,9 @@ export function SearchInput({
       // Chạm vào đệm/icon không trúng `TextInput`; Android khi đó trao focus cho ô kế tiếp.
       onPress={() => inputRef.current?.focus()}
     >
-      <Ionicons
-        name="search-outline"
+      {/* Figma "Search 2" - cùng nét icon tìm kiếm của trang kết quả. */}
+      <LineIcon
+        name="search-2"
         size={iconSize.sm}
         color={bare || boxed ? colors.primary : colors.textMuted}
       />

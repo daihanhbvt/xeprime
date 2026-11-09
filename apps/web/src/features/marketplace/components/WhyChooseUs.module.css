@@ -1,23 +1,23 @@
 /*
  * "Lý do nên chọn XePrime" — Figma "Homepage - Updated" › Solutions Section (`21965:5232`, ADR 0062).
- * Desktop: cột nội dung 628px | ảnh 532×488, cách 40, đệm trên/dưới 40.
+ * Desktop: lưới hai cột co giãn (nội dung ~54% | ảnh ~46%, tỉ lệ 628 : 532 của Figma) lấp đầy
+ * khung chợ (`--xp-market-container-max-width`); khoảng cách, chữ, icon co theo `clamp()`.
  * Mobile: bản vẽ MB (`19879:67457`) — tiêu đề canh giữa, lưới 2 × 2 canh giữa; mô tả + ảnh xếp dọc
  * để đủ thông tin như desktop.
  */
 .section {
-  display: flex;
-  align-items: flex-start;
-  padding-block: var(--xp-space-40);
-  gap: var(--xp-space-40);
+  display: grid;
+  align-items: center;
+  padding-block: clamp(var(--xp-space-xl), 3vw, var(--xp-space-40));
+  gap: clamp(var(--xp-space-xl), 4vw, 64px);
+  grid-template-columns: minmax(0, 628fr) minmax(0, 532fr);
 }
 
 .content {
   display: flex;
   min-width: 0;
-  max-width: 628px;
-  flex: 1 1 628px;
   flex-direction: column;
-  gap: var(--xp-space-40);
+  gap: clamp(var(--xp-space-28), 3vw, var(--xp-space-40));
 }
 
 .intro {
@@ -26,9 +26,10 @@
   gap: var(--xp-space-20);
 }
 
-/* Figma "Solution Titles" rộng 546px — tiêu đề xuống dòng đúng chỗ của bản vẽ. */
+/* Tiêu đề trải hết bề ngang cột chữ (bỏ trần 34ch - 09/11/2026: trần đó bẻ tiêu đề thành 4 dòng
+   hẹp khi khung nới lên 1320px). */
 .heading {
-  max-width: 546px;
+  max-width: none;
 }
 
 .accent {
@@ -44,7 +45,7 @@
 .lead,
 .closing {
   margin: 0;
-  font-size: var(--xp-font-size-body-lg);
+  font-size: clamp(var(--xp-font-size-body), 0.9rem + 0.25vw, var(--xp-font-size-body-lg));
   line-height: var(--xp-line-height-body-lg);
 }
 
@@ -63,7 +64,7 @@
   display: grid;
   padding: 0;
   margin: 0;
-  gap: var(--xp-space-20);
+  gap: clamp(var(--xp-space-md), 2vw, var(--xp-space-28)) clamp(var(--xp-space-md), 2vw, var(--xp-space-20));
   grid-template-columns: repeat(2, minmax(0, 1fr));
   list-style: none;
 }
@@ -77,7 +78,7 @@
 .iconWrap {
   display: inline-flex;
   flex: none;
-  padding: var(--xp-space-12);
+  padding: clamp(10px, 1vw, var(--xp-space-12));
   border-radius: var(--xp-border-radius-pill);
   background: var(--xp-color-primary-subtle);
 }
@@ -85,14 +86,16 @@
 /* Ô icon 32px — nét vẽ đặt nguyên cỡ ở giữa. */
 .iconBox {
   display: inline-flex;
-  width: 32px;
-  height: 32px;
+  width: clamp(28px, 2.4vw, 32px);
+  height: clamp(28px, 2.4vw, 32px);
   align-items: center;
   justify-content: center;
 }
 
 .iconBox img {
   display: block;
+  max-width: 100%;
+  height: auto;
 }
 
 .copy {
@@ -105,7 +108,7 @@
 .title {
   margin: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h4);
+  font-size: clamp(var(--xp-font-size-body-lg), 0.95rem + 0.4vw, var(--xp-font-size-h4));
   font-weight: var(--xp-font-weight-semibold);
   line-height: var(--xp-line-height-h4);
 }
@@ -123,10 +126,11 @@
  */
 .media {
   position: relative;
-  width: 532px;
-  max-width: 100%;
-  flex: none;
+  width: 100%;
+  max-width: 640px;
+  justify-self: end;
   aspect-ratio: 532 / 488;
+  container-type: inline-size;
   /* Khung của hai lớp parallax `view()` (ảnh + ô số) — `clip` cắt phần trôi ra mà không tạo khung cuộn. */
   overflow: clip;
 }
@@ -151,7 +155,7 @@
   height: calc(124 / 488 * 100%);
   flex-direction: column;
   justify-content: center;
-  padding: var(--xp-space-20);
+  padding: clamp(var(--xp-space-sm), 4%, var(--xp-space-20));
   background: url('/home/why-stat-bg.png') center / cover no-repeat;
   border-radius: var(--xp-border-radius-banner);
   --parallax-shift: -6%;
@@ -160,55 +164,53 @@
 .statValue {
   margin: 0;
   color: var(--xp-color-text-on-dark);
-  font-size: var(--xp-font-size-display);
+  /* Theo bề ngang ảnh (cqi), không theo màn hình: ô số luôn vừa khoét của ảnh. */
+  font-size: clamp(var(--xp-font-size-h3), 9cqi, var(--xp-font-size-display));
   font-weight: var(--xp-font-weight-semibold);
   letter-spacing: var(--xp-letter-spacing-display);
-  line-height: var(--xp-line-height-display);
+  line-height: 1.1;
 }
 
 .statLabel {
   margin: 0;
   color: var(--xp-color-text-on-dark);
-  font-size: var(--xp-font-size-body-lg);
+  font-size: clamp(var(--xp-font-size-body-sm), 3cqi, var(--xp-font-size-body-lg));
   font-weight: var(--xp-font-weight-medium);
-  line-height: var(--xp-line-height-body-lg);
+  line-height: 1.3;
 }
 
-/* Tablet: ảnh xuống dưới nội dung, canh giữa. */
+/* Màn lớn (≥ 1441): nới khoảng cách hai cột, ảnh lấp cột. */
+@media (min-width: 1441px) {
+  .section {
+    gap: 80px;
+  }
+}
+
+/* Tablet: ảnh xuống dưới nội dung, canh giữa, rộng tối đa 640; lưới cam kết 2 × 2. */
 @media (max-width: 1024px) {
   .section {
-    flex-direction: column;
-    align-items: center;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
   }
 
   .content {
-    max-width: none;
-    flex: none;
-    align-self: stretch;
+    width: 100%;
   }
 
   .heading {
     max-width: none;
   }
+
+  .media {
+    width: min(100%, 640px);
+    justify-self: center;
+  }
 }
 
-/* Mobile — Figma MB `19879:67457`: mọi thứ canh giữa, thẻ cam kết icon trên chữ, icon 30, cách 16. */
+/* Mobile — Figma MB `19879:67457`: mọi thứ canh giữa, thẻ cam kết icon trên chữ, cách 16. */
 @media (max-width: 640px) {
-  .section {
-    padding-block: var(--xp-space-xl);
-    gap: var(--xp-space-xl);
-  }
-
-  .content {
-    gap: var(--xp-space-28);
-  }
-
   .intro {
     text-align: center;
-  }
-
-  .list {
-    gap: var(--xp-space-md);
   }
 
   .item {
@@ -216,29 +218,12 @@
     align-items: center;
     text-align: center;
   }
+}
 
-  .iconBox {
-    width: 30px;
-    height: 30px;
-  }
-
-  .iconBox img {
-    transform: scale(0.9375);
-  }
-
-  .statValue {
-    font-size: var(--xp-font-size-h1);
-    letter-spacing: normal;
-    line-height: var(--xp-line-height-h1);
-  }
-
-  .statLabel {
-    font-size: var(--xp-font-size-body-sm);
-    line-height: var(--xp-line-height-body-sm);
-  }
-
-  .stat {
-    padding: var(--xp-space-12);
+/* Điện thoại rất hẹp: một cột để mô tả không bị bóp còn vài chữ một dòng. */
+@media (max-width: 360px) {
+  .list {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

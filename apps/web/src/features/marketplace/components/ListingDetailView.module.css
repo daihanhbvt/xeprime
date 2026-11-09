@@ -8,7 +8,7 @@
  */
 
 .wrap {
-  max-width: var(--xp-market-container-max-width, 1200px);
+  max-width: var(--xp-market-container-max-width, 1320px);
   margin: 0 auto;
   padding: 24px var(--xp-space-md, 16px) 64px;
 }
@@ -100,15 +100,16 @@
 }
 
 /* "Hỗ trợ xuất hoá đơn VAT" — cùng khuôn nhãn với "Xe mới", tông vàng thương hiệu. */
-.amenityBadge {
-  padding: 2px var(--xp-space-sm);
-  border-radius: var(--xp-border-radius-card);
-  background: var(--xp-color-primary-subtle);
-  color: var(--xp-color-primary-hover);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  font-weight: var(--xp-font-weight-medium);
-  white-space: nowrap;
+.amenityRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-sm) var(--xp-space-12);
+}
+
+.amenityVat {
+  margin-left: auto;
 }
 
 /* Vị trí: icon 20 + chữ `16/24 Regular` `Text/Gray/medium`. */

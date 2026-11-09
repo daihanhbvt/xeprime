@@ -1,13 +1,8 @@
 'use client';
 
-import {
-  AppstoreOutlined,
-  CloseOutlined,
-  ReloadOutlined,
-  UnorderedListOutlined,
-} from '@ant-design/icons';
+import { CloseOutlined, ReloadOutlined } from '@ant-design/icons';
 import { Button, Select, Skeleton } from 'antd';
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   DEFAULT_LISTING_SORT,
   LISTING_AMENITY_LABEL,
@@ -21,12 +16,15 @@ import {
   type TransmissionTypeExt,
 } from '@xeprime/types';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
+import { LineIcon } from '@/components/icons/LineIcon';
+import { useIsMobile } from '@/hooks/use-media-query';
 import { cx } from '@/lib/cx';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { FACET_FILTER_KEYS } from '../filter-params';
 import { provinceLabelOf } from '../province-options';
 import { useAllDestinations } from '../hooks/use-destinations';
 import { useInfinitePublicListings } from '../hooks/use-infinite-listings';
+import { useViewMode, type ViewMode } from '../hooks/use-view-mode';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import { usePriceBandLabel } from '../search/use-price-band-label';
 import type { MarketplaceFilters } from '../types';
@@ -44,9 +42,6 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 /** Số ô khung chờ — bằng đúng cỡ trang của API để lưới không đổi hình khi dữ liệu về. */
 const SKELETON_COUNT = 12;
 
-type ViewMode = 'grid' | 'list';
-/** Khoá nhớ chế độ xem kết quả trên thiết bị — cùng tên với app native. */
-const VIEW_MODE_KEY = 'xp:marketplace-view-mode';
 
 export function MarketplaceResults() {
   return (
@@ -54,23 +49,6 @@ export function MarketplaceResults() {
       <MarketplaceResultsContent />
     </SearchExperienceProvider>
   );
-}
-
-/** Nguồn chế độ hiển thị cho `useSyncExternalStore`: localStorage, dự phòng bộ nhớ khi bị chặn. */
-const viewModeListeners = new Set<() => void>();
-let viewModeFallback: ViewMode = 'grid';
-function subscribeViewMode(listener: () => void) {
-  viewModeListeners.add(listener);
-  return () => viewModeListeners.delete(listener);
-}
-function readViewMode(): ViewMode {
-  try {
-    const saved = window.localStorage.getItem(VIEW_MODE_KEY);
-    if (saved === 'grid' || saved === 'list') return saved;
-  } catch {
-    // Chế độ riêng tư / chặn lưu trữ: dùng bản trong bộ nhớ.
-  }
-  return viewModeFallback;
 }
 
 function MarketplaceResultsContent() {
@@ -86,21 +64,12 @@ function MarketplaceResultsContent() {
   const { data: destinations } = useAllDestinations();
   const { brandLabel, bodyTypeLabel, fuelTypeLabel, featureLabel } = useCatalogLabels();
 
-  /*
-   * Chế độ hiển thị: 'grid' (mặc định) hoặc 'list' (thẻ ngang). NHỚ trên thiết bị — tiện ích cá
-   * nhân, không phải dữ liệu (người dùng chốt 27/10/2026). Đọc SAU khi mount: đọc lúc render là
-   * lệch HTML giữa server và client.
-   */
-  const viewMode = useSyncExternalStore(subscribeViewMode, readViewMode, () => 'grid' as ViewMode);
-  const setViewMode = (next: ViewMode) => {
-    try {
-      window.localStorage.setItem(VIEW_MODE_KEY, next);
-    } catch {
-      // Không lưu được thì chỉ mất phần "nhớ", nút vẫn đổi chế độ.
-    }
-    viewModeFallback = next;
-    viewModeListeners.forEach((listener) => listener());
-  };
+  // Chế độ hiển thị dùng chung kho với nút chuyển ở hàng viên lọc (hero + thanh cố định).
+  const [viewMode] = useViewMode();
+  // Điện thoại (≤640px) không có chế độ danh sách (Figma "List - MB" chỉ có thẻ lưới): dù
+  // localStorage nhớ "list" từ desktop, ở đây luôn dựng thẻ lưới. Nút chuyển chỉ có ở desktop.
+  const isMobile = useIsMobile();
+  const effectiveViewMode: ViewMode = isMobile ? 'grid' : viewMode;
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
@@ -138,6 +107,15 @@ function MarketplaceResultsContent() {
     const removeFrom = (field: keyof MarketplaceFilters, value: string) => () =>
       setFilters({ [field]: (filters[field] as string[]).filter((v) => v !== value) });
 
+    // Nhu cầu (Tự lái / Có tài xế / Thuê dài hạn) là viên lọc ở hàng pill — hiện thành chip để
+    // khách thấy nó đang thu hẹp kết quả; gỡ thì bỏ luôn lộ trình đi kèm "Có tài xế".
+    if (filters.serviceType)
+      chips.push({
+        key: `service-${filters.serviceType}`,
+        label: domainLabel('serviceType', filters.serviceType),
+        onRemove: () => setFilters({ serviceType: undefined, routeType: undefined }),
+      });
+
     for (const v of filters.bodyType ?? [])
       chips.push({
         key: `body-${v}`,
@@ -159,7 +137,11 @@ function MarketplaceResultsContent() {
     for (const v of filters.transmission ?? [])
       chips.push({
         key: `trans-${v}`,
-        label: domainLabel('transmissionType', v, TRANSMISSION_TYPE_EXT_LABEL[v as TransmissionTypeExt] ?? v),
+        label: domainLabel(
+          'transmissionType',
+          v,
+          TRANSMISSION_TYPE_EXT_LABEL[v as TransmissionTypeExt] ?? v,
+        ),
         onRemove: removeFrom('transmission', v),
       });
     for (const v of filters.seats ?? [])
@@ -215,9 +197,13 @@ function MarketplaceResultsContent() {
     tFilters,
   ]);
 
-  /** Xoá đúng nhóm chip của panel Bộ lọc — giữ ngữ cảnh tìm kiếm (tỉnh/ngày/loại xe/dịch vụ). */
+  /** Xoá mọi chip đang hiện (bộ lọc + nhu cầu) — giữ ngữ cảnh tìm kiếm (tỉnh/ngày/loại xe). */
   function clearFacets() {
-    setFilters(Object.fromEntries(FACET_FILTER_KEYS.map((key) => [key, undefined])));
+    setFilters({
+      ...Object.fromEntries(FACET_FILTER_KEYS.map((key) => [key, undefined])),
+      serviceType: undefined,
+      routeType: undefined,
+    });
   }
 
   const hasActiveQuery = Boolean(
@@ -256,89 +242,73 @@ function MarketplaceResultsContent() {
 
       {/* Vùng kết quả tìm kiếm */}
       <div className={styles.container}>
-        {/* Toolbar kết quả: Tiêu đề + Vị trí + Sắp xếp + Chuyển Grid/List */}
-        <div className={styles.toolbar}>
-          <div className={styles.toolbarHeader}>
-            <div className={styles.toolbarLeft}>
-              <span className={styles.count} aria-live="polite">
-                {initialError
-                  ? tCommon('labels.emptyValue')
-                  : isInitialLoading
-                    ? t('searching')
-                    : filters.q
-                      ? t('availableFor', { count: total, q: filters.q })
-                      : t('foundCount', { count: total })}
-              </span>
-            </div>
-            {locationSubtitle ? (
-              <p className={styles.locationSubtitle}>{locationSubtitle}</p>
-            ) : null}
+        <div className={styles.infoBlock}>
+          {/*
+            Figma 19707:80489 › "Thông tin kết quả" (22230:58257): MỘT dòng - chip bộ lọc đang áp +
+            "↻ Xoá bộ lọc" bên trái, "Sắp xếp" bên phải. Số kết quả / khu vực không còn hiện, chỉ giữ
+            cho trình đọc màn hình; nút lưới/danh sách đã lên hàng viên lọc của hero.
+          */}
+          <div className={styles.srOnly} aria-live="polite">
+            <span>
+              {initialError
+                ? tCommon('labels.emptyValue')
+                : isInitialLoading
+                  ? t('searching')
+                  : filters.q
+                    ? t('availableFor', { count: total, q: filters.q })
+                    : t('foundCount', { count: total })}
+            </span>
+            {locationSubtitle ? <span> {locationSubtitle}</span> : null}
           </div>
 
-          <div className={styles.toolbarRight}>
-            <label className={styles.sort}>
-              <span className={styles.sortLabel}>{t('sortLabel')}</span>
-              <Select
-                value={sort}
-                onChange={(value: ListingSort) =>
-                  setFilters({ sort: value === DEFAULT_LISTING_SORT ? undefined : value })
-                }
-                options={LISTING_SORT_VALUES.map((value) => ({
-                  value,
-                  label: domainLabel('listingSort', value, LISTING_SORT_LABEL[value]),
-                }))}
-                className={styles.sortSelect}
-                size="large"
-                popupMatchSelectWidth={false}
-                aria-label={t('sortAriaLabel')}
-              />
-            </label>
+          <div className={styles.toolbar}>
+            {appliedChips.length > 0 ? (
+              <div className={styles.appliedRow}>
+                {appliedChips.map((chip) => (
+                  <button
+                    key={chip.key}
+                    type="button"
+                    className={styles.appliedChip}
+                    onClick={chip.onRemove}
+                    aria-label={t('removeFilter', { label: chip.label })}
+                  >
+                    {chip.label} <CloseOutlined className={styles.appliedX} />
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className={styles.clearAll}
+                  onClick={clearFacets}
+                  aria-label={t('clearAllAria')}
+                >
+                  {/* Figma "Rotate Right" vàng + "Xoá bộ lọc"; điện thoại chỉ còn icon, ghim mép phải. */}
+                  <LineIcon name="rotate-right" className={styles.clearAllIcon} />
+                  <span className={styles.clearAllText}>{t('clearFilters')}</span>
+                </button>
+              </div>
+            ) : null}
 
-            {/* Nút chuyển đổi View Mode: Grid (mặc định) & List */}
-            <div className={styles.viewModeGroup} role="group" aria-label={t('viewMode')}>
-              <button
-                type="button"
-                className={cx(styles.viewModeBtn, viewMode === 'grid' && styles.viewModeActive)}
-                onClick={() => setViewMode('grid')}
-                title={t('viewGrid')}
-                aria-label={t('viewGrid')}
-                aria-pressed={viewMode === 'grid'}
-              >
-                <AppstoreOutlined />
-              </button>
-              <button
-                type="button"
-                className={cx(styles.viewModeBtn, viewMode === 'list' && styles.viewModeActive)}
-                onClick={() => setViewMode('list')}
-                title={t('viewList')}
-                aria-label={t('viewList')}
-                aria-pressed={viewMode === 'list'}
-              >
-                <UnorderedListOutlined />
-              </button>
+            <div className={styles.toolbarRight}>
+              <label className={styles.sort}>
+                <span className={styles.sortLabel}>{t('sortLabel')}</span>
+                <Select
+                  value={sort}
+                  onChange={(value: ListingSort) =>
+                    setFilters({ sort: value === DEFAULT_LISTING_SORT ? undefined : value })
+                  }
+                  options={LISTING_SORT_VALUES.map((value) => ({
+                    value,
+                    label: domainLabel('listingSort', value, LISTING_SORT_LABEL[value]),
+                  }))}
+                  className={styles.sortSelect}
+                  popupMatchSelectWidth={false}
+                  suffixIcon={<LineIcon name="chevron-down" className={styles.sortCaret} />}
+                  aria-label={t('sortAriaLabel')}
+                />
+              </label>
             </div>
           </div>
         </div>
-
-        {/* Chip filter đang áp dụng */}
-        {appliedChips.length > 0 ? (
-          <div className={styles.appliedRow}>
-            {appliedChips.map((chip) => (
-              <button
-                key={chip.key}
-                type="button"
-                className={styles.appliedChip}
-                onClick={chip.onRemove}
-                aria-label={t('removeFilter', { label: chip.label })}
-              >
-                {chip.label} <CloseOutlined className={styles.appliedX} />
-              </button>
-            ))}
-            <button type="button" className={styles.clearAll} onClick={clearFacets}>
-              {t('clearAll')}
-            </button>
-          </div>
-        ) : null}
 
         {/* --- Thân kết quả: 4 trạng thái loại trừ nhau ----------------------------------- */}
         {initialError ? (
@@ -363,7 +333,12 @@ function MarketplaceResultsContent() {
             <div className={styles.stateBox}>
               {/* Hộp rỗng 160px của Figma "List - Scroll - Empty" (20063:60274). */}
               {/* eslint-disable-next-line @next/next/no-img-element -- SVG tĩnh trang trí */}
-              <img src="/illustrations/list-empty.svg" alt="" className={styles.stateArt} aria-hidden />
+              <img
+                src="/illustrations/list-empty.svg"
+                alt=""
+                className={styles.stateArt}
+                aria-hidden
+              />
               <h2 className={styles.stateTitle}>{t('emptyKeywordTitle', { q: filters.q })}</h2>
               <p className={styles.stateDesc}>{t('emptyKeywordDesc')}</p>
               <Button type="primary" onClick={() => setFilters({ q: undefined })}>
@@ -379,7 +354,12 @@ function MarketplaceResultsContent() {
             <div className={styles.stateBox}>
               {/* Hộp rỗng 160px của Figma "List - Scroll - Empty" (20063:60274). */}
               {/* eslint-disable-next-line @next/next/no-img-element -- SVG tĩnh trang trí */}
-              <img src="/illustrations/list-empty.svg" alt="" className={styles.stateArt} aria-hidden />
+              <img
+                src="/illustrations/list-empty.svg"
+                alt=""
+                className={styles.stateArt}
+                aria-hidden
+              />
               <h2 className={styles.stateTitle}>{t('emptyFilteredTitle')}</h2>
               <p className={styles.stateDesc}>{t('emptyFilteredDesc')}</p>
               <Button type="primary" onClick={clearFacets}>
@@ -393,7 +373,12 @@ function MarketplaceResultsContent() {
             <div className={styles.stateBox}>
               {/* Hộp rỗng 160px của Figma "List - Scroll - Empty" (20063:60274). */}
               {/* eslint-disable-next-line @next/next/no-img-element -- SVG tĩnh trang trí */}
-              <img src="/illustrations/list-empty.svg" alt="" className={styles.stateArt} aria-hidden />
+              <img
+                src="/illustrations/list-empty.svg"
+                alt=""
+                className={styles.stateArt}
+                aria-hidden
+              />
               <h2 className={styles.stateTitle}>{t('emptySystemTitle')}</h2>
               <p className={styles.stateDesc}>{t('emptySystemDesc')}</p>
             </div>
@@ -401,7 +386,7 @@ function MarketplaceResultsContent() {
         ) : (
           <>
             {/* Hiển thị danh sách xe theo dạng Thẻ (Grid) hoặc Danh sách (List) */}
-            {viewMode === 'grid' ? (
+            {effectiveViewMode === 'grid' ? (
               <ul className={cx(styles.grid, staggerFastClass, viewEnterClass)}>
                 {listings.map((listing) => (
                   <li key={listing.id} className={styles.cell}>

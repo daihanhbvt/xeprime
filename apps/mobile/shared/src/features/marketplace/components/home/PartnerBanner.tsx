@@ -2,8 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Linking, Text as NativeText, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
-import Animated, { useSharedValue, type SharedValue } from 'react-native-reanimated';
-import { useParallaxHeader } from '@/components/motion/use-parallax-header';
+import { useState } from 'react';
+import Animated, {
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { SUPPORT_HOTLINE } from '@xeprime/types';
@@ -16,10 +21,10 @@ import { FONT_FAMILY } from '@/theme/fonts';
 import { fontSize, fontWeight, gradients, market, space } from '@/theme/tokens';
 
 const BENEFITS = ['income', 'support', 'customers'] as const;
-/** Lề tràn của ảnh nền = trần trôi parallax (dp). */
-const BACKDROP_OVERSCAN = 160;
-/** Trôi chậm hơn banner đầu trang — khối giữa trang, ảnh nền cố định trong khung. */
-const BACKDROP_PARALLAX = 0.4;
+/** `speed` của `ParallaxBackdrop` web: ảnh đi tối đa 1 - 0.3 quãng cuộn. */
+const BACKDROP_SPEED = 0.3;
+/** Tỉ lệ cao/rộng ảnh nền mặc định (`partner-v7-mobile.webp` 780×2600); ảnh admin đọc lúc tải. */
+const DEFAULT_BACKDROP_RATIO = 2600 / 780;
 /** Logo rộng 164 (Figma MB `22059:15628`). */
 const LOGO_WIDTH = 164;
 const logoRatio = logoWidth(1000) / 1000;
@@ -38,14 +43,9 @@ const CTA_TEXT = XP_TOKENS['color-primary-contrast'];
 
 const styles = StyleSheet.create({
   backdrop: { ...StyleSheet.absoluteFillObject },
-  /** Ảnh nền tràn lề trên/dưới `BACKDROP_OVERSCAN` để trôi parallax không hở mép. */
-  backdropParallax: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: -BACKDROP_OVERSCAN,
-    bottom: -BACKDROP_OVERSCAN,
-  },
+  /** Lớp ảnh canh giữa khung, cao ĐÚNG tỉ lệ ảnh (không phóng) - phần dư là quãng trôi. */
+  backdropLayer: { position: 'absolute', left: 0, right: 0, top: '50%' },
+  backdropImage: { width: '100%', height: '100%' },
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -87,19 +87,33 @@ export function PartnerBanner({
   banner?: PublicBanner | null;
 } = {}) {
   const t = useTranslations('Home.partner');
-  const { height: windowHeight } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const reduceMotion = useReducedMotion();
+  const [ratio, setRatio] = useState(DEFAULT_BACKDROP_RATIO);
+  // Dải tràn hết bề ngang màn ⇒ bề rộng lớp ảnh = bề rộng cửa sổ.
+  const layerHeight = windowWidth * ratio;
+  const bannerHeight = useSharedValue(0);
   const fallbackScroll = useSharedValue(0);
   const fallbackOffset = useSharedValue(0);
-  const backdropStyle = useParallaxHeader(parallax?.scrollY ?? fallbackScroll, {
-    offset: parallax?.offset ?? fallbackOffset,
-    baseOffset: parallax?.baseOffset,
-    factor: BACKDROP_PARALLAX,
-    enterDistance: windowHeight,
-    maxShift: BACKDROP_OVERSCAN,
-    // PHÓNG lên chứ không co: ảnh co còn 0.92 lộ dải nền ở hai mép (khối tràn hết bề ngang,
-    // không có lề che). Phóng 1 → 1.06 giữ cảm giác chuyển động mà ảnh luôn phủ kín khung.
-    minScale: 1.1,
-  });
+  const scrollY = parallax?.scrollY ?? fallbackScroll;
+  const offset = parallax?.offset ?? fallbackOffset;
+  const baseOffset = parallax?.baseOffset;
+  const animate = Boolean(parallax) && !reduceMotion;
+
+  // Bản UI-thread của `ParallaxBackdrop` web: dịch THẲNG theo cuộn (không nội suy), liên tục suốt
+  // lượt khung đi qua màn, kẹp trong phần ảnh dư nên không bao giờ hở mép.
+  const backdropStyle = useAnimatedStyle(() => {
+    const h = bannerHeight.value;
+    let shift = 0;
+    if (animate && h > 0) {
+      const maxShift = Math.max(0, (layerHeight - h) / 2);
+      const factor = Math.min(1 - BACKDROP_SPEED, maxShift / ((windowHeight + h) / 2));
+      const top = (baseOffset?.value ?? 0) + offset.value - scrollY.value;
+      const centerOffset = top - (windowHeight - h) / 2;
+      shift = Math.max(-maxShift, Math.min(maxShift, -centerOffset * factor));
+    }
+    return { transform: [{ translateY: -layerHeight / 2 + shift }] };
+  }, [animate, layerHeight, windowHeight]);
 
   /*
    * Web ≤1024px: dải TRÀN hết bề ngang (không bo góc), đệm 40/16, các khối cách 24, thứ tự
@@ -115,17 +129,24 @@ export function PartnerBanner({
       py={toPx(XP_TOKENS['space-partner-mb-y'])}
       gap={space.md}
       ai="flex-start"
+      onLayout={(e) => {
+        bannerHeight.value = e.nativeEvent.layout.height;
+      }}
     >
-      {/* Ảnh nền trôi chậm + co/mờ khi cuộn qua (UI thread, `useParallaxHeader`); lớp phủ tối ở trên giữ chữ đọc được. */}
-      <Animated.View style={[styles.backdropParallax, parallax ? backdropStyle : null]} pointerEvents="none">
+      {/* Ảnh nền trôi chậm khi cuộn qua (UI thread, như `ParallaxBackdrop` web); lớp phủ tối ở trên giữ chữ đọc được. */}
+      <Animated.View style={[styles.backdropLayer, { height: layerHeight }, backdropStyle]} pointerEvents="none">
         <Image
           source={
             banner
               ? { uri: webAssetUrl(banner.mobileImageUrl ?? banner.tabletImageUrl ?? banner.imageUrl) }
               : images.homePartnerBackdrop
           }
-          style={styles.backdrop}
+          style={styles.backdropImage}
           contentFit="cover"
+          onLoad={(e) => {
+            const { width, height } = e.source;
+            if (width > 0 && height > 0) setRatio(height / width);
+          }}
           accessibilityElementsHidden
         />
       </Animated.View>

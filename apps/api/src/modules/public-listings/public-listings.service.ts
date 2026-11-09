@@ -17,6 +17,7 @@ import {
   PUBLIC_CACHE_SECONDS,
   REVIEW_STATUS,
   SEAT_BUCKET_VALUES,
+  COLLATERAL_MODE,
   SERVICE_TYPE,
   TENANT_STATUS,
   hasVehicleServiceSettings,
@@ -1460,7 +1461,9 @@ export class PublicListingsService {
       withDriverInterCityPrice: v.withDriverInterCityPrice as unknown as string | null,
       withDriverOneWayPrice: v.withDriverOneWayPrice as unknown as string | null,
       deliveryEnabled: v.deliveryEnabled,
-      noCollateral: v.noCollateral,
+      // Cùng nguồn với khối "Điều kiện bảo đảm" bên dưới: chính sách hiệu lực thắng cờ lưu sẵn (cờ có
+      // thể cũ - lỗi 09/11/2026: thẻ xe báo "Miễn thế chấp" mà trang chi tiết không có).
+      noCollateral: policy ? policy.values.collateralMode === COLLATERAL_MODE.NONE : v.noCollateral,
       vatInvoiceSupported: v.tenant.vatInvoiceSupported,
       discountPercent: v.discountPercent,
       shopName: storefront.name,

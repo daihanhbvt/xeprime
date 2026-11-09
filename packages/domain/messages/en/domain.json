@@ -1311,6 +1311,10 @@
       "update_role": "Change member role",
       "remove": "Remove member"
     },
+    "membership": {
+      "lock_after_plan_lapse": "Lock members after the shop plan lapsed",
+      "restore_after_plan": "Restore members when the plan is reactivated"
+    },
     "payment": {
       "record": "Record payment",
       "void": "Void payment"
@@ -1421,6 +1425,7 @@
       "marketplace_visibility": {
         "update": "Change marketplace visibility"
       },
+      "marketplace_paused_by_plan": "Hide vehicle from marketplace: no plan slot left",
       "operation_settings": {
         "update": "Update operation settings"
       },

@@ -1,4 +1,4 @@
-import { CATALOG_TYPE, SERVICE_TYPE } from '@xeprime/types';
+import { CATALOG_TYPE, COLLATERAL_MODE, SERVICE_TYPE } from '@xeprime/types';
 import { LIST_SEPARATOR, isNewListing, mapExternalUrl, toGeoPoint } from '@xeprime/domain';
 import { catalogLabel, type CatalogMap } from '@/features/catalog/types';
 import { StaticMapImage } from '@/components/data-display/StaticMapImage';
@@ -14,6 +14,7 @@ import { pickupMapSrc } from '../api';
 import { marketplaceSearchHref } from '../filter-params';
 import type { PublicListingDetail } from '../types';
 import { ListingGallery } from './ListingGallery';
+import { AmenityChips, listingAmenityItems } from './PhotoAmenityPills';
 import { ListingReviews } from './ListingReviews';
 import { ListingSpecsCard, type ListingSpecItem } from './ListingSpecsCard';
 import { ListingBenefitsCard } from './ListingBenefitsCard';
@@ -134,6 +135,22 @@ export async function ListingDetailView({
       : services.includes(SERVICE_TYPE.SELF_DRIVE)
         ? SERVICE_TYPE.SELF_DRIVE
         : (services[0] ?? SERVICE_TYPE.SELF_DRIVE);
+  // Hàng nhãn tiện ích dưới địa chỉ (Figma `22226:30044`) - cùng nguồn với thẻ xe, riêng trang
+  // chi tiết có thêm viên "Hỗ trợ xuất hoá đơn VAT" ở mép phải.
+  const amenities = listingAmenityItems(
+    {
+      ...listing,
+      // Cờ lưu sẵn có thể cũ - suy từ chính sách cọc hiệu lực khi có.
+      noCollateral: listing.collateral
+        ? listing.collateral.mode === COLLATERAL_MODE.NONE
+        : listing.noCollateral,
+    },
+    (listing.instantBookServiceTypes ?? []).some((type) => type === activeService),
+    (key) => (key === 'vatInvoice' ? t('vatInvoice.badge') : tCard(key)),
+    { includeVat: true },
+  );
+  const perks = amenities.filter((item) => item.key !== 'vat');
+  const vatChip = amenities.filter((item) => item.key === 'vat');
 
   return (
     <div className={styles.wrap}>
@@ -170,9 +187,6 @@ export async function ListingDetailView({
                   {isNewListing(listing) ? (
                     <span className={styles.badgeNew}>{tCard('newVehicle')}</span>
                   ) : null}
-                  {listing.vatInvoiceSupported ? (
-                    <span className={styles.amenityBadge}>{t('vatInvoice.badge')}</span>
-                  ) : null}
                 </div>
                 <ListingHeaderActions vehicleId={listing.id} vehicleName={listing.name} />
               </div>
@@ -195,6 +209,13 @@ export async function ListingDetailView({
                     <circle cx="12" cy="10" r="3" />
                   </svg>
                   <span>{locationLine}</span>
+                </div>
+              ) : null}
+
+              {amenities.length > 0 ? (
+                <div className={styles.amenityRow}>
+                  <AmenityChips items={perks} label={tCard('amenitiesLabel')} />
+                  <AmenityChips items={vatChip} className={styles.amenityVat} />
                 </div>
               ) : null}
             </div>

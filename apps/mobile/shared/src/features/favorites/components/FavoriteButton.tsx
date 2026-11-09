@@ -12,7 +12,7 @@ import { spring } from '@/theme/motion';
 import { LineIcon } from '@/components/icons/LineIcon';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { useAppScheme, useColors } from '@/theme/ThemeProvider';
+import { useColors } from '@/theme/ThemeProvider';
 import { radius, sizing, space } from '@/theme/tokens';
 import { haptics } from '@/lib/haptics';
 import { useFavoriteToggle } from '../hooks/use-favorite';
@@ -20,8 +20,8 @@ import { useFavoriteToggle } from '../hooks/use-favorite';
 /**
  * Ba dáng của trái tim — mỗi dáng là một class của web:
  *
- * - `photo` — đè lên ẢNH thẻ xe chợ (`VehicleCard.module.css` `.favoriteBtn`): đĩa 32, nền trắng mờ
- *   CỐ ĐỊNH ở cả hai giao diện (nằm trên ảnh, không trên nền trang), icon 15.
+ * - `photo` — đè lên ẢNH thẻ xe chợ (`VehicleCard.module.css` `.favoriteBtn`): đĩa 32, nền Figma gray-900 10%
+ *   CỐ ĐỊNH ở cả hai giao diện (nằm trên ảnh), tim trắng 20.
  * - `card` — đè lên ảnh thẻ Xe yêu thích (`FavoriteVehicleCard.module.css` `.heartBtn`): đĩa 32, nền
  *   `bg-elevated`, viền `border-subtle`, icon 15.
  * - `action` — cạnh nút Chia sẻ ở trang chi tiết (`ListingDetailView.module.css` `.actionBtn`): đĩa
@@ -35,10 +35,9 @@ export type FavoriteButtonVariant = 'photo' | 'card' | 'action' | 'list';
  * Nền/viền đĩa trên ẢNH — web viết thẳng `rgba(255,255,255,0.9)` / `rgba(0,0,0,0.06)`, không token
  * nào mang: chúng là màu "trên ảnh", không đổi theo giao diện sáng/tối.
  */
-const PHOTO_DISC_BG = 'rgba(255, 255, 255, 0.9)';
-const PHOTO_DISC_BORDER = 'rgba(0, 0, 0, 0.06)';
-/* Giao diện tối — web `[data-theme=dark] .favoriteBtn`: đĩa trắng 16% không viền, tim theo màu chữ (sáng). */
-const PHOTO_DISC_BG_DARK = 'rgba(255, 255, 255, 0.16)';
+/* Figma `22185:88916` "Favorites Button": đĩa gray-900 10% (web thêm blur 6px), đệm 6, tim trắng 20 - cả hai giao diện. */
+const PHOTO_DISC_BG = 'rgba(16, 24, 40, 0.1)';
+const PHOTO_HEART = '#ffffff';
 
 /* Đĩa của thẻ ngang — web viết thẳng hai màu mờ này ở `.listFavoriteBtn` (không có token, không đổi theo theme). */
 const LIST_DISC_BG = 'rgba(0, 0, 0, 0.03)';
@@ -46,11 +45,11 @@ const LIST_DISC_BORDER = 'rgba(0, 0, 0, 0.08)';
 
 /*
  * `action` = `.actionBtn` của chi tiết xe web ở ≤640px (bản mobile của mockup): đĩa 32, icon 16,
- * vùng chạm 44 qua `hitSlop`. `photo`/`card` = `.favoriteBtn`/`.heartBtn` của thẻ xe (đĩa 32, icon 15).
+ * vùng chạm 44 qua `hitSlop`. `photo`/`card` = `.favoriteBtn`/`.heartBtn` của thẻ xe (đĩa 32 kính tối mờ, tim trắng 20 - Figma `22185:88916`).
  */
 const DISC = { photo: 32, card: 32, action: 32, list: 32 } as const;
 /** Cỡ trái tim — bộ `LineIcon` vẽ trong khung 20, nên nhích 1–2px so với bản Ionicons để nét không mảnh hơn. */
-const ICON = { photo: 17, card: 17, action: 18, list: 17 } as const;
+const ICON = { photo: 20, card: 17, action: 18, list: 17 } as const;
 
 /*
  * Hằng cục bộ của hiệu ứng "pop + vòng lan toả" (06/11/2026) — hợp nhất vào `theme/motion` sau.
@@ -77,7 +76,6 @@ export function FavoriteButton({
   variant: FavoriteButtonVariant;
 }) {
   const colors = useColors();
-  const dark = useAppScheme().scheme === 'dark';
   const t = useTranslations('Favorites.button');
   const { isFavorite, toggle } = useFavoriteToggle(vehicleId);
   const label = isFavorite ? t('remove', { name: vehicleName }) : t('save', { name: vehicleName });
@@ -109,13 +107,10 @@ export function FavoriteButton({
     opacity: ringOpacity.value,
     transform: [{ scale: ringScale.value }],
   }));
-  const photoDark = variant === 'photo' && dark;
-  const iconColor = isFavorite ? colors.danger : photoDark ? colors.text : colors.textMuted;
+  const iconColor = isFavorite ? colors.danger : variant === 'photo' ? PHOTO_HEART : colors.textMuted;
   const skin =
     variant === 'photo'
-      ? photoDark
-        ? { bg: PHOTO_DISC_BG_DARK, bc: 'transparent' }
-        : { bg: PHOTO_DISC_BG, bc: PHOTO_DISC_BORDER }
+      ? { bg: PHOTO_DISC_BG, bc: 'transparent' }
       : variant === 'list'
         ? { bg: LIST_DISC_BG, bc: LIST_DISC_BORDER }
         : variant === 'card'

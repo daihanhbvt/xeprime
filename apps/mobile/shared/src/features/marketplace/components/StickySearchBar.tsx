@@ -66,7 +66,7 @@ export function StickySearchBar({
   /**
    * ĐỊNH DẠNG CHUẨN mốc nhận/trả, CÓ GIỜ: "T2, 09/11  15h35" (`fmt.rentalPoint`) - cùng một kiểu với
    * mọi màn khác (user chốt 09/11/2026: thanh gọn cũng phải có giờ). Thiếu chỗ thì chữ tự co nhẹ
-   * (`adjustsFontSizeToFit`) thay vì cắt "…" mất giờ.
+   * - KHÔNG tự co chữ (máy thật co quá nhỏ, khó đọc - 09/11/2026): thiếu chỗ thì cắt "…".
    */
   const day = (value: Dayjs | null) => (value ? fmt.rentalPoint(value) : '');
 
@@ -147,8 +147,7 @@ export function StickySearchBar({
                 col={colors.text}
                 fos={fontSize.bodySm}
                 numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.75}
+                ellipsizeMode="tail"
                 flexShrink={1}
               >
                 {day(draft.rental.pickupAt)}
@@ -158,8 +157,7 @@ export function StickySearchBar({
                 col={colors.text}
                 fos={fontSize.bodySm}
                 numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.75}
+                ellipsizeMode="tail"
                 flexShrink={1}
               >
                 {day(draft.rental.returnAt)}

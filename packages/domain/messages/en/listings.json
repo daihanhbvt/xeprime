@@ -15,7 +15,6 @@
     "delivery": "Delivery",
     "noCollateral": "No collateral",
     "vatInvoice": "VAT invoice",
-    "includesDriver": "driver included",
     "contactForQuote": "Contact for a quote",
     "extraServices": "+{count}",
     "priceDaily": "<amount>{value}</amount><unit>/day</unit>",
@@ -25,6 +24,7 @@
     "instantBook": "Auto-approved",
     "photoCount": "+{count}",
     "photoCountAria": "{count, plural, one {# photo} other {# photos}}",
+    "amenitiesLabel": "Vehicle perks",
     "locationLine": "{ward}, {province}",
     "specsLabel": "Car specs",
     "ratingValue": "{rating} <muted>({count})</muted>",
@@ -119,6 +119,7 @@
       "less": "Show less"
     },
     "gallery": {
+      "amenitiesLabel": "Vehicle perks",
       "photoAlt": "{name} - photo {index}",
       "pager": "Choose a vehicle photo",
       "goTo": "Photo {index} of {total}",

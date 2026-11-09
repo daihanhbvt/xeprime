@@ -178,7 +178,7 @@ describe('VehicleCard', () => {
     expect(detailLink().getAttribute('href')).toBe('/listings/V1?serviceType=with_driver');
   });
 
-  it('lọc có tài xế + xe có giá tài xế → giá đã gồm tài xế và giữ đúng service trong link', () => {
+  it('lọc có tài xế + xe có giá tài xế → hiện giá có tài xế và giữ đúng service trong link', () => {
     filters.value = { serviceType: 'with_driver' } as typeof filters.value;
     const withDriver = {
       ...LISTING,
@@ -187,7 +187,8 @@ describe('VehicleCard', () => {
     } as unknown as PublicListing;
     render(<VehicleCard listing={withDriver} />);
     expect(screen.getByText('1,3tr')).toBeTruthy();
-    expect(screen.getByText('đã gồm tài xế')).toBeTruthy();
+    // Nhãn "đã gồm tài xế" đã bỏ khỏi thẻ (09/11/2026) - giá đúng dịch vụ là đủ.
+    expect(screen.queryByText('đã gồm tài xế')).toBeNull();
     expect(detailLink().getAttribute('href')).toBe('/listings/V1?serviceType=with_driver');
   });
 
@@ -271,23 +272,22 @@ describe('VehicleCard', () => {
     expect(clipped.contains(mark)).toBe(false);
   });
 
-  it('hoá đơn VAT (ADR 0059): chỉ gắn nhãn khi chủ xe đã bật - false không có nhãn phủ định', () => {
+  it('hoá đơn VAT (ADR 0059): thẻ xe KHÔNG gắn nhãn VAT - nhãn chỉ ở trang chi tiết (09/11/2026)', () => {
     const { rerender } = render(<VehicleCard listing={LISTING} />);
     expect(screen.queryByText(/hoá đơn VAT/i)).toBeNull();
 
     rerender(<VehicleCard listing={{ ...LISTING, vatInvoiceSupported: true }} />);
-    expect(screen.getByText('Xuất hoá đơn VAT')).toBeTruthy();
+    expect(screen.queryByText(/hoá đơn VAT/i)).toBeNull();
   });
 
-  it('không để lại vùng hành động rỗng ở chân thẻ - giá nằm trên, dòng chủ xe chốt đáy', () => {
+  it('không để lại vùng hành động rỗng ở chân thẻ - chủ xe và giá chung hàng đáy', () => {
     const { container } = render(<VehicleCard listing={LISTING} />);
-    // Figma list v2 (`21636:46969`): hàng điểm + giá rồi tới dòng chủ xe ở đáy — không còn
+    // Figma card v3 (`22185:87092`): hàng đáy = chủ xe bên trái + giá bên phải - không còn
     // khối trống nơi nút thuê từng đứng.
     const body = container.querySelector('article > div:last-child');
     const last = body?.lastElementChild;
-    const beforeLast = last?.previousElementSibling;
     expect(last?.textContent).toContain(LISTING.shopName);
-    expect(beforeLast?.textContent).toContain('1,05tr');
+    expect(last?.textContent).toContain('1,05tr');
   });
 });
 

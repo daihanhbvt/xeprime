@@ -32,6 +32,7 @@ import {
   ROUTE_TYPE,
   SERVICE_TYPE,
   type ServiceType,
+  COLLATERAL_MODE,
 } from '@xeprime/types';
 import {
   applyDiscountPercent,
@@ -74,6 +75,10 @@ import { FeatureItem } from './components/FeatureChip';
 import { HomeCarousel } from './components/home/HomeCarousel';
 import { STAR_ART } from './components/home/home-art';
 import { ListingGalleryThumbs } from './components/ListingGalleryThumbs';
+import {
+  AmenityChips,
+  listingAmenityItems,
+} from './components/PhotoAmenityPills';
 import { PhotoViewer } from '@/components/ui/PhotoViewer';
 import { ListingBenefitsCard } from './components/ListingBenefitsCard';
 import {
@@ -596,7 +601,6 @@ function DetailBody({
                 {listing.name}
               </Text>
               {isNewVehicle ? <NewVehicleBadge /> : null}
-              {listing.vatInvoiceSupported ? <Badge label={t('vatInvoice.badge')} /> : null}
             </XStack>
             {/* Vùng Chia sẻ & Yêu thích — cụm `.actionIcons` của `ListingHeaderActions` web ≤640px: gap space-12. */}
             <XStack gap={ACTION_GAP}>
@@ -639,6 +643,23 @@ function DetailBody({
               </Text>
             </XStack>
           ) : null}
+
+          {/* Hàng nhãn tiện ích dưới địa chỉ (Figma `22226:30044`, web `.amenityRow`) - riêng trang
+              chi tiết có thêm viên "Hỗ trợ xuất hoá đơn VAT". */}
+          <AmenityChips
+            items={listingAmenityItems(
+              {
+                ...listing,
+                // Cờ lưu sẵn có thể cũ - suy từ chính sách cọc hiệu lực khi có.
+                noCollateral: listing.collateral
+                  ? listing.collateral.mode === COLLATERAL_MODE.NONE
+                  : listing.noCollateral,
+              },
+              (listing.instantBookServiceTypes ?? []).some((type) => type === activeService),
+              (key) => (key === 'vatInvoice' ? t('vatInvoice.badge') : tCard(key)),
+              { includeVat: true },
+            )}
+          />
 
           {specs.length > 0 ? (
             /* Web `ListingSpecsCard` (Figma `19771:72494`) ở ≤640px: lưới 2 × 2, hàng cách 16; vòng
@@ -1233,33 +1254,5 @@ function PickupPointCard({
         />
       ) : null}
     </YStack>
-  );
-}
-
-/**
- * Nhãn cạnh tên xe — `.badgeNew` / `.amenityBadge` của web: đệm 2 × 8, bo `card` (16), chữ 12
- * Medium. "Xe mới" nền `success-bg` chữ `success`; nhãn tiện ích nền `primary-subtle` chữ
- * `primary-hover`.
- */
-function Badge({ label, tone = 'brand' }: { label: string; tone?: 'brand' | 'success' }) {
-  const colors = useColors();
-  const success = tone === 'success';
-  return (
-    <XStack
-      bg={success ? colors.successSurface : colors.primarySubtle}
-      bw={1}
-      bc={success ? colors.successBorder : colors.primaryLight}
-      br={radius.card}
-      px={space.sm}
-      py={2}
-    >
-      <Text
-        col={success ? colors.success : colors.brandText}
-        fos={fontSize.bodySm}
-        fow={fontWeight.medium}
-      >
-        {label}
-      </Text>
-    </XStack>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { HeartFilled, HeartOutlined } from '@ant-design/icons';
+import { HeartIcon } from '@/components/icons/HeartIcon';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { cx } from '@/lib/cx';
@@ -58,7 +58,7 @@ export function FavoriteButton({
       onClick={onClick}
     >
       <span key={burst} className={cx(styles.icon, burst > 0 && isFavorite && styles.pop)}>
-        {isFavorite ? <HeartFilled aria-hidden /> : <HeartOutlined aria-hidden />}
+        <HeartIcon filled={isFavorite} />
         {burst > 0 && isFavorite ? <span className={styles.ring} aria-hidden="true" /> : null}
       </span>
     </button>

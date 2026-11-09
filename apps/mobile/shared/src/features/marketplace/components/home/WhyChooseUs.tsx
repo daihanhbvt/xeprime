@@ -30,6 +30,8 @@ const ICON_SCALE = ICON_BOX / 32;
 /** Ảnh tĩnh 532×488 (web `/home/why-image.png`); góc dưới-trái trong suốt là chỗ của ô số. */
 const IMAGE_RATIO = 532 / 488;
 /** Ô số chiếm 173 × 124 của ảnh 532 × 488 — tính ra px theo bề ngang ảnh (RN không co % đúng cho ô tuyệt đối). */
+const IMAGE_MAX_WIDTH = 532;
+const TABLET_MIN_WIDTH = 768;
 const STAT_RATIO = { width: 173 / 532, height: 124 / 488 };
 
 /**
@@ -46,8 +48,15 @@ export function WhyChooseUs() {
   const onDarkMuted = XP_TOKENS['color-text-on-dark-muted'];
   const t = useTranslations('Home.why');
   const { width } = useWindowDimensions();
-  const imageWidth = width - layout.screenX * 2;
+  // Máy tính bảng / điện thoại lớn: ảnh không giãn quá cỡ Figma desktop (532) để không vỡ nét,
+  // canh giữa. Cỡ chữ ô số co theo bề ngang ảnh để vừa ô ở máy nhỏ (≤ 360) lẫn tablet.
+  const imageWidth = Math.min(width - layout.screenX * 2, IMAGE_MAX_WIDTH);
   const imageHeight = imageWidth / IMAGE_RATIO;
+  const statScale = Math.min(Math.max(imageWidth / 343, 0.8), 1.3);
+  const statValueSize = Math.round(fontSize.h1 * statScale);
+  const statLabelSize = Math.round(fontSize.bodySm * statScale);
+  // Tablet: bốn cam kết chia 4 cột (hai cột trên tablet rất thưa); điện thoại giữ 2 × 2.
+  const cellBasis = width >= TABLET_MIN_WIDTH ? '22%' : '40%';
 
   return (
     <YStack gap={28}>
@@ -73,7 +82,7 @@ export function WhyChooseUs() {
       <XStack flexWrap="wrap" rowGap={space.md} columnGap={space.md}>
         {ITEMS.map((item, index) => (
           // Mỗi ô tự hiện khi CHÍNH NÓ cuộn vào màn (không theo đầu khối); trễ nhỏ theo cột.
-          <ScrollReveal key={item.key} index={index} style={styles.cell}>
+          <ScrollReveal key={item.key} index={index} style={[styles.cell, { flexBasis: cellBasis }]}>
           <YStack ai="center" gap={12}>
             <IconBounce index={index % 2}>
             <YStack p={12} br={radius.pill} bg={colors.primarySubtle}>
@@ -104,7 +113,7 @@ export function WhyChooseUs() {
       {/* Parallax nhẹ khi cuộn: cả khối ảnh + ô "100+" trôi chậm - đo ở khung ngoài đứng yên. */}
       <Animated.View ref={parallax.ref} collapsable={false}>
       <Animated.View style={parallax.style}>
-      <YStack w="100%" aspectRatio={IMAGE_RATIO}>
+      <YStack w={imageWidth} aspectRatio={IMAGE_RATIO} als="center">
         <Animated.View style={StyleSheet.absoluteFill} pointerEvents="box-none">
         <ImageBackground
           source={require('../../../../../assets/images/home/why-stat-bg.png')}
@@ -117,13 +126,13 @@ export function WhyChooseUs() {
             width: Math.round(imageWidth * STAT_RATIO.width),
             height: Math.round(imageHeight * STAT_RATIO.height),
             justifyContent: 'center',
-            padding: 12,
+            padding: Math.round(12 * statScale),
           }}
         >
-          <Text col={market.onDark} fos={fontSize.h1} lh={38} fow={fontWeight.semibold}>
+          <Text col={market.onDark} fos={statValueSize} lh={Math.round(statValueSize * 1.2)} fow={fontWeight.semibold}>
             <RevealCountUp text={t('statValue')} />
           </Text>
-          <Text col={market.onDark} fos={fontSize.bodySm} lh={18} fow={fontWeight.medium}>
+          <Text col={market.onDark} fos={statLabelSize} lh={Math.round(statLabelSize * 1.4)} numberOfLines={2} fow={fontWeight.medium}>
             {t('statLabel')}
           </Text>
         </ImageBackground>
@@ -151,5 +160,5 @@ function IconBounce({ index, children }: { index: number; children: ReactNode })
 
 const styles = StyleSheet.create({
   fill: { width: '100%', height: '100%' },
-  cell: { flexBasis: '40%', flexGrow: 1 },
+  cell: { flexGrow: 1 },
 });

@@ -332,7 +332,9 @@ beforeAll(async () => {
 
   // Uy tín là dữ liệu của GIAN HÀNG, nên nó chỉ vào điểm ở lượt tính lại tiếp theo.
   await refreshListingRankScore(prisma);
-});
+  // Hàng chục lượt seed tuần tự: chạy chung 4 worker trên một DB thì vượt mức 5s mặc định của hook,
+  // và hook quá hạn vẫn chạy tiếp — `afterAll` dọn dở giữa chừng rồi đổ lỗi khoá ngoại.
+}, 60_000);
 
 afterAll(async () => {
   if (dbAvailable) {

@@ -25,23 +25,23 @@
   inset: 0;
 }
 
-/* Ảnh nền trôi theo cuộn (`sectionParallaxClass`): lớp ảnh DƯ 34% trên/dưới khung để quãng trôi
-   20% (của chính lớp ảnh, ≈ 33% khung) không bao giờ lộ nền. Chỉ khi trình duyệt chạy được hiệu ứng - không
-   hỗ trợ thì giữ khít khung như cũ. Khung `.banner` cắt phần dư (`overflow: clip`). */
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .backdrop {
-      inset: -34% 0;
-    }
-  }
-}
-
 .backdropImage {
   object-fit: cover;
 }
 
-.backdropMobile {
+.backdropMobile,
+.backdropTablet {
   display: none;
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .backdropDesktop {
+    display: none;
+  }
+
+  .backdropTablet {
+    display: block;
+  }
 }
 
 /* Ảnh admin (`<picture>`) phủ kín dải như ảnh mặc định. */
@@ -280,4 +280,40 @@
     font-size: var(--xp-font-size-body-sm);
     line-height: var(--xp-line-height-body-sm);
   }
+}
+
+/* ─── Chuyển động: ảnh nền trôi kiểu jarallax (`ParallaxBackdrop`) ───────────────
+ * Lớp ảnh canh GIỮA dải, cao ĐÚNG tỉ lệ ảnh - không phóng to. Ảnh làm sẵn cao hơn dải để có quãng
+ * trôi (khổ khuyến nghị ở `PARTNER_BANNER_SLOTS`): PC 1440×1500 · tablet 1024×1400 · mobile 390×1300.
+ * Ảnh admin cùng khổ trôi y hệt; ảnh thấp hơn thì trôi ít hơn (không bao giờ lộ nền).
+ */
+.backdrop {
+  top: 50%;
+  bottom: auto;
+  height: max(100%, 104.17vw);
+  translate: 0 -50%;
+  will-change: transform;
+}
+
+@media (min-width: 1441px) {
+  .backdrop {
+    height: max(100%, 1500px);
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .backdrop {
+    height: max(100%, 136.72vw);
+  }
+}
+
+@media (max-width: 640px) {
+  .backdrop {
+    height: max(100%, 333.33vw);
+  }
+}
+
+/* JS đã gồm -50% trong `transform` ⇒ bỏ `translate` để không trừ hai lần. */
+.backdrop[style*='transform'] {
+  translate: none;
 }

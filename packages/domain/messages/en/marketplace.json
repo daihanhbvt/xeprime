@@ -142,7 +142,7 @@
     "emptyKeywordDesc": "Try a shorter term - just the make or model (e.g. “vios”, “vf8”), or the owner's name. Accents are optional.",
     "clearKeyword": "Clear search",
     "keyword": {
-      "placeholder": "Search by vehicle, owner or shop",
+      "placeholder": "Type to search vehicle types, shop owners,...",
       "ariaLabel": "Search vehicles by vehicle, owner or shop name",
       "hostsGroup": "Owners & shops",
       "shop": "Shop",
@@ -151,7 +151,16 @@
       "vehicleCount": "{count, plural, one {# vehicle} other {# vehicles}}",
       "searchAll": "See all vehicles matching “{q}”"
     },
-    "viewMode": "View mode"
+    "viewMode": "View mode",
+    "quickPills": {
+      "bodyType": "Body type",
+      "priceRange": "Price range",
+      "seats": "Seats",
+      "scrollMore": "More filters",
+      "scrollPrev": "Previous filters"
+    },
+    "clearAllAria": "Clear all filters",
+    "clearFilters": "Clear filters"
   },
   "filterPanel": {
     "title": "Filters",

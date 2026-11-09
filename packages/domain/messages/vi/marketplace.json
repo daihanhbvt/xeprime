@@ -142,7 +142,7 @@
     "emptyKeywordDesc": "Thử gõ ngắn hơn - chỉ tên hãng hoặc dòng xe (vd. “vios”, “vf8”), hoặc tên chủ xe. Không cần gõ dấu.",
     "clearKeyword": "Xoá từ khoá",
     "keyword": {
-      "placeholder": "Tìm tên xe, chủ xe hoặc gian hàng",
+      "placeholder": "Gõ để tìm kiếm loại xe, chủ gian hàng,...",
       "ariaLabel": "Tìm xe theo tên xe, chủ xe hoặc gian hàng",
       "hostsGroup": "Chủ xe & gian hàng",
       "shop": "Gian hàng",
@@ -151,7 +151,16 @@
       "vehicleCount": "{count, plural, other {# xe}}",
       "searchAll": "Xem mọi xe khớp “{q}”"
     },
-    "viewMode": "Chế độ hiển thị"
+    "viewMode": "Chế độ hiển thị",
+    "quickPills": {
+      "bodyType": "Kiểu xe",
+      "priceRange": "Khoảng giá",
+      "seats": "Số chỗ ngồi",
+      "scrollMore": "Xem thêm bộ lọc",
+      "scrollPrev": "Bộ lọc trước"
+    },
+    "clearAllAria": "Xoá tất cả bộ lọc",
+    "clearFilters": "Xoá bộ lọc"
   },
   "filterPanel": {
     "title": "Bộ lọc",
