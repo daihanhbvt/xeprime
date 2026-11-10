@@ -412,6 +412,10 @@
  * Wave 1A) nên con số viết thẳng — và chỉ được dùng một trong ba breakpoint chuẩn.
  */
 @media (max-width: 640px) {
+  .stepEnter {
+    height: auto;
+  }
+
   .layout {
     /* Một cột: thẻ xe gọn ở trên, bước hiện tại bên dưới. Cuộn chung một mạch. */
     display: flex;
@@ -532,6 +536,13 @@
 
 /* ─── Chuyển bước: mờ dần + trượt ngang ngắn theo hướng tiến/lùi ─────────────────────────── */
 .stepEnter {
+  /*
+   * Khung này nằm GIỮA thân overlay (khoá cuộn, `bodyScroll="content"`) và vùng tự cuộn của bước
+   * (`.layout`, `.review` cao 100%). Thiếu chiều cao ở đây thì 100% của con thành `auto`, vùng
+   * cuộn biến mất và nửa dưới bước bị cắt.
+   */
+  height: 100%;
+  min-height: 0;
   animation-duration: var(--xp-motion-duration-overlay);
   animation-timing-function: var(--xp-motion-ease-out);
   animation-fill-mode: both;
