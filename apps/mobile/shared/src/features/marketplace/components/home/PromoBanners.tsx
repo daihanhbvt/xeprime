@@ -1,7 +1,6 @@
 import { KenBurns } from '@/components/motion/KenBurns';
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { useWindowDimensions } from 'react-native';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -11,6 +10,7 @@ import { XP_TOKENS, toPx } from '@xeprime/ui';
 import type { PublicBanner } from '../../api';
 import { HomeCarousel } from './HomeCarousel';
 import { webAssetUrl } from '@/lib/web-base-url';
+import { useContentWidth } from '@/theme/use-content-width';
 
 /**
  * Thẻ CỐ ĐỊNH 340×140 (Figma MB `19771:51710`, token `promo-banner-mobile-*`), một thẻ mỗi lần, canh
@@ -38,7 +38,7 @@ export function PromoBanners({ banners }: { banners: PublicBanner[] }) {
   const colors = useColors();
   const t = useTranslations('Home.promos');
   const [broken, setBroken] = useState<ReadonlySet<string>>(new Set());
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
   const visible = banners.filter((banner) => !broken.has(banner.id));
   if (visible.length === 0) return null;
 
@@ -48,26 +48,26 @@ export function PromoBanners({ banners }: { banners: PublicBanner[] }) {
     <HomeCarousel accessibilityLabel={t('label')} itemWidth={width - layout.screenX * 2}>
       {visible.map((banner) => (
         <YStack key={banner.id} w="100%" ai="center">
-        <YStack
-          w={PROMO_CARD.width}
-          h={PROMO_CARD.height}
-          br={CARD_RADIUS}
-          ov="hidden"
-          bg={colors.surfaceMuted}
-        >
-          {/* Ken Burns chậm như hero — chỉ transform, khung ngoài clip. */}
-          <KenBurns style={{ width: '100%', height: '100%' }}>
-          <Image
-            source={{ uri: webAssetUrl(banner.mobileImageUrl ?? banner.imageUrl) }}
-            style={{ width: '100%', height: '100%' }}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            transition={150}
-            accessibilityLabel={banner.altText}
-            onError={() => setBroken((prev) => new Set(prev).add(banner.id))}
-          />
-          </KenBurns>
-        </YStack>
+          <YStack
+            w={PROMO_CARD.width}
+            h={PROMO_CARD.height}
+            br={CARD_RADIUS}
+            ov="hidden"
+            bg={colors.surfaceMuted}
+          >
+            {/* Ken Burns chậm như hero — chỉ transform, khung ngoài clip. */}
+            <KenBurns style={{ width: '100%', height: '100%' }}>
+              <Image
+                source={{ uri: webAssetUrl(banner.mobileImageUrl ?? banner.imageUrl) }}
+                style={{ width: '100%', height: '100%' }}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={150}
+                accessibilityLabel={banner.altText}
+                onError={() => setBroken((prev) => new Set(prev).add(banner.id))}
+              />
+            </KenBurns>
+          </YStack>
         </YStack>
       ))}
     </HomeCarousel>

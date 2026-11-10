@@ -6,7 +6,6 @@ import {
   Linking,
   Pressable,
   Share,
-  useWindowDimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
@@ -75,10 +74,7 @@ import { FeatureItem } from './components/FeatureChip';
 import { HomeCarousel } from './components/home/HomeCarousel';
 import { STAR_ART } from './components/home/home-art';
 import { ListingGalleryThumbs } from './components/ListingGalleryThumbs';
-import {
-  AmenityChips,
-  listingAmenityItems,
-} from './components/PhotoAmenityPills';
+import { AmenityChips, listingAmenityItems } from './components/PhotoAmenityPills';
 import { PhotoViewer } from '@/components/ui/PhotoViewer';
 import { ListingBenefitsCard } from './components/ListingBenefitsCard';
 import {
@@ -89,6 +85,7 @@ import {
 } from './components/ListingBookingCard';
 import { ListingPoliciesTabs } from './components/ListingPoliciesTabs';
 import { NewVehicleBadge } from './components/NewVehicleBadge';
+import { useContentWidth } from '@/theme/use-content-width';
 
 /**
  * Dịch vụ mở sẵn khi vào trang: ngữ cảnh mang từ danh sách sang nếu xe phục vụ được → ưu tiên
@@ -124,11 +121,18 @@ const SLIDE_GAP = space.sm;
 /*
  * Hiệu ứng theo cuộn của trang chi tiết (hằng cục bộ 06/11/2026 — hợp nhất vào `theme/motion` sau):
  * - Ảnh: kéo quá đỉnh thì giãn (scale 1 + kéo/cao ảnh, tối đa `GALLERY_MAX_STRETCH`); cuộn xuống thì
- *   trôi chậm hơn nội dung (`GALLERY_PARALLAX`) và mờ dần.
+ *   "lùi ra sau": cuộn CÙNG nhịp nội dung, chỉ thu nhỏ về tâm (`GALLERY_RECEDE_SCALE`) và mờ nhẹ
+ *   (`GALLERY_RECEDE_OPACITY`) trong quãng bằng chiều cao ảnh.
+ *   Bỏ parallax trôi chậm (10/11/2026): ảnh trôi xuống chậm hơn trang thì LẤN vào dải ảnh nhỏ và
+ *   chữ bên dưới — đọc thành chúng chui xuống dưới ảnh. Thu nhỏ về tâm chỉ co vào trong, không lấn
+ *   ai; và không `translateY` nên vị trí trên trang luôn khớp với nơi người dùng chạm.
  * - Thanh trên: tên xe hiện dần trong dải `TITLE_REVEAL_DISTANCE` cuối cùng trước khi ảnh khuất.
  * - (Thanh CTA đáy KHÔNG còn trồi lên lúc vào màn - tắt 09/11/2026, nhấp nháy bóng.)
  */
-const GALLERY_PARALLAX = 0.4;
+/** Ảnh nhỏ lại còn chừng này khi đã cuộn hết chiều cao của nó. */
+const GALLERY_RECEDE_SCALE = 0.92;
+/** Độ đậm còn lại của ảnh ở cùng mốc đó — đủ mờ để chữ phía trên nổi lên, không tắt hẳn. */
+const GALLERY_RECEDE_OPACITY = 0.6;
 const GALLERY_MAX_STRETCH = 0.35;
 const TITLE_REVEAL_DISTANCE = 48;
 /** Lề trái/phải của tên xe trên thanh trên — chừa nút Lui (vùng chạm 44 + đệm). */
@@ -170,7 +174,7 @@ export function ListingDetailScreen({
   const tDetail = useTranslations('Listings.detail');
   const listing = useListing(vehicleId);
   const scrollOffset = useSharedValue(0);
-  const { width: screenWidth } = useWindowDimensions();
+  const screenWidth = useContentWidth();
   // Ảnh khuất khi đã cuộn qua chiều cao ảnh + đệm 12 trên của `.wrap`.
   const galleryBottom = (screenWidth - layout.screenX * 2) / PHOTO_RATIO + 12;
   const collapsedTitleStyle = useAnimatedStyle(() => ({
@@ -312,14 +316,14 @@ export function ListingDetailScreen({
             // Thanh CTA có bóng: trượt + mờ lúc vào màn làm bóng nhấp nháy (Android) - tắt 09/11/2026.
             entering={undefined}
           >
-          <RequestBar
-            vehicleId={listing.data.id}
-            shopSlug={listing.data.shopSlug}
-            shopChatOpen={listing.data.shopChatOpen}
-            trip={current}
-            onNeedInput={(kind) => setInputRequest({ kind, nonce: Date.now() })}
-            {...(listing.data.provinceCode ? { provinceCode: listing.data.provinceCode } : {})}
-          />
+            <RequestBar
+              vehicleId={listing.data.id}
+              shopSlug={listing.data.shopSlug}
+              shopChatOpen={listing.data.shopChatOpen}
+              trip={current}
+              onNeedInput={(kind) => setInputRequest({ kind, nonce: Date.now() })}
+              {...(listing.data.provinceCode ? { provinceCode: listing.data.provinceCode } : {})}
+            />
           </Animated.View>
         }
       >
@@ -717,78 +721,78 @@ function DetailBody({
         />
 
         <ScrollReveal>
-        <YStack gap={space.sm}>
-          <MarketSectionTitle>{t('description')}</MarketSectionTitle>
-          {/* Hãng + màu đầu khối mô tả (Figma `19771:72580`): một hàng, khe 8 × 40, chữ 16. */}
-          {descriptionAttributes.length > 0 ? (
-            <XStack flexWrap="wrap" columnGap={40} rowGap={space.sm}>
-              {descriptionAttributes.map((attr) => (
-                <XStack key={attr.key} ai="center" gap={space.sm}>
-                  <Ionicons
-                    name={attr.key === 'brand' ? 'car-outline' : 'color-palette-outline'}
-                    size={20}
-                    color={colors.textMuted}
-                  />
-                  <Text col={colors.textMuted} fos={BODY_TEXT}>
-                    {t.rich(`attributes.${attr.key}`, {
-                      value: attr.value,
-                      strong: (chunks) => (
-                        <Text col={colors.text} fow={fontWeight.semibold}>
-                          {chunks}
-                        </Text>
-                      ),
-                    })}
-                  </Text>
-                </XStack>
-              ))}
-            </XStack>
-          ) : null}
-          {/* `.descBody` web ≤640px: 16/24, căn đều hai lề. */}
-          <Text
-            col={colors.textBody}
-            fos={BODY_TEXT}
-            textAlign="justify"
-            {...(descriptionOpen ? {} : { numberOfLines: 4 })}
-          >
-            {listing.description || t('descriptionEmpty')}
-          </Text>
-          {listing.description && listing.description.length > DESCRIPTION_CLAMP_CHARS ? (
-            <Pressable
-              onPress={() => setDescriptionOpen((v) => !v)}
-              accessibilityRole="button"
-              hitSlop={space.sm}
-            >
-              <XStack ai="center" gap={space.xs}>
-                <Text col={colors.primary} fos={BODY_TEXT} fow={fontWeight.semibold}>
-                  {descriptionOpen ? t('descriptionToggle.less') : t('descriptionToggle.more')}
-                </Text>
-                <Ionicons
-                  name={descriptionOpen ? 'chevron-up' : 'chevron-down'}
-                  size={iconSize.sm}
-                  color={colors.primary}
-                />
+          <YStack gap={space.sm}>
+            <MarketSectionTitle>{t('description')}</MarketSectionTitle>
+            {/* Hãng + màu đầu khối mô tả (Figma `19771:72580`): một hàng, khe 8 × 40, chữ 16. */}
+            {descriptionAttributes.length > 0 ? (
+              <XStack flexWrap="wrap" columnGap={40} rowGap={space.sm}>
+                {descriptionAttributes.map((attr) => (
+                  <XStack key={attr.key} ai="center" gap={space.sm}>
+                    <Ionicons
+                      name={attr.key === 'brand' ? 'car-outline' : 'color-palette-outline'}
+                      size={20}
+                      color={colors.textMuted}
+                    />
+                    <Text col={colors.textMuted} fos={BODY_TEXT}>
+                      {t.rich(`attributes.${attr.key}`, {
+                        value: attr.value,
+                        strong: (chunks) => (
+                          <Text col={colors.text} fow={fontWeight.semibold}>
+                            {chunks}
+                          </Text>
+                        ),
+                      })}
+                    </Text>
+                  </XStack>
+                ))}
               </XStack>
-            </Pressable>
-          ) : null}
-        </YStack>
+            ) : null}
+            {/* `.descBody` web ≤640px: 16/24, căn đều hai lề. */}
+            <Text
+              col={colors.textBody}
+              fos={BODY_TEXT}
+              textAlign="justify"
+              {...(descriptionOpen ? {} : { numberOfLines: 4 })}
+            >
+              {listing.description || t('descriptionEmpty')}
+            </Text>
+            {listing.description && listing.description.length > DESCRIPTION_CLAMP_CHARS ? (
+              <Pressable
+                onPress={() => setDescriptionOpen((v) => !v)}
+                accessibilityRole="button"
+                hitSlop={space.sm}
+              >
+                <XStack ai="center" gap={space.xs}>
+                  <Text col={colors.primary} fos={BODY_TEXT} fow={fontWeight.semibold}>
+                    {descriptionOpen ? t('descriptionToggle.less') : t('descriptionToggle.more')}
+                  </Text>
+                  <Ionicons
+                    name={descriptionOpen ? 'chevron-up' : 'chevron-down'}
+                    size={iconSize.sm}
+                    color={colors.primary}
+                  />
+                </XStack>
+              </Pressable>
+            ) : null}
+          </YStack>
         </ScrollReveal>
 
         {listing.features.length > 0 ? (
           <ScrollReveal>
-          <YStack gap={space.sm}>
-            <MarketSectionTitle>{t('featuresTitle')}</MarketSectionTitle>
-            {/* Lưới 2 cột, khe 12 (Figma `19771:72667`). */}
-            <XStack flexWrap="wrap" rowGap={12}>
-              {listing.features.map((key) => (
-                <YStack key={key} style={HALF_CELL}>
-                  <FeatureItem
-                    featureKey={key}
-                    label={catalogLabel(catalog[CATALOG_TYPE.VEHICLE_FEATURE], key) ?? key}
-                  />
-                </YStack>
-              ))}
-            </XStack>
-          </YStack>
+            <YStack gap={space.sm}>
+              <MarketSectionTitle>{t('featuresTitle')}</MarketSectionTitle>
+              {/* Lưới 2 cột, khe 12 (Figma `19771:72667`). */}
+              <XStack flexWrap="wrap" rowGap={12}>
+                {listing.features.map((key) => (
+                  <YStack key={key} style={HALF_CELL}>
+                    <FeatureItem
+                      featureKey={key}
+                      label={catalogLabel(catalog[CATALOG_TYPE.VEHICLE_FEATURE], key) ?? key}
+                    />
+                  </YStack>
+                ))}
+              </XStack>
+            </YStack>
           </ScrollReveal>
         ) : null}
 
@@ -807,24 +811,24 @@ function DetailBody({
           `shopRatingCount`, `shopCompletedTripCount`), không phải của riêng chiếc xe.
         */}
         <ScrollReveal>
-        <YStack gap={space.sm}>
-          <MarketSectionTitle>{t('hostTitle')}</MarketSectionTitle>
-          <ShopQuickInfoCard
-            shop={{
-              name: listing.shopName,
-              slug: listing.shopSlug,
-              logoUrl: listing.shopLogoUrl,
-              verified: listing.shopVerified,
-              province: listing.shopProvince,
-              bio: listing.shopBio,
-              ratingAvg: listing.shopRatingAvg,
-              ratingCount: listing.shopRatingCount,
-              completedTripCount: listing.shopCompletedTripCount,
-            }}
-            metrics={listing.shopMetrics}
-            variant="inline"
-          />
-        </YStack>
+          <YStack gap={space.sm}>
+            <MarketSectionTitle>{t('hostTitle')}</MarketSectionTitle>
+            <ShopQuickInfoCard
+              shop={{
+                name: listing.shopName,
+                slug: listing.shopSlug,
+                logoUrl: listing.shopLogoUrl,
+                verified: listing.shopVerified,
+                province: listing.shopProvince,
+                bio: listing.shopBio,
+                ratingAvg: listing.shopRatingAvg,
+                ratingCount: listing.shopRatingCount,
+                completedTripCount: listing.shopCompletedTripCount,
+              }}
+              metrics={listing.shopMetrics}
+              variant="inline"
+            />
+          </YStack>
         </ScrollReveal>
 
         {/* Figma `21636:82908`: Đánh giá đứng TRƯỚC Thông tin thêm (tabs điều khoản/huỷ/phí). */}
@@ -941,9 +945,21 @@ function GallerySlide({
     if (still) return { opacity: 1, transform: [{ scale: 1 }] };
     const range = [(index - 1) * step, index * step, (index + 1) * step];
     return {
-      opacity: interpolate(scrollX.value, range, [SLIDE_SIDE_OPACITY, 1, SLIDE_SIDE_OPACITY], Extrapolation.CLAMP),
+      opacity: interpolate(
+        scrollX.value,
+        range,
+        [SLIDE_SIDE_OPACITY, 1, SLIDE_SIDE_OPACITY],
+        Extrapolation.CLAMP,
+      ),
       transform: [
-        { scale: interpolate(scrollX.value, range, [SLIDE_SIDE_SCALE, 1, SLIDE_SIDE_SCALE], Extrapolation.CLAMP) },
+        {
+          scale: interpolate(
+            scrollX.value,
+            range,
+            [SLIDE_SIDE_SCALE, 1, SLIDE_SIDE_SCALE],
+            Extrapolation.CLAMP,
+          ),
+        },
       ],
     };
   });
@@ -963,7 +979,7 @@ function Gallery({
   scrollOffset?: SharedValue<number>;
 }) {
   const colors = useColors();
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
   const [active, setActive] = useState(0);
   const [viewing, setViewing] = useState<string | null>(null);
   const pagerRef = useRef<Animated.ScrollView>(null);
@@ -998,8 +1014,10 @@ function Gallery({
       };
     }
     return {
-      opacity: interpolate(y, [0, height], [1, 0.4], Extrapolation.CLAMP),
-      transform: [{ translateY: y * GALLERY_PARALLAX }],
+      opacity: interpolate(y, [0, height], [1, GALLERY_RECEDE_OPACITY], Extrapolation.CLAMP),
+      transform: [
+        { scale: interpolate(y, [0, height], [1, GALLERY_RECEDE_SCALE], Extrapolation.CLAMP) },
+      ],
     };
   });
 
@@ -1052,21 +1070,21 @@ function Gallery({
               scrollX={scrollX}
               still={reduceMotion || unique.length < 2}
             >
-            <PressableScale
-              scaleTo={pressScale.card}
-              onPress={() => setViewing(url)}
-              accessibilityRole="imagebutton"
-              accessibilityLabel={tGallery('photoAlt', { name, index: index + 1 })}
-            >
-              <Image
-                source={{ uri: url }}
-                style={{ width: slideWidth, height, borderRadius: radius.control }}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                recyclingKey={url}
-                transition={150}
-              />
-            </PressableScale>
+              <PressableScale
+                scaleTo={pressScale.card}
+                onPress={() => setViewing(url)}
+                accessibilityRole="imagebutton"
+                accessibilityLabel={tGallery('photoAlt', { name, index: index + 1 })}
+              >
+                <Image
+                  source={{ uri: url }}
+                  style={{ width: slideWidth, height, borderRadius: radius.control }}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  recyclingKey={url}
+                  transition={150}
+                />
+              </PressableScale>
             </GallerySlide>
           ))}
         </Animated.ScrollView>
@@ -1119,7 +1137,7 @@ function Reviews({ vehicleId }: { vehicleId: string }) {
    * 'ratingCount' of undefined" đúng giữa trang chi tiết xe.
    */
   const hasReviews = Boolean(data?.summary?.ratingCount && data.summary.ratingCount > 0);
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
 
   return (
     <YStack gap={space.sm}>

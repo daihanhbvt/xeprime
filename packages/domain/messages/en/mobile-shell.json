@@ -121,5 +121,11 @@
     "actionBlocked": "You need an internet connection to do this.",
     "staleAt": "Offline · Data last updated {time}",
     "staleMoney": "Amounts and payment status may be out of date."
+  },
+  "appUpdate": {
+    "title": "A new version is available",
+    "message": "A new version of {appName} is out with new features and fixes. Update now for the best experience.",
+    "update": "Update",
+    "later": "Later"
   }
 }

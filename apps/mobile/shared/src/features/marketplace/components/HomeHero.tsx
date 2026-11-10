@@ -4,7 +4,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   ScrollView,
   StyleSheet,
-  useWindowDimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   type ViewStyle,
@@ -31,9 +30,18 @@ import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { duration } from '@/theme/motion';
 import type { PublicBanner } from '../api';
+import { useContentWidth } from '@/theme/use-content-width';
+import { TABLET_MIN_WIDTH } from '@/theme/layout';
 
 /** Tỉ lệ ảnh banner mobile của backend (780×450 từ 30/10/2026, PR #253) — cùng tỉ lệ web dùng dưới 640px. */
 export const BANNER_RATIO = 780 / 450;
+/** Tỉ lệ banner ở bố cục máy tính bảng — web ≤1024px (`BannerCarousel.module.css` `aspect-ratio: 1024 / 450`). */
+export const BANNER_RATIO_TABLET = 1024 / 450;
+
+/** Tỉ lệ banner theo bề ngang CỘT nội dung — dùng chung cho hero và mốc thanh tìm kiếm dính. */
+export function bannerRatio(contentWidth: number): number {
+  return contentWidth >= TABLET_MIN_WIDTH ? BANNER_RATIO_TABLET : BANNER_RATIO;
+}
 
 /** Nhịp tự chuyển slide — 6s, cùng `BannerCarousel` của web. */
 const AUTO_ROTATE_MS = 6000;
@@ -123,7 +131,7 @@ function RevealLine({
 export function HomeHero({ banners, isLoading }: { banners: PublicBanner[]; isLoading: boolean }) {
   const colors = useColors();
   const t = useTranslations('Marketplace.banner');
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
   const [active, setActive] = useState(0);
   const [dragging, setDragging] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -138,7 +146,8 @@ export function HomeHero({ banners, isLoading }: { banners: PublicBanner[]; isLo
   const appActive = useAppActive();
   const reducedMotion = useReducedMotion();
 
-  const height = width / BANNER_RATIO;
+  const tablet = width >= TABLET_MIN_WIDTH;
+  const height = width / bannerRatio(width);
   const kenBurns = useKenBurns(focused && appActive && !reducedMotion && !isLoading);
 
   const onScroll = useCallback(
@@ -199,22 +208,28 @@ export function HomeHero({ banners, isLoading }: { banners: PublicBanner[]; isLo
   return (
     <YStack style={heroCorners}>
       <Animated.View style={kenBurns}>
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScrollBeginDrag={() => setDragging(true)}
-        // Vuốt hụt (thả tay mà không đủ đà) KHÔNG sinh `onMomentumScrollEnd` trên mọi máy — không
-        // gỡ cờ ở đây thì một cú chạm nhỡ làm banner đứng im vĩnh viễn.
-        onScrollEndDrag={() => setDragging(false)}
-        onMomentumScrollEnd={onScroll}
-        accessibilityLabel={t('carouselLabel')}
-      >
-        {banners.map((banner) => (
-          <BannerSlide key={banner.id} banner={banner} width={width} height={height} />
-        ))}
-      </ScrollView>
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScrollBeginDrag={() => setDragging(true)}
+          // Vuốt hụt (thả tay mà không đủ đà) KHÔNG sinh `onMomentumScrollEnd` trên mọi máy — không
+          // gỡ cờ ở đây thì một cú chạm nhỡ làm banner đứng im vĩnh viễn.
+          onScrollEndDrag={() => setDragging(false)}
+          onMomentumScrollEnd={onScroll}
+          accessibilityLabel={t('carouselLabel')}
+        >
+          {banners.map((banner) => (
+            <BannerSlide
+              key={banner.id}
+              banner={banner}
+              width={width}
+              height={height}
+              tablet={tablet}
+            />
+          ))}
+        </ScrollView>
       </Animated.View>
 
       {/* Chấm như `BannerCarousel.module.css` (≤640px): trái-dưới, 10px, trắng 55% · vàng đang chọn. */}
@@ -246,15 +261,23 @@ const BannerSlide = memo(function BannerSlide({
   banner,
   width,
   height,
+  tablet,
 }: {
   banner: PublicBanner;
   width: number;
   height: number;
+  /** Bố cục máy tính bảng: ảnh bản tablet (đúng tỉ lệ 1024/450) như web ≤1024px. */
+  tablet: boolean;
 }) {
   const colors = useColors();
   // Backend trả ba cỡ ảnh; native luôn bắt đầu từ bản mobile rồi mới lùi dần — tải ảnh desktop
   // trên 4G chỉ để thu nhỏ lại là lãng phí đúng thứ người dùng phải trả tiền.
-  const source = webAssetUrl(banner.mobileImageUrl ?? banner.tabletImageUrl ?? banner.imageUrl);
+  // Máy tính bảng đi theo web ≤1024px: ảnh tablet, thiếu thì ảnh PC (cùng chuỗi lùi của web).
+  const source = webAssetUrl(
+    tablet
+      ? (banner.tabletImageUrl ?? banner.imageUrl)
+      : (banner.mobileImageUrl ?? banner.tabletImageUrl ?? banner.imageUrl),
+  );
 
   // Chờ RIÊNG cho tấm ảnh, tách khỏi chờ API: danh sách về không có nghĩa là ẢNH về, và
   // `<Image>` vẽ ô rỗng cho tới byte cuối — trên banner tràn viền nó đọc ra như màn hình trắng.
@@ -364,7 +387,11 @@ function SlideDot({
     <Animated.View
       style={[
         style,
-        { height: DOT_SIZE, borderRadius: radius.pill, backgroundColor: active ? activeColor : DOT_IDLE_ON_PHOTO },
+        {
+          height: DOT_SIZE,
+          borderRadius: radius.pill,
+          backgroundColor: active ? activeColor : DOT_IDLE_ON_PHOTO,
+        },
       ]}
     />
   );

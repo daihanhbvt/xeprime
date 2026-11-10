@@ -1,7 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Linking, Text as NativeText, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import {
+  Linking,
+  Text as NativeText,
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+} from 'react-native';
 import { useState } from 'react';
 import Animated, {
   useAnimatedStyle,
@@ -19,6 +25,7 @@ import type { PublicBanner } from '../../api';
 import { layout } from '@/theme/layout';
 import { FONT_FAMILY } from '@/theme/fonts';
 import { fontSize, fontWeight, gradients, market, space } from '@/theme/tokens';
+import { useContentWidth } from '@/theme/use-content-width';
 
 const BENEFITS = ['income', 'support', 'customers'] as const;
 /** `speed` của `ParallaxBackdrop` web: ảnh đi tối đa 1 - 0.3 quãng cuộn. */
@@ -87,7 +94,8 @@ export function PartnerBanner({
   banner?: PublicBanner | null;
 } = {}) {
   const t = useTranslations('Home.partner');
-  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight } = useWindowDimensions();
+  const windowWidth = useContentWidth();
   const reduceMotion = useReducedMotion();
   const [ratio, setRatio] = useState(DEFAULT_BACKDROP_RATIO);
   // Dải tràn hết bề ngang màn ⇒ bề rộng lớp ảnh = bề rộng cửa sổ.
@@ -134,11 +142,18 @@ export function PartnerBanner({
       }}
     >
       {/* Ảnh nền trôi chậm khi cuộn qua (UI thread, như `ParallaxBackdrop` web); lớp phủ tối ở trên giữ chữ đọc được. */}
-      <Animated.View style={[styles.backdropLayer, { height: layerHeight }, backdropStyle]} pointerEvents="none">
+      <Animated.View
+        style={[styles.backdropLayer, { height: layerHeight }, backdropStyle]}
+        pointerEvents="none"
+      >
         <Image
           source={
             banner
-              ? { uri: webAssetUrl(banner.mobileImageUrl ?? banner.tabletImageUrl ?? banner.imageUrl) }
+              ? {
+                  uri: webAssetUrl(
+                    banner.mobileImageUrl ?? banner.tabletImageUrl ?? banner.imageUrl,
+                  ),
+                }
               : images.homePartnerBackdrop
           }
           style={styles.backdropImage}
@@ -189,14 +204,7 @@ export function PartnerBanner({
       <YStack gap={space.md} accessibilityLabel={t('benefitsLabel')}>
         {BENEFITS.map((key) => (
           <XStack key={key} ai="center" gap={space.sm}>
-            <YStack
-              w={CHECK}
-              h={CHECK}
-              br={CHECK / 2}
-              bg={GLASS_GOLD}
-              ai="center"
-              jc="center"
-            >
+            <YStack w={CHECK} h={CHECK} br={CHECK / 2} bg={GLASS_GOLD} ai="center" jc="center">
               <Ionicons name="checkmark" size={14} color={CHECK_COLOR} />
             </YStack>
             <Text col={market.onDark} fos={fontSize.body} lh={22} fow={fontWeight.medium}>
@@ -208,26 +216,31 @@ export function PartnerBanner({
 
       {/* `CtaButton size="xl" shape="pill"`: cao 56, đệm 8/8/8/20, chữ h3, vòng trắng 40 ôm mũi tên. */}
       {onRegister ? (
-      <Pressable onPress={onRegister} accessibilityRole="button" accessibilityLabel={t('cta')}>
-        <LinearGradient
-          colors={gradients.primary.colors}
-          locations={gradients.primary.locations}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={styles.cta}
-        >
-          <Text col={CTA_TEXT} fos={fontSize.h3} fow={fontWeight.semibold}>
-            {t('cta')}
-          </Text>
-          <YStack w={40} h={40} br={20} bg={market.onDark} ai="center" jc="center">
-            <Ionicons name="chevron-forward" size={18} color={CTA_TEXT} />
-          </YStack>
-        </LinearGradient>
-      </Pressable>
+        <Pressable onPress={onRegister} accessibilityRole="button" accessibilityLabel={t('cta')}>
+          <LinearGradient
+            colors={gradients.primary.colors}
+            locations={gradients.primary.locations}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={styles.cta}
+          >
+            <Text col={CTA_TEXT} fos={fontSize.h3} fow={fontWeight.semibold}>
+              {t('cta')}
+            </Text>
+            <YStack w={40} h={40} br={20} bg={market.onDark} ai="center" jc="center">
+              <Ionicons name="chevron-forward" size={18} color={CTA_TEXT} />
+            </YStack>
+          </LinearGradient>
+        </Pressable>
       ) : null}
 
       <NativeText
-        style={{ color: market.onDark, fontSize: fontSize.bodySm, lineHeight: 18, fontFamily: FONT_FAMILY.body }}
+        style={{
+          color: market.onDark,
+          fontSize: fontSize.bodySm,
+          lineHeight: 18,
+          fontFamily: FONT_FAMILY.body,
+        }}
       >
         {t.rich('help', {
           phone: SUPPORT_HOTLINE.display,

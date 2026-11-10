@@ -12,7 +12,7 @@ import { useAppStyles } from '@/theme/styles';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { useSearchExperience } from '../search-context';
-import { BANNER_RATIO } from './HomeHero';
+import { bannerRatio } from './HomeHero';
 import { LocationPicker } from './LocationPicker';
 import { RentalRangeSheet } from './RentalRangeSheet';
 
@@ -222,5 +222,5 @@ export function StickySearchBar({
  * để máy nhỏ và máy lớn đổi thanh ở cùng một chỗ trong bố cục.
  */
 export function stickyThreshold(screenWidth: number): number {
-  return screenWidth / BANNER_RATIO;
+  return screenWidth / bannerRatio(screenWidth);
 }

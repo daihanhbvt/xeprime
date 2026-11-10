@@ -6,11 +6,11 @@ import {
   AUTH_PROVIDER_BRAND_COLOR,
   AUTH_PROVIDER_LABEL,
   NATIVE_IDENTITY_PROVIDER,
+  NATIVE_IDENTITY_PROVIDER_LABEL,
   type AuthProvider,
   type NativeIdentityProvider,
 } from '@xeprime/types';
-import * as AppleAuthentication from 'expo-apple-authentication';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, Text as RNText } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useLocale, useTranslations } from 'use-intl';
@@ -20,23 +20,44 @@ import { useAppleLogin, useSocialLogin } from '@/features/auth/hooks/use-auth';
 import type { IconName } from '@/components/ui/Chip';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { FONT_FAMILY } from '@/theme/fonts';
-import { makeStyles, useColors } from '@/theme/ThemeProvider';
-import { fontSize, radius, sizing, space } from '@/theme/tokens';
+import { makeStyles, useAppScheme, useColors } from '@/theme/ThemeProvider';
+import { fontSize, radius, space } from '@/theme/tokens';
 
-/** Độ mờ của nút đang bị chặn — MỘT giá trị cho cả nút Google/Facebook lẫn nút Apple. */
+/** Độ mờ của nút đang bị chặn — MỘT giá trị cho mọi nút provider. */
 const DISABLED_OPACITY = 0.55;
 
 /** Ô cố định để nhãn hai nút thẳng hàng bất kể glyph rộng hẹp thế nào. */
-const ICON_BOX = 20;
+const ICON_BOX = 22;
+
+/**
+ * MỌI nút provider (Google, Facebook, Apple) vẽ bằng CÙNG một `ProviderButton` — cùng nền, viền,
+ * font, cỡ chữ, chiều cao (chốt 10/11/2026). Nút Apple CHÍNH THỨC (`AppleAuthenticationButton`)
+ * đã gỡ: iOS tự vẽ viền và chữ của nó, nên đứng cạnh nút Google không bao giờ khớp (viền Google
+ * đậm hơn, hai cỡ chữ khác nhau). Apple HIG CHO PHÉP nút "Sign in with Apple" tự vẽ khi: dùng
+ * đúng logo Apple, nền trắng (viền) hoặc đen, chữ hệ thống, cùng cỡ với các nút đăng nhập khác
+ * — đúng những gì `ProviderButton` làm. Bấm vẫn đi đúng luồng native (`useAppleLogin`).
+ *
+ * Nền/chữ trắng/đen thuần là màu BỘ NHẬN DIỆN của các provider, không phải màu XePrime ⇒ không
+ * vào token. Viền lấy `colors.borderInput` (cùng viền ô nhập) cho mọi nút.
+ */
+const PROVIDER_BUTTON_HEIGHT = 44; // sàn vùng chạm HIG; nhỏ hơn `touchTarget` (48) theo yêu cầu 06/11/2026.
+const PROVIDER_BUTTON = {
+  white: '#FFFFFF',
+  black: '#000000',
+  height: PROVIDER_BUTTON_HEIGHT,
+  fontSize: Math.round(PROVIDER_BUTTON_HEIGHT * 0.38),
+} as const;
 
 /**
  * Cỡ glyph theo TỪNG provider — chỉnh bằng mắt trên máy thật, không suy từ hình dạng glyph.
  * Provider thứ ba (Apple Sign-In) nhiều khả năng lại cần một con số khác.
  */
 const PROVIDER_ICON: Readonly<Record<AuthProvider, { name: IconName; size: number }>> = {
-  [AUTH_PROVIDER.GOOGLE]: { name: 'logo-google', size: 19 },
+  [AUTH_PROVIDER.GOOGLE]: { name: 'logo-google', size: 18 },
   [AUTH_PROVIDER.FACEBOOK]: { name: 'logo-facebook', size: 19 },
 };
+/** Logo Apple (Ionicons `logo-apple`) — glyph cao hơn chữ G nên nhỉnh 1 cỡ để nhìn bằng nhau. */
+const APPLE_ICON_SIZE = 19;
 
 // Facebook TẠM ẨN theo `APP_FEATURES` (28/10/2026) — Google vẫn hiện.
 const PROVIDERS = APP_FEATURES.facebookLogin
@@ -58,7 +79,10 @@ export function SocialButtons({
   blocked?: boolean;
 }) {
   const colors = useColors();
+  const { scheme } = useAppScheme();
   const styles = useStyles();
+  // Nền tối: nút trắng liền khối (viền trắng); nền sáng: nút trắng viền xám như ô nhập.
+  const providerSurface = scheme === 'dark' ? styles.buttonOnDark : null;
   const t = useTranslations('Auth');
   const locale = useLocale();
   const errorMessage = useErrorMessage();
@@ -102,6 +126,9 @@ export function SocialButtons({
     });
   }
 
+  const labelFor = (provider: string) =>
+    t(intent === 'register' ? 'social.registerWith' : 'social.loginWith', { provider });
+
   function signIn(provider: AuthProvider) {
     setPending(provider);
     socialLogin.mutate(
@@ -125,77 +152,58 @@ export function SocialButtons({
       </XStack>
 
       {/*
-        MỘT HÀNG, các ô chia đều (`f={1}`). Nhãn chữ chuyển vào `accessibilityLabel`: xếp
-        ngang thì không còn chỗ cho "Tiếp tục với Facebook" mà không cắt chữ, và cắt chữ tên
-        thương hiệu là thứ tệ hơn hẳn việc bỏ nó đi.
+        MỖI PROVIDER MỘT HÀNG ĐẦY ĐỦ (chốt 06/11/2026): cùng bề ngang, cùng chiều cao, cùng bo
+        góc và cùng câu "Đăng nhập với …". Apple cũng đi qua `ProviderButton` — xem docblock trên.
       */}
-      <XStack gap={space.sm}>
+      <YStack gap={space.sm}>
         {PROVIDERS.map((provider) => {
-          const busy = pending === provider;
-          const label = t(intent === 'register' ? 'social.registerWith' : 'social.loginWith', {
-            provider: AUTH_PROVIDER_LABEL[provider],
-          });
+          const label = labelFor(AUTH_PROVIDER_LABEL[provider]);
           return (
-            <Pressable
+            <ProviderButton
               key={provider}
+              label={label}
+              busy={pending === provider}
+              stopped={stopped}
+              blocked={blocked}
+              surface={providerSurface}
+              spinnerColor={AUTH_PROVIDER_BRAND_COLOR[provider]}
               onPress={() => signIn(provider)}
-              disabled={stopped}
-              accessibilityRole="button"
-              /*
-               * Nhãn khai TƯỜNG MINH, không để trình đọc màn hình tự suy từ chữ bên trong: lúc
-               * đang gọi, chữ đứng cạnh một `ActivityIndicator` không có nhãn, và tên khả truy cập
-               * suy ra được thì đổi theo trạng thái. Cùng cách `Button` của bộ UI làm.
-               */
-              accessibilityLabel={label}
-              accessibilityState={{ busy, disabled: stopped }}
-              style={({ pressed }) => [
-                styles.button,
-                pressed ? styles.pressed : null,
-                blocked ? styles.blocked : null,
-              ]}
-            >
-              {busy ? (
-                <XStack w={ICON_BOX} h={ICON_BOX} ai="center" jc="center">
-                  <ActivityIndicator size="small" color={AUTH_PROVIDER_BRAND_COLOR[provider]} />
-                </XStack>
-              ) : (
-                <XStack w={ICON_BOX} h={ICON_BOX} ai="center" jc="center">
-                  {provider === AUTH_PROVIDER.GOOGLE && !stopped ? (
-                    // Logo Google CHUẨN bốn màu (người dùng chốt 28/10/2026) — Ionicons chỉ có bản một màu.
-                    <GoogleLogo size={PROVIDER_ICON[provider].size} />
-                  ) : (
-                    <Ionicons
-                      name={PROVIDER_ICON[provider].name}
-                      size={PROVIDER_ICON[provider].size}
-                      color={stopped ? colors.textDisabled : AUTH_PROVIDER_BRAND_COLOR[provider]}
-                    />
-                  )}
-                </XStack>
-              )}
-              <RNText style={[styles.label, stopped ? styles.labelDisabled : null]}>
-                {AUTH_PROVIDER_LABEL[provider]}
-              </RNText>
-            </Pressable>
+              icon={
+                provider === AUTH_PROVIDER.GOOGLE && !stopped ? (
+                  // Logo Google CHUẨN bốn màu (người dùng chốt 28/10/2026) — Ionicons chỉ có bản một màu.
+                  <GoogleLogo size={PROVIDER_ICON[provider].size} />
+                ) : (
+                  <Ionicons
+                    name={PROVIDER_ICON[provider].name}
+                    size={PROVIDER_ICON[provider].size}
+                    color={stopped ? colors.textDisabled : AUTH_PROVIDER_BRAND_COLOR[provider]}
+                  />
+                )
+              }
+            />
           );
         })}
-      </XStack>
 
-      {/*
-        Nút CHÍNH THỨC của Apple (HIG bắt buộc khi duyệt app): Apple tự vẽ logo + chữ "Tiếp tục
-        với Apple" theo ngôn ngữ máy, nên không có khoá dịch nào ở đây. Đứng riêng một hàng dưới
-        hai provider kia — ép nó vào ô 1/3 bề ngang thì chữ của Apple bị cắt.
-      */}
-      {appleAvailable ? (
-        <YStack opacity={stopped ? DISABLED_OPACITY : 1} pointerEvents={stopped ? 'none' : 'auto'}>
-          <AppleAuthentication.AppleAuthenticationButton
-            buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-            cornerRadius={radius.pill}
-            style={styles.apple}
+        {/* "Sign in with Apple" CHỈ ở iOS (App Store Guideline 4.8), và chỉ khi máy hỗ trợ. */}
+        {appleAvailable ? (
+          <ProviderButton
+            label={labelFor(NATIVE_IDENTITY_PROVIDER_LABEL[NATIVE_IDENTITY_PROVIDER.APPLE])}
+            busy={pending === NATIVE_IDENTITY_PROVIDER.APPLE}
+            stopped={stopped}
+            blocked={blocked}
+            surface={providerSurface}
+            spinnerColor={PROVIDER_BUTTON.black}
             onPress={signInApple}
+            icon={
+              <Ionicons
+                name="logo-apple"
+                size={APPLE_ICON_SIZE}
+                color={stopped ? colors.textDisabled : PROVIDER_BUTTON.black}
+              />
+            }
           />
-        </YStack>
-      ) : null}
+        ) : null}
+      </YStack>
     </YStack>
   );
 }
@@ -203,25 +211,24 @@ export function SocialButtons({
 const useStyles = makeStyles((colors) => ({
   button: {
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.borderInput,
+    backgroundColor: PROVIDER_BUTTON.white,
     borderRadius: radius.pill,
     borderWidth: 1,
-    // `flex: 1` để hai (hoặc ba) ô chia đều bề ngang — thêm provider không phải tính lại gì.
-    flex: 1,
     flexDirection: 'row',
-    gap: space.xs,
+    gap: space.sm,
+    // `height` cố định (không `minHeight`): mọi nút provider phải cao đúng bằng nhau.
+    height: PROVIDER_BUTTON.height,
     justifyContent: 'center',
-    minHeight: sizing.touchTarget,
+    borderColor: colors.borderInput,
   },
+  buttonOnDark: { borderColor: PROVIDER_BUTTON.white },
   pressed: { opacity: 0.85 },
-  apple: { height: sizing.touchTarget, width: '100%' },
   label: {
-    color: colors.text,
-    // `RNText` (không phải `Text` của Tamagui) ⇒ không nhận font mặc định; khai tường minh.
-    // Mặt chữ đậm lấy bằng FILE, không bằng `fontWeight` — Android bỏ qua nó khi có font riêng.
-    fontFamily: FONT_FAMILY.semibold,
-    fontSize: fontSize.bodySm,
+    color: PROVIDER_BUTTON.black,
+    // Font HỆ THỐNG như chữ trong nút Apple — font hệ thống nhận `fontWeight` trên cả hai nền tảng.
+    fontFamily: FONT_FAMILY.system,
+    fontSize: PROVIDER_BUTTON.fontSize,
+    fontWeight: '500',
   },
   labelDisabled: { color: colors.textDisabled },
   /*
@@ -230,6 +237,56 @@ const useStyles = makeStyles((colors) => ({
    */
   blocked: { borderColor: colors.border, opacity: DISABLED_OPACITY },
 }));
+
+/** Một nút provider — Google, Facebook, Apple dùng chung để trông như MỘT bộ. */
+function ProviderButton({
+  label,
+  icon,
+  busy,
+  stopped,
+  blocked,
+  surface,
+  spinnerColor,
+  onPress,
+}: {
+  label: string;
+  icon: ReactNode;
+  busy: boolean;
+  stopped: boolean;
+  blocked: boolean;
+  surface: object | null;
+  spinnerColor: string;
+  onPress: () => void;
+}) {
+  const styles = useStyles();
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={stopped}
+      accessibilityRole="button"
+      /*
+       * Nhãn khai TƯỜNG MINH, không để trình đọc màn hình tự suy từ chữ bên trong: lúc đang gọi,
+       * chữ đứng cạnh một `ActivityIndicator` không có nhãn, và tên khả truy cập suy ra được thì
+       * đổi theo trạng thái. Cùng cách `Button` của bộ UI làm.
+       */
+      accessibilityLabel={label}
+      accessibilityState={{ busy, disabled: stopped }}
+      style={({ pressed }) => [
+        styles.button,
+        surface,
+        pressed ? styles.pressed : null,
+        blocked ? styles.blocked : null,
+      ]}
+    >
+      <XStack w={ICON_BOX} h={ICON_BOX} ai="center" jc="center">
+        {busy ? <ActivityIndicator size="small" color={spinnerColor} /> : icon}
+      </XStack>
+      <RNText numberOfLines={1} style={[styles.label, stopped ? styles.labelDisabled : null]}>
+        {label}
+      </RNText>
+    </Pressable>
+  );
+}
 
 /** Chữ "G" bốn màu của Google (bộ nhận diện chính thức, viewBox 48). */
 function GoogleLogo({ size }: { size: number }) {
