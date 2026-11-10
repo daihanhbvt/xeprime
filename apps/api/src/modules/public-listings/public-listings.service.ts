@@ -59,7 +59,12 @@ import type {
   ShopListingQueryDto,
   ShopTrustDto,
 } from './dto/public-listing.dto';
-import { approximatePoint, branchMapTarget, publicAreaLabel } from '../../common/address-view';
+import {
+  approximatePoint,
+  branchMapTarget,
+  pickupPointAddressOf,
+  publicAreaLabel,
+} from '../../common/address-view';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { stableCacheKey, TtlCache } from '../../common/ttl-cache';
 import { searchTokens } from '@xeprime/domain';
@@ -1408,7 +1413,7 @@ export class PublicListingsService {
       engaged: false,
       packageTrack: hasVerifiedStorefront(storefront.billingMode),
     });
-    const fullAddress = v.branch?.address?.trim() || v.tenant.profile?.address?.trim() || null;
+    const fullAddress = pickupPointAddressOf(v);
     const pickupArea = fromBranch
       ? publicAreaLabel(v.branch?.ward?.name, v.branch?.province?.name)
       : v.tenant.profile?.address?.trim()

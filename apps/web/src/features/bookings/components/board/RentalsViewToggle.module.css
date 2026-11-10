@@ -61,3 +61,9 @@
 .buttonActive:hover {
   color: var(--xp-color-primary-active);
 }
+
+@media (max-width: 1024px) {
+  .hint {
+    display: none;
+  }
+}

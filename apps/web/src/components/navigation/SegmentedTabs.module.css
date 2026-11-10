@@ -5,14 +5,17 @@
  */
 .list {
   display: inline-flex;
+  min-width: 0;
   max-width: 100%;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   gap: var(--xp-space-2, 2px);
   padding: 2px;
   border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius-control);
   background: var(--xp-color-bg-layout);
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 .list::-webkit-scrollbar {

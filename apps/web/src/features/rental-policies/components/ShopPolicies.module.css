@@ -517,14 +517,28 @@
   }
 
   .nav {
+    min-width: 0;
+    max-width: 100%;
     padding: 6px;
   }
 
   .navList {
     flex-direction: row;
+    min-width: 0;
+    max-width: 100%;
     overflow-x: auto;
+    overscroll-behavior-x: contain;
     gap: 4px;
     scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .navList::-webkit-scrollbar {
+    display: none;
+  }
+
+  .navList > li {
+    flex: none;
   }
 
   .navItem {

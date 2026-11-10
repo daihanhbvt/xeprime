@@ -1,10 +1,56 @@
 import { describe, expect, it } from 'vitest';
 import {
   addressGeocodeQuery,
+  addressWithoutProvince,
   formatAddress,
   guessAddressLine,
   provinceNameFromAddress,
+  shortAddress,
 } from './address';
+
+describe('shortAddress', () => {
+  it('bỏ tỉnh và tiền tố cấp xã', () => {
+    expect(
+      shortAddress('136 Huỳnh Văn Gấm, Phường Hòa Xuân, Thành phố Đà Nẵng, Đà Nẵng'),
+    ).toBe('136 Huỳnh Văn Gấm, Hòa Xuân');
+    expect(shortAddress('Thôn 3, Xã Tân Hội, Lâm Đồng')).toBe('Thôn 3, Tân Hội');
+  });
+
+  it('giữ tiền tố khi tên là số, và không đụng đoạn đầu', () => {
+    expect(shortAddress('12 Lê Lợi, Phường 5, TP.HCM')).toBe('12 Lê Lợi, Phường 5');
+    expect(shortAddress('Phố Xã Đàn, Phường Kim Liên, Hà Nội')).toBe('Phố Xã Đàn, Kim Liên');
+    expect(shortAddress(null)).toBeNull();
+  });
+});
+
+describe('addressWithoutProvince', () => {
+  it('bỏ tỉnh/thành ở cuối địa chỉ đã ghép, giữ số nhà + phường', () => {
+    expect(addressWithoutProvince('133 Lý Thường Kiệt, Phường Hải Châu, Đà Nẵng')).toBe(
+      '133 Lý Thường Kiệt, Phường Hải Châu',
+    );
+  });
+
+  it('nhận cả biến thể "TP.HCM", tên trước sáp nhập và đoạn "Việt Nam" của bản đồ', () => {
+    expect(addressWithoutProvince('12 Nguyễn Huệ, Quận 1, TP.HCM')).toBe('12 Nguyễn Huệ, Quận 1');
+    expect(addressWithoutProvince('5 Trần Phú, Hội An, Quảng Nam')).toBe('5 Trần Phú, Hội An');
+    expect(addressWithoutProvince('271 Trần Hưng Đạo, An Hải Bắc, Đà Nẵng, Việt Nam')).toBe(
+      '271 Trần Hưng Đạo, An Hải Bắc',
+    );
+  });
+
+  it('cắt cả tỉnh lặp hai lần ở cuối', () => {
+    expect(
+      addressWithoutProvince('136 Huỳnh Văn Gấm, Phường Hòa Xuân, Thành phố Đà Nẵng, Đà Nẵng'),
+    ).toBe('136 Huỳnh Văn Gấm, Phường Hòa Xuân');
+  });
+
+  it('không nhận ra tỉnh thì giữ nguyên; luôn còn ít nhất một đoạn', () => {
+    expect(addressWithoutProvince('Ngõ 5, Cầu Giấy')).toBe('Ngõ 5, Cầu Giấy');
+    expect(addressWithoutProvince('Hà Nội')).toBe('Hà Nội');
+    expect(addressWithoutProvince('  ')).toBeNull();
+    expect(addressWithoutProvince(null)).toBeNull();
+  });
+});
 
 describe('provinceNameFromAddress', () => {
   it('đọc tỉnh ở đoạn cuối, bỏ tên quốc gia', () => {

@@ -109,6 +109,13 @@
   margin-top: 20px;
 }
 
+@media (max-width: 1440px) {
+  .layout {
+    grid-template-columns: 248px minmax(0, 1fr);
+    gap: var(--xp-space-md);
+  }
+}
+
 @media (max-width: 1024px) {
   .layout {
     grid-template-columns: minmax(0, 1fr);
@@ -126,8 +133,10 @@
   }
 
   .headerActions > * {
-    flex: 1;
+    flex: 1 1 auto;
+    min-width: 0;
     justify-content: center;
     min-height: 44px;
+    padding-inline: var(--xp-space-12);
   }
 }

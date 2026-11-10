@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
+  shortAddress,
   DATE_TIME_SEPARATOR,
   isLateReturn,
   isPositiveMoney,
@@ -13,6 +14,7 @@ import {
   rentalProgress,
 } from '@xeprime/domain';
 import {
+  BOOKING_HANDOVER_PLACE,
   BOOKING_HANDOVER_PLACE_VALUES,
   BOOKING_LIST_PRESET,
   BOOKING_STATUS,
@@ -47,8 +49,11 @@ import {
   type RentalCardLayout,
 } from './rental-card/RentalCard';
 import {
+  RentalBoardAddress,
   RentalBoardCard,
+  RentalBoardPeriod,
   RentalBoardProgress,
+  type RentalBoardFact,
   type RentalBoardHold,
   type RentalBoardMoney,
 } from './rental-card/RentalBoardCard';
@@ -320,20 +325,15 @@ export function BookingCard({
           contacts,
         }}
         schedule={[
-          { key: 'pickup', label: tRequests('card.pickupAt'), value: fmt.rentalPoint(pickup) },
-          { key: 'return', label: tRequests('card.returnAt'), value: fmt.rentalPoint(dropoff) },
+          {
+            key: 'period',
+            label: tKanban('schedule.period'),
+            value: <RentalBoardPeriod from={pickup} to={dropoff} />,
+          },
           ...(booking.serviceType === SERVICE_TYPE.LONG_TERM && booking.longTermPackageMonths
             ? [{ key: 'package', label: tRequests('card.package'), value: durationLabel }]
             : []),
-          ...(place
-            ? [
-                {
-                  key: 'handover',
-                  label: tRequests('card.handover'),
-                  value: tBookings(`detailPage.side.place.${place}`),
-                },
-              ]
-            : []),
+          ...(place ? [bookingBoardPlace(booking, place, tKanban)] : []),
         ]}
         {...bookingBoardMoney(booking, tKanban)}
         progress={
@@ -456,41 +456,79 @@ function bookingPaymentRows(
   return rows;
 }
 
+type KanbanT = ReturnType<typeof useTranslations<'Bookings.board.kanban'>>;
+
 /**
- * Hàng tiền của thẻ Kanban — cùng số với `bookingPaymentRows`, KHÔNG có ô "Tiền thuê" (05/11/2026:
- * thẻ hẹp chỉ giữ số người trực cần lúc giao/nhận xe; tiền thuê ở trang chi tiết và thẻ List). Đơn
- * qua chợ: khách trả · trả khi nhận xe · giữ chỗ "Đã thanh toán" (đơn chỉ ra đời khi tiền về ĐỦ —
- * ADR 0044). Đơn tự lập: khách trả · đã thu · còn phải thu (tô đậm khi còn nợ), không có ô giữ chỗ.
+ * Dòng NƠI ĐỔI TAY của ô lịch thẻ gọn — nhãn theo hình thức (chốt 10/11/2026, design bỏ dòng "Hình
+ * thức nhận xe"): giao tận nơi "Giao xe tới" + địa chỉ khách · có tài xế "Điểm đón" · khách tự tới
+ * "Nhận tại" + địa chỉ chi nhánh / hồ sơ gian hàng (`pickupPointAddress`), chưa có thì tên chi
+ * nhánh. Địa chỉ gọn: bỏ tỉnh/TP và chữ "Phường/Xã" (`shortAddress`).
+ */
+function bookingBoardPlace(
+  booking: BookingListItem,
+  place: BookingHandoverPlace,
+  t: KanbanT,
+): RentalBoardFact {
+  const label =
+    place === BOOKING_HANDOVER_PLACE.DELIVERY
+      ? t('schedule.placeDelivery')
+      : place === BOOKING_HANDOVER_PLACE.DRIVER_PICKUP
+        ? t('schedule.placeDriverPickup')
+        : t('schedule.placeBranch');
+  const address = shortAddress(
+    place === BOOKING_HANDOVER_PLACE.BRANCH
+      ? (booking.pickupPointAddress ?? booking.handoverPlace)
+      : booking.handoverPlace,
+  );
+  return {
+    key: 'place',
+    label,
+    value: address ? <RentalBoardAddress text={address} /> : t('schedule.placeUnknown'),
+  };
+}
+
+/**
+ * Hàng tiền của thẻ gọn, góc nhìn CHỦ XE (chốt 10/11/2026) — KHÔNG có ô "Tiền thuê" (tiền thuê ở
+ * trang chi tiết và thẻ List) và không lặp "Khách trả" (đã là số vàng ở dải đầu). Đơn qua chợ: giữ
+ * chỗ (viên "Đã thanh toán" ở dải đầu — đơn chỉ ra đời khi tiền về ĐỦ, ADR 0044) · thu khi giao xe
+ * · cộng ví (`D − T` đóng băng). Đơn tự lập: đã thu · còn phải thu (tô đậm khi còn nợ).
  */
 function bookingBoardMoney(
   booking: BookingListItem,
-  t: ReturnType<typeof useTranslations<'Bookings.board.kanban'>>,
-): { money: RentalBoardMoney[]; hold: RentalBoardHold | null } {
+  t: KanbanT,
+): { total: RentalBoardMoney; money: RentalBoardMoney[]; hold: RentalBoardHold | null } {
   const customer: RentalBoardMoney = {
     key: 'customer',
     label: t('money.customerTotal'),
     amount: booking.customerTotalAmount ?? booking.totalAmount,
   };
   if (booking.payAtPickupAmount != null) {
+    const held = booking.holdPaidAmount != null;
     return {
+      total: customer,
       money: [
-        customer,
+        ...(held
+          ? [{ key: 'hold', label: t('money.hold'), amount: booking.holdPaidAmount as string }]
+          : []),
         { key: 'pickup', label: t('money.payAtPickup'), amount: booking.payAtPickupAmount },
+        ...(held && booking.ownerPayableAmount != null
+          ? [
+              {
+                key: 'walletCredit',
+                label: t('money.walletCredit'),
+                amount: booking.ownerPayableAmount,
+              },
+            ]
+          : []),
       ],
-      hold:
-        booking.holdPaidAmount != null
-          ? {
-              label: t('money.hold'),
-              amount: booking.holdPaidAmount,
-              state: 'paid',
-              stateLabel: t('holdState.paid'),
-            }
-          : null,
+      hold: held
+        ? { label: t('money.hold'), state: 'paid', stateLabel: t('holdState.paid') }
+        : null,
     };
   }
   return {
+    total: customer,
     money: [
-      customer,
       { key: 'collected', label: t('money.collected'), amount: booking.collectedAmount },
       {
         key: 'debt',
@@ -536,7 +574,11 @@ function statusLine(
       if (urgency === PICKUP_URGENCY.TODAY)
         return { text: t('pickupToday', { time }), tone: 'warning' };
       return {
-        text: t('pickupUpcoming', { date: fmt.dayMonth(booking.pickupAt), time, sep: DATE_TIME_SEPARATOR }),
+        text: t('pickupUpcoming', {
+          date: fmt.dayMonth(booking.pickupAt),
+          time,
+          sep: DATE_TIME_SEPARATOR,
+        }),
         tone: 'muted',
       };
     }

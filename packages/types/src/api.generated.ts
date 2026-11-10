@@ -13236,6 +13236,10 @@ export interface components {
             customerTotalAmount?: string | null;
             holdPaidAmount?: string | null;
             payAtPickupAmount?: string | null;
+            /** @description `D − T` đóng băng trong snapshot - số XePrime ghi vào Ví điểm chủ xe khi chuyến hoàn thành (ô "Cộng ví" của thẻ; cùng con số `ownerPayout.ownerPayableAmount` của chi tiết). `null` với đơn lập tay / đơn cũ không có bảng phí marketplace (VND string) */
+            ownerPayableAmount?: string | null;
+            /** @description Địa chỉ ĐIỂM NHẬN XE khi khách tự tới: chi nhánh giữ xe, rơi về địa chỉ hồ sơ gian hàng. `null` khi chưa điền cả hai - chuỗi thô, không dịch */
+            pickupPointAddress?: string | null;
             /** @description Phần tiền thuê CỦA CHỦ XE (`D`) khách đã trả trước trong tiền giữ chỗ, đang ở XePrime - vào ví khi chuyến xong. KHÁC `holdPaidAmount` (gồm cả phí sàn `S` và bảo hiểm). 0 với đơn lập tay / chưa thu giữ chỗ (VND string) */
             ownerShareOnlineAmount: string;
             /** @description Số khách CÒN PHẢI TRẢ TẬN TAY gian hàng = công nợ (`debtAmount`) − `ownerShareOnlineAmount`, sàn 0. Cùng phép với "Thu tiền thuê" của Chuẩn bị bàn giao và hộp nhận lại xe (VND string) */
@@ -13578,6 +13582,10 @@ export interface components {
             customerTotalAmount?: string | null;
             holdPaidAmount?: string | null;
             payAtPickupAmount?: string | null;
+            /** @description `D − T` đóng băng trong snapshot - số XePrime ghi vào Ví điểm chủ xe khi chuyến hoàn thành (ô "Cộng ví" của thẻ; cùng con số `ownerPayout.ownerPayableAmount` của chi tiết). `null` với đơn lập tay / đơn cũ không có bảng phí marketplace (VND string) */
+            ownerPayableAmount?: string | null;
+            /** @description Địa chỉ ĐIỂM NHẬN XE khi khách tự tới: chi nhánh giữ xe, rơi về địa chỉ hồ sơ gian hàng. `null` khi chưa điền cả hai - chuỗi thô, không dịch */
+            pickupPointAddress?: string | null;
             /** @description Phần tiền thuê CỦA CHỦ XE (`D`) khách đã trả trước trong tiền giữ chỗ, đang ở XePrime - vào ví khi chuyến xong. KHÁC `holdPaidAmount` (gồm cả phí sàn `S` và bảo hiểm). 0 với đơn lập tay / chưa thu giữ chỗ (VND string) */
             ownerShareOnlineAmount: string;
             /** @description Số khách CÒN PHẢI TRẢ TẬN TAY gian hàng = công nợ (`debtAmount`) − `ownerShareOnlineAmount`, sàn 0. Cùng phép với "Thu tiền thuê" của Chuẩn bị bàn giao và hộp nhận lại xe (VND string) */
@@ -13743,6 +13751,8 @@ export interface components {
             deliveryAddress?: string | null;
             /** @description Địa chỉ giao xe có cấu trúc - null khi khách tự tới lấy */
             deliveryLocation?: components["schemas"]["AddressViewDto"] | null;
+            /** @description Địa chỉ ĐIỂM NHẬN XE khi khách tự tới: chi nhánh giữ xe, rơi về địa chỉ hồ sơ gian hàng. `null` khi chưa điền cả hai - chuỗi thô, không dịch */
+            pickupPointAddress?: string | null;
             /** @description LỊCH SỬ: báo giá giao nhận của các yêu cầu tạo trước Wave 9. Chỉ để đọc - không còn ảnh hưởng tới việc duyệt, và yêu cầu mới luôn null. */
             deliveryQuote?: components["schemas"]["BookingRequestDeliveryQuoteDto"] | null;
             rejectReason?: string | null;
@@ -13802,6 +13812,8 @@ export interface components {
             holdAmount?: string | null;
             /** @description Tiền giữ chỗ khách ĐÃ chuyển (`booking_holds.paid_amount`) - "Đã giữ chỗ" chỉ khi số này đủ `holdAmount` (ADR 0044). null khi không có khoản giữ chỗ */
             holdPaidAmount?: string | null;
+            /** @description `D − T` - số XePrime ghi vào Ví điểm chủ xe khi chuyến hoàn thành (ô "Cộng ví" của thẻ). Tạm tính khi `isEstimate`; đã đóng băng khi có khoản giữ chỗ / đơn. null khi không có bảng phí (dài hạn chưa chốt, đơn đời cũ). Chỉ bề mặt đối tác (ADR 0064 điều 11) (VND string) */
+            ownerPayableAmount?: string | null;
         };
         BookingRequestReceiptDto: {
             id: string;

@@ -10,6 +10,7 @@
  * quận/huyện — mô hình hành chính hai cấp từ 01/07/2025.
  */
 import {
+  buildProvinceAliasSeeds,
   normalizeProvinceAlias,
   PROVINCE_ADMINISTRATIVE_TYPE,
   PROVINCE_CATALOG,
@@ -144,6 +145,59 @@ export function provinceNameFromAddress(formatted: string | null | undefined): s
   }
   return segments.at(-1) ?? null;
 }
+
+/**
+ * Địa chỉ NGẮN cho chỗ hẹp (thẻ đơn thuê của gian hàng, 10/11/2026): bỏ đoạn tỉnh/thành ở CUỐI —
+ * `"133 Lý Thường Kiệt, Phường Hải Châu, Đà Nẵng"` → `"133 Lý Thường Kiệt, Phường Hải Châu"`.
+ *
+ * Chỉ cắt khi NHẬN RA đoạn cuối là một tỉnh/thành (tên hiện hành, tên trước sáp nhập, biến thể
+ * "TP.HCM"/"Thành phố …" — cùng bảng bí danh với `province_aliases`), kèm đoạn "Việt Nam" của địa
+ * chỉ bản đồ. Không nhận ra thì trả NGUYÊN chuỗi: thừa một tên tỉnh còn hơn cắt nhầm tên đường.
+ * Luôn giữ ít nhất một đoạn. `null` khi chuỗi rỗng.
+ */
+export function addressWithoutProvince(address: string | null | undefined): string | null {
+  const full = address?.trim();
+  if (!full) return null;
+  const segments = full
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  while (segments.length > 1 && COUNTRY_SEGMENT.test(segments[segments.length - 1]!)) {
+    segments.pop();
+  }
+  // Lặp: địa chỉ ghép từ gợi ý bản đồ có khi mang tỉnh HAI lần ("…, Thành phố Đà Nẵng, Đà Nẵng").
+  while (
+    segments.length > 1 &&
+    PROVINCE_ALIAS_KEYS.has(normalizeProvinceAlias(segments[segments.length - 1]!))
+  ) {
+    segments.pop();
+  }
+  return segments.join(PART_SEPARATOR);
+}
+
+/** Tiền tố loại đơn vị CẤP XÃ — bỏ được ở địa chỉ ngắn khi theo sau là một TÊN (không phải số). */
+const WARD_PREFIX = /^(phường|xã|thị trấn|đặc khu)\s+(?!\d)/iu;
+
+/**
+ * Địa chỉ GỌN NHẤT cho một dòng trên thẻ (10/11/2026): {@link addressWithoutProvince} rồi bỏ tiền tố
+ * cấp xã — `"136 Huỳnh Văn Gấm, Phường Hòa Xuân, Đà Nẵng"` → `"136 Huỳnh Văn Gấm, Hòa Xuân"`.
+ *
+ * Không đụng đoạn ĐẦU (số nhà, tên đường — "Xã Đàn" là tên phố) và giữ tiền tố khi tên là SỐ
+ * ("Phường 5" bỏ chữ thì còn trơ "5"). Chỉ để HIỂN THỊ ở chỗ hẹp; bản đầy đủ vẫn ở ⓘ / chi tiết.
+ */
+export function shortAddress(address: string | null | undefined): string | null {
+  const withoutProvince = addressWithoutProvince(address);
+  if (!withoutProvince) return null;
+  return withoutProvince
+    .split(PART_SEPARATOR)
+    .map((segment, index) => (index === 0 ? segment : segment.replace(WARD_PREFIX, '')))
+    .join(PART_SEPARATOR);
+}
+
+/** Khoá chuẩn hoá của MỌI bí danh tỉnh (tên chuẩn, tên cũ, biến thể) — tính một lần. */
+const PROVINCE_ALIAS_KEYS: ReadonlySet<string> = new Set(
+  buildProvinceAliasSeeds().map((alias) => alias.normalizedAlias),
+);
 
 /** Tiền tố loại đơn vị hành chính, cả mô hình hiện hành lẫn mô hình trước 01/07/2025. */
 const ADMIN_PREFIX = /^(phường|xã|thị trấn|đặc khu|quận|huyện|thị xã|tp\.?|thành phố|tỉnh)\b/i;

@@ -172,10 +172,12 @@ export { provinceCenter, provinceCodesMissingCenter } from './province-center';
  */
 export {
   addressGeocodeQuery,
+  addressWithoutProvince,
   formatAddress,
   guessAddressLine,
   provinceNameFromAddress,
   provinceSelectLabel,
+  shortAddress,
   type AddressParts,
 } from './address';
 

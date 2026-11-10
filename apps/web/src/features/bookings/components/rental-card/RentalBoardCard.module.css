@@ -1,18 +1,28 @@
 /*
- * Thẻ chuyến trong cột Kanban — Figma Partner-XePrime "_Kanban Item" (`23895:15196`, `23895:15208`,
- * 05/11/2026). Số đo lấy thẳng từ design: đệm 16, khối cách 12, bo 16, viền gray-low200, bóng 6px rất
- * nhạt; chữ 14/20 cho mã · khách · ô lịch, 12/18 cho thông số xe và lưới tiền.
+ * Thẻ chuyến gọn (cột Kanban + danh sách điện thoại) — Figma Partner-XePrime "_Kanban Items"
+ * (`24117:72641` mở, `24117:72841` thu gọn; 10/11/2026). Số đo lấy thẳng từ design: đệm 16, khối
+ * cách 12, bo 16, viền gray-low200, bóng 6px rất nhạt; chữ 14/20 cho mã · tên xe · khách · ô lịch,
+ * 12/18 cho thông số xe và hàng tiền.
+ */
+/*
+ * Vỏ = container đo bề rộng (viền, nền, bóng); ruột `.body` mang đệm + bố cục — tách ra vì một
+ * container query không đổi được đệm của CHÍNH phần tử container (xem khối @container cuối file).
  */
 .card {
+  min-width: 0;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 0 6px 0 rgba(10, 13, 18, 0.04);
+  container: rental-board-card / inline-size;
+}
+
+.body {
   display: flex;
   flex-direction: column;
   gap: var(--xp-space-12);
   min-width: 0;
   padding: var(--xp-space-md);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-card);
-  background: var(--xp-color-bg-container);
-  box-shadow: 0 0 6px 0 rgba(10, 13, 18, 0.04);
 }
 
 .clickable {
@@ -28,9 +38,21 @@
   opacity: 0.85;
 }
 
-/* ── Dải đầu: ⋮⋮ · mã (14/500 xám đậm) … viên dịch vụ bên phải ─────────────── */
+/*
+ * ── Dải đầu: hai hàng cách 8, gạch gray-100 dưới, đệm dưới 12 ─────────────
+ * Hàng 1: ⋮⋮ · mã (14/500 xám đậm) … viên giữ chỗ. Hàng 2: viên dịch vụ … tổng khách trả 16/600 vàng.
+ */
 
 .head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+  padding-bottom: var(--xp-space-12);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+}
+
+.headRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -56,7 +78,53 @@
   white-space: nowrap;
 }
 
-/* ── Xe: ảnh 76×48 bo 8 · tên 16/600 · biển số + thông số 12/18 một dòng ──── */
+/* text/brand/primary-2 (#cb9115) — trùng giá trị `primary-hover` của bảng token. */
+.total {
+  flex: none;
+  margin: 0;
+  color: var(--xp-color-primary-hover);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 24px;
+  white-space: nowrap;
+}
+
+.srOnly {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  margin: -1px;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Viên trạng thái giữ chỗ (góc phải hàng 1) — bo 6, đệm 2/8, chữ 12/500, không viền. */
+.holdChip {
+  flex: none;
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.unpaid {
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+.paid {
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+/* ── Xe: ảnh 76×48 bo 8 · tên 14/600 · biển số (nền gray-50, bo 6) + thông số 12/18 · mũi tên ── */
 
 .vehicle {
   display: flex;
@@ -77,6 +145,7 @@
 
 .vehicleText {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: var(--xp-space-6);
   min-width: 0;
@@ -86,9 +155,9 @@
   overflow: hidden;
   max-width: 100%;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-lg);
+  font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: 24px;
+  line-height: 20px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -100,14 +169,13 @@ a.vehicleName:hover {
 .tags {
   display: flex;
   align-items: center;
-  gap: var(--xp-space-sm);
+  gap: var(--xp-space-6);
   min-width: 0;
 }
 
 .plate {
   flex: none;
   padding: 2px var(--xp-space-sm);
-  border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius-sm);
   background: var(--xp-color-bg);
   color: var(--xp-color-text-secondary);
@@ -127,7 +195,98 @@ a.vehicleName:hover {
   white-space: nowrap;
 }
 
-/* ── Khách: nét đứt phía trên · ảnh 32 + tên/SĐT 14/20 · ba nút liên hệ bên phải ── */
+/*
+ * Mũi tên mở/thu: tròn 24, icon 20. Thu gọn: nền xám, mũi tên xuống; mở: nền primary-low, màu
+ * primary-strong, mũi tên lên (xoay 180°). Vùng bấm nới ra 44 bằng `::after` cho ngón tay.
+ */
+.toggle {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.toggle::after {
+  position: absolute;
+  inset: -10px;
+  content: '';
+}
+
+.toggle:hover {
+  background: var(--xp-color-bg-active);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.toggleOpen,
+.toggleOpen:hover {
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-strong);
+}
+
+.toggleIcon {
+  font-size: 20px;
+  transition: transform 0.2s ease;
+}
+
+.toggleOpen .toggleIcon {
+  transform: rotate(180deg);
+}
+
+/*
+ * ── Phần thu gọn được (khách + ô lịch) ─────────────────────────────────────
+ * Hàng lưới 0fr ↔ 1fr để chiều cao trượt mượt mà không đo bằng JS. `margin-top: -12` triệt khoảng
+ * cách 12 của thẻ khi phần này đóng; lúc mở, đệm trên 12 của lớp trong trả lại đúng khoảng đó.
+ */
+
+.more {
+  display: grid;
+  grid-template-rows: 0fr;
+  margin-top: calc(-1 * var(--xp-space-12));
+  transition: grid-template-rows 0.2s ease;
+}
+
+.moreOpen {
+  grid-template-rows: 1fr;
+}
+
+.moreInner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  overflow: hidden;
+  min-height: 0;
+  padding-top: var(--xp-space-12);
+}
+
+/* Đóng xong mới ẩn hẳn (chờ hết lượt trượt) — nội dung không lộ qua mép khi đang thu. */
+.more:not(.moreOpen) .moreInner {
+  visibility: hidden;
+  transition: visibility 0s 0.2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .more,
+  .toggleIcon,
+  .more:not(.moreOpen) .moreInner {
+    transition: none;
+  }
+}
+
+/* ── Khách: ảnh 32 + tên/SĐT 14/20 · ba nút liên hệ bên phải ─────────────── */
 
 .customer {
   display: flex;
@@ -135,8 +294,6 @@ a.vehicleName:hover {
   justify-content: space-between;
   gap: var(--xp-space-sm);
   min-width: 0;
-  padding-top: var(--xp-space-12);
-  border-top: 1px dashed var(--xp-color-border);
 }
 
 .customerIdentity {
@@ -144,7 +301,11 @@ a.vehicleName:hover {
   min-width: 0;
 }
 
-/* ── Ô lịch: nền gray-50, bo 12, đệm 12, dòng cách 8; nhãn 132px xám, giá trị 14/500 ── */
+/*
+ * ── Ô lịch (luôn hiện): nền gray-50, bo 12, đệm 12, dòng cách 8 ─────────────
+ * Mỗi dòng: nhãn 14/400 xám bên trái (không bẻ), giá trị 14/400 đậm màu canh PHẢI — địa chỉ dài
+ * xuống dòng trong cột giá trị, khung giờ chỉ xuống dòng ở mũi tên (`.period`).
+ */
 
 .schedule {
   display: flex;
@@ -154,30 +315,88 @@ a.vehicleName:hover {
   padding: var(--xp-space-12);
   border-radius: var(--xp-border-radius-control);
   background: var(--xp-color-bg);
-}
-
-.fact {
-  display: grid;
-  grid-template-columns: 132px minmax(0, 1fr);
-  align-items: baseline;
-  gap: var(--xp-space-12);
   font-size: var(--xp-font-size-body);
   line-height: 20px;
 }
 
+.fact {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
 .factLabel {
+  flex: none;
   color: var(--xp-color-text-tertiary);
+  white-space: nowrap;
 }
 
 .factValue {
-  display: inline-flex;
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--xp-space-xs);
   min-width: 0;
   margin: 0;
   color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-medium);
+  text-align: right;
+}
+
+.period {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  column-gap: 0.3em;
+}
+
+.periodPoint {
+  white-space: nowrap;
+}
+
+/*
+ * Thẻ hẹp hơn design (cột Kanban trên màn ≤1440, thẻ ~294–304): giữ cỡ chữ 14, ẩn phần THỨ của hai
+ * mốc và bớt đệm — thẻ 16→12, ô lịch 12→8, nhãn–giá trị 12→6 — để "Thời gian" + khung giờ nằm trên
+ * MỘT dòng cả với chữ số rộng nhất. Số đo 10/11 (Google Sans Flex 14): nhãn 57, khung giờ không
+ * thứ tối đa 188 ("28/08 08h00 → 28/08 08h00"), có thứ ~236 ⇒ bản đầy đủ cần 32 + 24 + 57 + 12 +
+ * 236 ≈ 361px, bản gọn 24 + 16 + 57 + 6 + 188 = 291px (cột hẹp nhất cho thẻ 292px trong viền).
+ * Ngưỡng đo trên bề rộng trong viền của thẻ (vỏ không có đệm). Điện thoại thẻ ≥372 giữ bản đầy đủ.
+ */
+@container rental-board-card (max-width: 362px) {
+  .body {
+    padding: var(--xp-space-md) var(--xp-space-12);
+  }
+
+  .weekday {
+    display: none;
+  }
+
+  .schedule {
+    padding: var(--xp-space-12) var(--xp-space-sm);
+  }
+
+  .fact {
+    gap: var(--xp-space-6);
+  }
+}
+
+/*
+ * Thẻ hẹp hơn nữa (cột Kanban ở màn ~1280px: thẻ ~270): nhãn + kỳ thuê một hàng cần ~291px, nên
+ * nhãn lên trên, giá trị xuống dưới canh trái — kỳ thuê vẫn MỘT hàng, cỡ chữ giữ nguyên.
+ */
+@container rental-board-card (max-width: 290px) {
+  .fact {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .factValue {
+    justify-content: flex-start;
+    text-align: left;
+  }
 }
 
 .factHint {
@@ -186,26 +405,34 @@ a.vehicleName:hover {
 }
 
 /*
- * ── MỘT hàng tiền: nhãn 12/400 xám trên, số 12/500 dưới, cách 2 ────────────
- * Ô rộng theo nội dung, dàn đều hai mép (ô "Giữ chỗ" mang thêm viên trạng thái nên rộng hơn ô
- * khác — chia ba cột bằng nhau thì viên tràn). Thẻ hẹp hơn tổng ba ô thì ô cuối xuống hàng.
+ * ── MỘT hàng tiền (trong phần thu gọn): nét đứt phía trên, ô canh giữa, vạch gray-100 ngăn ──
+ * Nhãn 12/400 xám trên, số 14/500 dưới, cách 2. Ô lấy bề rộng theo CHỮ rồi chia đều phần dư
+ * (`flex: 1 1 auto`): cột Kanban hẹp thì "Thu khi giao xe" không bị bẻ đôi chỉ vì ba ô bằng nhau;
+ * chỉ khi cả hàng thật sự không vừa, nhãn mới xuống dòng trong ô của nó.
  */
 
 .money {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--xp-space-sm) var(--xp-space-12);
+  align-items: stretch;
   margin: 0;
+  padding-top: var(--xp-space-12);
+  border-top: 1px dashed var(--xp-color-border);
 }
 
 .moneyCell {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
+  align-items: center;
   gap: 2px;
   min-width: 0;
   margin: 0;
+  padding: 0 var(--xp-space-xs);
+  text-align: center;
+}
+
+.moneyCell + .moneyCell {
+  border-left: 1px solid var(--xp-color-border-subtle);
 }
 
 .moneyLabel {
@@ -217,45 +444,15 @@ a.vehicleName:hover {
 .moneyValue {
   margin: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-sm);
+  font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-medium);
-  line-height: 18px;
+  line-height: 20px;
   white-space: nowrap;
 }
 
 .moneyEmphasis {
   color: var(--xp-color-primary-active);
   font-weight: var(--xp-font-weight-semibold);
-}
-
-.holdState {
-  display: flex;
-  margin: var(--xp-space-xs) 0 0;
-}
-
-/* Viên trạng thái giữ chỗ — bo 16, đệm 2/8, chữ 12/500. */
-.holdChip {
-  padding: 2px var(--xp-space-sm);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg-muted);
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-medium);
-  line-height: 18px;
-  white-space: nowrap;
-}
-
-.unpaid {
-  border-color: var(--xp-color-info-border);
-  background: var(--xp-color-info-bg);
-  color: var(--xp-color-info-strong);
-}
-
-.paid {
-  border-color: var(--xp-color-success-border);
-  background: var(--xp-color-success-bg);
-  color: var(--xp-color-success);
 }
 
 /* ── Thanh tiến độ 8px (đang thuê) ───────────────────────────────────────── */

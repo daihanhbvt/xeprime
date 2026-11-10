@@ -26,6 +26,7 @@ import { LoadingState } from '@/components/feedback/LoadingState';
 import { RENTAL_STAGE, isRentalStage, type RentalStage } from '@/constants/rental-stages';
 import type { BookingRequestItem } from '@/features/booking-requests/types';
 import { usePrefersReducedMotion } from '@/hooks/use-media-query';
+import { useScrollingFlag } from '@/hooks/use-scrolling-flag';
 import { cx } from '@/lib/cx';
 import { boardDropVerdict, type BoardDropVerdict } from '../../rentals-board-rules';
 import type { BookingListItem } from '../../types';
@@ -251,6 +252,8 @@ function BoardColumnView({
   const t = useTranslations('Bookings.board.kanban');
   const tBoard = useTranslations('Bookings.board');
   const { setNodeRef, isOver } = useDroppable({ id: column.stage });
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useScrollingFlag(scrollRef);
   const verdict = active ? boardDropVerdict(active.stage, column.stage) : null;
   const headingId = `rentals-board-${column.stage}`;
 
@@ -268,34 +271,36 @@ function BoardColumnView({
     >
       <RentalStageHeading id={headingId} stage={column.stage} count={column.count} />
       <DropHint stage={column.stage} verdict={verdict} isOver={isOver} />
-      {column.loading ? (
-        <LoadingState variant="cards" rows={2} label={tBoard(`stage.${column.stage}`)} />
-      ) : column.error ? (
-        <div className={styles.columnNote} role="alert">
-          <p>{t('columnError')}</p>
-          <Button size="small" onClick={column.refetch}>
-            {t('retry')}
-          </Button>
-        </div>
-      ) : column.items.length === 0 ? (
-        <p className={styles.columnEmpty}>{tBoard(`stageEmpty.${column.stage}.title`)}</p>
-      ) : (
-        <ul
-          className={column.stale ? styles.cardsBusy : styles.cards}
-          aria-busy={column.stale || undefined}
-        >
-          {column.items.map((item) => (
-            <BoardCard
-              key={cardKey(column.stage, item)}
-              stage={column.stage}
-              item={item}
-              draggable={canDrag(column.stage, item)}
-              renderCard={renderCard}
-            />
-          ))}
-        </ul>
-      )}
-      {column.items.length > 0 ? <LoadMore column={column} /> : null}
+      <div ref={scrollRef} className={styles.columnBody}>
+        {column.loading ? (
+          <LoadingState variant="cards" rows={2} label={tBoard(`stage.${column.stage}`)} />
+        ) : column.error ? (
+          <div className={styles.columnNote} role="alert">
+            <p>{t('columnError')}</p>
+            <Button size="small" onClick={column.refetch}>
+              {t('retry')}
+            </Button>
+          </div>
+        ) : column.items.length === 0 ? (
+          <p className={styles.columnEmpty}>{tBoard(`stageEmpty.${column.stage}.title`)}</p>
+        ) : (
+          <ul
+            className={column.stale ? styles.cardsBusy : styles.cards}
+            aria-busy={column.stale || undefined}
+          >
+            {column.items.map((item) => (
+              <BoardCard
+                key={cardKey(column.stage, item)}
+                stage={column.stage}
+                item={item}
+                draggable={canDrag(column.stage, item)}
+                renderCard={renderCard}
+              />
+            ))}
+          </ul>
+        )}
+        {column.items.length > 0 ? <LoadMore column={column} rootRef={scrollRef} /> : null}
+      </div>
     </section>
   );
 }
@@ -365,7 +370,13 @@ function BoardCard({
  * Cuối cột: tải trang kế khi mép dưới cột vào gần khung nhìn (`IntersectionObserver`, cùng cách với
  * danh sách hội thoại) — lỗi thì nút thử lại, không tự dội request.
  */
-function LoadMore({ column }: { column: BoardColumn }) {
+function LoadMore({
+  column,
+  rootRef,
+}: {
+  column: BoardColumn;
+  rootRef: React.RefObject<HTMLElement | null>;
+}) {
   const t = useTranslations('Bookings.board.kanban');
   const sentinelRef = useRef<HTMLDivElement>(null);
   const { hasNext, loadingMore, loadMoreError, loadMore } = column;
@@ -378,11 +389,11 @@ function LoadMore({ column }: { column: BoardColumn }) {
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) loadMore();
       },
-      { rootMargin: '240px' },
+      { root: rootRef.current, rootMargin: '240px' },
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasNext, loadingMore, loadMoreError, loadMore]);
+  }, [hasNext, loadingMore, loadMoreError, loadMore, rootRef]);
 
   if (!hasNext) return null;
   return (

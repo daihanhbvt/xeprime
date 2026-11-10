@@ -400,7 +400,7 @@ describe('Tay nắm kéo - chỉ ở thẻ có bước kế mà người xem là
     expect(pickup.getAttribute('href')).toContain(bookingPath.detail('b-pick'));
   });
 
-  it('thẻ Kanban không có ô "Tiền thuê"; Giữ chỗ + viên trạng thái cùng MỘT hàng tiền', () => {
+  it('hàng tiền góc nhìn chủ xe: giữ chỗ · thu khi giao xe · cộng ví; viên + tổng ở dải đầu', () => {
     seedAll();
     seed(BOOKING_LIST_PRESET.RENTING, [
       booking({
@@ -411,21 +411,50 @@ describe('Tay nắm kéo - chỉ ở thẻ có bước kế mà người xem là
         customerTotalAmount: '1550000',
         holdPaidAmount: '275000',
         payAtPickupAmount: '1275000',
+        ownerPayableAmount: '180000',
       }),
     ]);
     renderPage();
     const renting = column('Đang thuê');
     expect(within(renting).queryByText('Tiền thuê')).toBeNull();
-    const row = within(renting).getByText('Khách trả').closest('dl')!;
-    for (const label of ['Khách trả', 'Trả khi nhận xe', 'Giữ chỗ', 'Đã thanh toán']) {
+    const row = within(renting).getByText('Thu khi giao xe').closest('dl')!;
+    for (const label of ['Giữ chỗ', 'Thu khi giao xe', 'Cộng ví']) {
       expect(within(row).getByText(label)).toBeTruthy();
     }
-    // Đơn tự lập: khách trả · đã thu · còn phải thu — cũng không có "Tiền thuê".
+    expect(row.textContent).toContain('180.000');
+    // "Khách trả" chỉ còn là số vàng ở dải đầu, cạnh viên trạng thái giữ chỗ — không lặp trong hàng.
+    expect(within(row).queryByText('Khách trả')).toBeNull();
+    expect(within(row).queryByText('Đã thanh toán')).toBeNull();
+    const head = within(renting).getByText('Đã thanh toán').closest('header')!;
+    expect(head.textContent).toContain('1.550.000');
+    // Đơn tự lập: đã thu · còn phải thu — không ô giữ chỗ, không cộng ví.
     const pickup = column('Chờ giao xe');
     expect(within(pickup).queryByText('Tiền thuê')).toBeNull();
-    const own = within(pickup).getByText('Khách trả').closest('dl')!;
-    expect(within(own).getByText('Đã thu')).toBeTruthy();
+    const own = within(pickup).getAllByText('Đã thu')[0]!.closest('dl')!;
     expect(within(own).getByText('Còn phải thu')).toBeTruthy();
+    expect(within(own).queryByText('Cộng ví')).toBeNull();
+  });
+
+  it('mũi tên mở/thu khối khách + tiền (mặc định thu); ô lịch luôn hiện', () => {
+    seedAll();
+    renderPage();
+    const pickup = column('Chờ giao xe');
+    const toggle = within(pickup).getAllByRole('button', {
+      name: 'Xem thông tin khách và tiền chuyến',
+    })[0]!;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    const region = document.getElementById(toggle.getAttribute('aria-controls')!)!;
+    expect(region.hasAttribute('inert')).toBe(true);
+    expect(within(region).getAllByText('Đã thu').length).toBeGreaterThan(0);
+    // Ô lịch nằm NGOÀI phần thu gọn.
+    const card = toggle.closest('article')!;
+    const period = within(card).getByText('Thời gian');
+    expect(region.contains(period)).toBe(false);
+
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(toggle.getAttribute('aria-label')).toBe('Thu gọn thông tin khách và tiền chuyến');
+    expect(region.hasAttribute('inert')).toBe(false);
   });
 });
 

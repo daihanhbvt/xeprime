@@ -122,6 +122,45 @@ textarea {
   background: transparent;
 }
 
+/*
+ * Màu con trượt của thanh cuộn "hiện khi cuộn" (cột Kanban — `useScrollingFlag`). Khai báo kiểu
+ * `<color>` để trình duyệt NỘI SUY được nó: `scrollbar-color` đọc biến này nên chuyển màu mượt
+ * thay vì nhảy bậc.
+ */
+@property --xp-scrollbar-thumb {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+
+/*
+ * Dải cuộn ngang dùng `useHorizontalScroll` (`hooks/use-horizontal-scroll.ts`): mép nào còn nội
+ * dung khuất thì mờ dần 32px, để biết còn mục phía sau dù thanh cuộn bị ẩn. Đang kéo bằng chuột
+ * thì con trỏ "nắm" và không bôi chọn chữ.
+ */
+[data-hscroll][data-hscroll-end] {
+  mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+}
+
+[data-hscroll][data-hscroll-start] {
+  mask-image: linear-gradient(to right, transparent, #000 32px);
+}
+
+[data-hscroll][data-hscroll-start][data-hscroll-end] {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 32px,
+    #000 calc(100% - 32px),
+    transparent
+  );
+}
+
+[data-hscroll][data-hscroll-dragging] {
+  cursor: grabbing;
+  user-select: none;
+}
+
 /**
  * AntD v6 + @rc-component/trigger:
  * `.ant-zoom-*` và `.ant-slide-*` đặt `transform: scale(0)` trên phần tử gốc của popup ở pha

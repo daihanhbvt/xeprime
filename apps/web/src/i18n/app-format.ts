@@ -93,6 +93,12 @@ export interface AppFormat {
    */
   rentalPoint: (value: Dayjs, opts?: { withTime?: boolean }) => string;
   /**
+   * {@link rentalPoint} (có giờ) tách làm hai: `{ weekday: 'T6, ', rest: '08/08  10h00' }`, nối lại
+   * đúng bằng bản chuẩn. Để chỗ hẹp ẩn phần THỨ bằng CSS (thẻ gọn trong cột Kanban — 10/11/2026)
+   * mà không viết một định dạng thứ hai; `weekday` rỗng nếu message không để thứ ở đầu.
+   */
+  rentalPointParts: (value: Dayjs) => { weekday: string; rest: string };
+  /**
    * Mốc thuê xe ở dạng NGẮN NHẤT còn đọc được: `14/09 17:00` (vi) · `09/14 17:00` (en).
    *
    * Bỏ THỨ so với {@link rentalPoint} — dành cho chỗ rất hẹp, nơi bản đầy đủ bị cắt thành
@@ -287,17 +293,27 @@ export function createAppFormat(
    * (vi) · `Wed, 11/04  15:35` (en). Giờ đi qua message `units.rentalTime` để vi/en khác nhau
    * được mà không gõ cứng chữ "h" trong mã.
    */
+  const withRentalTime = (point: string, value: Dayjs) =>
+    t('units.rentalPointWithTime', {
+      point,
+      time: t('units.rentalTime', { hour: value.format('HH'), minute: value.format('mm') }),
+      sep: DATE_TIME_SEPARATOR,
+    });
+
   const rentalPointText = (value: Dayjs, withTime: boolean) => {
     const base = t('units.rentalPoint', {
       weekday: weekday(value),
       date: value.format(pattern.dayMonth),
     });
-    if (!withTime) return base;
-    return t('units.rentalPointWithTime', {
-      point: base,
-      time: t('units.rentalTime', { hour: value.format('HH'), minute: value.format('mm') }),
-      sep: DATE_TIME_SEPARATOR,
-    });
+    return withTime ? withRentalTime(base, value) : base;
+  };
+
+  const rentalPointParts = (value: Dayjs) => {
+    const full = rentalPointText(value, true);
+    const rest = withRentalTime(value.format(pattern.dayMonth), value);
+    return full.endsWith(rest)
+      ? { weekday: full.slice(0, full.length - rest.length), rest }
+      : { weekday: '', rest: full };
   };
 
   /** Bản "gọn" nay dùng CHÍNH định dạng chuẩn - mọi mốc nhận/trả viết một kiểu. */
@@ -367,6 +383,7 @@ export function createAppFormat(
     weekdayShort: (value) => weekday(value),
     weekdayLong: (value) => format.dateTime(value.toDate(), 'weekdayLong'),
     rentalPoint: (value, opts) => rentalPointText(value, opts?.withTime !== false),
+    rentalPointParts,
     rentalPointCompact: (value) => compactPoint(value),
     rentalAt: (value) => (value ? rentalPointText(toAppTz(value), true) : empty),
     rentalRange: (from, to) =>
