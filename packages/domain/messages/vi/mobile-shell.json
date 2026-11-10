@@ -121,5 +121,11 @@
     "actionBlocked": "Cần kết nối mạng để thực hiện thao tác này.",
     "staleAt": "Đang offline · Dữ liệu cập nhật lúc {time}",
     "staleMoney": "Số tiền và trạng thái thanh toán có thể đã cũ."
+  },
+  "appUpdate": {
+    "title": "Đã có phiên bản mới",
+    "message": "{appName} vừa có bản cập nhật với tính năng mới và các bản sửa lỗi. Cập nhật ngay để có trải nghiệm tốt nhất.",
+    "update": "Cập nhật",
+    "later": "Để sau"
   }
 }

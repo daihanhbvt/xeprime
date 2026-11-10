@@ -1,11 +1,12 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StyleSheet, useWindowDimensions } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { XP_TOKENS } from '@xeprime/ui';
 import { useState, type ReactNode } from 'react';
 import { Text, YStack } from 'tamagui';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius } from '@/theme/tokens';
+import { useContentWidth } from '@/theme/use-content-width';
 
 /**
  * Ảnh HỎNG (bị gỡ khỏi máy chủ, URL sai) phải rơi về ĐÚNG hình chưa-có-ảnh, chứ không phải một
@@ -32,7 +33,7 @@ const COVER_MAX = 328;
 const COVER_VW = 0.228;
 
 export function useShopCoverHeight(): number {
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
   return Math.min(COVER_MAX, Math.max(COVER_MIN, Math.round(width * COVER_VW)));
 }
 
@@ -41,10 +42,9 @@ export function useShopCoverHeight(): number {
  * (`linear-gradient(120deg, #241d12, #3a2f1a)`): nâu tối, cố định ở cả hai giao diện. Đọc hai màu
  * từ token; góc 120° quy ra điểm đầu/cuối của `LinearGradient`.
  */
-const HERO_BACKDROP = [...XP_TOKENS['hero-backdrop'].matchAll(/#[0-9a-f]{3,8}/gi)].map((m) => m[0]) as [
-  string,
-  string,
-];
+const HERO_BACKDROP = [...XP_TOKENS['hero-backdrop'].matchAll(/#[0-9a-f]{3,8}/gi)].map(
+  (m) => m[0],
+) as [string, string];
 const HERO_START = { x: 0, y: 0.21 };
 const HERO_END = { x: 1, y: 0.79 };
 

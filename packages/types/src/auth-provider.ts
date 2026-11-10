@@ -95,6 +95,11 @@ export const AUTH_PROVIDER_LABEL: Readonly<Record<AuthProvider, string>> = {
   [AUTH_PROVIDER.FACEBOOK]: 'Facebook',
 };
 
+/** Nhãn thương hiệu của provider native — cùng luật với `AUTH_PROVIDER_LABEL` (không dịch). */
+export const NATIVE_IDENTITY_PROVIDER_LABEL: Readonly<Record<NativeIdentityProvider, string>> = {
+  [NATIVE_IDENTITY_PROVIDER.APPLE]: 'Apple',
+};
+
 export const AUTH_PROVIDER_BRAND_COLOR: Readonly<Record<AuthProvider, string>> = {
   [AUTH_PROVIDER.GOOGLE]: '#EA4335',
   [AUTH_PROVIDER.FACEBOOK]: '#1877F2',

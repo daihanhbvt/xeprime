@@ -1,7 +1,7 @@
 import { KenBurns } from '@/components/motion/KenBurns';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, useWindowDimensions } from 'react-native';
+import { Pressable } from 'react-native';
 import Svg, {
   Defs,
   LinearGradient as SvgGradient,
@@ -21,7 +21,9 @@ import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, market, space } from '@/theme/tokens';
 import { useSearchExperience } from '../search-context';
 import { GradientButton } from './home/GradientButton';
-import { HomeCarousel, homeCarouselItemWidth } from './home/HomeCarousel';
+import { CAROUSEL_GAP, HomeCarousel, homeCarouselItemWidth } from './home/HomeCarousel';
+import { gridCellWidth } from '@/components/layout/ResponsiveGrid';
+import { useContentWidth, useIsTabletLayout } from '@/theme/use-content-width';
 import { ScrollReveal } from '@/components/motion/ScrollReveal';
 import { HomeSectionHeading } from './home/HomeSectionHeading';
 
@@ -146,6 +148,24 @@ const ART_SCALE = { width: 4.5991, height: 1.6628 };
 const CARD_HEIGHT = 520;
 
 /**
+ * Bề ngang thẻ mà khung tranh % của web được canh cho — suy từ ảnh ghép 1536×1024 (tỉ lệ 1,5):
+ * cao 166,28% × 520 = 864,7 ⇒ rộng không méo 1297 ⇒ thẻ 1297 / 4,5991 ≈ 282 (thẻ 4 cột desktop).
+ *
+ * Bản cũ nhân % theo bề ngang VÀ chiều cao thẻ riêng rẽ — thẻ rộng hơn 282 (điện thoại ~335, iPad
+ * ~480) thì ảnh ghép bị KÉO NGANG (1,2× → 1,7×) và mép thẻ lộ ra tranh của thành phố bên cạnh.
+ * Giờ phóng ĐỀU hai chiều theo `artZoom` (≥ 1): mỗi thẻ vừa khít phần tranh của chính thành phố
+ * đó theo bề ngang, phần dư dưới đáy bị khung thẻ cắt (chỗ đó vốn nằm sau dải sóng).
+ */
+const ART_DESIGN_CARD_WIDTH = 282;
+/** Hệ số phóng đều của tranh cho một thẻ rộng `cardWidth` — không bao giờ thu nhỏ dưới bản thiết kế. */
+function artZoom(cardWidth: number): number {
+  return Math.max(cardWidth / ART_DESIGN_CARD_WIDTH, 1);
+}
+
+/** Bề ngang cột từ đó băng chuyền hiện 3 thẻ (iPad 13"); dưới mốc này máy tính bảng hiện 2. */
+const THREE_PER_VIEW_MIN_WIDTH = 900;
+
+/**
  * "Địa điểm nổi bật — Khám phá xe thuê tại các điểm đến phổ biến" (design v2, ADR 0062).
  *
  * Số xe và giá "chỉ từ" là số THẬT của `/public/destinations` (cùng ô cache với bộ chọn địa điểm
@@ -172,11 +192,18 @@ export function FeaturedLocations({
   const t = useTranslations('Home.destinations');
   const fmt = useAppFormat();
   const { destinations, destinationsLoading } = useSearchExperience();
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
   const byCode = new Map((destinations ?? []).map((item) => [item.provinceCode, item]));
 
-  // Như web ở bề rộng điện thoại: thẻ rộng theo băng chuyền (1.3 thẻ/khung), CAO cố định 520.
-  const cardWidth = homeCarouselItemWidth(width);
+  const tablet = useIsTabletLayout();
+  // Điện thoại: thẻ rộng theo băng chuyền (1.15 thẻ/khung), CAO cố định 520. Máy tính bảng: vẫn
+  // MỘT HÀNG vuốt ngang (người dùng chốt 10/11/2026 — không lưới 2 hàng), 2 thẻ một lượt, 3 ở
+  // iPad 13" để thẻ không quá to. Bề ngang thẻ tính CÙNG công thức với `HomeCarousel`.
+  const perView = width >= THREE_PER_VIEW_MIN_WIDTH ? 3 : 2;
+  const cardWidth = tablet
+    ? gridCellWidth(width - layout.screenX * 2, perView, CAROUSEL_GAP)
+    : homeCarouselItemWidth(width);
+  const zoom = artZoom(cardWidth);
   const cardHeight = CARD_HEIGHT;
   const large = 120;
   const small = 40;
@@ -186,125 +213,126 @@ export function FeaturedLocations({
       <HomeSectionHeading kicker={t('kicker')} title={t('title')} />
       {/* Dải thẻ tự hiện khi CHÍNH NÓ cuộn vào màn, không theo tiêu đề khối. */}
       <ScrollReveal>
-      <HomeCarousel accessibilityLabel={t('title')}>
-        {CITIES.map((city) => {
-          const name = t(`cities.${city.key}`);
-          const stats = byCode.get(city.provinceCode);
-          const open = () => onOpenSearch({ provinceCode: city.provinceCode });
+        <HomeCarousel accessibilityLabel={t('title')} tabletPerView={perView}>
+          {CITIES.map((city) => {
+            const name = t(`cities.${city.key}`);
+            const stats = byCode.get(city.provinceCode);
+            const open = () => onOpenSearch({ provinceCode: city.provinceCode });
 
-          return (
-            <Pressable
-              key={city.key}
-              onPress={open}
-              accessibilityRole="link"
-              accessibilityLabel={t('exploreAria', { city: name })}
-            >
-              <YStack
-                w={cardWidth}
-                h={cardHeight}
-                ov="hidden"
-                bw={1}
-                bc={market.destinationBorder}
-                bg={skin.card}
-                style={{
-                  borderTopLeftRadius: large,
-                  borderBottomRightRadius: large,
-                  borderTopRightRadius: small,
-                  borderBottomLeftRadius: small,
-                }}
+            return (
+              <Pressable
+                key={city.key}
+                onPress={open}
+                accessibilityRole="link"
+                accessibilityLabel={t('exploreAria', { city: name })}
               >
-                {/* Nền tối dùng chung — web chỉ bật ở giao diện tối (`.backdrop`). */}
-                {scheme === 'dark' ? (
-                  <Image
-                    source={images.homeDestBg}
-                    contentFit="fill"
-                    style={{
-                      position: 'absolute',
-                      top: cardHeight * -0.0001,
-                      left: cardWidth * -0.4815,
-                      width: cardWidth * 1.6556,
-                      height: cardHeight * 1.1077,
-                    }}
-                    accessibilityElementsHidden
-                  />
-                ) : null}
-                {/* Ảnh minh hoạ Ken Burns rất nhẹ (scale 1→1.02, 20s - user chốt 09/11/2026) — khung ngoài clip (`ov="hidden"`). */}
-                <KenBurns
-                  to={1.02}
-                  duration={20000}
+                <YStack
+                  w={cardWidth}
+                  h={cardHeight}
+                  ov="hidden"
+                  bw={1}
+                  bc={market.destinationBorder}
+                  bg={skin.card}
                   style={{
-                    position: 'absolute',
-                    width: cardWidth * ART_SCALE.width,
-                    height: cardHeight * ART_SCALE.height,
-                    top: cardHeight * city.top,
-                    left: cardWidth * city.left,
+                    borderTopLeftRadius: large,
+                    borderBottomRightRadius: large,
+                    borderTopRightRadius: small,
+                    borderBottomLeftRadius: small,
                   }}
                 >
-                  <Image
-                    source={images.homeDestCities}
-                    contentFit="fill"
-                    style={{ width: '100%', height: '100%' }}
-                    accessibilityElementsHidden
-                  />
-                </KenBurns>
-
-                {/* Khối chữ phía trên (`.details` web): dải màu nhạt dần cao 297, tên + số liệu căn phải. */}
-                <LinearGradient
-                  colors={skin.band}
-                  locations={[0, 0.31784, 1]}
-                  style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 297 }}
-                />
-                <YStack pt={36} px={20} gap={space.sm} ai="flex-end">
-                  <CityName name={name} width={cardWidth - 40} />
-                  {stats ? (
-                    <XStack w="100%" jc="space-between" gap={space.sm}>
-                      <Text col={skin.meta} fos={fontSize.label}>
-                        {t('available', { count: stats.vehicleCount })}
-                      </Text>
-                      {stats.minDailyPrice ? (
-                        <Text col={skin.meta} fos={fontSize.label}>
-                          {t.rich('fromPrice', {
-                            price: fmt.moneyCompact(stats.minDailyPrice, { price: true }),
-                            strong: (chunks) => (
-                              <Text col={skin.metaStrong} fow={fontWeight.medium}>
-                                {chunks}
-                              </Text>
-                            ),
-                          })}
-                        </Text>
-                      ) : null}
-                    </XStack>
-                  ) : destinationsLoading ? (
-                    // Giữ chỗ dòng số liệu khi danh mục tỉnh chưa về — chữ hiện ra không đẩy thẻ.
-                    <XStack w="100%" jc="space-between" gap={space.sm}>
-                      <YStack w="36%">
-                        <Skeleton height={14} />
-                      </YStack>
-                      <YStack w="30%">
-                        <Skeleton height={14} />
-                      </YStack>
-                    </XStack>
-                  ) : null}
-                </YStack>
-
-                {/* Chân thẻ (`.footer` web): hai lớp sóng + nút "Khám phá" ở 398/520. */}
-                <YStack pos="absolute" top={398} left={-1} w={cardWidth + 2} h={128}>
-                  <DestWaves width={cardWidth + 2} scale={1} />
-                  <YStack pos="absolute" top={56} left={0} right={0} ai="center">
-                    <GradientButton
-                      label={t('explore')}
-                      iconEnd="chevron-forward"
-                      shine
-                      onPress={open}
-                      accessibilityLabel={t('exploreAria', { city: name })}
+                  {/* Nền tối dùng chung — web chỉ bật ở giao diện tối (`.backdrop`). */}
+                  {scheme === 'dark' ? (
+                    <Image
+                      source={images.homeDestBg}
+                      contentFit="fill"
+                      style={{
+                        position: 'absolute',
+                        top: cardHeight * -0.0001,
+                        left: cardWidth * -0.4815,
+                        width: cardWidth * 1.6556,
+                        height: cardHeight * 1.1077,
+                      }}
+                      accessibilityElementsHidden
                     />
+                  ) : null}
+                  {/* Ảnh minh hoạ Ken Burns rất nhẹ (scale 1→1.02, 20s - user chốt 09/11/2026) — khung ngoài clip (`ov="hidden"`). */}
+                  <KenBurns
+                    to={1.02}
+                    duration={20000}
+                    style={{
+                      position: 'absolute',
+                      // Phóng ĐỀU theo `zoom` — giữ tỉ lệ ảnh ghép, xem `ART_DESIGN_CARD_WIDTH`.
+                      width: ART_DESIGN_CARD_WIDTH * zoom * ART_SCALE.width,
+                      height: CARD_HEIGHT * zoom * ART_SCALE.height,
+                      top: CARD_HEIGHT * zoom * city.top,
+                      left: ART_DESIGN_CARD_WIDTH * zoom * city.left,
+                    }}
+                  >
+                    <Image
+                      source={images.homeDestCities}
+                      contentFit="fill"
+                      style={{ width: '100%', height: '100%' }}
+                      accessibilityElementsHidden
+                    />
+                  </KenBurns>
+
+                  {/* Khối chữ phía trên (`.details` web): dải màu nhạt dần cao 297, tên + số liệu căn phải. */}
+                  <LinearGradient
+                    colors={skin.band}
+                    locations={[0, 0.31784, 1]}
+                    style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 297 }}
+                  />
+                  <YStack pt={36} px={20} gap={space.sm} ai="flex-end">
+                    <CityName name={name} width={cardWidth - 40} />
+                    {stats ? (
+                      <XStack w="100%" jc="space-between" gap={space.sm}>
+                        <Text col={skin.meta} fos={fontSize.label}>
+                          {t('available', { count: stats.vehicleCount })}
+                        </Text>
+                        {stats.minDailyPrice ? (
+                          <Text col={skin.meta} fos={fontSize.label}>
+                            {t.rich('fromPrice', {
+                              price: fmt.moneyCompact(stats.minDailyPrice, { price: true }),
+                              strong: (chunks) => (
+                                <Text col={skin.metaStrong} fow={fontWeight.medium}>
+                                  {chunks}
+                                </Text>
+                              ),
+                            })}
+                          </Text>
+                        ) : null}
+                      </XStack>
+                    ) : destinationsLoading ? (
+                      // Giữ chỗ dòng số liệu khi danh mục tỉnh chưa về — chữ hiện ra không đẩy thẻ.
+                      <XStack w="100%" jc="space-between" gap={space.sm}>
+                        <YStack w="36%">
+                          <Skeleton height={14} />
+                        </YStack>
+                        <YStack w="30%">
+                          <Skeleton height={14} />
+                        </YStack>
+                      </XStack>
+                    ) : null}
+                  </YStack>
+
+                  {/* Chân thẻ (`.footer` web): hai lớp sóng + nút "Khám phá" ở 398/520. */}
+                  <YStack pos="absolute" top={398} left={-1} w={cardWidth + 2} h={128}>
+                    <DestWaves width={cardWidth + 2} scale={1} />
+                    <YStack pos="absolute" top={56} left={0} right={0} ai="center">
+                      <GradientButton
+                        label={t('explore')}
+                        iconEnd="chevron-forward"
+                        shine
+                        onPress={open}
+                        accessibilityLabel={t('exploreAria', { city: name })}
+                      />
+                    </YStack>
                   </YStack>
                 </YStack>
-              </YStack>
-            </Pressable>
-          );
-        })}
-      </HomeCarousel>
+              </Pressable>
+            );
+          })}
+        </HomeCarousel>
       </ScrollReveal>
     </YStack>
   );

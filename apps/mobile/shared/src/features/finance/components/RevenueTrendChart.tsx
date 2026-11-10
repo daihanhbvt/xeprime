@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView } from 'react-native';
 import { BarChart, CurveType } from 'react-native-gifted-charts';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -18,6 +18,7 @@ import {
   profitLineSpacing,
 } from './revenue-trend-layout';
 import type { FinanceSeriesBucket } from '../api';
+import { useContentWidth } from '@/theme/use-content-width';
 
 /** Chiều cao vùng vẽ — cùng tỉ lệ với `height={220}` mà web dùng cho khối nhúng trong hồ sơ. */
 const PLOT_HEIGHT = 160;
@@ -141,7 +142,7 @@ export function RevenueTrendChart({
   const t = useTranslations('Finance.entity');
   const tChart = useTranslations('Finance.overview.chart');
   const fmt = useAppFormat();
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
   const [selected, setSelected] = useState<string | null>(null);
 
   const activeIndex = buckets.findIndex((bucket) => bucket.bucket === selected);

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import { BackHandler, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import { BackHandler, Pressable, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
@@ -12,6 +12,7 @@ import { useAppStyles } from '@/theme/styles';
 import { sidebar } from '@/theme/tokens';
 import { duration } from '@/theme/motion';
 import { ManageDrawer } from './ManageDrawer';
+import { useContentWidth } from '@/theme/use-content-width';
 
 /** Rộng nhất 320pt, và luôn chừa một dải hé thấy trang phía sau để biết đây là lớp phủ. */
 const MAX_WIDTH = 320;
@@ -54,7 +55,7 @@ export function useManageDrawer(): ManageDrawerControl {
  * gesture-handler). Nút hamburger, chạm ra ngoài để đóng và nút Back của Android đều chạy đúng.
  */
 export function ManageDrawerHost({ children }: { children: ReactNode }) {
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
   const [open, setOpen] = useState(false);
 
   const panelWidth = Math.min(MAX_WIDTH, width * WIDTH_RATIO);

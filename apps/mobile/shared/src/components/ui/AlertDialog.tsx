@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { Button } from './Button';
-import { layout } from '@/theme/layout';
+import { layout, modalColumn } from '@/theme/layout';
 import { useAppStyles } from '@/theme/styles';
 import { useColors, useFloatingSurfaceBorder } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
@@ -83,6 +83,7 @@ export function AlertDialog({
           không cộng nó vào thì nút "Huỷ" — nút dưới cùng — bị che mất một nửa.
         */}
         <YStack
+          style={modalColumn}
           bg={colors.surface}
           borderTopLeftRadius={radius.lg}
           borderTopRightRadius={radius.lg}

@@ -16,6 +16,12 @@ import { HomeCarousel } from './home/HomeCarousel';
 import { HomeSectionHeading } from './home/HomeSectionHeading';
 import { OutlineAction } from './home/GradientButton';
 import { VehicleCard } from './VehicleCard';
+import { ResponsiveGrid } from '@/components/layout/ResponsiveGrid';
+import { useIsTabletLayout } from '@/theme/use-content-width';
+
+/** Bản tablet của web: lưới 2 cột, tối đa 2 hàng. */
+const TABLET_GRID_COLUMNS = 2;
+const TABLET_GRID_ITEMS = 4;
 
 interface VehiclePreviewProps {
   /** Vắng mặt = thẻ xe chỉ hiển thị — trang chi tiết (MKT-04) chưa dựng. */
@@ -61,6 +67,7 @@ export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps
   const { filters, draft, provinceName } = useSearchExperience();
   /** Thẻ đang ở GIỮA băng chuyền — hiện sẵn trạng thái hover của web (Card highlighted). */
   const [focused, setFocused] = useState(0);
+  const tablet = useIsTabletLayout();
 
   /*
    * Liệt kê ĐÚNG năm chiều, không trải cả `filters`.
@@ -137,6 +144,18 @@ export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps
             {serviceLabel ? t('emptyForService', { service: serviceLabel }) : t('empty')}
           </Text>
         </Card>
+      ) : tablet ? (
+        // Máy tính bảng: lưới tĩnh 2 cột × 2 hàng, 4 xe đầu — bản tablet của web
+        // (`HomeCarousel layout="grid" responsiveGrid` ≤1024px ẩn từ thẻ thứ 5).
+        <ResponsiveGrid columns={TABLET_GRID_COLUMNS}>
+          {items.slice(0, TABLET_GRID_ITEMS).map((listing) => (
+            <VehicleCard
+              key={listing.id}
+              listing={listing}
+              {...(onOpenListing ? { onPress: onOpenListing } : {})}
+            />
+          ))}
+        </ResponsiveGrid>
       ) : (
         // Băng chuyền thẻ-ở-giữa — đúng trình bày mobile của web v2 (`HomeCarousel` dưới 640px).
         <HomeCarousel accessibilityLabel={tHome('title')} onActiveChange={setFocused} coverflow>

@@ -64,6 +64,7 @@
     "expo-image": "catalog:",
     "expo-image-manipulator": "catalog:",
     "expo-image-picker": "catalog:",
+    "expo-in-app-updates": "catalog:",
     "expo-linear-gradient": "catalog:",
     "expo-linking": "catalog:",
     "expo-localization": "catalog:",

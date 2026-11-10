@@ -28,6 +28,7 @@ import { queryPersistOptions } from '@/queries/query-persist';
 import { NetworkBanner } from '@/components/network/NetworkBanner';
 import { store } from '@/store';
 import { useAppFonts } from '@/theme/fonts';
+import { ContentColumn } from '@/components/layout/ContentColumn';
 import { useColors } from '@/theme/ThemeProvider';
 import type { ReactNode } from 'react';
 import { enableFreeze } from 'react-native-screens';
@@ -61,16 +62,19 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 function ThemedStack({ children }: { children: ReactNode }) {
   const colors = useColors();
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        animation: 'ios_from_right',
-        gestureEnabled: true,
-        contentStyle: { backgroundColor: colors.background },
-      }}
-    >
-      {children}
-    </Stack>
+    // Máy tính bảng: cả navigator nằm trong cột giữa có trần bề ngang — xem `ContentColumn`.
+    <ContentColumn>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          animation: 'ios_from_right',
+          gestureEnabled: true,
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
+        {children}
+      </Stack>
+    </ContentColumn>
   );
 }
 
