@@ -83379,6 +83379,16 @@
             "type": "string",
             "nullable": true
           },
+          "ownerPayableAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "`D − T` đóng băng trong snapshot - số XePrime ghi vào Ví điểm chủ xe khi chuyến hoàn thành (ô \"Cộng ví\" của thẻ; cùng con số `ownerPayout.ownerPayableAmount` của chi tiết). `null` với đơn lập tay / đơn cũ không có bảng phí marketplace (VND string)"
+          },
+          "pickupPointAddress": {
+            "type": "string",
+            "nullable": true,
+            "description": "Địa chỉ ĐIỂM NHẬN XE khi khách tự tới: chi nhánh giữ xe, rơi về địa chỉ hồ sơ gian hàng. `null` khi chưa điền cả hai - chuỗi thô, không dịch"
+          },
           "ownerShareOnlineAmount": {
             "type": "string",
             "description": "Phần tiền thuê CỦA CHỦ XE (`D`) khách đã trả trước trong tiền giữ chỗ, đang ở XePrime - vào ví khi chuyến xong. KHÁC `holdPaidAmount` (gồm cả phí sàn `S` và bảo hiểm). 0 với đơn lập tay / chưa thu giữ chỗ (VND string)"
@@ -84485,6 +84495,16 @@
             "type": "string",
             "nullable": true
           },
+          "ownerPayableAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "`D − T` đóng băng trong snapshot - số XePrime ghi vào Ví điểm chủ xe khi chuyến hoàn thành (ô \"Cộng ví\" của thẻ; cùng con số `ownerPayout.ownerPayableAmount` của chi tiết). `null` với đơn lập tay / đơn cũ không có bảng phí marketplace (VND string)"
+          },
+          "pickupPointAddress": {
+            "type": "string",
+            "nullable": true,
+            "description": "Địa chỉ ĐIỂM NHẬN XE khi khách tự tới: chi nhánh giữ xe, rơi về địa chỉ hồ sơ gian hàng. `null` khi chưa điền cả hai - chuỗi thô, không dịch"
+          },
           "ownerShareOnlineAmount": {
             "type": "string",
             "description": "Phần tiền thuê CỦA CHỦ XE (`D`) khách đã trả trước trong tiền giữ chỗ, đang ở XePrime - vào ví khi chuyến xong. KHÁC `holdPaidAmount` (gồm cả phí sàn `S` và bảo hiểm). 0 với đơn lập tay / chưa thu giữ chỗ (VND string)"
@@ -85035,6 +85055,11 @@
               }
             ]
           },
+          "pickupPointAddress": {
+            "type": "string",
+            "nullable": true,
+            "description": "Địa chỉ ĐIỂM NHẬN XE khi khách tự tới: chi nhánh giữ xe, rơi về địa chỉ hồ sơ gian hàng. `null` khi chưa điền cả hai - chuỗi thô, không dịch"
+          },
           "deliveryQuote": {
             "nullable": true,
             "description": "LỊCH SỬ: báo giá giao nhận của các yêu cầu tạo trước Wave 9. Chỉ để đọc - không còn ảnh hưởng tới việc duyệt, và yêu cầu mới luôn null.",
@@ -85227,6 +85252,11 @@
             "type": "string",
             "nullable": true,
             "description": "Tiền giữ chỗ khách ĐÃ chuyển (`booking_holds.paid_amount`) - \"Đã giữ chỗ\" chỉ khi số này đủ `holdAmount` (ADR 0044). null khi không có khoản giữ chỗ"
+          },
+          "ownerPayableAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "`D − T` - số XePrime ghi vào Ví điểm chủ xe khi chuyến hoàn thành (ô \"Cộng ví\" của thẻ). Tạm tính khi `isEstimate`; đã đóng băng khi có khoản giữ chỗ / đơn. null khi không có bảng phí (dài hạn chưa chốt, đơn đời cũ). Chỉ bề mặt đối tác (ADR 0064 điều 11) (VND string)"
           }
         },
         "required": [

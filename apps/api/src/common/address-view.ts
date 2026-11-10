@@ -76,6 +76,24 @@ export function pinOf(
   };
 }
 
+/** Đúng hai cột `pickupPointAddressOf` cần: địa chỉ chi nhánh giữ xe + địa chỉ hồ sơ gian hàng. */
+export interface PickupPointSource {
+  branch?: { address: string | null } | null;
+  tenant: { profile: { address: string | null } | null };
+}
+
+/**
+ * Địa chỉ ĐIỂM NHẬN XE khi khách tự tới lấy: chi nhánh giữ xe, rơi về địa chỉ hồ sơ gian hàng khi
+ * chi nhánh chưa điền. `null` khi không có cả hai — không bịa tên chi nhánh trần thành địa chỉ.
+ *
+ * MỘT quy tắc cho trang xe công khai và thẻ yêu cầu/đơn của gian hàng (10/11/2026): hai nơi đọc
+ * hai nguồn khác nhau là hai câu trả lời cho "khách tới đâu lấy xe". Bề mặt CÔNG KHAI còn phải
+ * qua cổng `customerSeesPickupAddress` (ADR 0077); bề mặt đối tác là địa chỉ của chính họ.
+ */
+export function pickupPointAddressOf(vehicle: PickupPointSource): string | null {
+  return vehicle.branch?.address?.trim() || vehicle.tenant.profile?.address?.trim() || null;
+}
+
 export interface BranchMapSource {
   address: string | null;
   latitude: DecimalLike;

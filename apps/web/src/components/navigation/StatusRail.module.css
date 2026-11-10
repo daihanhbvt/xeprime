@@ -125,17 +125,27 @@
 }
 
 /*
- * Màn hẹp: cột thành MỘT hàng cuộn ngang — tiêu đề nhóm ẩn (chấm màu vẫn nói nhóm), mục co theo
- * chữ. Không dính theo để không ăn mất chiều cao ít ỏi của điện thoại.
+ * Màn hẹp: cột thành MỘT dải tab cuộn ngang — Figma "Horizontal tabs" (`24117:67234`, 10/11/2026):
+ * nền gray-50 viền gray-200 bo 12, tab cách 2, cao 36, đệm 8/12, chữ 14/600 xám nhạt, chấm 6; tab
+ * đang chọn nền trắng viền gray-300 bóng xs, chữ xám đậm. Tiêu đề nhóm ẩn (chấm màu vẫn nói nhóm).
+ * Số đếm giữ lại thành viên nhỏ sau nhãn (chốt 10/11 — design không vẽ, nhưng nó nói việc nằm đâu).
+ * Không dính theo để không ăn mất chiều cao ít ỏi của điện thoại.
  */
 @media (max-width: 1024px) {
   .rail {
     position: static;
     flex-direction: row;
-    gap: var(--xp-space-xs);
+    gap: 2px;
+    min-width: 0;
+    max-width: 100%;
     overflow-x: auto;
-    padding: var(--xp-space-6);
+    overscroll-behavior-x: contain;
+    padding: 2px;
+    border-radius: var(--xp-border-radius-control);
+    background: var(--xp-color-bg);
+    box-shadow: none;
     scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
   }
 
   .rail::-webkit-scrollbar {
@@ -143,6 +153,7 @@
   }
 
   .group {
+    flex: none;
     flex-direction: row;
   }
 
@@ -151,14 +162,41 @@
   }
 
   .items {
+    flex: none;
     flex-direction: row;
-    gap: var(--xp-space-xs);
+    gap: 2px;
+  }
+
+  .items > li {
+    flex: none;
   }
 
   .item {
     width: auto;
-    height: 40px;
+    height: 36px;
+    padding: var(--xp-space-sm) var(--xp-space-12);
+    border: 1px solid transparent;
+    color: var(--xp-color-text-tertiary);
+    font-weight: var(--xp-font-weight-semibold);
     white-space: nowrap;
+  }
+
+  .item:hover {
+    background: transparent;
+    color: var(--xp-color-text-secondary);
+  }
+
+  .active,
+  .active:hover {
+    border-color: var(--xp-color-border-strong);
+    background: var(--xp-color-bg-container);
+    box-shadow: 0 1px 2px 0 rgba(10, 13, 18, 0.05);
+    color: var(--xp-color-text-secondary);
+  }
+
+  .dot {
+    width: 6px;
+    height: 6px;
   }
 
   .label {
@@ -166,7 +204,9 @@
   }
 
   .count {
-    min-width: 28px;
+    min-width: 0;
     padding: 0 var(--xp-space-6);
+    font-size: var(--xp-font-size-body-sm);
+    line-height: 18px;
   }
 }
