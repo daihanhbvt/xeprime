@@ -26,7 +26,7 @@ function groupDigits(value: number, group: string): string {
 function tickerMs(node: HTMLElement): number {
   const raw = getComputedStyle(node).getPropertyValue('--xp-motion-duration-ticker').trim();
   const seconds = Number.parseFloat(raw);
-  return Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 1600;
+  return Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 500;
 }
 
 /**

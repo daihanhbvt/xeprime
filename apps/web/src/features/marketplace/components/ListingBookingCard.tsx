@@ -854,7 +854,7 @@ export function ListingBookingCard({
               >
                 <NumberTicker
                   value={fmt.money(cost.total?.amount ?? quote.breakdown.totalAmount)}
-                  durationMs={550}
+                  durationMs={500}
                 />
               </span>
             </div>
