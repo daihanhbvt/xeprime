@@ -8,17 +8,18 @@ import {
   StopOutlined,
   UnlockOutlined,
 } from '@ant-design/icons';
-import { CHAT_REPORT_NOTE_MAX_LENGTH, CHAT_SIDE } from '@xeprime/types';
-import { App, Button, Dropdown, Empty, Input, Modal, Skeleton } from 'antd';
+import {
+  CHAT_REPORT_NOTE_MAX_LENGTH,
+  CHAT_REPORT_REASON_VALUES,
+  CHAT_SIDE,
+  type ChatReportReason,
+} from '@xeprime/types';
+import { App, Button, Dropdown, Input, Modal } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { cx } from '@/lib/cx';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import {
-  useChatReportReasons,
-  useReportConversation,
-  useToggleChatBlock,
-} from '../hooks/use-chat-mutations';
+import { useReportConversation, useToggleChatBlock } from '../hooks/use-chat-mutations';
 import type { ConversationSummary } from '../types';
 import styles from './ThreadActions.module.css';
 
@@ -27,8 +28,6 @@ export function ThreadActions({ conversation }: { conversation: ConversationSumm
   const t = useTranslations('Chat');
   const [reportOpen, setReportOpen] = useState(false);
   const { confirmBlock, unblock, pending } = useBlockActions(conversation);
-  // Tải sẵn lý do ngay khi mở hội thoại: bấm "Báo cáo" là có danh sách, không phải chờ request.
-  useChatReportReasons();
 
   return (
     <>
@@ -135,22 +134,21 @@ function ReportModal({
   const t = useTranslations('Chat');
   const { message } = App.useApp();
   const errorMessage = useErrorMessage();
-  const reasons = useChatReportReasons();
   const report = useReportConversation(conversationId);
-  const [reasonId, setReasonId] = useState<string | null>(null);
+  const [reason, setReason] = useState<ChatReportReason | null>(null);
   const [note, setNote] = useState('');
 
   // Đóng là xoá lựa chọn: lần mở sau là một báo cáo mới, không mang lựa chọn cũ sang.
   const close = () => {
-    setReasonId(null);
+    setReason(null);
     setNote('');
     onClose();
   };
 
   const submit = () => {
-    if (!reasonId) return;
+    if (!reason) return;
     report.mutate(
-      { reasonId, ...(note.trim() ? { note: note.trim() } : {}) },
+      { reason, ...(note.trim() ? { note: note.trim() } : {}) },
       {
         onSuccess: () => {
           void message.success(t('reportSuccess'));
@@ -186,7 +184,7 @@ function ReportModal({
           type="primary"
           danger
           icon={<SendOutlined />}
-          disabled={!reasonId}
+          disabled={!reason}
           loading={report.isPending}
           onClick={submit}
         >
@@ -196,39 +194,26 @@ function ReportModal({
     >
       <div className={styles.reportBody}>
         <div className={styles.reportLabel}>{t('reportReason')}</div>
-        {reasons.isPending ? (
-          <Skeleton active paragraph={{ rows: 3 }} title={false} />
-        ) : reasons.isError ? (
-          <div className={styles.reportError}>
-            <span>{t('reportReasonsLoadError')}</span>
-            <Button size="small" onClick={() => void reasons.refetch()}>
-              {t('retry')}
-            </Button>
-          </div>
-        ) : reasons.data.length === 0 ? (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('reportReasonsEmpty')} />
-        ) : (
-          <div className={styles.reasonList} role="radiogroup" aria-label={t('reportReason')}>
-            {reasons.data.map((r) => {
-              const selected = r.id === reasonId;
-              return (
-                <button
-                  key={r.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  className={cx(styles.reason, selected && styles.reasonSelected)}
-                  onClick={() => setReasonId(r.id)}
-                >
-                  <span className={styles.reasonLabel}>{r.label}</span>
-                  <span className={styles.reasonCheck} aria-hidden>
-                    {selected ? <CheckCircleFilled /> : null}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
+        <div className={styles.reasonList} role="radiogroup" aria-label={t('reportReason')}>
+          {CHAT_REPORT_REASON_VALUES.map((value) => {
+            const selected = value === reason;
+            return (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                className={cx(styles.reason, selected && styles.reasonSelected)}
+                onClick={() => setReason(value)}
+              >
+                <span className={styles.reasonLabel}>{t(`reportReasons.${value}`)}</span>
+                <span className={styles.reasonCheck} aria-hidden>
+                  {selected ? <CheckCircleFilled /> : null}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
         <div className={styles.reportLabel}>{t('reportNoteLabel')}</div>
         <Input.TextArea

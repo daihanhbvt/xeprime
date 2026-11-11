@@ -13,7 +13,6 @@ export type ChatUnreadSummary = Schemas['ChatUnreadSummaryDto'];
 export type ChatEligibility = Schemas['ChatEligibilityDto'];
 export type ChatBlockResult = Schemas['ChatBlockResultDto'];
 export type ReportConversationInput = Schemas['ReportConversationDto'];
-export type ChatReportReason = Schemas['ChatReportReasonDto'];
 
 /**
  * Mở hội thoại theo XE, hoặc theo GIAN HÀNG — hai lối, một endpoint.
@@ -158,11 +157,6 @@ export const chatApi = {
     return getApiClient().delete<ChatBlockResult>(
       `/conversations/${encodeURIComponent(conversationId)}/block`,
     );
-  },
-
-  /** Lý do báo cáo đang bật (admin cấu hình) — nhãn là dữ liệu, không qua i18n. */
-  reportReasons(): Promise<ChatReportReason[]> {
-    return getApiClient().get<ChatReportReason[]>('/chat/report-reasons');
   },
 
   report(conversationId: string, body: ReportConversationInput): Promise<{ id: string }> {

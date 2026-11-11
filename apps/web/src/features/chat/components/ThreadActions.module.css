@@ -93,18 +93,6 @@
   margin-bottom: 22px;
 }
 
-.reportError {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--xp-color-error-bg);
-  color: var(--xp-color-error);
-  font-size: 13px;
-}
-
 .reasonList {
   display: flex;
   flex-direction: column;

@@ -3,7 +3,6 @@ import { StorageModule } from '../storage/storage.module';
 import { ChatController } from './chat.controller';
 import { ConversationsController } from './conversations.controller';
 import { ChatService } from './chat.service';
-import { ChatReportReasonsService } from './chat-report-reasons.service';
 
 /**
  * Chat (Phase 5, ADR 0009). PostgreSQL là source of truth; realtime đẩy qua outbox → worker →
@@ -13,7 +12,7 @@ import { ChatReportReasonsService } from './chat-report-reasons.service';
 @Module({
   imports: [StorageModule],
   controllers: [ConversationsController, ChatController],
-  providers: [ChatService, ChatReportReasonsService],
-  exports: [ChatService, ChatReportReasonsService],
+  providers: [ChatService],
+  exports: [ChatService],
 })
 export class ChatModule {}

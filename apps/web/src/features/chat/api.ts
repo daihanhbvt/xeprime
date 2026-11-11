@@ -11,7 +11,6 @@ import { uploadToR2 } from '@/services/upload';
 import type {
   ChatAttachmentPresign,
   ChatBlockResult,
-  ChatReportReason,
   ChatMessage,
   ConversationFilters,
   ConversationListResult,
@@ -127,11 +126,6 @@ export const chatApi = {
   /** Bỏ chặn CỦA PHÍA MÌNH - chặn của phía kia (nếu có) vẫn giữ. */
   unblock(conversationId: string): Promise<ChatBlockResult> {
     return apiDelete<ChatBlockResult>(`/conversations/${encodeURIComponent(conversationId)}/block`);
-  },
-
-  /** Lý do báo cáo đang bật (admin cấu hình) — nhãn là dữ liệu, không qua i18n. */
-  reportReasons(): Promise<ChatReportReason[]> {
-    return apiGet<ChatReportReason[]>('/chat/report-reasons');
   },
 
   report(conversationId: string, body: ReportConversationInput): Promise<{ id: string }> {

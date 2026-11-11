@@ -11,7 +11,6 @@ export {
 export type {
   ChatAttachmentPresign,
   ChatBlockResult,
-  ChatReportReason,
   ChatMessage,
   ChatUnreadSummary,
   ConversationFilters,

@@ -76,6 +76,11 @@
   "reportSuccess": "Đã gửi báo cáo. Cảm ơn bạn, XePrime sẽ xem xét báo cáo này.",
   "reportIntro": "Bên kia sẽ không biết bạn đã báo cáo.",
   "reportNoteLabel": "Mô tả thêm",
-  "reportReasonsLoadError": "Không tải được danh sách lý do",
-  "reportReasonsEmpty": "Chưa có lý do báo cáo nào"
+  "reportReasons": {
+    "spam": "Spam, quảng cáo",
+    "harassment": "Quấy rối, xúc phạm",
+    "scam": "Lừa đảo",
+    "inappropriate_content": "Nội dung không phù hợp",
+    "other": "Khác"
+  }
 }

@@ -1,5 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { CHAT_REPORT_NOTE_MAX_LENGTH, CHAT_SIDE } from '@xeprime/types';
+import {
+  CHAT_REPORT_NOTE_MAX_LENGTH,
+  CHAT_REPORT_REASON_VALUES,
+  CHAT_SIDE,
+  type ChatReportReason,
+} from '@xeprime/types';
 import { useState } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -12,17 +17,12 @@ import type { IconName } from '@/components/ui/Chip';
 import { IconButton } from '@/components/ui/IconButton';
 import { IconDisc } from '@/components/ui/IconDisc';
 import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
-import { Skeleton } from '@/components/ui/Skeleton';
 import { TextControl } from '@/components/ui/TextControl';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { ConversationSummary } from '../api';
-import {
-  useChatReportReasons,
-  useReportConversation,
-  useToggleChatBlock,
-} from '../hooks/use-chat-moderation';
+import { useReportConversation, useToggleChatBlock } from '../hooks/use-chat-moderation';
 
 type Sheet = 'menu' | 'confirmBlock' | 'report' | null;
 
@@ -37,8 +37,6 @@ export function ChatThreadActions({ conversation }: { conversation: Conversation
   const errorMessage = useErrorMessage();
   const toggleBlock = useToggleChatBlock(conversation.id);
   const [sheet, setSheet] = useState<Sheet>(null);
-  // Tải sẵn lý do ngay khi mở hội thoại: mở tấm báo cáo là có danh sách, không phải chờ request.
-  useChatReportReasons();
 
   const unblock = () => {
     setSheet(null);
@@ -163,22 +161,21 @@ function ReportSheet({
   const colors = useColors();
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
-  const reasons = useChatReportReasons();
   const report = useReportConversation(conversationId);
-  const [reasonId, setReasonId] = useState<string | null>(null);
+  const [reason, setReason] = useState<ChatReportReason | null>(null);
   const [note, setNote] = useState('');
 
   // Đóng là xoá lựa chọn: lần mở sau là một báo cáo mới, không mang lựa chọn cũ sang.
   const close = () => {
-    setReasonId(null);
+    setReason(null);
     setNote('');
     onClose();
   };
 
   const submit = () => {
-    if (!reasonId) return;
+    if (!reason) return;
     report.mutate(
-      { reasonId, ...(note.trim() ? { note: note.trim() } : {}) },
+      { reason, ...(note.trim() ? { note: note.trim() } : {}) },
       {
         onSuccess: () => {
           toast.showSuccess(t('reportSuccess'));
@@ -201,7 +198,7 @@ function ReportSheet({
           variant="danger"
           icon="send"
           block
-          disabled={!reasonId}
+          disabled={!reason}
           loading={report.isPending}
           onPress={submit}
         />
@@ -211,35 +208,16 @@ function ReportSheet({
         <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
           {t('reportReason')}
         </Text>
-        {reasons.isPending ? (
-          <YStack gap={space.sm}>
-            <Skeleton height={44} />
-            <Skeleton height={44} />
-            <Skeleton height={44} />
-          </YStack>
-        ) : reasons.isError ? (
-          <XStack ai="center" jc="space-between" gap={space.sm}>
-            <Text f={1} col={colors.danger} fos={fontSize.bodySm}>
-              {t('reportReasonsLoadError')}
-            </Text>
-            <Button label={t('retry')} variant="outline" size="sm" onPress={() => void reasons.refetch()} />
-          </XStack>
-        ) : reasons.data.length === 0 ? (
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t('reportReasonsEmpty')}
-          </Text>
-        ) : (
-          <MenuOptionList>
-            {reasons.data.map((r) => (
-              <MenuOption
-                key={r.id}
-                label={r.label}
-                selected={reasonId === r.id}
-                onPress={() => setReasonId(r.id)}
-              />
-            ))}
-          </MenuOptionList>
-        )}
+        <MenuOptionList>
+          {CHAT_REPORT_REASON_VALUES.map((value) => (
+            <MenuOption
+              key={value}
+              label={t(`reportReasons.${value}`)}
+              selected={reason === value}
+              onPress={() => setReason(value)}
+            />
+          ))}
+        </MenuOptionList>
         <TextControl
           label={t('reportNoteLabel')}
           value={note}

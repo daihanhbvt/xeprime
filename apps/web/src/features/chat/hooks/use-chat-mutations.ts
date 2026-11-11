@@ -1,11 +1,9 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AppLocale } from '@xeprime/types';
-import { useLocale } from 'next-intl';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
 import { chatApi } from '../api';
-import type { ChatReportReason, ConversationTarget, ReportConversationInput } from '../types';
+import type { ConversationTarget, ReportConversationInput } from '../types';
 
 /**
  * Chặn / bỏ chặn phía bên kia (App Store 1.2). Làm mới TOÀN BỘ cache chat: cờ `canSend` /
@@ -20,24 +18,7 @@ export function useToggleChatBlock(conversationId: string) {
   });
 }
 
-/**
- * Lý do báo cáo đang BẬT, theo thứ tự admin sắp. Gọi ngay khi mở hội thoại để hộp báo cáo hiện ra
- * là có danh sách; khoá dùng chung mọi hội thoại và `staleTime` 5 phút nên chuyển qua lại giữa
- * các hội thoại không bắn thêm request.
- */
-export function useChatReportReasons() {
-  const locale = useLocale() as AppLocale;
-  return useQuery({
-    queryKey: queryKeys.chat.reportReasons(),
-    queryFn: () => chatApi.reportReasons(),
-    staleTime: 5 * 60_000,
-    // Chọn nhãn theo NGÔN NGỮ đang hiển thị một lần ở tầng dữ liệu (như `localizeCatalogItem`):
-    // mọi chỗ đọc `r.label` tự đúng ngôn ngữ. Lý do chưa có bản tiếng Anh giữ nhãn tiếng Việt.
-    select: (rows: ChatReportReason[]) =>
-      locale === 'en' ? rows.map((r) => ({ ...r, label: r.labelEn ?? r.label })) : rows,
-  });
-}
-
+/** Báo cáo hội thoại vi phạm — gửi MÃ lý do (`CHAT_REPORT_REASON`), nhãn do client dịch. */
 export function useReportConversation(conversationId: string) {
   return useMutation({
     mutationFn: (body: ReportConversationInput) => chatApi.report(conversationId, body),

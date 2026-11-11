@@ -3994,26 +3994,6 @@ model ChatBlock {
   @@map("chat_blocks")
 }
 
-/// Lý do báo cáo hội thoại — dữ liệu của NỀN TẢNG (5 lý do mặc định do migration tạo; màn quản trị
-/// để thêm/sửa/bật-tắt chưa làm). Nhãn chỉ tiếng Việt và là DỮ LIỆU, không qua i18n. Không xoá
-/// được: lý do đã có báo cáo thì tắt (`is_active = false`), báo cáo cũ vẫn trỏ được về.
-model ChatReportReason {
-  id        String   @id @db.Char(26)
-  label     String   @db.VarChar(120)
-  /// Nhãn tiếng Anh — NULL ⇒ client hiện nhãn tiếng Việt.
-  labelEn   String?  @map("label_en") @db.VarChar(120)
-  isActive  Boolean  @default(true) @map("is_active")
-  sortOrder Int      @default(0) @map("sort_order")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
-
-  reports ChatReport[]
-
-  /// Danh sách cho client: chỉ lý do đang bật, theo thứ tự admin sắp.
-  @@index([isActive, sortOrder])
-  @@map("chat_report_reasons")
-}
-
 /// Báo cáo một hội thoại vi phạm (App Store Guideline 1.2). Chỉ GHI NHẬN để nền tảng xem; không có
 /// luồng xử lý, không tự khoá ai. Writer duy nhất: `ChatService.report`.
 model ChatReport {
@@ -4022,20 +4002,18 @@ model ChatReport {
   reporterUserId String?  @map("reporter_user_id") @db.Char(26)
   /// @xeprime/types → ChatSide — phía của người báo cáo
   reporterSide   String   @map("reporter_side") @db.VarChar(20)
-  reasonId       String   @map("reason_id") @db.Char(26)
-  /// Nhãn lý do CHỤP lúc gửi — admin sửa nhãn sau này không viết lại điều người báo cáo đã chọn.
-  reasonLabel    String   @map("reason_label") @db.VarChar(120)
+  /// @xeprime/types → ChatReportReason (spam | harassment | scam | inappropriate_content | other).
+  /// Lưu MÃ, không lưu nhãn: nhãn vi/en ở `Chat.reportReasons.<mã>` (ADR 0012). CHECK ở migration.
+  reason         String   @db.VarChar(40)
   note           String?  @db.Text
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  conversation Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  reporter     User?            @relation("chat_report_reporter", fields: [reporterUserId], references: [id], onDelete: SetNull)
-  reason       ChatReportReason @relation(fields: [reasonId], references: [id], onDelete: Restrict)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  reporter     User?        @relation("chat_report_reporter", fields: [reporterUserId], references: [id], onDelete: SetNull)
 
   /// Danh sách báo cáo ở trang quản trị: mới nhất trước.
   @@index([createdAt])
   @@index([conversationId])
-  @@index([reasonId])
   @@map("chat_reports")
 }
 

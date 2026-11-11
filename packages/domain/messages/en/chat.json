@@ -76,6 +76,11 @@
   "reportSuccess": "Report sent. Thank you, XePrime will review it.",
   "reportIntro": "The other party will not know you reported them.",
   "reportNoteLabel": "Details",
-  "reportReasonsLoadError": "Could not load report reasons",
-  "reportReasonsEmpty": "No report reasons available"
+  "reportReasons": {
+    "spam": "Spam or advertising",
+    "harassment": "Harassment or abuse",
+    "scam": "Scam or fraud",
+    "inappropriate_content": "Inappropriate content",
+    "other": "Other"
+  }
 }

@@ -241,8 +241,7 @@
     "BOOKING_EXTENSION_PENDING": "This booking already has an extension awaiting payment.",
     "BOOKING_EXTENSION_NOT_CANCELLABLE": "This extension can no longer be cancelled.",
     "BOOKING_EXTENSION_UNPRICED": "The extension cannot be priced - check the vehicle's monthly price.",
-    "CHAT_BLOCKED": "Messaging is unavailable because one of you has blocked the other.",
-    "CHAT_REPORT_REASON_INVALID": "This report reason is no longer available. Please choose another."
+    "CHAT_BLOCKED": "Messaging is unavailable because one of you has blocked the other."
   },
   "codeWithWait": {
     "RATE_LIMITED": "You're going a little fast. Please try again in {wait}.",

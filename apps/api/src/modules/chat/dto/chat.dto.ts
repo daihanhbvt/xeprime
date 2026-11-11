@@ -5,8 +5,10 @@ import {
   CHAT_ATTACHMENT_MIME_TYPES,
   CHAT_INBOX_VALUES,
   CHAT_REPORT_NOTE_MAX_LENGTH,
+  CHAT_REPORT_REASON_VALUES,
   CHAT_SIDE_VALUES,
   MESSAGE_TYPE_VALUES,
+  type ChatReportReason,
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -16,7 +18,6 @@ import {
   IsIn,
   IsInt,
   IsISO8601,
-  Length,
   IsOptional,
   IsString,
   Matches,
@@ -335,28 +336,18 @@ export class ChatBlockResultDto {
 }
 
 export class ReportConversationDto {
-  @ApiProperty({ description: 'Id lý do (GET /chat/report-reasons) — phải đang bật' })
-  @IsString()
-  @Length(26, 26)
-  reasonId!: string;
+  @ApiProperty({
+    enum: CHAT_REPORT_REASON_VALUES,
+    description: 'Mã lý do - nhãn hiển thị do client dịch (`Chat.reportReasons.<mã>`, ADR 0012)',
+  })
+  @IsIn(CHAT_REPORT_REASON_VALUES)
+  reason!: ChatReportReason;
 
   @ApiPropertyOptional({ maxLength: CHAT_REPORT_NOTE_MAX_LENGTH })
   @IsOptional()
   @IsString()
   @MaxLength(CHAT_REPORT_NOTE_MAX_LENGTH)
   note?: string;
-}
-
-/** Một lý do báo cáo đang bật — nhãn là dữ liệu admin gõ (tiếng Việt), không qua i18n. */
-export class ChatReportReasonDto {
-  @ApiProperty() id!: string;
-  @ApiProperty({ description: 'Nhãn tiếng Việt' }) label!: string;
-  @ApiPropertyOptional({
-    type: String,
-    nullable: true,
-    description: 'Nhãn tiếng Anh - null thì client hiện nhãn tiếng Việt',
-  })
-  labelEn!: string | null;
 }
 
 export class ChatReportResultDto {

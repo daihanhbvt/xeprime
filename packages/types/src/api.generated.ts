@@ -2689,28 +2689,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/chat/report-reasons": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Lý do báo cáo hội thoại đang bật (admin cấu hình) - App Store 1.2
-         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
-         *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` - phiên của realm khác bị từ chối.
-         */
-        get: operations["ChatController_reportReasonsList"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/contracts/{id}": {
         parameters: {
             query?: never;
@@ -14334,13 +14312,6 @@ export interface components {
             /** @description Khách đang đăng nhập nhắn được cho gian hàng này */
             canChat: boolean;
         };
-        ChatReportReasonDto: {
-            id: string;
-            /** @description Nhãn tiếng Việt */
-            label: string;
-            /** @description Nhãn tiếng Anh - null thì client hiện nhãn tiếng Việt */
-            labelEn?: string | null;
-        };
         ChatReportResultDto: {
             id: string;
         };
@@ -21298,8 +21269,11 @@ export interface components {
             ids: string[];
         };
         ReportConversationDto: {
-            /** @description Id lý do (GET /chat/report-reasons) — phải đang bật */
-            reasonId: string;
+            /**
+             * @description Mã lý do - nhãn hiển thị do client dịch (`Chat.reportReasons.<mã>`, ADR 0012)
+             * @enum {string}
+             */
+            reason: "spam" | "harassment" | "scam" | "inappropriate_content" | "other";
             note?: string;
         };
         ResetMemberPasswordDto: {
@@ -41383,112 +41357,6 @@ export interface operations {
                      *       "error": {
                      *         "code": "CONFLICT",
                      *         "message": "Dữ liệu đã tồn tại"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Vượt giới hạn 120 request / 60 giây.
-             *
-             *     Mã lỗi: `RATE_LIMITED`
-             */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "RATE_LIMITED",
-                     *         "message": "Vượt giới hạn số request"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Lỗi không lường trước phía server.
-             *
-             *     Mã lỗi: `INTERNAL_ERROR`
-             */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "INTERNAL_ERROR",
-                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    ChatController_reportReasonsList: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Thành công */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["ChatReportReasonDto"][];
-                    };
-                };
-            };
-            /**
-             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
-             *
-             *     Mã lỗi: `UNAUTHENTICATED`
-             */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "UNAUTHENTICATED",
-                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
-             *
-             *     Mã lỗi: `REALM_NOT_ALLOWED`
-             */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "REALM_NOT_ALLOWED",
-                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */

@@ -856,8 +856,6 @@ export const API_ERROR_CODE = {
    * giao diện khoá ô soạn tin theo `blockedByMe` / `blockedByOther`.
    */
   CHAT_BLOCKED: 'CHAT_BLOCKED',
-  /** Lý do báo cáo không tồn tại hoặc admin vừa tắt — client tải lại danh sách lý do. */
-  CHAT_REPORT_REASON_INVALID: 'CHAT_REPORT_REASON_INVALID',
 
   /**
    * Chi nhánh còn ràng buộc nên chưa ngừng/đổi được: `details` liệt kê CHÍNH XÁC cái gì đang

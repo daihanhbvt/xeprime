@@ -732,18 +732,7 @@ export class ChatService {
     dto: ReportConversationDto,
   ): Promise<ChatReportResultDto> {
     const { side } = await this.resolveAccess(userId, conversationId);
-    // Chỉ lý do đang BẬT: một lý do admin vừa tắt không còn là lựa chọn hợp lệ, kể cả khi client
-    // còn giữ danh sách cũ trong cache.
-    const reason = await this.prisma.chatReportReason.findFirst({
-      where: { id: dto.reasonId, isActive: true },
-      select: { id: true, label: true },
-    });
-    if (!reason) {
-      throw new BadRequestException({
-        code: API_ERROR_CODE.CHAT_REPORT_REASON_INVALID,
-        message: 'Lý do báo cáo không còn khả dụng, hãy chọn lại',
-      });
-    }
+    // `reason` là MÃ của bộ từ vựng đóng — DTO (`@IsIn`) và CHECK ở DB đã gác giá trị lạ.
     const id = newId();
     await this.prisma.chatReport.create({
       data: {
@@ -751,8 +740,7 @@ export class ChatService {
         conversationId,
         reporterUserId: userId,
         reporterSide: side,
-        reasonId: reason.id,
-        reasonLabel: reason.label,
+        reason: dto.reason,
         note: dto.note?.trim() || null,
       },
     });
