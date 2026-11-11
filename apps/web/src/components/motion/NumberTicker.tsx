@@ -30,6 +30,9 @@ function tickerMs(node: HTMLElement): number {
 }
 
 /**
+ * CHỈ cho số liệu thống kê (lượt thuê, số xe…) — KHÔNG dùng cho TIỀN: số tiền luôn hiện tĩnh
+ * (bỏ hiệu ứng nhảy tiền 11/11/2026).
+ *
  * Số liệu đếm từ 0 lên khi cuộn tới (≈ "number ticker" của 21st.dev / counter của trang mẫu).
  *
  * SSR an toàn: HTML server mang CHÍNH con số cuối, JS chỉ ghi đè textContent trong lúc chạy rồi
@@ -39,12 +42,9 @@ function tickerMs(node: HTMLElement): number {
 export function NumberTicker({
   value,
   className,
-  durationMs,
 }: {
   value: string;
   className?: string;
-  /** Ghi đè thời lượng token (ms) - vd. số tiền ở thẻ đặt xe cần nhanh (~0.55s). */
-  durationMs?: number;
 }) {
   const ref = useCallback(
     (node: HTMLSpanElement | null) => {
@@ -54,7 +54,7 @@ export function NumberTicker({
 
       let frame = 0;
       const run = () => {
-        const duration = durationMs ?? tickerMs(node);
+        const duration = tickerMs(node);
         const start = performance.now();
         const step = (now: number) => {
           const t = Math.min(1, (now - start) / duration);
@@ -78,7 +78,7 @@ export function NumberTicker({
         node.textContent = value;
       };
     },
-    [value, durationMs],
+    [value],
   );
 
   return (

@@ -224,25 +224,3 @@ textarea {
   }
 }
 
-/*
- * View Transition thẻ xe → trang chi tiết (`components/motion/view-transition.ts`): ảnh thẻ nở
- * thành ảnh đầu trang với đường cong "expo-out"; phần còn lại cross-fade nhanh. Giảm chuyển động
- * thì helper không gọi API, khối dưới chỉ là lưới an toàn.
- */
-::view-transition-group(xp-listing-photo) {
-  animation-duration: 0.55s;
-  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: 0.3s;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*) {
-    animation: none !important;
-  }
-}

@@ -20,7 +20,6 @@ import type { CustomerTripDetail, CustomerTripFinance } from '../types';
 import { RefundAccountDialog } from './RefundAccountDialog';
 import { TripRequestPill, type TripRequestTone } from './TripRequestLayout';
 import { cx } from '@/lib/cx';
-import { NumberTicker } from '@/components/motion/NumberTicker';
 import styles from './TripFinanceCard.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -149,7 +148,7 @@ function OpenFinanceCard({ finance }: { finance: CustomerTripFinance }) {
 
       <div className={styles.total}>
         <span>{t('total')}</span>
-        <NumberTicker className={styles.totalValue} value={fmt.money(finance.finalTotal)} />
+        <span className={styles.totalValue}>{fmt.money(finance.finalTotal)}</span>
       </div>
 
       {/*

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -35,7 +35,7 @@ const BRAND_MORE = 20;
  *
  * `onOpenShop` vắng mặt = thẻ chỉ hiển thị.
  */
-export function FeaturedHosts({ onOpenShop }: { onOpenShop?: (slug: string) => void }) {
+function FeaturedHostsImpl({ onOpenShop }: { onOpenShop?: (slug: string) => void }) {
   const t = useTranslations('Home.owners');
   const { data, isLoading, isError, error } = useFeaturedShops(LIMIT);
   const shops = data?.shops ?? [];
@@ -254,3 +254,9 @@ function BrandLogos({ brands, total }: { brands: PublicShopSummary['brands']; to
     </XStack>
   );
 }
+
+/**
+ * Bọc `memo`: trang chủ chạy lại vì đủ thứ (cuộn, ô tìm kiếm, banner) — khối này chỉ cần dựng lại
+ * khi dữ liệu của nó đổi. Nơi gọi truyền hàm ỔN ĐỊNH (`useCallback`).
+ */
+export const FeaturedHosts = memo(FeaturedHostsImpl);

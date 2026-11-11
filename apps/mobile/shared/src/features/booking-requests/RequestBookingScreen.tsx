@@ -348,7 +348,10 @@ function RequestBookingBody({
         prefill?.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE
           ? PICKUP_PREFERENCE.SPECIFIC_DATE
           : PICKUP_PREFERENCE.WITHIN_7_DAYS,
-      requestedPickupDate: '',
+      requestedPickupDate:
+        prefill?.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE
+          ? (prefill.requestedPickupDate ?? '')
+          : '',
       routeType: isRouteType(prefill?.routeType) ? prefill.routeType : ROUTE_TYPE.IN_CITY,
       pickupProvinceCode: '',
       pickupWardCode: '',

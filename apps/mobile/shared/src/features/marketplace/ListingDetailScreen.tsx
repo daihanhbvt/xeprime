@@ -25,7 +25,6 @@ import { pressScale, scrollThrottle } from '@/theme/motion';
 import { MapPreview } from '@/components/map/MapPreview';
 import { pickupMapUri } from '@/lib/map-static';
 import {
-  RENTAL_MODE,
   CATALOG_TYPE,
   PICKUP_PREFERENCE,
   ROUTE_TYPE,
@@ -42,7 +41,12 @@ import {
   toGeoPoint,
   type RentalMode,
 } from '@xeprime/domain';
-import { rememberedOrDefaultRentalRange } from '@/lib/rental-range-memory';
+import {
+  peekRememberedOrDefaultRentalRange,
+  rememberedOrDefaultRentalRange,
+  type RememberedRentalRange,
+} from '@/lib/rental-range-memory';
+import { useAfterTransition } from '@/hooks/use-after-transition';
 import { resolveWebBaseUrl } from '@/lib/web-base-url';
 import { catalogLabel } from '@/api/catalog';
 import { APP_HEADER_HEIGHT, AppHeader } from '@/components/layout/AppHeader';
@@ -95,6 +99,18 @@ import { useContentWidth } from '@/theme/use-content-width';
  * thanh CTA đáy nằm ngoài vùng cuộn. Hai bản `useState` khởi tạo khác nhau là chỗ trang hiện
  * giá "có tài xế" trong khi nút mở wizard "tự lái".
  */
+function toInitialRange(range: RememberedRentalRange): {
+  pickupAt: string;
+  returnAt: string;
+  rentalMode: RentalMode;
+} {
+  return {
+    pickupAt: appWallClockToIso(range.pickupAt),
+    returnAt: appWallClockToIso(range.returnAt),
+    rentalMode: range.mode,
+  };
+}
+
 function defaultServiceOf(
   services: readonly string[],
   initialServiceType: string | undefined,
@@ -194,22 +210,32 @@ export function ListingDetailScreen({
   const [trip, setTrip] = useState<ListingTripDraft | null>(null);
   /** Lệnh mở ô còn thiếu trên thẻ đặt xe — "Chọn thuê" khi chuyến chưa đủ (xem `missingTripInput`). */
   const [inputRequest, setInputRequest] = useState<TripInputRequest | null>(null);
+  /*
+   * Khoảng thuê mặc định = lựa chọn khách đã nhớ, hoặc gợi ý — cùng nguồn với thẻ tìm kiếm.
+   * Lấy ĐỒNG BỘ từ tầng phiên ngay lượt dựng đầu (trước đây đợi một lượt đọc Keystore rồi dựng
+   * lại cả trang + gọi lại báo giá). Bản bất đồng bộ chỉ còn đổi state khi thực sự khác — tức lần
+   * mở app đầu tiên còn lựa chọn lưu từ trước.
+   */
   const [initialRange, setInitialRange] = useState<{
     pickupAt: string;
     returnAt: string;
     rentalMode: RentalMode;
-  } | null>(null);
+  }>(() => toInitialRange(peekRememberedOrDefaultRentalRange()));
+  // Trang đầy đủ chỉ dựng sau khi hiệu ứng đẩy màn chạy xong — xem `useAfterTransition`.
+  const transitionDone = useAfterTransition();
 
-  // Khoảng thuê mặc định = lựa chọn khách đã nhớ, hoặc gợi ý — cùng nguồn với thẻ tìm kiếm.
   useEffect(() => {
     let alive = true;
     void rememberedOrDefaultRentalRange().then((range) => {
       if (!alive) return;
-      setInitialRange({
-        pickupAt: appWallClockToIso(range.pickupAt),
-        returnAt: appWallClockToIso(range.returnAt),
-        rentalMode: range.mode,
-      });
+      const next = toInitialRange(range);
+      setInitialRange((prev) =>
+        prev.pickupAt === next.pickupAt &&
+        prev.returnAt === next.returnAt &&
+        prev.rentalMode === next.rentalMode
+          ? prev
+          : next,
+      );
     });
     return () => {
       alive = false;
@@ -262,7 +288,11 @@ export function ListingDetailScreen({
     );
   }
 
-  if (listing.isPending) {
+  /*
+   * Khung chờ cả khi đang tải LẪN khi hiệu ứng đẩy màn còn chạy: dữ liệu có sẵn trong cache thì
+   * trang đầy đủ vẫn chỉ dựng SAU khi trượt xong — lúc trượt chỉ có cây nhẹ này, cú bấm không khựng.
+   */
+  if (listing.isPending || !transitionDone) {
     return (
       <YStack f={1} bg={colors.background}>
         {header}
@@ -273,12 +303,13 @@ export function ListingDetailScreen({
 
   const current: ListingTripDraft = trip ?? {
     serviceType: defaultServiceOf(listing.data.serviceTypes ?? [], initialServiceType),
-    pickupAt: initialRange?.pickupAt ?? null,
-    returnAt: initialRange?.returnAt ?? null,
-    rentalMode: initialRange?.rentalMode ?? RENTAL_MODE.DAILY,
+    pickupAt: initialRange.pickupAt,
+    returnAt: initialRange.returnAt,
+    rentalMode: initialRange.rentalMode,
     routeType: ROUTE_TYPE.IN_CITY,
     packageMonths: listing.data.longTermPackages?.[0]?.packageMonths ?? null,
-    pickupPreference: PICKUP_PREFERENCE.WITHIN_7_DAYS,
+    // Thẻ dài hạn chỉ còn "chọn ngày cụ thể" (11/11/2026) — bỏ "càng sớm càng tốt".
+    pickupPreference: PICKUP_PREFERENCE.SPECIFIC_DATE,
     requestedPickupDate: '',
     deliveryRequested: false,
     delivery: null,
@@ -386,6 +417,10 @@ function requestPrefill(
     ...(trip.returnAt ? { returnAt: trip.returnAt } : {}),
     ...(withDriver ? { routeType: trip.routeType } : {}),
     ...(longTerm && trip.packageMonths ? { packageMonths: String(trip.packageMonths) } : {}),
+    ...(longTerm ? { pickupPreference: trip.pickupPreference } : {}),
+    ...(longTerm && trip.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE && trip.requestedPickupDate
+      ? { requestedPickupDate: trip.requestedPickupDate }
+      : {}),
     ...(!withDriver && trip.deliveryRequested ? { delivery: '1' } : {}),
     ...(delivery
       ? {
