@@ -234,6 +234,9 @@ export const ROUTES = {
         ...(context?.routeType ? { routeType: context.routeType } : {}),
         ...(context?.packageMonths ? { packageMonths: context.packageMonths } : {}),
         ...(context?.pickupPreference ? { pickupPreference: context.pickupPreference } : {}),
+        ...(context?.requestedPickupDate
+          ? { requestedPickupDate: context.requestedPickupDate }
+          : {}),
         ...(context?.delivery ? { delivery: context.delivery } : {}),
         ...(context?.deliveryAddressLine
           ? { deliveryAddressLine: context.deliveryAddressLine }
@@ -934,6 +937,8 @@ export type BookingRequestPrefillParams = {
   routeType?: string;
   packageMonths?: string;
   pickupPreference?: string;
+  /** Ngày muốn nhận xe (`YYYY-MM-DD`) khách chọn ở thẻ dài hạn — đi cùng `pickupPreference=specific_date`. */
+  requestedPickupDate?: string;
   delivery?: string;
   /** Địa chỉ giao xe đã xác nhận ở thẻ đặt xe (`prefill.delivery` web); tỉnh đi qua `provinceCode`. */
   deliveryAddressLine?: string;

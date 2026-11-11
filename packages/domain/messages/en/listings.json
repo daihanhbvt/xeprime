@@ -204,8 +204,6 @@
         "label": "Rental term:"
       },
       "longTerm": {
-        "wishLabel": "Preferred pick-up date:",
-        "asap": "As soon as possible (within the next 7 days)",
         "dateLabel": "When would you like to pick up the car?",
         "datePlaceholder": "Choose a pick-up date",
         "expectedReturn": "Expected return date:",

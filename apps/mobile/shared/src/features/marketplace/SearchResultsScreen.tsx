@@ -230,6 +230,10 @@ function ResultsBody({
    * xe cụ thể (đo chiều cao khối lọc, tải thêm trang, đổi sắp xếp), và một `renderItem` mới là
    * đủ để FlatList vẽ lại toàn bộ hàng đang hiển thị.
    */
+  const openShop = useCallback(
+    (slug: string) => navigateOnce(ROUTES.explore.shopDetail(slug)),
+    [navigateOnce],
+  );
   const openListing = useCallback(
     (listing: PublicListing, serviceType: string | undefined) =>
       // Mang ngữ cảnh dịch vụ sang, cùng vai trò `?serviceType=` bên web.
@@ -517,7 +521,7 @@ function ResultsBody({
             variant="bare"
             value={filters.q}
             onApply={(q) => setFilters({ q })}
-            onOpenShop={(slug) => navigateOnce(ROUTES.explore.shopDetail(slug))}
+            onOpenShop={openShop}
           />
           <Pressable
             onPress={() => setContextOpen(true)}

@@ -164,6 +164,18 @@ function HomeContent() {
     (params: ExploreSearchParams) => navigateOnce(ROUTES.explore.search(params)),
     [navigateOnce],
   );
+  // Hàm ỔN ĐỊNH cho các khối con (memo): viết thẳng trong JSX là mỗi lần trang chủ chạy lại thì
+  // cả lưới "Xe tiêu biểu" / "Chủ xe nổi bật" dựng lại theo.
+  const openListing = useCallback(
+    // Mang ngữ cảnh dịch vụ sang, cùng vai trò `?serviceType=` bên web.
+    (listing: { id: string }, serviceType: string | undefined) =>
+      navigateOnce(ROUTES.explore.listingDetail(listing.id, serviceType)),
+    [navigateOnce],
+  );
+  const openShop = useCallback(
+    (slug: string) => navigateOnce(ROUTES.explore.shopDetail(slug)),
+    [navigateOnce],
+  );
 
   const { catalog } = useCatalog();
   const showcaseTypes = homeShowcaseBodyTypes(catalog.body_type);
@@ -300,10 +312,7 @@ function HomeContent() {
             <ScrollReveal index={0}>
               <VehiclePreview
                 onExplore={openSearch}
-                onOpenListing={(listing, serviceType) =>
-                  // Mang ngữ cảnh dịch vụ sang, cùng vai trò `?serviceType=` bên web.
-                  navigateOnce(ROUTES.explore.listingDetail(listing.id, serviceType))
-                }
+                onOpenListing={openListing}
               />
             </ScrollReveal>
             <ScrollReveal index={1}>
@@ -321,7 +330,7 @@ function HomeContent() {
               <FeaturedLocations onOpenSearch={openSearchWith} />
             </ScrollReveal>
             <ScrollReveal index={4}>
-              <FeaturedHosts onOpenShop={(slug) => navigateOnce(ROUTES.explore.shopDetail(slug))} />
+              <FeaturedHosts onOpenShop={openShop} />
             </ScrollReveal>
             {/* Không có nút "Đăng ký ngay" trên app (người dùng chốt 29/10/2026). */}
             {/* Đo dải đối tác qua `onLayout` của ScrollReveal: nó là con trực tiếp của vùng khối nên toạ độ đúng cho parallax. */}

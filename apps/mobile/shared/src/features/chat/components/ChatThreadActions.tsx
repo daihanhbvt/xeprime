@@ -19,6 +19,7 @@ import { IconDisc } from '@/components/ui/IconDisc';
 import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
 import { TextControl } from '@/components/ui/TextControl';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { logger } from '@/lib/logger';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { ConversationSummary } from '../api';
@@ -181,7 +182,11 @@ function ReportSheet({
           toast.showSuccess(t('reportSuccess'));
           close();
         },
-        onError: (e) => toast.showError(errorMessage(e)),
+        onError: (e) => {
+          // Ghi lỗi gốc (mã + chi tiết server) — toast chỉ hiện câu đã dịch, không đủ để dò.
+          logger.error('chat.report failed', { conversationId, reason, error: e });
+          toast.showError(errorMessage(e));
+        },
       },
     );
   };
@@ -204,8 +209,9 @@ function ReportSheet({
         />
       }
     >
-      <YStack gap={space.md}>
-        <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+      {/* Gọn: nhãn sát danh sách (khe xs), khối cách khối sm — tấm không chiếm quá nửa màn. */}
+      <YStack gap={space.sm}>
+        <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.semibold}>
           {t('reportReason')}
         </Text>
         <MenuOptionList>
@@ -225,7 +231,7 @@ function ReportSheet({
           placeholder={t('reportNote')}
           maxLength={CHAT_REPORT_NOTE_MAX_LENGTH}
           multiline
-          rows={3}
+          rows={2}
         />
       </YStack>
     </BottomSheet>

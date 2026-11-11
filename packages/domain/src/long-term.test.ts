@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { dayjs } from './datetime';
-import { longTermReturnFromWallClock, pickupWishParts } from './long-term';
+import {
+  bestDiscountPackageMonths,
+  longTermReturnFromWallClock,
+  pickupWishParts,
+} from './long-term';
 
 /**
  * Nguyện vọng nhận xe của khách thuê dài hạn — ADR 0011.
@@ -75,5 +79,25 @@ describe('longTermReturnFromWallClock', () => {
   it('giữ nguyên giờ nhận xe theo giờ Việt Nam', () => {
     const back = longTermReturnFromWallClock(dayjs('2026-03-10T09:30:00'), 3);
     expect(back.format('YYYY-MM-DD HH:mm')).toBe('2026-06-10 09:30');
+  });
+});
+
+describe('bestDiscountPackageMonths', () => {
+  const pkg = (packageMonths: number, durationDiscountPercent: number | null) => ({
+    packageMonths,
+    durationDiscountPercent,
+  });
+
+  it('chọn gói có % cao nhất', () => {
+    expect(bestDiscountPackageMonths([pkg(1, 5), pkg(3, 15), pkg(6, 10)])).toBe(3);
+  });
+
+  it('% bằng nhau thì lấy gói nhiều tháng nhất', () => {
+    expect(bestDiscountPackageMonths([pkg(6, 20), pkg(12, 20), pkg(9, 20)])).toBe(12);
+  });
+
+  it('không gói nào giảm (0% / null) thì không có gói nào', () => {
+    expect(bestDiscountPackageMonths([pkg(1, 0), pkg(2, null)])).toBeNull();
+    expect(bestDiscountPackageMonths([])).toBeNull();
   });
 });

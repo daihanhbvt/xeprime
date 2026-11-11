@@ -68,6 +68,11 @@ const SUPPORT_ALLOWLIST = [
   'MaintenanceBoardController.list',
   'MaintenanceBoardController.summary',
   'MembersController.list',
+  // Tài khoản nhân viên do chủ cấp (ADR 0087, PR #289): danh bạ, bảng vai trò, nhật ký một nhân viên
+  // — đều CHỈ ĐỌC, cùng capability `member.view` với `list`.
+  'MembersController.activity',
+  'MembersController.roles',
+  'MembersController.roster',
   'PartnerDashboardController.overview',
   // Huy hiệu menu site partner (02–04/11/2026): cùng dữ liệu với Tổng quan / danh sách, cùng
   // capability đọc (`booking.view` · `booking_request.view` · `vehicle.view`) — vỏ trang trong

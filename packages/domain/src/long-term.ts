@@ -65,3 +65,26 @@ export function pickupWishParts(wish: PickupWish): PickupWishParts {
 export function longTermReturnFromWallClock(pickup: Dayjs, packageMonths: number): Dayjs {
   return toAppTz(longTermReturnAt(appWallClockToInstant(pickup).toDate(), packageMonths));
 }
+
+/**
+ * Gói mang nhãn "ưu đãi tốt nhất" (đỏ) của bảng gói thuê dài hạn: % ưu đãi cam kết thời hạn cao
+ * nhất; bằng nhau thì gói NHIỀU tháng nhất. Không gói nào giảm ⇒ `null` (gói 0% không có nhãn).
+ * Chỉ là luật TRÌNH BÀY — % do server tính (ADR 0011), ở đây chỉ so sánh để tô màu.
+ */
+export function bestDiscountPackageMonths(
+  packages: readonly { packageMonths: number; durationDiscountPercent?: number | null }[],
+): number | null {
+  let best: { months: number; percent: number } | null = null;
+  for (const pkg of packages) {
+    const percent = pkg.durationDiscountPercent ?? 0;
+    if (percent <= 0) continue;
+    if (
+      !best ||
+      percent > best.percent ||
+      (percent === best.percent && pkg.packageMonths > best.months)
+    ) {
+      best = { months: pkg.packageMonths, percent };
+    }
+  }
+  return best?.months ?? null;
+}

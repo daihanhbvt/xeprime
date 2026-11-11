@@ -109,12 +109,18 @@ export function StaffAccountDialog({ open, onClose }: { open: boolean; onClose: 
     defaultValues: defaults(),
   });
 
+  /*
+   * Đóng hộp là xoá tài khoản vừa tạo — xoá ở hàm ĐÓNG chứ không trong effect (setState trong
+   * effect gây render dây chuyền, lint `react-hooks/set-state-in-effect`).
+   */
+  const close = () => {
+    setCreated(null);
+    onClose();
+  };
+
   // Mỗi lần mở là một tài khoản mới — kèm một mật khẩu ngẫu nhiên mới.
   useEffect(() => {
-    if (open) {
-      setCreated(null);
-      reset(defaults());
-    }
+    if (open) reset(defaults());
     // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ dựng lại khi hộp MỞ
   }, [open]);
 
@@ -148,10 +154,10 @@ export function StaffAccountDialog({ open, onClose }: { open: boolean; onClose: 
       <ResponsiveDialog
         title={t('staff.created.title')}
         open={open}
-        onClose={onClose}
+        onClose={close}
         size="sm"
         footer={
-          <Button type="primary" onClick={onClose}>
+          <Button type="primary" onClick={close}>
             {t('staff.created.done')}
           </Button>
         }
@@ -170,7 +176,7 @@ export function StaffAccountDialog({ open, onClose }: { open: boolean; onClose: 
     <ResponsiveDialog
       title={<DialogHeading title={t('staff.title')} hint={t('staff.subtitle')} />}
       open={open}
-      onClose={onClose}
+      onClose={close}
       size="sm"
       okText={t('staff.submit')}
       onOk={() => void onSubmit()}

@@ -532,6 +532,13 @@
 
 /* ─── Chuyển bước: mờ dần + trượt ngang ngắn theo hướng tiến/lùi ─────────────────────────── */
 .stepEnter {
+  /*
+   * Khung này nằm GIỮA thân overlay (khoá cuộn, `bodyScroll="content"`) và vùng tự cuộn của bước
+   * (`.layout`, `.review` cao 100%). Thiếu chiều cao ở đây thì 100% của con thành `auto`, vùng
+   * cuộn biến mất và nửa dưới bước bị cắt.
+   */
+  height: 100%;
+  min-height: 0;
   animation-duration: var(--xp-motion-duration-overlay);
   animation-timing-function: var(--xp-motion-ease-out);
   animation-fill-mode: both;
@@ -570,5 +577,13 @@
 @media (prefers-reduced-motion: reduce) {
   .stepEnter {
     animation: none;
+  }
+}
+
+/* ≤640px một cột cuộn chung một mạch: khung bước cao theo nội dung. PHẢI đứng SAU rule gốc
+   `.stepEnter { height: 100% }` — cùng độ ưu tiên selector nên rule nào sau thắng. */
+@media (max-width: 640px) {
+  .stepEnter {
+    height: auto;
   }
 }

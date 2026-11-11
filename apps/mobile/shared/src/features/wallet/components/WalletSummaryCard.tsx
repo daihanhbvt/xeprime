@@ -1,4 +1,3 @@
-import { CountUpText } from '@/components/motion/use-count-up';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -110,7 +109,7 @@ export function WalletSummaryCard({
             một bó message, nên bỏ ở một bên là để bên kia nói một điều đã thôi đúng.
           */}
           <Text col={colors.price} fos={fontSize.h2} fow={fontWeight.bold}>
-            <CountUpText amount={data.available} format={fmt.money} />
+            {fmt.money(data.available)}
           </Text>
         </YStack>
 

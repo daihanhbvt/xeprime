@@ -35,7 +35,9 @@ export function ResetPasswordDialog({
   const errorMessage = useErrorMessage();
   const authLabels = useAuthSchemaLabels();
   const reset = useResetMemberPassword();
-  const [done, setDone] = useState<string | null>(null);
+  // Kết quả gắn với ĐÚNG người được đặt lại — đổi người thì không bao giờ hiện mật khẩu người trước.
+  const [doneFor, setDoneFor] = useState<{ userId: string; password: string } | null>(null);
+  const done = doneFor && doneFor.userId === member?.userId ? doneFor.password : null;
 
   const schema = useMemo(
     () => yup.object({ password: buildPasswordSchema(authLabels) }),
@@ -47,25 +49,32 @@ export function ResetPasswordDialog({
     defaultValues: { password: generateStaffPassword() },
   });
 
+  /*
+   * Đóng hộp là xoá kết quả lượt trước — xoá ở hàm ĐÓNG chứ không trong effect (setState trong
+   * effect gây render dây chuyền, lint `react-hooks/set-state-in-effect`).
+   */
+  const close = () => {
+    setDoneFor(null);
+    onClose();
+  };
+
   // Người khác ⇒ form sạch + mật khẩu ngẫu nhiên mới; không mang mật khẩu người trước sang.
   useEffect(() => {
-    if (member) {
-      setDone(null);
-      form.reset({ password: generateStaffPassword() });
-    }
+    if (member) form.reset({ password: generateStaffPassword() });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ dựng lại khi đổi người
   }, [member?.id]);
 
   const name = member?.displayName ?? member?.username ?? '';
 
   const onSubmit = form.handleSubmit((values) => {
-    if (!member?.userId || reset.isPending) return;
+    const userId = member?.userId;
+    if (!userId || reset.isPending) return;
     reset.mutate(
-      { userId: member.userId, password: values.password },
+      { userId, password: values.password },
       {
         onSuccess: () => {
           message.success(t('roster.toast.passwordReset'));
-          setDone(values.password);
+          setDoneFor({ userId, password: values.password });
         },
         onError: (err) => message.error(errorMessage(err)),
       },
@@ -77,10 +86,10 @@ export function ResetPasswordDialog({
       <ResponsiveDialog
         title={t('resetPassword.doneTitle')}
         open
-        onClose={onClose}
+        onClose={close}
         size="sm"
         footer={
-          <Button type="primary" onClick={onClose}>
+          <Button type="primary" onClick={close}>
             {t('staff.created.done')}
           </Button>
         }
@@ -101,7 +110,7 @@ export function ResetPasswordDialog({
         <DialogHeading title={t('resetPassword.title')} hint={t('resetPassword.subtitle', { name })} />
       }
       open={Boolean(member)}
-      onClose={onClose}
+      onClose={close}
       size="sm"
       okText={t('resetPassword.submit')}
       onOk={() => void onSubmit()}
