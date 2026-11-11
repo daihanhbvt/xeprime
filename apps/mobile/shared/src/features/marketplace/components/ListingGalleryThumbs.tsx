@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { PixelRatio, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { PixelRatio, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useTranslations } from 'use-intl';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
 import { radius, space } from '@/theme/tokens';
+import { useContentWidth } from '@/theme/use-content-width';
 
 /** Số ô vừa khít bề rộng nội dung — một xe thường có 5 ảnh, nên 5 ảnh thì không ô nào bị cắt. */
 export const GALLERY_THUMBS_PER_VIEW = 5;
@@ -27,8 +28,7 @@ const INACTIVE_OPACITY = 0.55;
  * ô thứ năm lòi ra ngoài và dải tự bật cuộn.
  */
 export function galleryThumbWidth(contentWidth: number, pixelRatio: number): number {
-  const fit =
-    (contentWidth - (GALLERY_THUMBS_PER_VIEW - 1) * THUMB_GAP) / GALLERY_THUMBS_PER_VIEW;
+  const fit = (contentWidth - (GALLERY_THUMBS_PER_VIEW - 1) * THUMB_GAP) / GALLERY_THUMBS_PER_VIEW;
   const clamped = Math.min(GALLERY_THUMB_MAX_WIDTH, Math.max(GALLERY_THUMB_MIN_WIDTH, fit));
   return Math.floor(clamped * pixelRatio) / pixelRatio;
 }
@@ -52,7 +52,7 @@ export function ListingGalleryThumbs({
   const colors = useColors();
   const t = useTranslations('Listings.detail.gallery');
   const scrollRef = useRef<ScrollView>(null);
-  const { width: windowWidth } = useWindowDimensions();
+  const windowWidth = useContentWidth();
 
   const contentWidth = windowWidth - 2 * layout.screenX;
   const thumbWidth = useMemo(

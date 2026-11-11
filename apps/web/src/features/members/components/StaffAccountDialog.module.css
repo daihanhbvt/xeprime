@@ -1,0 +1,5 @@
+/* Nút "Tạo ngẫu nhiên" nằm trong ô mật khẩu — bỏ đệm để ô không cao hơn các ô khác. */
+.generate {
+  height: auto;
+  padding: 0;
+}

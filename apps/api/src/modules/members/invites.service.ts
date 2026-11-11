@@ -14,7 +14,9 @@ import {
   MEMBERSHIP_BRANCH_SCOPE,
   MEMBERSHIP_STATUS,
   TENANT_ROLE,
+  invitableTenantRoles,
   type PaginationMeta,
+  type TenantRole,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -80,6 +82,7 @@ const SELECT = {
   status: true,
   expiresAt: true,
   createdAt: true,
+  displayName: true,
   creator: { select: { displayName: true } },
 } satisfies Prisma.TenantInviteSelect;
 
@@ -137,6 +140,8 @@ export class InvitesService {
      * chi nhánh A mời số thứ hai của chính họ với "Tất cả chi nhánh" là có toàn gian hàng.
      */
     actorAllowed: readonly string[] | null,
+    /** Vai của NGƯỜI MỜI — trần của vai được mời (ADR 0086 điều 2). */
+    actorRole: string,
   ): Promise<CreateInviteResultDto> {
     if (dto.roleKey === TENANT_ROLE.SHOP_OWNER) {
       throw new BadRequestException({
@@ -144,6 +149,14 @@ export class InvitesService {
         message: 'Không thể mời ai đó làm chủ gian hàng',
       });
     }
+    if (!invitableTenantRoles(actorRole).includes(dto.roleKey as TenantRole)) {
+      throw new ForbiddenException({
+        code: API_ERROR_CODE.MEMBER_ROLE_NOT_INVITABLE,
+        message: 'Bạn không được mời người vào gian hàng với vai trò này',
+        details: { roleKey: dto.roleKey },
+      });
+    }
+    const nickname = dto.nickname?.trim() || null;
 
     // Dạng CHUẨN `0…` (ADR 0082) — cùng dạng `users.phone` lưu, nên so khớp lúc nhận là so chuỗi.
     const phone = normalizePhone(dto.phone);
@@ -198,6 +211,7 @@ export class InvitesService {
           roleKey: dto.roleKey,
           branchScope: scope.branchScope,
           branchIds: scope.branchIds,
+          displayName: nickname,
           tokenHash: hashToken(token),
           status: INVITE_STATUS.PENDING,
           expiresAt,
@@ -216,7 +230,7 @@ export class InvitesService {
           targetId: created.id,
           // SĐT là định danh của lời mời nên phải ghi; token thì KHÔNG bao giờ (ADR 0017 —
           // audit là nơi nhiều người đọc được hơn database).
-          after: { phone, roleKey: dto.roleKey, ...scope },
+          after: { phone, roleKey: dto.roleKey, nickname, ...scope },
         },
         tx,
       );
@@ -403,6 +417,8 @@ export class InvitesService {
         branchScope: scope.branchScope,
         invitedBy: invite.createdBy,
         joinedAt: new Date(),
+        // Tên gợi nhớ của lời mời thành tên trong gian hàng; người từng bị gỡ thì lời mời mới thắng.
+        displayNameInTenant: invite.displayName,
       };
       // Người từng bị gỡ thì kích hoạt lại bản ghi cũ — unique (tenant, user) chỉ cho một hàng.
       const membershipRow = await tx.tenantMembership.upsert({
@@ -479,6 +495,7 @@ export class InvitesService {
         roleKey: true,
         branchScope: true,
         branchIds: true,
+        displayName: true,
         status: true,
         expiresAt: true,
         createdBy: true,
@@ -601,5 +618,6 @@ function toDto(row: InviteRow): InviteDto {
     expiresAt: (row.expiresAt as unknown as Date).toISOString(),
     createdAt: (row.createdAt as unknown as Date).toISOString(),
     createdByName: row.creator.displayName,
+    nickname: row.displayName,
   };
 }

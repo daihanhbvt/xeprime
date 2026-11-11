@@ -35,8 +35,11 @@ export function readAppVersion(
  * "Tài khoản & bảo mật" của khu quản lý. Không có số thì không hiện gì — một dòng "Phiên bản"
  * trống còn tệ hơn không có.
  */
-/** Host API production — bản trỏ vào đây là bản người dùng thật cầm. */
-const PRODUCTION_API_HOST = 'api.xeprime.vn';
+/**
+ * Host API production — bản trỏ vào đây là bản người dùng thật cầm. Hai host cùng một API:
+ * `api.xeprime.vn` (domain riêng cho app) và `xeprime.vn` (`/api` của site khách).
+ */
+const PRODUCTION_API_HOSTS: readonly string[] = ['api.xeprime.vn', 'xeprime.vn'];
 
 /**
  * Bản production chỉ hiện "0.1.0" — số build là việc nội bộ (QA, hỗ trợ phân biệt các bản nộp),
@@ -45,7 +48,7 @@ const PRODUCTION_API_HOST = 'api.xeprime.vn';
  */
 function isProductionBuild(): boolean {
   try {
-    return new URL(resolveApiBaseUrl()).host === PRODUCTION_API_HOST;
+    return PRODUCTION_API_HOSTS.includes(new URL(resolveApiBaseUrl()).host);
   } catch {
     return false;
   }

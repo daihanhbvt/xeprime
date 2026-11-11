@@ -1,5 +1,6 @@
 'use client';
 
+import { useHorizontalScroll } from '@/hooks/use-horizontal-scroll';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { cx } from '@/lib/cx';
 import styles from './StatusRail.module.css';
@@ -48,6 +49,11 @@ export function StatusRail<T extends string>({
   onSelect: (value: T) => void;
 }) {
   const fmt = useAppFormat();
+  // Dải ngang (màn hẹp): con lăn/kéo chuột cuộn được, mục đang chọn tự trượt vào khung.
+  const railRef = useHorizontalScroll<HTMLElement>({
+    activeSelector: '[aria-current="true"]',
+    activeKey: value,
+  });
 
   function renderItem(item: StatusRailItem<T>) {
     const active = item.value === value;
@@ -70,7 +76,7 @@ export function StatusRail<T extends string>({
   }
 
   return (
-    <nav className={styles.rail} aria-label={label}>
+    <nav ref={railRef} className={styles.rail} aria-label={label}>
       {head ? <ul className={styles.items}>{renderItem(head)}</ul> : null}
       {groups
         .filter((group) => group.items.length > 0)

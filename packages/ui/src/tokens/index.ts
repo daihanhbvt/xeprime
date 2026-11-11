@@ -341,6 +341,9 @@ export const XP_TOKENS = {
   'color-pink': '#dd2590', // v2 Status/pink-high - chữ viên "Thuê xe dài hạn" (partner)
   'color-pink-bg': '#fdf2fa', // v2 Status/pink-low - nền viên "Thuê xe dài hạn"
   'color-pink-border': '#faa7e0', // v2 Status/pink-300 - viền viên "Thuê xe dài hạn"
+  'color-purple': '#6938ef', // v2 Status/purple-high - chữ viên vai "Quan sát viên" (partner)
+  'color-purple-bg': '#f4f3ff', // v2 Status/purple-low - nền viên "Quan sát viên"
+  'color-purple-border': '#bdb4fe', // v2 Status/purple-300 - viền viên "Quan sát viên"
   'color-warning-strong': '#ec4a0a', // v2 Status/warning-600 - chữ nhãn trạng thái cam
   'color-warning-high': '#dc6803', // v2 Status/warning-high - chữ/thanh cảnh báo (dải thiếu tỉnh, thanh suất gói)
   'color-info-strong': '#1570ef',

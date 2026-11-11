@@ -375,6 +375,12 @@ export const queryKeys = {
      * phải quét được cả hai. Tách nhánh là để lọt đúng một nửa.
      */
     invites: (params: QueryParams) => ['members', 'invites', params] as const,
+    /** Danh sách GỘP thành viên + lời mời còn chờ (ADR 0086 điều 5). */
+    roster: (params: QueryParams) => ['members', 'roster', params] as const,
+    /** Bốn vai kèm khoá quyền + số người — ma trận "Vai trò & quyền". */
+    roles: () => ['members', 'roles'] as const,
+    /** Việc gần đây của MỘT thành viên — ngăn chi tiết (ADR 0087). */
+    activity: (userId: string) => ['members', 'activity', userId] as const,
     /** Xem trước lời mời - khoá theo token vì đây là dữ liệu của MỘT lời mời cụ thể. */
     invitePreview: (token: string) => ['members', 'invite-preview', token] as const,
   },

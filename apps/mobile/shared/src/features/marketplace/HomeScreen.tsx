@@ -6,7 +6,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { RefreshControl, useWindowDimensions } from 'react-native';
+import { RefreshControl } from 'react-native';
 import { BANNER_PLACEMENT } from '@xeprime/types';
 import { useTabBarHide, useTabBarInset } from '@/components/layout/tab-bar-inset';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -42,6 +42,7 @@ import { PromoBanners, PromoBannersSkeleton } from './components/home/PromoBanne
 import { VehicleTypes, homeShowcaseBodyTypes } from './components/home/VehicleTypes';
 import { ScrollReveal, ScrollRevealProvider } from '@/components/motion/ScrollReveal';
 import { WhyChooseUs } from './components/home/WhyChooseUs';
+import { useContentWidth } from '@/theme/use-content-width';
 
 /** Nhịp giữa các khối lớn của trang chủ v2 — rộng hơn `layout.section` vì mỗi khối có tiêu đề riêng. */
 const HOME_SECTION_GAP = space.xl + space.sm;
@@ -77,7 +78,7 @@ function HomeContent() {
   const colors = useColors();
   // Chạm nhanh nhiều lần vào "xem chi tiết" từng đẩy nhiều màn chồng nhau — xem hook.
   const navigateOnce = useNavigateOnce();
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { data: user } = useCurrentUser();
@@ -163,6 +164,18 @@ function HomeContent() {
     (params: ExploreSearchParams) => navigateOnce(ROUTES.explore.search(params)),
     [navigateOnce],
   );
+  // Hàm ỔN ĐỊNH cho các khối con (memo): viết thẳng trong JSX là mỗi lần trang chủ chạy lại thì
+  // cả lưới "Xe tiêu biểu" / "Chủ xe nổi bật" dựng lại theo.
+  const openListing = useCallback(
+    // Mang ngữ cảnh dịch vụ sang, cùng vai trò `?serviceType=` bên web.
+    (listing: { id: string }, serviceType: string | undefined) =>
+      navigateOnce(ROUTES.explore.listingDetail(listing.id, serviceType)),
+    [navigateOnce],
+  );
+  const openShop = useCallback(
+    (slug: string) => navigateOnce(ROUTES.explore.shopDetail(slug)),
+    [navigateOnce],
+  );
 
   const { catalog } = useCatalog();
   const showcaseTypes = homeShowcaseBodyTypes(catalog.body_type);
@@ -245,9 +258,7 @@ function HomeContent() {
                 refetchPromo(),
                 refetchPartner(),
                 queryClient.invalidateQueries({ queryKey: queryKeys.marketplace.all }),
-              ]).finally(() =>
-                setPulling(false),
-              );
+              ]).finally(() => setPulling(false));
             }}
             tintColor={colors.primary}
             colors={[colors.primary]}
@@ -290,61 +301,58 @@ function HomeContent() {
         >
           {/* Khối hiện ra khi cuộn tới (luồng UI, chỉ trượt — không mờ khối có bóng). */}
           <ScrollRevealProvider value={revealCtx}>
-          {/* TRÊN "Xe tiêu biểu" như web (người dùng chốt 04/11/2026). Chưa có banner thì không dựng khối. */}
-          {promoLoading ? (
-            <PromoBannersSkeleton />
-          ) : promoBanners && promoBanners.length > 0 ? (
-            <ScrollReveal>
-              <PromoBanners banners={promoBanners} />
+            {/* TRÊN "Xe tiêu biểu" như web (người dùng chốt 04/11/2026). Chưa có banner thì không dựng khối. */}
+            {promoLoading ? (
+              <PromoBannersSkeleton />
+            ) : promoBanners && promoBanners.length > 0 ? (
+              <ScrollReveal>
+                <PromoBanners banners={promoBanners} />
+              </ScrollReveal>
+            ) : null}
+            <ScrollReveal index={0}>
+              <VehiclePreview
+                onExplore={openSearch}
+                onOpenListing={openListing}
+              />
             </ScrollReveal>
-          ) : null}
-          <ScrollReveal index={0}>
-            <VehiclePreview
-              onExplore={openSearch}
-              onOpenListing={(listing, serviceType) =>
-                // Mang ngữ cảnh dịch vụ sang, cùng vai trò `?serviceType=` bên web.
-                navigateOnce(ROUTES.explore.listingDetail(listing.id, serviceType))
-              }
-            />
-          </ScrollReveal>
-          <ScrollReveal index={1}>
-            <WhyChooseUs />
-          </ScrollReveal>
-          {/* Kiểu dáng bật "Hiện ở trang chủ" — chưa có mục nào thì không dựng khối. */}
-          {showcaseTypes.length > 0 ? (
-            <ScrollReveal index={2}>
-              <HomeBand muted>
-                <VehicleTypes items={showcaseTypes} onOpenSearch={openSearchWith} />
+            <ScrollReveal index={1}>
+              <WhyChooseUs />
+            </ScrollReveal>
+            {/* Kiểu dáng bật "Hiện ở trang chủ" — chưa có mục nào thì không dựng khối. */}
+            {showcaseTypes.length > 0 ? (
+              <ScrollReveal index={2}>
+                <HomeBand muted>
+                  <VehicleTypes items={showcaseTypes} onOpenSearch={openSearchWith} />
+                </HomeBand>
+              </ScrollReveal>
+            ) : null}
+            <ScrollReveal index={3}>
+              <FeaturedLocations onOpenSearch={openSearchWith} />
+            </ScrollReveal>
+            <ScrollReveal index={4}>
+              <FeaturedHosts onOpenShop={openShop} />
+            </ScrollReveal>
+            {/* Không có nút "Đăng ký ngay" trên app (người dùng chốt 29/10/2026). */}
+            {/* Đo dải đối tác qua `onLayout` của ScrollReveal: nó là con trực tiếp của vùng khối nên toạ độ đúng cho parallax. */}
+            <ScrollReveal
+              index={5}
+              onLayout={(e) => {
+                partnerY.value = e.nativeEvent.layout.y;
+              }}
+            >
+              <PartnerBanner
+                banner={partnerBanners?.[0] ?? null}
+                parallax={{ scrollY, offset: partnerY, baseOffset: sectionsY }}
+              />
+            </ScrollReveal>
+            <ScrollReveal index={6}>
+              <RentalSteps />
+            </ScrollReveal>
+            <ScrollReveal index={6}>
+              <HomeBand>
+                <CustomerReviews />
               </HomeBand>
             </ScrollReveal>
-          ) : null}
-          <ScrollReveal index={3}>
-            <FeaturedLocations onOpenSearch={openSearchWith} />
-          </ScrollReveal>
-          <ScrollReveal index={4}>
-            <FeaturedHosts onOpenShop={(slug) => navigateOnce(ROUTES.explore.shopDetail(slug))} />
-          </ScrollReveal>
-          {/* Không có nút "Đăng ký ngay" trên app (người dùng chốt 29/10/2026). */}
-          {/* Đo dải đối tác qua `onLayout` của ScrollReveal: nó là con trực tiếp của vùng khối nên toạ độ đúng cho parallax. */}
-          <ScrollReveal
-            index={5}
-            onLayout={(e) => {
-              partnerY.value = e.nativeEvent.layout.y;
-            }}
-          >
-            <PartnerBanner
-              banner={partnerBanners?.[0] ?? null}
-              parallax={{ scrollY, offset: partnerY, baseOffset: sectionsY }}
-            />
-          </ScrollReveal>
-          <ScrollReveal index={6}>
-            <RentalSteps />
-          </ScrollReveal>
-          <ScrollReveal index={6}>
-            <HomeBand>
-              <CustomerReviews />
-            </HomeBand>
-          </ScrollReveal>
           </ScrollRevealProvider>
         </YStack>
       </Animated.ScrollView>

@@ -1,59 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { runOnJS, useAnimatedReaction, useReducedMotion } from 'react-native-reanimated';
 import { useRevealProgress } from './ScrollReveal';
 import { motionMs } from '@/theme/motion';
-
-/**
- * Số tiền ĐẾM LÊN tới giá trị mới — chỉ là hiệu ứng HIỂN THỊ. Tiền là chuỗi (ADR 0007): trong lúc
- * chạy trả các mốc nguyên đồng trung gian, và khung cuối LUÔN trả nguyên chuỗi `amount` gốc, nên
- * giá trị đứng lại đúng tuyệt đối. Chuỗi không đọc ra số / giảm chuyển động ⇒ trả thẳng `amount`.
- *
- * Dùng: `fmt.money(useCountUp(amount))`.
- */
-export function useCountUp(amount: string): string {
-  const reduceMotion = useReducedMotion();
-  const [shown, setShown] = useState(amount);
-  const from = useRef<number>(0);
-
-  useEffect(() => {
-    const target = Number(amount);
-    if (reduceMotion || !Number.isFinite(target)) {
-      setShown(amount);
-      from.current = Number.isFinite(target) ? target : 0;
-      return;
-    }
-    const start = from.current;
-    if (start === target) {
-      setShown(amount);
-      return;
-    }
-    const began = Date.now();
-    let frame = 0;
-    const tick = () => {
-      const t = Math.min(1, (Date.now() - began) / motionMs.countUp);
-      if (t >= 1) {
-        setShown(amount);
-        from.current = target;
-        return;
-      }
-      const eased = 1 - (1 - t) ** 3;
-      setShown(String(Math.round(start + (target - start) * eased)));
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(frame);
-      from.current = target;
-    };
-  }, [amount, reduceMotion]);
-
-  return shown;
-}
-
-/** Bọc `useCountUp` cho chỗ chỉ cần một chuỗi đã định dạng (trả text thuần, đặt trong `<Text>`). */
-export function CountUpText({ amount, format }: { amount: string; format: (amount: string) => string }) {
-  return format(useCountUp(amount));
-}
 
 /**
  * Số liệu dạng chữ ("100+", "4.9/5") ĐẾM TỪ 0 khi khối `ScrollReveal` cha bắt đầu hiện. Giữ

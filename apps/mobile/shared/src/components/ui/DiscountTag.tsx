@@ -10,8 +10,47 @@ import { badgeLineHeight } from './StatusBadge';
  * bước Giá. Màu giảm giá là MỘT cặp token riêng (`discount`/`onDiscount`), không phải `danger` —
  * giảm giá là tin vui, không phải cảnh báo.
  */
-export function DiscountTag({ percent, size = 'md' }: { percent: number; size?: 'sm' | 'md' }) {
+export function DiscountTag({
+  percent,
+  size = 'md',
+  variant = 'pill',
+  active = false,
+  best = false,
+}: {
+  percent: number;
+  size?: 'sm' | 'md';
+  /** `corner` — nhãn góc trên-phải của một ô chọn (gói thuê dài hạn), như web `variant="corner"`. */
+  variant?: 'pill' | 'corner';
+  /** Chỉ cho `corner`: ô đang được chọn ⇒ màu nhấn (vàng) thay cho màu ưu đãi (xanh). */
+  active?: boolean;
+  /** Chỉ cho `corner`: ưu đãi TỐT NHẤT trong nhóm ⇒ màu giảm giá (đỏ). `active` thắng nếu cả hai. */
+  best?: boolean;
+}) {
   const colors = useColors();
+  if (variant === 'corner') {
+    // Ô cha cần `overflow: hidden` + `position: relative` để nhãn ôm sát góc trên-phải.
+    return (
+      <XStack
+        pointerEvents="none"
+        pos="absolute"
+        top={0}
+        right={0}
+        zIndex={1}
+        px={space.xs}
+        bg={active ? colors.primary : best ? colors.discount : colors.success}
+        borderBottomLeftRadius={radius.sm}
+      >
+        <Text
+          col={active ? colors.onPrimary : best ? colors.onDiscount : colors.textInverse}
+          fos={fontSize.meta}
+          lh={badgeLineHeight(fontSize.meta)}
+          fow={fontWeight.semibold}
+        >
+          -{percent}%
+        </Text>
+      </XStack>
+    );
+  }
   return (
     <XStack
       bg={colors.discount}

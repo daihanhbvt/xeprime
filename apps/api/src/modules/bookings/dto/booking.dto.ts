@@ -292,6 +292,23 @@ export class BookingListItemDto {
   /** B − D - phần khách còn trả trực tiếp chủ xe khi nhận xe, do server đóng băng trong snapshot. */
   @ApiPropertyOptional({ type: String, nullable: true })
   payAtPickupAmount!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      '`D − T` đóng băng trong snapshot - số XePrime ghi vào Ví điểm chủ xe khi chuyến hoàn thành ' +
+      '(ô "Cộng ví" của thẻ; cùng con số `ownerPayout.ownerPayableAmount` của chi tiết). `null` với ' +
+      'đơn lập tay / đơn cũ không có bảng phí marketplace (VND string)',
+  })
+  ownerPayableAmount!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Địa chỉ ĐIỂM NHẬN XE khi khách tự tới: chi nhánh giữ xe, rơi về địa chỉ hồ sơ gian hàng. ' +
+      '`null` khi chưa điền cả hai - chuỗi thô, không dịch',
+  })
+  pickupPointAddress!: string | null;
   @ApiProperty({
     description:
       'Phần tiền thuê CỦA CHỦ XE (`D`) khách đã trả trước trong tiền giữ chỗ, đang ở XePrime - vào ví ' +

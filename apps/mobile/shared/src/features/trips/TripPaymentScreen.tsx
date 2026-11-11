@@ -1,4 +1,3 @@
-import { CountUpText } from '@/components/motion/use-count-up';
 import { celebrate } from '@/components/motion/Confetti';
 import { APP_FEATURES } from '@/lib/app-features';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -405,7 +404,7 @@ function AwaitingHold({
             {underpaid ? t('summary.remainingLabel') : t('summary.amountLabel')}
           </Text>
           <Text col={colors.primary} fos={fontSize.h3} lh={28} fow={fontWeight.semibold}>
-            <CountUpText amount={hold.remainingAmount} format={fmt.money} />
+            {fmt.money(hold.remainingAmount)}
           </Text>
           <Countdown
             deadline={hold.expiresAt}

@@ -48,6 +48,8 @@ catalog:
   expo-image: ~3.0.11
   expo-image-manipulator: 14.0.8
   expo-image-picker: 17.0.11
+  # Popup "có phiên bản mới": 0.9.x là dòng cuối hỗ trợ Expo SDK 52+ (0.11+ cần SDK 56, 0.13 cần SDK 58).
+  expo-in-app-updates: 0.9.0
   expo-linear-gradient: ~15.0.8
   expo-linking: ~8.0.12
   expo-localization: ~17.0.9

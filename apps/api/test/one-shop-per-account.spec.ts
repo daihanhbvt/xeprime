@@ -135,6 +135,7 @@ async function inviteToken(tenantId: string, ownerId: string, phone: string): Pr
     ownerId,
     { phone, roleKey: TENANT_ROLE.SHOP_STAFF },
     null,
+    TENANT_ROLE.SHOP_OWNER,
   );
   return created.inviteUrl.split('/').pop()!;
 }

@@ -13,7 +13,6 @@ import { cx } from '@/lib/cx';
 import { useCustomerCostView, type CustomerCostBreakdown } from '../hooks/use-customer-cost-view';
 import type { ListedPriceRow } from './BookingPriceSummary';
 import reviewStyles from './BookingReviewStep.module.css';
-import { NumberTicker } from '@/components/motion/NumberTicker';
 import styles from './BookingReviewCosts.module.css';
 
 /**
@@ -218,7 +217,7 @@ export function BookingReviewCosts({
                 ) : null}
               </span>
               <strong className={styles.totalAmount}>
-                <NumberTicker value={fmt.money(total?.amount ?? breakdown.totalAmount)} />
+                {fmt.money(total?.amount ?? breakdown.totalAmount)}
               </strong>
               {/* "Tiết kiệm" CHỈ nói về ưu đãi cam kết thời hạn, không so với giá ngày (ADR 0011). */}
               {longTerm?.durationDiscountPercent ? (

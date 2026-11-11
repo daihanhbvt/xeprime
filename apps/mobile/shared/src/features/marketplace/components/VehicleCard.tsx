@@ -61,7 +61,14 @@ const INSTANT_TEXT = PALETTES.light.colors.text;
  * Bố cục CỐ ĐỊNH: mỗi hàng giữ chỗ dù xe thiếu dữ liệu, giá luôn ở đáy — thẻ trong lưới/băng
  * chuyền cao bằng nhau như web (`.footer { margin-top: auto }` + thẻ `height: 100%`).
  */
-const ROW_LOCATION = 22;
+// 24 chứ không 22: Be Vietnam Pro cần ~22,4dp cho cỡ 14 (khoảng trên cho dấu tiếng Việt + phần
+// dưới cho móc chữ). Dòng 22 + `numberOfLines={1}` làm iOS cắt mất móc của g/y/p (10/11/2026).
+const ROW_LOCATION = 24;
+/**
+ * Chiều cao dòng cho chữ cỡ `body` bị kẹp MỘT dòng (`numberOfLines={1}`) trên thẻ — địa chỉ, tên
+ * gian hàng, thông số. Kẹp dòng thì iOS cắt đúng theo hộp dòng, nên hộp phải đủ cho móc chữ.
+ */
+const CLAMPED_LINE_HEIGHT = ROW_LOCATION;
 // Icon thông số của Figma "Vehicle Card": khung 16, hình vẽ đặt giữa theo kích thước gốc của file.
 const SPEC_ICON_XML = {
   seats: { xml: CARD_ICON_XML.seats, w: 12, h: 11 },
@@ -427,7 +434,7 @@ function VehicleCardImpl({
               <Text
                 col={isShopTrack ? shopNameColor : colors.textMuted}
                 fos={fontSize.body}
-                lh={22}
+                lh={CLAMPED_LINE_HEIGHT}
                 fow={fontWeight.medium}
                 numberOfLines={1}
               >
@@ -534,7 +541,13 @@ function VehicleCardImpl({
             <XStack ai="center" gap={space.sm}>
               {/* Nơi có xe — web `/home/card-location.svg`, Figma List: icon 20, cách chữ 8. */}
               <ShopLocationIcon color={colors.textPlaceholder} size={20} />
-              <Text f={1} col={colors.textMuted} fos={fontSize.body} lh={22} numberOfLines={1}>
+              <Text
+                f={1}
+                col={colors.textMuted}
+                fos={fontSize.body}
+                lh={CLAMPED_LINE_HEIGHT}
+                numberOfLines={1}
+              >
                 {location}
               </Text>
             </XStack>
@@ -560,7 +573,7 @@ function VehicleCardImpl({
                   <Text
                     col={colors.textMuted}
                     fos={fontSize.body}
-                    lh={22}
+                    lh={CLAMPED_LINE_HEIGHT}
                     fow={fontWeight.medium}
                     numberOfLines={1}
                   >
@@ -598,7 +611,7 @@ function VehicleCardImpl({
                     <Text
                       col={isShopTrack ? shopNameColor : colors.textMuted}
                       fos={fontSize.body}
-                      lh={22}
+                      lh={CLAMPED_LINE_HEIGHT}
                       fow={fontWeight.medium}
                       numberOfLines={1}
                     >
@@ -610,7 +623,12 @@ function VehicleCardImpl({
               {open ? (
                 <Pressable onPress={open} accessibilityRole="link" hitSlop={space.sm}>
                   <XStack ai="center" gap={6}>
-                    <Text col={colors.primary} fos={fontSize.body} lh={22} fow={fontWeight.semibold}>
+                    <Text
+                      col={colors.primary}
+                      fos={fontSize.body}
+                      lh={22}
+                      fow={fontWeight.semibold}
+                    >
                       {tResults('viewDetail')}
                     </Text>
                     <Ionicons name="arrow-forward" size={20} color={colors.primary} />
@@ -664,7 +682,6 @@ function VehicleCardImpl({
           ) : null}
 
           <PhotoAmenityPills items={amenities} />
-
         </YStack>
       </YStack>
 
@@ -711,7 +728,13 @@ function VehicleCardImpl({
                     color={XP_TOKENS['color-text-placeholder']}
                   />
                 </YStack>
-                <Text f={1} col={colors.textMuted} fos={fontSize.body} lh={22} numberOfLines={1}>
+                <Text
+                  f={1}
+                  col={colors.textMuted}
+                  fos={fontSize.body}
+                  lh={CLAMPED_LINE_HEIGHT}
+                  numberOfLines={1}
+                >
                   {location}
                 </Text>
               </>
@@ -846,7 +869,6 @@ function InstantBookBadge() {
     </XStack>
   );
 }
-
 
 /**
  * Bọc `memo`: đây là hàng trong danh sách kết quả, và màn đó dựng lại vì đủ thứ không liên quan

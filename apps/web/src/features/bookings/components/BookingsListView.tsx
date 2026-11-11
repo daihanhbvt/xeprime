@@ -67,12 +67,14 @@ import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/
 import { VehicleDetailDialog } from '@/features/vehicles/components/VehicleDetailDialog';
 import { queryKeys } from '@/services/query-keys';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { useMediaQuery } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { rememberRentalsView } from '@/lib/rentals-view-memory';
+import { XP_BREAKPOINTS } from '@/styles/theme';
 import { BookingCard, bookingCardDetailHref } from './BookingCard';
 import { BookingDetailDialog } from './BookingDetailDialog';
 import { RentalStageHeading, STAGE_TONE } from './RentalStageHeading';
@@ -221,6 +223,9 @@ export function BookingsListView() {
   const { view: mode, boardAvailable } = useRentalsView(filters.view);
   const isBoard = mode === RENTAL_VIEW.BOARD;
   const isList = mode === RENTAL_VIEW.LIST;
+  // Điện thoại + tablet: danh sách dùng thẻ GỌN của Kanban (Figma "Rental Request - MB" `24117:65745`,
+  // 10/11/2026) — trên tablet & mobile khi xem dạng List, thẻ gọn mở/thu giúp quét nhanh hơn.
+  const isCompactList = useMediaQuery(`(max-width: ${XP_BREAKPOINTS.tablet}px)`);
   /** Đang cầm một thẻ trên Kanban — tạm dừng làm mới nền để thẻ không biến mất dưới tay. */
   const [dragging, setDragging] = useState(false);
   const branch = useBranchFilter({
@@ -553,7 +558,7 @@ export function BookingsListView() {
   }
 
   function renderCard(stage: RentalStage, item: BookingRequestItem | BookingListItem) {
-    return <li key={item.id}>{cardFor(stage, item, 'list')}</li>;
+    return <li key={item.id}>{cardFor(stage, item, isCompactList ? 'board' : 'list')}</li>;
   }
 
   // ── Kanban: cột + kéo thả ───────────────────────────────────────────────

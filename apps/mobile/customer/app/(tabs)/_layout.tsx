@@ -13,7 +13,14 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
-import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -310,10 +317,24 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const { data: user } = useCurrentUser();
   const segments = useSegments();
+  /*
+   * `useSegments` là đường dẫn TOÀN CỤC: đẩy một màn lên trên bộ tab (chi tiết xe, đăng nhập…) cũng
+   * đổi nó. Chỉ đọc khi đường dẫn còn NẰM TRONG bộ tab; ngoài đó giữ nguyên giá trị cũ. Trước đây
+   * mở chi tiết xe làm `onHome` lật `false` ⇒ thanh trên của Trang chủ bị GỠ đúng lúc hiệu ứng đẩy
+   * màn đang chạy (cả trang chủ dựng lại bố cục) rồi dựng lại khi lui — cú khựng khi bấm vào xe.
+   */
+  const inTabs = segments[0] === '(tabs)';
+  const lastTabSegmentRef = useRef<{ last: string | undefined; length: number }>({
+    last: segments[segments.length - 1],
+    length: segments.length,
+  });
+  if (inTabs) {
+    lastTabSegmentRef.current = { last: segments[segments.length - 1], length: segments.length };
+  }
   // Thanh logo · tin nhắn · chuông · avatar: Trang chủ VÀ Tìm xe (người dùng chốt 28/10/2026).
-  const lastSegment = segments[segments.length - 1];
+  const lastSegment = lastTabSegmentRef.current.last;
   // Màn Tìm xe KHÔNG có thanh này (người dùng chốt 29/10/2026) — thẻ tìm kiếm là đỉnh màn.
-  const onHome = lastSegment === 'explore' || segments.length <= 1;
+  const onHome = lastSegment === 'explore' || lastTabSegmentRef.current.length <= 1;
   const [tabBarHeight, setTabBarHeight] = useState(0);
   const tabBarHide = useSharedValue(0);
   // Đổi tab ⇒ thanh hiện lại: chỉ Trang chủ được giấu nó khi cuộn.
@@ -337,6 +358,14 @@ export default function TabsLayout() {
   const driverCounts = useDriverPendingCounts(Boolean(user));
   const pendingDriverTrips = driverCounts.data?.trips ?? 0;
 
+  // Hàm ỔN ĐỊNH: viết thẳng trong JSX thì mỗi lần layout chạy lại là thanh tab dựng lại theo.
+  const renderTabBar = useCallback(
+    (props: TabBarProps) => (
+      <AppTabBar {...props} onHeight={setTabBarHeight} hide={tabBarHide} height={tabBarHeight} />
+    ),
+    [tabBarHide, tabBarHeight],
+  );
+
   return (
     <SafeAreaView edges={['top']} style={{ backgroundColor: colors.background, flex: 1 }}>
       {/* Thanh logo · tin nhắn · chuông · avatar CHỈ ở trang chủ (người dùng chốt 28/10/2026). */}
@@ -350,9 +379,7 @@ export default function TabsLayout() {
       <TabBarInsetContext.Provider value={tabBarHeight}>
       <TabBarHideContext.Provider value={tabBarHide}>
       <Tabs
-        tabBar={(props) => (
-          <AppTabBar {...props} onHeight={setTabBarHeight} hide={tabBarHide} height={tabBarHeight} />
-        )}
+        tabBar={renderTabBar}
         screenOptions={{
           headerShown: false,
           /*

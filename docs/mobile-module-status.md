@@ -287,6 +287,7 @@ Nó cũng không vào `registerSchema` (`@xeprime/validators` dùng chung với 
 | --- | --- | --- |
 | **BKG-14 — in / xuất PDF hợp đồng** | Chặn bởi server | Màn xem đã có. Cần endpoint xuất PDF; hiện chưa có |
 | Sửa mô tả sai trong `apps/mobile/README.md` §10 | Nhỏ | Đang ghi BKG-14 "⛔ CHẶN" trong khi màn xem đã chạy |
+| **Thẻ đơn thuê theo design mobile 10/11/2026** (app Partner) | Trung bình | Web đã ráp (Figma `24117:65745`). App cần làm theo cùng quyết định: dải tab chặng + thẻ gọn có mũi tên mở/thu — đặc tả ở `docs/design/09_PARTNER_REDESIGN.md` §3.2e. Chưa ai làm phía app |
 
 ### 3.2 Vehicle
 

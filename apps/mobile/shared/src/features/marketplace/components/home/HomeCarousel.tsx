@@ -1,10 +1,5 @@
 import { Children, useCallback, useRef, useState, type ReactNode } from 'react';
-import {
-  ScrollView,
-  useWindowDimensions,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
-} from 'react-native';
+import { ScrollView, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -20,12 +15,15 @@ import { XP_TOKENS } from '@xeprime/ui';
 import { layout } from '@/theme/layout';
 import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { market, radius, space } from '@/theme/tokens';
+import { useContentWidth, useIsTabletLayout } from '@/theme/use-content-width';
 /** Chấm phân trang như .dot / .dotActive web: 10px, chấm đang chọn dài 32px. */
 const DOT = 10;
 const DOT_ACTIVE = 32;
 /** Web ở bề rộng điện thoại: 1.3 thẻ mỗi khung, cách 16px, thẻ đang xem ở GIỮA. */
 const PER_VIEW = 1.15;
 const MOBILE_GAP = 16;
+/** Khe mặc định giữa hai thẻ — khối tự tính bề ngang thẻ (điểm đến) phải dùng đúng số này. */
+export const CAROUSEL_GAP = MOBILE_GAP;
 const OVERHANG = 20;
 /** Chừa chỗ dưới cho bóng/viền đáy thẻ — ScrollView ngang cắt mọi thứ tràn khỏi khung của nó. */
 const SHADOW_PAD = 12;
@@ -67,6 +65,12 @@ interface HomeCarouselProps {
   overhang?: boolean;
   /** Thẻ hai bên co + mờ + hạ xuống theo offset cuộn (khối "Xe tiêu biểu"). */
   coverflow?: boolean;
+  /**
+   * Số thẻ hiện cùng lúc ở bố cục máy tính bảng — bản tablet của website (`perView` 3–6 rút về 2
+   * ở ≤1024px). Mặc định 2; truyền 1 cho khối web để `tabletPerView={1}`. Khi > 1: thẻ chia đều
+   * bề ngang nội dung, căn TRÁI (như web), bỏ `itemWidth` và tắt coverflow (thẻ "giữa" không còn).
+   */
+  tabletPerView?: number;
 }
 
 function CoverflowSlide({
@@ -90,8 +94,22 @@ function CoverflowSlide({
       // KHÔNG opacity (09/11/2026): thẻ xe có bóng - làm mờ khối có elevation thì Android vẽ bóng
       // thành khung xám quanh thẻ kề. Chỉ co + hạ thẻ hai bên.
       transform: [
-        { translateY: interpolate(scrollX.value, range, [COVERFLOW_SIDE_DROP, 0, COVERFLOW_SIDE_DROP], clamp) },
-        { scale: interpolate(scrollX.value, range, [COVERFLOW_SIDE_SCALE, 1, COVERFLOW_SIDE_SCALE], clamp) },
+        {
+          translateY: interpolate(
+            scrollX.value,
+            range,
+            [COVERFLOW_SIDE_DROP, 0, COVERFLOW_SIDE_DROP],
+            clamp,
+          ),
+        },
+        {
+          scale: interpolate(
+            scrollX.value,
+            range,
+            [COVERFLOW_SIDE_SCALE, 1, COVERFLOW_SIDE_SCALE],
+            clamp,
+          ),
+        },
       ],
     };
   });
@@ -115,22 +133,32 @@ export function HomeCarousel({
   onActiveChange,
   overhang = false,
   coverflow = false,
+  tabletPerView = 2,
 }: HomeCarouselProps) {
   const reduceMotion = useReducedMotion();
   const scrollX = useSharedValue(0);
   const lastRaw = useSharedValue(-1);
   const colors = useColors();
   const { scheme } = useAppScheme();
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
   const items = Children.toArray(children);
   const count = items.length;
   const contentWidth = width - layout.screenX * 2;
-  const cardWidth =
-    count <= 1
+  const tablet = useIsTabletLayout();
+  // Máy tính bảng: N thẻ một lượt, chia đều bề ngang nội dung, căn trái — bản tablet của web.
+  const perView = tablet && count > 1 ? Math.max(1, Math.min(tabletPerView, count)) : 1;
+  const multi = perView > 1;
+  const cardWidth = multi
+    ? Math.floor((contentWidth - gap * (perView - 1)) / perView)
+    : count <= 1
       ? Math.min(itemWidth ?? contentWidth, contentWidth)
       : Math.min(itemWidth ?? homeCarouselItemWidth(width), contentWidth);
-  // Thẻ đang xem nằm GIỮA màn (web align: center), hai thẻ kề ló ra hai bên.
-  const sidePad = (width - cardWidth) / 2;
+  // Điện thoại: thẻ đang xem nằm GIỮA màn (web align: center), hai thẻ kề ló ra hai bên.
+  // Nhiều thẻ một lượt: thẻ đầu thẳng lề nội dung (web align: start).
+  const sidePad = multi ? layout.screenX : (width - cardWidth) / 2;
+  // Dựng đủ mọi thẻ đang lộ ra (perView) cộng cửa sổ dự phòng hai bên.
+  const mountWindow = MOUNT_WINDOW + perView;
+  const coverflowOn = coverflow && !multi;
   const step = cardWidth + gap;
   const [active, setActive] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
@@ -214,7 +242,7 @@ export function HomeCarousel({
           setActive(0);
           onActiveChange?.(0);
         }}
-        scrollEventThrottle={coverflow ? 16 : 32}
+        scrollEventThrottle={coverflowOn ? 16 : 32}
         accessibilityLabel={accessibilityLabel}
         // Vùng cuộn tràn ra mép màn (thẻ trượt dưới lề), nhưng thẻ đầu vẫn thẳng lề nội dung.
         style={{
@@ -231,8 +259,8 @@ export function HomeCarousel({
       >
         {slides.map((child, index) => (
           <YStack key={index} w={cardWidth}>
-            {Math.abs(index - pos) <= MOUNT_WINDOW ? (
-              coverflow && count > 1 ? (
+            {Math.abs(index - pos) <= mountWindow ? (
+              coverflowOn && count > 1 ? (
                 <CoverflowSlide index={index} step={step} scrollX={scrollX} enabled={!reduceMotion}>
                   {child}
                 </CoverflowSlide>

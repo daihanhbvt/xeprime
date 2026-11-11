@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
+import { CHAT_SIDE } from '@xeprime/types';
 
 /**
  * Realtime KHÔNG BAO GIỜ được tắt hẳn nhịp hỏi lại.
@@ -62,7 +63,7 @@ const cachedSnapshot = { metadata: { fromCache: true } };
 import { useThread } from './use-thread';
 
 function Probe({ conversationId }: { conversationId: string }) {
-  useThread(conversationId);
+  useThread(conversationId, CHAT_SIDE.CUSTOMER);
   return null;
 }
 

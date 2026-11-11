@@ -267,6 +267,8 @@ export const ROUTES = {
     /** ALIAS CHUYỂN TIẾP (16/09/2026) - đích thật: `SHOP?section=tax` (07/10/2026). */
     SELLER_PROFILE: partner('/shop/seller-profile'),
     MEMBERS: partner('/members'),
+    /** Ma trận "Vai trò & quyền" — trang con của Nhân viên & phân quyền (ADR 0086 điều 1). */
+    MEMBER_ROLES: partner('/members/roles'),
     /**
      * ALIAS CHUYỂN TIẾP - gói dịch vụ là một SECTION ở cả hai tuyến: tuyến gói ở `SHOP?section=plan`
      * (16/09/2026), tuyến hoa hồng ở `ACCOUNT?section=plan` của "Hồ sơ chủ xe" (07/10/2026, phễu nâng

@@ -378,6 +378,26 @@ export class MeDto {
   @ApiProperty({ description: 'Đã xác thực SĐT chưa - gate cho việc đặt xe/mở shop' })
   phoneVerified!: boolean;
 
+  /*
+   * Hai trường của tài khoản nhân viên do gian hàng cấp (ADR 0087). `required: false` cùng lý do với
+   * `realm`: app native dựng `CurrentUser` từ kiểu sinh ra, trường bắt buộc mới làm gãy fixture.
+   * Server luôn gửi; vắng mặt đọc như "không phải tài khoản nhân viên".
+   */
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    required: false,
+    description: 'Tên đăng nhập - chỉ tài khoản nhân viên do gian hàng cấp (ADR 0087)',
+  })
+  username?: string | null;
+
+  @ApiProperty({
+    required: false,
+    description:
+      'Tài khoản do gian hàng cấp (ADR 0087): không qua cổng xác minh SĐT, không tự xoá tài khoản',
+  })
+  managedAccount?: boolean;
+
   @ApiProperty({
     description:
       'Đã có mật khẩu chưa - false với tài khoản tạo bằng Google/Facebook (hoặc bằng OTP trước ADR 0060): họ đặt mật khẩu qua "Quên mật khẩu" bằng SĐT hoặc POST /auth/password/set',

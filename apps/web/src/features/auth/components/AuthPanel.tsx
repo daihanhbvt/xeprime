@@ -9,10 +9,10 @@ import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   buildLoginSchema,
-  buildPhoneLoginSchema,
+  buildPartnerLoginSchema,
   buildRegisterSchema,
   type LoginValues,
-  type PhoneLoginValues,
+  type PartnerLoginValues,
   type RegisterValues,
 } from '@xeprime/validators';
 import { TextField } from '@/components/form/TextField';
@@ -127,11 +127,11 @@ export function AuthPanel({
               onSubmit={(values) => void flow.startRegistration(values)}
             />
           ) : (
-            <PhonePasswordForm
+            <PartnerPasswordForm
               busy={busy}
               pending={pending === 'password'}
               autoFocus={autoFocus}
-              onSubmit={(values) => void flow.loginWithPhone(values)}
+              onSubmit={(values) => void flow.loginWithIdentifier(values)}
             />
           )}
 
@@ -242,8 +242,11 @@ function SubmitButton({
   );
 }
 
-/** Site khách / site partner: SỐ ĐIỆN THOẠI + mật khẩu (ADR 0060). */
-function PhonePasswordForm({
+/**
+ * Site partner: SỐ ĐIỆN THOẠI hoặc TÊN ĐĂNG NHẬP nhân viên + mật khẩu (ADR 0060 · ADR 0087). Một ô —
+ * server phân loại theo hình dạng; nhân viên không phải biết mình "thuộc loại" tài khoản nào.
+ */
+function PartnerPasswordForm({
   busy,
   pending,
   autoFocus,
@@ -252,28 +255,28 @@ function PhonePasswordForm({
   busy: boolean;
   pending: boolean;
   autoFocus: boolean;
-  onSubmit: (values: PhoneLoginValues) => void;
+  onSubmit: (values: PartnerLoginValues) => void;
 }) {
   const t = useTranslations('Auth');
   const labels = useAuthSchemaLabels();
   // Schema phải dựng lại khi đổi ngôn ngữ — câu lỗi nằm TRONG schema, không phải trong component.
-  const schema = useMemo(() => buildPhoneLoginSchema(labels), [labels]);
-  const { control, handleSubmit } = useForm<PhoneLoginValues>({
+  const schema = useMemo(() => buildPartnerLoginSchema(labels), [labels]);
+  const { control, handleSubmit } = useForm<PartnerLoginValues>({
     resolver: yupResolver(schema),
-    defaultValues: { phone: '', password: '' },
+    defaultValues: { identifier: '', password: '' },
   });
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
       <TextField
         control={control}
-        name="phone"
-        label={t('login.phone')}
-        type="tel"
-        placeholder={t('login.phonePlaceholder')}
-        // `username`: trình quản lý mật khẩu ghép đúng cặp SĐT + mật khẩu đã lưu.
+        name="identifier"
+        label={t('login.partnerIdentifier')}
+        placeholder={t('login.partnerIdentifierPlaceholder')}
+        help={t('login.partnerIdentifierHint')}
+        // `username`: trình quản lý mật khẩu ghép đúng cặp định danh + mật khẩu đã lưu.
         autoComplete="username"
-        prefix={<PhoneOutlined />}
+        prefix={<UserOutlined />}
         autoFocus={autoFocus}
       />
       <TextField

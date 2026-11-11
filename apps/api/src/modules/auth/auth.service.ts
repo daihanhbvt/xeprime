@@ -17,7 +17,10 @@ import {
   USER_STATUS,
   OPEN_CUSTOMER_TRIP_STATUSES,
   VEHICLE_PUBLIC_STATUS,
+  LOGIN_IDENTIFIER_KIND,
   compactPhoneInput,
+  detectLoginIdentifierKind,
+  normalizeStaffUsername,
   realmAllowsPasswordlessLogin,
   realmAllowsSelfRegistration,
   realmRequiresPhoneLogin,
@@ -216,19 +219,33 @@ export class AuthService {
     realm: AccountRealm,
   ): Promise<{ userId: string }> {
     const identifier = rawIdentifier.trim();
-    const isEmail = identifier.includes('@');
-    if (isEmail && realmRequiresPhoneLogin(realm)) {
-      throw new BadRequestException({
-        code: API_ERROR_CODE.PHONE_LOGIN_REQUIRED,
-        message: 'Hãy đăng nhập bằng số điện thoại',
-      });
+    const kind = detectLoginIdentifierKind(identifier);
+    const isEmail = kind === LOGIN_IDENTIFIER_KIND.EMAIL;
+    /*
+     * Tên đăng nhập chỉ có ở TÀI KHOẢN NHÂN VIÊN gian hàng (ADR 0087) — site partner. Site khách
+     * nhận nó thì đó là một chuỗi không phải SĐT: cùng câu trả lời với email.
+     */
+    const isUsername = kind === LOGIN_IDENTIFIER_KIND.USERNAME;
+    if ((isEmail || isUsername) && realmRequiresPhoneLogin(realm)) {
+      if (!(isUsername && realm === ACCOUNT_REALM.PARTNER)) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.PHONE_LOGIN_REQUIRED,
+          message: 'Hãy đăng nhập bằng số điện thoại',
+        });
+      }
     }
     // Tra TRONG realm (ADR 0053): cùng số/email ở site khác là một tài khoản khác, mật khẩu khác.
     // `compactPhoneInput` bỏ dấu cách/chấm/gạch/ngoặc — cùng phép bỏ mà ô nhập ở client đã cho qua.
-    const key = isEmail ? identifier.toLowerCase() : normalizePhone(compactPhoneInput(identifier));
+    const key = isEmail
+      ? identifier.toLowerCase()
+      : isUsername
+        ? normalizeStaffUsername(identifier)
+        : normalizePhone(compactPhoneInput(identifier));
     const where = isEmail
       ? { realm, email: key, deletedAt: null }
-      : { realm, phone: key, deletedAt: null };
+      : isUsername
+        ? { realm, username: key, deletedAt: null }
+        : { realm, phone: key, deletedAt: null };
 
     // Định danh đang bị khoá vì sai quá nhiều lần — chặn TRƯỚC bcrypt, kể cả khi lần này đúng mật
     // khẩu (ADR 0076 điều 3). Định danh không có tài khoản cũng khoá y hệt.
@@ -236,7 +253,7 @@ export class AuthService {
 
     const user = await this.prisma.user.findFirst({
       where,
-      select: { id: true, passwordHash: true, status: true },
+      select: { id: true, passwordHash: true, status: true, managedByTenantId: true },
     });
 
     const hash = user?.passwordHash ?? (await timingDummyHashOnce());
@@ -257,6 +274,27 @@ export class AuthService {
         code: API_ERROR_CODE.ACCOUNT_LOCKED,
         message: 'Tài khoản đã bị khoá',
       });
+    }
+    /*
+     * Tài khoản nhân viên do gian hàng cấp chỉ có MỘT việc: làm cho gian hàng đó (ADR 0087). Gian
+     * hàng tạm khoá họ thì không có gì để đăng nhập vào — chặn ở đây, sau khi đã đúng mật khẩu, thay
+     * vì cấp phiên rồi thả họ vào màn "mở gian hàng của bạn".
+     */
+    if (user.managedByTenantId) {
+      const active = await this.prisma.tenantMembership.findFirst({
+        where: {
+          userId: user.id,
+          tenantId: user.managedByTenantId,
+          status: MEMBERSHIP_STATUS.ACTIVE,
+        },
+        select: { id: true },
+      });
+      if (!active) {
+        throw new UnauthorizedException({
+          code: API_ERROR_CODE.STAFF_ACCOUNT_SUSPENDED,
+          message: 'Tài khoản đang bị gian hàng tạm khoá',
+        });
+      }
     }
 
     await this.loginThrottle.clear(realm, [key]);
@@ -726,6 +764,8 @@ export class AuthService {
         phone: true,
         phoneVerifiedAt: true,
         passwordHash: true,
+        username: true,
+        managedByTenantId: true,
       },
     });
     const realm = user.realm as AccountRealm;
@@ -875,6 +915,8 @@ export class AuthService {
       // liên hệ khi đặt xe. DB đã lưu `0…` (ADR 0082); vẫn quy để hàng cũ còn `84…` không lộ ra.
       phone: user.phone ? toLocalPhone(user.phone) : null,
       phoneVerified: user.phoneVerifiedAt !== null,
+      username: user.username,
+      managedAccount: user.managedByTenantId !== null,
       hasPassword: user.passwordHash !== null,
       tenant:
         membership && tenantPlan

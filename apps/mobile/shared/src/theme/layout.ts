@@ -38,3 +38,36 @@ export const layout = {
    */
   heroOverlap: space.lg,
 } as const;
+
+/**
+ * Bề ngang TỐI ĐA của cột nội dung (dp) — máy tính bảng. Nâng 720 → 1024 (10/11/2026, người dùng
+ * chọn "gần full màn hình", chia cột theo website) — bằng mép trên của dải tablet trên web.
+ *
+ * App vẽ cho điện thoại: rất nhiều khối tự tính cỡ theo bề ngang (banner, băng chuyền, ảnh xe,
+ * lưới loại xe). Trên iPad 13" (1032dp dọc) chúng phình gấp ~2,5 lần — chữ banner khổng lồ, ảnh xe
+ * cao nửa màn. Thay vì vẽ lại từng màn cho máy tính bảng, nội dung nằm trong MỘT cột giữa với trần
+ * này (`ContentColumn` ở gốc app) và mọi khối đo theo cột (`useContentWidth`), không theo cửa sổ.
+ *
+ * Điện thoại (≤ 440dp) không bao giờ chạm trần ⇒ giao diện điện thoại giữ nguyên từng điểm ảnh.
+ */
+export const CONTENT_MAX_WIDTH = 1024;
+
+/**
+ * Từ bề ngang CỘT này trở lên là bố cục máy tính bảng — đúng mốc tablet của website
+ * (`@media (min-width: 641px)`: ≤640 điện thoại, 641–1024 tablet). Mọi iPad dọc (mini 744 → 13"
+ * 1032) rơi vào đây; điện thoại lớn nhất (~440) không bao giờ chạm.
+ *
+ * Ở bố cục này các khối đi theo bản tablet của website: băng chuyền hiện 2 thẻ một lượt, xe tiêu
+ * biểu và địa điểm nổi bật thành lưới 2 cột, kết quả tìm xe 2 cột.
+ */
+export const TABLET_MIN_WIDTH = 641;
+
+/**
+ * Kiểu cho khung nổi trong `Modal` (tấm trượt, hộp thoại): `Modal` là cửa sổ RIÊNG của hệ điều
+ * hành, nằm ngoài `ContentColumn`, nên tự căn giữa và tự chặn trần như cột.
+ */
+export const modalColumn = {
+  width: '100%',
+  maxWidth: CONTENT_MAX_WIDTH,
+  alignSelf: 'center',
+} as const;

@@ -39,6 +39,8 @@ export function useAuthSchemaLabels(): AuthSchemaLabels {
       nameInvalid: t('nameInvalid'),
       confirmRequired: t('confirmRequired'),
       confirmMismatch: t('confirmMismatch'),
+      partnerIdentifierRequired: t('partnerIdentifierRequired'),
+      partnerIdentifierInvalid: t('partnerIdentifierInvalid'),
     }),
     [t],
   );

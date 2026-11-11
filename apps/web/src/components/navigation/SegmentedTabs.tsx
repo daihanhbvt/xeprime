@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, type KeyboardEvent } from 'react';
+import { useHorizontalScroll } from '@/hooks/use-horizontal-scroll';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { cx } from '@/lib/cx';
 import styles from './SegmentedTabs.module.css';
@@ -36,6 +37,11 @@ export function SegmentedTabs<T extends string>({
 }) {
   const fmt = useAppFormat();
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
+  // Hàng tab hẹp hơn nội dung: con lăn/kéo chuột cuộn được, tab đang chọn tự trượt vào khung.
+  const listRef = useHorizontalScroll<HTMLDivElement>({
+    activeSelector: '[aria-selected="true"]',
+    activeKey: value,
+  });
 
   function onKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
     const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
@@ -47,7 +53,7 @@ export function SegmentedTabs<T extends string>({
   }
 
   return (
-    <div role="tablist" aria-label={label} className={cx(styles.list, className)}>
+    <div ref={listRef} role="tablist" aria-label={label} className={cx(styles.list, className)}>
       {items.map((item, index) => {
         const selected = item.value === value;
         return (
