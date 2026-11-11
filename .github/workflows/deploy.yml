@@ -165,6 +165,19 @@ jobs:
             echo "moving=ghcr.io/${REPO_LC}:${XP_ENV}"
           } >> "$GITHUB_OUTPUT"
 
+      # Runner `ubuntu-latest` chỉ còn ~14 GB trống; build 4 image (stage `builder` cài trọn
+      # monorepo + `next build`) cộng cache BuildKit vượt quá (11/11/2026: runner chết giữa bước
+      # build với `No space left on device`, mất luôn log). Cùng bước dọn với job `build` của ci.yml
+      # — gỡ bộ công cụ cài sẵn mà job này không dùng (~25 GB). Rollback không build nên bỏ qua.
+      - name: Dọn ổ đĩa runner
+        if: needs.resolve.outputs.rollback != 'true'
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup \
+            /opt/hostedtoolcache/CodeQL /usr/share/swift /usr/local/share/boost
+          sudo docker image prune --all --force > /dev/null
+          df -h /
+
       - uses: docker/setup-buildx-action@v3
         if: needs.resolve.outputs.rollback != 'true'
 
