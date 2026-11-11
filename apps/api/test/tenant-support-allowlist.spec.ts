@@ -27,6 +27,8 @@ const SUPPORT_ALLOWLIST = [
   'VehiclesController.alerts',
   'VehiclesController.fleetSummary',
   'VehiclesController.getOne',
+  // ADR 0088 — xe còn thiếu gì để bán kèm bảo hiểm (chỉ đọc).
+  'VehicleInsuranceController.status',
   'VehiclesController.list',
   'VehiclesController.stats',
   'VehiclesController.summary',
@@ -39,6 +41,8 @@ const SUPPORT_ALLOWLIST = [
   // Giấy chứng nhận + tình trạng bảo hiểm của đơn (ADR 0064 điều 10) — chỉ đọc, cùng capability xem đơn.
   'BookingInsuranceController.coverage',
   'BookingInsuranceController.list',
+  // ADR 0088 — tải GCN PDF của đơn (chỉ đọc).
+  'BookingInsuranceController.pdf',
   'BookingRequestsController.getOne',
   'BookingRequestsController.list',
   // Lịch sử gán tài xế của đơn (ADR 0063) — chỉ đọc, cùng capability xem đơn.

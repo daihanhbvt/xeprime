@@ -30,6 +30,7 @@ import { CancellationsService } from '../src/modules/cancellations/cancellations
 import { CustomerTripsService } from '../src/modules/customer-trips/customer-trips.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { HoldSettlementService } from '../src/modules/holds/hold-settlement.service';
+import { InsuranceCertificateService } from '../src/modules/insurance/insurance-certificate.service';
 import { InsuranceReadService } from '../src/modules/insurance/insurance-read.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import { MaintenanceService } from '../src/modules/vehicles/maintenance/maintenance.service';
@@ -102,6 +103,7 @@ const trips = new CustomerTripsService(
   new CancellationsService(),
   new InsuranceReadService(asService),
   makeSupportService(asService, notifications),
+  new InsuranceCertificateService(asService, null),
 );
 
 let dbAvailable = false;

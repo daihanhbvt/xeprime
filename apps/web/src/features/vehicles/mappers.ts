@@ -45,6 +45,15 @@ function applicableFeatures(values: VehicleFormValues): string[] {
   return (values.features ?? []).filter((key) => vehicleFeatureAppliesTo(key, values.vehicleType));
 }
 
+/**
+ * Giá trị xe lên dây (ADR 0088): chuỗi số nguyên đồng; xe máy luôn `null` (chưa có bảo hiểm), ô
+ * trống `null` = xoá.
+ */
+function insuredValueToInput(values: VehicleFormValues): string | null {
+  if (values.vehicleType !== VEHICLE_TYPE.CAR || values.insuredValue == null) return null;
+  return String(Math.round(values.insuredValue));
+}
+
 export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput {
   return {
     code: textOrUndefined(values.code),
@@ -69,6 +78,7 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     vehicleCatalogModelId: values.vehicleCatalogModelId ?? null,
     manufactureYear: values.manufactureYear ?? undefined,
     seatCount: values.seatCount ?? undefined,
+    insuredValue: insuredValueToInput(values) ?? undefined,
     lengthMm: values.lengthMm ?? undefined,
     widthMm: values.widthMm ?? undefined,
     heightMm: values.heightMm ?? undefined,
@@ -129,6 +139,7 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
     vehicleCatalogModelId: v.vehicleCatalogModelId ?? null,
     manufactureYear: v.manufactureYear ?? null,
     seatCount: v.seatCount ?? null,
+    insuredValue: v.insuredValue ? Number(v.insuredValue) : null,
     lengthMm: v.lengthMm ?? null,
     widthMm: v.widthMm ?? null,
     heightMm: v.heightMm ?? null,
@@ -197,6 +208,7 @@ export function informationValuesToInput(values: VehicleFormValues): UpdateVehic
     vehicleCatalogModelId: values.vehicleCatalogModelId ?? null,
     manufactureYear: values.manufactureYear,
     seatCount: values.seatCount,
+    insuredValue: insuredValueToInput(values),
     lengthMm: values.lengthMm,
     widthMm: values.widthMm,
     heightMm: values.heightMm,
@@ -251,6 +263,7 @@ export function manageInformationValuesToInput(values: VehicleFormValues): Updat
     vehicleCatalogModelId: values.vehicleCatalogModelId ?? null,
     manufactureYear: values.manufactureYear,
     seatCount: values.seatCount,
+    insuredValue: insuredValueToInput(values),
     transmission: values.transmission,
     fuelConsumptionCity: values.fuelConsumptionCity,
     fuelConsumptionHighway: values.fuelConsumptionHighway,

@@ -14,8 +14,14 @@ export type InsuranceCoverage = Schemas['InsuranceCoverageDto'];
 /** Một lựa chọn bảo hiểm ĐANG được chào cho chuyến này. */
 export interface InsuranceOfferItem {
   kind: InsuranceProductKind;
-  /** Phí MỖI NGÀY theo chính sách phí của báo giá (chuỗi VND — ADR 0007). */
-  dailyAmount: string;
+  /** Phí MỖI NGÀY theo chính sách phí của báo giá (chuỗi VND — ADR 0007). `null` khi phí theo bậc. */
+  dailyAmount: string | null;
+  /**
+   * BẮT BUỘC (ADR 0088): phí theo bậc giá trị xe, server đã cộng vào báo giá — khách không bỏ chọn
+   * được. `tripAmount` là phí cả chuyến lấy từ dòng `IV` của báo giá.
+   */
+  mandatory: boolean;
+  tripAmount: string | null;
   /** Mô tả sản phẩm từ danh mục; `null` khi danh mục chưa tải được (vẫn chọn được, thiếu quyền lợi). */
   product: PublicInsuranceProduct | null;
 }

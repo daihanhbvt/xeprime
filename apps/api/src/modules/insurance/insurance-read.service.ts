@@ -246,6 +246,8 @@ const CUSTOMER_FACING_SELECT = {
   isTest: true,
   issuedAt: true,
   createdAt: true,
+  partnerContractNumber: true,
+  partnerPolicyId: true,
 } satisfies Prisma.BookingInsurancePolicySelect;
 
 type CustomerFacingRow = Prisma.BookingInsurancePolicyGetPayload<{
@@ -267,6 +269,9 @@ function toCertificateDto(r: CustomerFacingRow): InsuranceCertificateDto {
     coverageTo: isoOrNull(r.coverageTo),
     isTest: r.isTest,
     issuedAt: (r.issuedAt ?? r.createdAt).toISOString(),
+    contractNumber: r.partnerContractNumber,
+    pdfAvailable: r.partnerPolicyId != null,
+    claimHotline: product?.claimHotline ?? null,
   };
 }
 

@@ -1,6 +1,7 @@
 import type { components } from '@xeprime/types';
 import { apiGet, apiPatch, apiPost } from '@/services/api-client';
 import type {
+  VehicleInsuranceStatus,
   ApplyOcrFieldsInput,
   SaveVehicleDocumentInput,
   VehicleDocumentDetail,
@@ -102,3 +103,7 @@ export const applyDocumentOcr = (
     `/vehicles/${vehicleId}/documents/${documentId}/ocr/${jobId}/apply`,
     body,
   );
+
+/** Xe còn thiếu gì để được bán kèm bảo hiểm vật chất xe (ADR 0088) — tab Giấy tờ nhắc thiếu cà vẹt. */
+export const fetchVehicleInsuranceStatus = (vehicleId: string): Promise<VehicleInsuranceStatus> =>
+  apiGet<VehicleInsuranceStatus>(`/vehicles/${vehicleId}/insurance-eligibility`);

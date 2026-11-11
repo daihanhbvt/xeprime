@@ -295,6 +295,7 @@ model Tenant {
   vehicleDocuments              VehicleDocument[]
   vehicleDocumentVersions       VehicleDocumentVersion[]
   vehicleDocumentOcrJobs        VehicleDocumentOcrJob[]
+  vehicleRegistrationUploads    VehicleRegistrationUpload[]
   vehicleMaintenanceProfiles    VehicleMaintenanceProfile[]
   vehicleOdometerReadings       VehicleOdometerReading[]
   vehicleMaintenanceRecords     VehicleMaintenanceRecord[]
@@ -1417,6 +1418,9 @@ model Vehicle {
   manufactureYear                Int?      @map("manufacture_year")
   color                          String?   @db.VarChar(80)
   seatCount                      Int?      @map("seat_count")
+  /// GIÁ TRỊ XE nhận bảo hiểm vật chất (ADR 0088) — chủ xe nhập, mẫu số của phí bảo hiểm theo bậc.
+  /// NULL = chưa khai ⇒ xe không được bán kèm bảo hiểm. CHECK: 50 triệu..20 tỷ, bội 1.000.000đ.
+  insuredValue                   Decimal?  @map("insured_value") @db.Decimal(14, 2)
   fuelType                       String?   @map("fuel_type") @db.VarChar(50)
   /// @xeprime/types → BodyType. Kiểu dáng thân xe — chỉ có nghĩa khi vehicleType = car.
   bodyType                       String?   @map("body_type") @db.VarChar(50)
@@ -3089,6 +3093,40 @@ model VehicleDocumentOcrJob {
   /// `vehicle_document_ocr_jobs_one_processing_key` (Prisma không diễn đạt được WHERE).
   @@index([tenantId, vehicleId, documentId, createdAt], map: "vehicle_document_ocr_jobs_tenant_id_vehicle_id_document_id_crea")
   @@map("vehicle_document_ocr_jobs")
+}
+
+/// Ảnh cà vẹt tải lên TRƯỚC khi ô tô tồn tại (ADR 0089). Wizard tạo xe đọc ảnh, rồi lượt tạo xe
+/// gắn nó vào giấy tờ `registration` (một dòng `vehicle_private_files` mới trỏ CÙNG object) trong
+/// cùng transaction và chuyển `consumed`. Lượt chưa gắn quá 24 giờ: worker xoá ảnh + dòng (cà vẹt
+/// mang tên, địa chỉ chủ xe).
+///
+/// Writer DUY NHẤT: `VehicleRegistrationUploadsService` (worker chỉ dọn lượt bỏ dở).
+model VehicleRegistrationUpload {
+  id          String    @id @db.Char(26)
+  tenantId    String    @map("tenant_id") @db.Char(26)
+  /// Người tải — chỉ chính người đó dùng lượt này để tạo xe.
+  createdBy   String    @map("created_by") @db.Char(26)
+  /// @xeprime/types → VehicleRegistrationUploadStatus. CHECK ở migration.
+  status      String    @default("uploading") @db.VarChar(20)
+  objectKey   String    @unique @map("object_key") @db.VarChar(500)
+  mimeType    String    @map("mime_type") @db.VarChar(100)
+  sizeBytes   Int       @map("size_bytes")
+  /// `VehicleRegistrationReading` của máy đọc — null khi máy đọc lỗi / bận (chủ xe nhập tay).
+  readingJson Json?     @map("reading_json") @db.JsonB
+  readerName  String?   @map("reader_name") @db.VarChar(120)
+  /// Xe đã nhận lượt này (có khi `consumed`). Không FK: dòng là vết, xe xoá thì vết vẫn còn.
+  vehicleId   String?   @map("vehicle_id") @db.Char(26)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  readAt      DateTime? @map("read_at") @db.Timestamptz(3)
+  consumedAt  DateTime? @map("consumed_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  /// Trần lượt tải trong 24 giờ của một người.
+  @@index([createdBy, createdAt])
+  /// Worker dọn lượt bỏ dở theo tuổi.
+  @@index([status, createdAt])
+  @@map("vehicle_registration_uploads")
 }
 
 /// Hồ sơ bảo dưỡng & KM của MỘT xe (Wave 6) — 1:1 với `vehicles`. docs/design/12 §9.
@@ -5244,12 +5282,32 @@ model BookingInsurancePolicy {
   /// Chống mua đôi ở phía ĐỐI TÁC — sinh MỘT lần lúc tạo, không đổi qua các lần thử lại.
   idempotencyKey String @unique(map: "booking_insurance_policies_idempotency_key") @map("idempotency_key") @db.VarChar(100)
 
+  // ── Dữ liệu đối tác (ADR 0088) ──
+  /// Mã giao dịch gửi đối tác (MIC `id_tras`, ≤ 20 ký tự) — sinh MỘT lần ở lần gọi đầu, giữ nguyên
+  /// qua mọi lần thử lại để tra cứu trước khi cấp lại. Unique khi có.
+  partnerRef            String?   @unique(map: "booking_insurance_policies_partner_ref_key") @map("partner_ref") @db.VarChar(20)
+  /// Mã hợp đồng nội bộ của đối tác (MIC `so_id`) — khoá tải GCN PDF.
+  partnerPolicyId       String?   @map("partner_policy_id") @db.VarChar(50)
+  /// Số hợp đồng đối tác in trên GCN (MIC `so_hd`/`contact_number`).
+  partnerContractNumber String?   @map("partner_contract_number") @db.VarChar(50)
+  /// Tình trạng phía đối tác ở lần tra cứu gần nhất (MIC `ttrang`: 2/3/4/5).
+  partnerStatus         String?   @map("partner_status") @db.VarChar(10)
+  /// Phí đối tác tính lúc cấp (MIC `total_fee`). Lệch `premium_amount` ⇒ đối soát (ADR 0088 điều 5).
+  partnerPremiumAmount  Decimal?  @map("partner_premium_amount") @db.Decimal(14, 2)
+  /// Giá trị xe đã dùng để tính phí — snapshot lúc duyệt (bảo hiểm theo bậc).
+  insuredValue          Decimal?  @map("insured_value") @db.Decimal(14, 2)
+  /// Mốc đã gửi đủ ảnh xe sang đối tác — gửi lại không cần gửi ảnh lần nữa.
+  photosSentAt          DateTime? @map("photos_sent_at") @db.Timestamptz(3)
+  /// Bảng kê trả phí cho hãng đã gom hợp đồng này (ADR 0088 điều 6). NULL = chưa kê.
+  remittanceId          String?   @map("remittance_id") @db.Char(26)
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  booking Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  hold    BookingHold? @relation(fields: [holdId], references: [id], onDelete: SetNull)
+  booking    Booking                     @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  tenant     Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  hold       BookingHold?                @relation(fields: [holdId], references: [id], onDelete: SetNull)
+  remittance InsurancePremiumRemittance? @relation(fields: [remittanceId], references: [id], onDelete: SetNull)
 
   @@unique([bookingId, productKind], map: "booking_insurance_policies_booking_product_key")
   @@index([nextAttemptAt], map: "booking_insurance_policies_due_idx")
@@ -5257,7 +5315,49 @@ model BookingInsurancePolicy {
   @@index([tenantId, createdAt], map: "booking_insurance_policies_tenant_idx")
   /// Hàng đợi GCN của admin khi xem TẤT CẢ trạng thái — sắp theo ngày tạo, không lọc status.
   @@index([createdAt], map: "booking_insurance_policies_created_idx")
+  /// Lập bảng kê: hợp đồng đã cấp, chưa kê, theo mốc cấp.
+  @@index([issuedAt], map: "booking_insurance_policies_unremitted_idx")
+  @@index([remittanceId], map: "booking_insurance_policies_remittance_idx")
   @@map("booking_insurance_policies")
+}
+
+/// BẢNG KÊ TRẢ PHÍ cho hãng bảo hiểm — ADR 0088 điều 6.
+///
+/// Mỗi tháng một bảng cho một hãng: gom mọi hợp đồng ĐÃ CẤP (`issued`/`claim`) có `issued_at`
+/// trước hết tháng mà chưa nằm trong bảng nào. Phải trả = tổng phí − hoa hồng đại lý (% do admin
+/// nhập theo hợp đồng đại lý). `draft` sửa/xoá được; `finalized` khoá số; `paid` ghi nhận đã chuyển.
+///
+/// Writer DUY NHẤT: `InsuranceRemittanceService`. CHECK canh phép trừ và trạng thái `paid`.
+model InsurancePremiumRemittance {
+  id                String    @id @db.Char(26)
+  /// @xeprime/types → InsuranceProvider
+  provider          String    @db.VarChar(30)
+  /// Ngày ĐẦU tháng của kỳ kê (giờ Việt Nam).
+  periodMonth       DateTime  @map("period_month") @db.Date
+  /// @xeprime/types → InsuranceRemittanceStatus; DB canh CHECK.
+  status            String    @default("draft") @db.VarChar(20)
+  policyCount       Int       @map("policy_count")
+  grossPremium      Decimal   @map("gross_premium") @db.Decimal(14, 2)
+  commissionPercent Decimal   @map("commission_percent") @db.Decimal(5, 2)
+  commissionAmount  Decimal   @map("commission_amount") @db.Decimal(14, 2)
+  /// = `gross_premium − commission_amount` (CHECK).
+  payableAmount     Decimal   @map("payable_amount") @db.Decimal(14, 2)
+  paidAmount        Decimal?  @map("paid_amount") @db.Decimal(14, 2)
+  paidAt            DateTime? @map("paid_at") @db.Timestamptz(3)
+  bankReference     String?   @map("bank_reference") @db.VarChar(100)
+  note              String?   @db.Text
+  createdBy         String?   @map("created_by") @db.Char(26)
+  finalizedAt       DateTime? @map("finalized_at") @db.Timestamptz(3)
+  finalizedBy       String?   @map("finalized_by") @db.Char(26)
+  paidRecordedBy    String?   @map("paid_recorded_by") @db.Char(26)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  policies BookingInsurancePolicy[]
+
+  @@unique([provider, periodMonth], map: "insurance_premium_remittances_provider_period_key")
+  @@index([periodMonth], map: "insurance_premium_remittances_period_idx")
+  @@map("insurance_premium_remittances")
 }
 
 /// Danh mục SẢN PHẨM bảo hiểm chuyến — ADR 0064.
@@ -5291,6 +5391,13 @@ model InsuranceProduct {
   certificateUrlTemplate String  @map("certificate_url_template") @db.Text
   displayOrder           Int     @default(0) @map("display_order")
   isActive               Boolean @default(true) @map("is_active")
+  /// @xeprime/types → InsurancePremiumBasis (ADR 0088). `value_tier` = phí theo bậc giá trị xe,
+  /// BẮT BUỘC với xe đủ điều kiện. CHECK: chỉ `vehicle_trip` được tính theo bậc.
+  premiumBasis           String  @default("daily") @map("premium_basis") @db.VarChar(20)
+  /// Biểu phí bậc `[{maxDays, percent}]` — bắt buộc khi `premium_basis = value_tier`.
+  premiumTiersJson       Json?   @map("premium_tiers_json") @db.JsonB
+  /// Hotline báo sự cố / bồi thường của hãng — hiện cạnh GCN cho khách và chủ xe.
+  claimHotline           String? @map("claim_hotline") @db.VarChar(30)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)

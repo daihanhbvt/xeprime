@@ -1211,6 +1211,19 @@ export const API_ERROR_CODE = {
    * việc vô ích vào hàng đợi worker (ADR 0064).
    */
   INSURANCE_PARTNER_NOT_CONFIGURED: 'INSURANCE_PARTNER_NOT_CONFIGURED',
+  /** Không tải được GCN PDF từ hãng (mạng, hãng bảo trì) — thử lại sau (ADR 0088). */
+  INSURANCE_CERTIFICATE_UNAVAILABLE: 'INSURANCE_CERTIFICATE_UNAVAILABLE',
+  /** Bảng kê trả phí hãng không ở trạng thái cho phép thao tác này (ADR 0088 điều 6). */
+  INSURANCE_REMITTANCE_STATE_INVALID: 'INSURANCE_REMITTANCE_STATE_INVALID',
+  /** Kỳ kê chưa kết thúc, hoặc không có hợp đồng nào để kê (ADR 0088 điều 6). */
+  INSURANCE_REMITTANCE_EMPTY: 'INSURANCE_REMITTANCE_EMPTY',
+
+  /** Ảnh cà vẹt không hợp lệ (sai định dạng thật, sai kích thước khai báo, chưa tải xong) — ADR 0089. */
+  VEHICLE_REGISTRATION_IMAGE_INVALID: 'VEHICLE_REGISTRATION_IMAGE_INVALID',
+  /** Lượt tải cà vẹt không dùng được để tạo xe (không có, của người khác, đã dùng, đã hết hạn). */
+  VEHICLE_REGISTRATION_UPLOAD_INVALID: 'VEHICLE_REGISTRATION_UPLOAD_INVALID',
+  /** Chạm trần lượt tải cà vẹt trong 24 giờ (`details.limit`). */
+  VEHICLE_REGISTRATION_UPLOAD_LIMIT: 'VEHICLE_REGISTRATION_UPLOAD_LIMIT',
 } as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODE)[keyof typeof API_ERROR_CODE];

@@ -87,6 +87,9 @@
     "INTERNAL_ERROR": "The server hit a problem. Please try again later.",
     "UPLOADS_NOT_CONFIGURED": "File uploads aren't configured.",
     "INSURANCE_PARTNER_NOT_CONFIGURED": "No insurance partner is connected in this environment - retrying won't issue a certificate.",
+    "INSURANCE_CERTIFICATE_UNAVAILABLE": "Could not fetch the certificate from the insurer - please try again in a few minutes.",
+    "INSURANCE_REMITTANCE_STATE_INVALID": "This statement is not in a state that allows this action - reload to see its current state.",
+    "INSURANCE_REMITTANCE_EMPTY": "This period has not ended yet, or there are no unbilled issued policies.",
     "UPLOAD_FAILED": "The upload failed. Please try again.",
     "TRIP_CANCEL_NOT_ALLOWED": "This trip can no longer be cancelled. Please contact the host.",
     "TRIP_NOT_RECEIVED_NOT_ALLOWED": "You can no longer report that you did not receive the vehicle for this trip. Please contact support.",
@@ -240,7 +243,10 @@
     "BOOKING_EXTENSION_NOT_ALLOWED": "Only an active long-term booking can be extended.",
     "BOOKING_EXTENSION_PENDING": "This booking already has an extension awaiting payment.",
     "BOOKING_EXTENSION_NOT_CANCELLABLE": "This extension can no longer be cancelled.",
-    "BOOKING_EXTENSION_UNPRICED": "The extension cannot be priced - check the vehicle's monthly price."
+    "BOOKING_EXTENSION_UNPRICED": "The extension cannot be priced - check the vehicle's monthly price.",
+    "VEHICLE_REGISTRATION_IMAGE_INVALID": "The registration photo is not valid - choose a JPG, PNG or WEBP image and upload again.",
+    "VEHICLE_REGISTRATION_UPLOAD_INVALID": "The registration photo can no longer be used - please upload it again.",
+    "VEHICLE_REGISTRATION_UPLOAD_LIMIT": "You have uploaded registration photos too many times in the last 24 hours - please try again later."
   },
   "codeWithWait": {
     "RATE_LIMITED": "You're going a little fast. Please try again in {wait}.",

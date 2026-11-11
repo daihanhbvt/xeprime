@@ -87,6 +87,9 @@
     "INTERNAL_ERROR": "Máy chủ gặp sự cố. Thử lại sau giúp mình nhé.",
     "UPLOADS_NOT_CONFIGURED": "Chức năng tải tệp chưa được cấu hình.",
     "INSURANCE_PARTNER_NOT_CONFIGURED": "Môi trường này chưa cắm đối tác bảo hiểm - thử phát hành lại sẽ không cấp được giấy chứng nhận.",
+    "INSURANCE_CERTIFICATE_UNAVAILABLE": "Chưa tải được giấy chứng nhận từ hãng bảo hiểm - thử lại sau ít phút.",
+    "INSURANCE_REMITTANCE_STATE_INVALID": "Bảng kê không ở trạng thái cho phép thao tác này - tải lại trang để xem trạng thái mới.",
+    "INSURANCE_REMITTANCE_EMPTY": "Kỳ này chưa kết thúc hoặc không có hợp đồng đã cấp nào chưa kê.",
     "UPLOAD_FAILED": "Tải tệp lên thất bại. Thử lại giúp mình nhé.",
     "TRIP_CANCEL_NOT_ALLOWED": "Chuyến này không còn huỷ được nữa. Vui lòng liên hệ chủ xe.",
     "TRIP_NOT_RECEIVED_NOT_ALLOWED": "Chuyến này không còn báo chưa nhận được xe được nữa. Vui lòng liên hệ hỗ trợ.",
@@ -240,7 +243,10 @@
     "BOOKING_EXTENSION_NOT_ALLOWED": "Chỉ gia hạn được đơn thuê dài hạn đang thuê.",
     "BOOKING_EXTENSION_PENDING": "Đơn này đang có một lần gia hạn chờ khách thanh toán.",
     "BOOKING_EXTENSION_NOT_CANCELLABLE": "Lần gia hạn này không còn huỷ được.",
-    "BOOKING_EXTENSION_UNPRICED": "Chưa báo giá được phần gia hạn - kiểm tra giá thuê theo tháng của xe."
+    "BOOKING_EXTENSION_UNPRICED": "Chưa báo giá được phần gia hạn - kiểm tra giá thuê theo tháng của xe.",
+    "VEHICLE_REGISTRATION_IMAGE_INVALID": "Ảnh cà vẹt không hợp lệ - hãy chọn ảnh JPG, PNG hoặc WEBP và tải lại.",
+    "VEHICLE_REGISTRATION_UPLOAD_INVALID": "Ảnh cà vẹt không còn dùng được - vui lòng tải lại ảnh cà vẹt.",
+    "VEHICLE_REGISTRATION_UPLOAD_LIMIT": "Bạn đã tải ảnh cà vẹt quá nhiều lần trong 24 giờ qua - vui lòng thử lại sau."
   },
   "codeWithWait": {
     "RATE_LIMITED": "Bạn thao tác hơi nhanh. Vui lòng thử lại sau {wait}.",

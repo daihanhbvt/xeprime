@@ -1,9 +1,6 @@
 'use client';
 
-import {
-  ExclamationCircleFilled,
-  MessageOutlined,
-} from '@ant-design/icons';
+import { ExclamationCircleFilled, MessageOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { useId, type ReactNode } from 'react';
 import {
@@ -17,6 +14,7 @@ import {
 } from '@xeprime/types';
 import { SUPPORT_HOTLINE } from '@/constants/contact';
 import { ROUTES } from '@/constants/routes';
+import { tripCertificatePdfHref } from '@/features/insurance/api';
 import { InsuranceCoverageList } from '@/features/insurance/components/InsuranceCoverageList';
 import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -204,7 +202,11 @@ export function TripClosedView({ trip, backHref }: { trip: CustomerTripDetail; b
           variant={status.tone}
           badge={BADGE[status.tone]}
           image={IMAGE[status.tone]}
-          tag={stage === CUSTOMER_TRIP_STAGE.CANCELLED ? t('status.cancelledTag') : dl('customerTripStage', stage)}
+          tag={
+            stage === CUSTOMER_TRIP_STAGE.CANCELLED
+              ? t('status.cancelledTag')
+              : dl('customerTripStage', stage)
+          }
           tone={status.pill}
           title={cancelledBy ? tTrips(`cancelledBy.${cancelledBy}`) : t(status.title)}
           body={
@@ -246,7 +248,11 @@ export function TripClosedView({ trip, backHref }: { trip: CustomerTripDetail; b
           <TripActualJourney trip={trip} />
 
           {/* Bảo hiểm theo từng sản phẩm khách đã trả (ADR 0064) — rỗng thì không vẽ gì. */}
-          <InsuranceCoverageList coverage={trip.insuranceCoverage ?? []} className={layout.card} />
+          <InsuranceCoverageList
+            coverage={trip.insuranceCoverage ?? []}
+            className={layout.card}
+            pdfHref={(certificateId) => tripCertificatePdfHref(trip.id, certificateId)}
+          />
 
           <TripRequestRenterCard trip={trip} />
         </>

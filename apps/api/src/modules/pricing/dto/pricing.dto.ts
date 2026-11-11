@@ -85,8 +85,7 @@ export class DeliveryTierDto {
 
   @ApiPropertyOptional({
     type: String,
-    description:
-      "Phí TRỌN GÓI cho cả bậc (VND chuỗi, bội 1.000đ) - '0' = miễn phí",
+    description: "Phí TRỌN GÓI cho cả bậc (VND chuỗi, bội 1.000đ) - '0' = miễn phí",
     example: '30000',
   })
   @ValidateIf((o: DeliveryTierDto) => o.perKm == null)
@@ -442,7 +441,8 @@ export class SaveVehiclePricingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá cuối tuần VND - độc lập với source (giá luôn sửa được); null = xoá (dùng giá thường)',
+    description:
+      'Giá cuối tuần VND - độc lập với source (giá luôn sửa được); null = xoá (dùng giá thường)',
   })
   @IsOptional()
   @ValidateIf((o: SaveVehiclePricingDto) => o.weekendPrice !== null)
@@ -453,7 +453,8 @@ export class SaveVehiclePricingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá tháng thuê dài hạn - độc lập với source (giá luôn sửa được); null = xoá giá tháng',
+    description:
+      'Giá tháng thuê dài hạn - độc lập với source (giá luôn sửa được); null = xoá giá tháng',
   })
   @IsOptional()
   @ValidateIf((o: SaveVehiclePricingDto) => o.monthlyPrice !== null)
@@ -464,7 +465,8 @@ export class SaveVehiclePricingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá/ngày đã gồm tài xế (nội thành/cơ bản) - độc lập với source (giá luôn sửa được)',
+    description:
+      'Giá/ngày đã gồm tài xế (nội thành/cơ bản) - độc lập với source (giá luôn sửa được)',
   })
   @IsOptional()
   @ValidateIf((o: SaveVehiclePricingDto) => o.withDriverDailyPrice !== null)
@@ -617,7 +619,10 @@ export class FeeLineDto {
    * hiểm theo ngày (`unitAmount × quantity`) và hoa hồng lũy tiến (nấc nằm ở `policy`).
    */
   @ApiProperty({ type: Number, nullable: true }) percent!: number | null;
-  @ApiPropertyOptional({ type: String, description: 'Đơn giá MỖI NGÀY (VND) - dòng tính theo ngày' })
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Đơn giá MỖI NGÀY (VND) - dòng tính theo ngày',
+  })
   unitAmount?: string;
   @ApiPropertyOptional({ type: Number, description: 'Số ngày đã nhân với `unitAmount`' })
   quantity?: number;
@@ -718,7 +723,10 @@ export class PromoCodeSnapshotDto {
 export class CustomerFeeBreakdownDto {
   @ApiProperty({ enum: BILLING_MODE_VALUES }) billingMode!: string;
   @ApiProperty({ type: FeePolicySnapshotDto }) policy!: FeePolicySnapshotDto;
-  @ApiProperty({ enum: VEHICLE_TYPE_VALUES, description: 'Loại xe - quyết định mức S và biểu phí bảo hiểm' })
+  @ApiProperty({
+    enum: VEHICLE_TYPE_VALUES,
+    description: 'Loại xe - quyết định mức S và biểu phí bảo hiểm',
+  })
   vehicleType!: string;
   @ApiProperty({ description: 'Số ngày thuê tính phí - nhân biểu phí bảo hiểm, chia nấc hoa hồng' })
   rentalDays!: number;
@@ -742,14 +750,18 @@ export class CustomerFeeBreakdownDto {
   @ApiProperty({ description: 'Số KHÁCH TRẢ cả chuyến (chưa gồm cọc thế chấp)' })
   customerTotalAmount!: string;
   @ApiProperty({
-    description: 'D - phần của CHỦ XE trong tiền giữ chỗ online (cam kết giữ xe); "0" khi chuyến không thu online',
+    description:
+      'D - phần của CHỦ XE trong tiền giữ chỗ online (cam kết giữ xe); "0" khi chuyến không thu online',
   })
   depositAmount!: string;
   @ApiProperty({
-    description: 'H - hoa hồng lũy tiến trừ vào tiền chủ xe (tính trên tiền thuê, KHÔNG trên phí giao xe). "0" ở tuyến gói',
+    description:
+      'H - hoa hồng lũy tiến trừ vào tiền chủ xe (tính trên tiền thuê, KHÔNG trên phí giao xe). "0" ở tuyến gói',
   })
   ownerCommissionAmount!: string;
-  @ApiProperty({ description: 'S + H - phần XePrime giữ lại từ tiền giữ chỗ online (trước tài trợ mã)' })
+  @ApiProperty({
+    description: 'S + H - phần XePrime giữ lại từ tiền giữ chỗ online (trước tài trợ mã)',
+  })
   platformRetainedAmount!: string;
   @ApiProperty({
     description:
@@ -757,7 +769,8 @@ export class CustomerFeeBreakdownDto {
   })
   grossOnlineAmount!: string;
   @ApiProperty({
-    description: 'D + S + H - phần tiền giữ chỗ online XePrime được phép tài trợ bằng mã (không gồm bảo hiểm)',
+    description:
+      'D + S + H - phần tiền giữ chỗ online XePrime được phép tài trợ bằng mã (không gồm bảo hiểm)',
   })
   sponsorableAmount!: string;
   @ApiProperty({
@@ -827,7 +840,8 @@ export class CustomerFeeBreakdownDto {
   serviceType?: string | null;
   @ApiPropertyOptional({
     enum: SELLER_ENTITY_TYPE_VALUES,
-    description: 'Chủ thể ÁP THUẾ đã đóng băng lúc nhận chuyến (chỉ doanh nghiệp đã xác minh = company)',
+    description:
+      'Chủ thể ÁP THUẾ đã đóng băng lúc nhận chuyến (chỉ doanh nghiệp đã xác minh = company)',
   })
   sellerEntityType?: string;
   @ApiProperty({ description: 'D − T - khoản XePrime chuyển vào ví chủ xe khi chuyến hoàn thành' })
@@ -836,9 +850,15 @@ export class CustomerFeeBreakdownDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Khoản giữ chỗ khách chuyển XePrime - null khi không cần (tuyến gói, báo giá tạm tính)',
+    description:
+      'Khoản giữ chỗ khách chuyển XePrime - null khi không cần (tuyến gói, báo giá tạm tính)',
   })
   holdAmount!: string | null;
+  @ApiPropertyOptional({
+    description:
+      'Bảo hiểm vật chất xe BẮT BUỘC cho chuyến này (phí theo bậc giá trị xe - ADR 0088): không có ô bỏ chọn',
+  })
+  vehicleProtectionMandatory?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -882,6 +902,7 @@ export class PublicCustomerFeeBreakdownDto extends PickType(CustomerFeeBreakdown
   'onlineAmount',
   'payAtPickupAmount',
   'holdAmount',
+  'vehicleProtectionMandatory',
 ] as const) {
   @ApiProperty({ type: PublicFeePolicySnapshotDto }) policy!: PublicFeePolicySnapshotDto;
 }
@@ -1062,13 +1083,17 @@ export class DeliveryDistanceQueryDto {
    */
   @ApiPropertyOptional({ description: 'Vĩ độ ghim khách đã xác nhận' })
   @IsOptional()
-  @Transform(({ value }: { value: unknown }) => (value === undefined || value === '' ? undefined : Number(value)))
+  @Transform(({ value }: { value: unknown }) =>
+    value === undefined || value === '' ? undefined : Number(value),
+  )
   @IsLatitude()
   lat?: number;
 
   @ApiPropertyOptional({ description: 'Kinh độ đi kèm `lat`' })
   @IsOptional()
-  @Transform(({ value }: { value: unknown }) => (value === undefined || value === '' ? undefined : Number(value)))
+  @Transform(({ value }: { value: unknown }) =>
+    value === undefined || value === '' ? undefined : Number(value),
+  )
   @IsLongitude()
   lng?: number;
 }
@@ -1116,7 +1141,8 @@ export class DeliveryDistanceDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'Khoảng cách đường chim bay (km) - chỉ có ở ca ngoài bán kính, không phải đường lái',
+    description:
+      'Khoảng cách đường chim bay (km) - chỉ có ở ca ngoài bán kính, không phải đường lái',
   })
   straightLineKm!: number | null;
 
@@ -1137,7 +1163,8 @@ export class DeliveryDistanceDto {
   @ApiPropertyOptional({
     type: GeoPointDto,
     nullable: true,
-    description: 'Điểm giao xe đi - chi nhánh giữ xe, toạ độ XẤP XỈ ~1km (ADR 0077). Null khi chi nhánh chưa có toạ độ.',
+    description:
+      'Điểm giao xe đi - chi nhánh giữ xe, toạ độ XẤP XỈ ~1km (ADR 0077). Null khi chi nhánh chưa có toạ độ.',
   })
   origin!: GeoPointDto | null;
 

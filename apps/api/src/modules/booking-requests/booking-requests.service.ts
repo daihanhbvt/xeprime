@@ -913,6 +913,7 @@ export class BookingRequestsService {
       serviceType: req.serviceType,
       breakdown,
       schedule,
+      vehicleId: req.vehicleId,
     };
     const feeOpts = {
       depositRequired: deposit.required,
@@ -1252,7 +1253,15 @@ export class BookingRequestsService {
     const frozen = this.promos.frozenTermsOf(r);
     const fees = await this.pricing.customerFeesFor(
       tenantId,
-      { vehicleType: r.vehicle.vehicleType, serviceType: r.serviceType, breakdown },
+      {
+        vehicleType: r.vehicle.vehicleType,
+        serviceType: r.serviceType,
+        breakdown,
+        vehicleId: r.vehicleId,
+        ...(r.pickupAt && r.returnAt
+          ? { schedule: { pickupAt: r.pickupAt, returnAt: r.returnAt } }
+          : {}),
+      },
       breakdown.estimateNote != null,
       {
         vehicleProtectionSelected: r.vehicleProtectionSelected,
@@ -2292,7 +2301,9 @@ export class BookingRequestsService {
         status: true,
         customerUserId: true,
         vehicle: { select: { name: true } },
-        hold: { select: { id: true, code: true, amount: true, paidAmount: true, ...REMINDER_HOLD_SELECT } },
+        hold: {
+          select: { id: true, code: true, amount: true, paidAmount: true, ...REMINDER_HOLD_SELECT },
+        },
       },
     });
     if (!req) throw notFound();
@@ -2312,8 +2323,12 @@ export class BookingRequestsService {
     if (availableAt > now) throw reminderTooSoon(availableAt);
 
     const threshold = new Date(now.getTime() - HOLD_HOST_REMINDER_COOLDOWN_MINUTES * 60_000);
-    const quietSince = (column: 'hostRemindedAt' | 'paymentRemindedAt' | 'finalPaymentRemindedAt') =>
-      ({ OR: [{ [column]: null }, { [column]: { lte: threshold } }] }) as Prisma.BookingHoldWhereInput;
+    const quietSince = (
+      column: 'hostRemindedAt' | 'paymentRemindedAt' | 'finalPaymentRemindedAt',
+    ) =>
+      ({
+        OR: [{ [column]: null }, { [column]: { lte: threshold } }],
+      }) as Prisma.BookingHoldWhereInput;
 
     await this.prisma.$transaction(async (tx) => {
       const claimed = await tx.bookingHold.updateMany({
@@ -3143,7 +3158,12 @@ function holdAcceptsReminder(hold: ReminderHold, now: Date): boolean {
  * điều kiện của câu `UPDATE` trong `remindPayment` — hai chỗ nói cùng một mốc.
  */
 function reminderAvailableAt(hold: ReminderHold): Date {
-  const last = [hold.createdAt, hold.hostRemindedAt, hold.paymentRemindedAt, hold.finalPaymentRemindedAt]
+  const last = [
+    hold.createdAt,
+    hold.hostRemindedAt,
+    hold.paymentRemindedAt,
+    hold.finalPaymentRemindedAt,
+  ]
     .filter((value): value is Date => value != null)
     .reduce((latest, value) => (value > latest ? value : latest));
   return new Date(last.getTime() + HOLD_HOST_REMINDER_COOLDOWN_MINUTES * 60_000);

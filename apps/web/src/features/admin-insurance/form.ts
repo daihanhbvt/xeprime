@@ -1,7 +1,10 @@
 import * as yup from 'yup';
 import {
   INSURANCE_CERTIFICATE_URL_PLACEHOLDER,
+  INSURANCE_PREMIUM_BASIS,
   INSURANCE_PRODUCT_LIMITS,
+  INSURANCE_VALUE_TIER_LIMITS,
+  insurancePremiumTiersProblem,
   MONEY_STEP_VND,
 } from '@xeprime/types';
 import type { InsuranceProduct, UpdateInsuranceProductInput } from './types';
@@ -45,6 +48,8 @@ export interface InsuranceProductFormMessages {
   amountMax: string;
   urlTemplate: string;
   displayOrder: (min: number, max: number) => string;
+  /** Biểu phí bậc sai (ADR 0088) — câu từ `insurancePremiumTiersProblem` không hiện cho admin. */
+  tiers: string;
 }
 
 export function buildInsuranceProductSchema(m: InsuranceProductFormMessages) {
@@ -94,6 +99,33 @@ export function buildInsuranceProductSchema(m: InsuranceProductFormMessages) {
       .min(displayOrder.min, m.displayOrder(displayOrder.min, displayOrder.max))
       .max(displayOrder.max, m.displayOrder(displayOrder.min, displayOrder.max)),
     isActive: yup.boolean().required(),
+    claimHotline: yup
+      .string()
+      .trim()
+      .max(
+        INSURANCE_VALUE_TIER_LIMITS.claimHotline.max,
+        m.tooLong(INSURANCE_VALUE_TIER_LIMITS.claimHotline.max),
+      )
+      .default(''),
+    /*
+     * Biểu phí bậc (ADR 0088) — chỉ có hàng khi sản phẩm tính theo bậc; rỗng với sản phẩm theo ngày.
+     * Luật (tăng dần ngặt, 1-30 ngày, % ≤ 10, 4 chữ số lẻ) là CHÍNH hàm server dùng.
+     */
+    premiumTiers: yup
+      .array(
+        yup.object({
+          maxDays: yup.number().required(m.required),
+          percent: yup.string().trim().required(m.required),
+        }),
+      )
+      .default([])
+      .test('tiers', m.tiers, (tiers) =>
+        !tiers || tiers.length === 0
+          ? true
+          : insurancePremiumTiersProblem(
+              tiers.map((t) => ({ maxDays: Number(t.maxDays), percent: String(t.percent).trim() })),
+            ) === null,
+      ),
   });
 }
 
@@ -122,12 +154,15 @@ export function insuranceProductFormDefaults(
     certificateUrlTemplate: product.certificateUrlTemplate,
     displayOrder: product.displayOrder,
     isActive: product.isActive,
+    claimHotline: product.claimHotline ?? '',
+    premiumTiers: (product.premiumTiers ?? []).map((t) => ({ ...t })),
   };
 }
 
 /** Payload PATCH — tiền là chuỗi số nguyên đồng (ADR 0007); ô trống = không áp dụng (`null`). */
 export function toUpdateInsuranceProductBody(
   form: InsuranceProductFormValues,
+  product?: Pick<InsuranceProduct, 'premiumBasis'>,
 ): UpdateInsuranceProductInput {
   const body: UpdateInsuranceProductInput = {
     nameVi: form.nameVi,
@@ -140,6 +175,16 @@ export function toUpdateInsuranceProductBody(
     certificateUrlTemplate: form.certificateUrlTemplate,
     displayOrder: form.displayOrder,
     isActive: form.isActive,
+    claimHotline: form.claimHotline.trim() || null,
+    // Chỉ gửi biểu phí khi sản phẩm tính theo bậc — sản phẩm theo ngày không có biểu phí bậc.
+    ...(product?.premiumBasis === INSURANCE_PREMIUM_BASIS.VALUE_TIER
+      ? {
+          premiumTiers: form.premiumTiers.map((t) => ({
+            maxDays: Number(t.maxDays),
+            percent: String(t.percent).trim(),
+          })),
+        }
+      : {}),
   };
   for (const field of INSURANCE_MONEY_FIELDS) {
     const value = form[field];

@@ -2,7 +2,21 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
-import { fetchDocumentVersions, fetchVehicleDocument, fetchVehicleDocuments } from './api';
+import {
+  fetchDocumentVersions,
+  fetchVehicleDocument,
+  fetchVehicleDocuments,
+  fetchVehicleInsuranceStatus,
+} from './api';
+
+/** Điều kiện bảo hiểm của xe — chỉ hỏi cho ô tô (`enabled`). */
+export function useVehicleInsuranceStatus(vehicleId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.vehicles.insuranceEligibility(vehicleId),
+    queryFn: () => fetchVehicleInsuranceStatus(vehicleId),
+    enabled,
+  });
+}
 
 /** Danh sách TÓM TẮT giấy tờ của xe — `enabled` tắt khi thiếu `vehicles.documents.view`. */
 export function useVehicleDocuments(vehicleId: string | undefined, enabled = true) {

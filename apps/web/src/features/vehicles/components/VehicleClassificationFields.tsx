@@ -23,6 +23,11 @@ interface VehicleClassificationFieldsProps {
   disabled?: boolean;
   /** Dọn ô không còn nghĩa khi đổi loại xe — form phải hiện đúng thứ sắp được lưu. */
   setValue?: UseFormSetValue<VehicleFormValues>;
+  /**
+   * Ô cùng HÀNG với số chỗ / phân khúc (vd "Giá trị xe" của màn sửa xe) — nơi gọi bọc sẵn `Col`.
+   * Nằm trước kiểu dáng để hai ô nửa hàng đứng cạnh nhau thay vì để trống nửa phải.
+   */
+  trailing?: ReactNode;
 }
 
 /**
@@ -43,6 +48,7 @@ export function VehicleClassificationFields({
   disabled,
   setValue,
   required = false,
+  trailing,
 }: VehicleClassificationFieldsProps) {
   const t = useTranslations('Vehicles.form.specs');
   const tCommon = useTranslations('Common');
@@ -93,7 +99,9 @@ export function VehicleClassificationFields({
               disabled={disabled}
               help={t('specChoiceFromModel', {
                 model: spec.model.label,
-                values: spec.seats.values.map((count) => tCommon('units.seat', { count })).join(', '),
+                values: spec.seats.values
+                  .map((count) => tCommon('units.seat', { count }))
+                  .join(', '),
               })}
             />
           ) : (
@@ -131,6 +139,8 @@ export function VehicleClassificationFields({
           />
         </Col>
       ) : null}
+
+      {trailing}
 
       {policy.bodyType !== 'hidden' && bodyTypePicker ? <Col xs={24}>{bodyTypePicker}</Col> : null}
     </Row>

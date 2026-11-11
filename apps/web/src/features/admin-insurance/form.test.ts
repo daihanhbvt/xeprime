@@ -26,6 +26,7 @@ const schema = buildInsuranceProductSchema({
   amountStep: 'amountStep',
   urlTemplate: 'urlTemplate',
   displayOrder: (min, max) => `displayOrder:${min}-${max}`,
+  tiers: 'tiers',
 });
 
 const PRODUCT = {

@@ -31,10 +31,13 @@ export function InsuranceCoverageList({
   coverage,
   headingLevel = 2,
   className,
+  pdfHref,
 }: {
   coverage: readonly InsuranceCoverage[];
   headingLevel?: 2 | 3;
   className?: string;
+  /** Đường tải GCN PDF (ADR 0088) — khách và gian hàng có endpoint riêng. */
+  pdfHref?: (certificateId: string) => string;
 }) {
   const t = useTranslations('Insurance');
   if (coverage.length === 0) return null;
@@ -48,7 +51,7 @@ export function InsuranceCoverageList({
       <ul className={styles.list}>
         {coverage.map((item) =>
           item.status === INSURANCE_COVERAGE_STATUS.ISSUED && item.certificate ? (
-            <InsuranceCertificateItem key={item.kind} cert={item.certificate} />
+            <InsuranceCertificateItem key={item.kind} cert={item.certificate} pdfHref={pdfHref} />
           ) : (
             <CoverageItem key={item.kind} item={item} />
           ),

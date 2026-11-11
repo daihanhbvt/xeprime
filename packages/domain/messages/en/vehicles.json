@@ -279,7 +279,10 @@
       "specChoiceFromModel": "The {model} comes in: {values}.",
       "motorbikeCategory": "Category",
       "motorbikeCategoryPlaceholder": "Select a category",
-      "motorbikeCategoryHelp": "Guests filter motorbikes by category - the wrong one makes your bike hard to find."
+      "motorbikeCategoryHelp": "Guests filter motorbikes by category - the wrong one makes your bike hard to find.",
+      "insuredValue": "Car value",
+      "insuredValueTipLabel": "What is car value",
+      "insuredValueTip": "The purchase price of the car, or the value declared when buying body damage insurance."
     },
     "prices": {
       "weekday": "Weekday price",
@@ -461,7 +464,53 @@
       "imagesMax": "Maximum 20 photos",
       "seatCountCarOnly": "Seat count applies to cars only",
       "motorbikeCategoryMotorbikeOnly": "Category applies to motorbikes only",
-      "priceThousandStep": "Prices must be a multiple of 1,000 VND"
+      "priceThousandStep": "Prices must be a multiple of 1,000 VND",
+      "insuredValueRange": "Car value must be between 50,000,000 and 20,000,000,000 VND, rounded to the million.",
+      "insuredValueCarOnly": "Car value applies to cars only"
+    },
+    "registration": {
+      "title": "Vehicle registration certificate",
+      "tipLabel": "Why the registration certificate is needed",
+      "tip": "The side showing the owner name, chassis number and engine number. It is used to issue vehicle damage insurance for each rental trip.",
+      "choose": "Take or upload a photo of the registration",
+      "chooseHint": "The side with owner name, chassis and engine numbers - straight on, well lit",
+      "replace": "Retake",
+      "previewAlt": "Uploaded registration photo",
+      "reading": "Reading the registration...",
+      "autoFilled": "Registration details read in full",
+      "edit": "Edit",
+      "needsManual": "Some details could not be read - please fill in the missing ones.",
+      "readerUnavailable": "This photo could not be read automatically - please enter the registration details.",
+      "plateMismatch": "The plate on the registration ({read}) differs from the plate you entered ({typed}) - check the photo or the details.",
+      "fields": {
+        "holderName": "Owner name",
+        "chassisNumber": "Chassis number",
+        "engineNumber": "Engine number",
+        "holderAddress": "Owner address",
+        "plateNumber": "Plate on registration"
+      },
+      "placeholders": {
+        "holderName": "e.g. NGUYEN VAN AN",
+        "chassisNumber": "e.g. RL4B29F30K1234567",
+        "engineNumber": "e.g. 2NRX123456",
+        "holderAddress": "As printed on the registration (optional)"
+      },
+      "failure": {
+        "unsupported": "This photo cannot be opened - choose a JPG, PNG or WEBP image.",
+        "tooSmall": "The photo is too small to read - take it closer.",
+        "tooLarge": "The photo is too large - retake it or choose another one."
+      },
+      "errors": {
+        "photoRequired": "Please take or upload a photo of the registration",
+        "photoNotReady": "Wait for the registration photo to finish uploading and reading",
+        "holderNameRequired": "Enter the owner name as on the registration",
+        "holderNameInvalid": "Owner name is not valid",
+        "chassisRequired": "Enter the chassis number",
+        "chassisInvalid": "Chassis number is 6-25 letters and digits",
+        "engineRequired": "Enter the engine number",
+        "engineInvalid": "Engine number is 4-25 letters and digits",
+        "addressTooLong": "Address is at most 255 characters"
+      }
     }
   },
   "publish": {
@@ -1479,7 +1528,8 @@
       "customTypeNameRequired": "Enter the document type name",
       "presetInvalid": "Select a document type from the list",
       "customTypeNameMax": "Maximum 160 characters"
-    }
+    },
+    "registrationReminder": "Cars need a registration certificate with owner name, chassis and engine numbers to be sold with vehicle damage insurance - upload it and fill in the details on the Registration row."
   },
   "maintenance": {
     "title": "Maintenance",

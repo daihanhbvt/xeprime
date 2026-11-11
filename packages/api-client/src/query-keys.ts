@@ -235,6 +235,12 @@ export const queryKeys = {
     /** Lịch sử phiên bản file - endpoint riêng sau quyền `view_files` (Wave 5.1). */
     documentVersions: (id: string, documentId: string) =>
       ['vehicles', 'documents', id, documentId, 'versions'] as const,
+    /**
+     * Xe đủ điều kiện bán kèm bảo hiểm vật chất xe chưa (ADR 0088) — nằm DƯỚI nhánh giấy tờ để mỗi
+     * lần sửa giấy tờ (thêm cà vẹt) là lời nhắc tự làm mới.
+     */
+    insuranceEligibility: (id: string) =>
+      ['vehicles', 'documents', id, 'insurance-eligibility'] as const,
     /** Bảo dưỡng & KM của một xe (Wave 6) - nhánh gốc để invalidate cả cụm sau mutation. */
     maintenance: (id: string) => ['vehicles', 'maintenance', id] as const,
     maintenanceProfile: (id: string) => ['vehicles', 'maintenance', id, 'profile'] as const,
@@ -689,6 +695,12 @@ export const queryKeys = {
     detail: (id: string) => ['platform-insurance', 'detail', id] as const,
     /** Danh mục sản phẩm phía quản trị (ADR 0064). */
     products: ['platform-insurance', 'products'] as const,
+    /** Bảng kê trả phí cho hãng (ADR 0088 điều 6). */
+    remittances: (params: QueryParams) => ['platform-insurance', 'remittances', params] as const,
+    remittance: (id: string) => ['platform-insurance', 'remittance', id] as const,
+    remittanceLines: (id: string, params: QueryParams) =>
+      ['platform-insurance', 'remittance', id, 'lines', params] as const,
+    remittancePending: ['platform-insurance', 'remittance-pending'] as const,
   },
   /** Bảo hiểm phía khách/gian hàng - danh mục công khai + GCN của một đơn (ADR 0064). */
   insurance: {

@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsIn,
   IsInt,
@@ -11,9 +13,14 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
 import {
   INSURANCE_COVERAGE_STATUS_VALUES,
+  INSURANCE_ELIGIBILITY_GAP_VALUES,
+  INSURANCE_PREMIUM_BASIS_VALUES,
+  INSURANCE_VALUE_TIER_LIMITS,
+  type InsurancePremiumBasis,
   INSURANCE_POLICY_STATUS_VALUES,
   INSURANCE_PRODUCT_KIND_VALUES,
   INSURANCE_PRODUCT_LIMITS,
@@ -21,6 +28,7 @@ import {
   INSURANCE_QUEUE_STATUS_ANY,
   VEHICLE_TYPE_VALUES,
   type InsuranceCoverageStatus,
+  type InsuranceEligibilityGap,
   type InsurancePolicyStatus,
   type InsuranceProductKind,
   type InsuranceProvider,
@@ -220,6 +228,30 @@ export class InsuranceProductDto {
   @ApiProperty() displayOrder!: number;
   @ApiProperty() isActive!: boolean;
   @ApiProperty() updatedAt!: string;
+  @ApiProperty({
+    enum: INSURANCE_PREMIUM_BASIS_VALUES,
+    description:
+      'daily = biểu phí ngày ở chính sách phí; value_tier = % giá trị xe theo bậc, BẮT BUỘC (ADR 0088)',
+  })
+  premiumBasis!: InsurancePremiumBasis;
+  @ApiPropertyOptional({ type: () => [InsurancePremiumTierDto], nullable: true })
+  premiumTiers!: InsurancePremiumTierDto[] | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) claimHotline!: string | null;
+}
+
+/** Một bậc phí: chuyến tối đa `maxDays` ngày ⇒ phí = `percent`% giá trị xe (đã gồm VAT). */
+export class InsurancePremiumTierDto {
+  @ApiProperty({ minimum: 1, maximum: INSURANCE_VALUE_TIER_LIMITS.maxDays })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(INSURANCE_VALUE_TIER_LIMITS.maxDays)
+  maxDays!: number;
+
+  @ApiProperty({ example: '0.033', description: '% giá trị xe, tối đa 4 chữ số lẻ' })
+  @IsString()
+  @Matches(/^\d{1,2}(\.\d{1,4})?$/)
+  percent!: string;
 }
 
 const MONEY_PATTERN = new RegExp(`^\\d{1,${INSURANCE_PRODUCT_LIMITS.amountMaxDigits}}$`);
@@ -325,6 +357,25 @@ export class UpdateInsuranceProductDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({ enum: INSURANCE_PREMIUM_BASIS_VALUES })
+  @IsOptional()
+  @IsIn(INSURANCE_PREMIUM_BASIS_VALUES)
+  premiumBasis?: InsurancePremiumBasis;
+
+  @ApiPropertyOptional({ type: () => [InsurancePremiumTierDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(INSURANCE_VALUE_TIER_LIMITS.maxTiers)
+  @ValidateNested({ each: true })
+  @Type(() => InsurancePremiumTierDto)
+  premiumTiers?: InsurancePremiumTierDto[];
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(INSURANCE_VALUE_TIER_LIMITS.claimHotline.max)
+  claimHotline?: string | null;
 }
 
 /** Danh mục CÔNG KHAI — đúng loại xe khách đang xem, không có trường quản trị. */
@@ -355,6 +406,12 @@ export class PublicInsuranceProductDto {
   maxPayoutAmount!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) maxPayoutNoteVi!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) maxPayoutNoteEn!: string | null;
+  @ApiProperty({
+    description:
+      'Bắt buộc với xe đủ điều kiện (phí theo bậc giá trị xe - ADR 0088): khách không bỏ chọn được',
+  })
+  mandatory!: boolean;
+  @ApiPropertyOptional({ type: String, nullable: true }) claimHotline!: string | null;
 }
 
 // ── Giấy chứng nhận (khách + gian hàng) ──────────────────────────────────────
@@ -376,6 +433,23 @@ export class InsuranceCertificateDto {
   @ApiProperty({ description: 'GCN THỬ NGHIỆM (adapter giả lập) - không có hiệu lực bảo hiểm' })
   isTest!: boolean;
   @ApiProperty() issuedAt!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Số hợp đồng của hãng in trên GCN (MIC so_hd) - ADR 0088',
+  })
+  contractNumber!: string | null;
+  @ApiProperty({
+    description:
+      'Tải được GCN PDF qua endpoint .../insurance-certificates/:policyId/pdf (hợp đồng hãng thật)',
+  })
+  pdfAvailable!: boolean;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Hotline báo sự cố / bồi thường của hãng',
+  })
+  claimHotline!: string | null;
 }
 
 /**
@@ -399,4 +473,14 @@ export class InsuranceCoverageDto {
     description: 'GCN - chỉ có khi `status = issued`',
   })
   certificate!: InsuranceCertificateDto | null;
+}
+
+/** Tình trạng bảo hiểm vật chất xe của một xe — ADR 0088 điều 2. */
+export class VehicleInsuranceStatusDto {
+  @ApiProperty({ description: 'Nền tảng đang bán bảo hiểm vật chất xe theo bậc giá trị xe' })
+  applies!: boolean;
+  @ApiProperty({ description: 'Xe đủ điều kiện - khách thuê tự lái được bán kèm (bắt buộc)' })
+  eligible!: boolean;
+  @ApiProperty({ enum: INSURANCE_ELIGIBILITY_GAP_VALUES, isArray: true })
+  gaps!: InsuranceEligibilityGap[];
 }

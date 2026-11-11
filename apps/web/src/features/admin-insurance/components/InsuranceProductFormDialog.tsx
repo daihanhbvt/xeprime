@@ -3,6 +3,7 @@
 import { yupResolver } from '@hookform/resolvers/yup';
 import { App, Divider } from 'antd';
 import { useTranslations } from 'next-intl';
+import { INSURANCE_PREMIUM_BASIS } from '@xeprime/types';
 import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { DialogForm } from '@/components/form/DialogForm';
@@ -22,6 +23,7 @@ import {
   type InsuranceProductFormValues,
 } from '../form';
 import { useUpdateInsuranceProduct } from '../hooks';
+import { PremiumTiersField } from './PremiumTiersField';
 import type { InsuranceProduct } from '../types';
 import styles from './InsuranceProductFormDialog.module.css';
 
@@ -58,6 +60,7 @@ export function InsuranceProductFormDialog({
         amountStep: t('validation.amountStep'),
         urlTemplate: t('validation.urlTemplate'),
         displayOrder: (min, max) => t('validation.displayOrder', { min, max }),
+        tiers: t('validation.tiers'),
       }),
     [t],
   );
@@ -71,7 +74,7 @@ export function InsuranceProductFormDialog({
     // Enter gửi form ngay cả khi nút OK đang quay — chặn lượt thứ hai ở đây.
     if (!product || update.isPending) return;
     update.mutate(
-      { id: product.id, body: toUpdateInsuranceProductBody(form) },
+      { id: product.id, body: toUpdateInsuranceProductBody(form, product) },
       {
         onSuccess: (saved) => {
           message.success(t('saved', { name: localized(saved.nameVi, saved.nameEn) }));
@@ -158,7 +161,21 @@ export function InsuranceProductFormDialog({
         />
         <TextField control={control} name="maxPayoutNoteEn" label={t('fields.maxPayoutNoteEn')} />
 
+        {product?.premiumBasis === INSURANCE_PREMIUM_BASIS.VALUE_TIER ? (
+          <>
+            <Divider plain>{t('sections.premium')}</Divider>
+            <p className={styles.intro}>{t('help.valueTierIntro')}</p>
+            <PremiumTiersField control={control} />
+          </>
+        ) : null}
+
         <Divider plain>{t('sections.operation')}</Divider>
+        <TextField
+          control={control}
+          name="claimHotline"
+          label={t('fields.claimHotline')}
+          help={t('help.claimHotline')}
+        />
         <TextField
           control={control}
           name="partnerProductCode"

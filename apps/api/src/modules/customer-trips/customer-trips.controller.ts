@@ -8,9 +8,10 @@ import {
   Param,
   Post,
   Query,
+  StreamableFile,
 } from '@nestjs/common';
 import { ACCOUNT_REALM, type CustomerCancellationReason } from '@xeprime/types';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiProduces, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Realms } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { handoverPhotoSlotParam, handoverTypeParam } from '../bookings/handovers/handover-params';
@@ -74,6 +75,24 @@ export class CustomerTripsController {
   @ApiOkResponse({ type: CustomerUnpaidHoldsDto })
   unpaidHolds(@CurrentUser() user: AuthenticatedUser): Promise<CustomerUnpaidHoldsDto> {
     return this.trips.unpaidHolds(user.id);
+  }
+
+  @Get(':id/insurance-certificates/:policyId/pdf')
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOperation({ summary: 'Tải giấy chứng nhận bảo hiểm (PDF) của chuyến - ADR 0088' })
+  @ApiProduces('application/pdf')
+  @ApiOkResponse({ schema: { type: 'string', format: 'binary' } })
+  async insuranceCertificatePdf(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('policyId') policyId: string,
+  ): Promise<StreamableFile> {
+    const pdf = await this.trips.insuranceCertificatePdf(user.id, id, policyId);
+    return new StreamableFile(pdf.file, {
+      type: 'application/pdf',
+      length: pdf.file.length,
+      disposition: `attachment; filename="${pdf.fileName}"`,
+    });
   }
 
   @Get(':id')

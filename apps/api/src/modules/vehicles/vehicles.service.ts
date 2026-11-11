@@ -40,6 +40,7 @@ import {
   type VehiclePublicationInput,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_SUBMITTABLE,
+  VEHICLE_TYPE,
   type PaginationMeta,
   type VehiclePublicStatus,
   type VehicleType,
@@ -83,6 +84,7 @@ import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { buildVehicleReviewSnapshot } from './vehicle-review-snapshot';
 import { refreshPendingApprovalSnapshot } from './refresh-pending-approval-snapshot';
 import { lockVehicleRow } from './vehicle-row-lock';
+import { VehicleRegistrationUploadsService } from './registration/vehicle-registration-uploads.service';
 import { resolveBranchScope } from '../../common/dto/branch-scope';
 
 /** Cột dùng cho một dòng bảng — không kéo `description` dài. */
@@ -123,6 +125,7 @@ const LIST_SELECT = {
 const DETAIL_SELECT = {
   ...LIST_SELECT,
   color: true,
+  insuredValue: true,
   fuelType: true,
   lengthMm: true,
   widthMm: true,
@@ -199,6 +202,8 @@ export class VehiclesService {
     private readonly pricing: PricingService,
     private readonly config: ConfigService,
     private readonly supportStore: SupportRequestStore,
+    /** Cà vẹt kèm lượt tạo ô tô (ADR 0089) — gắn trong CÙNG transaction tạo xe. */
+    private readonly registrations: VehicleRegistrationUploadsService,
   ) {}
 
   /**
@@ -292,13 +297,17 @@ export class VehiclesService {
   async fleetSummary(
     tenantId: string,
     branchId: string | undefined,
-  /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
-  allowedBranchIds: readonly string[] | null,
+    /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
   ): Promise<FleetSummaryDto> {
     const groups = await this.prisma.vehicle.groupBy({
       by: ['operationStatus'],
       // Cùng phạm vi với danh sách xe ngay bên dưới dải này — `tenantId` vẫn là ranh giới thật.
-      where: { tenantId, deletedAt: null, branchId: resolveBranchScope(branchId, allowedBranchIds) },
+      where: {
+        tenantId,
+        deletedAt: null,
+        branchId: resolveBranchScope(branchId, allowedBranchIds),
+      },
       _count: { _all: true },
     });
 
@@ -404,8 +413,8 @@ export class VehiclesService {
   async list(
     tenantId: string,
     query: VehicleListQueryDto,
-  /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
-  allowedBranchIds: readonly string[] | null,
+    /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
   ): Promise<{ data: VehicleListItemDto[]; meta: PaginationMeta }> {
     const paging = resolvePaging(query, VEHICLE_DEFAULT_LIMIT, VEHICLE_MAX_LIMIT);
 
@@ -569,11 +578,24 @@ export class VehiclesService {
 
     await this.catalog.assertVehicleValues({ ...input, vehicleType: dto.vehicleType });
     assertVehicleProfile(dto.vehicleType, input.fuelType, input);
+    // Cà vẹt kèm lượt tạo chỉ dành cho ô tô (ADR 0089) — xe máy chưa có bảo hiểm.
+    if (dto.registration && dto.vehicleType !== VEHICLE_TYPE.CAR) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Cà vẹt kèm lượt tạo xe chỉ áp dụng cho ô tô',
+        details: { fields: [{ field: 'registration', message: 'Chỉ áp dụng cho ô tô' }] },
+      });
+    }
 
     await this.prisma.$transaction(async (tx) => {
       // Chi nhánh kiểm TRONG transaction: nó phải thuộc đúng gian hàng và đang hoạt động ngay
       // tại thời điểm ghi. FK composite `(branch_id, tenant_id)` là chốt chặn cuối ở DB.
-      const branch = await this.branches.assertAssignable(tx, tenantId, dto.branchId, allowedBranchIds);
+      const branch = await this.branches.assertAssignable(
+        tx,
+        tenantId,
+        dto.branchId,
+        allowedBranchIds,
+      );
       if (support) {
         // Kiểm TRƯỚC khi ghi xe — ảnh đại diện nằm trên chính hàng xe, ghi rồi thì nó thành "đã biết".
         // Xe mới chưa có ảnh nào: mọi URL phải nằm trong kho ảnh của CHÍNH gian hàng, không gắn ảnh
@@ -612,6 +634,15 @@ export class VehiclesService {
         },
       });
       await this.replaceMedia(tx, id, tenantId, input, dto.vehicleType);
+      if (dto.registration) {
+        await this.registrations.attachToNewVehicleWithinTx(tx, {
+          tenantId,
+          userId,
+          vehicleId: id,
+          vehiclePlate: input.plateNumber ?? null,
+          registration: dto.registration,
+        });
+      }
       if (support) {
         // Toàn bộ dữ liệu tạo ban đầu, trong CÙNG transaction (AuditService gắn phiên + lý do).
         await this.audit.record(
@@ -740,7 +771,12 @@ export class VehiclesService {
       if (changes.branchId) {
         // Đổi nơi giao xe của một chuyến đang sống là âm thầm đổi cam kết với khách — từ chối.
         await assertNoOpenTrips(tx, { tenantId, vehicleId: current.id });
-        const target = await this.branches.assertAssignable(tx, tenantId, changes.branchId, allowedBranchIds);
+        const target = await this.branches.assertAssignable(
+          tx,
+          tenantId,
+          changes.branchId,
+          allowedBranchIds,
+        );
         if (!target.provinceCode) {
           throw new ConflictException({
             code: API_ERROR_CODE.BRANCH_LOCATION_REQUIRED,
@@ -1889,6 +1925,8 @@ interface VehicleWritableFields {
   motorbikeCategory?: string | null;
   /** Liên kết mẫu xe chuẩn; null = xe khai tay. */
   vehicleCatalogModelId?: string | null;
+  /** Giá trị xe nhận bảo hiểm (VND string, ADR 0088). */
+  insuredValue?: string | null;
   lengthMm?: number | null;
   widthMm?: number | null;
   heightMm?: number | null;
@@ -1941,6 +1979,7 @@ function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritab
       ? { vehicleCatalogModelId: dto.vehicleCatalogModelId }
       : {}),
     ...(dto.lengthMm !== undefined ? { lengthMm: dto.lengthMm } : {}),
+    ...(dto.insuredValue !== undefined ? { insuredValue: dto.insuredValue } : {}),
     ...(dto.widthMm !== undefined ? { widthMm: dto.widthMm } : {}),
     ...(dto.heightMm !== undefined ? { heightMm: dto.heightMm } : {}),
     ...(dto.curbWeightKg !== undefined ? { curbWeightKg: dto.curbWeightKg } : {}),
@@ -2206,6 +2245,7 @@ function toDetail(
     color: v.color,
     fuelType: v.fuelType,
     lengthMm: v.lengthMm,
+    insuredValue: v.insuredValue ? v.insuredValue.toFixed(0) : null,
     widthMm: v.widthMm,
     heightMm: v.heightMm,
     curbWeightKg: v.curbWeightKg,

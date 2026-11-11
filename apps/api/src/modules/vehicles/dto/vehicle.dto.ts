@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
 import {
   MOTORBIKE_CATEGORY_VALUES,
   VEHICLE_ENERGY_LIMITS,
@@ -14,6 +14,7 @@ import {
   TRANSMISSION_TYPE_EXT_VALUES,
   VEHICLE_SOURCE_TYPE_VALUES,
   VEHICLE_TYPE_VALUES,
+  INSURANCE_VALUE_TIER_LIMITS,
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -33,10 +34,12 @@ import {
   MaxLength,
   Min,
   ValidateNested,
+  registerDecorator,
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 import { BranchIdQuery } from '../../../common/dto/branch-scope';
 import { IsMoneyStep } from '../../../common/validators/money-step.validator';
+import { CreateVehicleRegistrationDto } from '../registration/dto/vehicle-registration.dto';
 import { VehicleAlertDto } from './vehicle-alert.dto';
 
 /** Cách sắp xếp danh sách xe của gian hàng. */
@@ -62,6 +65,33 @@ export { DEFAULT_LIMIT as VEHICLE_DEFAULT_LIMIT, MAX_LIMIT as VEHICLE_MAX_LIMIT 
  * Query danh sách xe — luôn phân trang + filter + sort ở tầng DB (skill backend-endpoint).
  * `limit` có trần cứng: một gian hàng có thể có hàng trăm/nghìn xe, client không kéo cả bảng.
  */
+/** Giá trị xe hợp lệ (ADR 0088) — cùng khoảng và bước với CHECK `vehicles_insured_value_check`. */
+function IsInsuredValue(): PropertyDecorator {
+  return (target: object, propertyKey: string | symbol) => {
+    registerDecorator({
+      name: 'isInsuredValue',
+      target: target.constructor,
+      propertyName: String(propertyKey),
+      validator: {
+        validate: (value: unknown) => {
+          if (value === null || value === undefined) return true;
+          const n = Number(value);
+          const { insuredValueMin, insuredValueMax, insuredValueStep } =
+            INSURANCE_VALUE_TIER_LIMITS;
+          return (
+            Number.isInteger(n) &&
+            n >= insuredValueMin &&
+            n <= insuredValueMax &&
+            n % insuredValueStep === 0
+          );
+        },
+        defaultMessage: () =>
+          'insuredValue phải là bội 1.000.000đ trong khoảng 50.000.000đ - 20.000.000.000đ',
+      },
+    });
+  };
+}
+
 export class VehicleListQueryDto {
   @ApiPropertyOptional({ description: 'Tìm theo tên/mã/biển số/hãng/model' })
   @IsOptional()
@@ -273,6 +303,12 @@ export class VehicleDetailDto extends VehicleListItemDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
+    description: 'Giá trị xe nhận bảo hiểm vật chất (VND string) - ADR 0088',
+  })
+  insuredValue!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
     description: 'Key nhiên liệu - tra nhãn ở danh mục `fuel_type` (GET /catalog)',
   })
   fuelType!: string | null;
@@ -290,7 +326,11 @@ export class VehicleDetailDto extends VehicleListItemDto {
     description: 'Xe điện: số km đi được sau một lần sạc đầy',
   })
   electricRangeKm!: number | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Xe điện: dung lượng pin (kWh)' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Xe điện: dung lượng pin (kWh)',
+  })
   batteryCapacityKwh!: string | null;
   @ApiPropertyOptional({
     type: String,
@@ -674,6 +714,19 @@ export class CreateVehicleDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
+    description:
+      'Giá trị xe nhận bảo hiểm vật chất (ADR 0088) - bội 1.000.000đ, 50 triệu..20 tỷ. null = xoá ' +
+      '(xe thôi được bán kèm bảo hiểm).',
+    example: '340000000',
+  })
+  @IsOptional()
+  @Matches(/^\d{8,11}$/, { message: 'insuredValue phải là số tiền nguyên đồng' })
+  @IsInsuredValue()
+  insuredValue?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
     description: 'Giá cuối tuần - gửi null = xoá (dùng giá ngày thường)',
     example: '750000',
   })
@@ -797,6 +850,17 @@ export class CreateVehicleDto {
     message: 'features phải là key trong danh mục tiện ích',
   })
   features?: string[];
+
+  /**
+   * Cà vẹt (ADR 0089) — ảnh đã tải + trường đã xác nhận; gắn vào giấy tờ `registration` trong
+   * CÙNG transaction tạo xe. Chỉ ô tô. Web bắt buộc với ô tô; server chưa bắt buộc để app native
+   * chưa có bước này vẫn tạo được xe (xe thiếu cà vẹt không được bán kèm bảo hiểm).
+   */
+  @ApiPropertyOptional({ type: CreateVehicleRegistrationDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateVehicleRegistrationDto)
+  registration?: CreateVehicleRegistrationDto;
 }
 
 /**
@@ -804,7 +868,8 @@ export class CreateVehicleDto {
  * luồng duyệt (ADR 0008). `operationStatus` (sẵn sàng/bảo dưỡng/ngừng) là toggle vận hành
  * của gian hàng nên cho sửa ở đây.
  */
-export class UpdateVehicleDto extends PartialType(CreateVehicleDto) {}
+/** Cà vẹt của xe đã có sửa ở tab Giấy tờ — lượt sửa xe không nhận nó. */
+export class UpdateVehicleDto extends PartialType(OmitType(CreateVehicleDto, ['registration'] as const)) {}
 
 /**
  * `PATCH /vehicles/:id/marketplace-visibility` — công tắc hiển thị của CHỦ XE (ADR 0048).
@@ -994,6 +1059,10 @@ export class ListingRepairResultDto {
   @ApiProperty({ description: 'Xe có dòng trên `public_listings` sau lượt đồng bộ không.' })
   listed!: boolean;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Trạng thái listing sau đồng bộ.' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Trạng thái listing sau đồng bộ.',
+  })
   status!: string | null;
 }

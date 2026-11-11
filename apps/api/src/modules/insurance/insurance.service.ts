@@ -116,6 +116,15 @@ export class InsuranceService {
          * phải gửi ĐÚNG khoá cũ, nếu không đối tác coi đó là một hợp đồng mới và khách bị mua đôi.
          */
         idempotencyKey: `${input.bookingId}:${kind}`,
+        // Giá trị xe đã dùng tính phí theo bậc (ADR 0088) — đóng băng lúc duyệt, gửi hãng lúc cấp.
+        ...(kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP &&
+        input.snapshot.fees?.vehicleProtectionTier
+          ? {
+              insuredValue: new Prisma.Decimal(
+                input.snapshot.fees.vehicleProtectionTier.insuredValue,
+              ),
+            }
+          : {}),
         ...(product
           ? {
               productSnapshotJson: product as unknown as Prisma.InputJsonValue,
@@ -368,4 +377,3 @@ export function premiumsFromSnapshot(snapshot: BookingPriceSnapshot): PremiumLin
     personalAccident: amountOf(FEE_LINE.TRIP_INSURANCE),
   };
 }
-

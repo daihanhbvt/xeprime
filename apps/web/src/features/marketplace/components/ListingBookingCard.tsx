@@ -695,7 +695,10 @@ export function ListingBookingCard({
                 }}
                 onChange={setInsuranceSelected}
               />
-              <p className={styles.insuranceNote}>{t('insurance.note')}</p>
+              {/* "Tự nguyện" chỉ đúng với ô khách tự tích; dòng bắt buộc (ADR 0088) có câu riêng. */}
+              {insuranceOffer.items.some((item) => !item.mandatory) ? (
+                <p className={styles.insuranceNote}>{t('insurance.note')}</p>
+              ) : null}
             </div>
           ) : null}
         </div>

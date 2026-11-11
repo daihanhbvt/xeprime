@@ -30,6 +30,7 @@ import { useCatalogItems, useCatalogOptions } from '@/features/catalog/use-catal
 import { TypedMediaFields } from './TypedMediaFields';
 import { ServiceTypeChips } from './ServiceTypeChips';
 import { NumberField } from '@/components/form/NumberField';
+import { PolicyInfoTip } from '@/features/rental-policies/components/PolicyInfoTip';
 import { SelectField } from '@/components/form/SelectField';
 import { SwitchField } from '@/components/form/SwitchField';
 import { TextAreaField } from '@/components/form/TextAreaField';
@@ -696,6 +697,27 @@ export function VehicleIdentitySection({
           bodyTypePicker={bodyTypeElsewhere ? undefined : <BodyTypePicker control={control} />}
           disabled={Boolean(lockedNotice)}
           setValue={setValue}
+          trailing={
+            // Giá trị xe (ADR 0088) — cạnh số chỗ; mẫu số phí bảo hiểm. Xe máy chưa có bảo hiểm.
+            isCar ? (
+              <Col xs={24} sm={12}>
+                <NumberField
+                  control={control}
+                  name="insuredValue"
+                  label={
+                    <span className={styles.labelWithTip}>
+                      {t('insuredValue')}
+                      <PolicyInfoTip label={t('insuredValueTipLabel')}>
+                        {t('insuredValueTip')}
+                      </PolicyInfoTip>
+                    </span>
+                  }
+                  money
+                  min={0}
+                />
+              </Col>
+            ) : null
+          }
         />
       </Col>
     </Row>
