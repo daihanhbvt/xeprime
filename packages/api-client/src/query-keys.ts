@@ -619,6 +619,8 @@ export const queryKeys = {
     unreadCount: (side: string) => ['chat', 'unread-count', side] as const,
     /** Chưa đọc CẢ HAI vai - badge biểu tượng chat, không thuộc bề mặt nào. */
     unreadSummary: () => ['chat', 'unread-summary'] as const,
+    /** Lý do báo cáo hội thoại đang bật (admin cấu hình) — dữ liệu chung, không theo người xem. */
+    reportReasons: () => ['chat', 'report-reasons'] as const,
     /**
      * "Tôi nhắn được cho gian hàng này chưa" - PER-USER, nên khoá mang slug chứ không gộp vào
      * cache của hồ sơ gian hàng (hồ sơ là dữ liệu công khai, dùng chung mọi người xem).

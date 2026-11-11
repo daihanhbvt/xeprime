@@ -22,6 +22,9 @@ export type MessageAttachment = Schemas['MessageAttachmentDto'];
 /** Thẻ chuyến trên một tin nhắn — `id` là id YÊU CẦU thuê (định danh chuyến ở cả hai phía). */
 export type MessageTrip = Schemas['MessageTripDto'];
 export type SendMessageInput = Schemas['SendMessageDto'];
+export type ChatBlockResult = Schemas['ChatBlockResultDto'];
+export type ReportConversationInput = Schemas['ReportConversationDto'];
+export type ChatReportReason = Schemas['ChatReportReasonDto'];
 export type ChatAttachmentPresign = Schemas['PresignResultDto'];
 export type FirebaseChatToken = Schemas['FirebaseTokenDto'];
 

@@ -54,11 +54,14 @@ import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope'
 import { NotificationService } from '../notification/notification.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
+  ChatBlockResultDto,
+  ChatReportResultDto,
   ConversationListQueryDto,
   ConversationSummaryDto,
   CreateConversationDto,
   MessageDto,
   MessageListQueryDto,
+  ReportConversationDto,
   SendMessageDto,
   CONVERSATION_DEFAULT_LIMIT,
   CONVERSATION_MAX_LIMIT,
@@ -153,14 +156,16 @@ export class ChatService {
 
     await this.assertCustomerMayOpenChat(userId, target.tenantId);
 
+    const conversation = await this.getOrCreateFor({
+      tenantId: target.tenantId,
+      customerUserId: userId,
+      vehicleId: target.vehicleId,
+    });
     return toSummary(
-      await this.getOrCreateFor({
-        tenantId: target.tenantId,
-        customerUserId: userId,
-        vehicleId: target.vehicleId,
-      }),
+      conversation,
       CHAT_SIDE.CUSTOMER,
       true,
+      await this.blockSidesOf(conversation.id),
     );
   }
 
@@ -339,15 +344,12 @@ export class ChatService {
       throw chatLocked();
     }
 
-    return toSummary(
-      await this.getOrCreateFor({
-        tenantId,
-        customerUserId: request.customerUserId,
-        vehicleId: request.vehicleId,
-      }),
-      CHAT_SIDE.SHOP,
-      true,
-    );
+    const conversation = await this.getOrCreateFor({
+      tenantId,
+      customerUserId: request.customerUserId,
+      vehicleId: request.vehicleId,
+    });
+    return toSummary(conversation, CHAT_SIDE.SHOP, true, await this.blockSidesOf(conversation.id));
   }
 
   /**
@@ -469,7 +471,9 @@ export class ChatService {
        * Suy từ `customerUserId` là AN TOÀN vì hai vế của phạm vi rời nhau theo định nghĩa: vế gian
        * hàng loại trừ chính những hội thoại mà người này là khách (`chatInboxScope`).
        */
-      data: await this.withChatOpen(rows, (c, open) => toSummary(c, sideOfRow(c, userId), open)),
+      data: await this.withChatOpen(rows, (c, open, blocks) =>
+        toSummary(c, sideOfRow(c, userId), open, blocks),
+      ),
       meta: paginationMeta(paging, total),
     };
   }
@@ -512,7 +516,7 @@ export class ChatService {
       row.tenantId,
       row.customerUserId,
     );
-    return toSummary(row, side, open);
+    return toSummary(row, side, open, await this.blockSidesOf(row.id));
   }
 
   /**
@@ -575,6 +579,8 @@ export class ChatService {
       conversation.customerUserId,
     );
     if (!open) throw chatLocked();
+    // Chặn (App Store 1.2) đọc NGAY trước khi ghi: một cú chặn vừa bấm có hiệu lực với tin kế tiếp.
+    if ((await this.blockSidesOf(conversationId)).size > 0) throw chatBlocked();
 
     const text = dto.text?.trim() || null;
     const attachments = dto.attachments ?? [];
@@ -692,6 +698,83 @@ export class ChatService {
     }
 
     return toMessageDto(row);
+  }
+
+  /**
+   * Chặn phía bên kia của hội thoại (App Store Guideline 1.2). Hội thoại là duy nhất theo cặp
+   * (khách, gian hàng) nên đây là chặn cả cặp. Thành viên gian hàng chặn thay cho cả gian hàng -
+   * uỷ quyền là chuyện nội bộ người bán. Idempotent nhờ unique `(conversation_id, blocked_by)`.
+   *
+   * Không gửi thông báo cho phía bị chặn: báo cho người lạm dụng biết họ bị chặn chỉ mời họ quay
+   * lại bằng tài khoản khác. Họ thấy ô soạn tin bị khoá khi mở lại hội thoại.
+   */
+  async block(userId: string, conversationId: string): Promise<ChatBlockResultDto> {
+    const { side } = await this.resolveAccess(userId, conversationId);
+    await this.prisma.chatBlock.upsert({
+      where: { conversationId_blockedBy: { conversationId, blockedBy: side } },
+      create: { id: newId(), conversationId, blockedBy: side, createdByUserId: userId },
+      update: {},
+    });
+    return this.blockResult(conversationId, side);
+  }
+
+  /** Bỏ chặn CỦA PHÍA MÌNH. Chặn của phía kia (nếu có) vẫn giữ - không ai gỡ hộ người khác. */
+  async unblock(userId: string, conversationId: string): Promise<ChatBlockResultDto> {
+    const { side } = await this.resolveAccess(userId, conversationId);
+    await this.prisma.chatBlock.deleteMany({ where: { conversationId, blockedBy: side } });
+    return this.blockResult(conversationId, side);
+  }
+
+  /** Báo cáo hội thoại vi phạm (App Store Guideline 1.2) - chỉ ghi nhận cho nền tảng xem xét. */
+  async report(
+    userId: string,
+    conversationId: string,
+    dto: ReportConversationDto,
+  ): Promise<ChatReportResultDto> {
+    const { side } = await this.resolveAccess(userId, conversationId);
+    // Chỉ lý do đang BẬT: một lý do admin vừa tắt không còn là lựa chọn hợp lệ, kể cả khi client
+    // còn giữ danh sách cũ trong cache.
+    const reason = await this.prisma.chatReportReason.findFirst({
+      where: { id: dto.reasonId, isActive: true },
+      select: { id: true, label: true },
+    });
+    if (!reason) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.CHAT_REPORT_REASON_INVALID,
+        message: 'Lý do báo cáo không còn khả dụng, hãy chọn lại',
+      });
+    }
+    const id = newId();
+    await this.prisma.chatReport.create({
+      data: {
+        id,
+        conversationId,
+        reporterUserId: userId,
+        reporterSide: side,
+        reasonId: reason.id,
+        reasonLabel: reason.label,
+        note: dto.note?.trim() || null,
+      },
+    });
+    return { id };
+  }
+
+  /**
+   * Cờ chặn sau một lượt chặn/bỏ chặn. `canSend` ở đây chỉ phản ánh CHẶN; cổng ADR 0073 đi kèm
+   * danh sách/chi tiết hội thoại, nên client làm mới hội thoại sau thao tác này.
+   */
+  private async blockResult(conversationId: string, side: ChatSide): Promise<ChatBlockResultDto> {
+    const flags = blockFlags(side, await this.blockSidesOf(conversationId));
+    return { conversationId, ...flags, canSend: !flags.blockedByMe && !flags.blockedByOther };
+  }
+
+  /** Các phía đang chặn trong một hội thoại. Rỗng = không ai chặn. */
+  private async blockSidesOf(conversationId: string): Promise<Set<ChatSide>> {
+    const rows = await this.prisma.chatBlock.findMany({
+      where: { conversationId },
+      select: { blockedBy: true },
+    });
+    return new Set(rows.map((b) => b.blockedBy as ChatSide));
   }
 
   async markRead(
@@ -940,9 +1023,22 @@ export class ChatService {
    */
   private async withChatOpen<T>(
     rows: ConversationRow[],
-    map: (row: ConversationRow, open: boolean) => T,
+    map: (row: ConversationRow, open: boolean, blocks: Set<ChatSide>) => T,
   ): Promise<T[]> {
     const now = new Date();
+    // Chặn của cả trang trong MỘT câu - cùng lý do không N+1 như bằng chứng "đã có đơn".
+    const blocksByConversation = new Map<string, Set<ChatSide>>();
+    if (rows.length > 0) {
+      const blocks = await this.prisma.chatBlock.findMany({
+        where: { conversationId: { in: rows.map((c) => c.id) } },
+        select: { conversationId: true, blockedBy: true },
+      });
+      for (const b of blocks) {
+        const set = blocksByConversation.get(b.conversationId) ?? new Set<ChatSide>();
+        set.add(b.blockedBy as ChatSide);
+        blocksByConversation.set(b.conversationId, set);
+      }
+    }
     const gated = rows.filter(
       (c) => c.customerUserId && !storefrontAllowsPublicChat(resolveStorefront(c.tenant, now).kind),
     );
@@ -967,6 +1063,7 @@ export class ChatService {
           kind: resolveStorefront(c.tenant, now).kind,
           engaged: engaged.has(`${c.tenantId}:${c.customerUserId}`),
         }),
+        blocksByConversation.get(c.id) ?? new Set<ChatSide>(),
       ),
     );
   }
@@ -1130,7 +1227,27 @@ function sideOfRow(c: { customerUserId: string | null }, userId: string): ChatSi
   return c.customerUserId === userId ? CHAT_SIDE.CUSTOMER : CHAT_SIDE.SHOP;
 }
 
-function toSummary(c: ConversationRow, side: ChatSide, canSend: boolean): ConversationSummaryDto {
+/** Hai cờ chặn nhìn từ phía người xem. */
+function blockFlags(
+  side: ChatSide,
+  blocks: Set<ChatSide>,
+): { blockedByMe: boolean; blockedByOther: boolean } {
+  const other = side === CHAT_SIDE.CUSTOMER ? CHAT_SIDE.SHOP : CHAT_SIDE.CUSTOMER;
+  return { blockedByMe: blocks.has(side), blockedByOther: blocks.has(other) };
+}
+
+/**
+ * `chatOpen` là cổng ADR 0073; chặn (App Store 1.2) khoá thêm. `canSend` là hội của cả hai, nên
+ * client cũ chỉ biết `canSend` vẫn tự khoá ô soạn tin khi hội thoại bị chặn.
+ */
+function toSummary(
+  c: ConversationRow,
+  side: ChatSide,
+  chatOpen: boolean,
+  blocks: Set<ChatSide>,
+): ConversationSummaryDto {
+  const { blockedByMe, blockedByOther } = blockFlags(side, blocks);
+  const canSend = chatOpen && !blockedByMe && !blockedByOther;
   const viewingAsCustomer = side === CHAT_SIDE.CUSTOMER;
   // Khách thấy chủ xe đúng như ở chợ: tên + ảnh theo tuyến hiệu lực (ADR 0054).
   const storefront = viewingAsCustomer ? resolveStorefront(c.tenant, new Date()) : null;
@@ -1148,6 +1265,8 @@ function toSummary(c: ConversationRow, side: ChatSide, canSend: boolean): Conver
     unread: viewingAsCustomer ? c.unreadCustomerCount : c.unreadTenantCount,
     status: c.status,
     canSend,
+    blockedByMe,
+    blockedByOther,
   };
 }
 
@@ -1159,6 +1278,13 @@ function chatLocked(): ForbiddenException {
   return new ForbiddenException({
     code: API_ERROR_CODE.CHAT_REQUIRES_BOOKING,
     message: 'Với chủ xe cá nhân, kênh nhắn tin mở sau khi tiền giữ chỗ được thanh toán thành công',
+  });
+}
+
+function chatBlocked(): ForbiddenException {
+  return new ForbiddenException({
+    code: API_ERROR_CODE.CHAT_BLOCKED,
+    message: 'Không thể nhắn tin: một trong hai bên đã chặn',
   });
 }
 

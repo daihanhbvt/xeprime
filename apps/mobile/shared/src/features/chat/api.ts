@@ -10,6 +10,8 @@ export {
 
 export type {
   ChatAttachmentPresign,
+  ChatBlockResult,
+  ChatReportReason,
   ChatMessage,
   ChatUnreadSummary,
   ConversationFilters,
@@ -19,5 +21,6 @@ export type {
   MessageAttachment,
   MessageCursor,
   MessagePage,
+  ReportConversationInput,
   SendMessageInput,
 } from '@/api/chat/api';

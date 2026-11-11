@@ -50,6 +50,8 @@ const api = chatApi as jest.Mocked<typeof chatApi>;
 
 const conversation = (side: ChatSide): ConversationSummary => ({
   canSend: true,
+  blockedByMe: false,
+  blockedByOther: false,
   id: 'c1',
   vehicleId: null,
   vehicleName: null,

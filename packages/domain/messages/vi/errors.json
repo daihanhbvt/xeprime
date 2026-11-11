@@ -240,7 +240,9 @@
     "BOOKING_EXTENSION_NOT_ALLOWED": "Chỉ gia hạn được đơn thuê dài hạn đang thuê.",
     "BOOKING_EXTENSION_PENDING": "Đơn này đang có một lần gia hạn chờ khách thanh toán.",
     "BOOKING_EXTENSION_NOT_CANCELLABLE": "Lần gia hạn này không còn huỷ được.",
-    "BOOKING_EXTENSION_UNPRICED": "Chưa báo giá được phần gia hạn - kiểm tra giá thuê theo tháng của xe."
+    "BOOKING_EXTENSION_UNPRICED": "Chưa báo giá được phần gia hạn - kiểm tra giá thuê theo tháng của xe.",
+    "CHAT_BLOCKED": "Không thể nhắn tin vì một trong hai bên đã chặn.",
+    "CHAT_REPORT_REASON_INVALID": "Lý do báo cáo không còn khả dụng, hãy chọn lại."
   },
   "codeWithWait": {
     "RATE_LIMITED": "Bạn thao tác hơi nhanh. Vui lòng thử lại sau {wait}.",

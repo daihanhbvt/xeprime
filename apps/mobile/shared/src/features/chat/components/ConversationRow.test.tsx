@@ -11,6 +11,8 @@ import { ConversationRow } from './ConversationRow';
  */
 const conversation = (over: Partial<ConversationSummary> = {}): ConversationSummary => ({
   canSend: true,
+  blockedByMe: false,
+  blockedByOther: false,
   id: 'c1',
   vehicleId: 'v1',
   vehicleName: 'Kia Morning 2021',

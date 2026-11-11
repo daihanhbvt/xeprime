@@ -1,0 +1,162 @@
+.menu {
+  min-width: 200px;
+}
+
+.confirmIcon {
+  color: var(--xp-color-error) !important;
+}
+
+/* --- Dòng "đã chặn" thay ô soạn tin --- */
+
+.blockedNotice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--xp-color-border-subtle);
+  color: var(--xp-color-text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.blockedIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+  font-size: 16px;
+}
+
+.blockedText {
+  max-width: 420px;
+}
+
+/* --- Hộp báo cáo --- */
+
+.reportHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.reportHeadIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.reportTitle {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.reportIntro {
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--xp-color-text-secondary);
+}
+
+.reportBody {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 6px;
+}
+
+.reportLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+/*
+ * `showCount` của AntD vẽ bộ đếm "0 / 1000" THÒ RA dưới ô bằng định vị tuyệt đối — nó không chiếm
+ * chỗ trong luồng, nên không chừa khoảng thì hàng nút của modal đè lên nó.
+ */
+.reportNote {
+  margin-bottom: 22px;
+}
+
+.reportError {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+  font-size: 13px;
+}
+
+.reasonList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.reason {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: 10px;
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.reason:hover {
+  border-color: var(--xp-color-border-strong);
+  background: var(--xp-color-bg-hover);
+}
+
+.reason:focus-visible {
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.reasonSelected,
+.reasonSelected:hover {
+  border-color: var(--xp-color-error);
+  background: var(--xp-color-error-bg);
+}
+
+.reasonLabel {
+  min-width: 0;
+}
+
+.reasonCheck {
+  display: inline-flex;
+  width: 18px;
+  color: var(--xp-color-error);
+  font-size: 18px;
+  flex-shrink: 0;
+}

@@ -121,3 +121,6 @@ export const OUTBOX_STATUS_VALUES = Object.values(OUTBOX_STATUS) as OutboxStatus
 export function isOutboxStatus(value: unknown): value is OutboxStatus {
   return typeof value === 'string' && (OUTBOX_STATUS_VALUES as string[]).includes(value);
 }
+
+/** Ghi chú kèm báo cáo — giới hạn dùng chung cho DTO, web và app. */
+export const CHAT_REPORT_NOTE_MAX_LENGTH = 1000;

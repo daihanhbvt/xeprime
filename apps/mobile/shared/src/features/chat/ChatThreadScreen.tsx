@@ -25,6 +25,8 @@ import { makeStyles, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { ChatComposer } from './components/ChatComposer';
 import { ChatThreadSkeleton } from './components/ChatThreadSkeleton';
+import { BlockedNotice } from './components/BlockedNotice';
+import { ChatThreadActions } from './components/ChatThreadActions';
 import { MessageBubble } from './components/MessageBubble';
 import { resolveChatInbox } from './chat-inbox';
 import { useConversation } from './hooks/use-chat';
@@ -282,6 +284,10 @@ export function ChatThreadScreen({
             size={HEADER_AVATAR}
           />
         }
+        // Chặn / báo cáo (App Store 1.2) — có ở cả app khách lẫn app Partner.
+        {...(conversationQuery.data
+          ? { right: <ChatThreadActions conversation={conversationQuery.data} /> }
+          : {})}
       />
 
       {/*
@@ -306,7 +312,20 @@ export function ChatThreadScreen({
           `ThreadPanel`. Chưa tải xong thì vẫn hiện ô (không chớp ẩn/hiện).
         */
         {...(conversationQuery.data?.canSend === false
-          ? {}
+          ? conversationQuery.data.blockedByMe || conversationQuery.data.blockedByOther
+            ? {
+                // Đã chặn (App Store 1.2) - server cũng từ chối gửi (`CHAT_BLOCKED`).
+                footer: (
+                  <BlockedNotice
+                    text={
+                      conversationQuery.data.blockedByMe
+                        ? t('blockedByMe', { party: conversationQuery.data.partyName })
+                        : t('blockedByOther')
+                    }
+                  />
+                ),
+              }
+            : {}
           : {
               footer: (
                 <ChatComposer
