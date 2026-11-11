@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
-import type { ChatSide } from '@xeprime/types';
+import { API_ERROR_CODE, type ChatSide } from '@xeprime/types';
+import { ApiClientError } from '@xeprime/api-client';
 import {
   chatApi,
   type ChatMessage,
@@ -321,6 +322,9 @@ export function useThread(conversationId: string, viewerSide: ChatSide): ThreadS
             entries: markThreadMessageFailed(prev.entries, clientMessageId),
           }));
         }
+        // Kênh đã đóng (bị chặn - App Store 1.2, hay tuyến hoa hồng chưa có đơn - ADR 0073) mà màn
+        // này chưa biết: tải lại hội thoại để `canSend` mới thay ô soạn tin. Như bản web.
+        if (isChatClosedError(error)) invalidateInbox();
         throw error;
       }
     },
@@ -419,4 +423,12 @@ export function useThread(conversationId: string, viewerSide: ChatSide): ThreadS
     retry,
     discard,
   };
+}
+
+/** Lỗi gửi tin vì kênh đã đóng — hội thoại cần tải lại để giao diện biết. */
+function isChatClosedError(err: unknown): boolean {
+  return (
+    err instanceof ApiClientError &&
+    (err.code === API_ERROR_CODE.CHAT_BLOCKED || err.code === API_ERROR_CODE.CHAT_REQUIRES_BOOKING)
+  );
 }

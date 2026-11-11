@@ -20,6 +20,9 @@ export type ChatEligibility = Schemas['ChatEligibilityDto'];
 export type ChatMessage = Schemas['MessageDto'];
 export type MessageAttachment = Schemas['MessageAttachmentDto'];
 export type SendMessageInput = Schemas['SendMessageDto'];
+export type ChatBlockResult = Schemas['ChatBlockResultDto'];
+export type ReportConversationInput = Schemas['ReportConversationDto'];
+export type ChatReportReason = Schemas['ChatReportReasonDto'];
 export type ChatAttachmentPresign = Schemas['PresignResultDto'];
 export type FirebaseChatToken = Schemas['FirebaseTokenDto'];
 

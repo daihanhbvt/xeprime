@@ -13,6 +13,7 @@ import { useThreadScroll } from '../hooks/use-thread-scroll';
 import type { ConversationSummary } from '../types';
 import { MessageComposer } from './MessageComposer';
 import { MessageList } from './MessageList';
+import { BlockedNotice, ThreadActions } from './ThreadActions';
 import styles from './ChatView.module.css';
 
 /**
@@ -36,11 +37,11 @@ export function ThreadPanel({
   onClearPendingVehicle?: () => void;
 }) {
   const t = useTranslations('Chat');
-  const thread = useThread(conversation.id);
+  const viewerSide = conversation.side;
+  const thread = useThread(conversation.id, viewerSide);
   const vehicleContext = useVehicleContext(pendingVehicleId ?? null);
 
   const last = thread.entries[thread.entries.length - 1];
-  const viewerSide = conversation.side;
 
   const scroll = useThreadScroll({
     conversationId: conversation.id,
@@ -92,6 +93,8 @@ export function ThreadPanel({
         <div className={styles.threadTitleWrap}>
           <div className={styles.threadTitle}>{conversation.partyName}</div>
         </div>
+
+        <ThreadActions conversation={conversation} />
       </header>
 
       <MessageList
@@ -124,6 +127,9 @@ export function ThreadPanel({
           vehicleContext={vehicleContext}
           {...(onClearPendingVehicle ? { onClearVehicleContext: onClearPendingVehicle } : {})}
         />
+      ) : conversation.blockedByMe || conversation.blockedByOther ? (
+        // Đã chặn (App Store 1.2) - server cũng từ chối gửi (`CHAT_BLOCKED`).
+        <BlockedNotice conversation={conversation} />
       ) : null}
     </div>
   );

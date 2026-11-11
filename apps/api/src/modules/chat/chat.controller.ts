@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   Post,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -15,7 +16,13 @@ import { CurrentUser, Realms } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { FirebaseAppService } from '../firebase/firebase-app.service';
 import { R2Service } from '../storage/r2.service';
-import { FirebaseTokenDto, PresignAttachmentDto, PresignResultDto } from './dto/chat.dto';
+import { ChatReportReasonsService } from './chat-report-reasons.service';
+import {
+  ChatReportReasonDto,
+  FirebaseTokenDto,
+  PresignAttachmentDto,
+  PresignResultDto,
+} from './dto/chat.dto';
 
 /**
  * Hạ tầng chat cho client: mint custom token để đăng nhập Firebase (nghe realtime Firestore) và
@@ -28,7 +35,15 @@ export class ChatController {
   constructor(
     private readonly firebase: FirebaseAppService,
     private readonly r2: R2Service,
+    private readonly reportReasons: ChatReportReasonsService,
   ) {}
+
+  @Get('report-reasons')
+  @ApiOperation({ summary: 'Lý do báo cáo hội thoại đang bật (admin cấu hình) - App Store 1.2' })
+  @ApiOkResponse({ type: [ChatReportReasonDto] })
+  reportReasonsList(): Promise<ChatReportReasonDto[]> {
+    return this.reportReasons.listActive();
+  }
 
   @Post('firebase-token')
   @ApiOperation({ summary: 'Custom token để signInWithCustomToken (uid = user id)' })

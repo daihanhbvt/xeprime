@@ -1,8 +1,17 @@
 import { CHAT_ATTACHMENT_MAX_BYTES, CHAT_ATTACHMENT_MIME_TYPES } from '@xeprime/types';
-import { ApiClientError, apiGet, apiPost, apiRequest, fetchPage } from '@/services/api-client';
+import {
+  ApiClientError,
+  apiDelete,
+  apiGet,
+  apiPost,
+  apiRequest,
+  fetchPage,
+} from '@/services/api-client';
 import { uploadToR2 } from '@/services/upload';
 import type {
   ChatAttachmentPresign,
+  ChatBlockResult,
+  ChatReportReason,
   ChatMessage,
   ConversationFilters,
   ConversationListResult,
@@ -12,6 +21,7 @@ import type {
   FirebaseChatToken,
   MessageCursor,
   MessagePage,
+  ReportConversationInput,
   SendMessageInput,
 } from './types';
 
@@ -106,6 +116,28 @@ export const chatApi = {
   markRead(conversationId: string): Promise<{ conversationId: string; unread: number }> {
     return apiPost<{ conversationId: string; unread: number }>(
       `/conversations/${encodeURIComponent(conversationId)}/read`,
+    );
+  },
+
+  /** Chặn phía bên kia (App Store 1.2). Server suy phía người chặn từ phiên. */
+  block(conversationId: string): Promise<ChatBlockResult> {
+    return apiPost<ChatBlockResult>(`/conversations/${encodeURIComponent(conversationId)}/block`);
+  },
+
+  /** Bỏ chặn CỦA PHÍA MÌNH - chặn của phía kia (nếu có) vẫn giữ. */
+  unblock(conversationId: string): Promise<ChatBlockResult> {
+    return apiDelete<ChatBlockResult>(`/conversations/${encodeURIComponent(conversationId)}/block`);
+  },
+
+  /** Lý do báo cáo đang bật (admin cấu hình) — nhãn là dữ liệu, không qua i18n. */
+  reportReasons(): Promise<ChatReportReason[]> {
+    return apiGet<ChatReportReason[]>('/chat/report-reasons');
+  },
+
+  report(conversationId: string, body: ReportConversationInput): Promise<{ id: string }> {
+    return apiPost<{ id: string }>(
+      `/conversations/${encodeURIComponent(conversationId)}/report`,
+      body,
     );
   },
 

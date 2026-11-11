@@ -1,8 +1,41 @@
 'use client';
 
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/services/query-keys';
 import { chatApi } from '../api';
-import type { ConversationTarget } from '../types';
+import type { ConversationTarget, ReportConversationInput } from '../types';
+
+/**
+ * Chặn / bỏ chặn phía bên kia (App Store 1.2). Làm mới TOÀN BỘ cache chat: cờ `canSend` /
+ * `blockedByMe` nằm trên hội thoại ở cả danh sách lẫn chi tiết, và ở cả hai hộp thư.
+ */
+export function useToggleChatBlock(conversationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (block: boolean) =>
+      block ? chatApi.block(conversationId) : chatApi.unblock(conversationId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.chat.all }),
+  });
+}
+
+/**
+ * Lý do báo cáo đang BẬT, theo thứ tự admin sắp. Gọi ngay khi mở hội thoại để hộp báo cáo hiện ra
+ * là có danh sách; khoá dùng chung mọi hội thoại và `staleTime` 5 phút nên chuyển qua lại giữa
+ * các hội thoại không bắn thêm request.
+ */
+export function useChatReportReasons() {
+  return useQuery({
+    queryKey: queryKeys.chat.reportReasons(),
+    queryFn: () => chatApi.reportReasons(),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useReportConversation(conversationId: string) {
+  return useMutation({
+    mutationFn: (body: ReportConversationInput) => chatApi.report(conversationId, body),
+  });
+}
 
 /**
  * Khách mở/lấy hội thoại với một gian hàng (dùng ở nút "Nhắn shop" và "Nhắn tin" trang gian hàng).

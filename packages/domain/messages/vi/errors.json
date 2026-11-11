@@ -218,7 +218,9 @@
     "WITH_DRIVER_PRICE_OUT_OF_RANGE": "Giá có tài xế/ngày nằm ngoài khoảng hợp lý. Kiểm tra lại số (thừa hoặc thiếu số 0).",
     "DRIVER_SURCHARGE_RETIRED": "Phụ phí tài xế đã gỡ — giá có tài xế là giá trọn gói.",
     "SURCHARGE_CATEGORY_RETIRED": "Loại phụ phí này đã gỡ — giá có tài xế là giá trọn gói.",
-    "SURCHARGE_NOT_ALLOWED_WITH_DRIVER": "Chuyến có tài xế không ghi phụ phí quá giờ hay vượt km — khách trả một giá trọn gói."
+    "SURCHARGE_NOT_ALLOWED_WITH_DRIVER": "Chuyến có tài xế không ghi phụ phí quá giờ hay vượt km — khách trả một giá trọn gói.",
+    "CHAT_BLOCKED": "Không thể nhắn tin vì một trong hai bên đã chặn.",
+    "CHAT_REPORT_REASON_INVALID": "Lý do báo cáo không còn khả dụng, hãy chọn lại."
   },
   "appCode": {
     "PLAN_LIMIT_REACHED": "Tài khoản của bạn đã đạt giới hạn.",

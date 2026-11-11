@@ -218,7 +218,9 @@
     "WITH_DRIVER_PRICE_OUT_OF_RANGE": "The with-driver daily price is outside the reasonable range. Check for a missing or extra zero.",
     "DRIVER_SURCHARGE_RETIRED": "Driver surcharges have been removed — the with-driver price is all-inclusive.",
     "SURCHARGE_CATEGORY_RETIRED": "This surcharge type has been removed — the with-driver price is all-inclusive.",
-    "SURCHARGE_NOT_ALLOWED_WITH_DRIVER": "With-driver trips don't take overtime or excess-mileage surcharges — customers pay one all-inclusive price."
+    "SURCHARGE_NOT_ALLOWED_WITH_DRIVER": "With-driver trips don't take overtime or excess-mileage surcharges — customers pay one all-inclusive price.",
+    "CHAT_BLOCKED": "Messaging is unavailable because one of you has blocked the other.",
+    "CHAT_REPORT_REASON_INVALID": "This report reason is no longer available. Please choose another."
   },
   "appCode": {
     "PLAN_LIMIT_REACHED": "Your account has reached its limit.",

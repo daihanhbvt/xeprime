@@ -1,13 +1,15 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 import { ACCOUNT_REALM } from '@xeprime/types';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { ChatInbox } from '@xeprime/types';
 import { CurrentUser, Realms } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import {
+  ChatBlockResultDto,
   ChatEligibilityDto,
   ChatEligibilityQueryDto,
   ChatInboxQueryDto,
+  ChatReportResultDto,
   ChatUnreadCountDto,
   ChatUnreadSummaryDto,
   ConversationListQueryDto,
@@ -18,6 +20,7 @@ import {
   MessageDto,
   MessageListQueryDto,
   MessagePageDto,
+  ReportConversationDto,
   SendMessageDto,
 } from './dto/chat.dto';
 import { ChatService } from './chat.service';
@@ -145,5 +148,39 @@ export class ConversationsController {
     @Param('id') id: string,
   ): Promise<MarkReadResultDto> {
     return this.chat.markRead(user.id, id);
+  }
+
+  @Post(':id/block')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Chặn phía bên kia của hội thoại (khách chặn chủ xe / chủ xe chặn khách) - App Store 1.2',
+  })
+  @ApiOkResponse({ type: ChatBlockResultDto })
+  block(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<ChatBlockResultDto> {
+    return this.chat.block(user.id, id);
+  }
+
+  @Delete(':id/block')
+  @ApiOperation({ summary: 'Bỏ chặn của phía mình' })
+  @ApiOkResponse({ type: ChatBlockResultDto })
+  unblock(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<ChatBlockResultDto> {
+    return this.chat.unblock(user.id, id);
+  }
+
+  @Post(':id/report')
+  @ApiOperation({ summary: 'Báo cáo hội thoại vi phạm - App Store 1.2' })
+  @ApiCreatedResponse({ type: ChatReportResultDto })
+  report(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: ReportConversationDto,
+  ): Promise<ChatReportResultDto> {
+    return this.chat.report(user.id, id, dto);
   }
 }

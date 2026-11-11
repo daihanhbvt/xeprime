@@ -790,6 +790,13 @@ export const API_ERROR_CODE = {
    * 403 chứ không 404: gian hàng có thật và khách nhìn thấy nó, chỉ là chưa tới lúc mở kênh.
    */
   CHAT_REQUIRES_BOOKING: 'CHAT_REQUIRES_BOOKING',
+  /**
+   * Hội thoại đã bị chặn (một trong hai phía — App Store Guideline 1.2). Không gửi được tin;
+   * giao diện khoá ô soạn tin theo `blockedByMe` / `blockedByOther`.
+   */
+  CHAT_BLOCKED: 'CHAT_BLOCKED',
+  /** Lý do báo cáo không tồn tại hoặc admin vừa tắt — client tải lại danh sách lý do. */
+  CHAT_REPORT_REASON_INVALID: 'CHAT_REPORT_REASON_INVALID',
 
   /**
    * Chi nhánh còn ràng buộc nên chưa ngừng/đổi được: `details` liệt kê CHÍNH XÁC cái gì đang

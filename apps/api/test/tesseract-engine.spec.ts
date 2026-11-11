@@ -97,7 +97,10 @@ describe('TesseractEngine — không bao giờ treo', () => {
     createWorkerMock.mockResolvedValueOnce(stuck).mockResolvedValueOnce(healthy);
     // Hạn phải đủ cho lượt THỨ HAI (giải mã + sáu biến thể ảnh bằng sharp): trên runner CI 2 nhân
     // chạy song song các suite khác, 1,5s từng không đủ và lượt lành bị cắt thành TIMEOUT.
-    const reader = new TesseractDriverLicenceReader({ ...LIMITS, readTimeoutMs: 5_000 });
+    // Hạn đọc nới cho runner CI chậm: lượt đọc thứ hai xử lý một ẢNH THẬT, trên máy dev mất vài
+    // trăm mili-giây nhưng trên runner đang chạy song song cả bộ test có lúc vượt 5 giây và tự báo
+    // hết giờ - test đỏ dù code đúng. Lượt treo vẫn hết giờ đúng như cũ, chỉ chờ lâu hơn.
+    const reader = new TesseractDriverLicenceReader({ ...LIMITS, readTimeoutMs: 15_000 });
 
     expect(codeOf(await settle(reader.read(input)))).toBe(READER_FAILURE.TIMEOUT);
     expect(stuck.terminate).toHaveBeenCalled();
@@ -105,7 +108,7 @@ describe('TesseractEngine — không bao giờ treo', () => {
     expect(second).toMatchObject({ ok: true, value: { readable: false } });
     expect(createWorkerMock).toHaveBeenCalledTimes(2);
     await reader.dispose();
-  }, 20_000);
+  }, 40_000);
 
   it('thread chết giữa chừng ⇒ lượt đang chờ nó được nhả ngay, tiến trình không sập', async () => {
     const dying = fakeWorker(jest.fn(() => never()));

@@ -11,6 +11,9 @@ export type ChatAttachmentPresign = Schemas['PresignResultDto'];
 export type FirebaseChatToken = Schemas['FirebaseTokenDto'];
 export type ChatUnreadSummary = Schemas['ChatUnreadSummaryDto'];
 export type ChatEligibility = Schemas['ChatEligibilityDto'];
+export type ChatBlockResult = Schemas['ChatBlockResultDto'];
+export type ReportConversationInput = Schemas['ReportConversationDto'];
+export type ChatReportReason = Schemas['ChatReportReasonDto'];
 
 /**
  * Mở hội thoại theo XE, hoặc theo GIAN HÀNG — hai lối, một endpoint.
@@ -140,6 +143,32 @@ export const chatApi = {
   markRead(conversationId: string): Promise<{ conversationId: string; unread: number }> {
     return getApiClient().post<{ conversationId: string; unread: number }>(
       `/conversations/${encodeURIComponent(conversationId)}/read`,
+    );
+  },
+
+  /** Chặn phía bên kia (App Store 1.2) — bản của web: `apps/web/src/features/chat/api.ts`. */
+  block(conversationId: string): Promise<ChatBlockResult> {
+    return getApiClient().post<ChatBlockResult>(
+      `/conversations/${encodeURIComponent(conversationId)}/block`,
+    );
+  },
+
+  /** Bỏ chặn CỦA PHÍA MÌNH - chặn của phía kia (nếu có) vẫn giữ. */
+  unblock(conversationId: string): Promise<ChatBlockResult> {
+    return getApiClient().delete<ChatBlockResult>(
+      `/conversations/${encodeURIComponent(conversationId)}/block`,
+    );
+  },
+
+  /** Lý do báo cáo đang bật (admin cấu hình) — nhãn là dữ liệu, không qua i18n. */
+  reportReasons(): Promise<ChatReportReason[]> {
+    return getApiClient().get<ChatReportReason[]>('/chat/report-reasons');
+  },
+
+  report(conversationId: string, body: ReportConversationInput): Promise<{ id: string }> {
+    return getApiClient().post<{ id: string }>(
+      `/conversations/${encodeURIComponent(conversationId)}/report`,
+      body,
     );
   },
 

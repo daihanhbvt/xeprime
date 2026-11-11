@@ -56,6 +56,8 @@ const api = chatApi as jest.Mocked<typeof chatApi>;
 
 const conversation = (over: Partial<ConversationSummary> & { id: string }): ConversationSummary => ({
   canSend: true,
+  blockedByMe: false,
+  blockedByOther: false,
   vehicleId: null,
   vehicleName: null,
   vehicleImageUrl: null,
