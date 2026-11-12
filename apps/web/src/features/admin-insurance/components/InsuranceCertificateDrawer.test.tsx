@@ -76,7 +76,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('InsuranceCertificateDrawer — nút theo trạng thái', () => {
+describe('InsuranceCertificateDrawer - nút theo trạng thái', () => {
   it('hợp đồng LỖI ⇒ có cả Thử phát hành lại và Thu hồi; bấm thử lại gọi đúng hợp đồng', () => {
     state.detail.data = policy(INSURANCE_POLICY_STATUS.FAILED);
     renderDrawer();

@@ -94,7 +94,7 @@ export class PlatformBookingsService {
       ...(query.status ? { status: query.status } : {}),
       // Tra theo SĐT là khớp CHÍNH XÁC: nhân viên hỗ trợ có sẵn số khách đọc cho, và khớp
       // chính xác thì không lộ được danh sách khách bằng cách dò tiền tố. `customer_phone` lưu
-      // THÔ như shop gõ nên phải so cả `09…` lẫn `84…` (common/phone).
+      // cũ có thể còn dạng thô — so mọi biến thể (common/phone).
       ...(phone ? { customerPhone: { in: phoneLookupVariants(phone) } } : {}),
       ...(range ? { [dateField]: range } : {}),
       ...(q

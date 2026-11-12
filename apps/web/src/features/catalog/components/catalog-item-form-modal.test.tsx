@@ -78,7 +78,7 @@ describe('localizeCatalog', () => {
   });
 });
 
-describe('CatalogItemFormModal — bản tiếng Anh', () => {
+describe('CatalogItemFormModal - bản tiếng Anh', () => {
   function renderForm(item: CatalogItemAdmin | null) {
     return renderWithIntl(
       <App>

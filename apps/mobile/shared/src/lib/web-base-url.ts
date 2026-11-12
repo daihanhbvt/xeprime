@@ -33,7 +33,7 @@ export function resolveWebBaseUrl(): string {
    */
   const fallback = `http://${devServerHost()}:${DEFAULT_WEB_PORT}`;
   logger.warn(
-    `EXPO_PUBLIC_WEB_URL chưa có trong bundle — lùi về ${fallback}. Khai nó trong apps/mobile/.env rồi KHỞI ĐỘNG LẠI Metro (biến EXPO_PUBLIC_* nhúng lúc bundle, không đọc lúc chạy).`,
+    `EXPO_PUBLIC_WEB_URL chưa có trong bundle - lùi về ${fallback}. Khai nó trong apps/mobile/.env rồi KHỞI ĐỘNG LẠI Metro (biến EXPO_PUBLIC_* nhúng lúc bundle, không đọc lúc chạy).`,
     { configured: configured ?? null },
   );
   return fallback;

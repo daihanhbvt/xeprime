@@ -60,7 +60,7 @@
           "heading": "3. Your account and its security",
           "body": "You are responsible for the accuracy of your registration details and for everything done through your account.",
           "items": {
-            "accurate": "Give your real name, phone number and email — these are what we use to reach you when something goes wrong mid-trip.",
+            "accurate": "Give your real name, phone number and email - these are what we use to reach you when something goes wrong mid-trip.",
             "secret": "Never share your password or an OTP with anyone, including people claiming to be XePrime staff.",
             "report": "If you suspect your account has been accessed by someone else, change your password and tell us immediately.",
             "oneAccount": "One phone number belongs to one account; we may refuse an action if one person uses several accounts to get around a limit."
@@ -70,10 +70,10 @@
           "heading": "4. How a booking is made",
           "body": "A trip goes through four steps, and none of them takes your money before the owner agrees. All times are shown in Vietnam time.",
           "items": {
-            "request": "You send a rental request with your time window and where you want the vehicle. This charges nothing and holds nothing — the vehicle stays open to other renters.",
+            "request": "You send a rental request with your time window and where you want the vehicle. This charges nothing and holds nothing - the vehicle stays open to other renters.",
             "decision": "The shop accepts or declines. Vehicles with instant booking are accepted automatically. Only an acceptance holds the calendar and fixes the price.",
-            "holdPayment": "You transfer the holding amount within the payment window, which runs from the moment the shop accepts and never past the pick-up time. It is 30% of the time between the shop's acceptance and pick-up (at least 15 minutes, at most 120 minutes) — see the Cancellation and Refund Policy. We remind you before it closes. When it closes, it closes; there is no extension.",
-            "bookingCreated": "The booking itself is created only once reconciliation confirms the holding amount arrived in full — not when you press a button or scan a code.",
+            "holdPayment": "You transfer the holding amount within the payment window, which runs from the moment the shop accepts and never past the pick-up time. It is 30% of the time between the shop's acceptance and pick-up (at least 15 minutes, at most 120 minutes) - see the Cancellation and Refund Policy. We remind you before it closes. When it closes, it closes; there is no extension.",
+            "bookingCreated": "The booking itself is created only once reconciliation confirms the holding amount arrived in full - not when you press a button or scan a code.",
             "slotLost": "If the time window has gone to another renter, the remaining requests for it are closed and you are told. This is not the shop declining you."
           }
         },
@@ -83,7 +83,7 @@
           "items": {
             "online": "The up-front amount is transferred to the account XePrime shows on the payment screen of that booking. Do not transfer to any other account.",
             "atHandover": "The rest of the rental is paid directly to the owner when you collect the vehicle. XePrime does not collect it on their behalf.",
-            "deposit": "A security deposit at pick-up, where the shop asks for one, is a separate amount handed over between the two of you and returned at drop-off — it is not the holding amount you transferred earlier.",
+            "deposit": "A security deposit at pick-up, where the shop asks for one, is a separate amount handed over between the two of you and returned at drop-off - it is not the holding amount you transferred earlier.",
             "frozen": "Every figure and policy that applies to a booking is recorded when the booking is created. Later changes are never applied backwards to it."
           }
         },
@@ -94,7 +94,7 @@
             "rightToRent": "List only vehicles you own or are lawfully entitled to rent out.",
             "truthful": "Describe the model year, condition, price and rental terms accurately; photos must be of that actual vehicle.",
             "calendar": "Keep the vehicle calendar true to reality so renters do not request windows you cannot honour.",
-            "respond": "Respond to requests within a reasonable time. Your response rate and speed are measured and shown publicly — see the Marketplace Operating Rules.",
+            "respond": "Respond to requests within a reasonable time. Your response rate and speed are measured and shown publicly - see the Marketplace Operating Rules.",
             "handover": "Hand over the vehicle as described, and complete a handover record with condition photos at both ends of the trip."
           }
         },
@@ -110,8 +110,8 @@
         },
         "fees": {
           "heading": "8. XePrime fees",
-          "body": "XePrime charges in two ways: a per-trip service fee for owners without a subscription, and a subscription priced by VEHICLE COUNT and term for shops. This is what XePrime earns to run the marketplace, provide support and fight fraud — it is not tax and it is not insurance. Rates, terms and effective dates are published before you confirm; the amounts on a booking already created are never recalculated when the policy changes afterwards.",
-          "bodyInApp": "XePrime charges service fees according to the published fee schedule for each way owners and shops take part. This is what XePrime earns to run the marketplace, provide support and fight fraud — it is not tax and it is not insurance. Rates and effective dates are published before you confirm; the amounts on a booking already created are never recalculated when the policy changes afterwards."
+          "body": "XePrime charges in two ways: a per-trip service fee for owners without a subscription, and a subscription priced by VEHICLE COUNT and term for shops. This is what XePrime earns to run the marketplace, provide support and fight fraud - it is not tax and it is not insurance. Rates, terms and effective dates are published before you confirm; the amounts on a booking already created are never recalculated when the policy changes afterwards.",
+          "bodyInApp": "XePrime charges service fees according to the published fee schedule for each way owners and shops take part. This is what XePrime earns to run the marketplace, provide support and fight fraud - it is not tax and it is not insurance. Rates and effective dates are published before you confirm; the amounts on a booking already created are never recalculated when the policy changes afterwards."
         },
         "tax": {
           "heading": "9. Tax obligations",
@@ -170,7 +170,7 @@
             "support": "Communication between the two sides, support and dispute handling.",
             "safety": "Detecting fraud and protecting other users.",
             "improve": "Measuring usage in order to improve the product.",
-            "marketing": "Sending marketing — only with your consent, and you can unsubscribe at any time."
+            "marketing": "Sending marketing - only with your consent, and you can unsubscribe at any time."
           }
         },
         "sharing": {
@@ -268,7 +268,7 @@
         },
         "metrics": {
           "heading": "7. Shop reputation metrics",
-          "body": "The marketplace measures and publicly shows three metrics for every shop: request response rate, response time, and the rate of trips accepted and kept. They are calculated over the last 90 days and shown only once there are at least 5 qualifying cases — below that we leave them blank rather than display a figure with no statistical meaning. Cases where the shop had no opportunity to decide — the window had already gone to another renter, or the renter withdrew before the shop replied — are not counted."
+          "body": "The marketplace measures and publicly shows three metrics for every shop: request response rate, response time, and the rate of trips accepted and kept. They are calculated over the last 90 days and shown only once there are at least 5 qualifying cases - below that we leave them blank rather than display a figure with no statistical meaning. Cases where the shop had no opportunity to decide - the window had already gone to another renter, or the renter withdrew before the shop replied - are not counted."
         },
         "fees": {
           "heading": "8. Marketplace fees",
@@ -312,8 +312,8 @@
           "heading": "3. The payment and free-cancellation windows",
           "body": "Once the shop accepts, you get a window to transfer the holding amount. When the full holding amount arrives, the trip becomes a booking and only then does the free-cancellation window start. Both windows scale with the time left until pick-up and never run past pick-up. Current terms:",
           "items": {
-            "payment": "The payment window is 30% of the time between the shop's acceptance and pick-up, at least 15 minutes and at most 120 minutes — with pick-up about 7 hours or more away you get the full 120 minutes.",
-            "cancel": "Free cancellation starts when your payment succeeds and lasts 20% of the time from then until pick-up, at least 15 minutes and at most 2 hours — paying 10 hours or more before pick-up gives you the full 2 hours. The closer to pick-up you pay, the shorter the free-cancellation window.",
+            "payment": "The payment window is 30% of the time between the shop's acceptance and pick-up, at least 15 minutes and at most 120 minutes - with pick-up about 7 hours or more away you get the full 120 minutes.",
+            "cancel": "Free cancellation starts when your payment succeeds and lasts 20% of the time from then until pick-up, at least 15 minutes and at most 2 hours - paying 10 hours or more before pick-up gives you the full 2 hours. The closer to pick-up you pay, the shorter the free-cancellation window.",
             "tooShort": "Neither deadline ever runs past pick-up. If too little time is left to pay (under 15 minutes), the trip cannot be held through XePrime.",
             "expiry": "We remind you before the payment window closes. If the full amount has not arrived by then, the request is cancelled automatically: the slot is released to other renters and the trip does not go ahead; anything you already transferred is refunded in full to your Points wallet. The payment window cannot be extended."
           }
@@ -327,18 +327,18 @@
           "body": "Cancelling after the free-cancellation deadline, or cancelling after paying for a trip that has no free-cancellation window, works as follows. The cancellation dialog always shows what will and will not be refunded before you confirm.",
           "items": {
             "insurance": "Any insurance you chose is refunded 100% to your Points wallet, because the policy is only issued at pick-up.",
-            "split": "The whole holding amount except the insurance — the booking fee and the rent paid in advance — is not refunded: the owner is compensated for holding the car for you, and the remainder goes to XePrime.",
+            "split": "The whole holding amount except the insurance - the booking fee and the rent paid in advance - is not refunded: the owner is compensated for holding the car for you, and the remainder goes to XePrime.",
             "noShow": "Not turning up without notice is treated as cancelling after the free-cancellation deadline.",
             "direct": "The part payable directly to the owner at pick-up has not been paid yet, so there is nothing to refund there."
           }
         },
         "ownerCancel": {
           "heading": "6. When the owner cancels",
-          "body": "What an owner may do depends on the stage, and the later the stage the heavier the consequence for the renter — so the rules tighten accordingly.",
+          "body": "What an owner may do depends on the stage, and the later the stage the heavier the consequence for the renter - so the rules tighten accordingly.",
           "items": {
             "beforeDecision": "Not yet decided: the shop may DECLINE the request. Nobody loses money, because none has moved.",
             "beforePayment": "Accepted but not yet paid in full: the shop may cancel the trip. The calendar is released and anything you already transferred is refunded in full to your Points wallet.",
-            "afterBooking": "Already a booking: if the shop cancels, you are refunded 100% of what you transferred to your Points wallet — even after the free-cancellation deadline — and the cancellation is recorded against the shop's reputation metrics.",
+            "afterBooking": "Already a booking: if the shop cancels, you are refunded 100% of what you transferred to your Points wallet - even after the free-cancellation deadline - and the cancellation is recorded against the shop's reputation metrics.",
             "duringTrip": "Trip in progress: it cannot be cancelled. The vehicle is out on the road with the renter, so ending early has to go through the return handover and settlement."
           }
         },
@@ -348,7 +348,7 @@
         },
         "refund": {
           "heading": "8. How refunds are made",
-          "body": "What is refunded is the amount you transferred to XePrime, credited straight to the Points wallet of the account that booked the trip (1 point = 1 VND, never expires); you can withdraw your Points wallet to a bank account at any time. The part paid directly to the owner at pick-up, and any security deposit, are handed over between the two of you and so are settled between the two of you. If you used a XePrime promo code, the refund does not include the value of that code — it is a platform-funded discount, not money you paid."
+          "body": "What is refunded is the amount you transferred to XePrime, credited straight to the Points wallet of the account that booked the trip (1 point = 1 VND, never expires); you can withdraw your Points wallet to a bank account at any time. The part paid directly to the owner at pick-up, and any security deposit, are handed over between the two of you and so are settled between the two of you. If you used a XePrime promo code, the refund does not include the value of that code - it is a platform-funded discount, not money you paid."
         },
         "dispute": {
           "heading": "9. When the two of you disagree",
@@ -362,7 +362,7 @@
       "sections": {
         "basis": {
           "heading": "1. Legal basis",
-          "body": "XePrime withholds tax from owners because the law requires it — it is not a XePrime fee. The regulations in force:",
+          "body": "XePrime withholds tax from owners because the law requires it - it is not a XePrime fee. The regulations in force:",
           "items": {
             "nd117": "Decree 117/2025/ND-CP (effective 1 July 2025): digital platforms with a payment function must withhold, declare and pay value-added tax (VAT) and personal income tax (PIT) on behalf of households and individuals doing business on the platform.",
             "nd68": "Decree 68/2026/ND-CP (effective 5 March 2026): platforms with ordering and payment functions continue to withhold, declare and pay on behalf of sellers per transaction; PIT paid on your behalf is credited when you finalise your taxes.",
@@ -375,7 +375,7 @@
           "items": {
             "individual": "Individual: withheld.",
             "household": "Household business: withheld.",
-            "company": "Company verified by XePrime: not withheld — a company issues its own invoices and declares its own taxes.",
+            "company": "Company verified by XePrime: not withheld - a company issues its own invoices and declares its own taxes.",
             "noProfile": "No seller profile yet, or a company profile not yet verified: treated as an individual and withheld. Missing information does not remove the tax obligation.",
             "track": "Being on a subscription plan or not does not decide withholding: a shop that buys a plan but is a household business is still withheld."
           },
@@ -387,9 +387,9 @@
           "heading": "3. Rates",
           "body": "The rate depends on the trip's service type and is made of two taxes computed separately. Current rates:",
           "items": {
-            "selfDrive": "Self-drive rental: 7% — VAT 5% + PIT 2%.",
-            "longTerm": "Long-term rental: 7% — VAT 5% + PIT 2%.",
-            "withDriver": "Rental with driver: 4.5% — VAT 3% + PIT 1.5%.",
+            "selfDrive": "Self-drive rental: 7% - VAT 5% + PIT 2%.",
+            "longTerm": "Long-term rental: 7% - VAT 5% + PIT 2%.",
+            "withDriver": "Rental with driver: 4.5% - VAT 3% + PIT 1.5%.",
             "snapshot": "The rate of a trip is locked in when you accept it. If the rates change later, trips already locked in keep the old rate."
           }
         },

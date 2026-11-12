@@ -229,7 +229,9 @@ function HoldPaymentCard({
         <InfoHint content={tHold('vsDepositHint')} label={tHold('vsDepositHintLabel')} />
       </div>
 
-      <p className={styles.amount}>{amount}</p>
+      <p className={styles.amount}>
+        {amount}
+      </p>
       <Countdown
         deadline={hold.expiresAt}
         urgentMs={HOLD_COUNTDOWN_URGENT_MINUTES * 60_000}

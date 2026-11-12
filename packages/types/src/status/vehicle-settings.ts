@@ -148,26 +148,18 @@ export function vehicleImageTypeOf(value: string | null | undefined): VehicleIma
 /** Trần số ảnh thư viện — khớp `vehicleFormSchema.images.max(20)` và DTO backend. */
 export const VEHICLE_GALLERY_MAX_IMAGES = 20;
 
-// ── Khung giờ giao nhận + thời gian chết ─────────────────────────────────────
+// ── Thời gian chết (+ khung giờ giao nhận ĐÃ GỠ — ADR 0078) ─────────────────
+//
+// Xe nhận và trả mọi giờ. Phần khung giờ còn lại dưới đây chỉ để app Partner bản cũ biên dịch và
+// để DTO nhận-rồi-bỏ-qua payload của nó; không màn hình mới nào được dùng.
 
-export const HANDOVER_WINDOW_KIND = {
-  PICKUP: 'pickup',
-  RETURN: 'return',
-} as const;
-
-export type HandoverWindowKind = (typeof HANDOVER_WINDOW_KIND)[keyof typeof HANDOVER_WINDOW_KIND];
-export const HANDOVER_WINDOW_KIND_VALUES = Object.values(
-  HANDOVER_WINDOW_KIND,
-) as HandoverWindowKind[];
-
-/** Số mốc tối đa mỗi loại (giao / nhận) — đủ cho sáng-chiều-tối, chặn payload phình. */
+/** @deprecated ADR 0078 — khung giờ giao nhận đã gỡ. */
 export const HANDOVER_WINDOW_MAX_PER_KIND = 4;
 
-/** Mốc là số PHÚT kể từ 00:00 giờ Việt Nam; `end` lớn nhất là 1440 (= 24:00, kết thúc ngày). */
-export const HANDOVER_WINDOW_MIN_MINUTE = 0;
+/** @deprecated ADR 0078. Mốc PHÚT lớn nhất (= 24:00). */
 export const HANDOVER_WINDOW_MAX_MINUTE = 1440;
 
-/** Một khung giờ trong ngày — `start < end`, không qua nửa đêm trong cùng một dòng. */
+/** @deprecated ADR 0078 — snapshot điều kiện thuê cũ vẫn mang mảng này. */
 export interface HandoverWindow {
   /** `HH:mm` giờ Việt Nam. */
   start: string;
@@ -177,7 +169,7 @@ export interface HandoverWindow {
 
 const HHMM = /^([01]\d|2[0-4]):([0-5]\d)$/;
 
-/** `"08:30"` → 510. Trả `null` khi chuỗi không hợp lệ (24:00 = 1440 hợp lệ, 24:01 thì không). */
+/** @deprecated ADR 0078. `"08:30"` → 510; chuỗi sai → `null`. */
 export function handoverTimeToMinute(value: string): number | null {
   const match = HHMM.exec(value);
   if (!match) return null;
@@ -185,40 +177,11 @@ export function handoverTimeToMinute(value: string): number | null {
   return minute > HANDOVER_WINDOW_MAX_MINUTE ? null : minute;
 }
 
-/** 510 → `"08:30"`; 1440 → `"24:00"`. */
+/** @deprecated ADR 0078. 510 → `"08:30"`; 1440 → `"24:00"`. */
 export function minuteToHandoverTime(minute: number): string {
   const h = Math.floor(minute / 60);
   const m = minute % 60;
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-}
-
-/**
- * Phút-trong-ngày (giờ Việt Nam) của một mốc UTC — để đối chiếu với khung giờ giao nhận.
- * Asia/Ho_Chi_Minh cố định UTC+7, không DST.
- */
-export function vnMinuteOfDay(at: Date): number {
-  const shifted = new Date(at.getTime() + 7 * 60 * 60 * 1000);
-  return shifted.getUTCHours() * 60 + shifted.getUTCMinutes();
-}
-
-/**
- * Mốc có nằm trong ít nhất một khung không. KHÔNG có khung nào = không giới hạn (mọi giờ đều
- * nhận) — thiếu cấu hình không được hiểu là "đóng cửa cả ngày".
- *
- * Biên: `[start, end]` — trả xe đúng 22:00 của khung "06:00–22:00" vẫn hợp lệ.
- */
-export function isWithinHandoverWindows(
-  at: Date,
-  windows: readonly HandoverWindow[] | null | undefined,
-): boolean {
-  if (!windows || windows.length === 0) return true;
-  const minute = vnMinuteOfDay(at);
-  return windows.some((w) => {
-    const start = handoverTimeToMinute(w.start);
-    const end = handoverTimeToMinute(w.end);
-    if (start == null || end == null) return false;
-    return minute >= start && minute <= end;
-  });
 }
 
 /** Mức thời gian chết gợi ý (phút); người dùng vẫn nhập giá trị khác trong `[0, MAX]`. */
@@ -260,6 +223,7 @@ export const MIN_RENTAL_MINUTES_RANGE = { min: 60, max: 24 * 60 } as const;
 export const AUTO_ACCEPT_BLOCKER = {
   DISABLED: 'disabled',
   SERVICE_NOT_SUPPORTED: 'service_not_supported',
+  /** @deprecated ADR 0078 — khung giờ đã gỡ, không còn được sinh; giữ để log cũ đọc được. */
   OUTSIDE_HANDOVER_WINDOW: 'outside_handover_window',
   BELOW_MIN_DURATION: 'below_min_duration',
   QUOTE_ESTIMATE: 'quote_estimate',
@@ -276,6 +240,12 @@ export const AUTO_ACCEPT_BLOCKER = {
    * rõ phải sửa gì.
    */
   BILLING_NOT_CONFIGURED: 'billing_not_configured',
+  /**
+   * Chiếc xe còn ở ngoài với một chuyến `active` ĐÃ QUÁ GIỜ TRẢ (05/11/2026). Lịch bận chỉ chặn tới
+   * giờ trả gốc, nên lịch nói xe rảnh trong khi chìa khoá chưa về — tự nhận lúc đó là hứa một chiếc
+   * xe không có. Yêu cầu ở lại chờ duyệt tay; hộp duyệt hiện cảnh báo.
+   */
+  VEHICLE_STILL_OUT: 'vehicle_still_out',
 } as const;
 
 export type AutoAcceptBlocker = (typeof AUTO_ACCEPT_BLOCKER)[keyof typeof AUTO_ACCEPT_BLOCKER];

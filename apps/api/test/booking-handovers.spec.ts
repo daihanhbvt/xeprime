@@ -1,4 +1,4 @@
-import { createPrismaClient, newId } from '@xeprime/prisma';
+import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
@@ -17,7 +17,11 @@ import {
   MEMBERSHIP_STATUS,
   OCCUPANCY_SOURCE_TYPE,
   ODOMETER_SOURCE,
+  PAYMENT_KIND,
+  PAYMENT_METHOD,
   PERMISSION,
+  SURCHARGE_CATEGORY,
+  SURCHARGE_CATEGORY_LABEL,
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_TYPE,
@@ -39,6 +43,7 @@ import type { PrismaService } from '../src/prisma/prisma.service';
 import {
   makeBookingsService,
   makeCustomersService,
+  makeHandoverMoneyServices,
   makeNotificationService,
   makeVehiclesService,
   vehicleCreator,
@@ -89,7 +94,6 @@ const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Serv
 const odometer = new OdometerService(asService, audit);
 const maintenance = new MaintenanceService(
   asService,
-  occupancy,
   odometer,
   files,
   audit,
@@ -101,7 +105,17 @@ const bookings = makeBookingsService(asService, {
   notifications: notifications,
   customers: makeCustomersService(asService, audit),
 });
-const handovers = new HandoversService(asService, bookings, odometer, maintenance, files, audit);
+const [settlement, paymentWriter] = makeHandoverMoneyServices(asService, audit);
+const handovers = new HandoversService(
+  asService,
+  bookings,
+  odometer,
+  maintenance,
+  files,
+  audit,
+  settlement,
+  paymentWriter,
+);
 
 /** Chủ gian hàng (mở được ảnh) vs nhân viên vận hành (làm bàn giao, không mở kho ảnh). */
 const FULL_SCOPE = { canViewFiles: true };
@@ -185,6 +199,9 @@ beforeAll(async () => {
 afterAll(async () => {
   if (dbAvailable) {
     for (const id of [tenantId, otherTenantId]) {
+      // Phiếu thu tự ghi lúc nhận lại xe (06/11/2026) — `payments.booking_id` là SET NULL.
+      await prisma.payment.deleteMany({ where: { tenantId: id } });
+      await prisma.receipt.deleteMany({ where: { tenantId: id } });
       await prisma.booking.deleteMany({ where: { tenantId: id } });
       await prisma.vehicle.deleteMany({ where: { tenantId: id } });
       await prisma.auditLog.deleteMany({ where: { tenantId: id } });
@@ -875,6 +892,185 @@ describe('Xác nhận trả xe', () => {
       await prisma.tenantProfile.update({ where: { tenantId }, data: { settings: {} } });
       const clean = await handovers.context(tenantId, booking.id, FULL_SCOPE);
       expect(clean.suspiciousKmPerDay).toBeNull();
+    },
+  );
+});
+
+// ── Nhận lại xe kèm tiền (06/11/2026) ───────────────────────────────────────
+
+/**
+ * Hộp "Xác nhận đã nhận lại xe": phụ phí gõ trong hộp + ô "Đã thu tiền" (mặc định bật) ghi CÙNG
+ * transaction với biên bản trả xe. Số thu là số hộp HIỂN THỊ — server tính lại, lệch là 409.
+ */
+describe('Nhận lại xe kèm phụ phí và thu tiền', () => {
+  const MONEY = { canRecordPayment: true };
+
+  /** Đơn 2.000.000đ đã giao xe, khách đã đưa 1.500.000đ tiền thuê + 500.000đ cọc. */
+  async function activeBookingWithPayments() {
+    const vehicle = await createVehicle();
+    const booking = await createBooking(vehicle.id);
+    await completePickup(booking.id, 30_000);
+    const row = await prisma.booking.findUniqueOrThrow({
+      where: { id: booking.id },
+      select: { id: true, code: true, vehicleId: true, tenantCustomerId: true },
+    });
+    for (const [kind, amount] of [
+      [PAYMENT_KIND.RENTAL, 1_500_000],
+      [PAYMENT_KIND.DEPOSIT, 500_000],
+    ] as const) {
+      await prisma.$transaction((tx) =>
+        paymentWriter.recordWithinTx(tx, {
+          tenantId,
+          userId: ownerId,
+          booking: row,
+          amount: new Prisma.Decimal(amount),
+          method: PAYMENT_METHOD.CASH,
+          kind,
+          paidAt: new Date(),
+        }),
+      );
+    }
+    return booking;
+  }
+
+  maybe(
+    'phụ phí + phiếu thu ghi cùng lượt xác nhận: hết nợ, phiếu đúng số, lý do mặc định là tên loại',
+    async () => {
+      const booking = await activeBookingWithPayments();
+      const surcharges = [{ category: SURCHARGE_CATEGORY.DAMAGE, amount: '800000' }];
+
+      // Xem trước: 2.000.000 + 800.000 − (1.500.000 + 500.000 cọc gánh phụ phí) = 800.000.
+      const preview = await settlement.previewReturn(tenantId, booking.id, { surcharges });
+      expect(preview).toMatchObject({
+        depositReceived: '500000.00',
+        surchargeTotal: '800000.00',
+        proposedRefund: '0.00',
+        additionalDue: '300000.00',
+        collectableAmount: '800000.00',
+      });
+
+      const occurredAt = new Date(Date.now() - 5 * 60_000);
+      const after = await handovers.confirm(
+        tenantId,
+        booking.id,
+        HANDOVER_TYPE.RETURN,
+        ownerId,
+        {
+          occurredAt: occurredAt.toISOString(),
+          surcharges,
+          collectPayment: {
+            amount: preview.collectableAmount,
+            method: PAYMENT_METHOD.BANK_TRANSFER,
+          },
+        },
+        FULL_SCOPE,
+        MONEY,
+      );
+      expect(after.bookingStatus).toBe(BOOKING_STATUS.COMPLETED);
+
+      const rows = await prisma.bookingSurcharge.findMany({ where: { bookingId: booking.id } });
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.reason).toBe(SURCHARGE_CATEGORY_LABEL[SURCHARGE_CATEGORY.DAMAGE]);
+
+      const collected = await prisma.payment.findMany({
+        where: { bookingId: booking.id, method: PAYMENT_METHOD.BANK_TRANSFER },
+      });
+      expect(collected).toHaveLength(1);
+      expect(collected[0]?.amount.toFixed(0)).toBe('800000');
+      expect(collected[0]?.kind).toBe(PAYMENT_KIND.RENTAL);
+      expect(collected[0]?.paidAt?.toISOString()).toBe(occurredAt.toISOString());
+
+      const detail = await bookings.getOne(tenantId, booking.id);
+      expect(detail.debtAmount).toBe('0');
+
+      const audits = await prisma.auditLog.findMany({
+        where: { tenantId, targetId: booking.id, action: 'payment.record' },
+      });
+      expect(
+        audits.some((a) => (a.afterJson as { via?: string } | null)?.via === 'return_confirm'),
+      ).toBe(true);
+    },
+  );
+
+  maybe(
+    'số thu lệch số server tính ⇒ 409, KHÔNG ghi gì: biên bản, phụ phí, phiếu đều rollback',
+    async () => {
+      const booking = await activeBookingWithPayments();
+
+      await expect(
+        handovers.confirm(
+          tenantId,
+          booking.id,
+          HANDOVER_TYPE.RETURN,
+          ownerId,
+          {
+            surcharges: [{ category: SURCHARGE_CATEGORY.CLEANING, amount: '100000' }],
+            // Số hộp tự cộng: 500.000 tiền thuê + 100.000 vệ sinh. Sai — 100.000 nằm trong 500.000
+            // cọc (cọc gánh), nên khách vẫn chỉ còn nợ 500.000. Ghi 600.000 là thu thừa của khách.
+            collectPayment: { amount: '600000', method: PAYMENT_METHOD.CASH },
+          },
+          FULL_SCOPE,
+          MONEY,
+        ),
+      ).rejects.toMatchObject({
+        response: {
+          code: API_ERROR_CODE.HANDOVER_COLLECT_AMOUNT_CHANGED,
+          details: { collectableAmount: '500000.00' },
+        },
+      });
+
+      const booked = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
+      expect(booked.status).toBe(BOOKING_STATUS.ACTIVE);
+      expect(await prisma.bookingSurcharge.count({ where: { bookingId: booking.id } })).toBe(0);
+      expect(
+        await prisma.vehicleHandover.count({
+          where: {
+            bookingId: booking.id,
+            type: HANDOVER_TYPE.RETURN,
+            status: HANDOVER_STATUS.CONFIRMED,
+          },
+        }),
+      ).toBe(0);
+    },
+  );
+
+  maybe(
+    'thiếu payments.record ⇒ 403; phụ phí ở chiều GIAO ⇒ 400 — trước khi dựng biên bản nào',
+    async () => {
+      const vehicle = await createVehicle();
+      const booking = await createBooking(vehicle.id);
+
+      await expect(
+        handovers.confirm(
+          tenantId,
+          booking.id,
+          HANDOVER_TYPE.PICKUP,
+          ownerId,
+          { surcharges: [{ category: SURCHARGE_CATEGORY.CLEANING, amount: '100000' }] },
+          FULL_SCOPE,
+          MONEY,
+        ),
+      ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
+      expect(await prisma.vehicleHandover.count({ where: { bookingId: booking.id } })).toBe(0);
+
+      await completePickup(booking.id, 30_000);
+      await expect(
+        handovers.confirm(
+          tenantId,
+          booking.id,
+          HANDOVER_TYPE.RETURN,
+          ownerId,
+          { collectPayment: { amount: '2000000', method: PAYMENT_METHOD.CASH } },
+          FULL_SCOPE,
+          // Mặc định: người gọi KHÔNG có quyền ghi thu.
+        ),
+      ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.FORBIDDEN } });
+      expect(
+        await prisma.vehicleHandover.count({
+          where: { bookingId: booking.id, type: HANDOVER_TYPE.RETURN },
+        }),
+      ).toBe(0);
+      expect(await prisma.payment.count({ where: { bookingId: booking.id } })).toBe(0);
     },
   );
 });

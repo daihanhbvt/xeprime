@@ -59,12 +59,12 @@ const DARK_TOKENS: Partial<Record<XpTokenName, string>> = {
   'color-success-border': 'rgba(108, 233, 166, 0.45)',
   'color-warning-subtle': 'rgba(247, 144, 9, 0.1)',
   'color-text': '#ffffff',
-  'color-text-secondary': '#d5d7da',
-  'color-text-tertiary': '#a4a7ae',
-  'color-text-placeholder': '#717680',
+  'color-text-secondary': '#fafafa',
+  'color-text-tertiary': '#e9eaeb',
+  'color-text-placeholder': '#a4a7ae',
   'color-text-disabled': 'rgba(255, 255, 255, 0.25)',
   'color-text-inverse': '#0e0f12',
-  'color-border': '#333741',
+  'color-border': '#414651',
   'color-border-strong': '#414651',
   'color-border-subtle': '#1f242f',
 };
@@ -82,7 +82,7 @@ function resolve(name: XpTokenName, scheme: ColorScheme = 'light'): string {
     if (!alias) {
       if (CSS_FUNCTION.test(value)) {
         throw new Error(
-          `Token '${name}' là hàm CSS ('${value}') — React Native không hiểu. Dùng token khác hoặc thêm giá trị native tương ứng.`,
+          `Token '${name}' là hàm CSS ('${value}') - React Native không hiểu. Dùng token khác hoặc thêm giá trị native tương ứng.`,
         );
       }
       return value;
@@ -156,6 +156,8 @@ function buildColors(scheme: ColorScheme) {
     primaryHover: r('color-primary-hover'),
     primaryActive: r('color-primary-active'),
     primaryLight: r('color-primary-light'),
+    /** `--xp-color-primary-bright` #edbb4f - viền chip "Điều kiện đang chọn" (Figma 19707:80634). */
+    primaryBright: r('color-primary-bright'),
     /** Nền gold nhạt nhất (ô avatar, mảng nền) — v2 BG/primary-25. */
     primarySubtle: r('color-primary-subtle'),
     /** Chữ gold đậm trên nền nhạt (chữ cái avatar). */
@@ -166,6 +168,20 @@ function buildColors(scheme: ColorScheme) {
     primaryGlow: r('color-primary-glow'),
     /** `--xp-color-primary-border` — viền vàng nhạt của thẻ hoá đơn chuyến (luồng đặt xe v2). */
     primaryBorder: r('color-primary-border'),
+    /**
+     * Chữ/biểu tượng NHẤN thương hiệu (link, tab đang chọn, số tiền nhấn). Sáng: gold đậm `primary-active`
+     * cho đủ tương phản trên nền trắng; tối: gold chính `primary` — gold đậm trên
+     * nền tối thành màu bùn (Figma "Homepage - Dark Mode" 19879:66136).
+     */
+    accentText: scheme === 'dark' ? r('color-primary') : r('color-primary-active'),
+    /** Như `accentText`, bản sáng là `primary-strong` (chữ avatar, nhãn trên nền gold nhạt). */
+    accentStrongText: scheme === 'dark' ? r('color-primary') : r('color-primary-strong'),
+    /** Tên gian hàng: sáng `primary-hover`, tối vàng chuẩn `primary` (người dùng chốt 04/11/2026). */
+    shopName: scheme === 'dark' ? r('color-primary') : r('color-primary-hover'),
+    /** Chữ mô tả/thân bài: sáng `text-secondary` (= textMuted), tối `text-on-dark-muted` #d5d7da. */
+    /** Chữ gold nhấn mức vừa (link, số tiền, tab đang chọn): sáng `primary-hover`, tối `primary`. */
+    brandText: scheme === 'dark' ? r('color-primary') : r('color-primary-hover'),
+    textBody: scheme === 'dark' ? r('color-text-on-dark-muted') : r('color-text-secondary'),
     surfaceElevated: r('color-bg-elevated'),
     surfaceSelected: r('color-bg-selected'),
     /** Lớp phủ sau modal/sheet. */
@@ -185,6 +201,8 @@ function buildColors(scheme: ColorScheme) {
     infoSurface: r('color-info-bg'),
     /** `--xp-color-info-strong` — chữ/biểu tượng xanh đậm trên nền `infoSurface` (ghi chú đăng nhập). */
     infoStrong: cssOnly.infoStrong,
+    /** `--xp-color-pink` — chữ/icon viên "Đặt ngay" trên thẻ xe (Figma `22185:87230`). */
+    pink: r('color-pink'),
     /** `--xp-color-success-border` — viền viên nhãn xanh (đã xác minh). */
     successBorder: r('color-success-border'),
     /** `--xp-color-warning-border` / `--xp-color-warning-strong` — viên nhãn cam (chưa xác minh). */
@@ -303,7 +321,7 @@ export const market = {
    */
   photoScrim: 'rgba(0, 0, 0, 0.55)',
   /** Sao đánh giá — MỘT màu cho mọi chỗ rate sao của app (web `/home/star-*.svg`, người dùng chốt 27/10/2026). */
-  star: '#FEC84B',
+  star: XP_TOKENS['color-star'],
 } as const;
 
 /** Một gradient CSS `linear-gradient(<deg>, <màu> <vị trí>%, …)` dịch sang `expo-linear-gradient`. */
@@ -355,6 +373,8 @@ export const radius = {
   control: px('border-radius-control'),
   /** `--xp-border-radius-card` (16) — thẻ/khung lớn v2. */
   card: px('border-radius-card'),
+  /** `--xp-border-radius-banner` (20) — banner khuyến mãi trang chủ. */
+  banner: px('border-radius-banner'),
   pill: px('border-radius-pill'),
 } as const;
 

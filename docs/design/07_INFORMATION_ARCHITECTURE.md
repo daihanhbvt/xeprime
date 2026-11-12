@@ -1,6 +1,6 @@
 # 07 — Information Architecture
 
-> Cập nhật: 06/10/2026
+> Cập nhật: 02/11/2026 (menu site partner chuyển sang menu ngang — §3.2–3.3)
 > Trạng thái: **Canonical — cấu trúc trải nghiệm, vai trò và lối vào**
 > Nguồn quyết định: [ADR 0051](../decisions/0051-product-surfaces-web-zones-and-mobile-variants.md) (bề mặt) ·
 > [ADR 0053](../decisions/0053-separate-account-realms.md) (không gian tài khoản) ·
@@ -152,25 +152,33 @@ xeprime.vn "Đăng xe cho thuê" / "Trở thành chủ xe"
 
 ### 3.2 Menu Full Manage — gian hàng tuyến gói
 
+Từ 02/11/2026 site partner dùng **menu NGANG** của design Partner-XePrime (header trên cùng, mỗi khối
+mở một dropdown phẳng). Bản đồ cũ → mới, nơi các tính năng rời menu đã chuyển tới, và việc còn lại
+của đợt chuẩn hoá: [`09_PARTNER_REDESIGN.md`](09_PARTNER_REDESIGN.md).
+
 | Khối | Mục | Route |
 | --- | --- | --- |
-| Tổng quan (luôn hiện) | Tổng quan | `/` |
-| Vận hành | Xe của tôi → Danh sách xe · Bảo dưỡng | `/vehicles`, `/maintenance` |
-| | Lịch | `/calendar` |
-| | Đơn thuê → Yêu cầu đặt xe · Chờ giao xe · Tất cả đơn thuê | `/booking-requests`, `/bookings/awaiting-pickup`, `/bookings` |
-| | Khách hàng | `/customers` |
-| Kinh doanh | Tin nhắn | `/chat` |
-| | Tài chính → Số dư & rút tiền (chỉ `shop_owner`) · Doanh thu · Thu chi · Công nợ | `/balance`, `/finance`, `/receipts`, `/debts` |
-| Mặt tiền | Gian hàng — một trang năm section (hiển thị · chủ gian hàng · địa chỉ & pháp lý · tài khoản nhận tiền · gói & hạn mức) | `/shop?section=` |
-| Cấu hình | Chính sách thuê · Chi nhánh · Tài xế · Thành viên | `/shop/policies`, `/shop/branches`, `/drivers`, `/members` |
-| Hỗ trợ (luôn hiện) | Trung tâm hỗ trợ · Hỗ trợ & khiếu nại | `/support`, `/support/cases` |
+| Tổng quan (liên kết thẳng) | Tổng quan | `/` |
+| Vận hành | Lịch thuê xe · Yêu cầu đặt xe · Quản lý đơn thuê xe · Danh sách khách hàng | `/calendar`, `/booking-requests`, `/bookings`, `/customers` |
+| Xe & Tài xế | Danh sách xe · Quản lý tài xế · Bảo dưỡng | `/vehicles`, `/drivers`, `/maintenance` |
+| Doanh thu | Tổng quan doanh thu · Quản lý ví (chỉ `shop_owner`) · Lịch sử giao dịch | `/finance`, `/balance`, `/receipts` |
+| Cấu hình | Thông tin cửa hàng — một trang nhiều section (hiển thị · chủ gian hàng · địa chỉ & pháp lý · khai thuế · chi nhánh · gói & hạn mức) · Chính sách thuê · Nhân viên & Phân quyền | `/shop?section=`, `/shop/policies`, `/members` |
+| Trợ giúp | Trung tâm hỗ trợ · Yêu cầu hỗ trợ | `/support`, `/support/cases` |
 
-Ngoài sidebar: **Tài khoản & bảo mật** của NGƯỜI đăng nhập (tên, ảnh, email/SĐT đăng nhập, mật khẩu,
-xoá tài khoản) ở `/account?section=`, mở từ thẻ người dùng — tách khỏi hồ sơ gian hàng (pháp nhân).
-Đăng xuất ở cùng menu đó.
+Không phải dòng menu nhưng vẫn có lối vào (chi tiết ở `09` §2.1):
+
+- **Chờ giao xe / Đang thuê / Hoàn thành / Đã hủy** — các ngăn ở cột trái của "Quản lý đơn thuê xe"
+  (`/bookings?preset=`, 02/11/2026); `/bookings/awaiting-pickup` chuyển tiếp về ngăn Chờ giao xe.
+- **Công nợ** — tab "Công nợ" của Lịch sử giao dịch (`/receipts?view=debts`, 04/11/2026); `/debts` cũ chuyển tiếp về đó.
+- **Chi nhánh** — section của Thông tin cửa hàng; `/shop/branches` chuyển tiếp.
+- **Tin nhắn** (`/chat`) và **Thông báo** — hai icon ở header.
+
+Góc phải header: icon cài đặt mở **Tài khoản & bảo mật** của NGƯỜI đăng nhập (tên, ảnh, SĐT đăng nhập,
+mật khẩu, xoá tài khoản — `/account?section=`, tách khỏi hồ sơ gian hàng); khối hồ sơ mở menu tài
+khoản (cài đặt gian hàng, ngôn ngữ, đăng xuất).
 
 - "Yêu cầu đặt xe" có ba tab: **Cần xử lý** · **Chờ khách thanh toán** · **Đã đóng** (ADR 0047).
-- Huy hiệu menu chỉ có hai: yêu cầu chờ duyệt và tin chưa đọc.
+- Số trên menu chỉ là việc "cần xử lý": yêu cầu chờ duyệt. Tin chưa đọc nằm trên icon tin nhắn.
 - Lọc chi nhánh nằm trên TỪNG màn và sống trên URL, không có bộ chọn chung ở thanh trên (ADR 0052).
 - Mục gắn năng lực gói (bảo dưỡng, tài chính, công nợ, chi nhánh, tài xế, thành viên): hạ bậc hoặc
   đang ân hạn ⇒ `read_only`; hết ân hạn ⇒ về tuyến hoa hồng, các mục này vắng hẳn. **Ví, hoá đơn,
@@ -179,15 +187,19 @@ xoá tài khoản) ở `/account?section=`, mở từ thẻ người dùng — t
 
 ### 3.3 Menu Owner Lite — chủ xe tuyến hoa hồng
 
+CÙNG header và sáu khối với tuyến gói (02/11/2026); khối không còn dòng nào thì vắng hẳn.
+
 | Khối | Mục | Route |
 | --- | --- | --- |
-| Vận hành (luôn hiện) | Tổng quan · Xe của tôi · Lịch · Yêu cầu đặt xe · Đơn thuê · Tin nhắn | `/`, `/vehicles`, `/calendar`, `/booking-requests`, `/bookings`, `/chat` |
-| Kinh doanh | Số dư & rút tiền · Tài khoản nhận tiền · Thông tin khai thuế · Gói dịch vụ (phễu nâng cấp) | `/balance`, `/bank-accounts`, `/tax`, `/subscription` |
-| Mặt tiền | Hồ sơ chủ xe (tiến trình đăng ký) | `/registration` |
-| Hỗ trợ | Cẩm nang cho thuê xe · Hợp đồng & chứng từ mẫu · Chính sách bảo vệ dữ liệu · Hỗ trợ & khiếu nại | `/host-guide`, `/contracts-documents`, `/data-protection`, `/support/cases` |
+| Tổng quan (liên kết thẳng) | Tổng quan | `/` |
+| Vận hành | Lịch thuê xe · Đơn thuê xe (CÙNG màn với gian hàng, cho chủ lẫn thành viên — 06/11/2026; `/trips` "Chuyến cho thuê" cũ chỉ còn chuyển tiếp) | `/calendar`, `/bookings` |
+| Xe & Tài xế | Danh sách xe · Quản lý tài xế | `/vehicles`, `/drivers` |
+| Doanh thu | Quản lý ví — số dư, rút tiền, tài khoản nhận tiền, thuế đã khấu trừ | `/balance` |
+| Cấu hình | Hồ sơ chủ xe — hồ sơ, trang chủ xe, khai thuế, gói (phễu nâng cấp) | `/account` |
+| Trợ giúp | Cẩm nang cho thuê xe · Hợp đồng & Chứng từ · Chính sách bảo vệ dữ liệu · Yêu cầu hỗ trợ | `/host-guide`, `/contracts-documents`, `/data-protection`, `/support/cases` |
 
-Không có: chi nhánh, nhân viên, tài xế, sổ thu chi, khách hàng — đó là năng lực của gói, server chặn
-bằng `@SubscriptionTrackOnly()`.
+Tin nhắn là icon ở header. Không có: chi nhánh, nhân viên, sổ thu chi, khách hàng, bảo dưỡng — đó là
+năng lực của gói, server chặn bằng `@SubscriptionTrackOnly()`.
 
 Nguyên tắc Owner Lite: chủ xe 1–3 xe phải **hoàn thành được một chuyến từ đầu tới cuối** mà không bị
 ép dùng quy trình đội xe. Biên bản, ảnh tình trạng, odometer, nhiên liệu/pin **không bắt buộc**.

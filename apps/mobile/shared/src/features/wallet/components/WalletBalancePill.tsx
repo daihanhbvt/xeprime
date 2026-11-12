@@ -84,7 +84,7 @@ export function WalletBalancePill() {
           <Text col={colors.textMuted} fos={fontSize.body}>
             {t('pill.prefix')}
           </Text>
-          <Text col={colors.primaryHover} fos={fontSize.body} fow={fontWeight.semibold}>
+          <Text col={colors.brandText} fos={fontSize.body} fow={fontWeight.semibold}>
             {masked ? MASK : fmt.money(summary.data.available)}
           </Text>
           <Ionicons name="chevron-forward" size={12} color={colors.placeholder} />

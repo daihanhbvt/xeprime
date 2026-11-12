@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { ActivityIndicator, RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { YStack } from 'tamagui';
+import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   PERMISSION,
@@ -13,6 +13,7 @@ import {
 import { Screen } from '@/components/layout/Screen';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
+import { Callout } from '@/components/ui/Callout';
 import { IconButton } from '@/components/ui/IconButton';
 import type { CardAction } from '@/components/ui/CardActionBar';
 import { FleetVehicleCardSkeleton } from '@/components/ui/Skeleton';
@@ -40,8 +41,9 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
 import { useColors } from '@/theme/ThemeProvider';
-import { space } from '@/theme/tokens';
+import { fontSize, space } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
+import { AccountTrackNotice } from '@/features/account/components/AccountTrackNotice';
 import { FleetSummaryBar } from './components/FleetSummaryBar';
 import { VehicleCard } from './components/VehicleCard';
 import { useInfiniteVehicles, useVehicleAlerts, useVehicleStats } from './hooks/use-vehicles';
@@ -73,7 +75,18 @@ function vehicleKeyExtractor(vehicle: VehicleListItem): string {
  *
  * Chỉ số và cảnh báo là HAI truy vấn riêng chạy sau danh sách — xem `use-vehicles.ts`.
  */
-export function VehicleListScreen() {
+/**
+ * `shop` = gian hàng tuyến gói (đủ năm ô lọc, chi nhánh, hai lối thêm xe, Xem · Sửa · Lịch).
+ * `owner` = chủ xe tuyến hoa hồng — Owner Lite: lọc dịch vụ + vận hành + sắp xếp, "Thêm xe" mở luồng
+ * đăng xe của chủ xe, "Quản lý xe" mở không gian riêng của xe (`account.*`). Một màn cho hai
+ * tuyến, đúng web `VehiclesListView scope` (Figma Partner 03/11/2026).
+ */
+export type VehicleListScope = 'shop' | 'owner';
+
+export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope } = {}) {
+  const isOwner = scope === 'owner';
+  const tAccount = useTranslations('Account.vehicles');
+  const tPermission = useTranslations('ManageCommon.permission');
   const colors = useColors();
   const t = useTranslations('Vehicles.list');
   const sortLabel = useVehicleSortLabel();
@@ -98,15 +111,15 @@ export function VehicleListScreen() {
   const [adding, setAdding] = useState(false);
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   /* Ô "Chi nhánh" của màn, sống trên tham số route (ADR 0052) — dải chỉ số đi CÙNG chi nhánh. */
-  const { branchId, filter: branchFilter } = useScreenBranchFilter();
+  const { branchId, filter: branchFilter } = useScreenBranchFilter(undefined, !isOwner);
   const branchEmpty = useBranchEmptyCopy(branchFilter, branchId);
 
   const query = useInfiniteVehicles({
-    ...(branchId ? { branchId } : {}),
-    ...(vehicleType === ALL ? {} : { vehicleType }),
+    ...(branchId && !isOwner ? { branchId } : {}),
+    ...(vehicleType === ALL || isOwner ? {} : { vehicleType }),
     ...(serviceType === ALL ? {} : { serviceType }),
     ...(operationStatus === ALL ? {} : { operationStatus }),
-    ...(publicStatus === ALL ? {} : { publicStatus }),
+    ...(publicStatus === ALL || isOwner ? {} : { publicStatus }),
     ...(debouncedSearch.trim() ? { q: debouncedSearch.trim() } : {}),
     sort,
   });
@@ -172,7 +185,8 @@ export function VehicleListScreen() {
       ...values.map((value) => ({ value, label: domainLabel(group, value) })),
     ];
 
-    return [
+    const ownerHidden = new Set(['vehicleType', 'publicStatus']);
+    const list: FilterGroup[] = [
       {
         key: 'vehicleType',
         label: t('filters.vehicleType'),
@@ -209,7 +223,10 @@ export function VehicleListScreen() {
         options: VEHICLE_SORT_VALUES.map((value) => ({ value, label: sortLabel(value) })),
       },
     ];
+    // Tuyến hoa hồng: dịch vụ + vận hành + sắp xếp — như web `VehicleFiltersBar scope="owner"`.
+    return isOwner ? list.filter((group) => !('key' in group) || !ownerHidden.has(group.key)) : list;
   }, [
+    isOwner,
     t,
     tLabels,
     domainLabel,
@@ -223,13 +240,23 @@ export function VehicleListScreen() {
 
   const openVehicle = useCallback(
     (vehicle: VehicleListItem) =>
-      navigateOnce(withBranchReturn(ROUTES.manage.vehicleDetail(vehicle.id), branchId)),
-    [navigateOnce, branchId],
+      navigateOnce(
+        isOwner
+          ? ROUTES.account.vehicleDetail(vehicle.id)
+          : withBranchReturn(ROUTES.manage.vehicleDetail(vehicle.id), branchId),
+      ),
+    [navigateOnce, branchId, isOwner],
   );
 
+  /* Tuyến hoa hồng "Quản lý xe" mở KHÔNG GIAN của xe; gian hàng "Sửa" mở trang sửa xe — như web. */
   const editVehicle = useCallback(
-    (vehicle: VehicleListItem) => navigateOnce(ROUTES.manage.vehicleEdit(vehicle.id)),
-    [navigateOnce],
+    (vehicle: VehicleListItem) =>
+      navigateOnce(
+        isOwner
+          ? ROUTES.account.vehicleManage(vehicle.id)
+          : ROUTES.manage.vehicleEdit(vehicle.id),
+      ),
+    [navigateOnce, isOwner],
   );
 
   /*
@@ -261,16 +288,26 @@ export function VehicleListScreen() {
         icon: 'eye-outline',
         onPress: () => openVehicle(vehicle),
       },
-      ...(canEdit
+      ...(isOwner
         ? [
             {
-              key: 'edit',
-              label: t('actions.edit'),
-              icon: 'create-outline' as const,
+              // Không gác `VEHICLE_UPDATE`: mỗi mục trong không gian quản lý tự kiểm quyền (web).
+              key: 'manage',
+              label: tAccount('manage'),
+              icon: 'construct-outline' as const,
               onPress: () => editVehicle(vehicle),
             },
           ]
-        : []),
+        : canEdit
+          ? [
+              {
+                key: 'edit',
+                label: t('actions.edit'),
+                icon: 'create-outline' as const,
+                onPress: () => editVehicle(vehicle),
+              },
+            ]
+          : []),
       {
         key: 'schedule',
         label: t('actions.schedule'),
@@ -278,7 +315,7 @@ export function VehicleListScreen() {
         onPress: () => openSchedule(vehicle),
       },
     ],
-    [t, canEdit, openVehicle, editVehicle, openSchedule],
+    [t, tAccount, isOwner, canEdit, openVehicle, editVehicle, openSchedule],
   );
 
   /*
@@ -313,10 +350,10 @@ export function VehicleListScreen() {
   );
 
   const filtered =
-    vehicleType !== ALL ||
+    (!isOwner && vehicleType !== ALL) ||
     serviceType !== ALL ||
     operationStatus !== ALL ||
-    publicStatus !== ALL ||
+    (!isOwner && publicStatus !== ALL) ||
     debouncedSearch.trim().length > 0;
 
   // Thiếu quyền là 403 của CHÍNH màn này — hiện trạng thái lỗi của nó, không đá về đăng nhập.
@@ -325,7 +362,17 @@ export function VehicleListScreen() {
       <>
         <ManageHeader />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
-          <ScreenMessage icon="lock-closed-outline" title={t('page.title')} />
+          {isOwner ? (
+            <ScreenMessage
+              icon="lock-closed-outline"
+              title={tPermission('deniedTitle')}
+              description={`${tPermission('deniedBody')}\n${tPermission('requires')} ${PERMISSION.VEHICLE_VIEW}`}
+              actionLabel={tPermission('backHome')}
+              onAction={() => navigateOnce(ROUTES.account.home())}
+            />
+          ) : (
+            <ScreenMessage icon="lock-closed-outline" title={t('page.title')} />
+          )}
         </Screen>
       </>
     );
@@ -355,15 +402,23 @@ export function VehicleListScreen() {
                 icon="add"
                 label={t('page.addVehicle')}
                 tone="primary"
-                onPress={() => setAdding(true)}
+                onPress={() =>
+                  isOwner
+                    ? navigateOnce(
+                        ROUTES.listYourVehicle.register(VEHICLE_REGISTRATION_SOURCE.ACCOUNT),
+                      )
+                    : setAdding(true)
+                }
               />
             ) : null
           }
-          branch={<BranchFilterField filter={branchFilter} value={branchId} />}
+          {...(isOwner
+            ? {}
+            : { branch: <BranchFilterField filter={branchFilter} value={branchId} /> })}
           summary={
             <FleetSummaryBar
               enabled={items.length > 0 || query.isInitialLoading}
-              branchId={branchId}
+              {...(isOwner ? {} : { branchId })}
             />
           }
           searchValue={search}
@@ -446,6 +501,35 @@ export function VehicleListScreen() {
                 data={items}
                 keyExtractor={vehicleKeyExtractor}
                 renderItem={renderItem}
+                /*
+                  Đầu danh sách, cả hai tuyến — như `VehicleCardGrid` web: cảnh báo khi tải cảnh báo/KM
+                  hỏng MỘT PHẦN (kèm thử lại) và dòng "Hiển thị x–y / tổng". Tuyến hoa hồng mở đầu bằng
+                  dải tuyến Owner Lite.
+                */
+                ListHeaderComponent={
+                  <YStack gap={space.sm} pb={space.sm}>
+                    {isOwner ? <AccountTrackNotice /> : null}
+                    {alerts.isError ? (
+                      <Callout tone="warning" title={t('grid.alertsErrorTitle')}>
+                        <YStack gap={space.sm}>
+                          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                            {t('grid.alertsErrorBody')}
+                          </Text>
+                          <Button
+                            label={tActions('retry')}
+                            icon="refresh-outline"
+                            variant="ghost"
+                            size="sm"
+                            onPress={() => void alerts.refetch()}
+                          />
+                        </YStack>
+                      </Callout>
+                    ) : null}
+                    <Text col={colors.textMuted} fos={fontSize.label}>
+                      {t('grid.showing', { from: 1, to: items.length, total: query.total })}
+                    </Text>
+                  </YStack>
+                }
                 contentContainerStyle={contentContainerStyle}
                 onScroll={onScroll}
                 scrollEventThrottle={scrollThrottle.frame}

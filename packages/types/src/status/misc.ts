@@ -194,6 +194,18 @@ export type MembershipStatus = (typeof MEMBERSHIP_STATUS)[keyof typeof MEMBERSHI
 export const MEMBERSHIP_STATUS_VALUES = Object.values(MEMBERSHIP_STATUS) as MembershipStatus[];
 
 /**
+ * Vì sao HỆ THỐNG khoá một thành viên (`tenant_memberships.locked_reason`, ADR 0085 điều 6). Vắng
+ * (NULL) = không khoá, hoặc chủ khoá tay. Gói kích hoạt lại chỉ mở đúng các dòng mang lý do này.
+ */
+export const MEMBERSHIP_LOCK_REASON = {
+  /** Gian hàng hết ân hạn mọi gói, về tuyến hoa hồng — Owner Lite không có nhân viên. */
+  PLAN_LAPSED: 'plan_lapsed',
+} as const;
+
+export type MembershipLockReason =
+  (typeof MEMBERSHIP_LOCK_REASON)[keyof typeof MEMBERSHIP_LOCK_REASON];
+
+/**
  * Nhãn + màu cho nhãn trạng thái dùng chung.
  *
  * Ở đây chứ không ở từng app: web và app native cùng vẽ nhãn này trên màn Nhân sự, và hai bảng
@@ -206,6 +218,40 @@ export const MEMBERSHIP_STATUS_META: Readonly<Record<MembershipStatus, StatusMet
   [MEMBERSHIP_STATUS.LOCKED]: { label: 'Bị khoá', color: STATUS_COLOR.DANGER },
   [MEMBERSHIP_STATUS.REMOVED]: { label: 'Đã gỡ', color: STATUS_COLOR.NEUTRAL },
 };
+
+/**
+ * Một dòng của DANH SÁCH NHÂN SỰ gộp (`GET /members/roster`, ADR 0086 điều 5): thành viên thật
+ * hoặc lời mời còn chờ. Hai nguồn, một bảng — trạng thái của dòng là trạng thái người quản lý cần
+ * thấy, không phải cột `status` của một bảng nào.
+ */
+export const MEMBER_ROSTER_KIND = {
+  MEMBER: 'member',
+  INVITE: 'invite',
+} as const;
+
+export type MemberRosterKind = (typeof MEMBER_ROSTER_KIND)[keyof typeof MEMBER_ROSTER_KIND];
+export const MEMBER_ROSTER_KIND_VALUES = Object.values(MEMBER_ROSTER_KIND) as MemberRosterKind[];
+
+export const MEMBER_ROSTER_STATUS = {
+  ACTIVE: 'active',
+  /** Lời mời còn hạn, người được mời chưa trả lời — "Chờ xác nhận". */
+  PENDING: 'pending',
+  LOCKED: 'locked',
+} as const;
+
+export type MemberRosterStatus = (typeof MEMBER_ROSTER_STATUS)[keyof typeof MEMBER_ROSTER_STATUS];
+export const MEMBER_ROSTER_STATUS_VALUES = Object.values(
+  MEMBER_ROSTER_STATUS,
+) as MemberRosterStatus[];
+
+export const MEMBER_ROSTER_STATUS_META: Readonly<Record<MemberRosterStatus, StatusMeta>> = {
+  [MEMBER_ROSTER_STATUS.ACTIVE]: { label: 'Đang hoạt động', color: STATUS_COLOR.SUCCESS },
+  [MEMBER_ROSTER_STATUS.PENDING]: { label: 'Chờ xác nhận', color: STATUS_COLOR.WARNING },
+  [MEMBER_ROSTER_STATUS.LOCKED]: { label: 'Đã khoá', color: STATUS_COLOR.DANGER },
+};
+
+/** Trong khoảng này kể từ lần hoạt động cuối ⇒ "Đang trực tuyến" (`last_seen_at` ghi mỗi nửa khoảng). */
+export const MEMBER_ONLINE_WINDOW_MS = 5 * 60 * 1000;
 
 /**
  * Phạm vi người thao tác trong `audit_logs` (AuditEntry.actorScope).

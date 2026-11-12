@@ -1,9 +1,4 @@
-import {
-  COLLATERAL_MODE,
-  DELIVERY_TIER_FEE_MODE,
-  isPerKmDeliveryTier,
-  type LongTermPackageMonths,
-} from '@xeprime/types';
+import { COLLATERAL_MODE, isPerKmDeliveryTier, type LongTermPackageMonths } from '@xeprime/types';
 import type { PolicyFormValues, VehiclePricingFormValues } from './schema';
 import type { RentalPolicyValues, SaveRentalPolicyInput } from './types';
 
@@ -46,19 +41,14 @@ export function policyToForm(policy: RentalPolicyValues | null | undefined): Pol
     deliveryEnabled: policy.deliveryEnabled,
     deliveryMaxRadiusKm: policy.deliveryMaxRadiusKm ?? null,
     /*
-     * Bậc trọn gói hoặc theo km (ADR 0064): radio `feeMode` là trường của FORM, suy từ việc bậc
-     * mang `perKm` hay `fee`; ô của dạng kia để trống để chuyển qua lại không mang số cũ theo.
+     * Mỗi bậc MỘT phí trọn gói — phí theo km đã gỡ (ADR 0078) và migration đã đổi mọi bậc theo km
+     * thành trọn gói. Một bậc theo km còn sót (dữ liệu lạ) hiện ô phí TRỐNG để chủ xe tự nhập,
+     * không đoán ra một con số.
      */
-    deliveryTiers: policy.deliveryTiers.map((t) =>
-      isPerKmDeliveryTier(t)
-        ? {
-            toKm: t.toKm,
-            feeMode: DELIVERY_TIER_FEE_MODE.PER_KM,
-            fee: null,
-            perKm: toNumber(t.perKm),
-          }
-        : { toKm: t.toKm, feeMode: DELIVERY_TIER_FEE_MODE.FLAT, fee: toNumber(t.fee), perKm: null },
-    ),
+    deliveryTiers: policy.deliveryTiers.map((t) => ({
+      toKm: t.toKm,
+      fee: isPerKmDeliveryTier(t) ? null : toNumber(t.fee),
+    })),
     /*
      * Công tắc suy ra từ DỮ LIỆU, không lưu riêng: API chỉ biết "cả hai null = không giới hạn".
      * Đủ một trong hai là đang có hạn mức — bật công tắc để chủ xe thấy ngay ô còn thiếu, thay
@@ -94,12 +84,10 @@ export function formToSaveInput(values: PolicyFormValues): SaveRentalPolicyInput
       values.collateralMode === COLLATERAL_MODE.CASH ? toMoneyString(values.depositAmount) : '0',
     deliveryEnabled: values.deliveryEnabled,
     deliveryMaxRadiusKm: values.deliveryEnabled ? (values.deliveryMaxRadiusKm ?? null) : null,
-    // Đúng MỘT dạng mỗi bậc — server từ chối bậc mang cả `fee` lẫn `perKm`.
-    deliveryTiers: (values.deliveryTiers ?? []).map((t) =>
-      t.feeMode === DELIVERY_TIER_FEE_MODE.PER_KM
-        ? { toKm: t.toKm ?? 0, perKm: toMoneyString(t.perKm) }
-        : { toKm: t.toKm ?? 0, fee: toMoneyString(t.fee) },
-    ),
+    deliveryTiers: (values.deliveryTiers ?? []).map((t) => ({
+      toKm: t.toKm ?? 0,
+      fee: toMoneyString(t.fee),
+    })),
     /*
      * Tắt công tắc ⇒ gửi CẢ HAI về null, không giữ lại số cũ. Gửi nửa cặp là thứ
      * `PricingService.validatePolicy` và CHECK ở DB từ chối, và giữ lại số cũ là để một hạn mức
@@ -112,10 +100,21 @@ export function formToSaveInput(values: PolicyFormValues): SaveRentalPolicyInput
       values.mileageLimitEnabled && values.excessDistanceFeePerKm != null
         ? toMoneyString(values.excessDistanceFeePerKm)
         : null,
+    /*
+     * Công tắc quá giờ TẮT (chỉ form có công tắc mới đặt `false`) ⇒ gửi null cả hai, không giữ số cũ —
+     * cùng lý do với hạn mức quãng đường.
+     */
     overtimeFeePerHour:
-      values.overtimeFeePerHour == null ? null : toMoneyString(values.overtimeFeePerHour),
-    overtimeGraceMinutes: values.overtimeGraceMinutes ?? null,
-    overtimeRoundingMinutes: values.overtimeRoundingMinutes ?? null,
+      values.overtimeEnabled === false || values.overtimeFeePerHour == null
+        ? null
+        : toMoneyString(values.overtimeFeePerHour),
+    overtimeGraceMinutes:
+      values.overtimeEnabled === false ? null : (values.overtimeGraceMinutes ?? null),
+    /*
+     * Ô làm tròn đã gỡ khỏi web (06/11/2026): luôn null = làm tròn LÊN theo giờ, công thức mặc định
+     * của quyết toán (`SettlementService`). Số cũ không còn ai thấy thì không được tiếp tục áp.
+     */
+    overtimeRoundingMinutes: null,
     discountEnabled: values.discountEnabled,
     discountTiers: (values.discountTiers ?? []).map((t) => ({
       minMonths: (t.minMonths ?? 1) as LongTermPackageMonths,

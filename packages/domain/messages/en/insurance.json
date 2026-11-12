@@ -19,7 +19,7 @@
     "partner": "Insurer",
     "view": "View insurance certificate",
     "testTag": "TEST",
-    "testNote": "Test certificate — it provides no insurance cover.",
+    "testNote": "Test certificate - it provides no insurance cover.",
     "loadError": "Couldn't load the insurance certificate."
   },
   "coverage": {
@@ -35,11 +35,11 @@
     },
     "note": {
       "pending_issue": "The certificate is issued at vehicle handover.",
-      "issuing": "XePrime is issuing the certificate — this usually takes a few minutes.",
+      "issuing": "XePrime is issuing the certificate - this usually takes a few minutes.",
       "issued": "The certificate has been issued.",
-      "failed": "Issuance failed — XePrime is handling it. You don't need to do anything.",
+      "failed": "Issuance failed - XePrime is handling it. You don't need to do anything.",
       "voided": "The certificate has been revoked.",
-      "refunded": "The trip was cancelled before handover — the insurance premium has been refunded."
+      "refunded": "The trip was cancelled before handover - the insurance premium has been refunded."
     },
     "loadError": "Couldn't load the insurance details."
   }

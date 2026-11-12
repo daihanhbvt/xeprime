@@ -1,16 +1,18 @@
 'use client';
 
-import { App } from 'antd';
+import { App, Button } from 'antd';
+import { useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { API_ERROR_CODE, SERVICE_TYPE } from '@xeprime/types';
 
+import { bookingPath } from '@/constants/routes';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { getErrorCode } from '@/services/api-client';
 
 import { ApproveBookingRequestDialog } from '../components/ApproveBookingRequestDialog';
 import { ApproveLongTermDialog } from '../components/ApproveLongTermDialog';
-import { ApproveSuccessDialog } from '../components/ApproveSuccessDialog';
 import { CancelBookingRequestDialog } from '../components/CancelBookingRequestDialog';
 import { RejectBookingRequestDialog } from '../components/RejectBookingRequestDialog';
 import type {
@@ -35,7 +37,7 @@ export interface BookingRequestDecisions {
   openCancel: (request: BookingRequestDecisionTarget) => void;
   /** Quyết định đang chạy trên ĐÚNG yêu cầu này — để khoá nút của riêng nó. */
   decisionActionFor: (id: string) => 'approve' | 'reject' | 'cancel' | null;
-  /** Năm hộp thoại của luồng quyết định. Đặt một lần ở cuối cây của màn dùng nó. */
+  /** Bốn hộp thoại của luồng quyết định. Đặt một lần ở cuối cây của màn dùng nó. */
   dialogs: ReactNode;
 }
 
@@ -62,7 +64,9 @@ export interface BookingRequestDecisions {
  */
 export function useBookingRequestDecisions(): BookingRequestDecisions {
   const t = useTranslations('BookingRequests');
-  const { message } = App.useApp();
+  const { message, notification } = App.useApp();
+  const router = useRouter();
+  const fmt = useAppFormat();
   const errorMessage = useErrorMessage();
 
   const approve = useApproveBookingRequest();
@@ -76,8 +80,6 @@ export function useBookingRequestDecisions(): BookingRequestDecisions {
   const [approveError, setApproveError] = useState<string | null>(null);
   const [rejectError, setRejectError] = useState<string | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
-  /** Yêu cầu vừa duyệt xong — mở hộp kết quả kèm lối sang đơn vừa tạo. */
-  const [approvedResult, setApprovedResult] = useState<BookingRequestDecisionTarget | null>(null);
 
   function decisionActionFor(id: string): 'approve' | 'reject' | 'cancel' | null {
     if (approve.isPending && approve.variables?.id === id) return 'approve';
@@ -142,14 +144,41 @@ export function useBookingRequestDecisions(): BookingRequestDecisions {
       { id: row.id, body },
       {
         /*
-         * Kết quả mở thành một HỘP THOẠI, không phải toast: duyệt xong là đã có một đơn thuê
-         * thật và người trực còn nguyên một chuỗi việc trên chính đơn đó. Toast báo xong rồi
-         * biến mất bỏ họ lại giữa danh sách yêu cầu, phải tự đi tìm đơn mình vừa tạo.
+         * Kết quả là một THÔNG BÁO góc phải (design "Confirm Step 1 - Done", 05/11/2026) — thẻ đã tự
+         * sang nhóm kế tiếp ngay trên màn, nên không cần hộp chặn tay. Hai kết cục (ADR 0044 điều 2):
+         * có thu tiền giữ chỗ ⇒ chờ khách trả tới hạn server đã chốt; không thu ⇒ đơn có ngay, kèm
+         * lối sang đơn đó. Thông báo ở lại đủ lâu để đọc (không tự tắt sau 3 giây).
          */
         onSuccess: (approved) => {
           setApproveTarget(null);
           setLongTermTarget(null);
-          setApprovedResult(approved);
+          const bookingId = approved.bookingId;
+          const holdExpiresAt = (approved as { holdExpiresAt?: string | null }).holdExpiresAt;
+          notification.success({
+            key: `approved-${approved.id}`,
+            placement: 'topRight',
+            duration: 8,
+            title: t('approved.toastTitle'),
+            description: bookingId
+              ? t('approved.toastBooked', { customer: approved.customerName })
+              : holdExpiresAt
+                ? t('approved.toastHold', {
+                    customer: approved.customerName,
+                    time: fmt.dateTime(holdExpiresAt),
+                  })
+                : t('approved.toastHoldNoDeadline', { customer: approved.customerName }),
+            actions: bookingId ? (
+              <Button
+                type="link"
+                onClick={() => {
+                  notification.destroy(`approved-${approved.id}`);
+                  router.push(bookingPath.detail(bookingId));
+                }}
+              >
+                {t('approved.viewBooking')}
+              </Button>
+            ) : undefined,
+          });
         },
         // Trùng lịch (409): GIỮ hộp thoại mở để chọn giờ khác, không mất dữ liệu đã nhập.
         onError: (err) => setApproveError(decisionErrorText(err)),
@@ -195,15 +224,6 @@ export function useBookingRequestDecisions(): BookingRequestDecisions {
 
   const dialogs = (
     <>
-      {/* Dựng có điều kiện: mỗi lần duyệt là một instance mới, không giữ lại đơn của lần trước. */}
-      {approvedResult ? (
-        <ApproveSuccessDialog
-          request={approvedResult}
-          open
-          onClose={() => setApprovedResult(null)}
-        />
-      ) : null}
-
       <ApproveBookingRequestDialog
         request={approveTarget}
         submitting={approve.isPending}

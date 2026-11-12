@@ -1,9 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { INVITE_STATUS_VALUES, TENANT_ROLE_VALUES, VN_PHONE_PATTERN } from '@xeprime/types';
-import { Transform, Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, Matches, Max, Min } from 'class-validator';
+import { PhoneInput } from '../../../common/phone';
+import { INVITE_STATUS_VALUES, TENANT_ROLE_VALUES, VN_MOBILE_PHONE_PATTERN } from '@xeprime/types';
+import { Type } from 'class-transformer';
+import { IsIn, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
-import { MemberBranchScopeDto } from './member.dto';
+import { MEMBER_NICKNAME_MAX, MemberBranchScopeDto } from './member.dto';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -20,14 +21,14 @@ export class CreateInviteDto extends MemberBranchScopeDto {
     description:
       'SĐT người được mời. Chỉ tài khoản đối tác có ĐÚNG số này (đã xác minh) mới nhận được lời mời.',
   })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-  @Matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
+  @PhoneInput()
+  @Matches(VN_MOBILE_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
   phone!: string;
 
   @ApiProperty({
     enum: TENANT_ROLE_VALUES,
     description:
-      'Không nhận `shop_owner` — chủ gian hàng là người tạo gian hàng, không mời được. ' +
+      'Không nhận `shop_owner` - chủ gian hàng là người tạo gian hàng, không mời được. ' +
       'Giá trị đó nằm trong enum nhưng bị `InvitesService.create` từ chối bằng `VALIDATION_FAILED`.',
   })
   // `TENANT_ROLE_VALUES` trọn vẹn, KHÔNG lọc bớt `shop_owner`: enum ở đây là danh sách vai trò
@@ -36,6 +37,16 @@ export class CreateInviteDto extends MemberBranchScopeDto {
   // còn lại của lời mời (đã là thành viên, đã có lời mời đang chờ).
   @IsIn(TENANT_ROLE_VALUES)
   roleKey!: string;
+
+  /**
+   * "Tên gợi nhớ" (ADR 0086 điều 4) — để dòng "Chờ xác nhận" có một cái tên thay vì chỉ một số
+   * điện thoại. Nhận lời mời thì chép sang tên trong gian hàng; tên tài khoản không bị đổi.
+   */
+  @ApiPropertyOptional({ maxLength: MEMBER_NICKNAME_MAX, example: 'Hạnh - quầy Bình Chánh' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(MEMBER_NICKNAME_MAX)
+  nickname?: string;
 }
 
 export class InviteListQueryDto {
@@ -81,7 +92,7 @@ export class InviteDto {
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'Email được mời — CHỈ lời mời tạo trước ADR 0060; lời mời mới luôn null.',
+    description: 'Email được mời - CHỈ lời mời tạo trước ADR 0060; lời mời mới luôn null.',
   })
   email!: string | null;
   @ApiProperty({ enum: TENANT_ROLE_VALUES }) roleKey!: string;
@@ -90,6 +101,8 @@ export class InviteDto {
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Tên người gửi lời mời' })
   createdByName!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tên gợi nhớ người mời đặt' })
+  nickname!: string | null;
 }
 
 /**
@@ -103,7 +116,7 @@ export class InviteDto {
 export class CreateInviteResultDto extends InviteDto {
   @ApiProperty({
     description:
-      'Link nhận lời mời trên site partner — chỉ trả về ở đây, một lần. Người mời tự gửi cho người được mời.',
+      'Link nhận lời mời trên site partner - chỉ trả về ở đây, một lần. Người mời tự gửi cho người được mời.',
   })
   inviteUrl!: string;
 }
@@ -138,7 +151,7 @@ export class InvitePreviewDto {
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'Email được mời, ĐÃ che bớt — chỉ lời mời tạo trước ADR 0060.',
+    description: 'Email được mời, ĐÃ che bớt - chỉ lời mời tạo trước ADR 0060.',
   })
   invitedEmailMasked!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) expiresAt!: string;
@@ -150,7 +163,7 @@ export class InviteAnswerDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Slug gian hàng vừa vào — `null` khi từ chối. FE dùng để điều hướng.',
+    description: 'Slug gian hàng vừa vào - `null` khi từ chối. FE dùng để điều hướng.',
   })
   tenantSlug!: string | null;
 }

@@ -1,6 +1,6 @@
 {
   "page": {
-    "title": "Người dùng",
+    "title": "Nhân viên & Phân quyền",
     "tableLabel": "Danh sách thành viên",
     "loadError": "Không tải được danh sách thành viên",
     "empty": "Chưa có thành viên nào",
@@ -8,7 +8,8 @@
     "forbidden": {
       "title": "Không có quyền truy cập",
       "description": "Bạn cần quyền xem nhân sự của gian hàng. Liên hệ chủ gian hàng để được cấp quyền."
-    }
+    },
+    "subtitle": "Quản lý đội ngũ nhân viên, thiết lập quyền truy cập và phân quyền theo vai trò trong gian hàng."
   },
   "filters": {
     "search": "Tìm thành viên",
@@ -40,7 +41,7 @@
   },
   "form": {
     "title": "Mời thành viên",
-    "submit": "Tạo lời mời",
+    "submit": "Gửi lời mời",
     "notice": "Chúng tôi gửi thư mời tới địa chỉ này. Người được mời chỉ vào gian hàng sau khi họ tự bấm đồng ý.",
     "noticePhone": "Người được mời đăng nhập (hoặc tạo) tài khoản đối tác bằng đúng số này, và chỉ vào gian hàng sau khi họ tự bấm đồng ý. Tạo xong, bạn sao chép liên kết mời và gửi cho họ (Zalo, tin nhắn).",
     "phone": "Số điện thoại",
@@ -54,15 +55,20 @@
       "phoneRequired": "Nhập số điện thoại",
       "phoneInvalid": "Số điện thoại không hợp lệ",
       "roleRequired": "Chọn vai trò",
-      "branchRequired": "Chọn ít nhất một chi nhánh"
+      "branchRequired": "Chọn ít nhất một chi nhánh",
+      "nicknameTooLong": "Tên gợi nhớ tối đa {max} ký tự"
     },
     "branches": "Chi nhánh phụ trách",
     "branchesHelp": "Mặc định thấy toàn bộ gian hàng. Chọn chi nhánh cụ thể thì thành viên chỉ thấy xe, đơn và số liệu của các chi nhánh đó.",
-    "branchesHelpLimited": "Bạn chỉ phụ trách một số chi nhánh nên chỉ giao được trong phạm vi đó. Thành viên chỉ thấy xe, đơn và số liệu của các chi nhánh được chọn."
+    "branchesHelpLimited": "Bạn chỉ phụ trách một số chi nhánh nên chỉ giao được trong phạm vi đó. Thành viên chỉ thấy xe, đơn và số liệu của các chi nhánh được chọn.",
+    "subtitle": "Gửi lời mời tham gia vào gian hàng của bạn",
+    "nickname": "Tên gợi nhớ",
+    "nicknamePlaceholder": "Nhập tên gợi nhớ (không bắt buộc)",
+    "nicknameHelp": "Hiện thay tên khi lời mời còn chờ. Người được mời nhận lời thì tên này thành tên trong gian hàng."
   },
   "created": {
     "title": "Đã tạo lời mời",
-    "body": "Gửi liên kết này cho {phone} qua Zalo hoặc tin nhắn. Liên kết chỉ hiện MỘT lần — nếu mất, hãy mời lại số này để tạo liên kết mới.",
+    "body": "Gửi liên kết này cho {phone} qua Zalo hoặc tin nhắn. Liên kết chỉ hiện MỘT lần - nếu mất, hãy mời lại số này để tạo liên kết mới.",
     "linkLabel": "Liên kết mời",
     "copy": "Sao chép liên kết",
     "safety": "Chỉ tài khoản đối tác có đúng số này (đã xác minh) mới dùng được liên kết.",
@@ -97,7 +103,7 @@
     "role": "Vai trò được mời",
     "invitedEmail": "Gửi tới",
     "invitedPhone": "Số được mời",
-    "signInPartnerPromptPhone": "Lời mời này dành cho tài khoản ĐỐI TÁC — tách riêng với tài khoản thuê xe. Đăng nhập hoặc tạo tài khoản đối tác bằng đúng số điện thoại được mời để trả lời.",
+    "signInPartnerPromptPhone": "Lời mời này dành cho tài khoản ĐỐI TÁC - tách riêng với tài khoản thuê xe. Đăng nhập hoặc tạo tài khoản đối tác bằng đúng số điện thoại được mời để trả lời.",
     "expiresAt": "Hết hạn",
     "loadError": "Không mở được lời mời này",
     "signInPrompt": "Đăng nhập bằng địa chỉ email đã nhận thư mời để trả lời.",
@@ -111,12 +117,227 @@
     "goHome": "Về trang chủ",
     "closedTitle": "Lời mời này không còn hiệu lực",
     "closedBody": "Lời mời đã được trả lời, đã bị thu hồi hoặc đã hết hạn. Hãy nhờ gian hàng gửi lại nếu bạn vẫn muốn tham gia.",
-    "signInPartnerPrompt": "Lời mời này dành cho tài khoản ĐỐI TÁC — tách riêng với tài khoản thuê xe. Đăng nhập hoặc tạo tài khoản đối tác bằng đúng email đã nhận thư mời để trả lời.",
+    "signInPartnerPrompt": "Lời mời này dành cho tài khoản ĐỐI TÁC - tách riêng với tài khoản thuê xe. Đăng nhập hoặc tạo tài khoản đối tác bằng đúng email đã nhận thư mời để trả lời.",
     "createPartnerAccount": "Tạo tài khoản đối tác"
   },
   "branchScope": {
     "all": "Tất cả chi nhánh",
     "selectAria": "Chi nhánh phụ trách của {name}",
     "limitedCount": "{count} chi nhánh"
+  },
+  "roleHint": {
+    "shop_owner": "Toàn quyền, gồm gói, thanh toán và phân quyền.",
+    "shop_manager": "Điều hành đơn, doanh thu. Không đổi gói, không sửa thông tin pháp lý.",
+    "shop_staff": "Xử lý đơn và giao xe tại chi nhánh được giao.",
+    "shop_viewer": "Xem số liệu và báo cáo, không thao tác. Phù hợp kế toán, đối tác."
+  },
+  "roleShortHint": {
+    "shop_owner": "toàn quyền",
+    "shop_manager": "điều hành mọi hoạt động",
+    "shop_staff": "xử lý đơn, giao nhận xe",
+    "shop_viewer": "chỉ xem số liệu"
+  },
+  "roster": {
+    "tableLabel": "Danh sách nhân viên",
+    "searchLabel": "Tìm nhân viên",
+    "searchPlaceholder": "Tìm kiếm tên nhân viên, email, số điện thoại...",
+    "role": "Vai trò",
+    "allRoles": "Tất cả vai trò",
+    "status": "Trạng thái",
+    "allStatuses": "Tất cả trạng thái",
+    "rolesButton": "Vai trò & quyền",
+    "empty": "Gian hàng chưa có nhân viên nào ngoài bạn",
+    "emptyHint": "Cấp tài khoản cho nhân viên để cùng xử lý đơn, giao nhận xe và theo dõi số liệu.",
+    "emptyFiltered": "Không có nhân viên nào khớp bộ lọc",
+    "loadError": "Không tải được danh sách nhân viên",
+    "total": "{count, plural, other {# nhân viên}}",
+    "you": "(Bạn)",
+    "pendingName": "Chưa nhận lời mời",
+    "allBranches": "Tất cả chi nhánh",
+    "unknownBranch": "Chi nhánh đã ngừng",
+    "columns": {
+      "member": "Nhân viên",
+      "phone": "Số điện thoại",
+      "role": "Vai trò",
+      "branches": "Chi nhánh phụ trách",
+      "status": "Trạng thái",
+      "lastActive": "Hoạt động gần nhất",
+      "actions": "Thao tác"
+    },
+    "actions": {
+      "view": "Xem chi tiết",
+      "edit": "Chỉnh sửa",
+      "lock": "Tạm khoá",
+      "unlock": "Mở khoá",
+      "remove": "Gỡ khỏi gian hàng",
+      "reinvite": "Mời lại",
+      "revoke": "Thu hồi lời mời",
+      "resetPassword": "Đặt lại mật khẩu"
+    },
+    "confirm": {
+      "lock": "Tạm khoá {name}?",
+      "lockBody": "Người này mất quyền vào gian hàng ngay, cho tới khi được mở khoá.",
+      "unlock": "Mở khoá {name}?",
+      "remove": "Gỡ {name} khỏi gian hàng?",
+      "removeBody": "Người này mất quyền vào gian hàng. Muốn họ quay lại thì phải gửi lời mời mới.",
+      "revoke": "Thu hồi lời mời này?",
+      "revokeBody": "Liên kết đã gửi hết giá trị ngay."
+    },
+    "lockedBySystem": "Khoá vì gian hàng hết gói - tự mở khi gói kích hoạt lại",
+    "toast": {
+      "locked": "Đã tạm khoá thành viên",
+      "unlocked": "Đã mở khoá thành viên",
+      "saved": "Đã lưu thay đổi",
+      "created": "Đã tạo tài khoản nhân viên",
+      "passwordReset": "Đã đặt lại mật khẩu"
+    }
+  },
+  "lastActive": {
+    "online": "Đang trực tuyến",
+    "minutes": "{count, plural, other {# phút trước}}",
+    "hours": "{count, plural, other {# giờ trước}}",
+    "days": "{count, plural, other {# ngày trước}}",
+    "never": "Chưa đăng nhập",
+    "invited": "Đã mời lúc {date}"
+  },
+  "edit": {
+    "title": "Chỉnh sửa thành viên",
+    "subtitle": "Đổi vai trò, chi nhánh phụ trách hoặc tên gợi nhớ của {name}",
+    "submit": "Lưu thay đổi",
+    "noChange": "Chưa có thay đổi nào"
+  },
+  "detail": {
+    "title": "Thông tin nhân viên",
+    "inviteTitle": "Lời mời đang chờ",
+    "contact": "Liên hệ",
+    "phone": "Số điện thoại",
+    "email": "Email",
+    "nickname": "Tên gợi nhớ",
+    "role": "Vai trò",
+    "roleHint": "Quyền của vai",
+    "branches": "Chi nhánh phụ trách",
+    "status": "Trạng thái",
+    "lastActive": "Hoạt động gần nhất",
+    "joinedAt": "Tham gia",
+    "invitedBy": "Người mời",
+    "invitedAt": "Ngày mời",
+    "expiresAt": "Hạn lời mời",
+    "viewMatrix": "Xem bảng vai trò & quyền",
+    "sections": {
+      "contact": "Liên hệ",
+      "access": "Quyền truy cập",
+      "permissions": "Quyền của vai",
+      "activity": "Hoạt động",
+      "recent": "Hoạt động gần đây"
+    },
+    "username": "Tên đăng nhập",
+    "accountType": "Loại tài khoản",
+    "accountManaged": "Do gian hàng cấp",
+    "accountOwn": "Tài khoản riêng - đăng nhập bằng số điện thoại",
+    "contactPhone": "SĐT liên hệ",
+    "accessSwitch": "Cho phép truy cập gian hàng",
+    "accessOn": "Đang làm việc bình thường",
+    "accessOff": "Đã tạm khoá - không đăng nhập được cho tới khi mở lại",
+    "accessSystemLocked": "Khoá vì gian hàng hết gói - tự mở khi gói kích hoạt lại",
+    "createdBy": "Người tạo / mời",
+    "recentEmpty": "Chưa có hoạt động nào trong gian hàng",
+    "recentError": "Không tải được hoạt động gần đây",
+    "permissionsNone": "Vai này chỉ xem, không có quyền thao tác",
+    "permissionsLimited": "có giới hạn",
+    "permissionsView": "chỉ xem"
+  },
+  "matrix": {
+    "title": "Vai trò & quyền",
+    "subtitle": "Mỗi vai trò làm được gì trong gian hàng của bạn",
+    "heading": "Quyền theo vai trò",
+    "tableLabel": "Bảng quyền theo vai trò",
+    "loadError": "Không tải được bảng quyền",
+    "people": "{count, plural, other {# người}}",
+    "legend": {
+      "full": "Toàn quyền",
+      "limited": "Có giới hạn",
+      "view": "Chỉ xem",
+      "none": "Không có quyền"
+    },
+    "scopeNote": "Quản lý, Nhân viên và Quan sát viên có thể được giới hạn theo chi nhánh phụ trách - đặt khi mời hoặc chỉnh sửa thành viên. Khi đó họ chỉ thấy xe, đơn và số liệu của các chi nhánh đó.",
+    "groups": {
+      "operations": "Vận hành",
+      "fleet": "Xe & Tài xế",
+      "revenue": "Doanh thu",
+      "settings": "Cấu hình",
+      "help": "Trợ giúp"
+    },
+    "rows": {
+      "rentals": "Xem đơn thuê & lịch xe",
+      "requests": "Xác nhận / Từ chối yêu cầu đặt xe",
+      "handovers": "Giao xe & nhận lại xe",
+      "cancelSettle": "Huỷ đơn, hoàn cọc, phụ phí",
+      "customers": "Danh sách khách hàng",
+      "fleetView": "Xem xe & tài xế",
+      "fleetManage": "Thêm / sửa / ẩn xe, tài xế",
+      "maintenance": "Bảo dưỡng & KM",
+      "revenue": "Doanh thu & báo cáo",
+      "ledger": "Sổ thu chi & công nợ",
+      "wallet": "Quản lý ví",
+      "shopInfo": "Thông tin hiển thị, địa chỉ & thuế",
+      "branches": "Chi nhánh",
+      "policies": "Chính sách thuê",
+      "plan": "Gói & thanh toán",
+      "members": "Nhân viên & phân quyền",
+      "support": "Yêu cầu hỗ trợ"
+    },
+    "limited": {
+      "default": "Một phần",
+      "cancelSettle": "Chỉ thu tiền khi giao, nhận xe",
+      "ledger": "Chỉ thu tiền khi giao, nhận xe",
+      "customers": "Không chặn khách",
+      "maintenance": "Không xem chi phí",
+      "members": "Chỉ mời nhân viên",
+      "fleetManage": "Một phần",
+      "fleetView": "Một phần"
+    },
+    "cellAria": "{role} - {row}: {level}"
+  },
+  "staff": {
+    "addButton": "Thêm nhân viên",
+    "title": "Thêm nhân viên",
+    "subtitle": "Cấp tài khoản đăng nhập cho nhân viên của gian hàng",
+    "displayName": "Họ tên",
+    "displayNamePlaceholder": "Ví dụ: Lê Thị Kim",
+    "username": "Tên đăng nhập",
+    "usernamePlaceholder": "Ví dụ: kim.le",
+    "usernameHelp": "4-32 ký tự, bắt đầu bằng chữ cái; chỉ gồm chữ thường không dấu, số, dấu chấm hoặc gạch dưới.",
+    "password": "Mật khẩu",
+    "passwordPlaceholder": "Tối thiểu 8 ký tự, có chữ và số",
+    "passwordHelp": "Bạn tự gửi mật khẩu này cho nhân viên. Họ đổi lại được ở Tài khoản & bảo mật.",
+    "generate": "Tạo ngẫu nhiên",
+    "contactPhone": "Số điện thoại liên hệ",
+    "contactPhonePlaceholder": "Nhập số điện thoại (không bắt buộc)",
+    "contactPhoneHelp": "Chỉ để liên lạc, không dùng để đăng nhập.",
+    "submit": "Tạo tài khoản",
+    "errors": {
+      "displayNameRequired": "Nhập họ tên",
+      "usernameRequired": "Nhập tên đăng nhập",
+      "usernameInvalid": "Tên đăng nhập 4-32 ký tự, bắt đầu bằng chữ cái, chỉ gồm chữ thường không dấu, số, dấu chấm hoặc gạch dưới"
+    },
+    "created": {
+      "title": "Đã tạo tài khoản",
+      "body": "Gửi thông tin đăng nhập dưới đây cho {name}. Mật khẩu chỉ hiện MỘT lần - nếu nhân viên quên, bạn đặt lại ở màn Nhân viên.",
+      "loginUrl": "Địa chỉ đăng nhập",
+      "username": "Tên đăng nhập",
+      "password": "Mật khẩu",
+      "copyAll": "Sao chép tất cả",
+      "copyText": "Đăng nhập XePrime Partner\nĐịa chỉ: {url}\nTên đăng nhập: {username}\nMật khẩu: {password}",
+      "copy": "Sao chép",
+      "done": "Xong"
+    }
+  },
+  "resetPassword": {
+    "title": "Đặt lại mật khẩu",
+    "subtitle": "Mật khẩu mới cho {name}",
+    "notice": "{name} sẽ bị đăng xuất khỏi mọi thiết bị và đăng nhập lại bằng mật khẩu mới.",
+    "submit": "Đặt lại mật khẩu",
+    "doneTitle": "Đã đặt lại mật khẩu",
+    "doneBody": "Gửi mật khẩu mới cho {name}. Mật khẩu chỉ hiện MỘT lần."
   }
 }

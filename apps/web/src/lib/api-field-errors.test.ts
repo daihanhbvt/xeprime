@@ -38,14 +38,14 @@ describe('parseApiFieldIssues', () => {
     ]);
   });
 
-  it('giữ đường dẫn chấm của trường lồng — đó là thứ gắn được vào ô của react-hook-form', () => {
+  it('giữ đường dẫn chấm của trường lồng - đó là thứ gắn được vào ô của react-hook-form', () => {
     const issues = parseApiFieldIssues(
       validationError([{ field: 'deliveryTiers.0.toKm', constraints: ['toKm sai'] }]),
     );
     expect(issues.map((i) => i.field)).toEqual(['deliveryTiers.0.toKm']);
   });
 
-  it('một trường vi phạm nhiều ràng buộc chỉ ra MỘT lỗi — ô nhập chỉ hiện được một', () => {
+  it('một trường vi phạm nhiều ràng buộc chỉ ra MỘT lỗi - ô nhập chỉ hiện được một', () => {
     const issues = parseApiFieldIssues(
       validationError([
         { field: 'seatCount', constraints: ['phải là số nguyên'] },

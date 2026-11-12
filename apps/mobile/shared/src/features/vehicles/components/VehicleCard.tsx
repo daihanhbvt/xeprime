@@ -7,9 +7,12 @@ import {
   MARKETPLACE_VISIBILITY_REASON_META,
   SERVICE_TYPE,
   VEHICLE_OPERATION_STATUS_META,
+  VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
+  VEHICLE_SOURCE_TYPE,
   type VehicleOperationStatus,
   type VehiclePublicStatus,
+  type VehicleSourceType,
 } from '@xeprime/types';
 import { absoluteMoney, isNegativeMoney, subtractMoney, LIST_SEPARATOR } from '@xeprime/domain';
 import { BadgeRows, type BadgeRowItem } from '@/components/ui/BadgeRows';
@@ -123,6 +126,15 @@ function VehicleCardImpl({
 }: VehicleCardProps) {
   const colors = useColors();
   const t = useTranslations('Vehicles.list');
+  const tCard = useTranslations('Vehicles.list.card');
+  // Nguồn xe (sở hữu / hợp tác…) — viên cạnh tên như thẻ web `VehicleCardParts`; thiếu = sở hữu.
+  const sourceType = (vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED) as VehicleSourceType;
+  // Lý do kiểm duyệt CHỈ hiện khi xe bị trả về / từ chối — việc chủ xe phải sửa (như web).
+  const reviewReason =
+    vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.NEEDS_REVISION ||
+    vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.REJECTED
+      ? (vehicle.latestPublicReview?.reason ?? null)
+      : null;
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   /* Hook nên gọi VÔ ĐIỀU KIỆN — `alerts` vắng mặt khi chưa tải xong hoặc tải hỏng. */
@@ -273,9 +285,16 @@ function VehicleCardImpl({
       <YStack p={space.sm} gap={space.xs}>
         {/* TẦNG 2 — định danh. Một dòng tên, một dòng mã · biển số · loại/dịch vụ. */}
         <YStack gap={2}>
-          <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold} numberOfLines={1}>
-            {vehicle.name}
-          </Text>
+          <XStack ai="center" gap={space.xs}>
+            <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.bold} numberOfLines={1}>
+              {vehicle.name}
+            </Text>
+            <YStack px={6} py={1} br={radius.pill} bg={colors.background} flexShrink={0}>
+              <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+                {domainLabel('vehicleSourceType', sourceType)}
+              </Text>
+            </YStack>
+          </XStack>
           <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
             {identity}
           </Text>
@@ -287,6 +306,11 @@ function VehicleCardImpl({
         ) : (
           <YStack gap={space.xs}>
             <BadgeRows items={badges} />
+            {reviewReason ? (
+              <Text col={colors.danger} fos={fontSize.bodySm} numberOfLines={3}>
+                {reviewReason}
+              </Text>
+            ) : null}
             {/* Cảnh báo tải hỏng là một CÂU, không phải viên nhãn — nó không vào phép xếp hàng. */}
             {alertsFailed ? (
               <Text col={colors.textMuted} fos={fontSize.bodySm}>
@@ -317,6 +341,12 @@ function VehicleCardImpl({
               {t('row.odometer', { value: fmt.km(alerts.currentOdometerKm) })}
             </Stat>
           )}
+          {/* Giá ngày thường nằm trên ảnh; giá CUỐI TUẦN là ô riêng của thẻ web. */}
+          {vehicle.weekendPrice ? (
+            <Stat icon="calendar-outline">
+              {`${tCard('weekendPrice')}: ${fmt.money(vehicle.weekendPrice)}`}
+            </Stat>
+          ) : null}
 
           {statsLoading ? (
             <>

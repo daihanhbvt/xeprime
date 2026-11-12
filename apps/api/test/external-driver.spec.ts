@@ -151,7 +151,7 @@ function farPickup(): Date {
   return new Date(Date.UTC(2029, 2, 1 + day, 2));
 }
 
-const EXTERNAL = { name: '  Nguyễn Văn Tài  ', phone: '0912 345 678' };
+const EXTERNAL = { name: '  Nguyễn Văn Tài  ', phone: '0912345678' };
 const controller = new BookingsController(bookings);
 
 /** Đơn CŨ mang tài xế ngoài hệ thống — ghi thẳng DB vì API đã bỏ đường ghi (ADR 0074 điều 4). */
@@ -259,7 +259,7 @@ function validateBody(body: unknown) {
 }
 
 describe('DTO PATCH /bookings/:id/driver — đúng một khoá', () => {
-  it('nhận driverId, driverId null, hoặc externalDriver (cắt khoảng trắng, bỏ dấu cách SĐT)', async () => {
+  it('nhận driverId, driverId null, hoặc externalDriver (cắt khoảng trắng tên; SĐT chỉ chữ số — ADR 0082)', async () => {
     await expect(validateBody({ driverId: null })).resolves.toMatchObject({ driverId: null });
     await expect(validateBody({ driverId: newId() })).resolves.toBeDefined();
     const ext = await validateBody({ externalDriver: EXTERNAL });
@@ -273,7 +273,8 @@ describe('DTO PATCH /bookings/:id/driver — đúng một khoá', () => {
     ['body rỗng', {}],
     ['cả hai khoá', { driverId: null, externalDriver: EXTERNAL }],
     ['SĐT sai', { externalDriver: { name: 'Nguyễn Văn Tài', phone: '12345' } }],
-    ['SĐT bàn 11 số', { externalDriver: { name: 'Nguyễn Văn Tài', phone: '02838123456' } }],
+    ['SĐT có dấu cách', { externalDriver: { name: 'Nguyễn Văn Tài', phone: '0912 345 678' } }],
+    ['SĐT quá dài (12 số)', { externalDriver: { name: 'Nguyễn Văn Tài', phone: '028381234567' } }],
     ['thiếu SĐT', { externalDriver: { name: 'Nguyễn Văn Tài' } }],
     ['tên 1 ký tự sau khi cắt', { externalDriver: { name: '  A ', phone: '0912345678' } }],
     ['tên quá 120 ký tự', { externalDriver: { name: 'A'.repeat(121), phone: '0912345678' } }],
@@ -303,7 +304,7 @@ describe('Tài xế ngoài hệ thống — đã bỏ (ADR 0074 điều 4), đơ
 
   maybe('đơn cũ mang tài xế ngoài: bên thuê + khách vẫn thấy cùng tên + SĐT', async () => {
     const bookingId = await seedBooking(farPickup(), { withRequest: true });
-    await setLegacyExternal(bookingId, 'Nguyễn Văn Tài', '84912345678');
+    await setLegacyExternal(bookingId, 'Nguyễn Văn Tài', '0912345678');
 
     const detail = await bookings.getOne(tenant, bookingId);
     expect(detail.driver).toMatchObject({
@@ -319,7 +320,7 @@ describe('Tài xế ngoài hệ thống — đã bỏ (ADR 0074 điều 4), đơ
 
   maybe('gán tài xế liên kết xoá tài xế ngoài cũ (audit cleared); bỏ gán cũng xoá', async () => {
     const bookingId = await seedBooking(farPickup());
-    await setLegacyExternal(bookingId, 'Tài xế Ngoài', '84912000111');
+    await setLegacyExternal(bookingId, 'Tài xế Ngoài', '0912000111');
 
     const link = await seedDriverLink(asService, { tenantId: tenant });
     const linked = await bookings.assignDriver(tenant, bookingId, owner, link.driverId);
@@ -338,7 +339,7 @@ describe('Tài xế ngoài hệ thống — đã bỏ (ADR 0074 điều 4), đơ
     ).toBe(1);
 
     const other = await seedBooking(farPickup());
-    await setLegacyExternal(other, 'Tài xế Ngoài', '84912000111');
+    await setLegacyExternal(other, 'Tài xế Ngoài', '0912000111');
     const cleared = await bookings.assignDriver(tenant, other, owner, null);
     expect(cleared.driver).toBeNull();
     row = await prisma.booking.findUniqueOrThrow({ where: { id: other } });
@@ -353,7 +354,7 @@ describe('Tài xế ngoài hệ thống — đã bỏ (ADR 0074 điều 4), đơ
     await expect(
       prisma.booking.update({
         where: { id: linkedBooking },
-        data: { externalDriverName: 'Lén', externalDriverPhone: '84912345678' },
+        data: { externalDriverName: 'Lén', externalDriverPhone: '0912345678' },
       }),
     ).rejects.toThrow(/bookings_external_driver_exclusive_check/);
 
@@ -363,7 +364,7 @@ describe('Tài xế ngoài hệ thống — đã bỏ (ADR 0074 điều 4), đơ
         where: { id: selfDrive },
         data: {
           externalDriverName: 'Lén',
-          externalDriverPhone: '84912345678',
+          externalDriverPhone: '0912345678',
           driverAssignedAt: new Date(),
         },
       }),
@@ -379,7 +380,7 @@ describe('Tài xế ngoài hệ thống — đã bỏ (ADR 0074 điều 4), đơ
     await expect(
       prisma.booking.update({
         where: { id: plain },
-        data: { externalDriverName: 'Lén', externalDriverPhone: '84912345678' },
+        data: { externalDriverName: 'Lén', externalDriverPhone: '0912345678' },
       }),
     ).rejects.toThrow(/bookings_driver_assignment_consistency_check/);
   });
@@ -397,7 +398,7 @@ describe('Worker nhắc khẩn chuyến sắp nhận chưa có tài xế', () =>
       await bookings.assignDriver(tenant, pendingLinked, owner, pendingLink.driverId);
 
       const external = await seedBooking(soon());
-      await setLegacyExternal(external, 'Tài xế Ngoài', '84912000222');
+      await setLegacyExternal(external, 'Tài xế Ngoài', '0912000222');
 
       const far = await seedBooking(new Date(Date.now() + 5 * 60 * MIN));
       const past = await seedBooking(new Date(Date.now() - 10 * MIN));

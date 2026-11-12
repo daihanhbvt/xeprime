@@ -10,6 +10,8 @@ import { TENANT_ROLE } from '@xeprime/types';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
+import { RevealPop, RevealStack } from '@/components/motion/RevealStack';
+import { RevealText } from '@/components/motion/ScrollReveal';
 import { ScreenError } from '@/components/state/ScreenError';
 import { Button } from '@/components/ui/Button';
 import { CheckMark } from '@/components/ui/CheckMark';
@@ -134,7 +136,7 @@ export function CustomerDeleteAccountScreen() {
             onRetry={() => void pendingQuery.refetch()}
           />
         ) : pending ? (
-          <YStack gap={GAP_20} accessibilityLiveRegion="polite">
+          <RevealStack gap={GAP_20} accessibilityLiveRegion="polite">
             <YStack gap={space.xs} p={space.md} br={radius.lg} bg={colors.infoSurface}>
               <YStack
                 w={ROUND_ICON}
@@ -145,7 +147,9 @@ export function CustomerDeleteAccountScreen() {
                 jc="center"
                 mb={space.xs}
               >
-                <ActivityIndicator color={colors.info} />
+                <RevealPop>
+                  <ActivityIndicator color={colors.info} />
+                </RevealPop>
               </YStack>
               <Text col={colors.info} fos={fontSize.bodyLg} fow={fontWeight.semibold}>
                 {t('pendingTitle')}
@@ -158,9 +162,9 @@ export function CustomerDeleteAccountScreen() {
               </Text>
             </YStack>
             <DeletedData />
-          </YStack>
+          </RevealStack>
         ) : (
-          <YStack gap={GAP_20}>
+          <RevealStack gap={GAP_20}>
             <Conditions />
 
             <XStack
@@ -179,7 +183,9 @@ export function CustomerDeleteAccountScreen() {
                 ai="center"
                 jc="center"
               >
-                <Ionicons name="alert-circle-outline" size={22} color={colors.danger} />
+                <RevealPop>
+                  <Ionicons name="alert-circle-outline" size={22} color={colors.danger} />
+                </RevealPop>
               </YStack>
               <YStack f={1} minWidth={0} gap={2}>
                 <Text col={colors.danger} fos={fontSize.bodyLg} fow={fontWeight.semibold}>
@@ -220,7 +226,7 @@ export function CustomerDeleteAccountScreen() {
                 </Pressable>
               )}
             />
-          </YStack>
+          </RevealStack>
         )}
       </Screen>
     </>
@@ -258,7 +264,7 @@ function Conditions() {
                   </Text>
                   <Text
                     mt={2}
-                    col={colors.primaryHover}
+                    col={colors.brandText}
                     fos={fontSize.bodyLg}
                     fow={fontWeight.semibold}
                   >
@@ -281,7 +287,7 @@ function Conditions() {
                 </Text>
                 <Text
                   mt={2}
-                  col={colors.primaryHover}
+                  col={colors.brandText}
                   fos={fontSize.bodyLg}
                   fow={fontWeight.semibold}
                 >
@@ -342,19 +348,21 @@ function DeletedData() {
 function SectionHead({ title, text }: { title: string; text: string }) {
   const colors = useColors();
   return (
-    <YStack gap={2}>
-      <Text
-        col={colors.text}
-        fos={fontSize.bodyLg}
-        fow={fontWeight.semibold}
-        accessibilityRole="header"
-      >
-        {title}
-      </Text>
-      <Text col={colors.textMuted} fos={fontSize.body}>
-        {text}
-      </Text>
-    </YStack>
+    <RevealText>
+      <YStack gap={2}>
+        <Text
+          col={colors.text}
+          fos={fontSize.bodyLg}
+          fow={fontWeight.semibold}
+          accessibilityRole="header"
+        >
+          {title}
+        </Text>
+        <Text col={colors.textMuted} fos={fontSize.body}>
+          {text}
+        </Text>
+      </YStack>
+    </RevealText>
   );
 }
 

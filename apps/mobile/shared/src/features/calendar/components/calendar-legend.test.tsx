@@ -12,7 +12,7 @@ import { CalendarLegend } from './CalendarLegend';
  * lộ ở lint, và không lộ ở bất kỳ test hành vi nào — chỉ lộ khi mở app ra nhìn.
  */
 describe('CalendarLegend', () => {
-  it('KHÔNG nở ra theo chiều dọc — nếu không, lưới lịch mất gần hết chỗ', async () => {
+  it('KHÔNG nở ra theo chiều dọc - nếu không, lưới lịch mất gần hết chỗ', async () => {
     const view = await render(withIntl(<CalendarLegend />));
 
     const style = StyleSheet.flatten<ViewStyle>(

@@ -13,6 +13,7 @@ import { Public, Realms } from '../../common/decorators';
 import { resolveOptionalUser, type OptionalUser } from '../../common/optional-user';
 import type { RequestContext } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AUTH_THROTTLE } from '../auth/auth-throttle';
 import { AuthService, otpLoginRetired } from '../auth/auth.service';
 import { NativeSessionService } from '../auth/native-session.service';
 import { RequestRealmService } from '../auth/request-realm.service';
@@ -67,7 +68,7 @@ export class PhoneVerificationController {
   }
 
   @Public()
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Throttle(AUTH_THROTTLE.PHONE_PROBE)
   @Post('send-otp')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -76,7 +77,7 @@ export class PhoneVerificationController {
   })
   @ApiOkResponse({ type: SendOtpResultDto })
   @ApiGoneResponse({
-    description: '`purpose=login` — đăng nhập bằng OTP đã gỡ (`OTP_LOGIN_RETIRED`).',
+    description: '`purpose=login` - đăng nhập bằng OTP đã gỡ (`OTP_LOGIN_RETIRED`).',
   })
   async sendOtp(@Body() dto: SendOtpDto, @Req() req: RequestContext): Promise<SendOtpResultDto> {
     const { realm } = await this.otpContext(req, dto.clientApp);
@@ -91,7 +92,7 @@ export class PhoneVerificationController {
   }
 
   @Public()
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Throttle(AUTH_THROTTLE.OTP_CODE)
   @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Xác nhận mã OTP' })
@@ -123,10 +124,10 @@ export class PhoneVerificationController {
   @Post('login')
   @HttpCode(HttpStatus.GONE)
   @ApiOperation({
-    summary: 'ĐÃ GỠ — đăng nhập bằng OTP. Luôn 410 OTP_LOGIN_RETIRED (ADR 0060)',
+    summary: 'ĐÃ GỠ - đăng nhập bằng OTP. Luôn 410 OTP_LOGIN_RETIRED (ADR 0060)',
     deprecated: true,
   })
-  @ApiGoneResponse({ description: 'Đăng nhập bằng OTP đã gỡ — dùng SĐT + mật khẩu.' })
+  @ApiGoneResponse({ description: 'Đăng nhập bằng OTP đã gỡ - dùng SĐT + mật khẩu.' })
   login(): never {
     throw otpLoginRetired();
   }

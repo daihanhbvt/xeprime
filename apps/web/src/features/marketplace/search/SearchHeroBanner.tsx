@@ -1,8 +1,8 @@
 'use client';
 
-import { CalendarOutlined, SearchOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { RentalDateTimeRangeField } from '@/components/form/RentalDateTimeRangeField';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import { LocationPicker } from './LocationPicker';
@@ -21,6 +21,7 @@ export function SearchHeroBanner({
   appliedCount = 0,
 }: SearchHeroBannerProps) {
   const t = useTranslations('Marketplace.results');
+  const tFilters = useTranslations('Marketplace.filterPanel');
   const { filters, setFilters } = useMarketplaceFilters();
   const { draft, setRentalRange, setRentalMode } = useSearchExperience();
 
@@ -44,7 +45,7 @@ export function SearchHeroBanner({
 
           <div className={styles.searchBar}>
             <div className={styles.inputGroup}>
-              <SearchOutlined className={styles.searchIcon} aria-hidden />
+              <LineIcon name="search" className={styles.searchIcon} />
               <input
                 type="text"
                 className={styles.keywordInput}
@@ -58,14 +59,17 @@ export function SearchHeroBanner({
 
             <span className={styles.divider} aria-hidden />
 
+            {/* Điện thoại (Figma MB 22185:115224): hàng 2 mở đầu bằng MỘT icon địa điểm vàng. */}
+            <LineIcon name="location" className={styles.mobileRowIcon} />
+
             <div className={styles.vehicleTypeWrap}>
-              <VehicleTypePicker />
+              <VehicleTypePicker variant="select" className={styles.inlinePicker} />
             </div>
 
             <span className={styles.divider} aria-hidden />
 
             <div className={styles.locationWrap}>
-              <LocationPicker variant="chip" />
+              <LocationPicker variant="chip" className={styles.inlinePicker} />
             </div>
 
             <span className={styles.divider} aria-hidden />
@@ -76,8 +80,9 @@ export function SearchHeroBanner({
                 onChange={setRentalRange}
                 mode={draft.rental.mode}
                 onModeChange={setRentalMode}
-                prefix={<CalendarOutlined className={styles.calendarIcon} aria-hidden />}
+                prefix={<LineIcon name="calendar-2" className={styles.calendarIcon} />}
                 compactPoint
+                className={styles.inlinePicker}
               />
             </div>
 
@@ -87,15 +92,28 @@ export function SearchHeroBanner({
               onClick={handleSearchSubmit}
               aria-label={t('title')}
             >
-              <SearchOutlined />
+              <LineIcon name="search" />
             </button>
           </div>
+
+          {/* Điện thoại (Figma MB 20043:57771): nút lọc vuông chỉ có icon cạnh ô tìm kiếm. */}
+          <button
+            type="button"
+            className={styles.mobileFilterBtn}
+            onClick={onOpenFilterModal}
+            aria-label={tFilters('title')}
+          >
+            <LineIcon name="filter" />
+            {appliedCount > 0 ? <span className={styles.mobileFilterBadge}>{appliedCount}</span> : null}
+          </button>
         </div>
 
         <div className={styles.pillsRow}>
           <QuickFilterPills
             onOpenFilterModal={onOpenFilterModal}
             appliedCount={appliedCount}
+            showViewToggle
+            filterButtonClassName={styles.pillsFilterBtn}
           />
         </div>
       </div>

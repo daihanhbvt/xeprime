@@ -27,6 +27,23 @@
   min-height: 0;
 }
 
+/*
+ * Khung menu ngang site partner (`ShellFrame layout="topnav"`): không có cột sidebar; nội dung canh
+ * cùng cột 1560px với thanh header (đệm hai bên = đệm của `.bar` ở PartnerHeader.module.css). Phần
+ * dính của các màn canh theo chiều cao header này, không theo topbar 56px của site quản trị.
+ *
+ * Đặt TRƯỚC khối `@media (max-width: 1024px)` của `.content`: cùng độ ưu tiên, nên ở màn hẹp đệm
+ * của khung mobile (chừa thanh tab dưới đáy) thắng.
+ */
+.shellTopnav {
+  --xp-shell-header-offset: var(--xp-shell-partner-header-height);
+}
+
+.contentTopnav {
+  padding: var(--xp-space-lg)
+    max(var(--xp-space-lg), calc((100% - var(--xp-shell-partner-max-width)) / 2));
+}
+
 .centered {
   display: flex;
   flex-direction: column;

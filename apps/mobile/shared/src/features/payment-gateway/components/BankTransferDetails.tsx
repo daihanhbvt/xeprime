@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { buildVietQrUrl } from '@xeprime/domain';
+import { bankDisplayName, buildVietQrUrl, transferContent } from '@xeprime/domain';
 import type { components } from '@xeprime/types';
 import { DataRow } from '@/components/ui/DataRow';
 import { IconButton } from '@/components/ui/IconButton';
@@ -10,13 +10,16 @@ import { InfoHint } from '@/components/ui/InfoHint';
 import { useCopy } from '@/hooks/use-copy';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
-import { fontSize, radius, space } from '@/theme/tokens';
+import { PALETTES, fontSize, radius, space } from '@/theme/tokens';
 
 export type TransferAccount = components['schemas']['HoldPaymentInfoDto'];
 
 /** Ảnh QR do `qr.sepay.vn` sinh (#201, `template=compact`) — ảnh VUÔNG. */
 const QR_WIDTH = 260;
 const QR_HEIGHT = QR_WIDTH;
+
+// Ô QR luôn nền TRẮNG ở cả hai giao diện — máy quét ngân hàng cần nền sáng quanh mã.
+const QR_BOX_BG = PALETTES.light.colors.surface;
 
 const useStyles = makeStyles((colors) => ({
   qr: {
@@ -56,13 +59,15 @@ export function BankTransferDetails({
   const [qrFailed, setQrFailed] = useState(false);
 
   const qrUrl = account ? buildVietQrUrl(account, amount, code) : null;
+  // Chuỗi khách chép tay PHẢI là chuỗi in trong QR — kể cả từ khoá ngân hàng nhận đòi (SEVQR…).
+  const reference = transferContent(account, code);
 
   return (
     <YStack gap={space.md}>
       {qrUrl && !qrFailed ? (
         <YStack ai="center" gap={space.sm}>
           {/* Khung trắng có viền: QR nổi khỏi nền thẻ và đủ lề trắng cho máy quét bắt góc. */}
-          <YStack p={space.sm} br={radius.lg} bw={1} bc={colors.borderSubtle} bg={colors.surface}>
+          <YStack p={space.sm} br={radius.lg} bw={1} bc={colors.borderSubtle} bg={QR_BOX_BG}>
             <Image
               source={{ uri: qrUrl }}
               style={styles.qr}
@@ -89,12 +94,12 @@ export function BankTransferDetails({
             {account.bankCode ? (
               <DataRow
                 label={t('bank')}
-                value={account.bankCode}
+                value={bankDisplayName(account.bankCode)}
                 action={
                   <IconButton
                     icon="copy-outline"
                     label={tHold('copyBank')}
-                    onPress={() => void copy(account.bankCode as string)}
+                    onPress={() => void copy(bankDisplayName(account.bankCode))}
                   />
                 }
               />
@@ -149,11 +154,11 @@ export function BankTransferDetails({
         {/* MÃ quyết định tiền khớp vào khoản nào — gõ tay sai một ký tự là một khoản treo. */}
         <DataRow
           label={t('code')}
-          value={code}
+          value={reference}
           strong
           hint={<InfoHint content={t('codeHint')} label={t('codeHintLabel')} />}
           action={
-            <IconButton icon="copy-outline" label={t('copyCode')} onPress={() => void copy(code)} />
+            <IconButton icon="copy-outline" label={t('copyCode')} onPress={() => void copy(reference)} />
           }
         />
       </YStack>

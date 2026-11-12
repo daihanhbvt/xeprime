@@ -121,28 +121,3 @@
 .dark .caret {
   color: var(--xp-shell-sidebar-muted);
 }
-
-/* ─── Khối danh tính ở đầu menu tài khoản ────────────────────────────────────
-   Ba dòng: gian hàng · ai đang đăng nhập · nhãn tuyến. Mục `disabled` của AntD nên nó không
-   bấm được — đây là ngữ cảnh, không phải một lựa chọn.                                       */
-.menuIdentity {
-  display: flex;
-  min-width: 0;
-  max-width: 240px;
-  flex-direction: column;
-  gap: 2px;
-  /* Mục menu bị `disabled` bị AntD làm mờ; khối này là chữ để ĐỌC nên trả lại độ đậm. */
-  cursor: default;
-}
-
-.menuShop {
-  color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-semibold);
-  overflow-wrap: anywhere;
-}
-
-.menuUser {
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  overflow-wrap: anywhere;
-}

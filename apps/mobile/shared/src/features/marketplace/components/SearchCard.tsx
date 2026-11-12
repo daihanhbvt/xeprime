@@ -15,12 +15,13 @@ import { XP_TOKENS, toPx } from '@xeprime/ui';
 import { GradientButton } from './home/GradientButton';
 import { elevation } from '@/theme/elevation';
 import { useDomainLabel } from '@/i18n/domain';
-import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, market, space } from '@/theme/tokens';
+import { useAppScheme, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, market, radius, space } from '@/theme/tokens';
 import { SERVICE_ICON, SERVICE_LABEL_KEY, VEHICLE_ICON } from '../search-items';
 import { useSearchExperience } from '../search-context';
 import { LocationPicker } from './LocationPicker';
 import { RentalRangeField } from './RentalRangeField';
+import { SEARCH_FIELD_HEIGHT } from './search-card-metrics';
 
 /**
  * Thẻ tìm kiếm của trang chủ. Ba tầng quyết định, đúng thứ tự của web:
@@ -34,9 +35,11 @@ import { RentalRangeField } from './RentalRangeField';
  */
 const RADIUS_CARD = toPx(XP_TOKENS['border-radius-card']);
 const RADIUS_CONTROL = toPx(XP_TOKENS['border-radius-control']);
-/** `.listTabs .icon` 22px · `.listSegment .tab` cao 44 · `.fields` khe 12 (≤640) · `space-2`. */
+/** `.listTabs .icon` 22px · ô điều khiển cao `SEARCH_FIELD_HEIGHT` · `.fields` khe 12 (≤640) · `space-2`. */
 const TAB_ICON = 22;
-const SEGMENT_HEIGHT = 44;
+/** Đệm trong của khung nhóm "Ô tô / Xe máy" - ô chọn dạng viên thuốc nằm lọt trong khung. */
+/** Mục bên trong = chiều cao ô − viền 1px trên/dưới − đệm trên/dưới ⇒ cả nhóm đúng `SEARCH_FIELD_HEIGHT`. */
+const SEGMENT_HEIGHT = SEARCH_FIELD_HEIGHT;
 const FIELDS_GAP = toPx(XP_TOKENS['space-12']);
 const SPACE_2 = toPx(XP_TOKENS['space-2']);
 const tabStyles = StyleSheet.create({ tab: { flex: 1, height: 46 }, segment: { flex: 1 },
@@ -63,6 +66,10 @@ export function SearchCard({
 }) {
   const sheet = variant === 'sheet';
   const colors = useColors();
+  // Figma dark (`19879:66137`): mục đang chọn vàng sáng `primary`, mục chưa chọn xám mờ.
+  const dark = useAppScheme().scheme === 'dark';
+  const activeFg = dark ? colors.primary : colors.primaryHover;
+  const idleFg = dark ? colors.textPlaceholder : colors.textMuted;
   const t = useTranslations('HomeSearch');
   const tService = useTranslations('HomeSearch.service');
   const domainLabel = useDomainLabel();
@@ -171,10 +178,10 @@ export function SearchCard({
                   <Ionicons
                     name={item.icon}
                     size={TAB_ICON}
-                    color={selected ? colors.primaryHover : colors.textMuted}
+                    color={selected ? activeFg : idleFg}
                   />
                   <Text
-                    col={selected ? colors.primaryHover : colors.textMuted}
+                    col={selected ? activeFg : idleFg}
                     fos={fontSize.body}
                     fow={fontWeight.medium}
                     numberOfLines={1}
@@ -209,16 +216,16 @@ export function SearchCard({
         <Field label={withDriver ? t('route.label') : t('card.vehicleTypeLabel')}>
           {/*
             `.listSegment` — viền `color-border` 1px, bo control, nền `color-bg`, bóng xs, khe 2,
-            KHÔNG đệm; mỗi mục cao 44.
+            KHÔNG đệm; mỗi mục cao `SEARCH_FIELD_HEIGHT`.
           */}
           <XStack
-            gap={SPACE_2}
             ai="stretch"
-            br={RADIUS_CONTROL}
+            // Viên thuốc KHÔNG đệm (như web `.listSegment`): ô đang chọn đè đúng lên viền ngoài
+            // (lề -1) nên hai viền trùng thành MỘT. Không bóng - bóng Android ăn mất mép viền.
+            br={radius.pill}
             bw={1}
             bc={colors.border}
             bg={colors.background}
-            style={elevation.xs}
             accessibilityRole="radiogroup"
           >
             {segmentItems.map((item) => {
@@ -232,28 +239,30 @@ export function SearchCard({
                   accessibilityState={{ selected }}
                 >
                   {/*
-                    `.listSegment .tab` — cao 44, đệm sm/md, viền trong suốt; đang chọn
-                    (`.tabActive`): viền `border-strong`, nền `bg-container`, bóng xs, chữ `primary-hover`.
+                    `.listSegment .tab` - đệm sm/md, KHÔNG viền riêng; đang chọn: nền `bg-container`,
+                    bóng xs, chữ `primary-hover`. Không viền vì viền của ô chọn đè đúng lên viền
+                    ngoài của nhóm thành viền ĐÔI (06/11/2026) - nhóm chỉ có một viền ngoài.
                   */}
                   <XStack
                     f={1}
                     h={SEGMENT_HEIGHT}
+                    m={-1}
+                    bw={1}
+                    bc={selected ? colors.border : 'transparent'}
                     ai="center"
                     jc="center"
                     gap={space.sm}
                     // Ba ô lộ trình chia một hàng: đệm hẹp hơn để nhãn dài vẫn đủ chỗ.
                     px={withDriver ? space.xs : space.md}
-                    br={RADIUS_CONTROL}
-                    bw={1}
-                    bc={selected ? colors.borderInput : 'transparent'}
+                    br={radius.pill}
                     bg={selected ? colors.surface : 'transparent'}
-                    style={selected ? elevation.xs : undefined}
+                    // KHÔNG bóng (09/11/2026): vệt bóng quanh viên trắng đọc thành viền thứ hai - nhóm chỉ một viền ngoài.
                   >
                     {item.icon ? (
                       <Ionicons
                         name={item.icon}
                         size={18}
-                        color={selected ? colors.primaryHover : colors.textMuted}
+                        color={selected ? activeFg : idleFg}
                       />
                     ) : null}
                     {/*
@@ -261,7 +270,7 @@ export function SearchCard({
                       bề ngang THEO ĐỘ DÀI nhãn (flexBasis auto + flexGrow) nên "Liên tỉnh (1 chiều)" được ô rộng hơn.
                     */}
                     <Text
-                      col={selected ? colors.primaryHover : colors.textMuted}
+                      col={selected ? activeFg : idleFg}
                       fos={fontSize.bodyLg}
                       fow={fontWeight.medium}
                       numberOfLines={1}
@@ -282,7 +291,7 @@ export function SearchCard({
             accessibilityLabel={t('location.triggerLabel', { value: locationValue })}
           >
             <XStack
-              h={44}
+              h={SEARCH_FIELD_HEIGHT}
               ai="center"
               gap={space.sm}
               bg={colors.surface}
@@ -293,14 +302,14 @@ export function SearchCard({
               style={elevation.xs}
             >
               {/*
-                `LocationPicker .field` — cao 44, đệm 10/14, viền `border-strong` 1px, bo control,
+                `LocationPicker .field` - cao `SEARCH_FIELD_HEIGHT`, đệm 10/14, viền `border-strong` 1px, bo control,
                 nền `bg-container`, bóng xs, chữ body-lg.
               */}
               {/*
                 Như web `LocationPicker` (`selectedLabel`): chưa chọn tỉnh = GIÁ TRỊ "Toàn quốc" (chữ
                 `text`, không phải placeholder) — tìm toàn quốc là một lựa chọn thật. Icon ở CUỐI ô.
               */}
-              <Text f={1} col={colors.text} fos={fontSize.bodyLg} numberOfLines={1}>
+              <Text f={1} col={colors.text} fos={sheet ? fontSize.body : fontSize.bodyLg} lh={sheet ? 22 : undefined} numberOfLines={1}>
                 {draft.provinceCode ? locationValue : t('location.nationwide')}
               </Text>
               <Ionicons name="location-outline" size={20} color={colors.textMuted} />
@@ -326,7 +335,9 @@ export function SearchCard({
           <GradientButton
             label={t('card.searchAction')}
             iconStart="search"
+            shine
             radius={RADIUS_CONTROL}
+            height={SEARCH_FIELD_HEIGHT}
             onPress={onSearch}
           />
         ) : null}

@@ -38,7 +38,7 @@ export class PublicQuoteController {
   @Public()
   @Get(':id/quote')
   @ApiOperation({
-    summary: 'Báo giá thuê — theo khoảng ngày, hoặc theo GÓI tháng lịch với thuê dài hạn',
+    summary: 'Báo giá thuê - theo khoảng ngày, hoặc theo GÓI tháng lịch với thuê dài hạn',
   })
   @ApiOkResponse({ type: PublicQuoteDto })
   async quote(@Param('id') id: string, @Query() query: PublicQuoteQueryDto): Promise<PublicQuoteDto> {

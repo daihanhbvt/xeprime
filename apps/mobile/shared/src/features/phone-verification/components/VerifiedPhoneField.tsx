@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useController, useWatch, type Control, type FieldValues } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { VN_PHONE_PATTERN, type PhoneVerificationPurpose } from '@xeprime/types';
+import { VN_MOBILE_PHONE_PATTERN, type PhoneVerificationPurpose } from '@xeprime/types';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
@@ -11,6 +11,8 @@ import { TextField } from '@/components/ui/TextField';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { CONTACT_CHANNEL } from '@/features/account/api';
+import { useContactVerify } from '@/features/account/hooks/use-contact-verify';
 import { usePhoneVerify } from '../hooks/use-phone-verify';
 import { OtpCodeInput } from './OtpCodeInput';
 
@@ -46,7 +48,13 @@ export function VerifiedPhoneField({
   disabled = false,
   verifyRef,
   onVerified,
+  attachToAccount = false,
 }: {
+  /**
+   * Gắn số vào CHÍNH tài khoản đang đăng nhập (`/users/me/phone/*`) thay vì mã `purpose` — tài
+   * khoản đối tác vào bằng Google/Facebook/Apple chưa có SĐT xác minh. Khi bật, `purpose` bị bỏ qua.
+   */
+  attachToAccount?: boolean;
   /*
    * KHÔNG generic theo form của nơi gọi: `Path<T>` trên một `T` generic làm TypeScript dựng kiểu
    * template literal tới mức sập ("Map maximum size exceeded"). Nơi gọi ép `control` một lần.
@@ -68,7 +76,29 @@ export function VerifiedPhoneField({
   const t = useTranslations('Auth.otp');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
-  const otp = usePhoneVerify(purpose);
+  const purposeOtp = usePhoneVerify(purpose);
+  const accountOtp = useContactVerify(CONTACT_CHANNEL.PHONE);
+  /** Một mặt chung cho hai đường OTP — phần còn lại không cần biết đang dùng đường nào. */
+  const otp = attachToAccount
+    ? {
+        status: accountOtp.step === 'code' ? ('code_sent' as const) : ('idle' as const),
+        cooldown: accountOtp.cooldown,
+        sending: accountOtp.sending,
+        verifying: accountOtp.verifying,
+        sendAsync: accountOtp.sendAsync,
+        verify: (
+          _phone: string,
+          code: string,
+          options?: { onError?: (error: unknown) => void; onSuccess?: () => void },
+        ) => {
+          accountOtp.verifyAsync(code).then(
+            () => options?.onSuccess?.(),
+            (error: unknown) => options?.onError?.(error),
+          );
+        },
+        reset: accountOtp.reset,
+      }
+    : purposeOtp;
   const { field: codeField } = useController({ control, name: codeName });
   const { field: verifiedField, fieldState: verifiedState } = useController({
     control,
@@ -78,7 +108,7 @@ export function VerifiedPhoneField({
   /** Lượt xác thực do nút GỬI của form mở — đúng mã thì form tự gửi tiếp (`onVerified`). */
   const continueAfterVerify = useRef(false);
   const phone = String(useWatch({ control, name: phoneName }) ?? '').trim();
-  const phoneValid = VN_PHONE_PATTERN.test(phone);
+  const phoneValid = VN_MOBILE_PHONE_PATTERN.test(phone.trim());
   const code = String(codeField.value ?? '');
   const verified = verifiedField.value === true;
 

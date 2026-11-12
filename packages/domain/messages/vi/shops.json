@@ -25,13 +25,14 @@
   },
   "card": {
     "trips": "{count, plural, other {#{plus} chuyến}}",
+    "rentedTimes": "Đã cho thuê {count, plural, other {#{plus} lần}}",
     "highlight": {
       "topRated": "Chủ xe {rating} sao có thời gian phản hồi nhanh chóng, tỉ lệ đồng ý cao & dịch vụ nhận được nhiều đánh giá tốt từ khách hàng.",
       "reliable": "Chủ xe phản hồi nhanh và giữ đúng cam kết với hầu hết yêu cầu đã nhận.",
       "wellRated": "Chủ xe được khách đánh giá {rating} sao qua {count, plural, other {# lượt}} đánh giá.",
-      "instantBook": "Xe bật Đặt ngay — yêu cầu của bạn được nhận tự động, không phải chờ duyệt.",
+      "instantBook": "Xe bật Đặt ngay - yêu cầu của bạn được nhận tự động, không phải chờ duyệt.",
       "experienced": "Chủ xe đã hoàn thành {count, plural, other {# chuyến}} cho khách trên XePrime.",
-      "newHost": "Chủ xe mới trên XePrime — bạn có thể là một trong những khách đầu tiên."
+      "newHost": "Chủ xe mới trên XePrime - bạn có thể là một trong những khách đầu tiên."
     },
     "type": {
       "shop": "Gian hàng",

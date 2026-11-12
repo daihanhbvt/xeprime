@@ -10,6 +10,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -30,9 +31,11 @@ import type { AuthenticatedUser, TenantContext } from '../../common/types/reques
 import {
   AssignBookingDriverDto,
   BookingDetailDto,
+  BookingHandoverPrepDto,
   BookingListQueryDto,
   BookingPageDto,
   CreateBookingDto,
+  SetHandoverPrepCheckDto,
   TransitionBookingDto,
   UpdateBookingDeliveryFeeDto,
   UpdateBookingDto,
@@ -134,6 +137,25 @@ export class BookingsController {
     return this.bookings.updateDeliveryFee(tenant.tenantId, id, user.id, dto);
   }
 
+  /**
+   * Đánh dấu / bỏ đánh dấu TAY một việc "Chuẩn bị bàn giao" (03/11/2026) — khi việc diễn ra ngoài
+   * hệ thống. Việc tiền không đánh dấu tay được (phải là phiếu thu thật). Cùng quyền với soạn biên
+   * bản bàn giao; phiên hỗ trợ không dùng được (không khai `@SupportAction`).
+   */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Put(':id/handover-prep')
+  @RequirePermissions(PERMISSION.HANDOVER_MANAGE)
+  @ApiOperation({ summary: 'Đánh dấu / bỏ đánh dấu tay một việc chuẩn bị bàn giao' })
+  @ApiOkResponse({ type: BookingHandoverPrepDto })
+  setHandoverPrepCheck(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: SetHandoverPrepCheckDto,
+  ): Promise<BookingHandoverPrepDto> {
+    return this.bookings.setHandoverPrepCheck(tenant.tenantId, id, user.id, dto);
+  }
+
   /** Gán/bỏ gán tài xế (17/08) — endpoint riêng vì cần vết audit riêng (ai gán, gán ai). */
   @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
   @Patch(':id/driver')
@@ -156,7 +178,7 @@ export class BookingsController {
     if (dto.externalDriver !== undefined) {
       throw new UnprocessableEntityException({
         code: API_ERROR_CODE.EXTERNAL_DRIVER_NOT_SUPPORTED,
-        message: 'XePrime không còn nhận tài xế ngoài hệ thống — gán tài xế liên kết',
+        message: 'XePrime không còn nhận tài xế ngoài hệ thống - gán tài xế liên kết',
       });
     }
     return this.bookings.assignDriver(

@@ -10,7 +10,7 @@ import { ZONE } from './zone-config';
  * Bảng URL cũ (B2 — ADR 0051 điều 3). Bookmark, email và thông báo đã phát còn trỏ vào đây; một
  * dòng sai là một link chết hoặc — tệ hơn — trang của KHÁCH bị đá sang site đối tác.
  */
-describe('legacyOwnerPageTarget — Owner Lite cũ trên site khách → site partner', () => {
+describe('legacyOwnerPageTarget - Owner Lite cũ trên site khách → site partner', () => {
   const cases: Array<[string, string]> = [
     ['/account/registration', '/registration'],
     ['/account/vehicles', '/vehicles'],
@@ -63,7 +63,7 @@ describe('legacyOwnerPageTarget — Owner Lite cũ trên site khách → site pa
   });
 });
 
-describe('legacyPrefixedTarget — URL mang tiền tố nội bộ cũ', () => {
+describe('legacyPrefixedTarget - URL mang tiền tố nội bộ cũ', () => {
   it('/manage/admin/* là khu quản trị cũ', () => {
     expect(legacyPrefixedTarget('/manage/admin')).toEqual({ zone: ZONE.ADMIN, path: '/' });
     expect(legacyPrefixedTarget('/manage/admin/tenants/01T')).toEqual({
@@ -101,7 +101,7 @@ describe('legacyPrefixedTarget — URL mang tiền tố nội bộ cũ', () => {
   });
 });
 
-describe('legacyPartnerPageTarget — trang partner đã sang site khách', () => {
+describe('legacyPartnerPageTarget - trang partner đã sang site khách', () => {
   it('chuyến đi thuê → /trips', () => {
     expect(legacyPartnerPageTarget('/account/trips')).toEqual({ zone: ZONE.MARKET, path: '/trips' });
     expect(legacyPartnerPageTarget('/account/trips/01T/')).toEqual({

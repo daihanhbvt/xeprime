@@ -351,3 +351,45 @@ describe('feeDaysOf — chỉ giá NIÊM YẾT từng ngày mới được đón
     expect(days.dayAmountsListed).toBe(false);
   });
 });
+
+/**
+ * Bảng phí đóng băng TRƯỚC khi `rentalDays` vào snapshot (06/11/2026, đơn #DHECG2QE): đọc thẳng
+ * là `undefined` trên dây và màn hình in "Tiền thuê NaN ngày".
+ */
+describe('ownerPayoutOf — snapshot cũ thiếu số ngày', () => {
+  function legacyFees(dropDayAmounts: boolean): CustomerFeeBreakdown {
+    const fees = computeCustomerFees({
+      billingMode: BILLING_MODE.PACKAGE,
+      policy: ND117,
+      vehicleType: VEHICLE_TYPE.CAR,
+      baseAmount: '1300000',
+      rentalDays: 2,
+      dayAmounts: ['650000', '650000'],
+      insuranceOffered: false,
+      serviceType: SERVICE_TYPE.SELF_DRIVE,
+    });
+    const legacy = { ...fees } as Partial<CustomerFeeBreakdown>;
+    delete legacy.rentalDays;
+    if (dropDayAmounts) delete legacy.dayAmounts;
+    return legacy as CustomerFeeBreakdown;
+  }
+
+  const period = {
+    pickupAt: new Date('2026-11-09T01:00:00Z'),
+    returnAt: new Date('2026-11-11T01:00:00Z'),
+  };
+
+  it('còn mảng giá từng ngày ⇒ số ngày = độ dài mảng', () => {
+    expect(ownerPayoutOf(legacyFees(false), undefined, period).rentalDays).toBe(2);
+  });
+
+  it('không còn mảng ⇒ suy từ giờ nhận / trả của đơn (mỗi 24h kể cả lẻ là một ngày)', () => {
+    expect(ownerPayoutOf(legacyFees(true), undefined, period).rentalDays).toBe(2);
+    const late = { ...period, returnAt: new Date('2026-11-11T03:00:00Z') };
+    expect(ownerPayoutOf(legacyFees(true), undefined, late).rentalDays).toBe(3);
+  });
+
+  it('không còn nguồn nào ⇒ 0 (không biết), không bịa số ngày', () => {
+    expect(ownerPayoutOf(legacyFees(true)).rentalDays).toBe(0);
+  });
+});

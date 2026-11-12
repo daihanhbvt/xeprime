@@ -1,16 +1,79 @@
+/* Thẻ "Nhóm thông tin" của design `23813:38909`: nền trắng, viền mảnh, bo 16, đệm 20. */
 .card {
-  margin-top: var(--xp-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+  padding: var(--xp-space-20);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 0 6px rgba(10, 13, 18, 0.04);
 }
 
-.note {
-  margin-bottom: var(--xp-space-md);
+/* Trong hộp thoại: cùng nhịp khối, không khung — hộp thoại đã là khung. */
+.embedded {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
 }
 
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+  color: var(--xp-color-text);
+}
+
+.period {
+  width: 269px;
+  max-width: 100%;
+}
+
+/* Dải số (design "Vehicle Summary" `23813:39215`): các ô chia đều, chữ căn giữa. */
 .stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  margin-bottom: var(--xp-space-md);
   gap: var(--xp-space-md);
+  margin: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-card);
+  box-shadow: 0 0 6px rgba(10, 13, 18, 0.04);
+}
+
+.stat {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.statLabel {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text-secondary);
+}
+
+.statValue {
+  margin: 0;
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-text);
 }
 
 .value {
@@ -22,5 +85,30 @@
 .muted {
   margin: 0;
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
+  font-size: var(--xp-font-size-body);
+}
+
+/* Ô giải thích xanh ở cuối thẻ (design `23813:39548`). */
+.note {
+  margin: 0;
+  padding: var(--xp-space-12);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info-strong);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: var(--xp-space-md);
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .period {
+    width: 100%;
+  }
 }

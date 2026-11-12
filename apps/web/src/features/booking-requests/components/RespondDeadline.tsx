@@ -8,6 +8,7 @@ import {
   bookingRequestRemainingMs,
   longClockText,
 } from '@xeprime/types';
+import { CountdownClock } from './CountdownClock';
 import styles from './RespondDeadline.module.css';
 
 /** Dưới mốc này thì đồng hồ chuyển sang sắc thái cảnh báo — cùng con số với lần nhắc cuối. */
@@ -42,7 +43,38 @@ export function respondDeadlineState(remainingMs: number): RespondDeadlineState 
  * hydrate đầu của client lệch nhau đúng vài giây — đó là bản chất của một đồng hồ, không phải
  * một khác biệt cần sửa.
  */
-export function RespondDeadline({ respondBy }: { respondBy: string }) {
+export function RespondDeadline({
+  respondBy,
+  variant = 'chip',
+  compact = false,
+}: {
+  respondBy: string;
+  /**
+   * `chip` — dòng nhỏ dưới nhãn trạng thái (thẻ chuyến của chủ xe). `header` — "Chờ xác nhận:
+   * 59:39" trên dải đầu thẻ chuyến site partner (Figma Partner-XePrime 02/11/2026) — cùng đồng hồ
+   * `CountdownClock` với hạn thanh toán của khách.
+   */
+  variant?: 'chip' | 'header';
+  /** `header` ở chân thẻ Kanban — xem `CountdownClock.compact`. */
+  compact?: boolean;
+}) {
+  const t = useTranslations('BookingRequests.deadline');
+  const tCard = useTranslations('BookingRequests.card');
+  if (variant === 'header') {
+    return (
+      <CountdownClock
+        deadline={respondBy}
+        label={tCard('awaitingConfirm')}
+        expiredLabel={t('expired')}
+        urgentMinutes={BOOKING_REQUEST_REMINDER_REMAINING_MINUTES.FINAL}
+        compact={compact}
+      />
+    );
+  }
+  return <RespondDeadlineChip respondBy={respondBy} />;
+}
+
+function RespondDeadlineChip({ respondBy }: { respondBy: string }) {
   const t = useTranslations('BookingRequests.deadline');
   /*
    * State là "BÂY GIỜ", không phải "còn bao lâu".

@@ -15,22 +15,16 @@ import {
   DRIVER_DEPOSIT_MODE_SUPPORTED,
   DRIVER_SURCHARGE_KIND_SPEC,
   DRIVER_SURCHARGE_KIND_VALUES,
-  HANDOVER_WINDOW_KIND,
   IDENTITY_VERIFY_METHOD,
   SERVICE_TYPE,
   effectiveRequiredDocuments,
-  handoverTimeToMinute,
   hasVehicleServiceSettings,
   isDriverDepositModeSupported,
-  isWithinHandoverWindows,
-  minuteToHandoverTime,
   requiredIdentityDocuments,
   type AutoAcceptBlocker,
   type CustomerDocumentType,
   type DriverDepositMode,
   type DriverSurchargeRuleSnapshot,
-  type HandoverWindow,
-  type HandoverWindowKind,
   type RentalTermsSnapshot,
   type ServiceType,
 } from '@xeprime/types';
@@ -45,10 +39,11 @@ import { ListingsService } from '../public-listings/listings.service';
 import { refreshPendingApprovalSnapshot } from '../vehicles/refresh-pending-approval-snapshot';
 import {
   DriverSurchargeRuleDto,
-  HandoverWindowDto,
   PatchVehicleServiceSettingDto,
   SaveDriverSurchargeRulesDto,
+  SaveShopOperationDefaultsDto,
   SaveVehicleOperationSettingsDto,
+  ShopOperationDefaultsDto,
   VehicleOperationSettingsDto,
   VehicleServiceSettingDto,
   WithDriverAutoAcceptCapabilityDto,
@@ -69,11 +64,6 @@ export interface EffectiveServiceSetting {
   requireTermsAcceptance: boolean;
   depositMode: DriverDepositMode;
   updatedAt: Date | null;
-}
-
-export interface HandoverWindows {
-  pickup: HandoverWindow[];
-  return: HandoverWindow[];
 }
 
 /** Dữ kiện của MỘT yêu cầu để hỏi "có tự nhận được không" — hàm thuần, không đụng DB. */
@@ -104,14 +94,13 @@ const SERVICE_SELECT = {
 const MS_PER_MINUTE = 60_000;
 
 /**
- * Thiết lập vận hành theo xe (08/09/2026) — writer DUY NHẤT của bốn bảng
- * `vehicle_operation_settings` · `vehicle_handover_windows` · `vehicle_service_settings` ·
- * `vehicle_driver_surcharge_rules`, và là nơi DUY NHẤT trả lời ba câu hỏi nghiệp vụ mà các
- * module khác cần:
+ * Thiết lập vận hành theo xe (08/09/2026) — writer DUY NHẤT của
+ * `vehicle_operation_settings` · `vehicle_service_settings`, và là nơi DUY NHẤT trả lời ba câu
+ * hỏi nghiệp vụ mà các module khác cần:
  *
  *   - `turnaroundBufferFor` — bao nhiêu phút chết phải cộng vào occupancy MỚI (ADR 0006);
- *   - `assertHandoverWindows` / `assertServiceConstraints` — yêu cầu của khách có hợp lệ với
- *     khung giờ / thời lượng / điều khoản chủ xe đặt không;
+ *   - `assertServiceConstraints` — yêu cầu của khách có hợp lệ với thời lượng / điều khoản chủ
+ *     xe đặt không;
  *   - `evaluateAutoAccept` — yêu cầu này có được hệ thống tự nhận không (thuần, không DB).
  *
  * Module này là LÁ: chỉ phụ thuộc Prisma, Audit và OccupancyService (đọc lịch bận cho preview).
@@ -129,29 +118,25 @@ export class VehicleSettingsService {
     private readonly drivers: DriversService,
   ) {}
 
-  // ── Thời gian chết + khung giờ ───────────────────────────────────────────
+  // ── Thời gian chết ───────────────────────────────────────────────────────
+  //
+  // Khung giờ giao/nhận xe ĐÃ GỠ (ADR 0078): xe nhận và trả mọi giờ. `pickupWindows` /
+  // `returnWindows` giữ HÌNH DẠNG cũ để app phát hành trước đó không vỡ — đọc luôn rỗng, ghi bỏ qua.
 
   async getOperation(tenantId: string, vehicleId: string): Promise<VehicleOperationSettingsDto> {
     await this.assertOwned(this.prisma, tenantId, vehicleId);
-    const [setting, windows] = await Promise.all([
-      this.prisma.vehicleOperationSetting.findUnique({
-        where: { vehicleId },
-        select: { turnaroundBufferMinutes: true, updatedAt: true },
-      }),
-      this.handoverWindowsFor(this.prisma, vehicleId),
-    ]);
+    const resolved = await this.resolveTurnaround(this.prisma, vehicleId);
     return {
-      turnaroundBufferMinutes: setting?.turnaroundBufferMinutes ?? 0,
-      pickupWindows: windows.pickup,
-      returnWindows: windows.return,
-      updatedAt: setting?.updatedAt.toISOString() ?? null,
+      turnaroundBufferMinutes: resolved.effective,
+      useShopDefault: resolved.own == null,
+      shopDefaultMinutes: resolved.shopDefault,
+      pickupWindows: [],
+      returnWindows: [],
+      updatedAt: resolved.updatedAt?.toISOString() ?? null,
     };
   }
 
   /**
-   * Thay toàn bộ ba phần trong MỘT transaction. Khung giờ ghi lại từ đầu (xoá + tạo) — bảng chỉ
-   * có vài dòng mỗi xe và EXCLUDE của DB vẫn là người gác cuối cho hai request đua nhau.
-   *
    * Occupancy đã có KHÔNG bị tính lại: thời gian chết mới chỉ áp cho lịch giữ sau thời điểm này
    * hoặc lịch được dời (ADR 0006 — không âm thầm sửa lịch sử). Giao diện nói rõ điều này.
    */
@@ -162,39 +147,16 @@ export class VehicleSettingsService {
     dto: SaveVehicleOperationSettingsDto,
   ): Promise<VehicleOperationSettingsDto> {
     await this.assertOwned(this.prisma, tenantId, vehicleId);
-    const pickup = normalizeWindows(dto.pickupWindows);
-    const returns = normalizeWindows(dto.returnWindows);
     const before = await this.getOperation(tenantId, vehicleId);
+    // NULL = theo mặc định gian hàng. App cũ không gửi cờ ⇒ vẫn ghi số riêng như trước.
+    const own = dto.useShopDefault ? null : dto.turnaroundBufferMinutes;
 
     await this.prisma.$transaction(async (tx) => {
       await tx.vehicleOperationSetting.upsert({
         where: { vehicleId },
-        create: {
-          id: newId(),
-          tenantId,
-          vehicleId,
-          turnaroundBufferMinutes: dto.turnaroundBufferMinutes,
-          updatedBy: userId,
-        },
-        update: { turnaroundBufferMinutes: dto.turnaroundBufferMinutes, updatedBy: userId },
+        create: { id: newId(), tenantId, vehicleId, turnaroundBufferMinutes: own, updatedBy: userId },
+        update: { turnaroundBufferMinutes: own, updatedBy: userId },
       });
-      await tx.vehicleHandoverWindow.deleteMany({ where: { vehicleId, tenantId } });
-      const rows = [
-        ...pickup.map((w) => ({ kind: HANDOVER_WINDOW_KIND.PICKUP, ...w })),
-        ...returns.map((w) => ({ kind: HANDOVER_WINDOW_KIND.RETURN, ...w })),
-      ];
-      if (rows.length > 0) {
-        await tx.vehicleHandoverWindow.createMany({
-          data: rows.map((w) => ({
-            id: newId(),
-            tenantId,
-            vehicleId,
-            kind: w.kind,
-            startMinute: w.startMinute,
-            endMinute: w.endMinute,
-          })),
-        });
-      }
       await this.audit.record(
         {
           tenantId,
@@ -204,15 +166,9 @@ export class VehicleSettingsService {
           targetType: 'vehicle',
           targetId: vehicleId,
           before: {
-            turnaroundBufferMinutes: before.turnaroundBufferMinutes,
-            pickupWindows: before.pickupWindows,
-            returnWindows: before.returnWindows,
+            turnaroundBufferMinutes: before.useShopDefault ? null : before.turnaroundBufferMinutes,
           },
-          after: {
-            turnaroundBufferMinutes: dto.turnaroundBufferMinutes,
-            pickupWindows: pickup.map(toWindowDto),
-            returnWindows: returns.map(toWindowDto),
-          },
+          after: { turnaroundBufferMinutes: own },
         },
         tx,
       );
@@ -221,53 +177,115 @@ export class VehicleSettingsService {
     return this.getOperation(tenantId, vehicleId);
   }
 
-  /** Phút chết áp cho occupancy MỚI của xe — 0 khi chưa cấu hình (không âm thầm áp 1–2 giờ). */
-  async turnaroundBufferFor(db: Db, vehicleId: string): Promise<number> {
-    const row = await db.vehicleOperationSetting.findUnique({
-      where: { vehicleId },
-      select: { turnaroundBufferMinutes: true },
-    });
-    return row?.turnaroundBufferMinutes ?? 0;
-  }
-
-  async handoverWindowsFor(db: Db, vehicleId: string): Promise<HandoverWindows> {
-    const rows = await db.vehicleHandoverWindow.findMany({
-      where: { vehicleId },
-      orderBy: [{ kind: 'asc' }, { startMinute: 'asc' }],
-      select: { kind: true, startMinute: true, endMinute: true },
-    });
-    const of = (kind: HandoverWindowKind) =>
-      rows
-        .filter((r) => r.kind === kind)
-        .map((r) => ({
-          start: minuteToHandoverTime(r.startMinute),
-          end: minuteToHandoverTime(r.endMinute),
-        }));
-    return { pickup: of(HANDOVER_WINDOW_KIND.PICKUP), return: of(HANDOVER_WINDOW_KIND.RETURN) };
-  }
-
   /**
-   * Giờ nhận/trả phải rơi vào khung giờ chủ xe đặt — kiểm ở SERVER khi khách gửi yêu cầu và khi
-   * gian hàng chốt giờ nhận dài hạn. `returnAt = null` (dài hạn) chỉ kiểm giờ nhận.
+   * Phút chết áp cho occupancy MỚI của xe: số riêng của xe, nếu không thì mặc định gian hàng của
+   * loại xe, nếu không nữa thì 0 (không âm thầm áp 1–2 giờ).
    */
-  async assertHandoverWindows(
+  async turnaroundBufferFor(db: Db, vehicleId: string): Promise<number> {
+    return (await this.resolveTurnaround(db, vehicleId)).effective;
+  }
+
+  private async resolveTurnaround(
     db: Db,
     vehicleId: string,
-    pickupAt: Date,
-    returnAt: Date | null,
-  ): Promise<void> {
-    const windows = await this.handoverWindowsFor(db, vehicleId);
-    const blocker = handoverBlocker(windows, pickupAt, returnAt);
-    if (blocker) {
-      throw new BadRequestException({
-        code: API_ERROR_CODE.HANDOVER_WINDOW_VIOLATION,
-        message:
-          blocker === 'pickup'
-            ? 'Giờ nhận xe nằm ngoài khung giờ giao xe của chủ xe'
-            : 'Giờ trả xe nằm ngoài khung giờ nhận lại xe của chủ xe',
-        details: { kind: blocker, pickupWindows: windows.pickup, returnWindows: windows.return },
+  ): Promise<{
+    own: number | null;
+    shopDefault: number | null;
+    effective: number;
+    updatedAt: Date | null;
+  }> {
+    const vehicle = await db.vehicle.findUnique({
+      where: { id: vehicleId },
+      select: {
+        tenantId: true,
+        vehicleType: true,
+        operationSettings: { select: { turnaroundBufferMinutes: true, updatedAt: true }, take: 1 },
+      },
+    });
+    if (!vehicle) return { own: null, shopDefault: null, effective: 0, updatedAt: null };
+    const setting = vehicle.operationSettings[0] ?? null;
+    const own = setting?.turnaroundBufferMinutes ?? null;
+    const shopDefault =
+      (
+        await db.tenantOperationDefault.findUnique({
+          where: {
+            tenantId_vehicleType: { tenantId: vehicle.tenantId, vehicleType: vehicle.vehicleType },
+          },
+          select: { turnaroundBufferMinutes: true },
+        })
+      )?.turnaroundBufferMinutes ?? null;
+    return {
+      own,
+      shopDefault,
+      effective: own ?? shopDefault ?? 0,
+      updatedAt: setting?.updatedAt ?? null,
+    };
+  }
+
+  // ── Mặc định vận hành của gian hàng (06/11/2026) ─────────────────────────
+
+  async getShopOperationDefaults(
+    tenantId: string,
+    vehicleType: string,
+  ): Promise<ShopOperationDefaultsDto> {
+    const [row, total, overridden] = await this.prisma.$transaction([
+      this.prisma.tenantOperationDefault.findUnique({
+        where: { tenantId_vehicleType: { tenantId, vehicleType } },
+        select: { turnaroundBufferMinutes: true, updatedAt: true },
+      }),
+      this.prisma.vehicle.count({ where: { tenantId, vehicleType, deletedAt: null } }),
+      this.prisma.vehicleOperationSetting.count({
+        where: {
+          tenantId,
+          turnaroundBufferMinutes: { not: null },
+          vehicle: { vehicleType, deletedAt: null },
+        },
+      }),
+    ]);
+    return {
+      vehicleType,
+      turnaroundBufferMinutes: row?.turnaroundBufferMinutes ?? null,
+      inheritingVehicles: Math.max(0, total - overridden),
+      overriddenVehicles: overridden,
+      updatedAt: row?.updatedAt.toISOString() ?? null,
+    };
+  }
+
+  /** Áp cho lịch giữ MỚI của mọi xe đang theo mặc định; occupancy đã có giữ nguyên (ADR 0006). */
+  async saveShopOperationDefaults(
+    tenantId: string,
+    vehicleType: string,
+    userId: string,
+    dto: SaveShopOperationDefaultsDto,
+  ): Promise<ShopOperationDefaultsDto> {
+    const before = await this.getShopOperationDefaults(tenantId, vehicleType);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.tenantOperationDefault.upsert({
+        where: { tenantId_vehicleType: { tenantId, vehicleType } },
+        create: {
+          id: newId(),
+          tenantId,
+          vehicleType,
+          turnaroundBufferMinutes: dto.turnaroundBufferMinutes,
+          updatedBy: userId,
+        },
+        update: { turnaroundBufferMinutes: dto.turnaroundBufferMinutes, updatedBy: userId },
       });
-    }
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+          action: 'tenant.operation_defaults.update',
+          targetType: 'tenant',
+          targetId: tenantId,
+          before: { vehicleType, turnaroundBufferMinutes: before.turnaroundBufferMinutes },
+          after: { vehicleType, turnaroundBufferMinutes: dto.turnaroundBufferMinutes },
+        },
+        tx,
+      );
+    });
+    return this.getShopOperationDefaults(tenantId, vehicleType);
   }
 
   // ── Thiết lập theo dịch vụ ───────────────────────────────────────────────
@@ -296,7 +314,7 @@ export class VehicleSettingsService {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
         message:
-          'Chỉ dịch vụ tự lái và có tài xế có thiết lập riêng — thuê dài hạn luôn do gian hàng chốt lịch',
+          'Chỉ dịch vụ tự lái và có tài xế có thiết lập riêng - thuê dài hạn luôn do gian hàng chốt lịch',
       });
     }
     await this.assertOwned(this.prisma, tenantId, vehicleId);
@@ -336,11 +354,11 @@ export class VehicleSettingsService {
     }
     if (!isDriverDepositModeSupported(next.depositMode)) {
       throw invalid(
-        'Chế độ đặt cọc này chưa được hệ thống thu — chỉ "không yêu cầu đặt cọc" đang dùng được',
+        'Chế độ đặt cọc này chưa được hệ thống thu - chỉ "không yêu cầu đặt cọc" đang dùng được',
       );
     }
     if (next.requiredDocuments.includes(CUSTOMER_DOCUMENT_TYPE.OTHER)) {
-      throw invalid('"Giấy tờ khác" không định danh được khách — không dùng làm yêu cầu bắt buộc');
+      throw invalid('"Giấy tờ khác" không định danh được khách - không dùng làm yêu cầu bắt buộc');
     }
     if (next.requireTermsAcceptance && !next.termsText) {
       throw invalid('Bắt buộc khách đồng ý điều khoản thì phải có nội dung điều khoản');
@@ -357,7 +375,7 @@ export class VehicleSettingsService {
           code: API_ERROR_CODE.CONFLICT,
           message: capability.driversFeatureEnabled
             ? 'Cần ít nhất một tài xế đang hoạt động để bật tự động nhận chuyến có tài xế'
-            : 'Gói hiện hành chưa có tính năng Tài xế — chưa bật được tự động nhận chuyến có tài xế',
+            : 'Gói hiện hành chưa có tính năng Tài xế - chưa bật được tự động nhận chuyến có tài xế',
           details: capability,
         });
       }
@@ -484,8 +502,8 @@ export class VehicleSettingsService {
   }
 
   /**
-   * Thời lượng tối thiểu + đồng ý điều khoản — kiểm ở SERVER lúc khách gửi. Khung giờ đi qua
-   * `assertHandoverWindows` (cần DB); hàm này thuần trên thiết lập đã nạp.
+   * Thời lượng tối thiểu + đồng ý điều khoản — kiểm ở SERVER lúc khách gửi; thuần trên thiết
+   * lập đã nạp.
    */
   assertServiceConstraints(
     setting: EffectiveServiceSetting,
@@ -518,7 +536,6 @@ export class VehicleSettingsService {
    */
   evaluateAutoAccept(
     setting: EffectiveServiceSetting,
-    windows: HandoverWindows,
     input: AutoAcceptInput,
   ): AutoAcceptBlocker | null {
     if (!hasVehicleServiceSettings(input.serviceType))
@@ -530,9 +547,6 @@ export class VehicleSettingsService {
      * hay đặt xa đều vậy. Mọi điều kiện dưới đây là ràng buộc THẬT của chuyến, không phải ngưỡng
      * cấu hình — đó là lý do chúng ở lại.
      */
-    if (handoverBlocker(windows, input.pickupAt, input.returnAt)) {
-      return AUTO_ACCEPT_BLOCKER.OUTSIDE_HANDOVER_WINDOW;
-    }
     if (
       setting.minRentalMinutes != null &&
       input.returnAt.getTime() - input.pickupAt.getTime() < setting.minRentalMinutes * MS_PER_MINUTE
@@ -572,11 +586,12 @@ export class VehicleSettingsService {
     });
     if (!vehicle) return { eligible: false, blocker: AUTO_ACCEPT_BLOCKER.SERVICE_NOT_SUPPORTED };
     const tenantId = vehicle.tenantId;
-    const [setting, windows] = await Promise.all([
-      this.serviceSettingFor(this.prisma, vehicleId, input.serviceType as ServiceType),
-      this.handoverWindowsFor(this.prisma, vehicleId),
-    ]);
-    const blocker = this.evaluateAutoAccept(setting, windows, input);
+    const setting = await this.serviceSettingFor(
+      this.prisma,
+      vehicleId,
+      input.serviceType as ServiceType,
+    );
+    const blocker = this.evaluateAutoAccept(setting, input);
     if (blocker) return { eligible: false, blocker };
     if (input.pickupAt && input.returnAt) {
       const busy = await this.occupancy.findOverlapping(vehicleId, input.pickupAt, input.returnAt);
@@ -644,7 +659,7 @@ export class VehicleSettingsService {
     throw new UnprocessableEntityException({
       code: API_ERROR_CODE.DRIVER_SURCHARGE_RETIRED,
       message:
-        'Phụ phí tài xế đã gỡ — giá có tài xế là giá trọn gói, phí cầu đường khách trả trực tiếp',
+        'Phụ phí tài xế đã gỡ - giá có tài xế là giá trọn gói, phí cầu đường khách trả trực tiếp',
     });
   }
 
@@ -672,9 +687,8 @@ export class VehicleSettingsService {
     termsAcceptedAt: Date | null,
   ): Promise<RentalTermsSnapshot> {
     const service = serviceType as ServiceType;
-    const [setting, windows, buffer] = await Promise.all([
+    const [setting, buffer] = await Promise.all([
       this.serviceSettingFor(db, vehicleId, service),
-      this.handoverWindowsFor(db, vehicleId),
       this.turnaroundBufferFor(db, vehicleId),
     ]);
     // Phụ phí tài xế đã gỡ (ADR 0075) — snapshot mới luôn rỗng; snapshot cũ giữ nguyên số của nó.
@@ -688,8 +702,9 @@ export class VehicleSettingsService {
       termsAcceptedAt: termsAcceptedAt?.toISOString() ?? null,
       depositMode: serviceType === SERVICE_TYPE.WITH_DRIVER ? setting.depositMode : null,
       surchargeRules,
-      pickupWindows: windows.pickup,
-      returnWindows: windows.return,
+      // Khung giờ đã gỡ (ADR 0078) — snapshot mới luôn rỗng; snapshot cũ giữ nguyên khung của nó.
+      pickupWindows: [],
+      returnWindows: [],
       turnaroundBufferMinutes: buffer,
     };
   }
@@ -708,47 +723,6 @@ export class VehicleSettingsService {
 }
 
 // ── Helpers thuần ────────────────────────────────────────────────────────────
-
-interface MinuteWindow {
-  startMinute: number;
-  endMinute: number;
-}
-
-/** `HH:mm` → phút, kiểm `start < end` và không chồng lấn — cùng luật với CHECK/EXCLUDE ở DB. */
-function normalizeWindows(windows: HandoverWindowDto[]): MinuteWindow[] {
-  const parsed = windows.map((w) => {
-    const startMinute = handoverTimeToMinute(w.start);
-    const endMinute = handoverTimeToMinute(w.end);
-    if (startMinute == null || endMinute == null)
-      throw invalid('Giờ giao nhận không hợp lệ (HH:mm)');
-    if (startMinute >= endMinute) {
-      throw invalid('Giờ kết thúc phải sau giờ bắt đầu — một khung không qua nửa đêm');
-    }
-    return { startMinute, endMinute };
-  });
-  parsed.sort((a, b) => a.startMinute - b.startMinute);
-  for (let i = 1; i < parsed.length; i += 1) {
-    if (parsed[i]!.startMinute < parsed[i - 1]!.endMinute) {
-      throw invalid('Các khung giờ không được chồng lấn nhau');
-    }
-  }
-  return parsed;
-}
-
-function toWindowDto(w: MinuteWindow): HandoverWindow {
-  return { start: minuteToHandoverTime(w.startMinute), end: minuteToHandoverTime(w.endMinute) };
-}
-
-/** Giờ nào vi phạm — `pickup` / `return` / null. Không có khung = không giới hạn. */
-function handoverBlocker(
-  windows: HandoverWindows,
-  pickupAt: Date,
-  returnAt: Date | null,
-): 'pickup' | 'return' | null {
-  if (!isWithinHandoverWindows(pickupAt, windows.pickup)) return 'pickup';
-  if (returnAt && !isWithinHandoverWindows(returnAt, windows.return)) return 'return';
-  return null;
-}
 
 function toServiceDto(
   s: EffectiveServiceSetting,

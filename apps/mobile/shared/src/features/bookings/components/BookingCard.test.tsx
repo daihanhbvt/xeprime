@@ -40,7 +40,7 @@ const noop = () => {};
  * trả lời "xe nào phải rời bãi lúc mấy giờ, đi đâu, chuẩn bị tới đâu rồi". Dựng nhầm bộ là màn
  * hình vẫn chạy và vẫn đẹp — chỉ là nó không trả lời câu người trực đang hỏi.
  */
-describe('BookingCard — danh sách đầy đủ', () => {
+describe('BookingCard - danh sách đầy đủ', () => {
   it('hiện TỔNG TIỀN và trạng thái đơn', async () => {
     const view = await render(withIntl(<BookingCard booking={booking()} onPress={noop} />));
 
@@ -64,7 +64,7 @@ describe('BookingCard — danh sách đầy đủ', () => {
   });
 });
 
-describe('BookingCard — hàng đợi Chờ giao xe', () => {
+describe('BookingCard - hàng đợi Chờ giao xe', () => {
   /**
    * Viên góc phải đổi từ TRẠNG THÁI ĐƠN sang MỨC KHẨN.
    *

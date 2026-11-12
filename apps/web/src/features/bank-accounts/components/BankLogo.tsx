@@ -17,7 +17,7 @@ export function BankLogo({
   className,
 }: {
   code: string;
-  size?: 'xs' | 'sm' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   className?: string;
 }) {
   const [failed, setFailed] = useState(false);

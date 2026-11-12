@@ -16,6 +16,7 @@ import { CountTrendChart } from '@/components/chart/CountTrendChart';
 import { RevenueTrendChart } from '@/components/chart/RevenueTrendChart';
 import { isShopOwner } from '@/constants/account-nav';
 import { receiptsPath } from '@/constants/routes';
+import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/auth/post-auth-destination';
 import { withBranchParam } from '@/features/branches/branch-link';
 import { BranchFilterSelect } from '@/features/branches/components/BranchFilterSelect';
 import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
@@ -26,7 +27,7 @@ import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { dayjs } from '@/lib/datetime';
 import { DASHBOARD_REVENUE_DAYS, dashboardMonthRange, dashboardTodayRange } from '../api';
-import { todayLabel } from '../dashboard-model';
+import { greetingKey, todayLabel } from '../dashboard-model';
 import { useDashboardAnswer } from '../hooks/use-dashboard-answer';
 import { useDashboardLinks } from '../hooks/use-dashboard-links';
 import { useDashboardMoney } from '../hooks/use-dashboard-money';
@@ -37,6 +38,7 @@ import { DashboardHeader } from './DashboardHeader';
 import { DashboardPanel } from './DashboardPanel';
 import { MarketPanel } from './MarketPanel';
 import { MonthKpis } from './MonthKpis';
+import { OwnerVehiclesPanel } from './OwnerVehiclesPanel';
 import { PlanPanel } from './PlanPanel';
 import { ReceiptMiniList } from './ReceiptMiniList';
 import { ReputationPanel } from './ReputationPanel';
@@ -47,7 +49,8 @@ import { WalletPanel } from './WalletPanel';
 import styles from './DashboardView.module.css';
 
 /**
- * TỔNG QUAN của gian hàng TUYẾN GÓI — đúng khuôn bảng điều khiển của UX §1.5:
+ * TỔNG QUAN của site partner — gian hàng tuyến gói VÀ chủ xe cá nhân (ADR 0085 điều 1: một màn, khối
+ * không áp dụng thì vắng). Đúng khuôn bảng điều khiển của UX §1.5:
  *
  *  1. Câu trả lời ("Hôm nay: giao 3 xe · 1 yêu cầu chờ bạn trả lời") + bốn ô VIỆC CẦN LÀM;
  *  2. KPI tháng này, mỗi thẻ so cùng kỳ tháng trước và dẫn tới danh sách tạo nên nó;
@@ -59,6 +62,17 @@ import styles from './DashboardView.module.css';
  *
  * Cũng là Tổng quan trong phiên hỗ trợ gian hàng (ADR 0050): ví ẩn vì phiên không bao giờ là chủ,
  * khối tiền ẩn vì phiên không có `finance.view`.
+ *
+ * ## Chủ xe cá nhân (tuyến hoa hồng)
+ *
+ * Sổ tổng hợp là năng lực gói (ADR 0027 điều 1): thẻ doanh thu, biểu đồ, sổ quỹ tự vắng theo cờ
+ * `finance`, server không trả `trend`. Thêm ba khác biệt có chủ đích, giữ lại từ Tổng quan riêng cũ
+ * của họ để không mất tính năng:
+ *  - "Xe của bạn" (`OwnerVehiclesPanel`) thay số đếm "Xe trên chợ": 1–3 xe thì cần thấy chính chiếc
+ *    xe và vì sao nó chưa hiện, kèm lời mời lên gói khi chạm trần;
+ *  - ví hiện THU NHẬP tháng (không có thẻ doanh thu nào khác nói con số đó);
+ *  - không thẻ Gói (dòng hoa hồng 0đ không có "ngày hết hạn" nào để gia hạn) và không thẻ ba bước
+ *    mở gian hàng (luồng đăng ký của họ là `OwnerRegistrationView`).
  */
 export function DashboardView() {
   const t = useTranslations('Dashboard');
@@ -67,6 +81,10 @@ export function DashboardView() {
   const router = useRouter();
   const { has } = usePermissions();
   const { data: user } = useCurrentUser();
+  const commission = resolvePartnerTrack(user) === PARTNER_TRACK.COMMISSION;
+  // Chủ xe cá nhân: lời chào theo tên — Tổng quan của MỘT người, không của một gian hàng.
+  const greetName = commission ? user?.displayName?.trim() : undefined;
+  const title = greetName ? t(`greeting.${greetingKey(dayjs())}`, { name: greetName }) : t('title');
 
   /*
    * Ô "Chi nhánh" của Tổng quan — ADR 0052. Làm TRỌN: mọi thẻ xe/đơn/tiền đi theo cùng một chi
@@ -121,7 +139,7 @@ export function DashboardView() {
   const fleetCards = has(PERMISSION.VEHICLE_VIEW) ? (
     <StatCard
       label={t('stats.available')}
-      value={fleet.data ? `${fmt.count(fleet.data.available)}/${fmt.count(fleet.data.total)}` : '—'}
+      value={fleet.data ? `${fmt.count(fleet.data.available)}/${fmt.count(fleet.data.total)}` : '-'}
       hint={
         fleet.data
           ? t('kpi.fleetHint', {
@@ -183,7 +201,7 @@ export function DashboardView() {
   return (
     <div className={styles.wrap}>
       <DashboardHeader
-        title={t('title')}
+        title={title}
         subtitle={todayLabel(fmt, dayjs())}
         answer={answer}
         actions={<BranchFilterSelect branch={branch} value={branchId} className={styles.branch} />}
@@ -193,7 +211,7 @@ export function DashboardView() {
         Gian hàng chưa có xe / chưa duyệt xong: ba bước cần làm đứng TRƯỚC mọi con số, vì lúc đó
         mọi ô đều là 0 và không ô nào nói được việc gì tiếp theo. Thẻ tự ẩn khi hết việc.
       */}
-      <ShopOnboardingCard vehicleCount={fleet.data?.total} />
+      {commission ? null : <ShopOnboardingCard vehicleCount={fleet.data?.total} />}
 
       <TodayFocus overview={data} isError={overview.isError} links={links} />
 
@@ -222,6 +240,9 @@ export function DashboardView() {
               moreHref={links.allBookings}
             />
           ) : null}
+
+          {/* Chủ xe 1–3 xe: thấy CHÍNH chiếc xe thay vì số đếm "Xe trên chợ" của gian hàng. */}
+          {commission ? <OwnerVehiclesPanel links={links} /> : null}
 
           {showCharts ? (
             <div className={styles.charts}>
@@ -275,9 +296,13 @@ export function DashboardView() {
         </div>
 
         <aside className={styles.side}>
-          {isShopOwner(user) ? <WalletPanel showIncome={false} href={links.balance} /> : null}
-          {has(PERMISSION.SUBSCRIPTION_VIEW) ? <PlanPanel href={links.subscription} /> : null}
-          {data?.market !== null ? <MarketPanel market={data?.market ?? undefined} links={links} /> : null}
+          {isShopOwner(user) ? <WalletPanel showIncome={commission} href={links.balance} /> : null}
+          {has(PERMISSION.SUBSCRIPTION_VIEW) && !commission ? (
+            <PlanPanel href={links.subscription} />
+          ) : null}
+          {data?.market !== null && !commission ? (
+            <MarketPanel market={data?.market ?? undefined} links={links} />
+          ) : null}
           <ReputationPanel metrics={data?.reputation} />
           {/* Sổ quỹ hôm nay đi cùng điều kiện với thẻ tiền — cùng một tính năng, cùng một quyền. */}
           {money.visible ? (

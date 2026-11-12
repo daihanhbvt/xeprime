@@ -18,25 +18,6 @@
   background: var(--xp-color-bg-container);
 }
 
-/**
- * Hình thái HERO — thẻ mở đầu màn ví.
- *
- * Nền gold rất nhạt và căn giữa: đây là câu trả lời duy nhất mà người ta mở màn này để đọc, và
- * nó phải tách khỏi mọi khối còn lại ngay từ cái nhìn đầu tiên. Bề ngang có trần vì một con số
- * căn giữa trải hết màn 1440px thì nhãn và giá trị rời nhau ra quá xa để đọc thành một cặp.
- */
-.hero {
-  align-items: center;
-  align-self: center;
-  gap: var(--xp-space-sm);
-  width: 100%;
-  max-width: 400px;
-  padding: var(--xp-space-md);
-  border-color: var(--xp-color-primary);
-  background: var(--xp-color-primary-light);
-  text-align: center;
-}
-
 .head {
   display: flex;
   align-items: center;
@@ -97,48 +78,9 @@
   grid-column: 1 / -1;
 }
 
-.hero .primary dt {
-  font-size: var(--xp-font-size-label);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
 .big {
   font-size: var(--xp-font-size-h2);
   line-height: var(--xp-line-height-h2);
-}
-
-/*
- * Con số khả dụng ở hero mang sắc gold đậm của giá — nó LÀ giá trị của màn này.
- *
- * Cỡ h2 (24px) chứ không h1: thẻ chỉ rộng 400px, và ở h1 thì một số dư tám chữ số
- * ("18.520.000 ₫") chạm sát hai mép rồi xuống dòng giữa chừng.
- */
-.hero .big {
-  color: var(--xp-color-price);
-}
-
-/* Hai con số phụ ở hero nằm ngang nhau dưới con số chính, cách nhau bằng một vạch mảnh. */
-.hero .figures {
-  grid-template-columns: 1fr 1fr;
-  gap: var(--xp-space-sm);
-}
-
-.hero .figures > :not(.primary) {
-  padding-top: var(--xp-space-sm);
-  border-top: 1px solid var(--xp-color-border-subtle);
-}
-
-/*
- * Chỉ hai ô PHỤ nhỏ đi một bậc — con số chính giữ nguyên cỡ h2.
- *
- * Nhắm vào `> :not(.primary)` thay vì `.hero .figures dd` chung: quy tắc chung đó có đặc tả
- * cao hơn `.hero .big` và sẽ thu nhỏ luôn con số chính, rồi phải chống bằng một selector
- * nhân đôi lớp.
- */
-.hero .figures > :not(.primary) dt,
-.hero .figures > :not(.primary) dd {
-  font-size: var(--xp-font-size-label);
 }
 
 /**
@@ -259,4 +201,88 @@
   .panelFigures {
     gap: var(--xp-space-md);
   }
+}
+
+/**
+ * Hình thái HERO — thẻ số dư ở cột phải trang Quản lý ví (Figma `23948:94510`).
+ *
+ * Nền là vệt màu loang của design (`balance-glow.webp`, ~2KB — bản gốc 1,2MB đã cắt đúng vùng
+ * design dùng), bo 12, đệm 16. Mọi thứ căn giữa; nút Rút trải ngang. Giao diện tối không dùng
+ * vệt sáng (chữ sáng trên nền sáng không đọc được) — về nền gold nhạt của hệ.
+ */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-20);
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius-lg);
+  background:
+    url('/illustrations/wallet/balance-glow.webp') center / cover no-repeat,
+    var(--xp-color-primary-light);
+  text-align: center;
+}
+
+:global([data-theme='dark']) .hero {
+  background: var(--xp-color-primary-light);
+}
+
+.hero > :global(.ant-alert) {
+  align-self: stretch;
+  text-align: left;
+}
+
+.heroMain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.heroLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-lg);
+  text-transform: uppercase;
+}
+
+.heroBig {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h1);
+  font-weight: var(--xp-font-weight-bold);
+  line-height: var(--xp-line-height-h1);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* Tiền đang rút — chỉ hiện khi khác 0. */
+.heroTransit {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.heroAction {
+  align-self: stretch;
+}
+
+.heroAction > * {
+  width: 100%;
+}
+
+.heroHint {
+  margin: calc(var(--xp-space-sm) - var(--xp-space-20)) 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-label);
 }

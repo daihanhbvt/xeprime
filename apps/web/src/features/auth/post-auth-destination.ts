@@ -10,10 +10,8 @@ import {
 } from '@xeprime/types';
 
 import {
-  ACCOUNT_SECTION,
   ROUTES,
   SHOP_SECTION,
-  accountSectionPath,
   partnerTrackStartHref,
   balancePayoutPath,
   shopSectionPath,
@@ -152,11 +150,12 @@ const COMMISSION_PAGES: ReadonlyArray<{ readonly href: string; readonly exact?: 
   { href: ROUTES.MANAGE.VEHICLES, exact: true },
   { href: ROUTES.MANAGE.VEHICLE_REGISTER },
   { href: ROUTES.MANAGE.CALENDAR },
-  { href: ROUTES.MANAGE.TRIPS },
-  // Hộp thư + bảng đơn vẫn là trang của tuyến: THÀNH VIÊN không phải chủ làm việc ở đó, còn CHỦ xe
-  // được `ownerTripsRedirect` đưa sang `TRIPS`. `/bookings/[id]` là chi tiết đơn dùng chung.
-  { href: ROUTES.MANAGE.BOOKING_REQUESTS },
+  // "Đơn thuê xe" (+ chi tiết `/bookings/[id]`, "Đơn đã kết thúc") là màn của CẢ hai tuyến, cho chủ
+  // lẫn thành viên (06/11/2026). Ba URL cũ — hộp thư, "Chờ giao xe", "Chuyến cho thuê" `/trips` của
+  // chủ xe — là ALIAS: trang của chúng tự chuyển tiếp ở server, mang theo nhóm / tab lịch sử.
   { href: ROUTES.MANAGE.BOOKINGS },
+  { href: ROUTES.MANAGE.BOOKING_REQUESTS },
+  { href: ROUTES.MANAGE.TRIPS },
   { href: ROUTES.MANAGE.CHAT },
   { href: ROUTES.MANAGE.BALANCE },
   // Tài xế mở cho cả chủ xe tuyến hoa hồng (ADR 0063).
@@ -184,13 +183,13 @@ function matchesPage(pathname: string, page: { href: string; exact?: true }): bo
 export function isCommissionPage(path: string): boolean {
   const pathname = pathOnly(path);
   if (COMMISSION_PAGES.some((page) => matchesPage(pathname, page))) return true;
-  // `/vehicles/<id>` (chi tiết, MỘT URL hai tuyến) và `/vehicles/<id>/manage/...` (Owner Lite) —
-  // KHÔNG `/vehicles/<id>/edit` (màn sửa đầy đủ của tuyến gói) hay `/vehicles/new`.
+  // `/vehicles/<id>` (chi tiết) và `/vehicles/<id>/edit` (màn sửa) — MỘT URL hai tuyến từ 03/11/2026;
+  // `/vehicles/<id>/manage/...` (Owner Lite cũ) còn để chuyển hướng. KHÔNG `/vehicles/new`.
   const vehicles = `${ROUTES.MANAGE.VEHICLES}/`;
   if (!pathname.startsWith(vehicles)) return false;
   const rest = pathname.slice(vehicles.length);
   if (/^[^/]+$/.test(rest)) return rest !== 'new';
-  return /^[^/]+\/manage(\/.*)?$/.test(rest);
+  return /^[^/]+\/(edit|manage(\/.*)?)$/.test(rest);
 }
 
 /**
@@ -246,57 +245,23 @@ function packageEquivalent(pathname: string): string | null {
     return withPlanPurchaseIntent(shopSectionPath(SHOP_SECTION.PLAN));
   }
   if (pathname === ROUTES.MANAGE.BANK_ACCOUNTS) return balancePayoutPath();
-  if (pathname === ROUTES.MANAGE.TRIPS) return ROUTES.MANAGE.BOOKING_REQUESTS;
   return null;
 }
 
 /**
- * Hộp thư yêu cầu + bảng đơn của tuyến gói — CHỦ xe tuyến hoa hồng đọc chúng gộp ở "Chuyến cho
- * thuê" (`TRIPS`). Chi tiết `/bookings/<id>` KHÔNG nằm đây: đó là màn đơn dùng chung, nơi bàn giao.
- */
-const OWNER_TRIPS_REPLACES: readonly string[] = [
-  ROUTES.MANAGE.BOOKING_REQUESTS,
-  ROUTES.MANAGE.BOOKINGS,
-  ROUTES.MANAGE.BOOKINGS_AWAITING_PICKUP,
-];
-
-/**
- * Tuyến hoa hồng: yêu cầu + đơn ở đâu tuỳ người xem là CHỦ hay THÀNH VIÊN (`null` = ở lại).
- *
- *  - CHỦ xe (1–3 xe) → "Chuyến cho thuê", danh sách thẻ gộp; hộp thư + bảng đơn chuyển sang đó.
- *  - THÀNH VIÊN (vd nhân viên của gian hàng vừa hết gói — ADR 0038 điều 5) → hộp thư + bảng đơn
- *    như cũ. `GET /trips` chỉ dựng phía chủ xe cho CHỦ gian hàng, nên `TRIPS` với họ là một trang
- *    rỗng — trong khi họ vẫn phải bàn giao những chuyến đang chạy.
- */
-function ownerTripsRedirect(user: AuthScope | null | undefined, pathname: string): string | null {
-  if (isCommissionOwner(user)) {
-    return OWNER_TRIPS_REPLACES.includes(pathname) ? ROUTES.MANAGE.TRIPS : null;
-  }
-  return pathname === ROUTES.MANAGE.TRIPS ? ROUTES.MANAGE.BOOKING_REQUESTS : null;
-}
-
-/**
- * CHỦ xe tuyến hoa hồng mở trang Cửa hàng (bookmark, thông báo, link từ thời còn gói) → phần tương
- * đương trong "Hồ sơ chủ xe". Cùng một bản ghi gian hàng ở cả hai trang, nên đây là chuyển chỗ đọc,
- * không phải chuyển dữ liệu. Thành viên không có section đó (trang tài khoản của họ là bản thường)
- * ⇒ về trang chủ. Trang con của Cửa hàng (chi nhánh, chính sách…) là năng lực của gói ⇒ về trang
- * chủ như mọi trang tuyến gói khác.
- *
- * Ba ALIAS của chính tuyến hoa hồng (07/10/2026) cũng giải ở đây: khai thuế + gói về section của
- * "Hồ sơ chủ xe", tài khoản nhận tiền về trang số dư. Thành viên không có các section đó (và không có
- * ví) ⇒ trang tài khoản của họ / trang chủ.
+ * Ba ALIAS của tuyến hoa hồng (07/10/2026) → đích hiện hành: khai thuế + gói về section của trang
+ * Thông tin `/shop` (hồ sơ chủ xe từ ADR 0085), tài khoản nhận tiền về trang số dư. Thành viên không
+ * có các section đó (và không có ví) ⇒ trang tài khoản của họ / trang chủ. Trang con của Cửa hàng
+ * (chi nhánh, chính sách…) là năng lực của gói ⇒ về trang chủ như mọi trang tuyến gói khác.
  */
 function commissionEquivalent(user: AuthScope | null | undefined, pathname: string): string | null {
   const owner = isCommissionOwner(user);
-  if (pathname === ROUTES.MANAGE.SHOP && owner) {
-    return accountSectionPath(ACCOUNT_SECTION.PROFILE);
-  }
   if (pathname === ROUTES.MANAGE.TAX) {
-    return owner ? accountSectionPath(ACCOUNT_SECTION.TAX) : ROUTES.MANAGE.ACCOUNT;
+    return owner ? shopSectionPath(SHOP_SECTION.TAX) : ROUTES.MANAGE.ACCOUNT;
   }
   if (pathname === ROUTES.MANAGE.SUBSCRIPTION) {
     return owner
-      ? withPlanPurchaseIntent(accountSectionPath(ACCOUNT_SECTION.PLAN))
+      ? withPlanPurchaseIntent(shopSectionPath(SHOP_SECTION.PLAN))
       : ROUTES.MANAGE.ACCOUNT;
   }
   if (pathname === ROUTES.MANAGE.BANK_ACCOUNTS && owner) return balancePayoutPath();
@@ -345,8 +310,8 @@ export function partnerPageRedirect(
     case PARTNER_TRACK.COMMISSION: {
       // Onboarding tự đưa gian hàng hoa hồng về tiến trình đăng ký của nó.
       if (pathname === ROUTES.MANAGE.ONBOARDING) return null;
-      const trips = ownerTripsRedirect(user, pathname);
-      if (trips) return trips;
+      // Trang Thông tin `/shop` là "Hồ sơ chủ xe" của CHỦ (ADR 0085 điều 2) - thành viên không có nó.
+      if (pathname === ROUTES.MANAGE.SHOP && isCommissionOwner(user)) return null;
       if (isCommissionPage(pathname)) return null;
       return commissionEquivalent(user, pathname) ?? ROUTES.MANAGE.ROOT;
     }

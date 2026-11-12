@@ -6,11 +6,21 @@ import Animated, {
   FadeOut,
   LinearTransition,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
+  withSequence,
+  withSpring,
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
-import { useEffect, useState, type ComponentProps } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -29,11 +39,13 @@ import { useBadges } from '@/features/badges/hooks/use-badges';
 import { useDriverPendingCounts } from '@/features/driving/hooks';
 import { FavoriteIntentResumer } from '@/features/favorites/components/FavoriteIntentResumer';
 import { FONT_FAMILY } from '@/theme/fonts';
-import { useColors } from '@/theme/ThemeProvider';
+import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { fontSize, iconSize, space } from '@/theme/tokens';
 import { elevation } from '@/theme/elevation';
+import { duration, pressScale, spring } from '@/theme/motion';
 import { Avatar } from '@/components/ui/Avatar';
 import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
+import { haptics } from '@/lib/haptics';
 
 /** Viên vàng co/nở + đẩy mục bên cạnh. */
 // Đẩy NHẸ và CHẬM (người dùng chốt 28/10/2026): trượt êm 380ms, không lò xo nảy.
@@ -89,7 +101,17 @@ const styles = StyleSheet.create({
   },
   // Figma: các mục giãn ĐỀU (space-between), viên đang chọn chỉ ôm icon + nhãn — nhãn không bị "…".
   item: { alignItems: 'center', justifyContent: 'center' },
-  itemPressed: { transform: [{ scale: 0.92 }] },
+  // Ít mục (khách chưa đăng nhập chỉ có Khám phá + Tìm xe): viên kéo hết bề ngang thì hai mục
+  // dạt ra hai mép, giữa trống hoác — co viên lại ôm vừa các mục và đặt giữa màn.
+  // Bề rộng CỐ ĐỊNH chứ không ôm nội dung: mục đang chọn hiện thêm nhãn, ôm nội dung thì cả viên
+  // co giãn mỗi lần đổi tab — giật, và có lúc cắt chữ khi hoạt ảnh chưa xong.
+  barFew: {
+    alignSelf: 'center',
+    width: '80%',
+    justifyContent: 'space-around',
+    paddingVertical: space.sm,
+  },
+  itemPressed: { transform: [{ scale: pressScale.icon }] },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -140,6 +162,11 @@ function AppTabBar({
   const focusedOptions = descriptors[state.routes[state.index]!.key]!.options;
   const barStyle = focusedOptions.tabBarStyle as StyleProp<ViewStyle>;
   if (StyleSheet.flatten(barStyle)?.display === 'none') return null;
+  const visibleCount = state.routes.filter(
+    (route) =>
+      StyleSheet.flatten(descriptors[route.key]!.options.tabBarItemStyle as StyleProp<ViewStyle>)
+        ?.display !== 'none',
+  ).length;
 
   return (
     <Animated.View
@@ -147,7 +174,12 @@ function AppTabBar({
       onLayout={(event) => onHeight(event.nativeEvent.layout.height)}
     >
     <View
-      style={[styles.bar, elevation.raised, { backgroundColor: colors.surface, borderColor: colors.borderSubtle }]}
+      style={[
+        styles.bar,
+        visibleCount < 3 && styles.barFew,
+        elevation.raised,
+        { backgroundColor: colors.surface, borderColor: colors.borderSubtle },
+      ]}
       accessibilityRole="tablist"
     >
       {state.routes.map((route, index) => {
@@ -170,6 +202,7 @@ function AppTabBar({
             canPreventDefault: true,
           });
           if (!focused && !event.defaultPrevented) {
+            haptics.selection();
             navigation.navigate(route.name, route.params);
           }
         };
@@ -199,7 +232,9 @@ function AppTabBar({
               layout={TAB_LAYOUT_TRANSITION}
               style={[styles.pill, focused ? { backgroundColor: colors.primarySubtle } : null]}
             >
-              {options.tabBarIcon?.({ focused, color, size: iconSize.lg })}
+              <TabIconPop focused={focused}>
+                {options.tabBarIcon?.({ focused, color, size: iconSize.lg })}
+              </TabIconPop>
               {focused ? (
                 <Animated.Text
                   entering={FadeIn.duration(320)}
@@ -219,6 +254,32 @@ function AppTabBar({
     </Animated.View>
   );
 }
+
+/**
+ * Icon NẢY nhẹ khi tab vừa được chọn: 1 → 1.18 → lò xo về 1 (luồng UI, chỉ `transform`).
+ * Lượt render đầu không nảy; "Giảm chuyển động" thì đứng yên.
+ */
+function TabIconPop({ focused, children }: { focused: boolean; children: ReactNode }) {
+  const reduceMotion = useReducedMotion();
+  const scale = useSharedValue(1);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    if (!focused || reduceMotion) return;
+    scale.value = withSequence(
+      withTiming(TAB_ICON_POP_SCALE, { duration: duration.fast }),
+      withSpring(1, spring.pop),
+    );
+  }, [focused, reduceMotion, scale]);
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return <Animated.View style={style}>{children}</Animated.View>;
+}
+
+/** Đỉnh nảy của icon tab vừa chọn. */
+const TAB_ICON_POP_SCALE = 1.18;
 
 /**
  * Biểu tượng tab, kèm huy hiệu đếm (nếu có) VẼ TĨNH ngay trong biểu tượng.
@@ -250,14 +311,30 @@ function TabIcon({
 
 export default function TabsLayout() {
   const colors = useColors();
+  // Giao diện tối (Figma 19879:66136): tab chưa chọn xám placeholder — `textMuted` tối gần trắng.
+  const inactiveTint = useAppScheme().scheme === 'dark' ? colors.textPlaceholder : colors.textMuted;
   const t = useTranslations('Navigation.public');
   const insets = useSafeAreaInsets();
   const { data: user } = useCurrentUser();
   const segments = useSegments();
+  /*
+   * `useSegments` là đường dẫn TOÀN CỤC: đẩy một màn lên trên bộ tab (chi tiết xe, đăng nhập…) cũng
+   * đổi nó. Chỉ đọc khi đường dẫn còn NẰM TRONG bộ tab; ngoài đó giữ nguyên giá trị cũ. Trước đây
+   * mở chi tiết xe làm `onHome` lật `false` ⇒ thanh trên của Trang chủ bị GỠ đúng lúc hiệu ứng đẩy
+   * màn đang chạy (cả trang chủ dựng lại bố cục) rồi dựng lại khi lui — cú khựng khi bấm vào xe.
+   */
+  const inTabs = segments[0] === '(tabs)';
+  const lastTabSegmentRef = useRef<{ last: string | undefined; length: number }>({
+    last: segments[segments.length - 1],
+    length: segments.length,
+  });
+  if (inTabs) {
+    lastTabSegmentRef.current = { last: segments[segments.length - 1], length: segments.length };
+  }
   // Thanh logo · tin nhắn · chuông · avatar: Trang chủ VÀ Tìm xe (người dùng chốt 28/10/2026).
-  const lastSegment = segments[segments.length - 1];
+  const lastSegment = lastTabSegmentRef.current.last;
   // Màn Tìm xe KHÔNG có thanh này (người dùng chốt 29/10/2026) — thẻ tìm kiếm là đỉnh màn.
-  const onHome = lastSegment === 'explore' || segments.length <= 1;
+  const onHome = lastSegment === 'explore' || lastTabSegmentRef.current.length <= 1;
   const [tabBarHeight, setTabBarHeight] = useState(0);
   const tabBarHide = useSharedValue(0);
   // Đổi tab ⇒ thanh hiện lại: chỉ Trang chủ được giấu nó khi cuộn.
@@ -281,6 +358,14 @@ export default function TabsLayout() {
   const driverCounts = useDriverPendingCounts(Boolean(user));
   const pendingDriverTrips = driverCounts.data?.trips ?? 0;
 
+  // Hàm ỔN ĐỊNH: viết thẳng trong JSX thì mỗi lần layout chạy lại là thanh tab dựng lại theo.
+  const renderTabBar = useCallback(
+    (props: TabBarProps) => (
+      <AppTabBar {...props} onHeight={setTabBarHeight} hide={tabBarHide} height={tabBarHeight} />
+    ),
+    [tabBarHide, tabBarHeight],
+  );
+
   return (
     <SafeAreaView edges={['top']} style={{ backgroundColor: colors.background, flex: 1 }}>
       {/* Thanh logo · tin nhắn · chuông · avatar CHỈ ở trang chủ (người dùng chốt 28/10/2026). */}
@@ -291,48 +376,55 @@ export default function TabsLayout() {
         navigator; và bộ tab luôn còn mount bên dưới mọi màn đẩy lên (chi tiết xe, đăng nhập).
       */}
       <FavoriteIntentResumer />
-      <TabBarInsetContext.Provider value={user ? tabBarHeight : 0}>
+      <TabBarInsetContext.Provider value={tabBarHeight}>
       <TabBarHideContext.Provider value={tabBarHide}>
       <Tabs
-        tabBar={(props) => (
-          <AppTabBar {...props} onHeight={setTabBarHeight} hide={tabBarHide} height={tabBarHeight} />
-        )}
+        tabBar={renderTabBar}
         screenOptions={{
           headerShown: false,
+          /*
+           * Đổi tab TỨC THÌ (09/11/2026, bỏ `fade`): mờ dần cả màn làm mọi thẻ có bóng (elevation)
+           * trong màn mới NHẤP NHÁY trên Android - rõ nhất khi vào tab Chuyến (user báo "trông như
+           * bug"). Không làm mờ/trượt cả màn khi đổi tab; nền khung (`sceneStyle`) chặn nháy trắng.
+           */
           animation: 'none',
           // Tab ẩn đứng yên (react-freeze): đổi sáng/tối chỉ vẽ lại tab đang xem, tab kia vẽ lúc quay lại.
           freezeOnBlur: true,
+          // Nền của khung tab — thiếu nó khung trong suốt, lúc lui từ màn chi tiết về (tab gắn
+          // lại view) lộ nền TRẮNG của cửa sổ Android một nhịp: cú "nháy trắng". App Partner đã có.
+          sceneStyle: { backgroundColor: colors.background },
           tabBarActiveTintColor: colors.primary,
-          tabBarInactiveTintColor: colors.textMuted,
-          tabBarStyle: user
-            ? {
-                // NỔI đè lên nội dung (kiểu Facebook): khung ngoài trong suốt, nội dung cuộn xuống dưới
-                // vẫn thấy qua hai bên viên. Màn cuộn chừa đuôi qua `TabBarInsetContext`.
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'transparent',
-                paddingHorizontal: space.sm,
-                /*
-                 * Chiều cao PHẢI cộng `insets.bottom`, và đệm dưới cũng vậy.
-                 *
-                 * Expo SDK 54 bật edge-to-edge mặc định trên Android (targetSdk 36): app vẽ xuống
-                 * tận đáy màn, dưới cả thanh điều hướng cử chỉ. Một `height` cứng nghĩa là hàng
-                 * icon nằm ĐÚNG chỗ thanh điều hướng đang chiếm — nhãn bị cắt và cú chạm rơi vào
-                 * hệ thống thay vì vào tab.
-                 *
-                 * Trên máy có phím cứng hoặc iPhone không tai thỏ, `insets.bottom` là 0 và công
-                 * thức tự thu về đúng chiều cao gốc — không cần rẽ nhánh theo nền tảng.
-                 */
-                paddingTop: 0,
-                // Đệm đáy ĐỘNG theo máy: máy điều hướng cử chỉ có `insets.bottom` lớn, máy phím cứng /
-                // một số Android trả 0 — lấy max với sàn 16 để thanh không bao giờ chạm mép dưới, rồi cộng
-                // thêm 8 cho thanh nổi hẳn lên (người dùng chốt 28/10/2026).
-                paddingBottom: Math.max(insets.bottom, space.md) + space.sm,
-              }
-            : // Guest chỉ có một màn — một thanh tab đúng một mục là thanh trang trí chiếm chỗ.
-              { display: 'none' },
+          tabBarInactiveTintColor: inactiveTint,
+          /*
+           * Khách chưa đăng nhập VẪN có thanh tab: họ có hai màn (Khám phá + Tìm xe), ba tab cần
+           * phiên đã gỡ bằng `authOnly`. Ẩn thanh đi là kẹt ở Tìm xe, không còn đường về trang chủ.
+           */
+          tabBarStyle: {
+            // NỔI đè lên nội dung (kiểu Facebook): khung ngoài trong suốt, nội dung cuộn xuống dưới
+            // vẫn thấy qua hai bên viên. Màn cuộn chừa đuôi qua `TabBarInsetContext`.
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'transparent',
+            paddingHorizontal: space.sm,
+            /*
+             * Chiều cao PHẢI cộng `insets.bottom`, và đệm dưới cũng vậy.
+             *
+             * Expo SDK 54 bật edge-to-edge mặc định trên Android (targetSdk 36): app vẽ xuống
+             * tận đáy màn, dưới cả thanh điều hướng cử chỉ. Một `height` cứng nghĩa là hàng
+             * icon nằm ĐÚNG chỗ thanh điều hướng đang chiếm — nhãn bị cắt và cú chạm rơi vào
+             * hệ thống thay vì vào tab.
+             *
+             * Trên máy có phím cứng hoặc iPhone không tai thỏ, `insets.bottom` là 0 và công
+             * thức tự thu về đúng chiều cao gốc — không cần rẽ nhánh theo nền tảng.
+             */
+            paddingTop: 0,
+            // Đệm đáy ĐỘNG theo máy: máy điều hướng cử chỉ có `insets.bottom` lớn, máy phím cứng /
+            // một số Android trả 0 — lấy max với sàn 16 để thanh không bao giờ chạm mép dưới, rồi cộng
+            // thêm 8 cho thanh nổi hẳn lên (người dùng chốt 28/10/2026).
+            paddingBottom: Math.max(insets.bottom, space.md) + space.sm,
+          },
           tabBarLabelStyle: {
             /*
              * `fontFamily` PHẢI khai: nhãn tab do react-navigation vẽ bằng `Text` của RN, nằm

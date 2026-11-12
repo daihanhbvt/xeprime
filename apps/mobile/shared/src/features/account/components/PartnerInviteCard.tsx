@@ -3,6 +3,8 @@ import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { LineIcon } from '@/components/icons/LineIcon';
+import { RevealPop } from '@/components/motion/RevealStack';
+import { RevealText, ScrollReveal } from '@/components/motion/ScrollReveal';
 import { Button } from '@/components/ui/Button';
 import { usePartnerOffer } from '@/features/list-vehicle/use-partner-offer';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
@@ -19,7 +21,7 @@ const MILLION = 1_000_000;
  * Figma `21860:83510`: ô cúp vàng nhạt, tiêu đề + viên % phí, câu mời, nút gradient, dấu X ẩn thẻ
  * (ẩn trong lượt xem, như web).
  */
-export function PartnerInviteCard() {
+export function PartnerInviteCard({ revealIndex = 0 }: { revealIndex?: number } = {}) {
   const colors = useColors();
   const t = useTranslations('Account.partnerInvite');
   const navigateOnce = useNavigateOnce();
@@ -29,7 +31,9 @@ export function PartnerInviteCard() {
   const [dismissed, setDismissed] = useState(false);
   if (dismissed) return null;
 
+  /* Khối tự trượt lên khi vào màn (ở đây chứ không ở nơi gọi: ẩn thẻ thì không để lại khung rỗng). */
   return (
+    <ScrollReveal index={revealIndex}>
     <YStack
       gap={12}
       px={space.md}
@@ -42,7 +46,9 @@ export function PartnerInviteCard() {
     >
       <XStack ai="flex-start" jc="space-between">
         <YStack p={space.sm} br={radius.control} bw={1} bc={colors.primaryMuted} bg={colors.primarySubtle}>
-          <LineIcon name="award" size={iconSize.md} color={colors.primary} />
+          <RevealPop>
+            <LineIcon name="award" size={iconSize.md} color={colors.primary} />
+          </RevealPop>
         </YStack>
         <Pressable
           onPress={() => setDismissed(true)}
@@ -53,6 +59,7 @@ export function PartnerInviteCard() {
           <LineIcon name="close" size={iconSize.md} color={colors.textMuted} />
         </Pressable>
       </XStack>
+      <RevealText delay={80}>
       <YStack gap={space.xs}>
         <XStack ai="center" gap={space.sm} flexWrap="wrap">
           <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
@@ -75,7 +82,9 @@ export function PartnerInviteCard() {
           })}
         </Text>
       </YStack>
+      </RevealText>
       <Button label={t('cta')} variant="gradient" onPress={() => navigateOnce(ROUTES.manage.register())} />
     </YStack>
+    </ScrollReveal>
   );
 }

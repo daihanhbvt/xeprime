@@ -4,13 +4,17 @@
     "subtitle": "Nơi xe của bạn đang đỗ. Chi nhánh quyết định xe hiển thị ở tỉnh/thành nào trên marketplace.",
     "add": "Thêm chi nhánh",
     "needsReview": "{count, plural, other {# chi nhánh}} chưa có tỉnh/thành",
-    "needsReviewHint": "Xe thuộc các chi nhánh này KHÔNG hiển thị trên marketplace cho tới khi bạn bổ sung tỉnh/thành."
+    "needsReviewHint": "Xe thuộc các chi nhánh này KHÔNG hiển thị trên marketplace cho tới khi bạn bổ sung tỉnh/thành.",
+    "fixNow": "Bổ sung ngay"
   },
   "toolbar": {
     "searchPlaceholder": "Tìm theo tên, mã hoặc địa chỉ",
     "searchLabel": "Tìm chi nhánh",
     "summary": "{total, plural, other {# chi nhánh}} · {active} đang hoạt động",
-    "activeOnly": "Chỉ đang hoạt động"
+    "activeOnly": "Chỉ đang hoạt động",
+    "statusLabel": "Lọc theo trạng thái",
+    "allStatuses": "Tất cả trạng thái",
+    "summaryTotal": "Tổng {total, plural, other {# chi nhánh}} · <ok>{active} đang hoạt động</ok>"
   },
   "columns": {
     "branch": "Chi nhánh",
@@ -34,7 +38,7 @@
     "manage": "Bạn không có quyền quản lý chi nhánh",
     "inactive": "Chi nhánh đang ngừng hoạt động",
     "noProvince": "Chi nhánh chưa có tỉnh/thành",
-    "isDefault": "Chi nhánh mặc định không thể ngừng — đặt chi nhánh khác làm mặc định trước"
+    "isDefault": "Chi nhánh mặc định không thể ngừng - đặt chi nhánh khác làm mặc định trước"
   },
   "confirmDeactivate": {
     "title": "Ngừng hoạt động chi nhánh?",
@@ -52,12 +56,13 @@
   },
   "form": {
     "createTitle": "Thêm chi nhánh",
-    "editTitle": "Sửa {name}",
+    "editTitle": "Chỉnh sửa chi nhánh",
     "createOk": "Tạo chi nhánh",
     "nameLabel": "Tên chi nhánh",
     "namePlaceholder": "VD: Chi nhánh Đà Nẵng",
     "phoneLabel": "Số điện thoại",
-    "phonePlaceholder": "0901234567"
+    "phonePlaceholder": "0901234567",
+    "makeDefault": "Đặt làm chi nhánh mặc định"
   },
   "scope": {
     "all": "Tất cả chi nhánh",
@@ -82,6 +87,9 @@
     "nameMin": "Tối thiểu 2 ký tự",
     "provinceRequired": "Chọn tỉnh/thành của chi nhánh",
     "provinceInvalid": "Mã tỉnh không hợp lệ",
-    "phoneInvalid": "Số điện thoại không hợp lệ"
+    "phoneInvalid": "Số điện thoại không hợp lệ",
+    "wardRequired": "Chọn phường/xã",
+    "wardInvalid": "Xã/phường không hợp lệ",
+    "addressLineRequired": "Nhập số nhà, tên đường"
   }
 }

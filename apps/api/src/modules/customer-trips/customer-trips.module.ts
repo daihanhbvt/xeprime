@@ -1,6 +1,7 @@
 import { BankAccountsModule } from '../bank-accounts/bank-accounts.module';
 import { Module } from '@nestjs/common';
 import { BookingsModule } from '../bookings/bookings.module';
+import { BookingExtensionsModule } from '../booking-extensions/booking-extensions.module';
 import { HoldsModule } from '../holds/holds.module';
 import { VehiclesModule } from '../vehicles/vehicles.module';
 import { CustomerTripsController } from './customer-trips.controller';
@@ -27,6 +28,8 @@ import { SupportModule } from '../support/support.module';
   imports: [
     PricingModule,
     BookingsModule,
+    // Phụ lục gia hạn của chuyến (ADR 0077) — chỉ đọc.
+    BookingExtensionsModule,
     HoldsModule,
     VehiclesModule,
     BankAccountsModule,

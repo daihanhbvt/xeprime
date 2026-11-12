@@ -11,6 +11,7 @@ import { cx } from '@/lib/cx';
 import { initialOf } from '@/lib/initials';
 import { useFeaturedShops } from '../hooks/use-featured-shops';
 import type { PublicShopSummary } from '../types';
+import { BrandMark } from './BrandMark';
 import { HomeCarousel } from './HomeCarousel';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from './SectionHeading';
@@ -77,6 +78,7 @@ function HostCard({ shop }: { shop: PublicShopSummary }) {
       aria-label={t('viewShopAria', { name: shop.name })}
     >
       <span className={styles.head}>
+        <span className={styles.who}>
         <span
           className={cx(styles.avatar, shop.verified && styles.avatarVerified)}
           aria-hidden="true"
@@ -116,22 +118,9 @@ function HostCard({ shop }: { shop: PublicShopSummary }) {
             ) : null}
           </span>
         </span>
+        </span>
+        <BrandLogos brands={shop.brands} total={shop.brandCount} />
       </span>
-
-      {/*
-        Ảnh xe đại diện nhô lên khỏi mép thẻ như bản vẽ. Đây là ảnh THẬT của xe xếp hạng cao nhất
-        đang công khai — gian hàng chưa có ảnh nào thì thôi, không đặt ảnh minh hoạ giả.
-      */}
-      {shop.featuredVehicleImageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- ảnh xe từ storage ngoài
-        <img
-          src={shop.featuredVehicleImageUrl}
-          alt=""
-          loading="lazy"
-          className={styles.vehicle}
-          aria-hidden="true"
-        />
-      ) : null}
 
       {/* Giới thiệu là dữ liệu gian hàng tự viết — chưa viết thì giữ chỗ để các thẻ thẳng hàng. */}
       <span className={styles.bio}>{shop.bio}</span>
@@ -162,5 +151,23 @@ function HostCard({ shop }: { shop: PublicShopSummary }) {
         <span className={styles.viewShop}>{t('viewShop')}</span>
       </span>
     </Link>
+  );
+}
+
+/**
+ * Dãy logo hãng xe của gian hàng — Figma `21965:28698`: tối đa 3 logo 24px cách 2, thêm ô "+N" 20px
+ * khi gian hàng còn hãng khác. Hãng chưa có logo trong danh mục hiện CHỮ CÁI ĐẦU (`BrandMark`), để
+ * dãy không bao giờ chỉ còn mỗi "+N".
+ */
+function BrandLogos({ brands, total }: { brands: PublicShopSummary['brands']; total: number }) {
+  const rest = total - brands.length;
+  if (brands.length === 0) return null;
+  return (
+    <span className={styles.brands} aria-label={brands.map((b) => b.label).join(', ')}>
+      {brands.map((b) => (
+        <BrandMark key={b.label} label={b.label} iconUrl={b.iconUrl} className={styles.brandLogo} />
+      ))}
+      {rest > 0 ? <span className={styles.brandMore}>+{rest}</span> : null}
+    </span>
   );
 }

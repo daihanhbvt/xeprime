@@ -17,7 +17,10 @@ import {
   USER_STATUS,
   OPEN_CUSTOMER_TRIP_STATUSES,
   VEHICLE_PUBLIC_STATUS,
+  LOGIN_IDENTIFIER_KIND,
   compactPhoneInput,
+  detectLoginIdentifierKind,
+  normalizeStaffUsername,
   realmAllowsPasswordlessLogin,
   realmAllowsSelfRegistration,
   realmRequiresPhoneLogin,
@@ -35,7 +38,7 @@ import bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RbacService } from '../rbac/rbac.service';
-import { normalizePhone, toLocalPhone } from '../../common/phone';
+import { normalizePhone, phoneLookupVariants, toLocalPhone } from '../../common/phone';
 import {
   EFFECTIVE_SUBSCRIPTION_ARGS,
   effectiveSubscriptionWhere,
@@ -123,7 +126,7 @@ export class AuthService {
 
   /**
    * Đăng ký bằng SĐT + mật khẩu, TRONG một realm (ADR 0053). SĐT được chuẩn hoá về dạng
-   * `84xxxxxxxxx` trước khi lưu. Cùng số đó ở realm khác là một tài khoản khác, không phải trùng.
+   * `0xxxxxxxxx` trước khi lưu (ADR 0082). Cùng số đó ở realm khác là một tài khoản khác, không phải trùng.
    * Tạo user + identity(provider='password') trong một transaction.
    *
    * Từ ADR 0060 SĐT phải được CHỨNG MINH SỞ HỮU bằng OTP `purpose=register` (mã gửi qua
@@ -216,19 +219,33 @@ export class AuthService {
     realm: AccountRealm,
   ): Promise<{ userId: string }> {
     const identifier = rawIdentifier.trim();
-    const isEmail = identifier.includes('@');
-    if (isEmail && realmRequiresPhoneLogin(realm)) {
-      throw new BadRequestException({
-        code: API_ERROR_CODE.PHONE_LOGIN_REQUIRED,
-        message: 'Hãy đăng nhập bằng số điện thoại',
-      });
+    const kind = detectLoginIdentifierKind(identifier);
+    const isEmail = kind === LOGIN_IDENTIFIER_KIND.EMAIL;
+    /*
+     * Tên đăng nhập chỉ có ở TÀI KHOẢN NHÂN VIÊN gian hàng (ADR 0087) — site partner. Site khách
+     * nhận nó thì đó là một chuỗi không phải SĐT: cùng câu trả lời với email.
+     */
+    const isUsername = kind === LOGIN_IDENTIFIER_KIND.USERNAME;
+    if ((isEmail || isUsername) && realmRequiresPhoneLogin(realm)) {
+      if (!(isUsername && realm === ACCOUNT_REALM.PARTNER)) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.PHONE_LOGIN_REQUIRED,
+          message: 'Hãy đăng nhập bằng số điện thoại',
+        });
+      }
     }
     // Tra TRONG realm (ADR 0053): cùng số/email ở site khác là một tài khoản khác, mật khẩu khác.
     // `compactPhoneInput` bỏ dấu cách/chấm/gạch/ngoặc — cùng phép bỏ mà ô nhập ở client đã cho qua.
-    const key = isEmail ? identifier.toLowerCase() : normalizePhone(compactPhoneInput(identifier));
+    const key = isEmail
+      ? identifier.toLowerCase()
+      : isUsername
+        ? normalizeStaffUsername(identifier)
+        : normalizePhone(compactPhoneInput(identifier));
     const where = isEmail
       ? { realm, email: key, deletedAt: null }
-      : { realm, phone: key, deletedAt: null };
+      : isUsername
+        ? { realm, username: key, deletedAt: null }
+        : { realm, phone: key, deletedAt: null };
 
     // Định danh đang bị khoá vì sai quá nhiều lần — chặn TRƯỚC bcrypt, kể cả khi lần này đúng mật
     // khẩu (ADR 0076 điều 3). Định danh không có tài khoản cũng khoá y hệt.
@@ -236,7 +253,7 @@ export class AuthService {
 
     const user = await this.prisma.user.findFirst({
       where,
-      select: { id: true, passwordHash: true, status: true },
+      select: { id: true, passwordHash: true, status: true, managedByTenantId: true },
     });
 
     const hash = user?.passwordHash ?? (await timingDummyHashOnce());
@@ -257,6 +274,27 @@ export class AuthService {
         code: API_ERROR_CODE.ACCOUNT_LOCKED,
         message: 'Tài khoản đã bị khoá',
       });
+    }
+    /*
+     * Tài khoản nhân viên do gian hàng cấp chỉ có MỘT việc: làm cho gian hàng đó (ADR 0087). Gian
+     * hàng tạm khoá họ thì không có gì để đăng nhập vào — chặn ở đây, sau khi đã đúng mật khẩu, thay
+     * vì cấp phiên rồi thả họ vào màn "mở gian hàng của bạn".
+     */
+    if (user.managedByTenantId) {
+      const active = await this.prisma.tenantMembership.findFirst({
+        where: {
+          userId: user.id,
+          tenantId: user.managedByTenantId,
+          status: MEMBERSHIP_STATUS.ACTIVE,
+        },
+        select: { id: true },
+      });
+      if (!active) {
+        throw new UnauthorizedException({
+          code: API_ERROR_CODE.STAFF_ACCOUNT_SUSPENDED,
+          message: 'Tài khoản đang bị gian hàng tạm khoá',
+        });
+      }
     }
 
     await this.loginThrottle.clear(realm, [key]);
@@ -317,7 +355,7 @@ export class AuthService {
     if (!user.passwordHash) {
       throw new ConflictException({
         code: API_ERROR_CODE.PASSWORD_NOT_SET,
-        message: 'Tài khoản chưa có mật khẩu — hãy đặt mật khẩu lần đầu',
+        message: 'Tài khoản chưa có mật khẩu - hãy đặt mật khẩu lần đầu',
       });
     }
     const ok = await bcrypt.compare(currentPassword, user.passwordHash);
@@ -327,12 +365,7 @@ export class AuthService {
         message: 'Mật khẩu hiện tại không đúng',
       });
     }
-    if (await bcrypt.compare(newPassword, user.passwordHash)) {
-      throw new BadRequestException({
-        code: API_ERROR_CODE.PASSWORD_UNCHANGED,
-        message: 'Mật khẩu mới phải khác mật khẩu hiện tại',
-      });
-    }
+    await assertPasswordChanged(newPassword, user.passwordHash);
     const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     await this.prisma.$transaction(async (tx) => {
       await tx.user.update({ where: { id: user.id }, data: { passwordHash } });
@@ -445,7 +478,11 @@ export class AuthService {
     const tokenHash = this.hashToken(token);
     const record = await this.prisma.passwordResetToken.findFirst({
       where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() }, user: { realm } },
-      select: { id: true, userId: true, user: { select: { phone: true, email: true } } },
+      select: {
+        id: true,
+        userId: true,
+        user: { select: { phone: true, email: true, passwordHash: true } },
+      },
     });
     if (!record) {
       throw new BadRequestException({
@@ -453,6 +490,8 @@ export class AuthService {
         message: 'Liên kết đặt lại không hợp lệ hoặc đã hết hạn',
       });
     }
+    // Kiểm TRƯỚC transaction: token chưa bị tiêu, người dùng chọn mật khẩu khác rồi gửi lại được.
+    await assertPasswordChanged(newPassword, record.user.passwordHash);
 
     const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     await this.prisma.$transaction(async (tx) => {
@@ -491,7 +530,8 @@ export class AuthService {
   async checkRegistration(rawPhone: string, realm: AccountRealm): Promise<void> {
     this.assertSelfRegistration(realm);
     const taken = await this.prisma.user.findFirst({
-      where: { realm, phone: normalizePhone(rawPhone), deletedAt: null },
+      // Mọi biến thể — hàng cũ đụng số mà migration ADR 0082 để nguyên có thể còn `84…`.
+      where: { realm, phone: { in: phoneLookupVariants(rawPhone) }, deletedAt: null },
       select: { id: true },
     });
     if (taken) throw phoneTaken();
@@ -558,6 +598,12 @@ export class AuthService {
         message: 'Mã xác thực không đúng',
       });
     }
+    /*
+     * Mật khẩu mới trùng mật khẩu đang dùng ⇒ `PASSWORD_UNCHANGED`. Kiểm SAU khi mã đã chứng minh
+     * sở hữu số (không lộ gì cho người không cầm máy) và TRƯỚC khi tiêu mã: mã vẫn ở trạng thái
+     * đã xác minh, người dùng chọn mật khẩu khác và gửi lại ngay trong cửa sổ, không phải xin mã mới.
+     */
+    await assertPasswordChanged(newPassword, account.passwordHash);
 
     const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     const now = new Date();
@@ -585,10 +631,11 @@ export class AuthService {
     phone: string | null;
     email: string | null;
     phoneVerifiedAt: Date | null;
+    passwordHash: string | null;
   } | null> {
     return this.prisma.user.findFirst({
       where: { realm, phone: normalizedPhone, deletedAt: null, status: USER_STATUS.ACTIVE },
-      select: { id: true, phone: true, email: true, phoneVerifiedAt: true },
+      select: { id: true, phone: true, email: true, phoneVerifiedAt: true, passwordHash: true },
     });
   }
 
@@ -717,6 +764,8 @@ export class AuthService {
         phone: true,
         phoneVerifiedAt: true,
         passwordHash: true,
+        username: true,
+        managedByTenantId: true,
       },
     });
     const realm = user.realm as AccountRealm;
@@ -863,10 +912,11 @@ export class AuthService {
       email: user.email,
       avatarUrl: user.avatarUrl,
       // Dạng nội địa `0xxxxxxxxx` — đây là số của CHÍNH người đang đăng nhập, dùng để điền sẵn ô
-      // liên hệ khi đặt xe. DB lưu `84xxxxxxxxx`; trả nguyên dạng đó thì người dùng nhìn vào
-      // tưởng số lạ.
+      // liên hệ khi đặt xe. DB đã lưu `0…` (ADR 0082); vẫn quy để hàng cũ còn `84…` không lộ ra.
       phone: user.phone ? toLocalPhone(user.phone) : null,
       phoneVerified: user.phoneVerifiedAt !== null,
+      username: user.username,
+      managedAccount: user.managedByTenantId !== null,
       hasPassword: user.passwordHash !== null,
       tenant:
         membership && tenantPlan
@@ -948,6 +998,22 @@ function toTenantSummary(
     graceEndsAt: plan.graceEndsAt?.toISOString() ?? null,
     publicVehicleCount,
   };
+}
+
+/**
+ * Mật khẩu mới trùng mật khẩu đang dùng ⇒ 400 `PASSWORD_UNCHANGED` — MỘT luật cho đổi mật khẩu và
+ * cả hai đường đặt lại (link email, mã OTP). Tài khoản chưa có mật khẩu thì không có gì để trùng.
+ */
+async function assertPasswordChanged(
+  newPassword: string,
+  currentHash: string | null,
+): Promise<void> {
+  if (currentHash && (await bcrypt.compare(newPassword, currentHash))) {
+    throw new BadRequestException({
+      code: API_ERROR_CODE.PASSWORD_UNCHANGED,
+      message: 'Mật khẩu mới phải khác mật khẩu hiện tại',
+    });
+  }
 }
 
 /** SĐT đã có tài khoản TRONG realm — một mã, một câu, ở mọi đường tạo/gắn số. */

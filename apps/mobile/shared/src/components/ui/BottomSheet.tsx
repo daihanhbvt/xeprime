@@ -5,10 +5,18 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
   View,
   useWindowDimensions,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { spring } from '@/theme/motion';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -19,7 +27,7 @@ import {
   type KeyboardHold,
 } from '@/components/layout/focus-reveal';
 import { IconButton } from './IconButton';
-import { layout } from '@/theme/layout';
+import { layout, modalColumn } from '@/theme/layout';
 import { useAppStyles } from '@/theme/styles';
 import { useColors, useFloatingSurfaceBorder } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
@@ -36,6 +44,33 @@ import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
  * Đo lấy thì chỉ có hai trạng thái: có bàn phím = chiều cao thật, không có = 0. Không còn phép
  * trừ nào để sai.
  */
+/**
+ * Tấm trượt trồi lên bằng lò xo trên `translateY` (luồng UI). Tôn trọng "Giảm chuyển động".
+ *
+ * KHÔNG dùng layout animation `entering={SlideInDown…}` nữa (bỏ 10/11/2026). Layout animation
+ * chụp khung của view lúc gắn và không nhận lượt đo lại xảy ra TRONG lúc nó đang chạy. Tấm trượt
+ * hay đổi cao đúng lúc đó: nội dung tải dữ liệu ngay khi mở (xem trước phí huỷ hiện khung chờ
+ * rồi mới ra số), nên ở lần mở ĐẦU (cache rỗng) phần nội dung cao thêm giữa chừng và dải nút
+ * bị đẩy ra ngoài `overflow: hidden` — người dùng thấy modal mất hết nút. Lần mở sau dữ liệu đã
+ * có sẵn nên không tái hiện, đúng kiểu lỗi "chỉ lần đầu". `transform` không chạm vào layout nên
+ * nội dung đổi cao lúc nào cũng được đo lại đúng.
+ */
+function SheetEnter({ children }: { children: ReactNode }) {
+  const { height } = useWindowDimensions();
+  const reduceMotion = useReducedMotion();
+  const offset = useSharedValue(reduceMotion ? 0 : height);
+
+  useEffect(() => {
+    offset.value = reduceMotion ? 0 : withSpring(0, spring.sheet);
+    // Chỉ chạy lúc gắn: `Modal` gỡ cả cây con khi đóng, nên mỗi lần mở là một lần gắn mới.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const style = useAnimatedStyle(() => ({ transform: [{ translateY: offset.value }] }));
+  // `modalColumn`: máy tính bảng ⇒ tấm trượt nằm giữa, cùng trần bề ngang với cột nội dung.
+  return <Animated.View style={[modalColumn, style]}>{children}</Animated.View>;
+}
+
 /** Nhịp báo vị trí cuộn — chỉ ghi vào ref, đủ gần đúng cho lần cuộn tới ô đang gõ. */
 const SCROLL_REPORT_MS = 100;
 
@@ -171,7 +206,9 @@ export function BottomSheet({
     <Modal
       visible={open}
       transparent
-      animationType="slide"
+      // Nền mờ DẦN, tấm trượt lên bằng lò xo riêng (`sheetEntering`) — `slide` của Modal kéo cả
+      // lớp nền tối trượt theo, đọc ra như cả màn bị đẩy lên.
+      animationType="fade"
       onRequestClose={dismissable ? onClose : undefined}
       statusBarTranslucent
     >
@@ -192,9 +229,10 @@ export function BottomSheet({
               accessibilityRole="button"
               accessibilityLabel={t('close')}
             />
-            <YStack
-              maxHeight={ceiling}
-              /*
+            <SheetEnter>
+              <YStack
+                maxHeight={ceiling}
+                /*
             Chế độ `scroll={false}`: tấm trượt phải có chiều cao XÁC ĐỊNH, không phải `maxHeight`.
 
             Ở chế độ cuộn, chiều cao tấm = chiều cao nội dung (bị chặn trên bởi `maxHeight`) và
@@ -206,87 +244,105 @@ export function BottomSheet({
             Chốt luôn bằng trần: một tấm trượt chứa danh sách thì vốn dĩ muốn cao hết mức nó được
             phép, và `maxRatio` chính là con số đó.
           */
-              {...(scroll ? {} : { height: ceiling })}
-              bg={colors.surface}
-              borderTopLeftRadius={radius.lg}
-              borderTopRightRadius={radius.lg}
-              borderTopWidth={1}
-              borderColor={colors.borderSubtle}
-              {...floatingBorder}
-              ov="hidden"
-              /*
+                {...(scroll ? {} : { height: ceiling })}
+                bg={colors.surface}
+                borderTopLeftRadius={radius.lg}
+                borderTopRightRadius={radius.lg}
+                borderTopWidth={1}
+                borderColor={colors.borderSubtle}
+                {...floatingBorder}
+                ov="hidden"
+                /*
             Lề đáy có SÀN, không chỉ là safe-area inset.
 
             Trong `Modal` của Android, `useSafeAreaInsets()` trả bottom = 0 dù thanh điều hướng
             vẫn đè lên tấm trượt — nên lề bằng đúng inset cho ra 0, và MỤC CUỐI của danh sách
             nằm khuất dưới thanh đó. Lấy max với một lề thật để dòng cuối luôn có chỗ thở.
           */
-              pb={lifted ? space.md : Math.max(insets.bottom, space.md)}
-              mb={keyboardHeight}
-            >
-              <YStack ai="center" pt={space.sm}>
-                <YStack w={space.xl} h={space.xs} br={radius.pill} bg={colors.borderInput} />
-              </YStack>
+                pb={lifted ? space.md : Math.max(insets.bottom, space.md)}
+                mb={keyboardHeight}
+              >
+                <YStack ai="center" pt={space.sm}>
+                  <YStack w={space.xl} h={space.xs} br={radius.pill} bg={colors.borderInput} />
+                </YStack>
 
-              {title ? (
-                <XStack ai="center" gap={space.sm} px={layout.screenX} pt={space.sm} pb={space.xs}>
-                  <YStack f={1} gap={2}>
-                    <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-                      {title}
-                    </Text>
-                    {subtitle ? (
-                      <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                        {subtitle}
+                {title ? (
+                  <XStack
+                    ai="center"
+                    gap={space.sm}
+                    px={layout.screenX}
+                    pt={space.sm}
+                    pb={space.xs}
+                  >
+                    <YStack f={1} gap={2}>
+                      <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
+                        {title}
                       </Text>
+                      {subtitle ? (
+                        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                          {subtitle}
+                        </Text>
+                      ) : null}
+                    </YStack>
+                    {dismissable ? (
+                      <IconButton icon="close" label={t('close')} onPress={onClose} />
                     ) : null}
-                  </YStack>
-                  {dismissable ? (
-                    <IconButton icon="close" label={t('close')} onPress={onClose} />
-                  ) : null}
-                </XStack>
-              ) : null}
+                  </XStack>
+                ) : null}
 
-              {scroll ? (
-                <ScrollView
-                  ref={scroller}
-                  contentContainerStyle={{
-                    padding: padded ? layout.screenX : 0,
-                    gap: padded ? space.md : 0,
-                  }}
-                  keyboardShouldPersistTaps="handled"
-                  onScroll={(event) => {
-                    scrollY.current = event.nativeEvent.contentOffset.y;
-                  }}
-                  scrollEventThrottle={SCROLL_REPORT_MS}
-                >
-                  {children}
-                </ScrollView>
-              ) : (
-                /*
+                {scroll ? (
+                  <ScrollView
+                    ref={scroller}
+                    /*
+                    Vùng cuộn là phần DUY NHẤT được co khi nội dung vượt trần `maxHeight`; dải nút
+                    bên dưới đặt `flexShrink={0}`. Thiếu cặp này thì Yoga có thể co nhầm dải nút, hoặc để nó
+                    tràn khỏi tấm trượt và bị `overflow: hidden` cắt mất.
+                  */
+                    style={styles.scroll}
+                    contentContainerStyle={{
+                      padding: padded ? layout.screenX : 0,
+                      gap: padded ? space.md : 0,
+                    }}
+                    keyboardShouldPersistTaps="handled"
+                    onScroll={(event) => {
+                      scrollY.current = event.nativeEvent.contentOffset.y;
+                    }}
+                    scrollEventThrottle={SCROLL_REPORT_MS}
+                  >
+                    {children}
+                  </ScrollView>
+                ) : (
+                  /*
               `f={1}` chứ không để nội dung tự cao: danh sách bên trong cần một chiều cao CÓ TRẦN
               để ảo hoá và để biết khi nào chạm đáy. Trần đến từ `maxHeight` của tấm trượt ở trên.
             */
-                <YStack f={1} {...(padded ? { p: layout.screenX, gap: space.md } : {})}>
-                  {children}
-                </YStack>
-              )}
+                  <YStack f={1} {...(padded ? { p: layout.screenX, gap: space.md } : {})}>
+                    {children}
+                  </YStack>
+                )}
 
-              {footer ? (
-                <YStack
-                  px={layout.screenX}
-                  py={space.md}
-                  gap={space.sm}
-                  bg={colors.surface}
-                  borderTopWidth={1}
-                  borderColor={colors.borderSubtle}
-                >
-                  {footer}
-                </YStack>
-              ) : null}
-            </YStack>
+                {footer ? (
+                  <YStack
+                    flexShrink={0}
+                    px={layout.screenX}
+                    py={space.md}
+                    gap={space.sm}
+                    bg={colors.surface}
+                    borderTopWidth={1}
+                    borderColor={colors.borderSubtle}
+                  >
+                    {footer}
+                  </YStack>
+                ) : null}
+              </YStack>
+            </SheetEnter>
           </KeyboardHoldProvider>
         </FocusRevealProvider>
       </View>
     </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  scroll: { flexGrow: 0, flexShrink: 1 },
+});

@@ -5,17 +5,23 @@ import { queryKeys } from '@/services/query-keys';
 import { fetchPaymentHistory, recordPayment, voidPayment } from '../api';
 import type { RecordPaymentInput } from '../types';
 
-/** Thu tiền/hoàn tiền ảnh hưởng đơn + công nợ + dashboard + lịch sử → invalidate hết. */
-function invalidateAfterPayment(
+/**
+ * Thu tiền/hoàn tiền ảnh hưởng đơn + công nợ + dashboard + lịch sử → invalidate hết. Sổ khách
+ * cũng vậy: "Còn nợ", "Đã thu", đơn hiện tại và tab Thu chi của hồ sơ khách đều suy từ tiền đơn.
+ */
+export function invalidateAfterPayment(
   queryClient: ReturnType<typeof useQueryClient>,
   bookingId: string,
 ): void {
   void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
   void queryClient.invalidateQueries({ queryKey: queryKeys.debts.all });
   void queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
   void queryClient.invalidateQueries({ queryKey: queryKeys.receipts.all });
   void queryClient.invalidateQueries({ queryKey: queryKeys.payments.history(bookingId) });
   void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+  // Thu tiền sinh phiếu thu theo xe — "Tổng doanh thu" trên thẻ ở Danh sách xe đọc từ đó.
+  void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
 }
 
 export function usePaymentHistory(bookingId: string | null) {

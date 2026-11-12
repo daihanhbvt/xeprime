@@ -12,11 +12,14 @@ import { Alert, Button, Form, Input } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useController, useWatch, type Control, type FieldValues, type Path } from 'react-hook-form';
-import { PHONE_VERIFICATION_PURPOSE, VN_PHONE_PATTERN } from '@xeprime/types';
+import { PHONE_VERIFICATION_PURPOSE, sanitizePhoneInput, VN_MOBILE_PHONE_PATTERN } from '@xeprime/types';
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { OtpCodeInput } from '@/features/phone-verification/components/OtpCodeInput';
+import { formatOtpCooldown } from '@/features/phone-verification/format-cooldown';
 import { usePhoneVerify } from '@/features/phone-verification/hooks/use-phone-verify';
+import { useContactVerify } from '@/features/account/hooks/use-contact-verify';
+import { CONTACT_CHANNEL } from '@/features/account/types';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import styles from './ShopRegistration.module.css';
 
@@ -42,6 +45,13 @@ interface PartnerAccountFieldsProps<T extends PartnerAccountFieldValues> {
    */
   verifyRef?: RefObject<(() => void) | null>;
   onVerified?: () => void;
+  /**
+   * Tài khoản ĐÃ có (vào bằng Google/Facebook) nhưng chưa có SĐT xác minh: không hỏi họ tên, mã
+   * OTP gắn số vào CHÍNH tài khoản đang đăng nhập (`/users/me/phone/*`) thay vì purpose `register`.
+   */
+  attachToAccount?: boolean;
+  /** Hiện hai ô mật khẩu. Mặc định bật; tài khoản Google đã có mật khẩu thì tắt. */
+  askPassword?: boolean;
 }
 
 const isOtpCodeComplete = (code: string | undefined): boolean => /^[0-9]{6}$/.test(code ?? '');
@@ -65,12 +75,35 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
   autoFocus = true,
   verifyRef,
   onVerified,
+  attachToAccount = false,
+  askPassword = true,
 }: PartnerAccountFieldsProps<T>) {
   const t = useTranslations('ShopOnboarding');
   const errorMessage = useErrorMessage();
   const name = (key: keyof PartnerAccountFieldValues & string) => key as Path<T>;
 
-  const otp = usePhoneVerify(PHONE_VERIFICATION_PURPOSE.REGISTER);
+  const registerOtp = usePhoneVerify(PHONE_VERIFICATION_PURPOSE.REGISTER);
+  const accountOtp = useContactVerify(CONTACT_CHANNEL.PHONE);
+  /** Một mặt chung cho hai đường OTP — phần còn lại của component không cần biết đang dùng đường nào. */
+  const otp = attachToAccount
+    ? {
+        codeSent: accountOtp.step === 'code',
+        cooldown: accountOtp.cooldown,
+        sending: accountOtp.sending,
+        verifying: accountOtp.verifying,
+        sendAsync: accountOtp.sendAsync,
+        verifyAsync: (_phone: string, code: string) => accountOtp.verifyAsync(code),
+        reset: accountOtp.reset,
+      }
+    : {
+        codeSent: registerOtp.status === 'code_sent',
+        cooldown: registerOtp.cooldown,
+        sending: registerOtp.sending,
+        verifying: registerOtp.verifying,
+        sendAsync: registerOtp.sendAsync,
+        verifyAsync: registerOtp.verifyAsync,
+        reset: registerOtp.reset,
+      };
   const { field: phoneField, fieldState: phoneState } = useController({
     control,
     name: name('phone'),
@@ -88,7 +121,7 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
   const continueAfterVerify = useRef(false);
 
   const phone = String(useWatch({ control, name: name('phone') }) ?? '').trim();
-  const phoneValid = VN_PHONE_PATTERN.test(phone);
+  const phoneValid = VN_MOBILE_PHONE_PATTERN.test(phone.trim());
   const code = String(otpField.value ?? '');
   const verified = verifiedField.value === true;
 
@@ -111,7 +144,7 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
   const startVerify = async (fromSubmit = false) => {
     continueAfterVerify.current = fromSubmit;
     setOtpError(null);
-    if (otp.status === 'code_sent' && otp.cooldown > 0) {
+    if (otp.codeSent && otp.cooldown > 0) {
       setDialogOpen(true);
       return;
     }
@@ -177,16 +210,18 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
 
   return (
     <>
-      <TextField
-        control={control}
-        name={name('displayName')}
-        label={t('signup.fields.displayName.label')}
-        placeholder={t('signup.fields.displayName.placeholder')}
-        autoComplete="name"
-        prefix={<UserOutlined />}
-        required
-        autoFocus={autoFocus}
-      />
+      {attachToAccount ? null : (
+        <TextField
+          control={control}
+          name={name('displayName')}
+          label={t('signup.fields.displayName.label')}
+          placeholder={t('signup.fields.displayName.placeholder')}
+          autoComplete="name"
+          prefix={<UserOutlined />}
+          required
+          autoFocus={autoFocus}
+        />
+      )}
       <TextField
         control={control}
         name={name('email')}
@@ -222,7 +257,7 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
               ref={phoneInputRef}
               name={phoneInput.name}
               value={String(phoneInput.value ?? '')}
-              onChange={(event) => phoneInput.onChange(event.target.value)}
+              onChange={(event) => phoneInput.onChange(sanitizePhoneInput(event.target.value))}
               onBlur={phoneInput.onBlur}
               type="tel"
               autoComplete="tel"
@@ -244,26 +279,30 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
         )}
       </Form.Item>
 
-      <TextField
-        control={control}
-        name={name('password')}
-        label={t('signup.fields.password.label')}
-        type="password"
-        placeholder={t('signup.fields.password.placeholder')}
-        autoComplete="new-password"
-        prefix={<LockOutlined />}
-        required
-      />
-      <TextField
-        control={control}
-        name={name('confirmPassword')}
-        label={t('signup.fields.confirmPassword.label')}
-        type="password"
-        placeholder={t('signup.fields.confirmPassword.placeholder')}
-        autoComplete="new-password"
-        prefix={<LockOutlined />}
-        required
-      />
+      {askPassword ? (
+        <>
+          <TextField
+            control={control}
+            name={name('password')}
+            label={t('signup.fields.password.label')}
+            type="password"
+            placeholder={t('signup.fields.password.placeholder')}
+            autoComplete="new-password"
+            prefix={<LockOutlined />}
+            required
+          />
+          <TextField
+            control={control}
+            name={name('confirmPassword')}
+            label={t('signup.fields.confirmPassword.label')}
+            type="password"
+            placeholder={t('signup.fields.confirmPassword.placeholder')}
+            autoComplete="new-password"
+            prefix={<LockOutlined />}
+            required
+          />
+        </>
+      ) : null}
 
       <ResponsiveDialog
         open={dialogOpen}
@@ -307,7 +346,7 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
               onClick={() => void resend()}
             >
               {otp.cooldown > 0
-                ? t('signup.fields.otpCode.resendIn', { seconds: otp.cooldown })
+                ? t('signup.fields.otpCode.resendInTime', { time: formatOtpCooldown(otp.cooldown) })
                 : t('signup.fields.otpCode.resend')}
             </Button>
           </div>

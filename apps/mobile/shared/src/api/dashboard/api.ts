@@ -31,4 +31,14 @@ export const dashboardApi = {
   overview(branchId?: string): Promise<PartnerOverview> {
     return getApiClient().get<PartnerOverview>('/dashboard/overview', partnerOverviewParams(branchId));
   },
+
+  /** Chỉ khối "việc giao/nhận hôm nay" — nuôi huy hiệu menu (04/11/2026), toàn phạm vi người gọi. */
+  today(): Promise<PartnerOverviewToday> {
+    return getApiClient().get<PartnerOverviewToday>('/dashboard/today');
+  },
+
+  /** Yêu cầu chờ duyệt + sắp hết hạn trả lời — huy hiệu mục "Yêu cầu đặt xe" (gác `booking_requests.view`). */
+  requests(): Promise<PartnerOverviewRequests> {
+    return getApiClient().get<PartnerOverviewRequests>('/dashboard/requests');
+  },
 };

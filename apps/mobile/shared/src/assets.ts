@@ -8,18 +8,18 @@ import partnerHero from '../assets/images/partner/partner-hero.webp';
 import ownerShopShowroom from '../assets/images/owner-shop-showroom.png';
 // Minh hoạ "chưa có bằng lái" — xuất thẳng từ Figma (Empty State, node 20043:49464).
 import driverLicenceEmpty from '../assets/images/driver-licence-empty.png';
+// Hộp rỗng 160px — Figma "List - Scroll - Empty" (20063:60274), sinh từ apps/web/public/illustrations/list-empty.svg.
+import listEmpty from '../assets/images/list-empty.png';
 // Ảnh CHỤP THẬT từ app XePrime Partner cho màn hướng dẫn đăng ký ở app khách. Chụp lại khi giao
 // diện ba màn đó đổi: form tạo tài khoản đối tác, màn chọn cách cho thuê, wizard đăng xe.
-import partnerGuideAccount from '../assets/images/partner-guide/step-account.png';
-import partnerGuideChoose from '../assets/images/partner-guide/step-choose.png';
-import partnerGuidePublish from '../assets/images/partner-guide/step-publish.png';
 // Tranh minh hoạ trang chủ v2 — CHÉP NGUYÊN từ `apps/web/public/home/` (ADR 0062). Hai tấm là
 // SPRITE: mỗi thẻ cắt một ô bằng khung `overflow: hidden`, cùng vị trí cắt với CSS bên web.
 import homeHeroFallback from '../assets/images/home/hero-fallback.webp';
 import homeDestCities from '../assets/images/home/dest-cities.webp';
 import homeDestBg from '../assets/images/home/dest-bg.webp';
 import homeStepsSprite from '../assets/images/home/steps-sprite.webp';
-import homePartnerBackdrop from '../assets/images/home/partner-bg.webp';
+// Vùng cắt riêng của bản vẽ MB (`19771:51743`) — web dùng cùng ảnh ở ≤640px.
+import homePartnerBackdrop from '../assets/images/home/partner-bg-mobile.webp';
 // Huy hiệu thẻ trạng thái của các màn chuyến — CHÉP NGUYÊN apps/web/public/booking/request-sent.webp.
 import bookingRequestSent from '../assets/images/booking/request-sent.webp';
 import bookingRequestSentEnvelope from '../assets/images/booking/request-sent-envelope.webp';
@@ -57,9 +57,7 @@ export const images = {
   partnerHero,
   ownerShopShowroom,
   driverLicenceEmpty,
-  partnerGuideAccount,
-  partnerGuideChoose,
-  partnerGuidePublish,
+  listEmpty,
   homeHeroFallback,
   homeDestCities,
   homeDestBg,

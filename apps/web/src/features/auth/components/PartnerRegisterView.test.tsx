@@ -73,10 +73,11 @@ vi.mock('@/features/locations/hooks/use-provinces', () => ({
   }),
 }));
 vi.mock('@/features/locations/hooks/use-wards', () => ({
+  useWardLookup: () => ({ data: new Map(), isLoading: false }),
   useWardOptions: () => ({
-    options: [],
+    options: [{ value: '26734', label: 'Phường Bến Thành' }],
     items: [],
-    total: 0,
+    total: 1,
     isLoading: false,
     isError: false,
     refetch: vi.fn(),
@@ -94,6 +95,9 @@ const NO_SHOP = {
   displayName: 'Nguyễn Văn A',
   phone: '0901234567',
   email: 'a@xeprime.test',
+  // Tài khoản đã đủ SĐT xác minh + mật khẩu ⇒ form không gắn lại phần tài khoản (luồng Google).
+  phoneVerified: true,
+  hasPassword: true,
   tenant: null,
 };
 const COMMISSION_OWNER = {
@@ -119,6 +123,10 @@ async function pickProvince(): Promise<void> {
   fireEvent.mouseDown(screen.getByLabelText(/Tỉnh\/thành/));
   await waitFor(() => expect(screen.getByTitle('TP Hồ Chí Minh')).toBeTruthy());
   fireEvent.click(screen.getByTitle('TP Hồ Chí Minh'));
+  // ADR 0077: địa chỉ đăng ký thành chi nhánh mặc định ⇒ bắt buộc phường/xã.
+  fireEvent.mouseDown(screen.getByLabelText(/Xã\/phường/));
+  await waitFor(() => expect(screen.getByTitle('Phường Bến Thành')).toBeTruthy());
+  fireEvent.click(screen.getByTitle('Phường Bến Thành'));
 }
 
 function type(label: RegExp, value: string) {
@@ -162,7 +170,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Bước 1 — chọn tuyến TRƯỚC', () => {
+describe('Bước 1 - chọn tuyến TRƯỚC', () => {
   it('chưa đăng nhập: hiện hai thẻ tuyến, chưa có ô nhập nào', () => {
     renderView();
 
@@ -196,7 +204,7 @@ describe('Bước 1 — chọn tuyến TRƯỚC', () => {
   });
 });
 
-describe('Bước 2 — một form, không ô nào hỏi hai lần', () => {
+describe('Bước 2 - một form, không ô nào hỏi hai lần', () => {
   it('gian hàng: họ tên, SĐT, email mỗi thứ MỘT ô; có tên gian hàng', () => {
     nav.search = 'track=package';
     renderView();
@@ -240,7 +248,7 @@ describe('Bước 2 — một form, không ô nào hỏi hai lần', () => {
     expect(api.registerShop).not.toHaveBeenCalled();
   });
 
-  it('chưa xác thực SĐT: nút đăng ký KHÔNG khoá — bấm thì mở popup OTP, đúng mã là tự đăng ký luôn', async () => {
+  it('chưa xác thực SĐT: nút đăng ký KHÔNG khoá - bấm thì mở popup OTP, đúng mã là tự đăng ký luôn', async () => {
     nav.search = 'track=commission';
     renderView();
 
@@ -296,7 +304,7 @@ describe('Bước 2 — một form, không ô nào hỏi hai lần', () => {
     expect(screen.getAllByText('0901234567').length).toBeGreaterThan(0);
   });
 
-  it('chủ xe: tạo tài khoản (KHÔNG email — email chỉ là liên hệ) → tạo hồ sơ tuyến hoa hồng → Tổng quan', async () => {
+  it('chủ xe: tạo tài khoản (KHÔNG email - email chỉ là liên hệ) → tạo hồ sơ tuyến hoa hồng → Tổng quan', async () => {
     nav.search = 'track=commission';
     renderView();
 

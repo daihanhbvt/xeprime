@@ -2,8 +2,8 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { queryKeys } from '@/queries/query-keys';
 import {
   walletApi,
-  walletEntriesParams,
   walletStatementParams,
+  walletActivityParams,
   WALLET_SCOPE,
   type CreateWithdrawalInput,
   type WalletScope,
@@ -24,17 +24,6 @@ export function useWalletSummary(scope: WalletScope, enabled = true) {
   });
 }
 
-export function useWalletEntries(scope: WalletScope, page: number, enabled = true) {
-  const params = walletEntriesParams(page);
-  return useQuery({
-    queryKey: queryKeys.wallet.entries(scope, params),
-    queryFn: () => walletApi.entries(scope, params),
-    // Giữ trang cũ trong lúc tải trang mới — sổ tiền nhấp nháy trắng mỗi lần lật là khó đọc.
-    placeholderData: keepPreviousData,
-    enabled,
-  });
-}
-
 /**
  * Bảng tổng hợp giao dịch của gian hàng theo kỳ.
  *
@@ -49,6 +38,17 @@ export function useWalletStatement(filters: WalletStatementFilters, enabled: boo
   return useQuery({
     queryKey: queryKeys.wallet.statement(WALLET_SCOPE.SHOP, params),
     queryFn: () => walletApi.statement(params),
+    enabled,
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** Tab Biến động số dư của gian hàng — bút toán + lệnh rút trong MỘT danh sách, phân trang server. */
+export function useWalletActivity(filters: WalletStatementFilters, enabled: boolean) {
+  const params = walletActivityParams(filters);
+  return useQuery({
+    queryKey: queryKeys.wallet.activity(WALLET_SCOPE.SHOP, params),
+    queryFn: () => walletApi.activity(params),
     enabled,
     placeholderData: keepPreviousData,
   });

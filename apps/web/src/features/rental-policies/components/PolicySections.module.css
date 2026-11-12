@@ -16,6 +16,29 @@
   gap: var(--xp-space-md);
 }
 
+/*
+ * Bố cục PHẲNG (`PolicyFlatLayout`, màn sửa xe): khối là một phần của thẻ nơi gọi dựng — không viền,
+ * không nền, không đệm; vạch kẻ giữa các khối do nơi gọi đặt.
+ */
+.card.flat {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  gap: 12px;
+}
+
+.cardTitle.flatTitle {
+  font-size: 16px;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Công thức / bản xem trước nằm trong icon ⓘ, xuống dòng dưới lời giải thích. */
+.tipPreview {
+  display: block;
+  margin-top: 8px;
+}
+
 .cardHeader {
   display: flex;
   min-width: 0;
@@ -298,6 +321,19 @@
   color: var(--xp-color-text-secondary);
   line-height: 1.5;
   overflow-wrap: anywhere;
+}
+
+/*
+ * Bố cục phẳng đứng cạnh khung xem trước giá (màn sửa xe › Dài hạn): bề ngang chỉ còn ~550px nên
+ * cột hẹp lại và nút xoá chỉ còn icon — đo theo chỗ thật, không đợi viewport dưới 1000px.
+ */
+.flat .discountHead,
+.flat .discountRow {
+  grid-template-columns: minmax(110px, 1fr) 96px minmax(140px, 1.4fr) 56px;
+}
+
+.flat .deleteText {
+  display: none;
 }
 
 @media (max-width: 1000px) {

@@ -307,7 +307,7 @@ function SupportSessions({ tenantId }: { tenantId: string }) {
       title: t('columns.actor'),
       key: 'actor',
       width: 160,
-      render: (_, row) => row.actorName ?? '—',
+      render: (_, row) => row.actorName ?? '-',
     },
     {
       title: t('columns.mode'),

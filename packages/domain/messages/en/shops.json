@@ -25,13 +25,14 @@
   },
   "card": {
     "trips": "{count, plural, one {#{plus} trip} other {#{plus} trips}}",
+    "rentedTimes": "Rented {count, plural, one {#{plus} time} other {#{plus} times}}",
     "highlight": {
-      "topRated": "A {rating}-star host — quick to respond, accepts most requests, and consistently well reviewed by guests.",
+      "topRated": "A {rating}-star host - quick to respond, accepts most requests, and consistently well reviewed by guests.",
       "reliable": "This host replies quickly and sees through almost every request they accept.",
       "wellRated": "Rated {rating} stars by guests across {count, plural, one {# review} other {# reviews}}.",
-      "instantBook": "Instant Book is on — your request is accepted automatically, with no wait for approval.",
+      "instantBook": "Instant Book is on - your request is accepted automatically, with no wait for approval.",
       "experienced": "This host has completed {count, plural, one {# trip} other {# trips}} on XePrime.",
-      "newHost": "New to XePrime — you could be one of this host's first guests."
+      "newHost": "New to XePrime - you could be one of this host's first guests."
     },
     "type": {
       "shop": "Shop",
@@ -64,7 +65,7 @@
     "responseRate": "Response rate",
     "responseRateValue": "{percent}%",
     "responseRateHintLabel": "About the response rate",
-    "responseRateHint": "The share of booking requests this host answered — accepted or declined — in the last {days} days. Requests closed because the dates went to another guest, or withdrawn before the host could decide, are left out.",
+    "responseRateHint": "The share of booking requests this host answered - accepted or declined - in the last {days} days. Requests closed because the dates went to another guest, or withdrawn before the host could decide, are left out.",
     "responseTime": "Response time",
     "responseTimeHintLabel": "About the response time",
     "responseTimeHint": "Median time from a guest sending a request to the host answering it, over the last {days} days. Only decisions the host made in person count; vehicles on Instant Book are excluded.",

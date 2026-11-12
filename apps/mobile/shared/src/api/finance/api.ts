@@ -20,6 +20,7 @@ export type ReceiptVehicleOption = Schemas['ReceiptVehicleOptionDto'];
 export type FinanceCategory = Schemas['FinanceCategoryDto'];
 export type CreateCategoryInput = Schemas['CreateCategoryDto'];
 export type DebtItem = Schemas['DebtItemDto'];
+export type DebtSummary = Schemas['DebtSummaryDto'];
 export type FinanceSummary = Schemas['FinanceSummaryDto'];
 export type FinanceSeries = Schemas['FinanceSeriesDto'];
 export type FinanceSeriesBucket = Schemas['FinanceSeriesBucketDto'];
@@ -208,21 +209,35 @@ export function customerRevenueParams(filters: FinanceOverviewFilters): QueryPar
   };
 }
 
-/** Bộ lọc màn Công nợ — từ khoá + nhóm hạn trả, cả hai lọc ở SERVER. */
+/** Bộ lọc màn Công nợ — từ khoá · chi nhánh · trạng thái đơn · nhóm hạn · sắp xếp, đều lọc ở SERVER. */
 export interface DebtFilters {
   /** Chi nhánh của XE — ô "Chi nhánh" của màn (ADR 0052). */
   branchId?: string;
   q?: string;
+  /** Trạng thái đơn — `BOOKING_STATUS`. */
+  status?: string;
+  /** Nhóm hạn — `DEBT_FILTER`. */
   filter?: string;
+  /** `DEBT_SORT`; trống = trễ nhất trước. */
+  sort?: string;
   page?: number;
   limit?: number;
 }
 
-export function debtFiltersToParams(filters: DebtFilters): QueryParams {
+/** Phạm vi chung của danh sách và dải thẻ: tìm kiếm · chi nhánh · trạng thái đơn. */
+export function debtScopeToParams(filters: DebtFilters): QueryParams {
   return {
     q: filters.q ?? null,
-    filter: filters.filter ?? null,
     branchId: filters.branchId ?? null,
+    status: filters.status ?? null,
+  };
+}
+
+export function debtFiltersToParams(filters: DebtFilters): QueryParams {
+  return {
+    ...debtScopeToParams(filters),
+    filter: filters.filter ?? null,
+    sort: filters.sort ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? RECEIPTS_DEFAULT_LIMIT,
   };
@@ -292,9 +307,8 @@ export const receiptsApi = {
 /**
  * Danh mục thu/chi của gian hàng.
  *
- * CỐ Ý không có `update`: backend có `PATCH /finance/categories/:id` từ Phase 6 nhưng KHÔNG giao
- * diện nào gọi nó — mở nút đổi tên ở app mà web chưa có là app đi trước web, đúng thứ luật clone
- * cấm. Mở cùng lúc hai bên hoặc không mở.
+ * Đổi tên (`PATCH /finance/categories/:id`) mở từ PR #276 — web thêm nút sửa vào hộp quản lý
+ * danh mục, app mở cùng lúc.
  */
 export const financeCategoriesApi = {
   list(type?: string): Promise<FinanceCategory[]> {
@@ -306,6 +320,13 @@ export const financeCategoriesApi = {
 
   create(body: CreateCategoryInput): Promise<FinanceCategory> {
     return getApiClient().post<FinanceCategory>('/finance/categories', body);
+  },
+
+  rename(id: string, name: string): Promise<FinanceCategory> {
+    return getApiClient().patch<FinanceCategory>(
+      `/finance/categories/${encodeURIComponent(id)}`,
+      { name },
+    );
   },
 
   remove(id: string): Promise<void> {
@@ -321,6 +342,13 @@ export const debtsApi = {
       debtFiltersToParams(filters),
       RECEIPTS_DEFAULT_LIMIT,
     );
+  },
+  /**
+   * Dải thẻ + số đếm chip — cùng phạm vi với danh sách nhưng KHÔNG mang nhóm hạn: chip "Quá hạn"
+   * phải nói số của nhóm đó kể cả khi người dùng đang mở nhóm "Chưa thu".
+   */
+  summary(filters: DebtFilters): Promise<DebtSummary> {
+    return getApiClient().get<DebtSummary>('/debts/summary', debtScopeToParams(filters));
   },
 };
 

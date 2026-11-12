@@ -19,7 +19,7 @@ function Harness({ vehicleType }: { vehicleType: string }) {
   return <BasicStep control={control} branchOptions={[]} branchLoading={false} />;
 }
 
-describe('chip dịch vụ — khoá dịch vụ loại xe không phục vụ (như ServiceTypeChips web)', () => {
+describe('chip dịch vụ - khoá dịch vụ loại xe không phục vụ (như ServiceTypeChips web)', () => {
   const blocked = Object.values(SERVICE_TYPE).find(
     (s) => !isVehicleServiceTypeAllowed(VEHICLE_TYPE.MOTORBIKE, s),
   );

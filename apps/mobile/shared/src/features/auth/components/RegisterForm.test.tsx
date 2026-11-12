@@ -72,7 +72,7 @@ async function submitWithCode(view: View, code = '123456') {
   await fireEvent.changeText(await view.findByLabelText('Mã xác thực gồm 6 số'), code);
 }
 
-describe('RegisterForm — giống luồng đăng ký của web (ADR 0060)', () => {
+describe('RegisterForm - giống luồng đăng ký của web (ADR 0060)', () => {
   it('khoá nút cho tới khi cả bốn ô hợp lệ', async () => {
     const view = await renderForm();
     const submit = () => view.getByRole('button', { name: 'Tạo tài khoản' });

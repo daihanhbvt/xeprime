@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PhoneInput } from '../../../common/phone';
 import { BookingDriverSummaryDto } from '../../drivers/dto/driver.dto';
 import {
   ADDRESS_LINE_MAX_LENGTH,
@@ -56,7 +57,7 @@ export class TenantCustomerListQueryDto {
   @ApiPropertyOptional({
     enum: TENANT_CUSTOMER_RELATIONSHIP_VALUES,
     description:
-      'Nhóm quan hệ. `has_debt` là bộ lọc tài chính — thiếu `finance.view` sẽ bị từ chối, ' +
+      'Nhóm quan hệ. `has_debt` là bộ lọc tài chính - thiếu `finance.view` sẽ bị từ chối, ' +
       'không âm thầm trả về danh sách đầy đủ.',
   })
   @IsOptional()
@@ -65,7 +66,7 @@ export class TenantCustomerListQueryDto {
 
   @ApiPropertyOptional({
     enum: TENANT_CUSTOMER_SORT_VALUES,
-    description: '`total_value` và `debt` là sắp xếp tài chính — gate như bộ lọc trên.',
+    description: '`total_value` và `debt` là sắp xếp tài chính - gate như bộ lọc trên.',
   })
   @IsOptional()
   @IsIn(TENANT_CUSTOMER_SORT_VALUES)
@@ -101,7 +102,7 @@ export class TenantCustomerStatsDto {
   activeBookingCount!: number;
   @ApiProperty({ description: 'Số lần khách không tới nhận xe' }) noShowCount!: number;
   @ApiProperty({
-    description: 'Số chuyến trả xe MUỘN — chỉ đếm khi có `actual_return_at` thật, không suy đoán',
+    description: 'Số chuyến trả xe MUỘN - chỉ đếm khi có `actual_return_at` thật, không suy đoán',
   })
   lateReturnCount!: number;
   @ApiPropertyOptional({
@@ -139,7 +140,7 @@ export class TenantCustomerListItemDto extends TenantCustomerStatsDto {
   @ApiProperty({ enum: TENANT_CUSTOMER_RISK_LEVEL_VALUES }) riskLevel!: string;
   @ApiProperty({ enum: TENANT_CUSTOMER_SOURCE_VALUES }) source!: string;
   @ApiProperty({ description: 'Đã liên kết tài khoản trên nền tảng' }) hasAccount!: boolean;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — null = đang hoạt động' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO - null = đang hoạt động' })
   archivedAt!: string | null;
 }
 
@@ -151,16 +152,24 @@ export class TenantCustomerPageDto {
 /** Dải KPI đầu trang. `totalDebt` `null` khi thiếu `finance.view` (FE ẩn hẳn ô, không hiện 0). */
 export class TenantCustomerSummaryDto {
   @ApiProperty({ description: 'Khách đang hoạt động (chưa lưu trữ)' }) activeCustomers!: number;
-  @ApiProperty({ description: 'Khách quen — từ 2 chuyến hoàn tất trở lên' })
+  @ApiProperty({ description: 'Khách quen - từ 2 chuyến hoàn tất trở lên' })
   returningCustomers!: number;
   @ApiProperty() watchlistCustomers!: number;
   @ApiProperty() blockedCustomers!: number;
   @ApiProperty() archivedCustomers!: number;
   @ApiPropertyOptional({ type: String, nullable: true }) totalDebt!: string | null;
+  @ApiProperty({ description: 'Tổng số chuyến ĐÃ HOÀN TẤT của mọi khách (02/11/2026)' })
+  totalRentals!: number;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Tổng giá trị đơn (không tính đơn huỷ) - null khi thiếu finance.view',
+  })
+  totalRevenue!: string | null;
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'Số khách còn nợ · null khi thiếu finance.view — FE ẩn hẳn ô, không hiện 0',
+    description: 'Số khách còn nợ · null khi thiếu finance.view - FE ẩn hẳn ô, không hiện 0',
   })
   debtCustomers!: number | null;
 }
@@ -174,8 +183,9 @@ export class CreateTenantCustomerDto {
   @ApiProperty({
     example: '0901234567',
     description:
-      'Bắt buộc — SĐT là định danh của khách trong sổ khách. Server chuẩn hoá trước khi lưu.',
+      'Bắt buộc - SĐT là định danh của khách trong sổ khách. Server chuẩn hoá trước khi lưu.',
   })
+  @PhoneInput()
   @IsString()
   @Matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
   phone!: string;
@@ -233,6 +243,7 @@ export class UpdateTenantCustomerDto {
     description: 'Đổi sang SĐT đã thuộc khách khác → 409 CUSTOMER_PHONE_DUPLICATE',
   })
   @IsOptional()
+  @PhoneInput()
   @IsString()
   @Matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
   phone?: string;
@@ -287,7 +298,7 @@ export class UpdateCustomerRiskDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Lý do NỘI BỘ — bắt buộc khi khác `normal`. Không bao giờ hiển thị cho khách.',
+    description: 'Lý do NỘI BỘ - bắt buộc khi khác `normal`. Không bao giờ hiển thị cho khách.',
   })
   @IsOptional()
   @IsString()
@@ -303,6 +314,7 @@ export class CustomerBookingItemDto {
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
   @ApiProperty() vehicleName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) vehiclePlate!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) vehicleImageUrl!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) pickupAt!: string;
   @ApiProperty({ description: 'ISO-8601 UTC' }) returnAt!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) totalAmount!: string | null;
@@ -339,17 +351,84 @@ export class CustomerBookingListQueryDto {
   limit?: number;
 }
 
+/**
+ * Lịch sử thuê có lọc (02/11/2026) — tách khỏi `CustomerBookingListQueryDto` vì lớp đó còn là
+ * tham số phân trang của sổ ghi chú, nơi các bộ lọc này vô nghĩa.
+ */
+export class CustomerBookingHistoryQueryDto extends CustomerBookingListQueryDto {
+  @ApiPropertyOptional({ description: 'Mã đơn, tên xe hoặc biển số' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  q?: string;
+
+  @ApiPropertyOptional({ enum: BOOKING_STATUS_VALUES })
+  @IsOptional()
+  @IsIn(BOOKING_STATUS_VALUES)
+  status?: string;
+
+  @ApiPropertyOptional({ description: 'Nhận xe từ ngày (YYYY-MM-DD, giờ Việt Nam)' })
+  @IsOptional()
+  @Matches(DATE_ONLY_PATTERN)
+  from?: string;
+
+  @ApiPropertyOptional({ description: 'Nhận xe tới hết ngày (YYYY-MM-DD, giờ Việt Nam)' })
+  @IsOptional()
+  @Matches(DATE_ONLY_PATTERN)
+  to?: string;
+}
+
+/** Khoản phải thu đang mở của khách — banner "Còn nợ" ở tab Tổng quan. */
+export class CustomerReceivableDto {
+  @ApiProperty({ description: 'Số đơn còn nợ' }) count!: number;
+  @ApiPropertyOptional({ type: () => CustomerBookingItemDto, nullable: true, description: 'Đơn nợ cũ nhất' })
+  oldest!: CustomerBookingItemDto | null;
+}
+
+export const CUSTOMER_REVENUE_PERIOD_VALUES = ['week', 'month', 'quarter', 'year'] as const;
+export type CustomerRevenuePeriod = (typeof CUSTOMER_REVENUE_PERIOD_VALUES)[number];
+
+export class CustomerRevenueQueryDto {
+  @ApiPropertyOptional({ enum: CUSTOMER_REVENUE_PERIOD_VALUES, default: 'month' })
+  @IsOptional()
+  @IsIn(CUSTOMER_REVENUE_PERIOD_VALUES)
+  period?: CustomerRevenuePeriod;
+}
+
+export class CustomerRevenueBucketDto {
+  @ApiProperty({ description: 'ISO - đầu khoảng (giờ VN 00:00)' }) from!: string;
+  @ApiProperty({ description: 'ISO - đầu khoảng kế tiếp' }) to!: string;
+  @ApiProperty({ description: 'Giá trị đơn nhận xe trong khoảng (VND string)' }) amount!: string;
+  @ApiProperty({ description: 'Số đơn nhận xe trong khoảng' }) count!: number;
+}
+
+/** Tab "Thu chi" của hồ sơ khách (02/11/2026). Chỉ bề mặt có `finance.view`. */
+export class CustomerRevenueDto {
+  @ApiProperty({ enum: CUSTOMER_REVENUE_PERIOD_VALUES }) period!: string;
+  @ApiProperty() from!: string;
+  @ApiProperty() to!: string;
+  @ApiProperty({ type: [CustomerRevenueBucketDto] }) buckets!: CustomerRevenueBucketDto[];
+  @ApiProperty({ description: 'Tổng giá trị đơn nhận xe trong kỳ' }) periodRevenue!: string;
+  @ApiProperty({ description: 'Thực thu trong kỳ (phiếu thu kinh doanh đã duyệt)' })
+  collectedInPeriod!: string;
+  @ApiProperty({ description: 'Chuyến hoàn tất trong kỳ' }) completedInPeriod!: number;
+  @ApiProperty({ description: 'Tổng còn phải thu (mọi kỳ)' }) receivableAmount!: string;
+  @ApiProperty() receivableCount!: number;
+  @ApiProperty({ type: [CustomerBookingItemDto], description: 'Đơn còn nợ, cũ trước (tối đa 50)' })
+  receivables!: CustomerBookingItemDto[];
+}
+
 export class TenantCustomerDetailDto extends TenantCustomerStatsDto {
   @ApiProperty() id!: string;
   @ApiProperty() fullName!: string;
   @ApiProperty() phone!: string;
-  @ApiProperty({ description: 'Dạng chuẩn hoá — định danh khách trong gian hàng này' })
+  @ApiProperty({ description: 'Dạng chuẩn hoá - định danh khách trong gian hàng này' })
   normalizedPhone!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) email!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Địa chỉ HIỂN THỊ đã ghép sẵn — dùng thẳng, đừng ghép lại ở client',
+    description: 'Địa chỉ HIỂN THỊ đã ghép sẵn - dùng thẳng, đừng ghép lại ở client',
   })
   address!: string | null;
   @ApiPropertyOptional({
@@ -363,7 +442,7 @@ export class TenantCustomerDetailDto extends TenantCustomerStatsDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Lý do rủi ro — NỘI BỘ, chỉ đi tới người trong gian hàng',
+    description: 'Lý do rủi ro - NỘI BỘ, chỉ đi tới người trong gian hàng',
   })
   riskReason!: string | null;
   @ApiProperty() hasAccount!: boolean;
@@ -375,6 +454,18 @@ export class TenantCustomerDetailDto extends TenantCustomerStatsDto {
     description: 'Hoạt động gần đây (tối đa 5). Rỗng khi người gọi không có `bookings.view`.',
   })
   recentBookings!: CustomerBookingItemDto[];
+  @ApiPropertyOptional({
+    type: CustomerBookingItemDto,
+    nullable: true,
+    description: 'Đơn đang chạy, hoặc đơn sắp nhận gần nhất - thẻ "Đơn thuê hiện tại"',
+  })
+  currentBooking!: CustomerBookingItemDto | null;
+  @ApiPropertyOptional({
+    type: CustomerReceivableDto,
+    nullable: true,
+    description: 'Khoản phải thu đang mở - null khi thiếu finance.view hoặc bookings.view',
+  })
+  receivable!: CustomerReceivableDto | null;
 }
 
 export class CustomerNoteDto {
@@ -410,7 +501,11 @@ export class CustomerDocumentDto {
   @ApiProperty() id!: string;
   @ApiProperty({ enum: CUSTOMER_DOCUMENT_TYPE_VALUES }) documentType!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) customTypeName!: string | null;
-  @ApiProperty({ description: 'Tên file gốc (hiển thị) — KHÔNG phải đường dẫn lưu trữ' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Họ tên in trên giấy tờ' })
+  holderName!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Số CCCD / GPLX / hộ chiếu…' })
+  documentNumber!: string | null;
+  @ApiProperty({ description: 'Tên file gốc (hiển thị) - KHÔNG phải đường dẫn lưu trữ' })
   originalName!: string;
   @ApiProperty() mimeType!: string;
   @ApiProperty() sizeBytes!: number;
@@ -468,6 +563,20 @@ export class PresignCustomerDocumentDto {
   @Matches(DATE_ONLY_PATTERN, { message: 'Hạn giấy tờ phải theo dạng YYYY-MM-DD' })
   expiresAt?: string | null;
 
+  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 160, description: 'Họ tên in trên giấy tờ' })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(160)
+  holderName?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 60, description: 'Số giấy tờ' })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(60)
+  documentNumber?: string | null;
+
   @ApiProperty({ description: 'Tên file gốc (chỉ để hiển thị, không tham gia định danh)' })
   @IsString()
   @MaxLength(255)
@@ -486,13 +595,36 @@ export class PresignCustomerDocumentDto {
 }
 
 export class CustomerDocumentPresignDto {
-  @ApiProperty({ description: 'ID bản ghi giấy tờ — dùng cho bước hoàn tất' }) documentId!: string;
+  @ApiProperty({ description: 'ID bản ghi giấy tờ - dùng cho bước hoàn tất' }) documentId!: string;
   @ApiProperty({ description: 'URL PUT lên bucket riêng tư (hết hạn ngắn)' }) uploadUrl!: string;
   @ApiProperty() expiresIn!: number;
 }
 
 export class CustomerDocumentDownloadDto {
-  @ApiProperty({ description: 'Signed GET URL ngắn hạn — không cache, không lưu' })
+  @ApiProperty({ description: 'Signed GET URL ngắn hạn - không cache, không lưu' })
   downloadUrl!: string;
-  @ApiProperty({ description: 'ISO — thời điểm URL hết hiệu lực' }) expiresAt!: string;
+  @ApiProperty({ description: 'ISO - thời điểm URL hết hiệu lực' }) expiresAt!: string;
+}
+
+/** Sửa phần CHỮ của một giấy tờ đã tải (02/11/2026) — file ảnh không đổi; thay ảnh là tải bản mới. */
+export class UpdateCustomerDocumentDto {
+  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 160 })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(160)
+  holderName?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 60 })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(60)
+  documentNumber?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'YYYY-MM-DD - null = không thời hạn' })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @Matches(DATE_ONLY_PATTERN)
+  expiresAt?: string | null;
 }

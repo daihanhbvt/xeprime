@@ -129,7 +129,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('/manage/admin/bookings — bảng + panel chi tiết', () => {
+describe('/manage/admin/bookings - bảng + panel chi tiết', () => {
   it('chưa mở đơn nào: đủ cột, có cột tiền, không dòng nào được đánh dấu', () => {
     renderPage();
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -158,13 +158,13 @@ describe('/manage/admin/bookings — bảng + panel chi tiết', () => {
     expect(rowOf('XP-001').getAttribute('aria-current')).toBeNull();
   });
 
-  it('mã đơn là nút mở panel — dùng được bằng bàn phím', () => {
+  it('mã đơn là nút mở panel - dùng được bằng bàn phím', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Xem chi tiết đơn XP-001' }));
     expect(screen.getByText('Đơn XP-001')).toBeTruthy();
   });
 
-  it('panel mở: bảng GIỮ NGUYÊN mọi cột — nội dung đứng yên dưới panel, không co, không đẩy', () => {
+  it('panel mở: bảng GIỮ NGUYÊN mọi cột - nội dung đứng yên dưới panel, không co, không đẩy', () => {
     renderPage();
     const before = headers();
     fireEvent.click(within(rowOf('XP-001')).getByText('Nguyễn Văn A'));
@@ -201,7 +201,7 @@ describe('/manage/admin/bookings — bảng + panel chi tiết', () => {
     expect(document.querySelector('tr[aria-current]')).toBeNull();
   });
 
-  it('đơn đã huỷ: cột "Còn nợ" hiện "—" thay vì một khoản nợ không tồn tại', () => {
+  it('đơn đã huỷ: cột "Còn nợ" hiện "-" thay vì một khoản nợ không tồn tại', () => {
     list.data = {
       items: [booking({ status: 'cancelled', paidAmount: '68000', debtAmount: '400000' })],
       meta: { page: 1, limit: 20, total: 1, hasNext: false },
@@ -209,7 +209,7 @@ describe('/manage/admin/bookings — bảng + panel chi tiết', () => {
     renderPage();
     const row = within(rowOf('XP-001'));
     expect(row.queryByText('400.000 ₫')).toBeNull();
-    expect(row.getByText('—')).toBeTruthy();
+    expect(row.getByText('-')).toBeTruthy();
   });
 
   it('còn nợ của chuyến chưa kết thúc KHÔNG bị tô đỏ trong bảng', () => {

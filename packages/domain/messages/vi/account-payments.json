@@ -22,7 +22,7 @@
   "balance": {
     "notes": {
       "title": "Lưu ý khi thêm tài khoản nhận tiền:",
-      "holder": "<strong>Đúng tên chủ tài khoản:</strong> tên người thụ hưởng phải trùng khớp với tên đăng ký ở ngân hàng — sai tên thì ngân hàng trả lệnh chuyển về.",
+      "holder": "<strong>Đúng tên chủ tài khoản:</strong> tên người thụ hưởng phải trùng khớp với tên đăng ký ở ngân hàng - sai tên thì ngân hàng trả lệnh chuyển về.",
       "timing": "<strong>Thời gian nhận tiền:</strong> XePrime chuyển trong tối đa {days, plural, other {# ngày làm việc}} kể từ khi duyệt lệnh rút.",
       "accountType": "<strong>Loại tài khoản:</strong> chỉ nhận tài khoản ngân hàng trong nước. Không chuyển về thẻ tín dụng hay ví điện tử.",
       "change": "<strong>Đổi tài khoản:</strong> lệnh rút đã gửi vẫn chuyển vào tài khoản đã chọn lúc gửi lệnh."

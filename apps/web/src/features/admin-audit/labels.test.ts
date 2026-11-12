@@ -53,7 +53,7 @@ function backendActionCodes(): string[] {
   return [...codes].sort();
 }
 
-describe('createAuditLabels — nhãn hành động', () => {
+describe('createAuditLabels - nhãn hành động', () => {
   const vi = labelsFor('vi');
   const en = labelsFor('en');
 
@@ -93,7 +93,7 @@ describe('createAuditLabels — nhãn hành động', () => {
   });
 });
 
-describe('createAuditLabels — đối tượng và trường', () => {
+describe('createAuditLabels - đối tượng và trường', () => {
   const vi = labelsFor('vi');
 
   it('dịch loại đối tượng, mã lạ thì bỏ gạch dưới', () => {

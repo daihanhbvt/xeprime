@@ -6,14 +6,13 @@ import {
   tripHistoryFiltersToParams,
   vehicleSettingsApi,
   type PatchVehicleServiceSettingInput,
-  type SaveDriverSurchargeRuleInput,
   type SaveVehicleOperationSettingsInput,
   type VehicleTripHistoryItem,
 } from '../api';
 
 /**
  * Mọi mutation ở đây làm mới nhánh `vehicles` (thiết lập, hồ sơ 360, thẻ xe) VÀ nhánh chi tiết xe
- * công khai: khung giờ, điều khoản, phụ phí và "đặt nhanh" đều hiện ở trang xe — lưu xong mà
+ * công khai: khung giờ, điều khoản và "đặt nhanh" đều hiện ở trang xe — lưu xong mà
  * trang công khai còn nói số cũ là hai màn kể hai chuyện. Cùng danh sách web invalidate.
  */
 function useInvalidateVehicleSettings(vehicleId: string) {
@@ -24,9 +23,6 @@ function useInvalidateVehicleSettings(vehicleId: string) {
       queryKey: queryKeys.vehicles.operationSettings(vehicleId),
     });
     void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.serviceSettings(vehicleId) });
-    void queryClient.invalidateQueries({
-      queryKey: queryKeys.vehicles.driverSurchargeRules(vehicleId),
-    });
     void queryClient.invalidateQueries({ queryKey: queryKeys.marketplace.listing(vehicleId) });
   };
 }
@@ -66,27 +62,6 @@ export function usePatchVehicleServiceSetting(vehicleId: string, serviceType: Se
     mutationFn: (body: PatchVehicleServiceSettingInput) =>
       vehicleSettingsApi.patchServiceSetting(vehicleId, serviceType, body),
     onSuccess: invalidate,
-  });
-}
-
-export function useDriverSurchargeRules(vehicleId: string, enabled = true) {
-  return useQuery({
-    queryKey: queryKeys.vehicles.driverSurchargeRules(vehicleId),
-    queryFn: () => vehicleSettingsApi.driverSurchargeRules(vehicleId),
-    enabled: Boolean(vehicleId) && enabled,
-  });
-}
-
-export function useSaveDriverSurchargeRules(vehicleId: string) {
-  const invalidate = useInvalidateVehicleSettings(vehicleId);
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (items: SaveDriverSurchargeRuleInput[]) =>
-      vehicleSettingsApi.saveDriverSurchargeRules(vehicleId, items),
-    onSuccess: (data) => {
-      queryClient.setQueryData(queryKeys.vehicles.driverSurchargeRules(vehicleId), data);
-      invalidate();
-    },
   });
 }
 

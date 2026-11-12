@@ -26,7 +26,7 @@ const pathOf = (href: unknown) =>
  * Owner Lite (`customerScope`) — ADR 0053: ở app Partner các đích nằm dưới `/manage`, nhưng chỉ
  * trong danh sách trắng tuyến hoa hồng; ở app khách chúng đổ về màn handoff.
  */
-describe('workspace-links — Owner Lite chỉ dẫn vào trang của tuyến hoa hồng', () => {
+describe('workspace-links - Owner Lite chỉ dẫn vào trang của tuyến hoa hồng', () => {
   it.each([
     ['sửa (tab)', vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.DOCUMENTS, true)],
     ['hub sửa', vehicleEditHubHref(ID, true)],
@@ -65,7 +65,7 @@ describe('workspace-links — Owner Lite chỉ dẫn vào trang của tuyến ho
     ).toEqual(ROUTES.account.calendar({ q: '51A-12345', back: true }));
   });
 
-  it('đơn thuê → đơn thuê của xe — web: `workspacePaths` Owner Lite `bookings: MANAGE.BOOKINGS`', () => {
+  it('đơn thuê → đơn thuê của xe - web: `workspacePaths` Owner Lite `bookings: MANAGE.BOOKINGS`', () => {
     expect(vehicleBookingsHref(ID)).toEqual(ROUTES.manage.bookings({ vehicleId: ID }));
   });
 
@@ -78,14 +78,14 @@ describe('workspace-links — Owner Lite chỉ dẫn vào trang của tuyến ho
   });
 });
 
-describe('vehicleEditPartHref — mục không có ở khu tài khoản thì null (web part)', () => {
+describe('vehicleEditPartHref - mục không có ở khu tài khoản thì null (web part)', () => {
   it('bảo dưỡng / nguồn xe', () => {
     expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.MAINTENANCE, true)).toBeNull();
     expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.SOURCE, true)).toBeNull();
   });
   it('mục vận hành mới ánh xạ một-một sang mục của không gian quản lý xe', () => {
     expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES, true)).toEqual(
-      ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES),
+      ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION),
     );
     expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.OPERATIONS, true)).toEqual(
       ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.HANDOVER_TIME),
@@ -93,7 +93,7 @@ describe('vehicleEditPartHref — mục không có ở khu tài khoản thì nul
   });
 });
 
-describe('workspace-links — cổng QUẢN LÝ: mục của màn sửa xe', () => {
+describe('workspace-links - cổng QUẢN LÝ: mục của màn sửa xe', () => {
   it('đích cổng quản lý', () => {
     expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.DOCUMENTS, false)).toEqual(
       ROUTES.manage.vehicleEditTab(ID, VEHICLE_EDIT_TAB.DOCUMENTS),

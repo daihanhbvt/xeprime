@@ -1,6 +1,6 @@
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -23,6 +23,7 @@ import { InlineAction } from '@/components/ui/InlineAction';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { SelectField } from '@/components/ui/SelectField';
 import { ToggleRow } from '@/features/rental-policies/components/PolicySections';
+import { useAutoAcceptToggle } from './hooks/use-auto-accept-toggle';
 import { APP_SCOPE } from '@/features/shell/app-scope';
 import { useShellScope } from '@/features/shell/use-shell-scope';
 import { useDomainLabel } from '@/i18n/domain';
@@ -120,7 +121,6 @@ function AutoAcceptForm({
   const resolver = yupResolver(schema);
   const withDriver = serviceType === SERVICE_TYPE.WITH_DRIVER;
   const capability = setting.withDriverAutoAccept;
-  const capabilityBlocked = withDriver && capability ? !capability.available : false;
 
   const values = useMemo<FormValues>(
     () => ({
@@ -136,33 +136,9 @@ function AutoAcceptForm({
     resetOptions: { keepDirtyValues: true },
   });
 
-  /*
-   * Công tắc LƯU NGAY — đúng web `changeAutoAccept`. Giá trị lạc quan gắn với `updatedAt` của
-   * bản đang hiển thị: bản mới (đã lưu) về thì nhường chỗ cho dữ liệu server; lỗi thì bỏ và trả
-   * công tắc về như cũ.
-   */
-  const toggleAuto = usePatchVehicleServiceSetting(vehicleId, serviceType);
-  const [optimistic, setOptimistic] = useState<{ value: boolean; basis: string | null } | null>(
-    null,
-  );
-  const enabled =
-    optimistic && optimistic.basis === (setting.updatedAt ?? null)
-      ? optimistic.value
-      : setting.autoAcceptEnabled;
-
-  function changeAutoAccept(next: boolean) {
-    setOptimistic({ value: next, basis: setting.updatedAt ?? null });
-    toggleAuto.mutate(
-      { autoAcceptEnabled: next },
-      {
-        onSuccess: () => toast.showSuccess(t('autoAccept.saved')),
-        onError: (err) => {
-          setOptimistic(null);
-          toast.showError(errorMessage(err));
-        },
-      },
-    );
-  }
+  /* Công tắc LƯU NGAY — cùng hook với thẻ "Tối ưu nhận chuyến" ở chi tiết xe (web `useAutoAcceptToggle`). */
+  const toggleAuto = useAutoAcceptToggle({ vehicleId, setting, canEdit });
+  const enabled = toggleAuto.enabled;
 
   const minRentalOptions = Array.from(
     { length: MIN_RENTAL_MINUTES_RANGE.max / HOUR },
@@ -225,10 +201,8 @@ function AutoAcceptForm({
           label={t(withDriver ? 'autoAccept.instantTitle' : 'autoAccept.toggleTitle')}
           hint={t(withDriver ? 'autoAccept.instantBody' : 'autoAccept.toggleBody')}
           checked={enabled}
-          disabled={
-            !canEdit || toggleAuto.isPending || (capabilityBlocked && !setting.autoAcceptEnabled)
-          }
-          onToggle={() => changeAutoAccept(!enabled)}
+          disabled={toggleAuto.disabled}
+          onToggle={() => toggleAuto.change(!enabled)}
         />
       </Card>
 

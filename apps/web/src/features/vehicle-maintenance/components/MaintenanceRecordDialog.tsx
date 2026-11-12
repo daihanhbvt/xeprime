@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Alert, App, Col, Form, List, Row } from 'antd';
+import { Alert, App, Col, Form, Row } from 'antd';
 import { useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
@@ -17,21 +17,19 @@ import { SelectField } from '@/components/form/SelectField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { appWallClockToIso, toAppTz } from '@/lib/datetime';
+import { DAY_PARAM_FORMAT, startOfAppDay, toAppTz } from '@/lib/datetime';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorCode } from '@/services/api-client';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import type { ApiClientError } from '@/services/api-client';
 import {
   completeMaintenanceRecord,
   createMaintenanceRecord,
   updateMaintenanceRecord,
 } from '../api';
-import { makeMaintenanceRecordFormSchema, type MaintenanceRecordFormValues } from '../schema';
+import { maintenanceRecordFormSchema, type MaintenanceRecordFormValues } from '../schema';
 import type { MaintenanceRecord } from '../types';
 import styles from './VehicleMaintenanceWorkspace.module.css';
-import { useAppFormat } from '@/i18n/use-app-format';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
 const TYPE_OPTIONS = MAINTENANCE_TYPE_VALUES.map((value) => ({
@@ -42,19 +40,11 @@ const TYPE_OPTIONS = MAINTENANCE_TYPE_VALUES.map((value) => ({
 type DialogState =
   { mode: 'create' } | { mode: 'edit' | 'complete'; record: MaintenanceRecord } | null;
 
-interface ScheduleConflict {
-  sourceType: string;
-  startAt: string;
-  endAt: string;
-  label: string;
-}
-
 /**
  * Thêm / sửa / hoàn tất một phiếu bảo dưỡng (Wave 6 §9.2).
  *
- * Khi khoảng thời gian đụng đơn thuê hoặc lịch khác, backend trả 409 kèm CHÍNH khoảng bị
- * trùng — màn này hiển thị nguyên khoảng đó và GIỮ NGUYÊN dữ liệu người dùng đã nhập để họ
- * chỉ phải đổi ngày, không phải gõ lại từ đầu.
+ * Lịch chỉ có MỘT ngày dự kiến để nhắc — không giữ chỗ lịch xe nên không còn báo trùng lịch
+ * (ADR 0079).
  */
 export function MaintenanceRecordDialog({
   state,
@@ -69,18 +59,11 @@ export function MaintenanceRecordDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const fmt = useAppFormat();
-
   const { message } = App.useApp();
   const t = useTranslations('Maintenance');
   const tCommon = useTranslations('Common');
-  const recordSchema = useMemo(
-    () => makeMaintenanceRecordFormSchema(t as (key: string) => string),
-    [t],
-  );
   const errorMessage = useErrorMessage();
   const [saving, setSaving] = useState(false);
-  const [conflicts, setConflicts] = useState<ScheduleConflict[]>([]);
   const record = state && state.mode !== 'create' ? state.record : null;
   const completing = state?.mode === 'complete';
   /*
@@ -91,7 +74,7 @@ export function MaintenanceRecordDialog({
   const { has } = usePermissions();
   const canViewCost = has(PERMISSION.VEHICLE_MAINTENANCE_COST_VIEW);
   /*
-   * Phiên hỗ trợ gian hàng (ADR 0050): lịch (giữ chỗ lịch xe) và KM hiện ở dạng CHỈ ĐỌC và không
+   * Phiên hỗ trợ gian hàng (ADR 0050): ngày dự kiến và KM hiện ở dạng CHỈ ĐỌC và không
    * có trong lệnh — lập lịch bảo dưỡng không thuộc Đợt 1. Backend cũng chặn.
    */
   const scheduleLocked = useSupportHides(SUPPORT_HIDDEN_AREA.MAINTENANCE_SCHEDULE);
@@ -101,10 +84,10 @@ export function MaintenanceRecordDialog({
       type: (record?.type ?? MAINTENANCE_TYPE.OIL_CHANGE) as MaintenanceRecordFormValues['type'],
       customTypeName: record?.customTypeName ?? '',
       title: record?.title ?? '',
-      // ISO (mốc UTC) từ API → giờ VIỆT NAM cho DatePicker; chiều gửi đi là
-      // `appWallClockToIso`, vì giờ người dùng chọn luôn hiểu theo giờ VN (CLAUDE.md §9).
-      plannedStartAt: record?.plannedStartAt ? toAppTz(record.plannedStartAt) : null,
-      plannedEndAt: record?.plannedEndAt ? toAppTz(record.plannedEndAt) : null,
+      // ISO (mốc UTC) từ API → NGÀY theo giờ Việt Nam; chiều gửi đi là 00:00 giờ VN của ngày đó.
+      plannedDate: record?.plannedStartAt
+        ? toAppTz(record.plannedStartAt).format(DAY_PARAM_FORMAT)
+        : null,
       odometerKm: record?.odometerKm ?? null,
       providerName: record?.providerName ?? '',
       // `cost` vắng mặt khi thiếu quyền tiền — không dựng số 0 giả vào form.
@@ -116,7 +99,7 @@ export function MaintenanceRecordDialog({
   );
 
   const resolver = useValidationResolver<MaintenanceRecordFormValues>(
-    recordSchema,
+    maintenanceRecordFormSchema,
     'Maintenance.validation',
   );
   // `values` để RHF tự đồng bộ khi đổi phiếu — không cần effect reset thủ công.
@@ -129,14 +112,12 @@ export function MaintenanceRecordDialog({
 
   /** Đóng là hành động của người dùng → dọn trạng thái ở đây, không qua effect. */
   function handleClose() {
-    setConflicts([]);
     reset(defaults);
     onClose();
   }
 
   async function save(values: MaintenanceRecordFormValues) {
     setSaving(true);
-    setConflicts([]);
     const text = (value: string | null | undefined) => (value?.trim() ? value.trim() : null);
     try {
       if (completing && record) {
@@ -162,10 +143,9 @@ export function MaintenanceRecordDialog({
             ? {}
             : {
                 // API nhận ISO 8601 (UTC) — CLAUDE.md §9: lưu UTC, hiển thị Asia/Ho_Chi_Minh.
-                plannedStartAt: values.plannedStartAt
-                  ? appWallClockToIso(values.plannedStartAt)
+                plannedStartAt: values.plannedDate
+                  ? startOfAppDay(values.plannedDate).toISOString()
                   : null,
-                plannedEndAt: values.plannedEndAt ? appWallClockToIso(values.plannedEndAt) : null,
                 odometerKm: values.odometerKm,
               }),
           providerName: text(values.providerName),
@@ -191,13 +171,7 @@ export function MaintenanceRecordDialog({
       onSaved();
     } catch (err) {
       const code = getErrorCode(err);
-      if (code === 'BOOKING_SCHEDULE_CONFLICT') {
-        // Giữ nguyên form: người dùng chỉ cần đổi ngày, không phải nhập lại.
-        const details = (err as ApiClientError).details as
-          { conflicts?: ScheduleConflict[] } | undefined;
-        setConflicts(details?.conflicts ?? []);
-        message.error(t('toast.scheduleConflict'));
-      } else if (code === 'CONFLICT') {
+      if (code === 'CONFLICT') {
         message.error(t('toast.staleRecord'));
       } else if (code === 'ODOMETER_DECREASE_FORBIDDEN') {
         message.error(t('toast.odometerTooLow'));
@@ -230,27 +204,6 @@ export function MaintenanceRecordDialog({
       cancelText={tCommon('actions.cancel')}
     >
       <div className={styles.recordForm}>
-        {conflicts.length > 0 ? (
-          <Alert
-            type="error"
-            showIcon
-            role="alert"
-            className={styles.conflictAlert}
-            title={t('record.conflictAlert')}
-            description={
-              <List
-                size="small"
-                dataSource={conflicts}
-                renderItem={(conflict) => (
-                  <List.Item key={`${conflict.sourceType}-${conflict.startAt}`}>
-                    {conflict.label}: {fmt.dateTimeRange(conflict.startAt, conflict.endAt)}
-                  </List.Item>
-                )}
-              />
-            }
-          />
-        ) : null}
-
         <Form component={false} layout="vertical" colon={false}>
           <Row gutter={16}>
             <Col xs={24}>
@@ -288,24 +241,12 @@ export function MaintenanceRecordDialog({
                 <Col xs={24} sm={12}>
                   <DateTimeField
                     control={control}
-                    name="plannedStartAt"
-                    label={t('record.plannedStart')}
+                    name="plannedDate"
+                    label={t('record.plannedDate')}
+                    dateOnly
                     disabled={scheduleLocked}
                   />
                 </Col>
-                <Col xs={24} sm={12}>
-                  <DateTimeField
-                    control={control}
-                    name="plannedEndAt"
-                    label={t('record.plannedEnd')}
-                    disabled={scheduleLocked}
-                  />
-                </Col>
-                {scheduleLocked ? null : (
-                  <Col xs={24}>
-                    <p className={styles.attachmentNote}>{t('record.scheduleHoldNote')}</p>
-                  </Col>
-                )}
                 <Col xs={24} sm={12}>
                   <TextField
                     control={control}

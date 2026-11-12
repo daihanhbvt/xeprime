@@ -1,26 +1,61 @@
 /**
- * Trang "Số dư & rút tiền" của site partner — ví + tài khoản nhận tiền (+ thuế đã khấu trừ ở tuyến
- * hoa hồng). Bề ngang do khung trang quyết (`balance/page.module.css`), không phải ở đây.
+ * Trang "Quản lý ví" (design `23813:39558`): hàng tab, rồi hai cột — nội dung tab bên trái, cột
+ * phải rộng 400px (số dư · tài khoản nhận tiền · tổng hợp tháng · ghi chú thuế), cách nhau 24px.
+ *
+ * Máy hẹp xếp một cột: cột phải lên TRƯỚC (số dư là câu người ta mở trang để hỏi), rồi hàng tab
+ * ngay trên nội dung của nó. Màn rộng đưa cột phải sang phải bằng `grid-template-areas`; giữa
+ * 1024 và ~1440px bảng tám cột cuộn ngang trong thẻ của nó (quy tắc của `DataTable`).
  */
-.stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-md);
+.layout {
+  display: grid;
+  grid-template-areas:
+    'aside'
+    'tabs'
+    'main';
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--xp-space-20);
   min-width: 0;
 }
 
+.tabs {
+  grid-area: tabs;
+  justify-self: start;
+  max-width: 100%;
+}
+
+.main {
+  grid-area: main;
+  min-width: 0;
+}
+
+.aside {
+  grid-area: aside;
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-20);
+  min-width: 0;
+}
+
+/* Thẻ trắng chứa thẻ số dư + tài khoản nhận tiền — đệm 12, khối trong cách 12. */
+.walletCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-12);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
 /*
- * Khối "Tài khoản nhận tiền" — cùng viền/bo góc với bảng tổng hợp và các dòng sổ ngay dưới nó, để
- * nó đọc ra là một khối của CÙNG trang chứ không phải một thẻ lạc từ trang khác sang.
- *
- * `scroll-margin-top`: đích của `?section=payout` không được nằm khuất dưới thanh trên dính.
+ * Khối tài khoản nhận tiền nằm TRONG thẻ trắng — đệm 8 như design. `scroll-margin-top`: đích của
+ * `?section=payout` không được nằm khuất dưới thanh trên dính.
  */
 .payout {
-  padding: var(--xp-space-lg);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-lg);
-  background: var(--xp-color-bg-container);
-  scroll-margin-top: calc(var(--xp-shell-topbar-height) + var(--xp-space-md));
+  padding: var(--xp-space-sm);
+  scroll-margin-top: calc(
+    var(--xp-shell-header-offset, var(--xp-shell-topbar-height)) + var(--xp-space-md)
+  );
 }
 
 /* Tiêu điểm đến từ lệnh cuộn (`useScrollToSection`), không phải từ bàn phím — không vẽ viền. */
@@ -33,8 +68,41 @@
   outline-offset: 2px;
 }
 
-@media (max-width: 640px) {
-  .payout {
-    padding: var(--xp-space-md);
+.taxNote {
+  margin: 0;
+  padding: var(--xp-space-12);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info-strong);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+}
+
+.taxLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--xp-font-weight-semibold);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.taxLink:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* 1024px = `--xp-bp-tablet`: từ đây đủ chỗ cho bảng tám cột cạnh cột phải 400px. */
+@media (min-width: 1024px) {
+  .layout {
+    grid-template-areas:
+      'tabs tabs'
+      'main aside';
+    grid-template-columns: minmax(0, 1fr) 400px;
+    gap: var(--xp-space-20) var(--xp-space-lg);
+    align-items: start;
   }
 }

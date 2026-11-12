@@ -3,6 +3,9 @@ import {
   DOCUMENT_UPLOAD_MAX_BYTES,
   DOCUMENT_UPLOAD_MIME_TYPES,
   MAINTENANCE_BOARD_FILTER_VALUES,
+  MAINTENANCE_BOARD_SORT,
+  MAINTENANCE_BOARD_SORT_VALUES,
+  type MaintenanceBoardSort,
   MAINTENANCE_STATUS_VALUES,
   MAINTENANCE_TYPE_VALUES,
   ODOMETER_CORRECTION_REASON_VALUES,
@@ -59,7 +62,7 @@ export class OdometerHistoryDto {
  * Giảm KM còn phải có `vehicles.odometer.decrease` + `confirmDecrease` (xác nhận có ý thức).
  */
 export class CorrectOdometerDto {
-  @ApiProperty({ description: `KM mới, 0–${ODOMETER_MAX_KM}` })
+  @ApiProperty({ description: `KM mới, 0-${ODOMETER_MAX_KM}` })
   @Type(() => Number)
   @IsInt()
   @Min(0)
@@ -70,7 +73,7 @@ export class CorrectOdometerDto {
   @IsIn(ODOMETER_CORRECTION_REASON_VALUES)
   reasonCode!: string;
 
-  @ApiProperty({ description: 'Lý do chi tiết — bắt buộc, không được để trống' })
+  @ApiProperty({ description: 'Lý do chi tiết - bắt buộc, không được để trống' })
   @IsString()
   @MaxLength(1000)
   reason!: string;
@@ -84,7 +87,7 @@ export class CorrectOdometerDto {
   @IsBoolean()
   confirmDecrease?: boolean;
 
-  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Bắt buộc — chống sửa đè' })
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Bắt buộc - chống sửa đè' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -117,7 +120,7 @@ export class MaintenanceProfileDto {
   /** Ngưỡng "sắp đến hạn" đang hiệu lực (KM) — trả về để UI không tự đoán con số. */
   @ApiProperty() dueSoonKm!: number;
 
-  @ApiProperty({ description: 'Optimistic concurrency — nộp lại khi lưu' }) rowVersion!: number;
+  @ApiProperty({ description: 'Optimistic concurrency - nộp lại khi lưu' }) rowVersion!: number;
   @ApiProperty({ description: 'ISO' }) updatedAt!: string;
 }
 
@@ -150,7 +153,7 @@ export class SaveMaintenanceProfileDto {
   @MaxLength(2000)
   notes?: string | null;
 
-  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Bắt buộc — chống sửa đè' })
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Bắt buộc - chống sửa đè' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -174,9 +177,18 @@ export class MaintenanceRecordDto {
   @ApiPropertyOptional({ type: String, nullable: true }) customTypeName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) title!: string | null;
   @ApiProperty({ enum: MAINTENANCE_STATUS_VALUES }) status!: string;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO - ngày dự kiến (chỉ để nhắc, không giữ chỗ lịch xe - ADR 0079)',
+  })
   plannedStartAt!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    deprecated: true,
+    description: 'Không còn ghi (ADR 0079) - chỉ phiếu cũ đã đóng còn giá trị lịch sử',
+  })
   plannedEndAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })
   completedAt!: string | null;
@@ -186,7 +198,7 @@ export class MaintenanceRecordDto {
    * Tiền dạng string (ADR 0007). `undefined` (vắng mặt) = người gọi KHÔNG có
    * `vehicles.maintenance.view_cost` — khác hẳn `null` = phiếu chưa nhập chi phí.
    */
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền string — ADR 0007' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền string - ADR 0007' })
   cost?: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) receiptCode?: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) notes!: string | null;
@@ -219,12 +231,22 @@ export class SaveMaintenanceRecordDto {
   @MaxLength(255)
   title?: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — mốc bắt đầu dự kiến' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO - ngày dự kiến (chỉ để nhắc, không giữ chỗ lịch xe - ADR 0079)',
+  })
   @IsOptional()
   @IsISO8601()
   plannedStartAt?: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — mốc kết thúc dự kiến' })
+  /** App cũ còn gửi; server bỏ qua (ADR 0079). Vẫn soát dạng để lệnh sai không lọt qua im lặng. */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    deprecated: true,
+    description: 'Bị bỏ qua (ADR 0079)',
+  })
   @IsOptional()
   @IsISO8601()
   plannedEndAt?: string | null;
@@ -243,7 +265,7 @@ export class SaveMaintenanceRecordDto {
   @MaxLength(255)
   providerName?: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền string — ADR 0007' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền string - ADR 0007' })
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'cost phải là số tiền hợp lệ' })
   cost?: string | null;
@@ -276,7 +298,7 @@ export class SaveMaintenanceRecordDto {
 
 /** Hoàn tất phiếu — có thể đẩy KM hiện tại và mốc thay nhớt (đúng loại) trong cùng transaction. */
 export class CompleteMaintenanceDto {
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — mặc định là bây giờ' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO - mặc định là bây giờ' })
   @IsOptional()
   @IsISO8601()
   completedAt?: string | null;
@@ -284,7 +306,7 @@ export class CompleteMaintenanceDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'KM lúc bảo dưỡng — bỏ trống nếu ghi nhận hồi tố',
+    description: 'KM lúc bảo dưỡng - bỏ trống nếu ghi nhận hồi tố',
   })
   @IsOptional()
   @Type(() => Number)
@@ -293,7 +315,7 @@ export class CompleteMaintenanceDto {
   @Max(ODOMETER_MAX_KM)
   odometerKm?: number | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền string — ADR 0007' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền string - ADR 0007' })
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'cost phải là số tiền hợp lệ' })
   cost?: string | null;
@@ -310,7 +332,7 @@ export class CompleteMaintenanceDto {
   @MaxLength(2000)
   notes?: string | null;
 
-  @ApiProperty({ description: 'Bắt buộc — chống sửa đè' })
+  @ApiProperty({ description: 'Bắt buộc - chống sửa đè' })
   @Type(() => Number)
   @IsInt()
   @Min(1)
@@ -362,7 +384,7 @@ export class MaintenanceBoardItemDto {
   /** Phiếu đang mở gần nhất (đang bảo dưỡng hoặc đã lên lịch) — null nếu không có. */
   @ApiPropertyOptional({ type: MaintenanceRecordDto, nullable: true })
   activeRecord!: MaintenanceRecordDto | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — hoàn tất gần nhất' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO - hoàn tất gần nhất' })
   lastCompletedAt!: string | null;
   /** Số giấy tờ đã/sắp hết hạn — CẢNH BÁO liên quan, KHÔNG phải phiếu bảo dưỡng (§9.2). */
   @ApiProperty() expiringDocumentCount!: number;
@@ -382,7 +404,7 @@ export class MaintenanceBoardSummaryDto {
   @ApiProperty() inProgress!: number;
   @ApiProperty() missingOdometer!: number;
   @ApiProperty() upcoming!: number;
-  @ApiProperty({ description: 'Xe có giấy tờ sắp/đã hết hạn — cảnh báo liên quan' })
+  @ApiProperty({ description: 'Xe có giấy tờ sắp/đã hết hạn - cảnh báo liên quan' })
   expiringDocuments!: number;
   /**
    * Biên bản trả xe đã chốt nhưng chưa có KM (Wave 8). Đếm theo BIÊN BẢN, không theo xe —
@@ -426,22 +448,23 @@ export class MaintenanceBoardQueryDto {
   @BranchIdQuery()
   branchId?: string;
 
-  @ApiPropertyOptional({ description: 'ISO — lịch từ ngày' })
+  @ApiPropertyOptional({ description: 'ISO - lịch từ ngày' })
   @IsOptional()
   @IsISO8601()
   from?: string;
 
-  @ApiPropertyOptional({ description: 'ISO — lịch đến ngày' })
+  @ApiPropertyOptional({ description: 'ISO - lịch đến ngày' })
   @IsOptional()
   @IsISO8601()
   to?: string;
 
   @ApiPropertyOptional({
-    description: 'remaining_asc | remaining_desc | name_asc | updated_desc',
+    enum: MAINTENANCE_BOARD_SORT_VALUES,
+    default: MAINTENANCE_BOARD_SORT.REMAINING_ASC,
   })
   @IsOptional()
-  @IsIn(['remaining_asc', 'remaining_desc', 'name_asc', 'updated_desc'])
-  sort?: 'remaining_asc' | 'remaining_desc' | 'name_asc' | 'updated_desc';
+  @IsIn(MAINTENANCE_BOARD_SORT_VALUES)
+  sort?: MaintenanceBoardSort;
 
   @ApiPropertyOptional({ minimum: 1 })
   @IsOptional()
@@ -469,7 +492,7 @@ export class CorrectMaintenanceCostDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Tiền string — ADR 0007. `null` = xoá chi phí (phiếu chi bị huỷ theo)',
+    description: 'Tiền string - ADR 0007. `null` = xoá chi phí (phiếu chi bị huỷ theo)',
   })
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'cost phải là số tiền hợp lệ' })
@@ -481,12 +504,12 @@ export class CorrectMaintenanceCostDto {
   @MaxLength(100)
   receiptCode?: string | null;
 
-  @ApiProperty({ description: 'Vì sao sửa — vào audit cùng giá trị cũ' })
+  @ApiProperty({ description: 'Vì sao sửa - vào audit cùng giá trị cũ' })
   @IsString()
   @Length(3, 500)
   correctionReason!: string;
 
-  @ApiProperty({ description: 'rowVersion đang thấy — chống ghi đè' })
+  @ApiProperty({ description: 'rowVersion đang thấy - chống ghi đè' })
   @Type(() => Number)
   @IsInt()
   @Min(1)

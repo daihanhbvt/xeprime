@@ -1,16 +1,27 @@
-import { Pressable } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Pressable, StyleSheet } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { spring } from '@/theme/motion';
 import { LineIcon } from '@/components/icons/LineIcon';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { useColors } from '@/theme/ThemeProvider';
 import { radius, sizing, space } from '@/theme/tokens';
+import { haptics } from '@/lib/haptics';
 import { useFavoriteToggle } from '../hooks/use-favorite';
 
 /**
  * Ba dáng của trái tim — mỗi dáng là một class của web:
  *
- * - `photo` — đè lên ẢNH thẻ xe chợ (`VehicleCard.module.css` `.favoriteBtn`): đĩa 32, nền trắng mờ
- *   CỐ ĐỊNH ở cả hai giao diện (nằm trên ảnh, không trên nền trang), icon 15.
+ * - `photo` — đè lên ẢNH thẻ xe chợ (`VehicleCard.module.css` `.favoriteBtn`): đĩa 32, nền Figma gray-900 10%
+ *   CỐ ĐỊNH ở cả hai giao diện (nằm trên ảnh), tim trắng 20.
  * - `card` — đè lên ảnh thẻ Xe yêu thích (`FavoriteVehicleCard.module.css` `.heartBtn`): đĩa 32, nền
  *   `bg-elevated`, viền `border-subtle`, icon 15.
  * - `action` — cạnh nút Chia sẻ ở trang chi tiết (`ListingDetailView.module.css` `.actionBtn`): đĩa
@@ -24,8 +35,9 @@ export type FavoriteButtonVariant = 'photo' | 'card' | 'action' | 'list';
  * Nền/viền đĩa trên ẢNH — web viết thẳng `rgba(255,255,255,0.9)` / `rgba(0,0,0,0.06)`, không token
  * nào mang: chúng là màu "trên ảnh", không đổi theo giao diện sáng/tối.
  */
-const PHOTO_DISC_BG = 'rgba(255, 255, 255, 0.9)';
-const PHOTO_DISC_BORDER = 'rgba(0, 0, 0, 0.06)';
+/* Figma `22185:88916` "Favorites Button": đĩa gray-900 10% (web thêm blur 6px), đệm 6, tim trắng 20 - cả hai giao diện. */
+const PHOTO_DISC_BG = 'rgba(16, 24, 40, 0.1)';
+const PHOTO_HEART = '#ffffff';
 
 /* Đĩa của thẻ ngang — web viết thẳng hai màu mờ này ở `.listFavoriteBtn` (không có token, không đổi theo theme). */
 const LIST_DISC_BG = 'rgba(0, 0, 0, 0.03)';
@@ -33,11 +45,20 @@ const LIST_DISC_BORDER = 'rgba(0, 0, 0, 0.08)';
 
 /*
  * `action` = `.actionBtn` của chi tiết xe web ở ≤640px (bản mobile của mockup): đĩa 32, icon 16,
- * vùng chạm 44 qua `hitSlop`. `photo`/`card` = `.favoriteBtn`/`.heartBtn` của thẻ xe (đĩa 32, icon 15).
+ * vùng chạm 44 qua `hitSlop`. `photo`/`card` = `.favoriteBtn`/`.heartBtn` của thẻ xe (đĩa 32 kính tối mờ, tim trắng 20 - Figma `22185:88916`).
  */
 const DISC = { photo: 32, card: 32, action: 32, list: 32 } as const;
 /** Cỡ trái tim — bộ `LineIcon` vẽ trong khung 20, nên nhích 1–2px so với bản Ionicons để nét không mảnh hơn. */
-const ICON = { photo: 17, card: 17, action: 18, list: 17 } as const;
+const ICON = { photo: 20, card: 17, action: 18, list: 17 } as const;
+
+/*
+ * Hằng cục bộ của hiệu ứng "pop + vòng lan toả" (06/11/2026) — hợp nhất vào `theme/motion` sau.
+ * Tim phồng tới `HEART_POP_SCALE` rồi lò xo về 1; vòng đỏ phóng từ 0.6 → `RING_END_SCALE` và tắt dần.
+ */
+const HEART_POP_SCALE = 1.35;
+const HEART_POP_IN_MS = 110;
+const RING_END_SCALE = 1.9;
+const RING_MS = 420;
 
 /**
  * Nút trái tim của một xe — bản native của web `FavoriteButton`. Hành vi ở `useFavoriteToggle`.
@@ -60,10 +81,36 @@ export function FavoriteButton({
   const label = isFavorite ? t('remove', { name: vehicleName }) : t('save', { name: vehicleName });
 
   const size = DISC[variant];
-  const iconColor = isFavorite ? colors.danger : colors.textMuted;
+  const reduceMotion = useReducedMotion();
+  const heartScale = useSharedValue(1);
+  const ringScale = useSharedValue(0.6);
+  const ringOpacity = useSharedValue(0);
+  // Chỉ nổ khi NGƯỜI DÙNG vừa lưu (false → true), không nổ lúc cache nạp trạng thái ban đầu.
+  const pressedRef = useRef(false);
+  useEffect(() => {
+    if (!pressedRef.current) return;
+    pressedRef.current = false;
+    if (reduceMotion) return;
+    heartScale.value = withSequence(
+      withTiming(isFavorite ? HEART_POP_SCALE : 0.85, { duration: HEART_POP_IN_MS }),
+      withSpring(1, spring.pop),
+    );
+    if (isFavorite) {
+      ringScale.value = 0.6;
+      ringOpacity.value = 0.7;
+      ringScale.value = withTiming(RING_END_SCALE, { duration: RING_MS });
+      ringOpacity.value = withTiming(0, { duration: RING_MS });
+    }
+  }, [isFavorite, reduceMotion, heartScale, ringScale, ringOpacity]);
+  const heartStyle = useAnimatedStyle(() => ({ transform: [{ scale: heartScale.value }] }));
+  const ringStyle = useAnimatedStyle(() => ({
+    opacity: ringOpacity.value,
+    transform: [{ scale: ringScale.value }],
+  }));
+  const iconColor = isFavorite ? colors.danger : variant === 'photo' ? PHOTO_HEART : colors.textMuted;
   const skin =
     variant === 'photo'
-      ? { bg: PHOTO_DISC_BG, bc: PHOTO_DISC_BORDER }
+      ? { bg: PHOTO_DISC_BG, bc: 'transparent' }
       : variant === 'list'
         ? { bg: LIST_DISC_BG, bc: LIST_DISC_BORDER }
         : variant === 'card'
@@ -72,7 +119,11 @@ export function FavoriteButton({
 
   return (
     <Pressable
-      onPress={toggle}
+      onPress={() => {
+        pressedRef.current = true;
+        haptics.light();
+        toggle();
+      }}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected: isFavorite }}
@@ -93,12 +144,25 @@ export function FavoriteButton({
           Trái tim nét của bộ `LineIcon` (cùng icon "Xe yêu thích" trong menu tài khoản — người dùng
           chốt 27/10/2026); đã lưu thì bản tô đặc cùng hình.
         */}
-        <LineIcon
-          name={isFavorite ? 'heart-filled' : 'heart'}
-          size={ICON[variant]}
-          color={iconColor}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            styles.ring,
+            { borderRadius: size / 2, borderColor: colors.danger },
+            ringStyle,
+          ]}
         />
+        <Animated.View style={heartStyle}>
+          <LineIcon
+            name={isFavorite ? 'heart-filled' : 'heart'}
+            size={ICON[variant]}
+            color={iconColor}
+          />
+        </Animated.View>
       </YStack>
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({ ring: { borderWidth: 2 } });

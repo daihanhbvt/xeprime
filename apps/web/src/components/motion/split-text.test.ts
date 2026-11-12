@@ -35,7 +35,7 @@ describe('splitText', () => {
     expect(splitText('   ')).toEqual([]);
   });
 
-  it('chặn độ trễ ở ký tự thứ 40 — tiêu đề dài không bắt chờ', () => {
+  it('chặn độ trễ ở ký tự thứ 40 - tiêu đề dài không bắt chờ', () => {
     const indices = splitText('a'.repeat(60)).flatMap((w) => w.chars.map((c) => c.index));
     expect(Math.max(...indices)).toBe(40);
     expect(indices.slice(0, 41)).toEqual(Array.from({ length: 41 }, (_, i) => i));

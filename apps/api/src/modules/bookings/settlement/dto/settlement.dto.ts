@@ -1,19 +1,25 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   DEPOSIT_STATUS_VALUES,
+  ODOMETER_MAX_KM,
   REFUND_METHOD_VALUES,
+  RETURN_SURCHARGE_DRAFT_MAX,
   SURCHARGE_CATEGORY_VALUES,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsDateString,
   IsIn,
   IsInt,
   IsOptional,
   IsString,
   Matches,
+  Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 
 /** Tiền vào ra dưới dạng chuỗi thập phân — ADR 0007, không bao giờ `number`. */
@@ -24,7 +30,7 @@ const MONEY_PATTERN = /^\d{1,12}(\.\d{1,2})?$/;
 export class BookingSurchargeDto {
   @ApiProperty() id!: string;
   @ApiProperty({ enum: SURCHARGE_CATEGORY_VALUES }) category!: string;
-  @ApiProperty({ description: 'Tiền dạng chuỗi — ADR 0007' }) amount!: string;
+  @ApiProperty({ description: 'Tiền dạng chuỗi - ADR 0007' }) amount!: string;
   @ApiProperty() reason!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) createdByName!: string | null;
   @ApiProperty({ description: 'ISO' }) createdAt!: string;
@@ -36,11 +42,11 @@ export class SaveSurchargeDto {
   @IsIn(SURCHARGE_CATEGORY_VALUES)
   category!: string;
 
-  @ApiProperty({ description: 'VND, không âm (chuỗi — ADR 0007)' })
+  @ApiProperty({ description: 'VND, không âm (chuỗi - ADR 0007)' })
   @Matches(MONEY_PATTERN, { message: 'Số tiền không hợp lệ (số VND không âm)' })
   amount!: string;
 
-  @ApiProperty({ description: 'Lý do — bắt buộc, đây là khoản trừ vào tiền của khách' })
+  @ApiProperty({ description: 'Lý do - bắt buộc, đây là khoản trừ vào tiền của khách' })
   @IsString()
   @MaxLength(1000)
   reason!: string;
@@ -48,7 +54,7 @@ export class SaveSurchargeDto {
 
 /** Gỡ một khoản đã ghi nhầm. Huỷ MỀM kèm lý do — không xoá dấu vết. */
 export class VoidSurchargeDto {
-  @ApiProperty({ description: 'Lý do gỡ — bắt buộc' })
+  @ApiProperty({ description: 'Lý do gỡ - bắt buộc' })
   @IsString()
   @MaxLength(1000)
   reason!: string;
@@ -118,7 +124,7 @@ export class DepositRefundDto {
   @ApiPropertyOptional({ type: String, nullable: true }) reference!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) note!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) recordedByName!: string | null;
-  @ApiProperty({ description: 'Optimistic concurrency — nộp lại khi điều chỉnh' })
+  @ApiProperty({ description: 'Optimistic concurrency - nộp lại khi điều chỉnh' })
   rowVersion!: number;
 }
 
@@ -134,13 +140,13 @@ export class SettlementSurchargeRuleDto {
   @ApiProperty({ description: 'DRIVER_SURCHARGE_KIND' }) kind!: string;
   @ApiProperty({ description: 'SURCHARGE_CATEGORY tương ứng khi ghi khoản thật' }) category!: string;
   @ApiProperty({ description: 'DRIVER_SURCHARGE_UNIT' }) unit!: string;
-  @ApiProperty({ description: 'VND string — ADR 0007' }) amount!: string;
+  @ApiProperty({ description: 'VND string - ADR 0007' }) amount!: string;
   @ApiPropertyOptional({ type: Number, nullable: true }) thresholdValue!: number | null;
 }
 
 export class BookingSettlementDto {
   @ApiProperty() bookingId!: string;
-  @ApiProperty({ description: 'Cọc theo cấu hình đơn — CHƯA chắc đã thu' })
+  @ApiProperty({ description: 'Cọc theo cấu hình đơn - CHƯA chắc đã thu' })
   depositRequired!: string;
   @ApiProperty({ description: 'Cọc ĐÃ THU (từ payments kind=deposit)' }) depositReceived!: string;
   @ApiProperty({ type: [BookingSurchargeDto] }) surcharges!: BookingSurchargeDto[];
@@ -165,7 +171,7 @@ export class BookingSettlementDto {
 }
 
 export class RecordDepositRefundDto {
-  @ApiProperty({ description: 'Số tiền thực hoàn (chuỗi — ADR 0007)' })
+  @ApiProperty({ description: 'Số tiền thực hoàn (chuỗi - ADR 0007)' })
   @Matches(MONEY_PATTERN, { message: 'Số tiền không hợp lệ (số VND không âm)' })
   refundAmount!: string;
 
@@ -173,7 +179,7 @@ export class RecordDepositRefundDto {
   @IsIn(REFUND_METHOD_VALUES)
   refundMethod!: string;
 
-  @ApiPropertyOptional({ description: 'ISO — mặc định hiện tại. Không được ở tương lai.' })
+  @ApiPropertyOptional({ description: 'ISO - mặc định hiện tại. Không được ở tương lai.' })
   @IsOptional()
   @IsDateString()
   refundedAt?: string;
@@ -196,14 +202,94 @@ export class RecordDepositRefundDto {
  * Nằm trong menu `⋯`, không phải một bước của mọi chuyến.
  */
 export class CorrectDepositRefundDto extends RecordDepositRefundDto {
-  @ApiProperty({ description: 'Lý do điều chỉnh — bắt buộc, vào audit' })
+  @ApiProperty({ description: 'Lý do điều chỉnh - bắt buộc, vào audit' })
   @IsString()
   @MaxLength(1000)
   correctionReason!: string;
 
-  @ApiProperty({ description: 'Bắt buộc — chống sửa đè' })
+  @ApiProperty({ description: 'Bắt buộc - chống sửa đè' })
   @Type(() => Number)
   @IsInt()
   @Min(1)
   expectedRowVersion!: number;
+}
+
+// ── Nhận lại xe (06/11/2026) ────────────────────────────────────────────────
+
+/**
+ * Một khoản phát sinh NHÁP gõ trong hộp "Xác nhận đã nhận lại xe" (Figma `23941:65305`): để xem
+ * trước tiền cọc / hoàn cọc, và để ghi CÙNG transaction với lượt xác nhận trả xe.
+ *
+ * Lý do tuỳ chọn ở đây (hộp chỉ có Loại + Số tiền): trống thì server lấy tên loại phụ phí — khách
+ * vẫn đọc được một câu ở trang chuyến. Sửa câu chi tiết đi qua thẻ "Phát sinh" của trang đơn.
+ */
+export class ReturnSurchargeDraftDto {
+  @ApiProperty({ enum: SURCHARGE_CATEGORY_VALUES })
+  @IsIn(SURCHARGE_CATEGORY_VALUES)
+  category!: string;
+
+  @ApiProperty({ description: 'VND > 0 (chuỗi - ADR 0007)' })
+  @Matches(MONEY_PATTERN, { message: 'Số tiền không hợp lệ (số VND không âm)' })
+  amount!: string;
+
+  @ApiPropertyOptional({ description: 'Lý do gửi khách. Trống ⇒ tên loại phụ phí' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  reason?: string;
+}
+
+/**
+ * Những gì người nhận xe đang gõ trong hộp — server tính lại MỌI con số tiền từ đây (ADR 0007),
+ * hộp chỉ hiển thị. Không ghi gì.
+ */
+export class PreviewReturnSettlementDto {
+  @ApiPropertyOptional({
+    description: 'ISO - giờ nhận lại xe đang chọn; dùng cho gợi ý quá giờ. Trống ⇒ bây giờ',
+  })
+  @IsOptional()
+  @IsDateString()
+  occurredAt?: string;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: `Odo lúc nhận lại đang nhập (0-${ODOMETER_MAX_KM}); dùng cho gợi ý vượt km`,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(ODOMETER_MAX_KM)
+  odometerKm?: number | null;
+
+  @ApiPropertyOptional({ type: [ReturnSurchargeDraftDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(RETURN_SURCHARGE_DRAFT_MAX)
+  @ValidateNested({ each: true })
+  @Type(() => ReturnSurchargeDraftDto)
+  surcharges?: ReturnSurchargeDraftDto[];
+}
+
+/**
+ * Quyết toán XEM TRƯỚC của lượt nhận lại xe — các khoản nháp đã cộng vào như thể đã ghi.
+ *
+ * `collectableAmount` là số khách còn phải đưa TẬN TAY gian hàng sau các khoản nháp: tiền thuê chưa
+ * thu + phần phụ phí vượt cọc (`counterDueAmount` — công nợ trừ `D` đã ở XePrime). Ô "Đã thu tiền"
+ * của hộp nộp lại ĐÚNG số này; lệch với số server tính lúc xác nhận ⇒ 409, không ghi gì.
+ */
+export class ReturnSettlementPreviewDto {
+  @ApiProperty({ description: 'Cọc ĐÃ THU (payments kind=deposit)' }) depositReceived!: string;
+  @ApiProperty({ description: 'Phát sinh đã ghi + các khoản nháp' }) surchargeTotal!: string;
+  @ApiProperty({ description: 'max(cọc đã thu − tổng phát sinh, 0)' }) proposedRefund!: string;
+  @ApiProperty({ description: 'max(tổng phát sinh − cọc đã thu, 0)' }) additionalDue!: string;
+  @ApiProperty({ description: 'Số khách còn phải đưa gian hàng sau các khoản nháp' })
+  collectableAmount!: string;
+  @ApiProperty({ type: [BookingSurchargeDto], description: 'Các khoản ĐÃ ghi trước đó' })
+  surcharges!: BookingSurchargeDto[];
+  @ApiProperty({ type: OvertimeSuggestionDto, description: 'Theo giờ nhận lại đang chọn' })
+  overtime!: OvertimeSuggestionDto;
+  @ApiProperty({ type: ExcessMileageSuggestionDto, description: 'Theo Odo đang nhập' })
+  excessMileage!: ExcessMileageSuggestionDto;
 }

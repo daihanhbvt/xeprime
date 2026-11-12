@@ -20,6 +20,7 @@ import { useChatBadge } from '@/features/chat/hooks/use-chat-badge';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useTheme } from '@/lib/theme';
 import { CtaButton } from './CtaButton';
+import { Magnetic } from '@/components/motion/Magnetic';
 import { MarketAccountMenu } from './MarketAccountMenu';
 import styles from './MarketHeader.module.css';
 
@@ -43,7 +44,7 @@ const NAV = [
      */
     activeWhen: [ROUTES.SEARCH, '/listings', '/shops'],
   },
-  // Khách chưa đăng nhập tới đây vẫn được `AccountShell` mời đăng nhập ngay tại trang.
+  // Chỉ hiện khi đã đăng nhập (người dùng chốt 03/11/2026) — xem lọc ở `MarketHeader`.
   { key: 'trips', labelKey: 'tripsNav', href: ROUTES.TRIPS },
   // Đích thật là `/about` (`ROUTES.ABOUT`), trang duy nhất nói sàn này là gì và tiền đi đâu.
   { key: 'about', labelKey: 'aboutXePrime', href: ROUTES.ABOUT },
@@ -69,21 +70,39 @@ export function MarketHeader() {
 
   const isSearchPage = pathname === ROUTES.SEARCH;
   const [scrolledPast, setScrolledPast] = useState(false);
+  // Đã rời mép trên (> 8px) ⇒ header chuyển sang nền kính mờ + bóng đổ. Chỉ đổi màu/bóng, không đổi
+  // chiều cao — không layout shift. Một listener chung cho cả hai cờ, gom theo rAF.
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    if (!isSearchPage) return;
+    let frame = 0;
+    const read = () => {
+      frame = 0;
+      const y = window.scrollY;
+      setScrolled(y > 8);
+      if (isSearchPage) setScrolledPast(y > 140);
+    };
     const onScroll = () => {
-      setScrolledPast(window.scrollY > 140);
+      if (frame === 0) frame = window.requestAnimationFrame(read);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener('scroll', onScroll);
+    read();
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (frame !== 0) window.cancelAnimationFrame(frame);
+    };
   }, [isSearchPage]);
 
   const hiddenOnScroll = isSearchPage && scrolledPast;
 
   return (
-    <header className={cx(styles.header, isSearchPage && hiddenOnScroll && styles.headerHidden)}>
+    <header
+      className={cx(
+        styles.header,
+        scrolled && styles.headerScrolled,
+        isSearchPage && hiddenOnScroll && styles.headerHidden,
+      )}
+    >
       <div className={styles.inner}>
         <Link href={ROUTES.HOME} className={styles.brand} aria-label={APP_NAME}>
           <Image
@@ -98,7 +117,7 @@ export function MarketHeader() {
         </Link>
 
         <nav className={styles.nav} aria-label={t('mainNavLabel')}>
-          {NAV.map((item) => {
+          {NAV.filter((item) => item.key !== 'trips' || user).map((item) => {
             /*
              * Trước 23/09/2026 dòng này là `i === 0`, tức mục đầu luôn sáng vàng — ở trang điều
              * khoản sử dụng, thanh trên cùng vẫn khẳng định người dùng đang "Khám phá".
@@ -173,9 +192,11 @@ export function MarketHeader() {
                 Lối sang SITE PARTNER (ADR 0051 điều 3) — đăng ký cho thuê xe là một tài khoản
                 riêng ở đó (ADR 0053). Khách đã đăng nhập đi lối này từ menu tài khoản.
               */}
-              <CtaButton href={resolveOwnerCtaHref()} className={styles.ownerCta}>
-                {t('becomeOwner')}
-              </CtaButton>
+              <Magnetic className={styles.ownerCta}>
+                <CtaButton href={resolveOwnerCtaHref()} className={styles.ownerCta}>
+                  {t('becomeOwner')}
+                </CtaButton>
+              </Magnetic>
             </>
           )}
         </div>

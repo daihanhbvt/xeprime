@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { CrownFilled, EnvironmentOutlined, StarFilled } from '@ant-design/icons';
+import { EnvironmentOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 import type { HostMetrics as HostMetricsShape } from '@xeprime/types';
 import { useTranslations } from 'next-intl';
@@ -12,8 +12,8 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { cx } from '@/lib/cx';
 import { initialOf } from '@/lib/initials';
 import { roundedCount } from '@/lib/rounded-count';
-import { shopHighlightOf } from './shop-highlight';
 import styles from './ShopQuickInfoCard.module.css';
+import { RatingStar } from '@/components/data-display/Stars';
 
 export interface ShopQuickInfoCardShop {
   name: string;
@@ -85,24 +85,11 @@ export function ShopQuickInfoCard({
   const hasTrips = typeof shop.completedTripCount === 'number';
   const trips = hasTrips ? roundedCount(shop.completedTripCount as number) : null;
 
-  /*
-   * Dòng ghi chú LUÔN có ở biến thể đầy đủ và inline — nội dung đổi theo số liệu thật của từng gian hàng
-   * (`shopHighlightOf`). Để trống chỗ này với gian hàng chưa nổi bật làm thẻ trông như thiếu mất
-   * một phần, mà mọi gian hàng đều có ít nhất một điều đúng để nói.
-   */
-  const highlight =
-    variant !== 'compact'
-      ? shopHighlightOf({
-          metrics,
-          ratingAvg,
-          ratingCount: shop.ratingCount,
-          completedTripCount: shop.completedTripCount,
-        })
-      : null;
+  // Dòng ghi chú "Chủ xe được khách đánh giá…" đã GỠ theo yêu cầu người dùng (04/11/2026).
 
   if (variant === 'inline') {
     return (
-      <div className={cx(styles.card, styles.inlineCard, className)}>
+      <div className={cx(styles.card, styles.inlineCard, !shop.verified && styles.inlineCardOwner, className)}>
         <div className={styles.inlineMainRow}>
           <div className={styles.row}>
             <div className={styles.avatarWrap}>
@@ -114,11 +101,11 @@ export function ShopQuickInfoCard({
                 )}
               </span>
               {shop.verified ? (
-                <VerifiedMark
-                  label={t('header.verified')}
-                  size={16}
-                  className={styles.verifiedBadgeInline}
-                />
+                // Cùng dấu tích xanh của thẻ xe trang chủ (`/home/card-verified.svg` trong đĩa trắng).
+                <span className={styles.verifiedBadgeInline} role="img" aria-label={t('header.verified')}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- SVG tĩnh 12px */}
+                  <img src="/home/card-verified.svg" alt="" width={12} height={12} />
+                </span>
               ) : null}
             </div>
 
@@ -135,49 +122,42 @@ export function ShopQuickInfoCard({
                   {shop.name}
                 </Link>
               </div>
-              {hasRating || hasTrips ? (
-                <div className={styles.summary}>
-                  {hasRating ? (
-                    <span className={styles.rating}>
-                      <StarFilled className={styles.star} aria-hidden="true" />
-                      {fmt.rating(ratingAvg as number)}
-                      {shop.ratingCount ? (
-                        <span className={styles.ratingCount}> ({shop.ratingCount})</span>
-                      ) : (
-                        ''
-                      )}
-                    </span>
-                  ) : null}
-                  {hasRating && hasTrips ? (
-                    <span className={styles.divider} aria-hidden="true" />
-                  ) : null}
-                  {hasTrips && trips ? (
-                    <span className={styles.trips}>
-                      <TripsIcon />
-                      {t('card.trips', {
-                        count: trips.display,
-                        plus: trips.approximate ? '+' : '',
-                      })}
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
             </div>
           </div>
 
           <HostMetrics metrics={metrics} variant="inline" className={styles.inlineMetrics} />
         </div>
 
-        {highlight ? (
-          <p className={styles.highlight}>
-            <CrownFilled className={styles.crown} aria-hidden="true" />
-            <span>
-              {t(`card.highlight.${highlight.key}`, {
-                rating: highlight.rating === null ? '' : fmt.rating(highlight.rating),
-                count: highlight.count,
-              })}
-            </span>
-          </p>
+        {/* Figma "Owner Activity": điểm + số chuyến là HÀNG RIÊNG dưới cả khối, không nằm dưới tên. */}
+        {hasRating || hasTrips ? (
+          <div className={styles.summary}>
+            {hasRating ? (
+              <span className={styles.rating}>
+                <RatingStar size={20} className={styles.star} />
+                {fmt.rating(ratingAvg as number)}
+                {/* Figma: "4.7 (Đã cho thuê 28 lần)" — số lần cho thuê = chuyến đã hoàn thành. */}
+                {trips ? (
+                  <span className={styles.ratingCount}>
+                    {' ('}
+                    {t('card.rentedTimes', {
+                      count: trips.display,
+                      plus: trips.approximate ? '+' : '',
+                    })}
+                    {')'}
+                  </span>
+                ) : null}
+              </span>
+            ) : null}
+            {hasTrips && trips ? (
+              <span className={styles.trips}>
+                <TripsIcon />
+                {t('card.trips', {
+                  count: trips.display,
+                  plus: trips.approximate ? '+' : '',
+                })}
+              </span>
+            ) : null}
+          </div>
         ) : null}
       </div>
     );
@@ -221,7 +201,7 @@ export function ShopQuickInfoCard({
             <div className={styles.summary}>
               {hasRating ? (
                 <span className={styles.rating}>
-                  <StarFilled className={styles.star} aria-hidden="true" />
+                  <RatingStar size={16} className={styles.star} />
                   {fmt.rating(ratingAvg as number)}
                 </span>
               ) : null}
@@ -242,17 +222,6 @@ export function ShopQuickInfoCard({
       </div>
 
       {variant === 'full' ? <HostMetrics metrics={metrics} className={styles.metrics} /> : null}
-      {highlight ? (
-        <p className={styles.highlight}>
-          <CrownFilled className={styles.crown} aria-hidden="true" />
-          <span>
-            {t(`card.highlight.${highlight.key}`, {
-              rating: highlight.rating === null ? '' : fmt.rating(highlight.rating),
-              count: highlight.count,
-            })}
-          </span>
-        </p>
-      ) : null}
       {variant === 'full' && actions ? <div className={styles.actions}>{actions}</div> : null}
     </div>
   );

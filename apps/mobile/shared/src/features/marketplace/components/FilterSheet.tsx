@@ -6,6 +6,8 @@ import { Modal, Pressable, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import type { ListingSort } from '@xeprime/types';
+import { SortMenu } from './SortMenu';
 import {
   CATALOG_TYPE,
   FUEL_TYPE_LABEL,
@@ -43,6 +45,7 @@ import {
   usePriceBandLabel,
 } from '../filter-constants';
 import { SERVICE_ICON, SERVICE_LABEL_KEY, VEHICLE_ICON } from '../search-items';
+import { modalColumn } from '@/theme/layout';
 
 /** Số mục hiện trước "Xem thêm" — Figma vẽ 3 hàng × 2 cột (web `COLLAPSED_COUNT`). */
 const COLLAPSED_COUNT = 6;
@@ -68,16 +71,12 @@ interface FilterDraft {
   discount?: boolean;
   instantBook?: boolean;
   minRating?: number;
+  /** Thứ tự sắp xếp - đưa vào tấm lọc (09/11/2026), áp cùng lượt "Áp dụng". `undefined` = mặc định. */
+  sort?: ListingSort;
 }
 
 type ListField =
-  | 'brand'
-  | 'bodyType'
-  | 'motorbikeCategory'
-  | 'seats'
-  | 'fuelType'
-  | 'features'
-  | 'transmission';
+  'brand' | 'bodyType' | 'motorbikeCategory' | 'seats' | 'fuelType' | 'features' | 'transmission';
 
 type FlagField = 'delivery' | 'noCollateral' | 'vatInvoice' | 'discount' | 'instantBook';
 
@@ -100,6 +99,7 @@ function initDraft(filters: MarketplaceFilters): FilterDraft {
     ...(filters.discount ? { discount: true } : {}),
     ...(filters.instantBook ? { instantBook: true } : {}),
     ...(filters.minRating === undefined ? {} : { minRating: filters.minRating }),
+    ...(filters.sort === undefined ? {} : { sort: filters.sort }),
   };
 }
 
@@ -149,6 +149,7 @@ export function FilterSheet({
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const t = useTranslations('Marketplace.filterPanel');
+  const tResults = useTranslations('Marketplace.results');
   const tService = useTranslations('HomeSearch.service');
   const tCommon = useTranslations('Common');
   const domainLabel = useDomainLabel();
@@ -217,9 +218,7 @@ export function FilterSheet({
   const displayedBodyTypes = showAllBodyTypes
     ? bodyTypeItems
     : bodyTypeItems.slice(0, COLLAPSED_COUNT);
-  const displayedFeatures = showAllFeatures
-    ? featureItems
-    : featureItems.slice(0, COLLAPSED_COUNT);
+  const displayedFeatures = showAllFeatures ? featureItems : featureItems.slice(0, COLLAPSED_COUNT);
 
   const toggleItem = (field: ListField, value: string) => {
     setDraft((prev) => {
@@ -260,6 +259,7 @@ export function FilterSheet({
       discount: draft.discount,
       instantBook: draft.instantBook,
       minRating: draft.minRating,
+      sort: draft.sort,
     });
     onClose();
   };
@@ -275,14 +275,14 @@ export function FilterSheet({
       fuelType: [],
       features: [],
       transmission: [],
+      // "Xoá bộ lọc" xoá TIÊU CHÍ lọc, không đổi thứ tự sắp xếp khách đã chọn.
+      sort: draft.sort,
     });
 
   // Dải "Đang chọn" — MỌI tiêu chí đang bật trong nháp; chỉ chiều thuộc loại xe đang chọn.
   const brandByKey = new Map(catalog[CATALOG_TYPE.VEHICLE_BRAND].map((b) => [b.key, b.label]));
   const bodyTypeByKey = new Map(bodyTypeItems.map((b) => [b.key, b.label]));
-  const featureByKey = new Map(
-    catalog[CATALOG_TYPE.VEHICLE_FEATURE].map((f) => [f.key, f.label]),
-  );
+  const featureByKey = new Map(catalog[CATALOG_TYPE.VEHICLE_FEATURE].map((f) => [f.key, f.label]));
   const chips: { key: string; label: string; onRemove: () => void }[] = [
     ...draft.brand.map((key) => ({
       key: `brand:${key}`,
@@ -366,404 +366,462 @@ export function FilterSheet({
 
   return (
     <Modal visible={open} animationType="slide" onRequestClose={onClose}>
-      <YStack f={1} bg={colors.surface} pt={insets.top}>
-        {/* Đầu tấm */}
-        <XStack ai="flex-start" gap={space.sm} px={space.md} pt={space.md} pb={space.sm + space.xs}>
-          <YStack f={1} gap={2}>
-            <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.semibold} accessibilityRole="header">
-              {t('title')}
-            </Text>
-            <Text col={colors.placeholder} fos={fontSize.body}>
-              {t('subtitle')}
-            </Text>
-          </YStack>
-          {/* Dấu đóng to như Figma `19771:70427` (≈ 28px, nét mảnh) — mặc định 20 trông lọt thỏm cạnh tiêu đề h3. */}
-          <IconButton icon="close-outline" size={28} label={tCommon('actions.close')} onPress={onClose} />
-        </XStack>
-
-        <ScrollView
-          // Khoá cuộn khi đang kéo thanh giá — không thì kéo núm là kéo luôn cả tấm.
-          scrollEnabled={!sliding}
-          contentContainerStyle={{ paddingHorizontal: space.md, paddingBottom: space.lg, gap: space.md }}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Phần đầu: dịch vụ · loại xe */}
-          <Segmented
-            label={t('modal.service')}
-            items={services}
-            value={draft.serviceType}
-            fill
-            onChange={(value) => setDraft((p) => ({ ...p, serviceType: value }))}
-          />
-          <YStack gap={space.sm}>
-            <GroupTitle>{t('vehicleType')}</GroupTitle>
-            <Segmented
-              label={t('vehicleType')}
-              items={vehicles}
-              value={draft.vehicleType}
-              onChange={(value) =>
-                setDraft((p) => ({
-                  ...p,
-                  vehicleType: value,
-                  // Xe máy không có "có tài xế" — rơi về tự lái, cùng luật với thẻ tìm kiếm.
-                  serviceType: resolveServiceType(value, p.serviceType),
-                }))
-              }
+      {/* Nền phủ cả cửa sổ; nội dung nằm trong cột (máy tính bảng) — xem `modalColumn`. */}
+      <YStack f={1} bg={colors.surface}>
+        <YStack f={1} pt={insets.top} style={modalColumn}>
+          {/* Đầu tấm */}
+          <XStack
+            ai="flex-start"
+            gap={space.sm}
+            px={space.md}
+            pt={space.md}
+            pb={space.sm + space.xs}
+          >
+            <YStack f={1} gap={2}>
+              <Text
+                col={colors.text}
+                fos={fontSize.h3}
+                fow={fontWeight.semibold}
+                accessibilityRole="header"
+              >
+                {t('title')}
+              </Text>
+              <Text col={colors.placeholder} fos={fontSize.body}>
+                {t('subtitle')}
+              </Text>
+            </YStack>
+            {/* Dấu đóng to như Figma `19771:70427` (≈ 28px, nét mảnh) — mặc định 20 trông lọt thỏm cạnh tiêu đề h3. */}
+            <IconButton
+              icon="close-outline"
+              size={28}
+              label={tCommon('actions.close')}
+              onPress={onClose}
             />
-          </YStack>
-          {/* `.dashedDivider` web: `1px dashed border-strong` (= `borderInput` app). */}
-          <DashedDivider />
+          </XStack>
 
-          {/* Bề ngang điện thoại: hai ô xếp DỌC (web @768px `.fieldsRow { 1fr }`). */}
-          <ContextField
-            icon="location-outline"
-            label={t('searchAddress')}
-            value={locationLabel}
-            onPress={onPickLocation}
-          />
-          <ContextField
-            icon="calendar-outline"
-            label={t('rentalTime')}
-            value={rentalLabel}
-            onPress={onPickRentalTime}
-          />
+          <ScrollView
+            // Khoá cuộn khi đang kéo thanh giá — không thì kéo núm là kéo luôn cả tấm.
+            scrollEnabled={!sliding}
+            contentContainerStyle={{
+              paddingHorizontal: space.md,
+              paddingBottom: space.lg,
+              gap: space.md,
+            }}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Phần đầu: dịch vụ · loại xe */}
+            <Segmented
+              label={t('modal.service')}
+              items={services}
+              value={draft.serviceType}
+              fill
+              onChange={(value) => setDraft((p) => ({ ...p, serviceType: value }))}
+            />
+            <YStack gap={space.sm}>
+              <GroupTitle>{t('vehicleType')}</GroupTitle>
+              <Segmented
+                label={t('vehicleType')}
+                items={vehicles}
+                value={draft.vehicleType}
+                onChange={(value) =>
+                  setDraft((p) => ({
+                    ...p,
+                    vehicleType: value,
+                    // Xe máy không có "có tài xế" — rơi về tự lái, cùng luật với thẻ tìm kiếm.
+                    serviceType: resolveServiceType(value, p.serviceType),
+                  }))
+                }
+              />
+            </YStack>
+            {/* `.dashedDivider` web: `1px dashed border-strong` (= `borderInput` app). */}
+            <DashedDivider />
 
-          {/* Thứ tự nhóm theo Figma 19771:70427 (nội dung nhóm theo web FilterModal). */}
-          <FilterGroup title={t('brand')} hint={t('multiple')}>
-            {brandItems.length > 0 ? (
-              <OptionGrid>
-                {displayedBrands.map((b) => (
-                  <OptionRow
-                    key={b.key}
-                    kind="checkbox"
-                    checked={draft.brand.includes(b.key)}
-                    onPress={() => toggleItem('brand', b.key)}
-                    label={b.label}
-                    leading={<BrandMark label={b.label} iconUrl={b.iconUrl} />}
-                  />
-                ))}
-              </OptionGrid>
-            ) : (
-              <Note>{t('modal.noBrands')}</Note>
-            )}
-            {brandItems.length > COLLAPSED_COUNT ? (
-              <SeeMore expanded={showAllBrands} onToggle={setShowAllBrands} />
-            ) : null}
-          </FilterGroup>
+            {/* Bề ngang điện thoại: hai ô xếp DỌC (web @768px `.fieldsRow { 1fr }`). */}
+            <ContextField
+              icon="location-outline"
+              label={t('searchAddress')}
+              value={locationLabel}
+              onPress={onPickLocation}
+            />
+            <ContextField
+              icon="calendar-outline"
+              label={t('rentalTime')}
+              value={rentalLabel}
+              onPress={onPickRentalTime}
+            />
 
-          <FilterGroup title={t('modal.bodyType')} hint={t('multiple')}>
-            <OptionGrid>
-              {!isMotorbike
-                ? displayedBodyTypes.map((bt) => (
+            {/* Sắp xếp - chuyển từ hàng trên danh sách vào đây (09/11/2026), giữ trang kết quả gọn. */}
+            <YStack gap={space.sm}>
+              <GroupTitle>{tResults('sortLabel')}</GroupTitle>
+              <SortMenu
+                block
+                value={draft.sort}
+                onChange={(sort) => setDraft((p) => ({ ...p, sort }))}
+              />
+            </YStack>
+
+            {/* Thứ tự nhóm theo Figma 19771:70427 (nội dung nhóm theo web FilterModal). */}
+            <FilterGroup title={t('brand')} hint={t('multiple')}>
+              {brandItems.length > 0 ? (
+                <OptionGrid>
+                  {displayedBrands.map((b) => (
                     <OptionRow
-                      key={bt.key}
+                      key={b.key}
                       kind="checkbox"
-                      checked={draft.bodyType.includes(bt.key)}
-                      onPress={() => toggleItem('bodyType', bt.key)}
-                      label={bt.label}
-                      pill={bt.description}
-                    />
-                  ))
-                : MOTORBIKE_CATEGORY_VALUES.map((mc) => (
-                    <OptionRow
-                      key={mc}
-                      kind="checkbox"
-                      checked={draft.motorbikeCategory.includes(mc)}
-                      onPress={() => toggleItem('motorbikeCategory', mc)}
-                      label={domainLabel('motorbikeCategory', mc)}
+                      checked={draft.brand.includes(b.key)}
+                      onPress={() => toggleItem('brand', b.key)}
+                      label={b.label}
+                      leading={<BrandMark label={b.label} iconUrl={b.iconUrl} />}
                     />
                   ))}
-            </OptionGrid>
-            {!isMotorbike && bodyTypeItems.length > COLLAPSED_COUNT ? (
-              <SeeMore expanded={showAllBodyTypes} onToggle={setShowAllBodyTypes} />
-            ) : null}
-          </FilterGroup>
-
-          <Divider />
-
-          <FilterGroup title={t('transmission')} hint={t('single')}>
-            <OptionGrid>
-              <OptionRow
-                kind="radio"
-                checked={draft.transmission.length === 0}
-                onPress={() => setDraft((p) => ({ ...p, transmission: [] }))}
-                label={t('modal.all')}
-              />
-              {transmissions.map((code) => (
-                <OptionRow
-                  key={code}
-                  kind="radio"
-                  checked={draft.transmission.includes(code)}
-                  onPress={() => setDraft((p) => ({ ...p, transmission: [code] }))}
-                  label={transmissionLabel(code)}
-                />
-              ))}
-            </OptionGrid>
-          </FilterGroup>
-
-          {/* Số chỗ chỉ có nghĩa với ô tô. */}
-          {!isMotorbike ? (
-            <FilterGroup title={t('modal.seats')} hint={t('multiple')}>
-              <OptionGrid>
-                {SEAT_BUCKET_VALUES.map((sb) => (
-                  <OptionRow
-                    key={sb}
-                    kind="checkbox"
-                    checked={draft.seats.includes(sb)}
-                    onPress={() => toggleItem('seats', sb)}
-                    label={domainLabel('seatBucket', sb, SEAT_BUCKET_LABEL[sb])}
-                  />
-                ))}
-              </OptionGrid>
+                </OptionGrid>
+              ) : (
+                <Note>{t('modal.noBrands')}</Note>
+              )}
+              {brandItems.length > COLLAPSED_COUNT ? (
+                <SeeMore expanded={showAllBrands} onToggle={setShowAllBrands} />
+              ) : null}
             </FilterGroup>
-          ) : null}
 
-          <FilterGroup title={t('modal.fuelType')} hint={t('multiple')}>
-            <OptionGrid>
-              {fuelTypes.map((code) => (
-                <OptionRow
-                  key={code}
-                  kind="checkbox"
-                  checked={draft.fuelType.includes(code)}
-                  onPress={() => toggleItem('fuelType', code)}
-                  label={domainLabel('fuelType', code, FUEL_TYPE_LABEL[code])}
-                />
-              ))}
-            </OptionGrid>
-          </FilterGroup>
+            <FilterGroup title={t('modal.bodyType')} hint={t('multiple')}>
+              <OptionGrid>
+                {!isMotorbike
+                  ? displayedBodyTypes.map((bt) => (
+                      <OptionRow
+                        key={bt.key}
+                        kind="checkbox"
+                        checked={draft.bodyType.includes(bt.key)}
+                        onPress={() => toggleItem('bodyType', bt.key)}
+                        label={bt.label}
+                        pill={bt.description}
+                      />
+                    ))
+                  : MOTORBIKE_CATEGORY_VALUES.map((mc) => (
+                      <OptionRow
+                        key={mc}
+                        kind="checkbox"
+                        checked={draft.motorbikeCategory.includes(mc)}
+                        onPress={() => toggleItem('motorbikeCategory', mc)}
+                        label={domainLabel('motorbikeCategory', mc)}
+                      />
+                    ))}
+              </OptionGrid>
+              {!isMotorbike && bodyTypeItems.length > COLLAPSED_COUNT ? (
+                <SeeMore expanded={showAllBodyTypes} onToggle={setShowAllBodyTypes} />
+              ) : null}
+            </FilterGroup>
 
-          <Divider />
+            <Divider />
 
-          <YStack gap={space.md}>
-            <FilterGroup title={t('modal.priceRange')} hint={t('single')}>
+            <FilterGroup title={t('transmission')} hint={t('single')}>
               <OptionGrid>
                 <OptionRow
                   kind="radio"
-                  checked={draft.priceMin == null && draft.priceMax == null}
-                  onPress={() => setPrice(undefined, undefined)}
+                  checked={draft.transmission.length === 0}
+                  onPress={() => setDraft((p) => ({ ...p, transmission: [] }))}
                   label={t('modal.all')}
                 />
-                {priceBands.map((band) => (
+                {transmissions.map((code) => (
                   <OptionRow
-                    key={`${band.min ?? ''}-${band.max ?? ''}`}
+                    key={code}
                     kind="radio"
-                    checked={isPriceBandSelected(band, draft.priceMin, draft.priceMax)}
-                    onPress={() => setPrice(band.min, band.max)}
-                    label={priceBandLabel(band)}
+                    checked={draft.transmission.includes(code)}
+                    onPress={() => setDraft((p) => ({ ...p, transmission: [code] }))}
+                    label={transmissionLabel(code)}
                   />
                 ))}
               </OptionGrid>
             </FilterGroup>
 
-            {/*
+            {/* Số chỗ chỉ có nghĩa với ô tô. */}
+            {!isMotorbike ? (
+              <FilterGroup title={t('modal.seats')} hint={t('multiple')}>
+                <OptionGrid>
+                  {SEAT_BUCKET_VALUES.map((sb) => (
+                    <OptionRow
+                      key={sb}
+                      kind="checkbox"
+                      checked={draft.seats.includes(sb)}
+                      onPress={() => toggleItem('seats', sb)}
+                      label={domainLabel('seatBucket', sb, SEAT_BUCKET_LABEL[sb])}
+                    />
+                  ))}
+                </OptionGrid>
+              </FilterGroup>
+            ) : null}
+
+            <FilterGroup title={t('modal.fuelType')} hint={t('multiple')}>
+              <OptionGrid>
+                {fuelTypes.map((code) => (
+                  <OptionRow
+                    key={code}
+                    kind="checkbox"
+                    checked={draft.fuelType.includes(code)}
+                    onPress={() => toggleItem('fuelType', code)}
+                    label={domainLabel('fuelType', code, FUEL_TYPE_LABEL[code])}
+                  />
+                ))}
+              </OptionGrid>
+            </FilterGroup>
+
+            <Divider />
+
+            <YStack gap={space.md}>
+              <FilterGroup title={t('modal.priceRange')} hint={t('single')}>
+                <OptionGrid>
+                  <OptionRow
+                    kind="radio"
+                    checked={draft.priceMin == null && draft.priceMax == null}
+                    onPress={() => setPrice(undefined, undefined)}
+                    label={t('modal.all')}
+                  />
+                  {priceBands.map((band) => (
+                    <OptionRow
+                      key={`${band.min ?? ''}-${band.max ?? ''}`}
+                      kind="radio"
+                      checked={isPriceBandSelected(band, draft.priceMin, draft.priceMax)}
+                      onPress={() => setPrice(band.min, band.max)}
+                      label={priceBandLabel(band)}
+                    />
+                  ))}
+                </OptionGrid>
+              </FilterGroup>
+
+              {/*
               Không có ô nhập Tối thiểu/Tối đa (người dùng chốt 27/10/2026): khoảng giá chọn bằng các
               mức có sẵn ở trên hoặc kéo thanh trượt bên dưới.
             */}
-            <RangeSlider
-              min={0}
-              max={priceSlider.max}
-              step={priceSlider.step}
-              value={sliderValue}
-              label={t('modal.priceRange')}
-              onDraggingChange={setSliding}
-              onChange={([lo, hi]) =>
-                setPrice(lo > 0 ? lo : undefined, hi >= priceSlider.max ? undefined : hi)
-              }
-            />
-            <XStack jc="space-between" gap={space.sm}>
-              <Text col={colors.placeholder} fos={fontSize.bodySm}>
-                {fmt.pricePerDay('0')}
-              </Text>
-              <Text col={colors.placeholder} fos={fontSize.bodySm}>
-                {/* Figma: hai đầu thanh trượt ghi "0 đ/ngày" · "2.000.000 đ/ngày", không dấu "+". */}
-                {fmt.pricePerDay(String(priceSlider.max))}
-              </Text>
-            </XStack>
-            <Note>{t('modal.priceNote')}</Note>
-          </YStack>
-
-          <Divider />
-
-          <FilterGroup title={t('modal.pickupMethod')} hint={t('single')}>
-            <OptionGrid>
-              <OptionRow
-                kind="radio"
-                checked={!draft.delivery}
-                onPress={() => setFlag('delivery', false)}
-                label={t('modal.all')}
+              <RangeSlider
+                min={0}
+                max={priceSlider.max}
+                step={priceSlider.step}
+                value={sliderValue}
+                label={t('modal.priceRange')}
+                onDraggingChange={setSliding}
+                onChange={([lo, hi]) =>
+                  setPrice(lo > 0 ? lo : undefined, hi >= priceSlider.max ? undefined : hi)
+                }
               />
-              <OptionRow
-                kind="radio"
-                checked={Boolean(draft.delivery)}
-                onPress={() => setFlag('delivery', true)}
-                label={t('modal.deliveryOption')}
-              />
-            </OptionGrid>
-          </FilterGroup>
-
-          <FilterGroup title={t('modal.offers')} hint={t('multiple')}>
-            <Note>{t('modal.offersHint')}</Note>
-            <OptionGrid>
-              <OptionRow
-                kind="checkbox"
-                checked={Boolean(draft.discount)}
-                onPress={() => setFlag('discount', !draft.discount)}
-                label={t('modal.hasOffer')}
-              />
-            </OptionGrid>
-          </FilterGroup>
-
-          <Divider />
-
-          <FilterGroup title={t('amenities')} hint={t('multiple')}>
-            <OptionGrid>
-              {displayedFeatures.map((f) => (
-                <OptionRow
-                  key={f.key}
-                  kind="checkbox"
-                  checked={draft.features.includes(f.key)}
-                  onPress={() => toggleItem('features', f.key)}
-                  label={f.label}
-                />
-              ))}
-            </OptionGrid>
-            {featureItems.length > COLLAPSED_COUNT ? (
-              <SeeMore expanded={showAllFeatures} onToggle={setShowAllFeatures} />
-            ) : null}
-          </FilterGroup>
-
-          <FilterGroup title={t('rating')} hint={t('single')}>
-            <OptionGrid>
-              <OptionRow
-                kind="radio"
-                checked={draft.minRating == null}
-                onPress={() => setDraft((p) => ({ ...p, minRating: undefined }))}
-                label={t('modal.all')}
-              />
-              {LISTING_MIN_RATING_VALUES.map((rating) => (
-                <OptionRow
-                  key={rating}
-                  kind="radio"
-                  checked={draft.minRating === rating}
-                  onPress={() => setDraft((p) => ({ ...p, minRating: rating }))}
-                  label={ratingLabel(rating)}
-                />
-              ))}
-            </OptionGrid>
-          </FilterGroup>
-
-          <Divider />
-
-          <FilterGroup title={t('modal.rentalTerms')} hint={t('multiple')}>
-            <OptionGrid single>
-              <OptionRow
-                kind="checkbox"
-                checked={Boolean(draft.noCollateral)}
-                onPress={() => setFlag('noCollateral', !draft.noCollateral)}
-                label={t('amenityDesc.noCollateral')}
-              />
-              <OptionRow
-                kind="checkbox"
-                checked={Boolean(draft.vatInvoice)}
-                onPress={() => setFlag('vatInvoice', !draft.vatInvoice)}
-                label={t('vatInvoice')}
-              />
-            </OptionGrid>
-            {draft.vatInvoice ? <Note>{t('amenityDesc.vatInvoice')}</Note> : null}
-          </FilterGroup>
-
-          <Divider />
-
-          <YStack gap={space.sm + space.xs}>
-            <Pressable
-              onPress={() => setFlag('instantBook', !draft.instantBook)}
-              accessibilityRole="switch"
-              accessibilityState={{ checked: Boolean(draft.instantBook) }}
-              accessibilityLabel={t('modal.instantBook')}
-            >
-              <XStack ai="center" jc="space-between" gap={space.md}>
-                <YStack f={1} gap={2}>
-                  <GroupTitle>{t('modal.instantBook')}</GroupTitle>
-                  <Note>{t('modal.instantBookHint')}</Note>
-                </YStack>
-                <SmallSwitch value={Boolean(draft.instantBook)} />
+              <XStack jc="space-between" gap={space.sm}>
+                <Text col={colors.placeholder} fos={fontSize.bodySm}>
+                  {fmt.pricePerDay('0')}
+                </Text>
+                <Text col={colors.placeholder} fos={fontSize.bodySm}>
+                  {/* Figma: hai đầu thanh trượt ghi "0 đ/ngày" · "2.000.000 đ/ngày", không dấu "+". */}
+                  {fmt.pricePerDay(String(priceSlider.max))}
+                </Text>
               </XStack>
-            </Pressable>
-            <XStack ai="flex-start" gap={space.sm} p={space.sm + space.xs} br={radius.sm} bg={colors.warningSurface}>
-              <Ionicons name="information-circle-outline" size={16} color={colors.warning} />
-              <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
-                {t('modal.policyNote')}
-              </Text>
-            </XStack>
-          </YStack>
+              <Note>{t('modal.priceNote')}</Note>
+            </YStack>
 
-        </ScrollView>
+            <Divider />
 
-        {/* Dải "Đang chọn" — cố định trên chân tấm */}
-        {chips.length > 0 ? (
-          <XStack ai="center" gap={space.sm} paddingLeft={space.md} pt={space.sm} pb={space.sm + space.xs}>
-            <Text col={colors.placeholder} fos={fontSize.bodySm} flexShrink={0}>
-              {t('selected')}
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: space.sm, alignItems: 'center', paddingRight: space.md }}
-            >
-              {chips.map((chip) => (
-                <Pressable
-                  key={chip.key}
-                  onPress={chip.onRemove}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('modal.removeChip', { label: chip.label })}
-                >
-                  <XStack
-                    ai="center"
-                    gap={space.xs}
-                    px={10}
-                    py={2}
-                    bw={1}
-                    bc={colors.primary}
-                    br={radius.pill}
-                    bg={colors.primaryLight}
-                  >
-                    <Text col={colors.primaryHover} fos={fontSize.body} fow={fontWeight.medium}>
-                      {chip.label}
-                    </Text>
-                    <Ionicons name="close" size={10} color={colors.primaryHover} />
-                  </XStack>
-                </Pressable>
-              ))}
+            <FilterGroup title={t('modal.pickupMethod')} hint={t('single')}>
+              <OptionGrid>
+                <OptionRow
+                  kind="radio"
+                  checked={!draft.delivery}
+                  onPress={() => setFlag('delivery', false)}
+                  label={t('modal.all')}
+                />
+                <OptionRow
+                  kind="radio"
+                  checked={Boolean(draft.delivery)}
+                  onPress={() => setFlag('delivery', true)}
+                  label={t('modal.deliveryOption')}
+                />
+              </OptionGrid>
+            </FilterGroup>
+
+            <FilterGroup title={t('modal.offers')} hint={t('multiple')}>
+              <Note>{t('modal.offersHint')}</Note>
+              <OptionGrid>
+                <OptionRow
+                  kind="checkbox"
+                  checked={Boolean(draft.discount)}
+                  onPress={() => setFlag('discount', !draft.discount)}
+                  label={t('modal.hasOffer')}
+                />
+              </OptionGrid>
+            </FilterGroup>
+
+            <Divider />
+
+            <FilterGroup title={t('amenities')} hint={t('multiple')}>
+              <OptionGrid>
+                {displayedFeatures.map((f) => (
+                  <OptionRow
+                    key={f.key}
+                    kind="checkbox"
+                    checked={draft.features.includes(f.key)}
+                    onPress={() => toggleItem('features', f.key)}
+                    label={f.label}
+                  />
+                ))}
+              </OptionGrid>
+              {featureItems.length > COLLAPSED_COUNT ? (
+                <SeeMore expanded={showAllFeatures} onToggle={setShowAllFeatures} />
+              ) : null}
+            </FilterGroup>
+
+            <FilterGroup title={t('rating')} hint={t('single')}>
+              <OptionGrid>
+                <OptionRow
+                  kind="radio"
+                  checked={draft.minRating == null}
+                  onPress={() => setDraft((p) => ({ ...p, minRating: undefined }))}
+                  label={t('modal.all')}
+                />
+                {LISTING_MIN_RATING_VALUES.map((rating) => (
+                  <OptionRow
+                    key={rating}
+                    kind="radio"
+                    checked={draft.minRating === rating}
+                    onPress={() => setDraft((p) => ({ ...p, minRating: rating }))}
+                    label={ratingLabel(rating)}
+                  />
+                ))}
+              </OptionGrid>
+            </FilterGroup>
+
+            <Divider />
+
+            <FilterGroup title={t('modal.rentalTerms')} hint={t('multiple')}>
+              <OptionGrid single>
+                <OptionRow
+                  kind="checkbox"
+                  checked={Boolean(draft.noCollateral)}
+                  onPress={() => setFlag('noCollateral', !draft.noCollateral)}
+                  label={t('amenityDesc.noCollateral')}
+                />
+                <OptionRow
+                  kind="checkbox"
+                  checked={Boolean(draft.vatInvoice)}
+                  onPress={() => setFlag('vatInvoice', !draft.vatInvoice)}
+                  label={t('vatInvoice')}
+                />
+              </OptionGrid>
+              {draft.vatInvoice ? <Note>{t('amenityDesc.vatInvoice')}</Note> : null}
+            </FilterGroup>
+
+            <Divider />
+
+            <YStack gap={space.sm + space.xs}>
               <Pressable
-                onPress={handleClear}
-                accessibilityRole="button"
-                accessibilityLabel={tCommon('actions.clearSelection')}
-                hitSlop={space.sm}
+                onPress={() => setFlag('instantBook', !draft.instantBook)}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: Boolean(draft.instantBook) }}
+                accessibilityLabel={t('modal.instantBook')}
               >
-                <Ionicons name="reload-outline" size={16} color={colors.primary} />
+                <XStack ai="center" jc="space-between" gap={space.md}>
+                  <YStack f={1} gap={2}>
+                    <GroupTitle>{t('modal.instantBook')}</GroupTitle>
+                    <Note>{t('modal.instantBookHint')}</Note>
+                  </YStack>
+                  <SmallSwitch value={Boolean(draft.instantBook)} />
+                </XStack>
               </Pressable>
-            </ScrollView>
-          </XStack>
-        ) : null}
+              <XStack
+                ai="flex-start"
+                gap={space.sm}
+                p={space.sm + space.xs}
+                br={radius.sm}
+                bg={colors.warningSurface}
+              >
+                <Ionicons name="information-circle-outline" size={16} color={colors.warning} />
+                <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
+                  {t('modal.policyNote')}
+                </Text>
+              </XStack>
+            </YStack>
+          </ScrollView>
 
-        <XStack
-          gap={space.sm + space.xs}
-          px={space.md}
-          pt={space.sm + space.xs}
-          pb={space.sm + space.xs + insets.bottom}
-          borderTopWidth={1}
-          bc={colors.border}
-          bg={colors.surface}
-        >
-          {/* Bề ngang điện thoại: hai nút chia đều (web @768px `flex: 1`). */}
-          <YStack f={1}>
-            <Button label={t('clear')} icon="refresh-outline" variant="secondary" onPress={handleClear} />
-          </YStack>
-          <YStack f={1}>
-            {/* Figma: "Áp dụng" là nút dải vàng (gradient), "Xóa bộ lọc" viền trắng. */}
-            <Button label={t('apply')} icon="checkmark-outline" variant="gradient" onPress={handleApply} />
-          </YStack>
-        </XStack>
+          {/* Dải "Đang chọn" — cố định trên chân tấm */}
+          {chips.length > 0 ? (
+            <XStack
+              ai="center"
+              gap={space.sm}
+              paddingLeft={space.md}
+              pt={space.sm}
+              pb={space.sm + space.xs}
+            >
+              <Text col={colors.placeholder} fos={fontSize.bodySm} flexShrink={0}>
+                {t('selected')}
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{
+                  gap: space.sm,
+                  alignItems: 'center',
+                  paddingRight: space.md,
+                }}
+              >
+                {chips.map((chip) => (
+                  <Pressable
+                    key={chip.key}
+                    onPress={chip.onRemove}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('modal.removeChip', { label: chip.label })}
+                  >
+                    <XStack
+                      ai="center"
+                      gap={space.xs}
+                      px={10}
+                      py={2}
+                      bw={1}
+                      bc={colors.primary}
+                      br={radius.pill}
+                      bg={colors.primaryLight}
+                    >
+                      <Text col={colors.brandText} fos={fontSize.body} fow={fontWeight.medium}>
+                        {chip.label}
+                      </Text>
+                      <Ionicons name="close" size={10} color={colors.brandText} />
+                    </XStack>
+                  </Pressable>
+                ))}
+                <Pressable
+                  onPress={handleClear}
+                  accessibilityRole="button"
+                  accessibilityLabel={tCommon('actions.clearSelection')}
+                  hitSlop={space.sm}
+                >
+                  <Ionicons name="reload-outline" size={16} color={colors.primary} />
+                </Pressable>
+              </ScrollView>
+            </XStack>
+          ) : null}
+
+          <XStack
+            gap={space.sm + space.xs}
+            px={space.md}
+            pt={space.sm + space.xs}
+            pb={space.sm + space.xs + insets.bottom}
+            borderTopWidth={1}
+            bc={colors.border}
+            bg={colors.surface}
+          >
+            {/* Bề ngang điện thoại: hai nút chia đều (web @768px `flex: 1`). */}
+            <YStack f={1}>
+              <Button
+                label={t('clear')}
+                icon="refresh-outline"
+                variant="secondary"
+                onPress={handleClear}
+              />
+            </YStack>
+            <YStack f={1}>
+              {/* Figma: "Áp dụng" là nút dải vàng (gradient), "Xóa bộ lọc" viền trắng. */}
+              <Button
+                label={t('apply')}
+                icon="checkmark-outline"
+                variant="gradient"
+                onPress={handleApply}
+              />
+            </YStack>
+          </XStack>
+        </YStack>
       </YStack>
     </Modal>
   );
@@ -798,7 +856,11 @@ function ContextField({
           {label}
         </Text>
       </XStack>
-      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${label}: ${value}`}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${value}`}
+      >
         {/*
           Ô theo Figma `19771:70427`: cao 40, đệm ngang 14, viền `color-border` 1px (cùng viền ô nhập
           toàn app), bo control 12, nền `bg-container`, chữ body 14 thường `text`; không mũi tên,
@@ -874,17 +936,17 @@ function FilterGroup({
 function OptionGrid({ single = false, children }: { single?: boolean; children: ReactNode }) {
   return (
     <XStack flexWrap="wrap" columnGap={space.sm + space.xs} rowGap={2}>
-      {Array.isArray(children)
-        ? children.flat().map((child, index) =>
-            child ? (
-              <YStack key={index} w={single ? '100%' : '47%'}>
-                {child}
-              </YStack>
-            ) : null,
-          )
-        : (
-          <YStack w={single ? '100%' : '47%'}>{children}</YStack>
-        )}
+      {Array.isArray(children) ? (
+        children.flat().map((child, index) =>
+          child ? (
+            <YStack key={index} w={single ? '100%' : '47%'}>
+              {child}
+            </YStack>
+          ) : null,
+        )
+      ) : (
+        <YStack w={single ? '100%' : '47%'}>{children}</YStack>
+      )}
     </XStack>
   );
 }
@@ -929,16 +991,29 @@ function OptionRow({
           />
         )}
         {leading}
-        <Text f={1} col={colors.textMuted} fos={fontSize.body} numberOfLines={1}>
-          {label}
-        </Text>
-        {pill ? (
-          <YStack px={6} py={2} br={radius.pill} bg={colors.background} flexShrink={0}>
-            <Text col={colors.placeholder} fos={fontSize.bodySm} numberOfLines={1}>
-              {pill}
-            </Text>
-          </YStack>
-        ) : null}
+        {/*
+          Viên phụ nằm DƯỚI nhãn chứ không cạnh nhãn: ô lưới chỉ rộng nửa màn, máy hẹp mà để viên
+          không co ("7 chỗ · minivan") cạnh nhãn thì nhãn bị ép còn "…" — mất luôn tên kiểu xe.
+        */}
+        <YStack f={1} gap={2}>
+          <Text col={colors.textMuted} fos={fontSize.body} numberOfLines={2}>
+            {label}
+          </Text>
+          {pill ? (
+            <YStack
+              px={6}
+              py={2}
+              br={radius.pill}
+              bg={colors.background}
+              alignSelf="flex-start"
+              maxWidth="100%"
+            >
+              <Text col={colors.placeholder} fos={fontSize.bodySm} numberOfLines={1}>
+                {pill}
+              </Text>
+            </YStack>
+          ) : null}
+        </YStack>
       </XStack>
     </Pressable>
   );
@@ -1032,12 +1107,13 @@ function Segmented<T extends string>({
                 <Ionicons
                   name={item.icon}
                   size={20}
-                  color={active ? colors.primaryHover : colors.textMuted}
+                  color={active ? colors.brandText : colors.textMuted}
                 />
               ) : null}
               <Text
-                col={active ? colors.primaryHover : colors.textMuted}
-                fos={fontSize.body}
+                col={active ? colors.brandText : colors.textMuted}
+                fos={fontSize.bodyLg}
+                lh={24}
                 fow={fontWeight.medium}
                 ta="center"
               >
@@ -1055,7 +1131,14 @@ function Segmented<T extends string>({
 function SmallSwitch({ value }: { value: boolean }) {
   const colors = useColors();
   return (
-    <YStack w={28} h={16} br={radius.pill} bg={value ? colors.primary : colors.borderInput} jc="center" px={2}>
+    <YStack
+      w={28}
+      h={16}
+      br={radius.pill}
+      bg={value ? colors.primary : colors.borderInput}
+      jc="center"
+      px={2}
+    >
       <YStack w={12} h={12} br={radius.pill} bg={colors.surface} marginLeft={value ? 12 : 0} />
     </YStack>
   );

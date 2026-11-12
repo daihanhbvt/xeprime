@@ -1,6 +1,8 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import { DATE_TIME_SEPARATOR as SEP } from '@xeprime/domain';
+
 import { dayjs } from '@/lib/datetime';
 import { intlWrapper } from './test-utils';
 import { useAppFormat } from './use-app-format';
@@ -24,15 +26,15 @@ describe('tiền', () => {
     expect(format('en').money('12750000')).toBe('12,750,000 ₫');
   });
 
-  it('không đi qua Number — số 14 chữ số vẫn nguyên vẹn từng chữ số', () => {
+  it('không đi qua Number - số 14 chữ số vẫn nguyên vẹn từng chữ số', () => {
     // 2^53 ≈ 9,007e15; số này lớn hơn ngưỡng an toàn của float.
     expect(format('vi').money('99999999999999')).toBe('99.999.999.999.999 ₫');
     expect(format('en').money('99999999999999')).toBe('99,999,999,999,999 ₫');
   });
 
   it('rỗng/null ra dấu gạch, không ra "0 ₫"', () => {
-    expect(format('vi').money(null)).toBe('—');
-    expect(format('en').money('')).toBe('—');
+    expect(format('vi').money(null)).toBe('-');
+    expect(format('en').money('')).toBe('-');
   });
 
   it('rút gọn dùng bậc đọc của từng ngôn ngữ, cùng một ngưỡng', () => {
@@ -65,17 +67,21 @@ describe('ngày giờ', () => {
    * canh. Ngày-trước-giờ và đồng hồ 24 giờ đều là quy ước đã chốt của sản phẩm.
    */
   it('ngày ĐỨNG TRƯỚC giờ, đồng hồ 24 giờ, và luôn là giờ Việt Nam', () => {
-    expect(format('vi').dateTime(iso)).toBe('17/08/2026 08:00');
-    expect(format('en').dateTime(iso)).toBe('08/17/2026 08:00');
+    expect(format('vi').dateTime(iso)).toBe(`17/08/2026${SEP}08:00`);
+    expect(format('en').dateTime(iso)).toBe(`08/17/2026${SEP}08:00`);
   });
 
   it('khoảng ngày giờ dùng lại đúng cách đọc đó ở hai đầu', () => {
     const to = '2026-08-18T07:30:00.000Z';
-    expect(format('vi').dateTimeRange(iso, to)).toBe('17/08/2026 08:00 → 18/08/2026 14:30');
-    expect(format('en').dateTimeRange(iso, to)).toBe('08/17/2026 08:00 → 08/18/2026 14:30');
+    expect(format('vi').dateTimeRange(iso, to)).toBe(
+      `17/08/2026${SEP}08:00 → 18/08/2026${SEP}14:30`,
+    );
+    expect(format('en').dateTimeRange(iso, to)).toBe(
+      `08/17/2026${SEP}08:00 → 08/18/2026${SEP}14:30`,
+    );
   });
 
-  it('giờ đơn lẻ cũng 24 giờ — không có AM/PM lạc giữa các ô 24 giờ khác', () => {
+  it('giờ đơn lẻ cũng 24 giờ - không có AM/PM lạc giữa các ô 24 giờ khác', () => {
     const afternoon = '2026-08-17T07:30:00.000Z';
     expect(format('vi').time(afternoon)).toBe('14:30');
     expect(format('en').time(afternoon)).toBe('14:30');
@@ -99,7 +105,8 @@ describe('ngày giờ', () => {
 
   it('mốc thuê có THỨ và giờ, không có năm', () => {
     const point = format('vi').rentalPoint(dayjs('2026-08-08T10:00:00'));
-    expect(point).toBe('T7, 08/08 · 10:00');
+    expect(point).toBe(`T7, 08/08${SEP}10h00`);
+    expect(format('en').rentalPoint(dayjs('2026-08-08T10:00:00'))).toBe(`Sat, 08/08${SEP}10:00`);
     expect(point).not.toContain('2026');
     expect(format('vi').rentalPoint(dayjs('2026-08-09T10:00:00'), { withTime: false })).toBe(
       'CN, 09/08',
@@ -170,8 +177,8 @@ describe('thuê dài hạn (ADR 0011)', () => {
       pickupWindowStartDate: '2026-09-01',
       pickupWindowEndDate: '2026-09-07',
     };
-    expect(format('vi').pickupWish(wish)).toBe('Trong 7 ngày tới: 01/09 – 07/09/2026');
-    expect(format('en').pickupWish(wish)).toBe('Within the next 7 days: 09/01 – 09/07/2026');
+    expect(format('vi').pickupWish(wish)).toBe('Trong 7 ngày tới: 01/09 - 07/09/2026');
+    expect(format('en').pickupWish(wish)).toBe('Within the next 7 days: 09/01 - 09/07/2026');
   });
 
   it('yêu cầu cũ thiếu nguyện vọng: nói gian hàng sẽ chốt, không bịa một ngày', () => {

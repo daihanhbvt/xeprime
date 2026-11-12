@@ -4,13 +4,17 @@
     "subtitle": "Where your vehicles are parked. A branch decides which province your vehicles appear in on the marketplace.",
     "add": "Add branch",
     "needsReview": "{count, plural, one {# branch has} other {# branches have}} no province",
-    "needsReviewHint": "Vehicles at these branches are NOT shown on the marketplace until you add a province."
+    "needsReviewHint": "Vehicles at these branches are NOT shown on the marketplace until you add a province.",
+    "fixNow": "Fix now"
   },
   "toolbar": {
     "searchPlaceholder": "Search by name, code or address",
     "searchLabel": "Search branches",
     "summary": "{total, plural, one {# branch} other {# branches}} · {active} active",
-    "activeOnly": "Active only"
+    "activeOnly": "Active only",
+    "statusLabel": "Filter by status",
+    "allStatuses": "All statuses",
+    "summaryTotal": "{total, plural, one {# branch} other {# branches}} in total · <ok>{active} active</ok>"
   },
   "columns": {
     "branch": "Branch",
@@ -34,7 +38,7 @@
     "manage": "You do not have permission to manage branches",
     "inactive": "This branch is not active",
     "noProvince": "This branch has no province yet",
-    "isDefault": "The default branch cannot be deactivated — set another branch as default first"
+    "isDefault": "The default branch cannot be deactivated - set another branch as default first"
   },
   "confirmDeactivate": {
     "title": "Deactivate this branch?",
@@ -52,12 +56,13 @@
   },
   "form": {
     "createTitle": "Add branch",
-    "editTitle": "Edit {name}",
+    "editTitle": "Edit branch",
     "createOk": "Create branch",
     "nameLabel": "Branch name",
     "namePlaceholder": "e.g. Da Nang branch",
     "phoneLabel": "Phone number",
-    "phonePlaceholder": "0901234567"
+    "phonePlaceholder": "0901234567",
+    "makeDefault": "Set as default branch"
   },
   "scope": {
     "all": "All branches",
@@ -82,6 +87,9 @@
     "nameMin": "At least 2 characters",
     "provinceRequired": "Select the branch's province",
     "provinceInvalid": "Invalid province code",
-    "phoneInvalid": "Invalid phone number"
+    "phoneInvalid": "Invalid phone number",
+    "wardRequired": "Choose a ward",
+    "wardInvalid": "Invalid ward",
+    "addressLineRequired": "Enter the house number and street"
   }
 }

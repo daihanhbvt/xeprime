@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildLoginSchema, loginSchema, type AuthSchemaLabels } from './auth';
+import {
+  buildLoginSchema,
+  buildPartnerLoginSchema,
+  loginSchema,
+  registerSchema,
+  type AuthSchemaLabels,
+} from './auth';
 
 /**
  * Ô "Email hoặc số điện thoại" — thứ được khoá ở đây KHÔNG chỉ là "chặn được giá trị sai", mà là
@@ -31,7 +37,8 @@ describe('loginSchema.identifier', () => {
   });
 
   it('không đoán được định nhập gì → câu lỗi nêu CẢ HAI lựa chọn kèm ví dụ', async () => {
-    const message = await identifierError('nguyenvana');
+    // `nguyen van` có dấu cách: không phải SĐT, email hay tên đăng nhập nhân viên (ADR 0087).
+    const message = await identifierError('nguyen van');
     expect(message).toContain('email');
     expect(message).toContain('0901234567');
   });
@@ -68,7 +75,77 @@ describe('loginSchema.identifier', () => {
 
     await expect(check('ban@congty')).resolves.toBe(en.emailInvalid);
     await expect(check('0901')).resolves.toBe(en.invalid);
-    await expect(check('nguyenvana')).resolves.toBe(en.identifierInvalid);
+    await expect(check('nguyen van')).resolves.toBe(en.identifierInvalid);
+    // Tên đăng nhập nhân viên đúng hình dạng thì qua — site nào nhận là việc của backend.
+    await expect(check('kim.le')).resolves.toBeUndefined();
     await expect(check('0901234567')).resolves.toBeUndefined();
+  });
+});
+
+/** Lỗi ĐẦU TIÊN của một ô — đúng câu form hiện (react-hook-form chỉ hiện lỗi đầu của mỗi ô). */
+async function firstRegisterError(field: 'displayName' | 'password', value: string) {
+  try {
+    await registerSchema.validateAt(field, { [field]: value }, { abortEarly: false });
+    return undefined;
+  } catch (err) {
+    return (err as { errors: string[] }).errors[0];
+  }
+}
+
+describe('registerSchema.password — thứ tự báo lỗi (BR-AUTH-03: độ dài → số → chữ)', () => {
+  it.each([
+    ['abc', 'Mật khẩu tối thiểu 8 ký tự'],
+    ['!!!!!!!!', 'Mật khẩu cần có số'],
+    ['xeprimeabc', 'Mật khẩu cần có số'],
+    ['12345678', 'Mật khẩu cần có chữ'],
+  ])('%s → %s', async (value, message) => {
+    await expect(firstRegisterError('password', value)).resolves.toBe(message);
+  });
+});
+
+describe('registerSchema.displayName — DISPLAY_NAME_POLICY', () => {
+  it.each([
+    ['', 'Vui lòng nhập họ tên'],
+    ['      ', 'Vui lòng nhập họ tên'],
+    ['   A   ', 'Tên cần từ 2 đến 50 ký tự'],
+    ['A'.repeat(51), 'Tên cần từ 2 đến 50 ký tự'],
+    ['An@#', 'Tên chỉ gồm chữ cái, chữ số và khoảng trắng'],
+    ['<script>alert(1)</script>', 'Tên chỉ gồm chữ cái, chữ số và khoảng trắng'],
+  ])('%j → %s', async (value, message) => {
+    await expect(firstRegisterError('displayName', value)).resolves.toBe(message);
+  });
+
+  it('nhận đúng hai biên và tên tiếng Việt có dấu, có chữ số', async () => {
+    for (const value of ['An', 'A'.repeat(50), 'Nguyễn Thị Ánh', 'Trần Văn Bảo 2']) {
+      await expect(firstRegisterError('displayName', value)).resolves.toBeUndefined();
+    }
+  });
+
+  it('gõ dấu kiểu tổ hợp (NFD) không bị tính là dài hơn', async () => {
+    const nfd = 'Ễ'.repeat(50).normalize('NFD');
+    expect(nfd.length).toBeGreaterThan(50);
+    await expect(firstRegisterError('displayName', nfd)).resolves.toBeUndefined();
+  });
+});
+
+describe('buildPartnerLoginSchema - SĐT hoặc tên đăng nhập nhân viên (ADR 0087)', () => {
+  const schema = buildPartnerLoginSchema({} as AuthSchemaLabels);
+  const check = async (identifier: string) => {
+    try {
+      await schema.validateAt('identifier', { identifier, password: 'x' });
+      return undefined;
+    } catch (err) {
+      return (err as { message: string }).message;
+    }
+  };
+
+  it('nhận SĐT hợp lệ và tên đăng nhập', async () => {
+    await expect(check('0901234567')).resolves.toBeUndefined();
+    await expect(check('Kim.Le')).resolves.toBeUndefined();
+  });
+
+  it('từ chối email và chuỗi không ra hình gì, câu lỗi nêu hai lựa chọn', async () => {
+    await expect(check('ban@congty.vn')).resolves.toMatch(/tên đăng nhập/);
+    await expect(check('kim le')).resolves.toMatch(/tên đăng nhập/);
   });
 });

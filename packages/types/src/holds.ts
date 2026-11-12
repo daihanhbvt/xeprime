@@ -67,6 +67,18 @@ export const HOLD_PAYMENT_REMINDER_REMAINING_MINUTES = {
 } as const;
 
 /**
+ * Khoảng lặng giữa hai lời nhắc thanh toán tới CÙNG một khách cho CÙNG một khoản giữ chỗ — nút
+ * "Nhắc khách" của gian hàng (05/11/2026).
+ *
+ * Mốc so là lời nhắc GẦN NHẤT khách đã nhận, bất kể ai gửi: lúc khoản giữ chỗ ra đời (khách vừa
+ * nhận QR), hai mốc nhắc của worker (`HOLD_PAYMENT_REMINDER_REMAINING_MINUTES`) và lượt gian hàng
+ * bấm trước. Nhờ vậy khách không bao giờ nhận hai tin "hãy thanh toán" trong vòng chừng ấy phút,
+ * dù hai nhân viên cùng bấm hay worker vừa nhắc xong. Server là nơi chặn; client chỉ đọc
+ * `paymentReminderAvailableAt` để biết lúc nào nút mở lại.
+ */
+export const HOLD_HOST_REMINDER_COOLDOWN_MINUTES = 15;
+
+/**
  * Cửa sổ ngắn nhất còn có nghĩa để đưa QR cho khách.
  *
  * Hạn chuyển tiền bị KẸP bởi giờ nhận xe — một hold còn "chờ tiền" sau khi xe đáng lẽ đã giao

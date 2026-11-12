@@ -2,10 +2,9 @@ import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { SUPPORT_CAPABILITY, SUPPORT_MODE, type SupportCapability } from '@xeprime/types';
 import { describe, expect, it } from 'vitest';
-import { VEHICLE_EDIT_TAB, VEHICLE_MANAGE_SECTION } from '@/constants/routes';
+import { VEHICLE_EDIT_TAB } from '@/constants/routes';
 import {
   SupportSessionScope,
-  supportAllowsVehicleSection,
   supportAllowsVehicleTab,
   supportCanTouchBlock,
   supportSessionOf,
@@ -31,7 +30,7 @@ function wrapperFor(capabilities: SupportCapability[] | null) {
   };
 }
 
-describe('useSupportPinnedField — trường có điều kiện', () => {
+describe('useSupportPinnedField - trường có điều kiện', () => {
   it('ngoài phiên: không khoá ô nào', () => {
     const { result } = renderHook(() => useSupportPinnedField(), { wrapper: wrapperFor(null) });
     expect(result.current('branchId')).toBe(false);
@@ -73,7 +72,8 @@ describe('useSupportPinnedField — trường có điều kiện', () => {
 describe('mục / tab của xe theo capability', () => {
   it('giấy tờ và vận hành chỉ hiện khi phiên có capability tương ứng', () => {
     const view = sessionWith([SUPPORT_CAPABILITY.VEHICLE_VIEW]);
-    expect(supportAllowsVehicleSection(view, VEHICLE_MANAGE_SECTION.DOCUMENTS)).toBe(false);
+    expect(supportAllowsVehicleTab(view, VEHICLE_EDIT_TAB.DOCUMENTS)).toBe(false);
+    expect(supportAllowsVehicleTab(view, VEHICLE_EDIT_TAB.HANDOVER)).toBe(false);
     expect(supportAllowsVehicleTab(view, VEHICLE_EDIT_TAB.OPERATIONS)).toBe(false);
 
     const assist = sessionWith([
@@ -81,10 +81,11 @@ describe('mục / tab của xe theo capability', () => {
       SUPPORT_CAPABILITY.VEHICLE_DOCUMENT_MANAGE,
       SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
     ]);
-    expect(supportAllowsVehicleSection(assist, VEHICLE_MANAGE_SECTION.DOCUMENTS)).toBe(true);
-    expect(
-      supportAllowsVehicleSection(assist, VEHICLE_MANAGE_SECTION.HANDOVER_TIME),
-    ).toBe(true);
+    // Mục của menu 03/11/2026 giữ đúng capability của mục cũ; điều khoản (khu tiền) không bao giờ mở.
+    expect(supportAllowsVehicleTab(assist, VEHICLE_EDIT_TAB.HANDOVER)).toBe(true);
+    expect(supportAllowsVehicleTab(assist, VEHICLE_EDIT_TAB.SELF_DRIVE)).toBe(true);
+    expect(supportAllowsVehicleTab(assist, VEHICLE_EDIT_TAB.CONDITIONS)).toBe(false);
+    expect(supportAllowsVehicleTab(assist, VEHICLE_EDIT_TAB.PRICING)).toBe(false);
     expect(supportAllowsVehicleTab(assist, VEHICLE_EDIT_TAB.DOCUMENTS)).toBe(true);
     expect(supportAllowsVehicleTab(assist, VEHICLE_EDIT_TAB.OPERATIONS)).toBe(true);
   });
@@ -96,19 +97,20 @@ describe('mục / tab của xe theo capability', () => {
       SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
       SUPPORT_CAPABILITY.VEHICLE_INFO_EDIT,
     ]);
-    for (const section of [
-      // Giá & chính sách gồm cả giao xe có phí và cọc — khu TIỀN, không mở trong phiên.
-      VEHICLE_MANAGE_SECTION.PRICING,
-      VEHICLE_MANAGE_SECTION.TRIP_HISTORY,
+    // Giá & chính sách gồm cả giao xe có phí và cọc — khu TIỀN; điều khoản và lịch sử chuyến cũng không.
+    for (const tab of [
+      VEHICLE_EDIT_TAB.CONDITIONS,
+      VEHICLE_EDIT_TAB.LONG_TERM,
+      VEHICLE_EDIT_TAB.TRIP_HISTORY,
     ]) {
-      expect(supportAllowsVehicleSection(all, section)).toBe(false);
+      expect(supportAllowsVehicleTab(all, tab)).toBe(false);
     }
     expect(supportAllowsVehicleTab(all, VEHICLE_EDIT_TAB.PRICING)).toBe(false);
     expect(supportAllowsVehicleTab(all, VEHICLE_EDIT_TAB.SOURCE)).toBe(false);
   });
 });
 
-describe('supportCanTouchBlock — khoá lịch của chính phiên', () => {
+describe('supportCanTouchBlock - khoá lịch của chính phiên', () => {
   const future = new Date(Date.now() + 86400_000).toISOString();
   const past = new Date(Date.now() - 86400_000).toISOString();
   const session = sessionWith([SUPPORT_CAPABILITY.VEHICLE_SCHEDULE_BLOCK_MANAGE]);

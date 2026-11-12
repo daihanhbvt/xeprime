@@ -15,6 +15,7 @@ import type {
   CustomerUnpaidHolds,
   PrivateFileTicket,
   ProvideRefundAccountInput,
+  CustomerTripExtension,
 } from './types';
 
 export const TRIPS_DEFAULT_LIMIT = 10;
@@ -106,6 +107,14 @@ export function fetchUnpaidHolds(): Promise<CustomerUnpaidHolds> {
   return apiGet<CustomerUnpaidHolds>('/trips/unpaid-holds');
 }
 
+/**
+ * Phụ lục gia hạn của chuyến (ADR 0077) — mã XPE… + tài khoản nhận để quét QR. Mảng rỗng là câu
+ * trả lời bình thường (chuyến chưa từng gia hạn).
+ */
+export function fetchTripExtensions(id: string): Promise<CustomerTripExtension[]> {
+  return apiGet<CustomerTripExtension[]>(`/trips/${id}/extensions`);
+}
+
 export function fetchTrip(id: string): Promise<CustomerTripDetail> {
   return apiRequest<CustomerTripDetail>(`/trips/${id}`).then((res) => res.data);
 }
@@ -168,6 +177,25 @@ export function cancelTrip(
  */
 export function reportTripNotReceived(id: string): Promise<CustomerTripDetail> {
   return apiRequest<CustomerTripDetail>(`/trips/${id}/report-not-received`, {
+    method: 'POST',
+  }).then((res) => res.data);
+}
+
+/**
+ * Khách xác nhận "Đã nhận xe" — ADR 0081. Đơn sang đang thuê ngay; server trả về chính chuyến đó.
+ */
+export function confirmTripPickup(id: string): Promise<CustomerTripDetail> {
+  return apiRequest<CustomerTripDetail>(`/trips/${id}/confirm-pickup`, {
+    method: 'POST',
+  }).then((res) => res.data);
+}
+
+/**
+ * Khách báo "Đã trả xe" — ADR 0081. Chủ xe xác nhận trong hạn, im lặng quá hạn thì chuyến tự hoàn
+ * thành; server trả về chính chuyến đó với `customerReturnedAt`.
+ */
+export function reportTripReturned(id: string): Promise<CustomerTripDetail> {
+  return apiRequest<CustomerTripDetail>(`/trips/${id}/report-returned`, {
     method: 'POST',
   }).then((res) => res.data);
 }

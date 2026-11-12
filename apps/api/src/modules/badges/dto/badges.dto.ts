@@ -27,7 +27,7 @@ export class UserBadgesDto implements UserBadgeCounts {
     example: 1_757_600_000_000,
     description:
       'Mốc máy chủ (epoch ms) lúc đếm. Client so nó với `updatedAt` của bản chiếu realtime để ' +
-      'một document cũ không đè lên lượt đọc mới hơn — ví dụ sau một quãng `FIRESTORE_ENABLED=false`.',
+      'một document cũ không đè lên lượt đọc mới hơn - ví dụ sau một quãng `FIRESTORE_ENABLED=false`.',
   })
   asOf!: number;
 }

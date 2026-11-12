@@ -1,8 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
-import { Pressable } from 'react-native';
-import { useController, useForm, useWatch, type Control } from 'react-hook-form';
-import { Text, XStack, YStack } from 'tamagui';
+import { useForm, useWatch } from 'react-hook-form';
+import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   API_ERROR_CODE,
@@ -10,12 +8,11 @@ import {
   MAINTENANCE_TYPE_VALUES,
   PERMISSION,
 } from '@xeprime/types';
-import { appWallClockToIso, nowInAppTz, toAppTz, type Dayjs } from '@xeprime/domain';
+import { DAY_PARAM_FORMAT, startOfAppDay, toAppTz } from '@xeprime/domain';
+import { DateField } from '@/components/ui/DateField';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout, CalloutBody } from '@/components/ui/Callout';
-import { FieldLabel, FieldMessage, FieldShell } from '@/components/ui/Field';
-import { MomentPickerSheet } from '@/components/ui/MomentPickerSheet';
 import { MoneyField } from '@/components/ui/MoneyField';
 import { NumberField } from '@/components/ui/NumberField';
 import { SelectField } from '@/components/ui/SelectField';
@@ -28,7 +25,7 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { getErrorCode } from '@/lib/api-client';
 import { useColors } from '@/theme/ThemeProvider';
-import { fieldFontSize, fontSize, iconSize, space } from '@/theme/tokens';
+import { fontSize, space } from '@/theme/tokens';
 import { maintenanceRecordFormSchema, type MaintenanceRecordFormValues } from '../schema';
 import { useSaveMaintenanceRecord, useTransitionMaintenanceRecord } from '../hooks/use-maintenance';
 import type { MaintenanceRecord } from '../api';
@@ -39,7 +36,7 @@ export type RecordSheetMode =
   | { mode: 'edit'; record: MaintenanceRecord }
   | { mode: 'complete'; record: MaintenanceRecord };
 
-/** Khoảng đã bị chiếm mà server trả kèm 409 — đúng hình dạng `details.conflicts` bên web. */
+/** Khoảng đã bị chiếm mà server trả kèm 409 - đúng hình dạng `details.conflicts` bên web. */
 interface ScheduleConflict {
   sourceType: string;
   startAt: string;
@@ -48,18 +45,18 @@ interface ScheduleConflict {
 }
 
 /**
- * Tấm trượt phiếu bảo dưỡng — bản native của `MaintenanceRecordDialog` bên web, cùng nhãn và
+ * Tấm trượt phiếu bảo dưỡng - bản native của `MaintenanceRecordDialog` bên web, cùng nhãn và
  * cùng thứ tự ô.
  *
- * **Hoàn tất chỉ hỏi bốn ô** (KM, chi phí, mã chứng từ, ghi chú) — loại hạng mục và khoảng thời
+ * **Hoàn tất chỉ hỏi bốn ô** (KM, chi phí, mã chứng từ, ghi chú) - loại hạng mục và khoảng thời
  * gian đã chốt lúc tạo, hỏi lại là mời người dùng sửa một thứ họ không định sửa.
  *
  * Thời gian đi lên API dạng **ISO UTC** (CLAUDE.md §9: lưu UTC, hiển thị `Asia/Ho_Chi_Minh`), và
- * phải đủ CẶP thì phiếu mới giữ chỗ trên lịch xe (ADR 0006) — schema chặn trước, backend chặn thật.
+ * phải đủ CẶP thì phiếu mới giữ chỗ trên lịch xe (ADR 0006) - schema chặn trước, backend chặn thật.
  *
  * Trùng lịch KHÔNG đẩy ra toast: server trả về chính khoảng bị đụng, nên tấm trượt hiện nguyên
- * khoảng đó và GIỮ dữ liệu đã nhập — lối ra là đổi giờ ngay tại đây, không phải gõ lại từ đầu.
- * Các mã lỗi còn lại đi qua `useErrorMessage()` (ánh xạ từ MÃ — ADR 0012), không gõ câu lỗi tay.
+ * khoảng đó và GIỮ dữ liệu đã nhập - lối ra là đổi giờ ngay tại đây, không phải gõ lại từ đầu.
+ * Các mã lỗi còn lại đi qua `useErrorMessage()` (ánh xạ từ MÃ - ADR 0012), không gõ câu lỗi tay.
  */
 export function MaintenanceRecordSheet({
   vehicleId,
@@ -70,7 +67,7 @@ export function MaintenanceRecordSheet({
   vehicleId: string;
   state: RecordSheetMode;
   /**
-   * `vehicles.maintenance.file.view` — quyền RIÊNG cho chứng từ, không suy từ `manage`.
+   * `vehicles.maintenance.file.view` - quyền RIÊNG cho chứng từ, không suy từ `manage`.
    *
    * Web truyền đúng cờ này vào `MaintenanceRecordDialog` từ CẢ hai lối vào (tab bảo dưỡng của xe
    * và tấm bảo dưỡng trên lịch). Thiếu nó thì người có quyền xem chứng từ vẫn không thấy chúng.
@@ -94,7 +91,7 @@ export function MaintenanceRecordSheet({
   const record = state.mode === 'create' ? null : state.record;
   const completing = state.mode === 'complete';
   /*
-   * Chi phí + mã phiếu chi đi theo `vehicles.maintenance.view_cost` — đúng `MaintenanceRecordDialog`
+   * Chi phí + mã phiếu chi đi theo `vehicles.maintenance.view_cost` - đúng `MaintenanceRecordDialog`
    * bên web: thiếu quyền thì hai ô không có mặt và KHÔNG có trong lệnh gửi (gửi `null` là xoá chi
    * phí đang lưu, và backend từ chối lệnh mang hai trường này từ người không thấy chúng).
    */
@@ -105,12 +102,13 @@ export function MaintenanceRecordSheet({
       type: (record?.type ?? MAINTENANCE_TYPE.OIL_CHANGE) as MaintenanceRecordFormValues['type'],
       customTypeName: record?.customTypeName ?? '',
       title: record?.title ?? '',
-      // ISO từ API → Dayjs cho bộ chọn; chiều ngược lại serialize lúc gửi.
-      plannedStartAt: record?.plannedStartAt ? toAppTz(record.plannedStartAt) : null,
-      plannedEndAt: record?.plannedEndAt ? toAppTz(record.plannedEndAt) : null,
+      // ISO từ API → khoá ngày giờ Việt Nam cho bộ chọn; chiều ngược lại đổi lúc gửi.
+      plannedDate: record?.plannedStartAt
+        ? toAppTz(record.plannedStartAt).format(DAY_PARAM_FORMAT)
+        : null,
       odometerKm: record?.odometerKm ?? null,
       providerName: record?.providerName ?? '',
-      // `cost` VẮNG MẶT khi thiếu quyền xem tiền — không dựng số 0 giả vào form.
+      // `cost` VẮNG MẶT khi thiếu quyền xem tiền - không dựng số 0 giả vào form.
       cost: record?.cost != null ? Number(record.cost) : null,
       receiptCode: record?.receiptCode ?? '',
       notes: record?.notes ?? '',
@@ -125,7 +123,7 @@ export function MaintenanceRecordSheet({
   const { control, handleSubmit } = useForm<MaintenanceRecordFormValues>({
     resolver,
     defaultValues: defaults,
-    // `values` để RHF tự đồng bộ khi đổi phiếu — không cần effect reset thủ công.
+    // `values` để RHF tự đồng bộ khi đổi phiếu - không cần effect reset thủ công.
     values: defaults,
   });
   const type = useWatch({ control, name: 'type' });
@@ -178,9 +176,9 @@ export function MaintenanceRecordSheet({
         type: values.type,
         customTypeName: values.type === MAINTENANCE_TYPE.OTHER ? text(values.customTypeName) : null,
         title: text(values.title),
-        // Mặt đồng hồ giờ Việt Nam — đúng `MaintenanceRecordDialog` bên web.
-        plannedStartAt: values.plannedStartAt ? appWallClockToIso(values.plannedStartAt) : null,
-        plannedEndAt: values.plannedEndAt ? appWallClockToIso(values.plannedEndAt) : null,
+        // 00:00 giờ Việt Nam của ngày chọn - đúng `MaintenanceRecordDialog` bên web. Không gửi
+        // `plannedEndAt`: server bỏ qua nó (ADR 0079).
+        plannedStartAt: values.plannedDate ? startOfAppDay(values.plannedDate).toISOString() : null,
         odometerKm: values.odometerKm,
         providerName: text(values.providerName),
         ...(canViewCost
@@ -207,7 +205,11 @@ export function MaintenanceRecordSheet({
     })();
   }
 
-  const title = completing ? t('form.complete') : record ? t('form.edit') : t('form.create');
+  const title = completing
+    ? t('form.complete')
+    : record
+      ? t('form.edit')
+      : tMaintenance('record.titleCreate');
   const submitLabel = completing
     ? t('form.submitComplete')
     : record
@@ -271,14 +273,8 @@ export function MaintenanceRecordSheet({
               placeholder={t('form.titlePlaceholder')}
             />
 
-            {/* Đủ CẶP thì phiếu giữ chỗ trên lịch xe; để trống cả hai nếu chưa xếp lịch. */}
-            <MomentField control={control} name="plannedStartAt" label={t('form.plannedStartAt')} />
-            <MomentField
-              control={control}
-              name="plannedEndAt"
-              label={t('form.plannedEndAt')}
-              hint={t('form.scheduleHint')}
-            />
+            {/* Chỉ để nhắc - không giữ chỗ trên lịch xe (ADR 0079). */}
+            <DateField control={control} name="plannedDate" label={tMaintenance('record.plannedDate')} />
 
             <TextField
               control={control}
@@ -318,10 +314,10 @@ export function MaintenanceRecordSheet({
           maxLength={2000}
         />
 
-        {completing ? <Callout tone="info" title={t('form.completeHint')} /> : null}
+        {completing ? <Callout tone="info" title={tMaintenance('record.completeHint')} /> : null}
 
         {/*
-          Số chứng từ đính kèm — đúng dòng web đặt ở cuối hộp (`MaintenanceRecordDialog`:321).
+          Số chứng từ đính kèm - đúng dòng web đặt ở cuối hộp (`MaintenanceRecordDialog`:321).
           Gác bằng quyền RIÊNG `vehicles.maintenance.file.view`, không suy từ `manage`: người
           sửa được phiếu chưa chắc được xem chứng từ của nó.
         */}
@@ -335,87 +331,3 @@ export function MaintenanceRecordSheet({
   );
 }
 
-/**
- * Ô chọn MỘT THỜI ĐIỂM (ngày + giờ) cho React Hook Form — giá trị giữ nguyên `Dayjs`.
- *
- * Vỏ ô dựng y hệt [`DateField`](../../vehicles/components/DateField.tsx) của các tab hồ sơ xe —
- * nhãn, `FieldShell`, biểu tượng lịch, dấu × xoá NẰM TRONG ô. Trước đó ô này tự vẽ một kiểu
- * riêng và treo nút "Bỏ chọn thời điểm" thành một nút ghost bên dưới, nên hai ô thời gian đọc
- * ra khác hẳn mọi ô còn lại của cùng màn.
- *
- * Vẫn là ngày + GIỜ chứ không phải ngày trần: đủ cặp thì phiếu chiếm một khoảng thật trên
- * `vehicle_occupancies` (ADR 0006), mà hai mốc cùng rơi về 00:00 của một ngày là khoảng RỖNG.
- * Web cũng dùng `DateTimeField` không `dateOnly` ở đúng hai ô này.
- *
- * Không serialize ở đây: hai mốc phải so được với nhau trong schema (`isAfter`), và hoá chuỗi
- * sớm là ép schema phải parse ngược.
- */
-function MomentField({
-  control,
-  name,
-  label,
-  hint,
-}: {
-  control: Control<MaintenanceRecordFormValues>;
-  name: 'plannedStartAt' | 'plannedEndAt';
-  label: string;
-  hint?: string;
-}) {
-  const colors = useColors();
-  const tCommon = useTranslations('Common');
-  const fmt = useAppFormat();
-  const { field, fieldState } = useController({ control, name });
-  const [open, setOpen] = useState(false);
-
-  const value = field.value as Dayjs | null;
-  const error = fieldState.error?.message;
-
-  return (
-    <YStack gap={space.xs}>
-      <FieldLabel label={label} />
-
-      <Pressable
-        onPress={() => setOpen(true)}
-        accessibilityRole="button"
-        accessibilityLabel={label}
-      >
-        <FieldShell focused={open} invalid={Boolean(error)} align="center">
-          <Text f={1} col={value ? colors.text : colors.placeholder} fos={fieldFontSize.value}>
-            {value ? fmt.rentalPoint(value, { withTime: true }) : tCommon('labels.selectDate')}
-          </Text>
-
-          {/* `Pressable` RIÊNG: lồng trong `Pressable` mở lịch thì chạm × cũng bung bảng chọn. */}
-          {value ? (
-            <Pressable
-              onPress={() => field.onChange(null)}
-              accessibilityRole="button"
-              accessibilityLabel={tCommon('actions.clearValue')}
-              hitSlop={space.sm}
-            >
-              <XStack ai="center" jc="center">
-                <Ionicons name="close-circle" size={iconSize.sm} color={colors.textMuted} />
-              </XStack>
-            </Pressable>
-          ) : (
-            <Ionicons name="calendar-outline" size={iconSize.sm} color={colors.textMuted} />
-          )}
-        </FieldShell>
-      </Pressable>
-
-      <FieldMessage error={error} hint={hint} />
-
-      {open ? (
-        <MomentPickerSheet
-          open
-          onClose={() => setOpen(false)}
-          value={value ?? nowInAppTz()}
-          title={label}
-          onChange={(next) => {
-            field.onChange(next);
-            setOpen(false);
-          }}
-        />
-      ) : null}
-    </YStack>
-  );
-}

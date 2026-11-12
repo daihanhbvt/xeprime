@@ -1,12 +1,12 @@
 /*
- * "Khách hàng nói gì về XePrime" (Figma `19695:40832`, ADR 0062): thẻ trắng bo 16px, đệm 16px,
+ * "Khách hàng nói gì về XePrime" (Figma `21965:5359`, ADR 0062): tiêu đề cách thẻ 40; thẻ trắng bo 16px, đệm 16px,
  * các hàng cách nhau 12px — 5 sao 24px, dấu trích dẫn 20px, lời nhận xét, người đánh giá.
  */
 .section {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: var(--xp-space-lg);
+  gap: var(--xp-space-40);
 }
 
 .skeletonRow {
@@ -56,7 +56,7 @@
   font-size: var(--xp-font-size-body);
   -webkit-line-clamp: 5;
   line-clamp: 5;
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
   overflow-wrap: anywhere;
 }
 
@@ -102,11 +102,21 @@
 .trips {
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 @media (max-width: 640px) {
   .skeletonRow {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* Figma dark (`19879:66286`): thẻ đánh giá nổi trên nền tối bằng nền elevated, chữ nhận xét sáng hơn. */
+:global([data-theme='dark']) .card {
+  background: var(--xp-color-bg-elevated);
+}
+
+/* Figma dark: nội dung nhận xét xám sáng. */
+:global([data-theme='dark']) .comment {
+  color: var(--xp-color-text-on-dark-muted);
 }

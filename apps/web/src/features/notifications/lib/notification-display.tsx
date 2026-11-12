@@ -22,8 +22,6 @@ import {
 } from '@ant-design/icons';
 import { NOTIFICATION_TARGET_TYPE, NOTIFICATION_TYPE, type NotificationType } from '@xeprime/types';
 import {
-  ACCOUNT_SECTION,
-  accountSectionPath,
   listingPath,
   ROUTES,
   tripPath,
@@ -180,25 +178,18 @@ export function notificationHref(
     }
   }
   /*
-   * Owner Lite: "Hồ sơ chủ xe" thay cho trang Cửa hàng, và "Chuyến cho thuê" thay cho CẢ hộp thư
-   * yêu cầu lẫn bảng đơn (hai URL đó tự chuyển chủ xe sang đây — đi thẳng đỡ một lần chớp trang).
-   * Còn lại CÙNG màn với tuyến gói.
+   * Owner Lite: CÙNG màn với tuyến gói — kể cả "Hồ sơ chủ xe", nay là trang Thông tin `/shop` với mặt
+   * tiền cá nhân (ADR 0085), và yêu cầu + đơn ở "Đơn thuê xe" từ 06/11/2026.
    */
-  if (context === 'owner') {
-    if (target === NOTIFICATION_TARGET_TYPE.TENANT)
-      return accountSectionPath(ACCOUNT_SECTION.PROFILE);
-    if (
-      target === NOTIFICATION_TARGET_TYPE.BOOKING ||
-      target === NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST
-    ) {
-      return ROUTES.MANAGE.TRIPS;
-    }
+  if (context === 'owner' && target === NOTIFICATION_TARGET_TYPE.TENANT) {
+    return ROUTES.MANAGE.SHOP;
   }
   switch (target) {
     case NOTIFICATION_TARGET_TYPE.BOOKING:
       return ROUTES.MANAGE.BOOKINGS;
+    // Yêu cầu + đơn ở cùng màn "Đơn thuê xe" (05/11/2026) — ô "Tất cả" thấy chuyến ở mọi chặng.
     case NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST:
-      return ROUTES.MANAGE.BOOKING_REQUESTS;
+      return ROUTES.MANAGE.BOOKINGS;
     case NOTIFICATION_TARGET_TYPE.TENANT:
       return ROUTES.MANAGE.SHOP;
     case NOTIFICATION_TARGET_TYPE.VEHICLE:

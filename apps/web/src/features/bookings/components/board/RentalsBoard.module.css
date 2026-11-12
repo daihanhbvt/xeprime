@@ -1,0 +1,321 @@
+/*
+ * Bảng Kanban của màn "Đơn thuê xe" — Figma Partner-XePrime "Rental Request - Kanban" (`23895:15181`,
+ * 05/11/2026): bốn cột 372 cách 24, đệm 12, nền xám nhạt bo 16; dải tiêu đề cao 40, thẻ cách 8. Cột cao bằng cột dài nhất (grid
+ * kéo giãn) để vùng thả luôn là CẢ cột, kể cả cột trống. Màn hẹp hơn bốn cột 300px (tablet) thì
+ * cuộn ngang; điện thoại không có Kanban (luôn List — `useRentalsView`).
+ *
+ * Khung bảng KHÔNG cuộn dọc: chỉ từng cột cuộn danh sách thẻ của nó, lăn chuột ngoài cột thì cả trang
+ * cuộn. Cột cao gần trọn khung nhìn dưới header dính (10/11/2026): mới mở trang thì đáy bảng nằm dưới
+ * nếp gấp một đoạn bằng phần đầu trang (tiêu đề + bộ lọc); cuộn trang xuống là phần đầu trôi đi và
+ * bảng chiếm cả màn. `overflow-x: auto` một mình sẽ kéo `overflow-y` thành `auto` và mọc thêm một thanh cuộn dọc
+ * cho cả bảng, nên phải khoá trục dọc tường minh. Thanh cuộn (ngang ở đây, dọc ở cột) dùng màu vàng
+ * nhạt chung của `globals.css`, không tô lại.
+ */
+.board {
+  display: grid;
+  grid-auto-columns: minmax(320px, 1fr);
+  grid-auto-flow: column;
+  align-items: stretch;
+  gap: var(--xp-space-lg);
+  margin-top: 20px;
+  padding-bottom: var(--xp-space-sm);
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+}
+
+.column {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+  /* 48 = 16 cách header khi đã cuộn + 8 chỗ thanh cuộn ngang của bảng + 24 đệm đáy trang. */
+  max-height: calc(100dvh - var(--xp-shell-header-offset, var(--xp-shell-topbar-height)) - 48px);
+  /* Mép phải 16 (không phải 12): thanh cuộn dọc của cột nằm TRONG khoảng này — xem `.columnBody`. */
+  padding: var(--xp-space-12) var(--xp-space-md) var(--xp-space-12) var(--xp-space-12);
+  border: 1px dashed transparent;
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-muted);
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    opacity 150ms ease;
+}
+
+/*
+ * Vùng cuộn dọc của TỪNG CỘT Kanban: dải tiêu đề đứng yên ở đỉnh cột, danh sách thẻ cuộn bên
+ * dưới. Thanh cuộn là thanh vàng nhạt chung (`globals.css`). KHÔNG chặn cuộn lan: cuộn tới đáy
+ * cột thì phần còn lại đẩy cả trang, để phần đầu trang trôi đi và cột cao thêm mà không phải rời
+ * chuột khỏi cột.
+ *
+ * Thanh cuộn KHÔNG ăn bề rộng thẻ (10/11/2026): vùng cuộn thò sang phải 13px vào lề 16 của cột,
+ * thanh cuộn mảnh (~10px) nằm giữa lề đó, thẻ vẫn dừng cách mép cột 16. `scrollbar-gutter: stable`
+ * giữ chỗ cả khi cột chưa đủ dài để cuộn, nên thẻ ở mọi cột rộng bằng nhau. Màn cảm ứng không có
+ * thanh cuộn chiếm chỗ ⇒ trả về lề 12 đều hai bên.
+ *
+ * Thanh mờ khi đứng yên, rõ dần khi đang cuộn (`data-scrolling` của `useScrollingFlag`) rồi mờ
+ * chậm lại khi dừng. Màu lúc cuộn là vàng nhạt chung của thanh cuộn, không phải gold đậm của nút.
+ */
+.columnBody {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-height: 0;
+  margin-right: -13px;
+  padding-right: 3px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  --xp-scrollbar-thumb: color-mix(in srgb, var(--xp-gold-soft) 35%, transparent);
+  scrollbar-color: var(--xp-scrollbar-thumb) transparent;
+  transition: --xp-scrollbar-thumb 600ms ease;
+}
+
+.columnBody[data-scrolling] {
+  --xp-scrollbar-thumb: var(--xp-gold-soft);
+  transition-duration: 250ms;
+}
+
+@media (pointer: coarse) {
+  .column {
+    padding-right: var(--xp-space-12);
+  }
+
+  .columnBody {
+    margin-right: 0;
+    padding-right: 0;
+    scrollbar-gutter: auto;
+  }
+}
+
+/* Dải tiêu đề cột không cần khoảng dưới riêng — cột đã có `gap`. */
+.column > :first-child {
+  margin-bottom: 0;
+}
+
+/* Đang cầm thẻ: cột nhận được thì viền gold, cột khoá viền xám, cột không phải bước kế mờ đi. */
+.dropAllowed {
+  border-color: var(--xp-color-primary);
+}
+
+.dropAllowed.over {
+  background: var(--xp-color-primary-subtle);
+}
+
+.dropLocked {
+  border-color: var(--xp-color-border-strong);
+}
+
+.dropNotNext {
+  opacity: 0.6;
+}
+
+/*
+ * Câu gợi ý NỔI ngay dưới dải tiêu đề, không chen vào dòng chảy: hiện ra lúc bắt đầu kéo mà đẩy thẻ
+ * của cột xuống là thẻ nhảy dưới con trỏ.
+ */
+.hintAllowed,
+.hintLocked {
+  position: absolute;
+  z-index: 1;
+  top: 60px;
+  right: var(--xp-space-md);
+  left: var(--xp-space-12);
+  box-shadow: 0 4px 12px -4px rgba(10, 13, 18, 0.12);
+  margin: 0;
+  padding: var(--xp-space-12);
+  border: 1px dashed var(--xp-color-primary);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+  text-align: center;
+}
+
+.hintLocked {
+  border-color: var(--xp-color-border-strong);
+  color: var(--xp-color-text-secondary);
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Dữ liệu CŨ trong lúc tải bộ lọc mới — như dạng List; làm mới nền (30 giây) không vào đây. */
+.cardsBusy {
+  composes: cards;
+  opacity: 0.6;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+/* Thẻ gốc mờ đi trong lúc bóng của nó đi theo con trỏ — nó KHÔNG rời cột cho tới khi server đổi. */
+.cardDragging {
+  opacity: 0.4;
+}
+
+.columnEmpty,
+.columnNote {
+  margin: 0;
+  padding: var(--xp-space-lg) var(--xp-space-md);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 18px;
+  text-align: center;
+}
+
+.columnNote {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.columnNote p {
+  margin: 0;
+}
+
+.loadMore {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xp-space-sm);
+  min-height: 32px;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* Tay nắm ⋮⋮ ở đầu thẻ — `touch-action: none` để kéo bằng tay trên tablet không thành cuộn trang. */
+.handle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-left: calc(-1 * var(--xp-space-xs));
+  padding: 0;
+  border: 0;
+  border-radius: var(--xp-border-radius-sm);
+  background: none;
+  color: var(--xp-color-text-tertiary);
+  font-size: 16px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.handle:hover {
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+}
+
+.handle:active {
+  cursor: grabbing;
+}
+
+.handle:focus-visible {
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 1px;
+}
+
+/* Bóng thẻ đang cầm (DragOverlay) — khung gọn ở đỉnh vùng cỡ thẻ gốc. */
+.preview {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-12);
+  border: 1px solid var(--xp-color-primary);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 12px 24px -6px rgba(10, 13, 18, 0.18);
+  cursor: grabbing;
+}
+
+.previewThumb {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  width: 64px;
+  height: 40px;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-placeholder);
+  font-size: 20px;
+}
+
+.previewThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.previewText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 18px;
+}
+
+.previewText strong {
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.previewText > span {
+  color: var(--xp-color-text-secondary);
+}
+
+.previewStage {
+  color: var(--xp-color-text-tertiary);
+}
+
+@media (max-width: 1440px) {
+  .board {
+    /* 280: bốn cột + ba khe 16 vừa vùng nội dung ~1220 của màn 1280 (đã trừ thanh cuộn dọc của trang). */
+    grid-auto-columns: minmax(280px, 1fr);
+    gap: var(--xp-space-md);
+  }
+}
+
+@media (max-width: 1024px) {
+  .board {
+    /* 320 = thẻ 294, bề rộng nhỏ nhất mà dòng "Thời gian" còn nằm một hàng (RentalBoardCard). */
+    grid-auto-columns: minmax(320px, 1fr);
+    gap: var(--xp-space-12);
+    scroll-snap-type: x proximity;
+  }
+
+  .column {
+    max-height: calc(
+      100dvh - var(--xp-shell-header-offset, var(--xp-shell-topbar-height)) -
+        var(--xp-shell-bottom-nav-height) - 40px - env(safe-area-inset-bottom, 0px)
+    );
+    scroll-snap-align: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .column,
+  .cardsBusy {
+    transition: none;
+  }
+}

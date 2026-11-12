@@ -19,29 +19,30 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { BillingService } from '../billing/billing.service';
 import { BookingHoldsService } from '../holds/booking-holds.service';
+import { BookingExtensionsService } from '../booking-extensions/booking-extensions.service';
 import type { SepayWebhookResultDto } from './dto/sepay.dto';
 
 /**
- * Nhà cung cấp đối soát của mọi dòng do service này ghi — nằm trong khoá unique
+ * Nhà cung cấp đối soát của mọi dòng do service này ghi - nằm trong khoá unique
  * `(provider, provider_tx_id)`, nên ghi và đọc lại phải dùng CÙNG một chuỗi. Gõ tay ở ba chỗ là
  * ba chỗ để chốt chống ghi đôi lệch khỏi nhau.
  */
 const SEPAY_PROVIDER = 'sepay';
 
 /**
- * Đối soát tiền VÀO qua SePay — writer DUY NHẤT của `bank_transactions` (ADR 0022).
+ * Đối soát tiền VÀO qua SePay - writer DUY NHẤT của `bank_transactions` (ADR 0022).
  *
  * Nguyên tắc xuyên suốt, xếp theo thứ tự sống còn:
  *
- *  1. **Ghi thô trước, khớp sau — HAI transaction tách rời.** Dòng `bank_transactions` được
+ *  1. **Ghi thô trước, khớp sau - HAI transaction tách rời.** Dòng `bank_transactions` được
  *     chèn và COMMIT trước khi biết nội dung khớp vào đâu. Một lượt khớp hỏng vì thế không cuốn
  *     theo bằng chứng rằng tiền đã tới: giao dịch nằm lại hàng đợi admin, đúng chỗ của nó.
  *  2. **Idempotent bằng unique DB**, không bằng check tầng app: `(provider, provider_tx_id)`.
  *     Bắt P2002 = "đã nhận rồi" → 200, và chỉ khớp tiếp nếu dòng cũ còn `unmatched` (xem bất
- *     biến ở `ingest`). KHÔNG BAO GIỜ trả 5xx cho một giao dịch đã nhận — SePay retry vĩnh viễn.
+ *     biến ở `ingest`). KHÔNG BAO GIỜ trả 5xx cho một giao dịch đã nhận - SePay retry vĩnh viễn.
  *  3. **Không tin payload lấy tenant.** Mọi hiệu ứng ghi đều suy từ ĐÍCH đã khớp qua mã đối
  *     soát; webhook không có ngữ cảnh tenant nào.
- *  4. **Không khớp tự động theo số tiền** (ADR 0022 điều 4) — không rút được mã thì nằm ở
+ *  4. **Không khớp tự động theo số tiền** (ADR 0022 điều 4) - không rút được mã thì nằm ở
  *     hàng đợi `unmatched` cho admin, kể cả khi số tiền trùng khớp một hoá đơn duy nhất.
  *  5. **Log không mang tiền nhạy cảm**: chỉ id giao dịch + kết quả khớp. Nội dung chuyển khoản
  *     và payload nguyên trạng nằm ở DB làm bằng chứng, không nằm ở log.
@@ -56,26 +57,28 @@ export class SepayService {
     private readonly billing: BillingService,
     private readonly holds: BookingHoldsService,
     config: ConfigService,
+    /** `XPE…` - phụ lục gia hạn (ADR 0077). */
+    private readonly extensions: BookingExtensionsService,
   ) {
     const key = config.get<string>('SEPAY_API_KEY');
     /*
-     * So sánh time-safe cần hai buffer CÙNG ĐỘ DÀI — `timingSafeEqual` ném khi khác length, và
+     * So sánh time-safe cần hai buffer CÙNG ĐỘ DÀI - `timingSafeEqual` ném khi khác length, và
      * bắt exception đó lại chính là một kênh đo độ dài khoá. Hash cả hai vế về 32 byte trước
      * khi so: độ dài luôn bằng nhau, và phép so không rò gì ngoài đúng/sai.
      */
     this.apiKeyHash = key ? sha256(key) : null;
   }
 
-  /** Webhook đã cấu hình chưa — controller trả 503 fail-closed khi chưa. */
+  /** Webhook đã cấu hình chưa - controller trả 503 fail-closed khi chưa. */
   get configured(): boolean {
     return this.apiKeyHash !== null;
   }
 
   /**
-   * Kiểm khoá webhook — header `Authorization: Apikey <key>` (định dạng của SePay).
+   * Kiểm khoá webhook - header `Authorization: Apikey <key>` (định dạng của SePay).
    *
    * 401 KHÔNG kèm chi tiết nào: đây là endpoint công khai duy nhất có quyền ghi tiền
-   * (ADR 0022 — mã lỗi `SEPAY_SIGNATURE_INVALID` cũng chỉ nói "sai khoá", không nói sai chỗ nào).
+   * (ADR 0022 - mã lỗi `SEPAY_SIGNATURE_INVALID` cũng chỉ nói "sai khoá", không nói sai chỗ nào).
    */
   assertApiKey(authorization: string | undefined): void {
     if (!this.apiKeyHash) {
@@ -102,14 +105,14 @@ export class SepayService {
    * HAI BƯỚC COMMIT RIÊNG, và đó là điều quan trọng nhất ở đây (16/09/2026).
    *
    * Trước đợt này, dòng `bank_transactions` được chèn trong CÙNG transaction với lượt khớp. Đọc
-   * thì giống nguyên tắc 1, nhưng hiệu ứng thì ngược hẳn: bất kỳ lỗi nào trong lúc khớp —
+   * thì giống nguyên tắc 1, nhưng hiệu ứng thì ngược hẳn: bất kỳ lỗi nào trong lúc khớp -
    * deadlock với một lượt khách huỷ cùng lúc, `EXCLUDE` của lịch nổ khi mở đơn, một bug ở tầng
-   * tạo đơn — đều cuốn LUÔN dòng tiền đó theo, rồi trả 5xx. Kết quả: SePay retry, lỗi lặp lại y
+   * tạo đơn - đều cuốn LUÔN dòng tiền đó theo, rồi trả 5xx. Kết quả: SePay retry, lỗi lặp lại y
    * hệt, và khoản tiền thật của khách không có một dòng nào trong sổ để admin nhìn thấy. Đúng
    * loại "giao dịch mồ côi" mà gate R3 cấm.
    *
    * Nên: BƯỚC 1 ghi thô và COMMIT; BƯỚC 2 khớp trong transaction của riêng nó. Lỗi ở bước 2 chỉ
-   * làm giao dịch nằm lại hàng đợi `unmatched` — nơi nó vốn phải nằm khi không khớp được.
+   * làm giao dịch nằm lại hàng đợi `unmatched` - nơi nó vốn phải nằm khi không khớp được.
    *
    * Bất biến giữ cho việc đó an toàn: **`match_status` luôn được ghi trong CÙNG transaction với
    * lượt cộng tiền.** Vì vậy `unmatched` chứng minh chưa có gì được áp, và một lần gửi lại có
@@ -119,7 +122,7 @@ export class SepayService {
   async ingest(payload: unknown): Promise<SepayWebhookResultDto> {
     const parsed = parseWebhookPayload(payload);
     if (!parsed.ok) {
-      // Payload không đọc nổi các trường tối thiểu — 200 kèm cờ bỏ qua, KHÔNG 4xx/5xx:
+      // Payload không đọc nổi các trường tối thiểu - 200 kèm cờ bỏ qua, KHÔNG 4xx/5xx:
       // SePay retry một payload hỏng sẽ hỏng y hệt, và retry bão là thứ mình tự chuốc.
       this.logger.warn(`Webhook SePay bị bỏ qua: ${parsed.reason}`);
       return { received: true, duplicate: false, matched: false, note: parsed.reason };
@@ -157,7 +160,7 @@ export class SepayService {
        * cục nghiệp vụ bình thường.
        */
       this.logger.error(
-        `SePay ${tx.providerTxId}: khớp thất bại — giao dịch nằm lại hàng đợi đối soát`,
+        `SePay ${tx.providerTxId}: khớp thất bại - giao dịch nằm lại hàng đợi đối soát`,
         error instanceof Error ? error.stack : String(error),
       );
       return { received: true, duplicate: record.duplicate, matched: false, note: 'match_failed' };
@@ -175,7 +178,7 @@ export class SepayService {
   }
 
   /**
-   * Chèn dòng `bank_transactions` và COMMIT — bằng chứng rằng tiền đã tới, độc lập với việc nó
+   * Chèn dòng `bank_transactions` và COMMIT - bằng chứng rằng tiền đã tới, độc lập với việc nó
    * khớp được vào đâu.
    *
    * Idempotent bằng unique DB `(provider, provider_tx_id)`, không bằng check tầng app (nguyên
@@ -218,11 +221,11 @@ export class SepayService {
   }
 
   /**
-   * Ghi LÝ DO một giao dịch không khớp được — ADR 0045 điều 4.
+   * Ghi LÝ DO một giao dịch không khớp được - ADR 0045 điều 4.
    *
    * Trạng thái vẫn là `unmatched` (nó CHƯA được áp vào đâu, và đó là sự thật cần giữ), nhưng
    * `match_note` nay nói vì sao. Trước đợt này một khoản đến muộn nằm trong hàng đợi đối soát
-   * không phân biệt được với một khoản webhook vừa mới nhận — và người trực phải tự đi tra từng
+   * không phân biệt được với một khoản webhook vừa mới nhận - và người trực phải tự đi tra từng
    * mã để biết mình đang nhìn cái gì.
    *
    * KHÔNG ghi đè ghi chú của admin: điều kiện `match_status = unmatched` trong `updateMany` giữ
@@ -244,7 +247,8 @@ export class SepayService {
   }
 
   /**
-   * Áp một giao dịch đã ghi vào đích của nó — hold (`XPH…`) hoặc hoá đơn gói (`XPG…`).
+   * Áp một giao dịch đã ghi vào đích của nó - hold (`XPH…`), phụ lục gia hạn (`XPE…`), phiếu gộp
+   * gói (`XPC…`) hoặc hoá đơn gói (`XPG…`).
    *
    * Lượt cập nhật `match_status` nằm TRONG chính transaction này, cùng với lượt cộng tiền: đó là
    * thứ làm cho `unmatched` có nghĩa "chưa áp gì" ở lần webhook sau.
@@ -256,7 +260,7 @@ export class SepayService {
   ): Promise<{ matched: boolean; note: string | null }> {
     const target = referenceCodeTarget(referenceCode);
 
-    // `XPH…` — khoản giữ chỗ của khách (R3, ADR 0022 điều 3). Đủ tiền thì ĐƠN THUÊ được tạo
+    // `XPH…` - khoản giữ chỗ của khách (R3, ADR 0022 điều 3). Đủ tiền thì ĐƠN THUÊ được tạo
     // ngay trong transaction này, cùng kỷ luật với kích hoạt gói: tiền về là hiệu lực, không
     // phụ thuộc trình duyệt khách có quay lại hay không.
     if (target === BANK_MATCH_TARGET_TYPE.BOOKING_HOLD) {
@@ -268,7 +272,7 @@ export class SepayService {
       switch (applied.outcome) {
         case 'hold_not_found':
           /*
-           * Mã đúng dạng nhưng không có hold nào — gõ nhầm, hoặc một mã từ môi trường khác.
+           * Mã đúng dạng nhưng không có hold nào - gõ nhầm, hoặc một mã từ môi trường khác.
            * Ghi LÝ DO lên chính giao dịch: hàng đợi đối soát của admin phải nói được vì sao một
            * dòng nằm đó, nếu không nó chỉ là một danh sách tiền không ai biết phải làm gì.
            */
@@ -280,17 +284,17 @@ export class SepayService {
           return { matched: false, note: 'hold_not_found' };
         case 'hold_closed':
           /*
-           * TIỀN VỀ MUỘN — hold đã hết hạn/đã huỷ/đã chốt (ADR 0044 điều 7, ADR 0045 điều 4).
+           * TIỀN VỀ MUỘN - hold đã hết hạn/đã huỷ/đã chốt (ADR 0044 điều 7, ADR 0045 điều 4).
            *
            * Tuyệt đối KHÔNG tạo đơn: chỗ đó có thể đã thuộc về khách khác. Khoản tiền ở lại
            * `bank_transactions` với `match_status = unmatched` và một ghi chú nói rõ nó là
-           * khoản đến muộn — đó là đầu vào của hàng đợi đối soát, nơi admin khớp tay vào đúng
+           * khoản đến muộn - đó là đầu vào của hàng đợi đối soát, nơi admin khớp tay vào đúng
            * hold (nếu còn nhận được) hoặc mở đường hoàn cho khách.
            */
           await this.noteUnmatched(
             db,
             tx.providerTxId,
-            `Tiền về sau khi khoản giữ chỗ ${referenceCode} đã đóng (${applied.status}) — cần đối soát tay: khớp lại hoặc hoàn khách`,
+            `Tiền về sau khi khoản giữ chỗ ${referenceCode} đã đóng (${applied.status}) - cần đối soát tay: khớp lại hoặc hoàn khách`,
           );
           return { matched: false, note: `hold_${applied.status}` };
         case 'partial':
@@ -299,6 +303,76 @@ export class SepayService {
           await this.markMatched(db, tx.providerTxId, {
             type: BANK_MATCH_TARGET_TYPE.BOOKING_HOLD,
             refId: applied.holdId,
+            overpaid: applied.outcome === 'already_paid',
+          });
+          return { matched: true, note: applied.outcome };
+      }
+    }
+
+    // `XPE…` - khoản online của một PHỤ LỤC GIA HẠN (ADR 0077). Đủ tiền ⇒ phụ lục hiệu lực và
+    // giờ trả của đơn dời ngay trong transaction này; tiền muộn không bao giờ kéo lịch lại.
+    if (target === BANK_MATCH_TARGET_TYPE.BOOKING_EXTENSION) {
+      const applied = await this.extensions.applyBankPaymentWithinTx(db, {
+        code: referenceCode,
+        amount: tx.amount,
+        providerTxId: tx.providerTxId,
+      });
+      switch (applied.outcome) {
+        case 'not_found':
+          await this.noteUnmatched(
+            db,
+            tx.providerTxId,
+            `Không tìm thấy phụ lục gia hạn mang mã ${referenceCode}`,
+          );
+          return { matched: false, note: 'extension_not_found' };
+        case 'closed':
+          await this.noteUnmatched(
+            db,
+            tx.providerTxId,
+            `Tiền về khi phụ lục gia hạn ${referenceCode} không còn nhận tiền (${applied.status}) - cần đối soát tay: hoàn khách`,
+          );
+          return { matched: false, note: `extension_${applied.status}` };
+        case 'partial':
+        case 'already_paid':
+        case 'activated':
+          await this.markMatched(db, tx.providerTxId, {
+            type: BANK_MATCH_TARGET_TYPE.BOOKING_EXTENSION,
+            refId: applied.extensionId,
+            overpaid: applied.outcome === 'already_paid',
+          });
+          return { matched: true, note: applied.outcome };
+      }
+    }
+
+    // `XPC…` - PHIẾU GỘP nhiều gói (ADR 0083). Đủ tổng ⇒ mọi gói trong phiếu bật trong
+    // transaction này; tiền về cho phiếu đã void nằm lại hàng đợi như hoá đơn đơn lẻ.
+    if (target === BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_CHECKOUT) {
+      const applied = await this.billing.applyCheckoutPaymentWithinTx(db, {
+        code: referenceCode,
+        amount: tx.amount,
+        providerTxId: tx.providerTxId,
+      });
+      switch (applied.outcome) {
+        case 'checkout_not_found':
+          await this.noteUnmatched(
+            db,
+            tx.providerTxId,
+            `Không tìm thấy phiếu thanh toán gói mang mã ${referenceCode}`,
+          );
+          return { matched: false, note: 'checkout_not_found' };
+        case 'checkout_closed':
+          await this.noteUnmatched(
+            db,
+            tx.providerTxId,
+            `Tiền về khi phiếu thanh toán gói ${referenceCode} không còn nhận tiền (${applied.status}) - cần đối soát tay: hoàn gian hàng`,
+          );
+          return { matched: false, note: `checkout_${applied.status}` };
+        case 'partial':
+        case 'already_paid':
+        case 'activated':
+          await this.markMatched(db, tx.providerTxId, {
+            type: BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_CHECKOUT,
+            refId: applied.checkoutId,
             overpaid: applied.outcome === 'already_paid',
           });
           return { matched: true, note: applied.outcome };
@@ -317,7 +391,7 @@ export class SepayService {
 
     switch (applied.outcome) {
       case 'invoice_not_found':
-        // Mã đúng định dạng nhưng không có hoá đơn — gõ tay sai một ký tự, hoặc mã của môi
+        // Mã đúng định dạng nhưng không có hoá đơn - gõ tay sai một ký tự, hoặc mã của môi
         // trường khác. Nằm lại hàng đợi.
         return { matched: false, note: 'invoice_not_found' };
       case 'invoice_closed':
@@ -335,12 +409,12 @@ export class SepayService {
   }
 
   /**
-   * Đóng dấu đã khớp — `updateMany` theo khoá unique để không phải cầm `id` của dòng vừa ghi.
+   * Đóng dấu đã khớp - `updateMany` theo khoá unique để không phải cầm `id` của dòng vừa ghi.
    *
    * Chỉ đóng dấu dòng CÒN `unmatched`. Giữa bước 1 (ghi thô) và bước 2 (khớp) có một khe mà
    * admin có thể đã "bỏ qua" hay khớp tay chính dòng này; ghi đè kết luận đó là cộng tiền vào
    * một đích trong khi sổ nói một đằng và nhật ký admin nói một nẻo. Thua khe đó ⇒ ném, để cả
-   * transaction khớp (tiền vào hoá đơn/khoản giữ chỗ) cùng rơi — dòng giữ nguyên kết luận của người.
+   * transaction khớp (tiền vào hoá đơn/khoản giữ chỗ) cùng rơi - dòng giữ nguyên kết luận của người.
    */
   private async markMatched(
     db: Prisma.TransactionClient,
@@ -354,12 +428,12 @@ export class SepayService {
         matchedType: target.type,
         matchedRefId: target.refId,
         matchedAt: new Date(),
-        // `already_paid` là tiền THỪA — ghi chú để màn đối soát không phải suy.
+        // `already_paid` là tiền THỪA - ghi chú để màn đối soát không phải suy.
         matchNote: target.overpaid ? 'overpaid' : null,
       },
     });
     if (claimed.count !== 1) {
-      throw new Error(`Giao dịch ${providerTxId} đã có kết luận của admin — huỷ lượt khớp tự động`);
+      throw new Error(`Giao dịch ${providerTxId} đã có kết luận của admin - huỷ lượt khớp tự động`);
     }
   }
 }
@@ -386,7 +460,7 @@ function extractReferenceCode(content: string): string | null {
 }
 
 /**
- * Các trường tối thiểu đã bóc được từ một webhook — thứ mọi bước sau (ghi thô, khớp) làm việc
+ * Các trường tối thiểu đã bóc được từ một webhook - thứ mọi bước sau (ghi thô, khớp) làm việc
  * trên đó. Đặt tên riêng thay vì nội tuyến trong `ParsedWebhook` vì `recordTransaction` và
  * `matchWithinTx` đều nhận đúng hình dạng này.
  */
@@ -409,7 +483,7 @@ function parseWebhookPayload(payload: unknown): ParsedWebhook {
   }
   const raw = payload as Record<string, unknown>;
 
-  // Chỉ nhận tiền VÀO — webhook SePay có thể bật cả chiều ra; sổ này chỉ ghi chiều vào (ADR 0022).
+  // Chỉ nhận tiền VÀO - webhook SePay có thể bật cả chiều ra; sổ này chỉ ghi chiều vào (ADR 0022).
   const transferType = typeof raw['transferType'] === 'string' ? raw['transferType'] : 'in';
   if (transferType !== 'in') return { ok: false, reason: 'transfer_out_ignored' };
 
@@ -433,7 +507,7 @@ function parseWebhookPayload(payload: unknown): ParsedWebhook {
 
   let bankTime: Date | null = null;
   if (typeof raw['transactionDate'] === 'string') {
-    // SePay gửi `YYYY-MM-DD HH:mm:ss` GIỜ VIỆT NAM, không kèm múi giờ — gắn +07:00 tường minh,
+    // SePay gửi `YYYY-MM-DD HH:mm:ss` GIỜ VIỆT NAM, không kèm múi giờ - gắn +07:00 tường minh,
     // để `new Date(...)` khỏi hiểu theo múi giờ của server.
     const candidate = new Date(`${raw['transactionDate'].replace(' ', 'T')}+07:00`);
     bankTime = Number.isNaN(candidate.getTime()) ? null : candidate;

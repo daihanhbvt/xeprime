@@ -11,7 +11,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
  */
 export class MoneyQueueCountDto {
   @ApiProperty() count!: number;
-  @ApiProperty({ description: 'Tổng tiền của các dòng đang đếm, string — ADR 0007' })
+  @ApiProperty({ description: 'Tổng tiền của các dòng đang đếm, string - ADR 0007' })
   amount!: string;
 }
 
@@ -20,7 +20,7 @@ export class BankInQueueSummaryDto extends MoneyQueueCountDto {
     type: String,
     nullable: true,
     description:
-      'Lúc khoản CŨ NHẤT còn chưa khớp tới ngân hàng (thiếu mốc ngân hàng thì lúc webhook về) — ISO-8601 UTC',
+      'Lúc khoản CŨ NHẤT còn chưa khớp tới ngân hàng (thiếu mốc ngân hàng thì lúc webhook về) - ISO-8601 UTC',
   })
   oldestAt!: string | null;
 }
@@ -28,7 +28,7 @@ export class BankInQueueSummaryDto extends MoneyQueueCountDto {
 export class HoldQueueSummaryDto extends MoneyQueueCountDto {
   @ApiProperty({
     description:
-      'Trong số đó, bao nhiêu khoản đang bị tạm giữ vì case giữ quyết toán còn mở (tranh chấp, chưa xác nhận bàn giao — ADR 0066)',
+      'Trong số đó, bao nhiêu khoản đang bị tạm giữ vì case giữ quyết toán còn mở (tranh chấp, chưa xác nhận bàn giao - ADR 0066)',
   })
   disputeCount!: number;
 }
@@ -48,7 +48,7 @@ export class TaxQueueSummaryDto extends MoneyQueueCountDto {
     type: String,
     nullable: true,
     example: '2026-09',
-    description: 'Kỳ CŨ NHẤT còn dòng chưa kê khai — null khi không còn dòng nào',
+    description: 'Kỳ CŨ NHẤT còn dòng chưa kê khai - null khi không còn dòng nào',
   })
   oldestPeriod!: string | null;
 }

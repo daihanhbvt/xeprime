@@ -51,13 +51,13 @@ function renderPanel(hold: Hold) {
   );
 }
 
-describe('TripHoldPanel — đang chờ tiền', () => {
+describe('TripHoldPanel - đang chờ tiền', () => {
   /**
    * Từ 13/10/2026 việc TRẢ nằm ở trang thanh toán riêng (`/payment/:id`). Khối này ở trang chuyến
    * chỉ nói bao nhiêu, trước khi nào, và MỘT lối sang đó — không mã QR thứ hai (hai chỗ trả là hai
    * chỗ để số tiền hoặc nội dung chuyển khoản trôi khỏi nhau).
    */
-  it('hiện số tiền và một nút sang TRANG THANH TOÁN của đúng chuyến — không QR', () => {
+  it('hiện số tiền và một nút sang TRANG THANH TOÁN của đúng chuyến - không QR', () => {
     const { container } = renderPanel(BASE);
 
     expect(screen.getByText(/100.000/)).toBeTruthy();
@@ -91,7 +91,7 @@ describe('TripHoldPanel — đang chờ tiền', () => {
   });
 });
 
-describe('TripHoldPanel — đã chốt', () => {
+describe('TripHoldPanel - đã chốt', () => {
   it('đã trả đủ ⇒ báo CHUYẾN ĐÃ XÁC NHẬN, không còn ô chuyển khoản', () => {
     const { container } = renderPanel({
       ...BASE,

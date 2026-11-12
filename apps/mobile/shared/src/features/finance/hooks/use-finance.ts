@@ -4,6 +4,7 @@ import { queryKeys } from '@/queries/query-keys';
 import {
   customerRevenueParams,
   debtFiltersToParams,
+  debtScopeToParams,
   debtsApi,
   financeApi,
   financeByCategoryParams,
@@ -194,6 +195,16 @@ export function useDebts(filters: DebtFilters, enabled = true) {
   });
 }
 
+/** Dải thẻ + số đếm chip của màn Công nợ — cùng phạm vi với danh sách, không theo nhóm hạn. */
+export function useDebtSummary(filters: DebtFilters, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.debts.summary(debtScopeToParams(filters)),
+    queryFn: () => debtsApi.summary(filters),
+    placeholderData: (prev) => prev,
+    enabled,
+  });
+}
+
 /**
  * Sau mỗi thay đổi phiếu, làm mới MỌI nhánh đọc lại chính những phiếu đó.
  *
@@ -251,6 +262,15 @@ export function useCreateCategory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: CreateCategoryInput) => financeCategoriesApi.create(body),
+    onSuccess: () => invalidateCategories(queryClient),
+  });
+}
+
+export function useRenameCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      financeCategoriesApi.rename(id, name),
     onSuccess: () => invalidateCategories(queryClient),
   });
 }

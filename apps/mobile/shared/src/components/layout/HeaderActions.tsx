@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { CHAT_SIDE } from '@xeprime/types';
 import { useState } from 'react';
-import { Pressable } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { AccountMenuSheet } from '@/components/layout/AccountMenuSheet';
@@ -16,7 +17,7 @@ import { NOTIFICATION_CONTEXT } from '@/features/notifications/notification-disp
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { makeStyles, useAppScheme, useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, gradients, radius, space } from '@/theme/tokens';
 
 /** Avatar 32 + mũi tên nét 16 (`caret-up`) — `.trigger` của `MarketAccountMenu` web. */
 /** Avatar bằng chip Tin nhắn/Thông báo (40) — người dùng chốt 27/10: avatar 32 trông nhỏ hơn hai chip cạnh nó. */
@@ -99,7 +100,16 @@ export function HeaderActions() {
           br={radius.pill}
           px={space.md}
           minHeight={HEADER_CHIP_SIZE}
+          overflow="hidden"
         >
+          {/* Cùng dải gradient với nút chính (`Button` primary/gradient) - mọi nút vàng một kiểu. */}
+          <LinearGradient
+            colors={gradients.primary.colors}
+            locations={gradients.primary.locations}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
           <Ionicons name="person-circle-outline" size={18} color={colors.onPrimary} />
           <Text col={colors.onPrimary} fos={fontSize.bodySm} fow={fontWeight.semibold}>
             {t('login')}

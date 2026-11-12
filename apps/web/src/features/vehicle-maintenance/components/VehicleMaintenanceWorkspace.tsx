@@ -1,12 +1,18 @@
 'use client';
 
-import { EditOutlined, HistoryOutlined, PlusOutlined } from '@ant-design/icons';
-import { Alert, App, Button, Card, Col, Form, List, Progress, Row, Skeleton, Tag } from 'antd';
+import {
+  DeleteOutlined,
+  EditOutlined,
+  FileTextOutlined,
+  HistoryOutlined,
+  PlusOutlined,
+} from '@ant-design/icons';
+import { Alert, App, Button, Card, Col, Form, Progress, Row, Skeleton, Tooltip } from 'antd';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
-  MAINTENANCE_DUE_STATUS, MAINTENANCE_DUE_STATUS_META, MAINTENANCE_STATUS, MAINTENANCE_STATUS_META, MAINTENANCE_TYPE_LABEL, ODOMETER_SOURCE_LABEL, PERMISSION, type MaintenanceDueStatus, type MaintenanceStatus, type MaintenanceType, type OdometerSource, } from '@xeprime/types';
+  MAINTENANCE_DUE_STATUS, MAINTENANCE_DUE_STATUS_META, MAINTENANCE_STATUS, MAINTENANCE_STATUS_HOLDING_SCHEDULE, ODOMETER_SOURCE_LABEL, PERMISSION, type MaintenanceDueStatus, type OdometerSource, } from '@xeprime/types';
 import {
   maintenanceProfileFormSchema, type MaintenanceProfileFormValues, } from '@xeprime/validators';
 import { StatusTag } from '@/components/data-display/StatusTag';
@@ -20,10 +26,12 @@ import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/
 import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorCode } from '@/services/api-client';
 import type { VehicleDetail } from '@/features/vehicles/types';
-import { saveMaintenanceProfile } from '../api';
+import { cancelMaintenanceRecord, saveMaintenanceProfile } from '../api';
 import { useInvalidateMaintenance, useMaintenanceProfile, useMaintenanceRecords } from '../hooks';
 import type { MaintenanceProfile, MaintenanceRecord } from '../types';
+import { MaintenanceHistoryDialog } from './MaintenanceHistoryDialog';
 import { MaintenanceRecordDialog } from './MaintenanceRecordDialog';
+import { MaintenanceRecordItem } from './MaintenanceRecordItem';
 import { OdometerCorrectionDialog } from './OdometerCorrectionDialog';
 import { OdometerHistoryDialog } from './OdometerHistoryDialog';
 import styles from './VehicleMaintenanceWorkspace.module.css';
@@ -127,7 +135,7 @@ function MaintenanceTab({
   const errorMessage = useErrorMessage();
   const fmt = useAppFormat();
 
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const invalidate = useInvalidateMaintenance(vehicle.id);
   /*
    * Phiên hỗ trợ của nhân sự nền tảng (ADR 0050) chỉ tạo và sửa phiếu. Chu kỳ bảo dưỡng, hoàn tất
@@ -138,27 +146,34 @@ function MaintenanceTab({
   const canEditCycle = canManage && !scheduleHidden;
   const [correctionOpen, setCorrectionOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [recordHistoryOpen, setRecordHistoryOpen] = useState(false);
   const [recordDialog, setRecordDialog] = useState<
     { mode: 'create' } | { mode: 'edit' | 'complete'; record: MaintenanceRecord } | null
   >(null);
   const [savingProfile, setSavingProfile] = useState(false);
 
+  // Sắp tới: ngày gần nhất trước, phiếu chưa có ngày xuống cuối.
   const upcoming = useMemo(
     () =>
-      records.filter((row) =>
-        (
-          [MAINTENANCE_STATUS.SCHEDULED, MAINTENANCE_STATUS.IN_PROGRESS] as string[]
-        ).includes(row.status),
-      ),
+      records
+        .filter((row) => (MAINTENANCE_STATUS_HOLDING_SCHEDULE as string[]).includes(row.status))
+        .sort((a, b) =>
+          (a.plannedStartAt ?? '￿').localeCompare(b.plannedStartAt ?? '￿'),
+        ),
     [records],
   );
+  // Lịch sử: mới nhất trước — phiếu huỷ không có `completedAt` nên xếp theo lần cập nhật.
   const history = useMemo(
     () =>
-      records.filter((row) =>
-        ([MAINTENANCE_STATUS.COMPLETED, MAINTENANCE_STATUS.CANCELED] as string[]).includes(
-          row.status,
+      records
+        .filter((row) =>
+          ([MAINTENANCE_STATUS.COMPLETED, MAINTENANCE_STATUS.CANCELED] as string[]).includes(
+            row.status,
+          ),
+        )
+        .sort((a, b) =>
+          (b.completedAt ?? b.updatedAt).localeCompare(a.completedAt ?? a.updatedAt),
         ),
-      ),
     [records],
   );
 
@@ -202,6 +217,27 @@ function MaintenanceTab({
     } finally {
       setSavingProfile(false);
     }
+  }
+
+  /** Thùng rác của design = HUỶ lịch: phiếu ở lại trong lịch sử với nhãn "Đã huỷ" (sổ E22). */
+  function confirmCancel(record: MaintenanceRecord) {
+    modal.confirm({
+      title: t('actions.cancelScheduleConfirm'),
+      okText: t('actions.cancelSchedule'),
+      okButtonProps: { danger: true },
+      cancelText: tCommon('actions.close'),
+      onOk: async () => {
+        try {
+          await cancelMaintenanceRecord(vehicle.id, record.id, record.rowVersion);
+          message.success(t('toast.canceled'));
+          invalidate();
+        } catch (err) {
+          message.error(
+            getErrorCode(err) === 'CONFLICT' ? t('toast.staleRecord') : errorMessage(err),
+          );
+        }
+      },
+    });
   }
 
   const dueStatus = profile.dueStatus as MaintenanceDueStatus;
@@ -373,11 +409,14 @@ function MaintenanceTab({
         className={styles.card}
         title={t('workspace.upcomingCard')}
         extra={
-          canManage ? (
-            <Button icon={<PlusOutlined />} onClick={() => setRecordDialog({ mode: 'create' })}>
-              {t('workspace.addRecord')}
-            </Button>
-          ) : null
+          <Button
+            type="text"
+            icon={<FileTextOutlined />}
+            className={styles.cardLink}
+            onClick={() => setRecordHistoryOpen(true)}
+          >
+            {t('workspace.recordHistoryLink')}
+          </Button>
         }
       >
         {recordsFailed ? (
@@ -402,35 +441,39 @@ function MaintenanceTab({
             )}
           </p>
         ) : (
-          <List
-            dataSource={upcoming}
-            renderItem={(record) => (
-              <RecordRow
+          <div className={styles.recordList}>
+            {upcoming.map((record) => (
+              <MaintenanceRecordItem
                 key={record.id}
                 record={record}
-                canManage={canManage}
-                onEdit={() => setRecordDialog({ mode: 'edit', record })}
-                onComplete={
-                  scheduleHidden ? undefined : () => setRecordDialog({ mode: 'complete', record })
+                showStatus={false}
+                canViewFiles={canViewFiles}
+                actions={
+                  canManage ? (
+                    <UpcomingActions
+                      onComplete={
+                        scheduleHidden
+                          ? undefined
+                          : () => setRecordDialog({ mode: 'complete', record })
+                      }
+                      onCancel={scheduleHidden ? undefined : () => confirmCancel(record)}
+                      onEdit={() => setRecordDialog({ mode: 'edit', record })}
+                    />
+                  ) : null
                 }
               />
-            )}
-          />
+            ))}
+          </div>
         )}
-      </Card>
-
-      {/* ── Lịch sử ── */}
-      <Card className={styles.card} title={t('workspace.historyCard')}>
-        {history.length === 0 ? (
-          <p className={styles.emptyText}>{t('workspace.historyEmpty')}</p>
-        ) : (
-          <List
-            dataSource={history}
-            renderItem={(record) => (
-              <RecordRow key={record.id} record={record} canManage={false} canViewFiles={canViewFiles} />
-            )}
-          />
-        )}
+        {canManage ? (
+          <Button
+            icon={<PlusOutlined />}
+            className={styles.addRecord}
+            onClick={() => setRecordDialog({ mode: 'create' })}
+          >
+            {t('workspace.addSchedule')}
+          </Button>
+        ) : null}
       </Card>
 
       <OdometerCorrectionDialog
@@ -451,6 +494,13 @@ function MaintenanceTab({
         onClose={() => setHistoryOpen(false)}
       />
 
+      <MaintenanceHistoryDialog
+        open={recordHistoryOpen}
+        records={history}
+        canViewFiles={canViewFiles}
+        onClose={() => setRecordHistoryOpen(false)}
+      />
+
       <MaintenanceRecordDialog
         state={recordDialog}
         vehicleId={vehicle.id}
@@ -465,69 +515,50 @@ function MaintenanceTab({
   );
 }
 
-function RecordRow({
-  record,
-  canManage,
-  canViewFiles,
-  onEdit,
+/**
+ * Thao tác của một lịch sắp tới: thùng rác (huỷ) + bút (sửa) như design, và "Hoàn tất" — việc ghi
+ * KM + dời mốc thay nhớt, không có chỗ trong design nhưng là tính năng phải giữ.
+ * Phiên hỗ trợ (ADR 0050) không hoàn tất, không huỷ được — hai nút vắng mặt.
+ */
+function UpcomingActions({
   onComplete,
+  onCancel,
+  onEdit,
 }: {
-  record: MaintenanceRecord;
-  canManage: boolean;
-  canViewFiles?: boolean;
-  onEdit?: () => void;
   onComplete?: () => void;
+  onCancel?: () => void;
+  onEdit: () => void;
 }) {
-  const fmt = useAppFormat();
   const t = useTranslations('Maintenance');
   const tCommon = useTranslations('Common');
-
-  const title =
-    record.title ||
-    record.customTypeName ||
-    MAINTENANCE_TYPE_LABEL[record.type as MaintenanceType] ||
-    record.type;
-  const when = record.completedAt
-    ? fmt.date(record.completedAt)
-    : record.plannedStartAt
-      ? fmt.dateTime(record.plannedStartAt)
-      : null;
-
   return (
-    <List.Item className={styles.recordRow}>
-      <div className={styles.recordBody}>
-        <div className={styles.recordHead}>
-          <strong>{title}</strong>
-          <StatusTag value={record.status as MaintenanceStatus} meta={MAINTENANCE_STATUS_META} group="maintenanceStatus" />
-        </div>
-        <div className={styles.recordMeta}>
-          {when ? <span>{when}</span> : null}
-          {record.odometerKm != null ? <span>{fmt.km(record.odometerKm)}</span> : null}
-          {record.providerName ? <span>{record.providerName}</span> : null}
-          {/* `cost` vắng mặt = thiếu quyền tiền (server đã lược); null = chưa nhập. */}
-          {record.cost != null ? (
-            <span className={styles.recordCost}>{fmt.money(record.cost)}</span>
-          ) : null}
-          {canViewFiles && record.attachmentCount > 0 ? (
-            <Tag>{t('workspace.attachments', { count: record.attachmentCount })}</Tag>
-          ) : null}
-        </div>
-        {record.notes ? <p className={styles.recordNotes}>{record.notes}</p> : null}
-      </div>
-      {canManage ? (
-        <div className={styles.recordActions}>
-          {onComplete ? (
-            <Button size="small" type="primary" onClick={onComplete}>
-              {t('actions.complete')}
-            </Button>
-          ) : null}
-          {onEdit ? (
-            <Button size="small" onClick={onEdit}>
-              {tCommon('actions.edit')}
-            </Button>
-          ) : null}
-        </div>
+    <>
+      {onComplete ? (
+        <Button size="small" type="link" className={styles.completeLink} onClick={onComplete}>
+          {t('actions.complete')}
+        </Button>
       ) : null}
-    </List.Item>
+      {onCancel ? (
+        <Tooltip title={t('actions.cancelSchedule')}>
+          <Button
+            size="small"
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            aria-label={t('actions.cancelSchedule')}
+            onClick={onCancel}
+          />
+        </Tooltip>
+      ) : null}
+      <Tooltip title={tCommon('actions.edit')}>
+        <Button
+          size="small"
+          type="text"
+          icon={<EditOutlined />}
+          aria-label={tCommon('actions.edit')}
+          onClick={onEdit}
+        />
+      </Tooltip>
+    </>
   );
 }

@@ -8,10 +8,6 @@
   color: var(--xp-color-text-tertiary);
 }
 
-.desc {
-  color: var(--xp-color-text-secondary);
-}
-
 .income {
   font-weight: 700;
   color: var(--xp-color-success);

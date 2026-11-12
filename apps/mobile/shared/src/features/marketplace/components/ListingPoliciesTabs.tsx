@@ -6,7 +6,6 @@ import {
   COLLATERAL_ASSET_TYPE_LABEL,
   COLLATERAL_MODE,
   CUSTOMER_DOCUMENT_TYPE_LABEL,
-  DRIVER_DEPOSIT_MODE,
   HOLD_DYNAMIC_WINDOW,
   HOLD_FREE_CANCEL_HOURS,
   HOLD_PAYMENT_WINDOW_MINUTES,
@@ -25,18 +24,18 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
-import { useDriverSurchargeLine } from '../hooks/use-driver-surcharge-line';
+
 
 const TABS = ['general', 'documents', 'collateral', 'cancellation'] as const;
 type PolicyTab = (typeof TABS)[number];
 
 /**
- * "Quy định & Chính sách" — bản native của `ListingPoliciesTabs` bên web (#212): bốn tab Quy định
+ * "Quy định & Chính sách" - bản native của `ListingPoliciesTabs` bên web (#212): bốn tab Quy định
  * chung · Giấy tờ thuê xe · Tài sản thế chấp · Điều khoản huỷ, CÙNG khoá với web
- * (`Listings.detail.policies.general/documents/collateral/cancellation.*`), phụ phí tài xế qua
- * `useDriverSurchargeLine`. Cùng điều kiện hiện từng khối với web.
+ * (`Listings.detail.policies.general/documents/collateral/cancellation.*`). Dịch vụ có tài xế hiện
+ * ghi chú "giá trọn gói" (ADR 0075 - không còn phụ phí tài xế). Cùng điều kiện hiện từng khối với web.
  *
- * Hai mốc giữ chỗ đọc từ hằng số dùng chung với server như web — đây là mức TRẦN của chính sách
+ * Hai mốc giữ chỗ đọc từ hằng số dùng chung với server như web - đây là mức TRẦN của chính sách
  * (cửa sổ thật của từng chuyến co lại khi đặt sát giờ, `holdWindowsFor`, và hiện ở màn chuyến).
  */
 export function ListingPoliciesTabs({
@@ -51,15 +50,10 @@ export function ListingPoliciesTabs({
   const tDetail = useTranslations('Listings.detail');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
-  const surchargeLine = useDriverSurchargeLine();
   const [tab, setTab] = useState<PolicyTab>('general');
 
   const activeTerms =
     listing.rentalTerms?.find((term) => term.serviceType === activeService) ?? null;
-  const windowLabels = (windows: ReadonlyArray<{ start: string; end: string }>) =>
-    windows.map((window) => `${window.start}–${window.end}`).join(', ');
-  const pickupWindows = windowLabels(listing.handover?.pickupWindows ?? []);
-  const returnWindows = windowLabels(listing.handover?.returnWindows ?? []);
   const requiredDocs =
     activeTerms?.requiredDocuments && activeTerms.requiredDocuments.length > 0
       ? activeTerms.requiredDocuments
@@ -105,7 +99,7 @@ export function ListingPoliciesTabs({
       </Text>
 
       {/*
-        Tab TRƯỢT NGANG như web ≤640px (`.tabList` cuộn ngang, đệm 10 × 12, chữ 14) — người dùng chốt
+        Tab TRƯỢT NGANG như web ≤640px (`.tabList` cuộn ngang, đệm 10 × 12, chữ 14) - người dùng chốt
         27/10/2026: xuống dòng làm "Điều khoản huỷ" rơi một mình xuống hàng dưới.
       */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -128,10 +122,10 @@ export function ListingPoliciesTabs({
                 borderBottomColor={active ? colors.primary : 'transparent'}
               >
                 <Text
-                  col={active ? colors.primary : colors.textMuted}
+                  col={active ? colors.primary : colors.placeholder}
                   fos={fontSize.body}
                   numberOfLines={1}
-                  fow={active ? fontWeight.semibold : fontWeight.medium}
+                  fow={fontWeight.semibold}
                 >
                   {t(`tabs.${key}`)}
                 </Text>
@@ -162,35 +156,17 @@ export function ListingPoliciesTabs({
                 </Sub>
               ) : null}
 
-              {pickupWindows || returnWindows ? (
-                <Sub title={tDetail('handover.title')}>
-                  {pickupWindows ? (
-                    <Rule>{tDetail('handover.pickup', { windows: pickupWindows })}</Rule>
-                  ) : null}
-                  {returnWindows ? (
-                    <Rule>{tDetail('handover.return', { windows: returnWindows })}</Rule>
-                  ) : null}
-                </Sub>
-              ) : null}
+              {/* Khung giờ giao nhận đã gỡ (ADR 0078) - xe nhận và trả mọi giờ, không có gì để công bố. */}
 
               {activeService === SERVICE_TYPE.WITH_DRIVER ? (
-                <Sub title={tDetail('surcharges.title')}>
-                  {(listing.driverSurchargeRules ?? []).map((rule) => (
-                    <Rule key={rule.kind}>{surchargeLine(rule)}</Rule>
-                  ))}
-                  {activeTerms?.depositMode ? (
-                    <Rule>
-                      {activeTerms.depositMode === DRIVER_DEPOSIT_MODE.NONE
-                        ? tDetail('terms.driverDepositNone')
-                        : tDetail('terms.driverDeposit', {
-                            mode: domainLabel('driverDepositMode', activeTerms.depositMode),
-                          })}
-                    </Rule>
-                  ) : null}
+                // Giá có tài xế là giá TRỌN GÓI (ADR 0075) - khách chỉ trả thêm phí cầu đường.
+                <Sub title={tDetail('withDriverPrice.title')}>
+                  <Rule>{tDetail('withDriverPrice.included')}</Rule>
+                  <Rule>{tDetail('withDriverPrice.excluded')}</Rule>
                 </Sub>
               ) : null}
 
-              {/* Hoá đơn VAT (ADR 0059) — chỉ khi chủ xe đã công bố. */}
+              {/* Hoá đơn VAT (ADR 0059) - chỉ khi chủ xe đã công bố. */}
               {listing.vatInvoiceSupported ? (
                 <Sub title={tDetail('vatInvoice.title')}>
                   <Rule>{tDetail('vatInvoice.body')}</Rule>
@@ -266,7 +242,7 @@ export function ListingPoliciesTabs({
               <SubTitle text={t('cancellation.title')} />
               {/* Huỷ miễn phí tính XUÔI từ lúc chủ xe nhận chuyến (ADR 0032 điều 2 · ADR 0044 điều 3). */}
               <Rule>
-                {/* Hai cửa sổ của khoản giữ chỗ theo tỉ lệ ΔT, sàn, trần (ADR 0066) — đọc hằng dùng chung. */}
+                {/* Hai cửa sổ của khoản giữ chỗ theo tỉ lệ ΔT, sàn, trần (ADR 0066) - đọc hằng dùng chung. */}
                 {t.rich('cancellation.free', {
                   strong,
                   percent: Math.round(HOLD_DYNAMIC_WINDOW.FREE_CANCEL_SHARE * 100),

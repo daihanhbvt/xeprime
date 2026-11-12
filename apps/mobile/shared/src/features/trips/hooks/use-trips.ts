@@ -9,6 +9,7 @@ import {
 } from '@tanstack/react-query';
 import {
   API_ERROR_CODE,
+  BOOKING_EXTENSION_STATUS,
   HOLD_POLL_FALLBACK_MS,
   HOLD_POLL_LIVE_MS,
   isAwaitingPayment,
@@ -26,6 +27,7 @@ import {
   type CreateReviewInput,
   type UpdateReviewInput,
   type CustomerTripDetail,
+  type CustomerTripExtension,
   type CustomerTripHandoverEvidence,
   type ProvideRefundAccountInput,
   type PrivateFileTicket,
@@ -182,6 +184,27 @@ export function useTripHandoverEvidence(
     queryKey: queryKeys.trips.handoverEvidence(id),
     queryFn: () => tripsApi.handoverEvidence(id),
     enabled: enabled && Boolean(id),
+  });
+}
+
+/**
+ * Phụ lục gia hạn của chuyến dài hạn (ADR 0077) — như `useTripExtensions` web: hỏi lại theo nhịp
+ * dự phòng chừng nào còn một phụ lục chờ tiền, để QR biến thành "đã gia hạn" khi tiền về.
+ */
+export function useTripExtensions(
+  id: string,
+  enabled: boolean,
+): UseQueryResult<CustomerTripExtension[]> {
+  const appActive = useAppActive();
+  return useQuery({
+    queryKey: queryKeys.trips.extensions(id),
+    queryFn: () => tripsApi.extensions(id),
+    enabled: enabled && Boolean(id),
+    refetchInterval: (q) =>
+      appActive &&
+      q.state.data?.some((e) => e.status === BOOKING_EXTENSION_STATUS.AWAITING_PAYMENT)
+        ? HOLD_POLL_FALLBACK_MS
+        : false,
   });
 }
 

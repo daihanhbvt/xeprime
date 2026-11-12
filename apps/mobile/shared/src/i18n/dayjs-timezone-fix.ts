@@ -127,7 +127,7 @@ function warnUnknownZone(timeZone: unknown): void {
   if (warnedZones.has(key)) return;
   warnedZones.add(key);
   console.warn(
-    `[dayjs.tz] vùng lạ: ${key} (${typeof timeZone}) — dùng ${APP_TIME_ZONE_ID} thay thế.`,
+    `[dayjs.tz] vùng lạ: ${key} (${typeof timeZone}) - dùng ${APP_TIME_ZONE_ID} thay thế.`,
     new Error('nơi gọi').stack,
   );
 }

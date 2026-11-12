@@ -7,6 +7,7 @@ import {
   BOOKING_REQUEST_STATUS_VALUES,
   CANCELLATION_REASON_CATEGORY_VALUES,
   LONG_TERM_PACKAGE_MONTHS_VALUES,
+  MOTORBIKE_CATEGORY_VALUES,
   PICKUP_PREFERENCE,
   PICKUP_PREFERENCE_VALUES,
   ROUTE_TYPE_VALUES,
@@ -15,7 +16,7 @@ import {
   TENANT_CUSTOMER_RISK_LEVEL_VALUES,
   VEHICLE_TYPE_VALUES,
   VN_PHONE_PATTERN,
-  compactPhoneInput,
+  normalizeVnPhoneInput,
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -52,6 +53,10 @@ const MAX_LIMIT = 100;
 
 export { DEFAULT_LIMIT as BOOKING_REQUEST_DEFAULT_LIMIT, MAX_LIMIT as BOOKING_REQUEST_MAX_LIMIT };
 
+/** Thứ tự của hộp thư yêu cầu — xem `BookingRequestListQueryDto.sort`. */
+export const BOOKING_REQUEST_SORT = ['newest', 'urgent'] as const;
+export type BookingRequestSort = (typeof BOOKING_REQUEST_SORT)[number];
+
 /**
  * Chuỗi rỗng / toàn khoảng trắng ⇒ `undefined`, để `@IsOptional` bỏ qua nó.
  *
@@ -68,7 +73,7 @@ const optionalTrimmedText = ({ value }: { value: unknown }) => {
 /** Như trên, và bỏ dấu cách/chấm/gạch của SĐT chép từ danh bạ (`090 123 4567`) trước khi so mẫu. */
 const optionalPhoneInput = ({ value }: { value: unknown }) => {
   const text = optionalTrimmedText({ value });
-  return typeof text === 'string' ? compactPhoneInput(text) : text;
+  return typeof text === 'string' ? normalizeVnPhoneInput(text) : text;
 };
 
 /**
@@ -91,7 +96,7 @@ export class CreateBookingRequestDto {
    */
   @ApiPropertyOptional({
     maxLength: 255,
-    description: 'Họ tên người thuê — bỏ trống thì dùng tên tài khoản (ADR 0063)',
+    description: 'Họ tên người thuê - bỏ trống thì dùng tên tài khoản (ADR 0063)',
   })
   @IsOptional()
   @Transform(optionalTrimmedText)
@@ -108,7 +113,7 @@ export class CreateBookingRequestDto {
     maxLength: 32,
     pattern: VN_PHONE_PATTERN.source,
     description:
-      'SĐT liên hệ `0xxxxxxxxx`/`+84xxxxxxxxx` — bỏ trống thì dùng SĐT tài khoản; khác số không cần OTP (ADR 0063)',
+      'SĐT liên hệ `0xxxxxxxxx`/`+84xxxxxxxxx` - bỏ trống thì dùng SĐT tài khoản; khác số không cần OTP (ADR 0063)',
   })
   @IsOptional()
   @Transform(optionalPhoneInput)
@@ -131,7 +136,7 @@ export class CreateBookingRequestDto {
   @ApiPropertyOptional({
     enum: ['web', 'native'],
     deprecated: true,
-    description: 'ĐÃ GỠ (ADR 0060) — server bỏ qua; không còn phiên nào được cấp ở route này.',
+    description: 'ĐÃ GỠ (ADR 0060) - server bỏ qua; không còn phiên nào được cấp ở route này.',
   })
   @IsOptional()
   @IsIn(['web', 'native'])
@@ -140,7 +145,7 @@ export class CreateBookingRequestDto {
   @ApiPropertyOptional({
     type: MobileDeviceDto,
     deprecated: true,
-    description: 'ĐÃ GỠ (ADR 0060) — server bỏ qua.',
+    description: 'ĐÃ GỠ (ADR 0060) - server bỏ qua.',
   })
   @IsOptional()
   @Type(() => MobileDeviceDto)
@@ -148,7 +153,7 @@ export class CreateBookingRequestDto {
 
   @ApiPropertyOptional({
     deprecated: true,
-    description: 'ĐÃ GỠ (ADR 0060) — server bỏ qua; email đã xác minh lấy từ tài khoản.',
+    description: 'ĐÃ GỠ (ADR 0060) - server bỏ qua; email đã xác minh lấy từ tài khoản.',
   })
   @IsOptional()
   @IsString()
@@ -160,12 +165,12 @@ export class CreateBookingRequestDto {
    * khách chỉ nêu nguyện vọng ngày nhận, gian hàng chốt giờ nhận khi duyệt và server tính giờ
    * trả từ gói (ADR 0011). Giá trị client gửi kèm cho long_term bị BỎ QUA.
    */
-  @ApiPropertyOptional({ description: 'Nhận xe (ISO-8601) — không dùng cho long_term' })
+  @ApiPropertyOptional({ description: 'Nhận xe (ISO-8601) - không dùng cho long_term' })
   @ValidateIf((o: CreateBookingRequestDto) => o.serviceType !== SERVICE_TYPE.LONG_TERM)
   @IsDateString()
   pickupAt?: string;
 
-  @ApiPropertyOptional({ description: 'Trả xe (ISO-8601) — không dùng cho long_term' })
+  @ApiPropertyOptional({ description: 'Trả xe (ISO-8601) - không dùng cho long_term' })
   @ValidateIf((o: CreateBookingRequestDto) => o.serviceType !== SERVICE_TYPE.LONG_TERM)
   @IsDateString()
   returnAt?: string;
@@ -294,7 +299,7 @@ export class CreateBookingRequestDto {
 
   @ApiPropertyOptional({
     description:
-      'Lời nhắn của khách cho chủ xe — server cắt khoảng trắng hai đầu, chỉ có khoảng trắng thì lưu null',
+      'Lời nhắn của khách cho chủ xe - server cắt khoảng trắng hai đầu, chỉ có khoảng trắng thì lưu null',
     maxLength: BOOKING_REQUEST_NOTE_MAX_LENGTH,
   })
   @IsOptional()
@@ -303,7 +308,7 @@ export class CreateBookingRequestDto {
   note?: string;
 
   @ApiPropertyOptional({
-    description: 'Yêu cầu giao xe tận nơi — chỉ nhận khi chính sách giao nhận của xe đang bật',
+    description: 'Yêu cầu giao xe tận nơi - chỉ nhận khi chính sách giao nhận của xe đang bật',
   })
   @IsOptional()
   @IsBoolean()
@@ -316,7 +321,7 @@ export class CreateBookingRequestDto {
    * nên nó được hỏi kỹ nhất trong hệ thống: giao diện đòi chọn tỉnh + xã/phường và xác nhận
    * ghim trước khi gửi.
    */
-  @ApiPropertyOptional({ description: 'Địa điểm giao xe — bắt buộc khi yêu cầu giao tận nơi' })
+  @ApiPropertyOptional({ description: 'Địa điểm giao xe - bắt buộc khi yêu cầu giao tận nơi' })
   @IsOptional()
   @IsString()
   @MaxLength(500)
@@ -390,12 +395,12 @@ export class CreateBookingRequestDto {
    * băng vào yêu cầu; lượt chốt giá (duyệt/tự nhận) đọc lại đúng lựa chọn này. Chính sách phí tắt
    * cổng bảo hiểm thì lựa chọn không sinh dòng tiền nào. Bỏ trống = không chọn.
    */
-  @ApiPropertyOptional({ description: 'Thêm bảo hiểm vật chất xe (IV) — tính theo ngày' })
+  @ApiPropertyOptional({ description: 'Thêm bảo hiểm vật chất xe (IV) - tính theo ngày' })
   @IsOptional()
   @IsBoolean()
   vehicleProtectionSelected?: boolean;
 
-  @ApiPropertyOptional({ description: 'Thêm bảo hiểm tai nạn người trên xe (IP) — tính theo ngày' })
+  @ApiPropertyOptional({ description: 'Thêm bảo hiểm tai nạn người trên xe (IP) - tính theo ngày' })
   @IsOptional()
   @IsBoolean()
   personalAccidentSelected?: boolean;
@@ -431,7 +436,7 @@ export class CheckAvailabilityResultDto {
  */
 export class ApproveBookingRequestDto {
   @ApiPropertyOptional({
-    description: 'Ngày/giờ nhận xe chính xác (ISO-8601) — BẮT BUỘC với yêu cầu thuê dài hạn',
+    description: 'Ngày/giờ nhận xe chính xác (ISO-8601) - BẮT BUỘC với yêu cầu thuê dài hạn',
   })
   @IsOptional()
   @IsDateString()
@@ -468,7 +473,7 @@ export class RejectBookingRequestDto {
 export class CancelBookingRequestDto {
   @ApiProperty({
     enum: CANCELLATION_REASON_CATEGORY_VALUES,
-    description: 'Nhóm lý do — thứ DUY NHẤT người huỷ chọn. Không có nhóm "bất khả kháng".',
+    description: 'Nhóm lý do - thứ DUY NHẤT người huỷ chọn. Không có nhóm "bất khả kháng".',
   })
   @IsIn(CANCELLATION_REASON_CATEGORY_VALUES)
   reasonCategory!: string;
@@ -529,6 +534,17 @@ export class BookingRequestListQueryDto {
   @BranchIdQuery()
   branchId?: string;
 
+  /**
+   * Thứ tự (05/11/2026). `newest` (mặc định, như cũ) = mới gửi trước. `urgent` = hạn ĐANG CHẠY
+   * gần nhất trước — màn "Đơn thuê xe" là một ca trực, việc sắp hết hạn phải đứng đầu: nhóm "Cần
+   * xử lý" theo hạn phản hồi của gian hàng, nhóm "Chờ khách thanh toán" (`status=awaiting_hold`)
+   * theo hạn chuyển tiền giữ chỗ của khách.
+   */
+  @ApiPropertyOptional({ enum: BOOKING_REQUEST_SORT, default: 'newest' })
+  @IsOptional()
+  @IsIn(BOOKING_REQUEST_SORT)
+  sort?: BookingRequestSort;
+
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
   @Type(() => Number)
@@ -562,22 +578,47 @@ export class BookingRequestListQueryDto {
 export class BookingRequestPricingDto {
   @ApiProperty({ description: 'true = tạm tính (chưa duyệt), false = số đã chốt/đã đóng băng' })
   isEstimate!: boolean;
-  @ApiProperty({ description: 'Tiền thuê — doanh thu gian hàng, VND string' })
+  @ApiProperty({ description: 'Tiền thuê - doanh thu gian hàng, VND string' })
   rentalTotal!: string;
   @ApiProperty({ description: 'Tổng khách phải trả (đã gồm phụ phí nếu có), VND string' })
   customerTotalAmount!: string;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Đã trả qua nền tảng (giữ chỗ/đơn) — null khi còn tạm tính',
+    description: 'Đã trả qua nền tảng (giữ chỗ/đơn) - null khi còn tạm tính',
   })
   paidAmount!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Trả TRỰC TIẾP chủ xe khi nhận xe — null khi tạm tính hoặc không áp dụng',
+    description: 'Trả TRỰC TIẾP chủ xe khi nhận xe - null khi tạm tính hoặc không áp dụng',
   })
   remainingAmount!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Tiền giữ chỗ PHẢI chuyển của khoản đã phát hành (`booking_holds.amount`) - null khi chưa ' +
+      'ai nhận chuyến (số dự kiến ở `approvalPreview.onlineAmount`) hoặc chuyến không thu online',
+  })
+  holdAmount!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Tiền giữ chỗ khách ĐÃ chuyển (`booking_holds.paid_amount`) - "Đã giữ chỗ" chỉ khi số này đủ ' +
+      '`holdAmount` (ADR 0044). null khi không có khoản giữ chỗ',
+  })
+  holdPaidAmount!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      '`D − T` - số XePrime ghi vào Ví điểm chủ xe khi chuyến hoàn thành (ô "Cộng ví" của thẻ). ' +
+      'Tạm tính khi `isEstimate`; đã đóng băng khi có khoản giữ chỗ / đơn. null khi không có bảng ' +
+      'phí (dài hạn chưa chốt, đơn đời cũ). Chỉ bề mặt đối tác (ADR 0064 điều 11) (VND string)',
+  })
+  ownerPayableAmount!: string | null;
 }
 
 /**
@@ -590,17 +631,17 @@ export class BookingRequestApprovalWindowsDto {
   paymentWindowMinutes!: number;
   @ApiProperty({
     description:
-      'Khách huỷ miễn phí trong bấy nhiêu phút KỂ TỪ LÚC THANH TOÁN ĐỦ (ADR 0072) — ước tính nếu khách trả ngay khi được nhận (sàn 15′, chưa kẹp bởi giờ nhận xe); 0 = chính sách tắt huỷ miễn phí',
+      'Khách huỷ miễn phí trong bấy nhiêu phút KỂ TỪ LÚC THANH TOÁN ĐỦ (ADR 0072) - ước tính nếu khách trả ngay khi được nhận (sàn 15′, chưa kẹp bởi giờ nhận xe); 0 = chính sách tắt huỷ miễn phí',
   })
   freeCancelMinutes!: number;
-  @ApiProperty({ description: 'ISO — hạn chuyển tiền dự kiến (đã kẹp bởi giờ nhận xe)' })
+  @ApiProperty({ description: 'ISO - hạn chuyển tiền dự kiến (đã kẹp bởi giờ nhận xe)' })
   expiresAt!: string;
   @ApiProperty({
-    description: 'ISO — mốc huỷ miễn phí dự kiến NẾU khách trả đủ ngay khi được nhận (ADR 0072)',
+    description: 'ISO - mốc huỷ miễn phí dự kiến NẾU khách trả đủ ngay khi được nhận (ADR 0072)',
   })
   freeCancelUntil!: string;
   @ApiProperty({
-    description: 'Cửa sổ còn lại quá ngắn để phát QR — duyệt sẽ nhận `HOLD_WINDOW_TOO_SHORT`',
+    description: 'Cửa sổ còn lại quá ngắn để phát QR - duyệt sẽ nhận `HOLD_WINDOW_TOO_SHORT`',
   })
   tooShort!: boolean;
 }
@@ -614,17 +655,17 @@ export class BookingRequestApprovalWindowsDto {
  * đúng chỗ — khách không bao giờ đọc DTO này.
  */
 export class BookingRequestApprovalPreviewDto {
-  @ApiProperty({ description: 'Luôn true — số chốt khi duyệt' }) isEstimate!: boolean;
+  @ApiProperty({ description: 'Luôn true - số chốt khi duyệt' }) isEstimate!: boolean;
   @ApiProperty({
     description:
       'Duyệt xong khách có nhận QR tiền giữ chỗ không. false = không thu online (báo giá tạm tính ' +
-      'hoặc không thu cọc) — đơn tạo ngay lúc duyệt',
+      'hoặc không thu cọc) - đơn tạo ngay lúc duyệt',
   })
   collectsHold!: boolean;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Tiền giữ chỗ khách chuyển qua QR (VND string) — null khi không thu online',
+    description: 'Tiền giữ chỗ khách chuyển qua QR (VND string) - null khi không thu online',
   })
   onlineAmount!: string | null;
   @ApiProperty({ description: 'Khách trả TRỰC TIẾP chủ xe lúc nhận xe (VND string)' })
@@ -633,7 +674,7 @@ export class BookingRequestApprovalPreviewDto {
   @ApiProperty({
     deprecated: true,
     description:
-      'DEPRECATED — đọc `ownerPayout.ownerCommissionAmount`. `H` — phí dịch vụ – chủ xe (lũy ' +
+      'DEPRECATED - đọc `ownerPayout.ownerCommissionAmount`. `H` - phí dịch vụ - chủ xe (lũy ' +
       'tiến theo ngày), XePrime giữ lại từ phần của chủ xe (VND string)',
   })
   ownerCommissionAmount!: string;
@@ -641,14 +682,14 @@ export class BookingRequestApprovalPreviewDto {
   @ApiProperty({
     deprecated: true,
     description:
-      'DEPRECATED — đọc `ownerPayout.taxAmount`. `T` — thuế khấu trừ khỏi tiền chủ xe (VND string)',
+      'DEPRECATED - đọc `ownerPayout.taxAmount`. `T` - thuế khấu trừ khỏi tiền chủ xe (VND string)',
   })
   taxAmount!: string;
   /** @deprecated Đọc `ownerPayout.ownerPayableAmount` — trường phẳng giữ cho app native cũ. */
   @ApiProperty({
     deprecated: true,
     description:
-      'DEPRECATED — đọc `ownerPayout.ownerPayableAmount`. `D − T` — XePrime ghi vào ví điểm chủ ' +
+      'DEPRECATED - đọc `ownerPayout.ownerPayableAmount`. `D − T` - XePrime ghi vào ví điểm chủ ' +
       'xe khi chuyến hoàn thành (VND string)',
   })
   ownerPayableAmount!: string;
@@ -656,26 +697,26 @@ export class BookingRequestApprovalPreviewDto {
   @ApiProperty({
     deprecated: true,
     description:
-      'DEPRECATED — đọc `ownerPayout.ownerNetAmount`. `B − H − T` — chủ xe thực nhận cả chuyến ' +
+      'DEPRECATED - đọc `ownerPayout.ownerNetAmount`. `B − H − T` - chủ xe thực nhận cả chuyến ' +
       '(VND string)',
   })
   ownerNetAmount!: string;
   @ApiProperty({
     type: OwnerPayoutDto,
     description:
-      'Bảng cộng ví chủ xe nếu duyệt ngay (ADR 0068 điều 5) — doanh thu, phí dịch vụ – chủ xe, ' +
+      'Bảng cộng ví chủ xe nếu duyệt ngay (ADR 0068 điều 5) - doanh thu, phí dịch vụ - chủ xe, ' +
       'thuế tách GTGT/TNCN, thu nhập (a), khách trả trực tiếp (b), cộng ví (a − b)',
   })
   ownerPayout!: OwnerPayoutDto;
-  @ApiProperty({ description: 'Cửa sổ huỷ miễn phí khi đặt xa (giờ) — trần của cửa sổ động' })
+  @ApiProperty({ description: 'Cửa sổ huỷ miễn phí khi đặt xa (giờ) - trần của cửa sổ động' })
   policyFreeCancelHours!: number;
-  @ApiProperty({ description: 'Cửa sổ thanh toán khi đặt xa (phút) — trần của cửa sổ động' })
+  @ApiProperty({ description: 'Cửa sổ thanh toán khi đặt xa (phút) - trần của cửa sổ động' })
   policyPaymentWindowMinutes!: number;
   @ApiPropertyOptional({
     type: BookingRequestApprovalWindowsDto,
     nullable: true,
     description:
-      'Hai cửa sổ nếu duyệt ngay — null khi chưa có giờ nhận (dài hạn: gian hàng chốt lúc duyệt) ' +
+      'Hai cửa sổ nếu duyệt ngay - null khi chưa có giờ nhận (dài hạn: gian hàng chốt lúc duyệt) ' +
       'hoặc khi chuyến không thu online',
   })
   windows!: BookingRequestApprovalWindowsDto | null;
@@ -691,6 +732,14 @@ export class BookingRequestDto {
   @ApiPropertyOptional({ type: String, nullable: true }) vehicleCode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Ảnh đại diện của xe' })
   vehicleImageUrl!: string | null;
+  /** Bốn trường của dòng thông số "4 chỗ · Số tự động · Điện" — MÃ, nhãn do client dịch (ADR 0012). */
+  @ApiPropertyOptional({ type: String, nullable: true, enum: MOTORBIKE_CATEGORY_VALUES })
+  motorbikeCategory!: string | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) seatCount!: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) transmission!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) fuelType!: string | null;
+  /** Mã ĐƠN đã sinh từ yêu cầu (`#DH…`) — yêu cầu không có mã riêng; null khi chưa thành đơn. */
+  @ApiPropertyOptional({ type: String, nullable: true }) bookingCode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, enum: VEHICLE_TYPE_VALUES })
   vehicleType!: string | null;
   @ApiProperty({ enum: BOOKING_REQUEST_STATUS_LIVE_VALUES }) status!: string;
@@ -702,7 +751,7 @@ export class BookingRequestDto {
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'SĐT khách — null với chủ xe tuyến hoa hồng khi chuyến chưa có đơn',
+    description: 'SĐT khách - null với chủ xe tuyến hoa hồng khi chuyến chưa có đơn',
   })
   customerPhone!: string | null;
   /**
@@ -713,7 +762,7 @@ export class BookingRequestDto {
     type: String,
     nullable: true,
     description:
-      'SĐT tài khoản khách — chỉ trả về khi chủ xe được xem liên hệ và SĐT liên hệ khác SĐT tài khoản',
+      'SĐT tài khoản khách - chỉ trả về khi chủ xe được xem liên hệ và SĐT liên hệ khác SĐT tài khoản',
   })
   customerAccountPhone!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) customerEmail!: string | null;
@@ -737,6 +786,9 @@ export class BookingRequestDto {
    */
   @ApiPropertyOptional({ type: String, nullable: true, enum: TENANT_CUSTOMER_RISK_LEVEL_VALUES })
   customerRiskLevel!: string | null;
+  /** "Khách quen": đã có ít nhất một chuyến hoàn thành ở chính gian hàng này. */
+  @ApiProperty({ description: 'Khách đã có ≥ 1 chuyến hoàn thành ở gian hàng này' })
+  customerIsRegular!: boolean;
   /**
    * Khách có tài khoản trên nền tảng để nhắn tin trong ứng dụng không. `false` với khách vãng
    * lai — gian hàng chỉ liên hệ được qua điện thoại/Zalo.
@@ -748,12 +800,12 @@ export class BookingRequestDto {
    * (`hostSeesCustomerContact`): tuyến gói luôn mở; tuyến hoa hồng chỉ khi yêu cầu đã thành ĐƠN
    * (ADR 0073). `false` ⇒ giao diện ẩn hẳn nút "Nhắn tin"; server chặn `POST …/conversation`.
    */
-  @ApiProperty({ description: 'Kênh nhắn tin mở ở chặng này — tuyến hoa hồng chỉ khi đã có đơn' })
+  @ApiProperty({ description: 'Kênh nhắn tin mở ở chặng này - tuyến hoa hồng chỉ khi đã có đơn' })
   chatOpen!: boolean;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'ISO-8601 UTC — null với yêu cầu dài hạn chưa chốt lịch',
+    description: 'ISO-8601 UTC - null với yêu cầu dài hạn chưa chốt lịch',
   })
   pickupAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC' })
@@ -763,7 +815,7 @@ export class BookingRequestDto {
     type: Number,
     nullable: true,
     enum: LONG_TERM_PACKAGE_MONTHS_VALUES,
-    description: 'Gói thuê dài hạn khách chọn — null ở yêu cầu dài hạn LEGACY',
+    description: 'Gói thuê dài hạn khách chọn - null ở yêu cầu dài hạn LEGACY',
   })
   longTermPackageMonths!: number | null;
   @ApiPropertyOptional({ type: String, nullable: true, enum: PICKUP_PREFERENCE_VALUES })
@@ -780,14 +832,14 @@ export class BookingRequestDto {
   @ApiPropertyOptional({
     type: AddressViewDto,
     nullable: true,
-    description: 'Điểm đón có cấu trúc — null với yêu cầu không có điểm đón',
+    description: 'Điểm đón có cấu trúc - null với yêu cầu không có điểm đón',
   })
   pickupLocation!: AddressViewDto | null;
   @ApiPropertyOptional({ type: String, nullable: true }) destination!: string | null;
   @ApiPropertyOptional({
     type: GeoPinDto,
     nullable: true,
-    description: 'Ghim toạ độ của điểm đến — điểm đến không có mã hành chính',
+    description: 'Ghim toạ độ của điểm đến - điểm đến không có mã hành chính',
   })
   destinationPin!: GeoPinDto | null;
   @ApiPropertyOptional({ type: String, nullable: true }) note!: string | null;
@@ -796,14 +848,22 @@ export class BookingRequestDto {
   @ApiPropertyOptional({
     type: AddressViewDto,
     nullable: true,
-    description: 'Địa chỉ giao xe có cấu trúc — null khi khách tự tới lấy',
+    description: 'Địa chỉ giao xe có cấu trúc - null khi khách tự tới lấy',
   })
   deliveryLocation!: AddressViewDto | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Địa chỉ ĐIỂM NHẬN XE khi khách tự tới: chi nhánh giữ xe, rơi về địa chỉ hồ sơ gian hàng. ' +
+      '`null` khi chưa điền cả hai - chuỗi thô, không dịch',
+  })
+  pickupPointAddress!: string | null;
   @ApiPropertyOptional({
     type: BookingRequestDeliveryQuoteDto,
     nullable: true,
     description:
-      'LỊCH SỬ: báo giá giao nhận của các yêu cầu tạo trước Wave 9. Chỉ để đọc — không còn ' +
+      'LỊCH SỬ: báo giá giao nhận của các yêu cầu tạo trước Wave 9. Chỉ để đọc - không còn ' +
       'ảnh hưởng tới việc duyệt, và yêu cầu mới luôn null.',
   })
   deliveryQuote!: BookingRequestDeliveryQuoteDto | null;
@@ -822,14 +882,14 @@ export class BookingRequestDto {
    */
   @ApiProperty({
     description:
-      'ISO-8601 UTC — hạn gian hàng phải phản hồi (server tính: 20% của ΔT = giờ nhận − lúc gửi, ' +
-      '15–240 phút; dài hạn chưa có giờ nhận ⇒ 240 phút — ADR 0066)',
+      'ISO-8601 UTC - hạn gian hàng phải phản hồi (server tính: 20% của ΔT = giờ nhận − lúc gửi, ' +
+      '15-240 phút; dài hạn chưa có giờ nhận ⇒ 240 phút - ADR 0066)',
   })
   respondBy!: string;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'ISO-8601 UTC — thời điểm gian hàng duyệt/từ chối; null khi còn chờ',
+    description: 'ISO-8601 UTC - thời điểm gian hàng duyệt/từ chối; null khi còn chờ',
   })
   decidedAt!: string | null;
 
@@ -837,7 +897,7 @@ export class BookingRequestDto {
     type: String,
     nullable: true,
     enum: BOOKING_REQUEST_DECISION_SOURCE_VALUES,
-    description: 'Ai quyết định — chủ xe hay hệ thống tự nhận (08/09/2026); null khi chưa quyết',
+    description: 'Ai quyết định - chủ xe hay hệ thống tự nhận (08/09/2026); null khi chưa quyết',
   })
   decisionSource!: string | null;
 
@@ -852,9 +912,23 @@ export class BookingRequestDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'ISO-8601 UTC — hạn khách chuyển tiền giữ chỗ; null khi chuyến không thu',
+    description: 'ISO-8601 UTC - hạn khách chuyển tiền giữ chỗ; null khi chuyến không thu',
   })
   holdExpiresAt!: string | null;
+
+  /**
+   * Lúc nút "Nhắc khách" mở lại (05/11/2026) = lời nhắc gần nhất khách đã nhận +
+   * `HOLD_HOST_REMINDER_COOLDOWN_MINUTES`. `null` khi không có gì để nhắc: chuyến không ở chặng chờ
+   * khách trả, khoản giữ chỗ đã đủ/hết hạn, hoặc khách không có tài khoản nhận thông báo. Mốc ở
+   * quá khứ = bấm được ngay. Server vẫn chặn lại trong câu UPDATE — đây chỉ là gợi ý cho nút.
+   */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'ISO-8601 UTC - lúc gian hàng nhắc khách thanh toán được; null khi không có gì để nhắc',
+  })
+  paymentReminderAvailableAt!: string | null;
 
   /** Khách đã tích bảo hiểm vật chất xe (`IV`) lúc gửi — lượt chốt giá tính theo lựa chọn này. */
   @ApiProperty() vehicleProtectionSelected!: boolean;
@@ -865,9 +939,9 @@ export class BookingRequestDto {
     type: BookingRequestPricingDto,
     nullable: true,
     description:
-      'Tiền của yêu cầu này — xem docblock BookingRequestPricingDto cho nguồn theo trạng thái. ' +
+      'Tiền của yêu cầu này - xem docblock BookingRequestPricingDto cho nguồn theo trạng thái. ' +
       'Luôn có mặt (kể cả `null`) ở danh sách và chi tiết; VẮNG MẶT ở phiếu trả về của các thao ' +
-      'tác duyệt/từ chối/huỷ — client đọc lại danh sách/chi tiết để thấy số mới.',
+      'tác duyệt/từ chối/huỷ - client đọc lại danh sách/chi tiết để thấy số mới.',
   })
   pricing?: BookingRequestPricingDto | null;
 
@@ -875,10 +949,29 @@ export class BookingRequestDto {
     type: BookingRequestApprovalPreviewDto,
     nullable: true,
     description:
-      'Xem trước lượt duyệt (tiền + hai cửa sổ nếu duyệt ngay) — chỉ yêu cầu còn chờ duyệt. Cùng ' +
+      'Xem trước lượt duyệt (tiền + hai cửa sổ nếu duyệt ngay) - chỉ yêu cầu còn chờ duyệt. Cùng ' +
       'luật vắng mặt với `pricing` ở phiếu trả về của các thao tác.',
   })
   approvalPreview?: BookingRequestApprovalPreviewDto | null;
+
+  @ApiPropertyOptional({
+    type: () => BookingRequestVehicleStillOutDto,
+    nullable: true,
+    description:
+      'Chiếc xe của yêu cầu đang ở một chuyến ĐÃ QUÁ GIỜ TRẢ mà chưa được nhận về - chỉ có ở lượt ' +
+      'đọc CHI TIẾT một yêu cầu còn chờ duyệt (hộp duyệt đọc lại chi tiết mỗi lần mở). Lịch bận ' +
+      'chỉ chặn tới giờ trả gốc, nên đây là lời cảnh báo cho người duyệt; "Đặt ngay" cũng tạm dừng ' +
+      'với xe đó (`vehicle_still_out`).',
+  })
+  vehicleStillOut?: BookingRequestVehicleStillOutDto | null;
+}
+
+/** Chuyến đang giữ chiếc xe ở ngoài quá giờ trả — xem `BookingRequestDto.vehicleStillOut`. */
+export class BookingRequestVehicleStillOutDto {
+  @ApiProperty() bookingId!: string;
+  @ApiProperty() bookingCode!: string;
+  @ApiProperty({ format: 'date-time', description: 'Giờ trả theo đơn - đã qua' })
+  returnAt!: string;
 }
 
 /**
@@ -910,13 +1003,19 @@ export class BookingRequestPageDto {
   @ApiProperty({ type: BookingRequestPageMetaDto }) meta!: BookingRequestPageMetaDto;
 }
 
+/** Kết quả lượt gian hàng nhắc khách thanh toán tiền giữ chỗ. */
+export class PaymentReminderResultDto {
+  @ApiProperty({ description: 'ISO-8601 UTC - lúc lời nhắc được gửi' }) remindedAt!: string;
+  @ApiProperty({ description: 'ISO-8601 UTC - lúc nhắc lại được' }) nextAvailableAt!: string;
+}
+
 /** Kết quả trả khách sau khi gửi yêu cầu (không lộ nội bộ tenant). */
 export class BookingRequestReceiptDto {
   @ApiProperty() id!: string;
   @ApiProperty({ enum: BOOKING_REQUEST_STATUS_LIVE_VALUES }) status!: string;
   @ApiProperty({
     description:
-      'Luôn `true` — người gửi luôn là tài khoản khách đã đăng nhập (ADR 0060). Giữ cho client cũ.',
+      'Luôn `true` - người gửi luôn là tài khoản khách đã đăng nhập (ADR 0060). Giữ cho client cũ.',
   })
   authenticated!: boolean;
 
@@ -928,7 +1027,7 @@ export class BookingRequestReceiptDto {
   @ApiPropertyOptional({
     type: MobileSessionDto,
     deprecated: true,
-    description: 'ĐÃ GỠ (ADR 0060) — không bao giờ có mặt.',
+    description: 'ĐÃ GỠ (ADR 0060) - không bao giờ có mặt.',
   })
   session?: MobileSessionDto;
 

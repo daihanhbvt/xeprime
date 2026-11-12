@@ -3,7 +3,12 @@ import { App } from 'antd';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { API_ERROR_CODE, PERMISSION, SUPPORT_WORKSPACE } from '@xeprime/types';
-import { adminTenantSupportPath } from '@/constants/routes';
+import {
+  WORKSPACE,
+  adminTenantSupportPath,
+  workspacePaths,
+  workspaceVehiclePaths,
+} from '@/constants/routes';
 import { supportWorkspaceValue } from '@/features/tenant-support/components/SupportWorkspaceProvider';
 import { SupportSessionScope, supportSessionOf } from '@/features/tenant-support/support-session';
 import { CONTEXT_A, supportContextFixture } from '@/features/tenant-support/test-utils';
@@ -20,8 +25,14 @@ const url = vi.hoisted(() => ({ search: '' }));
  * Query. Test này mock `use-permissions` nên không dựng `QueryClientProvider`; thiếu mock
  * ở đây thì component chết vì hạ tầng, không vì thứ đang kiểm.
  */
+const plan = vi.hoisted(() => ({ fullManage: true }));
 vi.mock('@/hooks/use-feature', () => ({
-  useFeature: () => ({ state: 'enabled', canWrite: true, isVisible: true, planEndsAt: null }),
+  useFeature: () => ({
+    state: plan.fullManage ? 'enabled' : 'hidden',
+    canWrite: plan.fullManage,
+    isVisible: plan.fullManage,
+    planEndsAt: null,
+  }),
   useFeatureStates: () => ({}),
   usePlanEndsAt: () => null,
 }));
@@ -104,8 +115,39 @@ vi.mock('@/hooks/use-permissions', () => ({
   }),
 }));
 
-/** Chi nhánh của xe — bộ chọn ở tab Thông tin đọc danh sách này. */
+/** Giấy tờ: menu đếm loại cốt lõi đã có file — xe mẫu có 2/3. */
+vi.mock('@/features/vehicle-documents/hooks', () => ({
+  useVehicleDocuments: () => ({
+    data: [
+      { id: 'd1', type: 'registration', hasFile: true, presentation: 'valid', updatedAt: '' },
+      { id: 'd2', type: 'insurance', hasFile: true, presentation: 'valid', updatedAt: '' },
+      { id: 'd3', type: 'inspection', hasFile: false, presentation: 'missing', updatedAt: '' },
+    ],
+    isLoading: false,
+    isError: false,
+  }),
+}));
+/** Thiết lập dịch vụ + khung giờ của các mục "Hình thức cho thuê". */
+vi.mock('@/features/vehicle-manage/hooks', () => ({
+  useVehicleServiceSettings: () => ({
+    data: [],
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+  usePatchVehicleServiceSetting: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useVehicleOperationSettings: () => ({ data: undefined, isLoading: true, isError: false }),
+  useSaveVehicleOperationSettings: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useVehicleTripHistoryFilters: () => ({ filters: {}, setFilters: vi.fn() }),
+  useVehicleTripHistory: () => ({ data: undefined, isLoading: true, isError: false }),
+}));
+vi.mock('@/features/drivers/components/WithDriverWageNote', () => ({
+  WithDriverWageNote: () => null,
+}));
+
+/** Chi nhánh của xe — bộ chọn ở mục Thông tin đọc danh sách này. */
 vi.mock('@/features/branches/hooks/use-branches', () => ({
+  useBranches: () => ({ data: { items: [] }, isLoading: false, isError: false }),
   useActiveBranches: () => ({
     data: {
       items: [
@@ -206,20 +248,8 @@ vi.mock('@/services/api-client', async (importOriginal) => ({
   getErrorMessage: () => 'Không thể lưu xe',
 }));
 
+/** Màn sửa đọc vài truy vấn chưa mock (giấy tờ của mục Giấy tờ…) — dựng provider, `retry` tắt. */
 function renderPage() {
-  return render(
-    <App>
-      <EditVehiclePage />
-    </App>,
-  );
-}
-
-/**
- * Mục vận hành dựng section của khu tài khoản, và chúng tự gọi TanStack Query (thiết lập dịch
- * vụ, khung giờ). Ca nào mở thẳng các mục đó thì dựng provider — không gọi mạng nào vì `retry`
- * tắt và `fetch` không có máy chủ, section chỉ đứng ở trạng thái đang tải.
- */
-function renderPageWithQuery() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
@@ -230,7 +260,15 @@ function renderPageWithQuery() {
   );
 }
 
+const ownerWorkspace = {
+  workspace: WORKSPACE.ACCOUNT,
+  paths: workspacePaths(WORKSPACE.ACCOUNT),
+  vehicles: workspaceVehiclePaths(WORKSPACE.ACCOUNT),
+  isManage: false,
+};
+
 beforeEach(() => {
+  plan.fullManage = true;
   permissions.allow = true;
   query.data = vehicle;
   query.isLoading = false;
@@ -248,7 +286,14 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
+/** Tên mục trên menu, bỏ phần số đếm ("5 thiếu", "2/3") ở cuối. */
+function menuLabels(menu: HTMLElement): string[] {
+  return within(menu)
+    .getAllByRole('button')
+    .map((button) => (button.textContent ?? '').replace(/(\d+ thiếu|\d+\/\d+)$/, ''));
+}
+
+describe('/manage/vehicles/[id]/edit - màn sửa xe (design 23731:37932)', () => {
   it('không có quyền thì không gọi API và hiện màn 403', () => {
     permissions.allow = false;
     renderPage();
@@ -270,153 +315,107 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
   });
 
   /**
-   * MENU TRÁI 10 mục (30/09/2026) — mục là NÚT, không còn `role=tab`.
-   *
-   * Khoá lại rằng không khối nào của develop BIẾN MẤT: bảy tab cũ + năm khối trong `Collapse`
-   * của tab "Vận hành & điều kiện thuê" đều còn đường tới — thủ tục cho thuê nằm chung mục
-   * "Nhận chuyến & thủ tục" với tối ưu nhận chuyến của cùng dịch vụ.
+   * Menu trái ba nhóm (03/11/2026). Không khối nào của bản 30/09 biến mất: giá + tự nhận chuyến
+   * nằm trong "Dịch vụ & giá"; cọc, giao xe, thời gian chuẩn bị xe và điều khoản ở "Chính sách thuê".
    */
-  it('menu trái có đủ 10 mục, xếp theo nhóm dịch vụ', () => {
+  it('menu trái ba nhóm, mục là nút có aria-current; số đếm giấy tờ x/3', () => {
     renderPage();
     expect(screen.getByRole('heading', { name: vehicle.name })).toBeTruthy();
     expect(screen.getByDisplayValue(vehicle.name)).toBeTruthy();
     expect((screen.getByDisplayValue(vehicle.code) as HTMLInputElement).disabled).toBe(true);
 
-    const menu = screen.getByRole('navigation', { name: 'Mục của xe' });
-    // Mục đang mở nói ra bằng `aria-current`, không phải `aria-selected` của tab.
+    const menu = screen.getByRole('navigation', { name: 'Mục hồ sơ xe' });
     expect(
-      within(menu)
-        .getByRole('button', { name: 'Thông tin xe & tiện ích' })
-        .getAttribute('aria-current'),
+      within(menu).getByRole('button', { name: 'Thông tin chung' }).getAttribute('aria-current'),
     ).toBe('page');
-    expect(
-      within(menu)
-        .getAllByRole('button')
-        .map((button) => button.textContent),
-    ).toEqual([
-      'Thông tin xe & tiện ích',
+    expect(menuLabels(menu)).toEqual([
+      'Thông tin chung',
       'Hình ảnh',
       'Giấy tờ xe',
-      'Giá & chính sách',
-      'Thời gian giao nhận',
-      'Nhận chuyến & thủ tục',
-      'Nhận chuyến & thủ tục',
-      // Nhóm dài hạn không có mục — chỉ công tắc và lời nhắc dẫn về Giá & chính sách.
-      'Giá thuê tháng nằm ở Giá & chính sách',
-      'Nguồn xe & tài chính',
-      'Bảo dưỡng & KM',
+      'Dịch vụ & giá',
+      'Chính sách thuê',
+      'Bảo dưỡng & số KM',
+      'Nguồn gốc & tài chính xe',
     ]);
+    expect(within(menu).getByText('2/3')).toBeTruthy();
+    expect(within(menu).getByRole('button', { name: /^Hình ảnh/ }).textContent).toMatch(/thiếu$/);
   });
 
-  it('công tắc dịch vụ trên tiêu đề nhóm phản ánh dịch vụ của xe và ghi đủ mảng serviceTypes', async () => {
+  it('cột phải: tóm tắt xe + Hoàn tác · Lưu thay đổi (khoá khi chưa đổi gì)', () => {
     renderPage();
-    const selfDrive = screen.getByRole('switch', { name: 'Bật hoặc tắt dịch vụ Tự lái' });
-    const withDriver = screen.getByRole('switch', { name: 'Bật hoặc tắt dịch vụ Có tài xế' });
-    const longTerm = screen.getByRole('switch', { name: 'Bật hoặc tắt dịch vụ Thuê dài hạn' });
-    expect(selfDrive.getAttribute('aria-checked')).toBe('true');
-    // Dịch vụ cuối cùng của xe không tắt được — xe phải giữ ít nhất một dịch vụ.
-    expect((selfDrive as HTMLButtonElement).disabled).toBe(true);
-    expect(withDriver.getAttribute('aria-checked')).toBe('false');
-    expect(longTerm.getAttribute('aria-checked')).toBe('false');
-
-    fireEvent.click(withDriver);
-    await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
-    expect(update.mutateAsync.mock.calls[0]![0]).toEqual({
-      serviceTypes: ['self_drive', 'with_driver'],
-    });
+    const aside = screen.getByRole('complementary', { name: 'Tóm tắt xe và lưu thay đổi' });
+    expect(within(aside).getByText('Ô tô · 5 chỗ')).toBeTruthy();
+    expect(within(aside).getByText('Kiểm duyệt')).toBeTruthy();
+    // Công tắc "Trên chợ" lên góc phải đầu trang (03/11/2026) — không còn trong cột phải.
+    expect(within(aside).queryByText('Trên chợ')).toBeNull();
+    expect(screen.getByText('Trên chợ')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Xem trang xe/ })).toBeTruthy();
+    expect(within(aside).getByRole('progressbar', { name: 'Hoàn thiện' })).toBeTruthy();
+    const save = within(aside).getByRole('button', { name: 'Lưu thay đổi' }) as HTMLButtonElement;
+    expect(save.disabled).toBe(true);
   });
 
-  it('Loại dịch vụ là nhãn LƯU NGAY — lưu form Thông tin KHÔNG gửi serviceTypes', async () => {
+  it('bấm ảnh ở cột phải mở mục Hình ảnh', async () => {
     renderPage();
-    expect(screen.getByRole('group', { name: 'Loại dịch vụ' })).toBeTruthy();
-    fireEvent.change(screen.getByLabelText(/Tên xe/), { target: { value: 'Toyota Vios mới' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
-    await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
-    expect(update.mutateAsync.mock.calls[0]![0]).not.toHaveProperty('serviceTypes');
-  });
-
-  it('mục của dịch vụ đang tắt: nói ra và mời bật qua CÙNG công tắc', async () => {
-    renderPage();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Nhận chuyến & thủ tục' })[1]!);
-    expect(await screen.findByText('Dịch vụ Có tài xế đang tắt')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Bật Có tài xế' }));
-    await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
-    expect(update.mutateAsync.mock.calls[0]![0]).toEqual({
-      serviceTypes: ['self_drive', 'with_driver'],
-    });
-  });
-
-  it.each([
-    // Tab `operations` của develop mở khối đầu tiên của nó.
-    ['operations', 'Thời gian giao nhận', 0],
-    // Thủ tục tự lái nằm chung mục với tối ưu nhận chuyến tự lái (mục đầu trong hai mục cùng tên).
-    ['self-drive-terms', 'Nhận chuyến & thủ tục', 0],
-    ['with-driver-terms', 'Nhận chuyến & thủ tục', 1],
-  ])('link cũ ?tab=%s mở đúng mục "%s"', (tab, label, index) => {
-    url.search = `tab=${tab}`;
-    renderPageWithQuery();
-    const menu = screen.getByRole('navigation', { name: 'Mục của xe' });
-    expect(
-      within(menu).getAllByRole('button', { name: label })[index]!.getAttribute('aria-current'),
-    ).toBe('page');
-  });
-
-  it('?tab=pricing vẫn mở màn Giá & chính sách (một màn, một nút Lưu như develop)', async () => {
-    url.search = 'tab=pricing';
-    renderPage();
-    expect(await screen.findByText('Không tải được giá & chính sách')).toBeTruthy();
-  });
-
-  it('Giá & chính sách được nhúng trực tiếp trong tab, không qua màn trung gian', async () => {
-    renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Giá & chính sách' }));
-    expect(await screen.findByText('Không tải được giá & chính sách')).toBeTruthy();
-    expect(screen.queryByText('Mở Giá & chính sách')).toBeNull();
-  });
-
-  /**
-   * Mục Thông tin xe có HAI tab ngang (30/09/2026): "Thông tin xe cơ bản" gom các ô theo nhóm
-   * card, "Thông số kỹ thuật nâng cao" thay vùng thu gọn cũ. Cùng một form, một nút Lưu.
-   */
-  it('tab cơ bản gom ô theo nhóm card; tab nâng cao là tab ngang riêng', () => {
-    renderPage();
-    const basic = screen.getByRole('tab', { name: /Thông tin xe cơ bản/ });
-    expect(basic.getAttribute('aria-selected')).toBe('true');
-    for (const title of [
-      'Thông tin chung',
-      'Nhận dạng xe',
-      'Động cơ & nhiên liệu',
-      'Tiện ích & mô tả',
-    ]) {
-      expect(screen.getByText(title)).toBeTruthy();
-    }
-    // Trạng thái vận hành đổi trên chip thẻ đầu xe — không còn card/ô trong form.
-    expect(screen.queryByText('Quản lý trạng thái')).toBeNull();
-    expect(screen.queryByLabelText('Chiều dài (mm)')).toBeNull();
-  });
-
-  /**
-   * Thẻ đầu xe + cột xem nhanh (30/09/2026): chỉ đọc. Nút "Chỉnh sửa" ảnh dẫn tới mục Hình
-   * ảnh — không có lối ghi ảnh thứ hai ở đây.
-   */
-  it('thẻ đầu xe + cột tóm tắt; "Chỉnh sửa" ảnh mở mục Hình ảnh', async () => {
-    renderPage();
-    expect(screen.getByRole('heading', { level: 1, name: vehicle.name })).toBeTruthy();
-    expect(screen.getByText('Thông tin tóm tắt')).toBeTruthy();
-    expect(screen.getByText('5 chỗ')).toBeTruthy();
-    // Xe đã duyệt: thông báo khoá trường nằm ở cột tóm tắt.
-    expect(screen.getByText(/^Xe đang hiển thị trên chợ: biển số/)).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Chỉnh sửa hình ảnh xe' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mở mục Hình ảnh' }));
     await waitFor(() => expect(nav.replace).toHaveBeenCalled());
     expect(String(nav.replace.mock.calls[0]?.[0])).toContain('tab=media');
   });
 
-  /**
-   * Trạng thái vận hành đổi TẠI CHỖ trên chip của thẻ đầu xe (30/09/2026) — lưu ngay, chỉ gửi
-   * `operationStatus`. Form Thông tin không còn ô đó và không gửi nó (không ghi đè lần đổi này).
-   */
-  it('bấm chip "Vận hành" đổi trạng thái — lưu ngay, form không gửi operationStatus', async () => {
+  it.each([
+    ['pricing', 'Dịch vụ & giá'],
+    ['self-drive-optimization', 'Dịch vụ & giá'],
+    ['with-driver-surcharges', 'Dịch vụ & giá'],
+    // Hai mục của menu sáng 03/11 gộp thành "Chính sách thuê" — link cũ tới chúng vẫn mở đúng chỗ.
+    ['conditions', 'Chính sách thuê'],
+    ['handover', 'Chính sách thuê'],
+    ['operations', 'Chính sách thuê'],
+    ['handover-time', 'Chính sách thuê'],
+    ['self-drive-terms', 'Chính sách thuê'],
+    ['with-driver-terms', 'Chính sách thuê'],
+  ])('link cũ ?tab=%s mở đúng mục "%s"', (tab, label) => {
+    url.search = `tab=${tab}`;
+    renderPage();
+    const menu = screen.getByRole('navigation', { name: 'Mục hồ sơ xe' });
+    expect(within(menu).getByRole('button', { name: label }).getAttribute('aria-current')).toBe(
+      'page',
+    );
+  });
+
+  it('?tab=with-driver-surcharges mở tab Có tài xế của mục Dịch vụ & giá', () => {
+    url.search = 'tab=with-driver-surcharges';
+    renderPage();
+    expect(screen.getByRole('tab', { name: /Xe có tài xế/ }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+  });
+
+  it('Dịch vụ & giá: giá nhúng thẳng trong tab dịch vụ - lỗi tải giá chỉ chặn phần giá', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Dịch vụ & giá' }));
+    expect(await screen.findByText('Không tải được giá & chính sách')).toBeTruthy();
+    expect(screen.getByRole('switch', { name: 'Cho thuê tự lái' })).toBeTruthy();
+  });
+
+  it('Thông tin chung gom ô theo thẻ của design + hai thẻ design không vẽ', () => {
+    renderPage();
+    for (const title of [
+      'Kiểu dáng xe',
+      'Động cơ & nhiên liệu',
+      'Tiện ích xe',
+      'Thông số nâng cao',
+      'Mô tả xe',
+    ]) {
+      expect(screen.getByRole('region', { name: title })).toBeTruthy();
+    }
+    // Trạng thái vận hành đổi ở cột phải — không có ô trong form.
+    expect(screen.queryByText('Quản lý trạng thái')).toBeNull();
+    // Thông số nâng cao là một thẻ trên cùng trang, không còn tab ngang.
+    expect(screen.getByLabelText('Chiều dài (mm)')).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: /Thông số kỹ thuật nâng cao/ })).toBeNull();
+  });
+
+  it('đổi "Vận hành" ở cột phải - lưu ngay, form không gửi operationStatus', async () => {
     renderPage();
     expect(screen.queryByLabelText('Trạng thái vận hành')).toBeNull();
 
@@ -433,33 +432,21 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
 
   it('sửa thông số nâng cao rồi lưu: cùng MỘT lần lưu với form Thông tin', async () => {
     renderPage();
-    fireEvent.click(screen.getByRole('tab', { name: /Thông số kỹ thuật nâng cao/ }));
-    expect(await screen.findByText('Kích thước & Trọng lượng')).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Chiều dài (mm)'), { target: { value: '4500' } });
     fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
     await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
     expect(update.mutateAsync.mock.calls[0]![0].lengthMm).toBe(4500);
   });
 
-  it('lỗi ở tab nâng cao khi đang đứng tab cơ bản: tự mở đúng tab có lỗi', async () => {
+  it('Hoàn tác ở cột phải trả form về bản đã lưu', async () => {
     renderPage();
-    fireEvent.click(screen.getByRole('tab', { name: /Thông số kỹ thuật nâng cao/ }));
-    fireEvent.change(await screen.findByLabelText('Trong đô thị'), { target: { value: '1.233' } });
-    fireEvent.click(screen.getByRole('tab', { name: /Thông tin xe cơ bản/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
-
-    await waitFor(() =>
-      expect(
-        screen
-          .getByRole('tab', { name: /Thông số kỹ thuật nâng cao/ })
-          .getAttribute('aria-selected'),
-      ).toBe('true'),
-    );
-    expect(await screen.findByText(/2 chữ số thập phân/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText(/Tên xe/), { target: { value: 'Sửa dở' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Hoàn tác' }));
+    await waitFor(() => expect(screen.getByDisplayValue(vehicle.name)).toBeTruthy());
     expect(update.mutateAsync).not.toHaveBeenCalled();
   });
 
-  it('tab Thông tin chỉ gửi field thuộc tab, không ghi đè media hay giá', async () => {
+  it('mục Thông tin chỉ gửi field thuộc mục, không ghi đè media, giá hay dịch vụ', async () => {
     renderPage();
     fireEvent.change(screen.getByLabelText(/Tên xe/), { target: { value: 'Toyota Vios mới' } });
     fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
@@ -470,9 +457,10 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
     expect(payload).not.toHaveProperty('mainImageUrl');
     expect(payload).not.toHaveProperty('weekdayPrice');
     expect(payload).not.toHaveProperty('sourceType');
+    expect(payload).not.toHaveProperty('serviceTypes');
   });
 
-  it('chuyển xe sang chi nhánh tỉnh khác PHẢI gửi branchId — vị trí công khai đổi thật', async () => {
+  it('chuyển xe sang chi nhánh tỉnh khác PHẢI gửi branchId - vị trí công khai đổi thật', async () => {
     renderPage();
     fireEvent.mouseDown(screen.getByLabelText(/Chi nhánh giữ xe/));
     fireEvent.click(await screen.findByTitle('Chi nhánh Hà Nội · Hà Nội'));
@@ -481,63 +469,52 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
     expect(update.mutateAsync.mock.calls[0]![0].branchId).toBe('branch-2');
   });
 
-  /**
-   * Tiện ích + mô tả dời sang mục "Thông tin xe & tiện ích" (30/09/2026) — và PHẢI vào payload.
-   *
-   * Đây là ca khoá lỗi mất dữ liệu có thật trong đợt đổi cấu trúc: hai ô đã dời sang mục này
-   * nhưng hàm lưu của mục (`informationValuesToInput`) chưa mang chúng theo, nên form báo lưu
-   * thành công trong khi mô tả không đổi.
-   */
-  it('mô tả sửa ở mục Thông tin xe & tiện ích THỰC SỰ đi vào payload', async () => {
+  /** Khoá lỗi mất dữ liệu có thật: mô tả + tiện ích phải đi vào payload của mục này. */
+  it('mô tả sửa ở mục Thông tin chung THỰC SỰ đi vào payload', async () => {
     renderPage();
-    fireEvent.change(screen.getByLabelText(/Mô tả/), { target: { value: 'Mô tả mới' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Mô tả xe' }), {
+      target: { value: 'Mô tả mới' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
     await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
     const payload = update.mutateAsync.mock.calls[0]![0];
     expect(payload.description).toBe('Mô tả mới');
     expect(payload.features).toEqual(vehicle.features);
-    // Vẫn KHÔNG mang ảnh: ảnh có mục và đường lưu riêng.
     expect(payload).not.toHaveProperty('mainImageUrl');
     expect(payload).not.toHaveProperty('media');
   });
 
-  /**
-   * Mục ảnh dùng NGUYÊN `ImagesSection` của khu tài khoản (30/09/2026), không còn là một phần
-   * form RHF. Hành vi xoá/thay/lưu ảnh (gồm ADR 0030 — xoá ảnh đại diện gửi `null`) được khoá
-   * ở bộ test của chính section đó (`vehicle-manage-sections.test.tsx`), nơi nó sống.
-   *
-   * Ở đây khoá ranh giới: mở mục ảnh thì form "Thông tin xe" biến mất — hai đường lưu không bao
-   * giờ cùng hiện trên một màn.
-   */
-  it('mục Hình ảnh dùng section ảnh dùng chung, không dựng form thông tin', async () => {
+  it('mục Hình ảnh: không dựng form thông tin; nút lưu ở cột phải chờ có thay đổi ảnh', async () => {
     renderPage();
     expect(screen.getByLabelText(/Tên xe/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Hình ảnh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Hình ảnh/ }));
     await waitFor(() => expect(screen.queryByLabelText(/Tên xe/)).toBeNull());
+    expect(
+      (screen.getByRole('button', { name: 'Lưu thay đổi' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 
-  it('tab Nguồn xe (Wave 4): sửa dở rồi chuyển tab phải qua xác nhận bỏ thay đổi', async () => {
+  it('Nguồn gốc & tài chính: sửa dở rồi chuyển mục phải qua xác nhận bỏ thay đổi', async () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Nguồn xe & tài chính' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nguồn gốc & tài chính xe' }));
     fireEvent.change(await screen.findByLabelText(/Nơi mua/), {
       target: { value: 'Toyota Đông Sài Gòn' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Thông tin xe & tiện ích' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Thông tin chung' }));
     expect(await screen.findByText('Bỏ các thay đổi chưa lưu?')).toBeTruthy();
   });
 
-  it('không cho đổi tab làm mất dữ liệu chưa lưu', async () => {
+  it('không cho đổi mục làm mất dữ liệu chưa lưu', async () => {
     renderPage();
     fireEvent.change(screen.getByLabelText(/Tên xe/), { target: { value: 'Chưa lưu' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Hình ảnh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Hình ảnh/ }));
     expect(await screen.findByText('Bỏ các thay đổi chưa lưu?')).toBeTruthy();
     expect(screen.getByDisplayValue('Chưa lưu')).toBeTruthy();
   });
 
   /*
    * ADR 0030: xe đã lên chợ thì CĂN CƯỚC của nó (biển số · hộp số · nhiên liệu · năm sản xuất)
-   * bị khoá ngay tại ô nhập, thay cho luật cũ "sửa được nhưng phải duyệt lại". Server vẫn là
-   * chốt chặn thật (`VEHICLE_FIELD_LOCKED`); ô khoá chỉ để người dùng khỏi gõ xong mới biết.
+   * bị khoá ngay tại ô nhập. Server vẫn là chốt chặn thật (`VEHICLE_FIELD_LOCKED`).
    */
   it('xe công khai: ô biển số bị khoá và nói rõ lý do', () => {
     renderPage();
@@ -550,34 +527,29 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
     renderPage();
     fireEvent.change(screen.getByLabelText(/^Màu sắc/), { target: { value: 'Xanh rêu' } });
     fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
-
     await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
     expect(screen.queryByText('Xác nhận thay đổi nhạy cảm')).toBeNull();
   });
 
   /*
-   * Lỗi có thật từ staging: nhập mức tiêu thụ `1.233` thì Lưu chỉ hiện toast "Dữ liệu gửi lên
-   * không hợp lệ" — không ô nào đỏ, người dùng không biết sai ở đâu (nhập `1.23` lại lưu được).
-   * Cột là `Decimal(6, 2)` và DTO có `maxDecimalPlaces: 2`, nhưng yup thì không, nên giá trị đi
-   * lọt xuống server. Hai test dưới khoá cả hai lớp phòng thủ.
+   * Lỗi có thật từ staging: mức tiêu thụ `1.233` chỉ hiện toast "Dữ liệu gửi lên không hợp lệ".
+   * Cột là `Decimal(6, 2)` — yup phải báo ngay dưới ô.
    */
   it('mức tiêu thụ quá 2 chữ số thập phân: báo NGAY dưới ô, không gọi API', async () => {
     renderPage();
-    fireEvent.click(screen.getByRole('tab', { name: /Thông số kỹ thuật nâng cao/ }));
-    const field = await screen.findByLabelText('Trong đô thị');
+    const field = screen.getByLabelText('Trong đô thị');
     fireEvent.change(field, { target: { value: '1.233' } });
     fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
 
     expect(await screen.findByText(/2 chữ số thập phân/)).toBeTruthy();
     expect(update.mutateAsync).not.toHaveBeenCalled();
 
-    // …và 1.23 thì đi tiếp bình thường.
     fireEvent.change(field, { target: { value: '1.23' } });
     fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
     await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
   });
 
-  it('server trả lỗi cấp trường: gắn vào ĐÚNG ô, ở đúng tab đang chứa nó', async () => {
+  it('server trả lỗi cấp trường: gắn vào ĐÚNG ô', async () => {
     const { ApiClientError } = await import('@/services/api-client');
     update.mutateAsync.mockRejectedValue(
       new ApiClientError({
@@ -592,7 +564,6 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
     await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
 
-    // Dung tích động cơ ở khối năng lượng của tab cơ bản — lỗi phải hiện ngay tại ô đó.
     const field = await screen.findByLabelText('Dung tích động cơ (cc)');
     expect(field.getAttribute('aria-invalid')).toBe('true');
     expect(
@@ -602,20 +573,82 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
 });
 
 /**
- * CÙNG trang, dựng trong phiên hỗ trợ gian hàng tuyến gói (ADR 0050): không có bản admin nào của
- * màn này. Trang tự thu về các tab của Đợt 1 và khoá các ô "ghim" nhờ đọc ngữ cảnh phiên.
+ * Tuyến hoa hồng (sổ cái §3.6 E24): CÙNG màn sửa, không còn không gian "Quản lý xe" riêng. Chủ xe
+ * có "Lịch sử chuyến", không có nhóm Vận hành nâng cao (năng lực gói), sửa đúng bộ ô cũ của họ và
+ * địa chỉ xe ngay trong Thông tin chung.
  */
-describe('/manage/vehicles/[id]/edit — trong phiên hỗ trợ của nhân sự nền tảng', () => {
-  function renderInSupport() {
-    const context = supportContextFixture({ workspace: SUPPORT_WORKSPACE.MANAGE });
+describe('/vehicles/[id]/edit - chủ xe tuyến hoa hồng', () => {
+  function renderOwner() {
+    plan.fullManage = false;
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     return render(
-      <App>
-        <SupportSessionScope session={supportSessionOf(context)}>
-          <WorkspaceScope value={supportWorkspaceValue(context)}>
+      <QueryClientProvider client={client}>
+        <App>
+          <WorkspaceScope value={ownerWorkspace}>
             <EditVehiclePage />
           </WorkspaceScope>
-        </SupportSessionScope>
-      </App>,
+        </App>
+      </QueryClientProvider>,
+    );
+  }
+
+  it('menu có Lịch sử chuyến, không có nhóm nâng cao; không có ô tên/chi nhánh', () => {
+    renderOwner();
+    const menu = screen.getByRole('navigation', { name: 'Mục hồ sơ xe' });
+    expect(menuLabels(menu)).toEqual([
+      'Thông tin chung',
+      'Hình ảnh',
+      'Giấy tờ xe',
+      'Lịch sử chuyến',
+      'Dịch vụ & giá',
+      'Chính sách thuê',
+    ]);
+    expect(screen.queryByLabelText(/Tên xe/)).toBeNull();
+    expect(screen.queryByLabelText(/Chi nhánh giữ xe/)).toBeNull();
+    expect(screen.getByRole('region', { name: 'Địa chỉ xe hiện tại' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Thông số nâng cao' })).toBeNull();
+  });
+
+  it('lưu chỉ gửi đúng bộ ô của chủ xe - không gửi tên, chi nhánh, kích thước', async () => {
+    renderOwner();
+    fireEvent.change(screen.getByLabelText(/^Màu sắc/), { target: { value: 'Xanh rêu' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+    await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
+    const payload = update.mutateAsync.mock.calls[0]![0];
+    expect(payload.color).toBe('Xanh rêu');
+    expect(payload).not.toHaveProperty('name');
+    expect(payload).not.toHaveProperty('branchId');
+    expect(payload).not.toHaveProperty('lengthMm');
+  });
+
+  it('link cũ ?tab=source của tuyến gói rơi về Thông tin chung', () => {
+    url.search = 'tab=source';
+    renderOwner();
+    const menu = screen.getByRole('navigation', { name: 'Mục hồ sơ xe' });
+    expect(
+      within(menu).getByRole('button', { name: 'Thông tin chung' }).getAttribute('aria-current'),
+    ).toBe('page');
+  });
+});
+
+/**
+ * CÙNG trang, dựng trong phiên hỗ trợ gian hàng tuyến gói (ADR 0050): trang tự thu về các mục
+ * phiên được mở và khoá các ô "ghim" nhờ đọc ngữ cảnh phiên.
+ */
+describe('/manage/vehicles/[id]/edit - trong phiên hỗ trợ của nhân sự nền tảng', () => {
+  function renderInSupport() {
+    const context = supportContextFixture({ workspace: SUPPORT_WORKSPACE.MANAGE });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return render(
+      <QueryClientProvider client={client}>
+        <App>
+          <SupportSessionScope session={supportSessionOf(context)}>
+            <WorkspaceScope value={supportWorkspaceValue(context)}>
+              <EditVehiclePage />
+            </WorkspaceScope>
+          </SupportSessionScope>
+        </App>
+      </QueryClientProvider>,
     );
   }
 
@@ -628,42 +661,24 @@ describe('/manage/vehicles/[id]/edit — trong phiên hỗ trợ của nhân s�
     return Boolean(item?.querySelector('.ant-select-disabled'));
   }
 
-  it('chỉ còn ba mục của Đợt 1 — giá, nguồn xe, giấy tờ, vận hành không có mặt', () => {
+  it('chỉ các mục phiên được mở - giá, điều kiện, nguồn xe, giấy tờ, vận hành không có mặt', () => {
     renderInSupport();
-    /*
-     * Đọc trong CHÍNH thanh menu, không quét cả trang: vùng thu gọn "thông số nâng cao" và các
-     * nút hành động cũng là `button`, và một phép đếm toàn trang sẽ gộp chúng vào.
-     *
-     * Ba mục này suy ra từ capability của phiên (`supportContextFixture` bộ MANAGE cấp
-     * `VEHICLE_VIEW` + `MAINTENANCE_VIEW`), KHÔNG phải từ hình thái menu — nên đổi tab ngang
-     * thành menu trái không được làm danh sách này dài hay ngắn đi một mục nào.
-     */
-    const menu = screen.getByRole('navigation', { name: 'Mục của xe' });
-    const items = within(menu)
-      .getAllByRole('button')
-      .map((button) => button.textContent);
-    expect(items).toEqual(['Thông tin xe & tiện ích', 'Hình ảnh', 'Bảo dưỡng & KM']);
+    // Suy từ capability của phiên (`VEHICLE_VIEW` + `MAINTENANCE_VIEW`), không từ hình thái menu.
+    const menu = screen.getByRole('navigation', { name: 'Mục hồ sơ xe' });
+    expect(menuLabels(menu)).toEqual(['Thông tin chung', 'Hình ảnh', 'Bảo dưỡng & số KM']);
   });
 
-  it('chi nhánh, loại xe, trạng thái vận hành bị khoá; không có công tắc dịch vụ; tên xe vẫn sửa được', () => {
+  it('chi nhánh, loại xe, trạng thái vận hành bị khoá; tên xe vẫn sửa được', () => {
     renderInSupport();
     expect(fieldDisabled('Chi nhánh giữ xe')).toBe(true);
     expect(fieldDisabled('Loại xe')).toBe(true);
-    // Dịch vụ không còn là ô của form, và phiên hỗ trợ không có công tắc dịch vụ nào.
-    // Phiên hỗ trợ không bật/tắt dịch vụ thay chủ xe — nhãn có mặt nhưng bấm không ghi gì.
-    fireEvent.click(
-      within(screen.getByRole('group', { name: 'Loại dịch vụ' })).getByText('Có tài xế'),
-    );
-    expect(update.mutateAsync).not.toHaveBeenCalled();
-    expect(screen.queryAllByRole('switch', { name: /Bật hoặc tắt dịch vụ/ })).toHaveLength(0);
-    // Trạng thái vận hành: phiên thiếu capability riêng → chip TĨNH, không có nút đổi.
     expect(screen.queryByRole('button', { name: /Trạng thái vận hành: .* bấm để đổi/ })).toBeNull();
     expect((screen.getByDisplayValue(vehicle.name) as HTMLInputElement).disabled).toBe(false);
   });
 
-  it('đổi tab ghi URL của PHIÊN, không nhảy sang /manage/vehicles', async () => {
+  it('đổi mục ghi URL của PHIÊN, không nhảy sang /manage/vehicles', async () => {
     renderInSupport();
-    fireEvent.click(screen.getByRole('button', { name: 'Hình ảnh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Hình ảnh/ }));
     await waitFor(() => expect(nav.replace).toHaveBeenCalled());
     expect(nav.replace.mock.calls[0]?.[0]).toBe(
       `${adminTenantSupportPath.vehicleEdit(CONTEXT_A, 'vehicle-1')}?tab=media`,

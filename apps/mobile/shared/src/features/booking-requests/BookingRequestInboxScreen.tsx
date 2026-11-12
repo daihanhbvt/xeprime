@@ -10,6 +10,7 @@ import { RecordCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { getErrorCode } from '@/lib/api-client';
 import { ManageHeader } from '@/features/shell/ManageHeader';
@@ -50,7 +51,13 @@ import {
   useRejectBookingRequest,
 } from './hooks/use-booking-requests';
 import { useStickyStatusCounts, type StatusCounts } from './hooks/use-status-counts';
-import { type BookingRequestItem, type CancelBookingRequestInput } from './api';
+import {
+  BOOKING_REQUEST_SORT_URGENT,
+  BOOKING_REQUEST_STATUS_ALL,
+  BOOKING_REQUEST_TAB_CLOSED,
+  type BookingRequestItem,
+  type CancelBookingRequestInput,
+} from './api';
 
 /** Sentinel "mọi loại dịch vụ" của giao diện — API nhận `serviceType` vắng, không nhận `all`. */
 const SERVICE_ALL = 'all';
@@ -81,6 +88,8 @@ export function BookingRequestInboxScreen() {
   const colors = useColors();
   const t = useTranslations('BookingRequests');
   const toast = useAppToast();
+  const tApproved = useTranslations('BookingRequests.approved');
+  const fmtApproved = useAppFormat();
   const errorMessage = useErrorMessage();
   const permissions = usePermissions();
   const tLabels = useTranslations('Common.labels');
@@ -121,6 +130,13 @@ export function BookingRequestInboxScreen() {
     ...(branchId ? { branchId } : {}),
     ...(debouncedSearch.trim() ? { q: debouncedSearch.trim() } : {}),
     ...(serviceType ? { serviceType } : {}),
+    /*
+     * Nhóm còn việc (chờ duyệt / chờ khách trả) xếp theo HẠN gần nhất trước như màn "Đơn thuê xe"
+     * của web (05/11/2026); nhóm đã đóng giữ mới gửi trước.
+     */
+    ...(status !== BOOKING_REQUEST_TAB_CLOSED && status !== BOOKING_REQUEST_STATUS_ALL
+      ? { sort: BOOKING_REQUEST_SORT_URGENT }
+      : {}),
     page,
   });
 
@@ -283,7 +299,23 @@ export function BookingRequestInboxScreen() {
          */
         onSuccess: (approved) => {
           setApproving(null);
-          setApproved(approved);
+          /*
+           * Web 05/11/2026 ("Confirm Step 1 - Done"): có thu tiền giữ chỗ ⇒ chỉ một THÔNG BÁO kèm
+           * hạn khách trả (thẻ tự sang nhóm "Chờ thanh toán"); đơn có ngay ⇒ giữ tấm kết quả vì
+           * nó mang lối sang đơn vừa tạo.
+           */
+          if (approved.bookingId) {
+            setApproved(approved);
+          } else {
+            toast.showSuccess(
+              approved.holdExpiresAt
+                ? tApproved('toastHold', {
+                    customer: approved.customerName,
+                    time: fmtApproved.dateTime(approved.holdExpiresAt),
+                  })
+                : tApproved('toastHoldNoDeadline', { customer: approved.customerName }),
+            );
+          }
         },
         onError: (error) => toast.showError(decisionError(error)),
       },
@@ -519,7 +551,7 @@ export function BookingRequestInboxScreen() {
                   <RefreshControl
                     refreshing={query.isRefetching}
                     onRefresh={() => void query.refetch()}
-                    tintColor={colors.primaryActive}
+                    tintColor={colors.accentText}
                     progressViewOffset={headerHeight}
                   />
                 }

@@ -22,7 +22,7 @@ async function mount() {
  * ngay từ lần render đầu và trang chủ lọc theo một khoảng ngày khách chưa hề chọn — đúng lúc đó
  * app hiện 29 xe trong khi web hiện 49.
  */
-describe('useSearchExperience — ngữ cảnh áp dụng', () => {
+describe('useSearchExperience - ngữ cảnh áp dụng', () => {
   it('chưa chạm vào thẻ thì KHÔNG lọc theo ngày', async () => {
     const { result } = await mount();
 
@@ -75,7 +75,7 @@ describe('useSearchExperience — ngữ cảnh áp dụng', () => {
     expect(previewQuery.hourly).toBeNull();
   });
 
-  it('không để lọt key `undefined` vào ngữ cảnh — nó sẽ vào query key của TanStack Query', async () => {
+  it('không để lọt key `undefined` vào ngữ cảnh - nó sẽ vào query key của TanStack Query', async () => {
     const { result } = await mount();
 
     await act(async () => result.current.submit());
@@ -92,7 +92,7 @@ describe('useSearchExperience — ngữ cảnh áp dụng', () => {
  * Web gọi `edit` cho `setRentalRange`/`setRentalMode`, nên "Xe khả dụng" ở trang chủ đổi theo
  * ngay lúc bấm Áp dụng. Bản native từng giữ hai lối này ở riêng bản nháp và con số đứng im.
  */
-describe('useSearchExperience — khoảng thuê áp ngay', () => {
+describe('useSearchExperience - khoảng thuê áp ngay', () => {
   it('chọn khoảng thuê là ngữ cảnh đổi theo, chưa cần bấm Tìm xe', async () => {
     const { result } = await mount();
 

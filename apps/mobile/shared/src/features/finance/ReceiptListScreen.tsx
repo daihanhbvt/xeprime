@@ -46,6 +46,10 @@ import { ReceiptCard } from './components/ReceiptCard';
 import { ReceiptDetailSheet } from './components/ReceiptDetailSheet';
 import { ReceiptFormSheet } from './components/ReceiptFormSheet';
 import { ReceiptSummaryCards } from './components/ReceiptSummaryCards';
+import {
+  TRANSACTION_HISTORY_VIEW,
+  TransactionHistoryTabs,
+} from './components/TransactionHistoryTabs';
 import { FILTER_ALL, RECEIPT_PERIOD_VALUES } from './constants';
 import { hasReceiptFilters, type Receipt, type ReceiptFilters } from './api';
 import { useFinanceCategories, useReceipts, useReceiptSummary } from './hooks/use-finance';
@@ -614,7 +618,12 @@ export function ReceiptListScreen() {
               ) : null}
             </XStack>
           }
-          summary={summaryBlock}
+          summary={
+            <>
+              <TransactionHistoryTabs value={TRANSACTION_HISTORY_VIEW.LEDGER} />
+              {summaryBlock}
+            </>
+          }
           searchValue={search}
           searchLabel={t('filters.searchLabel')}
           searchPlaceholder={t('filters.searchPlaceholder')}

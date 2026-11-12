@@ -311,7 +311,7 @@ export function BookingPriceSummary({
               {headline.unit}
             </Text>
           </XStack>
-          <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+          <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={2}>
             {hint}
           </Text>
         </YStack>
@@ -363,7 +363,7 @@ export function BookingPriceSummary({
 
         <Text col={colors.textMuted} fos={fontSize.label}>
           {isWithDriver && routeType
-            ? `${domainLabel('routeType', routeType)} — ${hint}. `
+            ? `${domainLabel('routeType', routeType)} - ${hint}. `
             : `${hint}. `}
           {t('price.finalNote')}
         </Text>

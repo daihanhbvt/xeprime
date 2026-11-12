@@ -115,7 +115,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('AdminBookingDetailDrawer — vỏ panel', () => {
+describe('AdminBookingDetailDrawer - vỏ panel', () => {
   it('không chọn đơn nào thì panel đóng', () => {
     query.data = undefined;
     renderDrawer(null);
@@ -129,7 +129,8 @@ describe('AdminBookingDetailDrawer — vỏ panel', () => {
     const header = document.querySelector('.ant-drawer-header') as HTMLElement;
     expect(within(header).getByText('Đang thuê')).toBeTruthy();
     // 02:00Z = 09:00 giờ VN.
-    expect(within(header).getByText('Tạo lúc 09:00 · 01/08/2026')).toBeTruthy();
+    // getByText gộp khoảng trắng: hai NBSP của DATE_TIME_SEPARATOR khớp một dấu cách.
+    expect(within(header).getByText('Tạo lúc 09:00 01/08/2026')).toBeTruthy();
   });
 
   it('drawer chuẩn như màn Kiểm duyệt xe: có mask, bấm vào mask là đóng', () => {
@@ -173,7 +174,7 @@ describe('AdminBookingDetailDrawer — vỏ panel', () => {
   });
 });
 
-describe('AdminBookingDetailDrawer — Thông tin đơn', () => {
+describe('AdminBookingDetailDrawer - Thông tin đơn', () => {
   it('hiện khách, gian hàng + trạng thái gian hàng, xe + biển số, dịch vụ', () => {
     renderDrawer();
     expect(screen.getByText('Nguyễn Văn A')).toBeTruthy();
@@ -190,7 +191,7 @@ describe('AdminBookingDetailDrawer — Thông tin đơn', () => {
     expect(screen.getByText('Tự lái')).toBeTruthy();
   });
 
-  it('thiếu dữ liệu: SĐT "—", không biển số, không ghi chú, người tạo "—" — không bịa', () => {
+  it('thiếu dữ liệu: SĐT "-", không biển số, không ghi chú, người tạo "-" - không bịa', () => {
     query.data = {
       ...BOOKING,
       customerPhoneMasked: null,
@@ -203,7 +204,7 @@ describe('AdminBookingDetailDrawer — Thông tin đơn', () => {
       '/admin/vehicles?q=Toyota%20Vios',
     );
     expect(screen.queryByText('Ghi chú')).toBeNull();
-    expect(screen.getByText('Người tạo: —')).toBeTruthy();
+    expect(screen.getByText('Người tạo: -')).toBeTruthy();
     // Không có dòng điểm nhận xe: API không trả địa chỉ nhận.
     expect(screen.queryByText('Điểm nhận xe')).toBeNull();
   });
@@ -247,7 +248,7 @@ describe('AdminBookingDetailDrawer — Thông tin đơn', () => {
   });
 });
 
-describe('AdminBookingDetailDrawer — Lịch trình', () => {
+describe('AdminBookingDetailDrawer - Lịch trình', () => {
   it('đơn đang thuê: tạo đơn + giao xe xong, hoàn thành chưa tới', () => {
     renderDrawer();
     expect(timelineStates()).toEqual({
@@ -290,7 +291,7 @@ describe('AdminBookingDetailDrawer — Lịch trình', () => {
   });
 });
 
-describe('AdminBookingDetailDrawer — Thanh toán', () => {
+describe('AdminBookingDetailDrawer - Thanh toán', () => {
   it('tài sản bảo đảm là khối RIÊNG, không nằm trong bảng tiền của đơn', () => {
     renderDrawer();
     expect(within(collateralCard()).getByText('5.000.000 ₫')).toBeTruthy();
@@ -372,7 +373,7 @@ describe('AdminBookingDetailDrawer — Thanh toán', () => {
   });
 });
 
-describe('AdminBookingDetailDrawer — Hồ sơ & điều hướng', () => {
+describe('AdminBookingDetailDrawer - Hồ sơ & điều hướng', () => {
   it('đếm giao dịch, phiếu thu/chi, hợp đồng + người tạo, giờ cập nhật', () => {
     renderDrawer();
     expect(screen.getByText('3 giao dịch')).toBeTruthy();
@@ -390,7 +391,7 @@ describe('AdminBookingDetailDrawer — Hồ sơ & điều hướng', () => {
     expect(screen.getByText('Chưa có hợp đồng')).toBeTruthy();
   });
 
-  it('các ô hồ sơ không phải link giả — route của chúng thuộc phạm vi gian hàng', () => {
+  it('các ô hồ sơ không phải link giả - route của chúng thuộc phạm vi gian hàng', () => {
     renderDrawer();
     const docs = screen.getByText('3 giao dịch').closest('ul') as HTMLElement;
     expect(within(docs).queryAllByRole('link')).toHaveLength(0);
@@ -411,7 +412,7 @@ describe('AdminBookingDetailDrawer — Hồ sơ & điều hướng', () => {
     expect(document.querySelector('.ant-drawer-footer')).toBeNull();
   });
 
-  it('không có nút "Mở chi tiết đầy đủ" — admin nền tảng không có route chi tiết đơn', () => {
+  it('không có nút "Mở chi tiết đầy đủ" - admin nền tảng không có route chi tiết đơn', () => {
     perms.granted = [PERMISSION.PLATFORM_AUDIT_VIEW];
     renderDrawer();
     expect(screen.queryByText(/Mở chi tiết đầy đủ/)).toBeNull();

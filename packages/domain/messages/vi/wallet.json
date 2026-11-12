@@ -19,6 +19,13 @@
     "total": "Tổng XePrime phải trả",
     "frozen": "Ví đang tạm khoá. Liên hệ hỗ trợ để biết lý do."
   },
+  "summary": {
+    "availableInfoLabel": "Số dư khả dụng gồm những gì",
+    "availableInfo": "Phần tiền giữ chỗ khách trả online của các chuyến đã kết thúc (sau khi trừ phí nền tảng và thuế khấu trừ), cộng tiền bồi thường khi khách huỷ muộn. Phần khách trả trực tiếp cho bạn lúc nhận xe không đi qua đây.",
+    "inTransit": "{amount} đang được chuyển về ngân hàng",
+    "inTransitInfoLabel": "Tiền đang chuyển là gì",
+    "inTransitInfo": "Tiền của các lệnh rút bạn đã gửi, đang chờ XePrime chuyển khoản. Nó đã được tách khỏi số dư khả dụng; lệnh bị từ chối hoặc bị huỷ thì tiền quay lại số dư."
+  },
   "loadError": "Không tải được số dư.",
   "entries": {
     "title": "Lịch sử giao dịch",
@@ -51,7 +58,7 @@
     "cancel": "Huỷ yêu cầu",
     "cancelConfirm": "Huỷ yêu cầu rút này?",
     "cancelHint": "Tiền quay lại số dư rút được ngay.",
-    "reversed": "Chuyển không thành công: {reason}. Tiền đã về lại số dư — kiểm tra tài khoản nhận rồi tạo lệnh mới."
+    "reversed": "Chuyển không thành công: {reason}. Tiền đã về lại số dư - kiểm tra tài khoản nhận rồi tạo lệnh mới."
   },
   "admin": {
     "title": "Yêu cầu rút tiền",
@@ -75,7 +82,7 @@
     },
     "actions": {
       "approve": "Duyệt",
-      "approved": "Đã duyệt — bắt đầu đếm hạn chuyển.",
+      "approved": "Đã duyệt - bắt đầu đếm hạn chuyển.",
       "markPaid": "Đã chuyển khoản",
       "reject": "Từ chối",
       "reverse": "Chuyển hụt / sai tài khoản"
@@ -83,7 +90,7 @@
     "paid": {
       "title": "Xác nhận đã chuyển khoản",
       "bankReference": "Mã giao dịch ngân hàng",
-      "bankReferenceHint": "Bằng chứng đã chuyển — bắt buộc, dùng để đối chiếu về sau.",
+      "bankReferenceHint": "Bằng chứng đã chuyển - bắt buộc, dùng để đối chiếu về sau.",
       "submit": "Xác nhận đã chuyển",
       "done": "Đã ghi nhận chuyển khoản.",
       "referenceRequired": "Nhập mã giao dịch ngân hàng (tối thiểu 3 ký tự)."
@@ -100,7 +107,7 @@
     "reverse": {
       "title": "Đảo lệnh đã chuyển",
       "reason": "Vì sao tiền quay lại",
-      "reasonHint": "Chủ ví đọc được câu này — nói rõ vì sao tiền quay lại để họ kiểm tra tài khoản nhận trước khi rút lại.",
+      "reasonHint": "Chủ ví đọc được câu này - nói rõ vì sao tiền quay lại để họ kiểm tra tài khoản nhận trước khi rút lại.",
       "submit": "Đảo bút toán",
       "done": "Đã đảo. Tiền quay lại ví chủ ví, cả hai bút toán đều còn trên sổ.",
       "reasonPlaceholder": "Ví dụ: ngân hàng trả về vì sai số tài khoản",
@@ -137,7 +144,7 @@
       "returnAt": "Ngày về",
       "unitAmount": "Đơn giá",
       "revenue": "Doanh thu",
-      "commission": "Phí dịch vụ – Chủ xe",
+      "commission": "Phí dịch vụ - Chủ xe",
       "tax": "Thuế khấu trừ",
       "delivery": "Phí giao xe",
       "balanceChange": "Thay đổi SD"
@@ -151,20 +158,20 @@
       "body": "Chọn tháng khác, hoặc quay lại sau khi chuyến đang chạy kết thúc."
     },
     "totals": {
-      "balanceChange": "Tổng thay đổi số dư — chuyến đã hoàn thành",
+      "balanceChange": "Tổng thay đổi số dư - chuyến đã hoàn thành",
       "payAtPickup": "Khách thanh toán trực tiếp khi nhận xe",
       "payAtPickupHint": "Phần tiền thuê khách đưa thẳng cho bạn, không đi qua XePrime. Không gồm phí giao xe.",
       "delivery": "Phí giao xe khách trả trực tiếp",
       "deliveryHint": "Bạn nhận trọn khoản này; không tính phí dịch vụ và thuế.",
       "subscriptionFee": "Phí quản lý & vận hành gói nền tảng",
-      "commission": "Tổng phí dịch vụ – Chủ xe",
+      "commission": "Tổng phí dịch vụ - Chủ xe",
       "tax": "Tổng thuế khấu trừ, nộp thay",
       "ownerIncome": "Thu nhập chủ gian hàng",
-      "ownerIncomeHint": "Doanh thu cho thuê xe trừ phí dịch vụ – chủ xe, thuế khấu trừ và phí gói — gồm cả phần khách trả trực tiếp, không gồm phí giao xe.",
+      "ownerIncomeHint": "Doanh thu cho thuê xe trừ phí dịch vụ - chủ xe, thuế khấu trừ và phí gói - gồm cả phần khách trả trực tiếp, không gồm phí giao xe.",
       "ownerIncomeCommission": "Thu nhập chủ xe",
       "ownerIncomeGeneric": "Thu nhập",
       "appSubscriptionFee": "Phí quản lý & vận hành nền tảng",
-      "appOwnerIncomeHint": "Doanh thu cho thuê xe trừ phí dịch vụ – chủ xe, thuế khấu trừ và phí nền tảng — gồm cả phần khách trả trực tiếp, không gồm phí giao xe."
+      "appOwnerIncomeHint": "Doanh thu cho thuê xe trừ phí dịch vụ - chủ xe, thuế khấu trừ và phí nền tảng - gồm cả phần khách trả trực tiếp, không gồm phí giao xe."
     }
   },
   "pill": {
@@ -172,5 +179,46 @@
     "hide": "Ẩn số dư",
     "show": "Hiện số dư",
     "prefix": "Số dư:"
+  },
+  "manage": {
+    "title": "Quản lý ví",
+    "subtitle": "Theo dõi khoản tiền XePrime đối soát sau mỗi chuyến đi và quản lý các yêu cầu rút tiền về tài khoản ngân hàng"
+  },
+  "tabs": {
+    "label": "Chọn bảng",
+    "statement": "Tổng hợp giao dịch",
+    "activity": "Biến động số dư"
+  },
+  "aside": {
+    "label": "Số dư và tài khoản nhận tiền"
+  },
+  "month": {
+    "title": "Tổng hợp tháng {month}",
+    "value": "Tháng {month}",
+    "balanceChange": "Thay đổi số dư"
+  },
+  "taxNote": {
+    "body": "XePrime khấu trừ GTGT 5% + TNCN 2% (tự lái, dài hạn) hoặc 3% + 1,5% (có tài xế) trên tiền thuê theo NĐ 117/2025/NĐ-CP.",
+    "detail": "Chi tiết"
+  },
+  "activity": {
+    "title": "Biến động số dư",
+    "loadError": "Không tải được biến động số dư.",
+    "totalLabel": "{count, plural, other {# giao dịch}}",
+    "empty": {
+      "title": "Tháng này chưa có biến động nào",
+      "body": "Chọn tháng khác - tiền chuyến, bồi thường và các lệnh rút của bạn sẽ hiện ở đây."
+    },
+    "columns": {
+      "code": "Mã giao dịch",
+      "kind": "Loại giao dịch",
+      "occurredAt": "Thời gian giao dịch",
+      "amount": "Số tiền",
+      "status": "Trạng thái",
+      "actions": "Thao tác"
+    },
+    "balanceAfter": "SD: {amount}",
+    "posted": "Thành công",
+    "withdrawalKind": "Rút về tài khoản liên kết"
   }
 }

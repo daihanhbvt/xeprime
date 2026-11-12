@@ -11,7 +11,7 @@
 
 import { BOOKING_STATUS, type BookingStatus } from './booking';
 import { STATUS_COLOR, type StatusMeta } from './meta';
-import { FUEL_TYPE, type FuelType } from './vehicle';
+import { FUEL_TYPE, VEHICLE_TYPE, type FuelType } from './vehicle';
 
 /** Hai chiều của một chuyến thuê. Mỗi đơn có tối đa một bản còn hiệu lực mỗi chiều. */
 export const HANDOVER_TYPE = {
@@ -188,6 +188,24 @@ export function fuelLevelDropQuarters(
   return Math.round(drop * 4);
 }
 
+// ── Chuẩn bị bàn giao — việc đánh dấu TAY được (03/11/2026) ──────────────────
+
+/**
+ * Việc trong khối "Chuẩn bị bàn giao" mà người vận hành được đánh dấu tay khi sự thật nằm NGOÀI
+ * hệ thống (soi bản gốc giấy tờ, ký hợp đồng giấy, chụp ảnh bằng máy khác, tài xế đã nhận qua điện
+ * thoại). Hai việc TIỀN (tiền thuê, cọc) cố ý không có ở đây: "đã thu" phải là một phiếu thu thật,
+ * nếu không sổ tiền và danh sách việc nói hai chuyện khác nhau.
+ */
+export const HANDOVER_PREP_ITEM = {
+  DOCUMENTS: 'documents',
+  CONTRACT: 'contract',
+  PHOTOS: 'photos',
+  DRIVER: 'driver',
+} as const;
+
+export type HandoverPrepItem = (typeof HANDOVER_PREP_ITEM)[keyof typeof HANDOVER_PREP_ITEM];
+export const HANDOVER_PREP_ITEM_VALUES = Object.values(HANDOVER_PREP_ITEM) as HandoverPrepItem[];
+
 // ── Ảnh hiện trạng ───────────────────────────────────────────────────────────
 
 /**
@@ -220,6 +238,29 @@ export const HANDOVER_EXTERIOR_SLOTS: readonly HandoverPhotoSlot[] = [
   HANDOVER_PHOTO_SLOT.LEFT,
   HANDOVER_PHOTO_SLOT.RIGHT,
 ];
+
+/**
+ * Bộ góc chụp THEO LOẠI XE (chốt 03/11/2026): ô tô 5 góc — trước · sau · trái · phải · Odo; xe máy
+ * 3 góc — trước · sau · Odo (thân xe máy hẹp, hai góc bên không thêm bằng chứng gì). Một nguồn cho
+ * màn chụp của gian hàng (web + app), màn xem của khách và phép kiểm ở API — không nơi nào tự liệt kê.
+ *
+ * Loại xe lạ / chưa biết ⇒ bộ ĐẦY ĐỦ của ô tô: thừa một ô trống còn hơn giấu mất một góc.
+ */
+export function handoverExteriorSlotsFor(vehicleType: string | null | undefined): readonly HandoverPhotoSlot[] {
+  return vehicleType === VEHICLE_TYPE.MOTORBIKE
+    ? [HANDOVER_PHOTO_SLOT.FRONT, HANDOVER_PHOTO_SLOT.REAR]
+    : HANDOVER_EXTERIOR_SLOTS;
+}
+
+/** Toàn bộ góc chụp của một loại xe, theo thứ tự hiển thị — ngoại thất trước, Odo sau cùng. */
+export function handoverPhotoSlotsFor(vehicleType: string | null | undefined): readonly HandoverPhotoSlot[] {
+  return [...handoverExteriorSlotsFor(vehicleType), HANDOVER_PHOTO_SLOT.ODOMETER];
+}
+
+/** Góc này có thuộc bộ góc của loại xe không — API dùng để từ chối ảnh "trái/phải" của xe máy. */
+export function isHandoverPhotoSlotFor(vehicleType: string | null | undefined, slot: string): boolean {
+  return (handoverPhotoSlotsFor(vehicleType) as readonly string[]).includes(slot);
+}
 
 /*
  * CỐ Ý KHÔNG có `HANDOVER_REQUIRED_SLOTS`.
@@ -255,7 +296,7 @@ export function canAttachHandoverPhoto(status: HandoverStatus): boolean {
   return HANDOVER_PHOTO_ATTACHABLE_STATUS.includes(status);
 }
 
-/** Trần ảnh mỗi biên bản — 5 slot cố định, phần dư là ảnh hư hỏng chụp thêm. */
+/** Trần ảnh mỗi biên bản — 5 slot cố định (xe máy 3), phần dư là ảnh hư hỏng chụp thêm. */
 export const HANDOVER_MAX_PHOTOS = 12;
 
 /**

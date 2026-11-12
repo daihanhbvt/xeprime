@@ -85,21 +85,25 @@ export function InviteDriverModal({
       open={open}
       size="sm"
       okText={t('actions.sendInvite')}
-      cancelText={tCommon('actions.close')}
+      cancelText={tCommon('actions.cancel')}
       confirmLoading={invite.isPending}
       onOk={() => void submit()}
       onClose={onClose}
     >
-      <DialogForm onSubmit={submit} labelWidth="sm">
-        <div className={styles.hints}>
-          <Alert type="info" showIcon title={t('form.inviteHint')} />
-          {invite.isError ? (
-            <Alert type="error" showIcon title={errorMessage(invite.error)} />
-          ) : null}
-        </div>
+      {/* Figma `23737:45751`: nhãn nằm trên ô, khối "Lưu ý" xanh cuối form. */}
+      <DialogForm onSubmit={submit} labelPosition="top">
+        {invite.isError ? (
+          <Alert
+            className={styles.error}
+            type="error"
+            showIcon
+            title={errorMessage(invite.error)}
+          />
+        ) : null}
         <TextField
           control={control}
           name="phone"
+          type="tel"
           label={t('form.phone')}
           placeholder={t('form.phonePlaceholder')}
           autoComplete="tel"
@@ -119,7 +123,19 @@ export function InviteDriverModal({
             label: domainLabel('driverType', value),
           }))}
         />
-        <TextAreaField control={control} name="note" label={t('form.note')} rows={3} />
+        <TextAreaField
+          control={control}
+          name="note"
+          label={t('form.note')}
+          placeholder={t('form.notePlaceholder')}
+          rows={3}
+        />
+        <Alert
+          className={styles.hint}
+          type="info"
+          title={t('form.hintTitle')}
+          description={t('form.inviteHint')}
+        />
       </DialogForm>
     </ResponsiveDialog>
   );

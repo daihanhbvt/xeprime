@@ -21,7 +21,8 @@
       "vehicleType": "Vehicle type",
       "serviceType": "Service",
       "operationStatus": "Operation",
-      "publicStatus": "Listing"
+      "publicStatus": "Listing",
+      "reviewStatus": "Status"
     },
     "sort": {
       "label": "Sort",
@@ -61,27 +62,30 @@
       "weekendPrice": "Weekend price",
       "currentOdometer": "Current odometer",
       "odometerUnknown": "Unknown",
-      "activeBookings": "In progress",
       "completedBookings": "Completed",
       "totalIncome": "Total revenue",
       "totalExpense": "Total cost",
       "profit": "Net profit",
       "statsUnavailable": "Could not load the figures",
       "alertsUnavailable": "Could not load the alerts",
-      "rowActions": "Actions for {name}"
+      "rowActions": "Actions for {name}",
+      "completedTrips": "Trips completed"
     },
     "row": {
       "odometer": "Odometer: {value}",
       "bookings": "Bookings: <n>{active}</n> active / <n>{done}</n> done",
       "income": "Revenue: <n>{value}</n>",
       "profit": "Profit: <n>{value}</n>",
-      "loss": "Loss: <n>{value}</n>"
+      "loss": "Loss: <n>{value}</n>",
+      "trips": "Trips completed: <n>{count}</n>"
     },
     "actions": {
-      "view": "View details",
       "viewShort": "View",
       "edit": "Edit",
-      "schedule": "Calendar"
+      "schedule": "Calendar",
+      "detail": "Details",
+      "editFull": "Edit",
+      "manage": "Manage vehicle"
     },
     "page": {
       "title": "Vehicles",
@@ -91,7 +95,36 @@
       "addFirstVehicle": "Add the first vehicle",
       "addVehicleQuick": "Quick self-drive listing",
       "addVehicleAdvanced": "Advanced setup",
-      "addVehicleMore": "More ways to add a vehicle"
+      "subtitle": "Keep track of your whole fleet quickly, all in one place",
+      "addNewVehicle": "Add vehicle",
+      "viewLabel": "Vehicle list display",
+      "viewGrid": "Grid view",
+      "viewList": "List view",
+      "serviceChipsLabel": "Filter by service"
+    },
+    "review": {
+      "draft": "Draft",
+      "pending_public_review": "Awaiting review",
+      "approved_public": "Approved",
+      "needs_revision": "Needs changes",
+      "rejected": "Rejected",
+      "hidden": "Hidden by platform",
+      "archived": "Retired"
+    },
+    "reviewShort": {
+      "draft": "Draft",
+      "pending_public_review": "In review",
+      "approved_public": "Approved",
+      "needs_revision": "Needs changes",
+      "rejected": "Rejected",
+      "hidden": "Hidden",
+      "archived": "Retired"
+    },
+    "operation": {
+      "available": "Ready to rent",
+      "renting": "On rent",
+      "maintenance": "In maintenance",
+      "inactive": "Inactive"
     }
   },
   "alerts": {
@@ -159,7 +192,7 @@
       "branchHelp": "Determines which province the vehicle appears in on the marketplace.",
       "vehicleType": "Vehicle type",
       "serviceTypes": "Service type",
-      "serviceTypesHelp": "You can pick several — set the long-term and with-driver prices in the pricing step"
+      "serviceTypesHelp": "You can pick several - set the long-term and with-driver prices in the pricing step"
     },
     "warnings": {
       "typePolicyTitle": "Changing the vehicle type to {label}: the vehicle will inherit the default rental policy of the new type",
@@ -216,10 +249,10 @@
       "electricRangeHelp": "Kilometres the vehicle covers on one full charge",
       "batteryCapacity": "Battery capacity",
       "batteryCapacityPlaceholder": "42",
-      "batteryCapacityHelp": "kWh — leave empty if you are unsure",
+      "batteryCapacityHelp": "kWh - leave empty if you are unsure",
       "electricConsumption": "Electric consumption",
       "electricConsumptionPlaceholder": "15",
-      "electricConsumptionHelp": "kWh per 100 km — optional"
+      "electricConsumptionHelp": "kWh per 100 km - optional"
     },
     "specs": {
       "plateNumber": "Licence plate",
@@ -242,11 +275,11 @@
       "modelHelp": "Pick the exact model so your vehicle appears when guests filter by model.",
       "modelPickBrandFirst": "Select a brand first to load its models.",
       "modelEmpty": "No models listed for this brand yet.",
-      "specFromModel": "From the {model} model — pre-filled.",
+      "specFromModel": "From the {model} model - pre-filled.",
       "specChoiceFromModel": "The {model} comes in: {values}.",
       "motorbikeCategory": "Category",
       "motorbikeCategoryPlaceholder": "Select a category",
-      "motorbikeCategoryHelp": "Guests filter motorbikes by category — the wrong one makes your bike hard to find."
+      "motorbikeCategoryHelp": "Guests filter motorbikes by category - the wrong one makes your bike hard to find."
     },
     "prices": {
       "weekday": "Weekday price",
@@ -263,22 +296,22 @@
       "monthly": "Monthly price (long-term rental)",
       "monthlyPlaceholder": "e.g. 9,000,000",
       "monthlyHelp": "Customer estimate = days × monthly price ÷ 30. Required before submitting for review.",
-      "withDriverDaily": "With-driver day rate — in city",
+      "withDriverDaily": "With-driver day rate - in city",
       "withDriverDailyPlaceholder": "e.g. 1,500,000",
       "withDriverDailyHelp": "Driver included (base rate). Required before submitting for review.",
-      "withDriverInterCity": "With-driver day rate — intercity",
+      "withDriverInterCity": "With-driver day rate - intercity",
       "withDriverInterCityPlaceholder": "e.g. 1,800,000",
       "withDriverInterCityHelp": "Round trip; blank = estimated from the in-city rate",
-      "withDriverOneWay": "With-driver day rate — one way",
+      "withDriverOneWay": "With-driver day rate - one way",
       "withDriverOneWayPlaceholder": "e.g. 2,200,000",
       "withDriverOneWayHelp": "Intercity one way; blank = estimated from the nearest tier"
     },
     "marketPrice": {
-      "range": "Reference price: {low} – {high} per day",
+      "range": "Reference price: {low} - {high} per day",
       "basisProvinceSegment": "Median of {count} comparable vehicles listed in {province}",
       "basisSegment": "Median of {count} comparable vehicles listed nationwide",
       "basisVehicleType": "Median of {count} vehicles of the same type listed nationwide",
-      "basisBaseline": "Suggested starting point — not enough comparable vehicles on the marketplace yet",
+      "basisBaseline": "Suggested starting point - not enough comparable vehicles on the marketplace yet",
       "apply": "Use {price}",
       "applyBaseline": "Use starting point {price}"
     },
@@ -508,6 +541,11 @@
       "hint": "Turning this off does not affect existing requests or bookings.",
       "enabled": "The vehicle is live on the marketplace",
       "disabled": "The vehicle is paused on the marketplace",
+      "gate": {
+        "title": "This vehicle can't be shown on the marketplace yet",
+        "logoOnly": "Your shop needs a logo before its vehicles appear on the marketplace. Upload one in your shop profile, then turn this switch back on.",
+        "missing": "Your shop profile is missing the items below. Add them, then turn this switch back on."
+      },
       "moderationTag": {
         "draft": "Not listed",
         "pending_public_review": "Awaiting review",
@@ -542,7 +580,7 @@
       },
       "underReview": {
         "title": "The profile is under review",
-        "description": "XePrime will get back to you as soon as possible. You can still make changes — each time you save, the reviewer sees your latest version."
+        "description": "XePrime will get back to you as soon as possible. You can still make changes - each time you save, the reviewer sees your latest version."
       },
       "needsRevision": {
         "title": "More information needed",
@@ -575,7 +613,6 @@
     "delete": "Delete vehicle",
     "deleteConfirmTitle": "Delete \"{name}\"?",
     "deleteConfirmBody": "The vehicle will be hidden from the list and removed from the marketplace. Existing bookings and receipts are kept for reconciliation. It cannot be deleted while it still has current or future rentals.",
-    "moreActions": "More actions for {name}",
     "loadFailed": "Could not load the data.",
     "metric": "{value} {unit}",
     "todo": {
@@ -596,7 +633,9 @@
       "activeCount": "{count, plural, one {# booking} other {# bookings}}",
       "active": "In progress",
       "rating": "Rating",
-      "ratingValue": "{rating}/5 · {count, plural, one {# review} other {# reviews}}"
+      "ratingValue": "{rating}/5 · {count, plural, one {# review} other {# reviews}}",
+      "ratingScore": "{rating}/5",
+      "ratingCount": "{count, plural, one {# review} other {# reviews}}"
     },
     "pricing": {
       "title": "Pricing & policies",
@@ -608,7 +647,11 @@
       "publicPrice": "Marketplace price",
       "delivery": "Vehicle delivery",
       "deliveryOn": "Available",
-      "deliveryOff": "Not available"
+      "deliveryOff": "Not available",
+      "perDay": "/day",
+      "withDriver": "With driver (in town)",
+      "monthly": "Long-term rental",
+      "perMonth": "{price}/month"
     },
     "links": {
       "ariaLabel": "Quick links to this vehicle's sections",
@@ -622,12 +665,13 @@
       "calendar": "Vehicle calendar",
       "bookings": "Bookings",
       "receipts": "Vehicle receipts",
-      "title": "Vehicle sections"
+      "title": "Vehicle sections",
+      "shortcuts": "Shortcuts"
     },
     "documents": {
       "title": "Legal documents",
       "manageLink": "Manage documents",
-      "expired": "{count, plural, one {# document has} other {# documents have}} expired — resolve this before the vehicle goes back on the road",
+      "expired": "{count, plural, one {# document has} other {# documents have}} expired - resolve this before the vehicle goes back on the road",
       "expiring": "{count, plural, one {# document is} other {# documents are}} expiring soon",
       "clear": "No documents are expired or expiring soon.",
       "unknown": "No information yet."
@@ -655,7 +699,6 @@
     "source": {
       "title": "Ownership & finance",
       "kind": "Ownership type",
-      "summary": "Summary",
       "monthlyTotal": "{amount}/month (principal + interest)",
       "monthlyRent": "{amount}/month",
       "commission": "{percent}% to the owner",
@@ -663,14 +706,24 @@
       "detailLink": "View the ownership & finance record →",
       "missing": "No detailed ownership record yet.",
       "missingLink": "Add it now →",
-      "viewLink": "View record"
+      "viewLink": "View record",
+      "bank": "Bank",
+      "monthlyPayment": "Monthly payment",
+      "owner": "Owner",
+      "rent": "Monthly rent",
+      "share": "Owner share",
+      "sharePercent": "{percent}% of revenue",
+      "purchaseDate": "Purchase date",
+      "purchasePrice": "Vehicle value",
+      "addLink": "Add details"
     },
     "media": {
       "title": "Photo gallery",
       "manageLink": "Add/arrange photos",
       "cover": "Cover",
       "more": "+{count}",
-      "empty": "No photos for this vehicle yet."
+      "empty": "No photos for this vehicle yet.",
+      "addSlot": "Add {slot}"
     },
     "activity": {
       "title": "Recent activity",
@@ -679,16 +732,20 @@
       "sub": "{customer} • {range} • {amount}",
       "bookingRange": "Booking {code} • {range}"
     },
-    "dateRange": "{from} – {to}",
+    "dateRange": "{from} - {to}",
     "automation": {
       "title": "Booking automation",
       "editLink": "Configure",
-      "hint": "Turn on instant booking so a paid request becomes an order without waiting for your approval. Set the conditions that apply to this vehicle."
+      "hint": "Turn on instant booking so a paid request becomes an order without waiting for your approval. Set the conditions that apply to this vehicle.",
+      "toggle": "Auto-accept trips",
+      "toggleFor": "Auto-accept {service} trips",
+      "toggleHint": "Save response time and convert more customers into confirmed trips.",
+      "driverRequired": "You need at least one driver available to take trips before turning this on."
     },
     "repairListing": {
       "action": "Resync public listing",
-      "fixed": "Resynced — the marketplace listing now matches the vehicle data",
-      "unchanged": "The marketplace listing already matched the vehicle data — nothing changed"
+      "fixed": "Resynced - the marketplace listing now matches the vehicle data",
+      "unchanged": "The marketplace listing already matched the vehicle data - nothing changed"
     },
     "tabs": {
       "overview": "Overview",
@@ -696,7 +753,8 @@
       "media": "Photos",
       "review": "Review",
       "specs": "Specifications",
-      "maintenance": "Maintenance & odometer"
+      "maintenance": "Maintenance & odometer",
+      "features": "Features"
     },
     "idLabel": "ID: <b>{value}</b>",
     "asideLabel": "Vehicle activity summary",
@@ -704,7 +762,18 @@
       "title": "Key specs",
       "viewAll": "View all",
       "brandModel": "Make & model",
-      "viewAllLabel": "View all specifications"
+      "viewAllLabel": "View all specifications",
+      "odometer": "Current odometer",
+      "odometerInput": "Enter reading"
+    },
+    "scheduleFull": "View schedule",
+    "deleteLabel": "Delete vehicle {name}",
+    "features": {
+      "title": "Features on this vehicle",
+      "subtitle": "Features and equipment actually fitted on the vehicle",
+      "empty": "No features listed yet.",
+      "descriptionTitle": "Description",
+      "descriptionEmpty": "No description yet."
     }
   },
   "edit": {
@@ -735,7 +804,7 @@
     },
     "advanced": {
       "title": "Advanced specifications",
-      "hint": "Dimensions, engine and consumption — optional"
+      "hint": "Dimensions, engine and consumption - optional"
     },
     "revert": "Revert",
     "discard": {
@@ -765,14 +834,16 @@
       "information": "Vehicle details saved",
       "media": "Photos and features saved"
     },
-    "lockedNotice": "This vehicle is live on the marketplace: plate number, transmission, fuel type and manufacture year are locked. Everything else — pricing included — takes effect immediately.",
+    "lockedNotice": "This vehicle is live on the marketplace: plate number, transmission, fuel type and manufacture year are locked. Everything else - pricing included - takes effect immediately.",
     "lockedField": "Locked while the vehicle is on the marketplace. Remove it from the marketplace to change this.",
     "page": {
       "title": "Edit vehicle",
       "saved": "Changes saved",
       "forbiddenTitle": "No permission to edit vehicles",
       "forbiddenBody": "You need the permission below to edit vehicle information. Contact an administrator to request it.",
-      "viewDetail": "View vehicle details"
+      "viewDetail": "View vehicle details",
+      "subtitle": "Update and manage your vehicle's specs, photos and legal records",
+      "parentCrumb": "Vehicle details"
     },
     "nav": {
       "general": "General",
@@ -805,7 +876,7 @@
       "perMonth": "{price} / month",
       "odometer": "Odometer",
       "statusSaved": "Operating status updated",
-      "changeStatus": "Operating status: {status} — click to change",
+      "changeStatus": "Operating status: {status} - click to change",
       "editImagesLabel": "Edit vehicle photos",
       "prevImage": "Previous photo",
       "nextImage": "Next photo"
@@ -879,7 +950,8 @@
       "monthlyInterestPlaceholder": "e.g. 3,187,500",
       "endDate": "Contract end date (if known)",
       "interestMethod": "Interest calculation method",
-      "monthlyTotal": "Total due each month (principal + interest): {amount}"
+      "monthlyTotal": "Total due each month (principal + interest): {amount}",
+      "monthlyTotalRich": "Total due each month (principal + interest): <b>{amount}</b>"
     },
     "rented": {
       "ownerTitle": "Owner information (lessor)",
@@ -912,7 +984,8 @@
       "shopShare": "The shop keeps: <b>{percent}</b>",
       "startDate": "Contract effective date",
       "endDate": "Contract end date",
-      "formula": "Formula: shared revenue = rent after discount. Excludes refundable deposits, delivery fees, overtime fees, damage penalties and other amounts collected on behalf of others."
+      "formula": "Formula: shared revenue = rent after discount. Excludes refundable deposits, delivery fees, overtime fees, damage penalties and other amounts collected on behalf of others.",
+      "formulaTip": "How shared revenue is calculated"
     },
     "validation": {
       "sourceTypeRequired": "Select the vehicle source type",
@@ -925,6 +998,7 @@
       "termMonthsMin": "Loan term must be greater than 0",
       "termMonthsMax": "Loan term exceeds the allowed limit",
       "ownerNameRequired": "Enter the vehicle owner's / business name",
+      "phoneInvalid": "Invalid phone number (digits only, e.g. 0901234567)",
       "ownerEmailInvalid": "Invalid email address",
       "monthlyRentRequired": "Enter the monthly rent",
       "commissionTypeError": "Rate must be a number",
@@ -939,7 +1013,10 @@
       "moneyTypeError": "Please enter a number",
       "moneyInteger": "The amount must be a whole number",
       "moneyMin": "The amount cannot be negative"
-    }
+    },
+    "typeCurrent": "Current",
+    "typeChange": "Changing from <b>{from}</b> to <b>{to}</b> - not saved yet. Press “Save changes” to apply.",
+    "typeKeep": "Keep {label}"
   },
   "pricing": {
     "title": "Pricing & policy",
@@ -1011,9 +1088,9 @@
       "title": "With driver",
       "daily": "In-city (base price)",
       "dailyHint": "Required to publish the with-driver service.",
-      "interCity": "Inter-city — round trip (optional)",
+      "interCity": "Inter-city - round trip (optional)",
       "interCityHint": "Leave empty to estimate from the in-city price; the final price is confirmed on approval.",
-      "oneWay": "Inter-city — one way (optional)",
+      "oneWay": "Inter-city - one way (optional)",
       "oneWayHint": "Leave empty to fall back to the nearest tier: inter-city, then in-city.",
       "tipLabel": "About with-driver prices",
       "info": "These rates already include the driver; the in-city rate is the base the system falls back to when another rate is missing.",
@@ -1030,9 +1107,9 @@
       "assetTypesHint": "The customer only needs to meet ONE of the selected options.",
       "noneTitle": "No deposit and no collateral",
       "noneBody": "Vehicles on this policy show the “No collateral” badge and can be filtered by it on the marketplace.",
-      "hint": "Collateral is what the shop holds against risk: a cash deposit, an asset or document, or nothing at all. This is SEPARATE from checking the renter’s ID — that happens on every rental.",
+      "hint": "Collateral is what the shop holds against risk: a cash deposit, an asset or document, or nothing at all. This is SEPARATE from checking the renter’s ID - that happens on every rental.",
       "modeCash": "The renter leaves a sum of money, refunded once handover is complete.",
-      "modeAsset": "The renter leaves a document or asset instead of money — the shop holds no cash.",
+      "modeAsset": "The renter leaves a document or asset instead of money - the shop holds no cash.",
       "modeNone": "No collateral required. The vehicle carries a \"No collateral\" tag on the marketplace.",
       "tipLabel": "About the security requirement",
       "amountTipLabel": "About the default deposit amount"
@@ -1053,7 +1130,7 @@
       "maxRadiusLabel": "Maximum self-delivery radius",
       "maxRadiusHint": "This must match the end of the last band. Beyond the radius renters see \"Contact the owner\" and the shop quotes delivery manually.",
       "previewTitle": "Minimum amount shown to renters:",
-      "disabledNote": "Off — renters cannot request delivery when booking.",
+      "disabledNote": "Off - renters cannot request delivery when booking.",
       "tierName": "Band {index}",
       "tierRange": "From {from} km",
       "tipLabel": "About delivery fees",
@@ -1094,13 +1171,15 @@
       "placeholder": "Needs configuring",
       "formulaTitle": "Automatic late-fee formula:",
       "formula": "Late fee = (actual hours late) × {fee}. Computed at handover.",
-      "formulaNone": "No hourly fee set — the late fee will be agreed manually at handover.",
+      "formulaNone": "No hourly fee set - the late fee will be agreed manually at handover.",
       "tipLabel": "About the late-return fee",
       "feePerHourTipLabel": "About the fee per extra hour",
       "graceMinutesTipLabel": "About the maximum grace period",
       "roundingMinutesTipLabel": "About the minimum rounding unit",
       "unitPerHour": "đ / hour",
-      "unitMinutes": "minutes"
+      "unitMinutes": "minutes",
+      "formulaRounded": "Late fee = hours late (after the grace time, rounded up to the hour) × {fee}. Calculated at return.",
+      "hintRounded": "The late fee is calculated at return: the grace time is deducted and the remaining delay is rounded up to the hour."
     },
     "longTermDiscount": {
       "title": "Duration commitment discount (long-term)",
@@ -1116,7 +1195,7 @@
       "selectPackage": "Pick a package",
       "formulaTitle": "Package price formula:",
       "formula": "package = monthly × months − (monthly × months × discount)",
-      "disabledNote": "Off — every booking is charged the base rate.",
+      "disabledNote": "Off - every booking is charged the base rate.",
       "legacyTitle": "{count, plural, other {# legacy discount tier(s)}} still measured in DAYS",
       "legacyTier": "from {days} days, {percent}% off",
       "legacyBody": "These tiers no longer affect pricing. Pick package-based tiers and save; the system will not convert them automatically so prices never change behind your back.",
@@ -1164,22 +1243,25 @@
       "publicBody": "{vehicle} is currently published. Changing the price returns it to pending review and temporarily hides it from the marketplace until the platform approves it. Bookings already confirmed keep their original price.",
       "publicOk": "Confirm change",
       "overrideTitle": "Save a vehicle-specific policy?",
-      "overrideBody": "Changes apply to {vehicle} only, from new bookings onward — other vehicles and confirmed bookings are unaffected.",
+      "overrideBody": "Changes apply to {vehicle} only, from new bookings onward - other vehicles and confirmed bookings are unaffected.",
       "inheritTitle": "Save pricing for this vehicle?",
       "inheritBody": "The new price applies to {vehicle} only, from new bookings onward. The vehicle still inherits the shop-wide policy.",
       "ok": "Save changes",
       "cancel": "Discard",
       "ownerTitle": "Save prices & policy for this vehicle?",
-      "ownerBody": "Changes apply only to {vehicle}, from new bookings onwards — confirmed bookings are not affected."
+      "ownerBody": "Changes apply only to {vehicle}, from new bookings onwards - confirmed bookings are not affected."
     },
     "longTermHint": {
-      "suggestion": "Suggested {min} – {max}/month — a full month of daily rentals already costs {reference}, so the long-term price should sit below that to give renters a reason to commit.",
-      "noMonthly": "Self-drive {weekday}/day — no long-term price set yet",
+      "suggestion": "Suggested {min} - {max}/month - a full month of daily rentals already costs {reference}, so the long-term price should sit below that to give renters a reason to commit.",
+      "noMonthly": "Self-drive {weekday}/day - no long-term price set yet",
       "notCheaper": "The monthly price ({monthly}) is not cheaper than a full month of daily rentals ({reference})",
       "notCheaperBody": "At this level renters have no reason to pick a long-term package.",
       "base": "Base long-term price {monthly}/month",
       "packagesLead": "Renters will see these packages (duration discounts included):",
-      "perMonth": "{amount}/month"
+      "perMonth": "{amount}/month",
+      "suggestedLine": "Suggested price: {min} - {max}/month",
+      "notCheaperShort": "not cheaper than a full month of daily rentals ({reference})",
+      "suggestTipLabel": "How the suggested price is worked out"
     },
     "unitPerDay": "đ / day",
     "unitPerHour": "đ / hour",
@@ -1225,10 +1307,11 @@
       "excessFeeRequired": "Enter the fee for each extra kilometre",
       "excessFeeMax": "That excess mileage fee is too high",
       "moneyThousandStep": "The amount must be a multiple of 1,000 VND",
-      "perKmRequired": "Enter a price per km above 0 — for free delivery choose a 0 VND flat fee"
+      "perKmRequired": "Enter a price per km above 0 - for free delivery choose a 0 VND flat fee",
+      "overtimeFeeRequired": "Enter the fee per extra hour, or turn the late fee off"
     },
     "calendarLink": "Custom prices by calendar",
-    "calendarHint": "Per-day prices (holidays, weekends, peak season) are set directly on the vehicle calendar — one price source, no second seasonal table.",
+    "calendarHint": "Per-day prices (holidays, weekends, peak season) are set directly on the vehicle calendar - one price source, no second seasonal table.",
     "mileage": {
       "title": "Mileage allowance",
       "hint": "Kilometres per day already included in the rental price. Anything beyond it is suggested as a surcharge at settlement; it is never added to the quote at booking time.",
@@ -1244,23 +1327,35 @@
       "previewTitle": "Renters will see this on the vehicle page:",
       "preview": "Includes {km}/day. {fee} for each kilometre over the limit.",
       "previewIncomplete": "Fill in both fields for the allowance to show on the vehicle page.",
-      "disabledNote": "Unlimited mileage — no excess mileage surcharge."
+      "disabledNote": "Unlimited mileage - no excess mileage surcharge."
     },
     "backToVehicle": "Back to vehicle profile",
     "backToList": "Back to vehicle list",
     "forbiddenTitle": "No access",
     "notFoundTitle": "Vehicle not found",
-    "notFoundBody": "The vehicle may have been deleted, or it does not belong to this shop."
+    "notFoundBody": "The vehicle may have been deleted, or it does not belong to this shop.",
+    "longTermPreview": {
+      "eyebrow": "What customers see on the marketplace",
+      "aria": "Long-term package price preview",
+      "exampleLabel": "1-month price (example)",
+      "monthlyLabel": "Base long-term price: {amount}/month",
+      "featured": "{months} package",
+      "saving": "Customers save {amount} on the package",
+      "noTiers": "No discount tiers yet - customers pay the full package price.",
+      "exampleEmpty": "Enter an example monthly price to preview",
+      "monthlyEmpty": "Enter the base long-term price to preview package prices",
+      "exampleNote": "Example only. Each vehicle's real price is based on that vehicle's monthly price."
+    }
   },
   "documents": {
     "noPermissionTitle": "No permission to view documents",
     "noPermissionBody": "You do not have permission to view this vehicle's document records. Contact the shop owner to be granted access.",
     "loadError": "Could not load the document checklist",
-    "readOnly": "View only — you can see the documents but not edit them.",
+    "readOnly": "View only - you can see the documents but not edit them.",
     "cardTitle": "Vehicle records & documents",
     "addType": "Add document type",
     "ocrNoteTitle": "AI-assisted data extraction (OCR review)",
-    "ocrNoteBody": "OCR output is only a draft to speed up data entry — you must check it against the original document and pick each field yourself before saving it to the vehicle record.",
+    "ocrNoteBody": "OCR output is only a draft to speed up data entry - you must check it against the original document and pick each field yourself before saving it to the vehicle record.",
     "row": {
       "expiry": "Expires on: <b>{value}</b>",
       "updatedAt": "Updated: <b>{value}</b>",
@@ -1286,9 +1381,9 @@
       "inProgressAria": "Uploading {fileName}"
     },
     "ocr": {
-      "unreadable": "Could not extract anything — the image is blurry or in the wrong format. Enter the details manually or upload a clearer file.",
-      "failed": "Extraction failed — try again or enter the details manually.",
-      "notConfigured": "Automatic extraction is not available yet — please enter the details manually."
+      "unreadable": "Could not extract anything - the image is blurry or in the wrong format. Enter the details manually or upload a clearer file.",
+      "failed": "Extraction failed - try again or enter the details manually.",
+      "notConfigured": "Automatic extraction is not available yet - please enter the details manually."
     },
     "remove": {
       "title": "Remove this document from the checklist?",
@@ -1297,10 +1392,10 @@
       "done": "Document removed from the checklist"
     },
     "metadata": {
-      "editTitle": "Document details — {title}",
+      "editTitle": "Document details - {title}",
       "save": "Save document",
       "saved": "Document details saved",
-      "conflict": "Someone else just updated this document — close the dialog and reload before editing again.",
+      "conflict": "Someone else just updated this document - close the dialog and reload before editing again.",
       "noDetailTitle": "No permission to view document details",
       "noDetailBody": "The document details permission (vehicles.documents.view_details) is required to read and edit sensitive information.",
       "plateNumber": "Licence plate",
@@ -1325,7 +1420,7 @@
       "noPermissionBody": "The open-file permission (vehicles.documents.view_files) is required.",
       "loadError": "Could not load the history",
       "empty": "This document has no file versions yet",
-      "version": "Version {version} — {fileName}",
+      "version": "Version {version} - {fileName}",
       "replaced": "Replaced on {date}",
       "active": "In use · uploaded {date}",
       "download": "View file"
@@ -1333,21 +1428,21 @@
     "review": {
       "title": "Check the OCR result",
       "success": "Recognised successfully",
-      "successWithConfidence": "Recognised successfully — extraction confidence: {confidence}%",
+      "successWithConfidence": "Recognised successfully - extraction confidence: {confidence}%",
       "warning": "The OCR result is only a draft to speed up data entry. You must check it against the original document before saving.",
       "colSelect": "Select",
       "colField": "Field",
       "colCurrent": "Current",
       "colOcr": "Recognised (OCR)",
       "selectField": "Select {field}",
-      "empty": "No field could be read from the document — please enter the details manually.",
+      "empty": "No field could be read from the document - please enter the details manually.",
       "apply": "Update selected",
       "applyCount": "Update selected ({count})",
       "applied": "The selected fields have been updated",
       "markedReviewed": "Marked as reviewed",
-      "conflict": "Someone else already reviewed this OCR result — close the dialog and reload.",
+      "conflict": "Someone else already reviewed this OCR result - close the dialog and reload.",
       "applyPlateToVehicle": "Also update the licence plate on the vehicle record (a published vehicle goes back to pending review)",
-      "skip": "Skip — reviewed, update nothing"
+      "skip": "Skip - reviewed, update nothing"
     },
     "cardSubtitle": "Manage the legal papers and files attached to this vehicle",
     "cardTitleCompact": "Vehicle documents",
@@ -1363,13 +1458,13 @@
       "fileTitle": "Attached file",
       "fileNone": "No file uploaded yet",
       "fileVersion": "Version {version} · uploaded {date}",
-      "dialogTitle": "Document — {title}"
+      "dialogTitle": "Document - {title}"
     },
     "add": {
       "title": "Add document type",
       "typeLabel": "Document type",
       "typePlaceholder": "Choose a document type",
-      "customOption": "Other — name it yourself",
+      "customOption": "Other - name it yourself",
       "customLabel": "Document type name",
       "customPlaceholder": "e.g. Contract vehicle badge",
       "fileLabel": "Document image or file",
@@ -1390,7 +1485,7 @@
     "title": "Maintenance",
     "noPermission": "No permission to view maintenance",
     "loadError": "Could not load the maintenance details",
-    "readOnly": "View only — you may read maintenance data but not change it.",
+    "readOnly": "View only - you may read maintenance data but not change it.",
     "odometer": {
       "title": "Current odometer (Odo)",
       "current": "Current reading",
@@ -1468,7 +1563,7 @@
         "notes": "Notes",
         "plannedStartAt": "Planned start",
         "plannedEndAt": "Planned end",
-        "scheduleHint": "Fill in both moments and the record holds a real slot on the vehicle calendar — that window stops accepting rentals.",
+        "scheduleHint": "Fill in both moments and the record holds a real slot on the vehicle calendar - that window stops accepting rentals.",
         "completeHint": "Completing releases the calendar slot and updates the current odometer (if entered). An oil change also moves the next maintenance milestone.",
         "conflictTitle": "The vehicle already has another booking in this window",
         "conflictRow": "{label}: {range}"
@@ -1556,5 +1651,113 @@
     "interior": "Interior",
     "dashboard": "Odometer",
     "other": "Other"
+  },
+  "editor": {
+    "menu": {
+      "label": "Vehicle profile sections",
+      "groups": {
+        "profile": "Vehicle profile",
+        "rental": "Rental options",
+        "advanced": "Advanced operations"
+      },
+      "items": {
+        "information": "General information",
+        "media": "Photos",
+        "documents": "Vehicle documents",
+        "trip-history": "Trip history",
+        "services": "Services & prices",
+        "policy": "Rental policy",
+        "maintenance": "Maintenance & mileage",
+        "source": "Source & financing"
+      },
+      "missingBadge": "{count} missing",
+      "missingImages": "{count, plural, one {# required photo angle} other {# required photo angles}} missing",
+      "documentsCount": "{count} of {total} core documents uploaded"
+    },
+    "asideLabel": "Vehicle summary and save changes",
+    "summary": {
+      "label": "Vehicle summary",
+      "openMedia": "Open the Photos section",
+      "statusSaved": "Operating status updated",
+      "changeStatus": "Operating status: {status} - click to change",
+      "operation": "Operation",
+      "review": "Review",
+      "plate": "Plate number",
+      "kind": "Vehicle type",
+      "seats": "{count} seats",
+      "perDay": "/day",
+      "perMonth": "/month",
+      "price": "Rental price",
+      "priceWithUnit": "Rental price ({unit})",
+      "odometer": "Mileage",
+      "rating": "Rating",
+      "noRating": "No ratings yet",
+      "trips": "{count, plural, one {# trip} other {# trips}}",
+      "completeness": "Completeness",
+      "completenessValue": "{done} of {total} publishing requirements met",
+      "viewListing": "View listing"
+    },
+    "information": {
+      "general": "General information",
+      "bodyType": "Body type",
+      "bodyTypeHint": "Pick the right body type - customers filter by it on the marketplace.",
+      "energy": "Engine & fuel",
+      "features": "Features",
+      "advanced": "Advanced specs",
+      "advancedHint": "Dimensions, weight, power and consumption - optional.",
+      "dimensions": "Dimensions & weight",
+      "engine": "Power",
+      "consumption": "Consumption by road type",
+      "description": "Vehicle description"
+    },
+    "services": {
+      "tabsLabel": "Vehicle services",
+      "tabs": {
+        "self_drive": "Self-drive",
+        "with_driver": "With driver",
+        "long_term": "Long-term rental"
+      },
+      "on": "On",
+      "off": "Off",
+      "toggle": {
+        "self_drive": {
+          "title": "Self-drive rental",
+          "target": "self-drive customers"
+        },
+        "with_driver": {
+          "title": "With driver",
+          "target": "trips with a driver"
+        },
+        "long_term": {
+          "title": "Long-term rental",
+          "target": "long-term customers"
+        },
+        "hint": "Turn on to accept {service}. Deposit, delivery and terms are in <conditions>Rental policy</conditions>."
+      },
+      "offNote": "This service is off - turn it on above to set prices and accept trips for it.",
+      "price": {
+        "title": "Rental price",
+        "titlePromo": "Rental price & promotion"
+      },
+      "policy": {
+        "longTermTitle": "Long-term discounts (over 1 month)"
+      },
+      "extras": "Other",
+      "policyInvalid": "Some fields in Rental policy are invalid - open that section, fix them, then save again."
+    },
+    "policy": {
+      "useShop": "Apply the shop's policy",
+      "useShopHint": "When on, the vehicle follows the shop's <policies>general policy</policies>: delivery, deposit, mileage limit, overtime fee and long-term offers.",
+      "inherited": "Following the <policies>shop policy</policies>. Turn off \"Apply the shop's policy\" at the top of this section to customize it for this vehicle.",
+      "inheritedElsewhere": "Following the <policies>shop policy</policies>. To customise this vehicle, turn off the switch at the top of <switch>Rental policy</switch>.",
+      "deliveryTitle": "Doorstep delivery",
+      "rulesTitle": "Delivery, deposit & extra fees",
+      "pricesInvalid": "Some prices in Services & prices are invalid (for example, the weekday price is missing) - open that section, fix them, then save again.",
+      "bufferTipLabel": "Which bookings the preparation time applies to"
+    },
+    "conditions": {
+      "selfDriveTitle": "Self-drive & long-term rental",
+      "withDriverTitle": "With driver"
+    }
   }
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { usePathname } from 'next/navigation';
 import {
   createContext,
   useCallback,
@@ -13,6 +14,7 @@ import {
 import { ACCOUNT_REALM } from '@xeprime/types';
 import { ContactVerifyModal } from '@/features/account/components/ContactVerifyModal';
 import { CONTACT_CHANNEL } from '@/features/account/types';
+import { ROUTES } from '@/constants/routes';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useLogout } from '../hooks/use-logout';
 
@@ -36,8 +38,24 @@ import { useLogout } from '../hooks/use-logout';
 export function AccountPhoneGate({ signOutTo }: { signOutTo: string }) {
   const { data: user } = useCurrentUser();
   const signOut = useLogout(signOutTo);
+  const pathname = usePathname();
 
-  const needsPhone = user != null && user.realm !== ACCOUNT_REALM.PLATFORM && !user.phoneVerified;
+  /*
+   * Trang ĐĂNG KÝ không bật hộp: chọn tuyến xem trước thoải mái, còn form đăng ký tự hỏi SĐT ở ô
+   * "Xác thực" như luồng thường (`PartnerSignupForm` — nhánh tài khoản Google/Facebook). Server vẫn
+   * là chốt: chưa có SĐT đã xác minh thì không mở được gian hàng.
+   */
+  const onRegisterPage = pathname === ROUTES.MANAGE.REGISTER;
+  /*
+   * Tài khoản nhân viên do gian hàng CẤP (ADR 0087) đăng nhập bằng tên đăng nhập, không có SĐT và
+   * không cần: họ không mở gian hàng, không nhận lời mời, không làm việc với khách bằng số riêng.
+   */
+  const needsPhone =
+    user != null &&
+    user.realm !== ACCOUNT_REALM.PLATFORM &&
+    !user.managedAccount &&
+    !user.phoneVerified &&
+    !onRegisterPage;
   if (!needsPhone) return null;
 
   return (

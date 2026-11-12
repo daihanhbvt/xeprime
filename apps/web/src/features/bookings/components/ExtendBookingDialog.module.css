@@ -1,0 +1,354 @@
+/* Hộp thoại "Gia hạn thuê xe" / "Thanh toán" — Figma Partner-XePrime `23807:68543` · `23807:70054`. */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* ── Thẻ tóm tắt đơn ─────────────────────────────────────────────────────── */
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+}
+
+.vehicle {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+}
+
+.thumb {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-tertiary);
+  font-size: 24px;
+}
+
+.thumbImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vehicleText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-xs);
+}
+
+.vehicleName {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plate {
+  padding: 0 var(--xp-space-6);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  margin: 0;
+  padding-top: var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.facts > div {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.facts dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.facts dd {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  text-align: right;
+}
+
+.totalCell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--xp-space-xs);
+}
+
+.pill {
+  padding: 0 var(--xp-space-sm);
+  border: 1px solid transparent;
+  border-radius: var(--xp-border-radius-pill);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.pillSuccess {
+  border-color: var(--xp-color-success-border);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.pillWarning {
+  border-color: var(--xp-color-warning-border);
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning-strong);
+}
+
+/* ── Chọn thời gian ─────────────────────────────────────────────────────── */
+
+.choose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+}
+
+.heading {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+}
+
+.chip {
+  height: 32px;
+  padding: 0 var(--xp-space-12);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  font: inherit;
+  font-size: var(--xp-font-size-body-sm);
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--xp-color-primary-border);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.chipActive {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary-strong);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.period {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-12);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+}
+
+.periodCell {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.periodLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.periodValue {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.periodNew {
+  color: var(--xp-color-primary-strong);
+}
+
+.periodDash {
+  color: var(--xp-color-text-tertiary);
+}
+
+.checking {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.availability {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: var(--xp-space-sm) var(--xp-space-12);
+  border: 1px solid transparent;
+  border-radius: var(--xp-border-radius-control);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.availabilityOk {
+  border-color: var(--xp-color-success-border);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.availabilityBusy {
+  border-color: var(--xp-color-error-border);
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+/* ── Hộp phí (nền vàng nhạt) ────────────────────────────────────────────── */
+
+.fee {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-primary-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-primary-subtle);
+}
+
+.fee[aria-busy='true'] {
+  opacity: 0.6;
+}
+
+.feeRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.feeLabel {
+  display: flex;
+  flex-direction: column;
+}
+
+.feeLabel small {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.feeAmount {
+  color: var(--xp-color-primary-strong);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.feeMuted {
+  color: var(--xp-color-text-secondary);
+}
+
+.feeDivider {
+  height: 1px;
+  background: var(--xp-color-primary-border);
+}
+
+.freeNote {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  margin: 0;
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* ── Thanh toán ─────────────────────────────────────────────────────────── */
+
+.method {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-primary-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+.methodTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.methodHint {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.payNotes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  padding-left: var(--xp-space-lg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* ── Chân hộp thoại ─────────────────────────────────────────────────────── */
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+  padding-top: var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.footerStart {
+  margin-right: auto;
+}

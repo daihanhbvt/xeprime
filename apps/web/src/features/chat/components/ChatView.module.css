@@ -733,6 +733,14 @@
   white-space: nowrap;
 }
 
+.contextDetail {
+  font-size: 11px;
+  color: var(--xp-color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /*
  * Thẻ xe TRONG bong bóng — nền riêng, không ăn theo màu bong bóng.
  *
@@ -778,6 +786,15 @@
   font-size: 12.5px;
   font-weight: 600;
   color: var(--xp-gold-deep);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Dòng phụ của thẻ chuyến: mã đơn · lịch nhận–trả. */
+.vehicleCardDetail {
+  font-size: 11px;
+  color: var(--xp-color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

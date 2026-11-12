@@ -93,6 +93,7 @@ export {
   getApiBaseUrl,
   getErrorCode,
   getErrorDetails,
+  getRetryAfterSeconds,
   isUnauthenticated,
   type ApiRequestOptions,
   type Paged,

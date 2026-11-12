@@ -52,6 +52,7 @@ export default function ManageTabsLayout() {
         */}
         <Tabs.Screen name="bookings/index" />
         <Tabs.Screen name="bookings/awaiting-pickup" />
+        <Tabs.Screen name="bookings/ended" />
         <Tabs.Screen name="vehicles" />
         <Tabs.Screen name="maintenance" />
         <Tabs.Screen name="calendar" />

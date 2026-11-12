@@ -368,11 +368,11 @@
       },
       "privacy": {
         "title": "Quyền riêng tư",
-        "body": "Số điện thoại, email và số giấy tờ đã được che một phần ngay từ máy chủ. Màn này không hiện bản đầy đủ hay file giấy tờ — các thông tin đó chỉ mở ở màn chuyên trách, theo quyền riêng và có ghi nhật ký."
+        "body": "Số điện thoại, email và số giấy tờ đã được che một phần ngay từ máy chủ. Màn này không hiện bản đầy đủ hay file giấy tờ - các thông tin đó chỉ mở ở màn chuyên trách, theo quyền riêng và có ghi nhật ký."
       }
     },
     "billing": {
-      "permissionNote": "Chỉ người có quyền quản lý Gói & thanh toán mới xem được tab này. Tab chỉ để xem — gán, gia hạn hay huỷ gói nằm ở “Thao tác quản trị nền tảng”.",
+      "permissionNote": "Chỉ người có quyền quản lý Gói & thanh toán mới xem được tab này. Tab chỉ để xem - gán, gia hạn hay huỷ gói nằm ở “Thao tác quản trị nền tảng”.",
       "plan": {
         "title": "Gói hiện tại",
         "none": "Chưa có gói hiệu lực",
@@ -396,12 +396,14 @@
       "fee": {
         "title": "Chính sách phí",
         "none": "Chưa có chính sách phí hiệu lực",
-        "serviceFee": "Phí dịch vụ XePrime",
-        "percent": "{value}%",
+        "platformFee": "Phí sàn khách trả mỗi đơn",
+        "platformFeeValue": "{car} ô tô · {motorbike} xe máy",
+        "commission": "Hoa hồng chủ xe",
+        "commissionNone": "0% - gian hàng gói không bị trừ hoa hồng trên chuyến",
         "version": "Phiên bản chính sách",
         "effectiveFrom": "Áp dụng từ",
         "noteLabel": "Ghi chú",
-        "note": "Chính sách phí chung của nền tảng. Gian hàng gói không bị trừ hoa hồng trên chuyến."
+        "note": "Chính sách phí chung của nền tảng, đọc từ phiên bản đang hiệu lực."
       },
       "invoices": {
         "statusTitle": "Tình trạng hoá đơn",
@@ -430,9 +432,9 @@
         "title": "Mốc quan trọng",
         "joined": "Tham gia nền tảng",
         "started": "Bắt đầu gói {plan}",
-        "renewal": "Hết kỳ hiện tại — chưa gia hạn",
+        "renewal": "Hết kỳ hiện tại - chưa gia hạn",
         "scheduled": "Sẽ bắt đầu gói {plan}",
-        "renewed": "Hết kỳ hiện tại — kỳ kế tiếp đã xếp lịch"
+        "renewed": "Hết kỳ hiện tại - kỳ kế tiếp đã xếp lịch"
       }
     },
     "commission": {
@@ -441,10 +443,11 @@
       "policy": {
         "title": "Chính sách phí dịch vụ",
         "none": "Chưa có chính sách phí hiệu lực",
-        "rate": "Tỷ lệ hiện tại",
-        "percent": "{value}%",
+        "rate": "Hoa hồng lũy tiến theo ngày",
         "basis": "Cơ sở tính",
-        "basisValue": "Tiền thuê của chuyến — khách trả phí dịch vụ",
+        "basisValue": "Tiền thuê từng ngày của chuyến - trừ vào tiền chủ xe nhận",
+        "platformFee": "Phí sàn khách trả mỗi đơn",
+        "platformFeeValue": "{car} ô tô · {motorbike} xe máy",
         "effectiveFrom": "Áp dụng từ",
         "version": "Phiên bản chính sách"
       },
@@ -480,7 +483,7 @@
       "rules": {
         "title": "Nguyên tắc tính phí",
         "rule1": "Phí dịch vụ tính trên tiền thuê của chuyến, theo chính sách phí có hiệu lực lúc chốt đơn.",
-        "rule2": "Số tiền được chốt (đóng băng) trên từng đơn khi đơn hình thành — không tính lại khi chính sách đổi.",
+        "rule2": "Số tiền được chốt (đóng băng) trên từng đơn khi đơn hình thành - không tính lại khi chính sách đổi.",
         "rule3": "Chuyến bị huỷ hoặc khách không đến nhận không được tính vào số liệu.",
         "rule4": "Thuế khấu trừ do chủ xe chịu, không cộng vào số tiền khách trả."
       }
@@ -514,7 +517,7 @@
       "total": "{count, plural, other {# hoạt động}}",
       "ipNote": {
         "title": "IP và thiết bị",
-        "body": "IP và thiết bị không hiện ở đây. Mở “Xem chi tiết” để sang Nhật ký hệ thống — các trường đó chỉ hiện với tài khoản có quyền xem nhật ký."
+        "body": "IP và thiết bị không hiện ở đây. Mở “Xem chi tiết” để sang Nhật ký hệ thống - các trường đó chỉ hiện với tài khoản có quyền xem nhật ký."
       },
       "sessions": {
         "columns": {
@@ -545,7 +548,8 @@
       "notCovered": "{used} xe · chưa có gói cho loại xe này",
       "type": {
         "motorbike": "Xe máy",
-        "car": "Ô tô"
+        "car": "Ô tô",
+        "all": "Mọi loại xe"
       },
       "scope": {
         "motorbike": "Xe máy",

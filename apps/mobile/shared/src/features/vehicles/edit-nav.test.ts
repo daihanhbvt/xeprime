@@ -15,20 +15,22 @@ const shape = (groups: ReturnType<typeof vehicleEditNavGroups>) =>
   groups.map((g) => [g.key, g.items.map((i) => i.tab)]);
 
 /** Web `vehicle-edit-nav.ts` → `editNavGroups`: sáu nhóm, đúng thứ tự, đúng nhãn. */
-describe('vehicleEditNavGroups — menu sửa xe như web', () => {
-  it('đủ năng lực: sáu nhóm, mười mục, đúng thứ tự', () => {
+describe('vehicleEditNavGroups - menu sửa xe như web', () => {
+  it('đủ năng lực: bảy nhóm, mười một mục, đúng thứ tự', () => {
     const groups = vehicleEditNavGroups({ enabled: () => true, services: ALL_SERVICES });
     expect(shape(groups)).toEqual([
-      ['info', ['information', 'media', 'documents']],
-      ['pricingHandover', ['pricing', 'handover-time']],
+      ['info', ['information', 'media', 'documents', 'trip-history']],
+      ['services', ['pricing']],
+      ['policy', ['handover-time']],
       ['selfDrive', ['self-drive-optimization']],
-      ['withDriver', ['with-driver-optimization', 'with-driver-surcharges']],
+      ['withDriver', ['with-driver-optimization']],
       ['longTerm', []],
-      ['advanced', ['source', 'maintenance']],
+      ['advanced', ['maintenance', 'source']],
     ]);
     expect(groups.map((g) => g.labelKey)).toEqual([
       'groups.info',
-      'groups.pricingHandover',
+      'groups.services',
+      'groups.policy',
       'groups.selfDrive',
       'groups.withDriver',
       'groups.longTerm',
@@ -38,13 +40,13 @@ describe('vehicleEditNavGroups — menu sửa xe như web', () => {
       'items.information',
       'items.images',
       'items.documents',
-      'items.pricing',
-      'items.handoverTime',
+      'items.tripHistory',
+      'items.services',
+      'items.turnaround',
       'items.bookingTerms',
       'items.bookingTerms',
-      'items.surcharges',
-      'items.source',
       'items.maintenance',
+      'items.source',
     ]);
   });
 
@@ -59,10 +61,11 @@ describe('vehicleEditNavGroups — menu sửa xe như web', () => {
       services: ALL_SERVICES,
     });
     expect(shape(groups)).toEqual([
-      ['info', ['information', 'media']],
-      ['pricingHandover', ['pricing', 'handover-time']],
+      ['info', ['information', 'media', 'trip-history']],
+      ['services', ['pricing']],
+      ['policy', ['handover-time']],
       ['selfDrive', ['self-drive-optimization']],
-      ['withDriver', ['with-driver-optimization', 'with-driver-surcharges']],
+      ['withDriver', ['with-driver-optimization']],
       ['longTerm', []],
     ]);
   });
@@ -74,7 +77,8 @@ describe('vehicleEditNavGroups — menu sửa xe như web', () => {
     });
     expect(Object.fromEntries(groups.map((g) => [g.key, g.dimmed]))).toEqual({
       info: false,
-      pricingHandover: false,
+      services: false,
+      policy: false,
       selfDrive: false,
       withDriver: true,
       longTerm: true,
@@ -83,7 +87,7 @@ describe('vehicleEditNavGroups — menu sửa xe như web', () => {
   });
 
   it('mục → dịch vụ (web editTabServiceType)', () => {
-    expect(editTabServiceType(VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES)).toBe(
+    expect(editTabServiceType(VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION)).toBe(
       SERVICE_TYPE.WITH_DRIVER,
     );
     expect(editTabServiceType(VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION)).toBe(
@@ -105,7 +109,7 @@ describe('vehicleEditNavGroups — menu sửa xe như web', () => {
   });
 });
 
-describe('VEHICLE_EDIT_TAB — bí danh như web resolveEditTab', () => {
+describe('VEHICLE_EDIT_TAB - bí danh như web resolveEditTab', () => {
   it('giá trị chuỗi khớp web', () => {
     expect(VEHICLE_EDIT_TAB).toMatchObject({
       HANDOVER_TIME: 'handover-time',
@@ -134,12 +138,12 @@ describe('VEHICLE_EDIT_TAB — bí danh như web resolveEditTab', () => {
 
 /*
  * Ở app Customer mọi đích `/manage` đổ về handoff, nên phép so dạng đường dẫn chỉ có nghĩa ở app
- * Partner — đọc qua builder chứ không viết chuỗi literal.
+ * Partner - đọc qua builder chứ không viết chuỗi literal.
  */
 const describePartnerOnly =
   APP_PROFILE.clientApp === MOBILE_CLIENT_APP.PARTNER ? describe : describe.skip;
 
-describePartnerOnly('ROUTES.manage.vehicleEditTab — mục và bí danh', () => {
+describePartnerOnly('ROUTES.manage.vehicleEditTab - mục và bí danh', () => {
   const ID = '01JQZX0000000000000000000V';
   it('bí danh đi thẳng tới mục thật', () => {
     expect(ROUTES.manage.vehicleEditTab(ID, VEHICLE_EDIT_TAB.OPERATIONS)).toEqual(

@@ -62,7 +62,7 @@
     "provider_flagged": "Cổng báo giao dịch bị nghi ngờ",
     "duplicate_provider_tx": "Mã giao dịch của cổng đã dùng ở lượt khác",
     "result_after_resolution": "Cổng báo đã thu sau khi lượt đã được đóng",
-    "overpaid": "Tiền trả trùng — khoản này đã được trả đủ từ trước"
+    "overpaid": "Tiền trả trùng - khoản này đã được trả đủ từ trước"
   },
   "paymentOrderQueueView": {
     "review": "Cần xử lý",
@@ -82,7 +82,7 @@
     "pickup": "Bán tải",
     "van": "Van",
     "minibus": "Xe 16 chỗ",
-    "cargo": "Xe tải – Cargo"
+    "cargo": "Xe tải - Cargo"
   },
   "bookingDateField": {
     "createdAt": "Theo ngày tạo",
@@ -255,10 +255,10 @@
     "attention": "Có điểm cần lưu ý"
   },
   "handoverPhotoSlot": {
-    "front": "Trước",
-    "rear": "Sau",
-    "left": "Trái",
-    "right": "Phải",
+    "front": "Mặt trước",
+    "rear": "Mặt sau",
+    "left": "Bên trái",
+    "right": "Bên phải",
     "odometer": "Đồng hồ Odo"
   },
   "handoverStatus": {
@@ -351,6 +351,11 @@
     "locked": "Bị khoá",
     "removed": "Đã gỡ"
   },
+  "memberRosterStatus": {
+    "active": "Đang hoạt động",
+    "pending": "Chờ xác nhận",
+    "locked": "Đã khoá"
+  },
   "notificationType": {
     "booking_created": "Đơn thuê mới",
     "booking_status_changed": "Cập nhật đơn thuê",
@@ -384,7 +389,7 @@
     "hold_paid": "Đã nhận tiền giữ chỗ",
     "hold_expiring": "Sắp hết hạn thanh toán",
     "hold_expired": "Hết hạn thanh toán giữ chỗ",
-    "hold_refunded": "Chuyến không thành — đã hoàn",
+    "hold_refunded": "Chuyến không thành - đã hoàn",
     "hold_refund_paid": "Đã hoàn tiền giữ chỗ",
     "booking_request_slot_reopened": "Xe bạn hỏi đã rảnh lại",
     "booking_cancelled_by_host": "Chủ xe đã huỷ chuyến",
@@ -502,7 +507,7 @@
   "routeTypeDescription": {
     "in_city": "Di chuyển trong nội thành hoặc lân cận, lộ trình tự do",
     "inter_city": "Đi tỉnh/thành khác và quay về điểm đón (khứ hồi)",
-    "inter_city_one_way": "Đi tỉnh/thành khác một chiều — gian hàng có thể báo thêm phụ phí"
+    "inter_city_one_way": "Đi tỉnh/thành khác một chiều - gian hàng có thể báo thêm phụ phí"
   },
   "seatBucket": {
     "4": "4 chỗ",
@@ -585,8 +590,8 @@
   "tenantRole": {
     "shop_owner": "Chủ gian hàng",
     "shop_manager": "Quản lý gian hàng",
-    "shop_staff": "Nhân viên gian hàng",
-    "shop_viewer": "Chỉ xem"
+    "shop_staff": "Nhân viên",
+    "shop_viewer": "Quan sát viên"
   },
   "tenantStatus": {
     "draft": "Nháp",
@@ -716,6 +721,7 @@
   "marketplaceVisibility": {
     "visible": "Đang hiển thị",
     "owner_paused": "Chủ xe tạm ẩn",
+    "plan_paused": "Tạm ẩn - hết suất gói",
     "not_approved": "Chưa được duyệt",
     "platform_hidden": "Bị nền tảng ẩn",
     "shop_inactive": "Gian hàng ngừng hoạt động",
@@ -733,7 +739,7 @@
   },
   "feeLine": {
     "service_fee": "Phí đặt xe",
-    "owner_commission": "Phí dịch vụ – Chủ xe",
+    "owner_commission": "Phí dịch vụ - Chủ xe",
     "tax": "Thuế khấu trừ/nộp thay",
     "trip_insurance": "Bảo hiểm tai nạn người ngồi trên xe",
     "vehicle_protection": "Bảo hiểm vật chất xe",
@@ -811,7 +817,7 @@
   "feePolicyActivationBlocker": {
     "service_fee_out_of_range": "% phí dịch vụ ngoài khoảng cho phép",
     "tax_requires_rates_and_basis": "Thuế cần đủ bảng mức theo loại dịch vụ và căn cứ pháp lý",
-    "tax_rate_out_of_range": "Mức GTGT hoặc TNCN ngoài khoảng cho phép (0–5%, tối đa hai chữ số thập phân)",
+    "tax_rate_out_of_range": "Mức GTGT hoặc TNCN ngoài khoảng cho phép (0-5%, tối đa hai chữ số thập phân)",
     "insurance_requires_partner": "Bảo hiểm cần tên đối tác thật",
     "trip_insurance_requires_rate": "Bảo hiểm tai nạn người cần biểu phí ngày cho mọi loại xe",
     "vehicle_protection_requires_rate": "Bảo hiểm vật chất xe cần biểu phí ngày cho mọi loại xe",
@@ -835,7 +841,7 @@
   "bookingHoldOutcome": {
     "kept": "Đã dùng cho chuyến",
     "settled": "Đã quyết toán",
-    "split_late_cancel": "Huỷ muộn — đền giữ chỗ",
+    "split_late_cancel": "Huỷ muộn - đền giữ chỗ",
     "refunded": "Đã hoàn khách",
     "forfeited": "Bồi thường chủ xe",
     "released_to_shop": "Đã chuyển gian hàng"
@@ -928,7 +934,8 @@
     "no_driver": "Không có tài xế rảnh cho khung giờ này",
     "hold_required_with_driver": "Chuyến có tài xế cần chủ xe xác nhận trước khi giữ chỗ",
     "terms_not_accepted": "Khách chưa đồng ý điều khoản thuê",
-    "billing_not_configured": "Gian hàng chưa có chế độ tính phí hiệu lực"
+    "billing_not_configured": "Gian hàng chưa có chế độ tính phí hiệu lực",
+    "vehicle_still_out": "Xe chưa về từ một chuyến đã quá giờ trả"
   },
   "bookingRequestDecisionSource": {
     "host": "Chủ xe quyết định",
@@ -965,7 +972,7 @@
   },
   "catalogTypeHint": {
     "vehicle_brand": "Hiện ở ô \"Hãng xe\" khi tạo/sửa xe và ở bộ lọc ngoài chợ.",
-    "body_type": "Hiện thành thẻ có ảnh khi tạo/sửa xe, ở bộ lọc \"Loại xe\" ngoài chợ, và — khi bật \"Hiện ở trang chủ\" — ở khối \"Loại xe\" trang chủ.",
+    "body_type": "Hiện thành thẻ có ảnh khi tạo/sửa xe, ở bộ lọc \"Loại xe\" ngoài chợ, và - khi bật \"Hiện ở trang chủ\" - ở khối \"Loại xe\" trang chủ.",
     "fuel_type": "Hiện ở ô \"Nguồn năng lượng\" khi tạo/sửa xe và ở bộ lọc ngoài chợ.",
     "vehicle_feature": "Hiện ở phần \"Tiện ích\" khi tạo/sửa xe và ở bộ lọc ngoài chợ.",
     "vehicle_model": "Hiện ở ô \"Mẫu xe\" sau khi chọn hãng. Mỗi mẫu thuộc một hãng và một loại xe."
@@ -977,7 +984,9 @@
     "hold_overpay": "Hoàn phần chuyển thừa",
     "withdrawal": "Rút về ngân hàng",
     "withdrawal_reversal": "Hoàn lại do rút không thành",
-    "adjustment": "Điều chỉnh"
+    "adjustment": "Điều chỉnh",
+    "extension_release": "Tiền giữ chỗ phần gia hạn",
+    "extension_refund": "Hoàn tiền gia hạn"
   },
   "withdrawalStatus": {
     "pending": "Chờ duyệt",
@@ -1100,7 +1109,9 @@
     "contact_reveal": "Xem liên hệ đầy đủ",
     "bulk_create": "Tạo hàng loạt",
     "bulk_release": "Nhả hàng loạt",
-    "attach": "Đính kèm"
+    "attach": "Đính kèm",
+    "prep_check": "Đánh dấu việc chuẩn bị",
+    "prep_uncheck": "Bỏ đánh dấu việc chuẩn bị"
   },
   "billingPhase": {
     "current": "Đang hiệu lực",
@@ -1202,7 +1213,11 @@
         "void": "Huỷ phụ phí đơn thuê"
       },
       "driver_accept": "Tài xế nhận chuyến",
-      "driver_decline": "Tài xế từ chối chuyến"
+      "driver_decline": "Tài xế từ chối chuyến",
+      "customer_return": {
+        "report": "Khách báo đã trả xe",
+        "reject": "Gian hàng phản đối lời báo trả xe"
+      }
     },
     "booking_hold": {
       "create": "Tạo khoản giữ chỗ",
@@ -1220,7 +1235,8 @@
       "expire": "Yêu cầu quá hạn phản hồi",
       "slot_taken": "Đóng yêu cầu vì khung giờ đã có người",
       "auto_accept_skipped": "Bỏ qua tự nhận chuyến",
-      "platform_remind": "Nền tảng nhắc chủ xe phản hồi"
+      "platform_remind": "Nền tảng nhắc chủ xe phản hồi",
+      "remind_payment": "Chủ xe nhắc khách chuyển tiền giữ chỗ"
     },
     "branch": {
       "create": "Tạo chi nhánh",
@@ -1252,7 +1268,8 @@
       "view_image": "Mở ảnh bằng lái"
     },
     "customer_document": {
-      "verify": "Đối chiếu giấy tờ khách"
+      "verify": "Đối chiếu giấy tờ khách",
+      "update": "Sửa thông tin giấy tờ khách"
     },
     "driver": {
       "create": "Thêm tài xế",
@@ -1297,7 +1314,15 @@
       "invite_decline": "Từ chối lời mời",
       "invite_revoke": "Thu hồi lời mời",
       "update_role": "Đổi vai trò thành viên",
-      "remove": "Gỡ thành viên"
+      "remove": "Gỡ thành viên",
+      "lock": "Tạm khoá thành viên",
+      "unlock": "Mở khoá thành viên",
+      "create_account": "Cấp tài khoản nhân viên",
+      "reset_password": "Đặt lại mật khẩu nhân viên"
+    },
+    "membership": {
+      "lock_after_plan_lapse": "Khoá thành viên vì gian hàng hết gói",
+      "restore_after_plan": "Mở lại thành viên khi gói kích hoạt lại"
     },
     "payment": {
       "record": "Ghi thanh toán",
@@ -1349,7 +1374,9 @@
       "activate_from_payment": "Kích hoạt gói từ thanh toán",
       "lapse_to_commission": "Hết gói, chuyển tuyến hoa hồng",
       "schedule_change": "Đổi gói từ kỳ sau",
-      "change_now": "Đổi gói ngay"
+      "change_now": "Đổi gói ngay",
+      "update": "Sửa kỳ gói dịch vụ",
+      "shift": "Dời kỳ gói xếp sau"
     },
     "subscription_invoice": {
       "issue": "Phát hành hoá đơn gói"
@@ -1374,6 +1401,9 @@
       "free_trips_exhausted": "Hết lượt chuyến miễn phí",
       "vat_invoice": {
         "update": "Đổi hỗ trợ xuất hoá đơn VAT (mọi xe)"
+      },
+      "operation_defaults": {
+        "update": "Đổi thời gian chuẩn bị mặc định giữa hai chuyến"
       }
     },
     "tenant_customer": {
@@ -1404,6 +1434,7 @@
       "marketplace_visibility": {
         "update": "Đổi hiển thị xe trên chợ"
       },
+      "marketplace_paused_by_plan": "Tạm ẩn xe khỏi chợ vì hết suất gói",
       "operation_settings": {
         "update": "Cập nhật cài đặt vận hành xe"
       },
@@ -1492,6 +1523,15 @@
       "activate": "Bật mẫu email hướng dẫn gói",
       "delete": "Xoá mẫu email hướng dẫn gói",
       "send_test": "Gửi thư thử mẫu email hướng dẫn gói"
+    },
+    "booking_extension": {
+      "create": "Tạo phụ lục gia hạn",
+      "activate": "Phụ lục gia hạn có hiệu lực",
+      "cancel": "Huỷ phụ lục gia hạn",
+      "expire": "Phụ lục gia hạn hết hạn thanh toán"
+    },
+    "subscription_checkout": {
+      "issue": "Phát hành phiếu thanh toán gộp"
     }
   },
   "auditTargetType": {
@@ -1546,7 +1586,8 @@
     "vehicle_handover": "Biên bản bàn giao",
     "vehicle_maintenance_record": "Phiếu bảo dưỡng",
     "vehicle_private_file": "Tệp riêng của xe",
-    "withdrawal_request": "Yêu cầu rút điểm"
+    "withdrawal_request": "Yêu cầu rút điểm",
+    "subscription_checkout": "Phiếu thanh toán gộp"
   },
   "auditField": {
     "planCode": "Mã gói",
@@ -1658,7 +1699,20 @@
   "driverDropZone": {
     "grace": "Trong thời gian được trả lại",
     "far": "Còn trên 12 giờ",
-    "same_day": "Trong ngày (2–12 giờ)",
+    "same_day": "Trong ngày (2-12 giờ)",
     "critical": "Sát giờ (dưới 2 giờ)"
+  },
+  "bookingHistoryOutcome": {
+    "completed": "Hoàn thành",
+    "cancelled_by_customer": "Khách hàng đã huỷ",
+    "cancelled_by_host": "Bạn đã huỷ",
+    "cancelled_other": "Đã huỷ",
+    "no_show": "Khách không đến",
+    "request_rejected": "Bạn đã từ chối",
+    "request_expired": "Quá hạn phản hồi",
+    "request_withdrawn": "Khách rút yêu cầu",
+    "request_hold_expired": "Hết hạn thanh toán",
+    "request_slot_taken": "Xe đã có khách khác nhận",
+    "request_cancelled_by_host": "Bạn đã huỷ khi chờ thanh toán"
   }
 }

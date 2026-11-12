@@ -72,7 +72,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('SupportCaseDetailPanel — case giữ tiền chỉ nền tảng đóng', () => {
+describe('SupportCaseDetailPanel - case giữ tiền chỉ nền tảng đóng', () => {
   it.each([SUPPORT_CASE_CATEGORY.DISPUTE, SUPPORT_CASE_CATEGORY.HANDOVER_UNCONFIRMED])(
     'gian hàng xem case %s ⇒ không có nút đóng',
     (category) => {

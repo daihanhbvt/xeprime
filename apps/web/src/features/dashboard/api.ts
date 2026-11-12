@@ -10,7 +10,7 @@ import type { FinanceSeries, FinancePeriodFilters, FinanceSummary, ReceiptFilter
 import { apiGet, type QueryParams } from '@/services/api-client';
 import { DAY_PARAM_FORMAT, buildPeriodRange, nowInAppTz } from '@/lib/datetime';
 import { FINANCE_GRANULARITY } from '@xeprime/types';
-import type { PartnerOverview } from './types';
+import type { PartnerOverview, PartnerOverviewRequests, PartnerOverviewToday } from './types';
 
 // ── Tổng quan (một request cho phần vận hành) ────────────────────────────────────────────────
 
@@ -29,6 +29,14 @@ export const partnerOverviewParams = (branchId?: string): QueryParams => ({
  */
 export const fetchPartnerOverview = (branchId?: string): Promise<PartnerOverview> =>
   apiGet<PartnerOverview>('/dashboard/overview', partnerOverviewParams(branchId));
+
+/** Chỉ khối "việc giao/nhận hôm nay" — nuôi số trên menu (`use-nav-work-counts.ts`). */
+export const fetchPartnerToday = (): Promise<PartnerOverviewToday> =>
+  apiGet<PartnerOverviewToday>('/dashboard/today');
+
+/** Chỉ khối "yêu cầu chờ duyệt" — nuôi số trên menu (`use-nav-work-counts.ts`). */
+export const fetchPartnerRequests = (): Promise<PartnerOverviewRequests> =>
+  apiGet<PartnerOverviewRequests>('/dashboard/requests');
 
 // ── Tiền của tuyến gói (sổ thu chi) ──────────────────────────────────────────────────────────
 

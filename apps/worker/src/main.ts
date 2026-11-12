@@ -29,7 +29,9 @@ import {
 } from './jobs/driver-assignment-expiry';
 import { sweepSubscriptionLifecycle } from './jobs/subscription-lifecycle';
 import { sweepBookingHoldExpiry } from './jobs/booking-hold-expiry';
+import { sweepBookingExtensionExpiry } from './jobs/booking-extension-expiry';
 import { sweepHandoverOverdue } from './jobs/handover-overdue';
+import { sweepTripReminders } from './jobs/booking-trip-reminders';
 import { sweepInsuranceIssue } from './jobs/insurance-issue';
 import { purgeExpiredOauthStates } from './jobs/oauth-state-cleanup';
 import { purgeExpiredGeoCache } from './jobs/geo-cache-cleanup';
@@ -333,6 +335,11 @@ async function main(): Promise<void> {
         if (result.expired || reminders) {
           console.log(`giữ chỗ: nhắc ${reminders}, hết hạn ${result.expired}`);
         }
+        // Phụ lục gia hạn (ADR 0077) — cùng loại việc "tiền theo đồng hồ", cùng nhịp phút.
+        const ext = await sweepBookingExtensionExpiry(prisma);
+        if (ext.expired || ext.reminders) {
+          console.log(`gia hạn: nhắc ${ext.reminders}, hết hạn ${ext.expired}`);
+        }
         /*
          * Chống treo đơn ở mốc bàn giao (ADR 0066, lớp 3) — cùng nhịp phút, cùng loại việc "tiền
          * của một chuyến theo đồng hồ", nên đi chung vòng lặp thay vì chiếm thêm một khoá + một
@@ -341,6 +348,13 @@ async function main(): Promise<void> {
         const overdue = await sweepHandoverOverdue(prisma);
         if (overdue.flagged) {
           console.log(`bàn giao: ${overdue.flagged} chuyến quá ân hạn — đã mở case xác minh`);
+        }
+        // Nhắc giờ nhận / giờ trả / quá giờ trả (ADR 0081) — cùng họ "chuyến theo đồng hồ", cùng nhịp.
+        const trips = await sweepTripReminders(prisma);
+        if (trips.pickupReminders || trips.returnReminders || trips.overdueAlerts) {
+          console.log(
+            `nhắc chuyến: nhận ${trips.pickupReminders}, trả ${trips.returnReminders}, quá giờ trả ${trips.overdueAlerts}`,
+          );
         }
       },
       { critical: true },

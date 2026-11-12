@@ -77,7 +77,7 @@ describe('ngày bận gần nhất sau ngày nhận', () => {
     expect(next?.level).toBe('partial');
   });
 
-  it('KHÔNG tính chính ngày nhận — nhận vào ngày bận một phần là hợp lệ', () => {
+  it('KHÔNG tính chính ngày nhận - nhận vào ngày bận một phần là hợp lệ', () => {
     const next = firstBusyDayAfter(index, day('2026-09-10T14:00'), 30);
     expect(next?.date.format('YYYY-MM-DD')).toBe('2026-09-11');
     expect(next?.level).toBe('full');

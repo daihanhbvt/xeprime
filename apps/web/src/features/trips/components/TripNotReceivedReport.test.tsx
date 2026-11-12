@@ -123,7 +123,7 @@ describe('TripNotReceivedReport', () => {
     expect(screen.getByText('Chuyến này đang có khiếu nại')).toBeTruthy();
   });
 
-  describe('theo đồng hồ — trang mở TRƯỚC giờ nhận xe, không tải lại', () => {
+  describe('theo đồng hồ - trang mở TRƯỚC giờ nhận xe, không tải lại', () => {
     beforeEach(() => {
       clock.fixed = null;
       vi.useFakeTimers({

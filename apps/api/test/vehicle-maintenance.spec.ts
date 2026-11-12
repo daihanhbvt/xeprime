@@ -23,7 +23,6 @@ import 'reflect-metadata';
 import { PERMISSIONS_KEY } from '../src/common/decorators';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
-import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import { MaintenanceBoardController } from '../src/modules/vehicles/maintenance/maintenance-board.controller';
 import { MaintenanceService } from '../src/modules/vehicles/maintenance/maintenance.service';
@@ -39,8 +38,8 @@ import { giveTenantPlan } from './helpers/billing-fixture';
  *
  * Điều được khoá: công thức mốc bảo dưỡng và trạng thái `Chưa đủ dữ liệu`; luật KM
  * (không tụt số, chỉnh tay bắt buộc lý do, giảm cần quyền cao + xác nhận, lịch sử chỉ-thêm);
- * hoàn tất bảo dưỡng là MỘT transaction (nhả lịch + ghi KM + chỉ thay nhớt mới dời mốc);
- * lịch bảo dưỡng CHẶN THẬT việc đặt xe qua `vehicle_occupancies` (ADR 0006) và hủy thì nhả;
+ * hoàn tất bảo dưỡng là MỘT transaction (ghi KM + chỉ thay nhớt mới dời mốc);
+ * lịch bảo dưỡng chỉ là MỘT ngày nhắc, không giữ chỗ lịch xe (ADR 0079);
  * chi phí/chứng từ không rò cho vai trò thiếu quyền.
  */
 const prisma = createPrismaClient();
@@ -63,14 +62,12 @@ const fakeR2 = {
 };
 
 const audit = new AuditService(asService);
-const occupancy = new OccupancyService(asService);
 const vehicles = makeVehiclesService(asService);
 const createVehicleWithBranch = vehicleCreator(vehicles, asService);
 const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Service, audit);
 const odometer = new OdometerService(asService, audit);
 const maintenance = new MaintenanceService(
   asService,
-  occupancy,
   odometer,
   files,
   audit,
@@ -506,7 +503,7 @@ describe('Cấu hình & phiếu bảo dưỡng', () => {
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.CONFLICT } });
   });
 
-  maybe('hoàn tất THAY NHỚT: nhả lịch + đẩy KM + dời mốc thay nhớt (một transaction)', async () => {
+  maybe('hoàn tất THAY NHỚT: đẩy KM + dời mốc thay nhớt (một transaction)', async () => {
     const v = await createVehicle('MT-OIL');
     await setKm(v.id, 44_000);
     const profile = await maintenance.getProfile(tenantId, v.id);
@@ -524,16 +521,9 @@ describe('Cấu hình & phiếu bảo dưỡng', () => {
         type: MAINTENANCE_TYPE.OIL_CHANGE,
         title: 'Thay dầu động cơ & Lọc dầu',
         plannedStartAt: hours(0).toISOString(),
-        plannedEndAt: hours(4).toISOString(),
       },
       FULL_SCOPE,
     );
-    // Lịch đã đặt → có chỗ thật trên `vehicle_occupancies`.
-    expect(
-      await prisma.vehicleOccupancy.count({
-        where: { sourceType: OCCUPANCY_SOURCE_TYPE.MAINTENANCE, sourceId: record.id },
-      }),
-    ).toBe(1);
 
     const completed = await maintenance.completeRecord(
       tenantId,
@@ -544,13 +534,6 @@ describe('Cấu hình & phiếu bảo dưỡng', () => {
       FULL_SCOPE,
     );
     expect(completed.status).toBe(MAINTENANCE_STATUS.COMPLETED);
-
-    // Nhả lịch ngay khi xong việc — xe nhận đơn lại được.
-    expect(
-      await prisma.vehicleOccupancy.count({
-        where: { sourceType: OCCUPANCY_SOURCE_TYPE.MAINTENANCE, sourceId: record.id },
-      }),
-    ).toBe(0);
 
     const after = await maintenance.getProfile(tenantId, v.id);
     expect(after.currentOdometerKm).toBe(45_100);
@@ -659,10 +642,22 @@ describe('Cấu hình & phiếu bảo dưỡng', () => {
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.INVALID_STATUS_TRANSITION } });
   });
 
-  maybe('mốc thời gian phải đủ cặp và đúng thứ tự', async () => {
-    const v = await createVehicle('MT-DATES');
-    await expect(
-      maintenance.createRecord(
+  maybe(
+    'chỉ một ngày dự kiến: không đòi mốc kết thúc; mốc kết thúc app cũ gửi bị bỏ qua',
+    async () => {
+      const v = await createVehicle('MT-DATES');
+      const single = await maintenance.createRecord(
+        tenantId,
+        v.id,
+        ownerId,
+        { type: MAINTENANCE_TYPE.PERIODIC_SERVICE, plannedStartAt: hours(2).toISOString() },
+        FULL_SCOPE,
+      );
+      expect(single.plannedStartAt).toBe(hours(2).toISOString());
+      expect(single.plannedEndAt).toBeNull();
+
+      // App cũ gửi cả cặp, kể cả cặp ngược thứ tự: nhận ngày bắt đầu, bỏ mốc kết thúc.
+      const legacy = await maintenance.createRecord(
         tenantId,
         v.id,
         ownerId,
@@ -672,19 +667,11 @@ describe('Cấu hình & phiếu bảo dưỡng', () => {
           plannedEndAt: hours(2).toISOString(),
         },
         FULL_SCOPE,
-      ),
-    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
-
-    await expect(
-      maintenance.createRecord(
-        tenantId,
-        v.id,
-        ownerId,
-        { type: MAINTENANCE_TYPE.PERIODIC_SERVICE, plannedStartAt: hours(2).toISOString() },
-        FULL_SCOPE,
-      ),
-    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
-  });
+      );
+      expect(legacy.plannedStartAt).toBe(hours(10).toISOString());
+      expect(legacy.plannedEndAt).toBeNull();
+    },
+  );
 
   maybe('phiếu của xe khác không truy cập chéo được qua path xe này (404)', async () => {
     const a = await createVehicle('MT-CROSS-A');
@@ -711,9 +698,14 @@ describe('Cấu hình & phiếu bảo dưỡng', () => {
 
 // ── Lịch & availability ─────────────────────────────────────────────────────
 
-describe('Lịch bảo dưỡng CHẶN THẬT availability (ADR 0006 · §9.2)', () => {
-  maybe('đặt xe trùng khoảng bảo dưỡng bị DB chặn — không chỉ đổi nhãn trạng thái', async () => {
-    const v = await createVehicle('SCH-BLOCK');
+describe('Lịch bảo dưỡng chỉ là ngày nhắc — không giữ chỗ lịch xe (ADR 0079)', () => {
+  const holdsOf = (recordId: string) =>
+    prisma.vehicleOccupancy.count({
+      where: { sourceType: OCCUPANCY_SOURCE_TYPE.MAINTENANCE, sourceId: recordId },
+    });
+
+  maybe('lập lịch không sinh occupancy — đơn thuê trùng ngày vẫn đặt được', async () => {
+    const v = await createVehicle('SCH-NO-HOLD');
     const record = await maintenance.createRecord(
       tenantId,
       v.id,
@@ -726,87 +718,8 @@ describe('Lịch bảo dưỡng CHẶN THẬT availability (ADR 0006 · §9.2)',
       FULL_SCOPE,
     );
     expect(record.status).toBe(MAINTENANCE_STATUS.SCHEDULED);
+    expect(await holdsOf(record.id)).toBe(0);
 
-    // Một đơn thuê chồng lên khoảng bảo dưỡng: exclusion constraint từ chối.
-    await expect(
-      prisma.vehicleOccupancy.create({
-        data: {
-          id: newId(),
-          tenantId,
-          vehicleId: v.id,
-          sourceType: OCCUPANCY_SOURCE_TYPE.BOOKING,
-          sourceId: newId(),
-          startAt: hours(12),
-          endAt: hours(36),
-        },
-      }),
-    ).rejects.toBeDefined();
-  });
-
-  maybe('lịch bảo dưỡng đè lên đơn thuê: 409 kèm KHOẢNG bị trùng, không ghi đè', async () => {
-    const v = await createVehicle('SCH-CONFLICT');
-    await prisma.vehicleOccupancy.create({
-      data: {
-        id: newId(),
-        tenantId,
-        vehicleId: v.id,
-        sourceType: OCCUPANCY_SOURCE_TYPE.BOOKING,
-        sourceId: newId(),
-        startAt: hours(0),
-        endAt: hours(24),
-      },
-    });
-
-    await expect(
-      maintenance.createRecord(
-        tenantId,
-        v.id,
-        ownerId,
-        {
-          type: MAINTENANCE_TYPE.PERIODIC_SERVICE,
-          plannedStartAt: hours(12).toISOString(),
-          plannedEndAt: hours(36).toISOString(),
-        },
-        FULL_SCOPE,
-      ),
-    ).rejects.toMatchObject({
-      response: {
-        code: API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT,
-        details: { conflicts: [expect.objectContaining({ sourceType: 'booking' })] },
-      },
-    });
-
-    // Không để lại phiếu mồ côi khi giữ chỗ thất bại.
-    expect(await maintenance.listForVehicle(tenantId, v.id, FULL_SCOPE)).toHaveLength(0);
-  });
-
-  maybe('hủy lịch NHẢ chỗ — khoảng đó đặt xe lại được ngay', async () => {
-    const v = await createVehicle('SCH-CANCEL');
-    const record = await maintenance.createRecord(
-      tenantId,
-      v.id,
-      ownerId,
-      {
-        type: MAINTENANCE_TYPE.PERIODIC_SERVICE,
-        plannedStartAt: hours(0).toISOString(),
-        plannedEndAt: hours(24).toISOString(),
-      },
-      FULL_SCOPE,
-    );
-    await maintenance.cancelRecord(
-      tenantId,
-      v.id,
-      ownerId,
-      record.id,
-      record.rowVersion,
-      FULL_SCOPE,
-    );
-
-    expect(
-      await prisma.vehicleOccupancy.count({
-        where: { sourceType: OCCUPANCY_SOURCE_TYPE.MAINTENANCE, sourceId: record.id },
-      }),
-    ).toBe(0);
     await expect(
       prisma.vehicleOccupancy.create({
         data: {
@@ -822,20 +735,39 @@ describe('Lịch bảo dưỡng CHẶN THẬT availability (ADR 0006 · §9.2)',
     ).resolves.toBeDefined();
   });
 
-  maybe('dời lịch sang khoảng trống: chỗ giữ đi theo, không nhân đôi', async () => {
+  maybe('xe đã có đơn trong ngày đó: vẫn lập được lịch bảo dưỡng (không 409)', async () => {
+    const v = await createVehicle('SCH-OVER-BOOKING');
+    await prisma.vehicleOccupancy.create({
+      data: {
+        id: newId(),
+        tenantId,
+        vehicleId: v.id,
+        sourceType: OCCUPANCY_SOURCE_TYPE.BOOKING,
+        sourceId: newId(),
+        startAt: hours(0),
+        endAt: hours(24),
+      },
+    });
+    const record = await maintenance.createRecord(
+      tenantId,
+      v.id,
+      ownerId,
+      { type: MAINTENANCE_TYPE.PERIODIC_SERVICE, plannedStartAt: hours(12).toISOString() },
+      FULL_SCOPE,
+    );
+    expect(record.plannedStartAt).toBe(hours(12).toISOString());
+  });
+
+  maybe('dời ngày: chỉ đổi ngày dự kiến, vẫn không giữ chỗ', async () => {
     const v = await createVehicle('SCH-MOVE');
     const record = await maintenance.createRecord(
       tenantId,
       v.id,
       ownerId,
-      {
-        type: MAINTENANCE_TYPE.PERIODIC_SERVICE,
-        plannedStartAt: hours(0).toISOString(),
-        plannedEndAt: hours(4).toISOString(),
-      },
+      { type: MAINTENANCE_TYPE.PERIODIC_SERVICE, plannedStartAt: hours(0).toISOString() },
       FULL_SCOPE,
     );
-    await maintenance.updateRecord(
+    const moved = await maintenance.updateRecord(
       tenantId,
       v.id,
       ownerId,
@@ -848,12 +780,30 @@ describe('Lịch bảo dưỡng CHẶN THẬT availability (ADR 0006 · §9.2)',
       },
       FULL_SCOPE,
     );
+    expect(moved.plannedStartAt).toBe(hours(48).toISOString());
+    expect(moved.plannedEndAt).toBeNull();
+    expect(await holdsOf(record.id)).toBe(0);
+  });
 
-    const rows = await prisma.vehicleOccupancy.findMany({
-      where: { sourceType: OCCUPANCY_SOURCE_TYPE.MAINTENANCE, sourceId: record.id },
-    });
-    expect(rows).toHaveLength(1);
-    expect(rows[0]!.startAt.toISOString()).toBe(hours(48).toISOString());
+  maybe('hủy lịch: phiếu ở lại với trạng thái Đã hủy', async () => {
+    const v = await createVehicle('SCH-CANCEL');
+    const record = await maintenance.createRecord(
+      tenantId,
+      v.id,
+      ownerId,
+      { type: MAINTENANCE_TYPE.PERIODIC_SERVICE, plannedStartAt: hours(0).toISOString() },
+      FULL_SCOPE,
+    );
+    await maintenance.cancelRecord(
+      tenantId,
+      v.id,
+      ownerId,
+      record.id,
+      record.rowVersion,
+      FULL_SCOPE,
+    );
+    const rows = await maintenance.listForVehicle(tenantId, v.id, FULL_SCOPE);
+    expect(rows.find((row) => row.id === record.id)?.status).toBe(MAINTENANCE_STATUS.CANCELED);
   });
 });
 
@@ -1029,7 +979,6 @@ describe('Trung tâm bảo dưỡng toàn đội xe (§9.2)', () => {
         type: MAINTENANCE_TYPE.PERIODIC_SERVICE,
         cost: '1200000',
         plannedStartAt: hours(72).toISOString(),
-        plannedEndAt: hours(80).toISOString(),
       },
       FULL_SCOPE,
     );

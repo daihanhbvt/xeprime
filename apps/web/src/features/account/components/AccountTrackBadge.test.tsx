@@ -52,7 +52,7 @@ describe('AccountTrackBadge', () => {
     expect(screen.queryByText(/%/)).toBeNull();
   });
 
-  it('% khác 10 vẫn hiện đúng — con số đến từ chính sách phí, không phải hằng trong mã', () => {
+  it('% khác 10 vẫn hiện đúng - con số đến từ chính sách phí, không phải hằng trong mã', () => {
     render(<AccountTrackBadge tenant={tenant({ serviceFeePercent: 12.5 })} />);
     expect(screen.getByText('Chủ xe cá nhân · Hoa hồng 12,5%')).toBeTruthy();
   });
@@ -74,7 +74,7 @@ describe('AccountTrackBadge', () => {
     expect(screen.getByText('Chủ gian hàng · Gói nâng cao')).toBeTruthy();
   });
 
-  it('ÂN HẠN vẫn là gian hàng — backend giữ `package` suốt pha `grace`', () => {
+  it('ÂN HẠN vẫn là gian hàng - backend giữ `package` suốt pha `grace`', () => {
     render(
       <AccountTrackBadge
         tenant={tenant({ billingMode: BILLING_MODE.PACKAGE, planName: 'Gian hàng theo chỗ xe' })}
@@ -83,7 +83,7 @@ describe('AccountTrackBadge', () => {
     expect(screen.getByText(/Chủ gian hàng/)).toBeTruthy();
   });
 
-  it('HẾT ÂN HẠN thành chủ xe cá nhân — backend trả `commission` ở pha `lapsed`', () => {
+  it('HẾT ÂN HẠN thành chủ xe cá nhân - backend trả `commission` ở pha `lapsed`', () => {
     render(
       <AccountTrackBadge
         // Tên gói còn là gói vừa chết, nhưng tuyến đã đổi — nhãn đi theo TUYẾN.

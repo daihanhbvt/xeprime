@@ -120,7 +120,7 @@ export class SellerProfileService {
       const current = await this.lockEditable(
         tx,
         tenantId,
-        'Hồ sơ đang chờ xác minh — không sửa được cho tới khi có kết quả',
+        'Hồ sơ đang chờ xác minh - không sửa được cho tới khi có kết quả',
       );
       const reverify = reverificationFor(current, next);
 
@@ -194,7 +194,7 @@ export class SellerProfileService {
     if (current && !canEditSellerProfile(current.status as SellerProfileStatus)) {
       throw new ConflictException({
         code: API_ERROR_CODE.SELLER_PROFILE_NOT_EDITABLE,
-        message: 'Hồ sơ người bán đang chờ hoặc đã xác minh — không đổi được mã số thuế',
+        message: 'Hồ sơ người bán đang chờ hoặc đã xác minh - không đổi được mã số thuế',
         details: { status: current.status },
       });
     }

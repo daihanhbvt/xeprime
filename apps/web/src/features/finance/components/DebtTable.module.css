@@ -1,20 +1,56 @@
+.stack {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .name {
-  font-weight: 600;
+  font-weight: var(--xp-font-weight-medium);
   color: var(--xp-color-text);
 }
 
 .meta {
-  font-size: 12px;
   color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* "Quá 26 ngày" — đỏ như design, dưới ngày hạn trả. */
+.late {
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* Còn nợ: số đỏ · vạch đã trả · "Đã trả X / Y" (design `23857:58932`). */
+.debtCell {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
 }
 
 .debt {
-  font-weight: 700;
   color: var(--xp-color-error);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
   white-space: nowrap;
 }
 
-.overdue {
-  color: var(--xp-color-error);
-  font-weight: 600;
+.track {
+  display: block;
+  width: 100%;
+  max-width: 228px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+}
+
+.bar {
+  display: block;
+  width: var(--xp-paid-width);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--xp-color-success);
 }

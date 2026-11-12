@@ -8,7 +8,7 @@
  */
 
 .wrap {
-  max-width: var(--xp-market-container-max-width, 1200px);
+  max-width: var(--xp-market-container-max-width, 1320px);
   margin: 0 auto;
   padding: 24px var(--xp-space-md, 16px) 64px;
 }
@@ -75,9 +75,9 @@
 /* `30/38 Semibold` — tên xe giữ nguyên chữ hoa/thường như dữ liệu (đã duyệt bỏ in hoa). */
 .title {
   margin: 0;
-  font-size: var(--xp-font-size-h1);
+  font-size: var(--xp-font-size-h2);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-h1);
+  line-height: var(--xp-line-height-h2);
   color: var(--xp-color-text);
   letter-spacing: 0;
   overflow-wrap: anywhere;
@@ -85,26 +85,31 @@
 
 /* Nhãn "Xe mới": nền `Status/success-low`, chữ `12/18 Medium` success, đệm 2×8, bo 16. */
 .badgeNew {
-  padding: 2px var(--xp-space-sm);
-  border-radius: var(--xp-border-radius-card);
-  background: var(--xp-color-success-bg);
-  color: var(--xp-color-success);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  /* Figma "_Badge" Xe mới (19625:43854): nền success-low, chữ success-high 12/18 medium, đệm 2/8, bo 16 — cả hai giao diện. */
+  padding: var(--xp-space-2) var(--xp-space-sm);
+  border-radius: 16px;
+  background: var(--xp-color-badge-new-bg);
+  color: var(--xp-color-badge-new-text);
+  font-size: var(--xp-font-size-label);
   font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-label);
   white-space: nowrap;
 }
 
 /* "Hỗ trợ xuất hoá đơn VAT" — cùng khuôn nhãn với "Xe mới", tông vàng thương hiệu. */
-.amenityBadge {
-  padding: 2px var(--xp-space-sm);
-  border-radius: var(--xp-border-radius-card);
-  background: var(--xp-color-primary-subtle);
-  color: var(--xp-color-primary-hover);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  font-weight: var(--xp-font-weight-medium);
-  white-space: nowrap;
+.amenityRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-sm) var(--xp-space-12);
+}
+
+.amenityVat {
+  margin-left: auto;
 }
 
 /* Vị trí: icon 20 + chữ `16/24 Regular` `Text/Gray/medium`. */
@@ -131,8 +136,8 @@
 
 /* Nút chia sẻ / yêu thích — tròn trắng, viền 1px `Stroke/gray-low`, đệm 8 + icon 20 = 36. */
 .actionBtn {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   padding: var(--xp-space-sm);
   border-radius: 50%;
   border: 1px solid var(--xp-color-border);
@@ -229,7 +234,8 @@
 .featuresGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  row-gap: var(--xp-space-md);
+  /* Figma: hàng cách 8 (bản cũ 16 trông thưa). */
+  row-gap: var(--xp-space-sm);
   column-gap: var(--xp-space-lg);
 }
 
@@ -243,38 +249,72 @@
   color: var(--xp-color-text-secondary);
 }
 
+/* Figma: icon nét 16px. */
 .featureIcon {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   color: var(--xp-color-text-secondary);
   flex-shrink: 0;
 }
 
 .featureLabel {
   font-weight: var(--xp-font-weight-regular);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /*
- * Khung thẻ "Chủ xe" — Figma `19707:83457`: nền trắng, viền 1px `#e9c336`, bo 16, đệm 16. Bản vẽ
- * phủ hai lớp vân vàng mờ (ảnh); ở đây xấp xỉ bằng gradient token, không thêm tài nguyên ảnh.
+ * Khung thẻ "Chủ xe" — Figma `19707:83457`: nền trắng, viền 1px `#e9c336`, bo 16, đệm 16, phủ HAI
+ * lớp vân vàng của bản vẽ: "image 13" mờ 50% + "image 12" nhoè 7px mờ 60% (ảnh lấy từ Figma).
  */
 .hostCard {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   padding: var(--xp-space-md);
   border: 1px solid var(--xp-color-primary-glow);
   border-radius: var(--xp-border-radius-card);
-  background:
-    radial-gradient(
-      120% 90% at 100% 0%,
-      color-mix(in srgb, var(--xp-color-primary-glow) 14%, transparent) 0%,
-      transparent 60%
-    ),
-    linear-gradient(240deg, var(--xp-color-primary-subtle) 0%, var(--xp-color-bg-container) 100%);
+  background: var(--xp-color-bg-container);
+}
+
+.hostCard:not(.hostCardOwner)::before,
+.hostCard:not(.hostCardOwner)::after {
+  position: absolute;
+  z-index: -1;
+  content: '';
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  pointer-events: none;
+}
+
+.hostCard:not(.hostCardOwner)::before {
+  inset: 0;
+  background-image: url('/shops/owner-bg-13.png');
+  opacity: 0.5;
+}
+
+.hostCard:not(.hostCardOwner)::after {
+  inset: -8px;
+  background-image: url('/shops/owner-bg-12.png');
+  filter: blur(7px);
+  opacity: 0.6;
+}
+
+/* Chủ xe cá nhân (tuyến hoa hồng) — Figma "Owner Section" bản Cá nhân: nền trắng, viền xám. */
+.hostCardOwner {
+  border-color: var(--xp-color-border);
+  background: var(--xp-color-bg-container);
 }
 
 /* Vị trí nhận xe & bản đồ — thân `14/22 Regular` `Text/Gray/medium`. */
+/* Lời giải thích vì sao chỉ thấy khu vực (ADR 0077). */
+.pickupNote {
+  margin: 0 0 var(--xp-space-md);
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
 .pickupAddress {
   display: flex;
   align-items: flex-start;
@@ -296,8 +336,7 @@
   width: 100%;
   height: 180px;
   object-fit: cover;
-  border-radius: 12px;
-  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
   margin-bottom: 12px;
 }
 
@@ -359,9 +398,13 @@
     order: 5;
   }
 
-  .policiesSection,
+  /* Figma 21636:82908: Đánh giá đứng trước Thông tin thêm. */
   .reviewsSection {
     order: 6;
+  }
+
+  .policiesSection {
+    order: 7;
   }
 
   .featuresGrid {
@@ -464,10 +507,16 @@
 
   /* Khung do thẻ dùng chung tự vẽ ở mobile (Figma `19771:72767`) — lớp bọc nhường, tránh viền đôi. */
   .hostCard {
+    overflow: visible;
     padding: 0;
     border: none;
     border-radius: 0;
     background: none;
+  }
+
+  .hostCard::before,
+  .hostCard::after {
+    display: none;
   }
 
   /* Vị trí xe: "Mở bản đồ" `16px/Semibold` vàng; bản vẽ mobile không có bản đồ tĩnh. */
@@ -497,6 +546,15 @@
 /* ── Giao diện tối ─────────────────────────────────────────────────────────
    Mọi màu đã đi qua `--xp-*` nên tự đổi theo khối tối của tokens.css. Riêng viền thẻ "Chủ xe":
    vàng chói `#e9c336` trên nền tối quá gắt — hạ về vàng trầm như thẻ "Tự nhận xe". */
-:global([data-theme='dark']) .hostCard {
+:global([data-theme='dark']) .hostCard:not(.hostCardOwner) {
   border-color: var(--xp-color-primary-muted);
+}
+
+/* Tối: vân vàng sáng của bản vẽ sáng làm thẻ loá trên nền tối — chỉ giữ một lớp, rất mờ. */
+:global([data-theme='dark']) .hostCard:not(.hostCardOwner)::before {
+  opacity: 0.08;
+}
+
+:global([data-theme='dark']) .hostCard:not(.hostCardOwner)::after {
+  display: none;
 }

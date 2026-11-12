@@ -79,12 +79,12 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Lời mời — người được mời xem', () => {
+describe('Lời mời - người được mời xem', () => {
   it('nói ai mời, vai gì, và KHÔNG lộ nguyên email', () => {
     renderCard();
 
     expect(screen.getByText(/Shop Mời mời bạn tham gia/)).toBeTruthy();
-    expect(screen.getByText('Nhân viên gian hàng')).toBeTruthy();
+    expect(screen.getByText('Nhân viên')).toBeTruthy();
     expect(screen.getByText('nh****@congty.vn')).toBeTruthy();
   });
 

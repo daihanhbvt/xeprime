@@ -42,6 +42,11 @@
   line-height: var(--xp-line-height-body-sm);
 }
 
+.gateList {
+  margin: var(--xp-space-xs) 0 0;
+  padding-left: var(--xp-space-lg);
+}
+
 .live {
   color: var(--xp-color-success);
   font-weight: var(--xp-font-weight-medium);

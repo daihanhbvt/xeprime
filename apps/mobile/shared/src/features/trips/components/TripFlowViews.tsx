@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Reveal } from '@/components/motion/Reveal';
 import { useRef, useState, type RefObject } from 'react';
 import { Pressable, View, type ScrollView } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -42,12 +43,12 @@ import {
 } from '../trip-flow';
 import { FreeCancelCountdown } from './FreeCancelCountdown';
 import { TripDriverCard } from './TripDriverCard';
+import { TripExtensionPanel } from './TripExtensionPanel';
 import { TripFinanceCard } from './TripFinanceCard';
 import { TripNotReceivedReport } from './TripNotReceivedReport';
 import { TripOwnerActions } from './TripOutcomeViews';
 import { TripHoldPanel } from './TripHoldPanel';
 import {
-  CardLead,
   CardTitle,
   TripCostsCard,
   TripPlanChangeCard,
@@ -127,6 +128,7 @@ export function TripPendingApprovalView({ trip }: FlowViewProps) {
 
   return (
     <YStack gap={space.md}>
+      <Reveal index={0}>
       <TripRequestStatusCard
         image={images.tripRequestSent}
         tag={dl('customerTripStage', trip.stage)}
@@ -149,15 +151,21 @@ export function TripPendingApprovalView({ trip }: FlowViewProps) {
           br={radius.control}
           bg={colors.primarySubtle}
           col={colors.warning}
-          fos={fontSize.body}
+          fos={fontSize.bodySm}
+          lh={18}
         >
           {holdStage ? t('status.guidanceHold') : t('status.guidance')}
         </Text>
       </TripRequestStatusCard>
+      </Reveal>
 
-      <TripRequestTripCard trip={trip} listing={listing} ownerAction={<TripOwnerActions trip={trip} />} />
+      <Reveal index={1}>
+        <TripRequestTripCard trip={trip} listing={listing} ownerAction={<TripOwnerActions trip={trip} />} />
+      </Reveal>
       <TripRequestProgress current="response" hasHoldStage={holdStage} />
-      <TripRequestRenterCard trip={trip} />
+      <Reveal index={2}>
+        <TripRequestRenterCard trip={trip} />
+      </Reveal>
       <TripRequirementsCard trip={trip} listing={listing} />
 
       {/* Không báo giá được ⇒ nói thẳng là chưa có số; giá chính thức có lúc chủ xe xác nhận. */}
@@ -206,6 +214,7 @@ export function TripAwaitingHoldView({ trip }: FlowViewProps) {
 
   return (
     <YStack gap={space.md}>
+      <Reveal index={0}>
       <TripRequestStatusCard
         tag={dl('customerTripStage', trip.stage)}
         tone="success"
@@ -219,6 +228,7 @@ export function TripAwaitingHoldView({ trip }: FlowViewProps) {
             : t('status.bodyClosed', { owner: trip.shop.name })
         }
       />
+      </Reveal>
 
       {/* Việc chính (`priority` web) đứng ngay dưới thẻ trạng thái: khoản giữ chỗ cần thực hiện. */}
       {awaitingHold ? (
@@ -236,13 +246,17 @@ export function TripAwaitingHoldView({ trip }: FlowViewProps) {
         />
       ) : null}
 
-      <TripRequestTripCard trip={trip} listing={listing} ownerAction={<TripOwnerActions trip={trip} />} />
+      <Reveal index={1}>
+        <TripRequestTripCard trip={trip} listing={listing} ownerAction={<TripOwnerActions trip={trip} />} />
+      </Reveal>
       {/*
         Chặng này CHẮC CHẮN có khoản giữ chỗ (không thu thì đơn ra đời ngay lúc duyệt — ADR 0044 điều
         4). Bảng kê thiếu `holdAmount` không được xoá mất chính mốc khách đang đứng.
       */}
       <TripRequestProgress current="hold" hasHoldStage={hasHoldStage(costs) || hold != null} />
-      <TripRequestRenterCard trip={trip} />
+      <Reveal index={2}>
+        <TripRequestRenterCard trip={trip} />
+      </Reveal>
       <TripRequirementsCard trip={trip} listing={listing} />
 
       {/* Số ở đây là số ĐÃ CHỐT lúc chủ xe nhận chuyến (snapshot trên khoản giữ chỗ — ADR 0024). */}
@@ -312,7 +326,7 @@ export function HoldPaymentCard({
           <InfoHint content={tHold('vsDepositHint')} label={tHold('vsDepositHintLabel')} />
         </XStack>
 
-        <Text col={colors.primaryHover} fos={fontSize.h3} fow={fontWeight.semibold}>
+        <Text col={colors.primary} fos={fontSize.h3} lh={28} fow={fontWeight.semibold}>
           {amount}
         </Text>
         <Countdown
@@ -384,7 +398,7 @@ export function HoldPaymentCard({
  * 0024). Bảng kê chỉ hiện khi server nói nó còn khớp số trên đơn (`finance.breakdown`) và chưa có
  * phát sinh; lệch thì thẻ tiền đầy đủ `TripFinanceCard`. Liên hệ mở theo `canContact` (ADR 0056).
  */
-export function TripConfirmedView({ trip, scrollRef }: FlowViewProps) {
+export function TripConfirmedView({ trip, scrollRef, onCancel }: FlowViewProps) {
   const colors = useColors();
   const t = useTranslations('Trips.confirmed');
   const checklistRef = useRef<View>(null);
@@ -426,6 +440,7 @@ export function TripConfirmedView({ trip, scrollRef }: FlowViewProps) {
 
   return (
     <YStack gap={space.md}>
+      <Reveal index={0}>
       <TripRequestStatusCard
         variant="confirmed"
         tag={t('status.tag')}
@@ -445,21 +460,28 @@ export function TripConfirmedView({ trip, scrollRef }: FlowViewProps) {
           {t('status.guide')}
         </Text>
       </TripRequestStatusCard>
+      </Reveal>
 
       {/* Việc chính (`priority` web): "Chưa nhận được xe" (ADR 0066) · khoản hoàn khi chuyển THỪA · lời nhắc thu cọc trực tiếp. */}
       <TripNotReceivedReport trip={trip} />
+      {/* Gia hạn chuyến dài hạn (ADR 0077) — QR của phụ lục đang chờ; không có thì im lặng. */}
+      <TripExtensionPanel tripId={trip.id} />
       {hold?.refund ? <TripHoldPanel hold={hold} tripId={trip.id} /> : null}
       <DirectDepositNotice trip={trip} />
 
-      <TripRequestTripCard trip={trip} listing={listing} ownerAction={ownerAction} />
+      <Reveal index={1}>
+        <TripRequestTripCard trip={trip} listing={listing} ownerAction={ownerAction} />
+      </Reveal>
 
       {/* Người sẽ đến đón — chuyến có tài xế (ADR 0067). Chuyến khác: khối im lặng. */}
-      <TripDriverCard trip={trip} />
+      <TripDriverCard trip={trip} onCancel={onCancel} />
 
       <View ref={checklistRef} collapsable={false}>
         <PickupChecklist trip={trip} listing={listing} />
       </View>
-      <TripRequestRenterCard trip={trip} />
+      <Reveal index={2}>
+        <TripRequestRenterCard trip={trip} />
+      </Reveal>
 
       {finance && frozen ? (
         <TripCostsCard
@@ -547,8 +569,9 @@ function PickupChecklist({
   return (
     <Card>
       <YStack gap={space.sm}>
-        <CardTitle icon="checkbox-outline">{t('title')}</CardTitle>
-        <CardLead>{t('lead')}</CardLead>
+        <CardTitle icon="checkbox-outline" hint={t('lead')} hintLabel={t('leadLabel')}>
+          {t('title')}
+        </CardTitle>
         <YStack gap={space.sm}>
           {items.map((item) => {
             const text = textOf(item);
@@ -565,10 +588,10 @@ function PickupChecklist({
               >
               <XStack ai="flex-start" gap={space.sm}>
                 <YStack
-                  mt={2}
-                  w={18}
-                  h={18}
-                  br={radius.sm}
+                  mt={1}
+                  w={20}
+                  h={20}
+                  br={6}
                   bw={1}
                   ai="center"
                   jc="center"
@@ -578,10 +601,10 @@ function PickupChecklist({
                   {on ? <Ionicons name="checkmark" size={14} color={market.onDark} /> : null}
                 </YStack>
                 <YStack f={1} gap={2}>
-                  <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                  <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
                     {text.title}
                   </Text>
-                  <Text col={colors.textMuted} fos={fontSize.label}>
+                  <Text col={colors.placeholder} fos={fontSize.label}>
                     {text.body}
                   </Text>
                 </YStack>

@@ -2,7 +2,7 @@
 
 .rail {
   position: sticky;
-  top: calc(var(--xp-shell-topbar-height) + var(--xp-space-md));
+  top: calc(var(--xp-shell-header-offset, var(--xp-shell-topbar-height)) + var(--xp-space-md));
   display: flex;
   flex-direction: column;
   gap: var(--xp-space-xs);
@@ -129,9 +129,17 @@
     flex-direction: row;
     align-items: center;
     gap: var(--xp-space-xs);
+    min-width: 0;
+    max-width: 100%;
     padding: var(--xp-space-xs);
     overflow-x: auto;
     overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .rail::-webkit-scrollbar {
+    display: none;
   }
 
   .title,
@@ -146,14 +154,20 @@
 
   .group,
   .group + .group {
+    flex: none;
     margin: 0;
     padding: 0;
     border: 0;
   }
 
   .items {
+    flex: none;
     flex-direction: row;
     gap: var(--xp-space-xs);
+  }
+
+  .items > li {
+    flex: none;
   }
 
   .item {

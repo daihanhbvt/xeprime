@@ -2,45 +2,42 @@
 
 import {
   EditOutlined,
-  FileAddOutlined,
   InboxOutlined,
+  MoreOutlined,
   PlusOutlined,
   SafetyCertificateOutlined,
   UndoOutlined,
 } from '@ant-design/icons';
-import { App, Alert, Button, Result, Skeleton, Space, Tabs, Tag, Tooltip } from 'antd';
+import { App, Alert, Button, Dropdown, Result, Skeleton, Space, Tabs, Tooltip } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import {
-  PERMISSION,
-  TENANT_CUSTOMER_RISK_LEVEL,
-  TENANT_CUSTOMER_RISK_LEVEL_META,
-  type TenantCustomerRiskLevel,
-} from '@xeprime/types';
+import { PERMISSION, TENANT_CUSTOMER_RISK_LEVEL } from '@xeprime/types';
 import { CopyButton } from '@/components/data-display/CopyButton';
-import { EntityIdentity } from '@/components/data-display/EntityIdentity';
-import { StatusTag } from '@/components/data-display/StatusTag';
+import { ToneDotBadge } from '@/components/data-display/StatusBadge';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ROUTES } from '@/constants/routes';
-import { CustomerReceiptsPanel } from './CustomerReceiptsPanel';
 import { useIsDesktop } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
+import { cx } from '@/lib/cx';
 import { isZeroMoney } from '@/lib/money';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { customerStatusOf } from '../constants';
 import { useCustomer, useSetCustomerArchived } from '../hooks/use-customers';
 import { CustomerBookingHistory } from './CustomerBookingHistory';
 import { CustomerDocumentsPanel } from './CustomerDocumentsPanel';
 import { CustomerFormModal } from './CustomerFormModal';
-import { CustomerNotesPanel } from './CustomerNotesPanel';
 import { CustomerRiskModal } from './CustomerRiskModal';
-import styles from './CustomerDetailView.module.css';
-import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
-import { useAppFormat } from '@/i18n/use-app-format';
+import { CustomerFinanceTab } from './detail/CustomerFinanceTab';
+import { CustomerOverviewTab } from './detail/CustomerOverviewTab';
+import { CustomerProfileCard } from './detail/CustomerProfileCard';
+import styles from './detail/CustomerDetail.module.css';
 
-/** Nhãn kèm biểu tượng giải thích — icon NGOÀI ô nhập, không chồng lên nội dung. */
+/** Nhãn kèm biểu tượng giải thích — icon NGOÀI ô số, không chồng lên nội dung. */
 function LabelWithHint({ label, hint }: { label: string; hint: string }) {
   return (
     <span className={styles.labelWithHint}>
@@ -52,57 +49,33 @@ function LabelWithHint({ label, hint }: { label: string; hint: string }) {
   );
 }
 
-function SummaryCard({
-  label,
-  value,
-  danger,
-}: {
-  label: React.ReactNode;
-  value: React.ReactNode;
-  danger?: boolean;
-}) {
-  return (
-    <div className={styles.summaryCard}>
-      <div className={styles.summaryLabel}>{label}</div>
-      <div className={danger ? styles.summaryValueDanger : styles.summaryValue}>{value}</div>
-    </div>
-  );
-}
-
 /**
- * Hồ sơ khách — route THẬT (`/manage/customers/[id]`), không phải drawer.
+ * Hồ sơ khách — route THẬT (`/customers/[id]`), Figma Partner-XePrime `23777:54975` ·
+ * `23797:54015` · `23797:55706` · `23797:62633` (02/11/2026).
  *
- * Vì sao là trang: một hồ sơ khách được gửi cho nhau ("xem giúp anh khách này"), mở lại nhiều
- * lần trong ngày, và F5 không được mất chỗ. Cùng lý do với chi tiết đơn thuê (Wave 10).
+ * Vì sao là trang: hồ sơ được gửi cho nhau, mở lại nhiều lần trong ngày, F5 không được mất chỗ.
  *
- * Ba khối tiền BIẾN MẤT hoàn toàn khi thiếu `finance.view` — không render số 0 giả.
+ * Đầu trang: tên + nhãn + SĐT + nguồn; "Sửa hồ sơ" · "Tạo đơn thuê"; Mức rủi ro và Lưu trữ/Khôi
+ * phục vào menu "…" (chốt 02/11). Bốn tab: Tổng quan (có "Ghi chú vận hành" — tab Ghi chú cũ) ·
+ * Lịch sử thuê · Thu chi · Giấy tờ. Ô tiền BIẾN MẤT khi thiếu `finance.view` — không số 0 giả.
  */
 export function CustomerDetailView({
   customerId,
   embedded = false,
 }: {
   customerId: string;
-  /**
-   * Đang nằm TRONG một overlay (modal hồ sơ khách) chứ không phải một route.
-   *
-   * Chỉ tắt phần VỎ TRANG: tiêu đề `<h1>` và nút quay-lại-danh-sách. Modal đã có tiêu đề của
-   * riêng nó, và một `<h1>` thứ hai trong dialog làm hỏng cấu trúc heading của trang nền; còn
-   * nút "quay lại" trong modal thì điều hướng cả trang ra khỏi chỗ người dùng đang đứng.
-   * Mọi thứ còn lại — tag rủi ro, hành động, các tab — giữ nguyên.
-   */
+  /** Đang nằm TRONG một overlay — tắt vỏ trang (h1 + nút quay lại), giữ mọi thứ khác. */
   embedded?: boolean;
 }) {
   const t = useTranslations('Customers');
+  const tProfile = useTranslations('Customers.profile');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
+  const dl = useDomainLabel();
   const errorMessage = useErrorMessage();
-
   const router = useRouter();
   const { message } = App.useApp();
   const { has } = usePermissions();
-  // Thẻ hồ sơ render ĐÚNG MỘT lần trong DOM: cột phụ ở desktop, trong tab Tổng quan ở nơi hẹp.
-  // Dựng hai bản rồi ẩn một bằng CSS thì trình đọc màn hình đọc lặp toàn bộ thông tin liên hệ.
   const isDesktop = useIsDesktop();
 
   const canView = has(PERMISSION.CUSTOMER_VIEW);
@@ -113,28 +86,22 @@ export function CustomerDetailView({
   const canCreateBooking = has(PERMISSION.BOOKING_CREATE);
   const canManageDocuments = has(PERMISSION.CUSTOMER_DOCUMENT_MANAGE);
   const canViewDocumentFiles = has(PERMISSION.CUSTOMER_DOCUMENT_FILE_VIEW);
-  /*
-   * Ghi chú và giấy tờ của khách là sổ RIÊNG của gian hàng — phiên hỗ trợ của nền tảng không mở
-   * chúng (không `@SupportAction`, ADR 0050 §10). Cùng `customers.view` nên quyền không phân biệt
-   * được; ẩn hẳn hai tab thay vì để chúng 403.
-   */
+  // Ghi chú + giấy tờ là sổ RIÊNG của gian hàng — phiên hỗ trợ không mở (ADR 0050 §10).
   const showPrivateTabs = !useSupportHides(SUPPORT_HIDDEN_AREA.CUSTOMER_PRIVATE);
 
   const { data, isLoading, isError, error, refetch, isFetching } = useCustomer(
     canView ? customerId : null,
   );
   const setArchived = useSetCustomerArchived();
-
   const [editOpen, setEditOpen] = useState(false);
   const [riskOpen, setRiskOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
-
   const back = () => router.push(ROUTES.MANAGE.CUSTOMERS);
 
   if (!canView) {
     return (
       <div className={styles.page}>
-        <ManagePageHeader title={t('page.title')} onBack={back} />
+        <ManagePageHeader title={t('page.listTitle')} onBack={back} />
         <Result status="403" title={t('permission.title')} subTitle={t('permission.description')} />
       </div>
     );
@@ -175,17 +142,42 @@ export function CustomerDetailView({
   const archived = Boolean(data.archivedAt);
   const blocked = data.riskLevel === TENANT_CUSTOMER_RISK_LEVEL.BLOCKED;
   const watchlist = data.riskLevel === TENANT_CUSTOMER_RISK_LEVEL.WATCHLIST;
+  const status = customerStatusOf(data, canViewFinance);
 
   function toggleArchived() {
     setArchived.mutate(
       { id: customerId, archived: !archived },
       {
-        onSuccess: () =>
-          message.success(archived ? t('actions.restored') : t('actions.archived')),
+        onSuccess: () => message.success(archived ? t('actions.restored') : t('actions.archived')),
         onError: (err) => message.error(errorMessage(err)),
       },
     );
   }
+
+  const moreItems = [
+    ...(canManageRisk
+      ? [
+          {
+            key: 'risk',
+            icon: <SafetyCertificateOutlined />,
+            label: t('actions.risk'),
+            danger: blocked,
+            onClick: () => setRiskOpen(true),
+          },
+        ]
+      : []),
+    ...(canManage
+      ? [
+          {
+            key: 'archive',
+            icon: archived ? <UndoOutlined /> : <InboxOutlined />,
+            label: archived ? t('actions.restore') : t('actions.archive'),
+            disabled: setArchived.isPending,
+            onClick: toggleArchived,
+          },
+        ]
+      : []),
+  ];
 
   const actions = (
     <Space wrap>
@@ -195,18 +187,12 @@ export function CustomerDetailView({
         </Button>
       ) : null}
       {canCreateBooking ? (
-        <Tooltip
-          title={blocked ? t('actions.createBookingBlocked') : undefined}
-        >
+        <Tooltip title={blocked ? t('actions.createBookingBlocked') : undefined}>
           <Button
             type="primary"
             icon={<PlusOutlined />}
             disabled={blocked || archived}
-            /*
-             * KHÔNG dựng lại form tạo đơn ở đây: điều hướng sang luồng đơn thuê đã có, mang theo
-             * tên + SĐT để nhân viên không phải gõ lại. Một form tạo đơn thứ hai là hai bộ luật
-             * giá/lịch sẽ trôi khỏi nhau.
-             */
+            // Điều hướng sang luồng đơn thuê đã có, mang tên + SĐT — không dựng form tạo đơn thứ hai.
             onClick={() =>
               router.push(
                 `${ROUTES.MANAGE.BOOKINGS}?create=1&customerName=${encodeURIComponent(
@@ -219,148 +205,92 @@ export function CustomerDetailView({
           </Button>
         </Tooltip>
       ) : null}
-      {canManage ? (
-        <Button icon={<FileAddOutlined />} onClick={() => setActiveTab('notes')}>
-          {t('actions.addNote')}
-        </Button>
-      ) : null}
-      {canManageRisk ? (
-        <Button
-          icon={<SafetyCertificateOutlined />}
-          danger={blocked}
-          onClick={() => setRiskOpen(true)}
-        >
-          {t('actions.risk')}
-        </Button>
-      ) : null}
-      {canManage ? (
-        <Button
-          icon={archived ? <UndoOutlined /> : <InboxOutlined />}
-          loading={setArchived.isPending}
-          onClick={toggleArchived}
-        >
-          {archived ? t('actions.restore') : t('actions.archive')}
-        </Button>
+      {moreItems.length > 0 ? (
+        <Dropdown trigger={['click']} menu={{ items: moreItems }}>
+          <Button icon={<MoreOutlined />} aria-label={tProfile('more')} />
+        </Dropdown>
       ) : null}
     </Space>
   );
 
-  const profileCard = (
-    <aside className={styles.profileCard}>
-      <EntityIdentity
-        name={data.fullName}
-        subtitle={domainLabel('tenantCustomerSource', data.source)}
-        kind="person"
-        size="lg"
-        initialSource={data.fullName}
-      />
-      <dl className={styles.profileList}>
-        <div>
-          <dt>{t('detail.phone')}</dt>
-          {/* Gọi được VÀ chép được: ngoài quầy thì bấm gọi, ngồi máy thì dán sang Zalo/sổ tay. */}
-          <dd className={styles.copyRow}>
-            <a href={`tel:${data.phone}`}>{data.phone}</a>
-            <CopyButton value={data.phone} label={t('detail.copyPhone')} />
-          </dd>
-        </div>
-        {data.email ? (
-          <div>
-            <dt>{t('detail.email')}</dt>
-            <dd className={styles.copyRow}>
-              <a href={`mailto:${data.email}`}>{data.email}</a>
-              <CopyButton value={data.email} label={t('detail.copyEmail')} />
-            </dd>
-          </div>
-        ) : null}
-        {data.address ? (
-          <div>
-            <dt>{t('detail.address')}</dt>
-            <dd>{data.address}</dd>
-          </div>
-        ) : null}
-        <div>
-          <dt>{t('detail.account')}</dt>
-          <dd>
-            {data.hasAccount ? (
-              <Tag color="blue">{t('detail.accountLinked')}</Tag>
-            ) : (
-              <span className={styles.muted}>{t('detail.accountNotLinked')}</span>
-            )}
-          </dd>
-        </div>
-        <div>
-          <dt>{t('detail.createdAt')}</dt>
-          <dd>{fmt.date(data.createdAt)}</dd>
-        </div>
-      </dl>
-    </aside>
-  );
-
-  const headerExtra = (
-    <div className={styles.headerExtra}>
-      <div className={styles.headerTags}>
-        <StatusTag
-          value={data.riskLevel as TenantCustomerRiskLevel}
-          meta={TENANT_CUSTOMER_RISK_LEVEL_META}
-          group="tenantCustomerRiskLevel"
-        />
-        {archived ? <Tag>{t('card.archived')}</Tag> : null}
-      </div>
-      {actions}
-    </div>
-  );
-
-  /** Dòng liên hệ — dựng MỘT lần rồi dùng cho cả vỏ trang lẫn vỏ modal. */
-  const contactLine = (
-    <span className={styles.headerSub}>
-      <a href={`tel:${data.phone}`}>{data.phone}</a>
-      <CopyButton value={data.phone} label={t('detail.copyPhone')} />
-      {data.email ? <span className={styles.headerEmail}>· {data.email}</span> : null}
+  const titleNode = (
+    <span className={styles.titleRow}>
+      {data.fullName}
+      <ToneDotBadge color={status.color}>
+        {status.key === 'unclassified'
+          ? t('card.unclassified')
+          : dl('tenantCustomerRelationship', status.key)}
+      </ToneDotBadge>
     </span>
   );
+  const subtitle = (
+    <span className={styles.headerSub}>
+      <a href={`tel:${data.phone}`} className={styles.phoneLink}>
+        {data.phone}
+      </a>
+      <CopyButton value={data.phone} label={t('detail.copyPhone')} />
+      <span className={styles.muted}>{dl('tenantCustomerSource', data.source)}</span>
+    </span>
+  );
+
+  const kpis: { key: string; label: React.ReactNode; value: React.ReactNode; danger?: boolean }[] = [
+    { key: 'completed', label: t('stats.completed'), value: data.completedRentalCount },
+    { key: 'active', label: t('stats.active'), value: data.activeBookingCount },
+    ...(canViewFinance
+      ? [
+          { key: 'total', label: t('stats.totalValue'), value: fmt.money(data.totalBookingAmount) },
+          { key: 'paid', label: t('stats.paid'), value: fmt.money(data.paidAmount) },
+          {
+            key: 'debt',
+            label: <LabelWithHint label={t('stats.debt')} hint={t('hints.debt')} />,
+            value: fmt.money(data.debtAmount),
+            danger: !isZeroMoney(data.debtAmount),
+          },
+        ]
+      : []),
+    {
+      key: 'noShow',
+      label: t('stats.noShowLate'),
+      value: `${data.noShowCount} / ${data.lateReturnCount}`,
+      danger: data.noShowCount > 0 || data.lateReturnCount > 0,
+    },
+    {
+      key: 'last',
+      label: t('stats.lastRental'),
+      value: data.lastRentalAt ? fmt.date(data.lastRentalAt) : '-',
+    },
+  ];
+
+  const profileCard = <CustomerProfileCard customer={data} canViewFinance={canViewFinance} />;
 
   return (
     <div className={embedded ? styles.embedded : styles.page}>
       {embedded ? (
-        /*
-         * Trong modal: bỏ vỏ trang, nhưng GIỮ nguyên liên hệ + tag rủi ro + hành động — đó là
-         * phần người dùng thật sự cần; chỉ `<h1>` và nút quay lại là thuộc về route.
-         */
         <div className={styles.embeddedHeader}>
-          {contactLine}
-          {headerExtra}
+          {subtitle}
+          {actions}
         </div>
       ) : (
-        <ManagePageHeader
-          title={data.fullName}
-          subtitle={contactLine}
-          onBack={back}
-          extra={headerExtra}
-        />
+        <ManagePageHeader title={titleNode} subtitle={subtitle} onBack={back} extra={actions} />
       )}
 
       {archived ? (
         <Alert
-          className={styles.banner}
           type="info"
           showIcon
           title={t('detail.archivedBannerTitle')}
           description={t('detail.archivedBannerBody')}
         />
       ) : null}
-
       {blocked || watchlist ? (
         <Alert
-          className={styles.banner}
           type={blocked ? 'error' : 'warning'}
           showIcon
-          title={
-            blocked ? t('detail.blockedBannerTitle') : t('detail.watchlistBannerTitle')
-          }
+          title={blocked ? t('detail.blockedBannerTitle') : t('detail.watchlistBannerTitle')}
           description={
             <>
               {data.riskReason ? <div>{data.riskReason}</div> : null}
-              <div className={styles.bannerHint}>
+              <div className={styles.muted}>
                 {blocked ? t('detail.blockedBannerBody') : t('detail.watchlistBannerBody')}
               </div>
             </>
@@ -368,63 +298,35 @@ export function CustomerDetailView({
         />
       ) : null}
 
-      <div className={styles.summaryGrid}>
-        <SummaryCard label={t('stats.completed')} value={data.completedRentalCount} />
-        <SummaryCard label={t('stats.active')} value={data.activeBookingCount} />
-        {canViewFinance ? (
-          <>
-            <SummaryCard label={t('stats.totalValue')} value={fmt.money(data.totalBookingAmount)} />
-            <SummaryCard label={t('stats.paid')} value={fmt.money(data.paidAmount)} />
-            <SummaryCard
-              label={<LabelWithHint label={t('stats.debt')} hint={t('hints.debt')} />}
-              value={fmt.money(data.debtAmount)}
-              danger={!isZeroMoney(data.debtAmount)}
-            />
-          </>
-        ) : null}
-        <SummaryCard
-          label={t('stats.noShowLate')}
-          value={`${data.noShowCount} / ${data.lateReturnCount}`}
-          danger={data.noShowCount > 0 || data.lateReturnCount > 0}
-        />
-        <SummaryCard
-          label={t('stats.lastRental')}
-          value={data.lastRentalAt ? fmt.date(data.lastRentalAt) : '—'}
-        />
-      </div>
+      <section className={styles.kpis} aria-label={t('summary.ariaLabel')}>
+        {kpis.map((kpi) => (
+          <div key={kpi.key} className={styles.kpi}>
+            <span className={styles.kpiLabel}>{kpi.label}</span>
+            <b className={cx(styles.kpiValue, kpi.danger && styles.kpiDanger)}>{kpi.value}</b>
+          </div>
+        ))}
+      </section>
 
       <div className={styles.body}>
         <div className={styles.main}>
           <Tabs
             activeKey={activeTab}
             onChange={setActiveTab}
+            className={styles.tabs}
             items={[
               {
                 key: 'overview',
                 label: t('tabs.overview'),
                 children: (
-                  <div className={styles.overview}>
+                  <div className={styles.tabStack}>
                     {isDesktop ? null : profileCard}
-                    <section className={styles.recent}>
-                      <h2 className={styles.sectionTitle}>{t('overview.recentTitle')}</h2>
-                      {canViewBookings ? (
-                        data.recentBookings.length > 0 ? (
-                          <ul className={styles.recentList}>
-                            {data.recentBookings.map((booking) => (
-                              <li key={booking.id} className={styles.recentItem}>
-                                <span className={styles.recentCode}>{booking.code}</span>
-                                <span className={styles.recentVehicle}>{booking.vehicleName}</span>
-                                <span className={styles.muted}>{fmt.date(booking.pickupAt)}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className={styles.muted}>{t('overview.recentEmpty')}</p>
-                        )
-                      ) : (
-                        <p className={styles.muted}>{t('overview.recentHidden')}</p>
-                      )}
-                    </section>
+                    <CustomerOverviewTab
+                      customer={data}
+                      canViewBookings={canViewBookings}
+                      canViewFinance={canViewFinance}
+                      canManage={canManage}
+                      showNotes={showPrivateTabs}
+                    />
                   </div>
                 ),
               },
@@ -448,33 +350,26 @@ export function CustomerDetailView({
                     {
                       key: 'finance',
                       label: t('tabs.finance'),
-                      children: <CustomerReceiptsPanel customerId={customerId} />,
+                      children: (
+                        <CustomerFinanceTab customerId={customerId} canViewBookings={canViewBookings} />
+                      ),
                     },
                   ]
                 : []),
               ...(showPrivateTabs
                 ? [
                     {
-                      key: 'notes',
-                      label: t('tabs.notes'),
-                      children: (
-                        <CustomerNotesPanel
-                          customerId={customerId}
-                          canManage={canManage}
-                          disabled={archived}
-                        />
-                      ),
-                    },
-                    {
                       key: 'documents',
                       label: t('tabs.documents'),
                       children: (
-                        <CustomerDocumentsPanel
-                          customerId={customerId}
-                          canManage={canManageDocuments}
-                          canViewFiles={canViewDocumentFiles}
-                          disabled={archived}
-                        />
+                        <div className={styles.docsCard}>
+                          <CustomerDocumentsPanel
+                            customerId={customerId}
+                            canManage={canManageDocuments}
+                            canViewFiles={canViewDocumentFiles}
+                            disabled={archived}
+                          />
+                        </div>
                       ),
                     },
                   ]

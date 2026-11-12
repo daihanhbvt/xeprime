@@ -397,7 +397,7 @@
 
 /* Nút viền đỏ (Figma: viền #fda29b, chữ #d92d20). */
 .dangerOutline:global(.ant-btn) {
-  border-color: var(--xp-color-error);
+  border-color: var(--xp-color-error-border);
   color: var(--xp-color-error);
 }
 
@@ -524,9 +524,9 @@
 
 .statValue {
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h4, 20px);
+  font-size: var(--xp-font-size-lead);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: 30px;
+  line-height: var(--xp-line-height-lead);
   font-variant-numeric: tabular-nums;
 }
 
@@ -590,4 +590,20 @@
   color: var(--xp-color-text);
   font-weight: var(--xp-font-weight-semibold, 600);
   white-space: nowrap;
+}
+
+/* Dark mode (Figma "Homepage - Dark Mode" 19879:66136): vàng đậm primary-active/strong chìm trên nền
+   tối ⇒ chữ/icon nhấn dùng primary; thẻ dùng viền border thay bóng. */
+:global([data-theme='dark']) .card { border-color: var(--xp-color-border); box-shadow: none; }
+
+/*
+ * Hover ở giao diện tối — CÙNG ngôn ngữ thẻ xe trang chủ (Figma `19879:66185`): viền vàng,
+ * nền vàng trầm mờ (token `gradient-card-hover` bản tối), tên và số tiền vàng chuẩn `primary`.
+ * Viết riêng vì `[data-theme=dark] .card` mạnh hơn `.card:hover` và đè mất viền vàng.
+ */
+:global([data-theme='dark']) .card:hover,
+:global([data-theme='dark']) .card:focus-within {
+  border-color: var(--xp-color-primary-hover);
+  background: var(--xp-gradient-card-hover);
+  box-shadow: var(--xp-elevation-lg);
 }

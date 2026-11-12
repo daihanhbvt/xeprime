@@ -26,6 +26,10 @@ import type {
   UpdateCustomerRiskInput,
   UpdateTenantCustomerInput,
   VerifyCustomerDocumentInput,
+  CustomerBookingHistoryFilters,
+  CustomerRevenue,
+  CustomerRevenuePeriod,
+  UpdateCustomerDocumentInput,
 } from './types';
 
 /**
@@ -109,6 +113,33 @@ export function fetchCustomerBookings(
   return fetchPage<CustomerBooking>(`${one(id)}/bookings`, { page, limit }, limit);
 }
 
+/** Lịch sử thuê CÓ LỌC (tìm · trạng thái · khoảng ngày nhận) — phân trang ở server. */
+export function fetchCustomerBookingHistory(
+  id: string,
+  filters: CustomerBookingHistoryFilters,
+  limit = CUSTOMER_HISTORY_DEFAULT_LIMIT,
+): Promise<Paged<CustomerBooking>> {
+  return fetchPage<CustomerBooking>(
+    `${one(id)}/bookings`,
+    {
+      q: filters.q ?? null,
+      status: filters.status ?? null,
+      from: filters.from ?? null,
+      to: filters.to ?? null,
+      page: filters.page,
+      limit,
+    },
+    limit,
+  );
+}
+
+export function fetchCustomerRevenue(
+  id: string,
+  period: CustomerRevenuePeriod,
+): Promise<CustomerRevenue> {
+  return apiGet<CustomerRevenue>(`${one(id)}/revenue`, { period });
+}
+
 export function fetchCustomerNotes(
   id: string,
   page: number,
@@ -173,6 +204,15 @@ export function verifyCustomerDocument(
   );
 }
 
+/** Sửa chủ thẻ / số giấy tờ / hạn — ảnh không đổi. */
+export function updateCustomerDocument(
+  id: string,
+  documentId: string,
+  body: UpdateCustomerDocumentInput,
+): Promise<CustomerDocument> {
+  return apiPatch<CustomerDocument>(`${docs(id)}/${encodeURIComponent(documentId)}`, body);
+}
+
 export function deleteCustomerDocument(id: string, documentId: string): Promise<{ ok: true }> {
   return apiDelete<{ ok: true }>(`${docs(id)}/${encodeURIComponent(documentId)}`);
 }
@@ -181,6 +221,8 @@ export interface UploadCustomerDocumentInput {
   documentType: string;
   customTypeName?: string | null;
   expiresAt?: string | null;
+  holderName?: string | null;
+  documentNumber?: string | null;
   file: File;
 }
 
@@ -214,6 +256,8 @@ export async function uploadCustomerDocument(
     documentType: input.documentType as PresignCustomerDocumentInput['documentType'],
     customTypeName: input.customTypeName ?? null,
     expiresAt: input.expiresAt ?? null,
+    holderName: input.holderName ?? null,
+    documentNumber: input.documentNumber ?? null,
     fileName: input.file.name,
     contentType: input.file.type as PresignCustomerDocumentInput['contentType'],
     fileSize: input.file.size,

@@ -4,8 +4,11 @@ import {
   CHAT_ATTACHMENT_MAX_COUNT,
   CHAT_ATTACHMENT_MIME_TYPES,
   CHAT_INBOX_VALUES,
+  CHAT_REPORT_NOTE_MAX_LENGTH,
+  CHAT_REPORT_REASON_VALUES,
   CHAT_SIDE_VALUES,
   MESSAGE_TYPE_VALUES,
+  type ChatReportReason,
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -65,12 +68,12 @@ const toBoolean = () =>
  * câu trả lời đúng cho trường hợp chúng chỉ tới hai gian hàng khác nhau.
  */
 export class CreateConversationDto {
-  @ApiPropertyOptional({ description: 'ID xe (listing) muốn nhắn shop — hoặc dùng `shopSlug`' })
+  @ApiPropertyOptional({ description: 'ID xe (listing) muốn nhắn shop - hoặc dùng `shopSlug`' })
   @ValidateIf((dto: CreateConversationDto) => dto.shopSlug === undefined)
   @IsString()
   vehicleId?: string;
 
-  @ApiPropertyOptional({ description: 'Slug gian hàng muốn nhắn — hoặc dùng `vehicleId`' })
+  @ApiPropertyOptional({ description: 'Slug gian hàng muốn nhắn - hoặc dùng `vehicleId`' })
   @IsOptional()
   @IsString()
   @MaxLength(120)
@@ -213,6 +216,19 @@ export class SendMessageDto {
   @MaxLength(26)
   vehicleId?: string;
 
+  /**
+   * CHUYẾN mà tin nhắn này nói về — id YÊU CẦU thuê (định danh chuyến ở cả hai phía).
+   *
+   * Client gửi kèm ở câu ĐẦU TIÊN sau khi mở chat từ một chuyến. Server kiểm yêu cầu thuộc đúng
+   * cặp (khách, gian hàng) của hội thoại; không hợp lệ thì bỏ thẻ chứ không chặn tin. Có chuyến thì
+   * thẻ xe là xe CỦA chuyến đó — `vehicleId` client gửi kèm bị bỏ qua.
+   */
+  @ApiPropertyOptional({ description: 'ID yêu cầu thuê (chuyến) làm ngữ cảnh cho tin nhắn này' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(26)
+  bookingRequestId?: string;
+
   @ApiPropertyOptional({ type: [AttachmentInputDto] })
   @IsOptional()
   @IsArray()
@@ -301,8 +317,41 @@ export class ConversationSummaryDto {
    * Hai bên gửi tin được không (`chatOpenBetween`, ADR 0073). `false` với chủ xe tuyến hoa hồng khi
    * cặp này chưa có đơn — lịch sử vẫn đọc được, ô soạn tin ẩn; server chặn `POST …/messages`.
    */
-  @ApiProperty({ description: 'Gửi tin được không — tuyến hoa hồng chỉ khi đã có đơn (ADR 0073)' })
+  @ApiProperty({
+    description:
+      'Gửi tin được không - false khi tuyến hoa hồng chưa có đơn (ADR 0073) hoặc một trong hai phía đã chặn',
+  })
   canSend!: boolean;
+  @ApiProperty({ description: 'Phía người xem đã chặn phía bên kia (App Store 1.2)' })
+  blockedByMe!: boolean;
+  @ApiProperty({ description: 'Phía bên kia đã chặn người xem' })
+  blockedByOther!: boolean;
+}
+
+export class ChatBlockResultDto {
+  @ApiProperty() conversationId!: string;
+  @ApiProperty() blockedByMe!: boolean;
+  @ApiProperty() blockedByOther!: boolean;
+  @ApiProperty() canSend!: boolean;
+}
+
+export class ReportConversationDto {
+  @ApiProperty({
+    enum: CHAT_REPORT_REASON_VALUES,
+    description: 'Mã lý do - nhãn hiển thị do client dịch (`Chat.reportReasons.<mã>`, ADR 0012)',
+  })
+  @IsIn(CHAT_REPORT_REASON_VALUES)
+  reason!: ChatReportReason;
+
+  @ApiPropertyOptional({ maxLength: CHAT_REPORT_NOTE_MAX_LENGTH })
+  @IsOptional()
+  @IsString()
+  @MaxLength(CHAT_REPORT_NOTE_MAX_LENGTH)
+  note?: string;
+}
+
+export class ChatReportResultDto {
+  @ApiProperty() id!: string;
 }
 
 export class ConversationPageMetaDto {
@@ -331,6 +380,29 @@ export class MessageVehicleDto {
   @ApiPropertyOptional({ type: String, nullable: true }) imageUrl!: string | null;
 }
 
+/**
+ * Thẻ CHUYẾN đính kèm một tin nhắn — bấm vào mở đúng chuyến ở site của người xem.
+ *
+ * `bookingId`/`code` đọc SỐNG lúc trả về chứ không đóng băng lúc gửi: câu hỏi gửi khi yêu cầu còn
+ * chờ duyệt, về sau thành đơn thì thẻ dẫn thẳng tới đơn.
+ */
+export class MessageTripDto {
+  @ApiProperty({ description: 'ID yêu cầu thuê - định danh chuyến (`/trips/:id` phía khách)' })
+  id!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Đơn thuê - có khi đã thành đơn' })
+  bookingId!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Mã đơn - có khi đã thành đơn' })
+  code!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO-8601 UTC - giờ nhận (của đơn nếu có; dài hạn chưa chốt lịch là null)',
+  })
+  pickupAt!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC - giờ trả' })
+  returnAt!: string | null;
+}
+
 export class MessageDto {
   @ApiProperty() id!: string;
   @ApiProperty() conversationId!: string;
@@ -346,15 +418,21 @@ export class MessageDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Khoá idempotency client gửi kèm — client dùng để khớp tin lạc quan với tin thật',
+    description: 'Khoá idempotency client gửi kèm - client dùng để khớp tin lạc quan với tin thật',
   })
   clientMessageId!: string | null;
   @ApiPropertyOptional({
     type: MessageVehicleDto,
     nullable: true,
-    description: 'Xe tin nhắn này nói về — null khi câu đó không gắn ngữ cảnh nào',
+    description: 'Xe tin nhắn này nói về - null khi câu đó không gắn ngữ cảnh nào',
   })
   vehicle!: MessageVehicleDto | null;
+  @ApiPropertyOptional({
+    type: MessageTripDto,
+    nullable: true,
+    description: 'Chuyến tin nhắn này nói về - null khi câu đó không gắn chuyến nào',
+  })
+  trip!: MessageTripDto | null;
   @ApiProperty({ type: [MessageAttachmentDto] }) attachments!: MessageAttachmentDto[];
   @ApiProperty({ description: 'ISO-8601 UTC' }) sentAt!: string;
 }
@@ -381,7 +459,7 @@ export class ChatUnreadSummaryDto {
   @ApiProperty({ example: 2, description: 'Chưa đọc ở hộp thư KHÁCH' }) customer!: number;
   @ApiProperty({ example: 5, description: 'Chưa đọc ở inbox GIAN HÀNG (0 nếu không thuộc shop nào)' })
   shop!: number;
-  @ApiProperty({ example: 7, description: 'Tổng hai vai — con số cho badge biểu tượng chat' })
+  @ApiProperty({ example: 7, description: 'Tổng hai vai - con số cho badge biểu tượng chat' })
   total!: number;
 }
 

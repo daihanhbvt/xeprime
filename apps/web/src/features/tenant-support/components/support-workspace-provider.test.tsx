@@ -129,7 +129,7 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe('SupportSessionBoundary + SupportDataScope', () => {
-  it('đổi phiên là đổi hẳn cache — dữ liệu gian hàng A không hiện trong phiên B (13)', async () => {
+  it('đổi phiên là đổi hẳn cache - dữ liệu gian hàng A không hiện trong phiên B (13)', async () => {
     const view = renderProvider(CONTEXT_A);
     await screen.findByText('xe-cua-gian-hang-A');
 
@@ -159,8 +159,9 @@ describe('SupportSessionBoundary + SupportDataScope', () => {
     expect(screen.getByTestId('home').textContent).toContain(
       `/admin/tenant-support/${CONTEXT_A}`,
     );
-    expect(screen.getByTestId('detail').textContent).toContain(
-      `/admin/tenant-support/${CONTEXT_A}/vehicles/v1/manage`,
+    // Hai tuyến dùng chung trang chi tiết xe từ 03/11/2026 — trong phiên cũng vậy.
+    expect(screen.getByTestId('detail').textContent).toBe(
+      `/admin/tenant-support/${CONTEXT_A}/vehicles/v1`,
     );
   });
 
@@ -241,8 +242,8 @@ describe('SupportSessionBoundary + SupportDataScope', () => {
   });
 });
 
-describe('supportWorkspaceValue — bảng đường dẫn của phiên', () => {
-  it('đích KHÔNG có trong phiên giữ href thật (lớp điều hướng chặn và báo) — không đổi thành trang đầu', () => {
+describe('supportWorkspaceValue - bảng đường dẫn của phiên', () => {
+  it('đích KHÔNG có trong phiên giữ href thật (lớp điều hướng chặn và báo) - không đổi thành trang đầu', () => {
     const value = supportWorkspaceValue(
       supportContextFixture({ workspace: SUPPORT_WORKSPACE.MANAGE }),
     );

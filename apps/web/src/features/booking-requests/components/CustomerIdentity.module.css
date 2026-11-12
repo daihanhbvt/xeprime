@@ -1,0 +1,75 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.avatar {
+  flex: none;
+  border: 1px solid var(--xp-color-border);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-strong);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.text {
+  min-width: 0;
+}
+
+.name {
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phone {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+/*
+ * Hẹp (cột khách 240px của thẻ "Đơn thuê xe") thì viên "Khách quen" xuống dòng dưới tên thay vì
+ * cắt tên còn "Nguy…" — tên là thứ người trực đọc to khi gọi khách.
+ */
+.nameRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--xp-space-sm);
+  min-width: 0;
+}
+
+.nameRow .name {
+  min-width: 0;
+}
+
+/* Viên "Khách quen" — Figma `23807:66280`: nền xanh nhạt, viền xanh, chữ 12/500. */
+.badge {
+  flex: none;
+  padding: 0 var(--xp-space-sm);
+  border: 1px solid var(--xp-color-success-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+/* Thẻ Kanban (Figma "_Kanban Item" `23895:15196`): ảnh 32, cách 8, tên 14/500, SĐT 14/400. */
+.small {
+  gap: var(--xp-space-sm);
+}
+
+.small .name {
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+}

@@ -18,13 +18,13 @@ describe('haversineKm', () => {
     expect(haversineKm(HCM_BEN_THANH, HCM_BEN_THANH)).toBe(0);
   });
 
-  it('đo đúng khoảng cách Sài Gòn – Hà Nội (~1140 km đường chim bay)', () => {
+  it('đo đúng khoảng cách Sài Gòn - Hà Nội (~1140 km đường chim bay)', () => {
     const km = haversineKm(HCM_BEN_THANH, HANOI_HOAN_KIEM);
     expect(km).toBeGreaterThan(1130);
     expect(km).toBeLessThan(1160);
   });
 
-  it('đo đúng quãng ngắn nội thành (Bến Thành – Tân Sơn Nhất ~7 km)', () => {
+  it('đo đúng quãng ngắn nội thành (Bến Thành - Tân Sơn Nhất ~7 km)', () => {
     const km = haversineKm(HCM_BEN_THANH, HCM_TAN_SON_NHAT);
     expect(km).toBeGreaterThan(6);
     expect(km).toBeLessThan(9);
@@ -44,7 +44,7 @@ describe('normalizeAddressKey', () => {
     expect(normalizeAddressKey('  12   nguyễn huệ ,  quận 1 ,  tp . hcm  ')).toBe(key);
   });
 
-  it('GIỮ dấu tiếng Việt — "Đông" và "Dong" phải là hai khoá khác nhau', () => {
+  it('GIỮ dấu tiếng Việt - "Đông" và "Dong" phải là hai khoá khác nhau', () => {
     expect(normalizeAddressKey('Đông Hà')).not.toBe(normalizeAddressKey('Dong Ha'));
   });
 
@@ -76,7 +76,7 @@ describe('isValidGeoPoint', () => {
     expect(isValidGeoPoint({ lat: 10, lng: 181 })).toBe(false);
   });
 
-  it('loại (0,0) — luôn là dữ liệu hỏng với một sản phẩm chỉ chạy ở Việt Nam', () => {
+  it('loại (0,0) - luôn là dữ liệu hỏng với một sản phẩm chỉ chạy ở Việt Nam', () => {
     expect(isValidGeoPoint({ lat: 0, lng: 0 })).toBe(false);
   });
 });
@@ -95,7 +95,7 @@ describe('toGeoPoint', () => {
 });
 
 describe('mapExternalUrl', () => {
-  it('link phổ quát của Google Maps — không key, lat TRƯỚC lng', () => {
+  it('link phổ quát của Google Maps - không key, lat TRƯỚC lng', () => {
     // Đảo nhầm thứ tự ở Việt Nam là một điểm giữa Ấn Độ Dương. So nguyên chuỗi chứ không dựng
     // `URL`: package này không có lib DOM, đúng như môi trường Metro nó phải chạy.
     expect(mapExternalUrl(HCM_BEN_THANH)).toBe(

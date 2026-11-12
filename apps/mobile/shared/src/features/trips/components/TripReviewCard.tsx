@@ -61,7 +61,9 @@ export function TripReviewCard({ trip }: { trip: CustomerTripDetail }) {
     return (
       <Card radius={radius.card}>
         <YStack gap={space.md}>
-          <CardTitle icon="star-outline">{t('title')}</CardTitle>
+          <CardTitle icon="star-outline" hint={review.canEdit ? t('editHint') : undefined}>
+            {t('title')}
+          </CardTitle>
           {/* `.readHead`: sao xl + "đã chỉnh sửa" body-sm `text-tertiary`, khe `space-sm`. */}
           <XStack ai="center" gap={space.sm} flexWrap="wrap">
             <Stars value={review.rating} size={READ_STAR_SIZE} />
@@ -71,9 +73,9 @@ export function TripReviewCard({ trip }: { trip: CustomerTripDetail }) {
               </Text>
             ) : null}
           </XStack>
-          {/* `.comment`: body-lg `text-secondary`, giữ xuống dòng của khách. */}
+          {/* `.comment`: body-lg `text`, giữ xuống dòng của khách. */}
           {review.comment ? (
-            <Text col={colors.textMuted} fos={fontSize.bodyLg}>
+            <Text col={colors.text} fos={fontSize.bodyLg}>
               {review.comment}
             </Text>
           ) : null}
@@ -86,9 +88,6 @@ export function TripReviewCard({ trip }: { trip: CustomerTripDetail }) {
                 label={t('edit')}
                 onPress={() => setEditing(true)}
               />
-              <Text col={colors.placeholder} fos={fontSize.bodySm}>
-                {t('editHint')}
-              </Text>
             </YStack>
           ) : null}
         </YStack>
@@ -165,7 +164,9 @@ function ReviewForm({
   return (
     <Card radius={radius.card}>
       <YStack gap={space.md}>
-        <CardTitle icon="star-outline">{t('title')}</CardTitle>
+        <CardTitle icon="star-outline" hint={edit ? t('editHint') : undefined}>
+          {t('title')}
+        </CardTitle>
         {/* `.form`: khe `space-md` giữa các trường; `.field`: khe `space-xs` giữa ô và lỗi. */}
         <Controller
           control={control}
@@ -197,12 +198,6 @@ function ReviewForm({
           rows={COMMENT_ROWS}
           maxLength={REVIEW_COMMENT_MAX}
         />
-        {/* `.hint`: body-sm `text-tertiary` — chỉ khi đang SỬA. */}
-        {edit ? (
-          <Text col={colors.placeholder} fos={fontSize.bodySm}>
-            {t('editHint')}
-          </Text>
-        ) : null}
         {/* `.actions`: nút gửi gradient căn trái (`.submit`) + "Huỷ" dạng chữ khi sửa, khe `space-sm`. */}
         <XStack ai="center" gap={space.sm} flexWrap="wrap">
           <Button

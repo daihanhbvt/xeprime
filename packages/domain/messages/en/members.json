@@ -1,6 +1,6 @@
 {
   "page": {
-    "title": "People",
+    "title": "Staff & Permissions",
     "tableLabel": "Member list",
     "loadError": "Could not load the member list",
     "empty": "No members yet",
@@ -8,7 +8,8 @@
     "forbidden": {
       "title": "No access",
       "description": "You need permission to view shop members. Ask the shop owner to grant it."
-    }
+    },
+    "subtitle": "Manage your team, set up access and role-based permissions for your shop."
   },
   "filters": {
     "search": "Find a member",
@@ -40,7 +41,7 @@
   },
   "form": {
     "title": "Invite a member",
-    "submit": "Create invitation",
+    "submit": "Send invitation",
     "notice": "We will email an invitation to this address. They only join the shop once they accept it themselves.",
     "noticePhone": "The invitee signs in to (or creates) a partner account with exactly this number, and only joins the shop once they accept it themselves. After creating it, copy the invitation link and send it to them (Zalo, text message).",
     "phone": "Phone number",
@@ -54,15 +55,20 @@
       "phoneRequired": "Enter a phone number",
       "phoneInvalid": "That phone number is not valid",
       "roleRequired": "Pick a role",
-      "branchRequired": "Select at least one branch"
+      "branchRequired": "Select at least one branch",
+      "nicknameTooLong": "Nickname can be at most {max} characters"
     },
     "branches": "Assigned branches",
     "branchesHelp": "Defaults to the whole shop. Picking specific branches limits this member to vehicles, bookings and reports of those branches only.",
-    "branchesHelpLimited": "You manage only some branches, so you can assign only within them. The member will see vehicles, bookings and reports of the selected branches only."
+    "branchesHelpLimited": "You manage only some branches, so you can assign only within them. The member will see vehicles, bookings and reports of the selected branches only.",
+    "subtitle": "Send an invitation to join your shop",
+    "nickname": "Nickname",
+    "nicknamePlaceholder": "Enter a nickname (optional)",
+    "nicknameHelp": "Shown instead of a name while the invitation is pending. Once accepted it becomes the in-shop name."
   },
   "created": {
     "title": "Invitation created",
-    "body": "Send this link to {phone} via Zalo or text message. The link is shown only ONCE — if you lose it, invite this number again to get a new link.",
+    "body": "Send this link to {phone} via Zalo or text message. The link is shown only ONCE - if you lose it, invite this number again to get a new link.",
     "linkLabel": "Invitation link",
     "copy": "Copy link",
     "safety": "Only the partner account with this exact (verified) number can use the link.",
@@ -97,7 +103,7 @@
     "role": "Role offered",
     "invitedEmail": "Sent to",
     "invitedPhone": "Invited number",
-    "signInPartnerPromptPhone": "This invitation is for a PARTNER account — separate from your renter account. Sign in or create a partner account with the invited phone number to respond.",
+    "signInPartnerPromptPhone": "This invitation is for a PARTNER account - separate from your renter account. Sign in or create a partner account with the invited phone number to respond.",
     "expiresAt": "Expires",
     "loadError": "This invitation could not be opened",
     "signInPrompt": "Sign in with the email address that received this invitation to answer it.",
@@ -111,12 +117,227 @@
     "goHome": "Back to home",
     "closedTitle": "This invitation is no longer valid",
     "closedBody": "It has already been answered, revoked, or expired. Ask the shop to send a new one if you still want to join.",
-    "signInPartnerPrompt": "This invitation is for a PARTNER account — separate from your renter account. Sign in or create a partner account with the email that received the invitation to respond.",
+    "signInPartnerPrompt": "This invitation is for a PARTNER account - separate from your renter account. Sign in or create a partner account with the email that received the invitation to respond.",
     "createPartnerAccount": "Create a partner account"
   },
   "branchScope": {
     "all": "All branches",
     "selectAria": "Assigned branches of {name}",
     "limitedCount": "{count, plural, one {# branch} other {# branches}}"
+  },
+  "roleHint": {
+    "shop_owner": "Full access, including plans, payments and permissions.",
+    "shop_manager": "Runs bookings and revenue. Cannot change the plan or legal details.",
+    "shop_staff": "Handles bookings and vehicle handovers at assigned branches.",
+    "shop_viewer": "Views figures and reports, no actions. Suited to accountants and partners."
+  },
+  "roleShortHint": {
+    "shop_owner": "full access",
+    "shop_manager": "runs every operation",
+    "shop_staff": "bookings and handovers",
+    "shop_viewer": "view figures only"
+  },
+  "roster": {
+    "tableLabel": "Staff list",
+    "searchLabel": "Search staff",
+    "searchPlaceholder": "Search by staff name, email, phone...",
+    "role": "Role",
+    "allRoles": "All roles",
+    "status": "Status",
+    "allStatuses": "All statuses",
+    "rolesButton": "Roles & permissions",
+    "empty": "Your shop has no staff besides you yet",
+    "emptyHint": "Create accounts for your staff to handle bookings, vehicle handovers and follow the figures with you.",
+    "emptyFiltered": "No staff match these filters",
+    "loadError": "Could not load the staff list",
+    "total": "{count, plural, one {# staff member} other {# staff members}}",
+    "you": "(You)",
+    "pendingName": "Invitation not accepted yet",
+    "allBranches": "All branches",
+    "unknownBranch": "Inactive branch",
+    "columns": {
+      "member": "Staff",
+      "phone": "Phone",
+      "role": "Role",
+      "branches": "Assigned branches",
+      "status": "Status",
+      "lastActive": "Last active",
+      "actions": "Actions"
+    },
+    "actions": {
+      "view": "View details",
+      "edit": "Edit",
+      "lock": "Lock",
+      "unlock": "Unlock",
+      "remove": "Remove from shop",
+      "reinvite": "Invite again",
+      "revoke": "Revoke invitation",
+      "resetPassword": "Reset password"
+    },
+    "confirm": {
+      "lock": "Lock {name}?",
+      "lockBody": "They lose access to the shop right away, until unlocked.",
+      "unlock": "Unlock {name}?",
+      "remove": "Remove {name} from the shop?",
+      "removeBody": "They lose access to the shop. To bring them back you need to send a new invitation.",
+      "revoke": "Revoke this invitation?",
+      "revokeBody": "The link you sent stops working immediately."
+    },
+    "lockedBySystem": "Locked because the shop plan ended - unlocks automatically when a plan is active again",
+    "toast": {
+      "locked": "Member locked",
+      "unlocked": "Member unlocked",
+      "saved": "Changes saved",
+      "created": "Staff account created",
+      "passwordReset": "Password reset"
+    }
+  },
+  "lastActive": {
+    "online": "Online now",
+    "minutes": "{count, plural, one {# minute ago} other {# minutes ago}}",
+    "hours": "{count, plural, one {# hour ago} other {# hours ago}}",
+    "days": "{count, plural, one {# day ago} other {# days ago}}",
+    "never": "Never signed in",
+    "invited": "Invited on {date}"
+  },
+  "edit": {
+    "title": "Edit member",
+    "subtitle": "Change the role, assigned branches or nickname of {name}",
+    "submit": "Save changes",
+    "noChange": "Nothing has changed yet"
+  },
+  "detail": {
+    "title": "Staff details",
+    "inviteTitle": "Pending invitation",
+    "contact": "Contact",
+    "phone": "Phone",
+    "email": "Email",
+    "nickname": "Nickname",
+    "role": "Role",
+    "roleHint": "What this role can do",
+    "branches": "Assigned branches",
+    "status": "Status",
+    "lastActive": "Last active",
+    "joinedAt": "Joined",
+    "invitedBy": "Invited by",
+    "invitedAt": "Invited on",
+    "expiresAt": "Invitation expires",
+    "viewMatrix": "See roles & permissions",
+    "sections": {
+      "contact": "Contact",
+      "access": "Access",
+      "permissions": "Role permissions",
+      "activity": "Activity",
+      "recent": "Recent activity"
+    },
+    "username": "Username",
+    "accountType": "Account type",
+    "accountManaged": "Created by the shop",
+    "accountOwn": "Own account - signs in with a phone number",
+    "contactPhone": "Contact phone",
+    "accessSwitch": "Allow access to the shop",
+    "accessOn": "Working normally",
+    "accessOff": "Locked - cannot sign in until unlocked",
+    "accessSystemLocked": "Locked because the shop plan ended - unlocks when a plan is active again",
+    "createdBy": "Created / invited by",
+    "recentEmpty": "No activity in the shop yet",
+    "recentError": "Could not load recent activity",
+    "permissionsNone": "This role is view-only, with no actions",
+    "permissionsLimited": "limited",
+    "permissionsView": "view only"
+  },
+  "matrix": {
+    "title": "Roles & permissions",
+    "subtitle": "What each role can do in your shop",
+    "heading": "Permissions by role",
+    "tableLabel": "Permissions by role table",
+    "loadError": "Could not load the permissions table",
+    "people": "{count, plural, one {# person} other {# people}}",
+    "legend": {
+      "full": "Full access",
+      "limited": "Limited",
+      "view": "View only",
+      "none": "No access"
+    },
+    "scopeNote": "Managers, Staff and Observers can be limited to assigned branches - set when inviting or editing a member. They then only see vehicles, bookings and figures of those branches.",
+    "groups": {
+      "operations": "Operations",
+      "fleet": "Vehicles & Drivers",
+      "revenue": "Revenue",
+      "settings": "Settings",
+      "help": "Help"
+    },
+    "rows": {
+      "rentals": "View rentals & vehicle calendar",
+      "requests": "Accept / decline booking requests",
+      "handovers": "Hand over & take back vehicles",
+      "cancelSettle": "Cancel bookings, refund deposits, surcharges",
+      "customers": "Customer list",
+      "fleetView": "View vehicles & drivers",
+      "fleetManage": "Add / edit / hide vehicles, drivers",
+      "maintenance": "Maintenance & odometer",
+      "revenue": "Revenue & reports",
+      "ledger": "Cash book & receivables",
+      "wallet": "Wallet",
+      "shopInfo": "Display info, address & tax",
+      "branches": "Branches",
+      "policies": "Rental policies",
+      "plan": "Plan & payment",
+      "members": "Staff & permissions",
+      "support": "Support requests"
+    },
+    "limited": {
+      "default": "Partial",
+      "cancelSettle": "Collects payment at handover only",
+      "ledger": "Collects payment at handover only",
+      "customers": "Cannot block customers",
+      "maintenance": "Cannot see costs",
+      "members": "Invites staff only",
+      "fleetManage": "Partial",
+      "fleetView": "Partial"
+    },
+    "cellAria": "{role} - {row}: {level}"
+  },
+  "staff": {
+    "addButton": "Add staff",
+    "title": "Add staff",
+    "subtitle": "Create a sign-in account for a member of your shop",
+    "displayName": "Full name",
+    "displayNamePlaceholder": "e.g. Le Thi Kim",
+    "username": "Username",
+    "usernamePlaceholder": "e.g. kim.le",
+    "usernameHelp": "4-32 characters, starting with a letter; lowercase letters, digits, dots or underscores only.",
+    "password": "Password",
+    "passwordPlaceholder": "At least 8 characters with letters and digits",
+    "passwordHelp": "You hand this password to the staff member. They can change it in Account & security.",
+    "generate": "Generate",
+    "contactPhone": "Contact phone",
+    "contactPhonePlaceholder": "Enter a phone number (optional)",
+    "contactPhoneHelp": "For contact only, not used to sign in.",
+    "submit": "Create account",
+    "errors": {
+      "displayNameRequired": "Enter a full name",
+      "usernameRequired": "Enter a username",
+      "usernameInvalid": "Username must be 4-32 characters, start with a letter and use only lowercase letters, digits, dots or underscores"
+    },
+    "created": {
+      "title": "Account created",
+      "body": "Send the sign-in details below to {name}. The password is shown only ONCE - if they forget it, reset it from the Staff screen.",
+      "loginUrl": "Sign-in address",
+      "username": "Username",
+      "password": "Password",
+      "copyAll": "Copy all",
+      "copyText": "Sign in to XePrime Partner\nAddress: {url}\nUsername: {username}\nPassword: {password}",
+      "copy": "Copy",
+      "done": "Done"
+    }
+  },
+  "resetPassword": {
+    "title": "Reset password",
+    "subtitle": "New password for {name}",
+    "notice": "{name} will be signed out of every device and must sign in again with the new password.",
+    "submit": "Reset password",
+    "doneTitle": "Password reset",
+    "doneBody": "Send the new password to {name}. It is shown only ONCE."
   }
 }

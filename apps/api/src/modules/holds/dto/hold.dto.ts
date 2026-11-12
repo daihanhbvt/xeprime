@@ -55,7 +55,7 @@ export class HoldPaymentInfoDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Từ khoá đặt trước mã trong nội dung chuyển khoản — xem PaymentInfoDto',
+    description: 'Từ khoá đặt trước mã trong nội dung chuyển khoản - xem PaymentInfoDto',
   })
   transferPrefix!: string | null;
 }
@@ -68,7 +68,7 @@ export class HoldPaymentInfoDto {
  */
 export class CustomerHoldDto {
   @ApiProperty() id!: string;
-  @ApiProperty({ description: 'Mã đối soát XPH… — NỘI DUNG chuyển khoản' }) code!: string;
+  @ApiProperty({ description: 'Mã đối soát XPH… - NỘI DUNG chuyển khoản' }) code!: string;
   @ApiProperty({ enum: BOOKING_HOLD_STATUS_VALUES }) status!: string;
   @ApiPropertyOptional({ enum: BOOKING_HOLD_OUTCOME_VALUES, nullable: true, type: String })
   outcome!: string | null;
@@ -76,7 +76,7 @@ export class CustomerHoldDto {
   @ApiProperty({ description: 'Đã nhận (VND string)' }) paidAmount!: string;
   @ApiProperty({ description: 'Còn thiếu = amount − paidAmount, kẹp sàn 0' })
   remainingAmount!: string;
-  @ApiProperty({ description: 'ISO — quá mốc này mà chưa đủ tiền thì chỗ được nhả' })
+  @ApiProperty({ description: 'ISO - quá mốc này mà chưa đủ tiền thì chỗ được nhả' })
   expiresAt!: string;
   /**
    * Mốc huỷ miễn phí (ADR 0072 — đếm từ lúc tiền giữ chỗ về ĐỦ). Đã trả đủ: mốc ĐÃ LƯU. Chưa trả đủ:
@@ -85,11 +85,11 @@ export class CustomerHoldDto {
    */
   @ApiProperty({
     description:
-      'ISO — đã trả đủ: huỷ trước mốc này được hoàn toàn bộ. Chưa trả: mốc DỰ KIẾN nếu trả ngay (xem freeCancelStarted)',
+      'ISO - đã trả đủ: huỷ trước mốc này được hoàn toàn bộ. Chưa trả: mốc DỰ KIẾN nếu trả ngay (xem freeCancelStarted)',
   })
   freeCancelUntil!: string;
   /** Đồng hồ huỷ miễn phí đã chạy chưa — `true` từ lúc tiền giữ chỗ về đủ (ADR 0072). */
-  @ApiProperty({ description: 'true khi đã trả đủ — mốc huỷ miễn phí đã lưu và đang đếm' })
+  @ApiProperty({ description: 'true khi đã trả đủ - mốc huỷ miễn phí đã lưu và đang đếm' })
   freeCancelStarted!: boolean;
   /**
    * Độ dài cửa sổ huỷ miễn phí (phút): đã trả — tính từ `paidAt`; chưa trả — nếu trả NGAY bây giờ
@@ -112,7 +112,7 @@ export class CustomerHoldDto {
    * đền chủ xe, `S + H − P` XePrime giữ (`resolveHoldAllocation`, cùng phép phân bổ lượt huỷ thật
    * dùng — ADR 0066). VND string.
    */
-  @ApiProperty({ description: 'Hoàn vào ví nếu huỷ muộn (đã trả đủ) — VND string' })
+  @ApiProperty({ description: 'Hoàn vào ví nếu huỷ muộn (đã trả đủ) - VND string' })
   lateCancelRefundAmount!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) paidAt!: string | null;
   /**
@@ -215,7 +215,7 @@ export class PlatformHoldDto {
   @ApiPropertyOptional({ type: String, nullable: true }) releasedAt!: string | null;
   @ApiProperty({
     description:
-      'Đơn có case GIỮ quyết toán còn mở (tranh chấp, hoặc chưa xác nhận bàn giao — ADR 0066) — kết cục bị tạm giữ',
+      'Đơn có case GIỮ quyết toán còn mở (tranh chấp, hoặc chưa xác nhận bàn giao - ADR 0066) - kết cục bị tạm giữ',
   })
   disputeOpen!: boolean;
   @ApiPropertyOptional({ type: String, nullable: true, enum: HOLD_REFUND_STATUS_VALUES })
@@ -227,16 +227,16 @@ export class PlatformHoldDto {
    * server dùng lúc chốt — không phải một phép tính thứ hai ở client.
    */
   @ApiProperty({ enum: BOOKING_HOLD_PURPOSE_VALUES }) purpose!: string;
-  @ApiProperty({ description: '`D` — phần của chủ xe trong cọc online' }) depositAmount!: string;
-  @ApiProperty({ description: '`S` — phí sàn phía khách' }) serviceFeeAmount!: string;
-  @ApiProperty({ description: '`H` — hoa hồng lũy tiến sàn giữ lại từ phần của chủ xe' })
+  @ApiProperty({ description: '`D` - phần của chủ xe trong cọc online' }) depositAmount!: string;
+  @ApiProperty({ description: '`S` - phí sàn phía khách' }) serviceFeeAmount!: string;
+  @ApiProperty({ description: '`H` - hoa hồng lũy tiến sàn giữ lại từ phần của chủ xe' })
   ownerCommissionAmount!: string;
-  @ApiProperty({ description: '`IV` — bảo hiểm xe' }) vehicleInsuranceAmount!: string;
-  @ApiProperty({ description: '`IP` — bảo hiểm người' }) personalInsuranceAmount!: string;
-  @ApiProperty({ description: '`P` — nền tảng tài trợ qua mã khuyến mãi' })
+  @ApiProperty({ description: '`IV` - bảo hiểm xe' }) vehicleInsuranceAmount!: string;
+  @ApiProperty({ description: '`IP` - bảo hiểm người' }) personalInsuranceAmount!: string;
+  @ApiProperty({ description: '`P` - nền tảng tài trợ qua mã khuyến mãi' })
   promoDiscountAmount!: string;
   @ApiProperty({
-    description: 'Thuế khấu trừ đã đóng băng trên snapshot — chỉ áp khi chuyến hoàn thành',
+    description: 'Thuế khấu trừ đã đóng băng trên snapshot - chỉ áp khi chuyến hoàn thành',
   })
   taxAmount!: string;
 }
@@ -251,7 +251,7 @@ export class SettleHoldDto {
   @IsIn(BOOKING_HOLD_OUTCOME_VALUES)
   outcome!: string;
 
-  @ApiProperty({ description: 'Lý do — bắt buộc, đây là quyết định về tiền của người khác' })
+  @ApiProperty({ description: 'Lý do - bắt buộc, đây là quyết định về tiền của người khác' })
   @IsString()
   @MinLength(5)
   @MaxLength(1000)
@@ -306,7 +306,7 @@ export class PlatformHoldRefundPageDto {
 }
 
 export class MarkRefundPaidDto {
-  @ApiProperty({ description: 'Mã giao dịch ngân hàng chiều ra — bằng chứng đã chuyển' })
+  @ApiProperty({ description: 'Mã giao dịch ngân hàng chiều ra - bằng chứng đã chuyển' })
   @IsString()
   @MinLength(3)
   @MaxLength(100)
@@ -320,7 +320,7 @@ export class MarkRefundPaidDto {
 }
 
 export class RejectRefundDto {
-  @ApiProperty({ description: 'Lý do từ chối — bắt buộc' })
+  @ApiProperty({ description: 'Lý do từ chối - bắt buộc' })
   @IsString()
   @MinLength(5)
   @MaxLength(1000)
@@ -336,7 +336,7 @@ export class RejectRefundDto {
 export class ReconciliationPlatformDto {
   @ApiProperty({
     description:
-      'Phần XePrime giữ lại từ các hold ĐÃ CHỐT — đọc cột `settled_platform_amount` đã đóng ' +
+      'Phần XePrime giữ lại từ các hold ĐÃ CHỐT - đọc cột `settled_platform_amount` đã đóng ' +
       'băng. KHÔNG bằng tổng `service_fee_amount`: có hoa hồng `H`, và tài trợ mã khuyến mãi trừ ' +
       'vào phần nền tảng.',
   })
@@ -366,13 +366,13 @@ export class ReconciliationCustodiedDto {
   @ApiProperty({ description: 'Phần đang bị khoá bởi lệnh rút chờ xử lý (hiện tại)' })
   walletPending!: string;
   @ApiProperty({
-    description: 'Hoàn cho khách VÃNG LAI còn chờ chuyển tay — nghĩa vụ chưa vào ví được',
+    description: 'Hoàn cho khách VÃNG LAI còn chờ chuyển tay - nghĩa vụ chưa vào ví được',
   })
   refundsPending!: string;
   @ApiProperty() refundsPendingCount!: number;
   @ApiProperty({
     description:
-      'Tiền vào CHƯA KHỚP được đích — vẫn nằm trong tài khoản và vẫn là tiền của một ai đó. ' +
+      'Tiền vào CHƯA KHỚP được đích - vẫn nằm trong tài khoản và vẫn là tiền của một ai đó. ' +
       'Xếp vào giữ hộ chứ không vào chênh lệch: nó có chủ, chỉ là chưa biết ai.',
   })
   unmatchedIn!: string;
@@ -405,7 +405,7 @@ export class ReconciliationInflowDto {
   @ApiProperty() bankInCount!: number;
   @ApiProperty({ description: 'Phần đã khớp hoá đơn gói' }) matchedSubscriptions!: string;
   @ApiProperty({ description: 'Phần đã khớp khoản giữ chỗ' }) matchedHolds!: string;
-  @ApiProperty({ description: 'Chưa khớp — hàng đợi admin' }) unmatched!: string;
+  @ApiProperty({ description: 'Chưa khớp - hàng đợi admin' }) unmatched!: string;
   @ApiProperty() unmatchedCount!: number;
   @ApiProperty({ description: 'Bị bỏ qua (chuyển nhầm…)' }) ignored!: string;
   @ApiProperty({
@@ -438,7 +438,7 @@ export class DailyReconciliationDto {
     type: String,
     nullable: true,
     description:
-      'Số dư ngân hàng cuối ngày, NHẬP TAY (SePay không gửi số dư). `null` = chưa nhập — giao ' +
+      'Số dư ngân hàng cuối ngày, NHẬP TAY (SePay không gửi số dư). `null` = chưa nhập - giao ' +
       'diện phải nói rõ, KHÔNG hiển thị 0.',
   })
   bankBalanceEod!: string | null;
@@ -447,7 +447,7 @@ export class DailyReconciliationDto {
     type: String,
     nullable: true,
     description:
-      'bankBalanceEod − (platform.total + custodied.total). `null` khi chưa nhập số dư — ' +
+      'bankBalanceEod − (platform.total + custodied.total). `null` khi chưa nhập số dư - ' +
       'chênh lệch CHƯA TÍNH ĐƯỢC, không phải bằng 0.',
   })
   variance!: string | null;
@@ -471,7 +471,7 @@ export class SaveBankBalanceDto {
   @Matches(/^\d{1,12}$/, { message: 'Số dư phải là số nguyên không âm' })
   balance!: string;
 
-  @ApiPropertyOptional({ description: 'Ghi chú — vì sao con số này, đọc ở đâu' })
+  @ApiPropertyOptional({ description: 'Ghi chú - vì sao con số này, đọc ở đâu' })
   @IsOptional()
   @IsString()
   @MaxLength(500)

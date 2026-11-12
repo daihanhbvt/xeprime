@@ -140,7 +140,7 @@ beforeEach(() => {
   state.overview = overview();
 });
 
-describe('Tổng quan nền tảng — theo vai', () => {
+describe('Tổng quan nền tảng - theo vai', () => {
   it('REVIEWER: chỉ hàng đợi duyệt xe, không gọi API tiền/khiếu nại/chăm sóc, không GMV', async () => {
     state.permissions = [
       PERMISSION.PLATFORM_DASHBOARD_VIEW,

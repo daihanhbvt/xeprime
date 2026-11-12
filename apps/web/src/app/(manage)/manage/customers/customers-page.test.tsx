@@ -85,6 +85,8 @@ const summary: TenantCustomerSummary = {
   archivedCustomers: 3,
   totalDebt: '8400000',
   debtCustomers: 5,
+  totalRentals: 47,
+  totalRevenue: '17298000',
 };
 
 function renderPage() {
@@ -117,13 +119,14 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('/manage/customers — sổ khách của gian hàng (S-01)', () => {
+describe('/manage/customers - sổ khách của gian hàng (S-01)', () => {
   it('KHÔNG còn là placeholder: có dải chỉ số, bộ lọc và danh sách thật', () => {
     renderPage();
     // Chuỗi của `PlaceholderPage` cũ phải biến mất hoàn toàn.
     expect(screen.queryByText('Chưa có dữ liệu')).toBeNull();
-    expect(screen.getByRole('heading', { level: 1, name: 'Khách hàng' })).toBeTruthy();
-    expect(screen.getByText('Khách đang hoạt động')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Danh sách khách hàng' })).toBeTruthy();
+    expect(screen.getByText('Tổng khách hàng')).toBeTruthy();
+    expect(screen.getByText('Tổng số lần thuê')).toBeTruthy();
     expect(screen.getByText('Nguyễn Văn An')).toBeTruthy();
   });
 
@@ -161,7 +164,7 @@ describe('/manage/customers — sổ khách của gian hàng (S-01)', () => {
     expect(screen.getByText('Nguyễn Văn An')).toBeTruthy();
   });
 
-  it('rỗng thật: mời thêm khách đầu tiên', () => {
+  it('rỗng thật: nói rõ khách tự vào sổ khi đặt xe / lập đơn', () => {
     queries.list = {
       data: { items: [], meta: { page: 1, limit: 20, total: 0, hasNext: false } },
       isFetching: false,
@@ -170,6 +173,7 @@ describe('/manage/customers — sổ khách của gian hàng (S-01)', () => {
     };
     renderPage();
     expect(screen.getByText('Sổ khách còn trống')).toBeTruthy();
+    expect(screen.getByText(/tự vào sổ khi đặt xe/)).toBeTruthy();
   });
 
   it('rỗng DO LỌC: thông điệp khác hẳn rỗng thật, và có lối xoá bộ lọc', () => {
@@ -224,12 +228,7 @@ describe('/manage/customers — sổ khách của gian hàng (S-01)', () => {
     expect(screen.getByText(/2\.000\.000/)).toBeTruthy();
   });
 
-  it('nút "Thêm khách hàng" chỉ hiện khi có `customers.manage`', () => {
-    renderPage();
-    expect(screen.getByRole('button', { name: /Thêm khách hàng/ })).toBeTruthy();
-
-    cleanup();
-    permissions.granted = new Set([PERMISSION.CUSTOMER_VIEW]);
+  it('KHÔNG có nút "Thêm khách hàng" - khách vào sổ tự động khi đặt xe (chốt 02/11/2026)', () => {
     renderPage();
     expect(screen.queryByRole('button', { name: /Thêm khách hàng/ })).toBeNull();
   });

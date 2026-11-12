@@ -27,7 +27,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('MarketFooter — không còn dải mời đăng xe', () => {
+describe('MarketFooter - không còn dải mời đăng xe', () => {
   /**
    * Design v2 gỡ dải CTA khỏi chân trang: trang chủ đã có khối "Đăng ký trở thành đối tác" và
    * header có nút "Trở thành chủ xe" trên mọi trang. Một lời mời thứ ba ở chân trang là lặp.
@@ -39,7 +39,7 @@ describe('MarketFooter — không còn dải mời đăng xe', () => {
   });
 });
 
-describe('MarketFooter — điều hướng', () => {
+describe('MarketFooter - điều hướng', () => {
   /** Khẳng định trên TIÊU ĐỀ CỘT (h2), không phải trên chữ bất kỳ trong chân trang. */
   function columnTitles(container: HTMLElement) {
     return Array.from(container.querySelectorAll('h2')).map((h) => h.textContent?.trim());
@@ -84,7 +84,7 @@ describe('MarketFooter — điều hướng', () => {
   });
 });
 
-describe('MarketFooter — mạng xã hội chưa có kênh thật', () => {
+describe('MarketFooter - mạng xã hội chưa có kênh thật', () => {
   /**
    * Bốn biểu tượng là HÌNH có tên, không phải liên kết. Nếu một ngày chúng thành `<a href="#">`
    * thì đây là chỗ bắt được: một biểu tượng bấm được mà không đi đâu là lời hứa hão.
@@ -99,7 +99,7 @@ describe('MarketFooter — mạng xã hội chưa có kênh thật', () => {
   });
 });
 
-describe('MarketFooter — mục đang xem', () => {
+describe('MarketFooter - mục đang xem', () => {
   /** Đọc mục mang `aria-current="page"` — đúng thứ trình đọc màn hình dùng. */
   function currentLinks(container: HTMLElement) {
     return Array.from(container.querySelectorAll('a[aria-current="page"]')).map((a) =>
@@ -141,7 +141,7 @@ describe('MarketFooter — mục đang xem', () => {
   });
 });
 
-describe('MarketFooter — đổi ngôn ngữ VI | EN', () => {
+describe('MarketFooter - đổi ngôn ngữ VI | EN', () => {
   /**
    * Header v2 không còn nút ngôn ngữ cho khách chưa đăng nhập — hai chữ ở chân trang là lối DUY
    * NHẤT của họ, nên nó phải là nút thật và nói được ngôn ngữ nào đang chọn.

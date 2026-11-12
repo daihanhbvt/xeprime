@@ -16,3 +16,11 @@
   font-size: var(--xp-font-size-body);
   line-height: var(--xp-line-height-body-relaxed);
 }
+
+/* Khổ máy (Figma mobile `21850:66951`): lời nhắc `12px/Regular` 18, bo 12. */
+@media (max-width: 640px) {
+  .guidance {
+    font-size: var(--xp-font-size-body-sm);
+    line-height: var(--xp-line-height-body-sm);
+  }
+}

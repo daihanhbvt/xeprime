@@ -34,6 +34,7 @@ import {
   TENANT_STATUS,
   VEHICLE_TYPE,
   resolveStorefrontKind,
+  normalizeVnPhone,
 } from '@xeprime/types';
 import {
   upsertPasswordUser,
@@ -311,7 +312,19 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
   const driverOffset = spec.driverPoolOffset ?? 0;
   for (let i = 0; i < spec.driverCount; i += 1) {
     const account = deps.drivers[(driverOffset + i) % deps.drivers.length]!;
-    const id = seedId(`${spec.key}:driver-link:${account.phone}`);
+    // Một liên kết MỞ cho mỗi (bên thuê, tài khoản) — `drivers_one_open_link_key`. Lần dùng app
+    // trước có thể đã tạo liên kết đó với id khác id seed: nhận lại nó thay vì tạo dòng thứ hai.
+    const seedLinkId = seedId(`${spec.key}:driver-link:${account.phone}`);
+    const openLink = await prisma.driver.findFirst({
+      where: {
+        tenantId,
+        userId: account.userId,
+        linkStatus: { not: DRIVER_LINK_STATUS.ENDED },
+        id: { not: seedLinkId },
+      },
+      select: { id: true },
+    });
+    const id = openLink?.id ?? seedLinkId;
     const invited = i === spec.driverCount - 1 && spec.driverCount > 1;
     const fields = {
       name: account.name,
@@ -319,6 +332,9 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
       driverType: DRIVER_TYPES[(driverOffset + i) % DRIVER_TYPES.length]!,
       linkStatus: invited ? DRIVER_LINK_STATUS.INVITED : DRIVER_LINK_STATUS.ACTIVE,
       respondedAt: invited ? null : daysFromToday(-30),
+      // Seed đưa liên kết về trạng thái demo; một lần chạy app trước có thể đã kết thúc nó — để
+      // `ended_at` lại là vi phạm `drivers_ended_consistency_check`.
+      endedAt: null,
       invitedBy: ownerUserId,
     };
     await prisma.driver.upsert({
@@ -976,7 +992,7 @@ async function buildNotifications(
   }
 }
 
-/** `users.phone` lưu dạng `84xxxxxxxxx` — bản chụp SĐT trên liên kết khớp cùng dạng. */
+/** `users.phone` lưu dạng `0xxxxxxxxx` (ADR 0082) — bản chụp SĐT trên liên kết khớp cùng dạng. */
 function normalizeSeedPhone(phone: string): string {
-  return phone.startsWith('0') ? `84${phone.slice(1)}` : phone;
+  return normalizeVnPhone(phone);
 }

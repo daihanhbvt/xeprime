@@ -1,7 +1,8 @@
-import { createPrismaClient, newId } from '@xeprime/prisma';
+import { Prisma, createPrismaClient, newId } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
+  BOOKING_STATUS,
   MEMBERSHIP_STATUS,
   PAYMENT_KIND,
   PAYMENT_METHOD,
@@ -18,6 +19,7 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { FinanceOverviewService } from '../src/modules/finance/finance-overview.service';
+import { BookingPaymentWriter } from '../src/modules/payments/booking-payment.writer';
 import { PaymentsService } from '../src/modules/payments/payments.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
@@ -40,11 +42,13 @@ const bookings = makeBookingsService(asService, {
   notifications: makeNotificationService(asService),
   customers: makeCustomersService(asService, audit),
 });
+const receipts = new ReceiptsService(asService, audit);
 const payments = new PaymentsService(
   asService,
   audit,
   bookings,
-  new ReceiptsService(asService, audit),
+  receipts,
+  new BookingPaymentWriter(audit, receipts),
 );
 const overview = new FinanceOverviewService(asService);
 
@@ -279,6 +283,70 @@ describe('Payments — thu tiền đơn (S2)', () => {
     expect(theirs.data).toHaveLength(0);
   });
 
+  maybe('công nợ: đơn ĐÃ HOÀN THÀNH mà qua hạn vẫn là nợ quá hạn; chip khớp danh sách', async () => {
+    const done = await makeBooking('800000');
+    await payments.recordForBooking(tenantId, ownerId, done.id, {
+      amount: '300000',
+      method: PAYMENT_METHOD.CASH,
+    });
+    // Chuyến đã trả xe từ tuần trước mà còn nợ 500k — khoản phải đòi rõ nhất.
+    await prisma.booking.update({
+      where: { id: done.id },
+      data: {
+        status: BOOKING_STATUS.COMPLETED,
+        pickupAt: new Date(Date.now() - 9 * 86_400_000),
+        returnAt: new Date(Date.now() - 7 * 86_400_000),
+      },
+    });
+
+    const overdue = await overview.debts(tenantId, { filter: 'overdue', limit: 100 }, null);
+    expect(overdue.data.map((d) => d.bookingId)).toContain(done.id);
+
+    // Số trên chip/thẻ là số của TỪNG nhóm dưới cùng phạm vi — và mở nhóm ra phải đúng bấy nhiêu dòng.
+    const summary = await overview.debtSummary(tenantId, {}, null);
+    const all = await overview.debts(tenantId, { limit: 100 }, null);
+    const upcoming = await overview.debts(tenantId, { filter: 'upcoming', limit: 100 }, null);
+    const unpaid = await overview.debts(tenantId, { filter: 'unpaid', limit: 100 }, null);
+    expect(summary.totalCount).toBe(all.meta.total);
+    expect(summary.overdueCount).toBe(overdue.meta.total);
+    expect(summary.upcomingCount).toBe(upcoming.meta.total);
+    expect(summary.unpaidCount).toBe(unpaid.meta.total);
+    expect(summary.overdueCount + summary.withinTermCount).toBe(summary.totalCount);
+
+    // Tổng tiền của thẻ = tổng cột "Còn nợ" (Decimal, không qua float).
+    const sumOf = (rows: { debtAmount: string }[]) =>
+      rows.reduce((acc, r) => acc.plus(r.debtAmount), new Prisma.Decimal(0)).toString();
+    expect(summary.totalAmount).toBe(sumOf(all.data));
+    expect(summary.overdueAmount).toBe(sumOf(overdue.data));
+  });
+
+  maybe('công nợ: lọc trạng thái đơn và sắp xếp nợ nhiều nhất', async () => {
+    const small = await makeBooking('200000');
+    const big = await makeBooking('9000000');
+
+    const byStatus = await overview.debts(
+      tenantId,
+      { status: BOOKING_STATUS.COMPLETED, limit: 100 },
+      null,
+    );
+    expect(byStatus.data.every((d) => d.status === BOOKING_STATUS.COMPLETED)).toBe(true);
+    expect(byStatus.data.map((d) => d.bookingId)).not.toContain(small.id);
+
+    const byDebt = await overview.debts(tenantId, { sort: 'debt', limit: 100 }, null);
+    const order = byDebt.data.map((d) => d.bookingId);
+    expect(order.indexOf(big.id)).toBeLessThan(order.indexOf(small.id));
+    const amounts = byDebt.data.map((d) => new Prisma.Decimal(d.debtAmount));
+    for (let i = 1; i < amounts.length; i += 1) {
+      expect(amounts[i - 1]!.greaterThanOrEqualTo(amounts[i]!)).toBe(true);
+    }
+    expect(byDebt.data.find((d) => d.bookingId === big.id)?.plateNumber).not.toBeUndefined();
+  });
+
+  maybe('công nợ: tổng hợp KHÔNG vượt ra khỏi gian hàng của mình', async () => {
+    const theirs = await overview.debtSummary(newId(), {}, null);
+    expect(theirs).toMatchObject({ totalAmount: '0', totalCount: 0, customerCount: 0 });
+  });
+
   maybe('dashboard summary: cân đối = tổng thu − tổng chi', async () => {
     const s = await overview.summary(tenantId, {}, null);
     expect(Number(s.balance)).toBe(Number(s.totalIncome) - Number(s.totalExpense));
@@ -498,5 +566,138 @@ describe('Booking money — phụ phí và phiếu tay vào cùng một con số
     expect(String(after.amountDue)).toBe('700000');
     expect(String(after.collectedAmount)).toBe('700000');
     expect(String(after.debtAmount)).toBe('0');
+  });
+});
+
+/**
+ * 09/11/2026 — đơn huỷ / khách không đến là chuyến KHÔNG diễn ra (đơn đang chạy không huỷ được,
+ * ADR 0045 điều 1): không nhận tiền thuê hay cọc mới, không nằm trong công nợ. Hoàn lại phần đã
+ * thu thì vẫn mở.
+ */
+describe('Payments — đơn huỷ / khách không đến', () => {
+  async function closeBooking(id: string, status: string) {
+    await prisma.booking.update({ where: { id }, data: { status } });
+  }
+
+  maybe('đơn HUỶ: từ chối thu tiền thuê, không sinh payment hay phiếu thu', async () => {
+    const b = await makeBooking('1000000');
+    await closeBooking(b.id, BOOKING_STATUS.CANCELLED);
+
+    await expect(
+      payments.recordForBooking(tenantId, ownerId, b.id, {
+        amount: '400000',
+        method: PAYMENT_METHOD.CASH,
+      }),
+    ).rejects.toMatchObject({
+      status: 409,
+      response: { code: API_ERROR_CODE.BOOKING_MONEY_CLOSED },
+    });
+
+    expect(await prisma.payment.count({ where: { bookingId: b.id } })).toBe(0);
+    expect(await prisma.receipt.count({ where: { bookingId: b.id } })).toBe(0);
+    const fresh = await prisma.booking.findUniqueOrThrow({
+      where: { id: b.id },
+      select: { paidAmount: true },
+    });
+    expect(fresh.paidAmount.toString()).toBe('0');
+  });
+
+  maybe('đơn KHÁCH KHÔNG ĐẾN: từ chối cả thu cọc', async () => {
+    const b = await makeBooking('1000000');
+    await closeBooking(b.id, BOOKING_STATUS.NO_SHOW);
+
+    await expect(
+      payments.recordForBooking(tenantId, ownerId, b.id, {
+        amount: '2000000',
+        method: PAYMENT_METHOD.CASH,
+        kind: PAYMENT_KIND.DEPOSIT,
+      }),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.BOOKING_MONEY_CLOSED } });
+    expect(await prisma.payment.count({ where: { bookingId: b.id } })).toBe(0);
+  });
+
+  maybe('đơn HOÀN TẤT vẫn thu nốt được — chỉ chuyến không diễn ra mới bị khoá', async () => {
+    const b = await makeBooking('1000000');
+    await closeBooking(b.id, BOOKING_STATUS.COMPLETED);
+    const after = await payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '1000000',
+      method: PAYMENT_METHOD.CASH,
+    });
+    expect(String(after.debtAmount)).toBe('0');
+  });
+
+  maybe('đã thu rồi mới huỷ: HOÀN (huỷ giao dịch) vẫn làm được', async () => {
+    const b = await makeBooking('1000000');
+    await payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '300000',
+      method: PAYMENT_METHOD.CASH,
+    });
+    await closeBooking(b.id, BOOKING_STATUS.CANCELLED);
+    const payment = await prisma.payment.findFirstOrThrow({ where: { bookingId: b.id } });
+
+    const voided = await payments.voidPayment(tenantId, ownerId, payment.id);
+    expect(voided.status).toBe(PAYMENT_STATUS.REFUNDED);
+  });
+
+  maybe('lượt huỷ đang chạy giữ dòng đơn: lượt thu song song chờ rồi bị từ chối', async () => {
+    const b = await makeBooking('1000000');
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let locked!: () => void;
+    const lockTaken = new Promise<void>((resolve) => {
+      locked = resolve;
+    });
+
+    // Lượt huỷ: đổi trạng thái rồi GIỮ transaction mở cho tới khi lượt thu đã xếp hàng chờ khoá.
+    const cancelling = prisma.$transaction(
+      async (tx) => {
+        await tx.booking.update({
+          where: { id: b.id },
+          data: { status: BOOKING_STATUS.CANCELLED },
+        });
+        locked();
+        await gate;
+      },
+      { timeout: 15_000 },
+    );
+    await lockTaken;
+
+    const recording = payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '400000',
+      method: PAYMENT_METHOD.CASH,
+    });
+    const settled = recording.then(
+      () => 'recorded',
+      (err: unknown) => err,
+    );
+    // Cho lượt thu kịp chạm `FOR UPDATE` trước khi lượt huỷ commit.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    release();
+    await cancelling;
+
+    await expect(settled).resolves.toMatchObject({
+      response: { code: API_ERROR_CODE.BOOKING_MONEY_CLOSED },
+    });
+    expect(await prisma.payment.count({ where: { bookingId: b.id } })).toBe(0);
+  });
+
+  maybe('đơn KHÁCH KHÔNG ĐẾN rời công nợ: danh sách, tổng hợp và sổ khách', async () => {
+    const owing = await makeBooking('1000000');
+    const before = await overview.debtSummary(tenantId, {}, null);
+    expect(
+      (await overview.debts(tenantId, { limit: 100 }, null)).data.map((d) => d.bookingId),
+    ).toContain(owing.id);
+
+    await closeBooking(owing.id, BOOKING_STATUS.NO_SHOW);
+
+    const ids = (await overview.debts(tenantId, { limit: 100 }, null)).data.map((d) => d.bookingId);
+    expect(ids).not.toContain(owing.id);
+    const after = await overview.debtSummary(tenantId, {}, null);
+    expect(after.totalCount).toBe(before.totalCount - 1);
+    expect(new Prisma.Decimal(before.totalAmount).minus(after.totalAmount).toString()).toBe(
+      '1000000',
+    );
   });
 });

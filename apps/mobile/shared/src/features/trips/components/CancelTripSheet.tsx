@@ -13,6 +13,8 @@ import {
 import { isZeroMoney, LEGAL_DOC } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
+import { useIsOnline } from '@/hooks/use-is-online';
+import { OfflineActionHint } from '@/components/network/OfflineActionHint';
 import { Callout } from '@/components/ui/Callout';
 import { Chip } from '@/components/ui/Chip';
 import { FieldLabel } from '@/components/ui/Field';
@@ -58,6 +60,8 @@ export function CancelTripSheet({
 }) {
   const colors = useColors();
   const t = useTranslations('Trips.cancel');
+  // Huỷ phải tới server — offline thì khoá nút và nói lý do (OfflineActionHint).
+  const online = useIsOnline();
   const fmt = useAppFormat();
   const openDoc = useOpenLegalDoc();
   const preview = useTripCancelPreview(trip.id, open);
@@ -133,9 +137,10 @@ export function CancelTripSheet({
               icon="close-circle-outline"
               variant="danger"
               loading={loading}
-              disabled={notAllowed}
+              disabled={notAllowed || !online}
               onPress={confirm}
             />
+            <OfflineActionHint />
           </YStack>
         </XStack>
       }
@@ -155,14 +160,15 @@ export function CancelTripSheet({
             jc="center"
           >
             <Ionicons
-              name="alert-circle-outline"
+              name="warning-outline"
               size={FEATURED_ICON_GLYPH}
               color={colors.danger}
             />
           </YStack>
           <Text
             col={colors.text}
-            fos={fontSize.h4}
+            fos={fontSize.h3}
+            lh={28}
             fow={fontWeight.semibold}
             ta="center"
             accessibilityRole="header"
@@ -267,6 +273,19 @@ function CancelMoneyPreview({ preview }: { preview: CustomerTripCancelPreview })
   ) : null;
 
   // Hoàn đủ: đầu tấm đã nói số đã trả + dự kiến hoàn — như web (#233), chỉ còn lời nhắc hoàn CHẬM.
+  /*
+   * Huỷ do SỰ CỐ TÀI XẾ (ADR 0074): server đã chốt hoàn 100% dù qua mốc miễn phí — nói rõ vì sao,
+   * để khách không ngần ngại vì nhớ "quá giờ huỷ là mất tiền" (như web).
+   */
+  if (preview.driverIncident) {
+    return (
+      <YStack gap={space.sm}>
+        <Callout tone="success" title={t('driverIncident')} />
+        {deferred}
+      </YStack>
+    );
+  }
+
   if (preview.kind === CUSTOMER_CANCEL_PREVIEW_KIND.FULL_REFUND) return deferred;
 
   if (preview.kind === CUSTOMER_CANCEL_PREVIEW_KIND.LATE_CANCEL) {
@@ -337,7 +356,7 @@ function FactRow({
         {label}
       </Text>
       <Text
-        col={total ? colors.primaryHover : (valueColor ?? colors.text)}
+        col={total ? colors.brandText : (valueColor ?? colors.text)}
         fos={total ? fontSize.bodyLg : fontSize.body}
         fow={total ? fontWeight.semibold : fontWeight.medium}
       >

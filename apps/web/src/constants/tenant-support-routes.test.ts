@@ -31,7 +31,7 @@ describe('toTenantSupportRoute', () => {
     expect(toTenantSupportRoute(CTX, href)).toEqual({ kind: 'mapped', href: expected });
   });
 
-  it('giữ query/hash (bộ lọc trên URL — ADR 0004)', () => {
+  it('giữ query/hash (bộ lọc trên URL - ADR 0004)', () => {
     expect(toTenantSupportRoute(CTX, `${ROUTES.MANAGE.BOOKINGS}?status=active#top`)).toEqual({
       kind: 'mapped',
       href: `${base}/bookings?status=active#top`,
@@ -58,11 +58,11 @@ describe('toTenantSupportRoute', () => {
     ['/trips/t1'],
     ['/chat'],
     ['/chat/th1'],
-  ])('%s — khu không mở trong phiên: chặn, không điều hướng', (href) => {
+  ])('%s - khu không mở trong phiên: chặn, không điều hướng', (href) => {
     expect(toTenantSupportRoute(CTX, href)).toEqual({ kind: 'blocked' });
   });
 
-  it('link sang phiên KHÁC bị chặn — không nhảy phiên', () => {
+  it('link sang phiên KHÁC bị chặn - không nhảy phiên', () => {
     expect(toTenantSupportRoute(CTX, `${adminTenantSupportPath.root(OTHER)}/vehicles`)).toEqual({
       kind: 'blocked',
     });
@@ -85,7 +85,7 @@ describe('toTenantSupportRoute', () => {
     ['https://example.com/x'],
     ['mailto:a@b.c'],
     ['//evil.example/x'],
-  ])('%s — ngoài khu làm việc: để nguyên (rời phiên có chủ đích)', (href) => {
+  ])('%s - ngoài khu làm việc: để nguyên (rời phiên có chủ đích)', (href) => {
     expect(toTenantSupportRoute(CTX, href)).toEqual({ kind: 'outside', href });
   });
 
@@ -99,7 +99,7 @@ describe('toTenantSupportRoute', () => {
  * Chế độ `host` (ADR 0051): hai site không còn tiền tố phân biệt — `/vehicles` vừa là danh sách xe
  * của gian hàng vừa là danh sách xe toàn sàn. Trong phiên, link do VIEW PARTNER dựng thắng.
  */
-describe('toTenantSupportRoute — chế độ host', () => {
+describe('toTenantSupportRoute - chế độ host', () => {
   async function loadHostMode() {
     vi.resetModules();
     vi.stubEnv('NEXT_PUBLIC_XP_ZONE_MODE', 'host');

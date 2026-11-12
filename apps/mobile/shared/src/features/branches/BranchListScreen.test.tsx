@@ -153,7 +153,7 @@ beforeEach(() => {
   jest.restoreAllMocks();
 });
 
-describe('BranchListScreen — quyền', () => {
+describe('BranchListScreen - quyền', () => {
   it('thiếu `branches.view`: màn thiếu quyền, KHÔNG gọi API', async () => {
     const view = await renderScreen([PERMISSION.TENANT_VIEW]);
 
@@ -179,13 +179,13 @@ describe('BranchListScreen — quyền', () => {
   });
 });
 
-describe('BranchListScreen — luật nghiệp vụ hiện thành LÝ DO, không thành nút biến mất', () => {
+describe('BranchListScreen - luật nghiệp vụ hiện thành LÝ DO, không thành nút biến mất', () => {
   it('chi nhánh MẶC ĐỊNH: nút ngừng bị khoá kèm lý do', async () => {
     const view = await renderScreen([PERMISSION.BRANCH_VIEW, PERMISSION.BRANCH_MANAGE], [branch()]);
 
     await view.findByText('Chi nhánh Hải Châu');
     expect(
-      view.getByText('Chi nhánh mặc định không thể ngừng — đặt chi nhánh khác làm mặc định trước'),
+      view.getByText('Chi nhánh mặc định không thể ngừng - đặt chi nhánh khác làm mặc định trước'),
     ).toBeTruthy();
   });
 
@@ -229,7 +229,7 @@ describe('BranchListScreen — luật nghiệp vụ hiện thành LÝ DO, không
   });
 });
 
-describe('BranchListScreen — gói dịch vụ (ADR 0027)', () => {
+describe('BranchListScreen - gói dịch vụ (ADR 0027)', () => {
   it('gói chỉ-đọc: KHÔNG mở thêm chi nhánh, nhưng vẫn xem và SỬA chi nhánh đang có', async () => {
     const view = await renderScreen(
       [PERMISSION.BRANCH_VIEW, PERMISSION.BRANCH_MANAGE],
@@ -254,7 +254,7 @@ describe('BranchListScreen — gói dịch vụ (ADR 0027)', () => {
   });
 });
 
-describe('BranchListScreen — thao tác vòng đời', () => {
+describe('BranchListScreen - thao tác vòng đời', () => {
   it('đặt làm mặc định: gọi đúng endpoint hành động', async () => {
     const view = await renderScreen([PERMISSION.BRANCH_VIEW, PERMISSION.BRANCH_MANAGE]);
 
@@ -306,7 +306,7 @@ describe('BranchListScreen — thao tác vòng đời', () => {
   });
 });
 
-describe('BranchListScreen — trạng thái danh sách', () => {
+describe('BranchListScreen - trạng thái danh sách', () => {
   it('chưa có chi nhánh nào: mời thêm, khác hẳn "không khớp bộ lọc"', async () => {
     const view = await renderScreen([PERMISSION.BRANCH_VIEW, PERMISSION.BRANCH_MANAGE], []);
 

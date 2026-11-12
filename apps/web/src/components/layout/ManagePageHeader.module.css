@@ -47,6 +47,8 @@
    rơi xuống dòng dưới tiêu đề — thứ tự đọc vẫn là tiêu đề → mô tả → hành động. */
 .extra {
   display: flex;
+  min-width: 0;
+  max-width: 100%;
   gap: var(--xp-space-sm);
   flex-wrap: wrap;
 }

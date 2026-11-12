@@ -20,7 +20,7 @@ describe('useCalendarFilters', () => {
    * Vì là chỗ lệch web nên nó phải có một test nói thẳng con số, chứ không chỉ tham chiếu hằng —
    * đổi nó là một quyết định sản phẩm, không phải một lần chỉnh cho vừa mắt.
    */
-  it('mặc định mở 3 ngày — cố ý khác web', () => {
+  it('mặc định mở 3 ngày - cố ý khác web', () => {
     expect(DEFAULT_DAYS).toBe(3);
   });
 
@@ -37,7 +37,7 @@ describe('useCalendarFilters', () => {
     expect(result.current.filtered).toBe(false);
   });
 
-  it('GIEO `q` từ route param — đó là lối "Xem lịch" của một xe', async () => {
+  it('GIEO `q` từ route param - đó là lối "Xem lịch" của một xe', async () => {
     const { result } = await renderHook(() => useCalendarFilters({ q: '59X1-333.44' }));
 
     expect(result.current.filters.q).toBe('59X1-333.44');
@@ -63,7 +63,7 @@ describe('useCalendarFilters', () => {
     expect(result.current.filters.days).toBe(7);
   });
 
-  it('KẸP `days` lạc ra ngoài [1, 62] về mặc định — backend cũng validate lại', async () => {
+  it('KẸP `days` lạc ra ngoài [1, 62] về mặc định - backend cũng validate lại', async () => {
     expect(
       (await renderHook(() => useCalendarFilters({ days: '0' }))).result.current.filters.days,
     ).toBe(DEFAULT_DAYS);
@@ -94,7 +94,7 @@ describe('useCalendarFilters', () => {
     expect(result.current.filters.q).toBe('Vios');
   });
 
-  it('`null` đưa trường về MẶC ĐỊNH, không phải về null — `from`/`days`/`sort` luôn có giá trị', async () => {
+  it('`null` đưa trường về MẶC ĐỊNH, không phải về null - `from`/`days`/`sort` luôn có giá trị', async () => {
     const { result } = await renderHook(() =>
       useCalendarFilters({ from: '2026-08-01', days: '7' }),
     );
@@ -108,7 +108,7 @@ describe('useCalendarFilters', () => {
     expect(result.current.filters.sort).toBe('next_booking');
   });
 
-  it('`null` xoá HẲN hai bộ lọc thu hẹp — `q` và `vehicleType`', async () => {
+  it('`null` xoá HẲN hai bộ lọc thu hẹp - `q` và `vehicleType`', async () => {
     const { result } = await renderHook(() => useCalendarFilters({ q: 'Vios' }));
 
     await act(async () => {
@@ -164,7 +164,7 @@ describe('useCalendarFilters', () => {
     });
   });
 
-  it('`setFilters` giữ NGUYÊN tham chiếu qua các lần render — nó nằm trong deps của effect tìm kiếm', async () => {
+  it('`setFilters` giữ NGUYÊN tham chiếu qua các lần render - nó nằm trong deps của effect tìm kiếm', async () => {
     const { result, rerender } = await renderHook(() => useCalendarFilters());
     const first = result.current.setFilters;
 

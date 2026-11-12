@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { Reveal } from '@/components/motion/Reveal';
 import { useLocaleChoice } from '@/components/i18n/locale-menu';
 import { APP_NAME } from '@/constants/app-name';
 import { ROUTES } from '@/constants/routes';
@@ -94,7 +95,7 @@ export function MarketFooter() {
         </span>
       </span>
 
-      <div className={styles.inner}>
+      <Reveal className={styles.inner}>
         <div className={styles.top}>
           <div className={styles.about}>
             <Link href={ROUTES.HOME} className={styles.brand} aria-label={APP_NAME}>
@@ -202,7 +203,7 @@ export function MarketFooter() {
             ))}
           </div>
         </div>
-      </div>
+      </Reveal>
     </footer>
   );
 }

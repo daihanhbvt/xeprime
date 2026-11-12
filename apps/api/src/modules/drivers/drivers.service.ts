@@ -21,6 +21,7 @@ import {
   driverResponseExpiredEmployerCopy,
   driverTripDeclinedEmployerCopy,
   driverTripDroppedEmployerCopy,
+  holderNameDiffers,
   tripDriverReassignedCustomerCopy,
 } from '@xeprime/domain';
 import {
@@ -48,6 +49,12 @@ import {
   DRIVER_LINK_OPEN_STATUSES,
   DRIVER_LINK_STATUS,
   DRIVER_LINK_STATUS_FILTER_ANY,
+  DRIVER_LINK_STATUS_FILTER_CLOSED,
+  DRIVER_LINK_CLOSED_STATUSES,
+  DRIVER_LICENCE_CHECK_FILTER,
+  DRIVER_LIST_SORT,
+  DRIVER_OPERATION_FILTER,
+  type DriverListSort,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   SERVICE_TYPE,
@@ -84,9 +91,11 @@ import {
   DriverLicenceSummaryDto,
   DriverAssignmentListQueryDto,
   DriverAssignmentPageDto,
+  DriverListFilterDto,
   DriverListQueryDto,
   DriverOverviewDto,
   DriverPageDto,
+  DriverSummaryDto,
   DriverWageDto,
   DriverWageQuoteDto,
   DriverWageSettingsDto,
@@ -109,8 +118,12 @@ const DRIVER_ASSIGNABLE_MAX = 200;
 const DRIVER_AUTO_ASSIGN_LOAD_WINDOW_DAYS = 7;
 /** Số chuyến đã nhận liệt kê trong lỗi chặn "ngừng làm tài xế" — đủ để tài xế biết gọi ai. */
 const LEAVE_BLOCKING_TRIPS_SHOWN = 20;
+/** Trần số liên kết mở quét cho phép lọc "Cần đối chiếu giấy tờ" (xem `licenceCheckIds`). */
+const DRIVER_LICENCE_CHECK_SCAN_MAX = 1000;
 /** Số tháng của biểu đồ xu hướng tiền công trong ngăn chi tiết tài xế — tính cả tháng được chọn. */
 const DRIVER_WAGE_TREND_MONTHS = 6;
+/** Số đơn đang gán liệt kê trong ngăn chi tiết — chống trùng lịch theo người giữ con số này nhỏ. */
+const DRIVER_CURRENT_TRIPS_SHOWN = 20;
 
 const LINK_SELECT = {
   id: true,
@@ -164,20 +177,18 @@ export class DriversService {
   async list(tenantId: string, query: DriverListQueryDto): Promise<DriverPageDto> {
     const paging = resolvePaging(query, DRIVER_DEFAULT_LIMIT, DRIVER_MAX_LIMIT);
     const where: Prisma.DriverWhereInput = {
-      tenantId,
-      ...(query.linkStatus === DRIVER_LINK_STATUS_FILTER_ANY
-        ? {}
-        : { linkStatus: query.linkStatus ? query.linkStatus : { in: OPEN_LINK } }),
-      ...(query.driverType ? { driverType: query.driverType } : {}),
-      ...(query.q ? { OR: driverSearchOr(query.q) } : {}),
+      ...filterWhere(tenantId, query),
+      ...linkStatusWhere(query.linkStatus),
+      ...(query.licenceCheck === DRIVER_LICENCE_CHECK_FILTER
+        ? { id: { in: await this.licenceCheckIds(tenantId) } }
+        : {}),
     };
 
     const [total, rows] = await this.prisma.$transaction([
       this.prisma.driver.count({ where }),
       this.prisma.driver.findMany({
         where,
-        // Lời mời chờ trả lời lên đầu (`invited` < `active` < `suspended` theo chữ cái), rồi tên.
-        orderBy: [{ linkStatus: 'asc' }, { name: 'asc' }, { id: 'asc' }],
+        orderBy: LIST_ORDER[(query.sort as DriverListSort | undefined) ?? DRIVER_LIST_SORT.STATUS],
         skip: paging.skip,
         take: paging.take,
         select: LINK_SELECT,
@@ -188,6 +199,59 @@ export class DriversService {
       data: await this.listDtos(tenantId, rows, query.month),
       meta: paginationMeta(paging, total),
     };
+  }
+
+  /**
+   * Dải số đếm đầu màn Tài xế. Áp CÙNG bộ lọc chung với danh sách (tìm kiếm, hình thức, vận hành)
+   * nên ô nào cũng bằng tổng của danh sách khi bấm vào nó.
+   */
+  async summary(tenantId: string, query: DriverListFilterDto): Promise<DriverSummaryDto> {
+    const where = filterWhere(tenantId, query);
+    const [byStatus, checkIds] = await Promise.all([
+      this.prisma.driver.groupBy({ by: ['linkStatus'], where, _count: { _all: true } }),
+      this.licenceCheckIds(tenantId),
+    ]);
+    const count = (statuses: readonly string[]) =>
+      byStatus
+        .filter((r) => statuses.includes(r.linkStatus))
+        .reduce((sum, r) => sum + r._count._all, 0);
+    const licenceCheck =
+      checkIds.length === 0
+        ? 0
+        : await this.prisma.driver.count({ where: { ...where, id: { in: checkIds } } });
+    return {
+      open: count(OPEN_LINK),
+      active: count([DRIVER_LINK_STATUS.ACTIVE]),
+      invited: count([DRIVER_LINK_STATUS.INVITED]),
+      suspended: count([DRIVER_LINK_STATUS.SUSPENDED]),
+      closed: count(DRIVER_LINK_CLOSED_STATUSES),
+      licenceCheck,
+    };
+  }
+
+  /**
+   * Liên kết CÒN MỞ cần đối chiếu bằng lái: tài khoản chưa có bằng đã xác thực còn hạn, hoặc họ
+   * tên trên bằng lệch tên bên thuê nhập khi mời. Phép so tên chuẩn hoá bỏ dấu ở `@xeprime/domain`
+   * (cùng hàm với cảnh báo trên thẻ), nên tập này tính trong Node rồi đưa về DB dưới dạng `id IN`.
+   * Liên kết mở của một bên thuê là vài chục dòng; trần chỉ để chặn trường hợp bất thường.
+   */
+  private async licenceCheckIds(tenantId: string): Promise<string[]> {
+    const links = await this.prisma.driver.findMany({
+      where: { tenantId, linkStatus: { in: OPEN_LINK } },
+      orderBy: { id: 'asc' },
+      take: DRIVER_LICENCE_CHECK_SCAN_MAX,
+      select: { id: true, userId: true, name: true },
+    });
+    const licences = await this.licenceSummaries(links.map((l) => l.userId));
+    return links
+      .filter((l) => {
+        const licence = licences.get(l.userId);
+        return (
+          licence?.state !== DRIVER_LICENCE_STATE.VERIFIED ||
+          holderNameDiffers(licence.fullName, l.name)
+        );
+      })
+      .map((l) => l.id);
   }
 
   /**
@@ -250,20 +314,21 @@ export class DriversService {
     const COMPLETED = DRIVER_ASSIGNMENT_OUTCOME.COMPLETED;
 
     const openWhere = { tenantId, driverId, outcome: DRIVER_ASSIGNMENT_OUTCOME.OPEN };
-    const [[driver], [stats], trendRows, [reliability], accepted, pendingTrips] = await Promise.all([
-      this.listDtos(tenantId, [row], monthKey),
-      this.prisma.$queryRaw<
-        {
-          completed_trips: number;
-          driven_days: number;
-          completed_wage: string;
-          agreed_trips: number;
-          agreed_wage: string;
-          avg_wage: string;
-          avg_days: number;
-          edited_trips: number;
-        }[]
-      >`
+    const [[driver], [stats], trendRows, [reliability], accepted, pendingTrips, current] =
+      await Promise.all([
+        this.listDtos(tenantId, [row], monthKey),
+        this.prisma.$queryRaw<
+          {
+            completed_trips: number;
+            driven_days: number;
+            completed_wage: string;
+            agreed_trips: number;
+            agreed_wage: string;
+            avg_wage: string;
+            avg_days: number;
+            edited_trips: number;
+          }[]
+        >`
         SELECT
           COUNT(*) FILTER (WHERE a."outcome" = ${COMPLETED})::int AS completed_trips,
           COALESCE(SUM(a."wage_days") FILTER (WHERE a."outcome" = ${COMPLETED}), 0)::int AS driven_days,
@@ -280,7 +345,7 @@ export class DriversService {
           AND a."driver_id" = ${driverId}
           AND a."accepted_at" IS NOT NULL
           AND a."ended_at" >= ${from} AND a."ended_at" < ${to}`,
-      this.prisma.$queryRaw<{ month: string; trips: number; wage_total: string }[]>`
+        this.prisma.$queryRaw<{ month: string; trips: number; wage_total: string }[]>`
         SELECT
           to_char(a."ended_at" AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM') AS month,
           COUNT(*) FILTER (WHERE a."outcome" = ${COMPLETED})::int AS trips,
@@ -293,9 +358,9 @@ export class DriversService {
           AND a."accepted_at" IS NOT NULL
           AND a."ended_at" >= ${trendFrom} AND a."ended_at" < ${to}
         GROUP BY 1`,
-      this.prisma.$queryRaw<
-        { accepted: number; declined: number; expired: number; median_seconds: number | null }[]
-      >`
+        this.prisma.$queryRaw<
+          { accepted: number; declined: number; expired: number; median_seconds: number | null }[]
+        >`
         SELECT
           COUNT(*) FILTER (WHERE a."accepted_at" IS NOT NULL)::int AS accepted,
           COUNT(*) FILTER (WHERE a."accepted_at" IS NULL AND a."outcome" = ${DRIVER_ASSIGNMENT_OUTCOME.DECLINED})::int AS declined,
@@ -309,13 +374,28 @@ export class DriversService {
         WHERE a."tenant_id" = ${tenantId}
           AND a."driver_id" = ${driverId}
           AND a."assigned_at" >= ${since}`,
-      this.prisma.bookingDriverAssignment.aggregate({
-        where: { ...openWhere, acceptedAt: { not: null } },
-        _count: { _all: true },
-        _sum: { wageAmount: true },
-      }),
-      this.prisma.bookingDriverAssignment.count({ where: { ...openWhere, acceptedAt: null } }),
-    ]);
+        this.prisma.bookingDriverAssignment.aggregate({
+          where: { ...openWhere, acceptedAt: { not: null } },
+          _count: { _all: true },
+          _sum: { wageAmount: true },
+        }),
+        this.prisma.bookingDriverAssignment.count({ where: { ...openWhere, acceptedAt: null } }),
+        // Cùng tập đơn mà `activeBookingCount` của thẻ đếm — bấm "N chuyến" phải thấy đúng N chuyến.
+        this.prisma.booking.findMany({
+          where: { tenantId, driverId, deletedAt: null, status: { in: OCCUPYING } },
+          orderBy: [{ pickupAt: 'asc' }, { id: 'asc' }],
+          take: DRIVER_CURRENT_TRIPS_SHOWN,
+          select: {
+            id: true,
+            code: true,
+            status: true,
+            pickupAt: true,
+            returnAt: true,
+            driverAssignmentStatus: true,
+            vehicle: { select: { name: true, plateNumber: true } },
+          },
+        }),
+      ]);
 
     const byMonth = new Map(trendRows.map((r) => [r.month, r]));
     const trend = Array.from({ length: DRIVER_WAGE_TREND_MONTHS }, (_, i) => {
@@ -336,7 +416,8 @@ export class DriversService {
         agreedTrips: stats!.agreed_trips,
         agreedWage: stats!.agreed_wage,
         wageTotal: String(Number(stats!.completed_wage) + Number(stats!.agreed_wage)),
-        averageDailyWage: avgDays > 0 ? String(Math.round(Number(stats!.avg_wage) / avgDays)) : null,
+        averageDailyWage:
+          avgDays > 0 ? String(Math.round(Number(stats!.avg_wage) / avgDays)) : null,
         editedTrips: stats!.edited_trips,
       },
       upcoming: {
@@ -344,6 +425,16 @@ export class DriversService {
         acceptedWage: (accepted._sum.wageAmount ?? new Prisma.Decimal(0)).toFixed(0),
         pendingTrips,
       },
+      current: current.map((b) => ({
+        bookingId: b.id,
+        bookingCode: b.code,
+        bookingStatus: b.status,
+        pickupAt: b.pickupAt.toISOString(),
+        returnAt: b.returnAt.toISOString(),
+        vehicleName: b.vehicle.name,
+        vehiclePlate: b.vehicle.plateNumber,
+        assignmentStatus: b.driverAssignmentStatus,
+      })),
       reliability: {
         windowDays: DRIVER_DROP_STATS_WINDOW_DAYS,
         decided,
@@ -381,7 +472,7 @@ export class DriversService {
       throw new NotFoundException({
         code: API_ERROR_CODE.DRIVER_ACCOUNT_NOT_FOUND,
         message:
-          'Số điện thoại này chưa có tài khoản XePrime đã xác minh — nhờ tài xế đăng ký trước',
+          'Số điện thoại này chưa có tài khoản XePrime đã xác minh - nhờ tài xế đăng ký trước',
       });
     }
 
@@ -611,7 +702,7 @@ export class DriversService {
       if (committed.length > 0) {
         throw new ConflictException({
           code: API_ERROR_CODE.DRIVER_HAS_ACCEPTED_TRIPS,
-          message: `Bạn còn ${committed.length} chuyến đã nhận — liên hệ bên thuê để đổi tài xế trước khi ngừng`,
+          message: `Bạn còn ${committed.length} chuyến đã nhận - liên hệ bên thuê để đổi tài xế trước khi ngừng`,
           details: {
             count: committed.length,
             trips: committed.map((b) => ({
@@ -628,7 +719,7 @@ export class DriversService {
         {
           type: NOTIFICATION_TYPE.DRIVER_LINK_ENDED,
           title: `${link.name} đã ngừng làm tài xế cho bạn`,
-          body: 'Các chuyến chưa nhận xe của tài xế này đã được gỡ — hãy gán người khác.',
+          body: 'Các chuyến chưa nhận xe của tài xế này đã được gỡ - hãy gán người khác.',
           targetType: NOTIFICATION_TARGET_TYPE.DRIVER_LINK,
           targetId: id,
         },
@@ -770,12 +861,13 @@ export class DriversService {
     },
   ): Promise<{ skipped: boolean }> {
     const booking = await this.lockBookingForDriverChange(tx, input.tenantId, input.bookingId);
-    if (input.driverId === booking.driverId && !booking.externalDriverName) return { skipped: false };
+    if (input.driverId === booking.driverId && !booking.externalDriverName)
+      return { skipped: false };
     // Đã bàn giao (xe đang chạy) hoặc đơn đã khép ⇒ người cầm lái đã chốt, không đổi/gỡ nữa.
     if (!REASSIGNABLE.includes(booking.status)) {
       throw new ConflictException({
         code: API_ERROR_CODE.DRIVER_ASSIGNMENT_LOCKED,
-        message: 'Đơn đã giao xe hoặc đã kết thúc — không đổi tài xế được nữa',
+        message: 'Đơn đã giao xe hoặc đã kết thúc - không đổi tài xế được nữa',
       });
     }
 
@@ -795,13 +887,13 @@ export class DriversService {
       if (found.linkStatus !== DRIVER_LINK_STATUS.ACTIVE) {
         throw new ConflictException({
           code: API_ERROR_CODE.DRIVER_NOT_ASSIGNABLE,
-          message: `${found.name} chưa ở trạng thái liên kết — chưa gán được`,
+          message: `${found.name} chưa ở trạng thái liên kết - chưa gán được`,
         });
       }
       if (found.userId === booking.bookingRequest?.customerUserId) {
         throw new ConflictException({
           code: API_ERROR_CODE.DRIVER_IS_TRIP_CUSTOMER,
-          message: `${found.name} là khách của chính chuyến này — chọn tài xế khác`,
+          message: `${found.name} là khách của chính chuyến này - chọn tài xế khác`,
         });
       }
       const busy = await this.busyUserIds(tx, [found.userId], {
@@ -913,7 +1005,7 @@ export class DriversService {
         link.userId,
         {
           type: NOTIFICATION_TYPE.DRIVER_TRIP_ASSIGNED,
-          title: `Bạn có chuyến mới từ ${employer} — vui lòng xác nhận`,
+          title: `Bạn có chuyến mới từ ${employer} - vui lòng xác nhận`,
           body: `Chuyến ${booking.code} · nhận lúc ${formatVnDateTime(booking.pickupAt)}${wageText} · trả lời trước ${formatVnDateTime(respondBy)}`,
           targetType: NOTIFICATION_TARGET_TYPE.DRIVER_TRIP,
           targetId: booking.id,
@@ -951,7 +1043,7 @@ export class DriversService {
         if (input.actorUserId === null) return null;
         throw new UnprocessableEntityException({
           code: API_ERROR_CODE.DRIVER_WAGE_REQUIRED,
-          message: 'Gian hàng chưa đặt tiền công tài xế mặc định — nhập tiền công cho chuyến này',
+          message: 'Gian hàng chưa đặt tiền công tài xế mặc định - nhập tiền công cho chuyến này',
         });
       }
       amount = Number(tenant.driverDailyWage) * days;
@@ -1350,11 +1442,18 @@ export class DriversService {
       });
       if (claimed.count === 0) throw assignmentStateConflict();
       // Cùng đường khép với mọi kết cục khác — tiền công về 0 (ADR 0075), kèm ba cột lý do/vùng.
-      await closeOpenDriverAssignment(tx, bookingId, DRIVER_ASSIGNMENT_OUTCOME.DROPPED, userId, now, {
-        dropReasonCategory: input.reasonCategory,
-        dropReason: note,
-        dropZone: policy.zone,
-      });
+      await closeOpenDriverAssignment(
+        tx,
+        bookingId,
+        DRIVER_ASSIGNMENT_OUTCOME.DROPPED,
+        userId,
+        now,
+        {
+          dropReasonCategory: input.reasonCategory,
+          dropReason: note,
+          dropZone: policy.zone,
+        },
+      );
       // Cooldown chỉ KÉO DÀI, không rút ngắn một hình phạt đang chạy dài hơn.
       if (policy.cooldownUntil && booking.driverId) {
         await tx.driver.updateMany({
@@ -1475,7 +1574,7 @@ export class DriversService {
     if (running > 0) {
       throw new ConflictException({
         code: API_ERROR_CODE.DRIVER_HAS_ACTIVE_TRIP,
-        message: `Tài xế đang chạy ${running} chuyến — chờ bàn giao trả xe xong rồi mới kết thúc liên kết`,
+        message: `Tài xế đang chạy ${running} chuyến - chờ bàn giao trả xe xong rồi mới kết thúc liên kết`,
         details: { count: running },
       });
     }
@@ -1656,7 +1755,10 @@ export class DriversService {
       this.feePolicies.withDriverLimits(),
     ]);
     if (!booking) {
-      throw new NotFoundException({ code: API_ERROR_CODE.NOT_FOUND, message: 'Không tìm thấy đơn' });
+      throw new NotFoundException({
+        code: API_ERROR_CODE.NOT_FOUND,
+        message: 'Không tìm thấy đơn',
+      });
     }
     const days = wageDaysOf(booking);
     const range = driverWageRange(DRIVER_WAGE_STAGE.OFFER, limits, days)!;
@@ -1759,7 +1861,7 @@ export class DriversService {
       if (stage === DRIVER_WAGE_STAGE.NOT_APPLICABLE) {
         throw new UnprocessableEntityException({
           code: API_ERROR_CODE.DRIVER_WAGE_NOT_APPLICABLE,
-          message: 'Tài xế chưa từng nhận chuyến này — lượt gán không có tiền công',
+          message: 'Tài xế chưa từng nhận chuyến này - lượt gán không có tiền công',
         });
       }
       const editableUntil = driverWageEditableUntil(row.endedAt);
@@ -1781,7 +1883,10 @@ export class DriversService {
       if (current === amount) {
         // Số không đổi: chỉ đồng bộ mẫu số ngày — không phải một lần đổi tiền, không lịch sử/thông báo.
         if (row.wageDays !== days) {
-          await tx.bookingDriverAssignment.update({ where: { id: row.id }, data: { wageDays: days } });
+          await tx.bookingDriverAssignment.update({
+            where: { id: row.id },
+            data: { wageDays: days },
+          });
         }
         return;
       }
@@ -2152,7 +2257,7 @@ export function driverBusy(name?: string): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.DRIVER_BUSY,
     message: name
-      ? `${name} đã có chuyến khác trong khung giờ này — chọn tài xế khác`
+      ? `${name} đã có chuyến khác trong khung giờ này - chọn tài xế khác`
       : 'Tài xế đã có chuyến khác trong khung giờ này',
   });
 }
@@ -2167,7 +2272,7 @@ function linkNotFound(): NotFoundException {
 function linkStateConflict(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.DRIVER_LINK_STATE_CONFLICT,
-    message: 'Liên kết tài xế đã đổi trạng thái — tải lại rồi thử lại',
+    message: 'Liên kết tài xế đã đổi trạng thái - tải lại rồi thử lại',
   });
 }
 
@@ -2182,7 +2287,7 @@ function assignmentStateConflict(): ConflictException {
 function assignmentExpired(respondBy: Date | null): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.DRIVER_ASSIGNMENT_EXPIRED,
-    message: 'Đã quá hạn xác nhận chuyến này — chuyến được trả lại cho bên thuê',
+    message: 'Đã quá hạn xác nhận chuyến này - chuyến được trả lại cho bên thuê',
     ...(respondBy ? { details: { respondBy: respondBy.toISOString() } } : {}),
   });
 }
@@ -2235,6 +2340,39 @@ function toDto(
 }
 
 /** Tìm theo tên · SĐT. Trong phiên hỗ trợ (ADR 0050 §11) SĐT chỉ khớp đủ số. */
+/** Bộ lọc chung của danh sách và dải số đếm — trạng thái liên kết đi riêng (`linkStatusWhere`). */
+function filterWhere(tenantId: string, query: DriverListFilterDto): Prisma.DriverWhereInput {
+  // `driverId` của đơn có index — cùng tập đơn mà `activeBookingCount` đếm.
+  const onTrip: Prisma.BookingListRelationFilter = {
+    some: { deletedAt: null, status: { in: OCCUPYING } },
+  };
+  return {
+    tenantId,
+    ...(query.driverType ? { driverType: query.driverType } : {}),
+    ...(query.operation === DRIVER_OPERATION_FILTER.ON_TRIP ? { bookings: onTrip } : {}),
+    ...(query.operation === DRIVER_OPERATION_FILTER.IDLE
+      ? { bookings: { none: onTrip.some } }
+      : {}),
+    ...(query.q ? { OR: driverSearchOr(query.q) } : {}),
+  };
+}
+
+/** Bỏ trống = liên kết còn mở; `any` = mọi trạng thái; `closed` = hai trạng thái lịch sử. */
+function linkStatusWhere(linkStatus: string | undefined): Prisma.DriverWhereInput {
+  if (linkStatus === DRIVER_LINK_STATUS_FILTER_ANY) return {};
+  if (linkStatus === DRIVER_LINK_STATUS_FILTER_CLOSED) {
+    return { linkStatus: { in: [...DRIVER_LINK_CLOSED_STATUSES] } };
+  }
+  return { linkStatus: linkStatus ? linkStatus : { in: OPEN_LINK } };
+}
+
+const LIST_ORDER: Readonly<Record<DriverListSort, Prisma.DriverOrderByWithRelationInput[]>> = {
+  // Lời mời chờ trả lời lên đầu (`invited` < `active` < `suspended` theo chữ cái), rồi tên.
+  [DRIVER_LIST_SORT.STATUS]: [{ linkStatus: 'asc' }, { name: 'asc' }, { id: 'asc' }],
+  [DRIVER_LIST_SORT.NEWEST]: [{ invitedAt: 'desc' }, { id: 'desc' }],
+  [DRIVER_LIST_SORT.NAME_ASC]: [{ name: 'asc' }, { id: 'asc' }],
+};
+
 function driverSearchOr(q: string): Prisma.DriverWhereInput[] {
   const pii = piiSearch(q);
   if (pii.substring) {
@@ -2261,7 +2399,9 @@ export function wageDaysOf(b: {
 }): number {
   const snap = b.priceSnapshot;
   const days =
-    snap && typeof snap === 'object' && !Array.isArray(snap) ? (snap as { days?: unknown }).days : null;
+    snap && typeof snap === 'object' && !Array.isArray(snap)
+      ? (snap as { days?: unknown }).days
+      : null;
   if (typeof days === 'number' && Number.isInteger(days) && days > 0) return days;
   return Math.max(1, Math.ceil((b.returnAt.getTime() - b.pickupAt.getTime()) / DAY_MS));
 }
@@ -2317,7 +2457,11 @@ export const WAGE_SELECT = {
 } satisfies Prisma.BookingDriverAssignmentSelect;
 
 /** Tiền công của một lượt gán → DTO (ADR 0075). Khoảng sửa theo chính sách HIỆN HÀNH. */
-export function toWageDto(r: WageSource, limits: WithDriverLimits, now: Date = new Date()): DriverWageDto {
+export function toWageDto(
+  r: WageSource,
+  limits: WithDriverLimits,
+  now: Date = new Date(),
+): DriverWageDto {
   const stage: DriverWageStage = driverWageStage(r);
   const range = r.wageDays ? driverWageRange(stage, limits, r.wageDays) : null;
   const editableUntil = driverWageEditableUntil(r.endedAt);
@@ -2347,7 +2491,10 @@ export function shiftMonthKey(key: string, delta: number): string {
 }
 
 /** Khoảng `[đầu tháng; đầu tháng sau)` của tháng `YYYY-MM` theo giờ Việt Nam (UTC+7, không DST). */
-export function vnMonthRange(month: string | undefined, now: Date = new Date()): { from: Date; to: Date } {
+export function vnMonthRange(
+  month: string | undefined,
+  now: Date = new Date(),
+): { from: Date; to: Date } {
   const key = month ?? vnMonthKey(now);
   const [y, m] = key.split('-').map(Number) as [number, number];
   const from = new Date(Date.UTC(y, m - 1, 1) - 7 * 3_600_000);

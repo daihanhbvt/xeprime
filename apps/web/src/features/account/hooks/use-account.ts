@@ -5,12 +5,13 @@ import { queryKeys } from '@/services/query-keys';
 import { fetchMyProfile, updateMyProfile } from '../api';
 import type { UpdateProfileInput, UserProfile } from '../types';
 
-export function useMyProfile() {
+export function useMyProfile(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: queryKeys.account.profile(),
     queryFn: fetchMyProfile,
     // 401 = chưa đăng nhập, là trạng thái hợp lệ chứ không phải lỗi cần thử lại.
     retry: false,
+    enabled: options.enabled ?? true,
   });
 }
 

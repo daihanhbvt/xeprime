@@ -1,0 +1,142 @@
+/*
+ * "Đơn thuê xe" gộp — Figma Partner-XePrime "Rental Request - List" (`23973:51952`, 05/11/2026):
+ * cột trạng thái 280 bên trái, danh sách bên phải cách 20; nhóm cách nhau 20, thẻ cách 12. Màn hẹp
+ * (≤1024): cột trạng thái thành một hàng cuộn ngang phía trên (xem `StatusRail.module.css`).
+ */
+.page {
+  width: 100%;
+  min-width: 0;
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-12);
+}
+
+/* "Đơn đã kết thúc (17)" — nút viền xám cao 40, chữ 14/600 (design). */
+.endedLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  height: 40px;
+  padding: 0 var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.endedLink:hover {
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-text);
+}
+
+.endedLink:focus-visible {
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.content {
+  min-width: 0;
+}
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.viewAll {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-color-primary-active);
+  font: inherit;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.viewAll:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+.viewAll:focus-visible {
+  border-radius: var(--xp-border-radius-sm);
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * Đang hiện dữ liệu CŨ trong lúc tải bộ lọc mới: mờ nhẹ, chặn bấm. Làm mới NỀN (30 giây) KHÔNG
+ * vào đây — người trực đang bấm một thẻ không được bị khoá tay giữa chừng.
+ */
+.listBusy {
+  composes: list;
+  opacity: 0.6;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+@media (max-width: 1440px) {
+  .layout {
+    grid-template-columns: 248px minmax(0, 1fr);
+    gap: var(--xp-space-md);
+  }
+}
+
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--xp-space-md);
+  }
+}
+
+@media (max-width: 640px) {
+  .pagination {
+    justify-content: center;
+  }
+
+  .headerActions {
+    width: 100%;
+  }
+
+  .headerActions > * {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: center;
+    min-height: 44px;
+    padding-inline: var(--xp-space-12);
+  }
+}

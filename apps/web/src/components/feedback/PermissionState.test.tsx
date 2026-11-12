@@ -6,7 +6,7 @@ import { PermissionState } from './PermissionState';
 
 afterEach(cleanup);
 
-describe('PermissionState — nói rõ thiếu quyền', () => {
+describe('PermissionState - nói rõ thiếu quyền', () => {
   it('mặc định là forbidden với câu chữ sẵn', () => {
     render(<PermissionState />);
 
@@ -51,7 +51,7 @@ describe('PermissionState — nói rõ thiếu quyền', () => {
     expect(screen.getByRole('button', { name: 'Quay về trang chủ' })).toBeTruthy();
   });
 
-  it('KHÔNG tự dựng lối về đăng nhập — 403 nghĩa là đã đăng nhập rồi (134:2482)', () => {
+  it('KHÔNG tự dựng lối về đăng nhập - 403 nghĩa là đã đăng nhập rồi (134:2482)', () => {
     render(<PermissionState />);
 
     expect(screen.queryByText(/đăng nhập/i)).toBeNull();
@@ -59,7 +59,7 @@ describe('PermissionState — nói rõ thiếu quyền', () => {
   });
 });
 
-describe('PermissionState — ranh giới bảo mật', () => {
+describe('PermissionState - ranh giới bảo mật', () => {
   it('không nhận và không hiển thị dữ liệu của bản ghi bị từ chối', () => {
     // Hợp đồng chỉ có: kind, title, description, missingPermissions, action.
     // Không có khe nào cho dữ liệu bản ghi — người gọi không vô tình rò được.

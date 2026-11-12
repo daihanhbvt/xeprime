@@ -57,7 +57,7 @@ describe('DepositToggleCard', () => {
     expect(onChange).toHaveBeenCalledWith(true);
   });
 
-  it('tuyến hoa hồng: công tắc BẬT + KHOÁ, có giải thích — không ẩn (ADR 0027 điều 4)', () => {
+  it('tuyến hoa hồng: công tắc BẬT + KHOÁ, có giải thích - không ẩn (ADR 0027 điều 4)', () => {
     const { onChange, toggle } = setup(
       makeSettings({
         billingMode: BILLING_MODE.COMMISSION,

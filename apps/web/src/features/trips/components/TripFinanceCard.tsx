@@ -12,12 +12,14 @@ import {
   hasDepositToShow,
   type DepositStatus,
 } from '@xeprime/types';
+import { InfoHint } from '@/components/data-display/InfoHint';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { isZeroMoney } from '@/lib/money';
 import { visibleFeeLines } from '@/lib/customer-price-view';
 import type { CustomerTripDetail, CustomerTripFinance } from '../types';
 import { RefundAccountDialog } from './RefundAccountDialog';
 import { TripRequestPill, type TripRequestTone } from './TripRequestLayout';
+import { cx } from '@/lib/cx';
 import styles from './TripFinanceCard.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -467,19 +469,39 @@ function DepositBlock({
   const fmt = useAppFormat();
 
   const refunded = finance.refundAmount !== null;
+  /*
+   * Lời giải thích theo trạng thái cọc - nằm trong dấu "i" cạnh tiêu đề. Chip trạng thái và số tiền
+   * vẫn hiện thẳng; riêng câu "đã hoàn" (mang mã tham chiếu để đối chiếu) giữ hiện thẳng bên dưới.
+   */
+  const explain = [
+    status === DEPOSIT_STATUS.NOT_RECEIVED
+      ? t('depositNotReceived', { amount: fmt.money(finance.depositRequired) })
+      : null,
+    !isZeroMoney(finance.depositDeducted) ? t('deductNote') : null,
+    refunded
+      ? null
+      : status === DEPOSIT_STATUS.AWAITING_REFUND
+        ? t('awaitingRefund')
+        : status === DEPOSIT_STATUS.RECEIVED
+          ? t('holding')
+          : status === DEPOSIT_STATUS.SETTLED
+            ? t('settled')
+            : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <section className={styles.deposit} aria-label={t('depositAria')}>
       <header className={styles.depositHead}>
-        <h3 className={styles.subTitle}>{t('depositTitle')}</h3>
+        <h3 className={cx(styles.subTitle, styles.labelWithHint)}>
+          {t('depositTitle')}
+          {explain ? <InfoHint content={explain} label={t('depositHintLabel')} /> : null}
+        </h3>
         <StatusTag value={status} meta={DEPOSIT_STATUS_META} group="depositStatus" />
       </header>
 
-      {status === DEPOSIT_STATUS.NOT_RECEIVED ? (
-        <p className={styles.depositNote}>
-          {t('depositNotReceived', { amount: fmt.money(finance.depositRequired) })}
-        </p>
-      ) : (
+      {status === DEPOSIT_STATUS.NOT_RECEIVED ? null : (
         <dl className={styles.rows}>
           <div className={styles.row}>
             <dt>{t('depositReceived')}</dt>
@@ -506,10 +528,6 @@ function DepositBlock({
         </dl>
       )}
 
-      {!isZeroMoney(finance.depositDeducted) ? (
-        <p className={styles.depositNote}>{t('deductNote')}</p>
-      ) : null}
-
       {refunded ? (
         <p className={styles.depositNote}>
           {t('refundedBy', {
@@ -521,12 +539,6 @@ function DepositBlock({
             : ''}
           {t('refundedTail')}
         </p>
-      ) : status === DEPOSIT_STATUS.AWAITING_REFUND ? (
-        <p className={styles.depositNote}>{t('awaitingRefund')}</p>
-      ) : status === DEPOSIT_STATUS.RECEIVED ? (
-        <p className={styles.depositNote}>{t('holding')}</p>
-      ) : status === DEPOSIT_STATUS.SETTLED ? (
-        <p className={styles.depositNote}>{t('settled')}</p>
       ) : null}
     </section>
   );

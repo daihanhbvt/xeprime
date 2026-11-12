@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   ACCOUNT_REALM,
@@ -9,7 +19,9 @@ import type { AuthenticatedUser, TenantContext } from '../../../common/types/req
 import {
   BookingSettlementDto,
   CorrectDepositRefundDto,
+  PreviewReturnSettlementDto,
   RecordDepositRefundDto,
+  ReturnSettlementPreviewDto,
   SaveSurchargeDto,
   VoidSurchargeDto,
 } from './dto/settlement.dto';
@@ -43,6 +55,25 @@ export class BookingSettlementController {
     @Param('id') id: string,
   ): Promise<BookingSettlementDto> {
     return this.settlement.get(tenant.tenantId, id);
+  }
+
+  /**
+   * Hộp "Xác nhận đã nhận lại xe" (06/11/2026) gọi lại mỗi lần người dùng đổi giờ / Odo / phụ phí
+   * nháp. POST vì thân là danh sách khoản nháp; KHÔNG ghi gì. Cùng quyền với đọc quyết toán.
+   */
+  @Post('settlement/return-preview')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions(PERMISSION.BOOKING_VIEW)
+  @ApiOperation({
+    summary: 'Xem trước quyết toán lúc nhận lại xe: cọc, phát sinh nháp, hoàn cọc, còn phải thu',
+  })
+  @ApiOkResponse({ type: ReturnSettlementPreviewDto })
+  previewReturn(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+    @Body() dto: PreviewReturnSettlementDto,
+  ): Promise<ReturnSettlementPreviewDto> {
+    return this.settlement.previewReturn(tenant.tenantId, id, dto);
   }
 
   @Post('surcharges')

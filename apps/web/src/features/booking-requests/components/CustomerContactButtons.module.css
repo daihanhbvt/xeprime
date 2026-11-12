@@ -1,0 +1,80 @@
+/*
+ * Figma "Buttons group" (Partner-XePrime): nút viền xám bo 12, đệm 8/14, chữ 14/600, icon 20; nút
+ * Zalo nền xanh nhạt. Lớp đôi (`.button.button`) để thắng style mặc định của AntD Button.
+ */
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-12);
+}
+
+.slot {
+  display: inline-flex;
+}
+
+.button.button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  height: 38px;
+  padding: var(--xp-space-sm) 14px;
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+  box-shadow: none;
+}
+
+.button.button:hover:not(:disabled) {
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-text);
+}
+
+.iconOnly.iconOnly {
+  width: 38px;
+  padding: var(--xp-space-sm);
+  justify-content: center;
+}
+
+.zalo.zalo {
+  border-color: var(--xp-color-info-border);
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info-strong);
+}
+
+.zalo.zalo:hover {
+  border-color: var(--xp-color-info-strong);
+  color: var(--xp-color-info-strong);
+}
+
+.icon {
+  font-size: 20px;
+}
+
+.zaloLogo {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+/* Điện thoại: vùng chạm tối thiểu 44px (UX §9). */
+@media (max-width: 640px) {
+  .button.button {
+    height: 44px;
+  }
+
+  .iconOnly.iconOnly {
+    width: 44px;
+  }
+}
+
+/* Thẻ Kanban: ba nút cách 8, một hàng (Figma "_Kanban Item" `23895:15196`). */
+.compact {
+  flex: none;
+  flex-wrap: nowrap;
+  gap: var(--xp-space-sm);
+}

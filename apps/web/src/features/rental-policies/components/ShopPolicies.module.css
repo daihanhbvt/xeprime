@@ -1,0 +1,606 @@
+/*
+ * Trang Cấu hình › Chính sách thuê — design `23874:63907` (frame 1920: nội dung 1220 · cột phải 320,
+ * cách 20). Bố cục đo BỀ RỘNG THẬT của vùng nội dung (`@container`), không đo viewport: trang chạy
+ * dưới khung partner và cả khung phiên hỗ trợ của site quản trị.
+ */
+.page {
+  width: 100%;
+  min-width: 0;
+  padding-bottom: var(--xp-space-lg);
+}
+
+.workspace {
+  container: shop-policies / inline-size;
+  min-width: 0;
+}
+
+.layout {
+  display: grid;
+  align-items: start;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-areas: 'main aside';
+}
+
+.mainColumn {
+  min-width: 0;
+  grid-area: main;
+}
+
+.main {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Khối đích của mục lục: chừa chỗ cho header dính khi cuộn tới. */
+.navTarget {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+  scroll-margin-top: calc(var(--xp-shell-header-offset, var(--xp-shell-topbar-height)) + 16px);
+}
+
+.aside {
+  position: sticky;
+  top: calc(var(--xp-shell-header-offset, var(--xp-shell-topbar-height)) + 16px);
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+  grid-area: aside;
+}
+
+/* ── Mục lục cột phải ("Vehicle Edit Sidebar") ─────────────────────────── */
+
+.nav {
+  padding: 20px 12px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 1px 2px 0 rgba(10, 13, 18, 0.05);
+}
+
+.navList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.navItem {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: var(--xp-border-radius-control);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+  text-decoration: none;
+}
+
+.navItem:hover {
+  background: var(--xp-color-bg-hover);
+  color: var(--xp-color-text);
+}
+
+.navItem:focus-visible {
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: -2px;
+}
+
+.navItemActive,
+.navItemActive:hover {
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text);
+}
+
+.navDot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--xp-color-border);
+}
+
+.navItemActive .navDot {
+  background: var(--xp-color-primary);
+}
+
+.actions {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 100px minmax(0, 1fr);
+}
+
+.actions :global(.ant-btn) {
+  height: 40px;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* ── Thẻ "Nhóm thông tin" ───────────────────────────────────────────────── */
+
+.card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 0 6px 0 rgba(10, 13, 18, 0.04);
+  scroll-margin-top: calc(var(--xp-shell-header-offset, var(--xp-shell-topbar-height)) + 16px);
+}
+
+.cardHead {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cardTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: 18px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 28px;
+}
+
+.cardTitleExtra {
+  display: inline-flex;
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.cardSubtitle {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+/* Hàng có khung khi đang tải / lỗi — cùng khung với `SettingRow boxed`. */
+.rowBox {
+  padding: 12px 16px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+}
+
+.rowLink {
+  display: inline-block;
+  margin-left: 6px;
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.rowNote {
+  display: block;
+  margin-top: 4px;
+  color: var(--xp-color-text-secondary);
+}
+
+/* ── Tài sản thế chấp ───────────────────────────────────────────────────── */
+
+.subCard {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+}
+
+.subTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: 16px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 24px;
+}
+
+/* Lặp lớp để thắng `.ant-radio-group { display: inline-block }` của AntD (cùng độ ưu tiên). */
+.modeCards.modeCards {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Radio AntD dựng thành thẻ: chấm tròn bên trái, nhãn + một câu hệ quả bên phải. */
+.modeCards :global(.ant-radio-wrapper).modeCard {
+  display: flex;
+  align-items: flex-start;
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+}
+
+.modeCards :global(.ant-radio-wrapper).modeCard::after {
+  display: none;
+}
+
+.modeCards :global(.ant-radio-wrapper).modeCard > :global(.ant-radio) {
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.modeCards :global(.ant-radio-wrapper).modeCardChecked {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+}
+
+.modeCard > span:last-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+  padding-inline: 12px 0;
+}
+
+.modeLabel {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+}
+
+.modeCardChecked .modeLabel {
+  color: var(--xp-color-primary);
+}
+
+.modeDescription {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.depositRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.depositField {
+  width: 371px;
+  max-width: 100%;
+}
+
+.depositRow :global(.ant-form-item),
+.pairFields :global(.ant-form-item),
+.radiusField :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+.usage {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 6px;
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* ── Hạn mức quãng đường · quá giờ ───────────────────────────────────────── */
+
+.halfGrid {
+  display: grid;
+  align-items: start;
+  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.pairFields {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* ── Bảng (phí giao xe · mốc ưu đãi) ────────────────────────────────────── */
+
+.table {
+  overflow: hidden;
+  min-width: 0;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+}
+
+.tableHead,
+.tableRow {
+  display: grid;
+  align-items: center;
+  column-gap: 16px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--xp-color-border);
+}
+
+.tableRow:last-child {
+  border-bottom: 0;
+}
+
+.tableHead {
+  min-height: 44px;
+  background: var(--xp-color-bg-layout);
+  color: var(--xp-color-text-secondary);
+  font-size: 12px;
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+}
+
+.tableRow {
+  min-height: 72px;
+  padding-block: 12px;
+}
+
+.deliveryGrid {
+  grid-template-columns: minmax(64px, 248px) minmax(120px, 175px) minmax(0, 1fr) 72px;
+}
+
+.discountGrid {
+  /* Mức giảm chỉ 1–100%: ô hẹp, nhường chỗ cho ghi chú (bảng đứng cạnh khung xem trước). */
+  grid-template-columns: minmax(120px, 180px) minmax(88px, 120px) minmax(0, 1fr) 56px;
+}
+
+.headWithTip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.actionHead,
+.actionCell {
+  display: flex;
+  justify-content: center;
+}
+
+.actionCell :global(.ant-btn) {
+  color: var(--xp-color-text-secondary);
+}
+
+.fromCell {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* Nhãn từng ô vẫn có cho trình đọc màn hình; hàng tiêu đề lo phần nhìn thấy. */
+.tableRow :global(.ant-form-item-label),
+.tableRow :global(.ant-form-item .ant-form-item-label) {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.tableRow :global(.ant-form-item) {
+  min-width: 0;
+  margin-bottom: 0 !important;
+}
+
+.tableEmpty {
+  margin: 0;
+  padding: 16px;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size);
+}
+
+.tableFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.addButton:global(.ant-btn).addButton {
+  height: auto;
+  padding: 0;
+  color: var(--xp-color-primary);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.addButton:global(.ant-btn).addButton:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+.tableOk {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size);
+  font-style: italic;
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.tableError {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size);
+}
+
+.radiusField {
+  width: 371px;
+  max-width: 100%;
+}
+
+.divider {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--xp-color-border);
+}
+
+/* ── Thời gian chết ─────────────────────────────────────────────────────── */
+
+.turnaround {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.turnaroundHead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.blockTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: 16px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 24px;
+}
+
+.blockHint {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+/* ── Ưu đãi dài hạn: bảng mốc + xem trước giá (cùng khuôn khuyến mãi trực tiếp) ───────── */
+
+.discountLayout {
+  display: grid;
+  align-items: start;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) 320px;
+}
+
+.discountSettings {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Hẹp dần ─────────────────────────────────────────────────────────────── */
+
+@container shop-policies (max-width: 1180px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'aside'
+      'main';
+    gap: 16px;
+  }
+
+  .aside {
+    position: static;
+  }
+
+  .nav {
+    min-width: 0;
+    max-width: 100%;
+    padding: 6px;
+  }
+
+  .navList {
+    flex-direction: row;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    gap: 4px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .navList::-webkit-scrollbar {
+    display: none;
+  }
+
+  .navList > li {
+    flex: none;
+  }
+
+  .navItem {
+    min-height: 40px;
+    white-space: nowrap;
+  }
+
+  /* Hai nút lưu bám đáy màn hình — vẫn đủ, chỉ đổi chỗ (như màn sửa xe). */
+  .actions {
+    position: fixed;
+    z-index: 10;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--xp-color-border);
+    background: var(--xp-color-bg-container);
+    box-shadow: 0 -4px 12px rgba(10, 13, 18, 0.06);
+  }
+
+  .mainColumn {
+    padding-bottom: 72px;
+  }
+}
+
+@container shop-policies (max-width: 860px) {
+  .modeCards.modeCards,
+  .halfGrid,
+  .discountLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container shop-policies (max-width: 640px) {
+  .card {
+    padding: 16px;
+  }
+
+  .pairFields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Bảng: tiêu đề cột ẩn, mỗi dòng thành hai hàng (khoảng cách | phí · xoá). */
+  .tableHead {
+    display: none;
+  }
+
+  .deliveryGrid {
+    grid-template-columns: 56px minmax(0, 1fr) 40px;
+    row-gap: 8px;
+  }
+
+  .deliveryGrid > :nth-child(3) {
+    grid-column: 1 / 3;
+  }
+
+  .discountGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 40px;
+    row-gap: 8px;
+  }
+
+  .discountGrid > :nth-child(3) {
+    grid-column: 1 / 3;
+  }
+}

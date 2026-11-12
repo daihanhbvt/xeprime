@@ -111,7 +111,7 @@ export function InternalNoteForm({
             <>
               <span className={styles.caption}>
                 {t('conflict.current', {
-                  name: conflict.updatedByName ?? '—',
+                  name: conflict.updatedByName ?? '-',
                   at: fmt.shortDateTime(conflict.updatedAt),
                 })}
               </span>
@@ -165,7 +165,7 @@ export function InternalNoteForm({
               {saved.updatedAt
                 ? t('lastUpdated', {
                     at: fmt.shortDateTime(saved.updatedAt),
-                    name: saved.updatedByName ?? '—',
+                    name: saved.updatedByName ?? '-',
                   })
                 : null}
             </span>

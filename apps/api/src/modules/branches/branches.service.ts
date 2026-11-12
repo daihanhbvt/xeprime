@@ -168,7 +168,8 @@ export class BranchesService {
      * gọi mạng có timeout, và giữ một transaction Postgres mở trong lúc chờ Internet là cách
      * chắc chắn để một sự cố bên ngoài thành một hàng đợi khoá bên trong.
      */
-    const address = await this.address.resolve(addressInputOf(dto));
+    // Chi nhánh là nơi khách tới nhận xe: phường/xã bắt buộc (ADR 0077 ghi đè ADR 0042).
+    const address = await this.address.resolve(addressInputOf(dto), { requireWard: true });
 
     const branch = await this.prisma.$transaction(async (tx) => {
       const code = await nextBranchCode(tx, tenantId);
@@ -264,28 +265,39 @@ export class BranchesService {
       dto.placeId !== undefined;
 
     const nextAddress = addressTouched
-      ? await this.address.resolve({
-          provinceCode: dto.provinceCode ?? before.provinceCode,
-          wardCode: dto.wardCode ?? before.wardCode,
-          addressLine: dto.addressLine ?? dto.address ?? before.addressLine,
-          placeId: dto.placeId ?? before.placeId,
-          /*
-           * Toạ độ cũ KHÔNG được mang theo khi địa chỉ hành chính đổi: một cái ghim ở Hà Nội
-           * gắn vào địa chỉ vừa đổi sang Cần Thơ còn tệ hơn là không có ghim nào. Đổi địa chỉ
-           * mà không gửi ghim mới ⇒ để `AddressService` tra lại từ đầu.
-           */
-          latitude: dto.latitude ?? keepPin(dto, before)?.lat,
-          longitude: dto.longitude ?? keepPin(dto, before)?.lng,
-          locationSource: dto.locationSource ?? before.locationSource,
-        })
+      ? await this.address.resolve(
+          {
+            provinceCode: dto.provinceCode ?? before.provinceCode,
+            wardCode: dto.wardCode ?? before.wardCode,
+            /*
+             * Đổi tỉnh/xã mà không gửi dòng địa chỉ mới thì KHÔNG mượn dòng cũ: "41 Đinh Văn Chấp"
+             * của Phường Hòa Xuân gắn sang Phường An Thắng là một địa chỉ bịa (ADR 0077).
+             */
+            addressLine:
+              dto.addressLine ??
+              dto.address ??
+              (adminAreaChanged(dto, before) ? null : before.addressLine),
+            placeId: dto.placeId ?? before.placeId,
+            /*
+             * Toạ độ cũ KHÔNG được mang theo khi địa chỉ hành chính đổi: một cái ghim ở Hà Nội
+             * gắn vào địa chỉ vừa đổi sang Cần Thơ còn tệ hơn là không có ghim nào. Đổi địa chỉ
+             * mà không gửi ghim mới ⇒ để `AddressService` tra lại từ đầu.
+             */
+            latitude: dto.latitude ?? keepPin(dto, before)?.lat,
+            longitude: dto.longitude ?? keepPin(dto, before)?.lng,
+            locationSource: dto.locationSource ?? before.locationSource,
+          },
+          // Chi nhánh cũ thiếu xã: sửa địa chỉ là lúc buộc bổ sung (ADR 0077).
+          { requireWard: true },
+        )
       : null;
 
     // Tỉnh HOẶC xã đổi: snapshot chợ mang cả tên xã/phường (thẻ xe hiện nó), nên đổi riêng xã
     // cũng phải đồng bộ lại — không chỉ khi đổi tỉnh.
     const locationChanged = Boolean(
       nextAddress &&
-        (nextAddress.provinceCode !== before.provinceCode ||
-          (nextAddress.wardCode ?? null) !== (before.wardCode ?? null)),
+      (nextAddress.provinceCode !== before.provinceCode ||
+        (nextAddress.wardCode ?? null) !== (before.wardCode ?? null)),
     );
 
     return { id, dto, before, nextAddress, locationChanged };
@@ -361,13 +373,13 @@ export class BranchesService {
     if (target.status !== BRANCH_STATUS.ACTIVE) {
       throw new ConflictException({
         code: API_ERROR_CODE.BRANCH_DEFAULT_IMMUTABLE,
-        message: 'Chi nhánh đang ngừng hoạt động — bật lại trước khi đặt làm mặc định',
+        message: 'Chi nhánh đang ngừng hoạt động - bật lại trước khi đặt làm mặc định',
       });
     }
     if (!target.provinceCode) {
       throw new ConflictException({
         code: API_ERROR_CODE.BRANCH_LOCATION_REQUIRED,
-        message: 'Chi nhánh chưa có tỉnh/thành — bổ sung trước khi đặt làm mặc định',
+        message: 'Chi nhánh chưa có tỉnh/thành - bổ sung trước khi đặt làm mặc định',
       });
     }
 
@@ -589,7 +601,7 @@ export class BranchesService {
     if (branch.status !== BRANCH_STATUS.ACTIVE) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Chi nhánh đang ngừng hoạt động — chọn chi nhánh khác',
+        message: 'Chi nhánh đang ngừng hoạt động - chọn chi nhánh khác',
         details: { field: 'branchId' },
       });
     }
@@ -661,6 +673,14 @@ function keepPin(dto: UpdateBranchDto, before: BranchRow): { lat: number; lng: n
   if (adminChanged) return null;
   if (before.latitude == null || before.longitude == null) return null;
   return { lat: Number(before.latitude), lng: Number(before.longitude) };
+}
+
+/** Tỉnh hoặc xã có ĐỔI THẬT trong lượt sửa này không. */
+function adminAreaChanged(dto: UpdateBranchDto, before: BranchRow): boolean {
+  return (
+    (dto.provinceCode !== undefined && dto.provinceCode !== before.provinceCode) ||
+    (dto.wardCode !== undefined && dto.wardCode !== before.wardCode)
+  );
 }
 
 /** Trường địa chỉ từ DTO tạo mới (kèm bí danh `address` đã bỏ) → đầu vào của `AddressService`. */

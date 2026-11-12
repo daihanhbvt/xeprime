@@ -226,6 +226,16 @@ async function expectedToday(field: 'pickupAt' | 'returnAt', status: string[]): 
   return rows.filter((r) => vnDateKey(r[field]) === today).length;
 }
 
+/** Số mốc ĐẾN HẠN: rơi vào hôm nay hoặc trước đó (gồm cả lượt quá giờ) — mỗi đơn một lần. */
+async function expectedDue(field: 'pickupAt' | 'returnAt', status: string[]): Promise<number> {
+  const rows = await prisma.booking.findMany({
+    where: { tenantId, status: { in: status } },
+    select: { pickupAt: true, returnAt: true },
+  });
+  const today = vnDateKey(NOW);
+  return rows.filter((r) => vnDateKey(r[field]) <= today).length;
+}
+
 describe('Tổng quan partner — việc trong ngày', () => {
   maybe('chờ giao / đang thuê là đúng tập của hai danh sách; quá giờ tính mọi ngày', async () => {
     const res = await dashboard.overview(context(), {}, NOW);
@@ -234,10 +244,19 @@ describe('Tổng quan partner — việc trong ngày', () => {
       awaitingPickup: 3,
       pickupsToday: await expectedToday('pickupAt', [BOOKING_STATUS.RESERVED]),
       pickupsOverdue: 1,
+      pickupsDue: await expectedDue('pickupAt', [BOOKING_STATUS.RESERVED]),
       active: 2,
       returnsToday: await expectedToday('returnAt', [BOOKING_STATUS.ACTIVE]),
       returnsOverdue: 1,
+      returnsDue: await expectedDue('returnAt', [BOOKING_STATUS.ACTIVE]),
     });
+  });
+
+  maybe('huy hiệu menu: khối hôm nay và khối yêu cầu đứng riêng khớp Tổng quan', async () => {
+    const overview = await dashboard.overview(context(), {}, NOW);
+
+    expect(await dashboard.todayCounts(context(), NOW)).toEqual(overview.today);
+    expect(await dashboard.requestCounts(context(), NOW)).toEqual(overview.requests);
   });
 
   maybe('yêu cầu: chờ duyệt + KHẨN theo mốc nhắc cuối + hạn sớm nhất + chờ khách trả', async () => {

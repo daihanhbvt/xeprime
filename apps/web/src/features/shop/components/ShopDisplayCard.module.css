@@ -1,0 +1,250 @@
+/* Cột phải "Thông tin hiển thị" - design `23999:111471` (thẻ 400 · cặp nút cách 20). */
+.column {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+  padding: 20px;
+  border: 1px solid var(--xp-color-primary-glow);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 0 6px 0 rgba(10, 13, 18, 0.04);
+  scroll-margin-top: calc(var(--xp-shell-header-offset, var(--xp-shell-topbar-height)) + 16px);
+}
+
+.card:focus {
+  outline: none;
+}
+
+.card:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* Vệt vàng góc trên - đường viền "Gradient/Special" của design, vẽ bằng gradient thay vì ảnh mặt nạ. */
+.glow {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 160px;
+  background:
+    radial-gradient(120% 90% at 100% 0%, var(--xp-gold-wash) 0%, transparent 60%),
+    linear-gradient(180deg, var(--xp-color-primary-subtle) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.head,
+.media,
+.mediaActions,
+.divider,
+.facts,
+.card > :global(.ant-btn) {
+  position: relative;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+}
+
+.hint {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+}
+
+.media {
+  display: flex;
+  flex-direction: column;
+}
+
+.cover {
+  position: relative;
+  height: 136px;
+  overflow: hidden;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-muted);
+}
+
+.coverImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.coverEmpty {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  color: var(--xp-color-text-tertiary);
+  font-size: 32px;
+  place-items: center;
+}
+
+/* Logo 54px chồng lên mép dưới ảnh bìa 24px, cách lề trái 20. */
+.logoRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: -24px;
+  padding: 0 20px;
+}
+
+.logo {
+  position: relative;
+  display: block;
+  width: 54px;
+  height: 54px;
+  flex: none;
+  overflow: hidden;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  box-shadow:
+    0 1px 3px 0 rgba(10, 13, 18, 0.1),
+    0 1px 2px 0 rgba(10, 13, 18, 0.06);
+}
+
+.logoImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.logoEmpty {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-strong);
+  font-size: 20px;
+  font-weight: var(--xp-font-weight-semibold);
+  place-items: center;
+}
+
+.mediaHint {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  font-style: italic;
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* Nút gỡ ảnh - góc trên phải của ảnh, chỉ khi có ảnh và sửa được. */
+.remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--xp-color-bg-overlay);
+  color: var(--xp-color-text-inverse);
+  cursor: pointer;
+  font-size: 10px;
+  place-items: center;
+}
+
+.logo .remove {
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+}
+
+.remove:focus-visible {
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 1px;
+}
+
+.mediaActions {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mediaActions :global(.ant-upload-wrapper),
+.mediaActions :global(.ant-upload) {
+  display: block;
+  width: 100%;
+}
+
+.divider {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-top: 1px dashed var(--xp-color-border);
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+}
+
+.fact {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.factLabel {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+}
+
+.factValue {
+  min-width: 0;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size);
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.factEmpty {
+  color: var(--xp-color-text-tertiary);
+}
+
+.actions {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 100px minmax(0, 1fr);
+}
+
+/* Hộp sửa: ba ô một hàng (design), xếp dọc khi hộp hẹp. */
+.dialogRow {
+  display: grid;
+  gap: 0 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 720px) {
+  .dialogRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

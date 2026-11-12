@@ -41,7 +41,7 @@ const EXPECTED = [
 
 afterEach(() => jest.restoreAllMocks());
 
-describe('mutation phiếu — làm mới đủ mọi nhánh tiền', () => {
+describe('mutation phiếu - làm mới đủ mọi nhánh tiền', () => {
   it('TẠO phiếu', async () => {
     jest.spyOn(receiptsApi, 'create').mockResolvedValue({} as never);
     const { wrapper, invalidate } = setup();

@@ -58,7 +58,8 @@ export function AccountPaymentsHub({ children }: { children: ReactNode }) {
         </nav>
       }
     >
-      {children}
+      {/* Khối của tab con nằm sâu hơn tầm reveal `.content > * > *` của AccountShell. */}
+      <div className={styles.body}>{children}</div>
     </AccountPanel>
   );
 }

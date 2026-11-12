@@ -4,25 +4,27 @@
     "save": "Save vehicle",
     "newVehicle": "New",
     "ratingCount": "{count, plural, one {# review} other {# reviews}}",
+    "noRating": "No reviews yet",
+    "rentals": "{count, plural, one {# rental} other {# rentals}}",
     "completedTrips": "{count, plural, one {# trip} other {# trips}}",
     "owner": "Owner",
     "shop": "Shop",
     "shopVerified": "Verified by XePrime",
-    "shopVerifiedAria": "{name} — verified by XePrime",
+    "shopVerifiedAria": "{name} - verified by XePrime",
     "seats": "{count, plural, one {# seat} other {# seats}}",
     "delivery": "Delivery",
     "noCollateral": "No collateral",
     "vatInvoice": "VAT invoice",
-    "includesDriver": "driver included",
     "contactForQuote": "Contact for a quote",
     "extraServices": "+{count}",
     "priceDaily": "<amount>{value}</amount><unit>/day</unit>",
     "priceMonthly": "<amount>{value}</amount><unit>/month</unit>",
     "perDayUnit": "/day",
     "perMonthUnit": "/month",
-    "instantBook": "No confirmation needed",
+    "instantBook": "Auto-approved",
     "photoCount": "+{count}",
     "photoCountAria": "{count, plural, one {# photo} other {# photos}}",
+    "amenitiesLabel": "Vehicle perks",
     "locationLine": "{ward}, {province}",
     "specsLabel": "Car specs",
     "ratingValue": "{rating} <muted>({count})</muted>",
@@ -70,7 +72,7 @@
     },
     "terms": {
       "title": "Rental terms & requirements",
-      "instantBook": "Instant book",
+      "instantBook": "Auto-approved",
       "instantBookHint": "Valid requests inside the allowed hours are confirmed automatically.",
       "documents": "Documents required: {documents}",
       "verify": "Verification: {method}",
@@ -105,7 +107,8 @@
     "hostTitle": "Host",
     "location": {
       "title": "Vehicle location",
-      "openMap": "Open map"
+      "openMap": "Open map",
+      "exactAddressNote": "The exact address is shown once your booking is confirmed."
     },
     "attributes": {
       "brand": "Brand: <strong>{value}</strong>",
@@ -116,7 +119,8 @@
       "less": "Show less"
     },
     "gallery": {
-      "photoAlt": "{name} — photo {index}",
+      "amenitiesLabel": "Vehicle perks",
+      "photoAlt": "{name} - photo {index}",
       "pager": "Choose a vehicle photo",
       "goTo": "Photo {index} of {total}",
       "counter": "{index} / {total}"
@@ -143,7 +147,7 @@
         "cancellation": "Cancellation"
       },
       "general": {
-        "purpose": "Use the vehicle for its intended purpose — no prohibited goods, flammable or explosive materials, or livestock and poultry.",
+        "purpose": "Use the vehicle for its intended purpose - no prohibited goods, flammable or explosive materials, or livestock and poultry.",
         "noSmoking": "No smoking, chewing gum or littering inside the vehicle (a cleaning fee applies if broken).",
         "handover": "Pick up and return the vehicle within the agreed hours and keep it in its original condition.",
         "tip": "Tip: Take photos of the vehicle (exterior & odometer) at pick-up and return so both sides can compare."
@@ -165,7 +169,7 @@
       },
       "documents": {
         "licenceRequired": "This service needs a verified driving licence on your account before you send a rental request.",
-        "empty": "The owner hasn't published specific requirements for this service — you'll be reminded what to bring when you send a request."
+        "empty": "The owner hasn't published specific requirements for this service - you'll be reminded what to bring when you send a request."
       },
       "collateral": {
         "none": "<strong>No deposit or collateral required:</strong> this vehicle needs no collateral or deposit at pick-up.",
@@ -200,8 +204,6 @@
         "label": "Rental term:"
       },
       "longTerm": {
-        "wishLabel": "Preferred pick-up date:",
-        "asap": "As soon as possible (within the next 7 days)",
         "dateLabel": "When would you like to pick up the car?",
         "datePlaceholder": "Choose a pick-up date",
         "expectedReturn": "Expected return date:",
@@ -228,6 +230,7 @@
         "free": "Free",
         "chooseDelivery": "Choose a delivery address & view the map",
         "note": "* The exact location and the owner's phone number are shown once the reservation fee is paid.",
+        "noteLabel": "When the exact address is shown",
         "distanceFeeLater": "Estimated distance: ~{distance} · Delivery fee: the owner confirms it when accepting"
       },
       "insurance": {
@@ -279,7 +282,7 @@
     "withDriverPrice": {
       "title": "With-driver price",
       "included": "Includes the driver, fuel, the driver's overnight costs and service at your destination.",
-      "excluded": "Excludes road tolls — paid directly during the trip."
+      "excluded": "Excludes road tolls - paid directly during the trip."
     }
   },
   "reviews": {

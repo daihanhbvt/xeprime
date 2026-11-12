@@ -14,7 +14,7 @@ describe('eventBarShowsLabel', () => {
   const NARROW = 46; // thanh một ngày ở bề rộng cột tối thiểu
   const WIDE = 200;
 
-  it('đơn thuê hẹp VẪN hiện chữ — nó không có icon để đứng thay', () => {
+  it('đơn thuê hẹp VẪN hiện chữ - nó không có icon để đứng thay', () => {
     const icon = EVENT_ICON[OCCUPANCY_SOURCE_TYPE.BOOKING];
 
     expect(icon).toBeUndefined();

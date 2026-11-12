@@ -1,8 +1,12 @@
+import { ScrollReveal } from '@/components/motion/ScrollReveal';
 import { useTranslations } from 'use-intl';
 import { Text, YStack } from 'tamagui';
 import { Screen } from '@/components/layout/Screen';
 import { AppVersion } from '@/components/ui/AppVersion';
 import { Card } from '@/components/ui/Card';
+import { Reveal } from '@/components/motion/Reveal';
+import { useParallaxHeader } from '@/components/motion/use-parallax-header';
+import Animated, { useSharedValue } from 'react-native-reanimated';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -52,6 +56,9 @@ export { ACCOUNT_DOCUMENTS_SECTION } from './AccountProfileScreen';
  * Cổng phiên nằm ở `app/(tabs)/account.tsx` (`RequireSession`). Phiên chết GIỮA LÚC màn đang mở
  * cũng được cổng đó bắt.
  */
+/** Thẻ đầu trang: nhẹ hơn banner — trôi 0.25×, co 0.96, mờ 0.6. */
+const HUB_PARALLAX = { factor: 0.25, minScale: 0.96, minOpacity: 0.6, stretch: false } as const;
+
 export function AccountScreen() {
   const profile = useMyProfile();
 
@@ -97,26 +104,48 @@ function AccountBody({
   const t = useTranslations('Account');
   const tNav = useTranslations('Navigation');
   const { data: user } = useCurrentUser();
+  /*
+   * Thẻ đầu trang trôi chậm + co/mờ nhẹ khi cuộn (cùng ngôn ngữ banner Home, nhẹ hơn vì là thẻ
+   * thông tin chứ không phải ảnh). Các khối đầu so le một lần lúc mở màn.
+   */
+  const scrollY = useSharedValue(0);
+  const hubStyle = useParallaxHeader(scrollY, HUB_PARALLAX);
 
   return (
-    <Screen edges={['left', 'right']} refreshing={refreshing} onRefresh={refetch}>
+    <Screen
+      edges={['left', 'right']}
+      scrollReveal
+      refreshing={refreshing}
+      onRefresh={refetch}
+      scrollOffset={scrollY}
+    >
       {/* Nhịp khép (người dùng chốt 28/10/2026): khe 12 giữa các khối. */}
       <YStack gap={12}>
-        <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold} accessibilityRole="header">
-          {t('title')}
-        </Text>
+        <Reveal listItem variant="fade">
+          <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold} accessibilityRole="header">
+            {t('title')}
+          </Text>
+        </Reveal>
 
-        <AccountHubCard />
+        {/* Thẻ đầu + menu trượt so le khi vào/cuộn tới (ScrollReveal: chỉ transform, thẻ có bóng). */}
+        <ScrollReveal index={0}>
+          <Animated.View style={hubStyle}>
+            <AccountHubCard />
+          </Animated.View>
+        </ScrollReveal>
 
         {/* Cảnh báo cấu hình gói đứng NGAY TRƯỚC menu (ADR 0038 điều 11). */}
         <AccountTrackNotice />
 
-        <AccountNav />
+        <ScrollReveal index={2}>
+          <AccountNav />
+        </ScrollReveal>
 
-        <PartnerInviteCard />
+        <PartnerInviteCard revealIndex={3} />
 
         {/* Xoá tài khoản: thẻ riêng tông đỏ cuối màn (ADR 0038 điều 9), không lẫn vào menu. */}
         {showsDeleteAccountCard(user) ? (
+          <ScrollReveal index={4}>
           <Card padded={false}>
             <YStack px={space.md} py={space.xs}>
               <SettingRow
@@ -128,6 +157,7 @@ function AccountBody({
               />
             </YStack>
           </Card>
+          </ScrollReveal>
         ) : null}
 
         <AppVersion />

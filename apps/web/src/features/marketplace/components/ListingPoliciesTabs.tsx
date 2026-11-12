@@ -78,11 +78,6 @@ export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesT
   const activeTerms =
     listing.rentalTerms?.find((term) => term.serviceType === activeService) ?? null;
 
-  const windowLabels = (windows: ReadonlyArray<{ start: string; end: string }>) =>
-    windows.map((window) => `${window.start}–${window.end}`).join(', ');
-  const pickupWindows = windowLabels(listing.handover?.pickupWindows ?? []);
-  const returnWindows = windowLabels(listing.handover?.returnWindows ?? []);
-
   const requiredDocs =
     activeTerms?.requiredDocuments && activeTerms.requiredDocuments.length > 0
       ? activeTerms.requiredDocuments
@@ -169,24 +164,7 @@ export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesT
             </div>
           ) : null}
 
-          {/* Khung giờ giao nhận */}
-          {pickupWindows || returnWindows ? (
-            <div className={styles.subSection}>
-              <h3 className={styles.subSectionTitle}>{t('handover.title')}</h3>
-              {pickupWindows ? (
-                <div className={styles.ruleItem}>
-                  <span className={styles.bullet} />
-                  <span>{t('handover.pickup', { windows: pickupWindows })}</span>
-                </div>
-              ) : null}
-              {returnWindows ? (
-                <div className={styles.ruleItem}>
-                  <span className={styles.bullet} />
-                  <span>{t('handover.return', { windows: returnWindows })}</span>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+          {/* Khung giờ giao nhận đã gỡ (ADR 0078) — xe nhận và trả mọi giờ, không có gì để công bố. */}
 
           {/*
            * Giá có tài xế là giá TRỌN GÓI (ADR 0075) — chỉ khi khách đang xem dịch vụ CÓ TÀI XẾ.

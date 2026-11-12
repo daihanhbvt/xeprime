@@ -1,5 +1,10 @@
-import type { BookingListPreset, components } from '@xeprime/types';
-import { getApiClient, type Paged, type QueryParams } from '@xeprime/api-client';
+import type {
+  BookingHistoryOutcome,
+  BookingHistoryTab,
+  BookingListPreset,
+  components,
+} from '@xeprime/types';
+import { fetchPage, getApiClient, type Paged, type QueryParams } from '@xeprime/api-client';
 
 type Schemas = components['schemas'];
 
@@ -13,14 +18,54 @@ export type CheckConflictInput = Schemas['CheckConflictDto'];
 export type CheckConflictResult = Schemas['CheckConflictResultDto'];
 export type BookingDriverSummary = Schemas['BookingDriverSummaryDto'];
 export type BookingDriverHistoryItem = Schemas['BookingDriverHistoryItemDto'];
-export type ExternalDriverInput = Schemas['ExternalDriverInputDto'];
+export type BookingDriverIncident = Schemas['BookingDriverIncidentDto'];
 /**
- * Body của `PATCH /bookings/:id/driver` — ĐÚNG MỘT khoá (server từ chối body mang cả hai), như web:
- * `driverId` (tài xế liên kết, `null` = bỏ gán — ADR 0063) hoặc `externalDriver` (ADR 0067).
+ * Body của `PATCH /bookings/:id/driver` — chỉ tài xế LIÊN KẾT (`null` = bỏ gán). Khoá
+ * `externalDriver` đã bỏ (ADR 0074 điều 4 — server trả 422 `EXTERNAL_DRIVER_NOT_SUPPORTED`).
+ * `wageAmount` (VND chuỗi) bỏ trống = mức mặc định × số ngày (ADR 0075).
  */
-export type AssignBookingDriverInput =
-  | { driverId: string | null }
-  | { externalDriver: ExternalDriverInput };
+export type AssignBookingDriverInput = { driverId: string | null; wageAmount?: string };
+/** Tiền công của một lượt gán (ADR 0075) — XePrime chỉ ghi nhận, chủ xe trả trực tiếp. */
+export type DriverWage = Schemas['DriverWageDto'];
+/** Số liệu cho hộp gán: số ngày, gợi ý mặc định × N, khoảng hợp lệ — server tính. */
+export type DriverWageQuote = Schemas['DriverWageQuoteDto'];
+export type UpdateDriverWageInput = Schemas['UpdateDriverWageDto'];
+/** Meta của trang danh sách đơn — kèm số đếm các ngăn (02/11/2026). */
+export type BookingListMeta = Schemas['BookingPageMetaDto'];
+/** Phụ lục gia hạn đơn dài hạn (ADR 0077) — bề mặt đối tác, có dòng phía chủ xe. */
+export type BookingExtension = Schemas['BookingExtensionDto'];
+export type BookingExtensionQuote = Schemas['BookingExtensionQuoteDto'];
+/** Khối "Chuẩn bị bàn giao" — việc suy tự động + dấu tay (03/11/2026). */
+export type BookingHandoverPrep = Schemas['BookingHandoverPrepDto'];
+export type SetHandoverPrepCheckInput = Schemas['SetHandoverPrepCheckDto'];
+/** "Đơn đã kết thúc" (05/11/2026) — đơn đã đóng + yêu cầu không thành đơn, `GET /booking-history`. */
+export type BookingHistoryItem = Schemas['BookingHistoryItemDto'];
+export type BookingHistoryMeta = Schemas['BookingHistoryMetaDto'];
+
+export interface BookingHistoryFilters {
+  tab?: BookingHistoryTab;
+  outcome?: BookingHistoryOutcome;
+  q?: string;
+  serviceType?: string;
+  branchId?: string;
+  page?: number;
+  limit?: number;
+}
+
+/** Cùng 10 dòng/trang với web (`BOOKING_HISTORY_DEFAULT_LIMIT`). */
+export const BOOKING_HISTORY_DEFAULT_LIMIT = 10;
+
+export function historyFiltersToParams(filters: BookingHistoryFilters): QueryParams {
+  return {
+    tab: filters.tab ?? null,
+    outcome: filters.outcome ?? null,
+    q: filters.q ?? null,
+    serviceType: filters.serviceType ?? null,
+    branchId: filters.branchId ?? null,
+    page: filters.page ?? 1,
+    limit: filters.limit ?? BOOKING_HISTORY_DEFAULT_LIMIT,
+  };
+}
 
 /** Khớp `BOOKING_SORT` ở backend DTO. */
 export type BookingSort = 'newest' | 'pickup_asc' | 'pickup_desc' | 'return_asc';
@@ -87,8 +132,8 @@ export interface StaffQuoteParams extends QueryParams {
 }
 
 export const bookingsApi = {
-  list(filters: BookingFilters): Promise<Paged<BookingListItem>> {
-    return getApiClient().fetchPage<BookingListItem>(
+  list(filters: BookingFilters): Promise<Paged<BookingListItem, BookingListMeta>> {
+    return fetchPage<BookingListItem, BookingListMeta>(
       '/bookings',
       bookingFiltersToParams(filters),
       BOOKINGS_DEFAULT_LIMIT,
@@ -140,10 +185,75 @@ export const bookingsApi = {
     return getApiClient().patch<BookingDetail>(`/bookings/${encodeURIComponent(id)}/driver`, body);
   },
 
-  /** Lịch sử gán tài xế của đơn (ADR 0063) — đọc sổ `booking_driver_assignments`. */
+  /** Số liệu tiền công cho hộp gán tài xế (ADR 0075) — số ngày, gợi ý, khoảng hợp lệ. */
+  driverWageQuote(id: string): Promise<DriverWageQuote> {
+    return getApiClient().get<DriverWageQuote>(
+      `/bookings/${encodeURIComponent(id)}/driver-wage-quote`,
+    );
+  },
+
+  /** Sửa tiền công của một lượt gán (ADR 0075) — trả lịch sử tài xế của đơn đã cập nhật. */
+  updateDriverWage(
+    id: string,
+    assignmentId: string,
+    body: UpdateDriverWageInput,
+  ): Promise<BookingDriverHistoryItem[]> {
+    return getApiClient().patch<BookingDriverHistoryItem[]>(
+      `/bookings/${encodeURIComponent(id)}/driver-assignments/${encodeURIComponent(assignmentId)}/wage`,
+      body,
+    );
+  },
+
+  /** Lịch sử gán tài xế của đơn (ADR 0063) — đọc sổ `booking_driver_assignments`, kèm tiền công. */
   driverHistory(id: string): Promise<BookingDriverHistoryItem[]> {
     return getApiClient().get<BookingDriverHistoryItem[]>(
       `/bookings/${encodeURIComponent(id)}/driver-history`,
+    );
+  },
+
+  /** Đơn đã kết thúc + yêu cầu không thành đơn, MỘT danh sách xếp theo lúc kết thúc. */
+  history(filters: BookingHistoryFilters): Promise<Paged<BookingHistoryItem, BookingHistoryMeta>> {
+    return fetchPage<BookingHistoryItem, BookingHistoryMeta>(
+      '/booking-history',
+      historyFiltersToParams(filters),
+      BOOKING_HISTORY_DEFAULT_LIMIT,
+    );
+  },
+
+  /** Phụ lục gia hạn của một đơn, cũ trước (ADR 0077). */
+  extensions(id: string): Promise<BookingExtension[]> {
+    return getApiClient().get<BookingExtension[]>(
+      `/bookings/${encodeURIComponent(id)}/extensions`,
+    );
+  },
+
+  /** Xem trước giá + lịch trống của phụ lục N tháng — cùng hàm tính với lượt tạo. */
+  extensionQuote(id: string, months: number): Promise<BookingExtensionQuote> {
+    return getApiClient().get<BookingExtensionQuote>(
+      `/bookings/${encodeURIComponent(id)}/extensions/quote`,
+      { months },
+    );
+  },
+
+  createExtension(id: string, months: number): Promise<BookingExtension> {
+    return getApiClient().post<BookingExtension>(
+      `/bookings/${encodeURIComponent(id)}/extensions`,
+      { months },
+    );
+  },
+
+  cancelExtension(id: string, extensionId: string): Promise<BookingExtension> {
+    return getApiClient().post<BookingExtension>(
+      `/bookings/${encodeURIComponent(id)}/extensions/${encodeURIComponent(extensionId)}/cancel`,
+      {},
+    );
+  },
+
+  /** Đánh dấu / bỏ đánh dấu TAY một việc chuẩn bị bàn giao — trả về khối checklist mới. */
+  setHandoverPrepCheck(id: string, body: SetHandoverPrepCheckInput): Promise<BookingHandoverPrep> {
+    return getApiClient().put<BookingHandoverPrep>(
+      `/bookings/${encodeURIComponent(id)}/handover-prep`,
+      body,
     );
   },
 

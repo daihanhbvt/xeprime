@@ -67,7 +67,7 @@ export function AdminLocationsView() {
       width: 300,
       render: (aliases: string[]) =>
         aliases.length === 0 ? (
-          '—'
+          '-'
         ) : (
           <Tooltip title={aliases.join(LIST_SEPARATOR)}>
             <span className={styles.aliases}>{aliases.slice(0, 3).join(LIST_SEPARATOR)}</span>
@@ -122,7 +122,7 @@ export function AdminLocationsView() {
     <div className={styles.page}>
       <ManagePageHeader
         title="Danh mục tỉnh/thành"
-        subtitle="34 đơn vị hành chính cấp tỉnh (từ 01/07/2025). Tắt hiển thị KHÔNG xoá dữ liệu — chi nhánh và xe ở đó vẫn còn."
+        subtitle="34 đơn vị hành chính cấp tỉnh (từ 01/07/2025). Tắt hiển thị KHÔNG xoá dữ liệu - chi nhánh và xe ở đó vẫn còn."
       />
 
       <AutoSearchInput

@@ -7,8 +7,8 @@
   /* Token, không phải #fff: chữ, chip và logo trong thanh đều đổi theo giao diện tối. */
   background: var(--xp-color-bg-container);
   border-bottom: 1px solid var(--xp-color-border);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  padding: 10px 0 12px;
+  box-shadow: var(--xp-elevation-xs);
+  padding: var(--xp-space-md) 0;
   transform: translateY(-100%);
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
@@ -25,7 +25,7 @@
   padding: 0 var(--xp-space-md);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--xp-space-md);
 }
 
 .topRow {
@@ -42,18 +42,20 @@
 
 .logo {
   display: block;
-  width: 120px;
-  height: 38px;
+  width: 128px;
+  height: 40px;
 }
 
 .searchBar {
   display: flex;
   align-items: center;
-  height: 46px;
-  background: var(--xp-color-bg-muted);
+  height: 52px;
+  background: var(--xp-color-bg-container);
   border: 1px solid var(--xp-color-border);
   border-radius: 9999px;
-  padding: 3px 5px 3px 14px;
+  padding: var(--xp-space-12) var(--xp-space-6) var(--xp-space-12) var(--xp-space-12);
+  gap: var(--xp-space-12);
+  box-shadow: var(--xp-elevation-xs);
   flex: 1;
   max-width: 920px;
   min-width: 0;
@@ -78,8 +80,8 @@
 }
 
 .searchIcon {
-  font-size: 15px;
-  color: var(--xp-color-text-placeholder);
+  font-size: 20px;
+  color: var(--xp-color-primary);
 }
 
 .keywordInput {
@@ -88,8 +90,14 @@
   outline: none !important;
   box-shadow: none !important;
   background: transparent;
-  font-size: var(--xp-font-size-label);
+  font-size: 16px;
+  line-height: 24px;
   color: var(--xp-color-text);
+  text-overflow: ellipsis;
+}
+
+.keywordInput::placeholder {
+  color: var(--xp-color-text-placeholder);
 }
 
 .keywordInput:focus,
@@ -101,15 +109,16 @@
 
 .divider {
   width: 1px;
-  height: 20px;
+  height: 16px;
   background: var(--xp-color-border-strong);
-  margin: 0 8px;
+  margin: 0;
   flex: none;
 }
 
+/* Figma: mục địa điểm co theo chữ (shrink-0); phần co là ô từ khoá. */
 .locationWrap {
-  flex: 0.9;
-  min-width: 120px;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .dateWrap {
@@ -121,21 +130,22 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 9999px;
-  background: var(--xp-color-primary);
+  background: var(--xp-gradient-special);
   border: none;
-  color: var(--xp-color-primary-contrast);
-  font-size: 16px;
+  color: var(--xp-color-text);
+  font-size: 20px;
   cursor: pointer;
   flex: none;
-  margin-left: 6px;
-  transition: all 0.16s ease;
+  transition:
+    transform 0.16s ease,
+    filter 0.16s ease;
 }
 
 .searchSubmitBtn:hover {
-  background: var(--xp-color-primary-hover);
+  filter: brightness(1.05);
   transform: scale(1.04);
 }
 
@@ -151,5 +161,154 @@
 }
 
 .calendarIcon {
+  font-size: 20px;
   color: var(--xp-color-primary);
+}
+
+/*
+ * Figma 19707:80489 › "Search Filter" (20063:45992): loại xe · địa điểm · ngày giờ là chữ PHẲNG
+ * (icon vàng 20 + chữ 16/24 regular, gap 6), không viền/nền riêng; ngăn bằng vạch #d5d7da.
+ * Ngày giờ mang màu text/gray/medium (#414651), hai mục còn lại text/gray/high.
+ */
+.searchBar .inlinePicker {
+  width: auto;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  gap: var(--xp-space-6);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.searchBar .inlinePicker[aria-expanded='true'] {
+  background: transparent;
+}
+
+.locationWrap .inlinePicker > span:last-child,
+.dateWrap .inlinePicker span {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+.dateWrap .inlinePicker,
+.dateWrap .inlinePicker span {
+  color: var(--xp-color-text-secondary);
+}
+
+/* Icon lịch vàng như icon loại xe / địa điểm / tìm kiếm (Figma "Calender 2" #e9ac29). */
+.dateWrap .inlinePicker .calendarIcon {
+  color: var(--xp-color-primary);
+}
+
+/*
+ * Điện thoại (≤640px): thanh cố định gọn MỘT hàng tìm + MỘT hàng lọc, không tràn ngang.
+ * Figma List-MB không vẽ thanh này - giữ theo yêu cầu người dùng, chữ theo hàng 2 của khung
+ * tìm kiếm MB (12/18 medium #414651).
+ */
+@media (max-width: 640px) {
+  .stickyHeader {
+    padding: var(--xp-space-sm) 0;
+  }
+
+  .inner {
+    padding: 0 var(--xp-space-md);
+    gap: var(--xp-space-sm);
+  }
+
+  .searchBar {
+    height: 44px;
+    padding: 3px 4px 3px var(--xp-space-12);
+    gap: var(--xp-space-sm);
+  }
+
+  .inputGroup,
+  .vehicleTypeWrap,
+  .inputGroup + .divider,
+  .vehicleTypeWrap + .divider {
+    display: none;
+  }
+
+  .searchBar .inlinePicker {
+    font-size: var(--xp-font-size-label);
+    font-weight: var(--xp-font-weight-medium);
+    line-height: var(--xp-line-height-label);
+    color: var(--xp-color-text-secondary);
+  }
+
+  .calendarIcon {
+    font-size: 16px;
+  }
+
+  /* Ngày giờ ƯU TIÊN hiện đủ (mốc tính tiền); địa điểm lấy phần còn lại và tự "…" khi hẹp. */
+  .locationWrap {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .locationWrap .inlinePicker {
+    max-width: 100%;
+  }
+
+  .dateWrap {
+    flex: none;
+    min-width: 0;
+  }
+
+  .dateWrap .inlinePicker {
+    display: block;
+    white-space: nowrap;
+  }
+
+  .dateWrap .inlinePicker span {
+    display: inline;
+    overflow: visible;
+  }
+
+  .divider {
+    margin: 0 calc(-1 * var(--xp-space-xs));
+  }
+
+  /* Dòng inline mất `gap` của flex - chừa lại khoảng hai bên mũi tên giữa hai mốc. */
+  .dateWrap .inlinePicker span[aria-hidden] {
+    margin: 0 var(--xp-space-xs);
+  }
+
+  .dateWrap .inlinePicker .calendarIcon {
+    display: inline-block;
+    margin-right: var(--xp-space-6);
+    vertical-align: -0.2em;
+  }
+
+  .bottomRow {
+    min-width: 0;
+  }
+
+  /* Viên lọc + nút "Bộ lọc" là MỘT dòng cuộn chung - nút lọc là mục CUỐI, trượt theo dòng (không
+     ghim); huy hiệu số nằm TRONG nút nên không đè lên gì. */
+  .bottomRow > * {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    width: 100%;
+  }
+
+  .bottomRow > *::-webkit-scrollbar {
+    display: none;
+  }
+
+  .bottomRow > * > * {
+    flex: none;
+  }
+}
+
+/* Giao diện tối: bóng đen 8% vô hình trên nền tối — dùng bóng header tối của token. */
+:global([data-theme='dark']) .stickyHeader {
+  box-shadow: var(--xp-elevation-header);
 }

@@ -6,6 +6,7 @@ import {
   markThreadMessageFailed,
   mergeThreadMessages,
   newClientMessageId,
+  ownSenderType,
   removeThreadMessage,
   type ThreadMessage,
 } from '@xeprime/domain';
@@ -18,6 +19,8 @@ import {
   REALTIME_STATE,
   useRealtimeSubscription,
 } from '@/hooks/use-realtime-subscription';
+import { API_ERROR_CODE } from '@xeprime/types';
+import { ApiClientError } from '@/services/api-client';
 import { chatApi } from '../api';
 import { useChatRealtime } from '../context/ChatRealtimeContext';
 import type { ChatMessage, MessageCursor, SendMessageInput } from '../types';
@@ -45,6 +48,8 @@ export interface ThreadState {
     attachments?: SendAttachment[];
     /** Xe tin nhắn này nói về — thẻ ngữ cảnh, chỉ gắn ở câu đầu tiên mở từ tin đăng. */
     vehicleId?: string;
+    /** Chuyến (id yêu cầu) tin nhắn này nói về — câu đầu tiên mở từ chuyến đi / đơn thuê. */
+    bookingRequestId?: string;
   }) => Promise<void>;
   /** Gửi lại một tin `failed` — dùng lại đúng `clientMessageId` nên server nhận diện là một lần. */
   retry: (clientMessageId: string) => Promise<void>;
@@ -118,7 +123,12 @@ const emptyThread = (key: string, conversationId: string | null): ThreadData => 
  *     hiện ngay ở trạng thái `pending`, và `clientMessageId` là thứ khớp nó với bản server; gửi
  *     lại sau timeout dùng lại chính khoá đó nên server trả về tin cũ chứ không tạo tin thứ hai.
  */
-export function useThread(conversationId: string | null): ThreadState {
+/**
+ * `viewerSide` là phía người xem (`conversation.side`, server đã xác nhận). Tin lạc quan cần nó để
+ * mang đúng `senderType` — để trống thì tin đang gửi và tin GỬI LỖI hiện bên trái như của đối
+ * phương, vì trái/phải quyết bằng `isOwnSideMessage(senderType, side)`. Cùng chữ ký bản native.
+ */
+export function useThread(conversationId: string | null, viewerSide: string): ThreadState {
   const t = useTranslations('Chat');
   const { db, ready } = useChatRealtime();
   const queryClient = useQueryClient();
@@ -418,6 +428,12 @@ export function useThread(conversationId: string | null): ThreadState {
             entries: markThreadMessageFailed(prev.entries, clientMessageId),
           }));
         }
+        /*
+         * Server nói kênh đã ĐÓNG (bị chặn - App Store 1.2, hay tuyến hoa hồng chưa có đơn - ADR
+         * 0073) mà màn này chưa biết: tải lại hội thoại để `canSend` mới thay ô soạn tin bằng dòng
+         * giải thích, thay vì để người dùng gõ tiếp vào một kênh không bao giờ nhận.
+         */
+        if (isChatClosedError(err)) invalidateInbox();
         throw err;
       }
     },
@@ -425,13 +441,19 @@ export function useThread(conversationId: string | null): ThreadState {
   );
 
   const send = useCallback(
-    async (input: { text?: string; attachments?: SendAttachment[]; vehicleId?: string }) => {
+    async (input: {
+      text?: string;
+      attachments?: SendAttachment[];
+      vehicleId?: string;
+      bookingRequestId?: string;
+    }) => {
       if (!conversationId) return;
       const clientMessageId = newClientMessageId();
       const attachments = input.attachments ?? [];
       const body: SendMessageInput = {
         clientMessageId,
         ...(input.vehicleId ? { vehicleId: input.vehicleId } : {}),
+        ...(input.bookingRequestId ? { bookingRequestId: input.bookingRequestId } : {}),
         ...(input.text ? { text: input.text } : {}),
         ...(attachments.length ? { attachments } : {}),
       };
@@ -441,7 +463,7 @@ export function useThread(conversationId: string | null): ThreadState {
         conversationId,
         senderUserId: null,
         senderName: null,
-        senderType: '',
+        senderType: ownSenderType(viewerSide),
         messageType: '',
         text: input.text ?? null,
         clientMessageId,
@@ -454,7 +476,7 @@ export function useThread(conversationId: string | null): ThreadState {
         sentAt: new Date().toISOString(),
       });
     },
-    [conversationId, dispatchSend],
+    [conversationId, dispatchSend, viewerSide],
   );
 
   const retry = useCallback(
@@ -508,4 +530,12 @@ export function useThread(conversationId: string | null): ThreadState {
     retry,
     discard,
   };
+}
+
+/** Lỗi gửi tin vì kênh đã đóng — hội thoại cần tải lại để giao diện biết. */
+function isChatClosedError(err: unknown): boolean {
+  return (
+    err instanceof ApiClientError &&
+    (err.code === API_ERROR_CODE.CHAT_BLOCKED || err.code === API_ERROR_CODE.CHAT_REQUIRES_BOOKING)
+  );
 }

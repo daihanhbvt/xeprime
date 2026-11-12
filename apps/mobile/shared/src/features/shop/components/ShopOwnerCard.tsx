@@ -70,7 +70,7 @@ export function ShopOwnerCard({
           <ContactRow
             icon="call-outline"
             label={t('phone')}
-            /* SĐT lưu dạng `84…`; đọc lên thì về dạng `09…` như người Việt vẫn đọc số của mình. */
+            /* SĐT lưu dạng `0…` (ADR 0082); vẫn quy để hàng cũ còn `84…` hiện đúng. */
             value={owner.phone ? toLocalVnPhone(owner.phone) : null}
             emptyLabel={t('noPhone')}
             verified={owner.phoneVerified}

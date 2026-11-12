@@ -70,7 +70,7 @@ export function RangeFieldBox({
         <YStack jc="center" minHeight={40}>
           {filled && durationText ? (
             <XStack bg={colors.surfaceSelected} br={radius.sm} px={space.xs} py={2}>
-              <Text col={colors.primaryActive} fos={fieldFontSize.affix} fow={fontWeight.semibold}>
+              <Text col={colors.accentText} fos={fieldFontSize.affix} fow={fontWeight.semibold}>
                 {durationText}
               </Text>
             </XStack>

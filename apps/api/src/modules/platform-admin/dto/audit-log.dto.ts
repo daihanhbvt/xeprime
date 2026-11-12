@@ -28,7 +28,7 @@ export class AuditLogListQueryDto {
 
   @ApiPropertyOptional({
     enum: AUDIT_ACTION_CATEGORY_VALUES,
-    description: 'Nhóm hành động — suy từ tiền tố mã (auditActionCategoryOf), lọc ở DB',
+    description: 'Nhóm hành động - suy từ tiền tố mã (auditActionCategoryOf), lọc ở DB',
   })
   @IsOptional()
   @IsIn(AUDIT_ACTION_CATEGORY_VALUES)
@@ -108,7 +108,7 @@ export class AuditLogDto {
     type: String,
     nullable: true,
     description:
-      'Tên người đọc được của đối tượng (tên gói, biển số, mã đơn…) — null khi loại đối tượng không ' +
+      'Tên người đọc được của đối tượng (tên gói, biển số, mã đơn…) - null khi loại đối tượng không ' +
       'tra nhãn (dữ liệu cá nhân) hoặc bản ghi không còn',
   })
   targetLabel!: string | null;

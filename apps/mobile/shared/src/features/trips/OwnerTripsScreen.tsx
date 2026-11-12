@@ -287,7 +287,7 @@ export function OwnerTripsScreen() {
               <RefreshControl
                 refreshing={isRefetching}
                 onRefresh={() => void refetch()}
-                tintColor={colors.primaryActive}
+                tintColor={colors.accentText}
               />
             }
             ListFooterComponent={isFetchingNextPage ? TripCardSkeleton : null}

@@ -33,6 +33,7 @@ import {
   normalizeTransmissionFor,
   missingPublishRequirements,
   missingVehicleImageTypes,
+  PLAN_QUOTA_GATE_POINT,
   vehicleCoverUrlOf,
   vehicleFeatureAppliesTo,
   vehicleFieldPolicy,
@@ -106,6 +107,8 @@ const LIST_SELECT = {
   // Trục thứ ba của việc lên chợ (ADR 0048). `deletedAt` đi kèm vì phép gộp hiển thị cần nó —
   // các truy vấn ở đây đều lọc `deletedAt: null`, nhưng luật thì không được dựa vào điều đó.
   marketplaceEnabled: true,
+  // Ai tắt công tắc (ADR 0085): chủ xe, hay hệ thống vì hết suất gói — để lý do nói đúng người.
+  marketplacePausedReason: true,
   deletedAt: true,
   mainImageUrl: true,
   weekdayPrice: true,
@@ -741,7 +744,7 @@ export class VehiclesService {
         if (!target.provinceCode) {
           throw new ConflictException({
             code: API_ERROR_CODE.BRANCH_LOCATION_REQUIRED,
-            message: 'Chi nhánh đích chưa có tỉnh/thành — xe không hiển thị được trên chợ ở đó',
+            message: 'Chi nhánh đích chưa có tỉnh/thành - xe không hiển thị được trên chợ ở đó',
             details: { field: 'branchId' },
           });
         }
@@ -769,7 +772,7 @@ export class VehiclesService {
         if (cleared.length > 0) {
           throw new ForbiddenException({
             code: API_ERROR_CODE.SUPPORT_FIELD_NOT_ALLOWED,
-            message: 'Bỏ dịch vụ này sẽ xoá giá riêng chủ xe đã đặt — phiên hỗ trợ không sửa giá',
+            message: 'Bỏ dịch vụ này sẽ xoá giá riêng chủ xe đã đặt - phiên hỗ trợ không sửa giá',
             details: { fields: ['serviceTypes'], priceFields: cleared },
           });
         }
@@ -950,7 +953,7 @@ export class VehiclesService {
     if (dto.monthlyPrice != null && !current.serviceTypes.includes(SERVICE_TYPE.LONG_TERM)) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Xe không đăng dịch vụ thuê dài hạn — bổ sung dịch vụ trước khi đặt giá tháng',
+        message: 'Xe không đăng dịch vụ thuê dài hạn - bổ sung dịch vụ trước khi đặt giá tháng',
       });
     }
     const driverPriceSet =
@@ -960,7 +963,7 @@ export class VehiclesService {
     if (driverPriceSet && !current.serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER)) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Xe không đăng dịch vụ có tài xế — bổ sung dịch vụ trước khi đặt giá có tài xế',
+        message: 'Xe không đăng dịch vụ có tài xế - bổ sung dịch vụ trước khi đặt giá có tài xế',
       });
     }
 
@@ -1309,15 +1312,14 @@ export class VehiclesService {
     /*
      * Điểm chặn THỨ HAI của trần xe (ADR 0041 điều 4) — và nó CHỈ áp cho trần đã trả tiền.
      *
-     * Gian hàng hạ bậc bước sang kỳ mới với nhiều xe hơn trần vừa mua: đó là cửa duy nhất còn
-     * lại để trần của một bậc trả phí có nghĩa. Trần Owner Lite thì  tự bỏ
-     * qua ở đây — nó đã gác điểm TẠO, và gác thêm ở chợ sẽ khoá vĩnh viễn mọi chiếc rời chợ một
-     * lần (sửa hồ sơ, bị yêu cầu bổ sung, tạm gỡ) của một gian hàng vừa rơi khỏi gói.
+     * Suất là chỗ trên chợ (ADR 0085 điều 4): mọi nguồn trần gác ở đây, kể cả Owner Lite (3 xe,
+     * tổng). Chiếc rời chợ một lần (sửa hồ sơ, bị yêu cầu bổ sung) KHÔNG bị khoá vĩnh viễn như bản
+     * trước lo: xe tạm ẩn / bị trả về đã nhả suất, nên chỉ bị chặn khi số xe ĐANG chiếm chỗ đã đầy.
      *
      * Trừ chính chiếc này để gửi-lại-duyệt không tự chặn mình.
      */
     await this.billing.assertVehicleQuota(tenantId, vehicle.vehicleType as VehicleType, {
-      scope: 'marketplace',
+      scope: PLAN_QUOTA_GATE_POINT.MARKETPLACE,
       excludeVehicleId: id,
     });
 
@@ -1441,13 +1443,15 @@ export class VehiclesService {
    *  2. **Gian hàng đang hoạt động, và mặt tiền của gian hàng trả phí còn đủ** — cùng hai cổng
    *     với `submitForPublicReview`, vì cả hai đều là lối ĐƯA XE RA CHỢ.
    *
-   * ## Hai cổng CỐ Ý không chạy ở đây
+   *  3. **Còn suất gói** (ADR 0085 điều 4 — ghi đè mục "cổng cố ý không chạy" của ADR 0048 điều 3).
+   *     Suất là xe đang CHIẾM chỗ trên chợ (`MARKETPLACE_SLOT_WHERE`), nên tắt công tắc nhả suất và
+   *     bật lại thì đếm lại — công tắc không còn là cánh cửa một chiều mà bản trước lo. Áp mọi nguồn
+   *     trần, kể cả Owner Lite. Đếm TRONG transaction sau khoá suất của gian hàng.
    *
-   * **Trần số xe của gói** (`assertVehicleQuota`) đếm theo `public_status`, mà công tắc này
-   * không đổi `public_status` — chiếc xe đang tạm ẩn vẫn nằm trong phép đếm suốt thời gian đó.
-   * Chạy nó ở đây nghĩa là một gian hàng vừa hạ bậc sẽ tắt được công tắc nhưng không bật lại
-   * được, tức là công tắc trở thành một cánh cửa một chiều — trong khi việc tắt nó chưa bao giờ
-   * nhả ra một chỗ nào cho ai.
+   * Mọi lượt bật đều do CHỦ XE: nó xoá luôn lý do tạm ẩn của hệ thống (`marketplace_paused_reason`).
+   * Lượt tắt của chủ xe cũng để lý do NULL — "tôi tạm cất xe" chứ không phải "hết suất".
+   *
+   * ## Một cổng CỐ Ý không chạy ở đây
    *
    * **Điều kiện hồ sơ xe** (`missingPublishRequirements`) đã được chấm ở cổng duyệt, và từ
    * ADR 0030 thì giá/ảnh/mô tả sửa tự do sau đó mà xe vẫn ở ngoài chợ. Chấm lại ở đây tạo ra một
@@ -1470,7 +1474,13 @@ export class VehiclesService {
   ): Promise<VehicleDetailDto> {
     const current = await this.prisma.vehicle.findFirst({
       where: { id, tenantId, deletedAt: null },
-      select: { id: true, publicStatus: true, marketplaceEnabled: true },
+      select: {
+        id: true,
+        publicStatus: true,
+        marketplaceEnabled: true,
+        marketplacePausedReason: true,
+        vehicleType: true,
+      },
     });
     if (!current) throw notFound();
 
@@ -1511,6 +1521,15 @@ export class VehiclesService {
     }
 
     await this.prisma.$transaction(async (tx) => {
+      if (enabled) {
+        // Cổng suất (ADR 0085 điều 4): đếm SAU khoá suất của gian hàng, trừ chính chiếc này.
+        await this.billing.lockVehicleSlotsWithinTx(tx, tenantId);
+        await this.billing.assertVehicleQuota(tenantId, current.vehicleType as VehicleType, {
+          scope: PLAN_QUOTA_GATE_POINT.MARKETPLACE,
+          excludeVehicleId: id,
+          tx,
+        });
+      }
       const res = await tx.vehicle.updateMany({
         where: {
           id,
@@ -1521,7 +1540,8 @@ export class VehiclesService {
           // ẩn của nền tảng vừa chen vào sau các cổng ở trên.
           ...(enabled ? { publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC } : {}),
         },
-        data: { marketplaceEnabled: enabled },
+        // Lượt của CHỦ XE: không mang lý do của hệ thống, cả khi tắt lẫn khi bật lại.
+        data: { marketplaceEnabled: enabled, marketplacePausedReason: null },
       });
       // Không ghi được nghĩa là ai đó đã đổi trước — trạng thái thật trả ở `getOne` bên dưới.
       if (res.count !== 1) return;
@@ -1536,7 +1556,13 @@ export class VehiclesService {
           action: 'vehicle.marketplace_visibility.update',
           targetType: APPROVAL_TARGET_TYPE.VEHICLE,
           targetId: id,
-          before: { marketplaceEnabled: !enabled },
+          // Lý do của hệ thống chỉ ghi khi có — lượt bật này xoá nó, nhật ký phải kể lại được.
+          before: {
+            marketplaceEnabled: !enabled,
+            ...(current.marketplacePausedReason
+              ? { marketplacePausedReason: current.marketplacePausedReason }
+              : {}),
+          },
           after: { marketplaceEnabled: enabled },
         },
         tx,
@@ -2117,6 +2143,7 @@ function toListItem(
     deletedAt: v.deletedAt,
     publicStatus: v.publicStatus,
     marketplaceEnabled: v.marketplaceEnabled,
+    marketplacePausedReason: v.marketplacePausedReason,
     shopActive,
   });
 

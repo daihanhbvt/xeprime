@@ -11,7 +11,7 @@ describe('remainingKm', () => {
     expect(remainingKm(0)).toEqual({ kind: 'overdue', km: 0 });
   });
 
-  it('vượt mốc trả TRỊ TUYỆT ĐỐI — chữ "quá hạn" mới là chỗ mang dấu', () => {
+  it('vượt mốc trả TRỊ TUYỆT ĐỐI - chữ "quá hạn" mới là chỗ mang dấu', () => {
     expect(remainingKm(-320)).toEqual({ kind: 'overdue', km: 320 });
   });
 

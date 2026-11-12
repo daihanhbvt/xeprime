@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { useCallback } from 'react';
 
-import { API_ERROR_CODE, PLAN_STATUS } from '@xeprime/types';
+import { API_ERROR_CODE, PLAN_QUOTA_GATE_POINT, PLAN_STATUS } from '@xeprime/types';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { getErrorCode, getErrorDetails } from '@/services/api-client';
 
@@ -35,7 +35,14 @@ export function usePlanQuotaGateCopy(): (gate: PlanQuotaGate) => PlanQuotaGateCo
       const values = { used: gate.used, limit: gate.limit };
       switch (gate.source) {
         case PLAN_QUOTA_GATE_SOURCE.OWNER_LITE:
-          return { title: t('ownerLite', values), cta: t('upgradeToShop') };
+          // Ở CHỢ (ADR 0085 điều 4) trần là số xe đang hiển thị, không phải số xe đã đăng.
+          return {
+            title: t(
+              gate.point === PLAN_QUOTA_GATE_POINT.MARKETPLACE ? 'ownerLiteMarketplace' : 'ownerLite',
+              values,
+            ),
+            cta: t('upgradeToShop'),
+          };
         case PLAN_QUOTA_GATE_SOURCE.SHARED_PLAN:
           return { title: t(`shared.${gate.point}`, values), cta: t('viewPlans') };
         case PLAN_QUOTA_GATE_SOURCE.LANE_PLAN:

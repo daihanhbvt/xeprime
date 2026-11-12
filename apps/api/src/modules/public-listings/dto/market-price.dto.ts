@@ -24,12 +24,12 @@ export class MarketPriceQueryDto {
   @IsIn(VEHICLE_TYPE_VALUES)
   vehicleType!: string;
 
-  @ApiPropertyOptional({ enum: BODY_TYPE_VALUES, description: 'Kiểu dáng — chỉ ô tô' })
+  @ApiPropertyOptional({ enum: BODY_TYPE_VALUES, description: 'Kiểu dáng - chỉ ô tô' })
   @IsOptional()
   @IsIn(BODY_TYPE_VALUES)
   bodyType?: string;
 
-  @ApiPropertyOptional({ enum: MOTORBIKE_CATEGORY_VALUES, description: 'Phân khúc — chỉ xe máy' })
+  @ApiPropertyOptional({ enum: MOTORBIKE_CATEGORY_VALUES, description: 'Phân khúc - chỉ xe máy' })
   @IsOptional()
   @IsIn(MOTORBIKE_CATEGORY_VALUES)
   motorbikeCategory?: string;
@@ -38,7 +38,7 @@ export class MarketPriceQueryDto {
     type: Number,
     minimum: 1,
     maximum: 64,
-    description: 'Số chỗ — dùng khi ô tô chưa khai kiểu dáng',
+    description: 'Số chỗ - dùng khi ô tô chưa khai kiểu dáng',
   })
   @IsOptional()
   @Type(() => Number)
@@ -60,10 +60,10 @@ export class MarketPriceQueryDto {
  * khác nhau, dù hiện ra cùng một con số.
  */
 export class MarketPriceSuggestionDto {
-  @ApiProperty({ type: String, description: 'Mức thấp (phân vị 25) — tiền dạng string, ADR 0007' })
+  @ApiProperty({ type: String, description: 'Mức thấp (phân vị 25) - tiền dạng string, ADR 0007' })
   low!: string;
 
-  @ApiProperty({ type: String, description: 'Mức giữa (trung vị) — giá đề xuất' })
+  @ApiProperty({ type: String, description: 'Mức giữa (trung vị) - giá đề xuất' })
   median!: string;
 
   @ApiProperty({ type: String, description: 'Mức cao (phân vị 75)' })

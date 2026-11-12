@@ -2,28 +2,27 @@
 
 import {
   DeleteOutlined,
+  EditOutlined,
   EyeOutlined,
   FileImageOutlined,
   FilePdfOutlined,
+  PlusOutlined,
   SafetyCertificateOutlined,
-  UploadOutlined,
 } from '@ant-design/icons';
 import {
   App,
   Button,
   DatePicker,
   Dropdown,
-  Empty,
   Input,
   Popconfirm,
   Result,
-  Select,
   Skeleton,
-  Tag,
+  Spin,
   Upload,
 } from 'antd';
 import { useTranslations } from 'next-intl';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   API_ERROR_CODE,
   CUSTOMER_DOCUMENT_EXPIRY_META,
@@ -31,21 +30,26 @@ import {
   DOCUMENT_UPLOAD_MIME_TYPES,
   IDENTITY_VERIFY_METHOD_LABEL,
   IDENTITY_VERIFY_METHOD_VALUES,
+  STATUS_COLOR,
   type CustomerDocumentExpiry,
   type IdentityVerifyMethod,
 } from '@xeprime/types';
 import { PreviewImage, PreviewImageGroup } from '@/components/data-display/PreviewImage';
-import { StatusTag } from '@/components/data-display/StatusTag';
+import { StatusBadge, ToneDotBadge } from '@/components/data-display/StatusBadge';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { DAY_PARAM_FORMAT, dayjs } from '@/lib/datetime';
+import { getErrorCode, getErrorMessage } from '@/services/api-client';
+import { validateDocumentFile } from '@/services/upload';
+import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
 import { fetchCustomerDocumentDownload } from '../api';
 import { DOCUMENT_TYPE_VALUES, isPreviewableImage } from '../constants';
-import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import {
   useCustomerDocumentPreviews,
   useCustomerDocuments,
   useDeleteCustomerDocument,
-  useVerifyCustomerDocument,
+  useUpdateCustomerDocument,
   useUploadCustomerDocument,
+  useVerifyCustomerDocument,
 } from '../hooks/use-customers';
 import type { CustomerDocument } from '../types';
 import styles from './CustomerDocumentsPanel.module.css';
@@ -55,16 +59,30 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 
 const ACCEPT = DOCUMENT_UPLOAD_MIME_TYPES.join(',');
 
+/** Ba loại có ô CỐ ĐỊNH (Figma `23797:62633`); loại "khác" luôn có một ô trống để tải thêm. */
+const FIXED_TYPES = [
+  CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID,
+  CUSTOMER_DOCUMENT_TYPE.DRIVER_LICENCE,
+  CUSTOMER_DOCUMENT_TYPE.PASSPORT,
+] as const;
+
 /**
- * Giấy tờ tuỳ thân của khách (CCCD / GPLX).
+ * Giấy tờ tuỳ thân của khách — lưới thẻ theo loại (CCCD · GPLX · Hộ chiếu · Khác), Figma
+ * Partner-XePrime `23797:62633` (02/11/2026). Dùng chung cho tab "Giấy tờ" của hồ sơ khách và hộp
+ * "Giấy tờ khách" mở từ chi tiết đơn.
  *
- * Ba nguyên tắc nhìn thấy được trên bề mặt này:
- *  - **Không có URL nào sống lâu.** Bấm "Mở tệp" mới xin một link ký ngắn hạn; link đó không
- *    vào state, không vào cache, và chỉ mở được nếu người dùng có quyền xem tệp.
- *  - **Thấy trạng thái ≠ mở được tệp.** Nhân viên quầy biết khách đã có CCCD hay chưa mà không
- *    đương nhiên mở được kho ảnh giấy tờ của mọi khách cũ.
- *  - **Hỏng thì thử lại được.** Upload đứt giữa chừng không để lại gì trong danh sách; chọn lại
- *    tệp là xong (server chỉ nhận file đã xác minh nội dung).
+ * Ba nguyên tắc giữ nguyên từ bản trước:
+ *  - **Không có URL nào sống lâu.** Ảnh thu nhỏ / mở PDF đều xin link ký ngắn hạn, mỗi lần là một
+ *    dòng audit; chỉ người có quyền xem tệp mới phát ra request.
+ *  - **Thấy trạng thái ≠ mở được tệp.**
+ *  - **Đối chiếu là thao tác thủ công có ghi nhận** — chọn đã soi bằng đường nào (VNeID / bản gốc…).
+ *
+ * Tải lên là MỘT cú bấm (03/11/2026): bấm hoặc kéo ảnh vào ô ảnh của thẻ là tải ngay, đúng loại
+ * của thẻ — không có hộp nhập thông tin chen giữa. Chủ thẻ / số / thời hạn điền sau bằng "Sửa
+ * thông tin". Nút "Tải lên giấy tờ" ở đầu khối chọn loại trước, rồi mở hộp chọn tệp.
+ *
+ * "Thay giấy tờ" = tải bản mới (mang theo chủ thẻ + số của bản cũ, KHÔNG mang thời hạn — thay
+ * thường là vì hết hạn), xong thì gỡ bản cũ (soft-delete + audit) — bản mới cần đối chiếu lại.
  */
 export function CustomerDocumentsPanel({
   customerId,
@@ -77,65 +95,46 @@ export function CustomerDocumentsPanel({
   canViewFiles: boolean;
   disabled?: boolean;
 }) {
-  const t = useTranslations('Customers');
+  const t = useTranslations('Customers.profile.docs');
+  const tCustomers = useTranslations('Customers');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
+  const dl = useDomainLabel();
   const errorMessage = useErrorMessage();
-  const datePattern = useDatePickerPattern();
-
   const { message } = App.useApp();
+
   const { data, isLoading, isError, refetch, isFetching } = useCustomerDocuments(customerId);
-  const upload = useUploadCustomerDocument();
   const remove = useDeleteCustomerDocument();
   const verify = useVerifyCustomerDocument();
-
-  const [documentType, setDocumentType] = useState<string>(CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID);
-  const [customTypeName, setCustomTypeName] = useState('');
-  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const upload = useUploadCustomerDocument();
+  const uploadRejectionMessage = useUploadRejectionMessage();
   const [opening, setOpening] = useState<string | null>(null);
+  const [editing, setEditing] = useState<CustomerDocument | null>(null);
+  /** Thẻ đang tải (khoá ô) — một thẻ một lượt; thẻ khác vẫn tải song song được. */
+  const [uploading, setUploading] = useState<ReadonlySet<string>>(new Set());
+  const headerInput = useRef<HTMLInputElement>(null);
+  const headerType = useRef<string>(CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID);
 
-  const isOtherType = documentType === CUSTOMER_DOCUMENT_TYPE.OTHER;
+  const items = useMemo(() => data ?? [], [data]);
+  const previewQ = useCustomerDocumentPreviews(customerId, items, canViewFiles);
+  const previews = previewQ.data ?? {};
+  const editable = canManage && !disabled;
 
-  const typeOptions = useMemo(
-    () =>
-      DOCUMENT_TYPE_VALUES.map((value) => ({
-        value,
-        label: domainLabel('customerDocumentType', value),
-      })),
-    [domainLabel],
-  );
-
-  async function handleUpload(file: File) {
-    try {
-      await upload.mutateAsync({
-        id: customerId,
-        input: {
-          documentType,
-          // Nhãn tự đặt chỉ có nghĩa với loại "khác" — gửi kèm loại khác sẽ bị CHECK của DB từ chối.
-          customTypeName: isOtherType ? customTypeName.trim() || null : null,
-          expiresAt,
-          file,
-        },
-      });
-      message.success(t('documents.uploaded'));
-      setExpiresAt(null);
-      setCustomTypeName('');
-    } catch (err) {
-      /*
-       * Nhánh chung giữ `getErrorMessage`: hỏng ở bước PUT lên R2 ném một `Error` THƯỜNG (không
-       * mã), và câu của nó là thứ duy nhất nói được đã ngã ở đâu. Dịch theo mã ở đây biến mọi sự
-       * cố tải tệp thành một câu chung chung. Nhánh có MÃ thì vẫn dịch, như luật.
-       */
-      message.error(
-        getErrorCode(err) === API_ERROR_CODE.UPLOADS_NOT_CONFIGURED
-          ? t('documents.uploadsNotConfigured')
-          : getErrorMessage(err),
-      );
+  /** Mỗi loại cố định một ô (dù chưa có giấy); giấy tờ nhiều bản / loại khác nối tiếp sau. */
+  const slots = useMemo(() => {
+    const result: { key: string; type: string; document: CustomerDocument | null }[] = [];
+    for (const type of FIXED_TYPES) {
+      const ofType = items.filter((d) => d.documentType === type);
+      if (ofType.length === 0) result.push({ key: `empty-${type}`, type, document: null });
+      for (const document of ofType) result.push({ key: document.id, type, document });
     }
-  }
+    for (const document of items.filter((d) => d.documentType === CUSTOMER_DOCUMENT_TYPE.OTHER)) {
+      result.push({ key: document.id, type: CUSTOMER_DOCUMENT_TYPE.OTHER, document });
+    }
+    result.push({ key: 'empty-other', type: CUSTOMER_DOCUMENT_TYPE.OTHER, document: null });
+    return result;
+  }, [items]);
 
-  /** Mở PDF: xin signed URL NGAY LÚC BẤM rồi để trình duyệt render — không giữ URL ở đâu. */
   async function openDocument(document: CustomerDocument) {
     setOpening(document.id);
     try {
@@ -148,219 +147,400 @@ export function CustomerDocumentsPanel({
     }
   }
 
-  const items = data ?? [];
-  // Ảnh thu nhỏ chỉ nạp cho người ĐƯỢC PHÉP mở tệp; thiếu quyền thì không request nào phát ra.
-  const previewQ = useCustomerDocumentPreviews(customerId, items, canViewFiles);
-  const previews = previewQ.data ?? {};
+  async function uploadFile(
+    slotKey: string,
+    documentType: string,
+    file: File,
+    replaces?: CustomerDocument,
+  ) {
+    const invalid = validateDocumentFile(file);
+    if (invalid) {
+      message.error(uploadRejectionMessage(invalid));
+      return;
+    }
+    setUploading((prev) => new Set(prev).add(slotKey));
+    try {
+      await upload.mutateAsync({
+        id: customerId,
+        input: {
+          documentType,
+          customTypeName: replaces?.customTypeName ?? null,
+          holderName: replaces?.holderName ?? null,
+          documentNumber: replaces?.documentNumber ?? null,
+          file,
+        },
+      });
+      if (replaces) {
+        await remove.mutateAsync({ id: customerId, documentId: replaces.id });
+        message.success(t('replaced'));
+      } else {
+        message.success(tCustomers('documents.uploaded'));
+      }
+    } catch (err) {
+      // Lỗi PUT lên R2 là `Error` thường (không mã) — câu của nó là thứ duy nhất nói được ngã ở đâu.
+      message.error(
+        getErrorCode(err) === API_ERROR_CODE.UPLOADS_NOT_CONFIGURED
+          ? tCustomers('documents.uploadsNotConfigured')
+          : getErrorCode(err)
+            ? errorMessage(err)
+            : getErrorMessage(err),
+      );
+    } finally {
+      setUploading((prev) => {
+        const next = new Set(prev);
+        next.delete(slotKey);
+        return next;
+      });
+    }
+  }
+
+  /** Bộ chọn tệp của AntD — chặn upload mặc định, tự đi presign → R2 → complete. */
+  const picker = (slotKey: string, documentType: string, replaces?: CustomerDocument) => ({
+    accept: ACCEPT,
+    multiple: false,
+    showUploadList: false,
+    disabled: uploading.has(slotKey),
+    beforeUpload: (file: File) => {
+      void uploadFile(slotKey, documentType, file, replaces);
+      return false;
+    },
+  });
+
+  const typeLabel = (type: string, document: CustomerDocument | null) =>
+    type === CUSTOMER_DOCUMENT_TYPE.OTHER && document?.customTypeName
+      ? document.customTypeName
+      : dl('customerDocumentType', type);
+
+  if (isLoading) return <Skeleton active paragraph={{ rows: 6 }} />;
+  if (isError) {
+    return (
+      <Result
+        status="warning"
+        title={tCustomers('documents.errorTitle')}
+        extra={
+          <Button onClick={() => void refetch()} loading={isFetching}>
+            {tCommon('actions.retry')}
+          </Button>
+        }
+      />
+    );
+  }
 
   return (
     <section className={styles.panel}>
-      <p className={styles.hint}>{t('hints.documents')}</p>
-
-      {canManage && !disabled ? (
-        <div className={styles.uploader}>
-          <Select
-            className={styles.typeSelect}
-            value={documentType}
-            options={typeOptions}
-            onChange={setDocumentType}
-            aria-label={t('documents.type')}
-          />
-          {isOtherType ? (
-            <Input
-              className={styles.customName}
-              value={customTypeName}
-              onChange={(event) => setCustomTypeName(event.target.value)}
-              maxLength={160}
-              placeholder={t('documents.customNamePlaceholder')}
-              aria-label={t('documents.customName')}
+      <div className={styles.head}>
+        <h2 className={styles.title}>{t('title')}</h2>
+        {editable ? (
+          <>
+            <Dropdown
+              trigger={['click']}
+              disabled={uploading.has('header')}
+              menu={{
+                items: DOCUMENT_TYPE_VALUES.map((value) => ({
+                  key: value,
+                  label: dl('customerDocumentType', value),
+                })),
+                onClick: ({ key }) => {
+                  headerType.current = key;
+                  headerInput.current?.click();
+                },
+              }}
+            >
+              <button type="button" className={styles.headAction}>
+                {uploading.has('header') ? (
+                  <Spin size="small" />
+                ) : (
+                  <PlusOutlined aria-hidden="true" />
+                )}{' '}
+                {t('upload')}
+              </button>
+            </Dropdown>
+            <input
+              ref={headerInput}
+              type="file"
+              accept={ACCEPT}
+              hidden
+              aria-hidden="true"
+              tabIndex={-1}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                // Xoá giá trị để chọn lại CÙNG tệp (sau một lần lỗi) vẫn phát sự kiện change.
+                event.target.value = '';
+                if (file) void uploadFile('header', headerType.current, file);
+              }}
             />
-          ) : null}
-          <DatePicker
-            className={styles.expiry}
-            format={datePattern.date}
-            placeholder={t('documents.expiresAt')}
-            value={expiresAt ? dayjs(expiresAt, DAY_PARAM_FORMAT) : null}
-            onChange={(value) => setExpiresAt(value ? value.format(DAY_PARAM_FORMAT) : null)}
-          />
-          <Upload
-            accept={ACCEPT}
-            showUploadList={false}
-            beforeUpload={(file) => {
-              void handleUpload(file as unknown as File);
-              return false; // flow presign → PUT → complete tự lo, không dùng upload mặc định
-            }}
-          >
-            <Button icon={<UploadOutlined />} loading={upload.isPending}>
-              {t('documents.upload')}
-            </Button>
-          </Upload>
-        </div>
-      ) : null}
+          </>
+        ) : null}
+      </div>
+      <p className={styles.hint}>{tCustomers('hints.documents')}</p>
 
-      {isLoading ? <Skeleton active paragraph={{ rows: 2 }} /> : null}
-
-      {isError && !data ? (
-        <Result
-          status="warning"
-          title={t('documents.errorTitle')}
-          extra={
-            <Button onClick={() => void refetch()} loading={isFetching}>
-              {tCommon('actions.retry')}
-            </Button>
-          }
-        />
-      ) : null}
-
-      {!isLoading && !isError && items.length === 0 ? (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('documents.emptyTitle')} />
-      ) : null}
-
-      {items.length > 0 ? (
-        <PreviewImageGroup>
-          <ul className={styles.list}>
-            {items.map((document) => (
-              <li key={document.id} className={styles.item}>
-                {/*
-                 * Ảnh thu nhỏ THẬT — bấm là phóng to toàn màn hình bằng đúng trình xem ảnh dùng
-                 * chung của app (zoom / xoay / lật / đếm x-y), y như ảnh xe hay ảnh bàn giao.
-                 * PDF không có thumbnail nên rơi về icon loại tệp + nút mở tab.
-                 */}
+      <PreviewImageGroup>
+        <ul className={styles.grid}>
+          {slots.map(({ key, type, document }) => (
+            <li key={key} className={styles.card}>
+              {!document && editable ? (
+                <Upload.Dragger {...picker(key, type)} className={styles.dropzone}>
+                  <span className={styles.dropInner}>
+                    {uploading.has(key) ? (
+                      <Spin />
+                    ) : (
+                      <FileImageOutlined className={styles.thumbIcon} aria-hidden="true" />
+                    )}
+                    <span className={styles.dropHint}>
+                      {uploading.has(key) ? t('uploading') : t('dropHint')}
+                    </span>
+                  </span>
+                </Upload.Dragger>
+              ) : (
                 <span className={styles.thumb}>
-                  {previews[document.id] ? (
+                  {document && previews[document.id] ? (
                     <PreviewImage
                       src={previews[document.id] as string}
                       alt={document.originalName}
                       className={styles.thumbImage}
                     />
-                  ) : isPreviewableImage(document.mimeType) ? (
-                    <FileImageOutlined className={styles.thumbIcon} />
-                  ) : (
+                  ) : document && !isPreviewableImage(document.mimeType) ? (
                     <FilePdfOutlined className={styles.thumbIcon} />
-                  )}
-                </span>
-
-                <div className={styles.itemMain}>
-                  <div className={styles.itemTitle}>
-                    {document.documentType === CUSTOMER_DOCUMENT_TYPE.OTHER &&
-                    document.customTypeName
-                      ? document.customTypeName
-                      : domainLabel('customerDocumentType', document.documentType)}
-                  </div>
-                  <div className={styles.itemMeta}>
-                    {document.originalName} ·{' '}
-                    {document.uploadedByName ?? t('documents.unknownUploader')} ·{' '}
-                    {fmt.date(document.createdAt)}
-                  </div>
-                </div>
-                <div className={styles.itemTags}>
-                  <StatusTag
-                    value={document.expiryStatus as CustomerDocumentExpiry}
-                    meta={CUSTOMER_DOCUMENT_EXPIRY_META}
-                    group="customerDocumentExpiry"
-                  />
-                  {document.expiresAt ? (
-                    <Tag>{t('documents.expiresTag', { date: fmt.date(document.expiresAt) })}</Tag>
-                  ) : null}
-                  {/*
-                    Đối chiếu là việc RIÊNG với hạn giấy tờ: một CCCD còn hạn mà chưa ai soi vẫn
-                    là rủi ro. Hiện cả hai trạng thái, không gộp thành một dấu "ổn".
-                  */}
-                  {document.verifiedAt ? (
-                    <Tag color="green" icon={<SafetyCertificateOutlined />}>
-                      {t('documents.verified', { date: fmt.date(document.verifiedAt) })}
-                    </Tag>
                   ) : (
-                    <Tag>{t('documents.notVerified')}</Tag>
+                    <FileImageOutlined className={styles.thumbIcon} />
                   )}
+                  {document && uploading.has(key) ? (
+                    <span className={styles.thumbBusy}>
+                      <Spin />
+                    </span>
+                  ) : null}
+                </span>
+              )}
+
+              <h3 className={styles.cardTitle}>{typeLabel(type, document)}</h3>
+              <dl className={styles.facts}>
+                <div>
+                  <dt>{t('holder')}</dt>
+                  <dd>{document?.holderName ?? '-'}</dd>
                 </div>
-                <div className={styles.itemActions}>
-                  {/*
-                   * Ảnh đã có ô xem nhanh bấm-là-phóng-to, nên nút này chỉ còn cho PDF — thứ
-                   * trình duyệt hiển thị tốt hơn bất cứ gì ta dựng trong modal.
-                   */}
-                  {canViewFiles && !isPreviewableImage(document.mimeType) ? (
-                    <Button
-                      size="small"
-                      icon={<EyeOutlined />}
-                      loading={opening === document.id}
-                      onClick={() => void openDocument(document)}
-                    >
-                      {t('documents.openFile')}
-                    </Button>
-                  ) : null}
-                  {/*
-                    Đối chiếu là thao tác THỦ CÔNG có ghi nhận — nhân viên tự soi VNeID hoặc bản
-                    gốc rồi tích. Hệ thống không gọi API định danh quốc gia, nên phải nói rõ đã
-                    soi bằng đường nào; về sau tra lại còn biết ai chịu trách nhiệm.
-                  */}
-                  {canManage && !disabled ? (
-                    <Dropdown
-                      trigger={['click']}
-                      disabled={verify.isPending}
-                      menu={{
-                        items: IDENTITY_VERIFY_METHOD_VALUES.map((method) => ({
-                          key: method,
-                          // Nhãn enum đi qua Domain như `customerDocumentExpiry` ở ngay trên —
-                          // META tiếng Việt chỉ là bản dự phòng (ADR 0012).
-                          label: domainLabel(
-                            'identityVerifyMethod',
-                            method,
-                            IDENTITY_VERIFY_METHOD_LABEL[method],
-                          ),
-                        })),
-                        onClick: ({ key }) =>
-                          verify.mutate(
-                            {
-                              id: customerId,
-                              documentId: document.id,
-                              // `key` của menu là string thô; nó đến TỪ chính danh sách phương
-                              // thức nên thu hẹp lại đúng union của contract.
-                              input: { verifyMethod: key as IdentityVerifyMethod },
-                            },
-                            {
-                              onSuccess: () => message.success(t('documents.verifyRecorded')),
-                              onError: (err) => message.error(errorMessage(err)),
-                            },
-                          ),
-                      }}
-                    >
-                      <Button size="small" icon={<SafetyCertificateOutlined />}>
-                        {document.verifiedAt
-                          ? t('documents.verifyAgain')
-                          : t('documents.verify')}
-                      </Button>
-                    </Dropdown>
-                  ) : null}
-                  {canManage && !disabled ? (
-                    <Popconfirm
-                      title={t('documents.removeTitle')}
-                      okText={t('documents.removeOk')}
-                      cancelText={tCommon('actions.close')}
-                      onConfirm={() =>
-                        remove.mutate(
-                          { id: customerId, documentId: document.id },
-                          {
-                            onSuccess: () => message.success(t('documents.removed')),
-                            onError: (err) => message.error(errorMessage(err)),
-                          },
-                        )
-                      }
-                    >
+                <div>
+                  <dt>{t(`numberOf.${type}` as 'numberOf.other')}</dt>
+                  <dd>{document?.documentNumber ?? '-'}</dd>
+                </div>
+                <div>
+                  <dt>{t('expiry')}</dt>
+                  <dd>
+                    {!document ? (
+                      '-'
+                    ) : document.expiresAt ? (
+                      <span className={styles.expiry}>
+                        {fmt.date(document.expiresAt)}
+                        <StatusBadge
+                          value={document.expiryStatus as CustomerDocumentExpiry}
+                          meta={CUSTOMER_DOCUMENT_EXPIRY_META}
+                          group="customerDocumentExpiry"
+                        />
+                      </span>
+                    ) : (
+                      t('noExpiry')
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t('status')}</dt>
+                  <dd>
+                    {!document ? (
+                      <ToneDotBadge color={STATUS_COLOR.NEUTRAL}>{t('notUploaded')}</ToneDotBadge>
+                    ) : document.verifiedAt ? (
+                      <ToneDotBadge color={STATUS_COLOR.SUCCESS}>{t('verified')}</ToneDotBadge>
+                    ) : (
+                      <ToneDotBadge color={STATUS_COLOR.WARNING}>{t('notVerified')}</ToneDotBadge>
+                    )}
+                  </dd>
+                </div>
+              </dl>
+              {document ? (
+                <p className={styles.meta}>
+                  {document.originalName} ·{' '}
+                  {document.uploadedByName ?? tCustomers('documents.unknownUploader')} ·{' '}
+                  {fmt.date(document.createdAt)}
+                </p>
+              ) : null}
+
+              <div className={styles.actions}>
+                {document ? (
+                  <>
+                    {canViewFiles && !isPreviewableImage(document.mimeType) ? (
                       <Button
-                        size="small"
-                        danger
-                        icon={<DeleteOutlined />}
-                        aria-label={t('documents.removeLabel', { name: document.originalName })}
+                        icon={<EyeOutlined />}
+                        loading={opening === document.id}
+                        onClick={() => void openDocument(document)}
+                        aria-label={tCustomers('documents.openFile')}
                       />
-                    </Popconfirm>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </PreviewImageGroup>
+                    ) : null}
+                    {editable ? (
+                      <>
+                        <Popconfirm
+                          title={tCustomers('documents.removeTitle')}
+                          okText={tCustomers('documents.removeOk')}
+                          cancelText={tCommon('actions.close')}
+                          onConfirm={() =>
+                            remove.mutate(
+                              { id: customerId, documentId: document.id },
+                              {
+                                onSuccess: () => message.success(tCustomers('documents.removed')),
+                                onError: (err) => message.error(errorMessage(err)),
+                              },
+                            )
+                          }
+                        >
+                          <Button danger icon={<DeleteOutlined />}>
+                            {t('remove')}
+                          </Button>
+                        </Popconfirm>
+                        <Button
+                          icon={<EditOutlined />}
+                          aria-label={t('editInfo')}
+                          onClick={() => setEditing(document)}
+                        />
+                        {document.verifiedAt ? (
+                          <Upload {...picker(key, type, document)}>
+                            <Button loading={uploading.has(key)}>{t('replace')}</Button>
+                          </Upload>
+                        ) : (
+                          <Dropdown
+                            trigger={['click']}
+                            disabled={verify.isPending}
+                            menu={{
+                              items: IDENTITY_VERIFY_METHOD_VALUES.map((method) => ({
+                                key: method,
+                                label: dl(
+                                  'identityVerifyMethod',
+                                  method,
+                                  IDENTITY_VERIFY_METHOD_LABEL[method],
+                                ),
+                              })),
+                              onClick: ({ key }) =>
+                                verify.mutate(
+                                  {
+                                    id: customerId,
+                                    documentId: document.id,
+                                    input: { verifyMethod: key as IdentityVerifyMethod },
+                                  },
+                                  {
+                                    onSuccess: () =>
+                                      message.success(tCustomers('documents.verifyRecorded')),
+                                    onError: (err) => message.error(errorMessage(err)),
+                                  },
+                                ),
+                            }}
+                          >
+                            <Button type="primary" icon={<SafetyCertificateOutlined />}>
+                              {t('verify')}
+                            </Button>
+                          </Dropdown>
+                        )}
+                      </>
+                    ) : null}
+                  </>
+                ) : editable ? (
+                  <Upload {...picker(key, type)}>
+                    <Button icon={<PlusOutlined />} loading={uploading.has(key)}>
+                      {t('upload')}
+                    </Button>
+                  </Upload>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </PreviewImageGroup>
+
+      {editing ? (
+        <DocumentInfoDialog
+          key={editing.id}
+          customerId={customerId}
+          document={editing}
+          onClose={() => setEditing(null)}
+        />
       ) : null}
     </section>
+  );
+}
+
+/**
+ * Sửa chủ thẻ / số / thời hạn của MỘT giấy tờ. Dựng có điều kiện (mỗi lần mở là state mới) nên
+ * không bao giờ gửi số giấy tờ của bản trước cho bản sau.
+ */
+function DocumentInfoDialog({
+  customerId,
+  document,
+  onClose,
+}: {
+  customerId: string;
+  document: CustomerDocument;
+  onClose: () => void;
+}) {
+  const t = useTranslations('Customers.profile.docs');
+  const datePattern = useDatePickerPattern();
+  const errorMessage = useErrorMessage();
+  const { message } = App.useApp();
+  const update = useUpdateCustomerDocument();
+
+  const [holderName, setHolderName] = useState(document.holderName ?? '');
+  const [documentNumber, setDocumentNumber] = useState(document.documentNumber ?? '');
+  const [expiresAt, setExpiresAt] = useState<string | null>(document.expiresAt ?? null);
+
+  async function submit() {
+    if (update.isPending) return;
+    try {
+      await update.mutateAsync({
+        id: customerId,
+        documentId: document.id,
+        input: {
+          holderName: holderName.trim() || null,
+          documentNumber: documentNumber.trim() || null,
+          expiresAt,
+        },
+      });
+      message.success(t('saved'));
+      onClose();
+    } catch (err) {
+      message.error(errorMessage(err));
+    }
+  }
+
+  return (
+    <ResponsiveDialog
+      open
+      onClose={onClose}
+      size="sm"
+      title={t('dialogEdit')}
+      onOk={() => void submit()}
+      okText={t('save')}
+      confirmLoading={update.isPending}
+    >
+      <div className={styles.form}>
+        <label className={styles.field}>
+          <span>{t('holder')}</span>
+          <Input
+            value={holderName}
+            maxLength={160}
+            onChange={(e) => setHolderName(e.target.value)}
+          />
+        </label>
+        <label className={styles.field}>
+          <span>{t('number')}</span>
+          <Input
+            value={documentNumber}
+            maxLength={60}
+            onChange={(e) => setDocumentNumber(e.target.value)}
+          />
+        </label>
+        <label className={styles.field}>
+          <span>{t('expiry')}</span>
+          <DatePicker
+            value={expiresAt ? dayjs(expiresAt) : null}
+            format={datePattern.date}
+            onChange={(value) => setExpiresAt(value ? value.format(DAY_PARAM_FORMAT) : null)}
+          />
+        </label>
+      </div>
+    </ResponsiveDialog>
   );
 }

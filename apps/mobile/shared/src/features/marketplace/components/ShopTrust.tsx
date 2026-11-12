@@ -1,5 +1,9 @@
 import { Image } from 'expo-image';
 import { Text, XStack, YStack } from 'tamagui';
+import type { ReactNode } from 'react';
+import Animated from 'react-native-reanimated';
+import { ScrollReveal } from '@/components/motion/ScrollReveal';
+import { useRevealPop } from '@/components/motion/reveal-effects';
 import { useTranslations } from 'use-intl';
 import { SELLER_ENTITY_TYPE } from '@xeprime/types';
 import { images } from '@/assets';
@@ -91,6 +95,7 @@ export function ShopTrust({
   return (
     <YStack gap={space.lg} accessibilityLabel={t('sectionLabel')}>
       {checks.length > 0 ? (
+        <ScrollReveal>
         <YStack
           gap={20}
           p={space.md}
@@ -113,8 +118,9 @@ export function ShopTrust({
             ) : null}
           </XStack>
           <YStack gap={space.sm + space.xs}>
-            {checks.map((line) => (
+            {checks.map((line, i) => (
               <XStack key={line} ai="flex-start" gap={space.sm}>
+                <RevealPopBox delay={120 + Math.min(i, 5) * 70}>
                 <YStack
                   w={CHECK_ICON}
                   h={CHECK_ICON}
@@ -126,6 +132,7 @@ export function ShopTrust({
                 >
                   <ShopCheckIcon color={colors.primary} />
                 </YStack>
+                </RevealPopBox>
                 <Text f={1} col={colors.textMuted} fos={fontSize.body}>
                   {line}
                 </Text>
@@ -133,13 +140,14 @@ export function ShopTrust({
             ))}
           </YStack>
         </YStack>
+        </ScrollReveal>
       ) : null}
 
       {/* Bề ngang điện thoại: các ô xếp một cột (web `auto-fit, minmax(240px, 1fr)`), khoảng cách `md`. */}
       <YStack gap={space.md}>
-        {tiles.map((tile) => (
+        {tiles.map((tile, i) => (
+          <ScrollReveal key={tile.key} index={i}>
           <YStack
-            key={tile.key}
             ai="center"
             gap={20}
             p={space.md}
@@ -148,12 +156,14 @@ export function ShopTrust({
             br={radius.card}
             bg={colors.surface}
           >
-            <Image
-              source={tile.image}
-              style={{ width: TILE_IMAGE, height: TILE_IMAGE }}
-              contentFit="contain"
-              accessible={false}
-            />
+            <RevealPopBox delay={100} from={0.7}>
+              <Image
+                source={tile.image}
+                style={{ width: TILE_IMAGE, height: TILE_IMAGE }}
+                contentFit="contain"
+                accessible={false}
+              />
+            </RevealPopBox>
             <YStack gap={6} ai="center">
               <Text
                 col={colors.text}
@@ -173,8 +183,15 @@ export function ShopTrust({
                 ))}
             </YStack>
           </YStack>
+          </ScrollReveal>
         ))}
       </YStack>
     </YStack>
   );
+}
+
+/** Pop-in cho icon/ảnh minh hoạ KHÔNG bóng trong khối reveal. */
+function RevealPopBox({ children, delay, from = 0.6 }: { children: ReactNode; delay: number; from?: number }) {
+  const style = useRevealPop(delay, from);
+  return <Animated.View style={style}>{children}</Animated.View>;
 }

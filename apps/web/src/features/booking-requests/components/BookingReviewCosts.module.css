@@ -228,7 +228,9 @@
   color: var(--xp-color-text);
 }
 
-.depositNote {
-  font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body-relaxed);
+/* Nhãn + dấu "i" (InfoHint): ghi chú giải thích nằm trong tooltip, không chiếm dòng. */
+.labelWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }

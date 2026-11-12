@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  BOOKING_LIST_PRESET,
   DASHBOARD_AGENDA_KIND,
   FEATURE_STATE,
   PERMISSION,
@@ -8,7 +9,7 @@ import {
   RECEIPT_TYPE,
   TENANT_ROLE,
 } from '@xeprime/types';
-import { ROUTES, bookingPath } from '@/constants/routes';
+import { ROUTES, bookingPath, bookingsGroupPath } from '@/constants/routes';
 import type { Receipt } from '@/features/finance/types';
 import type { PartnerOverview } from '../types';
 import { DashboardView } from './DashboardView';
@@ -27,6 +28,7 @@ const state = vi.hoisted(() => ({
   featureState: 'enabled' as string,
   permissions: [] as string[],
   roleKey: 'shop_manager' as string,
+  billingMode: 'package' as string,
   overview: null as unknown,
   summary: null as Record<string, unknown> | null,
   previous: null as Record<string, unknown> | null,
@@ -63,7 +65,12 @@ vi.mock('@/hooks/use-current-user', () => ({
     data: {
       displayName: 'Chủ shop',
       realm: 'partner',
-      tenant: { roleKey: state.roleKey, billingMode: 'package', billingPhase: 'current' },
+      tenant: {
+        roleKey: state.roleKey,
+        billingMode: state.billingMode,
+        onboardingState: state.billingMode,
+        billingPhase: 'current',
+      },
     },
     isLoading: false,
   }),
@@ -105,10 +112,20 @@ vi.mock('@/components/chart/RevenueTrendChart', () => ({
 vi.mock('@/components/chart/CountTrendChart', () => ({
   CountTrendChart: () => <div data-testid="trend-chart" />,
 }));
-vi.mock('./PlanPanel', () => ({ PlanPanel: () => null }));
-vi.mock('./WalletPanel', () => ({ WalletPanel: () => <div data-testid="wallet-panel" /> }));
+vi.mock('./PlanPanel', () => ({ PlanPanel: () => <div data-testid="plan-panel" /> }));
+vi.mock('./WalletPanel', () => ({
+  WalletPanel: ({ showIncome }: { showIncome: boolean }) => (
+    <div data-testid="wallet-panel" data-income={String(showIncome)} />
+  ),
+}));
 vi.mock('./ReputationPanel', () => ({ ReputationPanel: () => null }));
-vi.mock('./ShopOnboardingCard', () => ({ ShopOnboardingCard: () => null }));
+vi.mock('./ShopOnboardingCard', () => ({
+  ShopOnboardingCard: () => <div data-testid="shop-onboarding" />,
+}));
+vi.mock('./MarketPanel', () => ({ MarketPanel: () => <div data-testid="market-panel" /> }));
+vi.mock('./OwnerVehiclesPanel', () => ({
+  OwnerVehiclesPanel: () => <div data-testid="owner-vehicles" />,
+}));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -126,9 +143,11 @@ function makeOverview(over: Partial<PartnerOverview> = {}): PartnerOverview {
       awaitingPickup: 4,
       pickupsToday: 2,
       pickupsOverdue: 1,
+      pickupsDue: 2,
       active: 3,
       returnsToday: 0,
       returnsOverdue: 0,
+      returnsDue: 0,
     },
     requests: { pending: 3, pendingUrgent: 1, nextRespondBy: inHours(0.25), awaitingPayment: 2 },
     agenda: {
@@ -211,6 +230,7 @@ beforeEach(() => {
     PERMISSION.VEHICLE_VIEW,
   ];
   state.roleKey = TENANT_ROLE.SHOP_MANAGER;
+  state.billingMode = 'package';
   state.overview = makeOverview();
   state.summary = { revenue: '12500000', depositHeld: '3000000', depositHeldBookings: 2 };
   state.previous = { revenue: '10000000', depositHeld: '0', depositHeldBookings: 0 };
@@ -220,7 +240,7 @@ beforeEach(() => {
   state.receiptCalls = 0;
 });
 
-describe('Tổng quan gian hàng — việc cần làm', () => {
+describe('Tổng quan gian hàng - việc cần làm', () => {
   it('câu trả lời đầu trang dựng từ chính các ô: quá giờ → yêu cầu → giao xe', async () => {
     await renderView();
     expect(
@@ -232,20 +252,22 @@ describe('Tổng quan gian hàng — việc cần làm', () => {
     await renderView();
 
     const requests = await tile('Yêu cầu chờ duyệt');
-    expect(requests.getAttribute('href')).toBe(ROUTES.MANAGE.BOOKING_REQUESTS);
+    expect(requests.getAttribute('href')).toBe(`${ROUTES.MANAGE.BOOKINGS}?preset=needs_action`);
     expect(within(requests).getByText('3')).toBeTruthy();
     expect(within(requests).getByText('1 sắp hết hạn trả lời')).toBeTruthy();
 
     const payment = await tile('Chờ khách thanh toán');
-    expect(payment.getAttribute('href')).toBe(`${ROUTES.MANAGE.BOOKING_REQUESTS}?status=awaiting_hold`);
+    expect(payment.getAttribute('href')).toBe(`${ROUTES.MANAGE.BOOKINGS}?preset=awaiting_payment`);
 
     const pickups = await tile('Chờ giao xe');
-    expect(pickups.getAttribute('href')).toBe(ROUTES.MANAGE.BOOKINGS_AWAITING_PICKUP);
+    expect(pickups.getAttribute('href')).toBe(
+      bookingsGroupPath(BOOKING_LIST_PRESET.AWAITING_PICKUP),
+    );
     expect(within(pickups).getByText('1 đã quá giờ')).toBeTruthy();
     expect(within(pickups).getByText('2 hẹn hôm nay')).toBeTruthy();
 
     const active = await tile('Đang cho thuê');
-    expect(active.getAttribute('href')).toBe(`${ROUTES.MANAGE.BOOKINGS}?status=active&sort=return_asc`);
+    expect(active.getAttribute('href')).toBe(bookingsGroupPath(BOOKING_LIST_PRESET.RENTING));
   });
 
   it('không có quyền xem yêu cầu: hai ô yêu cầu VẮNG HẲN, không vẽ thành 0', async () => {
@@ -259,7 +281,16 @@ describe('Tổng quan gian hàng — việc cần làm', () => {
 
   it('không có việc gì: câu "yên ả" nói rõ ra, ô nói một câu thay vì số 0 to', async () => {
     state.overview = makeOverview({
-      today: { awaitingPickup: 0, pickupsToday: 0, pickupsOverdue: 0, active: 0, returnsToday: 0, returnsOverdue: 0 },
+      today: {
+        awaitingPickup: 0,
+        pickupsToday: 0,
+        pickupsOverdue: 0,
+        pickupsDue: 0,
+        active: 0,
+        returnsToday: 0,
+        returnsOverdue: 0,
+        returnsDue: 0,
+      },
       requests: { pending: 0, pendingUrgent: 0, nextRespondBy: null, awaitingPayment: 0 },
       agenda: { items: [], hasMore: false },
     });
@@ -281,7 +312,7 @@ describe('Tổng quan gian hàng — việc cần làm', () => {
   });
 });
 
-describe('Tổng quan gian hàng — KPI tháng này', () => {
+describe('Tổng quan gian hàng - KPI tháng này', () => {
   it('đếm so cùng kỳ theo %, tỉ lệ lấp đầy theo ĐIỂM; kỳ trước bằng 0 thì nói không có gì để so', async () => {
     await renderView();
 
@@ -293,14 +324,14 @@ describe('Tổng quan gian hàng — KPI tháng này', () => {
     expect(screen.getAllByText('Chưa có số cùng kỳ để so').length).toBeGreaterThan(0);
   });
 
-  it('trend chỉ có ở tuyến gói có sổ tổng hợp — server trả null thì không dựng biểu đồ', async () => {
+  it('trend chỉ có ở tuyến gói có sổ tổng hợp - server trả null thì không dựng biểu đồ', async () => {
     await renderView();
     await screen.findByText('Chờ giao xe');
     expect(screen.queryByTestId('trend-chart')).toBeNull();
   });
 });
 
-describe('Tổng quan gian hàng — khối tiền dùng dữ liệu thật', () => {
+describe('Tổng quan gian hàng - khối tiền dùng dữ liệu thật', () => {
   it('có gói và có quyền: doanh thu và cọc là SỐ THẬT, kèm kỳ, mẫu số và so cùng kỳ', async () => {
     await renderView();
 
@@ -328,7 +359,7 @@ describe('Tổng quan gian hàng — khối tiền dùng dữ liệu thật', ()
     expect(screen.getByText('−200.000 ₫')).toBeTruthy();
   });
 
-  it('gói hết hạn (read_only): VẪN xem được sổ của chính mình — ADR 0027 điều 3', async () => {
+  it('gói hết hạn (read_only): VẪN xem được sổ của chính mình - ADR 0027 điều 3', async () => {
     state.featureState = FEATURE_STATE.READ_ONLY;
     await renderView();
 
@@ -373,5 +404,53 @@ describe('Tổng quan gian hàng — khối tiền dùng dữ liệu thật', ()
     state.roleKey = TENANT_ROLE.SHOP_OWNER;
     await renderView();
     expect(await screen.findByTestId('wallet-panel')).toBeTruthy();
+  });
+});
+
+/**
+ * Chủ xe cá nhân dùng CHÍNH màn này (ADR 0085 điều 1) — khối của gói vắng, và ba khối của Tổng quan
+ * riêng cũ của họ được giữ: "Xe của bạn", thu nhập trên ví, lời chào theo tên.
+ */
+describe('Tổng quan - chủ xe cá nhân (tuyến hoa hồng) dùng chung màn', () => {
+  beforeEach(() => {
+    state.billingMode = 'commission';
+    state.roleKey = TENANT_ROLE.SHOP_OWNER;
+    // Chủ xe có `subscription.view` (phễu nâng cấp) — thẻ Gói vắng vì TUYẾN, không vì quyền.
+    state.permissions = [...state.permissions, PERMISSION.SUBSCRIPTION_VIEW];
+    // Tuyến hoa hồng không có sổ tổng hợp, server không trả `trend`.
+    state.featureState = FEATURE_STATE.HIDDEN;
+    state.overview = makeOverview({ trend: null });
+  });
+
+  it('"Xe của bạn" thay "Xe trên chợ"; không thẻ Gói, không ba bước mở gian hàng', async () => {
+    await renderView();
+
+    expect(await screen.findByTestId('owner-vehicles')).toBeTruthy();
+    // Tổng quan của MỘT người: lời chào theo tên thay tiêu đề của gian hàng.
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/Chủ shop$/);
+    expect(screen.queryByTestId('market-panel')).toBeNull();
+    expect(screen.queryByTestId('plan-panel')).toBeNull();
+    expect(screen.queryByTestId('shop-onboarding')).toBeNull();
+  });
+
+  it('ví của CHỦ hiện thu nhập tháng; không thẻ tiền nào của sổ thu chi, không gọi API sổ', async () => {
+    await renderView();
+
+    expect((await screen.findByTestId('wallet-panel')).getAttribute('data-income')).toBe('true');
+    expect(screen.queryByTestId('revenue-chart')).toBeNull();
+    expect(state.summaryCalls).toBe(0);
+    expect(state.receiptCalls).toBe(0);
+  });
+
+  it('gian hàng tuyến gói vẫn thấy đủ khối của mình', async () => {
+    state.billingMode = 'package';
+    state.featureState = FEATURE_STATE.ENABLED;
+    await renderView();
+
+    expect(await screen.findByTestId('market-panel')).toBeTruthy();
+    expect(screen.getByTestId('plan-panel')).toBeTruthy();
+    expect(screen.getByTestId('shop-onboarding')).toBeTruthy();
+    expect(screen.queryByTestId('owner-vehicles')).toBeNull();
+    expect(screen.getByTestId('wallet-panel').getAttribute('data-income')).toBe('false');
   });
 });

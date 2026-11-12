@@ -5,6 +5,7 @@ import {
   APPROVAL_TARGET_TYPE,
   BOOKING_STATUS,
   BRANCH_STATUS,
+  CATALOG_TYPE,
   DOCUMENT_STATUS,
   SELLER_ENTITY_TYPE,
   SELLER_PROFILE_STATUS,
@@ -16,11 +17,13 @@ import {
   PUBLIC_CACHE_SECONDS,
   REVIEW_STATUS,
   SEAT_BUCKET_VALUES,
+  COLLATERAL_MODE,
   SERVICE_TYPE,
   TENANT_STATUS,
   hasVehicleServiceSettings,
   STOREFRONT_KIND,
   hasVerifiedStorefront,
+  customerSeesPickupAddress,
   provinceRegionPeers,
   storefrontAllowsPublicChat,
   type PaginationMeta,
@@ -50,17 +53,26 @@ import type {
   PublicShopDto,
   RecommendedListingQueryDto,
   RecommendedListingsDto,
+  PublicShopBrandDto,
   PublicShopListQueryDto,
   PublicShopSummaryDto,
   ShopListingQueryDto,
   ShopTrustDto,
 } from './dto/public-listing.dto';
-import { branchMapTarget } from '../../common/address-view';
+import {
+  approximatePoint,
+  branchMapTarget,
+  pickupPointAddressOf,
+  publicAreaLabel,
+} from '../../common/address-view';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { stableCacheKey, TtlCache } from '../../common/ttl-cache';
 import { searchTokens } from '@xeprime/domain';
 import { hostsMatchingAllTokens, resolveKeyword } from './keyword-match';
 import { completedTripsByVehicle, listingCardSelect, toListingCard } from './listing-card';
+
+/** Số logo hãng tối đa trên thẻ gian hàng (Figma: 3 logo + "+N"). */
+const SHOP_CARD_BRAND_LIMIT = 3;
 import {
   buildListingWhere,
   buildListingWhereSql,
@@ -72,7 +84,7 @@ import {
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 48;
 
-/** Trang chủ xem TRƯỚC — tám ô, không phân trang. Trần để một client khác không biến nó thành list. */
+/** Trang chủ xem TRƯỚC - tám ô, không phân trang. Trần để một client khác không biến nó thành list. */
 const DEFAULT_RECOMMENDED_LIMIT = 8;
 const MAX_RECOMMENDED_LIMIT = 24;
 
@@ -99,25 +111,25 @@ const RANK_CANDIDATE_POOL = 200;
  *
  * Đây là đầu ra ĐẮT NHẤT của marketplace: một lần mở panel Bộ lọc là 12 phép gộp gần như quét
  * trọn `public_listings`, và panel gọi lại sau mỗi lần khách chạm một ô (đã debounce). Nội dung
- * thì hoàn toàn công khai — không đọc cookie, không phụ thuộc người đang xem — nên hai khách
+ * thì hoàn toàn công khai - không đọc cookie, không phụ thuộc người đang xem - nên hai khách
  * cùng bộ lọc đang bắt Postgres tính lại y hệt nhau.
  *
  * 60 giây là khoảng mà không ai nhận ra: con số facet vốn đã không đồng bộ tuyệt đối với danh
- * sách (chúng chạy `Promise.all`, không chung một transaction — xem docblock `facets`). Đổi lại,
+ * sách (chúng chạy `Promise.all`, không chung một transaction - xem docblock `facets`). Đổi lại,
  * duyệt/ẩn một xe cần tới một phút mới thấy số đếm nhúc nhích; `search` KHÔNG cache nên bản
  * thân danh sách xe vẫn tức thì.
  *
- * Trần 500 khoá: mỗi tổ hợp filter là một khoá, và tổ hợp thì vô hạn — không có trần thì đây là
+ * Trần 500 khoá: mỗi tổ hợp filter là một khoá, và tổ hợp thì vô hạn - không có trần thì đây là
  * một chỗ rò bộ nhớ chờ ngày phát tác.
  *
- * TTL lấy từ `PUBLIC_CACHE_SECONDS.facets` — CÙNG con số với header `Cache-Control` của endpoint
+ * TTL lấy từ `PUBLIC_CACHE_SECONDS.facets` - CÙNG con số với header `Cache-Control` của endpoint
  * facets và `next.revalidate` phía web, để "facet cũ tối đa bao lâu" chỉ có một câu trả lời.
  */
 const FACETS_CACHE_TTL_MS = PUBLIC_CACHE_SECONDS.facets * 1000;
 const FACETS_CACHE_MAX_ENTRIES = 500;
 
 /**
- * Mã không thuộc danh mục — dùng khi tên tỉnh cũ không quy được về mã nào.
+ * Mã không thuộc danh mục - dùng khi tên tỉnh cũ không quy được về mã nào.
  *
  * Lọc bằng nó ra kết quả RỖNG, đúng ý "không tìm thấy tỉnh đó". Không có mã hành chính nào là
  * `00`, và `provinces.code` là khoá chính nên giá trị này không bao giờ va vào dữ liệu thật.
@@ -132,7 +144,7 @@ interface VehicleRating {
 
 /** `recommended` (mặc định): điểm cao trước (NULLS LAST) → nhiều đánh giá trước → mới trước. */
 /**
- * Thứ tự của danh sách chợ — ADR 0043 §2, đồng bộ hoá ở ADR 0045 điều 3.
+ * Thứ tự của danh sách chợ - ADR 0043 §2, đồng bộ hoá ở ADR 0045 điều 3.
  *
  * Ba sort do KHÁCH chọn giữ nguyên tuyệt đối: giá tăng, giá giảm, mới nhất. Khách bấm "giá thấp
  * nhất" thì họ muốn giá thấp nhất, không phải "giá thấp nhất theo ý chúng tôi".
@@ -140,11 +152,11 @@ interface VehicleRating {
  * ## Vì sao mặc định đổi từ `rating_avg` sang `rank_score`
  *
  * Trang chủ đã dùng `rank_score` từ ADR 0043, còn trang KẾT QUẢ thì vẫn xếp theo trung bình sao
- * trần — nên cùng một sàn, hai bề mặt trả lời "xe nào phù hợp" bằng hai câu khác nhau. Trung
+ * trần - nên cùng một sàn, hai bề mặt trả lời "xe nào phù hợp" bằng hai câu khác nhau. Trung
  * bình trần cũng là công thức có đúng cái bệnh mà ADR 0043 sinh ra để chữa:
  *
  *   · một xe 5,0 sao với MỘT đánh giá đứng trên một xe 4,8 sao với hai trăm đánh giá;
- *   · xe MỚI chưa ai chấm rơi xuống dưới MỌI xe đã có đánh giá — tức là sẽ mãi không ai thuê.
+ *   · xe MỚI chưa ai chấm rơi xuống dưới MỌI xe đã có đánh giá - tức là sẽ mãi không ai thuê.
  *
  * `rank_score` đã gồm Bayes, số chuyến, độ đầy hồ sơ, độ mới, uy tín chủ xe và cửa sổ khám phá.
  * Nó là một cột đã tính sẵn nên không có phép gộp nào chạy lúc đọc, và hai index
@@ -164,7 +176,7 @@ function listingOrderBy(sort: string | undefined): Prisma.PublicListingOrderByWi
  * Nguồn dữ liệu marketplace (ADR 0008).
  *
  * `search`/`listShopVehicles` đọc snapshot `public_listings` (status=`active`) và LUÔN join
- * `tenants` lọc `status='active'` — không denormalize trạng thái tenant, nên khoá shop có hiệu
+ * `tenants` lọc `status='active'` - không denormalize trạng thái tenant, nên khoá shop có hiệu
  * lực tức thì. `getById` (chi tiết) đọc thẳng `vehicles` vì cần field không snapshot (mô tả, màu,
  * đời xe, logo/bio shop); điều kiện `approved_public + tenant active + chưa xoá` TƯƠNG ĐƯƠNG
  * "listing active" (do `syncFromVehicle` suy status từ đúng các cờ đó trong cùng transaction).
@@ -175,7 +187,7 @@ export class PublicListingsService {
   /**
    * Cache facet của RIÊNG instance này (service là singleton nên thực tế là một cache cho cả
    * tiến trình). Để ở instance thay vì module-scope để mỗi service dựng trong test có cache
-   * riêng — không spec nào ăn phải số đếm của spec khác.
+   * riêng - không spec nào ăn phải số đếm của spec khác.
    *
    * Không có đường "đẩy" vô hiệu hoá từ `ListingsService`: nó phải ở lại module LÁ (ADR 0008,
    * xem `ListingsSyncModule`), nên gọi ngược lên đây là dựng lại đúng vòng phụ thuộc đã gỡ.
@@ -191,11 +203,11 @@ export class PublicListingsService {
     private readonly provinces: ProvincesService,
     private readonly pricing: PricingService,
     private readonly settings: VehicleSettingsService,
-    /** Ba chỉ số công khai — nguồn tính DUY NHẤT (ADR 0045 điều 2). */
+    /** Ba chỉ số công khai - nguồn tính DUY NHẤT (ADR 0045 điều 2). */
     private readonly hostMetrics: HostMetricsService,
   ) {}
 
-  /** Số chuyến đã hoàn thành theo xe — một truy vấn cho cả trang (xem `listing-card.ts`). */
+  /** Số chuyến đã hoàn thành theo xe - một truy vấn cho cả trang (xem `listing-card.ts`). */
   private completedTripsByVehicle(vehicleIds: string[]): Promise<Map<string, number>> {
     return completedTripsByVehicle(this.prisma, vehicleIds);
   }
@@ -229,23 +241,23 @@ export class PublicListingsService {
   }
 
   /**
-   * Khối "Xe phù hợp với bạn" ở trang chủ — GỢI Ý, không phải tìm kiếm.
+   * Khối "Xe phù hợp với bạn" ở trang chủ - GỢI Ý, không phải tìm kiếm.
    *
    * Ba luật, và cả ba đều khác `search`:
    *
    *   1. **Tỉnh là ưu tiên, không phải bộ lọc.** Xe đúng tỉnh lên trước, rồi xe cùng vùng, rồi
-   *      cả nước. Lọc cứng ở đây sẽ cho một trang chủ TRỐNG với khách ở tỉnh chưa có xe — trong
+   *      cả nước. Lọc cứng ở đây sẽ cho một trang chủ TRỐNG với khách ở tỉnh chưa có xe - trong
    *      khi họ mới chỉ mở trang chủ, chưa hề nói là chỉ thuê ở đó.
    *   2. **Mỗi gian hàng tối đa {@link MAX_PER_SHOP} xe.** Không có luật này thì một gian hàng
    *      40 xe chiếm trọn tám ô, và trang chủ trở thành mặt tiền của đúng một người bán.
-   *   3. **Thứ tự trong cùng một bậc là `rank_score`** — điểm denormalize (xem
+   *   3. **Thứ tự trong cùng một bậc là `rank_score`** - điểm denormalize (xem
    *      `refreshListingRankScore`), không phải `rating_avg` trần.
    *
    * ## Vì sao hai lượt truy vấn
    *
    * Lượt một chạy trên `public_listings` và chỉ mang về ID đã xếp hạng: phép xếp bậc địa lý và
    * cửa sổ giới hạn theo gian hàng là SQL thuần, Prisma không diễn đạt được. Lượt hai hydrate
-   * đúng chừng đó ID qua Prisma để dùng lại nguyên `listingCardSelect` — hình thẻ xe chỉ có một
+   * đúng chừng đó ID qua Prisma để dùng lại nguyên `listingCardSelect` - hình thẻ xe chỉ có một
    * định nghĩa, và nó không được phép khác nhau giữa trang chủ với trang kết quả.
    */
   async recommended(query: RecommendedListingQueryDto): Promise<RecommendedListingsDto> {
@@ -259,7 +271,7 @@ export class PublicListingsService {
 
     /*
      * Ngữ cảnh lọc CỨNG của khối: dịch vụ, loại xe, và xe còn rảnh trong khoảng khách đang chọn.
-     * Tỉnh CỐ Ý không có mặt ở đây — nó đi vào thứ tự, không vào điều kiện.
+     * Tỉnh CỐ Ý không có mặt ở đây - nó đi vào thứ tự, không vào điều kiện.
      */
     const filter: ListingFilterQuery = {
       vehicleType: query.vehicleType,
@@ -283,7 +295,7 @@ export class PublicListingsService {
     /*
      * `shop_rn <= MAX_PER_SHOP` là một khoá SẮP XẾP, không phải một bộ lọc.
      *
-     * Lọc thẳng sẽ trả về ít hơn `limit` xe ở một sàn mới có vài gian hàng — đúng lúc trang chủ
+     * Lọc thẳng sẽ trả về ít hơn `limit` xe ở một sàn mới có vài gian hàng - đúng lúc trang chủ
      * cần nhất là trông có hàng. Đẩy phần vượt trần xuống cuối thì trần vẫn có tác dụng khi có
      * đủ người bán, mà vẫn luôn lấp đầy chừng nào còn xe.
      */
@@ -333,7 +345,7 @@ export class PublicListingsService {
     });
     const completedTrips = await this.completedTripsByVehicle(rows.map((row) => row.vehicleId));
 
-    // Postgres không giữ thứ tự của `IN (...)`, nên thứ hạng vừa tính phải được áp lại ở đây —
+    // Postgres không giữ thứ tự của `IN (...)`, nên thứ hạng vừa tính phải được áp lại ở đây -
     // quên bước này là cả phép xếp hạng biến mất mà danh sách vẫn trông bình thường.
     const byId = new Map(rows.map((row) => [row.id, row]));
     const data = ids
@@ -362,7 +374,7 @@ export class PublicListingsService {
   async facets(rawQuery: ListingFacetsQueryDto): Promise<ListingFacetsDto> {
     const query = await this.withResolvedProvince(rawQuery);
     /*
-     * Khoá bỏ `province` (tên) vì `provinceCode` đã là kết quả quy đổi của nó — giữ cả hai thì
+     * Khoá bỏ `province` (tên) vì `provinceCode` đã là kết quả quy đổi của nó - giữ cả hai thì
      * "?province=TP.HCM" và "?provinceCode=79" thành hai khoá cho cùng một câu trả lời. Cùng lý
      * do, từ khoá vào khoá ở dạng ĐÃ GẤP: "Tuấn", "tuan", "TUAN " là một câu hỏi, không phải ba
      * khoá đẩy nhau ra khỏi cache.
@@ -384,11 +396,11 @@ export class PublicListingsService {
   }
 
   /**
-   * Phần tính thật của `facets` — 12 phép gộp, mỗi chiều bỏ chính filter của nó.
+   * Phần tính thật của `facets` - 12 phép gộp, mỗi chiều bỏ chính filter của nó.
    *
    * Tính năng nằm trong mảng `features` nên đếm riêng bằng raw unnest (Prisma groupBy không
    * bung được phần tử mảng). Dùng Promise.all thay vì `$transaction([...])` dạng mảng vì
-   * overload transaction-mảng của groupBy mất literal type (`_count` suy về union) — số đếm
+   * overload transaction-mảng của groupBy mất literal type (`_count` suy về union) - số đếm
    * facet là dữ liệu hiển thị, lệch một nhịp giữa các query không sao.
    */
   private async computeFacets(query: ListingFacetsQueryDto): Promise<ListingFacetsDto> {
@@ -418,7 +430,7 @@ export class PublicListingsService {
         where: buildListingWhere(query, 'bodyType'),
         _count: { _all: true },
       }),
-      // Phân khúc xe máy — chiều đối xứng với kiểu dáng ô tô. Đếm luôn cả khi khách đang xem ô
+      // Phân khúc xe máy - chiều đối xứng với kiểu dáng ô tô. Đếm luôn cả khi khách đang xem ô
       // tô: kết quả sẽ rỗng (xe máy mới có giá trị), và một mảng rỗng đúng thì rẻ hơn một nhánh
       // if ở đây rồi lại một nhánh if nữa ở web.
       this.prisma.publicListing.groupBy({
@@ -463,7 +475,7 @@ export class PublicListingsService {
       this.featureFacets(query),
     ]);
 
-    // Gom seatCount thô về bucket (4 / 5 / 7 / 7+) ở JS — mỗi giá trị rơi đúng một bucket.
+    // Gom seatCount thô về bucket (4 / 5 / 7 / 7+) ở JS - mỗi giá trị rơi đúng một bucket.
     const seatCounts = new Map<SeatBucket, number>();
     for (const row of seatRows) {
       const bucket = seatBucketOf(row.seatCount);
@@ -506,16 +518,16 @@ export class PublicListingsService {
   }
 
   /**
-   * Đếm listing theo từng key tính năng — MỘT câu, lọc và gộp đều nằm lại trong Postgres.
+   * Đếm listing theo từng key tính năng - MỘT câu, lọc và gộp đều nằm lại trong Postgres.
    *
    * Trước đây chỗ này chạy hai lượt: Prisma lấy `id` của mọi listing khớp filter, rồi nối chúng
    * thành `IN (...)` cho câu unnest. Lập luận "tập id đã được filter thu hẹp trước" đúng ở mọi
-   * trường hợp TRỪ trường hợp hay xảy ra nhất — mở chợ mà chưa lọc gì, khi đó tập id là toàn bộ
+   * trường hợp TRỪ trường hợp hay xảy ra nhất - mở chợ mà chưa lọc gì, khi đó tập id là toàn bộ
    * bảng. Ở quy mô vài chục nghìn xe, mỗi lần mở trang là kéo ngần ấy ULID về Node rồi gửi ngược
    * lại một câu SQL vài MB để Postgres parse lại từ đầu.
    *
    * `unnest` không dùng được GIN index, nhưng cái giá đó là một lượt quét `public_listings` đã
-   * lọc sẵn — rẻ hơn nhiều lần so với việc vận chuyển tập id qua lại.
+   * lọc sẵn - rẻ hơn nhiều lần so với việc vận chuyển tập id qua lại.
    */
   private async featureFacets(query: ListingFacetsQueryDto): Promise<FacetBucketDto[]> {
     const counted = await this.prisma.$queryRaw<Array<{ key: string; count: number }>>`
@@ -530,9 +542,9 @@ export class PublicListingsService {
   }
 
   /**
-   * Điểm đánh giá gộp theo xe, tính live từ `reviews` — giờ chỉ còn `getById` dùng (chi tiết đọc
+   * Điểm đánh giá gộp theo xe, tính live từ `reviews` - giờ chỉ còn `getById` dùng (chi tiết đọc
    * thẳng `vehicles`, không có snapshot); danh sách đọc cột denormalize `rating_avg/rating_count`
-   * trên `public_listings`. Chỉ tính review `published` chưa xoá — cùng quy tắc với
+   * trên `public_listings`. Chỉ tính review `published` chưa xoá - cùng quy tắc với
    * `tenants.rating_avg` (xem `review.ts`). Index `[vehicleId, status, createdAt]` phục vụ.
    */
   private async ratingsByVehicle(vehicleIds: string[]): Promise<Map<string, VehicleRating>> {
@@ -565,10 +577,10 @@ export class PublicListingsService {
    * Quy tham số địa điểm về MÃ trước khi dựng where.
    *
    * `provinceCode` có sẵn thì dùng luôn. Chỉ có `province` (tên, từ link/bookmark cũ) thì tra bí
-   * danh — "TP.HCM", "Bà Rịa - Vũng Tàu" (tỉnh đã sáp nhập) đều ra đúng mã.
+   * danh - "TP.HCM", "Bà Rịa - Vũng Tàu" (tỉnh đã sáp nhập) đều ra đúng mã.
    *
    * Không quy được thì gán mã KHÔNG TỒN TẠI (`00`) để kết quả rỗng, TUYỆT ĐỐI không bỏ qua bộ
-   * lọc: bỏ qua nghĩa là người dùng hỏi "xe ở Vientiane" và nhận về xe toàn quốc — sai lặng lẽ,
+   * lọc: bỏ qua nghĩa là người dùng hỏi "xe ở Vientiane" và nhận về xe toàn quốc - sai lặng lẽ,
    * kiểu tệ nhất.
    */
   /** Query thô → bộ lọc dựng được: tỉnh quy về mã, từ khoá đã phân giải tên công khai. */
@@ -576,7 +588,7 @@ export class PublicListingsService {
     return this.withResolvedKeyword(await this.withResolvedProvince(query), now);
   }
 
-  /** Gắn `keyword` (xem `keyword-match.ts`) — query không có từ khoá thì trả nguyên. */
+  /** Gắn `keyword` (xem `keyword-match.ts`) - query không có từ khoá thì trả nguyên. */
   private async withResolvedKeyword<T extends ListingFilterQuery>(query: T, now: Date): Promise<T> {
     const keyword = await resolveKeyword(this.prisma, query.q, now);
     return keyword ? { ...query, keyword } : query;
@@ -591,7 +603,7 @@ export class PublicListingsService {
   }
 
   /**
-   * "Địa điểm" công khai — các tỉnh ĐANG CÓ XE, kèm số xe và một ảnh đại diện.
+   * "Địa điểm" công khai - các tỉnh ĐANG CÓ XE, kèm số xe và một ảnh đại diện.
    *
    * Đây là NGUỒN DUY NHẤT cho mọi bộ chọn địa điểm ở marketplace (hero desktop, dialog mobile,
    * trang /search, địa điểm nổi bật). Frontend không có danh sách tỉnh riêng, nên desktop và
@@ -621,7 +633,7 @@ export class PublicListingsService {
     if (codes.length === 0) return [];
 
     // Ảnh đại diện + tên chuẩn: `distinct` để DB trả đúng một dòng mỗi tỉnh (không kéo cả bảng),
-    // tên lấy từ bảng `provinces` chứ không từ cột denormalize — tên chuẩn chỉ có một nguồn.
+    // tên lấy từ bảng `provinces` chứ không từ cột denormalize - tên chuẩn chỉ có một nguồn.
     const [covers, provinces, minPrices] = await Promise.all([
       this.prisma.publicListing.findMany({
         where: { ...scope, provinceCode: { in: codes }, mainImageUrl: { not: null } },
@@ -649,11 +661,11 @@ export class PublicListingsService {
   }
 
   /**
-   * Giá thuê TỰ LÁI theo ngày thấp nhất mỗi tỉnh — "chỉ từ …" trên thẻ địa điểm.
+   * Giá thuê TỰ LÁI theo ngày thấp nhất mỗi tỉnh - "chỉ từ …" trên thẻ địa điểm.
    *
    * Đọc cột snapshot `self_drive_daily_price` (giá ngày đã trừ khuyến mãi trực tiếp, cùng phép làm
-   * tròn với thẻ xe — `selfDriveDailyPrice` ở `@xeprime/prisma`), nên gộp được bằng `_min` trên
-   * CHÍNH phạm vi công khai mà danh sách địa điểm dùng — không chép tay phạm vi đó vào SQL thô.
+   * tròn với thẻ xe - `selfDriveDailyPrice` ở `@xeprime/prisma`), nên gộp được bằng `_min` trên
+   * CHÍNH phạm vi công khai mà danh sách địa điểm dùng - không chép tay phạm vi đó vào SQL thô.
    */
   private async minDailyPriceByProvince(
     scope: Prisma.PublicListingWhereInput,
@@ -675,7 +687,7 @@ export class PublicListingsService {
   }
 
   /**
-   * "Gian hàng nổi bật" — shop đang `active` và CÓ ít nhất một xe hiển thị công khai, sắp theo
+   * "Gian hàng nổi bật" - shop đang `active` và CÓ ít nhất một xe hiển thị công khai, sắp theo
    * điểm đánh giá. Số xe đếm ngay trong query (`_count` có điều kiện), không N+1.
    *
    * Có `q` thì đây là GỢI Ý CHỦ XE của ô từ khoá ở `/search`: chỉ giữ chủ xe/gian hàng có tên
@@ -690,7 +702,7 @@ export class PublicListingsService {
     // mà toàn bộ xe nằm ở tỉnh đã ẩn thì không còn là gian hàng nổi bật.
     const visibleListing = publicListingScope();
     const now = new Date();
-    // Gợi ý chủ xe: CÙNG phép phân giải tên công khai với lưới kết quả — nên không bao giờ nêu
+    // Gợi ý chủ xe: CÙNG phép phân giải tên công khai với lưới kết quả - nên không bao giờ nêu
     // một cái tên mà lưới không coi là khớp. Ở đây mọi từ phải nằm trong TÊN.
     const keyword = await resolveKeyword(this.prisma, query.q, now);
     const where: Prisma.TenantWhereInput = {
@@ -720,14 +732,15 @@ export class PublicListingsService {
     ]);
 
     const tenantIds = rows.map((t) => t.id);
-    const [tripsByTenant, coverByTenant] = await Promise.all([
+    const [tripsByTenant, coverByTenant, brandsByTenant] = await Promise.all([
       this.completedTripsByTenant(tenantIds),
       this.featuredVehicleImageByTenant(tenantIds, visibleListing),
+      this.brandsByTenant(tenantIds, visibleListing),
     ]);
 
     return {
       data: rows.map((t) => {
-        // Cùng tên + ảnh với thẻ xe và trang gian hàng — danh tính theo tuyến (ADR 0054).
+        // Cùng tên + ảnh với thẻ xe và trang gian hàng - danh tính theo tuyến (ADR 0054).
         const storefront = resolveStorefront(t, now);
         return {
           name: storefront.name,
@@ -741,6 +754,8 @@ export class PublicListingsService {
           bio: t.profile?.bio?.trim() || null,
           completedTripCount: tripsByTenant.get(t.id) ?? 0,
           featuredVehicleImageUrl: coverByTenant.get(t.id) ?? null,
+          brands: brandsByTenant.get(t.id)?.top ?? [],
+          brandCount: brandsByTenant.get(t.id)?.count ?? 0,
         };
       }),
       meta: paginationMeta(paging, total),
@@ -748,7 +763,7 @@ export class PublicListingsService {
   }
 
   /**
-   * Số chuyến đã hoàn thành của MỖI gian hàng trên một trang — một phép gộp cho cả trang, cùng
+   * Số chuyến đã hoàn thành của MỖI gian hàng trên một trang - một phép gộp cho cả trang, cùng
    * điều kiện với `shopStats` (đơn `completed`, chưa xoá) để thẻ và trang gian hàng nói một số.
    */
   private async completedTripsByTenant(tenantIds: string[]): Promise<Map<string, number>> {
@@ -762,7 +777,7 @@ export class PublicListingsService {
   }
 
   /**
-   * Ảnh một chiếc xe ĐẠI DIỆN cho mỗi gian hàng — xe xếp hạng cao nhất đang hiển thị công khai
+   * Ảnh một chiếc xe ĐẠI DIỆN cho mỗi gian hàng - xe xếp hạng cao nhất đang hiển thị công khai
    * (cùng `publicListingScope` với chợ, nên không bao giờ khoe một xe khách không mở được).
    * Một truy vấn `distinct` cho cả trang, cùng cách `listDestinations` chọn ảnh đại diện tỉnh.
    */
@@ -785,7 +800,62 @@ export class PublicListingsService {
   }
 
   /**
-   * Hồ sơ công khai của một gian hàng theo slug — chỉ shop đang `active`. 404 nếu không có/đã
+   * Hãng xe của MỖI gian hàng trên một trang - dãy logo trên thẻ "Gian hàng nổi bật" (Figma
+   * `21965:28698`). Hai phép gộp cho cả trang, không N+1: đếm xe công khai theo (gian hàng, hãng),
+   * rồi tra logo trong danh mục `vehicle_brand` theo KHOÁ hoặc NHÃN (`public_listings.brand` mang
+   * cả hai kiểu); hãng nhập lẻ không có trong danh mục vẫn được đếm, chỉ là `iconUrl = null`.
+   * Trả tối đa `SHOP_CARD_BRAND_LIMIT` hãng nhiều xe nhất + tổng số hãng cho nhãn "+N".
+   */
+  private async brandsByTenant(
+    tenantIds: string[],
+    visibleListing: Prisma.PublicListingWhereInput,
+  ): Promise<Map<string, { top: PublicShopBrandDto[]; count: number }>> {
+    if (tenantIds.length === 0) return new Map();
+    const groups = await this.prisma.publicListing.groupBy({
+      by: ['tenantId', 'brand'],
+      where: { ...visibleListing, tenantId: { in: tenantIds }, brand: { not: null } },
+      _count: { _all: true },
+    });
+    const labels = [...new Set(groups.map((g) => g.brand).filter((b): b is string => b != null))];
+    const catalog = labels.length
+      ? await this.prisma.catalogItem.findMany({
+          // Cột `brand` ghi KHOÁ danh mục ở xe mới (`hyundai`) và NHÃN ở dữ liệu cũ (`Hyundai`) - tra cả hai.
+          where: {
+            type: CATALOG_TYPE.VEHICLE_BRAND,
+            OR: [{ key: { in: labels } }, { label: { in: labels } }],
+          },
+          select: { key: true, label: true, iconUrl: true },
+        })
+      : [];
+    const catalogByBrand = new Map<string, { label: string; iconUrl: string | null }>();
+    for (const c of catalog) {
+      catalogByBrand.set(c.key, c);
+      catalogByBrand.set(c.label, c);
+    }
+
+    const byTenant = new Map<string, { label: string; count: number }[]>();
+    for (const g of groups) {
+      if (g.brand == null) continue;
+      const list = byTenant.get(g.tenantId) ?? [];
+      list.push({ label: g.brand, count: g._count._all });
+      byTenant.set(g.tenantId, list);
+    }
+    const result = new Map<string, { top: PublicShopBrandDto[]; count: number }>();
+    for (const [tenantId, list] of byTenant) {
+      list.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'vi'));
+      result.set(tenantId, {
+        top: list.slice(0, SHOP_CARD_BRAND_LIMIT).map((b) => {
+          const item = catalogByBrand.get(b.label);
+          return { label: item?.label ?? b.label, iconUrl: item?.iconUrl ?? null };
+        }),
+        count: list.length,
+      });
+    }
+    return result;
+  }
+
+  /**
+   * Hồ sơ công khai của một gian hàng theo slug - chỉ shop đang `active`. 404 nếu không có/đã
    * khoá. Không lộ dữ liệu nội bộ (id, email, mã số thuế…), chỉ thứ marketplace cần.
    */
   async getShopBySlug(slug: string): Promise<PublicShopDto> {
@@ -795,7 +865,7 @@ export class PublicListingsService {
       select: {
         /*
          * Tên, ảnh và tuyến thu tiền HIỆU LỰC, đọc trên cùng một hàng tenant. Tuyến quyết định
-         * trang này vẽ mặt tiền nào, đọc danh tính từ đâu (ADR 0054) và có đeo dấu xác thực không —
+         * trang này vẽ mặt tiền nào, đọc danh tính từ đâu (ADR 0054) và có đeo dấu xác thực không -
          * nên nó phải là phép chấm pha THẬT (`resolveEffectiveBilling`), không phải
          * `tenants.tenant_type` (ADR 0014 điều 2) và không phải `planCode`.
          */
@@ -811,7 +881,9 @@ export class PublicListingsService {
             logoUrl: true,
             coverUrl: true,
             bio: true,
+            bioHtml: true,
             address: true,
+            wardName: true,
           },
         },
       },
@@ -823,8 +895,16 @@ export class PublicListingsService {
       });
     }
 
-    const [stats, trust] = await Promise.all([this.shopStats(t.id), this.shopTrust(t.id, now)]);
     const storefront = resolveStorefront(t, now);
+    // Gian hàng tuyến gói công khai địa chỉ (ADR 0077) - kể cả từng chi nhánh.
+    const exactAddress = customerSeesPickupAddress({
+      engaged: false,
+      packageTrack: hasVerifiedStorefront(storefront.billingMode),
+    });
+    const [stats, trust] = await Promise.all([
+      this.shopStats(t.id, exactAddress),
+      this.shopTrust(t.id, now),
+    ]);
 
     return {
       name: storefront.name,
@@ -836,7 +916,13 @@ export class PublicListingsService {
       logoUrl: storefront.avatarUrl,
       coverUrl: t.profile?.coverUrl ?? null,
       bio: t.profile?.bio ?? null,
-      address: t.profile?.address ?? null,
+      bioHtml: t.profile?.bioHtml ?? null,
+      // Tuyến gói: địa chỉ đủ; tuyến hoa hồng: chỉ KHU VỰC (`customerSeesPickupAddress`, ADR 0077).
+      address: !t.profile?.address?.trim()
+        ? null
+        : exactAddress
+          ? t.profile.address.trim()
+          : publicAreaLabel(t.profile.wardName, t.profile.provinceName),
       joinedAt: t.createdAt as unknown as string,
       // Decimal → string do ResponseInterceptor lo (ADR 0007).
       ratingAvg: t.ratingAvg as unknown as string,
@@ -847,13 +933,13 @@ export class PublicListingsService {
   }
 
   /**
-   * Dấu hiệu uy tín ĐÃ KIỂM CHỨNG của gian hàng (`ShopTrustDto`) — mỗi cờ đọc từ nơi quyết định
+   * Dấu hiệu uy tín ĐÃ KIỂM CHỨNG của gian hàng (`ShopTrustDto`) - mỗi cờ đọc từ nơi quyết định
    * nó được ghi ra, không từ một cột tự khai:
    *
    *   - pháp nhân: `seller_profiles` đã được nền tảng xác minh (người duyệt + thời điểm) VÀ giấy
-   *     phép kinh doanh trong `tenant_documents` đã được duyệt. Cá nhân không có dòng này — "pháp
+   *     phép kinh doanh trong `tenant_documents` đã được duyệt. Cá nhân không có dòng này - "pháp
    *     nhân" không phải lời khen dành cho mọi người bán;
-   *   - gian hàng: phiếu `approval_tasks` loại tenant mới nhất (`resolveShopVerification`) — KHÔNG
+   *   - gian hàng: phiếu `approval_tasks` loại tenant mới nhất (`resolveShopVerification`) - KHÔNG
    *     phải tuyến gói: trả tiền không đồng nghĩa đã được xem xét (ADR 0040 điều 5);
    *   - liên hệ + địa chỉ: gian hàng đã duyệt, SĐT chủ đã OTP, và không chi nhánh nào đang giữ xe
    *     công khai mà bị đánh dấu cần soát lại vị trí;
@@ -937,19 +1023,21 @@ export class PublicListingsService {
   }
 
   /**
-   * Số liệu HIỂN THỊ của một gian hàng — những con số khách dùng để quyết định có thuê không.
+   * Số liệu HIỂN THỊ của một gian hàng - những con số khách dùng để quyết định có thuê không.
    *
    * Năm phép đếm chạy song song bằng `Promise.all`, KHÔNG phải `$transaction([...])`: overload
    * transaction-dạng-mảng làm `groupBy` mất literal type của `_count` (cùng lý do đã ghi ở
-   * `computeFacets`). Đánh đổi chấp nhận được ở đây — đây là dữ liệu chỉ-đọc, công khai, đằng nào
+   * `computeFacets`). Đánh đổi chấp nhận được ở đây - đây là dữ liệu chỉ-đọc, công khai, đằng nào
    * cũng đã đi qua cache 60 giây, nên "năm con số đọc trong năm mili-giây khác nhau" không tạo ra
    * mâu thuẫn nào mà người xem nhận ra được.
    *
-   * Điều kiện đếm xe là `publicListingScope()` y hệt chợ và trang shop — nếu không, tiêu đề
+   * Điều kiện đếm xe là `publicListingScope()` y hệt chợ và trang shop - nếu không, tiêu đề
    * "Xe đang cho thuê (36)" sẽ nói một số mà lưới bên dưới không bao giờ hiện đủ.
    */
   private async shopStats(
     tenantId: string,
+    /** Có trả địa chỉ đầy đủ của từng chi nhánh không - `customerSeesPickupAddress` (ADR 0077). */
+    exactAddress: boolean,
   ): Promise<
     Pick<
       PublicShopDto,
@@ -966,7 +1054,7 @@ export class PublicListingsService {
   > {
     const visibleListing: Prisma.PublicListingWhereInput = { ...publicListingScope(), tenantId };
     // Số xe của từng chip đi qua CHÍNH bộ lọc của danh sách (`listShopVehicles`), không phải một
-    // điều kiện viết tay thứ hai — chip hiện "có xe" thì bấm vào phải ra đúng chừng ấy xe.
+    // điều kiện viết tay thứ hai - chip hiện "có xe" thì bấm vào phải ra đúng chừng ấy xe.
     const countMatching = (filter: ListingFilterQuery) =>
       this.prisma.publicListing.count({ where: { ...buildListingWhere(filter), tenantId } });
 
@@ -1006,7 +1094,7 @@ export class PublicListingsService {
       }),
       /*
        * Ba chỉ số đi qua MỘT nguồn (ADR 0045 điều 2). Trước đợt này chỗ này tự cộng lấy hai
-       * mảng trạng thái, và bản của sổ ví đã trôi khỏi nó — hai con số khác nhau về cùng một
+       * mảng trạng thái, và bản của sổ ví đã trôi khỏi nó - hai con số khác nhau về cùng một
        * gian hàng là cách nhanh nhất để không ai tin con số nào.
        */
       this.hostMetrics.forTenant(tenantId),
@@ -1052,7 +1140,12 @@ export class PublicListingsService {
       branchStats.size > 0
         ? await this.prisma.tenantBranch.findMany({
             where: { tenantId, id: { in: [...branchStats.keys()] } },
-            select: { id: true, name: true, province: { select: { name: true } } },
+            select: {
+              id: true,
+              name: true,
+              address: true,
+              province: { select: { name: true } },
+            },
           })
         : [];
 
@@ -1077,6 +1170,7 @@ export class PublicListingsService {
             id: branch.id,
             name: branch.name,
             provinceName: branch.province?.name ?? null,
+            address: exactAddress ? branch.address?.trim() || null : null,
             vehicleCount: stats.vehicleCount,
             ratingAvg:
               stats.ratingCount > 0 ? (stats.ratingWeighted / stats.ratingCount).toFixed(2) : null,
@@ -1084,7 +1178,14 @@ export class PublicListingsService {
           };
         })
         .sort(byVehicleCountThenName),
-      vehicleFilterCounts: { withDriver, longTerm, delivery, instantBook, noCollateral, vatInvoice },
+      vehicleFilterCounts: {
+        withDriver,
+        longTerm,
+        delivery,
+        instantBook,
+        noCollateral,
+        vatInvoice,
+      },
       deliveryAvailable: delivery > 0,
     };
   }
@@ -1101,8 +1202,8 @@ export class PublicListingsService {
     const paging = resolvePaging(query, DEFAULT_LIMIT, MAX_LIMIT);
 
     // Cùng scope và cùng bộ lọc với marketplace (`buildListingWhere` đã gồm `publicListingScope`):
-    // xe ở tỉnh đã bị ẩn cũng không hiện ở trang shop — nếu không, trang shop thành đường vòng qua
-    // luật hiển thị — và chip ở đây nghĩa đúng như chip cùng tên ở trang tìm kiếm.
+    // xe ở tỉnh đã bị ẩn cũng không hiện ở trang shop - nếu không, trang shop thành đường vòng qua
+    // luật hiển thị - và chip ở đây nghĩa đúng như chip cùng tên ở trang tìm kiếm.
     const where: Prisma.PublicListingWhereInput = {
       ...buildListingWhere({
         provinceCode: query.provinceCode,
@@ -1134,7 +1235,7 @@ export class PublicListingsService {
   }
 
   /**
-   * Chi tiết một xe trên marketplace — chỉ trả xe đã duyệt của shop đang hoạt động (cùng điều
+   * Chi tiết một xe trên marketplace - chỉ trả xe đã duyệt của shop đang hoạt động (cùng điều
    * kiện scope với danh sách). Không lộ dữ liệu nội bộ (biển số, tenantId…).
    */
   async getById(id: string): Promise<PublicListingDetailDto> {
@@ -1143,7 +1244,7 @@ export class PublicListingsService {
       where: {
         id,
         // Bốn vế dùng chung với mọi đường đi thẳng tới một chiếc xe (`marketplaceVehicleWhere`)
-        // — gồm cả công tắc hiển thị của chủ xe (ADR 0048).
+        // - gồm cả công tắc hiển thị của chủ xe (ADR 0048).
         ...marketplaceVehicleWhere(),
         // Link trực tiếp tới chi tiết xe KHÔNG được là đường vòng qua luật hiển thị theo tỉnh:
         // ẩn một tỉnh mà URL cũ vẫn mở được xe ở đó thì việc ẩn chỉ là trang trí.
@@ -1153,9 +1254,10 @@ export class PublicListingsService {
         id: true,
         tenantId: true,
         name: true,
-        // `name`/`address`/`phone`: chi nhánh giữ xe CHÍNH LÀ chỗ khách tới nhận khi tự lấy xe.
-        // Toạ độ để trang xe ghim được điểm nhận lên bản đồ — cùng mức công khai với địa chỉ
-        // vốn đã hiện ở đó, không mở thêm gì về quyền riêng tư.
+        // Chi nhánh giữ xe là chỗ khách tới nhận - nhưng trang CÔNG KHAI chỉ được nói KHU VỰC
+        // (xã + tỉnh) và một toạ độ xấp xỉ; số nhà, đường, toạ độ chính xác chỉ mở cho khách đã
+        // có ĐƠN (ADR 0077, `customerSeesPickupAddress`). `address` chỉ còn để biết chi nhánh
+        // ĐÃ điền địa chỉ hay chưa - không bao giờ đi ra response.
         branch: {
           select: {
             name: true,
@@ -1189,7 +1291,7 @@ export class PublicListingsService {
         description: true,
         color: true,
         manufactureYear: true,
-        // Thông số NĂNG LƯỢNG khách hỏi trước khi đặt (09/09/2026) — xe xăng đọc lít/100km,
+        // Thông số NĂNG LƯỢNG khách hỏi trước khi đặt (09/09/2026) - xe xăng đọc lít/100km,
         // xe điện đọc quãng đường mỗi lần sạc; trang xe chỉ hiện cái có nghĩa với loại xe đó.
         transmission: true,
         fuelConsumptionCombined: true,
@@ -1198,16 +1300,24 @@ export class PublicListingsService {
         electricConsumptionKwhPer100Km: true,
         tenant: {
           select: {
-            // Tên, ảnh, tuyến hiệu lực — cùng nguồn với thẻ ở lưới kết quả (ADR 0054).
+            // Tên, ảnh, tuyến hiệu lực - cùng nguồn với thẻ ở lưới kết quả (ADR 0054).
             ...storefrontTenantSelect(now),
             slug: true,
             // `address`: dự phòng cho điểm nhận xe khi chi nhánh chưa điền địa chỉ.
-            profile: { select: { provinceName: true, logoUrl: true, bio: true, address: true } },
-            // Điểm đánh giá CỦA GIAN HÀNG — cột sẵn có, cùng nguồn `PublicShopDto` dùng cho trang
+            profile: {
+              select: {
+                provinceName: true,
+                wardName: true,
+                logoUrl: true,
+                bio: true,
+                address: true,
+              },
+            },
+            // Điểm đánh giá CỦA GIAN HÀNG - cột sẵn có, cùng nguồn `PublicShopDto` dùng cho trang
             // gian hàng (không phải một truy vấn tổng hợp mới).
             ratingAvg: true,
             ratingCount: true,
-            // Thiết lập hoá đơn VAT của gian hàng — áp cho mọi xe (ADR 0059).
+            // Thiết lập hoá đơn VAT của gian hàng - áp cho mọi xe (ADR 0059).
             vatInvoiceSupported: true,
           },
         },
@@ -1224,7 +1334,7 @@ export class PublicListingsService {
 
     /*
      * `effectivePolicy` lấy cho MỌI xe chứ không chỉ xe dài hạn: ngoài giá gói, nó còn là nguồn
-     * DUY NHẤT trả lời được "xe này có đặt giao tận nơi được không" — cùng giá trị mà
+     * DUY NHẤT trả lời được "xe này có đặt giao tận nơi được không" - cùng giá trị mà
      * `BookingRequestsService` dùng để chấp nhận/từ chối `deliveryRequested`.
      */
     const [
@@ -1232,7 +1342,6 @@ export class PublicListingsService {
       completedTripCount,
       shopCompletedTripCount,
       policy,
-      handover,
       surchargeRules,
       rentalTerms,
       shopMetrics,
@@ -1241,13 +1350,12 @@ export class PublicListingsService {
       this.prisma.booking.count({
         where: { vehicleId: v.id, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
       }),
-      // Cùng phép đếm với `shopStats` dùng cho trang gian hàng, nhưng theo TENANT thay vì xe —
+      // Cùng phép đếm với `shopStats` dùng cho trang gian hàng, nhưng theo TENANT thay vì xe -
       // thẻ gian hàng ở trang chi tiết xe nói về người bán, không phải riêng chiếc xe đang xem.
       this.prisma.booking.count({
         where: { tenantId: v.tenantId, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
       }),
       this.pricing.effectivePolicy(v.tenantId, v.id),
-      this.settings.handoverWindowsFor(this.prisma, v.id),
       // Chỉ chuyến có tài xế mới có phụ phí mặc định; chỉ khoản đang bật mới công bố.
       v.serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER)
         ? this.settings.surchargeRulesFor(this.prisma, v.id)
@@ -1274,7 +1382,7 @@ export class PublicListingsService {
           }),
       ),
       /*
-       * Ba chỉ số của CHỦ XE, ngay tại trang này (ADR 0045 điều 2) — một truy vấn gộp cho MỘT
+       * Ba chỉ số của CHỦ XE, ngay tại trang này (ADR 0045 điều 2) - một truy vấn gộp cho MỘT
        * tenant, chạy song song với phần còn lại. Không có N+1: trang chi tiết chỉ có một chủ xe.
        */
       this.hostMetrics.forTenant(v.tenantId),
@@ -1282,7 +1390,7 @@ export class PublicListingsService {
 
     /*
      * Giá SÁU gói thuê dài hạn (ADR 0011): bảng chọn gói phải hiện TIỀN THẬT ngay khi mở, nên
-     * giá tính sẵn ở đây bằng chính hàm mà báo giá dùng — nút gói và breakdown không thể lệch.
+     * giá tính sẵn ở đây bằng chính hàm mà báo giá dùng - nút gói và breakdown không thể lệch.
      * Chỉ tính khi xe đăng dịch vụ dài hạn.
      */
     const longTermPackages = v.serviceTypes.includes(SERVICE_TYPE.LONG_TERM)
@@ -1291,32 +1399,50 @@ export class PublicListingsService {
 
     /*
      * Điểm nhận xe: địa chỉ chi nhánh giữ xe, rơi về địa chỉ hồ sơ gian hàng khi chi nhánh chưa
-     * điền. Không có địa chỉ nào thì trả `null` — một điểm hẹn không có địa chỉ là thông tin vô
+     * điền. Không có địa chỉ nào thì trả `null` - một điểm hẹn không có địa chỉ là thông tin vô
      * dụng, và bịa ra tên chi nhánh trần còn tệ hơn im lặng.
      */
     const storefront = resolveStorefront(v.tenant, now);
 
-    const pickupAddress = v.branch?.address?.trim() || v.tenant.profile?.address?.trim() || null;
+    const fromBranch = Boolean(v.branch?.address?.trim());
+    /*
+     * Gian hàng TUYẾN GÓI (tích xanh) công khai địa chỉ cửa hàng; chủ xe tuyến hoa hồng chỉ lộ
+     * KHU VỰC cho tới khi khách có ĐƠN - `customerSeesPickupAddress` (ADR 0077).
+     */
+    const exactAddress = customerSeesPickupAddress({
+      engaged: false,
+      packageTrack: hasVerifiedStorefront(storefront.billingMode),
+    });
+    const fullAddress = pickupPointAddressOf(v);
+    const pickupArea = fromBranch
+      ? publicAreaLabel(v.branch?.ward?.name, v.branch?.province?.name)
+      : v.tenant.profile?.address?.trim()
+        ? publicAreaLabel(v.tenant.profile.wardName, v.tenant.profile.provinceName)
+        : null;
     const pickupMapTarget = branchMapTarget(v.branch);
-    const pickupPoint = pickupAddress
+    const approxPoint = approximatePoint(pickupMapTarget?.point);
+    const pickupPoint = (exactAddress ? fullAddress : pickupArea)
       ? {
           // Tên chi nhánh chỉ có nghĩa khi địa chỉ ĐẾN TỪ chi nhánh đó.
-          branchName: v.branch?.address?.trim() ? (v.branch.name ?? null) : null,
-          address: pickupAddress,
+          branchName: fromBranch ? (v.branch!.name ?? null) : null,
+          // Địa chỉ đủ (tuyến gói) hoặc chỉ KHU VỰC "Phường/Xã, Tỉnh/TP" (tuyến hoa hồng).
+          address: (exactAddress ? fullAddress : pickupArea)!,
           provinceName: v.branch?.province?.name ?? v.tenant.profile?.provinceName ?? null,
           /*
            * SĐT điểm nhận chỉ của GIAN HÀNG (số tổng đài chi nhánh). Chủ xe cá nhân: số của họ là
-           * SĐT ĐĂNG NHẬP — chỉ trao cho khách SAU khi có yêu cầu thuê (trang chuyến, ADR 0054),
+           * SĐT ĐĂNG NHẬP - chỉ trao cho khách SAU khi có yêu cầu thuê (trang chuyến, ADR 0054),
            * cùng lý do kênh chat của họ không mở công khai (`storefrontAllowsPublicChat`).
            */
           phone: storefront.kind === STOREFRONT_KIND.SHOP ? (v.branch?.phone ?? null) : null,
           /*
-           * Toạ độ CHỈ đi kèm khi địa chỉ đến từ chính chi nhánh đó — cùng một quy tắc với ảnh
+           * Toạ độ CHỈ đi kèm khi địa chỉ đến từ chính chi nhánh đó - cùng một quy tắc với ảnh
            * `/public/listings/:id/pickup-map` (`branchMapTarget`). Địa chỉ rơi về hồ sơ gian hàng
            * mà vẫn ghim toạ độ chi nhánh là ghim sai chỗ.
            */
-          latitude: pickupMapTarget?.point.lat ?? null,
-          longitude: pickupMapTarget?.point.lng ?? null,
+          // Tuyến hoa hồng: toạ độ XẤP XỈ (~1km) - đủ để vẽ khu vực, không đủ để tìm tới cửa.
+          latitude: (exactAddress ? pickupMapTarget?.point : approxPoint)?.lat ?? null,
+          longitude: (exactAddress ? pickupMapTarget?.point : approxPoint)?.lng ?? null,
+          isApproximate: !exactAddress,
         }
       : null;
 
@@ -1340,7 +1466,9 @@ export class PublicListingsService {
       withDriverInterCityPrice: v.withDriverInterCityPrice as unknown as string | null,
       withDriverOneWayPrice: v.withDriverOneWayPrice as unknown as string | null,
       deliveryEnabled: v.deliveryEnabled,
-      noCollateral: v.noCollateral,
+      // Cùng nguồn với khối "Điều kiện bảo đảm" bên dưới: chính sách hiệu lực thắng cờ lưu sẵn (cờ có
+      // thể cũ - lỗi 09/11/2026: thẻ xe báo "Miễn thế chấp" mà trang chi tiết không có).
+      noCollateral: policy ? policy.values.collateralMode === COLLATERAL_MODE.NONE : v.noCollateral,
       vatInvoiceSupported: v.tenant.vatInvoiceSupported,
       discountPercent: v.discountPercent,
       shopName: storefront.name,
@@ -1348,7 +1476,7 @@ export class PublicListingsService {
       shopVerified: hasVerifiedStorefront(storefront.billingMode),
       shopMetrics,
       // Nút "Nhắn shop" của trang này chỉ hiện khi gian hàng mở hộp thư công khai. Cờ nói đúng
-      // CHÍNH SÁCH chứ không phải tuyến, vì đó là thứ nút cần biết — xem
+      // CHÍNH SÁCH chứ không phải tuyến, vì đó là thứ nút cần biết - xem
       // `storefrontAllowsPublicChat`. Cổng thật vẫn nằm ở `ChatService`.
       shopChatOpen: storefrontAllowsPublicChat(storefront.kind),
       completedTripCount,
@@ -1377,7 +1505,7 @@ export class PublicListingsService {
       longTermPackages,
       pickupPoint,
       deliveryAvailable: policy?.values.deliveryEnabled ?? false,
-      // Điều kiện bảo đảm lấy từ CHÍNH SÁCH HIỆU LỰC — cùng nguồn với nhãn "Miễn thế chấp" trên
+      // Điều kiện bảo đảm lấy từ CHÍNH SÁCH HIỆU LỰC - cùng nguồn với nhãn "Miễn thế chấp" trên
       // thẻ xe. Chưa có chính sách thì null: nói "chưa công bố" đúng hơn là hứa miễn thế chấp.
       collateral: policy
         ? {
@@ -1387,7 +1515,8 @@ export class PublicListingsService {
           }
         : null,
       rentalTerms,
-      handover: { pickupWindows: handover.pickup, returnWindows: handover.return },
+      // Khung giờ giao/nhận đã gỡ (ADR 0078): xe nhận/trả mọi giờ - giữ hình dạng cho app cũ.
+      handover: { pickupWindows: [], returnWindows: [] },
       driverSurchargeRules: surchargeRules
         .filter((r) => r.enabled)
         .map((r) => ({

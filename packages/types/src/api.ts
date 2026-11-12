@@ -150,6 +150,10 @@ export const API_ERROR_CODE = {
    * `details` giữ nguyên dạng của `VALIDATION_FAILED` (`[{ field, constraints }]`).
    */
   MONEY_STEP_1000: 'MONEY_STEP_1000',
+  /** Mã xã gửi lên không thuộc tỉnh/thành đã chọn (ADR 0077). `details.field` = ô xã. */
+  WARD_NOT_IN_PROVINCE: 'WARD_NOT_IN_PROVINCE',
+  /** Địa chỉ của nơi ĐĂNG KÝ (chi nhánh) thiếu phường/xã — bắt buộc từ ADR 0077. */
+  WARD_REQUIRED: 'WARD_REQUIRED',
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',
   /** Khách đã dùng lượt chỉnh sửa đánh giá duy nhất (`reviews.edited_at` khác null). */
@@ -220,8 +224,8 @@ export const API_ERROR_CODE = {
   /** Khách yêu cầu giao tận nơi nhưng chính sách hiệu lực của xe không bật giao nhận. */
   DELIVERY_NOT_SUPPORTED: 'DELIVERY_NOT_SUPPORTED',
   /**
-   * Giờ nhận/trả nằm ngoài khung giờ giao nhận chủ xe đã đặt cho xe (08/09/2026). Server kiểm
-   * khi khách gửi yêu cầu và khi gian hàng chốt giờ nhận dài hạn — FE chỉ là preview.
+   * @deprecated ADR 0078 — khung giờ giao nhận đã gỡ, server không còn ném mã này. Giữ để app
+   * phát hành trước đó vẫn ánh xạ được.
    */
   HANDOVER_WINDOW_VIOLATION: 'HANDOVER_WINDOW_VIOLATION',
   /** Chủ xe bắt buộc khách đồng ý điều khoản trước khi gửi yêu cầu mà payload chưa tích. */
@@ -248,6 +252,20 @@ export const API_ERROR_CODE = {
    * đóng; việc còn lại đi qua mục Hỗ trợ. 409.
    */
   TRIP_NOT_RECEIVED_WINDOW_CLOSED: 'TRIP_NOT_RECEIVED_WINDOW_CLOSED',
+  /**
+   * Khách bấm "Đã nhận xe" (ADR 0081) ở chuyến không xác nhận được — chưa có đơn, đơn không còn
+   * `reserved`, đã có biên bản giao xe, hoặc chuyến có tài xế. 409.
+   */
+  TRIP_PICKUP_CONFIRM_NOT_ALLOWED: 'TRIP_PICKUP_CONFIRM_NOT_ALLOWED',
+  /** "Đã nhận xe" sớm hơn `CUSTOMER_PICKUP_CONFIRM_LEAD_MINUTES` trước giờ nhận. `details.opensAt`. 409. */
+  TRIP_PICKUP_CONFIRM_TOO_EARLY: 'TRIP_PICKUP_CONFIRM_TOO_EARLY',
+  /**
+   * Khách bấm "Đã trả xe" (ADR 0081) ở chuyến không báo được — đơn không `active`, đã có biên bản
+   * trả xe, đã báo rồi, hoặc chuyến có tài xế. 409.
+   */
+  TRIP_RETURN_REPORT_NOT_ALLOWED: 'TRIP_RETURN_REPORT_NOT_ALLOWED',
+  /** Gian hàng phản đối lời báo trả xe khi không còn lời báo nào đang chờ (đã xử lý / đã tự hoàn thành). 409. */
+  BOOKING_RETURN_REPORT_NOT_PENDING: 'BOOKING_RETURN_REPORT_NOT_PENDING',
   /**
    * Đơn đã có một khoản phát sinh còn hiệu lực ở danh mục CHỈ ĐƯỢC GHI MỘT LẦN (hiện là phí
    * vượt km). `details` mang `{ category, surchargeId }` để FE chỉ thẳng vào khoản đang có.
@@ -305,6 +323,13 @@ export const API_ERROR_CODE = {
    */
   PLAN_SCOPE_REQUIRED: 'PLAN_SCOPE_REQUIRED',
   /**
+   * Lượt mua gói làm số xe đang hiện trên chợ VƯỢT suất của gói sau khi áp (ADR 0085 điều 5) mà người
+   * mua chưa chọn xe giữ lại + xác nhận ẩn phần còn lại. `details.groups` mang từng nhóm vượt
+   * `{ countedScope, limit, vehicleIds }`. Lối đi tiếp: chọn gói lớn hơn / mua thêm gói loại kia, hoặc
+   * chọn xe giữ lại. Hệ thống không tự chọn thay.
+   */
+  PLAN_VEHICLE_SELECTION_REQUIRED: 'PLAN_VEHICLE_SELECTION_REQUIRED',
+  /**
    * Lượt ghi đụng EXCLUDE `tenant_subscriptions_package_scope_no_overlap` (ADR 0065): hai kỳ gói
    * chồng thời gian ở phạm vi xung đột (cùng loại xe, hoặc một bên là `all`). Chuỗi kỳ ở
    * `BillingService` không bao giờ đề xuất điều đó — mã này là lưới cuối của DB, không phải luồng
@@ -312,11 +337,15 @@ export const API_ERROR_CODE = {
    */
   SUBSCRIPTION_TERM_CONFLICT: 'SUBSCRIPTION_TERM_CONFLICT',
   /**
-   * Huỷ một kỳ thuê bao trong khi đã có kỳ khác XẾP LỊCH ngay sau nó. Huỷ kỳ đang chạy lúc đó để lại
-   * một khoảng trống tới ngày kỳ sau bắt đầu — gian hàng không có gói nào, đường ghi tiền từ chối.
-   * Huỷ kỳ xếp sau trước, hoặc dùng "Đổi gói ngay".
+   * Sửa một kỳ thuê bao không sửa được: đã huỷ / đã hết hạn, hoặc là dòng tuyến hoa hồng (ADR 0080
+   * điều 2). `details.reason` mang `SubscriptionEditBlock`. 409.
    */
-  SUBSCRIPTION_LATER_TERM_EXISTS: 'SUBSCRIPTION_LATER_TERM_EXISTS',
+  SUBSCRIPTION_TERM_NOT_EDITABLE: 'SUBSCRIPTION_TERM_NOT_EDITABLE',
+  /**
+   * Sửa GIÁ của một kỳ sinh từ hoá đơn gian hàng đã trả — số tiền trên kỳ phải khớp hoá đơn đã
+   * thu (ADR 0080 điều 3). Ngày kết thúc, hạn mức xe, ghi chú vẫn sửa được. 409.
+   */
+  SUBSCRIPTION_PRICE_NOT_EDITABLE: 'SUBSCRIPTION_PRICE_NOT_EDITABLE',
   /**
    * Bậc gói đã được DÙNG — có thuê bao hoặc hoá đơn trỏ tới nó — nên không XOÁ được.
    *
@@ -393,6 +422,16 @@ export const API_ERROR_CODE = {
   /** Hold không ở trạng thái chờ tiền — đã trả, đã hết hạn hoặc đã huỷ. `details` mang `{ status }`. */
   HOLD_NOT_PENDING: 'HOLD_NOT_PENDING',
   /**
+   * Gian hàng nhắc khách thanh toán khi khách VỪA nhận một lời nhắc — `HOLD_HOST_REMINDER_COOLDOWN_MINUTES`
+   * (05/11/2026). 429; `details` mang `{ availableAt }` (ISO) để nút nói được lúc nào bấm lại.
+   */
+  PAYMENT_REMINDER_TOO_SOON: 'PAYMENT_REMINDER_TOO_SOON',
+  /**
+   * Chuyến không còn chờ khách thanh toán (tiền vừa về, hết hạn, đã huỷ) hoặc khách không có tài
+   * khoản để nhận thông báo — không có ai/khoản nào để nhắc. 409; `details` mang `{ stage }`.
+   */
+  PAYMENT_REMINDER_NOT_AVAILABLE: 'PAYMENT_REMINDER_NOT_AVAILABLE',
+  /**
    * Giờ nhận xe quá gần để kịp thu tiền giữ chỗ — ADR 0044 điều 4.
    *
    * Hạn chuyển tiền bị kẹp bởi `pickupAt`, và phần còn lại đã ngắn hơn
@@ -449,8 +488,24 @@ export const API_ERROR_CODE = {
    * (đã bàn giao thì phải đi quyết toán, đã kết thúc thì chỉ còn lịch sử).
    */
   BOOKING_CANCEL_NOT_ALLOWED: 'BOOKING_CANCEL_NOT_ALLOWED',
+  /**
+   * Đơn đã huỷ / khách không đến — chuyến không diễn ra nên không ghi thu tiền thuê, thu cọc hay
+   * ghi/sửa phát sinh MỚI được nữa (`isBookingClosedWithoutTrip`). Hoàn phần đã thu vẫn mở.
+   */
+  BOOKING_MONEY_CLOSED: 'BOOKING_MONEY_CLOSED',
   /** Khoản giữ chỗ đang bị TẠM GIỮ vì có tranh chấp mở — không chốt kết cục được (R3). */
   HOLD_LOCKED_BY_DISPUTE: 'HOLD_LOCKED_BY_DISPUTE',
+  /**
+   * Đơn không gia hạn được — chỉ đơn THUÊ DÀI HẠN đang thuê (`active`) mới có phụ lục (ADR 0077).
+   * `details` mang `{ status, serviceType }`.
+   */
+  BOOKING_EXTENSION_NOT_ALLOWED: 'BOOKING_EXTENSION_NOT_ALLOWED',
+  /** Đơn đã có một phụ lục đang chờ khách thanh toán — xử lý (hoặc huỷ) nó trước (ADR 0077). */
+  BOOKING_EXTENSION_PENDING: 'BOOKING_EXTENSION_PENDING',
+  /** Phụ lục không còn ở chặng huỷ được (đã hiệu lực / đã đóng). */
+  BOOKING_EXTENSION_NOT_CANCELLABLE: 'BOOKING_EXTENSION_NOT_CANCELLABLE',
+  /** Không báo giá được phần gia hạn: xe chưa có giá tháng hoặc chưa có chính sách phí hiệu lực. */
+  BOOKING_EXTENSION_UNPRICED: 'BOOKING_EXTENSION_UNPRICED',
   /**
    * Gian hàng ở tuyến HOA HỒNG — cọc là bắt buộc và không có công tắc để tắt (ADR 0032 điều 2).
    *
@@ -740,6 +795,12 @@ export const API_ERROR_CODE = {
    * người khác vừa xác nhận). FE tải lại đơn thay vì hiện lỗi chung.
    */
   HANDOVER_NOT_ELIGIBLE: 'HANDOVER_NOT_ELIGIBLE',
+  /**
+   * Ô "Đã thu tiền" của lượt nhận lại xe nộp một số KHÁC số khách còn phải trả server vừa tính
+   * (người khác vừa ghi thu / phụ phí giữa chừng). Không ghi gì; `details.collectableAmount` là số
+   * mới để hộp hiện lại cho người dùng xác nhận lần nữa.
+   */
+  HANDOVER_COLLECT_AMOUNT_CHANGED: 'HANDOVER_COLLECT_AMOUNT_CHANGED',
 
   // Sổ khách của gian hàng (S-01)
   /**
@@ -790,6 +851,11 @@ export const API_ERROR_CODE = {
    * 403 chứ không 404: gian hàng có thật và khách nhìn thấy nó, chỉ là chưa tới lúc mở kênh.
    */
   CHAT_REQUIRES_BOOKING: 'CHAT_REQUIRES_BOOKING',
+  /**
+   * Hội thoại đã bị chặn (một trong hai phía — App Store Guideline 1.2). Không gửi được tin;
+   * giao diện khoá ô soạn tin theo `blockedByMe` / `blockedByOther`.
+   */
+  CHAT_BLOCKED: 'CHAT_BLOCKED',
 
   /**
    * Chi nhánh còn ràng buộc nên chưa ngừng/đổi được: `details` liệt kê CHÍNH XÁC cái gì đang
@@ -889,6 +955,24 @@ export const API_ERROR_CODE = {
    * (ADR 0053 điều 6). DB giữ luật bằng unique index một phần; mã này là câu trả lời đọc được.
    */
   MEMBER_ALREADY_IN_OTHER_TENANT: 'MEMBER_ALREADY_IN_OTHER_TENANT',
+  /** Người mời không được cấp vai này — quản lý chỉ mời Nhân viên (ADR 0086 điều 2). */
+  MEMBER_ROLE_NOT_INVITABLE: 'MEMBER_ROLE_NOT_INVITABLE',
+  /**
+   * Thành viên bị HỆ THỐNG khoá (gian hàng hết gói — ADR 0085 điều 6), không mở tay được: gói
+   * kích hoạt lại thì tự mở. Cho mở tay là để nhân viên dùng tiếp một gian hàng đã về tuyến hoa hồng.
+   */
+  MEMBER_LOCKED_BY_SYSTEM: 'MEMBER_LOCKED_BY_SYSTEM',
+  /** Tên đăng nhập đã có tài khoản khác dùng (unique toàn site partner — ADR 0087). */
+  USERNAME_TAKEN: 'USERNAME_TAKEN',
+  /**
+   * Tài khoản nhân viên do gian hàng cấp đang bị gian hàng đó tạm khoá — mật khẩu đúng nhưng không có
+   * gì để vào (ADR 0087).
+   */
+  STAFF_ACCOUNT_SUSPENDED: 'STAFF_ACCOUNT_SUSPENDED',
+  /** Thao tác chỉ áp cho tài khoản do gian hàng cấp (đặt lại mật khẩu, sửa họ tên — ADR 0087). */
+  MEMBER_ACCOUNT_NOT_MANAGED: 'MEMBER_ACCOUNT_NOT_MANAGED',
+  /** Mời bằng SĐT đã gỡ — gian hàng cấp tài khoản cho nhân viên (ADR 0087). */
+  MEMBER_INVITE_RETIRED: 'MEMBER_INVITE_RETIRED',
   /**
    * Hồ sơ GIAN HÀNG TUYẾN GÓI chưa đủ để gửi xe lên chợ (ADR 0040 điều 7).
    * `details.missing[]` mang khoá `PACKAGE_SHOP_LISTING_REQUIREMENT`.

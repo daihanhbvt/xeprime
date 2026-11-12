@@ -1,4 +1,4 @@
-import { CATALOG_TYPE, SERVICE_TYPE } from '@xeprime/types';
+import { CATALOG_TYPE, COLLATERAL_MODE, SERVICE_TYPE } from '@xeprime/types';
 import { LIST_SEPARATOR, isNewListing, mapExternalUrl, toGeoPoint } from '@xeprime/domain';
 import { catalogLabel, type CatalogMap } from '@/features/catalog/types';
 import { StaticMapImage } from '@/components/data-display/StaticMapImage';
@@ -9,15 +9,18 @@ import { ListingDescription, type ListingAttribute } from './ListingDescription'
 import { VehicleFeatureIcon } from './VehicleFeatureIcons';
 import { ROUTES } from '@/constants/routes';
 import { cx } from '@/lib/cx';
+import { Reveal } from '@/components/motion/Reveal';
 import { pickupMapSrc } from '../api';
 import { marketplaceSearchHref } from '../filter-params';
 import type { PublicListingDetail } from '../types';
 import { ListingGallery } from './ListingGallery';
+import { AmenityChips, listingAmenityItems } from './PhotoAmenityPills';
 import { ListingReviews } from './ListingReviews';
 import { ListingSpecsCard, type ListingSpecItem } from './ListingSpecsCard';
 import { ListingBenefitsCard } from './ListingBenefitsCard';
 import { ListingBookingCard } from './ListingBookingCard';
 import { ListingPoliciesTabs } from './ListingPoliciesTabs';
+import { popInClass, seqClass } from '@/components/motion/motion-classes';
 import styles from './ListingDetailView.module.css';
 import { getTranslations } from 'next-intl/server';
 
@@ -117,12 +120,13 @@ export async function ListingDetailView({
     ...(colorLabel ? [{ key: 'color' as const, value: colorLabel }] : []),
   ];
 
-  const locationLine = [
-    listing.pickupPoint?.address,
-    listing.pickupPoint?.provinceName || listing.shopProvince,
-  ]
-    .filter(Boolean)
-    .join(', ');
+  /*
+   * `pickupPoint.address` đã là KHU VỰC "Phường/Xã, Tỉnh/TP" do server ghép từ danh mục (ADR
+   * 0077) — KHÔNG nối thêm tên tỉnh (đó là nguồn của lỗi "Hà Nội, Hà Nội"). Chỉ khi không có điểm
+   * nhận nào mới rơi về tỉnh của gian hàng.
+   */
+  const locationLine =
+    listing.pickupPoint?.address || listing.pickupPoint?.provinceName || listing.shopProvince || '';
 
   const services: readonly string[] = listing.serviceTypes ?? [];
   const activeService =
@@ -131,6 +135,22 @@ export async function ListingDetailView({
       : services.includes(SERVICE_TYPE.SELF_DRIVE)
         ? SERVICE_TYPE.SELF_DRIVE
         : (services[0] ?? SERVICE_TYPE.SELF_DRIVE);
+  // Hàng nhãn tiện ích dưới địa chỉ (Figma `22226:30044`) - cùng nguồn với thẻ xe, riêng trang
+  // chi tiết có thêm viên "Hỗ trợ xuất hoá đơn VAT" ở mép phải.
+  const amenities = listingAmenityItems(
+    {
+      ...listing,
+      // Cờ lưu sẵn có thể cũ - suy từ chính sách cọc hiệu lực khi có.
+      noCollateral: listing.collateral
+        ? listing.collateral.mode === COLLATERAL_MODE.NONE
+        : listing.noCollateral,
+    },
+    (listing.instantBookServiceTypes ?? []).some((type) => type === activeService),
+    (key) => (key === 'vatInvoice' ? t('vatInvoice.badge') : tCard(key)),
+    { includeVat: true },
+  );
+  const perks = amenities.filter((item) => item.key !== 'vat');
+  const vatChip = amenities.filter((item) => item.key === 'vat');
 
   return (
     <div className={styles.wrap}>
@@ -167,9 +187,6 @@ export async function ListingDetailView({
                   {isNewListing(listing) ? (
                     <span className={styles.badgeNew}>{tCard('newVehicle')}</span>
                   ) : null}
-                  {listing.vatInvoiceSupported ? (
-                    <span className={styles.amenityBadge}>{t('vatInvoice.badge')}</span>
-                  ) : null}
                 </div>
                 <ListingHeaderActions vehicleId={listing.id} vehicleName={listing.name} />
               </div>
@@ -194,6 +211,13 @@ export async function ListingDetailView({
                   <span>{locationLine}</span>
                 </div>
               ) : null}
+
+              {amenities.length > 0 ? (
+                <div className={styles.amenityRow}>
+                  <AmenityChips items={perks} label={tCard('amenitiesLabel')} />
+                  <AmenityChips items={vatChip} className={styles.amenityVat} />
+                </div>
+              ) : null}
             </div>
 
             {/* 4 thông số icon 48px dạng hàng ngang (mobile: lưới 2 × 2) */}
@@ -211,29 +235,31 @@ export async function ListingDetailView({
 
           {/* Tiện ích trên xe (features) */}
           {listing.features && listing.features.length > 0 ? (
-            <section
+            <Reveal
+              as="section"
               className={cx(styles.sectionCard, styles.featuresSection)}
               aria-labelledby="features-heading"
             >
               <h2 id="features-heading" className={styles.sectionTitle}>
                 {t('featuresTitle')}
               </h2>
-              <div className={styles.featuresGrid}>
+              <div className={cx(styles.featuresGrid, seqClass)}>
                 {listing.features.map((key) => {
                   const label = catalogLabel(catalog[CATALOG_TYPE.VEHICLE_FEATURE], key) || key;
                   return (
-                    <div key={key} className={styles.featureItem}>
+                    <div key={key} className={cx(styles.featureItem, popInClass)}>
                       <VehicleFeatureIcon featureKey={key} className={styles.featureIcon} />
                       <span className={styles.featureLabel}>{label}</span>
                     </div>
                   );
                 })}
               </div>
-            </section>
+            </Reveal>
           ) : null}
 
           {/* Thẻ gian hàng / chủ xe với 3 chỉ số uy tín inline (ADR 0045) */}
-          <section
+          <Reveal
+            as="section"
             className={cx(styles.sectionCard, styles.hostSection)}
             aria-labelledby="host-heading"
           >
@@ -245,7 +271,7 @@ export async function ListingDetailView({
               biến thể `inline` của thẻ dùng chung để nền/viền trong suốt ở PC. Ở mobile thẻ tự vẽ
               khung riêng (`ShopQuickInfoCard.module.css`) nên lớp bọc nhường lại, không viền đôi.
             */}
-            <div className={styles.hostCard}>
+            <div className={cx(styles.hostCard, !listing.shopVerified && styles.hostCardOwner)}>
               <ShopQuickInfoCard
                 shop={{
                   name: listing.shopName,
@@ -262,11 +288,12 @@ export async function ListingDetailView({
                 variant="inline"
               />
             </div>
-          </section>
+          </Reveal>
 
           {/* Điểm nhận xe & Bản đồ tĩnh */}
           {listing.pickupPoint ? (
-            <section
+            <Reveal
+              as="section"
               className={cx(styles.sectionCard, styles.locationSection)}
               aria-labelledby="pickup-point-heading"
             >
@@ -274,7 +301,8 @@ export async function ListingDetailView({
                 <h2 id="pickup-point-heading" className={styles.sectionTitle}>
                   {t('location.title')}
                 </h2>
-                {pickupGeo ? (
+                {/* Chỉ khi toạ độ CHÍNH XÁC (tuyến gói) — điểm xấp xỉ mà mở chỉ đường là chỉ sai cửa (ADR 0077). */}
+                {pickupGeo && !listing.pickupPoint.isApproximate ? (
                   <a
                     href={mapExternalUrl(pickupGeo)}
                     target="_blank"
@@ -317,14 +345,17 @@ export async function ListingDetailView({
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
-                {[
-                  listing.pickupPoint.branchName,
-                  listing.pickupPoint.address,
-                  listing.pickupPoint.provinceName,
-                ]
+                {/*
+                  `address` đã mang tỉnh (địa chỉ đủ của tuyến gói, hoặc KHU VỰC của tuyến hoa hồng —
+                  ADR 0077) — không nối thêm `provinceName`, đó là nguồn của lỗi "Hà Nội, Hà Nội".
+                */}
+                {[listing.pickupPoint.branchName, listing.pickupPoint.address]
                   .filter(Boolean)
                   .join(LIST_SEPARATOR)}
               </p>
+              {listing.pickupPoint.isApproximate ? (
+                <p className={styles.pickupNote}>{t('location.exactAddressNote')}</p>
+              ) : null}
               {pickupGeo ? (
                 <StaticMapImage
                   src={pickupMapSrc(listing.id, pickupGeo, listing.pickupPoint.address)}
@@ -332,18 +363,18 @@ export async function ListingDetailView({
                   className={styles.pickupMap}
                 />
               ) : null}
-            </section>
+            </Reveal>
           ) : null}
 
-          {/* Quy định & Chính sách dạng tab theo Figma v2 (node 19707:83494) */}
-          <div className={styles.policiesSection}>
-            <ListingPoliciesTabs listing={listing} activeService={activeService} />
-          </div>
-
-          {/* Đánh giá xe */}
-          <section className={cx(styles.sectionCard, styles.reviewsSection)}>
+          {/* Đánh giá xe — Figma 21621:62130: ngay sau Vị trí xe, trước Thông tin thêm */}
+          <Reveal as="section" className={cx(styles.sectionCard, styles.reviewsSection)}>
             <ListingReviews vehicleId={listing.id} />
-          </section>
+          </Reveal>
+
+          {/* Quy định & Chính sách dạng tab theo Figma v2 (node 19707:83494) */}
+          <Reveal className={styles.policiesSection}>
+            <ListingPoliciesTabs listing={listing} activeService={activeService} />
+          </Reveal>
         </div>
 
         {/* CỘT PHẢI (440px sticky) — một cột thì đứng ngay sau tên + thông số */}

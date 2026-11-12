@@ -83,14 +83,14 @@ function renderDrawer() {
 
 afterEach(cleanup);
 
-describe('AuditLogDetailDrawer — sự kiện gói dịch vụ', () => {
+describe('AuditLogDetailDrawer - sự kiện gói dịch vụ', () => {
   it('đổi gói từ kỳ sau: câu tóm tắt nói TỪ gói nào SANG gói nào, từ ngày nào', () => {
     state.data = detail();
     renderDrawer();
 
     expect(screen.getAllByText('Đổi gói từ kỳ sau').length).toBeGreaterThan(0);
     expect(
-      screen.getByText('Đổi từ Gói cơ bản sang Gói nâng cao kể từ kỳ sau — bắt đầu 08/01/2027.'),
+      screen.getByText('Đổi từ Gói cơ bản sang Gói nâng cao kể từ kỳ sau - bắt đầu 08/01/2027.'),
     ).toBeTruthy();
     expect(screen.getByText('Theo bảng giá')).toBeTruthy();
     // Hạn mức `null` = không giới hạn, không phải gạch ngang.
@@ -196,7 +196,7 @@ describe('AuditLogDetailDrawer — sự kiện gói dịch vụ', () => {
   });
 });
 
-describe('AuditLogDetailDrawer — sự kiện chung', () => {
+describe('AuditLogDetailDrawer - sự kiện chung', () => {
   it('lượt sửa: bảng Trước · Sau chỉ hiện trường đổi', () => {
     state.data = detail({
       action: 'tenant.lock',

@@ -7,7 +7,11 @@ import {
 } from '@xeprime/types';
 import { positiveIntParam, useUrlFilters } from '@/hooks/use-url-filters';
 import { buildPeriodRange } from '@/lib/datetime';
-import { FINANCE_OVERVIEW_DEFAULT_PERIOD, VEHICLE_PROFIT_PAGE_SIZE } from '../constants';
+import {
+  FINANCE_OVERVIEW_DEFAULT_PERIOD,
+  FINANCE_PERFORMANCE_VIEW_VALUES,
+  VEHICLE_PROFIT_PAGE_SIZE,
+} from '../constants';
 import type { FinanceOverviewFilters, FinancePeriodFilters } from '../types';
 
 /**
@@ -43,14 +47,16 @@ export function useFinancePeriodFilters() {
 export function useFinanceOverviewFilters() {
   return useUrlFilters<FinanceOverviewFilters>((sp) => ({
     ...parsePeriodParams(sp),
+    perf: oneOf(sp.get('perf'), FINANCE_PERFORMANCE_VIEW_VALUES),
     sort: oneOf(sp.get('sort'), VEHICLE_PROFIT_SORT_VALUES),
     page: positiveIntParam(sp, 'page'),
-    limit: VEHICLE_PROFIT_PAGE_SIZE,
+    // Số dòng đọc từ URL: ô "10 dòng" dưới bảng ghi vào đây. Trần do server giữ (`RECEIPT_MAX_LIMIT`).
+    limit: positiveIntParam(sp, 'limit') ?? VEHICLE_PROFIT_PAGE_SIZE,
     // Bảng theo khách mang tiền tố riêng: dùng chung `sort`/`page` với bảng theo xe thì bấm
     // sang trang ở bảng này sẽ nhảy luôn cả bảng kia.
     customerSort: oneOf(sp.get('customerSort'), CUSTOMER_REVENUE_SORT_VALUES),
     customerPage: positiveIntParam(sp, 'customerPage'),
-    customerLimit: VEHICLE_PROFIT_PAGE_SIZE,
+    customerLimit: positiveIntParam(sp, 'customerLimit') ?? VEHICLE_PROFIT_PAGE_SIZE,
   }));
 }
 

@@ -1,20 +1,17 @@
 'use client';
 
-import { Button, Tag } from 'antd';
+import { Button } from 'antd';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
-import {
-  TENANT_CUSTOMER_RETURNING_MIN_RENTALS,
-  TENANT_CUSTOMER_RISK_LEVEL,
-  TENANT_CUSTOMER_RISK_LEVEL_META,
-  type PaginationMeta,
-  type TenantCustomerRiskLevel,
-} from '@xeprime/types';
+import { type PaginationMeta } from '@xeprime/types';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { EntityIdentity } from '@/components/data-display/EntityIdentity';
-import { StatusTag } from '@/components/data-display/StatusTag';
+import { ToneDotBadge } from '@/components/data-display/StatusBadge';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { customerStatusOf } from '../constants';
 import { isZeroMoney } from '@/lib/money';
 import { cx } from '@/lib/cx';
+import { rowNumberOf } from '@/lib/pagination';
 import type { TenantCustomer } from '../types';
 import styles from './CustomerTable.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -37,18 +34,12 @@ interface CustomerTableProps {
   onPageChange: (page: number, pageSize: number) => void;
 }
 
-/** Nhãn "khách quen" — một định nghĩa (types) cho cả KPI, bộ lọc và huy hiệu này. */
-function ReturningTag({ count, label }: { count: number; label: string }) {
-  if (count < TENANT_CUSTOMER_RETURNING_MIN_RENTALS) return null;
-  return <Tag color="green">{label}</Tag>;
-}
-
 /** Còn nợ nổi bật khi khác 0; so sánh trên CHUỖI, không `Number()` (ADR 0007). */
 function DebtValue({ value }: { value: string | null | undefined }) {
   const fmt = useAppFormat();
 
   // `null` = KHÔNG được xem tiền (server quyết). Khác hẳn 0 đồng — nên hiện gạch, không hiện 0.
-  if (value === null || value === undefined) return <span className={styles.muted}>—</span>;
+  if (value === null || value === undefined) return <span className={styles.muted}>-</span>;
   return (
     <span className={cx(styles.money, !isZeroMoney(value) && styles.debt)}>
       {fmt.money(value)}
@@ -71,23 +62,32 @@ export function CustomerTable({
 }: CustomerTableProps) {
   const t = useTranslations('Customers');
   const fmt = useAppFormat();
+  const dl = useDomainLabel();
 
-  const riskTags = (row: TenantCustomer) => (
-    <div className={styles.tags}>
-      {row.riskLevel === TENANT_CUSTOMER_RISK_LEVEL.NORMAL ? (
-        <ReturningTag count={row.completedRentalCount} label={t('card.returning')} />
-      ) : (
-        <StatusTag
-          value={row.riskLevel as TenantCustomerRiskLevel}
-          meta={TENANT_CUSTOMER_RISK_LEVEL_META}
-          group="tenantCustomerRiskLevel"
-        />
-      )}
-      {row.archivedAt ? <Tag>{t('card.archived')}</Tag> : null}
-    </div>
-  );
+  /*
+   * MỘT nhãn trạng thái mỗi khách (Figma `23777:53057`, 02/11/2026) — suy theo thứ tự ưu tiên
+   * Từ chối phục vụ > Cần lưu ý > Đã lưu trữ > Còn nợ > Khách quen > Chưa phân loại
+   * (`customerStatusOf`), cùng từ vựng với bộ lọc "Nhóm khách".
+   */
+  const statusBadge = (row: TenantCustomer) => {
+    const status = customerStatusOf(row, canViewFinance);
+    return (
+      <ToneDotBadge color={status.color}>
+        {status.key === 'unclassified'
+          ? t('card.unclassified')
+          : dl('tenantCustomerRelationship', status.key)}
+      </ToneDotBadge>
+    );
+  };
 
   const columns: DataTableColumn<TenantCustomer>[] = [
+    {
+      title: t('card.index'),
+      key: 'index',
+      width: 64,
+      align: 'center',
+      render: (_, __, index) => rowNumberOf(meta, index),
+    },
     {
       title: t('card.identity'),
       key: 'identity',
@@ -154,7 +154,7 @@ export function CustomerTable({
       title: t('card.status'),
       key: 'risk',
       width: 180,
-      render: (_, row) => riskTags(row),
+      render: (_, row) => statusBadge(row),
     },
     {
       title: t('card.actions'),
@@ -185,7 +185,7 @@ export function CustomerTable({
           size="sm"
           initialSource={row.fullName}
         />
-        {riskTags(row)}
+        {statusBadge(row)}
       </header>
 
       <dl className={styles.cardMetrics}>
@@ -195,7 +195,7 @@ export function CustomerTable({
         </div>
         <div>
           <dt>{t('card.lastRentalShort')}</dt>
-          <dd>{row.lastRentalAt ? fmt.date(row.lastRentalAt) : '—'}</dd>
+          <dd>{row.lastRentalAt ? fmt.date(row.lastRentalAt) : '-'}</dd>
         </div>
         {canViewFinance ? (
           <div>
@@ -219,6 +219,8 @@ export function CustomerTable({
       columns={columns}
       items={items}
       minWidth={MIN_TABLE_WIDTH}
+      framed
+      striped={false}
       loading={loading}
       error={error ? { title: t('list.errorTitle'), onRetry: error.onRetry } : null}
       permission={
@@ -229,7 +231,7 @@ export function CustomerTable({
       filtered={filtered}
       empty={{
         title: t('list.emptyTitle'),
-        description: t('list.emptyBody'),
+        description: t('list.emptyAutoBody'),
         action: emptyAction ?? undefined,
       }}
       noResults={{

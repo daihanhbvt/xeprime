@@ -58,7 +58,7 @@ export class ContractPricingDto {
   @ApiProperty({ description: 'MoneyString' }) totalAmount!: string;
   @ApiProperty({ description: 'MoneyString' }) depositAmount!: string;
   @ApiProperty({ description: 'MoneyString' }) paidAmount!: string;
-  @ApiProperty({ description: 'MoneyString — còn phải trả = tổng − đã trả' })
+  @ApiProperty({ description: 'MoneyString - còn phải trả = tổng − đã trả' })
   remainingAmount!: string;
 }
 

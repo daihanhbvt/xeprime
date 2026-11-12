@@ -9,12 +9,14 @@ import { newId, openSupportCaseWhere, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   HANDOVER_CONFIRM_BOOKING_TARGET,
+  HANDOVER_CONFIRM_SOURCE,
   HANDOVER_ENERGY_KIND,
   HANDOVER_MAX_PHOTOS,
   HANDOVER_STATUS,
   HANDOVER_SUSPICIOUS_KM_PER_DAY_SETTING,
   HANDOVER_TYPE,
   ODOMETER_SOURCE,
+  PAYMENT_KIND,
   PRIVATE_FILE_PURPOSE,
   PRIVATE_FILE_STATUS,
   AUDIT_ACTOR_SCOPE,
@@ -30,6 +32,7 @@ import {
   handoverEnergyKind,
   handoverOdometerSuspicion,
   canAttachHandoverPhoto,
+  isHandoverPhotoSlotFor,
   isHandoverEditable,
   isHandoverEligible,
   vehicleMaintenanceSchedule,
@@ -38,6 +41,7 @@ import {
   type HandoverStatus,
   type HandoverType,
   type OdometerSource,
+  type PaymentMethod,
 } from '@xeprime/types';
 import { AuditService } from '../../audit/audit.service';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -48,7 +52,9 @@ import {
   SourceContractDownloadDto,
   SourceContractPresignDto,
 } from '../../vehicles/dto/vehicle-source.dto';
+import { BookingPaymentWriter } from '../../payments/booking-payment.writer';
 import { BookingsService } from '../bookings.service';
+import { SettlementService } from '../settlement/settlement.service';
 import {
   CancelHandoverDto,
   ConfirmHandoverDto,
@@ -108,6 +114,9 @@ export class HandoversService {
     private readonly maintenance: MaintenanceService,
     private readonly files: VehicleContractsService,
     private readonly audit: AuditService,
+    // Tiền của lượt nhận lại xe: phụ phí (writer `booking_surcharges`) + phiếu thu (writer `payments`).
+    private readonly settlement: SettlementService,
+    private readonly payments: BookingPaymentWriter,
   ) {}
 
   // ── Đọc ───────────────────────────────────────────────────────────────────
@@ -144,6 +153,7 @@ export class HandoversService {
       vehicleId: booking.vehicleId,
       vehicleName: booking.vehicle.name,
       plateNumber: booking.vehicle.plateNumber,
+      vehicleType: booking.vehicle.vehicleType,
       energyKind,
       bookingPickupAt: booking.pickupAt.toISOString(),
       bookingReturnAt: booking.returnAt.toISOString(),
@@ -228,7 +238,7 @@ export class HandoversService {
     if (dto.expectedRowVersion == null) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Thiếu expectedRowVersion — cần cho phát hiện sửa đè',
+        message: 'Thiếu expectedRowVersion - cần cho phát hiện sửa đè',
       });
     }
 
@@ -314,7 +324,28 @@ export class HandoversService {
     userId: string,
     dto: ConfirmHandoverDto,
     scope: HandoverViewScope,
+    /** Người gọi có `payments.record` — đọc từ scope của request ở controller, không từ body. */
+    money: { canRecordPayment: boolean } = { canRecordPayment: false },
   ): Promise<HandoverContextDto> {
+    /*
+     * Phụ phí + "Đã thu tiền" (06/11/2026) chỉ có nghĩa lúc NHẬN LẠI xe, và là tiền: cần đúng quyền
+     * ghi thu (`payments.record`) như thẻ "Phát sinh" / hộp Thu tiền — `handovers.confirm` không đủ.
+     * Kiểm TRƯỚC mọi thứ để một request sai không kịp dựng biên bản nháp nào.
+     */
+    const settlesMoney = Boolean(dto.surcharges?.length) || dto.collectPayment !== undefined;
+    if (settlesMoney && type !== HANDOVER_TYPE.RETURN) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Phụ phí và thu tiền chỉ ghi cùng lượt nhận lại xe',
+      });
+    }
+    if (settlesMoney && !money.canRecordPayment) {
+      throw new ForbiddenException({
+        code: API_ERROR_CODE.FORBIDDEN,
+        message: 'Bạn không có quyền ghi phụ phí / thu tiền cho đơn này',
+      });
+    }
+
     const booking = await this.requireBooking(tenantId, bookingId);
     const bookingStatus = booking.status as BookingStatus;
 
@@ -437,6 +468,11 @@ export class HandoversService {
           });
         }
 
+        // Tiền của lượt nhận lại xe — TRƯỚC khi đơn sang `completed` (đơn còn `active`).
+        if (settlesMoney) {
+          await this.settleReturnMoneyWithinTx(tx, { tenantId, userId, booking, dto, occurredAt });
+        }
+
         // Đơn chuyển trạng thái qua chính BookingsService: nhả lịch, audit và thông báo giữ
         // nguyên luật cũ, không nhân bản ở đây.
         const target = HANDOVER_CONFIRM_BOOKING_TARGET[type];
@@ -483,6 +519,7 @@ export class HandoversService {
             bookingId,
             bookingCode: booking.code,
             userId,
+            by: 'host',
           });
         }
 
@@ -537,6 +574,236 @@ export class HandoversService {
   }
 
   /**
+   * Tiền của lượt nhận lại xe (hộp "Xác nhận đã nhận lại xe", 06/11/2026): các khoản phát sinh gõ
+   * trong hộp, rồi — nếu ô "Đã thu tiền" bật — MỘT phiếu thu tiền thuê cho số khách còn phải trả.
+   *
+   * Chạy TRONG transaction xác nhận: lỗi ở đây rollback cả biên bản, không có "xe đã nhận mà phụ phí
+   * mất" hay "đã thu mà đơn vẫn đang thuê". Dòng đơn khoá TRƯỚC khi đọc công nợ: một lượt Thu tiền
+   * song song hoặc xong trước (lượt này đọc số mới ⇒ lệch ⇒ 409), hoặc chờ lượt này xong — không có
+   * khe để hai lượt cùng thu một khoản. Mỗi bảng vẫn một writer: phụ phí qua `SettlementService`,
+   * phiếu thu qua `BookingPaymentWriter`.
+   */
+  private async settleReturnMoneyWithinTx(
+    tx: Prisma.TransactionClient,
+    args: {
+      tenantId: string;
+      userId: string;
+      booking: {
+        id: string;
+        code: string;
+        vehicleId: string;
+        serviceType: string;
+        tenantCustomerId: string | null;
+      };
+      dto: ConfirmHandoverDto;
+      occurredAt: Date;
+    },
+  ): Promise<void> {
+    const { tenantId, userId, booking, dto } = args;
+    await tx.$queryRaw`SELECT 1 FROM "public"."bookings" WHERE "id" = ${booking.id} FOR UPDATE`;
+
+    if (dto.surcharges?.length) {
+      await this.settlement.addSurchargesWithinTx(tx, {
+        tenantId,
+        bookingId: booking.id,
+        serviceType: booking.serviceType,
+        userId,
+        items: dto.surcharges,
+      });
+    }
+    if (!dto.collectPayment) return;
+
+    // Đọc SAU khi ghi phụ phí — cùng transaction nên thấy chính các dòng vừa ghi.
+    const due = await this.settlement.collectableAmount(tx, tenantId, booking.id);
+    if (!due.equals(new Prisma.Decimal(dto.collectPayment.amount))) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.HANDOVER_COLLECT_AMOUNT_CHANGED,
+        message: 'Số tiền còn phải thu vừa thay đổi - kiểm tra lại rồi xác nhận',
+        details: { collectableAmount: due.toFixed(2) },
+      });
+    }
+    if (due.lessThanOrEqualTo(0)) return;
+
+    await this.payments.recordWithinTx(tx, {
+      tenantId,
+      userId,
+      booking,
+      amount: due,
+      method: dto.collectPayment.method as PaymentMethod,
+      kind: PAYMENT_KIND.RENTAL,
+      // Tiền đổi tay đúng lúc nhận lại xe — cùng mốc vận hành với biên bản.
+      paidAt: args.occurredAt,
+      description: `Thu tiền khi nhận lại xe đơn ${booking.code}`,
+      via: 'return_confirm',
+    });
+  }
+
+  // ── Xác nhận theo lời KHÁCH (ADR 0081) ────────────────────────────────────
+
+  /**
+   * Biên bản ra đời từ LỜI CỦA KHÁCH thay vì từ quầy gian hàng — ADR 0081:
+   *  - `customer`: khách bấm "Đã nhận xe" ⇒ biên bản GIAO XE, đơn `reserved → active`;
+   *  - `auto`: khách đã báo "Đã trả xe" và chủ xe im lặng quá hạn ⇒ biên bản TRẢ XE, đơn
+   *    `active → completed` (quyết toán chạy như mọi lượt hoàn thành).
+   *
+   * CÙNG chuỗi hệ quả với `confirm` — claim biên bản → chuyển đơn qua `transitionWithinTx` → kết luận
+   * case `handover_unconfirmed` → audit — chạy TRONG transaction của người gọi, người đã khoá dòng đơn
+   * (`FOR UPDATE`) và kiểm điều kiện của chính lượt đó. Khác `confirm` ở ba chỗ: `confirmed_by` là
+   * tài khoản KHÁCH (CHECK `vh_confirmed_has_actor` đòi một người, và khách là người duy nhất đã lên
+   * tiếng), `confirm_source` nói rõ đó không phải nhân viên, và không có KM / hiện trạng nào từ lời
+   * khách (§9.1). KM chỉ ghi khi GIAN HÀNG đã nhập sẵn trong bản nháp, dưới tên người đã nhập.
+   *
+   * Không bắn thông báo chuyển trạng thái chung (`silent`) — người gọi báo bằng câu nói đúng chuyện
+   * đã xảy ra. Trả `false` khi biên bản đã được xác nhận (chủ xe vừa bấm xong): không còn việc gì.
+   */
+  async confirmOnCustomerWordWithinTx(
+    tx: Prisma.TransactionClient,
+    input: {
+      tenantId: string;
+      booking: { id: string; code: string; vehicleId: string; status: BookingStatus };
+      type: HandoverType;
+      customerUserId: string;
+      source: typeof HANDOVER_CONFIRM_SOURCE.CUSTOMER | typeof HANDOVER_CONFIRM_SOURCE.AUTO;
+      occurredAt: Date;
+    },
+  ): Promise<boolean> {
+    const { tenantId, booking, type, customerUserId, source, occurredAt } = input;
+    if (!isHandoverEligible(type, booking.status)) throw notEligible(type, booking.status);
+    const byCustomer = source === HANDOVER_CONFIRM_SOURCE.CUSTOMER;
+    const actorScope = byCustomer ? AUDIT_ACTOR_SCOPE.CUSTOMER : AUDIT_ACTOR_SCOPE.SYSTEM;
+
+    /*
+     * Chưa có biên bản thì dựng nháp ngay trong transaction này. `skipDuplicates` (= ON CONFLICT DO
+     * NOTHING): chủ xe vừa mở nháp cùng lúc thì partial unique "một biên bản sống mỗi chiều" bỏ qua
+     * bản của ta thay vì làm hỏng cả transaction — bản của họ được dùng tiếp.
+     */
+    await tx.vehicleHandover.createMany({
+      data: [
+        {
+          id: newId(),
+          tenantId,
+          bookingId: booking.id,
+          vehicleId: booking.vehicleId,
+          type,
+          status: HANDOVER_STATUS.DRAFT,
+          createdBy: customerUserId,
+          updatedBy: customerUserId,
+        },
+      ],
+      skipDuplicates: true,
+    });
+    const handover = await tx.vehicleHandover.findFirstOrThrow({
+      where: { tenantId, bookingId: booking.id, type, status: { not: HANDOVER_STATUS.CANCELED } },
+      select: { id: true, status: true, odometerKm: true, createdBy: true, updatedBy: true },
+    });
+    if (handover.status === HANDOVER_STATUS.CONFIRMED) return false;
+
+    const confirmedAt = new Date();
+    const claimed = await tx.vehicleHandover.updateMany({
+      where: {
+        id: handover.id,
+        tenantId,
+        status: { in: [HANDOVER_STATUS.DRAFT, HANDOVER_STATUS.READY] },
+      },
+      data: {
+        status: HANDOVER_STATUS.CONFIRMED,
+        confirmedAt,
+        confirmedBy: customerUserId,
+        confirmSource: source,
+        occurredAt,
+        odometerMissing: handover.odometerKm === null,
+        updatedBy: customerUserId,
+        rowVersion: { increment: 1 },
+      },
+    });
+    if (claimed.count === 0) return false;
+
+    // KM của bản nháp GIAN HÀNG đã nhập (người viết nháp sau cùng) — không bao giờ là số khách khai.
+    const keyedBy = handover.updatedBy ?? handover.createdBy;
+    const staffKm =
+      handover.odometerKm !== null && keyedBy !== null && keyedBy !== customerUserId
+        ? { km: handover.odometerKm, userId: keyedBy }
+        : null;
+    if (staffKm) {
+      const readingId = await this.odometer.record(tx, {
+        tenantId,
+        vehicleId: booking.vehicleId,
+        userId: staffKm.userId,
+        odometerKm: staffKm.km,
+        source: sourceOf(type),
+        sourceRefId: booking.id,
+      });
+      await tx.vehicleHandover.update({
+        where: { id: handover.id },
+        data: { odometerReadingId: readingId },
+      });
+    }
+
+    const target = HANDOVER_CONFIRM_BOOKING_TARGET[type];
+    if (target) {
+      await this.bookings.transitionWithinTx(
+        tx,
+        tenantId,
+        booking.id,
+        // Lượt tự hoàn thành là của HỆ THỐNG — không gán nó cho khách hay cho ai trong gian hàng.
+        byCustomer ? customerUserId : null,
+        booking.status,
+        target,
+        {
+          ...(type === HANDOVER_TYPE.PICKUP
+            ? { actualPickupAt: occurredAt.toISOString() }
+            : { actualReturnAt: occurredAt.toISOString() }),
+          actorScope,
+          silent: true,
+        },
+      );
+    }
+
+    if (type === HANDOVER_TYPE.PICKUP) {
+      await this.resolveHandoverUnconfirmedWithinTx(tx, {
+        tenantId,
+        bookingId: booking.id,
+        bookingCode: booking.code,
+        userId: customerUserId,
+        by: 'customer',
+      });
+    }
+    if (type === HANDOVER_TYPE.RETURN && staffKm) {
+      await this.maintenance.ensureDueTaskWithinTx(tx, {
+        tenantId,
+        vehicleId: booking.vehicleId,
+        userId: staffKm.userId,
+        reason: `trả xe đơn ${booking.code}`,
+      });
+    }
+
+    await this.audit.record(
+      {
+        tenantId,
+        actorUserId: byCustomer ? customerUserId : null,
+        actorScope,
+        action: `booking.handover.${type}.confirm`,
+        targetType: 'vehicle_handover',
+        targetId: handover.id,
+        before: { status: handover.status },
+        after: {
+          status: HANDOVER_STATUS.CONFIRMED,
+          bookingId: booking.id,
+          vehicleId: booking.vehicleId,
+          confirmSource: source,
+          // Lượt `auto` không có người bấm — ghi rõ lời của AI đã dẫn tới biên bản này.
+          onCustomerWordOf: customerUserId,
+          odometerKm: staffKm?.km ?? null,
+          occurredAt: occurredAt.toISOString(),
+          confirmedAt: confirmedAt.toISOString(),
+        },
+      },
+      tx,
+    );
+    return true;
+  }
+
+  /**
    * Bổ sung/sửa KM trên biên bản ĐÃ XÁC NHẬN — đường duy nhất chạm vào biên bản chỉ-đọc, và
    * chỉ chạm đúng con số KM. Bắt buộc có lý do; giảm KM cần quyền cao hơn + xác nhận có ý thức.
    */
@@ -554,7 +821,7 @@ export class HandoversService {
     if (handover.status !== HANDOVER_STATUS.CONFIRMED) {
       throw new ConflictException({
         code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message: 'Chỉ biên bản đã xác nhận mới cần bổ sung KM — bản nháp thì sửa trực tiếp',
+        message: 'Chỉ biên bản đã xác nhận mới cần bổ sung KM - bản nháp thì sửa trực tiếp',
       });
     }
 
@@ -573,7 +840,7 @@ export class HandoversService {
       if (!opts.canDecrease) {
         throw new ForbiddenException({
           code: API_ERROR_CODE.ODOMETER_DECREASE_FORBIDDEN,
-          message: `KM mới (${dto.odometerKm}) thấp hơn KM hiện tại (${currentKm}) — thao tác này cần quyền quản trị viên`,
+          message: `KM mới (${dto.odometerKm}) thấp hơn KM hiện tại (${currentKm}) - thao tác này cần quyền quản trị viên`,
           details: {
             currentKm,
             nextKm: dto.odometerKm,
@@ -584,7 +851,7 @@ export class HandoversService {
       if (!dto.confirmDecrease) {
         throw new ConflictException({
           code: API_ERROR_CODE.ODOMETER_DECREASE_FORBIDDEN,
-          message: 'KM mới thấp hơn KM hiện tại — cần xác nhận trước khi giảm',
+          message: 'KM mới thấp hơn KM hiện tại - cần xác nhận trước khi giảm',
           details: { currentKm, nextKm: dto.odometerKm, requiresConfirmation: true },
         });
       }
@@ -781,6 +1048,8 @@ export class HandoversService {
     userId: string,
     dto: PresignHandoverPhotoDto,
   ): Promise<SourceContractPresignDto> {
+    const booking = await this.requireBooking(tenantId, bookingId);
+    assertSlotForVehicle(booking.vehicle.vehicleType, dto.slot);
     const handover = await this.requireActive(tenantId, bookingId, type);
     if (!canAttachHandoverPhoto(handover.status as HandoverStatus)) throw photoLocked();
     // Ảnh mới cùng slot là THAY ảnh cũ nên không tính thêm; chỉ chặn khi thật sự vượt trần.
@@ -810,6 +1079,7 @@ export class HandoversService {
     scope: HandoverViewScope,
   ): Promise<HandoverDto> {
     const booking = await this.requireBooking(tenantId, bookingId);
+    assertSlotForVehicle(booking.vehicle.vehicleType, slot);
     const handover = await this.requireActive(tenantId, bookingId, type);
     if (!canAttachHandoverPhoto(handover.status as HandoverStatus)) throw photoLocked();
 
@@ -929,7 +1199,10 @@ export class HandoversService {
         vehicleId: true,
         pickupAt: true,
         returnAt: true,
-        vehicle: { select: { name: true, plateNumber: true, fuelType: true } },
+        // Lượt nhận lại xe ghi phụ phí (luật danh mục theo dịch vụ) và phiếu thu (gắn hồ sơ khách).
+        serviceType: true,
+        tenantCustomerId: true,
+        vehicle: { select: { name: true, plateNumber: true, fuelType: true, vehicleType: true } },
       },
     });
     if (!booking) {
@@ -972,7 +1245,14 @@ export class HandoversService {
    */
   private async resolveHandoverUnconfirmedWithinTx(
     tx: Prisma.TransactionClient,
-    input: { tenantId: string; bookingId: string; bookingCode: string; userId: string },
+    input: {
+      tenantId: string;
+      bookingId: string;
+      bookingCode: string;
+      userId: string;
+      /** Ai vừa xác nhận giao xe — chủ xe ở quầy, hay khách bấm "Đã nhận xe" (ADR 0081). */
+      by: 'host' | 'customer';
+    },
   ): Promise<void> {
     const open = await tx.supportCase.findMany({
       where: {
@@ -984,8 +1264,14 @@ export class HandoversService {
     if (open.length === 0) return;
 
     const resolution =
-      `Tự động kết luận: chủ xe đã xác nhận biên bản giao xe của chuyến ${input.bookingCode} — ` +
-      'chuyến đã diễn ra, không còn việc chờ xác minh bàn giao.';
+      input.by === 'customer'
+        ? `Tự động kết luận: khách đã xác nhận nhận xe của chuyến ${input.bookingCode} - ` +
+          'chuyến đã diễn ra, không còn việc chờ xác minh bàn giao.'
+        : `Tự động kết luận: chủ xe đã xác nhận biên bản giao xe của chuyến ${input.bookingCode} - ` +
+          'chuyến đã diễn ra, không còn việc chờ xác minh bàn giao.';
+    const party = input.by === 'customer' ? SUPPORT_PARTY.CUSTOMER : SUPPORT_PARTY.TENANT;
+    const auditScope =
+      input.by === 'customer' ? AUDIT_ACTOR_SCOPE.CUSTOMER : AUDIT_ACTOR_SCOPE.TENANT;
     const resolvedAt = new Date();
     for (const row of open) {
       // Điều kiện "còn mở" nằm trong UPDATE: nhân sự vừa đóng tay case này thì không ghi đè.
@@ -1000,7 +1286,7 @@ export class HandoversService {
           id: newId(),
           caseId: row.id,
           actorUserId: input.userId,
-          actorScope: SUPPORT_PARTY.TENANT,
+          actorScope: party,
           kind: SUPPORT_CASE_EVENT_KIND.RESOLUTION,
           visibility: SUPPORT_EVENT_VISIBILITY.PUBLIC,
           body: resolution,
@@ -1012,7 +1298,7 @@ export class HandoversService {
         {
           tenantId: input.tenantId,
           actorUserId: input.userId,
-          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+          actorScope: auditScope,
           action: SUPPORT_CASE_AUDIT_ACTION.RESOLVE,
           targetType: AUDIT_TARGET_TYPE.SUPPORT_CASE,
           targetId: row.id,
@@ -1163,6 +1449,7 @@ function toDto(
     occurredAt: row.occurredAt?.toISOString() ?? null,
     confirmedAt: row.confirmedAt?.toISOString() ?? null,
     confirmedByName: row.confirmedBy ? (nameByUserId.get(row.confirmedBy) ?? null) : null,
+    confirmSource: row.confirmSource,
     canceledAt: row.canceledAt?.toISOString() ?? null,
     rowVersion: row.rowVersion,
     updatedAt: row.updatedAt.toISOString(),
@@ -1264,7 +1551,7 @@ function notEligible(type: HandoverType, bookingStatus: string): ConflictExcepti
 function readOnly(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-    message: 'Biên bản đã xác nhận — chỉ đọc. Sai số KM thì dùng chức năng điều chỉnh có lý do.',
+    message: 'Biên bản đã xác nhận - chỉ đọc. Sai số KM thì dùng chức năng điều chỉnh có lý do.',
   });
 }
 
@@ -1275,14 +1562,14 @@ function readOnly(): ConflictException {
 function photoLocked(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-    message: 'Biên bản đã huỷ — không đính thêm ảnh được',
+    message: 'Biên bản đã huỷ - không đính thêm ảnh được',
   });
 }
 
 function stale(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.CONFLICT,
-    message: 'Biên bản vừa được người khác cập nhật — tải lại rồi thử lại',
+    message: 'Biên bản vừa được người khác cập nhật - tải lại rồi thử lại',
   });
 }
 
@@ -1294,3 +1581,17 @@ function photoNotFound(): NotFoundException {
 }
 
 /** Prisma 7 làm hỏng `instanceof` — nhận diện lỗi theo mã như các module khác trong kho. */
+
+/**
+ * Góc chụp phải thuộc bộ góc của LOẠI XE (`handoverPhotoSlotsFor`): xe máy không có ảnh trái/phải.
+ * Chặn ở API chứ không chỉ ẩn ô trên giao diện — một client cũ vẫn gửi được góc đó.
+ */
+function assertSlotForVehicle(vehicleType: string, slot: string): void {
+  if (!isHandoverPhotoSlotFor(vehicleType, slot)) {
+    throw new BadRequestException({
+      code: API_ERROR_CODE.VALIDATION_FAILED,
+      message: 'Góc chụp này không áp dụng cho loại xe của đơn',
+      details: { slot, vehicleType },
+    });
+  }
+}

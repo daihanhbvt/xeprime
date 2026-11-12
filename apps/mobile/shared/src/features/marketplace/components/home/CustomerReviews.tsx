@@ -1,3 +1,6 @@
+import type { ReactNode } from 'react';
+import Animated from 'react-native-reanimated';
+import { useRevealPop } from '@/components/motion/reveal-effects';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import Svg, { Path } from 'react-native-svg';
@@ -15,6 +18,7 @@ import { useFeaturedReviews } from '../../hooks/use-marketplace-data';
 import type { FeaturedReview } from '../../api';
 import { SectionError } from '../SectionError';
 import { HomeCarousel } from './HomeCarousel';
+import { ScrollReveal } from '@/components/motion/ScrollReveal';
 import { HomeSectionHeading } from './HomeSectionHeading';
 import { STAR_ART } from './home-art';
 
@@ -48,11 +52,14 @@ export function CustomerReviews() {
           ))}
         </YStack>
       ) : (
+        // Dải thẻ tự hiện khi CHÍNH NÓ cuộn vào màn, không theo tiêu đề khối.
+        <ScrollReveal>
         <HomeCarousel accessibilityLabel={t('title')} onActiveChange={setFocused}>
           {reviews.map((review, index) => (
             <ReviewCard key={review.id} review={review} highlighted={index === focused} />
           ))}
         </HomeCarousel>
+        </ScrollReveal>
       )}
     </YStack>
   );
@@ -85,6 +92,10 @@ function ReviewCard({
   const colors = useColors();
   const highlightBorder = useCardHighlightBorder();
   const { scheme } = useAppScheme();
+  const dark = scheme === 'dark';
+  // Figma dark (`19879:66251`): thẻ nổi bằng nền elevated, nhận xét xám sáng.
+  const cardBg = dark ? colors.surfaceElevated : colors.surface;
+  const commentColor = dark ? XP_TOKENS['color-text-on-dark-muted'] : colors.textMuted;
   const t = useTranslations('Home.reviews');
   const fmt = useAppFormat();
   const initial = review.customerName.trim().charAt(0).toLocaleUpperCase() || '?';
@@ -96,9 +107,9 @@ function ReviewCard({
       gap={12}
       br={CARD_RADIUS}
       bw={1}
-      bc={highlighted ? highlightBorder : colors.surface}
-      bg={colors.surface}
-      style={scheme === 'dark' ? undefined : elevation.card}
+      bc={highlighted ? highlightBorder : cardBg}
+      bg={cardBg}
+      style={dark ? undefined : elevation.card}
     >
       {highlighted ? <CardHighlightOverlay radius={CARD_RADIUS} /> : null}
       <XStack
@@ -108,19 +119,20 @@ function ReviewCard({
         accessibilityLabel={t('ratingAria', { rating: fmt.rating(review.rating) })}
       >
         {STARS.map((n) => (
-          <Ionicons
-            key={n}
-            name="star"
-            size={24}
-            color={STAR_ART}
-            style={n > review.rating ? { opacity: 0.35 } : undefined}
-          />
+          <StarPop key={n} index={n}>
+            <Ionicons
+              name="star"
+              size={24}
+              color={STAR_ART}
+              style={n > review.rating ? { opacity: 0.35 } : undefined}
+            />
+          </StarPop>
         ))}
       </XStack>
       <Svg width={20} height={20} viewBox="0 0 20 20">
         <Path d={QUOTE_PATH} fill={QUOTE_FILL} />
       </Svg>
-      <Text col={colors.textMuted} fos={fontSize.body} numberOfLines={5}>
+      <Text col={commentColor} fos={fontSize.body} lh={22} numberOfLines={5}>
         {review.comment}
       </Text>
       <XStack ai="center" gap={12} mt="auto">
@@ -133,16 +145,16 @@ function ReviewCard({
           jc="center"
           accessibilityElementsHidden
         >
-          <Text col={colors.primaryStrong} fos={fontSize.body} fow={fontWeight.semibold}>
+          <Text col={colors.accentStrongText} fos={fontSize.body} fow={fontWeight.semibold}>
             {initial}
           </Text>
         </YStack>
         <YStack f={1} minWidth={0}>
-          <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold} numberOfLines={1}>
+          <Text col={colors.text} fos={fontSize.bodyLg} lh={24} fow={fontWeight.semibold} numberOfLines={1}>
             {review.customerName}
           </Text>
           {review.customerTripCount > 0 ? (
-            <Text col={colors.textMuted} fos={fontSize.body}>
+            <Text col={colors.textMuted} fos={fontSize.body} lh={22}>
               {t('rentedTimes', { count: review.customerTripCount })}
             </Text>
           ) : null}
@@ -150,4 +162,10 @@ function ReviewCard({
       </XStack>
     </YStack>
   );
+}
+
+/** Từng ngôi sao "sáng" lần lượt khi khối hiện — chỉ scale (sao nằm trong thẻ có bóng). */
+function StarPop({ index, children }: { index: number; children: ReactNode }) {
+  const style = useRevealPop(250 + index * 90, 0.3, false);
+  return <Animated.View style={style}>{children}</Animated.View>;
 }

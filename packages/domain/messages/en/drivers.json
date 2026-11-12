@@ -1,34 +1,46 @@
 {
   "page": {
     "title": "Drivers",
-    "tableLabel": "Driver list",
+    "heading": "Driver management",
+    "subtitle": "Manage your linked drivers, their licence details and the trips assigned to them.",
+    "gridLabel": "Drivers",
+    "loading": "Loading drivers",
+    "loadErrorHint": "Check your connection and try again.",
+    "noResults": "No drivers match these filters",
+    "noResultsHint": "Try another keyword or remove some filters.",
+    "showing": "Showing {from}-{to} of {total, plural, one {# driver} other {# drivers}}",
     "loadError": "Couldn't load drivers",
     "empty": "No drivers yet",
     "emptyHint": "Invite drivers by the phone number of their XePrime account to assign them to chauffeured trips.",
-    "total": "{count, plural, one {# driver} other {# drivers}}",
     "forbidden": {
       "title": "Access denied",
       "description": "You need permission to view drivers. Ask the shop owner to grant it."
-    }
+    },
+    "total": "{count, plural, one {# driver} other {# drivers}}"
+  },
+  "columns": {
+    "accountName": "Account: {name}"
   },
   "filters": {
     "search": "Search drivers",
     "searchPlaceholder": "Search by name or phone",
-    "status": "Link status",
+    "type": "Engagement type",
+    "allTypes": "All engagement types",
+    "operation": "Operation",
+    "allOperations": "All",
+    "onTrip": "On a trip",
+    "idle": "Available",
+    "status": "Status",
     "openLinks": "Invited / linked",
-    "type": "Driver type",
-    "allTypes": "All types",
-    "allStatuses": "All statuses"
-  },
-  "columns": {
-    "driver": "Driver",
-    "accountName": "Account: {name}",
-    "type": "Type",
-    "licence": "Licence",
-    "activeBookings": "Assigned trips",
-    "status": "Link",
-    "drops": "Withdrawals (90 days)",
-    "monthWage": "Wages (month)"
+    "allStatuses": "Any status",
+    "closed": "Declined / Ended",
+    "sort": {
+      "label": "Sort",
+      "value": "Sort: {label}",
+      "newest": "Newest",
+      "name_asc": "Name A → Z",
+      "status": "Pending invites first"
+    }
   },
   "licence": {
     "classes": "Class {classes}",
@@ -36,47 +48,49 @@
     "noExpiry": "No expiry",
     "holder": "Name on licence: {name}",
     "kind": "Type: {kind}",
-    "nameMismatch": "Name on the licence differs from the name you entered — check the documents at handover"
+    "nameMismatch": "Name on the licence differs from the name you entered - check the documents at handover"
   },
   "activeBookings": "{count, plural, one {# trip} other {# trips}}",
   "actions": {
     "view": "View details",
-    "invite": "Invite driver",
+    "invite": "Invite new driver",
     "sendInvite": "Send invitation",
     "suspend": "Suspend",
     "suspendConfirm": "Suspend this driver? The link is kept, but they can't be assigned to new trips.",
     "resume": "Reactivate",
-    "end": "End link",
-    "endConfirm": "End the link with this driver? Upcoming trips assigned to them will have their driver removed.",
+    "end": "End partnership",
+    "endConfirm": "End the partnership with this driver? Upcoming trips assigned to them will have the driver removed.",
     "revoke": "Revoke invitation",
     "revokeConfirm": "Revoke this invitation?",
     "reinvite": "Invite again",
-    "endConfirmWithTrips": "This driver is assigned to {count, plural, one {# upcoming trip} other {# upcoming trips}}. Ending the link removes them from those trips — you will need to assign someone else. Continue?"
+    "endConfirmWithTrips": "This driver is assigned to {count, plural, one {# upcoming trip} other {# upcoming trips}}. Ending the partnership removes the driver from them - you will need to assign someone else. Continue?"
   },
   "toast": {
-    "invited": "Invitation sent — the driver will be notified to accept",
+    "invited": "Invitation sent - the driver will be notified to accept",
     "updated": "Driver updated",
     "suspended": "Driver suspended",
     "resumed": "Driver reactivated",
-    "ended": "Link ended",
+    "ended": "Partnership with the driver ended",
     "revoked": "Invitation revoked"
   },
   "form": {
-    "titleInvite": "Invite a driver",
+    "titleInvite": "Invite new driver",
     "inviteHint": "The driver needs a XePrime account (xeprime.vn) verified with this exact phone number. They'll be notified and must accept before you can assign trips.",
     "titleEdit": "Edit driver",
-    "name": "Display name",
-    "namePlaceholder": "John Smith",
+    "name": "Driver name",
+    "namePlaceholder": "Enter the driver’s name",
     "phone": "Account phone number",
-    "phonePlaceholder": "0901234567",
-    "type": "Driver type",
+    "phonePlaceholder": "Enter the phone number the driver registered with XePrime",
+    "type": "Engagement type",
     "note": "Note",
     "errors": {
       "nameRequired": "Enter the driver's name",
       "phoneRequired": "Enter a phone number",
       "phoneInvalid": "Invalid phone number"
     },
-    "titleReinvite": "Invite driver again"
+    "titleReinvite": "Invite driver again",
+    "notePlaceholder": "Add a note about this driver",
+    "hintTitle": "Note"
   },
   "booking": {
     "title": "Driver",
@@ -92,25 +106,25 @@
     "pickerLabel": "Choose a driver for the booking",
     "pickerEmpty": "No linked drivers yet",
     "busy": "Busy",
-    "assigned": "Driver assigned — waiting for them to accept",
+    "assigned": "Driver assigned - waiting for them to accept",
     "unassignedToast": "Driver removed",
     "assignedAt": "Assigned {time}",
     "respondedAt": "Accepted {time}",
-    "respondBy": "Waiting for the driver — answer by {time}",
+    "respondBy": "Waiting for the driver - answer by {time}",
     "legacyHint": "This booking isn't a chauffeured trip.",
     "externalTag": "External",
     "externalSetAt": "Recorded {time}",
-    "missingSoon": "Pickup is less than {hours} hours away and the trip has no driver — assign a linked driver, or cancel the trip if you cannot arrange one.",
-    "externalLegacy": "Driver outside the platform (older booking) — XePrime no longer accepts this. Assign a linked driver instead.",
+    "missingSoon": "Pickup is less than {hours} hours away and the trip has no driver - assign a linked driver, or cancel the trip if you cannot arrange one.",
+    "externalLegacy": "Driver outside the platform (older booking) - XePrime no longer accepts this. Assign a linked driver instead.",
     "incident": {
       "titleNamed": "Driver {name} withdrew from the trip",
       "titleReleased": "The driver handed the trip back",
       "reason": "Reason: {reason}",
-      "reasonWithNote": "Reason: {reason} — “{note}”",
+      "reasonWithNote": "Reason: {reason} - “{note}”",
       "droppedAt": "Withdrew at {time}",
       "reassignBy": "Assign another linked driver before {time}",
       "overdue": "The rearranging deadline has passed ({time}). The customer can now cancel with a 100% refund, counted against you.",
-      "urgent": "Pickup is less than 2 hours away — the customer can cancel with a 100% refund at any time.",
+      "urgent": "Pickup is less than 2 hours away - the customer can cancel with a 100% refund at any time.",
       "cancelForDriver": "Cancel trip: no driver available"
     }
   },
@@ -152,7 +166,7 @@
       "dialogTitle": "Driver wage · shop rate",
       "field": "Wage per day",
       "range": "From {min} to {max} per day",
-      "appliesNext": "Applies to new assignments on every vehicle — assigned trips keep their wage.",
+      "appliesNext": "Applies to new assignments on every vehicle - assigned trips keep their wage.",
       "clear": "Clear shop rate",
       "saved": "Shop rate saved",
       "cleared": "Shop rate cleared",
@@ -163,7 +177,9 @@
         "step": "The wage must be a multiple of 1,000"
       },
       "placeholder": "Suggested {amount}",
-      "useSuggested": "Use the suggested {amount}"
+      "useSuggested": "Use the suggested {amount}",
+      "button": "Wage: {amount}/day",
+      "unsetButton": "Set daily wage"
     },
     "month": {
       "label": "Stats month",
@@ -179,10 +195,10 @@
     "form": {
       "daily": "Wage per day",
       "placeholder": "Suggested {amount}",
-      "help": "Shop rate: {current} · range {min} – {max}/day",
-      "helpNoDefault": "No shop rate yet · range {min} – {max}/day",
+      "help": "Shop rate: {current} · range {min} - {max}/day",
+      "helpNoDefault": "No shop rate yet · range {min} - {max}/day",
       "total": "Trip total: {daily} × {days, plural, one {# day} other {# days}}",
-      "aboveRent": "The wage is higher than the trip's rent ({rent}) — double-check the amount.",
+      "aboveRent": "The wage is higher than the trip's rent ({rent}) - double-check the amount.",
       "rangeAgreed": "From 0 to {max}",
       "savedWithDefault": "Saved, and the shop rate is updated for later trips",
       "scope": {
@@ -220,7 +236,7 @@
       "saved": "Wage saved",
       "editableUntil": "Editable until {time}",
       "fieldAgreed": "Amount you both agreed on",
-      "daysChanged": "The booking changed from {from} to {to} days — the new total uses {to} days."
+      "daysChanged": "The booking changed from {from} to {to} days - the new total uses {to} days."
     },
     "changes": {
       "title": "Wage edit history",
@@ -229,11 +245,11 @@
       "at": "{time}",
       "reason": "Reason: {reason}"
     },
-    "daysChanged": "The trip length changed ({from} → {to} days) — review the driver's wage.",
+    "daysChanged": "The trip length changed ({from} → {to} days) - review the driver's wage.",
     "monthTrips": "{count, plural, one {# completed trip} other {# completed trips}}",
     "note": {
       "set": "These are the prices the customer pays, driver included. The driver's wage uses your shop rate for every vehicle: {amount}/day.",
-      "unset": "These are the prices the customer pays, driver included. The driver's wage uses your shop rate for every vehicle — not set yet.",
+      "unset": "These are the prices the customer pays, driver included. The driver's wage uses your shop rate for every vehicle - not set yet.",
       "link": "Set it on the Drivers page"
     }
   },
@@ -242,7 +258,7 @@
     "fallbackTitle": "Driver details",
     "previous": "Previous driver",
     "next": "Next driver",
-    "notFound": "This driver could not be found — the link may have been removed.",
+    "notFound": "This driver could not be found - the link may have been removed.",
     "loadError": "Couldn't load the driver's details.",
     "edit": "Edit details",
     "tabs": {
@@ -263,6 +279,10 @@
         "upcomingWage": "Expected {amount}",
         "upcomingNone": "No accepted trips yet"
       },
+      "current": {
+        "title": "{count, plural, one {Assigned trip (#)} other {Assigned trips (#)}}",
+        "more": "Showing the {shown} earliest trips."
+      },
       "wage": {
         "title": "Wages · {month}",
         "completed": "{count, plural, other {Completed trips (#)}}",
@@ -270,7 +290,7 @@
         "total": "Total recorded",
         "edited": "Trips with an edited wage",
         "editedValue": "{count, plural, one {# trip} other {# trips}}",
-        "note": "XePrime only records the amount both sides agreed — the shop pays the driver directly."
+        "note": "XePrime only records the amount both sides agreed - the shop pays the driver directly."
       },
       "reliability": {
         "title": "Reliability · last {days} days",
@@ -340,5 +360,40 @@
       "note": "Note",
       "noNote": "No note yet"
     }
+  },
+  "summary": {
+    "ariaLabel": "Driver figures - select one to filter",
+    "all": "All drivers",
+    "active": "Linked",
+    "invited": "Awaiting confirmation",
+    "licenceCheck": "Documents to check",
+    "suspended": "Suspended",
+    "closed": "Declined/Ended"
+  },
+  "card": {
+    "menu": "Actions for {name}",
+    "openDetail": "View details of {name}",
+    "accountName": "Account: {name}",
+    "licence": "Licence",
+    "verified": "Verified",
+    "needsCheck": "Needs checking",
+    "classes": "Class {classes}",
+    "holder": "Name on licence",
+    "expiry": "Valid until",
+    "noExpiry": "No expiry",
+    "kind": "Type",
+    "nameMismatch": "The name on the licence differs from the name you entered - check their documents at handover.",
+    "pendingTitle": "Reading the licence photo",
+    "pendingHint": "The driver has just submitted a licence; the result is ready in a few minutes.",
+    "noneTitle": "Not provided",
+    "noneHint": "Ask the driver to add a driving licence before taking trips.",
+    "activeTrips": "Assigned trips",
+    "noTrips": "None",
+    "monthWage": "Wages {month}",
+    "monthWageValue": "{amount} · {count, plural, one {# trip} other {# trips}}",
+    "drops": "Dropped trips {count, plural, one {# time} other {# times}} in 90 days",
+    "dropsCritical": "{count, plural, other {# close to pickup}}",
+    "editInfo": "Edit details",
+    "viewTrips": "View trips"
   }
 }

@@ -385,8 +385,12 @@ describe('Sổ CHỈ-GHI-THÊM: sửa sai bằng dòng đảo', () => {
     expect(reversal.periodKey).toBe(original.periodKey);
 
     // Cặp gốc + đảo triệt tiêu: `SUM(amount)` là con số đúng, không cần cây if theo trạng thái.
+    // Đọc phần CỦA GIAN HÀNG NÀY trong tổng kỳ: database test dùng chung, kỳ hiện hành có thể
+    // chứa dòng thuế của gian hàng khác (spec song song, dữ liệu dev) — chúng không phải của cặp này.
     const summary = await read.periodSummary(original.periodKey);
-    const net = Number(summary.totalAmount);
+    const mine = summary.byTenant.filter((t) => t.tenantId === tenantId);
+    const net = mine.reduce((sum, t) => sum + Number(t.amount), 0);
+    expect(mine.reduce((sum, t) => sum + t.rows, 0)).toBe(2);
     expect(net).toBe(0);
 
     const log = await prisma.auditLog.findFirstOrThrow({
@@ -630,26 +634,29 @@ describe('Báo cáo', () => {
     ).rejects.toThrow(/fee_policies_deposit_covers_tax_check/);
   });
 
-  maybe('CHECK mới: bật thuế mà thiếu bảng mức hoặc căn cứ ⇒ từ chối (trừ bản lưu trữ)', async () => {
-    await expect(
-      prisma.feePolicy.create({
-        data: {
-          id: newId(),
-          version: 600 + Math.floor(Math.random() * 90),
-          status: 'draft',
-          name: `Policy thiếu căn cứ ${RUN}`,
-          serviceFeePercent: new Prisma.Decimal(0),
-          holdMinAmount: new Prisma.Decimal(20_000),
-          holdPaymentWindowMinutes: 120,
-          freeCancelHours: 4,
-          depositPercent: new Prisma.Decimal(15),
-          taxEnabled: true,
-          taxRates: TAX_RATES_DEFAULTS as unknown as Prisma.InputJsonObject,
-          taxLegalBasis: '   ',
-        },
-      }),
-    ).rejects.toThrow(/fee_policies_tax_requires_rates_check/);
-  });
+  maybe(
+    'CHECK mới: bật thuế mà thiếu bảng mức hoặc căn cứ ⇒ từ chối (trừ bản lưu trữ)',
+    async () => {
+      await expect(
+        prisma.feePolicy.create({
+          data: {
+            id: newId(),
+            version: 600 + Math.floor(Math.random() * 90),
+            status: 'draft',
+            name: `Policy thiếu căn cứ ${RUN}`,
+            serviceFeePercent: new Prisma.Decimal(0),
+            holdMinAmount: new Prisma.Decimal(20_000),
+            holdPaymentWindowMinutes: 120,
+            freeCancelHours: 4,
+            depositPercent: new Prisma.Decimal(15),
+            taxEnabled: true,
+            taxRates: TAX_RATES_DEFAULTS as unknown as Prisma.InputJsonObject,
+            taxLegalBasis: '   ',
+          },
+        }),
+      ).rejects.toThrow(/fee_policies_tax_requires_rates_check/);
+    },
+  );
 
   maybe('nghĩa vụ GIỮ HỘ chỉ gồm phần chưa nộp', async () => {
     const bookingId = await makeBooking();
@@ -695,7 +702,10 @@ describe('Sổ thuế tách GTGT/TNCN (ADR 0068)', () => {
     vehicleProtectionPercent: null,
     insurancePartnerName: null,
   };
-  const bookingFor = async (serviceType: string, sellerEntityType: 'individual' | 'household_business' | 'company') => {
+  const bookingFor = async (
+    serviceType: string,
+    sellerEntityType: 'individual' | 'household_business' | 'company',
+  ) => {
     const fees = computeCustomerFees({
       billingMode: BILLING_MODE.COMMISSION,
       policy: { ...ND117, policyId },
@@ -715,28 +725,33 @@ describe('Sổ thuế tách GTGT/TNCN (ADR 0068)', () => {
     return { bookingId, fees };
   };
 
-  maybe('tự lái: dòng sổ mang GTGT 39.000 + TNCN 15.600 = 54.600, tỷ lệ, nhóm, định danh', async () => {
-    await prisma.sellerProfile.update({
-      where: { id: sellerProfileId },
-      data: { idNumber: `0790${RUN.slice(0, 6)}` },
-    });
-    const { bookingId } = await bookingFor(SERVICE_TYPE.SELF_DRIVE, 'household_business');
-    await accrue(bookingId);
-    const row = await prisma.taxWithholding.findFirstOrThrow({ where: { bookingId } });
-    expect(row.amount.toFixed(0)).toBe('54600');
-    expect(row.vatAmount?.toFixed(0)).toBe('39000');
-    expect(row.pitAmount?.toFixed(0)).toBe('15600');
-    expect([Number(row.vatPercent), Number(row.pitPercent), Number(row.percent)]).toEqual([5, 2, 7]);
-    expect(row.taxCategory).toBe('service');
-    expect(row.label).toBe('GTGT 5% + TNCN 2%');
-    expect(row.taxableBase.toFixed(0)).toBe('780000');
-    // Loại chủ thể KHAI + định danh chụp từ hồ sơ lúc ghi sổ; chủ thể ÁP THUẾ từ SNAPSHOT của đơn.
-    expect(row.sellerEntityType).toBe('household_business');
-    expect(row.taxSubjectType).toBe('household_business');
-    expect(row.sellerTaxId).toBe(`TX${RUN.toUpperCase()}`);
-    expect(row.sellerLegalName).toBe(`Hộ KD ${RUN}`);
-    expect(row.sellerIdNumber).toBe(`0790${RUN.slice(0, 6)}`);
-  });
+  maybe(
+    'tự lái: dòng sổ mang GTGT 39.000 + TNCN 15.600 = 54.600, tỷ lệ, nhóm, định danh',
+    async () => {
+      await prisma.sellerProfile.update({
+        where: { id: sellerProfileId },
+        data: { idNumber: `0790${RUN.slice(0, 6)}` },
+      });
+      const { bookingId } = await bookingFor(SERVICE_TYPE.SELF_DRIVE, 'household_business');
+      await accrue(bookingId);
+      const row = await prisma.taxWithholding.findFirstOrThrow({ where: { bookingId } });
+      expect(row.amount.toFixed(0)).toBe('54600');
+      expect(row.vatAmount?.toFixed(0)).toBe('39000');
+      expect(row.pitAmount?.toFixed(0)).toBe('15600');
+      expect([Number(row.vatPercent), Number(row.pitPercent), Number(row.percent)]).toEqual([
+        5, 2, 7,
+      ]);
+      expect(row.taxCategory).toBe('service');
+      expect(row.label).toBe('GTGT 5% + TNCN 2%');
+      expect(row.taxableBase.toFixed(0)).toBe('780000');
+      // Loại chủ thể KHAI + định danh chụp từ hồ sơ lúc ghi sổ; chủ thể ÁP THUẾ từ SNAPSHOT của đơn.
+      expect(row.sellerEntityType).toBe('household_business');
+      expect(row.taxSubjectType).toBe('household_business');
+      expect(row.sellerTaxId).toBe(`TX${RUN.toUpperCase()}`);
+      expect(row.sellerLegalName).toBe(`Hộ KD ${RUN}`);
+      expect(row.sellerIdNumber).toBe(`0790${RUN.slice(0, 6)}`);
+    },
+  );
 
   maybe('có tài xế = vận tải: GTGT 3% = 23.400 + TNCN 1,5% = 11.700', async () => {
     const { bookingId } = await bookingFor(SERVICE_TYPE.WITH_DRIVER, 'individual');
@@ -805,21 +820,39 @@ describe('Sổ thuế tách GTGT/TNCN (ADR 0068)', () => {
     const card = await read.tenantSummary(tenantId, row.periodKey);
     expect([card.totalVatAmount, card.totalPitAmount]).toEqual(['39000', '15600']);
     const item = card.items.find((i) => i.bookingId === bookingId)!;
-    expect([item.vatAmount, item.pitAmount, item.vatPercent, item.pitPercent, item.taxCategory]).toEqual(
-      ['39000', '15600', 5, 2, 'service'],
-    );
+    expect([
+      item.vatAmount,
+      item.pitAmount,
+      item.vatPercent,
+      item.pitPercent,
+      item.taxCategory,
+    ]).toEqual(['39000', '15600', 5, 2, 'service']);
 
     const csv = await read.periodCsv(row.periodKey, ownerId);
-    const [header, ...lines] = csv.replace(/^\uFEFF/, '').trim().split('\r\n');
+    const [header, ...lines] = csv
+      .replace(/^\uFEFF/, '')
+      .trim()
+      .split('\r\n');
     const cols = header!.split(',');
-    for (const col of ['thue_gtgt', 'thue_tncn', 'ty_le_gtgt', 'ty_le_tncn', 'nhom', 'so_dinh_danh']) {
+    for (const col of [
+      'thue_gtgt',
+      'thue_tncn',
+      'ty_le_gtgt',
+      'ty_le_tncn',
+      'nhom',
+      'so_dinh_danh',
+    ]) {
       expect(cols).toContain(col);
     }
     const line = lines.find((l) => l.includes(row.periodKey) && l.includes('54600'))!.split(',');
     const at = (name: string) => line[cols.indexOf(name)];
-    expect([at('thue_gtgt'), at('thue_tncn'), at('ty_le_gtgt'), at('ty_le_tncn'), at('nhom')]).toEqual(
-      ['39000', '15600', '5.00', '2.00', 'service'],
-    );
+    expect([
+      at('thue_gtgt'),
+      at('thue_tncn'),
+      at('ty_le_gtgt'),
+      at('ty_le_tncn'),
+      at('nhom'),
+    ]).toEqual(['39000', '15600', '5.00', '2.00', 'service']);
   });
 
   /**
@@ -828,90 +861,110 @@ describe('Sổ thuế tách GTGT/TNCN (ADR 0068)', () => {
    * ÁP THUẾ đã đóng băng (thiếu hồ sơ / doanh nghiệp chưa xác minh ⇒ khấu trừ như cá nhân). Ghi
    * chủ thể áp thuế vào cột khai từng xoá mất nhóm `unknown` khỏi tờ khai.
    */
-  maybe('CHƯA có hồ sơ người bán: khấu trừ như cá nhân, nhưng tờ khai thấy `unknown` + cảnh báo', async () => {
-    const profile = await prisma.sellerProfile.findUniqueOrThrow({ where: { id: sellerProfileId } });
-    await prisma.sellerProfile.delete({ where: { id: sellerProfileId } });
-    try {
-      const { bookingId } = await bookingFor(SERVICE_TYPE.SELF_DRIVE, taxSellerEntityOf(null));
-      await accrue(bookingId);
-      const row = await prisma.taxWithholding.findFirstOrThrow({ where: { bookingId } });
-      expect(row.amount.toFixed(0)).toBe('54600');
-      expect(row.sellerProfileId).toBeNull();
-      expect(row.sellerEntityType).toBeNull();
-      expect(row.taxSubjectType).toBe(SELLER_ENTITY_TYPE.INDIVIDUAL);
-
-      const summary = await read.periodSummary(row.periodKey);
-      const unknown = summary.byEntityType.find((e) => e.entityType === 'unknown');
-      // Dữ liệu mà cảnh báo "chưa khai hồ sơ" của màn tờ khai đọc: nhóm `unknown` có tiền.
-      expect(Number(unknown?.amount ?? 0)).toBeGreaterThanOrEqual(54_600);
-      expect(summary.byTenant.find((t) => t.tenantId === tenantId)?.entityType).toBe('unknown');
-
-      const item = (await read.tenantSummary(tenantId, row.periodKey)).items[0]!;
-      expect([item.entityType, item.taxSubjectType]).toEqual(['unknown', SELLER_ENTITY_TYPE.INDIVIDUAL]);
-
-      const csv = await read.periodCsv(row.periodKey, ownerId);
-      const [header, ...lines] = csv.replace(/^\uFEFF/, '').trim().split('\r\n');
-      const cols = header!.split(',');
-      const bookingCode = (await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } })).code;
-      const line = lines.find((l) => l.includes(bookingCode))!.split(',');
-      expect(line[cols.indexOf('loai_chu_the')]).toBe('unknown');
-      expect(line[cols.indexOf('khau_tru_nhu')]).toBe(SELLER_ENTITY_TYPE.INDIVIDUAL);
-    } finally {
-      await prisma.sellerProfile.create({
-        data: {
-          id: profile.id,
-          tenantId,
-          entityType: profile.entityType,
-          taxId: profile.taxId,
-          idNumber: profile.idNumber,
-          legalName: profile.legalName,
-        },
+  maybe(
+    'CHƯA có hồ sơ người bán: khấu trừ như cá nhân, nhưng tờ khai thấy `unknown` + cảnh báo',
+    async () => {
+      const profile = await prisma.sellerProfile.findUniqueOrThrow({
+        where: { id: sellerProfileId },
       });
-    }
-  });
+      await prisma.sellerProfile.delete({ where: { id: sellerProfileId } });
+      try {
+        const { bookingId } = await bookingFor(SERVICE_TYPE.SELF_DRIVE, taxSellerEntityOf(null));
+        await accrue(bookingId);
+        const row = await prisma.taxWithholding.findFirstOrThrow({ where: { bookingId } });
+        expect(row.amount.toFixed(0)).toBe('54600');
+        expect(row.sellerProfileId).toBeNull();
+        expect(row.sellerEntityType).toBeNull();
+        expect(row.taxSubjectType).toBe(SELLER_ENTITY_TYPE.INDIVIDUAL);
 
-  maybe('doanh nghiệp CHƯA xác minh: dòng sổ ghi loại KHAI `company`, vẫn bị khấu trừ như cá nhân', async () => {
-    await prisma.sellerProfile.update({
-      where: { id: sellerProfileId },
-      data: { entityType: SELLER_ENTITY_TYPE.COMPANY, status: SELLER_PROFILE_STATUS.SUBMITTED },
-    });
-    try {
-      const profile = await prisma.sellerProfile.findUniqueOrThrow({ where: { id: sellerProfileId } });
-      // Chủ thể áp thuế do `taxSellerEntityOf` quyết — đúng phép `PricingService` dùng lúc nhận chuyến.
-      const applied = taxSellerEntityOf(profile);
-      expect(applied).toBe(SELLER_ENTITY_TYPE.INDIVIDUAL);
-      const { bookingId } = await bookingFor(SERVICE_TYPE.SELF_DRIVE, applied);
-      await accrue(bookingId);
-      const row = await prisma.taxWithholding.findFirstOrThrow({ where: { bookingId } });
-      expect(row.amount.toFixed(0)).toBe('54600');
-      expect(row.sellerEntityType).toBe(SELLER_ENTITY_TYPE.COMPANY);
-      expect(row.taxSubjectType).toBe(SELLER_ENTITY_TYPE.INDIVIDUAL);
+        const summary = await read.periodSummary(row.periodKey);
+        const unknown = summary.byEntityType.find((e) => e.entityType === 'unknown');
+        // Dữ liệu mà cảnh báo "chưa khai hồ sơ" của màn tờ khai đọc: nhóm `unknown` có tiền.
+        expect(Number(unknown?.amount ?? 0)).toBeGreaterThanOrEqual(54_600);
+        expect(summary.byTenant.find((t) => t.tenantId === tenantId)?.entityType).toBe('unknown');
 
-      const item = (await read.tenantSummary(tenantId, row.periodKey)).items[0]!;
-      expect([item.entityType, item.taxSubjectType]).toEqual([
-        SELLER_ENTITY_TYPE.COMPANY,
-        SELLER_ENTITY_TYPE.INDIVIDUAL,
-      ]);
-      const summary = await read.periodSummary(row.periodKey);
-      expect(summary.byTenant.find((t) => t.tenantId === tenantId)?.entityType).toBe(
-        SELLER_ENTITY_TYPE.COMPANY,
-      );
+        const item = (await read.tenantSummary(tenantId, row.periodKey)).items[0]!;
+        expect([item.entityType, item.taxSubjectType]).toEqual([
+          'unknown',
+          SELLER_ENTITY_TYPE.INDIVIDUAL,
+        ]);
 
-      // Dòng ĐẢO mang lại cả hai cột của dòng gốc.
-      const reversal = await prisma.taxWithholding.findUniqueOrThrow({
-        where: { id: await tax.reverse(row.id, ownerId, 'Kiểm tra dòng đảo giữ chủ thể') },
-      });
-      expect([reversal.sellerEntityType, reversal.taxSubjectType]).toEqual([
-        SELLER_ENTITY_TYPE.COMPANY,
-        SELLER_ENTITY_TYPE.INDIVIDUAL,
-      ]);
-    } finally {
+        const csv = await read.periodCsv(row.periodKey, ownerId);
+        const [header, ...lines] = csv
+          .replace(/^\uFEFF/, '')
+          .trim()
+          .split('\r\n');
+        const cols = header!.split(',');
+        const bookingCode = (await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } }))
+          .code;
+        const line = lines.find((l) => l.includes(bookingCode))!.split(',');
+        expect(line[cols.indexOf('loai_chu_the')]).toBe('unknown');
+        expect(line[cols.indexOf('khau_tru_nhu')]).toBe(SELLER_ENTITY_TYPE.INDIVIDUAL);
+      } finally {
+        await prisma.sellerProfile.create({
+          data: {
+            id: profile.id,
+            tenantId,
+            entityType: profile.entityType,
+            taxId: profile.taxId,
+            idNumber: profile.idNumber,
+            legalName: profile.legalName,
+          },
+        });
+      }
+    },
+  );
+
+  maybe(
+    'doanh nghiệp CHƯA xác minh: dòng sổ ghi loại KHAI `company`, vẫn bị khấu trừ như cá nhân',
+    async () => {
       await prisma.sellerProfile.update({
         where: { id: sellerProfileId },
-        data: { entityType: SELLER_ENTITY_TYPE.HOUSEHOLD_BUSINESS, status: SELLER_PROFILE_STATUS.DRAFT },
+        data: { entityType: SELLER_ENTITY_TYPE.COMPANY, status: SELLER_PROFILE_STATUS.SUBMITTED },
       });
-    }
-  });
+      try {
+        const profile = await prisma.sellerProfile.findUniqueOrThrow({
+          where: { id: sellerProfileId },
+        });
+        // Chủ thể áp thuế do `taxSellerEntityOf` quyết — đúng phép `PricingService` dùng lúc nhận chuyến.
+        const applied = taxSellerEntityOf(profile);
+        expect(applied).toBe(SELLER_ENTITY_TYPE.INDIVIDUAL);
+        const { bookingId } = await bookingFor(SERVICE_TYPE.SELF_DRIVE, applied);
+        await accrue(bookingId);
+        const row = await prisma.taxWithholding.findFirstOrThrow({ where: { bookingId } });
+        expect(row.amount.toFixed(0)).toBe('54600');
+        expect(row.sellerEntityType).toBe(SELLER_ENTITY_TYPE.COMPANY);
+        expect(row.taxSubjectType).toBe(SELLER_ENTITY_TYPE.INDIVIDUAL);
+
+        const item = (await read.tenantSummary(tenantId, row.periodKey)).items[0]!;
+        expect([item.entityType, item.taxSubjectType]).toEqual([
+          SELLER_ENTITY_TYPE.COMPANY,
+          SELLER_ENTITY_TYPE.INDIVIDUAL,
+        ]);
+        const summary = await read.periodSummary(row.periodKey);
+        expect(summary.byTenant.find((t) => t.tenantId === tenantId)?.entityType).toBe(
+          SELLER_ENTITY_TYPE.COMPANY,
+        );
+
+        // Dòng ĐẢO mang lại cả hai cột của dòng gốc.
+        const reversal = await prisma.taxWithholding.findUniqueOrThrow({
+          where: { id: await tax.reverse(row.id, ownerId, 'Kiểm tra dòng đảo giữ chủ thể') },
+        });
+        expect([reversal.sellerEntityType, reversal.taxSubjectType]).toEqual([
+          SELLER_ENTITY_TYPE.COMPANY,
+          SELLER_ENTITY_TYPE.INDIVIDUAL,
+        ]);
+      } finally {
+        await prisma.sellerProfile.update({
+          where: { id: sellerProfileId },
+          data: {
+            entityType: SELLER_ENTITY_TYPE.HOUSEHOLD_BUSINESS,
+            status: SELLER_PROFILE_STATUS.DRAFT,
+          },
+        });
+      }
+    },
+  );
 
   maybe('kỳ TRỘN dòng một-mức cũ + dòng tách: tổng = GTGT + TNCN + phần chưa tách', async () => {
     await accrue(await makeBooking());
@@ -929,29 +982,40 @@ describe('Sổ thuế tách GTGT/TNCN (ADR 0068)', () => {
 
     const summary = await read.periodSummary(row.periodKey);
     expect(
-      Number(summary.totalVatAmount) + Number(summary.totalPitAmount) + Number(summary.totalUnsplitAmount),
+      Number(summary.totalVatAmount) +
+        Number(summary.totalPitAmount) +
+        Number(summary.totalUnsplitAmount),
     ).toBe(Number(summary.totalAmount));
     expect(Number(summary.totalUnsplitAmount)).toBeGreaterThanOrEqual(140_000);
   });
 
-  maybe('xuất CSV (có số CCCD đầy đủ) ghi audit `tax.period_export`: người xuất, kỳ, số dòng', async () => {
-    const { bookingId } = await bookingFor(SERVICE_TYPE.SELF_DRIVE, 'individual');
-    await accrue(bookingId);
-    const row = await prisma.taxWithholding.findFirstOrThrow({ where: { bookingId } });
+  maybe(
+    'xuất CSV (có số CCCD đầy đủ) ghi audit `tax.period_export`: người xuất, kỳ, số dòng',
+    async () => {
+      const { bookingId } = await bookingFor(SERVICE_TYPE.SELF_DRIVE, 'individual');
+      await accrue(bookingId);
+      const row = await prisma.taxWithholding.findFirstOrThrow({ where: { bookingId } });
 
-    const csv = await read.periodCsv(row.periodKey, ownerId);
-    const dataLines = csv.replace(/^\uFEFF/, '').trim().split('\r\n').length - 1;
+      const csv = await read.periodCsv(row.periodKey, ownerId);
+      const dataLines =
+        csv
+          .replace(/^\uFEFF/, '')
+          .trim()
+          .split('\r\n').length - 1;
 
-    const log = await prisma.auditLog.findFirstOrThrow({
-      where: { action: 'tax.period_export', actorUserId: ownerId, targetId: row.periodKey },
-      orderBy: { createdAt: 'desc' },
-    });
-    expect(log.targetType).toBe('tax_period');
-    expect(log.actorScope).toBe('platform');
-    expect(log.tenantId).toBeNull();
-    expect(log.afterJson).toMatchObject({ periodKey: row.periodKey, rows: dataLines });
-    // Audit KHÔNG mang số giấy tờ — chỉ đếm.
-    const profile = await prisma.sellerProfile.findUniqueOrThrow({ where: { id: sellerProfileId } });
-    if (profile.idNumber) expect(JSON.stringify(log.afterJson)).not.toContain(profile.idNumber);
-  });
+      const log = await prisma.auditLog.findFirstOrThrow({
+        where: { action: 'tax.period_export', actorUserId: ownerId, targetId: row.periodKey },
+        orderBy: { createdAt: 'desc' },
+      });
+      expect(log.targetType).toBe('tax_period');
+      expect(log.actorScope).toBe('platform');
+      expect(log.tenantId).toBeNull();
+      expect(log.afterJson).toMatchObject({ periodKey: row.periodKey, rows: dataLines });
+      // Audit KHÔNG mang số giấy tờ — chỉ đếm.
+      const profile = await prisma.sellerProfile.findUniqueOrThrow({
+        where: { id: sellerProfileId },
+      });
+      if (profile.idNumber) expect(JSON.stringify(log.afterJson)).not.toContain(profile.idNumber);
+    },
+  );
 });

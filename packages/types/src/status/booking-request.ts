@@ -165,6 +165,26 @@ export function hostSeesCustomerContact(input: {
 }
 
 /**
+ * Phía KHÁCH được thấy ĐỊA CHỈ CHÍNH XÁC nơi nhận xe (số nhà, đường, toạ độ) chưa — MỘT luật cho
+ * mọi bề mặt, web lẫn app, công khai lẫn trang chuyến (ADR 0077).
+ *
+ *  - Gian hàng TUYẾN GÓI (mặt tiền `shop`, có tích xanh): luôn thấy — địa chỉ cửa hàng là thông tin
+ *    kinh doanh công khai, như biển hiệu.
+ *  - Chủ xe TUYẾN HOA HỒNG: chỉ khi chuyến đã có ĐƠN (`isBookingRequestEngaged` — tiền giữ chỗ về
+ *    đủ). Địa chỉ của họ thường là nhà riêng; trước đó (kể cả chờ duyệt, `awaiting_hold`) chỉ thấy
+ *    "Phường/Xã, Tỉnh/TP".
+ *
+ * `packageTrack` là mặt tiền HIỆU LỰC (`hasVerifiedStorefront` trên `resolveStorefront`), cùng
+ * nguồn với tích xanh — không phải "có dòng thuê bao".
+ */
+export function customerSeesPickupAddress(input: {
+  engaged: boolean;
+  packageTrack: boolean;
+}): boolean {
+  return input.engaged || input.packageTrack;
+}
+
+/**
  * Lộ trình của yêu cầu thuê XE CÓ TÀI XẾ (mô hình 3 lộ trình — plan 17/08).
  *
  * Là NGỮ CẢNH để shop báo giá đúng khi duyệt (phụ phí 1 chiều/lưu đêm...), KHÔNG phải chiều

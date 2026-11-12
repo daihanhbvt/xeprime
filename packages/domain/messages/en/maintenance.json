@@ -1,7 +1,7 @@
 {
   "page": {
-    "title": "Maintenance centre",
-    "subtitle": "Track condition, service schedules and periodic repairs across your whole fleet.",
+    "title": "Maintenance list",
+    "subtitle": "Track vehicle condition, plan routine maintenance and manage repair costs across your whole fleet.",
     "loading": "Loading the maintenance centre…"
   },
   "filters": {
@@ -16,16 +16,18 @@
     "sortRemainingAsc": "Due soonest first",
     "sortRemainingDesc": "Most km remaining first",
     "sortNameAsc": "Vehicle name A→Z",
-    "sortUpdatedDesc": "Recently updated"
+    "sortUpdatedDesc": "Recently updated",
+    "sortValue": "Sort: {label}"
   },
   "actions": {
-    "detail": "Details",
+    "detail": "View vehicle details",
     "updateOdometer": "Update odometer",
     "editSchedule": "Edit schedule",
     "schedule": "Schedule",
     "complete": "Complete",
     "cancelSchedule": "Cancel schedule",
-    "cancelScheduleConfirm": "Cancel this maintenance slot? The time window is released back for bookings."
+    "cancelScheduleConfirm": "Cancel this maintenance schedule? It moves to the history as Cancelled.",
+    "scheduleNow": "Schedule now"
   },
   "dialog": {
     "loading": "Loading…",
@@ -37,9 +39,8 @@
     "canceled": "Maintenance schedule canceled",
     "updated": "Maintenance record updated",
     "created": "Maintenance scheduled",
-    "scheduleConflict": "That time window already has another booking — pick a different slot.",
-    "staleRecord": "Someone else just updated this record — close the dialog and reload.",
-    "odometerTooLow": "The odometer you entered is below the vehicle's current reading — check the number."
+    "staleRecord": "Someone else just updated this record - close the dialog and reload.",
+    "odometerTooLow": "The odometer you entered is below the vehicle's current reading - check the number."
   },
   "table": {
     "columns": {
@@ -67,18 +68,15 @@
   "record": {
     "titleComplete": "Complete maintenance",
     "titleEdit": "Edit maintenance",
-    "titleCreate": "Add maintenance",
+    "titleCreate": "Add upcoming maintenance",
     "okComplete": "Save maintenance",
     "okEdit": "Save changes",
     "okCreate": "Create schedule",
-    "conflictAlert": "This vehicle already has another booking overlapping that window",
     "type": "Service type",
     "customType": "Item name",
     "customTypePlaceholder": "e.g. Wheel alignment",
     "title": "Short description",
     "titlePlaceholder": "e.g. 45,000 km service",
-    "plannedStart": "Planned start",
-    "plannedEnd": "Planned end",
     "provider": "Garage / service provider",
     "providerPlaceholder": "e.g. Toyota East Saigon",
     "odometer": "Service odometer",
@@ -87,17 +85,18 @@
     "receipt": "Receipt / voucher number",
     "receiptPlaceholder": "e.g. CT-40092",
     "notes": "Notes",
-    "completeHint": "Completing releases the vehicle slot and updates the current odometer (if entered). An oil change also moves the next service milestone.",
-    "scheduleHoldNote": "Fill both times and the slot is actually held on the vehicle calendar — that window stops accepting bookings.",
+    "completeHint": "Completing updates the current odometer (if entered). Oil changes also move the next service milestone.",
     "odometerHelp": "Leave blank for a backdated record when you don't want to change the current odometer.",
     "attachments": "This record has {count, plural, one {# attachment} other {# attachments}}.",
-    "endAfterStart": "The end time must be after the start time",
-    "endRequired": "Enter an end time to hold the vehicle slot"
+    "plannedDate": "Expected date",
+    "completedDate": "Completed on",
+    "costShort": "Cost",
+    "notesValue": "Notes: {value}"
   },
   "odometer": {
     "updated": "Odometer updated",
     "decreaseForbidden": "Lowering the odometer needs an administrator. Ask the shop owner for the permission, or have them approve it.",
-    "stale": "Someone else just updated the odometer — close the dialog and reload.",
+    "stale": "Someone else just updated the odometer - close the dialog and reload.",
     "title": "Adjust odometer",
     "okRequest": "Request approval",
     "okUpdate": "Update odometer",
@@ -124,8 +123,8 @@
     "title": "Maintenance & odometer",
     "loadError": "Couldn't load maintenance data",
     "manage": "Manage",
-    "overdue": "Service overdue — {value}",
-    "dueSoon": "Service due soon — {value}",
+    "overdue": "Service overdue - {value}",
+    "dueSoon": "Service due soon - {value}",
     "noOdometer": "No odometer data",
     "noOdometerHint": "Enter the current reading to start tracking the service schedule.",
     "currentKm": "Current km",
@@ -138,8 +137,8 @@
     "noPermissionHint": "You can't view this vehicle's maintenance and odometer data. Ask the shop owner for access.",
     "loadError": "Couldn't load the maintenance information",
     "profileSaved": "Maintenance settings saved",
-    "profileStale": "Someone else just updated this — reload the page before saving again.",
-    "readOnlyBanner": "View only — you can see maintenance data but can't change it.",
+    "profileStale": "Someone else just updated this - reload the page before saving again.",
+    "readOnlyBanner": "View only - you can see maintenance data but can't change it.",
     "odometerCard": "Current odometer",
     "adjustManually": "Adjust manually",
     "updatedAt": "Updated {at}",
@@ -156,13 +155,13 @@
     "upcomingCard": "Upcoming maintenance",
     "recordsLoadError": "Couldn't load the maintenance list",
     "boardLink": "Open the maintenance centre",
-    "historyCard": "Maintenance & repair history",
     "historyEmpty": "No maintenance recorded yet.",
     "nextMilestone": "Next service milestone:",
     "dueSoonThreshold": "Your shop’s “due soon” threshold: {value} remaining.",
-    "addRecord": "Add maintenance",
     "upcomingEmpty": "No upcoming maintenance scheduled.",
-    "attachments": "{count, plural, one {# attachment} other {# attachments}}"
+    "attachments": "{count, plural, one {# attachment} other {# attachments}}",
+    "recordHistoryLink": "View maintenance history",
+    "addSchedule": "Add maintenance schedule"
   },
   "validation": {
     "odometerTypeError": "Odometer reading must be a number",
@@ -183,5 +182,59 @@
     "costTypeError": "Please enter a number",
     "costInteger": "The amount must be a whole number",
     "costMin": "The amount cannot be negative"
+  },
+  "recordHistory": {
+    "title": "Maintenance history",
+    "total": "{count, plural, one {# record} other {# records}}"
+  },
+  "board": {
+    "listLabel": "Vehicles to maintain",
+    "loading": "Loading the maintenance list",
+    "showing": "Showing {from}-{to} of {total, plural, one {# vehicle} other {# vehicles}}",
+    "more": "Actions for {name}",
+    "lastService": "Last serviced: <b>{date}</b>",
+    "noLastService": "Not serviced yet",
+    "odometer": "Current odometer",
+    "kmUnit": "km",
+    "missingOdometer": "No odometer reading",
+    "nextDue": "Next due: <b>{km}</b>",
+    "noNextDue": "No next service mark",
+    "cycle": "{percent}% of the {interval} cycle",
+    "noCycle": "Oil-change interval not set",
+    "needsOdometer": "Update the odometer to track the cycle",
+    "noSchedule": "Not scheduled",
+    "needNow": "Needs scheduling now",
+    "needSoon": "Needs scheduling",
+    "notYet": "Nothing due yet",
+    "scheduledOn": "Scheduled | {date}",
+    "scheduled": "Scheduled",
+    "inProgressSince": "In service | since {date}",
+    "inProgress": "In service"
+  },
+  "missingKmQueue": {
+    "listLabel": "Missing return mileage tasks",
+    "forbidden": "You can't view handover tasks",
+    "forbiddenHint": "This list belongs to handover records. Ask an administrator if you need access.",
+    "loadError": "Couldn't load missing mileage tasks",
+    "loadErrorHint": "The connection may have dropped. Try again to see outstanding tasks.",
+    "empty": "No return mileage missing",
+    "emptyHint": "Every return handover has an odometer reading - your fleet's mileage is complete.",
+    "columns": {
+      "vehicle": "Vehicle",
+      "booking": "Booking",
+      "confirmedAt": "Return confirmed at",
+      "pickupKm": "Mileage at pickup",
+      "actions": "Actions"
+    },
+    "noPlate": "No plate number",
+    "cardBooking": "Booking <link>{code}</link> · {time}",
+    "cardPickupKm": "Mileage at pickup: {km}",
+    "resolve": "Add mileage",
+    "needPermission": "Mileage edit permission required",
+    "resolveForbidden": "You can't open this handover record",
+    "resolveForbiddenHint": "Adding mileage requires permission to view this booking's handovers.",
+    "resolveLoadError": "Couldn't load the handover record",
+    "resolveLoadErrorHint": "The connection may have dropped. This task is still in the queue.",
+    "alreadyResolved": "This handover already has a mileage reading - nothing left to do."
   }
 }

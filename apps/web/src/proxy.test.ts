@@ -90,7 +90,7 @@ afterEach(() => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
-describe('proxy — chế độ path (máy dev, ba khu chung localhost:3000)', () => {
+describe('proxy - chế độ path (máy dev, ba khu chung localhost:3000)', () => {
   const L = 'http://localhost:3000';
 
   it('site khách: trang công khai đi tiếp, không gắn noindex', async () => {
@@ -239,7 +239,7 @@ describe('proxy — chế độ path (máy dev, ba khu chung localhost:3000)', (
     for (const [referer, realm] of expected) expect(realmOf(referer), referer).toBe(realm);
   });
 
-  it('/api/stg/* là route handler riêng — để nguyên', async () => {
+  it('/api/stg/* là route handler riêng - để nguyên', async () => {
     const run = await loadProxy('path');
     const out = run('/api/stg/auth/me');
     expect(out.next).toBe(true);
@@ -248,7 +248,7 @@ describe('proxy — chế độ path (máy dev, ba khu chung localhost:3000)', (
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
-describe('proxy — chế độ host (staging/production, mỗi khu một host)', () => {
+describe('proxy - chế độ host (staging/production, mỗi khu một host)', () => {
   const P = `http://${HOSTS.partner}`;
   const A = `http://${HOSTS.admin}`;
 

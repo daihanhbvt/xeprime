@@ -63,6 +63,8 @@ Think through the edge cases the domain guarantees will occur: the very long nam
 
 ## Figma is a visual reference, never a business spec
 
+Rebuilding an existing screen from a new design (the partner-site redesign): load the **`figma-redesign`** skill first — it holds the inventory → ask → build loop and the ledger of which features moved where.
+
 When a screen is rebuilt from a Figma design, the design decides layout, spacing, type sizes and colours — not what the product does. Every existing function on that screen survives the redesign: a filter, toggle, link or state the code already supports is moved into the new layout, never hidden, deleted, or swapped for a different behaviour because the mock-up has no slot for it. The reverse holds too: a control the design draws but the backend cannot serve (a filter dimension with no data, a promise the policy does not make) is not shipped as a button that does nothing — list it for the user and ask before adding the backend for it. Layer names in Figma are reused carelessly; read labels from the design's text, not from layer names. Data the admin manages (brand logos, body-type images) comes from the catalog (`catalog_items.icon_url`, editable on the admin catalog screen), not from static files guessed by key.
 
 ## Server versus client components

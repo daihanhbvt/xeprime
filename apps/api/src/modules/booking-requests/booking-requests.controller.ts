@@ -15,6 +15,7 @@ import {
   CancelBookingRequestDto,
   BookingRequestListQueryDto,
   BookingRequestPageDto,
+  PaymentReminderResultDto,
   RejectBookingRequestDto,
 } from './dto/booking-request.dto';
 import { BookingRequestsService } from './booking-requests.service';
@@ -76,7 +77,7 @@ export class BookingRequestsController {
     description:
       'Có tiền giữ chỗ: request chuyển sang `awaiting_hold`, KHÔNG có Booking nào được tạo ở ' +
       'bước này. Không thu tiền giữ chỗ: Booking được tạo ngay trong cùng transaction. ' +
-      'Thuê dài hạn: body bắt buộc scheduledPickupAt — gian hàng chốt giờ nhận, server tính ' +
+      'Thuê dài hạn: body bắt buộc scheduledPickupAt - gian hàng chốt giờ nhận, server tính ' +
       'giờ trả theo gói tháng lịch (ADR 0011). Trùng lịch → 409, yêu cầu vẫn chờ duyệt.',
   })
   @ApiOkResponse({ type: BookingRequestDto })
@@ -134,6 +135,32 @@ export class BookingRequestsController {
   }
 
   /**
+   * NHẮC khách chuyển tiền giữ chỗ — nút "Nhắc khách" của nhóm "Chờ khách thanh toán" (05/11/2026).
+   *
+   * Cùng quyền với Huỷ chuyến: người nhận chuyến là người theo nó tới lúc tiền về. KHÔNG mở cho
+   * phiên hỗ trợ (không `@SupportAction`): nhân sự nền tảng không gửi tin thay gian hàng (ADR 0050).
+   */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING_REQUEST)
+  @Post(':id/remind-payment')
+  @RequirePermissions(PERMISSION.BOOKING_REQUEST_APPROVE)
+  @ApiOperation({
+    summary: 'Nhắc khách thanh toán tiền giữ chỗ (chặng awaiting_hold)',
+    description:
+      'Gửi MỘT thông báo cho tài khoản khách; không gia hạn cửa sổ thanh toán. Khách vừa nhận lời ' +
+      'nhắc (lúc tạo khoản giữ chỗ, hai mốc worker, lượt bấm trước) trong ' +
+      'HOLD_HOST_REMINDER_COOLDOWN_MINUTES phút → 429 PAYMENT_REMINDER_TOO_SOON kèm details.availableAt. ' +
+      'Không còn chờ thanh toán / khách không có tài khoản → 409 PAYMENT_REMINDER_NOT_AVAILABLE.',
+  })
+  @ApiOkResponse({ type: PaymentReminderResultDto })
+  remindPayment(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<PaymentReminderResultDto> {
+    return this.requests.remindPayment(tenant.tenantId, user.id, id);
+  }
+
+  /**
    * Mở/lấy hội thoại với KHÁCH của yêu cầu này — nút "Nhắn tin" ở inbox gian hàng.
    *
    * Cố ý KHÔNG dùng `POST /conversations` (đường của KHÁCH): endpoint đó lấy người đang gọi làm
@@ -150,7 +177,7 @@ export class BookingRequestsController {
   @ApiOperation({
     summary: 'Mở/lấy hội thoại với khách của yêu cầu (phía gian hàng)',
     description:
-      'Idempotent theo (khách, xe) — mở lại đúng thread cũ. Khách vãng lai chưa có tài khoản ' +
+      'Idempotent theo (khách, xe) - mở lại đúng thread cũ. Khách vãng lai chưa có tài khoản ' +
       'trả CHAT_CUSTOMER_UNAVAILABLE.',
   })
   @ApiCreatedResponse({ type: ConversationSummaryDto })

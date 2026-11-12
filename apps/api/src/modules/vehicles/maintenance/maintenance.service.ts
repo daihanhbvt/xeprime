@@ -16,8 +16,6 @@ import {
   MAINTENANCE_TYPE,
   MAINTENANCE_TYPES_RESET_OIL_CHANGE,
   MAINTENANCE_TYPE_LABEL,
-  OCCUPANCY_SOURCE_TYPE,
-  OCCUPANCY_SOURCE_TYPE_META,
   ODOMETER_SOURCE,
   PAYMENT_METHOD,
   PRIVATE_FILE_PURPOSE,
@@ -30,11 +28,9 @@ import {
   type MaintenanceDueStatus,
   type MaintenanceStatus,
   type MaintenanceType,
-  type OccupancySourceType,
   type PaginationMeta,
 } from '@xeprime/types';
 import { AuditService } from '../../audit/audit.service';
-import { OccupancyService } from '../../calendar/occupancy.service';
 import { ReceiptsService } from '../../finance/receipts.service';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { SupportRequestStore } from '../../../common/support/support-request.store';
@@ -65,15 +61,12 @@ export interface MaintenanceViewScope {
 const DEFAULT_LIMIT = 20;
 
 /**
- * Bảo dưỡng xe (Wave 6) — writer DUY NHẤT của `vehicle_maintenance_records` và của
- * occupancy loại `maintenance`. docs/design/12 §9.
+ * Bảo dưỡng xe (Wave 6) — writer DUY NHẤT của `vehicle_maintenance_records`. docs/design/12 §9.
  *
  * Nguyên tắc đóng đinh:
- *  - Lịch bảo dưỡng còn hiệu lực GIỮ CHỖ thật trên `vehicle_occupancies` (ADR 0006) — đặt xe
- *    trùng khoảng đó bị exclusion constraint chặn. Đổi nhãn `operation_status` là KHÔNG đủ và
- *    service này không dùng nhãn thay cho lịch.
- *  - Ghi lịch/nhả lịch luôn CÙNG transaction với việc đổi trạng thái phiếu; không có trạng
- *    thái "đã hủy nhưng vẫn chiếm lịch".
+ *  - Lịch bảo dưỡng chỉ mang MỘT ngày dự kiến (`plannedStartAt`) để NHẮC — không giữ chỗ trên
+ *    `vehicle_occupancies`, xe vẫn nhận đặt bình thường (ADR 0079). Muốn chặn ngày thì khoá lịch xe.
+ *    `plannedEndAt` không còn được ghi (app cũ gửi lên thì bỏ qua).
  *  - Chỉ phiếu THAY NHỚT hoàn tất mới dời mốc thay nhớt; sửa chữa/thay lốp thì không
  *    (`MAINTENANCE_TYPES_RESET_OIL_CHANGE`).
  *  - Mọi thay đổi KM đi qua `OdometerService` — không ghi thẳng cột KM ở đây.
@@ -82,7 +75,6 @@ const DEFAULT_LIMIT = 20;
 export class MaintenanceService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly occupancy: OccupancyService,
     private readonly odometer: OdometerService,
     private readonly files: VehicleContractsService,
     private readonly audit: AuditService,
@@ -133,7 +125,7 @@ export class MaintenanceService {
         if (dto.expectedRowVersion == null) {
           throw new BadRequestException({
             code: API_ERROR_CODE.VALIDATION_FAILED,
-            message: 'Thiếu expectedRowVersion — cần cho phát hiện sửa đè',
+            message: 'Thiếu expectedRowVersion - cần cho phát hiện sửa đè',
           });
         }
         // Optimistic concurrency: 0 dòng khớp = ai đó vừa lưu bản khác.
@@ -200,64 +192,49 @@ export class MaintenanceService {
     assertCostWritable(dto, scope.canViewCost);
 
     const id = newId();
-    const plannedStartAt = toDateTime(dto.plannedStartAt);
-    const plannedEndAt = toDateTime(dto.plannedEndAt);
 
-    await this.runWithScheduleConflict(vehicleId, plannedStartAt, plannedEndAt, async () => {
-      await this.prisma.$transaction(async (tx) => {
-        await tx.vehicleMaintenanceRecord.create({
-          data: {
-            id,
-            tenantId,
-            vehicleId,
-            type: dto.type,
-            customTypeName: dto.type === MAINTENANCE_TYPE.OTHER ? trimOrNull(dto.customTypeName) : null,
-            title: trimOrNull(dto.title),
-            status: MAINTENANCE_STATUS.SCHEDULED,
-            plannedStartAt,
-            plannedEndAt,
-            odometerKm: dto.odometerKm ?? null,
-            providerName: trimOrNull(dto.providerName),
-            cost: dto.cost ?? null,
-            receiptCode: trimOrNull(dto.receiptCode),
-            notes: trimOrNull(dto.notes),
-            createdBy: userId,
-            updatedBy: userId,
-          },
-        });
-
-        await this.attachFiles(tx, tenantId, vehicleId, id, userId, dto.attachmentFileIds ?? []);
-
-        // Có khoảng thời gian → giữ chỗ THẬT trên lịch xe (ADR 0006), không chỉ đổi nhãn.
-        if (plannedStartAt && plannedEndAt) {
-          await this.occupancy.reserve(tx, {
-            tenantId,
-            vehicleId,
-            sourceType: OCCUPANCY_SOURCE_TYPE.MAINTENANCE,
-            sourceId: id,
-            startAt: plannedStartAt,
-            endAt: plannedEndAt,
-          });
-        }
-
-        await this.audit.record(
-          {
-            tenantId,
-            actorUserId: userId,
-            actorScope: 'tenant',
-            action: 'vehicle.maintenance.create',
-            targetType: 'vehicle_maintenance_record',
-            targetId: id,
-            after: {
-              vehicleId,
-              ...maintenanceRecordAuditView(
-                await tx.vehicleMaintenanceRecord.findUniqueOrThrow({ where: { id } }),
-              ),
-            },
-          },
-          tx,
-        );
+    await this.prisma.$transaction(async (tx) => {
+      await tx.vehicleMaintenanceRecord.create({
+        data: {
+          id,
+          tenantId,
+          vehicleId,
+          type: dto.type,
+          customTypeName: dto.type === MAINTENANCE_TYPE.OTHER ? trimOrNull(dto.customTypeName) : null,
+          title: trimOrNull(dto.title),
+          status: MAINTENANCE_STATUS.SCHEDULED,
+          // Một ngày dự kiến để nhắc — không giữ chỗ lịch xe, không còn mốc kết thúc (ADR 0079).
+          plannedStartAt: toDateTime(dto.plannedStartAt),
+          plannedEndAt: null,
+          odometerKm: dto.odometerKm ?? null,
+          providerName: trimOrNull(dto.providerName),
+          cost: dto.cost ?? null,
+          receiptCode: trimOrNull(dto.receiptCode),
+          notes: trimOrNull(dto.notes),
+          createdBy: userId,
+          updatedBy: userId,
+        },
       });
+
+      await this.attachFiles(tx, tenantId, vehicleId, id, userId, dto.attachmentFileIds ?? []);
+
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: 'tenant',
+          action: 'vehicle.maintenance.create',
+          targetType: 'vehicle_maintenance_record',
+          targetId: id,
+          after: {
+            vehicleId,
+            ...maintenanceRecordAuditView(
+              await tx.vehicleMaintenanceRecord.findUniqueOrThrow({ where: { id } }),
+            ),
+          },
+        },
+        tx,
+      );
     });
 
     return this.readRecord(tenantId, vehicleId, id, scope);
@@ -287,7 +264,7 @@ export class MaintenanceService {
     if (dto.expectedRowVersion == null) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Thiếu expectedRowVersion — cần cho phát hiện sửa đè',
+        message: 'Thiếu expectedRowVersion - cần cho phát hiện sửa đè',
       });
     }
 
@@ -295,89 +272,72 @@ export class MaintenanceService {
     if (isClosed(current.status as MaintenanceStatus)) {
       throw new ConflictException({
         code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message: 'Phiếu đã hoàn tất hoặc đã hủy — không sửa được nữa',
+        message: 'Phiếu đã hoàn tất hoặc đã hủy - không sửa được nữa',
       });
     }
 
-    const plannedStartAt =
-      dto.plannedStartAt !== undefined ? toDateTime(dto.plannedStartAt) : current.plannedStartAt;
-    const plannedEndAt =
-      dto.plannedEndAt !== undefined ? toDateTime(dto.plannedEndAt) : current.plannedEndAt;
+    await this.prisma.$transaction(async (tx) => {
+      const result = await tx.vehicleMaintenanceRecord.updateMany({
+        where: { id: recordId, tenantId, vehicleId, rowVersion: dto.expectedRowVersion! },
+        data: {
+          type: dto.type,
+          customTypeName:
+            dto.type === MAINTENANCE_TYPE.OTHER ? trimOrNull(dto.customTypeName) : null,
+          ...(dto.title !== undefined ? { title: trimOrNull(dto.title) } : {}),
+          // Chỉ ngày dự kiến; `plannedEndAt` app cũ gửi lên bị bỏ qua (ADR 0079).
+          ...(dto.plannedStartAt !== undefined
+            ? { plannedStartAt: toDateTime(dto.plannedStartAt) }
+            : {}),
+          ...(dto.odometerKm !== undefined ? { odometerKm: dto.odometerKm } : {}),
+          ...(dto.providerName !== undefined
+            ? { providerName: trimOrNull(dto.providerName) }
+            : {}),
+          ...(dto.cost !== undefined ? { cost: dto.cost } : {}),
+          ...(dto.receiptCode !== undefined ? { receiptCode: trimOrNull(dto.receiptCode) } : {}),
+          ...(dto.notes !== undefined ? { notes: trimOrNull(dto.notes) } : {}),
+          updatedBy: userId,
+          rowVersion: { increment: 1 },
+        },
+      });
+      if (result.count === 0) throw staleRecord();
 
-    await this.runWithScheduleConflict(vehicleId, plannedStartAt, plannedEndAt, async () => {
-      await this.prisma.$transaction(async (tx) => {
-        const result = await tx.vehicleMaintenanceRecord.updateMany({
-          where: { id: recordId, tenantId, vehicleId, rowVersion: dto.expectedRowVersion! },
-          data: {
-            type: dto.type,
-            customTypeName:
-              dto.type === MAINTENANCE_TYPE.OTHER ? trimOrNull(dto.customTypeName) : null,
-            ...(dto.title !== undefined ? { title: trimOrNull(dto.title) } : {}),
-            plannedStartAt,
-            plannedEndAt,
-            ...(dto.odometerKm !== undefined ? { odometerKm: dto.odometerKm } : {}),
-            ...(dto.providerName !== undefined
-              ? { providerName: trimOrNull(dto.providerName) }
-              : {}),
-            ...(dto.cost !== undefined ? { cost: dto.cost } : {}),
-            ...(dto.receiptCode !== undefined ? { receiptCode: trimOrNull(dto.receiptCode) } : {}),
-            ...(dto.notes !== undefined ? { notes: trimOrNull(dto.notes) } : {}),
-            updatedBy: userId,
-            rowVersion: { increment: 1 },
-          },
-        });
-        if (result.count === 0) throw staleRecord();
-
-        if (dto.attachmentFileIds !== undefined) {
-          await this.replaceAttachments(
-            tx,
-            tenantId,
-            vehicleId,
-            recordId,
-            userId,
-            dto.attachmentFileIds,
-          );
-        }
-
-        // Phiếu chưa hoàn tất thì chưa có phiếu chi nào để đồng bộ (`syncCostReceipt` chỉ chạy ở
-        // `completeRecord`). Sửa chi phí SAU khi hoàn tất đi đường riêng: `correctCost`.
-
-        // Lịch đổi → dời/nhả/giữ chỗ tương ứng, cùng transaction với phiếu. Phiên hỗ trợ không
-        // có đường nào tới đây: khung giờ đã bị ghim và bỏ khỏi lệnh ở trên (ADR 0050).
-        if (!support) await this.syncOccupancy(tx, {
+      if (dto.attachmentFileIds !== undefined) {
+        await this.replaceAttachments(
+          tx,
           tenantId,
           vehicleId,
           recordId,
-          status: current.status as MaintenanceStatus,
-          hadSchedule: Boolean(current.plannedStartAt && current.plannedEndAt),
-          startAt: plannedStartAt,
-          endAt: plannedEndAt,
-        });
-
-        await this.audit.record(
-          {
-            tenantId,
-            actorUserId: userId,
-            actorScope: 'tenant',
-            action: 'vehicle.maintenance.update',
-            targetType: 'vehicle_maintenance_record',
-            targetId: recordId,
-            // Toàn bộ trường nghiệp vụ của phiếu, trước và sau — audit phải trả lời được "đã đổi
-            // gì", kể cả khi người sửa là nhân sự nền tảng trong phiên hỗ trợ (ADR 0050).
-            before: maintenanceRecordAuditView(current),
-            after: maintenanceRecordAuditView(
-              await tx.vehicleMaintenanceRecord.findUniqueOrThrow({ where: { id: recordId } }),
-            ),
-          },
-          tx,
+          userId,
+          dto.attachmentFileIds,
         );
-      });
+      }
+
+      // Phiếu chưa hoàn tất thì chưa có phiếu chi nào để đồng bộ (`syncCostReceipt` chỉ chạy ở
+      // `completeRecord`). Sửa chi phí SAU khi hoàn tất đi đường riêng: `correctCost`.
+
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: 'tenant',
+          action: 'vehicle.maintenance.update',
+          targetType: 'vehicle_maintenance_record',
+          targetId: recordId,
+          // Toàn bộ trường nghiệp vụ của phiếu, trước và sau — audit phải trả lời được "đã đổi
+          // gì", kể cả khi người sửa là nhân sự nền tảng trong phiên hỗ trợ (ADR 0050).
+          before: maintenanceRecordAuditView(current),
+          after: maintenanceRecordAuditView(
+            await tx.vehicleMaintenanceRecord.findUniqueOrThrow({ where: { id: recordId } }),
+          ),
+        },
+        tx,
+      );
     });
 
     return this.readRecord(tenantId, vehicleId, recordId, scope);
   }
 
-  /** Bắt đầu thực hiện — giữ nguyên chỗ đã đặt trên lịch, chỉ đổi trạng thái. */
+  /** Bắt đầu thực hiện — chỉ đổi trạng thái. */
   async startRecord(
     tenantId: string,
     vehicleId: string,
@@ -394,9 +354,9 @@ export class MaintenanceService {
   }
 
   /**
-   * Hoàn tất phiếu — MỘT transaction cho tất cả: đổi trạng thái, nhả chỗ trên lịch, ghi KM
-   * (qua OdometerService), và CHỈ với phiếu thay nhớt thì dời mốc thay nhớt. Fail ở bất kỳ
-   * bước nào → rollback trọn gói, phiếu vẫn ở trạng thái cũ và lịch vẫn nguyên.
+   * Hoàn tất phiếu — MỘT transaction cho tất cả: đổi trạng thái, ghi KM (qua OdometerService),
+   * và CHỈ với phiếu thay nhớt thì dời mốc thay nhớt. Fail ở bất kỳ bước nào → rollback trọn
+   * gói, phiếu vẫn ở trạng thái cũ.
    */
   async completeRecord(
     tenantId: string,
@@ -429,9 +389,6 @@ export class MaintenanceService {
         },
       });
       if (result.count === 0) throw staleRecord();
-
-      // Xong việc thì trả lịch — xe nhận đơn lại được ngay, không phải chờ ai dọn tay.
-      await this.occupancy.release(tx, OCCUPANCY_SOURCE_TYPE.MAINTENANCE, recordId);
 
       // Chi phí bảo dưỡng LÀ một khoản chi của gian hàng. Trước đây nó dừng lại ở hồ sơ xe, nên
       // "lãi thực theo xe" không bao giờ tính được. Tự động, không hỏi lại bằng checkbox: người
@@ -524,7 +481,7 @@ export class MaintenanceService {
     if (current.status !== MAINTENANCE_STATUS.COMPLETED) {
       throw new ConflictException({
         code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message: 'Chỉ sửa được chi phí của phiếu ĐÃ hoàn tất — phiếu đang mở thì sửa như thường',
+        message: 'Chỉ sửa được chi phí của phiếu ĐÃ hoàn tất - phiếu đang mở thì sửa như thường',
       });
     }
 
@@ -569,7 +526,7 @@ export class MaintenanceService {
     return this.readRecord(tenantId, vehicleId, recordId, scope);
   }
 
-  /** Hủy lịch — NHẢ chỗ trên lịch xe trong cùng transaction (yêu cầu Wave 6 §3). */
+  /** Hủy lịch — phiếu ở lại trong lịch sử với nhãn "Đã hủy". */
   async cancelRecord(
     tenantId: string,
     vehicleId: string,
@@ -581,7 +538,6 @@ export class MaintenanceService {
     await this.transition(tenantId, vehicleId, userId, recordId, expectedRowVersion, {
       to: MAINTENANCE_STATUS.CANCELED,
       action: 'vehicle.maintenance.cancel',
-      releaseSchedule: true,
     });
     return this.readRecord(tenantId, vehicleId, recordId, scope);
   }
@@ -596,9 +552,7 @@ export class MaintenanceService {
    * Idempotent: xe đang có phiếu mở (`scheduled`/`in_progress`) thì không mở thêm — trả xe
    * mười chuyến liên tiếp vẫn chỉ một việc cần làm, không phải mười phiếu rác.
    *
-   * Phiếu sinh ra CỐ Ý không có khoảng thời gian: đây là việc-cần-xếp-lịch, chưa phải lịch.
-   * Có mốc thời gian mới giữ chỗ trên `vehicle_occupancies` — tự ý khoá xe của khách vì một
-   * cảnh báo là hành vi không ai cho phép.
+   * Phiếu sinh ra CỐ Ý không có ngày dự kiến: đây là việc-cần-xếp-lịch, gian hàng tự chọn ngày.
    */
   async ensureDueTaskWithinTx(
     tx: Prisma.TransactionClient,
@@ -640,8 +594,8 @@ export class MaintenanceService {
         type: MAINTENANCE_TYPE.OIL_CHANGE,
         title:
           schedule.status === MAINTENANCE_DUE_STATUS.OVERDUE
-            ? `Quá hạn bảo dưỡng — ${args.reason}`
-            : `Sắp đến hạn bảo dưỡng — ${args.reason}`,
+            ? `Quá hạn bảo dưỡng - ${args.reason}`
+            : `Sắp đến hạn bảo dưỡng - ${args.reason}`,
         status: MAINTENANCE_STATUS.SCHEDULED,
         notes: schedule.nextMaintenanceKm
           ? `Mốc bảo dưỡng: ${schedule.nextMaintenanceKm} km · KM hiện tại: ${profile.currentOdometerKm} km`
@@ -962,14 +916,14 @@ export class MaintenanceService {
 
   // ── Nội bộ ────────────────────────────────────────────────────────────────
 
-  /** Đổi trạng thái + (tuỳ chọn) nhả lịch, trong một transaction. */
+  /** Đổi trạng thái + audit, trong một transaction. */
   private async transition(
     tenantId: string,
     vehicleId: string,
     userId: string,
     recordId: string,
     expectedRowVersion: number,
-    opts: { to: MaintenanceStatus; action: string; releaseSchedule?: boolean },
+    opts: { to: MaintenanceStatus; action: string },
   ): Promise<void> {
     await this.assertVehicle(tenantId, vehicleId);
     const current = await this.requireRecord(tenantId, vehicleId, recordId);
@@ -981,10 +935,6 @@ export class MaintenanceService {
         data: { status: opts.to, updatedBy: userId, rowVersion: { increment: 1 } },
       });
       if (result.count === 0) throw staleRecord();
-
-      if (opts.releaseSchedule) {
-        await this.occupancy.release(tx, OCCUPANCY_SOURCE_TYPE.MAINTENANCE, recordId);
-      }
 
       await this.audit.record(
         {
@@ -1000,110 +950,6 @@ export class MaintenanceService {
         tx,
       );
     });
-  }
-
-  /** Đồng bộ chỗ trên lịch theo khoảng thời gian mới của phiếu (giữ/dời/nhả). */
-  private async syncOccupancy(
-    tx: Prisma.TransactionClient,
-    args: {
-      tenantId: string;
-      vehicleId: string;
-      recordId: string;
-      status: MaintenanceStatus;
-      hadSchedule: boolean;
-      startAt: Date | null;
-      endAt: Date | null;
-    },
-  ): Promise<void> {
-    const shouldHold =
-      MAINTENANCE_STATUS_HOLDING_SCHEDULE.includes(args.status) &&
-      Boolean(args.startAt && args.endAt);
-
-    if (!shouldHold) {
-      await this.occupancy.release(tx, OCCUPANCY_SOURCE_TYPE.MAINTENANCE, args.recordId);
-      return;
-    }
-    if (args.hadSchedule) {
-      await this.occupancy.reschedule(
-        tx,
-        OCCUPANCY_SOURCE_TYPE.MAINTENANCE,
-        args.recordId,
-        args.startAt!,
-        args.endAt!,
-      );
-      return;
-    }
-    await this.occupancy.reserve(tx, {
-      tenantId: args.tenantId,
-      vehicleId: args.vehicleId,
-      sourceType: OCCUPANCY_SOURCE_TYPE.MAINTENANCE,
-      sourceId: args.recordId,
-      startAt: args.startAt!,
-      endAt: args.endAt!,
-    });
-  }
-
-  /**
-   * Chạy thao tác có ghi lịch và dịch va chạm của exclusion constraint (ADR 0006) thành
-   * 409 kèm KHOẢNG bị trùng — người dùng cần biết vướng cái gì để đổi ngày, không phải một
-   * dòng "lỗi hệ thống". Constraint vẫn là lớp bảo vệ; đây chỉ là lớp diễn giải.
-   */
-  private async runWithScheduleConflict(
-    vehicleId: string,
-    startAt: Date | null,
-    endAt: Date | null,
-    operation: () => Promise<void>,
-  ): Promise<void> {
-    try {
-      await operation();
-    } catch (err) {
-      if (!isExclusionViolation(err) || !startAt || !endAt) throw err;
-      const conflicts = await this.occupancy.findOverlapping(vehicleId, startAt, endAt);
-      const detailed = await this.describeConflicts(conflicts);
-      throw new ConflictException({
-        code: API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT,
-        message: 'Xe đã có lịch khác trùng khoảng thời gian này',
-        details: { conflicts: detailed },
-      });
-    }
-  }
-
-  /** Khoảng bị trùng kèm nhãn nguồn — đủ để UI nói "vướng đơn nào / lịch nào". */
-  private async describeConflicts(
-    conflicts: Array<{ id: string; sourceType: string; sourceId: string }>,
-  ): Promise<Array<{ sourceType: string; startAt: string; endAt: string; label: string }>> {
-    if (conflicts.length === 0) return [];
-    const rows = await this.prisma.vehicleOccupancy.findMany({
-      where: { id: { in: conflicts.map((c) => c.id) } },
-      select: { sourceType: true, sourceId: true, startAt: true, endAt: true },
-      orderBy: { startAt: 'asc' },
-    });
-    const bookingIds = rows
-      .filter((row) => row.sourceType === OCCUPANCY_SOURCE_TYPE.BOOKING)
-      .map((row) => row.sourceId);
-    const bookings = bookingIds.length
-      ? await this.prisma.booking.findMany({
-          where: { id: { in: bookingIds } },
-          select: { id: true, code: true },
-        })
-      : [];
-    const codeById = new Map(bookings.map((b) => [b.id, b.code]));
-
-    return rows.map((row) => ({
-      sourceType: row.sourceType,
-      startAt: row.startAt.toISOString(),
-      endAt: row.endAt.toISOString(),
-      label:
-        row.sourceType === OCCUPANCY_SOURCE_TYPE.BOOKING
-          ? `Đơn thuê ${codeById.get(row.sourceId) ?? ''}`.trim()
-          : row.sourceType === OCCUPANCY_SOURCE_TYPE.MAINTENANCE
-            ? 'Lịch bảo dưỡng khác'
-            : // Nhãn của mọi nguồn còn lại lấy từ META, KHÔNG rơi hết về "Xe bị khóa": một khoản
-              // giữ chỗ (`booking_request`) không phải là một lệnh khoá xe, và nói sai ở đây thì
-              // người xếp lịch bảo dưỡng đi tìm nhầm chỗ để gỡ.
-              (OCCUPANCY_SOURCE_TYPE_META[row.sourceType as OccupancySourceType]?.label ??
-              OCCUPANCY_SOURCE_TYPE_META[OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE].label),
-    }));
   }
 
   /** Đính file đã xác minh vào phiếu; DB chặn file của tenant/xe khác bằng composite FK. */
@@ -1275,7 +1121,7 @@ export class MaintenanceService {
       vehicleId: input.vehicleId,
       occurredAt: input.occurredAt,
       referenceCode: input.receiptCode,
-      description: `${label} — ${vehicleLabel}`,
+      description: `${label} - ${vehicleLabel}`,
     });
 
     // `receipt_code` là ô chứng từ người dùng tự nhập (docblock Wave 6 đã chừa chỗ này). Chưa
@@ -1494,18 +1340,6 @@ function assertRecordInput(dto: SaveMaintenanceRecordDto): void {
   if (dto.type === MAINTENANCE_TYPE.OTHER && !dto.customTypeName?.trim()) {
     fields.push({ field: 'customTypeName', message: 'Hạng mục khác cần có tên' });
   }
-  const start = toDateTime(dto.plannedStartAt);
-  const end = toDateTime(dto.plannedEndAt);
-  if (start && end && end <= start) {
-    fields.push({ field: 'plannedEndAt', message: 'Thời điểm kết thúc phải sau thời điểm bắt đầu' });
-  }
-  // Một đầu mốc không có nghĩa cho việc giữ chỗ trên lịch — đòi đủ cặp hoặc không có gì.
-  if (Boolean(start) !== Boolean(end)) {
-    fields.push({
-      field: start ? 'plannedEndAt' : 'plannedStartAt',
-      message: 'Cần đủ cả thời điểm bắt đầu và kết thúc để giữ lịch xe',
-    });
-  }
   if (fields.length > 0) {
     throw new BadRequestException({
       code: API_ERROR_CODE.VALIDATION_FAILED,
@@ -1527,16 +1361,6 @@ function assertTransition(from: MaintenanceStatus, to: MaintenanceStatus): void 
 
 function isClosed(status: MaintenanceStatus): boolean {
   return status === MAINTENANCE_STATUS.COMPLETED || status === MAINTENANCE_STATUS.CANCELED;
-}
-
-/** Va chạm exclusion constraint đến qua Prisma (P2010/meta) hoặc thông điệp tên constraint. */
-function isExclusionViolation(err: unknown): boolean {
-  if (typeof err !== 'object' || err === null) return false;
-  const code = (err as { code?: unknown }).code;
-  const meta = (err as { meta?: { code?: unknown } }).meta;
-  if (code === '23P01' || (code === 'P2010' && String(meta?.code) === '23P01')) return true;
-  const message = (err as { message?: unknown }).message;
-  return typeof message === 'string' && message.includes('vehicle_occupancies_no_overlap');
 }
 
 function trimOrNull(value: string | null | undefined): string | null {
@@ -1566,14 +1390,14 @@ function recordNotFound(): NotFoundException {
 function staleRecord(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.CONFLICT,
-    message: 'Phiếu bảo dưỡng vừa được người khác cập nhật — tải lại rồi thử lại',
+    message: 'Phiếu bảo dưỡng vừa được người khác cập nhật - tải lại rồi thử lại',
   });
 }
 
 function staleProfile(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.CONFLICT,
-    message: 'Hồ sơ bảo dưỡng vừa được người khác cập nhật — tải lại rồi thử lại',
+    message: 'Hồ sơ bảo dưỡng vừa được người khác cập nhật - tải lại rồi thử lại',
   });
 }
 

@@ -33,6 +33,9 @@ const SUPPORT_ALLOWLIST = [
   'VehiclesController.update',
   // ── Đợt 2A: CHỈ ĐỌC, mỗi lĩnh vực một capability ──
   'BookingHandoversController.context',
+  // "Đơn đã kết thúc" (05/11/2026) — chỉ đọc, cùng capability xem đơn; dòng yêu cầu tự ẩn khi
+  // phiên không có `booking_request.view`.
+  'BookingHistoryController.list',
   // Giấy chứng nhận + tình trạng bảo hiểm của đơn (ADR 0064 điều 10) — chỉ đọc, cùng capability xem đơn.
   'BookingInsuranceController.coverage',
   'BookingInsuranceController.list',
@@ -57,14 +60,33 @@ const SUPPORT_ALLOWLIST = [
   'DriversController.list',
   // Chi tiết một tài xế (tiền công tháng, độ tin cậy, xu hướng) — chỉ đọc, cùng capability xem tài xế.
   'DriversController.overview',
+  // Dải số đếm đầu màn Tài xế (04/11/2026) — cùng dữ liệu với danh sách, cùng capability.
+  'DriversController.summary',
   'DriversController.wageSettings',
   'HandoverQueueController.missingOdometer',
   'InvitesController.list',
   'MaintenanceBoardController.list',
   'MaintenanceBoardController.summary',
   'MembersController.list',
+  // Tài khoản nhân viên do chủ cấp (ADR 0087, PR #289): danh bạ, bảng vai trò, nhật ký một nhân viên
+  // — đều CHỈ ĐỌC, cùng capability `member.view` với `list`.
+  'MembersController.activity',
+  'MembersController.roles',
+  'MembersController.roster',
   'PartnerDashboardController.overview',
+  // Huy hiệu menu site partner (02–04/11/2026): cùng dữ liệu với Tổng quan / danh sách, cùng
+  // capability đọc (`booking.view` · `booking_request.view` · `vehicle.view`) — vỏ trang trong
+  // phiên hỗ trợ gọi chúng mỗi phút, chặn là menu của người hỗ trợ đỏ 403 ở mọi trang.
+  'PartnerDashboardController.requests',
+  'PartnerDashboardController.today',
+  'VehiclesController.needsActionCount',
+  // Thời gian chết mặc định (06/11/2026) đứng cạnh chính sách thuê, cùng capability chỉ đọc.
+  // `ShopOperationDefaultsController.save` (PUT) CỐ Ý không vào phiên.
+  'ShopOperationDefaultsController.get',
   'ShopPoliciesController.get',
+  // Một phiếu thanh toán gộp theo id (ADR 0083) — CHỈ ĐỌC, cùng `subscription_status.view` với
+  // hoá đơn. Lối MUA (`purchase` · `createCheckout`) CỐ Ý không vào phiên.
+  'SubscriptionController.checkout',
   // Một hoá đơn theo id — cùng dữ liệu với danh sách, cùng `subscription_status.view` (ADR 0050).
   'SubscriptionController.invoice',
   'SubscriptionController.invoices',

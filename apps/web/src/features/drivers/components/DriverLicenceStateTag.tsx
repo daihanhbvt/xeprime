@@ -7,7 +7,7 @@ import { holderNameDiffers, LIST_SEPARATOR } from '@xeprime/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import type { DriverLicenceSummary } from '../types';
-import styles from './DriversPage.module.css';
+import styles from './DriverLicenceStateTag.module.css';
 
 const COLOR: Readonly<Record<string, string>> = {
   [DRIVER_LICENCE_STATE.VERIFIED]: 'green',
@@ -17,7 +17,7 @@ const COLOR: Readonly<Record<string, string>> = {
 
 /**
  * Bằng lái của tài xế nhìn từ phía bên thuê (ADR 0063): mức + hạng/hạn, cùng HỌ TÊN và LOẠI bằng
- * khi đã xác thực để bên thuê đối chiếu đúng người — không ảnh, không số bằng. Dùng chung cho bảng tài xế và bộ chọn gán đơn.
+ * khi đã xác thực để bên thuê đối chiếu đúng người — không ảnh, không số bằng. Dùng ở tab Hồ sơ của ngăn chi tiết tài xế và bộ chọn gán đơn.
  */
 export function DriverLicenceStateTag({
   licence,

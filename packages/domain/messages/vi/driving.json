@@ -6,7 +6,7 @@
   },
   "links": {
     "heading": "Nơi tôi làm tài xế",
-    "sub": "Lời mời và các bên (gian hàng, chủ xe) bạn đang lái xe cho. Chuyến được gán nằm ở tab \"Chuyến tôi lái\" trong Chuyến của tôi.",
+    "sub": "Lời mời và các bên (gian hàng, chủ xe) bạn đang lái xe cho. Chuyến được gán nằm ở tab \"Chuyến tôi lái\" trong Chuyến đi.",
     "scopeLabel": "Phạm vi",
     "scopeOpen": "Hiện tại",
     "scopeClosed": "Đã kết thúc",
@@ -26,7 +26,7 @@
     "declineConfirm": "Từ chối lời mời này?",
     "leave": "Ngừng làm tài xế",
     "leaveConfirm": "Ngừng làm tài xế cho bên này? Các chuyến sắp tới đang gán cho bạn sẽ được gỡ.",
-    "suspendedHint": "Bên thuê đang tạm khoá — bạn sẽ không được gán chuyến mới.",
+    "suspendedHint": "Bên thuê đang tạm khoá - bạn sẽ không được gán chuyến mới.",
     "viewTrips": "Xem chuyến tôi lái"
   },
   "trips": {
@@ -72,11 +72,11 @@
     "actualPickupAt": "Đã đón lúc {time}",
     "actualReturnAt": "Đã kết thúc lúc {time}",
     "pendingTitle": "Bên thuê gán bạn vào chuyến này",
-    "pendingBody": "Nhận chuyến để xác nhận bạn sẽ lái. Nếu từ chối — hoặc quá hạn mà chưa trả lời — chuyến quay về bên thuê để gán tài xế khác.",
+    "pendingBody": "Nhận chuyến để xác nhận bạn sẽ lái. Nếu từ chối - hoặc quá hạn mà chưa trả lời - chuyến quay về bên thuê để gán tài xế khác.",
     "accept": "Nhận chuyến",
     "decline": "Từ chối",
     "declineConfirm": "Từ chối chuyến này?",
-    "emptyValue": "—",
+    "emptyValue": "-",
     "dropFreeUntil": "Rút không bị phạt trước {time}."
   },
   "toast": {
@@ -86,7 +86,7 @@
     "tripAccepted": "Đã nhận chuyến",
     "tripDeclined": "Đã từ chối chuyến",
     "tripReleased": "Đã trả lại chuyến cho chủ xe",
-    "tripDropped": "Đã báo sự cố — chủ xe sẽ sắp xếp tài xế khác"
+    "tripDropped": "Đã báo sự cố - chủ xe sẽ sắp xếp tài xế khác"
   },
   "outcome": {
     "declined": "Bạn đã từ chối",
@@ -181,7 +181,7 @@
   },
   "respond": {
     "remaining": "Trả lời trong",
-    "expired": "Đã quá hạn trả lời — chuyến được trả lại cho bên thuê"
+    "expired": "Đã quá hạn trả lời - chuyến được trả lại cho bên thuê"
   },
   "drop": {
     "title": "Báo sự cố chuyến {code}",
@@ -191,8 +191,8 @@
     "notePlaceholder": "Ví dụ: sốt cao, không thể lái xe an toàn",
     "keepsBooking": "Đơn của khách KHÔNG bị huỷ. Chủ xe sẽ được báo khẩn để gán tài xế khác.",
     "penalty": {
-      "grace": "Bạn vẫn trong thời gian được trả lại chuyến — không bị ghi vi phạm.",
-      "far": "Còn hơn 12 giờ tới giờ đón — lượt rút được ghi nhận là vi phạm nhẹ, không bị tạm ngưng nhận chuyến.",
+      "grace": "Bạn vẫn trong thời gian được trả lại chuyến - không bị ghi vi phạm.",
+      "far": "Còn hơn 12 giờ tới giờ đón - lượt rút được ghi nhận là vi phạm nhẹ, không bị tạm ngưng nhận chuyến.",
       "cooldown": "Lượt rút này bị ghi vi phạm và bạn sẽ không được tự động nhận chuyến \"Đặt ngay\" trong {hours} giờ."
     },
     "errors": {

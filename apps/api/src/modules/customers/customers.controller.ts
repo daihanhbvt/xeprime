@@ -20,8 +20,11 @@ import { CustomersService } from './customers.service';
 import {
   CreateCustomerNoteDto,
   CreateTenantCustomerDto,
+  CustomerBookingHistoryQueryDto,
   CustomerBookingListQueryDto,
   CustomerBookingPageDto,
+  CustomerRevenueDto,
+  CustomerRevenueQueryDto,
   CustomerNoteDto,
   CustomerNotePageDto,
   TenantCustomerDetailDto,
@@ -88,7 +91,7 @@ export class CustomersController {
   @ApiOperation({
     summary: 'Thêm khách vào sổ',
     description:
-      'SĐT bắt buộc và là định danh — trùng với khách khác trả 409 CUSTOMER_PHONE_DUPLICATE.',
+      'SĐT bắt buộc và là định danh - trùng với khách khác trả 409 CUSTOMER_PHONE_DUPLICATE.',
   })
   @ApiCreatedResponse({ type: TenantCustomerDetailDto })
   create(
@@ -122,7 +125,7 @@ export class CustomersController {
   @ApiOperation({
     summary: 'Sửa hồ sơ khách',
     description:
-      'Không đụng tới snapshot tên/SĐT trên đơn thuê và yêu cầu cũ — đó là sự thật của giao dịch.',
+      'Không đụng tới snapshot tên/SĐT trên đơn thuê và yêu cầu cũ - đó là sự thật của giao dịch.',
   })
   @ApiOkResponse({ type: TenantCustomerDetailDto })
   update(
@@ -136,7 +139,7 @@ export class CustomersController {
 
   @Post(':id/archive')
   @RequirePermissions(PERMISSION.CUSTOMER_MANAGE)
-  @ApiOperation({ summary: 'Lưu trữ hồ sơ khách (soft — lịch sử đơn giữ nguyên)' })
+  @ApiOperation({ summary: 'Lưu trữ hồ sơ khách (soft - lịch sử đơn giữ nguyên)' })
   @ApiOkResponse({ type: TenantCustomerDetailDto })
   archive(
     @CurrentTenant() tenant: TenantContext,
@@ -190,9 +193,25 @@ export class CustomersController {
   bookings(
     @CurrentTenant() tenant: TenantContext,
     @Param('id') id: string,
-    @Query() query: CustomerBookingListQueryDto,
+    @Query() query: CustomerBookingHistoryQueryDto,
   ): Promise<CustomerBookingPageDto> {
     return this.customers.bookings(tenant.tenantId, id, query, canViewFinance(tenant));
+  }
+
+  /**
+   * Tab "Thu chi" của hồ sơ khách (02/11/2026) — tiền, nên đòi `finance.view` cùng quyền xem khách
+   * và quyền xem đơn (bảng khoản phải thu liệt kê đơn).
+   */
+  @Get(':id/revenue')
+  @RequirePermissions(PERMISSION.CUSTOMER_VIEW, PERMISSION.BOOKING_VIEW, PERMISSION.FINANCE_VIEW)
+  @ApiOperation({ summary: 'Doanh thu từ khách theo kỳ + khoản phải thu đang mở' })
+  @ApiOkResponse({ type: CustomerRevenueDto })
+  revenue(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+    @Query() query: CustomerRevenueQueryDto,
+  ): Promise<CustomerRevenueDto> {
+    return this.customers.revenue(tenant.tenantId, id, query.period ?? 'month');
   }
 
   @Get(':id/notes')

@@ -6,7 +6,6 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PERMISSION } from '@xeprime/types';
 import type { VehicleDetail } from '@/features/vehicles/types';
-import { ApiClientError } from '@/services/api-client';
 import { VehicleMaintenanceWorkspace } from './VehicleMaintenanceWorkspace';
 import type { MaintenanceProfile, MaintenanceRecord } from '../types';
 
@@ -100,7 +99,7 @@ function recordOf(overrides: Partial<MaintenanceRecord> = {}): MaintenanceRecord
     title: 'Thay dầu động cơ & Lọc dầu',
     status: 'scheduled',
     plannedStartAt: '2026-08-20T01:00:00.000Z',
-    plannedEndAt: '2026-08-20T05:00:00.000Z',
+    plannedEndAt: null,
     completedAt: null,
     odometerKm: null,
     providerName: 'Toyota Đông Sài Gòn',
@@ -146,7 +145,7 @@ describe('Tab Bảo dưỡng & KM (Wave 6)', () => {
     renderTab();
     expect(screen.getByText(/Chế độ xem/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Điều chỉnh thủ công/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /Thêm bảo dưỡng/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Thêm lịch bảo dưỡng/ })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Lưu thay đổi' })).toBeNull();
   });
 
@@ -251,76 +250,47 @@ describe('Tab Bảo dưỡng & KM (Wave 6)', () => {
     expect(api.correctOdometer).not.toHaveBeenCalled();
   });
 
-  it('mốc thời gian gửi lên là ISO 8601, không phải chuỗi hiển thị dd/MM/yyyy', async () => {
+  it('một ngày dự kiến: gửi 00:00 giờ Việt Nam của ngày đó, không có mốc kết thúc', async () => {
     api.createMaintenanceRecord.mockResolvedValue(recordOf());
     renderTab();
-    fireEvent.click(screen.getByRole('button', { name: /Thêm bảo dưỡng/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Thêm lịch bảo dưỡng/ }));
 
     // Gõ thẳng vào ô ngày như người dùng thật (DatePicker nhận định dạng hiển thị).
-    const start = await screen.findByLabelText('Bắt đầu dự kiến');
-    fireEvent.change(start, { target: { value: '16/08/2026 12:00' } });
-    fireEvent.keyDown(start, { key: 'Enter', code: 'Enter' });
-    const end = screen.getByLabelText('Kết thúc dự kiến');
-    fireEvent.change(end, { target: { value: '17/08/2026 08:45' } });
-    fireEvent.keyDown(end, { key: 'Enter', code: 'Enter' });
+    const date = await screen.findByLabelText('Ngày dự kiến');
+    fireEvent.change(date, { target: { value: '16/08/2026' } });
+    fireEvent.keyDown(date, { key: 'Enter', code: 'Enter' });
+    // Lịch chỉ để nhắc (ADR 0079): không còn ô kết thúc.
+    expect(screen.queryByLabelText('Kết thúc dự kiến')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Tạo lịch' }));
     await waitFor(() => expect(api.createMaintenanceRecord).toHaveBeenCalledTimes(1));
 
-    const [, body] = api.createMaintenanceRecord.mock.calls[0] as [
-      string,
-      { plannedStartAt: string | null; plannedEndAt: string | null },
-    ];
-    const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
-    expect(body.plannedStartAt).toMatch(ISO);
-    expect(body.plannedEndAt).toMatch(ISO);
-    // Mốc gửi đi phải đúng thời điểm người dùng chọn (UTC+7 → UTC).
-    expect(body.plannedStartAt).toBe('2026-08-16T05:00:00.000Z');
-    expect(body.plannedEndAt).toBe('2026-08-17T01:45:00.000Z');
+    const [, body] = api.createMaintenanceRecord.mock.calls[0] as [string, Record<string, unknown>];
+    // 16/08/2026 00:00 giờ VN (UTC+7) = 15/08 17:00 UTC.
+    expect(body.plannedStartAt).toBe('2026-08-15T17:00:00.000Z');
+    expect('plannedEndAt' in body).toBe(false);
   });
 
-  it('chỉ nhập một đầu mốc: chặn ở form vì lịch cần đủ cặp mới giữ chỗ được', async () => {
+  it('lịch sắp tới hiện MỘT ngày dự kiến, không hiện khoảng giờ', () => {
+    queries.records = { data: [recordOf()], isLoading: false, isError: false };
     renderTab();
-    fireEvent.click(screen.getByRole('button', { name: /Thêm bảo dưỡng/ }));
-    const start = await screen.findByLabelText('Bắt đầu dự kiến');
-    fireEvent.change(start, { target: { value: '16/08/2026 12:00' } });
-    fireEvent.keyDown(start, { key: 'Enter', code: 'Enter' });
-    fireEvent.click(screen.getByRole('button', { name: 'Tạo lịch' }));
-
-    expect(await screen.findByText('Nhập thời điểm kết thúc để giữ lịch xe')).toBeTruthy();
-    expect(api.createMaintenanceRecord).not.toHaveBeenCalled();
+    expect(screen.getByText('Ngày dự kiến')).toBeTruthy();
+    expect(screen.getByText('20/08/2026')).toBeTruthy();
+    expect(screen.queryByText(/20\/08\/2026 \d{2}:\d{2}/)).toBeNull();
   });
 
-  it('trùng lịch: hiện KHOẢNG bị trùng và GIỮ NGUYÊN dữ liệu đã nhập', async () => {
-    api.createMaintenanceRecord.mockRejectedValue(
-      new ApiClientError({
-        code: 'BOOKING_SCHEDULE_CONFLICT',
-        message: 'trùng lịch',
-        status: 409,
-        details: {
-          conflicts: [
-            {
-              sourceType: 'booking',
-              label: 'Đơn thuê BK-001',
-              startAt: '2026-08-20T00:00:00.000Z',
-              endAt: '2026-08-22T00:00:00.000Z',
-            },
-          ],
-        },
-      }),
-    );
+  it('thùng rác = huỷ lịch: hỏi lại rồi gửi rowVersion', async () => {
+    queries.records = { data: [recordOf()], isLoading: false, isError: false };
+    api.cancelMaintenanceRecord.mockResolvedValue(recordOf({ status: 'canceled' }));
     renderTab();
-    fireEvent.click(screen.getByRole('button', { name: /Thêm bảo dưỡng/ }));
-    const titleInput = await screen.findByLabelText('Mô tả ngắn');
-    fireEvent.change(titleInput, { target: { value: 'Bảo dưỡng mốc 45.000 km' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Tạo lịch' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hủy lịch' }));
 
-    const alert = await screen.findByRole('alert');
-    expect(alert.textContent).toContain('Đơn thuê BK-001');
-    // Form không bị xoá: người dùng chỉ cần đổi ngày.
-    expect((screen.getByLabelText('Mô tả ngắn') as HTMLInputElement).value).toBe(
-      'Bảo dưỡng mốc 45.000 km',
-    );
+    const confirm = await screen.findByRole('dialog');
+    expect(confirm.textContent).toContain('trạng thái Đã hủy');
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Hủy lịch' }));
+
+    await waitFor(() => expect(api.cancelMaintenanceRecord).toHaveBeenCalledTimes(1));
+    expect(api.cancelMaintenanceRecord).toHaveBeenCalledWith('vehicle-1', 'record-1', 1);
   });
 
   it('hoàn tất phiếu gửi rowVersion và nói rõ hệ quả với lịch xe + mốc thay nhớt', async () => {
@@ -329,7 +299,7 @@ describe('Tab Bảo dưỡng & KM (Wave 6)', () => {
     renderTab();
     fireEvent.click(screen.getByRole('button', { name: 'Hoàn tất' }));
 
-    expect(await screen.findByText(/giải phóng lịch xe/)).toBeTruthy();
+    expect(await screen.findByText(/cập nhật KM hiện tại/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Odo bảo dưỡng'), { target: { value: '45500' } });
     fireEvent.click(screen.getByRole('button', { name: 'Lưu bảo dưỡng' }));
 
@@ -343,18 +313,30 @@ describe('Tab Bảo dưỡng & KM (Wave 6)', () => {
     expect(body.expectedRowVersion).toBe(1);
   });
 
-  it('không có quyền tiền: chi phí vắng mặt khỏi dòng lịch sử (server đã lược)', () => {
+  it('lịch sử bảo dưỡng mở trong hộp thoại; thiếu quyền tiền thì không có chi phí', async () => {
     permissions.granted = new Set([PERMISSION.VEHICLE_MAINTENANCE_VIEW]);
     // Server không gửi `cost` cho vai trò thiếu quyền — dòng vẫn hiển thị đủ việc cần biết.
     queries.records = {
-      data: [recordOf({ status: 'completed', completedAt: '2026-07-15T02:00:00.000Z' })],
+      data: [
+        recordOf({ status: 'completed', completedAt: '2026-07-15T02:00:00.000Z' }),
+        recordOf({ id: 'record-2', title: 'Thay lốp', status: 'canceled' }),
+      ],
       isLoading: false,
       isError: false,
     };
-    const view = renderTab();
-    const historyCard = view.container.textContent ?? '';
-    expect(historyCard).toContain('Thay dầu động cơ & Lọc dầu');
-    expect(historyCard).not.toContain('₫');
+    renderTab();
+    // Không còn thẻ lịch sử trên trang — chỉ còn nút mở hộp.
+    expect(screen.queryByText('Thay lốp')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Xem lịch sử bảo dưỡng/ }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.textContent).toContain('Thay dầu động cơ & Lọc dầu');
+    expect(dialog.textContent).toContain('Thay lốp');
+    expect(within(dialog).getByText('Hoàn tất')).toBeTruthy();
+    expect(within(dialog).getByText('Đã hủy')).toBeTruthy();
+    expect(within(dialog).getByText('Ngày hoàn tất')).toBeTruthy();
+    expect(dialog.textContent).not.toContain('₫');
+    expect(within(dialog).queryByRole('button', { name: 'Sửa' })).toBeNull();
   });
 
   it('mobile: hành động trên dòng phiếu giữ vùng chạm tối thiểu 44px', () => {
@@ -371,7 +353,7 @@ describe('Tab Bảo dưỡng & KM (Wave 6)', () => {
  * CÙNG tab, trong phiên hỗ trợ gian hàng (ADR 0050): phiên chỉ TẠO và SỬA phiếu. Hoàn tất phiếu
  * (ghi KM, dời mốc, sinh phiếu chi) và sửa chu kỳ nằm ngoài Đợt 1 — backend cũng chặn.
  */
-describe('Tab Bảo dưỡng & KM — trong phiên hỗ trợ', () => {
+describe('Tab Bảo dưỡng & KM - trong phiên hỗ trợ', () => {
   function renderInSupport() {
     const context = supportContextFixture({ workspace: SUPPORT_WORKSPACE.MANAGE });
     return render(
@@ -386,9 +368,10 @@ describe('Tab Bảo dưỡng & KM — trong phiên hỗ trợ', () => {
   it('vẫn thêm và sửa được phiếu; KHÔNG có Hoàn tất, KHÔNG lưu được chu kỳ', () => {
     queries.records = { data: [recordOf()], isLoading: false, isError: false };
     renderInSupport();
-    expect(screen.getByRole('button', { name: /Thêm bảo dưỡng/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Thêm lịch bảo dưỡng/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Sửa' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Hoàn tất' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Hủy lịch' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Lưu thay đổi' })).toBeNull();
   });
 });
@@ -398,7 +381,7 @@ describe('Tab Bảo dưỡng & KM — trong phiên hỗ trợ', () => {
  * riêng phiên hỗ trợ. Trước đây form luôn gửi `cost: null`, nên một nhân viên thiếu quyền tiền sửa
  * ghi chú là xoá chi phí của phiếu.
  */
-describe('Phiếu bảo dưỡng — chi phí và lịch theo quyền', () => {
+describe('Phiếu bảo dưỡng - chi phí và lịch theo quyền', () => {
   async function saveEdit(render: () => unknown) {
     queries.records = {
       data: [recordOf({ cost: '500000', receiptCode: 'PC-01' } as Partial<MaintenanceRecord>)],
@@ -453,8 +436,7 @@ describe('Phiếu bảo dưỡng — chi phí và lịch theo quyền', () => {
         </App>,
       );
     });
-    expect((screen.getByLabelText('Bắt đầu dự kiến') as HTMLInputElement).disabled).toBe(true);
-    expect((screen.getByLabelText('Kết thúc dự kiến') as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByLabelText('Ngày dự kiến') as HTMLInputElement).disabled).toBe(true);
     for (const key of ['plannedStartAt', 'plannedEndAt', 'odometerKm']) {
       expect(key in body).toBe(false);
     }

@@ -57,3 +57,34 @@
     text-align: center;
   }
 }
+
+/*
+ * Từng KHỐI của tab con (số dư: tổng quan, tài khoản nhận tiền, lệnh rút, sổ; lịch sử: bộ lọc,
+ * danh sách) hiện dần khi cuộn tới - cùng nhịp với `.content > * > *` của AccountShell, vốn chỉ
+ * với tới khung tab. Chỉ opacity + translate; không có `view()` thì đứng yên.
+ */
+@supports (animation-timeline: view()) {
+  .body > * > * {
+    animation: paymentsBlockEnter linear backwards;
+    animation-timeline: view();
+    animation-range: entry 0% entry 55%;
+  }
+}
+
+@keyframes paymentsBlockEnter {
+  from {
+    opacity: 0;
+    translate: 0 28px;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .body > * > * {
+    animation: none;
+  }
+}

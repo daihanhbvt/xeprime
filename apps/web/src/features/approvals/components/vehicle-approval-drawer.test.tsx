@@ -152,7 +152,7 @@ describe('Header + nguồn đăng', () => {
     expect(screen.getByText('Gian hàng: Huế Rental')).toBeTruthy();
   });
 
-  it('xe máy cá nhân: chip chỉ "Cá nhân" — không kèm tên người', () => {
+  it('xe máy cá nhân: chip chỉ "Cá nhân" - không kèm tên người', () => {
     renderDrawer(motorbikeReview());
 
     expect(screen.queryByText(/^Cá nhân: /)).toBeNull();
@@ -225,7 +225,7 @@ describe('Hồ sơ theo loại xe / nguồn năng lượng', () => {
     expect(valueFor('Giao xe tận nơi')).toBe('Bật');
     expect(valueFor('Bán kính giao xe tối đa')).toBe('30 km');
     expect(valueFor('Miễn phí giao xe')).toBe('Trong 5 km');
-    expect(valueFor('Phí giao xe')).toMatch(/5–30 km: 150\.000/);
+    expect(valueFor('Phí giao xe')).toMatch(/5-30 km: 150\.000/);
     expect(valueFor('Giới hạn quãng đường')).toBe('300 km/ngày');
     expect(valueFor('Phí vượt giới hạn')).toMatch(/3\.000.*\/km/);
     expect(valueFor('Điều khoản riêng')).toBe('Xuất trình giấy phép lái xe khi nhận xe');
@@ -277,7 +277,7 @@ describe('Không có giấy tờ nào chưa được thu thập', () => {
 });
 
 describe('Danh mục kiểm tra', () => {
-  it('tự động: chấm bằng cổng gửi duyệt — chỉ mục áp dụng, mục thiếu là "Chưa đạt"', () => {
+  it('tự động: chấm bằng cổng gửi duyệt - chỉ mục áp dụng, mục thiếu là "Chưa đạt"', () => {
     const base = carReview();
     renderDrawer({ ...base, vehicle: { ...base.vehicle, plateNumber: null } });
 
@@ -323,7 +323,7 @@ describe('Quyết định', () => {
     expect(within(alert).getByText('Biển số')).toBeTruthy();
     expect(within(alert).getByText('Đủ các góc ảnh bắt buộc')).toBeTruthy();
     expect(
-      screen.getByText('Xe đã khác hồ sơ gửi duyệt — chỉ có thể yêu cầu bổ sung hoặc từ chối'),
+      screen.getByText('Xe đã khác hồ sơ gửi duyệt - chỉ có thể yêu cầu bổ sung hoặc từ chối'),
     ).toBeTruthy();
     // Lối đi tiếp vẫn mở.
     expect(screen.getByRole('button', { name: 'Yêu cầu bổ sung' })).toHaveProperty(

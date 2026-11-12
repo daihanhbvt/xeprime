@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
+  API_ERROR_CODE,
   MAINTENANCE_DUE_STATUS,
   MAINTENANCE_DUE_STATUS_META,
   MAINTENANCE_STATUS,
@@ -23,6 +24,7 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { OdometerCorrectionSheet } from './components/OdometerCorrectionSheet';
+import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Button } from '@/components/ui/Button';
 import { BlockLink, BlockTitle } from '@/components/ui/BlockTitle';
 import { Callout } from '@/components/ui/Callout';
@@ -43,6 +45,7 @@ import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { getErrorCode } from '@/lib/api-client';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { goBackOr } from '@/navigation/go-back-or';
@@ -56,6 +59,7 @@ import {
   useMaintenanceRecords,
   useOdometerHistory,
   useSaveMaintenanceProfile,
+  useTransitionMaintenanceRecord,
 } from './hooks/use-maintenance';
 import { MaintenanceRecordSheet, type RecordSheetMode } from './components/MaintenanceRecordSheet';
 import type { MaintenanceProfile, MaintenanceRecord } from './api';
@@ -639,17 +643,42 @@ function RecordRow({
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const { has } = usePermissions();
+  const tMaintenance = useTranslations('Maintenance');
+  const toast = useAppToast();
+  const errorMessage = useErrorMessage();
+  const transition = useTransitionMaintenanceRecord(record.vehicleId);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+
+  /** Thùng rác của design = HUỶ lịch: phiếu ở lại lịch sử với nhãn "Đã huỷ" — như web. */
+  function cancelSchedule() {
+    transition.mutate(
+      { action: 'cancel', recordId: record.id, expectedRowVersion: record.rowVersion },
+      {
+        onSuccess: () => {
+          setConfirmingCancel(false);
+          toast.showSuccess(tMaintenance('toast.canceled'));
+        },
+        onError: (error) => {
+          setConfirmingCancel(false);
+          toast.showError(
+            getErrorCode(error) === API_ERROR_CODE.CONFLICT
+              ? tMaintenance('toast.staleRecord')
+              : errorMessage(error),
+          );
+        },
+      },
+    );
+  }
 
   const status = record.status as MaintenanceStatus;
   const meta = MAINTENANCE_STATUS_META[status];
 
   const when = record.completedAt
     ? fmt.date(record.completedAt)
-    : record.plannedStartAt && record.plannedEndAt
-      ? fmt.shortDateTimeRange(record.plannedStartAt, record.plannedEndAt)
-      : record.plannedStartAt
-        ? fmt.dateTime(record.plannedStartAt)
-        : null;
+    : // Một NGÀY dự kiến (ADR 0079) — phiếu cũ có mốc kết thúc vẫn chỉ hiện ngày bắt đầu, như web.
+      record.plannedStartAt
+      ? fmt.date(record.plannedStartAt)
+      : null;
 
   const line = [
     when,
@@ -716,6 +745,25 @@ function RecordRow({
           </YStack>
         </XStack>
       ) : null}
+      {canManage ? (
+        <Button
+          label={tMaintenance('actions.cancelSchedule')}
+          icon="trash-outline"
+          variant="ghostDanger"
+          size="sm"
+          onPress={() => setConfirmingCancel(true)}
+        />
+      ) : null}
+      <AlertDialog
+        open={confirmingCancel}
+        title={tMaintenance('actions.cancelSchedule')}
+        message={tMaintenance('actions.cancelScheduleConfirm')}
+        confirmLabel={tMaintenance('actions.cancelSchedule')}
+        destructive
+        loading={transition.isPending}
+        onCancel={() => setConfirmingCancel(false)}
+        onConfirm={cancelSchedule}
+      />
     </YStack>
   );
 }

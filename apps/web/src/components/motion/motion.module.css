@@ -87,6 +87,40 @@
   --motion-delay: 1.2s;
 }
 
+/*
+ * So le NHANH cho lưới kết quả/danh sách dài: mục n trễ n × `--xp-motion-stagger-step`, trượt ngắn
+ * hơn (một nửa khoảng reveal) và nhanh hơn để trang 48 xe không phải chờ 1.2s. Từ mục 13 đứng yên
+ * ở bậc 12. Mục mới (đổi bộ lọc, trang sau) tự chạy khi được gắn vào DOM.
+ */
+@keyframes xpFadeInUpShort {
+  from {
+    opacity: 0;
+    transform: translate3d(0, calc(var(--xp-motion-distance-reveal) / 2), 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.staggerFast > * {
+  animation: xpFadeInUpShort calc(var(--xp-motion-duration-reveal) * 0.6) var(--xp-motion-ease-out)
+    calc(var(--stagger-index, 0) * var(--xp-motion-stagger-step)) both;
+}
+
+.staggerFast > :nth-child(2) { --stagger-index: 1; }
+.staggerFast > :nth-child(3) { --stagger-index: 2; }
+.staggerFast > :nth-child(4) { --stagger-index: 3; }
+.staggerFast > :nth-child(5) { --stagger-index: 4; }
+.staggerFast > :nth-child(6) { --stagger-index: 5; }
+.staggerFast > :nth-child(7) { --stagger-index: 6; }
+.staggerFast > :nth-child(8) { --stagger-index: 7; }
+.staggerFast > :nth-child(9) { --stagger-index: 8; }
+.staggerFast > :nth-child(10) { --stagger-index: 9; }
+.staggerFast > :nth-child(11) { --stagger-index: 10; }
+.staggerFast > :nth-child(n + 12) { --stagger-index: 11; }
+
 /* Độ trễ theo bậc của trang mẫu (0.1 · 0.2 · 0.4 · 0.6 · 0.9 · 1.2s). Chữ tách ký tự bên trong
    một khối có độ trễ cũng thừa hưởng độ trễ đó (biến tuỳ biến được kế thừa). */
 .delay100 {
@@ -168,6 +202,7 @@
   .kenBurns,
   .enter,
   .stagger > *,
+  .staggerFast > *,
   .splitChar,
   .gate[data-reveal='pending'].enter,
   .gate[data-reveal='pending'] .enter,
@@ -177,5 +212,551 @@
     animation: none;
     opacity: 1;
     transform: none;
+  }
+}
+
+/* ─── Parallax theo cuộn (CSS scroll-driven animations) ─────────────────────
+   Chỉ chạy ở trình duyệt hỗ trợ `animation-timeline`; nơi khác đứng yên (nội dung vẫn hiện đủ —
+   không ẩn gì trước khi có JS). Dùng thuộc tính RIÊNG `translate`/`scale` thay vì `transform` nên
+   cộng dồn được với `kenBurns` (đang chiếm `transform`) trên cùng phần tử.
+   Token cục bộ (chưa có ở @xeprime/ui): `--parallax-shift` quãng trôi, `--parallax-range` quãng cuộn. */
+@keyframes xpHeroParallax {
+  from {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+
+  to {
+    opacity: 0.25;
+    scale: 1.08;
+    translate: 0 var(--parallax-shift, 30%);
+  }
+}
+
+@keyframes xpViewParallax {
+  from {
+    translate: 0 calc(var(--parallax-shift, 8%) * -1);
+  }
+
+  to {
+    translate: 0 var(--parallax-shift, 8%);
+  }
+}
+
+/* Dải ảnh GIỮA trang theo vị trí của chính khối (entry → exit): ảnh trôi chậm hơn nội dung, phóng
+   khi vào, thu về khi giữa khung, mờ dần khi cuộn qua. Ảnh luôn dư mép (scale ≥ 1.16 > 2 × quãng
+   trôi 7%) nên không bao giờ lộ nền. */
+/* Ảnh giữa trang (khối đối tác) - cùng kịch bản với app (`useParallaxHeader` + PartnerBanner):
+   (1) TRÔI chậm suốt lúc khối còn trên màn; (2) khi khối cuộn qua MÉP TRÊN thì PHÓNG lên + MỜ dần.
+   Hai animation riêng, mỗi cái một `animation-range`. Lớp ảnh phải DƯ MÉP trên/dưới (khối dùng nó
+   tự mở rộng lớp ảnh, vd PartnerBanner `.backdrop { inset: -18% 0 }`) để quãng trôi 12% không lộ
+   nền - trôi theo % chiều cao CHÍNH lớp ảnh. Đo 09/11/2026: 5% chỉ ~30px trên quãng 1.600px, mắt
+   không thấy; 12% của lớp dư mép ≈ app (0.2 × tốc độ cuộn). */
+@keyframes xpSectionDrift {
+  from {
+    translate: 0 calc(var(--parallax-shift, 20%) * -1);
+  }
+
+  to {
+    translate: 0 var(--parallax-shift, 20%);
+  }
+}
+
+@keyframes xpSectionExit {
+  from {
+    opacity: 1;
+    scale: 1;
+  }
+
+  to {
+    opacity: 0.35;
+    scale: 1.12;
+  }
+}
+
+@supports (animation-timeline: scroll()) {
+  /* Khối ở ĐẦU trang: ảnh trôi chậm xuống (≈ nửa tốc độ cuộn), phóng nhẹ và mờ dần khi cuộn qua. */
+  .heroParallax {
+    animation: xpHeroParallax linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 0 var(--parallax-range, 520px);
+    will-change: translate, scale, opacity;
+  }
+
+  /* Ảnh giữa trang: trôi ngược chiều cuộn suốt lúc khung còn trong viewport. Ảnh nên dư mép
+     (`scale` sẵn) để không lộ nền.
+     ⚠️ Khung cha cắt ảnh bằng `overflow: CLIP`, KHÔNG `hidden`: `hidden`/`auto` tạo vùng cuộn
+     riêng và `view()` bám vào vùng KHÔNG cuộn đó ⇒ hiệu ứng đứng yên (lỗi PartnerBanner 09/11/2026).
+     Nằm trong băng chuyền cuộn ngang thì dùng `view-timeline` có tên ở tổ tiên bên ngoài
+     (xem `ListingGallery.module.css`). */
+  .viewParallax {
+    animation: xpViewParallax linear both;
+    animation-timeline: view(block);
+  }
+
+  .sectionParallax {
+    animation-name: xpSectionDrift, xpSectionExit;
+    animation-timing-function: linear, linear;
+    animation-fill-mode: both, both;
+    animation-timeline: view(block), view(block);
+    animation-range: cover 0% cover 100%, exit 0% exit 100%;
+    will-change: translate, scale, opacity;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroParallax,
+  .viewParallax,
+  .sectionParallax {
+    animation: none;
+    opacity: 1;
+    scale: none;
+    translate: none;
+  }
+}
+
+/* ─── Nút "magnetic" (`Magnetic.tsx`) ─────────────────────────────────────── */
+.magnetic {
+  display: inline-flex;
+  translate: var(--mag-x, 0) var(--mag-y, 0);
+  transition: translate 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.magneticBlock {
+  display: flex;
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .magnetic {
+    translate: none;
+    transition: none;
+  }
+}
+
+/* ─── Confetti (`Confetti.tsx`) ──────────────────────────────────────────── */
+.confetti {
+  position: fixed;
+  z-index: 1100;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+}
+
+/* ─── Minh hoạ trôi nhẹ (trạng thái rỗng/lỗi) ────────────────────────────── */
+@keyframes xpFloat {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: 0 -6px;
+  }
+}
+
+.float {
+  animation: xpFloat 3.2s ease-in-out infinite;
+}
+
+/* ─── Chấm nhịp đập cho trạng thái CHỜ (chờ duyệt / chờ thanh toán) ───────── */
+@keyframes xpPulseRing {
+  0% {
+    opacity: 0.6;
+    scale: 1;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 2.6;
+  }
+}
+
+.pulseDot {
+  position: relative;
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  margin-inline-end: 6px;
+  background: currentcolor;
+  vertical-align: middle;
+}
+
+.pulseDot::after {
+  position: absolute;
+  border-radius: inherit;
+  animation: xpPulseRing 1.6s ease-out infinite;
+  background: currentcolor;
+  content: '';
+  inset: 0;
+}
+
+/* ─── Phản hồi form + toast trong PHẠM VI site khách (`feedbackScopeClass`) ─ */
+@keyframes xpShake {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  20% {
+    translate: -4px 0;
+  }
+
+  40% {
+    translate: 4px 0;
+  }
+
+  60% {
+    translate: -2px 0;
+  }
+
+  80% {
+    translate: 2px 0;
+  }
+}
+
+@keyframes xpToastIn {
+  0% {
+    opacity: 0;
+    translate: 0 -16px;
+  }
+
+  60% {
+    opacity: 1;
+    translate: 0 4px;
+  }
+
+  100% {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes xpIconPop {
+  0% {
+    scale: 0;
+  }
+
+  60% {
+    scale: 1.25;
+  }
+
+  100% {
+    scale: 1;
+  }
+}
+
+.feedbackScope :global(.ant-input-affix-wrapper),
+.feedbackScope :global(.ant-input),
+.feedbackScope :global(.ant-select-selector),
+.feedbackScope :global(.ant-picker),
+.feedbackScope :global(.ant-input-number) {
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    background-color 0.25s ease;
+}
+
+/* Lắc MỘT lần lúc ô chuyển sang lỗi (AntD gắn lớp lúc validate) — chỉ `translate`, không đổi bố cục. */
+.feedbackScope :global(.ant-form-item-has-error .ant-form-item-control-input) {
+  animation: xpShake 0.4s ease-in-out;
+}
+
+/* Toast AntD được portal ra `body` — gác bằng `:has()` để chỉ áp khi trang đang thuộc site khách. */
+:global(body):has(.feedbackScope) :global(.ant-message-notice-content),
+:global(body):has(.feedbackScope) :global(.ant-notification-notice) {
+  animation: xpToastIn 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:global(body):has(.feedbackScope) :global(.ant-message-success .anticon),
+:global(body):has(.feedbackScope) :global(.ant-notification-notice-icon-success) {
+  animation: xpIconPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s backwards;
+}
+
+:global(body):has(.feedbackScope) :global(.ant-message-error .ant-message-notice-content),
+:global(body):has(.feedbackScope) :global(.ant-notification-notice:has(.ant-notification-notice-icon-error)) {
+  animation:
+    xpToastIn 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    xpShake 0.4s ease-in-out 0.45s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float,
+  .pulseDot::after,
+  .feedbackScope :global(.ant-form-item-has-error .ant-form-item-control-input) {
+    animation: none;
+  }
+
+  :global(body):has(.feedbackScope) :global(.ant-message-notice-content),
+  :global(body):has(.feedbackScope) :global(.ant-notification-notice),
+  :global(body):has(.feedbackScope) :global(.ant-message-success .anticon),
+  :global(body):has(.feedbackScope) :global(.ant-notification-notice-icon-success),
+  :global(body):has(.feedbackScope) :global(.ant-message-error .ant-message-notice-content),
+  :global(body):has(.feedbackScope) :global(.ant-notification-notice:has(.ant-notification-notice-icon-error)) {
+    animation: none;
+  }
+
+  .confetti {
+    display: none;
+  }
+}
+
+/* ─── Trang chủ: hoạt cảnh cho ẢNH trong các khối (Loại xe, Địa điểm, Các bước, Lý do, Đánh giá) ──
+   Chỉ `translate`/`scale`/`opacity` (thuộc tính RIÊNG, cộng dồn với `transform` hover sẵn có).
+   Thứ tự so le đọc từ `--seq-index` do lớp `.seq` gán theo vị trí con; đặt trong một `Reveal` thì
+   chờ cuộn tới như `.enter` (HTML server không ẩn gì). */
+.seq > :nth-child(2) { --seq-index: 1; }
+.seq > :nth-child(3) { --seq-index: 2; }
+.seq > :nth-child(4) { --seq-index: 3; }
+.seq > :nth-child(5) { --seq-index: 4; }
+.seq > :nth-child(6) { --seq-index: 5; }
+.seq > :nth-child(7) { --seq-index: 6; }
+.seq > :nth-child(n + 8) { --seq-index: 7; }
+
+@keyframes xpSlideInLeft {
+  from {
+    opacity: 0;
+    translate: -48px 0;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes xpSlideInRight {
+  from {
+    opacity: 0;
+    translate: 48px 0;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes xpFloatSoft {
+  0%,
+  100% {
+    translate: 0 -4px;
+  }
+
+  50% {
+    translate: 0 4px;
+  }
+}
+
+@keyframes xpKenBurnsSlow {
+  from {
+    scale: 1;
+  }
+
+  to {
+    scale: 1.06;
+  }
+}
+
+@keyframes xpPopIn {
+  from {
+    opacity: 0;
+    scale: 0.8;
+  }
+
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes xpBounceIn {
+  0% {
+    opacity: 0;
+    scale: 0.3;
+  }
+
+  55% {
+    opacity: 1;
+    scale: 1.12;
+  }
+
+  75% {
+    scale: 0.94;
+  }
+
+  100% {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes xpNudgeX {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: 6px 0;
+  }
+}
+
+@keyframes xpStarPop {
+  0% {
+    opacity: 0;
+    scale: 0.4;
+  }
+
+  60% {
+    opacity: 1;
+    scale: 1.3;
+  }
+
+  100% {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+/* Trượt vào từ trái/phải + hiện dần, rồi trôi nhẹ ±4px lặp vô hạn (animation sau thắng khi đã bắt đầu). */
+.slideInLeft,
+.slideInRight {
+  animation:
+    xpSlideInLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) calc(0.1s + var(--seq-index, 0) * 0.12s) both,
+    xpFloatSoft 4s ease-in-out calc(0.9s + var(--seq-index, 0) * 0.12s) infinite;
+}
+
+.slideInRight {
+  animation-name: xpSlideInRight, xpFloatSoft;
+}
+
+/* Ken Burns chậm: 1 → 1.06 trong 12s, đi rồi về. Khung cha phải cắt tràn. */
+.kenBurnsSlow {
+  animation: xpKenBurnsSlow 12s ease-in-out infinite alternate;
+}
+
+/* Bật ra lần lượt với đường cong nảy. */
+.popIn {
+  animation: xpPopIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) calc(0.2s + var(--seq-index, 0) * 0.18s)
+    both;
+}
+
+.bounceIn {
+  animation: xpBounceIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)
+    calc(0.15s + var(--seq-index, 0) * 0.15s) both;
+}
+
+/* Nhúc nhích ngang nhẹ, lặp — mũi tên chỉ hướng. */
+.nudgeX {
+  animation: xpNudgeX 1.6s ease-in-out infinite;
+}
+
+.starPop {
+  animation: xpStarPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)
+    calc(0.3s + var(--seq-index, 0) * 0.1s) both;
+}
+
+/* Vệt sáng quét qua nút định kỳ (cùng vệt của `CtaButton` `.gradient`, nhưng tự chạy). Phần tử cần
+   `position` khác static; lớp tự cắt tràn. */
+@keyframes xpShineSweep {
+  0%,
+  60% {
+    translate: -120% 0;
+  }
+
+  100% {
+    translate: 120% 0;
+  }
+}
+
+.shine {
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.shine::after {
+  position: absolute;
+  z-index: -1;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 70%
+  );
+  animation: xpShineSweep 3.6s var(--xp-motion-ease-out) infinite;
+  content: '';
+  inset: 0;
+  pointer-events: none;
+}
+
+.gate[data-reveal='pending'] .slideInLeft,
+.gate[data-reveal='pending'] .slideInRight,
+.gate[data-reveal='pending'] .popIn,
+.gate[data-reveal='pending'] .bounceIn,
+.gate[data-reveal='pending'] .starPop {
+  animation: none;
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slideInLeft,
+  .slideInRight,
+  .kenBurnsSlow,
+  .popIn,
+  .bounceIn,
+  .nudgeX,
+  .starPop,
+  .shine::after,
+  .gate[data-reveal='pending'] .slideInLeft,
+  .gate[data-reveal='pending'] .slideInRight,
+  .gate[data-reveal='pending'] .popIn,
+  .gate[data-reveal='pending'] .bounceIn,
+  .gate[data-reveal='pending'] .starPop {
+    animation: none;
+    opacity: 1;
+  }
+
+  .shine::after {
+    display: none;
+  }
+}
+
+/* ─── Thẻ trong danh sách dài hiện khi CUỘN TỚI (CSS `view()`, không cần Reveal từng thẻ) ─────
+   Đặt trên khung danh sách, áp cho từng CON. Cộng với `staggerFast` (lượt tải đầu): hoạt cảnh tải
+   giữ phần trượt `transform`, hoạt cảnh cuộn (đứng SAU nên thắng `opacity`) lo phần hiện dần +
+   `translate`. Trình duyệt không hỗ trợ: như cũ. Khung cha không được `overflow: hidden/auto`. */
+@keyframes xpViewEnter {
+  from {
+    opacity: 0;
+    translate: 0 24px;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@supports (animation-timeline: view()) {
+  .viewEnter > * {
+    animation:
+      xpFadeInUpShort calc(var(--xp-motion-duration-reveal) * 0.6) var(--xp-motion-ease-out)
+        calc(var(--stagger-index, 0) * var(--xp-motion-stagger-step)) both,
+      xpViewEnter linear both;
+    animation-range: normal, entry 0% entry 60%;
+    animation-timeline: auto, view();
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewEnter > * {
+    animation: none;
+    opacity: 1;
+    translate: none;
   }
 }

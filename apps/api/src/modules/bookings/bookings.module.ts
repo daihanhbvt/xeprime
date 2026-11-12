@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CancellationsModule } from '../cancellations/cancellations.module';
+import { BookingExtensionsModule } from '../booking-extensions/booking-extensions.module';
 import { CalendarModule } from '../calendar/calendar.module';
 import { CustomersModule } from '../customers/customers.module';
 import { DriversModule } from '../drivers/drivers.module';
@@ -8,6 +9,7 @@ import { HoldSettlementModule } from '../holds/hold-settlement.module';
 import { InsuranceModule } from '../insurance/insurance.module';
 import { TaxModule } from '../tax/tax.module';
 import { LocationsModule } from '../locations/locations.module';
+import { BookingPaymentWriterModule } from '../payments/booking-payment-writer.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { VehiclesModule } from '../vehicles/vehicles.module';
 import { VehicleSettingsModule } from '../vehicle-settings/vehicle-settings.module';
@@ -15,6 +17,8 @@ import { BookingsController } from './bookings.controller';
 import { BookingsService } from './bookings.service';
 import { BookingHandoversController } from './handovers/booking-handovers.controller';
 import { HandoverQueueController } from './handovers/handover-queue.controller';
+import { CustomerHandoverService } from './handovers/customer-handover.service';
+import { CustomerReturnSweeper } from './handovers/customer-return.sweeper';
 import { HandoversService } from './handovers/handovers.service';
 import { BookingSettlementController } from './settlement/booking-settlement.controller';
 import { SettlementService } from './settlement/settlement.service';
@@ -59,6 +63,11 @@ import { SettlementService } from './settlement/settlement.service';
     LocationsModule,
     // Phase 8: ghi nghĩa vụ thuế khi chuyến bắt đầu. Module lá, không tạo vòng.
     TaxModule,
+    // ADR 0077: phụ lục gia hạn — module lá với Bookings (không import ngược), không tạo vòng.
+    BookingExtensionsModule,
+    // Phiếu thu tự ghi lúc nhận lại xe (06/11/2026) — module lá (Finance + Audit), không tạo vòng
+    // với `PaymentsModule` (module đó import ngược Bookings).
+    BookingPaymentWriterModule,
   ],
   controllers: [
     BookingsController,
@@ -66,7 +75,15 @@ import { SettlementService } from './settlement/settlement.service';
     HandoverQueueController,
     BookingSettlementController,
   ],
-  providers: [BookingsService, HandoversService, SettlementService],
+  // `CustomerHandoverService` + bộ quét: lời của khách ở mốc giao/trả xe (ADR 0081) — đi qua chính
+  // `HandoversService`, xuất ra cho trang chuyến của khách.
+  providers: [
+    BookingsService,
+    HandoversService,
+    SettlementService,
+    CustomerHandoverService,
+    CustomerReturnSweeper,
+  ],
   /**
    * `HandoversService` xuất ra để Trung tâm bảo dưỡng đếm được việc `Thiếu KM trả` — hàng đợi
    * đó sống ở bề mặt việc-cần-làm đã có, không phải một module điều hướng thứ hai (Wave 8).
@@ -75,6 +92,6 @@ import { SettlementService } from './settlement/settlement.service';
    * cùng một phép tính cọc/phát sinh. Dựng lại công thức ở module khách là cách chắc chắn nhất
    * để hai bên đọc ra hai số tiền khác nhau.
    */
-  exports: [BookingsService, HandoversService, SettlementService],
+  exports: [BookingsService, HandoversService, SettlementService, CustomerHandoverService],
 })
 export class BookingsModule {}

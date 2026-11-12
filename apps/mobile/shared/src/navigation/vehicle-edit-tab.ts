@@ -14,6 +14,8 @@ export const VEHICLE_EDIT_TAB = {
   PRICING: 'pricing',
   SOURCE: 'source',
   DOCUMENTS: 'documents',
+  /** Lịch sử chuyến của xe — mục thứ tư của nhóm "Hồ sơ xe" bên web (`vehicle-edit-nav.ts`). */
+  TRIP_HISTORY: 'trip-history',
   MAINTENANCE: 'maintenance',
   /**
    * Vận hành & điều kiện thuê — tab cũ của web, nay là BÍ DANH của "Thời gian giao nhận"
@@ -28,6 +30,7 @@ export const VEHICLE_EDIT_TAB = {
   SELF_DRIVE_OPTIMIZATION: 'self-drive-optimization',
   SELF_DRIVE_TERMS: 'self-drive-terms',
   WITH_DRIVER_OPTIMIZATION: 'with-driver-optimization',
+  /** BÍ DANH — phụ phí tài xế đã gỡ (ADR 0075); link cũ mở "Nhận chuyến & thủ tục". */
   WITH_DRIVER_SURCHARGES: 'with-driver-surcharges',
   WITH_DRIVER_TERMS: 'with-driver-terms',
 } as const;
@@ -57,6 +60,8 @@ const TAB_ALIAS: Partial<Record<VehicleEditTab, VehicleEditTab>> = {
   [VEHICLE_EDIT_TAB.OPERATIONS]: VEHICLE_EDIT_TAB.HANDOVER_TIME,
   [VEHICLE_EDIT_TAB.SELF_DRIVE_TERMS]: VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION,
   [VEHICLE_EDIT_TAB.WITH_DRIVER_TERMS]: VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION,
+  // Phụ phí tài xế đã gỡ (ADR 0075) — link cũ mở mục thủ tục của dịch vụ có tài xế.
+  [VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES]: VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION,
 };
 
 export function resolveEditTab(tab: VehicleEditTab): VehicleEditTab {

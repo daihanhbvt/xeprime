@@ -392,7 +392,7 @@ function PriceDialogInner({
                 dataIndex: 'basePrice',
                 align: 'right' as const,
                 render: (value: string | null) =>
-                  value === null ? <span className={styles.muted}>—</span> : fmt.money(value),
+                  value === null ? <span className={styles.muted}>-</span> : fmt.money(value),
               },
               {
                 title: t('bulkPrice.colNext'),

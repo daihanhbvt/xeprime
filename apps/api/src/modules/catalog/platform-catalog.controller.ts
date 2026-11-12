@@ -73,7 +73,7 @@ export class PlatformCatalogController {
     if (!this.r2.enabled) {
       throw new ServiceUnavailableException({
         code: API_ERROR_CODE.UPLOADS_NOT_CONFIGURED,
-        message: 'Chưa cấu hình R2 — không upload được ảnh danh mục',
+        message: 'Chưa cấu hình R2 - không upload được ảnh danh mục',
       });
     }
     return this.r2.presignUpload({

@@ -127,6 +127,18 @@ export function isBookingFinal(status: BookingStatus): boolean {
   return BOOKING_STATUS_TRANSITIONS[status].length === 0;
 }
 
+/**
+ * Đơn đã khép mà chuyến KHÔNG diễn ra — `cancelled` / `no_show` (mọi trạng thái cuối trừ
+ * `completed`).
+ *
+ * Đơn đang chạy không huỷ được (ADR 0045 điều 1), nên hai trạng thái này luôn là chuyến chưa từng
+ * giao xe: không còn tiền thuê để thu tiếp, không có phát sinh, không có cọc thế chấp. Dùng để khoá
+ * GHI TIỀN MỚI và để loại đơn khỏi công nợ — hoàn lại phần đã thu thì vẫn mở.
+ */
+export function isBookingClosedWithoutTrip(status: BookingStatus): boolean {
+  return isBookingFinal(status) && status !== BOOKING_STATUS.COMPLETED;
+}
+
 export const BOOKING_STATUS_META: Readonly<Record<BookingStatus, StatusMeta>> = {
   // "Chờ giao xe" (đổi từ "Đã giữ xe" — ADR 0047), không phải "Đã đặt trước": đơn `reserved`
   // sinh ra ở đúng một chỗ — gian hàng bấm `Duyệt & giữ xe` — và tác dụng thật của nó là CHIẾM
@@ -182,9 +194,17 @@ export function isNoShowGracePassed(pickupAt: Date | string, now: Date = new Dat
  *
  * `awaiting_pickup` = đơn đã hình thành nhưng XE CHƯA RỜI BÃI. Nó cắt ngang `reserved` và
  * `confirmed`, nên không có một `status` nào diễn đạt được nó.
+ *
+ * Ba nhóm còn lại (02/11/2026) là cột trái của màn "Quản lý đơn thuê xe" site partner: `renting`
+ * (xe đang ở ngoài với khách), `completed`, `cancelled` (gồm cả khách không đến). Bốn nhóm phủ
+ * kín mọi đơn mà luồng hiện tại sinh ra và không chồng lên nhau — số đếm của chúng
+ * (`BookingPageMetaDto.presetCounts`) cộng lại đúng bằng "Tất cả".
  */
 export const BOOKING_LIST_PRESET = {
   AWAITING_PICKUP: 'awaiting_pickup',
+  RENTING: 'renting',
+  COMPLETED: 'completed',
+  CANCELLED: 'cancelled',
 } as const;
 
 export type BookingListPreset = (typeof BOOKING_LIST_PRESET)[keyof typeof BOOKING_LIST_PRESET];

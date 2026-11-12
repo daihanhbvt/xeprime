@@ -103,7 +103,7 @@ beforeEach(() => jest.restoreAllMocks());
  * Bản trước của app bày cả hai cho chủ xe: ba lối liên hệ với chính mình, và một nút Huỷ mà
  * `POST /trips/:id/cancel` (khoá theo `customerUserId`) luôn trả 404.
  */
-describe('TripDetailScreen — cụm của khách chỉ dành cho khách', () => {
+describe('TripDetailScreen - cụm của khách chỉ dành cho khách', () => {
   it('KHÁCH, chuyến đang thuê (bố cục chung): có khối hỗ trợ', async () => {
     const view = await renderTrip(trip({ stage: CUSTOMER_TRIP_STAGE.ACTIVE }));
 
@@ -125,7 +125,7 @@ describe('TripDetailScreen — cụm của khách chỉ dành cho khách', () =>
  * (`actualPickupAt || actualReturnAt`), không phải "chặng đang chạy hoặc đã đóng" — chuyến bị huỷ
  * hay từ chối là "đã đóng" mà chắc chắn không có biên bản nào.
  */
-describe('TripDetailScreen — bằng chứng bàn giao', () => {
+describe('TripDetailScreen - bằng chứng bàn giao', () => {
   /*
     Kiểu lấy từ CHÍNH trường sẽ nhận giá trị, không phải `CustomerTripStage`: union kia còn mang
     `pending_approval_paid` đã gỡ (ADR 0055) và chỉ giữ để mobile biên dịch, nên nó RỘNG hơn thứ
@@ -170,7 +170,7 @@ const PAY_LABEL = /Thanh toán giữ chỗ ·/;
  * Ba màn design v2 của KHÁCH (web PR #207, `TripDetailView` ~L193): chọn theo CHẶNG; chủ xe luôn ở
  * bố cục chung, nơi có cụm Duyệt/Từ chối.
  */
-describe('TripDetailScreen — chặng → màn design v2', () => {
+describe('TripDetailScreen - chặng → màn design v2', () => {
   it('chờ phản hồi ⇒ màn "Đã gửi yêu cầu" + tiến trình + nút huỷ ở thẻ thay đổi kế hoạch', async () => {
     const view = await renderTrip(
       trip({ stage: CUSTOMER_TRIP_STAGE.PENDING_APPROVAL, canContact: false, bookingId: null }),
@@ -223,7 +223,7 @@ describe('TripDetailScreen — chặng → màn design v2', () => {
  * Chuyến ĐANG THUÊ phía khách — cùng khuôn với web `TripActiveView`: thẻ trạng thái kèm giờ trả xe,
  * thông tin người thuê, khối "Cần hỗ trợ?" và KHÔNG có nút huỷ (ADR 0045 điều 1).
  */
-describe('TripDetailScreen — chuyến đang thuê', () => {
+describe('TripDetailScreen - chuyến đang thuê', () => {
   it('KHÁCH: thẻ trạng thái + giờ trả xe, người thuê, cần hỗ trợ, không huỷ', async () => {
     const view = await renderTrip(trip({ stage: CUSTOMER_TRIP_STAGE.ACTIVE }));
 

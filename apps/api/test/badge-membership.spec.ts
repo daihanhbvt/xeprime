@@ -10,6 +10,9 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { InvitesService } from '../src/modules/members/invites.service';
 import { RequestRealmService } from '../src/modules/auth/request-realm.service';
 import { MembersService } from '../src/modules/members/members.service';
+import { RbacService } from '../src/modules/rbac/rbac.service';
+import { SessionService } from '../src/modules/auth/session.service';
+import { NativeSessionService } from '../src/modules/auth/native-session.service';
 import { normalizePhone } from '../src/common/phone';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
@@ -46,7 +49,13 @@ const realms = new RequestRealmService(config);
 
 const audit = new AuditService(asService);
 const invites = new InvitesService(asService, audit, realms);
-const members = new MembersService(asService, audit);
+const members = new MembersService(
+  asService,
+  audit,
+  new RbacService(asService),
+  new SessionService(config, asService),
+  new NativeSessionService(config, asService),
+);
 
 let dbAvailable = false;
 let ownerId: string;
@@ -63,6 +72,7 @@ async function inviteStaff(): Promise<string> {
     ownerId,
     { phone: STAFF_PHONE, roleKey: TENANT_ROLE.SHOP_STAFF },
     null,
+    TENANT_ROLE.SHOP_OWNER,
   );
   return created.inviteUrl.split('/').pop()!;
 }

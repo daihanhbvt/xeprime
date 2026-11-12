@@ -172,12 +172,12 @@ export class VehicleApprovalVehicleDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'lít/100km — Decimal dạng chuỗi',
+    description: 'lít/100km - Decimal dạng chuỗi',
   })
   fuelConsumptionCombined!: string | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) engineDisplacementCc!: number | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) electricRangeKm!: number | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'kWh — Decimal dạng chuỗi' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'kWh - Decimal dạng chuỗi' })
   batteryCapacityKwh!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'kWh/100km' })
   electricConsumptionKwhPer100Km!: string | null;
@@ -223,9 +223,9 @@ export class VehicleApprovalServiceDto {
 /** Một bậc giao xe trong snapshot duyệt — trọn gói (`fee`) HOẶC theo km (`perKm`), ADR 0064. */
 export class VehicleApprovalDeliveryTierDto {
   @ApiProperty() toKm!: number;
-  @ApiPropertyOptional({ type: String, description: "Phí trọn gói VND — '0' là miễn phí" })
+  @ApiPropertyOptional({ type: String, description: "Phí trọn gói VND - '0' là miễn phí" })
   fee?: string;
-  @ApiPropertyOptional({ type: String, description: 'Đơn giá VND mỗi km — bậc tính theo km' })
+  @ApiPropertyOptional({ type: String, description: 'Đơn giá VND mỗi km - bậc tính theo km' })
   perKm?: string;
 }
 
@@ -297,7 +297,7 @@ export class VehicleApprovalInternalNoteDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'ISO-8601 UTC — gửi lại ở `expectedUpdatedAt` khi lưu',
+    description: 'ISO-8601 UTC - gửi lại ở `expectedUpdatedAt` khi lưu',
   })
   updatedAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) updatedByName!: string | null;
@@ -361,7 +361,7 @@ export class VehicleApprovalDetailDto {
 
   @ApiProperty({
     type: [VehicleApprovalCheckDto],
-    description: 'Đủ năm mục theo thứ tự hiển thị — mục chưa từng đánh dấu là passed=false',
+    description: 'Đủ năm mục theo thứ tự hiển thị - mục chưa từng đánh dấu là passed=false',
   })
   manualChecks!: VehicleApprovalCheckDto[];
   @ApiProperty({ type: VehicleApprovalInternalNoteDto })

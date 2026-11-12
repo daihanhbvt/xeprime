@@ -38,7 +38,7 @@ import { CountBadge } from '@/components/ui/CountBadge';
 import { DataRow, Divider } from '@/components/ui/DataRow';
 import { IconButton } from '@/components/ui/IconButton';
 import { PhotoViewer } from '@/components/ui/PhotoViewer';
-import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
+import { MiniRowsSkeleton, Skeleton, SkeletonText } from '@/components/ui/Skeleton';
 import { StatusBadge, statusTone } from '@/components/ui/StatusBadge';
 import type { IconName } from '@/components/ui/Chip';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -94,6 +94,10 @@ import {
 } from './hooks/use-vehicle';
 import type { Vehicle360Summary, VehicleBookingBrief, VehicleDetail } from './api';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { ToggleRow } from '@/features/rental-policies/components/PolicySections';
+import { useAutoAcceptToggle } from '@/features/vehicle-manage/hooks/use-auto-accept-toggle';
+import { useVehicleServiceSettings } from '@/features/vehicle-manage/hooks/use-vehicle-settings';
+import type { VehicleServiceSetting } from '@/features/vehicle-manage/api';
 
 const HERO_HEIGHT = 200;
 /** Số ô HIỆN trong thẻ thư viện (3 × 2) — web `GALLERY_VISIBLE`. */
@@ -1074,10 +1078,12 @@ function AutomationCard({
   const t = useTranslations('Vehicles.overview');
   const navigateOnce = useNavigateOnce();
 
-  const hasConfigurableService = VEHICLE_SERVICE_SETTING_SERVICES.some((service) =>
+  const domainLabel = useDomainLabel();
+  const services = VEHICLE_SERVICE_SETTING_SERVICES.filter((service) =>
     vehicle.serviceTypes.includes(service),
   );
-  if (!hasConfigurableService) return null;
+  const settings = useVehicleServiceSettings(vehicle.id, services.length > 0);
+  if (services.length === 0) return null;
 
   return (
     <Card>
@@ -1096,9 +1102,59 @@ function AutomationCard({
         >
           {t('automation.title')}
         </BlockTitle>
-        <Muted>{t('automation.hint')}</Muted>
+        {/*
+          Công tắc LƯU NGAY ngay trên thẻ (web `AutomationCard`, Figma `23670:3122`) — mỗi dịch vụ
+          một công tắc, có nhãn dịch vụ khi xe phục vụ cả hai. Điều kiện chi tiết ở "Cấu hình".
+        */}
+        {settings.isLoading ? (
+          <MiniRowsSkeleton rows={services.length} />
+        ) : settings.isError || !settings.data ? (
+          <Muted>{t('loadFailed')}</Muted>
+        ) : (
+          services.map((service) => {
+            const setting = settings.data.find((item) => item.serviceType === service);
+            return setting ? (
+              <AutoAcceptRow
+                key={service}
+                vehicleId={vehicle.id}
+                setting={setting}
+                canEdit={canEdit}
+                label={
+                  services.length > 1
+                    ? t('automation.toggleFor', { service: domainLabel('serviceType', service) })
+                    : t('automation.toggle')
+                }
+              />
+            ) : null;
+          })
+        )}
       </YStack>
     </Card>
+  );
+}
+
+function AutoAcceptRow({
+  vehicleId,
+  setting,
+  canEdit,
+  label,
+}: {
+  vehicleId: string;
+  setting: VehicleServiceSetting;
+  canEdit: boolean;
+  label: string;
+}) {
+  const t = useTranslations('Vehicles.overview');
+  const toggle = useAutoAcceptToggle({ vehicleId, setting, canEdit });
+  return (
+    <ToggleRow
+      label={label}
+      // Có tài xế chưa đủ năng lực: nói lý do thay cho công tắc mờ câm — như tooltip của web.
+      hint={toggle.blocked ? t('automation.driverRequired') : t('automation.toggleHint')}
+      checked={toggle.enabled}
+      disabled={toggle.disabled}
+      onToggle={() => toggle.change(!toggle.enabled)}
+    />
   );
 }
 

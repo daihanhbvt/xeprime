@@ -1,0 +1,394 @@
+/* Hồ sơ khách — Figma Partner-XePrime `23777:54975` · `23797:54015` · `23797:55706` · `23797:62633`. */
+
+.page,
+.embedded {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.embeddedHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.titleRow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.headerSub {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.phoneLink {
+  color: var(--xp-color-info-strong);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.muted {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.labelWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.hintIcon {
+  color: var(--xp-color-text-tertiary);
+}
+
+/* ── Dải số liệu ─────────────────────────────────────────────────────────── */
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-md) var(--xp-space-lg);
+  /* Figma `23788:39111`: không viền, đổ bóng tản quanh khung. */
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-ambient);
+}
+
+.kpi {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  text-align: center;
+}
+
+.kpiLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.kpiValue {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.kpiDanger {
+  color: var(--xp-color-error);
+}
+
+/* ── Thân trang: tab + cột hồ sơ ─────────────────────────────────────────── */
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 332px;
+  align-items: start;
+  gap: var(--xp-space-lg);
+}
+
+.main {
+  min-width: 0;
+}
+
+.side {
+  position: sticky;
+  top: var(--xp-space-md);
+}
+
+@media (max-width: 1199px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.tabs :global(.ant-tabs-nav) {
+  margin-bottom: var(--xp-space-md);
+}
+
+.tabStack {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.docsCard {
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+/* Thẻ của tab Tổng quan (Figma `23790:40668`): bo 16 + bóng tản thay cho bo 10 + bóng đổ của
+ * `SectionCard`. Hai lớp để thắng `.card` của SectionCard bất kể thứ tự nạp CSS. */
+.tabStack .sectionCard {
+  border-radius: var(--xp-border-radius-card);
+  box-shadow: var(--xp-elevation-ambient);
+}
+
+/* ── Thẻ hồ sơ ───────────────────────────────────────────────────────────── */
+
+.profileCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+.profileHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.profileIcon {
+  color: var(--xp-color-primary-strong);
+  font-size: 18px;
+}
+
+.profileList,
+.profileFoot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  margin: 0;
+  padding-top: var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.profileList > div,
+.profileFootRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.profileList dt,
+.profileFoot dt {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--xp-space-6);
+  color: var(--xp-color-text-secondary);
+}
+
+.profileList dd,
+.profileFoot dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  text-align: right;
+}
+
+.copyRow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.profileFootGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--xp-space-md);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.profileFootGrid > div:last-child {
+  text-align: right;
+}
+
+.profileFootGrid dd {
+  margin-top: var(--xp-space-xs);
+  text-align: inherit;
+}
+
+/* ── Tổng quan ───────────────────────────────────────────────────────────── */
+
+.debtBanner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-md) var(--xp-space-lg);
+  border: 1px solid var(--xp-color-error-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-error-bg);
+}
+
+.debtIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-error);
+  font-size: 18px;
+}
+
+.debtText {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.debtText b {
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.twoCols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--xp-space-md);
+}
+
+.oneCol {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 991px) {
+  .twoCols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timelineItem {
+  position: relative;
+  display: flex;
+  gap: var(--xp-space-12);
+}
+
+.timelineItem + .timelineItem::before {
+  position: absolute;
+  top: calc(-1 * var(--xp-space-lg));
+  left: 15px;
+  height: var(--xp-space-lg);
+  border-left: 1px solid var(--xp-color-border);
+  content: '';
+}
+
+.timelineIcon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--xp-border-radius-pill);
+  font-size: 14px;
+}
+
+.tone_warning {
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning-strong);
+}
+
+.tone_success {
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.tone_neutral {
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+}
+
+.timelineText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+/* ── Thu chi ─────────────────────────────────────────────────────────────── */
+
+.financeSummary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xl);
+  margin-bottom: var(--xp-space-md);
+  padding: var(--xp-space-md) var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-card);
+}
+
+.financeSummary > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.financeMain {
+  flex: 1;
+}
+
+.financeDebt {
+  color: var(--xp-color-error);
+  font-size: 22px;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.financeValue {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.stack {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.debt {
+  color: var(--xp-color-error);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  color: var(--xp-color-primary-strong);
+  font-weight: var(--xp-font-weight-medium);
+}

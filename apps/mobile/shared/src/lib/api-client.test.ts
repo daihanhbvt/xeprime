@@ -85,7 +85,7 @@ describe('apiRequest', () => {
   });
 });
 
-describe('Bearer — ADR 0017', () => {
+describe('Bearer - ADR 0017', () => {
   it('gắn access token vào mọi request sau khi đăng nhập', async () => {
     const fetchMock = mockFetch(
       { status: 200, body: { data: { tokens: TOKENS, user: { id: 'u1' } } } },
@@ -108,7 +108,7 @@ describe('Bearer — ADR 0017', () => {
     expect(fetchMock.mock.calls[0]?.[1]).not.toHaveProperty('credentials');
   });
 
-  it('chưa đăng nhập thì đi request trần — endpoint @Public() vẫn phục vụ được', async () => {
+  it('chưa đăng nhập thì đi request trần - endpoint @Public() vẫn phục vụ được', async () => {
     const fetchMock = mockFetch({ status: 200, body: { data: [] } });
 
     await apiGet('/listings');
@@ -116,7 +116,7 @@ describe('Bearer — ADR 0017', () => {
     expect(headersOf(fetchMock, 0)).not.toHaveProperty('Authorization');
   });
 
-  it('endpoint đăng nhập KHÔNG kèm danh tính — nó là chỗ danh tính được cấp', async () => {
+  it('endpoint đăng nhập KHÔNG kèm danh tính - nó là chỗ danh tính được cấp', async () => {
     const fetchMock = mockFetch({
       status: 200,
       body: { data: { tokens: TOKENS, user: { id: 'u1' } } },

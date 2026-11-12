@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { useTranslations } from 'use-intl';
 import { Card } from '@/components/ui/Card';
 import { VehicleCardSkeleton } from '@/components/ui/Skeleton';
@@ -16,6 +16,12 @@ import { HomeCarousel } from './home/HomeCarousel';
 import { HomeSectionHeading } from './home/HomeSectionHeading';
 import { OutlineAction } from './home/GradientButton';
 import { VehicleCard } from './VehicleCard';
+import { ResponsiveGrid } from '@/components/layout/ResponsiveGrid';
+import { useIsTabletLayout } from '@/theme/use-content-width';
+
+/** Bản tablet của web: lưới 2 cột, tối đa 2 hàng. */
+const TABLET_GRID_COLUMNS = 2;
+const TABLET_GRID_ITEMS = 4;
 
 interface VehiclePreviewProps {
   /** Vắng mặt = thẻ xe chỉ hiển thị — trang chi tiết (MKT-04) chưa dựng. */
@@ -53,7 +59,7 @@ interface VehiclePreviewProps {
  * Dựng bằng `map` chứ không `FlatList`: trang chủ đã cuộn trong `ScrollView` bên ngoài, lồng
  * danh sách ảo hoá vào đó là hỏng đo chiều cao và mất luôn phần ảo hoá.
  */
-export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps) {
+function VehiclePreviewImpl({ onOpenListing, onExplore }: VehiclePreviewProps) {
   const colors = useColors();
   const t = useTranslations('Marketplace.available');
   const tHome = useTranslations('Home.featured');
@@ -61,6 +67,7 @@ export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps
   const { filters, draft, provinceName } = useSearchExperience();
   /** Thẻ đang ở GIỮA băng chuyền — hiện sẵn trạng thái hover của web (Card highlighted). */
   const [focused, setFocused] = useState(0);
+  const tablet = useIsTabletLayout();
 
   /*
    * Liệt kê ĐÚNG năm chiều, không trải cả `filters`.
@@ -92,7 +99,8 @@ export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps
     <YStack gap={layout.section}>
       <HomeSectionHeading
         kicker={tHome('kicker')}
-        title={serviceLabel ? t('titleWithService', { service: serviceLabel }) : tHome('title')}
+        // Người dùng 04/11/2026: bỏ dòng "Xe phù hợp cho mọi hành trình" — chỉ giữ dòng "Xe tiêu biểu".
+        {...(serviceLabel ? { title: t('titleWithService', { service: serviceLabel }) } : {})}
       />
 
       {/*
@@ -112,7 +120,7 @@ export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps
           <Ionicons
             name="location-outline"
             size={iconSize.sm}
-            color={colors.primaryActive}
+            color={colors.accentText}
             accessibilityElementsHidden
           />
           <Text f={1} col={colors.textMuted} fos={fontSize.label}>
@@ -136,9 +144,21 @@ export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps
             {serviceLabel ? t('emptyForService', { service: serviceLabel }) : t('empty')}
           </Text>
         </Card>
+      ) : tablet ? (
+        // Máy tính bảng: lưới tĩnh 2 cột × 2 hàng, 4 xe đầu — bản tablet của web
+        // (`HomeCarousel layout="grid" responsiveGrid` ≤1024px ẩn từ thẻ thứ 5).
+        <ResponsiveGrid columns={TABLET_GRID_COLUMNS}>
+          {items.slice(0, TABLET_GRID_ITEMS).map((listing) => (
+            <VehicleCard
+              key={listing.id}
+              listing={listing}
+              {...(onOpenListing ? { onPress: onOpenListing } : {})}
+            />
+          ))}
+        </ResponsiveGrid>
       ) : (
         // Băng chuyền thẻ-ở-giữa — đúng trình bày mobile của web v2 (`HomeCarousel` dưới 640px).
-        <HomeCarousel accessibilityLabel={tHome('title')} onActiveChange={setFocused}>
+        <HomeCarousel accessibilityLabel={tHome('title')} onActiveChange={setFocused} coverflow>
           {items.map((listing, index) => (
             <VehicleCard
               key={listing.id}
@@ -155,3 +175,9 @@ export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps
     </YStack>
   );
 }
+
+/**
+ * Bọc `memo`: trang chủ chạy lại vì đủ thứ (cuộn, ô tìm kiếm, banner) — khối này chỉ cần dựng lại
+ * khi dữ liệu của nó đổi. Nơi gọi truyền hàm ỔN ĐỊNH (`useCallback`).
+ */
+export const VehiclePreview = memo(VehiclePreviewImpl);

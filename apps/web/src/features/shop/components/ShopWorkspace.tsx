@@ -1,12 +1,19 @@
 'use client';
 
-import { ExportOutlined, SaveOutlined } from '@ant-design/icons';
+import { ExportOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { Alert, Avatar, Button, Form } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { useState } from 'react';
+import { useWatch } from 'react-hook-form';
 import {
+  FEATURE_STATE,
+  isFeatureVisible,
   isPackageShopTrack,
   PERMISSION,
+  PLAN_FEATURE,
+  STOREFRONT_KIND,
+  storefrontIdentity,
   TENANT_STATUS,
   TENANT_STATUS_META,
   type TenantStatus,
@@ -14,318 +21,392 @@ import {
 
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { trailingRequiredMark } from '@/components/form/required-mark';
-import { SectionCard } from '@/components/layout/SectionCard';
-import { SectionNav, type SectionNavItem } from '@/components/layout/SectionNav';
-import { SellerTaxSection } from '@/features/seller-profile/components/SellerTaxSection';
-import { SubscriptionWorkspace } from '@/features/subscription/components/SubscriptionWorkspace';
+import { InfoCard } from '@/components/layout/InfoCard';
+import { OwnerInfoForm } from '@/features/account/components/OwnerInfoForm';
+import type { UserProfile } from '@/features/account/types';
+import { BranchesView } from '@/features/branches/components/BranchesView';
+import { ShopPlanSection } from '@/features/subscription/components/ShopPlanSection';
 import { shopPath, shopSectionDomId, SHOP_SECTION, type ShopSection } from '@/constants/routes';
 import { useTenantScope } from '@/hooks/use-tenant-scope';
+import { useFeatureStates } from '@/hooks/use-feature';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useScrollToSection } from '@/hooks/use-scroll-to-section';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { initialOf } from '@/lib/initials';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 
-import { toShopProfileBody, useShopProfileForm } from '../shop-profile-form';
+import {
+  SHOP_PROFILE_GROUP,
+  SHOP_PROFILE_GROUP_FIELDS,
+  toShopProfilePatch,
+  toShopProfileValues,
+  useShopProfileForm,
+  type ShopProfileGroup,
+} from '../shop-profile-form';
 import type { MyShop, UpdateProfileInput } from '../types';
-import { ShopDisplayFields } from './ShopDisplayFields';
-import { ShopLegalFields } from './ShopLegalFields';
+import { ShopDisplayCard, ShopDisplayDialog } from './ShopDisplayCard';
+import { ShopLegalCard, ShopLegalDialog } from './ShopLegalCard';
 import { ShopOwnerSection } from './ShopOwnerSection';
 import { ShopProfileChecklist } from './ShopProfileChecklist';
 import { ShopStatusBanner } from './ShopStatusBanner';
+import { ShopTaxCard } from './ShopTaxCard';
 import { ShopWelcomeBanner } from './ShopWelcomeBanner';
-import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
+import { VatInvoiceSetting } from './VatInvoiceSetting';
 import styles from './ShopWorkspace.module.css';
-
-/** `id` của thẻ `<form>` — nút Lưu sống ở tiêu đề, NGOÀI form, nên nó submit bằng thuộc tính `form`. */
-const PROFILE_FORM_ID = 'shop-profile-form';
 
 export interface ShopWorkspaceProps {
   shop: MyShop;
+  /**
+   * Tài khoản của CHỦ xe tuyến hoa hồng đang xem — có mặt ⇔ trang dựng mặt tiền CÁ NHÂN (ADR 0085
+   * điều 2): ở đó tên, ảnh khách thấy là của tài khoản chủ (ADR 0054). Route quyết và nạp nó.
+   */
+  ownerProfile?: UserProfile;
   /** Quyền `tenant.update`. Thiếu quyền thì chỉ-xem. */
   canEdit: boolean;
   saving: boolean;
-  errorMessage?: string | null;
   /** Section đang mở, đọc từ `?section=` (đã phân giải, không bao giờ là giá trị lạ). */
   section: ShopSection;
   /**
    * `?section=` CÓ MẶT trong URL hay đây chỉ là giá trị mặc định.
    *
-   * Khác nhau ở một việc: có mặt ⇒ cuộn tới section đó ngay lần vẽ đầu. Đó là đường mà các
-   * redirect cũ đi vào (`/manage/subscription` → `?section=plan`) và cũng là đường một link chia
-   * sẻ đi vào. Mặc định thì KHÔNG cuộn — người mở `/manage/shop` trần phải thấy đầu trang, chứ
-   * không phải một cú nhảy ngay khi trang vừa hiện.
+   * Có mặt ⇒ cuộn tới section đó ngay lần vẽ đầu - đường mà các redirect cũ đi vào
+   * (`/manage/subscription` → `?section=plan`, `/shop/branches` → `?section=branches`) và đường một
+   * link chia sẻ đi vào. Mặc định thì KHÔNG cuộn: người mở trang trần phải thấy đầu trang.
    */
   sectionInUrl: boolean;
   /**
-   * Gian hàng VỪA thanh toán gói xong — `?welcome=1` và đúng là gian hàng tuyến gói (ADR 0040).
-   *
-   * Route đã kiểm cả hai vế: nó không bao giờ `true` cho một chủ xe tuyến hoa hồng nhận được
-   * link `?welcome=1` của người khác.
+   * Gian hàng VỪA thanh toán gói xong - `?welcome=1` và đúng là gian hàng tuyến gói (ADR 0040).
+   * Route đã kiểm cả hai vế.
    */
   welcome?: boolean;
-  /** Gian hàng đã có xe nào chưa — chỉ dùng cho dải chào mừng; route chỉ hỏi khi `welcome`. */
+  /** Gian hàng đã có xe nào chưa - chỉ dùng cho dải chào mừng; route chỉ hỏi khi `welcome`. */
   hasVehicle?: boolean;
-  onSectionChange: (section: ShopSection) => void;
-  onSave: (body: UpdateProfileInput) => void;
+  /** Lưu MỘT nhóm ô của hồ sơ; promise từ chối khi server từ chối (hộp thoại giữ nguyên). */
+  onSave: (body: UpdateProfileInput) => Promise<unknown>;
 }
 
 /**
- * TRANG CỬA HÀNG — một trang nhiều section (16/09/2026; sắp lại 07/10/2026).
+ * TRANG THÔNG TIN CỬA HÀNG - design `23999:111044` (06/11/2026).
  *
- * ## Vì sao gộp
+ * ## Bố cục
  *
- * Bốn mục sidebar cũ — "Cửa hàng", "Gói & hoá đơn", "Tài khoản & bảo mật", "Hồ sơ người bán" —
- * ba mục trả lời cùng một câu hỏi ("gian hàng của tôi khai gì, trả tiền thế nào"), và mục thứ tư
- * thì nói về một con người chứ không phải gian hàng. Nay: ba câu hỏi đầu vào MỘT trang có mục
- * lục; câu hỏi thứ tư sang `/manage/security`.
+ *   Logo · tên · trạng thái                               [vai người xem] [Xem gian hàng]
+ *   ┌ Chủ gian hàng ┐┌ Địa chỉ & pháp lý ┐┌ Khai thuế ┐   ┌ Thông tin hiển thị ┐
+ *   ┌ Chi nhánh ──────────────────────────────────────┐   │ ảnh bìa · logo      │
+ *   ┌ Gói & hạn mức ──────────────────────────────────┐   │ tên · SĐT · email   │
+ *   ┌ Hoá đơn và thanh toán ──────────────────────────┐   └ giới thiệu ─────────┘
  *
- * 07/10/2026: "Tài khoản nhận tiền" rời trang này về "Số dư & rút tiền" (rút tiền và nơi tiền về là
- * một việc), và "Thông tin khai thuế" vào thay — hồ sơ NGƯỜI BÁN, nguồn duy nhất của mã số thuế mà
- * hợp đồng và báo cáo thuế đọc (ô MST cũ ở "Địa chỉ & pháp lý" ghi vào một bản sao không ai tính
- * thuế từ đó). Trang này và "Hồ sơ chủ xe" nay cùng một vai và cùng thứ tự: danh tính trên chợ ·
- * địa chỉ & pháp lý · khai thuế · gói.
+ * Mục lục trái của bản cũ đã bỏ (design không còn): trang giờ là các THẺ ngắn, mỗi thẻ một tiêu đề.
+ * `?section=` vẫn sống - các redirect và link cũ cuộn tới đúng thẻ (`shopSectionDomId`).
  *
- * ## Các section dựng CÙNG LÚC, `?section=` chỉ cuộn và làm sáng
+ * ## MỘT form, lưu THEO NHÓM
  *
- * Không phải tab. Nếu mỗi lần chọn là tháo khối cũ ra thì người đang gõ dở hồ sơ mà bấm sang
- * "Gói & hạn mức" để xem hạn sẽ mất sạch thay đổi chưa lưu. `?section=` sống ở URL để reload,
- * Back/Forward và link gửi cho nhau đều rơi đúng chỗ (ADR 0004).
+ * Các thẻ chỉ ĐỌC; sửa trong hộp thoại, và "Cập nhật" của hộp thoại lưu NGAY đúng nhóm ô của nó
+ * (`toShopProfilePatch` - người dùng chốt 06/11/2026). Cả trang dùng chung một form hồ sơ để danh
+ * sách "Hoàn thiện hồ sơ" và bản xem trước ảnh đọc giá trị đang sửa. Đóng hộp thoại = trả nhóm ô đó
+ * về bản đã lưu. Logo / ảnh bìa là ngoại lệ có chủ đích: đổi ảnh là xem trước trên thẻ, cặp
+ * "Hủy · Lưu thay đổi" dưới thẻ mới lưu.
  *
- * ## Một `<form>`, một `<fieldset>` hẹp
+ * "Thông tin khai thuế" lưu vào hồ sơ NGƯỜI BÁN (endpoint khác) bằng form riêng (`ShopTaxCard`).
  *
- * Thẻ `<form>` của hồ sơ bọc BA section đầu (hiển thị · chủ gian hàng · địa chỉ & pháp lý), và
- * `<fieldset disabled>` chỉ bọc hai nhóm ô THUỘC hồ sơ. "Thông tin khai thuế" có `<form>` RIÊNG
- * (lưu vào hồ sơ người bán, nút lưu riêng) nên đứng NGOÀI — một `<form>` lồng trong `<form>` là
- * HTML hỏng. "Gói & hạn mức" cũng đứng ngoài: form thật của nó (mua gói) sống trong Modal.
+ * ## Mặt tiền CÁ NHÂN — "Hồ sơ chủ xe" (ADR 0085 điều 2)
  *
- * ## Nút Lưu ở tiêu đề
+ * Chủ xe tuyến hoa hồng dùng CHÍNH trang này (thay trang "Hồ sơ chủ xe" kiểu cũ). Route chọn bản theo
+ * tuyến của người đăng nhập (`isCommissionOwner`), nên lên gói hay hết gói thì trang tự đổi bản ở lần
+ * tải kế tiếp. Khác bản gian hàng đúng ở chỗ khác nghĩa:
  *
- * Vì nó chỉ có nghĩa khi biết form CÓ THAY ĐỔI HAY CHƯA, và `isDirty` thì thuộc về form. Nút nằm
- * ngoài `<form>` trong DOM nên nó submit bằng `form={PROFILE_FORM_ID}` — cách chuẩn của HTML,
- * không phải một `onClick` gọi lén `handleSubmit`.
+ *   Ảnh · họ tên · trạng thái                                              [Xem trang chủ xe]
+ *   ┌ Địa chỉ nhận xe ┐┌ Khai thuế ┐┌ Hoá đơn VAT ┐                       ┌ Thông tin chủ xe ┐
+ *   ┌ Gói dịch vụ (phễu nâng cấp) ─────────────────┐                       │ ảnh · họ tên      │
+ *                                                                         └ giới thiệu ───────┘
+ *
+ *  - danh tính là TÀI KHOẢN chủ (ảnh tròn, họ tên) — thẻ "Thông tin chủ xe" lưu tài khoản + lời giới
+ *    thiệu (`OwnerInfoForm`), không có logo/ảnh bìa/SĐT/email riêng của gian hàng;
+ *  - không thẻ Chủ gian hàng (chính là họ), không Chi nhánh (một chi nhánh mặc định), không vai;
+ *  - thêm thẻ Hoá đơn VAT — gian hàng đặt thiết lập này ở "Chính sách thuê", chủ xe không có trang đó.
+ *
+ * Bộ riêng của gian hàng (`tenants.name/phone/email`, logo, ảnh bìa) nằm yên trong DB: lên gói là
+ * chúng hiện lại ở bản gian hàng (ADR 0054 điều 2).
  */
 export function ShopWorkspace({
   shop,
+  ownerProfile,
   canEdit,
   saving,
-  errorMessage,
   section,
   sectionInUrl,
   welcome = false,
   hasVehicle = false,
-  onSectionChange,
   onSave,
 }: ShopWorkspaceProps) {
   const t = useTranslations('Shop');
-  const tSections = useTranslations('Shop.sections');
+  const tOwner = useTranslations('Account.ownerHub');
+  const tVat = useTranslations('Shop.vatInvoice');
+  const domainLabel = useDomainLabel();
   const { has } = usePermissions();
-
-  const { control, handleSubmit, reset, formState } = useShopProfileForm(shop);
+  const { tenant } = useTenantScope();
+  const form = useShopProfileForm(shop);
+  const [editing, setEditing] = useState<ShopProfileGroup | null>(null);
 
   const status = shop.status as TenantStatus;
-  /*
-   * Chỉ-xem CHỈ vì thiếu quyền. Tới 24/09/2026 hồ sơ còn bị khoá suốt lúc chờ XÁC MINH; nền tảng
-   * đã tạm ngừng xác minh gian hàng, nên một phiếu chờ không còn ai xử lý và cái khoá đó thành
-   * vĩnh viễn — backend cũng đã gỡ nó (`TenantsService.updateProfile`).
-   */
-  const readOnly = !canEdit;
-  // Phiên hỗ trợ gian hàng (ADR 0050 §12): hồ sơ chỉ đọc — không nút Lưu, không lời giải thích quyền.
+  const personal = Boolean(ownerProfile);
+  // Phiên hỗ trợ gian hàng (ADR 0050 §12): hồ sơ chỉ đọc - không nút sửa, không lời giải thích quyền.
   const hidesDenied = useSupportHides(SUPPORT_HIDDEN_AREA.DENIED_ACTIONS);
   const readOnlyReason = canEdit || hidesDenied ? null : t('form.readOnly');
 
-  /**
-   * `isDirty` quyết định CẢ HAI nút: chưa sửa gì thì không có gì để lưu (nút mờ) và không có gì
-   * để huỷ (nút KHÔNG hiện). Một nút Lưu lúc nào cũng sáng dạy người dùng rằng bấm nó là vô hại,
-   * và một nút Huỷ luôn đứng đó gợi ý rằng có thứ gì đang dở dang.
-   */
-  const dirty = formState.isDirty && !readOnly;
-
   /*
-   * Các trục quyết định section nào có mặt, và mỗi trục KHỚP với guard của API:
+   * Các trục quyết định thẻ nào có mặt, và mỗi trục KHỚP với guard của API:
    *  - "Thông tin khai thuế" → `seller_profile.view` (`GET /seller-profile`); sửa cần
-   *    `seller_profile.manage` và `SellerTaxSection` tự chuyển chỉ-xem khi thiếu. Vắng trong phiên
-   *    hỗ trợ (ADR 0050 §10): endpoint đó không mở cho phiên, và giấy tờ pháp lý không hiện ở đó.
-   *  - "Gói & hạn mức" → `subscription.view`. Mua/gia hạn cần `subscription.purchase`, và
-   *    `SubscriptionWorkspace` tự giấu CTA lẫn modal khi thiếu.
-   *  - Ba section còn lại đi cùng `tenant.view`, thứ mà trang này đã đòi để vào.
+   *    `seller_profile.manage` (thẻ tự ẩn bút chì). Vắng trong phiên hỗ trợ (ADR 0050 §10).
+   *  - "Gói & hạn mức" + "Hoá đơn" → `subscription.view`. Mua/gia hạn cần `subscription.purchase`.
+   *  - Chi nhánh → `branches.view` + cờ gói `branches` (`hidden` ⇒ vắng hẳn, `read_only` ⇒ vẫn
+   *    xem/sửa, chỉ khoá thêm mới). Cờ vắng trong cache ⇒ `enabled`.
    */
-  const { tenant } = useTenantScope();
   const supportHidesLegal = useSupportHides(SUPPORT_HIDDEN_AREA.SHOP_LEGAL);
   const canSeeTax = has(PERMISSION.SELLER_PROFILE_VIEW) && !supportHidesLegal;
   const canSeePlan = has(PERMISSION.SUBSCRIPTION_VIEW);
-  const tTax = useTranslations('Account.tax');
-
-  const items: SectionNavItem<ShopSection>[] = [
-    { key: SHOP_SECTION.PROFILE, label: tSections('profile') },
-    { key: SHOP_SECTION.OWNER, label: tSections('owner') },
-    { key: SHOP_SECTION.LEGAL, label: tSections('legal') },
-    ...(canSeeTax ? [{ key: SHOP_SECTION.TAX, label: tTax('title') }] : []),
-    ...(canSeePlan ? [{ key: SHOP_SECTION.PLAN, label: tSections('plan') }] : []),
-  ];
+  const featureStates = useFeatureStates();
+  const canSeeBranches =
+    !personal &&
+    has(PERMISSION.BRANCH_VIEW) &&
+    isFeatureVisible(featureStates[PLAN_FEATURE.BRANCHES] ?? FEATURE_STATE.ENABLED);
 
   useScrollToSection(shopSectionDomId(section), sectionInUrl);
 
-  const submit = handleSubmit((v) => onSave(toShopProfileBody(v)));
+  const [logoUrl, coverUrl] = useWatch({ control: form.control, name: ['logoUrl', 'coverUrl'] });
+  const dirty = form.formState.dirtyFields;
+  const mediaDirty = Boolean(dirty.logoUrl || dirty.coverUrl);
+
+  /** Trả các ô của MỘT nhóm về bản đã lưu - đóng hộp thoại, hoặc "Hủy" của ảnh. */
+  function resetGroup(group: ShopProfileGroup) {
+    const saved = toShopProfileValues(shop);
+    for (const field of SHOP_PROFILE_GROUP_FIELDS[group]) {
+      form.resetField(field, { defaultValue: saved[field] });
+    }
+  }
+
+  async function saveGroup(group: ShopProfileGroup) {
+    // Enter vẫn gửi form khi nút đang quay - không gửi lượt thứ hai trong lúc lượt đầu đang bay.
+    if (saving) return;
+    const valid = await form.trigger([...SHOP_PROFILE_GROUP_FIELDS[group]]);
+    if (!valid) return;
+    const values = form.getValues();
+    try {
+      await onSave(toShopProfilePatch(values, group));
+    } catch {
+      // Câu lỗi do nơi gọi báo; giữ nguyên hộp thoại + giá trị đang sửa để sửa và gửi lại.
+      return;
+    }
+    // Ghi bản vừa lưu làm mốc "chưa sửa" của nhóm - nhóm khác đang sửa dở không bị đụng.
+    for (const field of SHOP_PROFILE_GROUP_FIELDS[group]) {
+      form.resetField(field, { defaultValue: values[field] });
+    }
+    setEditing(null);
+  }
+
+  function closeDialog() {
+    if (editing) resetGroup(editing);
+    setEditing(null);
+  }
+
+  const roleKey = tenant?.roleKey;
+  /*
+   * Thứ khách thấy về CHỦ XE CÁ NHÂN - cùng hàm với API (`storefrontIdentity`), nên đầu trang không
+   * thể nói khác trang công khai. Gian hàng thì là tên + logo của `tenants`.
+   */
+  const identity =
+    personal && ownerProfile
+      ? storefrontIdentity(
+          STOREFRONT_KIND.PERSONAL,
+          {
+            name: shop.name,
+            phone: shop.phone ?? null,
+            email: shop.email ?? null,
+            logoUrl: shop.profile.logoUrl ?? null,
+          },
+          {
+            displayName: ownerProfile.displayName,
+            phone: ownerProfile.phone,
+            phoneVerified: ownerProfile.phoneVerified,
+            email: ownerProfile.email,
+            emailVerified: ownerProfile.emailVerified,
+            avatarUrl: ownerProfile.avatarUrl,
+          },
+        )
+      : null;
+  const headName = identity?.name ?? shop.name;
+  const kind = personal ? STOREFRONT_KIND.PERSONAL : STOREFRONT_KIND.SHOP;
 
   return (
     <>
       <header className={styles.header}>
         <div className={styles.identity}>
           {/*
-            LOGO gian hàng — hình đại diện DUY NHẤT của trang. Không có avatar cá nhân nào đứng
-            cạnh nó: trong cổng quản lý, danh tính nổi bật là của gian hàng.
+            Gian hàng: LOGO vuông - danh tính nổi bật của trang là gian hàng, không phải một người.
+            Chủ xe cá nhân: ảnh TRÒN của chính họ - khách đang thuê xe của một con người.
           */}
           <Avatar
             className={styles.logo}
-            size={52}
-            shape="square"
-            src={shop.profile.logoUrl ?? undefined}
+            size={54}
+            shape={identity ? 'circle' : 'square'}
+            src={(identity ? identity.avatarUrl : shop.profile.logoUrl) ?? undefined}
           >
-            {initialOf(shop.name)}
+            {initialOf(headName)}
           </Avatar>
           <div className={styles.headText}>
             <h1 className={styles.shopName}>
-              {shop.name}
-              <StatusTag value={status} meta={TENANT_STATUS_META} group="tenantStatus" />
+              {headName}
+              <StatusTag
+                value={status}
+                meta={TENANT_STATUS_META}
+                group="tenantStatus"
+                appearance="pill"
+              />
             </h1>
-            <p className={styles.subtitle}>{t('page.subtitle')}</p>
+            <p className={styles.subtitle}>
+              {personal ? tOwner('pageSubtitle') : t('page.subtitle')}
+            </p>
           </div>
         </div>
 
         <div className={styles.actions}>
-          {dirty ? (
-            <span className={styles.dirtyHint}>
-              <span className={styles.dirtyDot} aria-hidden="true" />
-              {t('form.unsaved')}
+          {/* Vai chỉ có nghĩa ở gian hàng nhiều người - chủ xe cá nhân là chính họ. */}
+          {roleKey && !personal ? (
+            <span className={styles.roleChip}>
+              <SafetyCertificateOutlined aria-hidden />
+              {domainLabel('tenantRole', roleKey)}
             </span>
           ) : null}
-
-          {/* Chỉ shop đang hoạt động mới có trang công khai — link tới 404 là hành động giả. */}
+          {/* Chỉ shop đang hoạt động mới có trang công khai - link tới 404 là hành động giả. */}
           {status === TENANT_STATUS.ACTIVE ? (
             <Link href={shopPath.detail(shop.slug)} target="_blank" rel="noopener noreferrer">
-              <Button icon={<ExportOutlined />}>{t('page.viewPublicPage')}</Button>
+              <Button size="large" icon={<ExportOutlined />}>
+                {personal ? tOwner('viewPublicPage') : t('page.viewPublicPage')}
+              </Button>
             </Link>
           ) : null}
-
-          {/* Chưa sửa gì thì không có gì để huỷ — nút không tồn tại, chứ không phải mờ đi. */}
-          {dirty ? (
-            <Button onClick={() => reset()} disabled={saving}>
-              {t('form.reset')}
-            </Button>
-          ) : null}
-
-          {readOnly && hidesDenied ? null : (
-            <Button
-              type="primary"
-              icon={<SaveOutlined />}
-              htmlType="submit"
-              form={PROFILE_FORM_ID}
-              loading={saving}
-              disabled={!dirty}
-            >
-              {t('form.submit')}
-            </Button>
-          )}
         </div>
       </header>
 
       {/*
-        Dải CHÀO MỪNG đứng TRƯỚC dải trạng thái, và đó là thứ tự đúng đúng một lần trong đời gian
-        hàng: người vừa trả tiền cần biết việc còn lại của mình trước khi đọc bất cứ tin gì khác.
-        Nó tự im lặng khi không còn gì để nói (xem `ShopWelcomeBanner`).
+        Dải CHÀO MỪNG đứng TRƯỚC dải trạng thái: người vừa trả tiền cần biết việc còn lại của mình
+        trước khi đọc bất cứ tin gì khác. Nó tự im lặng khi không còn gì để nói.
       */}
-      {welcome ? (
+      {welcome && !personal ? (
         <ShopWelcomeBanner missingLogo={!shop.profile.logoUrl} hasVehicle={hasVehicle} />
       ) : null}
-
       <ShopStatusBanner shop={shop} />
-
-      {errorMessage ? (
-        <Alert type="error" showIcon title={errorMessage} className={styles.alert} />
-      ) : null}
       {readOnlyReason ? (
         <Alert type="info" showIcon className={styles.alert} title={readOnlyReason} />
       ) : null}
 
-      <div className={styles.layout}>
-        <SectionNav
-          items={items}
-          active={section}
-          onSelect={onSectionChange}
-          domIdOf={shopSectionDomId}
-          title={tSections('navTitle')}
-          ariaLabel={tSections('navLabel')}
-        />
-
-        <div className={styles.content}>
-          <Form
-            component={false}
-            layout="vertical"
-            size="large"
-            colon={false}
-            requiredMark={trailingRequiredMark}
-          >
-            <div className={styles.sections}>
-              <form id={PROFILE_FORM_ID} onSubmit={submit} noValidate className={styles.form}>
-                {/*
-                `fieldset[disabled]` khoá mọi ô nhập/nút NATIVE bên trong bằng chính cơ chế của
-                trình duyệt. Các ô CHỌN (tỉnh/thành, xã/phường) vẫn phải nhận `disabled` tường
-                minh: chúng là combobox dựng bằng div, fieldset không với tới được.
-
-                Nó chỉ bọc HAI nhóm ô của hồ sơ. Khối chủ gian hàng nằm ngoài — nó chỉ đọc, và có
-                luật quyền riêng.
+      {/* Form AntD bao cả trang để mọi `Form.Item` trong hộp thoại dùng chung layout + dấu bắt buộc. */}
+      <Form component={false} layout="vertical" colon={false} requiredMark={trailingRequiredMark}>
+        <div className={styles.layout}>
+          <div className={styles.main}>
+            <div className={styles.topCards}>
+              {personal ? null : <ShopOwnerSection shop={shop} />}
+              <ShopLegalCard
+                shop={shop}
+                kind={kind}
+                onEdit={canEdit ? () => setEditing(SHOP_PROFILE_GROUP.LEGAL) : undefined}
+              />
+              {canSeeTax ? <ShopTaxCard /> : null}
+              {/*
+                Hoá đơn VAT (ADR 0059) - MỘT thiết lập cho mọi xe. Gian hàng đặt nó ở "Chính sách thuê";
+                chủ xe cá nhân không có trang đó, nên nó là một thẻ ở đây. Lưu ngay khi bấm.
               */}
-                <fieldset disabled={readOnly || saving} className={styles.fieldset}>
-                  <SectionCard
-                    id={shopSectionDomId(SHOP_SECTION.PROFILE)}
-                    title={tSections('profile')}
-                    hint={tSections('profileHint')}
-                  >
-                    <ShopDisplayFields control={control} readOnly={readOnly && hidesDenied} />
-                  </SectionCard>
-                </fieldset>
-
-                <ShopOwnerSection shop={shop} />
-
-                <fieldset disabled={readOnly || saving} className={styles.fieldset}>
-                  <SectionCard
-                    id={shopSectionDomId(SHOP_SECTION.LEGAL)}
-                    title={tSections('legal')}
-                    hint={tSections('legalHint')}
-                  >
-                    {/*
-                    Checklist đứng trong section pháp lý vì đây là nơi còn ô để điền. Chỉ hiện khi
-                    người xem SỬA được hồ sơ — bảng "còn thiếu gì" không có nghĩa với người chỉ xem.
-                    Không còn gắn với trạng thái xác minh: web đã bỏ luồng đó (24/09/2026).
-                  */}
-                    {!readOnly ? (
-                      <ShopProfileChecklist
-                        control={control}
-                        ownerAccount={shop.ownerAccount}
-                        /*
-                         * Gian hàng tuyến gói: LOGO là mục chặn, không phải gợi ý — thiếu nó là
-                         * `submitForPublicReview` từ chối thật (ADR 0040 điều 7). Chủ xe tuyến hoa
-                         * hồng không bị cổng đó chạm tới, nên với họ nó vẫn là gợi ý.
-                         */
-                        logoRequired={isPackageShopTrack(tenant)}
-                      />
-                    ) : null}
-                    <ShopLegalFields control={control} readOnly={readOnly} />
-                  </SectionCard>
-                </fieldset>
-              </form>
-
-              {/* <form> riêng, lưu vào hồ sơ người bán — đứng NGOÀI form hồ sơ ở trên. */}
-              {canSeeTax ? <SellerTaxSection id={shopSectionDomId(SHOP_SECTION.TAX)} /> : null}
-
-              {canSeePlan ? (
-                <SectionCard id={shopSectionDomId(SHOP_SECTION.PLAN)} title={tSections('plan')}>
-                  <SubscriptionWorkspace />
-                </SectionCard>
+              {personal ? (
+                <InfoCard
+                  id={shopSectionDomId(SHOP_SECTION.VAT_INVOICE)}
+                  title={tVat('title')}
+                  hint={tVat('subtitle')}
+                >
+                  <VatInvoiceSetting canEdit={canEdit} />
+                </InfoCard>
               ) : null}
             </div>
-          </Form>
+
+            {canSeeBranches ? (
+              <BranchesView variant="section" sectionId={shopSectionDomId(SHOP_SECTION.BRANCHES)} />
+            ) : null}
+
+            {canSeePlan ? <ShopPlanSection id={shopSectionDomId(SHOP_SECTION.PLAN)} /> : null}
+          </div>
+
+          <aside className={styles.aside}>
+            {personal && ownerProfile ? (
+              <InfoCard
+                id={shopSectionDomId(SHOP_SECTION.PROFILE)}
+                title={tOwner('sections.profile')}
+                hint={tOwner('sections.profileHint')}
+              >
+                <OwnerInfoForm profile={ownerProfile} shop={shop} canEditBio={canEdit} stacked />
+              </InfoCard>
+            ) : (
+              <ShopDisplayCard
+                shop={shop}
+                logoUrl={logoUrl ?? null}
+                coverUrl={coverUrl ?? null}
+                canEdit={canEdit}
+                mediaDirty={mediaDirty}
+                saving={saving}
+                onEdit={() => setEditing(SHOP_PROFILE_GROUP.DISPLAY)}
+                onMediaChange={(field, url) =>
+                  form.setValue(field, url, { shouldDirty: true, shouldValidate: true })
+                }
+                onMediaCancel={() => resetGroup(SHOP_PROFILE_GROUP.MEDIA)}
+                onMediaSave={() => void saveGroup(SHOP_PROFILE_GROUP.MEDIA)}
+              />
+            )}
+            {/*
+              "Hoàn thiện hồ sơ" - design không vẽ; giữ dưới thẻ hiển thị vì nó nói đúng những gì
+              thẻ đó còn thiếu. Chỉ cho người SỬA được; tự ẩn khi đủ. Gian hàng tuyến gói: LOGO là
+              mục chặn (`submitForPublicReview` từ chối thật - ADR 0040 điều 7). Chủ xe cá nhân: ẢNH
+              ĐẠI DIỆN là mục bắt buộc - đó là ảnh khách thấy (ADR 0054).
+            */}
+            {canEdit ? (
+              personal ? (
+                <ShopProfileChecklist
+                  control={form.control}
+                  ownerAccount={shop.ownerAccount}
+                  kind={STOREFRONT_KIND.PERSONAL}
+                  ownerAvatarUrl={ownerProfile?.avatarUrl ?? null}
+                  logoRequired
+                />
+              ) : (
+                <ShopProfileChecklist
+                  control={form.control}
+                  ownerAccount={shop.ownerAccount}
+                  logoRequired={isPackageShopTrack(tenant)}
+                />
+              )
+            ) : null}
+          </aside>
         </div>
-      </div>
+
+        {canEdit ? (
+          <>
+            <ShopLegalDialog
+              open={editing === SHOP_PROFILE_GROUP.LEGAL}
+              control={form.control}
+              saving={saving}
+              kind={kind}
+              onCancel={closeDialog}
+              onSubmit={() => void saveGroup(SHOP_PROFILE_GROUP.LEGAL)}
+            />
+            {personal ? null : (
+              <ShopDisplayDialog
+                open={editing === SHOP_PROFILE_GROUP.DISPLAY}
+                control={form.control}
+                saving={saving}
+                onCancel={closeDialog}
+                onSubmit={() => void saveGroup(SHOP_PROFILE_GROUP.DISPLAY)}
+              />
+            )}
+          </>
+        ) : null}
+      </Form>
     </>
   );
 }

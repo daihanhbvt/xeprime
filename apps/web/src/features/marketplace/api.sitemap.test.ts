@@ -9,7 +9,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('sitemap — quét danh sách công khai', () => {
+describe('sitemap - quét danh sách công khai', () => {
   it('đi hết các trang, sort ổn định, bỏ mục trùng khi thứ tự xê dịch giữa hai trang', async () => {
     const fetchMock = vi.fn(async (input: string) => {
       const query = new URL(input, 'http://api').searchParams;

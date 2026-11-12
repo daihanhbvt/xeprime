@@ -28,7 +28,7 @@ export class SaveBankAccountDto {
   @MaxLength(20)
   bankCode!: string;
 
-  @ApiProperty({ description: 'Số tài khoản — chỉ chữ số', example: '0011001234567' })
+  @ApiProperty({ description: 'Số tài khoản - chỉ chữ số', example: '0011001234567' })
   @IsString()
   @Matches(/^[0-9\s]{4,40}$/, { message: 'Số tài khoản chỉ gồm chữ số' })
   accountNumber!: string;
@@ -51,7 +51,7 @@ export class SaveBankAccountDto {
    */
   @ApiPropertyOptional({
     deprecated: true,
-    description: 'Bỏ qua — tài khoản vừa khai luôn là tài khoản nhận tiền duy nhất.',
+    description: 'Bỏ qua - tài khoản vừa khai luôn là tài khoản nhận tiền duy nhất.',
   })
   @IsOptional()
   @IsBoolean()
@@ -63,17 +63,17 @@ export class BankAccountDto {
   @ApiProperty() id!: string;
   @ApiProperty({ enum: WALLET_OWNER_TYPE_VALUES }) ownerType!: WalletOwnerType;
   @ApiProperty() bankCode!: string;
-  @ApiProperty({ description: 'Số tài khoản đã che — PII', example: '••••4567' })
+  @ApiProperty({ description: 'Số tài khoản đã che - PII', example: '••••4567' })
   accountNumberMasked!: string;
   @ApiProperty() accountName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) label!: string | null;
-  @ApiProperty({ description: 'Luôn `true` với tài khoản đang dùng — giữ cho client cũ' })
+  @ApiProperty({ description: 'Luôn `true` với tài khoản đang dùng - giữ cho client cũ' })
   isDefault!: boolean;
   @ApiProperty({ enum: BANK_ACCOUNT_STATUS_VALUES }) status!: BankAccountStatus;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Đã đối chiếu với một khoản tiền thật chưa — null là người dùng tự khai',
+    description: 'Đã đối chiếu với một khoản tiền thật chưa - null là người dùng tự khai',
   })
   verifiedAt!: string | null;
   @ApiProperty() createdAt!: string;

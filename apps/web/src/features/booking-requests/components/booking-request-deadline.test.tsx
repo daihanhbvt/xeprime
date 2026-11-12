@@ -30,6 +30,11 @@ import type { BookingRequestItem } from '../types';
  * Hộp thoại duyệt đọc LẠI yêu cầu mỗi lần mở (cửa sổ "nếu duyệt ngay" không được cũ). Ở đây không
  * có server: lượt đọc lại treo mãi, hộp thoại hiện bản của dòng hộp thư — đúng hành vi lúc đang tải.
  */
+// Dòng thông số xe đọc nhãn nhiên liệu từ danh mục API — test dùng bản cố định.
+vi.mock('@/features/catalog/use-catalog', async () =>
+  (await import('@/features/catalog/test-catalog')).catalogModuleMock(),
+);
+
 vi.mock('../api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api')>()),
   fetchBookingRequest: () => new Promise(() => {}),
@@ -179,10 +184,10 @@ describe('Đồng hồ hạn phản hồi', () => {
 });
 
 describe('Quyết định theo hạn phản hồi', () => {
-  it('còn hạn: CTA là "Duyệt & giữ xe", cạnh nút từ chối', () => {
+  it('còn hạn: CTA là "Xác nhận" (design 05/11/2026), cạnh nút từ chối', () => {
     renderCard();
 
-    expect(screen.getByRole('button', { name: /Duyệt & giữ xe/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Xác nhận$/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Từ chối/ })).toBeTruthy();
   });
 
@@ -190,7 +195,7 @@ describe('Quyết định theo hạn phản hồi', () => {
     const item = request();
     renderCard(item);
 
-    fireEvent.click(screen.getByRole('button', { name: /Duyệt & giữ xe/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Xác nhận$/ }));
 
     await waitFor(() => expect(handlers.onApprove).toHaveBeenCalledTimes(1));
     expect(handlers.onApprove.mock.calls[0]![0]).toBe(item);
@@ -203,7 +208,7 @@ describe('Quyết định theo hạn phản hồi', () => {
   it('quá hạn nhưng worker chưa kịp đổi status: KHÔNG còn duyệt/từ chối', () => {
     renderCard(request({ respondBy: inMinutes(-2) }));
 
-    expect(screen.queryByRole('button', { name: /Duyệt & giữ xe/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Xác nhận$/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Từ chối/ })).toBeNull();
     // Nói vì sao — im lặng ở đây đọc như một lỗi tải.
     expect(screen.getByText(/Yêu cầu đã đóng vì quá hạn phản hồi/)).toBeTruthy();
@@ -212,14 +217,14 @@ describe('Quyết định theo hạn phản hồi', () => {
   it('yêu cầu đã hết hạn (status expired) cũng không có action nào', () => {
     renderCard(request({ status: BOOKING_REQUEST_STATUS.EXPIRED, respondBy: inMinutes(-90) }));
 
-    expect(screen.queryByRole('button', { name: /Duyệt & giữ xe/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Xác nhận$/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Từ chối/ })).toBeNull();
   });
 
   it('thiếu quyền booking_requests.approve: không render nút quyết định', () => {
     renderCard(request(), false);
 
-    expect(screen.queryByRole('button', { name: /Duyệt & giữ xe/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Xác nhận$/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Từ chối/ })).toBeNull();
   });
 });
@@ -255,7 +260,7 @@ describe('Lỗi khi duyệt', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Xe đã bận khung giờ này')).toBeTruthy();
-    expect(within(dialog).getByRole('button', { name: /Duyệt & giữ xe/ })).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: /Xác nhận yêu cầu/ })).toBeTruthy();
   });
 
   it('đang gửi: nút chính vào trạng thái chờ, không bấm được lần hai', async () => {
@@ -275,7 +280,7 @@ describe('Lỗi khi duyệt', () => {
     );
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByRole('button', { name: /Duyệt & giữ xe/ }).className).toContain(
+    expect(within(dialog).getByRole('button', { name: /Xác nhận yêu cầu/ }).className).toContain(
       'ant-btn-loading',
     );
   });

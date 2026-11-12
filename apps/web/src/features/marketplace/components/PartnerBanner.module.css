@@ -1,66 +1,103 @@
 /*
- * Dải "Đăng ký trở thành đối tác" (Figma `19695:40878`, ADR 0062) — tràn hết bề ngang, cao 312px.
+ * Dải "Đăng ký trở thành đối tác" — Figma "Homepage - Updated" › Partner Banner (`21965:5337`,
+ * ADR 0062): tràn hết bề ngang, cao 600px; nội dung MỘT cột canh trái trong khung 1200px, phủ nền
+ * tối từ trái sang (`gradient-partner-shade`).
  *
- * Desktop dựng lại đúng toạ độ của bản vẽ trong khung 1200px: logo ở x=0, tiêu đề ở x=430, nút và
- * quyền lợi ở x=971. Ba cột 342 | 1fr | 229 cách nhau 88px cho đúng ba mốc đó ở 1200px và vẫn co
- * được ở màn hẹp hơn; mọi khối nằm chung một hàng lưới, mốc dọc là `margin-top` của chính nó.
+ * Mốc dọc của bản vẽ: logo 64 → tiêu đề 139 → quyền lợi 267 → nút 441 → trợ giúp 513, đáy chừa 65.
+ * DOM giữ thứ tự của bản vẽ mobile (`19771:51743`: tiêu đề → nút → quyền lợi); desktop đổi chỗ
+ * bằng `order`.
  */
 .banner {
   position: relative;
-  overflow: hidden;
+  /* `clip` chứ không `hidden`: `hidden` biến khung thành vùng cuộn riêng, và `animation-timeline:
+     view()` của ảnh nền (`sectionParallaxClass`) bám vào khung KHÔNG cuộn này ⇒ hiệu ứng đứng yên.
+     `clip` vẫn cắt ảnh dư mép nhưng để timeline bám theo cuộn của trang. */
+  overflow: clip;
   background: var(--xp-color-bg-inverse);
   color: var(--xp-color-text-on-dark);
   isolation: isolate;
 }
 
-/* Ảnh nền: rộng 102.09%, cao 157.43%, lùi lên 27.71% (Figma) — cùng tỉ lệ ảnh, nên cover = khớp. */
+/* Ảnh nền cắt sẵn đúng khung 1440×600 của bản vẽ (@2x) — cover là khớp. */
 .backdrop {
   position: absolute;
-  z-index: -1;
-  top: -27.71%;
-  left: -1.045%;
-  width: 102.09%;
-  height: 157.43%;
+  z-index: -2;
+  inset: 0;
 }
 
 .backdropImage {
   object-fit: cover;
 }
 
-.inner {
-  display: grid;
-  max-width: calc(var(--xp-market-container-max-width) + 2 * var(--xp-space-md));
-  min-height: 312px;
-  box-sizing: border-box;
-  padding: 0 var(--xp-space-md);
-  margin: 0 auto;
-  column-gap: 88px;
-  grid-template-columns: 342px minmax(0, 1fr) 229px;
-  grid-template-rows: 312px;
+.backdropMobile,
+.backdropTablet {
+  display: none;
 }
 
-.inner > * {
-  grid-row: 1;
-  align-self: start;
+@media (min-width: 641px) and (max-width: 1024px) {
+  .backdropDesktop {
+    display: none;
+  }
+
+  .backdropTablet {
+    display: block;
+  }
+}
+
+/* Ảnh admin (`<picture>`) phủ kín dải như ảnh mặc định. */
+.adminImage {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+}
+
+/*
+ * Màn rộng hơn khung bản vẽ (> 1440): ảnh GIỮ khổ 1440 × 600 neo mép phải (phía có xe) thay vì
+ * `cover` phóng to theo bề ngang — phóng là xe to ra, trên/dưới bị cắt, lệch hẳn bố cục Figma.
+ * Phần dư bên trái là nền tối của dải; mép trái ảnh mờ dần vào nền để không thành một đường cắt.
+ */
+@media (min-width: 1441px) {
+  .backdrop {
+    left: auto;
+    width: var(--xp-bp-desktop);
+    mask-image: linear-gradient(to right, transparent 0%, #000 20%);
+  }
+}
+
+.banner::before {
+  position: absolute;
+  z-index: -1;
+  background: var(--xp-gradient-partner-shade);
+  content: '';
+  inset: 0;
+}
+
+.inner {
+  display: flex;
+  max-width: calc(var(--xp-market-container-max-width) + 2 * var(--xp-space-md));
+  min-height: 600px;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--xp-space-64) var(--xp-space-md) 65px;
+  margin: 0 auto;
 }
 
 .logo {
   display: block;
-  width: 342px;
-  height: 107px;
-  margin-top: 48.83px;
-  grid-column: 1;
+  width: 164px;
+  height: auto;
 }
 
 .title {
   display: flex;
   flex-direction: column;
-  margin: 35.83px 0 0;
-  font-size: 42px;
+  margin: var(--xp-space-lg) 0 0;
+  font-size: var(--xp-font-size-display-sm);
   font-weight: var(--xp-font-weight-semibold);
-  grid-column: 2;
-  letter-spacing: var(--xp-letter-spacing-display);
-  line-height: 60px;
+  line-height: 52px;
 }
 
 .titleLead {
@@ -71,14 +108,23 @@
   background: var(--xp-gradient-text-gold);
   background-clip: text;
   color: transparent;
-  font-weight: var(--xp-font-weight-bold);
   text-transform: uppercase;
 }
 
+.benefits {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: var(--xp-space-lg) 0 0;
+  gap: var(--xp-space-md);
+  list-style: none;
+  order: 1;
+}
+
+/* Nút cách khối quyền lợi 70px (Figma: 371 → 441). */
 .cta {
-  margin-top: 60px;
-  grid-column: 3;
-  justify-self: start;
+  margin-top: 70px;
+  order: 2;
 }
 
 /* Vòng trắng 40px ôm mũi tên ở đầu phải nút. */
@@ -89,17 +135,8 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg-container);
-}
-
-.benefits {
-  display: flex;
-  flex-direction: column;
-  padding: 0;
-  margin: 176.83px 0 0;
-  gap: var(--xp-space-md);
-  grid-column: 3;
-  list-style: none;
+  /* Dải đối tác LUÔN là tranh tối ⇒ đĩa mũi tên luôn trắng (không đảo theo giao diện tối). */
+  background: var(--xp-color-text-on-dark);
 }
 
 .benefit {
@@ -112,7 +149,7 @@
   white-space: nowrap;
 }
 
-/* Dấu tích trong ô kính vàng 24px. */
+/* Dấu tích trong ô kính vàng 24px (Figma: nền glass-gold, blur 10, không viền). */
 .check {
   display: inline-flex;
   width: 24px;
@@ -120,18 +157,17 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--xp-color-glass-strong);
-  border-radius: var(--xp-border-radius-pill);
+  border-radius: var(--xp-border-radius-control);
   background: var(--xp-color-glass-gold);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(10px);
 }
 
 .help {
-  margin: 278.83px 0 0;
+  margin: var(--xp-space-md) 0 0;
   color: var(--xp-color-text-on-dark-muted);
   font-size: var(--xp-font-size-body);
-  grid-column: 1 / 3;
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
+  order: 3;
 }
 
 .phone {
@@ -150,34 +186,8 @@
   outline-offset: 2px;
 }
 
-/* Desktop hẹp (1025–1279): logo nhỏ lại, khoảng cách hẹp lại — tiêu đề không bị ép xuống ba dòng. */
-@media (min-width: 1025px) and (max-width: 1279px) {
-  .inner {
-    column-gap: 48px;
-    grid-template-columns: 260px minmax(0, 1fr) 229px;
-  }
-
-  .logo {
-    width: 260px;
-    height: auto;
-    margin-top: 60px;
-  }
-
-  .title {
-    font-size: 34px;
-    line-height: 48px;
-    margin-top: 48px;
-  }
-}
-
-/* Tablet/mobile: các khối xếp dọc, giữ đúng thứ tự đọc logo → tiêu đề → quyền lợi → nút → trợ giúp. */
+/* Tablet/mobile: khung tự co theo nội dung, khoảng cách đều 24. */
 @media (max-width: 1024px) {
-  .backdrop {
-    inset: 0;
-    width: 100%;
-    height: 100%;
-  }
-
   .inner {
     display: flex;
     min-height: 0;
@@ -192,7 +202,7 @@
   }
 
   .logo {
-    width: 220px;
+    width: 192px;
     height: auto;
   }
 
@@ -201,15 +211,109 @@
     line-height: var(--xp-line-height-h1);
   }
 
-  .benefits {
+  /* Bản vẽ mobile: nút ngay dưới tiêu đề, quyền lợi sau nút. */
+  .cta {
     order: 1;
   }
 
-  .cta {
+  .benefits {
     order: 2;
   }
 
   .help {
     order: 3;
   }
+}
+
+/*
+ * Mobile — Figma MB `19771:51743` (390 × 448): đệm 36 / 24, các khối cách 16, logo 164, tiêu đề
+ * 26/34 + dòng nhấn 27/36 Bold gradient vàng (cách 4), quyền lợi 14/22, trợ giúp 12/18 chữ trắng.
+ * Lớp phủ tối của bản vẽ rộng 575px trên khung 390 ⇒ kéo dài 147.44% để giữ đúng độ dốc.
+ */
+@media (max-width: 640px) {
+  .backdropDesktop {
+    display: none;
+  }
+
+  .backdropMobile {
+    display: block;
+  }
+
+  .banner::before {
+    right: auto;
+    width: 147.44%;
+  }
+
+  .inner {
+    padding: var(--xp-space-partner-mb-y) calc(2 * var(--xp-space-md));
+    gap: var(--xp-space-lg);
+  }
+
+  .logo {
+    width: 164px;
+  }
+
+  .title {
+    gap: var(--xp-space-xs);
+  }
+
+  .titleLead {
+    font-size: var(--xp-font-size-partner-mb-lead);
+    line-height: var(--xp-line-height-partner-mb-lead);
+  }
+
+  .titleAccent {
+    background: var(--xp-gradient-primary);
+    background-clip: text;
+    font-size: var(--xp-font-size-partner-mb-accent);
+    font-weight: var(--xp-font-weight-bold);
+    line-height: var(--xp-line-height-partner-mb-accent);
+  }
+
+  .benefit {
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body-relaxed);
+  }
+
+  .help {
+    color: var(--xp-color-text-on-dark);
+    font-size: var(--xp-font-size-body-sm);
+    line-height: var(--xp-line-height-body-sm);
+  }
+}
+
+/* ─── Chuyển động: ảnh nền trôi kiểu jarallax (`ParallaxBackdrop`) ───────────────
+ * Lớp ảnh canh GIỮA dải, cao ĐÚNG tỉ lệ ảnh - không phóng to. Ảnh làm sẵn cao hơn dải để có quãng
+ * trôi (khổ khuyến nghị ở `PARTNER_BANNER_SLOTS`): PC 1440×1500 · tablet 1024×1400 · mobile 390×1300.
+ * Ảnh admin cùng khổ trôi y hệt; ảnh thấp hơn thì trôi ít hơn (không bao giờ lộ nền).
+ */
+.backdrop {
+  top: 50%;
+  bottom: auto;
+  height: max(100%, 104.17vw);
+  translate: 0 -50%;
+  will-change: transform;
+}
+
+@media (min-width: 1441px) {
+  .backdrop {
+    height: max(100%, 1500px);
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .backdrop {
+    height: max(100%, 136.72vw);
+  }
+}
+
+@media (max-width: 640px) {
+  .backdrop {
+    height: max(100%, 333.33vw);
+  }
+}
+
+/* JS đã gồm -50% trong `transform` ⇒ bỏ `translate` để không trừ hai lần. */
+.backdrop[style*='transform'] {
+  translate: none;
 }

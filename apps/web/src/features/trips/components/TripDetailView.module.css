@@ -10,7 +10,7 @@
   flex-direction: column;
   gap: var(--xp-space-md);
   width: 100%;
-  max-width: var(--xp-market-container-max-width, 1200px);
+  max-width: var(--xp-market-container-max-width, 1320px);
   margin-inline: auto;
   padding: var(--xp-space-lg) var(--xp-space-md);
   min-width: 0;
@@ -22,7 +22,7 @@
  */
 .flowPage {
   /* Nội dung rộng đúng 1200 như lưới của chợ (header, Figma khung 1440 lề 120) — đệm nằm ngoài. */
-  max-width: calc(var(--xp-market-container-max-width, 1200px) + 2 * var(--xp-space-md));
+  max-width: calc(var(--xp-market-container-max-width, 1320px) + 2 * var(--xp-space-md));
   gap: 0;
   padding-top: 0;
   padding-bottom: var(--xp-space-xl);
@@ -509,8 +509,7 @@
   max-width: 100%;
   color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 /* Một câu giải thích hệ quả của việc bấm Duyệt — nó giữ chỗ một chiếc xe thật. */

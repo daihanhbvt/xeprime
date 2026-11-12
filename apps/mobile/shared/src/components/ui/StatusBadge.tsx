@@ -4,6 +4,7 @@ import { byPalette, useColors } from '@/theme/ThemeProvider';
 import type { AppColors } from '@/theme/tokens';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { estimateTextWidth } from './text-fit';
+import { PulseDot } from '@/components/motion/PulseDot';
 
 /**
  * Nhãn trạng thái dùng chung — bản native của `<Tag color>` bên web.
@@ -24,8 +25,8 @@ const toneOf = byPalette<Readonly<Record<StatusColor, { fg: string; bg: string }
   [STATUS_COLOR.WARNING]: { fg: colors.warning, bg: colors.warningSurface },
   [STATUS_COLOR.DANGER]: { fg: colors.danger, bg: colors.dangerSurface },
   // Hai vai này chưa có token riêng ở native; dùng nhấn thương hiệu thay vì bịa một màu tím.
-  [STATUS_COLOR.SPECIAL]: { fg: colors.primaryActive, bg: colors.primaryLight },
-  [STATUS_COLOR.ACCENT]: { fg: colors.primaryActive, bg: colors.primaryLight },
+  [STATUS_COLOR.SPECIAL]: { fg: colors.accentText, bg: colors.primaryLight },
+  [STATUS_COLOR.ACCENT]: { fg: colors.accentText, bg: colors.primaryLight },
 }));
 
 export function statusTone(color: StatusColor, colors: AppColors): { fg: string; bg: string } {
@@ -161,6 +162,7 @@ export function StatusBadge({
       px={PADDING_X[size]}
       py={PADDING_Y}
     >
+      {color === STATUS_COLOR.WAITING ? <PulseDot color={tone.fg} /> : null}
       {/*
         `flexShrink` + `numberOfLines` = cắt bằng dấu "…" thay vì tràn ra ngoài khung.
         Chỉ ăn khi nơi gọi cho khung một bề rộng XÁC ĐỊNH: `maxWidth: '100%'` quy theo bề rộng đã

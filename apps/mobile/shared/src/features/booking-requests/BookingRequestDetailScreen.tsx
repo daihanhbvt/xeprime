@@ -264,7 +264,7 @@ export function BookingRequestDetailScreen({
                     ai="center"
                     jc="center"
                   >
-                    <Text col={colors.primaryActive} fos={fontSize.body} fow={fontWeight.bold}>
+                    <Text col={colors.accentText} fos={fontSize.body} fow={fontWeight.bold}>
                       {request.customerName.charAt(0).toUpperCase()}
                     </Text>
                   </YStack>
@@ -324,7 +324,7 @@ export function BookingRequestDetailScreen({
                             <Ionicons
                               name="call-outline"
                               size={iconSize.sm}
-                              color={colors.primaryActive}
+                              color={colors.accentText}
                             />
                           </Pressable>
                         ),
@@ -352,7 +352,7 @@ export function BookingRequestDetailScreen({
                             <Ionicons
                               name="call-outline"
                               size={iconSize.sm}
-                              color={colors.primaryActive}
+                              color={colors.accentText}
                             />
                           </Pressable>
                         ),
@@ -374,7 +374,7 @@ export function BookingRequestDetailScreen({
                       <Ionicons
                         name="open-outline"
                         size={iconSize.sm}
-                        color={colors.primaryActive}
+                        color={colors.accentText}
                       />
                     </Pressable>
                   }

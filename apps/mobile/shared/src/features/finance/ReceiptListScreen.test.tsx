@@ -178,7 +178,7 @@ afterEach(() => {
  *  3. phạm vi đến từ lối vào phải NHÌN THẤY ĐƯỢC — một cuốn sổ bị lọc âm thầm đọc ra là
  *     "gian hàng chỉ có ngần này phiếu".
  */
-describe('ReceiptListScreen — quyền', () => {
+describe('ReceiptListScreen - quyền', () => {
   it('thiếu `finance.view`: hiện màn thiếu quyền và KHÔNG gọi API nào', async () => {
     const { findByText, listSpy, summarySpy, categoriesSpy } = await renderScreen([]);
 
@@ -205,7 +205,7 @@ describe('ReceiptListScreen — quyền', () => {
   });
 });
 
-describe('ReceiptListScreen — gói hết hạn (read_only)', () => {
+describe('ReceiptListScreen - gói hết hạn (read_only)', () => {
   it('vẫn ĐỌC được sổ, nút tạo bị khoá; lý do nằm ở dải shell, không lặp ở màn', async () => {
     const { findByText, findByLabelText, queryByText } = await renderScreen(
       [PERMISSION.FINANCE_VIEW, PERMISSION.RECEIPT_CREATE],
@@ -226,7 +226,7 @@ describe('ReceiptListScreen — gói hết hạn (read_only)', () => {
   });
 });
 
-describe('ReceiptListScreen — phạm vi từ lối vào', () => {
+describe('ReceiptListScreen - phạm vi từ lối vào', () => {
   it('`tenantCustomerId` đi xuống API và hiện thành một viên gỡ được', async () => {
     const { listSpy, findByText } = await renderScreen([PERMISSION.FINANCE_VIEW], {
       params: { tenantCustomerId: 'c1' },
@@ -301,7 +301,7 @@ describe('ReceiptListScreen — phạm vi từ lối vào', () => {
   });
 });
 
-describe('ReceiptListScreen — thẻ tổng', () => {
+describe('ReceiptListScreen - thẻ tổng', () => {
   it('thẻ tổng gọi CÙNG bộ lọc với danh sách', async () => {
     const { summarySpy, listSpy } = await renderScreen([PERMISSION.FINANCE_VIEW], {
       params: { tenantCustomerId: 'c1', from: '2026-09-01', to: '2026-09-30' },
@@ -321,7 +321,7 @@ describe('ReceiptListScreen — thẻ tổng', () => {
    * Nên ba phép thử dưới đây đều phải MỞ nó ra trước. Chúng cũng chính là chỗ khoá cái mặc định
    * đó lại: nếu ai đó đổi về mở sẵn, `expand` sẽ đóng khối và cả ba cùng đỏ.
    */
-  it('mặc định THU GỌN — mở ra thì hiện đủ các con số của bộ lọc đang xem', async () => {
+  it('mặc định THU GỌN - mở ra thì hiện đủ các con số của bộ lọc đang xem', async () => {
     const { findByText, queryByText } = await renderScreen([PERMISSION.FINANCE_VIEW]);
 
     await findByText('THỐNG KÊ');
@@ -349,7 +349,7 @@ describe('ReceiptListScreen — thẻ tổng', () => {
   });
 });
 
-describe('ReceiptListScreen — rỗng và không có kết quả', () => {
+describe('ReceiptListScreen - rỗng và không có kết quả', () => {
   it('sổ chưa có phiếu nào: câu chữ "chưa có", không phải "không khớp"', async () => {
     const { findByText } = await renderScreen([PERMISSION.FINANCE_VIEW], { items: [], total: 0 });
     expect(await findByText('Chưa có phiếu thu/chi nào')).toBeTruthy();
@@ -382,8 +382,8 @@ describe('ReceiptListScreen — rỗng và không có kết quả', () => {
   });
 });
 
-describe('ReceiptListScreen — chi tiết phiếu', () => {
-  it('chạm một thẻ mở CHI TIẾT — cùng một implementation cho mọi lối vào', async () => {
+describe('ReceiptListScreen - chi tiết phiếu', () => {
+  it('chạm một thẻ mở CHI TIẾT - cùng một implementation cho mọi lối vào', async () => {
     const { findByLabelText, detailSpy } = await renderScreen([PERMISSION.FINANCE_VIEW]);
     detailSpy.mockResolvedValue({
       ...receipt(),
@@ -397,8 +397,8 @@ describe('ReceiptListScreen — chi tiết phiếu', () => {
   });
 });
 
-describe('ReceiptListScreen — tiền', () => {
-  it('phiếu THU mang dấu cộng, phiếu CHI mang dấu trừ — dấu là NGHĨA, không phải trang trí', async () => {
+describe('ReceiptListScreen - tiền', () => {
+  it('phiếu THU mang dấu cộng, phiếu CHI mang dấu trừ - dấu là NGHĨA, không phải trang trí', async () => {
     const { findByText } = await renderScreen([PERMISSION.FINANCE_VIEW], {
       items: [
         receipt({ id: 'r1', receiptNo: 'PT-0001', type: RECEIPT_TYPE.INCOME, amount: '1000000' }),
@@ -410,7 +410,7 @@ describe('ReceiptListScreen — tiền', () => {
     expect(await findByText('− 250.000 ₫')).toBeTruthy();
   });
 
-  it('số tiền rất lớn không mất chính xác — chuỗi, không phải number (ADR 0007)', async () => {
+  it('số tiền rất lớn không mất chính xác - chuỗi, không phải number (ADR 0007)', async () => {
     const { findByText } = await renderScreen([PERMISSION.FINANCE_VIEW], {
       items: [receipt({ amount: '12345678901234' })],
     });

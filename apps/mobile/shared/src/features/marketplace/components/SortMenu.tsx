@@ -15,6 +15,7 @@ import { elevation } from '@/theme/elevation';
 import { useAppStyles } from '@/theme/styles';
 import { useColors, useFloatingSurfaceBorder } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { modalColumn } from '@/theme/layout';
 
 /**
  * Bộ chọn thứ tự sắp xếp — **menu**, không phải hàng chip.
@@ -62,11 +63,13 @@ export function SortMenu({
           gap={space.sm}
           bw={1}
           bc={colors.border}
-          bg={block ? colors.surfaceMuted : colors.surface}
-          br={block ? radius.md : radius.control}
-          px={block ? space.md : 14}
+          // `block` (trong tấm Bộ lọc) = CÙNG hình ô "Địa điểm / Thời gian thuê" của tấm đó (`ContextField`):
+          // nền `surface`, bo control, đệm 14, cao 40. Nền `surfaceMuted` cũ trùng màu nền tấm nên ô chìm.
+          bg={colors.surface}
+          br={radius.control}
+          px={14}
           {...(block ? {} : { minWidth: SELECT_MIN_WIDTH, style: elevation.xs })}
-          minHeight={sizing.touchTarget - 8}
+          minHeight={block ? 40 : sizing.touchTarget - 8}
         >
           {/*
             Một dòng, không co: "Giá thấp → cao" từng gãy hai dòng vì ô chỉ rộng theo khung tối
@@ -76,8 +79,8 @@ export function SortMenu({
             {...(block ? { f: 1 } : { flexShrink: 0 })}
             numberOfLines={1}
             col={colors.text}
-            fos={block ? fontSize.bodySm : fontSize.bodyLg}
-            fow={block ? fontWeight.medium : fontWeight.regular}
+            fos={block ? fontSize.body : fontSize.bodyLg}
+            fow={fontWeight.regular}
           >
             {labelOf(current)}
           </Text>
@@ -94,6 +97,7 @@ export function SortMenu({
         <YStack f={1}>
           <Pressable style={appStyles.scrim} onPress={() => setOpen(false)} />
           <YStack
+            style={modalColumn}
             bg={colors.surface}
             borderTopLeftRadius={radius.lg}
             borderTopRightRadius={radius.lg}

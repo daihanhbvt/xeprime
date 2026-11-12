@@ -145,7 +145,7 @@ export class UpdateFollowUpDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Người phụ trách — tài khoản nền tảng; null để bỏ giao',
+    description: 'Người phụ trách - tài khoản nền tảng; null để bỏ giao',
   })
   @IsOptional()
   @IsString()
@@ -175,7 +175,7 @@ export class FollowUpAssigneeDto {
   @ApiProperty({ type: String, nullable: true }) email!: string | null;
   @ApiProperty({
     enum: PLATFORM_ROLE_VALUES,
-    description: 'Vai trò nền tảng — để phân biệt với tên hiển thị',
+    description: 'Vai trò nền tảng - để phân biệt với tên hiển thị',
   })
   roleKey!: string;
 }

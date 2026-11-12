@@ -1,13 +1,18 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
 import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ACCOUNT_REALM, WALLET_OWNER_TYPE } from '@xeprime/types';
 import {
-  ACCOUNT_REALM,
-  WALLET_OWNER_TYPE,
-} from '@xeprime/types';
-import { CurrentTenant, CurrentUser, Realms, ShopOwnerOnly, TenantScoped } from '../../common/decorators';
+  CurrentTenant,
+  CurrentUser,
+  Realms,
+  ShopOwnerOnly,
+  TenantScoped,
+} from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
   CreateWithdrawalDto,
+  WalletActivityPageDto,
+  WalletActivityQueryDto,
   WalletEntryPageDto,
   WalletEntryQueryDto,
   WalletStatementDto,
@@ -54,7 +59,7 @@ export class AccountWalletController {
   }
 
   @Get('entries')
-  @ApiOperation({ summary: 'Sổ ví — phân trang server-side, mới nhất trước' })
+  @ApiOperation({ summary: 'Sổ ví - phân trang server-side, mới nhất trước' })
   @ApiOkResponse({ type: WalletEntryPageDto })
   entries(
     @CurrentUser() user: AuthenticatedUser,
@@ -74,7 +79,7 @@ export class AccountWalletController {
   @ApiOperation({
     summary: 'Tạo yêu cầu rút về tài khoản ngân hàng',
     description:
-      'Đích chuyển phải là một tài khoản ĐÃ LƯU của chính chủ ví — không gõ số tài khoản ngay ' +
+      'Đích chuyển phải là một tài khoản ĐÃ LƯU của chính chủ ví - không gõ số tài khoản ngay ' +
       'tại bước chi tiền. Tiền bị khoá khỏi số dư khả dụng ngay khi tạo.',
   })
   @ApiOkResponse({ type: WithdrawalRequestDto })
@@ -82,11 +87,7 @@ export class AccountWalletController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateWithdrawalDto,
   ): Promise<WithdrawalRequestDto> {
-    return this.withdrawals.create(
-      { type: WALLET_OWNER_TYPE.USER, userId: user.id },
-      user.id,
-      dto,
-    );
+    return this.withdrawals.create({ type: WALLET_OWNER_TYPE.USER, userId: user.id }, user.id, dto);
   }
 
   @Post('withdrawals/:id/cancel')
@@ -96,10 +97,7 @@ export class AccountWalletController {
     description: 'Chỉ khi còn chờ duyệt. Đã duyệt rồi thì admin có thể đang cầm lệnh chuyển.',
   })
   @ApiNoContentResponse()
-  cancelWithdrawal(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
-  ): Promise<void> {
+  cancelWithdrawal(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<void> {
     return this.withdrawals.cancel({ type: WALLET_OWNER_TYPE.USER, userId: user.id }, id, user.id);
   }
 }
@@ -142,10 +140,23 @@ export class ShopWalletController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: WalletEntryQueryDto,
   ): Promise<WalletEntryPageDto> {
-    return this.read.entries(
-      { type: WALLET_OWNER_TYPE.TENANT, tenantId: tenant.tenantId },
-      query,
-    );
+    return this.read.entries({ type: WALLET_OWNER_TYPE.TENANT, tenantId: tenant.tenantId }, query);
+  }
+
+  @Get('activity')
+  @ApiOperation({
+    summary: 'Biến động số dư của gian hàng trong một kỳ',
+    description:
+      'Bút toán sổ ví và lệnh rút của kỳ (giờ Việt Nam) trong MỘT danh sách, mới nhất trước, ' +
+      'phân trang ở server. Bút toán `withdrawal`/`withdrawal_reversal` không lặp lại - lệnh rút ' +
+      'đã là dòng của chính nó, kèm trạng thái, hạn chuyển và lý do.',
+  })
+  @ApiOkResponse({ type: WalletActivityPageDto })
+  activity(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: WalletActivityQueryDto,
+  ): Promise<WalletActivityPageDto> {
+    return this.read.activity({ type: WALLET_OWNER_TYPE.TENANT, tenantId: tenant.tenantId }, query);
   }
 
   @Get('statement')

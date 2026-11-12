@@ -27,6 +27,7 @@ import {
 } from '../../common/dto/branch-scope';
 import type { TenantContext } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
+import { liveRequestWhere } from '../booking-requests/booking-requests.service';
 import { presetWhere } from '../bookings/bookings.service';
 import { HostMetricsService } from '../host-metrics/host-metrics.service';
 import { completedTripsInPeriodWhere } from '../wallet/wallet-statement.service';
@@ -145,6 +146,23 @@ export class PartnerDashboardService {
 
   // ── Việc trong ngày ──────────────────────────────────────────────────────────────────────
 
+  /** Khối "hôm nay" đứng riêng — huy hiệu menu (`GET /dashboard/today`), toàn phạm vi được giao. */
+  todayCounts(tenant: TenantContext, now: Date = new Date()): Promise<PartnerDashboardTodayDto> {
+    return this.today(tenant.tenantId, resolveBranchScope(undefined, tenant.allowedBranchIds), now);
+  }
+
+  /**
+   * Khối "yêu cầu" đứng riêng — huy hiệu menu (`GET /dashboard/requests`): số chờ duyệt và số KHẨN
+   * (sắp hết hạn trả lời) để huy hiệu chuyển màu đỏ. Toàn phạm vi được giao, như `todayCounts`.
+   */
+  requestCounts(
+    tenant: TenantContext,
+    now: Date = new Date(),
+  ): Promise<PartnerDashboardRequestsDto> {
+    const scope = resolveBranchScope(undefined, tenant.allowedBranchIds);
+    return this.requests(tenant.tenantId, scope, now);
+  }
+
   private async today(
     tenantId: string,
     scope: BranchScope,
@@ -154,23 +172,35 @@ export class PartnerDashboardService {
     const awaiting = awaitingPickupWhere(tenantId, scope);
     const active = activeWhere(tenantId, scope);
 
-    const [awaitingPickup, pickupsToday, pickupsOverdue, activeCount, returnsToday, returnsOverdue] =
-      await Promise.all([
-        this.prisma.booking.count({ where: awaiting }),
-        this.prisma.booking.count({ where: { ...awaiting, pickupAt: day } }),
-        this.prisma.booking.count({ where: { ...awaiting, pickupAt: { lt: now } } }),
-        this.prisma.booking.count({ where: active }),
-        this.prisma.booking.count({ where: { ...active, returnAt: day } }),
-        this.prisma.booking.count({ where: { ...active, returnAt: { lt: now } } }),
-      ]);
+    const [
+      awaitingPickup,
+      pickupsToday,
+      pickupsOverdue,
+      pickupsDue,
+      activeCount,
+      returnsToday,
+      returnsOverdue,
+      returnsDue,
+    ] = await Promise.all([
+      this.prisma.booking.count({ where: awaiting }),
+      this.prisma.booking.count({ where: { ...awaiting, pickupAt: day } }),
+      this.prisma.booking.count({ where: { ...awaiting, pickupAt: { lt: now } } }),
+      this.prisma.booking.count({ where: { ...awaiting, pickupAt: { lte: day.lte } } }),
+      this.prisma.booking.count({ where: active }),
+      this.prisma.booking.count({ where: { ...active, returnAt: day } }),
+      this.prisma.booking.count({ where: { ...active, returnAt: { lt: now } } }),
+      this.prisma.booking.count({ where: { ...active, returnAt: { lte: day.lte } } }),
+    ]);
 
     return {
       awaitingPickup,
       pickupsToday,
       pickupsOverdue,
+      pickupsDue,
       active: activeCount,
       returnsToday,
       returnsOverdue,
+      returnsDue,
     };
   }
 
@@ -179,7 +209,13 @@ export class PartnerDashboardService {
     scope: BranchScope,
     now: Date,
   ): Promise<PartnerDashboardRequestsDto> {
-    const base: Prisma.BookingRequestWhereInput = { tenantId, ...vehicleBranchWhere(scope) };
+    // Thẻ chết theo đồng hồ (quá hạn phản hồi / quá hạn chuyển tiền) không phải việc chờ ai — cùng
+    // điều kiện với danh sách "Cần xử lý" để huy hiệu menu và cột không bao giờ lệch nhau.
+    const base: Prisma.BookingRequestWhereInput = {
+      tenantId,
+      ...vehicleBranchWhere(scope),
+      ...liveRequestWhere(now),
+    };
     const pending: Prisma.BookingRequestWhereInput = {
       ...base,
       status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,

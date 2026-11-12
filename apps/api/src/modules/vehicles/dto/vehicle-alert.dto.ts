@@ -22,7 +22,7 @@ export class VehicleAlertDto {
   })
   severity!: string;
 
-  @ApiProperty({ description: 'Câu mô tả việc cần làm — đã lọc dữ liệu nhạy cảm' })
+  @ApiProperty({ description: 'Câu mô tả việc cần làm - đã lọc dữ liệu nhạy cảm' })
   title!: string;
 
   @ApiPropertyOptional({ type: String, nullable: true })
@@ -62,4 +62,13 @@ export class VehicleAlertsDto {
 
 export class VehicleAlertsListDto {
   @ApiProperty({ type: [VehicleAlertsDto] }) data!: VehicleAlertsDto[];
+}
+
+/** Số xe đang có việc "cần xử lý" — huy hiệu mục menu Danh sách xe. */
+export class VehicleNeedsActionCountDto {
+  @ApiProperty({
+    description:
+      'Số xe có ít nhất một việc thuộc VEHICLE_ALERT_NEEDS_ACTION_KINDS, trong phạm vi chi nhánh của người gọi',
+  })
+  count!: number;
 }

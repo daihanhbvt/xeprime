@@ -87,6 +87,13 @@ export const WITH_DRIVER_BLOCKED_SURCHARGE_CATEGORIES: readonly SurchargeCategor
   SURCHARGE_CATEGORY.EXCESS_MILEAGE,
 ];
 
+/**
+ * Số khoản phát sinh tối đa ghi trong MỘT lượt nhận lại xe (hộp "Xác nhận đã nhận lại xe",
+ * 06/11/2026). Chặn ở DTO; giao diện ẩn "Thêm phụ phí" khi đã đủ. Cần nhiều hơn thì ghi tiếp ở thẻ
+ * "Phát sinh" của trang đơn.
+ */
+export const RETURN_SURCHARGE_DRAFT_MAX = 10;
+
 /** Lý do một danh mục không ghi MỚI được trên đơn này — `null` = được. */
 export function surchargeCategoryBlock(
   category: string,

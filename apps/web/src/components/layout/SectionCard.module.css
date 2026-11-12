@@ -16,7 +16,9 @@
   box-shadow: var(--xp-shadow-card);
   gap: var(--xp-space-md);
   /* Cuộn tới bằng `?section=` dừng dưới topbar dính, không nằm khuất sau nó. */
-  scroll-margin-top: calc(var(--xp-shell-topbar-height) + var(--xp-space-md));
+  scroll-margin-top: calc(
+    var(--xp-shell-header-offset, var(--xp-shell-topbar-height)) + var(--xp-space-md)
+  );
 }
 
 /* `tabIndex={-1}` để nhận tiêu điểm khi nhảy tới — nhưng đừng vẽ viền như một điều khiển. */
@@ -70,7 +72,9 @@
 
 .extra {
   display: flex;
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
   flex-wrap: wrap;
   gap: var(--xp-space-sm);
 }

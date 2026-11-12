@@ -4,7 +4,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
 import { ASSIGNABLE_TENANT_ROLES, TENANT_ROLE } from '@xeprime/types';
-import { buildRequiredPhoneSchema } from '@xeprime/validators';
+import { buildRequiredMobilePhoneSchema } from '@xeprime/validators';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
@@ -64,7 +64,7 @@ export function InviteMemberSheet({ open, onClose }: { open: boolean; onClose: (
 
 /** Message là MÃ — `useValidationResolver` tra `Members.form.errors.*`, cùng khoá với web. */
 const invitePhoneSchema = yup.object({
-  phone: buildRequiredPhoneSchema({ required: 'phoneRequired', invalid: 'phoneInvalid' }),
+  phone: buildRequiredMobilePhoneSchema({ required: 'phoneRequired', invalid: 'phoneInvalid' }),
   roleKey: yup
     .string()
     .oneOf([...ASSIGNABLE_TENANT_ROLES])

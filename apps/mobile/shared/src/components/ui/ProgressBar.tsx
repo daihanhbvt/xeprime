@@ -1,3 +1,4 @@
+import { GrowFill } from '@/components/motion/GrowFill';
 import { Text, XStack, YStack } from 'tamagui';
 import { themed, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
@@ -64,7 +65,7 @@ export function ProgressBar({
         accessibilityRole="progressbar"
         accessibilityValue={{ min: 0, max: 100, now: Math.round(clamped) }}
       >
-        <YStack h={height} br={radius.pill} bg={TONE[tone]} width={`${clamped}%`} />
+        <GrowFill fraction={clamped / 100} color={TONE[tone]} style={{ borderRadius: radius.pill }} />
       </YStack>
     </YStack>
   );

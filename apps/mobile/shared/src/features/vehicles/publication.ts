@@ -180,6 +180,12 @@ export interface PublicStatusPresentation {
   useReason: boolean;
 }
 
+/** Mức hoàn thiện hồ sơ đăng chợ — số mục đã đủ / số mục áp dụng. Bản native của web `publishCompleteness`. */
+export function publishCompleteness(vehicle: VehicleDetail): { done: number; total: number } {
+  const total = applicableRequirements(toInput(vehicle)).length;
+  return { done: total - missingPublishRequirements(vehicle).length, total };
+}
+
 export function publicStatusPresentation(status: VehiclePublicStatus): PublicStatusPresentation {
   switch (status) {
     case VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW:

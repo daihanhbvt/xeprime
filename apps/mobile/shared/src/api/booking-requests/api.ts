@@ -1,4 +1,9 @@
-import { BOOKING_REQUEST_STATUS, type components, type PaginationMeta } from '@xeprime/types';
+import {
+  BOOKING_REQUEST_STATUS,
+  type components,
+  type PaginationMeta,
+  type paths,
+} from '@xeprime/types';
 import { getApiClient, type QueryParams } from '@xeprime/api-client';
 
 type Schemas = components['schemas'];
@@ -15,6 +20,8 @@ export type CheckAvailabilityResult = Schemas['CheckAvailabilityResultDto'];
 /** Lịch bận của một xe để tô/khoá ô trên hộp chọn thời gian thuê (preview — ADR 0006). */
 export type VehicleBusyDays = Schemas['VehicleBusyDaysDto'];
 export type BookingRequestConversation = Schemas['ConversationSummaryDto'];
+/** Kết quả lượt gian hàng nhắc khách thanh toán tiền giữ chỗ (05/11/2026). */
+export type PaymentReminderResult = Schemas['PaymentReminderResultDto'];
 
 /**
  * Lát cắt mà BA tấm trượt quyết định (duyệt · từ chối · duyệt xong) thật sự đọc.
@@ -83,6 +90,13 @@ export interface BookingRequestListResult {
   meta: BookingRequestListMeta;
 }
 
+export type BookingRequestSort = NonNullable<
+  NonNullable<paths['/booking-requests']['get']['parameters']['query']>['sort']
+>;
+
+/** Thứ tự "ca trực" — hạn gần nhất trước. Mã đi trên dây, không phải nhãn. */
+export const BOOKING_REQUEST_SORT_URGENT: BookingRequestSort = 'urgent';
+
 export interface BookingRequestFilters {
   /**
    * Trạng thái đang lọc. `all` là một GIÁ TRỊ THẬT của giao diện chứ không phải "không lọc":
@@ -95,6 +109,11 @@ export interface BookingRequestFilters {
   serviceType?: string;
   vehicleId?: string;
   branchId?: string;
+  /**
+   * `urgent` = hạn đang chạy gần nhất trước (hạn phản hồi; nhóm chờ khách trả là hạn thanh toán)
+   * — web 05/11/2026. Vắng = mới gửi trước.
+   */
+  sort?: BookingRequestSort;
   page?: number;
   limit?: number;
 }
@@ -189,6 +208,7 @@ export function bookingRequestFiltersToParams(filters: BookingRequestFilters): Q
     serviceType: filters.serviceType ?? null,
     vehicleId: filters.vehicleId ?? null,
     branchId: filters.branchId ?? null,
+    sort: filters.sort ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? BOOKING_REQUESTS_DEFAULT_LIMIT,
   };
@@ -255,6 +275,14 @@ export const bookingRequestsApi = {
     return getApiClient().post<BookingRequestItem>(
       `/booking-requests/${encodeURIComponent(id)}/cancel`,
       body,
+    );
+  },
+
+  /** Nhắc khách chuyển tiền giữ chỗ — chỉ là một thông báo; server chặn khoảng lặng (429). */
+  remindPayment(id: string): Promise<PaymentReminderResult> {
+    return getApiClient().post<PaymentReminderResult>(
+      `/booking-requests/${encodeURIComponent(id)}/remind-payment`,
+      {},
     );
   },
 

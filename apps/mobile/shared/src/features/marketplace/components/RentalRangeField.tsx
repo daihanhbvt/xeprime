@@ -11,6 +11,7 @@ import { useColors } from '@/theme/ThemeProvider';
 import { XP_TOKENS, toPx } from '@xeprime/ui';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { RentalRangeSheet, type RentalRangeDraft } from './RentalRangeSheet';
+import { SEARCH_FIELD_HEIGHT } from './search-card-metrics';
 
 interface RentalRangeFieldProps {
   value: RentalRangeDraft;
@@ -88,7 +89,7 @@ export function RentalRangeField({
           thương hiệu) — cả hai là ô nhập của cùng một thẻ tìm kiếm, `SearchCard.tsx`.
         */}
         <XStack
-          h={44}
+          h={SEARCH_FIELD_HEIGHT}
           ai="center"
           gap={space.sm}
           bg={colors.surface}
@@ -98,15 +99,14 @@ export function RentalRangeField({
           px={14}
         >
           {value.pickupAt || value.returnAt || !placeholder ? (
-            /* MỘT dòng, tự co chữ cho vừa máy hẹp — web hiện đủ cả hai mốc, không cắt bằng dấu ba chấm. */
+            /* MỘT dòng, giữ cỡ chữ; thiếu chỗ thì cắt "…" (tự co chữ làm chữ quá nhỏ trên máy thật - 09/11/2026). */
             <Text
               f={1}
               col={colors.text}
               fos={fontSize.body}
-              fow={fontWeight.semibold}
+              fow={fontWeight.regular}
               numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.7}
+              ellipsizeMode="tail"
             >
               {rangeLabel(value.pickupAt, value.returnAt)}
             </Text>

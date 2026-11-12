@@ -18,7 +18,7 @@ describe('normalizeBranchSelection', () => {
     expect(normalizeBranchSelection([ALL_FILTER, 'A'])).toEqual(['A']);
   });
 
-  it('người bị giới hạn: KHÔNG có "Tất cả" để rơi về — rỗng là rỗng', () => {
+  it('người bị giới hạn: KHÔNG có "Tất cả" để rơi về - rỗng là rỗng', () => {
     expect(normalizeBranchSelection([], false)).toEqual([]);
     expect(normalizeBranchSelection(['A', ALL_FILTER], false)).toEqual(['A']);
   });

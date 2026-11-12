@@ -63,10 +63,27 @@ vi.mock('next/navigation', async (importOriginal) => ({
   }),
 }));
 
+/**
+ * Bản xem trước của server (ADR 0084 · 0085) — mặc định KHỚP lựa chọn và không vượt suất, để các ca
+ * cũ đi như trước; ca vượt suất đặt `vehicleSlots`.
+ */
+const preview = vi.hoisted(() => ({
+  data: { items: [], total: '0', vehicleSlots: [] as unknown[] },
+  isSuccess: true,
+  isPlaceholderData: false,
+  isFetching: false,
+  isError: false,
+  refetch: vi.fn(),
+}));
+/** Hai gói ⇒ MỘT phiếu gộp (ADR 0083). */
+const checkout = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
+
 vi.mock('../hooks/use-subscription', () => ({
   usePendingInvoices: () => pendingInvoice,
   useTenantPlans: () => plans,
   usePurchaseSubscription: () => purchase,
+  usePurchasePreview: () => preview,
+  useCreateSubscriptionCheckout: () => checkout,
   usePaymentInfo: () => ({ data: undefined, isLoading: false, isError: false }),
   /* Làm mới scope khi tiền về — hành vi của nó thuộc về hook, có spec riêng ở tầng query. */
   useSyncScopeWhenInvoiceSettles: () => undefined,
@@ -122,6 +139,7 @@ vi.mock('@/features/locations/hooks/use-provinces', () => ({
   }),
 }));
 vi.mock('@/features/locations/hooks/use-wards', () => ({
+  useWardLookup: () => ({ data: new Map(), isLoading: false }),
   useWardOptions: () => ({
     options: [],
     items: [],
@@ -287,13 +305,17 @@ beforeEach(() => {
   updateBranch.mutateAsync.mockReset().mockResolvedValue(BRANCH);
   purchase.mutateAsync.mockReset().mockResolvedValue({ ...INVOICE, id: 'INV-NEW' });
   purchase.isError = false;
+  preview.data = { items: [], total: '0', vehicleSlots: [] };
+  preview.isSuccess = true;
+  preview.isPlaceholderData = false;
+  checkout.mutate.mockReset();
   useRegisterShop.mockClear();
 });
 
 afterEach(cleanup);
 
-describe('PackageUpgradeWizard — bảng giá đứng trước form', () => {
-  it('mở màn: thấy bậc, hạn mức và giá — KHÔNG thấy ô nào của hồ sơ gian hàng', () => {
+describe('PackageUpgradeWizard - bảng giá đứng trước form', () => {
+  it('mở màn: thấy bậc, hạn mức và giá - KHÔNG thấy ô nào của hồ sơ gian hàng', () => {
     renderWizard();
 
     expect(screen.getByText('Gói cơ bản')).toBeTruthy();
@@ -441,7 +463,7 @@ describe('PackageUpgradeWizard — bảng giá đứng trước form', () => {
   });
 });
 
-describe('PackageUpgradeWizard — bước thông tin gian hàng', () => {
+describe('PackageUpgradeWizard - bước thông tin gian hàng', () => {
   it('điền sẵn từ hồ sơ và CHI NHÁNH MẶC ĐỊNH đang có', () => {
     renderWizard();
     pickPlanAndContinue();
@@ -566,7 +588,7 @@ describe('PackageUpgradeWizard — bước thông tin gian hàng', () => {
   });
 });
 
-describe('PackageUpgradeWizard — bước thanh toán', () => {
+describe('PackageUpgradeWizard - bước thanh toán', () => {
   /**
    * Hoá đơn chờ đến từ `GET /subscription/invoices/pending`, nên F5 / đổi máy đều rơi thẳng vào
    * màn chuyển khoản với ĐÚNG mã cũ — không ai bị mời tạo hoá đơn thứ hai cho cùng một khoản.
@@ -610,7 +632,7 @@ describe('PackageUpgradeWizard — bước thanh toán', () => {
   });
 });
 
-describe('PackageUpgradeWizard — hai làn theo loại xe (ADR 0065)', () => {
+describe('PackageUpgradeWizard - hai làn theo loại xe (ADR 0065)', () => {
   const CAR_PLAN = makePlan({
     id: 'plan-car',
     code: 'car_5',
@@ -636,35 +658,98 @@ describe('PackageUpgradeWizard — hai làn theo loại xe (ADR 0065)', () => {
     expect(screen.getByText('Tối đa 3 ô tô')).toBeTruthy();
   });
 
-  it('chọn cả hai làn ⇒ HAI hoá đơn, tạo lần lượt, ở lại trang (không nhảy sang một mã)', async () => {
+  /*
+   * Hai gói ⇒ MỘT phiếu gộp (ADR 0083 · ADR 0085): suất tính cho cả hai gói cùng lúc, cả hai bật cùng
+   * một lần tiền về. Hai hoá đơn rời để lượt trả đầu tiên ẩn nhầm xe của loại sắp có gói.
+   */
+  it('chọn cả hai làn ⇒ MỘT phiếu gộp, sang trang thanh toán của phiếu', async () => {
     plans.data = [makePlan(), CAR_PLAN];
-    purchase.mutateAsync
-      .mockResolvedValueOnce({ ...INVOICE, id: 'INV-M' })
-      .mockResolvedValueOnce({ ...INVOICE, id: 'INV-C', vehicleScope: 'car' });
+    checkout.mutate.mockImplementation(
+      (_body: unknown, opts: { onSuccess: (created: { id: string }) => void }) =>
+        opts.onSuccess({ id: 'CK-1' }),
+    );
     renderWizard();
     pickInLane('Gói xe máy');
     pickInLane('Gói ô tô');
     fireEvent.click(screen.getByRole('button', { name: /Tiếp tục/ }));
     fireEvent.click(submitButton());
 
-    await waitFor(() => expect(purchase.mutateAsync).toHaveBeenCalledTimes(2));
-    expect(purchase.mutateAsync.mock.calls[0]![0]).toEqual({ planId: 'plan-basic', termMonths: 1 });
-    expect(purchase.mutateAsync.mock.calls[1]![0]).toEqual({ planId: 'plan-car', termMonths: 1 });
-    expect(nav.push).not.toHaveBeenCalled();
+    await waitFor(() => expect(checkout.mutate).toHaveBeenCalledTimes(1));
+    expect(checkout.mutate.mock.calls[0]![0]).toEqual({
+      items: [
+        { planId: 'plan-basic', termMonths: 1 },
+        { planId: 'plan-car', termMonths: 1 },
+      ],
+    });
+    expect(purchase.mutateAsync).not.toHaveBeenCalled();
+    expect(nav.push).toHaveBeenCalledWith('/manage/payment/checkout/CK-1');
   });
 
-  it('hoá đơn làn thứ hai hỏng ⇒ dừng, báo đúng làn, không điều hướng', async () => {
+  it('phiếu gộp hỏng ⇒ báo lỗi, không điều hướng', async () => {
     plans.data = [makePlan(), CAR_PLAN];
-    purchase.mutateAsync
-      .mockResolvedValueOnce({ ...INVOICE, id: 'INV-M' })
-      .mockRejectedValueOnce(new Error('500'));
+    checkout.mutate.mockImplementation((_body: unknown, opts: { onError: (e: unknown) => void }) =>
+      opts.onError(new Error('500')),
+    );
     renderWizard();
     pickInLane('Gói xe máy');
     pickInLane('Gói ô tô');
     fireEvent.click(screen.getByRole('button', { name: /Tiếp tục/ }));
     fireEvent.click(submitButton());
 
-    await waitFor(() => expect(purchase.mutateAsync).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(checkout.mutate).toHaveBeenCalledTimes(1));
     expect(nav.push).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * ADR 0085 điều 5 — chủ xe có ô tô + xe máy mà chỉ chọn gói xe máy: xe vượt suất phải được người bán
+ * tự chọn giữ lại + xác nhận, hệ thống không chọn thay.
+ */
+describe('PackageUpgradeWizard - xe vượt suất (ADR 0085)', () => {
+  beforeEach(() => {
+    preview.data = {
+      items: [],
+      total: '0',
+      vehicleSlots: [
+        {
+          countedScope: 'car',
+          limit: 0,
+          occupyingCount: 1,
+          vehicles: [
+            {
+              id: 'V-CAR',
+              name: 'Vios',
+              plateNumber: '51K-123.45',
+              vehicleType: 'car',
+              mainImageUrl: null,
+              publicStatus: 'approved_public',
+            },
+          ],
+        },
+      ],
+    };
+  });
+
+  it('chưa xác nhận thì không đi tiếp; xác nhận rồi mới sang hồ sơ, hoá đơn mang lựa chọn', async () => {
+    renderWizard();
+    fireEvent.click(screen.getByRole('radio', { name: /Chọn gói/ }));
+    fireEvent.click(termCards()[1]!);
+    // Nói rõ xe nào sẽ tạm ẩn, không tích sẵn gì.
+    expect(screen.getByText(/không gồm ô tô/)).toBeTruthy();
+    expect(screen.getByText(/Vios · 51K-123.45/)).toBeTruthy();
+    const next = screen.getByRole('button', { name: /Tiếp tục/ }) as HTMLButtonElement;
+    expect(next.disabled).toBe(true);
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /Tôi đồng ý tạm ẩn/ }));
+    expect(next.disabled).toBe(false);
+    fireEvent.click(next);
+    fireEvent.click(submitButton());
+
+    await waitFor(() => expect(purchase.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(purchase.mutateAsync.mock.calls[0]![0]).toMatchObject({
+      planId: 'plan-basic',
+      keepVehicleIds: [],
+      acceptVehicleHiding: true,
+    });
   });
 });

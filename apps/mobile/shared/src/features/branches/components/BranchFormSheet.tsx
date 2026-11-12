@@ -160,7 +160,6 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
         names={ADDRESS_FIELD_NAMES}
         pin={ADDRESS_PIN_NAMES}
         required
-        wardRequired={false}
         addressLineRequired={false}
         // Chỉ form TẠO MỚI. Ở form SỬA, ô tỉnh trống nghĩa là chi nhánh này có từ trước danh mục
         // hành chính (ADR 0035 điều 7) — điền vào đó tỉnh người dùng vừa tìm xe là dời một địa

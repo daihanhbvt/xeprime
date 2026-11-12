@@ -9,7 +9,7 @@ import {
   isDriverTripAwaitingAnswer,
   STOREFRONT_KIND,
 } from '@xeprime/types';
-import { chargedDays, driverTripBadges, telHref, toAppTz } from '@xeprime/domain';
+import { chargedDays, driverTripBadges, driverWageLine, telHref, toAppTz } from '@xeprime/domain';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Avatar } from '@/components/ui/Avatar';
@@ -23,7 +23,8 @@ import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { DriverTrip } from '../api';
-import { useAcceptDriverTrip, useDeclineDriverTrip, useReleaseDriverTrip } from '../hooks';
+import { useAcceptDriverTrip, useDeclineDriverTrip } from '../hooks';
+import { DropTripSheet } from './DropTripSheet';
 
 /** `--xp-space-12`. */
 const GAP_12 = space.sm + space.xs;
@@ -40,12 +41,13 @@ const PLATE_RADIUS = 6;
  * nghiêng, tên xe + biển số, các viên trạng thái (`driverTripBadges`), các dòng Chủ xe · Khách hàng
  * · Thời gian (kèm số ngày) · Đón tại · Điểm đến, rồi chân thẻ theo chặng:
  *  - chờ tôi nhận → đồng hồ hạn trả lời + Gọi khách / Từ chối / Nhận chuyến;
- *  - đã nhận, còn cửa sổ trả lại → "Bạn đã xác nhận…" + đồng hồ + Gọi khách / Hủy chuyến;
- *  - đã nhận, hết cửa sổ → "Bạn đã xác nhận…" + Gọi khách;
+ *  - đã nhận, chưa giao xe → "Bạn đã xác nhận…" (+ đồng hồ rút không phạt khi còn cửa sổ trả lại)
+ *    + Gọi khách / Báo sự cố – Rút khỏi chuyến (`trip.canDrop`, ADR 0074);
  *  - đã qua → Liên hệ hỗ trợ.
  *
- * Không có khối "Thu nhập chuyến": tài xế không thấy tiền (ADR 0063 điều 10). Chạm ảnh/tên mở chi
- * tiết; nút ở chân thẻ NẰM NGOÀI vùng chạm đó.
+ * Tiền công (ADR 0075): một dòng "Tiền công" trong thẻ — tài xế thấy số TRƯỚC khi bấm Nhận, sau
+ * chuyến thấy "Đã nhận". Chỉ tiền công của chính tài xế. Chạm ảnh/tên mở chi tiết; nút ở chân thẻ
+ * NẰM NGOÀI vùng chạm đó.
  */
 function DrivingTripCardImpl({
   trip,
@@ -67,15 +69,16 @@ function DrivingTripCardImpl({
   const navigateOnce = useNavigateOnce();
   const accept = useAcceptDriverTrip();
   const decline = useDeclineDriverTrip();
-  const release = useReleaseDriverTrip();
+  const tWage = useTranslations('Driving.wage');
   const [confirmingDecline, setConfirmingDecline] = useState(false);
-  const [confirmingRelease, setConfirmingRelease] = useState(false);
-  const busy = accept.isPending || decline.isPending || release.isPending;
+  const [dropOpen, setDropOpen] = useState(false);
+  const busy = accept.isPending || decline.isPending;
 
   const isOpen = trip.outcome === DRIVER_ASSIGNMENT_OUTCOME.OPEN;
   const pending = isDriverTripAwaitingAnswer(trip);
   const callHref = trip.customer.phone ? telHref(trip.customer.phone) : null;
   const days = chargedDays(toAppTz(trip.pickupAt), toAppTz(trip.returnAt));
+  const wage = driverWageLine(trip.wage);
   const openDetail = useCallback(() => onPress(trip), [onPress, trip]);
   const onError = (err: unknown) => toast.showError(errorMessage(err));
 
@@ -141,16 +144,15 @@ function DrivingTripCardImpl({
       </YStack>,
     );
   }
-  if (isOpen && trip.releaseUntil) {
+  if (trip.canDrop) {
     actions.push(
-      <YStack f={1} key="release">
+      <YStack f={1} key="drop">
         <Button
-          label={t('release')}
-          icon="close"
+          label={t('drop')}
+          icon="warning-outline"
           variant="dangerOutline"
           disabled={busy}
-          loading={release.isPending}
-          onPress={() => setConfirmingRelease(true)}
+          onPress={() => setDropOpen(true)}
         />
       </YStack>,
     );
@@ -259,7 +261,7 @@ function DrivingTripCardImpl({
                     : {})}
                 />
                 <Text
-                  col={colors.primaryHover}
+                  col={colors.shopName}
                   fos={fontSize.body}
                   fow={fontWeight.medium}
                   flexShrink={1}
@@ -279,7 +281,7 @@ function DrivingTripCardImpl({
             </Fact>
             <Fact label={t('time')}>
               <Text col={colors.text} fos={fontSize.body} ta="right" flexShrink={1}>
-                {fmt.dateTimeRange(trip.pickupAt, trip.returnAt)}
+                {fmt.rentalRange(trip.pickupAt, trip.returnAt)}
                 <Text col={colors.placeholder}>{` ${t('days', { count: days })}`}</Text>
               </Text>
             </Fact>
@@ -294,6 +296,22 @@ function DrivingTripCardImpl({
               <Fact label={t('destination')}>
                 <Text col={colors.text} fos={fontSize.body} ta="right" flexShrink={1}>
                   {trip.destination}
+                </Text>
+              </Fact>
+            ) : null}
+            {wage ? (
+              <Fact label={tWage('title')}>
+                <Text
+                  col={wage.kind === 'none' ? colors.textMuted : colors.text}
+                  fos={fontSize.body}
+                  fow={wage.kind === 'none' ? fontWeight.regular : fontWeight.semibold}
+                  ta="right"
+                  flexShrink={1}
+                >
+                  {tWage(`line.${wage.kind}`, {
+                    amount: fmt.money(wage.amount),
+                    days: trip.wage.days ?? days,
+                  })}
                 </Text>
               </Fact>
             ) : null}
@@ -312,29 +330,8 @@ function DrivingTripCardImpl({
         </YStack>
       </Card>
 
-      {isOpen && trip.releaseUntil ? (
-        <AlertDialog
-          open={confirmingRelease}
-          title={t('releaseConfirmTitle')}
-          message={t('releaseConfirmBody')}
-          confirmLabel={t('release')}
-          cancelLabel={tActions('close')}
-          destructive
-          loading={release.isPending}
-          onConfirm={() =>
-            release.mutate(trip.id, {
-              onSuccess: () => {
-                setConfirmingRelease(false);
-                toast.showSuccess(tToast('tripReleased'));
-              },
-              onError: (err) => {
-                setConfirmingRelease(false);
-                onError(err);
-              },
-            })
-          }
-          onCancel={() => setConfirmingRelease(false)}
-        />
+      {trip.canDrop && dropOpen ? (
+        <DropTripSheet trip={trip} onClose={() => setDropOpen(false)} />
       ) : null}
 
       {pending ? (

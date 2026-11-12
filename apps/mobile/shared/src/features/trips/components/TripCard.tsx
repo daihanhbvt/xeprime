@@ -210,11 +210,11 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
         </XStack>
 
         <XStack ai="center" gap={space.sm}>
-          <Text f={1} col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold} numberOfLines={1}>
+          <Text f={1} col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold} numberOfLines={1}>
             {trip.vehicle.name}
           </Text>
           {trip.code ? (
-            <Text col={colors.placeholder} fos={fontSize.label} numberOfLines={1}>
+            <Text col={colors.textPlaceholder} fos={fontSize.label} fontStyle="italic" numberOfLines={1}>
               {`#${trip.code}`}
             </Text>
           ) : null}
@@ -262,10 +262,10 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
             )}
           </MoneyCell>
           <MoneyCell label={t('card.paid')}>
-            {trip.totalAmount ? fmt.moneyThousands(paid) : '—'}
+            {trip.totalAmount ? fmt.moneyThousands(paid) : '-'}
           </MoneyCell>
           <MoneyCell label={t('card.remaining')} highlight>
-            {trip.totalAmount ? fmt.moneyThousands(remaining) : '—'}
+            {trip.totalAmount ? fmt.moneyThousands(remaining) : '-'}
           </MoneyCell>
         </XStack>
 
@@ -344,8 +344,8 @@ function TripInfoChips({ trip }: { trip: CustomerTrip }) {
   return (
     <XStack gap={space.xs} flexWrap="wrap">
       {chips.map((chip) => (
-        <YStack key={chip} px={space.sm} py={2} br={radius.sm} bw={1} bc={colors.border} bg={colors.surface}>
-          <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
+        <YStack key={chip} px={space.sm} py={2} br={6} bw={1} bc={colors.border} bg={colors.surface}>
+          <Text col={colors.textMuted} fos={fontSize.body} fow={fontWeight.medium} numberOfLines={1}>
             {chip}
           </Text>
         </YStack>
@@ -370,8 +370,8 @@ function ScheduleLine({ trip }: { trip: CustomerTrip }) {
   if (trip.pickupAt && trip.returnAt) {
     return (
       <YStack gap={space.xs}>
-        <SchedulePoint label={t('pickupAt')} value={fmt.dateTime(trip.pickupAt)} />
-        <SchedulePoint label={t('returnAt')} value={fmt.dateTime(trip.returnAt)} />
+        <SchedulePoint label={t('pickupAt')} value={fmt.rentalAt(trip.pickupAt)} />
+        <SchedulePoint label={t('returnAt')} value={fmt.rentalAt(trip.returnAt)} />
       </YStack>
     );
   }
@@ -386,7 +386,7 @@ function ScheduleLine({ trip }: { trip: CustomerTrip }) {
     return (
       <YStack gap={space.xs}>
         {packageLabel ? <SchedulePoint label={t('package')} value={packageLabel} /> : null}
-        <SchedulePoint label={t('pickupWish')} value={fmt.pickupWish(trip) || '—'} wrap />
+        <SchedulePoint label={t('pickupWish')} value={fmt.pickupWish(trip) || '-'} wrap />
       </YStack>
     );
   }
@@ -465,9 +465,9 @@ function TripHost({ trip }: { trip: CustomerTrip }) {
           {t(isShop ? 'shop' : 'owner')}
         </Text>
         <Text
-          col={isShop ? colors.primaryHover : colors.text}
+          col={isShop ? colors.shopName : colors.textMuted}
           fos={fontSize.body}
-          fow={fontWeight.semibold}
+          fow={isShop ? fontWeight.semibold : fontWeight.medium}
           numberOfLines={1}
         >
           {trip.shop.name}

@@ -4,12 +4,22 @@ import {
   CalendarOutlined,
   CarOutlined,
   ClockCircleOutlined,
+  ScheduleOutlined,
   SafetyCertificateOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
+import {
+  BOOKING_STATUS_META,
+  DRIVER_ASSIGNMENT_STATUS_META,
+  type BookingStatus,
+  type DriverAssignmentStatus,
+} from '@xeprime/types';
 import { MoneyVolumeChart } from '@/components/chart/MoneyVolumeChart';
+import { StatusBadge } from '@/components/data-display/StatusBadge';
+import { bookingPath } from '@/constants/routes';
 import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
 import { StatCard } from '@/features/dashboard/components/StatCard';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -36,7 +46,7 @@ export function DriverOverviewTab({
   const t = useTranslations('Drivers.detail.overview');
   const fmt = useAppFormat();
   const settings = useDriverWageSettings();
-  const { driver, month, upcoming, reliability, trend } = overview;
+  const { driver, month, upcoming, current, reliability, trend } = overview;
   const monthLabel = fmt.monthYear(dayjs(month.month, DRIVER_MONTH_FORMAT).toDate());
   const shopDaily = settings.data?.dailyWage ?? null;
   const hasTrend = trend.some((p) => p.trips > 0 || Number(p.wageTotal) > 0);
@@ -64,9 +74,11 @@ export function DriverOverviewTab({
         />
         <StatCard
           label={t('stats.averageDaily')}
-          value={month.averageDailyWage == null ? '—' : fmt.money(month.averageDailyWage)}
+          value={month.averageDailyWage == null ? '-' : fmt.money(month.averageDailyWage)}
           hint={
-            shopDaily ? t('stats.shopDaily', { amount: fmt.money(shopDaily) }) : t('stats.noShopDaily')
+            shopDaily
+              ? t('stats.shopDaily', { amount: fmt.money(shopDaily) })
+              : t('stats.noShopDaily')
           }
           icon={CalendarOutlined}
           tone="blue"
@@ -83,6 +95,49 @@ export function DriverOverviewTab({
           tone="blue"
         />
       </div>
+
+      {driver.activeBookingCount > 0 ? (
+        <DashboardPanel
+          title={t('current.title', { count: driver.activeBookingCount })}
+          icon={<ScheduleOutlined />}
+        >
+          <ul className={styles.currentList}>
+            {current.map((trip) => (
+              <li key={trip.bookingId} className={styles.currentRow}>
+                <Link href={bookingPath.detail(trip.bookingId)} className={styles.currentCode}>
+                  {trip.bookingCode}
+                </Link>
+                <span className={styles.vehicle}>
+                  <span>{trip.vehicleName}</span>
+                  {trip.vehiclePlate ? (
+                    <span className={styles.muted}>{trip.vehiclePlate}</span>
+                  ) : null}
+                </span>
+                <span className={styles.muted}>
+                  {fmt.rentalRange(trip.pickupAt, trip.returnAt)}
+                </span>
+                <span className={styles.currentBadges}>
+                  <StatusBadge
+                    value={trip.bookingStatus as BookingStatus}
+                    meta={BOOKING_STATUS_META}
+                    group="bookingStatus"
+                  />
+                  {trip.assignmentStatus ? (
+                    <StatusBadge
+                      value={trip.assignmentStatus as DriverAssignmentStatus}
+                      meta={DRIVER_ASSIGNMENT_STATUS_META}
+                      group="driverAssignmentStatus"
+                    />
+                  ) : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {driver.activeBookingCount > current.length ? (
+            <p className={styles.note}>{t('current.more', { shown: current.length })}</p>
+          ) : null}
+        </DashboardPanel>
+      ) : null}
 
       <div className={styles.halves}>
         <DashboardPanel title={t('wage.title', { month: monthLabel })} icon={<WalletOutlined />}>
@@ -138,7 +193,7 @@ export function DriverOverviewTab({
                 label: t('reliability.response'),
                 value:
                   reliability.medianResponseMinutes == null
-                    ? '—'
+                    ? '-'
                     : reliability.medianResponseMinutes === 0
                       ? t('reliability.underMinute')
                       : fmt.minutesDuration(reliability.medianResponseMinutes),

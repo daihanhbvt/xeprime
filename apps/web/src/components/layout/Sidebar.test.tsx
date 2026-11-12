@@ -57,7 +57,7 @@ vi.mock('@/hooks/use-permissions', () => ({
   }),
 }));
 
-vi.mock('./use-nav-badges', () => ({ useNavBadges: () => ({}) }));
+vi.mock('./use-nav-badges', () => ({ useNavBadges: () => ({ counts: {}, urgent: {} }) }));
 
 vi.mock('@/features/auth/hooks/use-portal-logout', () => ({
   usePortalLogout: () => vi.fn(async () => undefined),
@@ -98,7 +98,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Sidebar — trạng thái mở rộng', () => {
+describe('Sidebar - trạng thái mở rộng', () => {
   it('dựng vùng điều hướng CÓ TÊN', () => {
     renderSidebar();
 
@@ -128,19 +128,18 @@ describe('Sidebar — trạng thái mở rộng', () => {
   it('mục menu là link có nhãn đọc được', () => {
     renderSidebar();
 
-    expect(within(menuRegion()).getByRole('link', { name: 'Lịch thuê' })).toBeTruthy();
+    expect(within(menuRegion()).getByRole('link', { name: 'Lịch thuê xe' })).toBeTruthy();
   });
 
-  it('mục nằm trong một mục cha vẫn tới được: bấm mở "Xe của tôi"', () => {
+  it('mục đứng thẳng trong khối của nó - menu partner không còn mục cha phải bấm mở', () => {
     renderSidebar();
 
-    fireEvent.click(within(menuRegion()).getByText('Xe của tôi'));
-
+    expect(within(menuRegion()).getByText('Xe & Tài xế')).toBeTruthy();
     expect(within(menuRegion()).getByRole('link', { name: 'Danh sách xe' })).toBeTruthy();
   });
 });
 
-describe('Sidebar — nút thu gọn', () => {
+describe('Sidebar - nút thu gọn', () => {
   it('có tên truy cập được và nói ra trạng thái bằng aria-expanded', () => {
     renderSidebar();
 
@@ -175,7 +174,7 @@ describe('Sidebar — nút thu gọn', () => {
   });
 });
 
-describe('Sidebar — trạng thái thu gọn', () => {
+describe('Sidebar - trạng thái thu gọn', () => {
   function renderCollapsed() {
     const result = renderSidebar();
     fireEvent.click(toggle());
@@ -185,7 +184,7 @@ describe('Sidebar — trạng thái thu gọn', () => {
   it('mọi mục menu GIỮ tên truy cập được', () => {
     renderCollapsed();
 
-    expect(within(menuRegion()).getByRole('link', { name: 'Lịch thuê' })).toBeTruthy();
+    expect(within(menuRegion()).getByRole('link', { name: 'Lịch thuê xe' })).toBeTruthy();
     expect(within(menuRegion()).getByRole('link', { name: 'Tổng quan' })).toBeTruthy();
   });
 
@@ -194,16 +193,16 @@ describe('Sidebar — trạng thái thu gọn', () => {
     renderCollapsed();
 
     expect(
-      within(menuRegion()).getByRole('link', { name: 'Lịch thuê' }).getAttribute('aria-current'),
+      within(menuRegion()).getByRole('link', { name: 'Lịch thuê xe' }).getAttribute('aria-current'),
     ).toBe('page');
   });
 
-  it('vẫn lọc theo quyền — thu gọn không lộ thêm mục nào', () => {
+  it('vẫn lọc theo quyền - thu gọn không lộ thêm mục nào', () => {
     grant(PERMISSION.CALENDAR_VIEW);
     renderCollapsed();
 
-    expect(within(menuRegion()).getByRole('link', { name: 'Lịch thuê' })).toBeTruthy();
-    expect(within(menuRegion()).queryByRole('link', { name: 'Cửa hàng' })).toBeNull();
+    expect(within(menuRegion()).getByRole('link', { name: 'Lịch thuê xe' })).toBeTruthy();
+    expect(within(menuRegion()).queryByRole('link', { name: 'Thông tin cửa hàng' })).toBeNull();
   });
 
   it('tên gian hàng bị ẩn (không đủ chỗ), KHÔNG để lại chữ bị cắt dở', () => {
@@ -212,7 +211,7 @@ describe('Sidebar — trạng thái thu gọn', () => {
     expect(screen.queryByText('Thuê Xe Minh Anh')).toBeNull();
   });
 
-  it('cùng số mục như lúc mở rộng — không có cây menu thứ hai', () => {
+  it('cùng số mục như lúc mở rộng - không có cây menu thứ hai', () => {
     const expanded = renderSidebar();
     const before = within(menuRegion()).getAllByRole('link').length;
     expanded.unmount();
@@ -229,7 +228,7 @@ describe('Sidebar — trạng thái thu gọn', () => {
   });
 });
 
-describe('Sidebar — hợp đồng token nền tối', () => {
+describe('Sidebar - hợp đồng token nền tối', () => {
   /** Bỏ comment trước khi khẳng định: docblock ở đây CỐ Ý nêu tên thứ bị loại trừ. */
   const code = (file: string) =>
     readFileSync(join(HERE, file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');

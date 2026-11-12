@@ -96,6 +96,7 @@ export function HandoverPhotosScreen({ bookingId }: { bookingId: string }) {
   return (
     <SupplementBody
       bookingId={bookingId}
+      vehicleType={query.data?.vehicleType ?? ''}
       available={available}
       title={t('title')}
       refreshing={refreshing}
@@ -107,6 +108,7 @@ export function HandoverPhotosScreen({ bookingId }: { bookingId: string }) {
 
 function SupplementBody({
   bookingId,
+  vehicleType,
   available,
   title,
   refreshing,
@@ -114,6 +116,8 @@ function SupplementBody({
   onBack,
 }: {
   bookingId: string;
+  /** Loại xe của đơn — quyết bộ góc chụp (xe máy: trước · sau · Odo). */
+  vehicleType: string;
   available: readonly { type: HandoverType; handover: Handover }[];
   title: string;
   refreshing: boolean;
@@ -175,6 +179,7 @@ function SupplementBody({
             <HandoverPhotoGrid
               bookingId={bookingId}
               type={current.type}
+              vehicleType={vehicleType}
               handover={current.handover}
             />
           </Card>

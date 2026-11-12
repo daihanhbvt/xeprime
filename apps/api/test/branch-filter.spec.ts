@@ -41,6 +41,7 @@ import type { TenantContext } from '../src/common/types/request-context';
 import {
   makeBookingsService,
   makeCustomersService,
+  makeHandoverMoneyServices,
   makeNotificationService,
   makePricingService,
   makeVehiclesService,
@@ -91,7 +92,6 @@ const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Serv
 const odometer = new OdometerService(asService, audit);
 const maintenance = new MaintenanceService(
   asService,
-  occupancy,
   odometer,
   files,
   audit,
@@ -103,7 +103,15 @@ const bookings = makeBookingsService(asService, {
   notifications: makeNotificationService(asService),
   customers: makeCustomersService(asService, audit),
 });
-const handovers = new HandoversService(asService, bookings, odometer, maintenance, files, audit);
+const handovers = new HandoversService(
+  asService,
+  bookings,
+  odometer,
+  maintenance,
+  files,
+  audit,
+  ...makeHandoverMoneyServices(asService, audit),
+);
 const receipts = new ReceiptsService(asService, audit);
 const finance = new FinanceOverviewService(asService);
 
@@ -435,7 +443,7 @@ describe('/maintenance — bảng, dải đếm và tab thứ tư cùng một ph
         tenantId,
         fullName: 'Khách KM',
         phone: '0900000111',
-        normalizedPhone: '84900000111',
+        normalizedPhone: '0900000111',
       },
     });
     await prisma.booking.create({

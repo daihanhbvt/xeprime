@@ -54,6 +54,7 @@ vi.mock('../hooks/use-plans', () => ({
 vi.mock('../hooks/use-plan-mutations', () => ({
   useAssignSubscription: () => ({ mutate: vi.fn(), isPending: false }),
   useCancelSubscription: () => ({ mutate: vi.fn(), isPending: false, variables: undefined }),
+  useUpdateSubscription: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 const plan = {
@@ -78,7 +79,7 @@ beforeEach(() => {
 });
 afterEach(() => cleanup());
 
-describe('TenantPlanSection — chỉ đọc khi thiếu quyền quản lý gói', () => {
+describe('TenantPlanSection - chỉ đọc khi thiếu quyền quản lý gói', () => {
   it('không có quyền gói: thấy gói hiện hành, không nút nào, không gọi lịch sử', () => {
     permissions.granted = new Set([PERMISSION.PLATFORM_TENANT_VIEW]);
     renderSection();
@@ -121,7 +122,7 @@ function sub(over: Record<string, unknown>) {
 const DAY = 86_400_000;
 const at = (days: number) => new Date(Date.now() + days * DAY).toISOString();
 
-describe('TenantPlanSection — mỗi lúc chỉ MỘT kỳ hiệu lực', () => {
+describe('TenantPlanSection - mỗi lúc chỉ MỘT kỳ hiệu lực', () => {
   beforeEach(() => {
     permissions.granted = new Set([PERMISSION.PLATFORM_BILLING_MANAGE]);
     hooks.items = [
@@ -161,12 +162,47 @@ describe('TenantPlanSection — mỗi lúc chỉ MỘT kỳ hiệu lực', () =>
     expect(screen.getByText(/Kỳ kế tiếp · đã xếp lịch · Xe máy/)).toBeTruthy();
   });
 
-  it('chỉ huỷ được kỳ cuối chuỗi: kỳ xếp lịch có "Huỷ lịch", kỳ đang chạy thì không', () => {
+  it('kỳ còn hạn đều Sửa + Huỷ được; kỳ đã huỷ không có nút nào (ADR 0080)', () => {
     renderSection();
     const rows = screen.getAllByRole('listitem');
     expect(within(rows[0]!).getByRole('button', { name: 'Huỷ lịch' })).toBeTruthy();
-    expect(within(rows[1]!).queryByRole('button')).toBeNull();
+    expect(within(rows[0]!).getByRole('button', { name: 'Sửa' })).toBeTruthy();
+    expect(within(rows[1]!).getByRole('button', { name: 'Huỷ kỳ' })).toBeTruthy();
+    expect(within(rows[1]!).getByRole('button', { name: 'Sửa' })).toBeTruthy();
     expect(within(rows[2]!).queryByRole('button')).toBeNull();
+  });
+
+  it('huỷ kỳ đang chạy: hộp xác nhận kể tên kỳ xếp sau bị huỷ kèm', async () => {
+    renderSection();
+    const rows = screen.getAllByRole('listitem');
+    fireEvent.click(within(rows[1]!).getByRole('button', { name: 'Huỷ kỳ' }));
+    expect(await screen.findByText('1 kỳ xếp sau cũng bị huỷ kèm:')).toBeTruthy();
+    expect(screen.getByText(/^Gói nâng cao · /)).toBeTruthy();
+  });
+
+  it('sửa kỳ admin gán: có ô giá; kỳ từ hoá đơn đã trả: không có ô giá', async () => {
+    renderSection();
+    fireEvent.click(
+      within(screen.getAllByRole('listitem')[1]!).getByRole('button', { name: 'Sửa' }),
+    );
+    expect(await screen.findByText('Sửa kỳ gói · Gói cơ bản')).toBeTruthy();
+    expect(screen.getByLabelText('Giá cả kỳ')).toBeTruthy();
+    expect(screen.getByLabelText('Ngày kết thúc')).toBeTruthy();
+    cleanup();
+
+    hooks.items = [
+      sub({
+        id: 'paid',
+        origin: 'payment',
+        startsAt: at(-2),
+        endsAt: at(30),
+        termState: 'current',
+      }),
+    ];
+    renderSection();
+    fireEvent.click(screen.getByRole('button', { name: 'Sửa' }));
+    expect(await screen.findByText('Sửa kỳ gói · Gói cơ bản')).toBeTruthy();
+    expect(screen.queryByLabelText('Giá cả kỳ')).toBeNull();
   });
 
   it('dòng hệ thống nói nguồn gốc bằng nhãn dịch được, không phải ghi chú lưu trong DB', () => {
@@ -206,7 +242,7 @@ describe('TenantPlanSection — mỗi lúc chỉ MỘT kỳ hiệu lực', () =>
   });
 });
 
-describe('TenantPlanSection — kỳ theo PHẠM VI loại xe (ADR 0065)', () => {
+describe('TenantPlanSection - kỳ theo PHẠM VI loại xe (ADR 0065)', () => {
   const carPlan = {
     id: 'p-car',
     code: 'car_5',
@@ -274,7 +310,7 @@ describe('TenantPlanSection — kỳ theo PHẠM VI loại xe (ADR 0065)', () =>
   it('gán DOANH NGHIỆP: cảnh báo phủ cả hai loại, giá đàm phán bắt buộc, hỏi thời điểm', () => {
     renderSection();
     fireEvent.click(screen.getByRole('button', { name: 'Gia hạn / đổi gói' }));
-    choosePlan(/Doanh nghiệp — bán qua tư vấn/);
+    choosePlan(/Doanh nghiệp - bán qua tư vấn/);
 
     expect(screen.getByText(/phủ cả xe máy lẫn ô tô/)).toBeTruthy();
     expect(screen.getByText('Thời điểm áp dụng')).toBeTruthy();
@@ -290,7 +326,7 @@ describe('TenantPlanSection — kỳ theo PHẠM VI loại xe (ADR 0065)', () =>
     fireEvent.click(screen.getByRole('button', { name: 'Gia hạn / đổi gói' }));
     choosePlan(/Ô tô 10 xe.*chưa mở bán/);
 
-    expect(screen.getByText(/Gói này chưa mở bán — nhập giá/)).toBeTruthy();
+    expect(screen.getByText(/Gói này chưa mở bán - nhập giá/)).toBeTruthy();
     const submit = within(screen.getByRole('dialog'))
       .getAllByRole('button')
       .at(-1) as HTMLButtonElement;

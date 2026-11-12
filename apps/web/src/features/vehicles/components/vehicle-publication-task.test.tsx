@@ -93,7 +93,7 @@ function makeVehicle(over: Partial<VehicleDetail> = {}): VehicleDetail {
 function renderTask(over: Partial<VehicleDetail> = {}) {
   const vehicle = makeVehicle(over);
   const task = vehiclePublicationTask(vehicle);
-  if (!task) throw new Error('fixture này không sinh ra việc nào — kiểm lại đề bài của test');
+  if (!task) throw new Error('fixture này không sinh ra việc nào - kiểm lại đề bài của test');
   return render(
     <App>
       <VehiclePublicationTaskItem vehicle={vehicle} task={task} />
@@ -111,7 +111,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('vehiclePublicationTask — luật', () => {
+describe('vehiclePublicationTask - luật', () => {
   it('xe đã duyệt và đang bật: KHÔNG có việc nào', () => {
     expect(
       vehiclePublicationTask(
@@ -143,7 +143,7 @@ describe('vehiclePublicationTask — luật', () => {
     ).toBeNull();
   });
 
-  it('chỉ mở nút gửi duyệt khi checklist đã đủ — nút chắc chắn lỗi là nút không nên vẽ', () => {
+  it('chỉ mở nút gửi duyệt khi checklist đã đủ - nút chắc chắn lỗi là nút không nên vẽ', () => {
     expect(vehiclePublicationTask(makeVehicle())?.primary?.kind).toBe('submit');
     expect(vehiclePublicationTask(makeVehicle({ weekdayPrice: null }))?.primary?.kind).toBe('edit');
     // Xe bị từ chối mà hồ sơ còn thiếu: chỉ còn lối SỬA, không có "Gửi duyệt lại".
@@ -155,7 +155,7 @@ describe('vehiclePublicationTask — luật', () => {
   });
 });
 
-describe('VehiclePublicationTaskItem — nháp', () => {
+describe('VehiclePublicationTaskItem - nháp', () => {
   it('thiếu điều kiện: tiêu đề "Hoàn tất hồ sơ…", nêu ngắn phần thiếu, CTA mở đúng tab', () => {
     renderTask({ weekdayPrice: null });
 
@@ -163,12 +163,13 @@ describe('VehiclePublicationTaskItem — nháp', () => {
     expect(screen.getByText('Còn thiếu: Giá tự lái (ngày thường).')).toBeTruthy();
     // Mục thiếu đầu tiên là GIÁ, nên nút mở thẳng tab giá chứ không thả vào tab mặc định.
     const cta = screen.getByRole('link', { name: /Hoàn tất hồ sơ/ });
-    expect(cta.getAttribute('href')).toContain('/edit?tab=pricing');
+    // Thiếu giá tự lái mở ĐÚNG tab tự lái của mục Dịch vụ xe (03/11/2026).
+    expect(cta.getAttribute('href')).toContain('/edit?tab=self-drive');
     // Không có nút gửi duyệt khi hồ sơ còn thiếu.
     expect(screen.queryByRole('button', { name: /Gửi duyệt/ })).toBeNull();
   });
 
-  it('danh sách dài không đổ hết ra thẻ — phần dư đếm số, chi tiết nằm sau dấu "i"', () => {
+  it('danh sách dài không đổ hết ra thẻ - phần dư đếm số, chi tiết nằm sau dấu "i"', () => {
     renderTask({ weekdayPrice: null, mainImageUrl: null, media: [], plateNumber: null });
 
     expect(screen.getByText(/mục khác/)).toBeTruthy();
@@ -193,7 +194,7 @@ describe('VehiclePublicationTaskItem — nháp', () => {
   });
 });
 
-describe('VehiclePublicationTaskItem — các trạng thái còn lại', () => {
+describe('VehiclePublicationTaskItem - các trạng thái còn lại', () => {
   /*
    * 24/09/2026 — trạng thái chờ duyệt có lối SỬA, và vẫn không có nút gửi lại.
    *
@@ -268,7 +269,7 @@ describe('VehiclePublicationTaskItem — các trạng thái còn lại', () => {
     expect(screen.getByRole('link', { name: 'Liên hệ hỗ trợ' })).toBeTruthy();
   });
 
-  it('chủ xe tạm ẩn: chỉ NHẮC, không có nút — công tắc "Trên chợ" ở đầu trang là chỗ bấm duy nhất', () => {
+  it('chủ xe tạm ẩn: chỉ NHẮC, không có nút - công tắc "Trên chợ" ở đầu trang là chỗ bấm duy nhất', () => {
     renderTask({
       publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
       marketplaceEnabled: false,
@@ -281,7 +282,7 @@ describe('VehiclePublicationTaskItem — các trạng thái còn lại', () => {
   });
 });
 
-describe('VehiclePublicationTaskItem — lỗi khi gửi duyệt', () => {
+describe('VehiclePublicationTaskItem - lỗi khi gửi duyệt', () => {
   it('cổng hồ sơ gian hàng: dựng DẢI có link, KHÔNG dùng toast', async () => {
     submit.mutate.mockImplementation((_b: unknown, opts: { onError?: (e: unknown) => void }) =>
       opts.onError?.(

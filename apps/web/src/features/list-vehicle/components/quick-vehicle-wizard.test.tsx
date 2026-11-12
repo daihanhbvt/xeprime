@@ -64,7 +64,7 @@ vi.mock('@/components/form/AddressField', () => ({
     names,
   }: {
     control: Control<OwnerProfileValues>;
-    names: { provinceCode: 'provinceCode'; addressLine: 'addressLine' };
+    names: { provinceCode: 'provinceCode'; wardCode: 'wardCode'; addressLine: 'addressLine' };
   }) => <AddressFieldStub control={control} names={names} />,
 }));
 
@@ -78,9 +78,10 @@ function AddressFieldStub({
   names,
 }: {
   control: Control<OwnerProfileValues>;
-  names: { provinceCode: 'provinceCode'; addressLine: 'addressLine' };
+  names: { provinceCode: 'provinceCode'; wardCode: 'wardCode'; addressLine: 'addressLine' };
 }) {
   const province = useController({ control, name: names.provinceCode });
+  const ward = useController({ control, name: names.wardCode });
   const line = useController({ control, name: names.addressLine });
   return (
     <div data-testid="address-field">
@@ -89,6 +90,13 @@ function AddressFieldStub({
         <input
           value={province.field.value ?? ''}
           onChange={(e) => province.field.onChange(e.target.value)}
+        />
+      </label>
+      <label>
+        Xã/phường
+        <input
+          value={ward.field.value ?? ''}
+          onChange={(e) => ward.field.onChange(e.target.value)}
         />
       </label>
       <label>
@@ -107,6 +115,7 @@ vi.mock('@/features/locations/hooks/use-provinces', () => ({
   useProvinceOptions: () => ({ options: [{ value: '79', label: 'TP Hồ Chí Minh' }] }),
 }));
 vi.mock('@/features/locations/hooks/use-wards', () => ({
+  useWardLookup: () => ({ data: new Map(), isLoading: false }),
   useWardOptions: () => ({ options: [] }),
 }));
 
@@ -257,6 +266,8 @@ function render(source = VEHICLE_REGISTRATION_SOURCE.MARKETPLACE) {
  */
 async function fillOwnerStep() {
   fireEvent.change(screen.getByLabelText('Tỉnh/thành'), { target: { value: '79' } });
+  // ADR 0077: hồ sơ chủ xe thành chi nhánh mặc định ⇒ bắt buộc phường/xã.
+  fireEvent.change(screen.getByLabelText('Xã/phường'), { target: { value: '26734' } });
   fireEvent.change(screen.getByLabelText('Địa chỉ'), {
     target: { value: '12 Nguyễn Huệ' },
   });
@@ -427,7 +438,7 @@ describe('Cửa vào', () => {
   });
 });
 
-describe('Ba bước — đúng ba, và nút cuối nói đúng việc', () => {
+describe('Ba bước - đúng ba, và nút cuối nói đúng việc', () => {
   it('thanh bước có đúng ba mục, không có bước "Xác nhận"', () => {
     render();
     expect(screen.getByText('1. Thông tin xe')).toBeTruthy();
@@ -679,7 +690,7 @@ describe('Một cổng duyệt: gửi thẳng XE', () => {
  * thì bắt buộc trường đó ⇒ không đăng nổi chiếc xe đầu tiên. Backend đã mở ba route đọc/sửa chi
  * nhánh của CHÍNH MÌNH cho cả hai tuyến; phần còn lại là hình dạng của bước này.
  */
-describe('Bước 2 — địa chỉ xe', () => {
+describe('Bước 2 - địa chỉ xe', () => {
   it('một chi nhánh: KHÔNG có bộ chọn, hiện thẳng địa chỉ kèm nút sửa', async () => {
     permissions.granted = new Set([PERMISSION.VEHICLE_CREATE, PERMISSION.BRANCH_MANAGE]);
     render();

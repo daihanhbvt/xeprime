@@ -305,40 +305,13 @@ describe('mốc biên bậc giao nhận', () => {
   });
 
   /*
-   * Bậc THEO KM (ADR 0064): phí = đơn giá × khoảng cách một chiều, làm tròn tới 1.000đ. Dữ liệu
-   * cũ `{toKm, fee}` vẫn đọc nguyên trạng — ca trên là bằng chứng.
+   * Phí giao xe THEO KM đã gỡ (ADR 0078): mỗi bậc chỉ còn MỘT phí trọn gói. App cũ còn gửi `perKm`
+   * thì bị từ chối bằng 400 — không âm thầm bỏ bậc, không đoán phí.
    */
-  maybe(
-    'bậc theo km: đơn giá × khoảng cách, đúng tới đồng (ADR 0069); lưu và đọc lại đúng dạng',
-    async () => {
-      const perKmTiers = [
-        { toKm: 5, fee: '0' },
-        { toKm: 15, perKm: '10000' },
-      ];
-      await pricing.saveShopPolicy(
-        tenantId,
-        ownerId,
-        policyDto({ deliveryTiers: perKmTiers, deliveryMaxRadiusKm: 15 }),
-      );
-      try {
-        const { values } = (await pricing.effectivePolicy(tenantId, vehicleId))!;
-        expect(values.deliveryTiers).toEqual(perKmTiers);
-        const fee = (km: number) => pricing.deliveryFeeFor(values, km);
-        expect(fee(4)).toEqual({ kind: 'auto', fee: '0' });
-        expect(fee(12)).toEqual({ kind: 'auto', fee: '120000' });
-        // 12,34 km × 10.000 = 123.400 — đúng tới đồng, không còn tròn 1.000đ (trước: 123.000).
-        expect(fee(12.34)).toEqual({ kind: 'auto', fee: '123400' });
-        expect(fee(15.5)).toEqual({ kind: 'manual_required' });
-      } finally {
-        await pricing.saveShopPolicy(tenantId, ownerId, policyDto());
-      }
-    },
-  );
-
-  maybe('một bậc mang CẢ phí trọn gói lẫn đơn giá km, hoặc đơn giá 0đ/km ⇒ 400', async () => {
+  maybe('bậc mang đơn giá km (kể cả kèm phí trọn gói) hoặc thiếu phí ⇒ 400', async () => {
     for (const tier of [
+      { toKm: 10, perKm: '10000' },
       { toKm: 10, fee: '30000', perKm: '5000' },
-      { toKm: 10, perKm: '0' },
       { toKm: 10 },
     ]) {
       await expect(

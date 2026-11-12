@@ -36,7 +36,7 @@ export class BranchDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Địa chỉ HIỂN THỊ đã ghép sẵn (số nhà, xã/phường, tỉnh) — dùng thẳng, đừng ghép lại',
+    description: 'Địa chỉ HIỂN THỊ đã ghép sẵn (số nhà, xã/phường, tỉnh) - dùng thẳng, đừng ghép lại',
   })
   address!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Số nhà, đường, toà nhà' })
@@ -49,7 +49,7 @@ export class BranchDto {
   @ApiPropertyOptional({
     enum: LOCATION_SOURCE_VALUES,
     nullable: true,
-    description: 'Ghim đến từ đâu — `geocoded` là máy đoán, giao diện nhắc chủ shop kiểm lại',
+    description: 'Ghim đến từ đâu - `geocoded` là máy đoán, giao diện nhắc chủ shop kiểm lại',
   })
   locationSource!: string | null;
   @ApiProperty() isDefault!: boolean;
@@ -57,7 +57,7 @@ export class BranchDto {
   @ApiProperty({ description: 'Số xe (chưa xoá) đang thuộc chi nhánh' }) vehicleCount!: number;
   @ApiProperty({
     description:
-      'Địa chỉ chưa khớp danh mục hành chính hiện hành (thiếu tỉnh hoặc thiếu xã/phường) — chủ ' +
+      'Địa chỉ chưa khớp danh mục hành chính hiện hành (thiếu tỉnh hoặc thiếu xã/phường) - chủ ' +
       'shop cần mở form ra chọn lại và xác nhận ghim',
   })
   needsLocationReview!: boolean;
@@ -113,10 +113,10 @@ export class BranchListQueryDto {
  * Địa chỉ là các trường PHẲNG, không phải một object lồng — xem `AddressViewDto` ở
  * `modules/locations/dto/address.dto.ts` để biết vì sao.
  *
- * `wardCode` tuỳ chọn, và từ ADR 0042 giao diện KHÔNG còn hỏi nó ở đây: một chi nhánh có ghim
- * đã xác nhận thì toạ độ định vị chính xác hơn hẳn một mã năm chữ số. Trường vẫn nhận giá trị
- * (client cũ, dữ liệu nhập tay) và vẫn bị đối chiếu với tỉnh khi có — chỉ là không màn hình nào
- * còn sinh ra nó.
+ * `wardCode` BẮT BUỘC với chi nhánh từ ADR 0077 (ghi đè ADR 0042), kể cả khi có ghim: chuỗi hiển
+ * thị và bề mặt công khai ("Phường/Xã, Tỉnh") ghép từ danh mục, không từ dữ liệu bản đồ. Validator
+ * để tuỳ chọn có chủ đích — service trả mã `WARD_REQUIRED` (giao diện dịch được) thay cho lỗi
+ * validate chung; xã khác tỉnh trả `WARD_NOT_IN_PROVINCE`.
  */
 export class CreateBranchDto {
   @ApiProperty({ example: 'Chi nhánh Đà Nẵng' })
@@ -125,7 +125,7 @@ export class CreateBranchDto {
   @Length(2, 255)
   name!: string;
 
-  @ApiProperty({ example: '48', description: 'Mã tỉnh — BẮT BUỘC, phải đang mở đăng ký' })
+  @ApiProperty({ example: '48', description: 'Mã tỉnh - BẮT BUỘC, phải đang mở đăng ký' })
   @Transform(trimmed)
   @IsString()
   @Length(2, 2)
@@ -133,7 +133,7 @@ export class CreateBranchDto {
 
   @ApiPropertyOptional({
     example: '00004',
-    description: 'Mã xã/phường/đặc khu 5 chữ số — lấy từ `GET /provinces/:code/wards`',
+    description: 'Mã xã/phường/đặc khu 5 chữ số - lấy từ `GET /provinces/:code/wards`',
   })
   @IsOptional()
   @Transform(trimmed)
@@ -163,7 +163,7 @@ export class CreateBranchDto {
    * bỏ hẳn trường này khiến mọi bản client đang chạy nhận 400 ngay lần lưu tiếp theo. Server
    * coi nó là `addressLine` khi `addressLine` vắng mặt, rồi tự ghép lại chuỗi hiển thị.
    */
-  @ApiPropertyOptional({ deprecated: true, description: 'Cũ — dùng `addressLine`' })
+  @ApiPropertyOptional({ deprecated: true, description: 'Cũ - dùng `addressLine`' })
   @IsOptional()
   @Transform(trimmed)
   @IsString()
@@ -177,7 +177,7 @@ export class CreateBranchDto {
   phone?: string;
 
   @ApiPropertyOptional({
-    description: 'Vĩ độ của ghim chủ shop đã xác nhận — THẮNG toạ độ server tự tra',
+    description: 'Vĩ độ của ghim chủ shop đã xác nhận - THẮNG toạ độ server tự tra',
   })
   @IsOptional()
   @IsLatitude()
@@ -190,7 +190,7 @@ export class CreateBranchDto {
 
   @ApiPropertyOptional({
     enum: LOCATION_SOURCE_VALUES,
-    description: 'Ghim đến từ đâu. Server ghi đè khi tự tra — client không tự phong "đã xác nhận".',
+    description: 'Ghim đến từ đâu. Server ghi đè khi tự tra - client không tự phong "đã xác nhận".',
   })
   @IsOptional()
   @IsIn(LOCATION_SOURCE_VALUES)
@@ -235,7 +235,7 @@ export class UpdateBranchDto {
   placeId?: string;
 
   /** @deprecated Dùng `addressLine` — xem ghi chú ở `CreateBranchDto.address`. */
-  @ApiPropertyOptional({ deprecated: true, description: 'Cũ — dùng `addressLine`' })
+  @ApiPropertyOptional({ deprecated: true, description: 'Cũ - dùng `addressLine`' })
   @IsOptional()
   @Transform(trimmed)
   @IsString()

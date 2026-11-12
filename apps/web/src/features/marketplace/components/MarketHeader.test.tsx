@@ -65,7 +65,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('MarketHeader', () => {
-  it('mỗi biểu tượng ở góc phải đều có tên đọc được — không có nút câm', () => {
+  it('mỗi biểu tượng ở góc phải đều có tên đọc được - không có nút câm', () => {
     const { container } = render(<MarketHeader />);
     const unnamed = Array.from(container.querySelectorAll('button')).filter(
       (btn) => !btn.getAttribute('aria-label') && !btn.textContent?.trim(),
@@ -131,7 +131,7 @@ describe('MarketHeader', () => {
     expect(screen.queryByRole('button', { name: 'Tài khoản' })).toBeNull();
   });
 
-  it('khách CHƯA đăng nhập thấy nút "Trở thành chủ xe" ngay trên thanh — họ không có menu tài khoản', () => {
+  it('khách CHƯA đăng nhập thấy nút "Trở thành chủ xe" ngay trên thanh - họ không có menu tài khoản', () => {
     state.user = null;
     render(<MarketHeader />);
 
@@ -149,7 +149,7 @@ describe('MarketHeader', () => {
  * `tenant` (dữ liệu cũ), thanh vẫn là thanh của người đi thuê, và lối duy nhất sang phía cho thuê là
  * "Trở thành chủ xe" dẫn tới trang ĐĂNG KÝ của site partner.
  */
-describe('MarketHeader — chỉ của tài khoản khách', () => {
+describe('MarketHeader - chỉ của tài khoản khách', () => {
   /** Hình dạng của một tenant tuyến gói — để chứng minh thanh KHÔNG rẽ nhánh theo nó. */
   const legacyShopUser = {
     id: 'U9',
@@ -189,7 +189,9 @@ describe('MarketHeader — chỉ của tài khoản khách', () => {
 
     // "Tài khoản của tôi" đã gộp vào thẻ danh tính (Figma 26/10/2026) — không còn dòng riêng.
     expect(screen.queryByRole('link', { name: /Tài khoản của tôi/ })).toBeNull();
-    expect(screen.getByRole('link', { name: /Chuyến của tôi/ }).getAttribute('href')).toBe(
+    // Thanh menu chính cũng có mục "Chuyến đi" — chỉ soát trong menu tài khoản.
+    const menu = screen.getByRole('dialog', { name: 'Menu tài khoản' });
+    expect(within(menu).getByRole('link', { name: /Chuyến đi/ }).getAttribute('href')).toBe(
       '/trips',
     );
     expect(screen.getByRole('link', { name: /Xe yêu thích/ }).getAttribute('href')).toBe(
@@ -204,7 +206,7 @@ describe('MarketHeader — chỉ của tài khoản khách', () => {
     expect(screen.queryByText('Hồ sơ gian hàng')).toBeNull();
   });
 
-  it('không còn dấu "chủ gian hàng đã xác thực" — đó là danh tính của site partner', async () => {
+  it('không còn dấu "chủ gian hàng đã xác thực" - đó là danh tính của site partner', async () => {
     state.user = legacyShopUser;
     await openMenu();
 
@@ -219,7 +221,7 @@ describe('MarketHeader — chỉ của tài khoản khách', () => {
  * thuê ở site partner) thì cái tên một mình không phân biệt được, và đó chính là lúc người ta mở
  * menu này ra để kiểm tra.
  */
-describe('MarketHeader — thẻ danh tính', () => {
+describe('MarketHeader - thẻ danh tính', () => {
   /** Mở menu tài khoản và đợi nó dựng xong. */
   async function openMenu() {
     render(<MarketHeader />);
@@ -227,7 +229,7 @@ describe('MarketHeader — thẻ danh tính', () => {
     await waitFor(() => expect(screen.getByText('Đăng xuất')).toBeTruthy());
   }
 
-  it('hiện tên VÀ email — hai thứ cùng lúc mới phân biệt được tài khoản', async () => {
+  it('hiện tên VÀ email - hai thứ cùng lúc mới phân biệt được tài khoản', async () => {
     state.user = { id: 'U1', displayName: 'Huỳnh Văn Tài', email: 'taih@gmail.com' };
     await openMenu();
 
@@ -252,7 +254,7 @@ describe('MarketHeader — thẻ danh tính', () => {
   });
 });
 
-describe('MarketHeader — dòng điều hướng trong menu', () => {
+describe('MarketHeader - dòng điều hướng trong menu', () => {
   async function openMenu() {
     render(<MarketHeader />);
     fireEvent.click(screen.getByRole('button', { name: 'Tài khoản' }));

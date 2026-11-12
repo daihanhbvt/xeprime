@@ -44,7 +44,7 @@ function docOf(bundle: typeof viLegal, doc: string): DocBundle {
   return found;
 }
 
-describe('văn bản pháp lý — code và bản dịch phải khớp', () => {
+describe('văn bản pháp lý - code và bản dịch phải khớp', () => {
   it.each(LEGAL_DOC_VALUES)('%s: mọi mục trong LEGAL_SECTIONS đều có bản dịch vi + en', (doc) => {
     for (const section of LEGAL_SECTIONS[doc]) {
       for (const [locale, bundle] of [
@@ -178,7 +178,7 @@ describe('câu cam kết pháp lý cạnh nút hành động', () => {
   });
 });
 
-describe('chân trang — không còn liên kết chết', () => {
+describe('chân trang - không còn liên kết chết', () => {
   /**
    * MỌI đích trong chân trang, không chỉ các cột.
    *

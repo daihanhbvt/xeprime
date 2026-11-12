@@ -1,7 +1,9 @@
 import type { ConversationSummary } from '@/features/chat/api';
 import { CHAT_INBOX, CHAT_SIDE, type ChatSide } from '@xeprime/types';
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, RefreshControl, type ListRenderItemInfo } from 'react-native';
+import { RefreshControl, type ListRenderItemInfo } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { ScrollReveal, ScrollRevealProvider, useAppScrollRevealList } from '@/components/motion/ScrollReveal';
 import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { Screen } from '@/components/layout/Screen';
@@ -99,19 +101,23 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
       <RefreshControl
         refreshing={isRefetching}
         onRefresh={() => void refetch()}
-        tintColor={colors.primaryActive}
+        tintColor={colors.accentText}
       />
     ),
     [colors, isRefetching, refetch],
   );
 
+  // Hàng trượt lên khi cuộn tới (chỉ transform, một lần) - app Partner giữ tĩnh.
+  const listReveal = useAppScrollRevealList();
   const renderRow = useCallback(
-    ({ item }: ListRenderItemInfo<ConversationSummary>) => (
-      <ConversationRow
-        conversation={item}
-        showRole={inbox === CHAT_INBOX.UNIFIED}
-        onPress={openConversation}
-      />
+    ({ item, index }: ListRenderItemInfo<ConversationSummary>) => (
+      <ScrollReveal index={index}>
+        <ConversationRow
+          conversation={item}
+          showRole={inbox === CHAT_INBOX.UNIFIED}
+          onPress={openConversation}
+        />
+      </ScrollReveal>
     ),
     [inbox, openConversation],
   );
@@ -168,7 +174,10 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
           description={filtering ? undefined : t('pickConversation')}
         />
       ) : (
-        <FlatList
+        <ScrollRevealProvider value={listReveal.ctx}>
+        <Animated.FlatList
+          onScroll={listReveal.onScroll}
+          scrollEventThrottle={16}
           data={items}
           keyExtractor={conversationKey}
           renderItem={renderRow}
@@ -184,6 +193,7 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
           }
           {...LIST_TUNING}
         />
+        </ScrollRevealProvider>
       )}
     </Screen>
   );

@@ -87,8 +87,52 @@ export class TaxService {
       select: { id: true, taxAmount: true, priceSnapshot: true, feePolicyId: true },
     });
     if (!booking) return null;
+    return this.accrueWithinTx(tx, {
+      bookingId: input.bookingId,
+      bookingExtensionId: null,
+      tenantId: input.tenantId,
+      priceSnapshot: booking.priceSnapshot,
+      feePolicyId: booking.feePolicyId,
+      actorUserId: input.actorUserId,
+      now: input.now,
+    });
+  }
 
-    const snapshot = taxFromSnapshot(booking.priceSnapshot, booking.feePolicyId);
+  /**
+   * Ghi nghĩa vụ thuế của một PHỤ LỤC GIA HẠN vừa hiệu lực (ADR 0077) — chuyến đã chạy nên thuế
+   * phát sinh ngay lúc phụ lục có hiệu lực, trong transaction của lượt đối soát. Mỗi phụ lục MỘT
+   * nghĩa vụ còn sống (`tax_withholdings_live_extension_key`); chạy lại ⇒ `null`, không ghi đôi.
+   */
+  async accrueForExtensionWithinTx(
+    tx: Prisma.TransactionClient,
+    input: {
+      bookingExtensionId: string;
+      bookingId: string;
+      tenantId: string;
+      priceSnapshot: unknown;
+      feePolicyId: string | null;
+      actorUserId: string | null;
+      now?: Date;
+    },
+  ): Promise<string | null> {
+    return this.accrueWithinTx(tx, input);
+  }
+
+  /** Thân chung của hai đường ghi — một nơi chụp hồ sơ người bán và gác ghi đôi. */
+  private async accrueWithinTx(
+    tx: Prisma.TransactionClient,
+    input: {
+      bookingId: string;
+      /** `null` = nghĩa vụ của chính đơn. */
+      bookingExtensionId: string | null;
+      tenantId: string;
+      priceSnapshot: unknown;
+      feePolicyId: string | null;
+      actorUserId: string | null;
+      now?: Date;
+    },
+  ): Promise<string | null> {
+    const snapshot = taxFromSnapshot(input.priceSnapshot, input.feePolicyId);
     if (!snapshot || snapshot.amount.lte(0)) return null;
 
     const now = input.now ?? new Date();
@@ -108,6 +152,7 @@ export class TaxService {
         data: {
           id,
           bookingId: input.bookingId,
+          bookingExtensionId: input.bookingExtensionId,
           tenantId: input.tenantId,
           sellerProfileId: seller?.id ?? null,
           taxableBase: snapshot.taxableBase,
@@ -150,7 +195,11 @@ export class TaxService {
        * phép đọc đó.
        */
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-        this.logger.warn(`Đơn ${input.bookingId} đã có dòng thuế còn hiệu lực — bỏ qua`);
+        this.logger.warn(
+          input.bookingExtensionId
+            ? `Phụ lục ${input.bookingExtensionId} đã có dòng thuế còn hiệu lực - bỏ qua`
+            : `Đơn ${input.bookingId} đã có dòng thuế còn hiệu lực - bỏ qua`,
+        );
         return null;
       }
       throw err;
@@ -174,6 +223,7 @@ export class TaxService {
         id: true,
         tenantId: true,
         bookingId: true,
+        bookingExtensionId: true,
         status: true,
         amount: true,
         taxableBase: true,
@@ -204,13 +254,13 @@ export class TaxService {
     if (row.reversalOfId !== null) {
       throw new ConflictException({
         code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message: 'Đây đã là một dòng đảo — không đảo một bút toán đảo',
+        message: 'Đây đã là một dòng đảo - không đảo một bút toán đảo',
       });
     }
     if (!canTransitionTax(row.status as TaxWithholdingStatus, TAX_WITHHOLDING_STATUS.REVERSED)) {
       throw new ConflictException({
         code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message: 'Dòng thuế này không đảo được — tiền đã nộp thì sửa bằng tờ khai điều chỉnh',
+        message: 'Dòng thuế này không đảo được - tiền đã nộp thì sửa bằng tờ khai điều chỉnh',
         details: { status: row.status },
       });
     }
@@ -229,7 +279,7 @@ export class TaxService {
       if (claimed.count === 0) {
         throw new ConflictException({
           code: API_ERROR_CODE.CONFLICT,
-          message: 'Dòng thuế vừa được người khác xử lý — tải lại rồi thử lại',
+          message: 'Dòng thuế vừa được người khác xử lý - tải lại rồi thử lại',
         });
       }
 
@@ -237,6 +287,7 @@ export class TaxService {
         data: {
           id: reversalId,
           bookingId: row.bookingId,
+          bookingExtensionId: row.bookingExtensionId,
           tenantId: row.tenantId,
           sellerProfileId: row.sellerProfileId,
           taxableBase: row.taxableBase,

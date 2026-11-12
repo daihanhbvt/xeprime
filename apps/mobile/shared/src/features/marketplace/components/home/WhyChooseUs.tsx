@@ -1,69 +1,202 @@
-import { Ionicons } from '@expo/vector-icons';
+import type { ReactNode } from 'react';
+import { RevealText, ScrollReveal } from '@/components/motion/ScrollReveal';
+import { RevealCountUp } from '@/components/motion/use-count-up';
+import { Image } from 'expo-image';
+import { ImageBackground, StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { useRevealPop, useScrollParallax } from '@/components/motion/reveal-effects';
+import { SvgXml } from 'react-native-svg';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import type { IconName } from '@/components/ui/Chip';
+import { XP_TOKENS } from '@xeprime/ui';
 import { layout } from '@/theme/layout';
-import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useAppScheme, useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, market, radius, space } from '@/theme/tokens';
 import { HomeSectionHeading } from './HomeSectionHeading';
+import { WHY_FLEET_ART, WHY_PRICE_ART, WHY_SUPPORT_ART, WHY_TIME_ART } from './why-art';
+import { useContentWidth } from '@/theme/use-content-width';
+
+/** Cùng khoá, thứ tự và nét vẽ với `WhyChooseUs` bên web (`/home/why-*.svg`). */
+const ITEMS = [
+  { key: 'price', art: WHY_PRICE_ART },
+  { key: 'fleet', art: WHY_FLEET_ART },
+  { key: 'time', art: WHY_TIME_ART },
+  { key: 'support', art: WHY_SUPPORT_ART },
+] as const;
+
+/** Figma MB `19879:67459`: ô icon 30, đệm 12 ⇒ đĩa 54; nét vẽ 32px của web thu về 30/32. */
+const ICON_BOX = 30;
+const ICON_SCALE = ICON_BOX / 32;
+
+/** Ảnh tĩnh 532×488 (web `/home/why-image.png`); góc dưới-trái trong suốt là chỗ của ô số. */
+const IMAGE_RATIO = 532 / 488;
+/** Ô số chiếm 173 × 124 của ảnh 532 × 488 — tính ra px theo bề ngang ảnh (RN không co % đúng cho ô tuyệt đối). */
+// Trần bề ngang ảnh = website ≤1024px (`width: min(100%, 640px)`) — iPad co ảnh tới đây.
+const IMAGE_MAX_WIDTH = 640;
+const STAT_RATIO = { width: 173 / 532, height: 124 / 488 };
 
 /**
- * Bốn cam kết — cùng khoá và thứ tự với `WhyChooseUs` bên web. Biểu tượng là Ionicons gần nhất với
- * nét vẽ v2 (thẻ giá · nhóm người · đồng hồ · bong bóng chat): app chỉ có một bộ icon.
+ * "Lý do nên chọn XePrime" — bố cục Figma MB (`19879:67457`): tiêu đề canh giữa, lưới 2 × 2 canh
+ * giữa (cách 16). Bản MB chưa vẽ đoạn giới thiệu và ảnh "100+" của desktop (`21965:5232`) — app vẫn
+ * hiện đủ như web mobile: mô tả dưới tiêu đề, ảnh dưới lưới. Con số là chữ tĩnh trong bản dịch.
  */
-const ITEMS: readonly { key: 'price' | 'fleet' | 'time' | 'support'; icon: IconName }[] = [
-  { key: 'price', icon: 'pricetag-outline' },
-  { key: 'fleet', icon: 'people-outline' },
-  { key: 'time', icon: 'alarm-outline' },
-  { key: 'support', icon: 'chatbubbles-outline' },
-];
-
-/** `.iconWrap` ≤640px: đệm 12 + ô 48 thu 0.75 = đĩa 60. */
-const ICON_DISC = 60;
-
-/** "Tại sao lại chọn XePrime" — nội dung tĩnh, lưới 2 × 2 như bản vẽ mobile v2 (`19771:51689`). */
 export function WhyChooseUs() {
   const colors = useColors();
+  // Ảnh ghép có khoét chỗ cho ô "100+": ảnh và ô phải trôi CÙNG NHAU, không phóng - tách rời là vỡ hình.
+  const parallax = useScrollParallax(0.15, 24, 1);
+  // Figma dark: tiêu đề mục vàng, mô tả xám sáng (`21965:6841`, `19879:66279`).
+  const dark = useAppScheme().scheme === 'dark';
+  const onDarkMuted = XP_TOKENS['color-text-on-dark-muted'];
   const t = useTranslations('Home.why');
+  const width = useContentWidth();
+  // Ảnh co theo bề ngang nội dung, trần 640 như website ở tablet, canh giữa. Cỡ chữ ô số co theo
+  // bề ngang ảnh để vừa ô ở máy nhỏ (≤ 360) lẫn tablet.
+  const imageWidth = Math.min(width - layout.screenX * 2, IMAGE_MAX_WIDTH);
+  const imageHeight = imageWidth / IMAGE_RATIO;
+  const statScale = Math.min(Math.max(imageWidth / 343, 0.8), 1.3);
+  const statValueSize = Math.round(fontSize.h1 * statScale);
+  const statLabelSize = Math.round(fontSize.bodySm * statScale);
+  // Bốn cam kết luôn 2 × 2 — website giữ lưới 2 cột ở mọi bề ngang ≤1024px (chỉ 1 cột khi ≤360).
+  const cellBasis = '40%';
 
   return (
-    <YStack gap={layout.section}>
-      <HomeSectionHeading kicker={t('kicker')} title={t('title')} />
-      {/* `.list` web: đáy kẻ 1px màu `bg`, đệm dưới 40; hàng cách 24. */}
-      <XStack
-        flexWrap="wrap"
-        rowGap={space.lg}
-        pb={space.xl + space.sm}
-        borderBottomWidth={1}
-        borderBottomColor={colors.background}
-      >
-        {ITEMS.map((item, index) => (
-          <YStack key={item.key} w="50%" px={space.sm} ai="center" gap={space.lg}>
-            {/* Vạch ngăn giữa hai cột (`.item:nth-child(even)::before` web), màu `bg`. */}
-            {index % 2 === 1 ? (
-              <YStack pos="absolute" left={0} top={0} bottom={0} w={1} bg={colors.background} />
-            ) : null}
-            <YStack
-              w={ICON_DISC}
-              h={ICON_DISC}
-              br={radius.pill}
-              ai="center"
-              jc="center"
-              bg={colors.primarySubtle}
+    <YStack gap={28}>
+      <YStack gap={20}>
+        <HomeSectionHeading
+          kicker={t('kicker')}
+          title={t.rich('title', {
+            accent: (chunks) => <Text col={colors.primary}>{chunks}</Text>,
+          })}
+        />
+        <RevealText delay={300}>
+          <YStack gap={space.sm}>
+            <Text
+              col={dark ? onDarkMuted : colors.textMuted}
+              fos={fontSize.bodyLg}
+              lh={24}
+              ta="center"
             >
-              <Ionicons name={item.icon} size={27} color={colors.primary} />
-            </YStack>
-            <YStack gap={6} ai="center">
-              <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.semibold} ta="center">
-                {t(`items.${item.key}.title`)}
-              </Text>
-              <Text col={colors.text} fos={fontSize.body} ta="center">
-                {t(`items.${item.key}.desc`)}
-              </Text>
-            </YStack>
+              {t('intro')}
+            </Text>
+            <Text
+              col={colors.text}
+              fos={fontSize.bodyLg}
+              lh={24}
+              fow={fontWeight.medium}
+              ta="center"
+            >
+              {t('closing')}
+            </Text>
           </YStack>
+        </RevealText>
+      </YStack>
+
+      <XStack flexWrap="wrap" rowGap={space.md} columnGap={space.md}>
+        {ITEMS.map((item, index) => (
+          // Mỗi ô tự hiện khi CHÍNH NÓ cuộn vào màn (không theo đầu khối); trễ nhỏ theo cột.
+          <ScrollReveal
+            key={item.key}
+            index={index}
+            style={[styles.cell, { flexBasis: cellBasis }]}
+          >
+            <YStack ai="center" gap={12}>
+              <IconBounce index={index % 2}>
+                <YStack p={12} br={radius.pill} bg={colors.primarySubtle}>
+                  <YStack w={ICON_BOX} h={ICON_BOX} ai="center" jc="center">
+                    <SvgXml
+                      xml={item.art.xml}
+                      width={item.art.width * ICON_SCALE}
+                      height={item.art.height * ICON_SCALE}
+                    />
+                  </YStack>
+                </YStack>
+              </IconBounce>
+              <RevealText delay={160 + (index % 2) * 80}>
+                <YStack gap={2} ai="center">
+                  <Text
+                    col={dark ? colors.primary : colors.text}
+                    fos={fontSize.bodyLg}
+                    lh={24}
+                    fow={fontWeight.semibold}
+                    ta="center"
+                  >
+                    {t(`items.${item.key}.title`)}
+                  </Text>
+                  <Text
+                    col={dark ? onDarkMuted : colors.text}
+                    fos={fontSize.body}
+                    lh={22}
+                    ta="center"
+                  >
+                    {t(`items.${item.key}.desc`)}
+                  </Text>
+                </YStack>
+              </RevealText>
+            </YStack>
+          </ScrollReveal>
         ))}
       </XStack>
+
+      {/* Parallax nhẹ khi cuộn: cả khối ảnh + ô "100+" trôi chậm - đo ở khung ngoài đứng yên. */}
+      <Animated.View ref={parallax.ref} collapsable={false}>
+        <Animated.View style={parallax.style}>
+          <YStack w={imageWidth} aspectRatio={IMAGE_RATIO} alignSelf="center">
+            <Animated.View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+              <ImageBackground
+                source={require('../../../../../assets/images/home/why-stat-bg.png')}
+                resizeMode="cover"
+                imageStyle={{ borderRadius: radius.banner }}
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  bottom: 0,
+                  width: Math.round(imageWidth * STAT_RATIO.width),
+                  height: Math.round(imageHeight * STAT_RATIO.height),
+                  justifyContent: 'center',
+                  padding: Math.round(12 * statScale),
+                }}
+              >
+                <Text
+                  col={market.onDark}
+                  fos={statValueSize}
+                  lh={Math.round(statValueSize * 1.2)}
+                  fow={fontWeight.semibold}
+                >
+                  <RevealCountUp text={t('statValue')} />
+                </Text>
+                <Text
+                  col={market.onDark}
+                  fos={statLabelSize}
+                  lh={Math.round(statLabelSize * 1.4)}
+                  numberOfLines={2}
+                  fow={fontWeight.medium}
+                >
+                  {t('statLabel')}
+                </Text>
+              </ImageBackground>
+            </Animated.View>
+            <Animated.View style={styles.fill}>
+              <Image
+                source={require('../../../../../assets/images/home/why-image.png')}
+                accessibilityLabel={t('imageAlt')}
+                contentFit="contain"
+                style={{ width: '100%', height: '100%' }}
+              />
+            </Animated.View>
+          </YStack>
+        </Animated.View>
+      </Animated.View>
     </YStack>
   );
 }
+
+/** Icon tròn (không bóng) bounce-in lần lượt khi khối hiện. */
+function IconBounce({ index, children }: { index: number; children: ReactNode }) {
+  const style = useRevealPop(index * 110, 0.6);
+  return <Animated.View style={style}>{children}</Animated.View>;
+}
+
+const styles = StyleSheet.create({
+  fill: { width: '100%', height: '100%' },
+  cell: { flexGrow: 1 },
+});

@@ -1,0 +1,133 @@
+/*
+ * Header site partner - Figma Partner-XePrime `23649:27690`: nền trắng, kẻ dưới, bóng 4px rất nhẹ;
+ * thanh trong cùng cột 1560px với vùng nội dung, khoảng cách các khối 48px, đệm dọc 16px.
+ */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--xp-z-topbar);
+  border-bottom: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  height: var(--xp-shell-partner-header-height);
+  padding-inline: max(var(--xp-space-lg), calc((100% - var(--xp-shell-partner-max-width)) / 2));
+}
+
+/* `.bar .hamburger`: `display` của AntD Button là (0,1,0) - một class đơn sẽ thua (xem Topbar). */
+.bar .hamburger {
+  display: none;
+}
+
+.logo {
+  display: inline-flex;
+  flex: none;
+}
+
+/* Action Bar (`23649:27583`): nút · vạch ngăn · hồ sơ, cách nhau 20px, dồn về bên phải. */
+.right {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 20px;
+  margin-inline-start: auto;
+}
+
+/* Action Icons (`23649:27586`): ba nút vuông, cách 12px. */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Vạch ngăn (`23649:27590`): 1 × 32px, xám nhạt. */
+.divider {
+  flex: none;
+  width: 1px;
+  height: 32px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+}
+
+/*
+ * Nút mở menu hồ sơ: CHỈ ảnh 40px tròn + chấm trực tuyến (09/11/2026, người dùng chốt - tên và
+ * "Gian hàng · Vai" đã nằm ở thẻ đầu menu `PartnerAccountMenu`). Rê chuột là menu mở.
+ */
+.profile {
+  display: inline-flex;
+  flex: none;
+  padding: 0;
+  border: none;
+  border-radius: var(--xp-border-radius-pill);
+  background: none;
+  cursor: pointer;
+}
+
+.profile:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 4px;
+}
+
+.avatarWrap {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+.bar .avatar {
+  background: var(--xp-color-primary-muted);
+  color: var(--xp-color-primary-strong);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.online {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--xp-color-bg-container);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-success-accent);
+}
+
+/*
+ * Bề ngang: design vẽ ở 1920. Hẹp dần thì bớt khoảng cách của khối PHẢI trước để menu giữ đủ nhãn -
+ * xem các bậc tương ứng ở `PartnerTopNav.module.css`.
+ */
+@media (max-width: 1536px) {
+  .bar {
+    gap: var(--xp-space-lg);
+  }
+
+  .right {
+    gap: var(--xp-space-md);
+  }
+}
+
+/* Ranh vỏ 1024px: nút mở drawer xuất hiện đúng lúc menu ngang biến mất. */
+@media (max-width: 1024px) {
+  .bar {
+    gap: var(--xp-space-sm);
+    padding-inline: var(--xp-space-sm);
+  }
+
+  .bar .hamburger {
+    display: inline-flex;
+    flex: none;
+  }
+
+  .divider {
+    display: none;
+  }
+
+  .right,
+  .actions {
+    gap: var(--xp-space-sm);
+  }
+}

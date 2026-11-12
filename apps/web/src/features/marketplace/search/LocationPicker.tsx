@@ -16,6 +16,7 @@ import {
   deliveryAddressFromCurrentPlace,
   type CurrentPlace,
 } from '@/features/locations/hooks/use-current-place';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { cx } from '@/lib/cx';
 import { rememberDeliveryAddress } from '@/lib/delivery-address-memory';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -91,7 +92,7 @@ export function LocationPicker({
           </>
         ) : (
           <>
-            <EnvironmentOutlined className={styles.triggerIcon} aria-hidden="true" />
+            <LineIcon name="location" className={styles.triggerIcon} />
             <span className={styles.triggerValue}>{selectedLabel}</span>
           </>
         )

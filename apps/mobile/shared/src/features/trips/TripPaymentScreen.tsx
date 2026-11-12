@@ -1,3 +1,4 @@
+import { celebrate } from '@/components/motion/Confetti';
 import { APP_FEATURES } from '@/lib/app-features';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView } from 'react-native';
@@ -23,6 +24,7 @@ import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { Countdown } from '@/components/ui/Countdown';
 import { DataRow, Divider } from '@/components/ui/DataRow';
+import { InfoHint } from '@/components/ui/InfoHint';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
@@ -246,7 +248,7 @@ function AwaitingHold({
 
         {/* Tab VietQR | Ví điện tử — tab ví chỉ có khi server mở ít nhất một cổng (ADR 0058). */}
         {walletAvailable ? (
-          <XStack p={4} gap={4} br={radius.control} bg={colors.surfaceMuted}>
+          <XStack p={4} gap={4} br={radius.card} bw={1} bc={colors.border} bg={colors.surfaceMuted}>
             {(['transfer', 'wallet'] as const).map((key) => {
               const active = tab === key;
               return (
@@ -258,17 +260,17 @@ function AwaitingHold({
                   accessibilityState={{ selected: active }}
                 >
                   <YStack
-                    minHeight={40}
+                    minHeight={36}
                     ai="center"
                     jc="center"
-                    br={radius.md}
+                    br={radius.control}
                     bg={active ? colors.surface : 'transparent'}
                     style={active ? elevation.xs : undefined}
                   >
                     <Text
-                      col={active ? colors.text : colors.textMuted}
+                      col={active ? colors.textMuted : colors.placeholder}
                       fos={fontSize.body}
-                      fow={active ? fontWeight.semibold : fontWeight.medium}
+                      fow={fontWeight.semibold}
                     >
                       {key === 'transfer' ? tCheckout('tabTransfer') : tCheckout('wallet.title')}
                     </Text>
@@ -327,7 +329,7 @@ function AwaitingHold({
             accessibilityRole="link"
             hitSlop={space.sm}
           >
-            <Text col={colors.primaryHover} fos={fontSize.body} fow={fontWeight.semibold}>
+            <Text col={colors.brandText} fos={fontSize.body} fow={fontWeight.semibold}>
               {t('summary.viewDetail')}
             </Text>
           </Pressable>
@@ -367,7 +369,7 @@ function AwaitingHold({
           <>
             <DataRow
               label={t('summary.package')}
-              value={fmt.packageLabel(trip.longTermPackageMonths) ?? '—'}
+              value={fmt.packageLabel(trip.longTermPackageMonths) ?? '-'}
             />
             <DataRow label={t('summary.pickupWish')} value={fmt.pickupWish(trip)} />
           </>
@@ -379,17 +381,20 @@ function AwaitingHold({
         {payAtPickup ? (
           <YStack gap={2}>
             <XStack ai="center" jc="space-between" gap={space.sm}>
-              <Text f={1} col={colors.textMuted} fos={fontSize.body}>
-                {t('summary.payOwner')}
-              </Text>
+              <XStack f={1} ai="center" gap={4}>
+                <Text col={colors.textMuted} fos={fontSize.body}>
+                  {t('summary.payOwner')}
+                </Text>
+                <InfoHint
+                  content={t('summary.payOwnerNote')}
+                  label={t('summary.payOwnerNoteLabel')}
+                />
+              </XStack>
               {/* Figma: "Trả chủ xe" tô xanh — tiền mặt trả tay chủ xe, XePrime không thu hộ. */}
               <Text col={colors.success} fos={fontSize.body} fow={fontWeight.semibold}>
                 {fmt.money(payAtPickup)}
               </Text>
             </XStack>
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {t('summary.payOwnerNote')}
-            </Text>
           </YStack>
         ) : null}
         <DataRow label={tCheckout('summary.code')} value={hold.code} strong />
@@ -398,11 +403,12 @@ function AwaitingHold({
           <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
             {underpaid ? t('summary.remainingLabel') : t('summary.amountLabel')}
           </Text>
-          <Text col={colors.primaryHover} fos={fontSize.lead} fow={fontWeight.semibold}>
+          <Text col={colors.primary} fos={fontSize.h3} lh={28} fow={fontWeight.semibold}>
             {fmt.money(hold.remainingAmount)}
           </Text>
           <Countdown
             deadline={hold.expiresAt}
+            ring
             urgentMs={HOLD_COUNTDOWN_URGENT_MINUTES * 60_000}
             labels={{
               remaining: t('summary.countdown'),
@@ -413,10 +419,10 @@ function AwaitingHold({
         </YStack>
         {/* Hộp lưu ý nền vàng nhạt trong thẻ (Figma). Cùng khoá + thứ tự với web (`summary.notes.*`). */}
         <YStack gap={space.xs} p={12} br={radius.control} bg={colors.primarySubtle}>
-          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
             {t('summary.notes.auto')}
           </Text>
-          <Text col={colors.warning} fos={fontSize.bodySm}>
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
             {`• ${t('summary.notes.expires')}`}
           </Text>
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
@@ -475,6 +481,7 @@ function HoldSettled({ trip, hold }: { trip: CustomerTripDetail; hold: Hold | nu
   useEffect(() => {
     if (!paid || !successFresh || !hold || announced.current) return;
     announced.current = true;
+    celebrate();
     const amount = fmt.money(hold.paidAmount);
     toast.showSuccess(
       hold.paidVia

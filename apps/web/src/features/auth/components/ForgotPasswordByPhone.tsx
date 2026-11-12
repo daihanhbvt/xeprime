@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
+import { API_ERROR_CODE, PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
 import {
   buildResetPasswordByPhoneSchema,
   type ResetPasswordByPhoneValues,
@@ -17,9 +17,11 @@ import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { zoneAuthRoutes } from '@/constants/routes';
 import { OtpCodeInput } from '@/features/phone-verification/components/OtpCodeInput';
+import { formatOtpCooldown } from '@/features/phone-verification/format-cooldown';
 import { usePhoneVerify } from '@/features/phone-verification/hooks/use-phone-verify';
 import { maskPhone } from '@/features/phone-verification/mask';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { getErrorCode } from '@/services/api-client';
 import { resetPasswordWithOtp } from '@/services/auth.service';
 import { useZone } from '@/zones/ZoneProvider';
 import { useAuthSchemaLabels } from '../hooks/use-auth-schema-labels';
@@ -58,19 +60,73 @@ export function ForgotPasswordByPhone() {
   const [sending, setSending] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
+  /**
+   * Mã ĐÚNG của lượt trước mà mật khẩu bị từ chối vì trùng mật khẩu cũ (`PASSWORD_UNCHANGED`).
+   * Server đã xác minh và còn giữ mã đó (chưa tiêu), nên lần "Xác nhận" sau với cùng số gửi lại
+   * chính nó thay vì xin mã mới — xin mã mới lúc này chỉ vấp cooldown gửi lại.
+   */
+  const [provenCode, setProvenCode] = useState<{ phone: string; code: string } | null>(null);
 
   const schema = useMemo(() => buildResetPasswordByPhoneSchema(labels), [labels]);
-  const { control, handleSubmit } = useForm<ResetPasswordByPhoneValues>({
+  const {
+    control,
+    handleSubmit,
+    setError: setFieldError,
+  } = useForm<ResetPasswordByPhoneValues>({
     resolver: yupResolver(schema),
     defaultValues: { phone: '', password: '', confirmPassword: '' },
   });
 
+  /**
+   * Gửi mã + mật khẩu mới. `password_rejected`: mã đúng nhưng mật khẩu trùng mật khẩu cũ — đóng
+   * popup, báo ngay ở ô mật khẩu. `code_rejected`: mã sai/hết hạn/bị khoá — báo trong popup.
+   */
+  const submitReset = async (
+    values: ResetPasswordByPhoneValues,
+    value: string,
+  ): Promise<'done' | 'password_rejected' | 'code_rejected'> => {
+    setSubmitting(true);
+    setOtpError(null);
+    try {
+      await resetPasswordWithOtp({
+        phone: values.phone.trim(),
+        code: value,
+        password: values.password,
+      });
+      setDraft(null);
+      setProvenCode(null);
+      setDone(true);
+      return 'done';
+    } catch (err) {
+      if (getErrorCode(err) === API_ERROR_CODE.PASSWORD_UNCHANGED) {
+        setProvenCode({ phone: values.phone.trim(), code: value });
+        setDraft(null);
+        setFieldError('password', { message: errorMessage(err) }, { shouldFocus: true });
+        return 'password_rejected';
+      }
+      // Sai/hết hạn/bị khoá: ở lại popup — mã chết thì ô mã khoá, chỉ còn "Gửi lại mã".
+      otp.noteCodeError(err);
+      setProvenCode(null);
+      setOtpError(errorMessage(err));
+      setCode('');
+      return 'code_rejected';
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   /** "Xác nhận": gửi mã rồi mở popup. Môi trường nhận mã test thì không tốn SMS. */
   const confirm = async (values: ResetPasswordByPhoneValues) => {
-    if (sending) return;
+    if (sending || submitting) return;
+    const phone = values.phone.trim();
+    if (provenCode?.phone === phone) {
+      const outcome = await submitReset(values, provenCode.code);
+      if (outcome !== 'code_rejected') return;
+      // Mã giữ lại đã quá hạn dùng — đi tiếp đường thường: xin mã mới.
+    }
     setSending(true);
     try {
-      if (!otp.testCodeEnabled) await otp.sendAsync(values.phone.trim());
+      if (!otp.testCodeEnabled) await otp.sendAsync(phone);
       setCode('');
       setOtpError(null);
       setDraft(values);
@@ -83,24 +139,8 @@ export function ForgotPasswordByPhone() {
   const onSubmit = (event: FormEvent<HTMLFormElement>) => void handleSubmit(confirm)(event);
 
   const reset = async (value: string) => {
-    if (!draft || submitting || !isOtpCodeComplete(value)) return;
-    setSubmitting(true);
-    setOtpError(null);
-    try {
-      await resetPasswordWithOtp({
-        phone: draft.phone.trim(),
-        code: value,
-        password: draft.password,
-      });
-      setDraft(null);
-      setDone(true);
-    } catch (err) {
-      // Sai/hết hạn mã: ở lại popup cho nhập lại.
-      setOtpError(errorMessage(err));
-      setCode('');
-    } finally {
-      setSubmitting(false);
-    }
+    if (!draft || submitting || otp.codeDead || !isOtpCodeComplete(value)) return;
+    await submitReset(draft, value);
   };
 
   const resend = async () => {
@@ -203,7 +243,7 @@ export function ForgotPasswordByPhone() {
             <Button
               type="primary"
               loading={submitting}
-              disabled={!isOtpCodeComplete(code)}
+              disabled={!isOtpCodeComplete(code) || otp.codeDead}
               onClick={() => void reset(code)}
             >
               {t('resetPassword.submit')}
@@ -222,7 +262,7 @@ export function ForgotPasswordByPhone() {
               setCode(next);
             }}
             onComplete={(full) => void reset(full)}
-            disabled={submitting}
+            disabled={submitting || otp.codeDead}
             autoFocus
           />
           {otpError ? <Alert type="error" showIcon title={otpError} /> : null}
@@ -235,7 +275,7 @@ export function ForgotPasswordByPhone() {
               onClick={() => void resend()}
             >
               {otp.cooldown > 0
-                ? t('otp.resendIn', { seconds: otp.cooldown })
+                ? t('otp.resendInTime', { time: formatOtpCooldown(otp.cooldown) })
                 : t('otp.resend')}
             </Button>
           </div>

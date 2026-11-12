@@ -139,7 +139,7 @@ export async function requestPushPermission(): Promise<boolean> {
       if (result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
         // Người dùng đã từ chối hai lần ⇒ hệ điều hành không hiện hộp thoại nữa. Phân biệt với
         // "vừa bấm Không" vì cách xử KHÁC HẲN: chỉ còn đường mở màn Cài đặt của app.
-        logger.warn('[push] quyền thông báo bị chặn vĩnh viễn — phải bật trong Cài đặt');
+        logger.warn('[push] quyền thông báo bị chặn vĩnh viễn - phải bật trong Cài đặt');
         return false;
       }
       return result === PermissionsAndroid.RESULTS.GRANTED;

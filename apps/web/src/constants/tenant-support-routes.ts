@@ -48,6 +48,7 @@ const SUPPORT_PAGES: readonly RegExp[] = [
   /^booking-requests$/,
   /^bookings$/,
   /^bookings\/awaiting-pickup$/,
+  /^bookings\/ended$/,
   new RegExp(`^bookings/${ID}$`),
   /^customers$/,
   new RegExp(`^customers/${ID}$`),
@@ -56,6 +57,7 @@ const SUPPORT_PAGES: readonly RegExp[] = [
   /^shop\/policies$/,
   /^drivers$/,
   /^members$/,
+  /^members\/roles$/,
   /^support\/cases$/,
 ];
 

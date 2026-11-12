@@ -1,44 +1,45 @@
 'use client';
 
 /**
- * Các thẻ của tab TỔNG QUAN (và bảng của tab Thông số) trong Hồ sơ 360 — bố cục do
+ * Các thẻ của Hồ sơ xe (Figma Partner-XePrime section `23672:25621`, 03/11/2026) — bố cục do
  * `Vehicle360Overview` quyết định, mỗi thẻ ở đây tự gác quyền/cờ gói của chính nó.
  */
 
 import {
-  BankOutlined,
-  CheckCircleFilled,
+  ArrowRightOutlined,
+  CheckOutlined,
+  DashboardOutlined,
   EditOutlined,
   ExclamationCircleFilled,
-  FileProtectOutlined,
   InfoCircleFilled,
   PictureOutlined,
   PlusOutlined,
-  RightOutlined,
-  StarFilled,
-  ThunderboltOutlined,
-  WarningOutlined,
 } from '@ant-design/icons';
-import { Badge, Button, Card, Descriptions, Skeleton, Tag } from 'antd';
-import type { DescriptionsProps } from 'antd';
+import { Badge, Button, Skeleton, Switch, Tooltip } from 'antd';
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import {
+  SERVICE_TYPE,
   VEHICLE_ALERT_KIND,
   VEHICLE_ALERT_SEVERITY,
+  VEHICLE_IMAGE_TYPE,
   VEHICLE_SERVICE_SETTING_SERVICES,
   VEHICLE_SOURCE_TYPE,
+  requiredVehicleImageTypes,
   topVehicleAlertSeverity,
+  type ServiceType,
   type VehicleAlertSeverity,
   type VehicleSourceType,
 } from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { PreviewImage, PreviewImageGroup } from '@/components/data-display/PreviewImage';
 import { VEHICLE_EDIT_TAB, VEHICLE_MANAGE_SECTION } from '@/constants/routes';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useAvailableHref } from '@/features/tenant-support/support-session';
+import { useAutoAcceptToggle } from '@/features/vehicle-manage/hooks/use-auto-accept-toggle';
+import { useVehicleServiceSettings } from '@/features/vehicle-manage/hooks';
+import type { VehicleServiceSetting } from '@/features/vehicle-manage/types';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -49,7 +50,6 @@ import { useVehicleAlertView } from '../hooks/use-vehicle-alert-view';
 import { useVehicleCapabilities } from '../hooks/use-vehicle-capabilities';
 import { useVehicleSource } from '../hooks/use-vehicle-source';
 import { useVehicleSpecItems, type VehicleSpecKey } from '../hooks/use-vehicle-spec-items';
-import { vehicleGalleryItems } from '../media';
 import { discountedPriceVnd } from '../pricing';
 import { vehiclePublicationTask } from '../publication';
 import type { Vehicle360Summary, VehicleDetail } from '../types';
@@ -57,11 +57,60 @@ import { VehicleAlertList } from './VehicleAlerts';
 import { VehiclePublicationTaskItem } from './VehiclePublicationTaskItem';
 import styles from './Vehicle360Overview.module.css';
 
+/* ─── Khung thẻ ───────────────────────────────────────────────────────────── */
+
 /**
- * Số ảnh HIỆN trong thẻ thư viện (3 × 2 ô); ảnh dư vẫn nằm trong nhóm xem trước (ẩn bằng CSS) nên
- * mũi tên của trình xem toàn màn hình vẫn lướt qua đủ mọi ảnh.
+ * Khung thẻ của Hồ sơ xe — Figma "Nhóm thông tin" `23670:3504`: nền trắng, viền xám, bo 16, đệm 20,
+ * tiêu đề 18/600 + liên kết vàng ở góc phải. Một khung cho mọi thẻ của trang để chúng không lệch
+ * nhau từng px.
  */
-const GALLERY_VISIBLE = 6;
+export function Panel({
+  title,
+  subtitle,
+  extra,
+  className,
+  children,
+}: {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  extra?: ReactNode;
+  className?: string;
+  children: ReactNode;
+}) {
+  const headingId = useId();
+  return (
+    <section className={cx(styles.panel, className)} aria-labelledby={headingId}>
+      <div className={styles.panelHead}>
+        <div className={styles.panelHeading}>
+          <h3 id={headingId} className={styles.panelTitle}>
+            {title}
+          </h3>
+          {subtitle ? <p className={styles.panelSubtitle}>{subtitle}</p> : null}
+        </div>
+        {extra ? <div className={styles.panelExtra}>{extra}</div> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** Liên kết vàng ở góc thẻ ("Xem đầy đủ →", "Chỉnh sửa giá"…). */
+function PanelLink({
+  href,
+  icon,
+  children,
+}: {
+  href: string;
+  icon?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <Link href={href} className={styles.panelLink}>
+      {icon ? decorativeIcon(icon) : null}
+      {children}
+    </Link>
+  );
+}
 
 /* ─── Việc cần làm ────────────────────────────────────────────────────────── */
 
@@ -80,40 +129,30 @@ const PUBLICATION_ALERT_KINDS: readonly string[] = [
   VEHICLE_ALERT_KIND.MISSING_VEHICLE_INFO,
 ];
 
-/** Đã biết chắc không còn việc gì (danh sách tải xong và rỗng). */
-const TODO_CLEAR = 'clear';
-/** Chưa biết — tổng hợp đang tải hoặc tải hỏng. Không được trông giống "xong hết". */
-const TODO_UNKNOWN = 'unknown';
-type TodoTone = VehicleAlertSeverity | typeof TODO_CLEAR | typeof TODO_UNKNOWN;
-
-const TODO_TONE_CLASS: Record<TodoTone, string | undefined> = {
+const TODO_TONE_CLASS: Record<VehicleAlertSeverity, string | undefined> = {
   [VEHICLE_ALERT_SEVERITY.CRITICAL]: styles.todoCritical,
   [VEHICLE_ALERT_SEVERITY.WARNING]: styles.todoWarning,
   [VEHICLE_ALERT_SEVERITY.INFO]: styles.todoInfo,
-  [TODO_CLEAR]: styles.todoClear,
-  [TODO_UNKNOWN]: undefined,
 };
 
-const TODO_TONE_ICON: Record<TodoTone, ReactNode> = {
+const TODO_TONE_ICON: Record<VehicleAlertSeverity, ReactNode> = {
   [VEHICLE_ALERT_SEVERITY.CRITICAL]: <ExclamationCircleFilled />,
   [VEHICLE_ALERT_SEVERITY.WARNING]: <ExclamationCircleFilled />,
   [VEHICLE_ALERT_SEVERITY.INFO]: <InfoCircleFilled />,
-  [TODO_CLEAR]: <CheckCircleFilled />,
-  [TODO_UNKNOWN]: null,
 };
 
 /**
  * Việc cần làm — cảnh báo vận hành TỪ SERVER (`VehicleAlertsService`, cùng phép tính với thẻ xe
- * ở danh sách) cộng MỘT việc "đưa xe lên chợ" dựng tại chỗ từ bản ghi xe (ADR 0048).
+ * ở danh sách và huy hiệu menu) cộng MỘT việc "đưa xe lên chợ" dựng tại chỗ từ bản ghi xe (ADR
+ * 0048). Đây là lối DUY NHẤT gửi duyệt lại một chiếc xe bị trả về, nên nó ở lại dù design không vẽ
+ * (chốt 03/11/2026) — nhưng CHỈ hiện khi có việc: không có gì để làm thì không dựng thẻ trống.
  *
- * Hiện ở CẢ HAI khu (01/10/2026): xe bị trả về, xe nháp tạo từ app native, hay lượt gửi duyệt
- * thất bại của wizard — nút "Gửi duyệt" chỉ sống trong khối này.
+ * Cảnh báo giấy tờ (quá hạn / sắp hạn) cũng đi qua đây, kèm đích xử lý — thẻ "Giấy tờ" riêng đã
+ * gỡ (chốt 03/11).
  *
- * Thứ tự: việc lên chợ mức `critical`/`warning` lên ĐẦU (xe không bán được thì mọi việc khác là
- * thứ yếu); mức `info` — "xe đang tạm ẩn", "đang chờ duyệt" — xuống CUỐI.
- *
- * Nền thẻ đổi theo mức nặng nhất (02/10/2026) — thẻ đỏ là thứ đầu tiên mắt bắt được khi mở hồ sơ.
- * Màu không bao giờ là kênh duy nhất: từng việc vẫn nói mức nghiêm trọng bằng chữ.
+ * Thứ tự: việc lên chợ mức `critical`/`warning` lên ĐẦU; lời nhắc `info` ("đang chờ duyệt", "đang
+ * tạm ẩn") xuống CUỐI. Nền thẻ đổi theo mức nặng nhất; màu không bao giờ là kênh duy nhất — từng
+ * việc vẫn nói mức nghiêm trọng bằng chữ.
  */
 export function TodoCard({
   vehicle,
@@ -129,24 +168,30 @@ export function TodoCard({
   const t = useTranslations('Vehicles.overview');
   const alertView = useVehicleAlertView();
   const task = vehiclePublicationTask(vehicle);
-  // Lọc theo năng lực + đổi đích về đúng khu TRƯỚC, rồi mới bỏ hai cảnh báo nói trùng với việc
+  // Lọc theo năng lực + đổi đích về đúng tuyến TRƯỚC, rồi mới bỏ hai cảnh báo nói trùng với việc
   // "đưa xe lên chợ" dựng tại chỗ — hai phép lọc độc lập, thứ tự không đổi kết quả.
   const alerts = alertView(vehicle.id, summary?.alerts ?? []).filter(
     (alert) => !task || !PUBLICATION_ALERT_KINDS.includes(alert.kind),
   );
-  const taskLeads = task !== null && task.tone !== VEHICLE_ALERT_SEVERITY.INFO;
-  // Gợi ý không phải "việc cần làm" nên không vào số đếm — badge là số việc thật.
-  const count = alerts.length + (taskLeads ? 1 : 0);
-  const taskItem = task ? <VehiclePublicationTaskItem vehicle={vehicle} task={task} /> : null;
   const listReady = !loading && !failed && summary !== undefined;
+  const taskLeads = task !== null && task.tone !== VEHICLE_ALERT_SEVERITY.INFO;
 
+  /*
+   * Không có việc thì không có thẻ. Đang tải mà chưa biết có việc gì: cũng không dựng — một khung
+   * xương to ở đầu tab rồi biến mất làm cả trang nhảy. Tải hỏng thì NÓI (một dòng), vì "không thấy
+   * việc nào" lúc đó không có nghĩa là "không có việc nào".
+   */
+  if (!task && (loading || (listReady && alerts.length === 0))) return null;
+
+  // Gợi ý không phải "việc cần làm" nên không vào số đếm — huy hiệu là số việc thật.
+  const count = (listReady ? alerts.length : 0) + (taskLeads ? 1 : 0);
+  const taskItem = task ? <VehiclePublicationTaskItem vehicle={vehicle} task={task} /> : null;
   const shown = [...(listReady ? alerts : []), ...(task ? [{ severity: task.tone }] : [])];
-  const tone: TodoTone = topVehicleAlertSeverity(shown) ?? (listReady ? TODO_CLEAR : TODO_UNKNOWN);
+  const tone = topVehicleAlertSeverity(shown);
   /*
    * "Xử lý ngay" dẫn tới việc ĐẦU BẢNG của server (đã sắp theo ưu tiên) và đứng NGAY DƯỚI chính
-   * việc đó (02/10/2026) — trước đó nó nằm cuối thẻ, sau cả lời nhắc "Xe đang tạm ẩn", và đọc như
-   * nút của lời nhắc ấy. Chỉ dựng khi việc đầu bảng là việc phải làm (không phải lời nhắc `info`
-   * như "đang bảo dưỡng"), có đích, và việc lên chợ không đứng trên nó (việc đó có nút riêng).
+   * việc đó. Chỉ dựng khi việc đầu bảng là việc phải làm (không phải lời nhắc `info`), có đích, và
+   * việc lên chợ không đứng trên nó (việc đó có nút riêng).
    */
   const lead = listReady && !taskLeads ? alerts[0] : undefined;
   const leadHref =
@@ -158,176 +203,30 @@ export function TodoCard({
       </Button>
     </Link>
   ) : null;
-  const toneIcon = TODO_TONE_ICON[tone];
 
   return (
-    <Card
+    <Panel
       title={
         <span className={styles.todoTitle}>
-          {toneIcon ? <span className={styles.todoIcon}>{decorativeIcon(toneIcon)}</span> : null}
+          {tone ? (
+            <span className={styles.todoIcon}>{decorativeIcon(TODO_TONE_ICON[tone])}</span>
+          ) : null}
           {t('todo.title')}
         </span>
       }
       extra={count > 0 ? <Badge count={count} /> : null}
-      className={cx(styles.card, styles.todoCard, TODO_TONE_CLASS[tone])}
+      className={cx(styles.todoCard, tone ? TODO_TONE_CLASS[tone] : undefined)}
     >
       {taskLeads ? taskItem : null}
-      {loading ? (
-        <Skeleton active title={false} paragraph={{ rows: 2 }} />
-      ) : failed || !summary ? (
+      {failed ? (
         <p className={styles.muted}>{t('loadFailed')}</p>
-      ) : (
-        // `showEmpty` tắt khi đã có việc lên chợ: "Không có việc cần làm" ngay dưới một việc
-        // đang hiện là câu tự mâu thuẫn.
-        <VehicleAlertList alerts={alerts} showEmpty={!task} leadAction={leadAction} />
-      )}
+      ) : listReady ? (
+        // `showEmpty` tắt: thẻ chỉ dựng khi có việc, câu "không có việc" ở đây là tự mâu thuẫn.
+        <VehicleAlertList alerts={alerts} showEmpty={false} leadAction={leadAction} />
+      ) : null}
       {/* Lời nhắc `info` (đang chờ duyệt, đang tạm ẩn) luôn xuống CUỐI, dưới mọi việc phải làm. */}
       {task && !taskLeads ? <div className={styles.todoNote}>{taskItem}</div> : null}
-    </Card>
-  );
-}
-
-/* ─── Giấy tờ ─────────────────────────────────────────────────────────────── */
-
-/**
- * Tóm tắt giấy tờ (Wave 5) trên Hồ sơ 360.
- *
- * CỐ Ý chỉ hiện ĐẾM theo cảnh báo do server tính — không loại giấy tờ, không số hiệu, không
- * ngày hết hạn cụ thể. Những thứ đó nằm sau `documents.view_details` và thuộc về tab giấy tờ;
- * lặp lại chúng ở đây là mở một cửa sau vào dữ liệu PII.
- *
- * "Không có cảnh báo" vẫn là ô TRUNG TÍNH, không phải dấu xanh: tổng hợp không mang số giấy tờ,
- * nên một xe chưa tải lên giấy tờ nào cũng không có cảnh báo — vẽ nó thành "đã xác minh" là bịa.
- */
-export function DocumentsCard({
-  vehicleId,
-  summary,
-}: {
-  vehicleId: string;
-  summary: Vehicle360Summary | undefined;
-}) {
-  const t = useTranslations('Vehicles.overview');
-  const { vehicles: vehiclePaths } = useWorkspace();
-  const can = useVehicleCapabilities();
-  // Giấy tờ CÓ ở cả hai khu (backend không gác cờ gói) — chỉ đích của link là khác nhau.
-  const manageHref = useAvailableHref()(
-    vehiclePaths.part(vehicleId, VEHICLE_EDIT_TAB.DOCUMENTS, VEHICLE_MANAGE_SECTION.DOCUMENTS),
-  );
-  if (!can.documents) return null;
-
-  const alerts = summary?.alerts ?? [];
-  const expired = alerts.find((a) => a.kind === VEHICLE_ALERT_KIND.DOCUMENT_EXPIRED);
-  const expiring = alerts.find((a) => a.kind === VEHICLE_ALERT_KIND.DOCUMENT_EXPIRING);
-  const toneClass = expired ? styles.toneError : expiring ? styles.toneWarning : styles.toneMuted;
-
-  return (
-    <Card
-      title={t('documents.title')}
-      extra={
-        manageHref ? (
-          <Link href={manageHref} className={styles.cardLink}>
-            {t('documents.manageLink')}
-          </Link>
-        ) : null
-      }
-      className={styles.card}
-    >
-      <div className={styles.iconRow}>
-        <span className={cx(styles.iconTile, toneClass)} aria-hidden="true">
-          {expired || expiring ? <WarningOutlined /> : <FileProtectOutlined />}
-        </span>
-        {expired || expiring ? (
-          <ul className={styles.todoList}>
-            {expired ? (
-              <li className={styles.todoItem}>
-                <span className={cx(styles.todoDot, styles.error)} aria-hidden="true">
-                  ●
-                </span>
-                <span>{t('documents.expired', { count: expired.count ?? 1 })}</span>
-              </li>
-            ) : null}
-            {expiring ? (
-              <li className={styles.todoItem}>
-                <span className={cx(styles.todoDot, styles.warning)} aria-hidden="true">
-                  ●
-                </span>
-                <span>{t('documents.expiring', { count: expiring.count ?? 1 })}</span>
-              </li>
-            ) : null}
-          </ul>
-        ) : (
-          <p className={styles.iconRowText}>
-            {summary ? t('documents.clear') : t('documents.unknown')}
-          </p>
-        )}
-      </div>
-    </Card>
-  );
-}
-
-/* ─── Thư viện ảnh ────────────────────────────────────────────────────────── */
-
-export function MediaCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
-  const t = useTranslations('Vehicles.overview');
-  const slotLabel = useImageSlotLabel();
-  const { vehicles: vehiclePaths } = useWorkspace();
-  // Đi qua cổng của phiên hỗ trợ như mọi link khác — màn không mở trong phiên thì không dựng link.
-  const manageHref = useAvailableHref()(
-    vehiclePaths.part(vehicle.id, VEHICLE_EDIT_TAB.MEDIA, VEHICLE_MANAGE_SECTION.IMAGES),
-  );
-  const items = vehicleGalleryItems(vehicle, slotLabel);
-  const overflow = items.length - GALLERY_VISIBLE;
-
-  return (
-    <Card
-      title={t('media.title')}
-      extra={
-        canEdit && manageHref ? (
-          <Link href={manageHref} className={styles.cardLink}>
-            {decorativeIcon(<PlusOutlined />)} {t('media.manageLink')}
-          </Link>
-        ) : null
-      }
-      className={styles.card}
-    >
-      {items.length === 0 ? (
-        <div className={styles.iconRow}>
-          <span className={cx(styles.iconTile, styles.toneMuted)} aria-hidden="true">
-            <PictureOutlined />
-          </span>
-          <p className={styles.iconRowText}>{t('media.empty')}</p>
-        </div>
-      ) : (
-        // Group: bấm ảnh nào cũng mở trình xem toàn màn hình chung, chuyển ảnh bằng mũi tên.
-        <PreviewImageGroup>
-          <ul className={styles.gallery} aria-label={t('media.title')}>
-            {items.map((item, index) => (
-              <li
-                key={`${index}-${item.url}`}
-                className={cx(styles.galleryItem, index >= GALLERY_VISIBLE && styles.galleryHidden)}
-              >
-                <PreviewImage
-                  src={item.url}
-                  alt={item.label ?? ''}
-                  className={styles.galleryThumb}
-                  loading="lazy"
-                />
-                {index === 0 && item.url === vehicle.mainImageUrl ? (
-                  <span className={styles.coverBadge}>
-                    {decorativeIcon(<StarFilled />)}
-                    {t('media.cover')}
-                  </span>
-                ) : null}
-                {item.label ? <span className={styles.galleryLabel}>{item.label}</span> : null}
-                {index === GALLERY_VISIBLE - 1 && overflow > 0 ? (
-                  <span className={styles.galleryMore}>{t('media.more', { count: overflow })}</span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </PreviewImageGroup>
-      )}
-    </Card>
+    </Panel>
   );
 }
 
@@ -347,19 +246,26 @@ const KEY_SPECS: readonly VehicleSpecKey[] = [
 ];
 
 /**
- * Những thông số khách hỏi đầu tiên — bản ĐẦY ĐỦ ở tab "Thông số kỹ thuật", nút "Xem đầy đủ" đổi
- * tab tại chỗ chứ không mở trang khác. Ô áp dụng mà chưa điền thì nói thiếu (`—`), để chủ xe thấy
- * còn phải điền gì.
+ * Thông số chính (Figma `23670:3504`) — sáu ô khách hỏi đầu tiên + số KM hiện tại. "Xem đầy đủ"
+ * đổi sang tab Thông số kỹ thuật tại chỗ; "Nhập dữ liệu" mở tab Bảo dưỡng & số KM — nơi có hộp
+ * điều chỉnh KM (bắt buộc lý do, gác quyền) — và vắng khi tuyến/quyền không có tab đó.
+ *
+ * Ô áp dụng mà chưa điền thì nói thiếu (`—`), để chủ xe thấy còn phải điền gì.
  */
 export function KeySpecsCard({
   vehicle,
+  summary,
   onViewAll,
+  onOdometer,
 }: {
   vehicle: VehicleDetail;
+  summary: Vehicle360Summary | undefined;
   onViewAll: () => void;
+  onOdometer?: () => void;
 }) {
   const t = useTranslations('Vehicles.overview');
   const tLabels = useTranslations('Common.labels');
+  const fmt = useAppFormat();
   const specs = useVehicleSpecItems(vehicle);
 
   const empty = tLabels('emptyValue');
@@ -377,35 +283,368 @@ export function KeySpecsCard({
   ];
 
   return (
-    <Card
+    <Panel
       title={t('keySpecs.title')}
       extra={
-        <Button
-          type="link"
-          size="small"
-          className={styles.cardLinkButton}
+        <button
+          type="button"
+          className={styles.panelLink}
           onClick={onViewAll}
           aria-label={t('keySpecs.viewAllLabel')}
         >
-          {t('keySpecs.viewAll')}
-        </Button>
+          {t('keySpecs.viewAll')} {decorativeIcon(<ArrowRightOutlined />)}
+        </button>
       }
-      className={styles.card}
     >
-      <dl className={styles.specGrid}>
+      <dl className={styles.specTiles}>
         {tiles.map((tile) => (
           <div key={tile.key} className={styles.specTile}>
-            <dt>{tile.label}</dt>
+            <dt title={tile.label}>{tile.label}</dt>
             <dd>{tile.value}</dd>
           </div>
         ))}
       </dl>
-    </Card>
+      <div className={styles.odometerRow}>
+        <p className={styles.odometerValue}>
+          <span className={styles.odometerIcon}>{decorativeIcon(<DashboardOutlined />)}</span>
+          <span className={styles.odometerLabel}>{t('keySpecs.odometer')}</span>
+          <b>{summary ? fmt.km(summary.currentOdometerKm ?? null) : empty}</b>
+        </p>
+        {onOdometer ? (
+          <button type="button" className={styles.panelLink} onClick={onOdometer}>
+            {t('keySpecs.odometerInput')} {decorativeIcon(<ArrowRightOutlined />)}
+          </button>
+        ) : null}
+      </div>
+    </Panel>
   );
 }
 
-/* ─── Giá & chính sách · Tối ưu nhận chuyến · Nguồn xe ────────────────────── */
+/* ─── Thư viện ảnh ────────────────────────────────────────────────────────── */
 
+/**
+ * Số ô HIỆN trong thẻ thư viện (hai hàng năm ô); ô cuối báo "+N". Ảnh dư vẫn nằm trong nhóm xem
+ * trước (ẩn bằng CSS) nên mũi tên của trình xem toàn màn hình vẫn lướt qua đủ mọi ảnh.
+ */
+const GALLERY_VISIBLE = 10;
+
+/**
+ * Thư viện ảnh THEO GÓC (Figma `23670:3531`): mỗi góc bắt buộc của loại xe là một ô — có ảnh thì
+ * ảnh + nhãn góc, chưa có thì ô trống có dấu + (bấm được khi người này sửa được ảnh). Ô trống là
+ * thông tin: nó nói còn thiếu góc nào để lên chợ. Ảnh "Khác" đứng sau các góc.
+ *
+ * Mọi ảnh nằm trong MỘT nhóm xem trước: bấm ảnh nào cũng mở trình xem chung, lướt bằng mũi tên.
+ */
+export function MediaCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
+  const t = useTranslations('Vehicles.overview');
+  const slotLabel = useImageSlotLabel();
+  const { vehicles: vehiclePaths } = useWorkspace();
+  // Đi qua cổng của phiên hỗ trợ như mọi link khác — màn không mở trong phiên thì không dựng link.
+  const manageHref = useAvailableHref()(
+    vehiclePaths.part(vehicle.id, VEHICLE_EDIT_TAB.MEDIA, VEHICLE_MANAGE_SECTION.IMAGES),
+  );
+  const editHref = canEdit ? manageHref : null;
+  const media = vehicle.media ?? [];
+  const inMedia = (url: string) => media.some((item) => item.url === url);
+  /*
+   * Dữ liệu CŨ: ảnh bìa là một cột riêng có thể không nằm trong thư viện. Nó là ảnh mặt trước của
+   * xe (từ 07/10/2026 bìa SUY từ ô mặt trước), nên lấp vào ô đó thay vì để ô trống.
+   */
+  const legacyCover =
+    vehicle.mainImageUrl && !inMedia(vehicle.mainImageUrl) ? vehicle.mainImageUrl : null;
+  const slots = requiredVehicleImageTypes(vehicle.vehicleType).map((type) => ({
+    key: type,
+    type,
+    url:
+      media.find((item) => item.type === type)?.url ??
+      (type === VEHICLE_IMAGE_TYPE.FRONT ? legacyCover : null),
+  }));
+  const slotTypes = new Set<string>(slots.map((slot) => slot.type));
+  // Ảnh ngoài các góc bắt buộc ("Khác", hoặc ảnh cũ chỉ có URL) đứng sau, không có ô trống.
+  const extras =
+    media.length > 0
+      ? media
+          .filter((item) => !slotTypes.has(item.type ?? ''))
+          .map((item, index) => ({ key: `extra-${index}`, type: item.type, url: item.url }))
+      : vehicle.images
+          .filter((url) => url !== legacyCover)
+          .map((url, index) => ({ key: `legacy-${index}`, type: null, url }));
+  const tiles = [...slots, ...extras];
+  const overflow = tiles.length - GALLERY_VISIBLE;
+
+  return (
+    <Panel
+      title={t('media.title')}
+      extra={
+        editHref ? (
+          <PanelLink href={editHref} icon={<PlusOutlined />}>
+            {t('media.manageLink')}
+          </PanelLink>
+        ) : null
+      }
+    >
+      <PreviewImageGroup>
+        <ul className={styles.gallery} aria-label={t('media.title')}>
+          {tiles.map((item, index) => {
+            const label = item.type ? slotLabel(item.type) : null;
+            const isCover = item.type === VEHICLE_IMAGE_TYPE.FRONT && item.url !== null;
+            return (
+              <li
+                key={item.key}
+                className={cx(styles.galleryItem, index >= GALLERY_VISIBLE && styles.galleryHidden)}
+              >
+                {item.url ? (
+                  <PreviewImage
+                    src={item.url}
+                    alt={label ?? ''}
+                    className={styles.galleryThumb}
+                    loading="lazy"
+                  />
+                ) : editHref ? (
+                  <Link
+                    href={editHref}
+                    className={styles.galleryEmpty}
+                    aria-label={t('media.addSlot', { slot: label ?? '' })}
+                  >
+                    <EmptySlotIcon />
+                  </Link>
+                ) : (
+                  <span className={styles.galleryEmpty}>
+                    <EmptySlotIcon />
+                  </span>
+                )}
+                {index === GALLERY_VISIBLE - 1 && overflow > 0 ? (
+                  <span className={styles.galleryMore}>{t('media.more', { count: overflow })}</span>
+                ) : null}
+                {label ? (
+                  <span className={styles.galleryLabel}>
+                    {label}
+                    {isCover ? <span className={styles.coverBadge}>{t('media.cover')}</span> : null}
+                  </span>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      </PreviewImageGroup>
+    </Panel>
+  );
+}
+
+function EmptySlotIcon() {
+  return (
+    <span className={styles.emptySlotIcon} aria-hidden="true">
+      <PictureOutlined />
+      <span className={styles.emptySlotPlus}>
+        <PlusOutlined />
+      </span>
+    </span>
+  );
+}
+
+/* ─── Nguồn xe & tài chính ────────────────────────────────────────────────── */
+
+/**
+ * Nguồn xe & Tài chính (Figma `23670:3113`).
+ *
+ * HAI mức, và ranh giới giữa chúng là ranh giới hai tuyến:
+ *  - **Hình thức** (Sở hữu · Trả góp · Thuê lại · Hợp tác) nằm sẵn trên bản ghi xe — luôn hiện.
+ *  - **Con số** là sổ sách của gian hàng, thuộc năng lực `finance`. Thiếu nó thì KHÔNG tải, và
+ *    cũng không dựng đường dẫn "Xem hồ sơ".
+ *
+ * Con số đổi theo hình thức: sở hữu — ngày mua · giá trị xe; trả góp — ngân hàng · phải đóng mỗi
+ * tháng; thuê lại — chủ xe · tiền thuê; hợp tác — chủ xe · % chia. Ô chưa khai thì không dựng.
+ */
+export function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
+  const t = useTranslations('Vehicles.overview');
+  const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
+  const { vehicles: vehiclePaths } = useWorkspace();
+
+  const sourceType = (vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED) as VehicleSourceType;
+  const can = useVehicleCapabilities();
+  const sourceHref = useAvailableHref()(
+    vehiclePaths.part(vehicle.id, VEHICLE_EDIT_TAB.SOURCE, null),
+  );
+  const canViewFinance = can.source && sourceHref !== null;
+  const source = useVehicleSource(vehicle.id, canViewFinance);
+  const detail = source.data?.detail ?? null;
+
+  const rows: { key: string; label: string; value: string }[] = [];
+  const push = (key: string, label: string, value: string | null | undefined) => {
+    if (value) rows.push({ key, label, value });
+  };
+  if (detail) {
+    switch (sourceType) {
+      case VEHICLE_SOURCE_TYPE.FINANCED:
+        push('bank', t('source.bank'), detail.bankName);
+        push(
+          'monthly',
+          t('source.monthlyPayment'),
+          detail.monthlyTotal ? fmt.money(detail.monthlyTotal) : null,
+        );
+        break;
+      case VEHICLE_SOURCE_TYPE.RENTED:
+        push('owner', t('source.owner'), detail.ownerName);
+        push('rent', t('source.rent'), detail.monthlyRent ? fmt.money(detail.monthlyRent) : null);
+        break;
+      case VEHICLE_SOURCE_TYPE.PARTNERSHIP:
+        push('owner', t('source.owner'), detail.ownerName);
+        push(
+          'share',
+          t('source.share'),
+          detail.commissionPercent
+            ? t('source.sharePercent', { percent: detail.commissionPercent })
+            : null,
+        );
+        break;
+      default:
+        push(
+          'purchaseDate',
+          t('source.purchaseDate'),
+          detail.purchaseDate ? fmt.date(detail.purchaseDate) : null,
+        );
+        push(
+          'purchasePrice',
+          t('source.purchasePrice'),
+          detail.purchasePrice ? fmt.money(detail.purchasePrice) : null,
+        );
+    }
+  }
+
+  return (
+    <Panel
+      title={t('source.title')}
+      className={styles.pairItem}
+      extra={
+        canViewFinance && !source.isLoading && sourceHref ? (
+          <PanelLink href={sourceHref}>
+            {detail ? t('source.viewLink') : t('source.addLink')}{' '}
+            {decorativeIcon(<ArrowRightOutlined />)}
+          </PanelLink>
+        ) : null
+      }
+    >
+      <dl className={styles.kvList}>
+        <div className={styles.kvRow}>
+          <dt>{t('source.kind')}</dt>
+          <dd>
+            <span className={styles.sourceTag}>{domainLabel('vehicleSourceType', sourceType)}</span>
+          </dd>
+        </div>
+        {source.isLoading ? (
+          <Skeleton active title={false} paragraph={{ rows: 2 }} />
+        ) : (
+          rows.map((row) => (
+            <div key={row.key} className={styles.kvRow}>
+              <dt>{row.label}</dt>
+              <dd>{row.value}</dd>
+            </div>
+          ))
+        )}
+      </dl>
+      {canViewFinance && !source.isLoading && !source.isError && !detail ? (
+        <p className={styles.muted}>{t('source.missing')}</p>
+      ) : null}
+    </Panel>
+  );
+}
+
+/* ─── Tối ưu nhận chuyến ──────────────────────────────────────────────────── */
+
+/**
+ * Tối ưu nhận chuyến (Figma `23670:3122`) — công tắc "Tự động đồng ý nhận chuyến" NGAY trên thẻ,
+ * lưu tức thì; cùng hook (`useAutoAcceptToggle`) với mục dịch vụ của màn sửa. Xe phục vụ cả tự lái
+ * lẫn có tài xế thì mỗi dịch vụ một công tắc, có nhãn dịch vụ. Thuê dài hạn không có công tắc —
+ * gian hàng luôn tự chốt lịch (ADR 0011) — nên xe chỉ cho thuê dài hạn không có thẻ này.
+ */
+export function AutomationCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
+  const t = useTranslations('Vehicles.overview');
+  const services = VEHICLE_SERVICE_SETTING_SERVICES.filter((service) =>
+    vehicle.serviceTypes.includes(service),
+  );
+  const settings = useVehicleServiceSettings(services.length > 0 ? vehicle.id : undefined);
+  if (services.length === 0) return null;
+
+  return (
+    <Panel title={t('automation.title')} className={styles.pairItem}>
+      {settings.isLoading ? (
+        <Skeleton active title={false} paragraph={{ rows: 2 }} />
+      ) : settings.isError || !settings.data ? (
+        <p className={styles.muted}>{t('loadFailed')}</p>
+      ) : (
+        <div className={styles.toggleList}>
+          {services.map((service) => {
+            const setting = settings.data.find((item) => item.serviceType === service);
+            return setting ? (
+              <AutoAcceptRow
+                key={service}
+                vehicleId={vehicle.id}
+                setting={setting}
+                canEdit={canEdit}
+                showService={services.length > 1}
+              />
+            ) : null;
+          })}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function AutoAcceptRow({
+  vehicleId,
+  setting,
+  canEdit,
+  showService,
+}: {
+  vehicleId: string;
+  setting: VehicleServiceSetting;
+  canEdit: boolean;
+  showService: boolean;
+}) {
+  const t = useTranslations('Vehicles.overview');
+  const domainLabel = useDomainLabel();
+  const toggle = useAutoAcceptToggle({ vehicleId, setting, canEdit });
+  const labelId = useId();
+  const service = domainLabel('serviceType', setting.serviceType);
+  // Có tài xế chưa đủ năng lực (chưa có tài xế nào nhận lượt): nói lý do ở tooltip, không mờ câm.
+  const blockedHint =
+    setting.serviceType === SERVICE_TYPE.WITH_DRIVER &&
+    setting.withDriverAutoAccept &&
+    !setting.withDriverAutoAccept.available &&
+    !setting.autoAcceptEnabled
+      ? t('automation.driverRequired')
+      : undefined;
+
+  return (
+    <div className={styles.toggleRow}>
+      <div className={styles.toggleText}>
+        <p id={labelId} className={styles.toggleLabel}>
+          {showService ? t('automation.toggleFor', { service }) : t('automation.toggle')}
+        </p>
+        <p className={styles.toggleHint}>{t('automation.toggleHint')}</p>
+      </div>
+      <Tooltip title={blockedHint}>
+        <Switch
+          checked={toggle.enabled}
+          loading={toggle.pending}
+          disabled={toggle.disabled}
+          onChange={(next) => void toggle.change(next)}
+          aria-labelledby={labelId}
+        />
+      </Tooltip>
+    </div>
+  );
+}
+
+/* ─── Giá thuê & Chính sách (cột phải) ────────────────────────────────────── */
+
+/**
+ * Giá thuê & Chính sách (Figma cột phải `23672:25630`): hai ô giá ngày lớn trên cùng, rồi các dòng.
+ * Dòng chỉ có khi xe có giá đó — giá có tài xế, giá tháng (theo DỊCH VỤ xe phục vụ), khuyến mãi
+ * tự lái và giá hiển thị sàn sau giảm (chốt 03/11: thêm vào design để không mất).
+ */
 export function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
   const t = useTranslations('Vehicles.overview');
   const { vehicles: vehiclePaths } = useWorkspace();
@@ -415,30 +654,31 @@ export function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canE
   const fmt = useAppFormat();
 
   const empty = tLabels('emptyValue');
+  const serves = (service: ServiceType) => vehicle.serviceTypes.includes(service);
   const discounted = discountedPriceVnd(vehicle.weekdayPrice, vehicle.discountPercent);
+  const unit = t('pricing.perDay');
 
   return (
-    <Card
+    <Panel
       title={t('pricing.title')}
       extra={
         canEdit && pricingHref ? (
-          // Wave 2: giá & chính sách có workspace riêng (kế thừa/ghi đè) — không đi qua wizard.
-          <Link href={pricingHref} className={styles.cardLink}>
-            {decorativeIcon(<EditOutlined />)} {t('pricing.editLink')}
-          </Link>
+          <PanelLink href={pricingHref} icon={<EditOutlined />}>
+            {t('pricing.editLink')}
+          </PanelLink>
         ) : null
       }
-      className={styles.card}
     >
-      {/* Hai giá ngày là con số chủ xe nhìn nhiều nhất — đứng thành hai ô lớn trên cùng. */}
       <dl className={styles.priceTiles}>
         <div className={styles.priceTile}>
           <dt>{t('pricing.weekday')}</dt>
-          <dd>{vehicle.weekdayPrice ? fmt.pricePerDay(vehicle.weekdayPrice) : empty}</dd>
+          <dd>{vehicle.weekdayPrice ? fmt.money(vehicle.weekdayPrice) : empty}</dd>
+          <span className={styles.priceUnit}>{unit}</span>
         </div>
         <div className={styles.priceTile}>
           <dt>{t('pricing.weekend')}</dt>
-          <dd>{vehicle.weekendPrice ? fmt.pricePerDay(vehicle.weekendPrice) : empty}</dd>
+          <dd>{vehicle.weekendPrice ? fmt.money(vehicle.weekendPrice) : empty}</dd>
+          <span className={styles.priceUnit}>{unit}</span>
         </div>
       </dl>
       <dl className={styles.kvList}>
@@ -459,183 +699,109 @@ export function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canE
         {discounted != null ? (
           <div className={styles.kvRow}>
             <dt>{t('pricing.publicPrice')}</dt>
-            <dd>{fmt.money(discounted)}</dd>
+            <dd>{fmt.pricePerDay(discounted)}</dd>
+          </div>
+        ) : null}
+        {serves(SERVICE_TYPE.WITH_DRIVER) && vehicle.withDriverDailyPrice ? (
+          <div className={styles.kvRow}>
+            <dt>{t('pricing.withDriver')}</dt>
+            <dd>{fmt.pricePerDay(vehicle.withDriverDailyPrice)}</dd>
+          </div>
+        ) : null}
+        {serves(SERVICE_TYPE.LONG_TERM) && vehicle.monthlyPrice ? (
+          <div className={styles.kvRow}>
+            <dt>{t('pricing.monthly')}</dt>
+            <dd>{t('pricing.perMonth', { price: fmt.money(vehicle.monthlyPrice) })}</dd>
           </div>
         ) : null}
         {/*
-          Yêu cầu bảo đảm KHÔNG còn là thuộc tính của xe (20/08) — nó thuộc chính sách thuê hiệu
-          lực, kế thừa từ gian hàng hoặc ghi đè riêng. Chỗ đúng của nó là màn "Giá & chính sách".
+          Yêu cầu bảo đảm KHÔNG phải thuộc tính của xe (20/08) — nó thuộc chính sách thuê hiệu lực,
+          kế thừa từ gian hàng hoặc ghi đè riêng; chỗ của nó là màn "Giá & chính sách".
         */}
         <div className={styles.kvRow}>
           <dt>{t('pricing.delivery')}</dt>
-          <dd>{vehicle.deliveryEnabled ? t('pricing.deliveryOn') : t('pricing.deliveryOff')}</dd>
+          <dd className={vehicle.deliveryEnabled ? styles.deliveryOn : undefined}>
+            {vehicle.deliveryEnabled ? (
+              <>
+                {decorativeIcon(<CheckOutlined />)} {t('pricing.deliveryOn')}
+              </>
+            ) : (
+              t('pricing.deliveryOff')
+            )}
+          </dd>
         </div>
       </dl>
-    </Card>
-  );
-}
-
-/**
- * TỐI ƯU NHẬN CHUYẾN — đường vào duy nhất tới thiết lập tự động nhận của xe gian hàng.
- *
- * Chỉ hiện khi xe phục vụ ít nhất một dịch vụ CÓ thiết lập riêng: thuê dài hạn luôn do gian
- * hàng chốt lịch tay (ADR 0011), nên với xe chỉ cho thuê dài hạn thì thẻ này không có gì để nói.
- */
-export function AutomationCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
-  const t = useTranslations('Vehicles.overview');
-  const { vehicles: vehiclePaths } = useWorkspace();
-  // Phiên hỗ trợ không mở thiết lập nhận chuyến — link không có đích thì không dựng (ADR 0050).
-  const href = useAvailableHref()(vehiclePaths.optimization(vehicle.id));
-  const hasConfigurableService = VEHICLE_SERVICE_SETTING_SERVICES.some((service) =>
-    vehicle.serviceTypes.includes(service),
-  );
-  if (!hasConfigurableService) return null;
-
-  return (
-    <Card
-      title={t('automation.title')}
-      extra={
-        canEdit && href ? (
-          <Link href={href} className={styles.cardLink}>
-            {t('automation.editLink')}
-          </Link>
-        ) : null
-      }
-      className={styles.card}
-    >
-      <div className={styles.iconRow}>
-        <span className={cx(styles.iconTile, styles.toneBrand)} aria-hidden="true">
-          <ThunderboltOutlined />
-        </span>
-        <p className={styles.iconRowText}>{t('automation.hint')}</p>
-      </div>
-    </Card>
-  );
-}
-
-/**
- * Tóm tắt nguồn xe (Wave 4).
- *
- * HAI mức, và ranh giới giữa chúng là ranh giới hai tuyến:
- *  - **Hình thức** (Sở hữu · Thuê lại · Trả góp · Hợp tác) nằm sẵn trên bản ghi xe và không có
- *    cờ gói nào gác — nên nó luôn hiện.
- *  - **Con số và hồ sơ tài chính** là sổ sách của gian hàng, thuộc năng lực `finance`. Thiếu nó
- *    thì KHÔNG tải, và cũng không dựng đường dẫn sang màn nguồn xe.
- */
-export function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
-  const t = useTranslations('Vehicles.overview');
-  const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
-  const { vehicles: vehiclePaths } = useWorkspace();
-
-  const sourceType = (vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED) as VehicleSourceType;
-  const can = useVehicleCapabilities();
-  const sourceHref = useAvailableHref()(
-    vehiclePaths.part(vehicle.id, VEHICLE_EDIT_TAB.SOURCE, null),
-  );
-  const canViewFinance = can.source && sourceHref !== null;
-  const source = useVehicleSource(vehicle.id, canViewFinance);
-  const detail = source.data?.detail ?? null;
-  // Đích màn nguồn xe — chỉ dựng khi đọc được sổ và đã biết hồ sơ có hay chưa.
-  const sourceLink = canViewFinance && !source.isLoading ? sourceHref : null;
-
-  const summary = detail
-    ? [
-        detail.bankName,
-        detail.ownerName,
-        detail.monthlyTotal
-          ? t('source.monthlyTotal', { amount: fmt.money(detail.monthlyTotal) })
-          : null,
-        detail.monthlyRent
-          ? t('source.monthlyRent', { amount: fmt.money(detail.monthlyRent) })
-          : null,
-        detail.commissionPercent
-          ? t('source.commission', { percent: detail.commissionPercent })
-          : null,
-        detail.paymentDay ? t('source.paymentDay', { day: detail.paymentDay }) : null,
-      ]
-        .filter(Boolean)
-        .join(LIST_SEPARATOR)
-    : '';
-
-  return (
-    <Card
-      title={t('source.title')}
-      extra={
-        sourceLink && detail ? (
-          <Link href={sourceLink} className={styles.cardLink}>
-            {t('source.viewLink')} {decorativeIcon(<RightOutlined />)}
-          </Link>
-        ) : null
-      }
-      className={cx(styles.card, styles.spanFull)}
-    >
-      <div className={styles.iconRow}>
-        <span className={cx(styles.iconTile, styles.toneBrand)} aria-hidden="true">
-          <BankOutlined />
-        </span>
-        <div className={styles.sourceBody}>
-          <dl className={styles.sourceFacts}>
-            <div>
-              <dt>{t('source.kind')}</dt>
-              <dd>
-                <Tag color="gold">{domainLabel('vehicleSourceType', sourceType)}</Tag>
-              </dd>
-            </div>
-            {detail && summary ? (
-              <div>
-                <dt>{t('source.summary')}</dt>
-                <dd>{summary}</dd>
-              </div>
-            ) : null}
-          </dl>
-          {sourceLink && !detail ? (
-            <p className={styles.muted}>
-              {t('source.missing')} <Link href={sourceLink}>{t('source.missingLink')}</Link>
-            </p>
-          ) : null}
-        </div>
-      </div>
-    </Card>
+    </Panel>
   );
 }
 
 /* ─── Tab thông số kỹ thuật ───────────────────────────────────────────────── */
 
+/**
+ * Bảng thông số (Figma `23672:4043`): lưới bốn cột nhãn | giá trị | nhãn | giá trị, viền mảnh;
+ * màn hẹp gập về hai cột. Mỗi cặp là một hàng `<dl>` để trình đọc màn hình đọc đúng cặp.
+ */
 export function SpecsCard({ vehicle }: { vehicle: VehicleDetail }) {
   const t = useTranslations('Vehicles.overview');
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
-  const { featureLabel } = useCatalogLabels();
   const specs = useVehicleSpecItems(vehicle);
 
   const empty = tLabels('emptyValue');
-  const items: DescriptionsProps['items'] = [
-    ...specs.map((item) => ({ key: item.key, label: item.label, children: item.value ?? empty })),
-    { key: 'created', label: t('specs.createdAt'), children: fmt.dateTime(vehicle.createdAt) },
-    { key: 'updated', label: t('specs.updatedAt'), children: fmt.dateTime(vehicle.updatedAt) },
+  const items = [
+    ...specs.map((item) => ({ key: item.key, label: item.label, value: item.value ?? empty })),
+    { key: 'created', label: t('specs.createdAt'), value: fmt.dateTime(vehicle.createdAt) },
+    { key: 'updated', label: t('specs.updatedAt'), value: fmt.dateTime(vehicle.updatedAt) },
   ];
 
   return (
-    <Card title={t('specs.title')} className={styles.card}>
-      {/* `specsTable`: xem docblock ở CSS — antd cho ô nội dung bẻ giữa từ, phải chặn lại. */}
-      <Descriptions
-        bordered
-        size="small"
-        column={{ xs: 1, sm: 2 }}
-        items={items}
-        className={styles.specsTable}
-      />
+    <Panel title={t('specs.title')}>
+      <dl className={styles.specsTable}>
+        {items.map((item) => (
+          <div key={item.key} className={styles.specsCell}>
+            <dt>{item.label}</dt>
+            <dd>{item.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </Panel>
+  );
+}
 
-      {vehicle.features.length > 0 ? (
-        <div className={styles.chips}>
-          {vehicle.features.map((key) => (
-            <Tag key={key}>{featureLabel(key)}</Tag>
-          ))}
-        </div>
-      ) : null}
+/* ─── Tab tiện ích xe ─────────────────────────────────────────────────────── */
 
-      {vehicle.description ? <p className={styles.description}>{vehicle.description}</p> : null}
-    </Card>
+/**
+ * Tiện ích trên xe (Figma `23672:4810`) — danh sách PHẲNG hai cột (chốt 03/11/2026: danh mục tiện
+ * ích chưa có trường nhóm, nên chưa chia bốn nhóm như design). Nhãn đọc từ danh mục do admin quản
+ * lý, theo ngôn ngữ đang xem. Mô tả xe đứng ở thẻ thứ hai của cùng tab.
+ */
+export function FeaturesCard({ vehicle }: { vehicle: VehicleDetail }) {
+  const t = useTranslations('Vehicles.overview');
+  const { featureLabel } = useCatalogLabels();
+
+  return (
+    <div className={styles.stack}>
+      <Panel title={t('features.title')} subtitle={t('features.subtitle')}>
+        {vehicle.features.length > 0 ? (
+          <ul className={styles.featureList}>
+            {vehicle.features.map((key) => (
+              <li key={key} className={styles.featureItem}>
+                <span className={styles.featureCheck}>{decorativeIcon(<CheckOutlined />)}</span>
+                {featureLabel(key)}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className={styles.muted}>{t('features.empty')}</p>
+        )}
+      </Panel>
+      <Panel title={t('features.descriptionTitle')}>
+        {vehicle.description ? (
+          <p className={styles.description}>{vehicle.description}</p>
+        ) : (
+          <p className={styles.muted}>{t('features.descriptionEmpty')}</p>
+        )}
+      </Panel>
+    </div>
   );
 }

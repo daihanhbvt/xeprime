@@ -26,7 +26,8 @@ export const VEHICLE_MANAGE_SECTION = {
   SELF_DRIVE_OPTIMIZATION: 'self-drive/optimization',
   /** "Nhận chuyến & thủ tục" của có tài xế. */
   WITH_DRIVER_OPTIMIZATION: 'with-driver/optimization',
-  WITH_DRIVER_SURCHARGES: 'with-driver/surcharges',
+  // Không có mục phụ phí: giá có tài xế là giá TRỌN GÓI, phụ phí tài xế đã gỡ (ADR 0075). Route cũ
+  // `with-driver/surcharges` chuyển hướng về "Nhận chuyến & thủ tục".
 } as const;
 
 export type VehicleManageSection =
@@ -53,7 +54,7 @@ export interface VehicleManageNavItem {
 }
 
 export interface VehicleManageNavGroup {
-  readonly key: 'info' | 'pricingHandover' | 'selfDrive' | 'withDriver' | 'longTerm';
+  readonly key: 'info' | 'services' | 'policy' | 'selfDrive' | 'withDriver' | 'longTerm';
   readonly labelKey: VehicleManageMenuKey;
   /** Nhóm gắn với một DỊCH VỤ của xe — có công tắc bật/tắt trên tiêu đề; `null` = nhóm chung. */
   readonly serviceType: ServiceType | null;
@@ -97,16 +98,28 @@ export const VEHICLE_MANAGE_NAV: readonly VehicleManageNavGroup[] = [
       },
     ],
   },
+  /*
+   * Hai mục của "Hình thức cho thuê" bên web (màn sửa xe theo Figma, 03/11/2026): "Dịch vụ & giá"
+   * (giá từng dịch vụ) và "Chính sách thuê" (thời gian chết giữa hai chuyến — khung giờ giao nhận
+   * đã gỡ ở ADR 0078). Thủ tục / điều khoản của từng dịch vụ nằm ở nhóm dịch vụ bên dưới.
+   */
   {
-    key: 'pricingHandover',
-    labelKey: 'groups.pricingHandover',
+    key: 'services',
+    labelKey: 'groups.services',
     serviceType: null,
     items: [
-      { section: VEHICLE_MANAGE_SECTION.PRICING, labelKey: 'items.pricing', icon: 'cash-outline' },
+      { section: VEHICLE_MANAGE_SECTION.PRICING, labelKey: 'items.services', icon: 'cash-outline' },
+    ],
+  },
+  {
+    key: 'policy',
+    labelKey: 'groups.policy',
+    serviceType: null,
+    items: [
       {
         section: VEHICLE_MANAGE_SECTION.HANDOVER_TIME,
-        labelKey: 'items.handoverTime',
-        icon: 'alarm-outline',
+        labelKey: 'items.turnaround',
+        icon: 'hourglass-outline',
       },
     ],
   },
@@ -132,11 +145,7 @@ export const VEHICLE_MANAGE_NAV: readonly VehicleManageNavGroup[] = [
         labelKey: 'items.bookingTerms',
         icon: 'shield-checkmark-outline',
       },
-      {
-        section: VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES,
-        labelKey: 'items.surcharges',
-        icon: 'grid-outline',
-      },
+
     ],
   },
   /*

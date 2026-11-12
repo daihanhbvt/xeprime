@@ -1,7 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Reveal } from '@/components/motion/Reveal';
 import { Fragment, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { usePressScale } from '@/components/motion/PressableScale';
+import { useScrollRevealDefault } from '@/components/motion/ScrollReveal';
+import { useRevealPop } from '@/components/motion/reveal-effects';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { AlertDialog } from '@/components/ui/AlertDialog';
@@ -88,6 +93,9 @@ export function AccountNav() {
    * hai khối trên cùng một màn không bao giờ nói hai điều khác nhau về một con người.
    */
 
+  // Hàng menu hiện so le lúc mở màn (sau tiêu đề + thẻ hồ sơ, nên bắt đầu từ nhịp 2).
+  let rowIndex = 2;
+
   return (
     <>
       <Card padded={false}>
@@ -115,12 +123,13 @@ export function AccountNav() {
                   </Text>
                 ) : null}
                 {group.items.map((item) => (
-                  <AccountNavRow
-                    key={item.key}
-                    item={item}
-                    active={item.key === activeKey}
-                    badge={badgeCount(item)}
-                  />
+                  <Reveal key={item.key} index={rowIndex++}>
+                    <AccountNavRow
+                      item={item}
+                      active={item.key === activeKey}
+                      badge={badgeCount(item)}
+                    />
+                  </Reveal>
                 ))}
               </Fragment>
             ))}
@@ -202,6 +211,9 @@ function AccountNavRow({
   const navigateOnce = useNavigateOnce();
   const { switchTo } = useShellScope();
   const label = t(item.labelKey);
+  // App khách: dòng co nhẹ khi nhấn + icon nảy lên khi menu cuộn tới (app Partner giữ tĩnh).
+  const press = usePressScale(useScrollRevealDefault());
+  const iconPop = useRevealPop(120, 0.6);
 
   /**
    * Ba kiểu đích, ba cách mở — xem {@link NAV_TARGET}.
@@ -229,8 +241,11 @@ function AccountNavRow({
       accessibilityRole="menuitem"
       accessibilityState={{ selected: active }}
       accessibilityLabel={label}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
       style={({ pressed }) => (pressed ? { backgroundColor: colors.surfaceMuted } : null)}
     >
+      <Animated.View style={press.style}>
       {/* Hàng `_Account Tab` của Figma `21860:83492`: đệm 12, kẻ dưới mảnh, icon Figma 20, chữ 14 medium. */}
       <XStack
         ai="center"
@@ -242,24 +257,26 @@ function AccountNavRow({
         borderBottomWidth={1}
         borderBottomColor={colors.borderSubtle}
       >
+        <Animated.View style={iconPop}>
         {NAV_LINE_ICON[item.key] ? (
           <LineIcon
             name={NAV_LINE_ICON[item.key]!}
-            size={iconSize.md}
-            color={active ? colors.primaryActive : colors.placeholder}
+            size={iconSize.lg}
+            color={active ? colors.primary : colors.placeholder}
           />
         ) : (
           <Ionicons
             name={item.icon}
-            size={iconSize.md}
-            color={active ? colors.primaryActive : colors.placeholder}
+            size={iconSize.lg}
+            color={active ? colors.primary : colors.placeholder}
           />
         )}
+        </Animated.View>
         <Text
           f={1}
-          col={active ? colors.primaryActive : colors.textMuted}
+          col={active ? colors.primary : colors.textMuted}
           fos={fontSize.body}
-          fow={active ? fontWeight.semibold : fontWeight.medium}
+          fow={fontWeight.medium}
           numberOfLines={1}
         >
           {label}
@@ -267,9 +284,10 @@ function AccountNavRow({
         {badge > 0 ? <CountBadge count={badge} tone="danger" /> : null}
         {/* Figma: chỉ "Trở thành chủ xe" có mũi tên — nó dẫn RA khỏi khu tài khoản. */}
         {item.key === 'becomeOwner' ? (
-          <LineIcon name="arrow-right" size={iconSize.md} color={colors.placeholder} />
+          <LineIcon name="arrow-right" size={iconSize.lg} color={colors.placeholder} />
         ) : null}
       </XStack>
+      </Animated.View>
     </Pressable>
   );
 }

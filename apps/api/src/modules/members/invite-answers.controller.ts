@@ -44,7 +44,7 @@ export class InviteAnswersController {
   @Post(':token/accept')
   @ApiOperation({
     summary:
-      'Đồng ý tham gia gian hàng — cần đăng nhập tài khoản có đúng SĐT được mời (đã xác minh)',
+      'Đồng ý tham gia gian hàng - cần đăng nhập tài khoản có đúng SĐT được mời (đã xác minh)',
   })
   @ApiOkResponse({ type: InviteAnswerDto })
   accept(
@@ -61,7 +61,7 @@ export class InviteAnswersController {
    * người khác — rẻ tiền nhưng vẫn là chiếm quyền quyết định của họ.
    */
   @Post(':token/decline')
-  @ApiOperation({ summary: 'Từ chối lời mời — cần đăng nhập tài khoản có đúng SĐT được mời' })
+  @ApiOperation({ summary: 'Từ chối lời mời - cần đăng nhập tài khoản có đúng SĐT được mời' })
   @ApiOkResponse({ type: InviteAnswerDto })
   decline(
     @Param('token') token: string,

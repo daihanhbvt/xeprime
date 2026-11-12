@@ -52,7 +52,6 @@ import { TenantScopeGuard } from '../src/common/guards/tenant-scope.guard';
 import { SupportRequestStore } from '../src/common/support/support-request.store';
 import type { RequestContext } from '../src/common/types/request-context';
 import { AuditService } from '../src/modules/audit/audit.service';
-import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { RbacService } from '../src/modules/rbac/rbac.service';
 import { R2Service } from '../src/modules/storage/r2.service';
@@ -397,7 +396,6 @@ beforeAll(async () => {
   const billing = makeBillingService(asService);
   const maintenance = new MaintenanceService(
     asService,
-    new OccupancyService(asService),
     odometer,
     files,
     audit,
@@ -1416,7 +1414,7 @@ describe('Bảo dưỡng: chi phí và lịch nằm ngoài phiên (lượt 2)', 
   const records = () => `/vehicles/${packageVehicleId}/maintenance/records`;
   let slot = 0;
 
-  /** Phiếu CHỦ GIAN HÀNG lập: có khung giờ (giữ chỗ lịch), có KM, có chi phí. */
+  /** Phiếu CHỦ GIAN HÀNG lập: có ngày dự kiến, có KM, có chi phí. */
   async function ownerScheduledRecord() {
     slot += 1;
     const start = new Date(Date.now() + (30 + slot) * 86_400_000);
@@ -1436,7 +1434,7 @@ describe('Bảo dưỡng: chi phí và lịch nằm ngoài phiên (lượt 2)', 
       id: string;
       rowVersion: number;
       plannedStartAt: string;
-      plannedEndAt: string;
+      plannedEndAt: string | null;
     };
   }
 
@@ -1446,9 +1444,10 @@ describe('Bảo dưỡng: chi phí và lịch nằm ngoài phiên (lượt 2)', 
       select: { id: true, startAt: true, endAt: true },
     });
 
-  maybe('chủ gian hàng vẫn lập lịch bảo dưỡng bình thường (giữ chỗ lịch xe)', async () => {
+  maybe('chủ gian hàng vẫn lập lịch bảo dưỡng (ngày nhắc, không giữ chỗ — ADR 0079)', async () => {
     const record = await ownerScheduledRecord();
-    expect(await occupancyOf(record.id)).toHaveLength(1);
+    expect(record.plannedStartAt).toBeTruthy();
+    expect(await occupancyOf(record.id)).toHaveLength(0);
   });
 
   maybe('support tạo phiếu: không sinh occupancy, không thấy chi phí', async () => {
@@ -1811,7 +1810,7 @@ describe('Đợt 2A — màn đọc của gian hàng trong phiên', () => {
         tenantId: ids.packageTenant,
         fullName: 'Nguyễn Văn Khách',
         phone: '0912345678',
-        normalizedPhone: '84912345678',
+        normalizedPhone: '0912345678',
         email: 'khach.that@example.com',
         address: '12 Ngõ Riêng Tư, Hà Nội',
         riskLevel: TENANT_CUSTOMER_RISK_LEVEL.WATCHLIST,

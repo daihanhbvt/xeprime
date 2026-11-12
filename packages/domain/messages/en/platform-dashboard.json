@@ -79,7 +79,7 @@
   },
   "funnel": {
     "title": "Partner activation funnel",
-    "description": "Current state, all time — each step includes the conditions of the step before it.",
+    "description": "Current state, all time - each step includes the conditions of the step before it.",
     "registered": "Signed up",
     "withVehicle": "Has a car",
     "withListing": "Has a car on the marketplace",

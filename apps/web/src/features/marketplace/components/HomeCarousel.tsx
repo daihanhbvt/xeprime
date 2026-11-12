@@ -40,6 +40,7 @@ export function HomeCarousel({
   overhang = false,
   peek = false,
   responsiveGrid = false,
+  mobileFixed = false,
   children,
   className,
 }: {
@@ -64,6 +65,11 @@ export function HomeCarousel({
   peek?: boolean;
   /** Tự động mở rộng lên 5 hoặc 6 cột trên màn hình lớn khi layout="grid". */
   responsiveGrid?: boolean;
+  /**
+   * Mobile: MỘT slide mỗi khung, thẻ cố định của khối canh giữa trong slide, vuốt sang thẻ kế
+   * (banner khuyến mãi), thay vì 1.3 thẻ/khung có thẻ kề ló ra.
+   */
+  mobileFixed?: boolean;
   children: ReactNode[];
   className?: string;
 }) {
@@ -78,7 +84,9 @@ export function HomeCarousel({
      */
     slidesToScroll: peek ? 2 : 'auto',
     breakpoints: {
-      [MOBILE_QUERY]: { align: 'center', slidesToScroll: 1, containScroll: false, loop: true },
+      [MOBILE_QUERY]: mobileFixed
+        ? { align: 'center', slidesToScroll: 1, containScroll: false }
+        : { align: 'center', slidesToScroll: 1, containScroll: false, loop: true },
       ...(layout === 'grid' ? { [GRID_QUERY]: { active: false } } : {}),
     },
   };
@@ -127,6 +135,7 @@ export function HomeCarousel({
         responsiveGrid && styles.responsiveGrid,
         overhang && styles.overhang,
         peek && styles.peek,
+        mobileFixed && styles.mobileFixed,
         className,
       )}
     >
@@ -139,7 +148,13 @@ export function HomeCarousel({
       >
         <ul className={styles.container}>
           {children.map((child, index) => (
-            <li key={index} className={styles.slide}>
+            <li
+              key={index}
+              className={styles.slide}
+              // Coverflow mobile: thẻ đang ở giữa nổi, hai thẻ kề nhỏ + mờ (CSS, chỉ ≤ 640px nơi mỗi
+              // trang đúng một thẻ nên chỉ số trang = chỉ số thẻ).
+              data-active={index === selected ? '' : undefined}
+            >
               {child}
             </li>
           ))}

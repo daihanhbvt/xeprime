@@ -16,7 +16,7 @@ import type { PublicDestination } from '@xeprime/types';
 import { ListRowSkeleton } from '@/components/ui/Skeleton';
 import { Chip } from '@/components/ui/Chip';
 import { IconButton } from '@/components/ui/IconButton';
-import { layout } from '@/theme/layout';
+import { layout, modalColumn } from '@/theme/layout';
 import { useAppStyles } from '@/theme/styles';
 import { FONT_FAMILY } from '@/theme/fonts';
 import { useColors, useFloatingSurfaceBorder } from '@/theme/ThemeProvider';
@@ -177,7 +177,7 @@ export function LocationPicker({ open, onClose, onSelect }: LocationPickerProps)
       */}
       <YStack f={1}>
         <Pressable style={appStyles.scrim} onPress={onClose} />
-        <YStack>
+        <YStack style={modalColumn}>
           <YStack
             h={height * SHEET_RATIO}
             bg={colors.surface}
@@ -359,11 +359,7 @@ const Row = memo(function Row({
         br={radius.md}
         bg={selected ? colors.surfaceSelected : 'transparent'}
       >
-        <Ionicons
-          name={icon}
-          size={17}
-          color={selected ? colors.primaryActive : colors.textMuted}
-        />
+        <Ionicons name={icon} size={17} color={selected ? colors.accentText : colors.textMuted} />
         <Text
           f={1}
           col={colors.text}
@@ -383,7 +379,7 @@ const Row = memo(function Row({
             {count}
           </Text>
         ) : null}
-        {selected ? <Ionicons name="checkmark" size={17} color={colors.primaryActive} /> : null}
+        {selected ? <Ionicons name="checkmark" size={17} color={colors.accentText} /> : null}
       </XStack>
     </Pressable>
   );

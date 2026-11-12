@@ -10,7 +10,7 @@ import { FONT_FAMILY } from './fonts';
  * khoá bằng test, vì nó không làm gì đỏ lên cả.
  */
 describe('tamaguiConfig', () => {
-  it('`defaultFont` nằm trong `settings` — chỗ Tamagui v2 thật sự đọc', () => {
+  it('`defaultFont` nằm trong `settings` - chỗ Tamagui v2 thật sự đọc', () => {
     expect(tamaguiConfig.defaultFont).toBe('body');
   });
 

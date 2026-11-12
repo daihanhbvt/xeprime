@@ -1,6 +1,6 @@
 {
   "footer": {
-    "tagline": "Nền tảng kết nối chủ xe và người thuê xe trên toàn quốc — dễ dàng, an toàn và minh bạch.",
+    "tagline": "Nền tảng kết nối chủ xe và người thuê xe trên toàn quốc - dễ dàng, an toàn và minh bạch.",
     "cta": {
       "eyebrow": "Dành cho chủ xe",
       "title": "Xe của bạn đang nằm không?",
@@ -79,11 +79,11 @@
     "titleWithService": "Xe phù hợp với bạn · {service}",
     "count": "({count, plural, other {# xe}})",
     "nearProvince": "Ưu tiên xe ở {province}",
-    "nearProvinceMixed": "Ưu tiên xe ở {province} — chưa đủ nên có thêm xe tỉnh khác",
+    "nearProvinceMixed": "Ưu tiên xe ở {province} - chưa đủ nên có thêm xe tỉnh khác",
     "exploreAll": "Khám phá xe",
     "loadError": "Không tải được danh sách xe",
     "openSearch": "Mở trang tìm xe",
-    "emptyForService": "Chưa có xe {service} nào phù hợp — thử tab dịch vụ khác",
+    "emptyForService": "Chưa có xe {service} nào phù hợp - thử tab dịch vụ khác",
     "empty": "Chưa có xe nào được đăng công khai"
   },
   "locations": {
@@ -106,15 +106,15 @@
     "filters": "Bộ lọc",
     "sortLabel": "Sắp xếp",
     "sortAriaLabel": "Sắp xếp kết quả",
-    "dateRange": "{from} – {to}",
-    "dateRangeWithDays": "{from} – {to} ({days, plural, other {# ngày}})",
+    "dateRange": "{from} - {to}",
+    "dateRangeWithDays": "{from} - {to} ({days, plural, other {# ngày}})",
     "loadErrorTitle": "Không tải được danh sách xe",
     "loadingLabel": "Đang tải kết quả",
     "emptyFilteredTitle": "Không tìm thấy xe phù hợp",
     "emptyFilteredDesc": "Không có xe nào khớp với bộ lọc hiện tại của bạn. Thử thay đổi tiêu chí, nới lỏng bộ lọc hoặc cập nhật lịch trình đi chuyến khác.",
     "changeTimeOrPlace": "Thay đổi thời gian hoặc địa điểm",
     "emptySystemTitle": "Chưa có xe nào được đăng cho thuê",
-    "emptySystemDesc": "Các gian hàng chưa đăng xe công khai. Vui lòng quay lại sau — xe mới xuất hiện ngay khi được duyệt.",
+    "emptySystemDesc": "Các gian hàng chưa đăng xe công khai. Vui lòng quay lại sau - xe mới xuất hiện ngay khi được duyệt.",
     "loadingMore": "Đang tải thêm xe",
     "appendError": "Không tải được trang tiếp theo. {reason}",
     "loadMore": "Tải thêm xe",
@@ -139,10 +139,10 @@
     "clearAll": "Xoá tất cả",
     "availableFor": "{count, plural, other {# xe}} khớp “{q}”",
     "emptyKeywordTitle": "Không tìm thấy xe khớp “{q}”",
-    "emptyKeywordDesc": "Thử gõ ngắn hơn — chỉ tên hãng hoặc dòng xe (vd. “vios”, “vf8”), hoặc tên chủ xe. Không cần gõ dấu.",
+    "emptyKeywordDesc": "Thử gõ ngắn hơn - chỉ tên hãng hoặc dòng xe (vd. “vios”, “vf8”), hoặc tên chủ xe. Không cần gõ dấu.",
     "clearKeyword": "Xoá từ khoá",
     "keyword": {
-      "placeholder": "Tìm tên xe, chủ xe hoặc gian hàng",
+      "placeholder": "Gõ để tìm kiếm loại xe, chủ gian hàng,...",
       "ariaLabel": "Tìm xe theo tên xe, chủ xe hoặc gian hàng",
       "hostsGroup": "Chủ xe & gian hàng",
       "shop": "Gian hàng",
@@ -151,7 +151,16 @@
       "vehicleCount": "{count, plural, other {# xe}}",
       "searchAll": "Xem mọi xe khớp “{q}”"
     },
-    "viewMode": "Chế độ hiển thị"
+    "viewMode": "Chế độ hiển thị",
+    "quickPills": {
+      "bodyType": "Kiểu xe",
+      "priceRange": "Khoảng giá",
+      "seats": "Số chỗ ngồi",
+      "scrollMore": "Xem thêm bộ lọc",
+      "scrollPrev": "Bộ lọc trước"
+    },
+    "clearAllAria": "Xoá tất cả bộ lọc",
+    "clearFilters": "Xoá bộ lọc"
   },
   "filterPanel": {
     "title": "Bộ lọc",
@@ -180,11 +189,11 @@
       "delivery": "Chủ xe hỗ trợ giao nhận",
       "noCollateral": "Không yêu cầu cọc tài sản",
       "discount": "Xe có khuyến mãi",
-      "vatInvoice": "Chủ xe xuất hoá đơn cho tiền thuê xe theo thoả thuận trực tiếp với bạn — XePrime không xuất hoá đơn thay chủ xe"
+      "vatInvoice": "Chủ xe xuất hoá đơn cho tiền thuê xe theo thoả thuận trực tiếp với bạn - XePrime không xuất hoá đơn thay chủ xe"
     },
     "clear": "Xoá bộ lọc",
     "apply": "Áp dụng",
-    "priceRangeValue": "{from} – {to}",
+    "priceRangeValue": "{from} - {to}",
     "countSuffix": "xe",
     "applyWithCount": "Áp dụng ({count, plural, other {# xe}})",
     "motorbikeCategory": "Phân khúc xe máy",
@@ -206,7 +215,7 @@
       "offers": "Ưu đãi",
       "offersHint": "Lọc xe có ưu đãi đang được chủ xe công bố.",
       "hasOffer": "Có ưu đãi",
-      "instantBook": "Không cần xác nhận",
+      "instantBook": "Tự động duyệt",
       "instantBookHint": "Chỉ hiển thị xe đặt được ngay, không chờ chủ xe duyệt.",
       "policyNote": "Đây là tiêu chí tìm kiếm, không phải cam kết miễn cọc, hoàn tiền hay bảo hiểm. Chính sách thực tế được xác nhận tại chi tiết xe.",
       "ratingFrom": "Từ {rating, number, ::.0} sao",
@@ -215,7 +224,7 @@
       "chips": {
         "delivery": "Giao xe tận nơi",
         "discount": "Có ưu đãi",
-        "instantBook": "Không cần xác nhận",
+        "instantBook": "Tự động duyệt",
         "noCollateral": "Không cọc tài sản",
         "vatInvoice": "Xuất hoá đơn VAT"
       }
@@ -223,13 +232,13 @@
   },
   "searchDialog": {
     "title": "Tìm kiếm",
-    "longTermHint": "Chọn xe trước — sau đó chọn gói thuê ({packages} tháng) và nguyện vọng ngày nhận khi gửi yêu cầu thuê.",
+    "longTermHint": "Chọn xe trước - sau đó chọn gói thuê ({packages} tháng) và nguyện vọng ngày nhận khi gửi yêu cầu thuê.",
     "locationAriaLabel": "Địa điểm nhận xe"
   },
   "meta": {
     "home": {
       "title": "Thuê xe tự lái & có tài xế trên toàn quốc",
-      "description": "XePrime — thuê ô tô tự lái, có tài xế và xe máy khắp Việt Nam. Đặt xe nhanh, thanh toán sau khi chủ xe xác nhận."
+      "description": "XePrime - thuê ô tô tự lái, có tài xế và xe máy khắp Việt Nam. Đặt xe nhanh, thanh toán sau khi chủ xe xác nhận."
     },
     "search": {
       "title": "Tìm xe cho thuê",

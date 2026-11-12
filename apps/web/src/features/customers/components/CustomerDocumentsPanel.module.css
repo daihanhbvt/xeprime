@@ -1,8 +1,38 @@
+/* Giấy tờ khách — lưới thẻ theo loại (Figma Partner-XePrime `23797:62633`, 02/11/2026). */
+
 .panel {
   display: flex;
   flex-direction: column;
   gap: var(--xp-space-md);
   min-width: 0;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.headAction {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-color-primary-strong);
+  font: inherit;
+  font-weight: var(--xp-font-weight-medium);
+  cursor: pointer;
 }
 
 .hint {
@@ -12,105 +42,80 @@
   line-height: var(--xp-line-height-body-sm);
 }
 
-.uploader {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--xp-space-sm);
-  align-items: center;
-}
-
-.typeSelect {
-  min-width: 200px;
-  flex: 1 1 200px;
-}
-
-.customName {
-  flex: 1 1 200px;
-  min-width: 0;
-}
-
-.expiry {
-  flex: 1 1 200px;
-}
-
-.list {
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--xp-space-md);
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+.thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 17 / 10;
+  overflow: hidden;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-muted);
+}
+
+.thumb {
+  position: relative;
+}
+
+.thumbBusy {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--xp-color-bg-container);
+  opacity: 0.8;
+}
+
+/* Ô ảnh của thẻ CHƯA có giấy = vùng tải lên (bấm hoặc kéo thả) — cùng khuôn với ô ảnh đã có. */
+.dropzone :global(.ant-upload-drag) {
+  aspect-ratio: 17 / 10;
+  border: 1px dashed var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-muted);
+  transition: border-color 0.2s;
+}
+
+.dropzone :global(.ant-upload-drag:not(.ant-upload-disabled):hover),
+.dropzone :global(.ant-upload-drag-hover) {
+  border-color: var(--xp-color-primary-strong);
+}
+
+.dropzone :global(.ant-upload-drag .ant-upload-btn) {
+  height: 100%;
+  padding: var(--xp-space-md);
+}
+
+/* AntD giữ khung `table-cell` (căn giữa dọc) — nội dung tự xếp dọc trong một span riêng. */
+.dropInner {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-sm);
-}
-
-.item {
-  display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: var(--xp-space-sm);
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border: 1px solid var(--xp-color-border-subtle);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-container);
-  min-width: 0;
 }
 
-/* `min-width: 0` + `flex: 1` — tên tệp dài bị cắt trong ô của nó, không đẩy hàng rộng ra. */
-.itemMain {
-  flex: 1 1 220px;
-  min-width: 0;
-}
-
-.itemTitle {
-  font-weight: var(--xp-font-weight-semibold);
-  overflow-wrap: anywhere;
-}
-
-.itemMeta {
+.dropHint {
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  overflow-wrap: anywhere;
-}
-
-.itemTags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--xp-space-xs);
-  min-width: 0;
-}
-
-.itemActions {
-  display: flex;
-  gap: var(--xp-space-xs);
-  margin-left: auto;
-}
-
-@media (max-width: 640px) {
-  .itemActions {
-    margin-left: 0;
-    width: 100%;
-  }
-
-  .itemActions > * {
-    min-height: var(--xp-touch-target-min);
-  }
-}
-
-/*
- * Ô ảnh thu nhỏ đầu mỗi hàng: nhận ra CCCD/GPLX bằng mắt, bấm là phóng to toàn màn hình bằng
- * trình xem ảnh dùng chung (PreviewImage). Ảnh cắt vừa ô nên hàng nào cũng cao bằng nhau.
- */
-.thumb {
-  display: grid;
-  flex: none;
-  width: 64px;
-  height: 48px;
-  place-items: center;
-  overflow: hidden;
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-muted);
-  color: var(--xp-color-text-tertiary);
 }
 
 .thumbImage {
@@ -120,5 +125,85 @@
 }
 
 .thumbIcon {
-  font-size: var(--xp-font-size-h4);
+  color: var(--xp-color-text-tertiary);
+  font-size: 40px;
 }
+
+.cardTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+}
+
+.facts > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.facts dt {
+  color: var(--xp-color-text-secondary);
+}
+
+.facts dd {
+  margin: 0;
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  text-align: right;
+  text-overflow: ellipsis;
+}
+
+.expiry {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--xp-space-6);
+}
+
+.meta {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--xp-color-text-tertiary);
+  font-size: 12px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+  margin-top: auto;
+  padding-top: var(--xp-space-12);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.field > span:first-child {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+

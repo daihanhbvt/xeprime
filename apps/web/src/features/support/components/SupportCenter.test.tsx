@@ -39,19 +39,20 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('SupportCenter — hướng dẫn nhanh', () => {
+describe('SupportCenter - hướng dẫn nhanh', () => {
   it('mỗi thẻ là link thật tới một trang có sẵn trong cổng quản lý', () => {
     render(<SupportCenter />);
 
     expect(screen.getByRole('link', { name: /Thêm xe cho thuê/ }).getAttribute('href')).toBe(
       '/manage/vehicles/new',
     );
+    // Yêu cầu đặt xe nằm chung bảng kanban của trang Đơn thuê (05/11/2026).
     expect(screen.getByRole('link', { name: /Duyệt yêu cầu đặt xe/ }).getAttribute('href')).toBe(
-      '/manage/booking-requests',
+      '/manage/bookings',
     );
   });
 
-  it('lọc theo quyền — không dẫn người dùng vào trang họ sẽ nhận 403', () => {
+  it('lọc theo quyền - không dẫn người dùng vào trang họ sẽ nhận 403', () => {
     grant(PERMISSION.TENANT_VIEW);
     render(<SupportCenter />);
 
@@ -71,7 +72,7 @@ describe('SupportCenter — hướng dẫn nhanh', () => {
   });
 });
 
-describe('SupportCenter — câu hỏi thường gặp', () => {
+describe('SupportCenter - câu hỏi thường gặp', () => {
   it('trả lời đúng hai câu mà cấu trúc menu cũ làm người dùng bối rối', () => {
     render(<SupportCenter />);
 
@@ -82,7 +83,7 @@ describe('SupportCenter — câu hỏi thường gặp', () => {
     expect(screen.getByText(/theo dõi cả đội xe/)).toBeTruthy();
   });
 
-  it('KHÔNG dựng form gửi yêu cầu hay số hotline — backend chưa có kênh nào', () => {
+  it('KHÔNG dựng form gửi yêu cầu hay số hotline - backend chưa có kênh nào', () => {
     render(<SupportCenter />);
 
     expect(screen.queryByRole('textbox')).toBeNull();

@@ -51,8 +51,14 @@ export function useOdometerHistory(vehicleId: string, page: number, enabled = tr
  * hình nói chuyện cũ cho tới lần tải trang sau.
  */
 export function useInvalidateMaintenance(vehicleId: string) {
+  const invalidate = useInvalidateMaintenanceFor();
+  return () => invalidate(vehicleId);
+}
+
+/** Như `useInvalidateMaintenance`, xe truyền lúc gọi — cho danh sách nhiều xe. */
+export function useInvalidateMaintenanceFor() {
   const queryClient = useQueryClient();
-  return () => {
+  return (vehicleId: string) => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.maintenance(vehicleId) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.maintenance.all });
     // Nhánh gốc gồm danh sách + stats + alerts của mọi xe đang hiển thị.
@@ -77,6 +83,7 @@ export function useMaintenanceBoardFilters() {
     sort: sp.get('sort') ?? 'remaining_asc',
     page: positiveIntParam(sp, 'page'),
     limit: positiveIntParam(sp, 'limit'),
+    resolve: sp.get('resolve') ?? undefined,
   }));
 }
 

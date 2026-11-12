@@ -202,7 +202,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Vận hành chuyến — khung màn', () => {
+describe('Vận hành chuyến - khung màn', () => {
   it('mặc định mở hàng đợi chờ chủ xe duyệt, dải tóm tắt trả lời trước', () => {
     renderView();
 
@@ -254,7 +254,7 @@ describe('Vận hành chuyến — khung màn', () => {
   });
 });
 
-describe('Vận hành chuyến — hàng đợi yêu cầu', () => {
+describe('Vận hành chuyến - hàng đợi yêu cầu', () => {
   it('chờ duyệt: khách (SĐT che), xe · gian hàng kèm SĐT chủ xe gọi được, đồng hồ hạn trả lời', () => {
     renderView();
 
@@ -316,7 +316,7 @@ describe('Vận hành chuyến — hàng đợi yêu cầu', () => {
   });
 });
 
-describe('Vận hành chuyến — hàng đợi đơn', () => {
+describe('Vận hành chuyến - hàng đợi đơn', () => {
   it('sắp giao xe: quá giờ thành chip đỏ "quá 2 giờ"; mở chi tiết ghi ?open= và giữ hàng đợi', () => {
     nav.params = new URLSearchParams('queue=pickup_soon');
     renderView();

@@ -30,7 +30,7 @@ import {
   VehicleSourceContractFileDto,
   VehicleSourceDto,
 } from './dto/vehicle-source.dto';
-import { VehicleAlertsListDto } from './dto/vehicle-alert.dto';
+import { VehicleAlertsListDto, VehicleNeedsActionCountDto } from './dto/vehicle-alert.dto';
 import { VehicleAlertsService, vehicleAlertScopeOf } from './vehicle-alerts.service';
 import { VehicleContractsService } from './vehicle-contracts.service';
 import { VehicleSourceService } from './vehicle-source.service';
@@ -129,6 +129,28 @@ export class VehiclesController {
         query.ids,
         // Scope theo TỪNG MIỀN (Wave 8.1): endpoint chỉ đòi `vehicles.view`, nên miền nào
         // không có quyền thì không được tính, không được đếm, không được dẫn link.
+        vehicleAlertScopeOf(tenant.permissions),
+      ),
+    };
+  }
+
+  /**
+   * Số xe đang có việc "cần xử lý" — huy hiệu mục menu Danh sách xe (03/11/2026). Cùng phép tính
+   * và cùng scope quyền theo miền với `alerts`; phạm vi chi nhánh theo membership (ADR 0052).
+   * Route tĩnh phải đứng trước `:id`.
+   */
+  @Get('needs-action-count')
+  @RequirePermissions(PERMISSION.VEHICLE_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_VIEW)
+  @ApiOperation({ summary: 'Số xe có việc cần xử lý (huy hiệu menu Danh sách xe)' })
+  @ApiOkResponse({ type: VehicleNeedsActionCountDto })
+  async needsActionCount(
+    @CurrentTenant() tenant: TenantContext,
+  ): Promise<VehicleNeedsActionCountDto> {
+    return {
+      count: await this.alertsService.needsActionCount(
+        tenant.tenantId,
+        tenant.allowedBranchIds,
         vehicleAlertScopeOf(tenant.permissions),
       ),
     };
@@ -346,7 +368,7 @@ export class VehiclesController {
   @RequirePermissions(PERMISSION.VEHICLE_SUBMIT_PUBLIC)
   // Phiên hỗ trợ gửi DUYỆT thay chủ xe — phiếu vào hàng đợi của đội duyệt, không bao giờ tự duyệt.
   @SupportAction(SUPPORT_CAPABILITY.VEHICLE_SUBMIT_REVIEW)
-  @ApiOperation({ summary: 'Gửi xe đi duyệt công khai (đi qua luồng duyệt nền tảng — ADR 0008)' })
+  @ApiOperation({ summary: 'Gửi xe đi duyệt công khai (đi qua luồng duyệt nền tảng - ADR 0008)' })
   @ApiOkResponse({ type: VehicleDetailDto })
   submitPublic(
     @CurrentTenant() tenant: TenantContext,
@@ -370,7 +392,7 @@ export class VehiclesController {
   @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
   @Patch(':id/marketplace-visibility')
   @RequirePermissions(PERMISSION.VEHICLE_SUBMIT_PUBLIC)
-  @ApiOperation({ summary: 'Bật/tắt hiển thị xe trên chợ (lựa chọn của chủ xe — ADR 0048)' })
+  @ApiOperation({ summary: 'Bật/tắt hiển thị xe trên chợ (lựa chọn của chủ xe - ADR 0048)' })
   @ApiOkResponse({ type: VehicleDetailDto })
   setMarketplaceVisibility(
     @CurrentTenant() tenant: TenantContext,
@@ -392,7 +414,7 @@ export class VehiclesController {
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
   @SupportAction(SUPPORT_CAPABILITY.LISTING_REPAIR)
-  @ApiOperation({ summary: 'Đồng bộ lại snapshot công khai của xe (phiên hỗ trợ — ADR 0050)' })
+  @ApiOperation({ summary: 'Đồng bộ lại snapshot công khai của xe (phiên hỗ trợ - ADR 0050)' })
   @ApiOkResponse({ type: ListingRepairResultDto })
   repairListing(
     @CurrentTenant() tenant: TenantContext,

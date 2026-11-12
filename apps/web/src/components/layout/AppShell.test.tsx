@@ -55,6 +55,9 @@ vi.mock('@/services/auth.service', () => ({ destroySession: vi.fn(async () => un
 vi.mock('./Sidebar', () => ({ Sidebar: () => <div data-testid="sidebar" /> }));
 vi.mock('./Topbar', () => ({ Topbar: () => <div data-testid="topbar" /> }));
 vi.mock('./MobileNav', () => ({ MobileNav: () => <div data-testid="mobile-nav" /> }));
+// Site partner dựng header menu ngang (ShellFrame layout=topnav) thay cho sidebar + topbar.
+vi.mock('./PartnerHeader', () => ({ PartnerHeader: () => <div data-testid="partner-header" /> }));
+vi.mock('./PartnerBreadcrumb', () => ({ PartnerBreadcrumb: () => null }));
 
 const CUSTOMER = { displayName: 'Khách A', tenant: null, platformRole: null };
 /**
@@ -129,7 +132,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('AppShell — tài khoản đối tác chưa có gian hàng', () => {
+describe('AppShell - tài khoản đối tác chưa có gian hàng', () => {
   /*
    * B1 dòng 1: chưa có gian hàng → `/register` chọn tuyến. KHÔNG tự hiện form tạo gian hàng (form
    * chỉ sống ở `/onboarding` SAU khi chọn tuyến), và không dựng khung với tenant null.
@@ -138,7 +141,7 @@ describe('AppShell — tài khoản đối tác chưa có gian hàng', () => {
     state.user = CUSTOMER;
     renderShell();
 
-    expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(screen.queryByTestId('partner-header')).toBeNull();
     expect(screen.queryByTestId('page')).toBeNull();
     expect(screen.queryByText('Tên gian hàng')).toBeNull();
     await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('/manage/register'));
@@ -148,13 +151,13 @@ describe('AppShell — tài khoản đối tác chưa có gian hàng', () => {
    * Bước đầu của tuyến hoa hồng: wizard đăng xe nhanh mở được khi CHƯA có gian hàng, và tự dựng khung
    * tập trung của nó — không sidebar, để sidebar không bật lên giữa chừng khi gian hàng vừa mở.
    */
-  it('wizard đăng xe nhanh: vào được khi chưa có gian hàng, không dựng sidebar', () => {
+  it('wizard đăng xe nhanh: vào được khi chưa có gian hàng, không dựng khung', () => {
     state.user = CUSTOMER;
     nav.pathname = '/manage/vehicles/register';
     renderShell();
 
     expect(screen.getByTestId('page')).toBeTruthy();
-    expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(screen.queryByTestId('partner-header')).toBeNull();
     expect(nav.replace).not.toHaveBeenCalled();
   });
 
@@ -166,7 +169,7 @@ describe('AppShell — tài khoản đối tác chưa có gian hàng', () => {
     state.user = ADMIN;
     renderShell();
 
-    expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(screen.queryByTestId('partner-header')).toBeNull();
     await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('/manage/register'));
   });
 
@@ -174,12 +177,12 @@ describe('AppShell — tài khoản đối tác chưa có gian hàng', () => {
     state.user = OWNER;
     renderShell();
 
-    expect(screen.getByTestId('sidebar')).toBeTruthy();
+    expect(screen.getByTestId('partner-header')).toBeTruthy();
     expect(screen.getByTestId('page')).toBeTruthy();
   });
 });
 
-describe('AppShell — route thoát khỏi khung portal', () => {
+describe('AppShell - route thoát khỏi khung portal', () => {
   it('/manage/login render thẳng, KHÔNG đòi đăng nhập (chống loop redirect)', () => {
     nav.pathname = '/manage/login';
     state.user = null;
@@ -196,11 +199,11 @@ describe('AppShell — route thoát khỏi khung portal', () => {
 
     expect(screen.getByTestId('page')).toBeTruthy();
     expect(screen.queryByText('Bạn chưa có gian hàng')).toBeNull();
-    expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(screen.queryByTestId('partner-header')).toBeNull();
   });
 });
 
-describe('AppShell — phiên hỏng', () => {
+describe('AppShell - phiên hỏng', () => {
   it('/auth/me lỗi → dọn phiên và về portal login kèm next, không loop', async () => {
     nav.pathname = '/manage/vehicles';
     state.user = null;
@@ -217,33 +220,34 @@ describe('AppShell — phiên hỏng', () => {
     state.isLoading = true;
     renderShell();
 
-    expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(screen.queryByTestId('partner-header')).toBeNull();
     expect(screen.queryByTestId('page')).toBeNull();
     expect(nav.replace).not.toHaveBeenCalled();
   });
 });
 
-describe('AppShell — các vùng của khung', () => {
+describe('AppShell - các vùng của khung', () => {
   beforeEach(() => {
     state.user = OWNER;
   });
 
-  it('dựng đủ sidebar · topbar · vùng nội dung <main> · điều hướng mobile', () => {
+  it('dựng đủ header menu ngang · vùng nội dung <main> · điều hướng mobile - KHÔNG sidebar/topbar', () => {
     renderShell();
 
-    expect(screen.getByTestId('sidebar')).toBeTruthy();
-    expect(screen.getByTestId('topbar')).toBeTruthy();
+    expect(screen.getByTestId('partner-header')).toBeTruthy();
+    expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(screen.queryByTestId('topbar')).toBeNull();
     expect(screen.getByTestId('mobile-nav')).toBeTruthy();
     expect(screen.getByRole('main')).toBeTruthy();
   });
 
-  it('children nằm TRONG <main>, không nằm cạnh sidebar', () => {
+  it('children nằm TRONG <main>, không nằm cạnh header', () => {
     renderShell();
 
     expect(screen.getByRole('main').contains(screen.getByTestId('page'))).toBe(true);
   });
 
-  it('cả sidebar lẫn điều hướng mobile đều luôn mount — chọn hiện cái nào là việc của CSS', () => {
+  it('cả header lẫn điều hướng mobile đều luôn mount - chọn hiện cái nào là việc của CSS', () => {
     // Hiện trạng: `AppShell` KHÔNG gọi `useIsMobile`/`useIsTablet`. Không có nhánh JS nào theo
     // breakpoint; `Sidebar` và thanh tab của `MobileNav` loại trừ nhau bằng `@media` trong
     // `.module.css`. Wave 1D đổi ranh 992→1024 là đổi ở đó — nếu chuyển sang nhánh JS thì
@@ -251,7 +255,7 @@ describe('AppShell — các vùng của khung', () => {
     const matchMedia = vi.spyOn(window, 'matchMedia');
     renderShell();
 
-    expect(screen.getByTestId('sidebar')).toBeTruthy();
+    expect(screen.getByTestId('partner-header')).toBeTruthy();
     expect(screen.getByTestId('mobile-nav')).toBeTruthy();
     expect(matchMedia).not.toHaveBeenCalled();
   });
@@ -262,7 +266,7 @@ describe('AppShell — các vùng của khung', () => {
 
     expect(screen.getByText('Hồ sơ đang chờ nền tảng duyệt')).toBeTruthy();
     expect(screen.getByTestId('page')).toBeTruthy();
-    expect(screen.getByTestId('sidebar')).toBeTruthy();
+    expect(screen.getByTestId('partner-header')).toBeTruthy();
   });
 
   it('gian hàng đang hoạt động: KHÔNG có dải trạng thái nào', () => {
@@ -280,7 +284,7 @@ describe('AppShell — các vùng của khung', () => {
  * nó nằm đè lên một dải khác nói ngược lại ("Hồ sơ chưa được gửi duyệt"). Ba trạng thái xấu còn
  * lại thì không có dải nào: gian hàng bị khoá chỉ biết qua việc xe biến mất khỏi marketplace.
  */
-describe('AppShell — dải trạng thái gian hàng', () => {
+describe('AppShell - dải trạng thái gian hàng', () => {
   // Dải trạng thái chỉ hiện TRONG cổng quản lý, nên fixture phải là gian hàng tuyến GÓI —
   // tuyến hoa hồng không render khung này (xem describe 'cổng tuyến').
   const withStatus = (status: string) => ({
@@ -296,7 +300,7 @@ describe('AppShell — dải trạng thái gian hàng', () => {
     platformRole: null,
   });
 
-  it('nháp: nói CHƯA GỬI, không nói đang chờ — và chỉ đường về hồ sơ', () => {
+  it('nháp: nói CHƯA GỬI, không nói đang chờ - và chỉ đường về hồ sơ', () => {
     state.user = withStatus('draft');
     renderShell();
 
@@ -325,7 +329,7 @@ describe('AppShell — dải trạng thái gian hàng', () => {
     expect(screen.getByRole('button', { name: new RegExp(action) })).toBeTruthy();
   });
 
-  it('ở CHÍNH /manage/shop thì im lặng — trang đó đã có bản đầy đủ, hai dải là hai câu chồng nhau', () => {
+  it('ở CHÍNH /manage/shop thì im lặng - trang đó đã có bản đầy đủ, hai dải là hai câu chồng nhau', () => {
     nav.pathname = '/manage/shop';
     state.user = withStatus('draft');
     renderShell();
@@ -346,23 +350,23 @@ describe('AppShell — dải trạng thái gian hàng', () => {
     state.user = CUSTOMER;
     renderShell();
 
-    expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(screen.queryByTestId('partner-header')).toBeNull();
     expect(screen.queryByTestId('topbar')).toBeNull();
     expect(screen.queryByTestId('mobile-nav')).toBeNull();
     expect(screen.queryByRole('main')).toBeNull();
   });
 });
 
-describe('AppShell — ranh giới quyền giữ nguyên', () => {
+describe('AppShell - ranh giới quyền giữ nguyên', () => {
   it('vừa có gian hàng vừa là nhân sự nền tảng → vẫn vào khung, không bị chặn', () => {
     state.user = DUAL;
     renderShell();
 
-    expect(screen.getByTestId('sidebar')).toBeTruthy();
+    expect(screen.getByTestId('partner-header')).toBeTruthy();
     expect(screen.getByTestId('page')).toBeTruthy();
   });
 
-  it('AppShell KHÔNG tự quyết quyền — không đọc usePermissions', () => {
+  it('AppShell KHÔNG tự quyết quyền - không đọc usePermissions', () => {
     // Lọc menu là việc của `useManageNav`; chặn `/manage/admin/*` là việc của `admin/layout`;
     // chặn thật là guard backend. Khung chỉ phân biệt "đã đăng nhập / có gian hàng".
     const code = codeOf('./AppShell.tsx');
@@ -400,7 +404,7 @@ function wrapsAppShell(source: string): boolean {
   return /<AppShell[\s>]/.test(source);
 }
 
-describe('AppShell — vùng nội dung co theo bề rộng sidebar', () => {
+describe('AppShell - vùng nội dung co theo bề rộng sidebar', () => {
   const css = sourceOf('./AppShell.module.css');
 
   it('vỏ là flex: sidebar cột cố định, nội dung ăn phần còn lại', () => {
@@ -412,7 +416,7 @@ describe('AppShell — vùng nội dung co theo bề rộng sidebar', () => {
     expect(css).not.toContain('var(--xp-shell-sidebar-collapsed-width)');
   });
 
-  it('`.main` giữ min-width: 0 — thứ chặn bảng rộng đẩy tràn cả trang', () => {
+  it('`.main` giữ min-width: 0 - thứ chặn bảng rộng đẩy tràn cả trang', () => {
     expect(css).toMatch(/\.main\s*\{[^}]*min-width:\s*0/);
   });
 
@@ -439,7 +443,7 @@ describe('AppShell — vùng nội dung co theo bề rộng sidebar', () => {
   });
 });
 
-describe('AppShell — chồng lớp overlay', () => {
+describe('AppShell - chồng lớp overlay', () => {
   it('vỏ nằm DƯỚI mọi overlay của AntD', () => {
     // `ResponsiveDialog` và `DetailDrawer` không tự đặt z-index — AntD xếp chúng từ
     // `zIndexPopupBase`. Vỏ phải nằm thấp hơn con số đó, nếu không modal/drawer sẽ chui
@@ -455,7 +459,7 @@ describe('AppShell — chồng lớp overlay', () => {
   });
 });
 
-describe('MobileNav — ngoại lệ có chủ ý với DetailDrawer', () => {
+describe('MobileNav - ngoại lệ có chủ ý với DetailDrawer', () => {
   it('dùng thẳng Drawer của AntD, KHÔNG dùng DetailDrawer', () => {
     // `DetailDrawer` (Wave 1B) mang ngữ nghĩa "chi tiết một thực thể nghiệp vụ". Điều hướng
     // không phải thực thể. Ghi lại như ngoại lệ (kiểm kê trùng lặp Wave 0B §D17, đã nghỉ hưu).
@@ -471,7 +475,7 @@ describe('MobileNav — ngoại lệ có chủ ý với DetailDrawer', () => {
   });
 });
 
-describe('AppShell — không bọc nhầm khu công khai', () => {
+describe('AppShell - không bọc nhầm khu công khai', () => {
   it('CHỈ route group (manage) bọc AppShell', () => {
     expect(wrapsAppShell(sourceOf('../../app/(manage)/layout.tsx'))).toBe(true);
   });
@@ -502,7 +506,7 @@ describe('AppShell — không bọc nhầm khu công khai', () => {
   });
 });
 
-describe('AppShell — băng "gói hết hạn" của tính năng đang đọc (ADR 0027 điều 3)', () => {
+describe('AppShell - băng "gói hết hạn" của tính năng đang đọc (ADR 0027 điều 3)', () => {
   /**
    * Băng tra `pathname → leaf.feature` từ CHÍNH cây nav, nên test đi qua đúng đường đó: đặt
    * pathname vào một trang bị gác rồi bật `read_only` cho đúng cờ của trang ấy.
@@ -536,7 +540,7 @@ describe('AppShell — băng "gói hết hạn" của tính năng đang đọc (
     expect(screen.queryByText(/đang ở chế độ chỉ xem/)).toBeNull();
   });
 
-  it('hidden KHÔNG dựng băng — đó là màn upsell, không phải băng nhắc gia hạn', () => {
+  it('hidden KHÔNG dựng băng - đó là màn upsell, không phải băng nhắc gia hạn', () => {
     features.states = { finance: 'hidden' };
     shellAt('/manage/receipts');
 
@@ -554,7 +558,7 @@ describe('AppShell — băng "gói hết hạn" của tính năng đang đọc (
  * Đây là lớp trải nghiệm; lớp chặn thật là `@RequiresFeature` ở backend. Nhưng lớp này phải đúng,
  * nếu không người dùng vẫn nhìn thấy một khu họ không dùng được.
  */
-describe('AppShell — cổng tuyến', () => {
+describe('AppShell - cổng tuyến', () => {
   const COMMISSION_OWNER = {
     displayName: 'Chủ xe',
     tenant: {
@@ -574,7 +578,7 @@ describe('AppShell — cổng tuyến', () => {
     state.user = COMMISSION_OWNER;
     renderShell();
 
-    expect(screen.getByTestId('sidebar')).toBeTruthy();
+    expect(screen.getByTestId('partner-header')).toBeTruthy();
     expect(screen.getByTestId('page')).toBeTruthy();
     expect(nav.replace).not.toHaveBeenCalled();
   });
@@ -588,7 +592,7 @@ describe('AppShell — cổng tuyến', () => {
     await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('/manage'));
   });
 
-  it('chủ xe đang đăng ký vẫn ở trang chủ — trang chủ tự hiện tiến trình đăng ký', () => {
+  it('chủ xe đang đăng ký vẫn ở trang chủ - trang chủ tự hiện tiến trình đăng ký', () => {
     state.user = {
       ...COMMISSION_OWNER,
       tenant: { ...COMMISSION_OWNER.tenant, status: 'draft', publicVehicleCount: 0 },
@@ -603,7 +607,7 @@ describe('AppShell — cổng tuyến', () => {
     state.user = OWNER;
     renderShell();
 
-    expect(screen.getByTestId('sidebar')).toBeTruthy();
+    expect(screen.getByTestId('partner-header')).toBeTruthy();
     expect(nav.replace).not.toHaveBeenCalled();
   });
 
@@ -623,7 +627,7 @@ describe('AppShell — cổng tuyến', () => {
     nav.pathname = '/manage/onboarding';
     renderShell();
     expect(screen.getByTestId('page')).toBeTruthy();
-    expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(screen.queryByTestId('partner-header')).toBeNull();
     expect(nav.replace).not.toHaveBeenCalled();
   });
 });

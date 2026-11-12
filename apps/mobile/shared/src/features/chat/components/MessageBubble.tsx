@@ -191,7 +191,7 @@ export const MessageBubble = memo(function MessageBubble({
       pb={2}
     >
       {senderName ? (
-        <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.semibold} mb={2}>
+        <Text col={colors.placeholder} fos={fontSize.label} fow={fontWeight.semibold} mb={2}>
           {senderName}
         </Text>
       ) : null}
@@ -241,7 +241,7 @@ export const MessageBubble = memo(function MessageBubble({
                   {t('aboutVehicle')}
                 </Text>
                 <Text
-                  col={colors.primaryActive}
+                  col={colors.accentText}
                   fos={fontSize.label}
                   fow={fontWeight.semibold}
                   numberOfLines={2}
@@ -290,7 +290,7 @@ export const MessageBubble = memo(function MessageBubble({
             accessibilityRole="button"
             hitSlop={space.sm}
           >
-            <Text col={colors.primaryActive} fos={fontSize.label} fow={fontWeight.semibold}>
+            <Text col={colors.accentText} fos={fontSize.label} fow={fontWeight.semibold}>
               {t('retrySend')}
             </Text>
           </Pressable>

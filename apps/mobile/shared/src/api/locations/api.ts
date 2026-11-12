@@ -67,18 +67,29 @@ export const locationsApi = {
  * `available: false`, và ô nhập rơi về nhập tay.
  */
 export const placesApi = {
-  async search(q: string, bias?: { lat: number; lng: number } | null): Promise<PlaceSearchResult> {
+  async search(
+    q: string,
+    bias?: { lat: number; lng: number } | null,
+    /** Tỉnh/xã đã chọn (ADR 0077): server nối tên vào truy vấn và loại gợi ý khác tỉnh. */
+    scope?: { provinceCode: string; wardCode?: string | null } | null,
+  ): Promise<PlaceSearchResult> {
     const params = new URLSearchParams({ q });
     if (bias) {
       params.set('lat', String(bias.lat));
       params.set('lng', String(bias.lng));
     }
+    if (scope?.provinceCode) {
+      params.set('provinceCode', scope.provinceCode);
+      if (scope.wardCode) params.set('wardCode', scope.wardCode);
+    }
     return getApiClient().get<PlaceSearchResult>(`/places/search?${params.toString()}`);
   },
 
-  async detail(placeId: string): Promise<PlaceDetailResult> {
+  async detail(placeId: string, provinceCode?: string | null): Promise<PlaceDetailResult> {
+    // Có tỉnh đã chọn thì server gợi ý mã xã khớp (`suggestedWardCode`, ADR 0077).
+    const province = provinceCode ? `&provinceCode=${encodeURIComponent(provinceCode)}` : '';
     return getApiClient().get<PlaceDetailResult>(
-      `/places/detail?placeId=${encodeURIComponent(placeId)}`,
+      `/places/detail?placeId=${encodeURIComponent(placeId)}${province}`,
     );
   },
 

@@ -13,10 +13,9 @@
 
 .cellLabel {
   color: var(--xp-color-text-secondary);
-  font-size: 11px;
-  font-weight: var(--xp-font-weight-semibold, 600);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 .box {
@@ -24,11 +23,12 @@
   min-width: 0;
   height: 44px;
   align-items: center;
-  padding: 0 10px;
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-muted);
-  gap: 6px;
+  padding: 0 14px;
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-control);
+  box-shadow: var(--xp-elevation-xs);
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-sm);
 }
 
 .box:focus-within {
@@ -50,8 +50,8 @@
   min-width: 0;
   flex: 1;
   padding: 0 !important;
-  font-size: 15px;
-  font-weight: var(--xp-font-weight-medium, 500);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular);
 }
 
 .grow :global(.ant-select-selector) {
@@ -82,4 +82,10 @@
 .routeHint {
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-sm, 13px);
+}
+
+/* ── Giao diện tối (Figma "Homepage - Dark Mode") — chữ/icon vàng đậm của bản sáng chìm trên nền
+   tối; đổi sang gold chính `--xp-color-primary`. */
+:global([data-theme='dark']) .boxIcon {
+  color: var(--xp-color-primary);
 }

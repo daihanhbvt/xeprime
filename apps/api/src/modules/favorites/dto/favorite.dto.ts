@@ -71,7 +71,7 @@ export class FavoriteListQueryDto {
  * đóng băng lúc bấm thích (BRD §6.5).
  */
 export class FavoriteVehicleDto extends PublicListingDto {
-  @ApiProperty({ description: 'Lúc khách lưu xe này — ISO-8601 UTC.' })
+  @ApiProperty({ description: 'Lúc khách lưu xe này - ISO-8601 UTC.' })
   favoritedAt!: string;
 }
 
@@ -84,7 +84,7 @@ export class FavoriteVehiclePageDto {
 export class FavoriteStatusQueryDto {
   @ApiProperty({
     type: String,
-    description: `Id xe — CSV, tối đa ${FAVORITE_STATUS_MAX_IDS} id một lượt.`,
+    description: `Id xe - CSV, tối đa ${FAVORITE_STATUS_MAX_IDS} id một lượt.`,
   })
   @Transform(splitCsv)
   @IsArray()

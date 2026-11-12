@@ -64,7 +64,7 @@ async function renderSheet(decision: Decision) {
  * sai mà là một tính năng CHẾT: mọi lượt huỷ đơn từ app nhận 400, và không màn hình nào nói ra
  * điều đó — tấm vẫn dựng bình thường, chỉ lượt gửi là hỏng.
  */
-describe('BookingStatusSheet — huỷ đơn', () => {
+describe('BookingStatusSheet - huỷ đơn', () => {
   it('bày lưới nhóm lý do', async () => {
     const { view } = await renderSheet(BOOKING_STATUS.CANCELLED);
 
@@ -122,7 +122,7 @@ describe('BookingStatusSheet — huỷ đơn', () => {
  * khách chứ không phải gian hàng. DTO cũng chỉ đòi nhóm khi `status = cancelled` — gửi thừa là
  * ghi một phân loại HUỶ cho một việc không phải lượt huỷ.
  */
-describe('BookingStatusSheet — khách không đến', () => {
+describe('BookingStatusSheet - khách không đến', () => {
   it('không bày lưới nhóm lý do, và payload không kèm `reasonCategory`', async () => {
     const { view, onConfirm, confirm } = await renderSheet(BOOKING_STATUS.NO_SHOW);
 

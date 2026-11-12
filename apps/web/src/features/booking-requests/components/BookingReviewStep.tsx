@@ -19,6 +19,7 @@ import type { RequestFormValues } from '../schema';
 import { BookingRenterCard } from './BookingRenterCard';
 import { BookingRequirementsCard } from './BookingRequirementsCard';
 import { BookingTripCard, type BookingTrip } from './BookingTripCard';
+import { staggerFastClass } from '@/components/motion/motion-classes';
 import styles from './BookingReviewStep.module.css';
 
 /** Sau khi gửi thì chuyện gì xảy ra — server biết, không suy theo dịch vụ ở đây. */
@@ -107,7 +108,7 @@ export function BookingReviewStep({
 
       <div className={styles.columns}>
         {/* ── Cột trái: chuyến · người thuê · giấy tờ ─────────────────────────────────── */}
-        <div className={styles.main}>
+        <div className={cx(styles.main, staggerFastClass)}>
           <BookingTripCard
             listing={listing}
             vehicleName={vehicleName}
@@ -141,7 +142,7 @@ export function BookingReviewStep({
         </div>
 
         {/* ── Cột phải: tiền · đồng ý + gửi · sau khi gửi ─────────────────────────────── */}
-        <div className={styles.aside}>
+        <div className={cx(styles.aside, staggerFastClass)}>
           {costs}
 
           <section className={cx(styles.card, styles.submitCard)}>

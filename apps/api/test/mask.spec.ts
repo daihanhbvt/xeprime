@@ -60,10 +60,10 @@ describe('maskEmail', () => {
 });
 
 describe('phone', () => {
-  it('normalizePhone → dạng lưu của users.phone (`84…`)', () => {
-    expect(normalizePhone('0912345678')).toBe('84912345678');
-    expect(normalizePhone('+84912345678')).toBe('84912345678');
-    expect(normalizePhone('84912345678')).toBe('84912345678');
+  it('normalizePhone → dạng lưu chung (`0…`, ADR 0082)', () => {
+    expect(normalizePhone('0912345678')).toBe('0912345678');
+    expect(normalizePhone('+84912345678')).toBe('0912345678');
+    expect(normalizePhone('84912345678')).toBe('0912345678');
   });
 
   it('toLocalPhone → dạng hiển thị (`0…`)', () => {

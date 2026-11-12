@@ -13,6 +13,12 @@ interface OtpCodeEntryProps {
   onComplete: (code: string) => void;
   /** Đang gửi mã đi: khoá gõ, giữ focus. */
   submitting: boolean;
+  /**
+   * Mã đã bị server huỷ (khoá vì đoán sai / hết hạn — `usePhoneVerify().codeDead`): khoá hẳn ô mã,
+   * câu báo đứng yên cho tới khi người dùng gửi mã mới. Gõ tiếp vào một mã đã chết chỉ đổi câu báo
+   * thật thành "mã không đúng".
+   */
+  locked?: boolean;
   /** Lỗi của lượt gửi mã / gửi lại — đã dịch từ MÃ lỗi. */
   error: string | null;
   /** Mã dev của provider mock (dev/staging) — production luôn `null`. */
@@ -31,6 +37,7 @@ export function OtpCodeEntry({
   onChange,
   onComplete,
   submitting,
+  locked = false,
   error,
   devCode,
   inputRef,
@@ -46,8 +53,9 @@ export function OtpCodeEntry({
         value={value}
         onChange={onChange}
         onComplete={(full) => {
-          if (!submitting) onComplete(full);
+          if (!submitting && !locked) onComplete(full);
         }}
+        disabled={locked}
         readOnly={submitting}
         invalid={error !== null}
         describedBy={error ? errorId : undefined}
@@ -65,7 +73,7 @@ export function OtpCodeEntry({
 
 /**
  * Nút gửi của bản vẽ luôn sáng: mã đủ số thì gửi, chưa đủ thì đưa con trỏ về ô mã — không gửi một
- * mã thiếu chỉ để nhận câu "sai mã".
+ * mã thiếu chỉ để nhận câu "sai mã". Mã đã chết (`locked`) thì nơi gọi tắt nút, không gọi tới đây.
  */
 export function submitCodeOrFocus(
   code: string,

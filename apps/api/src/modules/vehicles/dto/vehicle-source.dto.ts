@@ -5,6 +5,7 @@ import {
   SOURCE_CONTRACT_MAX_FILES,
   VEHICLE_FINANCE_INTEREST_METHOD_VALUES,
   VEHICLE_SOURCE_TYPE_VALUES,
+  VN_PHONE_PATTERN,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
@@ -20,6 +21,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { OptionalPhoneInput } from '../../../common/phone';
 import { IsCalendarDate } from '../../../common/calendar-date';
 
 /** Tiền dạng chuỗi thập phân (ADR 0007) — cùng pattern với vehicle.dto. */
@@ -75,7 +77,7 @@ export class PresignSourceContractDto {
 }
 
 export class SourceContractPresignDto {
-  @ApiProperty({ description: 'ID file riêng tư — dùng cho bước hoàn tất + đính vào hồ sơ' })
+  @ApiProperty({ description: 'ID file riêng tư - dùng cho bước hoàn tất + đính vào hồ sơ' })
   fileId!: string;
 
   @ApiProperty({ description: 'URL PUT lên bucket riêng tư (hết hạn ngắn)' })
@@ -85,10 +87,10 @@ export class SourceContractPresignDto {
 }
 
 export class SourceContractDownloadDto {
-  @ApiProperty({ description: 'Signed GET URL ngắn hạn — không cache, không lưu' })
+  @ApiProperty({ description: 'Signed GET URL ngắn hạn - không cache, không lưu' })
   downloadUrl!: string;
 
-  @ApiProperty({ description: 'ISO — thời điểm URL hết hiệu lực' })
+  @ApiProperty({ description: 'ISO - thời điểm URL hết hiệu lực' })
   expiresAt!: string;
 }
 
@@ -147,7 +149,7 @@ export class SaveVehicleSourceDto {
   @Matches(MONEY_PATTERN)
   monthlyInterest?: string | null;
 
-  @ApiPropertyOptional({ description: 'Lãi suất cố định %/năm (chuỗi 0–100)', type: String, nullable: true })
+  @ApiPropertyOptional({ description: 'Lãi suất cố định %/năm (chuỗi 0-100)', type: String, nullable: true })
   @IsOptional()
   @Matches(PERCENT_PATTERN)
   interestRatePercent?: string | null;
@@ -172,10 +174,15 @@ export class SaveVehicleSourceDto {
   @MaxLength(160)
   ownerName?: string | null;
 
-  @ApiPropertyOptional({ description: 'Số điện thoại liên hệ của chủ xe', type: String, nullable: true })
+  @ApiPropertyOptional({
+    description: 'SĐT liên hệ của chủ xe - `0…`/`84…`/`+84…`, chỉ chữ số; lưu `0…` (ADR 0082)',
+    type: String,
+    nullable: true,
+  })
+  @OptionalPhoneInput()
   @IsOptional()
   @IsString()
-  @MaxLength(30)
+  @Matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
   ownerPhone?: string | null;
 
   @ApiPropertyOptional({ description: 'Email chủ xe (tuỳ chọn)', type: String, nullable: true })
@@ -193,14 +200,14 @@ export class SaveVehicleSourceDto {
     type: String,
     nullable: true,
     description:
-      '% doanh thu chia cho CHỦ XE (0–100). Cơ sở: tiền thuê sau giảm giá; không gồm cọc/giao nhận/quá giờ/phạt/bồi thường.',
+      '% doanh thu chia cho CHỦ XE (0-100). Cơ sở: tiền thuê sau giảm giá; không gồm cọc/giao nhận/quá giờ/phạt/bồi thường.',
   })
   @IsOptional()
   @Matches(PERCENT_PATTERN)
   commissionPercent?: string | null;
 
   // ── chung ──
-  @ApiPropertyOptional({ description: 'Ngày trong tháng đến hạn đóng tiền (1–31)', type: Number, nullable: true })
+  @ApiPropertyOptional({ description: 'Ngày trong tháng đến hạn đóng tiền (1-31)', type: Number, nullable: true })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -252,7 +259,7 @@ export class VehicleSourceDetailDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Tổng phải đóng mỗi tháng = gốc + lãi — TÍNH RA, không lưu',
+    description: 'Tổng phải đóng mỗi tháng = gốc + lãi - TÍNH RA, không lưu',
   })
   monthlyTotal!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) interestRatePercent!: string | null;
@@ -276,7 +283,7 @@ export class VehicleSourceDetailDto {
    * không chặn lưu dở dang; phase nghĩa vụ tài chính tiêu thụ cờ này.
    */
   @ApiProperty() obligationReady!: boolean;
-  @ApiProperty({ description: 'ISO — lần cập nhật hồ sơ gần nhất' }) updatedAt!: string;
+  @ApiProperty({ description: 'ISO - lần cập nhật hồ sơ gần nhất' }) updatedAt!: string;
 }
 
 /**

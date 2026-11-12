@@ -1,4 +1,5 @@
 import { Text, XStack, YStack } from 'tamagui';
+import { RevealText, ScrollReveal } from '@/components/motion/ScrollReveal';
 import { useTranslations } from 'use-intl';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
@@ -24,17 +25,26 @@ export function ShopBranches({ branches }: { branches: PublicShop['branches'] })
 
   return (
     <YStack gap={space.md}>
-      <Text col={colors.text} fos={fontSize.lead} fow={fontWeight.semibold} accessibilityRole="header">
-        {t('title')}
-      </Text>
+      <ScrollReveal>
+        <RevealText>
+          <Text
+            col={colors.text}
+            fos={fontSize.lead}
+            fow={fontWeight.semibold}
+            accessibilityRole="header"
+          >
+            {t('title')}
+          </Text>
+        </RevealText>
+      </ScrollReveal>
       {/* Bề ngang điện thoại: một cột (web @760px `grid-template-columns: minmax(0, 1fr)`). */}
       <YStack gap={space.md}>
-        {branches.map((branch) => {
+        {branches.map((branch, i) => {
           const rating = branch.ratingAvg == null ? null : Number(branch.ratingAvg);
           const showRating = rating !== null && Number.isFinite(rating);
           return (
+            <ScrollReveal key={branch.id} index={i}>
             <XStack
-              key={branch.id}
               ai="center"
               gap={space.sm + space.xs}
               p={space.md}
@@ -54,7 +64,12 @@ export function ShopBranches({ branches }: { branches: PublicShop['branches'] })
                 <ShopMapIcon color={colors.primary} />
               </YStack>
               <YStack f={1} minWidth={0}>
-                <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.semibold} numberOfLines={1}>
+                <Text
+                  col={colors.text}
+                  fos={fontSize.h4}
+                  fow={fontWeight.semibold}
+                  numberOfLines={1}
+                >
                   {branch.name}
                 </Text>
                 <Text col={colors.textMuted} fos={fontSize.body}>
@@ -63,6 +78,12 @@ export function ShopBranches({ branches }: { branches: PublicShop['branches'] })
                     ? ` · ${branch.provinceName}`
                     : null}
                 </Text>
+                {/* Địa chỉ đủ — chỉ gian hàng tuyến gói (ADR 0077). */}
+                {branch.address ? (
+                  <Text col={colors.placeholder} fos={fontSize.bodySm}>
+                    {branch.address}
+                  </Text>
+                ) : null}
               </YStack>
               {showRating ? (
                 <XStack
@@ -78,6 +99,7 @@ export function ShopBranches({ branches }: { branches: PublicShop['branches'] })
                 </XStack>
               ) : null}
             </XStack>
+            </ScrollReveal>
           );
         })}
       </YStack>

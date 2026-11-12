@@ -1,16 +1,6 @@
 'use client';
 
-import {
-  AppstoreOutlined,
-  CarOutlined,
-  CheckOutlined,
-  ControlOutlined,
-  DollarOutlined,
-  DownOutlined,
-  FilterOutlined,
-  StarOutlined,
-  TeamOutlined,
-} from '@ant-design/icons';
+import { CheckOutlined } from '@ant-design/icons';
 import { Checkbox, Popover, type PopoverProps } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
@@ -20,16 +10,20 @@ import {
   SEAT_BUCKET_LABEL,
   SEAT_BUCKET_VALUES,
   SERVICE_TYPE,
+  LISTING_MIN_RATING_VALUES,
   TRANSMISSION_TYPE_EXT_LABEL,
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { catalogItemAppliesTo } from '@/features/catalog/types';
 import { useCatalog } from '@/features/catalog/use-catalog';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { cx } from '@/lib/cx';
 import { isPriceBandSelected, priceBandsFor, quickTransmissionsFor } from '../constants';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import { usePriceBandLabel } from './use-price-band-label';
+import { useScrollMore } from './use-scroll-more';
+import { ViewModeToggle } from './ViewModeToggle';
 import styles from './QuickFilterPills.module.css';
 
 interface QuickFilterPillsProps {
@@ -37,6 +31,10 @@ interface QuickFilterPillsProps {
   appliedCount?: number;
   className?: string;
   popupContainer?: () => HTMLElement;
+  /** Lớp bổ sung cho nút "Bộ lọc" — nơi gọi dùng để ẩn nó ở khổ có nút lọc riêng. */
+  filterButtonClassName?: string;
+  /** Nút chuyển lưới/danh sách sau "Bộ lọc" (Figma 22230:32079) - hero và thanh cố định desktop. */
+  showViewToggle?: boolean;
 }
 
 export function QuickFilterPills({
@@ -44,6 +42,8 @@ export function QuickFilterPills({
   appliedCount = 0,
   className,
   popupContainer,
+  filterButtonClassName,
+  showViewToggle = false,
 }: QuickFilterPillsProps) {
   const t = useTranslations('Marketplace.results');
   const tFilters = useTranslations('Marketplace.filterPanel');
@@ -74,6 +74,7 @@ export function QuickFilterPills({
 
   // Local state for popovers to control open/close
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const { ref: containerRef, canLeft, canRight, scrollBy } = useScrollMore<HTMLDivElement>();
 
   /*
    * Chỉ mở bằng `click` (đồng nhất với LocationPicker và RentalDateTimeRangeField):
@@ -100,7 +101,13 @@ export function QuickFilterPills({
   };
 
   return (
-    <div className={cx(styles.container, className)}>
+    <div ref={containerRef} className={cx(styles.container, className)}>
+      <ScrollHint
+        direction="left"
+        visible={canLeft}
+        onScroll={scrollBy}
+        label={t('quickPills.scrollPrev')}
+      />
       {/* 1. Nhu cầu (Service Type) */}
       <Popover
         {...pillPopover('demand')}
@@ -170,12 +177,11 @@ export function QuickFilterPills({
       >
         <button type="button" className={cx(styles.pill, filters.serviceType && styles.pillActive)}>
           <span className={styles.pillIcon}>
-            <ControlOutlined />
+            <LineIcon name="chart" />
           </span>
           <span>
             {filters.serviceType ? domainLabel('serviceType', filters.serviceType) : t('demand')}
           </span>
-          <DownOutlined className={styles.pillArrow} />
         </button>
       </Popover>
 
@@ -201,10 +207,9 @@ export function QuickFilterPills({
           className={cx(styles.pill, (filters.brand?.length ?? 0) > 0 && styles.pillActive)}
         >
           <span className={styles.pillIcon}>
-            <AppstoreOutlined />
+            <LineIcon name="category" />
           </span>
           <span>{withCount(tFilters('brand'), filters.brand?.length)}</span>
-          <DownOutlined className={styles.pillArrow} />
         </button>
       </Popover>
 
@@ -250,15 +255,14 @@ export function QuickFilterPills({
           )}
         >
           <span className={styles.pillIcon}>
-            <CarOutlined />
+            <LineIcon name="car" />
           </span>
           <span>
             {withCount(
-              tFilters('bodyType'),
+              t('quickPills.bodyType'),
               isMotorbike ? filters.motorbikeCategory?.length : filters.bodyType?.length,
             )}
           </span>
-          <DownOutlined className={styles.pillArrow} />
         </button>
       </Popover>
 
@@ -311,12 +315,12 @@ export function QuickFilterPills({
           )}
         >
           <span className={styles.pillIcon}>
-            <DollarOutlined />
+            <LineIcon name="dollar-circle" />
           </span>
-          <span>{tFilters('priceRange')}</span>
-          <DownOutlined className={styles.pillArrow} />
+          <span>{t('quickPills.priceRange')}</span>
         </button>
       </Popover>
+
 
       {/* 5. Hộp số (Transmission) */}
       <Popover
@@ -366,10 +370,9 @@ export function QuickFilterPills({
           className={cx(styles.pill, (filters.transmission?.length ?? 0) > 0 && styles.pillActive)}
         >
           <span className={styles.pillIcon}>
-            <ControlOutlined />
+            <LineIcon name="filter-4" />
           </span>
           <span>{tFilters('transmission')}</span>
-          <DownOutlined className={styles.pillArrow} />
         </button>
       </Popover>
 
@@ -396,10 +399,9 @@ export function QuickFilterPills({
             className={cx(styles.pill, (filters.seats?.length ?? 0) > 0 && styles.pillActive)}
           >
             <span className={styles.pillIcon}>
-              <TeamOutlined />
+              <LineIcon name="users-2" />
             </span>
-            <span>{tFilters('seats')}</span>
-            <DownOutlined className={styles.pillArrow} />
+            <span>{t('quickPills.seats')}</span>
           </button>
         </Popover>
       ) : null}
@@ -449,19 +451,109 @@ export function QuickFilterPills({
           )}
         >
           <span className={styles.pillIcon}>
-            <StarOutlined />
+            <LineIcon name="graph" />
           </span>
           <span>{tFilters('amenities')}</span>
-          <DownOutlined className={styles.pillArrow} />
         </button>
       </Popover>
 
+      {/* 8. Đánh giá (minRating) - Figma 19956:44170, cùng bộ mức với FilterModal. */}
+      <Popover
+        {...pillPopover('rating')}
+        content={
+          <div className={styles.popoverBody}>
+            <button
+              type="button"
+              className={cx(styles.menuItem, filters.minRating == null && styles.menuItemActive)}
+              onClick={() => {
+                setFilters({ minRating: undefined });
+                setOpenKey(null);
+              }}
+            >
+              <span>{tFilters('any')}</span>
+              {filters.minRating == null ? <CheckOutlined className={styles.checkIcon} /> : null}
+            </button>
+            {LISTING_MIN_RATING_VALUES.map((rating) => {
+              const active = filters.minRating === rating;
+              return (
+                <button
+                  key={rating}
+                  type="button"
+                  className={cx(styles.menuItem, active && styles.menuItemActive)}
+                  onClick={() => {
+                    setFilters({ minRating: rating });
+                    setOpenKey(null);
+                  }}
+                >
+                  <span>{tFilters('modal.ratingFrom', { rating })}</span>
+                  {active ? <CheckOutlined className={styles.checkIcon} /> : null}
+                </button>
+              );
+            })}
+          </div>
+        }
+      >
+        <button
+          type="button"
+          className={cx(styles.pill, filters.minRating != null && styles.pillActive)}
+        >
+          <span className={styles.pillIcon}>
+            <LineIcon name="like" />
+          </span>
+          <span>{t('rating')}</span>
+        </button>
+      </Popover>
+
+      {/* Điện thoại: cả khung là MỘT dòng cuộn ngang - mũi tên "còn nữa" ở mép phải (trước nút lọc nếu có). */}
+      <ScrollHint
+        direction="right"
+        visible={canRight}
+        onScroll={scrollBy}
+        label={t('quickPills.scrollMore')}
+      />
+
       {/* 9. Nút Bộ lọc (Action Button) */}
-      <button type="button" className={styles.filterBtn} onClick={onOpenFilterModal}>
-        <FilterOutlined />
+      <button
+        type="button"
+        className={cx(styles.filterBtn, filterButtonClassName)}
+        onClick={onOpenFilterModal}
+        aria-label={tFilters('title')}
+      >
         <span>{tFilters('title')}</span>
+        {/* Figma "Filter 5" (thanh trượt), đứng SAU chữ như bản vẽ — không phải phễu. */}
+        <LineIcon name="filter" className={styles.filterIcon} />
         {appliedCount > 0 ? <span className={styles.filterBadge}>{appliedCount}</span> : null}
       </button>
+      {showViewToggle ? <ViewModeToggle /> : null}
     </div>
+  );
+}
+
+/**
+ * Mũi tên gợi ý ở mép một khung viên cuộn ngang: "‹" khi đã rời đầu dòng, "›" khi bên phải còn
+ * viên khuất; bấm thì cuộn ~70% bề rộng theo hướng đó. Icon chỉ trang trí, tên nút ở aria-label.
+ */
+function ScrollHint({
+  direction,
+  visible,
+  onScroll,
+  label,
+}: {
+  direction: 'left' | 'right';
+  visible: boolean;
+  onScroll: (direction: 1 | -1) => void;
+  label: string;
+}) {
+  if (!visible) return null;
+  const left = direction === 'left';
+  return (
+    <button
+      type="button"
+      className={cx(styles.moreHint, left && styles.moreHintLeft)}
+      onClick={() => onScroll(left ? -1 : 1)}
+      aria-label={label}
+    >
+      <LineIcon name="chevron-right" className={left ? styles.chevronLeft : undefined} />
+    </button>
   );
 }

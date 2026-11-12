@@ -31,7 +31,7 @@ beforeEach(() => window.sessionStorage.clear());
 afterEach(() => vi.useRealTimers());
 
 describe('booking-draft', () => {
-  it('KHÔNG lưu ô đồng ý điều khoản — khôi phục xong ô đó luôn trống', () => {
+  it('KHÔNG lưu ô đồng ý điều khoản - khôi phục xong ô đó luôn trống', () => {
     saveBookingDraft('V1', {
       values: values({ acceptedTerms: true }),
       rentalMode: 'daily',
@@ -62,7 +62,7 @@ describe('booking-draft', () => {
     expect(hasBookingDraft('V2')).toBe(true);
   });
 
-  it('quá 30 phút thì bỏ — giá và lịch trống đã có thể khác', () => {
+  it('quá 30 phút thì bỏ - giá và lịch trống đã có thể khác', () => {
     vi.useFakeTimers({ now: new Date('2026-10-14T03:00:00.000Z') });
     saveBookingDraft('V1', { values: values(), rentalMode: 'daily', promoCode: null });
 

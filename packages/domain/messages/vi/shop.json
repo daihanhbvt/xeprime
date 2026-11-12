@@ -19,7 +19,7 @@
     "submit": "Gửi duyệt",
     "resubmit": "Gửi lại duyệt",
     "submitted": "Đã gửi hồ sơ cho nền tảng duyệt",
-    "incomplete": "{count, plural, other {Còn # mục chưa điền đúng}} — con trỏ đã nhảy tới mục đầu tiên.",
+    "incomplete": "{count, plural, other {Còn # mục chưa điền đúng}} - con trỏ đã nhảy tới mục đầu tiên.",
     "reason": "Đội duyệt ghi: {reason}",
     "submitConfirm": {
       "title": "Gửi hồ sơ cho nền tảng duyệt?",
@@ -52,7 +52,7 @@
     },
     "rejected": {
       "title": "Hồ sơ bị từ chối",
-      "body": "Chỉnh lại theo lý do bên dưới rồi gửi lại — hồ sơ vẫn gửi lại được.",
+      "body": "Chỉnh lại theo lý do bên dưới rồi gửi lại - hồ sơ vẫn gửi lại được.",
       "shell": "Hồ sơ gian hàng chưa được duyệt. Xem lý do rồi chỉnh lại và gửi lại."
     },
     "active": {
@@ -97,7 +97,7 @@
         "label": "Email liên hệ của gian hàng",
         "placeholder": "lienhe@tencuahang.vn"
       },
-      "contactHint": "Khách thấy số và email này khi đặt xe. Chúng khác với SĐT và email của tài khoản đăng nhập — đổi một bên không làm đổi bên kia.",
+      "contactHint": "Khách thấy số và email này khi đặt xe. Chúng khác với SĐT và email của tài khoản đăng nhập - đổi một bên không làm đổi bên kia.",
       "bio": {
         "label": "Giới thiệu",
         "placeholder": "Mô tả ngắn về gian hàng…"
@@ -122,7 +122,7 @@
         "placeholder": "Chọn tỉnh/thành",
         "loading": "Đang tải tỉnh/thành…",
         "loadError": "Không tải được danh sách tỉnh/thành",
-        "help": "Vị trí của chi nhánh mặc định — xe thuộc chi nhánh này sẽ hiển thị ở tỉnh/thành đã chọn.",
+        "help": "Vị trí của chi nhánh mặc định - xe thuộc chi nhánh này sẽ hiển thị ở tỉnh/thành đã chọn.",
         "branchLink": "Quản lý chi nhánh"
       },
       "taxCode": {
@@ -141,7 +141,7 @@
     "requiredDone": "Đã đủ điều kiện gửi duyệt",
     "profileRequiredTitle": "Thông tin bắt buộc",
     "profileRequiredDone": "Đã đủ thông tin bắt buộc",
-    "suggestedTitle": "Nên có — giúp khách chọn gian hàng của bạn",
+    "suggestedTitle": "Nên có - giúp khách chọn gian hàng của bạn",
     "goToField": "Điền",
     "items": {
       "displayName": "Tên hiển thị của gian hàng",
@@ -191,7 +191,67 @@
       "ok": "Xác nhận thay đổi"
     },
     "appliedTipLabel": "Giải thích phạm vi áp dụng chính sách",
-    "dirtyDiscard": "Hủy bỏ"
+    "dirtyDiscard": "Hủy bỏ",
+    "workspace": {
+      "title": "Chính sách thuê",
+      "subtitle": "Áp dụng làm quy định mặc định cho toàn bộ gian hàng. Bạn có thể tùy chỉnh chính sách riêng cho từng xe khi cần.",
+      "vehicleTabsLabel": "Chính sách theo loại xe",
+      "nav": {
+        "label": "Mục lục chính sách thuê",
+        "rules": "Chính sách & Quy định cho thuê",
+        "delivery": "Giao nhận xe",
+        "longTerm": "Ưu đãi dài hạn"
+      },
+      "actionsLabel": "Lưu chính sách thuê",
+      "switchType": {
+        "title": "Bỏ thay đổi chưa lưu?",
+        "body": "Chính sách {vehicle} đang có thay đổi chưa lưu. Chuyển sang {next} sẽ bỏ các thay đổi đó.",
+        "ok": "Bỏ thay đổi và chuyển"
+      },
+      "payment": {
+        "title": "Thanh toán & hóa đơn",
+        "subtitle": "Cách khách thanh toán giữ chỗ và quy trình xuất hóa đơn.",
+        "tipLabel": "Giải thích khoản giữ chỗ"
+      },
+      "procedures": {
+        "title": "Thủ tục & Điều khoản cho thuê"
+      },
+      "collateral": {
+        "title": "Tài sản thế chấp",
+        "modeCash": "Khách đặt một khoản tiền, chủ xe hoàn lại sau khi khách bàn giao xe xong.",
+        "modeNone": "Tạo điều kiện tối đa thu hút khách đặt thuê xe nhanh chóng.",
+        "overriddenTipLabel": "Xe dùng chính sách riêng"
+      },
+      "mileage": {
+        "hint": "Giới hạn km/ngày và phụ phí vượt mức."
+      },
+      "overtime": {
+        "title": "Hạn mức & phí trả xe quá giờ",
+        "hint": "Thời hạn trả xe và phụ phí trả xe trễ.",
+        "grace": "Miễn phí tối đa"
+      },
+      "delivery": {
+        "title": "Giao nhận xe",
+        "serviceTitle": "Dịch vụ giao nhận xe tận nơi",
+        "serviceHint": "Cấu hình phạm vi giao nhận và phí vận chuyển xe hai chiều cho đơn hàng",
+        "from": "Từ",
+        "to": "Đến",
+        "fee": "Phí áp dụng",
+        "ok": "Không có khoảng cách nào trùng nhau",
+        "empty": "Chưa có khoảng cách nào - thêm ít nhất một mốc để khách đặt giao xe tận nơi."
+      },
+      "turnaround": {
+        "title": "Thời gian chết giữa hai chuyến",
+        "hint": "Khoảng chuẩn bị (vệ sinh, sạc, kiểm tra,...) được cộng vào lịch xe sau mỗi chuyến.",
+        "applies": "{count, plural, other {# xe}} đang theo mặc định này. Xe tự đặt riêng ở trang sửa xe thì giữ số của xe.",
+        "tipLabel": "Giải thích phạm vi áp dụng thời gian chết"
+      },
+      "longTerm": {
+        "title": "Ưu đãi thuê dài hạn (trên 1 tháng)",
+        "empty": "Chưa có mốc ưu đãi - khách thuê dài hạn trả nguyên giá gói.",
+        "inactive": "Các mốc dưới đây đang tắt nên khách chưa thấy. Lưu thay đổi sẽ bật chúng; không muốn dùng thì xoá đi."
+      }
+    }
   },
   "vatInvoice": {
     "title": "Hoá đơn VAT",
@@ -200,14 +260,15 @@
     "ariaLabel": "Bật hoặc tắt hỗ trợ xuất hoá đơn VAT cho mọi xe",
     "on": "Đang bật cho mọi xe",
     "off": "Đang tắt",
-    "note": "Bạn tự xuất hoặc qua doanh nghiệp, đơn vị bạn sắp xếp — hoá đơn cho tiền thuê xe, theo thoả thuận trực tiếp với khách. XePrime không xuất hoá đơn thay bạn, và thiết lập này không đổi giá, phí, thuế hay điều kiện đặt xe.",
+    "note": "Bạn tự xuất hoặc qua doanh nghiệp, đơn vị bạn sắp xếp - hoá đơn cho tiền thuê xe, theo thoả thuận trực tiếp với khách. XePrime không xuất hoá đơn thay bạn, và thiết lập này không đổi giá, phí, thuế hay điều kiện đặt xe.",
     "enabled": "Đã bật hỗ trợ xuất hoá đơn VAT cho mọi xe",
     "disabled": "Đã tắt hỗ trợ xuất hoá đơn VAT",
-    "loadError": "Không tải được thiết lập hoá đơn VAT"
+    "loadError": "Không tải được thiết lập hoá đơn VAT",
+    "rowHint": "Khi bật, xe sẽ hiển thị nhãn hỗ trợ xuất hóa đơn trên thẻ xe và trang chi tiết, đồng thời xuất hiện trong bộ lọc tìm kiếm. Bạn chủ động xuất hóa đơn theo thỏa thuận với khách hàng; XePrime không xuất thay hoặc điều chỉnh giá thuê, phí và thuế."
   },
   "paymentSettings": {
     "title": "Thanh toán giữ chỗ qua XePrime",
-    "subtitle": "Trong giai đoạn này, mọi chuyến trên XePrime đều thu khoản giữ chỗ của khách trước khi chuyến được xác nhận. Đây KHÔNG phải tiền cọc/thế chấp bạn nhận trực tiếp khi giao xe — khoản đó do bạn tự thu, tự giữ và tự hoàn, và đặt ở phần chính sách theo loại xe bên dưới.",
+    "subtitle": "Trong giai đoạn này, mọi chuyến trên XePrime đều thu khoản giữ chỗ của khách trước khi chuyến được xác nhận. Đây KHÔNG phải tiền cọc/thế chấp bạn nhận trực tiếp khi giao xe - khoản đó do bạn tự thu, tự giữ và tự hoàn, và đặt ở phần chính sách theo loại xe bên dưới.",
     "loadError": "Không tải được cấu hình thanh toán giữ chỗ",
     "readOnly": "Bạn chỉ có quyền xem cấu hình này. Chủ gian hàng là người bật/tắt.",
     "forbidden": {
@@ -224,12 +285,12 @@
       "onTitle": "Khách thanh toán tiền giữ chỗ sau khi bạn duyệt",
       "onBody": "Sau khi bạn duyệt yêu cầu thuê xe, khách quét VietQR thanh toán tiền giữ chỗ (phí sàn + bảo hiểm + 15% tiền thuê) trong cửa sổ thời gian quy định. Đơn thuê chính thức được kích hoạt ngay khi XePrime nhận đủ tiền. Nếu bạn hủy đơn sau khi nhận, khách được hoàn 100% và bạn bị trừ điểm uy tín.",
       "offTitle": "Bạn tự thoả thuận với khách",
-      "offBody": "Duyệt xong là có đơn ngay, không chờ tiền. Bạn liên hệ khách để thoả thuận tiền cọc/thế chấp khi nhận xe — XePrime không thu hộ và không đối soát khoản này, nên nếu có tranh chấp thì XePrime không có bằng chứng để hỗ trợ."
+      "offBody": "Duyệt xong là có đơn ngay, không chờ tiền. Bạn liên hệ khách để thoả thuận tiền cọc/thế chấp khi nhận xe - XePrime không thu hộ và không đối soát khoản này, nên nếu có tranh chấp thì XePrime không có bằng chứng để hỗ trợ."
     },
     "locked": {
       "platform": {
-        "title": "XePrime đang thu khoản giữ chỗ cho mọi gian hàng",
-        "body": "Trong giai đoạn này, mọi chuyến trên XePrime đều thu khoản giữ chỗ của khách trước — không phân biệt gói dịch vụ. Công tắc tạm khoá và sẽ mở lại sau; lựa chọn của bạn được giữ nguyên để dùng lại đúng lúc đó."
+        "title": "XePrime đang áp dụng thu tiền giữ chỗ cho tất cả gian hàng",
+        "body": "Hiện tại, tất cả chuyến thuê xe trên XePrime đều yêu cầu khách thanh toán tiền giữ chỗ trước, không phân biệt gói dịch vụ. Tính năng bật/tắt thu tiền giữ chỗ đang tạm khóa và sẽ được mở lại trong thời gian tới. Lựa chọn hiện tại của bạn vẫn được lưu để tiếp tục áp dụng khi tính năng hoạt động trở lại."
       },
       "commission": {
         "title": "Gian hàng của bạn luôn thu cọc qua XePrime",
@@ -302,7 +363,8 @@
     "noPhone": "Chưa có số điện thoại",
     "verified": "Đã xác minh",
     "unverified": "Chưa xác minh",
-    "manageLogin": "Quản lý thông tin đăng nhập"
+    "manageLogin": "Quản lý thông tin đăng nhập",
+    "manageAccount": "Quản lý tài khoản"
   },
   "welcome": {
     "logo": {
@@ -330,9 +392,9 @@
     }
   },
   "personal": {
-    "provinceHelp": "Nơi khách đến nhận xe — xe của bạn hiện ở tỉnh/thành này trên chợ.",
+    "provinceHelp": "Nơi khách đến nhận xe - xe của bạn hiện ở tỉnh/thành này trên chợ.",
     "checklist": {
-      "suggestedTitle": "Nên có — giúp khách yên tâm chọn xe của bạn",
+      "suggestedTitle": "Nên có - giúp khách yên tâm chọn xe của bạn",
       "items": {
         "displayName": "Tên hiển thị trên chợ",
         "province": "Tỉnh/thành nhận xe",
@@ -343,6 +405,44 @@
         "address": "Địa chỉ nhận xe",
         "cover": "Ảnh bìa"
       }
+    }
+  },
+  "info": {
+    "legal": {
+      "title": "Địa chỉ & pháp lý",
+      "hint": "Địa điểm giao nhận xe & thông tin pháp lý",
+      "dialogHint": "Cập nhật địa điểm giao nhận xe & thông tin pháp lý",
+      "edit": "Sửa địa chỉ & pháp lý",
+      "province": "Tỉnh/Thành phố",
+      "ward": "Xã/Phường",
+      "address": "Địa chỉ",
+      "businessLicenseNo": "Số giấy phép KD",
+      "defaultBranchNote": "Theo thông tin chi nhánh mặc định.",
+      "manageBranches": "Quản lý"
+    },
+    "tax": {
+      "hint": "Cung cấp thông tin phục vụ kê khai thuế",
+      "edit": "Sửa thông tin khai thuế",
+      "entityType": "Loại hình",
+      "legalNameBusiness": "Tên hộ KD/DN",
+      "note": "Hình thức nộp/khấu trừ thuế phụ thuộc vào loại chủ thể và tư vấn thuế hiện tại. Tỷ lệ thuế sẽ được thông báo trước khi áp dụng."
+    },
+    "display": {
+      "title": "Thông tin hiển thị",
+      "hint": "Khách nhìn thấy trên marketplace",
+      "mediaHint": "Logo 800x800px · Ảnh bìa 1600x600",
+      "changeLogo": "Đổi logo",
+      "changeCover": "Đổi ảnh bìa",
+      "removeLogo": "Gỡ logo",
+      "removeCover": "Gỡ ảnh bìa",
+      "edit": "Chỉnh sửa thông tin",
+      "dialogTitle": "Chỉnh sửa thông tin hiển thị",
+      "displayName": "Tên hiển thị",
+      "phone": "Số điện thoại liên hệ",
+      "phoneField": "Số điện thoại hiển thị",
+      "email": "Email liên hệ",
+      "bio": "Giới thiệu",
+      "bioPlaceholder": "Nhập giới thiệu gian hàng"
     }
   }
 }

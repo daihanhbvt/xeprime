@@ -69,3 +69,7 @@
 .ackLink:hover {
   color: var(--xp-color-primary-active);
 }
+
+/* Dark mode (Figma "Homepage - Dark Mode" 19879:66136): vàng đậm primary-active/strong chìm trên nền
+   tối ⇒ chữ/icon nhấn dùng primary; thẻ dùng viền border thay bóng. */
+:global([data-theme='dark']) .ackLink:hover { color: var(--xp-color-primary); }

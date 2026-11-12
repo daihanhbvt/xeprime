@@ -7,7 +7,7 @@ describe('estimateTextWidth', () => {
     );
   });
 
-  it('dấu tiếng Việt KHÔNG cộng thêm bề rộng — ký tự dựng sẵn, cùng advance với chữ gốc', () => {
+  it('dấu tiếng Việt KHÔNG cộng thêm bề rộng - ký tự dựng sẵn, cùng advance với chữ gốc', () => {
     expect(estimateTextWidth('Sẵn sàng', 12)).toBeCloseTo(estimateTextWidth('San sang', 12), 5);
   });
 
@@ -47,11 +47,11 @@ describe('packRows', () => {
     expect(packRows([150, 150], 308, 8)).toEqual([[0, 1]]);
   });
 
-  it('viên rộng hơn cả hàng vẫn được nhận — nó phải nằm đâu đó', () => {
+  it('viên rộng hơn cả hàng vẫn được nhận - nó phải nằm đâu đó', () => {
     expect(packRows([400, 50], 300, 8)).toEqual([[0], [1]]);
   });
 
-  it('chưa đo được bề rộng thì trả một hàng — nơi gọi tự `flexWrap` như cũ', () => {
+  it('chưa đo được bề rộng thì trả một hàng - nơi gọi tự `flexWrap` như cũ', () => {
     expect(packRows([100, 100], 0, 4)).toEqual([[0, 1]]);
     expect(packRows([], 0, 4)).toEqual([]);
   });

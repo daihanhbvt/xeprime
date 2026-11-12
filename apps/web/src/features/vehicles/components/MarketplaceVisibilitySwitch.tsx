@@ -1,8 +1,11 @@
 'use client';
 
 import { App, Switch, Tag } from 'antd';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { isLogoOnlyGate, packageShopListingGateFrom } from '@xeprime/domain';
 import {
+  MARKETPLACE_VISIBILITY_REASON,
   MARKETPLACE_VISIBILITY_REASON_META,
   PERMISSION,
   VEHICLE_PUBLIC_STATUS,
@@ -13,6 +16,7 @@ import {
 
 import { InfoHint } from '@/components/data-display/InfoHint';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { SHOP_SECTION, shopSectionPath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { usePlanAwareErrorMessage } from '@/features/subscription/use-plan-quota-gate-message';
 import { useSetVehicleMarketplaceVisibility } from '../hooks/use-vehicle-mutations';
@@ -59,7 +63,10 @@ export function MarketplaceVisibilitySwitch({
 }) {
   const rowClass = cx(styles.row, bare && styles.bare);
   const t = useTranslations('Vehicles.publish.visibility');
-  const { message } = App.useApp();
+  const tGate = useTranslations('Shop.listingGate');
+  const tCommon = useTranslations('Common.actions');
+  const router = useRouter();
+  const { message, modal } = App.useApp();
   // Đổi loại xe / bật lại trên chợ có thể chạm cổng gói (ADR 0065) — câu nói đúng loại xe + con số.
   const errorMessage = usePlanAwareErrorMessage();
   const { has } = usePermissions();
@@ -99,7 +106,38 @@ export function MarketplaceVisibilitySwitch({
        * Không cần khôi phục trạng thái cũ bằng tay: `checked` bám vào `vehicle` từ cache, và
        * mutation chỉ ghi cache khi server trả về thành công. Lỗi thì công tắc vẫn ở đúng chỗ cũ.
        */
-      onError: (err) => message.error(errorMessage(err)),
+      onError: (err) => {
+        const gate = packageShopListingGateFrom(err);
+        if (gate) showListingGate(gate);
+        else message.error(errorMessage(err));
+      },
+    });
+  }
+
+  /*
+   * Bật lại chợ chạm cổng mặt tiền gian hàng tuyến gói (ADR 0048 · ADR 0040 điều 7) — gần như luôn
+   * là thiếu LOGO: bước tạo gian hàng không đòi nó. Một toast vài giây không chứa được lối đi tiếp,
+   * nên đây là hộp thoại nói rõ thiếu gì và dẫn thẳng tới ô logo ở hồ sơ gian hàng.
+   */
+  function showListingGate(missing: NonNullable<ReturnType<typeof packageShopListingGateFrom>>) {
+    const logoOnly = isLogoOnlyGate(missing);
+    modal.confirm({
+      title: t('gate.title'),
+      content: logoOnly ? (
+        t('gate.logoOnly')
+      ) : (
+        <>
+          <p>{t('gate.missing')}</p>
+          <ul className={styles.gateList}>
+            {missing.map((key) => (
+              <li key={key}>{tGate(`items.${key}`)}</li>
+            ))}
+          </ul>
+        </>
+      ),
+      okText: logoOnly ? tGate('ctaLogo') : tGate('cta'),
+      cancelText: tCommon('close'),
+      onOk: () => router.push(shopSectionPath(SHOP_SECTION.PROFILE)),
     });
   }
 
@@ -136,7 +174,13 @@ function MarketplaceState({ vehicle }: { vehicle: VehicleDetail }) {
   const t = useTranslations('Vehicles.publish.visibility');
   const reason = vehicle.marketplaceVisibilityReason as MarketplaceVisibilityReason;
 
-  if (!vehicle.marketplaceEnabled) return <span className={styles.state}>{t('off')}</span>;
+  /*
+   * Tắt vì HẾT SUẤT GÓI (ADR 0085 điều 5) không phải "Đang tắt" của chủ xe: nói đúng lý do để họ biết
+   * bật lại cần một suất trống, không phải chỉ một cú bấm.
+   */
+  if (!vehicle.marketplaceEnabled && reason !== MARKETPLACE_VISIBILITY_REASON.PLAN_PAUSED) {
+    return <span className={styles.state}>{t('off')}</span>;
+  }
   if (vehicle.isMarketplaceVisible) {
     return <span className={`${styles.state} ${styles.live}`}>{t('on')}</span>;
   }

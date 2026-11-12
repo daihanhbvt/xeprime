@@ -27,6 +27,7 @@ import { useChatEligibility } from '../hooks/use-chat-eligibility';
 export function ShopChatButton({
   shopSlug,
   vehicleId,
+  tripId,
   publicChatOpen,
   label,
   size,
@@ -39,6 +40,8 @@ export function ShopChatButton({
   shopSlug: string;
   /** Nhắn TỪ một chiếc xe: xe đi kèm làm thẻ ngữ cảnh cho câu nhắn đầu tiên. */
   vehicleId?: string;
+  /** Nhắn về một CHUYẾN (id yêu cầu) — xem `ChatWithShopButton.tripId`. */
+  tripId?: string;
   /** Gian hàng mở hộp thư công khai (backend chấm) — đúng thì bỏ qua lượt hỏi theo người xem. */
   publicChatOpen: boolean;
   label?: string;
@@ -56,6 +59,7 @@ export function ShopChatButton({
   return (
     <ChatWithShopButton
       {...(vehicleId ? { vehicleId } : { shopSlug })}
+      {...(tripId ? { tripId } : {})}
       {...(label ? { label } : {})}
       {...(size ? { size } : {})}
       {...(type ? { type } : {})}

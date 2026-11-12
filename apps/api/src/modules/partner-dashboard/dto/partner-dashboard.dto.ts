@@ -27,7 +27,7 @@ export class PartnerDashboardQueryDto {
 export class PartnerDashboardTodayDto {
   @ApiProperty({
     description:
-      'Đơn CHỜ GIAO XE — đúng tập của màn "Chờ giao xe" (`preset=awaiting_pickup`): đơn đã ' +
+      'Đơn CHỜ GIAO XE - đúng tập của màn "Chờ giao xe" (`preset=awaiting_pickup`): đơn đã ' +
       'hình thành, xe chưa rời bãi. Gồm cả đơn đã quá giờ hẹn.',
   })
   awaitingPickup!: number;
@@ -40,7 +40,14 @@ export class PartnerDashboardTodayDto {
   })
   pickupsOverdue!: number;
 
-  @ApiProperty({ description: 'Đơn đang thuê (`status = active`) — xe đang ở với khách.' })
+  @ApiProperty({
+    description:
+      'Trong `awaitingPickup`: ĐẾN HẠN giao - hẹn giao tới hết hôm nay, gồm cả lượt đã quá giờ ' +
+      'từ những ngày trước. Mỗi đơn đếm một lần (khác `pickupsToday + pickupsOverdue`).',
+  })
+  pickupsDue!: number;
+
+  @ApiProperty({ description: 'Đơn đang thuê (`status = active`) - xe đang ở với khách.' })
   active!: number;
 
   @ApiProperty({ description: 'Trong `active`: hẹn trả trong HÔM NAY (ngày lịch VN).' })
@@ -48,6 +55,13 @@ export class PartnerDashboardTodayDto {
 
   @ApiProperty({ description: 'Trong `active`: đã QUÁ giờ hẹn trả (mọi ngày).' })
   returnsOverdue!: number;
+
+  @ApiProperty({
+    description:
+      'Trong `active`: ĐẾN HẠN trả - hẹn trả tới hết hôm nay, gồm cả lượt đã quá giờ. Mỗi đơn ' +
+      'đếm một lần.',
+  })
+  returnsDue!: number;
 }
 
 /** Hộp thư yêu cầu — cùng phép đếm với hàng đợi vận hành chuyến của nền tảng. */
@@ -58,14 +72,14 @@ export class PartnerDashboardRequestsDto {
   @ApiProperty({
     description:
       'Trong `pending`: còn ít hơn `TRIP_REQUEST_URGENT_MINUTES` phút tới hạn trả lời (gồm cả ' +
-      'yêu cầu đã chạm hạn mà worker chưa quét) — cùng mốc với lượt nhắc cuối của hệ thống.',
+      'yêu cầu đã chạm hạn mà worker chưa quét) - cùng mốc với lượt nhắc cuối của hệ thống.',
   })
   pendingUrgent!: number;
 
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'Hạn trả lời SỚM NHẤT trong các yêu cầu đang chờ — ISO-8601 UTC. Null = không có.',
+    description: 'Hạn trả lời SỚM NHẤT trong các yêu cầu đang chờ - ISO-8601 UTC. Null = không có.',
   })
   nextRespondBy!: string | null;
 
@@ -79,7 +93,7 @@ export class PartnerDashboardAgendaItemDto {
   @ApiProperty({ enum: DASHBOARD_AGENDA_KIND_VALUES })
   kind!: DashboardAgendaKind;
 
-  @ApiProperty({ description: 'Giờ HẸN giao (pickup) hoặc trả (return) — ISO-8601 UTC.' })
+  @ApiProperty({ description: 'Giờ HẸN giao (pickup) hoặc trả (return) - ISO-8601 UTC.' })
   at!: string;
 
   @ApiProperty() bookingId!: string;
@@ -120,7 +134,7 @@ export class PartnerDashboardMonthDto {
 
   @ApiProperty({
     description:
-      'Chuyến KẾT THÚC (completed) từ đầu tháng — cùng câu với "Số chuyến" của bảng tổng hợp ' +
+      'Chuyến KẾT THÚC (completed) từ đầu tháng - cùng câu với "Số chuyến" của bảng tổng hợp ' +
       'giao dịch (`completedTripsInPeriodWhere`).',
   })
   completedTrips!: number;
@@ -132,9 +146,9 @@ export class PartnerDashboardMonthDto {
     type: Number,
     nullable: true,
     description:
-      'Tỉ lệ lấp đầy (0–100, một chữ số thập phân): thời gian xe có khách (đơn đang thuê hoặc đã ' +
+      'Tỉ lệ lấp đầy (0-100, một chữ số thập phân): thời gian xe có khách (đơn đang thuê hoặc đã ' +
       'hoàn thành) ÷ thời gian xe có mặt trong đội (từ lúc tạo xe), trong kỳ. Null = chưa có xe ' +
-      'nào trong kỳ — KHÔNG phải 0%.',
+      'nào trong kỳ - KHÔNG phải 0%.',
   })
   utilizationPercent!: number | null;
 
@@ -151,14 +165,14 @@ export class PartnerDashboardTrendPointDto {
 /** Xe trên chợ — trục HIỂN THỊ, khác trục vận hành của `/vehicles/fleet-summary`. */
 export class PartnerDashboardMarketDto {
   @ApiProperty({
-    description: 'Xe khách đang tìm thấy được — tin đăng `active` do `ListingsService` duy trì.',
+    description: 'Xe khách đang tìm thấy được - tin đăng `active` do `ListingsService` duy trì.',
   })
   onMarket!: number;
 
   @ApiProperty({ description: 'Xe đang chờ XePrime duyệt (`pending_public_review`).' })
   inReview!: number;
 
-  @ApiProperty({ description: 'Xe XePrime yêu cầu sửa (`needs_revision`) — việc của gian hàng.' })
+  @ApiProperty({ description: 'Xe XePrime yêu cầu sửa (`needs_revision`) - việc của gian hàng.' })
   needsRevision!: number;
 
   @ApiProperty({ description: 'Xe chưa gửi duyệt (`draft`).' })
@@ -173,7 +187,7 @@ export class PartnerDashboardMarketDto {
  * yêu cầu nào" là hai câu khác nhau.
  */
 export class PartnerDashboardOverviewDto {
-  @ApiProperty({ description: 'Thời điểm tính — mọi mốc "hôm nay", "quá giờ" đều so với nó.' })
+  @ApiProperty({ description: 'Thời điểm tính - mọi mốc "hôm nay", "quá giờ" đều so với nó.' })
   generatedAt!: string;
 
   @ApiProperty({ type: PartnerDashboardTodayDto, nullable: true, description: 'Cần `bookings.view`.' })
@@ -197,7 +211,7 @@ export class PartnerDashboardOverviewDto {
     nullable: true,
     description:
       `${DASHBOARD_TREND_MONTHS} tháng gần nhất, cũ → mới. Chỉ có ở TUYẾN GÓI có tính năng sổ ` +
-      'tổng hợp (`finance` không `hidden`) và người gọi có `bookings.view` — báo cáo theo kỳ là ' +
+      'tổng hợp (`finance` không `hidden`) và người gọi có `bookings.view` - báo cáo theo kỳ là ' +
       'năng lực của gói (ADR 0027 điều 1).',
   })
   trend!: PartnerDashboardTrendPointDto[] | null;
@@ -208,7 +222,7 @@ export class PartnerDashboardOverviewDto {
   @ApiProperty({
     type: HostMetricsDto,
     description:
-      'Uy tín của CẢ gian hàng, cửa sổ công khai 90 ngày — đúng con số khách thấy trên chợ ' +
+      'Uy tín của CẢ gian hàng, cửa sổ công khai 90 ngày - đúng con số khách thấy trên chợ ' +
       '(`HostMetricsService`, ADR 0045). Không đổi theo ô chi nhánh.',
   })
   reputation!: HostMetricsDto;

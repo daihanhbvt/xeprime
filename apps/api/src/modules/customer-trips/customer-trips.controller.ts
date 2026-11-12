@@ -15,6 +15,9 @@ import { CurrentUser, Realms } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { handoverPhotoSlotParam, handoverTypeParam } from '../bookings/handovers/handover-params';
 import { SourceContractDownloadDto } from '../vehicles/dto/vehicle-source.dto';
+import { BookingExtensionsService } from '../booking-extensions/booking-extensions.service';
+import { CustomerHandoverService } from '../bookings/handovers/customer-handover.service';
+import { CustomerBookingExtensionDto } from '../booking-extensions/dto/booking-extension.dto';
 import { CustomerTripsService } from './customer-trips.service';
 import { CustomerTripHandoverEvidenceDto } from './dto/customer-trip-evidence.dto';
 import {
@@ -42,7 +45,11 @@ import {
 // Khách thấy chuyến ĐI THUÊ, chủ xe thấy chuyến CHO THUÊ — phạm vi lọc theo realm của phiên (ADR 0053).
 @Realms(ACCOUNT_REALM.CUSTOMER, ACCOUNT_REALM.PARTNER)
 export class CustomerTripsController {
-  constructor(private readonly trips: CustomerTripsService) {}
+  constructor(
+    private readonly trips: CustomerTripsService,
+    private readonly extensions: BookingExtensionsService,
+    private readonly customerHandover: CustomerHandoverService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Danh sách chuyến của tôi (lọc theo tab, phân trang ở DB)' })
@@ -73,7 +80,7 @@ export class CustomerTripsController {
   @ApiOperation({
     summary: 'Chi tiết một chuyến của tôi',
     description:
-      'Nhận id YÊU CẦU thuê hoặc id ĐƠN thuê — thông báo trỏ vào cả hai loại. Không phải chuyến ' +
+      'Nhận id YÊU CẦU thuê hoặc id ĐƠN thuê - thông báo trỏ vào cả hai loại. Không phải chuyến ' +
       'của mình thì trả 404 (không tiết lộ id có tồn tại hay không).',
   })
   @ApiOkResponse({ type: CustomerTripDetailDto })
@@ -82,6 +89,21 @@ export class CustomerTripsController {
     @Param('id') id: string,
   ): Promise<CustomerTripDetailDto> {
     return this.trips.detail(user.id, id);
+  }
+
+  /**
+   * PHỤ LỤC GIA HẠN của chuyến (ADR 0077) — mã XPE… + tài khoản nhận để khách quét QR. Chỉ realm
+   * khách; không có dòng phía chủ xe (ADR 0064 điều 11). Chuyến của người khác ⇒ mảng rỗng.
+   */
+  @Get(':id/extensions')
+  @Realms(ACCOUNT_REALM.CUSTOMER)
+  @ApiOperation({ summary: 'Các phụ lục gia hạn của một chuyến của tôi (cũ trước)' })
+  @ApiOkResponse({ type: [CustomerBookingExtensionDto] })
+  extensionsOf(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<CustomerBookingExtensionDto[]> {
+    return this.extensions.listForCustomer(user.id, id);
   }
 
   /**
@@ -99,7 +121,7 @@ export class CustomerTripsController {
     description:
       'Chỉ biên bản ĐÃ XÁC NHẬN (nháp / chờ xác nhận / đã huỷ không bao giờ ra tới đây). Trả ' +
       'tối đa hai bản theo thứ tự giao xe → nhận lại; chuyến chưa được duyệt thì mảng rỗng. ' +
-      'Ảnh mở qua endpoint download theo GÓC CHỤP — không có `fileId` nào trong payload này.',
+      'Ảnh mở qua endpoint download theo GÓC CHỤP - không có `fileId` nào trong payload này.',
   })
   @ApiOkResponse({ type: CustomerTripHandoverEvidenceDto, isArray: true })
   handoverEvidence(
@@ -118,7 +140,7 @@ export class CustomerTripsController {
   @ApiOperation({
     summary: 'Phát signed URL ngắn hạn xem một ảnh hiện trạng của chuyến mình',
     description:
-      'Khoá là (chuyến của tôi, chiều bàn giao, góc chụp) — không phải id file, nên không có ' +
+      'Khoá là (chuyến của tôi, chiều bàn giao, góc chụp) - không phải id file, nên không có ' +
       'định danh nào cầm đi thử ở chuyến khác được.',
   })
   @ApiOkResponse({ type: SourceContractDownloadDto })
@@ -162,7 +184,7 @@ export class CustomerTripsController {
     summary: 'Khách tự huỷ chuyến của mình',
     description:
       'Huỷ được khi yêu cầu còn chờ gian hàng trả lời, hoặc khi đơn đã duyệt nhưng CHƯA giao ' +
-      'xe. Đã giao xe rồi thì 409 `TRIP_CANCEL_NOT_ALLOWED` — việc cần làm lúc đó là liên hệ ' +
+      'xe. Đã giao xe rồi thì 409 `TRIP_CANCEL_NOT_ALLOWED` - việc cần làm lúc đó là liên hệ ' +
       'chủ xe. Trả về chính chuyến đó sau khi huỷ để giao diện không phải gọi thêm một lượt.',
   })
   @ApiOkResponse({ type: CustomerTripDetailDto })
@@ -187,7 +209,7 @@ export class CustomerTripsController {
   @Realms(ACCOUNT_REALM.CUSTOMER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Khách báo chưa nhận được xe — mở tranh chấp khẩn, tạm giữ tiền của chuyến',
+    summary: 'Khách báo chưa nhận được xe - mở tranh chấp khẩn, tạm giữ tiền của chuyến',
     description:
       'Mở được trong `[pickupAt, pickupAt + 120′]` khi đơn `reserved` hoặc `active`. Mở MỘT case ' +
       '`dispute` mức `urgent` gắn đơn (vào hàng đợi hỗ trợ của nền tảng, báo gian hàng); tranh chấp ' +
@@ -203,12 +225,61 @@ export class CustomerTripsController {
     return this.trips.reportNotReceived(user.id, id);
   }
 
+  /**
+   * "Đã nhận xe" — khách xác nhận chuyến đã bắt đầu (ADR 0081). Chỉ realm khách, chỉ chuyến tự lái /
+   * dài hạn: đơn sang `active` ngay, biên bản giao xe nguồn `customer`.
+   */
+  @Post(':id/confirm-pickup')
+  @Realms(ACCOUNT_REALM.CUSTOMER)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Khách xác nhận đã nhận xe - đơn chuyển sang đang thuê',
+    description:
+      'Được khi đơn `reserved`, chuyến tự lái/dài hạn, chưa có biên bản giao xe đã xác nhận và đã ' +
+      'tới `pickupAt − CUSTOMER_PICKUP_CONFIRM_LEAD_MINUTES`. Lập biên bản giao xe nguồn `customer` ' +
+      '(không KM/hiện trạng), chuyển đơn qua đúng đường bàn giao, kết luận case ' +
+      '`handover_unconfirmed`, báo gian hàng. Lỗi: 409 `TRIP_PICKUP_CONFIRM_NOT_ALLOWED`, ' +
+      '`TRIP_PICKUP_CONFIRM_TOO_EARLY` (`details.opensAt`); chuyến của người khác 404. Trả về ' +
+      'chính chuyến đó.',
+  })
+  @ApiOkResponse({ type: CustomerTripDetailDto })
+  async confirmPickup(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<CustomerTripDetailDto> {
+    await this.customerHandover.confirmPickup(user.id, id);
+    return this.trips.detail(user.id, id);
+  }
+
+  /**
+   * "Đã trả xe" — khách báo đã trả xe (ADR 0081). KHÔNG đổi trạng thái: chủ xe có
+   * `CUSTOMER_RETURN_CONFIRM_WINDOW_HOURS` để xác nhận hoặc phản đối, im lặng thì đơn tự hoàn thành.
+   */
+  @Post(':id/report-returned')
+  @Realms(ACCOUNT_REALM.CUSTOMER)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Khách báo đã trả xe - chủ xe xác nhận trong hạn, quá hạn tự hoàn thành',
+    description:
+      'Được khi đơn `active`, chuyến tự lái/dài hạn, chưa có biên bản trả xe và chưa báo lần nào. ' +
+      'Ghi `customerReturnedAt` + `returnAutoCompleteAt` (server tính), báo gian hàng. Lỗi: 409 ' +
+      '`TRIP_RETURN_REPORT_NOT_ALLOWED`; chuyến của người khác 404. Trả về chính chuyến đó.',
+  })
+  @ApiOkResponse({ type: CustomerTripDetailDto })
+  async reportReturned(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<CustomerTripDetailDto> {
+    await this.customerHandover.reportReturn(user.id, id);
+    return this.trips.detail(user.id, id);
+  }
+
   @Post(':id/refund-account')
   @ApiOperation({
     summary: 'Khách khai tài khoản nhận hoàn khoản giữ chỗ',
     description:
       'Bắt buộc trước khi admin chuyển được: `markRefundPaid` từ chối một lệnh chuyển không ' +
-      'có đích. Chọn một tài khoản đã lưu bằng `bankAccountId`, hoặc khai ba ô — khai mới thì ' +
+      'có đích. Chọn một tài khoản đã lưu bằng `bankAccountId`, hoặc khai ba ô - khai mới thì ' +
       'tài khoản được LƯU LẠI để lần sau không phải gõ. Trả về chính chuyến đó sau khi khai.',
   })
   @ApiOkResponse({ type: CustomerTripDetailDto })

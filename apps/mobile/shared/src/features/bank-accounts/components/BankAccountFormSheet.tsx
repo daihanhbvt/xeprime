@@ -104,7 +104,7 @@ export function BankAccountFormSheet({
         bank.fullName.toLowerCase().includes(needle),
     ).map((bank) => ({
       value: bank.code,
-      label: `${bank.shortName} — ${bank.fullName}`,
+      label: `${bank.shortName} - ${bank.fullName}`,
       // Logo trước tên — cùng danh sách chọn có logo của web (Figma `19973:52549`).
       leading: <BankLogo code={bank.code} size={BANK_OPTION_LOGO} radius={6} />,
     }));
@@ -166,6 +166,9 @@ export function BankAccountFormSheet({
            */
           if (savedNotice && outcome !== 'unchanged') {
             setSavedMessage(t(outcome));
+          } else if (scope === BANK_ACCOUNT_SCOPE.SHOP && outcome !== 'unchanged') {
+            // Site partner (web `appearance="partner"`, PR #276): câu đầy đủ nói tiền đi đâu tiếp.
+            toast.showSuccess(replacing ? t('saved.changedDetail') : t('saved.createdDetail'));
           } else {
             toast.showSuccess(t(outcome));
           }
@@ -225,7 +228,13 @@ export function BankAccountFormSheet({
           <YStack gap={space.sm}>
             <Button
               icon="checkmark-outline"
-              label={t('submit')}
+              label={
+                scope === BANK_ACCOUNT_SCOPE.SHOP
+                  ? replacing
+                    ? tCommon('confirm')
+                    : t('addSubmit')
+                  : t('submit')
+              }
               loading={create.isPending}
               onPress={() => void onSubmit()}
             />

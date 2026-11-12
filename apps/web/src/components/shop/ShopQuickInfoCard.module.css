@@ -256,15 +256,34 @@
 }
 
 .inlineCard .avatar {
-  width: 56px;
-  height: 56px;
-  font-size: 22px;
+  width: 48px;
+  height: 48px;
+  font-size: 20px;
+}
+
+/* Figma Owner Section `20051:59570`: nhãn loại chủ xe `14/22 Regular` `Text/Gray/low`. */
+/* Figma "Text and supporting text": nhãn và tên cách 4. */
+.inlineCard .name {
+  margin-top: var(--xp-space-xs);
+}
+
+.inlineCard .shopTypeLabel {
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
+  color: var(--xp-color-text-tertiary);
 }
 
 .verifiedBadgeInline {
   position: absolute;
   bottom: -2px;
   right: -2px;
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
 }
 
 .shopTypeLabel {
@@ -275,15 +294,15 @@
 }
 
 .inlineCard .name {
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 24px;
-  color: var(--xp-color-text, #0e0f12);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 22px;
+  color: var(--xp-color-text);
 }
 
 .inlineCard .summary {
-  margin-top: 4px;
-  gap: 16px;
+  margin-top: var(--xp-space-12);
+  gap: var(--xp-space-40);
   font-size: 14px;
   color: var(--xp-color-text, #0e0f12);
 }
@@ -293,14 +312,17 @@
 }
 
 .inlineCard .rating {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--xp-color-text, #0e0f12);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular);
+  color: var(--xp-color-text-secondary);
 }
 
-.inlineCard .rating .star {
-  color: #f79009;
-  font-size: 15px;
+.inlineCard .ratingCount {
+  color: var(--xp-color-text-placeholder);
+}
+
+.inlineCard .rating {
+  gap: var(--xp-space-xs);
 }
 
 .ratingCount {
@@ -311,10 +333,10 @@
 .inlineCard .trips {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--xp-color-text, #0e0f12);
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular);
+  color: var(--xp-color-text);
 }
 
 .tripsIcon {
@@ -345,6 +367,11 @@
     border: 1px solid var(--xp-color-primary-bright);
     border-radius: var(--xp-border-radius-card);
     background: var(--xp-color-bg-container);
+  }
+
+  /* Chủ xe cá nhân: viền xám (Figma "Owner Section" bản Cá nhân). */
+  .card.inlineCard.inlineCardOwner {
+    border-color: var(--xp-color-border);
   }
 
   .inlineMainRow {

@@ -18,6 +18,8 @@ import { usePartnerOffer } from '@/features/account/hooks/use-partner-offer';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { cx } from '@/lib/cx';
 
+import { popInClass, staggerClass, staggerFastClass } from '@/components/motion/motion-classes';
+import { SplitText } from '@/components/motion/SplitText';
 import styles from './ListYourVehicleLanding.module.css';
 
 /**
@@ -87,7 +89,7 @@ export function ListYourVehicleLanding({
       {showBack ? <LandingPageHeader /> : null}
 
       <div className={styles.body}>
-        <header className={styles.intro}>
+        <header className={cx(styles.intro, staggerClass)}>
           <Heading as={heroLevel} className={styles.title}>
             {t.rich('heroTitle', {
               brand: (chunks) => <span className={styles.brand}>{chunks}</span>,
@@ -96,7 +98,7 @@ export function ListYourVehicleLanding({
           <p className={styles.subtitle}>{t.rich('subtitle', { br: () => <br /> })}</p>
         </header>
 
-        <div className={styles.tracks}>
+        <div className={cx(styles.tracks, staggerFastClass)}>
           <TrackCard
             variant="personal"
             headingLevel={cardLevel}
@@ -193,7 +195,9 @@ function LandingPageHeader() {
           crumbs={[parent, { key: 'current', label: t('pageTitle') }]}
           back={{ href: parent.href ?? ROUTES.HOME, label: t('back') }}
         />
-        <h1 className={styles.pageTitle}>{t('pageTitle')}</h1>
+        <h1 className={styles.pageTitle}>
+          <SplitText text={t('pageTitle')} />
+        </h1>
       </div>
     </div>
   );
@@ -297,7 +301,7 @@ function TrackCard({
           <Fragment key={feature.key}>
             {index > 0 ? <li className={styles.featureDivider} aria-hidden="true" /> : null}
             <li className={styles.feature}>
-              <span className={styles.featureIcon} aria-hidden="true">
+              <span className={cx(styles.featureIcon, popInClass)} aria-hidden="true">
                 {feature.icon}
               </span>
               <span className={styles.featureLabel}>{feature.label}</span>

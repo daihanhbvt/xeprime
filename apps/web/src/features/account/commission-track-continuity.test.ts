@@ -9,7 +9,7 @@ import {
   type BillingPhase,
 } from '@xeprime/types';
 
-import { OWNER_LITE_NAV, SHOP_NAV, flattenLeaves, navForZone } from '@/constants/nav';
+import { COMMISSION_NAV, SHOP_NAV, flattenLeaves, navForZone } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
 import {
   PARTNER_TRACK,
@@ -69,18 +69,22 @@ const DAILY_PAGES = [
   ROUTES.MANAGE.ROOT,
   ROUTES.MANAGE.VEHICLES,
   ROUTES.MANAGE.CALENDAR,
-  // Yêu cầu + đơn gộp ở "Chuyến cho thuê" (07/10/2026); hộp thư + bảng đơn chuyển về đây.
-  ROUTES.MANAGE.TRIPS,
+  // Yêu cầu + đơn ở màn "Đơn thuê xe" dùng chung với gian hàng (06/11/2026).
+  ROUTES.MANAGE.BOOKINGS,
+  `${ROUTES.MANAGE.BOOKINGS}/01B`,
+  ROUTES.MANAGE.BOOKINGS_ENDED,
   ROUTES.MANAGE.CHAT,
   ROUTES.MANAGE.BALANCE,
+  // "Hồ sơ chủ xe" là trang Thông tin `/shop` của CHỦ (ADR 0085 điều 2).
+  ROUTES.MANAGE.SHOP,
 ];
 
-describe('Tuyến hoa hồng — đi qua mốc hết kỳ không đổi gì', () => {
+describe('Tuyến hoa hồng - đi qua mốc hết kỳ không đổi gì', () => {
   it('menu Owner Lite giữ nguyên ở cả ba pha', () => {
     for (const phase of PHASES) {
       const track = resolvePartnerTrack(ownerAt(phase));
       expect(track, phase).toBe(PARTNER_TRACK.COMMISSION);
-      expect(navForZone(ZONE.PARTNER, track)).toBe(OWNER_LITE_NAV);
+      expect(navForZone(ZONE.PARTNER, track)).toBe(COMMISSION_NAV);
     }
   });
 
@@ -113,7 +117,7 @@ describe('Tuyến hoa hồng — đi qua mốc hết kỳ không đổi gì', ()
  * Nếu không có nửa này, một bản sửa "cho chắc" trong tương lai có thể làm mọi pha đều vô hại và
  * xoá luôn ranh giới hạ cấp của tuyến gói (ADR 0038 điều 5).
  */
-describe('Đối chứng — tuyến gói VẪN đổi khi hết ân hạn', () => {
+describe('Đối chứng - tuyến gói VẪN đổi khi hết ân hạn', () => {
   it('current/grace dùng menu Full Manage; lapsed rơi về Owner Lite', () => {
     // `resolveEffectiveBilling` đã đổi `billingMode` sang `commission` TRƯỚC khi giá trị lên dây
     // ở pha `lapsed` — nên web chỉ cần đọc `billingMode`, không phải tự suy từ pha.
@@ -124,13 +128,13 @@ describe('Đối chứng — tuyến gói VẪN đổi khi hết ân hạn', () 
     }
 
     const lapsed = ownerAt(BILLING_PHASE.LAPSED, BILLING_MODE.COMMISSION);
-    expect(navForZone(ZONE.PARTNER, resolvePartnerTrack(lapsed))).toBe(OWNER_LITE_NAV);
+    expect(navForZone(ZONE.PARTNER, resolvePartnerTrack(lapsed))).toBe(COMMISSION_NAV);
     expect(partnerPageRedirect(lapsed, ROUTES.MANAGE.CUSTOMERS)).toBe(ROUTES.MANAGE.ROOT);
     expect(walletScopeFor(lapsed)).toBe('shop');
   });
 
   it('menu Owner Lite không chứa trang nào của Full Manage', () => {
-    const ownerLite = new Set(flattenLeaves(OWNER_LITE_NAV).map((leaf) => leaf.href));
+    const ownerLite = new Set(flattenLeaves(COMMISSION_NAV).map((leaf) => leaf.href));
     expect(ownerLite.has(ROUTES.MANAGE.CUSTOMERS)).toBe(false);
     expect(ownerLite.has(ROUTES.MANAGE.FINANCE)).toBe(false);
   });

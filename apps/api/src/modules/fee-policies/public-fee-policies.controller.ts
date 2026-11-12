@@ -14,7 +14,7 @@ export class PublicFeePoliciesController {
 
   @Public()
   @Get('partner-offer')
-  @ApiOperation({ summary: 'Khoảng % hoa hồng (thấp nhất → cao nhất) của chính sách hiện hành — cho lời mời hợp tác' })
+  @ApiOperation({ summary: 'Khoảng % hoa hồng (thấp nhất → cao nhất) của chính sách hiện hành - cho lời mời hợp tác' })
   @ApiOkResponse({ type: PartnerOfferDto })
   async partnerOffer(): Promise<PartnerOfferDto> {
     const policy = await this.policies.findEffective();

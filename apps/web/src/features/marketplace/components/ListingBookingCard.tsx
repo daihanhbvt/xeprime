@@ -23,6 +23,7 @@ import {
   type InsuranceProductKind,
   type RouteType,
 } from '@xeprime/types';
+import { bestDiscountPackageMonths } from '@xeprime/domain';
 import { appWallClockToIso, nowInAppTz, toAppTz, type Dayjs } from '@/lib/datetime';
 import { applyDiscountPercent, isZeroMoney } from '@/lib/money';
 import { cx } from '@/lib/cx';
@@ -42,6 +43,7 @@ import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
 import { InsuranceOptionList } from '@/features/insurance/components/InsuranceOptionList';
 import { useInsuranceOffer } from '@/features/insurance/hooks';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
+import { InfoHint } from '@/components/data-display/InfoHint';
 import {
   RentalDateTimeRangeField,
   type RentalMode,
@@ -169,8 +171,11 @@ export function ListingBookingCard({
   const [driverAddressModalOpen, setDriverAddressModalOpen] = useState(false);
   const [destination, setDestination] = useState('');
 
-  // 4b. Quản lý nguyện vọng nhận xe cho Thuê dài hạn
-  const [pickupPreference, setPickupPreference] = useState<'asap' | 'specific_date'>('asap');
+  /*
+   * 4b. Ngày khách MUỐN nhận xe cho Thuê dài hạn. Thẻ chỉ còn một cách nêu nguyện vọng: chọn ngày
+   * cụ thể (bỏ "càng sớm càng tốt" 11/11/2026 theo yêu cầu sản phẩm) — gian hàng vẫn chốt lịch thật
+   * lúc duyệt (ADR 0011).
+   */
   const [requestedPickupDate, setRequestedPickupDate] = useState<Dayjs | null>(null);
 
   /*
@@ -178,13 +183,10 @@ export function ListingBookingCard({
    * phải `dayjs.add('month')` của trình duyệt. Chỉ để khách hình dung; ngày thật do gian hàng chốt.
    */
   const expectedReturnDateStr = useMemo(() => {
-    if (selectedMonths == null) return null;
-    const start =
-      pickupPreference === 'specific_date' && requestedPickupDate
-        ? requestedPickupDate
-        : nowInAppTz();
-    return fmt.date(addCalendarMonthsVn(start.toDate(), selectedMonths).toISOString());
-  }, [fmt, pickupPreference, requestedPickupDate, selectedMonths]);
+    // Chưa chọn ngày nhận thì không có ngày trả để hứa — không suy từ "hôm nay".
+    if (selectedMonths == null || !requestedPickupDate) return null;
+    return fmt.date(addCalendarMonthsVn(requestedPickupDate.toDate(), selectedMonths).toISOString());
+  }, [fmt, requestedPickupDate, selectedMonths]);
 
   // Chuyển tab dịch vụ mượt mà (router.replace không reload toàn trang)
   const handleTabClick = (s: string) => {
@@ -224,6 +226,7 @@ export function ListingBookingCard({
    * dưới đến từ báo giá của server.
    */
   const longTermPackage = longTermPackages.find((p) => p.packageMonths === selectedMonths) ?? null;
+  const bestPackageMonths = bestDiscountPackageMonths(longTermPackages);
   /** `null` = dịch vụ này chưa có giá công bố — dòng giá nói "liên hệ báo giá", không hiện 0đ. */
   const basePrice: string | null =
     activeService === SERVICE_TYPE.LONG_TERM
@@ -333,7 +336,7 @@ export function ListingBookingCard({
         void message.warning(t('incomplete.package'));
         return false;
       }
-      if (pickupPreference === 'specific_date' && !requestedPickupDate) {
+      if (!requestedPickupDate) {
         void message.warning(t('incomplete.pickupDate'));
         return false;
       }
@@ -449,13 +452,18 @@ export function ListingBookingCard({
                       key={m}
                       type="button"
                       className={`${styles.packageBtn} ${selectedMonths === m ? styles.packageBtnActive : ''}`}
+                      aria-pressed={selectedMonths === m}
                       onClick={() => setSelectedMonths(m)}
                     >
-                      <span>{fmt.packageLabel(m)}</span>
+                      <span className={styles.packageMonths}>{fmt.packageLabel(m)}</span>
+                      {/* % ưu đãi cam kết (ADR 0011): nhãn góc trên-phải của ô. */}
                       {pkg.durationDiscountPercent ? (
-                        <span className={styles.packageDiscountBadge}>
-                          -{pkg.durationDiscountPercent}%
-                        </span>
+                        <DiscountTag
+                          percent={pkg.durationDiscountPercent}
+                          variant="corner"
+                          active={selectedMonths === m}
+                          best={bestPackageMonths === m}
+                        />
                       ) : null}
                     </button>
                   );
@@ -467,37 +475,17 @@ export function ListingBookingCard({
           {/* Khung chọn ngày giờ nhận / trả xe */}
           {activeService === SERVICE_TYPE.LONG_TERM ? (
             <div className={styles.longTermTimeSection}>
-              <span className={styles.inputLabel}>{t('longTerm.wishLabel')}</span>
-              <div className={styles.longTermPrefOptions}>
-                <button
-                  type="button"
-                  className={`${styles.longTermPrefBtn} ${pickupPreference === 'asap' ? styles.longTermPrefBtnActive : ''}`}
-                  onClick={() => setPickupPreference('asap')}
-                >
-                  {t('longTerm.asap')}
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.longTermPrefBtn} ${pickupPreference === 'specific_date' ? styles.longTermPrefBtnActive : ''}`}
-                  onClick={() => setPickupPreference('specific_date')}
-                >
-                  {dl('pickupPreference', PICKUP_PREFERENCE.SPECIFIC_DATE)}
-                </button>
+              <div className={styles.specificDatePickerWrap}>
+                <span className={styles.inputLabel}>{t('longTerm.dateLabel')}</span>
+                <DatePicker
+                  value={requestedPickupDate}
+                  onChange={(d) => setRequestedPickupDate(d)}
+                  disabledDate={(current) => current && current < nowInAppTz().startOf('day')}
+                  format="DD/MM/YYYY"
+                  placeholder={t('longTerm.datePlaceholder')}
+                  className={styles.datePickerInput}
+                />
               </div>
-
-              {pickupPreference === 'specific_date' && (
-                <div className={styles.specificDatePickerWrap}>
-                  <span className={styles.inputSubLabel}>{t('longTerm.dateLabel')}</span>
-                  <DatePicker
-                    value={requestedPickupDate}
-                    onChange={(d) => setRequestedPickupDate(d)}
-                    disabledDate={(current) => current && current < nowInAppTz().startOf('day')}
-                    format="DD/MM/YYYY"
-                    placeholder={t('longTerm.datePlaceholder')}
-                    className={styles.datePickerInput}
-                  />
-                </div>
-              )}
 
               {expectedReturnDateStr && selectedMonths != null ? (
                 <div className={styles.expectedReturnBox}>
@@ -589,7 +577,10 @@ export function ListingBookingCard({
             </div>
           ) : (
             <div className={styles.locationSection}>
-              <h4 className={styles.sectionTitle}>{t('pickup.title')}</h4>
+              <h4 className={cx(styles.sectionTitle, styles.labelWithHint)}>
+                {t('pickup.title')}
+                <InfoHint content={t('pickup.note')} label={t('pickup.noteLabel')} />
+              </h4>
               <div className={styles.deliveryToggle}>
                 <button
                   type="button"
@@ -670,7 +661,6 @@ export function ListingBookingCard({
                 </button>
               )}
 
-              <p className={styles.addressNote}>{t('pickup.note')}</p>
             </div>
           )}
 
@@ -814,8 +804,10 @@ export function ListingBookingCard({
             {cost.holdAmount ? (
               <div className={cx(styles.priceLineTop, styles.holdLine)}>
                 <div className={styles.priceLabel}>
-                  <span>{tPrice('holdAmount')}</span>
-                  <span className={styles.priceSubLabel}>{tPrice('holdHint')}</span>
+                  <span className={styles.labelWithHint}>
+                    {tPrice('holdAmount')}
+                    <InfoHint content={tPrice('holdHint')} label={tPrice('holdHintLabel')} />
+                  </span>
                 </div>
                 <span className={styles.priceValue}>{fmt.money(cost.holdAmount)}</span>
               </div>
@@ -835,19 +827,34 @@ export function ListingBookingCard({
             */}
 
             <div className={styles.totalRow}>
-              <span className={styles.totalLabel}>{cost.total?.label}</span>
+              <span className={cx(styles.totalLabel, styles.labelWithHint)}>
+                {cost.total?.label}
+                {cost.costNote ? (
+                  <InfoHint content={cost.costNote} label={tPrice('totalHintLabel')} />
+                ) : null}
+              </span>
+              {/* Tiền hiện tĩnh, không đếm/nhảy số (bỏ hiệu ứng 11/11/2026). */}
               <span className={styles.totalAmount}>
                 {fmt.money(cost.total?.amount ?? quote.breakdown.totalAmount)}
               </span>
             </div>
-            <p className={styles.costNote}>{cost.costNote}</p>
+            {cost.estimateNote ? <p className={styles.costNote}>{cost.estimateNote}</p> : null}
           </>
         ) : (
           /* Báo giá không về: không bịa số — chủ xe vẫn xác nhận giá khi duyệt, khách vẫn đặt được. */
           <p className={styles.costNote}>{tFlow('price.loadError')}</p>
         )}
 
-        {/* Nút hành động chính */}
+        {/* Figma `22110:55767` (Shop Actions): Nhắn shop + Thuê xe chung MỘT hàng */}
+        <div className={styles.actionsRow}>
+        <div className={styles.chatBtnWrapper}>
+          <ShopChatButton
+            shopSlug={listing.shopSlug}
+            vehicleId={listing.id}
+            publicChatOpen={listing.shopChatOpen}
+            size="large"
+          />
+        </div>
         <div className={styles.ctaBtnWrapper}>
           <RequestBookingButton
             vehicleId={listing.id}
@@ -903,12 +910,8 @@ export function ListingBookingCard({
                   : null,
               rentalMode,
               packageMonths: activeService === SERVICE_TYPE.LONG_TERM ? selectedMonths : null,
-              pickupPreference:
-                pickupPreference === 'specific_date'
-                  ? PICKUP_PREFERENCE.SPECIFIC_DATE
-                  : PICKUP_PREFERENCE.WITHIN_7_DAYS,
-              requestedPickupDate:
-                pickupPreference === 'specific_date' ? requestedPickupDate : null,
+              pickupPreference: PICKUP_PREFERENCE.SPECIFIC_DATE,
+              requestedPickupDate,
               promoCode: promo.appliedCode,
               vehicleProtectionSelected,
               personalAccidentSelected,
@@ -918,14 +921,6 @@ export function ListingBookingCard({
             block
           />
         </div>
-
-        <div className={styles.chatBtnWrapper}>
-          <ShopChatButton
-            shopSlug={listing.shopSlug}
-            vehicleId={listing.id}
-            publicChatOpen={listing.shopChatOpen}
-            size="large"
-          />
         </div>
       </section>
 

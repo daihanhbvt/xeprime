@@ -30,7 +30,7 @@
 }
 
 .inner {
-  max-width: calc(var(--xp-market-container-max-width, 1200px) + 2 * var(--xp-space-md));
+  max-width: calc(var(--xp-market-container-max-width, 1320px) + 2 * var(--xp-space-md));
   margin: 0 auto;
   padding: var(--xp-space-40) var(--xp-space-md) 0;
 }
@@ -87,6 +87,7 @@
 }
 
 .cardShop .summary {
+  border-bottom-color: var(--xp-color-primary);
   gap: var(--xp-space-20);
 }
 
@@ -165,8 +166,8 @@
 .name {
   margin: 0;
   font-family: var(--xp-font-family-display);
-  font-size: 28px;
-  font-weight: var(--xp-font-weight-semibold);
+  font-size: 24px;
+  font-weight: var(--xp-font-weight-regular);
   line-height: 36px;
   color: var(--xp-color-text);
   /* Tên là dữ liệu người dùng nhập — không có trần độ dài nào ép nó xuống dòng đẹp. */
@@ -446,4 +447,22 @@
     font-size: var(--xp-font-size-body);
     line-height: var(--xp-line-height-body);
   }
+}
+
+/* ── Giao diện tối (Figma "Homepage - Dark Mode") — chữ/icon vàng đậm của bản sáng chìm trên nền
+   tối; đổi sang gold chính `--xp-color-primary`. */
+:global([data-theme='dark']) .avatarFallback {
+  color: var(--xp-color-primary);
+}
+
+/* Lớp phủ trắng 80% của vân lụa biến thẻ thành mảng sáng dưới chữ trắng — bản tối phủ bằng chính
+   màu bề mặt (không có token rgba của bg-container nên dùng color-mix). */
+:global([data-theme='dark']) .cardShop {
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--xp-color-bg-container) 90%, transparent),
+      color-mix(in srgb, var(--xp-color-bg-container) 90%, transparent)
+    ),
+    url('/shops/card-texture.webp') center top / cover no-repeat,
+    var(--xp-color-bg-container);
 }

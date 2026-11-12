@@ -137,7 +137,7 @@
     "on": "Bật",
     "off": "Tắt",
     "unlimited": "Không giới hạn",
-    "tier": "{from}–{to} km: {fee}",
+    "tier": "{from}-{to} km: {fee}",
     "longTermTier": "Từ {months}: giảm {percent}%",
     "noPolicy": "Gian hàng chưa cấu hình chính sách thuê cho xe này",
     "policySource": {
@@ -180,7 +180,7 @@
     "pending": "Cần kiểm tra",
     "auto": {
       "title": "Kiểm tra tự động",
-      "hint": "Hệ thống tính từ hồ sơ đã gửi — chỉ đọc.",
+      "hint": "Hệ thống tính từ hồ sơ đã gửi - chỉ đọc.",
       "items": {
         "selfDrivePrice": "Có giá thuê tự lái",
         "longTermPrice": "Có giá thuê dài hạn",
@@ -203,12 +203,12 @@
         "content_not_misleading": "Nội dung không gây hiểu nhầm"
       },
       "updatedBy": "{name} · {at}",
-      "locked": "Phiếu đã xử lý — danh mục chỉ để xem."
+      "locked": "Phiếu đã xử lý - danh mục chỉ để xem."
     }
   },
   "note": {
     "title": "Ghi chú nội bộ",
-    "hint": "Chỉ đội vận hành thấy — không gửi cho chủ xe.",
+    "hint": "Chỉ đội vận hành thấy - không gửi cho chủ xe.",
     "placeholder": "Nhập ghi chú cho đội vận hành…",
     "tooLong": "Ghi chú tối đa {max} ký tự.",
     "save": "Lưu ghi chú",
@@ -225,8 +225,8 @@
   "footer": {
     "hint": "Hoàn tất kiểm tra thủ công trước khi phê duyệt",
     "ready": "Đã hoàn tất kiểm tra thủ công",
-    "decided": "Phiếu đã được xử lý — không còn thao tác",
-    "blocked": "Xe đã khác hồ sơ gửi duyệt — chỉ có thể yêu cầu bổ sung hoặc từ chối"
+    "decided": "Phiếu đã được xử lý - không còn thao tác",
+    "blocked": "Xe đã khác hồ sơ gửi duyệt - chỉ có thể yêu cầu bổ sung hoặc từ chối"
   },
   "actions": {
     "approve": "Phê duyệt",

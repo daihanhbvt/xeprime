@@ -1,0 +1,32 @@
+/*
+ * `Segmented` có khung — design v2 partner (Lịch sử giao dịch `23857:58928`): rãnh xám có viền,
+ * mục đang chọn là viên trắng có viền mảnh. AntD mặc định không có viền nào nên trên nền trang
+ * xám cả cụm gần như vô hình.
+ *
+ * Gắn bằng `className={segmentedStyles.outlined}` lên chính `<Segmented>`. Class nhân đôi để thắng
+ * specificity của AntD (bẫy D19). Viền của viên chọn là `box-shadow` inset để không đổi kích
+ * thước khi viên trượt (`.ant-segmented-thumb` là viên đang chạy hiệu ứng).
+ */
+.outlined.outlined {
+  padding: 3px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+}
+
+.outlined :global(.ant-segmented-item) {
+  border-radius: 8px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.outlined :global(.ant-segmented-item-selected),
+.outlined :global(.ant-segmented-thumb) {
+  border-radius: 8px;
+  background: var(--xp-color-bg-container);
+  box-shadow:
+    inset 0 0 0 1px var(--xp-color-border-strong),
+    var(--xp-shadow-card);
+  color: var(--xp-color-text);
+}

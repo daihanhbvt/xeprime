@@ -28,7 +28,7 @@ const CAR_MEDIA = [
   { url: url(5), type: VEHICLE_IMAGE_TYPE.INTERIOR },
 ];
 
-describe('quickVehicleSchema — điều kiện lên chợ (như web)', () => {
+describe('quickVehicleSchema - điều kiện lên chợ (như web)', () => {
   it('bắt buộc biển số, hãng, dòng xe, năm, số chỗ (ô tô)', () => {
     const errors = errorsOf({ ...QUICK_VEHICLE_DEFAULTS, vehicleType: VEHICLE_TYPE.CAR });
     expect(errors.plateNumber).toBe('plateNumberRequired');

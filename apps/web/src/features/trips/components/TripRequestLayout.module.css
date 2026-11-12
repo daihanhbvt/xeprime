@@ -239,9 +239,7 @@
 .statusTitle {
   margin: 0;
   color: var(--xp-color-text);
-  font-size: 18px;
   font-weight: var(--xp-font-weight-semibold);
-  line-height: 28px;
   overflow-wrap: anywhere;
   font-size: var(--xp-font-size-h3);
   line-height: var(--xp-line-height-h3);
@@ -294,7 +292,7 @@
 
 /* Figma `21621:55007`: nền `destructive-low`, viền `error-300`, chữ `error-700`. */
 .danger {
-  border-color: color-mix(in srgb, var(--xp-color-error) 45%, var(--xp-color-bg-container));
+  border-color: var(--xp-color-error-border);
   background: var(--xp-color-error-bg);
   color: color-mix(in srgb, var(--xp-color-error) 82%, var(--xp-color-text));
 }
@@ -422,3 +420,23 @@
     line-height: var(--xp-line-height-h3);
   }
 }
+
+/*
+ * Khổ máy (Figma mobile `21850:66944`): tiêu đề trạng thái `14px/Semibold` 22, câu giải thích
+ * `12px/Regular` 18 — bản 18/28 của desktop quá to trên thẻ 358.
+ */
+@media (max-width: 640px) {
+  .status .statusTitle {
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body-relaxed);
+  }
+
+  .status .cardLead {
+    font-size: var(--xp-font-size-body-sm);
+    line-height: var(--xp-line-height-body-sm);
+  }
+}
+
+/* Dark mode (Figma "Homepage - Dark Mode" 19879:66136): vàng đậm primary-active/strong chìm trên nền
+   tối ⇒ chữ/icon nhấn dùng primary; thẻ dùng viền border thay bóng. */
+:global([data-theme='dark']) .primary { color: var(--xp-color-primary); }

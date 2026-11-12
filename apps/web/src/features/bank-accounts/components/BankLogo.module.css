@@ -21,6 +21,13 @@
   border-radius: var(--xp-border-radius);
 }
 
+/* Khối "Tài khoản nhận tiền" ở cột phải trang Quản lý ví (Figma `23813:55449`). */
+.md {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--xp-border-radius-lg);
+}
+
 .lg {
   width: 172px;
   height: 172px;

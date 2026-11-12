@@ -30,7 +30,7 @@
   "drawer": {
     "fallbackTitle": "Đơn thuê",
     "title": "Đơn {code}",
-    "createdAt": "Tạo lúc {time} · {date}",
+    "createdAt": "Tạo lúc {time}{sep}{date}",
     "loadError": "Không tải được thông tin đơn",
     "viewHistory": "Xem lịch sử"
   },
@@ -74,7 +74,7 @@
     "collateral": {
       "title": "Tài sản bảo đảm khi nhận xe",
       "hintLabel": "Giải thích về tài sản bảo đảm",
-      "hint": "Đây là mức cọc đơn khai — chưa chắc đã thu.",
+      "hint": "Đây là mức cọc đơn khai - chưa chắc đã thu.",
       "none": "Đơn không khai cọc tiền",
       "note": "Đây là cọc thế chấp khi nhận xe, không phải tiền giữ chỗ và không tính vào tổng thanh toán. Sẽ được hoàn trả sau khi kết thúc thuê nếu không phát sinh hư hại."
     }

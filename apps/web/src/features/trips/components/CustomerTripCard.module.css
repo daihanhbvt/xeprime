@@ -419,9 +419,15 @@
     line-height: var(--xp-line-height-body-lg);
   }
 
-  .fact,
-  .plate {
+  /* Figma MB `21860:76251`: biển số + dữ kiện 14/22 Medium; mã chuyến 12/18 nghiêng. */
+  .fact {
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body-relaxed);
+  }
+
+  .code {
     font-size: var(--xp-font-size-body-sm);
+    line-height: var(--xp-line-height-body-sm);
   }
 
   .money {
@@ -437,4 +443,36 @@
 /* Nhãn "Bạn đã hủy chuyến" / "Chủ xe đã hủy chuyến" — một dòng, không ngắt giữa câu. */
 .cancelTag {
   white-space: nowrap;
+}
+
+/* Dark mode (Figma "Homepage - Dark Mode" 19879:66136): vàng đậm primary-active/strong chìm trên nền
+   tối ⇒ chữ/icon nhấn dùng primary; thẻ dùng viền border thay bóng. */
+:global([data-theme='dark']) .card { border-color: var(--xp-color-border); box-shadow: none; }
+:global([data-theme='dark']) .avatar,
+:global([data-theme='dark']) .chat:hover:not(:disabled) { color: var(--xp-color-primary); }
+
+/*
+ * Hover ở giao diện tối — CÙNG ngôn ngữ thẻ xe trang chủ (Figma `19879:66185`): viền vàng,
+ * nền vàng trầm mờ (token `gradient-card-hover` bản tối), tên và số tiền vàng chuẩn `primary`.
+ * Viết riêng vì `[data-theme=dark] .card` mạnh hơn `.card:hover` và đè mất viền vàng.
+ */
+:global([data-theme='dark']) .card:hover,
+:global([data-theme='dark']) .card:focus-within {
+  border-color: var(--xp-color-primary-hover);
+  background: var(--xp-gradient-card-hover);
+  box-shadow: var(--xp-elevation-lg);
+}
+:global([data-theme='dark']) .card:hover .nameLink,
+:global([data-theme='dark']) .card:focus-within .nameLink {
+  color: var(--xp-color-primary);
+}
+
+:global([data-theme='dark']) .card:hover .moneyHighlight,
+:global([data-theme='dark']) .card:focus-within .moneyHighlight {
+  color: var(--xp-color-primary);
+}
+
+/* Tên gian hàng vàng chuẩn `primary` như thẻ xe trang chủ (Figma dark `19879:66183`); chủ xe cá nhân giữ màu chữ. */
+:global([data-theme='dark']) .avatarShop + .ownerText .ownerName {
+  color: var(--xp-color-primary);
 }

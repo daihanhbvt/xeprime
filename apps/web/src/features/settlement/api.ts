@@ -2,7 +2,9 @@ import { apiDelete, apiGet, apiPatch, apiPost } from '@/services/api-client';
 import type {
   BookingSettlement,
   CorrectRefundInput,
+  PreviewReturnSettlementInput,
   RecordRefundInput,
+  ReturnSettlementPreview,
   SaveSurchargeInput,
 } from './types';
 
@@ -49,3 +51,13 @@ export const correctRefund = (
   body: CorrectRefundInput,
 ): Promise<BookingSettlement> =>
   apiPatch<BookingSettlement>(`${base(bookingId)}/settlement/refund`, body);
+
+/**
+ * Quyết toán XEM TRƯỚC lúc nhận lại xe — server cộng các khoản nháp như thể đã ghi và tính lại cọc,
+ * hoàn cọc, số khách còn phải trả, gợi ý quá giờ / vượt km theo giờ và Odo đang gõ. Không ghi gì.
+ */
+export const previewReturnSettlement = (
+  bookingId: string,
+  body: PreviewReturnSettlementInput,
+): Promise<ReturnSettlementPreview> =>
+  apiPost<ReturnSettlementPreview>(`${base(bookingId)}/settlement/return-preview`, body);

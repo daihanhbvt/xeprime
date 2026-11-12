@@ -61,13 +61,13 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('AccountSidebar — tài khoản khách', () => {
+describe('AccountSidebar - tài khoản khách', () => {
   it('hiện menu cá nhân, KHÔNG có mục quản lý xe nào', () => {
     render(<AccountSidebar user={user()} />);
 
     expect(screen.getByText('Quản lý tài khoản')).toBeTruthy();
     expect(screen.getByText('Quản lý thanh toán')).toBeTruthy();
-    expect(screen.getByText('Chuyến của tôi')).toBeTruthy();
+    expect(screen.getByText('Chuyến đi')).toBeTruthy();
     // Đổi mật khẩu + yêu cầu xoá tài khoản là MỘT mục (design Account / Security).
     expect(screen.getByText('Bảo mật tài khoản')).toBeTruthy();
     expect(screen.queryByText('Đổi mật khẩu')).toBeNull();
@@ -97,8 +97,8 @@ describe('AccountSidebar — tài khoản khách', () => {
   });
 });
 
-describe('AccountSidebar — hành vi chung', () => {
-  it('mọi mục trong menu đều là liên kết bấm được — không có mục "Sắp có"', () => {
+describe('AccountSidebar - hành vi chung', () => {
+  it('mọi mục trong menu đều là liên kết bấm được - không có mục "Sắp có"', () => {
     const { container } = render(<AccountSidebar user={user()} />);
 
     const items = container.querySelectorAll('nav li');
@@ -112,7 +112,7 @@ describe('AccountSidebar — hành vi chung', () => {
   it('mục đã dựng là liên kết thật', () => {
     render(<AccountSidebar user={user()} />);
 
-    expect(screen.getByRole('link', { name: /Chuyến của tôi/ }).getAttribute('href')).toBe(
+    expect(screen.getByRole('link', { name: /Chuyến đi/ }).getAttribute('href')).toBe(
       '/trips',
     );
   });
@@ -121,7 +121,7 @@ describe('AccountSidebar — hành vi chung', () => {
     pathname.value = '/trips';
     render(<AccountSidebar user={user()} />);
 
-    expect(screen.getByRole('link', { name: /Chuyến của tôi/ }).getAttribute('aria-current')).toBe(
+    expect(screen.getByRole('link', { name: /Chuyến đi/ }).getAttribute('aria-current')).toBe(
       'page',
     );
     expect(
@@ -142,7 +142,7 @@ describe('AccountSidebar — hành vi chung', () => {
    * ĐĂNG XUẤT KHÔNG ở menu này — nó ở menu avatar trên header, thứ đứng trên mọi trang của khu
    * này. Hai nút đăng xuất trên cùng một màn là hai luồng phải giữ cho giống nhau.
    */
-  it('KHÔNG có nút đăng xuất — lối đó nằm ở menu avatar trên header', () => {
+  it('KHÔNG có nút đăng xuất - lối đó nằm ở menu avatar trên header', () => {
     render(<AccountSidebar user={user()} />);
 
     expect(screen.queryByText('Đăng xuất')).toBeNull();

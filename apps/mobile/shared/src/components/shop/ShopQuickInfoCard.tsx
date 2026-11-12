@@ -5,6 +5,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import type { HostMetrics as HostMetricsShape } from '@xeprime/types';
 import { Avatar } from '@/components/ui/Avatar';
+import { HomeCardAvatar } from '@/features/marketplace/components/home/HomeCardAvatar';
 import { Card } from '@/components/ui/Card';
 import { VerifiedName } from '@/components/ui/VerifiedName';
 import { HostMetrics } from '@/features/marketplace/components/HostMetrics';
@@ -14,7 +15,6 @@ import { ROUTES } from '@/navigation/routes';
 import { roundedCount } from '@/lib/rounded-count';
 import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, market, radius, space } from '@/theme/tokens';
-import { shopHighlightOf } from './shop-highlight';
 
 export interface ShopQuickInfoCardShop {
   name: string;
@@ -84,19 +84,7 @@ export function ShopQuickInfoCard({
   const hasTrips = typeof shop.completedTripCount === 'number';
   const trips = hasTrips ? roundedCount(shop.completedTripCount as number) : null;
 
-  /*
-   * Dòng ghi chú LUÔN có ở biến thể đầy đủ — nội dung đổi theo số liệu thật của từng gian hàng
-   * (`shopHighlightOf`). Để trống chỗ này với gian hàng chưa nổi bật làm thẻ trông như thiếu
-   * mất một phần, mà mọi gian hàng đều có ít nhất một điều đúng để nói.
-   */
-  const highlight = compact
-    ? null
-    : shopHighlightOf({
-        metrics,
-        ratingAvg,
-        ratingCount: shop.ratingCount,
-        completedTripCount: shop.completedTripCount,
-      });
+  // Dòng ghi chú "Chủ xe được khách đánh giá…" đã GỠ theo yêu cầu người dùng (04/11/2026).
 
   if (variant === 'inline') {
     return (
@@ -105,14 +93,7 @@ export function ShopQuickInfoCard({
         metrics={metrics}
         rating={hasRating ? (ratingAvg as number) : null}
         trips={trips}
-        highlightText={
-          highlight
-            ? t(`card.highlight.${highlight.key}`, {
-                rating: highlight.rating === null ? '' : fmt.rating(highlight.rating),
-                count: highlight.count,
-              })
-            : null
-        }
+        highlightText={null}
         onOpen={() => navigateOnce(ROUTES.explore.shopDetail(shop.slug))}
       />
     );
@@ -167,7 +148,7 @@ export function ShopQuickInfoCard({
             </XStack>
           ) : null}
           {variant === 'full' && shop.bio ? (
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            <Text col={colors.textBody} fos={fontSize.bodySm}>
               {shop.bio}
             </Text>
           ) : null}
@@ -215,7 +196,7 @@ export function ShopQuickInfoCard({
         {compact ? (
           <XStack ai="center" gap={4}>
             {openLabel ? (
-              <Text col={colors.primaryActive} fos={fontSize.label} fow={fontWeight.medium}>
+              <Text col={colors.accentText} fos={fontSize.label} fow={fontWeight.medium}>
                 {openLabel}
               </Text>
             ) : null}
@@ -229,17 +210,6 @@ export function ShopQuickInfoCard({
         <HostMetrics metrics={metrics} />
       )}
 
-      {highlight ? (
-        <XStack ai="flex-start" gap={space.xs}>
-          <Ionicons name="ribbon-outline" size={14} color={colors.primary} />
-          <Text f={1} col={colors.textMuted} fos={fontSize.label}>
-            {t(`card.highlight.${highlight.key}`, {
-              rating: highlight.rating === null ? '' : fmt.rating(highlight.rating),
-              count: highlight.count,
-            })}
-          </Text>
-        </XStack>
-      ) : null}
 
       {!compact && actions ? <YStack gap={space.xs}>{actions}</YStack> : null}
     </YStack>
@@ -250,7 +220,7 @@ export function ShopQuickInfoCard({
       <Pressable
         accessibilityRole="button"
         /* Tên gian hàng + VIỆC sẽ xảy ra — xem `openLabel`. */
-        accessibilityLabel={openLabel ? `${shop.name} — ${openLabel}` : shop.name}
+        accessibilityLabel={openLabel ? `${shop.name} - ${openLabel}` : shop.name}
         onPress={() => navigateOnce(ROUTES.explore.shopDetail(shop.slug))}
       >
         {body}
@@ -312,16 +282,20 @@ function InlineShopCard({
         p={space.md}
         gap={space.md}
         bw={1}
-        bc={scheme === 'dark' ? colors.primaryMuted : colors.primaryGlow}
+        // Figma "Owner Section": gian hàng viền vàng, chủ xe cá nhân viền xám.
+        bc={!shop.verified ? colors.border : scheme === 'dark' ? colors.primaryMuted : colors.primaryGlow}
         br={radius.card}
         bg={colors.surface}
       >
         <XStack ai="center" gap={12}>
-          <Avatar
+          {/* Cùng dấu tích xanh của thẻ trang chủ (`HomeCardAvatar`), không dùng dấu cam của `Avatar`. */}
+          <HomeCardAvatar
             name={shop.name}
             url={shop.logoUrl}
             size={48}
-            verifiedLabel={shop.verified ? t('header.verified') : undefined}
+            verified={shop.verified}
+            markDisc={16}
+            markIcon={12}
           />
           <YStack f={1} minWidth={0}>
             <Text col={colors.placeholder} fos={fontSize.body}>
@@ -340,7 +314,7 @@ function InlineShopCard({
             {rating != null ? (
               <XStack ai="center" gap={space.xs}>
                 <Ionicons name="star" size={20} color={market.star} />
-                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+                <Text col={colors.textMuted} fos={fontSize.body} fow={fontWeight.regular}>
                   {fmt.rating(rating)}
                   {shop.ratingCount ? (
                     <Text col={colors.placeholder} fow={fontWeight.regular}>
@@ -356,7 +330,7 @@ function InlineShopCard({
               <XStack ai="center" gap={space.sm}>
                 {/* Web `TripsIcon`: biểu đồ cột viền xanh `success`. */}
                 <Ionicons name="stats-chart-outline" size={18} color={colors.success} />
-                <Text col={colors.textMuted} fos={fontSize.body}>
+                <Text col={colors.text} fos={fontSize.body}>
                   {t('card.trips', { count: trips.display, plus: trips.approximate ? '+' : '' })}
                 </Text>
               </XStack>

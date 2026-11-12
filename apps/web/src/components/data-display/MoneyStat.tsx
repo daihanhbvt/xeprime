@@ -1,8 +1,10 @@
 'use client';
 
+import { ArrowRightOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { cx } from '@/lib/cx';
+import { InfoHint } from './InfoHint';
 import styles from './MoneyStat.module.css';
 
 /**
@@ -25,6 +27,14 @@ interface MoneyStatProps {
   loading?: boolean;
   /** Biến thẻ thành đường dẫn tới danh sách sinh ra con số này (docs/design/09 §3.1). */
   href?: string;
+  /**
+   * `card` — ô viền mảnh (sổ Thu-Chi, khối tiền trong hồ sơ xe/khách).
+   * `tile` — thẻ nổi của design Partner-XePrime ("Summary Metrics", `23813:32225`): không viền,
+   * bo 16, bóng nhẹ; thẻ bấm được mang mũi tên ở mép phải thay cho việc chỉ đổi nền khi rê chuột.
+   */
+  variant?: 'card' | 'tile';
+  /** Lời giải thích con số — dấu ⓘ cạnh nhãn, không phải một dòng chữ dưới thẻ. */
+  info?: { content: ReactNode; label: string };
 }
 
 const TONE_CLASS: Record<MoneyStatTone, string | undefined> = {
@@ -52,30 +62,63 @@ export function MoneyStat({
   hint,
   loading,
   href,
+  variant = 'card',
+  info,
 }: MoneyStatProps) {
-  const body = (
-    <>
+  const tile = variant === 'tile';
+  const labelRow = info ? (
+    <span className={styles.labelRow}>
       <span className={styles.label}>{label}</span>
+      <InfoHint content={info.content} label={info.label} className={styles.info} />
+    </span>
+  ) : (
+    <span className={styles.label}>{label}</span>
+  );
+  const content = (
+    <>
+      {labelRow}
       {loading ? (
         <span className={styles.skeleton} aria-hidden />
       ) : (
         <span className={cx(styles.value, size === 'compact' && styles.compact, TONE_CLASS[tone])}>
-          {value ?? '—'}
+          {value ?? '-'}
         </span>
       )}
       {hint && !loading ? <span className={styles.hint}>{hint}</span> : null}
     </>
   );
+  const body = tile ? (
+    <>
+      <span className={styles.tileBody}>{content}</span>
+      {href ? <ArrowRightOutlined className={styles.arrow} aria-hidden /> : null}
+    </>
+  ) : (
+    content
+  );
+  const cardClass = cx(styles.card, tile && styles.tile);
 
   // Thẻ bấm được là một LIÊN KẾT thật, không phải `div` gắn `onClick`: mở tab mới, sao chép
   // đường dẫn và điều hướng bằng bàn phím phải chạy như mọi liên kết khác trong sản phẩm.
+  //
+  // Có dấu ⓘ thì KHÔNG bọc cả thẻ trong `<a>`: dấu ⓘ là một `<button>`, và nút lồng trong liên kết
+  // là HTML sai (bấm ⓘ sẽ điều hướng luôn). Liên kết khi đó phủ kín thẻ từ phía sau (`.cover`), còn
+  // dấu ⓘ nổi lên trên nó.
+  if (href && info) {
+    return (
+      <div className={cx(cardClass, styles.link, styles.covered)}>
+        {body}
+        <Link className={styles.cover} href={href} aria-label={label} />
+      </div>
+    );
+  }
+
   if (href) {
     return (
-      <Link className={cx(styles.card, styles.link)} href={href}>
+      <Link className={cx(cardClass, styles.link)} href={href}>
         {body}
       </Link>
     );
   }
 
-  return <div className={styles.card}>{body}</div>;
+  return <div className={cardClass}>{body}</div>;
 }

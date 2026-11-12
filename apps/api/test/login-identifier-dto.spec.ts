@@ -29,9 +29,9 @@ describe('LoginDto.identifier', () => {
     }
   });
 
-  it('nhận SĐT chép từ danh bạ, còn nguyên dấu cách/gạch', () => {
-    expect(identifierErrors('090 123 4567')).toEqual([]);
-    expect(identifierErrors('090-123-4567')).toEqual([]);
+  it('từ chối SĐT còn dấu cách/gạch — ô nhập đã tự lọc, chuỗi này không đi qua ô nhập (ADR 0082)', () => {
+    expect(identifierErrors('090 123 4567')).toContain('Số điện thoại không hợp lệ');
+    expect(identifierErrors('090-123-4567')).toContain('Số điện thoại không hợp lệ');
   });
 
   it('từ chối email sai định dạng và chỉ đúng "email"', () => {
@@ -44,7 +44,9 @@ describe('LoginDto.identifier', () => {
   });
 
   it('chuỗi không ra hình gì → câu lỗi nêu cả hai lựa chọn kèm ví dụ', () => {
-    const [message] = identifierErrors('nguyenvana');
+    // KHÔNG dùng 'nguyenvana': từ ADR 0087 đó là tên đăng nhập nhân viên hợp lệ (STAFF_USERNAME_PATTERN).
+    // Có khoảng trắng ⇒ không phải email, SĐT hay tên đăng nhập.
+    const [message] = identifierErrors('nguyen van a');
     expect(message).toContain('email');
     expect(message).toContain('0901234567');
   });

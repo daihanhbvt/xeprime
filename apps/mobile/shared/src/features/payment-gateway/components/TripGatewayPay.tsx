@@ -25,6 +25,8 @@ import {
   type PaymentOrder,
 } from '@/api/payment-gateway/api';
 import { Button } from '@/components/ui/Button';
+import { useIsOnline } from '@/hooks/use-is-online';
+import { OfflineActionHint } from '@/components/network/OfflineActionHint';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { useDomainLabel } from '@/i18n/domain';
@@ -202,6 +204,8 @@ export function TripGatewayPay({
 }) {
   const colors = useColors();
   const t = useTranslations('PaymentGateway.checkout');
+  // Mở cổng thanh toán phải tới server — offline thì khoá nút và nói lý do.
+  const online = useIsOnline();
   const locale = useLocale() === 'en' ? 'en' : 'vi';
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -319,8 +323,8 @@ export function TripGatewayPay({
                           <Text col={colors.warning} fos={fontSize.bodySm}>
                             {t('wallet.outOfRange', {
                               provider: name,
-                              min: method.minAmount ? fmt.money(method.minAmount) : '—',
-                              max: method.maxAmount ? fmt.money(method.maxAmount) : '—',
+                              min: method.minAmount ? fmt.money(method.minAmount) : '-',
+                              max: method.maxAmount ? fmt.money(method.maxAmount) : '-',
                             })}
                           </Text>
                         ) : null}
@@ -351,11 +355,12 @@ export function TripGatewayPay({
                   : t('pay.submit')
               }
               loading={busy}
-              disabled={!picked || pickedBlocked}
+              disabled={!picked || pickedBlocked || !online}
               onPress={() => {
                 if (picked) pay(picked.provider);
               }}
             />
+            <OfflineActionHint />
           </>
         )}
 
@@ -477,6 +482,7 @@ export function GatewayOrderNotice({
   const colors = useColors();
   const t = useTranslations('PaymentGateway.order');
   const tCommon = useTranslations('Common');
+  const online = useIsOnline();
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
 
@@ -558,8 +564,10 @@ export function GatewayOrderNotice({
             label={t('continue')}
             icon="open-outline"
             loading={busy}
+            disabled={!online}
             onPress={() => onContinue(order.checkoutUrl as string)}
           />
+          <OfflineActionHint />
         </GatewayStatusCard>
       ) : (
         <GatewayStatusCard

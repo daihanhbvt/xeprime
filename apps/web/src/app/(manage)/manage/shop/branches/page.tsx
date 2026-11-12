@@ -1,17 +1,13 @@
-import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
-import { BranchesView } from '@/features/branches/components/BranchesView';
+import { redirect } from 'next/navigation';
+
+import { SHOP_SECTION, shopSectionPath } from '@/constants/routes';
 
 /**
- * Tiêu đề tab đi qua `getTranslations` chứ không phải một chuỗi hằng: locale nằm ở cookie
- * `XP_LOCALE` và được đọc phía SERVER (ADR 0012), nên metadata cũng phải theo — một tab tiếng
- * Việt trên giao diện tiếng Anh là chỗ rò ngôn ngữ dễ lọt nhất.
+ * ALIAS CHUYỂN TIẾP (02/11/2026) — "Chi nhánh" rời menu ở design menu ngang và về làm một section của
+ * "Thông tin cửa hàng" (`docs/design/09_PARTNER_REDESIGN.md` §2). Bookmark và link cũ vẫn tới đúng chỗ.
+ *
+ * Phiên hỗ trợ gian hàng ở site quản trị vẫn có trang riêng (`tenant-support/[contextId]/shop/branches`).
  */
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('Branches');
-  return { title: t('page.title') };
-}
-
-export default function BranchesPage() {
-  return <BranchesView />;
+export default function ManageBranchesRedirectPage(): never {
+  redirect(shopSectionPath(SHOP_SECTION.BRANCHES));
 }

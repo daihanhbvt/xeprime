@@ -158,10 +158,10 @@ describe('BannerFormModal', () => {
   });
 
   /**
-   * Banner khuyến mãi: không có ô tablet (tablet hiện như máy tính), và lượt SỬA không gửi lại vị
-   * trí — vị trí đặt lúc tạo, API không cho đổi.
+   * Banner khuyến mãi: đủ ba ô máy tính · tablet · mobile như banner đầu trang, và lượt SỬA không
+   * gửi lại vị trí — vị trí đặt lúc tạo, API không cho đổi.
    */
-  it('banner khuyến mãi: không có ô tablet; sửa không gửi vị trí và luôn bỏ ảnh tablet', async () => {
+  it('banner khuyến mãi: có ô tablet; sửa không gửi vị trí', async () => {
     const promo: AdminBanner = {
       ...oldBanner,
       id: 'promo-banner',
@@ -171,7 +171,7 @@ describe('BannerFormModal', () => {
     const view = renderWithIntl(modal(true, null, BANNER_PLACEMENT.PROMO));
     // Hộp thoại giả không vẽ tiêu đề — câu giới thiệu là dấu hiệu form đang ở vị trí khuyến mãi.
     expect(screen.getByText(/Tạo banner khuyến mãi cho giữa trang chủ/)).toBeTruthy();
-    expect(screen.queryByText('Tablet')).toBeNull();
+    expect(screen.getByText('Tablet')).toBeTruthy();
     expect(screen.getByText('Mobile')).toBeTruthy();
 
     view.rerender(modal(false, null, BANNER_PLACEMENT.PROMO));
@@ -180,7 +180,7 @@ describe('BannerFormModal', () => {
       expect((screen.getByLabelText('Tên banner') as HTMLInputElement).value).toBe('Banner cũ'),
     );
     // Banner đang sửa giữ vị trí của CHÍNH nó, không theo tab đang mở.
-    expect(screen.queryByText('Tablet')).toBeNull();
+    expect(screen.getByText(/Tạo banner khuyến mãi cho giữa trang chủ/)).toBeTruthy();
 
     fireEvent.submit(screen.getByRole('dialog').querySelector('form') as HTMLFormElement);
     await waitFor(() => expect(mutations.update.mutate).toHaveBeenCalled());

@@ -311,7 +311,6 @@ afterEach(async () => {
   await prisma.notification.deleteMany({ where: { tenantId: tenants } });
   await prisma.auditLog.deleteMany({ where: { tenantId: tenants } });
   await prisma.vehicleServiceSetting.deleteMany({ where: { tenantId: tenants } });
-  await prisma.vehicleHandoverWindow.deleteMany({ where: { tenantId: tenants } });
   await prisma.vehicleOperationSetting.deleteMany({ where: { tenantId: tenants } });
 });
 
@@ -499,6 +498,41 @@ describe('Không đủ điều kiện — về hàng chờ, không tự từ ch�
     expect(row.bookingId).not.toBeNull();
   });
 
+  /**
+   * Xe còn ở ngoài với một chuyến quá giờ trả (05/11/2026): lịch nói xe rảnh — lịch bận chỉ chặn tới
+   * giờ trả gốc — nhưng chìa khoá chưa về. Tự nhận lúc đó là hứa một chiếc xe không có.
+   */
+  maybe('xe chưa về từ chuyến quá giờ trả: không tự nhận, ghi `vehicle_still_out`', async () => {
+    await enableAutoAccept(tenantId, vehicleId, ownerId, SERVICE_TYPE.SELF_DRIVE);
+    const overdueId = newId();
+    await prisma.booking.create({
+      data: {
+        id: overdueId,
+        tenantId,
+        vehicleId,
+        code: `DH${overdueId.slice(-6).toUpperCase()}`,
+        customerName: 'Khách đang trễ',
+        status: BOOKING_STATUS.ACTIVE,
+        pickupAt: new Date(Date.now() - 2 * 24 * 60 * 60_000),
+        returnAt: new Date(Date.now() - 2 * 60 * 60_000),
+        baseAmount: new Prisma.Decimal('900000'),
+        discountAmount: new Prisma.Decimal('0'),
+        deliveryFee: new Prisma.Decimal('0'),
+        totalAmount: new Prisma.Decimal('900000'),
+        depositAmount: new Prisma.Decimal('0'),
+      },
+    });
+
+    const receipt = await submit();
+    const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
+    expect(row.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
+    expect(row.decidedAt).toBeNull();
+    const skipped = await prisma.auditLog.findFirst({
+      where: { tenantId, action: 'booking_request.auto_accept_skipped', targetId: receipt.id },
+    });
+    expect(skipped?.afterJson).toMatchObject({ blocker: AUTO_ACCEPT_BLOCKER.VEHICLE_STILL_OUT });
+  });
+
   maybe('chưa bật tự nhận: ở lại hàng chờ, chưa thu tiền và chưa giữ chỗ', async () => {
     const receipt = await submit();
     const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
@@ -558,19 +592,19 @@ describe('Không đủ điều kiện — về hàng chờ, không tự từ ch�
   });
 });
 
-describe('Khung giờ và điều khoản — chặn ngay lúc gửi, ở SERVER', () => {
-  maybe('giờ nhận ngoài khung giao xe bị từ chối bằng mã lỗi riêng', async () => {
+describe('Giờ nhận và điều khoản — kiểm ngay lúc gửi, ở SERVER', () => {
+  /*
+   * Khung giờ giao/nhận đã gỡ (ADR 0078): kể cả khi app cũ gửi khung giờ lên, 05:00 vẫn đặt được
+   * — server không còn giữ khung nào để chặn.
+   */
+  maybe('giờ nhận lúc 05:00 vẫn gửi được dù app cũ từng gửi khung giờ', async () => {
     await settings.saveOperation(tenantId, vehicleId, ownerId, {
       turnaroundBufferMinutes: 0,
       pickupWindows: [{ start: '08:00', end: '18:00' }],
       returnWindows: [{ start: '08:00', end: '18:00' }],
     });
-    await expect(
-      submit({ pickupAt: vnAt(5, 5).toISOString(), returnAt: vnAt(7, 10).toISOString() }),
-    ).rejects.toMatchObject({
-      response: { code: API_ERROR_CODE.HANDOVER_WINDOW_VIOLATION },
-    });
-    expect(await prisma.bookingRequest.count({ where: { tenantId } })).toBe(0);
+    await submit({ pickupAt: vnAt(5, 5).toISOString(), returnAt: vnAt(7, 10).toISOString() });
+    expect(await prisma.bookingRequest.count({ where: { tenantId } })).toBe(1);
   });
 
   maybe(

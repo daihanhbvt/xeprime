@@ -8,6 +8,7 @@ import {
   MAINTENANCE_STATUS,
   PERMISSION,
   VEHICLE_ALERT_KIND,
+  VEHICLE_ALERT_NEEDS_ACTION_KINDS,
   VEHICLE_ALERT_SEVERITY_OF,
   VEHICLE_DOCUMENT_OCR_STATUS,
   VEHICLE_DOCUMENT_PRESENTATION,
@@ -20,6 +21,7 @@ import {
   type VehicleDocumentOcrStatus,
   type VehiclePublicStatus,
 } from '@xeprime/types';
+import { resolveBranchScope } from '../../common/dto/branch-scope';
 import { PrismaService } from '../../prisma/prisma.service';
 import { VehicleAlertDto, VehicleAlertsDto } from './dto/vehicle-alert.dto';
 
@@ -304,11 +306,13 @@ export class VehicleAlertsService {
       ]);
     }
     /**
+     * Việc này chỉ GIẢI QUYẾT được ở một chỗ: hàng đợi "Thiếu KM trả" của Trung tâm bảo dưỡng
+     * (hộp "Bổ sung KM"). Màn đơn thuê không có thao tác đó, nên link không bao giờ trỏ về đơn.
      * Đường đi tiếp phải là chỗ người này VÀO ĐƯỢC, và không được mang định danh họ không có
      * quyền biết:
-     *  - có `bookings.view` và đúng một biên bản → đi thẳng đơn đó (kèm `bookingId`);
-     *  - không có quyền đơn → về hàng đợi chung, nhưng chỉ khi hàng đợi đó vào được
-     *    (Trung tâm bảo dưỡng đòi `vehicles.maintenance.view`, tab đòi `handovers.view`);
+     *  - hàng đợi đòi `vehicles.maintenance.view` (Trung tâm) + `handovers.view` (tab);
+     *  - có `bookings.view` và đúng một biên bản → kèm `resolve=<bookingId>` để màn mở thẳng
+     *    hộp bổ sung KM của biên bản đó (web tự bỏ qua nếu thiếu quyền chỉnh KM);
      *  - không có đích nào hợp lệ → `href: null`. Thà không có lối đi còn hơn một link 403
      *    hoặc một `bookingId` rò ra ngoài.
      */
@@ -320,11 +324,11 @@ export class VehicleAlertsService {
       const soleBookingId = bookingIds.length === 1 ? bookingIds[0] : null;
       push(vehicleId, VEHICLE_ALERT_KIND.MISSING_RETURN_ODOMETER, {
         title: 'Thiếu KM trả',
-        detail: 'Biên bản trả xe đã chốt nhưng chưa có số KM — KM của xe chưa được cập nhật',
+        detail: 'Biên bản trả xe đã chốt nhưng chưa có số KM - KM của xe chưa được cập nhật',
         count: bookingIds.length,
         href:
-          scope.canViewBookings && soleBookingId
-            ? `/manage/bookings?booking=${soleBookingId}`
+          queueHref && scope.canViewBookings && soleBookingId
+            ? `${queueHref}&resolve=${soleBookingId}`
             : queueHref,
       });
     }
@@ -395,6 +399,40 @@ export class VehicleAlertsService {
     }
     // Giữ đúng thứ tự id người gọi hỏi; id không thuộc tenant đơn giản là vắng mặt (không lộ).
     return ids.map((id) => byVehicle.get(id)).filter(Boolean) as VehicleAlertsDto[];
+  }
+
+  /**
+   * Số xe đang có ÍT NHẤT MỘT việc "cần xử lý" (`VEHICLE_ALERT_NEEDS_ACTION_KINDS`) — con số trên
+   * mục menu Danh sách xe (03/11/2026).
+   *
+   * Đếm bằng CHÍNH phép tính của thẻ xe (`forVehicles`), không một câu SQL riêng: con số trên menu
+   * và chip đỏ trên thẻ phải luôn nói cùng một điều. Cùng scope quyền theo miền — người không xem
+   * được giấy tờ thì "giấy tờ hết hạn" không góp vào số của họ. Phạm vi chi nhánh theo người gọi
+   * (ADR 0052), không theo ô lọc của trang: menu đứng ngoài mọi trang.
+   */
+  async needsActionCount(
+    tenantId: string,
+    allowedBranchIds: readonly string[] | null,
+    scope: VehicleAlertScope,
+  ): Promise<number> {
+    const vehicles = await this.prisma.vehicle.findMany({
+      where: {
+        tenantId,
+        deletedAt: null,
+        branchId: resolveBranchScope(undefined, allowedBranchIds),
+      },
+      select: { id: true },
+    });
+    const groups = await this.forVehicles(
+      tenantId,
+      vehicles.map((vehicle) => vehicle.id),
+      scope,
+    );
+    return groups.filter((group) =>
+      group.alerts.some((alert) =>
+        VEHICLE_ALERT_NEEDS_ACTION_KINDS.includes(alert.kind as VehicleAlertKind),
+      ),
+    ).length;
   }
 
   /** Cảnh báo của MỘT xe — dùng cho Hồ sơ 360; cùng phép tính với lưới danh sách. */

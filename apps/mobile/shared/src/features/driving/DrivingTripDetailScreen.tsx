@@ -4,7 +4,13 @@ import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { API_ERROR_CODE, isDriverTripAwaitingAnswer } from '@xeprime/types';
-import { LIST_SEPARATOR, mapExternalUrl, mapSearchUrl, toGeoPoint } from '@xeprime/domain';
+import {
+  driverWageLine,
+  LIST_SEPARATOR,
+  mapExternalUrl,
+  mapSearchUrl,
+  toGeoPoint,
+} from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { useAppToast } from '@/components/feedback/use-app-toast';
@@ -27,6 +33,7 @@ import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { DrivingTripBookingBadge, DrivingTripStatusBadge } from './components/DrivingTripTags';
 import { DriverRespondCountdown } from './components/DriverRespondCountdown';
+import { DropTripSheet } from './components/DropTripSheet';
 import { useAcceptDriverTrip, useDeclineDriverTrip, useDriverTrip } from './hooks';
 
 /** Có toạ độ thì mở đúng điểm (ADR 0061); chỉ có địa chỉ chữ thì tìm theo chữ. */
@@ -69,7 +76,10 @@ export function DrivingTripDetailScreen({ bookingId }: { bookingId: string }) {
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
+  const tCard = useTranslations('Driving.tripCard');
+  const tWage = useTranslations('Driving.wage');
   const [confirmingDecline, setConfirmingDecline] = useState(false);
+  const [dropOpen, setDropOpen] = useState(false);
 
   const query = useDriverTrip(bookingId);
   const accept = useAcceptDriverTrip();
@@ -133,6 +143,7 @@ export function DrivingTripDetailScreen({ bookingId }: { bookingId: string }) {
     trip.destinationLongitude,
   );
   const empty = t('emptyValue');
+  const wageLine = driverWageLine(trip.wage);
 
   return (
     <>
@@ -192,9 +203,83 @@ export function DrivingTripDetailScreen({ bookingId }: { bookingId: string }) {
             </Callout>
           ) : null}
 
+          {/* Đã nhận, chưa giao xe: rút được khi có sự cố (ADR 0074) — trong cửa sổ trả lại thì không phạt. */}
+          {trip.canDrop ? (
+            <Callout tone="success" title={tCard('confirmed')}>
+              <YStack gap={space.sm}>
+                {trip.releaseUntil ? (
+                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                    {t('dropFreeUntil', { time: fmt.dateTime(trip.releaseUntil) })}
+                  </Text>
+                ) : null}
+                <Button
+                  label={tCard('drop')}
+                  icon="warning-outline"
+                  variant="dangerOutline"
+                  disabled={busy}
+                  onPress={() => setDropOpen(true)}
+                />
+              </YStack>
+            </Callout>
+          ) : null}
+
+          {/*
+           * Tiền công của CHÍNH tài xế (ADR 0075) — số hiện hành theo chặng và lịch sử sửa nếu có.
+           * Chủ xe trả trực tiếp; không có tiền nào khác của chuyến ở đây.
+           */}
+          {wageLine ? (
+            <Section title={tWage('title')}>
+              <Text
+                col={wageLine.kind === 'none' ? colors.textMuted : colors.text}
+                fos={fontSize.body}
+                fow={wageLine.kind === 'none' ? fontWeight.regular : fontWeight.semibold}
+              >
+                {tWage(`line.${wageLine.kind}`, {
+                  amount: fmt.money(wageLine.amount),
+                  days: trip.wage.days ?? 0,
+                })}
+              </Text>
+              {wageLine.kind !== 'none' ? (
+                <Text col={colors.textMuted} fos={fontSize.label}>
+                  {tWage('paidDirect')}
+                </Text>
+              ) : null}
+              {trip.wage.changes.length > 0 ? (
+                <YStack gap={space.xs}>
+                  <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
+                    {tWage('changesTitle')}
+                  </Text>
+                  {trip.wage.changes.map((c) => (
+                    <YStack key={c.id} gap={1}>
+                      <Text col={colors.text} fos={fontSize.bodySm}>
+                        {tWage('change', {
+                          old: fmt.money(c.oldAmount),
+                          new: fmt.money(c.newAmount),
+                        })}
+                      </Text>
+                      <Text col={colors.textMuted} fos={fontSize.label}>
+                        {c.changedByName
+                          ? tWage('changeBy', {
+                              name: c.changedByName,
+                              time: fmt.dateTime(c.changedAt),
+                            })
+                          : tWage('changeAt', { time: fmt.dateTime(c.changedAt) })}
+                      </Text>
+                      {c.reason ? (
+                        <Text col={colors.textMuted} fos={fontSize.label}>
+                          {tWage('reason', { reason: c.reason })}
+                        </Text>
+                      ) : null}
+                    </YStack>
+                  ))}
+                </YStack>
+              ) : null}
+            </Section>
+          ) : null}
+
           <Section title={t('schedule')}>
-            <DataRow label={t('pickupAt')} value={fmt.dateTime(trip.pickupAt)} />
-            <DataRow label={t('returnAt')} value={fmt.dateTime(trip.returnAt)} />
+            <DataRow label={t('pickupAt')} value={fmt.rentalAt(trip.pickupAt)} />
+            <DataRow label={t('returnAt')} value={fmt.rentalAt(trip.returnAt)} />
             {trip.actualPickupAt ? (
               <Text col={colors.textMuted} fos={fontSize.label}>
                 {t('actualPickupAt', { time: fmt.dateTime(trip.actualPickupAt) })}
@@ -275,6 +360,10 @@ export function DrivingTripDetailScreen({ bookingId }: { bookingId: string }) {
           </Section>
         </YStack>
       </Screen>
+
+      {trip.canDrop && dropOpen ? (
+        <DropTripSheet trip={trip} onClose={() => setDropOpen(false)} />
+      ) : null}
 
       <AlertDialog
         open={confirmingDecline}

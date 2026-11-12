@@ -23,8 +23,8 @@ import { queryKeys } from '@/services/query-keys';
  *    (`notificationsUnread`, `chatCustomer`/`chatShop`), và đã được nối ở đúng hook của chúng
  *    (`use-notifications.ts`, `use-conversations.ts`). Gộp vào đây là làm mới hai lần cho một
  *    sự kiện;
- *  - `vehicles`, `finance` — thông báo của chúng (duyệt xe, phiếu thu chi) không đổi thứ người
- *    dùng đang nhìn theo cách khiến màn hình nói sai.
+ *  - `finance` — thông báo phiếu thu chi không đổi thứ người dùng đang nhìn theo cách khiến màn
+ *    hình nói sai.
  */
 const NOTIFICATION_AFFECTED: readonly QueryKey[] = [
   /**
@@ -49,6 +49,11 @@ const NOTIFICATION_AFFECTED: readonly QueryKey[] = [
    */
   queryKeys.dashboard.all,
   /**
+   * Sổ khách của gian hàng — tiền giữ chỗ về đủ sinh ĐƠN mới cho một khách, huỷ đơn đổi lượt thuê
+   * và còn nợ; hồ sơ khách đang mở phải đi theo cùng tín hiệu với danh sách đơn.
+   */
+  queryKeys.customers.all,
+  /**
    * Gói và hoá đơn gói — `subscription_activated` do webhook phát khi tiền về đủ (SePay hoặc cổng
    * MoMo/VNPAY, cùng một đường áp tiền). Màn đang hiện QR của hoá đơn chờ phải lật sang "đã kích
    * hoạt" ngay lúc đó, nếu không người vừa trả sẽ quét lần hai. Đây là đường CHÍNH; nhịp hỏi lại
@@ -65,6 +70,13 @@ const NOTIFICATION_AFFECTED: readonly QueryKey[] = [
    */
   queryKeys.driving.all,
   queryKeys.drivers.all,
+  /**
+   * Xe của gian hàng (03/11/2026): admin duyệt / trả về / từ chối / ẩn xe là một thông báo, và nó
+   * đổi chip kiểm duyệt trên thẻ, lý do bị trả về lẫn huy hiệu "cần xử lý" của mục Danh sách xe
+   * (`vehicles.needsActionCount` nằm dưới nhánh này). Đơn đổi trạng thái thì đổi "Đang thuê" và
+   * "Chuyến đã đi" trên thẻ. Chỉ màn Danh sách xe/Hồ sơ xe đang mở mới tải lại.
+   */
+  queryKeys.vehicles.all,
 ];
 
 /**

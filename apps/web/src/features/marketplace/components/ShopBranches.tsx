@@ -40,6 +40,8 @@ export async function ShopBranches({ branches }: { branches: PublicShop['branche
                     ? ` · ${branch.provinceName}`
                     : null}
                 </span>
+                {/* Địa chỉ đủ — chỉ gian hàng tuyến gói, server trả null cho tuyến hoa hồng (ADR 0077). */}
+                {branch.address ? <span className={styles.address}>{branch.address}</span> : null}
               </span>
               {rating !== null && Number.isFinite(rating) ? (
                 <span

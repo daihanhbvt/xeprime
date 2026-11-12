@@ -126,10 +126,10 @@ export const ConversationRow = memo(function ConversationRow({
             <XStack ai="center" jc="space-between" gap={space.sm}>
               {conversation.vehicleName ? (
                 <XStack ai="center" gap={space.xs} flexShrink={1}>
-                  <Ionicons name="car-outline" size={12} color={colors.primaryActive} />
+                  <Ionicons name="car-outline" size={12} color={colors.accentText} />
                   <Text
                     numberOfLines={1}
-                    col={colors.primaryActive}
+                    col={colors.accentText}
                     fos={fontSize.label}
                     fow={fontWeight.medium}
                   >

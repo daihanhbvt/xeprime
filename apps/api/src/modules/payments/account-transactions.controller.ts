@@ -23,7 +23,7 @@ export class AccountTransactionsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Lịch sử giao dịch của tôi — một danh sách hợp nhất, phân trang server-side',
+    summary: 'Lịch sử giao dịch của tôi - một danh sách hợp nhất, phân trang server-side',
     description:
       'Gộp tiền giữ chỗ (SePay + cổng), lệnh rút ví điểm, dòng ghi có ví, hoàn tiền chuyển thẳng ' +
       'và khoản tiền thuê/cọc. Số tiền có dấu theo góc nhìn khách. Lọc `status` + khoảng ngày ' +

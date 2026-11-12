@@ -12,6 +12,7 @@ import {
   TENANT_TYPE_VALUES,
 } from '@xeprime/types';
 import { Transform } from 'class-transformer';
+import { SHOP_BIO_HTML_MAX_LENGTH } from '../../../common/shop-bio-html';
 import {
   IsEmail,
   IsIn,
@@ -42,7 +43,7 @@ export class RegisterShopDto {
    * BẮT BUỘC từ wave chi nhánh: gian hàng phải biết mình ở đâu ngay khi mở, vì chi nhánh mặc
    * định tạo cùng lúc và nó là nguồn vị trí công khai của mọi xe sau này.
    *
-   * Chỉ nhận MÃ. `provinceName` do server tra ra — client gửi tên lên là dữ liệu không kiểm soát
+   * Chỉ nhận MÃ. `provinceName` do server tra ra - client gửi tên lên là dữ liệu không kiểm soát
    * được (đúng thứ kiến trúc này thay thế).
    */
   @ApiProperty({ example: '48', description: 'Mã tỉnh/thành 2 ký tự (GET /provinces)' })
@@ -78,7 +79,7 @@ export class RegisterShopDto {
   @MaxLength(255)
   placeId?: string;
 
-  @ApiPropertyOptional({ description: 'Vĩ độ ghim đã xác nhận — thắng toạ độ server tự tra' })
+  @ApiPropertyOptional({ description: 'Vĩ độ ghim đã xác nhận - thắng toạ độ server tự tra' })
   @IsOptional()
   @IsLatitude()
   latitude?: number;
@@ -97,7 +98,7 @@ export class RegisterShopDto {
    * @deprecated Dùng `addressLine`. Giữ lại vì `ValidationPipe` chạy `forbidNonWhitelisted`:
    * bỏ hẳn khiến mọi bản client đang chạy nhận 400 ngay lần đăng ký tiếp theo.
    */
-  @ApiPropertyOptional({ deprecated: true, description: 'Cũ — dùng `addressLine`' })
+  @ApiPropertyOptional({ deprecated: true, description: 'Cũ - dùng `addressLine`' })
   @IsOptional()
   @Transform(trimmed)
   @IsString()
@@ -110,17 +111,17 @@ export class RegisterShopDto {
   tenantType?: string;
 
   /**
-   * CỬA VÀO mà người đăng ký đã chọn (ADR 0040) — hợp đồng tường minh, không phải một suy luận.
+   * CỬA VÀO mà người đăng ký đã chọn (ADR 0040) - hợp đồng tường minh, không phải một suy luận.
    *
    * Đây là thứ phân biệt hai tuyến của ADR 0028 ở đúng thời điểm chúng tách nhau. Trước đợt này
    * không có tham số nào: hai điểm vào gọi cùng endpoint, server gán gói hoa hồng cho cả hai, và
    * người bấm "Đăng ký gian hàng" bị điều hướng vào màn của tuyến kia. Mọi cách phân biệt ở
-   * client (prop component, `?next=`, state router) đều chết sau một lần F5 — nên ý định phải đi
+   * client (prop component, `?next=`, state router) đều chết sau một lần F5 - nên ý định phải đi
    * trên dây và được LƯU (`tenants.onboarding_state`).
    *
    * `commission` (mặc định): gán gói hoa hồng mặc định, vào Owner Lite ngay.
    * `package`: KHÔNG gán gói nào, tenant ở `package_pending` và chỉ vào được màn onboarding cho
-   * tới khi hoá đơn gói `paid`. Kèm theo đó là bộ trường NGHIÊM hơn — xem
+   * tới khi hoá đơn gói `paid`. Kèm theo đó là bộ trường NGHIÊM hơn - xem
    * `missingPackageShopRegistrationFields`.
    *
    * Tuỳ chọn để client cũ (app native chưa có màn gian hàng) không vỡ: vắng mặt = tuyến hoa
@@ -128,7 +129,7 @@ export class RegisterShopDto {
    *
    * ⚠️ KHÔNG khai `default:` trong `@ApiPropertyOptional`, dù giá trị mặc định có thật.
    * `openapi-typescript` v7 coi một property CÓ `default` là BẮT BUỘC trong type sinh ra, kể cả
-   * khi nó không nằm trong `required` của schema — và với một thân REQUEST, đó là nói ngược hợp
+   * khi nó không nằm trong `required` của schema - và với một thân REQUEST, đó là nói ngược hợp
    * đồng (client cũ không gửi trường này, và server có `@IsOptional()`). Mặc định vì vậy nằm ở
    * `description` + `registrationTrackOf` phía server.
    */
@@ -153,21 +154,21 @@ export class RegisterShopDto {
   email?: string;
 
   /*
-   * KHÔNG có `ownerFullName` (16/09/2026). Người gọi `POST /tenants` LÀ chủ gian hàng — server
-   * gắn `tenants.owner_user_id` bằng chính session của họ — nên họ tên chủ đã nằm ở
+   * KHÔNG có `ownerFullName` (16/09/2026). Người gọi `POST /tenants` LÀ chủ gian hàng - server
+   * gắn `tenants.owner_user_id` bằng chính session của họ - nên họ tên chủ đã nằm ở
    * `users.display_name` và hỏi lại là mời gõ một cái tên thứ hai không ai đối chiếu.
    */
 }
 
-/** Ô trống là "gỡ giá trị" — chỉ kiểm định dạng khi thật sự có chữ. */
+/** Ô trống là "gỡ giá trị" - chỉ kiểm định dạng khi thật sự có chữ. */
 const hasText = (_: object, value: unknown) =>
   value !== '' && value !== undefined && value !== null;
 
-/** Cập nhật hồ sơ gian hàng — mọi trường tuỳ chọn, gửi cái nào cập nhật cái đó. */
+/** Cập nhật hồ sơ gian hàng - mọi trường tuỳ chọn, gửi cái nào cập nhật cái đó. */
 export class UpdateTenantProfileDto {
   /**
-   * Tên HIỂN THỊ của gian hàng — ghi vào `tenants.name`, nguồn duy nhất mà mọi màn của khách đọc.
-   * Không gỡ được (2–255 ký tự, cùng luật với `RegisterShopDto.name`); `slug` không đổi theo.
+   * Tên HIỂN THỊ của gian hàng - ghi vào `tenants.name`, nguồn duy nhất mà mọi màn của khách đọc.
+   * Không gỡ được (2-255 ký tự, cùng luật với `RegisterShopDto.name`); `slug` không đổi theo.
    */
   @ApiPropertyOptional({ description: 'Tên hiển thị của gian hàng (`tenants.name`)' })
   @IsOptional()
@@ -177,7 +178,7 @@ export class UpdateTenantProfileDto {
   displayName?: string;
 
   /**
-   * SĐT LIÊN HỆ của gian hàng — khách thấy ở chuyến đi và hợp đồng. KHÔNG phải SĐT đăng nhập của
+   * SĐT LIÊN HỆ của gian hàng - khách thấy ở chuyến đi và hợp đồng. KHÔNG phải SĐT đăng nhập của
    * tài khoản chủ (`users.phone`, đổi qua OTP): hai số độc lập (ADR 0053). Chuỗi rỗng ⇒ gỡ.
    */
   @ApiPropertyOptional({
@@ -190,7 +191,7 @@ export class UpdateTenantProfileDto {
   @Matches(/^(0|\+84)\d{9}$/, { message: 'Số điện thoại không hợp lệ' })
   phone?: string;
 
-  /** Email LIÊN HỆ của gian hàng — độc lập với email đăng nhập. Chuỗi rỗng ⇒ gỡ. */
+  /** Email LIÊN HỆ của gian hàng - độc lập với email đăng nhập. Chuỗi rỗng ⇒ gỡ. */
   @ApiPropertyOptional({ description: 'Email liên hệ hiển thị cho khách. Chuỗi rỗng = gỡ.' })
   @IsOptional()
   @Transform(lowered)
@@ -199,11 +200,25 @@ export class UpdateTenantProfileDto {
   @MaxLength(255)
   email?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description:
+      'Giới thiệu CHỮ THUẦN. Gửi `bio` mà không kèm `bioHtml` (app native, form cũ) thì bản định ' +
+      'dạng bị gỡ - hai bản không bao giờ nói hai điều khác nhau',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(2000)
   bio?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Giới thiệu ĐÃ ĐỊNH DẠNG từ editor (đậm · nghiêng · gạch chân · căn lề). Server lọc theo danh ' +
+      'sách thẻ cho phép và tự rút chữ thuần ghi vào `bio` (bỏ qua `bio` gửi kèm). Chuỗi rỗng = gỡ',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(SHOP_BIO_HTML_MAX_LENGTH)
+  bioHtml?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -217,8 +232,8 @@ export class UpdateTenantProfileDto {
   @MaxLength(2000)
   coverUrl?: string;
 
-  /** @deprecated Dùng `addressLine` — xem ghi chú ở `RegisterShopDto.address`. */
-  @ApiPropertyOptional({ deprecated: true, description: 'Cũ — dùng `addressLine`' })
+  /** @deprecated Dùng `addressLine` - xem ghi chú ở `RegisterShopDto.address`. */
+  @ApiPropertyOptional({ deprecated: true, description: 'Cũ - dùng `addressLine`' })
   @IsOptional()
   @IsString()
   @MaxLength(500)
@@ -233,7 +248,7 @@ export class UpdateTenantProfileDto {
 
   /**
    * Địa chỉ của gian hàng = địa chỉ của CHI NHÁNH MẶC ĐỊNH, nên gửi mã lên đây là yêu cầu ĐỔI
-   * chi nhánh đó — service chuyển tiếp cho `BranchesService` (writer duy nhất) chứ không tự ghi
+   * chi nhánh đó - service chuyển tiếp cho `BranchesService` (writer duy nhất) chứ không tự ghi
    * bốn cột sao chép trên `tenant_profiles`.
    *
    * `provinceName`/`wardName` KHÔNG nhận từ client: tên do server tra từ mã. Client gửi tên lên
@@ -254,7 +269,7 @@ export class UpdateTenantProfileDto {
   wardCode?: string;
 
   /**
-   * TƯƠNG THÍCH NGƯỢC (07/10/2026) — MST của gian hàng là `seller_profiles.tax_id`, khai ở hồ sơ
+   * TƯƠNG THÍCH NGƯỢC (07/10/2026) - MST của gian hàng là `seller_profiles.tax_id`, khai ở hồ sơ
    * người bán (`PUT /seller-profile`). Trường này còn để client cũ (app native) không vỡ: giá trị
    * gửi lên ghi vào ĐÚNG hồ sơ đó (cùng luật khoá khi đang/đã xác minh), và ĐỔI nó cần thêm
    * `seller_profile.manage`. Cùng luật định dạng với `SaveSellerProfileDto.taxId`; chuỗi rỗng = gỡ.
@@ -282,13 +297,13 @@ export class UpdateTenantProfileDto {
   /*
    * ⚠️ KHÔNG nhận lại bốn ô NGÂN HÀNG và ba ô CHỦ GIAN HÀNG ở đây (16/09/2026).
    *
-   * Tài khoản nhận tiền đi qua `/shop/bank-accounts` — sổ có cờ mặc định, lưu trữ và dấu vết
+   * Tài khoản nhận tiền đi qua `/shop/bank-accounts` - sổ có cờ mặc định, lưu trữ và dấu vết
    * đổi, và là bảng mà mọi lệnh chi thật đọc. Bốn ô text cũ ghi vào chỗ không đồng tiền nào
    * chạy tới.
    *
    * Chủ gian hàng đi qua tài khoản của chính họ: tên ở `PATCH /users/me`, email/SĐT ở luồng
    * xác minh OTP (`/users/me/contact`). Nhận chúng ở endpoint tenant nghĩa là cho một
-   * `shop_manager` có `tenant.update` sửa danh tính của người CHỦ — đúng thứ ADR 0038 điều 3
+   * `shop_manager` có `tenant.update` sửa danh tính của người CHỦ - đúng thứ ADR 0038 điều 3
    * tách ra.
    */
 }
@@ -297,16 +312,23 @@ export class TenantProfileDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Tên hiển thị — chính là `tenants.name` (= `MyShopDto.name`), giữ cho tương thích',
+    description: 'Tên hiển thị - chính là `tenants.name` (= `MyShopDto.name`), giữ cho tương thích',
   })
   displayName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) bio!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Giới thiệu đã định dạng (HTML đã lọc ở server); null = chỉ có bản chữ thuần `bio`',
+  })
+  bioHtml!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) logoUrl!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) coverUrl!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Địa chỉ HIỂN THỊ đã ghép — bản sao của chi nhánh mặc định',
+    description: 'Địa chỉ HIỂN THỊ đã ghép - bản sao của chi nhánh mặc định',
   })
   address!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) provinceCode!: string | null;
@@ -318,25 +340,27 @@ export class TenantProfileDto {
     nullable: true,
     deprecated: true,
     description:
-      'Mã số thuế — chính là `seller_profiles.tax_id` (đọc ở `GET /seller-profile`), giữ cho tương thích',
+      'Mã số thuế - chính là `seller_profiles.tax_id` (đọc ở `GET /seller-profile`), giữ cho tương thích',
   })
   taxCode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) businessLicenseNo!: string | null;
 }
 
 /**
- * CHỦ GIAN HÀNG — đọc từ `tenants.owner_user_id → users`, nguồn DUY NHẤT (16/09/2026).
+ * CHỦ GIAN HÀNG - đọc từ `tenants.owner_user_id → users`, nguồn DUY NHẤT (16/09/2026).
  *
  * Không phải một bản sao trên hồ sơ: đây chính là tài khoản đăng nhập của người sở hữu, nên
- * email/SĐT ở đây là thứ đã (hoặc chưa) đi qua xác minh OTP — và hai cờ dưới nói ra điều đó.
+ * email/SĐT ở đây là thứ đã (hoặc chưa) đi qua xác minh OTP - và hai cờ dưới nói ra điều đó.
  * Một màn hình khoe "đã xác minh" mà không có cờ thật là một lời hứa không ai đứng sau.
  *
  * CHỈ CÓ ở endpoint "gian hàng của tôi". Trang gian hàng công khai không bao giờ mang khối này
- * (ADR 0008) — nó là dữ liệu liên hệ của một con người, không phải mặt tiền của cửa hàng.
+ * (ADR 0008) - nó là dữ liệu liên hệ của một con người, không phải mặt tiền của cửa hàng.
  */
 export class ShopOwnerAccountDto {
   @ApiProperty({ description: 'Id user chủ gian hàng' }) userId!: string;
   @ApiProperty() displayName!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Ảnh đại diện tài khoản chủ' })
+  avatarUrl!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) email!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Dạng lưu 84…' })
   phone!: string | null;
@@ -344,7 +368,7 @@ export class ShopOwnerAccountDto {
   @ApiProperty() phoneVerified!: boolean;
 }
 
-/** Tóm tắt lần gửi duyệt gần nhất — để shop thấy lý do bị từ chối/bổ sung. */
+/** Tóm tắt lần gửi duyệt gần nhất - để shop thấy lý do bị từ chối/bổ sung. */
 export class LatestApprovalDto {
   @ApiProperty({ enum: APPROVAL_STATUS_VALUES }) status!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) reason!: string | null;
@@ -352,7 +376,7 @@ export class LatestApprovalDto {
   @ApiPropertyOptional({ type: String, nullable: true }) reviewedAt!: string | null;
 }
 
-/** Chi nhánh mặc định — trả kèm ngay sau đăng ký để FE biết xe mới sẽ nằm ở đâu. */
+/** Chi nhánh mặc định - trả kèm ngay sau đăng ký để FE biết xe mới sẽ nằm ở đâu. */
 export class DefaultBranchDto {
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;
@@ -367,7 +391,7 @@ export class DefaultBranchDto {
     description: 'Địa chỉ hiển thị đã ghép của chi nhánh mặc định',
   })
   address!: string | null;
-  @ApiProperty({ description: 'Địa chỉ chưa khớp danh mục hành chính hiện hành — cần bổ sung' })
+  @ApiProperty({ description: 'Địa chỉ chưa khớp danh mục hành chính hiện hành - cần bổ sung' })
   needsLocationReview!: boolean;
 }
 
@@ -380,38 +404,38 @@ export class MyShopDto {
   @ApiProperty({ enum: TENANT_TYPE_VALUES }) tenantType!: string;
   @ApiProperty({ enum: TENANT_STATUS_VALUES }) status!: string;
   /**
-   * Trục XÁC MINH — độc lập với `status` (ADR 0036).
+   * Trục XÁC MINH - độc lập với `status` (ADR 0036).
    *
    * `status` trả lời "gian hàng còn được hoạt động không" (khoá/mở khoá của nền tảng);
    * trường này trả lời "nền tảng đã xem xét pháp nhân chưa" và là điều kiện để MUA GÓI thuê
-   * bao. Đăng xe lên chợ KHÔNG đọc trường này — tuyến hoa hồng chỉ có cổng duyệt XE.
+   * bao. Đăng xe lên chợ KHÔNG đọc trường này - tuyến hoa hồng chỉ có cổng duyệt XE.
    */
   @ApiProperty({ enum: SHOP_VERIFICATION_VALUES }) verification!: string;
   /**
-   * Trục ĐĂNG KÝ — `commission` · `package_pending` · `package_active` (ADR 0040).
+   * Trục ĐĂNG KÝ - `commission` · `package_pending` · `package_active` (ADR 0040).
    *
    * Trang Cửa hàng đọc nó để biết luật nào áp cho gian hàng này: cổng logo trước khi gửi xe
    * duyệt chỉ áp với tuyến gói, và băng chào mừng sau lần thanh toán đầu chỉ có nghĩa với
-   * `package_active`. Suy từ `billingMode` là SAI ở cả hai đầu — một gian hàng hết gói vẫn là
+   * `package_active`. Suy từ `billingMode` là SAI ở cả hai đầu - một gian hàng hết gói vẫn là
    * gian hàng, còn một chủ xe hoa hồng vừa mua gói thì chưa từng đi qua cửa gian hàng.
    */
   @ApiProperty({ enum: SHOP_ONBOARDING_STATE_VALUES }) onboardingState!: string;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'SĐT liên hệ của GIAN HÀNG (hiện cho khách) — khác SĐT đăng nhập ở `ownerAccount`',
+    description: 'SĐT liên hệ của GIAN HÀNG (hiện cho khách) - khác SĐT đăng nhập ở `ownerAccount`',
   })
   phone!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
     description:
-      'Email liên hệ của GIAN HÀNG (hiện cho khách) — khác email đăng nhập ở `ownerAccount`',
+      'Email liên hệ của GIAN HÀNG (hiện cho khách) - khác email đăng nhập ở `ownerAccount`',
   })
   email!: string | null;
   @ApiProperty({ type: TenantProfileDto }) profile!: TenantProfileDto;
   /**
-   * Tài khoản CHỦ gian hàng — LUÔN có: `tenants.owner_user_id` là cột NOT NULL với khoá ngoại
+   * Tài khoản CHỦ gian hàng - LUÔN có: `tenants.owner_user_id` là cột NOT NULL với khoá ngoại
    * tới `users`, nên không có gian hàng nào không có chủ.
    */
   @ApiProperty({ type: ShopOwnerAccountDto }) ownerAccount!: ShopOwnerAccountDto;

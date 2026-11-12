@@ -6,7 +6,7 @@
   "hero": {
     "eyebrow": "Về chúng tôi",
     "title": "Một chỗ để thuê xe mà không phải đoán",
-    "lead": "XePrime là sàn kết nối người cần xe với chủ xe trên toàn quốc. Chúng tôi không sở hữu chiếc xe nào — việc của chúng tôi là làm cho giá, lịch và trách nhiệm của hai bên rõ ràng trước khi ai đó trả tiền."
+    "lead": "XePrime là sàn kết nối người cần xe với chủ xe trên toàn quốc. Chúng tôi không sở hữu chiếc xe nào - việc của chúng tôi là làm cho giá, lịch và trách nhiệm của hai bên rõ ràng trước khi ai đó trả tiền."
   },
   "services": {
     "heading": "Ba cách thuê",
@@ -16,7 +16,7 @@
     },
     "withDriver": {
       "title": "Xe có tài xế",
-      "desc": "Đi tỉnh, đón sân bay hay thuê theo buổi — tài xế do gian hàng bố trí, lộ trình thống nhất trước."
+      "desc": "Đi tỉnh, đón sân bay hay thuê theo buổi - tài xế do gian hàng bố trí, lộ trình thống nhất trước."
     },
     "longTerm": {
       "title": "Thuê dài hạn",
@@ -52,7 +52,7 @@
     },
     "pickup": {
       "title": "Phần trả tại chỗ",
-      "desc": "Số tiền thuê còn lại trả trực tiếp cho chủ xe lúc nhận xe — XePrime không thu hộ khoản này."
+      "desc": "Số tiền thuê còn lại trả trực tiếp cho chủ xe lúc nhận xe - XePrime không thu hộ khoản này."
     },
     "lines": {
       "title": "Không gộp dòng",
@@ -61,7 +61,7 @@
   },
   "owners": {
     "heading": "Nếu bạn có xe",
-    "lead": "Hai cách tham gia trên cùng một chợ — chọn theo quy mô, đổi được về sau.",
+    "lead": "Hai cách tham gia trên cùng một chợ - chọn theo quy mô, đổi được về sau.",
     "basic": {
       "title": "Chủ xe cá nhân",
       "desc": "Vài chiếc xe, không thuê bao. Bạn chỉ trả phí dịch vụ theo chuyến thật sự phát sinh.",
@@ -82,7 +82,7 @@
     },
     "calendar": {
       "title": "Không trùng lịch",
-      "desc": "Một chiếc xe không thể bị đặt hai lần cho cùng một khung giờ — ràng buộc nằm ở tầng cơ sở dữ liệu."
+      "desc": "Một chiếc xe không thể bị đặt hai lần cho cùng một khung giờ - ràng buộc nằm ở tầng cơ sở dữ liệu."
     },
     "metrics": {
       "title": "Uy tín đo bằng hành vi thật",

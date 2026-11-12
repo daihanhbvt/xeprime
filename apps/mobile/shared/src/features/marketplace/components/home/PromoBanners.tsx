@@ -1,21 +1,28 @@
+import { KenBurns } from '@/components/motion/KenBurns';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
 import { XP_TOKENS, toPx } from '@xeprime/ui';
 import type { PublicBanner } from '../../api';
 import { HomeCarousel } from './HomeCarousel';
 import { webAssetUrl } from '@/lib/web-base-url';
+import { useContentWidth } from '@/theme/use-content-width';
 
 /**
- * Tỉ lệ khung của `PROMO_BANNER_SLOTS` bên web — ảnh mobile 680×400; banner không có ảnh mobile
- * thì hiện ảnh máy tính (1168×360) nguyên khung, như web dưới 640px.
+ * Thẻ CỐ ĐỊNH 340×140 (Figma MB `19771:51710`, token `promo-banner-mobile-*`), một thẻ mỗi lần, canh
+ * giữa — như web ≤640px. Ảnh `cover` vào khung, có ảnh mobile riêng hay không.
  */
-const MOBILE_RATIO = 680 / 400;
-const DESKTOP_RATIO = 1168 / 360;
-/** `.card` web: bo `border-radius-card`. */
-const CARD_RADIUS = toPx(XP_TOKENS['border-radius-card']);
+const PROMO_CARD = {
+  width: toPx(XP_TOKENS['promo-banner-mobile-width']),
+  height: toPx(XP_TOKENS['promo-banner-mobile-height']),
+};
+const PROMO_RATIO = PROMO_CARD.width / PROMO_CARD.height;
+/** `.card` web: bo `border-radius-banner` (20 — Figma `21965:5289`). */
+const CARD_RADIUS = toPx(XP_TOKENS['border-radius-banner']);
 
 /**
  * Banner KHUYẾN MÃI giữa trang chủ (\`placement = promo\`) — admin quản lý, chữ và giá nằm sẵn
@@ -31,31 +38,52 @@ export function PromoBanners({ banners }: { banners: PublicBanner[] }) {
   const colors = useColors();
   const t = useTranslations('Home.promos');
   const [broken, setBroken] = useState<ReadonlySet<string>>(new Set());
+  const width = useContentWidth();
   const visible = banners.filter((banner) => !broken.has(banner.id));
   if (visible.length === 0) return null;
 
   return (
-    <HomeCarousel accessibilityLabel={t('label')}>
+    // MỘT banner mỗi lần (như web ≤640px): slide rộng trọn khung nội dung, thẻ 340×140 canh giữa —
+    // thẻ kế nằm ngoài màn, người dùng vuốt sang.
+    <HomeCarousel accessibilityLabel={t('label')} itemWidth={width - layout.screenX * 2}>
       {visible.map((banner) => (
-        <YStack
-          key={banner.id}
-          w="100%"
-          aspectRatio={banner.mobileImageUrl ? MOBILE_RATIO : DESKTOP_RATIO}
-          br={CARD_RADIUS}
-          ov="hidden"
-          bg={colors.surfaceMuted}
-        >
-          <Image
-            source={{ uri: webAssetUrl(banner.mobileImageUrl ?? banner.imageUrl) }}
-            style={{ width: '100%', height: '100%' }}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            transition={150}
-            accessibilityLabel={banner.altText}
-            onError={() => setBroken((prev) => new Set(prev).add(banner.id))}
-          />
+        <YStack key={banner.id} w="100%" ai="center">
+          <YStack
+            w={PROMO_CARD.width}
+            h={PROMO_CARD.height}
+            br={CARD_RADIUS}
+            ov="hidden"
+            bg={colors.surfaceMuted}
+          >
+            {/* Ken Burns chậm như hero — chỉ transform, khung ngoài clip. */}
+            <KenBurns style={{ width: '100%', height: '100%' }}>
+              <Image
+                source={{ uri: webAssetUrl(banner.mobileImageUrl ?? banner.imageUrl) }}
+                style={{ width: '100%', height: '100%' }}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={150}
+                accessibilityLabel={banner.altText}
+                onError={() => setBroken((prev) => new Set(prev).add(banner.id))}
+              />
+            </KenBurns>
+          </YStack>
         </YStack>
       ))}
     </HomeCarousel>
+  );
+}
+
+/**
+ * Giữ chỗ khối khuyến mãi lúc danh sách banner chưa về — cùng khung tỉ lệ ảnh mobile, nên khi
+ * banner hiện ra phần dưới trang chủ không bị đẩy xuống.
+ */
+export function PromoBannersSkeleton() {
+  return (
+    <YStack w="100%" ai="center">
+      <YStack w={PROMO_CARD.width} br={CARD_RADIUS} ov="hidden">
+        <Skeleton aspectRatio={PROMO_RATIO} />
+      </YStack>
+    </YStack>
   );
 }

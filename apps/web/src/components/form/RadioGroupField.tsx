@@ -23,6 +23,8 @@ interface RadioGroupFieldProps<T extends FieldValues> {
   help?: ReactNode;
   /** Xếp dọc — mặc định cho lựa chọn có mô tả; ngang chỉ hợp với nhãn ngắn. */
   vertical?: boolean;
+  /** Id của tiêu đề đứng ngoài ô (khi không dùng `label`) — để nhóm vẫn có tên đọc được. */
+  labelledBy?: string;
 }
 
 /**
@@ -41,6 +43,7 @@ export function RadioGroupField<T extends FieldValues>({
   required,
   help,
   vertical = true,
+  labelledBy,
 }: RadioGroupFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
   const groupId = `${String(name)}-${useId()}`;
@@ -57,6 +60,7 @@ export function RadioGroupField<T extends FieldValues>({
     >
       <Radio.Group
         id={groupId}
+        aria-labelledby={labelledBy}
         aria-describedby={helpText ? describedById : undefined}
         value={(field.value as string | null | undefined) ?? undefined}
         onChange={(e) => field.onChange(e.target.value as string)}

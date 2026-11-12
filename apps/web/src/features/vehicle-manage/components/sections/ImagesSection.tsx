@@ -7,6 +7,7 @@ import type { VehicleImageType } from '@xeprime/types';
 
 import { StickyFormActions } from '@/components/form/StickyFormActions';
 import { useUpdateVehicle } from '@/features/vehicles/hooks/use-vehicle-mutations';
+import { useEditForm } from '@/features/vehicles/components/edit/edit-actions';
 import { useErrorMessage } from '@/i18n/use-error-message';
 
 import { useManagedVehicle } from '../VehicleManageContext';
@@ -43,14 +44,29 @@ export function ImagesSection() {
 
   const dirty = JSON.stringify(items) !== JSON.stringify(initial);
 
-  async function submit() {
+  async function submit(): Promise<boolean> {
+    // Ảnh đang tải lên chưa có URL để lưu — chờ xong hãy lưu.
+    if (uploading) return false;
     try {
       await update.mutateAsync({ media: items.map((i) => ({ url: i.url, type: i.type })) });
       message.success(t('saved'));
+      return true;
     } catch (err) {
       message.error(errorMessage(err));
+      return false;
     }
   }
+
+  /*
+   * Màn sửa xe: nút lưu ở cột phải (design `23707:25596`). Đang tải ảnh lên thì nút quay — bấm không
+   * lưu một thư viện còn thiếu tấm đang lên.
+   */
+  const registered = useEditForm('media', {
+    dirty: canEdit && dirty,
+    submitting: update.isPending || uploading,
+    submit,
+    reset: () => setItems(initial),
+  });
 
   return (
     <form
@@ -70,17 +86,15 @@ export function ImagesSection() {
         onUploadingChange={setUploading}
       />
 
-      <StickyFormActions
-        submitLabel={tActions('saveChanges')}
-        cancelLabel={tEdit('revert')}
-        onCancel={
-          dirty
-            ? () => setItems(initial)
-            : undefined
-        }
-        submitting={update.isPending}
-        disabled={!canEdit || !dirty || uploading}
-      />
+      {registered ? null : (
+        <StickyFormActions
+          submitLabel={tActions('saveChanges')}
+          cancelLabel={tEdit('revert')}
+          onCancel={dirty ? () => setItems(initial) : undefined}
+          submitting={update.isPending}
+          disabled={!canEdit || !dirty || uploading}
+        />
+      )}
     </form>
   );
 }

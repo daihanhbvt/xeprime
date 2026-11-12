@@ -1,4 +1,4 @@
-/** Khung danh sách chuyến — một cột thẻ, dùng chung cho site khách và site partner. */
+/** Thân danh sách chuyến đi thuê của khách — một cột thẻ. */
 
 .list {
   display: flex;
@@ -19,28 +19,6 @@
   justify-content: center;
 }
 
-/* Hàng công cụ khi bộ chuyển tab nằm ở màn cha (`tabs="external"`) — chỉ bộ lọc chặng. */
-.toolbar {
-  display: flex;
-  justify-content: flex-end;
-}
-
 .refreshing {
   align-self: center;
-}
-
-/* Bộ lọc chặng nằm ở khe phải của hàng tab — cùng nhịp với thanh lọc của hộp thư gian hàng. */
-.stageFilter {
-  min-width: 200px;
-}
-
-/** 640px = `--xp-bp-mobile`; custom property không dùng được trong `@media` (quyết định P8). */
-@media (max-width: 640px) {
-  .stageFilter {
-    min-width: 148px;
-  }
-
-  .toolbar .stageFilter {
-    width: 100%;
-  }
 }

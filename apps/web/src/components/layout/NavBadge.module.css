@@ -1,9 +1,9 @@
 /**
  * Huy hiệu "cần xử lý": nhỏ, một màu, đứng cuối dòng.
  *
- * Dùng gold thương hiệu chứ không phải đỏ cảnh báo — đây là việc đang chờ, không phải sự cố.
- * Chữ trên nền gold lấy `--xp-color-primary-contrast` (đo được 6.60 — đạt AA), giống hệt huy
- * hiệu vai trò ở thẻ người dùng nên hai chỗ không lệch tông.
+ * Màu CẢNH BÁO chứ không phải gold thương hiệu (04/11/2026): gold lẫn vào nhãn mục đang chọn và
+ * thanh menu, nên con số "có việc phải làm" không nổi lên. Cam = đang chờ xử lý; đỏ (`.urgent`) =
+ * đã trễ / sắp trễ. Chữ trắng trên nền đặc để đọc được cả khi huy hiệu đè lên biểu tượng tab.
  */
 .badge {
   flex: none;
@@ -14,10 +14,14 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-primary);
-  color: var(--xp-color-primary-contrast);
+  background: var(--xp-color-warning-strong);
+  color: var(--xp-color-text-on-dark);
   font-size: var(--xp-font-size-overline);
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+}
+
+.urgent {
+  background: var(--xp-color-error);
 }

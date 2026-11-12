@@ -1,0 +1,36 @@
+/* Nút tiền công/ngày cạnh "Mời tài xế mới" (màn Tài xế, 04/11/2026) — cao 40 như nút đầu trang. */
+.skeleton {
+  width: 200px !important;
+}
+
+/* Bản chỉ-xem: cùng khung nút viền nhưng không bấm được (không có `drivers.manage`). */
+.readOnly {
+  display: inline-flex;
+  height: 40px;
+  align-items: center;
+  padding: 0 var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+  gap: var(--xp-space-sm);
+  white-space: nowrap;
+}
+
+/* Chưa đặt mức chung — nhắc bằng màu cảnh báo: gán tay phải nhập số, "Đặt ngay" không tự gán. */
+.readOnlyUnset {
+  border-color: var(--xp-color-warning-border);
+  color: var(--xp-color-warning-strong);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.linkAction {
+  align-self: flex-start;
+  padding-inline: 0;
+}

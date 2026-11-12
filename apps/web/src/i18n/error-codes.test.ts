@@ -18,7 +18,7 @@ import viMessages from '../../messages/vi';
  * còn ném nó. Thêm bản dịch ở đây là thêm chuỗi chết vào bundle của cả hai ngôn ngữ.
  */
 const RETIRED_CODES: Readonly<Record<string, string>> = {
-  DELIVERY_QUOTE_REQUIRED: 'Nghỉ hưu ở Wave 9 — vòng báo giá giao nhận đã bị bỏ',
+  DELIVERY_QUOTE_REQUIRED: 'Nghỉ hưu ở Wave 9 - vòng báo giá giao nhận đã bị bỏ',
 };
 
 /** Mã do CHÍNH web sinh ra (không đến từ backend), nên không có mặt trong `API_ERROR_CODE`. */
@@ -33,7 +33,7 @@ describe('bảng câu lỗi ↔ API_ERROR_CODE', () => {
     expect(SERVER_CODES.filter((code) => !have.includes(code))).toEqual([]);
   });
 
-  it('không có câu thừa — mỗi khoá ứng với một mã thật hoặc một mã của chính web', () => {
+  it('không có câu thừa - mỗi khoá ứng với một mã thật hoặc một mã của chính web', () => {
     const known = new Set([...Object.values(API_ERROR_CODE), ...CLIENT_ONLY_CODES]);
     expect(Object.keys(viMessages.Errors.code).filter((code) => !known.has(code))).toEqual([]);
   });

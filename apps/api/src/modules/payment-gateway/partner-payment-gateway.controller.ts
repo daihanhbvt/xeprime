@@ -39,7 +39,7 @@ export class PartnerPaymentGatewayController {
   @Get('methods')
   @RequirePermissions(PERMISSION.SUBSCRIPTION_VIEW)
   @ApiOperation({
-    summary: 'Cổng thanh toán đang mở cho hoá đơn gói — rỗng khi chưa cấu hình hoặc chưa bật',
+    summary: 'Cổng thanh toán đang mở cho hoá đơn gói - rỗng khi chưa cấu hình hoặc chưa bật',
   })
   @ApiOkResponse({ type: PaymentGatewayMethodsDto })
   methods(): PaymentGatewayMethodsDto {
@@ -52,7 +52,7 @@ export class PartnerPaymentGatewayController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({
     summary:
-      'Mở phiên thanh toán hoá đơn gói qua cổng — số tiền là phần còn thiếu đọc từ DB; dùng lại phiên còn hạn',
+      'Mở phiên thanh toán hoá đơn gói qua cổng - số tiền là phần còn thiếu đọc từ DB; dùng lại phiên còn hạn',
   })
   @ApiOkResponse({ type: PaymentOrderDto })
   checkout(
@@ -73,7 +73,7 @@ export class PartnerPaymentGatewayController {
   @RequirePermissions(PERMISSION.SUBSCRIPTION_VIEW)
   @ApiOperation({
     summary:
-      'Trạng thái MỘT lượt thanh toán hoá đơn qua cổng (trang quay về) — server tự hỏi cổng khi còn chờ quá lâu',
+      'Trạng thái MỘT lượt thanh toán hoá đơn qua cổng (trang quay về) - server tự hỏi cổng khi còn chờ quá lâu',
   })
   @ApiOkResponse({ type: PaymentOrderDto })
   order(

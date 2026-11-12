@@ -55,7 +55,7 @@ const renderPanel = (over: Partial<VehicleDetail> = {}) =>
 
 afterEach(cleanup);
 
-describe('VehiclePublicReviewPanel — thẻ tra cứu', () => {
+describe('VehiclePublicReviewPanel - thẻ tra cứu', () => {
   it('chưa duyệt: tiêu đề "Tiến trình xét duyệt", checklist mở sẵn', () => {
     renderPanel();
 
@@ -98,7 +98,7 @@ describe('VehiclePublicReviewPanel — thẻ tra cứu', () => {
   });
 });
 
-describe('VehiclePublicReviewPanel — xe đã duyệt', () => {
+describe('VehiclePublicReviewPanel - xe đã duyệt', () => {
   it('đổi tên thành "Thông tin xét duyệt" và thu gọn sẵn', () => {
     renderPanel({
       publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
@@ -110,7 +110,7 @@ describe('VehiclePublicReviewPanel — xe đã duyệt', () => {
     expect(screen.queryByText('Đủ các góc ảnh bắt buộc')).toBeNull();
   });
 
-  it('mở ra thì có đủ checklist — và cái mở được bằng bàn phím', () => {
+  it('mở ra thì có đủ checklist - và cái mở được bằng bàn phím', () => {
     renderPanel({
       publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
       isMarketplaceVisible: true,

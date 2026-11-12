@@ -146,7 +146,7 @@ describe('useThreadScroll', () => {
     expect(scrollCalls.at(-1)).toBe(2000);
   });
 
-  it('CHƯA tải xong thì không cuộn — không có gì để neo vào', () => {
+  it('CHƯA tải xong thì không cuộn - không có gì để neo vào', () => {
     renderThread(thread({ lastMessageId: null, messageCount: 0, ready: false }), 0);
     expect(scrollCalls).toHaveLength(0);
   });

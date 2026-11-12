@@ -102,7 +102,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Topbar — dựng', () => {
+describe('Topbar - dựng', () => {
   it('là landmark banner', () => {
     renderTopbar();
 
@@ -123,7 +123,7 @@ describe('Topbar — dựng', () => {
    * này khoá lại điều đó: một lần "tiện tay" đưa ô chọn trở lên đây là tái lập đúng cái hiểu lầm
    * cũ, và nó sẽ lại không có cách nào sống sót qua một lần F5.
    */
-  it('KHÔNG dựng bộ chọn chi nhánh — nó thuộc thanh lọc của từng màn (ADR 0052)', () => {
+  it('KHÔNG dựng bộ chọn chi nhánh - nó thuộc thanh lọc của từng màn (ADR 0052)', () => {
     renderTopbar();
 
     expect(screen.queryByLabelText('Chi nhánh đang xem')).toBeNull();
@@ -137,35 +137,35 @@ describe('Topbar — dựng', () => {
     expect(screen.queryByText('Thuê Xe Minh Anh')).toBeNull();
   });
 
-  it('KHÔNG dựng ô tìm kiếm — chưa có API tìm kiếm nào đứng sau', () => {
+  it('KHÔNG dựng ô tìm kiếm - chưa có API tìm kiếm nào đứng sau', () => {
     renderTopbar();
 
     expect(screen.queryByRole('searchbox')).toBeNull();
     expect(screen.queryByPlaceholderText(/Tìm kiếm/)).toBeNull();
   });
 
-  it('KHÔNG dựng nút thu gọn thứ hai — nút đó thuộc sidebar (Figma `47:12`)', () => {
+  it('KHÔNG dựng nút thu gọn thứ hai - nút đó thuộc sidebar (Figma `47:12`)', () => {
     renderTopbar();
 
     expect(screen.queryByRole('button', { name: /Thu gọn menu|Mở rộng menu/ })).toBeNull();
   });
 });
 
-describe('Topbar — ngữ cảnh trang', () => {
+describe('Topbar - ngữ cảnh trang', () => {
   it('breadcrumb hiện trang đang mở, lấy nhãn từ chính cây menu', () => {
     renderTopbar();
 
     const banner = screen.getByRole('banner');
     expect(within(banner).getByText('Trang chủ')).toBeTruthy();
-    // Chủ xe tuyến hoa hồng (OWNER không mang gói) — nhãn của menu Owner Lite, cùng nhãn tuyến gói.
-    expect(within(banner).getByText('Xe của tôi')).toBeTruthy();
+    // Chủ xe tuyến hoa hồng (OWNER không mang gói) — nhãn của menu Owner Lite ("Xe & Tài xế › Danh sách xe"), cùng nhãn tuyến gói.
+    expect(within(banner).getByText('Danh sách xe')).toBeTruthy();
   });
 
   it('route con vẫn ra ngữ cảnh cha', () => {
     nav.pathname = '/manage/vehicles/01H/edit';
     renderTopbar();
 
-    expect(within(screen.getByRole('banner')).getByText('Xe của tôi')).toBeTruthy();
+    expect(within(screen.getByRole('banner')).getByText('Danh sách xe')).toBeTruthy();
   });
 
   it('route ngoài cây menu chỉ hiện cấp một, KHÔNG bịa tiêu đề', () => {
@@ -178,7 +178,7 @@ describe('Topbar — ngữ cảnh trang', () => {
   });
 });
 
-describe('Topbar — mọi nút icon đều có tên', () => {
+describe('Topbar - mọi nút icon đều có tên', () => {
   it('không còn nút nào không có tên truy cập được', () => {
     renderTopbar();
 
@@ -197,7 +197,7 @@ describe('Topbar — mọi nút icon đều có tên', () => {
   });
 });
 
-describe('Topbar — hành động người dùng', () => {
+describe('Topbar - hành động người dùng', () => {
   it('hamburger mở drawer mobile', () => {
     renderTopbar();
 

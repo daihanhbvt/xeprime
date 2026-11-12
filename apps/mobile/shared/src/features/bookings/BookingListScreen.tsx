@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { RefreshControl, type ListRenderItem } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   BOOKING_LIST_PRESET,
@@ -10,6 +10,8 @@ import {
   type BookingListPreset,
   SERVICE_TYPE_VALUES,
 } from '@xeprime/types';
+import { Button } from '@/components/ui/Button';
+import { Chip } from '@/components/ui/Chip';
 import { IconButton } from '@/components/ui/IconButton';
 import { Screen } from '@/components/layout/Screen';
 import { RecordCardSkeleton } from '@/components/ui/Skeleton';
@@ -18,7 +20,7 @@ import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManageListShell } from '@/features/shell/ManageListShell';
-import { withBranchParam, withBranchReturn } from '@/features/branches/branch-link';
+import { withBranchReturn } from '@/features/branches/branch-link';
 import {
   BranchFilterField,
   useBranchEmptyCopy,
@@ -36,10 +38,13 @@ import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { useColors } from '@/theme/ThemeProvider';
 import { scrollThrottle } from '@/theme/motion';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { BookingCard } from './components/BookingCard';
+import { ExtendBookingSheet } from './components/ExtendBookingSheet';
 import { useBookingsPage } from './hooks/use-bookings';
+import { usePaymentArrivalToast } from './hooks/use-payment-arrival-toast';
 import { useCanCreateBooking } from './hooks/use-can-create-booking';
-import type { BookingListItem, BookingSort } from './api';
+import type { BookingListItem, BookingListMeta, BookingSort } from './api';
 
 /** Khớp `BOOKING_SORT` ở DTO backend — bốn giá trị, không nhiều hơn. */
 const BOOKING_SORT_VALUES: readonly BookingSort[] = [
@@ -57,8 +62,25 @@ const SEARCH_DEBOUNCE_MS = 350;
 /** Sentinel "mọi trạng thái" của giao diện — không endpoint nào nhận `status=all`. */
 const STATUS_ALL = 'all';
 
+/** Ngăn "Tất cả" xem trước chừng này đơn mỗi chặng — đúng `ALL_VIEW_GROUP_LIMIT` của web. */
+const ALL_VIEW_GROUP_LIMIT = 3;
+
+/*
+ * Hai chặng ĐƠN đang chạy. Hai ngăn đã kết thúc (Hoàn thành / Đã huỷ) rời màn này sang "Đơn đã kết
+ * thúc" (05/11/2026, web `bookingsGroupPath`) — "Tất cả" chỉ gồm hai chặng này.
+ */
+const PRESET_ORDER = [BOOKING_LIST_PRESET.AWAITING_PICKUP, BOOKING_LIST_PRESET.RENTING] as const;
+type ActivePreset = (typeof PRESET_ORDER)[number];
+
+/** Dòng của danh sách: đầu chặng · thẻ đơn · nút "Xem tất cả" của chặng (chỉ ở ngăn "Tất cả"). */
+type ListRow =
+  | { kind: 'head'; preset: ActivePreset; count: number }
+  | { kind: 'booking'; preset: ActivePreset | undefined; booking: BookingListItem }
+  | { kind: 'more'; preset: ActivePreset; count: number };
+
 // Ở module scope, không inline: FlatList coi `keyExtractor` mới là prop đổi và dựng lại cả cây con.
-const keyOf = (booking: BookingListItem) => booking.id;
+const keyOf = (row: ListRow) =>
+  row.kind === 'booking' ? row.booking.id : `${row.kind}:${row.preset}`;
 
 /**
  * Danh sách đơn thuê (BKG-07).
@@ -89,8 +111,23 @@ export function BookingListScreen({
   // Lập đơn tay: quyền + tuyến gói (web `useCanCreateBooking`).
   const canCreate = useCanCreateBooking();
   const domainLabel = useDomainLabel();
+  // Toast "Ghi nhận thanh toán" khi khách trả đủ tiền giữ chỗ lúc màn đang mở (web 05/11/2026).
+  usePaymentArrivalToast({
+    enabled: permissions.has(PERMISSION.BOOKING_REQUEST_VIEW),
+    canOpenBooking: permissions.has(PERMISSION.BOOKING_VIEW),
+  });
 
-  const awaitingPickup = preset === BOOKING_LIST_PRESET.AWAITING_PICKUP;
+  /*
+   * Ngăn của "Quản lý đơn thuê xe" (02/11/2026, web `?preset=`): bốn ngăn phủ kín mọi đơn, số đếm
+   * do server trả cùng trang (`meta.presetCounts`). Màn mở bằng route nhóm việc thì ngăn CỐ ĐỊNH
+   * theo route — không có dải chọn.
+   */
+  const [view, setView] = useState<BookingListPreset | undefined>(undefined);
+  const activePreset = preset ?? view;
+  const awaitingPickup = activePreset === BOOKING_LIST_PRESET.AWAITING_PICKUP;
+  // Gia hạn ngay từ thẻ (ADR 0077) — cùng cổng quyền với web `canExtend`.
+  const canExtend = permissions.has(PERMISSION.BOOKING_UPDATE);
+  const [extending, setExtending] = useState<BookingListItem | null>(null);
 
   /*
    * Bộ lọc KHỞI TẠO từ tham số route — thẻ Tổng quan mở sẵn "Đang thuê, trả sớm nhất trước" như
@@ -126,21 +163,76 @@ export function BookingListScreen({
   const { branchId, filter: branchFilter } = useScreenBranchFilter(() => setPage(FIRST_PAGE));
   const branchEmpty = useBranchEmptyCopy(branchFilter, branchId);
 
-  const query = useBookingsPage({
+  /*
+   * Ngăn "Tất cả" của web (05/11/2026) là các chặng ĐANG CHẠY, mỗi chặng xem trước vài đơn kèm
+   * "Xem tất cả (n)" — KHÔNG gồm đơn đã hoàn thành/huỷ (chúng ở "Đơn đã kết thúc"). Không endpoint
+   * nào nhận nhiều nhóm việc, nên ngăn này là hai truy vấn nhỏ cùng phạm vi lọc. Lối từ Tổng quan
+   * mang sẵn `?status=` thì giữ danh sách phẳng theo trạng thái đó để còn gỡ được.
+   */
+  const grouped = !activePreset && status === STATUS_ALL;
+  const scope = {
     ...(branchId ? { branchId } : {}),
-    ...(status === STATUS_ALL ? {} : { status }),
     ...(serviceType === STATUS_ALL ? {} : { serviceType }),
-    ...(preset ? { preset } : {}),
     // Lọc theo xe đến từ ĐƯỜNG DẪN, không phải tấm lọc: nó là ngữ cảnh của lối đi từ hồ sơ xe,
     // giống hệt `?vehicleId=` bên web.
     ...(vehicleId ? { vehicleId } : {}),
     ...(debouncedSearch.trim() ? { q: debouncedSearch.trim() } : {}),
     sort,
-    page,
-  });
+  };
+  const query = useBookingsPage(
+    grouped
+      ? {
+          ...scope,
+          preset: BOOKING_LIST_PRESET.AWAITING_PICKUP,
+          page: FIRST_PAGE,
+          limit: ALL_VIEW_GROUP_LIMIT,
+        }
+      : {
+          ...scope,
+          ...(status === STATUS_ALL ? {} : { status }),
+          ...(activePreset ? { preset: activePreset } : {}),
+          page,
+        },
+  );
+  const rentingPreview = useBookingsPage(
+    {
+      ...scope,
+      preset: BOOKING_LIST_PRESET.RENTING,
+      page: FIRST_PAGE,
+      limit: ALL_VIEW_GROUP_LIMIT,
+    },
+    { enabled: grouped },
+  );
 
-  const items = query.data?.items ?? [];
+  const items = query.data?.items;
   const meta = query.data?.meta;
+  const rentingItems = rentingPreview.data?.items;
+  const groupedTotal = meta
+    ? meta.presetCounts
+        .filter((c) => (PRESET_ORDER as readonly string[]).includes(c.preset))
+        .reduce((sum, c) => sum + c.count, 0)
+    : 0;
+
+  const rows = useMemo<ListRow[]>(() => {
+    if (!grouped) {
+      return (items ?? []).map((booking) => ({ kind: 'booking' as const, preset: undefined, booking }));
+    }
+    const previews: Record<ActivePreset, readonly BookingListItem[]> = {
+      [BOOKING_LIST_PRESET.AWAITING_PICKUP]: items ?? [],
+      [BOOKING_LIST_PRESET.RENTING]: rentingItems ?? [],
+    };
+    const out: ListRow[] = [];
+    for (const preset of PRESET_ORDER) {
+      const groupItems = previews[preset];
+      if (groupItems.length === 0) continue;
+      const count =
+        meta?.presetCounts.find((c) => c.preset === preset)?.count ?? groupItems.length;
+      out.push({ kind: 'head', preset, count });
+      for (const booking of groupItems) out.push({ kind: 'booking', preset, booking });
+      if (count > groupItems.length) out.push({ kind: 'more', preset, count });
+    }
+    return out;
+  }, [grouped, items, rentingItems, meta]);
 
   /*
    * Duyệt / từ chối / huỷ làm danh sách ngắn đi, và trang đang đứng có thể biến mất theo —
@@ -185,7 +277,8 @@ export function BookingListScreen({
        * (`BOOKING_STATUS_SELECTABLE_VALUES`) — loại `confirmed` (deprecated), thứ chưa từng là
        * một trạng thái nghỉ hợp lệ trong bất kỳ luồng sản phẩm nào.
        */
-      ...(awaitingPickup
+      // Web bỏ ô "Trạng thái" (02/11/2026) — thay bằng dải NGĂN. Chỉ còn khi đang lọc sẵn một trạng thái (lối từ Tổng quan `?status=`) để còn gỡ được.
+      ...(awaitingPickup || status === STATUS_ALL
         ? []
         : [
             {
@@ -232,11 +325,35 @@ export function BookingListScreen({
     [navigateOnce],
   );
 
-  const renderItem = useCallback<ListRenderItem<BookingListItem>>(
-    ({ item }) => (
-      <BookingCard booking={item} onPress={openBooking} awaitingPickup={awaitingPickup} />
-    ),
-    [openBooking, awaitingPickup],
+  const showPreset = useCallback((next: ActivePreset) => {
+    setView(next);
+    setPage(FIRST_PAGE);
+  }, []);
+
+  const renderItem = useCallback<ListRenderItem<ListRow>>(
+    ({ item }) =>
+      item.kind === 'head' ? (
+        <StageHeading preset={item.preset} count={item.count} />
+      ) : item.kind === 'more' ? (
+        <XStack px={layout.screenX} pb={layout.inline}>
+          <Button
+            label={tRoot('board.viewAll', { count: item.count })}
+            variant="ghost"
+            size="sm"
+            onPress={() => showPreset(item.preset)}
+          />
+        </XStack>
+      ) : (
+        <BookingCard
+          booking={item.booking}
+          onPress={openBooking}
+          awaitingPickup={
+            item.preset ? item.preset === BOOKING_LIST_PRESET.AWAITING_PICKUP : awaitingPickup
+          }
+          {...(canExtend ? { onExtend: setExtending } : {})}
+        />
+      ),
+    [openBooking, awaitingPickup, canExtend, tRoot, showPreset],
   );
 
   const filtered =
@@ -254,6 +371,11 @@ export function BookingListScreen({
     setSearch('');
     setPage(FIRST_PAGE);
   }, []);
+
+  const refetchAll = () => {
+    void query.refetch();
+    if (grouped) void rentingPreview.refetch();
+  };
 
   // Thiếu quyền là 403 của CHÍNH màn này — hiện trạng thái lỗi của nó, không đá về đăng nhập.
   if (!permissions.isLoading && !permissions.has(PERMISSION.BOOKING_VIEW)) {
@@ -278,7 +400,7 @@ export function BookingListScreen({
             : {
                 total: awaitingPickup
                   ? tRoot('awaitingPickup.totalLabel', { count: meta.total })
-                  : t('totalLabel', { count: meta.total }),
+                  : t('totalLabel', { count: grouped ? groupedTotal : meta.total }),
               })}
           /*
            * Nhóm việc KHÔNG có nút tạo đơn: đây là hàng đợi của việc đang chạy, không phải chỗ
@@ -304,10 +426,22 @@ export function BookingListScreen({
           searchLabel={t('searchLabel')}
           searchPlaceholder={t('searchPlaceholder')}
           onSearchChange={changeSearch}
-          hasRows={items.length > 0}
+          {...(preset ? {} : {
+            tabs: (
+              <PresetTabs
+                value={view}
+                meta={meta}
+                onChange={(next) => {
+                  setView(next);
+                  setPage(FIRST_PAGE);
+                }}
+              />
+            ),
+          })}
+          hasRows={rows.length > 0}
           groups={groups}
           onFilterChange={changeFilter}
-          {...(meta === undefined ? {} : { meta })}
+          {...(meta === undefined || grouped ? {} : { meta })}
           onPageChange={setPage}
         >
           {({ onScroll, headerHeight, contentContainerStyle, bindList }) => {
@@ -323,14 +457,14 @@ export function BookingListScreen({
               <ManageStateScroll
                 onScroll={onScroll}
                 headerHeight={headerHeight}
-                refreshing={query.isRefetching}
-                onRefresh={() => void query.refetch()}
+                refreshing={query.isRefetching || rentingPreview.isRefetching}
+                onRefresh={refetchAll}
               >
                 {children}
               </ManageStateScroll>
             );
 
-            return query.isPending ? (
+            return query.isPending || (grouped && rentingPreview.isPending) ? (
               inStateScroll(
                 <YStack px={layout.screenX} gap={layout.inline}>
                   {Array.from({ length: SKELETON_ROWS }, (_, i) => (
@@ -338,15 +472,15 @@ export function BookingListScreen({
                   ))}
                 </YStack>,
               )
-            ) : query.isError ? (
+            ) : query.isError || (grouped && rentingPreview.isError) ? (
               inStateScroll(
                 <ScreenError
-                  error={query.error}
+                  error={query.error ?? rentingPreview.error}
                   title={t('errorTitle')}
-                  onRetry={() => void query.refetch()}
+                  onRetry={refetchAll}
                 />,
               )
-            ) : items.length === 0 ? (
+            ) : rows.length === 0 ? (
               /*
                 Đang lọc mà rỗng thì lối ra là GỠ bộ lọc — nút phải nằm ngay đó. Không có nút,
                 người dùng đứng trước một màn trắng và cách duy nhất là tự nhớ mình đã lọc gì.
@@ -399,7 +533,7 @@ export function BookingListScreen({
             ) : (
               <Animated.FlatList
                 ref={bindList}
-                data={items}
+                data={rows}
                 keyExtractor={keyOf}
                 {...LIST_TUNING}
                 renderItem={renderItem}
@@ -419,8 +553,8 @@ export function BookingListScreen({
                     `ManageStateScroll` đã làm vậy từ đầu; hai danh sách này thì bị sót.
                   */
                   <RefreshControl
-                    refreshing={query.isRefetching}
-                    onRefresh={() => void query.refetch()}
+                    refreshing={query.isRefetching || rentingPreview.isRefetching}
+                    onRefresh={refetchAll}
                     tintColor={colors.primaryActive}
                     progressViewOffset={headerHeight}
                   />
@@ -430,6 +564,9 @@ export function BookingListScreen({
           }}
         </ManageListShell>
       </Screen>
+      {extending ? (
+        <ExtendBookingSheet booking={extending} onClose={() => setExtending(null)} />
+      ) : null}
     </>
   );
 }
@@ -449,4 +586,95 @@ function sortLabel(
     default:
       return t('sort.newest');
   }
+}
+
+/* Dải ngăn giữ việc ĐANG chạy; chip cuối là lối sang màn "Đơn đã kết thúc". */
+const ENDED_TAB = 'ended';
+type PresetTab = BookingListPreset | 'all' | typeof ENDED_TAB;
+const presetKeyOf = (item: PresetTab) => item;
+
+/** Dải ngăn "Tất cả · Chờ giao xe · Đang thuê · Hoàn thành · Đã hủy" — bản native của `StatusRail` web. */
+function PresetTabs({
+  value,
+  meta,
+  onChange,
+}: {
+  value: BookingListPreset | undefined;
+  meta: BookingListMeta | undefined;
+  onChange: (next: BookingListPreset | undefined) => void;
+}) {
+  const t = useTranslations('Bookings.board');
+  const navigateOnce = useNavigateOnce();
+  const counts = meta?.presetCounts ?? null;
+  const countOf = (item: PresetTab): number | null =>
+    counts === null
+      ? null
+      : item === 'all'
+        ? // Như `allCount` của web: tổng các chặng ĐANG CHẠY, không gồm hoàn thành/huỷ.
+          counts
+            .filter((c) => (PRESET_ORDER as readonly string[]).includes(c.preset))
+            .reduce((sum, c) => sum + c.count, 0)
+        : (counts.find((c) => c.preset === item)?.count ?? 0);
+
+  return (
+    <FlatList
+      horizontal
+      data={['all', ...PRESET_ORDER, ENDED_TAB] as PresetTab[]}
+      keyExtractor={presetKeyOf}
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={presetStyles.content}
+      style={presetStyles.tabs}
+      accessibilityLabel={t('railLabel')}
+      renderItem={({ item }) => {
+        if (item === ENDED_TAB) {
+          return (
+            <Chip
+              label={t('ended')}
+              selected={false}
+              size="sm"
+              onPress={() => navigateOnce(ROUTES.manage.bookingsEnded())}
+            />
+          );
+        }
+        const count = countOf(item);
+        const label =
+          item === BOOKING_LIST_PRESET.AWAITING_PICKUP
+            ? t('stage.awaiting_pickup')
+            : item === BOOKING_LIST_PRESET.RENTING
+              ? t('stage.renting')
+              : t('all');
+        return (
+          <Chip
+            label={count === null ? label : `${label}  ${count}`}
+            selected={(value ?? 'all') === item}
+            size="sm"
+            onPress={() => onChange(item === 'all' ? undefined : item)}
+          />
+        );
+      }}
+    />
+  );
+}
+
+const presetStyles = StyleSheet.create({
+  tabs: { flexGrow: 0, paddingVertical: space.sm },
+  content: { paddingHorizontal: layout.screenX, gap: space.xs },
+});
+
+/** Đầu một chặng trong ngăn "Tất cả" — bản native của `RentalStageHeading` web. */
+function StageHeading({ preset, count }: { preset: ActivePreset; count: number }) {
+  const colors = useColors();
+  const t = useTranslations('Bookings.board');
+  return (
+    <XStack px={layout.screenX} pt={space.sm} pb={space.xs} gap={space.xs} alignItems="center">
+      <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+        {preset === BOOKING_LIST_PRESET.AWAITING_PICKUP
+          ? t('stage.awaiting_pickup')
+          : t('stage.renting')}
+      </Text>
+      <Text col={colors.textMuted} fos={fontSize.bodySm}>
+        {count}
+      </Text>
+    </XStack>
+  );
 }

@@ -1,5 +1,5 @@
 /*
- * Cỡ theo `font-size` của chỗ đặt (1em) — cùng cách icon AntD nhận cỡ, nên thay được cho nhau
+ * Cỡ theo `font-size` của chỗ đặt (1em) - cùng cách icon AntD nhận cỡ, nên thay được cho nhau
  * trong `HeaderIconButton` hay một dòng menu mà không phải sửa CSS của nơi đó.
  */
 .icon {
@@ -34,6 +34,10 @@
   mask-image: url('/icons/menu/chevron-right.svg');
 }
 
+.filter {
+  mask-image: url('/icons/menu/filter.svg');
+}
+
 .globe {
   mask-image: url('/icons/menu/globe.svg');
 }
@@ -64,4 +68,165 @@
 
 .work {
   mask-image: url('/icons/menu/work.svg');
+}
+
+.add-category {
+  mask-image: url('/icons/menu/add-category.svg');
+}
+
+.bag {
+  mask-image: url('/icons/menu/bag.svg');
+}
+
+.calendar-2 {
+  mask-image: url('/icons/menu/calendar-2.svg');
+}
+
+.car {
+  mask-image: url('/icons/menu/car.svg');
+}
+
+.category {
+  mask-image: url('/icons/menu/category.svg');
+}
+
+.chevron-down {
+  mask-image: url('/icons/menu/chevron-down.svg');
+}
+
+.discovery {
+  mask-image: url('/icons/menu/discovery.svg');
+}
+
+.doc-left {
+  mask-image: url('/icons/menu/doc-left.svg');
+}
+
+.doc-right {
+  mask-image: url('/icons/menu/doc-right.svg');
+}
+
+.dollar-circle {
+  mask-image: url('/icons/menu/dollar-circle.svg');
+}
+
+.dollar-square {
+  mask-image: url('/icons/menu/dollar-square.svg');
+}
+
+.faq {
+  mask-image: url('/icons/menu/faq.svg');
+}
+
+.folder {
+  mask-image: url('/icons/menu/folder.svg');
+}
+
+.minus {
+  mask-image: url('/icons/menu/minus.svg');
+}
+
+.notification {
+  mask-image: url('/icons/menu/notification.svg');
+}
+
+.plus {
+  mask-image: url('/icons/menu/plus.svg');
+}
+
+.profile {
+  mask-image: url('/icons/menu/profile.svg');
+}
+
+.setting {
+  mask-image: url('/icons/menu/setting.svg');
+}
+
+.shield-star {
+  mask-image: url('/icons/menu/shield-star.svg');
+}
+
+.users {
+  mask-image: url('/icons/menu/users.svg');
+}
+
+.wallet {
+  mask-image: url('/icons/menu/wallet.svg');
+}
+
+.time-circle {
+  mask-image: url('/icons/menu/time-circle.svg');
+}
+
+.close {
+  mask-image: url('/icons/menu/close.svg');
+}
+
+.tick {
+  mask-image: url('/icons/menu/tick.svg');
+}
+
+.calendar-sm {
+  mask-image: url('/icons/menu/calendar-sm.svg');
+}
+
+.message-sm {
+  mask-image: url('/icons/menu/message-sm.svg');
+}
+
+.calling {
+  mask-image: url('/icons/menu/calling.svg');
+}
+
+.chevron-sm {
+  mask-image: url('/icons/menu/chevron-sm.svg');
+}
+
+.arrow-sm {
+  mask-image: url('/icons/menu/arrow-sm.svg');
+}
+
+/* Huy chương "Award 2" - dòng "Nâng cấp gian hàng" của menu hồ sơ partner (`24051:85746`). */
+.award {
+  mask-image: url('/icons/menu/award.svg');
+}
+
+.search {
+  mask-image: url('/icons/menu/search.svg');
+}
+
+.chart {
+  mask-image: url('/icons/menu/chart.svg');
+}
+
+.filter-4 {
+  mask-image: url('/icons/menu/filter-4.svg');
+}
+
+.location {
+  mask-image: url('/icons/menu/location.svg');
+}
+
+.password {
+  mask-image: url('/icons/menu/password.svg');
+}
+
+.like {
+  mask-image: url('/icons/menu/like.svg');
+}
+
+.users-2 {
+  mask-image: url('/icons/menu/users-2.svg');
+}
+
+.menu-list {
+  mask-image: url('/icons/menu/menu-list.svg');
+}
+
+.graph {
+  mask-image: url('/icons/menu/graph.svg');
+}
+
+.rotate-right {
+  mask-image: url('/icons/menu/rotate-right.svg');
 }

@@ -70,6 +70,21 @@ vi.mock('@/features/vehicles/hooks/use-vehicles', () => ({
 }));
 
 /** Lưới thẻ gọi thật `useQuery`; harness này không có QueryClientProvider nên mock ở đây. */
+/**
+ * Tổng xe quyết bố cục (ít xe / lưới — 03/11/2026). Mặc định một đội xe đông để bộ này mô tả
+ * lưới thẻ; test nào cần bố cục ít xe thì hạ `fleet.total`.
+ */
+const fleet = vi.hoisted(() => ({ total: 5 as number | null, isError: false }));
+vi.mock('@/features/vehicles/hooks/use-fleet-summary', () => ({
+  useFleetSummary: () => ({
+    data:
+      fleet.total == null
+        ? undefined
+        : { total: fleet.total, available: fleet.total, renting: 0, maintenance: 0, inactive: 0 },
+    isLoading: fleet.total == null && !fleet.isError,
+    isError: fleet.isError,
+  }),
+}));
 vi.mock('@/features/vehicles/hooks/use-vehicle-card-stats', () => ({
   useVehicleCardStats: () => ({ byId: new Map(), isLoading: false, isError: false }),
 }));
@@ -205,6 +220,8 @@ beforeEach(() => {
   nav.params = new URLSearchParams();
   query.refetch.mockReset();
   viewport.mobile = false;
+  fleet.total = 5;
+  fleet.isError = false;
   setQuery();
   grant();
 });
@@ -213,7 +230,7 @@ afterEach(cleanup);
 
 /* ------------------------------------------------------------------ trạng thái tải */
 
-describe('/manage/vehicles — trạng thái tải', () => {
+describe('/manage/vehicles - trạng thái tải', () => {
   it('lần tải đầu hiện skeleton, chưa nói "chưa có xe"', () => {
     // ĐỔI CÓ CHỦ ĐÍCH ở Wave 1C-E: trước đây dựng bảng rỗng kèm spinner; nay là skeleton
     // (Figma `134:2011` R1 — bố cục đã biết thì dùng skeleton).
@@ -234,7 +251,7 @@ describe('/manage/vehicles — trạng thái tải', () => {
 
 /* ------------------------------------------------------------------ lỗi + thử lại */
 
-describe('/manage/vehicles — lỗi và khôi phục', () => {
+describe('/manage/vehicles - lỗi và khôi phục', () => {
   it('lỗi khi chưa có dữ liệu thì hiện thông báo lỗi kèm nút Thử lại', () => {
     setQuery({ isError: true });
     renderPage();
@@ -267,7 +284,7 @@ describe('/manage/vehicles — lỗi và khôi phục', () => {
 
 /* ------------------------------------------------------------------ rỗng vs không-kết-quả */
 
-describe('/manage/vehicles — rỗng và không có kết quả', () => {
+describe('/manage/vehicles - rỗng và không có kết quả', () => {
   it('không có xe và KHÔNG lọc: câu chữ "chưa có", không phải "không tìm thấy"', () => {
     setQuery({ data: { items: [], meta: { ...META, total: 0 } } });
     renderPage();
@@ -337,16 +354,17 @@ describe('/manage/vehicles — rỗng và không có kết quả', () => {
 
 /* ------------------------------------------------------------------ dữ liệu + quyền */
 
-describe('/manage/vehicles — dữ liệu và quyền', () => {
+describe('/manage/vehicles - dữ liệu và quyền', () => {
   it('hiện tên, mã và biển số của xe', () => {
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
 
     expect(screen.getByText('Honda SH 150i 2023')).toBeTruthy();
-    expect(screen.getByText('XM-001 · 59X1-333.44')).toBeTruthy();
+    expect(screen.getByText('XM-001')).toBeTruthy();
+    expect(screen.getByText('59X1-333.44')).toBeTruthy();
   });
 
-  it('thẻ hiện giá thuê qua bộ format — bố cục Figma `236:1778` mang giá về thẻ', () => {
+  it('thẻ hiện giá thuê qua bộ format - bố cục Figma `236:1778` mang giá về thẻ', () => {
     setQuery({ data: { items: [vehicle({ weekdayPrice: '350000' })], meta: META } });
     renderPage();
 
@@ -362,7 +380,7 @@ describe('/manage/vehicles — dữ liệu và quyền', () => {
     expect(within(row).getAllByRole('button')).toHaveLength(2);
   });
 
-  it('có quyền sửa: thêm nút Sửa — nhưng KHÔNG có Xoá (xoá chỉ ở Hồ sơ 360)', () => {
+  it('có quyền sửa: thêm nút Sửa - nhưng KHÔNG có Xoá (xoá chỉ ở Hồ sơ 360)', () => {
     grant(PERMISSION.VEHICLE_UPDATE, PERMISSION.VEHICLE_DELETE);
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
@@ -371,31 +389,26 @@ describe('/manage/vehicles — dữ liệu và quyền', () => {
     expect(within(row).getAllByRole('button')).toHaveLength(3);
   });
 
-  /*
-   * Hai lối thêm xe — THỨ TỰ ĐẢO ngày 29/09/2026.
-   *
-   * Nút chính nay là wizard NÂNG CAO, "đăng nhanh" lùi vào menu phụ. Đây là cổng của GIAN HÀNG,
-   * và chỉ wizard nâng cao mới hỏi hình thức nguồn xe, nhiều dịch vụ và chi nhánh giữ xe — ba
-   * thứ luồng nhanh cố định cứng (`QUICK_VEHICLE_FIXED`: chỉ tự lái, sở hữu, sẵn sàng). Cả hai
-   * lối vẫn còn nguyên; bỏ lối nào cũng là lấy mất một nhóm người dùng.
+  /**
+   * MỘT lối thêm xe ở màn này (chốt 03/11/2026, design Partner-XePrime `23649:30744`): "Thêm xe
+   * mới" mở wizard đầy đủ của gian hàng. "Đăng nhanh xe tự lái" không còn ở màn Danh sách xe.
    */
-  it('quyền tạo mở nút wizard NÂNG CAO của gian hàng', () => {
+  it('quyền tạo mở nút "Thêm xe mới" → wizard của gian hàng', () => {
     grant(PERMISSION.VEHICLE_CREATE);
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: /Thiết lập nâng cao/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Thêm xe mới/ }));
     expect(nav.push).toHaveBeenCalledWith('/manage/vehicles/new');
   });
 
-  it('đăng nhanh vẫn mở được từ menu phụ, mang theo ngữ cảnh "manage"', async () => {
+  it('không còn menu phụ "Đăng nhanh" trên màn này', () => {
     grant(PERMISSION.VEHICLE_CREATE);
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cách thêm xe khác' }));
-    fireEvent.click(await screen.findByText('Đăng nhanh xe tự lái'));
-    expect(nav.push).toHaveBeenCalledWith('/manage/vehicles/register?from=manage');
+    expect(screen.queryByRole('button', { name: 'Cách thêm xe khác' })).toBeNull();
+    expect(screen.queryByText('Đăng nhanh xe tự lái')).toBeNull();
   });
 
   it('mọi nút hành động trên thẻ ĐỀU có tên khả truy cập', () => {
@@ -413,13 +426,13 @@ describe('/manage/vehicles — dữ liệu và quyền', () => {
 
     expect(labels.every(Boolean)).toBe(true);
     // Không có "Xoá" dù đủ quyền — bản chỉnh 11/08/2026: xoá chỉ nằm trong Hồ sơ 360.
-    expect(labels).toEqual(['Xem chi tiết', 'Sửa', 'Lịch']);
+    expect(labels).toEqual(['Lịch', 'Chỉnh sửa', 'Chi tiết']);
   });
 });
 
 /* ------------------------------------------------------------------ lọc, tìm, phân trang */
 
-describe('/manage/vehicles — lọc, tìm kiếm, phân trang', () => {
+describe('/manage/vehicles - lọc, tìm kiếm, phân trang', () => {
   it('filter từ URL được truyền nguyên vẹn xuống lớp dữ liệu', () => {
     nav.params = new URLSearchParams(
       'q=sh&vehicleType=motorbike&serviceType=self_drive&operationStatus=available&publicStatus=hidden&sort=price_asc&page=2&limit=50',
@@ -506,7 +519,7 @@ describe('/manage/vehicles — lọc, tìm kiếm, phân trang', () => {
 
 /* ------------------------------------------------------------------ thanh lọc dùng chung */
 
-describe('/manage/vehicles — dùng FilterBar dùng chung', () => {
+describe('/manage/vehicles - dùng FilterBar dùng chung', () => {
   it('thanh lọc là landmark search dùng chung, không phải bản dựng riêng của Fleet', () => {
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
@@ -520,7 +533,7 @@ describe('/manage/vehicles — dùng FilterBar dùng chung', () => {
 
     const bar = within(screen.getByRole('search'));
     expect(bar.getByRole('textbox', { name: 'Tìm xe' })).toBeTruthy();
-    for (const label of ['Loại xe', 'Dịch vụ', 'Vận hành', 'Công khai']) {
+    for (const label of ['Loại xe', 'Dịch vụ', 'Vận hành', 'Trạng thái']) {
       expect(bar.getByRole('combobox', { name: label }), label).toBeTruthy();
     }
   });
@@ -554,7 +567,7 @@ describe('/manage/vehicles — dùng FilterBar dùng chung', () => {
 
 /* ------------------------------------------------------------------ quyền cấp trang */
 
-describe('/manage/vehicles — thiếu quyền xem', () => {
+describe('/manage/vehicles - thiếu quyền xem', () => {
   it('không có `vehicles.view`: thay TOÀN BỘ nội dung bằng màn 403 (Figma `188:2290`)', () => {
     revokeAll();
     setQuery({ data: { items: [vehicle()], meta: META } });
@@ -593,5 +606,82 @@ describe('/manage/vehicles — thiếu quyền xem', () => {
 
     expect(screen.getByRole('list', { name: 'Danh sách xe' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Thêm xe/ })).toBeNull();
+  });
+});
+
+/* ------------------------------------------------------------------ bố cục theo tổng xe */
+
+/**
+ * Hai kiểu theo TỔNG xe của chi nhánh đang chọn (chốt 03/11/2026): dưới 3 xe là thẻ ngang to; từ 3
+ * xe là lưới thẻ hoặc danh sách hàng ngang theo `?view=`. Tổng đến từ `fleet-summary`, không từ
+ * trang hiện tại — gõ tìm kiếm còn 1 kết quả không biến lưới thành thẻ to.
+ */
+describe('/manage/vehicles - bố cục ít xe / nhiều xe', () => {
+  const listItems = () => screen.getByRole('list', { name: 'Danh sách xe' });
+
+  it('dưới 3 xe: thẻ ngang to, không có nút chuyển kiểu xem', () => {
+    fleet.total = 2;
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    renderPage();
+
+    expect(listItems().className).toMatch(/few/);
+    expect(screen.queryByRole('radiogroup', { name: 'Kiểu hiển thị danh sách xe' })).toBeNull();
+  });
+
+  it('từ 3 xe: lưới thẻ, có nút chuyển Lưới/Danh sách', () => {
+    fleet.total = 3;
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    renderPage();
+
+    expect(listItems().className).toMatch(/grid/);
+    expect(screen.getByText('Dạng danh sách')).toBeTruthy();
+  });
+
+  it('tổng theo CẢ đội xe: đang lọc còn 1 kết quả vẫn giữ lưới', () => {
+    fleet.total = 12;
+    nav.params = new URLSearchParams('q=sh');
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    renderPage();
+
+    expect(listItems().className).toMatch(/grid/);
+  });
+
+  it('`?view=list` dựng danh sách hàng ngang', () => {
+    fleet.total = 8;
+    nav.params = new URLSearchParams('view=list');
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    renderPage();
+
+    expect(listItems().className).toMatch(/list/);
+  });
+
+  it('đổi kiểu xem ghi `view` lên URL và GIỮ trang đang đọc', () => {
+    fleet.total = 40;
+    nav.params = new URLSearchParams('page=2');
+    setQuery({ data: { items: [vehicle()], meta: { ...META, page: 2, total: 40 } } });
+    renderPage();
+
+    fireEvent.click(screen.getByText('Dạng danh sách'));
+    expect(nav.replace).toHaveBeenCalledWith('/manage/vehicles?page=2&view=list', {
+      scroll: false,
+    });
+  });
+
+  it('chưa biết tổng xe: khung chờ, chưa vẽ thẻ rồi nhảy bố cục', () => {
+    fleet.total = null;
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    renderPage();
+
+    expect(screen.getByRole('status', { name: 'Đang tải danh sách xe' })).toBeTruthy();
+    expect(screen.queryByText('Honda SH 150i 2023')).toBeNull();
+  });
+
+  it('đếm tổng hỏng và không lọc: suy từ trang hiện tại', () => {
+    fleet.total = null;
+    fleet.isError = true;
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    renderPage();
+
+    expect(listItems().className).toMatch(/few/);
   });
 });

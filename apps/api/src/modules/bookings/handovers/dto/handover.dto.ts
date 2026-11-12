@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   FUEL_LEVEL_VALUES,
   HANDOVER_CONDITION_VALUES,
+  HANDOVER_CONFIRM_SOURCE_VALUES,
   HANDOVER_PHOTO_SLOT_VALUES,
   HANDOVER_STATUS_VALUES,
   HANDOVER_TYPE_VALUES,
@@ -9,21 +10,28 @@ import {
   IMAGE_UPLOAD_MIME_TYPES,
   ODOMETER_CORRECTION_REASON_VALUES,
   ODOMETER_MAX_KM,
+  PAYMENT_METHOD_VALUES,
+  RETURN_SURCHARGE_DRAFT_MAX,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsDateString,
   IsIn,
   IsInt,
   IsOptional,
   IsString,
+  Matches,
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../../common/dto/api-response.dto';
 import { BranchIdQuery } from '../../../../common/dto/branch-scope';
+import { ReturnSurchargeDraftDto } from '../../settlement/dto/settlement.dto';
 
 // ── Ảnh hiện trạng ──────────────────────────────────────────────────────────
 
@@ -84,16 +92,24 @@ export class HandoverDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'ISO — khi việc giao/nhận THỰC SỰ xảy ra (bản ghi cũ: null, đọc confirmedAt)',
+    description: 'ISO - khi việc giao/nhận THỰC SỰ xảy ra (bản ghi cũ: null, đọc confirmedAt)',
   })
   occurredAt!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — khi được GHI NHẬN' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO - khi được GHI NHẬN' })
   confirmedAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) confirmedByName!: string | null;
+  @ApiProperty({
+    enum: HANDOVER_CONFIRM_SOURCE_VALUES,
+    description:
+      '@xeprime/types → HandoverConfirmSource (ADR 0081): `host` nhân sự gian hàng · `customer` ' +
+      'khách bấm "Đã nhận xe" · `auto` tự lập sau lời báo trả xe của khách. Hai nguồn sau: ' +
+      '`confirmedByName` là tên KHÁCH, biên bản không có KM/hiện trạng do gian hàng kiểm',
+  })
+  confirmSource!: string;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })
   canceledAt!: string | null;
 
-  @ApiProperty({ description: 'Optimistic concurrency — nộp lại khi lưu/xác nhận' })
+  @ApiProperty({ description: 'Optimistic concurrency - nộp lại khi lưu/xác nhận' })
   rowVersion!: number;
   @ApiProperty({ description: 'ISO' }) updatedAt!: string;
 }
@@ -120,6 +136,11 @@ export class HandoverContextDto {
   @ApiProperty() vehicleId!: string;
   @ApiProperty() vehicleName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
+  @ApiProperty({
+    description:
+      '@xeprime/types → VehicleType - quyết bộ góc chụp (`handoverPhotoSlotsFor`): xe máy không có trái/phải',
+  })
+  vehicleType!: string;
   @ApiProperty({ description: '@xeprime/types → HandoverEnergyKind' }) energyKind!: string;
 
   /**
@@ -135,7 +156,7 @@ export class HandoverContextDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'KM hiện tại của xe theo hệ thống — null = chưa từng ghi nhận',
+    description: 'KM hiện tại của xe theo hệ thống - null = chưa từng ghi nhận',
   })
   vehicleOdometerKm!: number | null;
   /** KM chốt ở biên bản giao xe đã xác nhận — mốc sàn mà KM trả phải vượt qua. */
@@ -176,16 +197,16 @@ export class MissingOdometerItemDto {
   @ApiProperty() vehicleId!: string;
   @ApiProperty() vehicleName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
-  @ApiProperty({ description: 'ISO — thời điểm biên bản được xác nhận' })
+  @ApiProperty({ description: 'ISO - thời điểm biên bản được xác nhận' })
   confirmedAt!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) confirmedByName!: string | null;
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'KM chốt lúc giao xe — mốc sàn khi bổ sung. null = biên bản giao cũng chưa có số',
+    description: 'KM chốt lúc giao xe - mốc sàn khi bổ sung. null = biên bản giao cũng chưa có số',
   })
   pickupOdometerKm!: number | null;
-  @ApiProperty({ description: 'Optimistic concurrency — nộp lại khi bổ sung KM' })
+  @ApiProperty({ description: 'Optimistic concurrency - nộp lại khi bổ sung KM' })
   rowVersion!: number;
 }
 
@@ -231,7 +252,7 @@ export class SaveHandoverDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: `KM đọc trên đồng hồ, 0–${ODOMETER_MAX_KM}`,
+    description: `KM đọc trên đồng hồ, 0-${ODOMETER_MAX_KM}`,
   })
   @IsOptional()
   @Type(() => Number)
@@ -245,7 +266,7 @@ export class SaveHandoverDto {
   @IsIn([...FUEL_LEVEL_VALUES, null])
   fuelLevel?: string | null;
 
-  @ApiPropertyOptional({ type: Number, nullable: true, description: '% pin xe điện (0–100)' })
+  @ApiPropertyOptional({ type: Number, nullable: true, description: '% pin xe điện (0-100)' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -292,6 +313,21 @@ export class SaveHandoverDto {
 }
 
 /**
+ * "Đã thu tiền" của lượt nhận lại xe. `amount` là số hộp đang HIỂN THỊ (`collectableAmount` của bản
+ * xem trước): server tính lại trong transaction và từ chối khi lệch (`HANDOVER_COLLECT_AMOUNT_CHANGED`)
+ * — người dùng không bao giờ ghi nhận đã thu một số mình chưa nhìn thấy.
+ */
+export class ReturnCollectPaymentDto {
+  @ApiProperty({ description: 'VND (chuỗi - ADR 0007) - đúng số khách còn phải trả' })
+  @Matches(/^\d{1,12}(\.\d{1,2})?$/, { message: 'Số tiền không hợp lệ (số VND không âm)' })
+  amount!: string;
+
+  @ApiProperty({ enum: PAYMENT_METHOD_VALUES })
+  @IsIn(PAYMENT_METHOD_VALUES)
+  method!: string;
+}
+
+/**
  * Xác nhận — thao tác duy nhất có hệ quả thật.
  *
  * Hai cờ xác nhận có ý thức, mặc định TẮT: không bao giờ âm thầm bỏ qua cảnh báo hay âm thầm
@@ -334,7 +370,7 @@ export class ConfirmHandoverDto {
    * trước; thiếu thì chuyến vẫn hoàn tất, KM của xe không bị đụng và chiều trả sinh việc
    * `Thiếu KM trả`.
    */
-  @ApiPropertyOptional({ type: Number, nullable: true, description: `0–${ODOMETER_MAX_KM}` })
+  @ApiPropertyOptional({ type: Number, nullable: true, description: `0-${ODOMETER_MAX_KM}` })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -365,6 +401,34 @@ export class ConfirmHandoverDto {
   @IsOptional()
   @IsBoolean()
   acknowledgeSuspicious?: boolean;
+
+  /**
+   * CHỈ chiều TRẢ (06/11/2026): các khoản phát sinh gõ trong hộp nhận lại xe — ghi CÙNG transaction
+   * với biên bản, qua `SettlementService` (writer của `booking_surcharges`). Cần `payments.record`.
+   */
+  @ApiPropertyOptional({
+    type: [ReturnSurchargeDraftDto],
+    description: `Chỉ chiều trả, tối đa ${RETURN_SURCHARGE_DRAFT_MAX} khoản. Cần payments.record`,
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(RETURN_SURCHARGE_DRAFT_MAX)
+  @ValidateNested({ each: true })
+  @Type(() => ReturnSurchargeDraftDto)
+  surcharges?: ReturnSurchargeDraftDto[];
+
+  /**
+   * CHỈ chiều TRẢ (06/11/2026): ô "Đã thu tiền" — mặc định bật ở hộp. Có mặt ⇒ ghi MỘT phiếu thu
+   * tiền thuê cho số khách còn phải trả, cùng transaction. Vắng ⇒ đơn hoàn thành với khoản còn nợ.
+   */
+  @ApiPropertyOptional({
+    type: ReturnCollectPaymentDto,
+    description: 'Chỉ chiều trả. Cần payments.record',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ReturnCollectPaymentDto)
+  collectPayment?: ReturnCollectPaymentDto;
 }
 
 export class CancelHandoverDto {
@@ -381,7 +445,7 @@ export class PresignHandoverPhotoDto {
   @MaxLength(255)
   fileName!: string;
 
-  @ApiProperty({ enum: IMAGE_UPLOAD_MIME_TYPES, description: 'Chỉ ảnh — không nhận PDF' })
+  @ApiProperty({ enum: IMAGE_UPLOAD_MIME_TYPES, description: 'Chỉ ảnh - không nhận PDF' })
   @IsIn(IMAGE_UPLOAD_MIME_TYPES)
   contentType!: string;
 
@@ -413,7 +477,7 @@ export class AttachHandoverPhotoDto {
  * Lý do bắt buộc, giảm KM cần quyền cao hơn + xác nhận, mọi lần đều để lại audit.
  */
 export class ResolveHandoverOdometerDto {
-  @ApiProperty({ description: `KM đọc trên đồng hồ, 0–${ODOMETER_MAX_KM}` })
+  @ApiProperty({ description: `KM đọc trên đồng hồ, 0-${ODOMETER_MAX_KM}` })
   @Type(() => Number)
   @IsInt()
   @Min(0)
@@ -424,7 +488,7 @@ export class ResolveHandoverOdometerDto {
   @IsIn(ODOMETER_CORRECTION_REASON_VALUES)
   reasonCode!: string;
 
-  @ApiProperty({ description: 'Lý do chi tiết — bắt buộc' })
+  @ApiProperty({ description: 'Lý do chi tiết - bắt buộc' })
   @IsString()
   @MaxLength(1000)
   reason!: string;
@@ -434,7 +498,7 @@ export class ResolveHandoverOdometerDto {
   @IsBoolean()
   confirmDecrease?: boolean;
 
-  @ApiProperty({ description: 'Bắt buộc — chống sửa đè' })
+  @ApiProperty({ description: 'Bắt buộc - chống sửa đè' })
   @Type(() => Number)
   @IsInt()
   @Min(1)

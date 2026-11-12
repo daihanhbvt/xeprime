@@ -9,12 +9,12 @@
     "title": "Trở thành chủ xe trong 4 bước",
     "steps": {
       "create": "Tạo hồ sơ: tên, loại hình, tỉnh/thành và liên hệ.",
-      "complete": "Khai nốt thông tin còn thiếu — hồ sơ đủ thì đăng xe được ngay.",
+      "complete": "Khai nốt thông tin còn thiếu - hồ sơ đủ thì đăng xe được ngay.",
       "prepare": "Thêm chiếc xe đầu tiên: ảnh, giấy tờ, giá thuê.",
       "publish": "Gửi xe duyệt. Được duyệt là xe lên chợ và bắt đầu nhận đơn.",
       "createShop": "Tạo gian hàng: tên, số điện thoại liên hệ và địa chỉ.",
       "pay": "Chọn gói, số chỗ xe và kỳ hạn, rồi chuyển khoản theo mã QR.",
-      "logo": "Tải logo gian hàng — cần có trước khi gửi xe lên chợ.",
+      "logo": "Tải logo gian hàng - cần có trước khi gửi xe lên chợ.",
       "activate": "XePrime xem xét và duyệt tài khoản gian hàng của bạn."
     },
     "packageTitle": "Mở gian hàng trong 4 bước"
@@ -34,9 +34,9 @@
       "province": {
         "label": "Tỉnh/thành",
         "placeholder": "Chọn tỉnh/thành",
-        "help": "Nơi đặt chi nhánh đầu tiên — khách sẽ tìm thấy xe của bạn ở tỉnh/thành này.",
+        "help": "Nơi đặt chi nhánh đầu tiên - khách sẽ tìm thấy xe của bạn ở tỉnh/thành này.",
         "loading": "Đang tải tỉnh/thành…",
-        "empty": "Chưa có tỉnh/thành nào mở đăng ký — liên hệ hỗ trợ.",
+        "empty": "Chưa có tỉnh/thành nào mở đăng ký - liên hệ hỗ trợ.",
         "loadError": "Không tải được danh sách tỉnh/thành"
       },
       "address": {
@@ -96,7 +96,7 @@
   "packagePage": {
     "title": "Đăng ký gian hàng",
     "subtitle": "Hai bước: khai thông tin gian hàng, rồi chọn gói và thanh toán. Bộ quản lý gian hàng mở ngay khi XePrime nhận được tiền.",
-    "subtitleApp": "Khai thông tin gian hàng — XePrime sẽ xem xét và duyệt tài khoản của bạn."
+    "subtitleApp": "Khai thông tin gian hàng - XePrime sẽ xem xét và duyệt tài khoản của bạn."
   },
   "steps": {
     "label": "Tiến trình đăng ký gian hàng",
@@ -142,7 +142,7 @@
       "commission": "Khu vực cho thuê",
       "package": "Thông tin gian hàng"
     },
-    "accountReady": "Tài khoản đối tác của bạn đã sẵn sàng — chỉ cần hoàn tất phần hồ sơ bên dưới.",
+    "accountReady": "Tài khoản đối tác của bạn đã sẵn sàng - chỉ cần hoàn tất phần hồ sơ bên dưới.",
     "fields": {
       "displayName": {
         "label": "Họ và tên",
@@ -164,6 +164,7 @@
         "sendCode": "Gửi mã",
         "resend": "Gửi lại mã",
         "resendIn": "Gửi lại ({seconds}s)",
+        "resendInTime": "Gửi lại ({time})",
         "sent": "Đã gửi mã tới {phone}.",
         "phoneFirst": "Nhập số điện thoại hợp lệ trước khi gửi mã.",
         "verify": "Xác thực",

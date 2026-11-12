@@ -4,25 +4,27 @@
     "save": "Lưu xe",
     "newVehicle": "Xe mới",
     "ratingCount": "{count, plural, other {# đánh giá}}",
+    "noRating": "Chưa có đánh giá",
+    "rentals": "{count, plural, other {# lượt thuê}}",
     "completedTrips": "{count, plural, other {# chuyến}}",
     "owner": "Chủ xe",
     "shop": "Gian hàng",
     "shopVerified": "Gian hàng đã được XePrime xác minh",
-    "shopVerifiedAria": "{name} — gian hàng đã được XePrime xác minh",
+    "shopVerifiedAria": "{name} - gian hàng đã được XePrime xác minh",
     "seats": "{count, plural, other {# chỗ}}",
     "delivery": "Giao tận nơi",
     "noCollateral": "Miễn thế chấp",
     "vatInvoice": "Xuất hoá đơn VAT",
-    "includesDriver": "đã gồm tài xế",
     "contactForQuote": "Liên hệ báo giá",
     "extraServices": "+{count}",
     "priceDaily": "<amount>{value}</amount><unit>/ngày</unit>",
     "priceMonthly": "<amount>{value}</amount><unit>/tháng</unit>",
     "perDayUnit": "/ngày",
     "perMonthUnit": "/tháng",
-    "instantBook": "Không cần xác nhận",
+    "instantBook": "Tự động duyệt",
     "photoCount": "+{count}",
     "photoCountAria": "{count, plural, other {Xe có # ảnh}}",
+    "amenitiesLabel": "Tiện ích của xe",
     "locationLine": "{ward}, {province}",
     "specsLabel": "Thông số xe",
     "ratingValue": "{rating} <muted>({count})</muted>",
@@ -70,7 +72,7 @@
     },
     "terms": {
       "title": "Thủ tục & điều kiện thuê",
-      "instantBook": "Đặt ngay",
+      "instantBook": "Tự động duyệt",
       "instantBookHint": "Yêu cầu hợp lệ trong khung giờ cho phép sẽ được xác nhận tự động.",
       "documents": "Giấy tờ cần có: {documents}",
       "verify": "Đối chiếu: {method}",
@@ -105,7 +107,8 @@
     "hostTitle": "Chủ xe",
     "location": {
       "title": "Vị trí xe",
-      "openMap": "Mở bản đồ"
+      "openMap": "Mở bản đồ",
+      "exactAddressNote": "Địa chỉ chính xác hiển thị sau khi đặt xe thành công."
     },
     "attributes": {
       "brand": "Hãng: <strong>{value}</strong>",
@@ -116,7 +119,8 @@
       "less": "Thu gọn"
     },
     "gallery": {
-      "photoAlt": "{name} — ảnh {index}",
+      "amenitiesLabel": "Tiện ích của xe",
+      "photoAlt": "{name} - ảnh {index}",
       "pager": "Chọn ảnh xe",
       "goTo": "Ảnh {index} / {total}",
       "counter": "{index} / {total}"
@@ -165,7 +169,7 @@
       },
       "documents": {
         "licenceRequired": "Dịch vụ này cần bằng lái đã xác thực trên tài khoản của bạn trước khi gửi yêu cầu thuê.",
-        "empty": "Chủ xe chưa công bố thủ tục riêng cho dịch vụ này — giấy tờ cần mang sẽ được nhắc khi bạn gửi yêu cầu."
+        "empty": "Chủ xe chưa công bố thủ tục riêng cho dịch vụ này - giấy tờ cần mang sẽ được nhắc khi bạn gửi yêu cầu."
       },
       "collateral": {
         "none": "<strong>Không yêu cầu đặt cọc hay thế chấp tài sản:</strong> xe này không cần thế chấp tài sản hay cọc khi nhận xe.",
@@ -200,8 +204,6 @@
         "label": "Thời hạn thuê:"
       },
       "longTerm": {
-        "wishLabel": "Nguyện vọng ngày nhận xe:",
-        "asap": "Càng sớm càng tốt (trong 7 ngày tới)",
         "dateLabel": "Ngày bạn muốn nhận xe:",
         "datePlaceholder": "Chọn ngày nhận xe",
         "expectedReturn": "Ngày trả xe dự kiến:",
@@ -228,6 +230,7 @@
         "free": "Miễn phí",
         "chooseDelivery": "Chọn địa chỉ giao xe & xem bản đồ",
         "note": "* Địa điểm cụ thể và số điện thoại chủ xe sẽ hiển thị sau khi hoàn tất thanh toán giữ chỗ.",
+        "noteLabel": "Khi nào thấy địa chỉ cụ thể",
         "distanceFeeLater": "Khoảng cách dự kiến: ~{distance} · Phí giao: chủ xe báo khi duyệt yêu cầu"
       },
       "insurance": {
@@ -279,7 +282,7 @@
     "withDriverPrice": {
       "title": "Giá thuê có tài xế",
       "included": "Đã gồm tài xế, xăng xe, chi phí qua đêm của tài xế và phục vụ chở khách tại điểm đến.",
-      "excluded": "Chưa gồm phí cầu đường — khách trả trực tiếp trong chuyến."
+      "excluded": "Chưa gồm phí cầu đường - khách trả trực tiếp trong chuyến."
     }
   },
   "reviews": {

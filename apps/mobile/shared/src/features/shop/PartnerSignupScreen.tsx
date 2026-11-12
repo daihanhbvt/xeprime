@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { TextField } from '@/components/ui/TextField';
-import type { CurrentUser } from '@/features/auth/api';
+import { setAccountPassword, type CurrentUser } from '@/features/auth/api';
 import { AuthSwitchLink } from '@/features/auth/components/AuthSwitchLink';
 import { useCurrentUser, useRegister } from '@/features/auth/hooks/use-auth';
 import { useEnterApp } from '@/features/auth/hooks/use-enter-app';
@@ -130,6 +130,18 @@ export function PartnerSignupForm({
   /** Chưa có phiên ⇒ form tạo luôn tài khoản (DỮ LIỆU của schema, `.when`). */
   const withAccount = !user;
 
+  /*
+   * Có phiên nhưng CHƯA có SĐT xác minh (vào bằng Google/Facebook/Apple): hỏi SĐT + mật khẩu y như
+   * luồng thường, gắn vào tài khoản đang đăng nhập. Chốt theo ID tài khoản để phần tài khoản không
+   * biến mất khi `/auth/me` làm mới thành `phoneVerified = true` giữa lúc đang điền (bản web cùng mẫu).
+   */
+  const [attachFor, setAttachFor] = useState<string | null>(null);
+  if (user && !user.phoneVerified && attachFor !== user.id) setAttachFor(user.id);
+  const attachToAccount = user != null && attachFor === user.id;
+  /** Đã đặt mật khẩu ở lượt trước (rồi bước tạo hồ sơ hỏng) — không đặt lại. */
+  const [passwordSet, setPasswordSet] = useState(false);
+  const needsPassword = attachToAccount && !user.hasPassword && !passwordSet;
+
   const resolver = useValidationResolver<PartnerSignupValues>(
     partnerSignupSchema,
     'ShopOnboarding.validation',
@@ -138,6 +150,7 @@ export function PartnerSignupForm({
     resolver,
     defaultValues: {
       withAccount,
+      needsPassword,
       registrationTrack: track,
       displayName: '',
       password: '',
@@ -165,11 +178,12 @@ export function PartnerSignupForm({
   // Phiên đến (sẵn có, hoặc bước 1 vừa tạo tài khoản): bỏ phần tài khoản, điền sẵn ô còn trống.
   useEffect(() => {
     setValue('withAccount', withAccount);
+    setValue('needsPassword', needsPassword);
     if (!user) return;
     if (!getValues('name').trim()) setValue('name', user.displayName ?? '');
     if (!getValues('phone').trim() && user.phone) setValue('phone', user.phone);
     if (!getValues('email').trim() && user.email) setValue('email', user.email);
-  }, [withAccount, user, setValue, getValues]);
+  }, [withAccount, needsPassword, user, setValue, getValues]);
 
   const submitValues = async (values: PartnerSignupValues) => {
     if (busy.current) return;
@@ -177,7 +191,7 @@ export function PartnerSignupForm({
      * Tạo tài khoản mà SĐT CHƯA xác thực: mở sheet nhập mã (gửi mã như nút "Xác thực"). Đúng mã thì
      * `PartnerAccountFields` gọi `submit` và form tự gửi tiếp — người dùng chỉ bấm một lần.
      */
-    if (values.withAccount && !values.phoneVerified) {
+    if ((values.withAccount || attachToAccount) && !values.phoneVerified) {
       verifyRef.current?.();
       return;
     }
@@ -191,6 +205,11 @@ export function PartnerSignupForm({
           password: values.password,
           code: values.otpCode,
         });
+      } else if (values.needsPassword) {
+        // SĐT đã gắn vào tài khoản lúc xác thực (`/users/me/phone/verify`); còn mật khẩu.
+        await setAccountPassword(values.password);
+        setPasswordSet(true);
+        setValue('needsPassword', false);
       }
       // Tuyến hoa hồng tạo tài khoản mới: họ tên CHÍNH LÀ tên hồ sơ chủ xe — không hỏi lại.
       const name = values.name.trim() || values.displayName.trim() || user?.displayName || '';
@@ -279,13 +298,19 @@ export function PartnerSignupForm({
             </Text>
           </YStack>
 
-          {withAccount ? (
+          {withAccount || attachToAccount ? (
             <Card>
               <YStack gap={space.md}>
                 <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold}>
                   {t('signup.accountSection')}
                 </Text>
-                <PartnerAccountFields control={control} verifyRef={verifyRef} onVerified={submit} />
+                <PartnerAccountFields
+                  control={control}
+                  verifyRef={verifyRef}
+                  onVerified={submit}
+                  attachToAccount={attachToAccount}
+                  askPassword={withAccount || needsPassword}
+                />
               </YStack>
             </Card>
           ) : (
@@ -323,7 +348,7 @@ export function PartnerSignupForm({
                 provinceRequired
                 prefillRememberedProvince
               />
-              {withAccount ? null : contactFields}
+              {withAccount || attachToAccount ? null : contactFields}
             </YStack>
           </Card>
 

@@ -81,7 +81,7 @@ export class UpdateStaffRoleDto {
 }
 
 export class StaffDto {
-  @ApiProperty({ description: 'ID user — dùng cho PATCH/DELETE /platform/staff/:userId' })
+  @ApiProperty({ description: 'ID user - dùng cho PATCH/DELETE /platform/staff/:userId' })
   userId!: string;
   @ApiProperty() displayName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) email!: string | null;

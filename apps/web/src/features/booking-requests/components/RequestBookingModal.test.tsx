@@ -139,6 +139,7 @@ vi.mock('@/features/locations/hooks/use-provinces', () => ({
   }),
 }));
 vi.mock('@/features/locations/hooks/use-wards', () => ({
+  useWardLookup: () => ({ data: new Map(), isLoading: false }),
   useWards: () => ({ data: { items: [WARD], total: 1 } }),
   useWardOptions: () => ({
     options: [{ value: '20242', label: 'Phường Hải Châu' }],
@@ -482,7 +483,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('RequestBookingModal — luồng đặt xe', () => {
+describe('RequestBookingModal - luồng đặt xe', () => {
   describe('vỏ overlay', () => {
     it('tiêu đề "Yêu cầu thuê xe" và là dialog có tên khả truy cập', () => {
       renderModal();
@@ -500,7 +501,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
      * chủ xe nhận và trả tiền giữ chỗ. Chặng "Chọn chuyến" đã ra trang chi tiết (27/10/2026), nên
      * hộp đứng ở chặng 1 "Gửi yêu cầu". Bằng lái và màn kết quả không bao giờ là một chặng riêng.
      */
-    it('tiến trình kể cả hành trình — mở ra ở chặng 1/3 "Gửi yêu cầu", không có chặng "Chọn chuyến"', async () => {
+    it('tiến trình kể cả hành trình - mở ra ở chặng 1/3 "Gửi yêu cầu", không có chặng "Chọn chuyến"', async () => {
       renderModal();
       await advanceToReview();
       const steps = screen.getByRole('list', { name: 'Tiến trình đặt xe' });
@@ -517,7 +518,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
    * KHÔNG còn bước "Chuyến đi" (27/10/2026): chuyến được chọn ở thẻ đặt xe của trang chi tiết, hộp
    * mở ra là tự chạy lượt kiểm mà nút "Tiếp tục" cũ từng chạy rồi vào thẳng màn Xem lại.
    */
-  describe('lượt kiểm khi mở — không có bước Chuyến đi', () => {
+  describe('lượt kiểm khi mở - không có bước Chuyến đi', () => {
     it('mở ra là kiểm khung giờ của ĐÚNG chuyến thẻ đưa sang (vehicleId + ISO), rồi vào Xem lại', async () => {
       renderModal();
 
@@ -565,14 +566,14 @@ describe('RequestBookingModal — luồng đặt xe', () => {
      * Lịch bận giờ nằm ở ô chọn ngày của THẺ ĐẶT XE (`useVehicleBusyDays`) — hộp không có lịch nào
      * để khoá ngày, nên nó không tải lịch bận nữa. Chốt thật vẫn là lượt kiểm khung giờ ở trên.
      */
-    it('hộp không tải lịch bận — không có ô chọn ngày nào để dùng nó', async () => {
+    it('hộp không tải lịch bận - không có ô chọn ngày nào để dùng nó', async () => {
       renderModal();
       await advanceToReview();
       expect(api.fetchVehicleBusyDays).not.toHaveBeenCalled();
     });
   });
 
-  describe('màn Xem lại — xác nhận & gửi (thuê theo ngày)', () => {
+  describe('màn Xem lại - xác nhận & gửi (thuê theo ngày)', () => {
     /**
      * Ô "Tôi đã đọc và đồng ý…" của design v2 (Figma `19727:56134`) — đặt lại ô tick mà luồng đã bỏ
      * ngày 20/08. Chưa tick thì KHÔNG gửi và nói ngay dưới ô; tick xong lời nhắc tự biến mất. Ba văn
@@ -736,7 +737,8 @@ describe('RequestBookingModal — luồng đặt xe', () => {
     });
 
     /**
-     * Thẻ chuyến của màn Xem lại (Figma `19727:55974`): xe, mốc nhận/trả có NĂM, nơi nhận xe, chủ xe
+     * Thẻ chuyến của màn Xem lại (Figma `19727:55974`): xe, mốc nhận/trả theo định dạng chuẩn
+     * (`T3, 01/09  09h00` — `fmt.rentalAt`, như mọi mốc nhận/trả khác), nơi nhận xe, chủ xe
      * + thời lượng — và "Chỉnh sửa" đưa về bước Chuyến đi, giữ nguyên mọi thứ đã chọn.
      */
     it('thẻ chuyến đi: xe + mốc nhận/trả + chủ xe; KHÔNG có lối "Chỉnh sửa"', async () => {
@@ -746,8 +748,9 @@ describe('RequestBookingModal — luồng đặt xe', () => {
 
       const trip = screen.getByRole('region', { name: 'Thông tin chuyến đi' });
       expect(within(trip).getByText('Toyota Vios 2022')).toBeTruthy();
-      expect(within(trip).getByText('01/09/2026 09:00')).toBeTruthy();
-      expect(within(trip).getByText('03/09/2026 09:00')).toBeTruthy();
+      // getByText gộp khoảng trắng: hai NBSP của DATE_TIME_SEPARATOR khớp một dấu cách.
+      expect(within(trip).getByText('T3, 01/09 09h00')).toBeTruthy();
+      expect(within(trip).getByText('T5, 03/09 09h00')).toBeTruthy();
       expect(within(trip).getByText('Tự nhận và trả xe tại chủ xe')).toBeTruthy();
       expect(within(trip).getByText('Gian hàng Demo XePrime')).toBeTruthy();
       expect(within(trip).getByText('Thuê theo ngày · 2 ngày')).toBeTruthy();
@@ -830,7 +833,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
 
       // Nhập số khác số tài khoản ⇒ báo khách rằng chủ xe sẽ thấy thêm số tài khoản.
       expect(
-        within(renter).getByText(/Số liên hệ chưa xác thực — chủ xe sẽ thấy thêm số tài khoản/i),
+        within(renter).getByText(/Số liên hệ chưa xác thực - chủ xe sẽ thấy thêm số tài khoản/i),
       ).toBeTruthy();
 
       api.submitBookingRequest.mockResolvedValue({ id: 'R1', status: 'pending_host_approval' });
@@ -847,7 +850,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
      * Bấm thêm lúc request đầu còn đang bay — hai yêu cầu cho cùng một chuyến là một yêu cầu trùng
      * mà chính khách không cố ý tạo ra. Khoá ở đây là trạng thái "đang gửi" của nút.
      */
-    it('đang gửi thì nút gửi KHOÁ — bấm thêm không sinh yêu cầu thứ hai', async () => {
+    it('đang gửi thì nút gửi KHOÁ - bấm thêm không sinh yêu cầu thứ hai', async () => {
       renderModal();
       await advanceToReview();
 
@@ -1064,7 +1067,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(screen.queryByText('Đang tính quãng đường…')).toBeNull();
     });
 
-    it('gửi kèm địa chỉ và deliveryRequested — KHÔNG kèm bất kỳ số phí nào', async () => {
+    it('gửi kèm địa chỉ và deliveryRequested - KHÔNG kèm bất kỳ số phí nào', async () => {
       // Gõ tay, không ghim, không mã tỉnh — mã tỉnh rơi về tỉnh của CHÍNH CHIẾC XE.
       await openWithDelivery('  123 Nguyễn Văn Linh  ', null);
 
@@ -1284,7 +1287,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       phoneVerified: true,
     };
 
-    it('bước Xác nhận hiện họ tên + SĐT của TÀI KHOẢN — và payload không mang chúng', async () => {
+    it('bước Xác nhận hiện họ tên + SĐT của TÀI KHOẢN - và payload không mang chúng', async () => {
       me.data = verifiedMe;
       api.submitBookingRequest.mockResolvedValue({ id: 'R1', status: 'pending_host_approval' });
       renderModal();
@@ -1368,7 +1371,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
    * đăng nhập — hộp đăng nhập chỉ mở khi khách bấm "Đăng nhập", không chồng hai hộp. Có phiên rồi thì luồng TỰ đi tiếp — kiểm lại khung giờ, bằng lái, Xác nhận — và
    * KHÔNG BAO GIỜ tự gửi: nút "Gửi yêu cầu" vẫn do khách bấm.
    */
-  describe('chưa đăng nhập — mời đăng nhập, giữ dữ liệu (ADR 0060)', () => {
+  describe('chưa đăng nhập - mời đăng nhập, giữ dữ liệu (ADR 0060)', () => {
     beforeEach(() => {
       me.data = undefined;
     });
@@ -1378,7 +1381,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(await screen.findByText('Đăng nhập để gửi yêu cầu')).toBeTruthy();
     }
 
-    it('chưa đăng nhập → KHÔNG có ô liên hệ nào, chỉ lời mời đăng nhập — danh tính đến từ tài khoản', async () => {
+    it('chưa đăng nhập → KHÔNG có ô liên hệ nào, chỉ lời mời đăng nhập - danh tính đến từ tài khoản', async () => {
       renderModal();
       await continueAsGuest();
 
@@ -1388,7 +1391,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(screen.queryByLabelText(/Email/)).toBeNull();
     });
 
-    it('mở hộp: kiểm khung giờ, GIỮ bản nháp, hiện lời mời — hộp đăng nhập chỉ mở khi bấm', async () => {
+    it('mở hộp: kiểm khung giờ, GIỮ bản nháp, hiện lời mời - hộp đăng nhập chỉ mở khi bấm', async () => {
       renderModal();
       await continueAsGuest();
 
@@ -1517,7 +1520,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
      * đã chết. Flow chỉ biết lượt đăng nhập kế tiếp là MỚI khi `/auth/me` không còn tài khoản; còn
      * giữ bản cũ thì nó tưởng khách vừa đăng nhập lại và tự đi tiếp ngay.
      */
-    it('gửi bị 401 (phiên vừa mất) → giữ bản nháp, mời đăng nhập lại — không gửi lần hai', async () => {
+    it('gửi bị 401 (phiên vừa mất) → giữ bản nháp, mời đăng nhập lại - không gửi lần hai', async () => {
       me.data = LOGGED_IN_ME;
       const { rerenderTree } = renderModal();
       await advanceToReview();
@@ -1833,7 +1836,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
    * một lời báo mời chọn lại ở thẻ. KHÔNG BAO GIỜ tự gửi (ADR 0060).
    */
   describe('mở từ thẻ đặt xe (prefill)', () => {
-    it('đã đăng nhập, xe rảnh, bằng hợp lệ ⇒ tới THẲNG màn Xem lại — không gửi gì', async () => {
+    it('đã đăng nhập, xe rảnh, bằng hợp lệ ⇒ tới THẲNG màn Xem lại - không gửi gì', async () => {
       api.checkAvailability.mockResolvedValue({ available: true });
       renderModalWithPrefill({});
 
@@ -1861,7 +1864,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(authModal.open).not.toHaveBeenCalled();
     });
 
-    it('CHƯA đăng nhập ⇒ kiểm khung giờ, giữ bản nháp, mời đăng nhập — đăng nhập xong tới Xem lại', async () => {
+    it('CHƯA đăng nhập ⇒ kiểm khung giờ, giữ bản nháp, mời đăng nhập - đăng nhập xong tới Xem lại', async () => {
       me.data = undefined;
       api.checkAvailability.mockResolvedValue({ available: true });
       const { rerenderTree } = renderModalWithPrefill({});
@@ -1921,7 +1924,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
      * CHƯA đăng nhập + mã của thẻ: mã không được đánh giá ẩn danh rồi rơi mất khi giữ bản nháp —
      * bản nháp mang mã, và mã được đánh giá cho người VỪA đăng nhập, đúng một lần (ADR 0046).
      */
-    it('chưa đăng nhập + mã của thẻ ⇒ bản nháp GIỮ mã, đăng nhập xong mới đánh giá — một lần', async () => {
+    it('chưa đăng nhập + mã của thẻ ⇒ bản nháp GIỮ mã, đăng nhập xong mới đánh giá - một lần', async () => {
       me.data = undefined;
       api.checkAvailability.mockResolvedValue({ available: true });
       const { rerenderTree } = renderModalWithPrefill({ promoCode: 'GIAM50' });
@@ -2001,7 +2004,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(onClose).not.toHaveBeenCalled();
     });
 
-    it('vỏ chỉ dựng flow khi mở (cơ chế reset) — đóng thì không kiểm gì', async () => {
+    it('vỏ chỉ dựng flow khi mở (cơ chế reset) - đóng thì không kiểm gì', async () => {
       renderModal(false);
       await act(async () => {});
       expect(screen.queryByText('Đang kiểm tra lịch xe…')).toBeNull();
@@ -2127,7 +2130,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       ).toBeGreaterThan(0);
     });
 
-    it('mobile hiện thẳng thông tin xe — không có nút gấp/mở', async () => {
+    it('mobile hiện thẳng thông tin xe - không có nút gấp/mở', async () => {
       media.isMobile = true;
       listing.data = LISTING;
       renderModal();

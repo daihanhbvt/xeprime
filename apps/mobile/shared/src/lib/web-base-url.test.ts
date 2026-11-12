@@ -18,7 +18,7 @@ describe('resolveWebBaseUrl', () => {
     expect(resolveWebBaseUrl()).toBe('https://xeprime.vn');
   });
 
-  it('suy host từ Expo dev server khi chưa khai — thiết bị thật không mở được localhost máy dev', () => {
+  it('suy host từ Expo dev server khi chưa khai - thiết bị thật không mở được localhost máy dev', () => {
     constantsMock.expoConfig = { hostUri: '192.168.1.7:8081' };
 
     expect(resolveWebBaseUrl()).toBe('http://192.168.1.7:3000');

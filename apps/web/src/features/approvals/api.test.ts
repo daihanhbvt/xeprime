@@ -22,7 +22,7 @@ beforeEach(() => {
   for (const fn of Object.values(client)) fn.mockReset();
 });
 
-describe('filtersToParams — mọi bộ lọc đi lên SERVER', () => {
+describe('filtersToParams - mọi bộ lọc đi lên SERVER', () => {
   it('mặc định: phiếu chờ duyệt, trang 1; chiều "all" không được gửi', () => {
     expect(
       filtersToParams({
@@ -42,7 +42,7 @@ describe('filtersToParams — mọi bộ lọc đi lên SERVER', () => {
     });
   });
 
-  it('"tất cả trạng thái" là KHÔNG gửi status — không phải gửi chữ "any"', () => {
+  it('"tất cả trạng thái" là KHÔNG gửi status - không phải gửi chữ "any"', () => {
     expect(
       filtersToParams({ status: APPROVAL_STATUS_ANY, vehicleType: 'all', storefrontKind: 'all' })
         .status,
@@ -82,7 +82,7 @@ describe('filtersToParams — mọi bộ lọc đi lên SERVER', () => {
   });
 });
 
-describe('endpoint — luôn là hàng đợi XE', () => {
+describe('endpoint - luôn là hàng đợi XE', () => {
   it('danh sách gọi /platform/vehicle-approvals và trả kèm số theo tab', async () => {
     client.apiRequest.mockResolvedValue({
       data: [],

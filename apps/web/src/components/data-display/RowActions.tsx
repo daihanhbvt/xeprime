@@ -65,9 +65,14 @@ interface RowActionsProps {
   /**
    * `'text'` (mặc định) — dành cho bề mặt phụ cần nút phẳng.
    * `'filled'` — nút có nền, viền và độ nổi rõ; đây là biến thể chuẩn cho bảng và thẻ quản trị.
+   * `'standard'` — nút chuẩn của design v2 (partner, 04/11/2026): hành động thường là nút viền nền
+   *   trắng, hành động chính là nút vàng đặc — đúng `Button` mặc định/`primary` của theme. Dành
+   *   cho bảng đã ráp theo design mới; bảng chưa ráp giữ `'filled'` cho tới lượt của nó.
    */
-  variant?: 'text' | 'filled';
+  variant?: RowActionsVariant;
 }
+
+export type RowActionsVariant = 'text' | 'filled' | 'standard';
 
 const DEFAULT_MAX_INLINE = 3;
 
@@ -84,7 +89,14 @@ const decorative = decorativeIcon;
  * được (`#dc2626`) khớp `--xp-color-error` từng chữ số. Tự viết `background` sẽ phải nhân đôi
  * class để thắng specificity của AntD (bẫy D19) và vẫn hỏng ở trạng thái hover/disabled/loading.
  */
-function toneProps(action: RowAction, variant: 'text' | 'filled', emphasized = false) {
+function toneProps(action: RowAction, variant: RowActionsVariant, emphasized = false) {
+  if (variant === 'standard') {
+    // Không tự tô màu: `primary` của theme đã là vàng đặc + chữ tương phản (`primaryColor`).
+    return {
+      type: (action.primary ?? emphasized) && !action.danger ? ('primary' as const) : ('default' as const),
+      danger: action.danger,
+    };
+  }
   if (variant !== 'filled') return { type: 'text' as const, danger: action.danger };
   if (action.danger) {
     return {
@@ -104,7 +116,7 @@ function ActionButton({
   emphasized,
 }: {
   action: RowAction;
-  variant: 'text' | 'filled';
+  variant: RowActionsVariant;
   emphasized?: boolean;
 }) {
   const tCommon = useTranslations('Common');
@@ -230,7 +242,9 @@ export function RowActions({
               color: 'default' as const,
               className: `${styles.toneNeutral} ${styles.overflowButton}`,
             }
-          : { type: 'text' as const, className: styles.overflowButton })}
+          : variant === 'standard'
+            ? { type: 'default' as const, className: styles.overflowButton }
+            : { type: 'text' as const, className: styles.overflowButton })}
         size="small"
         icon={decorative(<MoreOutlined />)}
         aria-label={overflowText}
@@ -245,6 +259,7 @@ export function RowActions({
         styles.root,
         align === 'start' && styles.alignStart,
         variant === 'filled' && styles.filled,
+        variant === 'standard' && styles.standard,
       ]
         .filter(Boolean)
         .join(' ')}

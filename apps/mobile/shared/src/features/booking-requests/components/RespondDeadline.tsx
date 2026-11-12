@@ -21,7 +21,17 @@ const URGENT_MS = BOOKING_REQUEST_REMINDER_REMAINING_MINUTES.FINAL * 60_000;
  * Quá hạn thì so MỐC chứ không so cột `status`: `expired` do worker ghi nên luôn có một cửa sổ
  * (tới một nhịp worker) mà yêu cầu đã chết nhưng vẫn còn `pending_host_approval` trong DB.
  */
-export function RespondDeadline({ respondBy }: { respondBy: string }) {
+export function RespondDeadline({
+  respondBy,
+  label,
+  expiredLabel,
+}: {
+  respondBy: string;
+  /** Nhãn trước đồng hồ — vắng = "Còn lại". Dùng lại cho hạn THANH TOÁN (web `CountdownClock`). */
+  label?: string;
+  /** Câu thay đồng hồ khi hết hạn — vắng = câu hạn phản hồi. */
+  expiredLabel?: string;
+}) {
   const colors = useColors();
   const t = useTranslations('BookingRequests.deadline');
   /*
@@ -41,7 +51,7 @@ export function RespondDeadline({ respondBy }: { respondBy: string }) {
       <XStack ai="center" gap={space.xs}>
         <Ionicons name="time-outline" size={iconSize.xs} color={colors.placeholder} />
         <Text col={colors.placeholder} fos={fontSize.bodySm}>
-          {t('expired')}
+          {expiredLabel ?? t('expired')}
         </Text>
       </XStack>
     );
@@ -62,7 +72,7 @@ export function RespondDeadline({ respondBy }: { respondBy: string }) {
       <Ionicons name="time-outline" size={iconSize.xs} color={urgent ? colors.warning : colors.textMuted} />
       <Text col={urgent ? colors.warning : colors.textMuted} fos={fontSize.bodySm} fow={urgent ? fontWeight.semibold : fontWeight.regular}>
         {/* Cửa sổ động tới 4 giờ (ADR 0066) ⇒ `h:mm:ss` khi còn từ một giờ, `m:ss` khi dưới. */}
-        {t('remaining')}{' '}
+        {label ?? t('remaining')}{' '}
         <Text col={urgent ? colors.warning : colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
           {longClockText(remaining)}
         </Text>

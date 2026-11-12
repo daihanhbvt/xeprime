@@ -36,6 +36,6 @@ describe('buildExternalDriverSchema (ADR 0067)', () => {
   it('SĐT bắt buộc và phải là số di động VN', async () => {
     await expect(errorOf({ name: 'Tài', phone: '' })).resolves.toBe('PHONE_REQUIRED');
     await expect(errorOf({ name: 'Tài', phone: '12345' })).resolves.toBe('PHONE_INVALID');
-    await expect(errorOf({ name: 'Tài', phone: '02838123456' })).resolves.toBe('PHONE_INVALID');
+    await expect(errorOf({ name: 'Tài', phone: '028381234567' })).resolves.toBe('PHONE_INVALID');
   });
 });

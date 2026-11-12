@@ -1,3 +1,4 @@
+import { sanitizePhoneInput } from '@xeprime/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
@@ -179,7 +180,9 @@ export function TextField<T extends FieldValues>({
           accessibilityLabel={label}
           ref={inputRef}
           value={String(field.value ?? '')}
-          onChangeText={(text) => {
+          onChangeText={(raw) => {
+            // Ô SĐT (ADR 0082): chỉ giữ chữ số và một `+` đầu, lúc gõ lẫn lúc dán.
+            const text = inputProps.keyboardType === 'phone-pad' ? sanitizePhoneInput(raw) : raw;
             field.onChange(text);
             onChangeTextExtra?.(text);
           }}

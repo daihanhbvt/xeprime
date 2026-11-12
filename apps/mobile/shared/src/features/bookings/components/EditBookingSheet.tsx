@@ -11,7 +11,7 @@ import {
   isDriverReassignable,
   PERMISSION,
   SERVICE_TYPE,
-  VN_PHONE_PATTERN,
+  isVnPhoneInput,
 } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -34,9 +34,8 @@ import { AssignDriverSheet } from './AssignDriverSheet';
 
 const NOTE_MAX = 2000;
 /**
- * Giá trị chọn đại diện tài xế NGOÀI HỆ THỐNG đang ghi trên đơn (ADR 0067) — không có id liên kết,
- * như `EXTERNAL_DRIVER` của web. Giữ nguyên là không gửi gì; sửa tên/SĐT làm ở khối Tài xế của
- * chi tiết đơn.
+ * Giá trị chọn đại diện tài xế NGOÀI HỆ THỐNG còn ghi trên đơn CŨ (ADR 0067) — không có id liên kết,
+ * như `EXTERNAL_DRIVER` của web. Chỉ còn để đọc/gỡ (ADR 0074 điều 4): giữ nguyên là không gửi gì.
  */
 const EXTERNAL_DRIVER = '__external__';
 
@@ -50,7 +49,7 @@ function buildEditSchema(labels: { name: string; phone: string }) {
       .string()
       .trim()
       .default('')
-      .matches(VN_PHONE_PATTERN, { message: labels.phone, excludeEmptyString: true }),
+      .test('vn-phone', labels.phone, isVnPhoneInput),
     depositAmount: yup
       .number()
       .transform((v, orig) => (orig === '' || orig === null || orig === undefined ? null : v))
@@ -198,7 +197,7 @@ export function EditBookingSheet({
                 : ''}
             </Text>
             <Text col={colors.text} fos={fontSize.bodySm}>
-              {fmt.shortDateTimeRange(booking.pickupAt, booking.returnAt)}
+              {fmt.rentalRange(booking.pickupAt, booking.returnAt)}
             </Text>
             <Text col={colors.price} fos={fontSize.body} fow={fontWeight.bold}>
               {fmt.money(booking.totalAmount)}

@@ -106,6 +106,18 @@ export function getErrorDetails(error: unknown): Record<string, unknown> | null 
     : null;
 }
 
+/**
+ * Số giây còn phải chờ của một lỗi "chờ rồi thử lại" — `details.retryAfterSeconds` mà backend gắn
+ * cho `RATE_LIMITED`, `LOGIN_TEMPORARILY_LOCKED`, `OTP_COOLDOWN`, `OTP_TOO_MANY`. `null` khi lỗi
+ * không mang con số đó (hoặc mang một giá trị không dùng được) — nơi gọi rơi về câu không có số.
+ */
+export function getRetryAfterSeconds(error: unknown): number | null {
+  const seconds = getErrorDetails(error)?.retryAfterSeconds;
+  return typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0
+    ? Math.ceil(seconds)
+    : null;
+}
+
 /** Phiên không còn hiệu lực — nơi gọi nên đá về đăng nhập, không phải hiện lỗi đỏ. */
 export function isUnauthenticated(error: unknown): boolean {
   const code = getErrorCode(error);

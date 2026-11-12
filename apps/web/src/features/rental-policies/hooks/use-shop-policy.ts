@@ -2,8 +2,13 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
-import { fetchShopPolicy, saveShopPolicy } from '../api';
-import type { SaveRentalPolicyInput } from '../types';
+import {
+  fetchShopOperationDefaults,
+  fetchShopPolicy,
+  saveShopOperationDefaults,
+  saveShopPolicy,
+} from '../api';
+import type { SaveRentalPolicyInput, SaveShopOperationDefaultsInput } from '../types';
 
 export function useShopPolicy(vehicleType: string, enabled = true) {
   return useQuery({
@@ -20,6 +25,27 @@ export function useSaveShopPolicy(vehicleType: string) {
     mutationFn: (body: SaveRentalPolicyInput) => saveShopPolicy(body, vehicleType),
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.rentalPolicies.shop(vehicleType), data);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
+    },
+  });
+}
+
+export function useShopOperationDefaults(vehicleType: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.rentalPolicies.operationDefaults(vehicleType),
+    queryFn: () => fetchShopOperationDefaults(vehicleType),
+    enabled,
+  });
+}
+
+/** Xe đang theo mặc định đổi số hiệu lực ⇒ thiết lập vận hành theo xe phải đọc lại. */
+export function useSaveShopOperationDefaults(vehicleType: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SaveShopOperationDefaultsInput) =>
+      saveShopOperationDefaults(body, vehicleType),
+    onSuccess: (data) => {
+      queryClient.setQueryData(queryKeys.rentalPolicies.operationDefaults(vehicleType), data);
       void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
     },
   });

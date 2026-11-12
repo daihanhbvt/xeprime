@@ -27,7 +27,7 @@ function area(): HTMLTextAreaElement {
   return screen.getByLabelText('Ghi chú') as HTMLTextAreaElement;
 }
 
-describe('TextAreaField — khả truy cập', () => {
+describe('TextAreaField - khả truy cập', () => {
   it('nhãn nối vào ô nhập (vá nợ D14.4)', () => {
     render(<Harness />);
 
@@ -50,7 +50,7 @@ describe('TextAreaField — khả truy cập', () => {
   });
 });
 
-describe('TextAreaField — bộ đếm ký tự', () => {
+describe('TextAreaField - bộ đếm ký tự', () => {
   it('maxLength bật bộ đếm', () => {
     render(<Harness maxLength={100} />);
 
@@ -90,7 +90,7 @@ describe('TextAreaField — bộ đếm ký tự', () => {
   });
 });
 
-describe('TextAreaField — không tự validate', () => {
+describe('TextAreaField - không tự validate', () => {
   it('giá trị đi thẳng vào payload, không bị cắt/biến đổi', async () => {
     const onValues = vi.fn();
     render(<Harness onValues={onValues} />);

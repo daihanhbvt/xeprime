@@ -1,16 +1,16 @@
 /*
- * Banner tải ứng dụng (Figma `19695:40877`, ADR 0062): nền nâu vàng đậm + ảnh nền vàng, logo,
- * hai huy hiệu cửa hàng kính mờ và mockup điện thoại 332 × 382 bị khung cắt ở mép trên/phải.
- * Toạ độ là của bản vẽ (khung rộng 458px, cao 342px); điện thoại neo theo mép PHẢI để khung rộng
- * hơn (tablet, hay khi chưa có đánh giá) vẫn giữ đúng bố cục.
+ * Banner tải ứng dụng — Figma "App Promotion Banner" (`19786:79519`, ADR 0062). Toạ độ là của bản
+ * vẽ (khung 458 × 370): logo (19, 35) 216 × 68 · câu mời tâm dọc ở 143 · huy hiệu ở 209 và 273 ·
+ * ảnh điện thoại 371 × 409 ở (167, −42) — nhô khỏi mép trên và mép phải. Điện thoại neo theo mép
+ * PHẢI để khung rộng hơn (tablet) vẫn giữ bố cục.
  */
 .banner {
   position: relative;
-  overflow: hidden;
-  min-height: 342px;
+  min-height: 370px;
+  box-sizing: border-box;
+  border: 1px solid var(--xp-color-app-banner-border);
   border-radius: var(--xp-border-radius-card);
-  background: var(--xp-color-primary-strong);
-  color: var(--xp-color-text-on-dark);
+  color: var(--xp-color-text);
   isolation: isolate;
 }
 
@@ -18,21 +18,25 @@
   object-fit: fill;
 }
 
-/* Ảnh nền: rộng 337.73%, cao 127.35%, lùi trái 46.04%, lùi lên 3.12% (Figma). */
-.backdrop {
-  position: absolute;
-  z-index: -2;
-  top: -3.12%;
-  left: -46.04%;
-  width: 337.73%;
-  height: 127.35%;
-}
-
-.glow {
+/* Nền: BG/primary-high dưới ảnh vàng (cover), cắt theo góc bo của khung. */
+.surface {
   position: absolute;
   z-index: -1;
+  overflow: hidden;
+  border-radius: inherit;
+  background: var(--xp-color-primary-strong);
+  inset: 0;
+}
+
+.cover {
+  object-fit: cover;
+}
+
+/* Vệt sáng 458 × 342 canh giữa dọc, hoà `screen` lên nền. */
+.glow {
+  position: absolute;
   top: 50%;
-  left: 0;
+  left: -1px;
   display: flex;
   width: 458px;
   height: 342px;
@@ -62,18 +66,19 @@
 
 .logo {
   position: absolute;
-  top: 36px;
-  left: 20px;
+  top: 35px;
+  left: 19px;
   width: 216px;
   height: 68px;
 }
 
+/* 16px/Medium, hai dòng 24px, tâm dọc ở 143 ⇒ đỉnh ở 119. */
 .title {
   position: absolute;
-  top: 120px;
-  left: 19px;
+  top: 119px;
+  left: 18px;
   margin: 0;
-  color: var(--xp-color-text-on-dark);
+  color: var(--xp-color-text);
   font-size: var(--xp-font-size-body-lg);
   font-weight: var(--xp-font-weight-medium);
   line-height: var(--xp-line-height-body-lg);
@@ -83,8 +88,8 @@
 .badges {
   position: absolute;
   z-index: 1;
-  top: 209.83px;
-  left: 20px;
+  top: 208.83px;
+  left: 19px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -94,23 +99,24 @@
   list-style: none;
 }
 
+/* Huy hiệu kính trắng 20%, viền `#fcebaf`, blur 21, chữ tối (Figma `19695:40885`). */
 .badge {
   display: inline-flex;
   overflow: hidden;
   align-items: center;
   padding: var(--xp-space-sm) var(--xp-space-md);
-  border: 1px solid var(--xp-color-text-on-dark);
+  border: 1px solid var(--xp-color-app-badge-border);
   border-radius: var(--xp-border-radius-control);
-  background: var(--xp-color-glass-faint);
-  backdrop-filter: blur(6px);
-  color: var(--xp-color-text-on-dark);
+  background: var(--xp-color-glass-light);
+  backdrop-filter: blur(21px);
+  color: var(--xp-color-text);
   gap: var(--xp-space-6);
   transition: background-color 0.15s ease;
 }
 
 .badge:hover {
-  background: var(--xp-color-glass);
-  color: var(--xp-color-text-on-dark);
+  background: var(--xp-color-glass-light-strong);
+  color: var(--xp-color-text);
 }
 
 .badge:focus-visible {
@@ -137,36 +143,100 @@
   white-space: nowrap;
 }
 
-/* Mockup 332 × 382, đỉnh ở −14px; trong khung 458px thì lề trái 181px = mép phải lố ra 55px. */
-.device {
+/*
+ * Ảnh điện thoại 371 × 409, đỉnh ở −42 (nhô lên). Trong khung 458 lề trái 167 ⇒ mép phải lố ra
+ * 80px; neo theo mép phải. Ảnh bên trong: rộng 100.4%, cao 110.53%, lệch trái 2.21%, lên −3.77%.
+ */
+.phone {
   position: absolute;
-  top: -14px;
-  right: -55px;
+  top: -42px;
+  right: -80px;
   overflow: hidden;
-  width: 332px;
-  height: 382px;
+  width: 371px;
+  height: 409px;
+  pointer-events: none;
 }
 
-.frame {
+.phoneCrop {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 99.86%;
-  height: 110.07%;
+  top: -3.77%;
+  left: 2.21%;
+  width: 100.4%;
+  height: 110.53%;
 }
 
-.screen {
-  position: absolute;
-  top: 1.34%;
-  right: 2.92%;
-  bottom: -5.28%;
-  left: 0.15%;
+/* Tablet: khung chiếm trọn cột — điện thoại neo sát mép phải khung, không lố ra ngoài màn. */
+@media (max-width: 1024px) {
+  .phone {
+    right: 0;
+  }
 }
 
-/* Màn hẹp: không đủ chỗ cho điện thoại cạnh hai huy hiệu — bỏ mockup, giữ lời mời tải app. */
+/*
+ * Mobile — bố cục Figma MB (`19771:51793`, khung 358 × 370) với màu/nền của bản desktop mới:
+ * logo 190 × 60 ở (20, 28) · câu mời ở 109 rộng 157 · huy hiệu ở 227 rộng 140 cách 12 · điện thoại
+ * 276 × 329 ở (135, 41) chạm đáy, bị khung cắt gọn (không lố ra ngoài màn).
+ */
 @media (max-width: 640px) {
-  .device {
-    display: none;
+  .banner {
+    overflow: hidden;
+  }
+
+  .logo {
+    top: 28px;
+    left: 20px;
+    width: 190px;
+    height: 60px;
+  }
+
+  .title {
+    top: 109px;
+    left: 20px;
+    width: 157px;
+    white-space: normal;
+  }
+
+  .badges {
+    top: 227px;
+    left: 20px;
+    gap: var(--xp-space-12);
+  }
+
+  .badge {
+    width: 140px;
+    box-sizing: border-box;
+    padding: var(--xp-space-sm) var(--xp-space-12);
+    gap: var(--xp-space-sm);
+  }
+
+  .badgeText {
+    width: auto;
+    gap: 1px;
+  }
+
+  .badgeCaption {
+    font-size: var(--xp-font-size-caption);
+    line-height: var(--xp-line-height-caption);
+  }
+
+  .badgeStore {
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .phone {
+    top: 41px;
+    right: auto;
+    left: 135px;
+    width: 276px;
+    height: 329px;
+  }
+
+  .phoneCrop {
+    top: 1.19%;
+    left: -4.77%;
+    width: 100%;
+    height: 102.07%;
   }
 }
 
@@ -174,4 +244,36 @@
   .badge {
     transition: none;
   }
+}
+
+/*
+ * Giao diện tối (Figma `19879:66323`): banner là thẻ TỐI viền vàng trầm, vệt sáng vàng phía sau,
+ * chữ trắng; nút cửa hàng là kính mờ viền trắng. Ảnh nền vàng của giao diện sáng bị ẩn — giữ nó thì
+ * chữ trắng (token `text` đảo sang trắng) nằm trên nền vàng sáng, không đọc được.
+ */
+:global([data-theme='dark']) .banner {
+  border-color: var(--xp-color-primary-muted);
+}
+
+:global([data-theme='dark']) .surface {
+  background: linear-gradient(135deg, #1a1408 0%, var(--xp-color-bg) 70%);
+}
+
+:global([data-theme='dark']) .cover {
+  display: none;
+}
+
+:global([data-theme='dark']) .title,
+:global([data-theme='dark']) .badge,
+:global([data-theme='dark']) .badge:hover {
+  color: #ffffff;
+}
+
+:global([data-theme='dark']) .badge {
+  border-color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+:global([data-theme='dark']) .badge:hover {
+  background: rgba(255, 255, 255, 0.12);
 }

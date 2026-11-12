@@ -1,6 +1,6 @@
 {
   "footer": {
-    "tagline": "The marketplace connecting vehicle owners and renters across Vietnam — easy, safe and transparent.",
+    "tagline": "The marketplace connecting vehicle owners and renters across Vietnam - easy, safe and transparent.",
     "cta": {
       "eyebrow": "For vehicle owners",
       "title": "Is your vehicle sitting idle?",
@@ -79,11 +79,11 @@
     "titleWithService": "Picked for you · {service}",
     "count": "({count, plural, one {# vehicle} other {# vehicles}})",
     "nearProvince": "Prioritising vehicles in {province}",
-    "nearProvinceMixed": "Prioritising vehicles in {province} — not enough there, so others are included",
+    "nearProvinceMixed": "Prioritising vehicles in {province} - not enough there, so others are included",
     "exploreAll": "Explore vehicles",
     "loadError": "Couldn't load the vehicle list",
     "openSearch": "Open search",
-    "emptyForService": "No {service} vehicles match yet — try another service tab",
+    "emptyForService": "No {service} vehicles match yet - try another service tab",
     "empty": "No vehicles have been listed publicly yet"
   },
   "locations": {
@@ -106,15 +106,15 @@
     "filters": "Filters",
     "sortLabel": "Sort",
     "sortAriaLabel": "Sort results",
-    "dateRange": "{from} – {to}",
-    "dateRangeWithDays": "{from} – {to} ({days, plural, one {# day} other {# days}})",
+    "dateRange": "{from} - {to}",
+    "dateRangeWithDays": "{from} - {to} ({days, plural, one {# day} other {# days}})",
     "loadErrorTitle": "Couldn't load the vehicle list",
     "loadingLabel": "Loading results",
     "emptyFilteredTitle": "No matching vehicles",
     "emptyFilteredDesc": "No vehicles match your current filters. Try changing your criteria, loosening the filters, or picking different dates.",
     "changeTimeOrPlace": "Change dates or location",
     "emptySystemTitle": "No vehicles listed yet",
-    "emptySystemDesc": "Shops have not listed any vehicles publicly. Please check back — new vehicles appear as soon as they are approved.",
+    "emptySystemDesc": "Shops have not listed any vehicles publicly. Please check back - new vehicles appear as soon as they are approved.",
     "loadingMore": "Loading more vehicles",
     "appendError": "Couldn't load the next page. {reason}",
     "loadMore": "Load more vehicles",
@@ -139,10 +139,10 @@
     "clearAll": "Clear all",
     "availableFor": "{count, plural, one {# vehicle} other {# vehicles}} matching “{q}”",
     "emptyKeywordTitle": "No vehicles match “{q}”",
-    "emptyKeywordDesc": "Try a shorter term — just the make or model (e.g. “vios”, “vf8”), or the owner's name. Accents are optional.",
+    "emptyKeywordDesc": "Try a shorter term - just the make or model (e.g. “vios”, “vf8”), or the owner's name. Accents are optional.",
     "clearKeyword": "Clear search",
     "keyword": {
-      "placeholder": "Search by vehicle, owner or shop",
+      "placeholder": "Type to search vehicle types, shop owners,...",
       "ariaLabel": "Search vehicles by vehicle, owner or shop name",
       "hostsGroup": "Owners & shops",
       "shop": "Shop",
@@ -151,7 +151,16 @@
       "vehicleCount": "{count, plural, one {# vehicle} other {# vehicles}}",
       "searchAll": "See all vehicles matching “{q}”"
     },
-    "viewMode": "View mode"
+    "viewMode": "View mode",
+    "quickPills": {
+      "bodyType": "Body type",
+      "priceRange": "Price range",
+      "seats": "Seats",
+      "scrollMore": "More filters",
+      "scrollPrev": "Previous filters"
+    },
+    "clearAllAria": "Clear all filters",
+    "clearFilters": "Clear filters"
   },
   "filterPanel": {
     "title": "Filters",
@@ -180,11 +189,11 @@
       "delivery": "Owner offers delivery and pickup",
       "noCollateral": "No asset collateral required",
       "discount": "Vehicles with a promotion",
-      "vatInvoice": "The owner invoices the rental under a direct agreement with you — XePrime does not issue invoices on the owner's behalf"
+      "vatInvoice": "The owner invoices the rental under a direct agreement with you - XePrime does not issue invoices on the owner's behalf"
     },
     "clear": "Clear filters",
     "apply": "Apply",
-    "priceRangeValue": "{from} – {to}",
+    "priceRangeValue": "{from} - {to}",
     "countSuffix": "vehicles",
     "applyWithCount": "Apply ({count, plural, one {# vehicle} other {# vehicles}})",
     "motorbikeCategory": "Motorbike category",
@@ -206,7 +215,7 @@
       "offers": "Offers",
       "offersHint": "Vehicles with an offer currently published by the owner.",
       "hasOffer": "Has an offer",
-      "instantBook": "No confirmation needed",
+      "instantBook": "Auto-approved",
       "instantBookHint": "Only show vehicles you can book instantly, without waiting for the owner to approve.",
       "policyNote": "These are search criteria, not a promise of no deposit, refunds or insurance. The actual policy is confirmed on the vehicle page.",
       "ratingFrom": "{rating, number, ::.0}+ stars",
@@ -215,7 +224,7 @@
       "chips": {
         "delivery": "Delivery",
         "discount": "Has an offer",
-        "instantBook": "No confirmation needed",
+        "instantBook": "Auto-approved",
         "noCollateral": "No asset collateral",
         "vatInvoice": "VAT invoice"
       }
@@ -223,13 +232,13 @@
   },
   "searchDialog": {
     "title": "Search",
-    "longTermHint": "Choose a vehicle first — then pick a rental package ({packages} months) and your preferred pickup date when you send the request.",
+    "longTermHint": "Choose a vehicle first - then pick a rental package ({packages} months) and your preferred pickup date when you send the request.",
     "locationAriaLabel": "Pickup location"
   },
   "meta": {
     "home": {
       "title": "Self-drive & chauffeured car rental across Vietnam",
-      "description": "XePrime — rent self-drive cars, chauffeured cars and motorbikes across Vietnam. Book fast, pay after the host confirms."
+      "description": "XePrime - rent self-drive cars, chauffeured cars and motorbikes across Vietnam. Book fast, pay after the host confirms."
     },
     "search": {
       "title": "Search vehicles for rent",

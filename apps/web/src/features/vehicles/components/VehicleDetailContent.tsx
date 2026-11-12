@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { ROUTES } from '@/constants/routes';
@@ -19,6 +20,7 @@ import { useVehicle } from '../hooks/use-vehicle';
 import { useVehicleSummary } from '../hooks/use-vehicle-summary';
 import { useDeleteVehicle } from '../hooks/use-vehicle-mutations';
 import { Vehicle360Overview } from './Vehicle360Overview';
+import { VehicleDetailActions } from './VehicleDetailActions';
 
 interface Props {
   vehicleId: string;
@@ -29,6 +31,12 @@ interface Props {
   notFoundAction?: { label: string; onClick: () => void };
   /** Sau khi xoá xe thành công. Trang điều hướng về danh sách; modal tự đóng. */
   onDeleted?: () => void;
+  /**
+   * Tiêu đề TRANG (chỉ trang truyền). Có nó thì hàng nút (Xoá · Chỉnh sửa · Xem lịch xe) đứng ở
+   * vùng phải của tiêu đề như design; modal không có tiêu đề trang nên hàng nút đứng trên thẻ xe.
+   * Tiêu đề dựng Ở ĐÂY chứ không ở trang vì nút cần bản ghi xe — mà bản ghi được tải ở đây.
+   */
+  pageHeader?: { title: string; subtitle?: string; onBack: () => void };
 }
 
 /**
@@ -39,7 +47,7 @@ interface Props {
  * `BookingDetailContent` ở Wave 10: hai bản chi tiết là một bản sẽ bị bỏ quên. Trình bày vẫn
  * nằm trọn ở `Vehicle360Overview`; component này chỉ điều phối.
  */
-export function VehicleDetailContent({ vehicleId, notFoundAction, onDeleted }: Props) {
+export function VehicleDetailContent({ vehicleId, notFoundAction, onDeleted, pageHeader }: Props) {
   const router = useRouter();
   // "Xem lịch" mang theo chi nhánh đang lọc lúc rời danh sách (ADR 0052).
   const branchCrumb = useBranchCrumb();
@@ -74,9 +82,24 @@ export function VehicleDetailContent({ vehicleId, notFoundAction, onDeleted }: P
     <Button onClick={notFoundAction.onClick}>{notFoundAction.label}</Button>
   ) : null;
 
+  const withHeader = (body: ReactNode, actions?: ReactNode) =>
+    pageHeader ? (
+      <>
+        <ManagePageHeader
+          title={pageHeader.title}
+          subtitle={pageHeader.subtitle}
+          onBack={pageHeader.onBack}
+          extra={actions}
+        />
+        {body}
+      </>
+    ) : (
+      body
+    );
+
   // Cùng quy tắc với danh sách: không có quyền xem thì không dựng gì của bản ghi.
   if (!canView) {
-    return (
+    return withHeader(
       <PermissionState
         kind="forbidden"
         title={t('detail.forbiddenTitle')}
@@ -89,40 +112,52 @@ export function VehicleDetailContent({ vehicleId, notFoundAction, onDeleted }: P
             </Link>
           )
         }
-      />
+      />,
     );
   }
 
-  if (isLoading) return <LoadingState variant="page" label={t('detail.loading')} />;
+  if (isLoading) return withHeader(<LoadingState variant="page" label={t('detail.loading')} />);
 
   if (isError || !vehicle) {
     const notFound = getErrorCode(error) === API_ERROR_CODE.NOT_FOUND;
-    return (
+    return withHeader(
       <EmptyState
         variant="error"
         title={notFound ? t('detail.notFoundTitle') : t('detail.loadErrorTitle')}
         description={notFound ? t('detail.notFoundBody') : t('detail.loadErrorBody')}
         onRetry={notFound ? undefined : () => void refetch()}
         action={fallbackAction}
-      />
+      />,
     );
   }
 
-  return (
+  const canEdit = has(PERMISSION.VEHICLE_UPDATE);
+  const actions = (
+    <VehicleDetailActions
+      vehicle={vehicle}
+      canEdit={canEdit}
+      canDelete={has(PERMISSION.VEHICLE_DELETE)}
+      deletePending={deleteVehicle.isPending}
+      // Theo TUYẾN: tuyến gói mở màn sửa, chủ xe tuyến hoa hồng mở không gian "Quản lý xe".
+      onEdit={() => router.push(vehiclePaths.profile(vehicleId))}
+      onSchedule={() =>
+        router.push(
+          vehicleSchedulePath(vehicle, { basePath: paths.calendar, branchId: branchCrumb }),
+        )
+      }
+      onDelete={handleDelete}
+    />
+  );
+
+  return withHeader(
     <Vehicle360Overview
       vehicle={vehicle}
       summary={summary.data}
       summaryLoading={summary.isLoading}
       summaryFailed={summary.isError}
-      canEdit={has(PERMISSION.VEHICLE_UPDATE)}
-      canDelete={has(PERMISSION.VEHICLE_DELETE)}
-      deletePending={deleteVehicle.isPending}
-      // Theo KHU: cổng quản lý mở màn sửa nhiều tab, khu tài khoản mở không gian "Quản lý xe".
-      onEdit={() => router.push(vehiclePaths.profile(vehicleId))}
-      onSchedule={() =>
-        router.push(vehicleSchedulePath(vehicle, { basePath: paths.calendar, branchId: branchCrumb }))
-      }
-      onDelete={handleDelete}
-    />
+      canEdit={canEdit}
+      inlineActions={pageHeader ? undefined : actions}
+    />,
+    actions,
   );
 }

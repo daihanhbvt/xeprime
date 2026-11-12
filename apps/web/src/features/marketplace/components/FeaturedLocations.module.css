@@ -105,6 +105,13 @@
   line-height: var(--xp-line-height-h1);
   text-transform: uppercase;
   white-space: nowrap;
+  /*
+   * Dấu chồng trên chữ HOA tiếng Việt (Ẵ, Ồ, Ế) nhô khỏi hộp dòng — `background-clip: text` chỉ tô
+   * trong hộp nên dấu thành trong suốt. Nới hộp lên 0.3em rồi trừ lại bằng lề âm: dấu được tô, vị
+   * trí chữ không đổi.
+   */
+  padding-top: 0.3em;
+  margin-top: -0.3em;
 }
 
 .meta {
@@ -220,3 +227,21 @@
   color: #ffffff;
 }
 
+
+/* Ảnh minh hoạ trôi RẤT nhẹ (1 → 1.025, 20s) - bản Ken Burns chung (1.06/12s) quá mạnh cho thẻ
+   điểm đến (user chốt 09/11/2026). Giảm chuyển động ⇒ tĩnh. */
+@keyframes xpDestDrift {
+  from {
+    scale: 1;
+  }
+
+  to {
+    scale: 1.025;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .drift {
+    animation: xpDestDrift 20s ease-in-out infinite alternate;
+  }
+}

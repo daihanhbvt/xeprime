@@ -25,7 +25,8 @@ export function SectionHeading({
   /** Gắn vào thẻ tiêu đề — section bọc ngoài dùng nó cho `aria-labelledby`. */
   id: string;
   kicker: string;
-  title: ReactNode;
+  /** Bỏ trống ⇒ khối chỉ có dòng nhỏ; dòng đó thành thẻ tiêu đề (giữ `id` cho `aria-labelledby`). */
+  title?: ReactNode;
   align?: 'start' | 'center';
   divider?: boolean;
   /**
@@ -42,8 +43,14 @@ export function SectionHeading({
    */
   const heading = (
     <div className={cx(styles.heading, align === 'center' && styles.center)}>
-      <p className={cx(styles.kicker, enterClass(100))}>{kicker}</p>
-      {typeof title === 'string' ? (
+      {title == null ? (
+        <h2 id={id} className={cx(styles.kicker, enterClass(100))}>
+          {kicker}
+        </h2>
+      ) : (
+        <p className={cx(styles.kicker, enterClass(100))}>{kicker}</p>
+      )}
+      {title == null ? null : typeof title === 'string' ? (
         <h2 id={id} className={styles.title}>
           <SplitText text={title} delay={200} />
         </h2>

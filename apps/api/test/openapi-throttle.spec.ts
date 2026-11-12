@@ -12,8 +12,12 @@ import { collectRouteAccess, type RouteAccess } from '../src/openapi/route-acces
  *  1. **Web lỏng hơn native.** `AuthController` và `MobileAuthController` gọi CÙNG
  *     `AuthService.loginWithPassword`. Trước 07/09/2026 web không khai `@Throttle` nên rơi về mức
  *     chung 120 req/phút, trong khi native là 5 — kẻ dò mật khẩu chỉ việc đổi URL và được gấp 24
- *     lần số lần đoán. Không có bộ đếm sai mật khẩu nào phía sau (`ACCOUNT_LOCKED` chỉ phản ánh
- *     `users.status` do admin đặt), nên rate limit là lớp phòng thủ CÒN LẠI, không phải lớp phụ.
+ *     lần số lần đoán. Cả hai nay đọc chung `AUTH_THROTTLE`.
+ *
+ *     Từ 05/11/2026 mức theo IP được NỚI (đăng nhập 5 → 20/phút…): throttler đếm theo `req.ip`, mà
+ *     cả văn phòng sau một NAT / khách 4G sau CGNAT chung một IP — 5 lượt/phút (tính cả lượt ĐÚNG)
+ *     chặn người thật. Dò MỘT tài khoản đã có khoá theo định danh ở DB (`LoginThrottleService`,
+ *     ADR 0076; mã OTP: `OTP_POLICY.MAX_ATTEMPTS`), nên mức IP chỉ còn là trần chống spam theo máy.
  *  2. **Tài liệu trôi khỏi decorator.** `enhance-document.ts` từng in cứng "120 request / 60 giây"
  *     cho MỌI endpoint. Nay nó đọc `route.rateLimit`, mà cái đó đọc metadata của `@nestjs/throttler`
  *     bằng các chuỗi khoá chép tay (`THROTTLER:LIMITdefault`…). Bản nâng cấp nào đổi khoá sẽ làm
@@ -25,11 +29,17 @@ import { collectRouteAccess, type RouteAccess } from '../src/openapi/route-acces
 /** Cửa dò và mức phải giữ. Đổi số ở đây là một quyết định, không phải một lần gõ nhầm. */
 const EXPECTED_LIMIT: Readonly<Record<string, number>> = {
   // Đăng nhập bằng mật khẩu — web và native phải BẰNG NHAU.
-  AuthController_login: 5,
-  MobileAuthController_login: 5,
-  // Đăng ký: dò `PHONE_TAKEN` để biết số nào đã có tài khoản.
-  AuthController_register: 5,
-  MobileAuthController_register: 5,
+  AuthController_login: 20,
+  MobileAuthController_login: 20,
+  // Đăng ký: mỗi lượt cần mã OTP còn hiệu lực.
+  AuthController_register: 10,
+  MobileAuthController_register: 10,
+  // Hai cửa trả lời "số đã có tài khoản" — và `send-otp` còn tốn một tin nhắn mỗi lượt.
+  AuthController_checkRegistration: 10,
+  PhoneVerificationController_sendOtp: 10,
+  // Đối chiếu mã 6 số — lần sai đếm trên chính hàng mã.
+  PhoneVerificationController_verifyOtp: 20,
+  AuthController_resetPasswordWithOtp: 20,
   // Quên mật khẩu: mỗi request gửi một email tới địa chỉ do người gọi nhập.
   AuthController_forgotPassword: 5,
   AuthController_resetPassword: 10,

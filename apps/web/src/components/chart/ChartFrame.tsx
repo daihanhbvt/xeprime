@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import type { ReactElement, ReactNode } from 'react';
 import { ResponsiveContainer } from 'recharts';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { cx } from '@/lib/cx';
 import styles from './ChartFrame.module.css';
 
 interface ChartFrameProps {
@@ -20,6 +21,8 @@ interface ChartFrameProps {
   error?: { title: string; onRetry?: () => void } | null;
   /** Kỳ không có dữ liệu — khác hẳn "đang tải" và "lỗi", nên là trạng thái riêng. */
   empty?: { title: string; description?: string } | null;
+  /** Lớp bổ sung cho `<figure>` — màn đặt kiểu thẻ riêng (bo, bóng, cỡ tiêu đề). */
+  className?: string;
   children: ReactElement;
 }
 
@@ -44,12 +47,13 @@ export function ChartFrame({
   loading,
   error,
   empty,
+  className,
   children,
 }: ChartFrameProps) {
   const t = useTranslations('Common');
 
   return (
-    <figure className={styles.frame}>
+    <figure className={cx(styles.frame, className)}>
       <div className={styles.header}>
         <figcaption className={styles.title}>{title}</figcaption>
         {actions ? <div className={styles.actions}>{actions}</div> : null}

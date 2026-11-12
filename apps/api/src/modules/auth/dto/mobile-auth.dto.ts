@@ -104,7 +104,7 @@ export class MobileRefreshDto {
 
 export class MobileLogoutDto {
   @ApiProperty({
-    description: 'Refresh token của thiết bị này — dùng để xác định phiên cần thu hồi',
+    description: 'Refresh token của thiết bị này - dùng để xác định phiên cần thu hồi',
   })
   @IsString()
   @MinLength(1)
@@ -118,7 +118,7 @@ export class MobileTokenPairDto {
 
   @ApiProperty({
     description:
-      'Số GIÂY còn lại của access token. Để client chủ động refresh trước khi hết hạn — ' +
+      'Số GIÂY còn lại của access token. Để client chủ động refresh trước khi hết hạn - ' +
       'không phải để tin: hạn thật nằm trong `exp` của token và do server kiểm.',
     example: 900,
   })

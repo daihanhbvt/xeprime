@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { XP_TOKENS, toPx } from '@xeprime/ui';
@@ -10,43 +9,33 @@ import { ListRowSkeleton } from '@/components/ui/Skeleton';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { elevation } from '@/theme/elevation';
 import { layout } from '@/theme/layout';
-import { useAppScheme, useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { PALETTES, fontSize, fontWeight, space } from '@/theme/tokens';
 import { useFeaturedShops } from '../hooks/use-marketplace-data';
 import type { PublicShopSummary } from '../api';
+import { BrandMark } from '../../catalog/components/BrandMark';
 import { HomeCardAvatar } from './home/HomeCardAvatar';
 import { HomeCarousel } from './home/HomeCarousel';
+import { ScrollReveal } from '@/components/motion/ScrollReveal';
 import { STAR_ART } from './home/home-art';
 import { HomeSectionHeading } from './home/HomeSectionHeading';
 import { SectionError } from './SectionError';
 
 /** Ba trang × ba thẻ — cùng con số với web; nhiều hơn là thành danh bạ, không còn là "nổi bật". */
 const LIMIT = 9;
-/** Ảnh xe đại diện 104 × 57, nhô 15px khỏi mép trên thẻ (`.vehicle` web ở ≤640px). */
-const VEHICLE_IMAGE = { width: 104, height: 57, top: -15 };
 const CARD_RADIUS = toPx(XP_TOKENS['border-radius-card']);
-const CHIP_RADIUS = toPx(XP_TOKENS['border-radius-chip']);
-
-const styles = StyleSheet.create({
-  vehicle: {
-    position: 'absolute',
-    top: VEHICLE_IMAGE.top,
-    right: 0,
-    width: VEHICLE_IMAGE.width,
-    height: VEHICLE_IMAGE.height,
-    borderRadius: CHIP_RADIUS,
-  },
-});
+/** Dãy logo hãng (Figma `21965:28698`): tối đa 3 logo 24px cách 2 + ô "+N" 20px. */
+const BRAND_LOGO = 24;
+const BRAND_MORE = 20;
 
 /**
  * "Gian hàng nổi bật — Những chủ xe được khách đánh giá cao" (design v2, ADR 0062).
  *
  * Shop đang hoạt động có xe công khai, sắp theo điểm đánh giá (`/public/shops`). Điểm, số xe, số
- * chuyến đã hoàn thành và ảnh xe đại diện đều từ backend. Chưa có gian hàng nào thì ẩn cả khối.
+ * chuyến đã hoàn thành và logo các hãng xe đều từ backend. Chưa có gian hàng nào thì ẩn cả khối.
  *
  * `onOpenShop` vắng mặt = thẻ chỉ hiển thị.
  */
-export function FeaturedHosts({ onOpenShop }: { onOpenShop?: (slug: string) => void }) {
+function FeaturedHostsImpl({ onOpenShop }: { onOpenShop?: (slug: string) => void }) {
   const t = useTranslations('Home.owners');
   const { data, isLoading, isError, error } = useFeaturedShops(LIMIT);
   const shops = data?.shops ?? [];
@@ -67,6 +56,8 @@ export function FeaturedHosts({ onOpenShop }: { onOpenShop?: (slug: string) => v
           ))}
         </YStack>
       ) : (
+        // Dải thẻ tự hiện khi CHÍNH NÓ cuộn vào màn, không theo tiêu đề khối.
+        <ScrollReveal>
         <HomeCarousel accessibilityLabel={t('title')} overhang onActiveChange={setActive}>
           {shops.map((shop, index) => (
             <HostCard
@@ -77,6 +68,7 @@ export function FeaturedHosts({ onOpenShop }: { onOpenShop?: (slug: string) => v
             />
           ))}
         </HomeCarousel>
+        </ScrollReveal>
       )}
     </YStack>
   );
@@ -92,8 +84,13 @@ function HostCard({
   active: boolean;
   onPress?: () => void;
 }) {
-  const colors = useColors();
-  const { scheme } = useAppScheme();
+  // Figma dark (`19879:66136`): thẻ gian hàng VẪN là thẻ sáng (nền trắng, chữ tối) trên nền tối.
+  const colors = PALETTES.light.colors;
+  const dark = false;
+  // Figma dark: viền thẻ #414651, tên gian hàng vàng nhạt, mô tả xám sáng.
+  const restBorder = dark ? colors.border : colors.surface;
+  const nameColor = dark ? colors.primary : colors.text;
+  const mutedColor = dark ? XP_TOKENS['color-text-on-dark-muted'] : colors.textMuted;
   const t = useTranslations('Home.owners');
   // Cùng một cách viết điểm "4,9 (12)" với thẻ xe — một câu, một bản dịch.
   const tCard = useTranslations('Listings.card');
@@ -101,7 +98,8 @@ function HostCard({
   const rating = Number(shop.ratingAvg);
   const hasRating = (shop.ratingCount ?? 0) > 0 && Number.isFinite(rating);
   const completed = shop.completedTripCount ?? 0;
-  const bodyLine = Math.round(fontSize.body * 1.43);
+  // Figma: chữ 14px dòng 22.
+  const bodyLine = 22;
   const [pressed, setPressed] = useState(false);
   // Thẻ đang ở giữa băng chuyền hoặc đang nhấn: trạng thái nổi DÙNG CHUNG (`CardHighlight`).
   const highlighted = active || pressed;
@@ -114,13 +112,15 @@ function HostCard({
       br={CARD_RADIUS}
       bw={1}
       // Web: viền cùng màu nền thẻ — chỉ có bóng; khi nổi thì viền vàng chung.
-      bc={highlighted ? highlightBorder : colors.surface}
+      bc={highlighted ? highlightBorder : restBorder}
       bg={colors.surface}
-      style={scheme === 'dark' ? undefined : elevation.card}
+      // Thẻ luôn sáng (kể cả giao diện tối) nên luôn mang bóng thẻ.
+      style={elevation.card}
     >
       {highlighted ? <CardHighlightOverlay radius={CARD_RADIUS} /> : null}
 
-      <XStack ai="center" gap={12} paddingRight={96}>
+      <XStack ai="flex-start" jc="space-between" gap={space.sm}>
+        <XStack f={1} minWidth={0} ai="center" gap={12}>
         <HomeCardAvatar
           name={shop.name}
           url={shop.logoUrl}
@@ -130,7 +130,7 @@ function HostCard({
           markIcon={10}
         />
         <YStack f={1} minWidth={0}>
-          <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.semibold} numberOfLines={1}>
+          <Text col={nameColor} fos={fontSize.h4} lh={24} fow={fontWeight.semibold} numberOfLines={1}>
             {shop.name}
           </Text>
           <XStack ai="center" gap={6}>
@@ -150,22 +150,13 @@ function HostCard({
             ) : null}
           </XStack>
         </YStack>
+        </XStack>
+        <BrandLogos brands={shop.brands ?? []} total={shop.brandCount ?? 0} />
       </XStack>
-
-      {/* Ảnh THẬT của xe xếp hạng cao nhất đang công khai — chưa có ảnh thì thôi, không ảnh giả. */}
-      {shop.featuredVehicleImageUrl ? (
-        <Image
-          source={{ uri: shop.featuredVehicleImageUrl }}
-          style={styles.vehicle}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-          accessibilityElementsHidden
-        />
-      ) : null}
 
       {/* Giới thiệu: hai dòng, giữ chỗ hai dòng kể cả khi trống để chân các thẻ thẳng hàng. */}
       <Text
-        col={colors.textMuted}
+        col={mutedColor}
         fos={fontSize.body}
         lh={bodyLine}
         minHeight={bodyLine * 2}
@@ -180,7 +171,7 @@ function HostCard({
         gap={12}
         pt={12}
         borderTopWidth={1}
-        borderTopColor={colors.background}
+        borderTopColor={dark ? colors.border : colors.background}
         mt="auto"
       >
         {/* Máy hẹp: điểm + lượt thuê XUỐNG DÒNG thay vì bị "Xem gian hàng" đè lên (người dùng báo 29/10/2026). */}
@@ -242,3 +233,30 @@ function HostCard({
     </Pressable>
   );
 }
+
+/** Dãy logo hãng — bản native của `BrandLogos` web; hãng chưa có logo hiện chữ cái đầu (`BrandMark`). */
+function BrandLogos({ brands, total }: { brands: PublicShopSummary['brands']; total: number }) {
+  const colors = PALETTES.light.colors;
+  const rest = total - brands.length;
+  if (brands.length === 0) return null;
+  return (
+    <XStack ai="center" gap={2} accessibilityLabel={brands.map((b) => b.label).join(', ')}>
+      {brands.map((b) => (
+        <BrandMark key={b.label} label={b.label} iconUrl={b.iconUrl} size={BRAND_LOGO} />
+      ))}
+      {rest > 0 ? (
+        <YStack minWidth={BRAND_MORE} h={BRAND_MORE} px={2} br={BRAND_MORE / 2} bg={colors.background} ai="center" jc="center">
+          <Text col={colors.textPlaceholder} fos={fontSize.bodySm} lh={18}>
+            +{rest}
+          </Text>
+        </YStack>
+      ) : null}
+    </XStack>
+  );
+}
+
+/**
+ * Bọc `memo`: trang chủ chạy lại vì đủ thứ (cuộn, ô tìm kiếm, banner) — khối này chỉ cần dựng lại
+ * khi dữ liệu của nó đổi. Nơi gọi truyền hàm ỔN ĐỊNH (`useCallback`).
+ */
+export const FeaturedHosts = memo(FeaturedHostsImpl);

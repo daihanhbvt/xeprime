@@ -3,7 +3,7 @@
     "home": "Home",
     "explore": "Explore",
     "about": "About Prime",
-    "trips": "My trips",
+    "trips": "Trips",
     "tripsShort": "Trips",
     "tripsNav": "Trips",
     "vehiclesMine": "My vehicles",
@@ -34,7 +34,7 @@
     "security": "Account security",
     "profile": "Manage account",
     "personalProfile": "Personal profile",
-    "trips": "My trips",
+    "trips": "Trips",
     "payments": "Payment history",
     "favorites": "Saved vehicles",
     "addresses": "My addresses",
@@ -99,7 +99,18 @@
     "openMenu": "Open menu",
     "fullMenu": "Full menu",
     "balance": "Balance & withdrawals",
-    "security": "Account security"
+    "security": "Account security",
+    "rentalCalendar": "Rental calendar",
+    "bookingManagement": "Booking management",
+    "customerList": "Customer list",
+    "driverManagement": "Driver management",
+    "wallet": "Wallet",
+    "transactionHistory": "Transaction history",
+    "shopInfo": "Shop information",
+    "staffPermissions": "Staff & permissions",
+    "rentals": "Rentals",
+    "bookingsEnded": "Ended bookings",
+    "vehiclesShort": "Vehicles"
   },
   "manageGroups": {
     "overview": "Overview",
@@ -115,7 +126,11 @@
     "platformFinance": "Money & operations",
     "platformPolicy": "Policies & plans",
     "platformSystem": "System",
-    "account": "Account"
+    "account": "Account",
+    "partnerOperations": "Operations",
+    "fleet": "Vehicles & drivers",
+    "revenue": "Revenue",
+    "help": "Help"
   },
   "platform": {
     "appConfig": "App configuration",

@@ -6,12 +6,13 @@ import { Text, XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { serviceUsesRentalRange } from '@xeprime/domain';
 import type { Dayjs } from '@xeprime/domain';
-import { useDatePickerPattern } from '@/i18n/use-app-format';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { elevation } from '@/theme/elevation';
 import { useAppStyles } from '@/theme/styles';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { useSearchExperience } from '../search-context';
+import { bannerRatio } from './HomeHero';
 import { LocationPicker } from './LocationPicker';
 import { RentalRangeSheet } from './RentalRangeSheet';
 
@@ -53,7 +54,7 @@ export function StickySearchBar({
   const appStyles = useAppStyles();
   const colors = useColors();
   const t = useTranslations('HomeSearch');
-  const pattern = useDatePickerPattern();
+  const fmt = useAppFormat();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [rangeOpen, setRangeOpen] = useState(false);
   const { draft, setProvinceCode, setRentalRange, setRentalMode, provinceLabel } =
@@ -63,13 +64,11 @@ export function StickySearchBar({
   const usesRange = serviceUsesRentalRange(draft.serviceType);
 
   /**
-   * Chỉ NGÀY — bỏ thứ và giờ.
-   *
-   * Thanh thu gọn chỉ có một dòng cho cả hai mốc; giữ "T4, 26/08 · 10:00" thì cả hai đầu đều bị
-   * cắt thành "T4, 26/08 · 03:…", mất đúng phần cần liếc. Mẫu ngày lấy theo ngôn ngữ
-   * (`DD/MM` vi · `MM/DD` en), không gõ cứng.
+   * ĐỊNH DẠNG CHUẨN mốc nhận/trả, CÓ GIỜ: "T2, 09/11  15h35" (`fmt.rentalPoint`) - cùng một kiểu với
+   * mọi màn khác (user chốt 09/11/2026: thanh gọn cũng phải có giờ). Thiếu chỗ thì chữ tự co nhẹ
+   * - KHÔNG tự co chữ (máy thật co quá nhỏ, khó đọc - 09/11/2026): thiếu chỗ thì cắt "…".
    */
-  const day = (value: Dayjs | null) => (value ? value.format(pattern.dayMonth) : '');
+  const day = (value: Dayjs | null) => (value ? fmt.rentalPoint(value) : '');
 
   // `progress` 0 = ẩn hoàn toàn phía trên, 1 = hiện đủ. Nội suy thẳng chứ không dùng cờ boolean:
   // thanh bám theo ngón tay thay vì nhảy nấc khi vượt ngưỡng.
@@ -116,7 +115,7 @@ export function StickySearchBar({
             px={space.sm}
             h={CONTROL_HEIGHT}
           >
-            <Ionicons name="location-outline" size={14} color={colors.primaryActive} />
+            <Ionicons name="location-outline" size={14} color={colors.accentText} />
             <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
               {locationValue}
             </Text>
@@ -144,11 +143,23 @@ export function StickySearchBar({
               h={CONTROL_HEIGHT}
             >
               <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-              <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
+              <Text
+                col={colors.text}
+                fos={fontSize.bodySm}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                flexShrink={1}
+              >
                 {day(draft.rental.pickupAt)}
               </Text>
               <Ionicons name="arrow-forward" size={11} color={colors.textMuted} />
-              <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
+              <Text
+                col={colors.text}
+                fos={fontSize.bodySm}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                flexShrink={1}
+              >
                 {day(draft.rental.returnAt)}
               </Text>
             </XStack>
@@ -207,9 +218,9 @@ export function StickySearchBar({
  * Mốc cuộn mà thẻ tìm kiếm ở hero coi như đã khuất.
  *
  * Web dùng `IntersectionObserver` trên chính thẻ đó; native không có API tương đương nên đo bằng
- * offset cuộn. Con số là chiều cao hero (tỉ lệ 780×390 ≈ nửa bề rộng) — tính từ bề rộng màn hình
+ * offset cuộn. Con số là chiều cao hero (`BANNER_RATIO` của `HomeHero`) — tính từ bề rộng màn hình
  * để máy nhỏ và máy lớn đổi thanh ở cùng một chỗ trong bố cục.
  */
 export function stickyThreshold(screenWidth: number): number {
-  return screenWidth / (780 / 390);
+  return screenWidth / bannerRatio(screenWidth);
 }

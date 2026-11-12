@@ -48,7 +48,7 @@ export class PlansController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Sửa gói (giá mới chỉ áp cho lượt gán sau — price snapshot)' })
+  @ApiOperation({ summary: 'Sửa gói (giá mới chỉ áp cho lượt gán sau - price snapshot)' })
   @ApiOkResponse({ type: PlanDto })
   update(
     @CurrentUser() user: AuthenticatedUser,
@@ -78,7 +78,7 @@ export class PlansController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary:
-      'Xoá HẲN gói chưa từng được dùng (bản nháp) — gói đã có thuê bao/hoá đơn trả PLAN_IN_USE, hãy ngừng bán',
+      'Xoá HẲN gói chưa từng được dùng (bản nháp) - gói đã có thuê bao/hoá đơn trả PLAN_IN_USE, hãy ngừng bán',
   })
   @ApiNoContentResponse()
   remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<void> {

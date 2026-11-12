@@ -70,7 +70,7 @@ describe('rentalDays', () => {
     expect(rentalDays('2026-07-12T03:00:00.000Z', '2026-07-13T03:00:00.000Z')).toBe(1);
   });
 
-  it('25 tiếng tính thành 2 ngày — làm tròn lên', () => {
+  it('25 tiếng tính thành 2 ngày - làm tròn lên', () => {
     expect(rentalDays('2026-07-12T03:00:00.000Z', '2026-07-13T04:00:00.000Z')).toBe(2);
   });
 

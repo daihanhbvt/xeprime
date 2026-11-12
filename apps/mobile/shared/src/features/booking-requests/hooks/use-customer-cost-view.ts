@@ -108,8 +108,10 @@ export function useCustomerCostView({
       : null;
 
   const total = useQuoteTotal(breakdown, { frozen });
+  /** Câu "tạm tính" — luôn hiện thẳng cạnh tổng, KHÔNG vào hint (người dùng phải thấy). */
+  const estimateNote = breakdown?.estimateNote ? `${breakdown.estimateNote}.` : null;
+  /** Phần giải thích thuần của tổng — nằm trong dấu "i". */
   const costNote = [
-    breakdown?.estimateNote ? `${breakdown.estimateNote}.` : null,
     t('reviewPage.costs.totalNote'),
     isDelivery && !(frozen && rentRows.some((row) => row.key === PRICE_ROW.DELIVERY))
       ? t('price.deliveryNote')
@@ -132,5 +134,6 @@ export function useCustomerCostView({
     deposit,
     total,
     costNote,
+    estimateNote,
   };
 }

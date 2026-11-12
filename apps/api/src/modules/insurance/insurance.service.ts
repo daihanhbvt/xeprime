@@ -250,7 +250,7 @@ export class InsuranceService {
     if (!this.partner.configured) {
       throw new ConflictException({
         code: API_ERROR_CODE.INSURANCE_PARTNER_NOT_CONFIGURED,
-        message: 'Chưa cắm đối tác bảo hiểm — thử phát hành lại sẽ không cấp được chứng nhận',
+        message: 'Chưa cắm đối tác bảo hiểm - thử phát hành lại sẽ không cấp được chứng nhận',
       });
     }
 
@@ -279,7 +279,7 @@ export class InsuranceService {
         // Worker vừa nhặt (hoặc vừa ghi kết quả) xen giữa — không ghi đè lượt đang chạy.
         throw new ConflictException({
           code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-          message: 'Hợp đồng vừa đổi trạng thái — tải lại để xem kết quả mới nhất',
+          message: 'Hợp đồng vừa đổi trạng thái - tải lại để xem kết quả mới nhất',
         });
       }
       await this.audit.record(

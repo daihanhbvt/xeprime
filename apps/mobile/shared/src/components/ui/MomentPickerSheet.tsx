@@ -234,7 +234,7 @@ export function MomentPickerSheet({
           </Text>
           {/* Kết quả đọc to và tách khung: đây là con số người dùng đang chỉnh, không phải chú thích. */}
           <XStack px={space.md} py={space.xs} br={radius.md} bw={1} bc={colors.primary}>
-            <Text col={colors.primaryActive} fos={fontSize.h4} fow={fontWeight.bold}>
+            <Text col={colors.accentText} fos={fontSize.h4} fow={fontWeight.bold}>
               {draft.format('HH:mm')}
             </Text>
           </XStack>
@@ -319,7 +319,7 @@ function SummaryCard({
         {label}
       </Text>
       <Text
-        col={highlighted ? colors.primaryActive : colors.text}
+        col={highlighted ? colors.accentText : colors.text}
         fos={fieldFontSize.value}
         fow={fontWeight.bold}
         numberOfLines={1}

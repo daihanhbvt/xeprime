@@ -1,9 +1,9 @@
 /**
- * MỘT KỲ thuê bao nhìn từ hôm nay — và các mã đi cùng vòng đời của nó (ADR 0010 · ADR 0041).
+ * MỘT KỲ thuê bao nhìn từ hôm nay - và các mã đi cùng vòng đời của nó (ADR 0010 · ADR 0041).
  *
  * `tenant_subscriptions.status` chỉ LƯU `active | cancelled` (ADR 0010 điều 2). Một dòng `active`
  * có thể là kỳ ĐANG CHẠY, kỳ ĐÃ HẾT, hoặc kỳ ĐÃ XẾP LỊCH (gia hạn trước hạn nối đuôi kỳ đang chạy
- * — `starts_at = ends_at` của kỳ trước). In thẳng `status` ra màn hình là nói với người đọc rằng
+ * - `starts_at = ends_at` của kỳ trước). In thẳng `status` ra màn hình là nói với người đọc rằng
  * gian hàng có hai gói cùng hiệu lực, trong khi tại mọi thời điểm chỉ có MỘT. Hàm dưới đây là
  * phép suy duy nhất, dùng chung cho web, api và app native.
  */
@@ -14,11 +14,11 @@ import { SUBSCRIPTION_STATUS } from './status/misc';
 import { planScopesConflict, planVehicleScopeOf } from './plan-billing';
 
 export const SUBSCRIPTION_TERM_STATE = {
-  /** `starts_at <= now < ends_at` — kỳ đang được tính. Tại mỗi thời điểm có tối đa một. */
+  /** `starts_at <= now < ends_at` - kỳ đang được tính. Tại mỗi thời điểm có tối đa một. */
   CURRENT: 'current',
-  /** `starts_at > now` — kỳ đã xếp lịch (gia hạn/đổi gói từ kỳ sau), chưa có hiệu lực. */
+  /** `starts_at > now` - kỳ đã xếp lịch (gia hạn/đổi gói từ kỳ sau), chưa có hiệu lực. */
   SCHEDULED: 'scheduled',
-  /** `ends_at <= now` — kỳ đã qua. */
+  /** `ends_at <= now` - kỳ đã qua. */
   ENDED: 'ended',
   /** Đã huỷ trước khi hết kỳ. */
   CANCELLED: 'cancelled',
@@ -38,7 +38,7 @@ export const SUBSCRIPTION_TERM_STATE_META: Readonly<Record<SubscriptionTermState
   [SUBSCRIPTION_TERM_STATE.CANCELLED]: { label: 'Đã huỷ', color: STATUS_COLOR.NEUTRAL },
 };
 
-/** Hình dạng tối thiểu để chấm — nhận cả `Date` (Prisma) lẫn chuỗi ISO (JSON). */
+/** Hình dạng tối thiểu để chấm - nhận cả `Date` (Prisma) lẫn chuỗi ISO (JSON). */
 export interface SubscriptionTermRow {
   status: string;
   startsAt: Date | string;
@@ -61,15 +61,15 @@ export function subscriptionTermStateOf(
 }
 
 /**
- * Admin gán gói khi gian hàng đang còn một kỳ ĐÃ TRẢ TIỀN — kỳ mới bắt đầu lúc nào.
+ * Admin gán gói khi gian hàng đang còn một kỳ ĐÃ TRẢ TIỀN - kỳ mới bắt đầu lúc nào.
  *
  *  - `next_term` (mặc định, ADR 0010 điều 2): nối đuôi kỳ cuối cùng còn hạn. Kỳ đang chạy giữ
- *    nguyên tới hết — gia hạn sớm không được cắt ngắn một kỳ khách đã trả.
- *  - `now` (ADR 0041 điều 6 — "đổi bậc giữa kỳ là cancel() rồi assign()"): huỷ MỌI kỳ còn hạn
+ *    nguyên tới hết - gia hạn sớm không được cắt ngắn một kỳ khách đã trả.
+ *  - `now` (ADR 0041 điều 6 - "đổi bậc giữa kỳ là cancel() rồi assign()"): huỷ MỌI kỳ còn hạn
  *    (đang chạy + đã xếp lịch) và bắt đầu kỳ mới từ bây giờ, trong MỘT transaction. Hai lượt bấm
  *    rời nhau để lại một khoảng giữa hai request mà gian hàng không có gói nào.
  *
- * Phần còn lại của kỳ bị huỷ KHÔNG tự hoàn (prorate hoãn — ADR 0024): bù trừ là giá đàm phán
+ * Phần còn lại của kỳ bị huỷ KHÔNG tự hoàn (prorate hoãn - ADR 0024): bù trừ là giá đàm phán
  * admin nhập cho kỳ mới.
  */
 export const SUBSCRIPTION_CHANGE_TIMING = {
@@ -94,27 +94,33 @@ export const SUBSCRIPTION_AUDIT_ACTION = {
   ASSIGN: 'subscription.assign',
   /** Nối đuôi kỳ trả phí còn hạn, CÙNG bậc gói. */
   RENEW: 'subscription.renew',
-  /** Nối đuôi kỳ trả phí còn hạn, KHÁC bậc gói — đổi gói có hiệu lực từ kỳ sau. */
+  /** Nối đuôi kỳ trả phí còn hạn, KHÁC bậc gói - đổi gói có hiệu lực từ kỳ sau. */
   SCHEDULE_CHANGE: 'subscription.schedule_change',
   /** Huỷ các kỳ còn hạn và bắt đầu kỳ mới ngay. Mỗi kỳ bị huỷ có một dòng `CANCEL` riêng. */
   CHANGE_NOW: 'subscription.change_now',
   CANCEL: 'subscription.cancel',
   /** Webhook SePay nhận đủ tiền hoá đơn gói ⇒ bật kỳ (ADR 0022 · 0040). Do HỆ THỐNG ghi. */
   ACTIVATE_FROM_PAYMENT: 'subscription.activate_from_payment',
+  /** Admin sửa giá / ngày kết thúc / hạn mức xe / ghi chú của một kỳ (ADR 0080 điều 2). */
+  UPDATE: 'subscription.update',
+  /** Kỳ xếp sau bị dời theo vì kỳ trước nó đổi ngày kết thúc - một dòng mỗi kỳ bị dời. */
+  SHIFT: 'subscription.shift',
 } as const;
 
-/** Vì sao một kỳ bị huỷ — ghi vào `after.reason` của dòng audit `subscription.cancel`. */
+/** Vì sao một kỳ bị huỷ - ghi vào `after.reason` của dòng audit `subscription.cancel`. */
 export const SUBSCRIPTION_CANCEL_REASON = {
   /** Admin bấm Huỷ trên chính kỳ đó. */
   MANUAL: 'manual',
   /** Bị thay bởi một lượt "đổi gói ngay". */
   REPLACED: 'replaced',
+  /** Huỷ kèm vì kỳ đứng trước nó trong chuỗi bị huỷ (ADR 0080 điều 1). */
+  CASCADE: 'cascade',
 } as const;
 
 export type SubscriptionCancelReason =
   (typeof SUBSCRIPTION_CANCEL_REASON)[keyof typeof SUBSCRIPTION_CANCEL_REASON];
 
-/** Bốn đường một lượt gán đi qua — một bảng quyết định, hai nơi đọc (server ghi, web xem trước). */
+/** Bốn đường một lượt gán đi qua - một bảng quyết định, hai nơi đọc (server ghi, web xem trước). */
 export const SUBSCRIPTION_ASSIGN_KIND = {
   ASSIGN: 'assign',
   RENEW: 'renew',
@@ -139,17 +145,17 @@ export function subscriptionAssignKindOfAction(action: string): SubscriptionAssi
   return entry ? (entry[0] as SubscriptionAssignKind) : null;
 }
 
-/** Một kỳ trong chuỗi — đủ để quyết định nối đuôi / huỷ / thay. */
+/** Một kỳ trong chuỗi - đủ để quyết định nối đuôi / huỷ / thay. */
 export interface SubscriptionChainTerm extends SubscriptionTermRow {
   id: string;
   planId: string;
   billingMode?: string | null;
-  /** Phạm vi loại xe (ADR 0065). Thiếu ⇒ `all` — xung đột với mọi phạm vi, đúng hành vi cũ. */
+  /** Phạm vi loại xe (ADR 0065). Thiếu ⇒ `all` - xung đột với mọi phạm vi, đúng hành vi cũ. */
   vehicleScope?: string | null;
 }
 
 /**
- * Chỉ giữ các kỳ ở phạm vi XUNG ĐỘT với `scope` (ADR 0065) — kỳ ô tô không nối đuôi, không huỷ,
+ * Chỉ giữ các kỳ ở phạm vi XUNG ĐỘT với `scope` (ADR 0065) - kỳ ô tô không nối đuôi, không huỷ,
  * không chặn huỷ một kỳ xe máy. Dòng hoa hồng (phạm vi `all`) xung đột với mọi phạm vi nên luôn ở
  * lại: nó vẫn nhường chỗ cho bất kỳ lượt gán gói nào.
  */
@@ -178,7 +184,7 @@ const isLiveTerm = (term: SubscriptionChainTerm, at: number) =>
 const isPaidTerm = (term: SubscriptionChainTerm) => term.billingMode !== BILLING_MODE.COMMISSION;
 
 /**
- * Lượt gán MỚI đặt vào chuỗi kỳ ở đâu — MỘT phép cho cả ba đường tạo thuê bao (admin gán, webhook
+ * Lượt gán MỚI đặt vào chuỗi kỳ ở đâu - MỘT phép cho cả ba đường tạo thuê bao (admin gán, webhook
  * kích hoạt khi tiền về) và cho phần xem trước ở web.
  *
  * | Thời điểm | Còn kỳ trả phí? | Bắt đầu | Huỷ | Đường |
@@ -189,7 +195,7 @@ const isPaidTerm = (term: SubscriptionChainTerm) => term.billingMode !== BILLING
  * | `next_term` | không | `now` | dòng hoa hồng còn hạn | `assign` |
  *
  * Đuôi chỉ chọn trong kỳ TRẢ PHÍ: một dòng hoa hồng đã xếp lịch sau kỳ gói (hạ về hoa hồng từ kỳ
- * sau) mà được chọn làm đuôi thì lượt gán kế tiếp sẽ huỷ nó rồi bắt đầu từ `now` — chồng lên kỳ
+ * sau) mà được chọn làm đuôi thì lượt gán kế tiếp sẽ huỷ nó rồi bắt đầu từ `now` - chồng lên kỳ
  * gói đang chạy. Dòng hoa hồng không phải kỳ ai trả tiền: nó luôn nhường chỗ, không bao giờ được nối.
  *
  * **Theo phạm vi loại xe (ADR 0065).** Bảng trên chỉ áp lên các kỳ XUNG ĐỘT với phạm vi của bậc
@@ -237,49 +243,217 @@ export function planSubscriptionChain<T extends SubscriptionChainTerm>(
   };
 }
 
-/** Vì sao một kỳ KHÔNG huỷ được — `null` là huỷ được. */
+/**
+ * Một lượt gian hàng TỰ MUA gói là gì so với các kỳ đang có (ADR 0084) - thứ quyết định thời điểm
+ * áp dụng thay cho lựa chọn "nối tiếp / áp dụng ngay" của người mua.
+ */
+export const PLAN_PURCHASE_KIND = {
+  /** Loại xe này chưa có kỳ trả phí còn hạn - bắt đầu khi tiền về. */
+  NEW: 'new',
+  /** Cùng bậc với kỳ cuối - nối tiếp sau kỳ cuối, không huỷ gì. */
+  RENEW: 'renew',
+  /** Trần xe CAO HƠN mọi kỳ còn hạn - áp dụng ngay khi tiền về, các kỳ cũ cùng loại xe kết thúc. */
+  UPGRADE: 'upgrade',
+  /** Bậc khác nhưng không cao hơn mọi kỳ còn hạn (hạ bậc) - nối tiếp, hết kỳ cũ mới đổi. */
+  CHANGE_NEXT: 'change_next',
+} as const;
+
+export type PlanPurchaseKind = (typeof PLAN_PURCHASE_KIND)[keyof typeof PLAN_PURCHASE_KIND];
+
+export const PLAN_PURCHASE_KIND_VALUES = Object.values(PLAN_PURCHASE_KIND) as PlanPurchaseKind[];
+
+/** Một kỳ kèm TRẦN XE của nó (`quota_json` trước, bậc gói sau - ADR 0041 điều 3). `null` = không giới hạn. */
+export interface SubscriptionCapTerm extends SubscriptionChainTerm {
+  maxVehicles: number | null;
+}
+
+/** `a` cao hơn hẳn `b` - `null` là không giới hạn, cao hơn mọi con số. */
+function capAbove(a: number | null, b: number | null): boolean {
+  if (a === null) return b !== null;
+  return b !== null && a > b;
+}
+
+/**
+ * Lượt gian hàng TỰ MUA đặt vào chuỗi kỳ thế nào (ADR 0084) - server suy, người mua không chọn:
+ *
+ * | Bậc được chọn so với các kỳ TRẢ PHÍ còn hạn cùng loại xe | Loại | Thời điểm |
+ * | --- | --- | --- |
+ * | Không có kỳ nào | `new` | bắt đầu khi tiền về |
+ * | Trần xe cao hơn MỌI kỳ (đang chạy + đã xếp lịch) | `upgrade` | `now` - các kỳ cũ kết thúc, không bù |
+ * | Cùng bậc với kỳ cuối | `renew` | `next_term` - nối sau kỳ cuối |
+ * | Còn lại (hạ bậc, hoặc thấp hơn một kỳ đã xếp lịch) | `change_next` | `next_term` |
+ *
+ * So với MỌI kỳ chứ không chỉ kỳ đang chạy: đang chạy 1 xe, đã trả trước kỳ sau 10 xe, giờ mua 5 xe
+ * thì "áp dụng ngay" sẽ huỷ luôn kỳ 10 xe đã trả - nên lượt đó phải nối tiếp. Trả `timing` để đưa
+ * thẳng vào `planSubscriptionChain` - một bảng quyết định, cả lúc phát hành hoá đơn lẫn lúc tiền về.
+ */
+export function selfServePurchaseTiming<T extends SubscriptionCapTerm>(
+  terms: readonly T[],
+  input: { planId: string; vehicleScope?: string | null; maxVehicles: number | null },
+  now: Date,
+): { kind: PlanPurchaseKind; timing: SubscriptionChangeTiming } {
+  const at = now.getTime();
+  const paidLive = termsConflictingWith(terms, input.vehicleScope).filter(
+    (term) => isLiveTerm(term, at) && isPaidTerm(term),
+  );
+  if (paidLive.length === 0) {
+    return { kind: PLAN_PURCHASE_KIND.NEW, timing: SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM };
+  }
+  if (paidLive.every((term) => capAbove(input.maxVehicles, term.maxVehicles))) {
+    return { kind: PLAN_PURCHASE_KIND.UPGRADE, timing: SUBSCRIPTION_CHANGE_TIMING.NOW };
+  }
+  const tail = paidLive.reduce((best, term) =>
+    toMs(term.endsAt) > toMs(best.endsAt) ? term : best,
+  );
+  return {
+    kind: tail.planId === input.planId ? PLAN_PURCHASE_KIND.RENEW : PLAN_PURCHASE_KIND.CHANGE_NEXT,
+    timing: SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM,
+  };
+}
+
+/**
+ * Các kỳ còn hạn XẾP SAU `term` trong chuỗi của nó - thứ đi cùng nó khi nó bị huỷ hoặc bị dời
+ * ngày kết thúc (ADR 0080 điều 1-2).
+ *
+ * "Trong chuỗi" là BAO ĐÓNG xung đột phạm vi (ADR 0065), không chỉ cùng phạm vi với `term`: huỷ
+ * kỳ xe máy kéo theo kỳ doanh nghiệp (`all`) xếp sau nó, và kỳ ô tô xếp sau kỳ doanh nghiệp đó
+ * cũng đi theo - để nó lại là để một khoảng trống giữa kỳ ô tô đang chạy và kỳ ô tô tương lai.
+ * Duyệt theo `startsAt` tăng dần nên một kỳ chỉ được kéo theo bởi kỳ bắt đầu TRƯỚC nó.
+ *
+ * Dòng hoa hồng đã xếp lịch (hạ về hoa hồng từ kỳ sau, phạm vi `all`) cũng thuộc chuỗi.
+ */
+export function laterChainTermsOf<T extends SubscriptionChainTerm>(
+  term: SubscriptionChainTerm,
+  terms: readonly T[],
+  now: Date | number = Date.now(),
+): T[] {
+  const at = typeof now === 'number' ? now : now.getTime();
+  const startsAt = toMs(term.startsAt);
+  const candidates = terms
+    .filter(
+      (other) => other.id !== term.id && isLiveTerm(other, at) && toMs(other.startsAt) > startsAt,
+    )
+    .sort((a, b) => toMs(a.startsAt) - toMs(b.startsAt));
+  const scopes = [planVehicleScopeOf(term.vehicleScope)];
+  const chain: T[] = [];
+  for (const other of candidates) {
+    const scope = planVehicleScopeOf(other.vehicleScope);
+    if (!scopes.some((included) => planScopesConflict(included, scope))) continue;
+    chain.push(other);
+    scopes.push(scope);
+  }
+  return chain;
+}
+
+/** Vì sao một kỳ KHÔNG huỷ được - `null` là huỷ được. */
 export const SUBSCRIPTION_CANCEL_BLOCK = {
-  /** Đã huỷ hoặc đã hết hạn — không còn gì để huỷ. */
+  /** Đã huỷ hoặc đã hết hạn - không còn gì để huỷ. */
   NOT_LIVE: 'not_live',
   /**
-   * Dòng hoa hồng ĐANG CHẠY — huỷ nó chỉ để hệ thống gán lại đúng dòng đó; đổi tuyến bằng cách GÁN
-   * gói. (Dòng hoa hồng đã XẾP LỊCH — hạ về hoa hồng từ kỳ sau — thì huỷ được: đó là huỷ lịch hạ.)
+   * Dòng hoa hồng ĐANG CHẠY - huỷ nó chỉ để hệ thống gán lại đúng dòng đó; đổi tuyến bằng cách GÁN
+   * gói. (Dòng hoa hồng đã XẾP LỊCH - hạ về hoa hồng từ kỳ sau - thì huỷ được: đó là huỷ lịch hạ.)
    */
   DEFAULT_TERM: 'default_term',
-  /** Có kỳ khác xếp sau — huỷ kỳ này sẽ để lại khoảng trống không gói. */
-  LATER_TERM: 'later_term',
 } as const;
 
 export type SubscriptionCancelBlock =
   (typeof SUBSCRIPTION_CANCEL_BLOCK)[keyof typeof SUBSCRIPTION_CANCEL_BLOCK];
 
 /**
- * Huỷ được một kỳ khi: còn hạn, không phải dòng hoa hồng đang chạy, và là ĐUÔI chuỗi (không kỳ nào
- * xếp sau). Server (`BillingService.cancel`) và nút "Huỷ" ở web đọc cùng một luật.
+ * Huỷ được một kỳ khi: còn hạn và không phải dòng hoa hồng đang chạy. Server
+ * (`BillingService.cancel`) và nút "Huỷ" ở web đọc cùng một luật.
+ *
+ * Kỳ có kỳ xếp sau VẪN huỷ được (ADR 0080 điều 1, thay luật "chỉ huỷ ở đuôi" của ADR 0041 điều 6.4):
+ * các kỳ trong `laterChainTermsOf` bị huỷ cùng nó, trong cùng transaction - chuỗi không bao giờ bị
+ * hở một khoảng.
  */
 export function subscriptionCancelBlockOf(
   term: SubscriptionChainTerm,
-  terms: readonly SubscriptionChainTerm[],
   now: Date | number = Date.now(),
 ): SubscriptionCancelBlock | null {
   const at = typeof now === 'number' ? now : now.getTime();
   if (!isLiveTerm(term, at)) return SUBSCRIPTION_CANCEL_BLOCK.NOT_LIVE;
-  const startsAt = toMs(term.startsAt);
-  if (!isPaidTerm(term) && startsAt <= at) return SUBSCRIPTION_CANCEL_BLOCK.DEFAULT_TERM;
-  // Chỉ kỳ cùng phạm vi XUNG ĐỘT mới là "kỳ xếp sau" (ADR 0065): kỳ xe máy bắt đầu tháng sau không
-  // chặn huỷ kỳ ô tô — huỷ kỳ ô tô không để lại khoảng trống nào trong chuỗi xe máy.
-  const later = termsConflictingWith(terms, term.vehicleScope).some(
-    (other) => other.id !== term.id && isLiveTerm(other, at) && toMs(other.startsAt) > startsAt,
-  );
-  return later ? SUBSCRIPTION_CANCEL_BLOCK.LATER_TERM : null;
+  if (!isPaidTerm(term) && toMs(term.startsAt) <= at) return SUBSCRIPTION_CANCEL_BLOCK.DEFAULT_TERM;
+  return null;
+}
+
+/** Vì sao một kỳ KHÔNG sửa được - `null` là sửa được (ADR 0080 điều 2). */
+export const SUBSCRIPTION_EDIT_BLOCK = {
+  /** Đã huỷ hoặc đã hết hạn. */
+  NOT_LIVE: 'not_live',
+  /** Dòng hoa hồng - không có giá, không có hạn mức mua; đổi tuyến bằng cách gán gói. */
+  COMMISSION_TERM: 'commission_term',
+} as const;
+
+export type SubscriptionEditBlock =
+  (typeof SUBSCRIPTION_EDIT_BLOCK)[keyof typeof SUBSCRIPTION_EDIT_BLOCK];
+
+export function subscriptionEditBlockOf(
+  term: SubscriptionChainTerm,
+  now: Date | number = Date.now(),
+): SubscriptionEditBlock | null {
+  const at = typeof now === 'number' ? now : now.getTime();
+  if (!isLiveTerm(term, at)) return SUBSCRIPTION_EDIT_BLOCK.NOT_LIVE;
+  if (!isPaidTerm(term)) return SUBSCRIPTION_EDIT_BLOCK.COMMISSION_TERM;
+  return null;
 }
 
 /**
- * Khoá tư vấn của CHUỖI KỲ một tenant — mọi đường GHI `tenant_subscriptions` (admin gán/huỷ,
+ * Ngày kết thúc mới xa nhất admin được đặt, tính từ hôm nay - chặn một lỗi gõ năm (2062) biến
+ * thành gói tặng vài chục năm. Kỳ hạn bán dài nhất là 12 tháng; ba năm là thừa cho mọi gia hạn tay.
+ */
+export const SUBSCRIPTION_EDIT_MAX_END_MONTHS = 36;
+
+/**
+ * Ngày kết thúc mới có hợp lệ không: sau ngày bắt đầu, sau BÂY GIỜ (rút về quá khứ là huỷ - dùng
+ * nút Huỷ), và không xa quá `SUBSCRIPTION_EDIT_MAX_END_MONTHS`.
+ */
+export function subscriptionEndsAtValid(
+  term: Pick<SubscriptionChainTerm, 'startsAt'>,
+  endsAt: Date | string,
+  now: Date | number = Date.now(),
+): boolean {
+  const at = typeof now === 'number' ? now : now.getTime();
+  const end = toMs(endsAt);
+  if (!Number.isFinite(end)) return false;
+  const max = new Date(at);
+  max.setUTCMonth(max.getUTCMonth() + SUBSCRIPTION_EDIT_MAX_END_MONTHS);
+  return end > toMs(term.startsAt) && end > at && end <= max.getTime();
+}
+
+export interface SubscriptionShift<T> {
+  term: T;
+  startsAt: Date;
+  endsAt: Date;
+}
+
+/**
+ * Dời ngày kết thúc của `term` thì các kỳ xếp sau nó (`laterChainTermsOf`) dời theo CÙNG một
+ * khoảng, giữ nguyên độ dài (ADR 0080 điều 2): kéo dài không đè lên kỳ sau, rút ngắn không để hở.
+ * Kỳ ngoài chuỗi không đụng tới; nếu dời làm một kỳ trong chuỗi chồng lên nó, EXCLUDE ở DB từ chối
+ * (`SUBSCRIPTION_TERM_CONFLICT`).
+ */
+export function subscriptionShiftPlan<T extends SubscriptionChainTerm>(
+  term: SubscriptionChainTerm,
+  terms: readonly T[],
+  endsAt: Date,
+  now: Date | number = Date.now(),
+): SubscriptionShift<T>[] {
+  const delta = endsAt.getTime() - toMs(term.endsAt);
+  if (delta === 0) return [];
+  return laterChainTermsOf(term, terms, now).map((other) => ({
+    term: other,
+    startsAt: new Date(toMs(other.startsAt) + delta),
+    endsAt: new Date(toMs(other.endsAt) + delta),
+  }));
+}
+
+/**
+ * Khoá tư vấn của CHUỖI KỲ một tenant - mọi đường GHI `tenant_subscriptions` (admin gán/huỷ,
  * webhook kích hoạt, job hết hạn) lấy cùng khoá này trước khi đọc "đuôi", nên hai lượt song song
  * không cùng nối sau một đuôi hay cùng thấy "chưa có gói". Dùng: `pg_advisory_xact_lock(hashtext(key))`.
  *
- * ⚠️ Khoá theo TENANT, không theo phạm vi loại xe (ADR 0065) — có chủ đích. Chồng lấn giữa hai kỳ
+ * ⚠️ Khoá theo TENANT, không theo phạm vi loại xe (ADR 0065) - có chủ đích. Chồng lấn giữa hai kỳ
  * gói đã có EXCLUDE ở DB canh; thứ khoá này giữ là các quyết định NHÌN XUYÊN phạm vi: "huỷ kỳ CUỐI
  * CÙNG còn hạn thì gán lại dòng hoa hồng", "job chỉ hạ về hoa hồng khi không còn phạm vi nào giữ
  * gói". Hai lượt huỷ ô tô và xe máy song song dưới hai khoá riêng sẽ cùng thấy phạm vi kia "còn",
@@ -289,7 +463,7 @@ export function subscriptionChainLockKey(tenantId: string): string {
   return `subscription-chain:${tenantId}`;
 }
 
-/** Ai tạo ra một kỳ — để giao diện nói thay cho ghi chú hệ thống viết cứng trong DB. */
+/** Ai tạo ra một kỳ - để giao diện nói thay cho ghi chú hệ thống viết cứng trong DB. */
 export const SUBSCRIPTION_ORIGIN = {
   /** Quản trị nền tảng gán tay. */
   ADMIN: 'admin',
@@ -316,7 +490,7 @@ export function subscriptionOriginOf(row: {
 }
 
 /**
- * Bộ lọc "Hạn gói" ở danh sách gian hàng gói của admin nền tảng — ba câu người vận hành hỏi
+ * Bộ lọc "Hạn gói" ở danh sách gian hàng gói của admin nền tảng - ba câu người vận hành hỏi
  * mỗi tuần: ai đang chạy, ai sắp phải gia hạn, ai đã rớt/chưa từng kích hoạt.
  */
 export const PLATFORM_TENANT_PLAN_FILTER = {
@@ -324,7 +498,7 @@ export const PLATFORM_TENANT_PLAN_FILTER = {
   ACTIVE: 'active',
   /** Kỳ gói đang chạy hết trong `PLAN_EXPIRING_SOON_DAYS` ngày VÀ chưa có kỳ nào xếp sau. */
   EXPIRING: 'expiring',
-  /** Không có kỳ gói nào đang chạy — đang ân hạn, đã hết, hoặc chưa kích hoạt. */
+  /** Không có kỳ gói nào đang chạy - đang ân hạn, đã hết, hoặc chưa kích hoạt. */
   NONE: 'none',
 } as const;
 
@@ -335,13 +509,13 @@ export const PLATFORM_TENANT_PLAN_FILTER_VALUES = Object.values(
   PLATFORM_TENANT_PLAN_FILTER,
 ) as PlatformTenantPlanFilter[];
 
-/** Cửa sổ "sắp hết hạn" — dùng chung cho bộ lọc server và nhãn cảnh báo ở web. */
+/** Cửa sổ "sắp hết hạn" - dùng chung cho bộ lọc server và nhãn cảnh báo ở web. */
 export const PLAN_EXPIRING_SOON_DAYS = 14;
 
 const MS_PER_DAY = 86_400_000;
 
 /**
- * Số ngày còn lại tới một mốc (làm tròn LÊN, không âm) — "còn 3 ngày" cho một kỳ hết hạn sau
+ * Số ngày còn lại tới một mốc (làm tròn LÊN, không âm) - "còn 3 ngày" cho một kỳ hết hạn sau
  * 2 ngày 1 giờ. Mốc đã qua ⇒ 0. Hiển thị thôi: luật tiền không bao giờ đọc con số này.
  */
 export function daysLeftUntil(target: Date | string, now: Date | number = Date.now()): number {

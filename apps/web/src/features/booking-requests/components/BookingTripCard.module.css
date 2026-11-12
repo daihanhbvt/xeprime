@@ -45,6 +45,18 @@
   min-width: 0;
 }
 
+/* Khung cắt cho ảnh xe "thở" chậm (Ken Burns) - `clip` không tạo khung cuộn. */
+.vehicleMedia {
+  display: block;
+  flex: none;
+  overflow: clip;
+  border-radius: var(--xp-border-radius-card);
+}
+
+.receipt .vehicleMedia {
+  border-radius: var(--xp-border-radius-control);
+}
+
 .vehicleImage,
 .vehiclePlaceholder {
   display: block;
@@ -81,7 +93,7 @@
   margin: 0;
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 /* Khung lịch nền xám (`BG/gray-50`) — mốc nhận/trả + nơi nhận xe. */
@@ -160,7 +172,7 @@
   color: var(--xp-color-text-secondary);
   overflow-wrap: anywhere;
   font-size: var(--xp-font-size-body);
-  line-height: 22px;
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 .divider {
@@ -372,4 +384,10 @@
   .card {
     padding: var(--xp-space-md);
   }
+}
+
+/* ── Giao diện tối (Figma "Homepage - Dark Mode") — chữ/icon vàng đậm của bản sáng chìm trên nền
+   tối; đổi sang gold chính `--xp-color-primary`. */
+:global([data-theme='dark']) .ownerAvatar {
+  color: var(--xp-color-primary);
 }

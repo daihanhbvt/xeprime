@@ -1,11 +1,12 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
 import {
   addSurcharge,
   correctRefund,
   fetchSettlement,
+  previewReturnSettlement,
   recordRefund,
   updateSurcharge,
   voidSurcharge,
@@ -13,6 +14,7 @@ import {
 import type {
   BookingSettlement,
   CorrectRefundInput,
+  PreviewReturnSettlementInput,
   RecordRefundInput,
   SaveSurchargeInput,
 } from './types';
@@ -45,6 +47,8 @@ function useSettlementMutation<TInput>(
       queryClient.setQueryData(queryKeys.bookings.settlement(bookingId), next);
       // Thẻ cọc và chi tiết đơn hiện cạnh nhau — làm mới cả nhánh để không nơi nào kể chuyện cũ.
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+      // Phụ phí / quyết toán đổi tiền đơn ⇒ đổi "Còn nợ" và tab Thu chi của hồ sơ khách.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
     },
   });
 }
@@ -67,3 +71,21 @@ export const useRecordRefund = (bookingId: string) =>
 
 export const useCorrectRefund = (bookingId: string) =>
   useSettlementMutation<CorrectRefundInput>(bookingId, (body) => correctRefund(bookingId, body));
+
+/**
+ * Quyết toán XEM TRƯỚC của hộp nhận lại xe. Nơi gọi truyền bộ số đã DEBOUNCE; giữ câu trả lời trước
+ * trong lúc chờ câu mới để khối tiền không nháy về trống mỗi lần gõ một chữ số.
+ */
+export function useReturnSettlementPreview(
+  bookingId: string,
+  input: PreviewReturnSettlementInput,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: queryKeys.bookings.returnPreview(bookingId, input),
+    queryFn: () => previewReturnSettlement(bookingId, input),
+    enabled,
+    placeholderData: keepPreviousData,
+    retry: false,
+  });
+}

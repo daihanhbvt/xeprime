@@ -1,26 +1,36 @@
+import { ScrollReveal } from '@/components/motion/ScrollReveal';
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Image } from 'expo-image';
 import {
   Linking,
   Pressable,
-  ScrollView,
   Share,
-  useWindowDimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  type SharedValue,
+} from 'react-native-reanimated';
+import { PressableScale } from '@/components/motion/PressableScale';
+import { pressScale, scrollThrottle } from '@/theme/motion';
 import { MapPreview } from '@/components/map/MapPreview';
 import { pickupMapUri } from '@/lib/map-static';
 import {
-  RENTAL_MODE,
   CATALOG_TYPE,
   PICKUP_PREFERENCE,
   ROUTE_TYPE,
   SERVICE_TYPE,
   type ServiceType,
+  COLLATERAL_MODE,
 } from '@xeprime/types';
 import {
   applyDiscountPercent,
@@ -31,10 +41,15 @@ import {
   toGeoPoint,
   type RentalMode,
 } from '@xeprime/domain';
-import { rememberedOrDefaultRentalRange } from '@/lib/rental-range-memory';
+import {
+  peekRememberedOrDefaultRentalRange,
+  rememberedOrDefaultRentalRange,
+  type RememberedRentalRange,
+} from '@/lib/rental-range-memory';
+import { useAfterTransition } from '@/hooks/use-after-transition';
 import { resolveWebBaseUrl } from '@/lib/web-base-url';
 import { catalogLabel } from '@/api/catalog';
-import { AppHeader } from '@/components/layout/AppHeader';
+import { APP_HEADER_HEIGHT, AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenError } from '@/components/state/ScreenError';
 import { Avatar } from '@/components/ui/Avatar';
@@ -63,6 +78,7 @@ import { FeatureItem } from './components/FeatureChip';
 import { HomeCarousel } from './components/home/HomeCarousel';
 import { STAR_ART } from './components/home/home-art';
 import { ListingGalleryThumbs } from './components/ListingGalleryThumbs';
+import { AmenityChips, listingAmenityItems } from './components/PhotoAmenityPills';
 import { PhotoViewer } from '@/components/ui/PhotoViewer';
 import { ListingBenefitsCard } from './components/ListingBenefitsCard';
 import {
@@ -72,6 +88,8 @@ import {
   type TripInputRequest,
 } from './components/ListingBookingCard';
 import { ListingPoliciesTabs } from './components/ListingPoliciesTabs';
+import { NewVehicleBadge } from './components/NewVehicleBadge';
+import { useContentWidth } from '@/theme/use-content-width';
 
 /**
  * Dịch vụ mở sẵn khi vào trang: ngữ cảnh mang từ danh sách sang nếu xe phục vụ được → ưu tiên
@@ -81,6 +99,18 @@ import { ListingPoliciesTabs } from './components/ListingPoliciesTabs';
  * thanh CTA đáy nằm ngoài vùng cuộn. Hai bản `useState` khởi tạo khác nhau là chỗ trang hiện
  * giá "có tài xế" trong khi nút mở wizard "tự lái".
  */
+function toInitialRange(range: RememberedRentalRange): {
+  pickupAt: string;
+  returnAt: string;
+  rentalMode: RentalMode;
+} {
+  return {
+    pickupAt: appWallClockToIso(range.pickupAt),
+    returnAt: appWallClockToIso(range.returnAt),
+    rentalMode: range.mode,
+  };
+}
+
 function defaultServiceOf(
   services: readonly string[],
   initialServiceType: string | undefined,
@@ -103,6 +133,26 @@ const BODY_TEXT = 13;
 
 /** Khe giữa hai ảnh khi trượt — `.grid { gap: space-sm }` của web ≤640px. */
 const SLIDE_GAP = space.sm;
+
+/*
+ * Hiệu ứng theo cuộn của trang chi tiết (hằng cục bộ 06/11/2026 — hợp nhất vào `theme/motion` sau):
+ * - Ảnh: kéo quá đỉnh thì giãn (scale 1 + kéo/cao ảnh, tối đa `GALLERY_MAX_STRETCH`); cuộn xuống thì
+ *   "lùi ra sau": cuộn CÙNG nhịp nội dung, chỉ thu nhỏ về tâm (`GALLERY_RECEDE_SCALE`) và mờ nhẹ
+ *   (`GALLERY_RECEDE_OPACITY`) trong quãng bằng chiều cao ảnh.
+ *   Bỏ parallax trôi chậm (10/11/2026): ảnh trôi xuống chậm hơn trang thì LẤN vào dải ảnh nhỏ và
+ *   chữ bên dưới — đọc thành chúng chui xuống dưới ảnh. Thu nhỏ về tâm chỉ co vào trong, không lấn
+ *   ai; và không `translateY` nên vị trí trên trang luôn khớp với nơi người dùng chạm.
+ * - Thanh trên: tên xe hiện dần trong dải `TITLE_REVEAL_DISTANCE` cuối cùng trước khi ảnh khuất.
+ * - (Thanh CTA đáy KHÔNG còn trồi lên lúc vào màn - tắt 09/11/2026, nhấp nháy bóng.)
+ */
+/** Ảnh nhỏ lại còn chừng này khi đã cuộn hết chiều cao của nó. */
+const GALLERY_RECEDE_SCALE = 0.92;
+/** Độ đậm còn lại của ảnh ở cùng mốc đó — đủ mờ để chữ phía trên nổi lên, không tắt hẳn. */
+const GALLERY_RECEDE_OPACITY = 0.6;
+const GALLERY_MAX_STRETCH = 0.35;
+const TITLE_REVEAL_DISTANCE = 48;
+/** Lề trái/phải của tên xe trên thanh trên — chừa nút Lui (vùng chạm 44 + đệm). */
+const COLLAPSED_TITLE_INSET = 56;
 
 /** Mô tả dài hơn chừng này thì thu gọn còn 4 dòng, kèm "Xem tiếp" — như `ListingDescription` web. */
 const DESCRIPTION_CLAMP_CHARS = 220;
@@ -139,6 +189,18 @@ export function ListingDetailScreen({
   const colors = useColors();
   const tDetail = useTranslations('Listings.detail');
   const listing = useListing(vehicleId);
+  const scrollOffset = useSharedValue(0);
+  const screenWidth = useContentWidth();
+  // Ảnh khuất khi đã cuộn qua chiều cao ảnh + đệm 12 trên của `.wrap`.
+  const galleryBottom = (screenWidth - layout.screenX * 2) / PHOTO_RATIO + 12;
+  const collapsedTitleStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollOffset.value,
+      [galleryBottom - TITLE_REVEAL_DISTANCE, galleryBottom],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
+  }));
   /*
    * Chuyến khách đang cấu hình sống ở VỎ, không trong `DetailBody`: thanh "Thuê xe" đáy màn nằm
    * ngoài vùng cuộn và phải mang ĐÚNG chuyến đó sang luồng gửi yêu cầu (prefill — web #205).
@@ -148,22 +210,32 @@ export function ListingDetailScreen({
   const [trip, setTrip] = useState<ListingTripDraft | null>(null);
   /** Lệnh mở ô còn thiếu trên thẻ đặt xe — "Chọn thuê" khi chuyến chưa đủ (xem `missingTripInput`). */
   const [inputRequest, setInputRequest] = useState<TripInputRequest | null>(null);
+  /*
+   * Khoảng thuê mặc định = lựa chọn khách đã nhớ, hoặc gợi ý — cùng nguồn với thẻ tìm kiếm.
+   * Lấy ĐỒNG BỘ từ tầng phiên ngay lượt dựng đầu (trước đây đợi một lượt đọc Keystore rồi dựng
+   * lại cả trang + gọi lại báo giá). Bản bất đồng bộ chỉ còn đổi state khi thực sự khác — tức lần
+   * mở app đầu tiên còn lựa chọn lưu từ trước.
+   */
   const [initialRange, setInitialRange] = useState<{
     pickupAt: string;
     returnAt: string;
     rentalMode: RentalMode;
-  } | null>(null);
+  }>(() => toInitialRange(peekRememberedOrDefaultRentalRange()));
+  // Trang đầy đủ chỉ dựng sau khi hiệu ứng đẩy màn chạy xong — xem `useAfterTransition`.
+  const transitionDone = useAfterTransition();
 
-  // Khoảng thuê mặc định = lựa chọn khách đã nhớ, hoặc gợi ý — cùng nguồn với thẻ tìm kiếm.
   useEffect(() => {
     let alive = true;
     void rememberedOrDefaultRentalRange().then((range) => {
       if (!alive) return;
-      setInitialRange({
-        pickupAt: appWallClockToIso(range.pickupAt),
-        returnAt: appWallClockToIso(range.returnAt),
-        rentalMode: range.mode,
-      });
+      const next = toInitialRange(range);
+      setInitialRange((prev) =>
+        prev.pickupAt === next.pickupAt &&
+        prev.returnAt === next.returnAt &&
+        prev.rentalMode === next.rentalMode
+          ? prev
+          : next,
+      );
     });
     return () => {
       alive = false;
@@ -176,6 +248,36 @@ export function ListingDetailScreen({
    * Cùng một header ở cả ba trạng thái: đổi kiểu giữa chừng làm nút Lui nhảy chỗ.
    */
   const header = <AppHeader onBack={onBack} title={tDetail('breadcrumb.current')} />;
+  /*
+   * Collapsing header: tên xe phủ dần lên đúng dải tiêu đề khi ảnh cuộn khuất — lớp phủ cùng nền
+   * thanh, chỉ đổi opacity (luồng UI). Không bắt sự kiện chạm: nút Lui bên dưới vẫn bấm được.
+   */
+  const collapsingHeader = listing.data ? (
+    <YStack>
+      {header}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          {
+            position: 'absolute',
+            left: COLLAPSED_TITLE_INSET,
+            right: COLLAPSED_TITLE_INSET,
+            bottom: 0,
+            height: APP_HEADER_HEIGHT,
+            justifyContent: 'center',
+            backgroundColor: colors.background,
+          },
+          collapsedTitleStyle,
+        ]}
+      >
+        <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={1}>
+          {listing.data.name}
+        </Text>
+      </Animated.View>
+    </YStack>
+  ) : (
+    header
+  );
 
   if (listing.isError) {
     return (
@@ -186,7 +288,11 @@ export function ListingDetailScreen({
     );
   }
 
-  if (listing.isPending) {
+  /*
+   * Khung chờ cả khi đang tải LẪN khi hiệu ứng đẩy màn còn chạy: dữ liệu có sẵn trong cache thì
+   * trang đầy đủ vẫn chỉ dựng SAU khi trượt xong — lúc trượt chỉ có cây nhẹ này, cú bấm không khựng.
+   */
+  if (listing.isPending || !transitionDone) {
     return (
       <YStack f={1} bg={colors.background}>
         {header}
@@ -197,12 +303,13 @@ export function ListingDetailScreen({
 
   const current: ListingTripDraft = trip ?? {
     serviceType: defaultServiceOf(listing.data.serviceTypes ?? [], initialServiceType),
-    pickupAt: initialRange?.pickupAt ?? null,
-    returnAt: initialRange?.returnAt ?? null,
-    rentalMode: initialRange?.rentalMode ?? RENTAL_MODE.DAILY,
+    pickupAt: initialRange.pickupAt,
+    returnAt: initialRange.returnAt,
+    rentalMode: initialRange.rentalMode,
     routeType: ROUTE_TYPE.IN_CITY,
     packageMonths: listing.data.longTermPackages?.[0]?.packageMonths ?? null,
-    pickupPreference: PICKUP_PREFERENCE.WITHIN_7_DAYS,
+    // Thẻ dài hạn chỉ còn "chọn ngày cụ thể" (11/11/2026) — bỏ "càng sớm càng tốt".
+    pickupPreference: PICKUP_PREFERENCE.SPECIFIC_DATE,
     requestedPickupDate: '',
     deliveryRequested: false,
     delivery: null,
@@ -217,7 +324,7 @@ export function ListingDetailScreen({
 
   return (
     <YStack f={1} bg={colors.background}>
-      {header}
+      {collapsingHeader}
       {/*
         `Screen` giữ vùng cuộn + BÀN PHÍM (ô "Điểm đến" của thẻ đặt xe nằm sâu dưới màn — gõ vào
         là được đẩy lên trên bàn phím, cùng cơ chế các màn form của app Partner; người dùng chốt
@@ -233,15 +340,22 @@ export function ListingDetailScreen({
         hideFooterWhileTyping
         refreshing={listing.isRefetching}
         onRefresh={() => void listing.refetch()}
+        scrollOffset={scrollOffset}
+        scrollReveal
         footer={
-          <RequestBar
-            vehicleId={listing.data.id}
-            shopSlug={listing.data.shopSlug}
-            shopChatOpen={listing.data.shopChatOpen}
-            trip={current}
-            onNeedInput={(kind) => setInputRequest({ kind, nonce: Date.now() })}
-            {...(listing.data.provinceCode ? { provinceCode: listing.data.provinceCode } : {})}
-          />
+          <Animated.View
+            // Thanh CTA có bóng: trượt + mờ lúc vào màn làm bóng nhấp nháy (Android) - tắt 09/11/2026.
+            entering={undefined}
+          >
+            <RequestBar
+              vehicleId={listing.data.id}
+              shopSlug={listing.data.shopSlug}
+              shopChatOpen={listing.data.shopChatOpen}
+              trip={current}
+              onNeedInput={(kind) => setInputRequest({ kind, nonce: Date.now() })}
+              {...(listing.data.provinceCode ? { provinceCode: listing.data.provinceCode } : {})}
+            />
+          </Animated.View>
         }
       >
         <DetailBody
@@ -249,6 +363,7 @@ export function ListingDetailScreen({
           trip={current}
           onTripChange={patchTrip}
           inputRequest={inputRequest}
+          scrollOffset={scrollOffset}
         />
       </Screen>
     </YStack>
@@ -302,6 +417,10 @@ function requestPrefill(
     ...(trip.returnAt ? { returnAt: trip.returnAt } : {}),
     ...(withDriver ? { routeType: trip.routeType } : {}),
     ...(longTerm && trip.packageMonths ? { packageMonths: String(trip.packageMonths) } : {}),
+    ...(longTerm ? { pickupPreference: trip.pickupPreference } : {}),
+    ...(longTerm && trip.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE && trip.requestedPickupDate
+      ? { requestedPickupDate: trip.requestedPickupDate }
+      : {}),
     ...(!withDriver && trip.deliveryRequested ? { delivery: '1' } : {}),
     ...(delivery
       ? {
@@ -386,6 +505,7 @@ function RequestBar({
           <GradientButton
             label={t('cta')}
             iconStart="car-sport-outline"
+            shine
             radius={toPx(XP_TOKENS['border-radius-control'])}
             onPress={() => {
               /*
@@ -394,7 +514,8 @@ function RequestBar({
                */
               const missing = missingTripInput(trip);
               if (missing) onNeedInput(missing);
-              else navigateOnce(ROUTES.booking.request(vehicleId, requestPrefill(trip, provinceCode)));
+              else
+                navigateOnce(ROUTES.booking.request(vehicleId, requestPrefill(trip, provinceCode)));
             }}
           />
         </YStack>
@@ -408,11 +529,14 @@ function DetailBody({
   trip,
   onTripChange,
   inputRequest,
+  scrollOffset,
 }: {
   listing: PublicListingDetail;
   trip: ListingTripDraft;
   onTripChange: (patch: Partial<ListingTripDraft>) => void;
   inputRequest: TripInputRequest | null;
+  /** Offset cuộn dọc của trang (luồng UI) — ảnh đầu trang giãn/parallax theo nó. */
+  scrollOffset?: SharedValue<number>;
 }) {
   const colors = useColors();
   const { scheme } = useAppScheme();
@@ -439,13 +563,13 @@ function DetailBody({
     ratingCount: listing.ratingCount ?? 0,
     ratingAvg: listing.ratingAvg,
   });
-  // Địa chỉ THẬT của điểm nhận xe; không có thì không hiện dòng này, không dùng địa chỉ mẫu.
-  const locationLine = [
-    listing.pickupPoint?.address,
-    listing.pickupPoint?.provinceName || listing.shopProvince,
-  ]
-    .filter(Boolean)
-    .join(', ');
+  /*
+   * `pickupPoint.address` đã là KHU VỰC "Phường/Xã, Tỉnh/TP" do server ghép từ danh mục (ADR
+   * 0077) — KHÔNG nối thêm tên tỉnh (đó là nguồn của lỗi "Hà Nội, Hà Nội"). Chỉ khi không có điểm
+   * nhận nào mới rơi về tỉnh của gian hàng.
+   */
+  const locationLine =
+    listing.pickupPoint?.address || listing.pickupPoint?.provinceName || listing.shopProvince || '';
 
   /*
    * Bốn thông số tiêu biểu của bản vẽ v2. Thông số chủ xe CHƯA khai thì bỏ ô đó — không điền giá
@@ -484,14 +608,19 @@ function DetailBody({
 
   const share = () => {
     void Share.share({
-      message: `${listing.name} — ${resolveWebBaseUrl()}/listings/${listing.id}`,
+      message: `${listing.name} - ${resolveWebBaseUrl()}/listings/${listing.id}`,
     }).catch(() => {});
   };
 
   // Vùng cuộn + bàn phím do `Screen` giữ (vỏ màn) — ở đây chỉ còn nội dung.
   return (
     <YStack pb={layout.section}>
-      <Gallery name={listing.name} mainImageUrl={listing.mainImageUrl} images={listing.images} />
+      <Gallery
+        name={listing.name}
+        mainImageUrl={listing.mainImageUrl}
+        images={listing.images}
+        {...(scrollOffset ? { scrollOffset } : {})}
+      />
 
       {/*
         Thứ tự khối = bản vẽ mobile v2 (Figma `19771:71482`) + nội dung của `ListingDetailView` web:
@@ -510,8 +639,7 @@ function DetailBody({
               <Text col={colors.text} fos={fontSize.lead} fow={fontWeight.semibold}>
                 {listing.name}
               </Text>
-              {isNewVehicle ? <Badge tone="success" label={tCard('newVehicle')} /> : null}
-              {listing.vatInvoiceSupported ? <Badge label={t('vatInvoice.badge')} /> : null}
+              {isNewVehicle ? <NewVehicleBadge /> : null}
             </XStack>
             {/* Vùng Chia sẻ & Yêu thích — cụm `.actionIcons` của `ListingHeaderActions` web ≤640px: gap space-12. */}
             <XStack gap={ACTION_GAP}>
@@ -532,7 +660,11 @@ function DetailBody({
                   bc={colors.border}
                   bg={colors.surface}
                 >
-                  <Ionicons name="share-social-outline" size={iconSize.sm} color={colors.textMuted} />
+                  <Ionicons
+                    name="share-social-outline"
+                    size={iconSize.sm}
+                    color={colors.textMuted}
+                  />
                 </YStack>
               </Pressable>
               <FavoriteButton vehicleId={listing.id} vehicleName={listing.name} variant="action" />
@@ -550,6 +682,23 @@ function DetailBody({
               </Text>
             </XStack>
           ) : null}
+
+          {/* Hàng nhãn tiện ích dưới địa chỉ (Figma `22226:30044`, web `.amenityRow`) - riêng trang
+              chi tiết có thêm viên "Hỗ trợ xuất hoá đơn VAT". */}
+          <AmenityChips
+            items={listingAmenityItems(
+              {
+                ...listing,
+                // Cờ lưu sẵn có thể cũ - suy từ chính sách cọc hiệu lực khi có.
+                noCollateral: listing.collateral
+                  ? listing.collateral.mode === COLLATERAL_MODE.NONE
+                  : listing.noCollateral,
+              },
+              (listing.instantBookServiceTypes ?? []).some((type) => type === activeService),
+              (key) => (key === 'vatInvoice' ? t('vatInvoice.badge') : tCard(key)),
+              { includeVat: true },
+            )}
+          />
 
           {specs.length > 0 ? (
             /* Web `ListingSpecsCard` (Figma `19771:72494`) ở ≤640px: lưới 2 × 2, hàng cách 16; vòng
@@ -572,7 +721,12 @@ function DetailBody({
                     <Text col={colors.placeholder} fos={fontSize.bodySm} numberOfLines={1}>
                       {spec.label}
                     </Text>
-                    <Text col={colors.textMuted} fos={BODY_TEXT} fow={fontWeight.medium} numberOfLines={1}>
+                    <Text
+                      col={colors.textMuted}
+                      fos={BODY_TEXT}
+                      fow={fontWeight.medium}
+                      numberOfLines={1}
+                    >
                       {spec.value}
                     </Text>
                   </YStack>
@@ -582,7 +736,9 @@ function DetailBody({
           ) : null}
         </YStack>
 
-        <ListingBenefitsCard listing={listing} activeService={activeService} />
+        <ScrollReveal>
+          <ListingBenefitsCard listing={listing} activeService={activeService} />
+        </ScrollReveal>
 
         <ListingBookingCard
           listing={listing}
@@ -599,76 +755,80 @@ function DetailBody({
           }
         />
 
-        <YStack gap={space.sm}>
-          <MarketSectionTitle>{t('description')}</MarketSectionTitle>
-          {/* Hãng + màu đầu khối mô tả (Figma `19771:72580`): một hàng, khe 8 × 40, chữ 16. */}
-          {descriptionAttributes.length > 0 ? (
-            <XStack flexWrap="wrap" columnGap={40} rowGap={space.sm}>
-              {descriptionAttributes.map((attr) => (
-                <XStack key={attr.key} ai="center" gap={space.sm}>
-                  <Ionicons
-                    name={attr.key === 'brand' ? 'car-outline' : 'color-palette-outline'}
-                    size={20}
-                    color={colors.textMuted}
-                  />
-                  <Text col={colors.textMuted} fos={BODY_TEXT}>
-                    {t.rich(`attributes.${attr.key}`, {
-                      value: attr.value,
-                      strong: (chunks) => (
-                        <Text col={colors.text} fow={fontWeight.semibold}>
-                          {chunks}
-                        </Text>
-                      ),
-                    })}
-                  </Text>
-                </XStack>
-              ))}
-            </XStack>
-          ) : null}
-          {/* `.descBody` web ≤640px: 16/24, căn đều hai lề. */}
-          <Text
-            col={colors.textMuted}
-            fos={BODY_TEXT}
-            textAlign="justify"
-            {...(descriptionOpen ? {} : { numberOfLines: 4 })}
-          >
-            {listing.description || t('descriptionEmpty')}
-          </Text>
-          {listing.description && listing.description.length > DESCRIPTION_CLAMP_CHARS ? (
-            <Pressable
-              onPress={() => setDescriptionOpen((v) => !v)}
-              accessibilityRole="button"
-              hitSlop={space.sm}
-            >
-              <XStack ai="center" gap={space.xs}>
-                <Text col={colors.primary} fos={BODY_TEXT} fow={fontWeight.semibold}>
-                  {descriptionOpen ? t('descriptionToggle.less') : t('descriptionToggle.more')}
-                </Text>
-                <Ionicons
-                  name={descriptionOpen ? 'chevron-up' : 'chevron-down'}
-                  size={iconSize.sm}
-                  color={colors.primary}
-                />
+        <ScrollReveal>
+          <YStack gap={space.sm}>
+            <MarketSectionTitle>{t('description')}</MarketSectionTitle>
+            {/* Hãng + màu đầu khối mô tả (Figma `19771:72580`): một hàng, khe 8 × 40, chữ 16. */}
+            {descriptionAttributes.length > 0 ? (
+              <XStack flexWrap="wrap" columnGap={40} rowGap={space.sm}>
+                {descriptionAttributes.map((attr) => (
+                  <XStack key={attr.key} ai="center" gap={space.sm}>
+                    <Ionicons
+                      name={attr.key === 'brand' ? 'car-outline' : 'color-palette-outline'}
+                      size={20}
+                      color={colors.textMuted}
+                    />
+                    <Text col={colors.textMuted} fos={BODY_TEXT}>
+                      {t.rich(`attributes.${attr.key}`, {
+                        value: attr.value,
+                        strong: (chunks) => (
+                          <Text col={colors.text} fow={fontWeight.semibold}>
+                            {chunks}
+                          </Text>
+                        ),
+                      })}
+                    </Text>
+                  </XStack>
+                ))}
               </XStack>
-            </Pressable>
-          ) : null}
-        </YStack>
+            ) : null}
+            {/* `.descBody` web ≤640px: 16/24, căn đều hai lề. */}
+            <Text
+              col={colors.textBody}
+              fos={BODY_TEXT}
+              textAlign="justify"
+              {...(descriptionOpen ? {} : { numberOfLines: 4 })}
+            >
+              {listing.description || t('descriptionEmpty')}
+            </Text>
+            {listing.description && listing.description.length > DESCRIPTION_CLAMP_CHARS ? (
+              <Pressable
+                onPress={() => setDescriptionOpen((v) => !v)}
+                accessibilityRole="button"
+                hitSlop={space.sm}
+              >
+                <XStack ai="center" gap={space.xs}>
+                  <Text col={colors.primary} fos={BODY_TEXT} fow={fontWeight.semibold}>
+                    {descriptionOpen ? t('descriptionToggle.less') : t('descriptionToggle.more')}
+                  </Text>
+                  <Ionicons
+                    name={descriptionOpen ? 'chevron-up' : 'chevron-down'}
+                    size={iconSize.sm}
+                    color={colors.primary}
+                  />
+                </XStack>
+              </Pressable>
+            ) : null}
+          </YStack>
+        </ScrollReveal>
 
         {listing.features.length > 0 ? (
-          <YStack gap={space.sm}>
-            <MarketSectionTitle>{t('featuresTitle')}</MarketSectionTitle>
-            {/* Lưới 2 cột, khe 12 (Figma `19771:72667`). */}
-            <XStack flexWrap="wrap" rowGap={12}>
-              {listing.features.map((key) => (
-                <YStack key={key} style={HALF_CELL}>
-                  <FeatureItem
-                    featureKey={key}
-                    label={catalogLabel(catalog[CATALOG_TYPE.VEHICLE_FEATURE], key) ?? key}
-                  />
-                </YStack>
-              ))}
-            </XStack>
-          </YStack>
+          <ScrollReveal>
+            <YStack gap={space.sm}>
+              <MarketSectionTitle>{t('featuresTitle')}</MarketSectionTitle>
+              {/* Lưới 2 cột, khe 12 (Figma `19771:72667`). */}
+              <XStack flexWrap="wrap" rowGap={12}>
+                {listing.features.map((key) => (
+                  <YStack key={key} style={HALF_CELL}>
+                    <FeatureItem
+                      featureKey={key}
+                      label={catalogLabel(catalog[CATALOG_TYPE.VEHICLE_FEATURE], key) ?? key}
+                    />
+                  </YStack>
+                ))}
+              </XStack>
+            </YStack>
+          </ScrollReveal>
         ) : null}
 
         {/*
@@ -676,35 +836,44 @@ function DetailBody({
           ≤1024px: location `order: 4`, host `order: 5`; Figma mobile `19771:71482`).
         */}
         {listing.pickupPoint ? (
-          <PickupPointCard listingId={listing.id} point={listing.pickupPoint} />
+          <ScrollReveal>
+            <PickupPointCard listingId={listing.id} point={listing.pickupPoint} />
+          </ScrollReveal>
         ) : null}
 
         {/*
           Thẻ gian hàng + ba chỉ số uy tín (ADR 0045 điều 3) — số của GIAN HÀNG (`shopRatingAvg`,
           `shopRatingCount`, `shopCompletedTripCount`), không phải của riêng chiếc xe.
         */}
-        <YStack gap={space.sm}>
-          <MarketSectionTitle>{t('hostTitle')}</MarketSectionTitle>
-          <ShopQuickInfoCard
-            shop={{
-              name: listing.shopName,
-              slug: listing.shopSlug,
-              logoUrl: listing.shopLogoUrl,
-              verified: listing.shopVerified,
-              province: listing.shopProvince,
-              bio: listing.shopBio,
-              ratingAvg: listing.shopRatingAvg,
-              ratingCount: listing.shopRatingCount,
-              completedTripCount: listing.shopCompletedTripCount,
-            }}
-            metrics={listing.shopMetrics}
-            variant="inline"
-          />
-        </YStack>
+        <ScrollReveal>
+          <YStack gap={space.sm}>
+            <MarketSectionTitle>{t('hostTitle')}</MarketSectionTitle>
+            <ShopQuickInfoCard
+              shop={{
+                name: listing.shopName,
+                slug: listing.shopSlug,
+                logoUrl: listing.shopLogoUrl,
+                verified: listing.shopVerified,
+                province: listing.shopProvince,
+                bio: listing.shopBio,
+                ratingAvg: listing.shopRatingAvg,
+                ratingCount: listing.shopRatingCount,
+                completedTripCount: listing.shopCompletedTripCount,
+              }}
+              metrics={listing.shopMetrics}
+              variant="inline"
+            />
+          </YStack>
+        </ScrollReveal>
 
-        <ListingPoliciesTabs listing={listing} activeService={activeService} />
+        {/* Figma `21636:82908`: Đánh giá đứng TRƯỚC Thông tin thêm (tabs điều khoản/huỷ/phí). */}
+        <ScrollReveal>
+          <Reviews vehicleId={listing.id} />
+        </ScrollReveal>
 
-        <Reviews vehicleId={listing.id} />
+        <ScrollReveal>
+          <ListingPoliciesTabs listing={listing} activeService={activeService} />
+        </ScrollReveal>
       </YStack>
     </YStack>
   );
@@ -789,21 +958,72 @@ function PriceRow({ amount, unit }: { amount: string; unit: string }) {
   );
 }
 
+/** Ảnh lệch khỏi tâm co về tỉ lệ này. */
+const SLIDE_SIDE_SCALE = 0.92;
+const SLIDE_SIDE_OPACITY = 0.6;
+
+/** Một ảnh của băng chuyền: co + mờ theo khoảng cách tới tâm (chỉ transform/opacity). */
+function GallerySlide({
+  index,
+  step,
+  scrollX,
+  still,
+  children,
+}: {
+  index: number;
+  step: number;
+  scrollX: SharedValue<number>;
+  still: boolean;
+  children: ReactNode;
+}) {
+  const style = useAnimatedStyle(() => {
+    if (still) return { opacity: 1, transform: [{ scale: 1 }] };
+    const range = [(index - 1) * step, index * step, (index + 1) * step];
+    return {
+      opacity: interpolate(
+        scrollX.value,
+        range,
+        [SLIDE_SIDE_OPACITY, 1, SLIDE_SIDE_OPACITY],
+        Extrapolation.CLAMP,
+      ),
+      transform: [
+        {
+          scale: interpolate(
+            scrollX.value,
+            range,
+            [SLIDE_SIDE_SCALE, 1, SLIDE_SIDE_SCALE],
+            Extrapolation.CLAMP,
+          ),
+        },
+      ],
+    };
+  });
+  return <Animated.View style={style}>{children}</Animated.View>;
+}
+
 /** Dịch vụ chưa niêm yết giá — nói rõ phải liên hệ, không trưng giá của dịch vụ khác thay. */
 function Gallery({
   name,
   mainImageUrl,
   images,
+  scrollOffset,
 }: {
   name: string;
   mainImageUrl?: string | null;
   images: string[];
+  scrollOffset?: SharedValue<number>;
 }) {
   const colors = useColors();
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
   const [active, setActive] = useState(0);
   const [viewing, setViewing] = useState<string | null>(null);
-  const pagerRef = useRef<ScrollView>(null);
+  const pagerRef = useRef<Animated.ScrollView>(null);
+  // Vị trí cuộn ngang trên luồng UI — ảnh hai bên co nhẹ + mờ đi (hiệu ứng thẻ băng chuyền).
+  const scrollX = useSharedValue(0);
+  const reduceMotion = useReducedMotion();
+  const onPagerScroll = useAnimatedScrollHandler((event) => {
+    scrollX.value = event.contentOffset.x;
+  });
   const tGallery = useTranslations('Listings.detail.gallery');
   const tStates = useTranslations('Common.states');
 
@@ -815,6 +1035,26 @@ function Gallery({
   const height = slideWidth / PHOTO_RATIO;
   // Mỗi trang cuộn = một ảnh + khe giữa hai ảnh.
   const step = slideWidth + SLIDE_GAP;
+
+  const verticalStyle = useAnimatedStyle(() => {
+    if (!scrollOffset || reduceMotion) return {};
+    const y = scrollOffset.value;
+    if (y < 0) {
+      // Giãn khi kéo quá đỉnh — dịch nửa quãng kéo để mép trên ảnh bám theo ngón tay.
+      return {
+        transform: [
+          { translateY: y / 2 },
+          { scale: 1 + Math.min(-y / Math.max(height, 1), GALLERY_MAX_STRETCH) },
+        ],
+      };
+    }
+    return {
+      opacity: interpolate(y, [0, height], [1, GALLERY_RECEDE_OPACITY], Extrapolation.CLAMP),
+      transform: [
+        { scale: interpolate(y, [0, height], [1, GALLERY_RECEDE_SCALE], Extrapolation.CLAMP) },
+      ],
+    };
+  });
 
   const onScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -844,10 +1084,12 @@ function Gallery({
   return (
     // `.wrap` ≤640px: đệm 12 trên/dưới; dải ảnh nhỏ cách ảnh 8.
     <YStack py={12} gap={space.sm}>
-      <YStack>
-        <ScrollView
+      <Animated.View style={verticalStyle}>
+        <Animated.ScrollView
           ref={pagerRef}
           horizontal
+          onScroll={onPagerScroll}
+          scrollEventThrottle={scrollThrottle.frame}
           showsHorizontalScrollIndicator={false}
           snapToInterval={step}
           decelerationRate="fast"
@@ -856,23 +1098,31 @@ function Gallery({
           onMomentumScrollEnd={onScroll}
         >
           {unique.map((url, index) => (
-            <Pressable
+            <GallerySlide
               key={url}
-              onPress={() => setViewing(url)}
-              accessibilityRole="imagebutton"
-              accessibilityLabel={tGallery('photoAlt', { name, index: index + 1 })}
+              index={index}
+              step={step}
+              scrollX={scrollX}
+              still={reduceMotion || unique.length < 2}
             >
-              <Image
-                source={{ uri: url }}
-                style={{ width: slideWidth, height, borderRadius: radius.control }}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                recyclingKey={url}
-                transition={150}
-              />
-            </Pressable>
+              <PressableScale
+                scaleTo={pressScale.card}
+                onPress={() => setViewing(url)}
+                accessibilityRole="imagebutton"
+                accessibilityLabel={tGallery('photoAlt', { name, index: index + 1 })}
+              >
+                <Image
+                  source={{ uri: url }}
+                  style={{ width: slideWidth, height, borderRadius: radius.control }}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  recyclingKey={url}
+                  transition={150}
+                />
+              </PressableScale>
+            </GallerySlide>
           ))}
-        </ScrollView>
+        </Animated.ScrollView>
 
         {/*
           Bộ đếm "n/N" nổi góc dưới-phải ảnh — `.counter` web ≤640px: nền đen 55% CỐ ĐỊNH (nó nằm
@@ -893,7 +1143,7 @@ function Gallery({
             </Text>
           </XStack>
         ) : null}
-      </YStack>
+      </Animated.View>
 
       {unique.length > 1 ? (
         <ListingGalleryThumbs urls={unique} active={active} onSelect={jumpTo} />
@@ -922,7 +1172,7 @@ function Reviews({ vehicleId }: { vehicleId: string }) {
    * 'ratingCount' of undefined" đúng giữa trang chi tiết xe.
    */
   const hasReviews = Boolean(data?.summary?.ratingCount && data.summary.ratingCount > 0);
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
 
   return (
     <YStack gap={space.sm}>
@@ -954,10 +1204,7 @@ function Reviews({ vehicleId }: { vehicleId: string }) {
         </Text>
       ) : (
         // Mỗi lần vuốt một đánh giá, trọn bề ngang nội dung, chấm phân trang bên dưới (Figma).
-        <HomeCarousel
-          accessibilityLabel={t('title')}
-          itemWidth={width - layout.screenX * 2}
-        >
+        <HomeCarousel accessibilityLabel={t('title')} itemWidth={width - layout.screenX * 2}>
           {data!.data.map((review) => (
             <Card key={review.id} seamless>
               <YStack gap={12}>
@@ -979,7 +1226,7 @@ function Reviews({ vehicleId }: { vehicleId: string }) {
                   <Stars value={review.rating} size={20} />
                 </XStack>
                 {review.comment ? (
-                  <Text col={colors.textMuted} fos={BODY_TEXT}>
+                  <Text col={colors.textBody} fos={BODY_TEXT}>
                     {review.comment}
                   </Text>
                 ) : null}
@@ -993,11 +1240,9 @@ function Reviews({ vehicleId }: { vehicleId: string }) {
 }
 
 /**
- * Khối VỊ TRÍ XE — bản ≤640px của web (Figma `19771:72668`): tiêu đề + "Mở bản đồ" cùng hàng, rồi
- * địa chỉ có ghim, rồi ẢNH BẢN ĐỒ TĨNH của điểm nhận xe (`StaticMapImage` web — người dùng chốt 28/10/2026
- * cho app có bản đồ như web). Chạm ảnh hay "Mở bản đồ" đều sang ứng dụng bản đồ của máy.
- *
- * Thiếu toạ độ thì không có liên kết; địa chỉ chữ vẫn ở lại.
+ * Khối VỊ TRÍ XE — bản ≤640px của web (Figma `19771:72668`). Gian hàng tuyến gói: địa chỉ đủ, ảnh
+ * bản đồ và "Mở bản đồ". Chủ xe tuyến hoa hồng: chỉ KHU VỰC, ảnh xấp xỉ, kèm lời giải thích —
+ * địa chỉ chính xác ở trang chuyến khi đã có đơn (ADR 0077, `isApproximate`).
  */
 function PickupPointCard({
   listingId,
@@ -1015,13 +1260,13 @@ function PickupPointCard({
     <YStack gap={space.sm}>
       <MarketSectionTitle
         action={
-          geo ? (
+          // Chỉ khi toạ độ CHÍNH XÁC (tuyến gói, ADR 0077) — điểm xấp xỉ mà chỉ đường là chỉ sai cửa.
+          geo && !point.isApproximate ? (
             <Pressable
               accessibilityRole="link"
               onPress={() => void Linking.openURL(mapExternalUrl(geo))}
               hitSlop={space.sm}
             >
-              {/* `.openMapLink` ≤640px: icon 20 + chữ 16 Semibold `color-primary`, khe 8. */}
               <XStack ai="center" gap={space.sm}>
                 <Ionicons name="map-outline" size={20} color={colors.primary} />
                 <Text col={colors.primary} fos={BODY_TEXT} fow={fontWeight.semibold}>
@@ -1036,51 +1281,31 @@ function PickupPointCard({
       </MarketSectionTitle>
       <XStack ai="flex-start" gap={space.sm}>
         <YStack pt={1}>
-                <Ionicons name="location-outline" size={18} color={colors.placeholder} />
-              </YStack>
+          <Ionicons name="location-outline" size={18} color={colors.placeholder} />
+        </YStack>
         <Text f={1} col={colors.textMuted} fos={BODY_TEXT}>
-          {[point.branchName, point.address, point.provinceName]
-            .filter(Boolean)
-            .join(LIST_SEPARATOR)}
+          {/* `address` đã mang tỉnh (đủ hoặc khu vực — ADR 0077) — không nối thêm tỉnh. */}
+          {[point.branchName, point.address].filter(Boolean).join(LIST_SEPARATOR)}
         </Text>
       </XStack>
+      {point.isApproximate ? (
+        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {t('location.exactAddressNote')}
+        </Text>
+      ) : null}
       {geo ? (
         <MapPreview
           uri={pickupMapUri(listingId, geo, point.address)}
           accessibilityLabel={t('location.title')}
           busyLabel={tStates('loading')}
-          onOpen={() => void Linking.openURL(mapExternalUrl(geo))}
-          openLabel={t('location.openMap')}
+          {...(point.isApproximate
+            ? {}
+            : {
+                onOpen: () => void Linking.openURL(mapExternalUrl(geo)),
+                openLabel: t('location.openMap'),
+              })}
         />
       ) : null}
     </YStack>
-  );
-}
-
-/**
- * Nhãn cạnh tên xe — `.badgeNew` / `.amenityBadge` của web: đệm 2 × 8, bo `card` (16), chữ 12
- * Medium. "Xe mới" nền `success-bg` chữ `success`; nhãn tiện ích nền `primary-subtle` chữ
- * `primary-hover`.
- */
-function Badge({ label, tone = 'brand' }: { label: string; tone?: 'brand' | 'success' }) {
-  const colors = useColors();
-  const success = tone === 'success';
-  return (
-    <XStack
-      bg={success ? colors.successSurface : colors.primarySubtle}
-      bw={1}
-      bc={success ? colors.successBorder : colors.primaryLight}
-      br={radius.card}
-      px={space.sm}
-      py={2}
-    >
-      <Text
-        col={success ? colors.success : colors.primaryHover}
-        fos={fontSize.bodySm}
-        fow={fontWeight.medium}
-      >
-        {label}
-      </Text>
-    </XStack>
   );
 }

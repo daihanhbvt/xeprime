@@ -24,7 +24,7 @@ describe('contentNavigation', () => {
     });
   });
 
-  describe('đích có màn NATIVE — rời WebView', () => {
+  describe('đích có màn NATIVE - rời WebView', () => {
     it('“Đăng xe cho thuê” mở wizard đăng xe', () => {
       expect(contentNavigation(`${WEB}/list-your-vehicle`, WEB)).toEqual({
         kind: 'native',

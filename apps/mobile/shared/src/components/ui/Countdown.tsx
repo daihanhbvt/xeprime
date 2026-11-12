@@ -9,6 +9,7 @@ import {
   longClockText,
 } from '@xeprime/types';
 import { useNow } from '@/hooks/use-now';
+import { CountdownRing } from '@/components/motion/CountdownRing';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 
@@ -35,6 +36,7 @@ export function Countdown({
   urgentMs,
   segmentMs,
   labels,
+  ring = false,
 }: {
   /** Mốc ISO từ API. */
   deadline: string;
@@ -42,6 +44,8 @@ export function Countdown({
   urgentMs: number;
   /** Chia thành chặng bao nhiêu mili-giây; bỏ trống thì đếm một mạch. */
   segmentMs?: number;
+  /** Vẽ vòng đếm ngược chạy mượt thay cho icon đồng hồ cát (chỉ lớp hình). */
+  ring?: boolean;
   labels: {
     remaining: string;
     expired: string;
@@ -80,11 +84,20 @@ export function Countdown({
       /* Lịch sự: trình đọc màn hình không đọc lại mỗi giây, nhưng vẫn biết khi sắc thái đổi. */
       accessibilityLiveRegion="polite"
     >
-      <Ionicons
-        name="hourglass-outline"
-        size={iconSize.xs}
-        color={urgent ? colors.danger : colors.warning}
-      />
+      {ring ? (
+        <CountdownRing
+          remainingMs={remaining}
+          size={iconSize.sm}
+          color={urgent ? colors.danger : colors.warning}
+          trackColor={colors.border}
+        />
+      ) : (
+        <Ionicons
+          name="hourglass-outline"
+          size={iconSize.xs}
+          color={urgent ? colors.danger : colors.warning}
+        />
+      )}
       <Text col={colors.textMuted} fos={fontSize.bodySm}>
         {labels.remaining}
       </Text>

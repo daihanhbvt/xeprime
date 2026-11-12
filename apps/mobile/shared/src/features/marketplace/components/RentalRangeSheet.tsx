@@ -23,7 +23,7 @@ import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
 import { StripePattern } from '@/components/ui/StripePattern';
 import { MonthGrid, useDayAccessibilityLabel, visibleDays } from '@/components/ui/MonthGrid';
 import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
-import { layout } from '@/theme/layout';
+import { layout, modalColumn } from '@/theme/layout';
 import { useAppStyles } from '@/theme/styles';
 import { themed, useColors, useFloatingSurfaceBorder } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
@@ -454,7 +454,7 @@ export function RentalRangeSheet({
       */}
       <YStack f={1}>
         <Pressable style={appStyles.scrim} onPress={onCancel} />
-        <YStack>
+        <YStack style={modalColumn}>
           <YStack
             maxHeight={height * SHEET_RATIO}
             bg={colors.surface}
@@ -630,7 +630,7 @@ export function RentalRangeSheet({
                   {/* Dòng mốc là kết quả của cả thao tác chọn — đậm vừa (600) để nổi hơn nhãn
                       quanh nó mà không tranh chỗ với con số thời lượng bên dưới. */}
                   <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                    {fmt.rentalPoint(value.pickupAt!)} – {fmt.rentalPoint(value.returnAt!)}
+                    {fmt.rentalPoint(value.pickupAt!)} → {fmt.rentalPoint(value.returnAt!)}
                   </Text>
                   <XStack gap={space.xs}>
                     <Text col={colors.textMuted} fos={fontSize.bodySm}>
@@ -916,7 +916,7 @@ function TimeSheet({
       {/* Lớp phủ là ANH EM của tấm trượt, không phải cha — xem ghi chú ở tấm trượt chính. */}
       <YStack f={1}>
         <Pressable style={appStyles.scrim} onPress={onClose} />
-        <YStack>
+        <YStack style={modalColumn}>
           <YStack
             maxHeight={height * TIME_SHEET_RATIO}
             bg={colors.surface}

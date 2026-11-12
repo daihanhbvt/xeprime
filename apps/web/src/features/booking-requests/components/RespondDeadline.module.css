@@ -47,3 +47,71 @@
   font-variant-numeric: tabular-nums;
   font-weight: var(--xp-font-weight-semibold);
 }
+
+/*
+ * Biến thể dải đầu thẻ yêu cầu (Figma Partner-XePrime): icon đồng hồ 16, nhãn xám 14/400, con số
+ * đỏ 14/500 — đỏ ngay cả khi còn nhiều giờ, vì nó là việc của gian hàng còn đang treo.
+ */
+.header {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.headerExpired {
+  composes: header;
+  color: var(--xp-color-text-tertiary);
+}
+
+.headerIcon {
+  font-size: 16px;
+}
+
+.headerClock {
+  color: var(--xp-color-error);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* Còn dưới 15 phút: con số thành viên nền cảnh báo — cùng mốc với lần nhắc cuối của worker. */
+.headerUrgent {
+  composes: header;
+}
+
+.headerUrgent .headerClock {
+  padding: 0 var(--xp-space-6);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-error-bg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Bản GỌN ở chân thẻ Kanban (Figma `23895:15181`: chỉ "⏱ 59:39") — nhãn vẫn được đọc bằng trình đọc
+   màn hình, chỉ không chiếm chỗ trên cột hẹp. */
+.srOnly {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  margin: -1px;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Chân thẻ Kanban: con số NGHIÊNG 14/400 đỏ (Figma "Confirmation Status"). */
+.compact {
+  font-style: italic;
+}
+
+.compact .headerClock,
+.compact.headerUrgent .headerClock {
+  padding: 0;
+  background: none;
+  font-weight: var(--xp-font-weight-regular);
+}

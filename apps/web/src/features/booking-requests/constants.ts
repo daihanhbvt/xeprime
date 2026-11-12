@@ -50,7 +50,7 @@ export interface BookingRequestTab {
   /** Trạng thái để tra `statusCounts` (cộng dồn nếu nhiều). */
   readonly status: readonly BookingRequestStatus[];
   /** Khoá message trong namespace `BookingRequests.tabs`. */
-  readonly labelKey: 'needsAction' | 'awaitingPayment' | 'closed';
+  readonly labelKey: 'needsAction' | 'awaitingPayment' | 'ended';
 }
 
 /**
@@ -94,7 +94,8 @@ export const BOOKING_REQUEST_TABS: readonly BookingRequestTab[] = [
   {
     value: BOOKING_REQUEST_TAB_CLOSED,
     status: BOOKING_REQUEST_CLOSED_STATUSES,
-    labelKey: 'closed',
+    // Nhãn "Đã kết thúc" theo design site partner (02/11/2026) — khoá `tabs.closed` cũ giữ cho mobile.
+    labelKey: 'ended',
   },
 ];
 

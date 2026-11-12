@@ -82,7 +82,7 @@ describe('BulkDayPriceDialog', () => {
     );
   }
 
-  it('dựng xong và DỪNG LẠI — không vòng lặp render', () => {
+  it('dựng xong và DỪNG LẠI - không vòng lặp render', () => {
     expect(() => open()).not.toThrow();
     expect(screen.getByText('Đặt giá riêng toàn bộ xe')).toBeTruthy();
   });
@@ -159,7 +159,7 @@ describe('BulkDayBlockDialog', () => {
     );
   }
 
-  it('dựng xong và DỪNG LẠI — không vòng lặp render', () => {
+  it('dựng xong và DỪNG LẠI - không vòng lặp render', () => {
     expect(() => open()).not.toThrow();
     expect(screen.getByText('Khóa toàn bộ xe')).toBeTruthy();
   });
@@ -174,7 +174,7 @@ describe('BulkDayBlockDialog', () => {
   it('cụm ngày lễ nhiều ngày ⇒ mở thẳng ở chế độ chọn khoảng', () => {
     open();
 
-    expect(screen.getByText(/Gợi ý theo dịp lễ: 31\/08\/2026 – 02\/09\/2026/)).toBeTruthy();
+    expect(screen.getByText(/Gợi ý theo dịp lễ: 31\/08\/2026 - 02\/09\/2026/)).toBeTruthy();
   });
 
   it('xe bận trọn khoảng được đếm riêng và KHÔNG gửi lên', () => {

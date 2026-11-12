@@ -6,17 +6,17 @@
     "breadcrumb": "Gói & hoá đơn"
   },
   "current": {
-    "none": "Chưa có gói — gian hàng đang ở tuyến hoa hồng theo chuyến.",
+    "none": "Chưa có gói - gian hàng đang ở tuyến hoa hồng theo chuyến.",
     "noneHint": "Mua gói theo chỗ để không mất phí trên từng chuyến.",
     "activeTag": "Đang sử dụng",
     "commissionSummary": "Bạn đang là chủ xe tuyến hoa hồng. Hoa hồng được tính theo từng chuyến thực tế hoàn thành.",
-    "packageSummary": "Trả trước theo chỗ xe — không thu gì trên chuyến.",
+    "packageSummary": "Trả trước theo chỗ xe - không thu gì trên chuyến.",
     "slotsSummary": "{car} chỗ ô tô · {motorbike} chỗ xe máy",
     "purchaseButton": "Mua gói",
     "renewButton": "Gia hạn / đổi gói",
     "upgradeButton": "Nâng cấp lên gian hàng",
     "packageTitle": "Gói gian hàng",
-    "packageCount": "{count, plural, other {Đang dùng # gói theo loại xe}} — không thu phí trên từng chuyến."
+    "packageCount": "{count, plural, other {Đang dùng # gói theo loại xe}} - không thu phí trên từng chuyến."
   },
   "usage": {
     "fleetTotal": "Tổng số xe",
@@ -43,7 +43,7 @@
     "title": "Lượt miễn phí",
     "left": "{left, plural, =0 {Đã dùng hết lượt miễn phí} other {Còn # lượt miễn phí}}",
     "used": "Đã dùng {used}/{allowance} lượt",
-    "explain": "Hai đơn đầu tiên miễn phí hoàn toàn — nền tảng không thu gì. Hết lượt, đơn mới sẽ tính hoa hồng trên mỗi chuyến trừ khi gian hàng có gói theo chỗ."
+    "explain": "Hai đơn đầu tiên miễn phí hoàn toàn - nền tảng không thu gì. Hết lượt, đơn mới sẽ tính hoa hồng trên mỗi chuyến trừ khi gian hàng có gói theo chỗ."
   },
   "features": {
     "title": "Tính năng theo gói",
@@ -103,27 +103,21 @@
     "emptyFor": "Chưa có {scope} nào đang bán.",
     "limitMotorbikes": "Tối đa {count} xe máy",
     "limitCars": "Tối đa {count} ô tô",
-    "chainsAfter": "Bạn đang dùng {plan} tới {date}. Gói mới bắt đầu ngay sau ngày đó — không mất ngày nào của kỳ đang chạy.",
     "startsOnPayment": "Gói bắt đầu ngay khi XePrime nhận được tiền.",
-    "replacesPending": "Hoá đơn {code} của loại xe này đang chờ thanh toán. Tạo hoá đơn mới sẽ huỷ mã đó — nếu bạn đã chuyển khoản theo mã cũ, đừng tạo mã mới.",
+    "replacesPending": "Hoá đơn {code} của loại xe này đang chờ thanh toán. Tạo hoá đơn mới sẽ huỷ mã đó - nếu bạn đã chuyển khoản theo mã cũ, đừng tạo mã mới.",
     "planNotOnSale": "Gói này vừa ngừng nhận mua mới. Chọn một gói khác hoặc tải lại bảng giá.",
-    "submitNow": "Nâng gói ngay",
-    "timingLabel": "Thời điểm áp dụng",
-    "timingNextTerm": "Nối tiếp sau khi hết hạn",
-    "timingNow": "Nâng gói ngay hôm nay",
-    "timingNowDesc": "Bắt đầu ngay khi thanh toán thành công",
-    "timingNowWarning": "Kỳ hiện tại kết thúc ngay hôm nay. Bạn thanh toán đầy đủ giá gói mới, không hoàn tiền ngày còn lại."
+    "currentPlanRule": "Bạn đang dùng {plan} tới {date}. Chọn lại đúng gói này để gia hạn nối tiếp; gói cao hơn áp dụng ngay khi thanh toán; gói thấp hơn áp dụng sau ngày đó."
   },
   "payment": {
     "title": "Chuyển khoản để kích hoạt gói",
-    "intro": "Hoá đơn đã tạo. Chuyển khoản ĐÚNG số tiền với ĐÚNG nội dung bên dưới — gói kích hoạt khi nền tảng nhận được tiền, không kích hoạt trước.",
+    "intro": "Hoá đơn đã tạo. Chuyển khoản ĐÚNG số tiền với ĐÚNG nội dung bên dưới - gói kích hoạt khi nền tảng nhận được tiền, không kích hoạt trước.",
     "amount": "Số tiền",
     "code": "Nội dung chuyển khoản (mã đối soát)",
     "expires": "Hạn chuyển khoản: {date}",
     "copyAmount": "Sao chép số tiền",
     "copyCode": "Sao chép mã",
     "done": "Đã hiểu",
-    "partialIntro": "Đã nhận {paid}. Chuyển nốt số còn thiếu bên dưới với ĐÚNG nội dung — gói kích hoạt ngay khi đủ tiền.",
+    "partialIntro": "Đã nhận {paid}. Chuyển nốt số còn thiếu bên dưới với ĐÚNG nội dung - gói kích hoạt ngay khi đủ tiền.",
     "qrAlt": "Mã VietQR chuyển khoản thanh toán gói",
     "bank": "Ngân hàng",
     "accountNumber": "Số tài khoản",
@@ -131,9 +125,9 @@
     "copyBank": "Sao chép tên ngân hàng",
     "copyAccount": "Sao chép số tài khoản",
     "copyAccountName": "Sao chép chủ tài khoản",
-    "autoActivateNote": "Gói tự kích hoạt khi tiền về — bạn không cần giữ trang này mở, hệ thống sẽ báo khi xong.",
+    "autoActivateNote": "Gói tự kích hoạt khi tiền về - bạn không cần giữ trang này mở, hệ thống sẽ báo khi xong.",
     "pendingTitle": "Hoá đơn đang chờ chuyển khoản",
-    "statusWaiting": "Đang chờ tiền về. Chuyển khoản theo đúng mã bên dưới — gói mở tự động khi XePrime nhận được tiền.",
+    "statusWaiting": "Đang chờ tiền về. Chuyển khoản theo đúng mã bên dưới - gói mở tự động khi XePrime nhận được tiền.",
     "statusPartial": "Đã nhận một phần. Chuyển nốt số còn thiếu theo đúng mã bên dưới.",
     "buying": "Gói đang mua",
     "period": "Áp dụng {from} → {to}",
@@ -154,7 +148,7 @@
     "submit": "Lưu thông tin và tạo hoá đơn",
     "shopInfo": {
       "title": "Thông tin gian hàng",
-      "intro": "Đây là mặt tiền khách nhìn thấy trên chợ. Thông tin hiện có đã điền sẵn — kiểm tra lại rồi tạo hoá đơn.",
+      "intro": "Đây là mặt tiền khách nhìn thấy trên chợ. Thông tin hiện có đã điền sẵn - kiểm tra lại rồi tạo hoá đơn.",
       "phoneHelp": "Số khách gọi khi cần liên hệ gian hàng. Lưu vào chi nhánh mặc định của bạn.",
       "logoHelp": "Chưa bắt buộc để mua gói, nhưng gian hàng phải có logo trước khi gửi xe lên chợ.",
       "missingTitle": "Còn thiếu thông tin bắt buộc của gian hàng",
@@ -182,7 +176,7 @@
     "editInvoice": "Chọn lại gói",
     "backToInvoice": "Quay lại mã đang chờ",
     "editWarnTitle": "Bạn đang có hoá đơn {code} chờ chuyển khoản",
-    "editWarnBody": "Mã cũ VẪN dùng được cho tới khi bạn tạo hoá đơn mới ở bước 3 — lúc đó nó mới bị huỷ. Nếu bạn đã chuyển khoản theo mã đó thì đừng tạo mã mới, hãy quay lại và chờ tiền về.",
+    "editWarnBody": "Mã cũ VẪN dùng được cho tới khi bạn tạo hoá đơn mới ở bước 3 - lúc đó nó mới bị huỷ. Nếu bạn đã chuyển khoản theo mã đó thì đừng tạo mã mới, hãy quay lại và chờ tiền về.",
     "partialFailure": "Chưa tạo được hoá đơn {scope}: {error} Hoá đơn đã tạo vẫn dùng được.",
     "chosenPlans": "Gói đã chọn: {plans} · Tổng {amount}",
     "chosenPlanItem": "{scope} {plan} ({months} tháng)",
@@ -241,7 +235,17 @@
     "enterManage": "Vào trang quản lý",
     "voidTitle": "Hoá đơn này không còn nhận thanh toán",
     "voidBody": "Hoá đơn {code} đã hết hạn hoặc đã được thay bằng hoá đơn mới. Vui lòng chọn gói lại.",
-    "pickAgain": "Chọn gói"
+    "pickAgain": "Chọn gói",
+    "backToShop": "Về thông tin cửa hàng",
+    "shellTitle": "Thanh toán hóa đơn",
+    "shellSubtitle": "Thanh toán hóa đơn các gói dịch vụ thuê xe của gian hàng.",
+    "paidTitleMany": "Các gói đã được kích hoạt",
+    "deadline": "Hạn thanh toán:",
+    "deadlinePassed": "Đã quá hạn thanh toán",
+    "pendingNote": "Hóa đơn chưa thanh toán được ghi nhận ở trạng thái Chờ thanh toán; quá hạn mà chưa đủ tiền thì hóa đơn tự huỷ.",
+    "termMonths": "{months, plural, other {Gói # tháng}}",
+    "periodLabel": "Thời gian áp dụng",
+    "periodLabelFor": "Thời gian áp dụng · {scope}"
   },
   "lanes": {
     "title": {
@@ -254,19 +258,19 @@
       "car": "Chọn một gói nếu bạn cho thuê ô tô. Bỏ trống thì ô tô chưa đưa lên chợ được."
     },
     "clear": "Bỏ chọn",
-    "invoiceCount": "{count, plural, =1 {Sẽ tạo 1 hoá đơn.} other {Sẽ tạo # hoá đơn — mỗi loại xe một hoá đơn.}}",
+    "invoiceCount": "{count, plural, =1 {Sẽ tạo 1 hoá đơn.} other {Sẽ tạo # hoá đơn - mỗi loại xe một hoá đơn.}}",
     "pickTermFirst": "Chọn kỳ hạn cho gói đã chọn để tạo hoá đơn.",
     "pickAtLeastOne": "Chọn ít nhất một gói (xe máy hoặc ô tô) và kỳ hạn để tạo hoá đơn.",
     "sectionTitle": "Gói theo loại xe",
-    "sectionHint": "Mỗi loại xe một gói riêng — bạn có thể dùng song song một gói xe máy và một gói ô tô.",
+    "sectionHint": "Mỗi loại xe một gói riêng - bạn có thể dùng song song một gói xe máy và một gói ô tô.",
     "sectionEnterprise": "Gian hàng đang dùng gói doanh nghiệp, phủ cả xe máy lẫn ô tô.",
     "activeTag": "Đang dùng",
     "graceTag": "Đang ân hạn",
     "noneTag": "Chưa có gói",
     "endsOn": "Hết hạn {date}",
     "scopeRequired": {
-      "motorbike": "Chưa có gói xe máy — xe máy chưa đăng lên chợ được.",
-      "car": "Chưa có gói ô tô — ô tô chưa đăng lên chợ được."
+      "motorbike": "Chưa có gói xe máy - xe máy chưa đăng lên chợ được.",
+      "car": "Chưa có gói ô tô - ô tô chưa đăng lên chợ được."
     },
     "noPlanHint": {
       "motorbike": "Chưa có gói xe máy. Mua gói để đăng xe máy lên chợ, không thu phí trên chuyến.",
@@ -287,43 +291,171 @@
     "defaultName": "Gói doanh nghiệp",
     "tag": "Doanh nghiệp",
     "activeTag": "Đang dùng",
-    "activeSummary": "Một gói cho cả đội xe — không giới hạn xe máy và ô tô, giá theo thoả thuận với XePrime.",
+    "activeSummary": "Một gói cho cả đội xe - không giới hạn xe máy và ô tô, giá theo thoả thuận với XePrime.",
     "contactSummary": "Cho đội xe lớn hơn 10 xe một loại, hoặc cần cấu hình riêng.",
     "coversBoth": "Không giới hạn xe máy và ô tô",
     "activeUntil": "Hiệu lực tới {date}",
     "changeHint": "Muốn đổi hoặc gia hạn gói doanh nghiệp? Đội ngũ XePrime sẽ hỗ trợ trực tiếp.",
-    "contactHint": "Gói doanh nghiệp được báo giá theo quy mô — không mua trực tiếp trên trang.",
+    "contactHint": "Gói doanh nghiệp được báo giá theo quy mô - không mua trực tiếp trên trang.",
     "contactCta": "Liên hệ tư vấn"
   },
   "quotaGate": {
     "scopeRequired": {
-      "motorbike": "Gian hàng chưa có gói xe máy — xe máy chưa đăng và đưa lên chợ được.",
-      "car": "Gian hàng chưa có gói ô tô — ô tô chưa đăng và đưa lên chợ được."
+      "motorbike": "Gian hàng chưa có gói xe máy - xe máy chưa đăng và đưa lên chợ được.",
+      "car": "Gian hàng chưa có gói ô tô - ô tô chưa đăng và đưa lên chợ được."
     },
     "buy": {
       "motorbike": "Mua gói xe máy",
       "car": "Mua gói ô tô"
     },
-    "ownerLite": "Chủ xe cá nhân đăng tối đa {limit} xe (tính chung ô tô và xe máy) — bạn đang có {used} xe.",
+    "ownerLite": "Chủ xe cá nhân đăng tối đa {limit} xe (tính chung ô tô và xe máy) - bạn đang có {used} xe.",
+    "ownerLiteMarketplace": "Chủ xe cá nhân hiển thị tối đa {limit} xe trên chợ (tính chung ô tô và xe máy) - bạn đang hiển thị {used} xe. Tạm ẩn một xe khác hoặc nâng cấp lên gian hàng.",
     "upgradeToShop": "Nâng cấp lên gian hàng",
     "shared": {
-      "fleet": "Gói hiện tại đã dùng hết {used}/{limit} xe — chưa thêm được xe mới.",
-      "marketplace": "Gói hiện tại đã dùng hết {used}/{limit} suất trên chợ — chưa đưa thêm xe lên chợ được."
+      "fleet": "Gói hiện tại đã dùng hết {used}/{limit} xe - chưa thêm được xe mới.",
+      "marketplace": "Gói hiện tại đã dùng hết {used}/{limit} suất trên chợ - chưa đưa thêm xe lên chợ được."
     },
     "viewPlans": "Xem gói",
     "lane": {
       "fleet": {
-        "motorbike": "Gói xe máy đã dùng hết {used}/{limit} xe — chưa thêm được xe máy mới.",
-        "car": "Gói ô tô đã dùng hết {used}/{limit} xe — chưa thêm được ô tô mới."
+        "motorbike": "Gói xe máy đã dùng hết {used}/{limit} xe - chưa thêm được xe máy mới.",
+        "car": "Gói ô tô đã dùng hết {used}/{limit} xe - chưa thêm được ô tô mới."
       },
       "marketplace": {
-        "motorbike": "Gói xe máy đã dùng hết {used}/{limit} suất trên chợ — chưa đưa thêm xe máy lên chợ được.",
-        "car": "Gói ô tô đã dùng hết {used}/{limit} suất trên chợ — chưa đưa thêm ô tô lên chợ được."
+        "motorbike": "Gói xe máy đã dùng hết {used}/{limit} suất trên chợ - chưa đưa thêm xe máy lên chợ được.",
+        "car": "Gói ô tô đã dùng hết {used}/{limit} suất trên chợ - chưa đưa thêm ô tô lên chợ được."
       }
     },
     "upgrade": {
       "motorbike": "Nâng gói xe máy",
       "car": "Nâng gói ô tô"
     }
+  },
+  "shopPlan": {
+    "title": "Gói & hạn mức",
+    "hint": "Quản lý gói dịch vụ và hạn mức sử dụng của gian hàng.",
+    "change": "Nâng cấp / Đổi gói",
+    "buy": "Mua gói",
+    "upgradeNow": "Nâng cấp ngay",
+    "activated": "xe được kích hoạt",
+    "activatedUnlimited": "xe được kích hoạt · không giới hạn",
+    "progressLabel": "Suất xe {scope} đã dùng",
+    "full": "Đã hết suất cho {scope}!",
+    "free": "{free, plural, other {Còn trống # suất}} · {market}",
+    "noneOnMarket": "chưa có xe nào trên chợ",
+    "contactXePrime": "Liên hệ với XePrime",
+    "totalVehicles": "Tổng số xe",
+    "unlimited": "không giới hạn",
+    "validUntil": "Hiệu lực tới",
+    "daysRemaining": "{days, plural, other {còn lại # ngày}}",
+    "invoicesTitle": "Hóa đơn và thanh toán",
+    "invoicesHint": "Quản lý hóa đơn và lịch sử thanh toán của gian hàng.",
+    "renew": "Gia hạn"
+  },
+  "combined": {
+    "title": "Mua hoặc gia hạn gói",
+    "subtitle": "Đăng ký gói mới hoặc gia hạn gói dịch vụ hiện tại.",
+    "scope": {
+      "car": "Ô tô",
+      "motorbike": "Xe máy"
+    },
+    "noPlan": {
+      "car": "Chưa có gói ô tô",
+      "motorbike": "Chưa có gói xe máy"
+    },
+    "inUse": "{used}/{limit} đang dùng",
+    "recommended": "Gói đề xuất",
+    "perMonth": "/tháng",
+    "termNotSold": "Không bán kỳ này",
+    "select": "Chọn gói",
+    "selected": "Đang chọn",
+    "currentTier": "Gói hiện tại",
+    "enterpriseTitle": "Doanh nghiệp · Không giới hạn ô tô, xe máy & chi nhánh",
+    "enterpriseQuote": "Báo giá riêng theo quy mô",
+    "termTitle": "Kỳ hạn thanh toán",
+    "termOption": "{months, plural, =1 {Gói 1 tháng} other {# tháng}}",
+    "termBase": "Giá gốc",
+    "pickAtLeastOne": "Chọn ít nhất một gói để tạo hoá đơn.",
+    "totalLabel": "Tổng thanh toán",
+    "submit": "Tạo hóa đơn",
+    "tierRank": {
+      "economy": {
+        "name": "Tiết kiệm",
+        "audience": "Phù hợp cho cá nhân"
+      },
+      "basic": {
+        "name": "Cơ bản",
+        "audience": "Phù hợp cho cửa hàng nhỏ"
+      },
+      "advanced": {
+        "name": "Nâng cao",
+        "audience": "Phù hợp cho cửa hàng vừa"
+      }
+    },
+    "limit": {
+      "car": "Tối đa <b>{count}</b> ô tô",
+      "motorbike": "Tối đa <b>{count}</b> xe máy",
+      "all": "Tối đa <b>{count}</b> xe"
+    },
+    "tierWithCap": "{tier} {count} xe",
+    "summaryPlan": "{scope} - <b>{tier}</b> <muted>{amount}/tháng</muted>",
+    "stepPlansHint": "Chọn được cùng lúc 1 gói ô tô và 1 gói xe máy - gộp chung một hoá đơn. Bấm “Đang chọn” lần nữa để bỏ chọn.",
+    "steps": {
+      "plans": "Chọn gói",
+      "confirm": "Kỳ hạn và xác nhận"
+    },
+    "stepsLabel": "Các bước mua gói",
+    "next": "Tiếp tục",
+    "back": "Quay lại chọn gói",
+    "confirmTitle": "Xác nhận gói",
+    "confirmHint": "Kiểm tra lại từng gói trước khi tạo hoá đơn.",
+    "termHint": "Áp dụng chung cho mọi gói đã chọn.",
+    "row": {
+      "limit": "Hạn mức",
+      "period": "Thời gian áp dụng",
+      "price": "Đơn giá",
+      "amount": "Thành tiền"
+    },
+    "priceLine": "{perMonth}/tháng × {months} tháng",
+    "paymentNote": "Thanh toán bằng chuyển khoản QR{count, plural, =1 {} other { - # gói chung một mã QR}}. Gói tự kích hoạt khi tiền về.",
+    "previewError": "Không tải được thông tin xác nhận gói.",
+    "confirmCardTitle": "{scope} · {tier}"
+  },
+  "purchaseOutcome": {
+    "kind": {
+      "new": "Mua mới",
+      "renew": "Gia hạn",
+      "upgrade": "Nâng cấp ngay",
+      "change_next": "Đổi gói từ kỳ sau"
+    },
+    "periodRange": "{from} → {to}",
+    "periodOnPayment": "Khi thanh toán xong → {to} (dự kiến)",
+    "note": {
+      "new": "Gói bắt đầu ngay khi tiền về.",
+      "renew": "Nối tiếp sau ngày {date} - các kỳ đã có giữ nguyên tới hết hạn.",
+      "upgrade": "Hạn mức mới có hiệu lực ngay khi tiền về.",
+      "change_next": "Các kỳ đã có giữ nguyên tới {date}, sau đó chuyển sang gói này."
+    },
+    "replacedTerm": "{plan} (đến {date})",
+    "upgradeWarning": "{terms} sẽ kết thúc ngay khi thanh toán xong - phần thời gian còn lại không được hoàn.",
+    "overCap": "Từ {date}, hạn mức còn {cap} xe trong khi bạn đang có {used} xe - xe vượt hạn mức vẫn chạy nhưng không gửi thêm lên chợ được.",
+    "hintLabel": "Lượt mua này làm gì với gói hiện tại"
+  },
+  "slots": {
+    "title": "Số xe trên chợ vượt suất của gói",
+    "hint": "Gói chỉ hiển thị được số xe bằng số suất. Chọn xe giữ lại; các xe còn lại sẽ tạm ẩn khỏi chợ khi gói kích hoạt - vẫn giữ nguyên hồ sơ, đơn và lịch. Bạn tự bật lại khi gói còn suất trống.",
+    "overLimit": "{scope} có {limit, plural, other {# suất}} - bạn đang hiển thị {count, plural, other {# xe}}. Chọn tối đa {limit, plural, other {# xe}} giữ lại.",
+    "noPlan": "Gói đã chọn không gồm {vehicles} - {count, plural, other {# xe}} sẽ tạm ẩn khi gói kích hoạt.",
+    "noPlanHint": "Muốn giữ chúng trên chợ? Quay lại chọn thêm gói cho loại xe này.",
+    "vehicles": {
+      "car": "ô tô",
+      "motorbike": "xe máy",
+      "all": "xe"
+    },
+    "selected": "Đã chọn {selected}/{limit}",
+    "more": "Và {count, plural, other {# xe}} khác cũng sẽ tạm ẩn.",
+    "listLabel": "Xe giữ lại trên chợ",
+    "accept": "Tôi đồng ý tạm ẩn các xe không được chọn khi gói kích hoạt.",
+    "pickBigger": "Muốn giữ tất cả? Quay lại chọn gói lớn hơn."
   }
 }

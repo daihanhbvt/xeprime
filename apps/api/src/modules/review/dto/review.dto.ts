@@ -107,7 +107,7 @@ export class ReviewPageDto {
  * tên đã che là tự tay cởi bỏ lớp che đó. FE dựng avatar bằng chữ cái đầu.
  */
 export class ShopReviewDto extends ReviewDto {
-  @ApiProperty({ description: 'Xe đã thuê — để mở trang chi tiết từ đánh giá' })
+  @ApiProperty({ description: 'Xe đã thuê - để mở trang chi tiết từ đánh giá' })
   vehicleId!: string;
 
   @ApiProperty({ description: 'Tên xe đã thuê' }) vehicleName!: string;
@@ -151,10 +151,10 @@ export class FeaturedReviewDto {
   @ApiProperty({ description: 'Lời nhận xét (luôn có nội dung)' }) comment!: string;
   @ApiProperty({ description: 'Tên khách (đã rút gọn)' }) customerName!: string;
 
-  @ApiProperty({ description: 'Số chuyến người viết đã hoàn thành trên XePrime — "Đã thuê N lần"' })
+  @ApiProperty({ description: 'Số chuyến người viết đã hoàn thành trên XePrime - "Đã thuê N lần"' })
   customerTripCount!: number;
 
-  @ApiProperty({ description: 'Xe đã thuê — để mở trang chi tiết từ đánh giá' })
+  @ApiProperty({ description: 'Xe đã thuê - để mở trang chi tiết từ đánh giá' })
   vehicleId!: string;
 
   @ApiProperty({ description: 'Tên xe đã thuê' }) vehicleName!: string;

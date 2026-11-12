@@ -17,7 +17,7 @@
   background: var(--xp-color-bg-container, #ffffff);
   border: 1px solid var(--xp-color-border, #e9eaeb);
   border-radius: var(--xp-border-radius-card);
-  box-shadow: 0 0 4px rgba(10, 13, 18, 0.04);
+  box-shadow: var(--xp-elevation-ambient);
   overflow: hidden;
 }
 
@@ -26,11 +26,15 @@
   display: flex;
   background: var(--xp-color-bg, #fafafa);
   border-bottom: 1px solid var(--xp-color-border, #e9eaeb);
-  height: 50px;
+  min-height: 50px;
 }
 
+/* Chia bề ngang theo độ dài nhãn (không 3 phần bằng nhau); thiếu chỗ thì xuống dòng căn giữa. */
 .serviceTab {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  overflow-wrap: anywhere;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -43,7 +47,7 @@
   border-bottom: 2px solid transparent;
   cursor: pointer;
   transition: all 0.15s ease;
-  padding: 0 8px;
+  padding: 6px 8px;
 }
 
 .serviceTab:hover {
@@ -204,28 +208,28 @@
 
 .toggleBtnActive {
   background: var(--xp-color-bg-container);
-  border-color: var(--xp-color-primary, #e9ac29);
-  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+  border-color: var(--xp-color-primary);
+  box-shadow: inset 0 0 0 1px var(--xp-color-primary-muted);
 }
 
 .toggleLabel {
-  font-size: var(--xp-font-size-body);
+  font-size: var(--xp-font-size-body-lg);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--bk-line-height-14);
+  line-height: var(--xp-line-height-body-lg);
   color: var(--xp-color-text, #0e0f12);
 }
 
 .toggleSub {
-  font-size: var(--xp-font-size-body-sm);
+  font-size: var(--xp-font-size-body);
   font-style: italic;
-  line-height: var(--xp-line-height-body-sm);
+  line-height: var(--bk-line-height-14);
   color: var(--xp-color-success);
 }
 
 .toggleSubDanger {
-  font-size: var(--xp-font-size-body-sm);
+  font-size: var(--xp-font-size-body);
   font-style: italic;
-  line-height: var(--xp-line-height-body-sm);
+  line-height: var(--bk-line-height-14);
   color: var(--xp-color-error);
 }
 
@@ -311,15 +315,6 @@
   margin-top: 1px;
 }
 
-/* 14/22 Light nghiêng `Text/Gray/low` — Light (300) chưa có token trọng lượng. */
-.addressNote {
-  margin: 0;
-  font-size: var(--xp-font-size-body);
-  font-weight: 300;
-  line-height: var(--bk-line-height-14);
-  color: var(--xp-color-text-tertiary, #717680);
-  font-style: italic;
-}
 
 /* Bảo hiểm chuyến đi MIC */
 .insuranceSection {
@@ -342,9 +337,9 @@
 .extraSection {
   background: var(--xp-color-bg-container, #ffffff);
   border: 1px solid var(--xp-color-border, #e9eaeb);
-  border-radius: 16px;
-  padding: 16px 20px;
-  box-shadow: 0 0 8px rgba(10, 13, 18, 0.04);
+  border-radius: var(--xp-border-radius-card);
+  padding: var(--xp-space-md);
+  box-shadow: var(--xp-elevation-ambient);
 }
 
 .extraTitleWrapper {
@@ -363,9 +358,10 @@
 
 .extraTitle {
   margin: 0;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--xp-color-text, #0e0f12);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+  color: var(--xp-color-text);
 }
 
 /* Thẻ Thành tiền */
@@ -546,13 +542,32 @@
   transform: translateY(-1px);
 }
 
-/* Nút nhắn shop đi sát nút chính (gap 16 của thẻ − 8). */
+/* Figma `22110:55767`: Nhắn shop (148px) + Thuê xe (phần còn lại) chung một hàng, cách 16px. */
+.actionsRow {
+  display: flex;
+  align-items: stretch;
+  gap: var(--xp-space-md);
+}
+
 .chatBtnWrapper {
-  margin-top: calc(-1 * var(--xp-space-sm));
+  flex: 0 0 148px;
+  min-width: 0;
+}
+
+/* Chat đóng thì ShopChatButton không vẽ gì — nút chính chiếm trọn hàng. */
+.chatBtnWrapper:empty {
+  display: none;
 }
 
 .chatBtnWrapper :global(.ant-btn) {
   width: 100%;
+  height: 48px;
+  border-radius: var(--xp-border-radius-control);
+}
+
+.actionsRow .ctaBtnWrapper {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* Lộ trình (Có tài xế) */
@@ -613,29 +628,49 @@
 }
 
 .packageOptions {
+  /* Lưới 3 cột (bản vẽ 11/11/2026): 6 gói = 2 hàng đều nhau; % là nhãn góc của từng ô. */
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--xp-space-sm);
 }
 
 .packageBtn {
-  padding: 8px 6px;
-  border-radius: 8px;
-  border: 1px solid var(--xp-color-border, #e9eaeb);
-  background: var(--xp-color-bg-container, #ffffff);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--xp-control-height);
+  padding: var(--xp-space-sm) var(--xp-space-xs);
+  border-radius: var(--xp-border-radius-control);
+  border: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
   font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-semibold);
+  font-weight: var(--xp-font-weight-medium);
   line-height: var(--bk-line-height-14);
-  color: var(--xp-color-text-secondary, #717680);
+  color: var(--xp-color-text);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    border-color var(--xp-motion-duration-fast) var(--xp-motion-ease-standard),
+    background-color var(--xp-motion-duration-fast) var(--xp-motion-ease-standard),
+    color var(--xp-motion-duration-fast) var(--xp-motion-ease-standard);
   text-align: center;
+  white-space: nowrap;
 }
 
 .packageBtnActive {
-  border-color: var(--xp-color-primary, #e9ac29);
-  color: var(--xp-color-primary, #e9ac29);
-  background: var(--xp-color-primary-subtle, #fff9f0);
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-primary);
+  background: var(--xp-color-primary-subtle);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.packageBtn:hover:not(.packageBtnActive) {
+  border-color: var(--xp-color-primary);
+}
+
+.packageMonths {
+  font-size: var(--xp-font-size-body);
 }
 
 /* Áp dụng mã khuyến mãi */
@@ -687,18 +722,6 @@
   color: var(--xp-color-error);
 }
 
-/* Badge giảm giá gói dài hạn */
-.packageDiscountBadge {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--xp-color-success);
-  background: var(--xp-color-success-bg);
-  border-radius: 4px;
-  padding: 1px 4px;
-  margin-top: 2px;
-}
-
 /* Lộ trình có tài xế: điểm đến & phụ phí */
 .destinationSection {
   display: flex;
@@ -712,11 +735,6 @@
   font-weight: var(--xp-font-weight-semibold);
   line-height: var(--bk-line-height-14);
   color: var(--xp-color-text, #0e0f12);
-}
-
-.inputSubLabel {
-  font-size: 12px;
-  color: var(--xp-color-text-secondary, #717680);
 }
 
 .textInput {
@@ -764,32 +782,6 @@
   gap: 8px;
 }
 
-.longTermPrefOptions {
-  display: flex;
-  gap: 8px;
-}
-
-.longTermPrefBtn {
-  flex: 1;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--xp-color-border, #e9eaeb);
-  background: var(--xp-color-bg-container, #ffffff);
-  font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--bk-line-height-14);
-  color: var(--xp-color-text-secondary, #717680);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  text-align: center;
-}
-
-.longTermPrefBtnActive {
-  border-color: var(--xp-color-primary, #e9ac29);
-  color: var(--xp-color-primary, #e9ac29);
-  background: var(--xp-color-primary-subtle, #fff9f0);
-}
-
 .specificDatePickerWrap {
   display: flex;
   flex-direction: column;
@@ -804,10 +796,13 @@
 }
 
 .expectedReturnBox {
+  /* Cao bằng ô chọn ngày ngay trên (`.datePickerInput` 40px) — hai khối xếp chồng phải cùng cỡ. */
+  box-sizing: border-box;
+  min-height: var(--xp-control-height-lg);
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 4px 12px;
   background: var(--xp-color-bg-subtle, #f9fafb);
   border-radius: 8px;
   border: 1px solid var(--xp-color-border, #e9eaeb);
@@ -913,7 +908,7 @@
   }
 
   .serviceTab {
-    padding: 0 var(--xp-space-12);
+    padding: 6px var(--xp-space-12);
     border-radius: var(--xp-space-12) var(--xp-space-12) 0 0;
     font-size: var(--xp-font-size-body);
     line-height: var(--bk-line-height-14);
@@ -978,18 +973,12 @@
     margin-top: 0;
   }
 
-  /* Gói dài hạn: 4 ô một hàng quá chật ở 358px → hai hàng. */
-  .packageOptions {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .routeOptions,
-  .longTermPrefOptions {
+  /* Lộ trình có tài xế: ba nút một hàng quá chật ở 358px → hai hàng. */
+  .routeOptions {
     flex-wrap: wrap;
   }
 
-  .routeBtn,
-  .longTermPrefBtn {
+  .routeBtn {
     flex: 1 1 calc(50% - var(--xp-space-sm));
   }
 }
@@ -1030,4 +1019,35 @@
   font-weight: var(--xp-font-weight-semibold);
   line-height: var(--xp-line-height-h3);
   color: var(--xp-color-text-secondary);
+}
+
+/* Nút đổi/chọn địa chỉ: `--xp-color-primary-dark` không được khai nên rơi về #cb9115 — trên nền
+   tối đổi sang gold chính; hover viết riêng vì quy tắc tối mạnh hơn `:hover`. */
+:global([data-theme='dark']) .changeAddressBtn,
+:global([data-theme='dark']) .chooseAddressBtn {
+  color: var(--xp-color-primary);
+}
+
+:global([data-theme='dark']) .changeAddressBtn:hover {
+  color: var(--xp-color-primary-bright);
+}
+
+:global([data-theme='dark']) .chooseAddressBtn:hover {
+  border-color: var(--xp-color-primary-hover);
+}
+
+:global([data-theme='dark']) .timeDivider {
+  color: var(--xp-color-text-placeholder);
+}
+
+:global([data-theme='dark']) .ctaBtnWrapper :global(.ant-btn),
+:global([data-theme='dark']) .routeBtnActive {
+  box-shadow: none;
+}
+
+/* Nhãn + dấu "i" (InfoHint) cùng một hàng — ghi chú giải thích nằm trong tooltip. */
+.labelWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }

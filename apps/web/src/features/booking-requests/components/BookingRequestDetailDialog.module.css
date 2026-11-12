@@ -1,170 +1,418 @@
-/* Chi tiết một yêu cầu chưa thành đơn — cùng nhịp với các modal chi tiết khác. */
+/*
+ * Chi tiết một yêu cầu thuê — Figma Partner-XePrime "Request / Details" (`23807:65661`): hộp 864,
+ * thân hai cột 400 cách 24, mỗi khối là thẻ trắng viền xám bo 16 đệm 20; chân hộp nút cao 44.
+ * Hộp `size="fit"` nên bề rộng do chính thân này đặt; điện thoại xếp một cột (hộp toàn màn).
+ */
 .titleRow {
   display: flex;
   min-width: 0;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--xp-space-sm);
+  font-size: 18px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 28px;
 }
 
 .body {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: var(--xp-space-md);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--xp-space-lg);
+  width: 824px;
+  max-width: 100%;
 }
 
-.section {
+.panel {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border: 1px solid var(--xp-color-border-subtle);
-  border-radius: var(--xp-border-radius-sm);
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 0 6px 0 rgba(10, 13, 18, 0.04);
+}
+
+.panelMain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+}
+
+.side {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.vehicle {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+}
+
+.thumb {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  width: 101px;
+  height: 64px;
+  border-radius: var(--xp-border-radius-control);
   background: var(--xp-color-bg-muted);
-  gap: var(--xp-space-sm);
+  color: var(--xp-color-text-placeholder);
+  font-size: 24px;
 }
 
-.sectionTitle {
+.thumbImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vehicleText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-xs);
+}
+
+.vehicleName {
   margin: 0;
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-overline);
+  color: var(--xp-color-text);
+  font-size: 18px;
   font-weight: var(--xp-font-weight-semibold);
-  letter-spacing: 0.06em;
-  line-height: var(--xp-line-height-overline);
-  text-transform: uppercase;
+  line-height: 28px;
+  overflow-wrap: anywhere;
 }
 
-/* Khối định danh + nút mở hồ sơ đầy đủ của thực thể đó. */
-.entity {
+.plate {
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-layout);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+}
+
+/* Dòng nhãn — giá trị, ngăn bằng kẻ rất nhạt (design `23807:66202`). */
+.rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-lg);
+  padding: var(--xp-space-12) 0;
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+}
+
+.row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.rowLabel {
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+}
+
+.rowValue {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.strong {
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.sub {
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.tag {
+  margin: 0;
+}
+
+.panelActions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--xp-space-12);
+}
+
+.ghostButton.ghostButton,
+.ghostLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: var(--xp-space-sm) 14px;
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+  box-shadow: none;
+}
+
+.ghostLink:hover,
+.ghostButton.ghostButton:hover {
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-text);
+}
+
+.panelHead {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--xp-space-sm);
 }
 
-.tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--xp-space-xs);
-}
-
-.facts {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  margin: 0;
-  gap: var(--xp-space-xs);
-}
-
-.fact {
-  display: flex;
-  min-width: 0;
-  align-items: baseline;
-  gap: var(--xp-space-sm);
-  font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
-}
-
-.factLabel {
-  width: 132px;
-  flex: none;
-  margin: 0;
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body);
-}
-
-.factValue {
-  min-width: 0;
+.panelTitle {
   margin: 0;
   color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-medium);
-  overflow-wrap: anywhere;
+  font-size: 18px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 28px;
 }
 
-.factValue a {
-  color: var(--xp-color-primary-active);
-}
-
-.factValue a:hover {
+.textAction {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--xp-color-primary);
-  text-decoration: underline;
-}
-
-/* Ghi chú trong hộp thoại hiện ĐỦ — đây đúng là chỗ để đọc hết, không cắt hai dòng như thẻ. */
-.longText {
-  margin: 0;
-  color: var(--xp-color-text);
+  font: inherit;
   font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+  cursor: pointer;
 }
 
-.rejectReason {
-  composes: longText;
-  padding: var(--xp-space-sm);
-  border-left: 3px solid var(--xp-color-error);
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-error-bg);
+.textAction:hover {
+  color: var(--xp-color-primary-hover);
 }
 
-.risk {
-  padding: var(--xp-space-xs) var(--xp-space-sm);
+.textAction:focus-visible {
   border-radius: var(--xp-border-radius-sm);
-  margin: 0;
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.textActionIcon {
+  font-size: 20px;
+}
+
+.estimateTag {
+  padding: 0 var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
   background: var(--xp-color-warning-bg);
   color: var(--xp-color-warning);
   font-size: var(--xp-font-size-body-sm);
   font-weight: var(--xp-font-weight-medium);
-  line-height: var(--xp-line-height-body-sm);
+  line-height: 20px;
+}
+
+.customer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-6);
+}
+
+.customerName {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+}
+
+.regular {
+  padding: 0 var(--xp-space-sm);
+  border: 1px solid var(--xp-color-success-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+}
+
+.contactLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-12);
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+}
+
+.contactLine a {
+  color: inherit;
+}
+
+.contactLine .zalo {
+  color: var(--xp-color-info-strong);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.risk {
+  margin: 0;
+  color: var(--xp-color-error);
+  font-weight: var(--xp-font-weight-medium);
 }
 
 .hint {
   margin: 0;
   color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
+  line-height: 18px;
 }
 
-/*
- * Quyết định nằm NGAY trong hộp thoại: đọc xong chi tiết là duyệt/từ chối được luôn, không
- * phải đóng ra rồi tìm lại đúng thẻ trong danh sách.
- */
+/* Ghi chú · lý do từ chối · dấu vết — cả chiều ngang dưới hai cột. */
+.more {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+}
+
+.moreLabel {
+  margin: 0 0 2px;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 18px;
+}
+
+.longText,
+.rejectReason {
+  margin: 0;
+  color: var(--xp-color-text);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.rejectReason {
+  color: var(--xp-color-error);
+}
+
+.trace {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--xp-space-lg);
+  margin: 0;
+}
+
+.trace .row {
+  gap: var(--xp-space-sm);
+  padding: 0;
+  border: 0;
+}
+
+.trace .rowValue {
+  font-weight: var(--xp-font-weight-regular);
+}
+
+/* ── Chân hộp ──────────────────────────────────────────────────────────── */
+
 .footer {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  padding-top: var(--xp-space-sm);
-  border-top: 1px solid var(--xp-color-border-subtle);
-  gap: var(--xp-space-sm);
+  justify-content: flex-end;
+  gap: var(--xp-space-12);
 }
 
-@media (max-width: 640px) {
-  .fact {
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .factLabel {
-    width: auto;
-  }
-}
-
-/* Hai lối đi của một thực thể: mở hồ sơ (modal) và mở lịch (route). */
-.entityActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--xp-space-xs);
-}
-
-/* Câu thay cho hàng nút quyết định khi yêu cầu đã quá hạn phản hồi (xem BookingRequestCard). */
-.expiredHint {
+.footerHint {
   margin: 0;
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.buttonIcon {
+  font-size: 20px;
+}
+
+.rejectButton.rejectButton,
+.confirmButton.confirmButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  height: 44px;
+  padding: 10px 18px;
+  border-radius: var(--xp-border-radius-control);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 24px;
+  box-shadow: none;
+}
+
+.rejectButton.rejectButton {
+  border: 1px solid var(--xp-color-error-border);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-error);
+}
+
+.rejectButton.rejectButton:hover:not(:disabled) {
+  border-color: var(--xp-color-error);
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+.confirmButton.confirmButton {
+  border: 0;
+  background: var(--xp-gradient-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+.confirmButton.confirmButton:hover:not(:disabled) {
+  background: var(--xp-gradient-primary);
+  color: var(--xp-color-primary-contrast);
+  filter: brightness(1.04);
+}
+
+@media (max-width: 900px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .rejectButton.rejectButton,
+  .confirmButton.confirmButton {
+    flex: 1;
+    justify-content: center;
+  }
 }

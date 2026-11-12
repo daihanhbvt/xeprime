@@ -1,6 +1,12 @@
+import Animated from 'react-native-reanimated';
+import {
+  ScrollReveal,
+  ScrollRevealProvider,
+  useScrollRevealList,
+} from '@/components/motion/ScrollReveal';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Platform, Pressable, RefreshControl } from 'react-native';
+import { FlatList, Platform, Pressable, RefreshControl, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -17,17 +23,20 @@ import { type MarketplaceFilters, type PublicListing } from '@xeprime/types';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { useTabBarInset } from '@/components/layout/tab-bar-inset';
 import { ScreenError } from '@/components/state/ScreenError';
+import { images } from '@/assets';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { Button } from '@/components/ui/Button';
 import { VehicleCardSkeleton } from '@/components/ui/Skeleton';
+import { Reveal } from '@/components/motion/Reveal';
 import { useCatalog, useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { layout } from '@/theme/layout';
+import { TABLET_MIN_WIDTH, layout } from '@/theme/layout';
 import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
 import { useColors } from '@/theme/ThemeProvider';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { SearchExperienceProvider, useSearchExperience } from './search-context';
 import { useInfinitePublicListings } from './hooks/use-search-results';
@@ -36,13 +45,22 @@ import { SearchContextSheet } from './components/SearchContextSheet';
 import { KeywordSearch } from './components/KeywordSearch';
 import { LocationPicker } from './components/LocationPicker';
 import { RentalRangeSheet } from './components/RentalRangeSheet';
-import { SortMenu } from './components/SortMenu';
 import { VehicleCard } from './components/VehicleCard';
 import { QuickFilterPills } from './components/QuickFilterPills';
 import { useRentalRangeLabel } from './use-rental-range-label';
 import { SERVICE_LABEL_KEY } from './search-items';
 import { ROUTES } from '@/navigation/routes';
-import { getSecureItem, SECURE_KEY, setSecureItem } from '@/lib/secure-storage';
+import { gridCellWidth } from '@/components/layout/ResponsiveGrid';
+import { useContentWidth } from '@/theme/use-content-width';
+
+/**
+ * Website: ≥900px kết quả tìm xe 4 cột, dải tablet còn lại 2 cột. App dùng 3 cột ở mốc rộng (lệch
+ * web CÓ CHỦ ĐÍCH, 10/11/2026): thẻ xe native xếp thông số (chỗ · hộp số · nhiên liệu) trên MỘT
+ * hàng và cần ~300dp — ở 4 cột (~235dp trên iPad 13") dòng đó dính chữ, tên xe/gian hàng bị cắt.
+ */
+const SEARCH_WIDE_MIN_WIDTH = 900;
+const SEARCH_WIDE_COLUMNS = 3;
+const SEARCH_TABLET_COLUMNS = 2;
 
 type ViewMode = 'grid' | 'list';
 
@@ -62,6 +80,9 @@ const FACET_KEYS = [
   'priceMin',
   'priceMax',
   'sort',
+  // Nhu cầu cũng hiện thành chip (khớp web) — "Xoá bộ lọc" gỡ cả nó lẫn lộ trình đi kèm.
+  'serviceType',
+  'routeType',
 ] as const;
 
 /**
@@ -70,7 +91,7 @@ const FACET_KEYS = [
  */
 const MODAL_DISMISS_MS = 350;
 /** Ô vuông bộ lọc cạnh khung tìm kiếm — Figma `20043:57783`: 36, icon 20. */
-const FILTER_BUTTON_SIZE = 36;
+const FILTER_BUTTON_SIZE = 38;
 
 function afterModalDismiss(run: () => void) {
   if (Platform.OS === 'ios') setTimeout(run, MODAL_DISMISS_MS);
@@ -111,12 +132,25 @@ export function SearchResultsScreen({
 }) {
   return (
     <SearchExperienceProvider initial={initialFilters}>
-      <ResultsBody onBack={onBack} embedded={embedded} />
+      <ResultsBody
+        onBack={onBack}
+        embedded={embedded}
+        contextKey={JSON.stringify(initialFilters)}
+      />
     </SearchExperienceProvider>
   );
 }
 
-function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boolean }) {
+function ResultsBody({
+  onBack,
+  embedded,
+  contextKey,
+}: {
+  onBack: () => void;
+  embedded: boolean;
+  /** Nội dung ngữ cảnh màn trước gửi sang — đổi ⇒ kết quả mới, cuộn về đầu. */
+  contextKey: string;
+}) {
   const colors = useColors();
   const t = useTranslations('Marketplace.results');
   const compactRangeLabel = useRentalRangeLabel(true);
@@ -146,6 +180,16 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
   /** Tấm "Tìm xe" (bộ chọn của thẻ tìm kiếm trang chủ) — Figma `19973:49063`. */
   const [contextOpen, setContextOpen] = useState(false);
   const listRef = useRef<FlatList<PublicListing>>(null);
+  /*
+   * Trang chủ gửi ngữ cảnh MỚI (màn không dựng lại nữa) ⇒ về đầu danh sách: kết quả mới mà giữ vị
+   * trí cuộn cũ là đọc giữa chừng một danh sách khác. Đổi lọc TRONG màn không đi qua đây.
+   */
+  const contextKeyRef = useRef(contextKey);
+  useEffect(() => {
+    if (contextKeyRef.current === contextKey) return;
+    contextKeyRef.current = contextKey;
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [contextKey]);
   const [locationOpen, setLocationOpen] = useState(false);
   const [rangeOpen, setRangeOpen] = useState(false);
   /**
@@ -186,6 +230,10 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
    * xe cụ thể (đo chiều cao khối lọc, tải thêm trang, đổi sắp xếp), và một `renderItem` mới là
    * đủ để FlatList vẽ lại toàn bộ hàng đang hiển thị.
    */
+  const openShop = useCallback(
+    (slug: string) => navigateOnce(ROUTES.explore.shopDetail(slug)),
+    [navigateOnce],
+  );
   const openListing = useCallback(
     (listing: PublicListing, serviceType: string | undefined) =>
       // Mang ngữ cảnh dịch vụ sang, cùng vai trò `?serviceType=` bên web.
@@ -194,25 +242,44 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
   );
 
   /*
-   * Chế độ xem: lưới (thẻ đầy đủ) hoặc danh sách (thẻ ngang gọn) — NHỚ trên thiết bị như web
-   * (người dùng chốt 27/10/2026).
+   * Chế độ xem CỐ ĐỊNH dạng lưới (09/11/2026): bỏ nút chuyển lưới/danh sách và hàng Sắp xếp cho
+   * trang kết quả gọn - sắp xếp chuyển vào tấm Bộ lọc. Không đọc lựa chọn cũ đã lưu, để máy từng
+   * chọn "danh sách" không bị kẹt ở đó mà không còn nút đổi lại.
    */
-  const [viewMode, setViewModeState] = useState<ViewMode>('grid');
-  useEffect(() => {
-    void getSecureItem(SECURE_KEY.MARKETPLACE_VIEW_MODE).then((saved) => {
-      if (saved === 'grid' || saved === 'list') setViewModeState(saved);
-    });
-  }, []);
-  const setViewMode = (next: ViewMode) => {
-    setViewModeState(next);
-    void setSecureItem(SECURE_KEY.MARKETPLACE_VIEW_MODE, next);
-  };
+  const viewMode = 'grid' as ViewMode;
+
+  // Thẻ trượt lên khi cuộn tới — ScrollReveal đo vị trí thật trên luồng UI.
+  const listReveal = useScrollRevealList();
+  /*
+   * Máy tính bảng, chế độ lưới: nhiều cột như website (`MarketplaceResults.module.css` — 2 cột ở
+   * 641-899px, 4 cột từ 900px). Chế độ "hàng" (thẻ ngang) giữ 1 cột: thẻ đó vốn đã trải ngang.
+   * Ô có bề ngang CỐ ĐỊNH (không `flex: 1`) để ô lẻ ở hàng cuối không giãn hết hàng.
+   */
+  const columnWidth = useContentWidth();
+  const contentWidth = columnWidth - layout.screenX * 2;
+  const columns =
+    viewMode === 'list' || columnWidth < TABLET_MIN_WIDTH
+      ? 1
+      : columnWidth >= SEARCH_WIDE_MIN_WIDTH
+        ? SEARCH_WIDE_COLUMNS
+        : SEARCH_TABLET_COLUMNS;
+  const cellStyle = useMemo(
+    () => (columns > 1 ? { width: gridCellWidth(contentWidth, columns, space.md) } : undefined),
+    [columns, contentWidth],
+  );
 
   const renderItem = useCallback(
-    ({ item }: { item: PublicListing }) => (
-      <VehicleCard listing={item} onPress={openListing} variant={viewMode === 'list' ? 'row' : 'grid'} />
+    ({ item, index }: { item: PublicListing; index: number }) => (
+      // Thẻ có bóng: CHỈ trượt lên khi cuộn tới (ScrollReveal), không mờ.
+      <ScrollReveal index={index} {...(cellStyle ? { style: cellStyle } : {})}>
+        <VehicleCard
+          listing={item}
+          onPress={openListing}
+          variant={viewMode === 'list' ? 'row' : 'grid'}
+        />
+      </ScrollReveal>
     ),
-    [openListing, viewMode],
+    [openListing, viewMode, cellStyle],
   );
 
   const tabBarInset = useTabBarInset();
@@ -229,6 +296,15 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
   /** Chip cho từng giá trị đang lọc — bấm × là gỡ đúng giá trị đó, không xoá cả chiều. */
   const activeChips = useMemo(() => {
     const chips: { id: string; label: string; clear: () => void }[] = [];
+
+    // Nhu cầu (Tự lái / Có tài xế / Thuê dài hạn) — chip đầu hàng, khớp web.
+    if (filters.serviceType) {
+      chips.push({
+        id: `serviceType:${filters.serviceType}`,
+        label: domainLabel('serviceType', filters.serviceType),
+        clear: () => setFilters({ serviceType: undefined, routeType: undefined }),
+      });
+    }
 
     const listChip = (
       dim: 'brand' | 'bodyType' | 'seats' | 'fuelType' | 'features' | 'transmission',
@@ -291,7 +367,6 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
    */
   const filterCount = activeChips.length;
 
-
   /** "Áp dụng" của tấm Tìm xe: chốt ngữ cảnh, đóng tấm, đưa danh sách về đầu. */
   const applyContext = () => {
     submit();
@@ -302,7 +377,9 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
   /** Dòng 2 của khung tìm kiếm: "Ô tô | Có tài xế | Hồ Chí Minh | 08:00 T3, 13/10 – …". */
   const contextSummary = [
     domainLabel('vehicleType', draft.vehicleType),
-    draft.serviceType === SERVICE_TYPE.SELF_DRIVE ? null : tService(SERVICE_LABEL_KEY[draft.serviceType] as never),
+    draft.serviceType === SERVICE_TYPE.SELF_DRIVE
+      ? null
+      : tService(SERVICE_LABEL_KEY[draft.serviceType] as never),
     provinceLabel(draft.provinceCode ?? ''),
     serviceUsesRentalRange(draft.serviceType)
       ? compactRangeLabel(draft.rental.pickupAt, draft.rental.returnAt)
@@ -311,7 +388,8 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
     .filter(Boolean)
     .join(' | ');
 
-  const clearFacets = () => setFilters(Object.fromEntries(FACET_KEYS.map((key) => [key, undefined])));
+  const clearFacets = () =>
+    setFilters(Object.fromEntries(FACET_KEYS.map((key) => [key, undefined])));
 
   /*
    * Phần CUỘN của đầu màn: hai hàng viên lọc nhanh, số kết quả, chip đang áp, sắp xếp. Khung tìm
@@ -322,8 +400,11 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
       {/* Viên lọc nhanh hai hàng — Figma `20043:57771`; mỗi hàng cuộn ngang riêng. */}
       <QuickFilterPills filters={filters} onChange={setFilters} />
 
-      {/* Số kết quả — Figma không có, người dùng chốt GIỮ (27/10/2026). */}
-      <Text numberOfLines={1} col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
+      {/* Số kết quả: bỏ khỏi màn (09/11/2026, như web ≤640px) - chỉ còn cho trình đọc màn hình. */}
+      <Text
+        accessibilityLiveRegion="polite"
+        style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }}
+      >
         {results.isInitialLoading
           ? t('searching')
           : filters.q
@@ -331,55 +412,68 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
             : t('foundCount', { count: results.total })}
       </Text>
 
-      {/* "Điều kiện đang chọn" — Figma `19771:64221`. */}
+      {/* "Điều kiện đang chọn" - Figma `22230:58296`: MỘT dòng chip cuộn ngang (không mũi tên),
+          nút xoá icon "Rotate Right" 20 vàng ghim ở mép phải. */}
       {activeChips.length > 0 ? (
-        <XStack gap={space.sm} rowGap={space.sm} flexWrap="wrap" ai="center">
-          {activeChips.map((chip) => (
-            <Pressable
-              key={chip.id}
-              onPress={chip.clear}
-              accessibilityRole="button"
-              accessibilityLabel={t('removeFilter', { label: chip.label })}
-            >
-              <XStack
-                ai="center"
-                gap={space.xs}
-                bg={colors.primaryLight}
-                bw={1}
-                bc={colors.primary}
-                br={radius.pill}
-                px={space.sm}
-                minHeight={28}
+        <XStack ai="center" gap={space.sm}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            // Co theo nội dung: ít chip thì nút xoá đứng ngay sau chip cuối; tràn thì bị đẩy ra mép phải.
+            style={{ flexGrow: 0, flexShrink: 1 }}
+            contentContainerStyle={{
+              gap: 8,
+              alignItems: 'center',
+              paddingHorizontal: 2,
+              paddingVertical: 1,
+            }}
+          >
+            {activeChips.map((chip) => (
+              <Pressable
+                key={chip.id}
+                onPress={chip.clear}
+                accessibilityRole="button"
+                accessibilityLabel={t('removeFilter', { label: chip.label })}
               >
-                <Text col={colors.primaryStrong} fos={fontSize.body}>
-                  {chip.label}
-                </Text>
-                <Ionicons name="close" size={iconSize.xs} color={colors.primaryStrong} />
-              </XStack>
-            </Pressable>
-          ))}
-          <Pressable onPress={clearFacets} accessibilityRole="button" hitSlop={space.xs}>
-            <Text col={colors.primaryHover} fos={fontSize.body} fow={fontWeight.medium}>
-              {t('clearAll')}
-            </Text>
+                <XStack
+                  ai="center"
+                  gap={4}
+                  bg={colors.primaryLight}
+                  bw={1}
+                  bc={colors.primaryBright}
+                  br={radius.pill}
+                  // Đệm viết bằng `style` (shorthand `pl` không áp trong cấu hình Tamagui này - chữ dính viền trái).
+                  style={{ paddingLeft: 10, paddingRight: 8, paddingVertical: 3, minHeight: 26 }}
+                >
+                  {/* Như web ≤640px: chữ 12/18 thường (không đậm - đậm trên Android dính chữ), đệm 3/10, x 12. */}
+                  <Text col={colors.brandText} fos={fontSize.label} lh={18} numberOfLines={1}>
+                    {chip.label}
+                  </Text>
+                  <Ionicons name="close" size={12} color={colors.brandText} />
+                </XStack>
+              </Pressable>
+            ))}
+          </ScrollView>
+          <Pressable
+            onPress={clearFacets}
+            accessibilityRole="button"
+            accessibilityLabel={t('clearAllAria')}
+            hitSlop={space.sm}
+          >
+            <LineIcon name="rotate-right" size={20} color={colors.primary} />
           </Pressable>
         </XStack>
       ) : null}
-
-      <XStack ai="center" gap={space.sm}>
-        <Text col={colors.placeholder} fos={fontSize.body}>
-          {t('sortLabel')}
-        </Text>
-        <SortMenu value={filters.sort} onChange={(sort) => setFilters({ sort })} />
-        <YStack f={1} />
-        <ViewModeToggle value={viewMode} onChange={setViewMode} />
-      </XStack>
     </YStack>
   );
 
   /** Trạng thái thay cho danh sách — nằm DƯỚI đầu màn, không che thẻ tìm kiếm. */
   const listEmpty = results.initialError ? (
-    <ScreenError title={t('loadErrorTitle')} error={results.initialError} onRetry={results.retryInitial} />
+    <ScreenError
+      title={t('loadErrorTitle')}
+      error={results.initialError}
+      onRetry={results.retryInitial}
+    />
   ) : results.isInitialLoading ? (
     <YStack gap={layout.block}>
       {Array.from({ length: 3 }, (_, i) => (
@@ -387,13 +481,15 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
       ))}
     </YStack>
   ) : (
-    <Empty
-      keyword={filters.q}
-      onClearKeyword={() => setFilters({ q: undefined })}
-      filtered={filterCount > 0}
-      onClear={clearFacets}
-      onChangeContext={() => setLocationOpen(true)}
-    />
+    <Reveal variant="fade">
+      <Empty
+        keyword={filters.q}
+        onClearKeyword={() => setFilters({ q: undefined })}
+        filtered={filterCount > 0}
+        onClear={clearFacets}
+        onChangeContext={() => setLocationOpen(true)}
+      />
+    </Reveal>
   );
   const showList = !results.initialError && !results.isInitialLoading;
 
@@ -412,12 +508,20 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
         nút Bộ lọc 36 (icon 20). Chạm dòng 2 ⇒ tấm "Tìm xe" (bộ chọn của thẻ tìm kiếm trang chủ).
       */}
       <XStack px={layout.screenX} py={space.sm} gap={space.sm} ai="center" bg={colors.surface}>
-        <YStack f={1} minWidth={0} gap={space.sm} px={12} py={space.sm} br={radius.card} bg={colors.surfaceMuted}>
+        <YStack
+          f={1}
+          minWidth={0}
+          gap={space.sm}
+          px={12}
+          py={space.sm}
+          br={radius.card}
+          bg={colors.surfaceMuted}
+        >
           <KeywordSearch
             variant="bare"
             value={filters.q}
             onApply={(q) => setFilters({ q })}
-            onOpenShop={(slug) => navigateOnce(ROUTES.explore.shopDetail(slug))}
+            onOpenShop={openShop}
           />
           <Pressable
             onPress={() => setContextOpen(true)}
@@ -425,25 +529,36 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
             accessibilityLabel={`${tNav('searchCars')}: ${contextSummary}`}
           >
             <XStack ai="center" gap={6} h={18}>
-              <Ionicons name="location-outline" size={iconSize.sm} color={colors.primary} />
-              <Text f={1} col={colors.text} fos={fontSize.bodySm} lh={18} numberOfLines={1}>
+              <LineIcon name="location" size={16} color={colors.primary} />
+              <Text
+                f={1}
+                col={colors.textMuted}
+                fos={fontSize.label}
+                fow={fontWeight.medium}
+                lh={18}
+                numberOfLines={1}
+              >
                 {contextSummary}
               </Text>
             </XStack>
           </Pressable>
         </YStack>
-        <Pressable onPress={() => setFilterOpen(true)} accessibilityRole="button" accessibilityLabel={t('filters')}>
+        <Pressable
+          onPress={() => setFilterOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t('filters')}
+        >
           <YStack
             w={FILTER_BUTTON_SIZE}
             h={FILTER_BUTTON_SIZE}
             ai="center"
             jc="center"
-            bg={colors.surface}
+            bg={colors.surfaceMuted}
             bw={1}
-            bc={colors.borderInput}
-            br={radius.control}
+            bc={colors.placeholder}
+            br={12}
           >
-            <Ionicons name="options-outline" size={iconSize.lg} color={colors.text} />
+            <LineIcon name="filter-5" size={20} color={colors.textMuted} />
             {filterCount > 0 ? (
               <YStack
                 position="absolute"
@@ -466,57 +581,65 @@ function ResultsBody({ onBack, embedded }: { onBack: () => void; embedded: boole
         </Pressable>
       </XStack>
 
-      <FlatList
-        ref={listRef}
-        data={showList ? results.listings : []}
-        keyExtractor={keyExtractor}
-        {...MEDIA_LIST_TUNING}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={listPadding}
-        ListHeaderComponent={listHeader}
-        ListEmptyComponent={listEmpty}
-        refreshControl={
-          <RefreshControl
-            refreshing={results.isRefreshing}
-            onRefresh={results.refresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
-        ItemSeparatorComponent={Separator}
-        renderItem={renderItem}
-        onEndReached={results.fetchNextPage}
-        ListFooterComponent={
-          results.appendError ? (
-            <YStack py={layout.section} gap={space.sm} ai="center">
-              <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
-                {t('appendError', { reason: errorMessage(results.appendError) })}
-              </Text>
-              <Button
-                label={t('loadMore')}
-                icon="chevron-down-outline"
-                variant="secondary"
-                block={false}
-                align="center"
-                onPress={results.retryNextPage}
-              />
-            </YStack>
-          ) : results.isFetchingNextPage ? (
-            <YStack pt={layout.block} accessibilityLabel={t('loadingMore')}>
-              <VehicleCardSkeleton />
-            </YStack>
-          ) : showList && !results.hasNextPage && results.total > 0 ? (
-            <YStack ai="center" gap={space.xs} py={layout.section}>
-              <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} ta="center">
-                {t('allViewed')}
-              </Text>
-              <Text col={colors.placeholder} fos={fontSize.label} ta="center">
-                {t('allViewedDesc')}
-              </Text>
-            </YStack>
-          ) : null
-        }
-      />
+      <ScrollRevealProvider value={listReveal.ctx}>
+        <Animated.FlatList
+          // Đổi số cột là dựng lại danh sách — FlatList không cho đổi `numColumns` tại chỗ.
+          key={`cols-${columns}`}
+          numColumns={columns}
+          {...(columns > 1 ? { columnWrapperStyle: { gap: space.md } } : {})}
+          ref={listRef as never}
+          onScroll={listReveal.onScroll}
+          scrollEventThrottle={16}
+          data={showList ? results.listings : []}
+          keyExtractor={keyExtractor}
+          {...MEDIA_LIST_TUNING}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={listPadding}
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={listEmpty}
+          refreshControl={
+            <RefreshControl
+              refreshing={results.isRefreshing}
+              onRefresh={results.refresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
+          ItemSeparatorComponent={Separator}
+          renderItem={renderItem}
+          onEndReached={results.fetchNextPage}
+          ListFooterComponent={
+            results.appendError ? (
+              <YStack py={layout.section} gap={space.sm} ai="center">
+                <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
+                  {t('appendError', { reason: errorMessage(results.appendError) })}
+                </Text>
+                <Button
+                  label={t('loadMore')}
+                  icon="chevron-down-outline"
+                  variant="secondary"
+                  block={false}
+                  align="center"
+                  onPress={results.retryNextPage}
+                />
+              </YStack>
+            ) : results.isFetchingNextPage ? (
+              <YStack pt={layout.block} accessibilityLabel={t('loadingMore')}>
+                <VehicleCardSkeleton />
+              </YStack>
+            ) : showList && !results.hasNextPage && results.total > 0 ? (
+              <YStack ai="center" gap={space.xs} py={layout.section}>
+                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} ta="center">
+                  {t('allViewed')}
+                </Text>
+                <Text col={colors.placeholder} fos={fontSize.label} ta="center">
+                  {t('allViewedDesc')}
+                </Text>
+              </YStack>
+            ) : null
+          }
+        />
+      </ScrollRevealProvider>
 
       <FilterSheet
         open={filterOpen}
@@ -599,7 +722,7 @@ function Empty({
     return (
       <YStack flexGrow={1} ai="center" jc="center" gap={space.md} p={layout.screenX}>
         <ScreenMessage
-          icon="search-outline"
+          art={images.listEmpty}
           title={t('emptyKeywordTitle', { q: keyword })}
           description={t('emptyKeywordDesc')}
           actionLabel={t('clearKeyword')}
@@ -607,7 +730,7 @@ function Empty({
         />
         {filtered ? (
           <Pressable onPress={onClear} accessibilityRole="button" hitSlop={space.sm}>
-            <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+            <Text col={colors.accentText} fos={fontSize.bodySm} fow={fontWeight.semibold}>
               {tFilters('clear')}
             </Text>
           </Pressable>
@@ -620,7 +743,7 @@ function Empty({
     return (
       <YStack flexGrow={1} jc="center">
         <ScreenMessage
-          icon="car-outline"
+          art={images.listEmpty}
           title={t('emptySystemTitle')}
           description={t('emptySystemDesc')}
         />
@@ -631,77 +754,17 @@ function Empty({
   return (
     <YStack flexGrow={1} ai="center" jc="center" gap={space.md} p={layout.screenX}>
       <ScreenMessage
-        icon="funnel-outline"
+        art={images.listEmpty}
         title={t('emptyFilteredTitle')}
         description={t('emptyFilteredDesc')}
         actionLabel={tFilters('clear')}
         onAction={onClear}
       />
       <Pressable onPress={onChangeContext} accessibilityRole="button" hitSlop={space.sm}>
-        <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+        <Text col={colors.accentText} fos={fontSize.bodySm} fow={fontWeight.semibold}>
           {t('changeTimeOrPlace')}
         </Text>
       </Pressable>
     </YStack>
-  );
-}
-
-/**
- * Cặp nút "Dạng thẻ · Dạng danh sách" bên phải ô Sắp xếp — `.viewModeGroup` web: khung viền
- * `border`, bo 8, đệm 2; nút đang chọn nền vàng nhạt, icon `primary-strong`.
- */
-function ViewModeToggle({
-  value,
-  onChange,
-}: {
-  value: ViewMode;
-  onChange: (next: ViewMode) => void;
-}) {
-  const colors = useColors();
-  const t = useTranslations('Marketplace.results');
-  const options = [
-    { mode: 'grid' as const, icon: 'grid-outline' as const, label: t('viewGrid') },
-    { mode: 'list' as const, icon: 'list-outline' as const, label: t('viewList') },
-  ];
-  return (
-    <XStack
-      p={2}
-      gap={2}
-      br={8}
-      bw={1}
-      bc={colors.border}
-      bg={colors.surface}
-      accessibilityRole="radiogroup"
-      accessibilityLabel={t('viewMode')}
-    >
-      {options.map((option) => {
-        const active = value === option.mode;
-        return (
-          <Pressable
-            key={option.mode}
-            onPress={() => onChange(option.mode)}
-            accessibilityRole="radio"
-            accessibilityState={{ selected: active }}
-            accessibilityLabel={option.label}
-            hitSlop={space.xs}
-          >
-            <YStack
-              w={36}
-              h={36}
-              ai="center"
-              jc="center"
-              br={6}
-              bg={active ? colors.primarySubtle : 'transparent'}
-            >
-              <Ionicons
-                name={option.icon}
-                size={iconSize.sm}
-                color={active ? colors.primaryStrong : colors.textMuted}
-              />
-            </YStack>
-          </Pressable>
-        );
-      })}
-    </XStack>
   );
 }

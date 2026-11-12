@@ -69,7 +69,7 @@ export function TripEstimateCard({
                 <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
                   {t('ownerNet')}
                 </Text>
-                <Text col={colors.primaryActive} fos={fontSize.body} fow={fontWeight.bold}>
+                <Text col={colors.accentText} fos={fontSize.body} fow={fontWeight.bold}>
                   {fmt.money(estimate.ownerNetAmount)}
                 </Text>
               </XStack>

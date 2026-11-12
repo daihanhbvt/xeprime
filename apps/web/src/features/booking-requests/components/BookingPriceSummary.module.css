@@ -48,10 +48,12 @@
 
 /* Gợi ý "chọn thời gian để xem tạm tính" là phần nhường chỗ đầu tiên khi cột hẹp. */
 .barHint {
+  display: -webkit-box;
   overflow: hidden;
   flex: 1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .toggle,

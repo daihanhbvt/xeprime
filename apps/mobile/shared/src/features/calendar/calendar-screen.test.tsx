@@ -202,7 +202,7 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-describe('CalendarScreen — quyền', () => {
+describe('CalendarScreen - quyền', () => {
   it('thiếu `calendar.view`: KHÔNG gọi API lịch, hiện màn từ chối', async () => {
     const spies = mockCalendar();
     const view = await renderScreen([PERMISSION.TENANT_VIEW]);
@@ -212,7 +212,7 @@ describe('CalendarScreen — quyền', () => {
     expect(spies.events).not.toHaveBeenCalled();
   });
 
-  it('chỉ có `calendar.view`: ô lịch KHÔNG mời thao tác — chỉ xem', async () => {
+  it('chỉ có `calendar.view`: ô lịch KHÔNG mời thao tác - chỉ xem', async () => {
     mockCalendar();
     const view = await renderScreen([PERMISSION.CALENDAR_VIEW]);
 
@@ -226,12 +226,12 @@ describe('CalendarScreen — quyền', () => {
     const view = await renderScreen();
 
     expect(
-      await view.findByText('Chưa có lịch trong khoảng này — chọn ngày trống để tạo lịch.'),
+      await view.findByText('Chưa có lịch trong khoảng này - chọn ngày trống để tạo lịch.'),
     ).toBeTruthy();
   });
 });
 
-describe('CalendarScreen — tham số truy vấn', () => {
+describe('CalendarScreen - tham số truy vấn', () => {
   it('gửi khoảng theo giờ VN và KHÔNG bao giờ gửi tenantId', async () => {
     const spies = mockCalendar();
     await renderScreen();
@@ -245,7 +245,7 @@ describe('CalendarScreen — tham số truy vấn', () => {
     expect(query).not.toHaveProperty('tenantId');
   });
 
-  it('`sort` CHỈ đi vào query của resources — ba query kia không mang nó', async () => {
+  it('`sort` CHỈ đi vào query của resources - ba query kia không mang nó', async () => {
     const spies = mockCalendar();
     await renderScreen();
 
@@ -257,7 +257,7 @@ describe('CalendarScreen — tham số truy vấn', () => {
     expect(spies.dailyPrices.mock.calls[0]![0]).not.toHaveProperty('sort');
   });
 
-  it('gieo `q` từ route param và gửi lên API — lối "Xem lịch" của một xe', async () => {
+  it('gieo `q` từ route param và gửi lên API - lối "Xem lịch" của một xe', async () => {
     mockRouteParams = { q: '43A-123.45' };
     const spies = mockCalendar();
     await renderScreen();
@@ -289,7 +289,7 @@ describe('CalendarScreen — tham số truy vấn', () => {
     );
   });
 
-  it('mang `branchId` của ô Chi nhánh (tham số route — ADR 0052) vào MỌI query của lưới', async () => {
+  it('mang `branchId` của ô Chi nhánh (tham số route - ADR 0052) vào MỌI query của lưới', async () => {
     jest.spyOn(branchesApi, 'list').mockResolvedValue({
       items: [
         {
@@ -345,7 +345,7 @@ describe('CalendarScreen — tham số truy vấn', () => {
     expect(spies.availability.mock.calls.at(-1)![0]).toHaveProperty('branchId', BRANCH_ID);
   });
 
-  it('lọc LOẠI XE đi qua tấm trượt Bộ lọc, y như màn Xe — không phải dải viên trên màn', async () => {
+  it('lọc LOẠI XE đi qua tấm trượt Bộ lọc, y như màn Xe - không phải dải viên trên màn', async () => {
     /*
      * Bộ lọc nằm sau MỘT nút có huy hiệu đếm (`ManageFilterSheet`), giống mọi màn danh sách của
      * khu quản lý. Bày hết ra thanh công cụ thì lưới — thứ người ta mở màn này để nhìn — chỉ còn
@@ -404,7 +404,7 @@ describe('CalendarScreen — tham số truy vấn', () => {
     const view = await renderScreen();
 
     // Hôm nay 12/07/2026 + 3 ngày mặc định ⇒ 14/07/2026.
-    expect(view.getByText('12/07 – 14/07/2026')).toBeTruthy();
+    expect(view.getByText('12/07 - 14/07/2026')).toBeTruthy();
   });
 
   it('hỏi ngày lễ theo biên INCLUSIVE của khoảng đang xem', async () => {
@@ -451,7 +451,7 @@ describe('CalendarScreen — tham số truy vấn', () => {
   });
 });
 
-describe('CalendarScreen — trạng thái màn hình', () => {
+describe('CalendarScreen - trạng thái màn hình', () => {
   it('chưa có xe nào: nói ra, và KHÔNG mời lọc lại', async () => {
     mockCalendar({ resources: [] });
     const view = await renderScreen();
@@ -479,7 +479,7 @@ describe('CalendarScreen — trạng thái màn hình', () => {
   });
 });
 
-describe('CalendarScreen — event trên lưới', () => {
+describe('CalendarScreen - event trên lưới', () => {
   it('đơn thuê: nhãn trợ năng nói đủ loại, tên, khoảng và trạng thái', async () => {
     mockCalendar({ events: [bookingEvent()] });
     const view = await renderScreen();
@@ -512,7 +512,7 @@ describe('CalendarScreen — event trên lưới', () => {
     });
   });
 
-  it('yêu cầu thuê đã duyệt: dẫn về HỘP THƯ — web bỏ sót nhánh này', async () => {
+  it('yêu cầu thuê đã duyệt: dẫn về HỘP THƯ - web bỏ sót nhánh này', async () => {
     mockCalendar({
       events: [
         bookingEvent({
@@ -572,7 +572,7 @@ describe('CalendarScreen — event trên lưới', () => {
   });
 });
 
-describe('CalendarScreen — ô trống mở bộ chọn hành động', () => {
+describe('CalendarScreen - ô trống mở bộ chọn hành động', () => {
   it('chỉ bày những hành động người dùng CÓ quyền', async () => {
     mockCalendar();
     const view = await renderScreen([PERMISSION.CALENDAR_VIEW, PERMISSION.VEHICLE_BLOCK_SCHEDULE]);
@@ -587,7 +587,7 @@ describe('CalendarScreen — ô trống mở bộ chọn hành động', () => {
     expect(view.queryByText('Đặt giá')).toBeNull();
   });
 
-  it('"Đặt xe" mang XE và KHOẢNG của ô sang form tạo đơn — giờ nhận 08:00 giờ VN', async () => {
+  it('"Đặt xe" mang XE và KHOẢNG của ô sang form tạo đơn - giờ nhận 08:00 giờ VN', async () => {
     mockCalendar();
     const view = await renderScreen();
     await layoutGrid(view);

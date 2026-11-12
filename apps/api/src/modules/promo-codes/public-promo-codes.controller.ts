@@ -64,7 +64,7 @@ export class PublicPromoCodesController {
   @Post('preview')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Xem trước một mã khuyến mãi cho chuyến đang chọn — KHÔNG giữ lượt sử dụng',
+    summary: 'Xem trước một mã khuyến mãi cho chuyến đang chọn - KHÔNG giữ lượt sử dụng',
   })
   @ApiOkResponse({ type: PromoPreviewDto })
   async preview(@Body() dto: PreviewPromoCodeDto, @Req() req: Request): Promise<PromoPreviewDto> {

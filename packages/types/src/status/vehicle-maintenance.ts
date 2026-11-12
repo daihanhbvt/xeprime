@@ -133,7 +133,10 @@ export const MAINTENANCE_STATUS_TRANSITIONS: Readonly<
   [MAINTENANCE_STATUS.CANCELED]: [],
 };
 
-/** Trạng thái chiếm lịch: chỉ lịch còn hiệu lực mới giữ chỗ trên `vehicle_occupancies`. */
+/**
+ * Trạng thái của phiếu còn MỞ (chưa xong, chưa huỷ). Tên giữ từ thời phiếu còn giữ chỗ trên
+ * `vehicle_occupancies` — từ ADR 0079 phiếu không giữ chỗ lịch xe nữa.
+ */
 export const MAINTENANCE_STATUS_HOLDING_SCHEDULE: readonly MaintenanceStatus[] = [
   MAINTENANCE_STATUS.SCHEDULED,
   MAINTENANCE_STATUS.IN_PROGRESS,
@@ -318,6 +321,20 @@ export const MAINTENANCE_BOARD_FILTER = {
    */
   MISSING_RETURN_KM: 'missing_return_km',
 } as const;
+
+/** Sắp xếp danh sách bảo dưỡng — `remaining_asc` (gần đến hạn trước) là mặc định. */
+export const MAINTENANCE_BOARD_SORT = {
+  REMAINING_ASC: 'remaining_asc',
+  REMAINING_DESC: 'remaining_desc',
+  NAME_ASC: 'name_asc',
+  UPDATED_DESC: 'updated_desc',
+} as const;
+
+export type MaintenanceBoardSort =
+  (typeof MAINTENANCE_BOARD_SORT)[keyof typeof MAINTENANCE_BOARD_SORT];
+export const MAINTENANCE_BOARD_SORT_VALUES = Object.values(
+  MAINTENANCE_BOARD_SORT,
+) as MaintenanceBoardSort[];
 
 export type MaintenanceBoardFilter =
   (typeof MAINTENANCE_BOARD_FILTER)[keyof typeof MAINTENANCE_BOARD_FILTER];

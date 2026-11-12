@@ -22,7 +22,7 @@ function render(ui: Parameters<typeof renderWithIntl>[0]) {
 
 afterEach(cleanup);
 
-describe('FeatureExpiredNotice — băng gói hết hạn', () => {
+describe('FeatureExpiredNotice - băng gói hết hạn', () => {
   it('nói rõ tên tính năng, và rằng dữ liệu cũ VẪN CÒN', () => {
     render(<FeatureExpiredNotice feature={PLAN_FEATURE.FINANCE} planEndsAt={null} />);
 
@@ -50,7 +50,7 @@ describe('FeatureExpiredNotice — băng gói hết hạn', () => {
     expect(screen.getByRole('button', { name: /Tôi đã gia hạn/ })).toBeTruthy();
   });
 
-  it('bấm "Tôi đã gia hạn" làm mới /auth/me — chữa độ trễ 60 giây của staleTime', () => {
+  it('bấm "Tôi đã gia hạn" làm mới /auth/me - chữa độ trễ 60 giây của staleTime', () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
     renderWithIntl(
@@ -65,8 +65,8 @@ describe('FeatureExpiredNotice — băng gói hết hạn', () => {
   });
 });
 
-describe('FeatureUpsellState — tính năng chưa mua', () => {
-  it('KHÔNG nói "không có quyền" — nói gian hàng chưa có tính năng', () => {
+describe('FeatureUpsellState - tính năng chưa mua', () => {
+  it('KHÔNG nói "không có quyền" - nói gian hàng chưa có tính năng', () => {
     render(<FeatureUpsellState feature={PLAN_FEATURE.DRIVERS} />);
 
     expect(screen.getByText(/Quản lý tài xế/)).toBeTruthy();

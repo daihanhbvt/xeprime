@@ -36,7 +36,7 @@ export class PlatformFollowUpsController {
   constructor(private readonly followUps: PlatformFollowUpsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Khách mất đơn cần chăm sóc — mới kết thúc trước' })
+  @ApiOperation({ summary: 'Khách mất đơn cần chăm sóc - mới kết thúc trước' })
   @ApiOkResponse({ type: PlatformFollowUpPageDto })
   list(
     @Query() query: PlatformFollowUpListQueryDto,

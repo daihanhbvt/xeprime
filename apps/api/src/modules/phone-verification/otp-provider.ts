@@ -1,7 +1,8 @@
+import { toIntlVnPhone } from '@xeprime/types';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-/** Kênh gửi mã OTP. `phone` đã chuẩn hoá `84xxxxxxxxx`. */
+/** Kênh gửi mã OTP. `phone` là dạng lưu `0xxxxxxxxx` (ADR 0082); provider tự đổi sang dạng mình cần. */
 export interface OtpProvider {
   send(phone: string, code: string): Promise<void>;
 }
@@ -17,7 +18,7 @@ export class MockOtpProvider implements OtpProvider {
   private readonly logger = new Logger('OtpMock');
 
   send(phone: string, code: string): Promise<void> {
-    this.logger.warn(`[OTP→${phone}] mã xác thực: ${code} (dev mock — không gửi SMS)`);
+    this.logger.warn(`[OTP→${phone}] mã xác thực: ${code} (dev mock - không gửi SMS)`);
     return Promise.resolve();
   }
 }
@@ -39,7 +40,8 @@ export class EsmsOtpProvider implements OtpProvider {
       ApiKey: this.config.getOrThrow<string>('ESMS_API_KEY'),
       SecretKey: this.config.getOrThrow<string>('ESMS_SECRET_KEY'),
       Brandname: this.config.getOrThrow<string>('ESMS_BRANDNAME'),
-      Phone: phone,
+      // eSMS nhận dạng quốc tế `84…`; dạng lưu `0…` chỉ đổi ở đúng mép này (ADR 0082).
+      Phone: toIntlVnPhone(phone),
       // SmsType 2 = brandname (CSKH). Nội dung PHẢI khớp mẫu đã duyệt của brandname — câu mẫu
       // đi theo môi trường (`ESMS_OTP_TEMPLATE`), không cố định trong code.
       SmsType: '2',

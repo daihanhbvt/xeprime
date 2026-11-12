@@ -26,26 +26,37 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
   control,
   verifyRef,
   onVerified,
+  attachToAccount = false,
+  askPassword = true,
 }: {
   control: Control<T>;
   /** Nút đăng ký mở lượt xác thực SĐT khi chưa xác thực — xem `VerifiedPhoneField`. */
   verifyRef?: RefObject<(() => void) | null>;
   onVerified?: () => void;
+  /**
+   * Tài khoản ĐÃ có (vào bằng Google/Facebook/Apple) nhưng chưa có SĐT xác minh: không hỏi họ
+   * tên, mã OTP gắn số vào CHÍNH tài khoản đang đăng nhập (`/users/me/phone/*`).
+   */
+  attachToAccount?: boolean;
+  /** Hiện hai ô mật khẩu. Mặc định bật; tài khoản mạng xã hội đã có mật khẩu thì tắt. */
+  askPassword?: boolean;
 }) {
   const name = (key: keyof PartnerAccountFieldValues & string) => key as Path<T>;
   const t = useTranslations('ShopOnboarding');
 
   return (
     <>
-      <TextField
-        control={control}
-        name={name('displayName')}
-        required
-        label={t('signup.fields.displayName.label')}
-        placeholder={t('signup.fields.displayName.placeholder')}
-        icon="person-outline"
-        autoComplete="name"
-      />
+      {attachToAccount ? null : (
+        <TextField
+          control={control}
+          name={name('displayName')}
+          required
+          label={t('signup.fields.displayName.label')}
+          placeholder={t('signup.fields.displayName.placeholder')}
+          icon="person-outline"
+          autoComplete="name"
+        />
+      )}
       <TextField
         control={control}
         name={name('email')}
@@ -68,29 +79,34 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
         hint={t('signup.fields.phone.help')}
         verifyRef={verifyRef}
         onVerified={onVerified}
+        attachToAccount={attachToAccount}
       />
-      <TextField
-        control={control}
-        name={name('password')}
-        required
-        label={t('signup.fields.password.label')}
-        placeholder={t('signup.fields.password.placeholder')}
-        icon="lock-closed-outline"
-        secureTextEntry
-        autoCapitalize="none"
-        autoComplete="new-password"
-      />
-      <TextField
-        control={control}
-        name={name('confirmPassword')}
-        required
-        label={t('signup.fields.confirmPassword.label')}
-        placeholder={t('signup.fields.confirmPassword.placeholder')}
-        icon="lock-closed-outline"
-        secureTextEntry
-        autoCapitalize="none"
-        autoComplete="new-password"
-      />
+      {askPassword ? (
+        <>
+          <TextField
+            control={control}
+            name={name('password')}
+            required
+            label={t('signup.fields.password.label')}
+            placeholder={t('signup.fields.password.placeholder')}
+            icon="lock-closed-outline"
+            secureTextEntry
+            autoCapitalize="none"
+            autoComplete="new-password"
+          />
+          <TextField
+            control={control}
+            name={name('confirmPassword')}
+            required
+            label={t('signup.fields.confirmPassword.label')}
+            placeholder={t('signup.fields.confirmPassword.placeholder')}
+            icon="lock-closed-outline"
+            secureTextEntry
+            autoCapitalize="none"
+            autoComplete="new-password"
+          />
+        </>
+      ) : null}
     </>
   );
 }

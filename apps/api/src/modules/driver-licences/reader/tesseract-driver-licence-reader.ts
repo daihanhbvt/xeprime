@@ -371,7 +371,7 @@ class TesseractEngine {
     if (Date.now() - this.createFailedAt < this.limits.createBackoffMs) {
       throw new DriverLicenceReaderError(
         READER_FAILURE.PROVIDER_ERROR,
-        'Bộ đọc vừa khởi động hỏng — tạm thời không đọc tự động',
+        'Bộ đọc vừa khởi động hỏng - tạm thời không đọc tự động',
       );
     }
     this.clearIdle();
@@ -532,7 +532,7 @@ class TesseractEngine {
     this.clearIdle();
     if (this.disposed) return;
     this.idleTimer = setTimeout(() => {
-      if (this.queued === 0) this.discard(new Error('Rảnh — tắt để trả RAM'));
+      if (this.queued === 0) this.discard(new Error('Rảnh - tắt để trả RAM'));
     }, this.limits.idleShutdownMs);
     this.idleTimer.unref();
   }

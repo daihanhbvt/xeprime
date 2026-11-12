@@ -83,7 +83,7 @@ export function AccountProfileCard({
         <XStack ai="center" gap={GAP_12} accessibilityLabel={t('profile.accountLabel')}>
           <Avatar name={profile.displayName} url={profile.avatarUrl ?? null} size={AVATAR_SIZE} />
           <YStack f={1} minWidth={0} gap={2}>
-            <Text col={colors.text} fos={fontSize.lead} lh={30} fow={fontWeight.semibold}>
+            <Text col={colors.text} fos={fontSize.bodyLg} lh={24} fow={fontWeight.semibold}>
               {profile.displayName}
             </Text>
             {/* Nhãn danh tính đọc TUYẾN, không đọc bảng vai — cùng nguồn với menu. */}
@@ -94,14 +94,7 @@ export function AccountProfileCard({
         </XStack>
 
         <YStack gap={GAP_12}>
-          <ContactRow
-            icon="mail-outline"
-            label={t('profile.email')}
-            value={profile.email}
-            emptyLabel={t('noEmail')}
-            verified={profile.emailVerified}
-            {...(editable ? { onEdit: () => setEditingContact(CONTACT_CHANNEL.EMAIL) } : {})}
-          />
+          {/* Số điện thoại (định danh đăng nhập — ADR 0060) đứng trước email, như web LoginMethods. */}
           <ContactRow
             icon="call-outline"
             label={t('profile.phone')}
@@ -109,6 +102,14 @@ export function AccountProfileCard({
             emptyLabel={t('noPhone')}
             verified={profile.phoneVerified}
             {...(editable ? { onEdit: () => setEditingContact(CONTACT_CHANNEL.PHONE) } : {})}
+          />
+          <ContactRow
+            icon="mail-outline"
+            label={t('profile.email')}
+            value={profile.email}
+            emptyLabel={t('noEmail')}
+            verified={profile.emailVerified}
+            {...(editable ? { onEdit: () => setEditingContact(CONTACT_CHANNEL.EMAIL) } : {})}
           />
         </YStack>
 
@@ -126,7 +127,7 @@ export function AccountProfileCard({
             <Text col={colors.infoStrong} fos={fontSize.body} fow={fontWeight.semibold}>
               {t('profile.securityTitle')}
             </Text>
-            <Text col={colors.textMuted} fos={fontSize.body}>
+            <Text col={colors.textMuted} fos={fontSize.bodySm} lh={18}>
               {t('profile.securityDescription')}
             </Text>
           </YStack>
@@ -309,12 +310,12 @@ function ContactRow({
         <Ionicons name={icon} size={ICON_20} color={colors.textMuted} />
       </YStack>
       <YStack f={1} minWidth={0} gap={2}>
-        <Text col={colors.placeholder} fos={fontSize.body}>
+        <Text col={colors.placeholder} fos={fontSize.bodySm} lh={18}>
           {label}
         </Text>
         <XStack ai="center" flexWrap="wrap" columnGap={space.sm} rowGap={space.xs}>
           {value ? (
-            <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.medium} flexShrink={1}>
+            <Text col={colors.text} fos={fontSize.body} lh={22} fow={fontWeight.medium} flexShrink={1}>
               {value}
             </Text>
           ) : (
@@ -363,7 +364,7 @@ function VerifyBadge({ verified }: { verified: boolean }) {
     >
       <Text
         col={verified ? colors.success : colors.warningStrong}
-        fos={fontSize.body}
+        fos={fontSize.bodySm}
         fow={fontWeight.medium}
       >
         {verified ? t('verified') : t('profile.unverified')}
@@ -446,7 +447,7 @@ function ProfileAvatarPicker({
               accessibilityLabel={tUpload('alt')}
             />
           ) : (
-            <Text col={colors.primaryActive} fos={fontSize.h2} fow={fontWeight.bold}>
+            <Text col={colors.accentText} fos={fontSize.h2} fow={fontWeight.bold}>
               {initial}
             </Text>
           )}
@@ -458,7 +459,7 @@ function ProfileAvatarPicker({
           {upload.busy ? (
             <>
               <YStack style={StyleSheet.absoluteFill} bg={colors.surface} opacity={0.8} />
-              <ActivityIndicator color={colors.primaryActive} />
+              <ActivityIndicator color={colors.accentText} />
             </>
           ) : null}
         </YStack>

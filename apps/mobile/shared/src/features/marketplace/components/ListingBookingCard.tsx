@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Children, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -7,7 +7,6 @@ import { useTranslations } from 'use-intl';
 import {
   addCalendarMonthsVn,
   COLLATERAL_MODE,
-  PICKUP_PREFERENCE,
   PRICE_ROW,
   ROUTE_TYPE,
   DELIVERY_DISTANCE_STATUS,
@@ -20,6 +19,7 @@ import {
 } from '@xeprime/types';
 import {
   appWallClockToIso,
+  bestDiscountPackageMonths,
   dayjs,
   isZeroMoney,
   nowInAppTz,
@@ -29,6 +29,13 @@ import {
   type RentalMode,
 } from '@xeprime/domain';
 import { DashedDivider } from '@/components/ui/DashedDivider';
+import { DiscountTag } from '@/components/ui/DiscountTag';
+import { InfoHint } from '@/components/ui/InfoHint';
+import {
+  INDICATOR_BASE_WIDTH,
+  useSlidingIndicator,
+} from '@/components/motion/use-sliding-indicator';
+import Animated from 'react-native-reanimated';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
@@ -67,7 +74,15 @@ import { rememberRentalRange } from '@/lib/rental-range-memory';
 import { elevation } from '@/theme/elevation';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, market, radius, space } from '@/theme/tokens';
+import {
+  buttonHeight,
+  fontSize,
+  fontWeight,
+  iconSize,
+  market,
+  radius,
+  space,
+} from '@/theme/tokens';
 import {
   CurrentLocationButton,
   deliveryAddressFromCurrentPlace,
@@ -75,7 +90,7 @@ import {
   type CurrentPlace,
 } from '@/features/locations/components/CurrentLocationButton';
 import { RentalRangeSheet } from './RentalRangeSheet';
-import { useDriverSurchargeLine } from '../hooks/use-driver-surcharge-line';
+
 
 /*
  * Tab dịch vụ: THỨ TỰ và NHÃN cố định như web (`Listings.detail.booking.tabs`) — tự lái đọc là
@@ -208,12 +223,13 @@ export function ListingBookingCard({
   const fmt = useAppFormat();
   const colors = useColors();
   const domainLabel = useDomainLabel();
-  const surchargeLine = useDriverSurchargeLine();
+  const tDriverPrice = useTranslations('Listings.detail.withDriverPrice');
   // Như web: xe không khai dịch vụ nào coi như chỉ tự lái.
   const services: readonly string[] = listing.serviceTypes ?? [SERVICE_TYPE.SELF_DRIVE];
   const longTerm = trip.serviceType === SERVICE_TYPE.LONG_TERM;
   const withDriver = trip.serviceType === SERVICE_TYPE.WITH_DRIVER;
   const packages = listing.longTermPackages ?? [];
+  const bestPackageMonths = bestDiscountPackageMonths(packages);
 
   const busyDays = useVehicleBusyDays(listing.id, !longTerm);
   const quoteParams = toQuoteParams({
@@ -240,13 +256,12 @@ export function ListingBookingCard({
    */
   const selectedMonths = trip.packageMonths;
   const expectedReturn = useMemo(() => {
-    if (selectedMonths == null) return null;
-    const start =
-      trip.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE && trip.requestedPickupDate
-        ? startOfAppDay(trip.requestedPickupDate)
-        : nowInAppTz();
-    return fmt.date(addCalendarMonthsVn(start.toDate(), selectedMonths).toISOString());
-  }, [fmt, selectedMonths, trip.pickupPreference, trip.requestedPickupDate]);
+    // Chưa chọn ngày nhận thì không có ngày trả để hứa — không suy từ "hôm nay".
+    if (selectedMonths == null || !trip.requestedPickupDate) return null;
+    return fmt.date(
+      addCalendarMonthsVn(startOfAppDay(trip.requestedPickupDate).toDate(), selectedMonths).toISOString(),
+    );
+  }, [fmt, selectedMonths, trip.requestedPickupDate]);
   const [dateSheetOpen, setDateSheetOpen] = useState(false);
 
   function openRangeSheet() {
@@ -433,7 +448,7 @@ export function ListingBookingCard({
   const noLongTermPackage = longTerm && packages.length === 0;
   const tPrice = useTranslations('Common.components.price');
   const feeLineSublabel = useFeeLineSublabel();
-  const surchargeRules = listing.driverSurchargeRules ?? [];
+
   const pickupAddress = listing.pickupPoint?.address || listing.shopProvince || null;
 
   const set = (patch: Partial<ListingTripDraft>) => onChange(patch);
@@ -477,6 +492,13 @@ export function ListingBookingCard({
   }
 
   const visibleTabs = SERVICE_TABS.filter((tab) => services.includes(tab.value));
+  const tabIndicator = useSlidingIndicator(
+    Math.max(
+      visibleTabs.findIndex((tab) => tab.value === trip.serviceType),
+      0,
+    ),
+    visibleTabs.length,
+  );
 
   return (
     /*
@@ -494,13 +516,16 @@ export function ListingBookingCard({
       >
       {visibleTabs.length > 1 ? (
         // `.tabHeader` ≤640px: khay `bg-muted`, cao 50; tab bo trên 12 (tab đầu 16), chữ 14.
-        <XStack h={50} bg={colors.surfaceMuted}>
+        // Chia bề ngang THEO ĐỘ DÀI nhãn (flexGrow 1 + flexBasis auto) thay vì 3 phần bằng nhau;
+        // máy hẹp/tiếng Anh vẫn thiếu chỗ thì nhãn xuống 2 dòng căn giữa, không cắt "…".
+        <XStack mih={50} bg={colors.surfaceMuted}>
           {visibleTabs.map((tab, index) => {
             const active = trip.serviceType === tab.value;
             return (
               <Pressable
                 key={tab.value}
-                style={{ flex: 1 }}
+                onLayout={tabIndicator.onItemLayout(index)}
+                style={{ flexGrow: 1, flexShrink: 1, flexBasis: 'auto' }}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: active }}
                 onPress={() => {
@@ -511,18 +536,20 @@ export function ListingBookingCard({
                   f={1}
                   ai="center"
                   jc="center"
-                  px={12}
+                  px={10}
+                  py={6}
                   borderTopLeftRadius={index === 0 ? radius.card : 12}
                   borderTopRightRadius={12}
                   bg={active ? colors.surface : 'transparent'}
                   borderBottomWidth={2}
-                  borderBottomColor={active ? market.accent : 'transparent'}
+                  borderBottomColor={active && !tabIndicator.ready ? market.accent : 'transparent'}
                 >
                   <Text
-                    col={active ? colors.primaryHover : colors.textMuted}
+                    col={active ? colors.brandText : colors.textMuted}
                     fos={fontSize.body}
                     fow={active ? fontWeight.semibold : fontWeight.medium}
-                    numberOfLines={1}
+                    ta="center"
+                    numberOfLines={2}
                   >
                     {t(`tabs.${tab.key}`)}
                   </Text>
@@ -530,6 +557,23 @@ export function ListingBookingCard({
               </Pressable>
             );
           })}
+          {/* Gạch chân TRƯỢT giữa các tab (luồng UI); chưa đo xong thì viền tĩnh ở trên thay. */}
+          {tabIndicator.ready ? (
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                {
+                  position: 'absolute',
+                  left: 0,
+                  bottom: 0,
+                  height: 2,
+                  width: INDICATOR_BASE_WIDTH,
+                  backgroundColor: market.accent,
+                },
+                tabIndicator.indicatorStyle,
+              ]}
+            />
+          ) : null}
         </XStack>
       ) : null}
       <YStack gap={space.md} p={space.md}>
@@ -562,101 +606,82 @@ export function ListingBookingCard({
             {packages.length > 0 ? (
               <YStack gap={space.xs}>
                 <Label text={t('package.label')} />
-                {/* Hai cột như web ≤640px (`.packageOptions` 2 cột). */}
-                <TwoColumns>
+                {/* Lưới 3 cột như web `.packageOptions` (bản vẽ 11/11/2026). */}
+                <XStack flexWrap="wrap" mx={-space.xs / 2} rowGap={space.sm}>
                   {packages.map((pkg) => (
-                    <Choice
+                    <PackageChip
                       key={pkg.packageMonths}
                       label={fmt.packageLabel(pkg.packageMonths) ?? String(pkg.packageMonths)}
-                      {...(pkg.durationDiscountPercent
-                        ? { badge: `-${pkg.durationDiscountPercent}%` }
-                        : {})}
+                      discount={pkg.durationDiscountPercent || null}
                       active={trip.packageMonths === pkg.packageMonths}
+                      best={bestPackageMonths === pkg.packageMonths}
                       onPress={() => set({ packageMonths: pkg.packageMonths })}
                     />
                   ))}
-                </TwoColumns>
+                </XStack>
               </YStack>
             ) : null}
             <YStack gap={space.xs}>
-              <Label text={t('longTerm.wishLabel')} size={fontSize.body} />
-              <TwoColumns>
-                <Choice
-                  label={t('longTerm.asap')}
-                  active={trip.pickupPreference === PICKUP_PREFERENCE.WITHIN_7_DAYS}
-                  onPress={() => set({ pickupPreference: PICKUP_PREFERENCE.WITHIN_7_DAYS })}
-                />
-                {/* Ngày cụ thể chọn ở bước gửi yêu cầu — cùng ô ngày của luồng đặt xe. */}
-                <Choice
-                  label={domainLabel('pickupPreference', PICKUP_PREFERENCE.SPECIFIC_DATE)}
-                  active={trip.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE}
-                  onPress={() => set({ pickupPreference: PICKUP_PREFERENCE.SPECIFIC_DATE })}
-                />
-              </TwoColumns>
-              {trip.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE ? (
-                <YStack gap={space.xs}>
-                  <Text col={colors.textMuted} fos={fontSize.label}>
-                    {t('longTerm.dateLabel')}
-                  </Text>
-                  <Pressable onPress={() => setDateSheetOpen(true)} accessibilityRole="button">
-                    <XStack
-                      ai="center"
-                      gap={space.sm}
-                      px={space.md}
-                      py={space.sm}
-                      br={radius.md}
-                      bw={1}
-                      bc={colors.border}
+              {/* Chỉ còn "chọn ngày cụ thể" (11/11/2026) — bỏ hẳn lựa chọn "càng sớm càng tốt". */}
+              <YStack gap={space.xs}>
+                <Label text={t('longTerm.dateLabel')} size={fontSize.body} />
+                <Pressable onPress={() => setDateSheetOpen(true)} accessibilityRole="button">
+                  <XStack
+                    ai="center"
+                    gap={space.sm}
+                    px={space.md}
+                    minHeight={LONG_TERM_FIELD_HEIGHT}
+                    br={radius.md}
+                    bw={1}
+                    bc={colors.border}
+                  >
+                    <Text
+                      f={1}
+                      col={trip.requestedPickupDate ? colors.text : colors.placeholder}
+                      fos={fontSize.bodySm}
                     >
-                      <Text
-                        f={1}
-                        col={trip.requestedPickupDate ? colors.text : colors.placeholder}
-                        fos={fontSize.bodySm}
-                      >
-                        {trip.requestedPickupDate
-                          ? fmt.date(startOfAppDay(trip.requestedPickupDate).toISOString())
-                          : t('longTerm.datePlaceholder')}
-                      </Text>
-                      <Ionicons
-                        name="calendar-outline"
-                        size={iconSize.sm}
-                        color={colors.textMuted}
-                      />
-                    </XStack>
-                  </Pressable>
-                  <DatePickerSheet
-                    open={dateSheetOpen}
-                    onClose={() => setDateSheetOpen(false)}
-                    value={trip.requestedPickupDate}
-                    onChange={(next) => set({ requestedPickupDate: next })}
-                    title={t('longTerm.dateLabel')}
-                    minDate={nowInAppTz().startOf('day')}
-                  />
-                </YStack>
-              ) : null}
+                      {trip.requestedPickupDate
+                        ? fmt.date(startOfAppDay(trip.requestedPickupDate).toISOString())
+                        : t('longTerm.datePlaceholder')}
+                    </Text>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={iconSize.sm}
+                      color={colors.textMuted}
+                    />
+                  </XStack>
+                </Pressable>
+                <DatePickerSheet
+                  open={dateSheetOpen}
+                  onClose={() => setDateSheetOpen(false)}
+                  value={trip.requestedPickupDate}
+                  onChange={(next) => set({ requestedPickupDate: next })}
+                  title={t('longTerm.dateLabel')}
+                  minDate={nowInAppTz().startOf('day')}
+                />
+              </YStack>
               {expectedReturn && selectedMonths != null ? (
+                // Cao bằng ô chọn ngày bên trên; nhãn + giá trị trên MỘT dòng như web.
                 <XStack
                   ai="center"
                   gap={space.sm}
                   px={space.md}
-                  py={space.sm}
+                  minHeight={LONG_TERM_FIELD_HEIGHT}
                   br={radius.md}
                   bw={1}
                   bc={colors.border}
                   bg={colors.surfaceMuted}
                 >
                   <Ionicons name="calendar-outline" size={iconSize.sm} color={colors.primary} />
-                  <YStack f={1}>
-                    <Text col={colors.textMuted} fos={fontSize.label}>
-                      {t('longTerm.expectedReturn')}
-                    </Text>
-                    <Text col={colors.text} fos={fontSize.label} fow={fontWeight.semibold}>
+                  <Text f={1} col={colors.textMuted} fos={fontSize.label}>
+                    {`${t('longTerm.expectedReturn')} `}
+                    <Text col={colors.text} fow={fontWeight.semibold}>
                       {t('longTerm.expectedReturnValue', {
                         date: expectedReturn,
                         duration: fmt.packageLabel(selectedMonths) ?? '',
                       })}
                     </Text>
-                  </YStack>
+                  </Text>
                 </XStack>
               ) : null}
             </YStack>
@@ -716,20 +741,23 @@ export function ListingBookingCard({
                 onChangeText={(value) => set({ destination: value })}
               />
             ) : null}
-            {surchargeRules.length > 0 ? (
-              <YStack gap={space.xs}>
-                <Label text={t('driver.surchargesTitle')} size={fontSize.bodySm} />
-                {surchargeRules.map((rule) => (
-                  <Text key={rule.kind} col={colors.textMuted} fos={fontSize.bodySm}>
-                    {`• ${surchargeLine(rule)}`}
-                  </Text>
-                ))}
-              </YStack>
-            ) : null}
+            {/* Giá có tài xế là giá trọn gói (ADR 0075) — khách chỉ trả thêm phí cầu đường. */}
+            <YStack gap={space.xs}>
+              <Label text={tDriverPrice('title')} size={fontSize.bodySm} />
+              <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                {`• ${tDriverPrice('included')}`}
+              </Text>
+              <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                {`• ${tDriverPrice('excluded')}`}
+              </Text>
+            </YStack>
           </YStack>
         ) : (
           <YStack gap={space.sm}>
-            <BarTitle text={t('pickup.title')} />
+            <BarTitle
+              text={t('pickup.title')}
+              hint={{ content: t('pickup.note'), label: t('pickup.noteLabel') }}
+            />
             {/* `.deliveryToggle` ≤640px: khay `bg` cao 72, bo 12; ô chọn nền thẻ + viền vàng. */}
             <XStack minHeight={72} br={radius.control} bg={colors.background}>
               <DeliveryToggle
@@ -775,10 +803,6 @@ export function ListingBookingCard({
                 onPress={() => setAddressSheet('delivery')}
               />
             )}
-            {/* `.addressNote`: 14 mảnh, nghiêng, `text-tertiary`. */}
-            <Text col={colors.placeholder} fos={fontSize.body} fow="300" fontStyle="italic">
-              {t('pickup.note')}
-            </Text>
           </YStack>
         )}
 
@@ -931,7 +955,7 @@ export function ListingBookingCard({
               {cost.holdAmount ? (
                 <CostLine
                   label={tPrice('holdAmount')}
-                  sub={tPrice('holdHint')}
+                  hint={{ content: tPrice('holdHint'), label: tPrice('holdHintLabel') }}
                   value={fmt.money(cost.holdAmount)}
                 />
               ) : null}
@@ -941,7 +965,7 @@ export function ListingBookingCard({
               {cost.deposit ? (
                 <CostLine
                   label={tPrice('deposit')}
-                  sub={cost.deposit.note}
+                  hint={{ content: cost.deposit.note, label: tPrice('depositHintLabel') }}
                   value={
                     cost.deposit.mode === COLLATERAL_MODE.CASH && cost.deposit.amount
                       ? fmt.money(cost.deposit.amount)
@@ -959,14 +983,20 @@ export function ListingBookingCard({
                 borderTopWidth={1}
                 borderTopColor={colors.border}
               >
-                <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                  {cost.total?.label}
-                </Text>
+                <XStack f={1} ai="center" gap={4}>
+                  <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+                    {cost.total?.label}
+                  </Text>
+                  {cost.costNote ? (
+                    <InfoHint content={cost.costNote} label={tPrice('totalHintLabel')} />
+                  ) : null}
+                </XStack>
+                {/* Tiền hiện tĩnh, không đếm/nhảy số (bỏ hiệu ứng 11/11/2026). */}
                 <Text col={colors.primary} fos={fontSize.lead} fow={fontWeight.semibold}>
                   {fmt.money(cost.total?.amount ?? quoteWithPromo.breakdown.totalAmount)}
                 </Text>
               </XStack>
-              <CostNote>{cost.costNote}</CostNote>
+              {cost.estimateNote ? <CostNote>{cost.estimateNote}</CostNote> : null}
             </>
           ) : (
             /* Báo giá không về: không bịa số — chủ xe vẫn xác nhận giá khi duyệt. */
@@ -1051,77 +1081,64 @@ function Label({
   );
 }
 
-function Choice({
+/** Chiều cao chung của ô chọn ngày nhận, hộp ngày trả dự kiến và ô gói (thuê dài hạn). */
+const LONG_TERM_FIELD_HEIGHT = buttonHeight.md;
+
+/** Một phần ba hàng, khe ngang chia đều hai bên (lưới dùng `mx` âm bù lại). */
+const PACKAGE_CELL = { width: '33.333%', paddingHorizontal: space.xs / 2 } as const;
+
+/**
+ * Một ô kỳ hạn trong lưới 3 cột gói dài hạn. % ưu đãi cam kết (ADR 0011) là `DiscountTag` dùng
+ * chung, biến thể nhãn GÓC trên-phải.
+ */
+function PackageChip({
   label,
-  sub,
-  badge,
+  discount,
   active,
+  best,
   onPress,
 }: {
   label: string;
-  sub?: string;
-  /** % ưu đãi cam kết thời hạn của gói (ADR 0011) — đúng số server trả. */
-  badge?: string;
+  /** % ưu đãi cam kết thời hạn — `null` khi gói không giảm. */
+  discount: number | null;
   active: boolean;
+  /** Gói ưu đãi tốt nhất (nhãn đỏ) — xem `bestDiscountPackageMonths`. */
+  best: boolean;
   onPress: () => void;
 }) {
   const colors = useColors();
   return (
-    // `flex: 1` + ruột `f={1}`: trong lưới 2 cột hai ô cùng hàng CAO BẰNG NHAU dù nhãn dài ngắn khác nhau.
     <Pressable
-      style={{ flex: 1 }}
+      style={PACKAGE_CELL}
       onPress={onPress}
       accessibilityRole="radio"
       accessibilityState={{ selected: active }}
     >
       <YStack
-        f={1}
-        px={space.md}
+        px={space.xs}
         py={space.sm}
-        minHeight={44}
+        minHeight={LONG_TERM_FIELD_HEIGHT}
         ai="center"
         jc="center"
         br={radius.md}
         bw={1}
         bc={active ? colors.primary : colors.border}
         bg={active ? colors.primarySubtle : colors.surface}
-        gap={2}
+        overflow="hidden"
       >
         <Text
           col={active ? colors.primary : colors.text}
           fos={fontSize.body}
-          ta="center"
           fow={active ? fontWeight.semibold : fontWeight.medium}
+          numberOfLines={1}
         >
           {label}
         </Text>
-        {badge ? (
-          <XStack bg={colors.successSurface} bw={1} bc={colors.successBorder} br={radius.sm} px={4}>
-            <Text col={colors.success} fos={fontSize.label} fow={fontWeight.bold}>
-              {badge}
-            </Text>
-          </XStack>
-        ) : null}
-        {sub ? (
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {sub}
-          </Text>
+        {discount != null ? (
+          <DiscountTag percent={discount} variant="corner" active={active} best={best} />
         ) : null}
       </YStack>
     </Pressable>
-  );
-}
-
-/** Xếp các `Choice` thành lưới HAI CỘT bằng nhau (web ≤640px `.packageOptions`, `.longTermPrefBtn`). */
-function TwoColumns({ children }: { children: ReactNode }) {
-  return (
-    <XStack flexWrap="wrap" mx={-space.xs}>
-      {Children.toArray(children).map((child, index) => (
-        <YStack key={index} w="50%" p={space.xs}>
-          {child}
-        </YStack>
-      ))}
-    </XStack>
   );
 }
 
@@ -1194,7 +1211,7 @@ function AddressCard({
         </Text>
         <Pressable onPress={onChange} accessibilityRole="button" hitSlop={space.sm}>
           <Text
-            col={colors.primaryHover}
+            col={colors.brandText}
             fos={fontSize.bodySm}
             fow={fontWeight.semibold}
             textDecorationLine="underline"
@@ -1229,8 +1246,8 @@ function ChooseAddress({ label, onPress }: { label: string; onPress: () => void 
         bc={colors.primary}
         bg={colors.primarySubtle}
       >
-        <Ionicons name="location-outline" size={iconSize.sm} color={colors.primaryHover} />
-        <Text col={colors.primaryHover} fos={13} fow={fontWeight.semibold}>
+        <Ionicons name="location-outline" size={iconSize.sm} color={colors.brandText} />
+        <Text col={colors.brandText} fos={13} fow={fontWeight.semibold}>
           {label}
         </Text>
       </XStack>
@@ -1245,11 +1262,14 @@ function ChooseAddress({ label, onPress }: { label: string; onPress: () => void 
 function CostLine({
   label,
   sub,
+  hint,
   value,
   tone,
 }: {
   label: string;
   sub?: string | null;
+  /** Ghi chú giải thích — dấu "i" cạnh nhãn, chạm mở tấm trượt (không chiếm dòng). */
+  hint?: { content: string; label: string } | null;
   value: string;
   tone?: 'discount';
 }) {
@@ -1257,9 +1277,12 @@ function CostLine({
   return (
     <XStack ai="flex-start" jc="space-between" gap={space.md}>
       <YStack f={1} gap={2}>
-        <Text col={colors.text} fos={fontSize.body}>
-          {label}
-        </Text>
+        <XStack ai="center" gap={4}>
+          <Text col={colors.text} fos={fontSize.body}>
+            {label}
+          </Text>
+          {hint ? <InfoHint content={hint.content} label={hint.label} /> : null}
+        </XStack>
         {sub ? (
           <Text col={colors.placeholder} fos={fontSize.body}>
             {sub}
@@ -1282,13 +1305,23 @@ function CostLine({
  * `primary-accent`, đệm ngang 12. Khác vạch 3×18 của tiêu đề trang (`MarketSectionTitle`) — web vẽ
  * hai kiểu khác nhau cho hai tầng, giữ đúng như thế.
  */
-function BarTitle({ text, size = fontSize.bodyLg }: { text: string; size?: number }) {
+function BarTitle({
+  text,
+  size = fontSize.bodyLg,
+  hint,
+}: {
+  text: string;
+  size?: number;
+  /** Ghi chú giải thích — dấu "i" cạnh tiêu đề. */
+  hint?: { content: string; label: string };
+}) {
   const colors = useColors();
   return (
-    <XStack px={12} borderLeftWidth={4} borderLeftColor={market.accent}>
+    <XStack px={12} ai="center" gap={4} borderLeftWidth={4} borderLeftColor={market.accent}>
       <Text col={colors.text} fos={size} fow={fontWeight.semibold} accessibilityRole="header">
         {text}
       </Text>
+      {hint ? <InfoHint content={hint.content} label={hint.label} size={size} /> : null}
     </XStack>
   );
 }
@@ -1329,14 +1362,13 @@ function DeliveryToggle({
         bw={1}
         bc={active ? colors.primary : 'transparent'}
         bg={active ? colors.surface : 'transparent'}
-        style={active ? elevation.xs : undefined}
       >
         <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} ta="center">
           {label}
         </Text>
         <Text
           col={subTone === 'danger' ? colors.danger : colors.success}
-          fos={fontSize.bodySm}
+          fos={fontSize.body}
           fontStyle="italic"
           ta="center"
         >
@@ -1376,7 +1408,6 @@ function TimeFrame({
         col={value ? colors.text : colors.placeholder}
         fos={fontSize.body}
         fow={fontWeight.medium}
-        numberOfLines={1}
       >
         {value ?? tRange('notSelected')}
       </Text>

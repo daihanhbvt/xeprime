@@ -16,6 +16,10 @@ import { HostMetricsService } from '../../src/modules/host-metrics/host-metrics.
 import { BookingHoldsService } from '../../src/modules/holds/booking-holds.service';
 import { BookingRequestsService } from '../../src/modules/booking-requests/booking-requests.service';
 import { BookingsService } from '../../src/modules/bookings/bookings.service';
+import { SettlementService } from '../../src/modules/bookings/settlement/settlement.service';
+import { ReceiptsService } from '../../src/modules/finance/receipts.service';
+import { BookingPaymentWriter } from '../../src/modules/payments/booking-payment.writer';
+import { BookingExtensionsService } from '../../src/modules/booking-extensions/booking-extensions.service';
 import { OccupancyService } from '../../src/modules/calendar/occupancy.service';
 import { CustomersService } from '../../src/modules/customers/customers.service';
 import { DriversService } from '../../src/modules/drivers/drivers.service';
@@ -352,6 +356,25 @@ export function makeBookingsService(
     makeAddressService(prisma),
     new TaxService(prisma, audit),
     new CancellationsService(),
+    makeBookingExtensionsService(prisma, { audit, notifications }),
+  );
+}
+
+/** `BookingExtensionsService` (ADR 0077) — mọi writer thật trên Postgres thật. */
+export function makeBookingExtensionsService(
+  prisma: PrismaService,
+  overrides: { audit?: AuditService; notifications?: NotificationService } = {},
+): BookingExtensionsService {
+  const audit = overrides.audit ?? new AuditService(prisma);
+  return new BookingExtensionsService(
+    prisma,
+    new OccupancyService(prisma),
+    makePricingService(prisma),
+    new TaxService(prisma, audit),
+    new WalletService(prisma),
+    makeBillingService(prisma),
+    audit,
+    overrides.notifications ?? makeNotificationService(prisma),
   );
 }
 
@@ -521,6 +544,29 @@ export async function seedProvince(
   return code;
 }
 
+const wardCodeCache = new Map<string, string>();
+
+/**
+ * Mã một xã/phường THẬT của tỉnh (xã đầu tiên trong danh mục migration đã nạp).
+ *
+ * Từ ADR 0077, mọi địa chỉ thành CHI NHÁNH (đăng ký gian hàng, tạo/sửa chi nhánh, dời tỉnh ở hồ
+ * sơ) đòi `wardCode` thuộc đúng tỉnh — spec đi qua các đường đó lấy mã ở đây thay vì gõ tay.
+ */
+export async function wardCodeOf(
+  prisma: Pick<PrismaService, 'ward'>,
+  provinceCode: string,
+): Promise<string> {
+  const cached = wardCodeCache.get(provinceCode);
+  if (cached) return cached;
+  const ward = await prisma.ward.findFirstOrThrow({
+    where: { provinceCode },
+    orderBy: { code: 'asc' },
+    select: { code: true },
+  });
+  wardCodeCache.set(provinceCode, ward.code);
+  return ward.code;
+}
+
 export async function seedBranch(
   prisma: PrismaService,
   input: {
@@ -593,4 +639,24 @@ export async function giveShopStorefront(
     create: { tenantId, ...data },
     update: data,
   });
+}
+
+/**
+ * Hai dependency TIỀN của `HandoversService` (06/11/2026): lượt nhận lại xe ghi phụ phí qua
+ * `SettlementService` và phiếu thu qua `BookingPaymentWriter`, cùng transaction với biên bản. Gom ở
+ * đây để các spec dựng tay `HandoversService` không mỗi nơi tự lắp một bộ — rải vào bằng `...`.
+ */
+export function makeHandoverMoneyServices(
+  prisma: PrismaService,
+  audit: AuditService,
+): [SettlementService, BookingPaymentWriter] {
+  const receipts = new ReceiptsService(prisma, audit);
+  const settlement = new SettlementService(
+    prisma,
+    audit,
+    makePricingService(prisma),
+    makeNotificationService(prisma),
+    receipts,
+  );
+  return [settlement, new BookingPaymentWriter(audit, receipts)];
 }

@@ -7,11 +7,12 @@ import { useTranslations } from 'next-intl';
 import { useState, type ReactNode } from 'react';
 import { nowInAppTz, toAppTz } from '@xeprime/domain';
 import type { ChatInbox, ChatSide } from '@xeprime/types';
-import { HeaderIconButton } from '@/components/layout/HeaderIconButton';
+import { HeaderIconButton, type HeaderIconButtonShape } from '@/components/layout/HeaderIconButton';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { cx } from '@/lib/cx';
 import { initialOf } from '@/lib/initials';
+import { chatThreadHref } from '../chat-links';
 import { useChatBadge } from '../hooks/use-chat-badge';
 import {
   RECENT_CONVERSATIONS_LIMIT,
@@ -20,8 +21,6 @@ import {
 import type { ConversationSummary } from '../types';
 import styles from './ChatMenu.module.css';
 
-/** Tham số deep link của `ChatView` — bấm một dòng ở popup mở ĐÚNG hội thoại đó. */
-const CONVERSATION_PARAM = 'c';
 
 /**
  * Biểu tượng tin nhắn ở thanh trên cùng — MỘT component cho cả khu khách (`CHAT_SIDE.CUSTOMER`)
@@ -41,9 +40,12 @@ const CONVERSATION_PARAM = 'c';
 export function ChatMenu({
   side,
   icon = <MessageOutlined />,
+  shape,
 }: {
   side: ChatSide;
   icon?: ReactNode;
+  /** Hình dạng nút trên thanh trên — xem `HeaderIconButton.shape`. */
+  shape?: HeaderIconButtonShape;
 }) {
   const t = useTranslations('Chat');
   const badge = useChatBadge(side);
@@ -54,6 +56,7 @@ export function ChatMenu({
     return (
       <HeaderIconButton
         icon={icon}
+        shape={shape}
         label={t('inboxTitle')}
         count={badge.count}
         href={badge.href}
@@ -79,6 +82,7 @@ export function ChatMenu({
     >
       <HeaderIconButton
         icon={icon}
+        shape={shape}
         label={t('inboxTitle')}
         count={badge.count}
         active={open}
@@ -176,7 +180,7 @@ function ConversationRow({
     <Link
       // Là LIÊN KẾT thật chứ không phải `router.push` trong `onClick`: mở tab mới, sao chép địa
       // chỉ và bấm giữa chuột đều hoạt động như mọi dòng danh sách khác trong sản phẩm.
-      href={`${inboxHref}?${CONVERSATION_PARAM}=${encodeURIComponent(conversation.id)}`}
+      href={chatThreadHref(inboxHref, conversation.id)}
       className={cx(styles.item, unread && styles.itemUnread)}
       onClick={onNavigate}
     >

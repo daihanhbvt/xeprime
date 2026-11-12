@@ -228,7 +228,7 @@ export function RefundSheet({
         </Text>
         <Card tone="muted" lift="flat" onPress={() => setPickingMoment(true)}>
           <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium}>
-            {fmt.rentalPoint(refundedAt)}
+            {fmt.dateTime(refundedAt.toISOString())}
           </Text>
         </Card>
       </YStack>

@@ -148,7 +148,7 @@ async function signIn(): Promise<CurrentUser> {
       await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_WINDOW_MS));
     }
   }
-  throw new Error('Vẫn bị rate limit sau 3 lần chờ — còn tiến trình nào khác đang gọi API?');
+  throw new Error('Vẫn bị rate limit sau 3 lần chờ - còn tiến trình nào khác đang gọi API?');
 }
 
 function rawPost(path: string, body: unknown): Promise<FetchResponse> {
@@ -251,7 +251,7 @@ describeLive('app native ↔ API thật', () => {
     expect(denied).toMatchObject({ status: 401 });
   });
 
-  it('access token bị sửa thì server từ chối — client không tự tin vào token của mình', async () => {
+  it('access token bị sửa thì server từ chối - client không tự tin vào token của mình', async () => {
     await signIn();
     const token = await getFreshAccessToken();
 

@@ -3,6 +3,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   API_ERROR_CODE,
+  BOOKING_EXTENSION_STATUS,
   HOLD_POLL_FALLBACK_MS,
   HOLD_POLL_LIVE_MS,
   isAwaitingPayment,
@@ -18,12 +19,15 @@ import {
   cancelTrip,
   fetchTrip,
   fetchTripCancelPreview,
+  fetchTripExtensions,
   fetchTripHandoverEvidence,
   fetchUnpaidHolds,
   fetchTripHandoverPhotoUrl,
   fetchTrips,
   provideRefundAccount,
+  confirmTripPickup,
   reportTripNotReceived,
+  reportTripReturned,
   tripsToParams,
   type TripListNarrow,
 } from './api';
@@ -117,6 +121,22 @@ export function useTrip(id: string) {
  * `enabled` do nơi gọi quyết định — màn chi tiết chỉ bật khi chuyến đã thật sự có mốc bàn giao,
  * nên chuyến chưa giao xe không phát request nào.
  */
+/**
+ * Phụ lục gia hạn của chuyến. Có phụ lục chờ tiền ⇒ hỏi lại theo nhịp, để màn tự lật "Đã gia hạn"
+ * khi SePay đối soát đủ — không có nút "tôi đã chuyển khoản".
+ */
+export function useTripExtensions(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.trips.extensions(id),
+    queryFn: () => fetchTripExtensions(id),
+    enabled: Boolean(id) && enabled,
+    refetchInterval: (query) =>
+      query.state.data?.some((e) => e.status === BOOKING_EXTENSION_STATUS.AWAITING_PAYMENT)
+        ? HOLD_POLL_FALLBACK_MS
+        : false,
+  });
+}
+
 export function useTripHandoverEvidence(id: string, enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.trips.handoverEvidence(id),
@@ -244,6 +264,31 @@ export function useReportTripNotReceived(id: string) {
         code === API_ERROR_CODE.TRIP_NOT_RECEIVED_NOT_ALLOWED ||
         code === API_ERROR_CODE.TRIP_NOT_RECEIVED_TOO_EARLY ||
         code === API_ERROR_CODE.TRIP_NOT_RECEIVED_WINDOW_CLOSED
+      ) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.trips.detail(id) });
+      }
+    },
+  });
+}
+
+/**
+ * "Đã nhận xe" / "Đã trả xe" (ADR 0081) — cùng khuôn với `useReportTripNotReceived`: server trả về
+ * chính chuyến nên ghi thẳng vào cache; bị từ chối vì chuyến đã đổi (chủ xe vừa xác nhận) thì đọc lại.
+ */
+export function useTripHandoverWord(id: string, word: 'pickup' | 'return') {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => (word === 'pickup' ? confirmTripPickup(id) : reportTripReturned(id)),
+    onSuccess: (trip) => {
+      queryClient.setQueryData(queryKeys.trips.detail(id), trip);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
+    },
+    onError: (error) => {
+      const code = getErrorCode(error);
+      if (
+        code === API_ERROR_CODE.TRIP_PICKUP_CONFIRM_NOT_ALLOWED ||
+        code === API_ERROR_CODE.TRIP_PICKUP_CONFIRM_TOO_EARLY ||
+        code === API_ERROR_CODE.TRIP_RETURN_REPORT_NOT_ALLOWED
       ) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.trips.detail(id) });
       }

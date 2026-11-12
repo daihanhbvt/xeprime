@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Xe toàn hệ thống",
-    "subtitle": "Mọi xe của gian hàng và chủ xe cá nhân — soát trạng thái trên chợ, ẩn xe vi phạm.",
+    "subtitle": "Mọi xe của gian hàng và chủ xe cá nhân - soát trạng thái trên chợ, ẩn xe vi phạm.",
     "loading": "Đang tải xe toàn hệ thống…"
   },
   "views": {
@@ -112,7 +112,7 @@
     "ownerVisibilityOn": "Bật",
     "ownerVisibilityOff": "Tắt",
     "ownerVisibilityHintLabel": "Vì sao nền tảng không đổi được mục này",
-    "ownerVisibilityHint": "Đây là lựa chọn của chủ xe. Nền tảng chỉ xem — gỡ ẩn không bật hộ công tắc này.",
+    "ownerVisibilityHint": "Đây là lựa chọn của chủ xe. Nền tảng chỉ xem - gỡ ẩn không bật hộ công tắc này.",
     "shopStatus": "Gian hàng",
     "effective": "Kết quả trên chợ",
     "effectiveVisible": "Đang hiển thị",

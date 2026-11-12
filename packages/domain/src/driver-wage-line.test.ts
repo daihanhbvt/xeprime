@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DRIVER_WAGE_STAGE } from '@xeprime/types';
 import { driverWageLine } from './driver-wage-line';
 
-describe('driverWageLine — ADR 0075', () => {
+describe('driverWageLine - ADR 0075', () => {
   it('đang mời / đã nhận / hoàn thành giữ đúng số', () => {
     expect(driverWageLine({ amount: '1500000', stage: DRIVER_WAGE_STAGE.OFFER })).toEqual({
       kind: 'offer',

@@ -6,7 +6,7 @@
     },
     "page": {
       "title": "Cash book",
-      "subtitle": "Every đồng that moves through your shop — booking payments, deposits, refunds and vehicle costs all land here automatically."
+      "subtitle": "Every đồng that moves through your shop - booking payments, deposits, refunds and vehicle costs all land here automatically."
     },
     "periods": {
       "label": "Quick period",
@@ -50,13 +50,17 @@
         "subject": "Related to",
         "description": "Details",
         "amount": "Amount",
-        "method": "Method"
+        "method": "Method",
+        "customer": "Customer",
+        "actions": "Actions"
       },
       "actions": {
         "cancel": "Cancel",
         "approveConfirm": "Approve this entry?",
         "cancelConfirm": "Cancel this entry?",
-        "cancelOk": "Cancel entry"
+        "cancelOk": "Cancel entry",
+        "view": "View details",
+        "cancelShort": "Cancel"
       },
       "error": {
         "title": "Could not load the entry list"
@@ -75,44 +79,48 @@
       "errorTitle": "Could not load the entry",
       "auto": {
         "title": "Automatic entry",
-        "body": "This entry came from {source}, so it cannot be edited or cancelled here — the book would drift from the booking. Reverse it in that flow instead",
+        "body": "This entry came from {source}, so it cannot be edited or cancelled here - the book would drift from the booking. Reverse it in that flow instead",
         "openBooking": "open the booking",
         "openVehicle": "open the vehicle"
       },
       "sections": {
-        "info": "Entry information",
-        "related": "Related records",
-        "attachments": "Proof photos",
-        "trace": "Audit trail"
+        "info": "Voucher details",
+        "related": "Linked to",
+        "attachments": "Attachments",
+        "trace": "Activity"
       },
       "rows": {
-        "occurredAt": "Date incurred",
+        "occurredAt": "Recorded on",
         "category": "Category",
-        "method": "Method",
-        "referenceCode": "Reference",
+        "method": "Payment method",
+        "referenceCode": "Transaction / reference code",
         "description": "Details",
         "booking": "Booking",
         "vehicle": "Vehicle",
         "customer": "Customer",
         "createdBy": "Created by",
         "approvedBy": "Approved by",
-        "cancelledBy": "Cancelled by"
+        "cancelledBy": "Cancelled by",
+        "type": "Type",
+        "source": "Source"
       },
       "copyReference": "Copy reference",
       "viewBooking": "View booking",
       "viewVehicle": "View vehicle",
       "viewCustomer": "View customer",
       "attachmentAlt": "Proof photo",
-      "cancelAction": "Cancel entry"
+      "cancelAction": "Cancel voucher",
+      "titleWithNo": "Voucher #{no}",
+      "approveAction": "Approve voucher"
     },
     "form": {
       "title": "New cash book entry",
       "occurredAt": "Date incurred",
       "type": "Transaction type",
       "linkHint": {
-        "none": "A shop-wide amount, not linked to anything",
-        "booking": "A cost or payment on a booking",
-        "vehicle": "A cost or payment on a vehicle"
+        "none": "Not tied to a specific booking or vehicle",
+        "booking": "Relates to one specific booking",
+        "vehicle": "Relates to one specific vehicle"
       },
       "booking": "Linked booking",
       "bookingPlaceholder": "Search booking code, customer or plate",
@@ -120,9 +128,9 @@
       "categoryPlaceholder": "Pick a category",
       "method": "Method",
       "amount": "Amount",
-      "referenceCode": "Reference (optional)",
-      "referenceCodePlaceholder": "e.g. bank transfer reference",
-      "description": "Description / reason",
+      "referenceCode": "Transaction code",
+      "referenceCodePlaceholder": "e.g. FT212001...",
+      "description": "Description",
       "attachments": {
         "label": "Supporting documents",
         "add": "Add file",
@@ -136,13 +144,13 @@
         "sourcePdf": "Choose a PDF file"
       },
       "submit": {
-        "income": "Create income entry",
-        "expense": "Create expense entry"
+        "income": "Create income voucher",
+        "expense": "Create expense voucher"
       },
-      "success": "Entry created — awaiting approval",
+      "success": "Entry created - awaiting approval",
       "linkMode": {
-        "label": "This amount is",
-        "none": "Not linked",
+        "label": "Linked to",
+        "none": "General item",
         "booking": "A booking",
         "vehicle": "A vehicle"
       },
@@ -171,14 +179,19 @@
         "customer": "Customer",
         "debt": "Outstanding"
       },
-      "keepOpen": "Save and start another",
+      "keepOpen": "Create and keep the form open",
       "cancel": "Cancel",
       "branchHelp": "Which branch this amount belongs to. Linking a vehicle or booking takes the branch from the vehicle.",
       "branchPlaceholder": "Select a branch",
-      "branchEmpty": "This shop has no branch yet. Create one before recording an amount that is not tied to a vehicle."
+      "branchEmpty": "This shop has no branch yet. Create one before recording an amount that is not tied to a vehicle.",
+      "typeIncome": "Income voucher",
+      "typeExpense": "Expense voucher",
+      "bookingField": "Linked booking",
+      "vehicleField": "Linked vehicle",
+      "descriptionPlaceholder": "Enter a description"
     },
     "summary": {
-      "error": "Could not load the totals — the list below is still correct",
+      "error": "Could not load the totals - the list below is still correct",
       "income": "Total in",
       "expense": "Total out",
       "balance": "Net (in − out)",
@@ -197,12 +210,45 @@
       "system": "System",
       "custom": "Custom",
       "delete": "Delete category",
-      "nameLabel": "Category name"
+      "nameLabel": "Category name",
+      "columns": {
+        "name": "Category",
+        "type": "Type",
+        "actions": "Actions"
+      },
+      "addRow": "Add category",
+      "edit": "Rename category",
+      "save": "Save category",
+      "discard": "Discard changes",
+      "renamed": "Category renamed",
+      "deleted": "Category deleted",
+      "deleteConfirm": "Delete category \"{name}\"?",
+      "systemHint": "System category - cannot be renamed or deleted",
+      "empty": "No categories yet",
+      "done": "Close"
     },
     "uncategorized": "Uncategorised",
     "booking": {
       "title": "Entries in the cash book",
       "error": "Could not load this booking's receipts"
+    },
+    "board": {
+      "title": "Income & expense ledger"
+    },
+    "tiles": {
+      "label": "Ledger figures",
+      "income": "Total income",
+      "incomeHint": "Cash {cash} · Transfer {transfer}",
+      "expense": "Total expenses",
+      "balance": "Balance",
+      "balanceHint": "Income - Expenses",
+      "debt": "Customer receivables",
+      "debtHint": "{count, plural, =0 {No bookings owing} one {# booking owing} other {# bookings owing}}",
+      "infoLabel": "How the totals are counted",
+      "infoFiltered": "Only APPROVED vouchers in the current filter count - pending vouchers are not real money yet.",
+      "infoWhole": "Only APPROVED vouchers across the whole ledger count - pending vouchers are not real money yet.",
+      "debtInfoLabel": "About customer receivables",
+      "debtInfo": "A right-now figure, independent of the period filter. Click to open the Receivables tab."
     }
   },
   "debts": {
@@ -215,7 +261,10 @@
       "groupLabel": "Group by due date",
       "overdue": "Overdue",
       "upcoming": "Due soon",
-      "unpaid": "Nothing collected"
+      "unpaid": "Nothing collected",
+      "all": "All",
+      "status": "Booking status",
+      "groupCount": "{label} {count}"
     },
     "table": {
       "label": "Outstanding debt list",
@@ -226,7 +275,13 @@
         "returnAt": "Return due",
         "total": "Total",
         "paid": "Collected",
-        "debt": "Balance"
+        "debt": "Balance",
+        "customer": "Customer",
+        "order": "Booking",
+        "status": "Booking status",
+        "vehicleFull": "Vehicle",
+        "dueAt": "Due",
+        "actions": "Actions"
       },
       "actions": {
         "view": "View booking",
@@ -241,13 +296,59 @@
       },
       "noResults": {
         "title": "No outstanding debt matches these filters"
-      }
+      },
+      "overdueDays": "{count, plural, one {# day overdue} other {# days overdue}}",
+      "paidOf": "Paid {paid} / {total}",
+      "paidProgress": "{percent}% of the amount due paid"
+    },
+    "board": {
+      "title": "Receivables ledger"
+    },
+    "tiles": {
+      "label": "Receivables figures",
+      "total": "Total receivables",
+      "totalHint": "{orders, plural, one {# booking} other {# bookings}} · {customers, plural, one {# customer} other {# customers}}",
+      "overdue": "Overdue",
+      "overdueHint": "{count, plural, =0 {Nothing overdue} one {# booking to chase now} other {# bookings to chase now}}",
+      "within": "Not yet due",
+      "withinHint": "{count, plural, one {# booking} other {# bookings}}",
+      "unpaid": "Unpaid",
+      "unpaidValue": "{count, plural, one {# booking} other {# bookings}}",
+      "unpaidHint": "{count, plural, =0 {Every booking has paid something} one {# booking has paid nothing yet} other {# bookings have paid nothing yet}}"
+    },
+    "sort": {
+      "label": "Sort",
+      "value": "Sort: {label}",
+      "overdue": "Most overdue",
+      "debt": "Largest balance",
+      "newest": "Newest"
+    },
+    "detail": {
+      "title": "Booking #{code}",
+      "debtLabel": "Outstanding",
+      "overdue": "{count, plural, one {# day overdue} other {# days overdue}}",
+      "dueAt": "due {date}",
+      "paidOf": "Paid {paid} / {total}",
+      "collect": "Collect payment",
+      "contract": "Contract",
+      "createContract": "Create contract",
+      "openBooking": "Booking details",
+      "history": "Payment history",
+      "historyEmpty": "No payments on this booking yet",
+      "historyError": "Could not load the payment history",
+      "depositExpected": "Deposit per booking",
+      "depositReceived": "Deposit received",
+      "depositReceivedYes": "Received",
+      "depositReceivedNo": "Not received",
+      "surcharge": "Extra charges",
+      "none": "None",
+      "errorTitle": "Could not load the booking"
     }
   },
   "overview": {
     "page": {
       "title": "Revenue overview",
-      "subtitle": "Whether this period made money, how much cash you are holding, and which vehicles earn it."
+      "subtitle": "See profit or loss for the period, the cash you have on hand, and which vehicles bring in the most revenue"
     },
     "periods": {
       "label": "Quick period",
@@ -276,14 +377,14 @@
         "margin": "{value}% margin",
         "marginUnknown": "No revenue yet to compute a margin",
         "unassigned": "Of which {value} is not tied to a vehicle",
-        "note": "Deposits are excluded from both sides. This is cash profit from the ledger — before depreciation, loan interest or vehicle lease payments."
+        "note": "Deposits are excluded from both sides. This is cash profit from the ledger - before depreciation, loan interest or vehicle lease payments."
       },
       "cash": {
         "title": "Cash flow",
         "in": "Cash in",
         "out": "Cash out",
         "balance": "Net",
-        "note": "Includes deposits taken and refunded — this is the money that actually changed hands this period."
+        "note": "Includes deposits taken and refunded - this is the money that actually changed hands this period."
       },
       "now": {
         "title": "Right now",
@@ -293,9 +394,28 @@
         "note": "These two figures do not depend on the selected period."
       }
     },
+    "tiles": {
+      "label": "Financial figures for the period",
+      "revenue": "Revenue",
+      "cost": "Costs",
+      "profit": "Profit",
+      "netCash": "Net cash flow (incl. deposits)",
+      "depositHeld": "Deposits held",
+      "debt": "Customers owe",
+      "receipts": "{count, plural, one {# voucher} other {# vouchers}} · excl. deposits",
+      "exDeposit": "Excl. deposits",
+      "margin": "{value}% margin",
+      "marginUnknown": "No revenue yet to compute a margin",
+      "cashFlow": "In {in} · Out {out}",
+      "bookingsNow": "{count, plural, one {# booking} other {# bookings}} · right now",
+      "bookings": "{count, plural, one {# booking} other {# bookings}}",
+      "businessInfoLabel": "About revenue and costs",
+      "businessNote": "Deposits are excluded from both sides. This is cash profit from the ledger - before depreciation, loan interest or vehicle lease payments.",
+      "cashInfoLabel": "About net cash flow",
+      "cashNote": "Cash in minus cash out across every approved voucher, deposits taken and refunded included - this is the money that actually changed hands this period."
+    },
     "chart": {
-      "title": "Income · costs · profit over time",
-      "description": "Bars are revenue and costs, the line is profit. Deposits excluded.",
+      "title": "Cash flow & profit over time",
       "revenue": "Revenue",
       "cost": "Costs",
       "profit": "Profit",
@@ -308,11 +428,15 @@
         "week": "Weekly",
         "month": "Monthly"
       },
-      "tapHint": "Tap a point on the chart to see it in detail."
+      "tapHint": "Tap a point on the chart to see it in detail.",
+      "yAxisUnit": "Unit: million VND",
+      "legend": "Chart legend",
+      "weekRange": "{from} - {to}",
+      "description": "Bars are revenue and costs, the line is profit. Deposits excluded."
     },
     "categories": {
-      "incomeTitle": "Revenue by category",
-      "expenseTitle": "Costs by category",
+      "incomeTitle": "Revenue breakdown",
+      "expenseTitle": "Cost breakdown",
       "share": "{percent}%",
       "count": "{count, plural, one {# voucher} other {# vouchers}}",
       "uncategorized": "Uncategorised",
@@ -325,7 +449,8 @@
         "deposit_refund": "Deposit refund",
         "maintenance": "Servicing / oil change",
         "repair": "Incident repair"
-      }
+      },
+      "row": "{name} · {count, plural, one {# voucher} other {# vouchers}}"
     },
     "vehicles": {
       "title": "Performance by vehicle",
@@ -342,7 +467,8 @@
         "revenue": "Revenue",
         "cost": "Costs",
         "profit": "Profit",
-        "margin": "Margin"
+        "margin": "Margin",
+        "index": "#"
       },
       "sort": {
         "label": "Sort by",
@@ -365,13 +491,23 @@
         "customer": "Customer",
         "trips": "Trips",
         "revenue": "Revenue",
-        "share": "Share"
+        "share": "Share",
+        "index": "#"
       },
       "sort": {
         "label": "Sort by",
         "revenue": "Highest revenue",
         "trips": "Most trips"
       }
+    },
+    "performance": {
+      "title": "Business performance",
+      "tabs": {
+        "label": "View performance by",
+        "vehicles": "By vehicle",
+        "customers": "By customer"
+      },
+      "sortValue": "Sort: {label}"
     }
   },
   "entity": {
@@ -381,7 +517,7 @@
     },
     "note": {
       "vehicle": "Summed from approved vouchers, deposits excluded. Before depreciation, loan interest or vehicle lease payments.",
-      "customer": "Summed from money ACTUALLY received in the period — different from \"Total rental value\" at the top of the profile, which counts agreed booking value."
+      "customer": "Summed from money ACTUALLY received in the period - different from \"Total rental value\" at the top of the profile, which counts agreed booking value."
     },
     "periods": {
       "label": "Quick period",
@@ -430,15 +566,28 @@
       "unsplit": "Legacy rows (VAT/PIT not split)"
     },
     "columns": {
-      "booking": "Trip",
+      "booking": "Trip code",
       "base": "Taxable value",
       "label": "Tax type",
       "amount": "Withheld",
       "status": "Status",
       "vat": "VAT",
-      "pit": "PIT"
+      "pit": "PIT",
+      "index": "#"
     },
     "ratePair": "VAT {vat, number}% + PIT {pit, number}%",
-    "notSplit": "Legacy row — not split"
+    "notSplit": "Legacy row - not split",
+    "monthValue": "{month}"
+  },
+  "history": {
+    "page": {
+      "title": "Transaction history",
+      "subtitle": "Track every money movement of your shop: booking revenue, deposits, vehicle running costs and customers' outstanding balances"
+    },
+    "views": {
+      "label": "View",
+      "ledger": "Income & expenses",
+      "debts": "Receivables"
+    }
   }
 }

@@ -84,7 +84,7 @@ export function AccountIdentityHero({
   return (
     <LinearGradient
       colors={
-        isShopOwner ? [colors.primaryLight, colors.surface] : [colors.primaryLight, colors.surface]
+        isShopOwner ? [colors.primaryLight, colors.surface] : [colors.surface, colors.surface]
       }
       start={{ x: 0.5, y: 0 }}
       end={{ x: 0.5, y: 1 }}
@@ -102,14 +102,14 @@ export function AccountIdentityHero({
           <VerifiedName
             name={name}
             verifiedLabel={isShopOwner ? t('trackBadge.verifiedHint') : undefined}
-            size={fontSize.h4}
-            weight={fontWeight.bold}
+            size={fontSize.lead}
+            weight={fontWeight.semibold}
             markSize={NAME_MARK}
             numberOfLines={2}
             /* Con dấu trên ảnh ngay phía trên đã đọc lên câu ấy rồi. */
             decorativeMark
           />
-          <Text col={colors.textMuted} fos={fontSize.bodySm} numberOfLines={1}>
+          <Text col={colors.placeholder} fos={fontSize.body} lh={22} numberOfLines={1}>
             {subtitle}
           </Text>
         </YStack>

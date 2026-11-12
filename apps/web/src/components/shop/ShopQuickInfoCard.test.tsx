@@ -34,7 +34,7 @@ const INSUFFICIENT_METRICS: HostMetricsShape = {
 
 afterEach(cleanup);
 
-describe('ShopQuickInfoCard — variant="full"', () => {
+describe('ShopQuickInfoCard - variant="full"', () => {
   it('hiện tên, dấu xác thực, vị trí, giới thiệu, rating + số chuyến làm tròn của GIAN HÀNG', () => {
     renderWithIntl(<ShopQuickInfoCard shop={SHOP} metrics={INSUFFICIENT_METRICS} />);
 
@@ -42,33 +42,28 @@ describe('ShopQuickInfoCard — variant="full"', () => {
     expect(screen.getByLabelText('Gian hàng đã được XePrime xác minh')).toBeTruthy();
     expect(screen.getByText('Hà Nội')).toBeTruthy();
     expect(screen.getByText(/Cho thuê xe tự lái/)).toBeTruthy();
-    // Điểm đánh giá xuất hiện ở CẢ dòng tóm tắt lẫn dòng ghi chú — `getAllByText` là đúng ý.
     expect(screen.getAllByText(/4[.,]9/).length).toBeGreaterThan(0);
     // 1234 làm tròn XUỐNG còn 1200, kèm dấu + vì không phải số thật.
     expect(screen.getByText(/1[.,]?200\+/)).toBeTruthy();
   });
 
-  it('chưa đủ mẫu: ba chỉ số nói "chưa đủ dữ liệu" nhưng dòng ghi chú VẪN có', () => {
+  it('chưa đủ mẫu: ba chỉ số nói "chưa đủ dữ liệu"', () => {
     renderWithIntl(<ShopQuickInfoCard shop={SHOP} metrics={INSUFFICIENT_METRICS} />);
 
     expect(screen.getByText(/Chưa có yêu cầu thuê nào/)).toBeTruthy();
-    // 4.9 sao / 120 lượt → câu nói về điểm đánh giá, không phải câu khen vận hành.
-    expect(screen.getByText(/được khách đánh giá/i)).toBeTruthy();
   });
 
-  it('đủ mẫu, tỉ lệ tốt, rating cao: hiện câu mạnh nhất kèm số sao', () => {
-    renderWithIntl(<ShopQuickInfoCard shop={SHOP} metrics={READY_GOOD_METRICS} />);
+  /* Dòng ghi chú "Chủ xe …" đã gỡ theo yêu cầu người dùng (04/11/2026) — ở mọi mức số liệu. */
+  it.each([
+    ['chưa đủ mẫu', SHOP, INSUFFICIENT_METRICS],
+    ['đủ mẫu, rating cao', SHOP, READY_GOOD_METRICS],
+    ['đủ mẫu, rating dưới ngưỡng', { ...SHOP, ratingAvg: '4.2' }, READY_GOOD_METRICS],
+  ])('không còn dòng ghi chú "Chủ xe …" (%s)', (_label, shop, metrics) => {
+    renderWithIntl(<ShopQuickInfoCard shop={shop} metrics={metrics} />);
 
-    expect(screen.getByText(/Chủ xe .* sao có thời gian phản hồi nhanh/)).toBeTruthy();
-  });
-
-  it('đủ mẫu nhưng rating dưới ngưỡng: đổi sang câu chỉ khen phần vận hành', () => {
-    renderWithIntl(
-      <ShopQuickInfoCard shop={{ ...SHOP, ratingAvg: '4.2' }} metrics={READY_GOOD_METRICS} />,
-    );
-
-    expect(screen.queryByText(/Chủ xe .* sao có thời gian phản hồi nhanh/)).toBeNull();
-    expect(screen.getByText(/giữ đúng cam kết/)).toBeTruthy();
+    expect(
+      screen.queryByText(/được khách đánh giá|thời gian phản hồi nhanh|giữ đúng cam kết/),
+    ).toBeNull();
   });
 
   /* Cửa sổ 90 ngày vẫn còn — nhưng nằm trong dấu "i", không phải một dòng chữ thứ tư. */
@@ -112,8 +107,8 @@ describe('ShopQuickInfoCard — variant="full"', () => {
   });
 });
 
-describe('ShopQuickInfoCard — variant="compact"', () => {
-  it('bỏ giới thiệu, ba chỉ số và dòng "Chủ xe … sao" — chỉ giữ danh tính + rating/số chuyến', () => {
+describe('ShopQuickInfoCard - variant="compact"', () => {
+  it('bỏ giới thiệu, ba chỉ số và dòng "Chủ xe … sao" - chỉ giữ danh tính + rating/số chuyến', () => {
     renderWithIntl(
       <ShopQuickInfoCard shop={SHOP} metrics={READY_GOOD_METRICS} variant="compact" />,
     );
@@ -139,7 +134,7 @@ describe('ShopQuickInfoCard — variant="compact"', () => {
   });
 });
 
-describe('ShopQuickInfoCard — variant="inline" (trang chi tiết xe)', () => {
+describe('ShopQuickInfoCard - variant="inline" (trang chi tiết xe)', () => {
   it('chưa đủ mẫu: nói "chưa có yêu cầu", KHÔNG vẽ ba con số mẫu của bản vẽ (ADR 0045 điều 3)', () => {
     renderWithIntl(
       <ShopQuickInfoCard shop={SHOP} metrics={INSUFFICIENT_METRICS} variant="inline" />,

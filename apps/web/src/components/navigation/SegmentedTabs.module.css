@@ -1,0 +1,71 @@
+/*
+ * Figma Partner-XePrime "Tabs" kiểu nút gộp: khung viền xám bo 12, đệm 2; tab cao 36, đệm 0/12,
+ * chữ 14/600; tab đang chọn nền trắng có viền và bóng xs; số đếm là viên tròn nền xám nhạt.
+ * Hẹp thì cả hàng cuộn ngang thay vì xuống dòng (giữ một hàng như design).
+ */
+.list {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  gap: var(--xp-space-2, 2px);
+  padding: 2px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-layout);
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.list::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  height: 36px;
+  padding: 0 var(--xp-space-12);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--xp-color-text-tertiary);
+  font: inherit;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--xp-color-text);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: -2px;
+}
+
+.selected {
+  border-color: var(--xp-color-border-strong);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  box-shadow: 0 1px 2px 0 rgba(10, 13, 18, 0.05);
+}
+
+.count {
+  min-width: 24px;
+  padding: 0 var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-layout);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+  text-align: center;
+}

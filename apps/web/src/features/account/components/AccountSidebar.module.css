@@ -80,7 +80,7 @@
 .active,
 .active:hover {
   background: var(--xp-color-primary-light);
-  color: var(--xp-color-primary-hover);
+  color: var(--xp-color-primary);
 }
 
 .icon {
@@ -96,7 +96,7 @@
 .trailing {
   flex: none;
   color: var(--xp-color-text-tertiary);
-  font-size: 16px;
+  font-size: 20px;
 }
 
 /* ── Thẻ người dùng ở chân menu ───────────────────────────────────────── */
@@ -159,7 +159,10 @@
   .groups {
     flex-direction: row;
     gap: var(--xp-space-xs);
+    min-width: 0;
+    max-width: 100%;
     overflow-x: auto;
+    overscroll-behavior-x: contain;
     padding: 0 0 var(--xp-space-xs);
     scroll-snap-type: x proximity;
     scrollbar-width: none;
@@ -172,6 +175,7 @@
 
   .group,
   .groupDivided {
+    flex: none;
     margin: 0;
     padding: 0;
     border: 0;
@@ -185,6 +189,10 @@
     flex: none;
     flex-direction: row;
     gap: var(--xp-space-xs);
+  }
+
+  .list > li {
+    flex: none;
   }
 
   .item {

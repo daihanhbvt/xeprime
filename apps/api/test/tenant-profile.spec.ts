@@ -19,6 +19,7 @@ import {
   makeBranchesService,
   makeSellerProfileService,
   makeTenantsService,
+  wardCodeOf,
 } from './helpers/service-factory';
 
 /**
@@ -100,7 +101,11 @@ beforeAll(async () => {
       status: MEMBERSHIP_STATUS.ACTIVE,
     },
   });
-  await branches.create(tenantId, ownerId, { name: 'Chi nhánh gốc', provinceCode: HCM });
+  await branches.create(tenantId, ownerId, {
+    name: 'Chi nhánh gốc',
+    provinceCode: HCM,
+    wardCode: await wardCodeOf(asService, HCM),
+  });
 });
 
 afterAll(async () => {
@@ -559,7 +564,9 @@ describe('Hồ sơ người bán đã xác minh đổi định danh thuế ⇒ d
     expect(after.status).toBe(SELLER_PROFILE_STATUS.SUBMITTED);
     expect(after.verifiedAt).toBeNull();
     expect(
-      await prisma.approvalTask.count({ where: { tenantId, targetId: after.id, status: 'pending' } }),
+      await prisma.approvalTask.count({
+        where: { tenantId, targetId: after.id, status: 'pending' },
+      }),
     ).toBe(1);
     const log = await prisma.auditLog.findFirstOrThrow({
       where: { tenantId, action: 'seller_profile.save' },
@@ -578,28 +585,33 @@ describe('Hồ sơ người bán đã xác minh đổi định danh thuế ⇒ d
    * minh không được cùng thấy `verified`. Lượt thắng đưa hồ sơ về `submitted`; lượt thua phải đọc
    * đúng trạng thái đó và bị từ chối — không ghi đè lên bộ số vừa được gửi duyệt.
    */
-  maybe('hai lượt lưu SONG SONG trên hồ sơ đã xác minh: đúng một lượt thắng, lượt kia 409', async () => {
-    await sellerProfiles.getOrCreate(tenantId);
-    await verify();
+  maybe(
+    'hai lượt lưu SONG SONG trên hồ sơ đã xác minh: đúng một lượt thắng, lượt kia 409',
+    async () => {
+      await sellerProfiles.getOrCreate(tenantId);
+      await verify();
 
-    const results = await Promise.allSettled([
-      sellerProfiles.save(tenantId, ownerId, { ...base, idNumber: '079000000011' }),
-      sellerProfiles.save(tenantId, ownerId, { ...base, idNumber: '079000000022' }),
-    ]);
+      const results = await Promise.allSettled([
+        sellerProfiles.save(tenantId, ownerId, { ...base, idNumber: '079000000011' }),
+        sellerProfiles.save(tenantId, ownerId, { ...base, idNumber: '079000000022' }),
+      ]);
 
-    const fulfilled = results.filter((r) => r.status === 'fulfilled');
-    const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
-    expect(fulfilled).toHaveLength(1);
-    expect(rejected).toHaveLength(1);
-    expect(rejected[0]!.reason).toMatchObject({
-      response: { code: API_ERROR_CODE.SELLER_PROFILE_NOT_EDITABLE },
-    });
-    const after = await state();
-    expect(after.status).toBe(SELLER_PROFILE_STATUS.SUBMITTED);
-    expect(
-      await prisma.approvalTask.count({ where: { tenantId, targetId: after.id, status: 'pending' } }),
-    ).toBe(1);
-  });
+      const fulfilled = results.filter((r) => r.status === 'fulfilled');
+      const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      expect(rejected[0]!.reason).toMatchObject({
+        response: { code: API_ERROR_CODE.SELLER_PROFILE_NOT_EDITABLE },
+      });
+      const after = await state();
+      expect(after.status).toBe(SELLER_PROFILE_STATUS.SUBMITTED);
+      expect(
+        await prisma.approvalTask.count({
+          where: { tenantId, targetId: after.id, status: 'pending' },
+        }),
+      ).toBe(1);
+    },
+  );
 
   maybe('đổi số CCCD cũng phải duyệt lại', async () => {
     await sellerProfiles.getOrCreate(tenantId);
@@ -608,14 +620,20 @@ describe('Hồ sơ người bán đã xác minh đổi định danh thuế ⇒ d
     expect((await state()).status).toBe(SELLER_PROFILE_STATUS.SUBMITTED);
   });
 
-  maybe('đổi sang loại chủ thể còn THIẾU trường bắt buộc ⇒ về `draft`, không vào hàng đợi', async () => {
-    await sellerProfiles.getOrCreate(tenantId);
-    await verify();
-    // Doanh nghiệp bắt buộc có MST — chưa khai thì không thể gửi duyệt.
-    await sellerProfiles.save(tenantId, ownerId, { ...base, entityType: SELLER_ENTITY_TYPE.COMPANY });
-    expect((await state()).status).toBe(SELLER_PROFILE_STATUS.DRAFT);
-    expect(await prisma.approvalTask.count({ where: { tenantId, status: 'pending' } })).toBe(0);
-  });
+  maybe(
+    'đổi sang loại chủ thể còn THIẾU trường bắt buộc ⇒ về `draft`, không vào hàng đợi',
+    async () => {
+      await sellerProfiles.getOrCreate(tenantId);
+      await verify();
+      // Doanh nghiệp bắt buộc có MST — chưa khai thì không thể gửi duyệt.
+      await sellerProfiles.save(tenantId, ownerId, {
+        ...base,
+        entityType: SELLER_ENTITY_TYPE.COMPANY,
+      });
+      expect((await state()).status).toBe(SELLER_PROFILE_STATUS.DRAFT);
+      expect(await prisma.approvalTask.count({ where: { tenantId, status: 'pending' } })).toBe(0);
+    },
+  );
 
   maybe('chỉ đổi tên pháp lý / nơi cấp ⇒ GIỮ `verified` (không đổi nghĩa vụ thuế)', async () => {
     await sellerProfiles.getOrCreate(tenantId);
@@ -641,7 +659,7 @@ describe('Tỉnh/thành đi qua chi nhánh mặc định', () => {
     const shop = await tenants.updateProfile(
       tenantId,
       ownerId,
-      { provinceCode: DANANG },
+      { provinceCode: DANANG, wardCode: await wardCodeOf(asService, DANANG) },
       OWNER_ACCESS,
     );
 

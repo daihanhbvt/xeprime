@@ -71,7 +71,7 @@ describe('packageShopListingGateFrom', () => {
 });
 
 describe('isLogoOnlyGate', () => {
-  it('đúng khi mục duy nhất còn thiếu là logo — ca thường gặp sau khi thanh toán', () => {
+  it('đúng khi mục duy nhất còn thiếu là logo - ca thường gặp sau khi thanh toán', () => {
     expect(isLogoOnlyGate([PACKAGE_SHOP_LISTING_REQUIREMENT.LOGO])).toBe(true);
   });
 

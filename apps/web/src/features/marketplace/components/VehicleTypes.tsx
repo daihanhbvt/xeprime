@@ -8,6 +8,8 @@ import { HomeCarousel } from './HomeCarousel';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from './SectionHeading';
 import styles from './VehicleTypes.module.css';
+import { slideInLeftClass, slideInRightClass } from '@/components/motion/motion-classes';
+import { cx } from '@/lib/cx';
 
 /**
  * Kiểu dáng được bật "Hiện ở trang chủ" — đúng thứ tự danh mục (API đã sắp theo `sortOrder`).
@@ -57,7 +59,7 @@ export async function VehicleTypes({ items }: { items: readonly CatalogItem[] })
       {/* Băng chuyền trượt lên sau tiêu đề khi cuộn tới (≈ `.category-slider wow fadeInUp` 0.2s). */}
       <Reveal delay={200}>
         <HomeCarousel ariaLabel={t('title')} perView={4}>
-          {items.map((item) => (
+          {items.map((item, index) => (
             <Link key={item.key} href={typeHref(item)} className={styles.card}>
               <span className={styles.media}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- ảnh admin tải lên R2 không nằm trong remotePatterns của next/image */}
@@ -65,7 +67,7 @@ export async function VehicleTypes({ items }: { items: readonly CatalogItem[] })
                   src={item.showcaseImageUrl ?? ''}
                   alt=""
                   loading="lazy"
-                  className={styles.image}
+                  className={cx(styles.image, index % 2 ? slideInRightClass : slideInLeftClass)}
                 />
               </span>
               <span className={styles.details}>

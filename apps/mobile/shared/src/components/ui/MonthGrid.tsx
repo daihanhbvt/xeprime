@@ -7,6 +7,7 @@ import { DAY_PARAM_FORMAT, dayjs, type Dayjs } from '@xeprime/domain';
 import { IconButton } from './IconButton';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
+import { haptics } from '@/lib/haptics';
 import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 /** `day()` của Day.js: 0 = Chủ nhật, khớp thứ tự nhãn `Common.weekdayShort.0…6`. */
@@ -100,7 +101,10 @@ export function MonthGrid<TMark>({
   useEffect(() => {
     onDayPressRef.current = onDayPress;
   }, [onDayPress]);
-  const pressDay = useCallback((day: Dayjs) => onDayPressRef.current(day), []);
+  const pressDay = useCallback((day: Dayjs) => {
+    haptics.selection();
+    onDayPressRef.current(day);
+  }, []);
 
   const DayComponent = useMemo(
     () =>

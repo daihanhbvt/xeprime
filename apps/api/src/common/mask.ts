@@ -19,11 +19,9 @@ const MASK_CHAR = '*';
  * SĐT: giữ 3 số đầu + 3 số cuối, phần giữa thành `*`.
  * `0912345678` → `091****678`. Số quá ngắn (≤6) chỉ giữ 2 số cuối.
  *
- * Che trên dạng NỘI ĐỊA (`toLocalPhone`) chứ không trên giá trị thô, vì hai lý do:
- *  - `users.phone` lưu `84…` — che thẳng sẽ ra `849****678`, tức 3 ký tự lộ ra đúng bằng mã
- *    quốc gia, giống hệt nhau ở mọi số, và nhân viên hỗ trợ không đối chiếu được gì.
- *  - `bookings.customer_phone` lưu thô `0…` — không quy về một dạng thì cùng một người hiện
- *    khác nhau ở màn Đơn thuê và màn Khách thuê.
+ * Che trên dạng NỘI ĐỊA (`toLocalPhone`) chứ không trên giá trị thô: dạng lưu là `0…` (ADR 0082)
+ * nhưng hàng cũ còn sót `84…` sẽ che thành `849****678` — 3 ký tự lộ ra đúng bằng mã quốc gia,
+ * nhân viên hỗ trợ không đối chiếu được gì.
  */
 export function maskPhone(phone: string | null | undefined): string | null {
   if (!phone) return null;

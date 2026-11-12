@@ -229,7 +229,7 @@ export function CatalogModelsPanel() {
       key: 'usage',
       align: 'right',
       width: 100,
-      render: (_, m) => (m.usageCount > 0 ? m.usageCount : '—'),
+      render: (_, m) => (m.usageCount > 0 ? m.usageCount : '-'),
     },
     {
       /*

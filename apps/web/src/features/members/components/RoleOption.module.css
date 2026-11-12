@@ -1,0 +1,19 @@
+/* Ô vai: "Quản lý gian hàng · điều hành mọi hoạt động" (Figma `24035:69694`). */
+.option {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.hint {
+  overflow: hidden;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hint::before {
+  content: '· ';
+}

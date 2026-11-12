@@ -21,6 +21,7 @@ export function ApprovalPreviewSummary({
   preview,
   windows,
   windowsPendingHint,
+  heading,
   showMoney = true,
 }: {
   preview: ApprovalPreview;
@@ -28,6 +29,8 @@ export function ApprovalPreviewSummary({
   windows?: ApprovalWindows | null;
   /** Câu thay cho khối cửa sổ khi chưa có giờ nhận (dài hạn chưa chọn giờ). */
   windowsPendingHint?: string;
+  /** Tiêu đề khối tiền — hộp duyệt theo ngày dùng "Lợi nhuận chuyến" (web 05/11/2026). */
+  heading?: string;
   /** `false` = chỉ hiện hai cửa sổ — số tiền server ước không phải tiền của chuyến này (dài hạn legacy). */
   showMoney?: boolean;
 }) {
@@ -50,11 +53,11 @@ export function ApprovalPreviewSummary({
       bw={1}
       bc={colors.border}
       br={radius.sm}
-      accessibilityLabel={t('title')}
+      accessibilityLabel={heading ?? t('title')}
     >
       <XStack ai="center" jc="space-between" gap={space.sm}>
         <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-          {t('title')}
+          {heading ?? t('title')}
         </Text>
         <YStack px={space.xs} br={radius.sm} bg={colors.surfaceMuted}>
           <Text col={colors.placeholder} fos={fontSize.label}>
@@ -63,35 +66,45 @@ export function ApprovalPreviewSummary({
         </YStack>
       </XStack>
 
-      {showMoney ? <OwnerPayoutTable payout={preview.ownerPayout} label={t('title')} /> : null}
+      {showMoney ? (
+        <OwnerPayoutTable payout={preview.ownerPayout} label={heading ?? t('title')} />
+      ) : null}
 
-      {!preview.collectsHold ? (
-        note(t('noHold'))
-      ) : w ? (
-        <>
-          <YStack gap={2} paddingLeft={space.xs}>
-            {note(
-              `• ${t('paymentWindow', {
-                duration: fmt.minutesDuration(w.paymentWindowMinutes),
-                time: fmt.dateTime(w.expiresAt),
-              })}`,
-            )}
-            {note(
-              `• ${
-                w.freeCancelMinutes > 0
-                  ? t('freeCancel', {
-                      duration: fmt.minutesDuration(w.freeCancelMinutes),
-                      time: fmt.dateTime(w.freeCancelUntil),
-                    })
-                  : t('noFreeCancel')
-              }`,
-            )}
-            {note(`• ${t('lateCancel')}`)}
-          </YStack>
-          {w.tooShort ? <Callout tone="warning" title={t('tooShort')} /> : null}
-        </>
-      ) : windowsPendingHint ? (
-        note(windowsPendingHint)
+      {/*
+        Hai cửa sổ của khách NẾU duyệt ngay (ADR 0066 · 0072) nằm trong ô nền xanh như web
+        `ApprovalWindowNotes` — tách khỏi bảng tiền để đọc ra là LUẬT, không phải một dòng tiền.
+      */}
+      {!preview.collectsHold || w || windowsPendingHint ? (
+        <YStack gap={space.xs} p={space.sm} br={radius.sm} bg={colors.infoSurface}>
+          {!preview.collectsHold ? (
+            note(t('noHold'))
+          ) : w ? (
+            <>
+              <YStack gap={2} paddingLeft={space.xs}>
+                {note(
+                  `• ${t('paymentWindow', {
+                    duration: fmt.minutesDuration(w.paymentWindowMinutes),
+                    time: fmt.dateTime(w.expiresAt),
+                  })}`,
+                )}
+                {note(
+                  `• ${
+                    w.freeCancelMinutes > 0
+                      ? t('freeCancel', {
+                          duration: fmt.minutesDuration(w.freeCancelMinutes),
+                          time: fmt.dateTime(w.freeCancelUntil),
+                        })
+                      : t('noFreeCancel')
+                  }`,
+                )}
+                {note(`• ${t('lateCancel')}`)}
+              </YStack>
+              {w.tooShort ? <Callout tone="warning" title={t('tooShort')} /> : null}
+            </>
+          ) : windowsPendingHint ? (
+            note(windowsPendingHint)
+          ) : null}
+        </YStack>
       ) : null}
     </YStack>
   );

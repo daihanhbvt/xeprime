@@ -37,7 +37,7 @@ function parseBoxShadow(value: string): {
 
   if (!match) {
     throw new Error(
-      `Token bóng '${value}' không đúng dạng '<x> <y> <blur> <spread> rgba(r, g, b, a)' (đơn vị px tuỳ chọn) — cập nhật parser ở theme/elevation.ts.`,
+      `Token bóng '${value}' không đúng dạng '<x> <y> <blur> <spread> rgba(r, g, b, a)' (đơn vị px tuỳ chọn) - cập nhật parser ở theme/elevation.ts.`,
     );
   }
 

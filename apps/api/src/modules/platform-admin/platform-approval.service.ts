@@ -428,7 +428,7 @@ export class PlatformApprovalService {
     if (expectedCapturedAt && currentCapturedAt && expectedCapturedAt !== currentCapturedAt) {
       throw new ConflictException({
         code: API_ERROR_CODE.APPROVAL_SNAPSHOT_STALE,
-        message: 'Chủ xe vừa cập nhật hồ sơ — tải lại phiếu để đọc bản mới trước khi duyệt.',
+        message: 'Chủ xe vừa cập nhật hồ sơ - tải lại phiếu để đọc bản mới trước khi duyệt.',
         details: { expectedCapturedAt, currentCapturedAt },
       });
     }

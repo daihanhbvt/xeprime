@@ -2,7 +2,7 @@
  * Yup schema dùng chung cho form frontend.
  *
  * CLAUDE.md mục 4: frontend validate bằng yup, backend validate bằng class-validator.
- * Hai lớp này KHÔNG thay thế nhau — yup để báo lỗi sớm cho người dùng, class-validator là
+ * Hai lớp này KHÔNG thay thế nhau - yup để báo lỗi sớm cho người dùng, class-validator là
  * lớp chặn thật. Bỏ lớp backend vì "frontend đã validate rồi" là lỗ bảo mật.
  */
 import * as yup from 'yup';
@@ -58,7 +58,8 @@ import {
   VEHICLE_SOURCE_TYPE_VALUES,
   VEHICLE_TYPE,
   VEHICLE_TYPE_VALUES,
-  VN_PHONE_PATTERN,
+  isVnMobilePhoneInput,
+  isVnPhoneInput,
 } from '@xeprime/types';
 
 export {
@@ -66,6 +67,9 @@ export {
   requiredPhoneSchema,
   buildPhoneSchema,
   buildRequiredPhoneSchema,
+  buildMobilePhoneSchema,
+  buildRequiredMobilePhoneSchema,
+  requiredMobilePhoneSchema,
   type PhoneSchemaLabels,
 } from './phone';
 
@@ -78,20 +82,20 @@ export {
 export const emailSchema = yup.string().trim().email('Email không hợp lệ');
 
 /**
- * Mã đơn vị hành chính — HẰNG SỐ, vì bản viết inline đã sai ba lần.
+ * Mã đơn vị hành chính - HẰNG SỐ, vì bản viết inline đã sai ba lần.
  *
  * Ba ô địa chỉ trong file này từng mang `/^d{2}$/` và `/^d{5}$/`: mẫu khớp chuỗi `"dd"` /
- * `"ddddd"` và không khớp một mã thật nào, nên mọi lượt chọn tỉnh/xã đều bị từ chối — và mã lỗi
+ * `"ddddd"` và không khớp một mã thật nào, nên mọi lượt chọn tỉnh/xã đều bị từ chối - và mã lỗi
  * `wardInvalid` lọt ra giao diện ở dạng chữ trần vì namespace của form đó chưa có khoá ấy.
  *
  * Độ dài khớp cột DB (`provinces.code CHAR(2)`, `wards.code CHAR(5)`) và `@Length` của DTO.
  * Lớp chặn THẬT vẫn ở backend: `AddressService` tra danh mục và DB giữ FK tổ hợp
- * `(ward_code, province_code)` — mẫu ở đây chỉ bắt lỗi hình dạng trước khi gửi.
+ * `(ward_code, province_code)` - mẫu ở đây chỉ bắt lỗi hình dạng trước khi gửi.
  */
 export const PROVINCE_CODE_PATTERN = /^\d{2}$/;
 export const WARD_CODE_PATTERN = /^\d{5}$/;
 
-/** Tiền VND: số nguyên không âm. Không dùng float — xem ADR 0007. */
+/** Tiền VND: số nguyên không âm. Không dùng float - xem ADR 0007. */
 export const moneySchema = yup
   .number()
   .typeError('Vui lòng nhập số')
@@ -105,7 +109,7 @@ const MAX_VEHICLE_YEAR = new Date().getFullYear() + 1;
 /** Text tuỳ chọn: chuỗi trim, rỗng coi như bỏ trống (map sang undefined khi gửi API). */
 const optionalText = (max: number) => yup.string().trim().max(max).default('');
 /**
- * `code` là TIỀN TỐ mã, không phải nhãn hiển thị — `useValidationResolver` tra
+ * `code` là TIỀN TỐ mã, không phải nhãn hiển thị - `useValidationResolver` tra
  * `Vehicles.form.validation.${code}TypeError` v.v. Chỉ `vehicleFormSchema` dùng hàm này (kiểm
  * bằng grep trước khi sửa); đổi cho schema khác thì phải kiểm lại đúng điều đó.
  */
@@ -122,7 +126,7 @@ const optionalPositiveInt = (code: string, max: number) =>
 /**
  * Đếm số chữ số thập phân THẬT của một số, kể cả khi nó được viết ở dạng mũ.
  *
- * `String(1e-7)` cho `'1e-7'` — tách theo dấu chấm sẽ đếm ra 0 chữ số thập phân và để lọt một
+ * `String(1e-7)` cho `'1e-7'` - tách theo dấu chấm sẽ đếm ra 0 chữ số thập phân và để lọt một
  * giá trị mà server từ chối. Nhánh mũ ở đây là lý do hàm này không phải một dòng.
  */
 function countDecimals(value: number): number {
@@ -133,11 +137,11 @@ function countDecimals(value: number): number {
 }
 
 /**
- * Luật "tối đa N chữ số thập phân" cho một ô số — dùng làm `.test(maxDecimalsTest(...))`.
+ * Luật "tối đa N chữ số thập phân" cho một ô số - dùng làm `.test(maxDecimalsTest(...))`.
  *
  * PHẢI khớp `@IsNumber({ maxDecimalPlaces })` của DTO và phần thập phân của cột `Decimal(p, s)`.
  * Thiếu luật này ở yup thì một giá trị như `1.233` đi lọt tới server, bị trả `VALIDATION_FAILED`,
- * và người dùng chỉ thấy một toast chung chung không chỉ ra được ô nào sai — đúng lớp lỗi mà
+ * và người dùng chỉ thấy một toast chung chung không chỉ ra được ô nào sai - đúng lớp lỗi mà
  * validate phía client sinh ra để chặn.
  *
  * Trả về mô tả test (không phải một hàm bọc schema) để `.test()` giữ nguyên kiểu suy ra của
@@ -154,11 +158,11 @@ export const maxDecimalsTest = (
 });
 
 /**
- * Thông số đo được (mức tiêu thụ nhiên liệu…): 0–999 với TỐI ĐA 2 chữ số thập phân — khớp
+ * Thông số đo được (mức tiêu thụ nhiên liệu…): 0-999 với TỐI ĐA 2 chữ số thập phân - khớp
  * `@IsNumber({ maxDecimalPlaces: 2 })` ở `vehicle.dto.ts` và cột `Decimal(6, 2)`.
  */
 const METRIC_DECIMALS = 2;
-/** `code` là tiền tố mã — cùng quy ước với `optionalPositiveInt`, chỉ `vehicleFormSchema` dùng. */
+/** `code` là tiền tố mã - cùng quy ước với `optionalPositiveInt`, chỉ `vehicleFormSchema` dùng. */
 const optionalMetric = (code: string) =>
   yup
     .number()
@@ -171,10 +175,10 @@ const optionalMetric = (code: string) =>
     .default(null);
 
 /**
- * Giá theo ngày/giờ/tháng — bản LOCAL của `moneySchema` với message là MÃ.
+ * Giá theo ngày/giờ/tháng - bản LOCAL của `moneySchema` với message là MÃ.
  *
  * KHÔNG đổi `moneySchema` (export ở trên): nó còn được `apps/web/src/features/bookings/schema.ts`
- * dùng, và màn đó chưa có `useValidationResolver` — đổi message của `moneySchema` sẽ làm màn đó
+ * dùng, và màn đó chưa có `useValidationResolver` - đổi message của `moneySchema` sẽ làm màn đó
  * hiện nguyên mã lỗi lên UI.
  */
 const vehiclePriceSchema = yup
@@ -182,15 +186,15 @@ const vehiclePriceSchema = yup
   .typeError('priceTypeError')
   .integer('priceInteger')
   .min(0, 'priceMin')
-  // Bước giá 1.000đ — cùng luật `@IsMoneyStep` của API (ADR 0064): giá đi thẳng vào tổng khách trả.
+  // Bước giá 1.000đ - cùng luật `@IsMoneyStep` của API (ADR 0064): giá đi thẳng vào tổng khách trả.
   .test('thousand-step', 'priceThousandStep', (value) => value == null || isThousandStep(value));
 
 /*
- * Message của schema này là MÃ — `useValidationResolver` tra `Vehicles.form.validation.*`.
+ * Message của schema này là MÃ - `useValidationResolver` tra `Vehicles.form.validation.*`.
  * Xem docblock `vehicleSourceFormSchema` về quy ước chung; đây là schema thứ hai được dịch.
  *
  * `manufactureYear.max` CÒN CHỮ VIỆT CỨNG có chủ đích: cận trên là `năm hiện tại + 1`, tính lúc
- * CHẠY chứ không phải hằng số — `useValidationResolver` hiện chỉ tra mã tĩnh, chưa truyền tham
+ * CHẠY chứ không phải hằng số - `useValidationResolver` hiện chỉ tra mã tĩnh, chưa truyền tham
  * số động vào message dịch. Sửa đúng cần thêm cơ chế tham số ở cả hai hook; để lại một nợ nhỏ,
  * đã ghi rõ, còn hơn xây cơ chế đó chỉ cho một trường.
  */
@@ -198,12 +202,12 @@ export const vehicleFormSchema = yup.object({
   code: yup.string().trim().max(80).default(''),
   name: yup.string().trim().required('nameRequired').max(255),
   /**
-   * Chi nhánh giữ xe — BẮT BUỘC. Đây là vị trí công khai của xe trên marketplace, nên không có
+   * Chi nhánh giữ xe - BẮT BUỘC. Đây là vị trí công khai của xe trên marketplace, nên không có
    * mặc định ngầm: form chọn sẵn chi nhánh mặc định của gian hàng, người dùng đổi được.
    */
   branchId: yup.string().trim().required('branchRequired'),
   vehicleType: yup.string().oneOf(VEHICLE_TYPE_VALUES).required('vehicleTypeRequired'),
-  /** MẢNG dịch vụ xe phục vụ được (17/08) — một xe đăng đồng thời tự lái/có tài xế/dài hạn. */
+  /** MẢNG dịch vụ xe phục vụ được (17/08) - một xe đăng đồng thời tự lái/có tài xế/dài hạn. */
   serviceTypes: yup
     .array()
     .of(yup.string().oneOf(SERVICE_TYPE_VALUES).required())
@@ -236,7 +240,7 @@ export const vehicleFormSchema = yup.object({
       return isVehicleFuelTypeAllowed(String(this.parent.vehicleType ?? ''), value);
     }),
   /**
-   * Phân khúc xe máy — chiều đối xứng với `bodyType` của ô tô, và là chiều khách lọc ngoài chợ.
+   * Phân khúc xe máy - chiều đối xứng với `bodyType` của ô tô, và là chiều khách lọc ngoài chợ.
    * Cùng luật mà DB giữ bằng CHECK và backend kiểm bằng `vehicleFieldPolicy`.
    */
   motorbikeCategory: yup
@@ -247,7 +251,7 @@ export const vehicleFormSchema = yup.object({
     .test('motorbike-only', 'motorbikeCategoryMotorbikeOnly', function motorbikeOnly(value) {
       return this.parent.vehicleType === VEHICLE_TYPE.MOTORBIKE || value == null;
     }),
-  /** Kiểu dáng thân xe — chỉ có nghĩa với ô tô; đổi sang xe máy thì form tự xoá. */
+  /** Kiểu dáng thân xe - chỉ có nghĩa với ô tô; đổi sang xe máy thì form tự xoá. */
   bodyType: yup
     .string()
     .oneOf(BODY_TYPE_VALUES)
@@ -287,13 +291,13 @@ export const vehicleFormSchema = yup.object({
   engineDisplacementCc: optionalPositiveInt('engineDisplacementCc', 30000),
   horsepowerHp: optionalPositiveInt('horsepowerHp', 5000),
   /**
-   * Truyền động — bộ MỞ RỘNG (`TRANSMISSION_TYPE_EXT_VALUES`), không phải năm mã cũ.
+   * Truyền động - bộ MỞ RỘNG (`TRANSMISSION_TYPE_EXT_VALUES`), không phải năm mã cũ.
    *
    * Bộ cũ (`automatic`/`manual`/`cvt`/`dct`/`other`) không có truyền động một cấp của xe điện,
-   * cũng không có ba kiểu của xe máy — mà ô "Hộp số" trên form lại dựng options từ
+   * cũng không có ba kiểu của xe máy - mà ô "Hộp số" trên form lại dựng options từ
    * `vehicleTransmissionTypesFor`. Hai nguồn lệch nhau nghĩa là form mời người dùng chọn "Truyền
    * động một cấp" cho một chiếc xe điện rồi tự chặn lại bằng câu lỗi mặc định của yup
-   * ("transmission must be one of the following values: automatic, manual, cvt, dct, other") —
+   * ("transmission must be one of the following values: automatic, manual, cvt, dct, other") -
    * không dịch được, và không nói được người dùng phải làm gì.
    *
    * `.test` thứ hai giữ đúng ma trận mà backend dùng: chọn hộp số ô tô rồi đổi sang xe máy thì
@@ -311,11 +315,11 @@ export const vehicleFormSchema = yup.object({
         value,
       );
     }),
-  /** Xe ĐIỆN: km mỗi lần sạc đầy — số nguyên, cùng trần 2000 với CHECK ở DB. */
+  /** Xe ĐIỆN: km mỗi lần sạc đầy - số nguyên, cùng trần 2000 với CHECK ở DB. */
   electricRangeKm: optionalPositiveInt('electricRangeKm', 2000),
-  /** Xe ĐIỆN: dung lượng pin (kWh) — tuỳ chọn, hai chữ số thập phân như các thông số đo được. */
+  /** Xe ĐIỆN: dung lượng pin (kWh) - tuỳ chọn, hai chữ số thập phân như các thông số đo được. */
   batteryCapacityKwh: optionalMetric('batteryCapacityKwh'),
-  /** Xe ĐIỆN: tiêu thụ điện (kWh/100km) — tuỳ chọn. */
+  /** Xe ĐIỆN: tiêu thụ điện (kWh/100km) - tuỳ chọn. */
   electricConsumptionKwhPer100Km: optionalMetric('electricConsumptionKwhPer100Km'),
   fuelConsumptionCity: optionalMetric('fuelConsumptionCity'),
   fuelConsumptionHighway: optionalMetric('fuelConsumptionHighway'),
@@ -328,33 +332,33 @@ export const vehicleFormSchema = yup.object({
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
     .default(null),
-  /** Giá thuê theo giờ — bỏ trống = xe không cho thuê giờ (tiện ích "Thuê theo giờ"). */
+  /** Giá thuê theo giờ - bỏ trống = xe không cho thuê giờ (tiện ích "Thuê theo giờ"). */
   hourlyPrice: vehiclePriceSchema
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
     .default(null),
-  /** Giá tháng tham chiếu thuê dài hạn — chỉ có nghĩa khi serviceTypes chứa long_term. */
+  /** Giá tháng tham chiếu thuê dài hạn - chỉ có nghĩa khi serviceTypes chứa long_term. */
   monthlyPrice: vehiclePriceSchema
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
     .default(null),
-  /** Giá/ngày đã gồm tài xế (nội thành/cơ bản) — chỉ có nghĩa khi serviceTypes chứa with_driver. */
+  /** Giá/ngày đã gồm tài xế (nội thành/cơ bản) - chỉ có nghĩa khi serviceTypes chứa with_driver. */
   withDriverDailyPrice: vehiclePriceSchema
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
     .default(null),
-  /** Giá/ngày có tài xế lộ trình liên tỉnh (khứ hồi) — bỏ trống = rơi về giá cơ bản. */
+  /** Giá/ngày có tài xế lộ trình liên tỉnh (khứ hồi) - bỏ trống = rơi về giá cơ bản. */
   withDriverInterCityPrice: vehiclePriceSchema
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
     .default(null),
-  /** Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều — bỏ trống = fallback liên tỉnh → cơ bản. */
+  /** Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều - bỏ trống = fallback liên tỉnh → cơ bản. */
   withDriverOneWayPrice: vehiclePriceSchema
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
     .default(null),
   deliveryEnabled: yup.boolean().default(false),
-  /** % giảm giá marketing — bỏ trống = không giảm. */
+  /** % giảm giá marketing - bỏ trống = không giảm. */
   discountPercent: yup
     .number()
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
@@ -369,7 +373,7 @@ export const vehicleFormSchema = yup.object({
    * `mainImageUrl` ĐÃ BỊ BỎ khỏi form (07/10/2026).
    *
    * Ảnh bìa là ảnh MẶT TRƯỚC, do server suy ra từ `media` (`VEHICLE_COVER_IMAGE_TYPE`). Một ô
-   * tải ảnh riêng bắt chủ xe tải cùng tấm ảnh hai lần, và hai ô lệch nhau được — thẻ xe ngoài
+   * tải ảnh riêng bắt chủ xe tải cùng tấm ảnh hai lần, và hai ô lệch nhau được - thẻ xe ngoài
    * chợ hiện một chiếc xe khác với ô "mặt trước" của chính nó.
    */
   images: yup
@@ -396,7 +400,7 @@ export const vehicleFormSchema = yup.object({
 export type VehicleFormValues = yup.InferType<typeof vehicleFormSchema>;
 
 /**
- * Các GÓC ảnh bắt buộc còn TRỐNG của một bộ giá trị form — ô tô 5, xe máy 2 (07/10/2026).
+ * Các GÓC ảnh bắt buộc còn TRỐNG của một bộ giá trị form - ô tô 5, xe máy 2 (07/10/2026).
  *
  * Form nào cũng gọi được, kể cả form sửa xe không dùng `quickVehicleSchema`. Luật gốc nằm ở
  * `@xeprime/types` (`missingVehicleImageTypes`), đây chỉ là lối vào theo shape của form.
@@ -409,13 +413,13 @@ export function missingVehiclePhotoSlots(values: {
 }
 
 /**
- * `vehicleFormSchema` + luật ẢNH BẮT BUỘC — dùng cho các form xe CÓ bước ảnh (thêm nâng cao, sửa
+ * `vehicleFormSchema` + luật ẢNH BẮT BUỘC - dùng cho các form xe CÓ bước ảnh (thêm nâng cao, sửa
  * xe ở cả hai khu, app native).
  *
  * Cố ý là một schema RIÊNG, không phải một `.test` gắn luôn vào `vehicleFormSchema`: mục "Thông
  * tin" của màn quản lý xe cũng dùng schema đó cho một form KHÔNG có ô ảnh nào. Gắn luật vào gốc
  * sẽ chặn lượt sửa biển số của một chiếc xe cũ còn thiếu ảnh, với một câu lỗi trỏ vào một bảng
- * ảnh không có trên màn hình — và không có cách nào sửa được từ chỗ đó.
+ * ảnh không có trên màn hình - và không có cách nào sửa được từ chỗ đó.
  */
 export const vehicleFormWithPhotosSchema = vehicleFormSchema.test(
   'photos-required',
@@ -431,9 +435,9 @@ export const vehicleFormWithPhotosSchema = vehicleFormSchema.test(
 );
 
 /**
- * Số nguyên VND tuỳ chọn — form nhập number (NumberField), hoá chuỗi khi gửi API (ADR 0007).
+ * Số nguyên VND tuỳ chọn - form nhập number (NumberField), hoá chuỗi khi gửi API (ADR 0007).
  *
- * Chỉ `vehicleSourceFormSchema` dùng hàm này (kiểm bằng grep trước khi sửa) — message ở đây là
+ * Chỉ `vehicleSourceFormSchema` dùng hàm này (kiểm bằng grep trước khi sửa) - message ở đây là
  * MÃ để `useValidationResolver` tra `Vehicles.source.validation.*`, không phải chữ hiển thị
  * thẳng. Đổi hàm này cho schema khác thì phải kiểm lại đúng điều đó, nếu không màn kia sẽ hiện
  * nguyên mã lỗi lên UI.
@@ -450,27 +454,27 @@ const optionalMoney = yup
 const optionalDate = yup.string().trim().nullable().default(null);
 
 /**
- * Hồ sơ nguồn xe & tài chính (Wave 4) — tab Nguồn xe & tài chính.
+ * Hồ sơ nguồn xe & tài chính (Wave 4) - tab Nguồn xe & tài chính.
  *
  * Bắt buộc-theo-biến-thể khớp REQUIRED_FIELDS ở backend (VehicleSourceService); các trường
- * còn lại tuỳ chọn. Trường lạc biến thể không cần chặn ở đây — form chỉ render trường của
+ * còn lại tuỳ chọn. Trường lạc biến thể không cần chặn ở đây - form chỉ render trường của
  * biến thể đang chọn và mapper chỉ gửi đúng nhóm đó.
  */
 /*
- * Message của schema này là MÃ, không phải chữ hiển thị — `useValidationResolver` (bản web ở
+ * Message của schema này là MÃ, không phải chữ hiển thị - `useValidationResolver` (bản web ở
  * `apps/web/src/i18n`, bản app ở `apps/mobile/src/i18n`) tra ra chữ thật ở
  * `Vehicles.source.validation.*` trước khi react-hook-form thấy `fieldState.error`. Đây là
- * schema DUY NHẤT đã được dịch — mọi schema khác trong file này vẫn còn chữ Việt cứng, nợ chung
+ * schema DUY NHẤT đã được dịch - mọi schema khác trong file này vẫn còn chữ Việt cứng, nợ chung
  * chưa trả (xem `docs/mobile-vehicle-module-status.md`).
  *
  * `termMonths`/`paymentDay` KHÔNG dùng `optionalPositiveInt` như các schema khác: hàm đó ghép
- * nhãn tiếng Việt thẳng vào message (`` `${label} phải là số` ``) nên không tra mã được — viết
+ * nhãn tiếng Việt thẳng vào message (`` `${label} phải là số` ``) nên không tra mã được - viết
  * riêng bốn dòng ở đây rẻ hơn nhiều so với đổi một hàm dùng chung bởi `vehicleFormSchema`.
  */
 export const vehicleSourceFormSchema = yup.object({
   sourceType: yup.string().oneOf(VEHICLE_SOURCE_TYPE_VALUES).required('sourceTypeRequired'),
 
-  // owned — tất cả tuỳ chọn
+  // owned - tất cả tuỳ chọn
   purchaseDate: optionalDate,
   purchasePrice: optionalMoney,
   purchasePlace: optionalText(255),
@@ -522,7 +526,9 @@ export const vehicleSourceFormSchema = yup.object({
       is: (value: string) => value === 'rented' || value === 'partnership',
       then: (s) => s.required('ownerNameRequired'),
     }),
-  ownerPhone: optionalText(30),
+  // SĐT liên hệ của chủ xe gốc - cùng luật mọi ô SĐT liên hệ (ADR 0082). Viết tại chỗ vì
+  // `contactPhoneRule` khai ở dưới (const - dùng trước khai báo là lỗi lúc nạp module).
+  ownerPhone: yup.string().trim().default('').test('vn-phone', 'phoneInvalid', isVnPhoneInput),
   ownerEmail: yup.string().trim().email('ownerEmailInvalid').max(160).default(''),
   monthlyRent: optionalMoney.when('sourceType', {
     is: 'rented',
@@ -554,7 +560,7 @@ export const vehicleSourceFormSchema = yup.object({
   startDate: optionalDate,
   endDate: optionalDate,
   /**
-   * Tài liệu đính kèm — chỉ là METADATA server phát: `id` file riêng tư (null với bản ghi
+   * Tài liệu đính kèm - chỉ là METADATA server phát: `id` file riêng tư (null với bản ghi
    * legacy Wave 4 chờ tải lên lại). KHÔNG có URL nào trong form state (Wave 4.1).
    */
   contractFiles: yup
@@ -575,11 +581,11 @@ export const vehicleSourceFormSchema = yup.object({
 export type VehicleSourceFormValues = yup.InferType<typeof vehicleSourceFormSchema>;
 
 /**
- * Metadata giấy tờ xe (Wave 5) — nhập tay hoặc chỉnh sau OCR. Mọi trường tuỳ chọn
+ * Metadata giấy tờ xe (Wave 5) - nhập tay hoặc chỉnh sau OCR. Mọi trường tuỳ chọn
  * (giấy tờ không bắt buộc); ràng buộc ngày ở backend là lớp chặn thật.
  */
 /*
- * Message của hai schema dưới đây là MÃ, tra `Vehicles.documents.validation.*` — cùng quy ước
+ * Message của hai schema dưới đây là MÃ, tra `Vehicles.documents.validation.*` - cùng quy ước
  * `useValidationResolver`, xem docblock `vehicleSourceFormSchema`.
  */
 export const vehicleDocumentFormSchema = yup.object({
@@ -604,12 +610,12 @@ export const vehicleDocumentFormSchema = yup.object({
 export type VehicleDocumentFormValues = yup.InferType<typeof vehicleDocumentFormSchema>;
 
 /**
- * Form "Thêm loại giấy tờ" — CHỈ chọn loại (+ tên tự đặt) và đính kèm ảnh/file.
+ * Form "Thêm loại giấy tờ" - CHỈ chọn loại (+ tên tự đặt) và đính kèm ảnh/file.
  *
  * Cố ý KHÔNG có metadata (biển số, số khung, ngày cấp…): lúc thêm, người dùng đang cầm tờ giấy
  * chứ chưa đọc nó. Các trường đó nhập sau ở màn chi tiết, hoặc để OCR điền.
  *
- * `preset` nhận một mã trong `VEHICLE_DOCUMENT_PRESET`, hoặc `other` nghĩa là "tự đặt tên" —
+ * `preset` nhận một mã trong `VEHICLE_DOCUMENT_PRESET`, hoặc `other` nghĩa là "tự đặt tên" -
  * dùng lại đúng hằng số loại giấy tờ thay vì bịa thêm một sentinel, và nó không thể trùng mã
  * preset nào.
  */
@@ -635,17 +641,17 @@ export const vehicleDocumentCreateSchema = yup.object({
 export type VehicleDocumentCreateValues = yup.InferType<typeof vehicleDocumentCreateSchema>;
 
 // ---------------------------------------------------------------------------
-// Bảo dưỡng & KM (Wave 6) — docs/design/12 §9
+// Bảo dưỡng & KM (Wave 6) - docs/design/12 §9
 // ---------------------------------------------------------------------------
 
 /**
  * Số KM: nguyên, không âm, trong trần vận hành. Backend + CHECK ở DB là lớp chặn thật.
  *
- * Message là MÃ — `useValidationResolver` tra `Maintenance.validation.*` (web) /
+ * Message là MÃ - `useValidationResolver` tra `Maintenance.validation.*` (web) /
  * `Vehicles.maintenance.validation.*` (app), hai namespace riêng vì hai bên đang đặt UI bảo
  * dưỡng ở hai chỗ khác nhau (nợ gộp namespace ghi ở `docs/mobile-vehicle-module-status.md`).
  * Dùng chung cho `maintenanceProfileFormSchema`, `odometerCorrectionFormSchema`,
- * `maintenanceRecordFields` — cả ba đều được dịch trong đợt này nên đổi an toàn.
+ * `maintenanceRecordFields` - cả ba đều được dịch trong đợt này nên đổi an toàn.
  */
 const odometerKmSchema = yup
   .number()
@@ -673,7 +679,7 @@ export const maintenanceProfileFormSchema = yup.object({
 export type MaintenanceProfileFormValues = yup.InferType<typeof maintenanceProfileFormSchema>;
 
 /**
- * Điều chỉnh KM thủ công. Lý do là BẮT BUỘC ở cả ba lớp (form, DTO backend, CHECK ở DB) —
+ * Điều chỉnh KM thủ công. Lý do là BẮT BUỘC ở cả ba lớp (form, DTO backend, CHECK ở DB) -
  * một số KM đổi mà không ai biết vì sao là thứ không được phép tồn tại (§9.1).
  */
 export const odometerCorrectionFormSchema = yup.object({
@@ -685,7 +691,7 @@ export const odometerCorrectionFormSchema = yup.object({
 export type OdometerCorrectionFormValues = yup.InferType<typeof odometerCorrectionFormSchema>;
 
 /**
- * Chi phí phiếu bảo dưỡng — bản LOCAL của `moneySchema` với message là MÃ.
+ * Chi phí phiếu bảo dưỡng - bản LOCAL của `moneySchema` với message là MÃ.
  *
  * KHÔNG đổi `moneySchema` (export ở trên): nó còn được `apps/web/src/features/bookings/schema.ts`
  * dùng, màn đó chưa có `useValidationResolver`.
@@ -701,7 +707,7 @@ const maintenanceCostSchema = yup
  *
  * Schema đầy đủ nằm ở `apps/web/src/features/vehicle-maintenance` vì hai mốc thời gian giữ
  * kiểu `Dayjs` (đúng hợp đồng của `DateTimeField`: component KHÔNG tự serialize để không làm
- * lệch múi giờ ở mọi form), mà package này cố ý không phụ thuộc `dayjs` — cùng lý do khiến
+ * lệch múi giờ ở mọi form), mà package này cố ý không phụ thuộc `dayjs` - cùng lý do khiến
  * schema banner cũng sống cạnh component của nó.
  */
 export const maintenanceRecordFields = {
@@ -721,7 +727,7 @@ export const maintenanceRecordFields = {
 };
 
 /**
- * Khoảng thuê. Kiểm tra `returnAt > pickupAt` ở đây chỉ để báo lỗi sớm — ràng buộc thật
+ * Khoảng thuê. Kiểm tra `returnAt > pickupAt` ở đây chỉ để báo lỗi sớm - ràng buộc thật
  * nằm ở CHECK constraint của bảng `bookings` và exclusion constraint của
  * `vehicle_occupancies` (ADR 0006).
  */
@@ -738,7 +744,7 @@ export const bookingPeriodSchema = yup.object({
 });
 
 /**
- * Biến thể có SÀN thời lượng (ngày) — thuê dài hạn dùng `LONG_TERM_MIN_DAYS`. Đếm ngày theo
+ * Biến thể có SÀN thời lượng (ngày) - thuê dài hạn dùng `LONG_TERM_MIN_DAYS`. Đếm ngày theo
  * đúng công thức backend (`ceil(Δ/24h)`) để hai tầng không bao giờ lệch nhau về ranh giới.
  */
 export const bookingPeriodMinDaysSchema = (minDays: number) =>
@@ -762,11 +768,11 @@ export const bookingPeriodMinDaysSchema = (minDays: number) =>
 export type BookingPeriodValues = yup.InferType<typeof bookingPeriodSchema>;
 
 // ---------------------------------------------------------------------------
-// Gian hàng (đăng ký + hồ sơ) — Phase 2 duyệt shop
+// Gian hàng (đăng ký + hồ sơ) - Phase 2 duyệt shop
 // ---------------------------------------------------------------------------
 
 /*
- * Message là MÃ — `useValidationResolver` tra `ShopOnboarding.validation.*` (chỉ web dùng
+ * Message là MÃ - `useValidationResolver` tra `ShopOnboarding.validation.*` (chỉ web dùng
  * schema này; app chưa có màn đăng ký gian hàng).
  */
 /**
@@ -779,19 +785,19 @@ export type BookingPeriodValues = yup.InferType<typeof bookingPeriodSchema>;
  * `wardCode` là chuỗi 5 ký tự; bắt buộc hay không do từng schema quyết định (đăng ký gian hàng
  * cho để trống, form chi nhánh thì không).
  *
- * Message là MÃ — mỗi schema tra trong namespace `validation` của chính nó.
+ * Message là MÃ - mỗi schema tra trong namespace `validation` của chính nó.
  */
 const addressShape = {
   provinceCode: yup.string().trim().required('provinceRequired').length(2, 'provinceInvalid'),
   /*
    * `.matches` + `excludeEmptyString` chứ KHÔNG `.length(5)`: ô chưa chọn mang chuỗi rỗng, và
-   * `.length` coi rỗng là sai độ dài. Hệ quả là một trường TUỲ CHỌN chặn cả form ngay khi mở —
+   * `.length` coi rỗng là sai độ dài. Hệ quả là một trường TUỲ CHỌN chặn cả form ngay khi mở -
    * và lỗi hiện ra ở một ô người dùng chưa hề chạm vào.
    *
-   * ⚠️ `\d`, không phải `d`. Bản trước viết `/^d{5}$/` — một mẫu khớp với chuỗi `"ddddd"` và
+   * ⚠️ `\d`, không phải `d`. Bản trước viết `/^d{5}$/` - một mẫu khớp với chuỗi `"ddddd"` và
    * KHÔNG khớp với bất kỳ mã xã thật nào. Hệ quả: mọi người chọn xã/phường đều bị từ chối ở ô
    * đó, và vì `ShopOnboarding.validation` chưa có khoá `wardInvalid`, `useValidationResolver`
-   * để nguyên chuỗi gốc — người dùng đọc thấy chữ `wardInvalid` trần trên giao diện. Ba mẫu số
+   * để nguyên chuỗi gốc - người dùng đọc thấy chữ `wardInvalid` trần trên giao diện. Ba mẫu số
    * trong file này từng mang cùng một lỗi đánh máy.
    */
   wardCode: yup
@@ -800,7 +806,7 @@ const addressShape = {
     .default('')
     .matches(WARD_CODE_PATTERN, { message: 'wardInvalid', excludeEmptyString: true }),
   addressLine: yup.string().trim().max(ADDRESS_LINE_MAX_LENGTH, 'addressLineMax').default(''),
-  /** Mã địa điểm Google — do ô chọn địa điểm đặt, người dùng không gõ. */
+  /** Mã địa điểm Google - do ô chọn địa điểm đặt, người dùng không gõ. */
   placeId: yup.string().trim().max(255).nullable().default(null),
   latitude: yup.number().min(-90).max(90).nullable().default(null),
   longitude: yup.number().min(-180).max(180).nullable().default(null),
@@ -812,35 +818,46 @@ const addressShape = {
 } as const;
 
 /**
- * SỐ ĐIỆN THOẠI LIÊN HỆ của một địa điểm (chi nhánh / gian hàng) — luật gốc, TUỲ CHỌN.
+ * SỐ ĐIỆN THOẠI LIÊN HỆ của một địa điểm (chi nhánh / gian hàng) - luật gốc, TUỲ CHỌN.
  *
  * Một const riêng vì đúng ô này xuất hiện ở ba form (đăng ký gian hàng, form chi nhánh, nâng cấp
  * lên tuyến gói) và hai trong ba đòi nó BẮT BUỘC. Ba bản chép tay của cùng một `matches` là ba
- * chỗ để mẫu số điện thoại lệch nhau — và `VN_PHONE_PATTERN` là thứ quyết định một khách có gọi
+ * chỗ để mẫu số điện thoại lệch nhau - và `VN_PHONE_PATTERN` là thứ quyết định một khách có gọi
  * được cho gian hàng hay không.
  *
  * `default('') + excludeEmptyString`: bỏ trống là hợp lệ, chỉ kiểm khi có nhập. Nơi cần bắt buộc
- * thì nối thêm `.required(...)` — schema của yup bất biến nên nối thêm không đụng tới bản gốc.
+ * thì nối thêm `.required(...)` - schema của yup bất biến nên nối thêm không đụng tới bản gốc.
  */
 const contactPhoneRule = yup
   .string()
   .trim()
   .default('')
-  .matches(VN_PHONE_PATTERN, { message: 'phoneInvalid', excludeEmptyString: true });
+  .test('vn-phone', 'phoneInvalid', isVnPhoneInput);
+
+/**
+ * Xã/phường BẮT BUỘC - cho địa chỉ trở thành CHI NHÁNH (nơi khách tới nhận xe). ADR 0077 ghi đè
+ * ADR 0042: bề mặt công khai hiện "Phường/Xã, Tỉnh/TP" ghép từ danh mục, nên chi nhánh phải có xã
+ * kể cả khi đã có ghim. Server cũng chặn (`WARD_REQUIRED`).
+ */
+const requiredWardRule = yup
+  .string()
+  .trim()
+  .required('wardRequired')
+  .matches(WARD_CODE_PATTERN, 'wardInvalid');
 
 /*
- * Từng có một `addressShapeWithWard` ở đây — bản BẮT BUỘC chọn xã/phường, dùng cho form khai
+ * Từng có một `addressShapeWithWard` ở đây - bản BẮT BUỘC chọn xã/phường, dùng cho form khai
  * địa điểm vận hành (chi nhánh, hồ sơ chủ xe).
  *
  * Nó bị bỏ theo ADR 0042: mọi ô địa chỉ CÓ GHIM thôi hỏi xã/phường, vì toạ độ đã xác nhận định
- * vị chính xác hơn hẳn một mã năm chữ số — và ô đó là thứ người dùng thường không trả lời được.
+ * vị chính xác hơn hẳn một mã năm chữ số - và ô đó là thứ người dùng thường không trả lời được.
  * `wardCode` vẫn nằm trong `addressShape` (vẫn đi trên dây, vẫn có ở dữ liệu cũ và ở sổ khách,
  * nơi KHÔNG có ghim nên mã xã vẫn là cấp định vị duy nhất dưới tỉnh), chỉ là không form có ghim
  * nào đòi nó nữa.
  */
 
 /**
- * ĐĂNG KÝ người cho thuê xe — MỘT schema, HAI cửa vào (ADR 0040).
+ * ĐĂNG KÝ người cho thuê xe - MỘT schema, HAI cửa vào (ADR 0040).
  *
  * `registrationTrack` KHÔNG phải một ô nhập: nó là CỬA VÀO mà người dùng đã chọn trước khi mở
  * form (CTA "Đăng xe cho thuê" hay "Đăng ký gian hàng"), và ba trường dưới đây nghiêm hay lỏng
@@ -853,17 +870,17 @@ const contactPhoneRule = yup
  *
  * Vì sao tuyến gói chặt hơn: người này đang chuẩn bị TRẢ TIỀN để mở một mặt tiền trên chợ, và cả
  * hai trường đều là thứ khách cần để tìm và gọi được họ. Hỏi ngay ở bước 1 rẻ hơn hẳn so với để
- * họ trả tiền xong rồi mới bị cổng đăng xe từ chối — nên bộ này khớp ĐÚNG
+ * họ trả tiền xong rồi mới bị cổng đăng xe từ chối - nên bộ này khớp ĐÚNG
  * `missingPackageShopRegistrationFields` ở `@xeprime/types` (cùng quy tắc, hai lớp thi hành).
  *
  * Vì sao MỘT schema chứ không hai, dù hai đọc dễ hơn: `useValidationResolver` nhận schema MỘT
  * lần và React Hook Form giữ resolver của lần dựng đầu. Một biểu thức `isPackageTrack ? A : B`
- * nghĩa là form đổi luật khi prop đổi mà RHF không biết — và ở tầng kiểu, union của hai
+ * nghĩa là form đổi luật khi prop đổi mà RHF không biết - và ở tầng kiểu, union của hai
  * `ObjectSchema` cũng không gán được vào tham số của resolver. Điều kiện thành DỮ LIỆU
  * (`.when`) giải cả hai, và đó là khuôn mà `customerRiskSchema` trong file này đã dùng.
  *
  * `tenantType` vẫn ở đây cho cả hai tuyến: tuyến gói không HỎI nó (loại hình không quyết định gì
- * trong luồng tiền — ADR 0014 điều 2) nhưng vẫn gửi một giá trị mặc định.
+ * trong luồng tiền - ADR 0014 điều 2) nhưng vẫn gửi một giá trị mặc định.
  */
 export const registerShopSchema = yup.object({
   name: yup.string().trim().required('nameRequired').min(2, 'nameMin').max(255),
@@ -874,7 +891,7 @@ export const registerShopSchema = yup.object({
     .default(REGISTRATION_TRACK.COMMISSION),
   /**
    * Tỉnh/thành là BẮT BUỘC ở CẢ HAI tuyến: đăng ký tạo luôn chi nhánh mặc định, và chi nhánh đó
-   * là nguồn vị trí công khai của mọi xe sau này. Giá trị là MÃ 2 ký tự lấy từ `GET /provinces` —
+   * là nguồn vị trí công khai của mọi xe sau này. Giá trị là MÃ 2 ký tự lấy từ `GET /provinces` -
    * KHÔNG kiểm theo danh sách cứng ở đây, backend mới là nơi biết tỉnh nào đang mở.
    */
   ...addressShape,
@@ -887,7 +904,7 @@ export const registerShopSchema = yup.object({
     is: REGISTRATION_TRACK.PACKAGE,
     then: (schema) => schema.required('addressLineRequired'),
   }),
-  // Bỏ trống là hợp lệ ở tuyến hoa hồng, chỉ kiểm khi có nhập — xem `contactPhoneRule`.
+  // Bỏ trống là hợp lệ ở tuyến hoa hồng, chỉ kiểm khi có nhập - xem `contactPhoneRule`.
   phone: contactPhoneRule.when('registrationTrack', {
     is: REGISTRATION_TRACK.PACKAGE,
     then: (schema) => schema.required('phoneRequired'),
@@ -898,28 +915,34 @@ export const registerShopSchema = yup.object({
 export type RegisterShopValues = yup.InferType<typeof registerShopSchema>;
 
 /**
- * ĐĂNG KÝ ĐỐI TÁC MỘT FORM — tài khoản + hồ sơ người cho thuê trong cùng một lần điền (site
+ * ĐĂNG KÝ ĐỐI TÁC MỘT FORM - tài khoản + hồ sơ người cho thuê trong cùng một lần điền (site
  * partner `/register` và app XePrime Partner). Người dùng chọn tuyến TRƯỚC, rồi điền đúng một form:
  * họ tên và SĐT chỉ hỏi MỘT lần và đi vào cả tài khoản lẫn hồ sơ gian hàng/chủ xe.
  *
  * `withAccount` KHÔNG phải ô nhập: `true` khi chưa có phiên (form tạo luôn tài khoản), `false` khi
- * tài khoản đã có (đăng nhập rồi, hoặc lượt trước tạo xong tài khoản nhưng `POST /tenants` hỏng) —
+ * tài khoản đã có (đăng nhập rồi, hoặc lượt trước tạo xong tài khoản nhưng `POST /tenants` hỏng) -
  * lúc đó chỉ còn phần hồ sơ, điền sẵn từ tài khoản. Điều kiện là DỮ LIỆU (`.when`) vì cùng lý do
  * của `registerShopSchema`: RHF giữ resolver của lần dựng đầu.
  *
  * | Trường | Luật |
  * | --- | --- |
- * | `displayName` · `password` · `confirmPassword` | bắt buộc khi `withAccount` |
- * | `name` | tên gian hàng (tuyến gói) — bắt buộc; tuyến hoa hồng tạo tài khoản mới thì lấy luôn họ tên, không hỏi lại |
- * | `phoneVerified` · `otpCode` | trạng thái bước xác thực SĐT — KHÔNG chặn ở schema: chưa xác thực thì bấm đăng ký mở popup OTP rồi tự gửi tiếp; server đối chiếu mã (ADR 0060) |
- * | `phone` · `email` | BẮT BUỘC ở cả hai tuyến — `email` là email LIÊN HỆ của gian hàng (chỉ vào `POST /tenants`, không gắn vào tài khoản); bắt buộc ở FORM, server để tuỳ chọn như cũ |
+ * | `displayName` | bắt buộc khi `withAccount` |
+ * | `password` · `confirmPassword` | bắt buộc khi `withAccount` hoặc `needsPassword` (tài khoản Google/Facebook chưa có mật khẩu) |
+ * | `name` | tên gian hàng (tuyến gói) - bắt buộc; tuyến hoa hồng tạo tài khoản mới thì lấy luôn họ tên, không hỏi lại |
+ * | `phoneVerified` · `otpCode` | trạng thái bước xác thực SĐT - KHÔNG chặn ở schema: chưa xác thực thì bấm đăng ký mở popup OTP rồi tự gửi tiếp; server đối chiếu mã (ADR 0060) |
+ * | `phone` · `email` | BẮT BUỘC ở cả hai tuyến - `email` là email LIÊN HỆ của gian hàng (chỉ vào `POST /tenants`, không gắn vào tài khoản); bắt buộc ở FORM, server để tuỳ chọn như cũ |
  * | địa chỉ | tỉnh/thành + số nhà/đường bắt buộc ở CẢ HAI tuyến (như `ownerProfileSchema`) |
  *
- * Message là MÃ, tra trong `ShopOnboarding.validation` — bốn mã mật khẩu trùng tên khoá của
+ * Message là MÃ, tra trong `ShopOnboarding.validation` - bốn mã mật khẩu trùng tên khoá của
  * `PASSWORD_RULES` để luật mật khẩu chỉ có một bản.
  */
 export const partnerSignupSchema = yup.object({
   withAccount: yup.boolean().default(false),
+  /**
+   * Tài khoản ĐÃ có (vào bằng Google/Facebook) nhưng chưa có mật khẩu - form hỏi mật khẩu như
+   * luồng thường rồi `POST /auth/password/set`. Không phải ô nhập.
+   */
+  needsPassword: yup.boolean().default(false),
   registrationTrack: yup
     .string()
     .oneOf(REGISTRATION_TRACK_VALUES)
@@ -936,8 +959,8 @@ export const partnerSignupSchema = yup.object({
   password: yup
     .string()
     .default('')
-    .when('withAccount', {
-      is: true,
+    .when(['withAccount', 'needsPassword'], {
+      is: (withAccount: boolean, needsPassword: boolean) => withAccount || needsPassword,
       then: (schema) =>
         PASSWORD_RULES.reduce(
           (acc, rule) => acc.test(rule.key, rule.key, (value) => rule.test(value ?? '')),
@@ -947,8 +970,8 @@ export const partnerSignupSchema = yup.object({
   confirmPassword: yup
     .string()
     .default('')
-    .when('withAccount', {
-      is: true,
+    .when(['withAccount', 'needsPassword'], {
+      is: (withAccount: boolean, needsPassword: boolean) => withAccount || needsPassword,
       then: (schema) =>
         schema.required('confirmRequired').oneOf([yup.ref('password')], 'confirmMismatch'),
     }),
@@ -962,15 +985,22 @@ export const partnerSignupSchema = yup.object({
         : schema,
     ),
   ...addressShape,
+  wardCode: requiredWardRule,
   /*
    * Số nhà/đường BẮT BUỘC ở cả hai tuyến: tuyến gói vì cổng đăng xe đòi nó ngay sau thanh toán;
-   * tuyến hoa hồng vì đó là nơi khách tới nhận xe — đúng luật `ownerProfileSchema` mà bước hồ sơ
+   * tuyến hoa hồng vì đó là nơi khách tới nhận xe - đúng luật `ownerProfileSchema` mà bước hồ sơ
    * chủ xe của wizard đang đòi (form một trang thay bước đó, không được hỏi ít hơn).
    */
   addressLine: addressShape.addressLine.required('addressLineRequired'),
-  phone: contactPhoneRule.required('phoneRequired'),
+  // SĐT TÀI KHOẢN đối tác - xác minh OTP, nên chỉ di động (ADR 0082).
+  phone: yup
+    .string()
+    .trim()
+    .default('')
+    .required('phoneRequired')
+    .test('vn-mobile-phone', 'phoneInvalid', isVnMobilePhoneInput),
   email: yup.string().trim().default('').required('emailRequired').email('emailInvalid'),
-  /** Mã OTP đã xác thực — gửi kèm `POST /auth/register` (ADR 0060). */
+  /** Mã OTP đã xác thực - gửi kèm `POST /auth/register` (ADR 0060). */
   otpCode: yup.string().trim().default(''),
   /*
    * SĐT đã qua bước "Xác thực" (`verify-otp`, purpose `register`). KHÔNG là luật chặn gửi: chưa xác
@@ -983,10 +1013,10 @@ export const partnerSignupSchema = yup.object({
 export type PartnerSignupValues = yup.InferType<typeof partnerSignupSchema>;
 
 /*
- * Message là MÃ — `useValidationResolver` tra `ListYourVehicle.ownerProfile.validation.*`.
+ * Message là MÃ - `useValidationResolver` tra `ListYourVehicle.ownerProfile.validation.*`.
  */
 /**
- * Hồ sơ chủ xe CÁ NHÂN (tuyến hoa hồng — ADR 0028): bộ trường tối thiểu để một chiếc xe có
+ * Hồ sơ chủ xe CÁ NHÂN (tuyến hoa hồng - ADR 0028): bộ trường tối thiểu để một chiếc xe có
  * thể lên chợ. Cùng gọi `POST /tenants` như gian hàng, nhưng hỏi ít hơn hẳn.
  *
  * Khác `registerShopSchema` ở ba chỗ, cả ba đều có chủ đích:
@@ -996,16 +1026,17 @@ export type PartnerSignupValues = yup.InferType<typeof partnerSignupSchema>;
  *    khách đến lấy xe. Một chiếc xe không có chỗ nhận thì không cho thuê được.
  *
  * `phone` cố tình KHÔNG nằm trong schema: số liên hệ lấy từ tài khoản đã xác thực OTP, không
- * phải một ô chữ gõ tự do — xem `QuickVehicleOwnerStep`.
+ * phải một ô chữ gõ tự do - xem `QuickVehicleOwnerStep`.
  */
 export const ownerProfileSchema = yup.object({
   name: yup.string().trim().required('nameRequired').min(2, 'nameMin').max(255),
   /*
    * Địa chỉ dùng CHUNG một hình dạng với mọi form khai địa điểm (`addressShape`): tỉnh → số nhà,
-   * kèm ghim toạ độ. Không tự khai lại các ô ở đây — lệch một ràng buộc là lệch luôn thứ
+   * kèm ghim toạ độ. Không tự khai lại các ô ở đây - lệch một ràng buộc là lệch luôn thứ
    * `AddressField` gửi lên so với thứ schema chấp nhận.
    */
   ...addressShape,
+  wardCode: requiredWardRule,
   /*
    * Ghi đè ĐÚNG một ô: với chủ xe cá nhân, số nhà/đường là BẮT BUỘC. Đăng ký gian hàng để nó
    * tuỳ chọn vì gian hàng còn một cổng "gửi duyệt" phía sau để đòi địa chỉ đủ; ở đây thì
@@ -1024,18 +1055,21 @@ export const ownerProfileSchema = yup.object({
 export type OwnerProfileValues = yup.InferType<typeof ownerProfileSchema>;
 
 /**
- * Form thêm/sửa chi nhánh. Dùng chung cho cả hai vì hai màn nhập ĐÚNG cùng một bộ trường —
+ * Form thêm/sửa chi nhánh. Dùng chung cho cả hai vì hai màn nhập ĐÚNG cùng một bộ trường -
  * trạng thái/mặc định đi bằng endpoint riêng, không phải input của form.
  */
-/** Message là MÃ — `useValidationResolver` tra `Branches.validation.*` (chỉ web có màn chi nhánh). */
+/** Message là MÃ - `useValidationResolver` tra `Branches.validation.*` (chỉ web có màn chi nhánh). */
 export const branchFormSchema = yup.object({
   name: yup.string().trim().required('nameRequired').min(2, 'nameMin').max(255),
   /*
-   * Chi nhánh là địa điểm vận hành thật — xe nằm ở đó, khách tới đó nhận xe, và toạ độ của nó là
-   * điểm xuất phát của mọi phép tính phí giao xe tận nơi. Thứ chốt độ chính xác ở đây là CÁI
-   * GHIM đã xác nhận, không phải mã xã (ADR 0042), nên `addressShape` giữ `wardCode` tuỳ chọn.
+   * Chi nhánh là địa điểm vận hành thật - xe nằm ở đó, khách tới đó nhận xe, và toạ độ của nó là
+   * điểm xuất phát của mọi phép tính phí giao xe tận nơi. Xã BẮT BUỘC (ADR 0077), và "số nhà,
+   * đường" cũng vậy: đổi tỉnh/xã sẽ xoá ô địa chỉ, và để trống mà lưu được thì form gửi
+   * `addressLine: undefined` ⇒ server giữ nguyên địa chỉ CŨ dưới xã mới.
    */
   ...addressShape,
+  wardCode: requiredWardRule,
+  addressLine: addressShape.addressLine.required('addressLineRequired'),
   phone: contactPhoneRule,
 });
 
@@ -1043,11 +1077,11 @@ export type BranchFormValues = yup.InferType<typeof branchFormSchema>;
 
 const profileText = (max: number) => yup.string().trim().max(max).default('');
 
-/** Message là MÃ — `useValidationResolver` tra `Shop.validation.*` (chỉ web có màn hồ sơ gian hàng). */
+/** Message là MÃ - `useValidationResolver` tra `Shop.validation.*` (chỉ web có màn hồ sơ gian hàng). */
 export const shopProfileSchema = yup.object({
   /*
-   * Tên HIỂN THỊ = `tenants.name` (05/10/2026) — thứ khách thấy ở thẻ xe, trang gian hàng, chat.
-   * Cùng luật 2–255 ký tự với `registerShopSchema.name` và `UpdateTenantProfileDto.displayName`.
+   * Tên HIỂN THỊ = `tenants.name` (05/10/2026) - thứ khách thấy ở thẻ xe, trang gian hàng, chat.
+   * Cùng luật 2-255 ký tự với `registerShopSchema.name` và `UpdateTenantProfileDto.displayName`.
    */
   displayName: yup
     .string()
@@ -1062,7 +1096,7 @@ export const shopProfileSchema = yup.object({
    * nên đổi nó là dời vị trí công khai của mọi xe thuộc chi nhánh đó.
    *
    * Tỉnh BẮT BUỘC vì mọi gian hàng đều đã có một tỉnh từ lúc đăng ký. Xã/phường thì KHÔNG: màn
-   * này là hồ sơ gian hàng, không phải form khai địa điểm — chặn nó ở đây nghĩa là chủ shop có
+   * này là hồ sơ gian hàng, không phải form khai địa điểm - chặn nó ở đây nghĩa là chủ shop có
    * hồ sơ cũ không sửa nổi số tài khoản ngân hàng cho tới khi xong việc địa chỉ. Chỗ đòi đủ hai
    * cấp là form CHI NHÁNH (`branchFormSchema`), nơi địa điểm vận hành thật được khai.
    */
@@ -1074,13 +1108,13 @@ export const shopProfileSchema = yup.object({
    * nhân, email/SĐT đổi qua luồng xác minh OTP. Ba ô text cũ ở đây ghi vào một bản sao mà không
    * gì chứng minh, và nó nằm ngay cạnh một tài khoản đã xác minh nói khác đi.
    *
-   * Tài khoản nhận tiền là `bank_accounts` — sổ riêng, cờ mặc định, lưu trữ, và là bảng mà mọi
+   * Tài khoản nhận tiền là `bank_accounts` - sổ riêng, cờ mặc định, lưu trữ, và là bảng mà mọi
    * lệnh chi thật đọc. Bốn ô text cũ ở đây không nối với đồng tiền nào.
    */
   /**
-   * TƯƠNG THÍCH NGƯỢC (07/10/2026) — mã số thuế nay khai ở hồ sơ NGƯỜI BÁN (`seller_profiles.tax_id`,
+   * TƯƠNG THÍCH NGƯỢC (07/10/2026) - mã số thuế nay khai ở hồ sơ NGƯỜI BÁN (`seller_profiles.tax_id`,
    * section "Thông tin khai thuế"), nguồn duy nhất mà hợp đồng và báo cáo thuế đọc. Web không còn
-   * ô này; trường để TUỲ CHỌN cho form của app native chưa chuyển — API vẫn nhận `taxCode` và ghi
+   * ô này; trường để TUỲ CHỌN cho form của app native chưa chuyển - API vẫn nhận `taxCode` và ghi
    * vào đúng hồ sơ người bán.
    */
   taxCode: yup.string().trim().max(50).optional(),
@@ -1093,7 +1127,7 @@ export const shopProfileSchema = yup.object({
     .max(2000)
     .nullable()
     .default(null),
-  /** Ảnh bìa trang gian hàng công khai — backend đã nhận sẵn, giờ có UI upload. */
+  /** Ảnh bìa trang gian hàng công khai - backend đã nhận sẵn, giờ có UI upload. */
   coverUrl: yup
     .string()
     .trim()
@@ -1107,7 +1141,7 @@ export const shopProfileSchema = yup.object({
 export type ShopProfileValues = yup.InferType<typeof shopProfileSchema>;
 
 /**
- * Hồ sơ gian hàng KÈM liên hệ của gian hàng — form hồ sơ ở web.
+ * Hồ sơ gian hàng KÈM liên hệ của gian hàng - form hồ sơ ở web.
  *
  * `phone`/`email` là SĐT/email LIÊN HỆ của gian hàng (`tenants.phone/email`) mà khách thấy ở
  * chuyến đi và hợp đồng. KHÔNG phải SĐT/email đăng nhập của tài khoản chủ (đổi qua OTP ở trang
@@ -1120,7 +1154,24 @@ export type ShopProfileValues = yup.InferType<typeof shopProfileSchema>;
 export const shopProfileWithContactSchema = shopProfileSchema.shape({
   phone: contactPhoneRule,
   email: yup.string().trim().default('').email('emailInvalid').max(255, 'emailMax'),
+  /**
+   * Giới thiệu ĐÃ ĐỊNH DẠNG từ editor (06/11/2026). Trần đếm trên CHỮ (bỏ thẻ) - cùng con số và
+   * cùng cách đếm mà server áp lên chữ thuần rút từ HTML (`SHOP_BIO_TEXT_MAX_LENGTH`). Server mới
+   * là nơi lọc thẻ; ở đây chỉ chặn sớm cho UX.
+   */
+  bioHtml: yup
+    .string()
+    .default('')
+    .test('bioMax', 'bioMax', (value) => htmlTextLength(value ?? '') <= 2000),
 });
+
+/** Số ký tự CHỮ của một đoạn HTML - bỏ thẻ, mỗi thực thể tính một ký tự. */
+function htmlTextLength(html: string): number {
+  return html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&[a-z]+;|&#\d+;/gi, ' ')
+    .trim().length;
+}
 
 export type ShopProfileWithContactValues = yup.InferType<typeof shopProfileWithContactSchema>;
 
@@ -1139,7 +1190,7 @@ export type ShopProfileWithContactValues = yup.InferType<typeof shopProfileWithC
  * | `contactPhone` | không có (thuộc CHI NHÁNH) | **bắt buộc** |
  *
  * Bộ bắt buộc khớp ĐÚNG `missingPackageShopRegistrationFields` ở `@xeprime/types` (tên · SĐT ·
- * tỉnh · số nhà) — cùng một quy tắc, hai lớp thi hành, y như `registerShopSchema` tuyến gói. Hỏi
+ * tỉnh · số nhà) - cùng một quy tắc, hai lớp thi hành, y như `registerShopSchema` tuyến gói. Hỏi
  * ở đây rẻ hơn hẳn so với để họ trả tiền xong rồi bị cổng đăng xe từ chối.
  *
  * `contactPhone` mang tên khác `phone` của `branchFormSchema` có chủ đích: giá trị này sống ở
@@ -1151,7 +1202,7 @@ export type ShopProfileWithContactValues = yup.InferType<typeof shopProfileWithC
  * người ta kịp trả tiền là ma sát đặt sai chỗ. Cổng đòi nó là lúc chiếc xe đầu tiên lên chợ
  * (`missingPackageShopListingRequirements`).
  *
- * Message là MÃ — `useValidationResolver` tra `Subscription.upgrade.validation.*` trước, rồi
+ * Message là MÃ - `useValidationResolver` tra `Subscription.upgrade.validation.*` trước, rồi
  * `Shop.validation.*` cho những mã đến từ `shopProfileSchema`.
  */
 export const shopUpgradeSchema = shopProfileSchema
@@ -1174,12 +1225,12 @@ export const shopUpgradeSchema = shopProfileSchema
 export type ShopUpgradeValues = yup.InferType<typeof shopUpgradeSchema>;
 
 /**
- * Hồ sơ tài khoản KHÁCH (`PATCH /users/me`) — khác hoàn toàn `shopProfileSchema` ở trên.
+ * Hồ sơ tài khoản KHÁCH (`PATCH /users/me`) - khác hoàn toàn `shopProfileSchema` ở trên.
  *
  * Chỉ hai trường vì backend chỉ nhận đúng hai: `email`/`phone` là khoá nhận diện, muốn đổi thì
  * phải qua luồng xác thực riêng. Đưa chúng vào form ở đây sẽ là chức năng giả.
  */
-/** Message là MÃ — `useValidationResolver` tra `Account.validation.*` (chỉ web có màn này). */
+/** Message là MÃ - `useValidationResolver` tra `Account.validation.*` (chỉ web có màn này). */
 export const accountProfileSchema = yup.object({
   displayName: yup
     .string()
@@ -1200,10 +1251,10 @@ export const accountProfileSchema = yup.object({
 export type AccountProfileValues = yup.InferType<typeof accountProfileSchema>;
 
 /**
- * "Thông tin chủ xe" — chủ xe tuyến hoa hồng (ADR 0054): CÙNG họ tên + ảnh của tài khoản, cộng lời
+ * "Thông tin chủ xe" - chủ xe tuyến hoa hồng (ADR 0054): CÙNG họ tên + ảnh của tài khoản, cộng lời
  * giới thiệu của trang chủ xe, trên MỘT khối.
  *
- * Ảnh BẮT BUỘC: với chủ xe cá nhân nó là ảnh khách thấy trên chợ, thẻ xe và hộp thư — trang chủ xe
+ * Ảnh BẮT BUỘC: với chủ xe cá nhân nó là ảnh khách thấy trên chợ, thẻ xe và hộp thư - trang chủ xe
  * không có logo nào để rơi về. Họ tên/ảnh ghi vào `PATCH /users/me`, lời giới thiệu vào
  * `PATCH /tenants/current/profile`; message là MÃ tra `Account.validation.*`.
  */
@@ -1224,7 +1275,7 @@ export type OwnerAccountProfileValues = yup.InferType<typeof ownerAccountProfile
  * Ô nhập định danh MỚI ở luồng đổi email / số điện thoại của trang tài khoản.
  *
  * Cùng tên trường `identifier` cho cả hai kênh, và đó là chủ đích: modal đổi liên lạc là MỘT
- * màn hình dùng chung, nên form của nó phải có một hình dạng duy nhất — nếu không thì mỗi kênh
+ * màn hình dùng chung, nên form của nó phải có một hình dạng duy nhất - nếu không thì mỗi kênh
  * kéo theo một `useForm` riêng và toàn bộ phần còn lại của màn hình phải rẽ nhánh theo.
  *
  * Luật khớp đúng `class-validator` của `SendPhoneOtpDto`/`SendEmailOtpDto`: yup báo lỗi sớm cho
@@ -1235,7 +1286,7 @@ export const accountPhoneChangeSchema = yup.object({
     .string()
     .trim()
     .required('phoneRequired')
-    .matches(VN_PHONE_PATTERN, 'phoneInvalid')
+    .test('vn-mobile-phone', 'phoneInvalid', isVnMobilePhoneInput)
     .default(''),
 });
 
@@ -1254,11 +1305,11 @@ export type AccountContactValues = yup.InferType<typeof accountEmailChangeSchema
 export * from './auth';
 
 /**
- * SỔ KHÁCH của gian hàng (S-01) — ba form dùng ở CẢ web và app native.
+ * SỔ KHÁCH của gian hàng (S-01) - ba form dùng ở CẢ web và app native.
  *
  * Message là MÃ, `useValidationResolver` tra `Customers.validation.*` (cùng quy ước với
  * `vehicleSourceFormSchema`). Chép schema sang app native là dựng bản thứ hai của cùng một luật,
- * và bản thứ hai luôn trôi khỏi bản đầu — mà luật ở đây trùng với `class-validator` của DTO
+ * và bản thứ hai luôn trôi khỏi bản đầu - mà luật ở đây trùng với `class-validator` của DTO
  * backend và với CHECK ở DB, nên lệch một chỗ là lệch ba lớp.
  *
  * Yup báo lỗi SỚM cho người dùng; lớp chặn thật vẫn là backend (CLAUDE.md mục 4).
@@ -1269,17 +1320,17 @@ export const customerFormSchema = yup.object({
     .trim()
     .required('fullNameRequired')
     .max(TENANT_CUSTOMER_FIELD_MAX.FULL_NAME, 'fullNameMax'),
-  phone: yup.string().trim().required('phoneRequired').matches(VN_PHONE_PATTERN, 'phoneInvalid'),
+  phone: yup.string().trim().required('phoneRequired').test('vn-phone', 'phoneInvalid', isVnPhoneInput),
   email: yup
     .string()
     .trim()
     .max(TENANT_CUSTOMER_FIELD_MAX.EMAIL, 'emailMax')
     .default('')
-    // `yup.email()` từ chối chuỗi rỗng, mà email là KHÔNG BẮT BUỘC — nên tự kiểm, bỏ qua rỗng.
+    // `yup.email()` từ chối chuỗi rỗng, mà email là KHÔNG BẮT BUỘC - nên tự kiểm, bỏ qua rỗng.
     .test('email', 'emailInvalid', (value) => !value || yup.string().email().isValidSync(value)),
   /*
    * Địa chỉ khách: tỉnh/xã KHÔNG bắt buộc. Sổ khách hay được điền nhanh lúc lập đơn và địa chỉ ở
-   * đó chủ yếu để liên hệ — bắt chọn hai cấp hành chính cho một ô phụ là cản trở việc chính.
+   * đó chủ yếu để liên hệ - bắt chọn hai cấp hành chính cho một ô phụ là cản trở việc chính.
    */
   provinceCode: yup
     .string()
@@ -1297,7 +1348,7 @@ export const customerFormSchema = yup.object({
 export type CustomerFormValues = yup.InferType<typeof customerFormSchema>;
 
 /**
- * Đổi mức rủi ro. Lý do BẮT BUỘC khi khác `normal` — cùng luật với DTO backend và với CHECK
+ * Đổi mức rủi ro. Lý do BẮT BUỘC khi khác `normal` - cùng luật với DTO backend và với CHECK
  * `tenant_customers_risk_reason_required_check` ở DB, nên ba lớp không thể lệch nhau.
  */
 export const customerRiskSchema = yup.object({
@@ -1342,9 +1393,9 @@ export type CustomerNoteFormValues = yup.InferType<typeof customerNoteSchema>;
  * Gửi LỜI MỜI vào gian hàng.
  *
  * `roleKey` cố ý KHÔNG nhận `shop_owner`: một gian hàng có đúng một chủ, và mời thêm chủ thứ hai
- * là đường tự nâng quyền. Backend từ chối nốt — đây chỉ là lớp báo sớm.
+ * là đường tự nâng quyền. Backend từ chối nốt - đây chỉ là lớp báo sớm.
  *
- * Message là MÃ — `useValidationResolver` tra `Members.form.errors.*`, đúng bộ khoá mà web dùng
+ * Message là MÃ - `useValidationResolver` tra `Members.form.errors.*`, đúng bộ khoá mà web dùng
  * cho cùng form này.
  */
 export const inviteMemberSchema = yup.object({
@@ -1359,13 +1410,17 @@ export const inviteMemberSchema = yup.object({
 export type InviteMemberValues = yup.InferType<typeof inviteMemberSchema>;
 
 /**
- * MỜI tài xế (ADR 0063) — tài xế là một TÀI KHOẢN KHÁCH đã xác minh SĐT; server mới là nơi quyết
+ * MỜI tài xế (ADR 0063) - tài xế là một TÀI KHOẢN KHÁCH đã xác minh SĐT; server mới là nơi quyết
  * định (`DRIVER_ACCOUNT_NOT_FOUND`). Tạm khoá / mở khoá / kết thúc đi bằng ENDPOINT riêng.
  *
- * Message là MÃ — `useValidationResolver` tra `Drivers.form.errors.*`.
+ * Message là MÃ - `useValidationResolver` tra `Drivers.form.errors.*`.
  */
 export const inviteDriverSchema = yup.object({
-  phone: yup.string().trim().required('phoneRequired').matches(VN_PHONE_PATTERN, 'phoneInvalid'),
+  phone: yup
+    .string()
+    .trim()
+    .required('phoneRequired')
+    .test('vn-mobile-phone', 'phoneInvalid', isVnMobilePhoneInput),
   name: yup.string().trim().required('nameRequired').max(255),
   driverType: yup
     .mixed<DriverType>()
@@ -1377,7 +1432,7 @@ export const inviteDriverSchema = yup.object({
 
 export type InviteDriverValues = yup.InferType<typeof inviteDriverSchema>;
 
-/** SỬA một liên kết tài xế — SĐT không đổi được (mời lại là một liên kết mới). */
+/** SỬA một liên kết tài xế - SĐT không đổi được (mời lại là một liên kết mới). */
 export const editDriverSchema = inviteDriverSchema.pick(['name', 'driverType', 'note']);
 
 export type EditDriverValues = yup.InferType<typeof editDriverSchema>;
@@ -1387,13 +1442,13 @@ export type EditDriverValues = yup.InferType<typeof editDriverSchema>;
 // ---------------------------------------------------------------------------
 
 /**
- * Schema form chính sách thuê — validate thật vẫn ở BE (`PricingService.validatePolicy` +
+ * Schema form chính sách thuê - validate thật vẫn ở BE (`PricingService.validatePolicy` +
  * class-validator); đây là lớp báo lỗi sớm ngay trên ô nhập.
  *
  * Giá trị số là `number | null` theo quy ước `NumberField`: bắt buộc khai bằng `.test('required')`
- * để GIỮ kiểu `| null` — `.required()` của yup làm `InferType` lệch với RHF.
+ * để GIỮ kiểu `| null` - `.required()` của yup làm `InferType` lệch với RHF.
  *
- * Message là MÃ — `useValidationResolver` tra `Vehicles.pricing.validation.*`. Bốn câu phụ thuộc
+ * Message là MÃ - `useValidationResolver` tra `Vehicles.pricing.validation.*`. Bốn câu phụ thuộc
  * dữ liệu người dùng gõ mang thêm tham số dạng `mã::{json}` (xem `codeWithParams`).
  *
  * Ở đây chứ không phải trong từng app: web và app native trước đó giữ HAI bản chép tay giống
@@ -1407,7 +1462,7 @@ const codeWithParams = (code: string, values: Record<string, number>): string =>
 const optionalPolicyMoney = () =>
   yup.number().nullable().defined().default(null).integer('moneyInteger').min(0, 'moneyNegative');
 
-/** Số tiền chính sách đi tới tổng khách trả — thêm bước giá 1.000đ (ADR 0064, `@IsMoneyStep`). */
+/** Số tiền chính sách đi tới tổng khách trả - thêm bước giá 1.000đ (ADR 0064, `@IsMoneyStep`). */
 const policyMoneyStep = () =>
   optionalPolicyMoney().test(
     'thousand-step',
@@ -1424,9 +1479,9 @@ const requiredPolicyNumber = (code: string) =>
     .test('required', code, (value) => value != null);
 
 /**
- * Khoảng cách giao nhận nhận TỐI ĐA 1 chữ số thập phân — khớp
+ * Khoảng cách giao nhận nhận TỐI ĐA 1 chữ số thập phân - khớp
  * `@IsNumber({ maxDecimalPlaces: 1 })` của `DeliveryTierDto`/`deliveryMaxRadiusKm` bên backend.
- * Thiếu luật này thì `1.25` km lọt xuống server và quay về thành một toast chung chung — đúng
+ * Thiếu luật này thì `1.25` km lọt xuống server và quay về thành một toast chung chung - đúng
  * lớp lỗi mà validate phía client sinh ra để chặn.
  */
 const KM_DECIMALS = 1;
@@ -1444,7 +1499,7 @@ export const deliveryTierSchema = yup.object({
     .max(KM_MAX, 'kmMax')
     .test(maxDecimalsTest(KM_DECIMALS, 'kmDecimals')),
   /*
-   * Cách tính của bậc (ADR 0064) — trường của FORM; vắng mặt = trọn gói (dữ liệu và form cũ).
+   * Cách tính của bậc (ADR 0064) - trường của FORM; vắng mặt = trọn gói (dữ liệu và form cũ).
    * Tuỳ chọn để app native chưa có ô này vẫn biên dịch và gửi bậc trọn gói như trước.
    */
   feeMode: yup.string().oneOf(DELIVERY_TIER_FEE_MODE_VALUES).optional(),
@@ -1463,11 +1518,11 @@ export const deliveryTierSchema = yup.object({
 });
 
 /**
- * Mốc ưu đãi cấu hình theo GÓI THÁNG (ADR 0011) — form nhập tháng, `form.ts` quy ra `minDays`
+ * Mốc ưu đãi cấu hình theo GÓI THÁNG (ADR 0011) - form nhập tháng, `form.ts` quy ra `minDays`
  * khi lưu. Ưu đãi này CHỈ áp cho dịch vụ Thuê dài hạn (luật ở `PricingService.buildQuote`).
  */
 export const discountTierSchema = yup.object({
-  // Mốc là một GÓI thuê hợp lệ, không phải số tháng tự do — form dùng Select, schema chặn nốt.
+  // Mốc là một GÓI thuê hợp lệ, không phải số tháng tự do - form dùng Select, schema chặn nốt.
   minMonths: requiredPolicyNumber('packageRequired').oneOf(
     [...LONG_TERM_PACKAGE_MONTHS],
     'packageOneOf',
@@ -1481,7 +1536,7 @@ export const discountTierSchema = yup.object({
 
 export const policyFormSchema = yup.object({
   /*
-   * Ba chế độ bảo đảm LOẠI TRỪ nhau — cùng luật với CHECK `rental_policies_collateral_scope_check`
+   * Ba chế độ bảo đảm LOẠI TRỪ nhau - cùng luật với CHECK `rental_policies_collateral_scope_check`
    * và `PricingService.validatePolicy`. Ba lớp nói cùng một điều để người dùng không gặp hai
    * kiểu thông báo khác nhau cho cùng một sai sót.
    */
@@ -1560,16 +1615,16 @@ export const policyFormSchema = yup.object({
       });
     }),
   /*
-   * Hạn mức quãng đường — MỘT công tắc, HAI ô, và chúng đi cặp (ADR 0007 · `MILEAGE_LIMIT`).
+   * Hạn mức quãng đường - MỘT công tắc, HAI ô, và chúng đi cặp (ADR 0007 · `MILEAGE_LIMIT`).
    *
    * Công tắc là trường của FORM chứ không phải của API: backend chỉ biết "cả hai null = không
    * giới hạn". Không có nó thì "tắt" phải suy từ việc người dùng xoá trắng cả hai ô, và một ô
-   * để trống nửa chừng trông y hệt trạng thái tắt — đúng cái mà `PricingService.validatePolicy`
+   * để trống nửa chừng trông y hệt trạng thái tắt - đúng cái mà `PricingService.validatePolicy`
    * và CHECK ở DB từ chối. Cùng luật, cùng mã lỗi với wizard đăng xe nhanh.
    *
    * Dùng CHUNG `$policyEditable` với các khối chính sách khác: ba trường này nằm trên cùng bản
    * ghi `rental_policies`, nên chúng luôn hiện ra và bị khoá cùng một nhịp với cọc/giao nhận.
-   * Một cờ riêng chỉ có nghĩa nếu có màn nào cho sửa hạn mức mà KHÔNG cho ghi đè chính sách —
+   * Một cờ riêng chỉ có nghĩa nếu có màn nào cho sửa hạn mức mà KHÔNG cho ghi đè chính sách -
    * điều đó cần một cột riêng trên `vehicles`, không phải một cờ validate.
    */
   mileageLimitEnabled: yup.boolean().defined().default(false),
@@ -1591,7 +1646,16 @@ export const policyFormSchema = yup.object({
       is: (enabled: boolean, editable?: boolean) => enabled && editable !== false,
       then: (s) => s.test('required', 'excessFeeRequired', (value) => value != null),
     }),
-  overtimeFeePerHour: optionalPolicyMoney(),
+  /*
+   * Công tắc "Hạn mức & phí trả xe quá giờ" (trang chính sách web, 06/11/2026) - trường của FORM như
+   * `mileageLimitEnabled`, API chỉ biết "phí null = không tính quá giờ". TUỲ CHỌN: form không có công
+   * tắc (app native) để trống thì không có luật nào đổi.
+   */
+  overtimeEnabled: yup.boolean().optional(),
+  overtimeFeePerHour: optionalPolicyMoney().when(['overtimeEnabled', '$policyEditable'], {
+    is: (enabled?: boolean, editable?: boolean) => enabled === true && editable !== false,
+    then: (s) => s.test('required', 'overtimeFeeRequired', (value) => value != null),
+  }),
   overtimeGraceMinutes: yup
     .number()
     .nullable()
@@ -1622,7 +1686,7 @@ export const policyFormSchema = yup.object({
     /*
      * Hai luật đi cùng nhau (cùng luật với PricingService.validatePolicy):
      *   - mốc tăng dần, không trùng;
-     *   - % KHÔNG được giảm khi thời hạn tăng — cam kết dài hơn mà ưu đãi thấp hơn là nghịch lý
+     *   - % KHÔNG được giảm khi thời hạn tăng - cam kết dài hơn mà ưu đãi thấp hơn là nghịch lý
      *     với khách, và vì mốc lấy theo "cao nhất đạt tới" nên nó tạo ra giá thuê lâu = đắt hơn.
      */
     .test('ascending-months', '', function ascendingMonths(tiers) {
@@ -1658,7 +1722,7 @@ export type PolicyFormValues = yup.InferType<typeof policyFormSchema>;
  * Form giá theo xe = giá ĐỦ các dịch vụ xe đăng + toàn bộ chính sách (khi ghi đè).
  *
  * Giá ngày thường chỉ bắt buộc khi xe đăng TỰ LÁI (`$serviceTypes` truyền qua context của
- * `useForm`) — xe chỉ chạy có tài xế/dài hạn không bị ép nhập giá tự lái. Giá chuyên biệt còn
+ * `useForm`) - xe chỉ chạy có tài xế/dài hạn không bị ép nhập giá tự lái. Giá chuyên biệt còn
  * lại là tuỳ chọn ở đây; điều kiện "đủ giá mới được gửi duyệt public" nằm ở
  * `features/vehicles/publication.ts` (đối xứng backend `missingPublicFields`).
  */

@@ -33,7 +33,7 @@
   "form": {
     "title": "Edit product · {name}",
     "submit": "Save changes",
-    "intro": "Policies already sold keep their own snapshot of the product — changes here only apply to trips from now on.",
+    "intro": "Policies already sold keep their own snapshot of the product - changes here only apply to trips from now on.",
     "sections": {
       "naming": "Display name",
       "coverage": "Coverage",
@@ -45,10 +45,10 @@
       "nameEn": "Name (English)",
       "coverageVi": "What is covered (Vietnamese)",
       "coverageEn": "What is covered (English)",
-      "deductibleCar": "Deductible / incident — car",
-      "deductibleMotorbike": "Deductible / incident — motorbike",
-      "maxPayoutCar": "Maximum payout — car",
-      "maxPayoutMotorbike": "Maximum payout — motorbike",
+      "deductibleCar": "Deductible / incident - car",
+      "deductibleMotorbike": "Deductible / incident - motorbike",
+      "maxPayoutCar": "Maximum payout - car",
+      "maxPayoutMotorbike": "Maximum payout - motorbike",
       "maxPayoutNoteVi": "Payout note (Vietnamese)",
       "maxPayoutNoteEn": "Payout note (English)",
       "partnerProductCode": "Partner product code",
@@ -60,7 +60,7 @@
     "help": {
       "amountEmpty": "Leave empty if not applicable.",
       "maxPayoutNote": "For example: “Up to the vehicle’s actual value”, “Per person, per incident”.",
-      "certificateUrlTemplate": "Starts with https:// and contains '{certCode}' — where the certificate number goes."
+      "certificateUrlTemplate": "Starts with https:// and contains '{certCode}' - where the certificate number goes."
     },
     "validation": {
       "required": "Required.",
@@ -82,7 +82,7 @@
       "status": "Status",
       "productKind": "Product"
     },
-    "defaultViewHint": "Showing FAILED policies — the work queue. Switch to \"All\" to see history.",
+    "defaultViewHint": "Showing FAILED policies - the work queue. Switch to \"All\" to see history.",
     "columns": {
       "booking": "Booking",
       "tenant": "Shop · vehicle",
@@ -153,7 +153,7 @@
       "product": "Product snapshot at sale",
       "empty": "None"
     },
-    "testNote": "TEST certificate issued by the mock adapter — it provides no insurance cover.",
+    "testNote": "TEST certificate issued by the mock adapter - it provides no insurance cover.",
     "copy": "Copy",
     "openBooking": "Open booking",
     "viewCertificate": "View certificate",
@@ -163,7 +163,7 @@
       "other": "No actions are available for this status."
     },
     "retry": "Retry issuing",
-    "retryQueued": "Queued for re-issue — the worker picks it up within about a minute.",
+    "retryQueued": "Queued for re-issue - the worker picks it up within about a minute.",
     "void": "Void",
     "voidDialog": {
       "title": "Void insurance policy",

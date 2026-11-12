@@ -26,4 +26,9 @@ export interface MaintenanceBoardFilters {
   sort: string;
   page?: number;
   limit?: number;
+  /**
+   * `bookingId` của biên bản cần mở hộp "Bổ sung KM" ngay khi vào tab "Thiếu KM trả" — đích
+   * của nút "Xử lý ngay" ở Hồ sơ xe. Không phải bộ lọc: không gửi xuống API.
+   */
+  resolve?: string;
 }

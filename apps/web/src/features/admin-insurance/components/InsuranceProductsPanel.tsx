@@ -68,7 +68,7 @@ export function InsuranceProductsPanel() {
         return (
           <div className={styles.stack}>
             {p.maxPayoutCar != null || p.maxPayoutMotorbike != null ? (
-              <span>{perVehicle(p.maxPayoutCar, p.maxPayoutMotorbike, '—')}</span>
+              <span>{perVehicle(p.maxPayoutCar, p.maxPayoutMotorbike, '-')}</span>
             ) : null}
             {note ? <span className={styles.muted}>{note}</span> : null}
           </div>

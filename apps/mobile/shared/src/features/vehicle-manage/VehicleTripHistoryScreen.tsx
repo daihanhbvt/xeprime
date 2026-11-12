@@ -31,7 +31,7 @@ import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
-import { VehicleManageShell } from './components/VehicleManageShell';
+import { VehicleManageShell, type VehicleSectionWorkspace } from './components/VehicleManageShell';
 import type { VehicleTripHistoryItem } from './api';
 import { useVehicleTripHistory } from './hooks/use-vehicle-settings';
 
@@ -44,9 +44,20 @@ import { useVehicleTripHistory } from './hooks/use-vehicle-settings';
  * Tab sống ở STATE màn hình, không ở URL như web: app không có thanh địa chỉ để chia sẻ, và bộ
  * lọc chết theo màn (ADR 0004).
  */
-export function VehicleTripHistoryScreen({ vehicleId }: { vehicleId: string }) {
+export function VehicleTripHistoryScreen({
+  vehicleId,
+  workspace,
+}: {
+  vehicleId: string;
+  /** `manage` = mục của màn sửa xe (app Partner, gian hàng) — như các section khác. */
+  workspace?: VehicleSectionWorkspace;
+}) {
   return (
-    <VehicleManageShell vehicleId={vehicleId} section={VEHICLE_MANAGE_SECTION.TRIP_HISTORY}>
+    <VehicleManageShell
+      vehicleId={vehicleId}
+      section={VEHICLE_MANAGE_SECTION.TRIP_HISTORY}
+      {...(workspace ? { workspace } : {})}
+    >
       {() => <TripHistoryBody vehicleId={vehicleId} />}
     </VehicleManageShell>
   );
@@ -166,7 +177,7 @@ function TripHistoryCard({ item }: { item: VehicleTripHistoryItem }) {
                 : (fmt.packageLabel(item.longTermPackageMonths) ?? fmt.dateTime(null))
             }
           />
-          <DataRow label={t('end')} value={item.returnAt ? fmt.dateTime(item.returnAt) : '—'} />
+          <DataRow label={t('end')} value={item.returnAt ? fmt.dateTime(item.returnAt) : '-'} />
           <DataRow
             label={t('total')}
             value={item.totalAmount ? fmt.money(item.totalAmount) : t('awaitingQuote')}

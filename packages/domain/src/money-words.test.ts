@@ -1,5 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { moneyToVietnameseWords } from './money';
+import { moneyToEnglishWords, moneyToVietnameseWords } from './money';
+
+describe('moneyToEnglishWords', () => {
+  it('đọc đúng các nhóm và gạch nối hàng chục', () => {
+    expect(moneyToEnglishWords('15950000')).toBe('Fifteen million nine hundred fifty thousand dong');
+    expect(moneyToEnglishWords('3250000')).toBe('Three million two hundred fifty thousand dong');
+    expect(moneyToEnglishWords('21')).toBe('Twenty-one dong');
+    expect(moneyToEnglishWords('1000005')).toBe('One million five dong');
+    expect(moneyToEnglishWords('1000000000')).toBe('One billion dong');
+  });
+
+  it('cùng hợp đồng với bản tiếng Việt: bỏ phần lẻ, số âm, rỗng/rác', () => {
+    expect(moneyToEnglishWords('100000.50')).toBe('One hundred thousand dong');
+    expect(moneyToEnglishWords('-50000')).toBe('Minus fifty thousand dong');
+    expect(moneyToEnglishWords('0')).toBe('Zero dong');
+    expect(moneyToEnglishWords('')).toBe('');
+    expect(moneyToEnglishWords(null)).toBe('');
+    expect(moneyToEnglishWords('abc')).toBe('');
+  });
+});
 
 /**
  * Đọc tiền bằng chữ — cái ô này tồn tại để người dùng bắt lỗi thừa/thiếu số 0, nên chính tả sai

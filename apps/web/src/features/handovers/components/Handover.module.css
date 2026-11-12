@@ -99,6 +99,65 @@
   justify-content: start;
 }
 
+/* Hình thái HÀNG (chi tiết đơn, Figma 23845:49956): năm ô một hàng, nhãn dưới ảnh. */
+.slotRow {
+  display: grid;
+  gap: var(--xp-space-md);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.slotRow .slotBox {
+  aspect-ratio: 188 / 120;
+  border-color: var(--xp-color-border-strong);
+  background: var(--xp-color-bg-muted);
+}
+
+.slotRow .slotFilled {
+  border-color: transparent;
+}
+
+.slotRow .slotLabel {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+}
+
+@media (max-width: 767px) {
+  .slotRow {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+}
+/*
+ * Góc còn thiếu khi người dùng bấm giao/nhận xe — viền đỏ NHẤP NHÁY vài nhịp rồi đứng yên
+ * cho tới khi cảnh báo đóng. Viền nằm trên `outline` để không làm xô lệch lưới.
+ */
+.slotFlagged,
+.slotRow .slotFlagged {
+  outline: 2px solid var(--xp-color-error);
+  outline-offset: 1px;
+  animation: missingBlink 0.7s ease-in-out 4 alternate;
+}
+
+.slotLabelFlagged,
+.slotRow .slotLabelFlagged {
+  color: var(--xp-color-error);
+}
+
+@keyframes missingBlink {
+  from {
+    outline-color: var(--xp-color-error);
+  }
+
+  to {
+    outline-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slotFlagged {
+    animation: none;
+  }
+}
+
 .slot {
   display: flex;
   min-width: 0;
@@ -135,7 +194,10 @@
   object-fit: cover;
 }
 
+/* Cả ô là vùng bấm: AntD bọc nút trong một wrapper inline — kéo cả hai lớp ra hết ô. */
+.slotBox :global(.ant-upload-wrapper),
 .slotBox :global(.ant-upload) {
+  display: block;
   width: 100%;
   height: 100%;
 }
@@ -235,4 +297,67 @@
   .deltaBad {
     margin-top: 30px;
   }
+}
+
+/*
+ * Ô CÒN TRỐNG (03/11/2026): hình mẫu đúng góc chụp (vẽ mờ) + nút "Tải ảnh lên" ngay bên dưới
+ * — người bàn giao thấy ngay phải chụp góc nào và bấm vào đâu. Cả ô vẫn là vùng bấm.
+ */
+.slotRow .slotAction {
+  gap: var(--xp-space-sm);
+}
+
+.slotSample {
+  flex: none;
+  width: auto;
+  max-width: 70%;
+  height: 46%;
+  color: var(--xp-color-text-tertiary);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.slotUploadPill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  padding: var(--xp-space-6) var(--xp-space-12);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  white-space: nowrap;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
+}
+
+.slotBox:has(.slotAction) {
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.slotBox:has(.slotAction:hover),
+.slotBox:has(.slotAction:focus-visible) {
+  border-color: var(--xp-color-primary);
+}
+
+.slotAction:hover .slotUploadPill,
+.slotAction:focus-visible .slotUploadPill {
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-primary-strong);
+}
+
+.slotAction:hover .slotSample {
+  opacity: 0.85;
+}
+
+/* Lưới nhỏ (hộp bổ sung biên bản, ô ~84px): nút gọn lại cho vừa. */
+.slotGrid .slotUploadPill {
+  padding: 2px var(--xp-space-sm);
+  font-size: 12px;
 }
