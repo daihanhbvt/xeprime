@@ -212,8 +212,8 @@ afterEach(cleanup);
 
 /* ------------------------------------------------------------------ hình thái mặc định */
 
-describe('/manage/vehicles - lưới thẻ là mặc định', () => {
-  it('dựng lưới thẻ, không còn bảng nào', () => {
+describe('/manage/vehicles - thẻ là mặc định', () => {
+  it('dựng danh sách thẻ, không còn bảng nào', () => {
     renderPage();
 
     expect(screen.getByRole('list', { name: 'Danh sách xe' })).toBeTruthy();
@@ -243,12 +243,22 @@ describe('/manage/vehicles - nội dung thẻ', () => {
     expect(within(card).queryByRole('img')).toBeNull();
   });
 
-  it('cả hai trục trạng thái đều hiện', () => {
+  it('cả hai trục trạng thái đều hiện - thẻ đôi (từ 4 xe) dùng nhãn DÀI', () => {
     renderPage();
 
     const card = cards()[0]!;
+    // Thẻ hai xe một hàng (`23655:38951`): "Sẵn sàng vận hành" · "Đã kiểm duyệt" có biểu tượng.
+    expect(within(card).getByText('Sẵn sàng vận hành')).toBeTruthy();
+    expect(within(card).getByText('Đã kiểm duyệt')).toBeTruthy();
+  });
+
+  it('cả hai trục trạng thái đều hiện - hàng ngang (dưới 4 xe) dùng nhãn GỌN', () => {
+    fleet.data = { total: 3, available: 3, renting: 0, maintenance: 0, inactive: 0 };
+    renderPage();
+
+    const card = cards()[0]!;
+    // Một xe một hàng (`23655:38389`): "Sẵn sàng" · "Đã duyệt".
     expect(within(card).getByText('Sẵn sàng')).toBeTruthy();
-    // Thẻ lưới dùng nhãn GỌN của design (`23655:36622`: "Chờ duyệt").
     expect(within(card).getByText('Đã duyệt')).toBeTruthy();
   });
 
@@ -635,9 +645,12 @@ describe('/manage/vehicles - cảnh báo và KM trên thẻ', () => {
         ),
         'utf8',
       );
-    // Thẻ lưới cố định TỈ LỆ khung; khung chung (`VehicleCardParts`) cắt tràn và phủ ảnh kín.
-    const card = read('VehicleManagementCard.module.css');
-    expect(card.slice(card.indexOf('.media {'))).toContain('aspect-ratio');
+    // Hai hình thái thẻ ngang cố định KHUNG ảnh; khung chung (`VehicleCardParts`) cắt tràn và phủ ảnh kín.
+    const card = read('VehicleWideCard.module.css');
+    for (const shape of ['.stacked .media {', '.row .media {']) {
+      const rule = card.slice(card.indexOf(shape), card.indexOf('}', card.indexOf(shape)));
+      expect(rule).toMatch(/height: \d+px/);
+    }
     const parts = read('VehicleCardParts.module.css');
     const media = parts.slice(parts.indexOf('.media {'), parts.indexOf('.mediaFallback'));
     expect(media).toContain('overflow: hidden');

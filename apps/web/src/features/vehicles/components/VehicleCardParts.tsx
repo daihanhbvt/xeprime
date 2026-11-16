@@ -70,15 +70,13 @@ const REVIEW_ICON: Readonly<Record<VehiclePublicStatus, ReactNode>> = {
   [VEHICLE_PUBLIC_STATUS.ARCHIVED]: <StopOutlined />,
 };
 
-/** Ảnh chính của xe; chưa có ảnh thì khung xám có biểu tượng xe. `children` = lớp phủ (chip). */
+/** Ảnh chính của xe; chưa có ảnh thì khung xám có biểu tượng xe. */
 export function VehicleCardMedia({
   vehicle,
   className,
-  children,
 }: {
   vehicle: VehicleListItem;
   className?: string;
-  children?: ReactNode;
 }) {
   return (
     <div className={cx(styles.media, className)}>
@@ -91,25 +89,19 @@ export function VehicleCardMedia({
           <CarOutlined />
         </span>
       )}
-      {children}
     </div>
   );
 }
 
 /**
- * Tên (liên kết sang Hồ sơ xe) + viên nguồn xe, dòng mã · biển số, và (tuỳ chọn) dòng loại xe ·
- * dịch vụ. `separator`: thẻ ít xe/danh sách vẽ gạch đứng giữa mã và biển, thẻ lưới vẽ chấm.
+ * Tên (liên kết sang Hồ sơ xe) + viên nguồn xe, dòng mã | biển số, và dòng loại xe · dịch vụ.
  */
 export function VehicleCardIdentity({
   vehicle,
   detailHref,
-  separator,
-  showSpecs = true,
 }: {
   vehicle: VehicleListItem;
   detailHref: string;
-  separator: 'bar' | 'dot';
-  showSpecs?: boolean;
 }) {
   const domainLabel = useDomainLabel();
   const sourceType = (vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED) as VehicleSourceType;
@@ -129,20 +121,19 @@ export function VehicleCardIdentity({
         </Link>
         <span className={styles.sourceBadge}>{domainLabel('vehicleSourceType', sourceType)}</span>
       </div>
-      <SeparatedLine parts={idParts} separator={separator} />
-      {showSpecs ? <SeparatedLine parts={specParts} separator="dot" small /> : null}
+      <SeparatedLine parts={idParts} separator="bar" />
+      <SeparatedLine parts={specParts} separator="dot" />
     </div>
   );
 }
 
+/** `bar` = gạch đứng giữa mã và biển số; `dot` = chấm nhỏ giữa loại xe và các dịch vụ. */
 function SeparatedLine({
   parts,
   separator,
-  small = false,
 }: {
   parts: readonly string[];
   separator: 'bar' | 'dot';
-  small?: boolean;
 }) {
   if (parts.length === 0) return null;
   return (
@@ -150,10 +141,7 @@ function SeparatedLine({
       {parts.map((part, index) => (
         <Fragment key={`${index}-${part}`}>
           {index > 0 ? (
-            <span
-              className={separator === 'bar' ? styles.bar : small ? styles.dotSmall : styles.dot}
-              aria-hidden="true"
-            >
+            <span className={separator === 'bar' ? styles.bar : styles.dot} aria-hidden="true">
               {separator === 'bar' ? '|' : null}
             </span>
           ) : null}
@@ -167,9 +155,9 @@ function SeparatedLine({
 /**
  * Hai trục trạng thái độc lập (vận hành · kiểm duyệt) + chip "Chủ xe tạm ẩn".
  *
- *  - `short`: hai viên gọn ("Sẵn sàng" · "Chờ duyệt") — thẻ lưới và hàng danh sách;
+ *  - `short`: hai viên gọn ("Sẵn sàng" · "Chờ duyệt") — thẻ một xe một hàng và hàng mobile;
  *  - `detailed`: nhãn kiểm duyệt có biểu tượng tròn + viên vận hành nhãn dài ("Sẵn sàng vận
- *    hành") — thẻ ít xe và thẻ đầu Hồ sơ xe.
+ *    hành") — thẻ hai xe một hàng và thẻ đầu Hồ sơ xe.
  *
  * Chip tạm ẩn CHỈ khi công tắc hiển thị đang tắt trên một xe đã duyệt (ADR 0048): mọi lý do ẩn khác
  * đã đọc được từ trạng thái kiểm duyệt, còn "đã duyệt nhưng đang tắt" thì không đọc được từ chỗ nào

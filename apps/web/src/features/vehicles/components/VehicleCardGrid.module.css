@@ -1,6 +1,6 @@
 /*
- * Danh sách xe — Figma Partner-XePrime 03/11/2026. Thẻ đặt thẳng trên nền trang, cách nhau 20
- * (lưới, ít xe) hoặc 12 (danh sách). Không còn khung bao chung.
+ * Danh sách xe — Figma Partner-XePrime (bố cục chốt 16/11/2026). Thẻ đặt thẳng trên nền trang,
+ * cách nhau 20 (hai thẻ một hàng) hoặc 12 (một xe một hàng). Không còn khung bao chung.
  */
 .root {
   display: flex;
@@ -13,8 +13,7 @@
   margin-bottom: var(--xp-space-md);
 }
 
-.grid,
-.few,
+.pairs,
 .list {
   display: grid;
   padding: 0;
@@ -22,41 +21,17 @@
   list-style: none;
 }
 
-/* Thẻ trong một hàng cao bằng nhau — hàng nút của các thẻ cạnh nhau thẳng một đường. */
-.grid,
-.few {
-  align-items: stretch;
-}
-
 /*
- * Lưới gọn — `23649:29724`: 5 thẻ 296 ở khung 1560 (cách 20). Track co theo khung với sàn 270px
- * (dưới mức đó hàng ba nút cắt chữ "Chi tiết"), nên màn 1366 tự về 4 cột thay vì bóp thẻ.
+ * Từ 4 xe — `23655:38521`: hai thẻ 770 một hàng, cách 20; khung hẹp thì một thẻ một hàng. Thẻ
+ * trong một hàng cao bằng nhau — hàng nút của hai thẻ cạnh nhau thẳng một đường.
  */
-.grid {
-  --card-gap: 20px;
-  --card-min: 270px;
-  --card-max-cols: 5;
-
-  gap: var(--card-gap);
-  grid-template-columns: repeat(
-    auto-fill,
-    minmax(
-      max(
-        var(--card-min),
-        calc((100% - (var(--card-max-cols) - 1) * var(--card-gap)) / var(--card-max-cols))
-      ),
-      1fr
-    )
-  );
-}
-
-/* Ít xe — `23655:38521`: hai thẻ 770 một hàng, cách 20; khung hẹp thì một thẻ một hàng. */
-.few {
+.pairs {
+  align-items: stretch;
   gap: 20px;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 560px), 1fr));
 }
 
-/* Danh sách — `23655:36959`: một xe một hàng, cách 12. */
+/* Dưới 4 xe — `23655:36959`: một xe một hàng, cách 12. */
 .list {
   gap: var(--xp-space-12);
   grid-template-columns: minmax(0, 1fr);
@@ -107,16 +82,16 @@
 }
 
 .skeletonCard {
-  min-height: 300px;
+  min-height: 180px;
   padding: var(--xp-space-md);
   border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius-card);
   background: var(--xp-color-bg-container);
 }
 
-.few > .skeletonCard,
-.list > .skeletonCard {
-  min-height: 180px;
+/* Thẻ đôi cao hơn hàng ngang — khối số liệu nằm dưới phần ảnh. */
+.pairs > .skeletonCard {
+  min-height: 300px;
 }
 
 .skeletonRow {
