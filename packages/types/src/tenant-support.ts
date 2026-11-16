@@ -253,6 +253,8 @@ export const SUPPORT_VEHICLE_FIELDS: Readonly<
     'bodyType',
     'motorbikeCategory',
     'vehicleCatalogModelId',
+    'vehicleCatalogVariantId',
+    'catalogVariantLabel',
     'manufactureYear',
     'seatCount',
     'lengthMm',

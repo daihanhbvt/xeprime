@@ -39,11 +39,13 @@ import { useTranslations } from 'next-intl';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
+  INSURANCE_ELIGIBILITY_GAP,
   PERMISSION,
   VEHICLE_DOCUMENT_PRESENTATION,
   VEHICLE_DOCUMENT_PRESENTATION_META,
   VEHICLE_DOCUMENT_PRESET_VALUES,
   VEHICLE_DOCUMENT_TYPE,
+  VEHICLE_TYPE,
   type VehicleDocumentPresentation,
   type VehicleDocumentType,
 } from '@xeprime/types';
@@ -81,6 +83,7 @@ import {
   useVehicleDocument,
   useVehicleDocuments,
   useVehicleDocumentVersions,
+  useVehicleInsuranceStatus,
 } from '../hooks';
 import type {
   ApplyOcrFieldsInput,
@@ -227,6 +230,17 @@ function DocumentsList({
   const isMobile = useIsMobile();
   const { message } = App.useApp();
   const invalidate = useInvalidateVehicleDocuments(vehicle.id);
+  /*
+   * Ô tô thiếu cà vẹt (hoặc cà vẹt thiếu số khung / tên chủ xe) thì chưa được bán kèm bảo hiểm vật
+   * chất xe (ADR 0088 · 0089) — nhắc ngay trên tab này, không chặn gì. Chỉ khi nền tảng đang bán
+   * bảo hiểm theo bậc (`applies`).
+   */
+  const isCar = vehicle.vehicleType === VEHICLE_TYPE.CAR;
+  const insurance = useVehicleInsuranceStatus(vehicle.id, isCar);
+  const registrationReminder =
+    isCar &&
+    insurance.data?.applies === true &&
+    insurance.data.gaps.includes(INSURANCE_ELIGIBILITY_GAP.REGISTRATION_MISSING);
   const [uploading, setUploading] = useState<Record<string, UploadingState>>({});
   const [adding, setAdding] = useState(false);
   const [detailFor, setDetailFor] = useState<DetailTarget | null>(null);
@@ -360,6 +374,9 @@ function DocumentsList({
   return (
     <div className={styles.stack}>
       {!canManage ? <Alert type="info" showIcon title={t('readOnly')} /> : null}
+      {registrationReminder ? (
+        <Alert type="warning" showIcon title={t('registrationReminder')} />
+      ) : null}
 
       <Card
         className={styles.card}

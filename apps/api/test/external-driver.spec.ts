@@ -31,6 +31,7 @@ import { CustomerTripsService } from '../src/modules/customer-trips/customer-tri
 import { DriversService } from '../src/modules/drivers/drivers.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { HoldSettlementService } from '../src/modules/holds/hold-settlement.service';
+import { InsuranceCertificateService } from '../src/modules/insurance/insurance-certificate.service';
 import { InsuranceReadService } from '../src/modules/insurance/insurance-read.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
@@ -88,6 +89,7 @@ const trips = new CustomerTripsService(
   new CancellationsService(),
   new InsuranceReadService(asService),
   makeSupportService(asService, notifications),
+  new InsuranceCertificateService(asService, null),
 );
 
 const MIN = 60_000;
@@ -290,12 +292,13 @@ describe('Tài xế ngoài hệ thống — đã bỏ (ADR 0074 điều 4), đơ
     const bookingId = await seedBooking(farPickup());
     // Controller ném ĐỒNG BỘ — bọc async để `rejects` bắt được như Nest bắt.
     await expect(
-      (async () => controller.assignDriver(
-        { tenantId: tenant } as TenantContext,
-        { id: owner } as AuthenticatedUser,
-        bookingId,
-        await validateBody({ externalDriver: EXTERNAL }),
-      ))(),
+      (async () =>
+        controller.assignDriver(
+          { tenantId: tenant } as TenantContext,
+          { id: owner } as AuthenticatedUser,
+          bookingId,
+          await validateBody({ externalDriver: EXTERNAL }),
+        ))(),
     ).rejects.toMatchObject(code(API_ERROR_CODE.EXTERNAL_DRIVER_NOT_SUPPORTED));
     const row = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
     expect(row.externalDriverName).toBeNull();

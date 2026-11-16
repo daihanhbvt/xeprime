@@ -6,7 +6,8 @@
   },
   "tabs": {
     "products": "Sản phẩm",
-    "certificates": "Chứng nhận"
+    "certificates": "Chứng nhận",
+    "remittances": "Bảng kê trả phí"
   },
   "products": {
     "tableLabel": "Danh mục sản phẩm bảo hiểm",
@@ -38,7 +39,8 @@
       "naming": "Tên hiển thị",
       "coverage": "Quyền lợi",
       "amounts": "Khấu trừ & bồi thường",
-      "operation": "Vận hành"
+      "operation": "Vận hành",
+      "premium": "Biểu phí theo bậc giá trị xe"
     },
     "fields": {
       "nameVi": "Tên (tiếng Việt)",
@@ -55,12 +57,20 @@
       "certificateUrlTemplate": "Mẫu URL tra cứu giấy chứng nhận",
       "displayOrder": "Thứ tự hiển thị",
       "isActive": "Đang bật",
-      "isActiveDescription": "Tắt thì khách không thấy ô chọn sản phẩm này nữa. Hợp đồng đã bán không bị ảnh hưởng."
+      "isActiveDescription": "Tắt thì khách không thấy ô chọn sản phẩm này nữa. Hợp đồng đã bán không bị ảnh hưởng.",
+      "premiumTiers": "Bậc phí",
+      "tierMaxDays": "Chuyến tối đa",
+      "tierDaysSuffix": "ngày",
+      "tierPercent": "% giá trị xe",
+      "claimHotline": "Hotline báo sự cố"
     },
     "help": {
       "amountEmpty": "Để trống nếu không áp dụng.",
       "maxPayoutNote": "Ví dụ: “Theo giá trị thực tế của xe”, “Mỗi người, mỗi vụ”.",
-      "certificateUrlTemplate": "Bắt đầu bằng https:// và chứa '{certCode}' - chỗ thay số chứng nhận."
+      "certificateUrlTemplate": "Bắt đầu bằng https:// và chứa '{certCode}' - chỗ thay số chứng nhận.",
+      "premiumTiers": "Bậc tăng dần cả số ngày lẫn tỷ lệ. Giờ lẻ làm tròn lên bậc kế tiếp.",
+      "valueTierIntro": "Sản phẩm này BẮT BUỘC với ô tô tự lái đủ điều kiện: phí = giá trị xe × tỷ lệ của bậc thời lượng chuyến (đã gồm VAT), theo biểu phí MIC loại xe M1.11.",
+      "claimHotline": "Hiện cạnh giấy chứng nhận cho khách và chủ xe."
     },
     "validation": {
       "required": "Bắt buộc nhập.",
@@ -70,9 +80,14 @@
       "amountMin": "Số tiền không được âm.",
       "urlTemplate": "Mẫu phải bắt đầu bằng https:// và chứa '{certCode}'.",
       "displayOrder": "Thứ tự từ {min} đến {max}.",
-      "amountMax": "Số tiền quá lớn."
+      "amountMax": "Số tiền quá lớn.",
+      "tiers": "Biểu phí chưa hợp lệ: số ngày 1-30, tỷ lệ lớn hơn 0 và tối đa 4 chữ số lẻ, cả hai tăng dần."
     },
-    "saved": "Đã lưu sản phẩm {name}."
+    "saved": "Đã lưu sản phẩm {name}.",
+    "actions": {
+      "addTier": "Thêm bậc",
+      "removeTier": "Xoá bậc này"
+    }
   },
   "certificates": {
     "tableLabel": "Hàng đợi giấy chứng nhận bảo hiểm",
@@ -173,6 +188,120 @@
       "reasonPlaceholder": "VD: Chuyến bị huỷ sau bàn giao, đối tác xác nhận huỷ hợp đồng",
       "reasonRequired": "Nhập lý do thu hồi (tối thiểu 5 ký tự).",
       "done": "Đã thu hồi hợp đồng."
+    }
+  },
+  "remittances": {
+    "tableLabel": "Bảng kê trả phí bảo hiểm",
+    "loadError": "Không tải được bảng kê.",
+    "total": "{count, plural, other {# bảng kê}}",
+    "empty": {
+      "title": "Chưa có bảng kê nào",
+      "description": "Lập bảng kê cho tháng đã kết thúc để đối soát và trả phí cho MIC."
+    },
+    "pending": {
+      "loading": "Đang tải hợp đồng chưa kê…",
+      "some": "{count, plural, other {# hợp đồng}} đã cấp chưa kê - tổng phí {amount}",
+      "none": "Mọi hợp đồng đã cấp đều đã nằm trong bảng kê",
+      "oldest": "Hợp đồng chưa kê sớm nhất cấp ngày {date}.",
+      "hint": "Mỗi tháng lập một bảng kê, chốt số, gửi MIC đối chiếu rồi ghi nhận chuyển khoản."
+    },
+    "columns": {
+      "period": "Kỳ",
+      "status": "Trạng thái",
+      "policies": "Số hợp đồng",
+      "gross": "Tổng phí",
+      "commission": "Hoa hồng đại lý",
+      "payable": "Phải trả",
+      "paid": "Đã trả",
+      "open": "Mở"
+    },
+    "card": {
+      "policies": "{count, plural, other {# hợp đồng}}",
+      "payable": "Phải trả {amount}"
+    },
+    "status": {
+      "draft": "Nháp",
+      "finalized": "Đã chốt",
+      "paid": "Đã trả"
+    },
+    "actions": {
+      "create": "Lập bảng kê",
+      "export": "Xuất CSV",
+      "finalize": "Chốt số",
+      "pay": "Ghi nhận đã chuyển",
+      "delete": "Xoá nháp"
+    },
+    "drawer": {
+      "title": "Bảng kê trả phí MIC"
+    },
+    "hint": {
+      "draft": "Nháp - kiểm số rồi chốt. Xoá nháp sẽ trả hợp đồng về \"chưa kê\".",
+      "finalized": "Đã chốt - gửi CSV cho MIC đối chiếu, chuyển khoản rồi ghi nhận.",
+      "paid": "Đã trả - bảng kê đã khép."
+    },
+    "facts": {
+      "policies": "Số hợp đồng",
+      "gross": "Tổng phí khách đã trả",
+      "commission": "Hoa hồng đại lý ({percent}%)",
+      "payable": "Phải trả MIC",
+      "partnerTotal": "Tổng phí MIC tính lúc cấp",
+      "test": "Thử nghiệm",
+      "testCount": "{count, plural, other {# hợp đồng sandbox}}",
+      "paid": "Đã chuyển",
+      "paidAt": "Ngày chuyển",
+      "bankReference": "Mã giao dịch",
+      "note": "Ghi chú"
+    },
+    "mismatch": "Phí MIC tính lệch phí khách đã trả - kiểm từng hợp đồng trước khi chốt.",
+    "lines": {
+      "label": "Hợp đồng trong bảng kê",
+      "booking": "Mã đơn",
+      "contract": "Số hợp đồng",
+      "plate": "Biển số",
+      "customer": "Khách thuê",
+      "coverage": "Hiệu lực",
+      "premium": "Phí khách trả",
+      "partnerPremium": "Phí MIC tính",
+      "test": "THỬ NGHIỆM",
+      "empty": "Không có hợp đồng",
+      "total": "{count, plural, other {# hợp đồng}}"
+    },
+    "confirmFinalize": {
+      "title": "Chốt số bảng kê?",
+      "body": "Sau khi chốt không thêm/bớt hợp đồng được nữa. Số phải trả MIC: {amount}."
+    },
+    "confirmDelete": {
+      "title": "Xoá bảng kê nháp?",
+      "body": "Các hợp đồng trong bảng sẽ trở về \"chưa kê\"."
+    },
+    "finalized": "Đã chốt bảng kê",
+    "deleted": "Đã xoá bảng kê nháp",
+    "create": {
+      "title": "Lập bảng kê trả phí MIC",
+      "intro": "Gom mọi hợp đồng đã cấp, chưa kê, cấp trước hết tháng đã chọn.",
+      "period": "Tháng kê",
+      "commission": "Hoa hồng đại lý",
+      "commissionHelp": "Theo hợp đồng đại lý với MIC. Để 0 nếu MIC trả hoa hồng riêng.",
+      "note": "Ghi chú",
+      "submit": "Lập bảng kê",
+      "done": "Đã lập bảng kê {count, plural, other {# hợp đồng}}",
+      "validation": {
+        "required": "Bắt buộc",
+        "commission": "Từ 0 tới {max}%"
+      }
+    },
+    "pay": {
+      "title": "Ghi nhận đã chuyển - kỳ {period}",
+      "amount": "Số tiền đã chuyển",
+      "paidAt": "Thời điểm chuyển",
+      "bankReference": "Mã giao dịch ngân hàng",
+      "note": "Ghi chú",
+      "submit": "Ghi nhận",
+      "done": "Đã ghi nhận chuyển khoản cho MIC",
+      "validation": {
+        "required": "Bắt buộc",
+        "amount": "Số tiền phải lớn hơn 0"
+      }
     }
   }
 }

@@ -14,6 +14,7 @@ export * from './auth-provider';
 export * from './cache';
 export * from './locale';
 export * from './catalog';
+export * from './vehicle-master-data';
 export * from './marketplace';
 export * from './phone';
 export * from './auth-identifier';

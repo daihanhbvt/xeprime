@@ -9,6 +9,7 @@ import {
   type CustomerTripStage,
 } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
+import { tripCertificatePdfHref } from '@/features/insurance/api';
 import { InsuranceCoverageList } from '@/features/insurance/components/InsuranceCoverageList';
 import { TripGatewayReturn } from '@/features/payment-gateway/components/TripGatewayReturn';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -120,7 +121,11 @@ export function TripActiveView({ trip, backHref }: { trip: CustomerTripDetail; b
           <TripActualJourney trip={trip} />
 
           {/* Bảo hiểm theo từng sản phẩm khách đã trả (ADR 0064) — rỗng thì không vẽ gì. */}
-          <InsuranceCoverageList coverage={trip.insuranceCoverage ?? []} className={layout.card} />
+          <InsuranceCoverageList
+            coverage={trip.insuranceCoverage ?? []}
+            className={layout.card}
+            pdfHref={(certificateId) => tripCertificatePdfHref(trip.id, certificateId)}
+          />
 
           <TripRequestRenterCard trip={trip} />
         </>

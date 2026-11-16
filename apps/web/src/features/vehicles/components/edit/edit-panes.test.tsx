@@ -26,6 +26,9 @@ import { OwnerAddressCard } from './OwnerAddressCard';
 import { PolicyPane } from './PolicyPane';
 import { ServicesPane } from './ServicesPane';
 
+vi.mock('@/features/vehicle-data/hooks', async () =>
+  (await import('@/features/vehicle-data/test-vehicle-data')).vehicleDataHooksMock(),
+);
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   usePathname: () => '/manage/vehicles/v1/edit',

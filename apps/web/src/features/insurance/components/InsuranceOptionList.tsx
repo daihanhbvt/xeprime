@@ -1,7 +1,7 @@
 'use client';
 
 import { DownOutlined, UpOutlined } from '@ant-design/icons';
-import { Checkbox } from 'antd';
+import { Checkbox, Tag } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useId, useState } from 'react';
 import type { InsuranceProductKind } from '@xeprime/types';
@@ -67,12 +67,25 @@ function InsuranceOption({
   return (
     <div className={styles.item} data-checked={checked || undefined}>
       <label className={styles.row}>
-        <Checkbox checked={checked} onChange={(e) => onChange(e.target.checked)} />
-        <span className={styles.name}>{name}</span>
+        {/* Bắt buộc (ADR 0088): luôn tích, không bỏ được — server đã cộng phí vào báo giá. */}
+        <Checkbox
+          checked={item.mandatory || checked}
+          disabled={item.mandatory}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        <span className={styles.name}>
+          {name}
+          {item.mandatory ? <Tag className={styles.mandatory}>{t('option.mandatory')}</Tag> : null}
+        </span>
         <span className={styles.rate}>
-          {t('option.dailyRate', { price: fmt.pricePerDay(item.dailyAmount) })}
+          {item.mandatory && item.tripAmount
+            ? t('option.tripRate', { price: fmt.money(item.tripAmount) })
+            : item.dailyAmount
+              ? t('option.dailyRate', { price: fmt.pricePerDay(item.dailyAmount) })
+              : null}
         </span>
       </label>
+      {item.mandatory ? <p className={styles.mandatoryNote}>{t('option.mandatoryNote')}</p> : null}
       {item.product ? (
         <>
           <button
@@ -132,6 +145,14 @@ function InsuranceBenefits({ product }: { product: PublicInsuranceProduct }) {
         <div className={styles.fact}>
           <dt>{t('benefits.maxPayout')}</dt>
           <dd>{maxPayout}</dd>
+        </div>
+      ) : null}
+      {product.claimHotline ? (
+        <div className={styles.fact}>
+          <dt>{t('benefits.claimHotline')}</dt>
+          <dd>
+            <a href={`tel:${product.claimHotline.replace(/\s/g, '')}`}>{product.claimHotline}</a>
+          </dd>
         </div>
       ) : null}
     </dl>

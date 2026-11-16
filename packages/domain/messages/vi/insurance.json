@@ -1,7 +1,10 @@
 {
   "option": {
     "dailyRate": "+{price}",
-    "benefits": "Quyền lợi"
+    "benefits": "Quyền lợi",
+    "mandatory": "Bắt buộc",
+    "tripRate": "+{price}",
+    "mandatoryNote": "Xe này bắt buộc mua bảo hiểm vật chất xe MIC cho cả chuyến - phí đã cộng vào giá."
   },
   "benefits": {
     "coverage": "Phạm vi bảo vệ",
@@ -9,7 +12,8 @@
     "deductiblePerIncident": "{amount}/vụ",
     "noDeductible": "Không áp dụng khấu trừ",
     "maxPayout": "Bồi thường tối đa",
-    "maxPayoutWithNote": "{amount} · {note}"
+    "maxPayoutWithNote": "{amount} · {note}",
+    "claimHotline": "Hotline báo sự cố"
   },
   "certificate": {
     "title": "Giấy chứng nhận bảo hiểm",
@@ -20,7 +24,10 @@
     "view": "Xem giấy chứng nhận bảo hiểm",
     "testTag": "THỬ NGHIỆM",
     "testNote": "Giấy chứng nhận thử nghiệm - không có hiệu lực bảo hiểm.",
-    "loadError": "Không tải được giấy chứng nhận bảo hiểm."
+    "loadError": "Không tải được giấy chứng nhận bảo hiểm.",
+    "contractNumber": "Số hợp đồng",
+    "claimHotline": "Hotline báo sự cố",
+    "downloadPdf": "Tải giấy chứng nhận (PDF)"
   },
   "coverage": {
     "title": "Bảo hiểm chuyến",

@@ -19,8 +19,23 @@ import {
   retryCertificate,
   updateInsuranceProduct,
   voidCertificate,
+  createRemittance,
+  deleteRemittance,
+  fetchRemittance,
+  fetchRemittanceLines,
+  fetchRemittancePending,
+  fetchRemittances,
+  finalizeRemittance,
+  payRemittance,
+  remittanceFiltersToParams,
 } from './api';
-import type { CertificateFilters, UpdateInsuranceProductInput } from './types';
+import type {
+  CertificateFilters,
+  CreateInsuranceRemittanceInput,
+  PayInsuranceRemittanceInput,
+  RemittanceFilters,
+  UpdateInsuranceProductInput,
+} from './types';
 
 // ── Danh mục sản phẩm ───────────────────────────────────────────────────────
 
@@ -116,6 +131,86 @@ export function useVoidCertificate() {
     mutationFn: ({ id, reason }: { id: string; reason: string }) => voidCertificate(id, reason),
     onSuccess: invalidate,
   });
+}
+
+// ── Bảng kê trả phí cho hãng (ADR 0088 điều 6) ──────────────────────────────
+
+function parseRemittanceFilters(params: URLSearchParams): RemittanceFilters {
+  return {
+    page: positiveIntParam(params, 'page'),
+    limit: positiveIntParam(params, 'limit'),
+    remittance: params.get('remittance') || undefined,
+  };
+}
+
+export function useRemittanceFilters() {
+  return useUrlFilters(parseRemittanceFilters);
+}
+
+export function useRemittances(filters: RemittanceFilters) {
+  const params = remittanceFiltersToParams(filters);
+  return useQuery({
+    queryKey: queryKeys.platformInsurance.remittances(params),
+    queryFn: () => fetchRemittances(filters),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useRemittancePending() {
+  return useQuery({
+    queryKey: queryKeys.platformInsurance.remittancePending,
+    queryFn: fetchRemittancePending,
+  });
+}
+
+export function useRemittance(id: string | null) {
+  return useQuery({
+    queryKey: queryKeys.platformInsurance.remittance(id ?? ''),
+    queryFn: () => fetchRemittance(id as string),
+    enabled: Boolean(id),
+  });
+}
+
+export function useRemittanceLines(id: string | null, page: number, limit: number) {
+  return useQuery({
+    queryKey: queryKeys.platformInsurance.remittanceLines(id ?? '', { page, limit }),
+    queryFn: () => fetchRemittanceLines(id as string, { page, limit }),
+    enabled: Boolean(id),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** Mọi thao tác bảng kê đổi danh sách, số "chưa kê" và chi tiết — làm mới cả nhánh bảo hiểm. */
+function useInvalidateInsurance() {
+  const queryClient = useQueryClient();
+  return () => void queryClient.invalidateQueries({ queryKey: queryKeys.platformInsurance.all });
+}
+
+export function useCreateRemittance() {
+  const invalidate = useInvalidateInsurance();
+  return useMutation({
+    mutationFn: (body: CreateInsuranceRemittanceInput) => createRemittance(body),
+    onSuccess: invalidate,
+  });
+}
+
+export function useFinalizeRemittance() {
+  const invalidate = useInvalidateInsurance();
+  return useMutation({ mutationFn: finalizeRemittance, onSuccess: invalidate });
+}
+
+export function usePayRemittance() {
+  const invalidate = useInvalidateInsurance();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: PayInsuranceRemittanceInput }) =>
+      payRemittance(id, body),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteRemittance() {
+  const invalidate = useInvalidateInsurance();
+  return useMutation({ mutationFn: deleteRemittance, onSuccess: invalidate });
 }
 
 export type { InsurancePolicyStatus };

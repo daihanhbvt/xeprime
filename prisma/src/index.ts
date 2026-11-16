@@ -158,7 +158,9 @@ export {
   createInsurancePartner,
   freezeInsuranceProducts,
   insuranceIssuingStaleBefore,
+  insurancePhotoUrls,
   issueInsurancePolicy,
+  partnerRefFor,
   readInsuranceProductSnapshot,
   sweepDueInsurancePolicies,
   toInsuranceProductSnapshot,
@@ -172,3 +174,14 @@ export {
   type IssuePolicyRequest,
   type IssuePolicyResult,
 } from './insurance-issue';
+
+/** Client + adapter THẬT của MIC (ADR 0088) — worker cấp hợp đồng, API tải GCN PDF. */
+export { MicClient, MicUnavailableError, readMicConfig, type MicConfig } from './mic-client';
+export {
+  MIC_VEHICLE_TYPE_SELF_DRIVE,
+  MicInsurancePartner,
+  coverageWindow,
+  parseVnDateTime,
+  vnDate,
+  vnTime,
+} from './mic-insurance-partner';

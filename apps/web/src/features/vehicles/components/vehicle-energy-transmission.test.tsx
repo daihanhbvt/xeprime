@@ -18,6 +18,9 @@ import { useTransmissionOptions } from './VehicleFormSections';
  * Ô nguồn năng lượng đọc danh mục qua TanStack Query; nó không phải thứ đang kiểm nên được thay
  * bằng một ô rỗng — test đổi nguồn năng lượng thẳng bằng `setValue`, đúng như người dùng chọn.
  */
+vi.mock('@/features/vehicle-data/hooks', async () =>
+  (await import('@/features/vehicle-data/test-vehicle-data')).vehicleDataHooksMock(),
+);
 vi.mock('./VehicleFormSections', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./VehicleFormSections')>();
   return { ...actual, FuelTypeSelect: () => null };

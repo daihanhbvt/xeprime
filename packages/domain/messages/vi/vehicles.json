@@ -279,7 +279,10 @@
       "specChoiceFromModel": "Mẫu {model} có các bản: {values}.",
       "motorbikeCategory": "Phân khúc xe",
       "motorbikeCategoryPlaceholder": "Chọn phân khúc",
-      "motorbikeCategoryHelp": "Khách lọc xe máy theo phân khúc - chọn sai thì xe khó được tìm thấy."
+      "motorbikeCategoryHelp": "Khách lọc xe máy theo phân khúc - chọn sai thì xe khó được tìm thấy.",
+      "insuredValue": "Giá trị xe",
+      "insuredValueTipLabel": "Giá trị xe là gì",
+      "insuredValueTip": "Giá khi mua xe, hoặc giá trị kê khai khi mua bảo hiểm thân vỏ xe."
     },
     "prices": {
       "weekday": "Giá ngày thường",
@@ -461,7 +464,98 @@
       "imagesMax": "Tối đa 20 ảnh",
       "seatCountCarOnly": "Số chỗ ngồi chỉ áp dụng cho ô tô",
       "motorbikeCategoryMotorbikeOnly": "Phân khúc chỉ áp dụng cho xe máy",
-      "priceThousandStep": "Giá phải là bội số 1.000đ"
+      "priceThousandStep": "Giá phải là bội số 1.000đ",
+      "insuredValueRange": "Giá trị xe từ 50.000.000đ tới 20.000.000.000đ, làm tròn tới triệu đồng.",
+      "insuredValueCarOnly": "Giá trị xe chỉ áp dụng cho ô tô"
+    },
+    "registration": {
+      "title": "Cà vẹt xe",
+      "tipLabel": "Vì sao cần cà vẹt",
+      "tip": "Ảnh mặt có tên chủ xe, số khung, số máy. Thông tin này dùng để cấp bảo hiểm vật chất xe cho từng chuyến thuê.",
+      "choose": "Chụp hoặc tải ảnh cà vẹt",
+      "chooseHint": "Mặt có tên chủ xe, số khung, số máy - chụp thẳng, đủ sáng",
+      "replace": "Chụp lại",
+      "previewAlt": "Ảnh cà vẹt vừa tải",
+      "reading": "Đang đọc cà vẹt...",
+      "autoFilled": "Đã đọc đủ thông tin cà vẹt",
+      "edit": "Sửa",
+      "needsManual": "Chưa đọc được đủ thông tin - vui lòng nhập phần còn thiếu.",
+      "readerUnavailable": "Chưa đọc tự động được ảnh này - vui lòng nhập thông tin trên cà vẹt.",
+      "plateMismatch": "Biển số trên cà vẹt ({read}) khác biển số đã nhập ({typed}) - kiểm tra lại ảnh hoặc thông tin.",
+      "fields": {
+        "holderName": "Tên chủ xe",
+        "chassisNumber": "Số khung",
+        "engineNumber": "Số máy",
+        "holderAddress": "Địa chỉ chủ xe",
+        "plateNumber": "Biển số trên cà vẹt"
+      },
+      "placeholders": {
+        "holderName": "VD: NGUYỄN VĂN AN",
+        "chassisNumber": "VD: RL4B29F30K1234567",
+        "engineNumber": "VD: 2NRX123456",
+        "holderAddress": "Như in trên cà vẹt (không bắt buộc)"
+      },
+      "failure": {
+        "unsupported": "Không mở được ảnh này - hãy chọn ảnh JPG, PNG hoặc WEBP.",
+        "tooSmall": "Ảnh quá nhỏ để đọc chữ - hãy chụp gần hơn.",
+        "tooLarge": "Ảnh quá lớn - hãy chụp lại hoặc chọn ảnh khác."
+      },
+      "errors": {
+        "photoRequired": "Vui lòng chụp hoặc tải ảnh cà vẹt",
+        "photoNotReady": "Đợi ảnh cà vẹt tải và đọc xong",
+        "holderNameRequired": "Nhập tên chủ xe như trên cà vẹt",
+        "holderNameInvalid": "Tên chủ xe không hợp lệ",
+        "chassisRequired": "Nhập số khung",
+        "chassisInvalid": "Số khung gồm 6-25 chữ và số",
+        "engineRequired": "Nhập số máy",
+        "engineInvalid": "Số máy gồm 4-25 chữ và số",
+        "addressTooLong": "Địa chỉ tối đa 255 ký tự"
+      }
+    },
+    "catalog": {
+      "variant": "Phiên bản",
+      "variantPlaceholder": "Chọn hoặc gõ phiên bản",
+      "variantHelp": "Chọn đúng phiên bản để nhận gợi ý thông số, giá trị xe và giá thuê.",
+      "variantPickModelFirst": "Chọn dòng xe trước.",
+      "variantEmpty": "Chưa có phiên bản nào - gõ tên phiên bản của xe bạn.",
+      "variantAny": "Mọi phiên bản",
+      "years": "{from} - {to}",
+      "yearsOpen": "{from} - nay",
+      "yearsUntil": "đến {to}",
+      "newOption": "{label} (mới)",
+      "addModel": "Thêm dòng xe \"{text}\"",
+      "addVariant": "Thêm phiên bản \"{text}\"",
+      "newVariant": "Phiên bản mới: {name}",
+      "undoNewVariant": "Bỏ",
+      "applied": "Đã điền thông số tham khảo - kiểm tra lại trước khi lưu.",
+      "specTitle": "Thông số tham khảo · {name}",
+      "apply": "Áp dụng thông số",
+      "applyNote": "Bấm \"Áp dụng thông số\" để điền vào xe; bạn vẫn sửa được từng ô nếu xe đã độ hoặc khác bản gốc.",
+      "features": "Tiện ích: {list}",
+      "spec": {
+        "seats": "Số chỗ",
+        "fuel": "Nhiên liệu",
+        "transmission": "Hộp số",
+        "body": "Kiểu dáng",
+        "engine": "Dung tích",
+        "ccValue": "{cc} cc",
+        "power": "Công suất",
+        "hpValue": "{hp} hp",
+        "size": "Kích thước",
+        "sizeValue": "{l} x {w} x {h} mm",
+        "consumption": "Tiêu hao",
+        "consumptionValue": "{value} L/100km",
+        "range": "Quãng đường điện",
+        "rangeValue": "{km} km"
+      },
+      "valueHint": "Giá trị tham khảo: {amount}",
+      "valueBasis": "(xe {age} năm tuổi, còn {percent}% giá xe mới)",
+      "valueBasisNew": "(theo giá xe mới)",
+      "useValue": "Dùng giá trị này",
+      "rentReference": "Giá tham khảo XePrime: {price}",
+      "rentReferenceModel": "Giá tham khảo cho dòng xe này: {price}",
+      "rentMarket": "Xe cùng dòng đang cho thuê: {low} - {high} ({count, plural, other {# xe}})",
+      "useRent": "Dùng {price}"
     }
   },
   "publish": {
@@ -1479,7 +1573,8 @@
       "customTypeNameRequired": "Nhập tên loại giấy tờ",
       "presetInvalid": "Chọn loại giấy tờ trong danh sách",
       "customTypeNameMax": "Tối đa 160 ký tự"
-    }
+    },
+    "registrationReminder": "Ô tô cần cà vẹt có tên chủ xe, số khung và số máy để được bán kèm bảo hiểm vật chất xe - tải ảnh và điền thông tin ở dòng Cà vẹt."
   },
   "maintenance": {
     "title": "Bảo dưỡng",

@@ -16,6 +16,8 @@
 | --- | --- |
 | [`01_BRAND_GUIDE.md`](01_BRAND_GUIDE.md) | Thương hiệu: insight, tông, logo, màu, chữ, ảnh, giọng nói và từ vựng chốt |
 | [`08_UX_GUIDELINES.md`](08_UX_GUIDELINES.md) | **Guideline UX/UI duy nhất**: tám nguyên tắc, khuôn trang, năm trạng thái, responsive/mobile, lỗi, form, định dạng, quyền, a11y, ràng buộc kỹ thuật và checklist duyệt màn |
+| [`10_ADMIN_INSURANCE.md`](10_ADMIN_INSURANCE.md) | **Sổ tay vận hành bảo hiểm chuyến ở admin** (11/11/2026): ba tab Chứng nhận / Bảng kê / Sản phẩm, mã lỗi và cách xử lý, điều kiện xe, cấu hình theo môi trường, việc định kỳ, định hướng (tab Xe & điều kiện, cảnh báo giá trị xe bất thường, báo cáo, bồi thường) |
+| [`11_VEHICLE_MASTER_DATA.md`](11_VEHICLE_MASTER_DATA.md) | **Dữ liệu xe** (11/11/2026): màn quản trị riêng, mỗi dòng một xe (thông số, tiện ích, giá bán, giá thuê tham khảo), dữ liệu tự ghi nhận từ xe của chủ xe + duyệt/gộp/từ chối, một định dạng file nhập/xuất, gợi ý cho chủ xe khi đăng xe, nguồn dữ liệu khởi đầu, khấu hao giá trị xe |
 | [`09_PARTNER_REDESIGN.md`](09_PARTNER_REDESIGN.md) | **Đợt chuẩn hoá site partner theo design Partner-XePrime** (từ 02/11/2026): luật làm việc, bản đồ menu cũ → mới, tính năng nào dời về màn nào, sổ theo màn, node Figma, rà soát cuối. Đọc trước khi ráp bất kỳ màn partner nào |
 
 Liên quan ngoài thư mục này:

@@ -25,6 +25,7 @@ import {
   SourceTypeSection,
   useCreateWizardSteps,
 } from './VehicleFormSections';
+import { RegistrationCapture } from './RegistrationCapture';
 import { VehicleReviewStep } from './VehicleReviewStep';
 import { VehicleWizard } from './VehicleWizard';
 import { CreateVehiclePricingStep } from './CreateVehiclePricingStep';
@@ -37,6 +38,8 @@ import { missingPublishRequirementsForForm } from '../publication';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
+import { EMPTY_REGISTRATION, checkRegistration, type RegistrationCaptureState } from '../registration-capture';
+import type { CreateVehicleRegistrationInput } from '../types';
 
 /** Mặc định khi tạo mới: chọn sẵn giá trị hợp lệ để select bắt buộc không rỗng. */
 const EMPTY_DEFAULTS: VehicleFormValues = {
@@ -63,6 +66,7 @@ const EMPTY_DEFAULTS: VehicleFormValues = {
   vehicleCatalogModelId: null,
   manufactureYear: null,
   seatCount: null,
+  insuredValue: null,
   lengthMm: null,
   widthMm: null,
   heightMm: null,
@@ -90,6 +94,8 @@ const EMPTY_DEFAULTS: VehicleFormValues = {
 export interface VehicleSubmitOptions {
   /** Bấm "Lưu & Gửi duyệt" thay vì "Lưu nháp" — trang quyết định gọi thêm `submit-public`. */
   submitForReview: boolean;
+  /** Cà vẹt đã chụp + xác nhận (ADR 0089) — chỉ ô tô, ngoài phiên hỗ trợ. */
+  registration?: CreateVehicleRegistrationInput;
 }
 
 interface VehicleFormProps {
@@ -204,6 +210,26 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
   const vehicleType = useWatch({ control, name: 'vehicleType' });
   const fuelType = useWatch({ control, name: 'fuelType' });
   const isCar = vehicleType === VEHICLE_TYPE.CAR;
+
+  /*
+   * Cà vẹt (ADR 0089) — BẮT BUỘC khi tạo ô tô; xe máy chưa có bảo hiểm nên không hỏi. Phiên hỗ trợ
+   * không có ô này: nhân sự nền tảng không tải giấy tờ thay chủ xe (server cũng chặn).
+   */
+  const registrationRequired = isCar && !draftOnly;
+  const [registration, setRegistration] = useState<RegistrationCaptureState>(EMPTY_REGISTRATION);
+  const [registrationShowErrors, setRegistrationShowErrors] = useState(false);
+  const plateNumber = useWatch({ control, name: 'plateNumber' });
+  const registrationCheck = checkRegistration(registration, plateNumber);
+  const registrationBlocked = registrationRequired && !registrationCheck.ok;
+  // Thu hồi ảnh xem trước khi rời wizard — object URL giữ cả tấm ảnh trong bộ nhớ trình duyệt.
+  const previewUrl = registration.previewUrl;
+  useEffect(
+    () => () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    },
+    [previewUrl],
+  );
+
   useEffect(() => {
     if (!isCar) setValue('bodyType', null);
     if (!isVehicleFuelTypeAllowed(vehicleType, fuelType)) {
@@ -242,7 +268,11 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
   }
 
   /** Lỗi của RIÊNG bước đang mở — dùng cho dải tổng hợp đầu thẻ (Figma `193:2687`). */
-  const stepErrors = steps[step]!.fields.filter((field) => errors[field]).length;
+  const stepErrors =
+    steps[step]!.fields.filter((field) => errors[field]).length +
+    (steps[step]!.key === 'media' && registrationRequired && registrationShowErrors
+      ? Object.keys(registrationCheck.errors).length
+      : 0);
 
   /** Mọi ô nhập wizard thật sự có — bộ lọc cho lỗi cấp trường mà server trả về. */
   const wizardFields = useMemo(() => steps.flatMap((s) => [...s.fields]), [steps]);
@@ -264,10 +294,19 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
       if (target >= 0) setStep(target);
       return;
     }
+    if (registrationBlocked) {
+      setRegistrationShowErrors(true);
+      const target = steps.findIndex((candidate) => candidate.key === 'media');
+      if (target >= 0) setStep(target);
+      return;
+    }
+    const withRegistration: VehicleSubmitOptions = registrationRequired
+      ? { ...options, registration: registrationCheck.input }
+      : options;
     void handleSubmit(
       async (formValues) => {
         try {
-          await onSubmit(formValues, options);
+          await onSubmit(formValues, withRegistration);
         } catch (err) {
           /*
            * Server bắt được thứ yup bỏ lọt (luật chỉ có ở backend: số chữ số thập phân, độ dài…)
@@ -311,7 +350,9 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
       const valid = await trigger([...steps[step]!.fields]);
       const missing = valid ? publishGaps(steps[step]!.key) : [];
       setPublishMissing(missing);
-      if (valid && missing.length === 0) setStep(step + 1);
+      const registrationGap = steps[step]!.key === 'media' && registrationBlocked;
+      if (registrationGap) setRegistrationShowErrors(true);
+      if (valid && missing.length === 0 && !registrationGap) setStep(step + 1);
       return;
     }
 
@@ -346,10 +387,27 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
         );
       case 'pricing':
         return (
-          <CreateVehiclePricingStep control={control} isCar={isCar} pricePreview={pricePreview} />
+          <CreateVehiclePricingStep
+            control={control}
+            isCar={isCar}
+            pricePreview={pricePreview}
+            setValue={setValue}
+          />
         );
       case 'media':
-        return <MediaSection {...props} />;
+        return (
+          <>
+            <MediaSection {...props} />
+            {registrationRequired ? (
+              <RegistrationCapture
+                state={registration}
+                onChange={setRegistration}
+                vehiclePlate={plateNumber}
+                showErrors={registrationShowErrors}
+              />
+            ) : null}
+          </>
+        );
       default:
         return <VehicleReviewStep values={values} onEditStep={setStep} />;
     }

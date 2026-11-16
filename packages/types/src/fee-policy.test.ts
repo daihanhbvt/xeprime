@@ -348,6 +348,38 @@ describe('computeCustomerFees — ví dụ chuẩn ADR 0064: thuế 10% trên ti
     expect(totals[ALLOCATION_TARGET.PLATFORM_REVENUE]).toBe('460000');
   });
 
+  describe('bảo hiểm vật chất xe theo BẬC giá trị xe (ADR 0088)', () => {
+    const tier = { amount: '224400', insuredValue: '340000000', maxDays: 10, percent: '0.066' };
+
+    it('bắt buộc: có dòng IV dù khách không chọn, đi vào tiền giữ chỗ và vế phải trả hãng', () => {
+      const r = trip({ vehicleProtectionTier: tier });
+      expect(amountOf(r, FEE_LINE.VEHICLE_PROTECTION)).toBe(224400);
+      expect(r.vehicleProtectionMandatory).toBe(true);
+      expect(r.vehicleProtectionTier).toEqual(tier);
+      expect(r.onlineAmount).toBe('1434400'); // S 50.000 + H 410.000 + IV 224.400 + D 750.000
+      expect(settled(r)[ALLOCATION_TARGET.INSURER_PAYABLE]).toBe('224400');
+    });
+
+    it('thay hẳn biểu phí ngày: khách tích chọn cũng không cộng thêm 50.000/ngày', () => {
+      const r = trip({ vehicleProtectionTier: tier, vehicleProtectionSelected: true });
+      expect(r.lines.filter((l) => l.key === FEE_LINE.VEHICLE_PROTECTION)).toHaveLength(1);
+      expect(amountOf(r, FEE_LINE.VEHICLE_PROTECTION)).toBe(224400);
+    });
+
+    it('xe/chuyến không đủ điều kiện (null) ⇒ không có dòng IV, kể cả khi khách tích chọn', () => {
+      const r = trip({ vehicleProtectionTier: null, vehicleProtectionSelected: true });
+      expect(amountOf(r, FEE_LINE.VEHICLE_PROTECTION)).toBe(0);
+      expect(r.vehicleProtectionMandatory).toBe(false);
+    });
+
+    it('cổng nền tảng đóng ⇒ không thu đồng nào dù có báo giá bậc', () => {
+      const r = trip({ vehicleProtectionTier: tier, insuranceOffered: false });
+      expect(amountOf(r, FEE_LINE.VEHICLE_PROTECTION)).toBe(0);
+      expect(r.vehicleProtectionMandatory).toBe(false);
+      expect(r.vehicleProtectionTier).toBeNull();
+    });
+  });
+
   it('tuyến gói, bật thu cọc: H = 0 · QR 800.000 · ví chủ xe 250.000 · chủ xe nhận 4.500.000', () => {
     const r = trip({ billingMode: BILLING_MODE.PACKAGE, depositRequired: true });
     expect(lineOf(r, FEE_LINE.OWNER_COMMISSION)).toBeUndefined();
@@ -472,7 +504,10 @@ describe('computeCustomerFees — insuranceOffered là cổng của NỀN TẢNG
 
   it('insuranceOfferedByKind: boolean áp cho cả hai sản phẩm', () => {
     expect(insuranceOfferedByKind(true)).toEqual({ vehicleProtection: true, tripInsurance: true });
-    expect(insuranceOfferedByKind(false)).toEqual({ vehicleProtection: false, tripInsurance: false });
+    expect(insuranceOfferedByKind(false)).toEqual({
+      vehicleProtection: false,
+      tripInsurance: false,
+    });
   });
 });
 
@@ -754,7 +789,11 @@ describe('computeCustomerFees — mức thuế theo LOẠI DỊCH VỤ và CHỦ
     const company = trip({ serviceType: SERVICE_TYPE.SELF_DRIVE, sellerEntityType: 'company' });
     expect(company.taxAmount).toBe('0');
     expect([company.vatAmount, company.pitAmount]).toEqual(['0', '0']);
-    expect([company.vatPercent, company.pitPercent, company.taxCategory]).toEqual([null, null, null]);
+    expect([company.vatPercent, company.pitPercent, company.taxCategory]).toEqual([
+      null,
+      null,
+      null,
+    ]);
     expect(company.taxExemptReason).toBe('company');
     expect(lineOf(company, FEE_LINE.TAX)).toBeUndefined();
     expect(company.onlineAmount).toBe(individual.onlineAmount);
@@ -1165,7 +1204,10 @@ describe('feePolicyActivationBlockers — ADR 0028 điều 4–5, ADR 0033, lu�
   });
 
   it('% giữ chỗ dưới mức thuế CAO NHẤT của bảng ⇒ chặn, dù loại dịch vụ khác thấp hơn', () => {
-    const rates = { ...TAX_RATES_DEFAULTS, [SERVICE_TYPE.LONG_TERM]: { vatPercent: 5, pitPercent: 5 } };
+    const rates = {
+      ...TAX_RATES_DEFAULTS,
+      [SERVICE_TYPE.LONG_TERM]: { vatPercent: 5, pitPercent: 5 },
+    };
     // Cao nhất = dài hạn 10% > 7% giữ chỗ.
     expect(
       feePolicyActivationBlockers({ ...withTax(5, 2), taxRates: rates, depositPercent: 7 }),
@@ -1311,7 +1353,12 @@ describe('customerHoldAllocation — khoản giữ chỗ như khách thấy (ADR
     { key: FEE_LINE.OWNER_COMMISSION, beneficiary: 'platform', bearer: 'owner', amount: '410000' },
     { key: FEE_LINE.PROMO, beneficiary: 'platform', bearer: 'customer', amount: '30000' },
     { key: FEE_LINE.SERVICE_FEE, beneficiary: 'platform', bearer: 'customer', amount: '50000' },
-    { key: FEE_LINE.VEHICLE_PROTECTION, beneficiary: 'insurer', bearer: 'customer', amount: '250000' },
+    {
+      key: FEE_LINE.VEHICLE_PROTECTION,
+      beneficiary: 'insurer',
+      bearer: 'customer',
+      amount: '250000',
+    },
   ];
   const amount = 750000 + 410000 + 50000 + 250000 - 30000;
 

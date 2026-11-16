@@ -12,6 +12,10 @@ export type VehicleDetail = Schemas['VehicleDetailDto'];
 export type ListingRepairResult = Schemas['ListingRepairResultDto'];
 export type CreateVehicleInput = Schemas['CreateVehicleDto'];
 export type UpdateVehicleInput = Schemas['UpdateVehicleDto'];
+/** Cà vẹt gửi kèm lượt tạo ô tô (ADR 0089). */
+export type CreateVehicleRegistrationInput = Schemas['CreateVehicleRegistrationDto'];
+export type VehicleRegistrationPresign = Schemas['VehicleRegistrationPresignDto'];
+export type VehicleRegistrationReadResult = Schemas['VehicleRegistrationReadResultDto'];
 
 /** Hai kiểu xem của danh sách xe nhiều xe (Figma `23649:29724` lưới · `23655:36959` danh sách). */
 export type VehicleListView = 'grid' | 'list';

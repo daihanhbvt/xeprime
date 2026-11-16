@@ -57,10 +57,13 @@ export function CreateVehiclePage() {
 
   async function handleSubmit(
     values: VehicleFormValues,
-    { submitForReview }: VehicleSubmitOptions,
+    { submitForReview, registration }: VehicleSubmitOptions,
   ) {
     // `tenantId` KHÔNG nằm trong payload: backend lấy từ membership/scope (CLAUDE.md §6.1).
-    const input = formValuesToInput(values);
+    // Cà vẹt (ADR 0089) gắn vào xe trong CÙNG transaction tạo xe ở server.
+    const input: CreateVehicleInput = registration
+      ? { ...formValuesToInput(values), registration }
+      : formValuesToInput(values);
     const body = support
       ? (Object.fromEntries(
           Object.entries(input).filter(([key]) => SUPPORT_CREATE_FIELDS.has(key)),

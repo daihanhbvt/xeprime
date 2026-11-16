@@ -3,6 +3,7 @@
 import { Alert, Button } from 'antd';
 import { useTranslations } from 'next-intl';
 import { InsuranceCoverageList } from '@/features/insurance/components/InsuranceCoverageList';
+import { bookingCertificatePdfHref } from '@/features/insurance/api';
 import { useBookingInsuranceCoverage } from '@/features/insurance/hooks';
 import styles from './BookingInsuranceCertificatesPanel.module.css';
 
@@ -41,5 +42,11 @@ export function BookingInsuranceCertificatesPanel({
     );
   }
   if (!data || data.length === 0) return null;
-  return <InsuranceCoverageList coverage={data} className={styles.panel} />;
+  return (
+    <InsuranceCoverageList
+      coverage={data}
+      className={styles.panel}
+      pdfHref={(certificateId) => bookingCertificatePdfHref(bookingId, certificateId)}
+    />
+  );
 }

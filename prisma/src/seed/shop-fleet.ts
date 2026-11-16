@@ -6,6 +6,7 @@
  * đội xe cũ, nên id, biển số và mã xe đều ổn định và `upsert` được.
  */
 import {
+  INSURANCE_VALUE_TIER_LIMITS,
   MAINTENANCE_STATUS,
   MAINTENANCE_TYPE,
   ODOMETER_SOURCE,
@@ -95,6 +96,29 @@ function buildPlate(spec: VehicleModelSpec, provinceCode: string, serial: number
   const head = String(100 + (spread % 900));
   const tail = String(Math.floor(spread / 900)).padStart(2, '0');
   return `${prefix}-${head}.${tail}`;
+}
+
+/** Năm mốc tính tuổi xe demo — cố định để seed chạy lại ra cùng số. */
+const DEMO_VALUE_REFERENCE_YEAR = 2026;
+/** Xe mới ~ 600 ngày giá thuê ngày thường; mất ~7%/năm, sàn 40% (đủ thô cho dữ liệu demo). */
+const DEMO_VALUE_RENT_DAYS = 600;
+const DEMO_VALUE_DEPRECIATION_PER_YEAR = 0.07;
+const DEMO_VALUE_FLOOR_RATIO = 0.4;
+
+/**
+ * Giá trị xe DEMO (ADR 0088) — mẫu số phí bảo hiểm vật chất xe MIC. Seed chưa có bảng giá thị
+ * trường nên suy thô từ giá thuê ngày trừ khấu hao theo tuổi, làm tròn tới triệu và kẹp trong
+ * `INSURANCE_VALUE_TIER_LIMITS` (CHECK `vehicles_insured_value_check`). Xe máy chưa có bảo hiểm
+ * ⇒ `null`.
+ */
+function demoInsuredValue(spec: VehicleModelSpec, year: number): string | null {
+  if (spec.vehicleType !== VEHICLE_TYPE.CAR) return null;
+  const { insuredValueMin, insuredValueMax, insuredValueStep } = INSURANCE_VALUE_TIER_LIMITS;
+  const age = Math.max(0, DEMO_VALUE_REFERENCE_YEAR - year);
+  const ratio = Math.max(DEMO_VALUE_FLOOR_RATIO, 1 - DEMO_VALUE_DEPRECIATION_PER_YEAR * age);
+  const raw = Math.round((spec.weekday * DEMO_VALUE_RENT_DAYS * ratio) / insuredValueStep);
+  const value = Math.min(insuredValueMax, Math.max(insuredValueMin, raw * insuredValueStep));
+  return String(value);
 }
 
 /**
@@ -258,6 +282,7 @@ export async function buildFleet(spec: ShopSpec, deps: FleetDeps): Promise<Vehic
       manufactureYear: year,
       color,
       seatCount: model.seatCount,
+      insuredValue: demoInsuredValue(model, year),
       fuelType: model.fuelType,
       bodyType: model.bodyType,
       sourceType,

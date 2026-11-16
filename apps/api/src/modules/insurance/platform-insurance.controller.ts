@@ -1,5 +1,22 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
-import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+  StreamableFile,
+} from '@nestjs/common';
+import {
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiProduces,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ACCOUNT_REALM, PERMISSION } from '@xeprime/types';
 import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
@@ -9,6 +26,7 @@ import {
   PlatformInsurancePolicyDetailDto,
   VoidInsurancePolicyDto,
 } from './dto/insurance.dto';
+import { InsuranceCertificateService } from './insurance-certificate.service';
 import { InsuranceReadService } from './insurance-read.service';
 import { InsuranceService } from './insurance.service';
 
@@ -31,7 +49,22 @@ export class PlatformInsuranceController {
   constructor(
     private readonly read: InsuranceReadService,
     private readonly insurance: InsuranceService,
+    private readonly certificates: InsuranceCertificateService,
   ) {}
+
+  @Get(':id/certificate.pdf')
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOperation({ summary: 'Tải GCN PDF của một hợp đồng từ hãng (ADR 0088)' })
+  @ApiProduces('application/pdf')
+  @ApiOkResponse({ schema: { type: 'string', format: 'binary' } })
+  async certificatePdf(@Param('id') id: string): Promise<StreamableFile> {
+    const pdf = await this.certificates.pdf(id, {});
+    return new StreamableFile(pdf.file, {
+      type: 'application/pdf',
+      length: pdf.file.length,
+      disposition: `attachment; filename="${pdf.fileName}"`,
+    });
+  }
 
   @Get()
   @ApiOperation({

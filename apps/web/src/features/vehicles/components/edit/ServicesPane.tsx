@@ -61,6 +61,7 @@ import { cx } from '@/lib/cx';
 import { vehicleSchedulePath } from '../../calendar-link';
 import type { VehicleDetail } from '../../types';
 import { SERVICE_TABS, serviceOfTab } from '../vehicle-edit-nav';
+import { CatalogRentHintFor } from '../CatalogSuggestions';
 import { EditCard, EditToggleRow as ToggleRow } from './EditCard';
 import { useEditForm } from './edit-actions';
 import { InheritedPolicyNote, PricingForm } from './PricingForm';
@@ -285,6 +286,19 @@ function ServicesBody({
                     <PriceField control={control} name="weekendPrice" label="weekend" />
                     <PriceField control={control} name="hourlyPrice" label="hourly" perHour />
                   </div>
+                  <CatalogRentHintFor
+                    modelId={vehicle.vehicleCatalogModelId}
+                    variantId={vehicle.vehicleCatalogVariantId}
+                    year={vehicle.manufactureYear}
+                    vehicleId={vehicle.id}
+                    field="weekdayPrice"
+                    onApply={(price) =>
+                      api!.form.setValue('weekdayPrice', price, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
+                  />
                   <DirectDiscountEditor control={control} setValue={api!.form.setValue} />
                   <CalendarPriceLink
                     href={calendarHref}
@@ -306,6 +320,19 @@ function ServicesBody({
                         title={tManage('pricing.withDriverEstimateHint')}
                       />
                     ) : null}
+                    <CatalogRentHintFor
+                      modelId={vehicle.vehicleCatalogModelId}
+                      variantId={vehicle.vehicleCatalogVariantId}
+                      year={vehicle.manufactureYear}
+                      vehicleId={vehicle.id}
+                      field="withDriverDailyPrice"
+                      onApply={(price) =>
+                        api!.form.setValue('withDriverDailyPrice', price, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        })
+                      }
+                    />
                     <div className={styles.priceRow}>
                       <PriceField control={control} name="withDriverDailyPrice" label="daily" />
                       <PriceField

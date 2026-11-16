@@ -91,3 +91,14 @@
 .fact dd {
   margin: 0;
 }
+
+.mandatory {
+  margin-inline-start: var(--xp-space-xs);
+  vertical-align: middle;
+}
+
+.mandatoryNote {
+  margin: 0 0 0 24px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}

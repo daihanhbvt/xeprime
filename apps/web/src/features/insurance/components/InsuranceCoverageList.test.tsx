@@ -28,6 +28,9 @@ const ISSUED: InsuranceCoverage = {
     coverageTo: null,
     isTest: true,
     issuedAt: '2026-10-21T02:00:00.000Z',
+    contractNumber: null,
+    pdfAvailable: false,
+    claimHotline: null,
   },
 };
 

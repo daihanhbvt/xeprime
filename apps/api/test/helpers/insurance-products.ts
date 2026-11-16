@@ -1,5 +1,5 @@
 import { newId, Prisma } from '@xeprime/prisma';
-import { INSURANCE_PROVIDER } from '@xeprime/types';
+import { INSURANCE_PREMIUM_BASIS, INSURANCE_PROVIDER } from '@xeprime/types';
 import {
   CERTIFICATE_URL_TEMPLATE,
   INSURANCE_PRODUCTS,
@@ -41,5 +41,25 @@ export async function ensureInsuranceProducts(prisma: PrismaService): Promise<vo
       isActive: true,
     })),
     skipDuplicates: true,
+  });
+  /*
+   * Spec báo giá `IV`/`IP` dựng kịch bản trên biểu phí NGÀY. Migration ADR 0088 đổi sản phẩm VCX
+   * của MIC sang phí theo BẬC trên database đã có dòng — đưa về `daily` cho mọi spec (idempotent,
+   * cùng một trạng thái mà mọi spec song song đều cần). Phí bậc có spec riêng, không qua dòng này.
+   */
+  await prisma.insuranceProduct.updateMany({
+    where: {
+      provider: INSURANCE_PROVIDER.MIC,
+      premiumBasis: { not: INSURANCE_PREMIUM_BASIS.DAILY },
+    },
+    data: { premiumBasis: INSURANCE_PREMIUM_BASIS.DAILY },
+  });
+  /*
+   * Migration ADR 0088 tắt sản phẩm tai nạn người (đợt này MIC chỉ bán vật chất xe). Spec báo giá
+   * `IP` vẫn kiểm luồng chung của ADR 0064 qua adapter giả lập ⇒ bật lại, cùng lý do như trên.
+   */
+  await prisma.insuranceProduct.updateMany({
+    where: { provider: INSURANCE_PROVIDER.MIC, isActive: false },
+    data: { isActive: true },
   });
 }

@@ -189,6 +189,26 @@ export const API_ERROR_CODE = {
    */
   CATALOG_MODEL_SPEC_INVALID: 'CATALOG_MODEL_SPEC_INVALID',
   /**
+   * Dữ liệu xe (ADR 0090): đã có một xe chuẩn cùng dòng xe, phiên bản và năm bắt đầu — một xe chỉ
+   * có một dòng.
+   */
+  CATALOG_VARIANT_DUPLICATE: 'CATALOG_VARIANT_DUPLICATE',
+  /** Xe chuẩn đang có xe của chủ xe gắn nên không xoá được — ẩn thay vì xoá. */
+  CATALOG_VARIANT_IN_USE: 'CATALOG_VARIANT_IN_USE',
+  /** Xe chuẩn không thuộc dòng xe đã chọn, hoặc đã bị từ chối/xoá. */
+  CATALOG_VARIANT_MISMATCH: 'CATALOG_VARIANT_MISMATCH',
+  /** Gian hàng đã tạo quá nhiều dòng xe mới trong 24 giờ (ADR 0090). */
+  CATALOG_PROPOSAL_LIMIT: 'CATALOG_PROPOSAL_LIMIT',
+  /**
+   * Lượt duyệt dữ liệu xe không hợp lệ: xe chuẩn không còn chờ duyệt, gộp vào chính nó / vào xe chưa
+   * duyệt / khác loại xe.
+   */
+  CATALOG_REVIEW_INVALID: 'CATALOG_REVIEW_INVALID',
+  /** File nhập không đọc được: sai định dạng, quá lớn, quá nhiều dòng hoặc không có bảng khớp tiêu đề. */
+  CATALOG_IMPORT_FILE_INVALID: 'CATALOG_IMPORT_FILE_INVALID',
+  /** Lượt nhập file không còn ở trạng thái xem trước (đã áp dụng / đã huỷ / hết hạn). */
+  CATALOG_IMPORT_NOT_PENDING: 'CATALOG_IMPORT_NOT_PENDING',
+  /**
    * Đã có một yêu cầu thuê y hệt (cùng xe + SĐT + khung giờ) đang chờ shop phản hồi.
    * Mã riêng thay vì `CONFLICT` chung: FE hiện hộp "Yêu cầu trùng lặp" có lối đi tiếp
    * (xem chuyến / nhắn chủ xe), khác hẳn một alert lỗi thường.
@@ -1216,6 +1236,19 @@ export const API_ERROR_CODE = {
    * việc vô ích vào hàng đợi worker (ADR 0064).
    */
   INSURANCE_PARTNER_NOT_CONFIGURED: 'INSURANCE_PARTNER_NOT_CONFIGURED',
+  /** Không tải được GCN PDF từ hãng (mạng, hãng bảo trì) — thử lại sau (ADR 0088). */
+  INSURANCE_CERTIFICATE_UNAVAILABLE: 'INSURANCE_CERTIFICATE_UNAVAILABLE',
+  /** Bảng kê trả phí hãng không ở trạng thái cho phép thao tác này (ADR 0088 điều 6). */
+  INSURANCE_REMITTANCE_STATE_INVALID: 'INSURANCE_REMITTANCE_STATE_INVALID',
+  /** Kỳ kê chưa kết thúc, hoặc không có hợp đồng nào để kê (ADR 0088 điều 6). */
+  INSURANCE_REMITTANCE_EMPTY: 'INSURANCE_REMITTANCE_EMPTY',
+
+  /** Ảnh cà vẹt không hợp lệ (sai định dạng thật, sai kích thước khai báo, chưa tải xong) — ADR 0089. */
+  VEHICLE_REGISTRATION_IMAGE_INVALID: 'VEHICLE_REGISTRATION_IMAGE_INVALID',
+  /** Lượt tải cà vẹt không dùng được để tạo xe (không có, của người khác, đã dùng, đã hết hạn). */
+  VEHICLE_REGISTRATION_UPLOAD_INVALID: 'VEHICLE_REGISTRATION_UPLOAD_INVALID',
+  /** Chạm trần lượt tải cà vẹt trong 24 giờ (`details.limit`). */
+  VEHICLE_REGISTRATION_UPLOAD_LIMIT: 'VEHICLE_REGISTRATION_UPLOAD_LIMIT',
 } as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODE)[keyof typeof API_ERROR_CODE];

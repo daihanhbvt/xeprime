@@ -69,6 +69,7 @@ import { PlatformAdminModule } from './modules/platform-admin/platform-admin.mod
 import { BillingModule } from './modules/billing/billing.module';
 import { BannersModule } from './modules/banners/banners.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
+import { VehicleDataModule } from './modules/vehicle-data/vehicle-data.module';
 import { PromoCodesModule } from './modules/promo-codes/promo-codes.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { DriversModule } from './modules/drivers/drivers.module';
@@ -153,6 +154,7 @@ import { AppConfigModule } from './modules/app-config/app-config.module';
     PlatformAdminModule,
     BillingModule,
     CatalogModule,
+    VehicleDataModule,
     BannersModule,
     PricingModule,
     DriversModule,

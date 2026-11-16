@@ -3,3 +3,23 @@
   font-size: var(--xp-font-size-sm);
   color: var(--xp-color-text-secondary);
 }
+
+/* Biểu phí bậc (ADR 0088) */
+.tiers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.tierRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: var(--xp-space-xs);
+  align-items: end;
+}
+
+@media (max-width: 575px) {
+  .tierRow {
+    grid-template-columns: 1fr 1fr 32px;
+  }
+}

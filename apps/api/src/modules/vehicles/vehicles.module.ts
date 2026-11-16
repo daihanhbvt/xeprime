@@ -1,8 +1,10 @@
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { BillingModule } from '../billing/billing.module';
 import { BranchesModule } from '../branches/branches.module';
 import { CalendarModule } from '../calendar/calendar.module';
 import { CatalogModule } from '../catalog/catalog.module';
+import { VehicleDataModule } from '../vehicle-data/vehicle-data.module';
 import { FinanceModule } from '../finance/finance.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { PublicListingsModule } from '../public-listings/public-listings.module';
@@ -14,6 +16,16 @@ import { VehicleMaintenanceController } from './maintenance/vehicle-maintenance.
 import { VehicleDocumentsController } from './documents/vehicle-documents.controller';
 import { VehicleDocumentsService } from './documents/vehicle-documents.service';
 import { OcrNotConfiguredProvider, VEHICLE_DOCUMENT_OCR_PROVIDER } from './documents/ocr-provider';
+import {
+  NotConfiguredVehicleRegistrationReader,
+  TesseractVehicleRegistrationReader,
+  VEHICLE_REGISTRATION_READER,
+  type VehicleRegistrationReader,
+} from './registration/registration-reader';
+import { VehicleRegistrationUploadsController } from './registration/vehicle-registration-uploads.controller';
+import { VehicleRegistrationUploadsService } from './registration/vehicle-registration-uploads.service';
+import { VehicleRegistrationUploadsSweeper } from './registration/vehicle-registration-uploads.sweeper';
+import { TesseractDriverLicenceReader } from '../driver-licences/reader/tesseract-driver-licence-reader';
 import { VehicleAlertsService } from './vehicle-alerts.service';
 import { VehicleContractsService } from './vehicle-contracts.service';
 import { VehicleSourceService } from './vehicle-source.service';
@@ -38,6 +50,8 @@ import { VehiclesService } from './vehicles.service';
     BranchesModule,
     BillingModule,
     CatalogModule,
+    // Dữ liệu xe (ADR 0090): kiểm phiên bản + tự ghi nhận dữ liệu từ xe khi lưu.
+    VehicleDataModule,
     PricingModule,
     StorageModule,
     // Bảo dưỡng ghi lịch xe qua OccupancyService — writer duy nhất của occupancies (ADR 0006).
@@ -51,6 +65,7 @@ import { VehiclesService } from './vehicles.service';
     VehicleDocumentsController,
     VehicleMaintenanceController,
     MaintenanceBoardController,
+    VehicleRegistrationUploadsController,
   ],
   providers: [
     VehiclesService,
@@ -60,6 +75,27 @@ import { VehiclesService } from './vehicles.service';
     VehicleDocumentsService,
     OdometerService,
     MaintenanceService,
+    VehicleRegistrationUploadsService,
+    VehicleRegistrationUploadsSweeper,
+    {
+      // Cà vẹt lúc tạo ô tô (ADR 0089): Tesseract tại chỗ như bộ đọc bằng lái. `off` — hoặc cài thiếu
+      // dữ liệu ngôn ngữ — ⇒ chủ xe nhập tay mọi trường; không bao giờ chặn tạo xe.
+      provide: VEHICLE_REGISTRATION_READER,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService): VehicleRegistrationReader => {
+        if (config.get<string>('VEHICLE_REGISTRATION_OCR') === 'off') {
+          return new NotConfiguredVehicleRegistrationReader();
+        }
+        const missing = TesseractDriverLicenceReader.unavailableReason();
+        if (missing) {
+          new Logger('VehiclesModule').error(
+            `Tesseract không dùng được (${missing}) - cà vẹt sẽ nhập tay`,
+          );
+          return new NotConfiguredVehicleRegistrationReader();
+        }
+        return new TesseractVehicleRegistrationReader();
+      },
+    },
     /**
      * Repo CHƯA có provider OCR nào (không dependency/credential) — mặc định fail rõ ràng:
      * yêu cầu OCR trả 503 OCR_NOT_CONFIGURED, người dùng nhập tay. Có provider thật thì

@@ -53,6 +53,7 @@ import {
   type BookingHoldPurpose,
 } from './status/hold';
 import type { PromoCodeSnapshot } from './promo-code';
+import type { VehicleProtectionTierQuote } from './status/insurance';
 
 // ── Vòng đời một phiên bản chính sách ───────────────────────────────────────
 
@@ -797,6 +798,13 @@ export interface CustomerFeeBreakdown {
    */
   taxableBaseAmount?: string;
   /**
+   * Bảo hiểm vật chất xe là BẮT BUỘC cho chuyến này (sản phẩm tính phí theo bậc giá trị xe — ADR
+   * 0088): giao diện hiện dòng `IV` không có ô bỏ chọn. Vắng ở snapshot cũ = `false`.
+   */
+  vehicleProtectionMandatory?: boolean;
+  /** Báo giá theo bậc đã dùng — giá trị xe, bậc, % — đóng băng cùng bảng phí. */
+  vehicleProtectionTier?: VehicleProtectionTierQuote | null;
+  /**
    * Khoản giữ chỗ khách chuyển online = `onlineAmount`, đã kẹp sàn.
    * `null` khi chuyến KHÔNG thu cọc (tuyến gói tắt công tắc, hoặc báo giá tạm tính).
    */
@@ -925,6 +933,17 @@ export function computeCustomerFees(input: {
   /** Khách có GIỮ lựa chọn bảo hiểm tai nạn người (`IP`) không. Mặc định: không. */
   personalAccidentSelected?: boolean;
   /**
+   * Bảo hiểm vật chất xe THEO BẬC giá trị xe (ADR 0088) — thay biểu phí theo ngày khi sản phẩm
+   * `IV` đang bán tính theo bậc:
+   *
+   *  - `undefined` — sản phẩm theo NGÀY: đi đường cũ, khách tự chọn (`vehicleProtectionSelected`).
+   *  - `null` — sản phẩm theo bậc nhưng xe/chuyến KHÔNG đủ điều kiện ⇒ không có dòng `IV`.
+   *  - có giá trị — BẮT BUỘC: dòng `IV` đúng số tiền này, bỏ qua `vehicleProtectionSelected`.
+   *
+   * Cổng của nền tảng và của chính sách vẫn đứng trước: chưa có đối tác thì không thu đồng nào.
+   */
+  vehicleProtectionTier?: VehicleProtectionTierQuote | null;
+  /**
    * MÃ KHUYẾN MÃI nền tảng đã áp — snapshot có sẵn `discountApplied` (ADR 0046).
    *
    * Số tiền ở đây do `computePromoDiscount` tính TRƯỚC (nó cần `grossOnlineAmount`, mà con số
@@ -1040,12 +1059,30 @@ export function computeCustomerFees(input: {
    * IV và IP — tuỳ chọn, theo ngày. Chỉ tính khi khách GIỮ lựa chọn VÀ cổng ở chính sách đang mở:
    * cổng thắng lựa chọn, vì chưa có hợp đồng bảo hiểm thật thì không được thu đồng nào (ADR 0028).
    */
+  const tierQuote = input.vehicleProtectionTier;
+  const vehicleProtectionMandatory =
+    tierQuote != null && offersVehicleProtection && Number(tierQuote.amount) > 0;
+  if (vehicleProtectionMandatory) {
+    lines.push({
+      key: FEE_LINE.VEHICLE_PROTECTION,
+      beneficiary: FEE_BENEFICIARY.INSURER,
+      bearer: FEE_BEARER.CUSTOMER,
+      percent: null,
+      amount: tierQuote.amount,
+      ...insurer,
+    });
+  }
   const vehicleDaily = amountFor(
     p.vehicleProtectionDailyAmount,
     vehicleType,
     'biểu phí bảo hiểm vật chất xe',
   );
-  if (input.vehicleProtectionSelected && offersVehicleProtection && vehicleDaily > 0) {
+  if (
+    tierQuote === undefined &&
+    input.vehicleProtectionSelected &&
+    offersVehicleProtection &&
+    vehicleDaily > 0
+  ) {
     lines.push({
       key: FEE_LINE.VEHICLE_PROTECTION,
       beneficiary: FEE_BENEFICIARY.INSURER,
@@ -1186,6 +1223,8 @@ export function computeCustomerFees(input: {
     taxExemptReason,
     serviceType: input.serviceType ?? null,
     sellerEntityType,
+    vehicleProtectionMandatory,
+    vehicleProtectionTier: vehicleProtectionMandatory ? tierQuote : null,
   };
 }
 
@@ -1292,6 +1331,7 @@ export type PublicCustomerFeeBreakdown = Pick<
   | 'onlineAmount'
   | 'payAtPickupAmount'
   | 'holdAmount'
+  | 'vehicleProtectionMandatory'
 > & {
   policy: PublicFeePolicySnapshot;
   /** Chỉ dòng KHÁCH chịu (`bearer = customer`). */
@@ -1320,6 +1360,7 @@ export function toPublicFeeBreakdown(fees: CustomerFeeBreakdown): PublicCustomer
     onlineAmount: fees.onlineAmount,
     payAtPickupAmount: fees.payAtPickupAmount,
     holdAmount: fees.holdAmount,
+    vehicleProtectionMandatory: fees.vehicleProtectionMandatory ?? false,
     policy: {
       policyId: p.policyId,
       version: p.version,

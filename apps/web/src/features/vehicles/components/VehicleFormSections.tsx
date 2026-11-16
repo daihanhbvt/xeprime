@@ -30,6 +30,7 @@ import { useCatalogItems, useCatalogOptions } from '@/features/catalog/use-catal
 import { TypedMediaFields } from './TypedMediaFields';
 import { ServiceTypeChips } from './ServiceTypeChips';
 import { NumberField } from '@/components/form/NumberField';
+import { PolicyInfoTip } from '@/features/rental-policies/components/PolicyInfoTip';
 import { SelectField } from '@/components/form/SelectField';
 import { SwitchField } from '@/components/form/SwitchField';
 import { TextAreaField } from '@/components/form/TextAreaField';
@@ -46,6 +47,11 @@ import { PublishRequiredLabel } from './VehicleCompleteness';
 import { VehicleClassificationFields } from './VehicleClassificationFields';
 import { VehicleEnergyFields } from './VehicleEnergyFields';
 import { VehicleIdentityFields } from './VehicleIdentityFields';
+import {
+  CatalogRentHint,
+  CatalogValueHint,
+  useVehicleCatalogSuggestion,
+} from './CatalogSuggestions';
 import { useSupportPinnedField } from '@/features/tenant-support/support-session';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import styles from './VehicleForm.module.css';
@@ -696,9 +702,58 @@ export function VehicleIdentitySection({
           bodyTypePicker={bodyTypeElsewhere ? undefined : <BodyTypePicker control={control} />}
           disabled={Boolean(lockedNotice)}
           setValue={setValue}
+          trailing={
+            // Giá trị xe (ADR 0088) — cạnh số chỗ; mẫu số phí bảo hiểm. Xe máy chưa có bảo hiểm.
+            isCar ? (
+              <Col xs={24} sm={12}>
+                <NumberField
+                  control={control}
+                  name="insuredValue"
+                  label={
+                    <span className={styles.labelWithTip}>
+                      {t('insuredValue')}
+                      <PolicyInfoTip label={t('insuredValueTipLabel')}>
+                        {t('insuredValueTip')}
+                      </PolicyInfoTip>
+                    </span>
+                  }
+                  money
+                  min={0}
+                />
+                <InsuredValueSuggestion control={control} setValue={setValue} />
+              </Col>
+            ) : null
+          }
         />
       </Col>
     </Row>
+  );
+}
+
+/**
+ * Giá trị xe tham khảo cho bảo hiểm (ADR 0090 điều 6) — theo phiên bản + năm sản xuất. Chỉ là gợi
+ * ý: chủ xe bấm "Dùng giá trị này" mới điền, vì họ là người khai giá trị với hãng bảo hiểm.
+ */
+function InsuredValueSuggestion({
+  control,
+  setValue,
+}: {
+  control: Control<VehicleFormValues>;
+  setValue?: UseFormSetValue<VehicleFormValues>;
+}) {
+  const suggestion = useVehicleCatalogSuggestion({
+    modelId: useWatch({ control, name: 'vehicleCatalogModelId' }),
+    variantId: useWatch({ control, name: 'vehicleCatalogVariantId' }),
+    year: useWatch({ control, name: 'manufactureYear' }),
+  });
+  if (!suggestion?.value || !setValue) return null;
+  return (
+    <CatalogValueHint
+      value={suggestion.value}
+      onApply={(amount) =>
+        setValue('insuredValue', amount, { shouldDirty: true, shouldValidate: true })
+      }
+    />
   );
 }
 
@@ -897,10 +952,16 @@ export function PricingSection({
   control,
   isCar,
   pricePreview,
+  setValue,
 }: SectionProps & { pricePreview: React.ReactNode }) {
   return (
     <>
-      <PricesSection control={control} isCar={isCar} pricePreview={pricePreview} />
+      <PricesSection
+        control={control}
+        isCar={isCar}
+        pricePreview={pricePreview}
+        setValue={setValue}
+      />
       <PoliciesSection control={control} isCar={isCar} />
     </>
   );
@@ -909,8 +970,22 @@ export function PricingSection({
 export function PricesSection({
   control,
   pricePreview,
+  setValue,
 }: SectionProps & { pricePreview: React.ReactNode }) {
   const t = useTranslations('Vehicles.form.prices');
+  // Giá thuê tham khảo theo Dữ liệu xe (ADR 0090) — chỉ chữ + nút "Dùng giá", không tự điền.
+  const catalogSuggestion = useVehicleCatalogSuggestion({
+    modelId: useWatch({ control, name: 'vehicleCatalogModelId' }),
+    variantId: useWatch({ control, name: 'vehicleCatalogVariantId' }),
+    year: useWatch({ control, name: 'manufactureYear' }),
+  });
+  const applyPrice =
+    (
+      name:
+        'weekdayPrice' | 'weekendPrice' | 'hourlyPrice' | 'monthlyPrice' | 'withDriverDailyPrice',
+    ) =>
+    (price: number) =>
+      setValue?.(name, price, { shouldDirty: true, shouldValidate: true });
   // Ô giá dài hạn/có tài xế chỉ hiện khi xe ĐĂNG dịch vụ đó (bước Cơ bản) — không bắt shop
   // nhìn hai ô giá vô nghĩa với xe chỉ tự lái.
   const serviceTypes = useWatch({ control, name: 'serviceTypes' }) ?? [];
@@ -933,6 +1008,11 @@ export function PricesSection({
             money
             help={t('weekdayHelp')}
           />
+          <CatalogRentHint
+            suggestion={catalogSuggestion}
+            field="weekdayPrice"
+            onApply={setValue ? applyPrice('weekdayPrice') : undefined}
+          />
         </Col>
         <Col xs={24} sm={12}>
           <NumberField
@@ -944,6 +1024,11 @@ export function PricesSection({
             money
             help={t('weekendHelp')}
           />
+          <CatalogRentHint
+            suggestion={catalogSuggestion}
+            field="weekendPrice"
+            onApply={setValue ? applyPrice('weekendPrice') : undefined}
+          />
         </Col>
         <Col xs={24} sm={12}>
           <NumberField
@@ -953,6 +1038,11 @@ export function PricesSection({
             placeholder={t('hourlyPlaceholder')}
             min={0}
             money
+          />
+          <CatalogRentHint
+            suggestion={catalogSuggestion}
+            field="hourlyPrice"
+            onApply={setValue ? applyPrice('hourlyPrice') : undefined}
           />
         </Col>
         <Col xs={24} sm={12}>
@@ -977,6 +1067,11 @@ export function PricesSection({
                 money
                 help={t('monthlyHelp')}
               />
+              <CatalogRentHint
+                suggestion={catalogSuggestion}
+                field="monthlyPrice"
+                onApply={setValue ? applyPrice('monthlyPrice') : undefined}
+              />
             </Col>
             <Col xs={24}>
               {/* Gợi ý giá tháng theo giá ngày ĐANG NHẬP (17/08 đợt 3) — cùng component với
@@ -999,6 +1094,11 @@ export function PricesSection({
                 min={0}
                 money
                 help={t('withDriverDailyHelp')}
+              />
+              <CatalogRentHint
+                suggestion={catalogSuggestion}
+                field="withDriverDailyPrice"
+                onApply={setValue ? applyPrice('withDriverDailyPrice') : undefined}
               />
             </Col>
             <Col xs={24} sm={12}>

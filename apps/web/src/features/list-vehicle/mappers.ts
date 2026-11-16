@@ -44,6 +44,8 @@ export function quickVehicleToCreateInput(values: QuickVehicleValues): CreateVeh
     motorbikeCategory:
       values.vehicleType === VEHICLE_TYPE.MOTORBIKE ? (values.motorbikeCategory ?? null) : null,
     vehicleCatalogModelId: values.vehicleCatalogModelId ?? null,
+    vehicleCatalogVariantId: values.vehicleCatalogVariantId ?? null,
+    catalogVariantLabel: values.catalogVariantLabel?.trim() || undefined,
     transmission: values.transmission ?? undefined,
     fuelConsumptionCombined: values.fuelConsumptionCombined ?? undefined,
     electricRangeKm: values.electricRangeKm ?? undefined,

@@ -98,6 +98,10 @@ import { BookingsService } from '../bookings/bookings.service';
 import { BankAccountsService, type BankAccountOwner } from '../bank-accounts/bank-accounts.service';
 import { BookingHoldsService } from '../holds/booking-holds.service';
 import { HoldSettlementService } from '../holds/hold-settlement.service';
+import {
+  InsuranceCertificateService,
+  type CertificatePdf,
+} from '../insurance/insurance-certificate.service';
 import { InsuranceReadService } from '../insurance/insurance-read.service';
 import { NotificationService } from '../notification/notification.service';
 import { PricingService } from '../pricing/pricing.service';
@@ -197,6 +201,8 @@ export class CustomerTripsService {
     private readonly insuranceRead: InsuranceReadService,
     /** Báo "Chưa nhận được xe" mở case tranh chấp qua đúng service hỗ trợ (ADR 0066, lớp 1). */
     private readonly support: SupportService,
+    /** GCN PDF tải từ hãng (ADR 0088). */
+    private readonly insuranceCertificates: InsuranceCertificateService,
   ) {}
 
   /**
@@ -416,6 +422,24 @@ export class CustomerTripsService {
    * Một chuyến. `id` là id yêu cầu HOẶC id đơn — thông báo của Wave 5/9/10 trỏ vào cả hai loại,
    * và bắt khách phải biết mình đang cầm loại id nào là một yêu cầu vô lý.
    */
+  /**
+   * GCN PDF của một hợp đồng bảo hiểm thuộc chuyến của tôi (ADR 0088). Quyền sở hữu nằm trong
+   * truy vấn như `detail`: chuyến không phải của tôi ⇒ 404.
+   */
+  async insuranceCertificatePdf(
+    viewerUserId: string,
+    id: string,
+    policyId: string,
+  ): Promise<CertificatePdf> {
+    const scope = await this.resolveScope(viewerUserId);
+    const row = await this.prisma.bookingRequest.findFirst({
+      where: { AND: [scopeWhere(scope), { OR: [{ id }, { bookingId: id }] }] },
+      select: { bookingId: true },
+    });
+    if (!row?.bookingId) throw tripNotFound();
+    return this.insuranceCertificates.pdf(policyId, { bookingId: row.bookingId });
+  }
+
   async detail(viewerUserId: string, id: string): Promise<CustomerTripDetailDto> {
     const now = new Date();
     const scope = await this.resolveScope(viewerUserId);

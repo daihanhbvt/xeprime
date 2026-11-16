@@ -350,6 +350,8 @@ export const ROUTES = {
     /** URL CŨ của hàng đợi tiền vào - chuyển tiếp về `MONEY?queue=bank-in` (01/10/2026). */
     BANK_TRANSACTIONS: admin('/bank-transactions'),
     CATALOG: admin('/catalog'),
+    /** Dữ liệu xe chuẩn (ADR 0090) - thông số, giá bán, giá thuê tham khảo; nguồn gợi ý cho chủ xe. */
+    VEHICLE_DATA: admin('/vehicle-data'),
     /** Danh mục hành chính (tỉnh/thành) - dữ liệu dùng chung cho mọi gian hàng. */
     LOCATIONS: admin('/locations'),
     BANNERS: admin('/marketplace-banners'),
@@ -960,8 +962,10 @@ export const BOOKINGS_GROUP_PARAM = 'preset';
  */
 export function bookingsGroupPath(group: BookingListPreset): string {
   // Hai ngăn đã kết thúc rời màn "Đơn thuê xe" sang "Đơn đã kết thúc" (05/11/2026).
-  if (group === BOOKING_LIST_PRESET.COMPLETED) return bookingHistoryPath(BOOKING_HISTORY_TAB.COMPLETED);
-  if (group === BOOKING_LIST_PRESET.CANCELLED) return bookingHistoryPath(BOOKING_HISTORY_TAB.CANCELLED);
+  if (group === BOOKING_LIST_PRESET.COMPLETED)
+    return bookingHistoryPath(BOOKING_HISTORY_TAB.COMPLETED);
+  if (group === BOOKING_LIST_PRESET.CANCELLED)
+    return bookingHistoryPath(BOOKING_HISTORY_TAB.CANCELLED);
   return rentalStagePath(group);
 }
 

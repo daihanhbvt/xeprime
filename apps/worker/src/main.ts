@@ -3,6 +3,7 @@ import {
   createInsurancePartner,
   createPrismaClient,
   oldestBadgeSignalAgeMs,
+  readMicConfig,
 } from '@xeprime/prisma';
 import { HOLIDAY_SYNC_STATUS } from '@xeprime/types';
 import {
@@ -250,10 +251,16 @@ async function main(): Promise<void> {
   const insurancePartner = createInsurancePartner(INSURANCE_PARTNER, {
     appEnv: APP_ENV,
     logger: { warn: (message, meta) => console.warn(message, meta ?? '') },
+    // ADR 0088 — adapter MIC thật đọc bộ MIC_* (cùng file env với API).
+    mic: readMicConfig(process.env),
   });
-  if (insurancePartner.configured) {
+  if (INSURANCE_PARTNER === 'mic_mock') {
     console.warn(
       'bảo hiểm: INSURANCE_PARTNER=mic_mock — GCN GIẢ LẬP (TEST-…), không có hiệu lực thật',
+    );
+  } else if (INSURANCE_PARTNER === 'mic') {
+    console.warn(
+      'bảo hiểm: INSURANCE_PARTNER=mic — cấp hợp đồng MIC thật (MIC_SANDBOX quyết định sandbox)',
     );
   }
   await prisma.$connect();

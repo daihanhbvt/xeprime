@@ -45,6 +45,15 @@ function applicableFeatures(values: VehicleFormValues): string[] {
   return (values.features ?? []).filter((key) => vehicleFeatureAppliesTo(key, values.vehicleType));
 }
 
+/**
+ * Giá trị xe lên dây (ADR 0088): chuỗi số nguyên đồng; xe máy luôn `null` (chưa có bảo hiểm), ô
+ * trống `null` = xoá.
+ */
+function insuredValueToInput(values: VehicleFormValues): string | null {
+  if (values.vehicleType !== VEHICLE_TYPE.CAR || values.insuredValue == null) return null;
+  return String(Math.round(values.insuredValue));
+}
+
 export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput {
   return {
     code: textOrUndefined(values.code),
@@ -67,8 +76,12 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
       values.vehicleType === VEHICLE_TYPE.MOTORBIKE ? (values.motorbikeCategory ?? null) : null,
     // Backend chép `brand`/`model` từ mẫu này xuống — hai ô chữ ở trên chỉ còn là bản đọc lại.
     vehicleCatalogModelId: values.vehicleCatalogModelId ?? null,
+    vehicleCatalogVariantId: values.vehicleCatalogVariantId ?? null,
+    // Phiên bản chủ xe gõ mới — server gắn hoặc tự ghi nhận (ADR 0090); không gửi cùng id.
+    catalogVariantLabel: values.catalogVariantLabel?.trim() || undefined,
     manufactureYear: values.manufactureYear ?? undefined,
     seatCount: values.seatCount ?? undefined,
+    insuredValue: insuredValueToInput(values) ?? undefined,
     lengthMm: values.lengthMm ?? undefined,
     widthMm: values.widthMm ?? undefined,
     heightMm: values.heightMm ?? undefined,
@@ -127,8 +140,11 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
     bodyType: (v.bodyType ?? null) as BodyType | null,
     motorbikeCategory: (v.motorbikeCategory ?? null) as VehicleFormValues['motorbikeCategory'],
     vehicleCatalogModelId: v.vehicleCatalogModelId ?? null,
+    vehicleCatalogVariantId: v.vehicleCatalogVariantId ?? null,
+    catalogVariantLabel: null,
     manufactureYear: v.manufactureYear ?? null,
     seatCount: v.seatCount ?? null,
+    insuredValue: v.insuredValue ? Number(v.insuredValue) : null,
     lengthMm: v.lengthMm ?? null,
     widthMm: v.widthMm ?? null,
     heightMm: v.heightMm ?? null,
@@ -195,8 +211,12 @@ export function informationValuesToInput(values: VehicleFormValues): UpdateVehic
       values.vehicleType === VEHICLE_TYPE.MOTORBIKE ? (values.motorbikeCategory ?? null) : null,
     // Backend chép `brand`/`model` từ mẫu này xuống — hai ô chữ ở trên chỉ còn là bản đọc lại.
     vehicleCatalogModelId: values.vehicleCatalogModelId ?? null,
+    vehicleCatalogVariantId: values.vehicleCatalogVariantId ?? null,
+    // Phiên bản chủ xe gõ mới — server gắn hoặc tự ghi nhận (ADR 0090); không gửi cùng id.
+    catalogVariantLabel: values.catalogVariantLabel?.trim() || undefined,
     manufactureYear: values.manufactureYear,
     seatCount: values.seatCount,
+    insuredValue: insuredValueToInput(values),
     lengthMm: values.lengthMm,
     widthMm: values.widthMm,
     heightMm: values.heightMm,
@@ -249,8 +269,12 @@ export function manageInformationValuesToInput(values: VehicleFormValues): Updat
       values.vehicleType === VEHICLE_TYPE.MOTORBIKE ? (values.motorbikeCategory ?? null) : null,
     // Backend chép `brand`/`model` từ mẫu này xuống — hai ô chữ ở trên chỉ còn là bản đọc lại.
     vehicleCatalogModelId: values.vehicleCatalogModelId ?? null,
+    vehicleCatalogVariantId: values.vehicleCatalogVariantId ?? null,
+    // Phiên bản chủ xe gõ mới — server gắn hoặc tự ghi nhận (ADR 0090); không gửi cùng id.
+    catalogVariantLabel: values.catalogVariantLabel?.trim() || undefined,
     manufactureYear: values.manufactureYear,
     seatCount: values.seatCount,
+    insuredValue: insuredValueToInput(values),
     transmission: values.transmission,
     fuelConsumptionCity: values.fuelConsumptionCity,
     fuelConsumptionHighway: values.fuelConsumptionHighway,

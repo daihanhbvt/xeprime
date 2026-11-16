@@ -31,6 +31,7 @@ import { NotificationService } from '../../src/modules/notification/notification
 import { BillingService } from '../../src/modules/billing/billing.service';
 import { BranchesService } from '../../src/modules/branches/branches.service';
 import { CatalogModelService } from '../../src/modules/catalog/catalog-model.service';
+import { VehicleDataService } from '../../src/modules/vehicle-data/vehicle-data.service';
 import { CatalogService } from '../../src/modules/catalog/catalog.service';
 import { GeoNotConfiguredProvider } from '../../src/modules/geo/geo-provider';
 import { GeoService } from '../../src/modules/geo/geo.service';
@@ -44,6 +45,7 @@ import { InsuranceReadService } from '../../src/modules/insurance/insurance-read
 import { InsuranceService } from '../../src/modules/insurance/insurance.service';
 import { TaxReadService } from '../../src/modules/tax/tax-read.service';
 import { TaxService } from '../../src/modules/tax/tax.service';
+import { InsuranceEligibilityService } from '../../src/modules/insurance/insurance-eligibility.service';
 import { InsuranceOfferService } from '../../src/modules/insurance/insurance-offer.service';
 import { PricingService } from '../../src/modules/pricing/pricing.service';
 import { SellerProfileService } from '../../src/modules/seller-profile/seller-profile.service';
@@ -51,6 +53,8 @@ import { SupportService } from '../../src/modules/support/support.service';
 import { TenantsService } from '../../src/modules/tenants/tenants.service';
 import { VehicleSettingsService } from '../../src/modules/vehicle-settings/vehicle-settings.service';
 import { VehiclesService } from '../../src/modules/vehicles/vehicles.service';
+import { NotConfiguredVehicleRegistrationReader } from '../../src/modules/vehicles/registration/registration-reader';
+import { VehicleRegistrationUploadsService } from '../../src/modules/vehicles/registration/vehicle-registration-uploads.service';
 import type { PrismaService } from '../../src/prisma/prisma.service';
 
 /**
@@ -312,16 +316,18 @@ export function makePricingService(
     insurancePartner?: 'none' | 'mic_mock';
   } = {},
 ): PricingService {
+  const offer = new InsuranceOfferService(
+    createInsurancePartner(overrides.insurancePartner ?? 'mic_mock', { appEnv: 'test' }),
+    prisma,
+  );
   return new PricingService(
     prisma,
     new AuditService(prisma),
     overrides.listings ?? new ListingsService(prisma),
     overrides.depositPolicy ?? makeDepositPolicyService(prisma),
     new FeePoliciesService(prisma, new AuditService(prisma)),
-    new InsuranceOfferService(
-      createInsurancePartner(overrides.insurancePartner ?? 'mic_mock', { appEnv: 'test' }),
-      prisma,
-    ),
+    offer,
+    new InsuranceEligibilityService(prisma, offer),
   );
 }
 
@@ -395,9 +401,32 @@ export function makeCustomersService(prisma: PrismaService, audit: AuditService)
   return new CustomersService(prisma, audit, makeAddressService(prisma));
 }
 
+/**
+ * Cà vẹt lúc tạo ô tô (ADR 0089). Mặc định: kho riêng tư TẮT, máy đọc TẮT — spec cần đọc/gắn thì
+ * truyền `r2` / `reader` giả.
+ */
+export function makeVehicleRegistrationUploadsService(
+  prisma: PrismaService,
+  opts: {
+    r2?: R2Service;
+    reader?: ConstructorParameters<typeof VehicleRegistrationUploadsService>[3];
+  } = {},
+): VehicleRegistrationUploadsService {
+  return new VehicleRegistrationUploadsService(
+    prisma,
+    opts.r2 ?? ({ privateEnabled: false } as unknown as R2Service),
+    new AuditService(prisma),
+    opts.reader ?? new NotConfiguredVehicleRegistrationReader(),
+  );
+}
+
 export function makeVehiclesService(
   prisma: PrismaService,
-  overrides: { listings?: ListingsService; config?: ConfigService } = {},
+  overrides: {
+    listings?: ListingsService;
+    config?: ConfigService;
+    registrations?: VehicleRegistrationUploadsService;
+  } = {},
 ): VehiclesService {
   const audit = new AuditService(prisma);
   return new VehiclesService(
@@ -412,6 +441,23 @@ export function makeVehiclesService(
     // ConfigService trần đọc process.env — spec phiên hỗ trợ truyền bản có R2_PUBLIC_BASE_URL.
     overrides.config ?? new ConfigService(),
     new SupportRequestStore(),
+    overrides.registrations ?? makeVehicleRegistrationUploadsService(prisma),
+    makeVehicleDataService(prisma, overrides.listings ?? new ListingsService(prisma)),
+  );
+}
+
+/** Dữ liệu xe (ADR 0090) — writer của xe chuẩn, VehiclesService gọi để tự ghi nhận khi lưu xe. */
+export function makeVehicleDataService(
+  prisma: PrismaService,
+  listings: ListingsService = new ListingsService(prisma),
+): VehicleDataService {
+  const audit = new AuditService(prisma);
+  return new VehicleDataService(
+    prisma,
+    audit,
+    new CatalogService(prisma, audit),
+    new CatalogModelService(prisma, audit),
+    listings,
   );
 }
 

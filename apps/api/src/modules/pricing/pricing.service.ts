@@ -42,6 +42,7 @@ import {
   type CustomerFeeBreakdown,
   type FeePolicySnapshot,
   type InsuranceOfferedByKind,
+  type VehicleProtectionTierQuote,
   type SellerEntityType,
 } from '@xeprime/types';
 import { deliveryTierFee } from '@xeprime/domain';
@@ -51,6 +52,7 @@ import { FeePoliciesService } from '../fee-policies/fee-policies.service';
 import { ListingsService } from '../public-listings/listings.service';
 import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope';
 import { PrismaService } from '../../prisma/prisma.service';
+import { InsuranceEligibilityService } from '../insurance/insurance-eligibility.service';
 import { InsuranceOfferService } from '../insurance/insurance-offer.service';
 import {
   DeliverySummaryDto,
@@ -110,8 +112,16 @@ export interface FeeTrip {
    */
   serviceType: string;
   breakdown: Pick<QuoteBreakdownDto, 'totalAmount' | 'rows' | 'days' | 'longTerm' | 'dayAmounts'>;
-  /** Lịch đã chốt — chỉ dài hạn cần, để đếm số ngày lịch thật của gói. */
+  /**
+   * Lịch của chuyến. Dài hạn cần nó để đếm số ngày lịch thật của gói; bảo hiểm vật chất xe theo
+   * BẬC (ADR 0088) cần nó để chọn bậc thời lượng.
+   */
   schedule?: { pickupAt: Date; returnAt: Date } | null;
+  /**
+   * Xe của chuyến — bảo hiểm vật chất xe theo bậc tính trên GIÁ TRỊ XE và chỉ bán cho xe đủ điều
+   * kiện (ADR 0088). Thiếu xe hoặc lịch khi sản phẩm bậc đang bán ⇒ không có dòng `IV` (không đoán).
+   */
+  vehicleId?: string;
 }
 
 /**
@@ -122,6 +132,10 @@ export interface PromoQuoteContext {
   tenantId: string;
   quoteIsEstimate: boolean;
   insurance: InsuranceSelection;
+  /** Câu trả lời cổng bảo hiểm của CHÍNH lượt báo giá — lượt áp mã không hỏi lại. */
+  insuranceOffered: InsuranceOfferedByKind;
+  /** Chuyến của lượt báo giá — lượt áp mã tính lại trên đúng nó (`ListingQuote.feeTrip`). */
+  feeTrip: FeeTrip;
   scope: { vehicleType: VehicleType; serviceType: ServiceType; provinceCode: string | null };
   breakdown: QuoteBreakdownDto;
   fees: CustomerFeeBreakdown | null;
@@ -151,6 +165,12 @@ export interface ListingQuote {
   insuranceOffered: boolean;
   /** Theo từng sản phẩm (ADR 0064) — ô chọn nào được hiện. */
   insuranceOfferedByKind: InsuranceOfferedByKind;
+  /**
+   * ĐÚNG chuyến mà bảng phí của báo giá này được tính trên (xe, lịch, dịch vụ, bảng kê). Lượt tính
+   * lại có mã khuyến mãi phải dùng chính object này: dựng lại một bản thiếu xe/lịch là mất dòng bảo
+   * hiểm vật chất xe theo bậc (ADR 0088) chỉ vì khách áp mã.
+   */
+  feeTrip: FeeTrip;
 }
 
 /** Kết quả tra phí giao nhận theo khoảng cách. */
@@ -183,6 +203,7 @@ export class PricingService {
     private readonly depositPolicy: DepositPolicyService,
     private readonly feePolicies: FeePoliciesService,
     private readonly insuranceOffer: InsuranceOfferService,
+    private readonly insuranceEligibility: InsuranceEligibilityService,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -260,6 +281,14 @@ export class PricingService {
      */
     if (!deposit.billingMode) return null;
     const { rentalDays, dayAmounts, dayAmountsListed } = feeDaysOf(trip);
+    /*
+     * Bảo hiểm vật chất xe THEO BẬC giá trị xe (ADR 0088) — BẮT BUỘC với xe đủ điều kiện. Hỏi ở
+     * đây, một chỗ cho mọi đường tính tiền, như cổng bảo hiểm của nền tảng ngay dưới. Phụ lục gia
+     * hạn không bán bảo hiểm (ADR 0077 điều 4).
+     */
+    const vehicleProtectionTier = opts.platformFeesWaived
+      ? undefined
+      : await this.vehicleProtectionTierFor(trip);
     const fees = computeCustomerFees({
       billingMode: deposit.billingMode,
       policy,
@@ -291,6 +320,7 @@ export class PricingService {
       depositRequired: opts.depositRequired ?? deposit.required,
       vehicleProtectionSelected: opts.vehicleProtectionSelected === true,
       personalAccidentSelected: opts.personalAccidentSelected === true,
+      ...(vehicleProtectionTier === undefined ? {} : { vehicleProtectionTier }),
       ...(opts.promo === undefined ? {} : { promo: opts.promo }),
     });
     /*
@@ -301,6 +331,25 @@ export class PricingService {
     if (dayAmountsListed) return fees;
     const { dayAmounts: _evenSplit, ...withoutDayAmounts } = fees;
     return withoutDayAmounts;
+  }
+
+  /**
+   * Báo giá bảo hiểm theo bậc cho một chuyến (ADR 0088) — `undefined` khi sản phẩm đang bán tính
+   * theo ngày; `null` khi sản phẩm bậc đang bán nhưng chuyến không mua được (thiếu xe/lịch, xe chưa
+   * đủ điều kiện, không phải tự lái, quá 30 ngày).
+   */
+  private async vehicleProtectionTierFor(
+    trip: FeeTrip,
+  ): Promise<VehicleProtectionTierQuote | null | undefined> {
+    if (!trip.vehicleId || !trip.schedule) {
+      return (await this.insuranceEligibility.tierPricingActive()) ? null : undefined;
+    }
+    return this.insuranceEligibility.tierQuoteFor({
+      vehicleId: trip.vehicleId,
+      serviceType: trip.serviceType,
+      pickupAt: trip.schedule.pickupAt,
+      returnAt: trip.schedule.returnAt,
+    });
   }
 
   /**
@@ -381,6 +430,8 @@ export class PricingService {
         vehicleProtectionSelected: query.vehicleProtectionSelected === true,
         personalAccidentSelected: query.personalAccidentSelected === true,
       },
+      insuranceOffered: quote.insuranceOfferedByKind,
+      feeTrip: quote.feeTrip,
       scope: {
         vehicleType: vehicle.vehicleType as VehicleType,
         serviceType: (query.serviceType ?? SERVICE_TYPE.SELF_DRIVE) as ServiceType,
@@ -425,11 +476,13 @@ export class PricingService {
       quoteIsEstimate: boolean;
       promo: PromoCodeSnapshot | null;
       depositRequired?: boolean;
+      insuranceOffered?: InsuranceOfferedByKind;
     },
   ): Promise<CustomerFeeBreakdown | null> {
     return this.customerFeesFor(tenantId, trip, opts.quoteIsEstimate, {
       promo: opts.promo,
       ...(opts.depositRequired === undefined ? {} : { depositRequired: opts.depositRequired }),
+      ...(opts.insuranceOffered === undefined ? {} : { insuranceOffered: opts.insuranceOffered }),
       vehicleProtectionSelected: opts.vehicleProtectionSelected,
       personalAccidentSelected: opts.personalAccidentSelected,
     });
@@ -1425,7 +1478,15 @@ export class PricingService {
        */
       const fees = await this.customerFeesFor(
         input.tenantId,
-        { vehicleType: vehicle.vehicleType, serviceType: input.serviceType, breakdown },
+        {
+          vehicleType: vehicle.vehicleType,
+          serviceType: input.serviceType,
+          breakdown,
+          vehicleId: input.vehicleId,
+          ...(input.pickupAt && input.returnAt
+            ? { schedule: { pickupAt: input.pickupAt, returnAt: input.returnAt } }
+            : {}),
+        },
         breakdown.estimateNote != null,
         { ...input.insurance, ...(input.promo ? { promo: input.promo } : {}) },
       );
@@ -1548,24 +1609,24 @@ export class PricingService {
         policy,
         delivery: null,
       });
+      const longTermTrip: FeeTrip = {
+        vehicleType: vehicle.vehicleType,
+        serviceType: SERVICE_TYPE.LONG_TERM,
+        breakdown: longTermBreakdown,
+      };
       return {
         breakdown: {
           ...longTermBreakdown,
           // Dài hạn chưa chốt giờ nhận ⇒ như báo giá tạm tính: hiện phí dự kiến, không thu giữ chỗ.
-          fees: await this.customerFeesFor(
-            vehicle.tenantId,
-            {
-              vehicleType: vehicle.vehicleType,
-              serviceType: SERVICE_TYPE.LONG_TERM,
-              breakdown: longTermBreakdown,
-            },
-            true,
-            { ...insurance, insuranceOffered: offeredByKind },
-          ),
+          fees: await this.customerFeesFor(vehicle.tenantId, longTermTrip, true, {
+            ...insurance,
+            insuranceOffered: offeredByKind,
+          }),
         },
         delivery,
         insuranceOffered,
         insuranceOfferedByKind: offeredByKind,
+        feeTrip: longTermTrip,
       };
     }
 
@@ -1598,17 +1659,20 @@ export class PricingService {
       discountPercent: vehicle.discountPercent,
     });
 
+    const feeTrip: FeeTrip = {
+      vehicleType: vehicle.vehicleType,
+      // Báo giá ngày không gửi loại dịch vụ ⇒ tự lái, cùng mặc định của `buildDailyQuote`.
+      serviceType: serviceType ?? SERVICE_TYPE.SELF_DRIVE,
+      breakdown,
+      vehicleId: vehicle.id,
+      schedule: { pickupAt: new Date(pickupAt), returnAt: new Date(returnAt) },
+    };
     return {
       breakdown: {
         ...breakdown,
         fees: await this.customerFeesFor(
           vehicle.tenantId,
-          {
-            vehicleType: vehicle.vehicleType,
-            // Báo giá ngày không gửi loại dịch vụ ⇒ tự lái, cùng mặc định của `buildDailyQuote`.
-            serviceType: serviceType ?? SERVICE_TYPE.SELF_DRIVE,
-            breakdown,
-          },
+          feeTrip,
           breakdown.estimateNote != null,
           { ...insurance, insuranceOffered: offeredByKind },
         ),
@@ -1616,6 +1680,7 @@ export class PricingService {
       delivery,
       insuranceOffered,
       insuranceOfferedByKind: offeredByKind,
+      feeTrip,
     };
   }
 }

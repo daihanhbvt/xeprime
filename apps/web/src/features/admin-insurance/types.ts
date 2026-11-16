@@ -20,3 +20,17 @@ export interface CertificateFilters {
   limit?: number;
   open?: string;
 }
+
+// ── Bảng kê trả phí cho hãng (ADR 0088 điều 6) ──
+export type InsuranceRemittance = Schemas['InsuranceRemittanceDto'];
+export type InsuranceRemittanceLine = Schemas['InsuranceRemittanceLineDto'];
+export type InsuranceRemittancePending = Schemas['InsuranceRemittancePendingDto'];
+export type CreateInsuranceRemittanceInput = Schemas['CreateInsuranceRemittanceDto'];
+export type PayInsuranceRemittanceInput = Schemas['PayInsuranceRemittanceDto'];
+
+export interface RemittanceFilters {
+  page?: number;
+  limit?: number;
+  /** Bảng kê đang mở trong drawer (`?remittance=`). */
+  remittance?: string;
+}

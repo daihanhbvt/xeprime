@@ -8,6 +8,7 @@
 import * as yup from 'yup';
 import { PASSWORD_RULES } from './auth';
 import {
+  INSURANCE_VALUE_TIER_LIMITS,
   DELIVERY_TIER_FEE_MODE,
   DELIVERY_TIER_FEE_MODE_VALUES,
   isThousandStep,
@@ -230,6 +231,13 @@ export const vehicleFormSchema = yup.object({
   brand: optionalText(100),
   model: optionalText(100),
   vehicleCatalogModelId: yup.string().nullable().default(null),
+  /**
+   * Phiên bản (xe chuẩn trong Dữ liệu xe — ADR 0090) — TUỲ CHỌN và `optional` có chủ đích: app native
+   * dựng giá trị form bằng object literal, thêm một khoá bắt buộc là vỡ typecheck của app đó.
+   */
+  vehicleCatalogVariantId: yup.string().nullable().optional(),
+  /** Phiên bản CHƯA CÓ mà chủ xe gõ ở ô "Phiên bản" — server tự ghi nhận (ADR 0090). */
+  catalogVariantLabel: yup.string().trim().max(120).nullable().optional(),
   color: optionalText(80),
   fuelType: yup
     .string()
@@ -282,6 +290,25 @@ export const vehicleFormSchema = yup.object({
     // Số chỗ ngồi là chiều của Ô TÔ. Một chiếc xe máy "2 chỗ" nghe có vẻ vô hại, nhưng nó đi
     // thẳng vào bộ lọc "4/5/7 chỗ" ngoài chợ và làm bẩn kết quả của cả nhóm ô tô.
     .test('seat-count-car-only', 'seatCountCarOnly', function carSeatsOnly(value) {
+      return this.parent.vehicleType === VEHICLE_TYPE.CAR || value == null;
+    }),
+  /**
+   * Giá trị xe (ADR 0088) — giá khi mua hoặc giá kê khai khi mua bảo hiểm thân vỏ; mẫu số của phí
+   * bảo hiểm vật chất xe MIC. Chỉ ô tô (xe máy chưa có bảo hiểm). Khoảng + bước là CHÍNH bảng server
+   * và CHECK `vehicles_insured_value_check` dùng.
+   */
+  insuredValue: yup
+    .number()
+    .transform((v, orig) => (orig === '' || orig === null ? null : v))
+    .typeError('insuredValueRange')
+    .nullable()
+    .default(null)
+    .test('insured-value-range', 'insuredValueRange', (value) => {
+      if (value == null) return true;
+      const { insuredValueMin, insuredValueMax, insuredValueStep } = INSURANCE_VALUE_TIER_LIMITS;
+      return value >= insuredValueMin && value <= insuredValueMax && value % insuredValueStep === 0;
+    })
+    .test('insured-value-car-only', 'insuredValueCarOnly', function carInsuredValueOnly(value) {
       return this.parent.vehicleType === VEHICLE_TYPE.CAR || value == null;
     }),
   lengthMm: optionalPositiveInt('lengthMm', 30000),
@@ -1320,7 +1347,11 @@ export const customerFormSchema = yup.object({
     .trim()
     .required('fullNameRequired')
     .max(TENANT_CUSTOMER_FIELD_MAX.FULL_NAME, 'fullNameMax'),
-  phone: yup.string().trim().required('phoneRequired').test('vn-phone', 'phoneInvalid', isVnPhoneInput),
+  phone: yup
+    .string()
+    .trim()
+    .required('phoneRequired')
+    .test('vn-phone', 'phoneInvalid', isVnPhoneInput),
   email: yup
     .string()
     .trim()

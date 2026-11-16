@@ -68,7 +68,7 @@ export interface TesseractReaderLimits {
   idleShutdownMs: number;
 }
 
-const DEFAULT_LIMITS: TesseractReaderLimits = {
+export const DEFAULT_LIMITS: TesseractReaderLimits = {
   readTimeoutMs: 60_000,
   createTimeoutMs: 20_000,
   createBackoffMs: 60_000,
@@ -93,7 +93,7 @@ const QUALITY = {
 } as const;
 
 const DATA_PACKAGE = '@tesseract.js-data/vie';
-const LANGUAGE = 'vie';
+export const LANGUAGE = 'vie';
 
 // sharp chỉ dùng ở đây, cho ảnh đọc một lần rồi bỏ — bộ nhớ đệm của libvips chỉ giữ RAM vô ích.
 sharp.cache(false);
@@ -103,7 +103,7 @@ function resolveLangPath(): string {
 }
 
 /** Phiên bản thật đang chạy — ghi vào `ocr_model` để biết lượt đọc nào do bản nào làm. */
-function packageVersion(name: string): string {
+export function packageVersion(name: string): string {
   try {
     const manifest = readFileSync(require.resolve(`${name}/package.json`), 'utf8');
     return (JSON.parse(manifest) as { version: string }).version;
@@ -193,14 +193,14 @@ export class TesseractDriverLicenceReader implements DriverLicenceReader {
 
 // ── Ảnh ───────────────────────────────────────────────────────────────────────────────────
 
-interface PreparedImage {
+export interface PreparedImage {
   /** Đã xoay theo EXIF, thu về cạnh dài ≤ `MAX_EDGE_PX`, PNG. */
   png: Buffer;
   longEdge: number;
   qualityIssues: DriverLicenceQualityIssue[];
 }
 
-async function prepareImage(image: Uint8Array): Promise<PreparedImage> {
+export async function prepareImage(image: Uint8Array): Promise<PreparedImage> {
   try {
     const original = sharp(image, { failOn: 'none', limitInputPixels: MAX_INPUT_PIXELS }).rotate();
     const meta = await original.metadata();
@@ -255,7 +255,7 @@ async function measureQuality(
 }
 
 /** Ảnh màu như khách chụp — Tesseract tự nhị phân hoá. */
-function variantOriginal(image: PreparedImage, angle: number): Promise<Buffer> {
+export function variantOriginal(image: PreparedImage, angle: number): Promise<Buffer> {
   return sharp(image.png).rotate(angle).png().toBuffer();
 }
 
@@ -272,12 +272,12 @@ function greyUpscaled(image: PreparedImage, angle: number): Sharp {
     .toColourspace('b-w');
 }
 
-function variantGrey(image: PreparedImage, angle: number): Promise<Buffer> {
+export function variantGrey(image: PreparedImage, angle: number): Promise<Buffer> {
   return greyUpscaled(image, angle).png().toBuffer();
 }
 
 /** Đen trắng cứng — mất chữ mảnh nhưng cắt được hoa văn nền và vết loá nhẹ. */
-function variantBinary(image: PreparedImage, angle: number): Promise<Buffer> {
+export function variantBinary(image: PreparedImage, angle: number): Promise<Buffer> {
   return greyUpscaled(image, angle).threshold(140).png().toBuffer();
 }
 
@@ -301,7 +301,7 @@ function variantLocalContrast(image: PreparedImage, angle: number): Promise<Buff
 
 // ── Worker ────────────────────────────────────────────────────────────────────────────────
 
-type Recognize = (image: Buffer) => Promise<OcrLine[]>;
+export type Recognize = (image: Buffer) => Promise<OcrLine[]>;
 
 /**
  * Một worker đang sống. `aborted` bị reject khi worker bị bỏ (hết giờ, thread chết, tắt tiến
@@ -325,7 +325,7 @@ class WorkerFault extends DriverLicenceReaderError {}
  * thư viện để `createWorker` treo vĩnh viễn khi nạp dữ liệu hỏng, và không reject việc đang dở khi
  * worker bị tắt. Một lần chờ như vậy là cả hàng đợi đứng mãi mãi.
  */
-class TesseractEngine {
+export class TesseractEngine {
   private ready: Generation | null = null;
   private creating: Promise<Generation> | null = null;
   private createFailedAt = 0;

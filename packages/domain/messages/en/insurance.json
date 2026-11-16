@@ -1,7 +1,10 @@
 {
   "option": {
     "dailyRate": "+{price}",
-    "benefits": "Coverage details"
+    "benefits": "Coverage details",
+    "mandatory": "Required",
+    "tripRate": "+{price}",
+    "mandatoryNote": "This car requires MIC vehicle damage insurance for the whole trip - the premium is included in the price."
   },
   "benefits": {
     "coverage": "What's covered",
@@ -9,7 +12,8 @@
     "deductiblePerIncident": "{amount} per incident",
     "noDeductible": "No deductible",
     "maxPayout": "Maximum payout",
-    "maxPayoutWithNote": "{amount} · {note}"
+    "maxPayoutWithNote": "{amount} · {note}",
+    "claimHotline": "Incident hotline"
   },
   "certificate": {
     "title": "Insurance certificate",
@@ -20,7 +24,10 @@
     "view": "View insurance certificate",
     "testTag": "TEST",
     "testNote": "Test certificate - it provides no insurance cover.",
-    "loadError": "Couldn't load the insurance certificate."
+    "loadError": "Couldn't load the insurance certificate.",
+    "contractNumber": "Contract number",
+    "claimHotline": "Incident hotline",
+    "downloadPdf": "Download certificate (PDF)"
   },
   "coverage": {
     "title": "Trip insurance",

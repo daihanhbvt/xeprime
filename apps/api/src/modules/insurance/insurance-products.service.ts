@@ -1,11 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import {
-  Prisma,
-  type InsuranceProductRow,
-} from '@xeprime/prisma';
+import { Prisma, type InsuranceProductRow } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
+  INSURANCE_PREMIUM_BASIS,
+  INSURANCE_PRODUCT_KIND,
+  insurancePremiumTiersProblem,
+  readInsurancePremiumTiers,
   VEHICLE_TYPE,
   type InsuranceProductKind,
   type InsuranceProvider,
@@ -85,6 +86,8 @@ export class InsuranceProductsService {
       maxPayoutAmount: money(isMoto ? r.maxPayoutMotorbike : r.maxPayoutCar),
       maxPayoutNoteVi: r.maxPayoutNoteVi,
       maxPayoutNoteEn: r.maxPayoutNoteEn,
+      mandatory: r.premiumBasis === INSURANCE_PREMIUM_BASIS.VALUE_TIER,
+      claimHotline: r.claimHotline,
     }));
   }
 
@@ -113,7 +116,29 @@ export class InsuranceProductsService {
         });
       }
 
+      /*
+       * Cách tính phí (ADR 0088): bậc chỉ cho vật chất xe, và luôn đi cùng một biểu phí hợp lệ —
+       * kiểm ở đây để trả lỗi có nghĩa, CHECK `insurance_products_value_tier_check` là chốt sau.
+       */
+      const basis = dto.premiumBasis ?? before.premiumBasis;
+      const tiers = dto.premiumTiers ?? readInsurancePremiumTiers(before.premiumTiersJson);
+      if (basis === INSURANCE_PREMIUM_BASIS.VALUE_TIER) {
+        if (before.kind !== INSURANCE_PRODUCT_KIND.VEHICLE_TRIP) {
+          throw invalidProduct('Chỉ bảo hiểm vật chất xe được tính phí theo bậc giá trị xe');
+        }
+        const problem = tiers ? insurancePremiumTiersProblem(tiers) : 'Cần biểu phí bậc';
+        if (problem) throw invalidProduct(problem, 'premiumTiers');
+      }
+
       const data: Prisma.InsuranceProductUpdateInput = {};
+      if (dto.premiumBasis !== undefined) data.premiumBasis = dto.premiumBasis;
+      if (dto.premiumTiers !== undefined) {
+        data.premiumTiersJson = dto.premiumTiers.map((t) => ({
+          maxDays: t.maxDays,
+          percent: t.percent,
+        }));
+      }
+      if (dto.claimHotline !== undefined) data.claimHotline = dto.claimHotline?.trim() || null;
       const assign = <K extends keyof UpdateInsuranceProductDto>(key: K) => {
         if (dto[key] !== undefined) (data as Record<string, unknown>)[key] = dto[key];
       };
@@ -161,6 +186,14 @@ export class InsuranceProductsService {
   }
 }
 
+function invalidProduct(message: string, field?: string): BadRequestException {
+  return new BadRequestException({
+    code: API_ERROR_CODE.VALIDATION_FAILED,
+    message,
+    ...(field ? { details: { field } } : {}),
+  });
+}
+
 function money(value: Prisma.Decimal | null): string | null {
   return value === null ? null : value.toFixed(0);
 }
@@ -185,5 +218,11 @@ function toAdminDto(r: ProductRow): InsuranceProductDto {
     displayOrder: r.displayOrder,
     isActive: r.isActive,
     updatedAt: r.updatedAt.toISOString(),
+    premiumBasis:
+      r.premiumBasis === INSURANCE_PREMIUM_BASIS.VALUE_TIER
+        ? INSURANCE_PREMIUM_BASIS.VALUE_TIER
+        : INSURANCE_PREMIUM_BASIS.DAILY,
+    premiumTiers: readInsurancePremiumTiers(r.premiumTiersJson),
+    claimHotline: r.claimHotline,
   };
 }

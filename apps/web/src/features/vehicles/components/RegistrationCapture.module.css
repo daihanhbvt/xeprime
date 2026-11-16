@@ -1,0 +1,151 @@
+/* Ô "Cà vẹt xe" ở bước Hình ảnh của wizard tạo ô tô (ADR 0089). */
+.block {
+  margin-top: var(--xp-space-lg);
+  padding-top: var(--xp-space-lg);
+  border-top: 1px solid var(--xp-color-border);
+}
+
+.title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  margin: 0 0 var(--xp-space-md);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.required::after {
+  content: ' *';
+  color: var(--xp-color-error);
+}
+
+.addTile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xp-space-xs);
+  width: 100%;
+  min-height: 160px;
+  padding: var(--xp-space-md);
+  border: 1px dashed var(--xp-color-primary);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.12s ease;
+}
+
+.addTile:hover {
+  border-color: var(--xp-color-primary-hover, var(--xp-color-primary));
+}
+
+.addTileError {
+  border-color: var(--xp-color-error);
+}
+
+.addIcon {
+  font-size: 24px;
+  color: var(--xp-color-primary);
+}
+
+.addHint {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  text-align: center;
+}
+
+/* Upload của AntD bọc nút trong một span inline — kéo nó ra hết chiều rộng cột. */
+.block :global(.ant-upload-wrapper),
+.block :global(.ant-upload) {
+  display: block;
+  width: 100%;
+}
+
+.preview {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  cursor: pointer;
+}
+
+.previewImage {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+}
+
+.replace {
+  position: absolute;
+  right: var(--xp-space-sm);
+  bottom: var(--xp-space-sm);
+}
+
+.error {
+  margin: var(--xp-space-xs) 0 0;
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-height: 48px;
+  color: var(--xp-color-text-secondary);
+}
+
+.notice {
+  margin-bottom: var(--xp-space-md);
+}
+
+.summary {
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.summaryHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  margin-bottom: var(--xp-space-sm);
+}
+
+.done {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  color: var(--xp-color-success);
+  font-weight: 600;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-sm) var(--xp-space-md);
+  margin: 0;
+}
+
+.fact dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.fact dd {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-weight: 600;
+  word-break: break-all;
+}
+
+@media (max-width: 575px) {
+  .facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
