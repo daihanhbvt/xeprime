@@ -132,6 +132,10 @@ export interface PromoQuoteContext {
   tenantId: string;
   quoteIsEstimate: boolean;
   insurance: InsuranceSelection;
+  /** Câu trả lời cổng bảo hiểm của CHÍNH lượt báo giá — lượt áp mã không hỏi lại. */
+  insuranceOffered: InsuranceOfferedByKind;
+  /** Chuyến của lượt báo giá — lượt áp mã tính lại trên đúng nó (`ListingQuote.feeTrip`). */
+  feeTrip: FeeTrip;
   scope: { vehicleType: VehicleType; serviceType: ServiceType; provinceCode: string | null };
   breakdown: QuoteBreakdownDto;
   fees: CustomerFeeBreakdown | null;
@@ -161,6 +165,12 @@ export interface ListingQuote {
   insuranceOffered: boolean;
   /** Theo từng sản phẩm (ADR 0064) — ô chọn nào được hiện. */
   insuranceOfferedByKind: InsuranceOfferedByKind;
+  /**
+   * ĐÚNG chuyến mà bảng phí của báo giá này được tính trên (xe, lịch, dịch vụ, bảng kê). Lượt tính
+   * lại có mã khuyến mãi phải dùng chính object này: dựng lại một bản thiếu xe/lịch là mất dòng bảo
+   * hiểm vật chất xe theo bậc (ADR 0088) chỉ vì khách áp mã.
+   */
+  feeTrip: FeeTrip;
 }
 
 /** Kết quả tra phí giao nhận theo khoảng cách. */
@@ -420,6 +430,8 @@ export class PricingService {
         vehicleProtectionSelected: query.vehicleProtectionSelected === true,
         personalAccidentSelected: query.personalAccidentSelected === true,
       },
+      insuranceOffered: quote.insuranceOfferedByKind,
+      feeTrip: quote.feeTrip,
       scope: {
         vehicleType: vehicle.vehicleType as VehicleType,
         serviceType: (query.serviceType ?? SERVICE_TYPE.SELF_DRIVE) as ServiceType,
@@ -464,11 +476,13 @@ export class PricingService {
       quoteIsEstimate: boolean;
       promo: PromoCodeSnapshot | null;
       depositRequired?: boolean;
+      insuranceOffered?: InsuranceOfferedByKind;
     },
   ): Promise<CustomerFeeBreakdown | null> {
     return this.customerFeesFor(tenantId, trip, opts.quoteIsEstimate, {
       promo: opts.promo,
       ...(opts.depositRequired === undefined ? {} : { depositRequired: opts.depositRequired }),
+      ...(opts.insuranceOffered === undefined ? {} : { insuranceOffered: opts.insuranceOffered }),
       vehicleProtectionSelected: opts.vehicleProtectionSelected,
       personalAccidentSelected: opts.personalAccidentSelected,
     });
@@ -1595,24 +1609,24 @@ export class PricingService {
         policy,
         delivery: null,
       });
+      const longTermTrip: FeeTrip = {
+        vehicleType: vehicle.vehicleType,
+        serviceType: SERVICE_TYPE.LONG_TERM,
+        breakdown: longTermBreakdown,
+      };
       return {
         breakdown: {
           ...longTermBreakdown,
           // Dài hạn chưa chốt giờ nhận ⇒ như báo giá tạm tính: hiện phí dự kiến, không thu giữ chỗ.
-          fees: await this.customerFeesFor(
-            vehicle.tenantId,
-            {
-              vehicleType: vehicle.vehicleType,
-              serviceType: SERVICE_TYPE.LONG_TERM,
-              breakdown: longTermBreakdown,
-            },
-            true,
-            { ...insurance, insuranceOffered: offeredByKind },
-          ),
+          fees: await this.customerFeesFor(vehicle.tenantId, longTermTrip, true, {
+            ...insurance,
+            insuranceOffered: offeredByKind,
+          }),
         },
         delivery,
         insuranceOffered,
         insuranceOfferedByKind: offeredByKind,
+        feeTrip: longTermTrip,
       };
     }
 
@@ -1645,19 +1659,20 @@ export class PricingService {
       discountPercent: vehicle.discountPercent,
     });
 
+    const feeTrip: FeeTrip = {
+      vehicleType: vehicle.vehicleType,
+      // Báo giá ngày không gửi loại dịch vụ ⇒ tự lái, cùng mặc định của `buildDailyQuote`.
+      serviceType: serviceType ?? SERVICE_TYPE.SELF_DRIVE,
+      breakdown,
+      vehicleId: vehicle.id,
+      schedule: { pickupAt: new Date(pickupAt), returnAt: new Date(returnAt) },
+    };
     return {
       breakdown: {
         ...breakdown,
         fees: await this.customerFeesFor(
           vehicle.tenantId,
-          {
-            vehicleType: vehicle.vehicleType,
-            // Báo giá ngày không gửi loại dịch vụ ⇒ tự lái, cùng mặc định của `buildDailyQuote`.
-            serviceType: serviceType ?? SERVICE_TYPE.SELF_DRIVE,
-            breakdown,
-            vehicleId: vehicle.id,
-            schedule: { pickupAt: new Date(pickupAt), returnAt: new Date(returnAt) },
-          },
+          feeTrip,
           breakdown.estimateNote != null,
           { ...insurance, insuranceOffered: offeredByKind },
         ),
@@ -1665,6 +1680,7 @@ export class PricingService {
       delivery,
       insuranceOffered,
       insuranceOfferedByKind: offeredByKind,
+      feeTrip,
     };
   }
 }
