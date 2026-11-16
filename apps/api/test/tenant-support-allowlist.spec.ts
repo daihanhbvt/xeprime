@@ -72,6 +72,9 @@ const SUPPORT_ALLOWLIST = [
   'MaintenanceBoardController.list',
   'MaintenanceBoardController.summary',
   'MembersController.list',
+  // Gợi ý thông số / giá trị xe / giá thuê khi sửa xe (ADR 0090) — chỉ đọc, cùng capability xem xe:
+  // form xe trong phiên hỗ trợ gọi nó, chặn thì thẻ gợi ý đỏ 403. Tạo dòng xe mới thì KHÔNG mở.
+  'PartnerVehicleDataController.suggestion',
   'PartnerDashboardController.overview',
   // Huy hiệu menu site partner (02–04/11/2026): cùng dữ liệu với Tổng quan / danh sách, cùng
   // capability đọc (`booking.view` · `booking_request.view` · `vehicle.view`) — vỏ trang trong

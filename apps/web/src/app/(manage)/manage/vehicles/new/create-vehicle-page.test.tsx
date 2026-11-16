@@ -5,6 +5,9 @@ import { PERMISSION } from '@xeprime/types';
 import NewVehiclePage from './page';
 
 const nav = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
+vi.mock('@/features/vehicle-data/hooks', async () =>
+  (await import('@/features/vehicle-data/test-vehicle-data')).vehicleDataHooksMock(),
+);
 vi.mock('next/navigation', () => ({
   useRouter: () => nav,
   usePathname: () => '/manage/vehicles/new',

@@ -231,6 +231,13 @@ export const vehicleFormSchema = yup.object({
   brand: optionalText(100),
   model: optionalText(100),
   vehicleCatalogModelId: yup.string().nullable().default(null),
+  /**
+   * Phiên bản (xe chuẩn trong Dữ liệu xe — ADR 0090) — TUỲ CHỌN và `optional` có chủ đích: app native
+   * dựng giá trị form bằng object literal, thêm một khoá bắt buộc là vỡ typecheck của app đó.
+   */
+  vehicleCatalogVariantId: yup.string().nullable().optional(),
+  /** Phiên bản CHƯA CÓ mà chủ xe gõ ở ô "Phiên bản" — server tự ghi nhận (ADR 0090). */
+  catalogVariantLabel: yup.string().trim().max(120).nullable().optional(),
   color: optionalText(80),
   fuelType: yup
     .string()

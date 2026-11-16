@@ -3,7 +3,7 @@
 import { Alert, Card, Skeleton } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import type { Control } from 'react-hook-form';
+import type { Control, UseFormSetValue } from 'react-hook-form';
 import { VEHICLE_TYPE } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
@@ -18,12 +18,15 @@ interface CreateVehiclePricingStepProps {
   control: Control<VehicleFormValues>;
   isCar: boolean;
   pricePreview: React.ReactNode;
+  /** Cho nút "dùng giá này" của gợi ý giá thuê theo mẫu xe (ADR 0090). */
+  setValue?: UseFormSetValue<VehicleFormValues>;
 }
 
 export function CreateVehiclePricingStep({
   control,
   isCar,
   pricePreview,
+  setValue,
 }: CreateVehiclePricingStepProps) {
   const t = useTranslations('Vehicles.form.pricingStep');
   // Chính sách kế thừa theo ĐÚNG loại xe đang tạo (17/08) — ô tô/xe máy hai bộ riêng.
@@ -50,7 +53,12 @@ export function CreateVehiclePricingStep({
 
       <Card title={t('vehiclePriceTitle')} className={styles.card}>
         <p className={styles.description}>{t('vehiclePriceBody')}</p>
-        <PricingSection control={control} isCar={isCar} pricePreview={pricePreview} />
+        <PricingSection
+          control={control}
+          isCar={isCar}
+          pricePreview={pricePreview}
+          setValue={setValue}
+        />
       </Card>
     </div>
   );

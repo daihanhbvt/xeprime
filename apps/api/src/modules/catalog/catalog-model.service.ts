@@ -1,13 +1,18 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { newId } from '@xeprime/prisma';
+import { newId, type Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   CATALOG_MARKET_STATUS,
+  CATALOG_ORIGIN,
+  CATALOG_PROPOSALS_PER_DAY,
+  CATALOG_REVIEW_STATUS,
   VEHICLE_TYPE,
   catalogModelKey,
   catalogModelMissingSpecs,
@@ -43,12 +48,16 @@ const SELECT = {
   yearFrom: true,
   yearTo: true,
   active: true,
+  reviewStatus: true,
 } as const;
 
 const ADMIN_SELECT = { ...SELECT, sourceUrl: true, verifiedAt: true } as const;
 
 /** Mẫu chưa bị xoá mềm — mọi đường đọc đều đi qua điều kiện này. */
 const NOT_DELETED = { deletedAt: null } as const;
+
+/** Dòng xe đã duyệt — danh sách chung chỉ gồm chúng; dòng chủ xe gõ mới đang chờ (ADR 0090). */
+const APPROVED = { reviewStatus: CATALOG_REVIEW_STATUS.APPROVED } as const;
 
 /**
  * Trần số mẫu trả về một lượt. Một hãng đông mẫu nhất hiện có ~36 dòng, nên 200 là thoải mái cho
@@ -128,7 +137,7 @@ export class CatalogModelService {
    */
   async brandSummary(vehicleType: string): Promise<CatalogModelBrandSummaryDto[]> {
     const rows = await this.prisma.vehicleCatalogModel.findMany({
-      where: { vehicleType, ...NOT_DELETED },
+      where: { vehicleType, ...NOT_DELETED, ...APPROVED },
       select: {
         brandKey: true,
         vehicleType: true,
@@ -173,19 +182,27 @@ export class CatalogModelService {
     });
 
     const key = catalogModelKey(dto.brandKey, label);
-    // Có thể khớp HAI dòng (một theo `key`, một theo tên) — dòng nào còn sống thì là trùng thật;
-    // chỉ khi mọi dòng khớp đều đã xoá mới khôi phục.
+    // Có thể khớp HAI dòng (một theo `key`, một theo tên) — dòng nào còn sống và ĐÃ DUYỆT thì là
+    // trùng thật. Dòng còn sống mà đang CHỜ DUYỆT là dòng xe chủ xe gõ mới cùng tên: admin thêm đúng
+    // dòng đó nghĩa là duyệt nó (ADR 0090) — xe đang gắn giữ nguyên liên kết. Chỉ khi mọi dòng khớp
+    // đều đã xoá mới khôi phục.
     const matches = await this.prisma.vehicleCatalogModel.findMany({
       where: {
         OR: [{ key }, { brandKey: dto.brandKey, vehicleType: dto.vehicleType, label }],
       },
-      select: { id: true, deletedAt: true },
+      select: { id: true, deletedAt: true, reviewStatus: true, vehicleType: true },
     });
-    if (matches.some((m) => !m.deletedAt)) throw this.duplicate(label);
+    const live = matches.filter((m) => !m.deletedAt);
+    if (live.some((m) => m.reviewStatus !== CATALOG_REVIEW_STATUS.PENDING)) {
+      throw this.duplicate(label);
+    }
     if (matches.length > 1) throw this.duplicate(label);
     const existing = matches[0] ?? null;
+    const approvingProposal = existing?.reviewStatus === CATALOG_REVIEW_STATUS.PENDING;
+    if (approvingProposal && existing.vehicleType !== dto.vehicleType) throw this.duplicate(label);
 
     const sourceUrl = dto.sourceUrl?.trim() || null;
+    const now = new Date();
     const data = {
       label,
       marketStatus: dto.marketStatus ?? CATALOG_MARKET_STATUS.CURRENT,
@@ -194,9 +211,10 @@ export class CatalogModelService {
       sourceUrl,
       // Người thêm tay là người đang nhìn nguồn — ngày xác minh là hôm nay, không phải một
       // ô để trống rồi không ai biết dữ liệu cũ tới đâu.
-      verifiedAt: sourceUrl ? new Date() : null,
+      verifiedAt: sourceUrl ? now : null,
       active: dto.active ?? true,
-      adminEditedAt: new Date(),
+      adminEditedAt: now,
+      reviewStatus: CATALOG_REVIEW_STATUS.APPROVED,
     };
 
     const row = await this.prisma.$transaction(async (tx) => {
@@ -211,6 +229,18 @@ export class CatalogModelService {
               brandKey: dto.brandKey,
               vehicleType: dto.vehicleType,
               deletedAt: null,
+              // Duyệt đề xuất giữ nguồn gốc `owner` + người đề xuất; khôi phục dòng đã xoá (kể cả
+              // đề xuất từng bị từ chối) là admin thêm lại ⇒ nguồn gốc `admin`.
+              ...(approvingProposal
+                ? { reviewedAt: now, reviewedBy: actorUserId }
+                : {
+                    origin: CATALOG_ORIGIN.ADMIN,
+                    proposedByTenantId: null,
+                    proposedByUserId: null,
+                    reviewedAt: null,
+                    reviewedBy: null,
+                    reviewNote: null,
+                  }),
               sortOrder: await this.nextSortOrder(dto.brandKey, dto.vehicleType),
             },
             select: SELECT,
@@ -222,6 +252,7 @@ export class CatalogModelService {
               brandKey: dto.brandKey,
               vehicleType: dto.vehicleType,
               ...data,
+              origin: CATALOG_ORIGIN.ADMIN,
               sortOrder: await this.nextSortOrder(dto.brandKey, dto.vehicleType),
             },
             select: SELECT,
@@ -230,7 +261,11 @@ export class CatalogModelService {
         {
           actorUserId,
           actorScope: 'platform',
-          action: existing ? 'catalog.model.restore' : 'catalog.model.create',
+          action: approvingProposal
+            ? 'catalog.proposal.approve'
+            : existing
+              ? 'catalog.model.restore'
+              : 'catalog.model.create',
           targetType: 'vehicle_catalog_model',
           targetId: saved.id,
           after: {
@@ -361,6 +396,277 @@ export class CatalogModelService {
     });
   }
 
+  // ── Dữ liệu xe (ADR 0090): dòng xe chủ xe gõ mới + ghi trong transaction của Dữ liệu xe ─────
+
+  /**
+   * Chủ xe gõ một dòng xe chưa có ngay trong ô "Dòng xe" của form: tạo dòng `pending` gắn được vào
+   * xe ngay, nhưng KHÔNG vào danh sách chung cho tới khi admin duyệt xe chuẩn của nó ở màn Dữ liệu
+   * xe. Trùng tên một dòng còn sống (kể cả dòng đang chờ của gian hàng khác) ⇒ trả lại dòng đó.
+   */
+  async createOwnerModel(
+    tenantId: string,
+    userId: string,
+    input: { vehicleType: string; brandKey: string; label: string },
+  ): Promise<CatalogModelDto> {
+    await this.assertBrandExists(input.brandKey, input.vehicleType);
+    const label = input.label.trim();
+    const key = catalogModelKey(input.brandKey, label);
+
+    return this.prisma.$transaction(async (tx) => {
+      // Khoá theo gian hàng: hai lượt song song cùng đếm "19 < 20" rồi cùng ghi là vượt trần.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`vehicle-data-owner:${tenantId}`}))`;
+      const existing = await tx.vehicleCatalogModel.findUnique({
+        where: { key },
+        select: { ...SELECT, deletedAt: true },
+      });
+      if (existing && !existing.deletedAt) {
+        // Khoá không mang loại xe: "Vision" xe máy chặn một "Vision" ô tô cùng hãng.
+        if (existing.vehicleType !== input.vehicleType) throw this.duplicate(label);
+        const { deletedAt: _d, ...row } = existing;
+        return row as CatalogModelDto;
+      }
+      await this.assertOwnerQuota(tx, tenantId);
+
+      const now = new Date();
+      const pending = {
+        label,
+        brandKey: input.brandKey,
+        vehicleType: input.vehicleType,
+        reviewStatus: CATALOG_REVIEW_STATUS.PENDING,
+        origin: CATALOG_ORIGIN.OWNER,
+        proposedByTenantId: tenantId,
+        proposedByUserId: userId,
+        reviewedAt: null,
+        reviewedBy: null,
+        reviewNote: null,
+      };
+      const row = existing
+        ? await tx.vehicleCatalogModel.update({
+            where: { id: existing.id },
+            data: { ...pending, deletedAt: null, active: true, createdAt: now },
+            select: SELECT,
+          })
+        : await tx.vehicleCatalogModel.create({
+            data: {
+              id: newId(),
+              key,
+              marketStatus: CATALOG_MARKET_STATUS.CURRENT,
+              ...pending,
+            },
+            select: SELECT,
+          });
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: 'tenant',
+          action: 'vehicle_data.model.create',
+          targetType: 'vehicle_catalog_model',
+          targetId: row.id,
+          after: { label, brandKey: input.brandKey, vehicleType: input.vehicleType },
+        },
+        tx,
+      );
+      return row as CatalogModelDto;
+    });
+  }
+
+  /**
+   * Trần dữ liệu mới một gian hàng tạo trong 24 giờ (dòng xe gõ mới + xe chuẩn tự ghi nhận) — gọi
+   * TRONG transaction, sau khoá cấp gian hàng `vehicle-data-owner:<tenant>`.
+   */
+  async ownerQuotaExceeded(tx: Prisma.TransactionClient, tenantId: string): Promise<boolean> {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const where = { proposedByTenantId: tenantId, createdAt: { gte: since } };
+    // Tuần tự: một transaction tương tác là MỘT kết nối.
+    const models = await tx.vehicleCatalogModel.count({ where });
+    const records = await tx.vehicleCatalogVariant.count({ where });
+    return models + records >= CATALOG_PROPOSALS_PER_DAY;
+  }
+
+  private async assertOwnerQuota(tx: Prisma.TransactionClient, tenantId: string) {
+    if (await this.ownerQuotaExceeded(tx, tenantId)) {
+      throw new HttpException(
+        {
+          code: API_ERROR_CODE.CATALOG_PROPOSAL_LIMIT,
+          message: 'Gian hàng đã thêm quá nhiều dòng xe mới trong 24 giờ qua',
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+  }
+
+  /**
+   * Tạo dòng xe mới khi admin thêm/nhập một xe chuẩn của dòng chưa có: đã duyệt, mảng thông số RỖNG
+   * (chưa xác minh ⇒ form chủ xe không khoá gì — thông số chi tiết nằm ở xe chuẩn). Cùng khoá đã bị
+   * xoá mềm ⇒ khôi phục dòng đó. Trả id.
+   */
+  async createApprovedWithinTx(
+    tx: Prisma.TransactionClient,
+    actorUserId: string,
+    input: {
+      brandKey: string;
+      vehicleType: string;
+      label: string;
+      origin: typeof CATALOG_ORIGIN.ADMIN | typeof CATALOG_ORIGIN.IMPORT;
+    },
+  ): Promise<string> {
+    const key = catalogModelKey(input.brandKey, input.label);
+    const last = await tx.vehicleCatalogModel.findFirst({
+      where: { brandKey: input.brandKey, vehicleType: input.vehicleType },
+      orderBy: { sortOrder: 'desc' },
+      select: { sortOrder: true },
+    });
+    const now = new Date();
+    const data = {
+      brandKey: input.brandKey,
+      vehicleType: input.vehicleType,
+      label: input.label,
+      marketStatus: CATALOG_MARKET_STATUS.CURRENT,
+      reviewStatus: CATALOG_REVIEW_STATUS.APPROVED,
+      origin: input.origin,
+      adminEditedAt: now,
+      sortOrder: last ? last.sortOrder + 1 : 0,
+    };
+    const deleted = await tx.vehicleCatalogModel.findUnique({
+      where: { key },
+      select: { id: true, deletedAt: true },
+    });
+    // Khoá không mang loại xe: một dòng SỐNG cùng khoá ("Vision" xe máy khi tạo "Vision" ô tô) là trùng.
+    if (deleted && !deleted.deletedAt) throw this.duplicate(input.label);
+    const id = deleted?.id ?? newId();
+    if (deleted) {
+      await tx.vehicleCatalogModel.update({
+        where: { id },
+        data: {
+          ...data,
+          deletedAt: null,
+          active: true,
+          proposedByTenantId: null,
+          proposedByUserId: null,
+          reviewedAt: null,
+          reviewedBy: null,
+          reviewNote: null,
+        },
+      });
+    } else {
+      await tx.vehicleCatalogModel.create({ data: { id, key, ...data } });
+    }
+    await this.audit.record(
+      {
+        actorUserId,
+        actorScope: 'platform',
+        action: 'catalog.model.create',
+        targetType: 'vehicle_catalog_model',
+        targetId: id,
+        after: { key, ...input },
+      },
+      tx,
+    );
+    return id;
+  }
+
+  /**
+   * Duyệt dòng xe chủ xe gõ mới (đi kèm lượt duyệt xe chuẩn của nó). Admin có thể sửa tên trước khi
+   * duyệt; tên mới trùng một dòng khác của hãng ⇒ `CATALOG_MODEL_DUPLICATE` (admin gộp thay vì duyệt).
+   */
+  async approvePendingWithinTx(
+    tx: Prisma.TransactionClient,
+    actorUserId: string,
+    id: string,
+    label: string | null,
+  ): Promise<void> {
+    const current = await tx.vehicleCatalogModel.findUnique({
+      where: { id },
+      select: { id: true, label: true, brandKey: true, vehicleType: true, reviewStatus: true },
+    });
+    if (!current || current.reviewStatus !== CATALOG_REVIEW_STATUS.PENDING) return;
+    const nextLabel = label?.trim() || current.label;
+    if (nextLabel !== current.label) await this.assertLabelFree(current, nextLabel);
+    const now = new Date();
+    await tx.vehicleCatalogModel.update({
+      where: { id },
+      data: {
+        label: nextLabel,
+        reviewStatus: CATALOG_REVIEW_STATUS.APPROVED,
+        reviewedAt: now,
+        reviewedBy: actorUserId,
+        adminEditedAt: now,
+      },
+    });
+    if (nextLabel !== current.label) {
+      // Tên dòng xe là cột chữ chép xuống xe — đổi tên khi duyệt thì chép lại cho xe đang gắn.
+      await tx.vehicle.updateMany({
+        where: { vehicleCatalogModelId: id },
+        data: { model: nextLabel },
+      });
+    }
+    await this.audit.record(
+      {
+        actorUserId,
+        actorScope: 'platform',
+        action: 'catalog.model.approve',
+        targetType: 'vehicle_catalog_model',
+        targetId: id,
+        before: { label: current.label },
+        after: { label: nextLabel },
+      },
+      tx,
+    );
+  }
+
+  /**
+   * Gỡ dòng xe chủ xe gõ mới khi không còn xe chuẩn nào sống dưới nó (bị gộp sang dòng khác, hoặc
+   * bị từ chối): xe đang gắn bỏ liên kết nhưng giữ cột chữ hãng/dòng chủ xe đã thấy. Trả id các xe
+   * bị đổi để nơi gọi đồng bộ ảnh chụp chợ.
+   */
+  async rejectPendingWithinTx(
+    tx: Prisma.TransactionClient,
+    actorUserId: string,
+    id: string,
+    reason: string,
+  ): Promise<string[]> {
+    const current = await tx.vehicleCatalogModel.findUnique({
+      where: { id },
+      select: { reviewStatus: true, deletedAt: true },
+    });
+    if (!current || current.deletedAt || current.reviewStatus !== CATALOG_REVIEW_STATUS.PENDING) {
+      return [];
+    }
+    const vehicles = await tx.vehicle.findMany({
+      where: { vehicleCatalogModelId: id },
+      select: { id: true },
+    });
+    await tx.vehicle.updateMany({
+      where: { vehicleCatalogModelId: id },
+      data: { vehicleCatalogModelId: null, vehicleCatalogVariantId: null },
+    });
+    const now = new Date();
+    await tx.vehicleCatalogModel.update({
+      where: { id },
+      data: {
+        reviewStatus: CATALOG_REVIEW_STATUS.REJECTED,
+        deletedAt: now,
+        active: false,
+        reviewedAt: now,
+        reviewedBy: actorUserId,
+        reviewNote: reason.slice(0, 500),
+      },
+    });
+    await this.audit.record(
+      {
+        actorUserId,
+        actorScope: 'platform',
+        action: 'catalog.model.reject',
+        targetType: 'vehicle_catalog_model',
+        targetId: id,
+        after: { reason, vehicles: vehicles.length },
+      },
+      tx,
+    );
+    return vehicles.map((v) => v.id);
+  }
+
   /**
    * CHUẨN HOÁ cặp (hãng, mẫu) khi lưu xe — điểm cốt lõi của cả tính năng này.
    *
@@ -417,6 +723,8 @@ export class CatalogModelService {
       where: {
         vehicleType: query.vehicleType,
         ...NOT_DELETED,
+        // Đề xuất đang chờ của chủ xe KHÔNG vào danh sách chung — chỉ lọt qua `includeId` bên dưới.
+        ...APPROVED,
         ...(query.brandKey ? { brandKey: query.brandKey } : {}),
         ...(opts.activeOnly ? { active: true } : {}),
       },
@@ -474,7 +782,7 @@ export class CatalogModelService {
    * Hãng phải có trong danh mục VÀ phải bán loại xe đó. Bỏ vế thứ hai thì admin tạo được
    * "Toyota / xe máy", và danh sách hãng lọc theo loại xe lập tức nói dối.
    */
-  private async assertBrandExists(brandKey: string, vehicleType: string): Promise<void> {
+  async assertBrandExists(brandKey: string, vehicleType: string): Promise<void> {
     const brand = await this.prisma.catalogItem.findUnique({
       where: { type_key: { type: 'vehicle_brand', key: brandKey } },
       select: { label: true, vehicleTypes: true },

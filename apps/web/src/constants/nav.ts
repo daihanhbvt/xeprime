@@ -1,4 +1,5 @@
 import {
+  DatabaseOutlined,
   AppstoreOutlined,
   AuditOutlined,
   CalendarOutlined,
@@ -587,6 +588,17 @@ export const PLATFORM_NAV: readonly NavSection[] = [
         permission: PERMISSION.PLATFORM_VEHICLE_VIEW,
         icon: CarOutlined,
       },
+      {
+        /*
+         * Dữ liệu xe chuẩn (ADR 0090) đứng cạnh xe của chợ: nó là nguồn gợi ý khi chủ xe đăng xe, và
+         * dữ liệu chủ xe gõ mới chờ duyệt ở đây. Cùng quyền với Danh mục (người dùng chốt 11/11/2026).
+         */
+        key: 'admin-vehicle-data',
+        labelKey: 'platform.vehicleData',
+        href: ROUTES.ADMIN.VEHICLE_DATA,
+        permission: PERMISSION.PLATFORM_CATALOG_MANAGE,
+        icon: DatabaseOutlined,
+      },
     ],
   },
   {
@@ -1123,7 +1135,8 @@ export function supportNavSections(contextId: string, workspace: SupportWorkspac
 
 export function supportMobileTabs(contextId: string, workspace: SupportWorkspace): MobileTab[] {
   if (workspace === SUPPORT_WORKSPACE.ONBOARDING) return [];
-  const tabs = workspace === SUPPORT_WORKSPACE.MANAGE ? PARTNER_MOBILE_TABS : OWNER_LITE_SUPPORT_TABS;
+  const tabs =
+    workspace === SUPPORT_WORKSPACE.MANAGE ? PARTNER_MOBILE_TABS : OWNER_LITE_SUPPORT_TABS;
   return tabs.flatMap((tab) => {
     const href = tenantSupportHref(contextId, tab.href);
     return href ? [{ ...tab, href }] : [];

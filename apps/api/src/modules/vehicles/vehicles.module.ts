@@ -4,6 +4,7 @@ import { BillingModule } from '../billing/billing.module';
 import { BranchesModule } from '../branches/branches.module';
 import { CalendarModule } from '../calendar/calendar.module';
 import { CatalogModule } from '../catalog/catalog.module';
+import { VehicleDataModule } from '../vehicle-data/vehicle-data.module';
 import { FinanceModule } from '../finance/finance.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { PublicListingsModule } from '../public-listings/public-listings.module';
@@ -49,6 +50,8 @@ import { VehiclesService } from './vehicles.service';
     BranchesModule,
     BillingModule,
     CatalogModule,
+    // Dữ liệu xe (ADR 0090): kiểm phiên bản + tự ghi nhận dữ liệu từ xe khi lưu.
+    VehicleDataModule,
     PricingModule,
     StorageModule,
     // Bảo dưỡng ghi lịch xe qua OccupancyService — writer duy nhất của occupancies (ADR 0006).

@@ -377,6 +377,11 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
       { name: 'platform-customers', description: 'Tra cứu tài khoản khách toàn nền tảng.' },
       { name: 'platform-staff', description: 'Nhân sự nền tảng và vai trò của họ.' },
       { name: 'platform-catalog', description: 'Biên tập danh mục hãng/dòng xe dùng chung.' },
+      {
+        name: 'platform-vehicle-data',
+        description:
+          'Dữ liệu xe chuẩn (ADR 0090): mỗi xe một dòng với thông số, tiện ích, giá bán và giá thuê tham khảo; duyệt dữ liệu tự ghi nhận từ chủ xe; nhập/xuất file.',
+      },
       { name: 'platform-banners', description: 'Biên tập banner marketplace.' },
       { name: 'platform-plans', description: 'Gói dịch vụ bán cho gian hàng và hạn mức đi kèm.' },
       { name: 'platform-subscriptions', description: 'Thuê bao của gian hàng: gia hạn, đổi gói.' },

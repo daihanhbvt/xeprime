@@ -208,6 +208,12 @@ export class VehicleListItemDto {
   })
   vehicleCatalogModelId!: string | null;
   @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Phiên bản trong danh mục (GET /catalog/variants) - ADR 0090; null = chưa chọn',
+  })
+  vehicleCatalogVariantId!: string | null;
+  @ApiPropertyOptional({
     type: Number,
     nullable: true,
     description: '% khuyến mãi trực tiếp cho tiền thuê tự lái (0-100)',
@@ -673,6 +679,37 @@ export class CreateVehicleDto {
   @MaxLength(26)
   vehicleCatalogModelId?: string | null;
 
+  /**
+   * Phiên bản (xe chuẩn trong Dữ liệu xe — ADR 0090) — tuỳ chọn, phải thuộc ĐÚNG dòng
+   * `vehicleCatalogModelId` (`CATALOG_VARIANT_MISMATCH`). Đổi dòng mà không gửi trường này ⇒ gỡ.
+   */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Id phiên bản (GET /catalog/variants), thuộc đúng mẫu xe. Gửi null để gỡ.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(26)
+  vehicleCatalogVariantId?: string | null;
+
+  /**
+   * Phiên bản CHƯA CÓ mà chủ xe gõ ở ô "Phiên bản" (ADR 0090): server gắn xe vào xe chuẩn cùng tên
+   * nếu đã có, không thì tự ghi nhận một dòng chờ duyệt từ chính xe này. Không gửi cùng
+   * `vehicleCatalogVariantId`.
+   */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    maxLength: 120,
+    description:
+      'Tên phiên bản chủ xe gõ mới (không có trong danh sách). Không gửi cùng vehicleCatalogVariantId',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  catalogVariantLabel?: string | null;
+
   @ApiPropertyOptional({ enum: VEHICLE_OPERATION_STATUS_VALUES })
   @IsOptional()
   @IsIn(VEHICLE_OPERATION_STATUS_VALUES)
@@ -869,7 +906,9 @@ export class CreateVehicleDto {
  * của gian hàng nên cho sửa ở đây.
  */
 /** Cà vẹt của xe đã có sửa ở tab Giấy tờ — lượt sửa xe không nhận nó. */
-export class UpdateVehicleDto extends PartialType(OmitType(CreateVehicleDto, ['registration'] as const)) {}
+export class UpdateVehicleDto extends PartialType(
+  OmitType(CreateVehicleDto, ['registration'] as const),
+) {}
 
 /**
  * `PATCH /vehicles/:id/marketplace-visibility` — công tắc hiển thị của CHỦ XE (ADR 0048).

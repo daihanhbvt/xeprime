@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { newId } from '@xeprime/prisma';
+import { newId, type Prisma } from '@xeprime/prisma';
 import { API_ERROR_CODE, CATALOG_TYPE, CATALOG_TYPE_LABEL, type CatalogType } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -290,6 +290,58 @@ export class CatalogService {
         tx,
       );
     });
+  }
+
+  /**
+   * Tạo một HÃNG nếu chưa có — lượt nhập file Dữ liệu xe gọi trong transaction của nó (ADR 0090).
+   * Có rồi thì chỉ nới loại xe (hãng mới bán thêm loại xe kia); không sửa nhãn admin đã đặt.
+   */
+  async ensureBrandWithinTx(
+    tx: Prisma.TransactionClient,
+    actorUserId: string,
+    brand: { key: string; label: string; vehicleType: string },
+  ): Promise<void> {
+    const existing = await tx.catalogItem.findUnique({
+      where: { type_key: { type: CATALOG_TYPE.VEHICLE_BRAND, key: brand.key } },
+      select: { id: true, vehicleTypes: true },
+    });
+    if (existing) {
+      if (existing.vehicleTypes.length > 0 && !existing.vehicleTypes.includes(brand.vehicleType)) {
+        await tx.catalogItem.update({
+          where: { id: existing.id },
+          data: { vehicleTypes: [...existing.vehicleTypes, brand.vehicleType] },
+        });
+      }
+      return;
+    }
+    const last = await tx.catalogItem.findFirst({
+      where: { type: CATALOG_TYPE.VEHICLE_BRAND },
+      orderBy: { sortOrder: 'desc' },
+      select: { sortOrder: true },
+    });
+    const id = newId();
+    await tx.catalogItem.create({
+      data: {
+        id,
+        type: CATALOG_TYPE.VEHICLE_BRAND,
+        key: brand.key,
+        label: brand.label,
+        vehicleTypes: [brand.vehicleType],
+        sortOrder: last ? last.sortOrder + 1 : 0,
+        active: true,
+      },
+    });
+    await this.audit.record(
+      {
+        actorUserId,
+        actorScope: 'platform',
+        action: 'catalog.create',
+        targetType: 'catalog_item',
+        targetId: id,
+        after: { type: CATALOG_TYPE.VEHICLE_BRAND, ...brand, source: 'vehicle_data_import' },
+      },
+      tx,
+    );
   }
 
   /** Ghi lại trọn thứ tự một chiều trong một transaction — không để nửa chừng lệch số. */

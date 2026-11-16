@@ -74,6 +74,7 @@ export const MESSAGE_NAMESPACES = [
   { file: 'finance', namespace: 'Finance' },
   // Quản trị gói dịch vụ (admin nền tảng) — chuyển đợt W1 (ADR 0015/0020).
   { file: 'admin-catalog', namespace: 'AdminCatalog' },
+  { file: 'admin-vehicle-data', namespace: 'AdminVehicleData' },
   // Giám sát xe toàn hệ thống của admin nền tảng — chuyển sang t() ngày 23/09/2026 cùng đợt
   // tách trục hiển thị (ADR 0048), vì màn này phải giải thích được vì sao gỡ ẩn không đủ.
   { file: 'admin-vehicles', namespace: 'AdminVehicles' },

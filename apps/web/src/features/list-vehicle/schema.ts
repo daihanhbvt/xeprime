@@ -35,6 +35,10 @@ const VEHICLE_FIELDS = [
   // Mẫu xe chuẩn: wizard nhanh cũng gửi id danh mục như form đầy đủ — không có lý do gì để
   // xe đăng nhanh kém chuẩn hoá hơn xe đăng ở /manage.
   'vehicleCatalogModelId',
+  // Phiên bản (ADR 0090) — tuỳ chọn, gợi ý thông số / giá trị xe / giá thuê.
+  'vehicleCatalogVariantId',
+  // Phiên bản chủ xe gõ mới (ADR 0090).
+  'catalogVariantLabel',
   'manufactureYear',
   'seatCount',
   // Kiểu dáng xe (30/09/2026) — chiều 'Loại xe' khách lọc ngoài chợ; wizard nâng cao đã có.
@@ -119,95 +123,98 @@ const PUBLISH_REQUIRED_FIELDS = {
   ),
 };
 
-export const quickVehicleSchema = vehicleFormSchema.pick(VEHICLE_FIELDS).shape({
-  ...PUBLISH_REQUIRED_FIELDS,
-  /*
-   * Giá ngày thường là thứ DUY NHẤT bắt buộc ở bước cho thuê: xe không có giá thì không lên chợ
-   * được, còn mọi cấu hình khác đều có mặc định an toàn (tắt).
-   */
-  weekdayPrice: money('price', { thousandStep: true }).test(
-    'required',
-    'weekdayPriceRequired',
-    (v) => v != null,
-  ),
+export const quickVehicleSchema = vehicleFormSchema
+  .pick(VEHICLE_FIELDS)
+  .shape({
+    ...PUBLISH_REQUIRED_FIELDS,
+    /*
+     * Giá ngày thường là thứ DUY NHẤT bắt buộc ở bước cho thuê: xe không có giá thì không lên chợ
+     * được, còn mọi cấu hình khác đều có mặc định an toàn (tắt).
+     */
+    weekdayPrice: money('price', { thousandStep: true }).test(
+      'required',
+      'weekdayPriceRequired',
+      (v) => v != null,
+    ),
 
-  /** Bật/tắt giảm giá — mặc định TẮT. Không có ưu đãi nào tự sinh ra vì ảnh mẫu có một con số. */
-  discountEnabled: yup.boolean().defined().default(false),
+    /** Bật/tắt giảm giá — mặc định TẮT. Không có ưu đãi nào tự sinh ra vì ảnh mẫu có một con số. */
+    discountEnabled: yup.boolean().defined().default(false),
 
-  /** Nhận chuyến tự động — ghi vào `VehicleServiceSetting` của dịch vụ tự lái. */
-  autoAcceptEnabled: yup.boolean().defined().default(false),
+    /** Nhận chuyến tự động — ghi vào `VehicleServiceSetting` của dịch vụ tự lái. */
+    autoAcceptEnabled: yup.boolean().defined().default(false),
 
-  deliveryEnabled: yup.boolean().defined().default(false),
-  deliveryFreeWithinKm: yup
-    .number()
-    .nullable()
-    .defined()
-    .default(null)
-    .min(0, 'deliveryFreeMin')
-    .max(500, 'deliveryRadiusMax'),
-  deliveryMaxRadiusKm: yup
-    .number()
-    .nullable()
-    .defined()
-    .default(null)
-    .max(500, 'deliveryRadiusMax')
-    .when('deliveryEnabled', {
+    deliveryEnabled: yup.boolean().defined().default(false),
+    deliveryFreeWithinKm: yup
+      .number()
+      .nullable()
+      .defined()
+      .default(null)
+      .min(0, 'deliveryFreeMin')
+      .max(500, 'deliveryRadiusMax'),
+    deliveryMaxRadiusKm: yup
+      .number()
+      .nullable()
+      .defined()
+      .default(null)
+      .max(500, 'deliveryRadiusMax')
+      .when('deliveryEnabled', {
+        is: true,
+        then: (s) =>
+          s
+            .test('required', 'deliveryRadiusRequired', (v) => v != null)
+            .moreThan(0, 'deliveryRadiusMin'),
+      }),
+    deliveryFee: money('deliveryFee', { thousandStep: true }).when('deliveryEnabled', {
       is: true,
-      then: (s) =>
-        s
-          .test('required', 'deliveryRadiusRequired', (v) => v != null)
-          .moreThan(0, 'deliveryRadiusMin'),
-    }),
-  deliveryFee: money('deliveryFee', { thousandStep: true }).when('deliveryEnabled', {
-    is: true,
-    then: (s) => s.test('required', 'deliveryFeeRequired', (v) => v != null),
-  }),
-
-  mileageLimitEnabled: yup.boolean().defined().default(false),
-  includedDistanceKmPerDay: yup
-    .number()
-    .nullable()
-    .defined()
-    .default(null)
-    .integer('mileageInteger')
-    .min(MILEAGE_LIMIT.minKmPerDay, 'mileageMin')
-    .max(MILEAGE_LIMIT.maxKmPerDay, 'mileageMax')
-    .when('mileageLimitEnabled', {
-      is: true,
-      then: (s) => s.test('required', 'mileageRequired', (v) => v != null),
-    }),
-  excessDistanceFeePerKm: money('excessFee')
-    .max(MILEAGE_LIMIT.maxFeePerKm, 'excessFeeMax')
-    .when('mileageLimitEnabled', {
-      is: true,
-      then: (s) => s.test('required', 'excessFeeRequired', (v) => v != null),
+      then: (s) => s.test('required', 'deliveryFeeRequired', (v) => v != null),
     }),
 
-  /** Điều khoản riêng của chủ xe — snapshot vào yêu cầu/đơn qua `VehicleServiceSetting`. */
-  termsText: yup.string().trim().max(4000, 'termsTooLong').defined().default(''),
-}).test(
-  'photos-required',
-  /*
-   * Đủ các GÓC ảnh bắt buộc của loại xe — ô tô 5 (trước · sau · trái · phải · nội thất), xe máy
-   * 2 (trước · sau). CÙNG luật `missingVehicleImageTypes` mà backend chạy khi lưu và khi gửi
-   * duyệt, nên form không thể nói "đủ" trong khi server nói "thiếu".
-   *
-   * Trước 07/10/2026 phép kiểm ở đây là ĐẾM: tối thiểu 4 URL khác nhau. Năm tấm ảnh mặt trước
-   * cũng qua được, còn chiếc xe máy có đúng hai tấm cần thiết thì không.
-   *
-   * Kiểm ở mức object (cần cả `vehicleType` lẫn `media`) nhưng gắn lỗi vào `media` để hiện ngay
-   * dưới bảng ảnh.
-   */
-  function photosRequired(values) {
-    const missing = missingVehicleImageTypes(values.vehicleType, values.media ?? []);
-    return missing.length === 0
-      ? true
-      : this.createError({
-          path: 'media',
-          message: `photosRequired::${JSON.stringify({ count: missing.length })}`,
-        });
-  },
-);
+    mileageLimitEnabled: yup.boolean().defined().default(false),
+    includedDistanceKmPerDay: yup
+      .number()
+      .nullable()
+      .defined()
+      .default(null)
+      .integer('mileageInteger')
+      .min(MILEAGE_LIMIT.minKmPerDay, 'mileageMin')
+      .max(MILEAGE_LIMIT.maxKmPerDay, 'mileageMax')
+      .when('mileageLimitEnabled', {
+        is: true,
+        then: (s) => s.test('required', 'mileageRequired', (v) => v != null),
+      }),
+    excessDistanceFeePerKm: money('excessFee')
+      .max(MILEAGE_LIMIT.maxFeePerKm, 'excessFeeMax')
+      .when('mileageLimitEnabled', {
+        is: true,
+        then: (s) => s.test('required', 'excessFeeRequired', (v) => v != null),
+      }),
+
+    /** Điều khoản riêng của chủ xe — snapshot vào yêu cầu/đơn qua `VehicleServiceSetting`. */
+    termsText: yup.string().trim().max(4000, 'termsTooLong').defined().default(''),
+  })
+  .test(
+    'photos-required',
+    /*
+     * Đủ các GÓC ảnh bắt buộc của loại xe — ô tô 5 (trước · sau · trái · phải · nội thất), xe máy
+     * 2 (trước · sau). CÙNG luật `missingVehicleImageTypes` mà backend chạy khi lưu và khi gửi
+     * duyệt, nên form không thể nói "đủ" trong khi server nói "thiếu".
+     *
+     * Trước 07/10/2026 phép kiểm ở đây là ĐẾM: tối thiểu 4 URL khác nhau. Năm tấm ảnh mặt trước
+     * cũng qua được, còn chiếc xe máy có đúng hai tấm cần thiết thì không.
+     *
+     * Kiểm ở mức object (cần cả `vehicleType` lẫn `media`) nhưng gắn lỗi vào `media` để hiện ngay
+     * dưới bảng ảnh.
+     */
+    function photosRequired(values) {
+      const missing = missingVehicleImageTypes(values.vehicleType, values.media ?? []);
+      return missing.length === 0
+        ? true
+        : this.createError({
+            path: 'media',
+            message: `photosRequired::${JSON.stringify({ count: missing.length })}`,
+          });
+    },
+  );
 
 export type QuickVehicleValues = yup.InferType<typeof quickVehicleSchema>;
 
@@ -244,6 +251,8 @@ export const QUICK_VEHICLE_DEFAULTS: QuickVehicleValues = {
   brand: '',
   model: '',
   vehicleCatalogModelId: null,
+  vehicleCatalogVariantId: null,
+  catalogVariantLabel: null,
   manufactureYear: null,
   seatCount: null,
   bodyType: null,

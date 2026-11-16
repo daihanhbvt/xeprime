@@ -31,6 +31,7 @@ import { NotificationService } from '../../src/modules/notification/notification
 import { BillingService } from '../../src/modules/billing/billing.service';
 import { BranchesService } from '../../src/modules/branches/branches.service';
 import { CatalogModelService } from '../../src/modules/catalog/catalog-model.service';
+import { VehicleDataService } from '../../src/modules/vehicle-data/vehicle-data.service';
 import { CatalogService } from '../../src/modules/catalog/catalog.service';
 import { GeoNotConfiguredProvider } from '../../src/modules/geo/geo-provider';
 import { GeoService } from '../../src/modules/geo/geo.service';
@@ -441,6 +442,22 @@ export function makeVehiclesService(
     overrides.config ?? new ConfigService(),
     new SupportRequestStore(),
     overrides.registrations ?? makeVehicleRegistrationUploadsService(prisma),
+    makeVehicleDataService(prisma, overrides.listings ?? new ListingsService(prisma)),
+  );
+}
+
+/** Dữ liệu xe (ADR 0090) — writer của xe chuẩn, VehiclesService gọi để tự ghi nhận khi lưu xe. */
+export function makeVehicleDataService(
+  prisma: PrismaService,
+  listings: ListingsService = new ListingsService(prisma),
+): VehicleDataService {
+  const audit = new AuditService(prisma);
+  return new VehicleDataService(
+    prisma,
+    audit,
+    new CatalogService(prisma, audit),
+    new CatalogModelService(prisma, audit),
+    listings,
   );
 }
 

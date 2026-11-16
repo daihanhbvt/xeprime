@@ -28,6 +28,7 @@ import type { Branch } from '@/features/branches/types';
 import type { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
 import { useWardOptions } from '@/features/locations/hooks/use-wards';
+import { CatalogRentHintFor } from '@/features/vehicles/components/CatalogSuggestions';
 import { MarketPriceHint } from '@/features/vehicles/components/MarketPriceHint';
 import { discountedPriceVnd } from '@/features/vehicles/pricing';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -91,6 +92,10 @@ export function QuickVehicleRentalStep({
    * đường duy nhất thấy nó đổi ngay.
    */
   const motorbikeCategory = useWatch({ control, name: 'motorbikeCategory' });
+  // Gợi ý theo MẪU xe (ADR 0090) thắng gợi ý theo phân khúc khi có dữ liệu.
+  const catalogModelId = useWatch({ control, name: 'vehicleCatalogModelId' });
+  const catalogVariantId = useWatch({ control, name: 'vehicleCatalogVariantId' });
+  const manufactureYear = useWatch({ control, name: 'manufactureYear' });
   const seatCount = useWatch({ control, name: 'seatCount' });
   const branchId = useWatch({ control, name: 'branchId' });
 
@@ -117,13 +122,22 @@ export function QuickVehicleRentalStep({
           Gợi ý giá đặt SAU ô nhập, không phải placeholder trong ô: placeholder biến mất ngay khi
           gõ ký tự đầu tiên — đúng lúc người dùng cần đối chiếu nhất.
         */}
-        <MarketPriceHint
-          vehicleType={vehicleType}
-          motorbikeCategory={motorbikeCategory}
-          seatCount={seatCount}
-          provinceCode={branch?.provinceCode ?? pendingAddress?.provinceCode ?? null}
-          provinceName={branch?.provinceName ?? null}
+        <CatalogRentHintFor
+          modelId={catalogModelId}
+          variantId={catalogVariantId}
+          year={manufactureYear}
+          field="weekdayPrice"
           onApply={(price) => setValue('weekdayPrice', price, { shouldValidate: true })}
+          fallback={
+            <MarketPriceHint
+              vehicleType={vehicleType}
+              motorbikeCategory={motorbikeCategory}
+              seatCount={seatCount}
+              provinceCode={branch?.provinceCode ?? pendingAddress?.provinceCode ?? null}
+              provinceName={branch?.provinceName ?? null}
+              onApply={(price) => setValue('weekdayPrice', price, { shouldValidate: true })}
+            />
+          }
         />
         {discounted != null ? (
           <p className={styles.preview}>{t('pricePreview', { price: fmt.money(discounted) })}</p>

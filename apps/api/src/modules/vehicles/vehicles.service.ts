@@ -52,6 +52,7 @@ import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
 import { BranchesService } from '../branches/branches.service';
 import { CatalogModelService } from '../catalog/catalog-model.service';
+import { VehicleDataService } from '../vehicle-data/vehicle-data.service';
 import { CatalogService } from '../catalog/catalog.service';
 import { policyData, PricingService } from '../pricing/pricing.service';
 import { SaveVehiclePricingDto, VehiclePricingDto } from '../pricing/dto/pricing.dto';
@@ -103,6 +104,7 @@ const LIST_SELECT = {
   bodyType: true,
   motorbikeCategory: true,
   vehicleCatalogModelId: true,
+  vehicleCatalogVariantId: true,
   discountPercent: true,
   operationStatus: true,
   publicStatus: true,
@@ -177,6 +179,8 @@ const SENSITIVE_SELECT = {
   deliveryEnabled: true,
   // Trường "ghim" của phiên hỗ trợ (ADR 0050) so với bản đang lưu — xem `assertSupportPinnedFields`.
   operationStatus: true,
+  // Liên kết danh mục — lượt sửa đổi mẫu mà không gửi phiên bản thì phải biết mẫu CŨ để gỡ phiên bản.
+  vehicleCatalogModelId: true,
 } satisfies Prisma.VehicleSelect;
 
 /**
@@ -204,6 +208,11 @@ export class VehiclesService {
     private readonly supportStore: SupportRequestStore,
     /** Cà vẹt kèm lượt tạo ô tô (ADR 0089) — gắn trong CÙNG transaction tạo xe. */
     private readonly registrations: VehicleRegistrationUploadsService,
+    /**
+     * Dữ liệu xe (ADR 0090) — kiểm phiên bản thuộc đúng dòng xe, và TỰ GHI NHẬN dữ liệu từ xe của
+     * chủ xe (dòng chờ duyệt) trong CÙNG transaction lưu xe.
+     */
+    private readonly vehicleData: VehicleDataService,
   ) {}
 
   /**
@@ -560,6 +569,7 @@ export class VehiclesService {
     // thì PLAN_SCOPE_REQUIRED. Thông điệp nói đúng lối đi tiếp theo NGUỒN của trần.
     await this.billing.assertVehicleQuota(tenantId, dto.vehicleType as VehicleType);
     await this.pricing.assertWithDriverPrices(dto);
+    assertSingleVariantChoice(dto);
     const id = newId();
     const code = dto.code?.trim() || `XP-${id.slice(-8).toUpperCase()}`;
     await this.assertCodeFree(tenantId, code);
@@ -574,7 +584,13 @@ export class VehiclesService {
       dto.vehicleCatalogModelId,
       dto.vehicleType,
     );
-    const input = applyCatalogModel(dto, canonical);
+    const input = {
+      ...applyCatalogModel(dto, canonical),
+      vehicleCatalogVariantId: await this.vehicleData.resolveForVehicle(
+        dto.vehicleCatalogVariantId,
+        canonical?.id ?? null,
+      ),
+    };
 
     await this.catalog.assertVehicleValues({ ...input, vehicleType: dto.vehicleType });
     assertVehicleProfile(dto.vehicleType, input.fuelType, input);
@@ -634,6 +650,13 @@ export class VehiclesService {
         },
       });
       await this.replaceMedia(tx, id, tenantId, input, dto.vehicleType);
+      // Chạy SAU replaceMedia: dữ liệu tự ghi nhận chụp cả tiện ích của xe.
+      await this.vehicleData.captureFromVehicleWithinTx(tx, {
+        tenantId,
+        userId,
+        vehicleId: id,
+        variantLabel: dto.catalogVariantLabel,
+      });
       if (dto.registration) {
         await this.registrations.attachToNewVehicleWithinTx(tx, {
           tenantId,
@@ -671,6 +694,7 @@ export class VehiclesService {
     allowedBranchIds: readonly string[] | null,
   ): Promise<VehicleDetailDto> {
     await this.pricing.assertWithDriverPrices(dto);
+    assertSingleVariantChoice(dto);
     await this.prisma.$transaction(async (tx) => {
       await this.applyUpdate(tx, tenantId, id, userId, dto, allowedBranchIds);
     });
@@ -718,7 +742,29 @@ export class VehiclesService {
       dto.vehicleCatalogModelId !== undefined
         ? await this.catalogModels.resolveForVehicle(dto.vehicleCatalogModelId, vehicleType)
         : null;
-    const input = dto.vehicleCatalogModelId !== undefined ? applyCatalogModel(dto, canonical) : dto;
+    const modelInput =
+      dto.vehicleCatalogModelId !== undefined ? applyCatalogModel(dto, canonical) : dto;
+    /*
+     * Phiên bản theo MẪU SAU KHI SỬA: gửi phiên bản ⇒ kiểm nó thuộc mẫu đó; đổi mẫu mà không gửi
+     * phiên bản ⇒ gỡ phiên bản cũ (nó thuộc mẫu cũ — giữ lại là một liên kết nói dối).
+     */
+    const targetModelId =
+      dto.vehicleCatalogModelId !== undefined
+        ? (canonical?.id ?? null)
+        : current.vehicleCatalogModelId;
+    const modelChanged = targetModelId !== current.vehicleCatalogModelId;
+    const input =
+      dto.vehicleCatalogVariantId !== undefined
+        ? {
+            ...modelInput,
+            vehicleCatalogVariantId: await this.vehicleData.resolveForVehicle(
+              dto.vehicleCatalogVariantId,
+              targetModelId,
+            ),
+          }
+        : modelChanged
+          ? { ...modelInput, vehicleCatalogVariantId: null }
+          : modelInput;
 
     await this.catalog.assertVehicleValues({ ...input, vehicleType });
     assertVehicleProfile(
@@ -850,6 +896,12 @@ export class VehiclesService {
 
     await tx.vehicle.update({ where: { id: current.id }, data });
     await this.replaceMedia(tx, current.id, tenantId, input, vehicleType);
+    await this.vehicleData.captureFromVehicleWithinTx(tx, {
+      tenantId,
+      userId,
+      vehicleId: current.id,
+      variantLabel: dto.catalogVariantLabel,
+    });
     // Mọi sửa xe → đồng bộ snapshot public_listings ngay, để chợ không trưng thông tin cũ.
     await this.listings.syncFromVehicle(current.id, tx);
     /*
@@ -1067,6 +1119,12 @@ export class VehiclesService {
       };
       if (Object.keys(vehicleData).length > 0) {
         await tx.vehicle.update({ where: { id: current.id }, data: vehicleData });
+        // Dữ liệu chờ duyệt do chính xe này tạo cập nhật theo giá mới (ADR 0090).
+        await this.vehicleData.captureFromVehicleWithinTx(tx, {
+          tenantId,
+          userId,
+          vehicleId: current.id,
+        });
       }
 
       /*
@@ -1925,6 +1983,8 @@ interface VehicleWritableFields {
   motorbikeCategory?: string | null;
   /** Liên kết mẫu xe chuẩn; null = xe khai tay. */
   vehicleCatalogModelId?: string | null;
+  /** Phiên bản trong danh mục (ADR 0090); null = chưa chọn. */
+  vehicleCatalogVariantId?: string | null;
   /** Giá trị xe nhận bảo hiểm (VND string, ADR 0088). */
   insuredValue?: string | null;
   lengthMm?: number | null;
@@ -1977,6 +2037,9 @@ function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritab
     ...(dto.motorbikeCategory !== undefined ? { motorbikeCategory: dto.motorbikeCategory } : {}),
     ...(dto.vehicleCatalogModelId !== undefined
       ? { vehicleCatalogModelId: dto.vehicleCatalogModelId }
+      : {}),
+    ...(dto.vehicleCatalogVariantId !== undefined
+      ? { vehicleCatalogVariantId: dto.vehicleCatalogVariantId }
       : {}),
     ...(dto.lengthMm !== undefined ? { lengthMm: dto.lengthMm } : {}),
     ...(dto.insuredValue !== undefined ? { insuredValue: dto.insuredValue } : {}),
@@ -2052,6 +2115,19 @@ function orphanPriceClears(serviceTypes: string[]): Partial<VehicleWritableField
  * xoá luôn liên kết cũ nhưng GIỮ chữ mà chủ xe đã gõ: xe khai tay vẫn phải hiển thị được tên
  * của nó, chỉ mất khả năng lọc theo mẫu chuẩn.
  */
+/** Chọn phiên bản có sẵn (id) HOẶC gõ phiên bản mới (tên) — không cả hai (ADR 0090). */
+function assertSingleVariantChoice(dto: {
+  vehicleCatalogVariantId?: string | null;
+  catalogVariantLabel?: string | null;
+}) {
+  if (dto.vehicleCatalogVariantId && dto.catalogVariantLabel?.trim()) {
+    throw new BadRequestException({
+      code: API_ERROR_CODE.VALIDATION_FAILED,
+      message: 'Chọn phiên bản có sẵn hoặc gõ phiên bản mới, không cả hai',
+    });
+  }
+}
+
 function applyCatalogModel<T extends VehicleWritableInput>(
   dto: T,
   canonical: { id: string; brand: string; model: string; motorbikeCategory: string | null } | null,
@@ -2213,6 +2289,7 @@ function toListItem(
     bodyType: v.bodyType,
     motorbikeCategory: v.motorbikeCategory,
     vehicleCatalogModelId: v.vehicleCatalogModelId,
+    vehicleCatalogVariantId: v.vehicleCatalogVariantId,
     discountPercent: v.discountPercent,
     operationStatus: v.operationStatus,
     publicStatus: v.publicStatus,

@@ -198,6 +198,21 @@ export const queryKeys = {
       ['catalog', 'models', vehicleType, brandKey, includeId] as const,
     /** Số mẫu xe theo hãng - cột hãng của màn quản trị mẫu xe. */
     modelBrands: (vehicleType: string) => ['catalog', 'model-brands', vehicleType] as const,
+    /** Ô 'Phiên bản' của form xe (ADR 0090) - khoá theo năm sản xuất + xe chuẩn đang gắn. */
+    variants: (modelId: string, year: number | null, includeId: string) =>
+      ['catalog', 'variants', modelId, year, includeId] as const,
+    /** Gợi ý khi đăng/sửa xe: thông số, giá trị xe, giá thuê tham khảo. */
+    suggestion: (params: QueryParams) => ['catalog', 'suggestion', params] as const,
+  },
+  /** Màn 'Dữ liệu xe' của quản trị (ADR 0090). */
+  vehicleData: {
+    all: ['vehicle-data'] as const,
+    list: (params: QueryParams) => ['vehicle-data', 'list', params] as const,
+    detail: (id: string) => ['vehicle-data', 'detail', id] as const,
+    imports: (params: QueryParams) => ['vehicle-data', 'imports', params] as const,
+    importDetail: (id: string) => ['vehicle-data', 'import', id] as const,
+    importRows: (id: string, params: QueryParams) =>
+      ['vehicle-data', 'import', id, 'rows', params] as const,
   },
   vehicles: {
     all: ['vehicles'] as const,

@@ -189,6 +189,26 @@ export const API_ERROR_CODE = {
    */
   CATALOG_MODEL_SPEC_INVALID: 'CATALOG_MODEL_SPEC_INVALID',
   /**
+   * Dữ liệu xe (ADR 0090): đã có một xe chuẩn cùng dòng xe, phiên bản và năm bắt đầu — một xe chỉ
+   * có một dòng.
+   */
+  CATALOG_VARIANT_DUPLICATE: 'CATALOG_VARIANT_DUPLICATE',
+  /** Xe chuẩn đang có xe của chủ xe gắn nên không xoá được — ẩn thay vì xoá. */
+  CATALOG_VARIANT_IN_USE: 'CATALOG_VARIANT_IN_USE',
+  /** Xe chuẩn không thuộc dòng xe đã chọn, hoặc đã bị từ chối/xoá. */
+  CATALOG_VARIANT_MISMATCH: 'CATALOG_VARIANT_MISMATCH',
+  /** Gian hàng đã tạo quá nhiều dòng xe mới trong 24 giờ (ADR 0090). */
+  CATALOG_PROPOSAL_LIMIT: 'CATALOG_PROPOSAL_LIMIT',
+  /**
+   * Lượt duyệt dữ liệu xe không hợp lệ: xe chuẩn không còn chờ duyệt, gộp vào chính nó / vào xe chưa
+   * duyệt / khác loại xe.
+   */
+  CATALOG_REVIEW_INVALID: 'CATALOG_REVIEW_INVALID',
+  /** File nhập không đọc được: sai định dạng, quá lớn, quá nhiều dòng hoặc không có bảng khớp tiêu đề. */
+  CATALOG_IMPORT_FILE_INVALID: 'CATALOG_IMPORT_FILE_INVALID',
+  /** Lượt nhập file không còn ở trạng thái xem trước (đã áp dụng / đã huỷ / hết hạn). */
+  CATALOG_IMPORT_NOT_PENDING: 'CATALOG_IMPORT_NOT_PENDING',
+  /**
    * Đã có một yêu cầu thuê y hệt (cùng xe + SĐT + khung giờ) đang chờ shop phản hồi.
    * Mã riêng thay vì `CONFLICT` chung: FE hiện hộp "Yêu cầu trùng lặp" có lối đi tiếp
    * (xem chuyến / nhắn chủ xe), khác hẳn một alert lỗi thường.

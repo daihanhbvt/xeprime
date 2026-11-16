@@ -387,7 +387,12 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
         );
       case 'pricing':
         return (
-          <CreateVehiclePricingStep control={control} isCar={isCar} pricePreview={pricePreview} />
+          <CreateVehiclePricingStep
+            control={control}
+            isCar={isCar}
+            pricePreview={pricePreview}
+            setValue={setValue}
+          />
         );
       case 'media':
         return (
