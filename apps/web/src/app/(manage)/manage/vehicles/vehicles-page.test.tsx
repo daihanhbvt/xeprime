@@ -612,59 +612,57 @@ describe('/manage/vehicles - thiếu quyền xem', () => {
 /* ------------------------------------------------------------------ bố cục theo tổng xe */
 
 /**
- * Hai kiểu theo TỔNG xe của chi nhánh đang chọn (chốt 03/11/2026): dưới 3 xe là thẻ ngang to; từ 3
- * xe là lưới thẻ hoặc danh sách hàng ngang theo `?view=`. Tổng đến từ `fleet-summary`, không từ
- * trang hiện tại — gõ tìm kiếm còn 1 kết quả không biến lưới thành thẻ to.
+ * Hai kiểu theo TỔNG xe của chi nhánh đang chọn (chốt 16/11/2026): dưới 4 xe là một xe một hàng;
+ * từ 4 xe là hai thẻ một hàng. Không còn lưới thẻ gọn và nút chuyển kiểu xem. Tổng đến từ
+ * `fleet-summary`, không từ trang hiện tại — gõ tìm kiếm còn 1 kết quả không làm bố cục nhảy.
  */
-describe('/manage/vehicles - bố cục ít xe / nhiều xe', () => {
+describe('/manage/vehicles - bố cục theo tổng xe', () => {
   const listItems = () => screen.getByRole('list', { name: 'Danh sách xe' });
 
-  it('dưới 3 xe: thẻ ngang to, không có nút chuyển kiểu xem', () => {
-    fleet.total = 2;
-    setQuery({ data: { items: [vehicle()], meta: META } });
-    renderPage();
-
-    expect(listItems().className).toMatch(/few/);
-    expect(screen.queryByRole('radiogroup', { name: 'Kiểu hiển thị danh sách xe' })).toBeNull();
-  });
-
-  it('từ 3 xe: lưới thẻ, có nút chuyển Lưới/Danh sách', () => {
+  it('dưới 4 xe: một xe một hàng', () => {
     fleet.total = 3;
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
 
-    expect(listItems().className).toMatch(/grid/);
-    expect(screen.getByText('Dạng danh sách')).toBeTruthy();
+    expect(listItems().className).toMatch(/list/);
+    expect(listItems().className).not.toMatch(/pairs/);
   });
 
-  it('tổng theo CẢ đội xe: đang lọc còn 1 kết quả vẫn giữ lưới', () => {
+  it('từ 4 xe: hai thẻ một hàng', () => {
+    fleet.total = 4;
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    renderPage();
+
+    expect(listItems().className).toMatch(/pairs/);
+  });
+
+  it('không còn nút chuyển kiểu xem ở bố cục nào', () => {
+    for (const total of [2, 12]) {
+      fleet.total = total;
+      setQuery({ data: { items: [vehicle()], meta: META } });
+      const { unmount } = renderPage();
+
+      expect(screen.queryByRole('radiogroup')).toBeNull();
+      unmount();
+    }
+  });
+
+  it('tổng theo CẢ đội xe: đang lọc còn 1 kết quả vẫn giữ hai thẻ một hàng', () => {
     fleet.total = 12;
     nav.params = new URLSearchParams('q=sh');
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
 
-    expect(listItems().className).toMatch(/grid/);
+    expect(listItems().className).toMatch(/pairs/);
   });
 
-  it('`?view=list` dựng danh sách hàng ngang', () => {
+  it('link cũ mang `?view=list` vẫn mở được, bố cục theo tổng xe', () => {
     fleet.total = 8;
     nav.params = new URLSearchParams('view=list');
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
 
-    expect(listItems().className).toMatch(/list/);
-  });
-
-  it('đổi kiểu xem ghi `view` lên URL và GIỮ trang đang đọc', () => {
-    fleet.total = 40;
-    nav.params = new URLSearchParams('page=2');
-    setQuery({ data: { items: [vehicle()], meta: { ...META, page: 2, total: 40 } } });
-    renderPage();
-
-    fireEvent.click(screen.getByText('Dạng danh sách'));
-    expect(nav.replace).toHaveBeenCalledWith('/manage/vehicles?page=2&view=list', {
-      scroll: false,
-    });
+    expect(listItems().className).toMatch(/pairs/);
   });
 
   it('chưa biết tổng xe: khung chờ, chưa vẽ thẻ rồi nhảy bố cục', () => {
@@ -682,6 +680,16 @@ describe('/manage/vehicles - bố cục ít xe / nhiều xe', () => {
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
 
-    expect(listItems().className).toMatch(/few/);
+    expect(listItems().className).toMatch(/list/);
+  });
+
+  it('đếm tổng hỏng khi ĐANG lọc: không biết tổng ⇒ giữ bố cục đội xe đông', () => {
+    fleet.total = null;
+    fleet.isError = true;
+    nav.params = new URLSearchParams('q=sh');
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    renderPage();
+
+    expect(listItems().className).toMatch(/pairs/);
   });
 });

@@ -424,15 +424,22 @@ Design: Users List `23777:53057` · Details Overview `23777:54975` · History `2
 
 Code: `features/vehicles/components/VehiclesListView` — MỘT màn cho hai tuyến (`scope="shop"` qua
 `ManageVehiclesPage`, `scope="owner"` qua `AccountVehiclesView`; cả hai là vỏ mỏng để route và phiên
-hỗ trợ giữ nguyên import). Thẻ: `VehicleManagementCard` (lưới) · `VehicleWideCard` (`stacked` = ít
-xe, `row` = danh sách) · mảnh chung `VehicleCardParts` · hàng mobile `VehicleListRow`.
+hỗ trợ giữ nguyên import). Thẻ: `VehicleWideCard` (`row` = một xe một hàng, `stacked` = hai thẻ
+một hàng) · mảnh chung `VehicleCardParts` · hàng mobile `VehicleListRow`.
+
+**Đổi bố cục 16/11/2026 (người dùng chốt design mới):** dưới 4 xe (`VEHICLE_LIST_PAIRS_FROM`) = một
+xe một hàng `23655:36959`; từ 4 xe = hai thẻ một hàng `23655:38521`. Lưới thẻ gọn `23649:29724`
+(`VehicleManagementCard`) và nút chuyển Lưới/Danh sách (`?view=`) **gỡ hẳn** — link cũ mang `?view=`
+vẫn mở, tham số bị bỏ qua. Nội dung thẻ không đổi: mọi thứ thẻ lưới có (dòng loại xe · dịch vụ, chip
+việc cần làm, lý do trả về, chip tạm ẩn, bảy con số, ba nút) đều có ở thẻ ngang. Đếm tổng như cũ
+(dòng 3). Dòng 3, 4 dưới đây là quyết định 03/11, đã bị thay bởi đoạn này.
 
 | # | Hạng mục | Dấu | Quyết định |
 | --- | --- | --- | --- |
 | 1 | Tiêu đề + dòng phụ · nút "Thêm xe mới" | ✅ | Theo design. Gian hàng → wizard `/vehicles/new`; chủ xe tuyến hoa hồng → luồng đăng xe `?from=account` (vắng trong phiên hỗ trợ — luồng tạo-và-gửi-duyệt không mở cho phiên, ADR 0050 §13). Màn rỗng giữ nút "Thêm xe đầu tiên" |
 | 2 | Bộ lọc: tìm · chi nhánh · loại xe · dịch vụ · vận hành · trạng thái · "Sắp xếp: …" | ✅ | Ô cao 40 (hình thái mặc định `FilterBar`, như màn Đơn thuê). Tuyến hoa hồng: tìm + dịch vụ + vận hành (chốt 03/11). Giữ chip "đang lọc" gỡ được. ≤1500px: ô thứ 5 vào nút "Bộ lọc" (`inlineFieldLimit`) để không tràn dòng |
-| 3 | Hai kiểu ít / nhiều xe | 🆕 | **Dưới 3 xe** (`VEHICLE_LIST_FEW_THRESHOLD`) = thẻ ngang to 2 thẻ/hàng. Đếm TỔNG xe của chi nhánh đang chọn (`fleet-summary`), KHÔNG theo ô lọc khác — gõ tìm kiếm không làm bố cục nhảy (chốt 03/11). Chưa có tổng ⇒ khung chờ; đếm hỏng ⇒ suy từ trang khi không lọc, đang lọc thì giữ bố cục đông |
-| 4 | Frame hàng ngang `23655:36959` | 🆕 | Chế độ **"Danh sách"** cho đội xe từ 3 xe: nút chuyển Lưới/Danh sách cạnh ô sắp xếp, `?view=list` trên URL, đổi kiểu không về trang 1 (chốt 03/11). Thẻ ít xe không có nút chuyển |
+| 3 | Hai kiểu ít / nhiều xe | 🆕 | ~~**Dưới 3 xe** = thẻ ngang to 2 thẻ/hàng~~ (thay 16/11: dưới 4 xe một hàng một xe, từ 4 xe 2 thẻ/hàng — đoạn trên). Đếm TỔNG xe của chi nhánh đang chọn (`fleet-summary`), KHÔNG theo ô lọc khác — gõ tìm kiếm không làm bố cục nhảy (chốt 03/11). Chưa có tổng ⇒ khung chờ; đếm hỏng ⇒ suy từ trang khi không lọc, đang lọc thì giữ bố cục đông |
+| 4 | Frame hàng ngang `23655:36959` | 🆕 | ~~Chế độ "Danh sách" qua nút chuyển Lưới/Danh sách, `?view=list`~~ (gỡ 16/11 — frame này nay là bố cục cố định của đội xe dưới 4 xe) |
 | 5 | Nhãn kiểm duyệt có biểu tượng ("Đã kiểm duyệt"), viên vận hành nhãn dài ("Sẵn sàng vận hành") ở thẻ ít xe; viên gọn ("Sẵn sàng" · "Chờ duyệt") phủ ảnh ở lưới, dưới danh tính ở danh sách | ✅ | Nhãn riêng của thẻ (`Vehicles.list.review*`, `operation.*`) — nhãn `Domain` dùng chung (admin, mobile) giữ nguyên |
 | 6 | Chip việc cần làm · lý do bị trả về · chip "Chủ xe tạm ẩn" | 🟡 | **Giữ** (chốt 03/11) — chỉ hiện khi có; nằm trên hàng trạng thái |
 | 7 | Dòng "Ô tô · Tự lái · Có tài xế" ở thẻ lưới | 🟡 | **Giữ** (chốt 03/11) — design lưới chỉ vẽ "mã • biển" |
@@ -445,7 +452,7 @@ xe, `row` = danh sách) · mảnh chung `VehicleCardParts` · hàng mobile `Vehi
 Tự dựng (design không vẽ): ô trắng bo 16 cho rỗng / không kết quả / lỗi; khung chờ theo bố cục; dòng
 "Hiển thị x-y của N xe" + phân trang dưới danh sách; thẻ trong một hàng cao bằng nhau, hàng nút dồn
 đáy; số liệu tải hỏng / thiếu `finance.view` (cột tiền vắng, không số 0 giả); KM chưa có = "—", gọi
-hỏng = "Không rõ"; lỗ tô đỏ; 1366 lưới 4 cột (sàn thẻ 270px); thẻ ngang tự xuống hàng theo bề rộng
+hỏng = "Không rõ"; lỗ tô đỏ; thẻ đôi dưới 560px bề rộng thì một thẻ một hàng; thẻ ngang tự xuống hàng theo bề rộng
 thật (`@container`); điện thoại giữ dải chỉ số + chip một chạm + hàng ngang, nút cùng kiểu desktop.
 
 **Màn dùng chung dữ liệu xe — tự cập nhật sau thao tác ghi** (mọi key dưới nhánh `vehicles` của
@@ -902,7 +909,7 @@ Ghi lại để phiên sau khỏi tốn lượt đọc lại.
 | `23746:50954` | Nút chuyển (`_switch`) Active yes/no |
 | `23672:25621` | Section Chi tiết xe: Tổng quan `23670:3440` (thẻ xe `23797:53034`, tab `23672:4701`, thẻ "Nhóm thông tin" `23670:3504`, cột phải `23672:25630`) · Thông số `23672:3988` · Tài chính (trống) `23672:5931` · Tiện ích `23672:4755` · Bảo dưỡng & KM `23672:6379` |
 | `23731:37932` | Section Chỉnh sửa xe: Thông tin chung `23683:17598` · Ảnh `23707:25596` · Giấy tờ `23713:7609` · Tự lái `23713:21048` · Có tài xế `23716:27912` · Dài hạn `23716:29056` · Điều kiện `23721:30416` · Giao nhận `23721:31485` · Bảo dưỡng `23724:10374` (hộp thêm KM `23731:39262`, thêm lịch `23724:29202`, lịch sử `23724:32002`) · Nguồn gốc & tài chính `23730:32702` |
-| `23672:25620` | Section Danh sách xe: ít xe `23655:38521` (thẻ `23655:38951`) · lưới `23649:29724` (thẻ `23655:36682`, page header + hàng lọc `23649:30744`) · danh sách `23655:36959` (hàng `23655:38389`) |
+| `23672:25620` | Section Danh sách xe: từ 4 xe `23655:38521` (thẻ `23655:38951`) · dưới 4 xe `23655:36959` (hàng `23655:38389`) · lưới `23649:29724` (thẻ `23655:36682`) — KHÔNG còn dùng từ 16/11, chỉ còn đọc page header + hàng lọc `23649:30744` |
 | `23737:45750` | Section Quản lý tài xế: danh sách `23737:41945` (thẻ `23737:43826`, dải số `23737:44163`; menu "…" đang mở vẽ ngay trong frame này) · hộp Mời tài xế mới `23737:45751` |
 | `23733:41941` | Section Danh sách bảo dưỡng: frame `23754:28662`, hàng xe `23754:29574` |
 | `I23661:27390;23649:28221` | Icon xe của dòng "Danh sách xe" — xuất qua instance cha trả nhầm icon tài liệu |

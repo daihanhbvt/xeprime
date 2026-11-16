@@ -97,9 +97,6 @@
       "addVehicleAdvanced": "Advanced setup",
       "subtitle": "Keep track of your whole fleet quickly, all in one place",
       "addNewVehicle": "Add vehicle",
-      "viewLabel": "Vehicle list display",
-      "viewGrid": "Grid view",
-      "viewList": "List view",
       "serviceChipsLabel": "Filter by service"
     },
     "review": {

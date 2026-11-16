@@ -1,4 +1,4 @@
-import type { VehicleListView, VehicleSort } from './types';
+import type { VehicleSort } from './types';
 
 /**
  * Thứ tự sắp xếp danh sách xe — GIÁ TRỊ, không nhãn.
@@ -19,19 +19,10 @@ export const VEHICLE_SORT_VALUES: readonly VehicleSort[] = [
 ];
 
 /**
- * Đội xe DƯỚI số này dùng bố cục "ít xe" — thẻ ngang to, hai thẻ một hàng (Figma `23655:38521`);
- * từ số này trở lên là lưới thẻ gọn (`23649:29724`) hoặc danh sách hàng ngang (`23655:36959`).
+ * Đội xe DƯỚI số này dùng danh sách một xe một hàng (Figma `23655:36959`); từ số này trở lên là
+ * hai thẻ một hàng (`23655:38521`). Chốt 16/11/2026 — bỏ lưới thẻ gọn và nút chuyển kiểu xem.
  *
  * Đếm TỔNG xe của gian hàng trong chi nhánh đang chọn (`fleet-summary`), KHÔNG theo các ô lọc
  * khác — gõ tìm kiếm hay lọc trạng thái không làm bố cục nhảy (chốt 03/11/2026).
  */
-export const VEHICLE_LIST_FEW_THRESHOLD = 3;
-
-/** Hai kiểu xem của danh sách nhiều xe — giá trị trên URL (`?view=`), mặc định là lưới. */
-export const VEHICLE_LIST_VIEW = {
-  GRID: 'grid',
-  LIST: 'list',
-} as const satisfies Record<string, VehicleListView>;
-
-export const VEHICLE_LIST_VIEW_VALUES: readonly VehicleListView[] =
-  Object.values(VEHICLE_LIST_VIEW);
+export const VEHICLE_LIST_PAIRS_FROM = 4;

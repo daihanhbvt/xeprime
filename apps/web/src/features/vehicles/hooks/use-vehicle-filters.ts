@@ -1,8 +1,7 @@
 'use client';
 
-import { enumParam, positiveIntParam, useUrlFilters } from '@/hooks/use-url-filters';
-import { VEHICLE_LIST_VIEW_VALUES } from '../constants';
-import type { VehicleFilters, VehicleListView, VehicleSort } from '../types';
+import { positiveIntParam, useUrlFilters } from '@/hooks/use-url-filters';
+import type { VehicleFilters, VehicleSort } from '../types';
 
 /**
  * Filter danh sách xe ở URL searchParams — ADR 0004.
@@ -11,8 +10,8 @@ import type { VehicleFilters, VehicleListView, VehicleSort } from '../types';
  * hay `false` xuống (thanh lọc dùng `allowClear` trả `undefined`), nên hai nhánh xoá thêm của
  * hook chung không đổi kết quả nào.
  *
- * `view` (lưới / danh sách) cũng sống ở đây để F5 và link chia sẻ giữ đúng kiểu xem; đổi nó thì
- * gọi `setFilters({ view }, { resetPage: false })` — đổi cách vẽ không phải đổi tập dữ liệu.
+ * Bố cục thẻ không còn trên URL (chốt 16/11/2026): nó suy từ tổng xe; link cũ mang `?view=` vẫn
+ * mở được, tham số đó chỉ bị bỏ qua.
  */
 export function useVehicleFilters() {
   return useUrlFilters<VehicleFilters>((sp) => ({
@@ -23,7 +22,6 @@ export function useVehicleFilters() {
     operationStatus: sp.get('operationStatus') ?? undefined,
     publicStatus: sp.get('publicStatus') ?? undefined,
     sort: (sp.get('sort') as VehicleSort | null) ?? undefined,
-    view: enumParam(sp, 'view', VEHICLE_LIST_VIEW_VALUES) as VehicleListView | undefined,
     page: positiveIntParam(sp, 'page'),
     limit: positiveIntParam(sp, 'limit'),
   }));

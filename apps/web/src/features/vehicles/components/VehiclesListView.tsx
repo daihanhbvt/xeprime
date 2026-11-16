@@ -1,7 +1,7 @@
 'use client';
 
-import { AppstoreOutlined, BarsOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Segmented } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import { Button } from 'antd';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Suspense } from 'react';
@@ -25,13 +25,13 @@ import { useIsMobile } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
 import { VEHICLES_DEFAULT_LIMIT } from '../api';
 import { vehicleSchedulePath } from '../calendar-link';
-import { VEHICLE_LIST_FEW_THRESHOLD, VEHICLE_LIST_VIEW } from '../constants';
+import { VEHICLE_LIST_PAIRS_FROM } from '../constants';
 import { useFleetSummary } from '../hooks/use-fleet-summary';
 import { useVehicleFilters } from '../hooks/use-vehicle-filters';
 import { useVehicleOptions } from '../hooks/use-vehicle-options';
 import { useVehicleRowActions } from '../hooks/use-vehicle-row-actions';
 import { useVehicles } from '../hooks/use-vehicles';
-import type { VehicleListItem, VehicleListView } from '../types';
+import type { VehicleListItem } from '../types';
 import { FleetSummaryBar } from './FleetSummaryBar';
 import { VehicleCardGrid, type VehicleGridLayout } from './VehicleCardGrid';
 import { VehicleFiltersBar, type VehicleFiltersScope } from './VehicleFilters';
@@ -48,8 +48,8 @@ import styles from './VehiclesListView.module.css';
  *    đăng xe của chủ xe, "Quản lý xe" mở không gian riêng của xe.
  *
  * Bố cục theo TỔNG xe của chi nhánh đang chọn (không theo các ô lọc khác, để gõ tìm kiếm không
- * làm bố cục nhảy): dưới `VEHICLE_LIST_FEW_THRESHOLD` xe là thẻ ngang to; từ đó trở lên là lưới
- * thẻ hoặc danh sách hàng ngang theo `?view=`.
+ * làm bố cục nhảy): dưới `VEHICLE_LIST_PAIRS_FROM` xe là một xe một hàng; từ đó trở lên là hai
+ * thẻ một hàng (chốt 16/11/2026 — không còn lưới thẻ gọn và nút chuyển kiểu xem).
  */
 export function VehiclesListView({ scope }: { scope: VehicleFiltersScope }) {
   const t = useTranslations('Vehicles.list.page');
@@ -91,8 +91,8 @@ function VehiclesListBody({ scope }: { scope: VehicleFiltersScope }) {
 
   /*
    * Tổng xe của CHI NHÁNH đang chọn — cùng `fleet-summary` với dải chỉ số mobile. Chưa có số thì
-   * chưa vẽ thẻ (khung chờ), để không vẽ lưới rồi nhảy sang thẻ to. Hỏng thì suy từ trang hiện
-   * tại khi không lọc gì; còn đang lọc thì không biết tổng ⇒ giữ bố cục đội xe đông.
+   * chưa vẽ thẻ (khung chờ), để không vẽ một kiểu rồi nhảy sang kiểu kia. Hỏng thì suy từ trang
+   * hiện tại khi không lọc gì; còn đang lọc thì không biết tổng ⇒ giữ bố cục đội xe đông.
    */
   const summary = useFleetSummary(canView, filters.branchId);
   const hasFilters = Boolean(
@@ -107,10 +107,9 @@ function VehiclesListBody({ scope }: { scope: VehicleFiltersScope }) {
   const meta = data?.meta ?? { page: 1, limit: VEHICLES_DEFAULT_LIMIT, total: 0, hasNext: false };
   const fleetTotal =
     summary.data?.total ??
-    (summary.isError ? (hasFilters ? VEHICLE_LIST_FEW_THRESHOLD : meta.total) : null);
-  const view: VehicleListView = filters.view ?? VEHICLE_LIST_VIEW.GRID;
-  const few = fleetTotal != null && fleetTotal < VEHICLE_LIST_FEW_THRESHOLD;
-  const layout: VehicleGridLayout = few ? 'few' : view === VEHICLE_LIST_VIEW.LIST ? 'list' : 'grid';
+    (summary.isError ? (hasFilters ? VEHICLE_LIST_PAIRS_FROM : meta.total) : null);
+  const layout: VehicleGridLayout =
+    fleetTotal != null && fleetTotal < VEHICLE_LIST_PAIRS_FROM ? 'list' : 'pairs';
 
   function clearFilters() {
     setFilters({
@@ -165,37 +164,6 @@ function VehiclesListBody({ scope }: { scope: VehicleFiltersScope }) {
     </Button>
   ) : undefined;
 
-  // Nút chuyển kiểu xem chỉ có nghĩa khi đội xe đông; thẻ ít xe là một bố cục cố định.
-  const viewToggle =
-    !isMobile && fleetTotal != null && !few ? (
-      <Segmented<VehicleListView>
-        size="large"
-        aria-label={t('viewLabel')}
-        value={view}
-        onChange={(next) =>
-          // Đổi cách VẼ không đổi tập dữ liệu ⇒ giữ nguyên trang đang đọc.
-          setFilters(
-            { view: next === VEHICLE_LIST_VIEW.GRID ? undefined : next },
-            { resetPage: false },
-          )
-        }
-        options={[
-          {
-            value: VEHICLE_LIST_VIEW.GRID,
-            icon: <AppstoreOutlined />,
-            title: t('viewGrid'),
-            label: <span className={styles.srOnly}>{t('viewGrid')}</span>,
-          },
-          {
-            value: VEHICLE_LIST_VIEW.LIST,
-            icon: <BarsOutlined />,
-            title: t('viewList'),
-            label: <span className={styles.srOnly}>{t('viewList')}</span>,
-          },
-        ]}
-      />
-    ) : null;
-
   return (
     <div className={styles.page}>
       <ManagePageHeader title={t('title')} subtitle={t('subtitle')} extra={createButton} />
@@ -240,7 +208,6 @@ function VehiclesListBody({ scope }: { scope: VehicleFiltersScope }) {
           );
         }}
         onClear={clearFilters}
-        extraActions={viewToggle}
       />
 
       <VehicleCardGrid

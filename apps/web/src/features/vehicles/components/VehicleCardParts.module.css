@@ -95,18 +95,12 @@
   color: var(--xp-color-border-strong);
 }
 
-.dot,
-.dotSmall {
-  width: 6px;
-  height: 6px;
+.dot {
+  width: 4px;
+  height: 4px;
   flex: none;
   border-radius: 50%;
   background: var(--xp-color-border-strong);
-}
-
-.dotSmall {
-  width: 4px;
-  height: 4px;
 }
 
 /* ─── Trạng thái ──────────────────────────────────────────────────────────── */
