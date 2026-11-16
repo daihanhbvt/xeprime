@@ -530,15 +530,13 @@
   line-height: var(--xp-line-height-body);
 }
 
-/*
- * ─── Chuyển bước: mờ dần + trượt ngang ngắn theo hướng tiến/lùi ───────────────────────────
- *
- * Khung này nằm GIỮA thân hộp thoại (cao cố định, `overflow: hidden` — `bodyScroll="content"`) và
- * bước bên trong, mà các bước tự cuộn bằng `height: 100%` (`.review` của màn Xem lại, `.layout`
- * của bước bằng lái). Thiếu `height: 100%` ở đây thì phần trăm đó tính trên một khung cao `auto`:
- * bước cao hết cỡ nội dung, thân hộp cắt phần dư và không còn vùng nào cuộn được.
- */
+/* ─── Chuyển bước: mờ dần + trượt ngang ngắn theo hướng tiến/lùi ─────────────────────────── */
 .stepEnter {
+  /*
+   * Khung này nằm GIỮA thân overlay (khoá cuộn, `bodyScroll="content"`) và vùng tự cuộn của bước
+   * (`.layout`, `.review` cao 100%). Thiếu chiều cao ở đây thì 100% của con thành `auto`, vùng
+   * cuộn biến mất và nửa dưới bước bị cắt.
+   */
   height: 100%;
   min-height: 0;
   animation-duration: var(--xp-motion-duration-overlay);
@@ -579,5 +577,13 @@
 @media (prefers-reduced-motion: reduce) {
   .stepEnter {
     animation: none;
+  }
+}
+
+/* ≤640px một cột cuộn chung một mạch: khung bước cao theo nội dung. PHẢI đứng SAU rule gốc
+   `.stepEnter { height: 100% }` — cùng độ ưu tiên selector nên rule nào sau thắng. */
+@media (max-width: 640px) {
+  .stepEnter {
+    height: auto;
   }
 }

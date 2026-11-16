@@ -1,6 +1,5 @@
-import { CountUpText } from '@/components/motion/use-count-up';
 import { Ionicons } from '@expo/vector-icons';
-import { Children, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -8,7 +7,6 @@ import { useTranslations } from 'use-intl';
 import {
   addCalendarMonthsVn,
   COLLATERAL_MODE,
-  PICKUP_PREFERENCE,
   PRICE_ROW,
   ROUTE_TYPE,
   DELIVERY_DISTANCE_STATUS,
@@ -21,6 +19,7 @@ import {
 } from '@xeprime/types';
 import {
   appWallClockToIso,
+  bestDiscountPackageMonths,
   dayjs,
   isZeroMoney,
   nowInAppTz,
@@ -30,8 +29,8 @@ import {
   type RentalMode,
 } from '@xeprime/domain';
 import { DashedDivider } from '@/components/ui/DashedDivider';
+import { DiscountTag } from '@/components/ui/DiscountTag';
 import { InfoHint } from '@/components/ui/InfoHint';
-import { ValueTicker } from '@/components/motion/ValueTicker';
 import {
   INDICATOR_BASE_WIDTH,
   useSlidingIndicator,
@@ -75,7 +74,15 @@ import { rememberRentalRange } from '@/lib/rental-range-memory';
 import { elevation } from '@/theme/elevation';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, market, radius, space } from '@/theme/tokens';
+import {
+  buttonHeight,
+  fontSize,
+  fontWeight,
+  iconSize,
+  market,
+  radius,
+  space,
+} from '@/theme/tokens';
 import {
   CurrentLocationButton,
   deliveryAddressFromCurrentPlace,
@@ -222,6 +229,7 @@ export function ListingBookingCard({
   const longTerm = trip.serviceType === SERVICE_TYPE.LONG_TERM;
   const withDriver = trip.serviceType === SERVICE_TYPE.WITH_DRIVER;
   const packages = listing.longTermPackages ?? [];
+  const bestPackageMonths = bestDiscountPackageMonths(packages);
 
   const busyDays = useVehicleBusyDays(listing.id, !longTerm);
   const quoteParams = toQuoteParams({
@@ -248,13 +256,12 @@ export function ListingBookingCard({
    */
   const selectedMonths = trip.packageMonths;
   const expectedReturn = useMemo(() => {
-    if (selectedMonths == null) return null;
-    const start =
-      trip.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE && trip.requestedPickupDate
-        ? startOfAppDay(trip.requestedPickupDate)
-        : nowInAppTz();
-    return fmt.date(addCalendarMonthsVn(start.toDate(), selectedMonths).toISOString());
-  }, [fmt, selectedMonths, trip.pickupPreference, trip.requestedPickupDate]);
+    // Chưa chọn ngày nhận thì không có ngày trả để hứa — không suy từ "hôm nay".
+    if (selectedMonths == null || !trip.requestedPickupDate) return null;
+    return fmt.date(
+      addCalendarMonthsVn(startOfAppDay(trip.requestedPickupDate).toDate(), selectedMonths).toISOString(),
+    );
+  }, [fmt, selectedMonths, trip.requestedPickupDate]);
   const [dateSheetOpen, setDateSheetOpen] = useState(false);
 
   function openRangeSheet() {
@@ -599,101 +606,82 @@ export function ListingBookingCard({
             {packages.length > 0 ? (
               <YStack gap={space.xs}>
                 <Label text={t('package.label')} />
-                {/* Hai cột như web ≤640px (`.packageOptions` 2 cột). */}
-                <TwoColumns>
+                {/* Lưới 3 cột như web `.packageOptions` (bản vẽ 11/11/2026). */}
+                <XStack flexWrap="wrap" mx={-space.xs / 2} rowGap={space.sm}>
                   {packages.map((pkg) => (
-                    <Choice
+                    <PackageChip
                       key={pkg.packageMonths}
                       label={fmt.packageLabel(pkg.packageMonths) ?? String(pkg.packageMonths)}
-                      {...(pkg.durationDiscountPercent
-                        ? { badge: `-${pkg.durationDiscountPercent}%` }
-                        : {})}
+                      discount={pkg.durationDiscountPercent || null}
                       active={trip.packageMonths === pkg.packageMonths}
+                      best={bestPackageMonths === pkg.packageMonths}
                       onPress={() => set({ packageMonths: pkg.packageMonths })}
                     />
                   ))}
-                </TwoColumns>
+                </XStack>
               </YStack>
             ) : null}
             <YStack gap={space.xs}>
-              <Label text={t('longTerm.wishLabel')} size={fontSize.body} />
-              <TwoColumns>
-                <Choice
-                  label={t('longTerm.asap')}
-                  active={trip.pickupPreference === PICKUP_PREFERENCE.WITHIN_7_DAYS}
-                  onPress={() => set({ pickupPreference: PICKUP_PREFERENCE.WITHIN_7_DAYS })}
-                />
-                {/* Ngày cụ thể chọn ở bước gửi yêu cầu — cùng ô ngày của luồng đặt xe. */}
-                <Choice
-                  label={domainLabel('pickupPreference', PICKUP_PREFERENCE.SPECIFIC_DATE)}
-                  active={trip.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE}
-                  onPress={() => set({ pickupPreference: PICKUP_PREFERENCE.SPECIFIC_DATE })}
-                />
-              </TwoColumns>
-              {trip.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE ? (
-                <YStack gap={space.xs}>
-                  <Text col={colors.textMuted} fos={fontSize.label}>
-                    {t('longTerm.dateLabel')}
-                  </Text>
-                  <Pressable onPress={() => setDateSheetOpen(true)} accessibilityRole="button">
-                    <XStack
-                      ai="center"
-                      gap={space.sm}
-                      px={space.md}
-                      py={space.sm}
-                      br={radius.md}
-                      bw={1}
-                      bc={colors.border}
+              {/* Chỉ còn "chọn ngày cụ thể" (11/11/2026) — bỏ hẳn lựa chọn "càng sớm càng tốt". */}
+              <YStack gap={space.xs}>
+                <Label text={t('longTerm.dateLabel')} size={fontSize.body} />
+                <Pressable onPress={() => setDateSheetOpen(true)} accessibilityRole="button">
+                  <XStack
+                    ai="center"
+                    gap={space.sm}
+                    px={space.md}
+                    minHeight={LONG_TERM_FIELD_HEIGHT}
+                    br={radius.md}
+                    bw={1}
+                    bc={colors.border}
+                  >
+                    <Text
+                      f={1}
+                      col={trip.requestedPickupDate ? colors.text : colors.placeholder}
+                      fos={fontSize.bodySm}
                     >
-                      <Text
-                        f={1}
-                        col={trip.requestedPickupDate ? colors.text : colors.placeholder}
-                        fos={fontSize.bodySm}
-                      >
-                        {trip.requestedPickupDate
-                          ? fmt.date(startOfAppDay(trip.requestedPickupDate).toISOString())
-                          : t('longTerm.datePlaceholder')}
-                      </Text>
-                      <Ionicons
-                        name="calendar-outline"
-                        size={iconSize.sm}
-                        color={colors.textMuted}
-                      />
-                    </XStack>
-                  </Pressable>
-                  <DatePickerSheet
-                    open={dateSheetOpen}
-                    onClose={() => setDateSheetOpen(false)}
-                    value={trip.requestedPickupDate}
-                    onChange={(next) => set({ requestedPickupDate: next })}
-                    title={t('longTerm.dateLabel')}
-                    minDate={nowInAppTz().startOf('day')}
-                  />
-                </YStack>
-              ) : null}
+                      {trip.requestedPickupDate
+                        ? fmt.date(startOfAppDay(trip.requestedPickupDate).toISOString())
+                        : t('longTerm.datePlaceholder')}
+                    </Text>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={iconSize.sm}
+                      color={colors.textMuted}
+                    />
+                  </XStack>
+                </Pressable>
+                <DatePickerSheet
+                  open={dateSheetOpen}
+                  onClose={() => setDateSheetOpen(false)}
+                  value={trip.requestedPickupDate}
+                  onChange={(next) => set({ requestedPickupDate: next })}
+                  title={t('longTerm.dateLabel')}
+                  minDate={nowInAppTz().startOf('day')}
+                />
+              </YStack>
               {expectedReturn && selectedMonths != null ? (
+                // Cao bằng ô chọn ngày bên trên; nhãn + giá trị trên MỘT dòng như web.
                 <XStack
                   ai="center"
                   gap={space.sm}
                   px={space.md}
-                  py={space.sm}
+                  minHeight={LONG_TERM_FIELD_HEIGHT}
                   br={radius.md}
                   bw={1}
                   bc={colors.border}
                   bg={colors.surfaceMuted}
                 >
                   <Ionicons name="calendar-outline" size={iconSize.sm} color={colors.primary} />
-                  <YStack f={1}>
-                    <Text col={colors.textMuted} fos={fontSize.label}>
-                      {t('longTerm.expectedReturn')}
-                    </Text>
-                    <Text col={colors.text} fos={fontSize.label} fow={fontWeight.semibold}>
+                  <Text f={1} col={colors.textMuted} fos={fontSize.label}>
+                    {`${t('longTerm.expectedReturn')} `}
+                    <Text col={colors.text} fow={fontWeight.semibold}>
                       {t('longTerm.expectedReturnValue', {
                         date: expectedReturn,
                         duration: fmt.packageLabel(selectedMonths) ?? '',
                       })}
                     </Text>
-                  </YStack>
+                  </Text>
                 </XStack>
               ) : null}
             </YStack>
@@ -1003,14 +991,10 @@ export function ListingBookingCard({
                     <InfoHint content={cost.costNote} label={tPrice('totalHintLabel')} />
                   ) : null}
                 </XStack>
-                <ValueTicker value={cost.total?.amount ?? quoteWithPromo.breakdown.totalAmount}>
-                  <Text col={colors.primary} fos={fontSize.lead} fow={fontWeight.semibold}>
-                    <CountUpText
-                      amount={cost.total?.amount ?? quoteWithPromo.breakdown.totalAmount}
-                      format={fmt.money}
-                    />
-                  </Text>
-                </ValueTicker>
+                {/* Tiền hiện tĩnh, không đếm/nhảy số (bỏ hiệu ứng 11/11/2026). */}
+                <Text col={colors.primary} fos={fontSize.lead} fow={fontWeight.semibold}>
+                  {fmt.money(cost.total?.amount ?? quoteWithPromo.breakdown.totalAmount)}
+                </Text>
               </XStack>
               {cost.estimateNote ? <CostNote>{cost.estimateNote}</CostNote> : null}
             </>
@@ -1097,77 +1081,64 @@ function Label({
   );
 }
 
-function Choice({
+/** Chiều cao chung của ô chọn ngày nhận, hộp ngày trả dự kiến và ô gói (thuê dài hạn). */
+const LONG_TERM_FIELD_HEIGHT = buttonHeight.md;
+
+/** Một phần ba hàng, khe ngang chia đều hai bên (lưới dùng `mx` âm bù lại). */
+const PACKAGE_CELL = { width: '33.333%', paddingHorizontal: space.xs / 2 } as const;
+
+/**
+ * Một ô kỳ hạn trong lưới 3 cột gói dài hạn. % ưu đãi cam kết (ADR 0011) là `DiscountTag` dùng
+ * chung, biến thể nhãn GÓC trên-phải.
+ */
+function PackageChip({
   label,
-  sub,
-  badge,
+  discount,
   active,
+  best,
   onPress,
 }: {
   label: string;
-  sub?: string;
-  /** % ưu đãi cam kết thời hạn của gói (ADR 0011) — đúng số server trả. */
-  badge?: string;
+  /** % ưu đãi cam kết thời hạn — `null` khi gói không giảm. */
+  discount: number | null;
   active: boolean;
+  /** Gói ưu đãi tốt nhất (nhãn đỏ) — xem `bestDiscountPackageMonths`. */
+  best: boolean;
   onPress: () => void;
 }) {
   const colors = useColors();
   return (
-    // `flex: 1` + ruột `f={1}`: trong lưới 2 cột hai ô cùng hàng CAO BẰNG NHAU dù nhãn dài ngắn khác nhau.
     <Pressable
-      style={{ flex: 1 }}
+      style={PACKAGE_CELL}
       onPress={onPress}
       accessibilityRole="radio"
       accessibilityState={{ selected: active }}
     >
       <YStack
-        f={1}
-        px={space.md}
+        px={space.xs}
         py={space.sm}
-        minHeight={44}
+        minHeight={LONG_TERM_FIELD_HEIGHT}
         ai="center"
         jc="center"
         br={radius.md}
         bw={1}
         bc={active ? colors.primary : colors.border}
         bg={active ? colors.primarySubtle : colors.surface}
-        gap={2}
+        overflow="hidden"
       >
         <Text
           col={active ? colors.primary : colors.text}
           fos={fontSize.body}
-          ta="center"
           fow={active ? fontWeight.semibold : fontWeight.medium}
+          numberOfLines={1}
         >
           {label}
         </Text>
-        {badge ? (
-          <XStack bg={colors.successSurface} bw={1} bc={colors.successBorder} br={radius.sm} px={4}>
-            <Text col={colors.success} fos={fontSize.label} fow={fontWeight.bold}>
-              {badge}
-            </Text>
-          </XStack>
-        ) : null}
-        {sub ? (
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {sub}
-          </Text>
+        {discount != null ? (
+          <DiscountTag percent={discount} variant="corner" active={active} best={best} />
         ) : null}
       </YStack>
     </Pressable>
-  );
-}
-
-/** Xếp các `Choice` thành lưới HAI CỘT bằng nhau (web ≤640px `.packageOptions`, `.longTermPrefBtn`). */
-function TwoColumns({ children }: { children: ReactNode }) {
-  return (
-    <XStack flexWrap="wrap" mx={-space.xs}>
-      {Children.toArray(children).map((child, index) => (
-        <YStack key={index} w="50%" p={space.xs}>
-          {child}
-        </YStack>
-      ))}
-    </XStack>
   );
 }
 

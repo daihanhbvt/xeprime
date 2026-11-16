@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { useTranslations } from 'use-intl';
 import { Card } from '@/components/ui/Card';
 import { VehicleCardSkeleton } from '@/components/ui/Skeleton';
@@ -59,7 +59,7 @@ interface VehiclePreviewProps {
  * Dựng bằng `map` chứ không `FlatList`: trang chủ đã cuộn trong `ScrollView` bên ngoài, lồng
  * danh sách ảo hoá vào đó là hỏng đo chiều cao và mất luôn phần ảo hoá.
  */
-export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps) {
+function VehiclePreviewImpl({ onOpenListing, onExplore }: VehiclePreviewProps) {
   const colors = useColors();
   const t = useTranslations('Marketplace.available');
   const tHome = useTranslations('Home.featured');
@@ -175,3 +175,9 @@ export function VehiclePreview({ onOpenListing, onExplore }: VehiclePreviewProps
     </YStack>
   );
 }
+
+/**
+ * Bọc `memo`: trang chủ chạy lại vì đủ thứ (cuộn, ô tìm kiếm, banner) — khối này chỉ cần dựng lại
+ * khi dữ liệu của nó đổi. Nơi gọi truyền hàm ỔN ĐỊNH (`useCallback`).
+ */
+export const VehiclePreview = memo(VehiclePreviewImpl);

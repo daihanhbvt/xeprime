@@ -147,26 +147,6 @@
   --motion-delay: 1.2s;
 }
 
-/*
- * Đổi nội dung tại chỗ (panel tab vừa mở, tổng tiền vừa đổi): hiện dần + trượt rất ngắn. Phần tử
- * phải được gắn lại (đổi `key`) hoặc vừa bỏ `hidden` để hoạt cảnh chạy lại.
- */
-@keyframes xpSwapIn {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 6px, 0);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.swap {
-  animation: xpSwapIn var(--xp-motion-duration-overlay) var(--xp-motion-ease-out) both;
-}
-
 /* ─── Tiêu đề tách ký tự ────────────────────────────────────────────────── */
 
 /* Một từ không bao giờ bị ngắt dòng giữa hai ký tự — xuống dòng chỉ ở khoảng trắng giữa các từ. */
@@ -223,7 +203,6 @@
   .enter,
   .stagger > *,
   .staggerFast > *,
-  .swap,
   .splitChar,
   .gate[data-reveal='pending'].enter,
   .gate[data-reveal='pending'] .enter,

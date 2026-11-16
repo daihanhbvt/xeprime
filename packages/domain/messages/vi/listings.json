@@ -204,8 +204,6 @@
         "label": "Thời hạn thuê:"
       },
       "longTerm": {
-        "wishLabel": "Nguyện vọng ngày nhận xe:",
-        "asap": "Càng sớm càng tốt (trong 7 ngày tới)",
         "dateLabel": "Ngày bạn muốn nhận xe:",
         "datePlaceholder": "Chọn ngày nhận xe",
         "expectedReturn": "Ngày trả xe dự kiến:",

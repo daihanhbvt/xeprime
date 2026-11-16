@@ -121,3 +121,29 @@ export const OUTBOX_STATUS_VALUES = Object.values(OUTBOX_STATUS) as OutboxStatus
 export function isOutboxStatus(value: unknown): value is OutboxStatus {
   return typeof value === 'string' && (OUTBOX_STATUS_VALUES as string[]).includes(value);
 }
+
+/**
+ * Lý do báo cáo hội thoại (App Store Guideline 1.2) — bộ từ vựng ĐÓNG, cùng kỷ luật với
+ * `CANCELLATION_REASON_CATEGORY`: DB lưu MÃ (`chat_reports.reason`, CHECK ở migration), nhãn hai
+ * ngôn ngữ nằm ở `Chat.reportReasons.<mã>` của `packages/domain/messages` — web và app đọc chung
+ * (ADR 0012: mã là dữ liệu, chỉ nhãn mới dịch). Thêm một lý do = thêm mã ở đây + migration nới
+ * CHECK + nhãn ở cả `vi`/`en`. Thứ tự trong object là thứ tự hiện trên giao diện.
+ */
+export const CHAT_REPORT_REASON = {
+  SPAM: 'spam',
+  HARASSMENT: 'harassment',
+  SCAM: 'scam',
+  INAPPROPRIATE_CONTENT: 'inappropriate_content',
+  OTHER: 'other',
+} as const;
+
+export type ChatReportReason = (typeof CHAT_REPORT_REASON)[keyof typeof CHAT_REPORT_REASON];
+
+export const CHAT_REPORT_REASON_VALUES = Object.values(CHAT_REPORT_REASON) as ChatReportReason[];
+
+export function isChatReportReason(value: unknown): value is ChatReportReason {
+  return typeof value === 'string' && (CHAT_REPORT_REASON_VALUES as string[]).includes(value);
+}
+
+/** Ghi chú kèm báo cáo — giới hạn dùng chung cho DTO, web và app. */
+export const CHAT_REPORT_NOTE_MAX_LENGTH = 1000;

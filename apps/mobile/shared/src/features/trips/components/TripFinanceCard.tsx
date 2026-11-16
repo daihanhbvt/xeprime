@@ -1,4 +1,3 @@
-import { CountUpText } from '@/components/motion/use-count-up';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, type ReactNode } from 'react';
 import { Pressable } from 'react-native';
@@ -151,7 +150,7 @@ function OpenFinanceCard({ finance }: { finance: CustomerTripFinance }) {
             {t('total')}
           </Text>
           <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
-            <CountUpText amount={finance.finalTotal} format={fmt.money} />
+            {fmt.money(finance.finalTotal)}
           </Text>
         </XStack>
 

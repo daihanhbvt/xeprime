@@ -177,6 +177,10 @@ export const XP_DARK_TOKENS = {
   'color-pink': '#f670c7',
   'color-pink-bg': 'rgba(221, 37, 144, 0.12)',
   'color-pink-border': 'rgba(250, 167, 224, 0.45)',
+  // Cùng giá trị khối `[data-theme='dark']` của packages/ui tokens.css (PR #289 thêm tím vào CSS).
+  'color-purple': '#9b8afb',
+  'color-purple-bg': 'rgba(105, 56, 239, 0.14)',
+  'color-purple-border': 'rgba(189, 180, 254, 0.45)',
   'color-warning-strong': '#fb6514',
   'color-info-strong': '#53b1fd',
   'color-text': '#ffffff',

@@ -253,7 +253,8 @@
     "BOOKING_EXTENSION_UNPRICED": "Chưa báo giá được phần gia hạn - kiểm tra giá thuê theo tháng của xe.",
     "VEHICLE_REGISTRATION_IMAGE_INVALID": "Ảnh cà vẹt không hợp lệ - hãy chọn ảnh JPG, PNG hoặc WEBP và tải lại.",
     "VEHICLE_REGISTRATION_UPLOAD_INVALID": "Ảnh cà vẹt không còn dùng được - vui lòng tải lại ảnh cà vẹt.",
-    "VEHICLE_REGISTRATION_UPLOAD_LIMIT": "Bạn đã tải ảnh cà vẹt quá nhiều lần trong 24 giờ qua - vui lòng thử lại sau."
+    "VEHICLE_REGISTRATION_UPLOAD_LIMIT": "Bạn đã tải ảnh cà vẹt quá nhiều lần trong 24 giờ qua - vui lòng thử lại sau.",
+    "CHAT_BLOCKED": "Không thể nhắn tin vì một trong hai bên đã chặn."
   },
   "codeWithWait": {
     "RATE_LIMITED": "Bạn thao tác hơi nhanh. Vui lòng thử lại sau {wait}.",

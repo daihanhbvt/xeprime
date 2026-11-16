@@ -44,7 +44,9 @@ describe('LoginDto.identifier', () => {
   });
 
   it('chuỗi không ra hình gì → câu lỗi nêu cả hai lựa chọn kèm ví dụ', () => {
-    const [message] = identifierErrors('nguyenvana');
+    // KHÔNG dùng 'nguyenvana': từ ADR 0087 đó là tên đăng nhập nhân viên hợp lệ (STAFF_USERNAME_PATTERN).
+    // Có khoảng trắng ⇒ không phải email, SĐT hay tên đăng nhập.
+    const [message] = identifierErrors('nguyen van a');
     expect(message).toContain('email');
     expect(message).toContain('0901234567');
   });

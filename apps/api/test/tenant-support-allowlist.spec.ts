@@ -72,6 +72,11 @@ const SUPPORT_ALLOWLIST = [
   'MaintenanceBoardController.list',
   'MaintenanceBoardController.summary',
   'MembersController.list',
+  // Tài khoản nhân viên do chủ cấp (ADR 0087, PR #289): danh bạ, bảng vai trò, nhật ký một nhân viên
+  // — đều CHỈ ĐỌC, cùng capability `member.view` với `list`.
+  'MembersController.activity',
+  'MembersController.roles',
+  'MembersController.roster',
   // Gợi ý thông số / giá trị xe / giá thuê khi sửa xe (ADR 0090) — chỉ đọc, cùng capability xem xe:
   // form xe trong phiên hỗ trợ gọi nó, chặn thì thẻ gợi ý đỏ 403. Tạo dòng xe mới thì KHÔNG mở.
   'PartnerVehicleDataController.suggestion',

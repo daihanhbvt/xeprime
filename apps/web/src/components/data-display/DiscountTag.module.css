@@ -36,3 +36,31 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+/* Nhãn GÓC trên-phải của một ô chọn (gói thuê dài hạn): bo ngược góc dưới-trái, ôm sát mép ô. */
+.corner {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  right: 0;
+  padding: 1px var(--xp-space-6);
+  border-bottom-left-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-success);
+  color: var(--xp-color-text-inverse);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-overline);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.cornerActive {
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+.cornerBest {
+  background: var(--xp-color-discount);
+  color: var(--xp-color-discount-contrast);
+}

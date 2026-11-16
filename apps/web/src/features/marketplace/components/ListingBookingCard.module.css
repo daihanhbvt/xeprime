@@ -628,29 +628,49 @@
 }
 
 .packageOptions {
+  /* Lưới 3 cột (bản vẽ 11/11/2026): 6 gói = 2 hàng đều nhau; % là nhãn góc của từng ô. */
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--xp-space-sm);
 }
 
 .packageBtn {
-  padding: 8px 6px;
-  border-radius: 8px;
-  border: 1px solid var(--xp-color-border, #e9eaeb);
-  background: var(--xp-color-bg-container, #ffffff);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--xp-control-height);
+  padding: var(--xp-space-sm) var(--xp-space-xs);
+  border-radius: var(--xp-border-radius-control);
+  border: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
   font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-semibold);
+  font-weight: var(--xp-font-weight-medium);
   line-height: var(--bk-line-height-14);
-  color: var(--xp-color-text-secondary, #717680);
+  color: var(--xp-color-text);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    border-color var(--xp-motion-duration-fast) var(--xp-motion-ease-standard),
+    background-color var(--xp-motion-duration-fast) var(--xp-motion-ease-standard),
+    color var(--xp-motion-duration-fast) var(--xp-motion-ease-standard);
   text-align: center;
+  white-space: nowrap;
 }
 
 .packageBtnActive {
-  border-color: var(--xp-color-primary, #e9ac29);
-  color: var(--xp-color-primary, #e9ac29);
-  background: var(--xp-color-primary-subtle, #fff9f0);
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-primary);
+  background: var(--xp-color-primary-subtle);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.packageBtn:hover:not(.packageBtnActive) {
+  border-color: var(--xp-color-primary);
+}
+
+.packageMonths {
+  font-size: var(--xp-font-size-body);
 }
 
 /* Áp dụng mã khuyến mãi */
@@ -702,18 +722,6 @@
   color: var(--xp-color-error);
 }
 
-/* Badge giảm giá gói dài hạn */
-.packageDiscountBadge {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--xp-color-success);
-  background: var(--xp-color-success-bg);
-  border-radius: 4px;
-  padding: 1px 4px;
-  margin-top: 2px;
-}
-
 /* Lộ trình có tài xế: điểm đến & phụ phí */
 .destinationSection {
   display: flex;
@@ -727,11 +735,6 @@
   font-weight: var(--xp-font-weight-semibold);
   line-height: var(--bk-line-height-14);
   color: var(--xp-color-text, #0e0f12);
-}
-
-.inputSubLabel {
-  font-size: 12px;
-  color: var(--xp-color-text-secondary, #717680);
 }
 
 .textInput {
@@ -779,32 +782,6 @@
   gap: 8px;
 }
 
-.longTermPrefOptions {
-  display: flex;
-  gap: 8px;
-}
-
-.longTermPrefBtn {
-  flex: 1;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--xp-color-border, #e9eaeb);
-  background: var(--xp-color-bg-container, #ffffff);
-  font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--bk-line-height-14);
-  color: var(--xp-color-text-secondary, #717680);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  text-align: center;
-}
-
-.longTermPrefBtnActive {
-  border-color: var(--xp-color-primary, #e9ac29);
-  color: var(--xp-color-primary, #e9ac29);
-  background: var(--xp-color-primary-subtle, #fff9f0);
-}
-
 .specificDatePickerWrap {
   display: flex;
   flex-direction: column;
@@ -819,10 +796,13 @@
 }
 
 .expectedReturnBox {
+  /* Cao bằng ô chọn ngày ngay trên (`.datePickerInput` 40px) — hai khối xếp chồng phải cùng cỡ. */
+  box-sizing: border-box;
+  min-height: var(--xp-control-height-lg);
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 4px 12px;
   background: var(--xp-color-bg-subtle, #f9fafb);
   border-radius: 8px;
   border: 1px solid var(--xp-color-border, #e9eaeb);
@@ -993,18 +973,12 @@
     margin-top: 0;
   }
 
-  /* Gói dài hạn: 4 ô một hàng quá chật ở 358px → hai hàng. */
-  .packageOptions {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .routeOptions,
-  .longTermPrefOptions {
+  /* Lộ trình có tài xế: ba nút một hàng quá chật ở 358px → hai hàng. */
+  .routeOptions {
     flex-wrap: wrap;
   }
 
-  .routeBtn,
-  .longTermPrefBtn {
+  .routeBtn {
     flex: 1 1 calc(50% - var(--xp-space-sm));
   }
 }

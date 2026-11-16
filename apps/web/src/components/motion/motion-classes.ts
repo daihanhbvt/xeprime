@@ -31,9 +31,6 @@ export const staggerClass: string = styles.stagger ?? '';
 /** So le nhanh (n × `--xp-motion-stagger-step`) cho lưới kết quả/danh sách dài — không chờ cuộn. */
 export const staggerFastClass: string = styles.staggerFast ?? '';
 
-/** Hiện dần tại chỗ khi nội dung đổi (gắn lại bằng `key`, hoặc panel vừa bỏ `hidden`). */
-export const swapClass: string = styles.swap ?? '';
-
 /** Lớp bắt buộc cho phần tử gắn `useReveal()` — không có nó thì trạng thái chờ không ẩn được gì. */
 export const revealGateClass: string = styles.gate ?? '';
 

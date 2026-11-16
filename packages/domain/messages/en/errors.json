@@ -253,7 +253,8 @@
     "BOOKING_EXTENSION_UNPRICED": "The extension cannot be priced - check the vehicle's monthly price.",
     "VEHICLE_REGISTRATION_IMAGE_INVALID": "The registration photo is not valid - choose a JPG, PNG or WEBP image and upload again.",
     "VEHICLE_REGISTRATION_UPLOAD_INVALID": "The registration photo can no longer be used - please upload it again.",
-    "VEHICLE_REGISTRATION_UPLOAD_LIMIT": "You have uploaded registration photos too many times in the last 24 hours - please try again later."
+    "VEHICLE_REGISTRATION_UPLOAD_LIMIT": "You have uploaded registration photos too many times in the last 24 hours - please try again later.",
+    "CHAT_BLOCKED": "Messaging is unavailable because one of you has blocked the other."
   },
   "codeWithWait": {
     "RATE_LIMITED": "You're going a little fast. Please try again in {wait}.",

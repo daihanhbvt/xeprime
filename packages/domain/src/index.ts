@@ -82,6 +82,7 @@ export {
 } from './datetime';
 
 export {
+  bestDiscountPackageMonths,
   longTermReturnFromWallClock,
   pickupWishParts,
   type PickupWish,

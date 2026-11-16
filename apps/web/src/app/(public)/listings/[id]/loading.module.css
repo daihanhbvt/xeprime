@@ -1,0 +1,107 @@
+/*
+ * Khung chờ trang chi tiết xe — cùng khung với `ListingDetailView.module.css` (.wrap, .layout) và
+ * `ListingGallery.module.css`. Các chiều cao px dưới đây là CHỦ Ý: chúng khớp bố cục thật để
+ * nội dung vào không làm nhảy trang; mọi khoảng cách/màu/nhịp đi qua token.
+ */
+.wrap {
+  max-width: var(--xp-market-container-max-width);
+  margin: 0 auto;
+  padding: var(--xp-space-lg) var(--xp-space-md) calc(var(--xp-space-xl) * 2);
+}
+
+.bone {
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-muted);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bone {
+    animation: pulse var(--xp-motion-duration-shimmer) ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* Đường dẫn (`PageBreadcrumb`, `.breadcrumb { margin-bottom: 20px }`). */
+.breadcrumb {
+  width: 240px;
+  height: var(--xp-space-20);
+  margin-bottom: var(--xp-space-20);
+}
+
+/* Dải ảnh PC: `ListingGallery .grid { height: 309px }`. */
+.gallery {
+  height: 309px;
+  margin-bottom: var(--xp-space-xl);
+}
+
+/* `.layout`: cột trái co giãn | cột phải tối thiểu 440px, khe 32px. */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(440px, 0.6fr);
+  gap: var(--xp-space-xl);
+  align-items: start;
+}
+
+.leftCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.title {
+  width: 60%;
+  height: var(--xp-space-xl);
+}
+
+.line {
+  width: 40%;
+  height: var(--xp-space-20);
+}
+
+.specs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--xp-space-sm);
+}
+
+.spec {
+  height: 56px;
+}
+
+.block {
+  height: 160px;
+}
+
+/* Thẻ đặt xe cột phải — xấp xỉ chiều cao thẻ khi mới mở. */
+.card {
+  height: 480px;
+}
+
+@media (max-width: 1024px) {
+  .layout {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 640px) {
+  .wrap {
+    padding: 0 var(--xp-space-lg) var(--xp-space-xl);
+  }
+
+  /* `ListingGallery` ≤640px: `height: 240px`. */
+  .gallery {
+    height: 240px;
+  }
+
+  .specs {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
