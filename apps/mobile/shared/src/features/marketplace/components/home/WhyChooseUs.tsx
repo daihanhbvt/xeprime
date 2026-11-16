@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { RevealText, ScrollReveal } from '@/components/motion/ScrollReveal';
 import { RevealCountUp } from '@/components/motion/use-count-up';
 import { Image } from 'expo-image';
-import { ImageBackground, StyleSheet, useWindowDimensions } from 'react-native';
+import { ImageBackground, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useRevealPop, useScrollParallax } from '@/components/motion/reveal-effects';
 import { SvgXml } from 'react-native-svg';
@@ -14,6 +14,7 @@ import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, market, radius, space } from '@/theme/tokens';
 import { HomeSectionHeading } from './HomeSectionHeading';
 import { WHY_FLEET_ART, WHY_PRICE_ART, WHY_SUPPORT_ART, WHY_TIME_ART } from './why-art';
+import { useContentWidth } from '@/theme/use-content-width';
 
 /** Cùng khoá, thứ tự và nét vẽ với `WhyChooseUs` bên web (`/home/why-*.svg`). */
 const ITEMS = [
@@ -30,8 +31,8 @@ const ICON_SCALE = ICON_BOX / 32;
 /** Ảnh tĩnh 532×488 (web `/home/why-image.png`); góc dưới-trái trong suốt là chỗ của ô số. */
 const IMAGE_RATIO = 532 / 488;
 /** Ô số chiếm 173 × 124 của ảnh 532 × 488 — tính ra px theo bề ngang ảnh (RN không co % đúng cho ô tuyệt đối). */
-const IMAGE_MAX_WIDTH = 532;
-const TABLET_MIN_WIDTH = 768;
+// Trần bề ngang ảnh = website ≤1024px (`width: min(100%, 640px)`) — iPad co ảnh tới đây.
+const IMAGE_MAX_WIDTH = 640;
 const STAT_RATIO = { width: 173 / 532, height: 124 / 488 };
 
 /**
@@ -47,16 +48,16 @@ export function WhyChooseUs() {
   const dark = useAppScheme().scheme === 'dark';
   const onDarkMuted = XP_TOKENS['color-text-on-dark-muted'];
   const t = useTranslations('Home.why');
-  const { width } = useWindowDimensions();
-  // Máy tính bảng / điện thoại lớn: ảnh không giãn quá cỡ Figma desktop (532) để không vỡ nét,
-  // canh giữa. Cỡ chữ ô số co theo bề ngang ảnh để vừa ô ở máy nhỏ (≤ 360) lẫn tablet.
+  const width = useContentWidth();
+  // Ảnh co theo bề ngang nội dung, trần 640 như website ở tablet, canh giữa. Cỡ chữ ô số co theo
+  // bề ngang ảnh để vừa ô ở máy nhỏ (≤ 360) lẫn tablet.
   const imageWidth = Math.min(width - layout.screenX * 2, IMAGE_MAX_WIDTH);
   const imageHeight = imageWidth / IMAGE_RATIO;
   const statScale = Math.min(Math.max(imageWidth / 343, 0.8), 1.3);
   const statValueSize = Math.round(fontSize.h1 * statScale);
   const statLabelSize = Math.round(fontSize.bodySm * statScale);
-  // Tablet: bốn cam kết chia 4 cột (hai cột trên tablet rất thưa); điện thoại giữ 2 × 2.
-  const cellBasis = width >= TABLET_MIN_WIDTH ? '22%' : '40%';
+  // Bốn cam kết luôn 2 × 2 — website giữ lưới 2 cột ở mọi bề ngang ≤1024px (chỉ 1 cột khi ≤360).
+  const cellBasis = '40%';
 
   return (
     <YStack gap={28}>
@@ -68,85 +69,122 @@ export function WhyChooseUs() {
           })}
         />
         <RevealText delay={300}>
-        <YStack gap={space.sm}>
-          <Text col={dark ? onDarkMuted : colors.textMuted} fos={fontSize.bodyLg} lh={24} ta="center">
-            {t('intro')}
-          </Text>
-          <Text col={colors.text} fos={fontSize.bodyLg} lh={24} fow={fontWeight.medium} ta="center">
-            {t('closing')}
-          </Text>
-        </YStack>
+          <YStack gap={space.sm}>
+            <Text
+              col={dark ? onDarkMuted : colors.textMuted}
+              fos={fontSize.bodyLg}
+              lh={24}
+              ta="center"
+            >
+              {t('intro')}
+            </Text>
+            <Text
+              col={colors.text}
+              fos={fontSize.bodyLg}
+              lh={24}
+              fow={fontWeight.medium}
+              ta="center"
+            >
+              {t('closing')}
+            </Text>
+          </YStack>
         </RevealText>
       </YStack>
 
       <XStack flexWrap="wrap" rowGap={space.md} columnGap={space.md}>
         {ITEMS.map((item, index) => (
           // Mỗi ô tự hiện khi CHÍNH NÓ cuộn vào màn (không theo đầu khối); trễ nhỏ theo cột.
-          <ScrollReveal key={item.key} index={index} style={[styles.cell, { flexBasis: cellBasis }]}>
-          <YStack ai="center" gap={12}>
-            <IconBounce index={index % 2}>
-            <YStack p={12} br={radius.pill} bg={colors.primarySubtle}>
-              <YStack w={ICON_BOX} h={ICON_BOX} ai="center" jc="center">
-                <SvgXml
-                  xml={item.art.xml}
-                  width={item.art.width * ICON_SCALE}
-                  height={item.art.height * ICON_SCALE}
-                />
-              </YStack>
+          <ScrollReveal
+            key={item.key}
+            index={index}
+            style={[styles.cell, { flexBasis: cellBasis }]}
+          >
+            <YStack ai="center" gap={12}>
+              <IconBounce index={index % 2}>
+                <YStack p={12} br={radius.pill} bg={colors.primarySubtle}>
+                  <YStack w={ICON_BOX} h={ICON_BOX} ai="center" jc="center">
+                    <SvgXml
+                      xml={item.art.xml}
+                      width={item.art.width * ICON_SCALE}
+                      height={item.art.height * ICON_SCALE}
+                    />
+                  </YStack>
+                </YStack>
+              </IconBounce>
+              <RevealText delay={160 + (index % 2) * 80}>
+                <YStack gap={2} ai="center">
+                  <Text
+                    col={dark ? colors.primary : colors.text}
+                    fos={fontSize.bodyLg}
+                    lh={24}
+                    fow={fontWeight.semibold}
+                    ta="center"
+                  >
+                    {t(`items.${item.key}.title`)}
+                  </Text>
+                  <Text
+                    col={dark ? onDarkMuted : colors.text}
+                    fos={fontSize.body}
+                    lh={22}
+                    ta="center"
+                  >
+                    {t(`items.${item.key}.desc`)}
+                  </Text>
+                </YStack>
+              </RevealText>
             </YStack>
-            </IconBounce>
-            <RevealText delay={160 + (index % 2) * 80}>
-            <YStack gap={2} ai="center">
-              <Text col={dark ? colors.primary : colors.text} fos={fontSize.bodyLg} lh={24} fow={fontWeight.semibold} ta="center">
-                {t(`items.${item.key}.title`)}
-              </Text>
-              <Text col={dark ? onDarkMuted : colors.text} fos={fontSize.body} lh={22} ta="center">
-                {t(`items.${item.key}.desc`)}
-              </Text>
-            </YStack>
-            </RevealText>
-          </YStack>
           </ScrollReveal>
         ))}
       </XStack>
 
       {/* Parallax nhẹ khi cuộn: cả khối ảnh + ô "100+" trôi chậm - đo ở khung ngoài đứng yên. */}
       <Animated.View ref={parallax.ref} collapsable={false}>
-      <Animated.View style={parallax.style}>
-      <YStack w={imageWidth} aspectRatio={IMAGE_RATIO} als="center">
-        <Animated.View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-        <ImageBackground
-          source={require('../../../../../assets/images/home/why-stat-bg.png')}
-          resizeMode="cover"
-          imageStyle={{ borderRadius: radius.banner }}
-          style={{
-            position: 'absolute',
-            left: 0,
-            bottom: 0,
-            width: Math.round(imageWidth * STAT_RATIO.width),
-            height: Math.round(imageHeight * STAT_RATIO.height),
-            justifyContent: 'center',
-            padding: Math.round(12 * statScale),
-          }}
-        >
-          <Text col={market.onDark} fos={statValueSize} lh={Math.round(statValueSize * 1.2)} fow={fontWeight.semibold}>
-            <RevealCountUp text={t('statValue')} />
-          </Text>
-          <Text col={market.onDark} fos={statLabelSize} lh={Math.round(statLabelSize * 1.4)} numberOfLines={2} fow={fontWeight.medium}>
-            {t('statLabel')}
-          </Text>
-        </ImageBackground>
+        <Animated.View style={parallax.style}>
+          <YStack w={imageWidth} aspectRatio={IMAGE_RATIO} alignSelf="center">
+            <Animated.View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+              <ImageBackground
+                source={require('../../../../../assets/images/home/why-stat-bg.png')}
+                resizeMode="cover"
+                imageStyle={{ borderRadius: radius.banner }}
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  bottom: 0,
+                  width: Math.round(imageWidth * STAT_RATIO.width),
+                  height: Math.round(imageHeight * STAT_RATIO.height),
+                  justifyContent: 'center',
+                  padding: Math.round(12 * statScale),
+                }}
+              >
+                <Text
+                  col={market.onDark}
+                  fos={statValueSize}
+                  lh={Math.round(statValueSize * 1.2)}
+                  fow={fontWeight.semibold}
+                >
+                  <RevealCountUp text={t('statValue')} />
+                </Text>
+                <Text
+                  col={market.onDark}
+                  fos={statLabelSize}
+                  lh={Math.round(statLabelSize * 1.4)}
+                  numberOfLines={2}
+                  fow={fontWeight.medium}
+                >
+                  {t('statLabel')}
+                </Text>
+              </ImageBackground>
+            </Animated.View>
+            <Animated.View style={styles.fill}>
+              <Image
+                source={require('../../../../../assets/images/home/why-image.png')}
+                accessibilityLabel={t('imageAlt')}
+                contentFit="contain"
+                style={{ width: '100%', height: '100%' }}
+              />
+            </Animated.View>
+          </YStack>
         </Animated.View>
-        <Animated.View style={styles.fill}>
-        <Image
-          source={require('../../../../../assets/images/home/why-image.png')}
-          accessibilityLabel={t('imageAlt')}
-          contentFit="contain"
-          style={{ width: '100%', height: '100%' }}
-        />
-        </Animated.View>
-      </YStack>
-      </Animated.View>
       </Animated.View>
     </YStack>
   );

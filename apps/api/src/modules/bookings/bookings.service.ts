@@ -68,7 +68,7 @@ import { bookingDebt } from '../../common/money';
 import { ownerPayoutOf } from '../../common/owner-payout';
 import { accountPhoneIfDifferent } from '../../common/phone';
 import { piiSearch } from '../../common/support/support-search';
-import { addressViewOf, pinOf } from '../../common/address-view';
+import { addressViewOf, pickupPointAddressOf, pinOf } from '../../common/address-view';
 import { normalizeRouteContext } from '../../common/route-context';
 import {
   BOOKING_DRIVER_INCIDENT_HOST_SELECT,
@@ -109,6 +109,7 @@ import { resolveBranchScope, vehicleBranchWhere } from '../../common/dto/branch-
  * Chiếc xe trên thẻ đơn — đủ để NHẬN RA nó: ảnh đại diện (một cột, không join gallery), dòng thông
  * số "4 chỗ · Số tự động · Điện" và chi nhánh (nơi giao xe, xem `handoverPlaceOf`). Danh sách và
  * chi tiết dùng chung một khối, nên chi tiết không bao giờ thiếu một trường mà `toListItem` đọc.
+ * Địa chỉ chi nhánh + hồ sơ gian hàng nuôi `pickupPointAddress` (điểm nhận khi khách tự tới).
  */
 const VEHICLE_CARD_SELECT = {
   name: true,
@@ -119,7 +120,8 @@ const VEHICLE_CARD_SELECT = {
   seatCount: true,
   transmission: true,
   fuelType: true,
-  branch: { select: { name: true } },
+  branch: { select: { name: true, address: true } },
+  tenant: { select: { profile: { select: { address: true } } } },
 } satisfies Prisma.VehicleSelect;
 
 const LIST_SELECT = {
@@ -1766,6 +1768,9 @@ function toListItem(b: BookingListRow): BookingListItemDto {
     holdPaidAmount: (b.hold?.paidAmount as unknown as string | undefined) ?? null,
     payAtPickupAmount:
       (b.priceSnapshot as unknown as BookingPriceSnapshot | null)?.fees?.payAtPickupAmount ?? null,
+    ownerPayableAmount:
+      (b.priceSnapshot as unknown as BookingPriceSnapshot | null)?.fees?.ownerPayableAmount ?? null,
+    pickupPointAddress: pickupPointAddressOf(b.vehicle),
     ownerShareOnlineAmount: ownerShareHeldOnline({
       holdPaid: b.hold?.paidAmount != null,
       priceSnapshot: b.priceSnapshot as unknown as BookingPriceSnapshot | null,

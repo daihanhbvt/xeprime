@@ -96,6 +96,8 @@ model User {
   customerBookingRequests      BookingRequest[]          @relation("request_customer")
   cancellationsActed           BookingCancellation[]     @relation("cancellation_actor")
   customerConversations        Conversation[]            @relation("conversation_customer")
+  chatBlocksCreated            ChatBlock[]               @relation("chat_block_creator")
+  chatReportsFiled             ChatReport[]              @relation("chat_report_reporter")
   conversationParticipations   ConversationParticipant[] @relation("participant_user")
   sentMessages                 Message[]                 @relation("message_sender")
   tenantCustomerProfiles       TenantCustomer[]          @relation("tenant_customer_account")
@@ -3855,6 +3857,8 @@ model Conversation {
   vehicle      Vehicle?                  @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
   participants ConversationParticipant[]
   messages     Message[]
+  blocks       ChatBlock[]
+  reports      ChatReport[]
 
   /// MỘT hội thoại cho mỗi cặp (khách, GIAN HÀNG).
   ///
@@ -3966,6 +3970,51 @@ model MessageOutbox {
   /// Worker quét pending tới hạn, cũ nhất trước.
   @@index([status, nextAttemptAt])
   @@map("message_outbox")
+}
+
+/// Chặn nhắn tin trong MỘT hội thoại (App Store Guideline 1.2 — nội dung do người dùng tạo phải
+/// chặn được người lạm dụng). Hội thoại là duy nhất theo cặp (khách, gian hàng) nên chặn hội thoại
+/// là chặn cả cặp. Hai phía chặn ĐỘC LẬP (`blocked_by` = customer | shop): bỏ chặn của phía này
+/// không gỡ chặn của phía kia. Còn bất kỳ hàng nào ⇒ không ai gửi được tin (`canSend = false`),
+/// lịch sử vẫn đọc được. Writer duy nhất: `ChatService.block/unblock`.
+model ChatBlock {
+  id              String   @id @db.Char(26)
+  conversationId  String   @map("conversation_id") @db.Char(26)
+  /// @xeprime/types → ChatSide (customer | shop)
+  blockedBy       String   @map("blocked_by") @db.VarChar(20)
+  /// Người bấm chặn (khách, hoặc thành viên gian hàng). NULL khi tài khoản đó bị xoá.
+  createdByUserId String?  @map("created_by_user_id") @db.Char(26)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdBy    User?        @relation("chat_block_creator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  /// Mỗi phía chặn một hội thoại tối đa một lần — chặn lại là idempotent nhờ constraint.
+  @@unique([conversationId, blockedBy])
+  @@map("chat_blocks")
+}
+
+/// Báo cáo một hội thoại vi phạm (App Store Guideline 1.2). Chỉ GHI NHẬN để nền tảng xem; không có
+/// luồng xử lý, không tự khoá ai. Writer duy nhất: `ChatService.report`.
+model ChatReport {
+  id             String   @id @db.Char(26)
+  conversationId String   @map("conversation_id") @db.Char(26)
+  reporterUserId String?  @map("reporter_user_id") @db.Char(26)
+  /// @xeprime/types → ChatSide — phía của người báo cáo
+  reporterSide   String   @map("reporter_side") @db.VarChar(20)
+  /// @xeprime/types → ChatReportReason (spam | harassment | scam | inappropriate_content | other).
+  /// Lưu MÃ, không lưu nhãn: nhãn vi/en ở `Chat.reportReasons.<mã>` (ADR 0012). CHECK ở migration.
+  reason         String   @db.VarChar(40)
+  note           String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  reporter     User?        @relation("chat_report_reporter", fields: [reporterUserId], references: [id], onDelete: SetNull)
+
+  /// Danh sách báo cáo ở trang quản trị: mới nhất trước.
+  @@index([createdAt])
+  @@index([conversationId])
+  @@map("chat_reports")
 }
 
 /// Metadata đính kèm chat — file thật ở Cloudflare R2 (ADR 0009 §5), đây chỉ giữ URL + info.

@@ -11,6 +11,7 @@ import { useAppLocale } from '@/i18n/I18nProvider';
 import { useAppStyles } from '@/theme/styles';
 import { useColors, useFloatingSurfaceBorder } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { modalColumn } from '@/theme/layout';
 
 /**
  * Đổi ngôn ngữ.
@@ -62,7 +63,7 @@ export function LocaleSwitcher() {
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
         <Pressable style={appStyles.scrim} onPress={() => setOpen(false)}>
           {/* Chạm ra ngoài để đóng; chặn sự kiện ở tấm nội dung để chạm bên trong không đóng theo. */}
-          <Pressable style={{ marginTop: 'auto' }} onPress={() => undefined}>
+          <Pressable style={[{ marginTop: 'auto' }, modalColumn]} onPress={() => undefined}>
             <YStack
               bg={colors.surface}
               borderTopLeftRadius={radius.lg}

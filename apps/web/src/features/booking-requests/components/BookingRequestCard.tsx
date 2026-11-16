@@ -18,7 +18,7 @@ import {
   type RouteType,
   type TenantCustomerRiskLevel,
 } from '@xeprime/types';
-import { isPositiveMoney, LIST_SEPARATOR, subtractMoney } from '@xeprime/domain';
+import { shortAddress, isPositiveMoney, LIST_SEPARATOR, subtractMoney } from '@xeprime/domain';
 import { ServiceTypeChip } from '@/components/data-display/ServiceTypeChip';
 import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { customerPath, vehiclePath } from '@/constants/routes';
@@ -33,8 +33,10 @@ import {
   type RentalCardLayout,
 } from '@/features/bookings/components/rental-card/RentalCard';
 import {
+  RentalBoardAddress,
   RentalBoardCard,
   RentalBoardHintList,
+  RentalBoardPeriod,
   type RentalBoardFact,
   type RentalBoardHold,
   type RentalBoardMoney,
@@ -367,7 +369,7 @@ export function BookingRequestCard({
           ),
           contacts,
         }}
-        schedule={requestBoardSchedule(request, { t, fmt, domainLabel })}
+        schedule={requestBoardSchedule(request, { t, tKanban, fmt, domainLabel })}
         {...requestBoardMoney(request, t, tKanban)}
         status={statusNode}
         actions={hasActions ? actionsNode : undefined}
@@ -727,18 +729,25 @@ function ExtraFact({ label, children }: { label: string; children: React.ReactNo
 
 type RequestCardT = ReturnType<typeof useTranslations<'BookingRequests'>>;
 
+type KanbanT = ReturnType<typeof useTranslations<'Bookings.board.kanban'>>;
+
 /**
- * Ô lịch của thẻ Kanban — đúng ba dòng của design (nhận · trả · hình thức nhận); dài hạn thêm GÓI.
- * Địa chỉ giao / lộ trình có tài xế vào ⓘ của dòng hình thức nhận xe.
+ * Ô lịch của thẻ gọn (design 10/11/2026 bản 2): "Nhận xe" nhận → trả trên MỘT dòng, rồi NƠI đổi
+ * tay với nhãn theo hình thức (chốt 10/11 — design bỏ dòng "Hình thức nhận xe", nhãn phải tự nói):
+ * giao tận nơi "Giao xe tới" · có tài xế "Điểm đón" · khách tự tới "Nhận tại" (chi nhánh / hồ sơ
+ * gian hàng). Địa chỉ gọn bỏ tỉnh/TP và chữ "Phường/Xã" (`shortAddress`); bản đầy đủ, phí giao,
+ * lộ trình, điểm đến vào ⓘ. Dài hạn thêm GÓI; dài hạn chưa duyệt nói gói + nguyện vọng.
  */
 function requestBoardSchedule(
   request: BookingRequestItem,
   {
     t,
+    tKanban,
     fmt,
     domainLabel,
   }: {
     t: RequestCardT;
+    tKanban: KanbanT;
     fmt: ReturnType<typeof useAppFormat>;
     domainLabel: ReturnType<typeof useDomainLabel>;
   },
@@ -751,8 +760,11 @@ function requestBoardSchedule(
   const facts: RentalBoardFact[] =
     pickup && dropoff
       ? [
-          { key: 'pickup', label: t('card.pickupAt'), value: fmt.rentalPoint(pickup) },
-          { key: 'return', label: t('card.returnAt'), value: fmt.rentalPoint(dropoff) },
+          {
+            key: 'period',
+            label: tKanban('schedule.period'),
+            value: <RentalBoardPeriod from={pickup} to={dropoff} />,
+          },
           ...(request.serviceType === SERVICE_TYPE.LONG_TERM && packageLabel
             ? [{ key: 'package', label: t('card.package'), value: packageLabel }]
             : []),
@@ -784,10 +796,27 @@ function requestBoardSchedule(
       : null,
   ].filter((item): item is { key: string; label?: string; text: string } => item !== null);
 
+  const place = request.deliveryRequested
+    ? {
+        label: tKanban('schedule.placeDelivery'),
+        address: request.deliveryLocation?.displayAddress ?? request.deliveryAddress ?? null,
+      }
+    : request.serviceType === SERVICE_TYPE.WITH_DRIVER &&
+        (request.pickupLocation?.displayAddress ?? request.pickupAddress)
+      ? {
+          label: tKanban('schedule.placeDriverPickup'),
+          address: request.pickupLocation?.displayAddress ?? request.pickupAddress ?? null,
+        }
+      : { label: tKanban('schedule.placeBranch'), address: request.pickupPointAddress ?? null };
+  const placeAddress = shortAddress(place.address);
   facts.push({
-    key: 'handover',
-    label: t('card.handover'),
-    value: request.deliveryRequested ? t('card.handoverDelivery') : t('card.handoverSelf'),
+    key: 'place',
+    label: place.label,
+    value: placeAddress ? (
+      <RentalBoardAddress text={placeAddress} />
+    ) : (
+      tKanban('schedule.placeUnknown')
+    ),
     hint:
       details.length > 0
         ? { label: t('card.handoverInfo'), content: <RentalBoardHintList items={details} /> }
@@ -797,36 +826,53 @@ function requestBoardSchedule(
 }
 
 /**
- * MỘT hàng tiền của thẻ Kanban: khách trả · trả khi nhận xe · giữ chỗ + viên trạng thái — CÙNG phép
- * tính `requestPaymentRows` với thẻ List và popup, chỉ đổi nhãn ngắn. Không có ô "Tiền thuê"
- * (05/11/2026 — tiền thuê ở popup chi tiết và thẻ List); ô "Khách trả" luôn có.
+ * MỘT hàng tiền của thẻ gọn, góc nhìn CHỦ XE (chốt 10/11/2026, đối chiếu bảng cộng ví của Mioto):
+ * Giữ chỗ (khách chuyển online qua XePrime) · Thu khi giao xe (khách trả tận tay) · Cộng ví (`D − T`
+ * XePrime ghi vào Ví điểm khi chuyến xong). Giữ chỗ + Thu khi giao xe = tổng khách trả — số vàng ở
+ * dải đầu. CÙNG phép tính `requestPaymentRows` với thẻ List và popup; viên trạng thái giữ chỗ ở
+ * dải đầu. Chuyến không thu online thì không có ô giữ chỗ lẫn cộng ví (không có gì về ví).
  */
 function requestBoardMoney(
   request: BookingRequestItem,
   t: RequestCardT,
-  tKanban: ReturnType<typeof useTranslations<'Bookings.board.kanban'>>,
-): { money: RentalBoardMoney[]; hold: RentalBoardHold | null } {
+  tKanban: KanbanT,
+): { total: RentalBoardMoney | null; money: RentalBoardMoney[]; hold: RentalBoardHold | null } {
   const pricing = request.pricing;
-  if (!pricing) return { money: [], hold: null };
+  if (!pricing) return { total: null, money: [], hold: null };
   const rows = requestPaymentRows(request, t);
   const payAtPickup = rows.find((row) => row.key === 'payAtPickup');
   const holdRow = rows.find((row) => row.key === 'hold');
+  const walletCredit = holdRow
+    ? (pricing.ownerPayableAmount ??
+      request.approvalPreview?.ownerPayout.ownerPayableAmount ??
+      null)
+    : null;
   const money: RentalBoardMoney[] = [
-    { key: 'customer', label: tKanban('money.customerTotal'), amount: pricing.customerTotalAmount },
+    ...(holdRow ? [{ key: 'hold', label: tKanban('money.hold'), amount: holdRow.amount }] : []),
     ...(payAtPickup
       ? [{ key: 'payAtPickup', label: tKanban('money.payAtPickup'), amount: payAtPickup.amount }]
+      : []),
+    ...(walletCredit != null
+      ? [{ key: 'walletCredit', label: tKanban('money.walletCredit'), amount: walletCredit }]
       : []),
   ];
   const hold =
     holdRow && holdRow.holdState
       ? {
           label: tKanban('money.hold'),
-          amount: holdRow.amount,
           state: holdRow.holdState,
           stateLabel: tKanban(`holdState.${holdRow.holdState}`),
         }
       : null;
-  return { money, hold };
+  return {
+    total: {
+      key: 'customer',
+      label: tKanban('money.customerTotal'),
+      amount: pricing.customerTotalAmount,
+    },
+    money,
+    hold,
+  };
 }
 
 /**

@@ -11,7 +11,6 @@ import {
   isAwaitingPayment,
   type BookingHoldStatus,
 } from '@xeprime/types';
-import { NumberTicker } from '@/components/motion/NumberTicker';
 import { Countdown } from '@/components/data-display/Countdown';
 import { InfoHint } from '@/components/data-display/InfoHint';
 import { LEGAL_DOC, legalPath } from '@/constants/legal';
@@ -231,7 +230,7 @@ function HoldPaymentCard({
       </div>
 
       <p className={styles.amount}>
-        <NumberTicker value={amount} />
+        {amount}
       </p>
       <Countdown
         deadline={hold.expiresAt}

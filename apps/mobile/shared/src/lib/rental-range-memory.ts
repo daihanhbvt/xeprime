@@ -168,6 +168,19 @@ export async function rememberedOrDefaultRentalRange(
   return { ...defaultRentalRange(now), mode: RENTAL_MODE.DAILY };
 }
 
+/**
+ * Bản ĐỒNG BỘ của `rememberedOrDefaultRentalRange`: chỉ đọc tầng phiên (không chạm Keystore).
+ * Cho màn cần một giá trị ngay ở lượt dựng đầu (trang chi tiết xe) — tránh dựng cả cây hai lần
+ * chỉ vì đợi một lượt đọc bất đồng bộ. Tầng Keystore chỉ khác tầng phiên ở lần mở app đầu tiên;
+ * nơi gọi vẫn hỏi bản bất đồng bộ rồi đổi khi thực sự khác.
+ */
+export function peekRememberedOrDefaultRentalRange(
+  now: Dayjs = nowInAppTz(),
+): RememberedRentalRange {
+  const session = sessionValue ? usable(sessionValue, now) : null;
+  return session ?? { ...defaultRentalRange(now), mode: RENTAL_MODE.DAILY };
+}
+
 /** Chỉ dành cho test — dọn tầng phiên giữa các ca. */
 export function __resetRentalRangeMemory(): void {
   sessionValue = null;

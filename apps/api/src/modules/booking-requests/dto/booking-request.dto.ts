@@ -610,6 +610,15 @@ export class BookingRequestPricingDto {
       '`holdAmount` (ADR 0044). null khi không có khoản giữ chỗ',
   })
   holdPaidAmount!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      '`D − T` - số XePrime ghi vào Ví điểm chủ xe khi chuyến hoàn thành (ô "Cộng ví" của thẻ). ' +
+      'Tạm tính khi `isEstimate`; đã đóng băng khi có khoản giữ chỗ / đơn. null khi không có bảng ' +
+      'phí (dài hạn chưa chốt, đơn đời cũ). Chỉ bề mặt đối tác (ADR 0064 điều 11) (VND string)',
+  })
+  ownerPayableAmount!: string | null;
 }
 
 /**
@@ -842,6 +851,14 @@ export class BookingRequestDto {
     description: 'Địa chỉ giao xe có cấu trúc - null khi khách tự tới lấy',
   })
   deliveryLocation!: AddressViewDto | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Địa chỉ ĐIỂM NHẬN XE khi khách tự tới: chi nhánh giữ xe, rơi về địa chỉ hồ sơ gian hàng. ' +
+      '`null` khi chưa điền cả hai - chuỗi thô, không dịch',
+  })
+  pickupPointAddress!: string | null;
   @ApiPropertyOptional({
     type: BookingRequestDeliveryQuoteDto,
     nullable: true,

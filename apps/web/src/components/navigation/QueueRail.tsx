@@ -1,6 +1,7 @@
 'use client';
 
 import type { ComponentType } from 'react';
+import { useHorizontalScroll } from '@/hooks/use-horizontal-scroll';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { cx } from '@/lib/cx';
 
@@ -45,10 +46,15 @@ export function QueueRail<T extends string>({
   onSelect: (value: T) => void;
 }) {
   const fmt = useAppFormat();
+  // Dải ngang (màn hẹp): con lăn/kéo chuột cuộn được, mục đang chọn tự trượt vào khung.
+  const railRef = useHorizontalScroll<HTMLElement>({
+    activeSelector: '[aria-current="true"]',
+    activeKey: active,
+  });
   const visible = groups.filter((group) => group.items.length > 0);
 
   return (
-    <nav className={styles.rail} aria-label={label}>
+    <nav ref={railRef} className={styles.rail} aria-label={label}>
       <h2 className={styles.title}>{title}</h2>
       {visible.map((group) => (
         <div key={group.key} className={styles.group}>

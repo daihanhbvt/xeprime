@@ -3,7 +3,7 @@ import { useFloatLoop, useRevealSlideIn } from '@/components/motion/reveal-effec
 import { ScrollReveal } from '@/components/motion/ScrollReveal';
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { CardHighlightContext, HighlightZoom } from '@/components/ui/HighlightZoom';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -16,6 +16,7 @@ import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { HomeSectionHeading } from './HomeSectionHeading';
 import { OutlineAction } from './GradientButton';
+import { useContentWidth } from '@/theme/use-content-width';
 
 /** Khung ảnh giữ tỉ lệ cố định để bốn ô cao bằng nhau; ảnh xe tách nền `contain` bên trong. */
 const MEDIA_RATIO = 4 / 3;
@@ -53,7 +54,7 @@ interface VehicleTypesProps {
  */
 export function VehicleTypes({ items, onOpenSearch }: VehicleTypesProps) {
   const t = useTranslations('Home.types');
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
   const tileWidth = Math.floor((width - layout.screenX * 2 - GRID_GAP) / 2);
 
   return (
@@ -95,7 +96,10 @@ function VehicleTypeTile({
   const colors = useColors();
   const [pressed, setPressed] = useState(false);
   // Ảnh xe (không bóng) trượt vào xen kẽ trái/phải + fade khi khối hiện, rồi bồng bềnh so le.
-  const slideStyle = useRevealSlideIn((index % 2) * 90, index % 2 === 0 ? -TILE_SLIDE_X : TILE_SLIDE_X);
+  const slideStyle = useRevealSlideIn(
+    (index % 2) * 90,
+    index % 2 === 0 ? -TILE_SLIDE_X : TILE_SLIDE_X,
+  );
   const floatStyle = useFloatLoop(3, 3500, index * 450);
   return (
     <Pressable
@@ -110,17 +114,17 @@ function VehicleTypeTile({
         {/* = web `.card:hover .image { scale(1.08) }`: nhấn thì ảnh xe to lên nhẹ, không nền/viền. */}
         <CardHighlightContext.Provider value={pressed}>
           <Animated.View style={[styles.fill, slideStyle]}>
-          <Animated.View style={[styles.fill, floatStyle]}>
-          <HighlightZoom scale={1.08}>
-            <Image
-              source={{ uri: webAssetUrl(item.showcaseImageUrl) }}
-              style={{ width: '100%', height: '100%' }}
-              contentFit="contain"
-              cachePolicy="memory-disk"
-              transition={150}
-            />
-          </HighlightZoom>
-          </Animated.View>
+            <Animated.View style={[styles.fill, floatStyle]}>
+              <HighlightZoom scale={1.08}>
+                <Image
+                  source={{ uri: webAssetUrl(item.showcaseImageUrl) }}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="contain"
+                  cachePolicy="memory-disk"
+                  transition={150}
+                />
+              </HighlightZoom>
+            </Animated.View>
           </Animated.View>
         </CardHighlightContext.Provider>
       </YStack>

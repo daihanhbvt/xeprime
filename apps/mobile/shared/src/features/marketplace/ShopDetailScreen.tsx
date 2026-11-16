@@ -34,6 +34,11 @@ import { ShopTrust } from './components/ShopTrust';
 import { VehicleCard } from './components/VehicleCard';
 import { SHOP_LIST_LAYOUT_MAX_VEHICLES } from './filter-constants';
 import { useInfiniteShopListings, usePublicShop } from './hooks/use-shop';
+import { gridCellWidth } from '@/components/layout/ResponsiveGrid';
+import { useContentWidth, useIsTabletLayout } from '@/theme/use-content-width';
+
+/** Website: xe của gian hàng 2 cột ở dải tablet. */
+const SHOP_TABLET_COLUMNS = 2;
 
 /** Cuộn qua bao nhiêu thì tên gian hàng hiện trên header nổi — non nửa chiều cao ảnh bìa. */
 const TITLE_REVEAL = 120;
@@ -150,7 +155,10 @@ function ShopBody({
   const hasActiveFilter = Object.values(activeFilters).some(Boolean);
   const listings = useInfiniteShopListings(shop.slug, activeFilters);
   const pull = usePullRefresh(
-    useCallback(() => Promise.all([onRefreshShop(), listings.refresh()]), [onRefreshShop, listings.refresh]),
+    useCallback(
+      () => Promise.all([onRefreshShop(), listings.refresh()]),
+      [onRefreshShop, listings.refresh],
+    ),
   );
 
   const counts = shop.vehicleFilterCounts;
@@ -175,9 +183,19 @@ function ShopBody({
   // của chính trang gian hàng.
   const activeService = activeFilters.serviceType;
   // Thẻ xe trượt lên khi cuộn tới (ScrollReveal, chỉ transform).
+  // Máy tính bảng: 2 cột như website (`ShopVehicles.module.css` ≤1024px). Ô bề ngang cố định để ô
+  // lẻ ở hàng cuối không giãn; lề trang chuyển từ từng ô sang hàng (`columnWrapperStyle`).
+  const tablet = useIsTabletLayout();
+  const columns = tablet ? SHOP_TABLET_COLUMNS : 1;
+  const contentWidth = useContentWidth() - layout.screenX * 2;
+  const cellStyle = useMemo(
+    () => (columns > 1 ? { width: gridCellWidth(contentWidth, columns, space.md) } : ITEM_GUTTER),
+    [columns, contentWidth],
+  );
+
   const renderItem = useCallback(
     ({ item, index }: { item: PublicListing; index: number }) => (
-      <ScrollReveal index={index} style={ITEM_GUTTER}>
+      <ScrollReveal index={index} style={cellStyle}>
         <VehicleCard
           listing={item}
           onPress={openListing}
@@ -186,7 +204,7 @@ function ShopBody({
         />
       </ScrollReveal>
     ),
-    [openListing, metrics, activeService],
+    [openListing, metrics, activeService, cellStyle],
   );
 
   const listPadding = useMemo(
@@ -199,186 +217,195 @@ function ShopBody({
 
   return (
     <ScrollRevealProvider value={revealCtx}>
-    <Animated.FlatList
-      data={listings.listings}
-      keyExtractor={keyExtractor}
-      {...MEDIA_LIST_TUNING}
-      onScroll={onScroll}
-      scrollEventThrottle={scrollThrottle.half}
-      refreshControl={
-        <RefreshControl
-          refreshing={pull.refreshing}
-          onRefresh={pull.onRefresh}
-          tintColor={colors.primary}
-          colors={[colors.primary]}
-        />
-      }
-      contentContainerStyle={listPadding}
-      ItemSeparatorComponent={Separator}
-      renderItem={renderItem}
-      ListHeaderComponent={
-        <YStack gap={layout.block} pb={layout.block}>
-          <ShopHeader shop={shop} coverStyle={coverStyle} />
+      <Animated.FlatList
+        // Đổi số cột là dựng lại danh sách — FlatList không cho đổi `numColumns` tại chỗ.
+        key={`cols-${columns}`}
+        numColumns={columns}
+        {...(columns > 1
+          ? { columnWrapperStyle: { gap: space.md, paddingHorizontal: layout.screenX } }
+          : {})}
+        data={listings.listings}
+        keyExtractor={keyExtractor}
+        {...MEDIA_LIST_TUNING}
+        onScroll={onScroll}
+        scrollEventThrottle={scrollThrottle.half}
+        refreshControl={
+          <RefreshControl
+            refreshing={pull.refreshing}
+            onRefresh={pull.onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+        contentContainerStyle={listPadding}
+        ItemSeparatorComponent={Separator}
+        renderItem={renderItem}
+        ListHeaderComponent={
+          <YStack gap={layout.block} pb={layout.block}>
+            <ShopHeader shop={shop} coverStyle={coverStyle} />
 
-          {isShop ? (
-            <YStack px={layout.screenX}>
-              <ShopTrust
-                trust={shop.trust}
-                vehicleCount={shop.vehicleCount}
-                noCollateralCount={counts.noCollateral}
-              />
-            </YStack>
-          ) : null}
-          {isShop ? (
-            <YStack px={layout.screenX}>
-              <ShopBranches branches={shop.branches} />
-            </YStack>
-          ) : null}
-
-          <YStack gap={space.md}>
-            <ScrollReveal style={ITEM_GUTTER}>
-              <RevealText>
-                <Text
-                  col={colors.text}
-                  fos={fontSize.lead}
-                  fow={fontWeight.semibold}
-                  accessibilityRole="header"
-                >
-                  {listings.total > 0
-                    ? t('vehicles.titleWithCount', { count: listings.total })
-                    : t('vehicles.title')}
-                </Text>
-              </RevealText>
-            </ScrollReveal>
-
-            {showProvinceTabs ? (
-              <ChipRow label={t('vehicleFilters.provinceLabel')}>
-                <ShopFilterChip
-                  label={t('vehicleFilters.all')}
-                  active={!filters.provinceCode}
-                  onPress={() => patch({ provinceCode: undefined })}
+            {isShop ? (
+              <YStack px={layout.screenX}>
+                <ShopTrust
+                  trust={shop.trust}
+                  vehicleCount={shop.vehicleCount}
+                  noCollateralCount={counts.noCollateral}
                 />
-                {shop.serviceProvinces.map((province) => (
-                  <ShopFilterChip
-                    key={province.code}
-                    label={province.name}
-                    active={filters.provinceCode === province.code}
-                    onPress={() => patch({ provinceCode: province.code })}
-                  />
-                ))}
-              </ChipRow>
+              </YStack>
+            ) : null}
+            {isShop ? (
+              <YStack px={layout.screenX}>
+                <ShopBranches branches={shop.branches} />
+              </YStack>
             ) : null}
 
-            {showChips ? (
-              <ChipRow label={t('vehicleFilters.label')}>
-                {serviceChips.map((chip) => {
-                  const active = filters.serviceType === chip.serviceType;
-                  return (
-                    <ShopFilterChip
-                      key={chip.key}
-                      label={t(`vehicleFilters.${chip.key}`)}
-                      active={active}
-                      onPress={() => patch({ serviceType: active ? undefined : chip.serviceType })}
-                    />
-                  );
-                })}
-                {toggleChips.map((key) => (
-                  <ShopFilterChip
-                    key={key}
-                    label={t(`vehicleFilters.${key}`)}
-                    active={Boolean(filters[key])}
-                    onPress={() => patch({ [key]: !filters[key] })}
-                  />
-                ))}
-              </ChipRow>
-            ) : null}
-
-            <YStack px={layout.screenX}>
-              {listings.initialError ? (
-                <ScreenError
-                  error={listings.initialError}
-                  onRetry={listings.retryInitial}
-                  title={t('vehicles.loadError')}
-                />
-              ) : listings.isInitialLoading ? (
-                <YStack gap={layout.block} accessibilityLabel={tResults('loadingLabel')}>
-                  {Array.from(
-                    { length: Math.max(1, Math.min(3, shop.vehicleCount)) },
-                    (_, i) => (
-                      <VehicleCardSkeleton key={i} />
-                    ),
-                  )}
-                </YStack>
-              ) : listings.total === 0 ? (
-                hasActiveFilter ? (
-                  <YStack ai="center" gap={space.md} py={space.xl}>
-                    <Text col={colors.textMuted} fos={fontSize.body} ta="center">
-                      {t('vehicleFilters.emptyFiltered')}
-                    </Text>
-                    <Button
-                      label={t('vehicleFilters.clear')}
-                      variant="secondary"
-                      block={false}
-                      align="center"
-                      onPress={clearFilters}
-                    />
-                  </YStack>
-                ) : (
-                  <Text col={colors.textMuted} fos={fontSize.body} ta="center" py={space.xl}>
-                    {t('vehicles.empty')}
+            <YStack gap={space.md}>
+              <ScrollReveal style={ITEM_GUTTER}>
+                <RevealText>
+                  <Text
+                    col={colors.text}
+                    fos={fontSize.lead}
+                    fow={fontWeight.semibold}
+                    accessibilityRole="header"
+                  >
+                    {listings.total > 0
+                      ? t('vehicles.titleWithCount', { count: listings.total })
+                      : t('vehicles.title')}
                   </Text>
-                )
+                </RevealText>
+              </ScrollReveal>
+
+              {showProvinceTabs ? (
+                <ChipRow label={t('vehicleFilters.provinceLabel')}>
+                  <ShopFilterChip
+                    label={t('vehicleFilters.all')}
+                    active={!filters.provinceCode}
+                    onPress={() => patch({ provinceCode: undefined })}
+                  />
+                  {shop.serviceProvinces.map((province) => (
+                    <ShopFilterChip
+                      key={province.code}
+                      label={province.name}
+                      active={filters.provinceCode === province.code}
+                      onPress={() => patch({ provinceCode: province.code })}
+                    />
+                  ))}
+                </ChipRow>
               ) : null}
+
+              {showChips ? (
+                <ChipRow label={t('vehicleFilters.label')}>
+                  {serviceChips.map((chip) => {
+                    const active = filters.serviceType === chip.serviceType;
+                    return (
+                      <ShopFilterChip
+                        key={chip.key}
+                        label={t(`vehicleFilters.${chip.key}`)}
+                        active={active}
+                        onPress={() =>
+                          patch({ serviceType: active ? undefined : chip.serviceType })
+                        }
+                      />
+                    );
+                  })}
+                  {toggleChips.map((key) => (
+                    <ShopFilterChip
+                      key={key}
+                      label={t(`vehicleFilters.${key}`)}
+                      active={Boolean(filters[key])}
+                      onPress={() => patch({ [key]: !filters[key] })}
+                    />
+                  ))}
+                </ChipRow>
+              ) : null}
+
+              <YStack px={layout.screenX}>
+                {listings.initialError ? (
+                  <ScreenError
+                    error={listings.initialError}
+                    onRetry={listings.retryInitial}
+                    title={t('vehicles.loadError')}
+                  />
+                ) : listings.isInitialLoading ? (
+                  <YStack gap={layout.block} accessibilityLabel={tResults('loadingLabel')}>
+                    {Array.from({ length: Math.max(1, Math.min(3, shop.vehicleCount)) }, (_, i) => (
+                      <VehicleCardSkeleton key={i} />
+                    ))}
+                  </YStack>
+                ) : listings.total === 0 ? (
+                  hasActiveFilter ? (
+                    <YStack ai="center" gap={space.md} py={space.xl}>
+                      <Text col={colors.textMuted} fos={fontSize.body} ta="center">
+                        {t('vehicleFilters.emptyFiltered')}
+                      </Text>
+                      <Button
+                        label={t('vehicleFilters.clear')}
+                        variant="secondary"
+                        block={false}
+                        align="center"
+                        onPress={clearFilters}
+                      />
+                    </YStack>
+                  ) : (
+                    <Text col={colors.textMuted} fos={fontSize.body} ta="center" py={space.xl}>
+                      {t('vehicles.empty')}
+                    </Text>
+                  )
+                ) : null}
+              </YStack>
             </YStack>
           </YStack>
-        </YStack>
-      }
-      ListFooterComponent={
-        <YStack gap={layout.block}>
-          {listings.appendError ? (
-            <YStack py={layout.section} px={layout.screenX} gap={space.sm} ai="center">
-              <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
-                {tResults('appendError', { reason: '' })}
-              </Text>
-              <Button
-                label={tResults('loadMore')}
-                icon="chevron-down-outline"
-                variant="secondary"
-                block={false}
-                align="center"
-                onPress={listings.retryNextPage}
-              />
-            </YStack>
-          ) : listings.isFetchingNextPage ? (
-            <YStack pt={layout.block} px={layout.screenX} accessibilityLabel={tResults('loadingMore')}>
-              <VehicleCardSkeleton />
-            </YStack>
-          ) : listings.hasNextPage ? (
-            /*
-             * Tải thêm bằng NÚT, không tự tải khi cuộn: web phân trang số nên khối đánh giá luôn
-             * nằm ngay cuối trang hiện tại. Tự tải khi chạm đáy thì đánh giá bị đẩy xuống mãi —
-             * gian hàng 100 xe phải cuộn qua cả đội xe mới thấy (thiếu thông tin so với web).
-             */
-            <YStack pt={layout.block} px={layout.screenX} ai="center">
-              <Button
-                label={tResults('loadMore')}
-                icon="chevron-down-outline"
-                variant="secondary"
-                block={false}
-                align="center"
-                onPress={listings.fetchNextPage}
-              />
-            </YStack>
-          ) : null}
-          {/* Đánh giá ĐỨNG SAU danh sách xe đang hiện, như web — luôn hiện, không chờ tải hết xe. */}
-          {!listings.isInitialLoading ? (
-            <YStack px={layout.screenX} pt={layout.block}>
-              <ShopReviews slug={shop.slug} />
-            </YStack>
-          ) : null}
-        </YStack>
-      }
-    />
+        }
+        ListFooterComponent={
+          <YStack gap={layout.block}>
+            {listings.appendError ? (
+              <YStack py={layout.section} px={layout.screenX} gap={space.sm} ai="center">
+                <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
+                  {tResults('appendError', { reason: '' })}
+                </Text>
+                <Button
+                  label={tResults('loadMore')}
+                  icon="chevron-down-outline"
+                  variant="secondary"
+                  block={false}
+                  align="center"
+                  onPress={listings.retryNextPage}
+                />
+              </YStack>
+            ) : listings.isFetchingNextPage ? (
+              <YStack
+                pt={layout.block}
+                px={layout.screenX}
+                accessibilityLabel={tResults('loadingMore')}
+              >
+                <VehicleCardSkeleton />
+              </YStack>
+            ) : listings.hasNextPage ? (
+              /*
+               * Tải thêm bằng NÚT, không tự tải khi cuộn: web phân trang số nên khối đánh giá luôn
+               * nằm ngay cuối trang hiện tại. Tự tải khi chạm đáy thì đánh giá bị đẩy xuống mãi —
+               * gian hàng 100 xe phải cuộn qua cả đội xe mới thấy (thiếu thông tin so với web).
+               */
+              <YStack pt={layout.block} px={layout.screenX} ai="center">
+                <Button
+                  label={tResults('loadMore')}
+                  icon="chevron-down-outline"
+                  variant="secondary"
+                  block={false}
+                  align="center"
+                  onPress={listings.fetchNextPage}
+                />
+              </YStack>
+            ) : null}
+            {/* Đánh giá ĐỨNG SAU danh sách xe đang hiện, như web — luôn hiện, không chờ tải hết xe. */}
+            {!listings.isInitialLoading ? (
+              <YStack px={layout.screenX} pt={layout.block}>
+                <ShopReviews slug={shop.slug} />
+              </YStack>
+            ) : null}
+          </YStack>
+        }
+      />
     </ScrollRevealProvider>
   );
 }

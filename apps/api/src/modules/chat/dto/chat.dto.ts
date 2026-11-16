@@ -4,8 +4,11 @@ import {
   CHAT_ATTACHMENT_MAX_COUNT,
   CHAT_ATTACHMENT_MIME_TYPES,
   CHAT_INBOX_VALUES,
+  CHAT_REPORT_NOTE_MAX_LENGTH,
+  CHAT_REPORT_REASON_VALUES,
   CHAT_SIDE_VALUES,
   MESSAGE_TYPE_VALUES,
+  type ChatReportReason,
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -314,8 +317,41 @@ export class ConversationSummaryDto {
    * Hai bên gửi tin được không (`chatOpenBetween`, ADR 0073). `false` với chủ xe tuyến hoa hồng khi
    * cặp này chưa có đơn — lịch sử vẫn đọc được, ô soạn tin ẩn; server chặn `POST …/messages`.
    */
-  @ApiProperty({ description: 'Gửi tin được không - tuyến hoa hồng chỉ khi đã có đơn (ADR 0073)' })
+  @ApiProperty({
+    description:
+      'Gửi tin được không - false khi tuyến hoa hồng chưa có đơn (ADR 0073) hoặc một trong hai phía đã chặn',
+  })
   canSend!: boolean;
+  @ApiProperty({ description: 'Phía người xem đã chặn phía bên kia (App Store 1.2)' })
+  blockedByMe!: boolean;
+  @ApiProperty({ description: 'Phía bên kia đã chặn người xem' })
+  blockedByOther!: boolean;
+}
+
+export class ChatBlockResultDto {
+  @ApiProperty() conversationId!: string;
+  @ApiProperty() blockedByMe!: boolean;
+  @ApiProperty() blockedByOther!: boolean;
+  @ApiProperty() canSend!: boolean;
+}
+
+export class ReportConversationDto {
+  @ApiProperty({
+    enum: CHAT_REPORT_REASON_VALUES,
+    description: 'Mã lý do - nhãn hiển thị do client dịch (`Chat.reportReasons.<mã>`, ADR 0012)',
+  })
+  @IsIn(CHAT_REPORT_REASON_VALUES)
+  reason!: ChatReportReason;
+
+  @ApiPropertyOptional({ maxLength: CHAT_REPORT_NOTE_MAX_LENGTH })
+  @IsOptional()
+  @IsString()
+  @MaxLength(CHAT_REPORT_NOTE_MAX_LENGTH)
+  note?: string;
+}
+
+export class ChatReportResultDto {
+  @ApiProperty() id!: string;
 }
 
 export class ConversationPageMetaDto {

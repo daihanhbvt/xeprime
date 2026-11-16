@@ -831,6 +831,8 @@
       "label": "Rentals board by stage",
       "dragHint": "Cards can only move to the next step",
       "handle": "Drag the {vehicle} card to the next step",
+      "expand": "Show customer and trip payment",
+      "collapse": "Hide customer and trip payment",
       "drop": {
         "approve": "Drop here to confirm the request",
         "pickup": "Drop here to open the pickup handover",
@@ -857,10 +859,18 @@
       },
       "money": {
         "customerTotal": "Customer pays",
-        "payAtPickup": "Due at pickup",
+        "payAtPickup": "Collect at handover",
         "hold": "Reservation",
+        "walletCredit": "To wallet",
         "collected": "Collected",
         "debt": "Outstanding"
+      },
+      "schedule": {
+        "period": "Time",
+        "placeDelivery": "Deliver to",
+        "placeDriverPickup": "Pick-up point",
+        "placeBranch": "Collect at",
+        "placeUnknown": "No address yet"
       },
       "holdState": {
         "expected": "Estimated",

@@ -12,6 +12,7 @@
     },
     "production": {
       "autoIncrement": false,
+      "env": { "APS_ENVIRONMENT": "production" },
       "android": { "buildType": "app-bundle" }
     }
   },

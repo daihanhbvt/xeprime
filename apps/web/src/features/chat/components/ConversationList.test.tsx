@@ -20,6 +20,8 @@ const conversation = (over: Partial<ConversationSummary> & { id: string }): Conv
   lastMessageAt: '2026-09-07T03:24:00.000Z',
   lastSenderType: 'customer',
   canSend: true,
+  blockedByMe: false,
+  blockedByOther: false,
   unread: 0,
   status: 'open',
   ...over,

@@ -446,10 +446,18 @@
 
   .menu {
     flex-direction: row;
+    min-width: 0;
+    max-width: 100%;
     overflow-x: auto;
+    overscroll-behavior-x: contain;
     gap: 4px;
     padding: 6px;
     scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .menu::-webkit-scrollbar {
+    display: none;
   }
 
   .menuGroup {
@@ -462,7 +470,12 @@
   }
 
   .menuList {
+    flex: none;
     flex-direction: row;
+  }
+
+  .menuList > li {
+    flex: none;
   }
 
   .menuItem {

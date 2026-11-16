@@ -10,7 +10,14 @@ interface DiscountTagProps {
    * `badge` — huy hiệu trên ảnh thẻ xe của design v2 (ADR 0062): nền gold nhạt, chữ "10% off".
    * Mặc định là viên `-10%` của các màn còn lại.
    */
-  variant?: 'pill' | 'badge';
+  variant?: 'pill' | 'badge' | 'corner';
+  /**
+   * Chỉ cho `corner`: ô chứa nó đang được chọn ⇒ nhãn theo màu nhấn của ô (vàng) thay cho màu
+   * ưu đãi (xanh).
+   */
+  active?: boolean;
+  /** Chỉ cho `corner`: ưu đãi TỐT NHẤT trong nhóm ⇒ màu giảm giá (đỏ). `active` thắng nếu cả hai. */
+  best?: boolean;
   /** Chỉ dùng cho bố trí như ghim tag lên ảnh/góc gói; màu và chữ vẫn do common sở hữu. */
   className?: string;
 }
@@ -20,6 +27,8 @@ export function DiscountTag({
   percent,
   size = 'md',
   variant = 'pill',
+  active = false,
+  best = false,
   className,
 }: DiscountTagProps) {
   const tCommon = useTranslations('Common');
@@ -32,6 +41,22 @@ export function DiscountTag({
         aria-label={tCommon('components.discount', { percent: normalized })}
       >
         {tCommon('components.discountBadge', { percent: normalized })}
+      </span>
+    );
+  }
+
+  if (variant === 'corner') {
+    // Nhãn GÓC: ô cha cần `position: relative` + `overflow: hidden` để nhãn ôm sát góc trên-phải.
+    return (
+      <span
+        className={cx(
+          styles.corner,
+          active ? styles.cornerActive : best && styles.cornerBest,
+          className,
+        )}
+        aria-label={tCommon('components.discount', { percent: normalized })}
+      >
+        -{normalized}%
       </span>
     );
   }

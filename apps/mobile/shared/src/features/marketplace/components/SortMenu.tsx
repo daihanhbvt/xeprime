@@ -15,6 +15,7 @@ import { elevation } from '@/theme/elevation';
 import { useAppStyles } from '@/theme/styles';
 import { useColors, useFloatingSurfaceBorder } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { modalColumn } from '@/theme/layout';
 
 /**
  * Bộ chọn thứ tự sắp xếp — **menu**, không phải hàng chip.
@@ -96,6 +97,7 @@ export function SortMenu({
         <YStack f={1}>
           <Pressable style={appStyles.scrim} onPress={() => setOpen(false)} />
           <YStack
+            style={modalColumn}
             bg={colors.surface}
             borderTopLeftRadius={radius.lg}
             borderTopRightRadius={radius.lg}

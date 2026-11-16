@@ -68,7 +68,7 @@ import {
 import { piiSearch } from '../../common/support/support-search';
 import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope';
 import { normalizeRouteContext } from '../../common/route-context';
-import { addressViewOf, pinOf } from '../../common/address-view';
+import { addressViewOf, pickupPointAddressOf, pinOf } from '../../common/address-view';
 import { ownerPayoutOf } from '../../common/owner-payout';
 import {
   EFFECTIVE_SUBSCRIPTION_ARGS,
@@ -216,6 +216,9 @@ const SELECT = {
       withDriverInterCityPrice: true,
       withDriverOneWayPrice: true,
       discountPercent: true,
+      // Điểm nhận xe khi khách tự tới (`pickupPointAddressOf`) — dòng "Nhận tại" của thẻ.
+      branch: { select: { address: true } },
+      tenant: { select: { profile: { select: { address: true } } } },
     },
   },
   // `phone` — SĐT tài khoản, để chủ xe thấy CẢ HAI số khi liên hệ của chuyến khác nó (ADR 0063).
@@ -238,7 +241,13 @@ const SELECT = {
     select: { amount: true, paidAmount: true, priceSnapshotJson: true, ...REMINDER_HOLD_SELECT },
   },
   booking: {
-    select: { code: true, totalAmount: true, customerTotalAmount: true, paidAmount: true },
+    select: {
+      code: true,
+      totalAmount: true,
+      customerTotalAmount: true,
+      paidAmount: true,
+      ownerPayableAmount: true,
+    },
   },
 } satisfies Prisma.BookingRequestSelect;
 
@@ -1184,6 +1193,7 @@ export class BookingRequestsService {
               // `approvalPreview.onlineAmount`, không giả làm một khoản đã phát hành.
               holdAmount: null,
               holdPaidAmount: null,
+              ownerPayableAmount: estimate.fees?.ownerPayableAmount ?? null,
             }
           : null;
       return {
@@ -1285,6 +1295,8 @@ export class BookingRequestsService {
           : null,
         holdAmount: r.hold ? r.hold.amount.toFixed(0) : null,
         holdPaidAmount: r.hold ? r.hold.paidAmount.toFixed(0) : null,
+        // Cột phẳng của đơn đọc từ chính snapshot (ADR 0032 điều 2) — null với đơn đời cũ.
+        ownerPayableAmount: r.booking.ownerPayableAmount?.toFixed(0) ?? null,
       };
     }
 
@@ -1299,6 +1311,7 @@ export class BookingRequestsService {
         remainingAmount: snapshot.fees?.payAtPickupAmount ?? null,
         holdAmount: r.hold.amount.toFixed(0),
         holdPaidAmount: r.hold.paidAmount.toFixed(0),
+        ownerPayableAmount: snapshot.fees?.ownerPayableAmount ?? null,
       };
     }
 
@@ -2921,6 +2934,7 @@ function toDto(r: BookingRequestRow, packageTrack: boolean): BookingRequestDto {
     note: r.note,
     deliveryRequested: r.deliveryRequested,
     deliveryAddress: r.deliveryAddress,
+    pickupPointAddress: pickupPointAddressOf(r.vehicle),
     deliveryLocation: addressViewOf({
       displayAddress: r.deliveryAddress,
       addressLine: r.deliveryAddressLine,

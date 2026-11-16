@@ -41,50 +41,6 @@
   }
 }
 
-/*
- * Nghiêng 3D theo con trỏ (`usePointerTilt` ghi `--tilt-rx/ry`, `--glare-x/y`) + vệt sáng bóng
- * chạy theo chuột. Chỉ chuột thật; giảm chuyển động thì tắt. Biến chưa ghi ⇒ 0deg, thẻ phẳng.
- * `--card-perspective` và màu vệt sáng là token CỤC BỘ (chưa có ở @xeprime/ui).
- */
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .card {
-    --card-perspective: 1000px;
-    transform-style: preserve-3d;
-  }
-
-  .card:hover {
-    transform: perspective(var(--card-perspective)) rotateX(var(--tilt-rx, 0deg))
-      rotateY(var(--tilt-ry, 0deg)) translateY(var(--xp-motion-lift-hover));
-  }
-
-  .card::after {
-    position: absolute;
-    z-index: 2;
-    inset: 0;
-    border-radius: inherit;
-    background: radial-gradient(
-      circle at var(--glare-x, 50%) var(--glare-y, 0%),
-      rgba(255, 255, 255, 0.38) 0%,
-      rgba(255, 255, 255, 0.08) 35%,
-      transparent 65%
-    );
-    content: '';
-    mix-blend-mode: soft-light;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity var(--xp-motion-duration-fast) var(--xp-motion-ease-standard);
-  }
-
-  .card:hover::after {
-    opacity: 1;
-  }
-}
-
-/* Ảnh thẻ vừa bấm — trùng tên với ảnh đầu trang chi tiết để View Transition nối hai ảnh. */
-.media[data-vt-source] {
-  view-transition-name: xp-listing-photo;
-}
-
 @media (hover: hover) {
 
   .card:hover .photo {

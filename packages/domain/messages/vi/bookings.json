@@ -831,6 +831,8 @@
       "label": "Bảng đơn thuê theo chặng",
       "dragHint": "Chỉ kéo được sang bước tiếp theo",
       "handle": "Kéo thẻ {vehicle} sang bước tiếp theo",
+      "expand": "Xem thông tin khách và tiền chuyến",
+      "collapse": "Thu gọn thông tin khách và tiền chuyến",
       "drop": {
         "approve": "Thả vào đây để xác nhận yêu cầu",
         "pickup": "Thả vào đây để mở bước giao xe",
@@ -857,10 +859,18 @@
       },
       "money": {
         "customerTotal": "Khách trả",
-        "payAtPickup": "Trả khi nhận xe",
+        "payAtPickup": "Thu khi giao xe",
         "hold": "Giữ chỗ",
+        "walletCredit": "Cộng ví",
         "collected": "Đã thu",
         "debt": "Còn phải thu"
+      },
+      "schedule": {
+        "period": "Thời gian",
+        "placeDelivery": "Giao xe tới",
+        "placeDriverPickup": "Điểm đón",
+        "placeBranch": "Nhận tại",
+        "placeUnknown": "Chưa có địa chỉ"
       },
       "holdState": {
         "expected": "Dự kiến",

@@ -583,3 +583,11 @@
     animation: none;
   }
 }
+
+/* ≤640px một cột cuộn chung một mạch: khung bước cao theo nội dung. PHẢI đứng SAU rule gốc
+   `.stepEnter { height: 100% }` — cùng độ ưu tiên selector nên rule nào sau thắng. */
+@media (max-width: 640px) {
+  .stepEnter {
+    height: auto;
+  }
+}

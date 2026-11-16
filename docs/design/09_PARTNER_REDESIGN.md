@@ -290,7 +290,7 @@ xe", nhãn "Khách hàng", dòng thời lượng thuê, mốc "Đã xử lý lú
 | 4 | Tay nắm ⋮⋮ | ✅ | Chỉ ở thẻ có bước kế mà người xem làm được: yêu cầu còn hạn phản hồi + quyền duyệt; thẻ chờ thanh toán + quyền duyệt (để thấy cột kế bị khoá); thẻ chờ giao + quyền bàn giao, ngoài phiên hỗ trợ. Thẻ Đang thuê là cột cuối — không có tay nắm (nhận xe bằng nút) |
 | 5 | Bàn phím + trình đọc màn hình | 🆕 | Space/Enter nhấc · ←/→ nhảy thẳng sang cột kế · Space/Enter thả · Esc huỷ; lời thông báo tiếng Việt/Anh |
 | 6 | Câu "Kéo thả thẻ để cập nhật trạng thái" ở phụ đề | ⚠️ | Giữ phụ đề chung (kéo chỉ MỞ hộp xác nhận); dòng "⋮⋮ Chỉ kéo được sang bước tiếp theo" cạnh nút chuyển dạng xem, chỉ ở Kanban và chỉ khi có thẻ kéo được |
-| 7 | Nút chuyển Kanban / List | ✅ | Chốt 05/11: `?view=` thắng; không có thì lựa chọn GẦN NHẤT của trình duyệt (`localStorage`); chưa chọn bao giờ ⇒ Kanban. Điện thoại (≤640px) LUÔN List, không có nút; tablet cuộn ngang các cột |
+| 7 | Nút chuyển Kanban / List | ✅ | Chốt 05/11: `?view=` thắng; không có thì lựa chọn GẦN NHẤT của trình duyệt (`localStorage`); chưa chọn bao giờ ⇒ Kanban. Điện thoại (≤640px) LUÔN List, không có nút; tablet cuộn ngang các cột (cột ≥320px để thẻ 294px giữ dòng "Thời gian" một hàng). Chốt 10/11: mỗi cột tự cuộn danh sách thẻ, cột cao gần trọn khung nhìn dưới header dính ⇒ cuộn trang (ngoài cột, hoặc hết cột thì cuộn lan ra trang) đẩy phần tiêu đề + bộ lọc đi để bảng chiếm cả màn. Lề phải cột 16 chứa thanh cuộn (không ăn bề rộng thẻ); thanh mờ khi đứng yên, rõ dần khi cuộn, mờ chậm khi dừng. Thẻ hẹp dưới ~291px (cột ở màn ~1280) thì nhãn "Thời gian"/"Điểm đón" lên trên, giá trị xuống dưới để kỳ thuê vẫn một hàng. Dải tab trạng thái (và mọi `StatusRail`/`SegmentedTabs`/`QueueRail` ở màn hẹp) cuộn được bằng con lăn và kéo chuột, tab đang chọn tự trượt vào khung, mép còn tab khuất thì mờ dần (`useHorizontalScroll`) |
 | 8 | Toast "Ghi nhận thanh toán" (Step 3) | 🆕→✅ | Chốt 05/11, cho CẢ List lẫn Kanban, chỉ ở trình duyệt: một truy vấn nền theo dõi tối đa 100 yêu cầu `awaiting_hold`; yêu cầu rời nhóm ⇒ hỏi server, chỉ `converted_to_booking` mới có toast "Khách đã thanh toán cho đơn hàng #…" + "Xem đơn hàng" (cần `bookings.view`); lần tải đầu chỉ ghi mốc; hết hạn/huỷ thì im |
 | 9 | Đồng hồ "59:39" / "1d 12:09" ở chân thẻ | ⚠️ | Cột 1–2: đồng hồ hạn của chặng, nhãn chỉ cho trình đọc màn hình. Cột 3–4: câu tình trạng như List (không có hạn chót ở chặng chờ giao) |
 | 10 | Hộp Nhận xe trong Kanban (`23941:65305`) · Gia hạn +7/+15 ngày | ✅ / ⚠️ | Hộp Nhận xe đã dựng 06/11 (§3.2d). Gia hạn: như §3.2b dòng 16 |
@@ -300,6 +300,40 @@ xe", nhãn "Khách hàng", dòng thời lượng thuê, mốc "Đã xử lý lú
 Tự dựng thêm: cột trống (câu của chặng) · lỗi từng cột (thử lại) · tải thêm / lỗi tải thêm · lỗi cả bảng · lọc
 không ra gì ⇒ một câu chung + "Xoá bộ lọc" · làm mới nền 30 giây TẮT trong lúc đang cầm thẻ · bóng thẻ gọn khi
 kéo · cột nhận được viền gold + câu nổi "Thả vào đây để…", cột khoá viền xám, cột khác mờ.
+
+### 3.2e Thẻ gọn mở/thu + bố cục điện thoại (10/11/2026)
+
+Design: "Rental Request - MB" `24117:65745` — dải tab `24117:67234`, thẻ mở `24117:72641`, thẻ thu
+gọn `24117:72841`. Người dùng: "trên PC sửa cái card là chủ yếu, bấm mũi tên hiện thêm thông tin,
+đóng để thu gọn như collapse của AntD; responsive cho web mobile như design". Code: khung
+`rental-card/RentalBoardCard` (dùng cho CẢ cột Kanban trên PC lẫn danh sách trên điện thoại) ·
+`BookingsListView` (điện thoại ⇒ thẻ gọn) · `components/navigation/StatusRail.module.css` (dải tab ≤1024).
+
+| # | Hạng mục | Dấu | Quyết định |
+| --- | --- | --- | --- |
+| 1 | Dải đầu hai hàng: (⋮⋮ · mã \| viên trạng thái) rồi (viên dịch vụ \| số vàng 16/600) | ✅ | Số vàng = **Khách trả** (chốt 10/11 — đúng design) |
+| 2 | Viên "Chưa cọc" ở góc phải dải đầu | ⚠️ | Chốt 10/11: viên mang trạng thái GIỮ CHỖ theo chặng — Dự kiến · Chưa thanh toán (đỏ như design) · Đã thanh toán (ADR 0044 điều 9 cấm gọi là "cọc"). Đơn tự lập không có viên. Ô "Giữ chỗ" của hàng tiền chỉ còn số |
+| 3 | Mũi tên ở hàng xe mở/thu **khối khách + hàng tiền** (design bản 2, 10/11) | 🆕→✅ | Chốt 10/11: **mặc định thu gọn**, mỗi thẻ nhớ riêng trong lúc ở trên màn (không lưu qua lần tải lại). Thu: tròn xám, mũi tên xuống; mở: nền primary-low, mũi tên lên. Trượt chiều cao như AntD Collapse; lúc thu thì vùng đó `inert`. Nút có `aria-expanded` + nhãn "Xem / Thu gọn thông tin khách và tiền chuyến". Nét đứt giữa khách và hàng tiền |
+| 4 | Hàng tiền ba ô có vạch ngăn, canh giữa, số 14/500 | ✅ / 🟡 | Chốt 10/11 (đối chiếu bảng cộng ví của Mioto, người đọc là chủ xe): **Giữ chỗ · Thu khi giao xe · Cộng ví** — giữ chỗ + thu khi giao xe = số vàng; cộng ví = `D − T` XePrime ghi vào Ví điểm khi chuyến xong. Bỏ ô "Khách trả" lặp số vàng. API: `ownerPayableAmount` lên `BookingListItemDto` (snapshot) và `BookingRequestPricingDto` (tạm tính / hold / đơn) — chỉ realm partner (ADR 0064 điều 11). Chuyến không thu online: không ô giữ chỗ, không cộng ví. Đơn tự lập: Đã thu · Còn phải thu. Ô rộng theo chữ rồi chia đều phần dư |
+| 5 | Tên xe 14/600, biển số nền gray-50 không viền | ✅ | Theo design |
+| 6 | Ô lịch LUÔN hiện: "Nhận xe" nhận → trả MỘT dòng + "Địa chỉ nhận" | ✅ / 🟡 | Nhãn trái, giá trị canh phải. Nhãn đổi **"Thời gian"** (chốt 10/11). Thẻ hẹp hơn design (cột Kanban trên màn ≤1440, nội dung thẻ <310px) không chứa nổi bản đầy đủ ở cỡ 14 dù bớt hết đệm (đo: nhãn 57 + khung giờ 215 > 270) ⇒ ở đó **ẩn phần thứ** ("03/11 21h00 → 04/11 10h00") và bớt đệm ngang: thẻ 16→12, ô lịch 12→8, nhãn–giá trị 12→6 (container query trên vỏ thẻ — ngưỡng 362px; `fmt.rentalPointParts`). Đã thử chuỗi chữ số rộng nhất ở thẻ hẹp nhất 294px: vẫn một dòng; điện thoại giữ bản có thứ. Địa chỉ gọn **bỏ cả chữ "Phường/Xã/Thị trấn/Đặc khu"** (`shortAddress`; giữ khi tên là số — "Phường 5"), dài quá thì chỉ xuống dòng ở dấu phẩy. Design bỏ dòng "Hình thức nhận xe" ⇒ chốt 10/11: **nhãn theo hình thức** — "Giao xe tới" (địa chỉ khách) · "Điểm đón" (có tài xế) · "Nhận tại" (khách tự tới: địa chỉ chi nhánh giữ xe, rơi về hồ sơ gian hàng — `pickupPointAddress` mới trên cả hai DTO, quy tắc chung `pickupPointAddressOf` với trang xe công khai). Địa chỉ cắt tỉnh/TP khi nhận ra được (`addressWithoutProvince` ở `@xeprime/domain`, cả tỉnh lặp hai lần và tên trước sáp nhập); bản đầy đủ + phí giao + lộ trình vào ⓘ. Dài hạn thêm dòng Gói; dài hạn chưa duyệt: Gói + Nguyện vọng |
+| 7 | Điện thoại: thẻ gọn thay thẻ List | ✅ | ≤640px danh sách vẽ bằng `RentalBoardCard` (không tay nắm — điện thoại vẫn không có Kanban, §3.2c dòng 7). Máy tính dạng List giữ thẻ `RentalCard` cũ |
+| 8 | Dải tab Cần xử lý · Chờ thanh toán · Chờ giao xe · Đang thuê xe | ✅ / 🟡 | Kiểu design (nền gray-50, tab chọn nền trắng viền gray-300, chấm 6, chữ 14/600). Chốt 10/11: **giữ tab "Tất cả" đầu tiên + số đếm** (design không vẽ — không bỏ tính năng). Áp cho mọi bề ngang ≤1024 (dải cột trái đã thành hàng ngang từ mốc đó) |
+| 9 | Màu viên dịch vụ của design mới (có tài xế hồng · dài hạn tím) | ⚠️ | **Chưa đổi** — `ServiceTypeChip` dùng chung với thẻ List, Đơn đã kết thúc, chi tiết (có tài xế cam · dài hạn hồng, design 02/11). Chờ người dùng chốt có đổi đồng loạt không |
+| 10 | Thẻ siêu gọn ẩn trong frame (`24117:69914`: mã · viên · mũi tên / tên xe · đồng hồ / giá) | — | Nằm ngoài khung 390 và các khối đều `hidden` — coi là bản nháp, không dựng |
+
+Không đổi: hành động, quyền, hộp thoại, kéo thả, đồng hồ/câu tình trạng ở chân thẻ, ⓘ cạnh tên khách
+(trong phần thu gọn) và ⓘ của dòng địa chỉ.
+
+**Việc cho app Partner (dev mobile làm sau — chưa ai nhận):** màn Đơn thuê của `apps/mobile/manage`
+theo cùng frame `24117:65745` (bản 2, 10/11) và các quyết định 1–4, 6, 8 ở trên: dải tab chặng (giữ
+"Tất cả" + số đếm), thẻ gọn mặc định thu, mũi tên mở/thu khối khách + hàng tiền, ô lịch luôn hiện
+(nhận → trả một dòng, địa chỉ nhãn theo hình thức, cắt tỉnh bằng `addressWithoutProvince`), viên
+trạng thái giữ chỗ theo chặng (không chữ "cọc"), số vàng = khách trả, hàng tiền Giữ chỗ · Thu khi giao
+xe · Cộng ví (`ownerPayableAmount`). API đã có đủ trường (`pickupPointAddress`, `ownerPayableAmount`)
+— bản `apps/mobile/shared/src/api` cần cập nhật kiểu (ADR 0031). Nhãn dùng chung namespace
+`Bookings.board.kanban` (`expand` / `collapse`, `money.*`, `schedule.*`, `holdState.*`). Ghi nợ ở
+`docs/mobile-module-status.md` §3.1.
 
 ### 3.2d Hộp "Xác nhận đã nhận lại xe" (06/11/2026)
 
@@ -860,6 +894,7 @@ Ghi lại để phiên sau khỏi tốn lượt đọc lại.
 | `23797:49689` | Màn Đơn thuê xe, một ngăn (Hoàn thành) có phân trang `23797:50995` |
 | `23746:51015` | Tab List/Kanban của màn Yêu cầu (frame chốt 02/11 không còn dùng) |
 | `23874:79920` | Section "Đơn thuê xe" gộp: List `23973:51952` (nhóm `23973:82735`, thẻ `23978:92713`) · Kanban `23895:15181` (nội dung `23898:24586`; thẻ "_Kanban Item" chờ duyệt `23895:15196`, đang thuê `23895:15208`) · Kanban + Tạo đơn `23948:84908` · Đơn đã kết thúc `23948:87473` · các bước `23898:28955` (Phê duyệt `23898:25444`, Từ chối `23919:39682`, Huỷ khi chờ trả `23930:44688`, toast duyệt `23930:42529`, Gia hạn `23941:62236`, Nhận xe `23941:64008` / modal `23941:65305`) |
+| `24117:65745` | Đơn thuê xe — điện thoại "Rental Request - MB" (10/11): dải tab `24117:67234` · thẻ mở `24117:72641` · thẻ thu gọn `24117:72841` · thẻ siêu gọn nháp `24117:69914` (không dựng). Chấm tab: đỏ #D92D20 · cam #F79009 · xanh #1570EF · lá #039855 |
 | `23948:99504` | Chi tiết đơn — đơn đã huỷ (Failed) · `23930:45292` đang thuê + toast |
 | `23777:53056` | Section Chi tiết đơn: chờ giao `23845:49956` (03/11, thay `23768:29928`) · cảnh báo thiếu `23845:51599` · popup sẵn sàng giao `23845:53852` (modal `23845:54382`) · chờ giao có tài xế `23807:73143` · hộp Thông tin khách `23777:49485` · hộp Thu tiền đơn `23777:52010` · đang thuê `23777:48710` · hoàn thành `23777:52626` |
 | `23777:54974` | Section Khách hàng: danh sách `23777:53057` (dải số liệu `23777:53832`) · Tổng quan `23777:54975` · Lịch sử thuê `23797:54015` · Thu chi `23797:55706` · Giấy tờ `23797:62633` |
