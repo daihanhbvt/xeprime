@@ -36,6 +36,9 @@ export type MarkWithdrawalPaidInput = Schemas['MarkWithdrawalPaidDto'];
 export interface WithdrawalFilters {
   status?: string | null;
   overdue?: boolean;
+  /** Mã lệnh, tên chủ ví, hoặc đúng 4 số cuối tài khoản — có `q` thì server tìm ở mọi trạng thái. */
+  q?: string;
+  ownerType?: string;
   page?: number;
 }
 

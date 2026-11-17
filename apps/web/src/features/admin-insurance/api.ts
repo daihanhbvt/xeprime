@@ -10,8 +10,10 @@ import {
 } from '@/services/api-client';
 import type {
   CertificateFilters,
+  InsuranceAttentionPage,
   InsurancePolicy,
   InsurancePolicyDetail,
+  InsurancePolicyPricing,
   InsuranceProduct,
   InsuranceRemittance,
   InsuranceRemittanceLine,
@@ -20,6 +22,8 @@ import type {
   PayInsuranceRemittanceInput,
   RemittanceFilters,
   UpdateInsuranceProductInput,
+  VoidInsurancePolicyInput,
+  VoidInsurancePolicyResult,
 } from './types';
 import { browserApiHref } from '@/lib/api-href';
 
@@ -58,11 +62,26 @@ export const fetchCertificates = (filters: CertificateFilters): Promise<Paged<In
 export const fetchCertificateDetail = (id: string): Promise<InsurancePolicyDetail> =>
   apiGet<InsurancePolicyDetail>(`/platform/money/insurance/${encodeURIComponent(id)}`);
 
+/** Phí thực tế của một hợp đồng (ADR 0091 điều 2). */
+export const fetchCertificatePricing = (id: string): Promise<InsurancePolicyPricing> =>
+  apiGet<InsurancePolicyPricing>(`/platform/money/insurance/${id}/pricing`);
+
+/** Hợp đồng cần xử lý gấp (ADR 0091 điều 7). */
+export const fetchInsuranceAttention = (): Promise<InsuranceAttentionPage> =>
+  apiGet<InsuranceAttentionPage>('/platform/money/insurance/attention');
+
 export const retryCertificate = (id: string): Promise<void> =>
   apiPost<void>(`/platform/money/insurance/${encodeURIComponent(id)}/retry`);
 
-export const voidCertificate = (id: string, reason: string): Promise<void> =>
-  apiPost<void>(`/platform/money/insurance/${encodeURIComponent(id)}/void`, { reason });
+/** Thu hồi — hai nhánh theo hiệu lực do server quyết (ADR 0093); hợp đồng đã cấp cần mã đối chiếu. */
+export const voidCertificate = (
+  id: string,
+  input: VoidInsurancePolicyInput,
+): Promise<VoidInsurancePolicyResult> =>
+  apiPost<VoidInsurancePolicyResult>(
+    `/platform/money/insurance/${encodeURIComponent(id)}/void`,
+    input,
+  );
 
 // ── Bảng kê trả phí cho hãng (ADR 0088 điều 6) ──────────────────────────────
 

@@ -50,6 +50,8 @@ export class InsuranceOfferService {
     kinds: ReadonlySet<string>;
     /** Biểu phí bậc của sản phẩm `IV` đang bật — `null` = sản phẩm tính theo ngày (ADR 0088). */
     vehicleTripTiers: InsurancePremiumTier[] | null;
+    /** % phí thu hộ của sản phẩm `IV` đang bật — `null` khi công tắc tắt (ADR 0091 điều 3). */
+    vehicleTripServiceFeePercent: number | null;
     at: number;
   } | null = null;
   /** Tăng mỗi lần `invalidate` — một lượt đọc bắt đầu TRƯỚC lần xoá không được ghi đè cache mới. */
@@ -86,6 +88,17 @@ export class InsuranceOfferService {
     return (await this.active()).vehicleTripTiers;
   }
 
+  /**
+   * % phí thu hộ bảo hiểm của nền tảng trên `IV` (ADR 0091 điều 3) — `null` khi vật chất xe không
+   * được bán hoặc công tắc của sản phẩm đang tắt. Một nguồn cho mọi đường tính tiền, cùng cổng với
+   * `vehicleTripTiers`.
+   */
+  async vehicleTripServiceFeePercent(): Promise<number | null> {
+    const offered = await this.offeredByKind();
+    if (!offered.vehicleProtection) return null;
+    return (await this.active()).vehicleTripServiceFeePercent;
+  }
+
   /** Một loại sản phẩm có đang được bán không — đọc cùng câu trả lời với `offeredByKind`. */
   static offers(offered: InsuranceOfferedByKind, kind: InsuranceProductKind): boolean {
     return kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP
@@ -102,6 +115,7 @@ export class InsuranceOfferService {
   private async active(): Promise<{
     kinds: ReadonlySet<string>;
     vehicleTripTiers: InsurancePremiumTier[] | null;
+    vehicleTripServiceFeePercent: number | null;
   }> {
     const now = Date.now();
     if (this.cache && now - this.cache.at < INSURANCE_OFFER_CACHE_TTL_MS) return this.cache;
@@ -109,7 +123,13 @@ export class InsuranceOfferService {
     const active = await this.products.insuranceProduct.findMany({
       where: { isActive: true },
       orderBy: { displayOrder: 'asc' },
-      select: { kind: true, premiumBasis: true, premiumTiersJson: true },
+      select: {
+        kind: true,
+        premiumBasis: true,
+        premiumTiersJson: true,
+        serviceFeeEnabled: true,
+        serviceFeePercent: true,
+      },
     });
     const kinds = new Set(active.map((p) => p.kind));
     const vehicleTrip = active.find((p) => p.kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP);
@@ -119,7 +139,15 @@ export class InsuranceOfferService {
       : null;
     // Sản phẩm bậc mà biểu phí hỏng ⇒ KHÔNG bán (không lặng lẽ rơi về biểu phí ngày).
     if (isTier && !vehicleTripTiers) kinds.delete(INSURANCE_PRODUCT_KIND.VEHICLE_TRIP);
-    const fresh = { kinds: kinds as ReadonlySet<string>, vehicleTripTiers, at: now };
+    const serviceFeePercent = vehicleTrip?.serviceFeeEnabled
+      ? Number(vehicleTrip.serviceFeePercent)
+      : 0;
+    const fresh = {
+      kinds: kinds as ReadonlySet<string>,
+      vehicleTripTiers,
+      vehicleTripServiceFeePercent: serviceFeePercent > 0 ? serviceFeePercent : null,
+      at: now,
+    };
     if (generation === this.generation) this.cache = fresh;
     return fresh;
   }

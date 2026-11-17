@@ -2,8 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, readInsuranceProductSnapshot } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  BOOKING_HOLD_OUTCOME,
   INSURANCE_POLICY_STATUS,
   INSURANCE_QUEUE_STATUS_ANY,
+  INSURANCE_REMITTANCE_STATUS,
   insuranceCoverageStatusOf,
   type InsurancePolicyStatus,
   type InsuranceProductKind,
@@ -16,10 +18,12 @@ import {
   INSURANCE_MAX_LIMIT,
   type InsuranceCertificateDto,
   type InsuranceCoverageDto,
+  type InsuranceVoidPlanDto,
   type PlatformInsuranceListQueryDto,
   type PlatformInsurancePolicyDetailDto,
   type PlatformInsurancePolicyDto,
 } from './dto/insurance.dto';
+import { insuranceVoidPlan } from './insurance-void-plan';
 
 const SELECT = {
   id: true,
@@ -116,8 +120,14 @@ export class InsuranceReadService {
     return { data: rows.map(toPlatformDto), meta: paginationMeta(paging, total) };
   }
 
-  /** Chi tiết một hợp đồng kèm bằng chứng hai chiều với đối tác. */
-  async detailForPlatform(id: string): Promise<PlatformInsurancePolicyDetailDto> {
+  /**
+   * Chi tiết một hợp đồng kèm bằng chứng hai chiều với đối tác, lý do / mã đối chiếu của lượt thu hồi và
+   * KẾ HOẠCH thu hồi (ADR 0093) — hộp thu hồi hiện đúng nhánh và số tiền server sẽ làm.
+   */
+  async detailForPlatform(
+    id: string,
+    now: Date = new Date(),
+  ): Promise<PlatformInsurancePolicyDetailDto> {
     const row = await this.prisma.bookingInsurancePolicy.findUnique({
       where: { id },
       select: {
@@ -126,6 +136,12 @@ export class InsuranceReadService {
         lastAttemptAt: true,
         cancelledAt: true,
         voidedAt: true,
+        voidReason: true,
+        voidPartnerReference: true,
+        refundedAt: true,
+        remittanceId: true,
+        serviceFeeAmount: true,
+        hold: { select: { outcome: true, customerUserId: true } },
         idempotencyKey: true,
         requestPayloadJson: true,
         responsePayloadJson: true,
@@ -143,6 +159,10 @@ export class InsuranceReadService {
       lastAttemptAt: isoOrNull(row.lastAttemptAt),
       cancelledAt: isoOrNull(row.cancelledAt),
       voidedAt: isoOrNull(row.voidedAt),
+      voidReason: row.voidReason,
+      voidPartnerReference: row.voidPartnerReference,
+      refundedAt: isoOrNull(row.refundedAt),
+      voidPlan: toVoidPlanDto(row, now),
       idempotencyKey: row.idempotencyKey,
       requestPayload: jsonObjectOrNull(row.requestPayloadJson),
       responsePayload: jsonObjectOrNull(row.responsePayloadJson),
@@ -207,16 +227,90 @@ export class InsuranceReadService {
   }
 
   /**
+   * Phần phí bảo hiểm ĐÃ QUYẾT TOÁN với hãng tới một mốc — các bảng kê `paid` có `paid_at < end`.
+   *
+   * Đối soát ba vế cần ba con số từ đây, vì lượt trả hãng chia tiền làm ba phía:
+   *  - `premiums`: tổng phí GỐC của các hợp đồng trong những bảng kê đó — rời vế GIỮ HỘ (hợp đồng
+   *    `issued`/`claim` vẫn mang trạng thái cũ sau khi trả, nên `custodiedPremiumAsOf` vẫn đếm nó).
+   *  - `commission`: hoa hồng đại lý XePrime được giữ lại — doanh thu NỀN TẢNG.
+   *  - `outstanding`: phần còn nợ hãng = phải trả − đã trả (âm khi trả dư) — vẫn là GIỮ HỘ.
+   *  Còn `paidOut` là số thật đã rời tài khoản.
+   *
+   * `premiums = commission + payable` theo phép lập bảng kê, nên bank giảm đúng `paidOut` và ba vế
+   * vẫn khép: `premiums` ra khỏi giữ hộ, `commission` vào nền tảng, `outstanding` ở lại giữ hộ.
+   */
+  async remittedAsOf(end: Date): Promise<{
+    premiums: Prisma.Decimal;
+    commission: Prisma.Decimal;
+    outstanding: Prisma.Decimal;
+    paidOut: Prisma.Decimal;
+  }> {
+    const paidBefore: Prisma.InsurancePremiumRemittanceWhereInput = {
+      status: INSURANCE_REMITTANCE_STATUS.PAID,
+      paidAt: { lt: end },
+    };
+    const [policies, remittances] = await Promise.all([
+      this.prisma.bookingInsurancePolicy.aggregate({
+        where: { ...custodiedPolicyWhere(end), remittance: paidBefore },
+        _sum: { premiumAmount: true },
+      }),
+      this.prisma.insurancePremiumRemittance.aggregate({
+        where: paidBefore,
+        _sum: { commissionAmount: true, payableAmount: true, paidAmount: true },
+      }),
+    ]);
+    const zero = new Prisma.Decimal(0);
+    const paidOut = remittances._sum.paidAmount ?? zero;
+    return {
+      premiums: policies._sum.premiumAmount ?? zero,
+      commission: remittances._sum.commissionAmount ?? zero,
+      outstanding: (remittances._sum.payableAmount ?? zero).sub(paidOut),
+      paidOut,
+    };
+  }
+
+  /** Số đã trả hãng TRONG một khoảng — dòng "đã chi" của đối soát ngày. */
+  async remittedBetween(start: Date, end: Date): Promise<Prisma.Decimal> {
+    const agg = await this.prisma.insurancePremiumRemittance.aggregate({
+      where: { status: INSURANCE_REMITTANCE_STATUS.PAID, paidAt: { gte: start, lt: end } },
+      _sum: { paidAmount: true },
+    });
+    return agg._sum.paidAmount ?? new Prisma.Decimal(0);
+  }
+
+  /**
    * Tổng phí bảo hiểm ĐANG GIỮ HỘ tới một mốc — vế `custodied.insuranceReserved` của đối soát.
    *
-   * Gồm `reserved`/`issuing`/`failed` (chưa mua gì, tiền vẫn của khách) và `issued`/`claim`
-   * (đã thành khoản phải trả hãng bảo hiểm). Cả năm đều là tiền XePrime đang cầm mà không sở
-   * hữu — chỉ khác ở chỗ đang nợ AI. `cancelled` đã hoàn khách, `voided` quyết toán riêng.
+   * Gồm `reserved`/`issuing`/`failed` (chưa mua gì, tiền vẫn của khách), `issued`/`claim` và
+   * `voided` đã từng cấp (khoản phải trả hãng — ADR 0093 điều 3), và `cancelled` của hold đã chốt
+   * `settled` mà chưa hoàn tới mốc (còn nợ khách — ADR 0093 điều 5). Tất cả đều là tiền XePrime đang
+   * cầm mà không sở hữu — chỉ khác ở chỗ đang nợ AI.
    */
   async custodiedPremiumAsOf(end: Date): Promise<Prisma.Decimal> {
     const agg = await this.prisma.bookingInsurancePolicy.aggregate({
-      where: {
-        createdAt: { lt: end },
+      where: custodiedPolicyWhere(end),
+      _sum: { premiumAmount: true },
+    });
+    return agg._sum.premiumAmount ?? new Prisma.Decimal(0);
+  }
+}
+
+/**
+ * Hợp đồng mà phí của nó đang nằm ở vế giữ hộ tới mốc `end` (trước khi trừ phần đã nộp hãng). MỘT
+ * định nghĩa cho `custodiedPremiumAsOf`, phần trừ của `remittedAsOf` và phần bảo hiểm nằm trong hold
+ * chưa chốt (`BookingHoldsService`) — ba chỗ cùng một luật thì không chỗ nào đếm lệch chỗ nào.
+ *
+ *  - còn chờ cấp / đã cấp / đang bồi thường: tiền của khách hoặc phải trả hãng;
+ *  - `voided` ĐÃ từng cấp: vẫn kê trả hãng cho tới khi hãng xác nhận huỷ (ADR 0093 điều 3);
+ *  - `cancelled` của hold đã chốt `settled`, chưa hoàn tới `end`: phí đã rời hold sang "phải trả
+ *    hãng", chờ vòng hoàn đưa về ví khách (ADR 0091 điều 7 · ADR 0093 điều 2).
+ * `cancelled` do huỷ chuyến trước bàn giao không thuộc đây: phí của nó đã về khách qua chính hold.
+ */
+export function custodiedPolicyWhere(end: Date): Prisma.BookingInsurancePolicyWhereInput {
+  return {
+    createdAt: { lt: end },
+    OR: [
+      {
         status: {
           in: [
             INSURANCE_POLICY_STATUS.RESERVED,
@@ -227,10 +321,29 @@ export class InsuranceReadService {
           ],
         },
       },
-      _sum: { premiumAmount: true },
-    });
-    return agg._sum.premiumAmount ?? new Prisma.Decimal(0);
-  }
+      { status: INSURANCE_POLICY_STATUS.VOIDED, issuedAt: { not: null } },
+      {
+        status: INSURANCE_POLICY_STATUS.CANCELLED,
+        hold: { outcome: BOOKING_HOLD_OUTCOME.SETTLED },
+        OR: [{ refundedAt: null }, { refundedAt: { gte: end } }],
+      },
+    ],
+  };
+}
+
+function toVoidPlanDto(
+  row: Parameters<typeof insuranceVoidPlan>[0],
+  now: Date,
+): InsuranceVoidPlanDto | null {
+  const plan = insuranceVoidPlan(row, now);
+  if (!plan) return null;
+  return {
+    branch: plan.branch,
+    partnerReferenceRequired: plan.partnerReferenceRequired,
+    refundTiming: plan.refundTiming,
+    refundAmount: plan.refundAmount?.toFixed(0) ?? null,
+    blockedByRemittance: plan.blockedByRemittance,
+  };
 }
 
 /** Cột hợp đồng đủ để dựng GCN phía khách/gian hàng — không phí, không lỗi, không payload. */

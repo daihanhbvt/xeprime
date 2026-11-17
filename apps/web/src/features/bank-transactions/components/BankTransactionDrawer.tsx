@@ -4,7 +4,12 @@ import { CheckCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { App, Alert, Button, Collapse, Radio, Tag } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { BANK_MATCH_STATUS, BANK_MATCH_STATUS_META, type BankMatchStatus } from '@xeprime/types';
+import {
+  BANK_MATCH_STATUS,
+  BANK_MATCH_STATUS_META,
+  BANK_MATCH_WALLET_CREDIT,
+  type BankMatchStatus,
+} from '@xeprime/types';
 import { CopyButton } from '@/components/data-display/CopyButton';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
@@ -22,14 +27,48 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import {
   useBankTransaction,
+  useCreditCustomer,
   useIgnoreBankTransaction,
   useMatchBankTransaction,
+  useMatchReceivable,
 } from '../hooks/use-bank-transactions';
-import type { BankTransactionDetail } from '../types';
+import type { BankTransactionDetail, BankTxReceivableSuggestion } from '../types';
 import { IgnoreDialog, NOTE_MAX } from './HandleDialogs';
+import { BankMatchReasonText } from './BankMatchReasonText';
 import styles from './BankTransactionDrawer.module.css';
 
-type DialogKind = 'match' | 'ignore';
+type DialogKind = 'match' | 'ignore' | 'credit';
+
+/**
+ * Giá trị của MỘT lựa chọn ở cột phải — hoá đơn gói (`invoice:<id>`) hay khoản giữ chỗ / phụ lục
+ * của khách (`booking_hold:<id>` · `booking_extension:<id>`, ADR 0092). Một nhóm radio duy nhất:
+ * khớp một khoản tiền vào HAI đích là điều không được xảy ra.
+ */
+const INVOICE_CHOICE = 'invoice';
+
+interface Chosen {
+  /** `invoice` hoặc loại khoản của khách (`booking_hold` / `booking_extension`). */
+  kind: string;
+  id: string;
+  code: string;
+  /** Gian hàng (hoá đơn gói) hoặc khách (khoản giữ chỗ). */
+  who: string;
+}
+
+function choiceValue(kind: string, id: string): string {
+  return `${kind}:${id}`;
+}
+
+function resolveChoice(tx: BankTransactionDetail | undefined, value: string | null): Chosen | null {
+  if (!tx || !value) return null;
+  const [kind, id] = value.split(':') as [string, string];
+  if (kind === INVOICE_CHOICE) {
+    const s = tx.suggestions.find((row) => row.invoiceId === id);
+    return s ? { kind, id, code: s.code, who: s.tenantName } : null;
+  }
+  const r = tx.receivableSuggestions.find((row) => row.targetType === kind && row.targetId === id);
+  return r ? { kind, id, code: r.code, who: r.customerName } : null;
+}
 
 /**
  * Chi tiết một giao dịch tiền vào + hai đường xử lý tay — ADR 0022 điều 4.
@@ -61,21 +100,28 @@ export function BankTransactionDrawer({
   const errorMessage = useErrorMessage();
   const detail = useBankTransaction(id);
   const match = useMatchBankTransaction();
+  const matchReceivable = useMatchReceivable();
+  const credit = useCreditCustomer();
   const ignore = useIgnoreBankTransaction();
   const tx = detail.data;
 
   /*
-   * Lựa chọn hoá đơn và hộp thoại GẮN VỚI GIAO DỊCH đã mở chúng: chuyển sang giao dịch khác
-   * (trước/sau) thì lựa chọn cũ tự không còn — không có đường khớp tiền của khoản A vào hoá đơn
+   * Lựa chọn đích và hộp thoại GẮN VỚI GIAO DỊCH đã mở chúng: chuyển sang giao dịch khác
+   * (trước/sau) thì lựa chọn cũ tự không còn — không có đường khớp tiền của khoản A vào đích
    * đã chọn cho khoản B.
    */
-  const [choice, setChoice] = useState<{ txId: string; invoiceId: string } | null>(null);
+  const [choice, setChoice] = useState<{ txId: string; value: string } | null>(null);
   const [dialogState, setDialogState] = useState<{ txId: string; kind: DialogKind } | null>(null);
-  const chosenId = choice && choice.txId === id ? choice.invoiceId : null;
+  const chosenValue = choice && choice.txId === id ? choice.value : null;
   const dialog = dialogState && dialogState.txId === id ? dialogState.kind : null;
-  const chosen = tx?.suggestions.find((s) => s.invoiceId === chosenId) ?? null;
+  const chosen = resolveChoice(tx, chosenValue);
   const pending = tx?.matchStatus === BANK_MATCH_STATUS.UNMATCHED;
-  const busy = match.isPending || ignore.isPending;
+  const hasTargets = Boolean(
+    tx && (tx.suggestions.length > 0 || tx.receivableSuggestions.length > 0),
+  );
+  // Ghi có ví chỉ mời khi mã trỏ tới khoản ĐÃ ĐÓNG có tài khoản khách (ADR 0092).
+  const lateCredit = tx?.lateCredit?.hasCustomerAccount ? tx.lateCredit : null;
+  const busy = match.isPending || matchReceivable.isPending || credit.isPending || ignore.isPending;
 
   // Giao dịch mới hiện ra: đưa vùng cuộn về đầu hồ sơ đó.
   const topRef = useRef<HTMLDivElement>(null);
@@ -105,11 +151,41 @@ export function BankTransactionDrawer({
     // Enter trong hộp thoại gửi lại kể cả khi nút đang quay — chặn lượt thứ hai ở đây.
     if (!id || !chosen || busy) return;
     const done = afterDecision();
-    match.mutate(
-      { id, invoiceId: chosen.invoiceId, note },
+    const handlers = {
+      onSuccess: () => {
+        message.success(t('match.success'));
+        done();
+      },
+      onError: (err: unknown) => message.error(errorMessage(err)),
+    };
+    if (chosen.kind === INVOICE_CHOICE) {
+      match.mutate({ id, invoiceId: chosen.id, note }, handlers);
+    } else {
+      matchReceivable.mutate(
+        {
+          id,
+          targetType: chosen.kind as BankTxReceivableSuggestion['targetType'],
+          targetId: chosen.id,
+          note,
+        },
+        handlers,
+      );
+    }
+  }
+
+  function submitCredit(note: string) {
+    if (!id || !lateCredit || busy) return;
+    const done = afterDecision();
+    credit.mutate(
+      {
+        id,
+        targetType: lateCredit.targetType as BankTxReceivableSuggestion['targetType'],
+        targetId: lateCredit.targetId,
+        note,
+      },
       {
         onSuccess: () => {
-          message.success(t('match.success'));
+          message.success(t('credit.success'));
           done();
         },
         onError: (err) => message.error(errorMessage(err)),
@@ -138,12 +214,12 @@ export function BankTransactionDrawer({
         chosen ? (
           <span className={styles.hintReady}>
             <CheckCircleOutlined aria-hidden />
-            {t('footer.chosen', { code: chosen.code, tenant: chosen.tenantName })}
+            {t('footer.chosen', { code: chosen.code, tenant: chosen.who })}
           </span>
         ) : (
           <span className={styles.hintTone}>
             <InfoCircleOutlined aria-hidden />
-            {tx.suggestions.length > 0 ? t('footer.choose') : t('footer.noInvoice')}
+            {hasTargets ? t('footer.choose') : t('footer.noInvoice')}
           </span>
         )
       }
@@ -156,8 +232,16 @@ export function BankTransactionDrawer({
           >
             {t('ignore.action')}
           </Button>
-          {/* Không có hoá đơn nào để khớp thì không có nút khớp — chỉ còn đường bỏ qua. */}
-          {tx.suggestions.length > 0 ? (
+          {lateCredit ? (
+            <Button
+              disabled={busy}
+              onClick={() => id && setDialogState({ txId: id, kind: 'credit' })}
+            >
+              {t('credit.action')}
+            </Button>
+          ) : null}
+          {/* Không có đích nào để khớp thì không có nút khớp — chỉ còn đường bỏ qua / ghi có ví. */}
+          {hasTargets ? (
             <Button
               type="primary"
               disabled={!chosen || busy}
@@ -220,10 +304,10 @@ export function BankTransactionDrawer({
             main={<TransactionFile tx={tx} />}
             side={
               pending ? (
-                <InvoicePicker
+                <TargetPicker
                   tx={tx}
-                  chosenId={chosenId}
-                  onChoose={(invoiceId) => id && setChoice({ txId: id, invoiceId })}
+                  chosenValue={chosenValue}
+                  onChoose={(value) => id && setChoice({ txId: id, value })}
                 />
               ) : (
                 <HandledResult tx={tx} />
@@ -241,7 +325,7 @@ export function BankTransactionDrawer({
             ? t('match.dialogSummary', {
                 amount: fmt.money(tx.amountIn),
                 code: chosen.code,
-                tenant: chosen.tenantName,
+                tenant: chosen.who,
               })
             : ''
         }
@@ -252,8 +336,32 @@ export function BankTransactionDrawer({
         maxLength={NOTE_MAX}
         submitText={t('match.submit')}
         destructive={false}
-        loading={match.isPending}
+        loading={match.isPending || matchReceivable.isPending}
         onSubmit={submitMatch}
+        onClose={closeDialog}
+      />
+
+      <ReasonDialog
+        open={dialog === 'credit' && Boolean(lateCredit)}
+        title={t('credit.dialogTitle')}
+        summary={
+          lateCredit && tx
+            ? t('credit.dialogSummary', {
+                amount: fmt.money(tx.amountIn),
+                code: lateCredit.code,
+                customer: lateCredit.customerName,
+              })
+            : ''
+        }
+        label={t('handle.reasonLabel')}
+        placeholder={t('handle.reasonPlaceholder')}
+        requiredMessage={t('handle.reasonRequired')}
+        minLength={1}
+        maxLength={NOTE_MAX}
+        submitText={t('credit.action')}
+        destructive={false}
+        loading={credit.isPending}
+        onSubmit={submitCredit}
         onClose={closeDialog}
       />
 
@@ -276,6 +384,16 @@ function TransactionFile({ tx }: { tx: BankTransactionDetail }) {
 
   const facts: WorkDrawerFact[] = [
     { key: 'content', label: t('columns.content'), value: tx.content, wide: true },
+    ...(tx.matchReasonCode
+      ? [
+          {
+            key: 'reason',
+            label: t('detail.systemReason'),
+            value: <BankMatchReasonText tx={tx} />,
+            wide: true,
+          },
+        ]
+      : []),
     {
       key: 'code',
       label: t('columns.code'),
@@ -342,60 +460,103 @@ function TransactionFile({ tx }: { tx: BankTransactionDetail }) {
   );
 }
 
-/** Cột phải khi còn chờ: chọn ĐÚNG MỘT hoá đơn — không dòng nào được chọn sẵn. */
-function InvoicePicker({
+/**
+ * Cột phải khi còn chờ: chọn ĐÚNG MỘT đích — hoá đơn gói, hoặc khoản giữ chỗ / phụ lục còn nhận
+ * tiền (ADR 0092). Không dòng nào được chọn sẵn. Mã trỏ tới một khoản ĐÃ ĐÓNG thì nói rõ ở đầu cột:
+ * đường đúng là ghi có Ví điểm khách (hoặc chuyển trả tay khi không có tài khoản khách).
+ */
+function TargetPicker({
   tx,
-  chosenId,
+  chosenValue,
   onChoose,
 }: {
   tx: BankTransactionDetail;
-  chosenId: string | null;
-  onChoose: (invoiceId: string) => void;
+  chosenValue: string | null;
+  onChoose: (value: string) => void;
 }) {
   const t = useTranslations('BankTransactions');
   const fmt = useAppFormat();
+  const hasTargets = tx.suggestions.length > 0 || tx.receivableSuggestions.length > 0;
+
+  const option = (
+    value: string,
+    head: { code: string; amountMatches: boolean },
+    lines: string[],
+  ) => (
+    <Radio
+      key={value}
+      value={value}
+      className={value === chosenValue ? styles.suggestionOn : styles.suggestion}
+    >
+      <span className={styles.suggestionBody}>
+        <span className={styles.suggestionHead}>
+          <span className={styles.mono}>{head.code}</span>
+          {head.amountMatches ? (
+            <Tag color="success" className={styles.matchTag}>
+              {t('suggestions.amountMatches')}
+            </Tag>
+          ) : null}
+        </span>
+        {lines.map((line) => (
+          <span key={line} className={styles.suggestionMeta}>
+            {line}
+          </span>
+        ))}
+      </span>
+    </Radio>
+  );
 
   return (
     <section className={styles.side} aria-labelledby="xp-bank-suggestions">
+      {tx.lateCredit ? (
+        <Alert
+          type="warning"
+          showIcon
+          title={t('lateCredit.title', {
+            code: tx.lateCredit.code,
+            customer: tx.lateCredit.customerName,
+          })}
+          description={
+            tx.lateCredit.hasCustomerAccount ? t('lateCredit.hint') : t('lateCredit.noAccount')
+          }
+        />
+      ) : null}
       <div>
         <h3 id="xp-bank-suggestions" className={styles.sideTitle}>
           {t('suggestions.title')}
         </h3>
         <p className={styles.sideHint}>{t('suggestions.hint')}</p>
       </div>
-      {tx.suggestions.length === 0 ? (
+      {!hasTargets ? (
         <div className={styles.empty}>{t('suggestions.empty')}</div>
       ) : (
         <Radio.Group
-          value={chosenId}
+          value={chosenValue}
           onChange={(e) => onChoose(String(e.target.value))}
           className={styles.suggestions}
           aria-label={t('suggestions.title')}
         >
-          {tx.suggestions.map((s) => (
-            <Radio
-              key={s.invoiceId}
-              value={s.invoiceId}
-              className={s.invoiceId === chosenId ? styles.suggestionOn : styles.suggestion}
-            >
-              <span className={styles.suggestionBody}>
-                <span className={styles.suggestionHead}>
-                  <span className={styles.mono}>{s.code}</span>
-                  {s.amountMatches ? (
-                    <Tag color="success" className={styles.matchTag}>
-                      {t('suggestions.amountMatches')}
-                    </Tag>
-                  ) : null}
-                </span>
-                <span className={styles.suggestionMeta}>
-                  {t('suggestions.tenant', { name: s.tenantName })}
-                </span>
-                <span className={styles.suggestionMeta}>
-                  {t('suggestions.remaining', { amount: fmt.money(s.remainingAmount) })}
-                </span>
-              </span>
-            </Radio>
-          ))}
+          {tx.receivableSuggestions.length > 0 ? (
+            <p className={styles.groupTitle}>{t('suggestions.receivablesTitle')}</p>
+          ) : null}
+          {tx.receivableSuggestions.map((r) =>
+            option(choiceValue(r.targetType, r.targetId), r, [
+              t('suggestions.customer', { name: r.customerName, tenant: r.tenantName }),
+              t('suggestions.remaining', { amount: fmt.money(r.remainingAmount) }),
+              ...(r.expiresAt
+                ? [t('suggestions.expiresAt', { time: fmt.dateTime(r.expiresAt) })]
+                : []),
+            ]),
+          )}
+          {tx.suggestions.length > 0 ? (
+            <p className={styles.groupTitle}>{t('suggestions.invoicesTitle')}</p>
+          ) : null}
+          {tx.suggestions.map((s) =>
+            option(choiceValue(INVOICE_CHOICE, s.invoiceId), s, [
+              t('suggestions.tenant', { name: s.tenantName }),
+              t('suggestions.remaining', { amount: fmt.money(s.remainingAmount) }),
+            ]),
+          )}
         </Radio.Group>
       )}
     </section>
@@ -415,6 +576,19 @@ function HandledResult({ tx }: { tx: BankTransactionDetail }) {
       {tx.matchedInvoiceCode ? (
         <p className={styles.resultLine}>
           {t('detail.matchedInvoice')}: <span className={styles.mono}>{tx.matchedInvoiceCode}</span>
+        </p>
+      ) : null}
+      {tx.matchedTargetCode ? (
+        <p className={styles.resultLine}>
+          {tx.matchedType === BANK_MATCH_WALLET_CREDIT
+            ? t('detail.walletCreditFor')
+            : t('detail.matchedReceivable')}
+          : <span className={styles.mono}>{tx.matchedTargetCode}</span>
+        </p>
+      ) : null}
+      {tx.matchReasonCode ? (
+        <p className={styles.resultNote}>
+          <BankMatchReasonText tx={tx} />
         </p>
       ) : null}
       {tx.matchNote ? <p className={styles.resultNote}>{tx.matchNote}</p> : null}

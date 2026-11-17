@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
@@ -10,9 +11,13 @@ import {
   WALLET_OWNER_TYPE,
   WITHDRAWAL_STATUS,
   WITHDRAWAL_TERMS,
+  taxPeriodRangeVn,
+  type NotificationType,
   type WalletOwnerType,
   type WithdrawalStatus,
 } from '@xeprime/types';
+import { formatMoneyVndVi } from '@xeprime/domain';
+import { csvDocument } from '../../common/csv';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
@@ -25,7 +30,6 @@ import type {
   ReverseWithdrawalDto,
 } from './dto/platform-withdrawal.dto';
 import { WalletService } from './wallet.service';
-import { formatMoneyVndVi } from '@xeprime/domain';
 
 const SELECT = {
   id: true,
@@ -37,6 +41,8 @@ const SELECT = {
   bankAccountNumber: true,
   bankAccountName: true,
   dueBy: true,
+  reviewedBy: true,
+  paidBy: true,
   paidAt: true,
   bankReference: true,
   rejectReason: true,
@@ -57,8 +63,20 @@ const SELECT = {
 
 type Row = Prisma.WithdrawalRequestGetPayload<{ select: typeof SELECT }>;
 
+/** Chủ ví của một lệnh — đủ để biết báo cho AI. */
+interface WalletOwnerRef {
+  ownerUserId: string | null;
+  ownerTenantId: string | null;
+}
+
 /** Việc CẦN LÀM: còn phải duyệt, hoặc đã duyệt mà chưa chuyển. */
 const ACTIONABLE: WithdrawalStatus[] = [WITHDRAWAL_STATUS.PENDING, WITHDRAWAL_STATUS.APPROVED];
+
+/** Lệnh đã CHI (tiền đã rời ngân hàng) — kể cả lệnh sau đó bị đảo. Đi vào bảng kê tháng. */
+const DISBURSED: WithdrawalStatus[] = [WITHDRAWAL_STATUS.PAID, WITHDRAWAL_STATUS.REVERSED];
+
+/** Ô tra cứu đúng 4 chữ số = 4 số cuối tài khoản nhận (khách đọc qua điện thoại). */
+const ACCOUNT_LAST4 = /^\d{4}$/;
 
 /**
  * Hàng đợi rút tiền của admin (ADR 0033, ADR 0025 điều 7).
@@ -69,6 +87,10 @@ const ACTIONABLE: WithdrawalStatus[] = [WITHDRAWAL_STATUS.PENDING, WITHDRAWAL_ST
  * Ranh giới giữa bốn hành động là ranh giới TIỀN, không phải ranh giới quy trình:
  * `approve` chưa đụng tiền · `paid` mới sinh bút toán âm · `reject` nhả khoá không bút toán ·
  * `reverse` là dòng đảo sau khi tiền đã đi.
+ *
+ * Lệnh từ ngưỡng `WITHDRAWAL_DUAL_CONTROL_MIN_AMOUNT` trở lên cần HAI người (đợt rà Admin
+ * 16/11/2026): người bấm "Đã chuyển" phải khác người đã duyệt — điều kiện nằm TRONG câu lệnh chốt,
+ * không ở một phép đọc trước.
  */
 @Injectable()
 export class PlatformWithdrawalService {
@@ -77,16 +99,29 @@ export class PlatformWithdrawalService {
     private readonly wallet: WalletService,
     private readonly audit: AuditService,
     private readonly notifications: NotificationService,
+    private readonly config: ConfigService,
   ) {}
+
+  /** Ngưỡng hai người — mặc định do `env.schema.ts` đặt, ConfigModule đã validate. */
+  private get dualControlMinAmount(): Prisma.Decimal {
+    return new Prisma.Decimal(this.config.getOrThrow<number>('WITHDRAWAL_DUAL_CONTROL_MIN_AMOUNT'));
+  }
 
   async list(query: PlatformWithdrawalQueryDto): Promise<PlatformWithdrawalPageDto> {
     const page = Math.max(1, query.page ?? 1);
     const limit = Math.min(100, Math.max(1, query.limit ?? 20));
     const now = new Date();
+    const q = query.q?.trim();
 
     const where: Prisma.WithdrawalRequestWhereInput = {
-      ...(query.status ? { status: query.status } : { status: { in: ACTIONABLE } }),
+      /*
+       * Không lọc trạng thái: hàng đợi mặc định là VIỆC CẦN LÀM. Nhưng khi người trực TRA một lệnh
+       * (mã, tên chủ ví, 4 số cuối) thì câu hỏi là "lệnh đó đâu", ở bất kỳ trạng thái nào.
+       */
+      ...(query.status ? { status: query.status } : q ? {} : { status: { in: ACTIONABLE } }),
       ...(query.overdue ? { dueBy: { lt: now }, status: { in: ACTIONABLE } } : {}),
+      ...(query.ownerType ? { wallet: { ownerType: query.ownerType } } : {}),
+      ...(q ? searchWhere(q) : {}),
     };
 
     const [total, rows, overdueCount] = await Promise.all([
@@ -104,13 +139,16 @@ export class PlatformWithdrawalService {
       }),
     ]);
 
+    const names = await this.staffNames(rows.flatMap((r) => [r.reviewedBy, r.paidBy]));
+    const threshold = this.dualControlMinAmount;
     return {
-      items: rows.map((row) => toDto(row, now)),
+      items: rows.map((row) => toDto(row, now, names, threshold)),
       total,
       page,
       limit,
       hasNext: page * limit < total,
       overdueCount,
+      dualControlMinAmount: threshold.toFixed(0),
     };
   }
 
@@ -151,8 +189,12 @@ export class PlatformWithdrawalService {
    *
    * `rowVersion` từ client: hai admin cùng mở hàng đợi và cùng bấm thì người sau thấy 409 thay
    * vì ghi đè bản ghi người trước — và quan trọng hơn, thay vì chuyển tiền lần thứ hai.
+   *
+   * Lệnh từ ngưỡng hai người: điều kiện `reviewed_by <> người bấm` nằm trong chính `updateMany`
+   * chốt lệnh, nên không có khe nào giữa "kiểm" và "ghi" để một người tự duyệt rồi tự chi.
    */
   async markPaid(id: string, actorUserId: string, dto: MarkWithdrawalPaidDto): Promise<void> {
+    const threshold = this.dualControlMinAmount;
     await this.prisma.$transaction(async (tx) => {
       const row = await tx.withdrawalRequest.findUnique({
         where: { id },
@@ -162,13 +204,20 @@ export class PlatformWithdrawalService {
           amount: true,
           status: true,
           code: true,
+          reviewedBy: true,
           wallet: { select: { ownerUserId: true, ownerTenantId: true } },
         },
       });
       if (!row) throw notFound();
 
+      const needsSecondPerson = row.amount.gte(threshold);
       const claimed = await tx.withdrawalRequest.updateMany({
-        where: { id, status: WITHDRAWAL_STATUS.APPROVED, rowVersion: dto.rowVersion },
+        where: {
+          id,
+          status: WITHDRAWAL_STATUS.APPROVED,
+          rowVersion: dto.rowVersion,
+          ...(needsSecondPerson ? { reviewedBy: { not: actorUserId } } : {}),
+        },
         data: {
           status: WITHDRAWAL_STATUS.PAID,
           paidBy: actorUserId,
@@ -177,7 +226,20 @@ export class PlatformWithdrawalService {
           rowVersion: { increment: 1 },
         },
       });
-      if (claimed.count === 0) throw alreadyHandled(row.status);
+      if (claimed.count === 0) {
+        if (
+          needsSecondPerson &&
+          row.status === WITHDRAWAL_STATUS.APPROVED &&
+          row.reviewedBy === actorUserId
+        ) {
+          throw new ConflictException({
+            code: API_ERROR_CODE.WITHDRAWAL_SECOND_PERSON_REQUIRED,
+            message: 'Lệnh lớn cần hai người: người chuyển phải khác người đã duyệt',
+            details: { minAmount: threshold.toFixed(0) },
+          });
+        }
+        throw alreadyHandled(row.status);
+      }
 
       await this.wallet.recordWithdrawalPaidWithinTx(tx, {
         walletId: row.walletId,
@@ -199,38 +261,35 @@ export class PlatformWithdrawalService {
             code: row.code,
             amount: row.amount.toString(),
             bankReference: dto.bankReference.trim(),
+            dualControl: needsSecondPerson,
           },
         },
         tx,
       );
 
-      if (row.wallet.ownerUserId) {
-        await this.notifications.emitToUser(
-          row.wallet.ownerUserId,
-          {
-            type: NOTIFICATION_TYPE.HOLD_REFUND_PAID,
-            title: 'Đã chuyển tiền rút',
-            body: `${formatMoneyVndVi(row.amount.toString())} · mã ${row.code}`,
-            /*
-             * Không có đích "ví" trong `NOTIFICATION_TARGET_TYPE`, và không nên thêm chỉ để
-             * thông báo này có chỗ trỏ: nó là tin BÁO, người dùng mở chuông rồi vào màn số dư.
-             * Trỏ về chính yêu cầu rút để tra cứu được khi họ hỏi hỗ trợ.
-             */
-            targetType: NOTIFICATION_TARGET_TYPE.TENANT,
-            targetId: row.id,
-          },
-          tx,
-        );
-      }
+      await this.notifyOwner(tx, row.wallet, {
+        type: NOTIFICATION_TYPE.WITHDRAWAL_PAID,
+        title: 'Đã chuyển tiền rút',
+        body: `${formatMoneyVndVi(row.amount.toString())} · mã ${row.code}`,
+        withdrawalId: row.id,
+      });
     });
   }
 
   /** Từ chối — nhả khoá. KHÔNG bút toán: tiền chưa bao giờ rời ví. */
   async reject(id: string, actorUserId: string, dto: RejectWithdrawalDto): Promise<void> {
+    const reason = dto.reason.trim();
     await this.prisma.$transaction(async (tx) => {
       const row = await tx.withdrawalRequest.findUnique({
         where: { id },
-        select: { id: true, walletId: true, amount: true, status: true },
+        select: {
+          id: true,
+          code: true,
+          walletId: true,
+          amount: true,
+          status: true,
+          wallet: { select: { ownerUserId: true, ownerTenantId: true } },
+        },
       });
       if (!row) throw notFound();
 
@@ -240,7 +299,7 @@ export class PlatformWithdrawalService {
           status: WITHDRAWAL_STATUS.REJECTED,
           reviewedBy: actorUserId,
           reviewedAt: new Date(),
-          rejectReason: dto.reason.trim(),
+          rejectReason: reason,
           rowVersion: { increment: 1 },
         },
       });
@@ -249,15 +308,23 @@ export class PlatformWithdrawalService {
       await this.wallet.releaseWithdrawalHoldWithinTx(tx, row.walletId, row.amount);
       await this.audit.record(
         {
+          tenantId: row.wallet.ownerTenantId,
           actorUserId,
           actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
           action: 'withdrawal.rejected',
           targetType: 'withdrawal_request',
           targetId: id,
-          after: { reason: dto.reason.trim() },
+          after: { code: row.code, reason },
         },
         tx,
       );
+
+      await this.notifyOwner(tx, row.wallet, {
+        type: NOTIFICATION_TYPE.WITHDRAWAL_REJECTED,
+        title: 'Lệnh rút bị từ chối - tiền đã về số dư khả dụng',
+        body: `${formatMoneyVndVi(row.amount.toString())} · mã ${row.code} · ${reason}`,
+        withdrawalId: row.id,
+      });
     });
   }
 
@@ -322,29 +389,127 @@ export class PlatformWithdrawalService {
         tx,
       );
 
-      /*
-       * ADR 0025 điều 7: "báo người dùng nhập lại". Ví gian hàng chỉ chủ gian hàng chạm được
-       * (`@ShopOwnerOnly`), nên thông báo cũng chỉ tới chủ — không tới nhân viên.
-       */
-      const notice = {
-        type: NOTIFICATION_TYPE.HOLD_REFUND_PAID,
+      // ADR 0025 điều 7: "báo người dùng nhập lại".
+      await this.notifyOwner(tx, row.wallet, {
+        type: NOTIFICATION_TYPE.WITHDRAWAL_REVERSED,
         title: 'Lệnh rút chuyển không thành công - tiền đã về ví',
         body: `${formatMoneyVndVi(row.amount.toString())} · mã ${row.code} · ${reason}. Kiểm tra tài khoản nhận rồi tạo lệnh rút mới.`,
-        targetType: NOTIFICATION_TARGET_TYPE.TENANT,
-        targetId: row.id,
-      };
-      if (row.wallet.ownerUserId) {
-        await this.notifications.emitToUser(row.wallet.ownerUserId, notice, tx);
-      } else if (row.wallet.ownerTenantId) {
-        await this.notifications.emitToTenantMembers(row.wallet.ownerTenantId, notice, tx, {
-          roleKeys: [TENANT_ROLE.SHOP_OWNER],
-        });
-      }
+        withdrawalId: row.id,
+      });
     });
+  }
+
+  /**
+   * BẢNG KÊ THÁNG các lệnh đã chi (`paid`, và `reversed` — tiền đã rời ngân hàng rồi mới quay về)
+   * theo mốc chuyển giờ Việt Nam — đối chiếu sao kê ngân hàng chiều RA.
+   *
+   * File mang SỐ TÀI KHOẢN ĐẦY ĐỦ của chủ ví: ghi audit (ai, tháng nào, bao nhiêu dòng — chỉ đếm,
+   * không chép số) TRƯỚC khi trả file, giống bảng kê thuế. Audit lỗi thì không xuất.
+   */
+  async monthCsv(month: string, actorUserId: string): Promise<string> {
+    const { start, end } = taxPeriodRangeVn(month);
+    const rows = await this.prisma.withdrawalRequest.findMany({
+      where: { status: { in: DISBURSED }, paidAt: { gte: start, lt: end } },
+      orderBy: [{ paidAt: 'asc' }, { id: 'asc' }],
+      select: SELECT,
+    });
+    const names = await this.staffNames(rows.flatMap((r) => [r.reviewedBy, r.paidBy]));
+
+    const header = [
+      'ma_lenh',
+      'chu_vi',
+      'loai_vi',
+      'ngan_hang',
+      'so_tai_khoan',
+      'ten_tai_khoan',
+      'so_tien',
+      'ngay_chuyen',
+      'ma_giao_dich',
+      'nguoi_duyet',
+      'nguoi_chuyen',
+      'trang_thai',
+    ];
+    const lines = rows.map((row) => [
+      row.code,
+      ownerNameOf(row) ?? '',
+      row.wallet.ownerType,
+      row.bankCode,
+      row.bankAccountNumber,
+      row.bankAccountName,
+      row.amount.toFixed(0),
+      row.paidAt ? vnDateTime(row.paidAt) : '',
+      row.bankReference ?? '',
+      (row.reviewedBy && names.get(row.reviewedBy)) ?? '',
+      (row.paidBy && names.get(row.paidBy)) ?? '',
+      row.status,
+    ]);
+
+    await this.audit.record({
+      actorUserId,
+      actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+      action: 'withdrawal.month_export',
+      targetType: 'withdrawal_month',
+      targetId: month,
+      after: { month, rows: lines.length },
+    });
+
+    return csvDocument(header, lines);
+  }
+
+  /** Tên nhân sự nền tảng đã duyệt / đã chuyển — một truy vấn cho cả trang. */
+  private async staffNames(ids: (string | null)[]): Promise<Map<string, string>> {
+    const unique = [...new Set(ids.filter((id): id is string => id != null))];
+    if (unique.length === 0) return new Map();
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: unique } },
+      select: { id: true, displayName: true },
+    });
+    return new Map(users.map((u) => [u.id, u.displayName]));
+  }
+
+  /**
+   * Báo CHỦ VÍ — ví tài khoản ⇒ chính tài khoản đó; ví gian hàng ⇒ chỉ chủ gian hàng: ví gian hàng
+   * là quyền SỞ HỮU (`@ShopOwnerOnly`, ADR 0038 điều 3), nhân viên không chạm được nên cũng không
+   * nhận tin về tiền của nó. Đích là màn Ví điểm (`withdrawal` + id lệnh).
+   */
+  private async notifyOwner(
+    tx: Prisma.TransactionClient,
+    owner: WalletOwnerRef,
+    notice: { type: NotificationType; title: string; body: string; withdrawalId: string },
+  ): Promise<void> {
+    const payload = {
+      type: notice.type,
+      title: notice.title,
+      body: notice.body,
+      targetType: NOTIFICATION_TARGET_TYPE.WITHDRAWAL,
+      targetId: notice.withdrawalId,
+    };
+    if (owner.ownerUserId) {
+      await this.notifications.emitToUser(owner.ownerUserId, payload, tx);
+    } else if (owner.ownerTenantId) {
+      await this.notifications.emitToTenantMembers(owner.ownerTenantId, payload, tx, {
+        roleKeys: [TENANT_ROLE.SHOP_OWNER],
+      });
+    }
   }
 }
 
 // ── Nội bộ ──────────────────────────────────────────────────────────────────
+
+/**
+ * Tra một lệnh: đúng 4 chữ số ⇒ 4 số cuối tài khoản nhận; ngược lại khớp mã lệnh HOẶC tên chủ ví
+ * (người hoặc gian hàng), không phân biệt hoa thường.
+ */
+function searchWhere(q: string): Prisma.WithdrawalRequestWhereInput {
+  if (ACCOUNT_LAST4.test(q)) return { bankAccountNumber: { endsWith: q } };
+  return {
+    OR: [
+      { code: { contains: q, mode: 'insensitive' } },
+      { wallet: { ownerUser: { displayName: { contains: q, mode: 'insensitive' } } } },
+      { wallet: { ownerTenant: { name: { contains: q, mode: 'insensitive' } } } },
+    ],
+  };
+}
 
 /**
  * Hạn cam kết: `MAX_BUSINESS_DAYS` ngày LÀM VIỆC kể từ lúc duyệt (ADR 0028 điều 8 — 2 ngày).
@@ -364,7 +529,24 @@ function commitmentDueDate(from: Date): Date {
   return due;
 }
 
-function toDto(row: Row, now: Date): PlatformWithdrawalDto {
+/** `dd/MM/yyyy HH:mm` giờ Việt Nam (UTC+7, không DST) — cột ngày của file Excel. */
+function vnDateTime(d: Date): string {
+  const v = new Date(d.getTime() + 7 * 60 * 60 * 1000).toISOString();
+  return `${v.slice(8, 10)}/${v.slice(5, 7)}/${v.slice(0, 4)} ${v.slice(11, 16)}`;
+}
+
+function ownerNameOf(row: Row): string | null {
+  return row.wallet.ownerType === WALLET_OWNER_TYPE.USER
+    ? (row.wallet.ownerUser?.displayName ?? null)
+    : (row.wallet.ownerTenant?.name ?? null);
+}
+
+function toDto(
+  row: Row,
+  now: Date,
+  names: Map<string, string>,
+  dualControlMinAmount: Prisma.Decimal,
+): PlatformWithdrawalDto {
   const ownerType = row.wallet.ownerType as WalletOwnerType;
   return {
     id: row.id,
@@ -372,16 +554,19 @@ function toDto(row: Row, now: Date): PlatformWithdrawalDto {
     amount: row.amount.toFixed(0),
     status: row.status as WithdrawalStatus,
     ownerType,
-    ownerName:
-      ownerType === WALLET_OWNER_TYPE.USER
-        ? (row.wallet.ownerUser?.displayName ?? null)
-        : (row.wallet.ownerTenant?.name ?? null),
+    ownerId:
+      ownerType === WALLET_OWNER_TYPE.USER ? row.wallet.ownerUserId : row.wallet.ownerTenantId,
+    ownerName: ownerNameOf(row),
     bankCode: row.bankCode,
     bankAccountNumber: row.bankAccountNumber,
     bankAccountName: row.bankAccountName,
     dueBy: row.dueBy?.toISOString() ?? null,
     overdue: row.dueBy != null && row.dueBy < now && (ACTIONABLE as string[]).includes(row.status),
     ageHours: Math.floor((now.getTime() - row.createdAt.getTime()) / 3_600_000),
+    reviewedById: row.reviewedBy,
+    reviewedByName: (row.reviewedBy && names.get(row.reviewedBy)) ?? null,
+    paidByName: (row.paidBy && names.get(row.paidBy)) ?? null,
+    requiresSecondPerson: row.amount.gte(dualControlMinAmount),
     paidAt: row.paidAt?.toISOString() ?? null,
     bankReference: row.bankReference,
     rejectReason: row.rejectReason,

@@ -16,6 +16,7 @@ import {
   type InsuranceRemittanceStatus,
   type PaginationMeta,
 } from '@xeprime/types';
+import { csvCell } from '../../common/csv';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { isUniqueViolation } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -32,7 +33,13 @@ import {
 } from './dto/insurance-remittance.dto';
 
 /** Hợp đồng PHẢI TRẢ hãng: đã cấp, hoặc đang bồi thường (vẫn là hợp đồng đã mua). */
-const PAYABLE_STATUSES = [INSURANCE_POLICY_STATUS.ISSUED, INSURANCE_POLICY_STATUS.CLAIM];
+const PAYABLE_STATUSES = [
+  INSURANCE_POLICY_STATUS.ISSUED,
+  INSURANCE_POLICY_STATUS.CLAIM,
+  // Thu hồi SAU khi có hiệu lực: vẫn nợ hãng cho tới khi hãng xác nhận huỷ (ADR 0093 điều 3).
+  // `unremittedWhere` đòi `issued_at` nên hợp đồng chưa từng cấp không bao giờ lọt vào.
+  INSURANCE_POLICY_STATUS.VOIDED,
+];
 /** Việt Nam UTC+7, không DST. */
 const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
 const ZERO = new Prisma.Decimal(0);
@@ -489,13 +496,6 @@ function vnDateTime(d: Date | null): string {
   if (!d) return '';
   const v = new Date(d.getTime() + VN_OFFSET_MS).toISOString();
   return `${v.slice(8, 10)}/${v.slice(5, 7)}/${v.slice(0, 4)} ${v.slice(11, 16)}`;
-}
-
-/** Ô CSV an toàn: bọc ngoặc kép, nhân đôi ngoặc kép, chặn công thức Excel (=, +, -, @). */
-function csvCell(value: string | undefined): string {
-  const v = value ?? '';
-  const safe = /^[=+\-@]/.test(v) && !/^-?\d+$/.test(v) ? `'${v}` : v;
-  return `"${safe.replace(/"/g, '""')}"`;
 }
 
 function notFound(): NotFoundException {

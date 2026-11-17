@@ -9,10 +9,11 @@ import {
   GiftOutlined,
   RightOutlined,
 } from '@ant-design/icons';
-import { App, DatePicker, Skeleton } from 'antd';
+import { Alert, App, Button, DatePicker, Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
 import {
   addCalendarMonthsVn,
+  BOOKING_LIMIT_VIOLATION,
   INSURANCE_PRODUCT_KIND,
   isRouteType,
   PICKUP_PREFERENCE,
@@ -22,6 +23,7 @@ import {
   SERVICE_TYPE,
   type InsuranceProductKind,
   type RouteType,
+  vnDayStart,
 } from '@xeprime/types';
 import { bestDiscountPackageMonths } from '@xeprime/domain';
 import { appWallClockToIso, nowInAppTz, toAppTz, type Dayjs } from '@/lib/datetime';
@@ -33,6 +35,7 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { useCustomerCostView } from '@/features/booking-requests/hooks/use-customer-cost-view';
 import { useVehicleBusyDays } from '@/features/booking-requests/hooks/use-vehicle-busy-days';
+import { useBookingLimitCheck } from '@/features/booking-requests/hooks/use-booking-limits';
 import {
   publicQuoteParams,
   usePublicQuote,
@@ -44,6 +47,7 @@ import { InsuranceOptionList } from '@/features/insurance/components/InsuranceOp
 import { useInsuranceOffer } from '@/features/insurance/hooks';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { InfoHint } from '@/components/data-display/InfoHint';
+import { InsuranceFeeHint } from '@/components/data-display/InsuranceFeeHint';
 import {
   RentalDateTimeRangeField,
   type RentalMode,
@@ -125,6 +129,36 @@ export function ListingBookingCard({
     };
   });
   const [rentalMode, setRentalMode] = useState<RentalMode>('daily');
+  /*
+   * Trần đặt xe của nền tảng (ADR 0091 điều 4) — báo SỚM bằng cùng hàm server dùng để chặn thật.
+   * Dài hạn chọn ngày theo gói, không đi qua đây.
+   */
+  const limitCheck = useBookingLimitCheck({
+    serviceType: activeService,
+    pickupAt:
+      activeService !== SERVICE_TYPE.LONG_TERM && range.pickupAt
+        ? new Date(appWallClockToIso(range.pickupAt))
+        : null,
+    returnAt:
+      activeService !== SERVICE_TYPE.LONG_TERM && range.returnAt
+        ? new Date(appWallClockToIso(range.returnAt))
+        : null,
+  });
+  const limitMessage =
+    limitCheck.violation === BOOKING_LIMIT_VIOLATION.TOO_FAR_AHEAD
+      ? t('limits.tooFarAhead', {
+          days: limitCheck.limits.maxAdvanceBookingDays,
+          date: fmt.date(vnDayStart(limitCheck.lastPickupDateKey).toISOString()),
+        })
+      : limitCheck.violation === BOOKING_LIMIT_VIOLATION.SELF_DRIVE_TOO_LONG
+        ? t('limits.selfDriveTooLong', { days: limitCheck.limits.selfDriveMaxDays })
+        : null;
+  /*
+   * Chủ xe đặt bảo hiểm Bắt buộc mà xe chưa đủ dữ liệu ⇒ tạm không nhận đặt tự lái (ADR 0091 điều 1).
+   * Server chặn thật ở bước gửi; ở đây nói trước để khách đổi dịch vụ hoặc xe.
+   */
+  const selfDriveInsuranceBlocked =
+    listing.selfDriveInsuranceBlocked === true && activeService === SERVICE_TYPE.SELF_DRIVE;
   /*
    * Lịch bận của CHÍNH xe này — lịch khoá ngày đã kín và tô ngày bận vài giờ, như hộp gửi yêu cầu.
    * Cùng khoá cache với hộp đó. Dài hạn không có ô chọn khoảng ⇒ không hỏi.
@@ -344,6 +378,14 @@ export function ListingBookingCard({
       void message.warning(t('incomplete.range'));
       return false;
     }
+    if (selfDriveInsuranceBlocked) {
+      void message.warning(t('insuranceBlocked'));
+      return false;
+    }
+    if (limitMessage) {
+      void message.warning(limitMessage);
+      return false;
+    }
     if (activeService === SERVICE_TYPE.WITH_DRIVER) {
       if (!driverPickupInfo?.address) {
         setDriverAddressModalOpen(true);
@@ -518,6 +560,25 @@ export function ListingBookingCard({
               />
             </div>
           )}
+
+          {selfDriveInsuranceBlocked ? (
+            <Alert type="warning" showIcon className={styles.limitAlert} message={t('insuranceBlocked')} />
+          ) : limitMessage ? (
+            <Alert
+              type="warning"
+              showIcon
+              className={styles.limitAlert}
+              message={limitMessage}
+              action={
+                limitCheck.violation === BOOKING_LIMIT_VIOLATION.SELF_DRIVE_TOO_LONG &&
+                services.includes(SERVICE_TYPE.LONG_TERM) ? (
+                  <Button size="small" onClick={() => handleTabClick(SERVICE_TYPE.LONG_TERM)}>
+                    {t('limits.switchLongTerm')}
+                  </Button>
+                ) : undefined
+              }
+            />
+          ) : null}
 
           {/* Vị trí nhận xe / Địa chỉ đón khách */}
           {activeService === SERVICE_TYPE.WITH_DRIVER ? (
@@ -733,7 +794,12 @@ export function ListingBookingCard({
             {cost.feeLines.map((line) => (
               <div key={line.key} className={styles.priceLine}>
                 <div className={styles.priceLabel}>
-                  <span>{dl('feeLine', line.key)}</span>
+                  <span>
+                    {dl('feeLine', line.key)}
+                    {line.includedServiceFee ? (
+                      <InsuranceFeeHint fee={line.includedServiceFee} />
+                    ) : null}
+                  </span>
                   <span className={styles.priceSubLabel}>
                     {[
                       line.percent != null

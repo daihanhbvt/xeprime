@@ -1,7 +1,7 @@
 'use client';
 
 import { EyeOutlined } from '@ant-design/icons';
-import { Button, Tooltip } from 'antd';
+import { Button, Tooltip, Typography } from 'antd';
 import styles from './MaskedContact.module.css';
 import { useTranslations } from 'next-intl';
 
@@ -19,9 +19,10 @@ interface MaskedContactProps {
 /**
  * Hiển thị một thông tin liên hệ đã che, kèm nút "xem đầy đủ".
  *
- * Dùng chung cho các màn giám sát nền tảng (đơn thuê, khách thuê): quy tắc PII giống nhau nên
- * phải trông và cư xử giống nhau. Bấm xem là một hành động có ghi audit ở backend — vì thế
- * nút phải do người dùng bấm, không tự bung khi mở drawer.
+ * Dùng chung cho các màn giám sát nền tảng (đơn thuê, khách thuê, đối tác): quy tắc PII giống
+ * nhau nên phải trông và cư xử giống nhau. Bấm xem là một hành động có ghi audit ở backend — vì
+ * thế nút phải do người dùng bấm, không tự bung khi mở drawer. Đã bỏ che thì kèm nút sao chép:
+ * người trực xem số là để gọi/nhắn, chép tay một SĐT là chỗ sinh lỗi.
  */
 export function MaskedContact({
   masked,
@@ -34,7 +35,17 @@ export function MaskedContact({
   if (!masked && !revealed) return <span>-</span>;
 
   if (revealed != null) {
-    return <span className={styles.revealed}>{revealed}</span>;
+    return (
+      <Typography.Text
+        className={styles.revealed}
+        copyable={{
+          text: revealed,
+          tooltips: [tCommon('actions.copy'), tCommon('actions.copied')],
+        }}
+      >
+        {revealed}
+      </Typography.Text>
+    );
   }
 
   return (
@@ -48,6 +59,7 @@ export function MaskedContact({
             icon={<EyeOutlined />}
             loading={loading}
             onClick={onReveal}
+            aria-label={tCommon('components.revealContact')}
           />
         </Tooltip>
       ) : null}

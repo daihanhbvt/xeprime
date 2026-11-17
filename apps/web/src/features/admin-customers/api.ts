@@ -42,6 +42,13 @@ export const fetchAdminCustomer = (id: string): Promise<AdminCustomerDetail> =>
 export const revealCustomerContact = (id: string): Promise<CustomerContact> =>
   apiPost<CustomerContact>(`/platform/customers/${id}/contact`);
 
+/** Khoá tài khoản khách — server thu hồi mọi phiên web + app trong cùng transaction. */
+export const lockCustomer = (id: string, reason: string): Promise<AdminCustomerDetail> =>
+  apiPost<AdminCustomerDetail>(`/platform/customers/${id}/lock`, { reason });
+
+export const unlockCustomer = (id: string, reason: string): Promise<AdminCustomerDetail> =>
+  apiPost<AdminCustomerDetail>(`/platform/customers/${id}/unlock`, { reason });
+
 /** Số lượt nộp bằng lái tối đa hiện trong hồ sơ — đủ cho mọi khách thật (trần nộp 10 lượt/ngày). */
 export const CUSTOMER_LICENCE_HISTORY_LIMIT = 20;
 

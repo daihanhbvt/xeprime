@@ -19,6 +19,7 @@ import type { VehicleDataDetail, VehicleDataVehicle } from '../types';
 import { useYearsLabel } from '../use-years-label';
 import { VehicleDataStatusTag } from './VehicleDataStatusTag';
 import styles from './VehicleData.module.css';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 
 /**
  * Cột phải của panel: dữ liệu này đang được dùng ra sao — nguồn tạo, xe gốc của chủ xe, các xe đang
@@ -90,7 +91,9 @@ export function VehicleDataSide({
 
       <section className={styles.sideBlock} aria-labelledby="vd-usage">
         <h4 id="vd-usage" className={styles.sideTitle}>
-          {t('side.usageTitle')} · {t('side.usageCount', { count: detail.usageCount })}
+          {t('side.usageTitle')}
+          {LIST_SEPARATOR}
+          {t('side.usageCount', { count: detail.usageCount })}
         </h4>
         {detail.vehicles.length > 0 ? (
           <ul className={styles.list}>
@@ -220,7 +223,7 @@ function VehicleLine({ vehicle }: { vehicle: VehicleDataVehicle }) {
           vehicle.weekdayPrice ? fmt.money(vehicle.weekdayPrice) : null,
         ]
           .filter(Boolean)
-          .join(' · ')}
+          .join(LIST_SEPARATOR)}
       </span>
     </span>
   );

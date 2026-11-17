@@ -321,6 +321,7 @@ jobs:
           V_BACKUP_KEEP_DAYS: ${{ vars.BACKUP_KEEP_DAYS }}
           V_NEXT_PUBLIC_APP_NAME: ${{ vars.NEXT_PUBLIC_APP_NAME }}
           V_GEO_DAILY_CALL_BUDGET: ${{ vars.GEO_DAILY_CALL_BUDGET }}
+          V_WITHDRAWAL_DUAL_CONTROL_MIN_AMOUNT: ${{ vars.WITHDRAWAL_DUAL_CONTROL_MIN_AMOUNT }}
           V_NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
           V_NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
           V_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
@@ -592,6 +593,8 @@ jobs:
           kv FIREBASE_PRIVATE_KEY "${S_FIREBASE_PRIVATE_KEY:-}"
           kv VIETMAP_API_KEY "${S_VIETMAP_API_KEY:-}"
           kv GEO_DAILY_CALL_BUDGET "${V_GEO_DAILY_CALL_BUDGET:-3000}"
+          # Ngưỡng hai người của lệnh rút Ví điểm (đợt rà Admin 16/11/2026).
+          kv WITHDRAWAL_DUAL_CONTROL_MIN_AMOUNT "${V_WITHDRAWAL_DUAL_CONTROL_MIN_AMOUNT:-10000000}"
           kv GOOGLE_HOLIDAY_API_KEY "${S_GOOGLE_HOLIDAY_API_KEY:-}"
 
           # Bằng lái của khách (ADR 0057). Đọc ảnh bằng Tesseract tại chỗ — không khoá, không bên

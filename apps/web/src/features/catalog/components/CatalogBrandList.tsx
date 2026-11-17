@@ -1,6 +1,7 @@
 'use client';
 
-import { SearchOutlined, WarningFilled } from '@ant-design/icons';
+import { ClockCircleFilled, SearchOutlined, WarningFilled } from '@ant-design/icons';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { normalizeCatalogSearch } from '@xeprime/types';
 import { Input, Select } from 'antd';
 import { useTranslations } from 'next-intl';
@@ -18,12 +19,18 @@ export interface CatalogBrandEntry {
   iconUrl: string | null;
   /** Hãng đang tắt trong danh mục — vẫn quản lý mẫu được, chỉ hiện mờ. */
   active: boolean;
+  /** Số DÒNG xe đã duyệt của hãng. */
   total: number;
   missingSpecs: number;
+  /** Số dữ liệu xe (xe chuẩn — ADR 0090) của hãng, kể cả chờ duyệt. */
+  vehicles: number;
+  /** Số dữ liệu xe CHỜ DUYỆT — hãng nào có việc thì người duyệt thấy ngay (ADR 0096). */
+  pending: number;
 }
 
 /**
- * Cột HÃNG của màn quản trị mẫu xe: mỗi hãng một dòng kèm số mẫu và số mẫu còn thiếu thông số.
+ * Cột HÃNG của tab Mẫu xe: mỗi hãng một dòng kèm số dòng xe, số xe, số xe chờ duyệt và số dòng
+ * còn thiếu thông số.
  *
  * Trả lời câu hỏi mà bảng phẳng cũ không trả lời được — "hãng nào có những mẫu nào" — trước khi
  * người quản trị phải bấm vào bất cứ đâu. Màn hẹp (dưới 960px) thay cột bằng một ô chọn đặt trên
@@ -57,7 +64,11 @@ export function CatalogBrandList({
     () =>
       brands.map((b) => ({
         value: b.key,
-        label: `${b.label} · ${t('brandModelCount', { count: b.total })}`,
+        label: [
+          b.label,
+          t('brandModelCount', { count: b.total }),
+          t('brandVehicleCount', { count: b.vehicles }),
+        ].join(LIST_SEPARATOR),
       })),
     [brands, t],
   );
@@ -92,8 +103,20 @@ export function CatalogBrandList({
                   <span className={styles.name}>{brand.label}</span>
                   <span className={styles.count}>
                     {t('brandModelCount', { count: brand.total })}
+                    {LIST_SEPARATOR}
+                    {t('brandVehicleCount', { count: brand.vehicles })}
                   </span>
                 </span>
+                {brand.pending > 0 ? (
+                  <span
+                    className={styles.pending}
+                    aria-label={t('brandPendingBadge', { count: brand.pending })}
+                    title={t('brandPendingBadge', { count: brand.pending })}
+                  >
+                    <ClockCircleFilled aria-hidden />
+                    {brand.pending}
+                  </span>
+                ) : null}
                 {brand.missingSpecs > 0 ? (
                   <span
                     className={styles.warning}

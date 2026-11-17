@@ -11,7 +11,7 @@ import {
   reverseTaxRow,
   taxRowFiltersToParams,
 } from '../api';
-import type { TaxRowFilters } from '../types';
+import type { DeclareTaxPeriodInput, RemitTaxPeriodInput, TaxRowFilters } from '../types';
 
 export function useTaxPeriodSummary(period: string, enabled = true) {
   return useQuery({
@@ -59,7 +59,8 @@ function useInvalidateTax() {
 export function useMarkPeriodDeclared() {
   const invalidate = useInvalidateTax();
   return useMutation({
-    mutationFn: (period: string) => markPeriodDeclared(period),
+    mutationFn: ({ period, body }: { period: string; body: DeclareTaxPeriodInput }) =>
+      markPeriodDeclared(period, body),
     onSuccess: invalidate,
   });
 }
@@ -67,7 +68,8 @@ export function useMarkPeriodDeclared() {
 export function useMarkPeriodRemitted() {
   const invalidate = useInvalidateTax();
   return useMutation({
-    mutationFn: (period: string) => markPeriodRemitted(period),
+    mutationFn: ({ period, body }: { period: string; body: RemitTaxPeriodInput }) =>
+      markPeriodRemitted(period, body),
     onSuccess: invalidate,
   });
 }

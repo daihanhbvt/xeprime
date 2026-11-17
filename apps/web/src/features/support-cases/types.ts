@@ -9,6 +9,9 @@ export type OpenSupportCaseInput = Schemas['OpenSupportCaseDto'];
 export type PostSupportEventInput = Schemas['PostSupportEventDto'];
 export type TransitionSupportCaseInput = Schemas['TransitionSupportCaseDto'];
 export type ResolveSupportCaseInput = Schemas['ResolveSupportCaseDto'];
+export type TripVerdictInput = Schemas['TripVerdictDto'];
+export type TripVerdictPreview = Schemas['TripVerdictPreviewDto'];
+export type TripVerdictMoney = Schemas['TripVerdictMoneyDto'];
 
 /**
  * Ba bề mặt của CÙNG một nghiệp vụ — khách, gian hàng, nền tảng. Khác nhau đúng hai thứ: đường

@@ -512,16 +512,17 @@ export class HandoversService {
          * đơn trước khi claim + mở case. Worker xong trước ⇒ câu đọc dưới đây (READ COMMITTED,
          * ảnh chụp mới mỗi câu) thấy case nó vừa mở; worker tới sau ⇒ nó chờ khoá rồi claim trượt
          * vì đơn đã `active`. Không có khe nào để case mọc ra sau lượt xác nhận.
+         *
+         * Đối xứng ở mốc TRẢ xe (ADR 0094): biên bản trả xe trả lời câu của case `return_unconfirmed`.
          */
-        if (type === HANDOVER_TYPE.PICKUP) {
-          await this.resolveHandoverUnconfirmedWithinTx(tx, {
-            tenantId,
-            bookingId,
-            bookingCode: booking.code,
-            userId,
-            by: 'host',
-          });
-        }
+        await this.resolveVerificationCasesWithinTx(tx, {
+          tenantId,
+          bookingId,
+          bookingCode: booking.code,
+          type,
+          userId,
+          by: 'host',
+        });
 
         // KM vừa nhảy → tính lại mốc bảo dưỡng và mở việc-cần-làm nếu tới hạn.
         if (type === HANDOVER_TYPE.RETURN && odometerKm !== null) {
@@ -655,6 +656,10 @@ export class HandoversService {
    *
    * Không bắn thông báo chuyển trạng thái chung (`silent`) — người gọi báo bằng câu nói đúng chuyện
    * đã xảy ra. Trả `false` khi biên bản đã được xác nhận (chủ xe vừa bấm xong): không còn việc gì.
+   *
+   * Nguồn thứ ba `platform` (ADR 0094): nhân sự nền tảng kết luận "xe đã giao" / "xe đã trả" sau khi
+   * gọi xác minh. `customerUserId` lúc đó là TÀI KHOẢN NHÂN SỰ (người ký biên bản), lượt chuyển đơn
+   * mang scope `platform` và KHÔNG `silent` — chủ xe lẫn khách cần biết chuyến vừa được chốt thay họ.
    */
   async confirmOnCustomerWordWithinTx(
     tx: Prisma.TransactionClient,
@@ -663,14 +668,24 @@ export class HandoversService {
       booking: { id: string; code: string; vehicleId: string; status: BookingStatus };
       type: HandoverType;
       customerUserId: string;
-      source: typeof HANDOVER_CONFIRM_SOURCE.CUSTOMER | typeof HANDOVER_CONFIRM_SOURCE.AUTO;
+      source:
+        | typeof HANDOVER_CONFIRM_SOURCE.CUSTOMER
+        | typeof HANDOVER_CONFIRM_SOURCE.AUTO
+        | typeof HANDOVER_CONFIRM_SOURCE.PLATFORM;
       occurredAt: Date;
     },
   ): Promise<boolean> {
     const { tenantId, booking, type, customerUserId, source, occurredAt } = input;
     if (!isHandoverEligible(type, booking.status)) throw notEligible(type, booking.status);
     const byCustomer = source === HANDOVER_CONFIRM_SOURCE.CUSTOMER;
-    const actorScope = byCustomer ? AUDIT_ACTOR_SCOPE.CUSTOMER : AUDIT_ACTOR_SCOPE.SYSTEM;
+    const byPlatform = source === HANDOVER_CONFIRM_SOURCE.PLATFORM;
+    const actorScope = byCustomer
+      ? AUDIT_ACTOR_SCOPE.CUSTOMER
+      : byPlatform
+        ? AUDIT_ACTOR_SCOPE.PLATFORM
+        : AUDIT_ACTOR_SCOPE.SYSTEM;
+    // Người thật đứng sau lượt này (khách hoặc nhân sự); lượt `auto` là của hệ thống.
+    const actorUserId = byCustomer || byPlatform ? customerUserId : null;
 
     /*
      * Chưa có biên bản thì dựng nháp ngay trong transaction này. `skipDuplicates` (= ON CONFLICT DO
@@ -746,7 +761,7 @@ export class HandoversService {
         tenantId,
         booking.id,
         // Lượt tự hoàn thành là của HỆ THỐNG — không gán nó cho khách hay cho ai trong gian hàng.
-        byCustomer ? customerUserId : null,
+        actorUserId,
         booking.status,
         target,
         {
@@ -754,20 +769,19 @@ export class HandoversService {
             ? { actualPickupAt: occurredAt.toISOString() }
             : { actualReturnAt: occurredAt.toISOString() }),
           actorScope,
-          silent: true,
+          silent: !byPlatform,
         },
       );
     }
 
-    if (type === HANDOVER_TYPE.PICKUP) {
-      await this.resolveHandoverUnconfirmedWithinTx(tx, {
-        tenantId,
-        bookingId: booking.id,
-        bookingCode: booking.code,
-        userId: customerUserId,
-        by: 'customer',
-      });
-    }
+    await this.resolveVerificationCasesWithinTx(tx, {
+      tenantId,
+      bookingId: booking.id,
+      bookingCode: booking.code,
+      type,
+      userId: customerUserId,
+      by: byPlatform ? 'platform' : 'customer',
+    });
     if (type === HANDOVER_TYPE.RETURN && staffKm) {
       await this.maintenance.ensureDueTaskWithinTx(tx, {
         tenantId,
@@ -780,7 +794,7 @@ export class HandoversService {
     await this.audit.record(
       {
         tenantId,
-        actorUserId: byCustomer ? customerUserId : null,
+        actorUserId,
         actorScope,
         action: `booking.handover.${type}.confirm`,
         targetType: 'vehicle_handover',
@@ -1232,46 +1246,65 @@ export class HandoversService {
    * rồi đi tiếp bình thường (điều kiện `status` trong UPDATE mới là chỗ chống xác nhận đôi).
    */
   /**
-   * Tự kết luận các case `handover_unconfirmed` còn mở của đơn khi biên bản GIAO XE được xác nhận
-   * (ADR 0066, lớp 3). Chỉ loại đó: tranh chấp (`dispute`) của khách — kể cả "chưa nhận được xe" —
-   * KHÔNG BAO GIỜ tự đóng theo đường này, vì chủ xe xác nhận giao không phải bằng chứng khách đã
-   * nhận; nó vẫn chờ nhân sự nền tảng phân xử.
+   * Tự kết luận các case XÁC MINH BÀN GIAO còn mở của đơn khi biên bản cùng chiều được xác nhận:
+   * biên bản GIAO XE trả lời `handover_unconfirmed` (ADR 0066, lớp 3), biên bản TRẢ XE trả lời
+   * `return_unconfirmed` (ADR 0094). Chỉ hai loại đó: tranh chấp (`dispute`) — kể cả "chưa nhận
+   * được xe" — KHÔNG BAO GIỜ tự đóng theo đường này, vì một bên tự xác nhận không phải bằng chứng
+   * bên kia đồng ý; nó vẫn chờ nhân sự nền tảng phân xử.
    *
    * Ghi như một lượt kết luận của `SupportService.resolve`: trạng thái `resolved` + `resolution`,
    * một sự kiện RESOLUTION công khai trên dòng thời gian, và audit `support_case.resolve` mang
-   * `reason = handover_confirmed`. Người thao tác là người vừa xác nhận biên bản — không có nhân
-   * sự nào bấm, và sự kiện không được giả làm của nền tảng. `resolved` vẫn mở lại được
-   * (`in_progress`) nếu CSKH thấy chưa ổn.
+   * `reason`. Người thao tác là người vừa xác nhận biên bản — không giả làm của nền tảng khi nền
+   * tảng không bấm. `resolved` vẫn mở lại được (`in_progress`) nếu CSKH thấy chưa ổn.
    */
-  private async resolveHandoverUnconfirmedWithinTx(
+  private async resolveVerificationCasesWithinTx(
     tx: Prisma.TransactionClient,
     input: {
       tenantId: string;
       bookingId: string;
       bookingCode: string;
+      type: HandoverType;
       userId: string;
-      /** Ai vừa xác nhận giao xe — chủ xe ở quầy, hay khách bấm "Đã nhận xe" (ADR 0081). */
-      by: 'host' | 'customer';
+      /**
+       * Ai vừa xác nhận — chủ xe ở quầy, khách (bấm "Đã nhận xe", hay lời "Đã trả xe" dẫn tới biên
+       * bản tự lập — ADR 0081), hay nhân sự nền tảng kết luận chuyến (ADR 0094).
+       */
+      by: 'host' | 'customer' | 'platform';
     },
   ): Promise<void> {
+    const pickup = input.type === HANDOVER_TYPE.PICKUP;
     const open = await tx.supportCase.findMany({
       where: {
         bookingId: input.bookingId,
-        ...openSupportCaseWhere([SUPPORT_CASE_CATEGORY.HANDOVER_UNCONFIRMED]),
+        ...openSupportCaseWhere([
+          pickup
+            ? SUPPORT_CASE_CATEGORY.HANDOVER_UNCONFIRMED
+            : SUPPORT_CASE_CATEGORY.RETURN_UNCONFIRMED,
+        ]),
       },
       select: { id: true, status: true },
     });
     if (open.length === 0) return;
 
-    const resolution =
+    const who =
+      input.by === 'customer' ? 'khách' : input.by === 'platform' ? 'XePrime' : 'chủ xe';
+    const resolution = pickup
+      ? `Tự động kết luận: ${who} đã xác nhận giao xe của chuyến ${input.bookingCode} - ` +
+        'chuyến đã diễn ra, không còn việc chờ xác minh bàn giao.'
+      : `Tự động kết luận: ${who} đã xác nhận trả xe của chuyến ${input.bookingCode} - ` +
+        'chuyến đã kết thúc, không còn việc chờ xác minh trả xe.';
+    const party =
       input.by === 'customer'
-        ? `Tự động kết luận: khách đã xác nhận nhận xe của chuyến ${input.bookingCode} - ` +
-          'chuyến đã diễn ra, không còn việc chờ xác minh bàn giao.'
-        : `Tự động kết luận: chủ xe đã xác nhận biên bản giao xe của chuyến ${input.bookingCode} - ` +
-          'chuyến đã diễn ra, không còn việc chờ xác minh bàn giao.';
-    const party = input.by === 'customer' ? SUPPORT_PARTY.CUSTOMER : SUPPORT_PARTY.TENANT;
+        ? SUPPORT_PARTY.CUSTOMER
+        : input.by === 'platform'
+          ? SUPPORT_PARTY.PLATFORM
+          : SUPPORT_PARTY.TENANT;
     const auditScope =
-      input.by === 'customer' ? AUDIT_ACTOR_SCOPE.CUSTOMER : AUDIT_ACTOR_SCOPE.TENANT;
+      input.by === 'customer'
+        ? AUDIT_ACTOR_SCOPE.CUSTOMER
+        : input.by === 'platform'
+          ? AUDIT_ACTOR_SCOPE.PLATFORM
+          : AUDIT_ACTOR_SCOPE.TENANT;
     const resolvedAt = new Date();
     for (const row of open) {
       // Điều kiện "còn mở" nằm trong UPDATE: nhân sự vừa đóng tay case này thì không ghi đè.
@@ -1307,7 +1340,9 @@ export class HandoversService {
             status: SUPPORT_CASE_STATUS.RESOLVED,
             resolution,
             bookingId: input.bookingId,
-            reason: SUPPORT_CASE_AUTO_RESOLVE_REASON.HANDOVER_CONFIRMED,
+            reason: pickup
+              ? SUPPORT_CASE_AUTO_RESOLVE_REASON.HANDOVER_CONFIRMED
+              : SUPPORT_CASE_AUTO_RESOLVE_REASON.RETURN_CONFIRMED,
           },
         },
         tx,

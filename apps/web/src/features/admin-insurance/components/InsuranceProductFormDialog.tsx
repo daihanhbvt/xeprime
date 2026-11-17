@@ -1,11 +1,11 @@
 'use client';
 
 import { yupResolver } from '@hookform/resolvers/yup';
-import { App, Divider } from 'antd';
+import { Alert, App, Divider } from 'antd';
 import { useTranslations } from 'next-intl';
-import { INSURANCE_PREMIUM_BASIS } from '@xeprime/types';
+import { INSURANCE_PREMIUM_BASIS, INSURANCE_SERVICE_FEE_PERCENT_MAX } from '@xeprime/types';
 import { useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { DialogForm } from '@/components/form/DialogForm';
 import { NumberField } from '@/components/form/NumberField';
 import { SwitchField } from '@/components/form/SwitchField';
@@ -19,6 +19,7 @@ import {
   INSURANCE_DISPLAY_ORDER_MIN,
   buildInsuranceProductSchema,
   insuranceProductFormDefaults,
+  offersServiceFee,
   toUpdateInsuranceProductBody,
   type InsuranceProductFormValues,
 } from '../form';
@@ -61,6 +62,8 @@ export function InsuranceProductFormDialog({
         urlTemplate: t('validation.urlTemplate'),
         displayOrder: (min, max) => t('validation.displayOrder', { min, max }),
         tiers: t('validation.tiers'),
+        serviceFeePercent: (max) => t('validation.serviceFeePercent', { max }),
+        serviceFeePercentRequired: t('validation.serviceFeePercentRequired'),
       }),
     [t],
   );
@@ -69,6 +72,7 @@ export function InsuranceProductFormDialog({
     resolver: yupResolver(schema),
     defaultValues: product ? insuranceProductFormDefaults(product) : undefined,
   });
+  const serviceFeeEnabled = useWatch({ control, name: 'serviceFeeEnabled' }) === true;
 
   const onSubmit = handleSubmit((form) => {
     // Enter gửi form ngay cả khi nút OK đang quay — chặn lượt thứ hai ở đây.
@@ -166,6 +170,30 @@ export function InsuranceProductFormDialog({
             <Divider plain>{t('sections.premium')}</Divider>
             <p className={styles.intro}>{t('help.valueTierIntro')}</p>
             <PremiumTiersField control={control} />
+          </>
+        ) : null}
+
+        {/* Phí thu hộ bảo hiểm của nền tảng (ADR 0091 điều 3) — chỉ vật chất xe, chờ luật sư. */}
+        {offersServiceFee(product) ? (
+          <>
+            <Divider plain>{t('sections.serviceFee')}</Divider>
+            <Alert type="warning" showIcon title={t('help.serviceFeeLegal')} />
+            <SwitchField
+              control={control}
+              name="serviceFeeEnabled"
+              label={t('fields.serviceFeeEnabled')}
+              description={t('fields.serviceFeeEnabledDescription')}
+            />
+            <NumberField
+              control={control}
+              name="serviceFeePercent"
+              label={t('fields.serviceFeePercent')}
+              percent
+              precision={2}
+              min={0}
+              max={INSURANCE_SERVICE_FEE_PERCENT_MAX}
+              required={serviceFeeEnabled}
+            />
           </>
         ) : null}
 

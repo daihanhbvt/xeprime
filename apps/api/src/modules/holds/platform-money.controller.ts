@@ -78,6 +78,9 @@ export class PlatformMoneyController {
   @ApiOperation({
     summary:
       'Chốt tay kết cục một hold đang chờ (thường sau tranh chấp) - bắt buộc lý do, có audit',
+    description:
+      'Chỉ hold thuộc hàng đợi chốt tay: đơn có case giữ quyết toán mở, hoặc đơn đã kết thúc mà kết ' +
+      'cục chưa chốt. Đơn còn chạy bình thường ⇒ 409 `HOLD_SETTLE_NOT_DUE` (kết cục tự chốt khi đơn kết thúc).',
   })
   @ApiNoContentResponse()
   async settle(

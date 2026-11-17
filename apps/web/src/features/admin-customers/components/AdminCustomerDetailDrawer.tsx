@@ -17,12 +17,16 @@ import {
   type BookingRequestStatus,
   type DriverLicenceReadingConfidence,
   type DriverLicenceStatus,
+  USER_STATUS,
+  WALLET_OWNER_TYPE,
   type UserStatus,
 } from '@xeprime/types';
 import { MaskedContact } from '@/components/data-display/MaskedContact';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
+import { ReasonDialog } from '@/components/overlay/ReasonDialog';
+import { PlatformWalletButton } from '@/features/platform-wallets/components/PlatformWalletButton';
 import { ROUTES } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useAppFormat, type AppFormat } from '@/i18n/use-app-format';
@@ -33,6 +37,7 @@ import {
   useCustomerLicenceImage,
   useCustomerLicences,
   useRevealCustomerContact,
+  useSetCustomerLock,
 } from '../hooks/use-admin-customers';
 import type { AdminCustomerDetail, AdminCustomerRequest, CustomerLicence } from '../types';
 import styles from './AdminCustomerDetailDrawer.module.css';
@@ -82,11 +87,37 @@ function Body({ customer }: { customer: AdminCustomerDetail }) {
 
   const canReveal = has(PERMISSION.PLATFORM_CUSTOMER_PII_VIEW);
   const canSeeLicence = has(PERMISSION.PLATFORM_DRIVER_LICENCE_REVIEW);
+  const canLock = has(PERMISSION.PLATFORM_CUSTOMER_LOCK);
   const onReveal = () =>
     reveal.mutate(undefined, { onError: (err) => void message.error(errorMessage(err)) });
+  const isLocked = customer.status === USER_STATUS.LOCKED;
 
   return (
     <div>
+      {isLocked && customer.lockedAt ? (
+        <Alert
+          className={styles.lockedBanner}
+          type="warning"
+          showIcon
+          title={t('lock.lockedBanner', { time: fmt.dateTime(customer.lockedAt) })}
+          description={
+            customer.lockedReason ? t('lock.lockedReason', { reason: customer.lockedReason }) : null
+          }
+        />
+      ) : null}
+      <div className={styles.actions}>
+        <PlatformWalletButton
+          owner={{
+            ownerType: WALLET_OWNER_TYPE.USER,
+            ownerId: customer.id,
+            ownerName: customer.displayName,
+          }}
+        />
+        {canLock &&
+        (customer.status === USER_STATUS.ACTIVE || customer.status === USER_STATUS.LOCKED) ? (
+          <LockAction customerId={customer.id} locked={isLocked} />
+        ) : null}
+      </div>
       <Descriptions
         column={1}
         size="small"
@@ -174,6 +205,54 @@ function Body({ customer }: { customer: AdminCustomerDetail }) {
         />
       )}
     </div>
+  );
+}
+
+/**
+ * Khoá / mở khoá tài khoản khách — lý do bắt buộc, nằm trong `ReasonDialog` dùng chung. Khoá là
+ * hành động nguy hiểm (đăng xuất khách khỏi mọi thiết bị) nên nút và hộp xác nhận màu đỏ.
+ */
+function LockAction({ customerId, locked }: { customerId: string; locked: boolean }) {
+  const t = useTranslations('AdminCustomers.lock');
+  const { message } = App.useApp();
+  const errorMessage = useErrorMessage();
+  const mutation = useSetCustomerLock(customerId);
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button danger={!locked} onClick={() => setOpen(true)}>
+        {locked ? t('unlock') : t('lock')}
+      </Button>
+      <ReasonDialog
+        open={open}
+        title={locked ? t('unlockTitle') : t('lockTitle')}
+        summary={locked ? t('unlockSummary') : t('lockSummary')}
+        audienceHint={t('audience')}
+        label={t('reasonLabel')}
+        placeholder={t('reasonPlaceholder')}
+        requiredMessage={t('reasonRequired')}
+        minLength={5}
+        maxLength={500}
+        submitText={locked ? t('unlock') : t('lock')}
+        destructive={!locked}
+        loading={mutation.isPending}
+        onClose={() => setOpen(false)}
+        onSubmit={(reason) => {
+          if (mutation.isPending) return;
+          mutation.mutate(
+            { lock: !locked, reason: reason.trim() },
+            {
+              onSuccess: () => {
+                setOpen(false);
+                message.success(locked ? t('unlocked') : t('locked'));
+              },
+              onError: (err) => void message.error(errorMessage(err)),
+            },
+          );
+        }}
+      />
+    </>
   );
 }
 

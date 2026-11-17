@@ -1,8 +1,5 @@
 {
   "page": {
-    "title": "Vehicle data",
-    "subtitle": "One row per vehicle: specs, features, reference sale price and reference rental prices. Owners get these as suggestions when listing a vehicle.",
-    "add": "Add vehicle",
     "import": "Import file",
     "export": "Export file",
     "template": "Download template",
@@ -19,13 +16,9 @@
   },
   "filters": {
     "search": "Search vehicles",
-    "searchPlaceholder": "Brand, model, variant",
-    "vehicleType": "Vehicle type",
-    "brand": "Brand",
     "status": "Status",
     "origin": "Created by",
     "gap": "Missing data",
-    "sort": "Sort",
     "sortOptions": {
       "updated_desc": "Recently updated",
       "name_asc": "By vehicle name",
@@ -65,7 +58,6 @@
     "yearsOpen": "{from} - now",
     "yearsUntil": "until {to}",
     "yearsAny": "All years",
-    "newModel": "New model",
     "complete": "Complete",
     "market": "Actual {price} · {count, plural, one {# vehicle} other {# vehicles}}",
     "marketAbove": "Actual is {percent}% higher",
@@ -74,14 +66,6 @@
     "seats": "{count} seats",
     "none": "-"
   },
-  "tableLabel": "Vehicle data list",
-  "total": "{count, plural, one {# vehicle} other {# vehicles}}",
-  "loadError": "Could not load vehicle data",
-  "empty": {
-    "title": "No vehicle data yet",
-    "description": "Add vehicles one by one or import a whole list from Excel."
-  },
-  "noResults": "No vehicles match the filters",
   "drawer": {
     "titleNew": "Add vehicle",
     "title": "Vehicle data",

@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { queryKeys } from '@/services/query-keys';
 import {
   fetchTripBookings,
+  fetchTripDrivers,
   fetchTripRequests,
   fetchTripSummary,
   queueParams,
@@ -11,7 +12,7 @@ import {
   summaryParams,
 } from '../api';
 import { TRIP_REFRESH_INTERVAL_MS } from '../trip-queues';
-import type { TripBookingFilters, TripRequestFilters } from '../types';
+import type { TripBookingFilters, TripDriverFilters, TripRequestFilters } from '../types';
 
 /** Dải tóm tắt — tự làm mới theo nhịp vận hành, kể cả khi tab đang mở nhưng không ai chạm. */
 export function useTripSummary(opts: { tenantId?: string; enabled?: boolean } = {}) {
@@ -36,6 +37,15 @@ export function useTripBookings(filters: TripBookingFilters) {
   return useQuery({
     queryKey: queryKeys.platformTrips.bookings(queueParams(filters)),
     queryFn: () => fetchTripBookings(filters),
+    placeholderData: keepPreviousData,
+    refetchInterval: TRIP_REFRESH_INTERVAL_MS,
+  });
+}
+
+export function useTripDrivers(filters: TripDriverFilters) {
+  return useQuery({
+    queryKey: queryKeys.platformTrips.drivers(queueParams(filters)),
+    queryFn: () => fetchTripDrivers(filters),
     placeholderData: keepPreviousData,
     refetchInterval: TRIP_REFRESH_INTERVAL_MS,
   });

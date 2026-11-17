@@ -7,7 +7,9 @@ import { useTranslations } from 'next-intl';
 import {
   ALLOCATION_TARGET,
   BOOKING_HOLD_STATUS_META,
+  BOOKING_STATUS_META,
   FEE_LINE,
+  HOLD_SETTLE_REASON,
   adminSettleOutcomes,
   allocationTotals,
   holdSettlementKindFor,
@@ -16,6 +18,7 @@ import {
   type BookingHoldOutcome,
   type BookingHoldPurpose,
   type BookingHoldStatus,
+  type BookingStatus,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
@@ -91,6 +94,7 @@ export function SettleHoldDrawer({
             ownerCommission: hold.ownerCommissionAmount,
             vehicleInsurance: hold.vehicleInsuranceAmount,
             personalInsurance: hold.personalInsuranceAmount,
+            insuranceServiceFee: hold.insuranceServiceFeeAmount,
           })
         : [],
     [hold],
@@ -234,11 +238,18 @@ function HoldFile({ hold }: { hold: PlatformHold }) {
     { key: FEE_LINE.OWNER_COMMISSION, amount: hold.ownerCommissionAmount },
     { key: FEE_LINE.VEHICLE_PROTECTION, amount: hold.vehicleInsuranceAmount },
     { key: FEE_LINE.TRIP_INSURANCE, amount: hold.personalInsuranceAmount },
+    { key: FEE_LINE.INSURANCE_SERVICE_FEE, amount: hold.insuranceServiceFeeAmount },
   ].filter((line) => Number(line.amount) > 0);
 
   return (
     <>
-      {hold.disputeOpen ? <Alert type="warning" showIcon title={t('settle.disputeOpen')} /> : null}
+      {hold.settleReason ? (
+        <Alert
+          type={hold.settleReason === HOLD_SETTLE_REASON.BOOKING_ENDED ? 'info' : 'warning'}
+          showIcon
+          title={t(`settle.reason.${hold.settleReason}`)}
+        />
+      ) : null}
 
       <WorkDrawerFacts
         items={[
@@ -246,6 +257,27 @@ function HoldFile({ hold }: { hold: PlatformHold }) {
             key: 'booking',
             label: t('columns.booking'),
             value: hold.bookingCode ?? tCommon('labels.emptyValue'),
+          },
+          {
+            key: 'bookingStatus',
+            label: t('settle.bookingStatus'),
+            value: hold.bookingStatus ? (
+              <StatusTag
+                value={hold.bookingStatus as BookingStatus}
+                meta={BOOKING_STATUS_META}
+                group="bookingStatus"
+              />
+            ) : (
+              tCommon('labels.emptyValue')
+            ),
+          },
+          {
+            key: 'schedule',
+            label: t('settle.schedule'),
+            value:
+              hold.pickupAt && hold.returnAt
+                ? fmt.dateTimeRange(hold.pickupAt, hold.returnAt)
+                : tCommon('labels.emptyValue'),
           },
           { key: 'vehicle', label: t('settle.vehicle'), value: hold.vehicleName },
           { key: 'tenant', label: t('columns.tenant'), value: hold.tenantName },
@@ -331,6 +363,8 @@ function OutcomePicker({
           ownerCommission: hold.ownerCommissionAmount,
           vehicleInsurance: hold.vehicleInsuranceAmount,
           personalInsurance: hold.personalInsuranceAmount,
+          // `X` đi cùng `IV` (ADR 0091 điều 3) — thiếu nó thì xem trước lệch số chốt thật.
+          insuranceServiceFee: hold.insuranceServiceFeeAmount,
           promoDiscount: hold.promoDiscountAmount,
         },
         kind,

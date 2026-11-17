@@ -249,6 +249,12 @@
         "package": "Chọn gói thuê dài hạn trước khi thuê.",
         "pickupDate": "Chọn ngày nhận xe mong muốn trước khi thuê.",
         "destination": "Nhập điểm đến của chuyến liên tỉnh trước khi thuê."
+      },
+      "insuranceBlocked": "Xe tạm chưa nhận đặt tự lái vì chưa đủ thông tin bảo hiểm bắt buộc. Bạn có thể chọn xe khác hoặc dịch vụ khác của xe này.",
+      "limits": {
+        "tooFarAhead": "Chỉ đặt trước được tối đa {days} ngày - chọn ngày nhận xe trước hoặc vào {date}.",
+        "selfDriveTooLong": "Chuyến tự lái dài tối đa {days} ngày. Thuê lâu hơn, hãy chọn thuê dài hạn.",
+        "switchLongTerm": "Chuyển sang thuê dài hạn"
       }
     },
     "deliveryModal": {

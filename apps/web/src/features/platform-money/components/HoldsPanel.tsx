@@ -1,22 +1,26 @@
 'use client';
 
 import { Button, Tag } from 'antd';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import {
   BOOKING_HOLD_OUTCOME_META,
-  BOOKING_HOLD_STATUS,
   BOOKING_HOLD_STATUS_META,
   BOOKING_HOLD_STATUS_VALUES,
+  BOOKING_STATUS_META,
+  HOLD_SETTLE_REASON,
   PERMISSION,
   isBookingHoldStatus,
   type BookingHoldOutcome,
   type BookingHoldStatus,
+  type BookingStatus,
 } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
+import { ROUTES } from '@/constants/routes';
 import { AdminBookingDetailDrawer } from '@/features/admin-bookings/components/AdminBookingDetailDrawer';
 import { usePermissions } from '@/hooks/use-permissions';
 import { positiveIntParam, useUrlFilters } from '@/hooks/use-url-filters';
@@ -52,9 +56,22 @@ interface HoldUrlFilters {
   open?: string;
 }
 
-/** Khoản admin CHỐT TAY được: đã trả, chưa có kết cục. */
+/**
+ * Khoản admin CHỐT TAY được — server nói qua `settleReason` (case giữ quyết toán mở, hoặc đơn đã kết
+ * thúc mà kết cục chưa chốt). Đơn còn chạy bình thường thì không: kết cục tự chốt khi đơn kết thúc,
+ * và `POST …/settle` từ chối nó (`HOLD_SETTLE_NOT_DUE`).
+ */
 function canSettle(row: PlatformHold): boolean {
-  return row.status === BOOKING_HOLD_STATUS.PAID && !row.outcome;
+  return row.settleReason !== null && !needsTripVerdict(row);
+}
+
+/**
+ * Case "chưa xác nhận giao xe" mở (ADR 0094): câu hỏi là CHUYẾN có diễn ra không, và kết luận ở case
+ * hỗ trợ tự chốt luôn tiền — nên ở đây không có nút chốt (server từ chối
+ * `HOLD_SETTLE_NEEDS_TRIP_VERDICT`), chỉ có lối sang case.
+ */
+function needsTripVerdict(row: PlatformHold): boolean {
+  return row.settleReason === HOLD_SETTLE_REASON.HANDOVER_UNCONFIRMED;
 }
 
 function parse(params: URLSearchParams): HoldUrlFilters {
@@ -72,11 +89,9 @@ function parse(params: URLSearchParams): HoldUrlFilters {
 }
 
 /**
- * Hàng đợi KHOẢN GIỮ CHỖ — mặc định chỉ khoản ĐÃ TRẢ mà chưa chốt kết cục.
- *
- * Phần lớn dòng ở đây là chuyến đang chạy bình thường (kết cục tự chốt khi đơn hoàn thành/huỷ);
- * việc tay của admin là những dòng mang nhãn TRANH CHẤP — kết luận ở màn hỗ trợ trước, chốt tiền
- * ở đây sau.
+ * Hàng đợi KHOẢN GIỮ CHỖ — mặc định chỉ khoản CẦN NGƯỜI CHỐT (`HOLD_SETTLE_REASON`): đơn có case
+ * giữ quyết toán mở (kết luận ở màn hỗ trợ trước, chốt tiền ở đây sau), hoặc đơn đã kết thúc mà kết
+ * cục chưa chốt. Chuyến đang chạy bình thường không nằm ở đây — kết cục của nó tự chốt.
  */
 export function HoldsPanel() {
   const t = useTranslations('PlatformMoney');
@@ -86,8 +101,10 @@ export function HoldsPanel() {
   const { has } = usePermissions();
   const { filters, setFilters } = useUrlFilters(parse);
 
+  const router = useRouter();
   const [bookingId, setBookingId] = useState<string | null>(null);
   const canViewBooking = has(PERMISSION.PLATFORM_BOOKING_VIEW);
+  const canOpenSupport = has(PERMISSION.PLATFORM_SUPPORT_MANAGE);
 
   const unsettled = !filters.scope;
   const { data, isError, isFetching, refetch } = useHolds({
@@ -111,8 +128,8 @@ export function HoldsPanel() {
   const openHold = (id: string | undefined) => setFilters({ open: id }, { resetPage: false });
 
   /*
-   * Ô lọc trạng thái CHỈ có mặt khi đang xem "tất cả": `unsettled=true` ở backend ép
-   * `status = paid, outcome = null` và nuốt luôn bộ lọc trạng thái — một ô lọc không làm gì còn
+   * Ô lọc trạng thái CHỈ có mặt khi đang xem "tất cả": `unsettled=true` ở backend ép hàng đợi
+   * chốt tay (`status = paid`, chưa kết cục) và nuốt luôn bộ lọc trạng thái — một ô lọc không làm gì còn
    * tệ hơn không có ô nào.
    */
   const filterFields: FilterField[] = [
@@ -146,9 +163,16 @@ export function HoldsPanel() {
       render: (_, row) => (
         <div className={styles.stack}>
           <span className={styles.mono}>{row.code}</span>
-          {row.disputeOpen ? (
-            <Tag color="error" className={styles.tag}>
-              {t('columns.disputeOpen')}
+          {/*
+           * MỘT tag theo lý do server trả: tranh chấp thật (đỏ), chủ xe chưa bấm giao xe — case hệ
+           * thống tự mở, không ai khiếu nại (cam), hay đơn đã khép mà kết cục chưa chốt (cam).
+           */}
+          {row.settleReason ? (
+            <Tag
+              color={row.settleReason === HOLD_SETTLE_REASON.DISPUTE_OPEN ? 'error' : 'warning'}
+              className={styles.tag}
+            >
+              {t(`columns.settleReason.${row.settleReason}`)}
             </Tag>
           ) : null}
         </div>
@@ -176,7 +200,21 @@ export function HoldsPanel() {
                 <span className={styles.muted}>{tCommon('labels.emptyValue')}</span>
               ))
             )}
-            <span className={styles.tertiary}>{fmt.dateTime(row.createdAt)}</span>
+            {/* Người chốt phải biết chuyến đã diễn ra chưa — trạng thái đơn + lịch nhận/trả. */}
+            {row.bookingStatus ? (
+              <StatusTag
+                value={row.bookingStatus as BookingStatus}
+                meta={BOOKING_STATUS_META}
+                group="bookingStatus"
+              />
+            ) : null}
+            {row.pickupAt && row.returnAt ? (
+              <span className={styles.tertiary}>
+                {fmt.shortDateTimeRange(row.pickupAt, row.returnAt)}
+              </span>
+            ) : (
+              <span className={styles.tertiary}>{fmt.dateTime(row.createdAt)}</span>
+            )}
           </div>
         );
       },
@@ -260,6 +298,14 @@ export function HoldsPanel() {
           label: t('columns.settleAction'),
           hidden: !canSettle(row),
           onClick: () => openHold(row.id),
+        },
+        {
+          key: 'verdict',
+          label: t('columns.verdictAction'),
+          // Case hỗ trợ tìm theo mã đơn (tiêu đề case do worker đặt có mã chuyến).
+          hidden: !needsTripVerdict(row) || !canOpenSupport || !row.bookingCode,
+          onClick: () =>
+            router.push(`${ROUTES.ADMIN.SUPPORT}?q=${encodeURIComponent(row.bookingCode ?? '')}`),
         },
       ],
       { width: 150, maxInline: 1 },

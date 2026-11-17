@@ -73,7 +73,100 @@ const BOOKING = {
   createdByName: 'Ngô Thanh Hải',
   createdAt: '2026-08-01T02:00:00.000Z',
   updatedAt: '2026-08-02T03:30:00.000Z',
+  // Đơn lập tay: không đi qua thanh toán của XePrime.
+  marketplace: {
+    fees: null,
+    hold: null,
+    bankTransactions: null,
+    insurancePolicies: [],
+    taxRows: [],
+    cancellation: null,
+  },
+  openSupportCases: [] as unknown[],
 };
+
+/** Đơn tuyến hoa hồng có mã khuyến mãi, tiền giữ chỗ đã về đủ, một GCN đã cấp. */
+const MARKETPLACE = {
+  fees: {
+    billingMode: 'commission',
+    baseAmount: '1560000',
+    deliveryAmount: '0',
+    serviceFeeAmount: '50000',
+    vehicleInsuranceAmount: '0',
+    personalInsuranceAmount: '0',
+    insuranceServiceFeeAmount: '0',
+    depositAmount: '234000',
+    promoDiscountAmount: '30000',
+    promoCode: 'VAOTHU',
+    grossOnlineAmount: '440000',
+    onlineAmount: '410000',
+    payAtPickupAmount: '1170000',
+    customerTotalAmount: '1580000',
+    platformRetainedAmount: '206000',
+    platformNetAmount: '176000',
+    ownerPayout: {
+      rentAmount: '1560000',
+      rentalDays: 2,
+      unitAmount: '780000',
+      ownerCommissionAmount: '156000',
+      commissionTiers: null,
+      taxAmount: '109200',
+      vatAmount: '78000',
+      pitAmount: '31200',
+      vatPercent: 5,
+      pitPercent: 2,
+      taxTotalPercent: 7,
+      taxExemptReason: null,
+      ownerNetAmount: '1294800',
+      payAtPickupRentAmount: '1170000',
+      ownerPayableAmount: '124800',
+      collectsHold: true,
+    },
+  },
+  hold: {
+    id: 'H1',
+    code: 'XPH01ABC',
+    status: 'paid',
+    outcome: null,
+    amount: '410000',
+    paidAmount: '410000',
+    expiresAt: '2026-08-01T04:00:00.000Z',
+    paidAt: '2026-08-01T03:00:00.000Z',
+    freeCancelUntil: '2026-08-01T05:00:00.000Z',
+    releasedAt: null,
+    settlement: null,
+    refund: null,
+  },
+  bankTransactions: [
+    {
+      id: 'TX1',
+      amountIn: '410000',
+      bankTime: '2026-08-01T03:00:00.000Z',
+      createdAt: '2026-08-01T03:00:05.000Z',
+      matchStatus: 'matched',
+      bankReferenceNumber: 'FT123',
+    },
+  ],
+  insurancePolicies: [
+    {
+      id: 'P1',
+      productKind: 'vehicle_trip',
+      status: 'issued',
+      premiumAmount: '120000',
+      partnerName: 'MIC',
+      certificateNumber: 'GCN-9',
+      isTest: true,
+      issuedAt: '2026-09-01T02:00:00.000Z',
+      certificateDownloadable: true,
+    },
+  ],
+  taxRows: [],
+  cancellation: null,
+};
+
+function marketplaceSection(): HTMLElement {
+  return screen.getByRole('heading', { level: 3, name: 'Tiền marketplace' }).closest('section')!;
+}
 
 function renderDrawer(bookingId: string | null = 'B1') {
   const onClose = vi.fn();
@@ -181,7 +274,7 @@ describe('AdminBookingDetailDrawer - Thông tin đơn', () => {
     expect(screen.getByRole('link', { name: 'Gian hàng ABC' }).getAttribute('href')).toBe(
       // Mở ĐÚNG gian hàng theo id (không tìm theo tên — tên trùng được); danh sách đối tác nào
       // thì server nói, qua URL cũ đang làm bộ tra loại.
-      '/admin/tenants?tenant=T-ABC',
+      '/admin/partners?tenant=T-ABC',
     );
     expect(screen.getByText('Đang hoạt động')).toBeTruthy();
     // Link xe tra theo BIỂN SỐ — tên xe trùng nhau giữa nhiều gian hàng.
@@ -417,5 +510,151 @@ describe('AdminBookingDetailDrawer - Hồ sơ & điều hướng', () => {
     renderDrawer();
     expect(screen.queryByText(/Mở chi tiết đầy đủ/)).toBeNull();
     expect(document.querySelector('a[href^="/manage/bookings/"]')).toBeNull();
+  });
+});
+
+describe('AdminBookingDetailDrawer - tiền marketplace', () => {
+  it('đơn lập tay: nói thẳng không đi qua thanh toán XePrime, không bịa dòng 0 ₫', () => {
+    renderDrawer();
+    const section = marketplaceSection();
+    expect(within(section).getByText(/không đi qua thanh toán của XePrime/)).toBeTruthy();
+    expect(within(section).queryByText('0 ₫')).toBeNull();
+  });
+
+  it('ba phía tách bạch: khách, chủ xe (thuế tách GTGT/TNCN), XePrime trừ tài trợ mã', () => {
+    query.data = { ...BOOKING, marketplace: MARKETPLACE };
+    renderDrawer();
+    const section = marketplaceSection();
+
+    expect(within(section).getByText('XPH01ABC')).toBeTruthy();
+    expect(within(section).getByText('Mã khuyến mãi VAOTHU')).toBeTruthy();
+    expect(within(section).getAllByText('- 30.000 ₫')).toHaveLength(2);
+    expect(within(section).getByText('Tiền giữ chỗ phải chuyển')).toBeTruthy();
+    expect(within(section).getByText('Cộng ví khi chuyến hoàn thành')).toBeTruthy();
+    expect(within(section).getByText('124.800 ₫')).toBeTruthy();
+    expect(within(section).getByText(/GTGT 78.000 ₫ · TNCN 31.200 ₫/)).toBeTruthy();
+    expect(within(section).getByText('Doanh thu thật')).toBeTruthy();
+    expect(within(section).getByText('176.000 ₫')).toBeTruthy();
+    // Tiền giữ chỗ không lẫn vào khối cọc thế chấp.
+    expect(within(collateralCard()).queryByText('XPH01ABC')).toBeNull();
+  });
+
+  it('giao dịch ngân hàng: link sang hàng đợi tiền vào mở đúng giao dịch; GCN chỉ tải khi có quyền tiền', () => {
+    query.data = { ...BOOKING, marketplace: MARKETPLACE };
+    renderDrawer();
+    const section = marketplaceSection();
+
+    const open = within(section).getByRole('link', { name: /Mở ở hàng đợi tiền vào/ });
+    const href = new URL(open.getAttribute('href')!, 'http://x');
+    expect(href.searchParams.get('queue')).toBe('bank-in');
+    expect(href.searchParams.get('open')).toBe('TX1');
+    expect(href.searchParams.get('q')).toBe('XPH01ABC');
+    expect(within(section).getByText(/Mã FT FT123/)).toBeTruthy();
+    expect(within(section).getByText('Thử nghiệm')).toBeTruthy();
+    expect(within(section).queryByRole('link', { name: /Tải GCN/ })).toBeNull();
+
+    cleanup();
+    perms.granted = [PERMISSION.PLATFORM_MONEY_MANAGE];
+    renderDrawer();
+    const download = within(marketplaceSection()).getByRole('link', { name: /Tải GCN/ });
+    expect(download.getAttribute('href')).toMatch(
+      /\/platform\/money\/insurance\/P1\/certificate\.pdf$/,
+    );
+  });
+
+  it('server bỏ chứng từ ngân hàng (thiếu quyền tiền) ⇒ khối giao dịch ẩn hẳn', () => {
+    query.data = { ...BOOKING, marketplace: { ...MARKETPLACE, bankTransactions: null } };
+    renderDrawer();
+    const section = marketplaceSection();
+    expect(within(section).queryByText('Giao dịch ngân hàng đã khớp')).toBeNull();
+    expect(within(section).getByText('XPH01ABC')).toBeTruthy();
+  });
+
+  it('đơn đã huỷ: phân bổ đã chốt, khoản hoàn vào ví và phía chịu trách nhiệm do server suy', () => {
+    query.data = {
+      ...BOOKING,
+      status: 'cancelled',
+      marketplace: {
+        ...MARKETPLACE,
+        hold: {
+          ...MARKETPLACE.hold,
+          status: 'cancelled',
+          outcome: 'kept',
+          releasedAt: '2026-08-01T06:00:00.000Z',
+          settlement: {
+            customerAmount: '410000',
+            ownerAmount: '0',
+            platformAmount: '0',
+            insurerAmount: '0',
+            taxAmount: '0',
+          },
+          refund: {
+            status: 'paid',
+            amount: '410000',
+            reason: 'owner_cancel',
+            settlementMode: 'balance',
+            paidAt: '2026-08-01T06:00:00.000Z',
+            bankReference: null,
+            bankCode: null,
+            bankAccountNumber: null,
+            bankAccountName: null,
+          },
+        },
+        cancellation: {
+          responsibleParty: 'host',
+          reasonCategory: 'vehicle_unavailable',
+          reason: 'Xe hỏng',
+          stage: 'booking_before_pickup',
+          cancelledAt: '2026-08-01T06:00:00.000Z',
+        },
+      },
+    };
+    renderDrawer();
+    const section = marketplaceSection();
+    expect(within(section).getByText('Phân bổ đã chốt')).toBeTruthy();
+    expect(within(section).getByText('Vào Ví điểm của khách')).toBeTruthy();
+    expect(within(section).getByText('Lượt huỷ')).toBeTruthy();
+    expect(within(section).getByText('Xe hỏng')).toBeTruthy();
+  });
+});
+
+/** ADR 0095 điều 4: case hỗ trợ còn mở đứng đầu drawer, lối mở case chỉ cho người xử lý hỗ trợ. */
+describe('AdminBookingDetailDrawer - Hỗ trợ đang mở', () => {
+  const OPEN_CASE = {
+    id: 'C1',
+    code: 'SC00AB12',
+    category: 'dispute',
+    status: 'open',
+    priority: 'urgent',
+    createdAt: '2026-09-01T03:00:00.000Z',
+    tripVerdictAvailable: true,
+  };
+
+  it('không có case mở thì không có khối nào', () => {
+    renderDrawer();
+    expect(screen.queryByRole('heading', { level: 3, name: 'Hỗ trợ đang mở' })).toBeNull();
+  });
+
+  it('có case mở: mã, nhãn cần kết luận, lối mở case khi có quyền hỗ trợ', () => {
+    query.data = { ...BOOKING, openSupportCases: [OPEN_CASE] };
+    perms.granted = [PERMISSION.PLATFORM_SUPPORT_MANAGE];
+    renderDrawer();
+
+    const section = screen
+      .getByRole('heading', { level: 3, name: 'Hỗ trợ đang mở' })
+      .closest('section')!;
+    expect(within(section).getByText('SC00AB12')).toBeTruthy();
+    expect(within(section).getByText('Cần kết luận chuyến')).toBeTruthy();
+    const link = within(section).getByRole('link');
+    expect(link.getAttribute('href')).toContain('open=C1');
+  });
+
+  it('không có quyền hỗ trợ ⇒ vẫn thấy case, không có lối mở', () => {
+    query.data = { ...BOOKING, openSupportCases: [OPEN_CASE] };
+    renderDrawer();
+    const section = screen
+      .getByRole('heading', { level: 3, name: 'Hỗ trợ đang mở' })
+      .closest('section')!;
+    expect(within(section).queryByRole('link')).toBeNull();
   });
 });

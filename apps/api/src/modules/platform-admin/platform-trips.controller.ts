@@ -6,6 +6,8 @@ import type { AuthenticatedUser } from '../../common/types/request-context';
 import { PlatformBookingPageDto } from './dto/platform-booking.dto';
 import {
   PlatformTripBookingListQueryDto,
+  PlatformTripDriverListQueryDto,
+  PlatformTripDriverPageDto,
   PlatformTripRemindResultDto,
   PlatformTripRequestListQueryDto,
   PlatformTripRequestPageDto,
@@ -33,7 +35,8 @@ export class PlatformTripsController {
 
   @Get('summary')
   @ApiOperation({
-    summary: 'Số dòng + số khẩn của bốn hàng đợi vận hành, và lịch giao/trả hôm nay',
+    summary:
+      'Số dòng + số khẩn của các hàng đợi vận hành (kèm ba nhóm vấn đề tài xế), và lịch giao/trả hôm nay',
   })
   @ApiOkResponse({ type: PlatformTripSummaryDto })
   summary(@Query() query: PlatformTripSummaryQueryDto): Promise<PlatformTripSummaryDto> {
@@ -52,6 +55,16 @@ export class PlatformTripsController {
   @ApiOkResponse({ type: PlatformBookingPageDto })
   bookings(@Query() query: PlatformTripBookingListQueryDto): Promise<PlatformBookingPageDto> {
     return this.bookingsService.listQueue(query) as Promise<PlatformBookingPageDto>;
+  }
+
+  @Get('drivers')
+  @ApiOperation({
+    summary:
+      'Hàng đợi tài xế: đơn có tài xế sắp nhận chưa có tài xế nhận / lượt gán quá hạn / tài xế đã rút',
+  })
+  @ApiOkResponse({ type: PlatformTripDriverPageDto })
+  drivers(@Query() query: PlatformTripDriverListQueryDto): Promise<PlatformTripDriverPageDto> {
+    return this.trips.drivers(query) as Promise<PlatformTripDriverPageDto>;
   }
 
   @Post('requests/:id/remind')

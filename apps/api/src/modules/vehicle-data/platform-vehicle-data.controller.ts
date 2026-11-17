@@ -42,6 +42,8 @@ import {
   VehicleDataImportRowsQueryDto,
   VehicleDataImportUploadDto,
   VehicleDataListQueryDto,
+  VehicleDataModelCountDto,
+  VehicleDataModelCountsQueryDto,
   VehicleDataPageDto,
   VehicleDataReviewResultDto,
 } from './dto/vehicle-data.dto';
@@ -83,6 +85,16 @@ export class PlatformVehicleDataController {
   @ApiOkResponse({ type: VehicleDataPageDto })
   list(@Query() query: VehicleDataListQueryDto): Promise<VehicleDataPageDto> {
     return this.query.list(query);
+  }
+
+  @Get('model-counts')
+  @ApiOperation({
+    summary:
+      'Số xe chuẩn theo từng dòng xe của một hãng (tổng, chờ duyệt, thiếu dữ liệu, khớp lọc)',
+  })
+  @ApiOkResponse({ type: [VehicleDataModelCountDto] })
+  modelCounts(@Query() query: VehicleDataModelCountsQueryDto): Promise<VehicleDataModelCountDto[]> {
+    return this.query.modelCounts(query);
   }
 
   @Get('template')

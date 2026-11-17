@@ -2,7 +2,7 @@
   "page": {
     "title": "Finance",
     "loadError": "Could not load the data.",
-    "holdsEmpty": "No booking holds.",
+    "holdsEmpty": "No booking holds need manual settlement.",
     "holdsTotal": "{count} booking holds",
     "refundsEmpty": "No refunds.",
     "refundsTotal": "{count} refunds",
@@ -14,7 +14,7 @@
     "holdsSearchPlaceholder": "XPH code, customer name, shop name",
     "status": "Status",
     "scope": "Scope",
-    "unsettledOnly": "Awaiting settlement",
+    "unsettledOnly": "Needs manual settlement",
     "allHolds": "All"
   },
   "columns": {
@@ -27,8 +27,13 @@
     "outcome": "Outcome",
     "reason": "Reason",
     "createdAt": "Created",
-    "disputeOpen": "Dispute open",
+    "settleReason": {
+      "dispute_open": "Dispute open",
+      "handover_unconfirmed": "Handover not confirmed",
+      "booking_ended": "Booking ended"
+    },
     "settleAction": "Settle",
+    "verdictAction": "Conclude in support",
     "markPaidAction": "Mark transferred",
     "rejectAction": "Reject",
     "booking": "Booking",
@@ -46,7 +51,11 @@
     "noteRequired": "A reason is required (at least 5 characters).",
     "submit": "Settle",
     "success": "Outcome settled.",
-    "disputeOpen": "This booking still has an open dispute or handover verification case - resolve it before settling the money.",
+    "reason": {
+      "dispute_open": "This booking has an open dispute - read and resolve the dispute case before settling the money.",
+      "handover_unconfirmed": "Pickup time has passed but the owner has not confirmed the handover, so the system opened a handover check case. Nobody has filed a complaint: contact the owner and the customer, then record the trip verdict on the support case. The money settles from that verdict.",
+      "booking_ended": "The booking has ended but its outcome was not settled automatically (usually because a case was open when it ended). Read the case conclusion, then settle."
+    },
     "auditHint": "This action is written to the audit log and cannot be undone.",
     "received": "Amount received",
     "paidTotal": "Total received",
@@ -72,7 +81,9 @@
     },
     "previous": "Previous hold",
     "next": "Next hold",
-    "taxWithheld": "Within the owner's share: tax withheld on completion"
+    "taxWithheld": "Within the owner's share: tax withheld on completion",
+    "bookingStatus": "Booking status",
+    "schedule": "Pickup - return"
   },
   "refundPaid": {
     "title": "Record refund transfer",
@@ -104,7 +115,7 @@
     "balanceSaved": "End-of-day balance saved",
     "platformTitle": "XePrime's own money",
     "serviceFeeRecognized": "Service fees recognised",
-    "subscriptionsCollected": "Subscription payments collected",
+    "subscriptionsCollected": "Subscription revenue (cash received)",
     "custodiedTitle": "Money held for others - liabilities",
     "holdsUnsettled": "Holds not yet settled",
     "walletTotal": "Balances payable",
@@ -114,7 +125,7 @@
     "taxAccrued": "Tax withheld, not yet remitted",
     "withdrawalsPaid": "Withdrawals transferred",
     "refundsPaid": "Refunds transferred",
-    "matchedSubscriptions": "Matched to subscription invoices",
+    "matchedSubscriptions": "Matched to plans (invoices + bundles)",
     "matchedHolds": "Matched to holds",
     "unmatched": "Unmatched",
     "ignored": "Ignored",
@@ -133,7 +144,17 @@
     "varianceMissing": "Enter the balance to compute",
     "varianceOff": "Needs review",
     "varianceBalanced": "Balanced",
-    "countChip": "{count, plural, one {# item} other {# items}}"
+    "countChip": "{count, plural, one {# item} other {# items}}",
+    "insuranceCommission": "Insurance agent commission",
+    "insuranceServiceFeeRefunded": "Insurance collection fees refunded",
+    "extensionsUnsettled": "Unsettled booking extensions",
+    "subscriptionsUnapplied": "Plan payments not yet revenue",
+    "subscriptionsUnappliedNote": "Underpaid invoices and overpayments from before automatic wallet credit",
+    "ignoredKept": "Ignored payments not yet returned",
+    "matchedExtensions": "Matched to booking extensions",
+    "manualRefunds": "Returned ignored payments",
+    "insuranceRemitted": "Paid to the insurer",
+    "matchedWalletCredits": "Late payments refunded to customer wallets"
   },
   "tax": {
     "title": "Tax ledger by period",
@@ -171,12 +192,13 @@
       "pit": "PIT"
     },
     "actions": {
-      "export": "Export CSV",
-      "markDeclared": "Mark declared",
-      "declaredDone": "Whole period marked as declared",
-      "markRemitted": "Mark remitted",
-      "remittedDone": "Whole period marked as remitted",
-      "reverse": "Reverse"
+      "export": "Export detailed CSV",
+      "markDeclared": "Record declaration",
+      "declaredDone": "Recorded the whole period as declared",
+      "markRemitted": "Record payment",
+      "remittedDone": "Recorded the whole period as paid",
+      "reverse": "Reverse",
+      "exportBySeller": "Export CSV by seller"
     },
     "empty": {
       "title": "No obligations in this period",
@@ -194,6 +216,48 @@
     "category": {
       "service": "Services group",
       "transport": "Transport group"
+    },
+    "filing": {
+      "title": "Declaration and payment evidence",
+      "declared": "Declaration",
+      "declaredValue": "No. {ref} - filed on {date}",
+      "remitted": "Payment",
+      "remittedValue": "Receipt {ref} - paid on {date} - {amount}",
+      "recordedBy": "Recorded by {name} at {time}",
+      "recordedAt": "Recorded at {time}",
+      "notYet": "Not recorded",
+      "legacyDeclared": "This period was declared before evidence was tracked - you can add the declaration number now.",
+      "mismatch": "The amount paid differs from the ledger total ({ledger})",
+      "note": "Note: {note}"
+    },
+    "declareDialog": {
+      "title": "Record declaration for {period}",
+      "hint": "This moves every undeclared row of the period to declared and saves the declaration number as evidence. Each period is recorded once.",
+      "rows": "Rows to declare",
+      "amount": "Total not yet declared",
+      "ref": "Declaration / filing number",
+      "refHint": "The number issued by the tax authority when the return is filed.",
+      "refRequired": "Enter the declaration number",
+      "date": "Filing date",
+      "dateRequired": "Pick the filing date",
+      "dateRange": "The date must be between {from} and today",
+      "submit": "Record declaration"
+    },
+    "remitDialog": {
+      "title": "Record tax payment for {period}",
+      "hint": "This moves every declared row of the period to paid and saves the payment receipt as evidence. Each period is recorded once.",
+      "rows": "Rows to mark as paid",
+      "ledger": "Tax on the ledger for this period",
+      "ref": "State budget payment receipt number",
+      "refRequired": "Enter the receipt number",
+      "date": "Payment date",
+      "dateRequired": "Pick the payment date",
+      "amount": "Amount paid",
+      "amountRequired": "Enter the amount paid",
+      "note": "Note on the difference",
+      "noteRequired": "The amount paid differs from the ledger total - add a note explaining it",
+      "mismatch": "The amount paid differs from the ledger total {ledger}. You can still record it, but a note is required.",
+      "submit": "Record payment"
     }
   },
   "status": {
@@ -219,6 +283,7 @@
     "tax": "Tax not yet declared",
     "oldest": "Oldest {age}",
     "disputes": "{count} in dispute",
+    "handoverUnconfirmed": "{count} handover not confirmed",
     "overdue": "{count} overdue",
     "period": "Period {period}",
     "loadError": "Could not load queue counts",

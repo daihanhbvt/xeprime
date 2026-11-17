@@ -621,4 +621,10 @@ export class CatalogModelBrandSummaryDto {
 
   @ApiProperty({ description: 'Số mẫu còn thiếu thông số điền sẵn (`catalogModelMissingSpecs`)' })
   missingSpecs!: number;
+
+  @ApiProperty({ description: 'Số dữ liệu xe (xe chuẩn, ADR 0090) của hãng - kể cả chờ duyệt' })
+  vehicleDataTotal!: number;
+
+  @ApiProperty({ description: 'Số dữ liệu xe CHỜ DUYỆT của hãng (ADR 0096)' })
+  vehicleDataPending!: number;
 }

@@ -1,0 +1,34 @@
+{
+  "open": "View points wallet",
+  "title": "Points wallet",
+  "titleWithName": "Points wallet - {name}",
+  "loadError": "Could not load the points wallet",
+  "ownerType": {
+    "user": "Customer account wallet",
+    "tenant": "Shop wallet"
+  },
+  "stats": {
+    "available": "Available",
+    "pending": "Withdrawing",
+    "total": "Total owed"
+  },
+  "noWallet": "This owner has no points wallet yet: nothing has ever been recorded.",
+  "reconciled": "Ledger matches: {count, plural, one {# entry adds} other {# entries add}} up to {total}, equal to available + withdrawing.",
+  "mismatch": "Ledger mismatch: entries total {ledger} but available + withdrawing is {total}. Ask engineering to check.",
+  "entriesTitle": "Points wallet entries",
+  "entriesError": "Could not load entries",
+  "entriesTotal": "{count, plural, one {# entry} other {# entries}}",
+  "noEntries": "No entries yet",
+  "reversal": "Reversal",
+  "columns": {
+    "time": "Time",
+    "kind": "Type",
+    "amount": "Points",
+    "balanceAfter": "Balance after"
+  },
+  "source": {
+    "booking": "Booking {code}",
+    "hold": "Hold {code}",
+    "withdrawal": "Withdrawal {code} ({status})"
+  }
+}

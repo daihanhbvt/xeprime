@@ -134,6 +134,15 @@ export const NOTIFICATION_TYPE = {
   HOLD_REFUND_PAID: 'hold_refund_paid',
 
   /**
+   * Lệnh RÚT khỏi Ví điểm — chủ ví (tài khoản khách, hoặc chủ gian hàng với ví gian hàng). Ba
+   * mốc chủ ví cần biết: tiền đã đi, lệnh bị từ chối (tiền về khả dụng), lệnh đã chi bị đảo vì
+   * chuyển hụt / sai tài khoản (tiền quay lại ví). `targetType = withdrawal`, `targetId` = lệnh.
+   */
+  WITHDRAWAL_PAID: 'withdrawal_paid',
+  WITHDRAWAL_REJECTED: 'withdrawal_rejected',
+  WITHDRAWAL_REVERSED: 'withdrawal_reversed',
+
+  /**
    * MÃ KHUYẾN MÃI không còn áp được lúc CHỐT GIÁ — KHÁCH (ADR 0046 điều 7).
    *
    * Loại riêng, và nó tồn tại vì một luật sản phẩm: không được âm thầm bỏ mã rồi tăng số tiền
@@ -237,6 +246,8 @@ export const NOTIFICATION_TARGET_TYPE = {
   DRIVER_LINK: 'driver_link',
   /** Chuyến được gán, nhìn từ phía TÀI XẾ — `targetId` là `bookings.id`. */
   DRIVER_TRIP: 'driver_trip',
+  /** Lệnh rút khỏi Ví điểm — `targetId` là `withdrawal_requests.id`; đích là màn Ví điểm. */
+  WITHDRAWAL: 'withdrawal',
 } as const;
 
 export type NotificationTargetType =
@@ -348,6 +359,15 @@ export const NOTIFICATION_TYPE_META: Readonly<Record<NotificationType, Notificat
     color: STATUS_COLOR.NEUTRAL,
   },
   [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: { label: 'Đã hoàn giữ chỗ', color: STATUS_COLOR.SUCCESS },
+  [NOTIFICATION_TYPE.WITHDRAWAL_PAID]: { label: 'Đã chuyển tiền rút', color: STATUS_COLOR.SUCCESS },
+  [NOTIFICATION_TYPE.WITHDRAWAL_REJECTED]: {
+    label: 'Lệnh rút bị từ chối',
+    color: STATUS_COLOR.WARNING,
+  },
+  [NOTIFICATION_TYPE.WITHDRAWAL_REVERSED]: {
+    label: 'Lệnh rút chuyển không thành công',
+    color: STATUS_COLOR.DANGER,
+  },
   [NOTIFICATION_TYPE.PROMO_CODE_DROPPED]: {
     label: 'Mã khuyến mãi không còn áp dụng',
     color: STATUS_COLOR.WARNING,

@@ -4,8 +4,10 @@ import type {
   BankTransaction,
   BankTransactionDetail,
   BankTransactionFilters,
+  CreditCustomerInput,
   IgnoreBankTransactionInput,
   MatchBankTransactionInput,
+  MatchReceivableInput,
 } from './types';
 
 export const BANK_TX_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
@@ -19,6 +21,8 @@ export function filtersToParams(filters: BankTransactionFilters): QueryParams {
     code: filters.code ?? null,
     from: filters.from ?? null,
     to: filters.to ?? null,
+    amount: filters.amount ?? null,
+    reason: filters.reason ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? BANK_TX_DEFAULT_LIMIT,
   };
@@ -47,3 +51,17 @@ export const ignoreBankTransaction = (
   body: IgnoreBankTransactionInput,
 ): Promise<BankTransactionDetail> =>
   apiPost<BankTransactionDetail>(`/platform/bank-transactions/${id}/ignore`, body);
+
+/** Khớp tay vào một khoản giữ chỗ / phụ lục còn nhận tiền (ADR 0092). */
+export const matchReceivable = (
+  id: string,
+  body: MatchReceivableInput,
+): Promise<BankTransactionDetail> =>
+  apiPost<BankTransactionDetail>(`/platform/bank-transactions/${id}/match-receivable`, body);
+
+/** Ghi có Ví điểm khách cho tiền về sau khi khoản đã đóng (ADR 0092). */
+export const creditCustomer = (
+  id: string,
+  body: CreditCustomerInput,
+): Promise<BankTransactionDetail> =>
+  apiPost<BankTransactionDetail>(`/platform/bank-transactions/${id}/credit-customer`, body);

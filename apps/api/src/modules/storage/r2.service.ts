@@ -186,6 +186,30 @@ export class R2Service {
   }
 
   /**
+   * Ghi một object riêng tư TỪ SERVER — cho tệp do chính server lấy về (GCN bảo hiểm tải từ đối tác,
+   * ADR 0091 điều 6), không phải tệp người dùng tải lên (những tệp đó đi presign). `true` khi đã ghi;
+   * `false` khi R2 lỗi — caller coi như chưa lưu và thử lại lần sau.
+   */
+  async putPrivateObject(key: string, body: Uint8Array, contentType: string): Promise<boolean> {
+    const { PutObjectCommand } = await import('@aws-sdk/client-s3');
+    try {
+      await (
+        await this.getClient()
+      ).send(
+        new PutObjectCommand({
+          Bucket: this.privateBucket(),
+          Key: key,
+          Body: body,
+          ContentType: contentType,
+        }),
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Xoá một object riêng tư. S3/R2 xoá idempotent (key không tồn tại cũng là thành công), nên
    * `true` nghĩa là "chắc chắn không còn"; `false` chỉ khi gọi R2 lỗi — caller thử lại lần sau.
    */

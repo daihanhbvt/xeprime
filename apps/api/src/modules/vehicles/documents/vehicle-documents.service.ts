@@ -184,6 +184,8 @@ export class VehicleDocumentsService {
           },
           tx,
         );
+        // Cà vẹt là điều kiện bảo hiểm ⇒ cờ chặn tự lái trên chợ đi theo (ADR 0091 điều 1).
+        await this.vehicles.syncInsuranceBlockWithinTx(vehicle.id, tx);
         return created;
       });
     } catch (err) {
@@ -253,6 +255,7 @@ export class VehicleDocumentsService {
         },
         tx,
       );
+      await this.vehicles.syncInsuranceBlockWithinTx(vehicleId, tx);
     });
 
     return this.readDetail(tenantId, vehicleId, documentId);
@@ -278,6 +281,7 @@ export class VehicleDocumentsService {
       targetType: 'vehicle_document',
       targetId: documentId,
     });
+    await this.vehicles.syncInsuranceBlockWithinTx(vehicleId);
     return { id: documentId };
   }
 
@@ -621,6 +625,8 @@ export class VehicleDocumentsService {
           where: { id: documentId },
           data: { ...patch, rowVersion: { increment: 1 } },
         });
+        // Số khung / chủ xe từ OCR là điều kiện bảo hiểm (ADR 0091 điều 1).
+        await this.vehicles.syncInsuranceBlockWithinTx(vehicleId, tx);
       }
 
       // Biển số vào HỒ SƠ XE trong CÙNG transaction: xe public sửa nhạy cảm tự knockback

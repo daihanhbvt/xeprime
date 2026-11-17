@@ -1,5 +1,5 @@
 import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
-import { apiPost, apiRequest, type QueryParams } from '@/services/api-client';
+import { apiGet, apiPost, apiRequest, type QueryParams } from '@/services/api-client';
 import {
   BOOKING_REQUEST_CLOSED_STATUSES,
   BOOKING_REQUEST_NEEDS_ACTION_STATUSES,
@@ -7,6 +7,7 @@ import {
   BOOKING_REQUEST_TAB_NEEDS_ACTION,
 } from './constants';
 import type {
+  BookingLimitsInfo,
   ApproveBookingRequestInput,
   BookingRequestConversation,
   BookingRequestFilters,
@@ -171,3 +172,7 @@ export const fetchVehicleBusyDays = async (
   });
   return res.data;
 };
+
+/** GET /public/fee-policies/booking-limits — trần đặt trước / độ dài tự lái của khách (ADR 0091 điều 4). */
+export const fetchBookingLimits = (): Promise<BookingLimitsInfo> =>
+  apiGet<BookingLimitsInfo>('/public/fee-policies/booking-limits');

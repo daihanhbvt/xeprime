@@ -29,7 +29,9 @@ import {
   VehicleApprovalPageDto,
   VehicleApprovalReasonDto,
 } from './dto/vehicle-approval.dto';
+import { VehicleRegistrationImageDto } from './dto/vehicle-insurance-review.dto';
 import { PlatformVehicleApprovalService } from './platform-vehicle-approval.service';
+import { PlatformVehicleInsuranceReviewService } from './platform-vehicle-insurance-review.service';
 
 /**
  * Màn "Duyệt xe" của nền tảng — CHỈ phiếu duyệt xe (ô tô, xe máy; gian hàng hay cá nhân).
@@ -47,7 +49,10 @@ import { PlatformVehicleApprovalService } from './platform-vehicle-approval.serv
 @RequirePermissions(PERMISSION.PLATFORM_APPROVAL_REVIEW)
 @Realms(ACCOUNT_REALM.PLATFORM)
 export class PlatformVehicleApprovalsController {
-  constructor(private readonly vehicleApprovals: PlatformVehicleApprovalService) {}
+  constructor(
+    private readonly vehicleApprovals: PlatformVehicleApprovalService,
+    private readonly insuranceReview: PlatformVehicleInsuranceReviewService,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -65,6 +70,19 @@ export class PlatformVehicleApprovalsController {
   @ApiOkResponse({ type: VehicleApprovalDetailDto })
   detail(@Param('id') id: string): Promise<VehicleApprovalDetailDto> {
     return this.vehicleApprovals.detail(id);
+  }
+
+  @Get(':id/registration-image')
+  @ApiOperation({
+    summary: 'Mở ảnh cà vẹt của xe trong phiếu - URL sống ngắn, ghi audit mỗi lần mở',
+  })
+  @ApiOkResponse({ type: VehicleRegistrationImageDto })
+  async registrationImage(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<VehicleRegistrationImageDto> {
+    const vehicleId = await this.vehicleApprovals.vehicleIdOf(id);
+    return this.insuranceReview.registrationImage(vehicleId, user.id);
   }
 
   @Put(':id/checks/:checkKey')

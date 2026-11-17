@@ -5,6 +5,8 @@ import {
   BOOKING_HOLD_OUTCOME,
   BOOKING_HOLD_PURPOSE,
   BOOKING_HOLD_STATUS,
+  BOOKING_STATUS,
+  HOLD_SETTLE_REASON,
   PERMISSION,
   WALLET_OWNER_TYPE,
   WITHDRAWAL_STATUS,
@@ -36,12 +38,13 @@ import { FinanceView } from './FinanceView';
 
 const nav = vi.hoisted(() => ({
   replace: vi.fn(),
+  push: vi.fn(),
   pathname: '/manage/admin/money',
   params: new URLSearchParams(),
 }));
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: nav.replace, push: vi.fn() }),
+  useRouter: () => ({ replace: nav.replace, push: nav.push }),
   usePathname: () => nav.pathname,
   useSearchParams: () => nav.params,
 }));
@@ -75,6 +78,7 @@ interface WithdrawalPage {
   limit: number;
   hasNext: boolean;
   overdueCount: number;
+  dualControlMinAmount?: string;
 }
 
 const summary = vi.hoisted(() => ({}) as QueryState<PlatformMoneySummary>);
@@ -123,6 +127,8 @@ vi.mock('@/features/bank-transactions/hooks/use-bank-transactions', () => ({
   }),
   useMatchBankTransaction: () => ({ mutate: vi.fn(), isPending: false }),
   useIgnoreBankTransaction: () => ({ mutate: vi.fn(), isPending: false }),
+  useMatchReceivable: () => ({ mutate: vi.fn(), isPending: false }),
+  useCreditCustomer: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 // Hai panel của feature khác — không phải đối tượng của test này, và cả hai tự gọi API.
@@ -130,6 +136,15 @@ vi.mock('@/features/admin-bookings/components/AdminBookingDetailDrawer', () => (
   AdminBookingDetailDrawer: () => null,
 }));
 vi.mock('@/features/tax/components/TaxPeriodPanel', () => ({ TaxPeriodPanel: () => null }));
+vi.mock('@/features/platform-wallets/components/PlatformWalletDrawer', () => ({
+  PlatformWalletDrawer: () => null,
+}));
+
+/** Người đang trực — luật hai người của lệnh rút so với người đã duyệt (đợt rà Admin 16/11/2026). */
+const me = vi.hoisted(() => ({ id: '01ME' }));
+vi.mock('@/hooks/use-current-user', () => ({
+  useCurrentUser: () => ({ data: { id: me.id } }),
+}));
 
 vi.mock('@/hooks/use-media-query', () => ({
   useIsMobile: () => false,
@@ -146,7 +161,8 @@ function moneySummary(over: Partial<PlatformMoneySummary> = {}): PlatformMoneySu
       oldestAt: new Date(Date.now() - 50 * 3_600_000).toISOString(),
     },
     gatewayIn: { count: 0, amount: '0' },
-    holds: { count: 12, amount: '3600000', disputeCount: 2 },
+    gatewayEnabled: true,
+    holds: { count: 12, amount: '3600000', disputeCount: 2, handoverUnconfirmedCount: 3 },
     refunds: { count: 4, amount: '800000' },
     withdrawals: { count: 5, amount: '9000000', overdueCount: 1 },
     insurance: { count: 0, amount: '0' },
@@ -161,6 +177,8 @@ function reconciled(over: Partial<DailyReconciliation> = {}): DailyReconciliatio
     platform: {
       serviceFeeRecognized: '400000',
       subscriptionsCollected: '600000',
+      insuranceCommission: '0',
+      insuranceServiceFeeRefunded: '0',
       total: '1000000',
     },
     custodied: {
@@ -175,6 +193,9 @@ function reconciled(over: Partial<DailyReconciliation> = {}): DailyReconciliatio
       unmatchedInCount: 0,
       insuranceReserved: '0',
       taxAccrued: '0',
+      extensionsUnsettled: '0',
+      subscriptionsUnapplied: '0',
+      ignoredKept: '0',
       total: '0',
     },
     outflow: {
@@ -182,6 +203,8 @@ function reconciled(over: Partial<DailyReconciliation> = {}): DailyReconciliatio
       withdrawalsPaidCount: 0,
       refundsPaid: '0',
       refundsPaidCount: 0,
+      manualRefunds: '0',
+      insuranceRemitted: '0',
       total: '0',
     },
     inflow: {
@@ -189,6 +212,8 @@ function reconciled(over: Partial<DailyReconciliation> = {}): DailyReconciliatio
       bankInCount: 3,
       matchedSubscriptions: '600000',
       matchedHolds: '400000',
+      matchedExtensions: '0',
+      matchedWalletCredits: '0',
       unmatched: '0',
       unmatchedCount: 0,
       ignored: '0',
@@ -212,6 +237,11 @@ function hold(over: Partial<PlatformHold> = {}): PlatformHold {
     bookingRequestId: '01REQ',
     bookingId: '01BOOKING',
     bookingCode: 'BK-000123',
+    // Mặc định: đơn đã kết thúc mà kết cục chưa chốt — một khoản thuộc hàng đợi chốt tay.
+    bookingStatus: BOOKING_STATUS.COMPLETED,
+    pickupAt: '2026-09-10T03:00:00.000Z',
+    returnAt: '2026-09-12T03:00:00.000Z',
+    settleReason: HOLD_SETTLE_REASON.BOOKING_ENDED,
     status: BOOKING_HOLD_STATUS.PAID,
     outcome: null,
     amount: '330000',
@@ -227,6 +257,7 @@ function hold(over: Partial<PlatformHold> = {}): PlatformHold {
     depositAmount: '300000',
     serviceFeeAmount: '30000',
     vehicleInsuranceAmount: '0',
+    insuranceServiceFeeAmount: '0',
     personalInsuranceAmount: '0',
     promoDiscountAmount: '0',
     taxAmount: '0',
@@ -253,6 +284,11 @@ function withdrawal(over: Partial<PlatformWithdrawal> = {}): PlatformWithdrawal 
     rejectReason: null,
     rowVersion: 1,
     createdAt: '2026-09-30T02:00:00.000Z',
+    ownerId: '01TENANT',
+    reviewedById: null,
+    reviewedByName: null,
+    paidByName: null,
+    requiresSecondPerson: false,
     ...over,
   } as PlatformWithdrawal;
 }
@@ -293,6 +329,33 @@ beforeEach(() => {
 });
 
 afterEach(cleanup);
+
+describe('Tài chính - hàng đợi hết việc rời danh sách (đợt rà Admin 16/11/2026)', () => {
+  it('cổng MoMo/VNPAY tắt, không còn lượt chờ ⇒ ẩn HẲN, kể cả khi URL đòi nó', () => {
+    Object.assign(summary, settledQuery(moneySummary({ gatewayEnabled: false })));
+    renderView('queue=gateway-in');
+    expect(within(rail()).queryByRole('button', { name: /Cổng thanh toán/ })).toBeNull();
+    expect(screen.queryByRole('heading', { level: 2, name: /Cổng thanh toán/ })).toBeNull();
+  });
+
+  it('cổng tắt nhưng còn lượt cũ chờ xử lý ⇒ vẫn hiện', () => {
+    Object.assign(
+      summary,
+      settledQuery(
+        moneySummary({ gatewayEnabled: false, gatewayIn: { count: 2, amount: '300000' } }),
+      ),
+    );
+    renderView();
+    expect(within(rail()).getByRole('button', { name: /Cổng thanh toán/ })).toBeTruthy();
+  });
+
+  it('"Chuyển trả" không còn khoản chờ ⇒ rời cột hàng đợi, URL vẫn mở được để tra lịch sử', () => {
+    Object.assign(summary, settledQuery(moneySummary({ refunds: { count: 0, amount: '0' } })));
+    renderView('queue=refunds');
+    expect(within(rail()).queryByRole('button', { name: /Hoàn cho khách/ })).toBeNull();
+    expect(screen.getByRole('heading', { level: 2, name: /Hoàn cho khách/ })).toBeTruthy();
+  });
+});
 
 describe('Tài chính - hàng đợi theo quyền và URL', () => {
   it('đủ quyền: mặc định mở hàng đợi tiền vào chưa khớp', () => {
@@ -369,7 +432,8 @@ describe('Tài chính - hàng đợi theo quyền và URL', () => {
   it('thẻ đếm đánh dấu việc khẩn: tranh chấp và lệnh quá hạn', () => {
     renderView();
 
-    expect(screen.getByText('2 đang tranh chấp')).toBeTruthy();
+    // Tranh chấp thật và chủ xe chưa bấm giao xe là hai số riêng trên cùng thẻ.
+    expect(screen.getByText('2 đang tranh chấp · 3 chưa xác nhận giao xe')).toBeTruthy();
     expect(screen.getByText('1 quá hạn')).toBeTruthy();
   });
 });
@@ -442,7 +506,13 @@ describe('Tài chính - kết luận đối soát', () => {
 describe('Tài chính - giữ chỗ chờ chốt', () => {
   it('hold ĐÃ TRẢ mà chưa chốt: có lối chốt kết cục; tranh chấp được đánh dấu trên hàng', () => {
     holds.data = {
-      items: [hold({ disputeOpen: true })],
+      items: [
+        hold({
+          disputeOpen: true,
+          bookingStatus: BOOKING_STATUS.RESERVED,
+          settleReason: HOLD_SETTLE_REASON.DISPUTE_OPEN,
+        }),
+      ],
       meta: { page: 1, limit: 20, total: 1, hasNext: false },
     };
     renderView('queue=holds');
@@ -452,10 +522,64 @@ describe('Tài chính - giữ chỗ chờ chốt', () => {
     expect(getButtonByText('Chốt kết cục')).toBeTruthy();
   });
 
+  /**
+   * Case hệ thống tự mở vì chủ xe chưa bấm giao xe KHÔNG phải tranh chấp — nhãn riêng. Và tiền không
+   * chốt tay ở đây (ADR 0094): kết luận chuyến ở case hỗ trợ tự chốt tiền, nên dòng chỉ có lối sang đó.
+   */
+  it('chưa xác nhận giao xe: nhãn riêng, không nút chốt, có lối sang case hỗ trợ', () => {
+    perms.granted = new Set([PERMISSION.PLATFORM_MONEY_MANAGE, PERMISSION.PLATFORM_SUPPORT_MANAGE]);
+    holds.data = {
+      items: [
+        hold({
+          disputeOpen: true,
+          bookingStatus: BOOKING_STATUS.RESERVED,
+          settleReason: HOLD_SETTLE_REASON.HANDOVER_UNCONFIRMED,
+        }),
+      ],
+      meta: { page: 1, limit: 20, total: 1, hasNext: false },
+    };
+    renderView('queue=holds');
+
+    expect(screen.getByText('Chưa xác nhận giao xe')).toBeTruthy();
+    expect(screen.queryByText('Đang tranh chấp')).toBeNull();
+    expect(queryButtonByText('Chốt kết cục')).toBeNull();
+
+    fireEvent.click(getButtonByText('Kết luận ở hỗ trợ'));
+    expect(nav.push).toHaveBeenCalledWith(expect.stringMatching(/\/admin\/support\?q=/));
+  });
+
+  it('đơn đã kết thúc mà chưa chốt: nhãn "Đơn đã kết thúc" + trạng thái đơn trên hàng', () => {
+    holds.data = {
+      items: [hold()],
+      meta: { page: 1, limit: 20, total: 1, hasNext: false },
+    };
+    renderView('queue=holds');
+
+    expect(screen.getByText('Đơn đã kết thúc')).toBeTruthy();
+    expect(screen.getByText('Hoàn thành')).toBeTruthy();
+    expect(getButtonByText('Chốt kết cục')).toBeTruthy();
+  });
+
+  /** Đơn còn chạy bình thường: kết cục tự chốt khi đơn kết thúc — không có nút chốt tay. */
+  it('đơn đang chạy, không case (`settleReason = null`): KHÔNG có nút chốt', () => {
+    holds.data = {
+      items: [hold({ bookingStatus: BOOKING_STATUS.RESERVED, settleReason: null })],
+      meta: { page: 1, limit: 20, total: 1, hasNext: false },
+    };
+    renderView('queue=holds&scope=any');
+
+    expect(screen.getByText('XPH23456789')).toBeTruthy();
+    expect(queryButtonByText('Chốt kết cục')).toBeNull();
+  });
+
   it('hold đã có kết cục: KHÔNG còn nút chốt', () => {
     holds.data = {
       items: [
-        hold({ outcome: BOOKING_HOLD_OUTCOME.SETTLED, status: BOOKING_HOLD_STATUS.RELEASED }),
+        hold({
+          outcome: BOOKING_HOLD_OUTCOME.SETTLED,
+          status: BOOKING_HOLD_STATUS.RELEASED,
+          settleReason: null,
+        }),
       ],
       meta: { page: 1, limit: 20, total: 1, hasNext: false },
     };
@@ -629,6 +753,63 @@ describe('Tài chính - rút tiền', () => {
 
     expect(getButtonByText('Chuyển hụt / sai tài khoản')).toBeTruthy();
     expect(screen.getByText('Mã GD FT123')).toBeTruthy();
+  });
+
+  it('lệnh lớn do CHÍNH mình duyệt: không có nút "Đã chuyển khoản", nói cần người khác', () => {
+    withdrawals.data = {
+      items: [
+        withdrawal({
+          amount: '12000000',
+          status: WITHDRAWAL_STATUS.APPROVED,
+          requiresSecondPerson: true,
+          reviewedById: me.id,
+          reviewedByName: 'Tôi',
+        }),
+      ],
+      total: 1,
+      page: 1,
+      limit: 20,
+      hasNext: false,
+      overdueCount: 0,
+      dualControlMinAmount: '10000000',
+    } as WithdrawalPage;
+    renderView('queue=withdrawals');
+
+    expect(screen.queryByText('Đã chuyển khoản')).toBeNull();
+    expect(screen.getByText(/cần người khác bạn bấm "Đã chuyển khoản"/)).toBeTruthy();
+    expect(screen.getByText('Duyệt: Tôi')).toBeTruthy();
+  });
+
+  it('lệnh lớn do NGƯỜI KHÁC duyệt: mình chuyển được', () => {
+    withdrawals.data = {
+      items: [
+        withdrawal({
+          amount: '12000000',
+          status: WITHDRAWAL_STATUS.APPROVED,
+          requiresSecondPerson: true,
+          reviewedById: '01OTHER',
+        }),
+      ],
+      total: 1,
+      page: 1,
+      limit: 20,
+      hasNext: false,
+      overdueCount: 0,
+    };
+    renderView('queue=withdrawals');
+    expect(getButtonByText('Đã chuyển khoản')).toBeTruthy();
+    expect(screen.getByText('Cần hai người')).toBeTruthy();
+  });
+
+  it('có ô tra cứu lệnh và nút tải bảng kê tháng trỏ đúng tháng', () => {
+    renderView('queue=withdrawals');
+    expect(
+      screen.getByPlaceholderText('Mã lệnh, tên chủ ví hoặc 4 số cuối tài khoản'),
+    ).toBeTruthy();
+    const link = screen.getByRole('link', { name: /Tải bảng kê tháng/ });
+    expect(link.getAttribute('href')).toMatch(
+      /\/platform\/money\/withdrawals\/export\?month=\d{4}-\d{2}$/,
+    );
   });
 
   it('dòng tổng nói số YÊU CẦU, không nói số lệnh quá hạn', () => {

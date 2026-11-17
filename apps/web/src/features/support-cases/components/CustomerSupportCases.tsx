@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useTranslations } from 'next-intl';
 import { SupportCasesView } from './SupportCasesView';
 import { SUPPORT_SURFACE } from '../types';
@@ -15,7 +16,10 @@ export function CustomerSupportCases() {
         <h1 className={styles.title}>{t('page.customerTitle')}</h1>
         <p className={styles.subtitle}>{t('page.customerSubtitle')}</p>
       </header>
-      <SupportCasesView surface={SUPPORT_SURFACE.CUSTOMER} />
+      {/* View đọc `useSearchParams` (bộ lọc trên URL) — bọc Suspense để khung trang vẫn dựng tĩnh. */}
+      <Suspense fallback={null}>
+        <SupportCasesView surface={SUPPORT_SURFACE.CUSTOMER} />
+      </Suspense>
     </div>
   );
 }

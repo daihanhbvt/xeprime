@@ -8,6 +8,9 @@ import {
 } from './insurance-products.controller';
 import { InsuranceCertificateService } from './insurance-certificate.service';
 import { InsuranceEligibilityService } from './insurance-eligibility.service';
+import { InsuranceFollowUpService } from './insurance-follow-up.service';
+import { InsuranceFollowUpSweeper } from './insurance-follow-up.sweeper';
+import { InsuranceRefundService } from './insurance-refund.service';
 import { InsuranceOfferService } from './insurance-offer.service';
 import { InsuranceProductsService } from './insurance-products.service';
 import { InsuranceReadService } from './insurance-read.service';
@@ -21,6 +24,8 @@ import {
 } from './partner/insurance-partner.port';
 import { PlatformInsuranceController } from './platform-insurance.controller';
 import { VehicleInsuranceController } from './vehicle-insurance.controller';
+import { StorageModule } from '../storage/storage.module';
+import { WalletModule } from '../wallet/wallet.module';
 
 /** Bộ `MIC_*` đọc qua ConfigService — cùng tên biến worker đọc từ process.env. */
 function micConfigFrom(config: ConfigService) {
@@ -53,6 +58,8 @@ function micConfigFrom(config: ConfigService) {
  * `partner.configured` (nút thử lại) và `partner.partnerName` (snapshot hợp đồng).
  */
 @Module({
+  // R2 riêng tư — bản lưu GCN (ADR 0091 điều 6). Ví điểm — tự hoàn khi không cấp được (điều 7).
+  imports: [StorageModule, WalletModule],
   controllers: [
     PlatformInsuranceController,
     PlatformInsuranceProductsController,
@@ -70,6 +77,10 @@ function micConfigFrom(config: ConfigService) {
     // Điều kiện xe + báo giá bảo hiểm vật chất xe theo bậc (ADR 0088) — PricingModule đọc nó.
     InsuranceEligibilityService,
     InsuranceCertificateService,
+    // Báo khẩn + phí thực tế từng chuyến + lưu trước GCN (ADR 0091 điều 2, 6, 7).
+    InsuranceFollowUpService,
+    InsuranceFollowUpSweeper,
+    InsuranceRefundService,
     // Bảng kê trả phí hãng (ADR 0088 điều 6) — writer duy nhất của insurance_premium_remittances.
     InsuranceRemittanceService,
     /*

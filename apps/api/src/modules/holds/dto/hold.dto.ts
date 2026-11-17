@@ -3,9 +3,11 @@ import {
   BOOKING_HOLD_OUTCOME_VALUES,
   BOOKING_HOLD_PURPOSE_VALUES,
   BOOKING_HOLD_STATUS_VALUES,
+  BOOKING_STATUS_VALUES,
   HOLD_PAYMENT_CHANNEL_VALUES,
   HOLD_REFUND_REASON_VALUES,
   HOLD_REFUND_STATUS_VALUES,
+  HOLD_SETTLE_REASON_VALUES,
   type HoldPaymentChannel,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
@@ -166,7 +168,10 @@ export class PlatformHoldListQueryDto {
   @IsIn(BOOKING_HOLD_STATUS_VALUES)
   status?: string;
 
-  @ApiPropertyOptional({ description: 'Chỉ hold ĐÃ TRẢ mà chưa chốt kết cục (chờ tranh chấp)' })
+  @ApiPropertyOptional({
+    description:
+      'Chỉ hàng đợi CHỐT TAY: hold đã trả, chưa có kết cục, và đơn có case giữ quyết toán mở hoặc đã kết thúc (`HOLD_SETTLE_REASON`)',
+  })
   @IsOptional()
   @IsIn(['true', 'false'])
   unsettled?: string;
@@ -203,6 +208,29 @@ export class PlatformHoldDto {
   @ApiProperty() bookingRequestId!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) bookingId!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) bookingCode!: string | null;
+  /** Trạng thái ĐƠN của hold — người chốt phải biết chuyến đã diễn ra hay chưa. `null` khi chưa có đơn. */
+  @ApiPropertyOptional({ enum: BOOKING_STATUS_VALUES, nullable: true, type: String })
+  bookingStatus!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giờ nhận xe của đơn (ISO-8601 UTC)',
+  })
+  pickupAt!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giờ trả xe của đơn (ISO-8601 UTC)',
+  })
+  returnAt!: string | null;
+  @ApiPropertyOptional({
+    enum: HOLD_SETTLE_REASON_VALUES,
+    nullable: true,
+    type: String,
+    description:
+      'Vì sao hold cần người chốt tay (`HOLD_SETTLE_REASON`: tranh chấp mở, chưa xác nhận bàn giao, đơn đã kết thúc); `null` = không thuộc hàng đợi chốt tay, không chốt tay được',
+  })
+  settleReason!: string | null;
   @ApiProperty({ enum: BOOKING_HOLD_STATUS_VALUES }) status!: string;
   @ApiPropertyOptional({ enum: BOOKING_HOLD_OUTCOME_VALUES, nullable: true, type: String })
   outcome!: string | null;
@@ -233,6 +261,10 @@ export class PlatformHoldDto {
   ownerCommissionAmount!: string;
   @ApiProperty({ description: '`IV` - bảo hiểm xe' }) vehicleInsuranceAmount!: string;
   @ApiProperty({ description: '`IP` - bảo hiểm người' }) personalInsuranceAmount!: string;
+  @ApiProperty({
+    description: '`X` - phí thu hộ bảo hiểm của nền tảng, đi cùng `IV` (ADR 0091 điều 3)',
+  })
+  insuranceServiceFeeAmount!: string;
   @ApiProperty({ description: '`P` - nền tảng tài trợ qua mã khuyến mãi' })
   promoDiscountAmount!: string;
   @ApiProperty({
@@ -341,9 +373,24 @@ export class ReconciliationPlatformDto {
       'vào phần nền tảng.',
   })
   serviceFeeRecognized!: string;
-  @ApiProperty({ description: 'Tiền gói đã thu (subscription_invoices.paid_amount)' })
+  @ApiProperty({
+    description:
+      'Doanh thu gói đã ghi nhận theo TIỀN THẬT về ngân hàng (hoá đơn lẻ + phiếu gộp đã trả đủ, ' +
+      'tới tối đa giá của từng đích). Gói admin gán tay "thu ngoài luồng" không có tiền vào tài ' +
+      'khoản nên không nằm ở đây; phần trả thiếu/thừa nằm ở `custodied.subscriptionsUnapplied`.',
+  })
   subscriptionsCollected!: string;
-  @ApiProperty({ description: 'Tổng hai dòng trên' }) total!: string;
+  @ApiProperty({
+    description: 'Hoa hồng đại lý bảo hiểm giữ lại từ các bảng kê đã trả hãng',
+  })
+  insuranceCommission!: string;
+  @ApiProperty({
+    description:
+      'Phí thu hộ bảo hiểm đã ghi doanh thu rồi HOÀN khách vì hợp đồng không cấp được (ADR 0091 ' +
+      'điều 7) - số ÂM trừ vào vế nền tảng; phần hoàn nằm ở Ví điểm khách.',
+  })
+  insuranceServiceFeeRefunded!: string;
+  @ApiProperty({ description: 'Tổng các dòng trên' }) total!: string;
 }
 
 /**
@@ -379,13 +426,30 @@ export class ReconciliationCustodiedDto {
   @ApiProperty() unmatchedInCount!: number;
   @ApiProperty({
     description:
-      'Phí bảo hiểm đã thu chưa quyết toán với hãng. 0 khi cổng bảo hiểm chưa mở (Phase 7).',
+      'Phí bảo hiểm đã thu chưa quyết toán với hãng (đã trừ phần đã trả theo bảng kê, cộng phần ' +
+      'còn nợ hãng của bảng kê đã trả). 0 khi cổng bảo hiểm chưa mở (Phase 7).',
   })
   insuranceReserved!: string;
   @ApiProperty({
     description: 'Thuế đã khấu trừ chưa nộp. 0 khi cổng thuế chưa mở (Phase 8).',
   })
   taxAccrued!: string;
+  @ApiProperty({
+    description:
+      'Tiền phụ lục gia hạn đã về mà chưa quyết toán, chưa hoàn - phần còn giữ hộ của XPE',
+  })
+  extensionsUnsettled!: string;
+  @ApiProperty({
+    description:
+      'Tiền gói đã về nhưng chưa thành doanh thu: hoá đơn/phiếu trả THIẾU, và phần chuyển THỪA ' +
+      '(tiền của gian hàng, phải hoàn)',
+  })
+  subscriptionsUnapplied!: string;
+  @ApiProperty({
+    description:
+      'Tiền vào bị BỎ QUA mà chưa chuyển trả - vẫn nằm trong tài khoản, vẫn là tiền của người chuyển',
+  })
+  ignoredKept!: string;
   @ApiProperty({ description: 'Tổng nghĩa vụ' }) total!: string;
 }
 
@@ -396,6 +460,12 @@ export class ReconciliationOutflowDto {
   @ApiProperty() withdrawalsPaidCount!: number;
   @ApiProperty({ description: 'Khoản hoàn đã chuyển tay trong ngày' }) refundsPaid!: string;
   @ApiProperty() refundsPaidCount!: number;
+  @ApiProperty({
+    description: 'Tiền vào bị bỏ qua đã chuyển trả tay trong ngày (có mã giao dịch hoàn)',
+  })
+  manualRefunds!: string;
+  @ApiProperty({ description: 'Đã trả hãng bảo hiểm trong ngày theo bảng kê' })
+  insuranceRemitted!: string;
   @ApiProperty({ description: 'Tổng đã chi trong ngày' }) total!: string;
 }
 
@@ -403,13 +473,20 @@ export class ReconciliationOutflowDto {
 export class ReconciliationInflowDto {
   @ApiProperty({ description: 'Tổng tiền VÀO ngân hàng trong ngày' }) bankIn!: string;
   @ApiProperty() bankInCount!: number;
-  @ApiProperty({ description: 'Phần đã khớp hoá đơn gói' }) matchedSubscriptions!: string;
+  @ApiProperty({ description: 'Phần đã khớp gói - hoá đơn lẻ (XPG) và phiếu gộp (XPC)' })
+  matchedSubscriptions!: string;
   @ApiProperty({ description: 'Phần đã khớp khoản giữ chỗ' }) matchedHolds!: string;
+  @ApiProperty({ description: 'Phần đã khớp phụ lục gia hạn (XPE)' }) matchedExtensions!: string;
+  @ApiProperty({
+    description: 'Tiền về muộn đã ghi có thẳng vào Ví điểm khách (ADR 0092)',
+  })
+  matchedWalletCredits!: string;
   @ApiProperty({ description: 'Chưa khớp - hàng đợi admin' }) unmatched!: string;
   @ApiProperty() unmatchedCount!: number;
   @ApiProperty({ description: 'Bị bỏ qua (chuyển nhầm…)' }) ignored!: string;
   @ApiProperty({
-    description: 'bankIn − (gói + giữ chỗ + chưa khớp + bỏ qua). Khác 0 là có dòng lạc nhóm.',
+    description:
+      'bankIn − (gói + giữ chỗ + phụ lục + chưa khớp + bỏ qua). Khác 0 là có dòng lạc nhóm.',
   })
   variance!: string;
 }

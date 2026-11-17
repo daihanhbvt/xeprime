@@ -9,8 +9,10 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  BANK_MATCH_REASON,
   BANK_MATCH_STATUS,
   BANK_MATCH_TARGET_TYPE,
+  type BankMatchReason,
   REFERENCE_CODE_ALPHABET,
   REFERENCE_CODE_BODY_LENGTH,
   REFERENCE_CODE_PREFIX,
@@ -234,7 +236,8 @@ export class SepayService {
   private async noteUnmatched(
     db: Prisma.TransactionClient,
     providerTxId: string,
-    note: string,
+    reason: BankMatchReason,
+    params: { code: string; status?: string },
   ): Promise<void> {
     await db.bankTransaction.updateMany({
       where: {
@@ -242,8 +245,22 @@ export class SepayService {
         providerTxId,
         matchStatus: BANK_MATCH_STATUS.UNMATCHED,
       },
-      data: { matchNote: note },
+      // MÃ lý do + tham số, không phải câu chữ: giao diện dịch ra nhãn theo ngôn ngữ người xem
+      // (ADR 0012), và hàng đợi lọc được theo lý do. `match_note` để dành cho ghi chú của người.
+      data: { matchReasonCode: reason, matchReasonParams: params },
     });
+  }
+
+  /** Id của dòng `bank_transactions` vừa ghi ở bước 1 — nguồn bút toán ví khi có tiền thừa. */
+  private async bankTransactionId(
+    db: Prisma.TransactionClient,
+    providerTxId: string,
+  ): Promise<string> {
+    const row = await db.bankTransaction.findUniqueOrThrow({
+      where: { provider_providerTxId: { provider: SEPAY_PROVIDER, providerTxId } },
+      select: { id: true },
+    });
+    return row.id;
   }
 
   /**
@@ -276,26 +293,22 @@ export class SepayService {
            * Ghi LÝ DO lên chính giao dịch: hàng đợi đối soát của admin phải nói được vì sao một
            * dòng nằm đó, nếu không nó chỉ là một danh sách tiền không ai biết phải làm gì.
            */
-          await this.noteUnmatched(
-            db,
-            tx.providerTxId,
-            `Không tìm thấy khoản giữ chỗ mang mã ${referenceCode}`,
-          );
+          await this.noteUnmatched(db, tx.providerTxId, BANK_MATCH_REASON.HOLD_NOT_FOUND, {
+            code: referenceCode,
+          });
           return { matched: false, note: 'hold_not_found' };
         case 'hold_closed':
           /*
            * TIỀN VỀ MUỘN - hold đã hết hạn/đã huỷ/đã chốt (ADR 0044 điều 7, ADR 0045 điều 4).
            *
            * Tuyệt đối KHÔNG tạo đơn: chỗ đó có thể đã thuộc về khách khác. Khoản tiền ở lại
-           * `bank_transactions` với `match_status = unmatched` và một ghi chú nói rõ nó là
-           * khoản đến muộn - đó là đầu vào của hàng đợi đối soát, nơi admin khớp tay vào đúng
-           * hold (nếu còn nhận được) hoặc mở đường hoàn cho khách.
+           * `bank_transactions` với `match_status = unmatched` và mã lý do nói rõ nó là khoản
+           * đến muộn - đầu vào của hàng đợi đối soát, nơi admin ghi có Ví điểm khách (ADR 0092).
            */
-          await this.noteUnmatched(
-            db,
-            tx.providerTxId,
-            `Tiền về sau khi khoản giữ chỗ ${referenceCode} đã đóng (${applied.status}) - cần đối soát tay: khớp lại hoặc hoàn khách`,
-          );
+          await this.noteUnmatched(db, tx.providerTxId, BANK_MATCH_REASON.HOLD_CLOSED, {
+            code: referenceCode,
+            status: applied.status,
+          });
           return { matched: false, note: `hold_${applied.status}` };
         case 'partial':
         case 'already_paid':
@@ -319,18 +332,15 @@ export class SepayService {
       });
       switch (applied.outcome) {
         case 'not_found':
-          await this.noteUnmatched(
-            db,
-            tx.providerTxId,
-            `Không tìm thấy phụ lục gia hạn mang mã ${referenceCode}`,
-          );
+          await this.noteUnmatched(db, tx.providerTxId, BANK_MATCH_REASON.EXTENSION_NOT_FOUND, {
+            code: referenceCode,
+          });
           return { matched: false, note: 'extension_not_found' };
         case 'closed':
-          await this.noteUnmatched(
-            db,
-            tx.providerTxId,
-            `Tiền về khi phụ lục gia hạn ${referenceCode} không còn nhận tiền (${applied.status}) - cần đối soát tay: hoàn khách`,
-          );
+          await this.noteUnmatched(db, tx.providerTxId, BANK_MATCH_REASON.EXTENSION_CLOSED, {
+            code: referenceCode,
+            status: applied.status,
+          });
           return { matched: false, note: `extension_${applied.status}` };
         case 'partial':
         case 'already_paid':
@@ -354,28 +364,33 @@ export class SepayService {
       });
       switch (applied.outcome) {
         case 'checkout_not_found':
-          await this.noteUnmatched(
-            db,
-            tx.providerTxId,
-            `Không tìm thấy phiếu thanh toán gói mang mã ${referenceCode}`,
-          );
+          await this.noteUnmatched(db, tx.providerTxId, BANK_MATCH_REASON.CHECKOUT_NOT_FOUND, {
+            code: referenceCode,
+          });
           return { matched: false, note: 'checkout_not_found' };
         case 'checkout_closed':
-          await this.noteUnmatched(
-            db,
-            tx.providerTxId,
-            `Tiền về khi phiếu thanh toán gói ${referenceCode} không còn nhận tiền (${applied.status}) - cần đối soát tay: hoàn gian hàng`,
-          );
+          await this.noteUnmatched(db, tx.providerTxId, BANK_MATCH_REASON.CHECKOUT_CLOSED, {
+            code: referenceCode,
+            status: applied.status,
+          });
           return { matched: false, note: `checkout_${applied.status}` };
         case 'partial':
         case 'already_paid':
-        case 'activated':
+        case 'activated': {
+          // Phần chuyển thừa (nếu có) ghi có ví gian hàng ngay trong transaction này (ADR 0092).
+          const credited = await this.billing.creditSubscriptionOverpayWithinTx(db, {
+            matchedType: BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_CHECKOUT,
+            refId: applied.checkoutId,
+            amount: tx.amount,
+            bankTransactionId: await this.bankTransactionId(db, tx.providerTxId),
+          });
           await this.markMatched(db, tx.providerTxId, {
             type: BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_CHECKOUT,
             refId: applied.checkoutId,
-            overpaid: applied.outcome === 'already_paid',
+            overpaid: credited.gt(0),
           });
           return { matched: true, note: applied.outcome };
+        }
       }
     }
 
@@ -393,18 +408,33 @@ export class SepayService {
       case 'invoice_not_found':
         // Mã đúng định dạng nhưng không có hoá đơn - gõ tay sai một ký tự, hoặc mã của môi
         // trường khác. Nằm lại hàng đợi.
+        await this.noteUnmatched(db, tx.providerTxId, BANK_MATCH_REASON.INVOICE_NOT_FOUND, {
+          code: referenceCode,
+        });
         return { matched: false, note: 'invoice_not_found' };
       case 'invoice_closed':
+        await this.noteUnmatched(db, tx.providerTxId, BANK_MATCH_REASON.INVOICE_CLOSED, {
+          code: referenceCode,
+          status: applied.status,
+        });
         return { matched: false, note: `invoice_${applied.status}` };
       case 'partial':
       case 'already_paid':
-      case 'activated':
+      case 'activated': {
+        // Phần chuyển thừa (nếu có) ghi có ví gian hàng ngay trong transaction này (ADR 0092).
+        const credited = await this.billing.creditSubscriptionOverpayWithinTx(db, {
+          matchedType: BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE,
+          refId: applied.invoiceId,
+          amount: tx.amount,
+          bankTransactionId: await this.bankTransactionId(db, tx.providerTxId),
+        });
         await this.markMatched(db, tx.providerTxId, {
           type: BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE,
           refId: applied.invoiceId,
-          overpaid: applied.outcome === 'already_paid',
+          overpaid: credited.gt(0),
         });
         return { matched: true, note: applied.outcome };
+      }
     }
   }
 
@@ -428,8 +458,8 @@ export class SepayService {
         matchedType: target.type,
         matchedRefId: target.refId,
         matchedAt: new Date(),
-        // `already_paid` là tiền THỪA - ghi chú để màn đối soát không phải suy.
-        matchNote: target.overpaid ? 'overpaid' : null,
+        // Tiền THỪA - mã lý do để màn đối soát không phải suy (phần thừa đã về ví, ADR 0092).
+        matchReasonCode: target.overpaid ? BANK_MATCH_REASON.OVERPAID : null,
       },
     });
     if (claimed.count !== 1) {

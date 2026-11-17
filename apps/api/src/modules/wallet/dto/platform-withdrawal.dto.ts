@@ -12,6 +12,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -34,6 +35,13 @@ export class PlatformWithdrawalDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
+    description:
+      'Id chủ ví (tài khoản hoặc gian hàng, theo `ownerType`) - để mở Ví điểm của chủ ví',
+  })
+  ownerId!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
     description: 'Tên chủ ví - người hoặc gian hàng',
   })
   ownerName!: string | null;
@@ -47,6 +55,18 @@ export class PlatformWithdrawalDto {
   dueBy!: string | null;
   @ApiProperty({ description: 'Đã quá hạn cam kết chưa' }) overdue!: boolean;
   @ApiProperty({ description: 'Tuổi của yêu cầu, tính bằng giờ' }) ageHours!: number;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Nhân sự đã duyệt (id)' })
+  reviewedById!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) reviewedByName!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Nhân sự đã chuyển' })
+  paidByName!: string | null;
+  @ApiProperty({
+    description:
+      'Lệnh từ ngưỡng hai người trở lên: người bấm "Đã chuyển" phải khác `reviewedById` (server chặn ' +
+      '409 `WITHDRAWAL_SECOND_PERSON_REQUIRED`)',
+  })
+  requiresSecondPerson!: boolean;
 
   @ApiPropertyOptional({ type: String, nullable: true }) paidAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) bankReference!: string | null;
@@ -72,6 +92,11 @@ export class PlatformWithdrawalPageDto {
   @ApiProperty() hasNext!: boolean;
   @ApiProperty({ description: 'Số lệnh đang quá hạn cam kết - chỉ số vận hành, hiện ở đầu màn' })
   overdueCount!: number;
+  @ApiProperty({
+    description:
+      'Ngưỡng hai người hiện hành (`WITHDRAWAL_DUAL_CONTROL_MIN_AMOUNT`) - để giao diện nói đúng số',
+  })
+  dualControlMinAmount!: string;
 }
 
 export class PlatformWithdrawalQueryDto {
@@ -82,6 +107,24 @@ export class PlatformWithdrawalQueryDto {
   @IsOptional()
   @IsIn(WITHDRAWAL_STATUS_VALUES)
   status?: WithdrawalStatus;
+
+  @ApiPropertyOptional({
+    description:
+      'Tra một lệnh: đúng 4 chữ số = 4 số cuối tài khoản nhận; còn lại khớp mã lệnh hoặc tên chủ ví. ' +
+      'Có `q` mà không lọc trạng thái thì tìm ở MỌI trạng thái',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  q?: string;
+
+  @ApiPropertyOptional({
+    enum: WALLET_OWNER_TYPE_VALUES,
+    description: 'Loại ví: tài khoản khách / gian hàng',
+  })
+  @IsOptional()
+  @IsIn(WALLET_OWNER_TYPE_VALUES)
+  ownerType?: WalletOwnerType;
 
   @ApiPropertyOptional({ description: 'Chỉ lệnh đã quá hạn cam kết' })
   @IsOptional()
@@ -103,6 +146,12 @@ export class PlatformWithdrawalQueryDto {
   @Min(1)
   @Max(100)
   limit?: number;
+}
+
+export class WithdrawalMonthExportQueryDto {
+  @ApiProperty({ description: 'Tháng chuyển `YYYY-MM` theo giờ Việt Nam', example: '2026-11' })
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/)
+  month!: string;
 }
 
 export class MarkWithdrawalPaidDto {

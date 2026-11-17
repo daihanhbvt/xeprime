@@ -1,5 +1,4 @@
 import {
-  DatabaseOutlined,
   AppstoreOutlined,
   AuditOutlined,
   CalendarOutlined,
@@ -545,7 +544,7 @@ export const COMMISSION_NAV: readonly NavSection[] = navForTrack(
  *    cứu), cùng cấp. Mục cha "Gian hàng & xe" biến mất. Hai màn vẫn là hai route, hai nguồn dữ liệu.
  *  - **Đối tác** — hai danh sách ĐỘC LẬP, mỗi danh sách một URL: "Gian hàng gói" và "Chủ xe cá
  *    nhân" (`PLATFORM_PARTNER_KIND`). Không phải hai tab: người trực hai nhóm này làm hai loại việc
- *    khác nhau (Full Manage vs Owner Lite). URL cũ `/manage/admin/tenants` chuyển tiếp.
+ *    khác nhau (Full Manage vs Owner Lite). URL cũ `/admin/tenants` đã gỡ (16/11/2026).
  *  - **Đơn & khách hàng** — đơn thuê toàn hệ thống và khách thuê.
  */
 export const PLATFORM_NAV: readonly NavSection[] = [
@@ -587,17 +586,6 @@ export const PLATFORM_NAV: readonly NavSection[] = [
         href: ROUTES.ADMIN.VEHICLES,
         permission: PERMISSION.PLATFORM_VEHICLE_VIEW,
         icon: CarOutlined,
-      },
-      {
-        /*
-         * Dữ liệu xe chuẩn (ADR 0090) đứng cạnh xe của chợ: nó là nguồn gợi ý khi chủ xe đăng xe, và
-         * dữ liệu chủ xe gõ mới chờ duyệt ở đây. Cùng quyền với Danh mục (người dùng chốt 11/11/2026).
-         */
-        key: 'admin-vehicle-data',
-        labelKey: 'platform.vehicleData',
-        href: ROUTES.ADMIN.VEHICLE_DATA,
-        permission: PERMISSION.PLATFORM_CATALOG_MANAGE,
-        icon: DatabaseOutlined,
       },
     ],
   },
@@ -671,8 +659,8 @@ export const PLATFORM_NAV: readonly NavSection[] = [
          * "Tài chính" (01/10/2026) gộp hai mục cũ — "Đối soát tiền vào" và "Vận hành tiền" — vào
          * MỘT màn: cùng một người trực, cùng một tài khoản ngân hàng, và bảng đối soát ngày vốn
          * đã đếm tiền vào chưa khớp mà không cho xử lý tại chỗ. Hàng đợi tiền vào vẫn gác bằng
-         * `platform.billing.manage` NGAY TRONG màn (thiếu quyền ⇒ hàng đợi đó ẩn hẳn); URL cũ
-         * `/manage/admin/bank-transactions` chuyển tiếp về đúng hàng đợi.
+         * `platform.billing.manage` NGAY TRONG màn (thiếu quyền ⇒ hàng đợi đó ẩn hẳn). URL cũ
+         * `/admin/bank-transactions` đã gỡ (16/11/2026).
          */
         key: 'admin-money',
         labelKey: 'platform.money',

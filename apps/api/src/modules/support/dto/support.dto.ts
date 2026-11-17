@@ -5,6 +5,7 @@ import {
   SUPPORT_CASE_PRIORITY_VALUES,
   SUPPORT_CASE_STATUS_VALUES,
   SUPPORT_PARTY_VALUES,
+  TRIP_VERDICT_VALUES,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
@@ -146,6 +147,69 @@ export class SupportCaseDto {
 export class SupportCaseDetailDto extends SupportCaseDto {
   @ApiProperty({ type: [SupportCaseEventDto], description: 'Dòng thời gian - append-only' })
   events!: SupportCaseEventDto[];
+  @ApiProperty({
+    enum: TRIP_VERDICT_VALUES,
+    isArray: true,
+    description:
+      'Kết luận chuyến dùng được NGAY BÂY GIỜ (`tripVerdictsFor`, ADR 0094) - chỉ bề mặt nền tảng; ' +
+      'rỗng khi case không cần kết luận chuyến hoặc đơn đã đi tiếp. Tranh chấp trên đơn chưa nhận xe cũng có (ADR 0095)',
+  })
+  tripVerdicts!: string[];
+  @ApiProperty({
+    description:
+      'Case CHỈ khép được bằng kết luận chuyến (`tripVerdictRequired`): nút kết luận/đóng trần bị chặn. ' +
+      '`false` với tranh chấp - kết luận chuyến là lựa chọn thêm (ADR 0095 điều 2)',
+  })
+  tripVerdictRequired!: boolean;
+}
+
+/** Tiền của MỘT kết luận chuyến nếu bấm ngay bây giờ (ADR 0095 điều 3) - cùng phép tính lượt thật. */
+export class TripVerdictMoneyDto {
+  @ApiProperty({ enum: TRIP_VERDICT_VALUES }) verdict!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Kết cục giữ chỗ (`BOOKING_HOLD_OUTCOME`). `null` = kết luận này chưa chốt tiền (xe đã giao - chốt khi ' +
+      'chuyến kết thúc), hoặc đơn không có khoản giữ chỗ đã trả nào chờ chốt',
+  })
+  outcome!: string | null;
+  @ApiProperty({
+    description: 'Tiền của khách còn ở XePrime cho khoản này (giữ chỗ + chuyển thừa còn chờ)',
+  })
+  paidAmount!: string;
+  @ApiProperty({ description: 'Hoàn khách (gồm khoản chuyển thừa còn chờ)' })
+  customerAmount!: string;
+  @ApiProperty({ description: 'Phần bảo hiểm trong khoản hoàn khách' })
+  insuranceRefundAmount!: string;
+  @ApiProperty({ description: 'Vào Ví điểm chủ xe' }) ownerAmount!: string;
+  @ApiProperty({ description: 'Doanh thu XePrime' }) platformAmount!: string;
+  @ApiProperty({ description: 'Phải trả hãng bảo hiểm' }) insurerAmount!: string;
+  @ApiProperty({ description: 'Thuế khấu trừ (chỉ khi chuyến hoàn thành)' }) taxAmount!: string;
+  @ApiProperty({
+    description:
+      'Đơn còn case giữ tiền KHÁC đang mở - kết luận vẫn chạy, tiền chờ người trực chốt tay',
+  })
+  deferred!: boolean;
+}
+
+export class TripVerdictPreviewDto {
+  @ApiProperty({ type: [TripVerdictMoneyDto] }) items!: TripVerdictMoneyDto[];
+}
+
+/** Nhân sự nền tảng kết luận CHUYẾN của một case xác minh bàn giao (ADR 0094). */
+export class TripVerdictDto {
+  @ApiProperty({ enum: TRIP_VERDICT_VALUES })
+  @IsIn(TRIP_VERDICT_VALUES)
+  verdict!: string;
+
+  @ApiProperty({
+    description: 'Đã xác minh thế nào (gọi ai, họ nói gì) - vào kết luận của case và nhật ký',
+  })
+  @IsString()
+  @MinLength(5)
+  @MaxLength(2000)
+  note!: string;
 }
 
 export class SupportCasePageDto {

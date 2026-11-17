@@ -65,7 +65,6 @@ function policy(over: Partial<FeePolicy> = {}): FeePolicy {
     serviceFeePercent: 0,
     depositPercent: 15,
     depositMinAmount: '0',
-    depositMaxPercent: 30,
     holdMinAmount: '20000',
     holdPaymentWindowMinutes: 1440,
     freeCancelHours: 4,

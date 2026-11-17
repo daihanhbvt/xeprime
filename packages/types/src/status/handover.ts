@@ -91,6 +91,16 @@ export const HANDOVER_ELIGIBLE_BOOKING_STATUS: Readonly<
 export const HANDOVER_CONFIRMATION_GRACE_MINUTES = 120;
 
 /**
+ * ÂN HẠN TRẢ XE (ADR 0094) — số phút tính từ giờ hẹn trả xe `returnAt`. Quá mốc này mà đơn vẫn
+ * `active`, không biên bản trả xe nào được xác nhận và khách cũng chưa báo "Đã trả xe" ⇒ worker mở
+ * case `return_unconfirmed` cho vận hành gọi xác minh.
+ *
+ * Rộng hơn ân hạn giao xe (120′) vì trễ trả vài giờ là chuyện thường và đã có lời nhắc ở mốc +30′
+ * (ADR 0081); một ngày im lặng sau giờ trả mới là dấu hiệu chuyến bị bỏ quên.
+ */
+export const RETURN_CONFIRMATION_GRACE_MINUTES = 24 * 60;
+
+/**
  * Trạng thái đơn mà khách còn báo "Chưa nhận được xe" được: `reserved` (chưa ai xác nhận giao)
  * và `active` (chủ xe đã xác nhận giao nhưng khách nói không nhận được).
  */

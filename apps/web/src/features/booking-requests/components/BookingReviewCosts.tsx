@@ -7,6 +7,7 @@ import { COLLATERAL_MODE, FEE_LINE, PRICE_ROW } from '@xeprime/types';
 import { isNegativeMoney, subtractMoney } from '@xeprime/domain';
 import type { PublicListingDetail } from '@/features/marketplace/types';
 import { InfoHint } from '@/components/data-display/InfoHint';
+import { InsuranceFeeHint } from '@/components/data-display/InsuranceFeeHint';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
@@ -158,7 +159,12 @@ export function BookingReviewCosts({
               {feeLines.map((line) => (
                 <div key={line.key} className={styles.row}>
                   <dt>
-                    <span className={styles.label}>{dl('feeLine', line.key)}</span>
+                    <span className={styles.label}>
+                      {dl('feeLine', line.key)}
+                      {line.includedServiceFee ? (
+                        <InsuranceFeeHint fee={line.includedServiceFee} />
+                      ) : null}
+                    </span>
                     <span className={styles.sub}>
                       {[
                         line.percent != null

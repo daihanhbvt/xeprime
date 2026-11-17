@@ -1,6 +1,6 @@
 'use client';
 
-import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
 import {
   fetchAdminCustomer,
@@ -8,7 +8,9 @@ import {
   filtersToParams,
   fetchCustomerLicenceImage,
   fetchCustomerLicences,
+  lockCustomer,
   revealCustomerContact,
+  unlockCustomer,
 } from '../api';
 import type { AdminCustomerFilters } from '../types';
 
@@ -34,6 +36,22 @@ export function useAdminCustomer(id: string | null) {
  */
 export function useRevealCustomerContact(id: string) {
   return useMutation({ mutationFn: () => revealCustomerContact(id) });
+}
+
+/**
+ * Khoá / mở khoá tài khoản khách. Server trả chi tiết MỚI — ghi thẳng vào cache chi tiết, rồi làm
+ * mới danh sách (bộ lọc "Đã khoá" đổi số).
+ */
+export function useSetCustomerLock(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ lock, reason }: { lock: boolean; reason: string }) =>
+      lock ? lockCustomer(id, reason) : unlockCustomer(id, reason),
+    onSuccess: (detail) => {
+      queryClient.setQueryData(['admin-customer', id], detail);
+      void queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
+    },
+  });
 }
 
 /** `enabled` = người xem có quyền xem bằng lái — không có thì không gọi để khỏi nhận 403. */

@@ -1,0 +1,34 @@
+{
+  "open": "Xem Ví điểm",
+  "title": "Ví điểm",
+  "titleWithName": "Ví điểm - {name}",
+  "loadError": "Không tải được Ví điểm",
+  "ownerType": {
+    "user": "Ví tài khoản khách",
+    "tenant": "Ví gian hàng"
+  },
+  "stats": {
+    "available": "Khả dụng",
+    "pending": "Đang rút",
+    "total": "Tổng nghĩa vụ"
+  },
+  "noWallet": "Chủ ví này chưa có Ví điểm: chưa từng có khoản nào được ghi.",
+  "reconciled": "Sổ khớp: {count, plural, other {# bút toán}} cộng lại {total}, bằng khả dụng + đang rút.",
+  "mismatch": "Sổ lệch: tổng bút toán {ledger} khác khả dụng + đang rút {total}. Báo kỹ thuật kiểm tra.",
+  "entriesTitle": "Bút toán Ví điểm",
+  "entriesError": "Không tải được bút toán",
+  "entriesTotal": "{count, plural, other {# bút toán}}",
+  "noEntries": "Chưa có bút toán nào",
+  "reversal": "Dòng đảo",
+  "columns": {
+    "time": "Thời gian",
+    "kind": "Loại",
+    "amount": "Số điểm",
+    "balanceAfter": "Số dư sau"
+  },
+  "source": {
+    "booking": "Đơn {code}",
+    "hold": "Giữ chỗ {code}",
+    "withdrawal": "Lệnh rút {code} ({status})"
+  }
+}

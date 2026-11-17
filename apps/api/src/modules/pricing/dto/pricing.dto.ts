@@ -9,6 +9,10 @@ import {
   DELIVERY_MANUAL_REASON_VALUES,
   type DeliveryManualReason,
   DELIVERY_QUOTE_SOURCE_VALUES,
+  INSURANCE_ELIGIBILITY_GAP_VALUES,
+  INSURANCE_MODE_VALUES,
+  type InsuranceEligibilityGap,
+  type InsuranceMode,
   LONG_TERM_PACKAGE_MONTHS_VALUES,
   MILEAGE_LIMIT,
   POLICY_SOURCE_VALUES,
@@ -270,6 +274,16 @@ export class SaveRentalPolicyDto {
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'Phí vượt km không hợp lệ (số VND không âm)' })
   excessDistanceFeePerKm?: string | null;
+
+  @ApiPropertyOptional({
+    enum: INSURANCE_MODE_VALUES,
+    description:
+      'Bảo hiểm vật chất xe MIC Bắt buộc hay Tuỳ chọn (ADR 0091 điều 1). Vắng ⇒ giữ chế độ đang lưu ' +
+      '(tạo bản ghi đè theo xe: chép chế độ của chính sách gian hàng).',
+  })
+  @IsOptional()
+  @IsIn(INSURANCE_MODE_VALUES)
+  insuranceMode?: InsuranceMode;
 }
 
 /** Giá trị chính sách trả về — tiers cùng shape với input, tiền là string. */
@@ -298,6 +312,11 @@ export class RentalPolicyValuesDto {
     description: 'VND mỗi km vượt hạn mức (ADR 0007: tiền là chuỗi)',
   })
   excessDistanceFeePerKm!: string | null;
+  @ApiProperty({
+    enum: INSURANCE_MODE_VALUES,
+    description: 'Bảo hiểm vật chất xe MIC Bắt buộc hay Tuỳ chọn (ADR 0091 điều 1)',
+  })
+  insuranceMode!: InsuranceMode;
   @ApiProperty({ type: [DiscountTierDto], description: 'Mốc ưu đãi canonical (theo tháng)' })
   discountTiers!: DiscountTierDto[];
   @ApiProperty({
@@ -309,6 +328,34 @@ export class RentalPolicyValuesDto {
 }
 
 /** GET/PUT /shop/rental-policies — chính sách mặc định + số xe kế thừa/ghi đè. */
+/** Một xe kế thừa chính sách gian hàng mà chưa đủ điều kiện bảo hiểm (ADR 0091 điều 1). */
+export class InsuranceImpactVehicleDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() name!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
+  @ApiProperty({ enum: INSURANCE_ELIGIBILITY_GAP_VALUES, isArray: true })
+  gaps!: InsuranceEligibilityGap[];
+}
+
+/**
+ * Hệ quả của việc đặt chính sách gian hàng sang Bắt buộc: xe đang KẾ THỪA chính sách này mà chưa đủ
+ * điều kiện bảo hiểm sẽ ngừng nhận đặt tự lái (ADR 0091 điều 1). Giao diện hỏi lại trước khi lưu.
+ */
+export class ShopInsuranceImpactDto {
+  @ApiProperty({
+    description:
+      'Nền tảng đang bán bảo hiểm vật chất xe theo bậc - false ⇒ chế độ chưa có hiệu lực',
+  })
+  applies!: boolean;
+  @ApiProperty({ description: 'Tổng số xe kế thừa chính sách mà thiếu dữ liệu bảo hiểm' })
+  total!: number;
+  @ApiProperty({
+    type: [InsuranceImpactVehicleDto],
+    description: 'Tối đa 50 xe đầu tiên theo tên',
+  })
+  vehicles!: InsuranceImpactVehicleDto[];
+}
+
 export class ShopRentalPolicyDto {
   @ApiPropertyOptional({
     type: RentalPolicyValuesDto,
@@ -669,7 +716,6 @@ export class FeePolicySnapshotDto {
   depositPercent!: number;
   @ApiProperty({ description: 'Sàn của `D` (VND): D = max(% × tiền thuê, sàn)' })
   depositMinAmount!: string;
-  @ApiProperty({ description: 'Trần % của `D` ở chính sách này' }) depositMaxPercent!: number;
   @ApiProperty({ type: PerVehicleTypeAmountDto, description: '`S` - phí sàn cố định mỗi đơn' })
   customerPlatformFee!: PerVehicleTypeAmountDto;
   @ApiProperty({ type: [OwnerCommissionTierDto], description: '`H` - nấc hoa hồng lũy tiến' })
@@ -856,9 +902,31 @@ export class CustomerFeeBreakdownDto {
   holdAmount!: string | null;
   @ApiPropertyOptional({
     description:
-      'Bảo hiểm vật chất xe BẮT BUỘC cho chuyến này (phí theo bậc giá trị xe - ADR 0088): không có ô bỏ chọn',
+      'Bảo hiểm vật chất xe BẮT BUỘC cho chuyến này - chủ xe đặt Bắt buộc (ADR 0091): không có ô bỏ chọn',
   })
   vehicleProtectionMandatory?: boolean;
+  @ApiPropertyOptional({
+    type: () => VehicleProtectionOfferDto,
+    nullable: true,
+    description:
+      'Lời chào bán bảo hiểm vật chất xe theo bậc, dù khách đã mua hay chưa - null khi xe/chuyến không mua được (ADR 0091)',
+  })
+  vehicleProtectionOffer?: VehicleProtectionOfferDto | null;
+  @ApiPropertyOptional({
+    description:
+      '`X` - phí thu hộ bảo hiểm của nền tảng (ADR 0091 điều 3). Dòng riêng trong `lines`; bề mặt khách hiện GỘP với IV kèm ⓘ',
+  })
+  insuranceServiceFeeAmount?: string;
+}
+
+/** Cùng shape `VehicleProtectionOffer` ở @xeprime/types (ADR 0091 điều 1). */
+export class VehicleProtectionOfferDto {
+  @ApiProperty({ description: 'Phí IV của chuyến nếu mua (VND string)' }) amount!: string;
+  @ApiProperty({ description: 'Chủ xe đặt Bắt buộc - không có ô bỏ chọn' }) required!: boolean;
+  @ApiPropertyOptional({
+    description: 'Phí thu hộ đi kèm nếu mua (ADR 0091 điều 3) - "0" khi công tắc tắt',
+  })
+  serviceFeeAmount?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -903,6 +971,8 @@ export class PublicCustomerFeeBreakdownDto extends PickType(CustomerFeeBreakdown
   'payAtPickupAmount',
   'holdAmount',
   'vehicleProtectionMandatory',
+  'vehicleProtectionOffer',
+  'insuranceServiceFeeAmount',
 ] as const) {
   @ApiProperty({ type: PublicFeePolicySnapshotDto }) policy!: PublicFeePolicySnapshotDto;
 }

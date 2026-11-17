@@ -1,0 +1,10 @@
+/* Hộp ghi chứng cứ kê khai / nộp: câu giải thích → số liệu kỳ → ô nhập. */
+
+.hint {
+  margin: 0 0 var(--xp-space-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.info {
+  margin-bottom: var(--xp-space-md);
+}

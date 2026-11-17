@@ -43,6 +43,7 @@ import { TaxModule } from './modules/tax/tax.module';
 import { SellerProfileModule } from './modules/seller-profile/seller-profile.module';
 import { DriverLicencesModule } from './modules/driver-licences/driver-licences.module';
 import { SupportModule } from './modules/support/support.module';
+import { TripVerdictModule } from './modules/trip-verdict/trip-verdict.module';
 import { BadgesModule } from './modules/badges/badges.module';
 import { PartnerDashboardModule } from './modules/partner-dashboard/partner-dashboard.module';
 import { PaymentGatewayModule } from './modules/payment-gateway/payment-gateway.module';
@@ -177,6 +178,8 @@ import { AppConfigModule } from './modules/app-config/app-config.module';
     SellerProfileModule,
     DriverLicencesModule,
     SupportModule,
+    // Kết luận chuyến của case chưa xác nhận giao/trả xe — ADR 0094.
+    TripVerdictModule,
     // Không gian hỗ trợ gian hàng của nhân sự nền tảng — ADR 0050.
     SupportRequestModule,
     TenantSupportModule,

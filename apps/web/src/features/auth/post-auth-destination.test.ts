@@ -319,7 +319,7 @@ describe('resolvePartnerDestination - next', () => {
   it('next sang site khác, ra ngoài domain, hay chính trang công khai → trang chủ theo tuyến', () => {
     for (const next of [
       '/trips',
-      ROUTES.ADMIN.TENANTS,
+      ROUTES.ADMIN.PARTNER_SHOPS,
       'https://evil.test/',
       '//evil.test',
       M.LOGIN,
@@ -380,8 +380,8 @@ describe('trang công khai', () => {
 
 describe('resolveAdminDestination', () => {
   it('next an toàn trong khu quản trị, còn lại về trang đầu', () => {
-    expect(resolveAdminDestination({ next: `${ROUTES.ADMIN.TENANTS}?status=active` })).toBe(
-      `${ROUTES.ADMIN.TENANTS}?status=active`,
+    expect(resolveAdminDestination({ next: `${ROUTES.ADMIN.PARTNER_SHOPS}?status=active` })).toBe(
+      `${ROUTES.ADMIN.PARTNER_SHOPS}?status=active`,
     );
     for (const next of [null, M.ROOT, '/trips', ROUTES.ADMIN.LOGIN, 'https://evil.test/']) {
       expect(resolveAdminDestination({ next }), String(next)).toBe(ROUTES.ADMIN.ROOT);

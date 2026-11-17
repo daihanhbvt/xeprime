@@ -70,7 +70,8 @@
     "pricing": "Giá & chính sách cho thuê",
     "pickup": "Điểm nhận xe & người đăng",
     "features": "Tiện nghi & mô tả",
-    "history": "Lịch sử xử lý"
+    "history": "Lịch sử xử lý",
+    "insurance": "Bảo hiểm & giấy tờ"
   },
   "gallery": {
     "count": "{count, plural, other {# ảnh}}",

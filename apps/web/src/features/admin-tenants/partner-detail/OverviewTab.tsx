@@ -35,6 +35,7 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
 import type { PartnerOverview } from './api';
+import { PartnerContactValue } from './PartnerContactValue';
 import { usePartnerCommission } from './hooks';
 import {
   KeyValues,
@@ -46,6 +47,7 @@ import {
   useTabState,
 } from './parts';
 import styles from './PartnerDetail.module.css';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -88,7 +90,7 @@ export function OverviewTab({
             {t('issuesBanner', { count: vehiclesWithAlerts })}
             {alerts.slice(0, 3).map((alert) => (
               <span key={alert.kind}>
-                {' · '}
+                {LIST_SEPARATOR}
                 {t('issueItem', {
                   label: domainLabel('vehicleAlertShort', alert.kind),
                   count: alert.vehicleCount,
@@ -172,8 +174,28 @@ export function OverviewTab({
                         label: t('info.joined'),
                         value: fmt.date(identity.createdAt),
                       },
-                      { key: 'phone', label: t('info.phone'), value: owner.phoneMasked ?? '-' },
-                      { key: 'email', label: t('info.email'), value: owner.emailMasked ?? '-' },
+                      {
+                        key: 'phone',
+                        label: t('info.phone'),
+                        value: (
+                          <PartnerContactValue
+                            tenantId={identity.id}
+                            field="ownerPhone"
+                            masked={owner.phoneMasked}
+                          />
+                        ),
+                      },
+                      {
+                        key: 'email',
+                        label: t('info.email'),
+                        value: (
+                          <PartnerContactValue
+                            tenantId={identity.id}
+                            field="ownerEmail"
+                            masked={owner.emailMasked}
+                          />
+                        ),
+                      },
                     ]
               }
             />
@@ -342,8 +364,28 @@ export function OverviewTab({
               <KeyValues
                 items={[
                   { key: 'name', label: t('info.ownerName'), value: owner.name ?? '-' },
-                  { key: 'phone', label: t('info.phone'), value: owner.phoneMasked ?? '-' },
-                  { key: 'email', label: t('info.email'), value: owner.emailMasked ?? '-' },
+                  {
+                    key: 'phone',
+                    label: t('info.phone'),
+                    value: (
+                      <PartnerContactValue
+                        tenantId={identity.id}
+                        field="ownerPhone"
+                        masked={owner.phoneMasked}
+                      />
+                    ),
+                  },
+                  {
+                    key: 'email',
+                    label: t('info.email'),
+                    value: (
+                      <PartnerContactValue
+                        tenantId={identity.id}
+                        field="ownerEmail"
+                        masked={owner.emailMasked}
+                      />
+                    ),
+                  },
                 ]}
               />
             </DashboardPanel>

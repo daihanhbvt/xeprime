@@ -20,6 +20,7 @@ import {
   fetchVehicleDataImport,
   fetchVehicleDataImportRows,
   fetchVehicleDataImports,
+  fetchVehicleDataModelCounts,
   fetchVehicleDataOptions,
   fetchVehicleDataPage,
   fetchVehicleDataSuggestion,
@@ -28,13 +29,16 @@ import {
   updateVehicleData,
   uploadVehicleDataImport,
   vehicleDataFiltersToParams,
+  vehicleDataModelCountsToParams,
+  type VehicleDataModelCountsParams,
 } from './api';
 import type { VehicleDataFilters, VehicleDataInput } from './types';
 
 /** Thứ tự sắp nhận được — khớp DTO server. */
 export const VEHICLE_DATA_SORT_VALUES = ['updated_desc', 'name_asc', 'usage_desc'] as const;
 
-function parseFilters(params: URLSearchParams): VehicleDataFilters {
+/** Đọc bộ lọc dữ liệu xe từ URL - dùng lại ở tab Mẫu xe (thêm tham số riêng của nó). */
+export function parseVehicleDataFilters(params: URLSearchParams): VehicleDataFilters {
   return {
     q: params.get('q')?.trim() || undefined,
     vehicleType: enumParam(params, 'vehicleType', VEHICLE_TYPE_VALUES),
@@ -51,7 +55,7 @@ function parseFilters(params: URLSearchParams): VehicleDataFilters {
 
 /** Bộ lọc màn "Dữ liệu xe" trên URL — F5 và gửi link giữ đúng chỗ (ADR 0004). */
 export function useVehicleDataFilters() {
-  return useUrlFilters(parseFilters);
+  return useUrlFilters(parseVehicleDataFilters);
 }
 
 export function useVehicleDataList(filters: VehicleDataFilters) {
@@ -59,6 +63,16 @@ export function useVehicleDataList(filters: VehicleDataFilters) {
   return useQuery({
     queryKey: queryKeys.vehicleData.list(params),
     queryFn: () => fetchVehicleDataPage(params),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** Số xe chuẩn theo từng dòng của một hãng (ADR 0096) - giữ số cũ trong lúc đổi bộ lọc. */
+export function useVehicleDataModelCounts(params: VehicleDataModelCountsParams) {
+  const query = vehicleDataModelCountsToParams(params);
+  return useQuery({
+    queryKey: queryKeys.vehicleData.modelCounts(query),
+    queryFn: () => fetchVehicleDataModelCounts(query),
     placeholderData: keepPreviousData,
   });
 }

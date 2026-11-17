@@ -75,6 +75,7 @@ import insurance from '@xeprime/domain/messages/vi/insurance.json';
 import adminInsurance from '@xeprime/domain/messages/vi/admin-insurance.json';
 import platformSellers from '@xeprime/domain/messages/vi/platform-sellers.json';
 import adminCustomers from '@xeprime/domain/messages/vi/admin-customers.json';
+import platformWallets from '@xeprime/domain/messages/vi/platform-wallets.json';
 import adminFollowUps from '@xeprime/domain/messages/vi/admin-follow-ups.json';
 import adminAppConfig from '@xeprime/domain/messages/vi/admin-app-config.json';
 import adminStaff from '@xeprime/domain/messages/vi/admin-staff.json';
@@ -146,6 +147,7 @@ const messages = {
   AdminInsurance: adminInsurance,
   PlatformSellers: platformSellers,
   AdminCustomers: adminCustomers,
+  PlatformWallets: platformWallets,
   AdminFollowUps: adminFollowUps,
   AdminAppConfig: adminAppConfig,
   AdminStaff: adminStaff,

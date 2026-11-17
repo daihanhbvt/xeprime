@@ -1,8 +1,5 @@
 {
   "page": {
-    "title": "Dữ liệu xe",
-    "subtitle": "Mỗi dòng là một xe: thông số, tiện ích, giá bán và giá thuê tham khảo. Đây là nguồn gợi ý cho chủ xe khi đăng xe.",
-    "add": "Thêm xe",
     "import": "Nhập file",
     "export": "Xuất file",
     "template": "Tải file mẫu",
@@ -19,13 +16,9 @@
   },
   "filters": {
     "search": "Tìm xe",
-    "searchPlaceholder": "Hãng, dòng xe, phiên bản",
-    "vehicleType": "Loại xe",
-    "brand": "Hãng",
     "status": "Trạng thái",
     "origin": "Nguồn tạo",
     "gap": "Thiếu dữ liệu",
-    "sort": "Sắp xếp",
     "sortOptions": {
       "updated_desc": "Mới cập nhật",
       "name_asc": "Theo tên xe",
@@ -65,7 +58,6 @@
     "yearsOpen": "{from} - nay",
     "yearsUntil": "đến {to}",
     "yearsAny": "Mọi đời",
-    "newModel": "Dòng xe mới",
     "complete": "Đủ dữ liệu",
     "market": "Thực tế {price} · {count, plural, other {# xe}}",
     "marketAbove": "Thực tế cao hơn {percent}%",
@@ -74,14 +66,6 @@
     "seats": "{count} chỗ",
     "none": "-"
   },
-  "tableLabel": "Danh sách dữ liệu xe",
-  "total": "{count, plural, other {# xe}}",
-  "loadError": "Không tải được dữ liệu xe",
-  "empty": {
-    "title": "Chưa có dữ liệu xe nào",
-    "description": "Thêm từng xe hoặc nhập cả danh sách từ file Excel."
-  },
-  "noResults": "Không có xe nào khớp bộ lọc",
   "drawer": {
     "titleNew": "Thêm xe",
     "title": "Dữ liệu xe",

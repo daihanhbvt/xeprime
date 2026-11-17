@@ -107,9 +107,13 @@ const BY_TYPE: Record<NotificationType, readonly QueryKey[]> = {
   [NOTIFICATION_TYPE.HOLD_PAID]: HOLD_BRANCHES,
   [NOTIFICATION_TYPE.HOLD_EXPIRING]: HOLD_BRANCHES,
   [NOTIFICATION_TYPE.HOLD_EXPIRED]: HOLD_BRANCHES,
-  // Tiền hoàn vào ví · lệnh rút đã chuyển / bị trả lại (API gửi cùng loại `HOLD_REFUND_PAID`).
+  // Tiền hoàn giữ chỗ vào ví.
   [NOTIFICATION_TYPE.HOLD_REFUNDED]: [...HOLD_BRANCHES, ...WALLET_BRANCHES],
   [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: [...HOLD_BRANCHES, ...WALLET_BRANCHES],
+  // Lệnh rút khỏi Ví điểm: đã chuyển · bị từ chối · chuyển không thành công (đợt rà Admin 16/11/2026).
+  [NOTIFICATION_TYPE.WITHDRAWAL_PAID]: WALLET_BRANCHES,
+  [NOTIFICATION_TYPE.WITHDRAWAL_REJECTED]: WALLET_BRANCHES,
+  [NOTIFICATION_TYPE.WITHDRAWAL_REVERSED]: WALLET_BRANCHES,
   /*
    * Mã khuyến mãi bị BỎ lúc chốt giá (ADR 0046) — làm mới nhánh giữ chỗ và nhánh chuyến: số tiền
    * khách phải chuyển vừa đổi, và cả hai màn đó đang hiện con số cũ.

@@ -39,6 +39,15 @@ export const SUPPORT_CASE_CATEGORY = {
    * xem `SUPPORT_CASE_SETTLEMENT_FREEZING_CATEGORIES`.
    */
   HANDOVER_UNCONFIRMED: 'handover_unconfirmed',
+  /**
+   * Quá giờ trả xe `RETURN_CONFIRMATION_GRACE_MINUTES` mà đơn vẫn `active`: không biên bản trả xe
+   * nào được xác nhận và khách cũng không báo "Đã trả xe" (ADR 0094). CHỈ worker mở.
+   *
+   * KHÔNG giữ quyết toán (không nằm trong `SUPPORT_CASE_SETTLEMENT_FREEZING_CATEGORIES`): đơn đang
+   * chạy vốn chưa có gì để chốt, và lượt xác nhận trả xe muộn của bất kỳ ai phải quyết toán ngay
+   * như thường lệ. Nhân sự kết luận bằng `TRIP_VERDICT.RETURNED` — không bằng nút kết luận trần.
+   */
+  RETURN_UNCONFIRMED: 'return_unconfirmed',
   OTHER: 'other',
 } as const;
 
@@ -60,6 +69,7 @@ export const SUPPORT_CASE_CATEGORY_LABEL: Readonly<Record<SupportCaseCategory, s
   [SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION]: 'Yêu cầu xoá tài khoản',
   [SUPPORT_CASE_CATEGORY.PLAN_CONSULTATION]: 'Tư vấn gói',
   [SUPPORT_CASE_CATEGORY.HANDOVER_UNCONFIRMED]: 'Chưa xác nhận bàn giao xe',
+  [SUPPORT_CASE_CATEGORY.RETURN_UNCONFIRMED]: 'Chưa xác nhận trả xe',
   [SUPPORT_CASE_CATEGORY.OTHER]: 'Khác',
 };
 
@@ -81,6 +91,7 @@ export const SUPPORT_CASE_SETTLEMENT_FREEZING_CATEGORIES: readonly SupportCaseCa
  */
 export const SUPPORT_CASE_CATEGORY_SYSTEM_ONLY: readonly SupportCaseCategory[] = [
   SUPPORT_CASE_CATEGORY.HANDOVER_UNCONFIRMED,
+  SUPPORT_CASE_CATEGORY.RETURN_UNCONFIRMED,
 ];
 
 export const SUPPORT_CASE_STATUS = {
@@ -211,6 +222,8 @@ export const SUPPORT_CASE_OPEN_REASON = {
   HANDOVER_OVERDUE: 'handover_overdue',
   /** ADR 0081: khách báo "Đã trả xe" nhưng gian hàng báo chưa nhận lại được xe. */
   RETURN_DISPUTED: 'return_disputed',
+  /** ADR 0094: worker — quá ân hạn trả xe mà cả hai bên im lặng. */
+  RETURN_OVERDUE: 'return_overdue',
 } as const;
 
 /**
@@ -224,6 +237,8 @@ export const SUPPORT_CASE_AUTO_RESOLVE_REASON = {
    * chấp (`dispute`) của khách KHÔNG bao giờ tự đóng theo đường này.
    */
   HANDOVER_CONFIRMED: 'handover_confirmed',
+  /** Biên bản TRẢ XE được xác nhận (ai cũng vậy) sau khi worker đã mở `return_unconfirmed` (ADR 0094). */
+  RETURN_CONFIRMED: 'return_confirmed',
 } as const;
 
 /** Mã `audit_logs.action` của case hỗ trợ. */
@@ -233,4 +248,6 @@ export const SUPPORT_CASE_AUDIT_ACTION = {
   TRANSITION: 'support_case.transition',
   RESOLVE: 'support_case.resolve',
   ASSIGN: 'support_case.assign',
+  /** Nhân sự nền tảng kết luận CHUYẾN của một case xác minh bàn giao (ADR 0094). */
+  TRIP_VERDICT: 'support_case.trip_verdict',
 } as const;

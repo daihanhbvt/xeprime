@@ -1,5 +1,5 @@
 import { App } from 'antd';
-import { cleanup, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SUPPORT_CASE_CATEGORY, SUPPORT_CASE_STATUS } from '@xeprime/types';
 
@@ -24,21 +24,32 @@ const query = vi.hoisted(() => ({
   isFetching: false,
   refetch: vi.fn(),
   lastSurface: undefined as unknown,
+  lastFilters: undefined as unknown,
   /** Thành viên gian hàng có `support.manage` không (bề mặt gian hàng). */
   tenantCanManage: true,
 }));
 
 vi.mock('../hooks/use-support-cases', () => ({
-  useSupportCases: (surface: unknown) => {
+  useSupportCases: (surface: unknown, filters: unknown) => {
     query.lastSurface = surface;
+    query.lastFilters = filters;
     return query;
   },
   useSupportCase: () => ({ data: undefined, isLoading: false, isError: false, refetch: vi.fn() }),
   usePostSupportMessage: () => ({ mutate: vi.fn(), isPending: false }),
   useTransitionSupportCase: () => ({ mutate: vi.fn(), isPending: false }),
   useResolveSupportCase: () => ({ mutate: vi.fn(), isPending: false }),
+  useTripVerdict: () => ({ mutate: vi.fn(), isPending: false }),
   useOpenSupportCase: () => ({ mutate: vi.fn(), isPending: false }),
   useCanWriteSupportCase: (surface: unknown) => surface !== 'tenant' || query.tenantCanManage,
+}));
+
+const nav = vi.hoisted(() => ({ replace: vi.fn(), params: new URLSearchParams() }));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: nav.replace, push: vi.fn() }),
+  usePathname: () => '/manage/admin/support',
+  useSearchParams: () => nav.params,
 }));
 
 vi.mock('@/hooks/use-media-query', () => ({
@@ -130,6 +141,17 @@ describe('SupportCasesView - bảng', () => {
     expect(screen.getByText('SC-000123')).toBeTruthy();
     expect(screen.getByText('Xe giao không đúng mô tả')).toBeTruthy();
     expect(screen.getAllByText('Tranh chấp chuyến đi').length).toBeGreaterThan(0);
+  });
+
+  /** Bộ lọc sống ở URL (ADR 0004) — link `?q=<mã đơn>` từ màn Tài chính phải lọc ngay. */
+  it('đọc từ khoá và trang từ URL; bấm dòng ghi `?open=` lên URL', () => {
+    nav.params = new URLSearchParams('q=DH123&page=2');
+    renderView(SUPPORT_SURFACE.PLATFORM);
+    expect(query.lastFilters).toMatchObject({ q: 'DH123', page: 2 });
+
+    fireEvent.click(screen.getByText('SC-000123'));
+    expect(String(nav.replace.mock.calls.at(-1)?.[0])).toContain('open=01CASE');
+    nav.params = new URLSearchParams();
   });
 
   it('lỗi khi chưa có dữ liệu: câu chữ riêng + Thử lại', () => {

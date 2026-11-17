@@ -47,6 +47,7 @@ import {
   SERVICE_TYPE,
   TENANT_CUSTOMER_SOURCE,
   type AuditActorScope,
+  type CancellationParty,
   type CancellationReasonCategory,
   type BookingPriceSnapshot,
   type DepositCollectionMode,
@@ -1167,6 +1168,12 @@ export class BookingsService {
        * huỷ ghi cho phía cho thuê (`driver_unavailable`), tiền hoàn 100%.
        */
       driverFault?: boolean;
+      /**
+       * Phía chịu trách nhiệm do NỀN TẢNG xác minh (ADR 0094: nhân sự kết luận "chủ xe không giao
+       * được xe") — ghi đè phép suy từ `actorScope` của `booking_cancellations`. Chỉ đường gọi của
+       * server truyền; không DTO nào nhận nó từ client (ADR 0045 điều 2).
+       */
+      verifiedParty?: CancellationParty;
     } = {},
   ): Promise<BookingDetailRow> {
     if (from === to || !canTransitionBooking(from, to)) {
@@ -1256,7 +1263,11 @@ export class BookingsService {
         reason: opts.reason ?? null,
         actorUserId: userId,
         actorScope: opts.actorScope ?? AUDIT_ACTOR_SCOPE.TENANT,
-        ...(opts.driverFault ? { verifiedParty: CANCELLATION_PARTY.HOST } : {}),
+        ...(opts.driverFault
+          ? { verifiedParty: CANCELLATION_PARTY.HOST }
+          : opts.verifiedParty
+            ? { verifiedParty: opts.verifiedParty }
+            : {}),
       });
     }
 
@@ -1370,8 +1381,14 @@ export class BookingsService {
          * lý do no-show vẫn là ghi chú nội bộ. Đặt trong ngoặc kép để dấu câu của chủ xe không
          * dính vào câu của hệ thống.
          */
+        // Chỉ câu của GIAN HÀNG mới là "Chủ xe nhắn" — lý do của nhân sự nền tảng (ADR 0094) là
+        // ghi chú nội bộ của case, không gán vào miệng chủ xe.
         const hostNote =
-          to === BOOKING_STATUS.CANCELLED && opts.reason?.trim() ? opts.reason.trim() : null;
+          to === BOOKING_STATUS.CANCELLED &&
+          (opts.actorScope ?? AUDIT_ACTOR_SCOPE.TENANT) === AUDIT_ACTOR_SCOPE.TENANT &&
+          opts.reason?.trim()
+            ? opts.reason.trim()
+            : null;
         if (request?.customerUserId) {
           await this.notifications.emitToUser(
             request.customerUserId,

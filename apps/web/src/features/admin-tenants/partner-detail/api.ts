@@ -1,10 +1,10 @@
 import type { components } from '@xeprime/types';
-import { apiGet, fetchPage, type Paged, type QueryParams } from '@/services/api-client';
+import { apiGet, apiPost, fetchPage, type Paged, type QueryParams } from '@/services/api-client';
 
 /**
- * Lời gọi của drawer CHI TIẾT đối tác — CHỈ GET (ADR 0031: lời gọi theo nghiệp vụ nằm trong
- * feature). Drawer không có hàm ghi nào ở đây; hai thao tác quản trị nền tảng dùng lại hook sẵn
- * có của `admin-tenants`/`admin-plans`.
+ * Lời gọi của drawer CHI TIẾT đối tác (ADR 0031: lời gọi theo nghiệp vụ nằm trong feature). Không
+ * có hàm sửa dữ liệu đối tác nào ở đây; hai thao tác quản trị nền tảng dùng lại hook sẵn có của
+ * `admin-tenants`/`admin-plans`. POST duy nhất là bỏ che liên hệ — nó chỉ ghi audit.
  */
 type Schemas = components['schemas'];
 
@@ -19,6 +19,7 @@ export type PartnerCommission = Schemas['PartnerCommissionDto'];
 export type PartnerActivity = Schemas['PartnerActivityDto'];
 export type PartnerSupportSession = Schemas['PartnerSupportSessionDto'];
 export type PartnerBranch = Schemas['PartnerBranchDto'];
+export type PartnerContact = Schemas['PartnerContactDto'];
 export type PartnerQuotaItem = Schemas['PartnerQuotaItemDto'];
 /** Trần xe theo LOẠI (ADR 0065) — hai trần xe máy / ô tô do server cưỡng chế. */
 export type PartnerVehicleTypeQuotas = Schemas['PartnerVehicleTypeQuotasDto'];
@@ -103,6 +104,10 @@ export const fetchPartnerBookingRequests = (
 
 export const fetchPartnerProfile = (tenantId: string) =>
   apiGet<PartnerProfile>(`${base(tenantId)}/profile`);
+
+/** SĐT/email đầy đủ của chủ + liên hệ công khai — server ghi audit MỖI lần gọi. */
+export const revealPartnerContact = (tenantId: string) =>
+  apiPost<PartnerContact>(`${base(tenantId)}/contact`);
 
 export const fetchPartnerBilling = (tenantId: string) =>
   apiGet<PartnerBilling>(`${base(tenantId)}/billing`);

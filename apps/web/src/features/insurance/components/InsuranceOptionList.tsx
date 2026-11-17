@@ -3,8 +3,12 @@
 import { DownOutlined, UpOutlined } from '@ant-design/icons';
 import { Checkbox, Tag } from 'antd';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { useId, useState } from 'react';
-import type { InsuranceProductKind } from '@xeprime/types';
+import { sumMoney } from '@xeprime/domain';
+import { INSURANCE_PRODUCT_KIND, type InsuranceProductKind } from '@xeprime/types';
+import { InsuranceFeeHint } from '@/components/data-display/InsuranceFeeHint';
+import { ROUTES } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useLocalizedText } from '@/i18n/localized';
@@ -67,7 +71,7 @@ function InsuranceOption({
   return (
     <div className={styles.item} data-checked={checked || undefined}>
       <label className={styles.row}>
-        {/* Bắt buộc (ADR 0088): luôn tích, không bỏ được — server đã cộng phí vào báo giá. */}
+        {/* Chủ xe đặt Bắt buộc (ADR 0091): luôn tích, không bỏ được — server đã cộng phí vào báo giá. */}
         <Checkbox
           checked={item.mandatory || checked}
           disabled={item.mandatory}
@@ -78,11 +82,27 @@ function InsuranceOption({
           {item.mandatory ? <Tag className={styles.mandatory}>{t('option.mandatory')}</Tag> : null}
         </span>
         <span className={styles.rate}>
-          {item.mandatory && item.tripAmount
-            ? t('option.tripRate', { price: fmt.money(item.tripAmount) })
+          {item.tripAmount
+            ? t('option.tripRate', {
+                // Phí thu hộ GỘP vào giá bảo hiểm khách thấy, ⓘ tách hai số (ADR 0091 điều 3).
+                price: fmt.money(
+                  item.serviceFeeAmount
+                    ? sumMoney([item.tripAmount, item.serviceFeeAmount])
+                    : item.tripAmount,
+                ),
+              })
             : item.dailyAmount
               ? t('option.dailyRate', { price: fmt.pricePerDay(item.dailyAmount) })
               : null}
+          {item.tripAmount && item.serviceFeeAmount ? (
+            <InsuranceFeeHint
+              fee={{
+                premiumAmount: item.tripAmount,
+                serviceFeeAmount: item.serviceFeeAmount,
+                serviceFeePercent: null,
+              }}
+            />
+          ) : null}
         </span>
       </label>
       {item.mandatory ? <p className={styles.mandatoryNote}>{t('option.mandatoryNote')}</p> : null}
@@ -101,6 +121,12 @@ function InsuranceOption({
           {open ? (
             <div id={benefitsId} className={styles.benefits}>
               <InsuranceBenefits product={item.product} />
+              {/* Trang quyền lợi đầy đủ + người chịu khấu trừ (ADR 0091 điều 8) — tab mới, giữ form. */}
+              {item.kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP ? (
+                <Link href={ROUTES.INSURANCE} target="_blank" rel="noopener noreferrer">
+                  {t('option.benefitsPage')}
+                </Link>
+              ) : null}
             </div>
           ) : null}
         </>

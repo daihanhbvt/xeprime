@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
+  AUDIT_ACTOR_SCOPE,
   CUSTOMER_LICENCE_STATE,
   DRIVER_LICENCE_STATUS,
+  USER_STATUS,
   type CustomerLicenceState,
   type PaginationMeta,
 } from '@xeprime/types';
@@ -14,6 +16,8 @@ import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { phoneLookupVariants } from '../../common/phone';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { NATIVE_REVOKE_REASON, NativeSessionService } from '../auth/native-session.service';
+import { SessionService, WEB_REVOKE_REASON } from '../auth/session.service';
 import {
   CustomerContactDto,
   PLATFORM_CUSTOMER_DEFAULT_LIMIT,
@@ -114,6 +118,8 @@ export class PlatformCustomersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly webSessions: SessionService,
+    private readonly nativeSessions: NativeSessionService,
   ) {}
 
   async list(
@@ -173,6 +179,8 @@ export class PlatformCustomersService {
         ...LIST_SELECT,
         emailVerifiedAt: true,
         updatedAt: true,
+        lockedAt: true,
+        lockedReason: true,
         _count: {
           select: {
             customerBookingRequests: true,
@@ -221,7 +229,94 @@ export class PlatformCustomersService {
         createdAt: (r.createdAt as Date).toISOString(),
       })),
       updatedAt: (row.updatedAt as Date).toISOString(),
+      lockedAt: row.lockedAt ? row.lockedAt.toISOString() : null,
+      lockedReason: row.lockedReason,
     };
+  }
+
+  /**
+   * KHOÁ tài khoản khách (đợt rà Admin 16/11/2026) — MỘT transaction: lật `active → locked` (điều
+   * kiện trong chính câu lệnh, nên hai người cùng bấm thì người sau nhận 409), thu hồi MỌI phiên web
+   * (`SessionService`) và MỌI phiên app (`NativeSessionService` — refresh token không xoay được nữa),
+   * rồi audit. Từ đó đăng nhập trả `ACCOUNT_LOCKED` và mọi request còn cầm phiên cũ trả 401 ở
+   * `AuthGuard` — kể cả gửi yêu cầu đặt xe.
+   *
+   * Không tự huỷ gì: yêu cầu đang chờ và đơn đã có giữ nguyên để CSKH xử lý tay (chủ sản phẩm chốt
+   * 16/11/2026) — tự huỷ một đơn đã trả tiền là quyết định tiền, không phải hệ quả của một cú khoá.
+   */
+  async lock(id: string, actorUserId: string, reason: string): Promise<PlatformCustomerDetailDto> {
+    const note = reason.trim();
+    await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.user.updateMany({
+        where: { id, ...CUSTOMER_ONLY, status: USER_STATUS.ACTIVE },
+        data: { status: USER_STATUS.LOCKED, lockedAt: new Date(), lockedReason: note },
+      });
+      if (claimed.count === 0) await this.throwStateConflict(tx, id);
+
+      await this.webSessions.revokeAllForUser(id, WEB_REVOKE_REASON.USER_DISABLED, { tx });
+      await this.nativeSessions.revokeAllForUser(id, NATIVE_REVOKE_REASON.USER_DISABLED, { tx });
+      await this.audit.record(
+        {
+          actorUserId,
+          actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+          action: 'customer.lock',
+          targetType: 'user',
+          targetId: id,
+          before: { status: USER_STATUS.ACTIVE },
+          after: { status: USER_STATUS.LOCKED, reason: note },
+        },
+        tx,
+      );
+    });
+    return this.getOne(id);
+  }
+
+  /** MỞ KHOÁ — `locked → active`, xoá mốc và lý do khoá; lý do mở vào audit. Khách đăng nhập lại. */
+  async unlock(
+    id: string,
+    actorUserId: string,
+    reason: string,
+  ): Promise<PlatformCustomerDetailDto> {
+    const note = reason.trim();
+    await this.prisma.$transaction(async (tx) => {
+      const before = await tx.user.findFirst({
+        where: { id, ...CUSTOMER_ONLY },
+        select: { lockedReason: true },
+      });
+      const claimed = await tx.user.updateMany({
+        where: { id, ...CUSTOMER_ONLY, status: USER_STATUS.LOCKED },
+        data: { status: USER_STATUS.ACTIVE, lockedAt: null, lockedReason: null },
+      });
+      if (claimed.count === 0) await this.throwStateConflict(tx, id);
+
+      await this.audit.record(
+        {
+          actorUserId,
+          actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+          action: 'customer.unlock',
+          targetType: 'user',
+          targetId: id,
+          before: { status: USER_STATUS.LOCKED, lockedReason: before?.lockedReason ?? null },
+          after: { status: USER_STATUS.ACTIVE, reason: note },
+        },
+        tx,
+      );
+    });
+    return this.getOne(id);
+  }
+
+  /** Lượt lật không trúng: khách không tồn tại ⇒ 404; đang ở trạng thái khác ⇒ 409 kèm trạng thái. */
+  private async throwStateConflict(tx: Prisma.TransactionClient, id: string): Promise<never> {
+    const row = await tx.user.findFirst({
+      where: { id, ...CUSTOMER_ONLY },
+      select: { status: true },
+    });
+    if (!row) throw notFound();
+    throw new ConflictException({
+      code: API_ERROR_CODE.CUSTOMER_ACCOUNT_STATE_CONFLICT,
+      message: 'Tài khoản vừa được đổi trạng thái',
+      details: { status: row.status },
+    });
   }
 
   /**

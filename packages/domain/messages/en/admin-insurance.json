@@ -40,7 +40,8 @@
       "coverage": "Coverage",
       "amounts": "Deductible & payout",
       "operation": "Operations",
-      "premium": "Premium by car value tier"
+      "premium": "Premium by car value tier",
+      "serviceFee": "Insurance collection fee"
     },
     "fields": {
       "nameVi": "Name (Vietnamese)",
@@ -62,15 +63,19 @@
       "tierMaxDays": "Trip up to",
       "tierDaysSuffix": "days",
       "tierPercent": "% of car value",
-      "claimHotline": "Incident hotline"
+      "claimHotline": "Incident hotline",
+      "serviceFeeEnabled": "Charge a collection fee",
+      "serviceFeeEnabledDescription": "When on, every trip with vehicle damage insurance adds a collection fee = % of the premium. Renters see it merged into the insurance line with an ⓘ splitting the two amounts; it is refunded with the premium, and promo codes never reduce it.",
+      "serviceFeePercent": "% of the premium"
     },
     "help": {
       "amountEmpty": "Leave empty if not applicable.",
       "maxPayoutNote": "For example: “Up to the vehicle’s actual value”, “Per person, per incident”.",
       "certificateUrlTemplate": "Starts with https:// and contains '{certCode}' - where the certificate number goes.",
       "premiumTiers": "Tiers must increase in both days and rate. Partial days round up to the next tier.",
-      "valueTierIntro": "This product is MANDATORY for eligible self-drive cars: premium = car value × the rate of the trip duration tier (VAT included), per MIC tariff for vehicle type M1.11.",
-      "claimHotline": "Shown next to the certificate for renters and owners."
+      "valueTierIntro": "Sold with eligible self-drive cars; each owner chooses Required or Optional for their cars. Premium = car value × the rate of the trip duration tier (VAT included), per MIC tariff for vehicle type M1.11.",
+      "claimHotline": "Shown next to the certificate for renters and owners.",
+      "serviceFeeLegal": "Do NOT turn this on in production until the lawyer has signed off (ADR 0091 clause 3). A new rate applies to quotes and approvals from the moment you save - existing bookings and reservation payments keep their locked amounts."
     },
     "validation": {
       "required": "Required.",
@@ -81,7 +86,9 @@
       "urlTemplate": "The template must start with https:// and contain '{certCode}'.",
       "displayOrder": "Order must be between {min} and {max}.",
       "amountMax": "The amount is too large.",
-      "tiers": "Invalid tiers: days 1-30, rate above 0 with up to 4 decimals, both increasing."
+      "tiers": "Invalid tiers: days 1-30, rate above 0 with up to 4 decimals, both increasing.",
+      "serviceFeePercent": "Rate from 0 to {max}%, up to 2 decimals.",
+      "serviceFeePercentRequired": "The rate must be above 0 when the fee is on."
     },
     "saved": "Saved product {name}.",
     "actions": {
@@ -132,6 +139,13 @@
     "emptyAll": {
       "title": "No insurance policies yet",
       "description": "Insurance policies for trips will appear here."
+    },
+    "attention": {
+      "title": "{count, plural, one {# policy needs} other {# policies need}} urgent attention",
+      "reasonOverdue": "Handed over at {at}, not issued after 2 hours",
+      "reasonOverdueNoTime": "Not issued 2 hours after handover",
+      "reasonPhotos": "MIC has not received the car photos - contact MIC",
+      "more": "and {count, plural, one {# more policy} other {# more policies}} in the queue"
     }
   },
   "drawer": {
@@ -160,7 +174,9 @@
       "idempotencyKey": "Idempotency key",
       "createdAt": "Created at",
       "cancelledAt": "Cancelled at",
-      "voidedAt": "Voided at"
+      "voidedAt": "Voided at",
+      "voidReason": "Void reason",
+      "voidPartnerReference": "Insurer reconciliation reference"
     },
     "payload": {
       "request": "Request sent to the partner",
@@ -175,19 +191,49 @@
     "footer": {
       "failed": "Failed policy: retry issuing, or void it if it cannot be issued.",
       "issued": "Certificate issued. Void it if the trip is cancelled after handover.",
-      "other": "No actions are available for this status."
+      "other": "No actions are available for this status.",
+      "remitted": "This policy is already on an insurer statement - reconcile with the insurer before cancelling it."
     },
     "retry": "Retry issuing",
     "retryQueued": "Queued for re-issue - the worker picks it up within about a minute.",
     "void": "Void",
     "voidDialog": {
-      "title": "Void insurance policy",
-      "summary": "The {amount} premium for booking {code} will be settled separately with the partner.",
       "hint": "The reason is written to the system log and the partner case file.",
       "reasonLabel": "Reason for voiding",
       "reasonPlaceholder": "e.g. Trip cancelled after handover, partner confirmed cancellation",
       "reasonRequired": "Enter a reason (at least 5 characters).",
-      "done": "Policy voided."
+      "titleCancel": "Cancel the policy and refund the customer",
+      "titleKeep": "Void a policy that is in force",
+      "summaryRefundNow": "The policy for booking {code} never took effect: cancel it and refund {amount} to the customer points wallet now.",
+      "summaryRefundLater": "The policy for booking {code} never took effect: cancel it now; {amount} is refunded to the customer points wallet once the reservation payment is settled.",
+      "summaryViaHold": "The policy for booking {code} never took effect: cancel it with no extra refund - the premium already went back to the customer through the reservation payment.",
+      "summaryNoRefund": "The policy for booking {code} never took effect: cancel it with no points wallet refund - the premium was not collected through XePrime.",
+      "summaryKeepPayable": "The policy for booking {code} is in force: voiding it does NOT refund the customer, and the {amount} premium stays on the insurer statement until the insurer confirms the cancellation.",
+      "referenceLabel": "Insurer cancellation code / reconciliation reference",
+      "referencePlaceholder": "E.g. MIC cancellation document or reconciliation record number",
+      "referenceRequired": "Enter the insurer cancellation code or reconciliation reference.",
+      "submitCancel": "Cancel and refund",
+      "doneRefunded": "Policy cancelled and {amount} refunded to the customer points wallet.",
+      "doneRefundLater": "Policy cancelled - the premium is refunded once the reservation payment is settled.",
+      "doneCancelled": "Policy cancelled.",
+      "doneKept": "Policy voided - the premium stays on the insurer statement."
+    },
+    "pricing": {
+      "title": "Insurance premium",
+      "loadError": "Could not load this policy's premium.",
+      "insuredValue": "Car value",
+      "tier": "Premium tier",
+      "tierValue": "Up to {days} days - {percent}% of car value",
+      "collected": "Collected from renter",
+      "partner": "MIC premium at issue",
+      "notIssued": "Not issued",
+      "difference": "Difference",
+      "differenceNone": "Matches",
+      "differenceOver": "Collected {amount} more",
+      "differenceUnder": "XePrime covers {amount}",
+      "serviceFee": "Collection fee (XePrime)",
+      "refunded": "Refunded to points wallet",
+      "refundedValue": "{amount} to the renter’s points wallet - {at}"
     }
   },
   "remittances": {

@@ -17,11 +17,16 @@ export interface InsuranceOfferItem {
   /** Phí MỖI NGÀY theo chính sách phí của báo giá (chuỗi VND — ADR 0007). `null` khi phí theo bậc. */
   dailyAmount: string | null;
   /**
-   * BẮT BUỘC (ADR 0088): phí theo bậc giá trị xe, server đã cộng vào báo giá — khách không bỏ chọn
-   * được. `tripAmount` là phí cả chuyến lấy từ dòng `IV` của báo giá.
+   * BẮT BUỘC — chủ xe đặt Bắt buộc (ADR 0091), server đã cộng vào báo giá, khách không bỏ chọn được.
+   * `tripAmount` là phí cả chuyến của bảo hiểm theo bậc giá trị xe (Bắt buộc lẫn Tuỳ chọn).
    */
   mandatory: boolean;
   tripAmount: string | null;
+  /**
+   * Phí thu hộ bảo hiểm đi kèm `tripAmount` nếu mua (ADR 0091 điều 3). Khách thấy GỘP
+   * `tripAmount + serviceFeeAmount`, ⓘ tách hai số. `null` khi không có (công tắc tắt, phí theo ngày).
+   */
+  serviceFeeAmount: string | null;
   /** Mô tả sản phẩm từ danh mục; `null` khi danh mục chưa tải được (vẫn chọn được, thiếu quyền lợi). */
   product: PublicInsuranceProduct | null;
 }

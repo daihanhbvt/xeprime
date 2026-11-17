@@ -695,6 +695,17 @@ export class ListingMileagePolicyDto {
 
 export class PublicListingDetailDto extends PublicListingDto {
   /**
+   * Chủ xe đặt bảo hiểm vật chất xe Bắt buộc mà xe chưa đủ điều kiện ⇒ xe tạm KHÔNG nhận đặt tự lái
+   * (ADR 0091 điều 1). Chỉ `true` khi nền tảng đang bán bảo hiểm theo bậc. Chặn thật ở bước gửi
+   * yêu cầu (`VEHICLE_INSURANCE_NOT_READY`); cờ này để trang xe nói trước.
+   */
+  @ApiProperty({
+    description:
+      'Xe tạm không nhận đặt tự lái vì bảo hiểm Bắt buộc chưa đủ điều kiện (ADR 0091) - dịch vụ khác vẫn đặt được',
+  })
+  selfDriveInsuranceBlocked!: boolean;
+
+  /**
    * Ba chỉ số của CHỦ XE, ngay trong trang chi tiết xe (ADR 0045 điều 2).
    *
    * Ở đây chứ không chỉ ở trang gian hàng vì đây là nơi khách thật sự quyết định gửi yêu cầu -

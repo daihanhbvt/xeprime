@@ -7,7 +7,7 @@ import type { PublicListingDetail } from '@/features/marketplace/types';
 import type { PublicQuote } from '@/features/rental-policies/types';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
-import { payAtPickupAmount, visibleFeeLines, visiblePriceRows } from '@/lib/customer-price-view';
+import { customerFeeLines, payAtPickupAmount, visiblePriceRows } from '@/lib/customer-price-view';
 import { useQuoteTotal } from './use-quote-total';
 
 type QuoteBreakdown = PublicQuote['breakdown'];
@@ -87,7 +87,8 @@ export function useCustomerCostView({
             sublabel: null,
           },
   );
-  const feeLines = visibleFeeLines(fees?.lines ?? [], 'customer');
+  /* Phí thu hộ bảo hiểm gộp vào dòng bảo hiểm vật chất xe, ⓘ tách hai số (ADR 0091 điều 3). */
+  const feeLines = customerFeeLines(fees?.lines ?? []);
   const promoDiscount = fees?.promoDiscountAmount ?? '0';
   const hasPromo = !isZeroMoney(promoDiscount);
   const longTerm = breakdown?.longTerm ?? null;

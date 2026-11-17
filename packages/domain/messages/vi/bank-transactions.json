@@ -9,9 +9,12 @@
   "filters": {
     "status": "Trạng thái",
     "search": "Tìm giao dịch",
-    "searchPlaceholder": "Nội dung CK hoặc mã rút được",
+    "searchPlaceholder": "Nội dung CK, mã rút được hoặc mã FT",
     "bankTime": "Thời điểm ngân hàng",
-    "code": "Đích"
+    "code": "Đích",
+    "amount": "Số tiền",
+    "amountPlaceholder": "Số tiền chính xác",
+    "reason": "Lý do"
   },
   "columns": {
     "amount": "Số tiền",
@@ -40,22 +43,29 @@
     "refunded": "Đã hoàn lại người gửi · mã {reference} · {time}",
     "previous": "Giao dịch trước",
     "next": "Giao dịch sau",
-    "sideLabel": "Xử lý giao dịch"
+    "sideLabel": "Xử lý giao dịch",
+    "systemReason": "Hệ thống ghi nhận",
+    "matchedReceivable": "Đã khớp vào khoản",
+    "walletCreditFor": "Đã ghi có ví thay cho khoản"
   },
   "suggestions": {
-    "title": "Hoá đơn gói đang chờ tiền",
-    "hint": "Chọn đúng hoá đơn của khoản tiền này - hoá đơn trùng số tiền được đưa lên đầu.",
-    "empty": "Không có hoá đơn nào đang chờ tiền",
+    "title": "Đích để khớp",
+    "hint": "Chọn đúng khoản của giao dịch này - khoản trùng số tiền được đưa lên đầu.",
+    "empty": "Không có hoá đơn gói hay khoản giữ chỗ nào đang chờ tiền",
     "amountMatches": "Khớp đúng số tiền",
     "remaining": "Còn thiếu: {amount}",
-    "tenant": "Gian hàng: {name}"
+    "tenant": "Gian hàng: {name}",
+    "receivablesTitle": "Khoản giữ chỗ / gia hạn còn hạn",
+    "invoicesTitle": "Hoá đơn gói đang chờ tiền",
+    "customer": "Khách: {name} · {tenant}",
+    "expiresAt": "Hạn chuyển: {time}"
   },
   "match": {
     "submit": "Xác nhận khớp",
-    "success": "Đã khớp giao dịch vào hoá đơn",
+    "success": "Đã khớp giao dịch",
     "submitFor": "Khớp vào {code}",
     "dialogTitle": "Khớp tay giao dịch",
-    "dialogSummary": "{amount} sẽ được ghi vào hoá đơn {code} của {tenant}. Thao tác ghi nhật ký và không hoàn tác được."
+    "dialogSummary": "{amount} sẽ được ghi vào {code} ({tenant}). Thao tác ghi nhật ký và không hoàn tác được."
   },
   "ignore": {
     "action": "Bỏ qua giao dịch",
@@ -83,9 +93,42 @@
     "reasonRequired": "Nhập lý do xử lý"
   },
   "footer": {
-    "choose": "Chọn một hoá đơn bên phải để khớp - hoặc bỏ qua nếu khoản này không thuộc hoá đơn nào.",
+    "choose": "Chọn một đích bên phải để khớp - hoặc bỏ qua nếu khoản này không thuộc đích nào.",
     "chosen": "Sẽ khớp vào {code} · {tenant}",
-    "noInvoice": "Không có hoá đơn nào đang chờ tiền - khoản này chỉ có thể bỏ qua.",
+    "noInvoice": "Không có đích nào đang chờ tiền - khoản này chỉ có thể bỏ qua hoặc hoàn vào ví khách.",
     "handled": "Giao dịch này đã được xử lý."
+  },
+  "credit": {
+    "action": "Ghi có Ví điểm khách",
+    "success": "Đã ghi có Ví điểm cho khách",
+    "dialogTitle": "Ghi có Ví điểm khách",
+    "dialogSummary": "{amount} chuyển cho {code} sẽ được hoàn vào Ví điểm của {customer}. Không tạo đơn - khoản này đã đóng. Thao tác ghi nhật ký và không hoàn tác được."
+  },
+  "lateCredit": {
+    "title": "Mã {code} của {customer} đã đóng trước khi tiền về",
+    "hint": "Không tạo được đơn từ khoản đã đóng. Hoàn tiền này bằng nút \"Ghi có Ví điểm khách\" - khách rút về ngân hàng qua Ví điểm.",
+    "noAccount": "Khoản này không gắn tài khoản khách. Hãy chuyển trả tay rồi bấm \"Bỏ qua\" kèm mã giao dịch hoàn."
+  },
+  "reasons": {
+    "hold_not_found": "Mã giữ chỗ {code} không tồn tại - có thể khách gõ nhầm một ký tự.",
+    "hold_closed": "Tiền về sau khi khoản giữ chỗ {code} đã đóng - ghi có Ví điểm khách hoặc chuyển trả.",
+    "extension_not_found": "Mã gia hạn {code} không tồn tại.",
+    "extension_closed": "Tiền về khi phụ lục gia hạn {code} không còn nhận tiền - ghi có Ví điểm khách hoặc chuyển trả.",
+    "checkout_not_found": "Mã phiếu thanh toán gói {code} không tồn tại.",
+    "checkout_closed": "Tiền về khi phiếu thanh toán gói {code} không còn nhận tiền - hoàn gian hàng.",
+    "invoice_not_found": "Mã hoá đơn gói {code} không tồn tại.",
+    "invoice_closed": "Tiền về khi hoá đơn gói {code} không còn nhận tiền - khớp vào hoá đơn mới hoặc hoàn gian hàng.",
+    "overpaid": "Chuyển thừa - phần thừa đã tự hoàn vào Ví điểm."
+  },
+  "reasonLabels": {
+    "hold_not_found": "Mã giữ chỗ không tồn tại",
+    "hold_closed": "Giữ chỗ đã đóng",
+    "extension_not_found": "Mã gia hạn không tồn tại",
+    "extension_closed": "Gia hạn đã đóng",
+    "checkout_not_found": "Mã phiếu gói không tồn tại",
+    "checkout_closed": "Phiếu gói đã đóng",
+    "invoice_not_found": "Mã hoá đơn không tồn tại",
+    "invoice_closed": "Hoá đơn đã đóng",
+    "overpaid": "Chuyển thừa (đã vào ví)"
   }
 }

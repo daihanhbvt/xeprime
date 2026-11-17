@@ -27,11 +27,15 @@ const detail = vi.hoisted(() => ({
 
 const match = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
 const ignore = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
+const matchReceivable = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
+const credit = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
 
 vi.mock('../hooks/use-bank-transactions', () => ({
   useBankTransaction: () => detail,
   useMatchBankTransaction: () => match,
   useIgnoreBankTransaction: () => ignore,
+  useMatchReceivable: () => matchReceivable,
+  useCreditCustomer: () => credit,
 }));
 
 vi.mock('@/hooks/use-media-query', () => ({
@@ -54,6 +58,9 @@ function makeDetail(over: Partial<BankTransactionDetail> = {}): BankTransactionD
     matchedType: null,
     matchedRefId: null,
     matchNote: null,
+    matchReasonCode: null,
+    matchReasonParams: null,
+    matchedTargetCode: null,
     matchedAt: null,
     matchedByName: null,
     matchedInvoiceCode: null,
@@ -88,6 +95,8 @@ function makeDetail(over: Partial<BankTransactionDetail> = {}): BankTransactionD
         createdAt: '2026-09-02T00:00:00.000Z',
       },
     ],
+    receivableSuggestions: [],
+    lateCredit: null,
     ...over,
   } as BankTransactionDetail;
 }
@@ -119,6 +128,8 @@ beforeEach(() => {
   detail.isError = false;
   match.mutate.mockReset();
   ignore.mutate.mockReset();
+  matchReceivable.mutate.mockReset();
+  credit.mutate.mockReset();
   nav.onNavigate.mockReset();
 });
 
@@ -271,5 +282,104 @@ describe('Đọc giao dịch', () => {
     ).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'Giao dịch sau' }));
     expect(nav.onNavigate).toHaveBeenCalledWith('tx-2');
+  });
+});
+
+/** ADR 0092 — khớp tay vào khoản giữ chỗ còn hạn, và ghi có Ví điểm khách cho tiền về muộn. */
+describe('Khoản của khách (ADR 0092)', () => {
+  it('khoản giữ chỗ còn hạn nằm trong danh sách đích; chọn nó thì gửi đúng loại + id', async () => {
+    detail.data = makeDetail({
+      suggestions: [],
+      receivableSuggestions: [
+        {
+          targetType: 'booking_hold',
+          targetId: 'hold-1',
+          code: 'XPHABCD2345',
+          customerName: 'Nguyen Van A',
+          tenantName: 'Shop A',
+          amount: '300000',
+          paidAmount: '0',
+          remainingAmount: '300000',
+          expiresAt: '2026-09-04T03:00:00.000Z',
+          amountMatches: true,
+        },
+      ],
+    });
+    renderDrawer();
+
+    expect(screen.getByText('Khoản giữ chỗ / gia hạn còn hạn')).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('radio')[0]!);
+    fireEvent.click(screen.getByRole('button', { name: 'Khớp vào XPHABCD2345' }));
+    const dialog = await decisionDialog('Khớp tay giao dịch');
+    fireEvent.change(within(dialog).getByLabelText('Lý do xử lý'), {
+      target: { value: 'Khách quên ghi mã' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Xác nhận khớp' }));
+
+    await waitFor(() => expect(matchReceivable.mutate).toHaveBeenCalledTimes(1));
+    expect(matchReceivable.mutate.mock.calls[0]![0]).toMatchObject({
+      id: 'tx-1',
+      targetType: 'booking_hold',
+      targetId: 'hold-1',
+      note: 'Khách quên ghi mã',
+    });
+    expect(match.mutate).not.toHaveBeenCalled();
+  });
+
+  it('mã trỏ tới khoản ĐÃ ĐÓNG: cảnh báo + nút ghi có ví, gửi đúng đích', async () => {
+    detail.data = makeDetail({
+      referenceCode: 'XPHABCD2345',
+      matchReasonCode: 'hold_closed',
+      matchReasonParams: { code: 'XPHABCD2345', status: 'expired' },
+      suggestions: [],
+      lateCredit: {
+        targetType: 'booking_hold',
+        targetId: 'hold-1',
+        code: 'XPHABCD2345',
+        status: 'expired',
+        customerName: 'Nguyen Van A',
+        hasCustomerAccount: true,
+      },
+    });
+    renderDrawer();
+
+    expect(
+      screen.getByText('Mã XPHABCD2345 của Nguyen Van A đã đóng trước khi tiền về'),
+    ).toBeTruthy();
+    expect(
+      screen.getAllByText(/Tiền về sau khi khoản giữ chỗ XPHABCD2345 đã đóng/).length,
+    ).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Ghi có Ví điểm khách' }));
+    const dialog = await decisionDialog('Ghi có Ví điểm khách');
+    fireEvent.change(within(dialog).getByLabelText('Lý do xử lý'), {
+      target: { value: 'Khách chuyển sau hạn' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Ghi có Ví điểm khách' }));
+
+    await waitFor(() => expect(credit.mutate).toHaveBeenCalledTimes(1));
+    expect(credit.mutate.mock.calls[0]![0]).toMatchObject({
+      id: 'tx-1',
+      targetType: 'booking_hold',
+      targetId: 'hold-1',
+      note: 'Khách chuyển sau hạn',
+    });
+  });
+
+  it('khoản đã đóng KHÔNG có tài khoản khách: không có nút ghi có ví, chỉ hướng dẫn chuyển trả', () => {
+    detail.data = makeDetail({
+      suggestions: [],
+      lateCredit: {
+        targetType: 'booking_hold',
+        targetId: 'hold-1',
+        code: 'XPHABCD2345',
+        status: 'expired',
+        customerName: 'Khách vãng lai',
+        hasCustomerAccount: false,
+      },
+    });
+    renderDrawer();
+
+    expect(screen.queryByRole('button', { name: 'Ghi có Ví điểm khách' })).toBeNull();
+    expect(screen.getByText(/Hãy chuyển trả tay/)).toBeTruthy();
   });
 });

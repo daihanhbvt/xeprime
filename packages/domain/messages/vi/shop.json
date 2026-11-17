@@ -188,7 +188,8 @@
       "title": "Xác nhận thay đổi chính sách thuê?",
       "body": "Chính sách mới áp dụng cho các lượt đặt xe mới. Các đơn thuê đã chốt trước đó vẫn giữ nguyên mức giá và tiền cọc cũ.",
       "bodyInheriting": "Chính sách mới áp dụng ngay cho {count, plural, other {# xe}} đang kế thừa, tính từ các lượt đặt xe mới. Các đơn thuê đã chốt trước đó vẫn giữ nguyên mức giá và tiền cọc cũ.",
-      "ok": "Xác nhận thay đổi"
+      "ok": "Xác nhận thay đổi",
+      "insuranceRequired": "{count, plural, other {# xe}} đang dùng chính sách này chưa đủ giá trị xe, ảnh hoặc cà vẹt sẽ ngừng nhận đặt tự lái cho tới khi bổ sung."
     },
     "appliedTipLabel": "Giải thích phạm vi áp dụng chính sách",
     "dirtyDiscard": "Hủy bỏ",
@@ -250,6 +251,15 @@
         "title": "Ưu đãi thuê dài hạn (trên 1 tháng)",
         "empty": "Chưa có mốc ưu đãi - khách thuê dài hạn trả nguyên giá gói.",
         "inactive": "Các mốc dưới đây đang tắt nên khách chưa thấy. Lưu thay đổi sẽ bật chúng; không muốn dùng thì xoá đi."
+      },
+      "insurance": {
+        "title": "Bảo hiểm vật chất xe",
+        "tipLabel": "Về bảo hiểm vật chất xe",
+        "hint": "Bảo hiểm vật chất xe MIC theo chuyến cho ô tô tự lái. Phí tính theo giá trị xe và số ngày thuê, do khách trả. Xe cần có giá trị xe, đủ ảnh và cà vẹt mới được bán kèm. Khi có tổn thất, khách thuê chịu phần khấu trừ.",
+        "modeOptional": "Khách tự chọn mua khi đặt xe. Xe chưa đủ dữ liệu bảo hiểm vẫn nhận đặt, không kèm bảo hiểm.",
+        "modeRequired": "Mọi chuyến tự lái phải mua kèm. Xe chưa đủ dữ liệu bảo hiểm sẽ ngừng nhận đặt tự lái cho tới khi bổ sung.",
+        "impactTitle": "{count, plural, other {# xe}} chưa đủ dữ liệu bảo hiểm sẽ ngừng nhận đặt tự lái",
+        "impactNamesMore": "{names} và {count, plural, other {# xe}} khác"
       }
     }
   },

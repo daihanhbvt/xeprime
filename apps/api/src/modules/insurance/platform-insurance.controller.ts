@@ -25,9 +25,16 @@ import {
   PlatformInsurancePageDto,
   PlatformInsurancePolicyDetailDto,
   VoidInsurancePolicyDto,
+  VoidInsurancePolicyResultDto,
 } from './dto/insurance.dto';
+import {
+  InsuranceAttentionPageDto,
+  InsurancePolicyPricingDto,
+} from './dto/insurance-follow-up.dto';
 import { InsuranceCertificateService } from './insurance-certificate.service';
+import { InsuranceFollowUpService } from './insurance-follow-up.service';
 import { InsuranceReadService } from './insurance-read.service';
+import { InsuranceRefundService } from './insurance-refund.service';
 import { InsuranceService } from './insurance.service';
 
 /**
@@ -50,6 +57,8 @@ export class PlatformInsuranceController {
     private readonly read: InsuranceReadService,
     private readonly insurance: InsuranceService,
     private readonly certificates: InsuranceCertificateService,
+    private readonly followUp: InsuranceFollowUpService,
+    private readonly refunds: InsuranceRefundService,
   ) {}
 
   @Get(':id/certificate.pdf')
@@ -64,6 +73,26 @@ export class PlatformInsuranceController {
       length: pdf.file.length,
       disposition: `attachment; filename="${pdf.fileName}"`,
     });
+  }
+
+  @Get('attention')
+  @ApiOperation({
+    summary:
+      'Hợp đồng cần xử lý gấp - quá 2 giờ sau giao xe chưa cấp, hoặc MIC hết lượt tra mà chưa nhận ảnh (ADR 0091)',
+  })
+  @ApiOkResponse({ type: InsuranceAttentionPageDto })
+  attention(): Promise<InsuranceAttentionPageDto> {
+    return this.followUp.attention();
+  }
+
+  @Get(':id/pricing')
+  @ApiOperation({
+    summary:
+      'Phí thực tế của một hợp đồng - giá trị xe, bậc, phí đã thu, phí MIC tính, chênh lệch (ADR 0091)',
+  })
+  @ApiOkResponse({ type: InsurancePolicyPricingDto })
+  pricing(@Param('id') id: string): Promise<InsurancePolicyPricingDto> {
+    return this.followUp.pricingOf(id);
   }
 
   @Get()
@@ -103,14 +132,21 @@ export class PlatformInsuranceController {
   }
 
   @Post(':id/void')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Thu hồi hợp đồng - bắt buộc lý do, có audit' })
-  @ApiNoContentResponse()
-  async void(
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Thu hồi hợp đồng - hai nhánh theo hiệu lực (ADR 0093), bắt buộc lý do, có audit',
+    description:
+      'Chưa từng có hiệu lực ⇒ huỷ + hoàn phí và phí thu hộ vào Ví điểm khách (ngay khi hold đã chốt, ' +
+      'chưa chốt thì vòng tự hoàn làm sau). Đã có hiệu lực ⇒ thu hồi, không hoàn, phí vẫn kê trả hãng. ' +
+      'Hợp đồng đã có bên đối tác bắt buộc `partnerReference` (`INSURANCE_VOID_REFERENCE_REQUIRED`); đã ' +
+      'nằm trong bảng kê thì không huỷ-hoàn được (`INSURANCE_POLICY_REMITTED`).',
+  })
+  @ApiOkResponse({ type: VoidInsurancePolicyResultDto })
+  void(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: VoidInsurancePolicyDto,
-  ): Promise<void> {
-    await this.insurance.voidPolicy(id, user.id, dto.reason);
+  ): Promise<VoidInsurancePolicyResultDto> {
+    return this.refunds.voidPolicy(id, user.id, dto);
   }
 }

@@ -101,6 +101,32 @@ export function queueSummary(
   }
 }
 
+/**
+ * Hàng đợi cổng MoMo/VNPAY đã NGHỈ: server nói cổng không dùng cho luồng nào (ADR 0058 còn
+ * Proposed, mặc định tắt) VÀ không còn lượt cũ nào chờ người xử lý. Khi đó ẩn HẲN — kể cả khi URL
+ * đòi nó. Chưa có số đếm (đang tải, hoặc người xem không có quyền tiền) ⇒ không đoán, coi như còn.
+ */
+export function isGatewayQueueRetired(summary: PlatformMoneySummary | undefined): boolean {
+  return summary != null && !summary.gatewayEnabled && summary.gatewayIn.count === 0;
+}
+
+/**
+ * Hàng đợi được LIỆT KÊ ở cột hàng đợi và dải thẻ — tập con của `visible` (đã lọc theo quyền):
+ *  - cổng MoMo/VNPAY nghỉ ⇒ bỏ (`isGatewayQueueRetired`);
+ *  - "Chuyển trả" không còn khoản chờ ⇒ bỏ khỏi danh sách: từ ADR 0060 mọi khoản hoàn vào thẳng
+ *    Ví điểm, hàng đợi này chỉ còn dữ liệu cũ. Lối vào bằng URL vẫn mở để tra lại lịch sử.
+ */
+export function listedFinanceQueues(
+  visible: readonly FinanceQueue[],
+  summary: PlatformMoneySummary | undefined,
+): FinanceQueue[] {
+  return visible.filter((queue) => {
+    if (queue === FINANCE_QUEUE.GATEWAY_IN) return !isGatewayQueueRetired(summary);
+    if (queue === FINANCE_QUEUE.REFUNDS) return summary == null || summary.refunds.count > 0;
+    return true;
+  });
+}
+
 /** Tham số riêng của hàng đợi thuế: kỳ đang xem (`YYYY-MM`) — xem `TaxPeriodPanel`. */
 export const TAX_PERIOD_PARAM = 'period';
 

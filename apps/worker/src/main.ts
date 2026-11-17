@@ -32,8 +32,9 @@ import { sweepSubscriptionLifecycle } from './jobs/subscription-lifecycle';
 import { sweepBookingHoldExpiry } from './jobs/booking-hold-expiry';
 import { sweepBookingExtensionExpiry } from './jobs/booking-extension-expiry';
 import { sweepHandoverOverdue } from './jobs/handover-overdue';
+import { sweepReturnOverdue } from './jobs/return-overdue';
 import { sweepTripReminders } from './jobs/booking-trip-reminders';
-import { sweepInsuranceIssue } from './jobs/insurance-issue';
+import { recheckInsurancePending, sweepInsuranceIssue } from './jobs/insurance-issue';
 import { purgeExpiredOauthStates } from './jobs/oauth-state-cleanup';
 import { purgeExpiredGeoCache } from './jobs/geo-cache-cleanup';
 import { refreshListingRanks } from './jobs/listing-rank-refresh';
@@ -356,6 +357,11 @@ async function main(): Promise<void> {
         if (overdue.flagged) {
           console.log(`bàn giao: ${overdue.flagged} chuyến quá ân hạn — đã mở case xác minh`);
         }
+        // Đối xứng ở mốc TRẢ xe (ADR 0094) — idempotent bằng cột claim `return_unconfirmed_at`.
+        const returnOverdue = await sweepReturnOverdue(prisma);
+        if (returnOverdue.flagged) {
+          console.log(`trả xe: ${returnOverdue.flagged} chuyến quá ân hạn - đã mở case xác minh`);
+        }
         // Nhắc giờ nhận / giờ trả / quá giờ trả (ADR 0081) — cùng họ "chuyến theo đồng hồ", cùng nhịp.
         const trips = await sweepTripReminders(prisma);
         if (trips.pickupReminders || trips.returnReminders || trips.overdueAlerts) {
@@ -379,6 +385,13 @@ async function main(): Promise<void> {
       if (result.claimed) {
         console.log(
           `bảo hiểm: xử lý ${result.claimed}, cấp ${result.issued}, lỗi ${result.failed}`,
+        );
+      }
+      // Hợp đồng đã cấp mà MIC còn báo chờ ảnh — tra lại tối đa 4 lần (ADR 0091 điều 7).
+      const recheck = await recheckInsurancePending(prisma, insurancePartner);
+      if (recheck.checked) {
+        console.log(
+          `bảo hiểm: tra lại ${recheck.checked} hợp đồng chờ ảnh, xác nhận ${recheck.confirmed}, chuyển admin ${recheck.exhausted}`,
         );
       }
     }),

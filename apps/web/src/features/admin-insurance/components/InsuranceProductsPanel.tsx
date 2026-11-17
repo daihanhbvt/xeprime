@@ -15,6 +15,7 @@ import { useInsuranceProducts } from '../hooks';
 import type { InsuranceProduct } from '../types';
 import { InsuranceProductFormDialog } from './InsuranceProductFormDialog';
 import styles from './InsuranceProductsPanel.module.css';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 
 const MIN_TABLE_WIDTH = 900;
 
@@ -50,7 +51,9 @@ export function InsuranceProductsPanel() {
         <div className={styles.stack}>
           <span className={styles.strong}>{localized(p.nameVi, p.nameEn)}</span>
           <span className={styles.muted}>
-            {domainLabel('insuranceProductKind', p.kind)} · {p.partnerProductCode}
+            {domainLabel('insuranceProductKind', p.kind)}
+            {LIST_SEPARATOR}
+            {p.partnerProductCode}
           </span>
         </div>
       ),

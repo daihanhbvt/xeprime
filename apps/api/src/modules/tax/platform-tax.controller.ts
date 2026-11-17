@@ -8,7 +8,10 @@ import {
 import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import {
+  DeclareTaxPeriodDto,
+  RemitTaxPeriodDto,
   ReverseTaxDto,
+  TaxExportQueryDto,
   TaxPeriodAdvancedDto,
   TaxPeriodQueryDto,
   TaxPeriodSummaryDto,
@@ -68,53 +71,53 @@ export class PlatformTaxController {
       'Dựng ở SERVER: một kỳ đông đơn có vài nghìn dòng, và tải hết về trình duyệt chỉ để ghép ' +
       'chuỗi là cách chắc chắn làm treo màn hình. File có BOM UTF-8 vì Excel trên Windows đọc ' +
       'CSV không BOM bằng codepage hệ thống và mọi tên có dấu sẽ thành ký tự lạ. File mang số ' +
-      'CCCD đầy đủ nên MỖI lần xuất ghi audit `tax.period_export` (người xuất, kỳ, số dòng).',
+      'CCCD đầy đủ nên MỖI lần xuất ghi audit `tax.period_export` (người xuất, kỳ, số dòng). ' +
+      '`groupBy=seller` cho một dòng mỗi người bán (định danh, số chuyến, doanh thu, GTGT, TNCN); ' +
+      'ngày giờ trong file theo giờ Việt Nam.',
   })
   @ApiProduces('text/csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @ApiOkResponse({ schema: { type: 'string' } })
   async exportCsv(
-    @Query() query: TaxPeriodQueryDto,
+    @Query() query: TaxExportQueryDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<string> {
-    return this.read.periodCsv(query.period, user.id);
+    return this.read.periodCsv(query.period, user.id, query.groupBy);
   }
 
   @Post('periods/:period/declared')
   @ApiOperation({
-    summary: 'Đánh dấu CẢ KỲ đã kê khai (`accrued → declared`)',
-    description: 'Chạy lại chỉ đụng dòng còn `accrued` - bấm hai lần không đẩy sang `remitted`.',
+    summary: 'Ghi KÊ KHAI cả kỳ (`accrued → declared`) kèm số tờ khai + ngày nộp tờ khai',
+    description:
+      'Chỉ kỳ ĐÃ KẾT THÚC (giờ VN) - kỳ đang chạy ⇒ 409 `TAX_PERIOD_NOT_ENDED`. Mỗi kỳ kê khai một ' +
+      'lần (409 `TAX_PERIOD_ALREADY_DECLARED`). Chứng cứ ghi cùng transaction với lượt lật trạng ' +
+      'thái và audit.',
   })
   @ApiOkResponse({ type: TaxPeriodAdvancedDto })
   async markDeclared(
     @Param('period') period: string,
     @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: DeclareTaxPeriodDto,
   ): Promise<TaxPeriodAdvancedDto> {
-    const { updated } = await this.tax.advancePeriod(
-      period,
-      TAX_WITHHOLDING_STATUS.DECLARED,
-      user.id,
-    );
+    const { updated } = await this.tax.declarePeriod(period, user.id, dto);
     return { updated, status: TAX_WITHHOLDING_STATUS.DECLARED };
   }
 
   @Post('periods/:period/remitted')
   @ApiOperation({
-    summary: 'Đánh dấu CẢ KỲ đã nộp (`declared → remitted`)',
+    summary: 'Ghi NỘP cả kỳ (`declared → remitted`) kèm mã chứng từ, ngày nộp, số đã nộp',
     description:
-      'Chỉ đi từ `declared`: không có đường "nộp mà chưa khai". Sau bước này tiền thôi nằm ở vế ' +
-      'GIỮ HỘ của đối soát ba vế.',
+      'Chỉ đi từ `declared`: kỳ còn dòng chưa kê khai ⇒ 409 `TAX_PERIOD_NOT_DECLARED`. Số đã nộp ' +
+      'khác tổng trên sổ thì bắt buộc `note` (400 `TAX_REMITTANCE_NOTE_REQUIRED`). Sau bước này ' +
+      'tiền thôi nằm ở vế GIỮ HỘ của đối soát ba vế.',
   })
   @ApiOkResponse({ type: TaxPeriodAdvancedDto })
   async markRemitted(
     @Param('period') period: string,
     @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: RemitTaxPeriodDto,
   ): Promise<TaxPeriodAdvancedDto> {
-    const { updated } = await this.tax.advancePeriod(
-      period,
-      TAX_WITHHOLDING_STATUS.REMITTED,
-      user.id,
-    );
+    const { updated } = await this.tax.remitPeriod(period, user.id, dto);
     return { updated, status: TAX_WITHHOLDING_STATUS.REMITTED };
   }
 

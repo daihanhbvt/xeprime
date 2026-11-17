@@ -128,6 +128,8 @@ export const MESSAGE_NAMESPACES = [
   { file: 'platform-sellers', namespace: 'PlatformSellers' },
   // Khách thuê + bằng lái của khách (ADR 0070) — chỉ site quản trị.
   { file: 'admin-customers', namespace: 'AdminCustomers' },
+  // Ví điểm của một chủ ví nhìn từ admin - chỉ đọc (đợt rà Admin 16/11/2026).
+  { file: 'platform-wallets', namespace: 'PlatformWallets' },
   // Chăm sóc khách mất đơn (ADR 0070) — tab của Đơn thuê toàn hệ thống.
   { file: 'admin-follow-ups', namespace: 'AdminFollowUps' },
   // Cấu hình app Partner (isPlanPromotionEnabled) + mẫu email hướng dẫn gói — chỉ site quản trị.

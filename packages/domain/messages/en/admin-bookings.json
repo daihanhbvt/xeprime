@@ -86,5 +86,112 @@
     "contracts": "{count, plural, =0 {No contract} one {# contract} other {# contracts}}",
     "createdBy": "Created by: {name}",
     "updatedAt": "Updated: {dateTime}"
+  },
+  "marketplace": {
+    "title": "Marketplace money",
+    "hint": "Money for this booking that passes through XePrime, read from the fee table frozen at approval. Not the pickup security deposit.",
+    "hintLabel": "About marketplace money",
+    "none": "This booking does not go through XePrime payments (entered manually by the shop).",
+    "feesUnavailable": "No detailed money table for this booking (manual booking or created before the current money flow).",
+    "hold": {
+      "title": "Reservation payment",
+      "code": "Reconciliation code",
+      "status": "Status",
+      "outcome": "Outcome",
+      "outcomePending": "Not settled",
+      "amount": "Amount due",
+      "paid": "Received",
+      "expiresAt": "Payment deadline",
+      "paidAt": "Fully paid at",
+      "freeCancelUntil": "Free cancellation until",
+      "releasedAt": "Outcome settled at"
+    },
+    "customer": {
+      "title": "Customer side",
+      "base": "Rental",
+      "delivery": "Of which delivery fee (paid to the owner in person)",
+      "serviceFee": "Platform fee",
+      "vehicleInsurance": "Vehicle damage insurance",
+      "personalInsurance": "Personal accident insurance",
+      "insuranceServiceFee": "Insurance collection fee",
+      "promo": "Promo code {code}",
+      "promoNoCode": "Promo code",
+      "online": "Reservation payment to transfer",
+      "payAtPickup": "Paid directly to the owner at pickup",
+      "total": "Customer total"
+    },
+    "owner": {
+      "title": "Owner side",
+      "rent": "Rental revenue",
+      "commission": "Owner service fee",
+      "tax": "Tax withheld",
+      "taxSplit": "VAT {vat}{sep}PIT {pit}",
+      "taxExempt": "Not withheld (company)",
+      "net": "Owner income",
+      "payable": "Credited to wallet when the trip completes"
+    },
+    "platform": {
+      "title": "XePrime side",
+      "retained": "Platform fee + owner service fee",
+      "promo": "Promo code sponsorship",
+      "net": "Actual revenue"
+    },
+    "settlement": {
+      "title": "Settled allocation",
+      "customer": "Refunded to customer",
+      "owner": "To owner wallet",
+      "platform": "Kept by XePrime",
+      "insurer": "Payable to insurer",
+      "tax": "Tax withheld"
+    },
+    "refund": {
+      "title": "Refund",
+      "status": "Status",
+      "amount": "Amount",
+      "reason": "Reason",
+      "mode": "Method",
+      "modes": {
+        "balance": "To the customer's points wallet",
+        "bank_transfer": "Bank transfer"
+      },
+      "paidAt": "Refunded at",
+      "account": "Receiving account",
+      "reference": "Refund transaction ref"
+    },
+    "bank": {
+      "title": "Matched bank transactions",
+      "empty": "No transaction has been matched to this reservation payment yet.",
+      "row": "{amount}{sep}{time}",
+      "reference": "FT ref {ref}",
+      "open": "Open in the incoming money queue"
+    },
+    "insurance": {
+      "title": "Trip insurance",
+      "certificate": "Certificate {number}",
+      "test": "Test",
+      "download": "Download certificate"
+    },
+    "tax": {
+      "title": "Tax lines of this booking",
+      "period": "Period {period}",
+      "reversal": "Reversal",
+      "extension": "Extension",
+      "split": "VAT {vat}{sep}PIT {pit}"
+    },
+    "cancellation": {
+      "title": "Cancellation",
+      "party": "Responsible party",
+      "category": "Reason category",
+      "stage": "Stage",
+      "reason": "Reason",
+      "at": "Cancelled at"
+    }
+  },
+  "supportCases": {
+    "title": "Open support cases",
+    "hint": "This booking has support cases that are still open. Trip verdicts, if needed, are made from the case detail.",
+    "verdictTag": "Trip verdict needed",
+    "openedAt": "Opened {time}",
+    "open": "Open case"
   }
 }

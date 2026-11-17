@@ -74,7 +74,8 @@
     "info": "Thông tin xe",
     "pricing": "Giá",
     "description": "Mô tả",
-    "activity": "Hoạt động"
+    "activity": "Hoạt động",
+    "insurance": "Bảo hiểm và giấy tờ"
   },
   "detail": {
     "code": "Mã xe",
@@ -154,5 +155,29 @@
     "unhideNoteOwnerPaused": "Chủ xe đang tắt hiển thị, nên xe vẫn chưa lên chợ sau khi gỡ ẩn.",
     "unhideSuccess": "Đã gỡ ẩn của nền tảng. Xe hiển thị lại trên Marketplace.",
     "unhideSuccessOwnerPaused": "Đã gỡ ẩn của nền tảng. Xe vẫn đang tạm ẩn theo lựa chọn của chủ xe."
+  },
+  "insuranceReview": {
+    "title": "Bảo hiểm và giấy tờ",
+    "hint": "Dữ liệu hiện tại của xe. Giá trị xe quyết định phí bảo hiểm vật chất xe khách trả và mức bồi thường của hãng.",
+    "hintLabel": "Giải thích khối bảo hiểm và giấy tờ",
+    "loadError": "Không tải được dữ liệu bảo hiểm và giấy tờ",
+    "insuredValue": "Giá trị xe khai",
+    "insuredValueNone": "Chưa khai",
+    "referenceValue": "Giá trị tham khảo",
+    "referenceValueDetail": "{amount} (xe {age} năm, còn {percent}% giá mới)",
+    "referenceNone": "Không có dữ liệu xe chuẩn để so",
+    "deviation": "Lệch so với tham khảo",
+    "deviationWarning": "Giá trị khai lệch giá tham khảo quá {threshold}% - kiểm tra lại với chủ xe trước khi duyệt.",
+    "eligibility": "Điều kiện bảo hiểm vật chất xe",
+    "eligible": "Đủ điều kiện",
+    "registration": "Cà vẹt",
+    "registrationNone": "Chưa có cà vẹt",
+    "holderName": "Tên chủ",
+    "chassisNumber": "Số khung",
+    "engineNumber": "Số máy",
+    "plateNumber": "Biển số trên cà vẹt",
+    "plateMismatch": "Biển số trên cà vẹt khác biển số khai của xe.",
+    "openImage": "Mở ảnh cà vẹt",
+    "openImageHint": "Mỗi lần mở được ghi vào nhật ký hệ thống."
   }
 }

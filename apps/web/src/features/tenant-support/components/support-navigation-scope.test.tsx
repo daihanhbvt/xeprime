@@ -134,7 +134,7 @@ describe('SupportNavigationScope', () => {
   });
 
   it('link ra màn nền tảng (thoát phiên) để nguyên', () => {
-    renderScope(<a href={ROUTES.ADMIN.TENANTS}>thoat</a>);
+    renderScope(<a href={ROUTES.ADMIN.PARTNERS}>thoat</a>);
     expect(fireEvent.click(screen.getByText('thoat'))).toBe(true);
     expect(router.push).not.toHaveBeenCalled();
   });

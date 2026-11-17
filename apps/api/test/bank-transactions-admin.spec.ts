@@ -3,20 +3,27 @@ import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
+  BANK_MATCH_REASON,
   BANK_MATCH_STATUS,
   BANK_TX_CODE_FILTER,
+  WALLET_ENTRY_KIND,
+  WALLET_ENTRY_SOURCE,
   type BankTxCodeFilter,
   BILLING_MODE,
   PLAN_STATUS,
   SUBSCRIPTION_INVOICE_STATUS,
   TENANT_STATUS,
 } from '@xeprime/types';
-import { AuditService } from '../src/modules/audit/audit.service';
-import { BankTransactionsService } from '../src/modules/sepay/bank-transactions.service';
 import { SepayService } from '../src/modules/sepay/sepay.service';
 import type { BillingService } from '../src/modules/billing/billing.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBillingService, makeBookingHoldsService, makeBookingExtensionsService } from './helpers/service-factory';
+import {
+  makeBankTransactionsService,
+  makeBillingService,
+  makeBookingHoldsService,
+  makeBookingExtensionsService,
+} from './helpers/service-factory';
+import { releaseWalletObligations } from './helpers/wallet-cleanup';
 
 /**
  * Hàng đợi đối soát + KHỚP TAY của admin (R2 mục 4, ADR 0022 điều 4) — PostgreSQL THẬT.
@@ -33,7 +40,7 @@ import { makeBillingService, makeBookingHoldsService, makeBookingExtensionsServi
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const billing: BillingService = makeBillingService(asService);
-const admin = new BankTransactionsService(asService, new AuditService(asService), billing);
+const admin = makeBankTransactionsService(asService, billing);
 
 const sepay = new SepayService(asService, billing, makeBookingHoldsService(asService), {
   get: () => 'test-key-0123456789abcdef',
@@ -176,6 +183,8 @@ afterAll(async () => {
     await prisma.subscriptionInvoice.deleteMany({ where: { tenantId } });
     await prisma.tenantSubscription.deleteMany({ where: { tenantId } });
     await prisma.notification.deleteMany({ where: { tenantId } });
+    // Tiền gói chuyển thừa đã ghi có ví gian hàng (ADR 0092) — ví là `RESTRICT`, gỡ trước.
+    await releaseWalletObligations(prisma, { tenantIds: [tenantId] });
     await prisma.tenantMembership.deleteMany({ where: { tenantId } });
     await prisma.plan.deleteMany({ where: { id: planId } });
     await prisma.tenant.deleteMany({ where: { id: tenantId } });
@@ -375,6 +384,94 @@ describe('Khớp tay', () => {
     expect(detail.bankGateway).toBe('Vietcombank');
     expect(detail.bankAccountNumber).toBe('1903567890');
     expect(detail.bankReferenceNumber).toBe('FT26247000001');
+  });
+});
+
+/**
+ * ADR 0092 — tiền gói chuyển THỪA tự ghi có Ví điểm gian hàng. Phần thừa đo bằng TIỀN THẬT đã khớp,
+ * không bằng `paid_amount`: hoá đơn gói admin gán tay ("thu ngoài luồng") đã `paid` mà chưa có đồng
+ * nào về — khớp khoản chuyển khoản thật vào nó là TRẢ gói, không phải tiền thừa để hoàn.
+ */
+describe('Tiền gói chuyển thừa (ADR 0092)', () => {
+  const overpayEntries = () =>
+    prisma.walletEntry.findMany({
+      where: { kind: WALLET_ENTRY_KIND.SUBSCRIPTION_OVERPAY, wallet: { ownerTenantId: tenantId } },
+      orderBy: { createdAt: 'asc' },
+    });
+
+  afterEach(async () => {
+    if (!dbAvailable) return;
+    await releaseWalletObligations(prisma, { tenantIds: [tenantId] });
+  });
+
+  it('webhook chuyển thừa ⇒ phần thừa vào ví gian hàng; chuyển TRÙNG lần nữa ⇒ trọn khoản đó', async () => {
+    if (!dbAvailable) return;
+    const invoice = await issueInvoice();
+    const total = Number(invoice.totalAmount);
+
+    await sepay.ingest(payload({ transferAmount: total + 50_000, content: `CK ${invoice.code}` }));
+    let entries = await overpayEntries();
+    expect(entries.map((e) => e.amount.toFixed(0))).toEqual(['50000']);
+    const first = await prisma.bankTransaction.findFirstOrThrow({
+      where: { ...ownRows, referenceCode: invoice.code },
+    });
+    expect(first.matchReasonCode).toBe(BANK_MATCH_REASON.OVERPAID);
+    expect(entries[0]!.sourceType).toBe(WALLET_ENTRY_SOURCE.BANK_TRANSACTION);
+    expect(entries[0]!.sourceRefId).toBe(first.id);
+
+    // Gian hàng chuyển lại cả khoản cho hoá đơn đã trả ⇒ cả khoản đó là thừa.
+    await sepay.ingest(payload({ transferAmount: total, content: `CK lan 2 ${invoice.code}` }));
+    entries = await overpayEntries();
+    expect(entries.map((e) => e.amount.toFixed(0))).toEqual(['50000', String(total)]);
+    expect(await prisma.tenantSubscription.count({ where: { tenantId } })).toBe(1);
+  });
+
+  it('khớp tay khoản chuyển thật vào hoá đơn GÁN TAY (đã paid, chưa có tiền) ⇒ KHÔNG hoàn', async () => {
+    if (!dbAvailable) return;
+    const invoiceId = newId();
+    await prisma.subscriptionInvoice.create({
+      data: {
+        id: invoiceId,
+        tenantId,
+        code: `XPG${invoiceId.slice(-8)}`,
+        periodFrom: new Date(),
+        periodTo: new Date(Date.now() + 30 * 86_400_000),
+        linesJson: [] as unknown as Prisma.InputJsonValue,
+        subtotal: new Prisma.Decimal(300_000),
+        totalAmount: new Prisma.Decimal(300_000),
+        paidAmount: new Prisma.Decimal(300_000),
+        status: SUBSCRIPTION_INVOICE_STATUS.PAID,
+        paidAt: new Date(),
+      },
+    });
+    const tx = await unmatchedTx(300_000);
+
+    const result = await admin.match(tx.id, adminId, {
+      invoiceId,
+      note: 'Khoản chuyển khoản của gói admin đã gán tay',
+    });
+
+    expect(result.matchReasonCode).toBeNull();
+    expect(await overpayEntries()).toHaveLength(0);
+  });
+
+  it('lọc hàng đợi theo số tiền chính xác và theo lý do', async () => {
+    if (!dbAvailable) return;
+    const tx = await unmatchedTx(123_457);
+    const byAmount = await admin.list({ amount: '123457' });
+    expect(byAmount.data.map((r) => r.id)).toContain(tx.id);
+    expect(byAmount.data.every((r) => r.amountIn === '123457')).toBe(true);
+
+    const invoice = await issueInvoice();
+    await sepay.ingest(
+      payload({ transferAmount: Number(invoice.totalAmount) + 1_000, content: invoice.code }),
+    );
+    const overpaid = await admin.list({
+      matchStatus: BANK_MATCH_STATUS.MATCHED,
+      reason: BANK_MATCH_REASON.OVERPAID,
+    });
+    expect(overpaid.data.some((r) => r.referenceCode === invoice.code)).toBe(true);
+    expect(overpaid.data.every((r) => r.matchReasonCode === BANK_MATCH_REASON.OVERPAID)).toBe(true);
   });
 });
 

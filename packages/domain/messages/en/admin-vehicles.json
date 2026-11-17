@@ -74,7 +74,8 @@
     "info": "Vehicle info",
     "pricing": "Pricing",
     "description": "Description",
-    "activity": "Activity"
+    "activity": "Activity",
+    "insurance": "Insurance and documents"
   },
   "detail": {
     "code": "Vehicle code",
@@ -154,5 +155,29 @@
     "unhideNoteOwnerPaused": "The owner has visibility turned off, so the vehicle still will not appear on the marketplace.",
     "unhideSuccess": "XePrime's hide is removed. The vehicle is back on the marketplace.",
     "unhideSuccessOwnerPaused": "XePrime's hide is removed. The vehicle is still paused by its owner."
+  },
+  "insuranceReview": {
+    "title": "Insurance and documents",
+    "hint": "Current vehicle data. The vehicle value sets the damage insurance premium the customer pays and the insurer payout.",
+    "hintLabel": "About insurance and documents",
+    "loadError": "Could not load insurance and document data",
+    "insuredValue": "Declared vehicle value",
+    "insuredValueNone": "Not declared",
+    "referenceValue": "Reference value",
+    "referenceValueDetail": "{amount} ({age}-year-old vehicle, {percent}% of new price)",
+    "referenceNone": "No reference vehicle data to compare",
+    "deviation": "Difference from reference",
+    "deviationWarning": "The declared value differs from the reference by more than {threshold}% - check with the owner before approving.",
+    "eligibility": "Vehicle damage insurance requirements",
+    "eligible": "All requirements met",
+    "registration": "Registration certificate",
+    "registrationNone": "No registration certificate",
+    "holderName": "Owner name",
+    "chassisNumber": "Chassis number",
+    "engineNumber": "Engine number",
+    "plateNumber": "Plate on certificate",
+    "plateMismatch": "The plate on the certificate differs from the declared plate.",
+    "openImage": "Open registration image",
+    "openImageHint": "Each opening is recorded in the system log."
   }
 }

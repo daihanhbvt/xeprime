@@ -8,12 +8,15 @@ import {
   SUPPORT_CASE_CATEGORY_VALUES,
   SUPPORT_CASE_STATUS_META,
   SUPPORT_CASE_STATUS_VALUES,
+  isSupportCaseCategory,
+  isSupportCaseStatus,
   type SupportCaseStatus,
 } from '@xeprime/types';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { positiveIntParam, useUrlFilters } from '@/hooks/use-url-filters';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { SUPPORT_DEFAULT_LIMIT } from '../api';
@@ -24,6 +27,24 @@ import { SupportCaseDetailPanel } from './SupportCaseDetailPanel';
 import styles from './SupportCasesView.module.css';
 
 const MIN_TABLE_WIDTH = 860;
+
+/** Bộ lọc trên URL + case đang mở (`?open=`). */
+interface SupportCaseUrlFilters extends SupportCaseFilters {
+  open?: string;
+}
+
+function parseFilters(params: URLSearchParams): SupportCaseUrlFilters {
+  const status = params.get('status');
+  const category = params.get('category');
+  return {
+    q: params.get('q')?.trim() || undefined,
+    status: isSupportCaseStatus(status) ? status : undefined,
+    category: isSupportCaseCategory(category) ? category : undefined,
+    page: positiveIntParam(params, 'page'),
+    limit: positiveIntParam(params, 'limit'),
+    open: params.get('open') || undefined,
+  };
+}
 
 /**
  * Danh sách + chi tiết case, DÙNG CHUNG cho ba bề mặt (khách / gian hàng / nền tảng).
@@ -37,8 +58,12 @@ export function SupportCasesView({ surface }: { surface: SupportSurface }) {
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
 
-  const [filters, setFilters] = useState<SupportCaseFilters>({});
-  const [openId, setOpenId] = useState<string | null>(null);
+  // Bộ lọc, trang và case đang mở sống ở URL (ADR 0004): F5, nút Back và link từ màn khác (vd.
+  // "Kết luận ở hỗ trợ" của màn Tài chính) đều mở lại đúng chỗ.
+  const { filters, setFilters } = useUrlFilters(parseFilters);
+  const openId = filters.open ?? null;
+  const setOpenId = (id: string | null) =>
+    setFilters({ open: id ?? undefined }, { resetPage: false });
   const [formOpen, setFormOpen] = useState(false);
 
   const { data, isError, isFetching, refetch } = useSupportCases(surface, filters);
@@ -49,10 +74,6 @@ export function SupportCasesView({ surface }: { surface: SupportSurface }) {
   // nhanh nhất để một khiếu nại mất chủ.
   const canWrite = useCanWriteSupportCase(surface);
   const canOpen = surface !== SUPPORT_SURFACE.PLATFORM && canWrite;
-
-  function patch(next: Partial<SupportCaseFilters>) {
-    setFilters((prev) => ({ ...prev, ...next, ...('page' in next ? {} : { page: 1 }) }));
-  }
 
   const filterFields: FilterField[] = [
     { kind: 'search', key: 'q', label: t('filters.search'), placeholder: t('filters.searchPlaceholder') },
@@ -126,7 +147,9 @@ export function SupportCasesView({ surface }: { surface: SupportSurface }) {
       <FilterBar
         fields={filterFields}
         values={{ q: filters.q, status: filters.status, category: filters.category }}
-        onChange={(next) => patch({ q: next.q, status: next.status, category: next.category })}
+        // `FilterBar` gửi đúng TRƯỜNG vừa đổi — ghi thẳng bản vá, dựng lại cả bộ là xoá các ô kia.
+        onChange={(next) => setFilters(next as Partial<SupportCaseUrlFilters>)}
+        onClear={() => setFilters({ q: undefined, status: undefined, category: undefined })}
         actions={openButton}
       />
 
@@ -142,7 +165,7 @@ export function SupportCasesView({ surface }: { surface: SupportSurface }) {
         onRowClick={(row) => setOpenId(row.id)}
         pagination={{
           meta,
-          onChange: (page, limit) => patch({ page, limit }),
+          onChange: (page, limit) => setFilters({ page, limit }),
           totalLabel: (total) => t('page.total', { count: total }),
         }}
       />

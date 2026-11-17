@@ -1,4 +1,4 @@
-import { createPrismaClient, newId } from '@xeprime/prisma';
+import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
@@ -9,6 +9,7 @@ import {
   BILLING_MODE,
   COLLATERAL_MODE,
   FUEL_TYPE,
+  INSURANCE_ELIGIBILITY_GAP,
   LISTING_STATUS,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TYPE,
@@ -21,6 +22,7 @@ import {
   VEHICLE_REVIEW_BASIS,
   VEHICLE_REVIEW_CHECK,
   VEHICLE_REVIEW_CHECK_VALUES,
+  VEHICLE_DOCUMENT_TYPE,
   VEHICLE_TYPE,
   type AccountRealm,
 } from '@xeprime/types';
@@ -28,12 +30,14 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
 import { PlatformVehicleApprovalService } from '../src/modules/platform-admin/platform-vehicle-approval.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
+import type { R2Service } from '../src/modules/storage/r2.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { giveTenantPlan } from './helpers/billing-fixture';
 import {
   giveShopStorefront,
   makeNotificationService,
   makePricingService,
+  makeVehicleInsuranceReviewService,
   makeVehiclesService,
   seedBranch,
 } from './helpers/service-factory';
@@ -67,6 +71,7 @@ const vehicleApprovals = new PlatformVehicleApprovalService(
   audit,
   makePricingService(asService),
   approvals,
+  makeVehicleInsuranceReviewService(asService),
 );
 
 /** Mã chạy — mọi tên/mã xe mang nó để `q` khoanh đúng dữ liệu của spec này trên DB dùng chung. */
@@ -503,8 +508,11 @@ describe('2. Snapshot v2: đủ dữ liệu lúc gửi, bất biến sau đó', 
     // Chủ xe, nguồn đăng, người bấm gửi — ba khái niệm, ba giá trị.
     expect(detail.owner?.name).toBe('Chủ Huế Rental');
     expect(detail.submitter.name).toBe('Nguyễn Văn Minh');
-    // Không một dòng giấy tờ nào: luồng đăng xe không thu đăng ký/đăng kiểm/bảo hiểm.
-    expect(JSON.stringify(detail)).not.toMatch(/document|registration|inspection|insurance/i);
+    // Ảnh chụp LÚC GỬI không mang giấy tờ nào. Cà vẹt + giá trị xe đi ở khối RIÊNG `insuranceReview`
+    // (dữ liệu sống, đợt rà Admin 16/11/2026 - ADR 0089 đã đưa cà vẹt vào luồng tạo ô tô).
+    const { insuranceReview, ...frozen } = detail;
+    expect(JSON.stringify(frozen)).not.toMatch(/document|registration|inspection|insurance/i);
+    expect(insuranceReview).not.toBeNull();
   });
 
   maybe('xe máy: phân khúc + dung tích, không số chỗ; xe điện: quãng đường + pin', async () => {
@@ -1176,5 +1184,137 @@ describe('8. Chủ xe sửa xe khi phiếu còn chờ: phiếu mang bản mới 
       select: { publicStatus: true },
     });
     expect(vehicle.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.DRAFT);
+  });
+});
+
+/*
+ * Khối "Bảo hiểm và giấy tờ" (đợt rà Admin 16/11/2026) — người duyệt thấy giá trị xe, điều kiện bảo
+ * hiểm còn thiếu, dữ liệu cà vẹt; mở ảnh cà vẹt ghi audit mỗi lần.
+ */
+describe('7. Bảo hiểm và giấy tờ: chỉ đọc, dữ liệu sống', () => {
+  /** Kho R2 giả: ký một URL giả, không gọi mạng. */
+  const fakeR2 = {
+    privateEnabled: true,
+    presignPrivateDownload: (key: string) =>
+      Promise.resolve({ downloadUrl: `https://r2.example/${key}?sig=1`, expiresIn: 120 }),
+  } as unknown as R2Service;
+  const review = makeVehicleInsuranceReviewService(asService, { r2: fakeR2, audit });
+
+  async function attachRegistration(vehicleId: string, plateNumber: string): Promise<string> {
+    const vehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: vehicleId },
+      select: { tenantId: true },
+    });
+    const documentId = newId();
+    const fileId = newId();
+    const versionId = newId();
+    await prisma.vehicleDocument.create({
+      data: {
+        id: documentId,
+        tenantId: vehicle.tenantId,
+        vehicleId,
+        type: VEHICLE_DOCUMENT_TYPE.REGISTRATION,
+        holderName: 'Nguyễn Văn A',
+        chassisNumber: 'RLA1234567890ABCD',
+        engineNumber: '2NR1234567',
+        plateNumber,
+      },
+    });
+    await prisma.vehiclePrivateFile.create({
+      data: {
+        id: fileId,
+        tenantId: vehicle.tenantId,
+        vehicleId,
+        purpose: 'vehicle_document',
+        objectKey: `tenants/${vehicle.tenantId}/vehicles/${vehicleId}/documents/${fileId}.jpg`,
+        originalName: 'ca-vet.jpg',
+        mimeType: 'image/jpeg',
+        sizeBytes: 2048,
+        status: 'ready',
+      },
+    });
+    await prisma.vehicleDocumentVersion.create({
+      data: {
+        id: versionId,
+        tenantId: vehicle.tenantId,
+        vehicleId,
+        documentId,
+        privateFileId: fileId,
+        version: 1,
+      },
+    });
+    await prisma.vehicleDocument.update({
+      where: { id: documentId },
+      data: { activeVersionId: versionId },
+    });
+    return documentId;
+  }
+
+  maybe('xe chưa khai giá trị, chưa có cà vẹt: liệt kê đúng điều kiện còn thiếu', async () => {
+    // Ô tô của gian hàng đã gửi duyệt ở đầu bộ (seed không khai giá trị, không có cà vẹt). Phiếu có
+    // thể đã được quyết ở mục 4 - chi tiết vẫn đọc được, khối này luôn là dữ liệu SỐNG.
+    const vehicleId = ids.shopCar;
+    const task = await prisma.approvalTask.findFirstOrThrow({
+      where: { targetType: APPROVAL_TARGET_TYPE.VEHICLE, targetId: vehicleId },
+      orderBy: { submittedAt: 'desc' },
+      select: { id: true },
+    });
+    const detail = await vehicleApprovals.detail(task.id);
+    expect(detail.insuranceReview).toMatchObject({
+      insuredValue: null,
+      referenceValue: null,
+      deviationPercent: null,
+      deviationWarning: false,
+      registration: null,
+    });
+    expect(detail.insuranceReview!.eligibilityGaps).toEqual(
+      expect.arrayContaining([
+        INSURANCE_ELIGIBILITY_GAP.INSURED_VALUE_MISSING,
+        INSURANCE_ELIGIBILITY_GAP.REGISTRATION_MISSING,
+      ]),
+    );
+    // Không có ảnh cà vẹt để mở.
+    await expect(review.registrationImage(vehicleId, reviewerA)).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+
+  maybe('cà vẹt có ảnh: hiện số khung/máy, cảnh báo biển số lệch, mở ảnh ghi audit', async () => {
+    const vehicleId = await seedVehicle(shopTenantId, {
+      insuredValue: new Prisma.Decimal(500_000_000),
+    });
+    const documentId = await attachRegistration(vehicleId, '30K-999.99');
+    const result = await review.review(vehicleId);
+    expect(result!.insuredValue).toBe('500000000');
+    expect(result!.registration).toMatchObject({
+      documentId,
+      holderName: 'Nguyễn Văn A',
+      chassisNumber: 'RLA1234567890ABCD',
+      engineNumber: '2NR1234567',
+      plateMatches: false,
+      hasImage: true,
+    });
+    expect(result!.eligibilityGaps).not.toContain(INSURANCE_ELIGIBILITY_GAP.REGISTRATION_MISSING);
+    expect(result!.eligibilityGaps).not.toContain(INSURANCE_ELIGIBILITY_GAP.INSURED_VALUE_MISSING);
+
+    // Biển số cùng chữ số, khác dấu ⇒ khớp.
+    const plate = (await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicleId } }))
+      .plateNumber!;
+    await prisma.vehicleDocument.update({
+      where: { id: documentId },
+      data: { plateNumber: plate.replace(/[-.]/g, ' ').toLowerCase() },
+    });
+    expect((await review.review(vehicleId))!.registration!.plateMatches).toBe(true);
+
+    const before = await prisma.auditLog.count({
+      where: { action: 'vehicle_document.view_registration_image', targetId: documentId },
+    });
+    const image = await review.registrationImage(vehicleId, reviewerA);
+    expect(image.url).toContain(`/vehicles/${vehicleId}/documents/`);
+    expect(image.expiresIn).toBe(120);
+    const after = await prisma.auditLog.count({
+      where: { action: 'vehicle_document.view_registration_image', targetId: documentId },
+    });
+    expect(after).toBe(before + 1);
   });
 });

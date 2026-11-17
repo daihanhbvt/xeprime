@@ -56,12 +56,13 @@ export const queryKeys = {
     list: (params: QueryParams) => ['vehicle-approvals', 'list', params] as const,
     detail: (id: string) => ['vehicle-approvals', 'detail', id] as const,
   },
-  /** Màn "Vận hành chuyến" của nền tảng - `/platform/trips` (bốn hàng đợi + nhắc chủ xe). */
+  /** Màn "Vận hành chuyến" của nền tảng - `/platform/trips` (các hàng đợi + nhắc chủ xe). */
   platformTrips: {
     all: ['platform-trips'] as const,
     summary: (params: QueryParams) => ['platform-trips', 'summary', params] as const,
     requests: (params: QueryParams) => ['platform-trips', 'requests', params] as const,
     bookings: (params: QueryParams) => ['platform-trips', 'bookings', params] as const,
+    drivers: (params: QueryParams) => ['platform-trips', 'drivers', params] as const,
   },
   /** Màn "Xe toàn hệ thống" của nền tảng - `/platform/vehicles` (giám sát + ẩn/gỡ ẩn). */
   platformVehicles: {
@@ -208,6 +209,8 @@ export const queryKeys = {
   vehicleData: {
     all: ['vehicle-data'] as const,
     list: (params: QueryParams) => ['vehicle-data', 'list', params] as const,
+    /** Số xe chuẩn theo từng dòng xe của một hãng - tab Mẫu xe (ADR 0096). */
+    modelCounts: (params: QueryParams) => ['vehicle-data', 'model-counts', params] as const,
     detail: (id: string) => ['vehicle-data', 'detail', id] as const,
     imports: (params: QueryParams) => ['vehicle-data', 'imports', params] as const,
     importDetail: (id: string) => ['vehicle-data', 'import', id] as const,
@@ -294,6 +297,9 @@ export const queryKeys = {
     /** Thời gian chết mặc định của gian hàng theo loại xe (06/11/2026). */
     operationDefaults: (vehicleType: string) =>
       ['rental-policies', 'operation-defaults', vehicleType] as const,
+    /** Xe kế thừa chính sách mà thiếu dữ liệu bảo hiểm - cảnh báo khi chọn Bắt buộc (ADR 0091). */
+    insuranceImpact: (vehicleType: string) =>
+      ['rental-policies', 'insurance-impact', vehicleType] as const,
   },
   bookings: {
     all: ['bookings'] as const,
@@ -676,6 +682,14 @@ export const queryKeys = {
     all: ['platform-withdrawals'] as const,
     list: (params: QueryParams) => ['platform-withdrawals', 'list', params] as const,
   },
+  /** Ví điểm của MỘT chủ ví nhìn từ admin (đợt rà Admin 16/11/2026) - chỉ đọc. */
+  platformWallets: {
+    all: ['platform-wallets'] as const,
+    summary: (ownerType: string, ownerId: string) =>
+      ['platform-wallets', ownerType, ownerId, 'summary'] as const,
+    entries: (ownerType: string, ownerId: string, params: QueryParams) =>
+      ['platform-wallets', ownerType, ownerId, 'entries', params] as const,
+  },
   /** Lịch sử giao dịch HỢP NHẤT của khách - `GET /account/transactions`. */
   accountTransactions: {
     all: ['account-transactions'] as const,
@@ -708,6 +722,10 @@ export const queryKeys = {
     list: (params: QueryParams) => ['platform-insurance', 'list', params] as const,
     /** Chi tiết một hợp đồng kèm payload đối tác (ADR 0064). */
     detail: (id: string) => ['platform-insurance', 'detail', id] as const,
+    /** Phí thực tế của một hợp đồng - giá trị xe, bậc, phí thu, phí MIC (ADR 0091). */
+    pricing: (id: string) => ['platform-insurance', 'pricing', id] as const,
+    /** Hợp đồng cần xử lý gấp - quá 2 giờ chưa cấp, MIC chưa nhận ảnh (ADR 0091). */
+    attention: ['platform-insurance', 'attention'] as const,
     /** Danh mục sản phẩm phía quản trị (ADR 0064). */
     products: ['platform-insurance', 'products'] as const,
     /** Bảng kê trả phí cho hãng (ADR 0088 điều 6). */
@@ -765,6 +783,8 @@ export const queryKeys = {
     list: () => ['fee-policies', 'list'] as const,
     /** `/public/fee-policies/partner-offer` - % hoa hồng trần cho lời mời hợp tác. */
     partnerOffer: () => ['fee-policies', 'partner-offer'] as const,
+    /** `/public/fee-policies/booking-limits` - trần đặt trước / độ dài tự lái của khách (ADR 0091). */
+    bookingLimits: () => ['fee-policies', 'booking-limits'] as const,
   },
   /**
    * MÃ KHUYẾN MÃI nền tảng - màn QUẢN TRỊ (ADR 0046).

@@ -26,7 +26,6 @@ const BASE = {
   freeCancelHours: 2,
   depositPercent: 15,
   depositMinAmount: '0',
-  depositMaxPercent: 30,
   taxEnabled: true,
   taxRates: TAX_RATES_DEFAULTS,
   taxLegalBasis: 'NĐ 117/2025/NĐ-CP · NĐ 68/2026/NĐ-CP',

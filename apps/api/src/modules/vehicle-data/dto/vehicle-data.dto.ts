@@ -195,10 +195,62 @@ export class VehicleDataSummaryDto {
   incomplete!: number;
 }
 
+/**
+ * Số xe chuẩn theo từng DÒNG xe của một hãng - tab Mẫu xe (ADR 0096) dùng để đánh dấu và mở sẵn
+ * dòng có xe chờ duyệt / thiếu dữ liệu, và để biết dòng nào khớp bộ lọc xe. Chỉ dòng có ít nhất một
+ * xe chuẩn mới có mặt; dòng xe mới do chủ xe gõ (chờ duyệt) cũng có, kèm `modelPending`.
+ */
+export class VehicleDataModelCountDto {
+  @ApiProperty() modelId!: string;
+  @ApiProperty() modelLabel!: string;
+  @ApiProperty({ description: 'Dòng xe do chủ xe gõ mới, chưa duyệt' }) modelPending!: boolean;
+  @ApiProperty() total!: number;
+  @ApiProperty() active!: number;
+  @ApiProperty() hidden!: number;
+  @ApiProperty() pending!: number;
+  @ApiProperty({ description: 'Đang gợi ý nhưng còn thiếu thông số / giá bán / giá thuê' })
+  incomplete!: number;
+  @ApiProperty({ description: 'Số xe khớp bộ lọc (search/status/gap/origin); không lọc = total' })
+  matched!: number;
+}
+
 export class VehicleDataPageDto {
   @ApiProperty({ type: [VehicleDataListItemDto] }) data!: VehicleDataListItemDto[];
   @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
   @ApiProperty({ type: VehicleDataSummaryDto }) summary!: VehicleDataSummaryDto;
+}
+
+/** Bộ lọc của số đếm theo dòng - PHẢI có loại xe + hãng: một hãng là phạm vi có giới hạn. */
+export class VehicleDataModelCountsQueryDto {
+  @ApiProperty({ enum: VEHICLE_TYPE_VALUES })
+  @IsIn(VEHICLE_TYPE_VALUES)
+  vehicleType!: string;
+
+  @ApiProperty()
+  @Matches(CATALOG_KEY_PATTERN)
+  brandKey!: string;
+
+  @ApiPropertyOptional({ description: 'Tìm theo hãng / dòng xe / phiên bản (không dấu)' })
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(100)
+  search?: string;
+
+  @ApiPropertyOptional({ enum: VEHICLE_DATA_STATUS_VALUES })
+  @IsOptional()
+  @IsIn(VEHICLE_DATA_STATUS_VALUES)
+  status?: string;
+
+  @ApiPropertyOptional({ enum: VEHICLE_DATA_ORIGIN_VALUES })
+  @IsOptional()
+  @IsIn(VEHICLE_DATA_ORIGIN_VALUES)
+  origin?: string;
+
+  @ApiPropertyOptional({ enum: VEHICLE_DATA_GAP_FILTER_VALUES })
+  @IsOptional()
+  @IsIn(VEHICLE_DATA_GAP_FILTER_VALUES)
+  gap?: string;
 }
 
 export class VehicleDataListQueryDto {

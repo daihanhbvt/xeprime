@@ -9,9 +9,11 @@ import {
 } from '@ant-design/icons';
 import { App, Button, Segmented, Tag } from 'antd';
 import { useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   CATALOG_ITEM_TYPES,
   CATALOG_TYPE,
+  CATALOG_TYPE_VALUES,
   CATALOG_TYPES_WITH_ICON,
   STATUS_COLOR,
   type CatalogItemType,
@@ -32,6 +34,7 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import styles from './catalog-page.module.css';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 
 const MIN_TABLE_WIDTH = 900;
 
@@ -56,7 +59,20 @@ export default function AdminCatalogPage() {
    * một panel khác chứ không phải một tab nữa của cùng bảng. Nó vẫn nằm chung màn hình này vì
    * với người quản trị thì đó vẫn là "danh mục xe".
    */
-  const [type, setType] = useState<CatalogType>(CATALOG_TYPE.BODY_TYPE);
+  // Tab nằm trên URL (`?type=`, ADR 0004): link thẳng tới tab Mẫu xe (ADR 0096) và F5 giữ đúng tab.
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const requestedType = searchParams.get('type');
+  const type: CatalogType = (CATALOG_TYPE_VALUES as readonly string[]).includes(requestedType ?? '')
+    ? (requestedType as CatalogType)
+    : CATALOG_TYPE.BODY_TYPE;
+  /** Đổi tab = bỏ mọi tham số của tab trước (hãng, bộ lọc, panel đang mở). */
+  const setType = (next: CatalogType) =>
+    router.replace(
+      next === CATALOG_TYPE.BODY_TYPE ? pathname : `${pathname}?type=${encodeURIComponent(next)}`,
+      { scroll: false },
+    );
   const isModelTab = type === CATALOG_TYPE.VEHICLE_MODEL;
   const { data, isError, refetch, isFetching } = useAdminCatalog(type as CatalogItemType);
   const remove = useDeleteCatalogItem();
@@ -162,7 +178,7 @@ export default function AdminCatalogPage() {
       render: (_, item) =>
         item.vehicleTypes.length === 0
           ? tCol('allVehicleTypes')
-          : item.vehicleTypes.map((v) => domainLabel('vehicleType', v)).join(' · '),
+          : item.vehicleTypes.map((v) => domainLabel('vehicleType', v)).join(LIST_SEPARATOR),
     },
     // Kiểu dáng: có thẻ ở khối "Loại xe" trang chủ hay không (công tắc trong form sửa).
     ...(type === CATALOG_TYPE.BODY_TYPE

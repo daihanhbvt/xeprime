@@ -368,7 +368,7 @@
       },
       "privacy": {
         "title": "Quyền riêng tư",
-        "body": "Số điện thoại, email và số giấy tờ đã được che một phần ngay từ máy chủ. Màn này không hiện bản đầy đủ hay file giấy tờ - các thông tin đó chỉ mở ở màn chuyên trách, theo quyền riêng và có ghi nhật ký."
+        "body": "Số điện thoại, email và số giấy tờ đã được che một phần ngay từ máy chủ. Người có quyền xem được số điện thoại, email đầy đủ ngay tại đây - mỗi lần xem đều ghi nhật ký. Số giấy tờ và file giấy tờ chỉ mở ở màn chuyên trách."
       }
     },
     "billing": {

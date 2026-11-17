@@ -32,6 +32,7 @@ import { GatewayOrderDrawer } from './GatewayOrderDrawer';
 import { QueueViewSwitch } from './QueueViewSwitch';
 import { WaitingAgeText } from './WaitingAgeText';
 import styles from './GatewayOrderQueue.module.css';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 
 const MIN_TABLE_WIDTH = 960;
 
@@ -232,7 +233,9 @@ export function GatewayOrderQueue() {
           />
         </div>
         <p className={styles.cardContent}>
-          {domainLabel('paymentGatewayProvider', row.provider)} · {row.tenantName}
+          {domainLabel('paymentGatewayProvider', row.provider)}
+          {LIST_SEPARATOR}
+          {row.tenantName}
         </p>
         {row.reviewReason ? (
           <p className={styles.cardContent}>

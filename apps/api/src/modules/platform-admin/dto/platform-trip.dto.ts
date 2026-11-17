@@ -1,8 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   BOOKING_REQUEST_STATUS_LIVE_VALUES,
+  DRIVER_ASSIGNMENT_STATUS_VALUES,
   PICKUP_PREFERENCE_VALUES,
   PLATFORM_TRIP_BOOKING_QUEUES,
+  PLATFORM_TRIP_DRIVER_ISSUE_VALUES,
   PLATFORM_TRIP_REQUEST_QUEUES,
   SERVICE_TYPE_VALUES,
   TENANT_STATUS_VALUES,
@@ -13,6 +15,7 @@ import {
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
+import { PlatformBookingDto } from './platform-booking.dto';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -63,6 +66,9 @@ export class PlatformTripBookingListQueryDto extends TripQueueQueryDto {
   queue!: PlatformTripBookingQueue;
 }
 
+/** Hàng đợi tài xế — đơn `with_driver` kẹt khâu tài xế (ADR 0066 · 0067 · 0074). */
+export class PlatformTripDriverListQueryDto extends TripQueueQueryDto {}
+
 /** Dải tóm tắt — toàn sàn, hoặc khoanh theo một gian hàng (link từ hồ sơ đối tác). */
 export class PlatformTripSummaryQueryDto {
   @ApiPropertyOptional({ description: 'Giới hạn theo gian hàng (ULID)' })
@@ -84,6 +90,14 @@ export class PlatformTripQueueCountsDto {
   @ApiProperty({ type: PlatformTripQueueCountDto }) awaiting_hold!: PlatformTripQueueCountDto;
   @ApiProperty({ type: PlatformTripQueueCountDto }) pickup_soon!: PlatformTripQueueCountDto;
   @ApiProperty({ type: PlatformTripQueueCountDto }) active!: PlatformTripQueueCountDto;
+  @ApiProperty({ type: PlatformTripQueueCountDto }) driver!: PlatformTripQueueCountDto;
+}
+
+/** Số đơn của từng nhóm vấn đề tài xế — khoá là `PLATFORM_TRIP_DRIVER_ISSUE`, cộng lại = hàng đợi `driver`. */
+export class PlatformTripDriverIssueCountsDto {
+  @ApiProperty() dropped!: number;
+  @ApiProperty() response_overdue!: number;
+  @ApiProperty() unassigned!: number;
 }
 
 /** Hôm nay (giờ Việt Nam) có bao nhiêu lượt giao xe và trả xe theo lịch. */
@@ -99,6 +113,8 @@ export class PlatformTripSummaryDto {
   generatedAt!: string;
   @ApiProperty({ type: PlatformTripTodayDto }) today!: PlatformTripTodayDto;
   @ApiProperty({ type: PlatformTripQueueCountsDto }) queues!: PlatformTripQueueCountsDto;
+  @ApiProperty({ type: PlatformTripDriverIssueCountsDto })
+  driverIssues!: PlatformTripDriverIssueCountsDto;
 }
 
 /**
@@ -182,4 +198,36 @@ export class PlatformTripRequestPageDto {
 export class PlatformTripRemindResultDto {
   @ApiProperty() requestId!: string;
   @ApiProperty({ description: 'ISO-8601 UTC' }) remindedAt!: string;
+}
+
+/**
+ * Một đơn trong hàng đợi TÀI XẾ — dòng đơn chuẩn kèm vấn đề tài xế và mốc của nó. SĐT khách vẫn
+ * che (cùng luật `PlatformBookingDto`); SĐT CHỦ GIAN HÀNG hiện đủ — gọi bên thuê là việc của hàng đợi
+ * này. Không có SĐT tài xế: liên hệ tài xế là việc của bên thuê.
+ */
+export class PlatformTripDriverDto extends PlatformBookingDto {
+  @ApiProperty({ enum: PLATFORM_TRIP_DRIVER_ISSUE_VALUES }) driverIssue!: string;
+  @ApiProperty({ description: 'Quá hạn, hoặc còn dưới mốc khẩn 2 giờ tới giờ nhận (ADR 0067)' })
+  urgent!: boolean;
+  @ApiProperty({
+    description:
+      'Mốc của vấn đề - ISO-8601 UTC: hạn điều phối lại (`dropped`), hạn tài xế trả lời ' +
+      '(`response_overdue`), giờ nhận xe (`unassigned`)',
+  })
+  deadlineAt!: string;
+  @ApiPropertyOptional({ enum: DRIVER_ASSIGNMENT_STATUS_VALUES, type: String, nullable: true })
+  driverAssignmentStatus!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tên tài xế đang được gán' })
+  driverName!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) driverRespondBy!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) driverDroppedAt!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) driverReassignBy!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) ownerName!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'SĐT chủ gian hàng - để gọi' })
+  ownerPhone!: string | null;
+}
+
+export class PlatformTripDriverPageDto {
+  @ApiProperty({ type: [PlatformTripDriverDto] }) data!: PlatformTripDriverDto[];
+  @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
 }

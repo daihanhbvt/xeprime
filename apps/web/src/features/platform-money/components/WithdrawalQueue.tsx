@@ -1,23 +1,32 @@
 'use client';
 
-import { App, Alert, Button } from 'antd';
+import { DownloadOutlined } from '@ant-design/icons';
+import { App, Alert, Button, DatePicker, Tag } from 'antd';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
+  PERMISSION,
   WITHDRAWAL_STATUS,
   WITHDRAWAL_STATUS_META,
   WALLET_OWNER_TYPE,
+  WALLET_OWNER_TYPE_VALUES,
   type WithdrawalStatus,
 } from '@xeprime/types';
 import { CopyButton } from '@/components/data-display/CopyButton';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
 import { ReasonDialog } from '@/components/overlay/ReasonDialog';
-import { positiveIntParam, useUrlFilters } from '@/hooks/use-url-filters';
+import { PlatformWalletDrawer } from '@/features/platform-wallets/components/PlatformWalletDrawer';
+import type { PlatformWalletOwner } from '@/features/platform-wallets/types';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import { usePermissions } from '@/hooks/use-permissions';
+import { enumParam, positiveIntParam, useUrlFilters } from '@/hooks/use-url-filters';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { MONEY_DEFAULT_LIMIT } from '../api';
+import { dayjs, nowInAppTz } from '@/lib/datetime';
+import { MONEY_DEFAULT_LIMIT, withdrawalMonthExportUrl } from '../api';
 import {
   useApproveWithdrawal,
   useRejectWithdrawal,
@@ -30,9 +39,12 @@ import { QueueViewSwitch } from './QueueViewSwitch';
 import { useWaitingAgeLabel } from './WaitingAgeText';
 import { WithdrawalPaidModal } from './WithdrawalPaidModal';
 import styles from './MoneyQueue.module.css';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 
 /** Bốn cột cố định (700px) + cột chủ ví tối thiểu 180px — vừa vùng nội dung ở 1366px trở lên. */
 const MIN_TABLE_WIDTH = 880;
+/** Tháng của bảng kê — cùng dạng `YYYY-MM` với server. */
+const MONTH_FORMAT = 'YYYY-MM';
 /** Cùng sàn với `RejectWithdrawalDto` / `ReverseWithdrawalDto`. */
 const REASON_MIN = 3;
 const REASON_MAX = 500;
@@ -61,6 +73,8 @@ const HISTORY_STATUS: Partial<Record<View, WithdrawalStatus>> = {
 
 interface WithdrawalUrlFilters {
   view?: Exclude<View, typeof VIEW.ACTIONABLE>;
+  q?: string;
+  ownerType?: string;
   page?: number;
 }
 
@@ -71,6 +85,8 @@ function parse(params: URLSearchParams): WithdrawalUrlFilters {
       view && view !== VIEW.ACTIONABLE && (VIEW_VALUES as string[]).includes(view)
         ? (view as WithdrawalUrlFilters['view'])
         : undefined,
+    q: params.get('q') ?? undefined,
+    ownerType: enumParam(params, 'ownerType', WALLET_OWNER_TYPE_VALUES),
     page: positiveIntParam(params, 'page'),
   };
 }
@@ -95,6 +111,11 @@ export function WithdrawalQueue() {
   const errorMessage = useErrorMessage();
   const { filters, setFilters } = useUrlFilters(parse);
   const ageLabel = useWaitingAgeLabel();
+  const { has } = usePermissions();
+  const me = useCurrentUser().data?.id ?? null;
+  const canViewWallet = has(PERMISSION.PLATFORM_WALLET_VIEW);
+  const [walletOwner, setWalletOwner] = useState<PlatformWalletOwner | null>(null);
+  const [exportMonth, setExportMonth] = useState(() => nowInAppTz().format(MONTH_FORMAT));
 
   const view: View = filters.view ?? VIEW.ACTIONABLE;
   const [paidTarget, setPaidTarget] = useState<PlatformWithdrawal | null>(null);
@@ -104,6 +125,8 @@ export function WithdrawalQueue() {
   const { data, isFetching, isError, refetch } = useWithdrawalQueue({
     overdue: view === VIEW.OVERDUE,
     status: HISTORY_STATUS[view] ?? null,
+    q: filters.q,
+    ownerType: filters.ownerType,
     page: filters.page,
   });
   const approve = useApproveWithdrawal();
@@ -112,6 +135,29 @@ export function WithdrawalQueue() {
 
   const items = data?.items ?? [];
   const overdueCount = data?.overdueCount ?? 0;
+  const searching = Boolean(filters.q || filters.ownerType);
+  /** Lệnh lớn: người đã duyệt không tự bấm "Đã chuyển" — server chặn, ở đây ẩn nút và nói lý do. */
+  const blockedForMe = (row: PlatformWithdrawal) =>
+    row.requiresSecondPerson && me != null && row.reviewedById === me;
+
+  const filterFields: FilterField[] = [
+    {
+      kind: 'search',
+      key: 'q',
+      label: t('filters.search'),
+      placeholder: t('filters.searchPlaceholder'),
+    },
+    {
+      kind: 'select',
+      key: 'ownerType',
+      label: t('filters.ownerType'),
+      allowClear: true,
+      options: WALLET_OWNER_TYPE_VALUES.map((value) => ({
+        value,
+        label: value === WALLET_OWNER_TYPE.TENANT ? t('ownerType.tenant') : t('ownerType.user'),
+      })),
+    },
+  ];
 
   const viewLabel: Record<View, string> = {
     [VIEW.ACTIONABLE]: t('views.actionable'),
@@ -157,7 +203,9 @@ export function WithdrawalQueue() {
         <div className={styles.stack}>
           <span className={styles.inlineCode}>
             <span className={styles.mono}>
-              {row.bankCode} · {row.bankAccountNumber}
+              {row.bankCode}
+              {LIST_SEPARATOR}
+              {row.bankAccountNumber}
             </span>
             <CopyButton value={row.bankAccountNumber} label={t('columns.account')} />
           </span>
@@ -192,6 +240,20 @@ export function WithdrawalQueue() {
               {t('columns.age', { age: ageLabel(waitingAge(row.createdAt)) })}
             </span>
           ) : null}
+          {row.reviewedByName ? (
+            <span className={styles.tertiary}>{t('reviewedBy', { name: row.reviewedByName })}</span>
+          ) : null}
+          {row.status === WITHDRAWAL_STATUS.APPROVED && row.requiresSecondPerson ? (
+            <Tag className={styles.statusTag}>{t('secondPersonTag')}</Tag>
+          ) : null}
+          {row.status === WITHDRAWAL_STATUS.APPROVED && blockedForMe(row) ? (
+            <span className={styles.secondary}>
+              {t('secondPerson', { amount: fmt.money(data?.dualControlMinAmount ?? '0') })}
+            </span>
+          ) : null}
+          {row.paidByName ? (
+            <span className={styles.tertiary}>{t('paidBy', { name: row.paidByName })}</span>
+          ) : null}
           {row.status === WITHDRAWAL_STATUS.PAID && row.bankReference ? (
             <span className={styles.secondary}>
               {t('columns.paidReference', { reference: row.bankReference })}
@@ -224,7 +286,7 @@ export function WithdrawalQueue() {
           key: 'paid',
           label: t('actions.markPaid'),
           primary: true,
-          hidden: row.status !== WITHDRAWAL_STATUS.APPROVED,
+          hidden: row.status !== WITHDRAWAL_STATUS.APPROVED || blockedForMe(row),
           onClick: () => setPaidTarget(row),
         },
         {
@@ -241,6 +303,18 @@ export function WithdrawalQueue() {
           danger: true,
           hidden: row.status !== WITHDRAWAL_STATUS.PAID,
           onClick: () => setReverseTarget(row),
+        },
+        {
+          key: 'wallet',
+          label: t('wallet'),
+          hidden: !canViewWallet || !row.ownerId,
+          onClick: () =>
+            row.ownerId &&
+            setWalletOwner({
+              ownerType: row.ownerType,
+              ownerId: row.ownerId,
+              ownerName: row.ownerName,
+            }),
         },
       ],
       { width: 190, maxInline: 1 },
@@ -262,6 +336,36 @@ export function WithdrawalQueue() {
         />
       ) : null}
 
+      <FilterBar
+        fields={filterFields}
+        values={{ q: filters.q, ownerType: filters.ownerType }}
+        // `FilterBar` gửi đúng TRƯỜNG vừa đổi — ghi thẳng bản vá đó, không dựng lại cả bộ.
+        onChange={(patch) => setFilters(patch as Partial<WithdrawalUrlFilters>)}
+        onClear={() => setFilters({ q: undefined, ownerType: undefined })}
+      />
+
+      <div className={styles.exportBar}>
+        <DatePicker
+          picker="month"
+          value={dayjs(exportMonth, MONTH_FORMAT)}
+          allowClear={false}
+          aria-label={t('export.month')}
+          disabledDate={(day) => day.isAfter(nowInAppTz(), 'month')}
+          onChange={(value) => {
+            if (value) setExportMonth(value.format(MONTH_FORMAT));
+          }}
+        />
+        {/* Thẻ <a> tải thẳng bằng cookie phiên — server ghi audit mỗi lượt tải. */}
+        <Button
+          icon={<DownloadOutlined />}
+          href={withdrawalMonthExportUrl(exportMonth)}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {t('export.button')}
+        </Button>
+      </div>
+
       <QueueViewSwitch<View>
         label={t('views.label')}
         value={view}
@@ -278,7 +382,7 @@ export function WithdrawalQueue() {
         minWidth={MIN_TABLE_WIDTH}
         loading={isFetching}
         error={isError && !data ? { title: t('loadError'), onRetry: () => void refetch() } : null}
-        filtered={view !== VIEW.ACTIONABLE}
+        filtered={view !== VIEW.ACTIONABLE || searching}
         empty={{ title: t('empty') }}
         noResults={{ title: t('emptyView') }}
         pagination={{
@@ -292,6 +396,8 @@ export function WithdrawalQueue() {
           totalLabel: (total) => t('total', { count: total }),
         }}
       />
+
+      <PlatformWalletDrawer owner={walletOwner} onClose={() => setWalletOwner(null)} />
 
       <WithdrawalPaidModal
         withdrawal={paidTarget}

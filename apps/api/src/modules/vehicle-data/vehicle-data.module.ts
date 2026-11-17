@@ -28,6 +28,7 @@ import { VehicleDataService } from './vehicle-data.service';
     VehicleDataSuggestionService,
     VehicleDataImportService,
   ],
-  exports: [VehicleDataService],
+  // Gợi ý giá trị xe: màn duyệt xe của nền tảng so giá trị khai với cùng con số chủ xe thấy.
+  exports: [VehicleDataService, VehicleDataSuggestionService],
 })
 export class VehicleDataModule {}

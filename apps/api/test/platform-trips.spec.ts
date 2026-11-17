@@ -4,10 +4,13 @@ import {
   API_ERROR_CODE,
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
+  DRIVER_ASSIGNMENT_STATUS,
   FEE_POLICY_STATUS,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TYPE,
+  PLATFORM_TRIP_DRIVER_ISSUE,
   PLATFORM_TRIP_QUEUE,
+  SERVICE_TYPE,
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_TYPE,
@@ -17,6 +20,7 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { PlatformBookingsService } from '../src/modules/platform-admin/platform-bookings.service';
 import { PlatformTripsService } from '../src/modules/platform-admin/platform-trips.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { cleanupDriverAccounts, seedDriverLink } from './helpers/driver-link';
 import { makeNotificationService } from './helpers/service-factory';
 
 /**
@@ -359,5 +363,176 @@ describe('Vận hành chuyến — nhắc tay chủ xe', () => {
     await expect(trips.remind(newId(), adminId, NOW)).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.NOT_FOUND },
     });
+  });
+});
+
+/*
+ * Hàng đợi TÀI XẾ (đợt rà Admin 16/11/2026) — ba nhóm loại trừ nhau: tài xế đã rút chưa ai nhận lại,
+ * lượt gán quá hạn trả lời, sắp nhận xe mà chưa có tài xế nhận. Gian hàng RIÊNG để các đơn có tài xế
+ * không làm lệch số đếm "sắp giao" của bộ trên.
+ */
+describe('Vận hành chuyến — hàng đợi tài xế', () => {
+  let driverTenantId: string;
+  let driverVehicleId: string;
+  const rows: Record<string, string> = {};
+
+  beforeAll(async () => {
+    if (!dbAvailable) return;
+    driverTenantId = newId();
+    driverVehicleId = newId();
+    await prisma.tenant.create({
+      data: {
+        id: driverTenantId,
+        code: `T-${driverTenantId.slice(-8)}`,
+        slug: `t-${driverTenantId.toLowerCase().slice(-10)}`,
+        name: `DriverShop-${tag}`,
+        status: TENANT_STATUS.ACTIVE,
+        ownerUserId: ownerId,
+      },
+    });
+    await prisma.vehicle.create({
+      data: {
+        id: driverVehicleId,
+        tenantId: driverTenantId,
+        code: `XE-${driverVehicleId.slice(-6)}`,
+        name: `Innova-${tag}`,
+        vehicleType: VEHICLE_TYPE.CAR,
+      },
+    });
+
+    const mk = async (
+      key: string,
+      opts: {
+        pickupMs: number;
+        driver?: 'pending' | 'accepted';
+        respondByMs?: number;
+        dropped?: { droppedMs: number; reassignByMs: number };
+        status?: string;
+        serviceType?: string;
+      },
+    ) => {
+      const id = newId();
+      rows[key] = id;
+      const link = opts.driver
+        ? await seedDriverLink(asService, { tenantId: driverTenantId })
+        : null;
+      const pending = opts.driver === 'pending';
+      await prisma.booking.create({
+        data: {
+          id,
+          tenantId: driverTenantId,
+          vehicleId: driverVehicleId,
+          code: `DR-${id.slice(-6)}`,
+          customerName: `Khach-${key}`,
+          customerPhone: '0912345678',
+          status: opts.status ?? BOOKING_STATUS.RESERVED,
+          serviceType: opts.serviceType ?? SERVICE_TYPE.WITH_DRIVER,
+          pickupAt: new Date(NOW.getTime() + opts.pickupMs),
+          returnAt: new Date(NOW.getTime() + opts.pickupMs + DAY),
+          totalAmount: '1000000',
+          ...(link
+            ? {
+                driverId: link.driverId,
+                driverUserId: link.userId,
+                driverAssignmentStatus: pending
+                  ? DRIVER_ASSIGNMENT_STATUS.PENDING
+                  : DRIVER_ASSIGNMENT_STATUS.ACCEPTED,
+                driverAssignedAt: new Date(NOW.getTime() - HOUR),
+                driverRespondBy: pending
+                  ? new Date(NOW.getTime() + (opts.respondByMs ?? 30 * MINUTE))
+                  : null,
+              }
+            : {}),
+          ...(opts.dropped
+            ? {
+                driverDroppedAt: new Date(NOW.getTime() + opts.dropped.droppedMs),
+                driverReassignBy: new Date(NOW.getTime() + opts.dropped.reassignByMs),
+              }
+            : {}),
+        },
+      });
+    };
+
+    // Vào hàng đợi.
+    await mk('unassignedSoon', { pickupMs: HOUR }); // còn 1 giờ, chưa ai ⇒ KHẨN
+    await mk('unassignedLater', { pickupMs: 10 * HOUR });
+    await mk('pendingInTime', { pickupMs: 5 * HOUR, driver: 'pending', respondByMs: 20 * MINUTE });
+    await mk('pendingOverdue', { pickupMs: 3 * DAY, driver: 'pending', respondByMs: -5 * MINUTE });
+    await mk('droppedOverdue', {
+      pickupMs: 3 * DAY + HOUR,
+      dropped: { droppedMs: -2 * HOUR, reassignByMs: -10 * MINUTE },
+    });
+    // Không vào hàng đợi.
+    await mk('droppedNotDue', {
+      pickupMs: 3 * DAY + 2 * HOUR,
+      dropped: { droppedMs: -HOUR, reassignByMs: 2 * HOUR },
+    });
+    await mk('accepted', { pickupMs: HOUR, driver: 'accepted' });
+    await mk('far', { pickupMs: 3 * DAY + 3 * HOUR });
+    await mk('selfDrive', { pickupMs: HOUR, serviceType: SERVICE_TYPE.SELF_DRIVE });
+    await mk('active', { pickupMs: -HOUR, status: BOOKING_STATUS.ACTIVE });
+  });
+
+  afterAll(async () => {
+    if (!dbAvailable) return;
+    await prisma.booking.deleteMany({ where: { tenantId: driverTenantId } });
+    await cleanupDriverAccounts(asService);
+    await prisma.vehicle.deleteMany({ where: { tenantId: driverTenantId } });
+    await prisma.tenant.deleteMany({ where: { id: driverTenantId } });
+  });
+
+  maybe('tóm tắt: đếm đúng ba nhóm, khẩn = quá hạn hoặc còn dưới 2 giờ', async () => {
+    const summary = await trips.summary({ tenantId: driverTenantId }, NOW);
+    expect(summary.queues[PLATFORM_TRIP_QUEUE.DRIVER]).toEqual({ count: 5, urgentCount: 3 });
+    expect(summary.driverIssues).toEqual({
+      [PLATFORM_TRIP_DRIVER_ISSUE.DROPPED]: 1,
+      [PLATFORM_TRIP_DRIVER_ISSUE.RESPONSE_OVERDUE]: 1,
+      [PLATFORM_TRIP_DRIVER_ISSUE.UNASSIGNED]: 3,
+    });
+  });
+
+  maybe('danh sách: giờ nhận gần nhất lên đầu, nhãn + mốc khớp nhóm đã đếm', async () => {
+    const res = await trips.drivers({ tenantId: driverTenantId }, NOW);
+    expect(ids(res)).toEqual([
+      rows.unassignedSoon,
+      rows.pendingInTime,
+      rows.unassignedLater,
+      rows.pendingOverdue,
+      rows.droppedOverdue,
+    ]);
+    const byId = new Map(res.data.map((r) => [r.id, r]));
+    expect(byId.get(rows.unassignedSoon!)).toMatchObject({
+      driverIssue: PLATFORM_TRIP_DRIVER_ISSUE.UNASSIGNED,
+      urgent: true,
+      deadlineAt: new Date(NOW.getTime() + HOUR).toISOString(),
+      driverName: null,
+    });
+    expect(byId.get(rows.pendingInTime!)).toMatchObject({
+      driverIssue: PLATFORM_TRIP_DRIVER_ISSUE.UNASSIGNED,
+      urgent: false,
+      driverAssignmentStatus: DRIVER_ASSIGNMENT_STATUS.PENDING,
+    });
+    expect(byId.get(rows.pendingInTime!)!.driverName).not.toBeNull();
+    expect(byId.get(rows.pendingOverdue!)).toMatchObject({
+      driverIssue: PLATFORM_TRIP_DRIVER_ISSUE.RESPONSE_OVERDUE,
+      urgent: true,
+      deadlineAt: new Date(NOW.getTime() - 5 * MINUTE).toISOString(),
+    });
+    expect(byId.get(rows.droppedOverdue!)).toMatchObject({
+      driverIssue: PLATFORM_TRIP_DRIVER_ISSUE.DROPPED,
+      urgent: true,
+      deadlineAt: new Date(NOW.getTime() - 10 * MINUTE).toISOString(),
+    });
+    // Số dòng mang nhãn khẩn = số khẩn trên thẻ.
+    expect(res.data.filter((r) => r.urgent)).toHaveLength(3);
+    // Gọi BÊN THUÊ: SĐT chủ gian hàng có, SĐT khách vẫn che.
+    expect(res.data[0]!.ownerPhone).toMatch(/^0988/);
+    expect(res.data[0]!.customerPhoneMasked).toMatch(/\*/);
+  });
+
+  maybe('tìm theo mã đơn trong hàng đợi tài xế', async () => {
+    const code = `DR-${rows.droppedOverdue!.slice(-6)}`;
+    const res = await trips.drivers({ tenantId: driverTenantId, q: code }, NOW);
+    expect(ids(res)).toEqual([rows.droppedOverdue]);
   });
 });

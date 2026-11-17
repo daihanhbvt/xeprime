@@ -5,6 +5,7 @@ import { queryKeys } from '@/services/query-keys';
 import {
   fetchAdminVehicle,
   fetchAdminVehicles,
+  fetchVehicleInsuranceReview,
   filtersToParams,
   hideVehicle,
   unhideVehicle,
@@ -16,6 +17,17 @@ export function useAdminVehicles(filters: AdminVehicleFilters) {
     queryKey: queryKeys.platformVehicles.list(filtersToParams(filters)),
     queryFn: () => fetchAdminVehicles(filters),
     placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Bảo hiểm và giấy tờ của một xe — dữ liệu sống, chỉ tải khi mục được mở (Collapse dựng nội dung lười).
+ * Khoá con của khoá chi tiết xe: ẩn/gỡ ẩn làm mới chi tiết thì mục này cũng làm mới theo.
+ */
+export function useVehicleInsuranceReview(id: string) {
+  return useQuery({
+    queryKey: [...queryKeys.platformVehicles.detail(id), 'insurance-review'],
+    queryFn: () => fetchVehicleInsuranceReview(id),
   });
 }
 

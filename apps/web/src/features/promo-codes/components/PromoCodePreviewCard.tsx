@@ -6,6 +6,7 @@ import { PROMO_DISCOUNT_TYPE, PROMO_VEHICLE_SCOPE } from '@xeprime/types';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import styles from './PromoCodePreviewCard.module.css';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 
 /**
  * XEM TRƯỚC mã khuyến mãi trong form quản trị — ADR 0046 (ảnh thiết kế 6).
@@ -76,7 +77,7 @@ export function PromoCodePreviewCard({
           {headline}
           {isPercent && maxDiscountAmount != null ? (
             <span className={styles.ticketCap}>
-              {' · '}
+              {LIST_SEPARATOR}
               {t('picker.maxDiscount', { amount: fmt.money(String(maxDiscountAmount)) })}
             </span>
           ) : null}

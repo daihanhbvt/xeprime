@@ -121,7 +121,21 @@
       "actionable": "To do",
       "overdue": "Overdue ({count})",
       "showOverdue": "Show overdue"
-    }
+    },
+    "filters": {
+      "search": "Find withdrawal",
+      "searchPlaceholder": "Code, wallet owner or last 4 account digits",
+      "ownerType": "Wallet type"
+    },
+    "export": {
+      "month": "Transfer month",
+      "button": "Download monthly statement"
+    },
+    "reviewedBy": "Approved by {name}",
+    "paidBy": "Transferred by {name}",
+    "secondPerson": "From {amount}: someone other than you must mark it as transferred.",
+    "secondPersonTag": "Two people",
+    "wallet": "View points wallet"
   },
   "openLedger": "View ledger",
   "verified": "Verified",

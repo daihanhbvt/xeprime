@@ -3,7 +3,7 @@
 import { App, Form, Switch } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import type { ServiceType } from '@xeprime/types';
+import { VEHICLE_TYPE, type ServiceType } from '@xeprime/types';
 
 import { ROUTES, VEHICLE_EDIT_TAB } from '@/constants/routes';
 import {
@@ -13,7 +13,9 @@ import {
   PolicySections,
   type PolicyBlock,
 } from '@/features/rental-policies/components/PolicySections';
+import { InsuranceModeBlock } from '@/features/rental-policies/components/InsuranceModeBlock';
 import type { VehiclePricingFormApi } from '@/features/rental-policies/hooks/use-vehicle-pricing-form';
+import { useVehicleInsuranceStatus } from '@/features/vehicle-documents/hooks';
 import {
   supportAllowsVehicleTab,
   useAvailableHref,
@@ -58,6 +60,7 @@ const POLICY_FIELDS = new Set([
   'overtimeFeePerHour',
   'overtimeGraceMinutes',
   'overtimeRoundingMinutes',
+  'insuranceMode',
 ]);
 
 /**
@@ -107,7 +110,11 @@ export function PolicyPane({
           }}
         >
           {(priced, pricingState) =>
-            priced ? <PolicyCards priced={priced} canUpdate={canUpdate} /> : pricingState
+            priced ? (
+              <PolicyCards priced={priced} canUpdate={canUpdate} vehicle={vehicle} />
+            ) : (
+              pricingState
+            )
           }
         </PricingForm>
       ) : null}
@@ -119,12 +126,27 @@ export function PolicyPane({
   );
 }
 
-function PolicyCards({ priced, canUpdate }: { priced: PricedFormProps; canUpdate: boolean }) {
+function PolicyCards({
+  priced,
+  canUpdate,
+  vehicle,
+}: {
+  priced: PricedFormProps;
+  canUpdate: boolean;
+  vehicle: VehicleDetail;
+}) {
   const t = useTranslations('Vehicles.editor.policy');
   const { isManage } = useWorkspace();
   const { api, policyEditable } = priced;
   const disabled = !canUpdate || !policyEditable;
   const control = api.form.control as unknown as Parameters<typeof PolicySections>[0]['control'];
+  /*
+   * Bảo hiểm vật chất xe Bắt buộc/Tuỳ chọn (ADR 0091 điều 1) — chỉ ô tô, chỉ khi nền tảng đang bán
+   * theo bậc. Đang theo chính sách gian hàng thì khoá như mọi ô khác của bộ chính sách.
+   */
+  const isCar = vehicle.vehicleType === VEHICLE_TYPE.CAR;
+  const insurance = useVehicleInsuranceStatus(vehicle.id, isCar);
+  const insuranceApplies = isCar && insurance.data?.applies === true;
 
   return (
     <Form component={false} layout="vertical" colon={false} disabled={disabled}>
@@ -143,6 +165,7 @@ function PolicyCards({ priced, canUpdate }: { priced: PricedFormProps; canUpdate
               blocks={RULE_BLOCKS}
               disabled={disabled}
             />
+            {insuranceApplies ? <InsuranceModeBlock control={control} disabled={disabled} /> : null}
           </div>
         </PolicyFlatLayout>
       </EditCard>

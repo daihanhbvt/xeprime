@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import {
   PERMISSION,
+  PLATFORM_TRIP_QUEUE,
   isPlatformTripBookingQueue,
   isPlatformTripRequestQueue,
   type PlatformTripQueue,
@@ -18,6 +19,7 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useTripSummary } from '../hooks/use-admin-trips';
 import { useTripQueue } from '../hooks/use-trip-queue';
 import { BookingQueuePanel } from './BookingQueuePanel';
+import { DriverQueuePanel } from './DriverQueuePanel';
 import { RequestQueuePanel } from './RequestQueuePanel';
 import { TripQueueRail, useTripQueueLabel } from './TripQueueRail';
 import { TripSummaryStrip } from './TripSummaryStrip';
@@ -29,12 +31,12 @@ const CONTENT_TITLE_ID = 'xp-trip-queue-title';
  * Màn VẬN HÀNH CHUYẾN của nền tảng (`admin.xeprime.vn/trips`).
  *
  * Người trực mở màn này để trả lời một câu: "chặng nào đang kẹt, và tôi phải gọi ai?". Dải trên
- * trả lời trước (hôm nay giao/nhận bao nhiêu, hàng đợi nào có dòng quá hạn); cột trái là bốn hàng
+ * trả lời trước (hôm nay giao/nhận bao nhiêu, hàng đợi nào có dòng quá hạn); cột trái là các hàng
  * đợi theo đúng thứ tự một chuyến đi qua nền tảng; bên phải là hàng đợi đang chọn, dòng gấp nhất
  * ở trên cùng. Hàng đợi, từ khoá, trang và đơn đang mở nằm trên URL — F5 và gửi link đều giữ chỗ.
  *
  * Màn này KHÔNG chuyển trạng thái yêu cầu/đơn — đó là việc của gian hàng (ADR 0006). Hành động
- * duy nhất là nhắc tay chủ xe ở chặng chờ duyệt.
+ * duy nhất là nhắc tay chủ xe ở chặng chờ duyệt; hàng đợi tài xế chỉ để xem và gọi bên thuê.
  */
 export function TripOpsView() {
   const t = useTranslations('AdminTrips');
@@ -110,5 +112,6 @@ export function TripOpsView() {
 function QueuePanel({ queue }: { queue: PlatformTripQueue }) {
   if (isPlatformTripRequestQueue(queue)) return <RequestQueuePanel queue={queue} />;
   if (isPlatformTripBookingQueue(queue)) return <BookingQueuePanel queue={queue} />;
+  if (queue === PLATFORM_TRIP_QUEUE.DRIVER) return <DriverQueuePanel />;
   return null;
 }

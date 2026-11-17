@@ -12,6 +12,8 @@ import {
   type DriverLicenceReader,
 } from '../../src/modules/driver-licences/reader/driver-licence-reader';
 import { R2Service } from '../../src/modules/storage/r2.service';
+import { PlatformVehicleInsuranceReviewService } from '../../src/modules/platform-admin/platform-vehicle-insurance-review.service';
+import { VehicleDataSuggestionService } from '../../src/modules/vehicle-data/vehicle-data-suggestion.service';
 import { HostMetricsService } from '../../src/modules/host-metrics/host-metrics.service';
 import { BookingHoldsService } from '../../src/modules/holds/booking-holds.service';
 import { BookingRequestsService } from '../../src/modules/booking-requests/booking-requests.service';
@@ -29,6 +31,7 @@ import { WalletService } from '../../src/modules/wallet/wallet.service';
 import { FirebaseAppService } from '../../src/modules/firebase/firebase-app.service';
 import { NotificationService } from '../../src/modules/notification/notification.service';
 import { BillingService } from '../../src/modules/billing/billing.service';
+import { BankTransactionsService } from '../../src/modules/sepay/bank-transactions.service';
 import { BranchesService } from '../../src/modules/branches/branches.service';
 import { CatalogModelService } from '../../src/modules/catalog/catalog-model.service';
 import { VehicleDataService } from '../../src/modules/vehicle-data/vehicle-data.service';
@@ -172,6 +175,8 @@ export function makeBillingService(prisma: PrismaService): BillingService {
     new ListingsService(prisma),
     // ConfigService trần đọc process.env — spec không đặt SEPAY_* nên paymentInfo trả "chưa cấu hình", đúng mặc định dev.
     new ConfigService(),
+    // ADR 0092: phần gói chuyển thừa ghi có ví gian hàng.
+    new WalletService(prisma),
   );
 }
 
@@ -381,6 +386,22 @@ export function makeBookingExtensionsService(
     makeBillingService(prisma),
     audit,
     overrides.notifications ?? makeNotificationService(prisma),
+  );
+}
+
+/** Hàng đợi tiền vào của admin (ADR 0022 · 0092) — khớp tay vào gói / giữ chỗ / phụ lục, ghi có ví. */
+export function makeBankTransactionsService(
+  prisma: PrismaService,
+  billing: BillingService = makeBillingService(prisma),
+): BankTransactionsService {
+  return new BankTransactionsService(
+    prisma,
+    new AuditService(prisma),
+    billing,
+    makeBookingHoldsService(prisma),
+    makeBookingExtensionsService(prisma),
+    new WalletService(prisma),
+    makeNotificationService(prisma),
   );
 }
 
@@ -705,4 +726,20 @@ export function makeHandoverMoneyServices(
     receipts,
   );
   return [settlement, new BookingPaymentWriter(audit, receipts)];
+}
+
+/**
+ * Khối "Bảo hiểm và giấy tờ" của màn duyệt xe (đợt rà Admin 16/11/2026) — gợi ý giá trị xe là service
+ * THẬT trên Postgres thật; kho R2 thay bằng giả (không gọi mạng).
+ */
+export function makeVehicleInsuranceReviewService(
+  prisma: PrismaService,
+  opts: { r2?: R2Service; audit?: AuditService } = {},
+): PlatformVehicleInsuranceReviewService {
+  return new PlatformVehicleInsuranceReviewService(
+    prisma,
+    opts.audit ?? new AuditService(prisma),
+    opts.r2 ?? ({ privateEnabled: false } as unknown as R2Service),
+    new VehicleDataSuggestionService(prisma),
+  );
 }

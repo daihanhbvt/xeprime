@@ -1,3 +1,4 @@
+import { browserApiHref } from '@/lib/api-href';
 import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
 import { apiGet, apiPost, fetchPage, type Paged, type QueryParams } from '@/services/api-client';
 import type {
@@ -83,10 +84,19 @@ export function withdrawalFiltersToParams(filters: WithdrawalFilters): QueryPara
     status: filters.status ?? null,
     // Backend đọc `'true' | 'false'` (query string), không phải boolean.
     overdue: filters.overdue ? 'true' : null,
+    q: filters.q?.trim() || null,
+    ownerType: filters.ownerType ?? null,
     page: filters.page ?? 1,
     limit: MONEY_DEFAULT_LIMIT,
   };
 }
+
+/**
+ * Đường tải bảng kê tháng các lệnh đã chuyển — thẻ `<a>` tải thẳng bằng cookie phiên (cùng cách
+ * với bảng kê thuế, `taxExportUrl`). File mang số tài khoản đầy đủ: mỗi lượt tải là một dòng audit.
+ */
+export const withdrawalMonthExportUrl = (month: string): string =>
+  browserApiHref(`/platform/money/withdrawals/export?${new URLSearchParams({ month }).toString()}`);
 
 export function fetchWithdrawalQueue(params: QueryParams): Promise<PlatformWithdrawalPage> {
   return apiGet<PlatformWithdrawalPage>('/platform/money/withdrawals', params);

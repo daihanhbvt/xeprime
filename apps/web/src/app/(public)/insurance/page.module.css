@@ -1,0 +1,57 @@
+/*
+ * Quyền lợi bảo hiểm (ADR 0091 điều 8) — cùng khổ và lưới với trang giới thiệu.
+ */
+.page {
+  max-width: var(--xp-container-max-width);
+  margin: 0 auto;
+  padding: 36px 20px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 44px;
+}
+
+.grid3 {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.lead {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  line-height: 1.6;
+}
+
+.facts {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) 1fr;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+}
+
+.fact dt {
+  color: var(--xp-color-text-secondary);
+}
+
+.fact dd {
+  margin: 0;
+  color: var(--xp-color-text);
+  white-space: pre-line;
+}
+
+@media (max-width: 576px) {
+  .fact {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}

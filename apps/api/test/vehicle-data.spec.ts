@@ -250,6 +250,25 @@ describe('admin quản lý xe chuẩn', () => {
     expect(v.vehicleCatalogVariantId).toBe(id);
     await expectCode(vehicleData.remove(adminId, id), API_ERROR_CODE.CATALOG_VARIANT_IN_USE);
   });
+
+  maybe('xoá dòng xe còn xe chuẩn sống ⇒ 409, không để xe chuẩn mồ côi (ADR 0096)', async () => {
+    const id = await vehicleData.create(adminId, {
+      vehicleType: VEHICLE_TYPE.CAR,
+      brandKey: BRAND,
+      newModelLabel: 'Dòng Còn Xe',
+      variantLabel: 'Bản A',
+    });
+    const { modelId } = await query.detail(id);
+    await expectCode(
+      models.remove(adminId, modelId),
+      API_ERROR_CODE.CATALOG_MODEL_HAS_VEHICLE_DATA,
+    );
+    // Xoá xe chuẩn rồi thì xoá được dòng.
+    await vehicleData.remove(adminId, id);
+    await models.remove(adminId, modelId);
+    const row = await prisma.vehicleCatalogModel.findUniqueOrThrow({ where: { id: modelId } });
+    expect(row.deletedAt).not.toBeNull();
+  });
 });
 
 describe('tự ghi nhận từ xe của chủ xe + duyệt', () => {
@@ -293,6 +312,40 @@ describe('tự ghi nhận từ xe của chủ xe + duyệt', () => {
         proposedByTenantName: 'Shop Dữ Liệu',
       });
       expect(pending.sourceVehicle?.id).toBe(v.id);
+
+      // ADR 0096: cột hãng của tab Mẫu xe nói hãng nào có xe chờ duyệt (kể cả khi dòng xe của nó
+      // còn chờ), và dải số liệu chỉ đếm trong phạm vi loại xe + hãng đang xem.
+      const brandRow = (await models.brandSummary(VEHICLE_TYPE.CAR)).find(
+        (b) => b.brandKey === BRAND,
+      );
+      expect(brandRow?.vehicleDataPending).toBe(1);
+      expect(brandRow?.vehicleDataTotal).toBeGreaterThanOrEqual(1);
+      expect(
+        (await query.summary({ vehicleType: VEHICLE_TYPE.CAR, brandKey: BRAND })).pending,
+      ).toBe(1);
+      expect(
+        (await query.summary({ vehicleType: VEHICLE_TYPE.MOTORBIKE, brandKey: BRAND })).pending,
+      ).toBe(0);
+      // Số đếm theo DÒNG: dòng mới do chủ xe gõ cũng có mặt (kèm `modelPending`) để tab Mẫu xe
+      // hiện được nó; `matched` theo bộ lọc xe đang bật.
+      const counts = await query.modelCounts({ vehicleType: VEHICLE_TYPE.CAR, brandKey: BRAND });
+      expect(counts.find((c) => c.modelId === model.id)).toMatchObject({
+        modelLabel: 'Mới Toanh',
+        modelPending: true,
+        total: 1,
+        pending: 1,
+        active: 0,
+        matched: 1,
+      });
+      const hiddenOnly = await query.modelCounts({
+        vehicleType: VEHICLE_TYPE.CAR,
+        brandKey: BRAND,
+        status: VEHICLE_DATA_STATUS.HIDDEN,
+      });
+      expect(hiddenOnly.find((c) => c.modelId === model.id)).toMatchObject({
+        total: 1,
+        matched: 0,
+      });
 
       // Sửa giá xe ⇒ dòng chờ duyệt đi theo.
       await vehicles.savePricing(tenantId, v.id, ownerId, {

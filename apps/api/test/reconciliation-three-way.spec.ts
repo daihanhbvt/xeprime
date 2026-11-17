@@ -6,9 +6,14 @@ import {
   BANK_DIRECTION,
   BANK_MATCH_STATUS,
   BANK_MATCH_TARGET_TYPE,
+  BANK_MATCH_WALLET_CREDIT,
+  BOOKING_EXTENSION_STATUS,
   BOOKING_HOLD_OUTCOME,
   BOOKING_HOLD_PURPOSE,
   BOOKING_HOLD_STATUS,
+  INSURANCE_POLICY_STATUS,
+  INSURANCE_REMITTANCE_STATUS,
+  PLAN_VEHICLE_SCOPE,
   REFERENCE_CODE_PREFIX,
   referenceCodeTarget,
   resolveHoldAllocation,
@@ -20,6 +25,7 @@ import {
   WITHDRAWAL_STATUS,
 } from '@xeprime/types';
 import { PlatformMoneySummaryService } from '../src/modules/holds/platform-money-summary.service';
+import type { PaymentGatewayConfig } from '../src/modules/payment-gateway/payment-gateway.config';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { makeBookingHoldsService } from './helpers/service-factory';
 
@@ -272,8 +278,27 @@ async function settle(holdId: string, outcome: 'settled' | 'split_late_cancel') 
   return { platform: at('platform_revenue'), owner: toOwner };
 }
 
-async function bankIn(amount: number, matched: 'subscription' | 'hold' | null) {
+/** Đích của một giao dịch tiền vào trong fixture. `ignored` = admin bỏ qua (kèm mã hoàn nếu có). */
+type BankTarget = 'subscription' | 'checkout' | 'hold' | 'extension' | 'walletCredit';
+
+const MATCHED_TYPE: Record<BankTarget, string> = {
+  subscription: BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE,
+  checkout: BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_CHECKOUT,
+  hold: BANK_MATCH_TARGET_TYPE.BOOKING_HOLD,
+  extension: BANK_MATCH_TARGET_TYPE.BOOKING_EXTENSION,
+  walletCredit: BANK_MATCH_WALLET_CREDIT,
+};
+
+async function bankIn(
+  amount: number,
+  matched: BankTarget | 'ignored' | null,
+  /** Đích đã khớp (`matched_ref_id`) — tiền gói tính doanh thu THEO ĐÍCH, nên phải trỏ đúng. */
+  refId: string | null = null,
+  refundReference: string | null = null,
+) {
   txCounter += 1;
+  const ignored = matched === 'ignored';
+  const target = matched && matched !== 'ignored' ? matched : null;
   await prisma.bankTransaction.create({
     data: {
       id: newId(),
@@ -283,12 +308,15 @@ async function bankIn(amount: number, matched: 'subscription' | 'hold' | null) {
       content: `recon ${txCounter}`,
       bankTime: AT,
       createdAt: AT,
-      matchStatus: matched ? BANK_MATCH_STATUS.MATCHED : BANK_MATCH_STATUS.UNMATCHED,
-      matchedType: matched
-        ? matched === 'subscription'
-          ? BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE
-          : BANK_MATCH_TARGET_TYPE.BOOKING_HOLD
-        : null,
+      matchStatus: ignored
+        ? BANK_MATCH_STATUS.IGNORED
+        : target
+          ? BANK_MATCH_STATUS.MATCHED
+          : BANK_MATCH_STATUS.UNMATCHED,
+      matchedType: target ? MATCHED_TYPE[target] : null,
+      matchedRefId: refId,
+      ...(ignored ? { matchNote: 'spec bỏ qua', matchedAt: AT } : {}),
+      ...(refundReference ? { refundReference, refundedAt: AT } : {}),
       rawJson: {} as unknown as Prisma.InputJsonValue,
     },
   });
@@ -316,7 +344,7 @@ describe('Công thức ba vế đóng trên một ngày có đủ năm loại gi
         createdAt: AT,
       },
     });
-    await bankIn(300_000, 'subscription');
+    await bankIn(300_000, 'subscription', invoiceId);
 
     // ── 2. Cọc mới vào, CHƯA chốt: toàn bộ là GIỮ HỘ ─────────────────────
     await paidHold(280_000, 140_000);
@@ -763,7 +791,12 @@ describe('Giữ hộ gồm bảo hiểm + thuế, và KHÔNG cộng đôi phần
    * hành thì ngày 1 của tháng — đúng lúc kỳ trước đến hạn kê khai — kỳ đó biến khỏi thẻ.
    */
   maybe('thẻ thuế: kỳ CŨ chưa kê khai vẫn được đếm, và là kỳ cũ nhất được chỉ ra', async () => {
-    const cards = new PlatformMoneySummaryService(prisma as unknown as PrismaService);
+    const cards = new PlatformMoneySummaryService(
+      prisma as unknown as PrismaService,
+      {
+        inUse: false,
+      } as PaymentGatewayConfig,
+    );
     const before = (await cards.summary(AT)).tax;
 
     await taxOn(await bookingFor(null), 30_000, '2001-01');
@@ -773,5 +806,451 @@ describe('Giữ hộ gồm bảo hiểm + thuế, và KHÔNG cộng đôi phần
     expect(d(after.amount, before.amount)).toBe(30_000);
     expect(after.oldestPeriod).toBe('2001-01');
     expect(after.period).not.toBe('2001-01');
+  });
+});
+
+/**
+ * Rà soát Admin 16/11/2026 — các dòng tiền mà phép đối soát từng đếm sai hoặc bỏ sót: phiếu gộp
+ * gói (XPC), phụ lục gia hạn (XPE), gói gán tay không có tiền, trả thiếu/thừa, bảng kê bảo hiểm đã
+ * trả hãng, tiền bỏ qua, hold trả thiếu.
+ *
+ * Mỗi ca khoá cùng một bất biến: tổng (nền tảng + giữ hộ) đổi ĐÚNG bằng tiền vào trừ tiền ra của
+ * chính nó — tức nhập số dư ngân hàng thật thì `variance = 0`. Và `inflow.variance` không đổi: mọi
+ * đồng vào đều rơi vào một nhóm có tên.
+ */
+describe('Mọi đồng trong tài khoản thuộc đúng một vế (rà soát 16/11/2026)', () => {
+  type Recon = Awaited<ReturnType<typeof holds.dailyReconciliation>>;
+  const d = (a: string, b: string) => Number(a) - Number(b);
+  /** (nền tảng + giữ hộ) sau − trước. */
+  const legs = (before: Recon, after: Recon) =>
+    d(after.platform.total, before.platform.total) +
+    d(after.custodied.total, before.custodied.total);
+  const remittanceIds: string[] = [];
+
+  async function standaloneBooking(): Promise<string> {
+    const bookingId = newId();
+    await prisma.booking.create({
+      data: {
+        id: bookingId,
+        tenantId,
+        vehicleId,
+        code: `DHN${RUN.slice(0, 4).toUpperCase()}${++txCounter}`,
+        customerName: 'Khách đối soát',
+        customerPhone: `0922${String(100000 + txCounter).slice(-6)}`,
+        status: 'active',
+        pickupAt: new Date(AT.getTime() - 86400_000),
+        returnAt: new Date(AT.getTime() + 30 * 86400_000),
+        baseAmount: new Prisma.Decimal(9_000_000),
+        totalAmount: new Prisma.Decimal(9_000_000),
+        feePolicyId: policyId,
+        createdAt: AT,
+      },
+    });
+    return bookingId;
+  }
+
+  async function invoice(over: {
+    total: number;
+    paid: number;
+    status: string;
+    paidAt?: Date | null;
+    checkoutId?: string;
+    vehicleScope?: string;
+  }): Promise<string> {
+    const id = newId();
+    await prisma.subscriptionInvoice.create({
+      data: {
+        id,
+        tenantId,
+        checkoutId: over.checkoutId ?? null,
+        // DB: mỗi gian hàng một hoá đơn CÒN MỞ mỗi phạm vi xe — hai hoá đơn trả thiếu phải khác phạm vi.
+        ...(over.vehicleScope ? { vehicleScope: over.vehicleScope } : {}),
+        code: `${REFERENCE_CODE_PREFIX[BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE]}${RUN.toUpperCase()}${++txCounter}`,
+        periodFrom: AT,
+        periodTo: new Date(AT.getTime() + 30 * 86400_000),
+        linesJson: [] as unknown as Prisma.InputJsonValue,
+        subtotal: new Prisma.Decimal(over.total),
+        totalAmount: new Prisma.Decimal(over.total),
+        paidAmount: new Prisma.Decimal(over.paid),
+        status: over.status,
+        paidAt: over.paidAt === undefined ? AT : over.paidAt,
+        createdAt: AT,
+      },
+    });
+    return id;
+  }
+
+  async function checkout(total: number, paid: number, status: string): Promise<string> {
+    const id = newId();
+    await prisma.subscriptionCheckout.create({
+      data: {
+        id,
+        tenantId,
+        code: `${REFERENCE_CODE_PREFIX[BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_CHECKOUT]}${RUN.toUpperCase()}${++txCounter}`,
+        totalAmount: new Prisma.Decimal(total),
+        paidAmount: new Prisma.Decimal(paid),
+        status,
+        paidAt: status === SUBSCRIPTION_INVOICE_STATUS.PAID ? AT : null,
+        createdAt: AT,
+      },
+    });
+    return id;
+  }
+
+  /** Ghi có ví của spec như `WalletService.creditWithinTx` — giữ bất biến Σ bút toán = số dư. */
+  async function credit(amount: number, kind: string, sourceType: string, sourceRefId: string) {
+    const wallet = await prisma.wallet.update({
+      where: { id: walletId },
+      data: { balance: { increment: amount } },
+    });
+    await prisma.walletEntry.create({
+      data: {
+        id: newId(),
+        walletId,
+        kind,
+        sourceType,
+        sourceRefId,
+        amount: new Prisma.Decimal(amount),
+        balanceAfter: wallet.balance,
+        createdAt: AT,
+      },
+    });
+  }
+
+  async function extension(
+    bookingId: string,
+    over: { online: number; tax?: number; paid: number; status: string; settled?: boolean },
+  ): Promise<string> {
+    const id = newId();
+    await prisma.bookingExtension.create({
+      data: {
+        id,
+        code: `XPE${RUN.toUpperCase()}${++txCounter}`,
+        tenantId,
+        bookingId,
+        vehicleId,
+        months: 1,
+        fromAt: new Date(AT.getTime() + 30 * 86400_000),
+        toAt: new Date(AT.getTime() + 60 * 86400_000),
+        status: over.status,
+        billingMode: 'commission',
+        rentalAmount: new Prisma.Decimal(over.online * 6),
+        taxAmount: new Prisma.Decimal(over.tax ?? 0),
+        // DB: phụ lục không có phí sàn — khoản online là toàn bộ `D`.
+        depositAmount: new Prisma.Decimal(over.online),
+        onlineAmount: new Prisma.Decimal(over.online),
+        payAtPickupAmount: new Prisma.Decimal(over.online * 5),
+        paidAmount: new Prisma.Decimal(over.paid),
+        priceSnapshot: {} as unknown as Prisma.InputJsonValue,
+        paidAt: over.paid > 0 ? AT : null,
+        activatedAt: over.status === BOOKING_EXTENSION_STATUS.ACTIVE ? AT : null,
+        closedAt: over.status === BOOKING_EXTENSION_STATUS.CANCELLED ? AT : null,
+        settledAt: over.settled ? AT : null,
+        createdAt: AT,
+      },
+    });
+    return id;
+  }
+
+  afterEach(async () => {
+    if (!dbAvailable) return;
+    await prisma.taxWithholding.deleteMany({ where: { tenantId } });
+    await prisma.bookingExtension.deleteMany({ where: { tenantId } });
+    await prisma.bookingInsurancePolicy.deleteMany({ where: { tenantId } });
+    await prisma.insurancePremiumRemittance.deleteMany({ where: { id: { in: remittanceIds } } });
+    await prisma.bookingHold.updateMany({ where: { tenantId }, data: { bookingId: null } });
+    await prisma.booking.deleteMany({ where: { tenantId } });
+    await prisma.subscriptionInvoice.deleteMany({ where: { tenantId } });
+    await prisma.subscriptionCheckout.deleteMany({ where: { tenantId } });
+  });
+
+  maybe(
+    'gói: chỉ TIỀN THẬT thành doanh thu; trả thiếu/thừa ở giữ hộ; XPC không lạc nhóm',
+    async () => {
+      const before = await holds.dailyReconciliation(RECON_DAY);
+
+      // Gán tay "thu ngoài luồng": hoá đơn `paid` nhưng không có đồng nào vào tài khoản.
+      await invoice({ total: 900_000, paid: 900_000, status: SUBSCRIPTION_INVOICE_STATUS.PAID });
+      // Chuyển THỪA 50.000 cho hoá đơn 200.000.
+      const over = await invoice({
+        total: 200_000,
+        paid: 250_000,
+        status: SUBSCRIPTION_INVOICE_STATUS.PAID,
+      });
+      await bankIn(250_000, 'subscription', over);
+      // Trả THIẾU: chưa đủ nên chưa có `paid_at`.
+      const partial = await invoice({
+        total: 400_000,
+        paid: 150_000,
+        status: SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID,
+        paidAt: null,
+        vehicleScope: PLAN_VEHICLE_SCOPE.CAR,
+      });
+      await bankIn(150_000, 'subscription', partial);
+      // Phiếu gộp đã trả đủ: hai hoá đơn con `paid` không có giao dịch riêng — doanh thu đếm MỘT lần.
+      const xpc = await checkout(500_000, 500_000, SUBSCRIPTION_INVOICE_STATUS.PAID);
+      for (let i = 0; i < 2; i += 1) {
+        await invoice({
+          total: 250_000,
+          paid: 250_000,
+          status: SUBSCRIPTION_INVOICE_STATUS.PAID,
+          checkoutId: xpc,
+        });
+      }
+      await bankIn(500_000, 'checkout', xpc);
+      // Khớp tay vào một hoá đơn CON của phiếu gộp đang trả thiếu ⇒ quy về phiếu, chưa là doanh thu.
+      const xpcPartial = await checkout(
+        300_000,
+        100_000,
+        SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID,
+      );
+      const member = await invoice({
+        total: 300_000,
+        paid: 0,
+        status: SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID,
+        paidAt: null,
+        checkoutId: xpcPartial,
+        vehicleScope: PLAN_VEHICLE_SCOPE.MOTORBIKE,
+      });
+      await bankIn(100_000, 'subscription', member);
+
+      const after = await holds.dailyReconciliation(RECON_DAY);
+      expect(d(after.platform.subscriptionsCollected, before.platform.subscriptionsCollected)).toBe(
+        700_000,
+      );
+      expect(
+        d(after.custodied.subscriptionsUnapplied, before.custodied.subscriptionsUnapplied),
+      ).toBe(300_000);
+      expect(d(after.inflow.matchedSubscriptions, before.inflow.matchedSubscriptions)).toBe(
+        1_000_000,
+      );
+      expect(d(after.inflow.variance, before.inflow.variance)).toBe(0);
+      expect(legs(before, after)).toBe(1_000_000);
+    },
+  );
+
+  maybe('phụ lục gia hạn: phần chưa quyết toán ở giữ hộ, thuế không bị trừ đôi', async () => {
+    const before = await holds.dailyReconciliation(RECON_DAY);
+
+    // Đơn có hold CHƯA CHỐT — đúng ca mà phép trừ "thuế trong hold mở" từng cuốn cả thuế phụ lục.
+    const holdId = await paidHold(200_000, 20_000);
+    await bankIn(220_000, 'hold', holdId);
+    const bookingId = await standaloneBooking();
+    await prisma.bookingHold.update({ where: { id: holdId }, data: { bookingId } });
+
+    // A: đã trả, đang hiệu lực, chưa quyết toán ⇒ trọn 120.000 còn giữ hộ.
+    const a = await extension(bookingId, {
+      online: 120_000,
+      paid: 120_000,
+      status: BOOKING_EXTENSION_STATUS.ACTIVE,
+    });
+    await bankIn(120_000, 'extension', a);
+
+    // B: đã quyết toán — chủ xe nhận D − T vào ví, T sang sổ thuế, phụ lục không còn giữ hộ gì.
+    // Cùng đơn có hold mở: thuế của B KHÔNG được trừ như "thuế nằm trong hold".
+    const b = await extension(bookingId, {
+      online: 120_000,
+      tax: 7_000,
+      paid: 120_000,
+      status: BOOKING_EXTENSION_STATUS.ACTIVE,
+      settled: true,
+    });
+    await bankIn(120_000, 'extension', b);
+    await credit(
+      113_000,
+      WALLET_ENTRY_KIND.EXTENSION_RELEASE,
+      WALLET_ENTRY_SOURCE.BOOKING_EXTENSION,
+      b,
+    );
+    await prisma.taxWithholding.create({
+      data: {
+        id: newId(),
+        bookingId,
+        bookingExtensionId: b,
+        tenantId,
+        taxableBase: new Prisma.Decimal(100_000),
+        percent: new Prisma.Decimal(7),
+        label: 'GTGT 5% + TNCN 2%',
+        amount: new Prisma.Decimal(7_000),
+        feePolicyId: policyId,
+        status: 'accrued',
+        accruedAt: AT,
+        periodKey: '2019-06',
+      },
+    });
+
+    // C: bị huỷ — hoàn trọn phần đã chuyển vào ví.
+    const c = await extension(bookingId, {
+      online: 50_000,
+      paid: 50_000,
+      status: BOOKING_EXTENSION_STATUS.CANCELLED,
+    });
+    await bankIn(50_000, 'extension', c);
+    await credit(
+      50_000,
+      WALLET_ENTRY_KIND.EXTENSION_REFUND,
+      WALLET_ENTRY_SOURCE.BOOKING_EXTENSION,
+      c,
+    );
+
+    const after = await holds.dailyReconciliation(RECON_DAY);
+    expect(d(after.custodied.extensionsUnsettled, before.custodied.extensionsUnsettled)).toBe(
+      120_000,
+    );
+    expect(d(after.custodied.taxAccrued, before.custodied.taxAccrued)).toBe(7_000);
+    expect(d(after.custodied.walletTotal, before.custodied.walletTotal)).toBe(163_000);
+    expect(d(after.inflow.matchedExtensions, before.inflow.matchedExtensions)).toBe(290_000);
+    expect(d(after.inflow.variance, before.inflow.variance)).toBe(0);
+    expect(legs(before, after)).toBe(290_000 + 220_000);
+  });
+
+  maybe(
+    'bảo hiểm trả hãng: phí rời giữ hộ, hoa hồng sang nền tảng, phần còn nợ hãng ở lại',
+    async () => {
+      const bookingId = await standaloneBooking();
+      await prisma.bookingInsurancePolicy.create({
+        data: {
+          id: newId(),
+          bookingId,
+          tenantId,
+          productKind: 'vehicle_trip',
+          status: INSURANCE_POLICY_STATUS.ISSUED,
+          premiumAmount: new Prisma.Decimal(100_000),
+          partnerName: 'Đối tác kiểm thử',
+          idempotencyKey: `recon-${RUN}-${++txCounter}:vehicle_trip`,
+          certificateNumber: `GCN-${RUN}`,
+          issuedAt: AT,
+          createdAt: AT,
+        },
+      });
+      const before = await holds.dailyReconciliation(RECON_DAY);
+
+      // Bảng kê: phí 100.000, hoa hồng 10% = 10.000, phải trả 90.000 — mới chuyển 85.000.
+      const remittanceId = newId();
+      remittanceIds.push(remittanceId);
+      await prisma.insurancePremiumRemittance.create({
+        data: {
+          id: remittanceId,
+          provider: 'mic',
+          // Tháng riêng của lượt chạy — unique (provider, tháng).
+          periodMonth: new Date(
+            Date.UTC(
+              1900 + (parseInt(RUN.slice(-4, -2), 36) % 99),
+              parseInt(RUN.slice(-1), 36) % 12,
+              1,
+            ),
+          ),
+          status: INSURANCE_REMITTANCE_STATUS.PAID,
+          policyCount: 1,
+          grossPremium: new Prisma.Decimal(100_000),
+          commissionPercent: new Prisma.Decimal(10),
+          commissionAmount: new Prisma.Decimal(10_000),
+          payableAmount: new Prisma.Decimal(90_000),
+          paidAmount: new Prisma.Decimal(85_000),
+          paidAt: AT,
+          bankReference: `FT${RUN}`,
+          finalizedAt: AT,
+        },
+      });
+      await prisma.bookingInsurancePolicy.updateMany({
+        where: { bookingId },
+        data: { remittanceId },
+      });
+
+      const after = await holds.dailyReconciliation(RECON_DAY);
+      expect(d(after.custodied.insuranceReserved, before.custodied.insuranceReserved)).toBe(
+        -95_000,
+      );
+      expect(d(after.platform.insuranceCommission, before.platform.insuranceCommission)).toBe(
+        10_000,
+      );
+      expect(d(after.outflow.insuranceRemitted, before.outflow.insuranceRemitted)).toBe(85_000);
+      // Tài khoản giảm đúng số đã chuyển hãng.
+      expect(legs(before, after)).toBe(-85_000);
+    },
+  );
+
+  maybe('tiền BỎ QUA: chưa hoàn thì vẫn giữ hộ; đã hoàn tay thì vào dòng đã chi', async () => {
+    const before = await holds.dailyReconciliation(RECON_DAY);
+
+    await bankIn(30_000, 'ignored');
+    await bankIn(40_000, 'ignored', null, `FTR${RUN}`);
+
+    const after = await holds.dailyReconciliation(RECON_DAY);
+    expect(d(after.custodied.ignoredKept, before.custodied.ignoredKept)).toBe(30_000);
+    expect(d(after.outflow.manualRefunds, before.outflow.manualRefunds)).toBe(40_000);
+    expect(d(after.inflow.ignored, before.inflow.ignored)).toBe(70_000);
+    expect(legs(before, after)).toBe(70_000 - 40_000);
+  });
+
+  /** ADR 0092: tiền về muộn được ghi có thẳng vào ví khách — nghĩa vụ nằm ở vế ví, đếm MỘT lần. */
+  maybe(
+    'tiền về muộn ghi có ví khách: nhóm riêng ở tiền vào, nghĩa vụ ở ví, không đếm đôi',
+    async () => {
+      const before = await holds.dailyReconciliation(RECON_DAY);
+
+      const sourceId = newId();
+      await bankIn(90_000, 'walletCredit', sourceId);
+      await credit(
+        90_000,
+        WALLET_ENTRY_KIND.LATE_PAYMENT_REFUND,
+        WALLET_ENTRY_SOURCE.BANK_TRANSACTION,
+        sourceId,
+      );
+
+      const after = await holds.dailyReconciliation(RECON_DAY);
+      expect(d(after.inflow.matchedWalletCredits, before.inflow.matchedWalletCredits)).toBe(90_000);
+      expect(d(after.inflow.variance, before.inflow.variance)).toBe(0);
+      expect(d(after.custodied.walletTotal, before.custodied.walletTotal)).toBe(90_000);
+      expect(legs(before, after)).toBe(90_000);
+    },
+  );
+
+  /** ADR 0092: phần gói chuyển thừa đã tự vào ví gian hàng — không còn ở "tiền gói chưa thành doanh thu". */
+  maybe('gói chuyển thừa đã ghi có ví: phần thừa ở vế ví, không đếm đôi', async () => {
+    const before = await holds.dailyReconciliation(RECON_DAY);
+
+    const over = await invoice({
+      total: 200_000,
+      paid: 250_000,
+      status: SUBSCRIPTION_INVOICE_STATUS.PAID,
+    });
+    await bankIn(250_000, 'subscription', over);
+    await credit(
+      50_000,
+      WALLET_ENTRY_KIND.SUBSCRIPTION_OVERPAY,
+      WALLET_ENTRY_SOURCE.BANK_TRANSACTION,
+      newId(),
+    );
+
+    const after = await holds.dailyReconciliation(RECON_DAY);
+    expect(d(after.platform.subscriptionsCollected, before.platform.subscriptionsCollected)).toBe(
+      200_000,
+    );
+    expect(d(after.custodied.subscriptionsUnapplied, before.custodied.subscriptionsUnapplied)).toBe(
+      0,
+    );
+    expect(d(after.custodied.walletTotal, before.custodied.walletTotal)).toBe(50_000);
+    expect(legs(before, after)).toBe(250_000);
+  });
+
+  maybe('hold TRẢ THIẾU (chưa có `paid_at`): tiền đã về vẫn ở giữ hộ', async () => {
+    const before = await holds.dailyReconciliation(RECON_DAY);
+
+    const holdId = await paidHold(80_000, 20_000);
+    await prisma.bookingHold.update({
+      where: { id: holdId },
+      data: {
+        status: BOOKING_HOLD_STATUS.UNDERPAID,
+        paidAmount: new Prisma.Decimal(60_000),
+        paidAt: null,
+        freeCancelUntil: null,
+      },
+    });
+    await bankIn(60_000, 'hold', holdId);
+
+    const after = await holds.dailyReconciliation(RECON_DAY);
+    expect(d(after.custodied.holdsUnsettled, before.custodied.holdsUnsettled)).toBe(60_000);
+    expect(legs(before, after)).toBe(60_000);
   });
 });
