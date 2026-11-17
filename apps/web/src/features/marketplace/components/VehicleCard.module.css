@@ -893,6 +893,12 @@
   color: var(--xp-color-text-on-dark);
 }
 
+/* Quy tắc tối ở trên mạnh hơn `.favoriteBtn:hover` - không viết lại thì tim trắng trên đĩa trắng. */
+:global([data-theme='dark']) .favoriteBtn:hover,
+:global([data-theme='dark']) .favoriteBtn.heartActive {
+  color: #ef4444;
+}
+
 /*
  * Figma dark — thẻ đang HOVER (`19879:66185`): viền vàng, nền vàng trầm mờ phủ trên `#0e0f12`,
  * tên xe và giá vàng chuẩn `primary` (người dùng chốt 04/11/2026).

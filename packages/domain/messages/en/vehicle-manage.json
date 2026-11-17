@@ -95,6 +95,10 @@
   "images": {
     "reorderToggle": "Allow drag and drop to reorder photos.",
     "reorderLabel": "Enable drag-and-drop reordering",
+    "coverBadge": "Cover",
+    "appReorderToggle": "Allow moving photos between slots.",
+    "appReorderLabel": "Enable moving photos",
+    "appReorderHint": "Tap a photo to pick it, then tap the slot to move it to - the two photos swap places.",
     "minimumHint": "Each slot holds one photo and none may be left empty (up to {max} gallery photos).",
     "galleryTitle": "Vehicle photos",
     "coverFromFront": "The front photo is used as the cover on the vehicle card and listing - pick your sharpest shot.",

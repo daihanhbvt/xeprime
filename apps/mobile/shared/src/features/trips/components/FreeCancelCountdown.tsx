@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { HOLD_COUNTDOWN_URGENT_MINUTES } from '@xeprime/types';

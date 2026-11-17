@@ -1,6 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import type { ChatMessage, MessageAttachment } from '@/features/chat/api';
-import { CHAT_SEND_STATE, type ChatSendState } from '@xeprime/domain';
+import { CHAT_SEND_STATE, LIST_SEPARATOR, type ChatSendState } from '@xeprime/domain';
 import { Image } from 'expo-image';
 import { memo, useState } from 'react';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
@@ -10,6 +10,7 @@ import { chatDebug } from '@/lib/chat-debug';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 
 /**
  * Cạnh dài nhất của một ảnh đính kèm — đúng `max-width/max-height: 200px` của web.
@@ -84,10 +85,16 @@ export interface MessageBubbleProps {
   lastOfGroup?: boolean;
   /** Xe tin nhắn này nói về — thẻ ngữ cảnh, bấm vào mở tin đăng. */
   vehicle?: ChatMessage['vehicle'];
+  /**
+   * Chuyến tin nhắn này nói về (`trip.id` = id YÊU CẦU) — có thì thẻ là thẻ CHUYẾN, bấm vào mở đúng
+   * chuyến ở bề mặt của người xem (web `ContextCard` + `messageTripHref`).
+   */
+  trip?: ChatMessage['trip'];
   /** Khoá idempotency của tin — chỉ tin do CHÍNH người dùng gửi mới có. */
   clientMessageId?: string | null;
   onPressImage: (url: string) => void;
   onPressVehicle?: (vehicleId: string) => void;
+  onPressTrip?: (trip: NonNullable<ChatMessage['trip']>) => void;
   /*
    * Nhận `clientMessageId` thay vì đóng gói sẵn trong closure.
    *
@@ -129,6 +136,9 @@ function sameBubble(a: MessageBubbleProps, b: MessageBubbleProps): boolean {
     a.lastOfGroup === b.lastOfGroup &&
     a.clientMessageId === b.clientMessageId &&
     a.vehicle?.id === b.vehicle?.id &&
+    a.trip?.id === b.trip?.id &&
+    a.trip?.bookingId === b.trip?.bookingId &&
+    a.onPressTrip === b.onPressTrip &&
     a.onRetry === b.onRetry &&
     a.onDiscard === b.onDiscard &&
     a.onPressImage === b.onPressImage &&
@@ -156,14 +166,27 @@ export const MessageBubble = memo(function MessageBubble({
   lastOfGroup = true,
   clientMessageId,
   vehicle,
+  trip,
   onPressImage,
   onPressVehicle,
+  onPressTrip,
   onRetry,
   onDiscard,
 }: MessageBubbleProps) {
   const colors = useColors();
   const t = useTranslations('Chat');
   const fmt = useAppFormat();
+
+  // Thẻ chuyến: tên xe của chuyến (server luôn gắn xe của chính chuyến đó) + mã đơn · lịch nhận–trả.
+  const contextName = vehicle?.name ?? t('trip');
+  const tripDetail = trip
+    ? [
+        trip.code ? t('tripCode', { code: trip.code }) : null,
+        trip.pickupAt ? fmt.shortDateTimeRange(trip.pickupAt, trip.returnAt) : null,
+      ]
+        .filter(Boolean)
+        .join(LIST_SEPARATOR)
+    : '';
 
   const pending = state === CHAT_SEND_STATE.PENDING;
   const failed = state === CHAT_SEND_STATE.FAILED;
@@ -186,7 +209,7 @@ export const MessageBubble = memo(function MessageBubble({
   return (
     <YStack
       ai={mine ? 'flex-end' : 'flex-start'}
-      px={space.md}
+      px={layout.padX}
       pt={firstOfGroup ? space.sm : 2}
       pb={2}
     >
@@ -197,9 +220,9 @@ export const MessageBubble = memo(function MessageBubble({
       ) : null}
 
       <YStack
-        {...bubbleSizeStyle(Boolean(vehicle))}
+        {...bubbleSizeStyle(Boolean(vehicle || trip))}
         gap={space.xs}
-        px={space.md}
+        px={layout.padX}
         py={space.sm}
         br={radius.lg}
         {...tail}
@@ -211,11 +234,16 @@ export const MessageBubble = memo(function MessageBubble({
         // Tin đang bay mờ đi — phân biệt được với tin server đã nhận mà vẫn đọc được.
         opacity={pending ? 0.65 : 1}
       >
-        {vehicle ? (
+        {vehicle || trip ? (
           <Pressable
-            onPress={() => onPressVehicle?.(vehicle.id)}
+            onPress={() => {
+              if (trip) onPressTrip?.(trip);
+              else if (vehicle) onPressVehicle?.(vehicle.id);
+            }}
             accessibilityRole="button"
-            accessibilityLabel={vehicle.name}
+            accessibilityLabel={t('about', {
+              subject: trip ? t('tripOf', { name: contextName }) : contextName,
+            })}
           >
             <XStack
               ai="center"
@@ -228,7 +256,7 @@ export const MessageBubble = memo(function MessageBubble({
               // nó cũng là màu tương phản nhất, nên một giá trị dùng được cho cả hai phía.
               bg={colors.surface}
             >
-              {vehicle.imageUrl ? (
+              {vehicle?.imageUrl ? (
                 <Image
                   source={{ uri: vehicle.imageUrl }}
                   style={styles.vehicleThumb}
@@ -238,7 +266,7 @@ export const MessageBubble = memo(function MessageBubble({
               {/* `minWidth={0}` để `numberOfLines` cắt được: thiếu nó, chữ dài đẩy thẻ tràn ra. */}
               <YStack f={1} minWidth={0}>
                 <Text col={colors.textMuted} fos={fontSize.meta}>
-                  {t('aboutVehicle')}
+                  {trip ? t('aboutTrip') : t('aboutVehicle')}
                 </Text>
                 <Text
                   col={colors.accentText}
@@ -246,8 +274,13 @@ export const MessageBubble = memo(function MessageBubble({
                   fow={fontWeight.semibold}
                   numberOfLines={2}
                 >
-                  {vehicle.name}
+                  {contextName}
                 </Text>
+                {tripDetail ? (
+                  <Text col={colors.textMuted} fos={fontSize.meta} numberOfLines={1}>
+                    {tripDetail}
+                  </Text>
+                ) : null}
               </YStack>
             </XStack>
           </Pressable>

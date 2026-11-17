@@ -2,7 +2,6 @@ import { memo, useCallback } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
-  RECEIPT_SOURCE_META,
   RECEIPT_STATUS,
   RECEIPT_STATUS_META,
   RECEIPT_TYPE,
@@ -12,13 +11,13 @@ import {
 import { LIST_SEPARATOR, vehicleLabel } from '@xeprime/domain';
 import { metaColor } from '@/lib/status-meta';
 import { Card } from '@/components/ui/Card';
-import { CardAccent } from '@/components/ui/CardAccent';
-import { DetailChevron } from '@/components/ui/DetailArrow';
-import { StatusBadge } from '@/components/ui/StatusBadge';
+import { Button } from '@/components/ui/Button';
+import { FactRow } from '@/components/ui/FactRow';
+import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { fontSize, fontWeight, space, typeScale } from '@/theme/tokens';
 import type { Receipt } from '../api';
 
 /**
@@ -78,15 +77,11 @@ function ReceiptCardImpl({
   const accent = cancelled ? STATUS_COLOR.NEUTRAL : metaColor(RECEIPT_TYPE_META, receipt.type);
 
   return (
+    // Khuôn thẻ danh sách chuẩn (Đơn thuê): mã phiếu + viên trạng thái, các dòng FactRow, nút vàng.
     <Card
-      padded={false}
       {...(onPress
         ? {
             onPress: open,
-            /*
-             * Nhãn khả truy cập = MÃ PHIẾU + số tiền có dấu. Chỉ số tiền thì một danh sách hai
-             * mươi phiếu đọc ra là hai mươi con số không phân biệt được với nhau.
-             */
             accessibilityLabel: [
               receipt.receiptNo,
               `${income ? '+' : '−'} ${fmt.money(receipt.amount)}`,
@@ -96,91 +91,47 @@ function ReceiptCardImpl({
           }
         : {})}
     >
-      <XStack>
-        <CardAccent color={accent} />
-
-        <YStack f={1} minWidth={0} p={space.md} gap={space.xs}>
-          {/* Tầng 1 — SỐ TIỀN là thứ to nhất của thẻ, nhãn trạng thái đối diện. */}
-          <XStack ai="center" gap={space.xs}>
-            <Text
-              f={1}
-              minWidth={0}
-              col={income ? colors.success : colors.danger}
-              fos={fontSize.h4}
-              fow={fontWeight.bold}
-              numberOfLines={1}
-            >
-              {income ? '+' : '−'} {fmt.money(receipt.amount)}
-            </Text>
-            <StatusBadge
-              label={domainLabel('receiptStatus', receipt.status)}
-              color={metaColor(RECEIPT_STATUS_META, receipt.status)}
-              size="sm"
-            />
-          </XStack>
-
-          {/*
-            Tầng 2 — hai nhãn ĐI CÙNG NHAU: loại phiếu và nguồn sinh ra nó.
-
-            Loại phiếu lặp lại điều dấu +/− đã nói, và đó là chủ ý của thẻ web: dấu trừ là một nét
-            ngang dễ trượt mắt trong danh sách dài, còn "Phiếu chi" thì không đọc nhầm được. Nguồn
-            đứng ngay cạnh vì hai câu hỏi đi liền nhau — tiền vào hay ra, và ai sinh ra phiếu này:
-            chỉ `manual` mới sửa/huỷ tay được.
-          */}
-          <XStack ai="center" gap={space.xs} flexWrap="wrap">
-            <StatusBadge
-              label={domainLabel('receiptType', receipt.type)}
-              color={metaColor(RECEIPT_TYPE_META, receipt.type)}
-              size="sm"
-            />
-            <StatusBadge
-              label={domainLabel('receiptSource', receipt.source)}
-              color={metaColor(RECEIPT_SOURCE_META, receipt.source)}
-              size="sm"
-            />
-          </XStack>
-
-          {/* Tầng 3 — NGÀY và DANH MỤC: khoản này xảy ra lúc nào, thuộc nhóm nào. */}
-          <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
-            {fmt.date(receipt.occurredAt)} · {receipt.categoryName ?? t('uncategorized')}
+      <YStack gap={space.sm}>
+        <XStack ai="center" jc="space-between" gap={space.sm}>
+          <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.medium} numberOfLines={1} flexShrink={1}>
+            {receipt.receiptNo ? `#${receipt.receiptNo}` : tCommon('labels.emptyValue')}
           </Text>
+          <Pill
+            label={domainLabel('receiptStatus', receipt.status)}
+            tone={pillToneOfStatusColor(
+              cancelled ? STATUS_COLOR.NEUTRAL : metaColor(RECEIPT_STATUS_META, receipt.status),
+            )}
+          />
+        </XStack>
 
-          {/* Tầng 4 — ĐỐI TƯỢNG, ăn mực đen: dòng trả lời "tiền của ai, xe nào". */}
-          {subject ? (
-            <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
-              {subject}
-            </Text>
-          ) : null}
+        {/* Số tiền: tiền vào xanh, tiền ra đỏ - vẫn là con số nổi nhất thẻ. */}
+        <XStack ai="center" jc="space-between" gap={space.sm}>
+          <Pill
+            label={domainLabel('receiptType', receipt.type)}
+            tone={pillToneOfStatusColor(accent)}
+          />
+          <Text col={income ? colors.success : colors.danger} fos={fontSize.h4} fow={fontWeight.bold} numberOfLines={1} flexShrink={1}>
+            {income ? '+' : '−'} {fmt.money(receipt.amount)}
+          </Text>
+        </XStack>
 
-          {/* Tầng 5 — diễn giải người ghi tự nhập. */}
-          {showDescription && receipt.description ? (
-            <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={2}>
-              {receipt.description}
-            </Text>
-          ) : null}
+        <FactRow label={t('detail.rows.source')}>{domainLabel('receiptSource', receipt.source)}</FactRow>
+        <FactRow label={t('detail.rows.occurredAt')}>{fmt.date(receipt.occurredAt)}</FactRow>
+        <FactRow label={t('detail.rows.category')}>{receipt.categoryName ?? t('uncategorized')}</FactRow>
+        {subject ? <FactRow label={t('detail.rows.customer')}>{subject}</FactRow> : null}
+        <FactRow label={t('detail.rows.method')}>{domainLabel('paymentMethod', receipt.paymentMethod)}</FactRow>
+        {showDescription && receipt.description ? (
+          <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={2}>
+            {receipt.description}
+          </Text>
+        ) : null}
 
-          {/*
-            Tầng 6 — MÃ PHIẾU và phương thức, mờ nhất thẻ.
-
-            Chúng là thứ TRA CỨU chứ không phải thứ đọc lướt: mã phiếu chỉ dùng khi đối chiếu với
-            một chứng từ ngoài, phương thức chỉ dùng khi soát quỹ. Ở tầng chữ mờ nhất thì chúng
-            luôn có mặt mà không tranh chỗ với bốn tầng trên.
-          */}
-          <XStack ai="center" gap={space.xs}>
-            <Text
-              f={1}
-              minWidth={0}
-              col={colors.placeholder}
-              fos={fontSize.label}
-              numberOfLines={1}
-            >
-              {receipt.receiptNo ?? tCommon('labels.emptyValue')} ·{' '}
-              {domainLabel('paymentMethod', receipt.paymentMethod)}
-            </Text>
-            {onPress ? <DetailChevron /> : null}
-          </XStack>
-        </YStack>
-      </XStack>
+        {onPress ? (
+          <YStack pt={space.xs}>
+            <Button label={tCommon('actions.viewDetail')} variant="gradient" size="compact" onPress={open} />
+          </YStack>
+        ) : null}
+      </YStack>
     </Card>
   );
 }

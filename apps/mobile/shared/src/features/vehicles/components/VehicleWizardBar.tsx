@@ -1,10 +1,12 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 const CIRCLE = 28;
+/** Chấm giữa vòng bước đang ở / chưa tới - cùng tỉ lệ chấm của tiến trình app khách. */
+const DOT = 10;
 /** Vạch nối giữa hai bước — mảnh như đường kẻ của `Steps`, không phải một thanh tiến độ. */
 const CONNECTOR_HEIGHT = 2;
 const CONNECTOR_ARROW = 12;
@@ -65,6 +67,12 @@ export function VehicleWizardBar({
               <XStack ai="center" alignSelf="stretch" height={CIRCLE}>
                 <Connector show={!first} done={index <= current} />
 
+                {/*
+                  Vòng bước theo khuôn tiến trình yêu cầu của app KHÁCH (`TripRequestProgress`):
+                  xong = nền vàng + dấu tích; đang ở = viền vàng 2 + nền vàng nhạt + chấm vàng;
+                  chưa tới = viền mảnh + chấm xám. Màn quản lý lấy phong cách hiển thị của app
+                  khách (người dùng chốt 10/11/2026).
+                */}
                 <YStack
                   w={CIRCLE}
                   h={CIRCLE}
@@ -72,15 +80,20 @@ export function VehicleWizardBar({
                   ai="center"
                   jc="center"
                   mx={space.xs}
-                  bg={active || done ? colors.primary : colors.surfaceMuted}
+                  bw={done ? 0 : active ? 2 : 1}
+                  bc={active ? colors.primary : colors.border}
+                  bg={done ? colors.primary : active ? colors.primaryLight : colors.surface}
                 >
-                  <Text
-                    col={active || done ? colors.onPrimary : colors.textMuted}
-                    fos={fontSize.bodySm}
-                    fow={fontWeight.bold}
-                  >
-                    {index + 1}
-                  </Text>
+                  {done ? (
+                    <Ionicons name="checkmark" size={iconSize.sm} color={colors.onPrimary} />
+                  ) : (
+                    <YStack
+                      w={DOT}
+                      h={DOT}
+                      br={radius.pill}
+                      bg={active ? colors.primary : colors.border}
+                    />
+                  )}
                 </YStack>
 
                 <Connector show={!last} done={done} arrow />

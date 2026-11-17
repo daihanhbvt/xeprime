@@ -1,9 +1,9 @@
 import type { Href as TypedHref } from 'expo-router';
 import type { LegalDoc } from '@xeprime/domain';
-import { REGISTRATION_TRACK, type RegistrationTrack } from '@xeprime/types';
+import { REGISTRATION_TRACK, SERVICE_TYPE, type RegistrationTrack } from '@xeprime/types';
 import { VEHICLE_EDIT_TAB, type VehicleEditTab } from './vehicle-edit-tab';
 import { compactParams } from './list-params';
-import { ACCOUNT_SECTION, ACCOUNT_SECTION_PARAM, type AccountSection } from './account-section';
+import { ACCOUNT_SECTION_PARAM, type AccountSection } from './account-section';
 import {
   VEHICLE_REGISTRATION_SOURCE,
   type VehicleRegistrationSource,
@@ -13,6 +13,26 @@ import {
   VEHICLE_MANAGE_SECTION,
   type VehicleManageSection,
 } from './vehicle-manage-section';
+
+/**
+ * Tham số kèm một mục Owner Lite: `service` = tab dịch vụ mở sẵn ở "Dịch vụ & giá", hoặc khối
+ * điều khoản cần cuộn tới ở "Chính sách thuê" (đi cùng `anchor`) — web `resolveEditTab`.
+ */
+export interface VehicleManageSectionOptions {
+  anchor?: string;
+  service?: string;
+}
+
+function vehicleManageSectionParams(
+  vehicleId: string,
+  options?: VehicleManageSectionOptions,
+): Record<string, string> {
+  return {
+    id: vehicleId,
+    ...(options?.anchor ? { anchor: options.anchor } : {}),
+    ...(options?.service ? { service: options.service } : {}),
+  };
+}
 
 /**
  * `Href` NỚI LỎNG — chỉ dùng trong BẢN ĐỒ GỐC này (tách app 25/09/2026).
@@ -76,6 +96,8 @@ const VEHICLE_MANAGE_SECTION_PATHNAME = {
   [VEHICLE_MANAGE_SECTION.IMAGES]: '/account/vehicles/[id]/manage/images',
   [VEHICLE_MANAGE_SECTION.DOCUMENTS]: '/account/vehicles/[id]/manage/documents',
   [VEHICLE_MANAGE_SECTION.TRIP_HISTORY]: '/account/vehicles/[id]/manage/trip-history',
+  [VEHICLE_MANAGE_SECTION.SERVICES]: '/account/vehicles/[id]/manage/services',
+  [VEHICLE_MANAGE_SECTION.POLICY]: '/account/vehicles/[id]/manage/policy',
   [VEHICLE_MANAGE_SECTION.PRICING]: '/account/vehicles/[id]/manage/pricing',
   [VEHICLE_MANAGE_SECTION.HANDOVER_TIME]: '/account/vehicles/[id]/manage/handover-time',
   [VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION]:
@@ -114,6 +136,11 @@ export const SHOP_SECTION_PARAM = 'section';
 export const BALANCE_SECTION_PARAM = 'section';
 export const BALANCE_PAYOUT_SECTION = 'payout';
 export const SHOP_SECTION = {
+  /**
+   * Thông tin hiển thị — với mặt tiền CÁ NHÂN (chủ xe tuyến hoa hồng) là thông tin chủ xe: ảnh, họ
+   * tên, giới thiệu (ADR 0085 điều 2).
+   */
+  PROFILE: 'profile',
   /** Địa chỉ chi nhánh mặc định + mã số thuế/giấy phép. */
   LEGAL: 'legal',
   /** Sổ `bank_accounts` phạm vi gian hàng. CŨ (PR #159): route chuyển sang trang số dư. */
@@ -122,6 +149,13 @@ export const SHOP_SECTION = {
   TAX: 'tax',
   /** Gói hiện hành, hạn mức chỗ và hoá đơn. */
   PLAN: 'plan',
+  /**
+   * Hỗ trợ xuất hoá đơn VAT cho mọi xe (ADR 0059) - CHỈ mặt tiền cá nhân: chủ xe tuyến hoa hồng không
+   * có "Chính sách thuê", nơi gian hàng đặt cùng thiết lập này (ADR 0085 điều 2).
+   */
+  VAT_INVOICE: 'vat-invoice',
+  /** Thẻ "Chi nhánh" của trang Thông tin cửa hàng (web `SHOP_SECTION.BRANCHES`, S13). */
+  BRANCHES: 'branches',
 } as const;
 export type ShopSection = (typeof SHOP_SECTION)[keyof typeof SHOP_SECTION];
 
@@ -138,6 +172,7 @@ export function isShopSection(value: unknown): value is ShopSection {
  * `ScopeGuard` mở nhầm cho một route nó phải gác.
  */
 export const MANAGE_ONBOARDING_PATHNAME = '/manage/onboarding';
+export const MANAGE_REGISTER_PATHNAME = '/manage/register';
 export const MANAGE_SHOP_PATHNAME = '/manage/shop';
 
 /**
@@ -157,6 +192,8 @@ export interface CalendarFilters {
    * bằng `isSafeNextPath`.
    */
   back?: boolean;
+  /** Chi nhánh đang lọc ở màn trước — lịch mở đúng phạm vi đó (web `vehicleSchedulePath`). */
+  branchId?: string;
 }
 
 function calendarHref(
@@ -184,7 +221,10 @@ export const ROUTES = {
      */
     search: (params?: ExploreSearchParams): Href =>
       params && Object.keys(params).length > 0
-        ? { pathname: '/search', params: { ...EMPTY_SEARCH_PARAMS, ...params, nav: String(Date.now()) } }
+        ? {
+            pathname: '/search',
+            params: { ...EMPTY_SEARCH_PARAMS, ...params, nav: String(Date.now()) },
+          }
         : '/search',
     listingDetail: (vehicleId: string, serviceType?: string): Href =>
       serviceType
@@ -285,9 +325,20 @@ export const ROUTES = {
      * URL — hội thoại thuộc về GIAN HÀNG (một thread cho mọi xe của shop), nên chiếc xe phải đi
      * kèm riêng.
      */
-    thread: (conversationId: string, vehicleId?: string): Href => ({
+    /**
+     * `v` = xe, `t` = CHUYẾN (id yêu cầu) — ngữ cảnh chờ gắn vào câu đầu tiên, vai của `?v=`/`?t=`
+     * bên web (`chatThreadHref`). Chuyến thắng xe: thẻ chuyến đã mang xe của chính chuyến đó.
+     */
+    thread: (
+      conversationId: string,
+      context: { vehicleId?: string | null; tripId?: string | null } = {},
+    ): Href => ({
       pathname: '/chat/[id]',
-      params: vehicleId ? { id: conversationId, v: vehicleId } : { id: conversationId },
+      params: context.tripId
+        ? { id: conversationId, t: context.tripId }
+        : context.vehicleId
+          ? { id: conversationId, v: context.vehicleId }
+          : { id: conversationId },
     }),
   },
 
@@ -320,8 +371,8 @@ export const ROUTES = {
       params: { id: vehicleId },
     }),
     /**
-     * Không gian "QUẢN LÝ XE" của một chiếc xe — 13 mục, ba nhóm (web: menu trái; app: một màn
-     * mục lục rồi mỗi mục một màn).
+     * Màn SỬA XE của chủ xe tuyến hoa hồng — menu ba nhóm như web `VehicleEditWorkspace` (web: menu
+     * trái; app: một màn menu rồi mỗi mục một màn).
      *
      * Gốc là MỤC LỤC chứ không tự chuyển sang mục đầu tiên như web: web có menu trái luôn hiện
      * nên "gốc" của nó không cần tồn tại, còn trên điện thoại mục lục CHÍNH LÀ menu.
@@ -337,12 +388,12 @@ export const ROUTES = {
     vehicleManageSection: (
       vehicleId: string,
       section: VehicleManageSection,
-      /** `anchor` = bản native của `#rental-terms` bên web — màn đích cuộn tới khối đó. */
-      options?: { anchor?: string },
+      /** `anchor` = bản native của `#rental-terms` bên web; `service` = tab / khối của dịch vụ. */
+      options?: VehicleManageSectionOptions,
     ): Href =>
       ({
         pathname: VEHICLE_MANAGE_SECTION_PATHNAME[section],
-        params: options?.anchor ? { id: vehicleId, anchor: options.anchor } : { id: vehicleId },
+        params: vehicleManageSectionParams(vehicleId, options),
       }) as Href,
     hostGuide: (): Href => '/account/host-guide',
     contractsDocuments: (): Href => '/account/contracts-documents',
@@ -471,6 +522,14 @@ export const ROUTES = {
       const params = compactParams({ filter: filters?.filter });
       return params ? { pathname: '/manage/trips', params } : '/manage/trips';
     },
+    /**
+     * Hộp thư yêu cầu mở sẵn MỘT yêu cầu (`?request=`, như web `bookingRequestPath.open`) — đích của
+     * thẻ chuyến trong tin nhắn khi yêu cầu chưa thành đơn. Đã thành đơn thì màn tự mở chi tiết ĐƠN.
+     */
+    requestDetail: (requestId: string): Href => ({
+      pathname: '/manage/requests',
+      params: { request: requestId },
+    }),
     /** Màn Chuyến mở sẵn chi tiết MỘT yêu cầu — đích của thông báo yêu cầu cho chủ xe tuyến hoa hồng. */
     tripRequest: (requestId: string): Href => ({
       pathname: '/manage/trips',
@@ -480,9 +539,16 @@ export const ROUTES = {
      * Danh sách đơn thuê. `vehicleId` lọc theo MỘT xe — cùng tham số web đặt trên URL
      * (`/manage/bookings?vehicleId=…`), dùng cho lối đi từ hồ sơ xe.
      */
-    bookings: (filters?: { vehicleId?: string; status?: string; sort?: string }): Href => {
+    bookings: (filters?: {
+      vehicleId?: string;
+      status?: string;
+      sort?: string;
+      /** Nhóm của màn "Đơn thuê xe" gộp (`RENTAL_STAGE`) — như `?preset=` của web. */
+      stage?: string;
+    }): Href => {
       // `status`/`sort` = bộ lọc KHỞI TẠO từ thẻ Tổng quan (như `?status=active&sort=return_asc`).
       const params = compactParams({
+        stage: filters?.stage,
         vehicleId: filters?.vehicleId,
         status: filters?.status,
         sort: filters?.sort,
@@ -501,8 +567,18 @@ export const ROUTES = {
      * "Đơn đã kết thúc" (05/11/2026, web `BOOKINGS_ENDED`) — đơn hoàn thành / huỷ / khách không đến
      * + yêu cầu không thành đơn. `tab` = ngăn mở sẵn (`BOOKING_HISTORY_TAB`), vắng = "Tất cả".
      */
-    bookingsEnded: (tab?: string): Href =>
-      tab ? { pathname: '/manage/bookings/ended', params: { tab } } : '/manage/bookings/ended',
+    bookingsEnded: (
+      tab?: string,
+      /** Bộ lọc chung mang sang từ "Đơn thuê xe" - web `endedHref`: cùng câu hỏi, khác chặng. */
+      carry?: { q?: string; branchId?: string; serviceType?: string },
+    ): Href => {
+      const params = Object.fromEntries(
+        Object.entries({ tab, ...carry }).filter(([, value]) => Boolean(value)),
+      ) as Record<string, string>;
+      return Object.keys(params).length > 0
+        ? { pathname: '/manage/bookings/ended', params }
+        : '/manage/bookings/ended';
+    },
     /**
      * Tạo đơn tại quầy. `prefill` mang tên + SĐT của một khách đã có trong sổ — cùng vai với
      * `?customerName=&customerPhone=` mà web đặt lên URL khi bấm "Tạo đơn thuê" ở hồ sơ khách —
@@ -522,9 +598,13 @@ export const ROUTES = {
         ? { pathname: '/manage/bookings/new', params }
         : '/manage/bookings/new';
     },
-    bookingDetail: (bookingId: string): Href => ({
+    /**
+     * `noShow` mở thẳng tấm "Khách không đến" — nút trên THẺ đơn của web mở hộp ngay tại chỗ
+     * (`BookingsListView` `setNoShowFor`); tấm native cần `BookingDetail` nên đi qua màn chi tiết.
+     */
+    bookingDetail: (bookingId: string, options?: { noShow?: boolean }): Href => ({
       pathname: '/manage/bookings/[id]',
-      params: { id: bookingId },
+      params: options?.noShow ? { id: bookingId, action: 'no_show' } : { id: bookingId },
     }),
     /** `type` là `HANDOVER_TYPE.PICKUP` / `.RETURN` — không truyền chuỗi trần (ADR 0005). */
     handover: (bookingId: string, type: string): Href => ({
@@ -570,8 +650,9 @@ export const ROUTES = {
       params: { id: vehicleId },
     }),
     /**
-     * Không gian "QUẢN LÝ XE" của tuyến HOA HỒNG (Owner Lite) trong app Partner — ADR 0053 dời nó
-     * từ khu tài khoản của app khách sang đây (web: `/vehicles/<id>/manage` của site partner).
+     * Màn SỬA XE của tuyến HOA HỒNG (Owner Lite) trong app Partner — ADR 0053 dời nó từ khu tài
+     * khoản của app khách sang đây. Web 03/11/2026 cho hai tuyến chung `/vehicles/<id>/edit`; app
+     * giữ cây riêng `/manage/vehicles/<id>/manage` (menu Owner Lite, không qua hub của gian hàng).
      */
     vehicleManage: (vehicleId: string): Href => ({
       pathname: '/manage/vehicles/[id]/manage',
@@ -580,11 +661,11 @@ export const ROUTES = {
     vehicleManageSection: (
       vehicleId: string,
       section: VehicleManageSection,
-      options?: { anchor?: string },
+      options?: VehicleManageSectionOptions,
     ): Href =>
       ({
         pathname: manageVehicleSectionPathname(section),
-        params: options?.anchor ? { id: vehicleId, anchor: options.anchor } : { id: vehicleId },
+        params: vehicleManageSectionParams(vehicleId, options),
       }) as Href,
     /**
      * Một mục của hub sửa xe. `tab` là `VEHICLE_EDIT_TAB.*` — cùng bộ giá trị web đặt trong
@@ -603,26 +684,38 @@ export const ROUTES = {
           return { pathname: '/manage/vehicles/[id]/edit/media', params };
         case VEHICLE_EDIT_TAB.SOURCE:
           return { pathname: '/manage/vehicles/[id]/edit/source', params };
+        /*
+         * Menu sửa xe chỉ còn HAI mục cho thuê như web (`EDIT_MENU.SERVICES` · `EDIT_MENU.POLICY`).
+         * Bí danh cũ đi đúng nơi web `resolveEditTab` đưa: giao nhận / thủ tục → "Chính sách thuê";
+         * nhận chuyến tự động / phụ phí tài xế → tab dịch vụ đó của "Dịch vụ & giá".
+         */
+        case VEHICLE_EDIT_TAB.POLICY:
         case VEHICLE_EDIT_TAB.OPERATIONS:
         case VEHICLE_EDIT_TAB.HANDOVER_TIME:
-          return { pathname: '/manage/vehicles/[id]/edit/handover-time', params };
-        case VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION:
-          return { pathname: '/manage/vehicles/[id]/edit/self-drive-optimization', params };
+          return { pathname: '/manage/vehicles/[id]/edit/policy', params };
+        // Web `resolveEditTab` → `termsOf`: cuộn tới khối điều khoản của ĐÚNG dịch vụ.
         case VEHICLE_EDIT_TAB.SELF_DRIVE_TERMS:
           return {
-            pathname: '/manage/vehicles/[id]/edit/self-drive-optimization',
-            params: anchored,
+            pathname: '/manage/vehicles/[id]/edit/policy',
+            params: { ...anchored, service: 'self_drive' },
           };
-        case VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION:
-          return { pathname: '/manage/vehicles/[id]/edit/with-driver-optimization', params };
         case VEHICLE_EDIT_TAB.WITH_DRIVER_TERMS:
           return {
-            pathname: '/manage/vehicles/[id]/edit/with-driver-optimization',
-            params: anchored,
+            pathname: '/manage/vehicles/[id]/edit/policy',
+            params: { ...anchored, service: 'with_driver' },
           };
-        // Phụ phí tài xế đã gỡ (ADR 0075) — bí danh mở "Nhận chuyến & thủ tục" có tài xế.
+        case VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION:
+          return {
+            pathname: '/manage/vehicles/[id]/edit/pricing',
+            params: { id: vehicleId, service: SERVICE_TYPE.SELF_DRIVE },
+          };
+        // Phụ phí tài xế đã gỡ (ADR 0075) — bí danh mở tab có tài xế.
+        case VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION:
         case VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES:
-          return { pathname: '/manage/vehicles/[id]/edit/with-driver-optimization', params };
+          return {
+            pathname: '/manage/vehicles/[id]/edit/pricing',
+            params: { id: vehicleId, service: SERVICE_TYPE.WITH_DRIVER },
+          };
         case VEHICLE_EDIT_TAB.DOCUMENTS:
           return { pathname: '/manage/vehicles/[id]/edit/documents', params };
         case VEHICLE_EDIT_TAB.MAINTENANCE:
@@ -633,7 +726,14 @@ export const ROUTES = {
           return { pathname: '/manage/vehicles/[id]/edit/information', params };
       }
     },
-    maintenance: (): Href => '/manage/maintenance',
+    /**
+     * Trung tâm bảo dưỡng. `filter` = nhóm việc mở sẵn, `resolve` = `bookingId` của biên bản cần mở
+     * NGAY hộp "Bổ sung KM" (đích "Xử lý ngay" của cảnh báo Thiếu KM trả — web `?resolve=`).
+     */
+    maintenance: (opts?: { filter?: string; resolve?: string }): Href => {
+      const params = compactParams({ filter: opts?.filter, resolve: opts?.resolve });
+      return params ? { pathname: '/manage/maintenance', params } : '/manage/maintenance';
+    },
 
     /**
      * Lịch xe (CAL-01) — cùng địa chỉ với web (`/manage/calendar`) và cùng tham số.
@@ -727,8 +827,10 @@ export const ROUTES = {
      */
     sellerProfile: (): Href => '/manage/shop/seller-profile',
 
-    /** Nhân sự gian hàng + lời mời (SHP-05). */
+    /** Nhân viên & phân quyền — danh sách gộp thành viên + lời mời cũ còn chờ (ADR 0086). */
     members: (): Href => '/manage/members',
+    /** "Vai trò & quyền" — ma trận CHỈ XEM, cùng địa chỉ với web (`/manage/members/roles`). */
+    memberRoles: (): Href => '/manage/members/roles',
 
     /** Tài xế của gian hàng (SHP-06). */
     drivers: (): Href => '/manage/drivers',
@@ -753,21 +855,22 @@ export const ROUTES = {
      * tham số bắt buộc.
      */
     chat: (): Href => '/manage/chat',
-    chatThread: (conversationId: string): Href => ({
+    /** `tripId` = chuyến (id yêu cầu) vừa bấm "Nhắn khách" — thẻ chuyến gắn vào câu đầu tiên. */
+    chatThread: (conversationId: string, tripId?: string | null): Href => ({
       pathname: '/manage/chat/[id]',
-      params: { id: conversationId },
+      params: tripId ? { id: conversationId, t: tripId } : { id: conversationId },
     }),
 
     /** Tổng quan doanh thu (FIN-01) — ba lớp tiền của một kỳ + hai bảng xếp hạng. */
     /** Ví điểm của GIAN HÀNG — khoản XePrime phải trả sau mỗi chuyến (ADR 0033 điều 2). */
     /**
-     * Khối "Gói & hạn mức" (chỉ đọc, không thanh toán) — app Partner không có màn gói riêng, như web:
-     * `/manage/account?section=plan` mở khối gói của "Hồ sơ chủ xe" (tuyến hoa hồng) và route đó
-     * chuyển tuyến gói sang khối gói của trang Cửa hàng (`/manage/shop?section=plan`).
+     * Khối "Gói & hạn mức" (chỉ đọc, không thanh toán) — app Partner không có màn gói riêng. Từ ADR
+     * 0085 điều 2 trang Thông tin `/manage/shop` là của CẢ HAI tuyến (chủ xe hoa hồng: "Hồ sơ chủ xe"),
+     * nên khối gói luôn là `/manage/shop?section=plan`.
      */
     plan: (): Href => ({
-      pathname: '/manage/account',
-      params: { [ACCOUNT_SECTION_PARAM]: ACCOUNT_SECTION.PLAN },
+      pathname: MANAGE_SHOP_PATHNAME,
+      params: { [SHOP_SECTION_PARAM]: SHOP_SECTION.PLAN },
     }),
     balance: (): Href => '/manage/balance',
     /** Khối 'Tài khoản nhận tiền' của trang số dư — web `balancePayoutPath()` (PR #159). */
@@ -785,12 +888,22 @@ export const ROUTES = {
     hostGuide: (): Href => '/manage/host-guide',
     contractsDocuments: (): Href => '/manage/contracts-documents',
     dataProtection: (): Href => '/manage/data-protection',
-    /** Chọn cách cho thuê — tài khoản đối tác CHƯA có gian hàng (web: `/register` site partner). */
-    register: (): Href => '/manage/register',
+    /**
+     * Chọn cách cho thuê — tài khoản đối tác CHƯA có gian hàng (web: `/register` site partner).
+     * `track` đi thẳng vào form một trang của tuyến đó (web `partnerSignupHref(track)`) — đây là
+     * đích của `/manage/onboarding` khi chưa có gian hàng, y như web chuyển hướng.
+     */
+    register: (track?: RegistrationTrack | null): Href =>
+      track
+        ? { pathname: MANAGE_REGISTER_PATHNAME, params: { [REGISTRATION_TRACK_PARAM]: track } }
+        : MANAGE_REGISTER_PATHNAME,
     finance: (): Href => '/manage/finance',
 
     /** Công nợ (FIN-04) — các đơn còn nợ, lọc và phân trang ở server. */
-    debts: (): Href => '/manage/debts',
+    debts: (filters?: { branchId?: string }): Href =>
+      filters?.branchId
+        ? { pathname: '/manage/debts', params: { branchId: filters.branchId } }
+        : '/manage/debts',
 
     /**
      * Sổ Thu-Chi (FIN-02), tuỳ chọn LỌC SẴN — đường đi từ thẻ tổng, hồ sơ xe hay hồ sơ khách

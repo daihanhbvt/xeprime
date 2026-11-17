@@ -10,80 +10,38 @@ import {
 import { RENTAL_TERMS_ANCHOR } from '@/navigation/vehicle-manage-section';
 import { editTabServiceType, selfDriveOptimizationTarget, vehicleEditNavGroups } from './edit-nav';
 
-const ALL_SERVICES = [SERVICE_TYPE.SELF_DRIVE, SERVICE_TYPE.WITH_DRIVER, SERVICE_TYPE.LONG_TERM];
 const shape = (groups: ReturnType<typeof vehicleEditNavGroups>) =>
   groups.map((g) => [g.key, g.items.map((i) => i.tab)]);
 
-/** Web `vehicle-edit-nav.ts` → `editNavGroups`: sáu nhóm, đúng thứ tự, đúng nhãn. */
+/** Web `vehicle-edit-nav.ts` → `EDIT_MENU_GROUPS`: ba nhóm (ledger §3.6 E1), đúng thứ tự, đúng nhãn. */
 describe('vehicleEditNavGroups - menu sửa xe như web', () => {
-  it('đủ năng lực: bảy nhóm, mười một mục, đúng thứ tự', () => {
-    const groups = vehicleEditNavGroups({ enabled: () => true, services: ALL_SERVICES });
+  it('đủ năng lực: ba nhóm, hai mục cho thuê, đúng thứ tự và nhãn web', () => {
+    const groups = vehicleEditNavGroups({ enabled: () => true });
     expect(shape(groups)).toEqual([
-      ['info', ['information', 'media', 'documents', 'trip-history']],
-      ['services', ['pricing']],
-      ['policy', ['handover-time']],
-      ['selfDrive', ['self-drive-optimization']],
-      ['withDriver', ['with-driver-optimization']],
-      ['longTerm', []],
+      ['profile', ['information', 'media', 'documents', 'trip-history']],
+      ['rental', ['pricing', 'policy']],
       ['advanced', ['maintenance', 'source']],
     ]);
-    expect(groups.map((g) => g.labelKey)).toEqual([
-      'groups.info',
-      'groups.services',
-      'groups.policy',
-      'groups.selfDrive',
-      'groups.withDriver',
-      'groups.longTerm',
-      'groups.advanced',
-    ]);
     expect(groups.flatMap((g) => g.items.map((i) => i.labelKey))).toEqual([
-      'items.information',
-      'items.images',
-      'items.documents',
-      'items.tripHistory',
-      'items.services',
-      'items.turnaround',
-      'items.bookingTerms',
-      'items.bookingTerms',
-      'items.maintenance',
-      'items.source',
+      'information',
+      'media',
+      'documents',
+      'trip-history',
+      'services',
+      'policy',
+      'maintenance',
+      'source',
     ]);
   });
 
-  it('thiếu giấy tờ/nguồn xe/bảo dưỡng: mục biến mất, nhóm Nâng cao rỗng bị bỏ, nhóm dịch vụ giữ', () => {
+  it('thiếu giấy tờ/nguồn xe/bảo dưỡng: mục biến mất, nhóm rỗng bị bỏ', () => {
     const hidden = new Set<VehicleEditTab>([
       VEHICLE_EDIT_TAB.DOCUMENTS,
       VEHICLE_EDIT_TAB.SOURCE,
       VEHICLE_EDIT_TAB.MAINTENANCE,
     ]);
-    const groups = vehicleEditNavGroups({
-      enabled: (tab) => !hidden.has(tab),
-      services: ALL_SERVICES,
-    });
-    expect(shape(groups)).toEqual([
-      ['info', ['information', 'media', 'trip-history']],
-      ['services', ['pricing']],
-      ['policy', ['handover-time']],
-      ['selfDrive', ['self-drive-optimization']],
-      ['withDriver', ['with-driver-optimization']],
-      ['longTerm', []],
-    ]);
-  });
-
-  it('nhóm của dịch vụ đang tắt mờ đi, nhóm chung không bao giờ mờ', () => {
-    const groups = vehicleEditNavGroups({
-      enabled: () => true,
-      services: [SERVICE_TYPE.SELF_DRIVE],
-    });
-    expect(Object.fromEntries(groups.map((g) => [g.key, g.dimmed]))).toEqual({
-      info: false,
-      services: false,
-      policy: false,
-      selfDrive: false,
-      withDriver: true,
-      longTerm: true,
-      advanced: false,
-    });
+    const groups = vehicleEditNavGroups({ enabled: (tab) => !hidden.has(tab) });
+    expect(groups.map((g) => g.key)).toEqual(['profile', 'rental']);
   });
 
   it('mục → dịch vụ (web editTabServiceType)', () => {
@@ -123,13 +81,11 @@ describe('VEHICLE_EDIT_TAB - bí danh như web resolveEditTab', () => {
   });
 
   it('resolveEditTab / isTermsAlias', () => {
-    expect(resolveEditTab(VEHICLE_EDIT_TAB.OPERATIONS)).toBe(VEHICLE_EDIT_TAB.HANDOVER_TIME);
-    expect(resolveEditTab(VEHICLE_EDIT_TAB.SELF_DRIVE_TERMS)).toBe(
-      VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION,
-    );
-    expect(resolveEditTab(VEHICLE_EDIT_TAB.WITH_DRIVER_TERMS)).toBe(
-      VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION,
-    );
+    // Gộp 03/11/2026 (web `resolveEditTab`): mọi lối cũ về giao nhận/điều khoản mở "Chính sách thuê".
+    expect(resolveEditTab(VEHICLE_EDIT_TAB.OPERATIONS)).toBe(VEHICLE_EDIT_TAB.POLICY);
+    expect(resolveEditTab(VEHICLE_EDIT_TAB.HANDOVER_TIME)).toBe(VEHICLE_EDIT_TAB.POLICY);
+    expect(resolveEditTab(VEHICLE_EDIT_TAB.SELF_DRIVE_TERMS)).toBe(VEHICLE_EDIT_TAB.POLICY);
+    expect(resolveEditTab(VEHICLE_EDIT_TAB.WITH_DRIVER_TERMS)).toBe(VEHICLE_EDIT_TAB.POLICY);
     expect(resolveEditTab(VEHICLE_EDIT_TAB.PRICING)).toBe(VEHICLE_EDIT_TAB.PRICING);
     expect(isTermsAlias(VEHICLE_EDIT_TAB.WITH_DRIVER_TERMS)).toBe(true);
     expect(isTermsAlias(VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION)).toBe(false);
@@ -145,15 +101,22 @@ const describePartnerOnly =
 
 describePartnerOnly('ROUTES.manage.vehicleEditTab - mục và bí danh', () => {
   const ID = '01JQZX0000000000000000000V';
-  it('bí danh đi thẳng tới mục thật', () => {
-    expect(ROUTES.manage.vehicleEditTab(ID, VEHICLE_EDIT_TAB.OPERATIONS)).toEqual(
-      ROUTES.manage.vehicleEditTab(ID, VEHICLE_EDIT_TAB.HANDOVER_TIME),
-    );
+  it('giao nhận / vận hành cũ → "Chính sách thuê" (web PolicyPane)', () => {
+    const policy = { pathname: '/manage/vehicles/[id]/edit/policy', params: { id: ID } };
+    expect(ROUTES.manage.vehicleEditTab(ID, VEHICLE_EDIT_TAB.POLICY)).toEqual(policy);
+    expect(ROUTES.manage.vehicleEditTab(ID, VEHICLE_EDIT_TAB.OPERATIONS)).toEqual(policy);
+    expect(ROUTES.manage.vehicleEditTab(ID, VEHICLE_EDIT_TAB.HANDOVER_TIME)).toEqual(policy);
   });
-  it('mục thủ tục mang neo cuộn tới khối thủ tục', () => {
+  it('thủ tục mang neo cuộn tới khối thủ tục ở "Chính sách thuê"', () => {
     expect(ROUTES.manage.vehicleEditTab(ID, VEHICLE_EDIT_TAB.SELF_DRIVE_TERMS)).toEqual({
-      pathname: '/manage/vehicles/[id]/edit/self-drive-optimization',
+      pathname: '/manage/vehicles/[id]/edit/policy',
       params: { id: ID, anchor: RENTAL_TERMS_ANCHOR },
+    });
+  });
+  it('nhận chuyến tự động / phụ phí cũ → tab dịch vụ đó của "Dịch vụ & giá"', () => {
+    expect(ROUTES.manage.vehicleEditTab(ID, VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES)).toEqual({
+      pathname: '/manage/vehicles/[id]/edit/pricing',
+      params: { id: ID, service: SERVICE_TYPE.WITH_DRIVER },
     });
   });
 });

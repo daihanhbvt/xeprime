@@ -1,8 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, market, radius, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 
 /** Các chặng của một chuyến từ phía khách — ADR 0044: yêu cầu → duyệt → giữ chỗ → đơn thuê. */
 // Ba chặng như web #230 — bỏ "Chọn chuyến": chuyến chọn ở thẻ đặt xe của trang xe, không phải một bước.
@@ -102,7 +103,7 @@ export function BookingJourney(props: BookingJourneyProps) {
   return (
     <YStack
       gap={space.sm}
-      px={space.md}
+      px={layout.padX}
       py={space.sm}
       br={radius.lg}
       bw={1}

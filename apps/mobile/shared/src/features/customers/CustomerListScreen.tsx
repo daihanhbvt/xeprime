@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useAccumulatedPages } from '@/hooks/use-accumulated-pages';
 import { RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Text, YStack } from 'tamagui';
@@ -11,12 +12,12 @@ import {
   type TenantCustomerSort,
 } from '@xeprime/types';
 import { Screen } from '@/components/layout/Screen';
-import { IconButton } from '@/components/ui/IconButton';
 import { RecordCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ManageHeader } from '@/features/shell/ManageHeader';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { ManageListShell } from '@/features/shell/ManageListShell';
 import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
@@ -26,12 +27,13 @@ import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
 import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
 import { layout } from '@/theme/layout';
+import { useCardGrid, useResponsive } from '@/theme/use-responsive';
+import { ChipTabs } from '@/components/ui/ChipTabs';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, space } from '@/theme/tokens';
 import { CustomerCard } from './components/CustomerCard';
-import { CustomerFormSheet } from './components/CustomerFormSheet';
 import { CustomerSummaryBar } from './components/CustomerSummaryBar';
 import { relationshipValues, sortValues } from './constants';
 import { useCustomerListRefresh, useCustomersPage } from './hooks/use-customers';
@@ -63,9 +65,9 @@ export function CustomerListScreen() {
   const navigateOnce = useNavigateOnce();
   const permissions = usePermissions();
   const domainLabel = useDomainLabel();
+  const { gutter } = useResponsive();
 
   const canView = permissions.has(PERMISSION.CUSTOMER_VIEW);
-  const canManage = permissions.has(PERMISSION.CUSTOMER_MANAGE);
   const canViewFinance = permissions.has(PERMISSION.FINANCE_VIEW);
 
   const [relationship, setRelationship] = useState<TenantCustomerRelationship>(
@@ -75,7 +77,6 @@ export function CustomerListScreen() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(FIRST_PAGE);
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
-  const [formOpen, setFormOpen] = useState(false);
 
   const trimmedSearch = debouncedSearch.trim();
 
@@ -93,7 +94,8 @@ export function CustomerListScreen() {
   // Kéo xuống làm mới CẢ dải chỉ số ở đầu trang, không riêng trang khách — xem hook.
   const refresh = useCustomerListRefresh();
 
-  const items = query.data?.items ?? [];
+  // Cuộn vô hạn trên mobile: gộp các trang đã tải (`useAccumulatedPages`).
+  const items = useAccumulatedPages(query.data?.items, query.data?.meta?.page);
   const meta = query.data?.meta;
 
   /*
@@ -127,16 +129,6 @@ export function CustomerListScreen() {
   const groups = useMemo<readonly FilterGroup[]>(
     () => [
       {
-        key: 'relationship',
-        label: t('filters.relationship'),
-        value: relationship,
-        resetValue: TENANT_CUSTOMER_RELATIONSHIP.ALL,
-        options: relationshipValues(canViewFinance).map((value) => ({
-          value,
-          label: domainLabel('tenantCustomerRelationship', value),
-        })),
-      },
-      {
         key: 'sort',
         label: t('filters.sort'),
         value: sort,
@@ -147,7 +139,7 @@ export function CustomerListScreen() {
         })),
       },
     ],
-    [t, domainLabel, canViewFinance, relationship, sort],
+    [t, domainLabel, canViewFinance, sort],
   );
 
   const openCustomer = useCallback(
@@ -161,6 +153,8 @@ export function CustomerListScreen() {
     ),
     [canViewFinance, openCustomer],
   );
+  // iPad: thẻ xếp lưới 2 cột trong cột nội dung; điện thoại giữ 1 cột.
+  const grid = useCardGrid(renderItem, { listKey: 'customers' });
 
   /*
    * Sắp xếp KHÔNG tính là "đang lọc": đổi thứ tự không làm mất dòng nào, nên trạng thái rỗng vẫn
@@ -168,6 +162,12 @@ export function CustomerListScreen() {
    * của web.
    */
   const filtered = relationship !== TENANT_CUSTOMER_RELATIONSHIP.ALL || trimmedSearch.length > 0;
+  // Web `CustomerTable noResults.action`: gỡ nhóm + tìm kiếm, về trang đầu.
+  const clearFilters = () => {
+    setRelationship(TENANT_CUSTOMER_RELATIONSHIP.ALL);
+    setSearch('');
+    setPage(FIRST_PAGE);
+  };
 
   // Thiếu quyền là 403 của CHÍNH màn này — hiện trạng thái thiếu quyền, KHÔNG giả thành rỗng.
   if (!permissions.isLoading && !canView) {
@@ -187,45 +187,43 @@ export function CustomerListScreen() {
 
   return (
     <>
-      <ManageHeader />
+      {/* Chuẩn UI màn Đơn thuê (người dùng 16/11/2026): thanh trang v2 + khung danh sách `page`. */}
+      <ManagePageHeader title={t('page.title')} />
       <Screen edges={['left', 'right', 'bottom']} scroll={false} padded={false}>
         <ManageListShell
+          variant="page"
           title={t('page.title')}
+          subtitle={t('page.listSubtitle')}
           {...(meta === undefined ? {} : { total: t('page.totalLabel', { count: meta.total }) })}
-          action={
-            canManage ? (
-              <IconButton
-                icon="add"
-                label={t('page.add')}
-                tone="primary"
-                onPress={() => setFormOpen(true)}
-              />
-            ) : null
-          }
           summary={
             <>
               <CustomerSummaryBar enabled={canView} canViewFinance={canViewFinance} />
-              {/*
-                Câu định nghĩa nhóm khách của web — nó giải thích chính các lựa chọn trong tấm
-                lọc, nên phải ở gần chúng. Nằm trong khối ĐẦU TRANG, thứ tự thu lại khi cuộn, nên
-                có mặt lúc cần mà không chiếm chỗ vĩnh viễn.
-              */}
-              <YStack px={layout.screenX} pb={space.sm}>
-                <Text col={colors.textMuted} fos={fontSize.label}>
-                  {t('hints.relationship')}
-                </Text>
-              </YStack>
             </>
           }
           searchValue={search}
           searchLabel={t('filters.search')}
           searchPlaceholder={t('filters.searchPlaceholder')}
           onSearchChange={changeSearch}
+          tabs={
+            // Nhóm khách thành dải tab viên như Lịch sử đơn thuê (người dùng 16/11/2026); sắp xếp
+            // vẫn ở tấm lọc. Bộ lựa chọn y như cũ (`relationshipValues` theo quyền tài chính).
+            <ChipTabs
+              label={t('filters.relationship')}
+              items={relationshipValues(canViewFinance).map((value) => ({
+                value,
+                label: domainLabel('tenantCustomerRelationship', value),
+              }))}
+              value={relationship}
+              onSelect={(value) => changeFilter('relationship', value)}
+              gutter={gutter}
+            />
+          }
           hasRows={items.length > 0}
           groups={groups}
           onFilterChange={changeFilter}
           {...(meta === undefined ? {} : { meta })}
           onPageChange={setPage}
+          loadingMore={query.isFetching && page > 1}
         >
           {({ onScroll, headerHeight, contentContainerStyle, bindList }) => {
             const inStateScroll = (children: ReactNode) => (
@@ -266,27 +264,29 @@ export function CustomerListScreen() {
                     icon="search-outline"
                     title={t('list.noResultsTitle')}
                     description={t('list.noResultsBody')}
+                    actionLabel={t('list.clearFilters')}
+                    onAction={clearFilters}
                   />
                 ) : (
                   /*
-                    KHÔNG có nút "thêm" ở đây: nó đã nằm ở hàng tiêu đề (`ManageListShell action`),
-                    và danh sách rỗng thì không có gì để cuộn nên hàng đó đứng nguyên trên màn —
-                    hai nút cùng một việc trong cùng một khung hình.
+                    Không có lối "Thêm khách hàng" (web 02/11/2026, ledger §3.4 #3): khách vào sổ
+                    TỰ ĐỘNG khi đặt xe / lập đơn — form chỉ còn để sửa ở hồ sơ khách.
                   */
                   <ScreenMessage
                     icon="people-outline"
                     title={t('list.emptyTitle')}
-                    description={t('list.emptyBody')}
+                    description={t('list.emptyAutoBody')}
                   />
                 ),
               )
             ) : (
               <Animated.FlatList
+                key={grid.key}
                 ref={bindList}
                 data={items}
                 keyExtractor={keyOf}
                 {...LIST_TUNING}
-                renderItem={renderItem}
+                {...grid.listProps}
                 contentContainerStyle={contentContainerStyle}
                 onScroll={onScroll}
                 scrollEventThrottle={scrollThrottle.frame}
@@ -308,13 +308,6 @@ export function CustomerListScreen() {
           }}
         </ManageListShell>
       </Screen>
-
-      <CustomerFormSheet
-        open={formOpen}
-        customer={null}
-        onClose={() => setFormOpen(false)}
-        onOpenExisting={(id) => navigateOnce(ROUTES.manage.customerDetail(id))}
-      />
     </>
   );
 }

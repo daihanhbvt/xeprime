@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { BlockTitle } from '@/components/ui/BlockTitle';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { InlineAction } from '@/components/ui/InlineAction';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -54,7 +54,7 @@ export function CustomerFinancePanel({ customerId }: { customerId: string }) {
 
       {/* ── Phiếu gần nhất, bằng chứng đằng sau con số trên ─────────────────── */}
       <YStack gap={space.md}>
-        <BlockTitle>{t('list.title')}</BlockTitle>
+        <SectionHeader icon="receipt-outline">{t('list.title')}</SectionHeader>
 
         {receipts.isLoading && !receipts.data ? (
           <SkeletonText lines={4} />

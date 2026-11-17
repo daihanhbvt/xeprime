@@ -183,10 +183,13 @@ export function VehicleIdentityCardFields({
   isCar,
   lockedNotice,
   setValue,
+  bodyTypeElsewhere = false,
 }: SectionProps & {
   isCar: boolean;
   lockedNotice?: string | undefined;
   setValue: UseFormSetValue<VehicleFormValues>;
+  /** Kiểu dáng vẽ ở THẺ RIÊNG (màn sửa xe, web `bodyTypeElsewhere`) — không lặp ở đây. */
+  bodyTypeElsewhere?: boolean;
 }) {
   const t = useTranslations('Vehicles.form.specs');
   const vehicleType = isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE;
@@ -210,28 +213,35 @@ export function VehicleIdentityCardFields({
         {...(lockedNotice ? { lockedNotice } : {})}
         setValue={setValue}
       />
-      <NumberField
-        control={control}
-        name="manufactureYear"
-        grouped={false}
-        integer
-        label={t('manufactureYear')}
-        placeholder={String(new Date().getFullYear())}
-        min={1980}
-        max={new Date().getFullYear() + 1}
-        {...(lockedNotice ? { hint: lockedNotice } : {})}
-        editable={!lockedNotice}
-      />
-      <TextField
-        control={control}
-        name="color"
-        label={t('color')}
-        placeholder={t('colorPlaceholder')}
-      />
+      {/* Figma: Năm sản xuất | Màu sắc cùng một hàng. */}
+      <XStack gap={space.md}>
+        <YStack f={1} minWidth={0}>
+          <NumberField
+            control={control}
+            name="manufactureYear"
+            grouped={false}
+            integer
+            label={t('manufactureYear')}
+            placeholder={String(new Date().getFullYear())}
+            min={1980}
+            max={new Date().getFullYear() + 1}
+            {...(lockedNotice ? { hint: lockedNotice } : {})}
+            editable={!lockedNotice}
+          />
+        </YStack>
+        <YStack f={1} minWidth={0}>
+          <TextField
+            control={control}
+            name="color"
+            label={t('color')}
+            placeholder={t('colorPlaceholder')}
+          />
+        </YStack>
+      </XStack>
       <VehicleClassificationFields
         control={control}
         vehicleType={vehicleType}
-        bodyTypePicker={<BodyTypePicker control={control} />}
+        {...(bodyTypeElsewhere ? {} : { bodyTypePicker: <BodyTypePicker control={control} /> })}
         disabled={Boolean(lockedNotice)}
         setValue={setValue}
       />
@@ -289,6 +299,32 @@ export function FeaturesDescriptionFields({ control, isCar }: SectionProps & { i
         maxLength={DESCRIPTION_MAX}
       />
     </YStack>
+  );
+}
+
+/** Thẻ "Tiện ích xe" của màn sửa xe — chỉ tiện ích, lọc theo loại xe (web `FeaturesSelect`). */
+export function FeaturesOnlyFields({ control, isCar }: SectionProps & { isCar: boolean }) {
+  const { catalog } = useCatalog();
+  const vehicleType = isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE;
+  const features = (catalog[CATALOG_TYPE.VEHICLE_FEATURE] ?? []).filter((item) =>
+    vehicleFeatureAppliesTo(item.key, vehicleType),
+  );
+  return <FeaturesField control={control} features={features} />;
+}
+
+/** Thẻ "Mô tả xe" của màn sửa xe — ô mô tả không nhãn (tiêu đề thẻ đã nói), như web. */
+export function DescriptionField({ control, label }: SectionProps & { label: string }) {
+  const t = useTranslations('Vehicles.form.media');
+  return (
+    <TextField
+      control={control}
+      name="description"
+      label={label}
+      placeholder={t('descriptionPlaceholder')}
+      multiline
+      rows={5}
+      maxLength={DESCRIPTION_MAX}
+    />
   );
 }
 

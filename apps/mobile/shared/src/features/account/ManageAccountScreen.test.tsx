@@ -21,6 +21,11 @@ jest.mock('expo-router', () => ({
   useNavigation: () => ({ isFocused: () => true }),
   useRouter: () => ({ push: mockPush, replace: mockReplace, back: jest.fn() }),
   usePathname: () => '/manage/account',
+  /** Màn dùng nó để cuộn tới `?section=`; ở test chạy callback một lần sau khi mount. */
+  useFocusEffect: (callback: () => void | (() => void)) => {
+    const { useEffect } = jest.requireActual<typeof import('react')>('react');
+    useEffect(() => callback(), [callback]);
+  },
 }));
 
 /** Thanh trên của khu quản lý kéo theo cả drawer, chuông và badge chat — không thuộc màn này. */
@@ -161,7 +166,7 @@ describe('ManageAccountScreen - chỉnh sửa hồ sơ', () => {
 
     await fireEvent.press(view.getByRole('button', { name: EDIT_PROFILE }));
 
-    expect(await view.findByText(/Họ tên hiển thị/)).toBeTruthy();
+    expect(await view.findByText(/Họ & tên hiển thị/)).toBeTruthy();
     // Ảnh đại diện nay là ô TẢI ẢNH (presign → R2), không còn ô dán URL.
     expect(view.getByText(/Ảnh đại diện/)).toBeTruthy();
   });
@@ -174,7 +179,7 @@ describe('ManageAccountScreen - chỉnh sửa hồ sơ', () => {
     await fireEvent.changeText(await view.findByDisplayValue('Nguyễn Văn An'), 'Tên gõ dở');
     await fireEvent.press(view.getByRole('button', { name: 'Huỷ' }));
 
-    await waitFor(() => expect(view.queryByText(/Họ tên hiển thị/)).toBeNull());
+    await waitFor(() => expect(view.queryByText(/Họ & tên hiển thị/)).toBeNull());
     expect(view.getAllByText('Nguyễn Văn An').length).toBeGreaterThan(0);
     expect(view.queryByText('Tên gõ dở')).toBeNull();
   });

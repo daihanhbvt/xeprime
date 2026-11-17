@@ -78,6 +78,8 @@ export interface ThreadState {
     attachments?: SendAttachment[];
     /** Xe tin nhắn này nói về — thẻ ngữ cảnh, chỉ gắn ở câu đầu tiên mở từ tin đăng. */
     vehicleId?: string;
+    /** Chuyến (id yêu cầu) tin nhắn này nói về — câu đầu tiên mở từ chuyến đi / đơn thuê. */
+    bookingRequestId?: string;
   }) => Promise<void>;
   retry: (clientMessageId: string) => Promise<void>;
   discard: (clientMessageId: string) => void;
@@ -332,7 +334,12 @@ export function useThread(conversationId: string, viewerSide: ChatSide): ThreadS
   );
 
   const send = useCallback(
-    async (input: { text?: string; attachments?: SendAttachment[]; vehicleId?: string }) => {
+    async (input: {
+      text?: string;
+      attachments?: SendAttachment[];
+      vehicleId?: string;
+      bookingRequestId?: string;
+    }) => {
       const clientMessageId = newClientMessageId();
       const attachments = input.attachments ?? [];
 
@@ -340,6 +347,7 @@ export function useThread(conversationId: string, viewerSide: ChatSide): ThreadS
         {
           clientMessageId,
           ...(input.vehicleId ? { vehicleId: input.vehicleId } : {}),
+          ...(input.bookingRequestId ? { bookingRequestId: input.bookingRequestId } : {}),
           ...(input.text ? { text: input.text } : {}),
           ...(attachments.length ? { attachments } : {}),
         },

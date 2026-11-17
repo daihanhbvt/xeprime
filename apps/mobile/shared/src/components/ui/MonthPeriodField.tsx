@@ -1,9 +1,14 @@
-import { useMemo } from 'react';
-import { XStack, YStack } from 'tamagui';
+import { useMemo, useState } from 'react';
+import { Pressable, StyleSheet } from 'react-native';
+import { Text, XStack, YStack } from 'tamagui';
+import { Ionicons } from '@/components/icons/Ionicons';
+import { useColors } from '@/theme/ThemeProvider';
 import { useTranslations } from 'use-intl';
 import { dayjs, nowInAppTz, type Dayjs } from '@xeprime/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { iconSize, space } from '@/theme/tokens';
+import { fontWeight, iconSize, radius, sizing, space, typeScale } from '@/theme/tokens';
+import { BottomSheet } from './BottomSheet';
+import { MenuOption, MenuOptionList } from './MenuOption';
 import { IconButton } from './IconButton';
 import { SelectControl } from './SelectControl';
 
@@ -13,7 +18,7 @@ export const MONTH_PERIOD_FORMAT = 'YYYY-MM';
 /**
  * Số kỳ GẦN NHẤT bày sẵn trong tấm chọn — chỉ là lối tắt. Kỳ cũ hơn tới được bằng nút ‹.
  */
-const RECENT_CHOICES = 12;
+const RECENT_CHOICES = 36;
 
 /**
  * Các kỳ bày trong tấm chọn: 12 tháng gần nhất (tính theo giờ VN, không theo giờ máy) + kỳ đang
@@ -60,7 +65,10 @@ export function MonthPeriodField({
   value,
   onChange,
   maxPeriod,
+  variant = 'field',
 }: {
+  /** `stepper` - thanh gọn "‹ Tháng 11 năm 2026 ›", chạm giữa mở danh sách tháng (không nhãn trên ô). */
+  variant?: 'field' | 'stepper';
   label: string;
   /** `YYYY-MM`. */
   value: string;
@@ -76,6 +84,97 @@ export function MonthPeriodField({
   );
   // So chuỗi `YYYY-MM` là so thứ tự thời gian — cùng độ dài, số đứng đầu.
   const atMax = maxPeriod != null && value >= maxPeriod;
+  const colors = useColors();
+  const [picking, setPicking] = useState(false);
+
+  if (variant === 'field') {
+    // Ô chọn tháng như web (`DatePicker picker="month"`): MỘT ô có icon lịch + mũi tên, không nhãn trên,
+    // không nút ‹ › (người dùng 17/11/2026) - chạm mở danh sách tháng.
+    const current = options.find((option) => option.value === value)?.label ?? value;
+    return (
+      <>
+        <Pressable
+          onPress={() => setPicking(true)}
+          accessibilityRole="button"
+          accessibilityLabel={`${label}: ${current}`}
+        >
+          <XStack ai="center" gap={space.sm} minHeight={sizing.touchTarget} px={space.sm} bg={colors.surface} bw={1} bc={colors.border} br={radius.md}>
+            <Ionicons name="calendar-outline" size={iconSize.md} color={colors.textMuted} />
+            <Text f={1} col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} numberOfLines={1}>
+              {current}
+            </Text>
+            <Ionicons name="chevron-down" size={iconSize.sm} color={colors.placeholder} />
+          </XStack>
+        </Pressable>
+        <BottomSheet open={picking} onClose={() => setPicking(false)} title={label} chrome="v2" headerDivider>
+          <MenuOptionList>
+            {options.map((option) => (
+              <MenuOption
+                key={option.value}
+                label={option.label}
+                selected={option.value === value}
+                onPress={() => {
+                  onChange(option.value);
+                  setPicking(false);
+                }}
+              />
+            ))}
+          </MenuOptionList>
+        </BottomSheet>
+      </>
+    );
+  }
+
+  if (variant === 'stepper') {
+    const current = options.find((option) => option.value === value)?.label ?? value;
+    return (
+      <>
+        <XStack ai="center" gap={space.xs} minHeight={sizing.touchTarget} px={space.xs} bg={colors.surface} bw={1} bc={colors.borderInput} br={radius.control}>
+          <IconButton
+            icon="chevron-back"
+            label={`${t('actions.previous')} · ${label}`}
+            onPress={() => onChange(shiftMonthPeriod(value, -1))}
+            size={iconSize.md}
+            compact
+          />
+          <Pressable
+            style={styles.center}
+            onPress={() => setPicking(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`${label}: ${current}`}
+          >
+            <Ionicons name="calendar-outline" size={iconSize.sm} color={colors.textMuted} />
+            <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.medium} numberOfLines={1}>
+              {current}
+            </Text>
+          </Pressable>
+          <IconButton
+            icon="chevron-forward"
+            label={`${t('actions.next')} · ${label}`}
+            onPress={() => onChange(shiftMonthPeriod(value, 1))}
+            disabled={atMax}
+            size={iconSize.md}
+            compact
+          />
+        </XStack>
+        <BottomSheet open={picking} onClose={() => setPicking(false)} title={label} chrome="v2" headerDivider>
+          <MenuOptionList>
+            {options.map((option) => (
+              <MenuOption
+                key={option.value}
+                label={option.label}
+                selected={option.value === value}
+                onPress={() => {
+                  onChange(option.value);
+                  setPicking(false);
+                }}
+              />
+            ))}
+          </MenuOptionList>
+        </BottomSheet>
+      </>
+    );
+  }
 
   return (
     <XStack ai="flex-end" gap={space.xs}>
@@ -98,3 +197,7 @@ export function MonthPeriodField({
     </XStack>
   );
 }
+
+const styles = StyleSheet.create({
+  center: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+});

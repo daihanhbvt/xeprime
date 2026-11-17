@@ -107,7 +107,7 @@ export function RegisterForm({
 
   /** Bước 2: tạo tài khoản kèm mã. Sai mã thì ở lại bước mã. */
   const confirmRegistration = (submitted: string) => {
-    if (!registration || register.isPending) return;
+    if (!registration || register.isPending || registerOtp.codeDead) return;
     register.mutate(
       {
         displayName: registration.displayName,
@@ -119,10 +119,19 @@ export function RegisterForm({
         onSuccess,
         onError: (error) => {
           setCode('');
+          // Mã khoá / hết hạn ⇒ khoá ô nhập, chỉ còn "Gửi lại mã" (web PR #278).
+          registerOtp.noteCodeError(error);
           toast.showError(errorMessage(error));
         },
       },
     );
+  };
+
+  /** Gửi lại mã cho lượt đăng ký đang chờ — mã mới, ô nhập trống lại. */
+  const resendRegistrationCode = () => {
+    if (!registration || register.isPending) return;
+    setCode('');
+    registerOtp.send(registration.phone.trim());
   };
 
   /** Quay lại form — giữ nguyên thứ đã điền; mã đã gửi vẫn tính cooldown ở server. */
@@ -147,6 +156,7 @@ export function RegisterForm({
           <Callout tone="danger">{errorMessage(registerOtp.error)}</Callout>
         ) : null}
         <OtpCodeStep
+          onResend={resendRegistrationCode}
           phone={registration.phone.trim()}
           verify={registerOtp}
           code={code}

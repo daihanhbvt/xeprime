@@ -524,6 +524,58 @@
   }
 }
 
+/*
+ * Khổ điện thoại (Figma Partner "Chỉnh sửa xe" MB `24228:103820`): dải tab GẠCH CHÂN lên đầu (không
+ * viền, không nền, bỏ icon) → thẻ tóm tắt xe → nội dung; hai nút Hoàn tác · Lưu thay đổi bám đáy,
+ * "Hoàn tác" nút viền, "Lưu thay đổi" nút vàng chiếm phần còn lại.
+ */
+@container vehicle-edit (max-width: 600px) {
+  .layout {
+    grid-template-areas:
+      'nav'
+      'aside'
+      'main';
+    gap: 12px;
+  }
+
+  .menu {
+    padding: 0;
+    border: 0;
+    border-bottom: 1px solid var(--xp-color-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    gap: 8px;
+  }
+
+  .menuIcon {
+    display: none;
+  }
+
+  .menuItem,
+  .menuItem:hover {
+    min-height: 32px;
+    padding: 0 4px 12px;
+    border-radius: 0;
+    background: transparent;
+    color: var(--xp-color-text-tertiary);
+    font-weight: var(--xp-font-weight-semibold);
+    box-sizing: content-box;
+    gap: 6px;
+  }
+
+  .menuItemActive,
+  .menuItemActive:hover {
+    box-shadow: inset 0 -2px 0 var(--xp-color-primary);
+    background: transparent;
+    color: var(--xp-color-brand-link, var(--xp-color-primary-active));
+  }
+
+  .actions {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  }
+}
+
 .sourceBadge {
   flex: none;
   padding: 2px var(--xp-space-sm);

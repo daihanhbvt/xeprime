@@ -1,6 +1,6 @@
 import { KenBurns } from '@/components/motion/KenBurns';
 import type { ComponentProps, ReactNode } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Image } from 'expo-image';
 import { Linking, Pressable, type ImageSourcePropType } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -39,7 +39,6 @@ import { layout } from '@/theme/layout';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { CustomerTripDetail } from '../api';
 import { tripRequestSteps, type TripRequestStep } from '../trip-flow';
-import { InfoHint } from '@/components/ui/InfoHint';
 
 /**
  * Các thẻ dùng chung của ba màn chuyến phía khách theo design v2 — bản native của
@@ -113,66 +112,10 @@ export function TripRequestPill({
   );
 }
 
-/** Tiêu đề thẻ — `.cardTitle` web (18 Semibold), cùng cỡ cho mọi thẻ để chúng đọc thành một bộ. */
-export function CardTitle({
-  children,
-  icon,
-  hint,
-  hintLabel,
-}: {
-  children: string;
-  icon?: IoniconName;
-  /** Ghi chú phụ gói vào icon ⓘ cạnh tiêu đề thay vì một dòng chữ riêng — tiết kiệm chỗ dọc. */
-  hint?: string;
-  /**
-   * TÊN của nút ⓘ cho trình đọc màn hình (vd "Thông tin này dùng để làm gì"). Thiếu thì dùng tiêu
-   * đề thẻ - KHÔNG dùng chính nội dung hint, vì trình đọc sẽ đọc câu đó hai lần.
-   */
-  hintLabel?: string;
-}) {
-  const colors = useColors();
-  const text = (
-    <Text
-      flexShrink={1}
-      col={colors.text}
-      fos={fontSize.bodyLg}
-      fow={fontWeight.semibold}
-      accessibilityRole="header"
-    >
-      {children}
-    </Text>
-  );
-  const title = hint ? (
-    <XStack f={icon ? 1 : undefined} ai="center" gap={space.xs}>
-      {text}
-      <InfoHint content={hint} label={hintLabel ?? children} />
-    </XStack>
-  ) : icon ? (
-    <YStack f={1}>{text}</YStack>
-  ) : (
-    text
-  );
-  if (!icon) return title;
-  // Icon trong vòng tròn 28 nền vàng nhạt, CÓ VIỀN (Figma "Requirement icon") — người dùng chốt 28/10/2026.
-  return (
-    <XStack ai="center" gap={space.sm}>
-      <YStack w={28} h={28} br={radius.pill} ai="center" jc="center" bw={1} bc={colors.primaryMuted} bg={colors.primarySubtle}>
-        <Ionicons name={icon} size={16} color={colors.primary} />
-      </YStack>
-      {title}
-    </XStack>
-  );
-}
+/* `CardTitle` / `CardLead` đã chuyển sang `components/ui/CardTitle` (dùng chung với app Partner). */
+import { CardLead, CardTitle } from '@/components/ui/CardTitle';
 
-/** Câu dẫn của thẻ — `.cardLead` web (14, `Text/tertiary`). */
-export function CardLead({ children }: { children: ReactNode }) {
-  const colors = useColors();
-  return (
-    <Text col={colors.placeholder} fos={fontSize.bodySm}>
-      {children}
-    </Text>
-  );
-}
+export { CardLead, CardTitle };
 
 /**
  * Đầu trang của các màn chuyến — bản native của `TripPageHeader` web: đường dẫn "Trang chủ / … /
@@ -240,26 +183,26 @@ export function TripPageHeading({
       ) : null}
       <YStack gap={space.sm}>
         {title || description || badge ? (
-        <XStack ai="flex-start" gap={space.sm}>
-          <YStack f={1} gap={2}>
-            {title ? (
-            <Text
-              col={colors.text}
-              fos={fontSize.h3}
-              fow={fontWeight.semibold}
-              accessibilityRole="header"
-            >
-              {title}
-            </Text>
-            ) : null}
-            {description ? (
-              <Text col={colors.placeholder} fos={fontSize.body}>
-                {description}
-              </Text>
-            ) : null}
-          </YStack>
-          {badge ? <XStack pt={space.xs}>{badge}</XStack> : null}
-        </XStack>
+          <XStack ai="flex-start" gap={space.sm}>
+            <YStack f={1} gap={2}>
+              {title ? (
+                <Text
+                  col={colors.text}
+                  fos={fontSize.h3}
+                  fow={fontWeight.semibold}
+                  accessibilityRole="header"
+                >
+                  {title}
+                </Text>
+              ) : null}
+              {description ? (
+                <Text col={colors.placeholder} fos={fontSize.body}>
+                  {description}
+                </Text>
+              ) : null}
+            </YStack>
+            {badge ? <XStack pt={space.xs}>{badge}</XStack> : null}
+          </XStack>
         ) : null}
         {aside}
       </YStack>
@@ -326,12 +269,7 @@ export function TripRequestStatusCard({
     >
       <XStack ai="center" gap={space.sm}>
         {/* Huy hiệu TRANG TRÍ — web `TripRequestStatusCard.image` (mặc định `status-success`). */}
-        <Image
-          source={image}
-          style={STATUS_BADGE_STYLE}
-          contentFit="contain"
-          accessible={false}
-        />
+        <Image source={image} style={STATUS_BADGE_STYLE} contentFit="contain" accessible={false} />
         <YStack f={1} gap={2} ai="flex-start">
           <TripRequestPill tone={tone} size="label">
             {tag}
@@ -372,7 +310,7 @@ export function TripRequestProgress({
   return (
     <Card>
       <YStack gap={space.md}>
-        <CardTitle icon="git-commit-outline">{t('title')}</CardTitle>
+        <CardTitle>{t('title')}</CardTitle>
         <YStack gap={space.md}>
           {steps.map(({ step, state }) => (
             <XStack
@@ -667,13 +605,6 @@ export function TripRequestTripCard({
                 {specs}
               </Text>
             ) : null}
-            {vehicle.plateNumber ? (
-              <XStack bg={colors.surfaceMuted} br={radius.sm} px={space.sm} py={2}>
-                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
-                  {vehicle.plateNumber}
-                </Text>
-              </XStack>
-            ) : null}
           </YStack>
 
           <YStack gap={layout.cardPad} p={space.md} br={radius.lg} bg={colors.background}>
@@ -685,6 +616,17 @@ export function TripRequestTripCard({
                 value={row.value}
               />
             ))}
+            {/*
+              Biển số là một hàng của khung lịch như web (`BookingTripCard`, Figma `21731:15889`,
+              icon `AppstoreOutlined`) - chỉ có khi server đã mở (sau lượt nhận chuyến).
+            */}
+            {vehicle.plateNumber ? (
+              <ScheduleRow
+                icon="grid-outline"
+                label={t('reviewPage.trip.plate')}
+                value={vehicle.plateNumber}
+              />
+            ) : null}
             {placeRows.map((row) => (
               <ScheduleRow
                 key={row.key}
@@ -753,7 +695,12 @@ export function TripRequestTripCard({
               {serviceText}
             </Text>
             {durationText ? (
-              <Text col={colors.brandText} fos={fontSize.bodySm} fow={fontWeight.semibold} ta="right">
+              <Text
+                col={colors.brandText}
+                fos={fontSize.bodySm}
+                fow={fontWeight.semibold}
+                ta="right"
+              >
                 {durationText}
               </Text>
             ) : null}
@@ -780,11 +727,7 @@ export function TripRequestRenterCard({ trip }: { trip: CustomerTripDetail }) {
   return (
     <Card>
       <YStack gap={space.sm}>
-        <CardTitle
-          icon="person-outline"
-          hint={t('readonlyDescription')}
-          hintLabel={t('infoLabel')}
-        >
+        <CardTitle icon="person-outline" hint={t('readonlyDescription')} hintLabel={t('infoLabel')}>
           {t('title')}
         </CardTitle>
         {contact ? (

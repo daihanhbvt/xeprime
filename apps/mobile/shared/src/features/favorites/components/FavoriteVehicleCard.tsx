@@ -1,4 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
+import { CardSpecIcon, type CardSpecIconKind } from '@/components/icons/CardSpecIcon';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { LineIcon } from '@/components/icons/LineIcon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo } from 'react';
@@ -34,6 +35,7 @@ import {
 import { useFavoriteToggle } from '../hooks/use-favorite';
 import { FavoriteButton } from './FavoriteButton';
 import { NewVehicleBadge } from '@/features/marketplace/components/NewVehicleBadge';
+import { layout } from '@/theme/layout';
 
 /** Ảnh 16:9 — `.media { aspect-ratio: 16 / 9 }` của web khi thẻ hẹp (< 640px, tức mọi điện thoại). */
 const PHOTO_RATIO = 16 / 9;
@@ -105,10 +107,14 @@ function FavoriteVehicleCardImpl({ vehicle }: { vehicle: FavoriteVehicle }) {
   const amenityBg = dark ? colors.border : colors.surfaceMuted;
   const amenityBorder = dark ? XP_TOKENS['color-text-tertiary'] : colors.border;
 
-  // Cùng bộ icon với thẻ chợ native (`VehicleCard`) — bản thay cho các SVG `/home/card-*.svg` web.
+  // Icon vẽ bằng CHÍNH các SVG `/home/card-*.svg` của web (`CardSpecIcon`, theo `key`).
   const specs = [
     vehicle.seatCount
-      ? { key: 'seats', icon: 'people-outline', label: tCard('seats', { count: vehicle.seatCount }) }
+      ? {
+          key: 'seats',
+          icon: 'people-outline',
+          label: tCard('seats', { count: vehicle.seatCount }),
+        }
       : null,
     vehicle.transmission
       ? {
@@ -157,7 +163,11 @@ function FavoriteVehicleCardImpl({ vehicle }: { vehicle: FavoriteVehicle }) {
           </XStack>
         ) : null}
 
-        <XStack pos="absolute" top={toPx(XP_TOKENS['space-12'])} right={toPx(XP_TOKENS['space-12'])}>
+        <XStack
+          pos="absolute"
+          top={toPx(XP_TOKENS['space-12'])}
+          right={toPx(XP_TOKENS['space-12'])}
+        >
           <FavoriteButton vehicleId={vehicle.id} vehicleName={vehicle.name} variant="card" />
         </XStack>
 
@@ -176,7 +186,7 @@ function FavoriteVehicleCardImpl({ vehicle }: { vehicle: FavoriteVehicle }) {
             accessible
             accessibilityLabel={tCard('photoCountAria', { count: vehicle.imageCount ?? 0 })}
           >
-            <Ionicons name="images-outline" size={iconSize.xs} color={photoChipFg} />
+            <CardSpecIcon kind="photos" size={iconSize.xs} color={photoChipFg} />
             <Text col={photoChipFg} fos={fontSize.label}>
               {tCard('photoCount', { count: extraPhotos })}
             </Text>
@@ -186,7 +196,12 @@ function FavoriteVehicleCardImpl({ vehicle }: { vehicle: FavoriteVehicle }) {
 
       <YStack p={space.md} gap={space.sm}>
         {/* Phần 1 — tên · "Đã lưu" · vị trí · tag dịch vụ + tiện ích. */}
-        <YStack gap={space.xs} pb={space.sm} borderBottomWidth={1} borderBottomColor={colors.background}>
+        <YStack
+          gap={space.xs}
+          pb={space.sm}
+          borderBottomWidth={1}
+          borderBottomColor={colors.background}
+        >
           <XStack flexWrap="wrap" ai="center" columnGap={space.sm} rowGap={space.xs}>
             <Pressable
               onPress={() => openDetail()}
@@ -209,7 +224,7 @@ function FavoriteVehicleCardImpl({ vehicle }: { vehicle: FavoriteVehicle }) {
 
           {location ? (
             <XStack ai="center" gap={space.sm}>
-              <Ionicons name="location-outline" size={iconSize.sm} color={colors.textMuted} />
+              <CardSpecIcon kind="location" size={iconSize.sm} color={colors.textMuted} />
               <Text f={1} col={colors.textMuted} fos={fontSize.body} numberOfLines={1}>
                 {location}
               </Text>
@@ -220,59 +235,66 @@ function FavoriteVehicleCardImpl({ vehicle }: { vehicle: FavoriteVehicle }) {
             <XStack flexWrap="wrap" gap={space.xs} mt={2}>
               {/* Hai nhóm có nhãn riêng cho trình đọc màn hình — hai `<ul aria-label>` của web. */}
               {vehicle.serviceTypes.length > 0 ? (
-              <XStack
-                flexWrap="wrap"
-                gap={space.xs}
-                accessibilityRole="list"
-                accessibilityLabel={t('servicesLabel')}
-              >
-              {vehicle.serviceTypes.map((service) => {
-                const label = dl('serviceType', service);
-                return (
-                  <Pressable
-                    key={service}
-                    onPress={() => openDetail(service)}
-                    accessibilityRole="link"
-                    accessibilityLabel={t('serviceLinkAria', { name: vehicle.name, service: label })}
-                  >
-                    <XStack bg={colors.primarySubtle} br={radius.card} px={space.sm} py={2}>
-                      <Text col={colors.accentText} fos={fontSize.label} fow={fontWeight.medium}>
-                        {label}
-                      </Text>
-                    </XStack>
-                  </Pressable>
-                );
-              })}
-              </XStack>
+                <XStack
+                  flexWrap="wrap"
+                  gap={space.xs}
+                  accessibilityRole="list"
+                  accessibilityLabel={t('servicesLabel')}
+                >
+                  {vehicle.serviceTypes.map((service) => {
+                    const label = dl('serviceType', service);
+                    return (
+                      <Pressable
+                        key={service}
+                        onPress={() => openDetail(service)}
+                        accessibilityRole="link"
+                        accessibilityLabel={t('serviceLinkAria', {
+                          name: vehicle.name,
+                          service: label,
+                        })}
+                      >
+                        <XStack bg={colors.primarySubtle} br={radius.card} px={space.sm} py={2}>
+                          <Text
+                            col={colors.accentText}
+                            fos={fontSize.label}
+                            fow={fontWeight.medium}
+                          >
+                            {label}
+                          </Text>
+                        </XStack>
+                      </Pressable>
+                    );
+                  })}
+                </XStack>
               ) : null}
               {amenities.length > 0 ? (
-              <XStack
-                flexWrap="wrap"
-                gap={space.xs}
-                accessibilityRole="list"
-                accessibilityLabel={t('highlightsLabel')}
-              >
-              {amenities.map((item) => (
                 <XStack
-                  key={item.label}
-                  ai="center"
-                  gap={2}
-                  bg={amenityBg}
-                  bw={1}
-                  bc={amenityBorder}
-                  br={radius.pill}
-                  px={6}
-                  py={2}
+                  flexWrap="wrap"
+                  gap={space.xs}
+                  accessibilityRole="list"
+                  accessibilityLabel={t('highlightsLabel')}
                 >
-                  <YStack w={12} h={12} ai="center" jc="center">
-                    <SvgXml xml={item.icon} width="100%" height="100%" />
-                  </YStack>
-                  <Text col={colors.textMuted} fos={10} lh={14} numberOfLines={1}>
-                    {item.label}
-                  </Text>
+                  {amenities.map((item) => (
+                    <XStack
+                      key={item.label}
+                      ai="center"
+                      gap={2}
+                      bg={amenityBg}
+                      bw={1}
+                      bc={amenityBorder}
+                      br={radius.pill}
+                      px={6}
+                      py={2}
+                    >
+                      <YStack w={12} h={12} ai="center" jc="center">
+                        <SvgXml xml={item.icon} width="100%" height="100%" />
+                      </YStack>
+                      <Text col={colors.textMuted} fos={10} lh={14} numberOfLines={1}>
+                        {item.label}
+                      </Text>
+                    </XStack>
+                  ))}
                 </XStack>
-              ))}
-              </XStack>
               ) : null}
             </XStack>
           ) : null}
@@ -293,7 +315,11 @@ function FavoriteVehicleCardImpl({ vehicle }: { vehicle: FavoriteVehicle }) {
             {specs.map((spec) => (
               <XStack key={spec.key} ai="center" gap={space.sm}>
                 {/* Icon thông số — web SVG `card-seats/transmission/fuel` tô `text-placeholder`. */}
-                <Ionicons name={spec.icon} size={iconSize.sm} color={colors.textPlaceholder} />
+                <CardSpecIcon
+                  kind={spec.key as CardSpecIconKind}
+                  size={iconSize.sm}
+                  color={colors.textPlaceholder}
+                />
                 <Text col={colors.textMuted} fos={fontSize.body} fow={fontWeight.medium}>
                   {spec.label}
                 </Text>
@@ -309,7 +335,9 @@ function FavoriteVehicleCardImpl({ vehicle }: { vehicle: FavoriteVehicle }) {
               onPress={() => navigateOnce(ROUTES.explore.shopDetail(vehicle.shopSlug))}
               accessibilityRole="link"
               accessibilityLabel={
-                isShopTrack ? tCard('shopVerifiedAria', { name: vehicle.shopName }) : vehicle.shopName
+                isShopTrack
+                  ? tCard('shopVerifiedAria', { name: vehicle.shopName })
+                  : vehicle.shopName
               }
               style={{ flexGrow: 1, flexShrink: 1, flexBasis: 200 }}
             >
@@ -369,7 +397,7 @@ function FavoriteVehicleCardImpl({ vehicle }: { vehicle: FavoriteVehicle }) {
                 ai="center"
                 jc="center"
                 gap={space.xs}
-                px={space.md}
+                px={layout.padX}
                 br={radius.control}
                 bw={1}
                 bc={colors.border}

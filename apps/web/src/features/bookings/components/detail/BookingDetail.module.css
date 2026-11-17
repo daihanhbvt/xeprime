@@ -735,6 +735,17 @@ a.vehicleName:hover {
   padding-inline: var(--xp-space-12);
 }
 
+/* "Ghi nhận khách không đến" xuống hàng riêng, trải hết bề ngang, nút viền (16/11/2026 - trước bị
+   dồn vào ô hẹp của lưới 1:2 và tràn chữ ra ngoài). */
+.sideActionsRow > :global(.ant-btn-text) {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  border: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
 .primaryCta {
   grid-row: 1;
   grid-column: 2;

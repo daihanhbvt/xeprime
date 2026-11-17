@@ -1,5 +1,6 @@
 import { ScrollReveal } from '@/components/motion/ScrollReveal';
-import { Ionicons } from '@expo/vector-icons';
+import { MapLineIcon } from '@/components/icons/BrandIcons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Image } from 'expo-image';
 import {
@@ -77,7 +78,7 @@ import type { PublicListingDetail } from './api';
 import { FeatureItem } from './components/FeatureChip';
 import { HomeCarousel } from './components/home/HomeCarousel';
 import { STAR_ART } from './components/home/home-art';
-import { ListingGalleryThumbs } from './components/ListingGalleryThumbs';
+import { VehicleGalleryThumbs } from '@/components/vehicle/VehicleGalleryThumbs';
 import { AmenityChips, listingAmenityItems } from './components/PhotoAmenityPills';
 import { PhotoViewer } from '@/components/ui/PhotoViewer';
 import { ListingBenefitsCard } from './components/ListingBenefitsCard';
@@ -1146,7 +1147,7 @@ function Gallery({
       </Animated.View>
 
       {unique.length > 1 ? (
-        <ListingGalleryThumbs urls={unique} active={active} onSelect={jumpTo} />
+        <VehicleGalleryThumbs urls={unique} active={active} onSelect={jumpTo} />
       ) : null}
 
       <PhotoViewer
@@ -1268,7 +1269,7 @@ function PickupPointCard({
               hitSlop={space.sm}
             >
               <XStack ai="center" gap={space.sm}>
-                <Ionicons name="map-outline" size={20} color={colors.primary} />
+                <MapLineIcon size={20} color={colors.primary} />
                 <Text col={colors.primary} fos={BODY_TEXT} fow={fontWeight.semibold}>
                   {t('location.openMap')}
                 </Text>

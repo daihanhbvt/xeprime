@@ -432,3 +432,13 @@ export {
 export { holderNameDiffers, normalizeHolderName } from './licence-holder-name';
 
 export { canShowHostChatOnTrip } from './trip-chat';
+
+export { describeLastActive, type LastActive } from './last-active';
+export { generateStaffPassword } from './staff-password';
+export {
+  auditActionLabel,
+  lookupAuditMessage,
+  type AuditMessageTree,
+} from './audit-action-label';
+
+export { customerStatusOf, type CustomerStatusKey } from './customer-status';

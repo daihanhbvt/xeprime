@@ -338,7 +338,7 @@
   --xp-motion-duration-press: 0.12s;
   --xp-motion-duration-overlay: 0.24s;
   --xp-motion-duration-shine: 0.8s;
-  --xp-motion-duration-ticker: 1.6s;
+  --xp-motion-duration-ticker: 0.5s;
   --xp-motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --xp-motion-stagger-step: 0.08s;
   --xp-motion-scale-press: 0.97;

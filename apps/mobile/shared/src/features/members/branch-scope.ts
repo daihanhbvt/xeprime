@@ -4,7 +4,7 @@ import { MEMBERSHIP_BRANCH_SCOPE } from '@xeprime/types';
 import { branchLabel } from '@/api/branches/api';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { useBranches } from '@/features/branches/hooks/use-branches';
-import type { Member, UpdateMemberRoleInput } from './api';
+import type { MemberRosterItem, UpdateMemberRoleInput } from './api';
 
 /**
  * Chi nhánh phụ trách của thành viên — bản native của
@@ -50,7 +50,7 @@ export function toggleBranchSelection(
 export function canManageMemberScope(
   allowAll: boolean,
   actorBranchIds: readonly string[],
-  member: Pick<Member, 'branchScope' | 'branchIds'>,
+  member: Pick<MemberRosterItem, 'branchScope' | 'branchIds'>,
 ): boolean {
   if (allowAll) return true;
   return (
@@ -90,20 +90,52 @@ export function useBranchScopeOptions() {
   const items = useMemo(() => branches.data?.items ?? [], [branches.data]);
   // Ổn định tham chiếu: danh sách thành viên đưa nó vào `renderItem` của FlatList.
   const branchIds = useMemo(() => items.map((b) => b.id), [items]);
-  const options: BranchScopeOption[] = [
-    { value: BRANCH_SCOPE_ALL, label: t('branchScope.all'), disabled: !allowAll },
-    ...items.map((b) => ({
-      value: b.id,
-      label: branchLabel(b, tBranches('labels.noProvince')),
-      disabled: false,
-    })),
-  ];
+  const noProvince = tBranches('labels.noProvince');
+  const branchOptions = useMemo(
+    () =>
+      items.map((b) => ({
+        value: b.id,
+        label: branchLabel(b, noProvince),
+        disabled: false,
+      })),
+    [items, noProvince],
+  );
+  const allLabel = t('branchScope.all');
+  const options = useMemo<BranchScopeOption[]>(
+    () => [{ value: BRANCH_SCOPE_ALL, label: allLabel, disabled: !allowAll }, ...branchOptions],
+    [allLabel, allowAll, branchOptions],
+  );
+  // Ổn định tham chiếu như `branchIds`: `renderItem` của danh sách thành viên phụ thuộc nó.
+  const labelById = useMemo(
+    () => new Map(branchOptions.map((o) => [o.value, o.label])),
+    [branchOptions],
+  );
+  const defaultSelection = useMemo(
+    () => (allowAll ? [BRANCH_SCOPE_ALL] : branchIds),
+    [allowAll, branchIds],
+  );
   return {
     isLoading: branches.isLoading,
     count: items.length,
     allowAll,
     branchIds,
-    defaultSelection: allowAll ? [BRANCH_SCOPE_ALL] : branchIds,
+    defaultSelection,
     options,
+    /** Tên chi nhánh theo id — dòng "Chi nhánh phụ trách" của thẻ và tấm chi tiết. */
+    labelById,
   };
+}
+
+/**
+ * Tên các chi nhánh của một thành viên — gương của `memberBranchNames` bên web. Phạm vi `all` ⇒
+ * `null` (nơi gọi hiện "Tất cả chi nhánh"). Id không còn trong danh sách đi ra `unknownLabel` thay
+ * vì biến mất — "phụ trách 2 chi nhánh" mà chỉ hiện 1 là nói sai về quyền của người đó.
+ */
+export function memberBranchNames(
+  member: Pick<MemberRosterItem, 'branchScope' | 'branchIds'>,
+  labelById: ReadonlyMap<string, string>,
+  unknownLabel: string,
+): string[] | null {
+  if (member.branchScope !== MEMBERSHIP_BRANCH_SCOPE.LIMITED) return null;
+  return member.branchIds.map((id) => labelById.get(id) ?? unknownLabel);
 }

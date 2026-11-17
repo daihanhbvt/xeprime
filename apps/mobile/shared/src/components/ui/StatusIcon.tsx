@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { YStack } from 'tamagui';
 import { themed, useColors } from '@/theme/ThemeProvider';
 import { radius } from '@/theme/tokens';

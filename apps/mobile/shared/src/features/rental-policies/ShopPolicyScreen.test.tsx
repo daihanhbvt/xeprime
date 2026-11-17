@@ -59,6 +59,7 @@ function currentUser(permissions: Permission[]): authApi.CurrentUser {
 function policy(overrides: Partial<ShopRentalPolicy> = {}): ShopRentalPolicy {
   return {
     policy: {
+      insuranceMode: 'optional',
       collateralMode: COLLATERAL_MODE.CASH,
       collateralAssetTypes: [],
       depositAmount: '3000000',

@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { useState } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack } from 'tamagui';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { useLogout } from '@/features/auth/hooks/use-auth';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 
 /**
  * ĐĂNG XUẤT — một dòng, dùng chung cho mọi tấm trượt của khu quản lý.
@@ -38,13 +39,16 @@ export function LogoutRow({
    *   dòng menu trơ trọi giữa trang trông như lỗi render.
    * `link` = nút `ghost` ở chân một trang DÀI (vd. màn đăng ký gian hàng), đúng dáng nút
    *   "Quay lại marketplace" mà nó thay thế — chỉ khác icon, màu và việc nó làm.
+   * `center` = chữ đỏ + icon căn giữa, không khung, chữ semibold — chân màn "Tài khoản của tôi" app
+   *   Partner (Figma `Button` `24183:85580`).
    */
-  variant?: 'row' | 'card' | 'link';
+  variant?: 'row' | 'card' | 'link' | 'center';
 }) {
   const colors = useColors();
   const styles = useStyles();
   const card = variant === 'card';
   const link = variant === 'link';
+  const center = variant === 'center';
   const t = useTranslations('ManageCommon.shell');
   const tAccount = useTranslations('Account');
   const tCommon = useTranslations('Common.actions');
@@ -66,23 +70,23 @@ export function LogoutRow({
           accessibilityRole="menuitem"
           accessibilityLabel={t('logout')}
           style={({ pressed }) =>
-            pressed ? (card || link ? styles.cardPressed : styles.rowPressed) : null
+            pressed ? (card || link || center ? styles.cardPressed : styles.rowPressed) : null
           }
         >
           <XStack
             ai="center"
-            jc={card || link ? 'center' : 'flex-start'}
+            jc={card || link || center ? 'center' : 'flex-start'}
             gap={space.sm}
             minHeight={sizing.touchTarget}
-            px={space.md}
+            px={layout.padX}
             {...(card ? { br: radius.lg, bw: 1, bc: colors.border, bg: colors.surface } : {})}
           >
-            <Ionicons name="log-out-outline" size={iconSize.md} color={colors.danger} />
+            <LineIcon name="logout" size={iconSize.md} color={colors.danger} />
             <Text
-              f={card || link ? undefined : 1}
+              f={card || link || center ? undefined : 1}
               col={colors.danger}
               fos={fontSize.body}
-              fow={fontWeight.medium}
+              fow={center ? fontWeight.semibold : fontWeight.medium}
               numberOfLines={1}
             >
               {t('logout')}

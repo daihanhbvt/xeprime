@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import type { ReactNode } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { themed, useColors } from '@/theme/ThemeProvider';

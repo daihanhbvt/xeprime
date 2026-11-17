@@ -1,4 +1,8 @@
-import { SURCHARGE_CATEGORY, SURCHARGE_CATEGORY_VALUES } from '@xeprime/types';
+import {
+  SURCHARGE_CATEGORY,
+  SURCHARGE_CATEGORY_VALUES,
+  surchargeCategoryBlock,
+} from '@xeprime/types';
 
 import { visibleSurchargeCategories } from './surcharge-categories';
 
@@ -12,9 +16,14 @@ import { visibleSurchargeCategories } from './surcharge-categories';
  * Lọc QUÁ TAY thì hỏng theo chiều ngược lại và khó thấy hơn: một chuyến có thể có hai khoản vệ
  * sinh thật, mỗi khoản một lý do. Nên hai chiều đều có test.
  */
+/** Danh mục còn GHI được (bỏ danh mục đã gỡ - chờ đợi · đường dài · qua đêm, ADR 0075). */
+const ACTIVE = SURCHARGE_CATEGORY_VALUES.filter(
+  (value) => surchargeCategoryBlock(value, '') === null,
+);
+
 describe('visibleSurchargeCategories', () => {
   it('chưa ghi khoản nào ⇒ giữ nguyên toàn bộ danh mục', () => {
-    expect(visibleSurchargeCategories([])).toEqual(SURCHARGE_CATEGORY_VALUES);
+    expect(visibleSurchargeCategories([])).toEqual(ACTIVE);
   });
 
   it('ĐÃ ghi phí vượt km ⇒ bỏ đúng danh mục đó', () => {
@@ -23,7 +32,7 @@ describe('visibleSurchargeCategories', () => {
     ]);
 
     expect(visible).not.toContain(SURCHARGE_CATEGORY.EXCESS_MILEAGE);
-    expect(visible).toHaveLength(SURCHARGE_CATEGORY_VALUES.length - 1);
+    expect(visible).toHaveLength(ACTIVE.length - 1);
   });
 
   it('ĐÃ ghi vệ sinh ⇒ vẫn ghi được khoản vệ sinh thứ hai', () => {
@@ -35,7 +44,7 @@ describe('visibleSurchargeCategories', () => {
     const visible = visibleSurchargeCategories([{ category: SURCHARGE_CATEGORY.CLEANING }]);
 
     expect(visible).toContain(SURCHARGE_CATEGORY.CLEANING);
-    expect(visible).toEqual(SURCHARGE_CATEGORY_VALUES);
+    expect(visible).toEqual(ACTIVE);
   });
 
   it('nhiều khoản cùng lúc ⇒ chỉ danh mục một-lần bị bỏ', () => {
@@ -52,6 +61,6 @@ describe('visibleSurchargeCategories', () => {
 
   it('mã lạ trong danh sách đã ghi KHÔNG làm rơi danh mục nào', () => {
     // Đơn cũ có thể mang một mã danh mục đã bị gỡ khỏi `SURCHARGE_CATEGORY`.
-    expect(visibleSurchargeCategories([{ category: 'fuel' }])).toEqual(SURCHARGE_CATEGORY_VALUES);
+    expect(visibleSurchargeCategories([{ category: 'fuel' }])).toEqual(ACTIVE);
   });
 });

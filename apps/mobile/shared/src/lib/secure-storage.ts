@@ -25,6 +25,8 @@ export const SECURE_KEY = {
   /** Ẩn/hiện SỐ DƯ trên viên số dư của tab Tài khoản — `wallet/balance-visibility.ts`. Không phải bí mật (web `localStorage` `xp.wallet.balance.hidden`). */
   WALLET_BALANCE_HIDDEN: 'xp.wallet.balance.hidden',
   DELIVERY_ADDRESS: 'xp.deliveryAddress',
+  /** Dạng xem "Đơn thuê xe" (Kanban / List) trên iPad — `lib/rentals-view-memory.ts` (web `localStorage`). Không phải bí mật. */
+  RENTALS_VIEW: 'xp.rentals.view',
   /** Tỉnh SUY RA từ vị trí thiết bị — gợi ý của máy, không phải lựa chọn của người dùng. */
   GEO_PROVINCE: 'xp.geoProvince',
   /** Lượt cổng MoMo/VNPAY đang theo dõi theo chuyến — `features/payment-gateway/trip-order-memory`. */

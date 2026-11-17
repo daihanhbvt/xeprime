@@ -11,6 +11,10 @@ export type RecordRefundInput = Schemas['RecordDepositRefundDto'];
 export type CorrectRefundInput = Schemas['CorrectDepositRefundDto'];
 export type OvertimeSuggestion = Schemas['OvertimeSuggestionDto'];
 export type ExcessMileageSuggestion = Schemas['ExcessMileageSuggestionDto'];
+/** Hộp "Xác nhận đã nhận lại xe" (06/11/2026): khoản phát sinh nháp + quyết toán xem trước. */
+export type ReturnSurchargeDraft = Schemas['ReturnSurchargeDraftDto'];
+export type PreviewReturnSettlementInput = Schemas['PreviewReturnSettlementDto'];
+export type ReturnSettlementPreview = Schemas['ReturnSettlementPreviewDto'];
 
 /**
  * Quyết toán cuối chuyến — gắn thẳng vào route đơn thuê, không có "đơn" thứ hai.
@@ -60,5 +64,19 @@ export const settlementApi = {
 
   correctRefund(bookingId: string, body: CorrectRefundInput): Promise<BookingSettlement> {
     return getApiClient().patch<BookingSettlement>(`${base(bookingId)}/settlement/refund`, body);
+  },
+
+  /**
+   * Quyết toán XEM TRƯỚC lúc nhận lại xe — server cộng các khoản nháp như thể đã ghi và tính lại cọc,
+   * hoàn cọc, số khách còn phải trả, gợi ý quá giờ / vượt km. Không ghi gì.
+   */
+  previewReturn(
+    bookingId: string,
+    body: PreviewReturnSettlementInput,
+  ): Promise<ReturnSettlementPreview> {
+    return getApiClient().post<ReturnSettlementPreview>(
+      `${base(bookingId)}/settlement/return-preview`,
+      body,
+    );
   },
 };

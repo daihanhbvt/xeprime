@@ -11,42 +11,39 @@ import {
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
 import { Screen } from '@/components/layout/Screen';
-import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
+import { ChipTabs, type ChipTabItem } from '@/components/ui/ChipTabs';
 import { Callout } from '@/components/ui/Callout';
-import { IconButton } from '@/components/ui/IconButton';
+import { IconSquareButton } from '@/components/ui/IconSquareButton';
+import { LineIcon } from '@/components/icons/LineIcon';
 import type { CardAction } from '@/components/ui/CardActionBar';
-import { FleetVehicleCardSkeleton } from '@/components/ui/Skeleton';
+import { RecordCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { ManageHeader } from '@/features/shell/ManageHeader';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { ManageListShell } from '@/features/shell/ManageListShell';
 import { withBranchReturn } from '@/features/branches/branch-link';
-import {
-  BranchFilterField,
-  useBranchEmptyCopy,
-} from '@/features/branches/components/BranchFilterField';
+import { useBranchEmptyCopy } from '@/features/branches/components/BranchFilterField';
 import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useDomainLabel } from '@/i18n/domain';
 import { useListParam, useListParamChange } from '@/navigation/list-params';
-import { SheetActionRow } from '@/features/calendar/components/SheetActionRow';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
 import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
+import { useCardGrid, useResponsive } from '@/theme/use-responsive';
 import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, space } from '@/theme/tokens';
+import { fontSize, iconSize, space } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
 import { AccountTrackNotice } from '@/features/account/components/AccountTrackNotice';
-import { FleetSummaryBar } from './components/FleetSummaryBar';
 import { VehicleCard } from './components/VehicleCard';
-import { useInfiniteVehicles, useVehicleAlerts, useVehicleStats } from './hooks/use-vehicles';
+import { useFleetSummary, useInfiniteVehicles, useVehicleAlerts, useVehicleStats } from './hooks/use-vehicles';
 import { useVehicleAlertView } from './hooks/use-vehicle-alert-view';
 import type { VehicleAlertGroup, VehicleListItem, VehicleSort } from './api';
 import { DEFAULT_VEHICLE_SORT, VEHICLE_SORT_VALUES, useVehicleSortLabel } from './vehicle-sort';
@@ -107,19 +104,55 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
   useListParamChange('publicStatus', routePublic, setPublicStatus);
   const [sort, setSort] = useState<VehicleSort>(DEFAULT_VEHICLE_SORT);
   const [search, setSearch] = useState('');
-  /** Tấm trượt chọn LỐI thêm xe — đăng nhanh hay thiết lập nâng cao. */
-  const [adding, setAdding] = useState(false);
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   /* Ô "Chi nhánh" của màn, sống trên tham số route (ADR 0052) — dải chỉ số đi CÙNG chi nhánh. */
   const { branchId, filter: branchFilter } = useScreenBranchFilter(undefined, !isOwner);
   const branchEmpty = useBranchEmptyCopy(branchFilter, branchId);
+
+  /** Lối thêm xe — gian hàng: wizard đầy đủ; chủ xe tuyến hoa hồng: luồng đăng xe (web `goCreate`). */
+  const goCreate = useCallback(() => {
+    if (isOwner) {
+      navigateOnce(ROUTES.listYourVehicle.register(VEHICLE_REGISTRATION_SOURCE.ACCOUNT));
+      return;
+    }
+    // Chi nhánh đang lọc là GỢI Ý cho form (ADR 0052 điều 6) — form điền sẵn, đổi được.
+    navigateOnce(withBranchReturn(ROUTES.manage.vehicleNew(), branchId));
+  }, [branchId, isOwner, navigateOnce]);
+
+  const { gutter } = useResponsive();
+  const fleet = useFleetSummary(!isOwner, branchId);
+  /* Figma/Đơn thuê: dải tab trạng thái (Tất cả · Sẵn sàng · Đang thuê…) - số đếm lấy từ tổng hợp đội xe. */
+  const statusTabs = useMemo<ChipTabItem<string>[]>(
+    () => [
+      { value: ALL, label: tLabels('all'), count: fleet.data?.total },
+      ...VEHICLE_OPERATION_STATUS_VALUES.map((value) => ({
+        value,
+        label: domainLabel('vehicleOperationStatus', value),
+        count:
+          value === 'available'
+            ? fleet.data?.available
+            : value === 'renting'
+              ? fleet.data?.renting
+              : undefined,
+      })),
+    ],
+    [domainLabel, fleet.data, tLabels],
+  );
+  const serviceTabs = useMemo<ChipTabItem<string>[]>(
+    () => [
+      { value: ALL, label: tLabels('all') },
+      ...SERVICE_TYPE_VALUES.map((value) => ({ value, label: domainLabel('serviceType', value) })),
+    ],
+    [domainLabel, tLabels],
+  );
 
   const query = useInfiniteVehicles({
     ...(branchId && !isOwner ? { branchId } : {}),
     ...(vehicleType === ALL || isOwner ? {} : { vehicleType }),
     ...(serviceType === ALL ? {} : { serviceType }),
     ...(operationStatus === ALL ? {} : { operationStatus }),
-    ...(publicStatus === ALL || isOwner ? {} : { publicStatus }),
+    // Chủ xe tuyến hoa hồng không có ô này, nhưng tham số đến từ route vẫn lọc (web: chip gỡ được).
+    ...(publicStatus === ALL ? {} : { publicStatus }),
     ...(debouncedSearch.trim() ? { q: debouncedSearch.trim() } : {}),
     sort,
   });
@@ -185,7 +218,10 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
       ...values.map((value) => ({ value, label: domainLabel(group, value) })),
     ];
 
-    const ownerHidden = new Set(['vehicleType', 'publicStatus']);
+    // Đang lọc trạng thái duyệt (từ route) thì chủ xe vẫn thấy ô đó để gỡ - web hiện chip gỡ được.
+    const ownerHidden = new Set(
+      publicStatus === ALL ? ['vehicleType', 'publicStatus'] : ['vehicleType'],
+    );
     const list: FilterGroup[] = [
       {
         key: 'vehicleType',
@@ -220,6 +256,8 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
         label: t('sort.label'),
         value: sort,
         resetValue: DEFAULT_VEHICLE_SORT,
+        // Figma "_Filter Modal": "Sắp xếp: Mới nhất" - chiều luôn có giá trị.
+        display: 'prefixed',
         options: VEHICLE_SORT_VALUES.map((value) => ({ value, label: sortLabel(value) })),
       },
     ];
@@ -266,14 +304,17 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
    * Ưu tiên biển số vì nó phân biệt tốt hơn tên xe trùng lặp; không có biển thì rơi về tên.
    */
   const openSchedule = useCallback(
-    (vehicle: VehicleListItem) => navigateOnce(vehicleSchedulePath(vehicle, { back: true })),
-    [navigateOnce],
+    (vehicle: VehicleListItem) =>
+      navigateOnce(
+        vehicleSchedulePath(vehicle, { back: true, ...(isOwner ? {} : { branchId }) }),
+      ),
+    [navigateOnce, isOwner, branchId],
   );
 
   const canEdit = permissions.has(PERMISSION.VEHICLE_UPDATE);
 
   /*
-   * Ba thao tác của web ở CỔNG QUẢN LÝ (`useVehicleRowActions`): Xem · Sửa · Lịch — cùng thứ
+   * Ba thao tác của web ở CỔNG QUẢN LÝ (`useVehicleRowActions`): Lịch · Sửa · Xem — cùng thứ
    * tự, cùng luật ẩn. Khu tài khoản dựng bộ KHÁC (`AccountVehiclesScreen`), đúng như web cho hai
    * màn đó hai hàm `rowActions` riêng.
    *
@@ -283,36 +324,37 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
   const rowActions = useCallback(
     (vehicle: VehicleListItem): readonly CardAction[] => [
       {
-        key: 'view',
-        label: t('actions.viewShort'),
-        icon: 'eye-outline',
-        onPress: () => openVehicle(vehicle),
-      },
-      ...(isOwner
-        ? [
-            {
-              // Không gác `VEHICLE_UPDATE`: mỗi mục trong không gian quản lý tự kiểm quyền (web).
-              key: 'manage',
-              label: tAccount('manage'),
-              icon: 'construct-outline' as const,
-              onPress: () => editVehicle(vehicle),
-            },
-          ]
-        : canEdit
-          ? [
-              {
-                key: 'edit',
-                label: t('actions.edit'),
-                icon: 'create-outline' as const,
-                onPress: () => editVehicle(vehicle),
-              },
-            ]
-          : []),
-      {
         key: 'schedule',
         label: t('actions.schedule'),
         icon: 'calendar-outline',
         onPress: () => openSchedule(vehicle),
+      },
+      /*
+        Cả hai tuyến cùng gác `VEHICLE_UPDATE` như web `useVehicleRowActions` (`hidden: !canEdit`);
+        chỉ khác NHÃN: chủ xe tuyến hoa hồng "Quản lý xe", gian hàng "Chỉnh sửa".
+      */
+      ...(canEdit
+        ? [
+            isOwner
+              ? {
+                  key: 'manage',
+                  label: tAccount('manage'),
+                  icon: 'construct-outline' as const,
+                  onPress: () => editVehicle(vehicle),
+                }
+              : {
+                  key: 'edit',
+                  label: t('actions.editFull'),
+                  icon: 'create-outline' as const,
+                  onPress: () => editVehicle(vehicle),
+                },
+          ]
+        : []),
+      {
+        key: 'view',
+        label: t('actions.detail'),
+        icon: 'eye-outline',
+        onPress: () => openVehicle(vehicle),
       },
     ],
     [t, tAccount, isOwner, canEdit, openVehicle, editVehicle, openSchedule],
@@ -348,20 +390,30 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
       alerts.isError,
     ],
   );
+  // iPad: thẻ xếp lưới 2 cột trong cột nội dung; điện thoại giữ 1 cột.
+  const grid = useCardGrid(renderItem, { listKey: 'vehicles' });
 
   const filtered =
     (!isOwner && vehicleType !== ALL) ||
     serviceType !== ALL ||
     operationStatus !== ALL ||
-    (!isOwner && publicStatus !== ALL) ||
+    publicStatus !== ALL ||
     debouncedSearch.trim().length > 0;
+  // Web `VehicleCardGrid` rỗng-do-lọc: "Xoá bộ lọc" gỡ mọi ô lọc + tìm kiếm (giữ sắp xếp).
+  const clearFilters = () => {
+    setVehicleType(ALL);
+    setServiceType(ALL);
+    setOperationStatus(ALL);
+    setPublicStatus(ALL);
+    setSearch('');
+  };
 
   // Thiếu quyền là 403 của CHÍNH màn này — hiện trạng thái lỗi của nó, không đá về đăng nhập.
   if (!permissions.isLoading && !permissions.has(PERMISSION.VEHICLE_VIEW)) {
     return (
       <>
-        <ManageHeader />
-        <Screen edges={['left', 'right', 'bottom']} scroll={false}>
+        <ManagePageHeader title={t('page.title')} />
+        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
           {isOwner ? (
             <ScreenMessage
               icon="lock-closed-outline"
@@ -380,47 +432,43 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
 
   return (
     <>
-      <ManageHeader />
-      <Screen edges={['left', 'right', 'bottom']} scroll={false} padded={false}>
+      {/*
+        Thanh trang v2 (Figma "Header MB" `24175:60019`): tiêu đề + nút "+" Thêm xe (cổng
+        `vehicles.create`). Nút tài liệu của Figma bỏ - web không có (người dùng chốt 16/11/2026).
+      */}
+      <ManagePageHeader
+        title={t('page.title')}
+        actions={
+          permissions.has(PERMISSION.VEHICLE_CREATE) ? (
+            /*
+              MỘT lối thêm xe (web 03/11/2026, ledger §3.5 #9): gian hàng → wizard đầy đủ, chủ xe
+              tuyến hoa hồng → luồng đăng xe của chủ xe.
+            */
+            <IconSquareButton label={t('page.addNewVehicle')} tone="brand" onPress={goCreate}>
+              <LineIcon name="plus" size={iconSize.lg} color={colors.onPrimary} />
+            </IconSquareButton>
+          ) : null
+        }
+      />
+      <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false} padded={false}>
+        {/*
+          Figma "Vehice / List" MB: chỉ ô tìm + nút "Lọc" - dải chỉ số đội xe, chip vận hành và dòng
+          "Hiển thị x-y" đã bỏ (người dùng chốt 16/11/2026); mọi chiều lọc nằm trong tấm Lọc dạng lưới.
+        */}
         <ManageListShell
-          title={t('page.title')}
-          {...(query.total > 0 ? { total: t('summary.vehicleCount', { count: query.total }) } : {})}
-          action={
-            permissions.has(PERMISSION.VEHICLE_CREATE) ? (
-              /*
-                HAI lối thêm xe, đúng như web (09/09/2026): "đăng nhanh" cho chiếc xe tự lái
-                thông thường, và wizard nâng cao cho xe nhiều dịch vụ / có nguồn xe / nhiều chi
-                nhánh. Trước đợt này app chỉ có lối NÂNG CAO — wizard đăng nhanh tồn tại nhưng
-                không màn nào trong cổng quản lý trỏ tới nó, nên gian hàng không có cách nào
-                dùng bốn bước ngắn.
-
-                Web dựng cặp nút tách (nút chính + nút xổ menu); native thì một nút "+" mở tấm
-                trượt hai lựa chọn — một hàng nút tách ở thanh tiêu đề điện thoại chỉ còn chỗ cho
-                hai biểu tượng không nhãn.
-              */
-              <IconButton
-                icon="add"
-                label={t('page.addVehicle')}
-                tone="primary"
-                onPress={() =>
-                  isOwner
-                    ? navigateOnce(
-                        ROUTES.listYourVehicle.register(VEHICLE_REGISTRATION_SOURCE.ACCOUNT),
-                      )
-                    : setAdding(true)
-                }
-              />
-            ) : null
-          }
-          {...(isOwner
-            ? {}
-            : { branch: <BranchFilterField filter={branchFilter} value={branchId} /> })}
-          summary={
-            <FleetSummaryBar
-              enabled={items.length > 0 || query.isInitialLoading}
-              {...(isOwner ? {} : { branchId })}
+          variant="page"
+          filterLayout="grid"
+          tabs={
+            <ChipTabs
+              label={t('page.title')}
+              items={isOwner ? serviceTabs : statusTabs}
+              value={isOwner ? serviceType : operationStatus}
+              onSelect={isOwner ? setServiceType : setOperationStatus}
+              gutter={gutter}
             />
           }
+          title={t('page.title')}
+          {...(isOwner ? {} : { branchFilter: { filter: branchFilter, value: branchId } })}
           searchValue={search}
           searchLabel={t('filters.search')}
           searchPlaceholder={t('filters.searchPlaceholder')}
@@ -453,7 +501,7 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
               inStateScroll(
                 <YStack px={layout.screenX} gap={layout.inline}>
                   {Array.from({ length: SKELETON_ROWS }, (_, i) => (
-                    <FleetVehicleCardSkeleton key={i} />
+                    <RecordCardSkeleton key={i} />
                   ))}
                 </YStack>,
               )
@@ -482,31 +530,36 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
                     icon="search-outline"
                     title={t('grid.noResultsTitle')}
                     description={t('grid.noResultsBody')}
+                    actionLabel={tActions('clear')}
+                    onAction={clearFilters}
                   />
                 ) : (
                   /*
-                    KHÔNG có nút "thêm" ở đây: nó đã nằm ở hàng tiêu đề (`ManageListShell action`),
-                    và danh sách rỗng thì không có gì để cuộn nên hàng đó đứng nguyên trên màn —
-                    hai nút cùng một việc trong cùng một khung hình.
+                    Màn rỗng giữ nút "Thêm xe đầu tiên" như web (ledger §3.5 #1): nút ở tiêu đề
+                    chỉ là biểu tượng, còn lời mời ở đây nói đúng hoàn cảnh.
                   */
                   <ScreenMessage
                     icon="car-outline"
                     title={t('grid.emptyTitle')}
                     description={t('grid.emptyBody')}
+                    {...(permissions.has(PERMISSION.VEHICLE_CREATE)
+                      ? { actionLabel: t('page.addFirstVehicle'), actionIcon: 'add', onAction: goCreate }
+                      : {})}
                   />
                 ),
               )
             ) : (
               <Animated.FlatList
+                key={grid.key}
                 data={items}
                 keyExtractor={vehicleKeyExtractor}
-                renderItem={renderItem}
+                {...grid.listProps}
                 /*
                   Đầu danh sách, cả hai tuyến — như `VehicleCardGrid` web: cảnh báo khi tải cảnh báo/KM
-                  hỏng MỘT PHẦN (kèm thử lại) và dòng "Hiển thị x–y / tổng". Tuyến hoa hồng mở đầu bằng
-                  dải tuyến Owner Lite.
+                  hỏng MỘT PHẦN (kèm thử lại). Tuyến hoa hồng mở đầu bằng dải tuyến Owner Lite.
                 */
                 ListHeaderComponent={
+                  isOwner || alerts.isError ? (
                   <YStack gap={space.sm} pb={space.sm}>
                     {isOwner ? <AccountTrackNotice /> : null}
                     {alerts.isError ? (
@@ -525,10 +578,8 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
                         </YStack>
                       </Callout>
                     ) : null}
-                    <Text col={colors.textMuted} fos={fontSize.label}>
-                      {t('grid.showing', { from: 1, to: items.length, total: query.total })}
-                    </Text>
                   </YStack>
+                  ) : null
                 }
                 contentContainerStyle={contentContainerStyle}
                 onScroll={onScroll}
@@ -562,38 +613,6 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
         </ManageListShell>
       </Screen>
 
-      <BottomSheet open={adding} onClose={() => setAdding(false)} title={t('page.addVehicle')}>
-        <YStack gap={space.xs}>
-          {/*
-            "Thiết lập nâng cao" đứng TRƯỚC và mang tông chính — đúng web từ 29/09/2026: đây là
-            cổng của GIAN HÀNG, và chỉ wizard nâng cao mới hỏi nguồn xe, nhiều dịch vụ và chi nhánh
-            giữ xe. "Đăng nhanh" lùi xuống lựa chọn thứ hai.
-          */}
-          <SheetActionRow
-            icon="options-outline"
-            tone="primary"
-            label={t('page.addVehicleAdvanced')}
-            onPress={() => {
-              setAdding(false);
-              // Chi nhánh đang lọc là GỢI Ý cho form (ADR 0052 điều 6) — form điền sẵn, đổi được.
-              navigateOnce(withBranchReturn(ROUTES.manage.vehicleNew(), branchId));
-            }}
-          />
-          <SheetActionRow
-            icon="flash-outline"
-            label={t('page.addVehicleQuick')}
-            onPress={() => {
-              setAdding(false);
-              navigateOnce(
-                withBranchReturn(
-                  ROUTES.listYourVehicle.register(VEHICLE_REGISTRATION_SOURCE.MANAGE),
-                  branchId,
-                ),
-              );
-            }}
-          />
-        </YStack>
-      </BottomSheet>
     </>
   );
 }
@@ -625,7 +644,7 @@ function ListFooter({
         <Button
           label={retryLabel}
           icon="refresh-outline"
-          variant="secondary"
+          variant="outline"
           size="sm"
           block={false}
           align="center"

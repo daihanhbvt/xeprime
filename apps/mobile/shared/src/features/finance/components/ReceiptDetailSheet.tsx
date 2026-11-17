@@ -1,5 +1,5 @@
 import { Children, Fragment, useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Image } from 'expo-image';
 import * as Clipboard from 'expo-clipboard';
 import { Linking, Pressable, StyleSheet } from 'react-native';
@@ -15,10 +15,10 @@ import {
   RECEIPT_TYPE_META,
   isAutoReceipt,
 } from '@xeprime/types';
-import { moneyToVietnameseWords, vehicleLabel } from '@xeprime/domain';
+import { vehicleLabel } from '@xeprime/domain';
 import { metaColor } from '@/lib/status-meta';
 import { AlertDialog } from '@/components/ui/AlertDialog';
-import { BlockTitle } from '@/components/ui/BlockTitle';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
@@ -41,6 +41,7 @@ import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { useApproveReceipt, useCancelReceipt, useReceiptDetail } from '../hooks/use-finance';
+import { layout } from '@/theme/layout';
 
 const THUMB = 92;
 
@@ -261,7 +262,7 @@ export function ReceiptDetailSheet({
               phải dừng lại hai lần cho một thông tin.
             */}
             <Text col={colors.placeholder} fos={fontSize.bodySm} fontStyle="italic">
-              {moneyToVietnameseWords(data.amount)}
+              {fmt.moneyWords(data.amount)}
             </Text>
             <XStack gap={space.xs} flexWrap="wrap">
               <StatusBadge
@@ -511,7 +512,7 @@ const LABEL_WIDTH = 108;
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   const colors = useColors();
   return (
-    <XStack ai="flex-start" gap={space.sm} px={space.md} py={space.sm}>
+    <XStack ai="flex-start" gap={space.sm} px={layout.padX} py={space.sm}>
       <YStack w={LABEL_WIDTH} flexShrink={0}>
         <Text col={colors.textMuted} fos={fontSize.bodySm}>
           {label}
@@ -528,7 +529,7 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
 function InfoBlock({ label, children }: { label: string; children: React.ReactNode }) {
   const colors = useColors();
   return (
-    <YStack gap={2} px={space.md} py={space.sm}>
+    <YStack gap={2} px={layout.padX} py={space.sm}>
       <Text col={colors.textMuted} fos={fontSize.bodySm}>
         {label}
       </Text>
@@ -611,7 +612,7 @@ function Section({
 
   return (
     <YStack gap={space.sm}>
-      <BlockTitle>{title}</BlockTitle>
+      <SectionHeader icon="document-text-outline">{title}</SectionHeader>
       {rows ? (
         <Card padded={false}>
           <YStack>

@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from 'react';
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { Linking, Pressable, ScrollView } from 'react-native';
+import { Ionicons } from '@/components/icons/Ionicons';
+import { Linking, Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -12,6 +11,7 @@ import {
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_OPERATION_STATUS_VALUES,
   VEHICLE_PUBLIC_STATUS_META,
+  VEHICLE_SOURCE_TYPE,
   type VehicleOperationStatus,
   type VehiclePublicStatus,
 } from '@xeprime/types';
@@ -20,7 +20,9 @@ import { Button } from '@/components/ui/Button';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { resolveWebBaseUrl } from '@/lib/web-base-url';
 import { publishCompleteness } from '../publication';
-import { vehicleDisplayMedia } from '../display-media';
+import { vehicleGalleryItems } from '../display-media';
+import { useImageSlotLabel } from '../hooks/use-vehicle-spec-items';
+import { VehicleGallery } from '@/components/vehicle/VehicleGallery';
 import { Card } from '@/components/ui/Card';
 import { ImageEditBadge } from '@/components/ui/ImageEditBadge';
 import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
@@ -29,19 +31,15 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { makeStyles, useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { useUpdateVehicle, useVehicleSummary } from '../hooks/use-vehicle';
 import type { VehicleDetail } from '../api';
 import { MarketplaceVisibilityRow } from './MarketplaceVisibilityRow';
 
-const MEDIA_HEIGHT = 168;
-const THUMB = 64;
-
-const useStyles = makeStyles((colors) => ({
-  media: { width: '100%', height: MEDIA_HEIGHT, backgroundColor: colors.surfaceMuted },
-  thumb: { width: THUMB, height: THUMB, borderRadius: radius.sm },
-}));
+/** Vùng chạm của nút máy ảnh "Đổi ảnh" giữa ảnh lớn — ≥ 44dp. */
+const EDIT_TARGET = 48;
 
 function Strong({ children }: { children: ReactNode }) {
   const colors = useColors();
@@ -67,10 +65,16 @@ export function VehicleEditHeaderCard({
   onEditImages,
   statusEditable = false,
   showOwnerStats = false,
+  showSource = false,
   footer,
 }: {
   /** Đánh giá + số chuyến — chỉ khu chủ xe (web `showOwnerStats={!isManage}`). */
   showOwnerStats?: boolean;
+  /**
+   * Nhãn nguồn xe (Sở hữu/Trả góp…) cạnh tên — chỉ tuyến gói có khái niệm nguồn xe (web
+   * `showSource={isManage && can.source}`).
+   */
+  showSource?: boolean;
   vehicle: VehicleDetail;
   onEditImages?: (() => void) | undefined;
   statusEditable?: boolean;
@@ -81,13 +85,13 @@ export function VehicleEditHeaderCard({
   footer?: ReactNode;
 }) {
   const colors = useColors();
-  const styles = useStyles();
   const t = useTranslations('Vehicles.overview');
   const tEdit = useTranslations('Vehicles.edit.aside');
   const tLabels = useTranslations('Common.labels');
-  // Nhãn NGẮN của góc chụp ("Mặt sau", "Nội thất") — web cũng ghi ngắn trên ảnh nhỏ; bản đầy đủ
-  // "Ảnh mặt sau" thừa chữ "Ảnh" và cắt cụt ở ô 1/4 bề ngang.
-  const tSlot = useTranslations('Vehicles.imageSlot');
+  // Nhãn NGẮN của góc chụp ("Mặt sau", "Nội thất") dưới ô ảnh nhỏ.
+  const slotLabel = useImageSlotLabel();
+  // Bề ngang THẬT của thẻ (đo lúc layout) — thư viện ảnh dựng theo nó, không theo màn hình.
+  const [cardWidth, setCardWidth] = useState(0);
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
@@ -135,8 +139,8 @@ export function VehicleEditHeaderCard({
       VEHICLE_OPERATION_STATUS_META[status]?.label ?? status,
     );
 
-  // Bỏ ảnh đại diện (đã có ô lớn) và ảnh loại "Ảnh khác" — xem `vehicleDisplayMedia`.
-  const thumbs = vehicleDisplayMedia(vehicle);
+  // Ảnh bìa đầu tiên rồi ảnh theo góc chụp, bỏ "Ảnh khác" — CÙNG nguồn với thư viện màn chi tiết xe.
+  const photos = vehicleGalleryItems(vehicle, slotLabel);
 
   async function changeStatus(next: VehicleOperationStatus) {
     setPicking(false);
@@ -149,20 +153,6 @@ export function VehicleEditHeaderCard({
     }
   }
 
-  const media = vehicle.mainImageUrl ? (
-    <Image
-      source={{ uri: vehicle.mainImageUrl }}
-      style={styles.media}
-      contentFit="cover"
-      cachePolicy="memory-disk"
-      accessible={false}
-    />
-  ) : (
-    <YStack style={styles.media} ai="center" jc="center">
-      <Ionicons name="car-outline" size={iconSize.lg} color={colors.textMuted} />
-    </YStack>
-  );
-
   const operationBadge = (
     <StatusBadge
       label={operationLabel(operationStatus)}
@@ -173,57 +163,63 @@ export function VehicleEditHeaderCard({
 
   return (
     <Card padded={false} accessibilityLabel={t('profileLabel')}>
-      {onEditImages ? (
-        <Pressable
-          onPress={onEditImages}
-          accessibilityRole="button"
-          accessibilityLabel={tEdit('changeImage')}
-        >
-          {media}
-          <ImageEditBadge />
-        </Pressable>
-      ) : (
-        media
-      )}
-
-      <YStack p={space.md} gap={space.sm}>
-        {thumbs.length > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <XStack gap={space.xs}>
-              {thumbs.map((item) => (
-                <YStack key={item.url} gap={2} w={THUMB}>
-                  <Image
-                    source={{ uri: item.url }}
-                    style={styles.thumb}
-                    contentFit="cover"
-                    cachePolicy="memory-disk"
-                    accessibilityLabel={tSlot(item.type as never)}
-                  />
-                  <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
-                    {tSlot(item.type as never)}
-                  </Text>
-                </YStack>
-              ))}
-            </XStack>
-          </ScrollView>
+      {/*
+        Thư viện ảnh = bố cục trang xe app KHÁCH (`VehicleGallery`, người dùng chốt 10/11/2026):
+        băng chuyền thụt lề + bộ đếm + dải ảnh nhỏ, ở đây kèm nhãn góc chụp. Chạm ảnh xem toàn
+        màn; nút máy ảnh giữa ảnh mở mục Hình ảnh.
+      */}
+      <YStack pt={layout.cardPad} onLayout={(e) => setCardWidth(e.nativeEvent.layout.width)}>
+        {cardWidth > 0 ? (
+          <VehicleGallery
+            name={vehicle.name}
+            photos={photos}
+            width={cardWidth}
+            inset={layout.cardPad}
+            padded={false}
+            showLabels
+            {...(onEditImages
+              ? {
+                  overlay: (
+                    <YStack f={1} ai="center" jc="center" pointerEvents="box-none">
+                      <Pressable
+                        onPress={onEditImages}
+                        accessibilityRole="button"
+                        accessibilityLabel={tEdit('changeImage')}
+                        style={styles.editTarget}
+                      >
+                        <ImageEditBadge />
+                      </Pressable>
+                    </YStack>
+                  ),
+                }
+              : {})}
+          />
         ) : null}
+      </YStack>
 
+      <YStack p={layout.cardPad} gap={space.sm}>
         <XStack ai="center" gap={space.xs}>
-          <Text f={1} col={colors.text} fos={fontSize.h3} fow={fontWeight.bold}>
+          <Text f={1} col={colors.text} fos={fontSize.lead} fow={fontWeight.semibold}>
             {vehicle.name}
           </Text>
-          {vehicle.code ? (
-            <Text
-              col={colors.textMuted}
-              fos={fontSize.bodySm}
-              numberOfLines={1}
-              flexShrink={0}
-              maxWidth="40%"
-            >
-              {vehicle.code}
-            </Text>
+          {showSource ? (
+            <StatusBadge
+              label={domainLabel(
+                'vehicleSourceType',
+                vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED,
+              )}
+              color={STATUS_COLOR.ACCENT}
+              size="sm"
+            />
           ) : null}
         </XStack>
+
+        {/* Mã xe xuống dòng riêng: cạnh tên + viên nguồn thì vỡ layout trên màn hẹp. */}
+        {vehicle.code ? (
+          <Text col={colors.textMuted} fos={fontSize.bodySm} numberOfLines={1}>
+            {vehicle.code}
+          </Text>
+        ) : null}
 
         <Text col={colors.textMuted} fos={fontSize.bodySm}>
           {t.rich('plate', {
@@ -326,7 +322,7 @@ export function VehicleEditHeaderCard({
           <Button
             label={tSummary('viewListing')}
             icon="open-outline"
-            variant="secondary"
+            variant="outline"
             size="sm"
             onPress={() => void Linking.openURL(`${resolveWebBaseUrl()}/listings/${vehicle.id}`)}
           />
@@ -350,3 +346,7 @@ export function VehicleEditHeaderCard({
     </Card>
   );
 }
+
+const styles = StyleSheet.create({
+  editTarget: { width: EDIT_TARGET, height: EDIT_TARGET },
+});

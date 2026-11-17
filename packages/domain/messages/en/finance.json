@@ -395,6 +395,9 @@
       }
     },
     "tiles": {
+      "cashTitle": "Cash flow",
+      "cashIn": "Cash in",
+      "cashOut": "Cash out",
       "label": "Financial figures for the period",
       "revenue": "Revenue",
       "cost": "Costs",
@@ -455,7 +458,9 @@
     "vehicles": {
       "title": "Performance by vehicle",
       "total": "{count, plural, one {# vehicle} other {# vehicles}}",
+      "tripsCount": "{trips, plural, one {# trip} other {# trips}}",
       "marginValue": "{value}%",
+      "marginLine": "Margin: {value}",
       "cardLine": "In {revenue} · Out {cost} · {trips, plural, one {# trip} other {# trips}}",
       "unassigned": "Shared costs not tied to a vehicle: {value}. This is not included in any row above.",
       "error": "Could not load performance by vehicle",

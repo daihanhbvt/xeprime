@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { useForm } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -15,7 +16,7 @@ import { IconButton } from '@/components/ui/IconButton';
 import { Pagination } from '@/components/ui/Pagination';
 import { SelectField } from '@/components/ui/SelectField';
 import { SkeletonText } from '@/components/ui/Skeleton';
-import { StatusBadge } from '@/components/ui/StatusBadge';
+import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
 import { TextField } from '@/components/ui/TextField';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
@@ -26,7 +27,7 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { FIRST_PAGE } from '@/queries/use-clamped-page';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, space } from '@/theme/tokens';
+import { fontSize, radius, space, typeScale } from '@/theme/tokens';
 import { customerNoteSchema, type CustomerNoteFormValues } from '@xeprime/validators';
 import { NOTE_TYPE_VALUES } from '../constants';
 import {
@@ -152,38 +153,31 @@ export function CustomerNotesPanel({
       ) : null}
 
       {items.map((note) => (
-        <Card key={note.id}>
-          <YStack gap={space.xs}>
-            <XStack ai="center" gap={space.xs}>
-              <StatusBadge
-                label={domainLabel('tenantCustomerNoteType', note.noteType)}
-                color={metaColor(TENANT_CUSTOMER_NOTE_TYPE_META, note.noteType)}
-                size="sm"
+        // Khối viền nhạt (không Card lồng Card): viên loại ghi chú · nút xoá, nội dung, dòng người ghi.
+        <YStack key={note.id} gap={space.xs} p={space.md} br={radius.md} bw={1} bc={colors.border}>
+          <XStack ai="center" jc="space-between" gap={space.sm}>
+            <Pill
+              label={domainLabel('tenantCustomerNoteType', note.noteType)}
+              tone={pillToneOfStatusColor(metaColor(TENANT_CUSTOMER_NOTE_TYPE_META, note.noteType))}
+            />
+            {canManage ? (
+              <IconButton
+                icon="trash-outline"
+                label={t('notes.removeLabel', { date: fmt.dateTime(note.createdAt) })}
+                tone="danger"
+                compact
+                size={16}
+                onPress={() => setRemoving(note)}
               />
-              {/* `f={1}` + `minWidth={0}`: tên người ghi dài không được đẩy nút xoá ra khỏi mép. */}
-              <Text
-                col={colors.textMuted}
-                fos={fontSize.label}
-                f={1}
-                minWidth={0}
-                numberOfLines={1}
-              >
-                {note.authorName ?? t('notes.deletedAuthor')} · {fmt.dateTime(note.createdAt)}
-              </Text>
-              {canManage ? (
-                <IconButton
-                  icon="trash-outline"
-                  label={t('notes.removeLabel', { date: fmt.dateTime(note.createdAt) })}
-                  tone="danger"
-                  onPress={() => setRemoving(note)}
-                />
-              ) : null}
-            </XStack>
-            <Text col={colors.text} fos={fontSize.bodySm}>
-              {note.body}
-            </Text>
-          </YStack>
-        </Card>
+            ) : null}
+          </XStack>
+          <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+            {note.body}
+          </Text>
+          <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+            {`${note.authorName ?? t('notes.deletedAuthor')}${LIST_SEPARATOR}${fmt.dateTime(note.createdAt)}`}
+          </Text>
+        </YStack>
       ))}
 
       {meta && meta.total > meta.limit ? (

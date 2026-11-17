@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -16,6 +16,7 @@ import type { PublicQuote } from '../api';
 import { useLocalizePriceRows } from '../hooks/use-localized-price-rows';
 import { useQuoteTotal } from '../hooks/use-quote-total';
 import { visibleFeeLines } from '../customer-price-view';
+import { layout } from '@/theme/layout';
 
 /** Một dòng đơn giá khi CHƯA có báo giá — bảng NIÊM YẾT, không phải breakdown. */
 interface UnitRow {
@@ -387,7 +388,7 @@ function Bar({ children, onExpand }: { children: React.ReactNode; onExpand: () =
       br={radius.md}
       bw={1}
       bc={colors.primary}
-      px={space.md}
+      px={layout.padX}
       py={space.sm}
       minHeight={sizing.touchTarget}
     >

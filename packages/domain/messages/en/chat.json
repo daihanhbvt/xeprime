@@ -23,6 +23,7 @@
   "filterLabel": "Filter conversations",
   "filterUnread": "Unread",
   "imageAlt": "Image",
+  "loadingOlder": "Loading older messages",
   "inboxTitle": "Messages",
   "inputPlaceholder": "Write a message…",
   "loadError": "Couldn't load conversations",

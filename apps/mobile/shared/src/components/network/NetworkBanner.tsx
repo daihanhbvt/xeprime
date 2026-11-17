@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,6 +7,7 @@ import { useIsOnline } from '@/hooks/use-is-online';
 import { subscribeOffline } from '@/lib/network';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 
 /** Hộp "Không có kết nối mạng" — đủ lâu để đọc hai dòng, rồi tự tắt. */
 const OFFLINE_VISIBLE_MS = 3500;
@@ -165,7 +166,7 @@ const useStyles = makeStyles((colors) => ({
     alignItems: 'center',
     gap: space.sm,
     paddingVertical: space.sm,
-    paddingHorizontal: space.md,
+    paddingHorizontal: layout.padX,
   },
   texts: { flex: 1, gap: 2 },
   title: { fontSize: fontSize.body, fontWeight: fontWeight.semibold },

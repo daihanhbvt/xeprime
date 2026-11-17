@@ -11,7 +11,13 @@ export const VEHICLE_EDIT_TAB = {
   INFORMATION: 'information',
   /** Thư viện ảnh — giá trị chuẩn là `media` (không phải `images`). */
   MEDIA: 'media',
+  /** "Dịch vụ & giá" - web `EDIT_MENU.SERVICES` (tab dịch vụ, công tắc, giá, nhận chuyến tự động). */
   PRICING: 'pricing',
+  /**
+   * "Chính sách thuê" - web `EDIT_MENU.POLICY` (`PolicyPane`): nguồn chính sách, giao nhận, thời
+   * gian chết, điều kiện thuê (ledger §3.6 E13-E17).
+   */
+  POLICY: 'policy',
   SOURCE: 'source',
   DOCUMENTS: 'documents',
   /** Lịch sử chuyến của xe — mục thứ tư của nhóm "Hồ sơ xe" bên web (`vehicle-edit-nav.ts`). */
@@ -57,9 +63,11 @@ export const VEHICLE_EDIT_TAB_ORDER = [
  * `*-terms`) mở đúng mục của menu mới.
  */
 const TAB_ALIAS: Partial<Record<VehicleEditTab, VehicleEditTab>> = {
-  [VEHICLE_EDIT_TAB.OPERATIONS]: VEHICLE_EDIT_TAB.HANDOVER_TIME,
-  [VEHICLE_EDIT_TAB.SELF_DRIVE_TERMS]: VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION,
-  [VEHICLE_EDIT_TAB.WITH_DRIVER_TERMS]: VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION,
+  // Gộp 03/11/2026 (web): giờ giao nhận + điều khoản của từng dịch vụ nằm ở mục "Chính sách thuê".
+  [VEHICLE_EDIT_TAB.OPERATIONS]: VEHICLE_EDIT_TAB.POLICY,
+  [VEHICLE_EDIT_TAB.HANDOVER_TIME]: VEHICLE_EDIT_TAB.POLICY,
+  [VEHICLE_EDIT_TAB.SELF_DRIVE_TERMS]: VEHICLE_EDIT_TAB.POLICY,
+  [VEHICLE_EDIT_TAB.WITH_DRIVER_TERMS]: VEHICLE_EDIT_TAB.POLICY,
   // Phụ phí tài xế đã gỡ (ADR 0075) — link cũ mở mục thủ tục của dịch vụ có tài xế.
   [VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES]: VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION,
 };

@@ -133,7 +133,9 @@ describe('CustomerDetailScreen - quyền', () => {
     // Tên hiện ở CẢ thanh trên lẫn thẻ danh tính — chủ ý, nên đếm chứ không đòi duy nhất.
     expect((await view.findAllByText('Nguyễn Văn An')).length).toBeGreaterThan(0);
     expect(view.getByText('Tổng quan')).toBeTruthy();
-    expect(view.getByText('Ghi chú nội bộ')).toBeTruthy();
+    // Ghi chú là thẻ "Ghi chú vận hành" của Tổng quan, không còn là tab (web 02/11/2026).
+    expect(view.getByText('Ghi chú vận hành')).toBeTruthy();
+    expect(view.queryByText('Ghi chú nội bộ')).toBeNull();
     expect(view.getByText('Giấy tờ')).toBeTruthy();
   });
 

@@ -1,5 +1,7 @@
+import { useCallback, useRef } from 'react';
+import type { LayoutChangeEvent, ScrollView } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { Text, YStack } from 'tamagui';
-import { PERMISSION } from '@xeprime/types';
 import { useTranslations } from 'use-intl';
 import { Screen } from '@/components/layout/Screen';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
@@ -11,15 +13,13 @@ import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { InlineAction } from '@/components/ui/InlineAction';
 import { useShopSettingsAccess } from '@/features/shop/hooks/use-shop-settings-access';
 import { isCommissionOwner as isCommissionOwnerOf } from '@/features/shell/partner-track';
-import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import type { AccountSection } from '@/navigation/account-section';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
+import { ACCOUNT_SECTION, type AccountSection } from '@/navigation/account-section';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, space } from '@/theme/tokens';
 import { AccountSecuritySections, SectionHead } from './components/AccountSecuritySections';
 import { PersonalProfileCard } from './components/PersonalProfileCard';
-import { OwnerProfileScreen } from './OwnerProfileScreen';
 import { useMyProfile } from './hooks/use-account';
 import { useAccountIdentityLabel } from './use-account-identity-label';
 
@@ -53,21 +53,30 @@ import { useAccountIdentityLabel } from './use-account-identity-label';
  * cỡ chữ cùng màu, là mời người dùng chạm nhầm vào thứ không rút lại được.
  */
 
+/**
+ * `/manage/account` — "Tài khoản & bảo mật" của MỌI tài khoản partner (ADR 0085 điều 2, web
+ * `PartnerAccountRoute`). Trước ADR 0085 cùng URL này là "Hồ sơ chủ xe" của chủ xe tuyến hoa hồng;
+ * hồ sơ đó nay là trang Thông tin `/manage/shop` (route chuyển các `?section=` cũ sang đó).
+ */
 export function ManageAccountScreen({ section }: { section?: AccountSection } = {}) {
-  const { data: user } = useCurrentUser();
-  const { has } = usePermissions();
-  /*
-   * MỘT URL, nội dung theo tuyến (web `PartnerAccountRoute`, PR #156): CHỦ xe tuyến hoa hồng có
-   * `tenant.view` → "Hồ sơ chủ xe"; mọi người khác → "Tài khoản & bảo mật". Thiếu `tenant.view`
-   * thì vẫn bản thường — quản lý được tài khoản của mình thay vì đứng trước trang không tải nổi.
-   */
-  if (isCommissionOwnerOf(user) && has(PERMISSION.TENANT_VIEW)) {
-    return <OwnerProfileScreen {...(section ? { section } : {})} />;
-  }
-  return <PartnerAccountScreen />;
+  return <PartnerAccountScreen section={section} />;
 }
 
-function PartnerAccountScreen() {
+/** Ba khối cuộn tới được — web `PartnerAccountPage` `useScrollToSection` (login · password · delete). */
+type ScrollableSection =
+  | typeof ACCOUNT_SECTION.LOGIN
+  | typeof ACCOUNT_SECTION.PASSWORD
+  | typeof ACCOUNT_SECTION.DELETE;
+
+function isScrollableSection(value: AccountSection | undefined): value is ScrollableSection {
+  return (
+    value === ACCOUNT_SECTION.LOGIN ||
+    value === ACCOUNT_SECTION.PASSWORD ||
+    value === ACCOUNT_SECTION.DELETE
+  );
+}
+
+function PartnerAccountScreen({ section }: { section: AccountSection | undefined }) {
   const colors = useColors();
   const tHub = useTranslations('Account.hub');
   const canOpenShopSettings = useShopSettingsAccess();
@@ -84,6 +93,40 @@ function PartnerAccountScreen() {
 
   /* Nhãn danh tính — xem `useAccountIdentityLabel`: tuyến, không phải vai RBAC. */
   const userRole = identityLabel(user);
+
+  /* ---------- Cuộn tới `?section=` — MỘT lần mỗi lần màn được focus (như `OwnerProfileScreen`) ---------- */
+  const target = isScrollableSection(section) ? section : undefined;
+  const scrollRef = useRef<ScrollView | null>(null);
+  const columnY = useRef<number | null>(null);
+  const sectionY = useRef<Partial<Record<ScrollableSection, number>>>({});
+  const scrolled = useRef(false);
+  const scrollToSection = useCallback(() => {
+    if (!target || scrolled.current) return;
+    const y = sectionY.current[target];
+    if (columnY.current === null || y === undefined) return;
+    scrolled.current = true;
+    scrollRef.current?.scrollTo({ y: Math.max(0, columnY.current + y - space.md), animated: true });
+  }, [target]);
+  useFocusEffect(
+    useCallback(() => {
+      scrolled.current = false;
+      scrollToSection();
+    }, [scrollToSection]),
+  );
+  const onColumnLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      columnY.current = event.nativeEvent.layout.y;
+      scrollToSection();
+    },
+    [scrollToSection],
+  );
+  const sectionLayout = useCallback(
+    (key: ScrollableSection) => (event: LayoutChangeEvent) => {
+      sectionY.current[key] = event.nativeEvent.layout.y;
+      scrollToSection();
+    },
+    [scrollToSection],
+  );
 
   if (profile.isLoading) {
     return (
@@ -122,8 +165,9 @@ function PartnerAccountScreen() {
         edges={['left', 'right', 'bottom']}
         refreshing={profile.isRefetching}
         onRefresh={() => void profile.refetch()}
+        scrollRef={scrollRef}
       >
-        <YStack gap={space.lg}>
+        <YStack gap={space.lg} onLayout={onColumnLayout}>
           {/*
             Thẻ hồ sơ CON NGƯỜI, bản CHO SỬA — đây là nơi duy nhất sửa tên/ảnh/email/SĐT trong
             app (người dùng chốt 16/09/2026). Tab Tài khoản bên khu khách dựng CÙNG component ở
@@ -135,33 +179,50 @@ function PartnerAccountScreen() {
             gánh luôn phần đăng nhập (email/SĐT đổi qua OTP) — tách thành hai thẻ là hai nơi hiện
             cùng một danh tính.
           */}
-          <SectionHead title={tHub('sections.profile')} hint={tHub('sections.profileHint')} />
-          <PersonalProfileCard
-            profile={profile.data}
-            subtitle={userRole}
-            tenant={tenant}
-            editable
-          />
+          {/* Thẻ hồ sơ gánh phần đăng nhập (SĐT/email) — đích của `?section=login`. */}
+          <YStack gap={space.lg} onLayout={sectionLayout(ACCOUNT_SECTION.LOGIN)}>
+            <SectionHead title={tHub('sections.profile')} hint={tHub('sections.profileHint')} />
+            <PersonalProfileCard
+              profile={profile.data}
+              subtitle={userRole}
+              tenant={tenant}
+              editable
+            />
+          </YStack>
           {/*
             Tài khoản ≠ gian hàng: tên/ảnh ở đây là của con người; tên, logo, SĐT liên hệ khách thấy là
             của gian hàng. Một câu cho mọi tuyến, đúng web `AccountProfileForm` sau PR #156 (danh tính
             trang chủ xe tuyến hoa hồng nay do server suy — ADR 0054).
           */}
-          {tenant ? (
-            <YStack gap={space.xs}>
-              <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {tHub('profile.notShop')}
-              </Text>
-              {/* Chủ xe tuyến hoa hồng không có trang Cửa hàng (`/manage/shop` → hồ sơ chủ xe). */}
-              {canOpenShopSettings && !isCommissionOwner ? (
-                <InlineAction
-                  label={tHub('profile.shopSettingsLink')}
-                  onPress={() => navigateOnce(ROUTES.manage.shop())}
-                />
-              ) : null}
-            </YStack>
-          ) : null}
-          <AccountSecuritySections />
+          {/*
+            Câu luôn hiện, kể cả tài khoản partner CHƯA có gian hàng (vừa đăng ký, chưa onboarding) -
+            web `AccountProfileForm` vẽ nó không điều kiện; chỉ lối dẫn sang /shop mới cần quyền.
+          */}
+          <YStack gap={space.xs}>
+            {/*
+              Chủ xe tuyến hoa hồng: ảnh + họ tên này CHÍNH LÀ thứ khách thấy (ADR 0054), nên câu
+              nói điều đó và dẫn sang "Hồ sơ chủ xe" (`/manage/shop`, ADR 0085) — như web
+              `AccountProfileForm`.
+            */}
+            <Text col={colors.textMuted} fos={fontSize.bodySm}>
+              {isCommissionOwner ? tHub('profile.personalStorefront') : tHub('profile.notShop')}
+            </Text>
+            {isCommissionOwner ? (
+              <InlineAction
+                label={tHub('profile.ownerProfileLink')}
+                onPress={() => navigateOnce(ROUTES.manage.shop())}
+              />
+            ) : canOpenShopSettings ? (
+              <InlineAction
+                label={tHub('profile.shopSettingsLink')}
+                onPress={() => navigateOnce(ROUTES.manage.shop())}
+              />
+            ) : null}
+          </YStack>
+          <AccountSecuritySections
+            onPasswordLayout={sectionLayout(ACCOUNT_SECTION.PASSWORD)}
+            onDeleteLayout={sectionLayout(ACCOUNT_SECTION.DELETE)}
+          />
 
           <AppVersion />
         </YStack>

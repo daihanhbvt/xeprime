@@ -7,7 +7,8 @@ import {
   type MaintenanceDueStatus,
 } from '@xeprime/types';
 import { metaColor, metaLabel } from '@/lib/status-meta';
-import { BlockLink, BlockTitle } from '@/components/ui/BlockTitle';
+import { BlockLink } from '@/components/ui/BlockTitle';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { DataRow } from '@/components/ui/DataRow';
@@ -61,7 +62,7 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
     return (
       <Card>
         <YStack gap={space.sm}>
-          <BlockTitle>{t('card.title')}</BlockTitle>
+          <SectionHeader icon="construct-outline">{t('card.title')}</SectionHeader>
           <SkeletonText lines={3} />
         </YStack>
       </Card>
@@ -72,7 +73,7 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
     return (
       <Card>
         <YStack gap={space.sm}>
-          <BlockTitle>{t('card.title')}</BlockTitle>
+          <SectionHeader icon="construct-outline">{t('card.title')}</SectionHeader>
           <Callout tone="danger">{t('card.loadError')}</Callout>
         </YStack>
       </Card>
@@ -96,7 +97,7 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
   return (
     <Card>
       <YStack gap={space.sm}>
-        <BlockTitle action={manage}>{t('card.title')}</BlockTitle>
+        <SectionHeader icon="construct-outline" action={manage}>{t('card.title')}</SectionHeader>
 
         {dueStatus === MAINTENANCE_DUE_STATUS.OVERDUE ? (
           <Callout tone="danger">

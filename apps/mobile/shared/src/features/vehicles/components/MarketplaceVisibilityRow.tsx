@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Switch } from 'react-native';
-import { Text, XStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { isLogoOnlyGate, packageShopListingGateFrom } from '@xeprime/domain';
 import {
+  MARKETPLACE_VISIBILITY_REASON,
   MARKETPLACE_VISIBILITY_REASON_META,
   PERMISSION,
   VEHICLE_PUBLIC_STATUS,
@@ -11,6 +13,7 @@ import {
   type VehiclePublicStatus,
 } from '@xeprime/types';
 import { metaColor, metaLabel } from '@/lib/status-meta';
+import { AlertDialog } from '@/components/ui/AlertDialog';
 import { InfoHint } from '@/components/ui/InfoHint';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppToast } from '@/components/feedback/use-app-toast';
@@ -18,6 +21,8 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 // Lỗi hạn mức gói (ADR 0065) nói đúng loại xe + con số thay cho câu chung — như web.
 import { usePlanAwareErrorMessage } from '@/features/subscription/plan-quota-gate';
 import { useDomainLabel } from '@/i18n/domain';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { ROUTES, SHOP_SECTION } from '@/navigation/routes';
 import { themed, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { useSetVehicleMarketplaceVisibility } from '../hooks/use-vehicle';
@@ -54,7 +59,17 @@ const useSwitchTrack = themed((colors) => ({ false: colors.borderInput, true: co
  * mã lỗi kèm câu giải thích ĐÚNG LÚC người dùng cần nó, thay vì một dòng luật nội bộ đứng sẵn ở
  * đầu màn. Và TẮT thì luôn được — một ô mờ ở đó sẽ khoá luôn quyền rút xe về.
  */
-export function MarketplaceVisibilityRow({ vehicle }: { vehicle: VehicleDetail }) {
+export function MarketplaceVisibilityRow({
+  vehicle,
+  compact = false,
+}: {
+  vehicle: VehicleDetail;
+  /**
+   * Dạng gọn của Chi tiết xe (Figma `_Toggle base` 36×20 ở mép phải dòng tên): chỉ công tắc (hoặc
+   * viên trạng thái khi xe chưa duyệt / bị hệ thống ẩn), nhãn "Trên chợ" thành tên trợ năng.
+   */
+  compact?: boolean;
+}) {
   const colors = useColors();
   const SWITCH_TRACK = useSwitchTrack();
   const t = useTranslations('Vehicles.publish.visibility');
@@ -62,6 +77,16 @@ export function MarketplaceVisibilityRow({ vehicle }: { vehicle: VehicleDetail }
   const errorMessage = usePlanAwareErrorMessage();
   const { has } = usePermissions();
   const toggle = useSetVehicleMarketplaceVisibility(vehicle.id);
+  const tGate = useTranslations('Shop.listingGate');
+  const tActions = useTranslations('Common.actions');
+  const navigateOnce = useNavigateOnce();
+  /**
+   * Bật lại chợ chạm cổng mặt tiền gian hàng tuyến gói (ADR 0048 · ADR 0040 điều 7) — gần như luôn
+   * là thiếu LOGO. Toast không chứa được lối đi tiếp, nên đây là hộp thoại nói rõ thiếu gì và dẫn
+   * thẳng tới hồ sơ gian hàng — đúng `showListingGate` của web.
+   */
+  const [listingGate, setListingGate] =
+    useState<ReturnType<typeof packageShopListingGateFrom>>(null);
 
   /**
    * Vị trí công tắc trong lúc CHỜ server — `null` nghĩa là đang đọc thẳng giá trị của server.
@@ -83,6 +108,15 @@ export function MarketplaceVisibilityRow({ vehicle }: { vehicle: VehicleDetail }
   const canManage = has(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
 
   if (!approved) {
+    if (compact) {
+      return (
+        <StatusBadge
+          label={t(`moderationTag.${status}`)}
+          color={metaColor(VEHICLE_PUBLIC_STATUS_META, status)}
+          size="sm"
+        />
+      );
+    }
     return (
       <XStack ai="center" jc="space-between" gap={space.sm}>
         <Text col={colors.textMuted} fos={fontSize.label}>
@@ -111,21 +145,28 @@ export function MarketplaceVisibilityRow({ vehicle }: { vehicle: VehicleDetail }
          * của server từ chối phải kết thúc ở chỗ cũ, chứ không nằm lại chỗ người dùng vừa gạt.
          */
         setPending(null);
-        toast.showError(errorMessage(error));
+        const gate = packageShopListingGateFrom(error);
+        if (gate) setListingGate(gate);
+        else toast.showError(errorMessage(error));
       },
     });
   }
 
   return (
     <XStack ai="center" jc="space-between" gap={space.sm}>
-      <XStack ai="center" gap={4} flexShrink={1}>
-        <Text col={colors.textMuted} fos={fontSize.label}>
-          {t('label')}
-        </Text>
-        <InfoHint label={t('hintLabel')} content={t('hint')} />
-      </XStack>
+      {compact ? null : (
+        <XStack ai="center" gap={4} flexShrink={1}>
+          <Text col={colors.textMuted} fos={fontSize.label}>
+            {t('label')}
+          </Text>
+          <InfoHint label={t('hintLabel')} content={t('hint')} />
+        </XStack>
+      )}
       <XStack ai="center" gap={space.xs}>
-        <MarketplaceState vehicle={vehicle} />
+        {/* Dạng gọn: chỉ nói thêm khi xe KHÔNG ra chợ dù đã bật (lý do server suy) - còn lại công tắc đã đủ. */}
+        {compact && canManage && (vehicle.isMarketplaceVisible || !vehicle.marketplaceEnabled) ? null : (
+          <MarketplaceState vehicle={vehicle} />
+        )}
         {canManage ? (
           <Switch
             value={pending ?? vehicle.marketplaceEnabled}
@@ -139,6 +180,31 @@ export function MarketplaceVisibilityRow({ vehicle }: { vehicle: VehicleDetail }
           />
         ) : null}
       </XStack>
+      <AlertDialog
+        open={listingGate !== null}
+        title={t('gate.title')}
+        message={listingGate && isLogoOnlyGate(listingGate) ? t('gate.logoOnly') : t('gate.missing')}
+        body={
+          listingGate && !isLogoOnlyGate(listingGate) ? (
+            <YStack gap={2}>
+              {listingGate.map((key) => (
+                <Text key={key} col={colors.textMuted} fos={fontSize.bodySm}>
+                  {`• ${tGate(`items.${key}`)}`}
+                </Text>
+              ))}
+            </YStack>
+          ) : null
+        }
+        confirmLabel={
+          listingGate && isLogoOnlyGate(listingGate) ? tGate('ctaLogo') : tGate('cta')
+        }
+        cancelLabel={tActions('close')}
+        onConfirm={() => {
+          setListingGate(null);
+          navigateOnce(ROUTES.manage.shop({ section: SHOP_SECTION.PROFILE }));
+        }}
+        onCancel={() => setListingGate(null)}
+      />
     </XStack>
   );
 }
@@ -157,7 +223,11 @@ function MarketplaceState({ vehicle }: { vehicle: VehicleDetail }) {
   const domainLabel = useDomainLabel();
   const reason = vehicle.marketplaceVisibilityReason as MarketplaceVisibilityReason;
 
-  if (!vehicle.marketplaceEnabled) {
+  /*
+   * Tắt vì HẾT SUẤT GÓI (ADR 0085 điều 5) không phải "Đang tắt" của chủ xe: nói đúng lý do để họ biết
+   * bật lại cần một suất trống, không phải chỉ một cú bấm. Như web.
+   */
+  if (!vehicle.marketplaceEnabled && reason !== MARKETPLACE_VISIBILITY_REASON.PLAN_PAUSED) {
     return (
       <Text col={colors.textMuted} fos={fontSize.bodySm}>
         {t('off')}

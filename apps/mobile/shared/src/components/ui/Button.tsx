@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback } from 'react';
 import { ActivityIndicator, Keyboard, StyleSheet } from 'react-native';
@@ -16,6 +16,7 @@ import {
   iconSize,
   radius,
   space,
+  typeScale,
 } from '@/theme/tokens';
 import type { IconName } from './Chip';
 
@@ -42,14 +43,23 @@ type Variant =
   | 'ghostDanger'
   | 'danger'
   | 'dangerOutline'
-  | 'accent';
+  | 'dangerSolid'
+  | 'accent'
+  | 'success'
+  | 'primarySubtle'
+  | 'dangerSoft'
+  | 'text';
 /**
  * Chiều cao VẼ RA khớp web (`buttonHeight`): `sm` 32 · `md` 40 (mặc định) · `lg` 44. Vùng
  * CHẠM vẫn ≥ `sizing.touchTarget` nhờ `hitSlop` dọc — không thổi phồng nút cho vừa ngón tay.
  *
  * Đệm ngang thì MỌI cỡ dùng chung `space.md` — xem lý do ở `px` trong phần dựng hình.
  */
-type Size = 'sm' | 'md' | 'lg';
+/**
+ * `compact` = nút trong chân thẻ đơn v2 (Figma "Rental Request - MB" "Action Buttons"): cao 32 như
+ * `sm` nhưng chữ 14/20 đậm vừa, đệm ngang 12, bo 12 — đứng cạnh đồng hồ đếm ngược.
+ */
+type Size = 'sm' | 'md' | 'lg' | 'compact';
 /**
  * `pill` là mặc định của app — nút hành động chính chiếm trọn bề ngang, bo tròn hết cỡ.
  *
@@ -76,7 +86,17 @@ const useVariant = themed<Record<Variant, { bg: string; fg: string; border: stri
     danger: { bg: colors.dangerSurface, fg: colors.danger, border: colors.danger },
     /** = AntD `<Button danger>` (kiểu mặc định): nền thẻ, viền + chữ đỏ — đứng được trên nền tông lỗi. */
     dangerOutline: { bg: colors.surface, fg: colors.danger, border: colors.danger },
+    /** Nút chính mang hậu quả nặng (Figma "Từ chối yêu cầu" `24145:97165`): nền `bg/destructive` đặc, chữ trắng. */
+    dangerSolid: { bg: colors.danger, fg: colors.textInverse, border: colors.danger },
     accent: { bg: colors.primaryLight, fg: colors.accentText, border: colors.primary },
+    /** Nút "Nhận xe" của thẻ đơn web (`BookingCard .receive`): nền xanh lá, chữ trắng. */
+    success: { bg: colors.success, fg: colors.textInverse, border: colors.success },
+    /** Nút "Gia hạn" của thẻ đơn web (`BookingCard .extend`): nền vàng nhạt, viền vàng, chữ vàng đậm. */
+    primarySubtle: { bg: colors.primarySubtle, fg: colors.primaryActive, border: colors.primaryBorder },
+    /** Nút "Từ chối"/"Huỷ" của thẻ yêu cầu web (`.rejectButton`): nền đỏ nhạt, chữ đỏ, không viền. */
+    dangerSoft: { bg: colors.dangerSurface, fg: colors.danger, border: colors.dangerSurface },
+    /** AntD `Button type="text"` cấp ba (web `BookingStatusActions .tertiary`): không nền, không viền, chữ phụ. */
+    text: { bg: 'transparent', fg: colors.textMuted, border: 'transparent' },
   }),
 );
 
@@ -201,7 +221,8 @@ export function Button({
     onPress();
   }, [onPress, variant]);
   const skin = VARIANT[variant];
-  const height = buttonHeight[size];
+  const compact = size === 'compact';
+  const height = buttonHeight[compact ? 'sm' : size];
   const slop = buttonHitSlop(height);
   /** Hai biến thể KHÔNG nền, không viền — nền mờ lúc bị chặn cũng không áp cho chúng. */
   const borderless = variant === 'ghost' || variant === 'ghostDanger';
@@ -212,7 +233,7 @@ export function Button({
    */
   const fg = blocked ? colors.textMuted : skin.fg;
   const isMain = variant === 'gradient' || variant === 'primary';
-  const showShine = (shine ?? (isMain && size !== 'sm')) && !blocked;
+  const showShine = (shine ?? (isMain && size !== 'sm' && !compact)) && !blocked;
 
   return (
     /*
@@ -246,7 +267,7 @@ export function Button({
         bc={blocked ? colors.border : skin.border}
         bw={borderless ? 0 : 1}
         // Chuẩn chung của mọi nút = nút "Chọn thuê" (người dùng chốt 28/10/2026): bo `control` 12, không còn viên thuốc.
-        br={shape === 'square' ? radius.md : radius.control}
+        br={shape === 'square' && !compact ? radius.md : radius.control}
         /*
           Đệm ngang `space.md` cho MỌI cỡ, không phải `space.lg`.
 
@@ -256,7 +277,7 @@ export function Button({
 
           Nút full-width không mất gì: nhãn ở đó căn giữa nên đệm ngang không ai nhìn thấy.
         */
-        px={tight ? space.xs : space.md}
+        px={tight ? space.xs : compact ? COMPACT_PAD_X : space.md}
         minHeight={height}
       >
         {(variant === 'gradient' || variant === 'primary') && !blocked ? (
@@ -276,7 +297,7 @@ export function Button({
             {icon ? (
               // `flexShrink={0}`: hết chỗ thì CHỮ co, không phải biểu tượng méo đi.
               <XStack flexShrink={0}>
-                <Ionicons name={icon} size={size === 'sm' ? iconSize.sm : iconSize.md} color={fg} />
+                <Ionicons name={icon} size={size === 'sm' || compact ? iconSize.sm : iconSize.md} color={fg} />
               </XStack>
             ) : null}
             <Text
@@ -285,9 +306,15 @@ export function Button({
               ta="center"
               col={fg}
               fos={
-                size === 'lg' ? fontSize.bodyLg : size === 'sm' ? fontSize.bodySm : fontSize.body
+                size === 'lg'
+                  ? fontSize.bodyLg
+                  : size === 'sm'
+                    ? fontSize.bodySm
+                    : compact
+                      ? typeScale.body.fontSize
+                      : fontSize.body
               }
-              fow={fontWeight.semibold}
+              fow={compact ? fontWeight.medium : fontWeight.semibold}
               numberOfLines={1}
             >
               {label}
@@ -298,3 +325,6 @@ export function Button({
     </PressableScale>
   );
 }
+
+/** Figma "Button" cỡ nhỏ v2: đệm ngang 12. */
+const COMPACT_PAD_X = 12;

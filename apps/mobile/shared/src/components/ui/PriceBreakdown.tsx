@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useState } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -10,6 +10,7 @@ import { InfoHint } from './InfoHint';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 
 type FeeLineLike = PriceBreakdownFeesInput['lines'][number];
 
@@ -390,7 +391,7 @@ export function PriceBreakdown({
             thuê" to đậm phía trên (phản hồi người dùng 18/09/2026).
           */}
           {fees.holdAmount ? (
-            <YStack gap={6} px={space.md} py={space.sm} br={radius.sm} bg={colors.surfaceMuted}>
+            <YStack gap={6} px={layout.padX} py={space.sm} br={radius.sm} bg={colors.surfaceMuted}>
               <XStack ai="baseline" jc="space-between" gap={space.sm}>
                 <XStack f={1} ai="center" gap={4}>
                   <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>

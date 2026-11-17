@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { RATING_MAX, RATING_SCALE } from '@xeprime/types';

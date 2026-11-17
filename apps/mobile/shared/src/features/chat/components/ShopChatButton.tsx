@@ -10,6 +10,7 @@ import { ChatWithShopButton } from './ChatWithShopButton';
 export function ShopChatButton({
   shopSlug,
   vehicleId,
+  tripId,
   publicChatOpen,
   label,
   variant,
@@ -20,6 +21,8 @@ export function ShopChatButton({
 }: {
   shopSlug: string;
   vehicleId?: string;
+  /** Nhắn về một CHUYẾN (id yêu cầu) — xem `ChatWithShopButton.tripId`. */
+  tripId?: string;
   publicChatOpen: boolean;
   label?: string;
   variant?: 'primary' | 'secondary';
@@ -35,6 +38,7 @@ export function ShopChatButton({
   return (
     <ChatWithShopButton
       {...(vehicleId ? { vehicleId } : { shopSlug })}
+      {...(tripId ? { tripId } : {})}
       {...(label ? { label } : {})}
       {...(variant ? { variant } : {})}
       {...(size ? { size } : {})}

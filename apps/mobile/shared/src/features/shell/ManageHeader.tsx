@@ -1,86 +1,110 @@
+import { useState } from 'react';
+import { Pressable, StyleSheet } from 'react-native';
 import { CHAT_SIDE } from '@xeprime/types';
-import { Text, XStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { LineIcon } from '@/components/icons/LineIcon';
+import { HEADER_CHIP_SIZE } from '@/components/layout/HeaderChip';
+import { Avatar } from '@/components/ui/Avatar';
+import { useAppScheme, useColors } from '@/theme/ThemeProvider';
+import { ManageAccountSheet } from './ManageAccountSheet';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { IconButton } from '@/components/ui/IconButton';
 import { useAuthenticatedUser } from '@/features/auth/hooks/use-authenticated-user';
-import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
 import { ChatBadgeButton } from '@/features/chat/components/ChatBadgeButton';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { NOTIFICATION_CONTEXT } from '@/features/notifications/notification-display';
-import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, space } from '@/theme/tokens';
-import { useManageDrawer } from './ManageDrawerHost';
+import { space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 import { ManageShellNotices } from './ManageShellNotices';
 import { isCommissionOwner } from './partner-track';
-import { ScopeSwitcherButton } from './ScopeSwitcher';
+
+/** Logo thanh gốc - bằng `AppTopBar` của app khách. */
+const BRAND_LOGO = 30;
 
 /**
- * Thanh trên của khu quản lý — nút mở menu · gian hàng đang làm việc · đổi khu.
+ * Thanh trên site partner ở khổ điện thoại (Figma Partner-XePrime `Header MB` `24175:59922`):
  *
- * MỘT thanh cho mọi màn gốc của khu quản lý, thay vì mỗi màn tự khai `AppHeader` riêng rồi lệch
- * nhau về nội dung bên phải — đổi mục là cả thanh trên nhảy.
+ *   logo XePrime ······································ tin nhắn · thông báo
  *
- * Tiêu đề TRANG không nằm ở đây mà ở `ManagePageTitle` trong nội dung — cùng cách web dựng, và
- * mục đang sáng trong drawer đã nói người dùng đang ở đâu.
- *
- * Không có bộ chọn chi nhánh ở đây (ADR 0052): chi nhánh là ô lọc của TỪNG màn lọc được, sống
- * trên tham số route của màn đó. Dòng phụ chỉ chở lời chào.
- *
- * Không nhồi bộ chọn vào HÀNG CHÍNH: hàng đó đã có nút menu, tên gian hàng và nút đổi khu, thêm
- * một ô chọn nữa thì ở 360dp tên chi nhánh còn ba ký tự.
+ * - Không còn nút mở menu và ảnh đại diện: cả cây menu nằm ở thanh menu dưới đáy (`ManageTabBar`),
+ *   menu hồ sơ (tài khoản & bảo mật, giao diện, ngôn ngữ, đăng xuất) là màn "Tài khoản của tôi" của
+ *   ô Tài khoản (`ManageAccountMenuScreen`).
+ * - Tin nhắn là ICON ở đây, không phải mục menu (§2.1 "Trò chuyện → icon tin nhắn ở header"); tin
+ *   nhắn và thông báo là `HeaderChip` (vòng 40 viền + bóng), như `HeaderActions` app khách.
+ * - Tiêu đề TRANG không nằm ở đây mà ở `ManagePageTitle` trong nội dung — cùng cách web dựng.
  */
 export function ManageHeader() {
-  const t = useTranslations('MobileShell.manageHome');
-  const tNav = useTranslations('MobileShell.manageNav');
   const user = useAuthenticatedUser();
-  const { tenant } = useTenantScope();
-
-  const drawer = useManageDrawer();
+  const colors = useColors();
+  const { scheme } = useAppScheme();
+  const t = useTranslations('ManageCommon.shell');
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <>
       <AppHeader
-        left={
-          <IconButton icon="menu" label={tNav('openMenu')} onPress={drawer.open} tone="surface" />
-        }
-        title={tenant?.name ?? ''}
-        context={<Greeting text={t('greeting', { name: user.displayName })} />}
+        brandLogoHeight={BRAND_LOGO}
+        // Không còn nút menu / ảnh đại diện ở hai mép: logo và nút thông báo theo lề trang.
+        edgeInset={layout.screenX}
         right={
-          /*
-          Tin nhắn → thông báo → ngữ cảnh gian hàng, đúng thứ tự web đặt trên `Topbar`.
-
-          Biểu tượng tin nhắn KHÔNG trùng với mục "Trò chuyện" trong drawer: mục đó đếm riêng
-          hộp thư GIAN HÀNG (`MANAGE_NAV_BADGE.CHAT_UNREAD`), còn viên này đếm TỔNG cả hai vai —
-          nếu không, chủ gian hàng đang làm việc ở khu quản lý không hề biết có người nhắn vào hộp
-          thư cá nhân của mình. Đó là đúng lỗ mà `useChatBadge` sinh ra để bịt.
-
-          Cả ba ở biến thể GỌN 32dp: hàng này còn phải chứa nút menu và tên gian hàng trên màn
-          320dp, và ở 48dp thì tên chỉ còn vài ký tự.
-        */
           <XStack ai="center" gap={space.xs}>
-            <ChatBadgeButton surface={CHAT_SIDE.SHOP} compact />
+            {/*
+              Đếm phía GIAN HÀNG — cùng `side` với `ChatMenu` web (`CHAT_SIDE.SHOP`); đây là lối vào
+              DUY NHẤT của hộp thư gian hàng.
+            */}
+            <ChatBadgeButton surface={CHAT_SIDE.SHOP} chip />
             <NotificationBell
               context={
                 isCommissionOwner(user) ? NOTIFICATION_CONTEXT.OWNER : NOTIFICATION_CONTEXT.MANAGE
               }
-              compact
+              chip
             />
-            <ScopeSwitcherButton compact />
+            {/*
+              Avatar + mũi tên mở MENU TÀI KHOẢN như thanh trên app khách (`HeaderActions`) - người
+              dùng yêu cầu thêm 13/11/2026 dù Figma `Header MB` không có.
+            */}
+            <Pressable
+              onPress={() => setMenuOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t('accountMenu')}
+              accessibilityState={{ expanded: menuOpen }}
+              hitSlop={space.xs}
+              style={({ pressed }) => [styles.avatarTrigger, pressed ? styles.pressed : null]}
+            >
+              <Avatar
+                name={user.displayName || user.email || '-'}
+                url={user.avatarUrl ?? null}
+                size={HEADER_CHIP_SIZE}
+                gradient
+              />
+              <YStack style={menuOpen ? null : styles.caret}>
+                <LineIcon
+                  name="caret-up"
+                  size={CARET_SIZE}
+                  color={scheme === 'dark' ? colors.primary : colors.primaryStrong}
+                />
+              </YStack>
+            </Pressable>
           </XStack>
         }
       />
+      <ManageAccountSheet open={menuOpen} onClose={() => setMenuOpen(false)} />
       <ManageShellNotices />
     </>
   );
 }
 
-/** Dòng phụ mặc định khi không có chi nhánh nào để hiện — cùng kiểu chữ với `subtitle` của thanh. */
-function Greeting({ text }: { text: string }) {
-  const colors = useColors();
-  return (
-    <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
-      {text}
-    </Text>
-  );
-}
+/** Mũi tên cạnh avatar - cùng cỡ `HeaderActions` app khách. */
+const CARET_SIZE = 12;
+
+const styles = StyleSheet.create({
+  avatarTrigger: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 2,
+    height: HEADER_CHIP_SIZE,
+    paddingLeft: 2,
+  },
+  caret: { transform: [{ rotate: '180deg' }] },
+  pressed: { opacity: 0.7 },
+});

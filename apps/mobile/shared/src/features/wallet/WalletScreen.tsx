@@ -8,21 +8,18 @@ import { nowInAppTz } from '@xeprime/domain';
 import { Screen } from '@/components/layout/Screen';
 import { Card } from '@/components/ui/Card';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { Chip } from '@/components/ui/Chip';
-import { IconButton } from '@/components/ui/IconButton';
+import { UnderlineTabs } from '@/components/ui/UnderlineTabs';
 import { ScrollReveal } from '@/components/motion/ScrollReveal';
 import { BANK_ACCOUNT_SCOPE } from '@/api/bank-accounts/api';
 import { PayoutNotes } from '@/features/account-payments/components/PayoutNotes';
 import { BankAccountList } from '@/features/bank-accounts/components/BankAccountList';
 import { ShopTaxWithheldCard } from '@/features/tax/components/ShopTaxWithheldCard';
-import { ManageHeader } from '@/features/shell/ManageHeader';
-import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { queryKeys } from '@/queries/query-keys';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { WALLET_SCOPE, type WalletScope, type WalletStatementFilters } from '@/api/wallet/api';
-import { canWithdraw } from './can-withdraw';
 import { WalletActivityPanel } from './components/WalletActivityPanel';
 import { WalletMonthSummary, WalletStatementPanel } from './components/WalletStatementPanel';
 import { WalletSummaryCard } from './components/WalletSummaryCard';
@@ -164,8 +161,8 @@ export function WalletScreen({
   }, [walletSummary.isSuccess, scrollToPayout]);
 
   const isShop = scope === WALLET_SCOPE.SHOP;
-  const title = t(isShop ? 'title.tenant' : 'title.user');
-  const withdrawable = canWithdraw(walletSummary.data);
+  // Trang gian hàng là "Quản lý ví" của web (ledger 09 §3.10); ví tài khoản khách giữ tên cũ.
+  const title = isShop ? t('manage.title') : t('title.user');
 
   /*
    * Hai VỎ cho cùng một màn: khu gian hàng có thanh quản lý + tiêu đề trang, khu tài khoản có nút
@@ -177,7 +174,7 @@ export function WalletScreen({
    * `AccountPaymentsHub`, design Account 22/10/2026) - tiêu đề là của MỤC, bộ chuyển tab ngay dưới.
    */
   // Khu tài khoản: header + dải tab do `AccountPaymentsHub` dựng (đổi tab tại chỗ, 29/10/2026).
-  const header = manageShell ? <ManageHeader /> : null;
+  const header = manageShell ? <ManagePageHeader title={title} /> : null;
 
   return (
     <>
@@ -196,145 +193,147 @@ export function WalletScreen({
         */}
         {manageShell ? (
           <YStack pb={space.sm}>
-            <ManagePageTitle
-              title={title}
-              action={
-                <IconButton
-                  icon="cash-outline"
-                  label={t('withdraw.action')}
-                  tone="primary"
-                  disabled={!withdrawable}
-                  loading={walletSummary.isPending}
-                  onPress={() => setWithdrawOpen(true)}
-                />
-              }
-            />
+            {/* Nút "Rút về ngân hàng" nằm TRONG thẻ số dư như web — hàng tiêu đề không lặp nó. */}
             {/*
               Mô tả đứng TRỌN bề ngang dưới hàng tiêu đề, giống `summaryBlock` của Giao dịch
               thu chi. Đặt nó chung cột với nút Rút sẽ bó câu dài vào phần bề ngang còn lại và
               biến hai dòng thành bốn dòng trên máy 360dp.
             */}
             <Text px={layout.screenX} col={colors.textMuted} fos={fontSize.label}>
-              {t('page.subtitle')}
+              {isShop ? t('manage.subtitle') : t('page.subtitle')}
             </Text>
           </YStack>
         ) : null}
 
+        {/*
+          Thứ tự khổ điện thoại của web `PartnerBalanceView` (ledger 09 §3.10): CỘT PHẢI lên trước
+          — thẻ số dư + tài khoản nhận tiền chung một thẻ trắng, Tổng hợp tháng, ô ghi chú thuế —
+          rồi hàng tab ngay trên nội dung của nó.
+        */}
         <YStack
           gap={layout.section}
           px={manageShell ? layout.screenX : 0}
           pb={manageShell ? layout.section : 0}
           onLayout={onColumnLayout}
         >
-          <ScrollReveal index={0}>
-            <WalletSummaryCard
-              scope={scope}
-              onWithdraw={() => setWithdrawOpen(true)}
-              pageVariant={manageShell}
-            />
-          </ScrollReveal>
-
-          {/*
-            TÀI KHOẢN NHẬN TIỀN - khối của trang số dư ở CẢ HAI phía: gian hàng từ PR #159 (web
-            `PartnerBalanceView`), tài khoản khách từ design Account 22/10/2026 (web
-            `AccountBalanceView`). Rút tiền và nơi tiền về là một việc, người bấm "Rút" mà chưa có
-            tài khoản phải thấy chỗ khai ngay trên cùng màn. Sổ đi theo ĐÚNG chủ ví (`scope`); phía
-            gian hàng chỉ dựng cho CHỦ (route gác), đúng `@ShopOwnerOnly` của `/shop/bank-accounts`.
-          */}
-          <YStack onLayout={onPayoutLayout}>
-            <ScrollReveal index={1}>
-            {isShop ? (
-              <BankAccountList
-                scope={BANK_ACCOUNT_SCOPE.SHOP}
-                title={tBank('title')}
-                hint={t('payout.hint')}
-              />
-            ) : (
-              /*
+          {isShop ? (
+            <ScrollReveal index={0}>
+              <Card lift="flat">
+                <YStack gap={space.sm}>
+                  <WalletSummaryCard
+                    scope={scope}
+                    onWithdraw={() => setWithdrawOpen(true)}
+                    pageVariant={manageShell}
+                  />
+                  {/* Đích của `?section=payout` (thông báo, route cũ `/manage/bank-accounts`). */}
+                  <YStack onLayout={onPayoutLayout}>
+                    <BankAccountList
+                      scope={BANK_ACCOUNT_SCOPE.SHOP}
+                      title={tBank('title')}
+                      hint={t('payout.hint')}
+                    />
+                  </YStack>
+                </YStack>
+              </Card>
+            </ScrollReveal>
+          ) : (
+            <>
+              <ScrollReveal index={0}>
+                <WalletSummaryCard
+                  scope={scope}
+                  onWithdraw={() => setWithdrawOpen(true)}
+                  pageVariant={manageShell}
+                />
+              </ScrollReveal>
+              {/*
                * Tab "Tài khoản thanh toán" (web `AccountBalanceView`, Figma `19879:74829`): khối là
                * MỘT thẻ - tiêu đề, mô tả, thẻ tài khoản hình `detail`, rồi khối lưu ý.
-               */
+               */}
+              <YStack onLayout={onPayoutLayout}>
+                <ScrollReveal index={1}>
+                  <SectionCard>
+                    <BankAccountList
+                      scope={BANK_ACCOUNT_SCOPE.ACCOUNT}
+                      title={tBank('title')}
+                      hint={tBank('subtitle')}
+                      detailed
+                      footer={<PayoutNotes maxBusinessDays={walletSummary.data?.maxBusinessDays} />}
+                    />
+                  </SectionCard>
+                </ScrollReveal>
+              </YStack>
+            </>
+          )}
+
+          {isShop ? (
+            <>
+              {/* Thẻ Tổng hợp tháng - hiện ở CẢ HAI tab, như cột bên của web. */}
               <SectionCard>
-                <BankAccountList
-                  scope={BANK_ACCOUNT_SCOPE.ACCOUNT}
-                  title={tBank('title')}
-                  hint={tBank('subtitle')}
-                  detailed
-                  footer={<PayoutNotes maxBusinessDays={walletSummary.data?.maxBusinessDays} />}
+                <WalletMonthSummary
+                  filters={
+                    tab === BALANCE_TAB.STATEMENT
+                      ? statementFilters
+                      : { period: statementFilters.period, page: 1 }
+                  }
                 />
               </SectionCard>
-            )}
-            </ScrollReveal>
-          </YStack>
 
-          {/*
-            Bảng tổng hợp chỉ có ở phía GIAN HÀNG - khách thuê thuần không có chuyến nào ở phía bán,
-            và một bảng rỗng vĩnh viễn là một câu hỏi không lời đáp.
-          */}
-          {isShop ? (
-            <SectionCard>
-              {/* Thẻ Tổng hợp tháng - hiện ở CẢ HAI tab, như cột bên của web. */}
-              <WalletMonthSummary
-                filters={
-                  tab === BALANCE_TAB.STATEMENT
-                    ? statementFilters
-                    : { period: statementFilters.period, page: 1 }
-                }
-              />
-            </SectionCard>
-          ) : null}
-
-          {isShop ? (
-            <SectionCard>
-              <XStack gap={space.xs} accessibilityLabel={t('tabs.label')}>
-                {BALANCE_TABS.map((value) => (
-                  <Chip
-                    key={value}
-                    label={t(`tabs.${value}`)}
-                    selected={tab === value}
-                    size="sm"
-                    onPress={() => {
-                      setTab(value);
-                      setStatementFilters((prev) => ({ ...prev, page: 1 }));
-                    }}
-                  />
-                ))}
-              </XStack>
-              {tab === BALANCE_TAB.ACTIVITY ? (
-                <WalletActivityPanel
-                  filters={statementFilters}
-                  onFiltersChange={(patch) =>
-                    setStatementFilters((prev) => ({ ...prev, ...patch }))
-                  }
-                />
-              ) : (
-                <WalletStatementPanel
-                  filters={statementFilters}
-                  onFiltersChange={(patch) =>
-                    setStatementFilters((prev) => ({ ...prev, ...patch }))
-                  }
-                />
-              )}
-            </SectionCard>
-          ) : null}
-
-          {isShop ? (
-            /*
-              Ghi chú thuế (web `TaxNote`, PR #276): một câu tóm mức khấu trừ, "Chi tiết" mở bảng
-              thuế đã khấu trừ của kỳ trong tấm trượt - thay cho khối bảng đầy đủ ở cuối trang.
-            */
-            <Text col={colors.textMuted} fos={fontSize.label}>
-              {t('taxNote.body')}{' '}
-              <Text
-                col={colors.primaryActive}
-                fos={fontSize.label}
-                fow={fontWeight.semibold}
-                accessibilityRole="button"
-                onPress={() => setTaxOpen(true)}
+              {/*
+                Ô ghi chú thuế (web `TaxNote`, design `23948:94510`): ô nền xanh thông tin, "Chi tiết"
+                mở bảng thuế đã khấu trừ trong tấm trượt.
+              */}
+              <YStack
+                p={space.sm}
+                br={radius.lg}
+                bg={colors.infoSurface}
+                bw={1}
+                bc={colors.infoBorder}
               >
-                {t('taxNote.detail')}
-              </Text>
-            </Text>
+                <Text col={colors.infoStrong} fos={fontSize.body} fow={fontWeight.medium}>
+                  {t('taxNote.body')}{' '}
+                  <Text
+                    col={colors.infoStrong}
+                    fos={fontSize.body}
+                    fow={fontWeight.semibold}
+                    textDecorationLine="underline"
+                    accessibilityRole="button"
+                    onPress={() => setTaxOpen(true)}
+                  >
+                    {t('taxNote.detail')}
+                  </Text>
+                </Text>
+              </YStack>
+
+              {/* Hàng tab có khung viền (`segmented.module.css` của web) đứng ngay trên nội dung. */}
+              <XStack accessibilityLabel={t('tabs.label')}>
+                <UnderlineTabs
+                  items={BALANCE_TABS.map((value) => ({ key: value, label: t(`tabs.${value}`) }))}
+                  value={tab}
+                  onChange={(value) => {
+                    setTab(value);
+                    setStatementFilters((prev) => ({ ...prev, page: 1 }));
+                  }}
+                />
+              </XStack>
+
+              <SectionCard>
+                {tab === BALANCE_TAB.ACTIVITY ? (
+                  <WalletActivityPanel
+                    filters={statementFilters}
+                    onFiltersChange={(patch) =>
+                      setStatementFilters((prev) => ({ ...prev, ...patch }))
+                    }
+                  />
+                ) : (
+                  <WalletStatementPanel
+                    filters={statementFilters}
+                    onFiltersChange={(patch) =>
+                      setStatementFilters((prev) => ({ ...prev, ...patch }))
+                    }
+                  />
+                )}
+              </SectionCard>
+            </>
           ) : null}
         </YStack>
       </Screen>
@@ -342,7 +341,12 @@ export function WalletScreen({
       <WithdrawSheet scope={scope} open={withdrawOpen} onClose={() => setWithdrawOpen(false)} />
       {isShop ? (
         <BottomSheet open={taxOpen} onClose={() => setTaxOpen(false)} title={tTax('title')}>
-          <ShopTaxWithheldCard />
+          {/* Mở đúng tháng đang xem ở trang ví, như web. */}
+          <ShopTaxWithheldCard
+            embedded
+            key={statementFilters.period}
+            initialPeriod={statementFilters.period}
+          />
         </BottomSheet>
       ) : null}
     </>

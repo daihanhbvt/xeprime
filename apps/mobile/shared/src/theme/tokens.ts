@@ -1,4 +1,5 @@
 import { XP_TOKENS, toPx, type XpTokenName } from '@xeprime/ui';
+import Constants from 'expo-constants';
 import { Dimensions } from 'react-native';
 import { mixColor } from './color-mix';
 
@@ -58,6 +59,11 @@ const DARK_TOKENS: Partial<Record<XpTokenName, string>> = {
   'color-primary-border': '#946e1f',
   'color-success-border': 'rgba(108, 233, 166, 0.45)',
   'color-warning-subtle': 'rgba(247, 144, 9, 0.1)',
+  // Viên loại dịch vụ "Tự lái" / "Thuê xe dài hạn" (tokens.css khối tối, Partner-XePrime 02/11/2026).
+  'color-info-border': 'rgba(132, 202, 255, 0.45)',
+  'color-pink': '#f670c7',
+  'color-pink-bg': 'rgba(221, 37, 144, 0.12)',
+  'color-pink-border': 'rgba(250, 167, 224, 0.45)',
   'color-text': '#ffffff',
   'color-text-secondary': '#fafafa',
   'color-text-tertiary': '#e9eaeb',
@@ -98,7 +104,28 @@ function resolve(name: XpTokenName, scheme: ColorScheme = 'light'): string {
   throw new Error(`Token '${name}' có chuỗi bí danh vòng lặp.`);
 }
 
+/**
+ * App XePrime Partner = site partner ở KHỔ ĐIỆN THOẠI. Web hạ thang khoảng cách và cỡ tiêu đề ngay
+ * ở tầng token trong `@media (max-width: 640px)` (`packages/ui/src/styles/tokens.css`); app Partner
+ * luôn là khổ đó nên dùng thẳng bộ giá trị ấy - mọi `space.*` / `fontSize.h*` khớp web mà không
+ * component nào phải tự đổi số. App khách giữ thang gốc (đã tinh chỉnh theo Figma khách).
+ */
+const PARTNER_APP = Constants.expoConfig?.slug === 'xeprime-partner';
+const PHONE_TOKEN_PX: Partial<Record<XpTokenName, number>> = {
+  'space-md': 12,
+  'space-lg': 16,
+  'space-xl': 24,
+  'font-size-display': 32,
+  'font-size-h1': 24,
+  'font-size-h2': 20,
+  'font-size-h3': 18,
+};
+
 function px(name: XpTokenName): number {
+  if (PARTNER_APP) {
+    const phone = PHONE_TOKEN_PX[name];
+    if (phone !== undefined) return phone;
+  }
   return toPx(resolve(name));
 }
 
@@ -110,13 +137,71 @@ function px(name: XpTokenName): number {
 const CSS_ONLY_STATUS_TOKENS = {
   light: {
     warningBorder: '#fec84b',
+    /** `--xp-color-error-border` - viền viên đếm nhóm "Cần xử lý" (web `RentalStageHeading`). */
+    dangerBorder: '#fda29b',
     warningStrong: '#ec4a0a',
     infoStrong: '#1570ef',
+    // Viên vai "Quan sát viên" (`Status/purple-*`, Partner-XePrime 09/11/2026 — ADR 0086).
+    purple: '#6938ef',
+    purpleSurface: '#f4f3ff',
+    purpleBorder: '#bdb4fe',
   },
   dark: {
     warningBorder: 'rgba(254, 200, 75, 0.45)',
+    dangerBorder: 'rgba(253, 162, 155, 0.45)',
     warningStrong: '#fb6514',
     infoStrong: '#53b1fd',
+    purple: '#9b8afb',
+    purpleSurface: 'rgba(105, 56, 239, 0.14)',
+    purpleBorder: 'rgba(189, 180, 254, 0.45)',
+  },
+} as const;
+
+/**
+ * Bậc màu v2 mà design "Overview MB" của app Partner (Figma `24175:52345`) dùng nhưng `XP_TOKENS`
+ * chưa mang — tên theo biến Figma (`text/brand/primary-2`, `shape/primary`, `bg/primary-low`…).
+ * Giá trị sáng CHÉP NGUYÊN từ Figma; bản tối giữ cùng sắc, hạ nền thành lớp mờ như các token tối khác.
+ */
+const FIGMA_V2_TOKENS = {
+  light: {
+    /** `text/brand/primary-2` #f0b212 — link "Xem tất cả →", tab đang chọn. */
+    brandLink: '#f0b212',
+    /** `shape/primary` · `stroke/primary` #f5c33b — cột biểu đồ, gạch tab, giờ lịch giao nhận. */
+    brandShape: '#f5c33b',
+    /** `text/brand/high` #996f0e — chữ viên đếm vàng. */
+    brandHigh: '#996f0e',
+    /** `bg/primary-low` #fff9e5 — nền viên đếm vàng. */
+    brandLow: '#fff9e5',
+    /** `stroke/primary-300` #fbdf85 — viền viên đếm vàng. */
+    brandBorder: '#fbdf85',
+    /** `status/error-high700` #b42318 — chữ viên đỏ ("7 quá hạn", "Trễ 3 ngày"). */
+    dangerStrong: '#b42318',
+    /** `status/warning-25` #fffcf5 — nền ô "Doanh thu" của thẻ thu chi. */
+    warningWash: '#fffcf5',
+    /** `status/warning-500` #f79009 — đoạn "Chờ duyệt" của thanh xe trên chợ. */
+    warningVivid: '#f79009',
+    /** `status/warning-high` #dc6803. */
+    warningHigh: '#dc6803',
+    /** `status/success-500` #12b76a — thanh tiến độ uy tín. */
+    successVivid: '#12b76a',
+    /** `status/information-low` #ebf6ff — nền ô icon / viên "Giao xe". */
+    infoLow: '#ebf6ff',
+    /** `status/purple-high` #5925dc — chữ viên "Thuê xe dài hạn" của thẻ đơn (Rental Request MB). */
+    purpleStrong: '#5925dc',
+  },
+  dark: {
+    brandLink: '#f5c33b',
+    brandShape: '#f5c33b',
+    brandHigh: '#fbdf85',
+    brandLow: 'rgba(245, 195, 59, 0.14)',
+    brandBorder: 'rgba(251, 223, 133, 0.45)',
+    dangerStrong: '#fda29b',
+    warningWash: 'rgba(247, 144, 9, 0.08)',
+    warningVivid: '#fdb022',
+    warningHigh: '#fdb022',
+    successVivid: '#32d583',
+    infoLow: 'rgba(21, 112, 239, 0.16)',
+    purpleStrong: '#bdb4fe',
   },
 } as const;
 
@@ -130,7 +215,9 @@ const CSS_ONLY_STATUS_TOKENS = {
 function buildColors(scheme: ColorScheme) {
   const r = (name: XpTokenName) => resolve(name, scheme);
   const cssOnly = CSS_ONLY_STATUS_TOKENS[scheme];
+  const v2 = FIGMA_V2_TOKENS[scheme];
   return {
+    ...v2,
     background: r('color-bg'),
     surface: r('color-bg-container'),
     surfaceMuted: r('color-bg-muted'),
@@ -203,11 +290,25 @@ function buildColors(scheme: ColorScheme) {
     infoStrong: cssOnly.infoStrong,
     /** `--xp-color-pink` — chữ/icon viên "Đặt ngay" trên thẻ xe (Figma `22185:87230`). */
     pink: r('color-pink'),
+    /** `--xp-color-pink-bg` / `--xp-color-pink-border` — viên "Thuê xe dài hạn" (`ServiceTypeChip`). */
+    pinkSurface: r('color-pink-bg'),
+    pinkBorder: r('color-pink-border'),
     /** `--xp-color-success-border` — viền viên nhãn xanh (đã xác minh). */
     successBorder: r('color-success-border'),
     /** `--xp-color-warning-border` / `--xp-color-warning-strong` — viên nhãn cam (chưa xác minh). */
     warningBorder: cssOnly.warningBorder,
+    dangerBorder: cssOnly.dangerBorder,
     warningStrong: cssOnly.warningStrong,
+    /** `--xp-color-purple*` — viên vai "Quan sát viên" ở màn Nhân viên & phân quyền (ADR 0086). */
+    purple: cssOnly.purple,
+    purpleSurface: cssOnly.purpleSurface,
+    purpleBorder: cssOnly.purpleBorder,
+    /** `--xp-color-info-border` — viền viên vai "Quản lý gian hàng". */
+    infoBorder: r('color-info-border'),
+    /** `--xp-color-warning-subtle` — nền viên vai "Nhân viên". */
+    warningSubtle: r('color-warning-subtle'),
+    /** `--xp-color-gold-on-dark` — chữ vàng trên viên vai đen "Chủ gian hàng". */
+    goldOnDark: r('color-gold-on-dark'),
     /**
      * Bậc "đang chạy" — TÁCH khỏi `info`, không phải một sắc thái của nó.
      *
@@ -255,6 +356,9 @@ function buildChartColors(scheme: ColorScheme) {
     profit: r('color-viz-profit'),
     grid: r('color-viz-grid'),
     axis: r('color-viz-axis'),
+    /** Dải định danh cho chuỗi KHÔNG có vai tiền (web `CHART_SERIES_COLORS`), theo thứ tự. */
+    series1: r('color-viz-1'),
+    series2: r('color-viz-2'),
   } as const;
 }
 
@@ -320,6 +424,15 @@ export const market = {
    * (`ListingGallery.module.css`): `color-bg-overlay` (xám 45%) chỉ cho chữ trắng ~2.9:1.
    */
   photoScrim: 'rgba(0, 0, 0, 0.55)',
+  /**
+   * Viên chữ SÁNG đặt trên một dải nền tối cố định (dải gói "Gói Doanh nghiệp · Còn 41 ngày",
+   * Figma `24175:52535`) — nền `bg/gray-50`, chữ `text/gray/medium`, giữ nguyên ở cả hai giao diện
+   * vì nó đứng trên ảnh tối chứ không trên nền trang.
+   */
+  onDarkChip: resolve('color-bg'),
+  onDarkChipText: resolve('color-text-secondary'),
+  /** Ô icon kính mờ trên dải tối (`rgba(255,255,255,0.2)`, Figma `24175:52529`). */
+  onDarkGlass: 'rgba(255, 255, 255, 0.2)',
   /** Sao đánh giá — MỘT màu cho mọi chỗ rate sao của app (web `/home/star-*.svg`, người dùng chốt 27/10/2026). */
   star: XP_TOKENS['color-star'],
 } as const;
@@ -354,6 +467,32 @@ export function gradient(name: XpTokenName): NativeGradient {
 export const gradients = {
   /** Nút chính v2 ("Đăng ký ngay", "Khám phá"). */
   primary: gradient('gradient-primary'),
+  /**
+   * Nút "Rút về ngân hàng" của thẻ ví Tổng quan Partner (Figma `24175:52402`:
+   * `bg-gradient-to-r from-#efc423 to-#f3c84a`) — chưa là token ở `@xeprime/ui`, giữ ở đây.
+   */
+  walletCta: { colors: ['#efc423', '#f3c84a'], locations: [0, 1] } as NativeGradient,
+} as const;
+
+/**
+ * Thang chữ v2 theo TÊN STYLE Figma (`10px/Regular`, `14px/Semibold`…): cặp cỡ chữ + dòng ĐI LIỀN
+ * nhau, đọc thẳng từ `XP_TOKENS` — KHÔNG qua bộ hạ cỡ khổ điện thoại của Partner (`PHONE_TOKEN_PX`)
+ * hay bộ co máy hẹp, vì design Partner mới (Overview MB) đã vẽ đúng cho điện thoại.
+ */
+const raw = (name: XpTokenName) => toPx(resolve(name));
+export const typeScale = {
+  /** 10/14 — nhãn VIẾT HOA ô việc, ngày dưới giờ, so sánh KPI. */
+  caption: { fontSize: raw('font-size-caption'), lineHeight: raw('line-height-caption') },
+  /** 12/18 — chú thích, viên đếm. */
+  label: { fontSize: raw('font-size-label'), lineHeight: raw('line-height-label') },
+  /** 14/20 — chữ thân, tab, link. */
+  body: { fontSize: raw('font-size-body'), lineHeight: raw('line-height-body') },
+  /** 16/24 — tiêu đề "Nhóm thông tin", giá trị KPI. */
+  title: { fontSize: raw('font-size-h4'), lineHeight: raw('line-height-h4') },
+  /** 18/28 — tiêu đề thanh trang ("Page Header" Figma) và tiêu đề tấm trượt v2. */
+  heading: { fontSize: raw('font-size-h3'), lineHeight: raw('line-height-h3') },
+  /** 24/32 — số lớn (ô việc, số dư rút được). */
+  display: { fontSize: raw('font-size-h2'), lineHeight: raw('line-height-h2') },
 } as const;
 
 /** Thang khoảng cách Figma: 4 · 8 · 16 · 24 · 32, không có giá trị nào khác. */
@@ -376,6 +515,12 @@ export const radius = {
   /** `--xp-border-radius-banner` (20) — banner khuyến mãi trang chủ. */
   banner: px('border-radius-banner'),
   pill: px('border-radius-pill'),
+  /** 14 — ô việc cần làm Tổng quan partner (web `ActionTile .tile` viết cứng 14px). */
+  partnerTile: 14,
+  /** 9 — ô icon vuông trong ô việc cần làm (web `ActionTile .iconTile`). */
+  partnerIconTile: 9,
+  /** 8 — ảnh xe nhỏ của thẻ danh sách xe (Figma `num/8` "Vehicle Image"). */
+  thumb: 8,
 } as const;
 
 /**
@@ -412,6 +557,29 @@ export const fontSize = {
    * kicker) — cùng một bậc trên thang, khác vai ở native, và đó là lý do nó có tên riêng ở đây.
    */
   meta: px('font-size-overline'),
+  /**
+   * 13px — nhãn ô số liệu site partner (web `ActionTile .label`, `StatCard .tinted .label`,
+   * `DashboardHeader .subtitle` viết cứng 13px ngoài thang). Chỉ dùng cho các khối partner sao
+   * đúng web; nhãn thường vẫn là `label` 12.
+   */
+  /**
+   * Tiêu đề trang (`<h1>` của web `ManagePageHeader`, cỡ token h2): Partner 20 như web khổ ≤640;
+   * app khách giữ 18 (màn Chuyến đi dùng chung khung tiêu đề).
+   */
+  pageTitle: PARTNER_APP ? px('font-size-h2') : scaled('font-size-h3', HEADING_SCALE),
+  partnerLabel: 13,
+  /** 12.5px — nhãn thẻ KPI Tổng quan partner (web `StatCard .label`). */
+  partnerStatLabel: 12.5,
+  /** 11.5px — gợi ý + dòng so sánh thẻ KPI (web `StatCard .hint`, `ChangeBadge`). */
+  partnerStatHint: 11.5,
+  /** 15px — số đếm dòng "Xe trên chợ" (web `SidePanels .rowValue`). */
+  partnerValue: 15,
+  /** 22px — số tiền nổi của ô thu nhập (web `SidePanels .moneyValue`). */
+  partnerMoney: 22,
+  /** 13.5px — dòng "Hôm nay: …" đầu Tổng quan partner khổ điện thoại (web `.answer`). */
+  partnerAnswer: 13.5,
+  /** 26px — số đếm ô việc cần làm khổ điện thoại (`--xp-font-size-partner-mb-lead`). */
+  partnerCount: px('font-size-partner-mb-lead'),
 } as const;
 
 /**
@@ -451,6 +619,8 @@ export const fontWeight = {
 } as const;
 
 export const iconSize = {
+  /** 11 - mũi tên nhỏ góc ô việc cần làm partner (web `ActionTile .chevron`). */
+  xxs: 11,
   xs: 13,
   sm: 16,
   md: 18,

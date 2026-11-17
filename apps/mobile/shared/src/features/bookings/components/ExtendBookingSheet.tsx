@@ -123,7 +123,7 @@ function ChooseStep({
           </Text>
           <DataRow
             label={t('rentalPeriod')}
-            value={fmt.shortDateTimeRange(booking.pickupAt, booking.returnAt)}
+            value={fmt.rentalRange(booking.pickupAt, booking.returnAt)}
           />
           <DataRow
             label={t('remaining')}
@@ -164,7 +164,7 @@ function ChooseStep({
             />
           ))}
         </XStack>
-        <DataRow label={t('fromLabel')} value={fmt.shortDateTime(booking.returnAt)} />
+        <DataRow label={t('fromLabel')} value={fmt.rentalAt(booking.returnAt)} />
         <DataRow label={t('toLabel')} value={q ? fmt.shortDateTime(q.toAt) : '—'} strong />
         {quote.isError ? (
           <Callout tone="danger" title={t('quoteError')}>

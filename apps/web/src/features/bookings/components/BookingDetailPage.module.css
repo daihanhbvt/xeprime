@@ -16,3 +16,15 @@
   align-items: center;
   gap: var(--xp-space-sm);
 }
+
+/* Figma "Chi tiết đơn" (16/11/2026) - khổ điện thoại: tiêu đề 18/28 semibold, khoảng trang 16. */
+@media (max-width: 640px) {
+  .page {
+    gap: 16px;
+  }
+  .title {
+    font-size: 18px;
+    line-height: 28px;
+    font-weight: 600;
+  }
+}

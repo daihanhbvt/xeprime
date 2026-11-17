@@ -11,6 +11,7 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 
 /** Khoảng thu nhập/tháng quảng bá — cùng số với web `PARTNER_MONTHLY_INCOME_RANGE`. */
 const PARTNER_MONTHLY_INCOME_RANGE = { min: 7_000_000, max: 15_000_000 } as const;
@@ -36,7 +37,7 @@ export function PartnerInviteCard({ revealIndex = 0 }: { revealIndex?: number } 
     <ScrollReveal index={revealIndex}>
     <YStack
       gap={12}
-      px={space.md}
+      px={layout.padX}
       py={space.md}
       br={radius.control}
       bw={1}

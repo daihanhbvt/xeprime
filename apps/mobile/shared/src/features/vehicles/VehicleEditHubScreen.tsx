@@ -1,24 +1,24 @@
-import { Ionicons } from '@expo/vector-icons';
+import { AntIcon, type AntIconDefinition } from '@/components/icons/AntIcon';
 import { Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { PERMISSION, VEHICLE_ALERT_KIND, type VehicleAlertKind } from '@xeprime/types';
+import {
+  PERMISSION,
+  VEHICLE_ALERT_KIND,
+  VEHICLE_DOCUMENT_TYPE,
+  missingVehicleImageTypes,
+  type VehicleAlertKind,
+} from '@xeprime/types';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Card } from '@/components/ui/Card';
-import { InlineAction } from '@/components/ui/InlineAction';
 import { DetailChevron } from '@/components/ui/DetailArrow';
 import { CountBadge } from '@/components/ui/CountBadge';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
-import { useAppToast } from '@/components/feedback/use-app-toast';
-import type { IconName } from '@/components/ui/Chip';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { ToggleRow } from '@/features/rental-policies/components/PolicySections';
-import { useServiceToggle } from '@/features/vehicle-manage/hooks/use-service-toggle';
-import { useDomainLabel } from '@/i18n/domain';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB, type VehicleEditTab } from '@/navigation/vehicle-edit-tab';
@@ -30,6 +30,7 @@ import type { VehicleDetail } from './api';
 import { vehicleEditNavGroups } from './edit-nav';
 import { useVehicle, useVehicleSummary } from './hooks/use-vehicle';
 import { useVehicleCapabilities } from './hooks/use-vehicle-capabilities';
+import { useVehicleDocuments } from '@/features/vehicle-documents/hooks/use-documents';
 import { VehicleEditHeaderCard } from './components/VehicleEditHeaderCard';
 
 /** Ô đựng biểu tượng của một mục. Đủ to để hình 18px có khoảng thở quanh nó. */
@@ -101,7 +102,7 @@ export function VehicleEditHubScreen({ vehicleId }: { vehicleId: string }) {
     return (
       <>
         <AppHeader title={tPage('title')} onBack={back} />
-        <Screen edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
             title={tPage('forbiddenTitle')}
@@ -127,7 +128,7 @@ ${tPermission('requires')} ${PERMISSION.VEHICLE_UPDATE}`}
     <>
       {/* Tên + biển số đã nằm trên thẻ tóm tắt đầu màn — thanh đầu chỉ còn tiêu đề. */}
       <AppHeader title={t('title')} onBack={back} />
-      <Screen
+      <Screen scrollReveal
         edges={['left', 'right', 'bottom']}
         refreshing={query.isRefetching}
         onRefresh={() => {
@@ -152,6 +153,20 @@ ${tPermission('requires')} ${PERMISSION.VEHICLE_UPDATE}`}
   );
 }
 
+/** Ba giấy tờ CỐT LÕI của số "2/3" trên menu — web `STANDARD_VEHICLE_DOCUMENT_TYPES`. */
+const CORE_DOCUMENT_TYPES = [
+  VEHICLE_DOCUMENT_TYPE.REGISTRATION,
+  VEHICLE_DOCUMENT_TYPE.INSPECTION,
+  VEHICLE_DOCUMENT_TYPE.INSURANCE,
+] as const;
+
+/** Nhãn số bên phải một mục menu (web `EditMenuBadge`): "1 thiếu" ở Hình ảnh, "2/3" ở Giấy tờ. */
+interface HubBadge {
+  text: string;
+  label: string;
+  warn: boolean;
+}
+
 /** Tách để `useServiceToggle` chỉ chạy khi ĐÃ có xe — hook không nhận `undefined`. */
 function EditMenu({
   vehicle,
@@ -161,32 +176,54 @@ function EditMenu({
   countFor: (tab: VehicleEditTab) => number;
 }) {
   const tNav = useTranslations('Vehicles.edit.nav');
-  const tMenu = useTranslations('VehicleManage.menu');
-  const tManage = useTranslations('VehicleManage');
-  const toast = useAppToast();
-  const domainLabel = useDomainLabel();
+  const tEditor = useTranslations('Vehicles.editor');
   const navigateOnce = useNavigateOnce();
   const { has } = usePermissions();
   const can = useVehicleCapabilities();
   /* Web `canToggle = canUpdate && !support` — app Partner không có phiên hỗ trợ. */
   const canToggle = has(PERMISSION.VEHICLE_UPDATE);
-  const toggle = useServiceToggle(vehicle, canToggle);
-  const services = vehicle.serviceTypes ?? [];
+
+  /*
+   * Số trên menu (ledger §3.6 E2): góc ảnh bắt buộc còn thiếu · giấy tờ cốt lõi đã có / 3 — cùng
+   * phép tính với web `VehicleEditWorkspace`.
+   */
+  const missingImages = missingVehicleImageTypes(vehicle.vehicleType, vehicle.media ?? []).length;
+  const documents = useVehicleDocuments(vehicle.id, can.documents);
+  const docsPresent = CORE_DOCUMENT_TYPES.filter((type) =>
+    (documents.data ?? []).some((doc) => doc.type === type && doc.hasFile),
+  ).length;
+  const badgeFor = (tab: VehicleEditTab): HubBadge | null => {
+    if (tab === VEHICLE_EDIT_TAB.MEDIA && missingImages > 0) {
+      return {
+        text: tEditor('menu.missingBadge', { count: missingImages }),
+        label: tEditor('menu.missingImages', { count: missingImages }),
+        warn: true,
+      };
+    }
+    if (tab === VEHICLE_EDIT_TAB.DOCUMENTS && documents.data) {
+      return {
+        text: `${docsPresent}/${CORE_DOCUMENT_TYPES.length}`,
+        label: tEditor('menu.documentsCount', {
+          count: docsPresent,
+          total: CORE_DOCUMENT_TYPES.length,
+        }),
+        warn: docsPresent < CORE_DOCUMENT_TYPES.length,
+      };
+    }
+    return null;
+  };
 
   const groups = vehicleEditNavGroups({
     enabled: (tab) => {
       if (tab === VEHICLE_EDIT_TAB.SOURCE) return can.source;
       if (tab === VEHICLE_EDIT_TAB.DOCUMENTS) return can.documents;
       if (tab === VEHICLE_EDIT_TAB.MAINTENANCE) return can.maintenance;
-      // Cần CẢ hai quyền xem đơn và xem yêu cầu — như màn Lịch sử chuyến và backend.
-      if (tab === VEHICLE_EDIT_TAB.TRIP_HISTORY)
-        return has(PERMISSION.BOOKING_VIEW) && has(PERMISSION.BOOKING_REQUEST_VIEW);
+      // Web `VehicleEditWorkspace`: "Lịch sử chuyến" chỉ ở tuyến hoa hồng - gian hàng đã có màn
+      // Đơn thuê lọc theo xe. Hub này chỉ dựng cho cổng quản lý (tuyến gói).
+      if (tab === VEHICLE_EDIT_TAB.TRIP_HISTORY) return false;
       return true;
     },
-    services,
-  })
-    // Không có công tắc thì nhóm dịch vụ rỗng (dài hạn) không còn gì để bày — web cũng bỏ qua nó.
-    .filter((group) => group.items.length > 0 || canToggle);
+  });
 
   const open = (tab: VehicleEditTab) => navigateOnce(ROUTES.manage.vehicleEditTab(vehicle.id, tab));
 
@@ -200,76 +237,32 @@ function EditMenu({
         <VehicleEditHeaderCard
           vehicle={vehicle}
           statusEditable={canToggle}
+          showSource={can.source}
           onEditImages={canToggle ? () => open(VEHICLE_EDIT_TAB.MEDIA) : undefined}
         />
 
-        {groups.map((group) => {
-          const service = group.serviceType;
-          const showToggle = Boolean(service) && canToggle;
-          const on = service ? services.includes(service) : true;
-          // Công tắc bị KHOÁ vẫn hiện, kèm lý do khi chạm — web nói lý do qua tooltip.
-          const blocked = service && showToggle ? toggle.blockedReason(service, !on) : null;
-
-          return (
-            <YStack key={group.key} gap={space.xs}>
-              <SectionLabel>{tMenu(group.labelKey)}</SectionLabel>
-              {/*
-                MỘT thẻ cho cả nhóm — các mục là dòng gọn ngăn bằng đường kẻ; công tắc dịch vụ là
-                dòng ĐẦU của chính nhóm nó (trước đây là khối xám tách rời, không rõ mục nào thuộc
-                dịch vụ nào).
-              */}
-              <Card padded={false} lift="flat">
-                {showToggle && service ? (
-                  <YStack px={space.md} py={space.xs}>
-                    <ToggleRow
-                      label={tManage('nav.toggleLabel', {
-                        service: domainLabel('serviceType', service),
-                      })}
-                      {...(blocked ? { hint: blocked } : {})}
-                      checked={on}
-                      disabled={toggle.pending || blocked !== null}
-                      onToggle={() => {
-                        if (blocked) {
-                          toast.showInfo(blocked);
-                          return;
-                        }
-                        toggle.toggle(service, !on);
-                      }}
-                    />
-                  </YStack>
-                ) : null}
-
-                {group.items.map((item, index) => (
-                  <YStack key={item.tab}>
-                    {index > 0 || showToggle ? <RowDivider /> : null}
-                    <HubRow
-                      label={tMenu(item.labelKey)}
-                      icon={item.icon}
-                      count={countFor(item.tab)}
-                      dimmed={group.dimmed}
-                      onPress={() => open(item.tab)}
-                    />
-                  </YStack>
-                ))}
-
-                {/* Dài hạn: nhóm chỉ có công tắc + lời nhắc giá tháng nằm ở đâu (web `extra`). */}
-                {group.items.length === 0 ? (
-                  <>
-                    {showToggle ? <RowDivider /> : null}
-                    <XStack px={space.md} py={space.sm}>
-                      <InlineAction
-                        label={tMenu('longTermNote')}
-                        onPress={() => open(VEHICLE_EDIT_TAB.PRICING)}
-                      />
-                    </XStack>
-                  </>
-                ) : null}
-              </Card>
-            </YStack>
-          );
-        })}
+        {groups.map((group) => (
+          <YStack key={group.key} gap={space.xs}>
+            <SectionLabel>{tEditor(`menu.groups.${group.key}`)}</SectionLabel>
+            {/* MỘT thẻ cho cả nhóm - các mục là dòng gọn ngăn bằng đường kẻ (web `VehicleEditMenu`). */}
+            <Card padded={false} lift="flat">
+              {group.items.map((item, index) => (
+                <YStack key={item.tab}>
+                  {index > 0 ? <RowDivider /> : null}
+                  <HubRow
+                    label={tEditor(`menu.items.${item.labelKey}`)}
+                    icon={item.icon}
+                    count={countFor(item.tab)}
+                    badge={badgeFor(item.tab)}
+                    dimmed={false}
+                    onPress={() => open(item.tab)}
+                  />
+                </YStack>
+              ))}
+            </Card>
+          </YStack>
+        ))}
       </YStack>
-      {toggle.dialog}
     </>
   );
 }
@@ -305,13 +298,15 @@ function HubRow({
   label,
   icon,
   count,
+  badge,
   dimmed,
   onPress,
 }: {
   label: string;
-  icon: IconName;
+  icon: AntIconDefinition;
   /** 0 = không có việc; viên đếm chỉ hiện khi > 0, cùng luật với thẻ "Việc cần làm". */
   count: number;
+  badge: HubBadge | null;
   dimmed: boolean;
   onPress: () => void;
 }) {
@@ -320,7 +315,9 @@ function HubRow({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={count > 0 ? `${label}, ${count}` : label}
+      accessibilityLabel={[label, badge?.label, count > 0 ? String(count) : null]
+        .filter(Boolean)
+        .join(', ')}
       onPress={onPress}
       style={({ pressed }) => (pressed ? styles.pressed : null)}
     >
@@ -328,7 +325,7 @@ function HubRow({
         ai="center"
         gap={space.sm}
         minHeight={ROW_HEIGHT}
-        px={space.md}
+        px={layout.padX}
         py={space.sm}
         opacity={dimmed ? DIMMED_OPACITY : 1}
       >
@@ -340,13 +337,30 @@ function HubRow({
           ai="center"
           jc="center"
         >
-          <Ionicons name={icon} size={iconSize.sm} color={colors.primaryActive} />
+          <AntIcon icon={icon} size={iconSize.sm} color={colors.primaryActive} />
         </YStack>
 
         <Text f={1} minWidth={0} col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
           {label}
         </Text>
 
+        {badge ? (
+          <XStack
+            px={space.xs}
+            br={radius.pill}
+            bw={1}
+            bc={badge.warn ? colors.warning : colors.border}
+            bg={badge.warn ? colors.warningSurface : colors.surfaceMuted}
+          >
+            <Text
+              col={badge.warn ? colors.warning : colors.textMuted}
+              fos={fontSize.label}
+              fow={fontWeight.semibold}
+            >
+              {badge.text}
+            </Text>
+          </XStack>
+        ) : null}
         {count > 0 ? <CountBadge count={count} tone="danger" /> : null}
         <DetailChevron />
       </XStack>

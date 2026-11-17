@@ -115,7 +115,7 @@ describe('SupportCenterScreen - hướng dẫn nhanh', () => {
    */
   it.each([
     ['Thêm xe cho thuê', '/manage/vehicles/new'],
-    ['Duyệt yêu cầu đặt xe', '/manage/requests'],
+    ['Duyệt yêu cầu đặt xe', '/manage/bookings'],
     ['Xem lịch thuê', '/manage/calendar'],
   ])('thẻ "%s" đi tới màn CÓ THẬT %s', async (label, href) => {
     const view = await renderScreen();

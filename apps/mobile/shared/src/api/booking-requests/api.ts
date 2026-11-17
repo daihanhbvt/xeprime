@@ -72,7 +72,17 @@ export type BookingRequestDecisionTarget = Omit<
   /** Mã dịch vụ đi trên dây; `/trips` khai `string` còn hộp thư khai union — `string` nhận cả hai. */
   readonly serviceType: string;
   readonly pickupPreference?: string | null;
-};
+} & Partial<
+    /*
+     * Trường HIỂN THỊ thêm của tấm duyệt/từ chối (ảnh xe, mã xe, khách quen, địa chỉ giao) - hộp
+     * thư mang đủ, màn chuyến chỉ có ảnh xe. Vắng thì dòng đó vắng, không đoán (web
+     * `ApproveBookingRequestDialog` đọc bù từ lượt đọc lại chi tiết).
+     */
+    Pick<
+      BookingRequestItem,
+      'vehicleImageUrl' | 'vehicleCode' | 'customerIsRegular' | 'deliveryAddress' | 'createdAt' | 'bookingCode'
+    >
+  >;
 export type BookingRequestStatusCount = Schemas['BookingRequestStatusCountDto'];
 
 /**

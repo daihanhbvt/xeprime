@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { LIST_SEPARATOR } from '@xeprime/domain';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Controller, useForm } from 'react-hook-form';
 import { useRouter } from 'expo-router';
@@ -12,7 +14,6 @@ import {
   PERMISSION,
   isHandoverEditable,
   HANDOVER_STATUS,
-  HANDOVER_STATUS_META,
   ODOMETER_MAX_KM,
   type HandoverCondition,
   type HandoverStatus,
@@ -26,7 +27,6 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { RadioOption } from '@/components/ui/RadioOption';
 import { MomentPickerSheet } from '@/components/ui/MomentPickerSheet';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { TextField } from '@/components/ui/TextField';
 import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -35,15 +35,15 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { getErrorCode } from '@/lib/api-client';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { useDomainLabel } from '@/i18n/domain';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { HandoverPhotoGrid } from './components/HandoverPhotoGrid';
 import { ResolveOdometerSheet } from './components/ResolveOdometerSheet';
+import { ReturnHandoverForm } from './components/ReturnHandoverForm';
 import {
   useConfirmHandover,
   useHandoverContext,
@@ -53,6 +53,9 @@ import type { Handover, HandoverContext, HandoverBelowPickupDetails } from './ap
 import { useErrorMessage } from '@/i18n/use-error-message';
 
 const NOTE_MAX = 2000;
+/** Vòng icon đầu khối "Sẵn sàng giao xe" - 56px như web `ConfirmHandoverDialog.module.css`. */
+const PICKUP_ICON = 56;
+const PICKUP_ICON_GLYPH = 24;
 
 interface HandoverFormValues {
   odometerKm: number | null;
@@ -131,6 +134,25 @@ export function HandoverScreen({ bookingId, type }: { bookingId: string; type: H
     );
   }
 
+  /*
+   * Nhận lại xe (PR #278, 06/11/2026): màn riêng gom biên bản + phụ phí + thu tiền vào CÙNG lượt
+   * xác nhận như web `ConfirmReturnDialog`. Biên bản đã chốt (chỉ đọc) vẫn đi màn chung bên dưới.
+   */
+  if (
+    type === HANDOVER_TYPE.RETURN &&
+    (existing == null || isHandoverEditable(existing.status as HandoverStatus))
+  ) {
+    return (
+      <ReturnHandoverForm
+        context={query.data}
+        handover={existing ?? null}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        onBack={back}
+      />
+    );
+  }
+
   return (
     <HandoverForm
       context={query.data}
@@ -184,7 +206,6 @@ function HandoverForm({
   const t = useTranslations('Bookings.handover');
   const tOdoError = useTranslations('Bookings.handover.odometerError');
   const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
   const permissions = usePermissions();
@@ -306,38 +327,61 @@ function HandoverForm({
 
   const canConfirm = permissions.has(PERMISSION.HANDOVER_CONFIRM);
   const canManage = permissions.has(PERMISSION.HANDOVER_MANAGE);
-  const meta = HANDOVER_STATUS_META[status];
 
   return (
     <>
-      <AppHeader title={title} subtitle={context.bookingCode} onBack={onBack} />
+      <ManagePageHeader
+        title={title}
+        onBack={onBack}
+        subtitle={
+          <Text col={colors.textMuted} fos={fontSize.body} numberOfLines={1}>
+            {[context.bookingCode, context.vehicleName, context.plateNumber].filter(Boolean).join(LIST_SEPARATOR)}
+          </Text>
+        }
+      />
       <Screen edges={['left', 'right', 'bottom']} refreshing={refreshing} onRefresh={onRefresh}>
         <YStack gap={layout.section}>
-          <Card>
-            <YStack gap={space.sm}>
-              <XStack ai="center" jc="space-between" gap={space.sm}>
-                <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                  {context.vehicleName}
-                </Text>
-                <StatusBadge
-                  label={domainLabel('handoverStatus', status, meta.label)}
-                  color={meta.color}
-                  size="sm"
-                />
-              </XStack>
-              {context.plateNumber ? (
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {context.plateNumber}
-                </Text>
-              ) : null}
-            </YStack>
-          </Card>
+          {/* Bỏ thẻ xe + nhãn "Bản nháp" như hộp bàn giao của web (16/11/2026) - xe đã nằm ở dòng phụ thanh đầu. */}
 
           {readOnly ? (
             <Notice>{t('readOnly')}</Notice>
           ) : (
             <Card>
               <YStack gap={space.md}>
+                {/*
+                  "Sẵn sàng giao xe" - đầu hộp xác nhận của web (`ConfirmHandoverDialog`, Figma
+                  `23845:54382`): icon xe nền xanh, tiêu đề, lời dặn và câu nói trạng thái kế tiếp.
+                */}
+                {isPickup ? (
+                  <YStack gap={space.sm}>
+                    <YStack
+                      w={PICKUP_ICON}
+                      h={PICKUP_ICON}
+                      br={radius.pill}
+                      ai="center"
+                      jc="center"
+                      bg={colors.successSurface}
+                    >
+                      <Ionicons name="car-outline" size={PICKUP_ICON_GLYPH} color={colors.success} />
+                    </YStack>
+                    <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.semibold}>
+                      {t('confirmDialog.readyTitlePickup')}
+                    </Text>
+                    <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                      {t('confirmDialog.readyBodyPickup')}
+                    </Text>
+                    <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                      {t.rich('confirmDialog.nextPickup', {
+                        b: (chunks) => (
+                          <Text col={colors.text} fow={fontWeight.semibold}>
+                            {chunks}
+                          </Text>
+                        ),
+                      })}
+                    </Text>
+                  </YStack>
+                ) : null}
+
                 {/*
                   Odo ĐỨNG ĐẦU và ở ngoài vùng nâng cao — xem docblock màn hình. Nhãn nói rõ đây
                   là chỉ số lúc GIAO hay lúc NHẬN, vì hai con số đó đứng cạnh nhau trong hồ sơ xe.
@@ -442,7 +486,7 @@ function HandoverForm({
                       label={t('notes.label')}
                       placeholder={t('notes.placeholder')}
                       multiline
-                      rows={2}
+                      rows={3}
                       maxLength={NOTE_MAX}
                     />
 

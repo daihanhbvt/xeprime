@@ -129,13 +129,17 @@ export function useManageNavBadges(): ManageNavBadgeCounts {
     }, [refetch, refetchHandovers, refetchVehicles]),
   );
 
+  /*
+   * "Đơn thuê xe" gộp (05/11/2026, web `NAV_BADGE.RENTALS_WORK`): yêu cầu chờ duyệt + lượt giao/trả
+   * đến hạn — hai việc của cùng một ca trực, giờ ở cùng một mục nên cộng lại.
+   */
+  const pendingCount = requestsEnabled ? (pending.data?.pending ?? 0) : 0;
+  const dueCount =
+    handoversEnabled && handovers.data ? handovers.data.pickupsDue + handovers.data.returnsDue : 0;
+
   return {
-    [MANAGE_NAV_BADGE.BOOKING_REQUESTS_PENDING]: requestsEnabled ? (pending.data?.pending ?? 0) : 0,
+    [MANAGE_NAV_BADGE.RENTALS_WORK]: pendingCount + dueCount,
     [MANAGE_NAV_BADGE.CHAT_UNREAD]: badges.chatShop,
-    [MANAGE_NAV_BADGE.HANDOVERS_DUE]:
-      handoversEnabled && handovers.data
-        ? handovers.data.pickupsDue + handovers.data.returnsDue
-        : 0,
     [MANAGE_NAV_BADGE.VEHICLES_NEEDS_ACTION]: vehiclesEnabled ? (vehicles.data?.count ?? 0) : 0,
   };
 }
@@ -165,10 +169,7 @@ export function useManageNavBadgeUrgency(): ManageNavBadgeUrgency {
     (today.data?.pickupsOverdue ?? 0) + (today.data?.returnsOverdue ?? 0) > 0;
   // Ổn định danh tính — ngăn kéo dựng lại cây mục theo `useMemo` trên object này.
   return useMemo(
-    () => ({
-      [MANAGE_NAV_BADGE.BOOKING_REQUESTS_PENDING]: requestsUrgent,
-      [MANAGE_NAV_BADGE.HANDOVERS_DUE]: handoversUrgent,
-    }),
+    () => ({ [MANAGE_NAV_BADGE.RENTALS_WORK]: requestsUrgent || handoversUrgent }),
     [requestsUrgent, handoversUrgent],
   );
 }

@@ -185,6 +185,19 @@ export const tripsApi = {
     );
   },
 
+  /** Khách xác nhận "Đã nhận xe" — ADR 0081. Đơn sang đang thuê ngay; server trả về chính chuyến đó. */
+  confirmPickup(id: string): Promise<CustomerTripDetail> {
+    return getApiClient().post<CustomerTripDetail>(`/trips/${encodeURIComponent(id)}/confirm-pickup`);
+  },
+
+  /**
+   * Khách báo "Đã trả xe" — ADR 0081. Chủ xe xác nhận trong hạn, im lặng quá hạn thì chuyến tự hoàn
+   * thành; server trả về chính chuyến đó với `customerReturnedAt`.
+   */
+  reportReturned(id: string): Promise<CustomerTripDetail> {
+    return getApiClient().post<CustomerTripDetail>(`/trips/${encodeURIComponent(id)}/report-returned`);
+  },
+
   /**
    * Khách khai tài khoản nhận tiền hoàn khoản giữ chỗ — ADR 0033.
    *

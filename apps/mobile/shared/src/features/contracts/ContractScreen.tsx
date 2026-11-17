@@ -3,7 +3,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import type { ServiceType, VehicleType } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
-import { AppHeader } from '@/components/layout/AppHeader';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Card } from '@/components/ui/Card';
 import { DataRow, Divider } from '@/components/ui/DataRow';
@@ -41,7 +41,7 @@ export function ContractScreen({ contractId }: { contractId: string }) {
   if (query.isPending) {
     return (
       <>
-        <AppHeader title={t('title')} onBack={back} />
+        <ManagePageHeader title={t('title')} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']} refreshing={refreshing} onRefresh={onRefresh}>
           <YStack gap={layout.section}>
             <SkeletonText lines={3} />
@@ -56,7 +56,7 @@ export function ContractScreen({ contractId }: { contractId: string }) {
   if (query.isError) {
     return (
       <>
-        <AppHeader title={t('title')} onBack={back} />
+        <ManagePageHeader title={t('title')} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenError
             messageFrom="backend"
@@ -106,41 +106,57 @@ function ContractBody({
 
   return (
     <>
-      <AppHeader title={t('title')} subtitle={s.rental.bookingCode} onBack={onBack} />
+      <ManagePageHeader title={t('title')} subtitle={s.rental.bookingCode} onBack={onBack} />
       <Screen edges={['left', 'right', 'bottom']} refreshing={refreshing} onRefresh={onRefresh}>
         <YStack gap={layout.section}>
-          <Card>
-            <YStack gap={space.xs}>
-              <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-                {t('title')}
-              </Text>
-              <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {t('contractNo', { no: contract.contractNo })}
-              </Text>
-              <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {t('createdAt', { date: fmt.date(contract.createdAt) })}
-              </Text>
-            </YStack>
-          </Card>
-
-          {/* Hai bên */}
+          {/*
+            Bố cục văn bản như web `ContractDocument` (16/11/2026): đầu thư của bên cho thuê (tên vàng,
+            liên hệ, địa chỉ, MST · GPKD) → số + ngày lập → vạch vàng → tiêu đề giữa → hai ô bên A/B.
+          */}
           <Card>
             <YStack gap={space.md}>
               <YStack gap={2}>
+                <Text col={colors.primaryActive} fos={fontSize.bodyLg} fow={fontWeight.bold}>
+                  {s.shop.name}
+                </Text>
+                {[s.shop.phone, s.shop.email].filter(Boolean).length > 0 ? (
+                  <Line>{[s.shop.phone, s.shop.email].filter(Boolean).join(LIST_SEPARATOR)}</Line>
+                ) : null}
+                {[s.shop.address, s.shop.province].filter(Boolean).length > 0 ? (
+                  <Line>{[s.shop.address, s.shop.province].filter(Boolean).join(', ')}</Line>
+                ) : null}
+                {[
+                  s.shop.taxCode ? t('taxCode', { code: s.shop.taxCode }) : null,
+                  s.shop.businessLicenseNo ? t('businessLicense', { code: s.shop.businessLicenseNo }) : null,
+                ].filter(Boolean).length > 0 ? (
+                  <Line>
+                    {[
+                      s.shop.taxCode ? t('taxCode', { code: s.shop.taxCode }) : null,
+                      s.shop.businessLicenseNo ? t('businessLicense', { code: s.shop.businessLicenseNo }) : null,
+                    ]
+                      .filter(Boolean)
+                      .join(LIST_SEPARATOR)}
+                  </Line>
+                ) : null}
+              </YStack>
+              <YStack gap={2} pb={space.md} borderBottomWidth={2} borderBottomColor={colors.primary}>
+                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
+                  {t('contractNo', { no: contract.contractNo })}
+                </Text>
+                <Line>{t('createdAt', { date: fmt.date(contract.createdAt) })}</Line>
+              </YStack>
+              <Text ta="center" col={colors.text} fos={fontSize.h4} fow={fontWeight.bold} textTransform="uppercase">
+                {t('title')}
+              </Text>
+              <YStack gap={2} p={space.md} br={12} bw={1} bc={colors.border}>
                 <SectionTitle>{t('partyA')}</SectionTitle>
                 <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
                   {s.shop.name}
                 </Text>
-                {[s.shop.address, s.shop.province].filter(Boolean).length > 0 ? (
-                  <Line>{[s.shop.address, s.shop.province].filter(Boolean).join(', ')}</Line>
-                ) : null}
                 {s.shop.phone ? <Line>{t('phone', { phone: s.shop.phone })}</Line> : null}
                 {bankLine ? <Line>{t('bankAccount', { account: bankLine })}</Line> : null}
               </YStack>
-
-              <Divider />
-
-              <YStack gap={2}>
+              <YStack gap={2} p={space.md} br={12} bw={1} bc={colors.border}>
                 <SectionTitle>{t('partyB')}</SectionTitle>
                 <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
                   {s.customer.name}

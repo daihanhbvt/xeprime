@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import * as Clipboard from 'expo-clipboard';
 import { Linking, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -7,15 +7,16 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   PERMISSION,
-  STATUS_COLOR,
   TENANT_CUSTOMER_RISK_LEVEL,
-  TENANT_CUSTOMER_RISK_LEVEL_META,
   blocksNewRentals,
   type TenantCustomerRiskLevel,
 } from '@xeprime/types';
-import { isZeroMoney } from '@xeprime/domain';
-import { metaColor } from '@/lib/status-meta';
+import { customerStatusOf, isZeroMoney } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { useHideTabBar } from '@/components/layout/tab-bar-visibility';
+import { ChipTabs } from '@/components/ui/ChipTabs';
+import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Avatar } from '@/components/ui/Avatar';
 import { Callout } from '@/components/ui/Callout';
@@ -23,11 +24,9 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import type { IconName } from '@/components/ui/Chip';
-import { DetailChevron } from '@/components/ui/DetailArrow';
 import { IconButton } from '@/components/ui/IconButton';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
 import { StatGrid, type StatCell } from '@/components/ui/StatGrid';
-import { StatusBadge, badgeLineHeight } from '@/components/ui/StatusBadge';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
@@ -38,9 +37,10 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
+import { RentalContactButtons } from '@/features/bookings/components/rental-card/RentalCard';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, radius, sizing, space, typeScale } from '@/theme/tokens';
 import { CustomerBookingHistory } from './components/CustomerBookingHistory';
 import { CustomerDocumentsPanel } from './components/CustomerDocumentsPanel';
 import { CustomerFinancePanel } from './components/CustomerFinancePanel';
@@ -57,7 +57,8 @@ import {
 import type { TenantCustomerDetail } from './api';
 
 /**
- * Năm khu của hồ sơ, đúng năm tab của web. Mã là khoá `Customers.tabs.*`, không phải chữ.
+ * Bốn khu của hồ sơ, đúng bốn tab của web (02/11/2026). Mã là khoá `Customers.tabs.*`, không phải
+ * chữ. Tab "Ghi chú" cũ đã thành thẻ "Ghi chú vận hành" trong Tổng quan (ledger §3.4 #5).
  *
  * Khu `history` và `finance` chỉ có mặt khi đủ quyền — cùng luật web dùng để dựng mảng `items`
  * của `<Tabs>`.
@@ -66,7 +67,6 @@ const SECTION = {
   OVERVIEW: 'overview',
   HISTORY: 'history',
   FINANCE: 'finance',
-  NOTES: 'notes',
   DOCUMENTS: 'documents',
 } as const;
 
@@ -166,6 +166,7 @@ function CustomerProfile({
 }) {
   const colors = useColors();
   const t = useTranslations('Customers');
+  const tProfile = useTranslations('Customers.profile');
   const tCommon = useTranslations('Common.actions');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -173,6 +174,7 @@ function CustomerProfile({
   const toast = useAppToast();
   const permissions = usePermissions();
   const navigateOnce = useNavigateOnce();
+  useHideTabBar();
 
   const canManage = permissions.has(PERMISSION.CUSTOMER_MANAGE);
   const canManageRisk = permissions.has(PERMISSION.CUSTOMER_MANAGE_RISK);
@@ -191,6 +193,11 @@ function CustomerProfile({
   const [changingRisk, setChangingRisk] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const archived = Boolean(customer.archivedAt);
+  const status = customerStatusOf(customer, canViewFinance);
+  const statusLabel =
+    status.key === 'unclassified'
+      ? t('card.unclassified')
+      : domainLabel('tenantCustomerRelationship', status.key);
   const riskLevel = customer.riskLevel as TenantCustomerRiskLevel;
   const blocked = blocksNewRentals(customer.riskLevel);
   const watchlist = riskLevel === TENANT_CUSTOMER_RISK_LEVEL.WATCHLIST;
@@ -202,7 +209,6 @@ function CustomerProfile({
     ];
     if (canViewBookings) list.push({ key: SECTION.HISTORY, label: t('tabs.history') });
     if (canViewFinance) list.push({ key: SECTION.FINANCE, label: t('tabs.finance') });
-    list.push({ key: SECTION.NOTES, label: t('tabs.notes') });
     list.push({ key: SECTION.DOCUMENTS, label: t('tabs.documents') });
     return list;
   }, [t, canViewBookings, canViewFinance]);
@@ -273,18 +279,7 @@ function CustomerProfile({
   const actionPills = useMemo<ActionPillSpec[]>(() => {
     const list: ActionPillSpec[] = [];
 
-    if (canCreateBooking) {
-      list.push({
-        key: 'createBooking',
-        icon: 'add-circle-outline',
-        label: t('actions.createBooking'),
-        primary: true,
-        tone: colors.primaryActive,
-        surface: colors.primaryLight,
-        disabled: blocked || archived,
-        onPress: createBooking,
-      });
-    }
+    // Thứ tự như web `CustomerDetailView`: Sửa · Tạo đơn · (rủi ro, lưu trữ ở menu thêm).
     if (canManage) {
       list.push({
         key: 'edit',
@@ -296,14 +291,16 @@ function CustomerProfile({
         onPress: () => setEditing(true),
       });
     }
-    if (canManage) {
+    if (canCreateBooking) {
       list.push({
-        key: 'addNote',
-        icon: 'document-text-outline',
-        label: t('actions.addNote'),
-        tone: colors.warning,
-        surface: colors.warningSurface,
-        onPress: () => setSection(SECTION.NOTES),
+        key: 'createBooking',
+        icon: 'add-circle-outline',
+        label: t('actions.createBooking'),
+        primary: true,
+        tone: colors.primaryActive,
+        surface: colors.primaryLight,
+        disabled: blocked || archived,
+        onPress: createBooking,
       });
     }
     if (canManageRisk) {
@@ -350,32 +347,6 @@ function CustomerProfile({
    */
   const contactLine = customer.email ? `${customer.phone} · ${customer.email}` : customer.phone;
 
-  /**
-   * Nhãn rủi ro (+ lưu trữ) đứng NGAY CẠNH TÊN trên thanh đầu — không phải một hàng riêng nằm
-   * trong thân trang.
-   *
-   * Đây là thứ định tính chính con người đang mở, nên nó phải đọc được cùng lúc với cái tên, và
-   * phải còn nhìn thấy sau khi người dùng đã cuộn xuống tận tab Giấy tờ. Một hàng nhãn nằm trong
-   * thân trang thì cuộn một cái là mất — mà "khách này đang bị từ chối phục vụ" đúng là thứ
-   * không được phép biến mất giữa lúc đang thao tác.
-   *
-   * Web đặt hai nhãn này ở `headerExtra`, cũng ngay dưới tiêu đề trang: cùng vai, cùng chỗ.
-   *
-   * `flexShrink={0}` ở đây và `flexShrink={1}` ở tiêu đề: khi hết chỗ thì CÁI TÊN cắt bớt, không
-   * phải cái nhãn. Một cái tên cụt vẫn nhận ra được; "Từ chối phụ…" thì mất đúng phần nói ra hệ quả.
-   */
-  const headerBadge = (
-    <XStack ai="center" gap={space.xs} flexShrink={0}>
-      <StatusBadge
-        label={domainLabel('tenantCustomerRiskLevel', riskLevel)}
-        color={metaColor(TENANT_CUSTOMER_RISK_LEVEL_META, riskLevel)}
-        size="sm"
-      />
-      {archived ? (
-        <StatusBadge label={t('card.archived')} color={STATUS_COLOR.NEUTRAL} size="sm" />
-      ) : null}
-    </XStack>
-  );
 
   /**
    * Bảy ô số liệu của web, ĐÚNG thứ tự đó, trong một bảng `StatGrid` hai cột.
@@ -468,8 +439,8 @@ function CustomerProfile({
   }, [colors, customer, canViewFinance, t, fmt]);
 
   /**
-   * Thẻ hồ sơ — bản native của `profileCard` bên web, đặt ĐÚNG chỗ web đặt nó ở màn hẹp: TRONG
-   * khu "Tổng quan", ngay TRÊN "Hoạt động gần đây".
+   * Thẻ hồ sơ — bản native của `profileCard` bên web, đặt ĐÚNG chỗ web đặt nó ở màn hẹp: ĐẦU khu
+   * "Tổng quan" (web đã gỡ "Hoạt động gần đây", app gỡ theo - user chốt 12/11/2026).
    *
    * Web dựng thẻ này một lần rồi thả vào cột phụ ở desktop hoặc vào tab Tổng quan ở nơi hẹp
    * (`{isDesktop ? null : profileCard}`). App native luôn là "nơi hẹp", nên chỉ còn một chỗ.
@@ -486,7 +457,7 @@ function CustomerProfile({
   const profileCard = (
     <Card padded={false}>
       <XStack ai="center" gap={space.sm} bg={colors.primaryLight} p={space.md}>
-        <Avatar name={customer.fullName} size={AVATAR_SIZE} />
+        <Avatar name={customer.fullName} url={customer.avatarUrl ?? null} size={AVATAR_SIZE} />
         <YStack f={1} minWidth={0} gap={2}>
           <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={2}>
             {customer.fullName}
@@ -498,6 +469,8 @@ function CustomerProfile({
       </XStack>
 
       <YStack p={space.md} gap={space.md}>
+        {/* Web `CustomerContactButtons variant="icon"`: Gọi · Zalo ngay dưới danh tính. */}
+        <RentalContactButtons name={customer.fullName} phone={customer.phone} size="md" />
         {/* SĐT: gọi được VÀ chép được — ngoài quầy thì bấm gọi, ngồi máy thì dán sang Zalo. */}
         <ProfileRow
           icon="call-outline"
@@ -509,18 +482,31 @@ function CustomerProfile({
             <>
               <IconButton
                 icon="call"
+                boxSize={24}
+                size={12}
                 tone="success"
                 label={t('detail.phone')}
                 onPress={() => void Linking.openURL(`tel:${customer.phone}`)}
               />
               <IconButton
                 icon="copy-outline"
+                boxSize={24}
+                size={12}
                 tone="accent"
                 label={t('detail.copyPhone')}
                 onPress={() => void copy(customer.phone)}
               />
             </>
           }
+        />
+        {/* Web `CustomerProfileCard`: dòng "Nhãn khách hàng" ngay dưới SĐT. */}
+        <ProfileRow
+          icon="pricetag-outline"
+          tone={colors.textMuted}
+          surface={colors.surfaceMuted}
+          label={tProfile('label')}
+          value={statusLabel}
+          valueNode={<Pill label={statusLabel} tone={pillToneOfStatusColor(status.color)} />}
         />
         {customer.email ? (
           <ProfileRow
@@ -533,12 +519,16 @@ function CustomerProfile({
               <>
                 <IconButton
                   icon="mail"
+                  boxSize={24}
+                  size={12}
                   tone="info"
                   label={t('detail.email')}
                   onPress={() => void Linking.openURL(`mailto:${customer.email}`)}
                 />
                 <IconButton
                   icon="copy-outline"
+                  boxSize={24}
+                  size={12}
                   tone="accent"
                   label={t('detail.copyEmail')}
                   onPress={() => void copy(customer.email as string)}
@@ -566,6 +556,13 @@ function CustomerProfile({
           valueTone={customer.hasAccount ? colors.info : colors.textMuted}
         />
         <ProfileRow
+          icon="time-outline"
+          tone={colors.primaryActive}
+          surface={colors.primaryLight}
+          label={tProfile('lastRental')}
+          value={customer.lastRentalAt ? fmt.date(customer.lastRentalAt) : '-'}
+        />
+        <ProfileRow
           icon="calendar-outline"
           tone={colors.primaryActive}
           surface={colors.primaryLight}
@@ -578,19 +575,29 @@ function CustomerProfile({
 
   return (
     <>
-      <AppHeader
+      {/* Chuẩn chi tiết đơn thuê (16/11/2026): ← tên, dòng phụ liên hệ + viên trạng thái, ⋮ mở "Thao tác". */}
+      <ManagePageHeader
         title={customer.fullName}
-        subtitle={contactLine}
-        badge={headerBadge}
         onBack={onBack}
+        subtitle={
+          <XStack ai="center" jc="space-between" gap={space.sm}>
+            <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} numberOfLines={1} flexShrink={1}>
+              {contactLine}
+            </Text>
+            <Pill label={statusLabel} tone={pillToneOfStatusColor(status.color)} />
+          </XStack>
+        }
         {...(actionPills.length > 0
           ? {
-              right: (
-                <IconButton
-                  icon="ellipsis-horizontal"
-                  label={t('actions.more')}
+              actions: (
+                <Pressable
                   onPress={() => setMoreOpen(true)}
-                />
+                  accessibilityRole="button"
+                  accessibilityLabel={t('actions.more')}
+                  hitSlop={12}
+                >
+                  <Ionicons name="ellipsis-vertical" size={20} color={colors.textMuted} />
+                </Pressable>
               ),
             }
           : {})}
@@ -602,44 +609,13 @@ function CustomerProfile({
         onRefresh={refresh.onRefresh}
       >
         <YStack gap={space.lg}>
-          {actionPills.length > 0 ? (
-            <YStack gap={space.sm}>
-              {/*
-                Cuộn ngang, chữ MỘT dòng — không phải lưới ô chia đều.
-
-                Ô chia đều thì bề rộng mỗi ô = bề rộng màn ÷ số hành động, mà số hành động phụ
-                thuộc QUYỀN: người đủ năm quyền được ô rộng ~65dp và "Tạo đơn thuê" vỡ thành hai
-                dòng, người có hai quyền lại được ô rộng gấp đôi. Viên pill thì bề rộng đi theo
-                CHỮ, nên không cấu hình quyền nào làm vỡ được nó; thừa chỗ thì vuốt ngang.
-
-                Cùng cơ chế với dải tab ngay bên dưới, nên không phải một thao tác mới cần học.
-              */}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: space.xs, paddingRight: layout.screenX }}
-              >
-                {actionPills.map(({ key, ...pill }) => (
-                  <ActionPill key={key} {...pill} />
-                ))}
-              </ScrollView>
-
-              {/*
-                Vì sao "Tạo đơn thuê" đang tắt — nói ra ngay dưới chính cái viên bị tắt.
-
-                Web treo câu này trong tooltip của nút; native không có hover, nên một nút xám
-                không lời giải thích chỉ đọc ra là "app hỏng". Chỉ hiện khi người dùng THẬT SỰ có
-                quyền tạo đơn — người không có quyền thì không có viên nào để mà thắc mắc.
-              */}
-              {blocked && canCreateBooking ? (
-                <XStack ai="flex-start" gap={space.xs}>
-                  <Ionicons name="ban-outline" size={iconSize.sm} color={colors.danger} />
-                  <Text f={1} col={colors.textMuted} fos={fontSize.label}>
-                    {t('actions.createBookingBlocked')}
-                  </Text>
-                </XStack>
-              ) : null}
-            </YStack>
+          {blocked && canCreateBooking ? (
+            <XStack ai="flex-start" gap={space.xs}>
+              <Ionicons name="ban-outline" size={iconSize.sm} color={colors.danger} />
+              <Text f={1} col={colors.textMuted} fos={fontSize.label}>
+                {t('actions.createBookingBlocked')}
+              </Text>
+            </XStack>
           ) : null}
 
           {archived ? (
@@ -682,7 +658,7 @@ function CustomerProfile({
               <XStack
                 ai="flex-start"
                 gap={space.xs}
-                px={space.md}
+                px={layout.padX}
                 py={space.sm}
                 borderTopWidth={1}
                 borderTopColor={colors.borderSubtle}
@@ -701,124 +677,50 @@ function CustomerProfile({
           </Card>
 
           {/* ── Dải tab cuộn ngang ─────────────────────────────────────────── */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: space.xs, paddingRight: layout.screenX }}
-          >
-            {sections.map((entry) => {
-              const active = entry.key === activeSection;
-              return (
-                <YStack
-                  key={entry.key}
-                  onPress={() => setSection(entry.key)}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={entry.label}
-                  px={space.md}
-                  py={space.sm}
-                  br={radius.pill}
-                  bg={active ? colors.primaryLight : colors.surfaceMuted}
-                  bw={1}
-                  bc={active ? colors.primary : colors.borderSubtle}
-                >
-                  <Text
-                    col={active ? colors.primaryActive : colors.text}
-                    fos={fontSize.bodySm}
-                    fow={active ? fontWeight.semibold : fontWeight.regular}
-                    numberOfLines={1}
-                  >
-                    {entry.label}
-                  </Text>
-                </YStack>
-              );
-            })}
-          </ScrollView>
+          <ChipTabs
+            label={t('detail.title')}
+            items={sections.map((entry) => ({ value: entry.key, label: entry.label }))}
+            value={activeSection}
+            onSelect={setSection}
+            gutter={0}
+          />
 
           {activeSection === SECTION.OVERVIEW ? (
             <YStack gap={space.md}>
+              {/* Web màn hẹp: thẻ hồ sơ đứng ĐẦU tab Tổng quan (`{isDesktop ? null : profileCard}`). */}
+              {profileCard}
               {/* Công nợ cũ nhất + chuyến hiện tại (web `CustomerOverviewTab`). */}
               <CustomerOverviewBlocks
                 customer={customer}
                 canViewBookings={canViewBookings}
                 canViewFinance={canViewFinance}
               />
-              {profileCard}
-              <XStack ai="center" gap={space.xs}>
-                <Ionicons name="time-outline" size={iconSize.md} color={colors.primaryActive} />
-                <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                  {t('overview.recentTitle')}
-                </Text>
-              </XStack>
               {/*
-                Thiếu `bookings.view`: KHÔNG gọi endpoint lịch sử và KHÔNG hiện dữ liệu đơn —
-                `recentBookings` của server cũng rỗng trong trường hợp đó. Nói ra vì sao phần này
-                trống thay vì để một khoảng trắng khó hiểu.
+                "Ghi chú vận hành" — thẻ của Tổng quan, không còn là tab riêng (web
+                `CustomerOverviewTab`). Đứng ngay sau tiến trình đơn, trước thẻ hồ sơ.
               */}
-              {canViewBookings ? (
-                customer.recentBookings.length > 0 ? (
-                  customer.recentBookings.map((booking) => (
-                    <Card
-                      key={booking.id}
-                      onPress={() => navigateOnce(ROUTES.manage.bookingDetail(booking.id))}
-                      accessibilityLabel={booking.code}
-                    >
-                      <XStack ai="center" gap={space.sm}>
-                        {/*
-                          Mã đơn thành một viên nhãn vàng: nó là ĐỊNH DANH, không phải một dòng
-                          chữ trong câu. Ở dạng chữ trần nó dính vào tên xe ngay bên cạnh và cả
-                          hàng đọc ra thành một chuỗi liền.
-
-                          Đệm dọc và `lh` lấy đúng luật của `StatusBadge`: thiếu `lh` thì Tamagui
-                          rơi về hộp dòng của cỡ mặc định (24pt) và viên nhãn cao gần gấp đôi khối
-                          hai dòng chữ nó đứng cạnh.
-                        */}
-                        <XStack bg={colors.primaryLight} br={radius.pill} px={space.sm} py={0}>
-                          <Text
-                            col={colors.primaryActive}
-                            fos={fontSize.label}
-                            lh={badgeLineHeight(fontSize.label)}
-                            fow={fontWeight.semibold}
-                            numberOfLines={1}
-                          >
-                            {booking.code}
-                          </Text>
-                        </XStack>
-                        <YStack f={1} minWidth={0} gap={2}>
-                          <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
-                            {booking.vehicleName}
-                          </Text>
-                          <XStack ai="center" gap={space.xs}>
-                            <Ionicons
-                              name="calendar-outline"
-                              size={iconSize.xs}
-                              color={colors.textMuted}
-                            />
-                            <Text
-                              f={1}
-                              minWidth={0}
-                              col={colors.textMuted}
-                              fos={fontSize.label}
-                              numberOfLines={1}
-                            >
-                              {fmt.date(booking.pickupAt)}
-                            </Text>
-                          </XStack>
-                        </YStack>
-                        <DetailChevron />
-                      </XStack>
-                    </Card>
-                  ))
-                ) : (
-                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                    {t('overview.recentEmpty')}
-                  </Text>
-                )
-              ) : (
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {t('overview.recentHidden')}
-                </Text>
-              )}
+              <Card>
+                <YStack gap={space.sm}>
+                  <XStack ai="center" gap={space.xs}>
+                    <Ionicons
+                      name="document-text-outline"
+                      size={iconSize.md}
+                      color={colors.primaryActive}
+                    />
+                    <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+                      {tProfile('notes.title')}
+                    </Text>
+                    <Text col={colors.textMuted} fos={fontSize.label}>
+                      {tProfile('notes.internal')}
+                    </Text>
+                  </XStack>
+                  <CustomerNotesPanel
+                    customerId={customer.id}
+                    canManage={canManage}
+                    disabled={archived}
+                  />
+                </YStack>
+              </Card>
             </YStack>
           ) : null}
 
@@ -832,14 +734,6 @@ function CustomerProfile({
               {canViewBookings ? <CustomerRevenueCard customerId={customer.id} /> : null}
               <CustomerFinancePanel customerId={customer.id} />
             </YStack>
-          ) : null}
-
-          {activeSection === SECTION.NOTES ? (
-            <CustomerNotesPanel
-              customerId={customer.id}
-              canManage={canManage}
-              disabled={archived}
-            />
           ) : null}
 
           {activeSection === SECTION.DOCUMENTS ? (
@@ -862,19 +756,23 @@ function CustomerProfile({
       */}
       <BottomSheet open={moreOpen} onClose={() => setMoreOpen(false)} title={t('actions.more')}>
         <YStack gap={space.sm}>
-          {actionPills.map(({ key, icon, label, primary, disabled, onPress }) => (
-            <Button
-              key={key}
-              label={label}
-              icon={icon}
-              variant={primary ? 'primary' : 'secondary'}
-              disabled={disabled ?? false}
-              onPress={() => {
-                setMoreOpen(false);
-                onPress();
-              }}
-            />
-          ))}
+          {/* Hai nút một hàng, cùng màu vàng "Tạo đơn thuê" (người dùng 16/11/2026). */}
+          <XStack flexWrap="wrap" gap={space.sm}>
+            {actionPills.map(({ key, icon, label, disabled, onPress }) => (
+              <YStack key={key} w="48%" f={1} minWidth="45%">
+                <Button
+                  label={label}
+                  icon={icon}
+                  variant="gradient"
+                  disabled={disabled ?? false}
+                  onPress={() => {
+                    setMoreOpen(false);
+                    onPress();
+                  }}
+                />
+              </YStack>
+            ))}
+          </XStack>
           {blocked && canCreateBooking ? (
             <Text col={colors.textMuted} fos={fontSize.label}>
               {t('actions.createBookingBlocked')}
@@ -914,6 +812,7 @@ function ProfileRow({
   label,
   value,
   valueTone,
+  valueNode,
   lines = 1,
   actions,
 }: {
@@ -925,6 +824,8 @@ function ProfileRow({
   label: string;
   value: string;
   valueTone?: string;
+  /** Vẽ giá trị bằng node riêng (VD viên nhãn khách) thay cho chữ. */
+  valueNode?: ReactNode;
   /** Số dòng tối đa của giá trị. Địa chỉ cần 3; số điện thoại và ngày thì 1 là đủ. */
   lines?: number;
   actions?: ReactNode;
@@ -953,15 +854,19 @@ function ProfileRow({
         <Text col={colors.textMuted} fos={fontSize.label}>
           {label}
         </Text>
-        <Text
-          flexShrink={1}
-          col={valueTone ?? colors.text}
-          fos={fontSize.bodySm}
-          fow={fontWeight.medium}
-          numberOfLines={lines}
-        >
-          {value}
-        </Text>
+        {valueNode ? (
+          <XStack>{valueNode}</XStack>
+        ) : (
+          <Text
+            flexShrink={1}
+            col={valueTone ?? colors.text}
+            fos={fontSize.bodySm}
+            fow={fontWeight.medium}
+            numberOfLines={lines}
+          >
+            {value}
+          </Text>
+        )}
       </YStack>
 
       {actions}
@@ -985,57 +890,6 @@ interface ActionPillSpec {
   onPress: () => void;
 }
 
-/**
- * Một viên hành động: hình + chữ MỘT dòng, bề rộng đi theo CHỮ.
- *
- * Không có `numberOfLines` nào ở đây cắt được nhãn, vì viên không có bề rộng cố định để mà cắt —
- * đó là cả điểm của việc bỏ lưới ô chia đều. Hàng cha lo phần vuốt ngang khi tổng bề rộng vượt
- * bề ngang màn hình.
- *
- * `minHeight` bằng vùng chạm tối thiểu: đệm dọc `space.sm` chỉ cho ra ~34dp, nhỏ hơn ngón tay —
- * mà đây đúng là hàng nút chính của cả màn.
- */
-function ActionPill({
-  icon,
-  label,
-  primary = false,
-  tone,
-  surface,
-  disabled = false,
-  onPress,
-}: Omit<ActionPillSpec, 'key'>) {
-  const colors = useColors();
-  const fg = disabled ? colors.textDisabled : primary ? colors.onPrimary : tone;
-  const bg = disabled ? colors.surfaceMuted : primary ? colors.primary : surface;
-  const border = disabled ? colors.border : primary ? colors.primary : tone;
-
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled }}
-      style={({ pressed }) => (pressed ? pillStyles.pressed : null)}
-    >
-      <XStack
-        ai="center"
-        gap={space.xs}
-        px={space.md}
-        minHeight={sizing.touchTarget}
-        br={radius.pill}
-        bg={bg}
-        bw={1}
-        bc={border}
-      >
-        <Ionicons name={icon} size={iconSize.sm} color={fg} />
-        <Text col={fg} fos={fontSize.bodySm} fow={fontWeight.semibold} numberOfLines={1}>
-          {label}
-        </Text>
-      </XStack>
-    </Pressable>
-  );
-}
 
 const pillStyles = StyleSheet.create({
   pressed: { opacity: 0.6 },

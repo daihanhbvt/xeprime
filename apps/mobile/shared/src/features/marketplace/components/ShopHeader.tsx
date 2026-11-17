@@ -17,10 +17,11 @@ import { RevealText, ScrollReveal, useRevealFadeUp } from '@/components/motion/S
 import { useRevealPop } from '@/components/motion/reveal-effects';
 import { RevealCountUp } from '@/components/motion/use-count-up';
 import { InfoHint } from '@/components/ui/InfoHint';
+import { RichText } from '@/components/ui/RichText';
 import { ShopCover, useImageLoadFailure } from '@/components/ui/ShopCover';
 import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { layout } from '@/theme/layout';
+import { useResponsive } from '@/theme/use-responsive';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { PublicShop } from '../api';
@@ -76,6 +77,7 @@ export function ShopHeader({
   coverStyle?: StyleProp<ViewStyle>;
 }) {
   const colors = useColors();
+  const { gutter } = useResponsive();
   const insets = useSafeAreaInsets();
   const t = useTranslations('Shops');
   const fmt = useAppFormat();
@@ -199,7 +201,7 @@ export function ShopHeader({
 
       {/* Thẻ hồ sơ trượt lên khi mở trang; phần tử con (avatar, tên, chip, số liệu) nối tiếp. */}
       <ScrollReveal>
-      <YStack px={layout.screenX} mt={-CARD_OVERLAP}>
+      <YStack px={gutter} mt={-CARD_OVERLAP}>
         <YStack
           p={space.md}
           gap={20}
@@ -347,7 +349,7 @@ export function ShopHeader({
             ) : null}
           </YStack>
 
-          {shop.bio || (isShop && shop.address) ? (
+          {shop.bioHtml || shop.bio || (isShop && shop.address) ? (
             <RevealText delay={280}>
             <YStack gap={space.xs}>
               <Text
@@ -358,11 +360,14 @@ export function ShopHeader({
               >
                 {t('profile.aboutTitle')}
               </Text>
-              {shop.bio ? (
-                <Text col={colors.textBody} fos={fontSize.body}>
-                  {shop.bio}
-                </Text>
-              ) : null}
+              {/* Bản định dạng (đã lọc ở server) khi chủ gian hàng soạn bằng editor; không thì chữ thuần. */}
+              <RichText
+                html={shop.bioHtml}
+                text={shop.bio}
+                color={colors.textBody}
+                fontSize={fontSize.body}
+                gap={space.xs}
+              />
               {isShop && shop.address ? (
                 <Text col={colors.textMuted} fos={fontSize.body} mt={shop.bio ? space.xs : 0}>
                   {t('profile.address', { address: shop.address })}

@@ -42,22 +42,38 @@ export function DecisionWarning({ children }: { children: ReactNode }) {
   );
 }
 
-/** Chân tấm: "Quay lại" (viền) + nút chính, chia đôi bề ngang như web. */
+/**
+ * Chân tấm theo khuôn tấm của app KHÁCH (`CancelTripSheet`): "Quay lại" dạng chữ co vừa nội dung
+ * bên trái, nút chính lấy phần còn lại - người dùng chốt 10/11/2026 lấy phong cách app khách.
+ */
 export function DecisionFooter({
   backLabel,
   onBack,
+  leading,
   confirm,
 }: {
-  backLabel: string;
-  onBack: () => void;
+  backLabel?: string;
+  onBack?: () => void;
+  /**
+   * Nút bên TRÁI tự dựng thay cho "Quay lại" dạng chữ - Figma v2 của tấm duyệt ("Từ chối" viền đỏ)
+   * và tấm từ chối ("Quay lại" viền xám). `null` = chỉ còn nút chính chiếm trọn hàng.
+   */
+  leading?: ReactNode;
   confirm: ReactNode;
 }) {
+  const left =
+    leading !== undefined ? (
+      leading
+    ) : backLabel && onBack ? (
+      <Button label={backLabel} variant="ghost" onPress={onBack} />
+    ) : null;
   return (
-    <XStack gap={space.sm}>
-      <YStack flex={1}>
-        <Button label={backLabel} variant="neutral" onPress={onBack} />
-      </YStack>
-      <YStack flex={1}>{confirm}</YStack>
+    <XStack gap={leading !== undefined ? FOOTER_GAP : space.sm}>
+      {left ? <YStack flexShrink={0}>{left}</YStack> : null}
+      <YStack f={1}>{confirm}</YStack>
     </XStack>
   );
 }
+
+/** Figma "Hành động" của chân tấm v2: hai nút cách 12. */
+const FOOTER_GAP = 12;

@@ -46,6 +46,9 @@ export default function PartnerRegisterRoute() {
   return (
     <PartnerSignupScreen
       initialTrack={chosenTrack}
+      // Tuyến chọn sẵn ở app XePrime ⇒ không mời đổi tuyến (web ẩn "Đổi cách cho thuê" khi `source=market`).
+      lockTrack={chosenTrack != null}
+      onExit={() => goBackOr(router, ROUTES.account.login())}
       onSwitchToLogin={() => router.replace(ROUTES.account.login())}
     />
   );

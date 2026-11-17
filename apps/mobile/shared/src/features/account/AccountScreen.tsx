@@ -21,6 +21,7 @@ import { AccountHubCard } from './components/AccountHubCard';
 import { PartnerInviteCard } from './components/PartnerInviteCard';
 import { useMyProfile } from './hooks/use-account';
 import type { UserProfile } from './api';
+import { layout } from '@/theme/layout';
 
 // Khối giấy tờ đã sang "Quản lý tài khoản" — giữ export cũ cho nơi gọi.
 export { ACCOUNT_DOCUMENTS_SECTION } from './AccountProfileScreen';
@@ -147,7 +148,7 @@ function AccountBody({
         {showsDeleteAccountCard(user) ? (
           <ScrollReveal index={4}>
           <Card padded={false}>
-            <YStack px={space.md} py={space.xs}>
+            <YStack px={layout.padX} py={space.xs}>
               <SettingRow
                 icon="trash-outline"
                 label={tNav('account.deleteAccount')}

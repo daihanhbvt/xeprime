@@ -25,6 +25,7 @@ export function OtpCodeStep({
   submitting,
   onEdit,
   editLabel,
+  onResend,
 }: {
   phone: string;
   verify: ReturnType<typeof usePhoneVerify>;
@@ -37,13 +38,20 @@ export function OtpCodeStep({
   /** Quay lại sửa thông tin — mã đã gửi vẫn tính cooldown ở server. */
   onEdit: () => void;
   editLabel: string;
+  /**
+   * "Gửi lại mã" của luồng có endpoint riêng (đăng ký) — để luồng đó tự xoá câu lỗi của mã cũ.
+   * Vắng thì gửi lại qua `verify.send`.
+   */
+  onResend?: () => void;
 }) {
   const colors = useColors();
   const t = useTranslations('Auth.otp');
   // Đếm ngược của cổng xác minh tài khoản — cùng câu + đồng hồ "00:58" với `VerifyAccountDialog` web.
   const tVerify = useTranslations('Auth.market.verify');
   const sent = verify.status === 'code_sent';
-  const ready = code.length === OTP_LENGTH && !submitting;
+  // Mã đã chết (sai quá số lần / hết hạn) ⇒ khoá ô nhập, chỉ còn "Gửi lại mã" (web PR #278).
+  const locked = verify.codeDead;
+  const ready = code.length === OTP_LENGTH && !submitting && !locked;
 
   return (
     <YStack gap={space.md}>
@@ -52,9 +60,9 @@ export function OtpCodeStep({
           value={code}
           onChange={onCodeChange}
           onComplete={(full) => {
-            if (!submitting) onSubmit(full);
+            if (!submitting && !locked) onSubmit(full);
           }}
-          disabled={submitting}
+          disabled={submitting || locked}
           autoFocus
         />
         {sent || verify.testCodeEnabled ? (
@@ -86,7 +94,9 @@ export function OtpCodeStep({
         ) : (
           <InlineAction
             label={sent ? t('resend') : t('sendCode')}
-            onPress={() => verify.send(phone)}
+            onPress={onResend ?? (() => verify.send(phone))}
+            // Web khoá nút trong lúc đang gửi / đang xác nhận - chặn bấm đôi gửi hai SMS.
+            disabled={verify.sending || submitting}
           />
         )}
       </XStack>

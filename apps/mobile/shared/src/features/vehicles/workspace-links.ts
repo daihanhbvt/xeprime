@@ -1,8 +1,10 @@
 import type { Href } from 'expo-router';
-import { SERVICE_TYPE } from '@xeprime/types';
+import { SERVICE_TYPE, type ServiceType } from '@xeprime/types';
+import { ownerOptimizationService } from '@/features/vehicle-manage/owner-edit-nav';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB, type VehicleEditTab } from '@/navigation/vehicle-edit-tab';
 import {
+  RENTAL_TERMS_ANCHOR,
   VEHICLE_MANAGE_SECTION,
   type VehicleManageSection,
 } from '@/navigation/vehicle-manage-section';
@@ -21,46 +23,98 @@ import {
  */
 
 /**
- * Tab của form sửa xe → mục tương ứng trong không gian QUẢN LÝ XE của khu tài khoản.
+ * Tab của form sửa xe → mục tương ứng trong màn SỬA XE của Owner Lite (cây
+ * `/manage/vehicles/<id>/manage/`), kèm dịch vụ cần mở / cuộn tới — bản native của web
+ * `resolveEditTab` khi `isManage === false` (03/11/2026, hai tuyến chung một màn sửa trên web).
  *
- * Chỗ DUY NHẤT biết cặp đôi này. `null` = khu tài khoản KHÔNG có mục đó (web `part(id, tab,
- * null)` trả `null` và nơi gọi ẩn lối vào): bảo dưỡng là tính năng của gói, nguồn xe là sổ sách
- * gian hàng.
+ * Chỗ DUY NHẤT biết cặp đôi này. `null` = Owner Lite KHÔNG có mục đó (web `part(id, tab, null)` trả
+ * `null` và nơi gọi ẩn lối vào): bảo dưỡng là tính năng của gói, nguồn xe là sổ sách gian hàng.
+ *
+ * - `pricing` / `*-optimization` / phụ phí tài xế → "Dịch vụ & giá" (tab của dịch vụ đó).
+ * - `policy` / `operations` / `handover-time` → "Chính sách thuê".
+ * - `*-terms` → "Chính sách thuê", cuộn tới khối điều khoản của dịch vụ đó (`termsOf`).
  */
-export const EDIT_TAB_TO_SECTION: Readonly<Record<VehicleEditTab, VehicleManageSection | null>> = {
-  [VEHICLE_EDIT_TAB.INFORMATION]: VEHICLE_MANAGE_SECTION.INFORMATION,
-  [VEHICLE_EDIT_TAB.MEDIA]: VEHICLE_MANAGE_SECTION.IMAGES,
-  [VEHICLE_EDIT_TAB.DOCUMENTS]: VEHICLE_MANAGE_SECTION.DOCUMENTS,
-  [VEHICLE_EDIT_TAB.TRIP_HISTORY]: VEHICLE_MANAGE_SECTION.TRIP_HISTORY,
-  [VEHICLE_EDIT_TAB.PRICING]: VEHICLE_MANAGE_SECTION.PRICING,
+export interface OwnerEditTarget {
+  section: VehicleManageSection;
+  /** Tab dịch vụ mở sẵn (`SERVICES`) hoặc khối điều khoản cần cuộn tới (`POLICY`). */
+  service?: ServiceType;
+  /** Chỉ `*-terms`: cuộn tới khối điều khoản. */
+  terms?: boolean;
+}
+
+export const EDIT_TAB_TO_SECTION: Readonly<Record<VehicleEditTab, OwnerEditTarget | null>> = {
+  [VEHICLE_EDIT_TAB.INFORMATION]: { section: VEHICLE_MANAGE_SECTION.INFORMATION },
+  [VEHICLE_EDIT_TAB.MEDIA]: { section: VEHICLE_MANAGE_SECTION.IMAGES },
+  [VEHICLE_EDIT_TAB.DOCUMENTS]: { section: VEHICLE_MANAGE_SECTION.DOCUMENTS },
+  [VEHICLE_EDIT_TAB.TRIP_HISTORY]: { section: VEHICLE_MANAGE_SECTION.TRIP_HISTORY },
+  // Web `PRICING` → tab của dịch vụ đầu tiên xe đang phục vụ (màn giá tự chọn khi không có `service`).
+  [VEHICLE_EDIT_TAB.PRICING]: { section: VEHICLE_MANAGE_SECTION.SERVICES },
   [VEHICLE_EDIT_TAB.MAINTENANCE]: null,
   [VEHICLE_EDIT_TAB.SOURCE]: null,
-  /* Bí danh `operations` (tab cũ) → thời gian giao nhận, như `resolveEditTab`. */
-  [VEHICLE_EDIT_TAB.OPERATIONS]: VEHICLE_MANAGE_SECTION.HANDOVER_TIME,
-  [VEHICLE_EDIT_TAB.HANDOVER_TIME]: VEHICLE_MANAGE_SECTION.HANDOVER_TIME,
-  [VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION]: VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION,
-  [VEHICLE_EDIT_TAB.SELF_DRIVE_TERMS]: VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION,
-  [VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION]: VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION,
-  [VEHICLE_EDIT_TAB.WITH_DRIVER_TERMS]: VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION,
-  // Phụ phí tài xế đã gỡ (ADR 0075) — bí danh về "Nhận chuyến & thủ tục".
-  [VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES]: VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION,
+  [VEHICLE_EDIT_TAB.POLICY]: { section: VEHICLE_MANAGE_SECTION.POLICY },
+  [VEHICLE_EDIT_TAB.OPERATIONS]: { section: VEHICLE_MANAGE_SECTION.POLICY },
+  [VEHICLE_EDIT_TAB.HANDOVER_TIME]: { section: VEHICLE_MANAGE_SECTION.POLICY },
+  /*
+   * `self-drive-optimization` cố định tab tự lái ở bảng này; `vehicleEditPartHref` đổi sang tab có
+   * tài xế khi xe chỉ phục vụ có tài xế (web `resolveEditTab`).
+   */
+  [VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION]: {
+    section: VEHICLE_MANAGE_SECTION.SERVICES,
+    service: SERVICE_TYPE.SELF_DRIVE,
+  },
+  [VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION]: {
+    section: VEHICLE_MANAGE_SECTION.SERVICES,
+    service: SERVICE_TYPE.WITH_DRIVER,
+  },
+  // Phụ phí tài xế đã gỡ (ADR 0075) — bí danh về tab có tài xế.
+  [VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES]: {
+    section: VEHICLE_MANAGE_SECTION.SERVICES,
+    service: SERVICE_TYPE.WITH_DRIVER,
+  },
+  [VEHICLE_EDIT_TAB.SELF_DRIVE_TERMS]: {
+    section: VEHICLE_MANAGE_SECTION.POLICY,
+    service: SERVICE_TYPE.SELF_DRIVE,
+    terms: true,
+  },
+  [VEHICLE_EDIT_TAB.WITH_DRIVER_TERMS]: {
+    section: VEHICLE_MANAGE_SECTION.POLICY,
+    service: SERVICE_TYPE.WITH_DRIVER,
+    terms: true,
+  },
 };
 
+/** Đích Owner Lite của một mục — dựng route kèm `service` / `anchor`. */
+function ownerTargetHref(vehicleId: string, target: OwnerEditTarget): Href {
+  return ROUTES.account.vehicleManageSection(vehicleId, target.section, {
+    ...(target.service ? { service: target.service } : {}),
+    ...(target.terms ? { anchor: RENTAL_TERMS_ANCHOR } : {}),
+  });
+}
+
 /**
- * Một tab của form sửa xe (quản lý) ↔ một mục của không gian quản lý xe (tài khoản) — bản native
- * của web `workspaceVehiclePaths().part`. `null` = khu tài khoản không có mục đó: nơi gọi ẨN lối vào.
+ * Một tab của form sửa xe (gian hàng) ↔ một mục của màn sửa xe Owner Lite — bản native của web
+ * `workspaceVehiclePaths().part`. `null` = Owner Lite không có mục đó: nơi gọi ẨN lối vào.
+ * `services` (dịch vụ xe đang phục vụ) chỉ cần cho bí danh `self-drive-optimization`.
  */
 export function vehicleEditPartHref(
   vehicleId: string,
   tab: VehicleEditTab,
   customerScope: boolean,
+  services?: readonly string[],
 ): Href | null {
   if (!customerScope) return ROUTES.manage.vehicleEditTab(vehicleId, tab);
-  const section = EDIT_TAB_TO_SECTION[tab];
-  return section ? ROUTES.account.vehicleManageSection(vehicleId, section) : null;
+  const target = EDIT_TAB_TO_SECTION[tab];
+  if (!target) return null;
+  if (tab === VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION && services) {
+    return ownerTargetHref(vehicleId, {
+      ...target,
+      service: ownerOptimizationService(services) as ServiceType,
+    });
+  }
+  return ownerTargetHref(vehicleId, target);
 }
 
-/** Nút "Chỉnh sửa xe": hub sửa xe (quản lý) ↔ mục lục không gian quản lý xe (tài khoản). */
+/** Nút "Chỉnh sửa xe": hub sửa xe (gian hàng) ↔ menu sửa xe Owner Lite. */
 export function vehicleEditHubHref(vehicleId: string, customerScope: boolean): Href {
   return customerScope
     ? ROUTES.account.vehicleManage(vehicleId)
@@ -68,31 +122,29 @@ export function vehicleEditHubHref(vehicleId: string, customerScope: boolean): H
 }
 
 /**
- * "Giá & chính sách": MỤC giá của màn sửa xe (quản lý) ↔ mục "Giá & chính sách" (tài khoản) — web
- * `paths.pricing`. Không trỏ route `/pricing` cũ: nó chỉ còn là một lần chuyển hướng tới mục này.
+ * "Giá & chính sách" — web `paths.pricing` = `?tab=pricing`, tức mục "Dịch vụ & giá" ở cả hai
+ * tuyến. Không trỏ route `/pricing` cũ: nó chỉ còn là một lần chuyển hướng tới mục này.
  */
 export function vehiclePricingHref(vehicleId: string, customerScope: boolean): Href {
   return customerScope
-    ? ROUTES.account.vehicleManageSection(vehicleId, VEHICLE_MANAGE_SECTION.PRICING)
+    ? ROUTES.account.vehicleManageSection(vehicleId, VEHICLE_MANAGE_SECTION.SERVICES)
     : ROUTES.manage.vehicleEditTab(vehicleId, VEHICLE_EDIT_TAB.PRICING);
 }
 
 /**
- * "Tối ưu nhận chuyến": màn tối ưu (quản lý) ↔ mục tối ưu CỦA DỊCH VỤ xe đang đăng (tài khoản —
- * mỗi dịch vụ một mục). Tự lái trước, vì đó là dịch vụ phổ biến và là mục đứng đầu mục lục.
+ * "Tối ưu nhận chuyến" — web `paths.optimization` = `?tab=self-drive-optimization`: tab TỰ LÁI của
+ * "Dịch vụ & giá", đổi sang tab có tài xế khi xe chỉ phục vụ có tài xế.
  */
 export function vehicleOptimizationHref(
   vehicle: { id: string; serviceTypes: readonly string[] },
   customerScope: boolean,
 ): Href {
-  // Cổng quản lý: mục tự lái — route của mục đó tự đổi sang có tài xế khi xe chỉ có dịch vụ ấy (web).
-  if (!customerScope) {
-    return ROUTES.manage.vehicleEditTab(vehicle.id, VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION);
-  }
-  const section = vehicle.serviceTypes.includes(SERVICE_TYPE.SELF_DRIVE)
-    ? VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION
-    : VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION;
-  return ROUTES.account.vehicleManageSection(vehicle.id, section);
+  return vehicleEditPartHref(
+    vehicle.id,
+    VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION,
+    customerScope,
+    vehicle.serviceTypes,
+  ) as Href;
 }
 
 /**

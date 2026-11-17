@@ -1151,15 +1151,49 @@ a.galleryEmpty:focus-visible {
 
 /* Điện thoại: ảnh lên trên, mọi lưới gập một cột. */
 @container vehicle-profile (max-width: 600px) {
+  /*
+   * Khổ điện thoại (Figma Partner "Vehicle Image" `24158:107062`, "Vehicle Summary" `24158:107080`):
+   * khối xe trắng trọn bề ngang, ảnh 390×246 sát mép, nội dung đệm 16; "Hiệu suất lũy kế" là ô
+   * `bg/gray-50` bo 12 đệm 12, bỏ viền trái và tiêu đề (ba cột số).
+   */
+  .profile {
+    flex-direction: column;
+    padding: 0 0 var(--xp-space-md);
+    gap: 12px;
+  }
+
   .profileMain {
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
   }
 
   .profileMedia {
     width: 100%;
     height: auto;
-    aspect-ratio: 212 / 134;
+    border-radius: 0;
+    aspect-ratio: 390 / 246;
+  }
+
+  .profileBody,
+  .performance {
+    margin: 0 var(--xp-space-lg);
+  }
+
+  .performance {
+    padding: var(--xp-space-12);
+    border-left: 0;
+    border-radius: var(--xp-border-radius-control);
+    background: var(--xp-color-bg);
+  }
+
+  .performanceTitle {
+    display: none;
+  }
+
+  .vehicleName {
+    font-size: var(--xp-font-size-h3);
+    line-height: var(--xp-line-height-h3);
   }
 
   .metrics {

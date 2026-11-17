@@ -7,7 +7,8 @@ import { Button } from './Button';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useImageErrorMessage } from '@/lib/image-permission-message';
 import { getErrorMessage } from '@/lib/get-error-message';
-import { IMAGE_SOURCE, pickImages, uploadImageToR2, type ImageSource } from '@/lib/r2-image-upload';
+import { ImageSourceSheet } from './ImageSourceSheet';
+import { pickImages, uploadImageToR2, type ImageSource } from '@/lib/r2-image-upload';
 import { useColors } from '@/theme/ThemeProvider';
 import { fieldFontSize, space } from '@/theme/tokens';
 
@@ -114,38 +115,14 @@ export function useImageUpload({
     busy,
     open: () => setChoosing(true),
     sheet: (
-      <BottomSheet open={choosing} onClose={() => setChoosing(false)} title={title}>
-        <YStack gap={space.sm}>
-          {hint ? (
-            <Text col={colors.textMuted} fos={fieldFontSize.message}>
-              {hint}
-            </Text>
-          ) : null}
-          <Button
-            label={t('takePhoto')}
-            icon="camera-outline"
-            variant="secondary"
-            onPress={() => void add(IMAGE_SOURCE.CAMERA)}
-          />
-          <Button
-            label={t('chooseFromLibrary')}
-            icon="images-outline"
-            variant="secondary"
-            onPress={() => void add(IMAGE_SOURCE.LIBRARY)}
-          />
-          {onRemove ? (
-            <Button
-              label={t('removeImage')}
-              icon="trash-outline"
-              variant="danger"
-              onPress={() => {
-                setChoosing(false);
-                onRemove();
-              }}
-            />
-          ) : null}
-        </YStack>
-      </BottomSheet>
+      <ImageSourceSheet
+        open={choosing}
+        onClose={() => setChoosing(false)}
+        title={title}
+        hint={hint}
+        onPick={(source) => void add(source)}
+        onRemove={onRemove}
+      />
     ),
   };
 }

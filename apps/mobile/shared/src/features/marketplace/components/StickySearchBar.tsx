@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useState } from 'react';
 import { Pressable } from 'react-native';
 import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
@@ -15,6 +15,7 @@ import { useSearchExperience } from '../search-context';
 import { bannerRatio } from './HomeHero';
 import { LocationPicker } from './LocationPicker';
 import { RentalRangeSheet } from './RentalRangeSheet';
+import { layout } from '@/theme/layout';
 
 /**
  * Chiều cao ô bấm bên trong thanh — thấp hơn sàn 44pt để thanh không ăn quá nhiều chiều dọc
@@ -87,7 +88,7 @@ export function StickySearchBar({
       <XStack
         ai="center"
         gap={space.xs}
-        px={space.md}
+        px={layout.padX}
         py={space.sm}
         h={STICKY_BAR_HEIGHT}
         borderTopWidth={1}

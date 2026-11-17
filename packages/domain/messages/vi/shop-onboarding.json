@@ -123,10 +123,12 @@
     "title": "Đăng ký gian hàng thành công!",
     "status": "Đang chờ kích hoạt",
     "next": {
-      "review": "XePrime đang xem xét thông tin gian hàng của bạn.",
-      "notify": "Bạn sẽ nhận được thông báo ngay khi tài khoản được duyệt.",
-      "refresh": "Màn này tự cập nhật khi tài khoản được duyệt."
-    }
+      "review": "XePrime sẽ liên hệ tư vấn gói phù hợp cho gian hàng của bạn.",
+      "notify": "Bạn sẽ nhận được thông báo ngay khi gian hàng được kích hoạt.",
+      "refresh": "Màn này tự cập nhật khi gian hàng được kích hoạt."
+    },
+    "webHint": "Chọn gói và chuyển khoản trên website XePrime Partner. Gian hàng tự kích hoạt khi tiền về.",
+    "openWeb": "Chọn gói trên website"
   },
   "signup": {
     "title": {

@@ -132,16 +132,10 @@ describe('CustomerListScreen - quyền', () => {
     expect(view.summarySpy).not.toHaveBeenCalled();
   });
 
-  it('thiếu `customers.manage`: KHÔNG có nút thêm khách', async () => {
-    const view = await renderScreen([PERMISSION.CUSTOMER_VIEW]);
-    await view.findByText('Nguyễn Văn An');
-    expect(view.queryByLabelText('Thêm khách hàng')).toBeNull();
-  });
-
-  it('có `customers.manage`: nút thêm khách xuất hiện', async () => {
+  it('không có lối thêm khách ở danh sách, kể cả có `customers.manage` (web ledger §3.4 #3)', async () => {
     const view = await renderScreen([PERMISSION.CUSTOMER_VIEW, PERMISSION.CUSTOMER_MANAGE]);
     await view.findByText('Nguyễn Văn An');
-    expect(view.getByLabelText('Thêm khách hàng')).toBeTruthy();
+    expect(view.queryByLabelText('Thêm khách hàng')).toBeNull();
   });
 });
 

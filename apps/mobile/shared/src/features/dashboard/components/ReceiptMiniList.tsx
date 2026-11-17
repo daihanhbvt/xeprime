@@ -63,7 +63,7 @@ export function ReceiptMiniList({
                     RECEIPT_STATUS_META[receipt.status]?.label,
                   )}
                   color={RECEIPT_STATUS_META[receipt.status]?.color ?? 'default'}
-                  size="xs"
+                  size="sm"
                 />
               }
             />

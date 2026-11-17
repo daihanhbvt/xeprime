@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { useController, useWatch, type Control } from 'react-hook-form';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { ROUTES } from '@/navigation/routes';
+import { useCurrentUser } from '@/features/auth/hooks/use-auth';
+import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/shell/partner-track';
 import { MILEAGE_LIMIT, PERMISSION } from '@xeprime/types';
 import { formatAddress } from '@xeprime/domain';
 import type { OwnerProfileValues } from '@xeprime/validators';
@@ -367,6 +371,8 @@ function VehicleAddressBlock({
   const tActions = useTranslations('Common.actions');
   const { has } = usePermissions();
   const [editing, setEditing] = useState(false);
+  const navigateOnce = useNavigateOnce();
+  const packageShop = resolvePartnerTrack(useCurrentUser().data) === PARTNER_TRACK.PACKAGE;
   /*
    * Lỗi của `branchId` phải có CHỖ ĐỂ HIỆN kể cả khi không vẽ bộ chọn. Bấm "Tiếp tục" trong lúc
    * danh sách chi nhánh còn đang tải thì `branchId` vẫn rỗng: không có dòng này, bước 2 đứng im
@@ -445,6 +451,17 @@ function VehicleAddressBlock({
               <InlineAction label={t('addressEdit')} onPress={() => setEditing(true)} />
             ) : null}
           </YStack>
+        ) : null}
+
+        {/*
+          Web: "Quản lý chi nhánh" chỉ ở cổng GIAN HÀNG - chủ xe tuyến hoa hồng chỉ có chi nhánh
+          mặc định và không vào được màn đó, hiện link là hứa một màn họ sẽ bị đẩy ra.
+        */}
+        {packageShop ? (
+          <InlineAction
+            label={t('addressManageLink')}
+            onPress={() => navigateOnce(ROUTES.manage.shopBranches())}
+          />
         ) : null}
       </YStack>
 

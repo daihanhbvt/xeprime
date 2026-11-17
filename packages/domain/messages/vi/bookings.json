@@ -351,6 +351,7 @@
       "notesPlaceholder": "Ví dụ: xe trả tại bãi, khách gửi lại chìa khoá phụ",
       "surchargeLabel": "Phụ phí phát sinh",
       "surchargeCategory": "Loại phụ phí",
+      "surchargeItem": "Phụ phí {index}",
       "surchargeAmountPlaceholder": "Nhập phụ phí phát sinh",
       "surchargeRemove": "Bỏ dòng phụ phí {index}",
       "surchargeAdd": "Thêm phụ phí",
@@ -522,6 +523,8 @@
       "price": "Giá"
     },
     "vehicle": {
+        "available": "Sẵn sàng",
+        "pricePerDay": "{price}/ngày",
       "title": "Chọn xe cho chuyến",
       "searchLabel": "Tìm xe",
       "searchPlaceholder": "Tên xe, biển số, mã xe…",
@@ -629,6 +632,9 @@
     "partyB": "Bên thuê (Bên B)",
     "phone": "Điện thoại: {phone}",
     "bankAccount": "TK: {account}",
+    "email": "Email: {email}",
+    "taxCode": "MST: {code}",
+    "businessLicense": "GPKD: {code}",
     "vehicleHeading": "Thông tin xe",
     "vehicleName": "Tên xe",
     "plateNumber": "Biển số",
@@ -873,6 +879,7 @@
         "placeUnknown": "Chưa có địa chỉ"
       },
       "holdState": {
+        "awaitingApproval": "Chờ duyệt",
         "expected": "Dự kiến",
         "unpaid": "Chưa thanh toán",
         "paid": "Đã thanh toán"
@@ -942,6 +949,7 @@
     }
   },
   "detailPage": {
+    "tabs": { "prep": "Chuẩn bị", "trip": "Chuyến & thời gian", "extra": "Phát sinh" },
     "title": "Chi tiết đơn · #{code}",
     "createdAt": "Tạo lúc {date}",
     "stepperLabel": "Tiến trình đơn thuê",
@@ -958,6 +966,7 @@
     "cancelledBanner": "Đơn đã huỷ - chuyến không diễn ra.",
     "noShowBanner": "Khách không đến nhận xe - đơn đã khép.",
     "actions": {
+      "menuTitle": "Thao tác",
       "viewContract": "Xem hợp đồng",
       "createContract": "Tạo hợp đồng",
       "moneyHistory": "Lịch sử thu tiền",
@@ -1028,6 +1037,7 @@
       "title": "Lợi nhuận chuyến"
     },
     "side": {
+      "schedule": "Lịch xe",
       "serviceType": "Hình thức",
       "pickup": "Nhận xe",
       "return": "Trả xe",

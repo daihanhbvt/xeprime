@@ -106,25 +106,25 @@ describe('partnerPathRedirect - "Chuyến cho thuê" (PR #158)', () => {
     expect(isCommissionOwner(pkg)).toBe(false);
   });
 
-  it('chủ xe hoa hồng: hộp thư, bảng đơn, chờ giao xe → chuyến cho thuê; trips ở lại', () => {
+  it('chủ xe hoa hồng dùng chung hộp thư + Đơn thuê với gian hàng (PR #278); trips cũ → Đơn thuê', () => {
     for (const path of [
       PARTNER_PATH.REQUESTS,
       PARTNER_PATH.BOOKINGS,
       PARTNER_PATH.BOOKINGS_AWAITING_PICKUP,
     ]) {
-      expect(partnerPathRedirect(commission, path)).toBe(PARTNER_PATH.TRIPS);
+      expect(partnerPathRedirect(commission, path)).toBeNull();
     }
-    expect(partnerPathRedirect(commission, PARTNER_PATH.TRIPS)).toBeNull();
+    expect(partnerPathRedirect(commission, PARTNER_PATH.TRIPS)).toBe(PARTNER_PATH.BOOKINGS);
     // Chi tiết đơn là màn dùng chung, nơi bàn giao — không bị chuyển.
     expect(
       partnerPathRedirect(commission, `${PARTNER_PATH.BOOKINGS}/01JQZX0000000000000000000B`),
     ).toBeNull();
   });
 
-  it('thành viên hoa hồng và tuyến gói mở trips → hộp thư', () => {
-    expect(partnerPathRedirect(commissionStaff, PARTNER_PATH.TRIPS)).toBe(PARTNER_PATH.REQUESTS);
+  it('thành viên hoa hồng và tuyến gói mở trips → Đơn thuê', () => {
+    expect(partnerPathRedirect(commissionStaff, PARTNER_PATH.TRIPS)).toBe(PARTNER_PATH.BOOKINGS);
     expect(partnerPathRedirect(commissionStaff, PARTNER_PATH.REQUESTS)).toBeNull();
-    expect(partnerPathRedirect(pkg, PARTNER_PATH.TRIPS)).toBe(PARTNER_PATH.REQUESTS);
+    expect(partnerPathRedirect(pkg, PARTNER_PATH.TRIPS)).toBe(PARTNER_PATH.BOOKINGS);
   });
 });
 
@@ -169,13 +169,13 @@ describe('partnerPathRedirect', () => {
     expect(partnerPathRedirect(commission, PARTNER_PATH.REGISTER)).toBe(PARTNER_PATH.HOME);
   });
 
-  it('tuyến hoa hồng: /manage/shop và alias /manage/registration mở section hồ sơ của trang tài khoản', () => {
-    expect(partnerPathRedirect(commission, PARTNER_PATH.SHOP)).toBe(PARTNER_PATH.ACCOUNT_PROFILE);
-    expect(partnerPathRedirect(commission, PARTNER_PATH.REGISTRATION)).toBe(
-      '/manage/account?section=profile',
-    );
-    // Đích không tự chuyển tiếp lần nữa — không vòng lặp trong ScopeGuard.
-    expect(partnerPathRedirect(commission, PARTNER_PATH.ACCOUNT_PROFILE)).toBeNull();
+  it('tuyến hoa hồng: /manage/shop là Hồ sơ chủ xe của CHỦ (ADR 0085); alias /manage/registration về đó', () => {
+    expect(partnerPathRedirect(commission, PARTNER_PATH.SHOP)).toBeNull();
+    expect(partnerPathRedirect(commission, PARTNER_PATH.REGISTRATION)).toBe(PARTNER_PATH.SHOP);
+  });
+
+  it('tuyến hoa hồng: chủ mở /manage/tax cũ ⇒ khối khai thuế của Hồ sơ chủ xe (web PR #284)', () => {
+    expect(partnerPathRedirect(commission, PARTNER_PATH.TAX)).toBe('/manage/shop?section=tax');
   });
 
   it('tuyến gói: ba trang chỉ của tuyến hoa hồng đổi sang bản trong khu Gian hàng', () => {

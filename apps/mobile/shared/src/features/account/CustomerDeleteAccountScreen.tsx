@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable } from 'react-native';
 import { Controller } from 'react-hook-form';

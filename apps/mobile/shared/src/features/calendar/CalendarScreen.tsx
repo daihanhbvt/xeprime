@@ -405,10 +405,18 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
     [navigateOnce],
   );
 
+  /*
+   * Web `CalendarScheduler`: không có quyền thao tác ngày thì đầu ngày LỄ vẫn bấm được để xem tên
+   * lễ; ngày thường khi đó không mở gì.
+   */
   const onDayPress = useMemo(
     () =>
-      dayActions.length > 0
-        ? (day: DayCell) => setDayPanel({ day, holiday: holidaysByDay.get(day.key) })
+      dayActions.length > 0 || holidaysByDay.size > 0
+        ? (day: DayCell) => {
+            const holiday = holidaysByDay.get(day.key);
+            if (dayActions.length === 0 && !holiday) return;
+            setDayPanel({ day, holiday });
+          }
         : null,
     [dayActions.length, holidaysByDay],
   );
@@ -708,7 +716,7 @@ function GridBusyOverlay() {
       <XStack
         ai="center"
         gap={space.xs}
-        px={space.md}
+        px={layout.padX}
         py={space.sm}
         br={radius.pill}
         bg={colors.surfaceElevated}

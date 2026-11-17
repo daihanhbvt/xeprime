@@ -140,6 +140,8 @@ export class TenantCustomerListItemDto extends TenantCustomerStatsDto {
   @ApiProperty({ enum: TENANT_CUSTOMER_RISK_LEVEL_VALUES }) riskLevel!: string;
   @ApiProperty({ enum: TENANT_CUSTOMER_SOURCE_VALUES }) source!: string;
   @ApiProperty({ description: 'Đã liên kết tài khoản trên nền tảng' }) hasAccount!: boolean;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Ảnh đại diện của tài khoản khách đã liên kết' })
+  avatarUrl!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO - null = đang hoạt động' })
   archivedAt!: string | null;
 }
@@ -446,6 +448,8 @@ export class TenantCustomerDetailDto extends TenantCustomerStatsDto {
   })
   riskReason!: string | null;
   @ApiProperty() hasAccount!: boolean;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Ảnh đại diện của tài khoản khách đã liên kết' })
+  avatarUrl!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) archivedAt!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
   @ApiProperty({ description: 'ISO-8601 UTC' }) updatedAt!: string;

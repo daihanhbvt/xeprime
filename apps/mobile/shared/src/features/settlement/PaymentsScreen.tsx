@@ -9,7 +9,7 @@ import {
   PERMISSION,
   type PaymentStatus,
 } from '@xeprime/types';
-import { AppHeader } from '@/components/layout/AppHeader';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { Screen } from '@/components/layout/Screen';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Button } from '@/components/ui/Button';
@@ -30,6 +30,8 @@ import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { usePaymentHistory, useVoidPayment } from './hooks/use-settlement';
 import type { Payment } from './api';
 import { getErrorMessage } from '@/lib/get-error-message';
+import { BookingReceiptList } from '@/features/finance/components/BookingReceiptList';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 
 /**
  * LỊCH SỬ tiền của một đơn (FIN-06) — bản native của `PaymentHistory`.
@@ -48,12 +50,17 @@ export function PaymentsScreen({ bookingId }: { bookingId: string }) {
   const t = useTranslations('Bookings.payments');
   const router = useRouter();
   const query = usePaymentHistory(bookingId);
+  const tActionBar = useTranslations('Bookings.actionBar');
+  const permissions = usePermissions();
+  const navigateOnce = useNavigateOnce();
+  // Web hộp "Lịch sử thu tiền": khoản ở sổ Thu-Chi của đơn + lối mở sổ - chỉ khi có `finance.view`.
+  const canViewFinance = permissions.has(PERMISSION.FINANCE_VIEW);
 
   const back = () => goBackOr(router, ROUTES.manage.bookingDetail(bookingId));
 
   return (
     <>
-      <AppHeader title={t('title')} onBack={back} />
+      <ManagePageHeader title={t('title')} onBack={back} />
       <Screen
         edges={['left', 'right', 'bottom']}
         refreshing={query.isRefetching}
@@ -88,6 +95,20 @@ export function PaymentsScreen({ bookingId }: { bookingId: string }) {
               <PaymentRow key={payment.id} bookingId={bookingId} payment={payment} />
             ))
           )}
+
+          {canViewFinance ? (
+            <YStack gap={space.sm}>
+              <BookingReceiptList bookingId={bookingId} />
+              <Text
+                col={colors.primaryStrong}
+                fos={fontSize.body}
+                accessibilityRole="link"
+                onPress={() => navigateOnce(ROUTES.manage.receipts({ bookingId }))}
+              >
+                {tActionBar('openLedger')}
+              </Text>
+            </YStack>
+          ) : null}
         </YStack>
       </Screen>
     </>

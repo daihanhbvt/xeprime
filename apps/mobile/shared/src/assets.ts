@@ -10,6 +10,8 @@ import ownerShopShowroom from '../assets/images/owner-shop-showroom.png';
 import driverLicenceEmpty from '../assets/images/driver-licence-empty.png';
 // Hộp rỗng 160px — Figma "List - Scroll - Empty" (20063:60274), sinh từ apps/web/public/illustrations/list-empty.svg.
 import listEmpty from '../assets/images/list-empty.png';
+// Logo Zalo của nút liên hệ khách — CHÉP NGUYÊN apps/web/public/icons/brand/zalo.png (`CustomerContactButtons`).
+import zaloLogo from '../assets/images/brand/zalo.png';
 // Ảnh CHỤP THẬT từ app XePrime Partner cho màn hướng dẫn đăng ký ở app khách. Chụp lại khi giao
 // diện ba màn đó đổi: form tạo tài khoản đối tác, màn chọn cách cho thuê, wizard đăng xe.
 // Tranh minh hoạ trang chủ v2 — CHÉP NGUYÊN từ `apps/web/public/home/` (ADR 0062). Hai tấm là
@@ -51,6 +53,7 @@ import shopTileWallet from '../assets/images/shops/tile-wallet.webp';
  */
 export const images = {
   logo,
+  zaloLogo,
   logoMark,
   shopOnboarding,
   ownerPersonalCar,

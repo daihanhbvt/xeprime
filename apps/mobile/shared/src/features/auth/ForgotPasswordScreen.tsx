@@ -4,7 +4,8 @@ import { useForm } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { formatOtpCooldown } from '@/features/phone-verification/format-cooldown';
-import { PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
+import { API_ERROR_CODE, PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
+import { getErrorCode } from '@/lib/api-client';
 import {
   buildResetPasswordByPhoneSchema,
   type ResetPasswordByPhoneValues,
@@ -56,11 +57,17 @@ export function ForgotPasswordScreen({ onBackToLogin }: { onBackToLogin: () => v
   const [sending, setSending] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
+  /**
+   * Mã đã được server CHẤP NHẬN nhưng mật khẩu bị từ chối (`PASSWORD_UNCHANGED`, web PR #278): giữ
+   * lại để lần "Xác nhận" kế tiếp với mật khẩu khác dùng tiếp mã đó, không bắt chờ SMS mới.
+   */
+  const [provenCode, setProvenCode] = useState<{ phone: string; code: string } | null>(null);
 
   const schema = useMemo(() => buildResetPasswordByPhoneSchema(labels), [labels]);
   const {
     control,
     handleSubmit,
+    setError: setFieldError,
     formState: { isValid },
   } = useForm<ResetPasswordByPhoneValues>({
     mode: 'onChange',
@@ -69,11 +76,45 @@ export function ForgotPasswordScreen({ onBackToLogin }: { onBackToLogin: () => v
   });
 
   /** "Xác nhận": gửi mã rồi mở sheet. Môi trường nhận mã test thì không tốn SMS. */
+  const submitReset = async (
+    values: ResetPasswordByPhoneValues,
+    value: string,
+  ): Promise<'done' | 'password_rejected' | 'code_rejected'> => {
+    setSubmitting(true);
+    setOtpError(null);
+    try {
+      await resetPasswordWithOtp(values.phone.trim(), value, values.password);
+      setDraft(null);
+      setProvenCode(null);
+      setDone(true);
+      return 'done';
+    } catch (error) {
+      if (getErrorCode(error) === API_ERROR_CODE.PASSWORD_UNCHANGED) {
+        setProvenCode({ phone: values.phone.trim(), code: value });
+        setDraft(null);
+        setFieldError('password', { message: errorMessage(error) }, { shouldFocus: true });
+        return 'password_rejected';
+      }
+      otp.noteCodeError(error);
+      setProvenCode(null);
+      setOtpError(errorMessage(error));
+      setCode('');
+      return 'code_rejected';
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const confirm = async (values: ResetPasswordByPhoneValues) => {
-    if (sending) return;
+    if (sending || submitting) return;
+    const phone = values.phone.trim();
+    if (provenCode?.phone === phone) {
+      const outcome = await submitReset(values, provenCode.code);
+      if (outcome !== 'code_rejected') return;
+    }
     setSending(true);
     try {
-      if (!otp.testCodeEnabled) await otp.sendAsync(values.phone.trim());
+      if (!otp.testCodeEnabled) await otp.sendAsync(phone);
       setCode('');
       setOtpError(null);
       setDraft(values);
@@ -88,20 +129,9 @@ export function ForgotPasswordScreen({ onBackToLogin }: { onBackToLogin: () => v
   const onConfirm = () => void handleSubmit(confirm)();
 
   const reset = async (value: string) => {
-    if (!draft || submitting || !isOtpCodeComplete(value)) return;
-    setSubmitting(true);
-    setOtpError(null);
-    try {
-      await resetPasswordWithOtp(draft.phone.trim(), value, draft.password);
-      setDraft(null);
-      setDone(true);
-    } catch (error) {
-      // Sai/hết hạn mã: ở lại sheet cho nhập lại.
-      setOtpError(errorMessage(error));
-      setCode('');
-    } finally {
-      setSubmitting(false);
-    }
+    if (!draft || submitting || otp.codeDead || !isOtpCodeComplete(value)) return;
+    // Sai/hết hạn mã: ở lại sheet cho nhập lại (mã chết thì khoá ô, chỉ còn gửi lại).
+    await submitReset(draft, value);
   };
 
   const resend = async () => {
@@ -119,7 +149,7 @@ export function ForgotPasswordScreen({ onBackToLogin }: { onBackToLogin: () => v
     return (
       <>
         <AppHeader onBack={onBackToLogin} />
-        <Screen edges={['left', 'right', 'bottom']}>
+        <Screen edges={['left', 'right', 'bottom']} maxWidth="form">
           <YStack ai="center" gap={space.lg}>
             <StatusIcon icon="checkmark-circle-outline" tone={STATUS_TONE.SUCCESS} />
             <YStack ai="center" gap={space.xs}>
@@ -141,7 +171,7 @@ export function ForgotPasswordScreen({ onBackToLogin }: { onBackToLogin: () => v
     <>
       <AppHeader onBack={onBackToLogin} />
 
-      <Screen edges={['left', 'right', 'bottom']}>
+      <Screen edges={['left', 'right', 'bottom']} maxWidth="form">
         <YStack gap={space.xl}>
           <YStack gap={space.xs}>
             <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold}>
@@ -170,6 +200,7 @@ export function ForgotPasswordScreen({ onBackToLogin }: { onBackToLogin: () => v
               required
               label={t('resetPassword.newPassword')}
               placeholder={t('resetPassword.newPasswordPlaceholderApp')}
+              hint={t('passwordRule')}
               icon="lock-closed-outline"
               secureTextEntry
               autoCapitalize="none"
@@ -219,7 +250,7 @@ export function ForgotPasswordScreen({ onBackToLogin }: { onBackToLogin: () => v
             label={t('resetPassword.submit')}
             icon="key-outline"
             loading={submitting}
-            disabled={!isOtpCodeComplete(code)}
+            disabled={!isOtpCodeComplete(code) || otp.codeDead}
             onPress={() => void reset(code)}
           />
         }
@@ -235,7 +266,7 @@ export function ForgotPasswordScreen({ onBackToLogin }: { onBackToLogin: () => v
               setCode(next);
             }}
             onComplete={(full) => void reset(full)}
-            disabled={submitting}
+            disabled={submitting || otp.codeDead}
             autoFocus
           />
           {otpError ? <Callout tone="danger">{otpError}</Callout> : null}

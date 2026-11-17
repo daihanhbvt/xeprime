@@ -16,15 +16,17 @@ import { elevation } from '@/theme/elevation';
 import { layout } from '@/theme/layout';
 import { duration, easing, pressScale } from '@/theme/motion';
 import { themed, useAppScheme, useDarkAccentBorder } from '@/theme/ThemeProvider';
-import { radius, space } from '@/theme/tokens';
+import { radius } from '@/theme/tokens';
 
-type Tone = 'surface' | 'muted' | 'accent';
+type Tone = 'surface' | 'muted' | 'accent' | 'layout';
 type Lift = 'flat' | 'card' | 'raised';
 
 const useTone = themed<Record<Tone, { bg: string; border: string }>>((colors) => ({
   surface: { bg: colors.surface, border: colors.border },
   muted: { bg: colors.surfaceMuted, border: colors.borderSubtle },
   accent: { bg: colors.primaryLight, border: colors.primaryLight },
+  /** Nền TRANG (`--xp-color-bg-layout`) - ô "yên" của Tổng quan partner (web `ActionTile .calm`). */
+  layout: { bg: colors.background, border: colors.borderSubtle },
 }));
 
 interface CardProps {
@@ -59,6 +61,11 @@ interface CardProps {
    * thay cho hover chuột của web trên màn cảm ứng (người dùng chốt 27/10/2026).
    */
   highlighted?: boolean;
+  /**
+   * Thẻ GIÃN hết ô cha (cả chiều cao) - cho lưới hai cột mà hai thẻ cùng hàng phải cao bằng nhau
+   * như `grid` của web (ô việc cần làm, thẻ KPI Tổng quan). Thân thẻ thành `flex: 1`.
+   */
+  fill?: boolean;
 }
 
 
@@ -82,6 +89,7 @@ export function Card({
   borderColor: borderOverride,
   pressHighlight = false,
   highlighted: highlightedProp = false,
+  fill = false,
 }: CardProps) {
   const [pressed, setPressed] = useState(false);
   const highlighted = highlightedProp || (pressHighlight && pressed);
@@ -107,6 +115,7 @@ export function Card({
 
   const body = (
     <YStack
+      {...(fill ? { f: 1 } : {})}
       bg={skin.bg}
       br={cornerRadius}
       bw={1}
@@ -131,6 +140,7 @@ export function Card({
     <PressableCard
       onPress={onPress}
       label={accessibilityLabel}
+      fill={fill}
       {...(pressHighlight ? { onPressedChange: setPressed } : {})}
     >
       {body}
@@ -158,10 +168,12 @@ function PressableCard({
   onPress,
   label,
   onPressedChange,
+  fill = false,
 }: {
   children: ReactNode;
   onPress: () => void;
   label?: string;
+  fill?: boolean;
   /** Báo ra ngoài lúc ngón tay chạm/rời — `Card` dùng cho `pressHighlight`. */
   onPressedChange?: (pressed: boolean) => void;
 }) {
@@ -186,6 +198,7 @@ function PressableCard({
       onPress={onPress}
       accessibilityRole="button"
       {...(label ? { accessibilityLabel: label } : {})}
+      {...(fill ? { style: FILL_STYLE } : {})}
       onPressIn={() => {
         onPressedChange?.(true);
         to(1, duration.fast * PRESS_IN_DURATION_RATIO);
@@ -195,7 +208,9 @@ function PressableCard({
         to(0, duration.fast);
       }}
     >
-      <Animated.View style={style}>{children}</Animated.View>
+      <Animated.View style={fill ? [FILL_STYLE, style] : style}>{children}</Animated.View>
     </Pressable>
   );
 }
+
+const FILL_STYLE = { flex: 1 } as const;

@@ -38,7 +38,10 @@ function useTypeOptions() {
   );
 }
 
-/** Hàng nút cuối form: lối thoát bên TRÁI co vừa chữ, hành động chính bên PHẢI lấy phần còn lại. */
+/**
+ * Hàng nút cuối form theo khuôn thanh đặt xe của app KHÁCH: hai nút chia đều, lối thoát `outline`
+ * bên TRÁI, hành động chính `gradient` bên PHẢI (người dùng chốt 10/11/2026).
+ */
 function FormActions({
   saving,
   submitLabel,
@@ -53,11 +56,17 @@ function FormActions({
   const tActions = useTranslations('Common.actions');
   return (
     <XStack gap={space.sm}>
-      <YStack flexShrink={0}>
-        <Button label={tActions('close')} variant="ghost" disabled={saving} onPress={onClose} />
+      <YStack f={1}>
+        <Button label={tActions('close')} variant="outline" disabled={saving} onPress={onClose} />
       </YStack>
       <YStack f={1}>
-        <Button label={submitLabel} icon="checkmark-outline" loading={saving} onPress={onSubmit} />
+        <Button
+          label={submitLabel}
+          variant="gradient"
+          icon="checkmark-outline"
+          loading={saving}
+          onPress={onSubmit}
+        />
       </YStack>
     </XStack>
   );
@@ -92,7 +101,6 @@ export function InviteDriverSheet({
 }
 
 function InviteForm({ onDone, defaults }: { onDone: () => void; defaults: InviteDriverValues }) {
-  const colors = useColors();
   const t = useTranslations('Drivers');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
@@ -128,9 +136,6 @@ function InviteForm({ onDone, defaults }: { onDone: () => void; defaults: Invite
 
   return (
     <YStack gap={space.md}>
-      <Text col={colors.textMuted} fos={fontSize.bodySm}>
-        {t('form.inviteHint')}
-      </Text>
       {invite.isError ? <Callout tone="danger">{errorMessage(invite.error)}</Callout> : null}
       <TextField
         control={control}
@@ -155,7 +160,16 @@ function InviteForm({ onDone, defaults }: { onDone: () => void; defaults: Invite
         required
         options={typeOptions}
       />
-      <TextField control={control} name="note" label={t('form.note')} multiline rows={3} />
+      <TextField
+        control={control}
+        name="note"
+        label={t('form.note')}
+        placeholder={t('form.notePlaceholder')}
+        multiline
+        rows={3}
+      />
+      {/* Khối "Lưu ý" cuối form như web `InviteDriverModal` (tiêu đề + mô tả). */}
+      <Callout title={t('form.hintTitle')}>{t('form.inviteHint')}</Callout>
       <FormActions
         saving={invite.isPending}
         submitLabel={t('actions.sendInvite')}

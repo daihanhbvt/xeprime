@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';

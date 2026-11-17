@@ -1,31 +1,36 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { FlatList, RefreshControl, StyleSheet, type ListRenderItem } from 'react-native';
+import { useAccumulatedPages } from '@/hooks/use-accumulated-pages';
+import { RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { YStack } from 'tamagui';
+import { Redirect } from 'expo-router';
+import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import {
-  BOOKING_STATUS,
+  isBookingClosedWithoutTrip,
   BOOKING_STATUS_SELECTABLE_VALUES,
   DEBT_FILTER,
   DEBT_FILTER_VALUES,
   DEBT_SORT_VALUES,
   DEFAULT_DEBT_SORT,
   PERMISSION,
+  PLAN_FEATURE,
   type DebtFilter,
 } from '@xeprime/types';
-import { Chip } from '@/components/ui/Chip';
 import { useDomainLabel } from '@/i18n/domain';
 import { space } from '@/theme/tokens';
 import { Screen } from '@/components/layout/Screen';
 import { RecordCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
+import { useFeature } from '@/features/auth/hooks/use-feature';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { ROUTES } from '@/navigation/routes';
 import { RecordPaymentSheet } from '@/features/settlement/components/RecordPaymentSheet';
-import { ManageHeader } from '@/features/shell/ManageHeader';
+import { ChipTabs } from '@/components/ui/ChipTabs';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { ManageListShell } from '@/features/shell/ManageListShell';
 import {
-  BranchFilterField,
   useBranchEmptyCopy,
 } from '@/features/branches/components/BranchFilterField';
 import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
@@ -51,9 +56,12 @@ import type { DebtItem, DebtSummary } from './api';
 const SKELETON_ROWS = 3;
 const SEARCH_DEBOUNCE_MS = 300;
 
-/** Trạng thái đơn chọn được ở bộ lọc — đơn huỷ không mang công nợ (như web). */
+/**
+ * Trạng thái đơn chọn được ở bộ lọc — đơn huỷ / khách không đến không mang công nợ (chuyến không
+ * diễn ra — `SQL_DEBT_SCOPE`), như web.
+ */
 const DEBT_STATUS_OPTIONS = BOOKING_STATUS_SELECTABLE_VALUES.filter(
-  (status) => status !== BOOKING_STATUS.CANCELLED,
+  (status) => !isBookingClosedWithoutTrip(status),
 );
 
 /** Số đếm của một chip nhóm hạn — đọc từ dải thẻ, KHÔNG theo nhóm đang mở. */
@@ -89,6 +97,9 @@ const keyOf = (debt: DebtItem) => debt.bookingId;
 export function DebtListScreen() {
   const colors = useColors();
   const t = useTranslations('Finance.debts');
+  const navigateOnce = useNavigateOnce();
+  // Hai tab của "Lịch sử giao dịch" dùng CHUNG tiêu đề + mô tả của web (ledger 09 §3.11).
+  const tHistory = useTranslations('Finance.history.page');
   const tCommon = useTranslations('Common.labels');
   const tActions = useTranslations('Common.actions');
   /* Câu thiếu quyền là CHUNG cho cả tuyến tiền — dùng lại đúng chuỗi của màn Tổng quan. */
@@ -99,6 +110,11 @@ export function DebtListScreen() {
   const canViewFinance = permissions.has(PERMISSION.FINANCE_VIEW);
   const canViewBooking = permissions.has(PERMISSION.BOOKING_VIEW);
   const canRecord = permissions.has(PERMISSION.PAYMENT_RECORD);
+  /*
+   * Tab Công nợ mang cờ gói RIÊNG (`PLAN_FEATURE.DEBTS`) — web: gói không có thì `?view=debts`
+   * rơi về sổ Thu-Chi. `read_only` (gói hết hạn) VẪN mở, kèm băng gia hạn của vỏ trang.
+   */
+  const debtsFeature = useFeature(PLAN_FEATURE.DEBTS);
 
   const [group, setGroup] = useState<string>(DEBT_FILTER.ALL);
   const [status, setStatus] = useState<string>(FILTER_ALL);
@@ -130,11 +146,12 @@ export function DebtListScreen() {
       sort,
       page,
     },
-    canViewFinance,
+    canViewFinance && debtsFeature.isVisible,
   );
-  const summary = useDebtSummary(scope, canViewFinance);
+  const summary = useDebtSummary(scope, canViewFinance && debtsFeature.isVisible);
 
-  const items = query.data?.items ?? [];
+  // Cuộn vô hạn trên mobile: gộp các trang đã tải (`useAccumulatedPages`).
+  const items = useAccumulatedPages(query.data?.items, query.data?.meta?.page, (row) => row.bookingId);
   const meta = query.data?.meta;
 
   /* Thu xong một đơn là nó rời danh sách — trang đang đứng có thể biến mất theo. */
@@ -197,19 +214,22 @@ export function DebtListScreen() {
     [canViewBooking, canRecord, openBooking],
   );
 
-  const filtered =
-    group !== DEBT_FILTER.ALL || status !== FILTER_ALL || trimmedSearch.length > 0;
+  const filtered = group !== DEBT_FILTER.ALL || status !== FILTER_ALL || trimmedSearch.length > 0;
+
+  if (!debtsFeature.isVisible) return <Redirect href={ROUTES.manage.receipts()} />;
 
   // Thiếu quyền là 403 của CHÍNH màn này — KHÔNG gọi API rồi mới nhận lỗi.
   if (!permissions.isLoading && !canViewFinance) {
     return (
       <>
-        <ManageHeader />
+        <ManagePageHeader title={tHistory('title')} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
             title={tForbidden('title')}
             description={tForbidden('description')}
+            actionLabel={tForbidden('home')}
+            onAction={() => navigateOnce(ROUTES.manage.home())}
           />
         </Screen>
       </>
@@ -218,16 +238,18 @@ export function DebtListScreen() {
 
   return (
     <>
-      <ManageHeader />
+      <ManagePageHeader title={tHistory('title')} />
       <Screen edges={['left', 'right', 'bottom']} scroll={false} padded={false}>
         <ManageListShell
-          title={t('page.title')}
+          variant="page"
+          title={tHistory('title')}
+          subtitle={tHistory('subtitle')}
           {...(meta === undefined ? {} : { total: t('table.totalLabel', { count: meta.total }) })}
           searchValue={search}
           searchLabel={t('filters.searchLabel')}
           searchPlaceholder={t('filters.searchPlaceholder')}
           onSearchChange={changeSearch}
-          branch={<BranchFilterField filter={branchFilter} value={branchId} />}
+          branchFilter={{ filter: branchFilter, value: branchId }}
           summary={
             <>
               <TransactionHistoryTabs value={TRANSACTION_HISTORY_VIEW.DEBTS} />
@@ -241,30 +263,20 @@ export function DebtListScreen() {
             </>
           }
           tabs={
-            /*
-              Nhóm hạn là CHIP có số đếm (design web) — đứng ngoài tấm lọc để con số luôn nhìn
-              thấy. Số đếm đọc từ dải thẻ nên không đổi theo chip đang mở.
-            */
-            <FlatList
-              horizontal
-              data={DEBT_FILTER_VALUES}
-              keyExtractor={groupKeyOf}
-              showsHorizontalScrollIndicator={false}
-              style={styles.tabs}
-              contentContainerStyle={styles.tabsContent}
-              accessibilityLabel={t('filters.groupLabel')}
-              renderItem={({ item }) => {
+            // Nhóm hạn: dải tab viên chung kèm số đếm (số đếm đọc từ dải thẻ nên không đổi theo tab).
+            <ChipTabs
+              label={t('filters.groupLabel')}
+              value={group}
+              onSelect={changeGroup}
+              gutter={layout.screenX}
+              items={DEBT_FILTER_VALUES.map((item) => {
                 const count = groupCount(summary.data, item);
-                const label = item === DEBT_FILTER.ALL ? t('filters.all') : t(`filters.${item}`);
-                return (
-                  <Chip
-                    label={count === null ? label : `${label}  ${count}`}
-                    selected={group === item}
-                    size="sm"
-                    onPress={() => changeGroup(item)}
-                  />
-                );
-              }}
+                return {
+                  value: item as string,
+                  label: item === DEBT_FILTER.ALL ? t('filters.all') : t(`filters.${item}`),
+                  ...(count === null ? {} : { count }),
+                };
+              })}
             />
           }
           hasRows={items.length > 0}
@@ -272,6 +284,7 @@ export function DebtListScreen() {
           onFilterChange={changeFilter}
           {...(meta === undefined ? {} : { meta })}
           onPageChange={setPage}
+          loadingMore={query.isFetching && page > 1}
         >
           {({ onScroll, headerHeight, contentContainerStyle, bindList }) => {
             const inStateScroll = (children: ReactNode) => (
@@ -375,9 +388,3 @@ export function DebtListScreen() {
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  // `flexGrow: 0`: một FlatList ngang trong cột dọc sẽ nuốt hết chiều cao còn lại.
-  tabs: { flexGrow: 0, paddingVertical: space.sm },
-  tabsContent: { paddingHorizontal: layout.screenX, gap: space.xs },
-});

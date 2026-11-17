@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -8,7 +8,6 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
-import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { usePartnerAppConfig } from '@/features/app-config/use-partner-app-config';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -35,7 +34,12 @@ import { usePaymentSettings, useUpdatePaymentSettings } from '../hooks/use-shop'
  * phải một màn, nên không có chỗ để dựng một trạng thái "không có quyền" của riêng nó; màn chứa
  * nó đã có trạng thái đó cho chính sách thuê.
  */
-export function DepositSettingsSection() {
+export function DepositSettingsSection({
+  showHead = true,
+}: {
+  /** `false` khi khối nằm trong thẻ "Thanh toán & hóa đơn" (web `ShopPaymentCard`) — thẻ mang tiêu đề. */
+  showHead?: boolean;
+} = {}) {
   const colors = useColors();
   const t = useTranslations('Shop.paymentSettings');
   const { has } = usePermissions();
@@ -46,6 +50,13 @@ export function DepositSettingsSection() {
   const query = usePaymentSettings(canView && Boolean(tenant));
 
   if (!canView) return null;
+  /*
+   * Đang tải thì chưa vẽ gì, và khoá theo GIAI ĐOẠN nền tảng (mọi gian hàng đều thu, không ai bật/tắt
+   * được) thì ẩn HẲN khối — không có việc gì để làm, không có lựa chọn nào để đọc (web `ShopPaymentCard`,
+   * chốt 06/11/2026). Một khung xương hiện rồi biến mất làm cả màn giật lên. Chặn thật vẫn ở server.
+   */
+  if (query.isLoading) return null;
+  if (query.data && lockReason(query.data) === 'platform') return null;
 
   return (
     <YStack gap={space.md}>
@@ -53,25 +64,25 @@ export function DepositSettingsSection() {
         Tiêu đề khối tự dựng chứ không mượn `BlockTitle`: đây là một MỤC ngang hàng với các khối
         chính sách của màn (thẻ trắng, tiêu đề cỡ thường), không phải một nhãn nhỏ bên trong thẻ.
       */}
-      <YStack gap={2}>
-        <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.semibold}>
-          {t('title')}
-        </Text>
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {t('subtitle')}
-        </Text>
-      </YStack>
+      {showHead ? (
+        <YStack gap={2}>
+          <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.semibold}>
+            {t('title')}
+          </Text>
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            {t('subtitle')}
+          </Text>
+        </YStack>
+      ) : null}
 
-      {query.isLoading ? (
-        <MiniRowsSkeleton rows={5} />
-      ) : query.isError || !query.data ? (
+      {query.isError || !query.data ? (
         <ScreenError
           error={query.error}
           title={t('loadError')}
           onRetry={() => void query.refetch()}
         />
       ) : (
-        <DepositToggleCard settings={query.data} canEdit={canEdit} />
+        <DepositToggleCard settings={query.data} canEdit={canEdit} inCard={!showHead} />
       )}
     </YStack>
   );
@@ -112,7 +123,16 @@ function lockReason(
  * Chặn THẬT nằm ở server (`DepositPolicyService.updateSettings` ném 403); `canEdit` ở đây chỉ để
  * không mời người dùng bấm một thứ chắc chắn hỏng.
  */
-function DepositToggleCard({ settings, canEdit }: { settings: PaymentSettings; canEdit: boolean }) {
+function DepositToggleCard({
+  settings,
+  canEdit,
+  inCard,
+}: {
+  settings: PaymentSettings;
+  canEdit: boolean;
+  /** Nằm trong thẻ "Thanh toán & hóa đơn" (không có đầu khối riêng). */
+  inCard: boolean;
+}) {
   const colors = useColors();
   const t = useTranslations('Shop.paymentSettings');
   const router = useRouter();
@@ -211,9 +231,21 @@ function DepositToggleCard({ settings, canEdit }: { settings: PaymentSettings; c
         {settings.depositRequired ? t('mode.onBody') : t('mode.offBody')}
       </Callout>
 
+      {/* Web `ShopPaymentCard` để câu "giữ chỗ khác cọc thế chấp" trong ⓘ - thẻ không có tiêu đề riêng thì in ra đây. */}
+      {inCard ? (
+        <Text col={colors.textMuted} fos={fontSize.label}>
+          {t('subtitle')}
+        </Text>
+      ) : null}
       <Text col={colors.placeholder} fos={fontSize.label}>
         {t('frozen')}
       </Text>
+      {/* Thiếu `seller_profile.manage` mà không bị khoá: nói vì sao công tắc mờ (web `DepositDescription`). */}
+      {!canEdit && !locked ? (
+        <Text col={colors.textMuted} fos={fontSize.label}>
+          {t('readOnly')}
+        </Text>
+      ) : null}
     </YStack>
   );
 }

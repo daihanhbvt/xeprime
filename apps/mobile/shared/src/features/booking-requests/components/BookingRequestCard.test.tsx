@@ -150,11 +150,10 @@ describe('BookingRequestCard - Nhắn tin', () => {
     expect(await view.findByLabelText('Gọi Nguyễn Văn An theo số 0901234567')).toBeTruthy();
   });
 
-  it('khách để lại số khác số tài khoản: hiện thêm SĐT tài khoản, chạm là gọi', async () => {
+  it('khách để lại số khác số tài khoản: dải thông tin thêm nói SĐT tài khoản (như web)', async () => {
     const view = await renderCard(request({ customerAccountPhone: '0912345678' }));
 
     expect(await view.findByText('SĐT tài khoản: 0912345678')).toBeTruthy();
-    expect(view.getByLabelText('Gọi số tài khoản 0912345678 của Nguyễn Văn An')).toBeTruthy();
   });
 
   it('không có SĐT tài khoản (server không trả): không hiện dòng nào', async () => {
@@ -213,49 +212,29 @@ describe('BookingRequestCard - ghi chú của khách', () => {
 });
 
 /*
- * Web: `openableDetail = true` — mọi yêu cầu đều mở chi tiết, và nhãn gợi ý của khối lịch trình
- * LUÔN là `trace.viewBooking`, kể cả khi yêu cầu chưa thành đơn. Yêu cầu đã thành đơn (và người
- * xem có quyền xem đơn) có thêm lối cùng nhãn ở chân thẻ (`hasBookingLink`).
+ * Web 05/11/2026: bấm vào THẺ (chỗ trống) mở chi tiết — `RentalCard.onOpenDetail`. Màn gọi quyết
+ * đích (đã thành đơn thì chi tiết ĐƠN), thẻ chỉ gọi `onOpenDetail`.
  */
 describe('BookingRequestCard - lối mở chi tiết', () => {
-  it('yêu cầu CHƯA thành đơn: khối lịch trình vẫn nói "Xem chi tiết đơn thuê" và mở chi tiết', async () => {
+  it('chạm vào thẻ mở chi tiết yêu cầu', async () => {
     const onOpenDetail = jest.fn();
     const view = await renderCard(request(), ALL, onOpenDetail);
 
-    expect(await view.findByText(t.trace.viewBooking)).toBeTruthy();
-    expect(view.queryByText(t.detail.title)).toBeNull();
     await fireEvent.press(
-      view.getByLabelText(t.trace.viewBookingFor.replace('{vehicle}', 'Toyota Vios 2022')),
+      await view.findByLabelText(t.card.openDetail.replace('{vehicle}', 'Toyota Vios 2022')),
     );
     expect(onOpenDetail).toHaveBeenCalledTimes(1);
   });
 
-  it('yêu cầu ĐÃ thành đơn + có quyền xem đơn: thêm lối ở chân thẻ', async () => {
-    const onOpenDetail = jest.fn();
+  it('yêu cầu chưa có mã đơn: dải đầu nói "Gửi lúc", có mã thì nói mã đơn', async () => {
     const view = await renderCard(
       request({
         status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
         bookingId: '01JQZX0000000000000000000B',
-      }),
-      ALL,
-      onOpenDetail,
+        bookingCode: 'DH-0042',
+      } as Partial<BookingRequestItem>),
     );
 
-    await waitFor(() => expect(view.getAllByText(t.trace.viewBooking)).toHaveLength(2));
-    await fireEvent.press(view.getByRole('button', { name: t.trace.viewBooking }));
-    expect(onOpenDetail).toHaveBeenCalledTimes(1);
-  });
-
-  it('đã thành đơn nhưng KHÔNG có quyền xem đơn: không có lối ở chân thẻ', async () => {
-    const view = await renderCard(
-      request({
-        status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
-        bookingId: '01JQZX0000000000000000000B',
-      }),
-      [PERMISSION.VEHICLE_VIEW],
-    );
-
-    await view.findByRole('link', { name: 'Toyota Vios 2022' });
-    expect(view.getAllByText(t.trace.viewBooking)).toHaveLength(1);
+    expect(await view.findByText(t.card.bookingCode.replace('{code}', 'DH-0042'))).toBeTruthy();
   });
 });

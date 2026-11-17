@@ -17,7 +17,7 @@ import {
   type TenantCustomerRiskLevel,
 } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
-import { StatusBadge } from '@/components/data-display/StatusBadge';
+import { StatusBadge, ToneDotBadge } from '@/components/data-display/StatusBadge';
 import { LineIcon } from '@/components/icons/LineIcon';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useBranchCrumb } from '@/features/branches/hooks/use-branch-return';
@@ -28,7 +28,7 @@ import { telHref, zaloHref } from '@/lib/contact';
 import { toAppTz } from '@/lib/datetime';
 import { BOOKING_REQUEST_CLOSED_STATUSES } from '../constants';
 import type { BookingRequestItem } from '../types';
-import { RequestPaymentFacts } from './BookingRequestCard';
+import { RequestPaymentFacts, requestPaymentRows } from './BookingRequestCard';
 import styles from './BookingRequestDetailDialog.module.css';
 
 interface Props {
@@ -389,10 +389,12 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 /** Remount theo `request.id` để không giữ lại trạng thái của yêu cầu trước. */
 export function BookingRequestDetailDialog(props: Props) {
   const t = useTranslations('BookingRequests');
+  const tKanban = useTranslations('Bookings.board.kanban');
   const { request, onClose } = props;
   if (!request) return null;
   const isClosed = (BOOKING_REQUEST_CLOSED_STATUSES as readonly string[]).includes(request.status);
 
+  const holdState = requestPaymentRows(request, t).find((row) => row.key === 'hold')?.holdState ?? null;
   return (
     <ResponsiveDialog
       open
@@ -403,12 +405,22 @@ export function BookingRequestDetailDialog(props: Props) {
       title={
         <span className={styles.titleRow}>
           <span>{t('detail.dialogTitle')}</span>
-          <StatusBadge
-            value={request.status as BookingRequestStatus}
-            meta={BOOKING_REQUEST_STATUS_META}
-            group="bookingRequestStatus"
-            tone={isClosed ? STATUS_COLOR.DANGER : undefined}
-          />
+          {/*
+            Cùng viên với thẻ (16/11/2026): yêu cầu còn mở mà có giữ chỗ thì nói TRẠNG THÁI GIỮ CHỖ
+            ("Chưa thanh toán" / "Đã thanh toán" / "Dự kiến") như thẻ Kanban; đã khép thì kết cục.
+          */}
+          {holdState && !isClosed ? (
+            <ToneDotBadge color={HOLD_STATE_COLOR[holdState]}>
+              {holdState === 'expected' ? tKanban('holdState.awaitingApproval') : tKanban(`holdState.${holdState}`)}
+            </ToneDotBadge>
+          ) : (
+            <StatusBadge
+              value={request.status as BookingRequestStatus}
+              meta={BOOKING_REQUEST_STATUS_META}
+              group="bookingRequestStatus"
+              tone={isClosed ? STATUS_COLOR.DANGER : undefined}
+            />
+          )}
         </span>
       }
     >
@@ -416,3 +428,9 @@ export function BookingRequestDetailDialog(props: Props) {
     </ResponsiveDialog>
   );
 }
+
+const HOLD_STATE_COLOR = {
+  paid: STATUS_COLOR.SUCCESS,
+  unpaid: STATUS_COLOR.DANGER,
+  expected: STATUS_COLOR.WAITING,
+} as const;

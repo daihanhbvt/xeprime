@@ -22,6 +22,7 @@ import { getErrorMessage } from '@/lib/get-error-message';
  */
 export function ChatWithShopButton({
   vehicleId,
+  tripId,
   shopSlug,
   label,
   variant = 'secondary',
@@ -33,6 +34,11 @@ export function ChatWithShopButton({
 }: {
   /** Mở hội thoại VỀ MỘT XE. Loại trừ nhau với `shopSlug` — truyền đúng một trong hai. */
   vehicleId?: string;
+  /**
+   * Nhắn từ một CHUYẾN (id yêu cầu thuê) — câu đầu tiên mang thẻ chuyến, gian hàng bấm vào mở
+   * đúng đơn / yêu cầu đó (web `ChatWithShopButton.tripId`). Vẫn cần `vehicleId` để mở hội thoại.
+   */
+  tripId?: string;
   /**
    * Mở hội thoại với GIAN HÀNG, cho màn gian hàng nơi chưa có chiếc xe nào được chọn.
    *
@@ -78,7 +84,7 @@ export function ChatWithShopButton({
     mutationFn: () => chatApi.start(vehicleId ? { vehicleId } : { shopSlug: shopSlug ?? '' }),
     onSuccess: (conversation) => {
       onNavigate?.();
-      navigateOnce(ROUTES.chat.thread(conversation.id, vehicleId));
+      navigateOnce(ROUTES.chat.thread(conversation.id, { vehicleId, tripId }));
     },
     onError: (error: unknown) => {
       /*

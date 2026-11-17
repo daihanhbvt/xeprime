@@ -32,6 +32,7 @@ export {
   getApiBaseUrl,
   getErrorCode,
   getErrorDetails,
+  getRetryAfterSeconds,
   isRetriableError,
   isUnauthenticated,
   type ApiRequestOptions,

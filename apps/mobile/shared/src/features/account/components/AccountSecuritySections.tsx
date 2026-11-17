@@ -6,6 +6,7 @@ import { SettingRow } from '@/components/ui/SettingRow';
 import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 
 /** Tiêu đề + lời dẫn một phần của trang — gương `SectionCard` (title/hint) bên web. */
 export function SectionHead({
@@ -56,7 +57,7 @@ export function AccountSecuritySections({
       <YStack gap={space.sm} {...(onPasswordLayout ? { onLayout: onPasswordLayout } : {})}>
         <SectionHead title={tHub('sections.password')} hint={tHub('sections.passwordHint')} />
         <Card padded={false}>
-          <YStack px={space.md} py={space.xs}>
+          <YStack px={layout.padX} py={space.xs}>
             <SettingRow
               icon="lock-closed-outline"
               label={t('account.changePassword')}
@@ -70,7 +71,7 @@ export function AccountSecuritySections({
       <YStack gap={space.sm} {...(onDeleteLayout ? { onLayout: onDeleteLayout } : {})}>
         <SectionHead title={tHub('sections.delete')} hint={tHub('sections.deleteHint')} danger />
         <Card padded={false}>
-          <YStack px={space.md} py={space.xs}>
+          <YStack px={layout.padX} py={space.xs}>
             <SettingRow
               icon="trash-outline"
               label={t('account.deleteAccount')}

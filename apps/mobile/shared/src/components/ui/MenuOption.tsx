@@ -1,5 +1,5 @@
 import { Children, Fragment, isValidElement, type ReactNode } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { layout } from '@/theme/layout';

@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/Button';
 import { Callout, CalloutBody } from '@/components/ui/Callout';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
-import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
 
 /**
  * DẢI CHÀO MỪNG sau lần thanh toán gói đầu tiên (ADR 0040).
@@ -74,9 +73,8 @@ export function ShopWelcomeBanner({
         label={t('ready.cta')}
         size="sm"
         block={false}
-        onPress={() =>
-          navigateOnce(ROUTES.listYourVehicle.register(VEHICLE_REGISTRATION_SOURCE.ACCOUNT))
-        }
+        // Gian hàng tuyến gói đăng xe ở khu manage (web `paths.vehicleNew`), không vào wizard chủ xe.
+        onPress={() => navigateOnce(ROUTES.manage.vehicleNew())}
       />
     </Callout>
   );

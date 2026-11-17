@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { HANDOVER_TYPE, type HandoverType } from '@xeprime/types';
-import { AppHeader } from '@/components/layout/AppHeader';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
@@ -48,7 +48,7 @@ export function HandoverPhotosScreen({ bookingId }: { bookingId: string }) {
   if (query.isPending) {
     return (
       <>
-        <AppHeader title={t('title')} onBack={back} />
+        <ManagePageHeader title={t('title')} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']} refreshing={refreshing} onRefresh={onRefresh}>
           <YStack gap={layout.section}>
             <SkeletonText lines={2} />
@@ -62,7 +62,7 @@ export function HandoverPhotosScreen({ bookingId }: { bookingId: string }) {
   if (query.isError) {
     return (
       <>
-        <AppHeader title={t('title')} onBack={back} />
+        <ManagePageHeader title={t('title')} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenError error={query.error} onRetry={() => void query.refetch()} />
         </Screen>
@@ -81,7 +81,7 @@ export function HandoverPhotosScreen({ bookingId }: { bookingId: string }) {
   if (available.length === 0) {
     return (
       <>
-        <AppHeader title={t('title')} onBack={back} />
+        <ManagePageHeader title={t('title')} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="images-outline"
@@ -136,7 +136,7 @@ function SupplementBody({
 
   return (
     <>
-      <AppHeader title={title} onBack={onBack} />
+      <ManagePageHeader title={title} onBack={onBack} />
       <Screen edges={['left', 'right', 'bottom']} refreshing={refreshing} onRefresh={onRefresh}>
         <YStack gap={layout.section}>
           {/* Hai chiều có ảnh RIÊNG — gộp chung một lưới là trộn hiện trạng đầu và cuối chuyến. */}

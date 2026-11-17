@@ -1,4 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
+import { CardTitle } from '@/components/ui/CardTitle';
 import type { ReactNode } from 'react';
 import { Linking, Platform, Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -70,15 +71,10 @@ export function InsuranceCertificateList({
 }
 
 function InsuranceBlock({ title, children }: { title: string; children: ReactNode }) {
-  const colors = useColors();
   return (
     <YStack gap={space.sm} minWidth={0}>
-      <XStack ai="center" gap={space.xs}>
-        <Ionicons name="shield-checkmark-outline" size={iconSize.md} color={colors.text} />
-        <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.semibold} accessibilityRole="header">
-          {title}
-        </Text>
-      </XStack>
+      {/* Tiêu đề thẻ dùng chung (`CardTitle`, khuôn app khách) - cùng bộ với các thẻ khác của trang. */}
+      <CardTitle icon="shield-checkmark-outline">{title}</CardTitle>
       <YStack gap={space.sm}>{children}</YStack>
     </YStack>
   );

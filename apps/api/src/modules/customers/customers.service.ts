@@ -113,6 +113,7 @@ interface CustomerListRow {
   source: string;
   archived_at: Date | null;
   has_account: boolean;
+  avatar_url: string | null;
   completed_rental_count: bigint;
   active_booking_count: bigint;
   no_show_count: bigint;
@@ -176,9 +177,11 @@ export class CustomersService {
       ${statsCte(tenantId)}
       SELECT c.id, c.full_name, c.phone, c.email, c.risk_level, c.source, c.archived_at,
              (c.customer_user_id IS NOT NULL) AS has_account,
+             u.avatar_url,
              ${STATS_COLUMNS}
       FROM tenant_customers c
       LEFT JOIN customer_stats s ON s.tenant_customer_id = c.id
+      LEFT JOIN users u ON u.id = c.customer_user_id
       WHERE ${where}
       ORDER BY ${orderSql(sort)}
       LIMIT ${paging.take} OFFSET ${paging.skip}
@@ -361,6 +364,7 @@ export class CustomersService {
       riskLevel: customer.riskLevel,
       riskReason: customer.riskReason,
       hasAccount: customer.customerUserId !== null,
+      avatarUrl: customer.account?.avatarUrl ?? null,
       archivedAt: customer.archivedAt?.toISOString() ?? null,
       createdAt: customer.createdAt.toISOString(),
       updatedAt: customer.updatedAt.toISOString(),
@@ -803,6 +807,8 @@ export class CustomersService {
         riskLevel: true,
         riskReason: true,
         customerUserId: true,
+        // Ảnh đại diện của TÀI KHOẢN khách đã liên kết (sổ khách không có ảnh riêng).
+        account: { select: { avatarUrl: true } },
         archivedAt: true,
         createdAt: true,
         updatedAt: true,
@@ -1324,6 +1330,7 @@ function toListItem(row: CustomerListRow, canViewFinance: boolean): TenantCustom
     riskLevel: row.risk_level,
     source: row.source,
     hasAccount: row.has_account,
+    avatarUrl: row.avatar_url,
     archivedAt: row.archived_at?.toISOString() ?? null,
     ...toStats(row, canViewFinance),
   };

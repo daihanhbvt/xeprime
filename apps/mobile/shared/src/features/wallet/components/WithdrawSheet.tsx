@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { useQueryClient } from '@tanstack/react-query';
 import { getErrorCode } from '@xeprime/api-client';
@@ -172,19 +172,28 @@ export function WithdrawSheet({
           </Callout>
 
           <YStack gap={space.sm}>
-            <Button
-              icon="send-outline"
-              label={t('submit')}
-              disabled={!valid}
-              loading={create.isPending}
-              onPress={submit}
-            />
-            <Button
-              label={tCommon('cancel')}
-              variant="ghost"
-              disabled={create.isPending}
-              onPress={close}
-            />
+            {/* Hai nút một hàng: Huỷ (trái) · Gửi yêu cầu rút vàng (phải) - người dùng 17/11/2026. */}
+            <XStack gap={space.sm}>
+              <YStack f={1}>
+                <Button
+                  label={tCommon('cancel')}
+                  icon="close-outline"
+                  variant="neutral"
+                  disabled={create.isPending}
+                  onPress={close}
+                />
+              </YStack>
+              <YStack f={1}>
+                <Button
+                  icon="send-outline"
+                  label={t('submit')}
+                  variant="gradient"
+                  disabled={!valid}
+                  loading={create.isPending}
+                  onPress={submit}
+                />
+              </YStack>
+            </XStack>
           </YStack>
         </YStack>
       </BottomSheet>

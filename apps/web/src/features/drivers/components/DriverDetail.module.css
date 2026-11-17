@@ -186,3 +186,18 @@
     justify-content: flex-start;
   }
 }
+
+/* Tab Hồ sơ: mỗi nhóm một thẻ có tiêu đề (người dùng 16/11/2026). */
+.profileSection {
+  padding: var(--xp-space-md) var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+.profileSectionTitle {
+  margin: 0 0 var(--xp-space-md);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}

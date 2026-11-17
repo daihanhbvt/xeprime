@@ -1,5 +1,7 @@
+import { useState } from 'react';
+import { Pressable } from 'react-native';
 import { useForm } from 'react-hook-form';
-import { XStack, YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { guessAddressLine } from '@xeprime/domain';
 import { branchFormSchema, type BranchFormValues } from '@xeprime/validators';
@@ -7,13 +9,15 @@ import { AddressFields } from '@/components/form/AddressFields';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
+import { CheckMark } from '@/components/ui/CheckMark';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { space } from '@/theme/tokens';
-import type { Branch } from '../api';
-import { useCreateBranch, useUpdateBranch } from '../hooks/use-branches';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, sizing, space } from '@/theme/tokens';
+import { BRANCH_ACTION, type Branch } from '../api';
+import { useBranchAction, useCreateBranch, useUpdateBranch } from '../hooks/use-branches';
 
 /** Tên trường địa chỉ trong `branchFormSchema` — hằng ngoài component để định danh ổn định. */
 const ADDRESS_FIELD_NAMES = {
@@ -37,8 +41,8 @@ const ADDRESS_PIN_NAMES = {
  *
  * Địa chỉ đi qua `AddressFields` — tỉnh/thành và xã/phường chọn từ DANH MỤC NHÀ NƯỚC (mô hình
  * hai cấp từ 01/07/2025), số nhà và đường thì gõ kèm gợi ý địa điểm, rồi KIỂM lại cái ghim trên
- * ảnh bản đồ. Chỉ tỉnh/thành là BẮT BUỘC (đúng `branchFormSchema` + `CreateBranchDto`); xã/phường và
- * số nhà tuỳ chọn, nhưng nên khai đủ vì toạ độ chi nhánh là điểm xuất phát của phí giao xe tận nơi.
+ * ảnh bản đồ. Tỉnh/thành, xã/phường VÀ số nhà/đường đều BẮT BUỘC (`branchFormSchema`, ADR 0077 -
+ * y như web `BranchFormDialog`): toạ độ chi nhánh là điểm xuất phát của phí giao xe tận nơi.
  */
 export function BranchFormSheet({
   open,
@@ -83,9 +87,18 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
   const tActions = useTranslations('Common.actions');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
+  const colors = useColors();
   const create = useCreateBranch();
   const update = useUpdateBranch();
-  const saving = create.isPending || update.isPending;
+  const setDefault = useBranchAction();
+  /*
+   * "Đặt làm chi nhánh mặc định" ngay trong form (web `BranchFormDialog`, PR #282) — chỉ khi chi
+   * nhánh chưa là mặc định. Lưu xong mới gọi lượt đặt mặc định; lượt đó lỗi thì chi nhánh vẫn đã
+   * lưu, lối đặt mặc định ở menu thẻ vẫn còn.
+   */
+  const canMakeDefault = !branch?.isDefault;
+  const [makeDefault, setMakeDefault] = useState(false);
+  const saving = create.isPending || update.isPending || setDefault.isPending;
 
   const resolver = useValidationResolver<BranchFormValues>(branchFormSchema, 'Branches.validation');
   const { control, handleSubmit } = useForm<BranchFormValues>({
@@ -127,8 +140,14 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
       phone: values.phone.trim() || undefined,
     };
     const done = {
-      onSuccess: () => {
+      onSuccess: (saved: Branch) => {
         toast.showSuccess(branch ? t('toast.updated') : t('toast.created', { name: body.name }));
+        if (makeDefault && canMakeDefault) {
+          setDefault.mutate(
+            { id: saved.id, action: BRANCH_ACTION.SET_DEFAULT },
+            { onError: (err: unknown) => toast.showError(errorMessage(err)) },
+          );
+        }
         onDone();
       },
       onError: (err: unknown) => toast.showError(errorMessage(err)),
@@ -160,7 +179,6 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
         names={ADDRESS_FIELD_NAMES}
         pin={ADDRESS_PIN_NAMES}
         required
-        addressLineRequired={false}
         // Chỉ form TẠO MỚI. Ở form SỬA, ô tỉnh trống nghĩa là chi nhánh này có từ trước danh mục
         // hành chính (ADR 0035 điều 7) — điền vào đó tỉnh người dùng vừa tìm xe là dời một địa
         // điểm vận hành có thật sang tỉnh khác, âm thầm, chỉ vì họ bấm Lưu.
@@ -173,6 +191,22 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
         placeholder={tForm('phonePlaceholder')}
         keyboardType="phone-pad"
       />
+      {canMakeDefault ? (
+        <Pressable
+          disabled={saving}
+          onPress={() => setMakeDefault((value) => !value)}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: makeDefault, disabled: saving }}
+          accessibilityLabel={tForm('makeDefault')}
+        >
+          <XStack ai="center" gap={space.sm} minHeight={sizing.touchTarget}>
+            <CheckMark checked={makeDefault} />
+            <Text f={1} col={colors.text} fos={fontSize.bodySm}>
+              {tForm('makeDefault')}
+            </Text>
+          </XStack>
+        </Pressable>
+      ) : null}
 
       <XStack gap={space.sm}>
         {/*
@@ -187,7 +221,7 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
         </YStack>
         <YStack f={1}>
           <Button
-            label={branch ? tActions('save') : tForm('createOk')}
+            label={branch ? tActions('update') : tForm('createOk')}
             icon="checkmark-outline"
             loading={saving}
             onPress={() => void submit()}
