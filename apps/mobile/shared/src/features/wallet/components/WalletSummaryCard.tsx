@@ -1,8 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { isZeroMoney } from '@xeprime/domain';
 import { PERMISSION, SELLER_PROFILE_STATUS, WALLET_STATUS } from '@xeprime/types';
 import { Callout } from '@/components/ui/Callout';
+import { InfoHint } from '@/components/ui/InfoHint';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Divider } from '@/components/ui/DataRow';
@@ -88,6 +90,23 @@ export function WalletSummaryCard({
     );
   }
 
+  /*
+   * Trang "Quản lý ví" của gian hàng = `variant="hero"` của web (Figma `23948:94510`, ledger 09
+   * §3.10 #1-2): MỘT con số "Rút được ngay" trên nền vàng nhạt, huy hiệu "Đã xác minh" dưới số,
+   * dòng "… đang được chuyển về ngân hàng" chỉ khi khác 0, nút "Rút về ngân hàng" trong thẻ, dòng
+   * tối thiểu dưới nút khi khoá. Ô "Tổng XePrime phải trả" cũ đã bỏ — nó chỉ là tổng hai ô kia.
+   */
+  if (scope === WALLET_SCOPE.SHOP && pageVariant) {
+    return (
+      <HeroSummary
+        data={data}
+        frozen={frozen}
+        withdrawable={withdrawable}
+        {...(onWithdraw ? { onWithdraw } : {})}
+      />
+    );
+  }
+
   return (
     <Card>
       <YStack gap={space.md}>
@@ -164,6 +183,88 @@ export function WalletSummaryCard({
         {scope === WALLET_SCOPE.SHOP ? <VerifiedBadge /> : null}
       </YStack>
     </Card>
+  );
+}
+
+function HeroSummary({
+  data,
+  frozen,
+  withdrawable,
+  onWithdraw,
+}: {
+  data: { available: string; pending: string; minWithdrawAmount: string };
+  frozen: boolean;
+  withdrawable: boolean;
+  onWithdraw?: () => void;
+}) {
+  const colors = useColors();
+  const t = useTranslations('Wallet');
+  const fmt = useAppFormat();
+  const inTransit = !isZeroMoney(data.pending);
+
+  return (
+    <YStack
+      ai="center"
+      gap={space.md}
+      p={space.md}
+      br={radius.lg}
+      bg={colors.primaryLight}
+      bw={1}
+      bc={colors.primaryMuted}
+    >
+      {frozen ? (
+        <YStack alignSelf="stretch">
+          <Callout tone="warning">{t('balance.frozen')}</Callout>
+        </YStack>
+      ) : null}
+
+      <YStack ai="center" gap={space.sm} maxWidth="100%">
+        <XStack ai="center" gap={space.xs}>
+          <Text
+            col={colors.text}
+            fos={fontSize.bodyLg}
+            fow={fontWeight.medium}
+            textTransform="uppercase"
+          >
+            {t('balance.available')}
+          </Text>
+          <InfoHint label={t('summary.availableInfoLabel')} content={t('summary.availableInfo')} />
+        </XStack>
+        <Text col={colors.text} fos={fontSize.h1} fow={fontWeight.bold} ta="center">
+          {fmt.money(data.available)}
+        </Text>
+        <VerifiedBadge />
+      </YStack>
+
+      {inTransit ? (
+        <XStack ai="center" gap={space.xs} flexWrap="wrap" jc="center">
+          <Ionicons name="time-outline" size={iconSize.sm} color={colors.textMuted} />
+          <Text col={colors.textMuted} fos={fontSize.body}>
+            {t('summary.inTransit', { amount: fmt.money(data.pending) })}
+          </Text>
+          <InfoHint label={t('summary.inTransitInfoLabel')} content={t('summary.inTransitInfo')} />
+        </XStack>
+      ) : null}
+
+      {onWithdraw ? (
+        <YStack alignSelf="stretch" gap={space.xs}>
+          {/*
+            Nút vẫn HIỆN khi chưa đủ điều kiện rút, chỉ bị khoá — dòng ngay dưới nói rõ vì sao.
+          */}
+          <Button
+            icon="cash-outline"
+            label={t('withdraw.action')}
+            disabled={!withdrawable}
+            onPress={onWithdraw}
+          />
+          {!withdrawable && !frozen ? (
+            <Text col={colors.textMuted} fos={fontSize.label} ta="center">
+              {t('withdraw.belowMinimum', { min: fmt.money(data.minWithdrawAmount) })}
+            </Text>
+          ) : null}
+        </YStack>
+      ) : null}
+    </YStack>
   );
 }
 

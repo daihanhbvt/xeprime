@@ -1051,3 +1051,8 @@
   align-items: center;
   gap: 4px;
 }
+
+/* Cảnh báo trần đặt xe / chặn tự lái vì bảo hiểm (ADR 0091) — nằm ngay dưới ô chọn thời gian. */
+.limitAlert {
+  margin-top: var(--xp-space-12);
+}

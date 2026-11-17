@@ -184,10 +184,35 @@ export const API_ERROR_CODE = {
   /** Mẫu xe đang có xe gắn nên không xoá được — tắt mẫu thay vì xoá. */
   CATALOG_MODEL_IN_USE: 'CATALOG_MODEL_IN_USE',
   /**
+   * Dòng xe còn xe chuẩn (dữ liệu xe - ADR 0090) nên không xoá được: xoá dòng mà để xe chuẩn sống
+   * là xe chuẩn mồ côi, biến khỏi danh sách. Xoá / gộp các xe chuẩn trước, hoặc tắt dòng (ADR 0096).
+   */
+  CATALOG_MODEL_HAS_VEHICLE_DATA: 'CATALOG_MODEL_HAS_VEHICLE_DATA',
+  /**
    * Thông số mẫu xe tự mâu thuẫn: hộp số không khớp nguồn năng lượng, nguồn năng lượng sai loại
    * xe, số chỗ trên xe máy, năm kết thúc trước năm bắt đầu. Cùng ma trận mà form đăng xe dùng.
    */
   CATALOG_MODEL_SPEC_INVALID: 'CATALOG_MODEL_SPEC_INVALID',
+  /**
+   * Dữ liệu xe (ADR 0090): đã có một xe chuẩn cùng dòng xe, phiên bản và năm bắt đầu — một xe chỉ
+   * có một dòng.
+   */
+  CATALOG_VARIANT_DUPLICATE: 'CATALOG_VARIANT_DUPLICATE',
+  /** Xe chuẩn đang có xe của chủ xe gắn nên không xoá được — ẩn thay vì xoá. */
+  CATALOG_VARIANT_IN_USE: 'CATALOG_VARIANT_IN_USE',
+  /** Xe chuẩn không thuộc dòng xe đã chọn, hoặc đã bị từ chối/xoá. */
+  CATALOG_VARIANT_MISMATCH: 'CATALOG_VARIANT_MISMATCH',
+  /** Gian hàng đã tạo quá nhiều dòng xe mới trong 24 giờ (ADR 0090). */
+  CATALOG_PROPOSAL_LIMIT: 'CATALOG_PROPOSAL_LIMIT',
+  /**
+   * Lượt duyệt dữ liệu xe không hợp lệ: xe chuẩn không còn chờ duyệt, gộp vào chính nó / vào xe chưa
+   * duyệt / khác loại xe.
+   */
+  CATALOG_REVIEW_INVALID: 'CATALOG_REVIEW_INVALID',
+  /** File nhập không đọc được: sai định dạng, quá lớn, quá nhiều dòng hoặc không có bảng khớp tiêu đề. */
+  CATALOG_IMPORT_FILE_INVALID: 'CATALOG_IMPORT_FILE_INVALID',
+  /** Lượt nhập file không còn ở trạng thái xem trước (đã áp dụng / đã huỷ / hết hạn). */
+  CATALOG_IMPORT_NOT_PENDING: 'CATALOG_IMPORT_NOT_PENDING',
   /**
    * Đã có một yêu cầu thuê y hệt (cùng xe + SĐT + khung giờ) đang chờ shop phản hồi.
    * Mã riêng thay vì `CONFLICT` chung: FE hiện hộp "Yêu cầu trùng lặp" có lối đi tiếp
@@ -422,6 +447,18 @@ export const API_ERROR_CODE = {
   /** Hold không ở trạng thái chờ tiền — đã trả, đã hết hạn hoặc đã huỷ. `details` mang `{ status }`. */
   HOLD_NOT_PENDING: 'HOLD_NOT_PENDING',
   /**
+   * Admin chốt tay một hold CHƯA tới lượt người chốt: đơn còn chạy và không có case giữ quyết toán
+   * nào mở — kết cục sẽ tự chốt khi đơn kết thúc (`HOLD_SETTLE_REASON`). 409; `details` mang
+   * `{ bookingStatus }`.
+   */
+  HOLD_SETTLE_NOT_DUE: 'HOLD_SETTLE_NOT_DUE',
+  /**
+   * Admin chốt tay một hold mà đơn còn case "chưa xác nhận giao xe" mở: kết luận CHUYẾN ở case trước
+   * (ADR 0094) — tiền tự chốt theo kết luận đó. Chốt tiền trước là để đơn treo ở "Chờ giao xe"
+   * với một kết cục có thể trái ngược kết luận sau này. 409.
+   */
+  HOLD_SETTLE_NEEDS_TRIP_VERDICT: 'HOLD_SETTLE_NEEDS_TRIP_VERDICT',
+  /**
    * Gian hàng nhắc khách thanh toán khi khách VỪA nhận một lời nhắc — `HOLD_HOST_REMINDER_COOLDOWN_MINUTES`
    * (05/11/2026). 429; `details` mang `{ availableAt }` (ISO) để nút nói được lúc nào bấm lại.
    */
@@ -553,6 +590,13 @@ export const API_ERROR_CODE = {
   WITHDRAWAL_BELOW_MINIMUM: 'WITHDRAWAL_BELOW_MINIMUM',
   /** Yêu cầu rút đã được duyệt/chi/từ chối — không đổi được nữa. */
   WITHDRAWAL_ALREADY_HANDLED: 'WITHDRAWAL_ALREADY_HANDLED',
+  /**
+   * Lệnh từ ngưỡng hai người (`WITHDRAWAL_DUAL_CONTROL_MIN_AMOUNT`) trở lên: người bấm "Đã chuyển"
+   * phải KHÁC người đã duyệt (đợt rà Admin 16/11/2026). `details.minAmount` mang ngưỡng.
+   */
+  WITHDRAWAL_SECOND_PERSON_REQUIRED: 'WITHDRAWAL_SECOND_PERSON_REQUIRED',
+  /** Khoá một tài khoản đang khoá / mở một tài khoản đang mở. `details.status` mang trạng thái. */
+  CUSTOMER_ACCOUNT_STATE_CONFLICT: 'CUSTOMER_ACCOUNT_STATE_CONFLICT',
 
   // Hồ sơ người bán (R3)
   /** Hồ sơ ở trạng thái không cho sửa/gửi (đang chờ xác minh). `details` mang `{ status }`. */
@@ -569,6 +613,19 @@ export const API_ERROR_CODE = {
    * tranh chấp tự làm được — kể cả với case do chính họ mở.
    */
   SUPPORT_CASE_PLATFORM_RESOLVE_ONLY: 'SUPPORT_CASE_PLATFORM_RESOLVE_ONLY',
+  /**
+   * Case xác minh bàn giao (`handover_unconfirmed`, `return_unconfirmed`) mà đơn vẫn còn treo ở
+   * mốc đó: phải KẾT LUẬN CHUYẾN (`POST /platform/support/cases/:id/trip-verdict`), không kết
+   * luận/đóng trần được — đóng trần để đơn treo mãi và tiền giữ chỗ không bao giờ tự chốt
+   * (ADR 0094). 409; `details` mang `{ verdicts }`.
+   */
+  SUPPORT_CASE_TRIP_VERDICT_REQUIRED: 'SUPPORT_CASE_TRIP_VERDICT_REQUIRED',
+  /**
+   * Kết luận chuyến không dùng được cho case này lúc này: loại case không cần kết luận, kết luận
+   * không thuộc loại case, hay đơn đã rời mốc đó (chủ xe vừa xác nhận / huỷ). 409; `details`
+   * mang `{ verdicts, bookingStatus }` — `verdicts` là các kết luận còn hợp lệ (có thể rỗng).
+   */
+  SUPPORT_TRIP_VERDICT_NOT_ALLOWED: 'SUPPORT_TRIP_VERDICT_NOT_ALLOWED',
   /**
    * Loại case này chỉ do CHÍNH người dùng mở cho tài khoản của mình (`account_deletion`) —
    * gian hàng/nền tảng không mở hộ, và không gắn đơn thuê.
@@ -615,6 +672,19 @@ export const API_ERROR_CODE = {
    * `{ invoiceStatus }`.
    */
   BANK_TX_TARGET_NOT_PAYABLE: 'BANK_TX_TARGET_NOT_PAYABLE',
+  /**
+   * Khớp tay vào một khoản giữ chỗ / phụ lục ĐÃ ĐÓNG (hết hạn, huỷ, đã đủ…). Không bao giờ tạo đơn
+   * từ khoản đã đóng (ADR 0044 điều 7) — đường đúng là ghi có ví khách (ADR 0092). 409; `details`
+   * mang `{ status }`.
+   */
+  BANK_TX_TARGET_CLOSED: 'BANK_TX_TARGET_CLOSED',
+  /**
+   * Ghi có ví khách cho một khoản giữ chỗ / phụ lục VẪN CÒN NHẬN TIỀN — phải khớp vào nó để khách
+   * có chuyến, không hoàn tiền đi (ADR 0092). 409.
+   */
+  BANK_TX_TARGET_STILL_OPEN: 'BANK_TX_TARGET_STILL_OPEN',
+  /** Khoản giữ chỗ / phụ lục không gắn tài khoản khách nào để ghi có ví — chuyển trả tay. 409. */
+  BANK_TX_NO_CUSTOMER_ACCOUNT: 'BANK_TX_NO_CUSTOMER_ACCOUNT',
 
   // Cổng thanh toán MoMo / VNPAY (ADR 0058)
   /**
@@ -1216,6 +1286,62 @@ export const API_ERROR_CODE = {
    * việc vô ích vào hàng đợi worker (ADR 0064).
    */
   INSURANCE_PARTNER_NOT_CONFIGURED: 'INSURANCE_PARTNER_NOT_CONFIGURED',
+  /**
+   * Kê khai / nộp thuế cho một kỳ CHƯA KẾT THÚC (giờ VN) — làm giữa tháng là cắt đôi kỳ. 409;
+   * `details` mang `{ periodKey }`.
+   */
+  TAX_PERIOD_NOT_ENDED: 'TAX_PERIOD_NOT_ENDED',
+  /** Kỳ này đã ghi chứng cứ kê khai — mỗi kỳ kê khai một lần. 409. */
+  TAX_PERIOD_ALREADY_DECLARED: 'TAX_PERIOD_ALREADY_DECLARED',
+  /**
+   * Ghi NỘP cho một kỳ còn dòng chưa kê khai, hoặc không còn khoản đã kê khai nào để nộp. 409;
+   * `details` mang `{ accruedRows }`.
+   */
+  TAX_PERIOD_NOT_DECLARED: 'TAX_PERIOD_NOT_DECLARED',
+  /** Kỳ này đã ghi chứng cứ nộp — mỗi kỳ nộp một lần. 409. */
+  TAX_PERIOD_ALREADY_REMITTED: 'TAX_PERIOD_ALREADY_REMITTED',
+  /**
+   * Số đã nộp khác tổng thuế trên sổ của kỳ mà không có ghi chú giải thích. 400; `details` mang
+   * `{ ledgerAmount, remittedAmount }`.
+   */
+  TAX_REMITTANCE_NOTE_REQUIRED: 'TAX_REMITTANCE_NOTE_REQUIRED',
+  /** Không tải được GCN PDF từ hãng (mạng, hãng bảo trì) — thử lại sau (ADR 0088). */
+  INSURANCE_CERTIFICATE_UNAVAILABLE: 'INSURANCE_CERTIFICATE_UNAVAILABLE',
+  /** Bảng kê trả phí hãng không ở trạng thái cho phép thao tác này (ADR 0088 điều 6). */
+  INSURANCE_REMITTANCE_STATE_INVALID: 'INSURANCE_REMITTANCE_STATE_INVALID',
+  /** Kỳ kê chưa kết thúc, hoặc không có hợp đồng nào để kê (ADR 0088 điều 6). */
+  INSURANCE_REMITTANCE_EMPTY: 'INSURANCE_REMITTANCE_EMPTY',
+  /** Thu hồi hợp đồng đã tồn tại bên đối tác mà thiếu mã huỷ / biên bản đối chiếu (ADR 0093). */
+  INSURANCE_VOID_REFERENCE_REQUIRED: 'INSURANCE_VOID_REFERENCE_REQUIRED',
+  /** Hợp đồng đã nằm trong bảng kê trả hãng — không huỷ-hoàn được, phải đối chiếu với hãng (ADR 0093). */
+  INSURANCE_POLICY_REMITTED: 'INSURANCE_POLICY_REMITTED',
+  /**
+   * Chủ xe đặt bảo hiểm Bắt buộc mà xe chưa đủ điều kiện bảo hiểm — xe tạm không nhận đặt tự lái
+   * (ADR 0091 điều 1). 409 ở bước gửi yêu cầu.
+   */
+  VEHICLE_INSURANCE_NOT_READY: 'VEHICLE_INSURANCE_NOT_READY',
+  /**
+   * Khách đã mua bảo hiểm vật chất xe nhưng lúc duyệt xe không còn đủ điều kiện bảo hiểm — chủ xe
+   * bổ sung dữ liệu xe rồi duyệt lại, không tự bỏ dòng bảo hiểm khách đã chọn (ADR 0091 điều 1). 409.
+   */
+  VEHICLE_PROTECTION_UNAVAILABLE: 'VEHICLE_PROTECTION_UNAVAILABLE',
+  /**
+   * Ngày nhận xa hơn trần đặt trước của nền tảng (ADR 0091 điều 4). 400; `details` mang
+   * `{ maxAdvanceBookingDays, lastPickupDate }`.
+   */
+  BOOKING_TOO_FAR_AHEAD: 'BOOKING_TOO_FAR_AHEAD',
+  /**
+   * Chuyến tự lái dài hơn trần của nền tảng — dài hơn phải đặt thuê dài hạn (ADR 0091 điều 4). 400;
+   * `details` mang `{ selfDriveMaxDays }`.
+   */
+  SELF_DRIVE_TOO_LONG: 'SELF_DRIVE_TOO_LONG',
+
+  /** Ảnh cà vẹt không hợp lệ (sai định dạng thật, sai kích thước khai báo, chưa tải xong) — ADR 0089. */
+  VEHICLE_REGISTRATION_IMAGE_INVALID: 'VEHICLE_REGISTRATION_IMAGE_INVALID',
+  /** Lượt tải cà vẹt không dùng được để tạo xe (không có, của người khác, đã dùng, đã hết hạn). */
+  VEHICLE_REGISTRATION_UPLOAD_INVALID: 'VEHICLE_REGISTRATION_UPLOAD_INVALID',
+  /** Chạm trần lượt tải cà vẹt trong 24 giờ (`details.limit`). */
+  VEHICLE_REGISTRATION_UPLOAD_LIMIT: 'VEHICLE_REGISTRATION_UPLOAD_LIMIT',
 } as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODE)[keyof typeof API_ERROR_CODE];

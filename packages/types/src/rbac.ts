@@ -305,6 +305,14 @@ export const PERMISSION = {
    * gian hàng (ADR 0050). Luôn đi kèm `platform.tenant_support.view`; một mình nó không mở gì.
    */
   PLATFORM_TENANT_SUPPORT_ASSIST: 'platform.tenant_support.assist',
+  /**
+   * Xem SĐT/email ĐẦY ĐỦ của chủ gian hàng / chủ xe và liên hệ công khai của gian hàng trên drawer
+   * đối tác. Mặc định drawer trả bản đã che; bỏ che là endpoint riêng, ghi `audit_logs` từng lần.
+   *
+   * Quyền RIÊNG, không dùng lại `platform.customers.view_pii`: người bán và người thuê là hai tập
+   * PII khác nhau (cùng lý do tách `platform.driver_licences.review` khỏi `platform.sellers.verify`).
+   */
+  PLATFORM_TENANT_PII_VIEW: 'platform.tenants.view_pii',
 
   // Nền tảng — giám sát toàn hệ thống (build plan §11.1). Tách khỏi `vehicles.*`/`bookings.*`
   // của gian hàng: quyền tenant chỉ có nghĩa TRONG một tenant, còn đây là đọc xuyên tenant.
@@ -318,6 +326,17 @@ export const PERMISSION = {
    * bỏ mask là hành động riêng, có quyền riêng và ghi `audit_logs` từng lần.
    */
   PLATFORM_CUSTOMER_PII_VIEW: 'platform.customers.view_pii',
+  /**
+   * Khoá / mở khoá tài khoản KHÁCH (đợt rà Admin 16/11/2026): thu hồi mọi phiên web + app trong
+   * cùng transaction, chặn đăng nhập. Quyền riêng vì nó cắt một người khỏi sản phẩm.
+   */
+  PLATFORM_CUSTOMER_LOCK: 'platform.customers.lock',
+  /**
+   * Xem Ví điểm (số dư + bút toán) của một khách / gian hàng — CHỈ ĐỌC. Tách khỏi
+   * `platform.money.manage` để hỗ trợ trả lời "tiền hoàn của tôi đâu" mà không cầm được hàng đợi
+   * rút tiền; tài khoản ngân hàng nhận tiền chỉ hiện cho người có `platform.money.manage`.
+   */
+  PLATFORM_WALLET_VIEW: 'platform.wallets.view',
 
   /**
    * Danh mục hành chính (tỉnh/thành) — dữ liệu DÙNG CHUNG cho mọi gian hàng, nên nằm ở nền tảng
@@ -700,10 +719,16 @@ export const DEFAULT_PLATFORM_ROLE_PERMISSIONS: Readonly<
     PERMISSION.PLATFORM_TENANT_VIEW,
     PERMISSION.PLATFORM_TENANT_SUPPORT_VIEW,
     PERMISSION.PLATFORM_TENANT_SUPPORT_ASSIST,
+    // …và gọi được cho chủ gian hàng khi xử lý case (bỏ che có audit).
+    PERMISSION.PLATFORM_TENANT_PII_VIEW,
     // Khách hỏi "sao tôi chưa đặt được xe" thường là chuyện bằng lái — support xem được.
     PERMISSION.PLATFORM_DRIVER_LICENCE_REVIEW,
     // Support là người gọi lại khách mất đơn (ADR 0070).
     PERMISSION.PLATFORM_SALES_FOLLOWUP_MANAGE,
+    // Đợt rà Admin 16/11/2026: khoá tài khoản khách gian lận/quấy rối, và xem Ví điểm để trả lời
+    // khách về tiền hoàn (không thấy tài khoản ngân hàng — đó là của `platform.money.manage`).
+    PERMISSION.PLATFORM_CUSTOMER_LOCK,
+    PERMISSION.PLATFORM_WALLET_VIEW,
   ],
   [PLATFORM_ROLE.FINANCE_ADMIN]: [
     PERMISSION.PLATFORM_DASHBOARD_VIEW,
@@ -711,6 +736,8 @@ export const DEFAULT_PLATFORM_ROLE_PERMISSIONS: Readonly<
     // Khoá/mở khoá cần THẤY gian hàng trước — hai quyền đi cặp từ khi tách xem khỏi quản lý.
     PERMISSION.PLATFORM_TENANT_VIEW,
     PERMISSION.PLATFORM_TENANT_MANAGE,
+    // Nhắc gia hạn gói / hoá đơn quá hạn là gọi cho chủ gian hàng (bỏ che có audit).
+    PERMISSION.PLATFORM_TENANT_PII_VIEW,
     PERMISSION.PLATFORM_BILLING_MANAGE,
     PERMISSION.PLATFORM_BOOKING_VIEW,
     // R3: finance_admin vận hành tiền marketplace và chính sách phí.
@@ -718,6 +745,8 @@ export const DEFAULT_PLATFORM_ROLE_PERMISSIONS: Readonly<
     // Ngân sách tài trợ mã khuyến mãi là một dòng chi — cùng người chịu trách nhiệm với dòng thu.
     PERMISSION.PLATFORM_PROMO_CODE_MANAGE,
     PERMISSION.PLATFORM_MONEY_MANAGE,
+    // Ví điểm là sổ công nợ phải trả — người duyệt rút tiền phải đọc được sổ của chủ ví.
+    PERMISSION.PLATFORM_WALLET_VIEW,
     // Hàng đợi GCN bảo hiểm là phí khách đã trả đang giữ hộ — cùng ca trực tiền (ADR 0064).
     PERMISSION.PLATFORM_INSURANCE_MANAGE,
     PERMISSION.PLATFORM_SELLER_VERIFY,

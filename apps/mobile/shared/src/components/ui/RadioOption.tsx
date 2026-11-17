@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useColors } from '@/theme/ThemeProvider';
 import { fieldFontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 import { CheckMark } from './CheckMark';
 import type { IconName } from './Chip';
+import { layout } from '@/theme/layout';
 
 /**
  * Đường kính vòng chọn, và cạnh của chấm bên trong.
@@ -73,7 +74,7 @@ function OptionShell({
       <XStack
         ai="center"
         gap={space.sm}
-        px={space.md}
+        px={layout.padX}
         py={space.sm}
         minHeight={sizing.touchTarget}
         bw={1}

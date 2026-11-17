@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import type { ReactNode } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack } from 'tamagui';

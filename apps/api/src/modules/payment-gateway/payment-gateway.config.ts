@@ -4,6 +4,7 @@ import {
   PAYMENT_GATEWAY_PROVIDER,
   PAYMENT_GATEWAY_PROVIDER_VALUES,
   PAYMENT_ORDER_TARGET,
+  PAYMENT_ORDER_TARGET_VALUES,
   type PaymentGatewayProvider,
   type PaymentOrderTarget,
 } from '@xeprime/types';
@@ -78,6 +79,14 @@ export class PaymentGatewayConfig {
   /** Có ít nhất một cổng đủ khoá — điều kiện để bộ quét định kỳ chạy. */
   get anyConfigured(): boolean {
     return this.momo !== null || this.vnpay !== null;
+  }
+
+  /**
+   * Cổng thanh toán đang DÙNG cho ít nhất một luồng (luồng bật VÀ có cổng đủ khoá). Tắt ⇒ màn Tài
+   * chính ẩn hẳn hàng đợi MoMo/VNPAY (ADR 0058 còn Proposed, mặc định tắt).
+   */
+  get inUse(): boolean {
+    return PAYMENT_ORDER_TARGET_VALUES.some((target) => this.providersFor(target).length > 0);
   }
 
   /** Luồng này có được phép dùng cổng không (công tắc env). */

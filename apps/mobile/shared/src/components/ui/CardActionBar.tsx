@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { ActivityIndicator, Pressable, type LayoutChangeEvent } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { themed, useColors } from '@/theme/ThemeProvider';

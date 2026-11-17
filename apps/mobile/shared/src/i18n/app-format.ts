@@ -10,6 +10,8 @@ import {
   toAppTz,
   wholeUnits,
   moneyInThousands,
+  moneyToEnglishWords,
+  moneyToVietnameseWords,
   LIST_SEPARATOR,
   type Dayjs,
   type MoneySeparators,
@@ -34,6 +36,11 @@ import type { DomainLabel } from './domain';
 export interface AppFormat {
   /** `1.200.000 ₫` (vi) · `1,200,000 ₫` (en). Không đi qua `Number` — ADR 0007. */
   money: (value: MoneyString | null | undefined) => string;
+  /**
+   * Số tiền BẰNG CHỮ theo ngôn ngữ giao diện (hộp chi tiết phiếu thu/chi — web `fmt.moneyWords`,
+   * ledger 09 §3.11 #6). Trước đây giao diện en vẫn đọc tiếng Việt.
+   */
+  moneyWords: (value: MoneyString | null | undefined) => string;
   /** Dạng rút gọn cho chỗ hẹp: `12,7tr` (vi) · `12.7M` (en). */
   /**
    * `price: true` cho HAI chữ số lẻ ở bậc triệu (`1,05tr` thay vì `1tr`) — bắt buộc khi con số là
@@ -113,6 +120,8 @@ export interface AppFormat {
    * thời gian (thanh toán, huỷ miễn phí): làm tròn tới phút, âm thì 0.
    */
   minutesDuration: (totalMinutes: number) => string;
+  /** Thời lượng ĐỌC LƯỚT, một đơn vị: `7 ngày` · `3 giờ` · `25 phút` (web `roughDuration`). */
+  roughDuration: (totalMinutes: number) => string;
   /**
    * Dòng tóm tắt khoảng thuê: hai mốc gọn + thời lượng — `14/09 17:00 → 15/09 17:00 (1 ngày)`.
    *
@@ -221,6 +230,8 @@ export function createAppFormat(
    * múi giờ của formatter không kéo nó lùi sang ngày hôm trước.
    */
   const asCalendarDate = (dateKey: string) => new Date(`${dateKey}T12:00:00Z`);
+  /** Khoá ngày thuần (`2026-11-10`), phân biệt với mốc ISO có giờ. */
+  const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
   /**
    * Mốc ngày + giờ ghép TAY từ hai mảnh: với `vi`, CLDR đặt GIỜ TRƯỚC NGÀY
@@ -277,6 +288,13 @@ export function createAppFormat(
     return t('units.hourAndMinute', { hours, minutes });
   };
 
+  const roughDuration = (totalMinutes: number) => {
+    const total = Math.max(0, Math.floor(totalMinutes));
+    if (total >= 24 * 60) return t('units.day', { count: Math.floor(total / (24 * 60)) });
+    if (total >= 60) return t('units.hour', { count: Math.floor(total / 60) });
+    return t('units.minute', { count: total });
+  };
+
   const shortStamp = (value: IsoDateTimeString | null | undefined) => {
     if (!value) return empty;
     return t('units.shortDateTime', {
@@ -294,6 +312,8 @@ export function createAppFormat(
       if (!parts) return money(wholeUnits(value));
       return t(`units.compact.${parts.unit}` as never, { value: parts.value } as never);
     },
+    moneyWords: (value) =>
+      locale === 'en' ? moneyToEnglishWords(value) : moneyToVietnameseWords(value),
     moneyThousands: (value) => {
       if (value === null || value === undefined || value === '') return empty;
       const thousands = moneyInThousands(value, separators);
@@ -316,7 +336,15 @@ export function createAppFormat(
     shortDateTimeRange: (from, to) =>
       t('units.range', { from: shortStamp(from), to: shortStamp(to) }),
     dateKey: (value) => (value ? format.dateTime(asCalendarDate(value), 'short') : empty),
-    dayMonth: (value) => (value ? toAppTz(asCalendarDate(value)).format(pattern.dayMonth) : empty),
+    /*
+     * Nhận CẢ khoá ngày `YYYY-MM-DD` lẫn mốc ISO đầy đủ (web chỉ nhận mốc ISO). Ghép `T12:00:00Z`
+     * vào một mốc ISO sinh ngày không hợp lệ và màn sập "Invalid time value" (thẻ "Chờ giao xe" có
+     * ngày nhận khác hôm nay, đo trên emulator 10/11/2026).
+     */
+    dayMonth: (value) =>
+      value
+        ? toAppTz(DATE_KEY_PATTERN.test(value) ? asCalendarDate(value) : value).format(pattern.dayMonth)
+        : empty,
 
     weekdayShort: (value) => weekday(value),
     weekdayLong: (value) => format.dateTime(value.toDate(), 'weekdayLong'),
@@ -330,6 +358,7 @@ export function createAppFormat(
       }),
     rentalDuration: duration,
     minutesDuration,
+    roughDuration,
     rentalRangeSummary: (from, to) =>
       t('units.rentalRangeSummary', {
         from: compactPoint(from),

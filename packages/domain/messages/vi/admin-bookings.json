@@ -86,5 +86,112 @@
     "contracts": "{count, plural, =0 {Chưa có hợp đồng} other {# hợp đồng}}",
     "createdBy": "Người tạo: {name}",
     "updatedAt": "Cập nhật: {dateTime}"
+  },
+  "marketplace": {
+    "title": "Tiền marketplace",
+    "hint": "Tiền đi qua XePrime của đơn này, đọc từ bảng phí đã chốt lúc duyệt. Khác cọc thế chấp khi nhận xe.",
+    "hintLabel": "Giải thích về tiền marketplace",
+    "none": "Đơn này không đi qua thanh toán của XePrime (đơn gian hàng lập tay).",
+    "feesUnavailable": "Không có bảng tiền chi tiết cho đơn này (đơn lập tay hoặc đơn trước luồng tiền mới).",
+    "hold": {
+      "title": "Khoản giữ chỗ",
+      "code": "Mã đối soát",
+      "status": "Trạng thái",
+      "outcome": "Kết cục",
+      "outcomePending": "Chưa chốt",
+      "amount": "Phải chuyển",
+      "paid": "Đã về",
+      "expiresAt": "Hạn chuyển tiền",
+      "paidAt": "Về đủ lúc",
+      "freeCancelUntil": "Huỷ miễn phí tới",
+      "releasedAt": "Chốt kết cục lúc"
+    },
+    "customer": {
+      "title": "Phía khách",
+      "base": "Tiền thuê",
+      "delivery": "Trong đó phí giao xe (trả tay chủ xe)",
+      "serviceFee": "Phí sàn",
+      "vehicleInsurance": "Bảo hiểm vật chất xe",
+      "personalInsurance": "Bảo hiểm tai nạn người",
+      "insuranceServiceFee": "Phí thu hộ bảo hiểm",
+      "promo": "Mã khuyến mãi {code}",
+      "promoNoCode": "Mã khuyến mãi",
+      "online": "Tiền giữ chỗ phải chuyển",
+      "payAtPickup": "Trả trực tiếp chủ xe lúc nhận xe",
+      "total": "Tổng khách trả"
+    },
+    "owner": {
+      "title": "Phía chủ xe",
+      "rent": "Doanh thu cho thuê",
+      "commission": "Phí dịch vụ chủ xe",
+      "tax": "Thuế khấu trừ",
+      "taxSplit": "GTGT {vat}{sep}TNCN {pit}",
+      "taxExempt": "Không khấu trừ (doanh nghiệp)",
+      "net": "Thu nhập chủ xe",
+      "payable": "Cộng ví khi chuyến hoàn thành"
+    },
+    "platform": {
+      "title": "Phía XePrime",
+      "retained": "Phí sàn + phí dịch vụ chủ xe",
+      "promo": "Tài trợ mã khuyến mãi",
+      "net": "Doanh thu thật"
+    },
+    "settlement": {
+      "title": "Phân bổ đã chốt",
+      "customer": "Hoàn khách",
+      "owner": "Về ví chủ xe",
+      "platform": "XePrime giữ",
+      "insurer": "Phải trả hãng bảo hiểm",
+      "tax": "Thuế khấu trừ"
+    },
+    "refund": {
+      "title": "Khoản hoàn",
+      "status": "Trạng thái",
+      "amount": "Số tiền",
+      "reason": "Lý do",
+      "mode": "Hình thức",
+      "modes": {
+        "balance": "Vào Ví điểm của khách",
+        "bank_transfer": "Chuyển khoản"
+      },
+      "paidAt": "Hoàn lúc",
+      "account": "Tài khoản nhận",
+      "reference": "Mã giao dịch hoàn"
+    },
+    "bank": {
+      "title": "Giao dịch ngân hàng đã khớp",
+      "empty": "Chưa có giao dịch nào khớp vào khoản giữ chỗ này.",
+      "row": "{amount}{sep}{time}",
+      "reference": "Mã FT {ref}",
+      "open": "Mở ở hàng đợi tiền vào"
+    },
+    "insurance": {
+      "title": "Bảo hiểm của chuyến",
+      "certificate": "GCN {number}",
+      "test": "Thử nghiệm",
+      "download": "Tải GCN"
+    },
+    "tax": {
+      "title": "Dòng thuế của đơn",
+      "period": "Kỳ {period}",
+      "reversal": "Dòng đảo",
+      "extension": "Gia hạn",
+      "split": "GTGT {vat}{sep}TNCN {pit}"
+    },
+    "cancellation": {
+      "title": "Lượt huỷ",
+      "party": "Phía chịu trách nhiệm",
+      "category": "Nhóm lý do",
+      "stage": "Chặng",
+      "reason": "Lý do",
+      "at": "Huỷ lúc"
+    }
+  },
+  "supportCases": {
+    "title": "Hỗ trợ đang mở",
+    "hint": "Đơn đang có case hỗ trợ chưa khép. Kết luận chuyến, nếu cần, làm ở chi tiết case.",
+    "verdictTag": "Cần kết luận chuyến",
+    "openedAt": "Mở lúc {time}",
+    "open": "Mở case"
   }
 }

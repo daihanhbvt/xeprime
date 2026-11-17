@@ -1,7 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CUSTOMER_LICENCE_STATE_VALUES, USER_STATUS_VALUES } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 
 const DEFAULT_LIMIT = 20;
@@ -127,6 +137,26 @@ export class PlatformCustomerDetailDto extends PlatformCustomerDto {
   @ApiProperty({ type: [PlatformCustomerRequestDto] })
   recentRequests!: PlatformCustomerRequestDto[];
   @ApiProperty({ description: 'ISO-8601 UTC' }) updatedAt!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Lúc nền tảng khoá tài khoản (ISO-8601 UTC) - người khoá ở audit `customer.lock`',
+  })
+  lockedAt!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) lockedReason!: string | null;
+}
+
+/** Khoá / mở khoá tài khoản khách — lý do bắt buộc, vào audit (và `locked_reason` khi khoá). */
+export class CustomerLockDto {
+  @ApiProperty({
+    description: 'Lý do - nội bộ, khách không đọc được',
+    minLength: 5,
+    maxLength: 500,
+  })
+  @IsString()
+  @MinLength(5)
+  @MaxLength(500)
+  reason!: string;
 }
 
 /** SĐT/email khách ở dạng đầy đủ — trả về kèm việc ghi `audit_logs`. */

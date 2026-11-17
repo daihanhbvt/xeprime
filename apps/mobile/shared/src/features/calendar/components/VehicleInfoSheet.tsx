@@ -1,9 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   PERMISSION,
-  VEHICLE_OPERATION_STATUS,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_TYPE,
 } from '@xeprime/types';
@@ -63,11 +62,8 @@ export function VehicleInfoSheet({
         resource.operationStatus as keyof typeof VEHICLE_OPERATION_STATUS_META
       ]
     : undefined;
-  /** Web chỉ nêu trạng thái khi nó ĐÁNG CHÚ Ý — "đang sẵn sàng"/"đang thuê" không nói thêm gì. */
-  const showStatus =
-    resource !== null &&
-    resource.operationStatus !== VEHICLE_OPERATION_STATUS.AVAILABLE &&
-    resource.operationStatus !== VEHICLE_OPERATION_STATUS.RENTING;
+  /** Web `CalendarScheduler` thẻ xe: luôn có dòng "Trạng thái vận hành" khi biết trạng thái. */
+  const showStatus = resource !== null;
 
   return (
     <BottomSheet
@@ -132,7 +128,8 @@ export function VehicleInfoSheet({
             </YStack>
 
             <YStack f={1} gap={space.xs} minWidth={0}>
-              <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+              {/* Tên xe cỡ thẻ chuyến app khách (`TripCard`: bodyLg semibold). */}
+              <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold} numberOfLines={2}>
                 {resource.name}
               </Text>
               <XStack gap={space.xs} flexWrap="wrap">

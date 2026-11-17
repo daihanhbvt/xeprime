@@ -66,6 +66,14 @@ vi.mock('../hooks', () => ({
   },
   useVehicleDocumentVersions: () => versionsQuery,
   useInvalidateVehicleDocuments: () => vi.fn(),
+  useVehicleInsuranceStatus: (_id: string, enabled: boolean) => ({
+    data: enabled ? insuranceStatus.data : undefined,
+  }),
+}));
+
+/** Điều kiện bảo hiểm của xe (ADR 0088) — mặc định nền tảng không bán theo bậc ⇒ không nhắc. */
+const insuranceStatus = vi.hoisted(() => ({
+  data: { applies: false, eligible: false, gaps: [] as string[] } as Record<string, unknown>,
 }));
 
 const api = vi.hoisted(() => ({
@@ -138,10 +146,10 @@ function detailOf(overrides: Partial<VehicleDocumentDetail>): VehicleDocumentDet
   } as VehicleDocumentDetail;
 }
 
-function renderTab() {
+function renderTab(target: VehicleDetail = vehicle) {
   return render(
     <App>
-      <VehicleDocumentsWorkspace vehicle={vehicle} />
+      <VehicleDocumentsWorkspace vehicle={target} />
     </App>,
   );
 }
@@ -165,6 +173,7 @@ beforeEach(() => {
   versionsQuery.isError = false;
   versionsQuery.error = null;
   Object.values(api).forEach((mock) => mock.mockClear());
+  insuranceStatus.data = { applies: false, eligible: false, gaps: [] };
 });
 afterEach(cleanup);
 
@@ -182,6 +191,22 @@ describe('Tab Giấy tờ (Wave 5 + 5.1)', () => {
     renderTab();
     expect(screen.getByText('Không có quyền xem giấy tờ')).toBeTruthy();
     expect(documentsQuery.enabled).toBe(false);
+  });
+
+  it('ô tô thiếu cà vẹt khi nền tảng đang bán bảo hiểm: nhắc, không chặn; xe máy không nhắc', () => {
+    const reminder = /cần cà vẹt có tên chủ xe, số khung và số máy/;
+    insuranceStatus.data = { applies: true, eligible: false, gaps: ['registration_missing'] };
+    renderTab({ ...vehicle, vehicleType: 'car' } as VehicleDetail);
+    expect(screen.getByText(reminder)).toBeTruthy();
+    cleanup();
+
+    renderTab({ ...vehicle, vehicleType: 'motorbike' } as VehicleDetail);
+    expect(screen.queryByText(reminder)).toBeNull();
+    cleanup();
+
+    insuranceStatus.data = { applies: true, eligible: true, gaps: [] };
+    renderTab({ ...vehicle, vehicleType: 'car' } as VehicleDetail);
+    expect(screen.queryByText(reminder)).toBeNull();
   });
 
   it('chỉ có view (summary-only): chế độ xem, KHÔNG có menu hành động, KHÔNG request chi tiết', () => {

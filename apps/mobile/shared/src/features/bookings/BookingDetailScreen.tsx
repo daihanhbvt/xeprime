@@ -1,15 +1,17 @@
-import { useCallback, useState, type ReactNode } from 'react';
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { Linking, Pressable } from 'react-native';
+import { Children, useCallback, useRef, useState, type ReactNode } from 'react';
+import { BottomSheet } from '@/components/ui/BottomSheet';
+import { IconSquareButton } from '@/components/ui/IconSquareButton';
+import { StickyActionBar } from '@/components/ui/StickyActionBar';
+import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
+import { CardTitle } from '@/components/ui/CardTitle';
+import { Ionicons } from '@/components/icons/Ionicons';
+import { Linking, Pressable, type ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
-  BOOKING_HISTORY_OUTCOME,
+  API_ERROR_CODE,
   BOOKING_STATUS,
-  CANCELLATION_PARTY,
-  BOOKING_STATUS_META,
   canTransitionBooking,
   CANCELLATION_REASON_CATEGORY,
   DRIVER_ASSIGNMENT_OUTCOME,
@@ -20,9 +22,9 @@ import {
   isDriverMissingAlertDue,
   isDriverReassignable,
   STATUS_COLOR,
-  TENANT_CUSTOMER_RETURNING_MIN_RENTALS,
   HANDOVER_TYPE,
   type HandoverType,
+  isBookingClosedWithoutTrip,
   isBookingFinal,
   isNoShowGracePassed,
   PERMISSION,
@@ -32,12 +34,13 @@ import {
   type CancellationReasonCategory,
 } from '@xeprime/types';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
-import { DataRow } from '@/components/ui/DataRow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -50,20 +53,29 @@ import { queryKeys } from '@/queries/query-keys';
 import { useHandoverContext } from '@/features/handovers/hooks/use-handovers';
 import { useCreateContract } from '@/features/contracts/hooks/use-contract';
 import { RecordPaymentSheet } from '@/features/settlement/components/RecordPaymentSheet';
-import { isZeroMoney, LIST_SEPARATOR, telHref, toAppTz } from '@xeprime/domain';
+import { isZeroMoney, LIST_SEPARATOR, telHref } from '@xeprime/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
+import { useCustomerProfileAccess } from '@/features/booking-requests/hooks/use-customer-profile-access';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useNow } from '@/hooks/use-now';
 import { layout } from '@/theme/layout';
-import { makeStyles, useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, space, typeScale } from '@/theme/tokens';
 import { AssignDriverSheet } from './components/AssignDriverSheet';
 import { BookingDriverHistory } from './components/BookingDriverHistory';
-import { BookingMoneyCard } from './components/BookingMoneyCard';
+import { CustomerReturnReport } from './components/CustomerReturnReport';
+import {
+  CustomerSideCard,
+  PaymentSideCard,
+  VehicleSideCard,
+} from './components/BookingDetailSide';
+import { HandoverPhotosCard } from './components/HandoverPhotosCard';
+import { OwnerPayoutTable } from './components/OwnerPayoutTable';
+import { SectionCard } from '@/components/ui/SectionCard';
 import { BookingStatusSheet, type Decision } from './components/BookingStatusSheet';
 import { BookingSettlementCard } from './components/BookingSettlementCard';
 import { BookingInsurancePanel } from './components/BookingInsurancePanel';
@@ -71,10 +83,12 @@ import { BookingExtensionsPanel } from './components/BookingExtensionsPanel';
 import { HandoverPrepCard, missingPhotoSlots, prepRowStates } from './components/HandoverPrepCard';
 import {
   BookingOutcomeBanner,
+  BookingStageChip,
   BookingStepper,
   TripScheduleCard,
 } from './components/BookingStageSections';
 import { DeliveryFeeSheet } from './components/DeliveryFeeSheet';
+import { BookingCustomerDocumentsSheet } from './components/BookingCustomerDocumentsSheet';
 import { EditBookingSheet } from './components/EditBookingSheet';
 import { AssignDriverWageSheet } from './components/AssignDriverWageSheet';
 import { DriverWageEditSheet } from './components/DriverWageEditSheet';
@@ -88,33 +102,8 @@ import {
   useUpdateDeliveryFee,
 } from './hooks/use-bookings';
 import type { BookingDetail, BookingDriverHistoryItem, BookingDriverIncident } from './api';
-import { getErrorMessage } from '@/lib/get-error-message';
+import { getErrorCode } from '@/lib/api-client';
 
-/** Ảnh xe: tỉ lệ cố định để hàng thẳng dù ảnh nguồn dọc hay ngang — cùng cách thẻ hộp thư làm. */
-const VEHICLE_IMAGE = { width: 96, height: 72 } as const;
-
-/* `Image` của React Native cần style phẳng — Tamagui không có primitive ảnh thay thế. */
-const useStyles = makeStyles((colors) => ({
-  vehicleImage: {
-    width: VEHICLE_IMAGE.width,
-    height: VEHICLE_IMAGE.height,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceMuted,
-  },
-}));
-
-/** Nhãn của một KHỐI trong thẻ chi tiết — nhỏ, viết hoa, mờ. Cùng vai `blockTitle` của web. */
-function BlockTitle({ children }: { children: string }) {
-  const colors = useColors();
-  return (
-    <XStack ai="center" gap={space.xs}>
-      <YStack w={3} h={iconSize.sm} br={radius.pill} bg={colors.primary} />
-      <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.semibold}>
-        {children.toUpperCase()}
-      </Text>
-    </XStack>
-  );
-}
 
 /**
  * Chi tiết một đơn thuê (BKG-08, 12, 13).
@@ -131,12 +120,36 @@ function BlockTitle({ children }: { children: string }) {
 /** Web `BookingDriverSection .row { gap: 10px }` — không có bậc này trên thang token. */
 const UNASSIGNED_ROW_GAP = 10;
 
-export function BookingDetailScreen({ bookingId }: { bookingId: string }) {
+export function BookingDetailScreen({
+  bookingId,
+  openNoShow = false,
+}: {
+  bookingId: string;
+  /** Mở sẵn tấm "Khách không đến" — từ nút trên thẻ đơn (web mở hộp ngay trên thẻ). */
+  openNoShow?: boolean;
+}) {
   const t = useTranslations('Bookings.detail');
   const router = useRouter();
-  const query = useBooking(bookingId);
+  // Web `BookingDetailContent`: thiếu `bookings.view` thì nói thẳng, KHÔNG gọi API.
+  const canView = usePermissions().has(PERMISSION.BOOKING_VIEW);
+  const query = useBooking(bookingId, canView);
 
   const back = () => goBackOr(router, ROUTES.manage.bookings());
+
+  if (!canView) {
+    return (
+      <>
+        <AppHeader title={t('title')} onBack={back} />
+        <Screen edges={['left', 'right', 'bottom']} scroll={false}>
+          <ScreenMessage
+            icon="lock-closed-outline"
+            title={t('forbiddenTitle')}
+            description={t('forbiddenBody')}
+          />
+        </Screen>
+      </>
+    );
+  }
 
   if (query.isPending) {
     return (
@@ -158,7 +171,7 @@ export function BookingDetailScreen({ bookingId }: { bookingId: string }) {
      * Đơn bị xoá và lỗi mạng là hai chuyện khác nhau — không mời "thử lại" cho cái đã biến mất.
      * Cùng phép nhận biết với `BookingDetailContent` bên web (câu của server có "Không tìm thấy").
      */
-    const notFound = getErrorMessage(query.error).includes('Không tìm thấy');
+    const notFound = getErrorCode(query.error) === API_ERROR_CODE.NOT_FOUND;
     return (
       <>
         <AppHeader title={t('title')} onBack={back} />
@@ -184,7 +197,7 @@ export function BookingDetailScreen({ bookingId }: { bookingId: string }) {
     );
   }
 
-  return <BookingDetailBody booking={query.data} onBack={back} />;
+  return <BookingDetailBody booking={query.data} onBack={back} openNoShow={openNoShow} />;
 }
 
 /**
@@ -219,22 +232,45 @@ function useBookingRefresh(bookingId: string) {
   };
 }
 
-function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack: () => void }) {
+function BookingDetailBody({
+  booking,
+  onBack,
+  openNoShow,
+}: {
+  booking: BookingDetail;
+  onBack: () => void;
+  openNoShow: boolean;
+}) {
   const colors = useColors();
-  const styles = useStyles();
   const { refreshing, onRefresh } = useBookingRefresh(booking.id);
   const t = useTranslations('Bookings');
-  const tSide = useTranslations('Bookings.detailPage.side');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
   const permissions = usePermissions();
+  const navigateOnce = useNavigateOnce();
 
-  const [decision, setDecision] = useState<Decision | null>(null);
+  /*
+   * Mở sẵn tấm no-show khi đến từ nút trên thẻ — chỉ khi máy trạng thái còn cạnh `→ no_show`;
+   * server vẫn là bên chặn cuối (ân hạn, đã giao xe).
+   */
+  const [decision, setDecision] = useState<Decision | null>(() =>
+    openNoShow && canTransitionBooking(booking.status as BookingStatus, BOOKING_STATUS.NO_SHOW)
+      ? BOOKING_STATUS.NO_SHOW
+      : null,
+  );
   const [assigningDriver, setAssigningDriver] = useState(false);
   const [editingFee, setEditingFee] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [detailTab, setDetailTab] = useState<'prep' | 'trip' | 'extra'>('prep');
+  const [docsOpen, setDocsOpen] = useState(false);
+  /* Nút "Ảnh" của Chuẩn bị bàn giao cuộn tới khối ảnh TRONG trang (web `BookingDetailSections`). */
+  const scrollRef = useRef<ScrollView | null>(null);
+  const photosY = useRef(0);
+  const scrollToPhotos = useCallback(() => {
+    scrollRef.current?.scrollTo({ y: Math.max(0, photosY.current - space.md), animated: true });
+  }, []);
 
   const transition = useTransitionBooking(booking.id);
   const assignDriver = useAssignDriver(booking.id);
@@ -266,15 +302,16 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
   );
   const updateFee = useUpdateDeliveryFee(booking.id);
   const status = booking.status as BookingStatus;
-  const meta = BOOKING_STATUS_META[status];
   const closed = isBookingFinal(status);
+  // Đơn huỷ / khách không đến: không ghi tiền MỚI (server `BOOKING_MONEY_CLOSED`), như web.
+  const moneyClosed = isBookingClosedWithoutTrip(status);
 
   const canUpdate = permissions.has(PERMISSION.BOOKING_UPDATE);
   // Cổng của khối "Chuẩn bị bàn giao" — cùng `can` của web (BookingDetailActions).
   const prepFinance = useFeature(PLAN_FEATURE.FINANCE);
   const prepContracts = useFeature(PLAN_FEATURE.CONTRACTS);
   const prepCan = {
-    collect: permissions.has(PERMISSION.PAYMENT_RECORD) && prepFinance.isVisible,
+    collect: permissions.has(PERMISSION.PAYMENT_RECORD) && prepFinance.isVisible && !moneyClosed,
     contract: permissions.has(PERMISSION.CONTRACT_MANAGE) && prepContracts.isVisible,
     markPrep: permissions.has(PERMISSION.HANDOVER_MANAGE) && !closed,
     documents:
@@ -282,6 +319,10 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
     managePhotos: permissions.has(PERMISSION.HANDOVER_MANAGE),
   };
   const withDriver = booking.serviceType === SERVICE_TYPE.WITH_DRIVER;
+  const handoverCta = useHandoverCta(booking, prepCan);
+  const canViewVehicle = permissions.has(PERMISSION.VEHICLE_VIEW);
+  /** Sổ khách: quyền + tuyến gói (ADR 0056) — như web `canViewCustomer`. */
+  const customerProfileAccess = useCustomerProfileAccess();
   /*
    * Tài xế mở cho CẢ HAI tuyến, không sau cờ gói (ADR 0063) — chỉ gác bằng quyền. Và CHỈ đơn
    * `with_driver` mới nhận tài xế: đơn khác chỉ còn đọc tài xế gán từ trước (dữ liệu cũ).
@@ -323,7 +364,7 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
    * NHÓM lý do đi kèm CHỈ khi huỷ — `TransitionBookingDto` đòi nó ở đúng nhánh đó (ADR 0045
    * điều 1), và gửi thừa ở `no_show` là ghi một phân loại cho một việc không phải lượt huỷ.
    */
-  function confirmDecision(input: { reason: string; reasonCategory?: CancellationReasonCategory }) {
+  function confirmDecision(input: { reason?: string; reasonCategory?: CancellationReasonCategory }) {
     if (!decision) return;
     transition.mutate(
       { status: decision, ...input },
@@ -341,216 +382,89 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
     );
   }
 
+  /* Figma "Chi tiết đơn" `24158:103509`: Huỷ + nút bàn giao DÍNH ĐÁY; "Khách không đến" cuối nội dung. */
+  const cancelButton = canCancelBooking ? (
+    <Button
+      label={t('statusActions.cancel')}
+      variant="dangerOutline"
+      block={false}
+      onPress={() => setDecision(BOOKING_STATUS.CANCELLED)}
+    />
+  ) : null;
+  const handoverButton =
+    handoverCta.cta && permissions.has(PERMISSION.HANDOVER_CONFIRM) ? (
+      <Button
+        label={handoverCta.cta.label}
+        variant="gradient"
+        onPress={() => handoverCta.request(handoverCta.cta!.type)}
+      />
+    ) : null;
+  const noShowButton =
+    canUpdate &&
+    canTransitionBooking(status, BOOKING_STATUS.NO_SHOW) &&
+    isNoShowGracePassed(booking.pickupAt) &&
+    !handoverCta.pickupConfirmed ? (
+      <Button
+        label={t('statusActions.noShow')}
+        variant="secondary"
+        onPress={() => setDecision(BOOKING_STATUS.NO_SHOW)}
+      />
+    ) : null;
+
   return (
     <>
-      <AppHeader
-        title={t('detail.titleWithCode', { code: booking.code })}
-        subtitle={booking.vehicleName}
+      {/* Web `ManagePageHeader` của trang chi tiết: "Chi tiết đơn · #mã" + nút quay lại. */}
+      {/* Figma "Page Header" `24145:102197`: ← tiêu đề, "Tạo lúc" + viên chặng, thanh 4 bước. */}
+      <ManagePageHeader
+        title={t('detailPage.title', { code: booking.code })}
         onBack={onBack}
+        subtitle={
+          <XStack ai="center" jc="space-between" gap={space.sm}>
+            <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} numberOfLines={1} flexShrink={1}>
+              {t('detailPage.createdAt', { date: fmt.date(booking.createdAt) })}
+            </Text>
+            <BookingStageChip status={status} cancellationParty={booking.cancellationParty} />
+          </XStack>
+        }
+        below={<BookingStepper booking={booking} variant="bar" />}
+        actions={<BookingActionsMenu booking={booking} />}
       />
-      <Screen edges={['left', 'right', 'bottom']} refreshing={refreshing} onRefresh={onRefresh}>
-        <YStack gap={layout.section}>
-          {/*
-            MỘT thẻ "Chi tiết đơn đặt xe" gom bốn khối, đúng thứ tự web dựng: phương tiện → khách
-            → hành trình (chỉ đơn có tài xế) → thời gian thuê. Một danh sách `DataRow` phẳng thì
-            tên xe, khách, giờ giấc và ghi chú cùng một tông, mất hết thứ bậc web có.
-          */}
-          <Card>
-            <YStack gap={space.md}>
-              <XStack ai="flex-start" jc="space-between" gap={space.sm}>
-                <Text f={1} col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-                  {t('detail.cardTitle')}
-                </Text>
-                <StatusBadge
-                  label={
-                    /* Đơn huỷ nói AI huỷ — phía huỷ do SERVER suy (web `BookingStageChip`, ADR 0045). */
-                    status === BOOKING_STATUS.CANCELLED &&
-                    booking.cancellationParty === CANCELLATION_PARTY.CUSTOMER
-                      ? domainLabel(
-                          'bookingHistoryOutcome',
-                          BOOKING_HISTORY_OUTCOME.CANCELLED_BY_CUSTOMER,
-                        )
-                      : status === BOOKING_STATUS.CANCELLED &&
-                          booking.cancellationParty === CANCELLATION_PARTY.HOST
-                        ? domainLabel('bookingHistoryOutcome', BOOKING_HISTORY_OUTCOME.CANCELLED_BY_HOST)
-                        : domainLabel('bookingStatus', status, meta.label)
-                  }
-                  color={meta.color}
-                  size="sm"
-                />
-              </XStack>
-              <Text col={colors.placeholder} fos={fontSize.label}>
-                {t('detail.createdAt', { value: fmt.dateTime(booking.createdAt) })}
-              </Text>
+      {handoverCta.alert}
+      <Screen
+        edges={['left', 'right', 'bottom']}
+        {...(cancelButton || handoverButton
+          ? { footer: <StickyActionBar secondary={cancelButton} primary={handoverButton} /> }
+          : {})}
+        scrollRef={scrollRef}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+      >
+        {/*
+          Web `BookingDetailBody` khổ hẹp: MỘT cột, khe `space-md`; cột phải (xe · tài xế · khách ·
+          thanh toán · hành động) lên TRƯỚC cột chính (`.side { order: -1 }`).
+        */}
+        <YStack gap={space.md}>
+          {/* Đầu trang: chip chặng + "Tạo lúc" (web `ManagePageHeader title/subtitle`) rồi cụm nút. */}
 
-              {/* Phương tiện */}
-              <YStack gap={space.sm}>
-                <BlockTitle>{t('detail.vehicleBlock')}</BlockTitle>
-                <XStack gap={space.sm}>
-                  {/*
-                    Ảnh chỉ hiện khi xe THẬT SỰ có — không dựng khung xám giả trông như đang tải
-                    mãi. Cùng quyết định với web.
-                  */}
-                  {booking.vehicleImageUrl ? (
-                    <Image
-                      source={{ uri: booking.vehicleImageUrl }}
-                      style={styles.vehicleImage}
-                      contentFit="cover"
-                      cachePolicy="memory-disk"
-                      transition={150}
-                      accessibilityLabel={booking.vehicleName}
-                    />
-                  ) : null}
-                  <YStack f={1} gap={2}>
-                    <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
-                      {booking.vehicleName}
-                    </Text>
-                    {booking.vehiclePlate ? (
-                      // Biển số tô gold như web: đó là thứ nhân viên đọc to khi giao xe.
-                      <Text
-                        col={colors.primaryActive}
-                        fos={fontSize.body}
-                        fow={fontWeight.semibold}
-                      >
-                        {booking.vehiclePlate}
-                      </Text>
-                    ) : null}
-                    <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                      {domainLabel('serviceType', booking.serviceType)}
-                    </Text>
-                  </YStack>
-                </XStack>
-              </YStack>
 
-              {/* Khách hàng */}
-              <YStack gap={space.xs} p={space.sm} br={radius.md} bg={colors.surfaceMuted}>
-                <BlockTitle>{t('detail.customerBlock')}</BlockTitle>
-                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
-                  {booking.customerName}
-                </Text>
-                {/* "Khách quen" — đủ số chuyến hoàn tất với gian hàng (web `BookingDetailSide`). */}
-                {booking.customerCompletedRentals != null &&
-                booking.customerCompletedRentals >= TENANT_CUSTOMER_RETURNING_MIN_RENTALS ? (
-                  <XStack>
-                    <StatusBadge
-                      label={tSide('returningCustomer')}
-                      color={STATUS_COLOR.SUCCESS}
-                      size="sm"
-                    />
-                  </XStack>
-                ) : null}
-                {booking.customerPhone ? (
-                  // Vận hành gọi khách ngay từ đây — trên điện thoại là một chạm.
-                  <Pressable
-                    onPress={() => void Linking.openURL(`tel:${booking.customerPhone}`)}
-                    accessibilityRole="button"
-                    accessibilityLabel={booking.customerPhone}
-                  >
-                    <Text col={colors.primaryActive} fos={fontSize.body}>
-                      {booking.customerPhone}
-                    </Text>
-                  </Pressable>
-                ) : (
-                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                    {t('detail.noPhone')}
-                  </Text>
-                )}
-              </YStack>
-
-              {/* Hành trình: CHỈ đơn có tài xế, đúng như web. */}
-              {withDriver ? (
-                <YStack gap={space.xs} p={space.sm} br={radius.md} bg={colors.surfaceMuted}>
-                  <BlockTitle>{t('detail.routeBlock')}</BlockTitle>
-                  <DataRow
-                    label={t('detail.route')}
-                    value={
-                      booking.routeType
-                        ? domainLabel('routeType', booking.routeType)
-                        : t('detail.unknown')
-                    }
-                  />
-                  <DataRow
-                    label={t('detail.pickupAddress')}
-                    value={booking.pickupAddress ?? t('detail.unknown')}
-                    block
-                  />
-                  {booking.destination ? (
-                    <DataRow label={t('detail.destination')} value={booking.destination} block />
-                  ) : null}
-                </YStack>
-              ) : null}
-
-              {/* Thời gian thuê */}
-              <YStack gap={space.xs} p={space.sm} br={radius.md} bg={colors.surfaceMuted}>
-                <BlockTitle>{t('detail.scheduleBlock')}</BlockTitle>
-                <DataRow
-                  label={t('detail.pickupAt')}
-                  value={fmt.rentalPoint(toAppTz(booking.pickupAt))}
-                />
-                <DataRow
-                  label={t('detail.returnAt')}
-                  value={fmt.rentalPoint(toAppTz(booking.returnAt))}
-                />
-                {/*
-                  Đơn THUÊ DÀI HẠN dài đúng bằng GÓI (tháng lịch — ADR 0011). Nói "92 ngày" cho
-                  gói 3 tháng là đúng số nhưng sai đơn vị nghiệp vụ: gói mới là thứ hai bên ký.
-                */}
-                <DataRow
-                  label={t('detail.duration')}
-                  value={
-                    booking.longTermPackageMonths
-                      ? (fmt.packageLabel(booking.longTermPackageMonths) ?? '')
-                      : fmt.rentalDuration(toAppTz(booking.pickupAt), toAppTz(booking.returnAt))
-                  }
-                />
-                {/*
-                  Mốc THỰC TẾ chỉ hiện khi đã có — chưa giao xe mà bày một dòng trống là mời
-                  người đọc tự điền lấy một giả định.
-                */}
-                {booking.actualPickupAt ? (
-                  <DataRow
-                    label={t('detail.actualPickup')}
-                    value={fmt.rentalPoint(toAppTz(booking.actualPickupAt))}
-                  />
-                ) : null}
-                {booking.actualReturnAt ? (
-                  <DataRow
-                    label={t('detail.actualReturn')}
-                    value={fmt.rentalPoint(toAppTz(booking.actualReturnAt))}
-                  />
-                ) : null}
-              </YStack>
-
-              {booking.note ? (
-                <YStack gap={space.xs} p={space.sm} br={radius.md} bg={colors.surfaceMuted}>
-                  <BlockTitle>{t('detail.noteBlock')}</BlockTitle>
-                  <Text col={colors.text} fos={fontSize.bodySm}>
-                    {booking.note}
-                  </Text>
-                </YStack>
-              ) : null}
-            </YStack>
-          </Card>
-
-          <BookingMoneyCard
+          <VehicleSideCard
             booking={booking}
-            {...(canUpdate && !closed ? { onEditFee: () => setEditingFee(true) } : {})}
-          />
-
-          {/*
-            Hành động đi THEO DÒNG nội dung, không dính đáy — đúng như web, nơi thanh này nằm ở
-            chân thẻ chi tiết ngay sau khối chi phí.
-
-            Bản dính đáy đã bỏ: trên điện thoại nó ăn một dải cố định ở mọi đơn, và dải đó lớn
-            dần theo số nút mà số nút thì đổi theo quyền. Đổi lại người dùng phải cuộn tới nơi
-            mới bấm được — chấp nhận được, vì đây là màn ĐỌC trước rồi mới quyết định.
-          */}
-          <BookingActionBar
-            booking={booking}
-            status={status}
-            onEdit={() => setEditing(true)}
-            onDecide={setDecision}
-            prepCan={prepCan}
+            onOpenVehicle={
+              canViewVehicle
+                ? () => navigateOnce(ROUTES.manage.vehicleDetail(booking.vehicleId))
+                : undefined
+            }
+            onOpenSchedule={
+              canViewVehicle
+                ? () =>
+                    navigateOnce(
+                      vehicleSchedulePath(
+                        { name: booking.vehicleName, plateNumber: booking.vehiclePlate },
+                        { back: true },
+                      ),
+                    )
+                : undefined
+            }
           />
 
           {/*
@@ -561,9 +475,7 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
           {withDriver || booking.driver ? (
             <Card>
               <YStack gap={space.sm}>
-                <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-                  {t('driver.title')}
-                </Text>
+                <CardTitle icon="person-outline">{t('driver.title')}</CardTitle>
 
                 {!withDriver ? (
                   <Text col={colors.textMuted} fos={fontSize.bodySm}>
@@ -758,22 +670,97 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
             </Card>
           ) : null}
 
-          {/* Banner kết cục + tiến trình 4 chặng + chuyến đi (Figma `23845:49956`, 03/11/2026). */}
+          {/* Thẻ KHÁCH — web `CustomerSideCard`: "Chỉnh sửa" = form Sửa đơn; hồ sơ khách + giấy tờ. */}
+          <CustomerSideCard
+            booking={booking}
+            onEdit={canUpdate && !closed ? () => setEditing(true) : undefined}
+            onViewProfile={
+              booking.tenantCustomerId && customerProfileAccess
+                ? () => navigateOnce(ROUTES.manage.customerDetail(booking.tenantCustomerId as string))
+                : undefined
+            }
+            onDocuments={
+              booking.tenantCustomerId && prepCan.documents ? () => setDocsOpen(true) : undefined
+            }
+          />
+
+          <PaymentSideCard
+            booking={booking}
+            onEditFee={canUpdate && !closed ? () => setEditingFee(true) : undefined}
+          />
+          {/* Lợi nhuận chuyến đứng riêng ngay sau Thanh toán như cột phải của web (16/11/2026). */}
+            {booking.ownerPayout ? (
+              <SectionCard title={t('detailPage.profit.title')}>
+                <OwnerPayoutTable payout={booking.ownerPayout} label={t('detailPage.profit.title')} />
+                <Text col={colors.placeholder} fos={fontSize.label}>
+                  {t('money.ownerEconomics.note')}
+                </Text>
+              </SectionCard>
+            ) : null}
+
+
           <BookingOutcomeBanner booking={booking} />
-          <BookingStepper booking={booking} />
-          {/* Thay `BookingTripCard` cũ (trùng giờ giao/nhận + Odo) — khớp web `TripScheduleCard`. */}
-          <TripScheduleCard booking={booking} />
-
-          {/* Chuẩn bị bàn giao (03/11/2026) — chỉ có khi server trả `handoverPrep`. */}
-          <HandoverPrepCard booking={booking} can={prepCan} />
-
-          {/* Phụ lục gia hạn đơn dài hạn (ADR 0077) — tự ẩn với đơn khác. */}
-          <BookingExtensionsPanel booking={booking} />
-
-          <BookingSettlementCard bookingId={booking.id} />
-
-          {/* Bảo hiểm chuyến theo từng sản phẩm (ADR 0064) — có ngay khi có đơn, chỉ đọc; như web. */}
-          <BookingInsurancePanel bookingId={booking.id} />
+          {/* Dòng thời gian đầy đủ (chấm + mốc giờ từng bước) ngay trước thẻ tab - header chỉ giữ thanh gọn (16/11/2026). */}
+          <Card>
+            <BookingStepper booking={booking} />
+          </Card>
+          {/*
+            Figma thẻ 3 tab `24158:102976`: Chuẩn bị (việc bàn giao) · Chuyến & thời gian (lịch,
+            gia hạn) · Phát sinh (quyết toán, bảo hiểm, lợi nhuận). Mọi khối cũ vẫn còn, chỉ xếp lại.
+          */}
+          <Card>
+            <YStack gap={space.md}>
+              <SegmentedTabs
+                variant="neutral"
+                fit
+                items={[
+                  { key: 'prep', label: t('detailPage.tabs.prep') },
+                  { key: 'trip', label: t('detailPage.tabs.trip') },
+                  { key: 'extra', label: t('detailPage.tabs.extra') },
+                ]}
+                value={detailTab}
+                onChange={setDetailTab}
+              />
+              {detailTab === 'prep' ? (
+                <HandoverPrepCard
+                  embedded
+                  booking={booking}
+                  can={prepCan}
+                  onDocuments={() => setDocsOpen(true)}
+                  onPhotos={scrollToPhotos}
+                />
+              ) : detailTab === 'trip' ? (
+                <YStack gap={space.md}>
+                  <TripScheduleCard booking={booking} />
+                  <BookingExtensionsPanel booking={booking} />
+                </YStack>
+              ) : (
+                <YStack gap={space.md}>
+                  <BookingSettlementCard bookingId={booking.id} moneyClosed={moneyClosed} />
+                  <BookingInsurancePanel bookingId={booking.id} />
+                </YStack>
+              )}
+            </YStack>
+          </Card>
+          <YStack
+            onLayout={(event) => {
+              photosY.current = event.nativeEvent.layout.y;
+            }}
+          >
+            <HandoverPhotosCard booking={booking} closed={closed} />
+          </YStack>
+          {/* Nút hành động chính của chặng (huỷ · giao/nhận xe) ở CUỐI trang (người dùng 16/11/2026). */}
+          {/*
+            Web `SideActions`: lời báo trả xe của khách (ADR 0081) rồi MỘT hàng "Hủy đơn" (trái) ·
+            nút bàn giao (phải, gấp đôi); "Khách không đến" xuống hàng dưới; một nút thì cả hàng.
+          */}
+          <YStack gap={GAP_12}>
+            <CustomerReturnReport
+              booking={booking}
+              canDispute={permissions.has(PERMISSION.HANDOVER_CONFIRM)}
+            />
+            {noShowButton}
+          </YStack>
         </YStack>
       </Screen>
 
@@ -834,6 +821,14 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
 
       {/* Mount có điều kiện — xem ghi chú ở `SettlementScreen`: `useForm` chốt mặc định một lần. */}
       {editing ? <EditBookingSheet booking={booking} onClose={() => setEditing(false)} /> : null}
+      {booking.tenantCustomerId ? (
+        <BookingCustomerDocumentsSheet
+          customerId={booking.tenantCustomerId}
+          customerName={booking.customerName}
+          open={docsOpen}
+          onClose={() => setDocsOpen(false)}
+        />
+      ) : null}
 
       {editingFee ? (
         <DeliveryFeeSheet
@@ -919,72 +914,60 @@ function DriverIncidentCallout({
   );
 }
 
-function BookingActionBar({
-  booking,
-  status,
-  onEdit,
-  onDecide,
-  prepCan,
-}: {
-  booking: BookingDetail;
-  status: BookingStatus;
-  /** Cổng của khối "Chuẩn bị bàn giao" — để cảnh báo "còn thiếu" đếm đúng bộ dòng đang hiện. */
-  prepCan: { collect: boolean; contract: boolean };
-  /** Mở form sửa đơn — state của nó nằm ở màn cha vì tấm trượt mount theo điều kiện. */
-  onEdit: () => void;
-  /** Mở hộp xác nhận cho một quyết định khép đơn (huỷ / khách không đến). */
-  onDecide: (decision: Decision) => void;
-}) {
-  const colors = useColors();
+/**
+ * Nút bàn giao CHÍNH ("Xác nhận giao xe" / "Xác nhận nhận xe") - tách khỏi `BookingActionBar` để
+ * đứng ở THANH DÍNH ĐÁY như thanh CTA của app khách (người dùng chốt 10/11/2026). Logic giữ nguyên
+ * bản cũ: cùng điều kiện hiện, cùng cảnh báo "còn thiếu" của web `requestHandover`.
+ */
+function useHandoverCta(
+  booking: BookingDetail,
+  prepCan: { collect: boolean; contract: boolean },
+): {
+  cta: { label: string; type: HandoverType } | null;
+  request: (type: HandoverType) => void;
+  alert: ReactNode;
+  pickupConfirmed: boolean;
+} {
   const t = useTranslations('Bookings.actionBar');
-  const tStatus = useTranslations('Bookings.statusActions');
-  const [collecting, setCollecting] = useState(false);
-  const createContract = useCreateContract();
-  const errorMessage = useErrorMessage();
-  const toast = useAppToast();
   const navigateOnce = useNavigateOnce();
   const permissions = usePermissions();
-
-  // Chỉ hỏi ngữ cảnh bàn giao khi đơn CÒN SỐNG — đơn đã khép thì không chiều nào mở được nữa.
-  const closed = isBookingFinal(status);
-  // Như web: đơn đã khép vẫn cần ngữ cảnh để hiện lối "Ảnh bàn giao" cho biên bản đã có.
   const handovers = useHandoverContext(booking.id, permissions.has(PERMISSION.HANDOVER_VIEW));
   const context = handovers.data;
-
   const canViewHandover = permissions.has(PERMISSION.HANDOVER_VIEW);
-  const canManageHandover = permissions.has(PERMISSION.HANDOVER_MANAGE);
-  const canUpdate = permissions.has(PERMISSION.BOOKING_UPDATE);
-  const canRecordPayment = permissions.has(PERMISSION.PAYMENT_RECORD);
-  const canConfirmHandover = permissions.has(PERMISSION.HANDOVER_CONFIRM);
-  /*
-   * Hai trục nối tiếp (ADR 0027 điều 2), đúng web `BookingActionBar`: chủ xe tuyến hoa hồng mang
-   * ĐỦ quyền `shop_owner`, nên chỉ hỏi quyền là bày cho họ Hợp đồng / Lịch sử tiền / Thu tiền —
-   * những năng lực của gói (`contracts`, `finance`) họ không có.
-   */
-  const contractsFeature = useFeature(PLAN_FEATURE.CONTRACTS);
-  const financeFeature = useFeature(PLAN_FEATURE.FINANCE);
-
-  const hasDebt = !isZeroMoney(booking.debtAmount);
-  /** Đã lập biên bản chưa — lối "Ảnh bàn giao" chỉ có nghĩa khi thật sự đã có biên bản. */
-  const hasHandover = Boolean(context?.pickup ?? context?.return);
-
   const tAlert = useTranslations('Bookings.detailPage.handoverAlert');
-  const [handoverAlert, setHandoverAlert] = useState<HandoverType | null>(null);
+  const tPrep = useTranslations('Bookings.detailPage.prep');
+  const slotLabel = useDomainLabel();
+  /** Lượt cảnh báo: chiều bàn giao + ĐÚNG những việc còn thiếu (web tô đỏ từng dòng/góc ảnh). */
+  const [handoverAlert, setHandoverAlert] = useState<{ type: HandoverType; missing: string[] } | null>(
+    null,
+  );
   /** Bản native của `requestHandover` (web): đủ việc thì mở luồng ngay, thiếu thì hỏi lại. */
   const requestHandover = (type: HandoverType) => {
-    const prepMissing =
-      type === HANDOVER_TYPE.PICKUP && booking.handoverPrep
-        ? prepRowStates(booking.handoverPrep, prepCan).some((row) => !row.done)
-        : false;
-    const slots = missingPhotoSlots(
-      type === HANDOVER_TYPE.PICKUP ? context?.pickup?.photos : context?.return?.photos,
-      booking.vehicleType,
-    );
-    if (!prepMissing && slots.length === 0) {
+    /*
+     * Nhận lại xe (06/11/2026, PR #278): màn "Xác nhận đã nhận lại xe" tự chụp ảnh và đếm x/N ảnh
+     * ngay trong thân — cảnh báo "còn thiếu" chỉ còn cho chiều giao xe, như web.
+     */
+    if (type === HANDOVER_TYPE.RETURN) {
       navigateOnce(ROUTES.manage.handover(booking.id, type));
       return;
     }
-    setHandoverAlert(type);
+    const prepMissing = booking.handoverPrep
+      ? prepRowStates(booking.handoverPrep, prepCan)
+          .filter((row) => !row.done)
+          .map((row) => tPrep(row.key))
+      : [];
+    const slots = missingPhotoSlots(context?.pickup?.photos, booking.vehicleType);
+    if (prepMissing.length === 0 && slots.length === 0) {
+      navigateOnce(ROUTES.manage.handover(booking.id, type));
+      return;
+    }
+    setHandoverAlert({
+      type,
+      missing: [
+        ...prepMissing,
+        ...slots.map((slot) => `${tPrep('photos')}: ${slotLabel('handoverPhotoSlot', slot)}`),
+      ],
+    });
   };
 
   const cta =
@@ -996,173 +979,9 @@ function BookingActionBar({
           : null
       : null;
 
-  /*
-   * Dựng thành MẢNG rồi mới vẽ, thay vì rải `{cond ? <BarAction/> : null}` trong JSX: lưới cần
-   * biết TỔNG số nút để chia hàng và căn giữa hàng cuối, mà số nút thì đổi theo quyền và theo
-   * việc đã có biên bản hay chưa (ba tới năm nút tuỳ đơn).
-   *
-   * Thứ tự khớp web từng mục một.
-   */
-  const actions: BarActionItem[] = [];
 
-  /*
-   * Quyết định KHÉP ĐƠN đứng ĐẦU hàng, đúng chỗ web đặt `BookingStatusActions`: chúng là việc
-   * phải làm với đơn, phần còn lại của hàng là tra cứu.
-   *
-   * Nút nào hiện lên hỏi thẳng `canTransitionBooking` thay vì tự liệt kê theo trạng thái: thêm
-   * một cạnh vào máy trạng thái ở `@xeprime/types` là thanh này tự đúng theo (ADR 0005).
-   */
-  if (canUpdate && canTransitionBooking(status, BOOKING_STATUS.CANCELLED)) {
-    actions.push({
-      label: tStatus('cancel'),
-      icon: 'close-circle-outline',
-      variant: 'danger',
-      onPress: () => onDecide(BOOKING_STATUS.CANCELLED),
-    });
-  }
-
-  /*
-   * Ba điều kiện, và cả ba đều phải đúng — đúng bộ mà server kiểm:
-   *   1. máy trạng thái còn cạnh `→ no_show`;
-   *   2. đã qua ân hạn `BOOKING_NO_SHOW_GRACE_MINUTES` kể từ giờ nhận theo đơn;
-   *   3. CHƯA HỀ giao xe — có biên bản giao đã xác nhận thì khách đã cầm chìa khoá, gọi họ là
-   *      "không đến" vừa sai sự thật vừa nhả lịch một chiếc xe đang chạy ngoài đường.
-   *
-   * Điều kiện thứ ba là thứ app còn thiếu so với web.
-   */
-  if (
-    canUpdate &&
-    canTransitionBooking(status, BOOKING_STATUS.NO_SHOW) &&
-    isNoShowGracePassed(booking.pickupAt) &&
-    !context?.pickup?.confirmedAt
-  ) {
-    actions.push({
-      label: tStatus('noShow'),
-      icon: 'person-remove-outline',
-      onPress: () => onDecide(BOOKING_STATUS.NO_SHOW),
-    });
-  }
-
-  /*
-   * "Hợp đồng" — tạo (hoặc lấy) rồi mở trang của nó, đúng luồng web.
-   *
-   * Server idempotent: bấm lại trả đúng bản cũ chứ không lập bản thứ hai, nên không cần hỏi
-   * "đã có hợp đồng chưa" trước khi bấm. Gate `contracts.manage` như web.
-   */
-  if (permissions.has(PERMISSION.CONTRACT_MANAGE) && contractsFeature.isVisible) {
-    actions.push({
-      label: t('contract'),
-      icon: 'document-attach-outline',
-      disabled: createContract.isPending,
-      onPress: () =>
-        createContract.mutate(booking.id, {
-          onSuccess: (contract) => navigateOnce(ROUTES.manage.contract(contract.id)),
-          onError: (error) => toast.showError(errorMessage(error)),
-        }),
-    });
-  }
-
-  /*
-   * "Lịch sử tiền" chứ không phải "Sổ tiền của đơn": nó liệt kê các lần thu và các phiếu của
-   * ĐƠN, còn "sổ" là cuốn Thu-Chi của cả gian hàng — hai thứ khác nhau mà gọi cùng một chữ thì
-   * người dùng tưởng mình mở nhầm chỗ.
-   */
-  // Web gác CHỈ bằng năng lực `finance` (đọc lịch sử tiền của đơn không cần quyền ghi).
-  if (financeFeature.isVisible) {
-    actions.push({
-      label: t('moneyHistory'),
-      icon: 'receipt-outline',
-      onPress: () => navigateOnce(ROUTES.manage.payments(booking.id)),
-    });
-  }
-
-  if (canUpdate) {
-    actions.push({
-      label: t('edit'),
-      icon: 'create-outline',
-      /*
-       * Đơn đã khép thì server từ chối mọi lần ghi. Nút vẫn ĐỨNG NGUYÊN CHỖ nhưng mờ đi — biến
-       * mất thì hàng nút nhảy chỗ giữa các đơn, còn để bấm được thì người dùng ăn 409 mà không
-       * hiểu vì sao. Cùng quyết định với web.
-       */
-      disabled: closed,
-      onPress: onEdit,
-    });
-  }
-
-  if (canRecordPayment && financeFeature.isVisible) {
-    actions.push({
-      // Hết nợ thì nút vẫn đứng nguyên chỗ nhưng nói rõ là không còn gì để thu.
-      label: hasDebt ? t('collect') : t('collected'),
-      icon: 'cash-outline',
-      disabled: !hasDebt,
-      /*
-       * MỞ TẤM TRƯỢT ngay tại đây, không đẩy sang màn lịch sử — đúng như web mở
-       * `RecordPaymentModal`. Số còn nợ đang nằm ngay trên màn này, nên form điền sẵn được;
-       * đẩy sang một màn khác là bắt người dùng nhớ con số rồi gõ lại.
-       */
-      onPress: () => setCollecting(true),
-    });
-  }
-
-  /*
-   * Lối BỔ SUNG ảnh cho biên bản ĐÃ lập. Luồng nhanh cho xác nhận trong một cú bấm nên quên
-   * đính ảnh là chuyện thường ngày — không có lối này thì bằng chứng nằm lại trong điện thoại
-   * nhân viên mãi mãi. Chỉ hiện khi thật sự đã có biên bản.
-   */
-  if (canManageHandover && hasHandover) {
-    actions.push({
-      label: t('handoverPhotos'),
-      icon: 'images-outline',
-      onPress: () => navigateOnce(ROUTES.manage.handoverPhotos(booking.id)),
-    });
-  }
-
-  return (
-    /*
-      Một THẺ như mọi khối khác của màn, không phải một lớp nổi: nó nằm trong dòng nội dung nên
-      không cần bóng, không cần viền gold, không cần safe-area đáy — `Screen` đã giữ cạnh đó.
-    */
-    <Card>
-      <YStack gap={space.sm}>
-        {/*
-        CTA chính đứng TRÊN hàng phụ, ngược thứ tự web (web để nó bên phải cùng hàng).
-        Trên điện thoại hàng dọc: thứ quan trọng nhất phải gần ngón cái nhất, và nó là dòng
-        người dùng chạm tới trước khi mắt kịp đọc hết hàng phụ.
-      */}
-        {cta ? (
-          <Button
-            label={cta.label}
-            size="lg"
-            // Thiếu `handovers.confirm` thì nút đứng đó nhưng mờ kèm lời giải thích — đúng web,
-            // thay vì bấm được rồi ăn 403.
-            disabled={!canConfirmHandover}
-            onPress={() => requestHandover(cta.type)}
-          />
-        ) : null}
-        {cta && !canConfirmHandover ? (
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {t('confirmPermissionHint')}
-          </Text>
-        ) : null}
-
-        {/*
-          Hàng phụ — CÙNG BỘ và CÙNG THỨ TỰ với `BookingActionBar` của web: Hợp đồng · Lịch sử
-          tiền · Sửa đơn · Thu tiền/Đã thu đủ · Ảnh bàn giao. Bày thẳng chứ không giấu sau menu
-          ba chấm — đều là việc thường ngày ở quầy.
-
-          KHÔNG có "Quyết toán": web không có, và nó đã có lối vào riêng ngay trên thẻ "Phát
-          sinh & Tiền cọc" của chính màn này.
-        */}
-        <BarActionGrid actions={actions} />
-
-        {closed && canUpdate ? (
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {t('closedHint')}
-          </Text>
-        ) : null}
-      </YStack>
-
+  const alert = (
+    <>
       {/*
         Cảnh báo "còn thiếu" trước khi bàn giao (web `requestHandover`, 03/11/2026): lượt GIAO soát
         các dòng "Chuẩn bị bàn giao" chưa xong + góc ảnh bắt buộc còn trống; lượt NHẬN chỉ soát ảnh.
@@ -1171,91 +990,194 @@ function BookingActionBar({
       <AlertDialog
         open={handoverAlert !== null}
         title={tAlert('title')}
-        message={tAlert(handoverAlert === HANDOVER_TYPE.PICKUP ? 'bodyPickup' : 'bodyReturn')}
+        message={[
+          tAlert('bodyPickup'),
+          ...(handoverAlert?.missing ?? []).map((item) => `- ${item}`),
+        ].join(ALERT_LINE_BREAK)}
         confirmLabel={tAlert('continue')}
         destructive
         onConfirm={() => {
-          const type = handoverAlert;
+          const type = handoverAlert?.type;
           setHandoverAlert(null);
           if (type) navigateOnce(ROUTES.manage.handover(booking.id, type));
         }}
         onCancel={() => setHandoverAlert(null)}
       />
 
-      {/* Gắn/tháo theo cờ mở: số điền sẵn chỉ đọc lúc dựng. */}
-      {collecting ? (
-        <RecordPaymentSheet
-          open
-          onClose={() => setCollecting(false)}
-          bookingId={booking.id}
-          debtAmount={booking.debtAmount}
+    </>
+  );
+  return {
+    cta,
+    request: requestHandover,
+    alert,
+    pickupConfirmed: Boolean(context?.pickup?.confirmedAt),
+  };
+}
+
+/**
+ * Cụm nút đầu trang — web `HeaderActions`: Hợp đồng (xem/tạo) · Lịch sử thu tiền · Thu tiền, đều
+ * theo quyền + năng lực gói (ADR 0027 điều 2). "Sửa" nằm ở thẻ khách, ảnh bàn giao là một khối
+ * ngay trong trang — như web.
+ */
+function BookingHeaderActions({
+  booking,
+  stacked = false,
+  onDone,
+}: {
+  booking: BookingDetail;
+  /** Trong tấm "Thao tác": nút xếp dọc, trải hết bề ngang. */
+  stacked?: boolean;
+  onDone?: () => void;
+}) {
+  const t = useTranslations('Bookings.detailPage.actions');
+  const [collecting, setCollecting] = useState(false);
+  const createContract = useCreateContract();
+  const errorMessage = useErrorMessage();
+  const toast = useAppToast();
+  const navigateOnce = useNavigateOnce();
+  const permissions = usePermissions();
+  const contractsFeature = useFeature(PLAN_FEATURE.CONTRACTS);
+  const financeFeature = useFeature(PLAN_FEATURE.FINANCE);
+  const moneyClosed = isBookingClosedWithoutTrip(booking.status as BookingStatus);
+
+  const can = {
+    contract: permissions.has(PERMISSION.CONTRACT_MANAGE) && contractsFeature.isVisible,
+    history: financeFeature.isVisible,
+    collect: permissions.has(PERMISSION.PAYMENT_RECORD) && financeFeature.isVisible && !moneyClosed,
+  };
+  if (!can.contract && !can.history && !can.collect) return null;
+  const hasDebt = !isZeroMoney(booking.debtAmount);
+  const contractKnown = booking.handoverPrep ? booking.handoverPrep.contractId !== null : true;
+
+  return (
+    <>
+    <ActionsWrap stacked={stacked}>
+      {can.contract ? (
+        <Button
+          label={contractKnown ? t('viewContract') : t('createContract')}
+          icon={contractKnown ? 'document-text-outline' : 'add-circle-outline'}
+          variant="gradient"
+          block={stacked}
+          loading={createContract.isPending}
+          onPress={() =>
+            createContract.mutate(booking.id, {
+              onSuccess: (contract) => {
+                onDone?.();
+                navigateOnce(ROUTES.manage.contract(contract.id));
+              },
+              onError: (error) => toast.showError(errorMessage(error)),
+            })
+          }
         />
       ) : null}
-    </Card>
-  );
-}
-
-interface BarActionItem {
-  label: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  /** Mặc định `accent`. `danger` dành cho Hủy đơn — web cũng tô đỏ riêng nút đó. */
-  variant?: 'accent' | 'danger';
-  disabled?: boolean;
-  onPress: () => void;
-}
-
-/**
- * Bao nhiêu ô một hàng. HAI: nhãn tiếng Việt của nhóm này dài và nút còn mang biểu tượng, nên
- * ba ô một hàng là ô nào cũng phải cắt chữ. Năm nút vì thế xếp 2 · 2 · 1, hàng lẻ nằm giữa.
- */
-const BAR_ROW_SIZE = 2;
-
-/**
- * Lưới hành động phụ: cắt thành hàng ba, hàng cuối CĂN GIỮA.
- *
- * Ô rộng theo phần trăm cố định chứ không `flexGrow`: có `flexGrow` thì hàng cuối chỉ còn hai ô
- * sẽ phình mỗi ô lên một nửa bề ngang, và lưới đọc ra như hai nhóm nút khác cỡ nhau. Rộng cố
- * định + `jc="center"` thì mọi ô bằng nhau ở mọi hàng, hàng thiếu chỉ đơn giản là hẹp hơn và
- * nằm giữa.
- */
-function BarActionGrid({ actions }: { actions: readonly BarActionItem[] }) {
-  const rows: BarActionItem[][] = [];
-  for (let i = 0; i < actions.length; i += BAR_ROW_SIZE) {
-    rows.push(actions.slice(i, i + BAR_ROW_SIZE));
-  }
-
-  return (
-    <YStack gap={space.xs}>
-      {rows.map((row) => (
-        <XStack key={row[0]?.label} jc="center" gap={space.xs}>
-          {row.map((item) => (
-            <BarAction key={item.label} {...item} />
-          ))}
-        </XStack>
-      ))}
-    </YStack>
-  );
-}
-
-/**
- * Một ô của lưới — một `Button` nền vàng nhạt (`accent`), hạng dưới CTA chính của màn.
- *
- * Ô rộng `48%` chứ không `flexGrow`: có `flexGrow` thì hàng cuối chỉ còn một nút sẽ giãn ra
- * chiếm trọn bề ngang và đọc ra như một hành động chính thứ hai. Rộng cố định thì nút lẻ giữ
- * đúng cỡ của các nút trên nó, chỉ khác là nằm giữa.
- */
-function BarAction({ label, icon, variant = 'accent', disabled = false, onPress }: BarActionItem) {
-  /* Hai ô + một khe vẫn dưới 100% — xem ghi chú ở docblock ngay trên. */
-  return (
-    <YStack w="48%">
-      <Button
-        label={label}
-        icon={icon}
-        variant={variant}
-        size="sm"
-        disabled={disabled}
-        onPress={onPress}
+      {can.history ? (
+        <Button
+          label={t('moneyHistory')}
+          icon="receipt-outline"
+          variant="gradient"
+          block={stacked}
+          onPress={() => {
+            onDone?.();
+            navigateOnce(ROUTES.manage.payments(booking.id));
+          }}
+        />
+      ) : null}
+      {can.collect ? (
+        <Button
+          label={hasDebt ? t('collect') : t('collected')}
+          icon={hasDebt ? 'wallet-outline' : 'checkmark-circle-outline'}
+          variant="gradient"
+          block={stacked}
+          disabled={!hasDebt}
+          onPress={() => setCollecting(true)}
+        />
+      ) : null}
+    </ActionsWrap>
+    {/* Gắn/tháo theo cờ mở: số điền sẵn chỉ đọc lúc dựng. */}
+    {collecting ? (
+      <RecordPaymentSheet
+        open
+        onClose={() => setCollecting(false)}
+        bookingId={booking.id}
+        debtAmount={booking.debtAmount}
       />
+    ) : null}
+    </>
+  );
+}
+
+/**
+ * Hàng nút cuối cột phải — web `.sideActionsRow`: lưới 1 : 2, khe 8. Nút bàn giao luôn ở ô PHẢI
+ * hàng đầu; "Hủy đơn" lấp ô trái; nút phụ thứ hai xuống hàng dưới. Một nút duy nhất ⇒ cả hàng.
+ */
+function SideActionsRow({
+  secondary,
+  primary,
+}: {
+  secondary: readonly ReactNode[];
+  primary: ReactNode;
+}) {
+  const cells = [...secondary, ...(primary ? [primary] : [])];
+  if (cells.length === 0) return null;
+  if (cells.length === 1) return <YStack>{cells[0]}</YStack>;
+  const [first, second] = secondary;
+  return (
+    <YStack gap={space.sm}>
+      <XStack gap={space.sm}>
+        <YStack f={1} minWidth={0}>
+          {first}
+        </YStack>
+        <YStack f={2} minWidth={0}>
+          {primary ?? second}
+        </YStack>
+      </XStack>
+      {/* Nút phụ thứ hai ("Ghi nhận khách không đến") trải cả hàng - ô 1/3 cắt mất chữ. */}
+      {primary && second ? <YStack>{second}</YStack> : null}
     </YStack>
+  );
+}
+
+/** Web `--xp-space-12` (`.sideActions { gap }`). */
+const GAP_12 = 12;
+
+/** Mỗi việc còn thiếu một dòng trong hộp cảnh báo bàn giao. */
+const ALERT_LINE_BREAK = String.fromCharCode(10);
+
+/**
+ * Nút ⋮ trên thanh đầu (Figma "Thao tác"): mở tấm chứa các thao tác phụ của đơn - hợp đồng, lịch sử
+ * thu tiền, thu tiền. Cùng cổng quyền / cờ như hàng nút cũ (`BookingHeaderActions`).
+ */
+function BookingActionsMenu({ booking }: { booking: BookingDetail }) {
+  const t = useTranslations('Bookings.detailPage.actions');
+  const colors = useColors();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      {/* Figma: dấu ⋮ trơn, không viền/nền. */}
+      <Pressable onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel={t('menuTitle')} hitSlop={12}>
+        <Ionicons name="ellipsis-vertical" size={20} color={colors.textMuted} />
+      </Pressable>
+      <BottomSheet open={open} onClose={() => setOpen(false)} title={t('menuTitle')} chrome="v2" headerDivider>
+        <BookingHeaderActions booking={booking} stacked onDone={() => setOpen(false)} />
+      </BottomSheet>
+    </>
+  );
+}
+
+/** Tấm "Thao tác": mỗi nút một hàng trải hết bề ngang; ngoài tấm thì xếp ngang tự xuống dòng. */
+function ActionsWrap({ stacked, children }: { stacked: boolean; children: ReactNode }) {
+  return stacked ? (
+    // Hai nút một hàng, cùng màu vàng (chuẩn tấm "Thao tác" của hồ sơ khách, 16/11/2026).
+    <XStack flexWrap="wrap" gap={space.sm} alignSelf="stretch">
+      {Children.toArray(children).map((child, index) => (
+        <YStack key={index} f={1} minWidth="45%">
+          {child}
+        </YStack>
+      ))}
+    </XStack>
+  ) : (
+    <XStack flexWrap="wrap" gap={space.sm}>
+      {children}
+    </XStack>
   );
 }

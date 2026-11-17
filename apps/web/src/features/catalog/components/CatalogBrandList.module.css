@@ -146,3 +146,14 @@
     display: block;
   }
 }
+
+/* Số xe chờ duyệt của hãng (ADR 0096) — cùng khuôn với huy hiệu thiếu thông số, màu chờ. */
+.pending {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-sm);
+  font-variant-numeric: tabular-nums;
+}

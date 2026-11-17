@@ -92,6 +92,14 @@
   width: 100%;
 }
 
+/* Tiêu đề nhóm trong danh sách đích: khoản của khách · hoá đơn gói (ADR 0092). */
+.groupTitle {
+  margin: var(--xp-space-xs) 0 0;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text-secondary);
+}
+
 .suggestion,
 .suggestionOn {
   display: flex;

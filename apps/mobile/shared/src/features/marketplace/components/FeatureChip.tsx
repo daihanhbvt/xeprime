@@ -1,53 +1,12 @@
-import { Ionicons } from '@expo/vector-icons';
+import { VehicleFeatureIcon } from '@/components/icons/VehicleFeatureIcon';
 import { Text, XStack } from 'tamagui';
-import type { VehicleFeatureKey } from '@xeprime/types';
-import type { IconName } from '@/components/ui/Chip';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
-/**
- * Biểu tượng cho mọi tiện ích của `VEHICLE_FEATURE_LABEL` (14 của ô tô + 8 của xe máy).
- *
- * Toàn bộ dùng bản `-outline`: bản đặc ở cỡ nhỏ bị bết thành một khối, đọc ra hình thù thì
- * chậm hơn đọc chữ bên cạnh — tức là biểu tượng phản tác dụng.
- *
- * Khoá lạ (admin thêm tiện ích mới) rơi về dấu tick, không bao giờ để trống.
+/*
+ * Icon tiện ích dùng CÙNG bộ SVG nét với web `VehicleFeatureIcon` (Figma v2) — xem
+ * `components/icons/VehicleFeatureIcon`. Khoá lạ rơi về dấu tích tròn, không bao giờ để trống.
  */
-const FEATURE_ICON: Record<VehicleFeatureKey, IconName> = {
-  bluetooth: 'bluetooth-outline',
-  gps: 'navigate-outline',
-  backup_camera: 'camera-outline',
-  camera_360: 'scan-outline',
-  dash_camera: 'videocam-outline',
-  reverse_sensor: 'radio-outline',
-  sunroof: 'sunny-outline',
-  etc: 'card-outline',
-  spare_tire: 'ellipse-outline',
-  airbag: 'shield-checkmark-outline',
-  usb: 'hardware-chip-outline',
-  screen: 'tv-outline',
-  map: 'map-outline',
-  child_seat: 'happy-outline',
-  // Xe máy (09/09/2026) — bộ tiện ích của `VEHICLE_FEATURE_LABEL` đã có thêm phần của xe máy.
-  abs: 'disc-outline',
-  traction_control: 'git-compare-outline',
-  smart_key: 'key-outline',
-  phone_holder: 'phone-portrait-outline',
-  top_box: 'cube-outline',
-  helmet_included: 'shield-outline',
-  raincoat_included: 'rainy-outline',
-  anti_theft: 'lock-closed-outline',
-};
-
-/**
- * Một tiện ích của xe: biểu tượng mảnh + nhãn, nền màu thương hiệu ĐẬM.
- *
- * Cùng nền với avatar và nút chính của app. Chữ dùng `onPrimary` (đen) chứ không phải trắng —
- * gold sáng không đỡ nổi chữ trắng.
- */
-function featureIconOf(featureKey: string): IconName {
-  return FEATURE_ICON[featureKey as VehicleFeatureKey] ?? 'checkmark-circle-outline';
-}
 
 /**
  * Một ô của lưới "Tiện ích trên xe" ở trang chi tiết — `.featureItem` web ≤640px (Figma
@@ -58,7 +17,7 @@ export function FeatureItem({ featureKey, label }: { featureKey: string; label: 
   const colors = useColors();
   return (
     <XStack ai="center" gap={space.sm} minWidth={0}>
-      <Ionicons name={featureIconOf(featureKey)} size={18} color={colors.textMuted} />
+      <VehicleFeatureIcon featureKey={featureKey} size={18} color={colors.textMuted} />
       <Text f={1} col={colors.textMuted} fos={13} numberOfLines={1}>
         {label}
       </Text>
@@ -66,9 +25,12 @@ export function FeatureItem({ featureKey, label }: { featureKey: string; label: 
   );
 }
 
+/**
+ * Một tiện ích của xe: biểu tượng mảnh + nhãn, nền màu thương hiệu ĐẬM. Chữ dùng `onPrimary`
+ * (đen) chứ không phải trắng — gold sáng không đỡ nổi chữ trắng.
+ */
 export function FeatureChip({ featureKey, label }: { featureKey: string; label: string }) {
   const colors = useColors();
-  const icon = featureIconOf(featureKey);
 
   return (
     <XStack
@@ -79,7 +41,7 @@ export function FeatureChip({ featureKey, label }: { featureKey: string; label: 
       px={space.sm}
       py={space.xs}
     >
-      <Ionicons name={icon} size={13} color={colors.onPrimary} />
+      <VehicleFeatureIcon featureKey={featureKey} size={13} color={colors.onPrimary} />
       <Text col={colors.onPrimary} fos={fontSize.label} fow={fontWeight.medium}>
         {label}
       </Text>

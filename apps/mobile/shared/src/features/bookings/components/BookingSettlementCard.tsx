@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { useState, type ReactNode } from 'react';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { isNegativeMoney, isZeroMoney, subtractMoney } from '@xeprime/domain';
@@ -14,9 +14,7 @@ import {
 } from '@xeprime/types';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
-import { Card } from '@/components/ui/Card';
-import { DataRow } from '@/components/ui/DataRow';
-import { InlineAction } from '@/components/ui/InlineAction';
+import { SectionCard } from '@/components/ui/SectionCard';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -44,7 +42,17 @@ import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
  * Khác web đúng một chỗ: web mở ba hộp thoại ngay tại thẻ, native đẩy sang màn Quyết toán nơi đã
  * có sẵn cả ba form. Mọi con số và câu trạng thái thì giữ nguyên.
  */
-export function BookingSettlementCard({ bookingId }: { bookingId: string }) {
+export function BookingSettlementCard({
+  bookingId,
+  moneyClosed = false,
+}: {
+  bookingId: string;
+  /**
+   * Đơn huỷ / khách không đến (`isBookingClosedWithoutTrip`): không ghi phát sinh hay thu cọc MỚI
+   * (server `BOOKING_MONEY_CLOSED`). Hoàn cọc đã thu vẫn mở — như web `SettlementCard`.
+   */
+  moneyClosed?: boolean;
+}) {
   const colors = useColors();
   const t = useTranslations('Bookings.settlement');
   const tActions = useTranslations('Common.actions');
@@ -57,6 +65,8 @@ export function BookingSettlementCard({ bookingId }: { bookingId: string }) {
 
   const canView = permissions.has(PERMISSION.BOOKING_VIEW);
   const canRecord = permissions.has(PERMISSION.PAYMENT_RECORD);
+  // Ghi tiền MỚI (phát sinh, thu cọc) — hoàn cọc dùng `canRecord` trần, vẫn mở trên đơn huỷ.
+  const canRecordNew = canRecord && !moneyClosed;
   /*
    * Ghi nhận hoàn cần `payments.record`; ĐIỀU CHỈNH một bản ghi đã có cần `payments.void` —
    * sửa một con số tiền đã ghi sổ là quyền khác hẳn với ghi mới. Cùng phân tách với web.
@@ -68,12 +78,9 @@ export function BookingSettlementCard({ bookingId }: { bookingId: string }) {
 
   if (query.isPending) {
     return (
-      <Card>
-        <YStack gap={space.sm}>
-          <CardTitle>{t('cardTitle')}</CardTitle>
-          <SkeletonText lines={3} />
-        </YStack>
-      </Card>
+      <SectionCard title={t('cardTitle')}>
+        <SkeletonText lines={3} />
+      </SectionCard>
     );
   }
 
@@ -81,12 +88,11 @@ export function BookingSettlementCard({ bookingId }: { bookingId: string }) {
   // thẻ biến mất thì người trực tưởng đơn chưa có tiền nào cần quyết toán.
   if (query.isError) {
     return (
-      <Card>
+      <SectionCard title={t('cardTitle')}>
         <YStack gap={space.sm}>
-          <CardTitle>{t('cardTitle')}</CardTitle>
           <Callout tone="danger" title={t('errorTitle')}>
             <YStack gap={space.xs}>
-              <Text col={colors.danger} fos={fontSize.bodySm}>
+              <Text col={colors.danger} fos={fontSize.body}>
                 {getErrorMessage(query.error)}
               </Text>
               <XStack>
@@ -101,7 +107,7 @@ export function BookingSettlementCard({ bookingId }: { bookingId: string }) {
             </YStack>
           </Callout>
         </YStack>
-      </Card>
+      </SectionCard>
     );
   }
 
@@ -138,77 +144,74 @@ export function BookingSettlementCard({ bookingId }: { bookingId: string }) {
    * thêm" là một nghiệp vụ khác hẳn, không phải thu nốt cọc. Điều kiện gương y web.
    */
   const canTakeDeposit =
-    canRecord &&
+    canRecordNew &&
     !isNegativeMoney(depositOutstanding) &&
     !isZeroMoney(depositOutstanding) &&
     (status === DEPOSIT_STATUS.NOT_RECEIVED || status === DEPOSIT_STATUS.RECEIVED);
 
   return (
-    <Card>
-      <YStack gap={space.md}>
-        <XStack ai="center" jc="space-between" gap={space.sm}>
-          <CardTitle>{t('cardTitle')}</CardTitle>
+    /*
+      Web `SettlementCard` (Figma 23845:49956): `SectionCard` "Phát sinh", chặng cọc ở góc phải khi
+      đã có tiền trong tay; thân là các bảng gọn - mỗi dòng một con số, hành động là LINK gạch chân
+      ngay cạnh số đó. Thân và các bảng cách nhau `space-md`.
+    */
+    <SectionCard
+      title={t('cardTitle')}
+      extra={
+        status === DEPOSIT_STATUS.NOT_RECEIVED ? undefined : (
           <StatusBadge
             label={domainLabel('depositStatus', status, meta.label)}
             color={meta.color}
             size="sm"
           />
-        </XStack>
-
-        {/* Phát sinh */}
-        <YStack gap={space.sm}>
-          <XStack ai="center" jc="space-between" gap={space.sm}>
-            <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-              {t('surchargeHeading')}
-            </Text>
-            {canRecord ? (
-              <Button
-                label={t('surchargeRecord')}
-                variant="secondary"
-                size="sm"
-                block={false}
-                onPress={openSettlement}
-              />
-            ) : null}
-          </XStack>
-
+        )
+      }
+    >
+      <YStack gap={space.md} minWidth={0}>
+        <SettleRow label={t('surchargeHeading')}>
           {hasSurcharges ? (
-            data.surcharges.map((row) => (
-              <XStack key={row.id} ai="flex-start" jc="space-between" gap={space.sm}>
-                <YStack f={1} gap={1}>
-                  <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
+            <Money>{fmt.money(data.surchargeTotal)}</Money>
+          ) : (
+            <Text col={colors.text} fos={fontSize.body}>
+              {t('surchargeNone')}
+            </Text>
+          )}
+          {canRecordNew ? <InlineLink label={t('surchargeRecord')} onPress={openSettlement} /> : null}
+        </SettleRow>
+
+        {hasSurcharges ? (
+          <YStack gap={space.sm}>
+            {data.surcharges.map((row) => (
+              <XStack
+                key={row.id}
+                ai="baseline"
+                jc="space-between"
+                gap={space.md}
+                px={space.md}
+                py={space.sm}
+                br={radius.sm}
+                bg={colors.surfaceMuted}
+              >
+                <YStack f={1} minWidth={0} gap={2}>
+                  <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
                     {domainLabel('surchargeCategory', row.category as SurchargeCategory)}
                   </Text>
-                  <Text col={colors.textMuted} fos={fontSize.label}>
+                  <Text col={colors.textMuted} fos={fontSize.body}>
                     {row.reason}
                   </Text>
                 </YStack>
-                <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.bold}>
-                  {fmt.money(row.amount)}
-                </Text>
+                <Money>{fmt.money(row.amount)}</Money>
               </XStack>
-            ))
-          ) : (
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {t('surchargeEmpty')}
-            </Text>
-          )}
-        </YStack>
+            ))}
+          </YStack>
+        ) : null}
 
         {/*
-          DỮ KIỆN phí vượt km — đặt ngay dưới danh sách phát sinh, nơi chủ xe sắp bấm ghi.
-
-          Nó KHÔNG phải một khoản đã ghi: phí vượt chỉ thành phụ phí khi chủ xe chủ động ghi,
-          và họ vẫn sửa được số tiền. Bày ở đây để quyết định đó dựa trên số thật — hai chỉ số
-          đồng hồ, hạn mức của đơn, và công thức — thay vì một con số xuất hiện từ hư không.
-
-          Cổng là `includedKmPerDay != null`, KHÔNG phải sự tồn tại của `excessMileage`: DTO khai
-          trường đó `!` (luôn có), nên phép kiểm object luôn đúng và khối "chưa đặt hạn mức" sẽ
-          hiện trên MỌI đơn. Xe không đặt hạn mức thì không có gì để nói, và một dòng thừa trên
-          màn hình đang nói về tiền là nhiễu. Cùng cổng với web.
+          Vượt hạn mức km - chỉ khi chuyến CÓ hạn mức (`includedKmPerDay != null`). Thông tin ĐỌC:
+          phí vượt chỉ thành phụ phí khi chủ xe tự ghi.
         */}
         {showsExcessMileageFacts(data.excessMileage) ? (
-          <YStack gap={space.sm}>
+          <YStack gap={space.md}>
             <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
               {tMileage('title')}
             </Text>
@@ -216,50 +219,37 @@ export function BookingSettlementCard({ bookingId }: { bookingId: string }) {
           </YStack>
         ) : null}
 
-        {/* Cọc */}
-        <YStack gap={space.xs}>
-          <DataRow label={t('depositRequiredShort')} value={fmt.money(data.depositRequired)} />
-          {/*
-            Dòng này chở một CÂU khi chưa thu, chứ không phải một con số — nên nó xuống dạng
-            KHỐI (nhãn trên, nội dung dưới) thay vì cột nhãn 30% / cột giá trị 70%.
-
-            Ở dạng hàng ngang, "Chưa ghi nhận đã thu cọc" cộng thêm nút "Thu cọc" phải chen vào
-            70% bề ngang còn lại của màn 360dp: câu vỡ thành ba dòng cụt và nút bị đẩy lệch khỏi
-            hàng. Con số thì ngược lại — ngắn, và đặt cạnh nhãn mới so sánh được với hai dòng
-            tiền ở trên.
-          */}
-          <DataRow
-            label={t('depositReceivedShort')}
-            /* Chưa có bằng chứng thu tiền thì nói THẲNG, không hiện một số 0 mập mờ. */
-            value={
-              status === DEPOSIT_STATUS.NOT_RECEIVED
-                ? t('depositNotReceived')
-                : fmt.money(data.depositReceived)
-            }
-            tone={status === DEPOSIT_STATUS.NOT_RECEIVED ? 'muted' : 'default'}
-            block={status === DEPOSIT_STATUS.NOT_RECEIVED}
-            {...(canTakeDeposit
-              ? {
-                  action: (
-                    <InlineAction label={t('takeDeposit')} onPress={() => setTakingDeposit(true)} />
-                  ),
-                }
-              : {})}
-          />
+        <YStack gap={space.md}>
+          <SettleRow label={t('depositRequiredShort')}>
+            <Money>{fmt.money(data.depositRequired)}</Money>
+          </SettleRow>
+          <SettleRow label={t('depositReceivedShort')}>
+            {status === DEPOSIT_STATUS.NOT_RECEIVED ? (
+              // Nói THẲNG là chưa có bằng chứng thu tiền, không hiện một số 0 mập mờ.
+              <Text col={colors.text} fos={fontSize.body} ta="right">
+                {t('depositNotRecorded')}
+              </Text>
+            ) : (
+              <Money>{fmt.money(data.depositReceived)}</Money>
+            )}
+            {canTakeDeposit ? (
+              <InlineLink label={t('takeDeposit')} onPress={() => setTakingDeposit(true)} />
+            ) : null}
+          </SettleRow>
           {hasSurcharges ? (
-            <DataRow
-              label={t('surchargeTotalShort')}
-              value={`−${fmt.money(data.surchargeTotal)}`}
-              tone="discount"
-            />
+            <SettleRow label={t('surchargeTotalShort')}>
+              <Money negative>{`−${fmt.money(data.surchargeTotal)}`}</Money>
+            </SettleRow>
           ) : null}
           {showRefundLine ? (
-            <DataRow
+            <SettleRow
               label={data.refund ? t('refunded') : t('proposedRefundShort')}
-              value={fmt.money(data.refund ? data.refund.refundAmount : data.proposedRefund)}
-              tone="price"
-              strong
-            />
+              total
+            >
+              <Text col={colors.success} fos={fontSize.h4} fow={fontWeight.semibold} numberOfLines={1}>
+                {fmt.money(data.refund ? data.refund.refundAmount : data.proposedRefund)}
+              </Text>
+            </SettleRow>
           ) : null}
         </YStack>
 
@@ -272,53 +262,45 @@ export function BookingSettlementCard({ bookingId }: { bookingId: string }) {
           </Notice>
         ) : null}
 
-        {status === DEPOSIT_STATUS.NOT_RECEIVED ? <Notice>{t('noticeNotReceived')}</Notice> : null}
-        {status === DEPOSIT_STATUS.RECEIVED ? <Notice>{t('noticeReceived')}</Notice> : null}
-        {status === DEPOSIT_STATUS.SETTLED ? <Notice>{t('noticeSettled')}</Notice> : null}
+        {status === DEPOSIT_STATUS.SETTLED ? <Notice title={t('noticeSettled')} /> : null}
 
-        {/* Bản ghi hoàn cọc đã có */}
+        {/* Web `.refundBox`: viền, bo 6, đệm `space-md`, các dòng 12 màu phụ, giá trị đậm canh phải. */}
         {data.refund ? (
-          <YStack gap={space.xs} p={space.sm} br={radius.md} bg={colors.surfaceMuted}>
-            <DataRow
+          <YStack gap={space.xs} p={space.md} bw={1} bc={colors.border} br={radius.sm}>
+            <RefundRow
               label={t('refundMethod')}
               value={domainLabel('refundMethod', data.refund.refundMethod as RefundMethod)}
             />
-            <DataRow label={t('refundedAt')} value={fmt.dateTime(data.refund.refundedAt)} />
+            <RefundRow label={t('refundedAt')} value={fmt.dateTime(data.refund.refundedAt)} />
             {data.refund.reference ? (
-              <DataRow label={t('refundReference')} value={data.refund.reference} />
+              <RefundRow label={t('refundReference')} value={data.refund.reference} />
             ) : null}
             {data.refund.recordedByName ? (
-              <DataRow label={t('refundRecordedBy')} value={data.refund.recordedByName} />
+              <RefundRow label={t('refundRecordedBy')} value={data.refund.recordedByName} />
             ) : null}
           </YStack>
-        ) : null}
-
-        {/*
-          Lối ĐIỀU CHỈNH một bản ghi hoàn cọc đã có — web bày nó ngay trên thẻ. Không có nó thì
-          một con số hoàn ghi nhầm nằm lại vĩnh viễn trên màn đơn.
-        */}
-        {data.refund && canCorrect ? (
-          <Button
-            label={t('correctRefund')}
-            variant="secondary"
-            size="sm"
-            block={false}
-            onPress={openSettlement}
-          />
         ) : null}
 
         {status === DEPOSIT_STATUS.AWAITING_REFUND && canRecord ? (
           <YStack gap={space.xs}>
-            <Button label={t('markRefunded')} size="sm" onPress={openSettlement} />
-            {/*
-              Câu miễn trừ đi KÈM nút, không nằm ở một góc khác: XePrime chỉ GHI NHẬN trạng thái,
-              tiền do chủ xe tự chuyển bên ngoài ứng dụng. Người bấm phải đọc được điều đó ngay
-              tại chỗ bấm.
-            */}
-            <Text col={colors.textMuted} fos={fontSize.label}>
+            <Button label={t('markRefunded')} onPress={openSettlement} />
+            {/* Câu miễn trừ đi KÈM nút: XePrime chỉ GHI NHẬN, tiền do chủ xe tự chuyển. */}
+            <Text col={colors.placeholder} fos={fontSize.label}>
               {t('refund.disclaimer')}
             </Text>
           </YStack>
+        ) : null}
+
+        {data.refund && canCorrect ? (
+          <XStack>
+            <Button
+              label={t('correctRefund')}
+              variant="secondary"
+              size="sm"
+              block={false}
+              onPress={openSettlement}
+            />
+          </XStack>
         ) : null}
       </YStack>
 
@@ -338,25 +320,95 @@ export function BookingSettlementCard({ bookingId }: { bookingId: string }) {
           debtAmount={depositOutstanding}
         />
       ) : null}
-    </Card>
+    </SectionCard>
   );
 }
 
-function CardTitle({ children }: { children: string }) {
+/** Web `.row`/`.rowTotal`: nhãn trái (màu phụ, không co) · giá trị phải, canh đường chữ. */
+function SettleRow({
+  label,
+  total = false,
+  children,
+}: {
+  label: string;
+  total?: boolean;
+  children: ReactNode;
+}) {
   const colors = useColors();
   return (
-    <Text f={1} col={colors.text} fos={fontSize.h4} fow={fontWeight.bold} numberOfLines={1}>
+    <XStack
+      ai="baseline"
+      jc="space-between"
+      gap={space.md}
+      minWidth={0}
+      {...(total ? { pt: space.sm, borderTopWidth: 1, borderTopColor: colors.borderSubtle } : {})}
+    >
+      <Text
+        col={colors.textMuted}
+        fos={fontSize.body}
+        fow={total ? fontWeight.semibold : fontWeight.regular}
+        flexShrink={0}
+      >
+        {label}
+      </Text>
+      {/* `.rowValue`: giá trị + link tự xuống dòng, canh phải, khe `space-sm`. */}
+      <XStack f={1} flexWrap="wrap" ai="baseline" jc="flex-end" gap={space.sm} minWidth={0}>
+        {children}
+      </XStack>
+    </XStack>
+  );
+}
+
+/** Web `.money` / `.moneyNegative`: số đậm, không bao giờ ngắt giữa con số. */
+function Money({ children, negative = false }: { children: string; negative?: boolean }) {
+  const colors = useColors();
+  return (
+    <Text col={negative ? colors.danger : colors.text} fos={fontSize.body} fow={fontWeight.bold} numberOfLines={1}>
       {children}
     </Text>
   );
 }
 
+/** Web `.inlineLink`: chữ vàng đậm 500, gạch chân. */
+function InlineLink({ label, onPress }: { label: string; onPress: () => void }) {
+  const colors = useColors();
+  return (
+    <Text
+      col={colors.primaryStrong}
+      fos={fontSize.body}
+      fow={fontWeight.medium}
+      textDecorationLine="underline"
+      accessibilityRole="button"
+      onPress={onPress}
+      suppressHighlighting
+    >
+      {label}
+    </Text>
+  );
+}
+
+/** Web `.refundRow`: 12 màu phụ, giá trị đậm màu chữ canh phải. */
+function RefundRow({ label, value }: { label: string; value: string }) {
+  const colors = useColors();
+  return (
+    <XStack ai="baseline" jc="space-between" gap={space.md} minWidth={0}>
+      <Text col={colors.textMuted} fos={fontSize.body}>
+        {label}
+      </Text>
+      <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.bold} ta="right">
+        {value}
+      </Text>
+    </XStack>
+  );
+}
+
+/** Web AntD `Alert showIcon` (cảnh báo / thông tin): viền + nền nhạt cùng sắc, icon, tiêu đề, mô tả. */
 function Notice({
   children,
   title,
   tone = 'info',
 }: {
-  children: string;
+  children?: string;
   title?: string;
   tone?: 'info' | 'warning';
 }) {
@@ -367,8 +419,11 @@ function Notice({
     <XStack
       ai="flex-start"
       gap={space.sm}
-      p={space.sm}
+      px={space.md}
+      py={space.sm}
       br={radius.md}
+      bw={1}
+      bc={warning ? colors.warningBorder : colors.infoBorder}
       bg={warning ? colors.warningSurface : colors.infoSurface}
     >
       <Ionicons
@@ -378,13 +433,15 @@ function Notice({
       />
       <YStack f={1} gap={2}>
         {title ? (
-          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+          <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
             {title}
           </Text>
         ) : null}
-        <Text col={colors.text} fos={fontSize.bodySm}>
-          {children}
-        </Text>
+        {children ? (
+          <Text col={colors.text} fos={fontSize.body}>
+            {children}
+          </Text>
+        ) : null}
       </YStack>
     </XStack>
   );

@@ -5,6 +5,7 @@
     "defaultDescription": "Nền tảng cho thuê xe: tìm xe, đặt xe và quản lý gian hàng cho thuê."
   },
   "actions": {
+    "backToTop": "Về đầu trang",
     "save": "Lưu",
     "saveChanges": "Lưu thay đổi",
     "cancel": "Huỷ",
@@ -198,7 +199,14 @@
       "depositHintLabel": "Cọc thế chấp khi nhận xe là gì",
       "holdHintLabel": "Tiền giữ chỗ là gì",
       "totalHintLabel": "Tổng bạn trả gồm những gì",
-      "dailyRate": "{days, plural, other {# ngày}} × {amount}"
+      "dailyRate": "{days, plural, other {# ngày}} × {amount}",
+      "insuranceFee": {
+        "hintLabel": "Phí bảo hiểm vật chất xe gồm những gì",
+        "premium": "Phí bảo hiểm: {amount}",
+        "serviceFee": "Phí thu hộ bảo hiểm: {amount}",
+        "serviceFeePercent": "Phí thu hộ bảo hiểm ({percent}%): {amount}",
+        "refund": "Hoàn cả hai khoản khi chuyến bị huỷ hoặc giấy chứng nhận không cấp được."
+      }
     },
     "filterBar": {
       "allOf": "{label}: Tất cả",
@@ -284,9 +292,12 @@
     "activeCount": "{count, plural, other {# bộ lọc đang bật}}",
     "reset": "Xoá lọc",
     "open": "Mở bộ lọc",
+    "short": "Lọc",
     "subtitle": "Chọn tiêu chí để thu hẹp danh sách",
     "chip": "{label}: {value}",
-    "none": "Chưa áp dụng bộ lọc nào"
+    "none": "Chưa áp dụng bộ lọc nào",
+    "clearAll": "Xoá bộ lọc",
+    "save": "Lưu bộ lọc"
   },
   "permissions": {
     "cameraDenied": "Chưa có quyền dùng máy ảnh. Vào Cài đặt → XePrime để bật quyền Máy ảnh.",

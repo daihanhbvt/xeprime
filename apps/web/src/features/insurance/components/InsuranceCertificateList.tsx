@@ -1,6 +1,11 @@
 'use client';
 
-import { ExportOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import {
+  DownloadOutlined,
+  ExportOutlined,
+  PhoneOutlined,
+  SafetyCertificateOutlined,
+} from '@ant-design/icons';
 import { Button, Tag } from 'antd';
 import { useTranslations } from 'next-intl';
 import { STATUS_COLOR } from '@xeprime/types';
@@ -25,10 +30,13 @@ export function InsuranceCertificateList({
   certificates,
   headingLevel = 2,
   className,
+  pdfHref,
 }: {
   certificates: readonly InsuranceCertificate[];
   headingLevel?: 2 | 3;
   className?: string;
+  /** Đường tải GCN PDF của từng hợp đồng — mỗi bề mặt (khách / gian hàng) một endpoint riêng. */
+  pdfHref?: (certificateId: string) => string;
 }) {
   const t = useTranslations('Insurance');
   if (certificates.length === 0) return null;
@@ -41,7 +49,7 @@ export function InsuranceCertificateList({
       </Heading>
       <ul className={styles.list}>
         {certificates.map((cert) => (
-          <InsuranceCertificateItem key={cert.id} cert={cert} />
+          <InsuranceCertificateItem key={cert.id} cert={cert} pdfHref={pdfHref} />
         ))}
       </ul>
     </section>
@@ -49,7 +57,13 @@ export function InsuranceCertificateList({
 }
 
 /** Một GCN đã cấp — dùng lại ở `InsuranceCoverageList` cho dòng `issued`. */
-export function InsuranceCertificateItem({ cert }: { cert: InsuranceCertificate }) {
+export function InsuranceCertificateItem({
+  cert,
+  pdfHref,
+}: {
+  cert: InsuranceCertificate;
+  pdfHref?: ((certificateId: string) => string) | undefined;
+}) {
   const t = useTranslations('Insurance');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -82,12 +96,37 @@ export function InsuranceCertificateItem({ cert }: { cert: InsuranceCertificate 
             <dd>{fmt.dateTimeRange(cert.coverageFrom, cert.coverageTo)}</dd>
           </div>
         ) : null}
+        {cert.contractNumber ? (
+          <div className={styles.fact}>
+            <dt>{t('certificate.contractNumber')}</dt>
+            <dd className={styles.mono}>{cert.contractNumber}</dd>
+          </div>
+        ) : null}
         <div className={styles.fact}>
           <dt>{t('certificate.partner')}</dt>
           <dd>{cert.partnerName}</dd>
         </div>
+        {cert.claimHotline ? (
+          <div className={styles.fact}>
+            <dt>{t('certificate.claimHotline')}</dt>
+            <dd>
+              <a href={`tel:${cert.claimHotline.replace(/\s/g, '')}`}>
+                <PhoneOutlined aria-hidden /> {cert.claimHotline}
+              </a>
+            </dd>
+          </div>
+        ) : null}
       </dl>
       {cert.isTest ? <p className={styles.testNote}>{t('certificate.testNote')}</p> : null}
+      {cert.pdfAvailable && pdfHref ? (
+        <Button
+          href={pdfHref(cert.id)}
+          icon={<DownloadOutlined aria-hidden />}
+          className={styles.view}
+        >
+          {t('certificate.downloadPdf')}
+        </Button>
+      ) : null}
       {cert.certificateUrl ? (
         <Button
           href={cert.certificateUrl}

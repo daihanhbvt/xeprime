@@ -26,6 +26,9 @@ import { OwnerAddressCard } from './OwnerAddressCard';
 import { PolicyPane } from './PolicyPane';
 import { ServicesPane } from './ServicesPane';
 
+vi.mock('@/features/vehicle-data/hooks', async () =>
+  (await import('@/features/vehicle-data/test-vehicle-data')).vehicleDataHooksMock(),
+);
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   usePathname: () => '/manage/vehicles/v1/edit',
@@ -103,6 +106,11 @@ const savePricing = vi.hoisted(() => ({
 vi.mock('@/features/rental-policies/hooks/use-vehicle-pricing', () => ({
   useVehiclePricing: () => pricing,
   useSaveVehiclePricing: () => savePricing,
+}));
+
+/** Tình trạng bảo hiểm của xe (ADR 0091) — mặc định nền tảng CHƯA bán theo bậc ⇒ không có khối chọn. */
+vi.mock('@/features/vehicle-documents/hooks', () => ({
+  useVehicleInsuranceStatus: () => ({ data: { applies: false, eligible: false, gaps: [] } }),
 }));
 
 const updateVehicle = vi.hoisted(() => ({

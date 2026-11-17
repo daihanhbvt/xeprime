@@ -1,4 +1,5 @@
 import {
+  FEE_LINE,
   INSURANCE_PRODUCT_KIND,
   type InsuranceProductKind,
   type VehicleType,
@@ -49,7 +50,8 @@ export function insuranceOfferItems(
   products: readonly PublicInsuranceProduct[] | undefined,
 ): InsuranceOfferItem[] | null {
   if (!quote) return null;
-  const policy = quote.breakdown.fees?.policy;
+  const fees = quote.breakdown.fees;
+  const policy = fees?.policy;
   if (!policy) return [];
 
   const config: Record<InsuranceProductKind, { enabled: boolean; daily: string | undefined }> = {
@@ -65,13 +67,59 @@ export function insuranceOfferItems(
 
   const items: InsuranceOfferItem[] = [];
   for (const kind of KINDS) {
+    const product = products?.find((p) => p.kind === kind) ?? null;
+    /*
+     * Vật chất xe theo BẬC giá trị xe (ADR 0088 · ADR 0091). Server quyết và kể lại qua lời chào bán
+     * `vehicleProtectionOffer`: chủ xe đặt Bắt buộc ⇒ dòng cố định không bỏ được; Tuỳ chọn ⇒ ô tích,
+     * mặc định chưa tích, phí cả chuyến. Sản phẩm bậc mà báo giá không chào ⇒ xe/chuyến chưa đủ điều
+     * kiện ⇒ không chào gì (không rơi về ô chọn theo ngày).
+     */
+    if (
+      kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP &&
+      (product?.mandatory || fees?.vehicleProtectionOffer || fees?.vehicleProtectionMandatory)
+    ) {
+      const offer = fees?.vehicleProtectionOffer;
+      if (offer && isPositiveMoney(offer.amount)) {
+        items.push({
+          kind,
+          dailyAmount: null,
+          mandatory: offer.required,
+          tripAmount: offer.amount,
+          serviceFeeAmount:
+            offer.serviceFeeAmount && isPositiveMoney(offer.serviceFeeAmount)
+              ? offer.serviceFeeAmount
+              : null,
+          product,
+        });
+      } else if (fees?.vehicleProtectionMandatory) {
+        // API trước ADR 0091 (deploy chồng) chưa có lời chào bán — đọc lại dòng `IV` bắt buộc.
+        const line = fees.lines.find((l) => l.key === FEE_LINE.VEHICLE_PROTECTION);
+        if (line && isPositiveMoney(line.amount)) {
+          items.push({
+            kind,
+            dailyAmount: null,
+            mandatory: true,
+            tripAmount: line.amount,
+            serviceFeeAmount: null,
+            product,
+          });
+        }
+      }
+      continue;
+    }
     const { enabled, daily } = config[kind];
     if (!quoteOffersInsurance(quote, kind) || !enabled || !daily || !isPositiveMoney(daily)) {
       continue;
     }
-    const product = products?.find((p) => p.kind === kind) ?? null;
     if (products !== undefined && product === null) continue;
-    items.push({ kind, dailyAmount: daily, product });
+    items.push({
+      kind,
+      dailyAmount: daily,
+      mandatory: false,
+      tripAmount: null,
+      serviceFeeAmount: null,
+      product,
+    });
   }
   return items;
 }
@@ -87,6 +135,9 @@ export function sameOfferItems(
     (item, i) =>
       item.kind === b[i]!.kind &&
       item.dailyAmount === b[i]!.dailyAmount &&
+      item.mandatory === b[i]!.mandatory &&
+      item.tripAmount === b[i]!.tripAmount &&
+      item.serviceFeeAmount === b[i]!.serviceFeeAmount &&
       item.product === b[i]!.product,
   );
 }

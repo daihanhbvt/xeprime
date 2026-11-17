@@ -1,5 +1,5 @@
 import { sanitizePhoneInput } from '@xeprime/types';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { Pressable, TextInput, type TextInputProps } from 'react-native';

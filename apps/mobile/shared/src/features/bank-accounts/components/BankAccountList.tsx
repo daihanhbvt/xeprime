@@ -3,7 +3,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
-import { BlockTitle } from '@/components/ui/BlockTitle';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { IconDisc } from '@/components/ui/IconDisc';
@@ -71,7 +71,7 @@ export function BankAccountList({
   return (
     <>
       <YStack gap={space.sm}>
-        {title ? <BlockTitle>{title}</BlockTitle> : null}
+        {title ? <SectionHeader icon="card-outline">{title}</SectionHeader> : null}
         {hint ? (
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
             {hint}

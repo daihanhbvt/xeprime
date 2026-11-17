@@ -34,6 +34,7 @@ import {
   makeNotificationService,
   makePricingService,
 } from './helpers/service-factory';
+import { relaxBookingLimits } from './helpers/booking-limits';
 import { customerAccountFor } from './helpers/customer-account';
 import { payHoldForRequest } from './helpers/hold-payment';
 
@@ -210,6 +211,8 @@ const notificationsOfType = (type: string, targetId: string) =>
   prisma.notification.count({ where: { type, targetId } });
 
 beforeAll(async () => {
+  // Spec đặt xe, không phải spec trần đặt xe (ADR 0091 điều 4) — lịch rải theo bộ đếm ngày.
+  relaxBookingLimits();
   try {
     await prisma.$connect();
     await prisma.$queryRaw`SELECT 1`;

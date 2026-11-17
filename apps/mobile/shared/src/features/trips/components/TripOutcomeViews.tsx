@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Reveal } from '@/components/motion/Reveal';
 import { Image } from 'expo-image';
 import type { ReactNode } from 'react';
@@ -41,6 +41,7 @@ import { TripEstimateCard } from './TripEstimateCard';
 import { TripFinanceCard } from './TripFinanceCard';
 import { TripHandoverEvidence } from './TripHandoverEvidence';
 import { TripHoldPanel } from './TripHoldPanel';
+import { TripHandoverWord } from './TripHandoverWord';
 import { TripNotReceivedReport } from './TripNotReceivedReport';
 import { TripReviewCard } from './TripReviewCard';
 import {
@@ -203,6 +204,7 @@ export function TripOwnerActions({ trip }: { trip: CustomerTripDetail }) {
       {canChat ? (
         <ChatWithShopButton
           vehicleId={trip.vehicle.id}
+          tripId={trip.id}
           iconOnly
           compact
           iconTone="plain"
@@ -424,7 +426,7 @@ export function TripActiveView({ trip }: OutcomeViewProps) {
           <XStack
             ai="flex-start"
             gap={space.sm}
-            px={space.md}
+            px={layout.padX}
             py={space.sm}
             br={radius.control}
             bg={colors.surface}
@@ -446,7 +448,8 @@ export function TripActiveView({ trip }: OutcomeViewProps) {
       </OutcomeStatusCard>
       </Reveal>
 
-      {/* priority */}
+      {/* priority — "Đã trả xe" (ADR 0081): chủ xe im lặng quá hạn thì chuyến tự hoàn thành. */}
+      <TripHandoverWord trip={trip} />
       <TripNotReceivedReport trip={trip} />
       <HoldCard trip={trip} />
       {trip.depositCollectionMode === DEPOSIT_COLLECTION_MODE.DIRECT ? (

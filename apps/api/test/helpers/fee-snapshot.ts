@@ -46,7 +46,6 @@ export const FEE_POLICY_ND117: FeePolicySnapshot = {
   holdMinAmount: '20000',
   holdPaymentWindowMinutes: 120,
   freeCancelHours: 2,
-  depositMaxPercent: 50,
   taxEnabled: true,
   taxRates: TAX_RATES_DEFAULTS,
   taxLegalBasis: 'NĐ 117/2025/NĐ-CP · NĐ 68/2026/NĐ-CP',

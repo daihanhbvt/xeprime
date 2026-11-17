@@ -9,9 +9,12 @@
   "filters": {
     "status": "Status",
     "search": "Search transactions",
-    "searchPlaceholder": "Transfer note or extracted code",
+    "searchPlaceholder": "Transfer content, extracted code or FT reference",
     "bankTime": "Bank time",
-    "code": "Destination"
+    "code": "Destination",
+    "amount": "Amount",
+    "amountPlaceholder": "Exact amount",
+    "reason": "Reason"
   },
   "columns": {
     "amount": "Amount",
@@ -40,22 +43,29 @@
     "refunded": "Refunded to sender · ref {reference} · {time}",
     "previous": "Previous transaction",
     "next": "Next transaction",
-    "sideLabel": "Handle transaction"
+    "sideLabel": "Handle transaction",
+    "systemReason": "System note",
+    "matchedReceivable": "Matched to",
+    "walletCreditFor": "Wallet credited instead of"
   },
   "suggestions": {
-    "title": "Plan invoices awaiting payment",
-    "hint": "Pick the invoice this payment belongs to - invoices with the exact amount are listed first.",
-    "empty": "No invoices are awaiting payment",
+    "title": "Match target",
+    "hint": "Pick the item this transfer belongs to - items with the exact amount are listed first.",
+    "empty": "No plan invoice or reservation hold is awaiting payment",
     "amountMatches": "Exact amount match",
     "remaining": "Outstanding: {amount}",
-    "tenant": "Shop: {name}"
+    "tenant": "Shop: {name}",
+    "receivablesTitle": "Open reservation holds / extensions",
+    "invoicesTitle": "Plan invoices awaiting payment",
+    "customer": "Customer: {name} · {tenant}",
+    "expiresAt": "Pay by: {time}"
   },
   "match": {
     "submit": "Confirm match",
-    "success": "Transaction matched to the invoice",
+    "success": "Transaction matched",
     "submitFor": "Match to {code}",
     "dialogTitle": "Match transaction manually",
-    "dialogSummary": "{amount} will be applied to invoice {code} of {tenant}. This is logged and cannot be undone."
+    "dialogSummary": "{amount} will be recorded against {code} ({tenant}). This is logged and cannot be undone."
   },
   "ignore": {
     "action": "Skip transaction",
@@ -83,9 +93,42 @@
     "reasonRequired": "Enter a reason"
   },
   "footer": {
-    "choose": "Pick an invoice on the right to match - or ignore this payment if it belongs to no invoice.",
+    "choose": "Pick a target on the right to match - or ignore it if it belongs to none.",
     "chosen": "Will match to {code} · {tenant}",
-    "noInvoice": "No invoice is awaiting payment - this payment can only be ignored.",
+    "noInvoice": "Nothing is awaiting payment - this transfer can only be ignored or refunded to the customer wallet.",
     "handled": "This transaction has been handled."
+  },
+  "credit": {
+    "action": "Credit customer wallet",
+    "success": "Credited to the customer points wallet",
+    "dialogTitle": "Credit customer points wallet",
+    "dialogSummary": "{amount} sent for {code} will be refunded to {customer}'s points wallet. No booking is created - this item is closed. This is logged and cannot be undone."
+  },
+  "lateCredit": {
+    "title": "Code {code} of {customer} closed before the money arrived",
+    "hint": "A closed item cannot become a booking. Refund it with \"Credit customer wallet\" - the customer withdraws to their bank from the points wallet.",
+    "noAccount": "This item is not linked to a customer account. Refund the transfer manually, then use \"Ignore\" with the refund reference."
+  },
+  "reasons": {
+    "hold_not_found": "Reservation code {code} does not exist - the customer may have mistyped a character.",
+    "hold_closed": "Money arrived after reservation hold {code} closed - credit the customer wallet or refund.",
+    "extension_not_found": "Extension code {code} does not exist.",
+    "extension_closed": "Money arrived after extension {code} stopped accepting payment - credit the customer wallet or refund.",
+    "checkout_not_found": "Plan checkout code {code} does not exist.",
+    "checkout_closed": "Money arrived after plan checkout {code} stopped accepting payment - refund the shop.",
+    "invoice_not_found": "Plan invoice code {code} does not exist.",
+    "invoice_closed": "Money arrived after plan invoice {code} stopped accepting payment - match a new invoice or refund the shop.",
+    "overpaid": "Overpaid - the excess was refunded to the points wallet automatically."
+  },
+  "reasonLabels": {
+    "hold_not_found": "Unknown reservation code",
+    "hold_closed": "Reservation closed",
+    "extension_not_found": "Unknown extension code",
+    "extension_closed": "Extension closed",
+    "checkout_not_found": "Unknown plan checkout code",
+    "checkout_closed": "Plan checkout closed",
+    "invoice_not_found": "Unknown invoice code",
+    "invoice_closed": "Invoice closed",
+    "overpaid": "Overpaid (refunded to wallet)"
   }
 }

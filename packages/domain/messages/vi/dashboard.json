@@ -70,7 +70,8 @@
       "label": "Yêu cầu chờ duyệt",
       "urgent": "{count, plural, other {# sắp hết hạn trả lời}}",
       "next": "Hạn trả lời gần nhất {time}",
-      "none": "Không có yêu cầu mới"
+      "none": "Không có yêu cầu mới",
+      "urgentShort": "{count, plural, other {# sắp hết hạn}}"
     },
     "awaitingPayment": {
       "label": "Chờ khách thanh toán",
@@ -81,13 +82,15 @@
       "label": "Chờ giao xe",
       "today": "{count, plural, other {# hẹn hôm nay}}",
       "overdue": "{count, plural, other {# đã quá giờ}}",
-      "none": "Không có xe chờ giao"
+      "none": "Không có xe chờ giao",
+      "overdueShort": "{count, plural, other {# quá hạn}}"
     },
     "active": {
       "label": "Đang cho thuê",
       "returnsToday": "{count, plural, other {# trả hôm nay}}",
       "overdue": "{count, plural, other {# quá hạn trả}}",
-      "none": "Không có xe đang ở với khách"
+      "none": "Không có xe đang ở với khách",
+      "overdueShort": "{count, plural, other {# quá hạn}}"
     }
   },
   "agenda": {
@@ -104,7 +107,23 @@
       "pickup": "Giao xe",
       "return": "Nhận xe"
     },
-    "itemAria": "{kind} {vehicle} - {customer}, {time}"
+    "itemAria": "{kind} {vehicle} - {customer}, {time}",
+    "tabs": {
+      "all": "Tất cả",
+      "overdue": "Quá giờ",
+      "today": "Hôm nay",
+      "upcoming": "{days} ngày tới"
+    },
+    "tabEmpty": {
+      "overdue": "Không có lịch giao hay nhận xe nào quá giờ.",
+      "today": "Hôm nay không có lịch giao hay nhận xe.",
+      "upcoming": "Không có lịch giao hay nhận xe nào sau hôm nay."
+    },
+    "moreAll": "Xem tất cả trong Đơn thuê xe",
+    "dayLabel": "{weekday}, {date}",
+    "lateDays": "{count, plural, other {Trễ # ngày}}",
+    "lateHours": "{count, plural, other {Trễ # giờ}}",
+    "lateMinutes": "{count, plural, other {Trễ # phút}}"
   },
   "kpi": {
     "title": "Tháng này",
@@ -114,7 +133,9 @@
     "utilizationValue": "{value, number}%",
     "utilizationHint": "Thời gian xe có khách trên thời gian xe sẵn có",
     "utilizationEmpty": "Chưa có xe trong kỳ",
-    "fleetHint": "{renting} đang thuê · {maintenance} bảo dưỡng"
+    "fleetHint": "{renting} đang thuê · {maintenance} bảo dưỡng",
+    "titleVsPrevious": "Tháng {month} vs tháng trước",
+    "report": "Báo cáo"
   },
   "change": {
     "up": "+{value, number}%",
@@ -123,7 +144,11 @@
     "pointsUp": "+{value, number} điểm",
     "pointsDown": "−{value, number} điểm",
     "none": "Chưa có số cùng kỳ để so",
-    "suffix": "so với cùng kỳ tháng trước"
+    "suffix": "so với cùng kỳ tháng trước",
+    "percent": "{value, number}%",
+    "points": "{value, number} điểm",
+    "vsPrevious": "vs tháng trước ({value})",
+    "vsPreviousBare": "vs tháng trước"
   },
   "charts": {
     "revenueTitle": "Doanh thu {days} ngày qua",
@@ -136,7 +161,12 @@
     "tripsEmpty": "Chưa có đơn nào trong {months} tháng gần nhất",
     "tripsError": "Chưa tải được biểu đồ chuyến.",
     "newBookings": "Đơn mới",
-    "completedTrips": "Chuyến hoàn thành"
+    "completedTrips": "Chuyến hoàn thành",
+    "revenueTab": "Thu chi {days} ngày",
+    "tripsTab": "Đơn & chuyến {months} tháng",
+    "revenue": "Doanh thu",
+    "cost": "Chi phí",
+    "profit": "Lợi nhuận"
   },
   "market": {
     "title": "Xe trên chợ",
@@ -146,7 +176,10 @@
     "draft": "Chưa gửi duyệt",
     "manage": "Quản lý xe",
     "empty": "Chưa có xe nào. Thêm xe đầu tiên để khách tìm thấy bạn.",
-    "add": "Thêm xe"
+    "add": "Thêm xe",
+    "statusTitle": "Trạng thái xe trên chợ",
+    "totalValue": "{count, plural, other {# xe}}",
+    "legendLabel": "{label}:"
   },
   "reputation": {
     "title": "Uy tín với khách",
@@ -175,7 +208,8 @@
     "incomeHint": "{count, plural, other {# chuyến hoàn thành}} · sau thuế khấu trừ",
     "open": "Số dư & rút tiền",
     "frozen": "Số dư đang tạm khoá - liên hệ XePrime để được hỗ trợ.",
-    "loadError": "Chưa tải được số dư."
+    "loadError": "Chưa tải được số dư.",
+    "pendingShort": "Đang chờ"
   },
   "ownerVehicles": {
     "title": "Xe của bạn",
@@ -199,5 +233,9 @@
     "open": "Xem chi tiết",
     "none": "Chưa có thông tin hạn mức.",
     "loadError": "Chưa tải được thông tin tài khoản."
+  },
+  "fleetPlan": {
+    "title": "Đội xe & gói dịch vụ",
+    "fleetTitle": "Đội xe"
   }
 }

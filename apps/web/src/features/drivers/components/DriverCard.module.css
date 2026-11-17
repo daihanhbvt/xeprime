@@ -323,3 +323,33 @@
   margin-top: auto;
   gap: var(--xp-space-12);
 }
+
+/*
+ * Khổ điện thoại: khuôn thẻ danh sách Partner (Đơn thuê / Danh sách xe) - đệm 16, khối cách 12,
+ * hàng nút tràn ngang chia đều, nút CUỐI là nút chính (dải vàng).
+ */
+@media (max-width: 640px) {
+  .card {
+    box-shadow: none;
+    gap: var(--xp-space-12);
+  }
+
+  .actions {
+    flex-wrap: nowrap;
+    justify-content: stretch;
+  }
+
+  .actions > :global(.ant-btn) {
+    min-width: 0;
+    flex: 1 1 0;
+    height: 40px;
+    border-radius: var(--xp-border-radius-control);
+    font-weight: var(--xp-font-weight-semibold);
+  }
+
+  .actions > :global(.ant-btn):last-child:not(:global(.ant-btn-primary)) {
+    border-color: transparent;
+    background: var(--xp-gradient-primary, var(--xp-color-primary));
+    color: var(--xp-color-text);
+  }
+}

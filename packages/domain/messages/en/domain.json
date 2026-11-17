@@ -391,6 +391,9 @@
     "hold_expired": "Payment window closed",
     "hold_refunded": "Trip fell through - refunded",
     "hold_refund_paid": "Reservation payment refunded",
+    "withdrawal_paid": "Withdrawal transferred",
+    "withdrawal_rejected": "Withdrawal rejected",
+    "withdrawal_reversed": "Withdrawal transfer failed",
     "booking_request_slot_reopened": "That car is free again",
     "booking_cancelled_by_host": "Host cancelled the trip",
     "driver_invited": "Driver invitation",
@@ -745,7 +748,8 @@
     "vehicle_protection": "Vehicle damage insurance",
     "deposit": "Booking deposit",
     "promo": "XePrime promo code",
-    "rent_prepaid": "Rent paid in advance"
+    "rent_prepaid": "Rent paid in advance",
+    "insurance_service_fee": "Insurance collection fee"
   },
   "promoCodeState": {
     "disabled": "Paused",
@@ -877,6 +881,7 @@
     "account_deletion": "Account deletion request",
     "plan_consultation": "Plan consultation",
     "handover_unconfirmed": "Handover not confirmed",
+    "return_unconfirmed": "Return not confirmed",
     "other": "Other"
   },
   "supportCaseParty": {
@@ -975,7 +980,7 @@
     "body_type": "Shown as picture cards when adding a vehicle, in the marketplace \"Type\" filter and - when \"Show on home page\" is on - in the home page \"Vehicle types\" section.",
     "fuel_type": "Shown in the \"Energy source\" field when adding a vehicle, and in filters.",
     "vehicle_feature": "Shown under \"Features\" when adding a vehicle, and in marketplace filters.",
-    "vehicle_model": "Shown in the \"Model\" field once a brand is picked. Each model belongs to one brand and one vehicle type."
+    "vehicle_model": "Pick a brand on the left. Vehicles: each variant by model year with specs, list price, reference rental prices and owner submissions awaiting review. Model lines: shared specs of a line, shown in the \"Model\" field when listing a vehicle."
   },
   "walletEntryKind": {
     "hold_forfeit": "Late-cancellation compensation",
@@ -986,7 +991,14 @@
     "withdrawal_reversal": "Returned - transfer failed",
     "adjustment": "Adjustment",
     "extension_release": "Extension reservation payout",
-    "extension_refund": "Extension refund"
+    "extension_refund": "Extension refund",
+    "late_payment_refund": "Late payment refund",
+    "subscription_overpay": "Plan overpayment refund",
+    "insurance_refund": "Refund of unissued insurance"
+  },
+  "walletStatus": {
+    "active": "Active",
+    "frozen": "Frozen"
   },
   "withdrawalStatus": {
     "pending": "Awaiting review",
@@ -1173,7 +1185,9 @@
     },
     "bank_transaction": {
       "ignore": "Ignore bank transaction",
-      "match_manual": "Manually match bank transaction"
+      "match_manual": "Manually match bank transaction",
+      "credit_customer": "Credit customer points wallet from bank transaction",
+      "match_receivable": "Match bank transaction to receivable"
     },
     "payment_gateway_order": {
       "resolve": "Close gateway payment",
@@ -1252,14 +1266,19 @@
       "reorder": "Reorder catalog",
       "model": {
         "update": "Update vehicle model",
-        "delete": "Delete vehicle model"
+        "delete": "Delete vehicle model",
+        "create": "Create model line",
+        "approve": "Approve model line",
+        "reject": "Reject model line"
       }
     },
     "contract": {
       "create": "Create rental contract"
     },
     "customer": {
-      "contact_reveal": "Reveal customer contact"
+      "contact_reveal": "Reveal customer contact",
+      "lock": "Lock customer account",
+      "unlock": "Unlock customer account"
     },
     "driver_licence": {
       "submit": "Submit driving licence photo",
@@ -1398,6 +1417,7 @@
       "submit_review": "Submit shop for review",
       "lock": "Lock shop",
       "unlock": "Unlock shop",
+      "contact_reveal": "Reveal partner contact",
       "free_trips_exhausted": "Free trips exhausted",
       "vat_invoice": {
         "update": "Change VAT invoice support (all vehicles)"
@@ -1511,7 +1531,8 @@
       "rejected": "Withdrawal rejected",
       "paid": "Withdrawal paid",
       "cancelled": "Withdrawal cancelled",
-      "reversed": "Withdrawal reversed"
+      "reversed": "Withdrawal reversed",
+      "month_export": "Export monthly withdrawals"
     },
     "app_config": {
       "update": "Change Partner app config"
@@ -1532,6 +1553,25 @@
     },
     "subscription_checkout": {
       "issue": "Issue combined payment"
+    },
+    "insurance_remittance": {
+      "create": "Create insurance remittance statement",
+      "delete": "Delete insurance remittance statement"
+    },
+    "vehicle_data": {
+      "capture": "Capture vehicle data from an owner's vehicle",
+      "delete": "Delete vehicle data",
+      "import": {
+        "row": "Save vehicle from import file",
+        "apply": "Apply vehicle data import",
+        "discard": "Discard vehicle data import"
+      },
+      "model": {
+        "create": "Create model line from vehicle data"
+      }
+    },
+    "vehicle_document": {
+      "view_registration_image": "View registration image"
     }
   },
   "auditTargetType": {
@@ -1587,7 +1627,11 @@
     "vehicle_maintenance_record": "Maintenance record",
     "vehicle_private_file": "Vehicle private file",
     "withdrawal_request": "Withdrawal request",
-    "subscription_checkout": "Combined payment"
+    "subscription_checkout": "Combined payment",
+    "insurance_remittance": "Insurance remittance statement",
+    "vehicle_catalog_import": "Vehicle data import",
+    "vehicle_catalog_variant": "Standard vehicle (vehicle data)",
+    "withdrawal_month": "Withdrawal month"
   },
   "auditField": {
     "planCode": "Plan code",
@@ -1714,5 +1758,16 @@
     "request_hold_expired": "Payment expired",
     "request_slot_taken": "Taken by another customer",
     "request_cancelled_by_host": "Cancelled by you before payment"
+  },
+  "insuranceMode": {
+    "required": "Required",
+    "optional": "Optional"
+  },
+  "insuranceEligibilityGap": {
+    "not_car": "Not a car",
+    "insured_value_missing": "Vehicle value not declared",
+    "photos_missing": "Required vehicle photos missing",
+    "registration_missing": "No registration certificate (chassis number + owner name)",
+    "vehicle_info_missing": "Brand, model, year or seat count missing"
   }
 }

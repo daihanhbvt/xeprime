@@ -8,14 +8,19 @@ import {
   newId,
   NoopInsurancePartner,
   Prisma,
+  recheckPendingInsurancePolicies,
 } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
   type BookingPriceSnapshot,
   INSURANCE_CONSENT_SOURCE,
+  INSURANCE_ESCALATE_AFTER_MINUTES,
   INSURANCE_ISSUE_ERROR,
   INSURANCE_POLICY_STATUS,
   INSURANCE_ISSUING_LEASE_MINUTES,
+  INSURANCE_PARTNER_STATUS,
+  INSURANCE_PENDING_CHECK_INTERVAL_SECONDS,
+  INSURANCE_PENDING_CHECKS_MAX,
   INSURANCE_PRODUCT_KIND,
   insuranceRetryDelayMinutes,
   TENANT_STATUS,
@@ -24,8 +29,11 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { InsuranceService } from '../src/modules/insurance/insurance.service';
+import { InsuranceFollowUpService } from '../src/modules/insurance/insurance-follow-up.service';
 import { InsuranceProductsService } from '../src/modules/insurance/insurance-products.service';
 import { InsuranceReadService } from '../src/modules/insurance/insurance-read.service';
+import { InsuranceRefundService } from '../src/modules/insurance/insurance-refund.service';
+import { WalletService } from '../src/modules/wallet/wallet.service';
 import {
   INSURANCE_OFFER_CACHE_TTL_MS,
   InsuranceOfferService,
@@ -83,6 +91,12 @@ const noopInsurance = new InsuranceService(asService, audit, new NoopInsurancePa
 /** Adapter GIẢ LẬP MIC thật (dev/staging) — đúng bản worker chạy khi `INSURANCE_PARTNER=mic_mock`. */
 const mockInsurance = new InsuranceService(asService, audit, new MicMockInsurancePartner());
 const insuranceRead = new InsuranceReadService(asService);
+const refunds = new InsuranceRefundService(
+  asService,
+  insurance,
+  new WalletService(asService),
+  audit,
+);
 const insuranceProducts = new InsuranceProductsService(
   asService,
   audit,
@@ -465,40 +479,67 @@ describe('Huỷ trước bàn giao — hợp đồng chưa bao giờ được mu
 });
 
 describe('Admin: thử lại và thu hồi', () => {
-  maybe('thu hồi ghi lý do + audit; hợp đồng `reserved` thì KHÔNG thu hồi được', async () => {
-    const bookingId = await makeBooking();
-    await prisma.$transaction((tx) =>
-      insurance.reserveForBookingWithinTx(tx, {
-        bookingId,
-        tenantId,
-        holdId: null,
-        snapshot: snapshotWith('28000', '0'),
-        consent: null,
-      }),
-    );
-    const policy = await prisma.bookingInsurancePolicy.findFirstOrThrow({ where: { bookingId } });
+  maybe(
+    'thu hồi hợp đồng ĐÃ có hiệu lực: bắt buộc mã đối chiếu, ghi lý do + audit, không hoàn (ADR 0093)',
+    async () => {
+      const bookingId = await makeBooking();
+      await prisma.$transaction((tx) =>
+        insurance.reserveForBookingWithinTx(tx, {
+          bookingId,
+          tenantId,
+          holdId: null,
+          snapshot: snapshotWith('28000', '0'),
+          consent: null,
+        }),
+      );
+      const policy = await prisma.bookingInsurancePolicy.findFirstOrThrow({ where: { bookingId } });
 
-    // `reserved` chưa có gì để thu hồi — chuyến còn đang chạy.
-    await expect(insurance.voidPolicy(policy.id, ownerId, 'lý do đủ dài')).rejects.toMatchObject({
-      response: { code: 'INVALID_STATUS_TRANSITION' },
-    });
+      // `reserved` chưa có gì để thu hồi — chuyến còn đang chạy.
+      await expect(
+        refunds.voidPolicy(policy.id, ownerId, { reason: 'lý do đủ dài' }),
+      ).rejects.toMatchObject({ response: { code: 'INVALID_STATUS_TRANSITION' } });
 
-    await prisma.$transaction((tx) => insurance.markDueWithinTx(tx, bookingId));
-    await insurance.claimDue(10);
-    await insurance.issueOne(policy.id);
+      await prisma.$transaction((tx) => insurance.markDueWithinTx(tx, bookingId));
+      await insurance.claimDue(10);
+      await insurance.issueOne(policy.id);
 
-    await insurance.voidPolicy(policy.id, ownerId, 'Đối tác báo sai biển số');
-    const after = await prisma.bookingInsurancePolicy.findUniqueOrThrow({
-      where: { id: policy.id },
-    });
-    expect(after.status).toBe(INSURANCE_POLICY_STATUS.VOIDED);
-    expect(after.voidedAt).not.toBeNull();
+      // Hợp đồng đã có bên đối tác: thiếu mã huỷ / biên bản đối chiếu là bị từ chối.
+      await expect(
+        refunds.voidPolicy(policy.id, ownerId, { reason: 'Đối tác báo sai biển số' }),
+      ).rejects.toMatchObject({ response: { code: 'INSURANCE_VOID_REFERENCE_REQUIRED' } });
 
-    const log = await prisma.auditLog.findFirstOrThrow({
-      where: { tenantId, action: 'insurance_policy.void', targetId: policy.id },
-    });
-    expect(log.afterJson).toMatchObject({ reason: 'Đối tác báo sai biển số' });
-  });
+      // Hiệu lực đã bắt đầu ⇒ nhánh thu hồi giữ nghĩa vụ trả hãng.
+      await prisma.bookingInsurancePolicy.update({
+        where: { id: policy.id },
+        data: { coverageFrom: new Date(Date.now() - 3600_000) },
+      });
+      const result = await refunds.voidPolicy(policy.id, ownerId, {
+        reason: 'Đối tác báo sai biển số',
+        partnerReference: 'MIC-HUY-001',
+      });
+      expect(result).toMatchObject({
+        branch: 'void_keep_payable',
+        status: INSURANCE_POLICY_STATUS.VOIDED,
+        refundedAmount: null,
+      });
+      const after = await prisma.bookingInsurancePolicy.findUniqueOrThrow({
+        where: { id: policy.id },
+      });
+      expect(after.status).toBe(INSURANCE_POLICY_STATUS.VOIDED);
+      expect(after.voidedAt).not.toBeNull();
+      expect(after.voidReason).toBe('Đối tác báo sai biển số');
+      expect(after.voidPartnerReference).toBe('MIC-HUY-001');
+      expect(after.refundedAt).toBeNull();
+
+      const log = await prisma.auditLog.findFirstOrThrow({
+        where: { tenantId, action: 'insurance_policy.void', targetId: policy.id },
+      });
+      expect(log.afterJson).toMatchObject({
+        reason: 'Đối tác báo sai biển số',
+        partnerReference: 'MIC-HUY-001',
+      });
+    },
+  );
 });
 
 describe('ADR 0064 — adapter giả lập MIC phát hành GCN THỬ NGHIỆM trọn luồng', () => {
@@ -816,6 +857,57 @@ describe('ADR 0064 — danh mục sản phẩm', () => {
     expect(await products.listPublic(VEHICLE_TYPE.CAR)).toEqual([]);
   });
 
+  maybe(
+    'phí thu hộ (ADR 0091 điều 3): chỉ vật chất xe, bật thì % > 0, cổng chào bán đọc đúng %',
+    async () => {
+      const iv = await prisma.insuranceProduct.findFirstOrThrow({
+        where: { provider: INSURANCE_PROVIDER.MIC, kind: INSURANCE_PRODUCT_KIND.VEHICLE_TRIP },
+      });
+      const ip = await prisma.insuranceProduct.findFirstOrThrow({
+        where: { provider: INSURANCE_PROVIDER.MIC, kind: INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT },
+      });
+      const offer = new InsuranceOfferService(new MicMockInsurancePartner(), asService);
+      const products = new InsuranceProductsService(asService, audit, offer);
+      const original = {
+        serviceFeeEnabled: iv.serviceFeeEnabled,
+        serviceFeePercent: iv.serviceFeePercent,
+        isActive: iv.isActive,
+      };
+      try {
+        await expect(
+          products.update(ip.id, { serviceFeeEnabled: true, serviceFeePercent: 10 }, ownerId),
+        ).rejects.toMatchObject({ response: { code: 'VALIDATION_FAILED' } });
+        await expect(
+          products.update(iv.id, { serviceFeeEnabled: true, serviceFeePercent: 0 }, ownerId),
+        ).rejects.toMatchObject({ response: { code: 'VALIDATION_FAILED' } });
+
+        const saved = await products.update(
+          iv.id,
+          { serviceFeeEnabled: true, serviceFeePercent: 12.5, isActive: true },
+          ownerId,
+        );
+        expect(saved).toMatchObject({ serviceFeeEnabled: true, serviceFeePercent: 12.5 });
+        expect(await offer.vehicleTripServiceFeePercent()).toBe(12.5);
+
+        await products.update(iv.id, { serviceFeeEnabled: false }, ownerId);
+        expect(await offer.vehicleTripServiceFeePercent()).toBeNull();
+
+        // Chưa cắm đối tác ⇒ không bán vật chất xe ⇒ không có phí thu hộ, dù công tắc bật.
+        await prisma.insuranceProduct.update({
+          where: { id: iv.id },
+          data: { serviceFeeEnabled: true, serviceFeePercent: new Prisma.Decimal(10) },
+        });
+        const noPartner = new InsuranceOfferService(new NoopInsurancePartner(), asService);
+        expect(await noPartner.vehicleTripServiceFeePercent()).toBeNull();
+      } finally {
+        await prisma.insuranceProduct.update({ where: { id: iv.id }, data: original });
+        await prisma.auditLog.deleteMany({
+          where: { action: 'insurance_product.update', actorUserId: ownerId },
+        });
+      }
+    },
+  );
+
   maybe('số tiền không phải bội số 1.000 bị từ chối trước khi chạm DB', async () => {
     const iv = await prisma.insuranceProduct.findFirstOrThrow({
       where: { provider: INSURANCE_PROVIDER.MIC, kind: INSURANCE_PRODUCT_KIND.VEHICLE_TRIP },
@@ -937,6 +1029,155 @@ describe('ADR 0064 — lượt `issuing` bỏ dở được nhặt lại (worker
     expect(await mockInsurance.claimDue(10)).toContain(policyId);
     expect(await mockInsurance.issueOne(policyId)).toBe('issued');
     await prisma.auditLog.deleteMany({ where: { action: 'insurance_policy.retry', targetId: policyId } });
+  });
+});
+
+describe('ADR 0091 điều 7 — MIC còn chờ ảnh (ttrang 3) ⇒ tra cứu lại có giới hạn', () => {
+  /** Đối tác cấp hợp đồng nhưng báo chờ ảnh; lượt tra lại trả lần lượt các tình trạng đặt sẵn. */
+  class PendingPhotosPartner extends FakePartner {
+    statuses: (string | null)[] = [];
+    override issue(request: IssuePolicyRequest): Promise<IssuePolicyResult> {
+      this.lastRequest = request;
+      return Promise.resolve({
+        ok: true,
+        certificateNumber: `CERT-${request.idempotencyKey.slice(-8)}`,
+        isTest: false,
+        raw: { ok: true },
+        partnerStatus: INSURANCE_PARTNER_STATUS.PENDING_PHOTOS,
+      });
+    }
+    lookupStatus(): Promise<string | null> {
+      return Promise.resolve(this.statuses.shift() ?? INSURANCE_PARTNER_STATUS.PENDING_PHOTOS);
+    }
+  }
+
+  async function issuedPendingPolicy(pendingPartner: PendingPhotosPartner): Promise<string> {
+    const svc = new InsuranceService(asService, audit, pendingPartner);
+    const bookingId = await makeBooking();
+    await prisma.$transaction((tx) =>
+      svc.reserveForBookingWithinTx(tx, {
+        bookingId,
+        tenantId,
+        holdId: null,
+        snapshot: snapshotWith('50000', '0'),
+        consent: null,
+      }),
+    );
+    await prisma.$transaction((tx) => svc.markDueWithinTx(tx, bookingId));
+    const row = await prisma.bookingInsurancePolicy.findFirstOrThrow({ where: { bookingId } });
+    expect(await svc.claimDue(10)).toContain(row.id);
+    expect(await svc.issueOne(row.id)).toBe('issued');
+    // Có partnerRef để tra cứu — adapter thật sinh nó trước khi gọi.
+    await prisma.bookingInsurancePolicy.update({
+      where: { id: row.id },
+      data: { partnerRef: `XP${row.id.slice(-18)}` },
+    });
+    return row.id;
+  }
+
+  const later = (seconds: number) => new Date(Date.now() + seconds * 1000);
+
+  maybe('cấp xong còn chờ ảnh ⇒ hẹn tra lại; MIC xác nhận ⇒ thôi hẹn', async () => {
+    const pendingPartner = new PendingPhotosPartner();
+    const policyId = await issuedPendingPolicy(pendingPartner);
+    const issued = await prisma.bookingInsurancePolicy.findUniqueOrThrow({
+      where: { id: policyId },
+    });
+    expect(issued.status).toBe(INSURANCE_POLICY_STATUS.ISSUED);
+    expect(issued.partnerStatus).toBe(INSURANCE_PARTNER_STATUS.PENDING_PHOTOS);
+    expect(issued.nextAttemptAt).not.toBeNull();
+
+    pendingPartner.statuses = [INSURANCE_PARTNER_STATUS.ISSUED];
+    const result = await recheckPendingInsurancePolicies(prisma, pendingPartner, {
+      now: later(INSURANCE_PENDING_CHECK_INTERVAL_SECONDS + 1),
+    });
+    expect(result.confirmed).toBeGreaterThanOrEqual(1);
+    const confirmed = await prisma.bookingInsurancePolicy.findUniqueOrThrow({
+      where: { id: policyId },
+    });
+    expect(confirmed.partnerStatus).toBe(INSURANCE_PARTNER_STATUS.ISSUED);
+    expect(confirmed.nextAttemptAt).toBeNull();
+  });
+
+  maybe('hết số lần tra mà vẫn chờ ảnh ⇒ thôi hẹn, để admin liên hệ đối tác', async () => {
+    const pendingPartner = new PendingPhotosPartner();
+    const policyId = await issuedPendingPolicy(pendingPartner);
+    for (let i = 1; i <= INSURANCE_PENDING_CHECKS_MAX; i++) {
+      await recheckPendingInsurancePolicies(prisma, pendingPartner, {
+        now: later(i * (INSURANCE_PENDING_CHECK_INTERVAL_SECONDS + 1)),
+      });
+    }
+    const row = await prisma.bookingInsurancePolicy.findUniqueOrThrow({ where: { id: policyId } });
+    expect(row.partnerPendingChecks).toBe(INSURANCE_PENDING_CHECKS_MAX);
+    expect(row.partnerStatus).toBe(INSURANCE_PARTNER_STATUS.PENDING_PHOTOS);
+    expect(row.nextAttemptAt).toBeNull();
+    expect(row.status).toBe(INSURANCE_POLICY_STATUS.ISSUED);
+  });
+});
+
+describe('ADR 0091 điều 2, 7 — báo khẩn sau 2 giờ và phí thực tế từng chuyến', () => {
+  const followUp = new InsuranceFollowUpService(asService);
+
+  async function reservedPolicy(handedOverMinutesAgo: number | null): Promise<string> {
+    const bookingId = await makeBooking();
+    if (handedOverMinutesAgo != null) {
+      await prisma.booking.update({
+        where: { id: bookingId },
+        data: { actualPickupAt: new Date(Date.now() - handedOverMinutesAgo * 60_000) },
+      });
+    }
+    await prisma.$transaction((tx) =>
+      insurance.reserveForBookingWithinTx(tx, {
+        bookingId,
+        tenantId,
+        holdId: null,
+        snapshot: snapshotWith('224400', '0'),
+        consent: null,
+      }),
+    );
+    return (await prisma.bookingInsurancePolicy.findFirstOrThrow({ where: { bookingId } })).id;
+  }
+
+  maybe('quá 2 giờ sau giao xe chưa cấp ⇒ đánh dấu MỘT lần, vào khối cần xử lý gấp', async () => {
+    const overdue = await reservedPolicy(INSURANCE_ESCALATE_AFTER_MINUTES + 5);
+    const fresh = await reservedPolicy(30);
+    const notHandedOver = await reservedPolicy(null);
+
+    expect(await followUp.markEscalations()).toBeGreaterThanOrEqual(1);
+    const rows = await prisma.bookingInsurancePolicy.findMany({
+      where: { id: { in: [overdue, fresh, notHandedOver] } },
+      select: { id: true, escalatedAt: true },
+    });
+    const escalated = new Map(rows.map((r) => [r.id, r.escalatedAt]));
+    expect(escalated.get(overdue)).not.toBeNull();
+    expect(escalated.get(fresh)).toBeNull();
+    expect(escalated.get(notHandedOver)).toBeNull();
+
+    // Chạy lại không đánh dấu lại.
+    const first = escalated.get(overdue)!;
+    await followUp.markEscalations(new Date(Date.now() + 60_000));
+    const again = await prisma.bookingInsurancePolicy.findUniqueOrThrow({ where: { id: overdue } });
+    expect(again.escalatedAt?.getTime()).toBe(first.getTime());
+
+    const attention = await followUp.attention();
+    expect(attention.items.map((i) => i.policyId)).toContain(overdue);
+    expect(attention.items.map((i) => i.policyId)).not.toContain(fresh);
+  });
+
+  maybe('phí thực tế: phí đã thu, phí đối tác, chênh lệch', async () => {
+    const policyId = await reservedPolicy(null);
+    const before = await followUp.pricingOf(policyId);
+    expect(before.premiumAmount).toBe('224400');
+    expect(before.partnerPremiumAmount).toBeNull();
+    expect(before.differenceAmount).toBeNull();
+
+    await prisma.bookingInsurancePolicy.update({
+      where: { id: policyId },
+      data: { partnerPremiumAmount: new Prisma.Decimal(230000) },
+    });
+    const after = await followUp.pricingOf(policyId);
+    expect(after.partnerPremiumAmount).toBe('230000');
+    expect(after.differenceAmount).toBe('-5600');
   });
 });
 

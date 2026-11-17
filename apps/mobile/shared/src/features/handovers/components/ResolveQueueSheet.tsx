@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useAppToast } from '@/components/feedback/use-app-toast';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { API_ERROR_CODE, HANDOVER_TYPE } from '@xeprime/types';
@@ -10,7 +11,6 @@ import { getErrorCode } from '@/lib/api-client';
 import { space } from '@/theme/tokens';
 import { useHandoverContext } from '../hooks/use-handovers';
 import { ResolveOdometerSheet } from './ResolveOdometerSheet';
-import type { MissingOdometerItem } from '../api';
 
 /**
  * Mở tấm bổ sung KM cho MỘT việc trong hàng đợi — bản native của `ResolveQueueItem` bên web.
@@ -19,20 +19,25 @@ import type { MissingOdometerItem } from '../api';
  * nên khi mở mới tải ngữ cảnh bàn giao của đúng đơn đó rồi dùng LẠI `ResolveOdometerSheet` của
  * màn biên bản. Một form sửa KM, hai nơi gọi: vẫn đúng một đường ghi có mã lý do + diễn giải bắt
  * buộc vào `audit_logs`, và luật giảm KM (`vehicles.odometer.decrease`) chỉ sống ở một chỗ.
+ *
+ * Chỉ cần `bookingId` (xe đọc từ ngữ cảnh) để mở được cả biên bản đến từ lối "Xử lý ngay" của
+ * cảnh báo Thiếu KM trả (`?resolve=`), vốn không chắc nằm trong trang hàng đợi đang tải.
  */
 export function ResolveQueueSheet({
-  item,
+  bookingId,
   onClose,
   onResolved,
 }: {
-  item: MissingOdometerItem;
+  bookingId: string;
   onClose: () => void;
   /** Việc đã xong ở nơi khác — hàng đợi cần tải lại để dòng đó biến mất. */
   onResolved?: () => void;
 }) {
   const t = useTranslations('Bookings.missingKm');
   const tActions = useTranslations('Common.actions');
-  const { data, isLoading, isError, error, refetch } = useHandoverContext(item.bookingId);
+  const tQueue = useTranslations('Maintenance.missingKmQueue');
+  const toast = useAppToast();
+  const { data, isLoading, isError, error, refetch } = useHandoverContext(bookingId);
   const handover = data?.return ?? null;
 
   /*
@@ -48,9 +53,11 @@ export function ResolveQueueSheet({
   useEffect(() => {
     if (!resolvedElsewhere || notified.current) return;
     notified.current = true;
+    // Nói ra lý do tấm không mở — nhất là khi người dùng đến từ một lối "Xử lý ngay" đã cũ (như web).
+    toast.showInfo(tQueue('alreadyResolved'));
     onClose();
     onResolved?.();
-  }, [resolvedElsewhere, onClose, onResolved]);
+  }, [resolvedElsewhere, onClose, onResolved, toast, tQueue]);
 
   if (isError) {
     // Thiếu quyền là câu trả lời cuối cùng, không phải sự cố tạm — không mời thử lại.
@@ -70,7 +77,7 @@ export function ResolveQueueSheet({
           {forbidden ? null : (
             <Button
               label={tActions('retry')}
-              variant="secondary"
+              variant="outline"
               icon="refresh-outline"
               onPress={() => void refetch()}
             />
@@ -92,7 +99,7 @@ export function ResolveQueueSheet({
 
   return (
     <ResolveOdometerSheet
-      bookingId={item.bookingId}
+      bookingId={bookingId}
       type={HANDOVER_TYPE.RETURN}
       context={data}
       handover={handover}

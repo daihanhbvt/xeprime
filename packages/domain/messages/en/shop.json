@@ -1,5 +1,6 @@
 {
   "page": {
+    "title": "Shop information",
     "subtitle": "Your shop’s details and settings.",
     "viewPublicPage": "View shop page",
     "loadError": "Couldn't load your shop profile",
@@ -188,7 +189,8 @@
       "title": "Apply the new rental policy?",
       "body": "The new policy applies to new bookings. Bookings already confirmed keep their original price and deposit.",
       "bodyInheriting": "The new policy applies immediately to {count, plural, other {# vehicle(s)}} inheriting it, starting from new bookings. Bookings already confirmed keep their original price and deposit.",
-      "ok": "Apply changes"
+      "ok": "Apply changes",
+      "insuranceRequired": "{count, plural, one {# car} other {# cars}} using this policy without a car value, photos or registration will stop taking self-drive bookings until completed."
     },
     "appliedTipLabel": "How this policy applies",
     "dirtyDiscard": "Discard",
@@ -250,6 +252,15 @@
         "title": "Long-term discounts (over 1 month)",
         "empty": "No discount tiers yet - long-term customers pay the full package price.",
         "inactive": "The tiers below are switched off, so customers cannot see them. Saving will switch them on; delete them if you do not want them."
+      },
+      "insurance": {
+        "title": "Vehicle damage insurance",
+        "tipLabel": "About vehicle damage insurance",
+        "hint": "MIC per-trip vehicle damage insurance for self-drive cars. The premium depends on the car value and rental days and is paid by the renter. A car needs its value, the required photos and its registration to be sold with insurance. The renter bears the deductible when there is a loss.",
+        "modeOptional": "Renters choose whether to buy it when booking. Cars with incomplete insurance details still take bookings, without insurance.",
+        "modeRequired": "Every self-drive trip includes it. Cars with incomplete insurance details stop taking self-drive bookings until they are completed.",
+        "impactTitle": "{count, plural, one {# car} other {# cars}} with incomplete insurance details will stop taking self-drive bookings",
+        "impactNamesMore": "{names} and {count, plural, one {# other car} other {# other cars}}"
       }
     }
   },
@@ -442,7 +453,8 @@
       "phoneField": "Displayed phone number",
       "email": "Contact email",
       "bio": "About",
-      "bioPlaceholder": "Introduce your shop"
+      "bioPlaceholder": "Introduce your shop",
+      "bioPlainNote": "Formatting added on the website is removed if you edit the introduction here."
     }
   }
 }

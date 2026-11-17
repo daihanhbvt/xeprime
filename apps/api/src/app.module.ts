@@ -43,6 +43,7 @@ import { TaxModule } from './modules/tax/tax.module';
 import { SellerProfileModule } from './modules/seller-profile/seller-profile.module';
 import { DriverLicencesModule } from './modules/driver-licences/driver-licences.module';
 import { SupportModule } from './modules/support/support.module';
+import { TripVerdictModule } from './modules/trip-verdict/trip-verdict.module';
 import { BadgesModule } from './modules/badges/badges.module';
 import { PartnerDashboardModule } from './modules/partner-dashboard/partner-dashboard.module';
 import { PaymentGatewayModule } from './modules/payment-gateway/payment-gateway.module';
@@ -69,6 +70,7 @@ import { PlatformAdminModule } from './modules/platform-admin/platform-admin.mod
 import { BillingModule } from './modules/billing/billing.module';
 import { BannersModule } from './modules/banners/banners.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
+import { VehicleDataModule } from './modules/vehicle-data/vehicle-data.module';
 import { PromoCodesModule } from './modules/promo-codes/promo-codes.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { DriversModule } from './modules/drivers/drivers.module';
@@ -153,6 +155,7 @@ import { AppConfigModule } from './modules/app-config/app-config.module';
     PlatformAdminModule,
     BillingModule,
     CatalogModule,
+    VehicleDataModule,
     BannersModule,
     PricingModule,
     DriversModule,
@@ -175,6 +178,8 @@ import { AppConfigModule } from './modules/app-config/app-config.module';
     SellerProfileModule,
     DriverLicencesModule,
     SupportModule,
+    // Kết luận chuyến của case chưa xác nhận giao/trả xe — ADR 0094.
+    TripVerdictModule,
     // Không gian hỗ trợ gian hàng của nhân sự nền tảng — ADR 0050.
     SupportRequestModule,
     TenantSupportModule,

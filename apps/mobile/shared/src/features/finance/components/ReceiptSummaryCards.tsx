@@ -1,64 +1,59 @@
-import { useCallback, useState } from 'react';
-import { Text, XStack, YStack } from 'tamagui';
+import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { isNegativeMoney } from '@xeprime/domain';
-import { BlockTitle } from '@/components/ui/BlockTitle';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { SkeletonText } from '@/components/ui/Skeleton';
-import { StatCardFooter, StatGrid, type StatCell } from '@/components/ui/StatGrid';
+import { StatGrid, type StatCell } from '@/components/ui/StatGrid';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
-import type { ReceiptSummary } from '../api';
+import { fontSize, space } from '@/theme/tokens';
+import type { DebtSummary, ReceiptSummary } from '../api';
 
 /**
- * Bốn con số của ĐÚNG danh sách đang xem — bản native của `ReceiptSummaryCards`.
+ * Bốn thẻ đầu tab "Giao dịch thu chi" — bản native của web `ReceiptSummaryCards` (design
+ * Partner-XePrime `23813:58308`, ledger 09 §3.11 #2): Tổng thu · Tổng chi · Cân đối · Công nợ
+ * khách hàng.
  *
- * Điểm khác biệt so với màn Tổng quan doanh thu: thẻ ở đây cộng cùng một vị từ với danh sách bên
- * dưới (backend dùng chung `whereOf`). Một ô "Tổng thu" không khớp danh sách ngay dưới nó là cách
- * nhanh nhất khiến người dùng thôi tin cả hai con số.
+ * Ba thẻ đầu cộng ĐÚNG danh sách đang xem (backend dùng chung `whereOf`): một ô "Tổng thu" không
+ * khớp danh sách ngay dưới nó là cách nhanh nhất khiến người dùng thôi tin cả hai con số. Chỉ phiếu
+ * ĐÃ DUYỆT được cộng — câu giải thích (ⓘ của web) đứng ngay dưới thẻ.
  *
- * Chỉ cộng phiếu ĐÃ DUYỆT — phiếu chờ duyệt chưa phải tiền thật, và chú thích nói rõ điều đó
- * thay vì để người dùng tự đoán vì sao tổng không khớp số dòng.
+ * Thẻ Công nợ thay ô "Số phiếu đã duyệt" cũ (chốt 04/11/2026): số phiếu đã có ở tổng dòng của danh
+ * sách, còn khoản khách đang nợ là câu người giữ sổ hỏi ngay sau "tháng này thu bao nhiêu". Chạm
+ * vào nó là sang tab Công nợ.
  *
- * **Cùng khuôn dòng sổ với thẻ ở màn Tổng quan** (`FinanceOverviewCards`): hai vế thu/chi là hai
- * dòng, "Cân đối" là hàng TỔNG dưới vạch đậm chứ không phải chỉ số thứ ba ngang hàng với hai thứ
- * sinh ra nó, và số phiếu — thứ đếm DÒNG chứ không đếm TIỀN — xuống chân thẻ. Ba con số tiền và
- * một con số đếm đứng chung một dải là mời người đọc so chúng với nhau.
- *
- * Màu gói trong huy hiệu; con số giữ mực đen và chỉ đổi màu khi cân đối ÂM.
+ * Cùng khuôn danh sách thẻ số (`StatGrid` list) với Tổng quan doanh thu và Công nợ — một app, một
+ * cách đọc thẻ tiền.
  */
 export function ReceiptSummaryCards({
   data,
   loading,
   error,
   filtered,
+  debt,
 }: {
   data: ReceiptSummary | undefined;
   loading: boolean;
   error: boolean;
-  /** Có bộ lọc nào đang bật không — đổi câu chú thích, không đổi con số. */
+  /** Có bộ lọc nào đang bật không — đổi câu giải thích, không đổi con số. */
   filtered: boolean;
+  /**
+   * Công nợ khách hàng TẠI LÚC NÀY. `null` = người xem không vào được Công nợ (gói không có) —
+   * thẻ vắng hẳn thay vì hiện một số 0 giả.
+   */
+  debt: { data: DebtSummary | undefined; loading: boolean; onPress: () => void } | null;
 }) {
   const colors = useColors();
-  const t = useTranslations('Finance.receipts.summary');
+  const t = useTranslations('Finance.receipts.tiles');
+  const tSummary = useTranslations('Finance.receipts.summary');
   const fmt = useAppFormat();
-  /*
-   * Mặc định THU GỌN.
-   *
-   * Sổ Thu-Chi là màn người ta mở để TRA một phiếu cụ thể, không phải để đọc bốn con số tổng —
-   * câu hỏi tổng quan đã có màn riêng của nó. Bày sẵn thẻ tổng thì khối đầu trang chiếm gần nửa
-   * màn trước khi thấy phiếu đầu tiên, mỗi lần vào lại phải cuộn qua đúng thứ mình không đi tìm.
-   * Mở nó ra chỉ tốn một cú chạm, và tiêu đề khối vẫn luôn ở đó nói rằng có gì bên trong.
-   *
-   * Trước mọi nhánh trả sớm: hook phải chạy ở mọi lần render, kể cả lúc lỗi hay chưa có dữ liệu.
-   */
-  const [collapsed, setCollapsed] = useState(true);
-  const toggle = useCallback(() => setCollapsed((current) => !current), []);
 
-  if (error && !data) return <Callout tone="warning">{t('error')}</Callout>;
+  if (error && !data) return <Callout tone="warning">{tSummary('error')}</Callout>;
   if (!data) return <SkeletonText lines={4} />;
+
+  const balanceNegative = isNegativeMoney(data.balance);
+  const owing = debt?.data !== undefined && debt.data.totalCount > 0;
 
   const cells: StatCell[] = [
     {
@@ -68,12 +63,10 @@ export function ReceiptSummaryCards({
       value: fmt.money(data.totalIncome),
       tone: colors.success,
       surface: colors.successSurface,
-      valueTone: colors.success,
-      /* Hai phương thức, HAI DÒNG: nối chúng lại là hai số tiền dính thành một dòng phải dò. */
-      hint: [
-        t('cash', { value: fmt.money(data.incomeCash) }),
-        t('transfer', { value: fmt.money(data.incomeTransfer) }),
-      ],
+      hint: t('incomeHint', {
+        cash: fmt.money(data.incomeCash),
+        transfer: fmt.money(data.incomeTransfer),
+      }),
     },
     {
       key: 'expense',
@@ -84,52 +77,44 @@ export function ReceiptSummaryCards({
       surface: colors.dangerSurface,
       valueTone: colors.danger,
     },
+    {
+      key: 'balance',
+      icon: 'swap-vertical-outline',
+      label: t('balance'),
+      value: fmt.money(data.balance),
+      tone: balanceNegative ? colors.danger : colors.success,
+      valueTone: balanceNegative ? colors.danger : colors.success,
+      hint: t('balanceHint'),
+    },
+    ...(debt
+      ? [
+          {
+            key: 'debt',
+            icon: 'people-outline',
+            label: t('debt'),
+            value: debt.data ? fmt.money(debt.data.totalAmount) : '-',
+            tone: owing ? colors.danger : colors.textMuted,
+            ...(owing ? { surface: colors.dangerSurface, valueTone: colors.danger } : {}),
+            hint: debt.data
+              ? [t('debtHint', { count: debt.data.totalCount }), t('debtInfo')]
+              : t('debtInfo'),
+            onPress: debt.onPress,
+          } satisfies StatCell,
+        ]
+      : []),
   ];
-
-  const total: StatCell = {
-    key: 'balance',
-    icon: 'swap-vertical-outline',
-    label: t('balance'),
-    value: fmt.money(data.balance),
-    tone: colors.textMuted,
-    valueTone: isNegativeMoney(data.balance) ? colors.danger : colors.success,
-  };
 
   /* Đổi bộ lọc: GIỮ số cũ và mờ đi, thay vì nháy về skeleton rồi nhảy lại một con số khác. */
   return (
-    <YStack gap={space.sm}>
-      {/*
-        Thu gọn được, và đó là lý do khối này có tiêu đề.
-
-        Sổ Thu-Chi là màn để CUỘN: khối đầu trang đã chiếm gần nửa màn trước khi thấy phiếu đầu
-        tiên. Người vào sổ để tra một phiếu cụ thể không cần bốn con số tổng suốt cả buổi — gấp
-        chúng lại là được thêm ba thẻ phiếu trong tầm mắt, mà mở lại chỉ tốn một cú chạm.
-      */}
-      <BlockTitle collapsed={collapsed} onToggleCollapsed={toggle}>
-        {t('title')}
-      </BlockTitle>
-      {collapsed ? null : (
-        <Card padded={false}>
-          <YStack opacity={loading ? 0.6 : 1}>
-            <StatGrid variant="list" cells={cells} total={total} />
-            <StatCardFooter>
-              <XStack ai="center" gap={space.sm}>
-                <YStack f={1} minWidth={0} gap={2}>
-                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                    {t('approvedCount')}
-                  </Text>
-                  <Text col={colors.placeholder} fos={fontSize.label}>
-                    {filtered ? t('inFilter') : t('wholeBook')}
-                  </Text>
-                </YStack>
-                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                  {fmt.count(data.approvedCount)}
-                </Text>
-              </XStack>
-            </StatCardFooter>
-          </YStack>
-        </Card>
-      )}
+    <YStack gap={space.xs}>
+      <Card padded={false} accessibilityLabel={t('label')}>
+        <YStack opacity={loading || (debt?.loading ?? false) ? 0.6 : 1}>
+          <StatGrid variant="list" cells={cells} />
+        </YStack>
+      </Card>
+      <Text col={colors.textMuted} fos={fontSize.label}>
+        {filtered ? t('infoFiltered') : t('infoWhole')}
+      </Text>
     </YStack>
   );
 }

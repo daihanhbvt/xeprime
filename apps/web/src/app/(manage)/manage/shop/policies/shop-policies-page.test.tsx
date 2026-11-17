@@ -46,11 +46,21 @@ const defaultsQuery = vi.hoisted(() => ({
 const save = vi.hoisted(() => ({ mutateAsync: vi.fn(), isPending: false }));
 const saveDefaults = vi.hoisted(() => ({ mutateAsync: vi.fn(), isPending: false }));
 
+/** Cảnh báo đổi chế độ bảo hiểm (ADR 0091) — mặc định nền tảng CHƯA bán theo bậc ⇒ ẩn khối. */
+const impactQuery = vi.hoisted(() => ({
+  data: { applies: false, total: 0, vehicles: [] } as {
+    applies: boolean;
+    total: number;
+    vehicles: { id: string; name: string; plateNumber: string | null; gaps: string[] }[];
+  },
+}));
+
 vi.mock('@/features/rental-policies/hooks/use-shop-policy', () => ({
   useShopPolicy: () => query,
   useSaveShopPolicy: () => save,
   useShopOperationDefaults: () => defaultsQuery,
   useSaveShopOperationDefaults: () => saveDefaults,
+  useShopInsuranceImpact: () => impactQuery,
 }));
 
 const paymentQuery = vi.hoisted(() => ({
@@ -95,6 +105,7 @@ function policyFixture(over: Partial<ShopRentalPolicy> = {}): ShopRentalPolicy {
       collateralMode: 'cash',
       collateralAssetTypes: [],
       depositAmount: '5000000',
+      insuranceMode: 'optional',
       deliveryEnabled: true,
       deliveryMaxRadiusKm: 10,
       deliveryTiers: [
@@ -299,6 +310,40 @@ describe('Chính sách thuê - lưu', () => {
       { toKm: 10, fee: '50000' },
     ]);
     expect(saveDefaults.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('nền tảng chưa bán bảo hiểm theo bậc: không có khối chọn Bắt buộc/Tuỳ chọn', () => {
+    renderPage();
+    expect(screen.queryByRole('radiogroup', { name: 'Bảo hiểm vật chất xe' })).toBeNull();
+  });
+
+  it('chọn bảo hiểm Bắt buộc → cảnh báo xe thiếu dữ liệu, xác nhận nêu số xe, gửi insuranceMode', async () => {
+    impactQuery.data = {
+      applies: true,
+      total: 2,
+      vehicles: [
+        { id: 'V1', name: 'Vios 01', plateNumber: null, gaps: ['insured_value_missing'] },
+        { id: 'V2', name: 'City 02', plateNumber: null, gaps: ['photos_missing'] },
+      ],
+    };
+    renderPage();
+    const group = screen.getByRole('radiogroup', { name: 'Bảo hiểm vật chất xe' });
+    /*
+     * Chính sách đang lưu là Tuỳ chọn ⇒ ô đó được chọn sẵn. Đọc class của antd chứ không đọc
+     * `:checked`: môi trường test đặt chung `name` cho mọi nhóm radio, nên jsdom chỉ giữ MỘT ô được
+     * chọn trên cả trang (nhóm thế chấp giành mất).
+     */
+    expect(group.querySelector('.ant-radio-wrapper-checked')?.textContent).toMatch(/^Tuỳ chọn/);
+    fireEvent.click(within(group).getByRole('radio', { name: /Bắt buộc/ }));
+    expect(
+      screen.getByText('2 xe chưa đủ dữ liệu bảo hiểm sẽ ngừng nhận đặt tự lái'),
+    ).toBeTruthy();
+    await saveAndConfirm();
+    expect(screen.getAllByText(/2 xe đang dùng chính sách này/).length).toBeGreaterThan(0);
+    await waitFor(() => expect(save.mutateAsync).toHaveBeenCalledTimes(1));
+    const body = save.mutateAsync.mock.calls[0]![0] as Record<string, unknown>;
+    expect(body.insuranceMode).toBe('required');
+    impactQuery.data = { applies: false, total: 0, vehicles: [] };
   });
 
   it('đổi thời gian chết → chỉ gửi mặc định gian hàng', async () => {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';

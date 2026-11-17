@@ -131,3 +131,38 @@ export function taxPeriodRangeVn(periodKey: string): { start: Date; end: Date } 
   const end = new Date(Date.UTC(month === 12 ? year + 1 : year, month % 12, 1) - 7 * 60 * 60 * 1000);
   return { start, end };
 }
+
+/**
+ * Cách gộp của file CSV một kỳ (`GET /platform/money/tax/export?groupBy=`). Vắng = từng dòng theo
+ * chuyến; `seller` = một dòng mỗi NGƯỜI BÁN (định danh + doanh thu + GTGT + TNCN) — dạng người làm
+ * tờ khai cần để lập bảng kê kèm tờ khai nộp thay.
+ */
+export const TAX_EXPORT_GROUP_BY = {
+  SELLER: 'seller',
+} as const;
+
+export type TaxExportGroupBy = (typeof TAX_EXPORT_GROUP_BY)[keyof typeof TAX_EXPORT_GROUP_BY];
+export const TAX_EXPORT_GROUP_BY_VALUES = Object.values(TAX_EXPORT_GROUP_BY) as TaxExportGroupBy[];
+
+/**
+ * Kỳ đã KẾT THÚC chưa (theo giờ Việt Nam) — chỉ kỳ đã qua mới kê khai / nộp được. Kê khai giữa
+ * tháng là cắt đôi kỳ: dòng trước lượt bấm thành "đã kê khai", dòng sau vẫn "chưa", và không tờ khai
+ * nào khớp sổ. So chuỗi `YYYY-MM` là so đúng thứ tự thời gian.
+ */
+export function isTaxPeriodEnded(periodKey: string, now: Date): boolean {
+  return isTaxPeriodKey(periodKey) && periodKey < taxPeriodKeyVn(now);
+}
+
+/**
+ * Ngày SỚM NHẤT (`YYYY-MM-DD`, ngày lịch VN) có thể nộp tờ khai / nộp tiền cho một kỳ: ngày đầu
+ * tháng kế tiếp. Ngày khai trước mốc này là nhập nhầm kỳ.
+ */
+export function taxPeriodFilingEarliestDateKey(periodKey: string): string {
+  if (!isTaxPeriodKey(periodKey)) {
+    throw new Error(`Kỳ thuế không hợp lệ: ${periodKey}`);
+  }
+  const [year, month] = periodKey.split('-').map(Number) as [number, number];
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = String((month % 12) + 1).padStart(2, '0');
+  return `${nextYear}-${nextMonth}-01`;
+}

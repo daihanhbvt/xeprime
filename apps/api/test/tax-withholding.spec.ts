@@ -1,6 +1,7 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
+  API_ERROR_CODE,
   BILLING_MODE,
   BOOKING_STATUS,
   type BookingPriceSnapshot,
@@ -12,10 +13,13 @@ import {
   SERVICE_TYPE,
   TAX_RATES_DEFAULTS,
   VEHICLE_TYPE,
+  TAX_EXPORT_GROUP_BY,
   TAX_WITHHOLDING_STATUS,
+  taxPeriodFilingEarliestDateKey,
   taxPeriodKeyVn,
   taxSellerEntityOf,
   TENANT_STATUS,
+  vnDateKey,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { TaxReadService } from '../src/modules/tax/tax-read.service';
@@ -116,6 +120,34 @@ async function makeBooking(snap: BookingPriceSnapshot = snapshot()): Promise<str
   return id;
 }
 
+/**
+ * Kỳ QUÁ KHỨ riêng của spec này — chỉ kỳ đã kết thúc mới kê khai / nộp được, và kê khai lật MỌI
+ * dòng của kỳ: dùng kỳ hiện tại là đụng vào dòng của spec khác chạy song song. Năm 1990–2019 rút
+ * từ RUN, mỗi lượt gọi một tháng khác.
+ */
+const usedPeriods: string[] = [];
+let periodSeq = 0;
+function pastPeriod(): { at: Date; period: string } {
+  periodSeq += 1;
+  const year = 1990 + (parseInt(RUN.slice(-4), 36) % 30) + Math.floor((periodSeq - 1) / 12);
+  const month = ((periodSeq - 1) % 12) + 1;
+  const at = new Date(Date.UTC(year, month - 1, 15, 3));
+  const period = taxPeriodKeyVn(at);
+  usedPeriods.push(period);
+  return { at, period };
+}
+
+const declare = (period: string, declaredOn = taxPeriodFilingEarliestDateKey(period)) =>
+  tax.declarePeriod(period, ownerId, { declarationRef: `TK-${RUN}-${period}`, declaredOn });
+
+const remit = (period: string, remittedAmount: string, note?: string) =>
+  tax.remitPeriod(period, ownerId, {
+    remittanceRef: `CT-${RUN}-${period}`,
+    remittedOn: taxPeriodFilingEarliestDateKey(period),
+    remittedAmount,
+    note,
+  });
+
 const accrue = (bookingId: string, now?: Date) =>
   prisma.$transaction((tx) =>
     tax.accrueForBookingWithinTx(tx, {
@@ -215,6 +247,7 @@ afterAll(async () => {
     await prisma.feePolicy.deleteMany({ where: { id: policyId } });
     // Audit của nền tảng (chốt kỳ, xuất CSV) không gắn tenant — dọn theo người thao tác.
     await prisma.auditLog.deleteMany({ where: { actorUserId: ownerId } });
+    await prisma.taxPeriodFiling.deleteMany({ where: { periodKey: { in: usedPeriods } } });
     await prisma.vehicle.deleteMany({ where: { tenantId } });
     await prisma.tenant.deleteMany({ where: { id: tenantId } });
     await prisma.user.deleteMany({ where: { id: ownerId } });
@@ -257,7 +290,6 @@ describe('Phát sinh nghĩa vụ', () => {
       holdPaymentWindowMinutes: 120,
       freeCancelHours: 4,
       depositMinAmount: '50000',
-      depositMaxPercent: 50,
       taxEnabled: true,
       taxRates: { self_drive: flat, long_term: flat, with_driver: flat },
       taxLegalBasis: 'NĐ 117/2025/NĐ-CP',
@@ -432,11 +464,12 @@ describe('Sổ CHỈ-GHI-THÊM: sửa sai bằng dòng đảo', () => {
 
   maybe('dòng ĐÃ NỘP không đảo được — sửa bằng tờ khai điều chỉnh', async () => {
     const bookingId = await makeBooking();
-    await accrue(bookingId);
+    const { at, period } = pastPeriod();
+    await accrue(bookingId, at);
     const row = await prisma.taxWithholding.findFirstOrThrow({ where: { bookingId } });
 
-    await tax.advancePeriod(row.periodKey, TAX_WITHHOLDING_STATUS.DECLARED, ownerId);
-    await tax.advancePeriod(row.periodKey, TAX_WITHHOLDING_STATUS.REMITTED, ownerId);
+    await declare(period);
+    await remit(period, TAX_AMOUNT);
 
     await expect(tax.reverse(row.id, ownerId, 'lý do đủ dài')).rejects.toMatchObject({
       response: { code: 'INVALID_STATUS_TRANSITION' },
@@ -489,49 +522,166 @@ describe('Sổ CHỈ-GHI-THÊM: sửa sai bằng dòng đảo', () => {
 });
 
 describe('Chuyển trạng thái theo KỲ', () => {
-  maybe('accrued → declared → remitted, và bấm hai lần không nhảy cóc', async () => {
+  maybe('accrued → declared → remitted kèm chứng cứ; mỗi bước chỉ một lần', async () => {
     const bookingId = await makeBooking();
-    await accrue(bookingId);
+    const { at, period } = pastPeriod();
+    await accrue(bookingId, at);
     const row = await prisma.taxWithholding.findFirstOrThrow({ where: { bookingId } });
-    const period = row.periodKey;
 
-    const declared = await tax.advancePeriod(period, TAX_WITHHOLDING_STATUS.DECLARED, ownerId);
-    expect(declared.updated).toBeGreaterThanOrEqual(1);
+    const declared = await declare(period);
+    expect(declared.updated).toBe(1);
+    const filing = await prisma.taxPeriodFiling.findUniqueOrThrow({ where: { periodKey: period } });
+    expect(filing.declarationRef).toBe(`TK-${RUN}-${period}`);
+    expect(filing.declaredBy).toBe(ownerId);
+    expect(filing.remittanceRef).toBeNull();
 
-    // Bấm lại: không còn dòng `accrued` nào của kỳ này ⇒ 0 dòng đổi, KHÔNG đẩy sang `remitted`.
-    const again = await tax.advancePeriod(period, TAX_WITHHOLDING_STATUS.DECLARED, ownerId);
-    expect(again.updated).toBe(0);
+    // Kê khai lần hai: 409, không lật gì, không đẩy sang `remitted`.
+    await expect(declare(period)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.TAX_PERIOD_ALREADY_DECLARED },
+    });
     expect((await prisma.taxWithholding.findUniqueOrThrow({ where: { id: row.id } })).status).toBe(
       TAX_WITHHOLDING_STATUS.DECLARED,
     );
 
-    await tax.advancePeriod(period, TAX_WITHHOLDING_STATUS.REMITTED, ownerId);
+    const remitted = await remit(period, TAX_AMOUNT);
+    expect(remitted.updated).toBe(1);
     const final = await prisma.taxWithholding.findUniqueOrThrow({ where: { id: row.id } });
     expect(final.status).toBe(TAX_WITHHOLDING_STATUS.REMITTED);
     expect(final.declaredAt).not.toBeNull();
     expect(final.remittedAt).not.toBeNull();
+    const after = await prisma.taxPeriodFiling.findUniqueOrThrow({ where: { periodKey: period } });
+    expect(after.remittedAmount?.toFixed(0)).toBe(TAX_AMOUNT);
+    expect(after.ledgerAmount?.toFixed(0)).toBe(TAX_AMOUNT);
+
+    await expect(remit(period, TAX_AMOUNT)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.TAX_PERIOD_ALREADY_REMITTED },
+    });
+    expect(
+      await prisma.auditLog.count({
+        where: { targetId: period, action: { startsWith: 'tax_period.' } },
+      }),
+    ).toBe(2);
+  });
+
+  maybe('KỲ ĐANG CHẠY không kê khai / nộp được — tránh cắt đôi kỳ', async () => {
+    const bookingId = await makeBooking();
+    await accrue(bookingId);
+    const row = await prisma.taxWithholding.findFirstOrThrow({ where: { bookingId } });
+    const current = taxPeriodKeyVn(new Date());
+
+    await expect(
+      tax.declarePeriod(current, ownerId, {
+        declarationRef: 'TK-1',
+        declaredOn: vnDateKey(new Date()),
+      }),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.TAX_PERIOD_NOT_ENDED } });
+    await expect(
+      tax.remitPeriod(current, ownerId, {
+        remittanceRef: 'CT-1',
+        remittedOn: vnDateKey(new Date()),
+        remittedAmount: TAX_AMOUNT,
+      }),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.TAX_PERIOD_NOT_ENDED } });
+    expect((await prisma.taxWithholding.findUniqueOrThrow({ where: { id: row.id } })).status).toBe(
+      TAX_WITHHOLDING_STATUS.ACCRUED,
+    );
+    expect(await prisma.taxPeriodFiling.count({ where: { periodKey: current } })).toBe(0);
   });
 
   maybe('KHÔNG có đường "nộp mà chưa khai"', async () => {
     const bookingId = await makeBooking();
-    await accrue(bookingId);
+    const { at, period } = pastPeriod();
+    await accrue(bookingId, at);
     const row = await prisma.taxWithholding.findFirstOrThrow({ where: { bookingId } });
 
-    const skipped = await tax.advancePeriod(
-      row.periodKey,
-      TAX_WITHHOLDING_STATUS.REMITTED,
-      ownerId,
-    );
-    expect(skipped.updated).toBe(0);
+    await expect(remit(period, TAX_AMOUNT)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.TAX_PERIOD_NOT_DECLARED, details: { accruedRows: 1 } },
+    });
     expect((await prisma.taxWithholding.findUniqueOrThrow({ where: { id: row.id } })).status).toBe(
       TAX_WITHHOLDING_STATUS.ACCRUED,
     );
   });
 
+  maybe('ngày trên chứng từ trước khi kỳ kết thúc hoặc ở tương lai ⇒ từ chối', async () => {
+    const { period } = pastPeriod();
+    await expect(declare(period, `${period}-28`)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.VALIDATION_FAILED, details: { field: 'declaredOn' } },
+    });
+    const tomorrow = vnDateKey(new Date(Date.now() + 86_400_000));
+    await expect(declare(period, tomorrow)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.VALIDATION_FAILED, details: { field: 'declaredOn' } },
+    });
+    await expect(declare(period, '2019-02-30')).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.VALIDATION_FAILED },
+    });
+    expect(await prisma.taxPeriodFiling.count({ where: { periodKey: period } })).toBe(0);
+  });
+
+  /** Người dùng chốt 16/11/2026: số nộp được lệch sổ, nhưng phải có ghi chú. */
+  maybe(
+    'nộp LỆCH sổ: thiếu ghi chú ⇒ từ chối, không lật gì; có ghi chú ⇒ ghi kèm số sổ',
+    async () => {
+      const bookingId = await makeBooking();
+      const { at, period } = pastPeriod();
+      await accrue(bookingId, at);
+      const row = await prisma.taxWithholding.findFirstOrThrow({ where: { bookingId } });
+      await declare(period);
+
+      await expect(remit(period, '139000')).rejects.toMatchObject({
+        response: {
+          code: API_ERROR_CODE.TAX_REMITTANCE_NOTE_REQUIRED,
+          details: { ledgerAmount: TAX_AMOUNT, remittedAmount: '139000' },
+        },
+      });
+      // Transaction cuộn lại: dòng vẫn `declared`, chưa có chứng cứ nộp.
+      expect(
+        (await prisma.taxWithholding.findUniqueOrThrow({ where: { id: row.id } })).status,
+      ).toBe(TAX_WITHHOLDING_STATUS.DECLARED);
+      expect(
+        (await prisma.taxPeriodFiling.findUniqueOrThrow({ where: { periodKey: period } }))
+          .remittanceRef,
+      ).toBeNull();
+
+      await remit(period, '139000', 'Làm tròn theo giấy nộp tiền');
+      const filing = await prisma.taxPeriodFiling.findUniqueOrThrow({
+        where: { periodKey: period },
+      });
+      expect(filing.remittedAmount?.toFixed(0)).toBe('139000');
+      expect(filing.ledgerAmount?.toFixed(0)).toBe(TAX_AMOUNT);
+      expect(filing.remittanceNote).toBe('Làm tròn theo giấy nộp tiền');
+    },
+  );
+
+  maybe('tờ khai kỳ trả chứng cứ, số dòng theo trạng thái và cờ kỳ đã kết thúc', async () => {
+    const bookingId = await makeBooking();
+    const { at, period } = pastPeriod();
+    await accrue(bookingId, at);
+
+    const before = await read.periodSummary(period);
+    expect(before).toMatchObject({
+      periodEnded: true,
+      accruedRows: 1,
+      declaredRows: 0,
+      filing: null,
+    });
+
+    await declare(period);
+    const after = await read.periodSummary(period);
+    expect(after).toMatchObject({ accruedRows: 0, declaredRows: 1 });
+    expect(after.filing).toMatchObject({
+      declarationRef: `TK-${RUN}-${period}`,
+      declaredOn: taxPeriodFilingEarliestDateKey(period),
+      declaredByName: 'Chủ thuế',
+      remittanceRef: null,
+    });
+
+    expect((await read.periodSummary(taxPeriodKeyVn(new Date()))).periodEnded).toBe(false);
+  });
+
   maybe('kỳ sai dạng bị từ chối', async () => {
     await expect(
-      tax.advancePeriod('2026-13', TAX_WITHHOLDING_STATUS.DECLARED, ownerId),
-    ).rejects.toMatchObject({ response: { code: 'VALIDATION_FAILED' } });
+      tax.declarePeriod('2026-13', ownerId, { declarationRef: 'TK-1', declaredOn: '2026-12-01' }),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
   });
 });
 
@@ -577,6 +727,52 @@ describe('Báo cáo', () => {
     // Nhãn chứa dấu `+` chứ không có phẩy; ô nào có phẩy thì phải được bọc ngoặc kép.
     expect(csv).toContain(`TX${RUN.toUpperCase()}`);
     expect(csv).toContain(TAX_AMOUNT);
+  });
+
+  maybe('CSV chi tiết ghi ngày giờ theo GIỜ VIỆT NAM, không ISO UTC', async () => {
+    const bookingId = await makeBooking();
+    const { period } = pastPeriod();
+    // 06:30 ngày 01 giờ VN = 23:30 ngày cuối tháng trước theo UTC — đúng khe dễ đọc nhầm kỳ.
+    const [y, m] = period.split('-').map(Number) as [number, number];
+    await accrue(bookingId, new Date(Date.UTC(y, m - 1, 1, 6, 30) - 7 * 3_600_000));
+
+    const csv = await read.periodCsv(period, ownerId);
+    expect(csv).toContain(`${period}-01 06:30:00`);
+    expect(csv).not.toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+  });
+
+  maybe('CSV gộp theo NGƯỜI BÁN: một dòng, chỉ cộng dòng còn hiệu lực', async () => {
+    const { at, period } = pastPeriod();
+    const first = await makeBooking();
+    const second = await makeBooking();
+    const reversed = await makeBooking();
+    await accrue(first, at);
+    await accrue(second, at);
+    await accrue(reversed, at);
+    const toReverse = await prisma.taxWithholding.findFirstOrThrow({
+      where: { bookingId: reversed },
+    });
+    await tax.reverse(toReverse.id, ownerId, 'Ghi nhầm chuyến');
+
+    const csv = await read.periodCsv(period, ownerId, TAX_EXPORT_GROUP_BY.SELLER);
+    const lines = csv
+      .replace(/^\uFEFF/, '')
+      .trim()
+      .split('\r\n');
+    expect(lines[0]).toContain('so_chuyen');
+    expect(lines).toHaveLength(2);
+    const cells = lines[1]!.split(',');
+    // Hai chuyến còn hiệu lực — dòng đảo và dòng gốc bị đảo đều không cộng (không đếm đôi doanh thu).
+    expect(cells).toContain(`TX${RUN.toUpperCase()}`);
+    expect(cells[7]).toBe('2');
+    expect(cells[8]).toBe(String(Number(BASE) * 2));
+    expect(cells[cells.length - 1]).toBe(String(Number(TAX_AMOUNT) * 2));
+
+    const audit = await prisma.auditLog.findFirstOrThrow({
+      where: { targetId: period, action: 'tax.period_export' },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(audit.afterJson).toMatchObject({ groupBy: TAX_EXPORT_GROUP_BY.SELLER, rows: 1 });
   });
 
   /**
@@ -660,18 +856,18 @@ describe('Báo cáo', () => {
 
   maybe('nghĩa vụ GIỮ HỘ chỉ gồm phần chưa nộp', async () => {
     const bookingId = await makeBooking();
-    await accrue(bookingId);
-    const row = await prisma.taxWithholding.findFirstOrThrow({ where: { bookingId } });
+    const { at, period } = pastPeriod();
+    await accrue(bookingId, at);
     const end = new Date(Date.now() + 60_000);
 
     const before = await read.unpaidAsOf(end);
     expect(Number(before)).toBeGreaterThanOrEqual(Number(TAX_AMOUNT));
 
-    await tax.advancePeriod(row.periodKey, TAX_WITHHOLDING_STATUS.DECLARED, ownerId);
+    await declare(period);
     // `declared` VẪN là giữ hộ: đã khai nhưng tiền chưa rời tài khoản.
     expect(Number(await read.unpaidAsOf(end))).toBe(Number(before));
 
-    await tax.advancePeriod(row.periodKey, TAX_WITHHOLDING_STATUS.REMITTED, ownerId);
+    await remit(period, TAX_AMOUNT);
     // `remitted` ⇒ tiền đã nộp, thôi là nghĩa vụ.
     expect(Number(await read.unpaidAsOf(end))).toBe(Number(before) - Number(TAX_AMOUNT));
   });
@@ -690,7 +886,6 @@ describe('Sổ thuế tách GTGT/TNCN (ADR 0068)', () => {
     holdMinAmount: '20000',
     holdPaymentWindowMinutes: 120,
     freeCancelHours: 2,
-    depositMaxPercent: 50,
     taxEnabled: true,
     taxRates: TAX_RATES_DEFAULTS,
     taxLegalBasis: 'NĐ 117/2025/NĐ-CP · NĐ 68/2026/NĐ-CP',

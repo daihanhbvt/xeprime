@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Image } from 'expo-image';
 import { ActivityIndicator, Modal, Pressable, useWindowDimensions } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';

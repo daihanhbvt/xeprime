@@ -4,9 +4,8 @@ import {
   notificationDeepLink,
   type NotificationAudience,
 } from '@xeprime/domain';
-import { NOTIFICATION_TARGET_TYPE, NOTIFICATION_TYPE, type NotificationType } from '@xeprime/types';
+import { NOTIFICATION_TYPE, type NotificationType } from '@xeprime/types';
 import type { IconName } from '@/components/ui/Chip';
-import { PARTNER_PATH } from '@/features/shell/partner-track';
 import { notificationHref as hrefFromPath } from './deep-link';
 
 /** Ngữ cảnh xem thông báo — quyết định link click-through (khu quản lý vs khu khách). */
@@ -56,7 +55,7 @@ const ICONS: Readonly<Record<NotificationType, IconName>> = {
   [NOTIFICATION_TYPE.BOOKING_REQUEST_APPROVED]: 'checkmark-circle-outline',
   [NOTIFICATION_TYPE.BOOKING_REQUEST_REJECTED]: 'close-circle-outline',
   // Khách RÚT lại yêu cầu — khác chiều với shop từ chối, nên khác icon.
-  [NOTIFICATION_TYPE.BOOKING_REQUEST_CANCELLED]: 'arrow-undo-outline',
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_CANCELLED]: 'return-up-back-outline',
   // Hạn phản hồi 60 phút: đồng hồ cho lời nhắc, đồng hồ cát cho lúc hết giờ.
   [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRING]: 'time-outline',
   [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRED]: 'hourglass-outline',
@@ -71,7 +70,7 @@ const ICONS: Readonly<Record<NotificationType, IconName>> = {
    * app). Gán nó cho một loại đã khai làm bài test "mọi loại đều có icon riêng" mất tác dụng —
    * một loại bị quên sau này sẽ trốn được sau đúng cái icon đó.
    */
-  [NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_REOPENED]: 'sparkles-outline',
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_REOPENED]: 'megaphone-outline',
   // Chủ xe rút lại chuyến ĐÃ NHẬN — dấu X, khác hẳn mũi tên "khách rút" ở trên.
   [NOTIFICATION_TYPE.BOOKING_CANCELLED_BY_HOST]: 'close-circle-outline',
   // Hệ thống tự nhận chuyến theo thiết lập của chủ xe — tia sét, không phải dấu tích của người duyệt.
@@ -95,8 +94,11 @@ const ICONS: Readonly<Record<NotificationType, IconName>> = {
   // Sắp hết hạn và ĐÃ hết hạn dùng chung đồng hồ cát — cùng cặp icon web dùng.
   [NOTIFICATION_TYPE.HOLD_EXPIRING]: 'hourglass-outline',
   [NOTIFICATION_TYPE.HOLD_EXPIRED]: 'hourglass-outline',
-  [NOTIFICATION_TYPE.HOLD_REFUNDED]: 'arrow-undo-outline',
-  [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: 'arrow-undo-outline',
+  [NOTIFICATION_TYPE.HOLD_REFUNDED]: 'return-up-back-outline',
+  [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: 'return-up-back-outline',
+  [NOTIFICATION_TYPE.WITHDRAWAL_PAID]: 'wallet-outline',
+  [NOTIFICATION_TYPE.WITHDRAWAL_REJECTED]: 'wallet-outline',
+  [NOTIFICATION_TYPE.WITHDRAWAL_REVERSED]: 'wallet-outline',
   /* Mã khuyến mãi không còn áp được (ADR 0046) — icon QUÀ, cùng ký hiệu với ô áp mã ở luồng đặt xe. */
   [NOTIFICATION_TYPE.PROMO_CODE_DROPPED]: 'gift-outline',
   // Hồ sơ người bán — icon chứng nhận, không phải icon gian hàng: đây là danh tính pháp lý.
@@ -109,15 +111,15 @@ const ICONS: Readonly<Record<NotificationType, IconName>> = {
   [NOTIFICATION_TYPE.DRIVER_INVITED]: 'id-card-outline',
   [NOTIFICATION_TYPE.DRIVER_INVITE_ACCEPTED]: 'checkmark-circle-outline',
   [NOTIFICATION_TYPE.DRIVER_INVITE_DECLINED]: 'close-circle-outline',
-  [NOTIFICATION_TYPE.DRIVER_LINK_ENDED]: 'person-remove-outline',
+  [NOTIFICATION_TYPE.DRIVER_LINK_ENDED]: 'reader-outline',
   [NOTIFICATION_TYPE.DRIVER_TRIP_ASSIGNED]: 'car-outline',
-  [NOTIFICATION_TYPE.DRIVER_TRIP_UNASSIGNED]: 'arrow-undo-outline',
-  [NOTIFICATION_TYPE.DRIVER_TRIP_COMPLETED]: 'checkmark-done-outline',
+  [NOTIFICATION_TYPE.DRIVER_TRIP_UNASSIGNED]: 'return-up-back-outline',
+  [NOTIFICATION_TYPE.DRIVER_TRIP_COMPLETED]: 'checkmark-circle-outline',
   [NOTIFICATION_TYPE.DRIVER_TRIP_WAGE_CHANGED]: 'cash-outline',
   [NOTIFICATION_TYPE.DRIVER_TRIP_ACCEPTED]: 'checkmark-circle-outline',
   [NOTIFICATION_TYPE.DRIVER_TRIP_DECLINED]: 'close-circle-outline',
   [NOTIFICATION_TYPE.DRIVER_TRIP_RESPONSE_EXPIRED]: 'hourglass-outline',
-  [NOTIFICATION_TYPE.BOOKING_DRIVER_MISSING]: 'alert-circle-outline',
+  [NOTIFICATION_TYPE.BOOKING_DRIVER_MISSING]: 'time-outline',
 };
 
 export function notificationIcon(type: string): IconName {
@@ -155,20 +157,8 @@ export function notificationHref(
   context: NotificationContext,
 ): Href | null {
   /*
-   * "Chuyến cho thuê" thay cho CẢ hộp thư lẫn bảng đơn của chủ xe tuyến hoa hồng (web PR #158).
-   * Hai đích kia vẫn tự chuyển chủ xe sang đây (`partnerPathRedirect`), đi thẳng đỡ một lần chớp.
+   * Chủ xe tuyến hoa hồng dùng CÙNG hộp thư + màn Đơn thuê với gian hàng từ web PR #278 — đơn và
+   * yêu cầu đi đúng đích của khu quản lý, không còn "Chuyến cho thuê" riêng.
    */
-  if (context === NOTIFICATION_CONTEXT.OWNER) {
-    /*
-     * Mở ĐÚNG chuyến, không chỉ danh sách (web chỉ mở danh sách — mobile đi thêm một bước): đơn thì
-     * thẳng chi tiết đơn (trang chi tiết đơn không bị chuyển hướng cho chủ xe); yêu cầu thì màn
-     * Chuyến mở sẵn yêu cầu đó. Qua CÙNG allowlist của app — app Customer không có các màn này.
-     */
-    const id = notification.targetId;
-    if (notification.targetType === NOTIFICATION_TARGET_TYPE.BOOKING)
-      return hrefFromPath(id ? `${PARTNER_PATH.BOOKINGS}/${id}` : PARTNER_PATH.TRIPS);
-    if (notification.targetType === NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST)
-      return hrefFromPath(id ? `${PARTNER_PATH.TRIPS}/${id}` : PARTNER_PATH.TRIPS);
-  }
   return hrefFromPath(notificationDeepLink(notification, AUDIENCE_OF[context]));
 }

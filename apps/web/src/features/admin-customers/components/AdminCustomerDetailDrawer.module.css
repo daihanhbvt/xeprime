@@ -60,3 +60,15 @@
 .historyActive {
   font-weight: var(--xp-font-weight-semibold);
 }
+
+/* Khoá tài khoản + lối mở Ví điểm (đợt rà Admin 16/11/2026). */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+  margin-bottom: var(--xp-space-md);
+}
+
+.lockedBanner {
+  margin-bottom: var(--xp-space-md);
+}

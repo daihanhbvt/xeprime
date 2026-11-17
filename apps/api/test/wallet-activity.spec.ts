@@ -1,3 +1,4 @@
+import type { ConfigService } from '@nestjs/config';
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
@@ -31,11 +32,15 @@ const bankAccounts = new BankAccountsService(prisma);
 const audit = new AuditService(prisma);
 const withdrawals = new WithdrawalService(prisma, wallet, bankAccounts, audit);
 const notifications = { emitToUser: jest.fn(), emitToTenantMembers: jest.fn() };
+/** Ngưỡng hai người của lệnh rút — spec đặt tường minh để không phụ thuộc .env. */
+const DUAL_CONTROL_MIN = 10_000_000;
+const dualControlConfig = { getOrThrow: () => DUAL_CONTROL_MIN };
 const platform = new PlatformWithdrawalService(
   prisma,
   wallet,
   audit,
   notifications as unknown as NotificationService,
+  dualControlConfig as unknown as ConfigService,
 );
 
 let dbAvailable = false;

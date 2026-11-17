@@ -2,13 +2,27 @@
 
 import { Form, Select } from 'antd';
 import type React from 'react';
-import { useId, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import styles from './field.module.css';
 
 export interface SelectFieldOption {
   readonly value: string;
   readonly label: string;
+}
+
+/** Giá trị nội bộ của dòng "Thêm …" — không bao giờ ghi xuống form. */
+const CREATE_VALUE = '__select_field_create__';
+
+/**
+ * Ô chọn cho phép GÕ THÊM một lựa chọn chưa có: khi chữ đang gõ không trùng nhãn nào, cuối danh
+ * sách hiện một dòng "Thêm …"; chọn dòng đó gọi `onCreate` với chữ đã gõ (field KHÔNG đổi — nơi gọi
+ * tự quyết tạo gì và ghi gì).
+ */
+export interface SelectFieldCreatable {
+  /** Nhãn của dòng thêm mới, đã dịch: `(text) => t('addNew', { text })`. */
+  optionLabel: (text: string) => string;
+  onCreate: (text: string) => void;
 }
 
 export interface SelectFieldOptionGroup {
@@ -76,6 +90,8 @@ interface SelectFieldProps<T extends FieldValues> {
    * tên khả truy cập của ô (`aria-label`), chỉ không vẽ ra.
    */
   hideLabel?: boolean;
+  /** Cho gõ thêm lựa chọn chưa có — xem `SelectFieldCreatable`. Cần `showSearch`. */
+  creatable?: SelectFieldCreatable;
 }
 
 /**
@@ -101,6 +117,7 @@ export function SelectField<T extends FieldValues>({
   notFoundContent,
   renderOption,
   hideLabel = false,
+  creatable,
 }: SelectFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
   // AntD `Select` không tự nhận `htmlFor` của `Form.Item` — thiếu `id` tường minh thì bấm nhãn
@@ -108,6 +125,15 @@ export function SelectField<T extends FieldValues>({
   const selectId = `${String(name)}-${useId()}`;
   const describedById = `${selectId}-help`;
   const helpText = fieldState.error?.message ?? help;
+  const [search, setSearch] = useState('');
+  const typed = search.trim();
+  const flat = optionGroups ? optionGroups.flatMap((g) => g.options) : options;
+  const createOption =
+    creatable && typed && !flat.some((o) => o.label.trim().toLowerCase() === typed.toLowerCase())
+      ? { value: CREATE_VALUE, label: creatable.optionLabel(typed) }
+      : null;
+  const baseOptions = (optionGroups ?? options) as readonly unknown[];
+  const allOptions = createOption ? [...baseOptions, createOption] : baseOptions;
 
   return (
     <Form.Item
@@ -136,6 +162,12 @@ export function SelectField<T extends FieldValues>({
         }
         // multiple: bỏ hết lựa chọn trả mảng RỖNG (schema .min(1) báo lỗi) chứ không phải null.
         onChange={(value: string | string[] | undefined) => {
+          if (value === CREATE_VALUE && creatable) {
+            creatable.onCreate(typed);
+            setSearch('');
+            return;
+          }
+          setSearch('');
           const raw = value ?? (mode === 'multiple' ? [] : null);
           const next =
             typeof field.value === 'number' && typeof raw === 'string' ? Number(raw) : raw;
@@ -145,16 +177,16 @@ export function SelectField<T extends FieldValues>({
           onAfterChange?.(raw);
         }}
         onBlur={field.onBlur}
-        options={
-          (optionGroups ?? options) as React.ComponentProps<typeof Select>['options']
-        }
+        options={allOptions as React.ComponentProps<typeof Select>['options']}
         notFoundContent={notFoundContent}
         placeholder={placeholder}
         allowClear={allowClear}
         disabled={disabled}
         loading={loading}
         showSearch={showSearch}
-        onSearch={onSearch}
+        // Ô cho thêm mới cần biết chữ đang gõ, nhưng VẪN lọc ở client (dòng "Thêm …" chứa chính chữ
+        // đó nên luôn lọt bộ lọc theo nhãn).
+        onSearch={onSearch ?? (creatable ? setSearch : undefined)}
         // Tìm ở server thì KHÔNG lọc lại ở client — nếu không, kết quả server vừa trả về sẽ bị
         // chính ô tìm kiếm giấu đi vì nhãn không chứa nguyên văn chuỗi đã gõ.
         filterOption={onSearch ? false : undefined}

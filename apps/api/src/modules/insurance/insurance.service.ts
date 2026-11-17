@@ -28,6 +28,8 @@ import { INSURANCE_PARTNER, type InsurancePartner } from './partner/insurance-pa
 interface PremiumLines {
   vehicleTrip: Prisma.Decimal;
   personalAccident: Prisma.Decimal;
+  /** `X` — phí thu hộ bảo hiểm của nền tảng đi cùng `IV` (ADR 0091 điều 3). */
+  vehicleTripServiceFee: Prisma.Decimal;
 }
 
 /**
@@ -116,14 +118,34 @@ export class InsuranceService {
          * phải gửi ĐÚNG khoá cũ, nếu không đối tác coi đó là một hợp đồng mới và khách bị mua đôi.
          */
         idempotencyKey: `${input.bookingId}:${kind}`,
+        // Phí thu hộ đi cùng `IV` (ADR 0091 điều 3) — biết số cần hoàn nếu hợp đồng không cấp được.
+        ...(kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP && premiums.vehicleTripServiceFee.gt(0)
+          ? { serviceFeeAmount: premiums.vehicleTripServiceFee }
+          : {}),
+        // Giá trị xe đã dùng tính phí theo bậc (ADR 0088) — đóng băng lúc duyệt, gửi hãng lúc cấp.
+        ...(kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP &&
+        input.snapshot.fees?.vehicleProtectionTier
+          ? {
+              insuredValue: new Prisma.Decimal(
+                input.snapshot.fees.vehicleProtectionTier.insuredValue,
+              ),
+            }
+          : {}),
         ...(product
           ? {
               productSnapshotJson: product as unknown as Prisma.InputJsonValue,
               partnerProductCode: product.partnerProductCode,
             }
           : {}),
-        // Bằng chứng khách chọn — từ luồng tiền v2 CẢ HAI sản phẩm đều tuỳ chọn, nên cả hai cần nó.
-        ...(input.consent
+        /*
+         * Bằng chứng khách CHỌN mua (ADR 0028 điều 5). `IV` mà chủ xe đặt Bắt buộc thì khách không
+         * chọn gì — để trống, đúng nghĩa (ADR 0091 điều 1); Tuỳ chọn mà khách tích thì ghi.
+         */
+        ...(input.consent &&
+        !(
+          kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP &&
+          input.snapshot.fees?.vehicleProtectionMandatory
+        )
           ? { consentAt: input.consent.at, consentSource: input.consent.source }
           : {}),
       });
@@ -295,59 +317,6 @@ export class InsuranceService {
       );
     });
   }
-
-  /**
-   * THU HỒI một hợp đồng — bắt buộc lý do, có audit.
-   *
-   * Dùng cho hai ca khác nhau: hợp đồng `issued` phải huỷ (chuyến bị huỷ sau bàn giao), và hợp
-   * đồng `failed` vĩnh viễn cần đóng sổ để thôi nằm trong hàng đợi. Cả hai đều là quyết định
-   * TIỀN của người thật, nên lý do là bắt buộc chứ không phải tuỳ chọn.
-   */
-  async voidPolicy(policyId: string, actorUserId: string, reason: string): Promise<void> {
-    const policy = await this.prisma.bookingInsurancePolicy.findUnique({
-      where: { id: policyId },
-      select: { id: true, tenantId: true, status: true },
-    });
-    if (!policy) {
-      throw new NotFoundException({
-        code: API_ERROR_CODE.NOT_FOUND,
-        message: 'Không tìm thấy hợp đồng bảo hiểm',
-      });
-    }
-    const voidable: string[] = [INSURANCE_POLICY_STATUS.ISSUED, INSURANCE_POLICY_STATUS.FAILED];
-    if (!voidable.includes(policy.status)) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message: 'Chỉ hợp đồng đã cấp hoặc đang lỗi mới thu hồi được',
-        details: { status: policy.status },
-      });
-    }
-
-    await this.prisma.$transaction(async (tx) => {
-      await tx.bookingInsurancePolicy.updateMany({
-        where: { id: policyId, status: policy.status },
-        data: {
-          status: INSURANCE_POLICY_STATUS.VOIDED,
-          voidedAt: new Date(),
-          nextAttemptAt: null,
-          lastErrorMessage: reason,
-        },
-      });
-      await this.audit.record(
-        {
-          tenantId: policy.tenantId,
-          actorUserId,
-          actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
-          action: 'insurance_policy.void',
-          targetType: 'booking_insurance_policy',
-          targetId: policyId,
-          before: { status: policy.status },
-          after: { status: INSURANCE_POLICY_STATUS.VOIDED, reason },
-        },
-        tx,
-      );
-    });
-  }
 }
 
 // ── Hàm thuần ───────────────────────────────────────────────────────────────
@@ -366,6 +335,6 @@ export function premiumsFromSnapshot(snapshot: BookingPriceSnapshot): PremiumLin
   return {
     vehicleTrip: amountOf(FEE_LINE.VEHICLE_PROTECTION),
     personalAccident: amountOf(FEE_LINE.TRIP_INSURANCE),
+    vehicleTripServiceFee: amountOf(FEE_LINE.INSURANCE_SERVICE_FEE),
   };
 }
-

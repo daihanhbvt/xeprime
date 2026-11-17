@@ -21,6 +21,7 @@ import {
   makeNotificationService,
   makePricingService,
 } from './helpers/service-factory';
+import { relaxBookingLimits } from './helpers/booking-limits';
 
 /**
  * Wave 12 — hai lỗ hổng GHI được phát hiện khi soát toàn tuyến, trên PostgreSQL THẬT.
@@ -96,6 +97,8 @@ async function seedBooking(status: string): Promise<string> {
 }
 
 beforeAll(async () => {
+  // Spec đặt xe, không phải spec trần đặt xe (ADR 0091 điều 4) — lịch rải theo bộ đếm ngày.
+  relaxBookingLimits();
   try {
     await prisma.$connect();
     await prisma.$queryRaw`SELECT 1`;

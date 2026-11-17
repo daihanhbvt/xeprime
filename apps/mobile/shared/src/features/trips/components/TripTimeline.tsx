@@ -1,5 +1,5 @@
 import { GrowFill } from '@/components/motion/GrowFill';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { customerTripTimeline, type CustomerTripStage } from '@xeprime/types';

@@ -34,6 +34,14 @@ const NEW_USER: authApi.CurrentUser = {
   permissions: [],
 };
 
+const HAI_CHAU = {
+  code: '20242',
+  provinceCode: '48',
+  name: 'Phường Hải Châu',
+  shortName: 'Hải Châu',
+  administrativeType: 'ward',
+} as Awaited<ReturnType<typeof locationsApi.wardLookup>>[number];
+
 async function renderScreen() {
   jest
     .spyOn(authApi, 'fetchCurrentUser')
@@ -54,6 +62,9 @@ async function renderScreen() {
     .mockResolvedValue([
       { code: '48', name: 'Đà Nẵng', administrativeType: 'municipality', slug: 'da-nang' },
     ]);
+  /* Xã/phường là cấp BẮT BUỘC của địa chỉ đăng ký (`partnerSignupSchema.wardCode`, ADR 0077). */
+  jest.spyOn(locationsApi, 'wards').mockResolvedValue({ items: [HAI_CHAU], total: 1 });
+  jest.spyOn(locationsApi, 'wardLookup').mockResolvedValue([HAI_CHAU]);
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -88,6 +99,8 @@ async function fillAccount(
   await fireEvent.changeText(view.getAllByLabelText('Nhập lại mật khẩu')[0]!, 'matkhau123');
   await fireEvent.press(view.getByLabelText('Tỉnh/thành phố'));
   await fireEvent.press(await view.findByText('TP Đà Nẵng'));
+  await fireEvent.press(view.getByLabelText('Xã/phường'));
+  await fireEvent.press(await view.findByText('Phường Hải Châu'));
   await fireEvent.changeText(view.getByLabelText('Địa chỉ'), '12 Lê Lợi');
   await fireEvent.press(view.getByRole('checkbox'));
 }
@@ -101,7 +114,7 @@ beforeEach(() => {
 describe('PartnerSignupScreen - đăng ký đối tác một form', () => {
   it('hiện lựa chọn tuyến TRƯỚC, chưa có form', async () => {
     const view = await renderScreen();
-    expect(await view.findByText('Gian hàng chuyên nghiệp')).toBeTruthy();
+    expect(await view.findByText('Gian hàng Chuyên nghiệp')).toBeTruthy();
     expect(view.getByText('Đăng xe cá nhân')).toBeTruthy();
     expect(view.queryByLabelText('Mật khẩu')).toBeNull();
   });
@@ -113,8 +126,8 @@ describe('PartnerSignupScreen - đăng ký đối tác một form', () => {
     const registerShop = jest.spyOn(tenantsApi, 'register').mockResolvedValue({} as MyShop);
     const view = await renderScreen();
 
-    await fireEvent.press(await view.findByText('Gian hàng chuyên nghiệp'));
-    await fireEvent.press(view.getByRole('button', { name: 'Tìm hiểu và tạo gian hàng' }));
+    await fireEvent.press(await view.findByText('Gian hàng Chuyên nghiệp'));
+    await fireEvent.press(view.getByRole('button', { name: 'Tìm hiểu các gói Gian hàng' }));
 
     expect((await view.findAllByText('Đăng ký gian hàng')).length).toBeGreaterThan(0);
     // Họ tên chỉ hỏi MỘT lần.

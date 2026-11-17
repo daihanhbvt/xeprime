@@ -36,6 +36,7 @@ import {
 } from '../hooks/use-finance';
 import type { CreateCategoryInput, FinanceCategory } from '../api';
 import { getErrorMessage } from '@/lib/get-error-message';
+import { layout } from '@/theme/layout';
 
 /**
  * Bề rộng hai cột nhãn của một hàng danh mục.
@@ -203,7 +204,7 @@ export function CategoryManagerSheet({ open, onClose }: { open: boolean; onClose
               <XStack
                 ai="center"
                 gap={space.sm}
-                px={space.md}
+                px={layout.padX}
                 py={space.xs}
                 minHeight={sizing.touchTarget}
               >

@@ -412,6 +412,10 @@
  * Wave 1A) nên con số viết thẳng — và chỉ được dùng một trong ba breakpoint chuẩn.
  */
 @media (max-width: 640px) {
+  .stepEnter {
+    height: auto;
+  }
+
   .layout {
     /* Một cột: thẻ xe gọn ở trên, bước hiện tại bên dưới. Cuộn chung một mạch. */
     display: flex;

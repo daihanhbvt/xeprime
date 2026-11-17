@@ -6,6 +6,7 @@ import {
   CATALOG_SEAT_OPTIONS_MAX,
   CATALOG_KEY_PATTERN,
   CATALOG_MARKET_STATUS_VALUES,
+  CATALOG_REVIEW_STATUS_VALUES,
   FUEL_TYPE_VALUES,
   MOTORBIKE_CATEGORY_VALUES,
   TRANSMISSION_TYPE_EXT_VALUES,
@@ -369,6 +370,13 @@ export class CatalogModelDto {
 
   @ApiProperty()
   active!: boolean;
+
+  @ApiProperty({
+    enum: CATALOG_REVIEW_STATUS_VALUES,
+    description:
+      'pending = dòng xe chủ xe gõ mới, chờ duyệt ở Dữ liệu xe (chỉ trả về qua includeId) - ADR 0090',
+  })
+  reviewStatus!: string;
 }
 
 /** Bản quản trị: kèm nguồn tra cứu để người rà danh mục biết dữ liệu đến từ đâu. */
@@ -613,4 +621,10 @@ export class CatalogModelBrandSummaryDto {
 
   @ApiProperty({ description: 'Số mẫu còn thiếu thông số điền sẵn (`catalogModelMissingSpecs`)' })
   missingSpecs!: number;
+
+  @ApiProperty({ description: 'Số dữ liệu xe (xe chuẩn, ADR 0090) của hãng - kể cả chờ duyệt' })
+  vehicleDataTotal!: number;
+
+  @ApiProperty({ description: 'Số dữ liệu xe CHỜ DUYỆT của hãng (ADR 0096)' })
+  vehicleDataPending!: number;
 }

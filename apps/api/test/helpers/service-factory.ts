@@ -12,6 +12,8 @@ import {
   type DriverLicenceReader,
 } from '../../src/modules/driver-licences/reader/driver-licence-reader';
 import { R2Service } from '../../src/modules/storage/r2.service';
+import { PlatformVehicleInsuranceReviewService } from '../../src/modules/platform-admin/platform-vehicle-insurance-review.service';
+import { VehicleDataSuggestionService } from '../../src/modules/vehicle-data/vehicle-data-suggestion.service';
 import { HostMetricsService } from '../../src/modules/host-metrics/host-metrics.service';
 import { BookingHoldsService } from '../../src/modules/holds/booking-holds.service';
 import { BookingRequestsService } from '../../src/modules/booking-requests/booking-requests.service';
@@ -29,8 +31,10 @@ import { WalletService } from '../../src/modules/wallet/wallet.service';
 import { FirebaseAppService } from '../../src/modules/firebase/firebase-app.service';
 import { NotificationService } from '../../src/modules/notification/notification.service';
 import { BillingService } from '../../src/modules/billing/billing.service';
+import { BankTransactionsService } from '../../src/modules/sepay/bank-transactions.service';
 import { BranchesService } from '../../src/modules/branches/branches.service';
 import { CatalogModelService } from '../../src/modules/catalog/catalog-model.service';
+import { VehicleDataService } from '../../src/modules/vehicle-data/vehicle-data.service';
 import { CatalogService } from '../../src/modules/catalog/catalog.service';
 import { GeoNotConfiguredProvider } from '../../src/modules/geo/geo-provider';
 import { GeoService } from '../../src/modules/geo/geo.service';
@@ -44,6 +48,7 @@ import { InsuranceReadService } from '../../src/modules/insurance/insurance-read
 import { InsuranceService } from '../../src/modules/insurance/insurance.service';
 import { TaxReadService } from '../../src/modules/tax/tax-read.service';
 import { TaxService } from '../../src/modules/tax/tax.service';
+import { InsuranceEligibilityService } from '../../src/modules/insurance/insurance-eligibility.service';
 import { InsuranceOfferService } from '../../src/modules/insurance/insurance-offer.service';
 import { PricingService } from '../../src/modules/pricing/pricing.service';
 import { SellerProfileService } from '../../src/modules/seller-profile/seller-profile.service';
@@ -51,6 +56,8 @@ import { SupportService } from '../../src/modules/support/support.service';
 import { TenantsService } from '../../src/modules/tenants/tenants.service';
 import { VehicleSettingsService } from '../../src/modules/vehicle-settings/vehicle-settings.service';
 import { VehiclesService } from '../../src/modules/vehicles/vehicles.service';
+import { NotConfiguredVehicleRegistrationReader } from '../../src/modules/vehicles/registration/registration-reader';
+import { VehicleRegistrationUploadsService } from '../../src/modules/vehicles/registration/vehicle-registration-uploads.service';
 import type { PrismaService } from '../../src/prisma/prisma.service';
 
 /**
@@ -168,6 +175,8 @@ export function makeBillingService(prisma: PrismaService): BillingService {
     new ListingsService(prisma),
     // ConfigService trần đọc process.env — spec không đặt SEPAY_* nên paymentInfo trả "chưa cấu hình", đúng mặc định dev.
     new ConfigService(),
+    // ADR 0092: phần gói chuyển thừa ghi có ví gian hàng.
+    new WalletService(prisma),
   );
 }
 
@@ -312,16 +321,18 @@ export function makePricingService(
     insurancePartner?: 'none' | 'mic_mock';
   } = {},
 ): PricingService {
+  const offer = new InsuranceOfferService(
+    createInsurancePartner(overrides.insurancePartner ?? 'mic_mock', { appEnv: 'test' }),
+    prisma,
+  );
   return new PricingService(
     prisma,
     new AuditService(prisma),
     overrides.listings ?? new ListingsService(prisma),
     overrides.depositPolicy ?? makeDepositPolicyService(prisma),
     new FeePoliciesService(prisma, new AuditService(prisma)),
-    new InsuranceOfferService(
-      createInsurancePartner(overrides.insurancePartner ?? 'mic_mock', { appEnv: 'test' }),
-      prisma,
-    ),
+    offer,
+    new InsuranceEligibilityService(prisma, offer),
   );
 }
 
@@ -378,6 +389,22 @@ export function makeBookingExtensionsService(
   );
 }
 
+/** Hàng đợi tiền vào của admin (ADR 0022 · 0092) — khớp tay vào gói / giữ chỗ / phụ lục, ghi có ví. */
+export function makeBankTransactionsService(
+  prisma: PrismaService,
+  billing: BillingService = makeBillingService(prisma),
+): BankTransactionsService {
+  return new BankTransactionsService(
+    prisma,
+    new AuditService(prisma),
+    billing,
+    makeBookingHoldsService(prisma),
+    makeBookingExtensionsService(prisma),
+    new WalletService(prisma),
+    makeNotificationService(prisma),
+  );
+}
+
 /**
  * `InsuranceService` với adapter NOOP — đúng bản chạy ở production hiện tại.
  *
@@ -395,9 +422,32 @@ export function makeCustomersService(prisma: PrismaService, audit: AuditService)
   return new CustomersService(prisma, audit, makeAddressService(prisma));
 }
 
+/**
+ * Cà vẹt lúc tạo ô tô (ADR 0089). Mặc định: kho riêng tư TẮT, máy đọc TẮT — spec cần đọc/gắn thì
+ * truyền `r2` / `reader` giả.
+ */
+export function makeVehicleRegistrationUploadsService(
+  prisma: PrismaService,
+  opts: {
+    r2?: R2Service;
+    reader?: ConstructorParameters<typeof VehicleRegistrationUploadsService>[3];
+  } = {},
+): VehicleRegistrationUploadsService {
+  return new VehicleRegistrationUploadsService(
+    prisma,
+    opts.r2 ?? ({ privateEnabled: false } as unknown as R2Service),
+    new AuditService(prisma),
+    opts.reader ?? new NotConfiguredVehicleRegistrationReader(),
+  );
+}
+
 export function makeVehiclesService(
   prisma: PrismaService,
-  overrides: { listings?: ListingsService; config?: ConfigService } = {},
+  overrides: {
+    listings?: ListingsService;
+    config?: ConfigService;
+    registrations?: VehicleRegistrationUploadsService;
+  } = {},
 ): VehiclesService {
   const audit = new AuditService(prisma);
   return new VehiclesService(
@@ -412,6 +462,23 @@ export function makeVehiclesService(
     // ConfigService trần đọc process.env — spec phiên hỗ trợ truyền bản có R2_PUBLIC_BASE_URL.
     overrides.config ?? new ConfigService(),
     new SupportRequestStore(),
+    overrides.registrations ?? makeVehicleRegistrationUploadsService(prisma),
+    makeVehicleDataService(prisma, overrides.listings ?? new ListingsService(prisma)),
+  );
+}
+
+/** Dữ liệu xe (ADR 0090) — writer của xe chuẩn, VehiclesService gọi để tự ghi nhận khi lưu xe. */
+export function makeVehicleDataService(
+  prisma: PrismaService,
+  listings: ListingsService = new ListingsService(prisma),
+): VehicleDataService {
+  const audit = new AuditService(prisma);
+  return new VehicleDataService(
+    prisma,
+    audit,
+    new CatalogService(prisma, audit),
+    new CatalogModelService(prisma, audit),
+    listings,
   );
 }
 
@@ -659,4 +726,20 @@ export function makeHandoverMoneyServices(
     receipts,
   );
   return [settlement, new BookingPaymentWriter(audit, receipts)];
+}
+
+/**
+ * Khối "Bảo hiểm và giấy tờ" của màn duyệt xe (đợt rà Admin 16/11/2026) — gợi ý giá trị xe là service
+ * THẬT trên Postgres thật; kho R2 thay bằng giả (không gọi mạng).
+ */
+export function makeVehicleInsuranceReviewService(
+  prisma: PrismaService,
+  opts: { r2?: R2Service; audit?: AuditService } = {},
+): PlatformVehicleInsuranceReviewService {
+  return new PlatformVehicleInsuranceReviewService(
+    prisma,
+    opts.audit ?? new AuditService(prisma),
+    opts.r2 ?? ({ privateEnabled: false } as unknown as R2Service),
+    new VehicleDataSuggestionService(prisma),
+  );
 }

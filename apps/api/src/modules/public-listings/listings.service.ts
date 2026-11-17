@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import {
+  INSURANCE_ELIGIBILITY_VEHICLE_SELECT,
   newId,
   Prisma,
   readListingCardExtras,
   refreshListingRankScore,
+  resolveInsuranceMode,
   selfDriveDailyPrice,
+  selfDriveInsuranceBlockedOf,
 } from '@xeprime/prisma';
 import {
   BILLING_MODE,
@@ -81,6 +84,13 @@ export class ListingsService {
     // xe — trước đây hai thứ độc lập nên một xe có thể vừa gắn nhãn vừa đòi cọc 5 triệu.
     const noCollateral = await resolveNoCollateral(tx, v.tenantId, v.id, v.vehicleType);
     const billing = await resolveBilling(tx, v.tenantId);
+    // Bắt buộc mà xe chưa đủ điều kiện bảo hiểm ⇒ không nhận đặt tự lái (ADR 0091 điều 1).
+    const selfDriveInsuranceBlocked = await resolveSelfDriveInsuranceBlocked(
+      tx,
+      v.tenantId,
+      v.id,
+      v.vehicleType,
+    );
 
     if (status === LISTING_STATUS.ACTIVE) {
       // Xe đã duyệt → tạo/cập nhật snapshot đầy đủ, đưa về hiển thị. Rating tính lại từ review
@@ -124,6 +134,7 @@ export class ListingsService {
         withDriverOneWayPrice: v.withDriverOneWayPrice,
         deliveryEnabled: v.deliveryEnabled,
         noCollateral,
+        selfDriveInsuranceBlocked,
         billingMode: billing.billingMode,
         serviceFeePercent: billing.serviceFeePercent,
         discountPercent: v.discountPercent,
@@ -212,6 +223,81 @@ export class ListingsService {
       changed += res.count;
     }
     return changed;
+  }
+
+  /**
+   * Đồng bộ lại cờ "không nhận đặt tự lái vì thiếu bảo hiểm Bắt buộc" của MỘT xe (ADR 0091 điều 1) —
+   * cho những thay đổi không đi qua `syncFromVehicle` (cà vẹt ở tab Giấy tờ). `updateMany` để no-op
+   * an toàn khi xe chưa có listing.
+   */
+  async syncInsuranceBlockForVehicle(
+    vehicleId: string,
+    tx: Prisma.TransactionClient = this.prisma,
+  ): Promise<void> {
+    const v = await tx.vehicle.findUnique({
+      where: { id: vehicleId },
+      select: { tenantId: true, vehicleType: true },
+    });
+    if (!v) return;
+    const blocked = await resolveSelfDriveInsuranceBlocked(tx, v.tenantId, vehicleId, v.vehicleType);
+    await tx.publicListing.updateMany({
+      where: { vehicleId, selfDriveInsuranceBlocked: { not: blocked } },
+      data: { selfDriveInsuranceBlocked: blocked },
+    });
+  }
+
+  /**
+   * Đồng bộ lại cờ chặn tự lái vì bảo hiểm cho MỌI listing của một gian hàng — gọi từ
+   * `PricingService.saveShopPolicy` trong cùng transaction (đổi chế độ mặc định của gian hàng).
+   *
+   * Hai câu đọc gộp (xe + chính sách mặc định) rồi chỉ GHI những dòng đổi — không lặp
+   * `syncFromVehicle` từng xe (cùng lý do với `syncCollateralForPolicy`).
+   */
+  async syncInsuranceBlockForTenant(
+    tenantId: string,
+    tx: Prisma.TransactionClient = this.prisma,
+  ): Promise<number> {
+    const [vehicles, defaults] = await Promise.all([
+      tx.vehicle.findMany({
+        where: { tenantId, publicListing: { isNot: null } },
+        select: {
+          id: true,
+          ...INSURANCE_ELIGIBILITY_VEHICLE_SELECT,
+          rentalPolicy: { select: { insuranceMode: true } },
+          publicListing: { select: { selfDriveInsuranceBlocked: true } },
+        },
+      }),
+      tx.rentalPolicy.findMany({
+        where: { tenantId, vehicleId: null },
+        select: { vehicleType: true, insuranceMode: true },
+      }),
+    ]);
+    const legacy = defaults.find((d) => d.vehicleType === null)?.insuranceMode;
+    const toBlock: string[] = [];
+    const toUnblock: string[] = [];
+    for (const v of vehicles) {
+      const mode = resolveInsuranceMode({
+        override: v.rentalPolicy?.insuranceMode,
+        typedDefault: defaults.find((d) => d.vehicleType === v.vehicleType)?.insuranceMode,
+        legacyDefault: legacy,
+      });
+      const blocked = selfDriveInsuranceBlockedOf(mode, v);
+      if (blocked === v.publicListing?.selfDriveInsuranceBlocked) continue;
+      (blocked ? toBlock : toUnblock).push(v.id);
+    }
+    if (toBlock.length) {
+      await tx.publicListing.updateMany({
+        where: { vehicleId: { in: toBlock } },
+        data: { selfDriveInsuranceBlocked: true },
+      });
+    }
+    if (toUnblock.length) {
+      await tx.publicListing.updateMany({
+        where: { vehicleId: { in: toUnblock } },
+        data: { selfDriveInsuranceBlocked: false },
+      });
+    }
+    return toBlock.length + toUnblock.length;
   }
 
   /**
@@ -361,6 +447,33 @@ function deriveStatus(
  *
  * Không có chính sách nào ⇒ `false`: chưa cấu hình thì không được hứa với khách là miễn cọc.
  */
+/**
+ * Cờ chặn tự lái vì bảo hiểm của một xe (ADR 0091 điều 1): chế độ theo thứ tự ưu tiên của chính sách
+ * thuê + điều kiện xe — cùng hai hàm thuần với `syncInsuranceBlockForTenant`.
+ */
+async function resolveSelfDriveInsuranceBlocked(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  vehicleId: string,
+  vehicleType: string,
+): Promise<boolean> {
+  const [rows, vehicle] = await Promise.all([
+    tx.rentalPolicy.findMany({
+      where: { tenantId, OR: [{ vehicleId }, { vehicleId: null }] },
+      select: { vehicleId: true, vehicleType: true, insuranceMode: true },
+    }),
+    tx.vehicle.findUnique({ where: { id: vehicleId }, select: INSURANCE_ELIGIBILITY_VEHICLE_SELECT }),
+  ]);
+  if (!vehicle) return false;
+  const mode = resolveInsuranceMode({
+    override: rows.find((r) => r.vehicleId === vehicleId)?.insuranceMode,
+    typedDefault: rows.find((r) => r.vehicleId === null && r.vehicleType === vehicleType)
+      ?.insuranceMode,
+    legacyDefault: rows.find((r) => r.vehicleId === null && r.vehicleType === null)?.insuranceMode,
+  });
+  return selfDriveInsuranceBlockedOf(mode, vehicle);
+}
+
 async function resolveNoCollateral(
   tx: Prisma.TransactionClient,
   tenantId: string,

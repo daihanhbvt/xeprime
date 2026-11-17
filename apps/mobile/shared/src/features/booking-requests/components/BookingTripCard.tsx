@@ -1,6 +1,6 @@
 import { KenBurns } from '@/components/motion/KenBurns';
 import type { ComponentProps, ReactNode } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Image } from 'expo-image';
 import { Text, XStack, YStack } from 'tamagui';
 import { XP_TOKENS, toPx } from '@xeprime/ui';

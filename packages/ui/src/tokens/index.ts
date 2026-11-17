@@ -442,7 +442,7 @@ export const XP_TOKENS = {
   'motion-duration-press': '0.12s', // nút lún xuống khi nhấn
   'motion-duration-overlay': '0.24s', // modal/drawer/dropdown vào-ra
   'motion-duration-shine': '0.8s', // vệt sáng quét qua nút chính
-  'motion-duration-ticker': '1.6s', // số liệu đếm lên
+  'motion-duration-ticker': '0.5s', // số liệu đếm lên
   'motion-ease-out': 'cubic-bezier(0.22, 1, 0.36, 1)', // easeOutQuint: vào nhanh, đỗ êm
   'motion-stagger-step': '0.08s', // bước so le giữa các mục lưới/danh sách dài
   'motion-scale-press': '0.97', // nút khi nhấn

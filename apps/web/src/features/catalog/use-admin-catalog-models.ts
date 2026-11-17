@@ -63,7 +63,12 @@ function useModelMutation<TVars>(fn: (vars: TVars) => Promise<unknown>) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: fn,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.catalog.all }),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.catalog.all }),
+        // Tên / trạng thái dòng xe hiện trong danh sách xe chuẩn cùng tab (ADR 0096).
+        queryClient.invalidateQueries({ queryKey: queryKeys.vehicleData.all }),
+      ]),
   });
 }
 

@@ -12,3 +12,5 @@ export type VehicleDocumentOcrJob = Schemas['VehicleDocumentOcrJobDto'];
 export type VehicleDocumentOcrField = Schemas['VehicleDocumentOcrFieldDto'];
 export type SaveVehicleDocumentInput = Schemas['SaveVehicleDocumentDto'];
 export type ApplyOcrFieldsInput = Schemas['ApplyOcrFieldsDto'];
+/** Điều kiện bán kèm bảo hiểm vật chất xe của một xe (ADR 0088). */
+export type VehicleInsuranceStatus = Schemas['VehicleInsuranceStatusDto'];

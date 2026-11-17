@@ -281,7 +281,12 @@ jobs:
           V_PLAN_FEATURE_ENFORCEMENT: ${{ vars.PLAN_FEATURE_ENFORCEMENT }}
           V_DRIVER_LICENCE_ENFORCEMENT: ${{ vars.DRIVER_LICENCE_ENFORCEMENT }}
           V_DRIVER_LICENCE_OCR: ${{ vars.DRIVER_LICENCE_OCR }}
+          V_VEHICLE_REGISTRATION_OCR: ${{ vars.VEHICLE_REGISTRATION_OCR }}
           V_INSURANCE_PARTNER: ${{ vars.INSURANCE_PARTNER }}
+          V_MIC_BASE_URL: ${{ vars.MIC_BASE_URL }}
+          V_MIC_USERNAME: ${{ vars.MIC_USERNAME }}
+          V_MIC_CLIENT_ID: ${{ vars.MIC_CLIENT_ID }}
+          V_MIC_SANDBOX: ${{ vars.MIC_SANDBOX }}
           V_SMTP_HOST: ${{ vars.SMTP_HOST }}
           V_SMTP_PORT: ${{ vars.SMTP_PORT }}
           V_SMTP_USER: ${{ vars.SMTP_USER }}
@@ -316,6 +321,7 @@ jobs:
           V_BACKUP_KEEP_DAYS: ${{ vars.BACKUP_KEEP_DAYS }}
           V_NEXT_PUBLIC_APP_NAME: ${{ vars.NEXT_PUBLIC_APP_NAME }}
           V_GEO_DAILY_CALL_BUDGET: ${{ vars.GEO_DAILY_CALL_BUDGET }}
+          V_WITHDRAWAL_DUAL_CONTROL_MIN_AMOUNT: ${{ vars.WITHDRAWAL_DUAL_CONTROL_MIN_AMOUNT }}
           V_NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
           V_NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
           V_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
@@ -335,6 +341,8 @@ jobs:
           S_ESMS_BRANDNAME: ${{ secrets.ESMS_BRANDNAME || vars.ESMS_BRANDNAME }}
           S_SMTP_PASS: ${{ secrets.SMTP_PASS }}
           S_SEPAY_API_KEY: ${{ secrets.SEPAY_API_KEY }}
+          S_MIC_PASSWORD: ${{ secrets.MIC_PASSWORD }}
+          S_MIC_CLIENT_SECRET: ${{ secrets.MIC_CLIENT_SECRET }}
           S_MOMO_ACCESS_KEY: ${{ secrets.MOMO_ACCESS_KEY }}
           S_MOMO_SECRET_KEY: ${{ secrets.MOMO_SECRET_KEY }}
           S_VNPAY_HASH_SECRET: ${{ secrets.VNPAY_HASH_SECRET }}
@@ -585,6 +593,8 @@ jobs:
           kv FIREBASE_PRIVATE_KEY "${S_FIREBASE_PRIVATE_KEY:-}"
           kv VIETMAP_API_KEY "${S_VIETMAP_API_KEY:-}"
           kv GEO_DAILY_CALL_BUDGET "${V_GEO_DAILY_CALL_BUDGET:-3000}"
+          # Ngưỡng hai người của lệnh rút Ví điểm (đợt rà Admin 16/11/2026).
+          kv WITHDRAWAL_DUAL_CONTROL_MIN_AMOUNT "${V_WITHDRAWAL_DUAL_CONTROL_MIN_AMOUNT:-10000000}"
           kv GOOGLE_HOLIDAY_API_KEY "${S_GOOGLE_HOLIDAY_API_KEY:-}"
 
           # Bằng lái của khách (ADR 0057). Đọc ảnh bằng Tesseract tại chỗ — không khoá, không bên
@@ -592,11 +602,20 @@ jobs:
           # bộ đọc quyết sai). Cổng đặt xe mặc định "on"; "off" là thoát hiểm (vd app native chưa
           # có bước nộp bằng).
           kv DRIVER_LICENCE_OCR "${V_DRIVER_LICENCE_OCR:-tesseract}"
+          kv VEHICLE_REGISTRATION_OCR "${V_VEHICLE_REGISTRATION_OCR:-tesseract}"
           kv DRIVER_LICENCE_ENFORCEMENT "${V_DRIVER_LICENCE_ENFORCEMENT:-on}"
 
           # Đối tác bảo hiểm chuyến (ADR 0032 điều 4). "mic_mock" = GCN GIẢ LẬP, chỉ staging —
           # production TỪ CHỐI boot khi khai giá trị đó.
           kv INSURANCE_PARTNER "${V_INSURANCE_PARTNER:-none}"
+          # ADR 0088 — adapter MIC thật ("mic"). Mật khẩu + client secret là SECRET, phần còn lại là
+          # Variable. MIC_SANDBOX mặc định "true"; production phải khai "false" (API chặn nếu không).
+          kv MIC_BASE_URL "${V_MIC_BASE_URL:-}"
+          kv MIC_USERNAME "${V_MIC_USERNAME:-}"
+          kv MIC_PASSWORD "${S_MIC_PASSWORD:-}"
+          kv MIC_CLIENT_ID "${V_MIC_CLIENT_ID:-}"
+          kv MIC_CLIENT_SECRET "${S_MIC_CLIENT_SECRET:-}"
+          kv MIC_SANDBOX "${V_MIC_SANDBOX:-true}"
 
           # Nhóm NEXT_PUBLIC_* đã nhúng cứng vào image lúc build. Ghi vào file env chỉ để
           # `docker compose build` còn dùng được nếu có ngày phải build tay ngay trên máy.

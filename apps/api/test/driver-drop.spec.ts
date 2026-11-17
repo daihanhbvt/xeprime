@@ -32,6 +32,7 @@ import { DriverSelfService } from '../src/modules/drivers/driver-self.service';
 import { DriversService } from '../src/modules/drivers/drivers.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { decideOutcome, HoldSettlementService } from '../src/modules/holds/hold-settlement.service';
+import { InsuranceCertificateService } from '../src/modules/insurance/insurance-certificate.service';
 import { InsuranceReadService } from '../src/modules/insurance/insurance-read.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
@@ -88,6 +89,7 @@ const trips = new CustomerTripsService(
   new CancellationsService(),
   new InsuranceReadService(asService),
   makeSupportService(asService, notifications),
+  new InsuranceCertificateService(asService, null),
 );
 
 const MIN = 60_000;
@@ -301,73 +303,83 @@ describe('decideOutcome — khách huỷ do sự cố tài xế', () => {
 });
 
 describe('Tài xế rút khỏi chuyến đã nhận', () => {
-  maybe('vùng xa: đơn giữ nguyên, sự cố + hạn 120′, sổ dropped, không cooldown, báo khẩn', async () => {
-    const t = await acceptedTrip(new Date(Date.now() + 30 * HOUR), 180);
-    expect((await driverSelf.trip(t.userId, t.bookingId)).canDrop).toBe(true);
+  maybe(
+    'vùng xa: đơn giữ nguyên, sự cố + hạn 120′, sổ dropped, không cooldown, báo khẩn',
+    async () => {
+      const t = await acceptedTrip(new Date(Date.now() + 30 * HOUR), 180);
+      expect((await driverSelf.trip(t.userId, t.bookingId)).canDrop).toBe(true);
 
-    const before = Date.now();
-    await drivers.dropTrip(t.userId, t.bookingId, {
-      reasonCategory: DRIVER_DROP_REASON.HEALTH_ISSUE,
-      reason: '  Sốt cao  ',
-    });
+      const before = Date.now();
+      await drivers.dropTrip(t.userId, t.bookingId, {
+        reasonCategory: DRIVER_DROP_REASON.HEALTH_ISSUE,
+        reason: '  Sốt cao  ',
+      });
 
-    const row = await prisma.booking.findUniqueOrThrow({ where: { id: t.bookingId } });
-    expect(row.status).toBe(BOOKING_STATUS.RESERVED);
-    expect(row.driverId).toBeNull();
-    expect(row.driverUserId).toBeNull();
-    expect(row.driverAssignmentStatus).toBeNull();
-    expect(row.driverDroppedAt).not.toBeNull();
-    expect(row.driverReassignBy!.getTime() - row.driverDroppedAt!.getTime()).toBe(120 * MIN);
-    expect(row.driverDroppedAt!.getTime()).toBeGreaterThanOrEqual(before);
+      const row = await prisma.booking.findUniqueOrThrow({ where: { id: t.bookingId } });
+      expect(row.status).toBe(BOOKING_STATUS.RESERVED);
+      expect(row.driverId).toBeNull();
+      expect(row.driverUserId).toBeNull();
+      expect(row.driverAssignmentStatus).toBeNull();
+      expect(row.driverDroppedAt).not.toBeNull();
+      expect(row.driverReassignBy!.getTime() - row.driverDroppedAt!.getTime()).toBe(120 * MIN);
+      expect(row.driverDroppedAt!.getTime()).toBeGreaterThanOrEqual(before);
 
-    const episode = await prisma.bookingDriverAssignment.findFirstOrThrow({
-      where: { bookingId: t.bookingId, driverId: t.driverId },
-    });
-    expect(episode).toMatchObject({
-      outcome: DRIVER_ASSIGNMENT_OUTCOME.DROPPED,
-      dropReasonCategory: DRIVER_DROP_REASON.HEALTH_ISSUE,
-      dropReason: 'Sốt cao',
-      dropZone: DRIVER_DROP_ZONE.FAR,
-    });
-    expect(
-      (await prisma.driver.findUniqueOrThrow({ where: { id: t.driverId } }))
-        .autoAssignCooldownUntil,
-    ).toBeNull();
-    expect(
-      await prisma.auditLog.count({
-        where: { targetId: t.bookingId, action: DRIVER_ASSIGNMENT_AUDIT_ACTION.DROPPED },
-      }),
-    ).toBe(1);
-    const alert = await prisma.notification.findFirstOrThrow({
-      where: { targetId: t.bookingId, userId: owner, type: NOTIFICATION_TYPE.DRIVER_TRIP_DECLINED },
-    });
-    expect(alert.title).toContain('KHẨN CẤP');
+      const episode = await prisma.bookingDriverAssignment.findFirstOrThrow({
+        where: { bookingId: t.bookingId, driverId: t.driverId },
+      });
+      expect(episode).toMatchObject({
+        outcome: DRIVER_ASSIGNMENT_OUTCOME.DROPPED,
+        dropReasonCategory: DRIVER_DROP_REASON.HEALTH_ISSUE,
+        dropReason: 'Sốt cao',
+        dropZone: DRIVER_DROP_ZONE.FAR,
+      });
+      expect(
+        (await prisma.driver.findUniqueOrThrow({ where: { id: t.driverId } }))
+          .autoAssignCooldownUntil,
+      ).toBeNull();
+      expect(
+        await prisma.auditLog.count({
+          where: { targetId: t.bookingId, action: DRIVER_ASSIGNMENT_AUDIT_ACTION.DROPPED },
+        }),
+      ).toBe(1);
+      const alert = await prisma.notification.findFirstOrThrow({
+        where: {
+          targetId: t.bookingId,
+          userId: owner,
+          type: NOTIFICATION_TYPE.DRIVER_TRIP_DECLINED,
+        },
+      });
+      expect(alert.title).toContain('KHẨN CẤP');
 
-    // Bên thuê thấy sự cố kèm người rút + lý do; khách thấy "đang sắp xếp", chưa được huỷ miễn phí.
-    const detail = await bookings.getOne(tenant, t.bookingId);
-    expect(detail.driverIncident).toMatchObject({
-      driverName: 'Tài xế Rút',
-      reasonCategory: DRIVER_DROP_REASON.HEALTH_ISSUE,
-      zone: DRIVER_DROP_ZONE.FAR,
-      customerCanCancelFree: false,
-      level: DRIVER_INCIDENT_LEVEL.ARRANGING,
-    });
-    const renter = await trips.detail(customer, t.bookingId);
-    expect(renter.driver).toBeNull();
-    expect(renter.driverIncident).toEqual({
-      level: DRIVER_INCIDENT_LEVEL.ARRANGING,
-      freeCancel: false,
-    });
+      // Bên thuê thấy sự cố kèm người rút + lý do; khách thấy "đang sắp xếp", chưa được huỷ miễn phí.
+      const detail = await bookings.getOne(tenant, t.bookingId);
+      expect(detail.driverIncident).toMatchObject({
+        driverName: 'Tài xế Rút',
+        reasonCategory: DRIVER_DROP_REASON.HEALTH_ISSUE,
+        zone: DRIVER_DROP_ZONE.FAR,
+        customerCanCancelFree: false,
+        level: DRIVER_INCIDENT_LEVEL.ARRANGING,
+      });
+      const renter = await trips.detail(customer, t.bookingId);
+      expect(renter.driver).toBeNull();
+      expect(renter.driverIncident).toEqual({
+        level: DRIVER_INCIDENT_LEVEL.ARRANGING,
+        freeCancel: false,
+      });
 
-    // Lịch sử của bên thuê mang lý do.
-    const history = await bookings.driverHistory(tenant, t.bookingId);
-    expect(history.at(-1)).toMatchObject({ dropReason: 'Sốt cao', dropZone: DRIVER_DROP_ZONE.FAR });
+      // Lịch sử của bên thuê mang lý do.
+      const history = await bookings.driverHistory(tenant, t.bookingId);
+      expect(history.at(-1)).toMatchObject({
+        dropReason: 'Sốt cao',
+        dropZone: DRIVER_DROP_ZONE.FAR,
+      });
 
-    // Tài xế: chuyến sang "Đã qua" với kết cục dropped, không còn rút được.
-    const mine = await driverSelf.trip(t.userId, t.bookingId);
-    expect(mine.outcome).toBe(DRIVER_ASSIGNMENT_OUTCOME.DROPPED);
-    expect(mine.canDrop).toBe(false);
-  });
+      // Tài xế: chuyến sang "Đã qua" với kết cục dropped, không còn rút được.
+      const mine = await driverSelf.trip(t.userId, t.bookingId);
+      expect(mine.outcome).toBe(DRIVER_ASSIGNMENT_OUTCOME.DROPPED);
+      expect(mine.canDrop).toBe(false);
+    },
+  );
 
   maybe('sát giờ: cooldown 48h, loại khỏi tự gán; khách huỷ ⇒ lỗi ghi cho bên thuê', async () => {
     const t = await acceptedTrip(new Date(Date.now() + 90 * MIN), 60);

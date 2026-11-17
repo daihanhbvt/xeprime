@@ -1,5 +1,5 @@
 import { useState, type ReactNode, type RefObject } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Pressable, type View } from 'react-native';
 import { Controller, useFormState, useWatch, type Control } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';

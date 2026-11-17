@@ -4,8 +4,11 @@ import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
+  CANCELLATION_PARTY,
+  BANK_MATCH_REASON,
   BANK_MATCH_STATUS,
   BANK_MATCH_TARGET_TYPE,
+  BANK_MATCH_WALLET_CREDIT,
   BILLING_MODE,
   BOOKING_HOLD_OUTCOME,
   BOOKING_HOLD_STATUS,
@@ -20,16 +23,22 @@ import {
   HOLD_PAYMENT_WINDOW_MINUTES,
   HOLD_REFUND_REASON,
   HOLD_REFUND_STATUS,
+  HOLD_SETTLE_REASON,
   NOTIFICATION_TYPE,
   OCCUPANCY_SOURCE_TYPE,
+  PERMISSION,
+  PLATFORM_ROLE,
   PLAN_STATUS,
   SUBSCRIPTION_STATUS,
   SUPPORT_CASE_CATEGORY,
   SUPPORT_CASE_STATUS,
   SUPPORT_PARTY,
   TENANT_STATUS,
+  TRIP_VERDICT,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
+  WALLET_ENTRY_KIND,
+  WALLET_ENTRY_SOURCE,
   holdFreeCancelMinutes,
   holdPaymentWindowMinutes,
 } from '@xeprime/types';
@@ -38,14 +47,19 @@ import { SepayService } from '../src/modules/sepay/sepay.service';
 import { HoldSettlementService } from '../src/modules/holds/hold-settlement.service';
 import { WalletService } from '../src/modules/wallet/wallet.service';
 import { AuditService } from '../src/modules/audit/audit.service';
+import { PlatformBookingsService } from '../src/modules/platform-admin/platform-bookings.service';
+import type { HandoversService } from '../src/modules/bookings/handovers/handovers.service';
+import { TripVerdictService } from '../src/modules/trip-verdict/trip-verdict.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
+  makeSupportService,
   makeNotificationService,
   makeBillingService,
   makeBookingHoldsService,
   makeBookingsService,
   makeBookingRequestsService,
   makeBookingExtensionsService,
+  makeBankTransactionsService,
 } from './helpers/service-factory';
 import { FEE_POLICY_V2_OFF } from './helpers/fee-snapshot';
 import { releaseWalletObligations } from './helpers/wallet-cleanup';
@@ -150,7 +164,6 @@ function snapshotOf(): BookingPriceSnapshot {
         freeCancelHours: 4,
         depositPercent: 0,
         depositMinAmount: '0',
-        depositMaxPercent: 30,
         taxEnabled: false,
         taxRates: null,
         taxLegalBasis: null,
@@ -583,6 +596,58 @@ describe('Tiền về — thiếu / đủ / thừa (ADR 0016 điều 6 · ADR 00
   );
 
   /*
+   * Chi tiết đơn phía NỀN TẢNG (đợt rà Admin 16/11): người trực đọc được khách đã trả gì, phần nào
+   * của ai - từ snapshot và cột hold đã đóng băng. Chứng từ ngân hàng chỉ với quyền tiền: người chỉ
+   * xem đơn (CSKH) nhận `null` từ SERVER, không phải một nút bị ẩn.
+   */
+  maybe(
+    'chi tiết đơn nền tảng: khoản giữ chỗ + bảng tiền, giao dịch ngân hàng chỉ với quyền tiền',
+    async () => {
+      const { code, holdId } = await makeHold();
+      await sepay.ingest(payload(code, 100_000));
+      const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+      const platformBookings = new PlatformBookingsService(asService, audit);
+
+      const finance = await platformBookings.getOne(hold.bookingId!, {
+        roleKey: PLATFORM_ROLE.FINANCE_ADMIN,
+        permissions: [PERMISSION.PLATFORM_BOOKING_VIEW, PERMISSION.PLATFORM_MONEY_MANAGE],
+      });
+      expect(finance.marketplace.hold).toMatchObject({
+        code,
+        status: BOOKING_HOLD_STATUS.PAID,
+        outcome: null,
+        amount: HOLD_AMOUNT,
+        paidAmount: HOLD_AMOUNT,
+        settlement: null,
+        refund: null,
+      });
+      expect(finance.marketplace.hold?.paidAt).not.toBeNull();
+      expect(finance.marketplace.fees).toMatchObject({
+        billingMode: BILLING_MODE.COMMISSION,
+        serviceFeeAmount: HOLD_AMOUNT,
+        onlineAmount: HOLD_AMOUNT,
+        payAtPickupAmount: BASE,
+        customerTotalAmount: '1100000',
+        platformNetAmount: HOLD_AMOUNT,
+        promoCode: null,
+      });
+      expect(finance.marketplace.bankTransactions).toEqual([
+        expect.objectContaining({ amountIn: '100000', matchStatus: BANK_MATCH_STATUS.MATCHED }),
+      ]);
+      expect(finance.marketplace.cancellation).toBeNull();
+
+      const support = await platformBookings.getOne(hold.bookingId!, {
+        roleKey: PLATFORM_ROLE.SUPPORT,
+        permissions: [PERMISSION.PLATFORM_BOOKING_VIEW],
+      });
+      expect(support.marketplace.bankTransactions).toBeNull();
+      // Dòng tiền và trạng thái vẫn đủ cho CSKH trả lời khách.
+      expect(support.marketplace.hold?.paidAmount).toBe(HOLD_AMOUNT);
+      expect(support.marketplace.fees).toEqual(finance.marketplace.fees);
+    },
+  );
+
+  /*
    * Có hold KHÔNG có nghĩa là có cọc (ADR 0064 điều 5): tuyến gói tắt công tắc vẫn có hold cho
    * phần không phải tiền chủ xe. Đơn sinh từ khoản đó phải nói đúng `direct` — cọc do chủ xe tự
    * thu — chứ không phải `platform` chỉ vì tiền đã vào XePrime.
@@ -739,6 +804,262 @@ describe('Kết cục — tiền về tay ai (ADR 0028 điều 6)', () => {
     const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: made.holdId } });
     return { ...made, bookingId: hold.bookingId! };
   }
+
+  /** Mở một case GIỮ quyết toán (mặc định tranh chấp) trên đơn — trả id của case. */
+  async function openFreezingCase(
+    bookingId: string,
+    category: string = SUPPORT_CASE_CATEGORY.DISPUTE,
+  ): Promise<string> {
+    const caseId = newId();
+    await prisma.supportCase.create({
+      data: {
+        id: caseId,
+        code: `SC${caseId.slice(-6).toUpperCase()}`,
+        tenantId,
+        bookingId,
+        openedByUserId: customerId,
+        openedByScope: SUPPORT_PARTY.CUSTOMER,
+        category,
+        status: SUPPORT_CASE_STATUS.OPEN,
+        subject: 'Khiếu nại thử',
+        description: 'Case giữ quyết toán của spec',
+      },
+    });
+    return caseId;
+  }
+
+  /** Dòng hold trong danh sách admin, tìm theo mã (không phụ thuộc dữ liệu của spec khác). */
+  async function platformRow(code: string, unsettled: boolean) {
+    const page = await holds.listForPlatform({
+      q: code,
+      ...(unsettled ? { unsettled: 'true' } : {}),
+    });
+    return { total: page.meta.total, row: page.data.find((r) => r.code === code) ?? null };
+  }
+
+  /**
+   * Hàng đợi chốt tay chỉ gồm hold người PHẢI chốt (`HOLD_SETTLE_REASON`). Một đơn còn chạy bình
+   * thường không thuộc đó: chốt sớm là trả `D` cho chủ xe khi chuyến chưa diễn ra, rồi khách huỷ
+   * trong cửa sổ miễn phí sẽ không được hoàn.
+   */
+  maybe(
+    'đơn còn chạy, không case ⇒ ngoài hàng đợi, chốt tay bị từ chối HOLD_SETTLE_NOT_DUE',
+    async () => {
+      const { holdId, code } = await paidHold();
+
+      const queued = await platformRow(code, true);
+      expect(queued.total).toBe(0);
+      const any = await platformRow(code, false);
+      expect(any.row).toMatchObject({
+        bookingStatus: BOOKING_STATUS.RESERVED,
+        settleReason: null,
+      });
+      expect(any.row?.pickupAt).toEqual(expect.any(String));
+      expect(any.row?.returnAt).toEqual(expect.any(String));
+
+      await expect(
+        settlement.adminSettle(holdId, ownerId, {
+          outcome: BOOKING_HOLD_OUTCOME.SETTLED,
+          note: 'Thử quyết toán khi chuyến chưa diễn ra',
+        }),
+      ).rejects.toMatchObject({
+        response: {
+          code: API_ERROR_CODE.HOLD_SETTLE_NOT_DUE,
+          details: { bookingStatus: BOOKING_STATUS.RESERVED },
+        },
+      });
+      const still = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+      expect(still.outcome).toBeNull();
+      expect(
+        await prisma.auditLog.count({ where: { targetId: holdId, action: 'booking_hold.settle' } }),
+      ).toBe(0);
+    },
+  );
+
+  maybe('đơn còn chạy mà có tranh chấp mở ⇒ vào hàng đợi với lý do `dispute_open`', async () => {
+    const { code, bookingId } = await paidHold();
+    await openFreezingCase(bookingId);
+
+    const queued = await platformRow(code, true);
+    expect(queued.total).toBe(1);
+    expect(queued.row).toMatchObject({
+      bookingStatus: BOOKING_STATUS.RESERVED,
+      disputeOpen: true,
+      settleReason: HOLD_SETTLE_REASON.DISPUTE_OPEN,
+    });
+  });
+
+  /**
+   * Case "chưa xác nhận bàn giao" do hệ thống mở KHÔNG phải tranh chấp: cùng giữ tiền, nhưng lý do
+   * riêng để màn Tài chính không gọi một lượt chủ xe quên bấm giao xe là "đang tranh chấp".
+   */
+  maybe(
+    'chỉ case chưa xác nhận bàn giao ⇒ `handover_unconfirmed`; thêm tranh chấp ⇒ `dispute_open`',
+    async () => {
+      const { code, bookingId } = await paidHold();
+      await openFreezingCase(bookingId, SUPPORT_CASE_CATEGORY.HANDOVER_UNCONFIRMED);
+
+      const handover = await platformRow(code, true);
+      expect(handover.total).toBe(1);
+      expect(handover.row).toMatchObject({
+        disputeOpen: true,
+        settleReason: HOLD_SETTLE_REASON.HANDOVER_UNCONFIRMED,
+      });
+
+      await openFreezingCase(bookingId);
+      const both = await platformRow(code, true);
+      expect(both.row).toMatchObject({
+        disputeOpen: true,
+        settleReason: HOLD_SETTLE_REASON.DISPUTE_OPEN,
+      });
+    },
+  );
+
+  /**
+   * ADR 0094: case "chưa xác nhận giao xe" hỏi CHUYẾN có diễn ra không — câu trả lời quyết luôn
+   * tiền. Chốt tay bị chặn; kết luận chuyến ở case làm tiền tự chốt theo luật thường.
+   */
+  maybe(
+    'case chưa xác nhận giao xe ⇒ chốt tay bị chặn; kết luận "chủ xe không giao được" ⇒ hoàn khách tự động',
+    async () => {
+      const { holdId, bookingId } = await paidHold();
+      const caseId = await openFreezingCase(bookingId, SUPPORT_CASE_CATEGORY.HANDOVER_UNCONFIRMED);
+
+      await expect(
+        settlement.adminSettle(holdId, ownerId, {
+          outcome: BOOKING_HOLD_OUTCOME.REFUNDED,
+          note: 'Chốt tiền trước khi xác minh',
+        }),
+      ).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.HOLD_SETTLE_NEEDS_TRIP_VERDICT },
+      });
+
+      const verdicts = new TripVerdictService(
+        asService,
+        audit,
+        makeSupportService(asService, notifications),
+        bookings,
+        // Kết luận huỷ không đi qua biên bản bàn giao.
+        {} as HandoversService,
+        settlement,
+      );
+      await verdicts.apply(caseId, ownerId, {
+        verdict: TRIP_VERDICT.HOST_NOT_DELIVERED,
+        note: 'Chủ xe xác nhận xe hỏng, không giao được',
+      });
+
+      const after = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+      expect(after.outcome).toBe(BOOKING_HOLD_OUTCOME.REFUNDED);
+      const booking = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
+      expect(booking.status).toBe(BOOKING_STATUS.CANCELLED);
+    },
+  );
+
+  /**
+   * ADR 0095: tranh chấp trước giờ nhận mà chủ xe bỏ mặc — nền tảng khép chuyến. Hộp kết luận hứa
+   * đúng con số lượt thật ghi (cùng `previewOutcome`), và bấm lại không hoàn lần hai.
+   */
+  maybe(
+    'tranh chấp trước nhận xe: xem trước khớp lượt thật; "huỷ không tính lỗi" hoàn 100%, phía platform, không hoàn đôi',
+    async () => {
+      const { holdId, bookingId } = await paidHold();
+      const caseId = await openFreezingCase(bookingId, SUPPORT_CASE_CATEGORY.DISPUTE);
+      const verdicts = new TripVerdictService(
+        asService,
+        audit,
+        makeSupportService(asService, notifications),
+        bookings,
+        {} as HandoversService,
+        settlement,
+      );
+
+      const preview = await verdicts.preview(caseId);
+      const cancelMoney = preview.items.find((i) => i.verdict === TRIP_VERDICT.PLATFORM_CANCELLED);
+      expect(preview.items.map((i) => i.verdict)).toEqual([
+        TRIP_VERDICT.HANDED_OVER,
+        TRIP_VERDICT.CUSTOMER_NO_SHOW,
+        TRIP_VERDICT.HOST_NOT_DELIVERED,
+        TRIP_VERDICT.PLATFORM_CANCELLED,
+      ]);
+      // Xe đã giao: chưa chốt tiền gì.
+      expect(preview.items[0]).toMatchObject({ outcome: null, customerAmount: '0' });
+      expect(cancelMoney).toMatchObject({
+        outcome: BOOKING_HOLD_OUTCOME.REFUNDED,
+        ownerAmount: '0',
+        platformAmount: '0',
+        deferred: false,
+      });
+      expect(cancelMoney?.customerAmount).toBe(cancelMoney?.paidAmount);
+
+      await verdicts.apply(caseId, ownerId, {
+        verdict: TRIP_VERDICT.PLATFORM_CANCELLED,
+        note: 'Hai bên thoả thuận huỷ qua điện thoại',
+      });
+
+      const after = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+      expect(after.outcome).toBe(BOOKING_HOLD_OUTCOME.REFUNDED);
+      const refunds = await prisma.holdRefund.findMany({ where: { holdId } });
+      expect(refunds).toHaveLength(1);
+      expect(refunds[0]!.amount.toFixed(0)).toBe(cancelMoney?.customerAmount);
+      const booking = await prisma.booking.findUniqueOrThrow({
+        where: { id: bookingId },
+        select: { status: true, cancellation: { select: { responsibleParty: true } } },
+      });
+      expect(booking.status).toBe(BOOKING_STATUS.CANCELLED);
+      expect(booking.cancellation?.responsibleParty).toBe(CANCELLATION_PARTY.PLATFORM);
+
+      await expect(
+        verdicts.apply(caseId, ownerId, {
+          verdict: TRIP_VERDICT.PLATFORM_CANCELLED,
+          note: 'Bấm lần hai',
+        }),
+      ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.SUPPORT_CASE_CLOSED } });
+      expect(await prisma.holdRefund.count({ where: { holdId } })).toBe(1);
+    },
+  );
+
+  /**
+   * Ca thật của `booking_ended`: case mở lúc đơn kết thúc ⇒ lượt chốt tự động bị hoãn; case được
+   * kết luận sau đó ⇒ không còn gì tự chốt nữa, người phải chốt.
+   */
+  maybe(
+    'đơn đã kết thúc, kết cục bị hoãn rồi case được kết luận ⇒ `booking_ended`, chốt tay được',
+    async () => {
+      const { holdId, code, bookingId } = await paidHold();
+      const caseId = await openFreezingCase(bookingId);
+      await prisma.$transaction((tx) =>
+        bookings.transitionWithinTx(
+          tx,
+          tenantId,
+          bookingId,
+          customerId,
+          BOOKING_STATUS.RESERVED,
+          BOOKING_STATUS.CANCELLED,
+          { actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER },
+        ),
+      );
+      await prisma.supportCase.update({
+        where: { id: caseId },
+        data: { status: SUPPORT_CASE_STATUS.RESOLVED },
+      });
+
+      const queued = await platformRow(code, true);
+      expect(queued.total).toBe(1);
+      expect(queued.row).toMatchObject({
+        bookingStatus: BOOKING_STATUS.CANCELLED,
+        disputeOpen: false,
+        settleReason: HOLD_SETTLE_REASON.BOOKING_ENDED,
+      });
+
+      await settlement.adminSettle(holdId, ownerId, {
+        outcome: BOOKING_HOLD_OUTCOME.REFUNDED,
+        note: 'Kết luận case: hoàn khách',
+      });
+      const after = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+      expect(after.outcome).toBe(BOOKING_HOLD_OUTCOME.REFUNDED);
+      expect((await platformRow(code, true)).total).toBe(0);
+    },
+  );
 
   /**
    * ADR 0032 đổi bản chất khoản giữ chỗ: nó chứa `D` — một phần GIÁ THUÊ, tức tiền của chủ xe —
@@ -1224,7 +1545,9 @@ describe('Kết cục — tiền về tay ai (ADR 0028 điều 6)', () => {
   maybe(
     'hai admin chốt cùng lúc ⇒ đúng một kết cục, người sau nhận 409, một dòng audit',
     async () => {
-      const { holdId } = await paidHold(14);
+      const { holdId, bookingId } = await paidHold(14);
+      // Chỉ hold thuộc hàng đợi chốt tay mới chốt tay được — tranh chấp mở đưa nó vào đó.
+      await openFreezingCase(bookingId);
 
       const results = await Promise.allSettled([
         settlement.adminSettle(holdId, ownerId, {
@@ -1838,4 +2161,149 @@ describe('ADR 0055 — tiền về không viết lại lượt NHẬN; DB khoá 
       expect(inDb).toEqual([...BOOKING_REQUEST_STATUS_LIVE_VALUES].sort());
     },
   );
+});
+
+/**
+ * ADR 0092 — tiền vào ngoại lệ của khoản giữ chỗ.
+ *
+ *  - Khách chuyển SAI nội dung khi hold còn hạn ⇒ admin khớp tay ⇒ ĐƠN được tạo, cùng đường áp tiền
+ *    với webhook (trước đây chỉ khớp được vào hoá đơn gói, hold hết hạn và khách mất chuyến).
+ *  - Tiền về SAU khi hold đã đóng ⇒ không bao giờ tạo đơn (ADR 0044 điều 7); admin ghi có Ví điểm
+ *    khách thay vì chuyển trả tay ra ngoài sổ.
+ */
+describe('Tiền vào ngoại lệ - khớp tay hold còn hạn, ghi có ví tiền về muộn (ADR 0092)', () => {
+  const admin = makeBankTransactionsService(asService);
+
+  async function txByProvider(body: Record<string, unknown>) {
+    return prisma.bankTransaction.findFirstOrThrow({
+      where: { providerTxId: String(body['id']) },
+    });
+  }
+
+  maybe('chuyển SAI nội dung khi hold còn hạn ⇒ gợi ý đúng hold, khớp tay ⇒ có đơn', async () => {
+    const made = await makeHold();
+    const body = payload('', 100_000);
+    await sepay.ingest(body);
+    const tx = await txByProvider(body);
+    expect(tx.matchStatus).toBe(BANK_MATCH_STATUS.UNMATCHED);
+
+    const detail = await admin.getOne(tx.id);
+    const suggestion = detail.receivableSuggestions.find((s) => s.targetId === made.holdId);
+    expect(suggestion).toMatchObject({ code: made.code, amountMatches: true });
+    expect(detail.lateCredit).toBeNull();
+
+    const result = await admin.matchReceivable(tx.id, ownerId, {
+      targetType: BANK_MATCH_TARGET_TYPE.BOOKING_HOLD,
+      targetId: made.holdId,
+      note: 'Khách quên ghi mã, đã gọi xác nhận',
+    });
+    expect(result).toMatchObject({
+      matchStatus: BANK_MATCH_STATUS.MANUAL,
+      matchedType: BANK_MATCH_TARGET_TYPE.BOOKING_HOLD,
+      matchedTargetCode: made.code,
+    });
+    const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: made.holdId } });
+    expect(hold.status).toBe(BOOKING_HOLD_STATUS.PAID);
+    expect(hold.bookingId).not.toBeNull();
+    expect(
+      await prisma.auditLog.count({
+        where: { targetId: tx.id, action: 'bank_transaction.match_receivable' },
+      }),
+    ).toBe(1);
+  });
+
+  maybe(
+    'hold đã HẾT HẠN: khớp tay bị từ chối; ghi có ví khách ⇒ vào ví, có báo, không có đơn',
+    async () => {
+      const made = await makeHold();
+      await prisma.bookingHold.update({
+        where: { id: made.holdId },
+        data: { expiresAt: new Date(Date.now() - 60_000) },
+      });
+      const body = payload(made.code, 100_000);
+      await sepay.ingest(body);
+      const tx = await txByProvider(body);
+      expect(tx.matchStatus).toBe(BANK_MATCH_STATUS.UNMATCHED);
+      expect(tx.matchReasonCode).toBe(BANK_MATCH_REASON.HOLD_CLOSED);
+
+      const detail = await admin.getOne(tx.id);
+      expect(detail.lateCredit).toMatchObject({
+        targetType: BANK_MATCH_TARGET_TYPE.BOOKING_HOLD,
+        targetId: made.holdId,
+        code: made.code,
+        hasCustomerAccount: true,
+      });
+      expect(detail.receivableSuggestions.some((s) => s.targetId === made.holdId)).toBe(false);
+
+      await expect(
+        admin.matchReceivable(tx.id, ownerId, {
+          targetType: BANK_MATCH_TARGET_TYPE.BOOKING_HOLD,
+          targetId: made.holdId,
+          note: 'Thử khớp vào hold đã chết',
+        }),
+      ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.BANK_TX_TARGET_CLOSED } });
+
+      const result = await admin.creditCustomer(tx.id, ownerId, {
+        targetType: BANK_MATCH_TARGET_TYPE.BOOKING_HOLD,
+        targetId: made.holdId,
+        note: 'Khách chuyển sau hạn, hoàn vào ví',
+      });
+      expect(result).toMatchObject({
+        matchStatus: BANK_MATCH_STATUS.MANUAL,
+        matchedType: BANK_MATCH_WALLET_CREDIT,
+        matchedTargetCode: made.code,
+      });
+      const entry = await prisma.walletEntry.findUniqueOrThrow({
+        where: { id: result.matchedRefId! },
+      });
+      expect(entry).toMatchObject({
+        kind: WALLET_ENTRY_KIND.LATE_PAYMENT_REFUND,
+        sourceType: WALLET_ENTRY_SOURCE.BANK_TRANSACTION,
+        sourceRefId: tx.id,
+        holdId: made.holdId,
+      });
+      expect(entry.amount.toFixed(0)).toBe('100000');
+      const wallet = await prisma.wallet.findUniqueOrThrow({ where: { id: entry.walletId } });
+      expect(wallet.ownerUserId).toBe(customerId);
+
+      const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: made.holdId } });
+      expect(hold.bookingId).toBeNull();
+      expect(
+        await prisma.notification.count({
+          where: { userId: customerId, type: NOTIFICATION_TYPE.HOLD_REFUNDED },
+        }),
+      ).toBeGreaterThanOrEqual(1);
+
+      // Bấm lại ⇒ giao dịch đã xử lý, không cộng ví lần hai.
+      await expect(
+        admin.creditCustomer(tx.id, ownerId, {
+          targetType: BANK_MATCH_TARGET_TYPE.BOOKING_HOLD,
+          targetId: made.holdId,
+          note: 'Bấm lại',
+        }),
+      ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.BANK_TX_ALREADY_HANDLED } });
+      expect(
+        await prisma.walletEntry.count({
+          where: { kind: WALLET_ENTRY_KIND.LATE_PAYMENT_REFUND, sourceRefId: tx.id },
+        }),
+      ).toBe(1);
+    },
+  );
+
+  maybe('ghi có ví cho hold CÒN HẠN ⇒ từ chối: phải khớp để khách giữ chuyến', async () => {
+    const made = await makeHold();
+    const body = payload('', 100_000);
+    await sepay.ingest(body);
+    const tx = await txByProvider(body);
+
+    await expect(
+      admin.creditCustomer(tx.id, ownerId, {
+        targetType: BANK_MATCH_TARGET_TYPE.BOOKING_HOLD,
+        targetId: made.holdId,
+        note: 'Hoàn thử',
+      }),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.BANK_TX_TARGET_STILL_OPEN } });
+    const still = await prisma.bankTransaction.findUniqueOrThrow({ where: { id: tx.id } });
+    expect(still.matchStatus).toBe(BANK_MATCH_STATUS.UNMATCHED);
+  });
 });

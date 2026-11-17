@@ -124,6 +124,12 @@
   color: var(--xp-color-success);
 }
 
+/* Yêu cầu chưa duyệt: "Chờ duyệt" vàng (16/11/2026). */
+.expected {
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning);
+}
+
 /* ── Xe: ảnh 76×48 bo 8 · tên 14/600 · biển số (nền gray-50, bo 6) + thông số 12/18 · mũi tên ── */
 
 .vehicle {

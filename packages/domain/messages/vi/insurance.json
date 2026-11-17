@@ -1,7 +1,11 @@
 {
   "option": {
     "dailyRate": "+{price}",
-    "benefits": "Quyền lợi"
+    "benefits": "Quyền lợi",
+    "mandatory": "Bắt buộc",
+    "tripRate": "+{price}",
+    "mandatoryNote": "Chủ xe yêu cầu mua bảo hiểm vật chất xe MIC cho cả chuyến - phí đã cộng vào giá.",
+    "benefitsPage": "Xem quyền lợi và người chịu khấu trừ"
   },
   "benefits": {
     "coverage": "Phạm vi bảo vệ",
@@ -9,7 +13,8 @@
     "deductiblePerIncident": "{amount}/vụ",
     "noDeductible": "Không áp dụng khấu trừ",
     "maxPayout": "Bồi thường tối đa",
-    "maxPayoutWithNote": "{amount} · {note}"
+    "maxPayoutWithNote": "{amount} · {note}",
+    "claimHotline": "Hotline báo sự cố"
   },
   "certificate": {
     "title": "Giấy chứng nhận bảo hiểm",
@@ -20,7 +25,10 @@
     "view": "Xem giấy chứng nhận bảo hiểm",
     "testTag": "THỬ NGHIỆM",
     "testNote": "Giấy chứng nhận thử nghiệm - không có hiệu lực bảo hiểm.",
-    "loadError": "Không tải được giấy chứng nhận bảo hiểm."
+    "loadError": "Không tải được giấy chứng nhận bảo hiểm.",
+    "contractNumber": "Số hợp đồng",
+    "claimHotline": "Hotline báo sự cố",
+    "downloadPdf": "Tải giấy chứng nhận (PDF)"
   },
   "coverage": {
     "title": "Bảo hiểm chuyến",
@@ -42,5 +50,63 @@
       "refunded": "Chuyến huỷ trước khi bàn giao - phí bảo hiểm đã được hoàn."
     },
     "loadError": "Không tải được thông tin bảo hiểm."
+  },
+  "info": {
+    "meta": {
+      "title": "Quyền lợi bảo hiểm vật chất xe",
+      "description": "Bảo hiểm vật chất xe MIC theo chuyến cho ô tô tự lái trên XePrime: quyền lợi, mức khấu trừ, người chịu khấu trừ và cách báo sự cố."
+    },
+    "hero": {
+      "eyebrow": "Bảo hiểm chuyến đi",
+      "title": "Quyền lợi bảo hiểm vật chất xe",
+      "lead": "Bảo hiểm vật chất xe MIC theo chuyến cho ô tô tự lái. Chủ xe chọn Bắt buộc hoặc Tuỳ chọn cho xe của mình; phí tính theo giá trị xe và số ngày thuê."
+    },
+    "benefits": {
+      "heading": "Quyền lợi",
+      "coverage": "Phạm vi bảo vệ",
+      "deductible": "Mức khấu trừ",
+      "deductibleValue": "{amount}/vụ",
+      "noDeductible": "Không áp dụng khấu trừ",
+      "maxPayout": "Bồi thường tối đa",
+      "hotline": "Hotline báo sự cố"
+    },
+    "deductible": {
+      "heading": "Ai chịu phần khấu trừ",
+      "body": "Khi có tổn thất, khách thuê chịu phần khấu trừ mỗi vụ theo giấy chứng nhận bảo hiểm; phần còn lại do hãng bảo hiểm bồi thường theo quy tắc của MIC."
+    },
+    "rules": {
+      "heading": "Áp dụng thế nào",
+      "scope": {
+        "title": "Xe và chuyến được bảo hiểm",
+        "desc": "Ô tô thuê tự lái, chuyến tối đa 30 ngày. Xe máy, có tài xế và thuê dài hạn chưa có bảo hiểm này."
+      },
+      "coverage": {
+        "title": "Thời gian hiệu lực",
+        "desc": "Từ khi chủ xe giao xe (cộng 5 phút) tới giờ trả xe trên đơn. Giấy chứng nhận hiện trong chuyến của bạn sau khi được cấp."
+      },
+      "cancel": {
+        "title": "Huỷ chuyến",
+        "desc": "Huỷ trước khi nhận xe được hoàn 100% khoản bảo hiểm đã trả, vì hợp đồng chỉ được cấp khi chủ xe giao xe."
+      },
+      "unissued": {
+        "title": "Không cấp được giấy chứng nhận",
+        "desc": "Tới giờ trả xe mà giấy chứng nhận vẫn chưa được cấp, XePrime tự hoàn toàn bộ khoản bảo hiểm đã trả vào Ví điểm của bạn."
+      }
+    },
+    "claim": {
+      "heading": "Khi có sự cố",
+      "safety": {
+        "title": "Giữ an toàn và hiện trường",
+        "desc": "Đưa người và xe tới nơi an toàn, chụp ảnh hiện trường và giấy tờ liên quan."
+      },
+      "hotline": {
+        "title": "Gọi hotline bảo hiểm",
+        "desc": "Báo sự cố cho MIC qua hotline trên giấy chứng nhận, đọc số giấy chứng nhận trong chuyến của bạn."
+      },
+      "owner": {
+        "title": "Báo chủ xe",
+        "desc": "Nhắn chủ xe trong chuyến để cùng phối hợp giám định và sửa chữa theo hướng dẫn của MIC."
+      }
+    }
   }
 }

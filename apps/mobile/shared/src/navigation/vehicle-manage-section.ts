@@ -1,178 +1,105 @@
 import { SERVICE_TYPE, type ServiceType } from '@xeprime/types';
 import type { useTranslations } from 'use-intl';
-import type { IconName } from '@/components/ui/Chip';
 
 /**
- * Chín mục của không gian "Quản lý xe" — GIÁ TRỊ đường dẫn, cùng bộ với
- * `apps/web/src/constants/routes.ts` (`VEHICLE_MANAGE_SECTION`, 30/09/2026).
+ * Mục của màn SỬA XE của chủ xe tuyến hoa hồng (Owner Lite) trong app Partner — GIÁ TRỊ đoạn đường
+ * dẫn dưới `/manage/vehicles/<id>/manage/`.
  *
- * Chép chứ không đưa vào package dùng chung: bên web đây là đoạn đường dẫn của Next, bên app là
- * đoạn đường dẫn của expo-router — hai vai của cùng một từ vựng. Phần THẬT SỰ phải khớp là chuỗi,
- * nên một liên kết sâu do web hay thông báo đẩy sinh ra vẫn tới đúng chỗ.
+ * Từ 03/11/2026 web cho hai tuyến dùng CHUNG màn sửa xe (`VehicleEditWorkspace`, sổ cái §3.6 E24):
+ * menu ba nhóm "Hồ sơ xe · Hình thức cho thuê · Vận hành nâng cao". App giữ cây route riêng cho
+ * Owner Lite (không đi qua hub sửa xe của gian hàng), nhưng mục và nội dung trùng web 1-1 — xem
+ * `features/vehicle-manage/owner-edit-nav.ts`.
  *
- * Đường dẫn CŨ (giá tự lái/có tài xế, giao xe tận nơi, thời gian giao nhận tự lái, thủ tục) không
- * còn là mục: route của chúng chỉ còn chuyển hướng sang mục mới (như trang redirect bên web).
+ * Bốn giá trị cuối là mục CŨ của không gian "Quản lý xe" (trước 03/11/2026). Chúng không còn trên
+ * menu; route của chúng chỉ còn chuyển hướng (web `editTabOfLegacyManageSection`). Giữ trong hằng
+ * vì vỏ `VehicleManageShell` của vài màn cũ còn dùng ở cổng quản lý.
  */
 export const VEHICLE_MANAGE_SECTION = {
   INFORMATION: 'information',
+  /** Hình ảnh — web `VEHICLE_EDIT_TAB.MEDIA`; đường dẫn giữ `images` cho link cũ. */
   IMAGES: 'images',
   DOCUMENTS: 'documents',
   TRIP_HISTORY: 'trip-history',
-  /** Giá & chính sách — giá mọi dịch vụ + cọc · giao xe · km, một nút Lưu. */
+  /** "Dịch vụ & giá" — web `EDIT_MENU.SERVICES` (`ServicesPane`). Tham số `service` = tab mở sẵn. */
+  SERVICES: 'services',
+  /** "Chính sách thuê" — web `EDIT_MENU.POLICY` (`PolicyPane`). */
+  POLICY: 'policy',
+  /** CŨ — "Giá & chính sách"; route chuyển về `SERVICES`. */
   PRICING: 'pricing',
-  /** Thời gian giao nhận — áp cho CẢ chiếc xe, không thuộc dịch vụ nào. */
+  /** CŨ — thời gian giao nhận / thời gian chết; route chuyển về `POLICY`. */
   HANDOVER_TIME: 'handover-time',
-  /** "Nhận chuyến & thủ tục" của tự lái (tối ưu nhận chuyến + thủ tục cho thuê). */
+  /** CŨ — "Nhận chuyến & thủ tục" tự lái; route chuyển về tab tự lái của `SERVICES`. */
   SELF_DRIVE_OPTIMIZATION: 'self-drive/optimization',
-  /** "Nhận chuyến & thủ tục" của có tài xế. */
+  /** CŨ — "Nhận chuyến & thủ tục" có tài xế; route chuyển về tab có tài xế của `SERVICES`. */
   WITH_DRIVER_OPTIMIZATION: 'with-driver/optimization',
-  // Không có mục phụ phí: giá có tài xế là giá TRỌN GÓI, phụ phí tài xế đã gỡ (ADR 0075). Route cũ
-  // `with-driver/surcharges` chuyển hướng về "Nhận chuyến & thủ tục".
 } as const;
 
 export type VehicleManageSection =
   (typeof VEHICLE_MANAGE_SECTION)[keyof typeof VEHICLE_MANAGE_SECTION];
 
+/** Tên tham số mang dịch vụ (tab mở sẵn ở `SERVICES`, khối điều khoản cần cuộn tới ở `POLICY`). */
+export const VEHICLE_MANAGE_SERVICE_PARAM = 'service';
+
 /**
- * Neo của card "Thủ tục cho thuê" trong mục "Nhận chuyến & thủ tục" — cùng giá trị với web
- * `RENTAL_TERMS_ANCHOR`. Native không có `#hash`: route cũ truyền nó qua tham số `anchor`.
+ * Neo của khối "Điều khoản" — cùng giá trị với web `RENTAL_TERMS_ANCHOR`. Native không có `#hash`:
+ * route truyền nó qua tham số `anchor`, kèm `service` để biết khối của dịch vụ nào.
  */
 export const RENTAL_TERMS_ANCHOR = 'rental-terms';
 
+/** Đọc tham số `service` của route — chỉ nhận một dịch vụ thật, còn lại `undefined`. */
+export function parseServiceParam(value: string | string[] | undefined): ServiceType | undefined {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return (Object.values(SERVICE_TYPE) as string[]).includes(raw ?? '')
+    ? (raw as ServiceType)
+    : undefined;
+}
+
 /**
- * Khoá nhãn trong `VehicleManage.menu` — CÙNG bộ nhãn với menu bên web. Union đóng, gõ sai là lỗi
- * biên dịch.
+ * Khoá nhãn trong `VehicleManage.menu` — nhãn của các mục CŨ (tiêu đề màn cũ còn dùng ở cổng quản
+ * lý). Union đóng, gõ sai là lỗi biên dịch.
  */
 export type VehicleManageMenuKey = Parameters<
   ReturnType<typeof useTranslations<'VehicleManage.menu'>>
 >[0];
 
-export interface VehicleManageNavItem {
-  readonly section: VehicleManageSection;
-  readonly labelKey: VehicleManageMenuKey;
-  readonly icon: IconName;
+/** Khoá nhãn trong `Vehicles.editor.menu.items` — CÙNG nhãn với menu trái web (`VehicleEditMenu`). */
+export type VehicleEditMenuItemKey = Parameters<
+  ReturnType<typeof useTranslations<'Vehicles.editor.menu.items'>>
+>[0];
+
+/** Mục của menu mới → nhãn web. Mục cũ không có (dùng `sectionLabelKeyOf`). */
+const SECTION_EDIT_MENU_KEY: Partial<Record<VehicleManageSection, VehicleEditMenuItemKey>> = {
+  [VEHICLE_MANAGE_SECTION.INFORMATION]: 'information',
+  [VEHICLE_MANAGE_SECTION.IMAGES]: 'media',
+  [VEHICLE_MANAGE_SECTION.DOCUMENTS]: 'documents',
+  [VEHICLE_MANAGE_SECTION.TRIP_HISTORY]: 'trip-history',
+  [VEHICLE_MANAGE_SECTION.SERVICES]: 'services',
+  [VEHICLE_MANAGE_SECTION.POLICY]: 'policy',
+};
+
+/** Nhãn menu web của một mục — tiêu đề màn con nói đúng tên mục đã chạm trên menu. */
+export function sectionEditMenuKeyOf(section: VehicleManageSection): VehicleEditMenuItemKey | null {
+  return SECTION_EDIT_MENU_KEY[section] ?? null;
 }
 
-export interface VehicleManageNavGroup {
-  readonly key: 'info' | 'services' | 'policy' | 'selfDrive' | 'withDriver' | 'longTerm';
-  readonly labelKey: VehicleManageMenuKey;
-  /** Nhóm gắn với một DỊCH VỤ của xe — có công tắc bật/tắt trên tiêu đề; `null` = nhóm chung. */
-  readonly serviceType: ServiceType | null;
-  readonly items: readonly VehicleManageNavItem[];
+/** Nhãn cũ của các mục không còn trên menu (màn cũ còn mở được ở cổng quản lý). */
+const LEGACY_SECTION_LABEL: Partial<Record<VehicleManageSection, VehicleManageMenuKey>> = {
+  [VEHICLE_MANAGE_SECTION.PRICING]: 'items.pricing',
+  [VEHICLE_MANAGE_SECTION.HANDOVER_TIME]: 'items.turnaround',
+  [VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION]: 'items.bookingTerms',
+  [VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION]: 'items.bookingTerms',
+};
+
+export function sectionLabelKeyOf(section: VehicleManageSection): VehicleManageMenuKey | null {
+  return LEGACY_SECTION_LABEL[section] ?? null;
 }
 
 /**
- * Năm nhóm, đúng thứ tự và đúng nhãn của menu trái bên web (`vehicle-manage/navigation.ts`):
- *
- * | Nhóm | Mục |
- * | --- | --- |
- * | Thông tin xe | Thông tin xe & tiện ích · Hình ảnh · Giấy tờ xe · Lịch sử chuyến |
- * | Giá & giao nhận | Giá & chính sách · Thời gian giao nhận |
- * | Cho thuê tự lái [công tắc] | Nhận chuyến & thủ tục |
- * | Cho thuê có tài xế [công tắc] | Nhận chuyến & thủ tục · Phụ phí |
- * | Cho thuê dài hạn [công tắc] | — (giá tháng ở Giá & chính sách) |
- *
- * Giá và giờ giao nhận áp cho CẢ chiếc xe, nên không khoá theo dịch vụ.
+ * Dịch vụ mà một màn mục thuộc về — `null` với mục áp cho cả xe. Chỉ hai màn "Nhận chuyến & thủ
+ * tục" cũ (còn dựng ở cổng quản lý) thuộc một dịch vụ: tắt dịch vụ thì vỏ mời bật lại.
  */
-export const VEHICLE_MANAGE_NAV: readonly VehicleManageNavGroup[] = [
-  {
-    key: 'info',
-    labelKey: 'groups.info',
-    serviceType: null,
-    items: [
-      {
-        section: VEHICLE_MANAGE_SECTION.INFORMATION,
-        labelKey: 'items.information',
-        icon: 'car-outline',
-      },
-      { section: VEHICLE_MANAGE_SECTION.IMAGES, labelKey: 'items.images', icon: 'images-outline' },
-      {
-        section: VEHICLE_MANAGE_SECTION.DOCUMENTS,
-        labelKey: 'items.documents',
-        icon: 'document-text-outline',
-      },
-      {
-        section: VEHICLE_MANAGE_SECTION.TRIP_HISTORY,
-        labelKey: 'items.tripHistory',
-        icon: 'time-outline',
-      },
-    ],
-  },
-  /*
-   * Hai mục của "Hình thức cho thuê" bên web (màn sửa xe theo Figma, 03/11/2026): "Dịch vụ & giá"
-   * (giá từng dịch vụ) và "Chính sách thuê" (thời gian chết giữa hai chuyến — khung giờ giao nhận
-   * đã gỡ ở ADR 0078). Thủ tục / điều khoản của từng dịch vụ nằm ở nhóm dịch vụ bên dưới.
-   */
-  {
-    key: 'services',
-    labelKey: 'groups.services',
-    serviceType: null,
-    items: [
-      { section: VEHICLE_MANAGE_SECTION.PRICING, labelKey: 'items.services', icon: 'cash-outline' },
-    ],
-  },
-  {
-    key: 'policy',
-    labelKey: 'groups.policy',
-    serviceType: null,
-    items: [
-      {
-        section: VEHICLE_MANAGE_SECTION.HANDOVER_TIME,
-        labelKey: 'items.turnaround',
-        icon: 'hourglass-outline',
-      },
-    ],
-  },
-  {
-    key: 'selfDrive',
-    labelKey: 'groups.selfDrive',
-    serviceType: SERVICE_TYPE.SELF_DRIVE,
-    items: [
-      {
-        section: VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION,
-        labelKey: 'items.bookingTerms',
-        icon: 'shield-checkmark-outline',
-      },
-    ],
-  },
-  {
-    key: 'withDriver',
-    labelKey: 'groups.withDriver',
-    serviceType: SERVICE_TYPE.WITH_DRIVER,
-    items: [
-      {
-        section: VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION,
-        labelKey: 'items.bookingTerms',
-        icon: 'shield-checkmark-outline',
-      },
-
-    ],
-  },
-  /*
-   * Thuê dài hạn — nhóm chỉ mang công tắc; giá tháng nằm ở 'Giá & chính sách' (mục lục gắn lời
-   * nhắc `menu.longTermNote` dẫn tới đó, như sidebar web).
-   */
-  {
-    key: 'longTerm',
-    labelKey: 'groups.longTerm',
-    serviceType: SERVICE_TYPE.LONG_TERM,
-    items: [],
-  },
-];
-
-/** Dịch vụ mà một mục thuộc về — `null` với nhóm chung. */
 export function sectionServiceType(section: VehicleManageSection): ServiceType | null {
-  for (const group of VEHICLE_MANAGE_NAV) {
-    if (group.items.some((item) => item.section === section)) return group.serviceType;
-  }
-  return null;
-}
-
-/** Khoá nhãn của MỘT mục — tiêu đề màn con đọc nó để nói đúng tên mục đang mở. */
-export function sectionLabelKeyOf(section: VehicleManageSection): VehicleManageMenuKey | null {
-  for (const group of VEHICLE_MANAGE_NAV) {
-    const item = group.items.find((candidate) => candidate.section === section);
-    if (item) return item.labelKey;
-  }
+  if (section === VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION) return SERVICE_TYPE.SELF_DRIVE;
+  if (section === VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION) return SERVICE_TYPE.WITH_DRIVER;
   return null;
 }

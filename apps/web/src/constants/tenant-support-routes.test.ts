@@ -76,7 +76,7 @@ describe('toTenantSupportRoute', () => {
   });
 
   it.each([
-    [ROUTES.ADMIN.TENANTS],
+    [ROUTES.ADMIN.PARTNERS],
     [ROUTES.ADMIN.ROOT],
     // Tài khoản của CHÍNH nhân sự đang đăng nhập (thẻ người dùng ở menu) — ở site quản trị.
     [ROUTES.ADMIN.SECURITY],
@@ -123,7 +123,7 @@ describe('toTenantSupportRoute - chế độ host', () => {
 
   it('route quản trị không có trong phiên → rời phiên; trang partner khác → chặn', async () => {
     const { toTenantSupportRoute: map, ROUTES: R } = await loadHostMode();
-    expect(map(CTX, R.ADMIN.TENANTS)).toEqual({ kind: 'outside', href: R.ADMIN.TENANTS });
+    expect(map(CTX, R.ADMIN.PARTNERS)).toEqual({ kind: 'outside', href: R.ADMIN.PARTNERS });
     expect(map(CTX, R.ADMIN.SECURITY)).toEqual({ kind: 'outside', href: R.ADMIN.SECURITY });
     expect(map(CTX, R.MANAGE.FINANCE)).toEqual({ kind: 'blocked' });
   });

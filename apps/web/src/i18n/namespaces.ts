@@ -74,6 +74,7 @@ export const MESSAGE_NAMESPACES = [
   { file: 'finance', namespace: 'Finance' },
   // Quản trị gói dịch vụ (admin nền tảng) — chuyển đợt W1 (ADR 0015/0020).
   { file: 'admin-catalog', namespace: 'AdminCatalog' },
+  { file: 'admin-vehicle-data', namespace: 'AdminVehicleData' },
   // Giám sát xe toàn hệ thống của admin nền tảng — chuyển sang t() ngày 23/09/2026 cùng đợt
   // tách trục hiển thị (ADR 0048), vì màn này phải giải thích được vì sao gỡ ẩn không đủ.
   { file: 'admin-vehicles', namespace: 'AdminVehicles' },
@@ -127,6 +128,8 @@ export const MESSAGE_NAMESPACES = [
   { file: 'platform-sellers', namespace: 'PlatformSellers' },
   // Khách thuê + bằng lái của khách (ADR 0070) — chỉ site quản trị.
   { file: 'admin-customers', namespace: 'AdminCustomers' },
+  // Ví điểm của một chủ ví nhìn từ admin - chỉ đọc (đợt rà Admin 16/11/2026).
+  { file: 'platform-wallets', namespace: 'PlatformWallets' },
   // Chăm sóc khách mất đơn (ADR 0070) — tab của Đơn thuê toàn hệ thống.
   { file: 'admin-follow-ups', namespace: 'AdminFollowUps' },
   // Cấu hình app Partner (isPlanPromotionEnabled) + mẫu email hướng dẫn gói — chỉ site quản trị.

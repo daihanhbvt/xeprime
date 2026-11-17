@@ -11,6 +11,9 @@ export type DeliveryTier = Schemas['DeliveryTierDto'];
 export type DiscountTier = Schemas['DiscountTierDto'];
 /** Mốc ưu đãi cũ tính theo NGÀY — chỉ để cảnh báo, không còn tham gia tính giá (ADR 0011). */
 export type LegacyDiscountTier = Schemas['LegacyDiscountTierDto'];
+/** Thời gian chết mặc định của gian hàng theo loại xe (06/11/2026, PR #280). */
+export type ShopOperationDefaults = Schemas['ShopOperationDefaultsDto'];
+export type SaveShopOperationDefaultsInput = Schemas['SaveShopOperationDefaultsDto'];
 
 const PATH = '/shop/rental-policies';
 
@@ -34,6 +37,32 @@ export const shopPoliciesApi = {
    */
   async save(vehicleType: string, body: SaveRentalPolicyInput): Promise<ShopRentalPolicy> {
     const res = await getApiClient().request<ShopRentalPolicy>(PATH, {
+      method: 'PUT',
+      query: { vehicleType },
+      body,
+    });
+    return res.data;
+  },
+};
+
+const OPERATION_DEFAULTS_PATH = '/shop/operation-defaults';
+
+/**
+ * Thiết lập vận hành MẶC ĐỊNH của gian hàng theo loại xe — hiện là thời gian chết giữa hai chuyến,
+ * đứng cạnh chính sách thuê trên cùng một màn nên cùng quyền (`tenant.view` / `tenant.update`).
+ * Áp cho lịch giữ MỚI của các xe đang theo mặc định (ADR 0006). `vehicleType` đi trên QUERY ở cả
+ * hai chiều — hợp đồng của `ShopOperationDefaultsController`.
+ */
+export const shopOperationDefaultsApi = {
+  get(vehicleType: string): Promise<ShopOperationDefaults> {
+    return getApiClient().get<ShopOperationDefaults>(OPERATION_DEFAULTS_PATH, { vehicleType });
+  },
+
+  async save(
+    vehicleType: string,
+    body: SaveShopOperationDefaultsInput,
+  ): Promise<ShopOperationDefaults> {
+    const res = await getApiClient().request<ShopOperationDefaults>(OPERATION_DEFAULTS_PATH, {
       method: 'PUT',
       query: { vehicleType },
       body,

@@ -128,6 +128,7 @@ export function OdometerCorrectionSheet({
       title={t('correctTitle')}
       footer={
         <Button
+          variant="gradient"
           label={isDecrease && !canDecrease ? t('submitApproval') : t('submit')}
           /* Hình đi theo VIỆC: ghi số mới là cập nhật KM, còn thiếu quyền giảm thì là GỬI ĐI. */
           icon={isDecrease && !canDecrease ? 'send-outline' : 'speedometer-outline'}

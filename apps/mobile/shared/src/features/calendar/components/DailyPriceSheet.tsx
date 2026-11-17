@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useQuery } from '@tanstack/react-query';
 import * as yup from 'yup';
-import { YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { queryKeys } from '@xeprime/api-client';
 import { DAY_PARAM_FORMAT, dayjs, nowInAppTz, startOfAppDay } from '@xeprime/domain';
@@ -223,13 +223,6 @@ function PriceForm({ state, onClose }: { state: DailyPriceSheetState; onClose: (
         title={t('dailyPrice.title')}
         footer={
           <>
-            <Button
-              label={t('dailyPrice.submit')}
-              icon="save-outline"
-              onPress={() => void submit()}
-              loading={save.isPending}
-              disabled={rangeInvalid}
-            />
             {hasOverrides ? (
               <Button
                 label={t('dailyPrice.restore')}
@@ -239,13 +232,27 @@ function PriceForm({ state, onClose }: { state: DailyPriceSheetState; onClose: (
                 loading={remove.isPending}
               />
             ) : null}
-            <Button
-              label={tCommon('cancel')}
-              icon="close-outline"
-              variant="secondary"
-              onPress={onClose}
-              disabled={save.isPending}
-            />
+            {/* Huỷ + Lưu giá chung một hàng (người dùng 16/11/2026). */}
+            <XStack gap={space.sm}>
+              <YStack f={1}>
+                <Button
+                  label={tCommon('cancel')}
+                  icon="close-outline"
+                  variant="secondary"
+                  onPress={onClose}
+                  disabled={save.isPending}
+                />
+              </YStack>
+              <YStack f={1}>
+                <Button
+                  label={t('dailyPrice.submit')}
+                  icon="save-outline"
+                  onPress={() => void submit()}
+                  loading={save.isPending}
+                  disabled={rangeInvalid}
+                />
+              </YStack>
+            </XStack>
           </>
         }
       >

@@ -291,11 +291,11 @@
     "defaultName": "Enterprise plan",
     "tag": "Enterprise",
     "activeTag": "Active",
-    "activeSummary": "One plan for your whole fleet: unlimited motorbikes and cars, priced by agreement with XePrime.",
+    "activeSummary": "One plan for your whole fleet: unlimited motorbikes and cars.",
     "contactSummary": "For fleets of more than 10 vehicles of one type, or that need a custom setup.",
     "coversBoth": "Unlimited motorbikes and cars",
     "activeUntil": "Valid until {date}",
-    "changeHint": "Want to change or renew your enterprise plan? The XePrime team will help you directly.",
+    "changeHint": "Need more help? The XePrime team is happy to assist.",
     "contactHint": "The enterprise plan is quoted by fleet size and cannot be bought directly on this page.",
     "contactCta": "Contact sales"
   },
@@ -332,8 +332,8 @@
     }
   },
   "shopPlan": {
-    "title": "Plans & limits",
-    "hint": "Manage your service plans and usage limits.",
+    "title": "Service plan",
+    "hint": "Your shop's service plan and vehicle usage.",
     "change": "Upgrade / Change plan",
     "buy": "Buy a plan",
     "upgradeNow": "Upgrade now",

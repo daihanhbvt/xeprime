@@ -23,10 +23,12 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useLocalizedText } from '@/i18n/localized';
 import { QueueViewSwitch } from '@/features/platform-money/components/QueueViewSwitch';
 import { CERTIFICATE_DEFAULT_LIMIT } from '../api';
-import { useCertificateFilters, useCertificates } from '../hooks';
+import { useCertificateFilters, useCertificates, useInsuranceAttention } from '../hooks';
 import type { CertificateFilters, InsurancePolicy } from '../types';
+import { InsuranceAttentionAlert } from './InsuranceAttentionAlert';
 import { InsuranceCertificateDrawer } from './InsuranceCertificateDrawer';
 import styles from './InsuranceCertificatesPanel.module.css';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 
 const MIN_TABLE_WIDTH = 1040;
 
@@ -51,6 +53,8 @@ export function InsuranceCertificatesPanel() {
   const domainLabel = useDomainLabel();
   const { filters, setFilters } = useCertificateFilters();
   const { data, isError, isFetching, refetch } = useCertificates(filters);
+  // Hợp đồng cần xử lý gấp (ADR 0091 điều 7) — một khối ở đầu bảng, bấm là mở đúng hợp đồng.
+  const attention = useInsuranceAttention();
 
   const items = data?.items ?? [];
   const meta = data?.meta ?? {
@@ -238,7 +242,9 @@ export function InsuranceCertificatesPanel() {
         </div>
         <span>{productName(row)}</span>
         <span className={styles.muted}>
-          {row.tenantName} · {fmt.money(row.premiumAmount)}
+          {row.tenantName}
+          {LIST_SEPARATOR}
+          {fmt.money(row.premiumAmount)}
         </span>
         {certificateCell(row)}
       </div>
@@ -289,6 +295,12 @@ export function InsuranceCertificatesPanel() {
       />
       {!showAll ? <p className={styles.hint}>{t('defaultViewHint')}</p> : null}
 
+      {attention.data && attention.data.total > 0 ? (
+        <InsuranceAttentionAlert
+          page={attention.data}
+          onOpen={(policyId) => setFilters({ open: policyId }, { resetPage: false })}
+        />
+      ) : null}
       {partnerMissing ? (
         <Alert
           type="warning"

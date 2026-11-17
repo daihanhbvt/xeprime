@@ -1,6 +1,12 @@
 'use client';
 
-import { useQuery, type Query } from '@tanstack/react-query';
+import {
+  skipToken,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type Query,
+} from '@tanstack/react-query';
 import { isClientError } from '@/lib/http-status';
 import {
   fetchPartnerActivity,
@@ -13,6 +19,8 @@ import {
   fetchPartnerProfile,
   fetchPartnerSupportSessions,
   fetchPartnerVehicles,
+  revealPartnerContact,
+  type PartnerContact,
   type PartnerActivityFilters,
   type PartnerBookingFilters,
   type PartnerVehicleFilters,
@@ -41,6 +49,7 @@ export const adminPartnerKeys = {
     ['admin-partner', tenantId, 'activity', filters] as const,
   supportSessions: (tenantId: string, filters: { page?: number }) =>
     ['admin-partner', tenantId, 'support-sessions', filters] as const,
+  contact: (tenantId: string) => ['admin-partner', tenantId, 'contact'] as const,
 };
 
 /**
@@ -174,4 +183,22 @@ export function usePartnerSupportSessions(
     retry: retryUnlessClientError,
     placeholderData: keepSameTenant(tenantId),
   });
+}
+
+/**
+ * Liên hệ ĐẦY ĐỦ của đối tác — chỉ có sau khi người xem tự bấm bỏ che (server ghi audit mỗi lần).
+ *
+ * Kết quả nằm trong cache theo `tenantId` (query `skipToken`: không bao giờ tự gọi, không bị
+ * invalidate hay focus kéo lại), nên bỏ che ở tab Tổng quan thì tab Hồ sơ cũng đã thấy — một lượt
+ * bấm, một dòng audit. Đổi đối tác là đổi khoá, không có số của người trước hiện dưới tên người sau.
+ */
+export function usePartnerContact(tenantId: string) {
+  const queryClient = useQueryClient();
+  const key = adminPartnerKeys.contact(tenantId);
+  const { data } = useQuery<PartnerContact>({ queryKey: key, queryFn: skipToken });
+  const mutation = useMutation({
+    mutationFn: () => revealPartnerContact(tenantId),
+    onSuccess: (contact) => queryClient.setQueryData(key, contact),
+  });
+  return { contact: data, reveal: mutation.mutate, isPending: mutation.isPending };
 }

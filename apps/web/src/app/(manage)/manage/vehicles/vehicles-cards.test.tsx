@@ -212,8 +212,8 @@ afterEach(cleanup);
 
 /* ------------------------------------------------------------------ hình thái mặc định */
 
-describe('/manage/vehicles - lưới thẻ là mặc định', () => {
-  it('dựng lưới thẻ, không còn bảng nào', () => {
+describe('/manage/vehicles - thẻ là mặc định', () => {
+  it('dựng danh sách thẻ, không còn bảng nào', () => {
     renderPage();
 
     expect(screen.getByRole('list', { name: 'Danh sách xe' })).toBeTruthy();
@@ -243,12 +243,22 @@ describe('/manage/vehicles - nội dung thẻ', () => {
     expect(within(card).queryByRole('img')).toBeNull();
   });
 
-  it('cả hai trục trạng thái đều hiện', () => {
+  it('cả hai trục trạng thái đều hiện - thẻ đôi (từ 4 xe) dùng nhãn DÀI', () => {
     renderPage();
 
     const card = cards()[0]!;
+    // Thẻ hai xe một hàng (`23655:38951`): "Sẵn sàng vận hành" · "Đã kiểm duyệt" có biểu tượng.
+    expect(within(card).getByText('Sẵn sàng vận hành')).toBeTruthy();
+    expect(within(card).getByText('Đã kiểm duyệt')).toBeTruthy();
+  });
+
+  it('cả hai trục trạng thái đều hiện - hàng ngang (dưới 4 xe) dùng nhãn GỌN', () => {
+    fleet.data = { total: 3, available: 3, renting: 0, maintenance: 0, inactive: 0 };
+    renderPage();
+
+    const card = cards()[0]!;
+    // Một xe một hàng (`23655:38389`): "Sẵn sàng" · "Đã duyệt".
     expect(within(card).getByText('Sẵn sàng')).toBeTruthy();
-    // Thẻ lưới dùng nhãn GỌN của design (`23655:36622`: "Chờ duyệt").
     expect(within(card).getByText('Đã duyệt')).toBeTruthy();
   });
 
@@ -487,19 +497,18 @@ describe('/manage/vehicles - hàng ngang ở mobile', () => {
     expect(within(cards()[0]!).getByText('Honda SH 150i 2023')).toBeTruthy();
   });
 
-  it('gộp mã, biển số và loại/dịch vụ vào MỘT dòng', () => {
+  it('gộp mã và biển số vào MỘT dòng (loại/dịch vụ đã có chip riêng)', () => {
     renderPage();
 
-    expect(within(cards()[0]!).getByText('XM-001 · 59X1-333.44 · Xe máy / Tự lái')).toBeTruthy();
+    expect(within(cards()[0]!).getByText('XM-001 · 59X1-333.44')).toBeTruthy();
   });
 
-  it('tiền rút gọn để lọt một dòng, KHÔNG phải dạng đầy đủ của desktop', () => {
+  it('tiền thu / chi hiện dạng đầy đủ như desktop (không rút gọn)', () => {
     renderPage();
 
     const card = within(cards()[0]!);
-    expect(card.getByText('12,7tr')).toBeTruthy();
-    expect(card.getByText('9,5tr')).toBeTruthy();
-    expect(card.queryByText('12.750.000 ₫')).toBeNull();
+    expect(card.getByText(/12\.750\.000/)).toBeTruthy();
+    expect(card.queryByText('12,7tr')).toBeNull();
   });
 
   it('đủ bộ hành động như desktop - không cắt bớt quyền ở màn nhỏ', () => {
@@ -508,10 +517,11 @@ describe('/manage/vehicles - hàng ngang ở mobile', () => {
 
     const labels = within(cards()[0]!)
       .getAllByRole('button')
-      .map((button) => button.textContent);
+      .map((button) => button.textContent)
+      .filter(Boolean);
 
-    // Cùng thứ tự với thẻ desktop; ở mobile nút chi tiết rút gọn thành "Xem".
-    expect(labels).toEqual(['Lịch', 'Chỉnh sửa', 'Xem']);
+    // Cùng bộ nút và thứ tự với desktop (nút chỉ có icon không có chữ nên bị lọc).
+    expect(labels).toEqual(['Lịch', 'Chỉnh sửa', 'Chi tiết']);
   });
 
   it('số liệu hỏng ở mobile cũng không dựng số 0 giả', () => {
@@ -521,16 +531,11 @@ describe('/manage/vehicles - hàng ngang ở mobile', () => {
     expect(within(cards()[0]!).getByText('Không tải được số liệu')).toBeTruthy();
   });
 
-  it('dải chỉ số đội xe: tổng / sẵn sàng / đang thuê từ API, không phụ thuộc trang', () => {
+  it('dải chỉ số đội xe đã bỏ ở mobile (Figma): chỉ còn chip lọc trạng thái', () => {
     renderPage();
 
-    const bar = screen.getByLabelText('Chỉ số đội xe');
-    expect(within(bar).getByText('Tổng số xe')).toBeTruthy();
-    expect(within(bar).getByText('32 xe')).toBeTruthy();
-    expect(within(bar).getByText('Sẵn sàng')).toBeTruthy();
-    expect(within(bar).getByText('24 xe')).toBeTruthy();
-    expect(within(bar).getByText('Đang thuê')).toBeTruthy();
-    expect(within(bar).getByText('3 xe')).toBeTruthy();
+    expect(screen.queryByLabelText('Chỉ số đội xe')).toBeNull();
+    expect(screen.getByRole('group', { name: 'Lọc theo trạng thái vận hành' })).toBeTruthy();
   });
 
   it('dải chỉ số hỏng: tự ẩn, danh sách vẫn dựng bình thường', () => {
@@ -635,9 +640,12 @@ describe('/manage/vehicles - cảnh báo và KM trên thẻ', () => {
         ),
         'utf8',
       );
-    // Thẻ lưới cố định TỈ LỆ khung; khung chung (`VehicleCardParts`) cắt tràn và phủ ảnh kín.
-    const card = read('VehicleManagementCard.module.css');
-    expect(card.slice(card.indexOf('.media {'))).toContain('aspect-ratio');
+    // Hai hình thái thẻ ngang cố định KHUNG ảnh; khung chung (`VehicleCardParts`) cắt tràn và phủ ảnh kín.
+    const card = read('VehicleWideCard.module.css');
+    for (const shape of ['.stacked .media {', '.row .media {']) {
+      const rule = card.slice(card.indexOf(shape), card.indexOf('}', card.indexOf(shape)));
+      expect(rule).toMatch(/height: \d+px/);
+    }
     const parts = read('VehicleCardParts.module.css');
     const media = parts.slice(parts.indexOf('.media {'), parts.indexOf('.mediaFallback'));
     expect(media).toContain('overflow: hidden');

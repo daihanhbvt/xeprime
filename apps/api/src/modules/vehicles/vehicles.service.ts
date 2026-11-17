@@ -40,6 +40,7 @@ import {
   type VehiclePublicationInput,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_SUBMITTABLE,
+  VEHICLE_TYPE,
   type PaginationMeta,
   type VehiclePublicStatus,
   type VehicleType,
@@ -51,6 +52,7 @@ import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
 import { BranchesService } from '../branches/branches.service';
 import { CatalogModelService } from '../catalog/catalog-model.service';
+import { VehicleDataService } from '../vehicle-data/vehicle-data.service';
 import { CatalogService } from '../catalog/catalog.service';
 import { policyData, PricingService } from '../pricing/pricing.service';
 import { SaveVehiclePricingDto, VehiclePricingDto } from '../pricing/dto/pricing.dto';
@@ -83,6 +85,7 @@ import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { buildVehicleReviewSnapshot } from './vehicle-review-snapshot';
 import { refreshPendingApprovalSnapshot } from './refresh-pending-approval-snapshot';
 import { lockVehicleRow } from './vehicle-row-lock';
+import { VehicleRegistrationUploadsService } from './registration/vehicle-registration-uploads.service';
 import { resolveBranchScope } from '../../common/dto/branch-scope';
 
 /** Cột dùng cho một dòng bảng — không kéo `description` dài. */
@@ -101,6 +104,7 @@ const LIST_SELECT = {
   bodyType: true,
   motorbikeCategory: true,
   vehicleCatalogModelId: true,
+  vehicleCatalogVariantId: true,
   discountPercent: true,
   operationStatus: true,
   publicStatus: true,
@@ -123,6 +127,7 @@ const LIST_SELECT = {
 const DETAIL_SELECT = {
   ...LIST_SELECT,
   color: true,
+  insuredValue: true,
   fuelType: true,
   lengthMm: true,
   widthMm: true,
@@ -174,6 +179,8 @@ const SENSITIVE_SELECT = {
   deliveryEnabled: true,
   // Trường "ghim" của phiên hỗ trợ (ADR 0050) so với bản đang lưu — xem `assertSupportPinnedFields`.
   operationStatus: true,
+  // Liên kết danh mục — lượt sửa đổi mẫu mà không gửi phiên bản thì phải biết mẫu CŨ để gỡ phiên bản.
+  vehicleCatalogModelId: true,
 } satisfies Prisma.VehicleSelect;
 
 /**
@@ -199,6 +206,13 @@ export class VehiclesService {
     private readonly pricing: PricingService,
     private readonly config: ConfigService,
     private readonly supportStore: SupportRequestStore,
+    /** Cà vẹt kèm lượt tạo ô tô (ADR 0089) — gắn trong CÙNG transaction tạo xe. */
+    private readonly registrations: VehicleRegistrationUploadsService,
+    /**
+     * Dữ liệu xe (ADR 0090) — kiểm phiên bản thuộc đúng dòng xe, và TỰ GHI NHẬN dữ liệu từ xe của
+     * chủ xe (dòng chờ duyệt) trong CÙNG transaction lưu xe.
+     */
+    private readonly vehicleData: VehicleDataService,
   ) {}
 
   /**
@@ -292,13 +306,17 @@ export class VehiclesService {
   async fleetSummary(
     tenantId: string,
     branchId: string | undefined,
-  /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
-  allowedBranchIds: readonly string[] | null,
+    /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
   ): Promise<FleetSummaryDto> {
     const groups = await this.prisma.vehicle.groupBy({
       by: ['operationStatus'],
       // Cùng phạm vi với danh sách xe ngay bên dưới dải này — `tenantId` vẫn là ranh giới thật.
-      where: { tenantId, deletedAt: null, branchId: resolveBranchScope(branchId, allowedBranchIds) },
+      where: {
+        tenantId,
+        deletedAt: null,
+        branchId: resolveBranchScope(branchId, allowedBranchIds),
+      },
       _count: { _all: true },
     });
 
@@ -404,8 +422,8 @@ export class VehiclesService {
   async list(
     tenantId: string,
     query: VehicleListQueryDto,
-  /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
-  allowedBranchIds: readonly string[] | null,
+    /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
   ): Promise<{ data: VehicleListItemDto[]; meta: PaginationMeta }> {
     const paging = resolvePaging(query, VEHICLE_DEFAULT_LIMIT, VEHICLE_MAX_LIMIT);
 
@@ -551,6 +569,7 @@ export class VehiclesService {
     // thì PLAN_SCOPE_REQUIRED. Thông điệp nói đúng lối đi tiếp theo NGUỒN của trần.
     await this.billing.assertVehicleQuota(tenantId, dto.vehicleType as VehicleType);
     await this.pricing.assertWithDriverPrices(dto);
+    assertSingleVariantChoice(dto);
     const id = newId();
     const code = dto.code?.trim() || `XP-${id.slice(-8).toUpperCase()}`;
     await this.assertCodeFree(tenantId, code);
@@ -565,15 +584,34 @@ export class VehiclesService {
       dto.vehicleCatalogModelId,
       dto.vehicleType,
     );
-    const input = applyCatalogModel(dto, canonical);
+    const input = {
+      ...applyCatalogModel(dto, canonical),
+      vehicleCatalogVariantId: await this.vehicleData.resolveForVehicle(
+        dto.vehicleCatalogVariantId,
+        canonical?.id ?? null,
+      ),
+    };
 
     await this.catalog.assertVehicleValues({ ...input, vehicleType: dto.vehicleType });
     assertVehicleProfile(dto.vehicleType, input.fuelType, input);
+    // Cà vẹt kèm lượt tạo chỉ dành cho ô tô (ADR 0089) — xe máy chưa có bảo hiểm.
+    if (dto.registration && dto.vehicleType !== VEHICLE_TYPE.CAR) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Cà vẹt kèm lượt tạo xe chỉ áp dụng cho ô tô',
+        details: { fields: [{ field: 'registration', message: 'Chỉ áp dụng cho ô tô' }] },
+      });
+    }
 
     await this.prisma.$transaction(async (tx) => {
       // Chi nhánh kiểm TRONG transaction: nó phải thuộc đúng gian hàng và đang hoạt động ngay
       // tại thời điểm ghi. FK composite `(branch_id, tenant_id)` là chốt chặn cuối ở DB.
-      const branch = await this.branches.assertAssignable(tx, tenantId, dto.branchId, allowedBranchIds);
+      const branch = await this.branches.assertAssignable(
+        tx,
+        tenantId,
+        dto.branchId,
+        allowedBranchIds,
+      );
       if (support) {
         // Kiểm TRƯỚC khi ghi xe — ảnh đại diện nằm trên chính hàng xe, ghi rồi thì nó thành "đã biết".
         // Xe mới chưa có ảnh nào: mọi URL phải nằm trong kho ảnh của CHÍNH gian hàng, không gắn ảnh
@@ -612,6 +650,22 @@ export class VehiclesService {
         },
       });
       await this.replaceMedia(tx, id, tenantId, input, dto.vehicleType);
+      // Chạy SAU replaceMedia: dữ liệu tự ghi nhận chụp cả tiện ích của xe.
+      await this.vehicleData.captureFromVehicleWithinTx(tx, {
+        tenantId,
+        userId,
+        vehicleId: id,
+        variantLabel: dto.catalogVariantLabel,
+      });
+      if (dto.registration) {
+        await this.registrations.attachToNewVehicleWithinTx(tx, {
+          tenantId,
+          userId,
+          vehicleId: id,
+          vehiclePlate: input.plateNumber ?? null,
+          registration: dto.registration,
+        });
+      }
       if (support) {
         // Toàn bộ dữ liệu tạo ban đầu, trong CÙNG transaction (AuditService gắn phiên + lý do).
         await this.audit.record(
@@ -640,6 +694,7 @@ export class VehiclesService {
     allowedBranchIds: readonly string[] | null,
   ): Promise<VehicleDetailDto> {
     await this.pricing.assertWithDriverPrices(dto);
+    assertSingleVariantChoice(dto);
     await this.prisma.$transaction(async (tx) => {
       await this.applyUpdate(tx, tenantId, id, userId, dto, allowedBranchIds);
     });
@@ -687,7 +742,29 @@ export class VehiclesService {
       dto.vehicleCatalogModelId !== undefined
         ? await this.catalogModels.resolveForVehicle(dto.vehicleCatalogModelId, vehicleType)
         : null;
-    const input = dto.vehicleCatalogModelId !== undefined ? applyCatalogModel(dto, canonical) : dto;
+    const modelInput =
+      dto.vehicleCatalogModelId !== undefined ? applyCatalogModel(dto, canonical) : dto;
+    /*
+     * Phiên bản theo MẪU SAU KHI SỬA: gửi phiên bản ⇒ kiểm nó thuộc mẫu đó; đổi mẫu mà không gửi
+     * phiên bản ⇒ gỡ phiên bản cũ (nó thuộc mẫu cũ — giữ lại là một liên kết nói dối).
+     */
+    const targetModelId =
+      dto.vehicleCatalogModelId !== undefined
+        ? (canonical?.id ?? null)
+        : current.vehicleCatalogModelId;
+    const modelChanged = targetModelId !== current.vehicleCatalogModelId;
+    const input =
+      dto.vehicleCatalogVariantId !== undefined
+        ? {
+            ...modelInput,
+            vehicleCatalogVariantId: await this.vehicleData.resolveForVehicle(
+              dto.vehicleCatalogVariantId,
+              targetModelId,
+            ),
+          }
+        : modelChanged
+          ? { ...modelInput, vehicleCatalogVariantId: null }
+          : modelInput;
 
     await this.catalog.assertVehicleValues({ ...input, vehicleType });
     assertVehicleProfile(
@@ -740,7 +817,12 @@ export class VehiclesService {
       if (changes.branchId) {
         // Đổi nơi giao xe của một chuyến đang sống là âm thầm đổi cam kết với khách — từ chối.
         await assertNoOpenTrips(tx, { tenantId, vehicleId: current.id });
-        const target = await this.branches.assertAssignable(tx, tenantId, changes.branchId, allowedBranchIds);
+        const target = await this.branches.assertAssignable(
+          tx,
+          tenantId,
+          changes.branchId,
+          allowedBranchIds,
+        );
         if (!target.provinceCode) {
           throw new ConflictException({
             code: API_ERROR_CODE.BRANCH_LOCATION_REQUIRED,
@@ -814,6 +896,12 @@ export class VehiclesService {
 
     await tx.vehicle.update({ where: { id: current.id }, data });
     await this.replaceMedia(tx, current.id, tenantId, input, vehicleType);
+    await this.vehicleData.captureFromVehicleWithinTx(tx, {
+      tenantId,
+      userId,
+      vehicleId: current.id,
+      variantLabel: dto.catalogVariantLabel,
+    });
     // Mọi sửa xe → đồng bộ snapshot public_listings ngay, để chợ không trưng thông tin cũ.
     await this.listings.syncFromVehicle(current.id, tx);
     /*
@@ -997,10 +1085,10 @@ export class VehiclesService {
      * hàng. Không có lần lưu nào để hai nguồn lệch nhau nữa. `null` = gian hàng chưa có chính
      * sách ⇒ giữ nguyên cờ.
      */
+    const shopValues = await this.pricing.shopPolicyValues(tenantId, current.vehicleType);
     const deliverySync = overriding
       ? dto.policy!.deliveryEnabled
-      : ((await this.pricing.shopPolicyValues(tenantId, current.vehicleType))?.deliveryEnabled ??
-        null);
+      : (shopValues?.deliveryEnabled ?? null);
 
     await this.prisma.$transaction(async (tx) => {
       const existingOverride = await tx.rentalPolicy.findUnique({
@@ -1014,7 +1102,21 @@ export class VehiclesService {
         if (existingOverride) {
           await tx.rentalPolicy.update({ where: { id: existingOverride.id }, data });
         } else {
-          await tx.rentalPolicy.create({ data: { id: newId(), tenantId, vehicleId: id, ...data } });
+          /*
+           * Bản ghi đè MỚI mà client không gửi chế độ bảo hiểm (app cũ) ⇒ chép chế độ của chính
+           * sách gian hàng: tách một xe ra để sửa cọc không được phép lặng lẽ hạ Bắt buộc về
+           * Tuỳ chọn (ADR 0091 điều 1).
+           */
+          const insuranceMode = dto.policy!.insuranceMode ?? shopValues?.insuranceMode;
+          await tx.rentalPolicy.create({
+            data: {
+              id: newId(),
+              tenantId,
+              vehicleId: id,
+              ...data,
+              ...(insuranceMode ? { insuranceMode } : {}),
+            },
+          });
         }
         policyChanged = true;
       } else if (existingOverride) {
@@ -1031,6 +1133,12 @@ export class VehiclesService {
       };
       if (Object.keys(vehicleData).length > 0) {
         await tx.vehicle.update({ where: { id: current.id }, data: vehicleData });
+        // Dữ liệu chờ duyệt do chính xe này tạo cập nhật theo giá mới (ADR 0090).
+        await this.vehicleData.captureFromVehicleWithinTx(tx, {
+          tenantId,
+          userId,
+          vehicleId: current.id,
+        });
       }
 
       /*
@@ -1374,6 +1482,14 @@ export class VehiclesService {
     }
 
     return this.getOne(tenantId, id);
+  }
+
+  /**
+   * Cà vẹt / dữ liệu xe đổi ngoài lượt lưu xe ⇒ đồng bộ cờ "không nhận đặt tự lái vì thiếu bảo hiểm
+   * Bắt buộc" trên chợ (ADR 0091 điều 1). Writer vẫn là `ListingsService` (ADR 0008).
+   */
+  syncInsuranceBlockWithinTx(vehicleId: string, tx?: Prisma.TransactionClient): Promise<void> {
+    return this.listings.syncInsuranceBlockForVehicle(vehicleId, tx);
   }
 
   /**
@@ -1889,6 +2005,10 @@ interface VehicleWritableFields {
   motorbikeCategory?: string | null;
   /** Liên kết mẫu xe chuẩn; null = xe khai tay. */
   vehicleCatalogModelId?: string | null;
+  /** Phiên bản trong danh mục (ADR 0090); null = chưa chọn. */
+  vehicleCatalogVariantId?: string | null;
+  /** Giá trị xe nhận bảo hiểm (VND string, ADR 0088). */
+  insuredValue?: string | null;
   lengthMm?: number | null;
   widthMm?: number | null;
   heightMm?: number | null;
@@ -1940,7 +2060,11 @@ function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritab
     ...(dto.vehicleCatalogModelId !== undefined
       ? { vehicleCatalogModelId: dto.vehicleCatalogModelId }
       : {}),
+    ...(dto.vehicleCatalogVariantId !== undefined
+      ? { vehicleCatalogVariantId: dto.vehicleCatalogVariantId }
+      : {}),
     ...(dto.lengthMm !== undefined ? { lengthMm: dto.lengthMm } : {}),
+    ...(dto.insuredValue !== undefined ? { insuredValue: dto.insuredValue } : {}),
     ...(dto.widthMm !== undefined ? { widthMm: dto.widthMm } : {}),
     ...(dto.heightMm !== undefined ? { heightMm: dto.heightMm } : {}),
     ...(dto.curbWeightKg !== undefined ? { curbWeightKg: dto.curbWeightKg } : {}),
@@ -2013,6 +2137,19 @@ function orphanPriceClears(serviceTypes: string[]): Partial<VehicleWritableField
  * xoá luôn liên kết cũ nhưng GIỮ chữ mà chủ xe đã gõ: xe khai tay vẫn phải hiển thị được tên
  * của nó, chỉ mất khả năng lọc theo mẫu chuẩn.
  */
+/** Chọn phiên bản có sẵn (id) HOẶC gõ phiên bản mới (tên) — không cả hai (ADR 0090). */
+function assertSingleVariantChoice(dto: {
+  vehicleCatalogVariantId?: string | null;
+  catalogVariantLabel?: string | null;
+}) {
+  if (dto.vehicleCatalogVariantId && dto.catalogVariantLabel?.trim()) {
+    throw new BadRequestException({
+      code: API_ERROR_CODE.VALIDATION_FAILED,
+      message: 'Chọn phiên bản có sẵn hoặc gõ phiên bản mới, không cả hai',
+    });
+  }
+}
+
 function applyCatalogModel<T extends VehicleWritableInput>(
   dto: T,
   canonical: { id: string; brand: string; model: string; motorbikeCategory: string | null } | null,
@@ -2174,6 +2311,7 @@ function toListItem(
     bodyType: v.bodyType,
     motorbikeCategory: v.motorbikeCategory,
     vehicleCatalogModelId: v.vehicleCatalogModelId,
+    vehicleCatalogVariantId: v.vehicleCatalogVariantId,
     discountPercent: v.discountPercent,
     operationStatus: v.operationStatus,
     publicStatus: v.publicStatus,
@@ -2206,6 +2344,7 @@ function toDetail(
     color: v.color,
     fuelType: v.fuelType,
     lengthMm: v.lengthMm,
+    insuredValue: v.insuredValue ? v.insuredValue.toFixed(0) : null,
     widthMm: v.widthMm,
     heightMm: v.heightMm,
     curbWeightKg: v.curbWeightKg,

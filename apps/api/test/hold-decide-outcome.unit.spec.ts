@@ -81,6 +81,7 @@ describe('allocationForHold — phép chia lượt chốt thật và màn xem tr
     ownerCommissionAmount: new Prisma.Decimal(20_000),
     vehicleInsuranceAmount: new Prisma.Decimal(50_000),
     personalInsuranceAmount: new Prisma.Decimal(20_000),
+    insuranceServiceFeeAmount: new Prisma.Decimal(0),
     promoDiscountAmount: new Prisma.Decimal(0),
     priceSnapshotJson: { fees: { taxAmount: '10000' } } as Prisma.JsonValue,
   };

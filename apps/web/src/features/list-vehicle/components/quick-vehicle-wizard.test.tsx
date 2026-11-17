@@ -30,6 +30,9 @@ import { QuickVehicleWizard } from './QuickVehicleWizard';
  *  4. **Chặn ở đúng cửa**: chưa đăng nhập, chưa có gian hàng, hoặc thiếu quyền tạo xe.
  */
 const nav = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
+vi.mock('@/features/vehicle-data/hooks', async () =>
+  (await import('@/features/vehicle-data/test-vehicle-data')).vehicleDataHooksMock(),
+);
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: nav.push, replace: nav.replace }),
   usePathname: () => '/list-your-vehicle/register',

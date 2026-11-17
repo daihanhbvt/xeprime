@@ -6,6 +6,8 @@ import type {
   AdminVehicleCounts,
   AdminVehicleDetail,
   AdminVehicleFilters,
+  VehicleInsuranceReview,
+  VehicleRegistrationImage,
 } from './types';
 
 const BASE = '/platform/vehicles';
@@ -83,3 +85,13 @@ export const hideVehicle = (id: string, reason: string): Promise<AdminVehicleDet
 
 export const unhideVehicle = (id: string): Promise<AdminVehicleDetail> =>
   apiPost<AdminVehicleDetail>(`${BASE}/${id}/unhide`);
+
+/** Bảo hiểm và giấy tờ của một xe — dữ liệu sống (giá trị khai, giá tham khảo, điều kiện thiếu, cà vẹt). */
+export const fetchVehicleInsuranceReview = (id: string): Promise<VehicleInsuranceReview> =>
+  apiGet<VehicleInsuranceReview>(`/platform/vehicles/${encodeURIComponent(id)}/insurance-review`);
+
+/** URL ảnh cà vẹt, sống ngắn — mỗi lần gọi là một dòng audit ở server. Chỉ gọi khi người xem bấm. */
+export const fetchVehicleRegistrationImage = (id: string): Promise<VehicleRegistrationImage> =>
+  apiGet<VehicleRegistrationImage>(
+    `/platform/vehicles/${encodeURIComponent(id)}/registration-image`,
+  );

@@ -12,7 +12,7 @@
  * Mẫu URL trỏ về trang tra cứu THỬ NGHIỆM: chưa có hợp đồng MIC thật, và GCN duy nhất phát hành
  * được hiện nay là GCN `TEST-…` của adapter giả lập (`INSURANCE_PARTNER=mic_mock`).
  */
-import { INSURANCE_PROVIDER } from '@xeprime/types';
+import { INSURANCE_PREMIUM_BASIS, INSURANCE_PROVIDER } from '@xeprime/types';
 import { Prisma } from '../index';
 import { prisma, seedId } from './context';
 import { CERTIFICATE_URL_TEMPLATE, INSURANCE_PRODUCTS } from './insurance-products.data';
@@ -43,7 +43,12 @@ export async function seedInsuranceProducts(): Promise<number> {
         maxPayoutNoteEn: p.maxPayoutNoteEn,
         certificateUrlTemplate: CERTIFICATE_URL_TEMPLATE,
         displayOrder: p.displayOrder,
-        isActive: true,
+        isActive: p.isActive ?? true,
+        premiumBasis: p.premiumBasis ?? INSURANCE_PREMIUM_BASIS.DAILY,
+        premiumTiersJson: p.premiumTiers
+          ? (p.premiumTiers.map((t) => ({ ...t })) as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
+        claimHotline: p.claimHotline ?? null,
       },
     });
   }

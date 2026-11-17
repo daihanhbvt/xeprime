@@ -1,22 +1,22 @@
 import { useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import { Text, XStack, YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
-import { TURNAROUND_BUFFER_MAX_MINUTES, TURNAROUND_BUFFER_PRESET_MINUTES } from '@xeprime/types';
+import { TURNAROUND_BUFFER_MAX_MINUTES } from '@xeprime/types';
 import { ScreenError } from '@/components/state/ScreenError';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { Button } from '@/components/ui/Button';
-import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
-import { Chip } from '@/components/ui/Chip';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
-import { NumberField } from '@/components/ui/NumberField';
+import { useCurrentUser } from '@/features/auth/hooks/use-auth';
+import { TurnaroundBufferField } from '@/features/rental-policies/components/TurnaroundBufferField';
+import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/shell/partner-track';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
-import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { space } from '@/theme/tokens';
 import { VehicleManageShell, type VehicleSectionWorkspace } from './components/VehicleManageShell';
 import type { VehicleOperationSettings } from './api';
 import {
@@ -31,6 +31,7 @@ const schema = yup.object({
     .min(0, 'bufferRange')
     .max(TURNAROUND_BUFFER_MAX_MINUTES, 'bufferRange')
     .required('bufferRange'),
+  useShopDefault: yup.boolean().defined(),
 });
 type FormValues = yup.InferType<typeof schema>;
 
@@ -91,31 +92,45 @@ function HandoverForm({
   vehicleId: string;
   canEdit: boolean;
 }) {
-  const colors = useColors();
   const t = useTranslations('VehicleManage');
   const tActions = useTranslations('Common.actions');
   const errorMessage = useErrorMessage();
   const toast = useAppToast();
   const save = useSaveVehicleOperationSettings(vehicleId);
   const resolver = useValidationResolver<FormValues>(schema, 'VehicleManage.handover.validation');
+  /*
+   * "Theo gian hàng" chỉ có ở gian hàng (web `isManage`): chủ xe tuyến hoa hồng không có màn chính
+   * sách gian hàng, nên mặc định của họ luôn trống (0) — lưu ở đó luôn là số riêng của xe.
+   */
+  const { data: user } = useCurrentUser();
+  // Chỉ tuyến GÓI có mặc định gian hàng (web `isManage`) — `unconfigured`/chưa rõ tuyến không phải gian hàng.
+  const isShop = resolvePartnerTrack(user) === PARTNER_TRACK.PACKAGE;
 
   const values = useMemo<FormValues>(
     () => ({
       turnaroundBufferMinutes: settings.turnaroundBufferMinutes,
+      useShopDefault: isShop && settings.useShopDefault,
     }),
-    [settings],
+    [settings, isShop],
   );
   const { control, handleSubmit, reset, formState, setValue } = useForm<FormValues>({
     resolver,
     values,
   });
-  const buffer = useWatch({ control, name: 'turnaroundBufferMinutes' });
-  const isPreset = (TURNAROUND_BUFFER_PRESET_MINUTES as readonly number[]).includes(buffer);
+  const useShopDefault = useWatch({ control, name: 'useShopDefault' });
+  const shopMinutes = settings.shopDefaultMinutes ?? 0;
+  const formatBuffer = (minutes: number): string =>
+    minutes === 0
+      ? t('handover.bufferNone')
+      : minutes % 60 === 0
+        ? t('common.hours', { count: minutes / 60 })
+        : t('common.minutes', { count: minutes });
 
   const submit = handleSubmit((next) => {
     save.mutate(
       {
         turnaroundBufferMinutes: next.turnaroundBufferMinutes,
+        useShopDefault: next.useShopDefault,
       },
       {
         onSuccess: (saved) => {
@@ -123,6 +138,7 @@ function HandoverForm({
           // không theo thứ người dùng vừa gõ — nếu không, nút Lưu còn sáng sau một lần lưu thành công.
           reset({
             turnaroundBufferMinutes: saved.turnaroundBufferMinutes,
+            useShopDefault: isShop && saved.useShopDefault,
           });
           toast.showSuccess(t('handover.saved'));
         },
@@ -136,59 +152,30 @@ function HandoverForm({
       {/* Khung giờ giao/nhận đã gỡ (ADR 0078) — xe nhận và trả mọi giờ; chỉ còn thời gian chuẩn bị. */}
       <Card>
         <YStack gap={space.sm}>
-          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+          <SectionHeader icon="time-outline" lead={t('handover.bufferHint')}>
             {t('handover.bufferTitle')}
-          </Text>
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {t('handover.bufferHint')}
-          </Text>
-          <XStack gap={space.xs} flexWrap="wrap">
-            {TURNAROUND_BUFFER_PRESET_MINUTES.map((minutes) => (
-              <Chip
-                key={minutes}
-                label={
-                  minutes === 0
-                    ? t('handover.bufferNone')
-                    : t('common.hours', { count: minutes / 60 })
+          </SectionHeader>
+          <TurnaroundBufferField
+            control={control}
+            name="turnaroundBufferMinutes"
+            label={t('handover.bufferTitle')}
+            disabled={!canEdit}
+            {...(isShop
+              ? {
+                  inherit: {
+                    active: useShopDefault,
+                    label: t('handover.bufferShop', { value: formatBuffer(shopMinutes) }),
+                    onChange: (active: boolean) => {
+                      setValue('useShopDefault', active, { shouldDirty: true });
+                      // Rời "theo gian hàng" bắt đầu từ chính số đang áp — không nhảy về 0.
+                      if (!active && useShopDefault) {
+                        setValue('turnaroundBufferMinutes', shopMinutes, { shouldDirty: true });
+                      }
+                    },
+                  },
                 }
-                selected={isPreset && buffer === minutes}
-                {...(canEdit
-                  ? {
-                      onPress: () =>
-                        setValue('turnaroundBufferMinutes', minutes, {
-                          shouldDirty: true,
-                          shouldValidate: true,
-                        }),
-                    }
-                  : {})}
-              />
-            ))}
-            <Chip
-              label={t('handover.bufferCustom')}
-              selected={!isPreset}
-              {...(canEdit
-                ? {
-                    onPress: () =>
-                      setValue('turnaroundBufferMinutes', 30, {
-                        shouldDirty: true,
-                        shouldValidate: true,
-                      }),
-                  }
-                : {})}
-            />
-          </XStack>
-          {!isPreset ? (
-            <NumberField
-              control={control}
-              name="turnaroundBufferMinutes"
-              label={t('handover.bufferCustomLabel')}
-              required
-              min={0}
-              max={TURNAROUND_BUFFER_MAX_MINUTES}
-              editable={canEdit}
-            />
-          ) : null}
-          <Callout tone="info">{t('handover.scopeNote')}</Callout>
+              : {})}
+          />
         </YStack>
       </Card>
 
@@ -218,4 +205,3 @@ function HandoverForm({
     </YStack>
   );
 }
-

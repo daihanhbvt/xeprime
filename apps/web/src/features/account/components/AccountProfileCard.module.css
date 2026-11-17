@@ -1,0 +1,239 @@
+/*
+ * Thẻ hồ sơ cá nhân - design `24131:71668`: rộng 400 (cột trái của trang), viền vàng, bo 16, đệm
+ * 48 trên / 20 quanh, các khối cách 16. Nền vàng đầu thẻ là ảnh của bản vẽ (`24131:71671`) mờ dần
+ * xuống dưới (mặt nạ `24131:71670`: cao 132, đục → trong).
+ */
+.card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-md);
+  overflow: hidden;
+  padding: var(--xp-space-48) var(--xp-space-20) var(--xp-space-20);
+  border: 1px solid var(--xp-color-primary-glow);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 0 6px 0 rgba(10, 13, 18, 0.04);
+}
+
+.cover {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 132px;
+  background: url('/partner/account-profile-cover.webp') center top / cover no-repeat;
+  mask-image: linear-gradient(180deg, #000 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.avatarWrap {
+  position: relative;
+  flex: none;
+  width: 96px;
+  height: 96px;
+}
+
+/* Hai class: nền mặc định của `.ant-avatar` (nạp lúc chạy, sau CSS Module) đè một class đơn. */
+.avatarWrap .avatar {
+  border: 2px solid var(--xp-color-bg-container);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-strong);
+  font-size: var(--xp-font-size-h2);
+  font-weight: var(--xp-font-weight-semibold);
+  filter: drop-shadow(0 12px 8px rgba(10, 13, 18, 0.08)) drop-shadow(0 4px 3px rgba(10, 13, 18, 0.03));
+}
+
+/* Nút máy ảnh 28px góc dưới phải - nền vàng, viền trắng 2 (design `24131:71674`). */
+.camera {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 2px solid var(--xp-color-bg-container);
+  border-radius: 50%;
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.camera:hover:not(:disabled) {
+  background: var(--xp-color-primary-hover);
+}
+
+.camera:focus-visible,
+.remove:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.camera:disabled,
+.remove:disabled {
+  cursor: not-allowed;
+  opacity: var(--xp-disabled-opacity);
+}
+
+/* Gỡ ảnh - cùng dáng nút gỡ logo/ảnh bìa của trang Thông tin cửa hàng. */
+.remove {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 2px solid var(--xp-color-bg-container);
+  border-radius: 50%;
+  background: var(--xp-color-text);
+  color: var(--xp-color-bg-container);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.identity {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  text-align: center;
+}
+
+.name {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h2);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h2);
+  overflow-wrap: anywhere;
+}
+
+/* Viên vai: nền tối, viền vàng, chấm + chữ vàng (design `24131:71678`). */
+.role {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border: 1px solid var(--xp-color-primary-glow);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-text);
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+}
+
+.roleDot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.workspace {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+}
+
+.workspaceItem {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--xp-color-border-strong);
+}
+
+.divider {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--xp-color-border);
+}
+
+.form {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+/* Ô họ tên đứng sát khung ghi chú - khoảng cách do `gap` của form, không do lề của Form.Item. */
+.form :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+.fieldIcon {
+  color: var(--xp-color-text-tertiary);
+  font-size: 20px;
+}
+
+.note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-12);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.note p {
+  margin: 0;
+}
+
+.note strong {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.noteLink {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: var(--xp-space-6);
+  color: var(--xp-color-primary-hover);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.noteLink:hover {
+  color: var(--xp-color-primary-active);
+}
+
+.actions {
+  display: flex;
+  gap: var(--xp-space-12);
+  padding-top: var(--xp-space-12);
+}
+
+.actions > :global(.ant-btn) {
+  flex: 1 1 0;
+}

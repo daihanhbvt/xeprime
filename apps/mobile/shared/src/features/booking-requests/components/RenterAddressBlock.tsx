@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useController, type Control, type Path, type PathValue } from 'react-hook-form';
 import { provinceCenter, type GeoPoint } from '@xeprime/domain';
 import { Text, XStack, YStack } from 'tamagui';

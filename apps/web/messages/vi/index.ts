@@ -46,6 +46,7 @@ import branches from '@xeprime/domain/messages/vi/branches.json';
 import customers from '@xeprime/domain/messages/vi/customers.json';
 import finance from '@xeprime/domain/messages/vi/finance.json';
 import adminCatalog from '@xeprime/domain/messages/vi/admin-catalog.json';
+import adminVehicleData from '@xeprime/domain/messages/vi/admin-vehicle-data.json';
 import adminVehicles from '@xeprime/domain/messages/vi/admin-vehicles.json';
 import adminBookings from '@xeprime/domain/messages/vi/admin-bookings.json';
 import adminTrips from '@xeprime/domain/messages/vi/admin-trips.json';
@@ -74,6 +75,7 @@ import insurance from '@xeprime/domain/messages/vi/insurance.json';
 import adminInsurance from '@xeprime/domain/messages/vi/admin-insurance.json';
 import platformSellers from '@xeprime/domain/messages/vi/platform-sellers.json';
 import adminCustomers from '@xeprime/domain/messages/vi/admin-customers.json';
+import platformWallets from '@xeprime/domain/messages/vi/platform-wallets.json';
 import adminFollowUps from '@xeprime/domain/messages/vi/admin-follow-ups.json';
 import adminAppConfig from '@xeprime/domain/messages/vi/admin-app-config.json';
 import adminStaff from '@xeprime/domain/messages/vi/admin-staff.json';
@@ -116,6 +118,7 @@ const messages = {
   Customers: customers,
   Finance: finance,
   AdminCatalog: adminCatalog,
+  AdminVehicleData: adminVehicleData,
   AdminVehicles: adminVehicles,
   AdminBookings: adminBookings,
   AdminTrips: adminTrips,
@@ -144,6 +147,7 @@ const messages = {
   AdminInsurance: adminInsurance,
   PlatformSellers: platformSellers,
   AdminCustomers: adminCustomers,
+  PlatformWallets: platformWallets,
   AdminFollowUps: adminFollowUps,
   AdminAppConfig: adminAppConfig,
   AdminStaff: adminStaff,

@@ -20,6 +20,8 @@ import { useRecordPayment } from '../hooks/use-settlement';
 import type { RecordPaymentInput } from '../api';
 
 const NOTE_MAX = 500;
+/** Web `payments/schema.ts` + API `@MaxLength(255)` cho mã tra soát. */
+const REFERENCE_MAX = 255;
 
 /** Suy từ CHÍNH schema — `yup.oneOf` thu hẹp kiểu, interface viết tay sẽ lệch với resolver. */
 type PaymentFormValues = yup.InferType<ReturnType<typeof buildPaymentSchema>>;
@@ -42,7 +44,7 @@ function buildPaymentSchema(amountLabel: string) {
       .moreThan(0, amountLabel)
       .test('required', amountLabel, (v) => v != null),
     method: yup.string().oneOf(PAYMENT_METHOD_VALUES).required(),
-    referenceCode: yup.string().trim().max(NOTE_MAX).default(''),
+    referenceCode: yup.string().trim().max(REFERENCE_MAX).default(''),
     description: yup.string().trim().max(NOTE_MAX).default(''),
   });
 }

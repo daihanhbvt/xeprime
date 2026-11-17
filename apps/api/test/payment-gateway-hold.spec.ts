@@ -93,7 +93,6 @@ function snapshotOf(): BookingPriceSnapshot {
         freeCancelHours: 4,
         depositPercent: 0,
         depositMinAmount: '0',
-        depositMaxPercent: 30,
         taxEnabled: false,
         taxRates: null,
         taxLegalBasis: null,

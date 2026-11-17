@@ -9,8 +9,9 @@ import {
   HistoryOutlined,
   InfoCircleOutlined,
   PictureOutlined,
+  SafetyCertificateOutlined,
 } from '@ant-design/icons';
-import { Alert, Button, Collapse, Tag, type CollapseProps } from 'antd';
+import { Alert, Button, Collapse, Skeleton, Tag, type CollapseProps } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState, type ReactNode } from 'react';
@@ -54,7 +55,10 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
+import { fetchVehicleRegistrationImage } from '../api';
+import { useVehicleInsuranceReview } from '../hooks/use-admin-vehicles';
 import type { AdminVehicleDetail } from '../types';
+import { VehicleInsuranceReviewBlock } from './VehicleInsuranceReviewBlock';
 import styles from './AdminVehicleDetailDrawer.module.css';
 
 /** Khối mở sẵn: đủ để nhận diện xe và kiểm giá mà không phải bấm; mô tả và hoạt động mở khi cần. */
@@ -294,6 +298,12 @@ function useSectionItems(
       label: label(<DollarOutlined aria-hidden />, t('sections.pricing')),
       children: <WorkDrawerFacts items={pricing} />,
     },
+    // Bảo hiểm và giấy tờ (đợt rà Admin 16/11/2026) — đóng mặc định, chỉ tải khi mở.
+    {
+      key: 'insurance',
+      label: label(<SafetyCertificateOutlined aria-hidden />, t('sections.insurance')),
+      children: <VehicleInsuranceSection vehicleId={vehicle.id} />,
+    },
     ...(vehicle.description
       ? [
           {
@@ -309,6 +319,34 @@ function useSectionItems(
       children: <WorkDrawerFacts items={activity} />,
     },
   ];
+}
+
+/** Mục "Bảo hiểm và giấy tờ" — tải riêng, đủ trạng thái tải / lỗi. */
+function VehicleInsuranceSection({ vehicleId }: { vehicleId: string }) {
+  const t = useTranslations('AdminVehicles.insuranceReview');
+  const tCommon = useTranslations('Common');
+  const review = useVehicleInsuranceReview(vehicleId);
+  if (review.isPending) return <Skeleton active paragraph={{ rows: 3 }} />;
+  if (review.isError || !review.data) {
+    return (
+      <Alert
+        type="error"
+        showIcon
+        title={t('loadError')}
+        action={
+          <Button size="small" onClick={() => void review.refetch()}>
+            {tCommon('actions.retry')}
+          </Button>
+        }
+      />
+    );
+  }
+  return (
+    <VehicleInsuranceReviewBlock
+      review={review.data}
+      fetchImage={() => fetchVehicleRegistrationImage(vehicleId)}
+    />
+  );
 }
 
 /* ──────────────────────── Cột phải: trên chợ + gian hàng ──────────────────────── */

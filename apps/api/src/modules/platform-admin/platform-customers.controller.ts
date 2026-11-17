@@ -1,10 +1,11 @@
-import { Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ACCOUNT_REALM, PERMISSION } from '@xeprime/types';
 import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import {
   CustomerContactDto,
+  CustomerLockDto,
   PlatformCustomerDetailDto,
   PlatformCustomerListQueryDto,
   PlatformCustomerPageDto,
@@ -13,7 +14,8 @@ import { PlatformCustomersService } from './platform-customers.service';
 
 /**
  * Tra cứu khách thuê toàn hệ thống (Phase 7 — build plan §11.1: "Tra cứu có masking PII").
- * CHỈ ĐỌC. SĐT/email luôn trả bản đã che; bỏ che là endpoint riêng, quyền riêng, ghi audit.
+ * SĐT/email luôn trả bản đã che; bỏ che là endpoint riêng, quyền riêng, ghi audit. Thao tác ghi
+ * duy nhất là khoá / mở khoá tài khoản (quyền `platform.customers.lock`, đợt rà Admin 16/11/2026).
  */
 @ApiTags('platform-customers')
 @Controller('platform/customers')
@@ -48,5 +50,39 @@ export class PlatformCustomersController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<CustomerContactDto> {
     return this.customers.revealContact(id, user.id);
+  }
+
+  @Post(':id/lock')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions(PERMISSION.PLATFORM_CUSTOMER_VIEW, PERMISSION.PLATFORM_CUSTOMER_LOCK)
+  @ApiOperation({
+    summary: 'Khoá tài khoản khách: thu hồi mọi phiên web + app, chặn đăng nhập (lý do bắt buộc)',
+    description:
+      'Một transaction: `active → locked` + thu hồi phiên + audit `customer.lock`. Không tự huỷ yêu cầu/đơn đang có. ' +
+      '409 `CUSTOMER_ACCOUNT_STATE_CONFLICT` khi tài khoản không còn ở trạng thái hoạt động.',
+  })
+  @ApiOkResponse({ type: PlatformCustomerDetailDto })
+  lock(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CustomerLockDto,
+  ): Promise<PlatformCustomerDetailDto> {
+    return this.customers.lock(id, user.id, dto.reason);
+  }
+
+  @Post(':id/unlock')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions(PERMISSION.PLATFORM_CUSTOMER_VIEW, PERMISSION.PLATFORM_CUSTOMER_LOCK)
+  @ApiOperation({
+    summary: 'Mở khoá tài khoản khách (lý do bắt buộc, ghi audit)',
+    description: '409 `CUSTOMER_ACCOUNT_STATE_CONFLICT` khi tài khoản không ở trạng thái khoá.',
+  })
+  @ApiOkResponse({ type: PlatformCustomerDetailDto })
+  unlock(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CustomerLockDto,
+  ): Promise<PlatformCustomerDetailDto> {
+    return this.customers.unlock(id, user.id, dto.reason);
   }
 }

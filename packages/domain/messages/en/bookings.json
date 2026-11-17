@@ -351,6 +351,7 @@
       "notesPlaceholder": "E.g. returned at the lot, customer handed back the spare key",
       "surchargeLabel": "Extra charges",
       "surchargeCategory": "Charge type",
+      "surchargeItem": "Surcharge {index}",
       "surchargeAmountPlaceholder": "Enter the extra charge",
       "surchargeRemove": "Remove charge line {index}",
       "surchargeAdd": "Add a charge",
@@ -522,6 +523,8 @@
       "price": "Price"
     },
     "vehicle": {
+        "available": "Available",
+        "pricePerDay": "{price}/day",
       "title": "Pick a vehicle",
       "searchLabel": "Search vehicles",
       "searchPlaceholder": "Name, plate, code…",
@@ -629,6 +632,9 @@
     "partyB": "Lessee (Party B)",
     "phone": "Phone: {phone}",
     "bankAccount": "Account: {account}",
+    "email": "Email: {email}",
+    "taxCode": "Tax code: {code}",
+    "businessLicense": "Business licence: {code}",
     "vehicleHeading": "Vehicle",
     "vehicleName": "Vehicle",
     "plateNumber": "Plate number",
@@ -873,6 +879,7 @@
         "placeUnknown": "No address yet"
       },
       "holdState": {
+        "awaitingApproval": "Awaiting approval",
         "expected": "Estimated",
         "unpaid": "Unpaid",
         "paid": "Paid"
@@ -942,6 +949,7 @@
     }
   },
   "detailPage": {
+    "tabs": { "prep": "Preparation", "trip": "Trip & time", "extra": "Extras" },
     "title": "Booking details · #{code}",
     "createdAt": "Created {date}",
     "stepperLabel": "Booking progress",
@@ -958,6 +966,7 @@
     "cancelledBanner": "Booking cancelled - the trip did not take place.",
     "noShowBanner": "The customer did not show up - the booking is closed.",
     "actions": {
+      "menuTitle": "Actions",
       "viewContract": "View contract",
       "createContract": "Create contract",
       "moneyHistory": "Payment history",
@@ -1028,6 +1037,7 @@
       "title": "Trip earnings"
     },
     "side": {
+      "schedule": "Vehicle schedule",
       "serviceType": "Service",
       "pickup": "Pickup",
       "return": "Return",

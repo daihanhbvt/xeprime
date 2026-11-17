@@ -1,7 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  INSURANCE_PREMIUM_BASIS,
   INSURANCE_PRODUCT_KIND,
+  readInsurancePremiumTiers,
   type InsuranceOfferedByKind,
+  type InsurancePremiumTier,
   type InsuranceProductKind,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -43,7 +46,14 @@ export type InsuranceProductSource = Pick<PrismaService, 'insuranceProduct'>;
  */
 @Injectable()
 export class InsuranceOfferService {
-  private cache: { kinds: ReadonlySet<string>; at: number } | null = null;
+  private cache: {
+    kinds: ReadonlySet<string>;
+    /** Biểu phí bậc của sản phẩm `IV` đang bật — `null` = sản phẩm tính theo ngày (ADR 0088). */
+    vehicleTripTiers: InsurancePremiumTier[] | null;
+    /** % phí thu hộ của sản phẩm `IV` đang bật — `null` khi công tắc tắt (ADR 0091 điều 3). */
+    vehicleTripServiceFeePercent: number | null;
+    at: number;
+  } | null = null;
   /** Tăng mỗi lần `invalidate` — một lượt đọc bắt đầu TRƯỚC lần xoá không được ghi đè cache mới. */
   private generation = 0;
 
@@ -54,11 +64,39 @@ export class InsuranceOfferService {
 
   async offeredByKind(): Promise<InsuranceOfferedByKind> {
     if (!this.partner.configured) return NOTHING_OFFERED;
-    const kinds = await this.activeKinds();
+    const { kinds } = await this.active();
+    /*
+     * Đối tác thật có thể chỉ phát hành MỘT loại (MIC: chỉ vật chất xe — ADR 0088). Bán một loại
+     * không ai phát hành là thu tiền của một hợp đồng sẽ `failed` mãi mãi.
+     */
+    const supports = (kind: InsuranceProductKind) =>
+      kinds.has(kind) && (this.partner.supportsKind?.(kind) ?? true);
     return {
-      vehicleProtection: kinds.has(INSURANCE_PRODUCT_KIND.VEHICLE_TRIP),
-      tripInsurance: kinds.has(INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT),
+      vehicleProtection: supports(INSURANCE_PRODUCT_KIND.VEHICLE_TRIP),
+      tripInsurance: supports(INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT),
     };
+  }
+
+  /**
+   * Biểu phí BẬC của bảo hiểm vật chất xe đang bán (ADR 0088) — `null` khi sản phẩm đang bán tính
+   * theo NGÀY, hoặc không bán vật chất xe. Có giá trị ⇒ phí bắt buộc theo giá trị xe, thay biểu phí
+   * ngày của `fee_policies`.
+   */
+  async vehicleTripTiers(): Promise<InsurancePremiumTier[] | null> {
+    const offered = await this.offeredByKind();
+    if (!offered.vehicleProtection) return null;
+    return (await this.active()).vehicleTripTiers;
+  }
+
+  /**
+   * % phí thu hộ bảo hiểm của nền tảng trên `IV` (ADR 0091 điều 3) — `null` khi vật chất xe không
+   * được bán hoặc công tắc của sản phẩm đang tắt. Một nguồn cho mọi đường tính tiền, cùng cổng với
+   * `vehicleTripTiers`.
+   */
+  async vehicleTripServiceFeePercent(): Promise<number | null> {
+    const offered = await this.offeredByKind();
+    if (!offered.vehicleProtection) return null;
+    return (await this.active()).vehicleTripServiceFeePercent;
   }
 
   /** Một loại sản phẩm có đang được bán không — đọc cùng câu trả lời với `offeredByKind`. */
@@ -74,16 +112,43 @@ export class InsuranceOfferService {
     this.generation += 1;
   }
 
-  private async activeKinds(): Promise<ReadonlySet<string>> {
+  private async active(): Promise<{
+    kinds: ReadonlySet<string>;
+    vehicleTripTiers: InsurancePremiumTier[] | null;
+    vehicleTripServiceFeePercent: number | null;
+  }> {
     const now = Date.now();
-    if (this.cache && now - this.cache.at < INSURANCE_OFFER_CACHE_TTL_MS) return this.cache.kinds;
+    if (this.cache && now - this.cache.at < INSURANCE_OFFER_CACHE_TTL_MS) return this.cache;
     const generation = this.generation;
     const active = await this.products.insuranceProduct.findMany({
       where: { isActive: true },
-      select: { kind: true },
+      orderBy: { displayOrder: 'asc' },
+      select: {
+        kind: true,
+        premiumBasis: true,
+        premiumTiersJson: true,
+        serviceFeeEnabled: true,
+        serviceFeePercent: true,
+      },
     });
     const kinds = new Set(active.map((p) => p.kind));
-    if (generation === this.generation) this.cache = { kinds, at: now };
-    return kinds;
+    const vehicleTrip = active.find((p) => p.kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP);
+    const isTier = vehicleTrip?.premiumBasis === INSURANCE_PREMIUM_BASIS.VALUE_TIER;
+    const vehicleTripTiers = isTier
+      ? readInsurancePremiumTiers(vehicleTrip.premiumTiersJson)
+      : null;
+    // Sản phẩm bậc mà biểu phí hỏng ⇒ KHÔNG bán (không lặng lẽ rơi về biểu phí ngày).
+    if (isTier && !vehicleTripTiers) kinds.delete(INSURANCE_PRODUCT_KIND.VEHICLE_TRIP);
+    const serviceFeePercent = vehicleTrip?.serviceFeeEnabled
+      ? Number(vehicleTrip.serviceFeePercent)
+      : 0;
+    const fresh = {
+      kinds: kinds as ReadonlySet<string>,
+      vehicleTripTiers,
+      vehicleTripServiceFeePercent: serviceFeePercent > 0 ? serviceFeePercent : null,
+      at: now,
+    };
+    if (generation === this.generation) this.cache = fresh;
+    return fresh;
   }
 }

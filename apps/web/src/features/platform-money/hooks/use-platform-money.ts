@@ -159,6 +159,8 @@ function useInvalidateQueue() {
   const queryClient = useQueryClient();
   return () => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.platformWithdrawals.all });
+    // Lệnh rút đổi số dư / đang rút của chủ ví — drawer Ví điểm đang mở phải đọc lại.
+    void queryClient.invalidateQueries({ queryKey: queryKeys.platformWallets.all });
     void queryClient.invalidateQueries({ queryKey: queryKeys.platformMoney.all });
   };
 }

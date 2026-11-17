@@ -6,6 +6,8 @@ import type { components } from '@xeprime/types';
  */
 export type RentalPolicyValues = components['schemas']['RentalPolicyValuesDto'];
 export type ShopRentalPolicy = components['schemas']['ShopRentalPolicyDto'];
+/** Xe kế thừa chính sách mà thiếu dữ liệu bảo hiểm (ADR 0091 điều 1). */
+export type ShopInsuranceImpact = components['schemas']['ShopInsuranceImpactDto'];
 export type SaveRentalPolicyInput = components['schemas']['SaveRentalPolicyDto'];
 export type DeliveryTier = components['schemas']['DeliveryTierDto'];
 export type DiscountTier = components['schemas']['DiscountTierDto'];

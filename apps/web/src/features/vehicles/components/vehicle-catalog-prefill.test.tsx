@@ -52,6 +52,9 @@ const MODELS = [
   ]),
 ];
 
+vi.mock('@/features/vehicle-data/hooks', async () =>
+  (await import('@/features/vehicle-data/test-vehicle-data')).vehicleDataHooksMock(),
+);
 vi.mock('@/features/catalog/use-catalog', async () =>
   (await import('@/features/catalog/test-catalog')).catalogModuleMock(),
 );

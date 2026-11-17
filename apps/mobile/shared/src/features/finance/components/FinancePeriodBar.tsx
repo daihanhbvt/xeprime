@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { ScrollView } from 'react-native';
 import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { buildPeriodRange, dayjs, type PeriodKey } from '@xeprime/domain';
-import { Chip } from '@/components/ui/Chip';
+import { UnderlineTabs } from '@/components/ui/UnderlineTabs';
 import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
 import { FieldBox } from '@/components/ui/FieldBox';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -61,20 +60,13 @@ export function FinancePeriodBar({
 
   return (
     <YStack gap={space.sm}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: space.xs }}
-      >
-        {periods.map((period) => (
-          <Chip
-            key={period}
-            label={t(period)}
-            selected={active === period}
-            onPress={() => onChange(buildPeriodRange(period))}
-          />
-        ))}
-      </ScrollView>
+      {/* Dải tab viên chung (chuẩn màn Đơn thuê, 16/11/2026); khoảng tự chọn thì không ô nào sáng. */}
+      {/* Dải kỳ dạng tab gạch chân vàng như Figma (Tổng quan doanh thu); khoảng tự chọn thì không tab nào sáng. */}
+      <UnderlineTabs
+        items={periods.map((period) => ({ key: period as string, label: t(period) }))}
+        value={(active as string | undefined) ?? ''}
+        onChange={(period) => onChange(buildPeriodRange(period as (typeof periods)[number]))}
+      />
 
       {customRange ? (
         <>

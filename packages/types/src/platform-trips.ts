@@ -1,8 +1,9 @@
 import { HOLD_PAYMENT_REMINDER_REMAINING_MINUTES } from './holds';
 import { BOOKING_REQUEST_FINAL_REMINDER_REMAINING_MINUTES } from './status/booking-request';
+import { DRIVER_MISSING_ALERT_LEAD_MINUTES } from './status/driver';
 
 /**
- * VẬN HÀNH CHUYẾN nhìn từ khu Platform Admin (`/platform/trips`) — bốn hàng đợi theo đúng thứ tự
+ * VẬN HÀNH CHUYẾN nhìn từ khu Platform Admin (`/platform/trips`) — các hàng đợi theo đúng thứ tự
  * một chuyến đi qua nền tảng (ADR 0044): khách hỏi → chủ xe nhận → khách giữ chỗ → giao xe →
  * trả xe. Người trực nền tảng không chuyển trạng thái gì (đó là việc của gian hàng — ADR 0006);
  * họ nhìn để biết chỗ nào đang kẹt và nhắc đúng người.
@@ -18,6 +19,12 @@ export const PLATFORM_TRIP_QUEUE = {
   PICKUP_SOON: 'pickup_soon',
   /** Xe đang ở với khách — và những chuyến đã quá giờ trả. */
   ACTIVE: 'active',
+  /**
+   * Đơn CÓ TÀI XẾ đang kẹt khâu tài xế (ADR 0066 · 0067 · 0074): sắp nhận xe mà chưa có tài xế nhận,
+   * lượt gán quá hạn trả lời, hoặc tài xế đã rút mà bên thuê chưa điều phối lại. Nền tảng chỉ nhìn
+   * và gọi bên thuê - không gán tài xế thay họ.
+   */
+  DRIVER: 'driver',
 } as const;
 
 export type PlatformTripQueue = (typeof PLATFORM_TRIP_QUEUE)[keyof typeof PLATFORM_TRIP_QUEUE];
@@ -49,6 +56,34 @@ export type PlatformTripBookingQueue = (typeof PLATFORM_TRIP_BOOKING_QUEUES)[num
 export function isPlatformTripRequestQueue(value: unknown): value is PlatformTripRequestQueue {
   return (PLATFORM_TRIP_REQUEST_QUEUES as readonly unknown[]).includes(value);
 }
+
+/**
+ * Vấn đề tài xế của MỘT đơn trong hàng đợi `driver` — ba nhóm loại trừ nhau, ưu tiên từ trên xuống:
+ *
+ *  - `dropped`: tài xế ĐÃ NHẬN rồi rút (ADR 0074), chưa ai nhận lại — vào hàng đợi khi đã quá hạn
+ *    điều phối `driver_reassign_by` hoặc giờ nhận đã vào cửa sổ `TRIP_PICKUP_WINDOW_HOURS`;
+ *  - `response_overdue`: lượt gán `pending` đã quá `driver_respond_by` mà worker chưa kịp trả về;
+ *  - `unassigned`: giờ nhận trong `TRIP_PICKUP_WINDOW_HOURS` tới mà chưa có tài xế NHẬN (chưa gán,
+ *    hoặc đang chờ tài xế trả lời trong hạn).
+ */
+export const PLATFORM_TRIP_DRIVER_ISSUE = {
+  DROPPED: 'dropped',
+  RESPONSE_OVERDUE: 'response_overdue',
+  UNASSIGNED: 'unassigned',
+} as const;
+
+export type PlatformTripDriverIssue =
+  (typeof PLATFORM_TRIP_DRIVER_ISSUE)[keyof typeof PLATFORM_TRIP_DRIVER_ISSUE];
+
+export const PLATFORM_TRIP_DRIVER_ISSUE_VALUES = Object.values(
+  PLATFORM_TRIP_DRIVER_ISSUE,
+) as PlatformTripDriverIssue[];
+
+/**
+ * Đơn có tài xế còn dưới ngần này phút tới giờ nhận mà chưa có tài xế nhận là KHẨN — đúng mốc worker
+ * báo khẩn bên thuê (ADR 0067 điều 2), để thông báo tự động và màn người trực nói cùng một mốc.
+ */
+export const TRIP_DRIVER_URGENT_MINUTES = DRIVER_MISSING_ALERT_LEAD_MINUTES;
 
 export function isPlatformTripBookingQueue(value: unknown): value is PlatformTripBookingQueue {
   return (PLATFORM_TRIP_BOOKING_QUEUES as readonly unknown[]).includes(value);

@@ -102,50 +102,49 @@ describe('CustomerDocumentsPanel - quyền xem TỆP', () => {
 });
 
 describe('CustomerDocumentsPanel - quyền QUẢN LÝ', () => {
-  it('thiếu `customers.documents.manage`: không tải lên, không đối chiếu, không gỡ', async () => {
+  it('thiếu `customers.documents.manage`: không tải lên, không đối chiếu, không xoá', async () => {
     const view = await renderPanel({ canManage: false, canViewFiles: true });
     await view.findByText(/cccd/);
 
-    expect(view.queryByRole('button', { name: /Tải giấy tờ lên$/ })).toBeNull();
-    expect(view.queryByRole('button', { name: /Đã đối chiếu$/ })).toBeNull();
-    expect(view.queryByLabelText('Gỡ cccd.jpg')).toBeNull();
+    expect(view.queryByRole('button', { name: /^Tải lên giấy tờ$/ })).toBeNull();
+    expect(view.queryByRole('button', { name: /Xác nhận đã đối chiếu$/ })).toBeNull();
+    expect(view.queryByRole('button', { name: /^Xoá$/ })).toBeNull();
   });
 
-  it('có quyền quản lý: đủ tải lên · đối chiếu · gỡ', async () => {
+  it('có quyền quản lý: đủ tải lên · đối chiếu · xoá', async () => {
     const view = await renderPanel({ canManage: true, canViewFiles: true });
     await view.findByText(/cccd/);
 
-    expect(view.getByRole('button', { name: /Tải giấy tờ lên$/ })).toBeTruthy();
-    expect(view.getByRole('button', { name: /Đã đối chiếu$/ })).toBeTruthy();
-    expect(view.getByLabelText('Gỡ cccd.jpg')).toBeTruthy();
+    expect(view.getAllByRole('button', { name: /^Tải lên giấy tờ$/ }).length).toBeGreaterThan(0);
+    expect(view.getByRole('button', { name: /Xác nhận đã đối chiếu$/ })).toBeTruthy();
+    expect(view.getByRole('button', { name: /^Xoá$/ })).toBeTruthy();
   });
 
-  it('giấy tờ ĐÃ đối chiếu: nút đổi thành "Đối chiếu lại", trạng thái hạn vẫn hiện riêng', async () => {
+  it('giấy tờ ĐÃ đối chiếu: nút đổi thành "Thay giấy tờ", trạng thái "Đã đối chiếu"', async () => {
     const view = await renderPanel({ canManage: true, canViewFiles: true }, [
       doc({ verifiedAt: '2026-08-02T02:00:00.000Z', verifyMethod: 'vneid' }),
     ]);
     await view.findByText(/cccd/);
 
-    expect(view.getByRole('button', { name: /Đối chiếu lại$/ })).toBeTruthy();
-    // Đối chiếu ≠ còn hạn: hai trạng thái hiện riêng, không gộp thành một dấu "ổn".
-    expect(view.getByText('Không có hạn')).toBeTruthy();
+    expect(view.getByRole('button', { name: /Thay giấy tờ$/ })).toBeTruthy();
+    expect(view.getByText('Đã đối chiếu')).toBeTruthy();
   });
 
-  it('hồ sơ LƯU TRỮ: xem được nhưng không tải lên / đối chiếu / gỡ', async () => {
+  it('hồ sơ LƯU TRỮ: xem được nhưng không tải lên / đối chiếu / xoá', async () => {
     const view = await renderPanel({ canManage: true, canViewFiles: true, disabled: true });
     await view.findByText(/cccd/);
 
     expect(view.getByText(/cccd\.jpg/)).toBeTruthy();
-    expect(view.queryByRole('button', { name: /Tải giấy tờ lên$/ })).toBeNull();
-    expect(view.queryByRole('button', { name: /Đã đối chiếu$/ })).toBeNull();
-    expect(view.queryByLabelText('Gỡ cccd.jpg')).toBeNull();
+    expect(view.queryByRole('button', { name: /^Tải lên giấy tờ$/ })).toBeNull();
+    expect(view.queryByRole('button', { name: /Xác nhận đã đối chiếu$/ })).toBeNull();
+    expect(view.queryByRole('button', { name: /^Xoá$/ })).toBeNull();
   });
 });
 
 describe('CustomerDocumentsPanel - trạng thái dữ liệu', () => {
-  it('rỗng thật: nói rõ chưa có giấy tờ nào', async () => {
+  it('rỗng thật: vẫn đủ ô cố định (CCCD · bằng lái · hộ chiếu · khác), mỗi ô "Chưa tải lên"', async () => {
     const view = await renderPanel({ canManage: false, canViewFiles: false }, []);
-    expect(await view.findByText('Chưa có giấy tờ nào của khách này')).toBeTruthy();
+    expect((await view.findAllByText('Chưa tải lên')).length).toBe(4);
   });
 
   it('lỗi tải danh sách: hiện lỗi có nút thử lại, KHÔNG biến thành trạng thái rỗng', async () => {
@@ -160,6 +159,6 @@ describe('CustomerDocumentsPanel - trạng thái dữ liệu', () => {
     );
 
     expect(await view.findByText('Không tải được danh sách giấy tờ')).toBeTruthy();
-    expect(view.queryByText('Chưa có giấy tờ nào của khách này')).toBeNull();
+    expect(view.queryByText('Chưa tải lên')).toBeNull();
   });
 });

@@ -48,16 +48,42 @@
   font-weight: var(--xp-font-weight-semibold);
 }
 
-.filters {
+/* Nội dung một hãng: hành động, dải số liệu, bộ lọc, các nhóm dòng xe (ADR 0096). */
+.tree {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
+  min-width: 0;
   gap: var(--xp-space-md);
 }
 
-.search {
-  width: 260px;
-  max-width: 100%;
+.treeActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--xp-space-xs);
+}
+
+/* Xe của một dòng, xổ ra dưới hàng dòng — thụt vào để đọc ra quan hệ cha - con. */
+.lineVehicles {
+  min-width: 0;
+  padding-inline-start: var(--xp-space-lg);
+}
+
+.lineCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.inlineTag {
+  margin-inline-start: var(--xp-space-xs);
+}
+
+/* Số xe chờ duyệt của một dòng — cùng màu với huy hiệu chờ duyệt của cột hãng. */
+.pendingNote {
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body-sm);
 }
 
 .group {
@@ -119,7 +145,7 @@
     gap: var(--xp-space-md);
   }
 
-  .search {
-    width: 100%;
+  .lineVehicles {
+    padding-inline-start: 0;
   }
 }

@@ -38,8 +38,8 @@ function MoneyRow({
  *    (`BookingPriceSnapshot.depositAmount`: "hoàn trả, KHÔNG nằm trong totalAmount"), KHÁC tiền
  *    giữ chỗ khách chuyển qua QR (ADR 0044 điều 9). Nó là mức ĐƠN KHAI, chưa chắc đã thu.
  *
- * Không có dòng "tiền giữ chỗ": DTO nền tảng không mang khoản giữ chỗ đã trả — dựng dòng đó từ
- * `depositAmount` là đúng cái gộp nhầm mà ADR 0044 cấm.
+ * Không có dòng "tiền giữ chỗ" ở đây: khoản giữ chỗ và bảng tiền marketplace nằm ở khối riêng
+ * (`BookingMarketplaceMoney`) - dựng dòng đó từ `depositAmount` là đúng cái gộp nhầm mà ADR 0044 cấm.
  */
 export function BookingPaymentSummary({ booking }: { booking: AdminBookingDetail }) {
   const t = useTranslations('AdminBookings.payment');

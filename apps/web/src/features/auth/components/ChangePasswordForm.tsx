@@ -6,163 +6,50 @@ import {
   LockOutlined,
   MinusCircleOutlined,
 } from '@ant-design/icons';
-import { yupResolver } from '@hookform/resolvers/yup';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Form } from 'antd';
-import { useMemo, useState, type ReactNode } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import * as yup from 'yup';
-import { API_ERROR_CODE } from '@xeprime/types';
-import {
-  PASSWORD_MIN,
-  PASSWORD_RULES,
-  buildPasswordSchema,
-  type PasswordRuleKey,
-} from '@xeprime/validators';
 
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { AccountPageHeader } from '@/features/account/components/AccountPageHeader';
 import { CtaButton } from '@/features/marketplace/components/CtaButton';
-import { useCurrentUser } from '@/hooks/use-current-user';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { cx } from '@/lib/cx';
-import { getErrorCode } from '@/services/api-client';
-import { changePassword, setPassword } from '@/services/auth.service';
-import { queryKeys } from '@/services/query-keys';
 
-import { useAuthSchemaLabels } from '../hooks/use-auth-schema-labels';
+import { useChangePasswordForm } from '../hooks/use-change-password-form';
 import styles from './ChangePasswordForm.module.css';
 
-interface ChangePasswordValues {
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-}
-
 /**
- * Đổi mật khẩu ở khu tài khoản — MỘT form cho hai tình huống, phân nhánh theo `MeDto.hasPassword`:
+ * Đổi mật khẩu - trang bảo mật của site KHÁCH (`appearance="account"`) và của site QUẢN TRỊ
+ * (mặc định). Logic (hai nhánh đổi / đặt lần đầu, lỗi trên ô, bảng yêu cầu) ở
+ * `useChangePasswordForm`; site partner dùng cùng hook với dáng riêng (`AccountPasswordForm`).
  *
- *  - Đã có mật khẩu → hỏi mật khẩu hiện tại, gọi `POST /auth/password/change`. Sai mật khẩu cũ
- *    là lỗi TRÊN Ô (mã `CURRENT_PASSWORD_INCORRECT`), không phải một alert chung.
- *  - Chưa có (tài khoản OTP / mạng xã hội) → nói rõ đây là đặt lần đầu, không hỏi mật khẩu cũ, và
- *    gọi `POST /auth/password/set` đã có. Không bao giờ dùng token quên/đặt lại để giả một lần đổi.
- *
- * Bảng "Yêu cầu của mật khẩu" tick theo `PASSWORD_RULES` — cùng nguồn với schema, nên bảng nói
- * đạt thì submit không thể đỏ vì luật mật khẩu.
- *
- * Sau khi thành công: reset form và invalidate `auth.me` để `hasPassword` đảo sang `true` — form
- * tự chuyển từ "đặt lần đầu" sang "đổi" mà không cần tải lại trang.
- *
- * `embedded`: nằm TRONG một section đã có tiêu đề và khung (trang Tài khoản & bảo mật của site
- * partner) — bỏ tiêu đề trang và hai khung thẻ, chỉ giữ form + bảng yêu cầu.
- *
- * `appearance="account"`: trang "Bảo mật tài khoản" của SITE KHÁCH (design Account / Security,
- * Figma `19973:54991`) — nằm trong `AccountPanel` như `embedded`, nút gửi là nút vàng của chợ
- * v2 và thành công hiện hộp "Thành công" thay cho toast. Site partner và admin giữ nguyên.
- *
- * Quy tắc "Không trùng với mật khẩu hiện tại" chỉ có khi đã có mật khẩu — đó là luật của backend
- * (`PASSWORD_UNCHANGED`); bảng chỉ nói trước điều server sẽ từ chối.
+ * `appearance="account"`: trang "Bảo mật tài khoản" của site khách (design Account / Security,
+ * Figma `19973:54991`) - nằm trong `AccountPanel` (không tự dựng tiêu đề trang), nhãn trên ô, nút
+ * gửi là nút vàng của chợ v2 và thành công hiện hộp "Thành công" thay cho toast.
  */
 export function ChangePasswordForm({
   headingLevel = 'h1',
-  embedded: embeddedProp = false,
   appearance = 'default',
 }: {
   headingLevel?: 'h1' | 'h2';
-  embedded?: boolean;
   appearance?: 'default' | 'account';
 } = {}) {
   const isAccount = appearance === 'account';
-  const embedded = embeddedProp || isAccount;
   const t = useTranslations('Account.changePassword');
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
-  const errorMessage = useErrorMessage();
-  const queryClient = useQueryClient();
-  const labels = useAuthSchemaLabels();
-  const { data: user } = useCurrentUser();
-  // Vỏ đã nạp người dùng; nếu vì lý do gì chưa có thì mặc định "đã có mật khẩu" — nhánh an toàn
-  // hơn (đòi thêm bằng chứng) chứ không phải nhánh bỏ qua bước xác minh.
-  const hasPassword = user?.hasPassword ?? true;
-  const [formError, setFormError] = useState<string | null>(null);
   /** `appearance="account"`: thông điệp của hộp "Thành công" (null = đóng). */
   const [successNote, setSuccessNote] = useState<string | null>(null);
 
-  const schema = useMemo(
-    () =>
-      yup.object({
-        // MỘT schema cho cả hai nhánh, chỉ đổi LUẬT: hai schema khác nhau theo nhánh làm kiểu
-        // suy ra của `yupResolver` thành hợp của hai shape và form mất bảo chứng khoá.
-        currentPassword: yup
-          .string()
-          .defined()
-          .test(
-            'currentRequired',
-            labels.passwordRequired,
-            (value) => !hasPassword || Boolean(value),
-          ),
-        newPassword: buildPasswordSchema(labels).test(
-          'notSameAsCurrent',
-          t('unchanged'),
-          function notSameAsCurrent(value) {
-            const current = (this.parent as ChangePasswordValues).currentPassword;
-            return !hasPassword || !current || value !== current;
-          },
-        ),
-        confirmPassword: yup
-          .string()
-          .required(labels.confirmRequired)
-          .oneOf([yup.ref('newPassword')], labels.confirmMismatch),
-      }),
-    [hasPassword, labels, t],
-  );
-
-  const { control, handleSubmit, reset, setError, formState } = useForm<ChangePasswordValues>({
-    resolver: yupResolver(schema),
-    defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
+  const { form, onSubmit, hasPassword, formError, saving, requirements } = useChangePasswordForm({
+    onSuccess: (note) => (isAccount ? setSuccessNote(note) : message.success(note)),
   });
-  const newPassword = useWatch({ control, name: 'newPassword' }) ?? '';
-  const currentPassword = useWatch({ control, name: 'currentPassword' }) ?? '';
-  // Nhúng trong section `h2` (partner) → `h3`; trang bảo mật của khách có thẻ `h1` → `h2`.
-  const RequirementsHeading = embeddedProp ? 'h3' : 'h2';
-
-  const save = useMutation({
-    mutationFn: (values: ChangePasswordValues) =>
-      hasPassword
-        ? changePassword(values.currentPassword, values.newPassword)
-        : setPassword(values.newPassword),
-    onSuccess: () => {
-      const note = hasPassword ? t('success') : t('successFirstTime');
-      if (isAccount) setSuccessNote(note);
-      else message.success(note);
-      reset();
-      void queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
-    },
-    onError: (err) => {
-      if (getErrorCode(err) === API_ERROR_CODE.CURRENT_PASSWORD_INCORRECT) {
-        setError('currentPassword', { type: 'server', message: errorMessage(err) });
-        return;
-      }
-      if (getErrorCode(err) === API_ERROR_CODE.PASSWORD_UNCHANGED) {
-        setError('newPassword', { type: 'server', message: errorMessage(err) });
-        return;
-      }
-      setFormError(errorMessage(err));
-    },
-  });
-
-  const onSubmit = handleSubmit((values) => {
-    // Enter vẫn submit form khi nút đang quay — chặn lượt thứ hai ở đây.
-    if (save.isPending) return;
-    setFormError(null);
-    save.mutate(values);
-  });
+  const { control, formState } = form;
 
   return (
     <div className={styles.page}>
-      {embedded ? null : (
+      {isAccount ? null : (
         <AccountPageHeader title={t('title')} subtitle={t('subtitle')} as={headingLevel} />
       )}
 
@@ -170,7 +57,7 @@ export function ChangePasswordForm({
         <form
           onSubmit={onSubmit}
           noValidate
-          className={cx(!embedded && styles.card, isAccount && styles.accountForm)}
+          className={cx(isAccount ? styles.accountForm : styles.card)}
         >
           {!hasPassword ? (
             <Alert
@@ -186,8 +73,8 @@ export function ChangePasswordForm({
           ) : null}
 
           {/*
-            Dáng `account` (Figma `19973:54991`): nhãn NẰM TRÊN ô — bọc `Form layout="vertical"`
-            không sinh thẻ (`component={false}`), cùng cách trang Tài khoản & bảo mật của site partner.
+            Dáng `account` (Figma `19973:54991`): nhãn NẰM TRÊN ô - bọc `Form layout="vertical"`
+            không sinh thẻ (`component={false}`).
           */}
           <FieldLayout vertical={isAccount}>
             {hasPassword ? (
@@ -199,7 +86,7 @@ export function ChangePasswordForm({
                 type="password"
                 autoComplete="current-password"
                 prefix={<LockOutlined />}
-                disabled={save.isPending}
+                disabled={saving}
               />
             ) : null}
             <TextField
@@ -210,7 +97,7 @@ export function ChangePasswordForm({
               type="password"
               autoComplete="new-password"
               prefix={<LockOutlined />}
-              disabled={save.isPending}
+              disabled={saving}
             />
             <TextField
               control={control}
@@ -220,15 +107,15 @@ export function ChangePasswordForm({
               type="password"
               autoComplete="new-password"
               prefix={<LockOutlined />}
-              disabled={save.isPending}
+              disabled={saving}
             />
           </FieldLayout>
 
           {isAccount ? (
             <CtaButton
               type="submit"
-              loading={save.isPending}
-              disabled={!formState.isDirty}
+              loading={saving}
+              disabled={!formState.isValid}
               className={styles.ctaSubmit}
             >
               {hasPassword ? t('submit') : t('submitFirstTime')}
@@ -237,8 +124,8 @@ export function ChangePasswordForm({
             <Button
               type="primary"
               htmlType="submit"
-              loading={save.isPending}
-              disabled={!formState.isDirty && !save.isPending}
+              loading={saving}
+              disabled={!formState.isValid && !saving}
             >
               {hasPassword ? t('submit') : t('submitFirstTime')}
             </Button>
@@ -246,33 +133,14 @@ export function ChangePasswordForm({
         </form>
 
         <aside
-          className={cx(embedded ? styles.panel : styles.card, isAccount && styles.accountPanel)}
+          className={cx(isAccount ? styles.panel : styles.card, isAccount && styles.accountPanel)}
           aria-label={t('requirementsTitle')}
         >
-          {/* Nhúng thì section đã giữ `h2` — bảng phụ này xuống `h3`. */}
-          <RequirementsHeading className={styles.requirementsTitle}>
-            {t('requirementsTitle')}
-          </RequirementsHeading>
+          <h2 className={styles.requirementsTitle}>{t('requirementsTitle')}</h2>
           <ul className={styles.requirements}>
-            {[
-              ...PASSWORD_RULES.map((rule) => ({
-                key: rule.key as string,
-                label: requirementLabel(t, rule.key),
-                met: rule.test(newPassword),
-              })),
-              // Chỉ khi đã có mật khẩu: lần đặt đầu không có gì để trùng.
-              ...(hasPassword
-                ? [
-                    {
-                      key: 'notSameAsCurrent',
-                      label: t('requirements.notSameAsCurrent'),
-                      met: Boolean(newPassword) && newPassword !== currentPassword,
-                    },
-                  ]
-                : []),
-            ].map(({ key, label, met }) => (
+            {requirements.map(({ key, label, met }) => (
               <li key={key} className={cx(styles.requirement, met && styles.met)}>
-                {/* Bản vẽ: đạt = chấm vàng đặc, chưa đạt = chấm xám đặc — cùng một hình, khác màu. */}
+                {/* Bản vẽ: đạt = chấm vàng đặc, chưa đạt = chấm xám đặc - cùng một hình, khác màu. */}
                 {met || isAccount ? (
                   <CheckCircleFilled className={styles.requirementIcon} aria-hidden="true" />
                 ) : (
@@ -314,25 +182,6 @@ export function ChangePasswordForm({
       ) : null}
     </div>
   );
-}
-
-/**
- * Nhãn của một quy tắc. Khoá của `t()` phải TĨNH (next-intl kiểm lúc biên dịch), nên mã quy tắc
- * đi qua bảng tra này chứ không ghép chuỗi.
- *
- * `Record` đầy đủ chứ không phải `switch`: thêm một quy tắc vào `PASSWORD_RULES` mà quên viết
- * nhãn thì đỏ ngay ở đây, thay vì lặng lẽ rơi xuống một nhánh mặc định.
- */
-function requirementLabel(
-  t: ReturnType<typeof useTranslations<'Account.changePassword'>>,
-  key: PasswordRuleKey,
-): string {
-  const labels: Record<PasswordRuleKey, string> = {
-    passwordTooShort: t('requirements.passwordTooShort', { min: PASSWORD_MIN }),
-    passwordNeedsLetter: t('requirements.passwordNeedsLetter'),
-    passwordNeedsDigit: t('requirements.passwordNeedsDigit'),
-  };
-  return labels[key];
 }
 
 /** Nhãn trên ô khi `vertical`; ngược lại giữ nguyên bố cục mặc định của nơi nhúng. */

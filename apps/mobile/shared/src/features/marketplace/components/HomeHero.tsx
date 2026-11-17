@@ -32,6 +32,7 @@ import { duration } from '@/theme/motion';
 import type { PublicBanner } from '../api';
 import { useContentWidth } from '@/theme/use-content-width';
 import { TABLET_MIN_WIDTH } from '@/theme/layout';
+import { layout } from '@/theme/layout';
 
 /** Tỉ lệ ảnh banner mobile của backend (780×450 từ 30/10/2026, PR #253) — cùng tỉ lệ web dùng dưới 640px. */
 export const BANNER_RATIO = 780 / 450;
@@ -340,7 +341,7 @@ function HeroFallback({
         end={{ x: 1, y: 0.5 }}
         style={StyleSheet.absoluteFill}
       />
-      <YStack px={space.md} pt={space.lg} gap={space.xs} maxWidth="70%" accessibilityRole="header">
+      <YStack px={layout.padX} pt={space.lg} gap={space.xs} maxWidth="70%" accessibilityRole="header">
         <RevealLine index={0} reducedMotion={reducedMotion}>
           <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
             {t('title')}

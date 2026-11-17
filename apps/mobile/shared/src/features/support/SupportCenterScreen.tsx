@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useMemo } from 'react';
 import { useRouter, type Href } from 'expo-router';
 import { Pressable } from 'react-native';
@@ -77,7 +77,8 @@ const QUICK_START: readonly QuickStartLink[] = [
   },
   {
     key: 'requests',
-    href: ROUTES.manage.requests(),
+    // Hộp thư yêu cầu đã gộp vào "Đơn thuê xe" (05/11/2026) — web trỏ `ROUTES.MANAGE.BOOKINGS`.
+    href: ROUTES.manage.bookings(),
     permission: PERMISSION.BOOKING_REQUEST_VIEW,
     icon: 'mail-unread-outline',
   },

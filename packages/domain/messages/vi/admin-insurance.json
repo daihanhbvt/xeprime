@@ -6,7 +6,8 @@
   },
   "tabs": {
     "products": "Sản phẩm",
-    "certificates": "Chứng nhận"
+    "certificates": "Chứng nhận",
+    "remittances": "Bảng kê trả phí"
   },
   "products": {
     "tableLabel": "Danh mục sản phẩm bảo hiểm",
@@ -38,7 +39,9 @@
       "naming": "Tên hiển thị",
       "coverage": "Quyền lợi",
       "amounts": "Khấu trừ & bồi thường",
-      "operation": "Vận hành"
+      "operation": "Vận hành",
+      "premium": "Biểu phí theo bậc giá trị xe",
+      "serviceFee": "Phí thu hộ bảo hiểm"
     },
     "fields": {
       "nameVi": "Tên (tiếng Việt)",
@@ -55,12 +58,24 @@
       "certificateUrlTemplate": "Mẫu URL tra cứu giấy chứng nhận",
       "displayOrder": "Thứ tự hiển thị",
       "isActive": "Đang bật",
-      "isActiveDescription": "Tắt thì khách không thấy ô chọn sản phẩm này nữa. Hợp đồng đã bán không bị ảnh hưởng."
+      "isActiveDescription": "Tắt thì khách không thấy ô chọn sản phẩm này nữa. Hợp đồng đã bán không bị ảnh hưởng.",
+      "premiumTiers": "Bậc phí",
+      "tierMaxDays": "Chuyến tối đa",
+      "tierDaysSuffix": "ngày",
+      "tierPercent": "% giá trị xe",
+      "claimHotline": "Hotline báo sự cố",
+      "serviceFeeEnabled": "Thu phí thu hộ",
+      "serviceFeeEnabledDescription": "Bật thì mỗi chuyến có bảo hiểm vật chất xe thu thêm phí thu hộ = % phí bảo hiểm. Khách thấy gộp vào dòng bảo hiểm kèm ⓘ tách hai số; hoàn cùng phí bảo hiểm; mã khuyến mãi không trừ vào khoản này.",
+      "serviceFeePercent": "% trên phí bảo hiểm"
     },
     "help": {
       "amountEmpty": "Để trống nếu không áp dụng.",
       "maxPayoutNote": "Ví dụ: “Theo giá trị thực tế của xe”, “Mỗi người, mỗi vụ”.",
-      "certificateUrlTemplate": "Bắt đầu bằng https:// và chứa '{certCode}' - chỗ thay số chứng nhận."
+      "certificateUrlTemplate": "Bắt đầu bằng https:// và chứa '{certCode}' - chỗ thay số chứng nhận.",
+      "premiumTiers": "Bậc tăng dần cả số ngày lẫn tỷ lệ. Giờ lẻ làm tròn lên bậc kế tiếp.",
+      "valueTierIntro": "Sản phẩm bán kèm ô tô tự lái đủ điều kiện; chủ xe chọn Bắt buộc hoặc Tuỳ chọn cho xe của mình. Phí = giá trị xe × tỷ lệ của bậc thời lượng chuyến (đã gồm VAT), theo biểu phí MIC loại xe M1.11.",
+      "claimHotline": "Hiện cạnh giấy chứng nhận cho khách và chủ xe.",
+      "serviceFeeLegal": "Chưa có ý kiến luật sư thì KHÔNG bật ở production (ADR 0091 điều 3). Đổi % áp cho báo giá và lượt duyệt từ lúc lưu - đơn và khoản giữ chỗ đã có giữ số đã chốt."
     },
     "validation": {
       "required": "Bắt buộc nhập.",
@@ -70,9 +85,16 @@
       "amountMin": "Số tiền không được âm.",
       "urlTemplate": "Mẫu phải bắt đầu bằng https:// và chứa '{certCode}'.",
       "displayOrder": "Thứ tự từ {min} đến {max}.",
-      "amountMax": "Số tiền quá lớn."
+      "amountMax": "Số tiền quá lớn.",
+      "tiers": "Biểu phí chưa hợp lệ: số ngày 1-30, tỷ lệ lớn hơn 0 và tối đa 4 chữ số lẻ, cả hai tăng dần.",
+      "serviceFeePercent": "Tỷ lệ từ 0 đến {max}%, tối đa 2 chữ số lẻ.",
+      "serviceFeePercentRequired": "Bật phí thu hộ thì tỷ lệ phải lớn hơn 0."
     },
-    "saved": "Đã lưu sản phẩm {name}."
+    "saved": "Đã lưu sản phẩm {name}.",
+    "actions": {
+      "addTier": "Thêm bậc",
+      "removeTier": "Xoá bậc này"
+    }
   },
   "certificates": {
     "tableLabel": "Hàng đợi giấy chứng nhận bảo hiểm",
@@ -117,6 +139,13 @@
     "emptyAll": {
       "title": "Chưa có hợp đồng bảo hiểm nào",
       "description": "Hợp đồng bảo hiểm của các chuyến sẽ hiện ở đây."
+    },
+    "attention": {
+      "title": "{count, plural, other {# hợp đồng}} cần xử lý gấp",
+      "reasonOverdue": "Giao xe lúc {at}, quá 2 giờ chưa cấp",
+      "reasonOverdueNoTime": "Quá 2 giờ sau giao xe chưa cấp",
+      "reasonPhotos": "MIC chưa nhận ảnh xe - liên hệ MIC",
+      "more": "và {count, plural, other {# hợp đồng}} khác trong hàng đợi"
     }
   },
   "drawer": {
@@ -145,7 +174,9 @@
       "idempotencyKey": "Khoá chống mua đôi",
       "createdAt": "Tạo lúc",
       "cancelledAt": "Huỷ lúc",
-      "voidedAt": "Thu hồi lúc"
+      "voidedAt": "Thu hồi lúc",
+      "voidReason": "Lý do thu hồi",
+      "voidPartnerReference": "Mã đối chiếu với hãng"
     },
     "payload": {
       "request": "Yêu cầu gửi đối tác",
@@ -160,19 +191,163 @@
     "footer": {
       "failed": "Hợp đồng lỗi: thử phát hành lại, hoặc thu hồi nếu không thể cấp.",
       "issued": "Đã cấp chứng nhận. Thu hồi khi chuyến bị huỷ sau bàn giao.",
-      "other": "Không có thao tác nào cho trạng thái này."
+      "other": "Không có thao tác nào cho trạng thái này.",
+      "remitted": "Hợp đồng đã nằm trong bảng kê trả hãng - đối chiếu với hãng trước khi huỷ."
     },
     "retry": "Thử phát hành lại",
     "retryQueued": "Đã xếp lượt phát hành lại - worker xử lý trong khoảng một phút.",
     "void": "Thu hồi",
     "voidDialog": {
-      "title": "Thu hồi hợp đồng bảo hiểm",
-      "summary": "Phí {amount} của đơn {code} sẽ quyết toán riêng với đối tác.",
       "hint": "Lý do được ghi vào nhật ký hệ thống và hồ sơ làm việc với đối tác.",
       "reasonLabel": "Lý do thu hồi",
       "reasonPlaceholder": "VD: Chuyến bị huỷ sau bàn giao, đối tác xác nhận huỷ hợp đồng",
       "reasonRequired": "Nhập lý do thu hồi (tối thiểu 5 ký tự).",
-      "done": "Đã thu hồi hợp đồng."
+      "titleCancel": "Huỷ hợp đồng và hoàn phí cho khách",
+      "titleKeep": "Thu hồi hợp đồng đã có hiệu lực",
+      "summaryRefundNow": "Hợp đồng của đơn {code} chưa từng có hiệu lực: huỷ và hoàn {amount} vào Ví điểm của khách ngay.",
+      "summaryRefundLater": "Hợp đồng của đơn {code} chưa từng có hiệu lực: huỷ ngay, {amount} sẽ hoàn vào Ví điểm của khách khi khoản giữ chỗ được chốt.",
+      "summaryViaHold": "Hợp đồng của đơn {code} chưa từng có hiệu lực: huỷ, không hoàn thêm vì phí đã về khách qua khoản giữ chỗ.",
+      "summaryNoRefund": "Hợp đồng của đơn {code} chưa từng có hiệu lực: huỷ, không có khoản hoàn qua Ví điểm vì phí không thu qua XePrime.",
+      "summaryKeepPayable": "Hợp đồng của đơn {code} đã có hiệu lực: thu hồi KHÔNG hoàn cho khách, phí {amount} vẫn kê trả hãng cho tới khi hãng xác nhận huỷ.",
+      "referenceLabel": "Mã huỷ / biên bản đối chiếu với hãng",
+      "referencePlaceholder": "VD: số văn bản huỷ hoặc biên bản đối chiếu của MIC",
+      "referenceRequired": "Nhập mã huỷ hoặc số biên bản đối chiếu với hãng.",
+      "submitCancel": "Huỷ và hoàn phí",
+      "doneRefunded": "Đã huỷ hợp đồng và hoàn {amount} vào Ví điểm khách.",
+      "doneRefundLater": "Đã huỷ hợp đồng - phí sẽ hoàn khi khoản giữ chỗ được chốt.",
+      "doneCancelled": "Đã huỷ hợp đồng.",
+      "doneKept": "Đã thu hồi hợp đồng - phí vẫn kê trả hãng."
+    },
+    "pricing": {
+      "title": "Phí bảo hiểm",
+      "loadError": "Chưa tải được phí của hợp đồng này.",
+      "insuredValue": "Giá trị xe",
+      "tier": "Bậc phí",
+      "tierValue": "Tới {days} ngày - {percent}% giá trị xe",
+      "collected": "Đã thu của khách",
+      "partner": "MIC tính lúc cấp",
+      "notIssued": "Chưa cấp",
+      "difference": "Chênh lệch",
+      "differenceNone": "Khớp",
+      "differenceOver": "Thu dư {amount}",
+      "differenceUnder": "XePrime bù {amount}",
+      "serviceFee": "Phí thu hộ (XePrime)",
+      "refunded": "Đã hoàn vào Ví điểm",
+      "refundedValue": "{amount} vào Ví điểm khách - {at}"
+    }
+  },
+  "remittances": {
+    "tableLabel": "Bảng kê trả phí bảo hiểm",
+    "loadError": "Không tải được bảng kê.",
+    "total": "{count, plural, other {# bảng kê}}",
+    "empty": {
+      "title": "Chưa có bảng kê nào",
+      "description": "Lập bảng kê cho tháng đã kết thúc để đối soát và trả phí cho MIC."
+    },
+    "pending": {
+      "loading": "Đang tải hợp đồng chưa kê…",
+      "some": "{count, plural, other {# hợp đồng}} đã cấp chưa kê - tổng phí {amount}",
+      "none": "Mọi hợp đồng đã cấp đều đã nằm trong bảng kê",
+      "oldest": "Hợp đồng chưa kê sớm nhất cấp ngày {date}.",
+      "hint": "Mỗi tháng lập một bảng kê, chốt số, gửi MIC đối chiếu rồi ghi nhận chuyển khoản."
+    },
+    "columns": {
+      "period": "Kỳ",
+      "status": "Trạng thái",
+      "policies": "Số hợp đồng",
+      "gross": "Tổng phí",
+      "commission": "Hoa hồng đại lý",
+      "payable": "Phải trả",
+      "paid": "Đã trả",
+      "open": "Mở"
+    },
+    "card": {
+      "policies": "{count, plural, other {# hợp đồng}}",
+      "payable": "Phải trả {amount}"
+    },
+    "status": {
+      "draft": "Nháp",
+      "finalized": "Đã chốt",
+      "paid": "Đã trả"
+    },
+    "actions": {
+      "create": "Lập bảng kê",
+      "export": "Xuất CSV",
+      "finalize": "Chốt số",
+      "pay": "Ghi nhận đã chuyển",
+      "delete": "Xoá nháp"
+    },
+    "drawer": {
+      "title": "Bảng kê trả phí MIC"
+    },
+    "hint": {
+      "draft": "Nháp - kiểm số rồi chốt. Xoá nháp sẽ trả hợp đồng về \"chưa kê\".",
+      "finalized": "Đã chốt - gửi CSV cho MIC đối chiếu, chuyển khoản rồi ghi nhận.",
+      "paid": "Đã trả - bảng kê đã khép."
+    },
+    "facts": {
+      "policies": "Số hợp đồng",
+      "gross": "Tổng phí khách đã trả",
+      "commission": "Hoa hồng đại lý ({percent}%)",
+      "payable": "Phải trả MIC",
+      "partnerTotal": "Tổng phí MIC tính lúc cấp",
+      "test": "Thử nghiệm",
+      "testCount": "{count, plural, other {# hợp đồng sandbox}}",
+      "paid": "Đã chuyển",
+      "paidAt": "Ngày chuyển",
+      "bankReference": "Mã giao dịch",
+      "note": "Ghi chú"
+    },
+    "mismatch": "Phí MIC tính lệch phí khách đã trả - kiểm từng hợp đồng trước khi chốt.",
+    "lines": {
+      "label": "Hợp đồng trong bảng kê",
+      "booking": "Mã đơn",
+      "contract": "Số hợp đồng",
+      "plate": "Biển số",
+      "customer": "Khách thuê",
+      "coverage": "Hiệu lực",
+      "premium": "Phí khách trả",
+      "partnerPremium": "Phí MIC tính",
+      "test": "THỬ NGHIỆM",
+      "empty": "Không có hợp đồng",
+      "total": "{count, plural, other {# hợp đồng}}"
+    },
+    "confirmFinalize": {
+      "title": "Chốt số bảng kê?",
+      "body": "Sau khi chốt không thêm/bớt hợp đồng được nữa. Số phải trả MIC: {amount}."
+    },
+    "confirmDelete": {
+      "title": "Xoá bảng kê nháp?",
+      "body": "Các hợp đồng trong bảng sẽ trở về \"chưa kê\"."
+    },
+    "finalized": "Đã chốt bảng kê",
+    "deleted": "Đã xoá bảng kê nháp",
+    "create": {
+      "title": "Lập bảng kê trả phí MIC",
+      "intro": "Gom mọi hợp đồng đã cấp, chưa kê, cấp trước hết tháng đã chọn.",
+      "period": "Tháng kê",
+      "commission": "Hoa hồng đại lý",
+      "commissionHelp": "Theo hợp đồng đại lý với MIC. Để 0 nếu MIC trả hoa hồng riêng.",
+      "note": "Ghi chú",
+      "submit": "Lập bảng kê",
+      "done": "Đã lập bảng kê {count, plural, other {# hợp đồng}}",
+      "validation": {
+        "required": "Bắt buộc",
+        "commission": "Từ 0 tới {max}%"
+      }
+    },
+    "pay": {
+      "title": "Ghi nhận đã chuyển - kỳ {period}",
+      "amount": "Số tiền đã chuyển",
+      "paidAt": "Thời điểm chuyển",
+      "bankReference": "Mã giao dịch ngân hàng",
+      "note": "Ghi chú",
+      "submit": "Ghi nhận",
+      "done": "Đã ghi nhận chuyển khoản cho MIC",
+      "validation": {
+        "required": "Bắt buộc",
+        "amount": "Số tiền phải lớn hơn 0"
+      }
     }
   }
 }

@@ -8,6 +8,7 @@ import {
   BANK_MATCH_STATUS_VALUES,
   BANK_TX_CODE_FILTER,
   BANK_TX_CODE_FILTER_VALUES,
+  BANK_MATCH_REASON_VALUES,
   isBankMatchStatus,
   type BankMatchStatus,
   type BankTxCodeFilter,
@@ -25,6 +26,7 @@ import { isUrgentWait, waitingAge } from '@/features/platform-money/waiting-age'
 import { BANK_TX_DEFAULT_LIMIT } from '../api';
 import { useBankTransactions } from '../hooks/use-bank-transactions';
 import type { BankTransaction } from '../types';
+import { useBankMatchReasonLabel } from './BankMatchReasonText';
 import { BankTransactionDrawer } from './BankTransactionDrawer';
 import styles from './BankInQueue.module.css';
 
@@ -37,6 +39,10 @@ interface BankInUrlFilters {
   code?: BankTxCodeFilter;
   from?: string;
   to?: string;
+  /** Số tiền chính xác - chỉ giữ chữ số (người trực hay gõ `420.000`). */
+  amount?: string;
+  /** `BankMatchReason` - lý do hệ thống ghi (ADR 0092). */
+  reason?: string;
   page?: number;
   limit?: number;
   /** Giao dịch đang mở ở panel chi tiết - trên URL để link tới đúng một khoản. */
@@ -57,6 +63,8 @@ function parse(params: URLSearchParams): BankInUrlFilters {
   const code = params.get('code');
   const from = params.get('from');
   const to = params.get('to');
+  const amount = (params.get('amount') ?? '').replace(/\D/g, '').replace(/^0+/, '');
+  const reason = params.get('reason');
   return {
     q: params.get('q')?.trim() || undefined,
     status:
@@ -66,6 +74,8 @@ function parse(params: URLSearchParams): BankInUrlFilters {
       : undefined,
     from: isDayParam(from) ? from : undefined,
     to: isDayParam(to) ? to : undefined,
+    amount: amount || undefined,
+    reason: reason && (BANK_MATCH_REASON_VALUES as string[]).includes(reason) ? reason : undefined,
     page: positiveIntParam(params, 'page'),
     limit: positiveIntParam(params, 'limit'),
     open: params.get('open') || undefined,
@@ -84,6 +94,7 @@ export function BankInQueue() {
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
+  const reasonLabel = useBankMatchReasonLabel();
   const { filters, setFilters } = useUrlFilters(parse);
 
   const status = filters.status ?? BANK_MATCH_STATUS.UNMATCHED;
@@ -95,6 +106,8 @@ export function BankInQueue() {
     code: filters.code,
     from: filters.from,
     to: filters.to,
+    amount: filters.amount,
+    reason: filters.reason,
     page: filters.page,
     limit: filters.limit,
   });
@@ -118,6 +131,12 @@ export function BankInQueue() {
       label: t('filters.search'),
       placeholder: t('filters.searchPlaceholder'),
     },
+    {
+      kind: 'search',
+      key: 'amount',
+      label: t('filters.amount'),
+      placeholder: t('filters.amountPlaceholder'),
+    },
     { kind: 'dateRange', fromKey: 'from', toKey: 'to', label: t('filters.bankTime') },
     {
       kind: 'select',
@@ -125,6 +144,16 @@ export function BankInQueue() {
       label: t('filters.code'),
       allowClear: true,
       options: BANK_TX_CODE_FILTER_VALUES.map((value) => ({ value, label: codeLabel[value] })),
+    },
+    {
+      kind: 'select',
+      key: 'reason',
+      label: t('filters.reason'),
+      allowClear: true,
+      options: BANK_MATCH_REASON_VALUES.map((value) => ({
+        value,
+        label: reasonLabel(value) ?? value,
+      })),
     },
   ];
 
@@ -139,7 +168,15 @@ export function BankInQueue() {
     {
       title: t('columns.content'),
       key: 'content',
-      render: (_, row) => <span className={styles.content}>{row.content}</span>,
+      render: (_, row) => (
+        <>
+          <span className={styles.content}>{row.content}</span>
+          {/* Lý do hệ thống ghi (tiền về muộn, chuyển thừa…) - người trực biết ngay phải làm gì. */}
+          {reasonLabel(row.matchReasonCode) ? (
+            <span className={styles.reason}>{reasonLabel(row.matchReasonCode)}</span>
+          ) : null}
+        </>
+      ),
     },
     {
       title: t('columns.code'),
@@ -224,7 +261,13 @@ export function BankInQueue() {
   }
 
   const filtered = Boolean(
-    filters.q || filters.code || filters.from || filters.to || filters.status,
+    filters.q ||
+    filters.code ||
+    filters.from ||
+    filters.to ||
+    filters.status ||
+    filters.amount ||
+    filters.reason,
   );
 
   return (
@@ -236,12 +279,21 @@ export function BankInQueue() {
           from: filters.from,
           to: filters.to,
           code: filters.code,
+          amount: filters.amount,
+          reason: filters.reason,
         }}
         // `FilterBar` gửi đúng TRƯỜNG vừa đổi - ghi thẳng bản vá đó. Dựng lại cả bộ từ bản vá là
         // xoá mất các bộ lọc kia: chọn mã thì mất khoảng ngày, gõ tìm thì mất mã.
         onChange={(patch) => setFilters(patch as Partial<BankInUrlFilters>)}
         onClear={() =>
-          setFilters({ q: undefined, from: undefined, to: undefined, code: undefined })
+          setFilters({
+            q: undefined,
+            from: undefined,
+            to: undefined,
+            code: undefined,
+            amount: undefined,
+            reason: undefined,
+          })
         }
       />
 

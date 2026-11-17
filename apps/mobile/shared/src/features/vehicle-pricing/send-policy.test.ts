@@ -44,10 +44,11 @@ describe('shouldSendPolicy - đúng luật của web', () => {
   });
 });
 
-it('khu tài khoản bày đúng ba khối của web: cọc · giao xe · km', () => {
+it('chủ xe tuyến hoa hồng bày cọc · giao xe · km · quá giờ (ADR 0085 điều 3)', () => {
   expect(OWNER_POLICY_BLOCKS).toEqual([
     POLICY_BLOCK.COLLATERAL,
     POLICY_BLOCK.DELIVERY,
     POLICY_BLOCK.MILEAGE,
+    POLICY_BLOCK.OVERTIME,
   ]);
 });

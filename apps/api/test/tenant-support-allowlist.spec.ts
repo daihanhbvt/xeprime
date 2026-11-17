@@ -27,6 +27,8 @@ const SUPPORT_ALLOWLIST = [
   'VehiclesController.alerts',
   'VehiclesController.fleetSummary',
   'VehiclesController.getOne',
+  // ADR 0088 — xe còn thiếu gì để bán kèm bảo hiểm (chỉ đọc).
+  'VehicleInsuranceController.status',
   'VehiclesController.list',
   'VehiclesController.stats',
   'VehiclesController.summary',
@@ -39,6 +41,8 @@ const SUPPORT_ALLOWLIST = [
   // Giấy chứng nhận + tình trạng bảo hiểm của đơn (ADR 0064 điều 10) — chỉ đọc, cùng capability xem đơn.
   'BookingInsuranceController.coverage',
   'BookingInsuranceController.list',
+  // ADR 0088 — tải GCN PDF của đơn (chỉ đọc).
+  'BookingInsuranceController.pdf',
   'BookingRequestsController.getOne',
   'BookingRequestsController.list',
   // Lịch sử gán tài xế của đơn (ADR 0063) — chỉ đọc, cùng capability xem đơn.
@@ -73,6 +77,9 @@ const SUPPORT_ALLOWLIST = [
   'MembersController.activity',
   'MembersController.roles',
   'MembersController.roster',
+  // Gợi ý thông số / giá trị xe / giá thuê khi sửa xe (ADR 0090) — chỉ đọc, cùng capability xem xe:
+  // form xe trong phiên hỗ trợ gọi nó, chặn thì thẻ gợi ý đỏ 403. Tạo dòng xe mới thì KHÔNG mở.
+  'PartnerVehicleDataController.suggestion',
   'PartnerDashboardController.overview',
   // Huy hiệu menu site partner (02–04/11/2026): cùng dữ liệu với Tổng quan / danh sách, cùng
   // capability đọc (`booking.view` · `booking_request.view` · `vehicle.view`) — vỏ trang trong
@@ -84,6 +91,8 @@ const SUPPORT_ALLOWLIST = [
   // `ShopOperationDefaultsController.save` (PUT) CỐ Ý không vào phiên.
   'ShopOperationDefaultsController.get',
   'ShopPoliciesController.get',
+  // Cảnh báo đổi sang bảo hiểm Bắt buộc (ADR 0091) — CHỈ ĐỌC, cùng capability với chính sách thuê.
+  'ShopPoliciesController.insuranceImpact',
   // Một phiếu thanh toán gộp theo id (ADR 0083) — CHỈ ĐỌC, cùng `subscription_status.view` với
   // hoá đơn. Lối MUA (`purchase` · `createCheckout`) CỐ Ý không vào phiên.
   'SubscriptionController.checkout',

@@ -193,6 +193,11 @@ export function TripHostDecisions({
           onClose={() => setApproving(false)}
           request={target}
           onConfirm={confirmApprove}
+          // Chuyến còn chờ quyết thì "Từ chối" luôn có cạnh "Duyệt" - chân tấm duyệt chuyển thẳng sang.
+          onReject={() => {
+            setApproving(false);
+            setRejecting(true);
+          }}
           loading={approve.isPending}
         />
       ) : null}

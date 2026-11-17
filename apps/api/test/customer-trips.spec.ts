@@ -36,6 +36,7 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { CancellationsService } from '../src/modules/cancellations/cancellations.service';
+import { InsuranceCertificateService } from '../src/modules/insurance/insurance-certificate.service';
 import { InsuranceReadService } from '../src/modules/insurance/insurance-read.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { CustomerTripsService } from '../src/modules/customer-trips/customer-trips.service';
@@ -109,6 +110,7 @@ const trips = new CustomerTripsService(
   new CancellationsService(),
   new InsuranceReadService(asService),
   makeSupportService(asService, notifications),
+  new InsuranceCertificateService(asService, null),
 );
 
 let dbAvailable = false;

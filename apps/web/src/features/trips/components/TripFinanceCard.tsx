@@ -13,9 +13,10 @@ import {
   type DepositStatus,
 } from '@xeprime/types';
 import { InfoHint } from '@/components/data-display/InfoHint';
+import { InsuranceFeeHint } from '@/components/data-display/InsuranceFeeHint';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { isZeroMoney } from '@/lib/money';
-import { visibleFeeLines } from '@/lib/customer-price-view';
+import { customerFeeLines } from '@/lib/customer-price-view';
 import type { CustomerTripDetail, CustomerTripFinance } from '../types';
 import { RefundAccountDialog } from './RefundAccountDialog';
 import { TripRequestPill, type TripRequestTone } from './TripRequestLayout';
@@ -231,8 +232,9 @@ type RefundPillKey =
  * mãi của chủ xe, phí giao xe, các khoản đi kèm do KHÁCH chịu (phí sàn, bảo hiểm — dòng 0đ không
  * vẽ), mã khuyến mãi XePrime; rồi tổng, đã thanh toán, trạng thái. Khoản giữ chỗ và khoản hoàn GỘP
  * vào đây thay cho thẻ riêng. KHÔNG bao giờ hiện thuế, hoa hồng hay các dòng phía chủ xe (ADR 0064
- * điều 11) — `visibleFeeLines(…, 'customer')` bỏ dòng chủ xe chịu, và hai khoá đó bị loại thêm lần
- * nữa cho chắc. Mọi con số là của server; ở đây không cộng trừ.
+ * điều 11) — `customerFeeLines` bỏ dòng chủ xe chịu (và gộp phí thu hộ bảo hiểm vào dòng bảo hiểm
+ * vật chất xe, ADR 0091 điều 3), hai khoá đó bị loại thêm lần nữa cho chắc. Mọi con số là của
+ * server; ở đây không cộng trừ.
  */
 function ClosedInvoice({
   finance,
@@ -251,7 +253,7 @@ function ClosedInvoice({
 
   const fees = finance.breakdown?.fees ?? null;
   const baseRow = finance.breakdown?.rows.find((row) => row.key === PRICE_ROW.BASE);
-  const feeLines = visibleFeeLines(fees?.lines ?? [], 'customer').filter(
+  const feeLines = customerFeeLines(fees?.lines ?? []).filter(
     (line) => line.key !== FEE_LINE.TAX && line.key !== FEE_LINE.OWNER_COMMISSION,
   );
   const promoDiscount = fees?.promoDiscountAmount ?? '0';
@@ -324,7 +326,12 @@ function ClosedInvoice({
           return (
             <div key={line.key} className={styles.invoiceRow}>
               <dt className={styles.invoiceLabel}>
-                <span>{dl('feeLine', line.key)}</span>
+                <span>
+                  {dl('feeLine', line.key)}
+                  {line.includedServiceFee ? (
+                    <InsuranceFeeHint fee={line.includedServiceFee} />
+                  ) : null}
+                </span>
                 {sub || line.partnerName ? (
                   <span className={styles.invoiceSub}>
                     {[sub, line.partnerName].filter(Boolean).join(' · ')}

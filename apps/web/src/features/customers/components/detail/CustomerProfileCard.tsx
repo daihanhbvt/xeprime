@@ -51,6 +51,7 @@ export function CustomerProfileCard({
         kind="person"
         size="lg"
         initialSource={customer.fullName}
+        imageUrl={customer.avatarUrl}
       />
       <CustomerContactButtons variant="icon" name={customer.fullName} phone={customer.phone} />
       <dl className={styles.profileList}>

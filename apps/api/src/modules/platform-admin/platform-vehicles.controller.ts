@@ -1,6 +1,16 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  NotFoundException,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ACCOUNT_REALM, PERMISSION } from '@xeprime/types';
+import { ACCOUNT_REALM, API_ERROR_CODE, PERMISSION } from '@xeprime/types';
 import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import {
@@ -9,6 +19,11 @@ import {
   PlatformVehicleListQueryDto,
   PlatformVehiclePageDto,
 } from './dto/platform-vehicle.dto';
+import {
+  VehicleInsuranceReviewDto,
+  VehicleRegistrationImageDto,
+} from './dto/vehicle-insurance-review.dto';
+import { PlatformVehicleInsuranceReviewService } from './platform-vehicle-insurance-review.service';
 import { PlatformVehiclesService } from './platform-vehicles.service';
 
 /**
@@ -21,7 +36,10 @@ import { PlatformVehiclesService } from './platform-vehicles.service';
 @RequirePermissions(PERMISSION.PLATFORM_VEHICLE_VIEW)
 @Realms(ACCOUNT_REALM.PLATFORM)
 export class PlatformVehiclesController {
-  constructor(private readonly vehicles: PlatformVehiclesService) {}
+  constructor(
+    private readonly vehicles: PlatformVehiclesService,
+    private readonly insuranceReview: PlatformVehicleInsuranceReviewService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Danh sách xe toàn hệ thống (phân trang, lọc, tìm kiếm)' })
@@ -35,6 +53,30 @@ export class PlatformVehiclesController {
   @ApiOkResponse({ type: PlatformVehicleDetailDto })
   getOne(@Param('id') id: string): Promise<PlatformVehicleDetailDto> {
     return this.vehicles.getOne(id);
+  }
+
+  @Get(':id/insurance-review')
+  @ApiOperation({
+    summary:
+      'Bảo hiểm và giấy tờ của xe: giá trị khai, giá tham khảo + % lệch, điều kiện bảo hiểm còn thiếu, cà vẹt',
+  })
+  @ApiOkResponse({ type: VehicleInsuranceReviewDto })
+  async getInsuranceReview(@Param('id') id: string): Promise<VehicleInsuranceReviewDto> {
+    const review = await this.insuranceReview.review(id);
+    if (!review) {
+      throw new NotFoundException({ code: API_ERROR_CODE.NOT_FOUND, message: 'Không tìm thấy xe' });
+    }
+    return review;
+  }
+
+  @Get(':id/registration-image')
+  @ApiOperation({ summary: 'Mở ảnh cà vẹt của xe - URL sống ngắn, ghi audit mỗi lần mở' })
+  @ApiOkResponse({ type: VehicleRegistrationImageDto })
+  registrationImage(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<VehicleRegistrationImageDto> {
+    return this.insuranceReview.registrationImage(id, user.id);
   }
 
   // `RequirePermissions` ở handler GHI ĐÈ cấp class (PermissionGuard dùng getAllAndOverride),

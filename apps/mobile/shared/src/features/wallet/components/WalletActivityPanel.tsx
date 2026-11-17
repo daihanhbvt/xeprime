@@ -12,7 +12,7 @@ import {
 } from '@xeprime/types';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { AlertDialog } from '@/components/ui/AlertDialog';
-import { BlockTitle } from '@/components/ui/BlockTitle';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
@@ -20,7 +20,7 @@ import { Divider } from '@/components/ui/DataRow';
 import { MONTH_PERIOD_FORMAT, MonthPeriodField } from '@/components/ui/MonthPeriodField';
 import { Pagination } from '@/components/ui/Pagination';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
-import { StatusBadge } from '@/components/ui/StatusBadge';
+import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
@@ -36,6 +36,7 @@ import {
 } from '@/api/wallet/api';
 import { useCancelWithdrawal, useWalletActivity } from '../hooks/use-wallet';
 import { SignedAmount } from './WalletStatementPanel';
+import { layout } from '@/theme/layout';
 
 /**
  * Tab "Biến động số dư" của trang Số dư gian hàng — bản native của `WalletActivityPanel` (web,
@@ -64,7 +65,7 @@ export function WalletActivityPanel({
 
   return (
     <YStack gap={space.sm}>
-      <BlockTitle>{t('activity.title')}</BlockTitle>
+      <SectionHeader icon="swap-vertical-outline">{t('activity.title')}</SectionHeader>
 
       <MonthPeriodField
         label={t('statement.period')}
@@ -187,7 +188,7 @@ function ActivityRowImpl({ row }: { row: WalletActivity }) {
   const muted = isVoidWithdrawal(row);
 
   return (
-    <YStack px={space.md} py={space.sm} gap={space.xs}>
+    <YStack px={layout.padX} py={space.sm} gap={space.xs}>
       <XStack ai="flex-start" gap={space.sm}>
         <YStack f={1} minWidth={0} gap={2}>
           <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold} numberOfLines={2}>
@@ -226,7 +227,7 @@ function ActivityRowImpl({ row }: { row: WalletActivity }) {
               {t('activity.balanceAfter', { amount: fmt.money(row.balanceAfter) })}
             </Text>
           )}
-          <StatusBadge label={statusLabel} color={statusColor} size="sm" />
+          <Pill label={statusLabel} tone={pillToneOfStatusColor(statusColor)} />
         </YStack>
       </XStack>
 

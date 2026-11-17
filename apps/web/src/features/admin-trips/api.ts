@@ -3,6 +3,8 @@ import { apiGet, apiPost, fetchPage, type Paged, type QueryParams } from '@/serv
 import type {
   TripBooking,
   TripBookingFilters,
+  TripDriver,
+  TripDriverFilters,
   TripRemindResult,
   TripRequest,
   TripRequestFilters,
@@ -17,9 +19,11 @@ export function summaryParams(tenantId?: string): QueryParams {
   return { tenantId: tenantId ?? null };
 }
 
-export function queueParams(filters: TripRequestFilters | TripBookingFilters): QueryParams {
+export function queueParams(
+  filters: TripRequestFilters | TripBookingFilters | TripDriverFilters,
+): QueryParams {
   return {
-    queue: filters.queue,
+    queue: 'queue' in filters ? filters.queue : null,
     q: filters.q ?? null,
     tenantId: filters.tenantId ?? null,
     page: filters.page ?? 1,
@@ -35,6 +39,10 @@ export const fetchTripRequests = (filters: TripRequestFilters): Promise<Paged<Tr
 
 export const fetchTripBookings = (filters: TripBookingFilters): Promise<Paged<TripBooking>> =>
   fetchPage<TripBooking>(`${BASE}/bookings`, queueParams(filters), TRIPS_DEFAULT_LIMIT);
+
+/** Hàng đợi tài xế — đơn có tài xế kẹt khâu tài xế (ADR 0066 · 0067 · 0074). */
+export const fetchTripDrivers = (filters: TripDriverFilters): Promise<Paged<TripDriver>> =>
+  fetchPage<TripDriver>(`${BASE}/drivers`, queueParams(filters), TRIPS_DEFAULT_LIMIT);
 
 /** Nhắc tay chủ xe — một thông báo + một dòng audit ở backend; có cooldown (`TRIP_REMIND_TOO_SOON`). */
 export const remindTripRequest = (id: string): Promise<TripRemindResult> =>

@@ -3,7 +3,9 @@ import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
+  BANK_MATCH_REASON,
   BANK_MATCH_STATUS,
+  WALLET_ENTRY_KIND,
   BILLING_MODE,
   PLAN_STATUS,
   SUBSCRIPTION_INVOICE_STATUS,
@@ -18,6 +20,7 @@ import {
   makeBookingExtensionsService,
   makeBookingHoldsService,
 } from './helpers/service-factory';
+import { releaseWalletObligations } from './helpers/wallet-cleanup';
 
 /**
  * Đường tiền SePay → hoá đơn gói → kích hoạt — chạy trên PostgreSQL THẬT (R2, ADR 0016/0022).
@@ -176,6 +179,8 @@ afterAll(async () => {
     await prisma.subscriptionInvoice.deleteMany({ where: { tenantId } });
     await prisma.tenantSubscription.deleteMany({ where: { tenantId } });
     await prisma.notification.deleteMany({ where: { tenantId } });
+    // Tiền gói chuyển thừa ghi có ví gian hàng (ADR 0092) — ví là `RESTRICT`, gỡ trước.
+    await releaseWalletObligations(prisma, { tenantIds: [tenantId] });
     await prisma.tenantMembership.deleteMany({ where: { tenantId } });
     await prisma.plan.deleteMany({ where: { id: planId } });
     await prisma.tenant.deleteMany({ where: { id: tenantId } });
@@ -357,7 +362,13 @@ describe('Thiếu / đủ / thừa tiền (ADR 0016 điều 6)', () => {
       where: ownRows,
       orderBy: { createdAt: 'asc' },
     });
-    expect(rows[1]!.matchNote).toBe('overpaid');
+    // Mã lý do (không phải câu chữ) + phần thừa đã tự vào ví gian hàng (ADR 0092).
+    expect(rows[1]!.matchReasonCode).toBe(BANK_MATCH_REASON.OVERPAID);
+    expect(
+      await prisma.walletEntry.count({
+        where: { kind: WALLET_ENTRY_KIND.SUBSCRIPTION_OVERPAY, sourceRefId: rows[1]!.id },
+      }),
+    ).toBe(1);
     expect(await prisma.tenantSubscription.count({ where: { tenantId } })).toBe(1);
   });
 
@@ -395,14 +406,17 @@ describe('Mã chết và mã lạ', () => {
    * tự tra từng mã để biết mình đang nhìn cái gì — và một hàng đợi tiền như vậy thì không ai
    * dọn hết được.
    */
-  it('mã giữ chỗ không tồn tại: unmatched, và match_note nói rõ lý do', async () => {
+  it('mã giữ chỗ không tồn tại: unmatched, và MÃ lý do nói rõ vì sao (ADR 0092)', async () => {
     if (!dbAvailable) return;
     const result = await sepay.ingest(payload({ content: 'XPH23456789' }));
     expect(result).toMatchObject({ matched: false, note: 'hold_not_found' });
 
     const row = await prisma.bankTransaction.findFirstOrThrow({ where: ownRows });
     expect(row.matchStatus).toBe(BANK_MATCH_STATUS.UNMATCHED);
-    expect(row.matchNote).toContain('XPH23456789');
+    expect(row.matchReasonCode).toBe(BANK_MATCH_REASON.HOLD_NOT_FOUND);
+    expect(row.matchReasonParams).toEqual({ code: 'XPH23456789' });
+    // `match_note` để dành cho ghi chú của NGƯỜI.
+    expect(row.matchNote).toBeNull();
   });
 
   /*

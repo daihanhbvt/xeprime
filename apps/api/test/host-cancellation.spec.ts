@@ -32,6 +32,7 @@ import {
   makeNotificationService,
   makeDriversService,
 } from './helpers/service-factory';
+import { relaxBookingLimits } from './helpers/booking-limits';
 
 /**
  * QUYỀN HUỶ CỦA CHỦ XE — trên PostgreSQL THẬT (ADR 0045 điều 1).
@@ -106,6 +107,8 @@ async function acceptedRequest(offsetDays = 6): Promise<string> {
 }
 
 beforeAll(async () => {
+  // Spec đặt xe, không phải spec trần đặt xe (ADR 0091 điều 4) — lịch rải theo bộ đếm ngày.
+  relaxBookingLimits();
   try {
     await prisma.$connect();
     await prisma.$queryRaw`SELECT 1`;

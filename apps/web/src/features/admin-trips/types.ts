@@ -9,6 +9,8 @@ export type TripRequest = Schemas['PlatformTripRequestDto'];
 export type TripRemindResult = Schemas['PlatformTripRemindResultDto'];
 /** Dòng đơn trong hai hàng đợi "trong chuyến" — cùng DTO với danh sách đơn thuê toàn hệ thống. */
 export type TripBooking = Schemas['PlatformBookingDto'];
+/** Dòng của hàng đợi TÀI XẾ — dòng đơn chuẩn kèm vấn đề tài xế và mốc của nó. */
+export type TripDriver = Schemas['PlatformTripDriverDto'];
 
 /** Bộ lọc của MỘT hàng đợi — ở URL searchParams (ADR 0004); đổi hàng đợi là bỏ hết. */
 export interface TripQueueFilters {
@@ -25,3 +27,6 @@ export interface TripRequestFilters extends TripQueueFilters {
 export interface TripBookingFilters extends TripQueueFilters {
   queue: PlatformTripBookingQueue;
 }
+
+/** Hàng đợi tài xế không có tham số `queue` — endpoint riêng. */
+export type TripDriverFilters = TripQueueFilters;

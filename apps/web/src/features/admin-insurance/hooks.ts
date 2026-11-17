@@ -14,13 +14,31 @@ import { queryKeys } from '@/services/query-keys';
 import {
   certificateFiltersToParams,
   fetchCertificateDetail,
+  fetchCertificatePricing,
   fetchCertificates,
+  fetchInsuranceAttention,
   fetchInsuranceProducts,
   retryCertificate,
   updateInsuranceProduct,
   voidCertificate,
+  createRemittance,
+  deleteRemittance,
+  fetchRemittance,
+  fetchRemittanceLines,
+  fetchRemittancePending,
+  fetchRemittances,
+  finalizeRemittance,
+  payRemittance,
+  remittanceFiltersToParams,
 } from './api';
-import type { CertificateFilters, UpdateInsuranceProductInput } from './types';
+import type {
+  CertificateFilters,
+  CreateInsuranceRemittanceInput,
+  PayInsuranceRemittanceInput,
+  RemittanceFilters,
+  UpdateInsuranceProductInput,
+  VoidInsurancePolicyInput,
+} from './types';
 
 // ── Danh mục sản phẩm ───────────────────────────────────────────────────────
 
@@ -93,6 +111,25 @@ export function useCertificateDetail(id: string | null) {
   });
 }
 
+/** Phí thực tế của một hợp đồng — ngăn chi tiết (ADR 0091 điều 2). */
+export function useCertificatePricing(id: string | null) {
+  return useQuery({
+    queryKey: queryKeys.platformInsurance.pricing(id ?? ''),
+    queryFn: () => fetchCertificatePricing(id as string),
+    enabled: Boolean(id),
+  });
+}
+
+/** Hợp đồng cần xử lý gấp — khối cảnh báo đầu tab Chứng nhận (ADR 0091 điều 7). */
+export function useInsuranceAttention(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.platformInsurance.attention,
+    queryFn: fetchInsuranceAttention,
+    enabled,
+    staleTime: 60_000,
+  });
+}
+
 /**
  * Thử lại / thu hồi đổi trạng thái một hợp đồng VÀ con số "phí bảo hiểm đang giữ hộ" của đối soát
  * — làm mới cả nhánh bảo hiểm lẫn nhánh tiền.
@@ -113,9 +150,90 @@ export function useRetryCertificate() {
 export function useVoidCertificate() {
   const invalidate = useInvalidateCertificates();
   return useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) => voidCertificate(id, reason),
+    mutationFn: ({ id, ...input }: { id: string } & VoidInsurancePolicyInput) =>
+      voidCertificate(id, input),
     onSuccess: invalidate,
   });
+}
+
+// ── Bảng kê trả phí cho hãng (ADR 0088 điều 6) ──────────────────────────────
+
+function parseRemittanceFilters(params: URLSearchParams): RemittanceFilters {
+  return {
+    page: positiveIntParam(params, 'page'),
+    limit: positiveIntParam(params, 'limit'),
+    remittance: params.get('remittance') || undefined,
+  };
+}
+
+export function useRemittanceFilters() {
+  return useUrlFilters(parseRemittanceFilters);
+}
+
+export function useRemittances(filters: RemittanceFilters) {
+  const params = remittanceFiltersToParams(filters);
+  return useQuery({
+    queryKey: queryKeys.platformInsurance.remittances(params),
+    queryFn: () => fetchRemittances(filters),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useRemittancePending() {
+  return useQuery({
+    queryKey: queryKeys.platformInsurance.remittancePending,
+    queryFn: fetchRemittancePending,
+  });
+}
+
+export function useRemittance(id: string | null) {
+  return useQuery({
+    queryKey: queryKeys.platformInsurance.remittance(id ?? ''),
+    queryFn: () => fetchRemittance(id as string),
+    enabled: Boolean(id),
+  });
+}
+
+export function useRemittanceLines(id: string | null, page: number, limit: number) {
+  return useQuery({
+    queryKey: queryKeys.platformInsurance.remittanceLines(id ?? '', { page, limit }),
+    queryFn: () => fetchRemittanceLines(id as string, { page, limit }),
+    enabled: Boolean(id),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** Mọi thao tác bảng kê đổi danh sách, số "chưa kê" và chi tiết — làm mới cả nhánh bảo hiểm. */
+function useInvalidateInsurance() {
+  const queryClient = useQueryClient();
+  return () => void queryClient.invalidateQueries({ queryKey: queryKeys.platformInsurance.all });
+}
+
+export function useCreateRemittance() {
+  const invalidate = useInvalidateInsurance();
+  return useMutation({
+    mutationFn: (body: CreateInsuranceRemittanceInput) => createRemittance(body),
+    onSuccess: invalidate,
+  });
+}
+
+export function useFinalizeRemittance() {
+  const invalidate = useInvalidateInsurance();
+  return useMutation({ mutationFn: finalizeRemittance, onSuccess: invalidate });
+}
+
+export function usePayRemittance() {
+  const invalidate = useInvalidateInsurance();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: PayInsuranceRemittanceInput }) =>
+      payRemittance(id, body),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteRemittance() {
+  const invalidate = useInvalidateInsurance();
+  return useMutation({ mutationFn: deleteRemittance, onSuccess: invalidate });
 }
 
 export type { InsurancePolicyStatus };

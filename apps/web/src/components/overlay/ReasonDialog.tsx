@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import * as yup from 'yup';
 import { RadioGroupField, type RadioGroupFieldOption } from '@/components/form/RadioGroupField';
 import { TextAreaField } from '@/components/form/TextAreaField';
+import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import styles from './ReasonDialog.module.css';
 
@@ -37,15 +38,29 @@ interface ReasonDialogProps {
   choiceLabel?: string;
   choiceRequiredMessage?: string;
   textRequiredFor?: readonly string[];
-  /** `choice` chỉ có khi khai `choices`; chuỗi lời nhắn có thể rỗng khi mã không đòi lời nhắn. */
-  onSubmit: (reason: string, choice?: string) => void;
+  /**
+   * Ô MÃ CHỨNG TỪ một dòng đi kèm lý do — khi quyết định phải dẫn chiếu một chứng từ bên ngoài (mã huỷ /
+   * biên bản đối chiếu với hãng bảo hiểm). `required` do server quyết qua dữ liệu, không do màn hình đoán.
+   */
+  reference?: {
+    label: string;
+    placeholder?: string;
+    required: boolean;
+    requiredMessage: string;
+    maxLength: number;
+  };
+  /**
+   * `choice` chỉ có khi khai `choices`; chuỗi lời nhắn có thể rỗng khi mã không đòi lời nhắn.
+   * `reference` chỉ có khi khai `reference` (chuỗi rỗng = người dùng không nhập).
+   */
+  onSubmit: (reason: string, choice?: string, reference?: string) => void;
   onClose: () => void;
 }
 
 /**
  * Hộp nhập LÝ DO cho một quyết định phải có người chịu trách nhiệm — mở từ CHÂN panel làm việc
  * (`WorkDrawer`) hay từ nút trên một dòng: từ chối hoàn, từ chối / đảo lệnh rút, chốt kết cục giữ
- * chỗ, khớp tay tiền vào, vô hiệu hợp đồng bảo hiểm, từ chối bằng lái. Một chỗ dùng chung để mọi
+ * chỗ, khớp tay tiền vào, thu hồi hợp đồng bảo hiểm (kèm mã đối chiếu với hãng), từ chối bằng lái. Một chỗ dùng chung để mọi
  * quyết định có cùng một hình thức: lý do bắt buộc, nói rõ ai đọc nó, nút xác nhận màu nguy hiểm
  * khi phá huỷ.
  *
@@ -69,18 +84,30 @@ export function ReasonDialog({
   choiceLabel,
   choiceRequiredMessage,
   textRequiredFor,
+  reference,
   onSubmit,
   onClose,
 }: ReasonDialogProps) {
   const tCommon = useTranslations('Common');
   const hasChoices = Boolean(choices && choices.length > 0);
+  const referenceRequired = reference?.required ?? false;
+  const referenceRequiredMessage = reference?.requiredMessage ?? requiredMessage;
+  const referenceMaxLength = reference?.maxLength;
   const schema = useMemo(() => {
     const text = yup
       .string()
       .trim()
       .max(maxLength, tCommon('validation.maxLength', { max: maxLength }));
     const required = text.min(minLength, requiredMessage).required(requiredMessage);
+    const referenceMax = referenceMaxLength ?? 100;
+    const referenceText = yup
+      .string()
+      .trim()
+      .max(referenceMax, tCommon('validation.maxLength', { max: referenceMax }));
     return yup.object({
+      reference: referenceRequired
+        ? referenceText.required(referenceRequiredMessage)
+        : referenceText.default(''),
       choice: hasChoices
         ? yup.string().required(choiceRequiredMessage ?? requiredMessage)
         : yup.string().default(''),
@@ -99,28 +126,33 @@ export function ReasonDialog({
     requiredMessage,
     choiceRequiredMessage,
     textRequiredFor,
+    // Khoá theo giá trị, không theo object: nơi gọi dựng `reference` mới mỗi lần render.
+    referenceRequired,
+    referenceRequiredMessage,
+    referenceMaxLength,
     tCommon,
   ]);
 
-  type FormValues = { choice?: string; reason?: string };
+  type FormValues = { choice?: string; reason?: string; reference?: string };
 
   const { control, handleSubmit, reset } = useForm<FormValues>({
     // Schema đổi hình theo `choices` (nhánh `.when`), nên kiểu suy ra của yup không khớp một
     // `FormValues` cố định — ép ở MỘT chỗ này thay vì để nó lan ra nơi gọi.
     resolver: yupResolver(schema) as unknown as Resolver<FormValues>,
-    defaultValues: { choice: '', reason: '' },
+    defaultValues: { choice: '', reason: '', reference: '' },
   });
   const choice = useWatch({ control, name: 'choice' });
   const textRequired = !hasChoices || Boolean(choice && textRequiredFor?.includes(choice));
 
   useEffect(() => {
-    if (open) reset({ choice: '', reason: '' });
+    if (open) reset({ choice: '', reason: '', reference: '' });
   }, [open, reset]);
 
   const submit = handleSubmit((values) => {
     if (loading) return;
     const reason = (values.reason ?? '').trim();
-    if (hasChoices) onSubmit(reason, values.choice);
+    const ref = reference ? (values.reference ?? '').trim() : undefined;
+    if (hasChoices || reference) onSubmit(reason, hasChoices ? values.choice : undefined, ref);
     else onSubmit(reason);
   });
 
@@ -146,6 +178,15 @@ export function ReasonDialog({
               label={choiceLabel}
               options={choices!}
               required
+            />
+          ) : null}
+          {reference ? (
+            <TextField
+              control={control}
+              name="reference"
+              label={reference.label}
+              placeholder={reference.placeholder}
+              required={reference.required}
             />
           ) : null}
           <TextAreaField

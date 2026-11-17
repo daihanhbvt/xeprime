@@ -4,7 +4,7 @@ import {
   ScrollRevealProvider,
   useScrollRevealList,
 } from '@/components/motion/ScrollReveal';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Platform, Pressable, RefreshControl, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,7 +30,6 @@ import { VehicleCardSkeleton } from '@/components/ui/Skeleton';
 import { Reveal } from '@/components/motion/Reveal';
 import { useCatalog, useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
-import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { TABLET_MIN_WIDTH, layout } from '@/theme/layout';
@@ -46,6 +45,7 @@ import { KeywordSearch } from './components/KeywordSearch';
 import { LocationPicker } from './components/LocationPicker';
 import { RentalRangeSheet } from './components/RentalRangeSheet';
 import { VehicleCard } from './components/VehicleCard';
+import { usePriceBandLabel } from './filter-constants';
 import { QuickFilterPills } from './components/QuickFilterPills';
 import { useRentalRangeLabel } from './use-rental-range-label';
 import { SERVICE_LABEL_KEY } from './search-items';
@@ -156,10 +156,10 @@ function ResultsBody({
   const compactRangeLabel = useRentalRangeLabel(true);
   const errorMessage = useErrorMessage();
   const tPanel = useTranslations('Marketplace.filterPanel');
+  const priceBandLabel = usePriceBandLabel();
   const tService = useTranslations('HomeSearch.service');
   const tNav = useTranslations('Navigation.public');
   const domainLabel = useDomainLabel();
-  const fmt = useAppFormat();
   const insets = useSafeAreaInsets();
   const navigateOnce = useNavigateOnce();
   const { catalog } = useCatalog();
@@ -319,12 +319,23 @@ function ResultsBody({
       }
     };
 
-    listChip('brand', (key) => brandLabel(key) ?? key);
+    // Thứ tự chip đúng web `MarketplaceResults.appliedChips`.
     listChip('bodyType', (key) => catalogLabel(catalog.body_type, key) ?? key);
+    for (const key of filters.motorbikeCategory ?? []) {
+      chips.push({
+        id: `motorbikeCategory:${key}`,
+        label: domainLabel('motorbikeCategory', key),
+        clear: () =>
+          setFilters({
+            motorbikeCategory: (filters.motorbikeCategory ?? []).filter((k) => k !== key),
+          }),
+      });
+    }
+    listChip('brand', (key) => brandLabel(key) ?? key);
+    listChip('transmission', (key) => domainLabel('transmissionType', key));
     listChip('seats', (key) => domainLabel('seatBucket', key, SEAT_BUCKET_LABEL[key as never]));
     listChip('fuelType', (key) => catalogLabel(catalog.fuel_type, key) ?? key);
     listChip('features', (key) => catalogLabel(catalog.vehicle_feature, key) ?? key);
-    listChip('transmission', (key) => domainLabel('transmissionType', key));
 
     for (const amenity of LISTING_AMENITY_VALUES) {
       if (!filters[amenity]) continue;
@@ -335,28 +346,33 @@ function ResultsBody({
       });
     }
 
-    if (filters.sort) {
+    if (filters.instantBook) {
       chips.push({
-        id: 'sort',
-        label: domainLabel('listingSort', filters.sort, LISTING_SORT_LABEL[filters.sort]),
-        // Gỡ = về lại thứ tự mặc định, không phải "không sắp xếp".
-        clear: () => setFilters({ sort: undefined }),
+        id: 'instantBook',
+        label: tPanel('modal.chips.instantBook'),
+        clear: () => setFilters({ instantBook: undefined }),
       });
     }
 
+    if (filters.minRating != null) {
+      chips.push({
+        id: 'minRating',
+        label: tPanel('modal.ratingFrom', { rating: filters.minRating }),
+        clear: () => setFilters({ minRating: undefined }),
+      });
+    }
+
+    // Sắp xếp KHÔNG thành chip (web cũng không) - nó đổi thứ tự, không thu hẹp kết quả.
     if (filters.priceMin !== undefined || filters.priceMax !== undefined) {
       chips.push({
         id: 'price',
-        label: tPanel('priceRangeValue', {
-          from: fmt.money(String(filters.priceMin ?? 0)),
-          to: fmt.money(String(filters.priceMax ?? 0)),
-        }),
+        label: priceBandLabel({ min: filters.priceMin, max: filters.priceMax }),
         clear: () => setFilters({ priceMin: undefined, priceMax: undefined }),
       });
     }
 
     return chips;
-  }, [filters, brandLabel, catalog, domainLabel, fmt, setFilters, tPanel]);
+  }, [filters, brandLabel, catalog, domainLabel, priceBandLabel, setFilters, tPanel]);
 
   /**
    * Huy hiệu trên nút Bộ lọc = SỐ VIÊN đang hiện ngay cạnh "Xoá tất cả".

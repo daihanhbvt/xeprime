@@ -9,10 +9,16 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { InsuranceCertificatesPanel } from './InsuranceCertificatesPanel';
 import { InsuranceProductsPanel } from './InsuranceProductsPanel';
+import { RemittancesPanel } from './RemittancesPanel';
 
-const TAB = { PRODUCTS: 'products', CERTIFICATES: 'certificates' } as const;
+const TAB = {
+  PRODUCTS: 'products',
+  CERTIFICATES: 'certificates',
+  /** Bảng kê trả phí cho hãng (ADR 0088 điều 6). */
+  REMITTANCES: 'remittances',
+} as const;
 type Tab = (typeof TAB)[keyof typeof TAB];
-const isTab = (v: string | null): v is Tab => v === TAB.PRODUCTS || v === TAB.CERTIFICATES;
+const isTab = (v: string | null): v is Tab => Object.values(TAB).includes(v as Tab);
 
 /**
  * Màn BẢO HIỂM của nền tảng (ADR 0064) — hai tab, mỗi tab gác bằng quyền của chính endpoint nó gọi:
@@ -36,7 +42,15 @@ export function InsuranceAdminView() {
   const canCertificates = has(PERMISSION.PLATFORM_MONEY_MANAGE);
   const items = [
     ...(canCertificates
-      ? [{ key: TAB.CERTIFICATES, label: t('tabs.certificates'), children: <InsuranceCertificatesPanel /> }]
+      ? [
+          {
+            key: TAB.CERTIFICATES,
+            label: t('tabs.certificates'),
+            children: <InsuranceCertificatesPanel />,
+          },
+          // Cùng quyền tiền: bảng kê là vế "phải trả hãng" của tiền giữ hộ.
+          { key: TAB.REMITTANCES, label: t('tabs.remittances'), children: <RemittancesPanel /> },
+        ]
       : []),
     ...(canProducts
       ? [{ key: TAB.PRODUCTS, label: t('tabs.products'), children: <InsuranceProductsPanel /> }]
@@ -52,7 +66,10 @@ export function InsuranceAdminView() {
         <Skeleton active paragraph={{ rows: 6 }} />
       ) : items.length === 0 ? (
         <PermissionState
-          missingPermissions={[PERMISSION.PLATFORM_INSURANCE_MANAGE, PERMISSION.PLATFORM_MONEY_MANAGE]}
+          missingPermissions={[
+            PERMISSION.PLATFORM_INSURANCE_MANAGE,
+            PERMISSION.PLATFORM_MONEY_MANAGE,
+          ]}
         />
       ) : (
         <Tabs

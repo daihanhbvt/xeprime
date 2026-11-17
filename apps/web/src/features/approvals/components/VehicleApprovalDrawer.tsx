@@ -9,6 +9,7 @@ import {
   HistoryOutlined,
   InfoCircleOutlined,
   PictureOutlined,
+  SafetyCertificateOutlined,
   ShopOutlined,
   UnorderedListOutlined,
   UserOutlined,
@@ -44,6 +45,8 @@ import {
   useVehicleApproval,
   useVehicleApprovalDecision,
 } from '../hooks/use-vehicle-approvals';
+import { VehicleInsuranceReviewBlock } from '@/features/admin-vehicles/components/VehicleInsuranceReviewBlock';
+import { fetchApprovalRegistrationImage } from '../api';
 import { hasApprovalBlockers, pricingPolicyRows, vehicleInfoRows } from '../review-rows';
 import type { VehicleApprovalDetail } from '../types';
 import { ApproveDialog, ReasonDialog } from './DecisionDialogs';
@@ -62,7 +65,7 @@ interface VehicleApprovalDrawerProps {
 }
 
 /** Khối mở sẵn: đủ để quyết định mà không phải bấm; tiện nghi và lịch sử mở khi cần. */
-const DEFAULT_OPEN_SECTIONS = ['gallery', 'vehicle', 'pricing', 'pickup'];
+const DEFAULT_OPEN_SECTIONS = ['gallery', 'vehicle', 'pricing', 'insurance', 'pickup'];
 
 const DECIDED_TONE: Partial<Record<ApprovalStatus, AlertProps['type']>> = {
   [APPROVAL_STATUS.APPROVED]: 'success',
@@ -471,6 +474,21 @@ function sectionItems(
         </div>
       ),
     },
+    // Bảo hiểm và giấy tờ — dữ liệu SỐNG, không thuộc ảnh chụp lúc gửi (đợt rà Admin 16/11/2026).
+    ...(detail.insuranceReview
+      ? [
+          {
+            key: 'insurance',
+            label: label(<SafetyCertificateOutlined aria-hidden />, t('sections.insurance')),
+            children: (
+              <VehicleInsuranceReviewBlock
+                review={detail.insuranceReview}
+                fetchImage={() => fetchApprovalRegistrationImage(detail.approvalTaskId)}
+              />
+            ),
+          },
+        ]
+      : []),
     {
       key: 'pickup',
       label: label(<EnvironmentOutlined aria-hidden />, t('sections.pickup')),

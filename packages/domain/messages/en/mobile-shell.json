@@ -33,6 +33,32 @@
     "more": "More",
     "openMenu": "Open management menu"
   },
+  "manageMenu": {
+    "system": "System",
+    "appearanceHint": "Switch between light and dark mode",
+    "localeHint": "Choose the display language",
+    "needsAction": "{count} to handle",
+    "descriptions": {
+      "bookings": "Manage booking requests and rentals",
+      "calendar": "Manage your rental schedule",
+      "customers": "Manage your customer information",
+      "vehicles": "Vehicle details, status and activity",
+      "drivers": "Track and manage your drivers",
+      "maintenance": "Track maintenance schedules and vehicle condition",
+      "financeOverview": "Revenue, costs and profit over time",
+      "balance": "Points wallet balance and withdrawals",
+      "receipts": "Income and expense transactions and debts",
+      "shop": "Manage your shop information and profile",
+      "ownerProfile": "Owner details, tax and payout accounts",
+      "shopPolicies": "Set rental prices, rules and terms",
+      "members": "Manage staff information & permissions",
+      "support": "Answers to questions and shop issue handling",
+      "hostGuide": "How to rent out vehicles on XePrime",
+      "contractsDocuments": "Contracts and documents for your trips",
+      "dataProtection": "How XePrime protects your data",
+      "supportCases": "Help with issues and disputes"
+    }
+  },
   "manageHome": {
     "greeting": "Hello, {name}",
     "shopStatus": "Shop status",

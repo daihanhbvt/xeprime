@@ -1,69 +1,45 @@
 'use client';
 
-import { Form, Skeleton } from 'antd';
+import { Button, Form, Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { trailingRequiredMark } from '@/components/form/required-mark';
+import { LineIcon } from '@/components/icons/LineIcon';
+import { InfoCard } from '@/components/layout/InfoCard';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
-import { SectionCard } from '@/components/layout/SectionCard';
-import { SectionNav, type SectionNavItem } from '@/components/layout/SectionNav';
-import {
-  ACCOUNT_SECTION,
-  PERSONAL_ACCOUNT_SECTIONS,
-  accountSectionDomId,
-  accountSectionOf,
-  type AccountSection,
-} from '@/constants/routes';
-import { useScrollToSection } from '@/hooks/use-scroll-to-section';
-import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useErrorMessage } from '@/i18n/use-error-message';
 
 import { useMyProfile } from '../hooks/use-account';
-import type { UserProfile } from '../types';
-import { AccountProfileForm } from './AccountProfileForm';
-import { AccountSecuritySections } from './AccountSecuritySections';
+import { AccountDeletionDialog } from './AccountDeletionDialog';
+import { AccountPasswordForm } from './AccountPasswordForm';
+import { AccountProfileCard } from './AccountProfileCard';
+import { LoginMethods } from './LoginMethods';
 import styles from './PartnerAccountPage.module.css';
 
 /**
- * TÀI KHOẢN & BẢO MẬT — trang của CON NGƯỜI đang đăng nhập ở site partner (05/10/2026).
+ * TÀI KHOẢN & BẢO MẬT - trang của CON NGƯỜI đang đăng nhập ở site partner, mọi tuyến (ADR 0085
+ * điều 2). Design `24131:71662` (17/11/2026):
  *
- * Gộp hai trang cũ: "Hồ sơ cá nhân" (`/manage/account`) và "Bảo mật tài khoản" (`/manage/security`).
- * Cả hai cùng hiện email/SĐT, nên người dùng phải đoán đổi số ở cửa nào; và cả hai cùng nói về
- * một danh tính. Một trang, bốn section theo thứ tự người ta cần chúng — từ thường dùng tới hiếm
- * và khó lùi lại:
+ *   - cột trái 400: thẻ hồ sơ cá nhân (ảnh, họ tên) + dòng "Yêu cầu xóa tài khoản";
+ *   - cột phải: "Thông tin đăng nhập" (SĐT, email - đổi/xác minh qua OTP) và "Mật khẩu".
  *
- *   1. Hồ sơ cá nhân      — tên, ảnh đại diện.
- *   2. Thông tin đăng nhập — email/SĐT, tình trạng xác minh, đổi qua OTP.
- *   3. Mật khẩu            — đổi, hoặc đặt lần đầu cho tài khoản OTP/mạng xã hội.
- *   4. Xoá tài khoản       — một YÊU CẦU, form khép lại cho tới khi người dùng chủ động mở.
+ * Một URL, không mục lục và không `?section=` (người dùng chốt 17/11/2026 - trang đủ gọn để nhìn
+ * hết một lượt). Link cũ mang `?section=` vẫn mở được trang; các bí danh của "Hồ sơ chủ xe" cũ
+ * (`address|vat-invoice|tax|plan`) do `PartnerAccountRoute` chuyển sang `/shop` trước khi tới đây.
  *
- * Cùng khuôn với trang Cửa hàng (`SectionNav` + `SectionCard`): mục lục dính bên trái, section xếp
- * dọc bên phải, `?section=` ở URL để link chia sẻ / F5 / Quay lại về đúng chỗ (ADR 0004). Không có
- * gì của GIAN HÀNG ở đây — tên, logo, SĐT liên hệ của gian hàng sống ở Cài đặt gian hàng.
+ * Xoá tài khoản là một YÊU CẦU (support case), mở trong hộp `AccountDeletionDialog` dùng chung với
+ * site khách: điều kiện, quy trình, gửi, xem trạng thái và rút yêu cầu.
  *
- * Mỗi section dùng lại component của khu tài khoản (không clone): luồng OTP, luật mật khẩu và
- * luồng yêu cầu xoá tài khoản chỉ có một chỗ để sửa (`AccountSecuritySections`).
- *
- * CHỦ xe tuyến hoa hồng không thấy bản này — cùng URL, họ thấy "Hồ sơ chủ xe" (`OwnerProfilePage`,
- * chọn ở `PartnerAccountRoute`).
+ * Không có gì của GIAN HÀNG ở đây - tên, logo, SĐT liên hệ của gian hàng sống ở Cài đặt gian hàng.
  */
 export function PartnerAccountPage() {
-  const t = useTranslations('Account.hub');
+  const t = useTranslations('Account.securityPage');
   const tCommon = useTranslations('Common');
   const errorMessage = useErrorMessage();
   const profile = useMyProfile();
-
-  const { filters, setFilters } = useUrlFilters((params) => ({
-    /*
-     * Hai section của "Hồ sơ chủ xe" (trang chủ xe, địa chỉ) không có ở đây — một link
-     * `?section=storefront` gửi cho người ở tuyến gói rơi về đầu trang, không về một mục lục
-     * đang sáng một dòng không tồn tại.
-     */
-    section: personalSectionOf(params.get('section')),
-    // Dẫn xuất, không bao giờ ghi ngược lên URL — chỉ để lần vẽ đầu biết có nên cuộn hay không.
-    sectionInUrl: params.has('section'),
-  }));
+  const [deleting, setDeleting] = useState(false);
 
   return (
     <div className={styles.page}>
@@ -71,10 +47,12 @@ export function PartnerAccountPage() {
 
       {profile.isPending ? (
         <div className={styles.layout} aria-busy="true">
-          <Skeleton active title={false} paragraph={{ rows: 4 }} className={styles.navSkeleton} />
+          <div className={styles.skeletonCard}>
+            <Skeleton active avatar paragraph={{ rows: 6 }} />
+          </div>
           <div className={styles.content}>
             <div className={styles.skeletonCard}>
-              <Skeleton active avatar paragraph={{ rows: 4 }} />
+              <Skeleton active paragraph={{ rows: 3 }} />
             </div>
             <div className={styles.skeletonCard}>
               <Skeleton active paragraph={{ rows: 3 }} />
@@ -92,77 +70,39 @@ export function PartnerAccountPage() {
           />
         </div>
       ) : (
-        <AccountSections
-          profile={profile.data}
-          section={filters.section}
-          sectionInUrl={filters.sectionInUrl}
-          // Đổi section không đổi tập dữ liệu nào, chỉ cuộn — không xoá `?page=` của ai.
-          onSectionChange={(section) => setFilters({ section }, { resetPage: false })}
-        />
+        /*
+          Một `Form` ngữ cảnh (không dựng thẻ <form>) cho cả trang: nhãn nằm TRÊN ô, không dấu hai
+          chấm. Mỗi khối vẫn giữ <form> riêng của nó.
+        */
+        <Form component={false} layout="vertical" colon={false} requiredMark={trailingRequiredMark}>
+          <div className={styles.layout}>
+            <div className={styles.aside}>
+              <AccountProfileCard profile={profile.data} />
+              <Button
+                type="link"
+                danger
+                className={styles.delete}
+                icon={<LineIcon name="delete" />}
+                onClick={() => setDeleting(true)}
+              >
+                {t('deleteLink')}
+              </Button>
+            </div>
+
+            <div className={styles.content}>
+              <InfoCard title={t('loginTitle')} hint={t('loginHint')}>
+                <LoginMethods profile={profile.data} />
+              </InfoCard>
+              <InfoCard title={t('passwordTitle')} hint={t('passwordHint')}>
+                <AccountPasswordForm />
+              </InfoCard>
+            </div>
+          </div>
+        </Form>
       )}
-    </div>
-  );
-}
 
-function personalSectionOf(value: string | null): AccountSection {
-  const section = accountSectionOf(value);
-  return PERSONAL_ACCOUNT_SECTIONS.includes(section) ? section : ACCOUNT_SECTION.PROFILE;
-}
-
-/**
- * Bốn section — chỉ dựng khi đã có hồ sơ, để `useScrollToSection` tìm thấy đích ngay lần vẽ đầu
- * (link `?section=password` từ một redirect phải rơi đúng chỗ, không phải đầu trang).
- */
-function AccountSections({
-  profile,
-  section,
-  sectionInUrl,
-  onSectionChange,
-}: {
-  profile: UserProfile;
-  section: AccountSection;
-  sectionInUrl: boolean;
-  onSectionChange: (section: AccountSection) => void;
-}) {
-  const t = useTranslations('Account.hub');
-
-  const items: SectionNavItem<AccountSection>[] = [
-    { key: ACCOUNT_SECTION.PROFILE, label: t('sections.profile') },
-    { key: ACCOUNT_SECTION.LOGIN, label: t('sections.login') },
-    { key: ACCOUNT_SECTION.PASSWORD, label: t('sections.password') },
-    { key: ACCOUNT_SECTION.DELETE, label: t('sections.delete') },
-  ];
-
-  useScrollToSection(accountSectionDomId(section), sectionInUrl);
-
-  return (
-    <div className={styles.layout}>
-      <SectionNav
-        items={items}
-        active={section}
-        onSelect={onSectionChange}
-        domIdOf={accountSectionDomId}
-        title={t('navTitle')}
-        ariaLabel={t('navLabel')}
-      />
-
-      {/*
-        Một `Form` ngữ cảnh (không dựng thẻ <form>) cho cả bốn section: nhãn nằm TRÊN ô, không dấu
-        hai chấm — cùng nhịp với trang Cửa hàng. Mỗi section vẫn giữ <form> riêng của nó.
-      */}
-      <Form component={false} layout="vertical" colon={false} requiredMark={trailingRequiredMark}>
-        <div className={styles.content}>
-          <SectionCard
-            id={accountSectionDomId(ACCOUNT_SECTION.PROFILE)}
-            title={t('sections.profile')}
-            hint={t('sections.profileHint')}
-          >
-            <AccountProfileForm profile={profile} />
-          </SectionCard>
-
-          <AccountSecuritySections profile={profile} />
-        </div>
-      </Form>
+      {/* Render có điều kiện: mỗi lần mở là một lượt đọc mới, tick xác nhận không đi theo. */}
+      {deleting ? <AccountDeletionDialog open onClose={() => setDeleting(false)} /> : null}
     </div>
   );
 }

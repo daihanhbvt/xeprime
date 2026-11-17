@@ -61,7 +61,7 @@ export function AmenityChips({ items }: { items: readonly PhotoAmenityItem[] }) 
   const colors = useColors();
   if (items.length === 0) return null;
   return (
-    <XStack fw="wrap" ai="center" gap={space.sm + space.xs} rowGap={space.sm}>
+    <XStack flexWrap="wrap" ai="center" gap={space.sm + space.xs} rowGap={space.sm}>
       {items.map((item) => {
         const vat = item.key === 'vat';
         const icon = CHIP_ICON_XML[item.key];
@@ -115,7 +115,7 @@ export function PhotoAmenityPills({
       right={right}
       bottom={space.sm}
       zi={1}
-      fw="wrap"
+      flexWrap="wrap"
       gap={6}
       maxHeight={2 * 18 + 6}
       ov="hidden"

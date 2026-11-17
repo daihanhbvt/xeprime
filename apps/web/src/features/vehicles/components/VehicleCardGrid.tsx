@@ -12,16 +12,15 @@ import { useVehicleAlertView } from '../hooks/use-vehicle-alert-view';
 import { useVehicleCardStats } from '../hooks/use-vehicle-card-stats';
 import type { VehicleListItem } from '../types';
 import { VehicleListRow } from './VehicleListRow';
-import { VehicleManagementCard } from './VehicleManagementCard';
 import { VehicleWideCard } from './VehicleWideCard';
 import styles from './VehicleCardGrid.module.css';
 
 /**
- * Bố cục desktop (Figma Partner-XePrime 03/11/2026): `few` — thẻ ngang to hai thẻ một hàng
- * (`23655:38521`); `grid` — lưới thẻ gọn (`23649:29724`); `list` — một xe một hàng
- * (`23655:36959`). Trang chọn theo tổng xe + kiểu xem; ở ≤640px luôn là hàng ngang mobile.
+ * Bố cục desktop (Figma Partner-XePrime, chốt 16/11/2026): `list` — một xe một hàng
+ * (`23655:36959`) cho đội xe dưới `VEHICLE_LIST_PAIRS_FROM` xe; `pairs` — hai thẻ một hàng
+ * (`23655:38521`) từ số đó trở lên. Trang chọn theo tổng xe; ở ≤640px luôn là hàng ngang mobile.
  */
-export type VehicleGridLayout = 'few' | 'grid' | 'list';
+export type VehicleGridLayout = 'list' | 'pairs';
 
 interface VehicleCardGridProps {
   items: VehicleListItem[];
@@ -42,8 +41,8 @@ interface VehicleCardGridProps {
   detailHref?: (id: string) => string;
 }
 
-/** Số khung chờ theo bố cục — đúng một hàng đầy (lưới 5 cột), hai thẻ to, ba hàng danh sách. */
-const SKELETON_COUNT: Readonly<Record<VehicleGridLayout, number>> = { grid: 5, few: 2, list: 3 };
+/** Số khung chờ theo bố cục — ba hàng danh sách, hai hàng thẻ đôi. */
+const SKELETON_COUNT: Readonly<Record<VehicleGridLayout, number>> = { list: 3, pairs: 4 };
 
 /**
  * Danh sách xe của `/vehicles` — dùng chung cho gian hàng và chủ xe tuyến hoa hồng.
@@ -204,11 +203,7 @@ export function VehicleCardGrid({
             };
             return (
               <li key={item.id} className={styles.cell}>
-                {layout === 'grid' ? (
-                  <VehicleManagementCard {...cardProps} />
-                ) : (
-                  <VehicleWideCard {...cardProps} layout={layout === 'few' ? 'stacked' : 'row'} />
-                )}
+                <VehicleWideCard {...cardProps} layout={layout === 'pairs' ? 'stacked' : 'row'} />
               </li>
             );
           })}

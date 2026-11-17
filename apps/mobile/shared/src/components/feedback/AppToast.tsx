@@ -1,10 +1,12 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Toast, ToastProvider, ToastViewport, useToastState } from '@tamagui/toast';
 import type { ReactNode } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Pressable, StyleSheet } from 'react-native';
 import { XStack, YStack } from 'tamagui';
 import { elevation } from '@/theme/elevation';
+import { SHEET_MAX_WIDTH, layout } from '@/theme/layout';
+import { useResponsive } from '@/theme/use-responsive';
 import { dwell } from '@/theme/motion';
 import { themed, useColors, useFloatingBorderColor } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
@@ -126,7 +128,7 @@ function AppToast() {
         br={radius.md}
         borderLeftWidth={ACCENT_BAR_WIDTH}
         bc={skin.accent}
-        px={space.md}
+        px={layout.padX}
         py={space.sm}
         style={
           floatingBorderColor
@@ -194,6 +196,9 @@ function AppToast() {
  */
 export function AppToastProvider({ children }: { children: ReactNode }) {
   const insets = useSafeAreaInsets();
+  // iPad: thông báo nổi có trần bề rộng như tấm trượt, nằm giữa trên đỉnh màn.
+  const { width } = useResponsive();
+  const toastInset = Math.max(space.md, Math.round((width - SHEET_MAX_WIDTH) / 2));
 
   return (
     <ToastProvider native={false} duration={dwell.toast} swipeDirection="up">
@@ -204,7 +209,7 @@ export function AppToastProvider({ children }: { children: ReactNode }) {
       {/*
  
       */}
-      <ToastViewport pos="absolute" top={insets.top + space.xs} left={space.md} right={space.md} />
+      <ToastViewport pos="absolute" top={insets.top + space.xs} left={toastInset} right={toastInset} />
     </ToastProvider>
   );
 }

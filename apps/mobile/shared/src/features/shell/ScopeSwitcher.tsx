@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -17,6 +17,7 @@ import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { LogoutRow } from './LogoutRow';
 import { useShellScope } from './use-shell-scope';
+import { layout } from '@/theme/layout';
 
 /** Ảnh đại diện ở khối nhận diện — `size` là đường kính NGOÀI, vòng gold vẽ vào bên trong. */
 const AVATAR = 44;
@@ -199,7 +200,7 @@ export function ScopeSwitcherSheet({ open, onClose }: { open: boolean; onClose: 
           </XStack>
         ) : null}
 
-        <YStack gap={space.sm} px={space.md}>
+        <YStack gap={space.sm} px={layout.padX}>
           {/* Chỉ gian hàng TUYẾN GÓI có khu quản lý — ADR 0038 điều 4, cùng vị từ với `ScopeGuard`. */}
           {SWITCHABLE_SCOPES.includes(APP_SCOPE.MANAGE) &&
           tenant &&

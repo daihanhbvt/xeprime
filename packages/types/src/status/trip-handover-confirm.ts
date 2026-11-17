@@ -32,6 +32,11 @@ export const HANDOVER_CONFIRM_SOURCE = {
    * tài khoản khách (người duy nhất đã lên tiếng), không có KM/hiện trạng.
    */
   AUTO: 'auto',
+  /**
+   * Nhân sự NỀN TẢNG kết luận chuyến sau khi gọi xác minh một case `handover_unconfirmed` /
+   * `return_unconfirmed` (ADR 0094). `confirmed_by` = tài khoản nhân sự đó, không có KM/hiện trạng.
+   */
+  PLATFORM: 'platform',
 } as const;
 
 export type HandoverConfirmSource =

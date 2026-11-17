@@ -25,6 +25,7 @@ import {
   makeNotificationService,
   makePricingService,
 } from './helpers/service-factory';
+import { relaxBookingLimits } from './helpers/booking-limits';
 
 /**
  * AI ĐƯỢC ĐẶT XE — ADR 0053 điều 2 và 7 + ADR 0060, trên PostgreSQL thật.
@@ -206,6 +207,8 @@ function submit(
 }
 
 beforeAll(async () => {
+  // Spec đặt xe, không phải spec trần đặt xe (ADR 0091 điều 4) — lịch rải theo bộ đếm ngày.
+  relaxBookingLimits();
   try {
     await prisma.$connect();
     await prisma.$queryRaw`SELECT 1`;

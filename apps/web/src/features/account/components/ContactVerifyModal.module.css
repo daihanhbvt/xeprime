@@ -1,10 +1,6 @@
-/**
- * Modal đổi/thêm email — số điện thoại. Một cột hẹp, mỗi bước đúng một việc; xem docblock của
- * `ContactVerifyModal.tsx`.
- *
- * Hành động nằm ở FOOTER của hộp thoại, không phải ba nút `block` xếp chồng trong thân như bản
- * đầu: xếp chồng làm hộp thoại trông như một danh sách nút, và trong khổ hẹp thì câu gợi ý dài
- * bị ngắt dòng lởm chởm ngay giữa các nút đó.
+/*
+ * Hộp đổi/thêm/xác minh email - số điện thoại (design `24131:71845` bước nhập · `24131:72204` bước
+ * mã): thân đệm 20, các khối cách 16, thanh hai bước 4px ở cuối thân.
  */
 .body {
   display: flex;
@@ -12,41 +8,85 @@
   gap: var(--xp-space-md);
 }
 
-/* Câu dẫn ngay dưới tiêu đề: nói người dùng sắp phải làm gì, trước khi họ nhìn xuống ô nhập. */
-.lead {
-  margin: 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: 1.6;
+.step,
+.codeStep {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
 }
 
-.current {
-  margin: 0;
+/* Một field duy nhất - khoảng chừa dưới `Form.Item` đẩy khung "được bảo mật" rơi khỏi nhịp. */
+.step :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+.inputIcon {
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: 1.6;
+  font-size: 20px;
 }
 
 .strong {
   color: var(--xp-color-text);
   font-weight: var(--xp-font-weight-semibold);
-  /* Email dài không được đẩy rộng modal — cắt ở ký tự bất kỳ thay vì tràn ngang. */
+  /* Email dài không được đẩy rộng hộp - cắt ở ký tự bất kỳ thay vì tràn ngang. */
   word-break: break-all;
   font-variant-numeric: tabular-nums;
 }
 
-.step {
+/* ── Khối trấn an: nền xám nhạt, tiêu đề đậm + thân (design `24131:71859`) ── */
+.secure {
   display: flex;
   flex-direction: column;
   gap: var(--xp-space-sm);
+  padding: var(--xp-space-12);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
 }
 
-/*
- * `Form.Item` mặc định chừa 16px dưới mỗi field cho khoảng cách giữa các field. Trong modal
- * này chỉ có ĐÚNG MỘT field, và khoảng trống đó đẩy hộp "được bảo mật" rơi khỏi nhịp.
- */
-.step :global(.ant-form-item) {
-  margin-bottom: 0;
+.secureTitle,
+.secureBody {
+  margin: 0;
+}
+
+.secureTitle {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.secureBody {
+  color: var(--xp-color-text-secondary);
+}
+
+/* ── Bước mã ─────────────────────────────────────────────────────────────── */
+.codeStep {
+  align-items: stretch;
+}
+
+.codeHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-2);
+  text-align: center;
+}
+
+.codeTitle,
+.codeSent {
+  margin: 0;
+}
+
+.codeTitle {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+}
+
+.codeSent {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
 }
 
 /* Mã dev chỉ có ở môi trường không phải production; nói rõ điều đó ngay trong chữ. */
@@ -60,65 +100,87 @@
   text-align: center;
 }
 
-.altActions {
+.resendRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--xp-space-sm);
-  flex-wrap: wrap;
+}
+
+.resend {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.resendLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--xp-font-weight-medium);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.resendLink:disabled {
+  cursor: not-allowed;
+  opacity: var(--xp-disabled-opacity);
+}
+
+.resendLink:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* "Sửa số điện thoại" / "Sửa email" - chữ vàng 16 đậm, không đệm (design `24131:72230`). */
+.edit:global(.ant-btn) {
+  height: auto;
+  padding: 0;
+  color: var(--xp-color-primary-hover);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.changeNote {
+  margin: 0;
+  color: var(--xp-color-text-placeholder);
+  font-size: var(--xp-font-size-body);
+  font-style: italic;
+  line-height: var(--xp-line-height-body);
+  text-align: center;
 }
 
 .error {
   margin: 0;
 }
 
-/* ── Khối trấn an ───────────────────────────────────────────────────────── */
-.secure {
+/* ── Thanh hai bước ──────────────────────────────────────────────────────── */
+.steps {
   display: flex;
-  align-items: flex-start;
   gap: var(--xp-space-sm);
-  padding: var(--xp-space-md);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-primary-light);
 }
 
-.secureIcon {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-container);
-  color: var(--xp-gold-deep);
-  font-size: 15px;
+.stepBar {
+  height: 4px;
+  flex: 1 1 0;
+  border-radius: 999px;
+  background: var(--xp-color-bg-muted);
 }
 
-.secureBody {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.secureTitle {
-  color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  font-weight: var(--xp-font-weight-semibold);
-}
-
-.secureDesc {
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: 1.5;
+.stepDone {
+  background: var(--xp-color-primary);
 }
 
 /* ── Hàng hành động ─────────────────────────────────────────────────────── */
 .footer {
   display: flex;
   justify-content: flex-end;
-  gap: var(--xp-space-sm);
+  gap: var(--xp-space-12);
 }
 
 /*
@@ -131,6 +193,8 @@
   }
 }
 
-/* Dark mode (Figma "Homepage - Dark Mode" 19879:66136): vàng đậm primary-active/strong chìm trên nền
-   tối ⇒ chữ/icon nhấn dùng primary; thẻ dùng viền border thay bóng. */
-:global([data-theme='dark']) .devCode { color: var(--xp-color-primary); }
+/* Dark mode: vàng đậm primary-active/hover chìm trên nền tối ⇒ chữ nhấn dùng primary. */
+:global([data-theme='dark']) .devCode,
+:global([data-theme='dark']) .edit:global(.ant-btn) {
+  color: var(--xp-color-primary);
+}

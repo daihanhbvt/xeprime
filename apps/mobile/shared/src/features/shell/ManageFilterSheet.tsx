@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -9,10 +9,12 @@ import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
 import { FieldBox } from '@/components/ui/FieldBox';
+import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
 
 export interface FilterOption {
   readonly value: string;
@@ -36,6 +38,13 @@ export interface FilterSelectGroup {
   readonly value: string;
   /** Giá trị coi là "không lọc" — dùng để đếm số bộ lọc đang bật. */
   readonly resetValue: string;
+  /**
+   * Chữ trên ô chọn của tấm dạng LƯỚI (`layout="grid"`, Figma "_Filter Modal" `24158:105500`):
+   * - `label` (mặc định): chưa lọc ⇒ tên chiều ("Loại xe"), đã lọc ⇒ nhãn lựa chọn.
+   * - `option`: luôn nhãn lựa chọn - lựa chọn "không lọc" tự nói đủ ("Tất cả chi nhánh").
+   * - `prefixed`: "Tên chiều: lựa chọn" với tên mờ ("Sắp xếp: Mới nhất") - chiều luôn có giá trị.
+   */
+  readonly display?: 'label' | 'option' | 'prefixed';
 }
 
 /**
@@ -120,7 +129,14 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
   searchPlaceholder = '',
   onSearchChange,
   onClose,
+  layout = 'chips',
 }: {
+  /**
+   * `chips` - mỗi chiều một nhóm chip + dải tóm tắt (mặc định, các màn cũ).
+   * `grid` - design v2 (Figma "_Filter Modal" `24158:105500`): ô tìm, rồi lưới ô chọn hai cột,
+   * chân "Xoá bộ lọc" · "Lưu bộ lọc". Cùng luật bản nháp - chỉ khác cách trình bày.
+   */
+  layout?: 'chips' | 'grid';
   open: boolean;
   groups: readonly FilterGroup[];
   onChange: (groupKey: string, value: string) => void;
@@ -233,6 +249,66 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
     setSearchDraft('');
   };
 
+  if (layout === 'grid') {
+    const selects = groups.filter((group): group is FilterSelectGroup => group.kind !== 'dateRange');
+    const dateRanges = groups.filter((group): group is FilterDateRangeGroup => group.kind === 'dateRange');
+    return (
+      <BottomSheet
+        open={open}
+        onClose={onClose}
+        title={t('title')}
+        chrome="v2"
+        headerDivider
+        footer={
+          <XStack gap={GRID_GAP}>
+            <YStack f={1}>
+              <Button label={t('clearAll')} icon="refresh-outline" variant="neutral" onPress={reset} />
+            </YStack>
+            <YStack f={1}>
+              <Button label={t('save')} icon="funnel-outline" variant="gradient" onPress={apply} />
+            </YStack>
+          </XStack>
+        }
+      >
+        <YStack gap={GRID_GAP}>
+          {onSearchChange ? (
+            <SearchInput
+              value={searchDraft}
+              onChange={setSearchDraft}
+              label={searchLabel}
+              placeholder={searchPlaceholder}
+              variant="field"
+            />
+          ) : null}
+          {/* Lưới HAI cột, ô cách nhau 12 - chiều lẻ cuối cùng chiếm nửa hàng như Figma. */}
+          {pairsOf(selects).map((pair) => (
+            <XStack key={pair[0].key} gap={GRID_GAP}>
+              {pair.map((group) => (
+                <YStack key={group.key} f={1} minWidth={0}>
+                  <GridSelect
+                    group={group}
+                    value={draft[group.key] ?? group.value}
+                    onSelect={select}
+                  />
+                </YStack>
+              ))}
+              {pair.length === 1 ? <YStack f={1} /> : null}
+            </XStack>
+          ))}
+          {dateRanges.map((group) => (
+            <DateRangeGroup
+              key={group.fromKey}
+              group={group}
+              from={draft[group.fromKey] ?? group.from}
+              to={draft[group.toKey] ?? group.to}
+              onSelect={select}
+            />
+          ))}
+        </YStack>
+      </BottomSheet>
+    );
+  }
+
   return (
     <BottomSheet
       open={open}
@@ -325,6 +401,99 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
         )}
       </YStack>
     </BottomSheet>
+  );
+});
+
+/** Figma "_Filter Modal": ô cách ô 12 (cả hai chiều), mỗi ô nửa hàng trừ nửa khe. */
+const GRID_GAP = 12;
+
+/** Gom các chiều thành từng HÀNG hai ô cho lưới của tấm v2. */
+function pairsOf<T>(items: readonly T[]): (readonly [T] | readonly [T, T])[] {
+  const rows: (readonly [T] | readonly [T, T])[] = [];
+  for (let i = 0; i < items.length; i += 2) {
+    const first = items[i] as T;
+    rows.push(i + 1 < items.length ? [first, items[i + 1] as T] : [first]);
+  }
+  return rows;
+}
+/** Figma "_Select input base": cao tối thiểu 40, đệm 14/8, bo 12, icon mũi tên 20. */
+const SELECT_MIN_HEIGHT = 40;
+const SELECT_PAD_X = 14;
+const SELECT_PAD_Y = 8;
+const SELECT_ICON = 20;
+
+/**
+ * Một ô chọn của tấm dạng lưới: bấm mở tấm lựa chọn (cùng `MenuOption` với `SelectControl`), chọn
+ * xong ghi vào BẢN NHÁP của tấm lọc - chưa áp tới khi bấm "Lưu bộ lọc".
+ */
+const GridSelect = memo(function GridSelect({
+  group,
+  value,
+  onSelect,
+}: {
+  group: FilterSelectGroup;
+  value: string;
+  onSelect: (groupKey: string, value: string) => void;
+}) {
+  const colors = useColors();
+  const [open, setOpen] = useState(false);
+  const current = group.options.find((option) => option.value === value);
+  const display = group.display ?? 'label';
+  const showLabel = display === 'label' && (value === group.resetValue || !current);
+  return (
+    <>
+      <Pressable
+        onPress={() => setOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel={current ? `${group.label}: ${current.label}` : group.label}
+      >
+        {({ pressed }) => (
+          <XStack
+            ai="center"
+            gap={space.sm}
+            minHeight={SELECT_MIN_HEIGHT}
+            px={SELECT_PAD_X}
+            py={SELECT_PAD_Y}
+            br={radius.control}
+            bw={1}
+            bc={colors.borderInput}
+            bg={colors.surface}
+            opacity={pressed ? 0.7 : 1}
+          >
+            <Text
+              f={1}
+              minWidth={0}
+              col={colors.text}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {display === 'prefixed' ? (
+                <Text col={colors.placeholder}>{`${group.label}: `}</Text>
+              ) : null}
+              {showLabel ? group.label : (current?.label ?? group.label)}
+            </Text>
+            <LineIcon name="chevron-down" size={SELECT_ICON} color={colors.placeholder} />
+          </XStack>
+        )}
+      </Pressable>
+      <BottomSheet open={open} onClose={() => setOpen(false)} title={group.label} chrome="v2" headerDivider>
+        <MenuOptionList>
+          {group.options.map((option) => (
+            <MenuOption
+              key={option.value}
+              label={option.label}
+              selected={option.value === value}
+              onPress={() => {
+                onSelect(group.key, option.value);
+                setOpen(false);
+              }}
+            />
+          ))}
+        </MenuOptionList>
+      </BottomSheet>
+    </>
   );
 });
 

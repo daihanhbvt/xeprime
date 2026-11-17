@@ -26,6 +26,9 @@ const schema = buildInsuranceProductSchema({
   amountStep: 'amountStep',
   urlTemplate: 'urlTemplate',
   displayOrder: (min, max) => `displayOrder:${min}-${max}`,
+  tiers: 'tiers',
+  serviceFeePercent: (max) => `serviceFeePercent:${max}`,
+  serviceFeePercentRequired: 'serviceFeePercentRequired',
 });
 
 const PRODUCT = {
@@ -46,6 +49,8 @@ const PRODUCT = {
   certificateUrlTemplate: 'https://mic.vn/gcn/{certCode}',
   displayOrder: 1,
   isActive: true,
+  serviceFeeEnabled: false,
+  serviceFeePercent: 0,
   updatedAt: '2026-08-01T00:00:00.000Z',
 } as InsuranceProduct;
 
@@ -100,5 +105,36 @@ describe('admin-insurance form', () => {
     expect(await errorsOf({ ...valid(), displayOrder: max + 1 })).toContain(
       `displayOrder:${min}-${max}`,
     );
+  });
+
+  describe('phí thu hộ bảo hiểm (ADR 0091 điều 3)', () => {
+    it('bật thì % > 0; % ngoài 0..50 hoặc quá 2 chữ số lẻ ⇒ lỗi', async () => {
+      expect(
+        await errorsOf({ ...valid(), serviceFeeEnabled: true, serviceFeePercent: 0 }),
+      ).toContain('serviceFeePercentRequired');
+      expect(await errorsOf({ ...valid(), serviceFeePercent: 50.5 })).toContain(
+        'serviceFeePercent:50',
+      );
+      expect(await errorsOf({ ...valid(), serviceFeePercent: 12.345 })).toContain(
+        'serviceFeePercent:50',
+      );
+      expect(
+        await errorsOf({ ...valid(), serviceFeeEnabled: true, serviceFeePercent: 12.5 }),
+      ).toEqual([]);
+      // Tắt mà % = 0 là trạng thái mặc định hợp lệ.
+      expect(await errorsOf(valid())).toEqual([]);
+    });
+
+    it('chỉ vật chất xe gửi phí thu hộ lên server', () => {
+      const form = { ...valid(), serviceFeeEnabled: true, serviceFeePercent: 10 };
+      expect(toUpdateInsuranceProductBody(form, PRODUCT)).toMatchObject({
+        serviceFeeEnabled: true,
+        serviceFeePercent: 10,
+      });
+      const ip = { ...PRODUCT, kind: INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT };
+      const body = toUpdateInsuranceProductBody(form, ip);
+      expect(body).not.toHaveProperty('serviceFeeEnabled');
+      expect(body).not.toHaveProperty('serviceFeePercent');
+    });
   });
 });

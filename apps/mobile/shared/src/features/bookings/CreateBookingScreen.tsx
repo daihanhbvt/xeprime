@@ -3,7 +3,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { BackHandler, Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -258,7 +258,6 @@ function StaffBookingFlow({
    */
   const [vehicle, setVehicle] = useState<PickedVehicle | null>(null);
   const [choosing, setChoosing] = useState(!prefill.vehicleId);
-  const [picking, setPicking] = useState(false);
   /** Đếm lượt chọn xe — khoá của biểu mẫu chuyến, để chọn lại (kể cả CÙNG xe) cũng là form mới. */
   const [pickCount, setPickCount] = useState(0);
 
@@ -293,26 +292,21 @@ function StaffBookingFlow({
     return (
       <>
         <AppHeader title={t('pickVehicleTitle')} onBack={onBack} />
+        {/* Danh sách xe hiện NGAY trên màn như web (bỏ nút mở tấm, 16/11/2026). */}
         <Screen edges={['left', 'right', 'bottom']}>
-          <Button
-            label={t('pickVehicleTitle')}
-            icon="car-outline"
-            onPress={() => setPicking(true)}
-          />
-        </Screen>
-
         <VehiclePickerSheet
-          open={picking}
-          onClose={() => setPicking(false)}
+          inline
+          open
+          onClose={onBack}
           selectedId={vehicle?.id ?? null}
           initialBranchId={hintedBranchId}
           onSelect={(picked) => {
             setVehicle({ id: picked.id, name: picked.name, imageUrl: picked.mainImageUrl ?? null });
             setPickCount((n) => n + 1);
-            setPicking(false);
             setChoosing(false);
           }}
         />
+        </Screen>
       </>
     );
   }

@@ -537,6 +537,32 @@ export const CUSTOMER_CANCEL_PREVIEW_KIND_VALUES = Object.values(
 ) as CustomerCancelPreviewKind[];
 
 /**
+ * Vì sao một khoản giữ chỗ nằm trong hàng đợi CHỐT TAY của admin (Tài chính > Giữ chỗ).
+ *
+ * Kết cục của hold tự chốt khi đơn kết thúc (`HoldSettlementService.settleForBookingWithinTx`). Người
+ * chỉ cần chốt khi đường tự động KHÔNG chạy được — và chỉ khi đó:
+ *  - `dispute_open`: đơn có case TRANH CHẤP (`dispute`) còn mở — khách hoặc gian hàng khiếu nại.
+ *  - `handover_unconfirmed`: đơn có case "chưa xác nhận bàn giao" còn mở — hệ thống tự mở khi quá
+ *    giờ nhận xe mà chủ xe chưa bấm giao xe (ADR 0066 lớp 3). Không ai khiếu nại; tách khỏi
+ *    `dispute_open` để người trực không đọc một lượt quên bấm thành một vụ tranh chấp.
+ *  - `booking_ended`: đơn đã kết thúc (hoàn thành / huỷ / không đến) mà hold vẫn chưa có kết cục —
+ *    thường là lượt chốt đã bị hoãn vì case mở, rồi case được kết luận sau đó.
+ *
+ * Đơn có cả hai loại case mở thì mang `dispute_open` — tranh chấp là việc nặng hơn.
+ *
+ * Đơn còn `reserved`/`active` không có case nào thì KHÔNG thuộc hàng đợi: chốt tay lúc đó là trả
+ * tiền cho chủ xe khi chuyến chưa diễn ra, rồi khách huỷ trong cửa sổ miễn phí sẽ không được hoàn.
+ */
+export const HOLD_SETTLE_REASON = {
+  DISPUTE_OPEN: 'dispute_open',
+  HANDOVER_UNCONFIRMED: 'handover_unconfirmed',
+  BOOKING_ENDED: 'booking_ended',
+} as const;
+
+export type HoldSettleReason = (typeof HOLD_SETTLE_REASON)[keyof typeof HOLD_SETTLE_REASON];
+export const HOLD_SETTLE_REASON_VALUES = Object.values(HOLD_SETTLE_REASON) as HoldSettleReason[];
+
+/**
  * Chuyến có cửa sổ huỷ miễn phí không — so mốc huỷ miễn phí với MỐC BẮT ĐẦU của nó.
  *
  * Mốc bắt đầu là `paid_at` (ADR 0072); hold trả trước ADR 0072 bắt đầu từ lúc nhận chuyến. Mọi hold

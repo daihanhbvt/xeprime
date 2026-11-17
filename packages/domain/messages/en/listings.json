@@ -249,6 +249,12 @@
         "package": "Choose a long-term package first.",
         "pickupDate": "Choose your preferred pick-up date first.",
         "destination": "Enter the destination of your intercity trip first."
+      },
+      "insuranceBlocked": "This car is not taking self-drive bookings yet because its required insurance details are incomplete. Choose another car or another service of this car.",
+      "limits": {
+        "tooFarAhead": "You can book at most {days} days ahead - pick a pickup date on or before {date}.",
+        "selfDriveTooLong": "Self-drive trips are limited to {days} days. For longer rentals, choose long-term rental.",
+        "switchLongTerm": "Switch to long-term rental"
       }
     },
     "deliveryModal": {

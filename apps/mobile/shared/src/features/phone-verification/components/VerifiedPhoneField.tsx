@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useController, useWatch, type Control, type FieldValues } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -14,6 +14,7 @@ import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { CONTACT_CHANNEL } from '@/features/account/api';
 import { useContactVerify } from '@/features/account/hooks/use-contact-verify';
 import { usePhoneVerify } from '../hooks/use-phone-verify';
+import { formatOtpCooldown } from '../format-cooldown';
 import { OtpCodeInput } from './OtpCodeInput';
 
 const isOtpCodeComplete = (code: string | undefined): boolean => /^[0-9]{6}$/.test(code ?? '');
@@ -262,7 +263,11 @@ export function VerifiedPhoneField({
           />
           <XStack jc="center">
             <Button
-              label={otp.cooldown > 0 ? t('resendIn', { seconds: otp.cooldown }) : t('resend')}
+              label={
+                otp.cooldown > 0
+                  ? t('resendInTime', { time: formatOtpCooldown(otp.cooldown) })
+                  : t('resend')
+              }
               variant="ghost"
               block={false}
               loading={otp.sending}

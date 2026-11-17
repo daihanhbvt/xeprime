@@ -54,6 +54,7 @@ import { TripHoldPanel } from './TripHoldPanel';
 import { TripHostDecisions } from './TripHostDecisions';
 import { TripHandoverEvidence } from './TripHandoverEvidence';
 import { TripNotReceivedReport } from './TripNotReceivedReport';
+import { tripCertificatePdfHref } from '@/features/insurance/api';
 import { InsuranceCoverageList } from '@/features/insurance/components/InsuranceCoverageList';
 import { TripActiveView } from './TripActiveView';
 import { TripAwaitingHoldView } from './TripAwaitingHoldView';
@@ -577,7 +578,11 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
             hành → đã cấp (thẻ GCN, nhãn THỬ NGHIỆM ở dev/staging) hoặc lỗi/đã hoàn. Rỗng ⇒ chuyến
             không mua bảo hiểm, không render gì.
           */}
-          <InsuranceCoverageList coverage={data.insuranceCoverage ?? []} className={styles.block} />
+          <InsuranceCoverageList
+            coverage={data.insuranceCoverage ?? []}
+            className={styles.block}
+            pdfHref={(certificateId) => tripCertificatePdfHref(data.id, certificateId)}
+          />
 
           {data.customerNote ? (
             <section className={styles.block}>

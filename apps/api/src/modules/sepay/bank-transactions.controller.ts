@@ -11,8 +11,10 @@ import {
   BankTransactionDetailDto,
   BankTransactionListQueryDto,
   BankTransactionPageDto,
+  CreditCustomerDto,
   IgnoreBankTransactionDto,
   MatchBankTransactionDto,
+  MatchReceivableDto,
 } from './dto/bank-transaction.dto';
 
 /**
@@ -62,6 +64,46 @@ export class BankTransactionsController {
     @Body() dto: MatchBankTransactionDto,
   ): Promise<BankTransactionDetailDto> {
     return this.transactions.match(id, user.id, dto);
+  }
+
+  /*
+   * Hai lượt dưới đụng TIỀN MARKETPLACE (tiền giữ chỗ của khách, Ví điểm) chứ không chỉ tiền gói,
+   * nên đòi thêm `platform.money.manage` — `RequirePermissions` ở handler GHI ĐÈ cấp class, nên
+   * liệt kê lại quyền gói.
+   */
+  @Post(':id/match-receivable')
+  @RequirePermissions(PERMISSION.PLATFORM_BILLING_MANAGE, PERMISSION.PLATFORM_MONEY_MANAGE)
+  @ApiOperation({
+    summary:
+      'Khớp TAY vào một khoản giữ chỗ (XPH) / phụ lục (XPE) CÒN NHẬN TIỀN - cùng đường tiền với webhook (ADR 0092)',
+    description:
+      'Khoản đã đóng ⇒ 409 `BANK_TX_TARGET_CLOSED`: không bao giờ tạo đơn từ khoản đã đóng ' +
+      '(ADR 0044 điều 7) - dùng `credit-customer`.',
+  })
+  @ApiOkResponse({ type: BankTransactionDetailDto })
+  matchReceivable(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: MatchReceivableDto,
+  ): Promise<BankTransactionDetailDto> {
+    return this.transactions.matchReceivable(id, user.id, dto);
+  }
+
+  @Post(':id/credit-customer')
+  @RequirePermissions(PERMISSION.PLATFORM_BILLING_MANAGE, PERMISSION.PLATFORM_MONEY_MANAGE)
+  @ApiOperation({
+    summary: 'Ghi có Ví điểm khách cho tiền về SAU khi khoản giữ chỗ / phụ lục đã đóng (ADR 0092)',
+    description:
+      'Khoản còn nhận tiền ⇒ 409 `BANK_TX_TARGET_STILL_OPEN` (phải khớp vào nó). Không có tài ' +
+      'khoản khách ⇒ 409 `BANK_TX_NO_CUSTOMER_ACCOUNT` (chuyển trả tay rồi "Bỏ qua" kèm mã hoàn).',
+  })
+  @ApiOkResponse({ type: BankTransactionDetailDto })
+  creditCustomer(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreditCustomerDto,
+  ): Promise<BankTransactionDetailDto> {
+    return this.transactions.creditCustomer(id, user.id, dto);
   }
 
   @Post(':id/ignore')

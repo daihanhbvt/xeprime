@@ -11,17 +11,32 @@ import { fontSize, fontWeight, space } from '@/theme/tokens';
  *
  * Gương `<Button type="link" size="small">` mà web đặt ở đúng những chỗ này.
  */
-export function InlineAction({ label, onPress }: { label: string; onPress: () => void }) {
+export function InlineAction({
+  label,
+  onPress,
+  disabled = false,
+}: {
+  label: string;
+  onPress: () => void;
+  /** Mờ đi và không nhận chạm - vd. "Gửi lại mã" khi đang gửi. */
+  disabled?: boolean;
+}) {
   const colors = useColors();
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled }}
       hitSlop={space.sm}
       style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
     >
-      <Text col={colors.accentText} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+      <Text
+        col={disabled ? colors.textMuted : colors.accentText}
+        fos={fontSize.bodySm}
+        fow={fontWeight.semibold}
+      >
         {label}
       </Text>
     </Pressable>

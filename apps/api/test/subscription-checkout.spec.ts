@@ -10,11 +10,10 @@ import {
   SUBSCRIPTION_INVOICE_STATUS,
   SUBSCRIPTION_STATUS,
 } from '@xeprime/types';
-import { AuditService } from '../src/modules/audit/audit.service';
-import { BankTransactionsService } from '../src/modules/sepay/bank-transactions.service';
 import { SepayService } from '../src/modules/sepay/sepay.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
+  makeBankTransactionsService,
   makeBillingService,
   makeBookingExtensionsService,
   makeBookingHoldsService,
@@ -42,7 +41,7 @@ const sepay = new SepayService(
   { get: () => undefined } as unknown as ConfigService,
   makeBookingExtensionsService(asService),
 );
-const bankAdmin = new BankTransactionsService(asService, new AuditService(asService), billing);
+const bankAdmin = makeBankTransactionsService(asService, billing);
 /** `bank_transactions` là bảng toàn sàn - mọi dòng của spec này mang tiền tố riêng để dọn. */
 const TX_PREFIX = 'checkout-spec-';
 

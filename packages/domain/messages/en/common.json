@@ -5,6 +5,7 @@
     "defaultDescription": "A car rental platform: find a vehicle, book it, and run your rental shop."
   },
   "actions": {
+    "backToTop": "Back to top",
     "save": "Save",
     "saveChanges": "Save changes",
     "cancel": "Cancel",
@@ -198,7 +199,14 @@
       "depositHintLabel": "What the security deposit is",
       "holdHintLabel": "What the reservation payment is",
       "totalHintLabel": "What the total includes",
-      "dailyRate": "{days, plural, one {# day} other {# days}} × {amount}"
+      "dailyRate": "{days, plural, one {# day} other {# days}} × {amount}",
+      "insuranceFee": {
+        "hintLabel": "What the vehicle damage insurance charge includes",
+        "premium": "Insurance premium: {amount}",
+        "serviceFee": "Insurance collection fee: {amount}",
+        "serviceFeePercent": "Insurance collection fee ({percent}%): {amount}",
+        "refund": "Both are refunded if the trip is cancelled or the certificate cannot be issued."
+      }
     },
     "filterBar": {
       "allOf": "{label}: All",
@@ -284,9 +292,12 @@
     "activeCount": "{count, plural, one {# filter active} other {# filters active}}",
     "reset": "Clear filters",
     "open": "Open filters",
+    "short": "Filter",
     "subtitle": "Narrow the list down by criteria",
     "chip": "{label}: {value}",
-    "none": "No filters applied yet"
+    "none": "No filters applied yet",
+    "clearAll": "Clear filters",
+    "save": "Save filters"
   },
   "permissions": {
     "cameraDenied": "Camera access is off. Open Settings → XePrime and allow Camera.",

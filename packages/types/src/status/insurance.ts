@@ -82,6 +82,44 @@ export function isInsurancePolicyStatus(value: unknown): value is InsurancePolic
   return typeof value === 'string' && (INSURANCE_POLICY_STATUS_VALUES as string[]).includes(value);
 }
 
+/**
+ * Lượt THU HỒI hợp đồng chia hai nhánh theo HIỆU LỰC — ADR 0093. Server quyết, client chỉ hiện.
+ *
+ *  - `cancel_refund`: hợp đồng chưa từng có hiệu lực ⇒ `cancelled` + hoàn phí vào Ví điểm khách.
+ *  - `void_keep_payable`: hợp đồng đã có hiệu lực ⇒ `voided`, không hoàn, phí vẫn kê trả hãng.
+ */
+export const INSURANCE_VOID_BRANCH = {
+  CANCEL_REFUND: 'cancel_refund',
+  VOID_KEEP_PAYABLE: 'void_keep_payable',
+} as const;
+
+export type InsuranceVoidBranch =
+  (typeof INSURANCE_VOID_BRANCH)[keyof typeof INSURANCE_VOID_BRANCH];
+export const INSURANCE_VOID_BRANCH_VALUES = Object.values(
+  INSURANCE_VOID_BRANCH,
+) as InsuranceVoidBranch[];
+
+/**
+ * Khi nào khoản hoàn của nhánh `cancel_refund` vào ví — đi theo khoản giữ chỗ để không phân bổ hai lần.
+ *
+ *  - `now`: hold đã chốt `settled` ⇒ hoàn trong chính lượt thu hồi;
+ *  - `after_settlement`: hold còn mở ⇒ vòng tự hoàn làm sau khi hold chốt `settled`;
+ *  - `via_hold`: hold đã chốt kết cục khác ⇒ phí đã về khách qua chính hold;
+ *  - `none`: không có hold / tài khoản khách, hoặc nhánh `void_keep_payable`.
+ */
+export const INSURANCE_VOID_REFUND_TIMING = {
+  NOW: 'now',
+  AFTER_SETTLEMENT: 'after_settlement',
+  VIA_HOLD: 'via_hold',
+  NONE: 'none',
+} as const;
+
+export type InsuranceVoidRefundTiming =
+  (typeof INSURANCE_VOID_REFUND_TIMING)[keyof typeof INSURANCE_VOID_REFUND_TIMING];
+export const INSURANCE_VOID_REFUND_TIMING_VALUES = Object.values(
+  INSURANCE_VOID_REFUND_TIMING,
+) as InsuranceVoidRefundTiming[];
+
 export const INSURANCE_POLICY_STATUS_META: Readonly<Record<InsurancePolicyStatus, StatusMeta>> = {
   [INSURANCE_POLICY_STATUS.RESERVED]: {
     label: 'Đã thu phí, chờ bàn giao',
@@ -149,6 +187,28 @@ export function insuranceRetryDelayMinutes(attempts: number): number {
  * đổi qua các lần thử, đối tác trả lại đúng GCN cũ — nhưng không có lý do để mời nó.
  */
 export const INSURANCE_ISSUING_LEASE_MINUTES = 10;
+
+/**
+ * Tình trạng hợp đồng phía MIC (`ttrang`) mà XePrime phải theo dõi sau khi cấp (ADR 0091 điều 7):
+ * `3` = MIC chưa nhận ảnh xe, `4` = thành công. Ảnh gửi TRƯỚC khi cấp nên thường ra 4 ngay; còn 3
+ * thì tra cứu lại theo nhịp dưới đây.
+ */
+export const INSURANCE_PARTNER_STATUS = {
+  PENDING_PHOTOS: '3',
+  ISSUED: '4',
+} as const;
+
+/** Số lần tra cứu lại một hợp đồng còn chờ ảnh — quá số này thì để admin liên hệ đối tác. */
+export const INSURANCE_PENDING_CHECKS_MAX = 4;
+
+/** Khoảng giữa hai lần tra cứu lại hợp đồng chờ ảnh. */
+export const INSURANCE_PENDING_CHECK_INTERVAL_SECONDS = 15;
+
+/** Quá chừng này sau mốc giao xe mà hợp đồng chưa cấp ⇒ báo khẩn admin MỘT lần (ADR 0091 điều 7). */
+export const INSURANCE_ESCALATE_AFTER_MINUTES = 120;
+
+/** Trần % phí thu hộ bảo hiểm của nền tảng trên `IV` (ADR 0091 điều 3) — khớp CHECK ở DB. */
+export const INSURANCE_SERVICE_FEE_PERCENT_MAX = 50;
 
 /** Trần chờ một lần gọi đối tác phát hành — adapter thật phải tôn trọng nó. */
 export const INSURANCE_PARTNER_TIMEOUT_MS = 60_000;
@@ -292,6 +352,12 @@ export interface InsuranceProductSnapshot {
   maxPayoutNoteVi: string | null;
   maxPayoutNoteEn: string | null;
   certificateUrlTemplate: string;
+  /** Cách tính phí (ADR 0088). Vắng = snapshot cũ = `daily`. */
+  premiumBasis?: InsurancePremiumBasis;
+  /** Biểu phí bậc — chỉ có khi `premiumBasis = value_tier`. */
+  premiumTiers?: InsurancePremiumTier[] | null;
+  /** Hotline báo sự cố / bồi thường của hãng. */
+  claimHotline?: string | null;
 }
 
 // ── Tình trạng bảo hiểm như KHÁCH/CHỦ XE thấy (ADR 0064) ───────────────────
@@ -341,12 +407,275 @@ export function insuranceCoverageStatusOf(status: InsurancePolicyStatus): Insura
 }
 
 /** Màu nhãn của từng tình trạng — web/mobile đọc ở đây, không tự chọn màu trong component. */
-export const INSURANCE_COVERAGE_STATUS_COLOR: Readonly<Record<InsuranceCoverageStatus, StatusColor>> =
-  {
-    [INSURANCE_COVERAGE_STATUS.PENDING_ISSUE]: STATUS_COLOR.WAITING,
-    [INSURANCE_COVERAGE_STATUS.ISSUING]: STATUS_COLOR.PROCESSING,
-    [INSURANCE_COVERAGE_STATUS.ISSUED]: STATUS_COLOR.SUCCESS,
-    [INSURANCE_COVERAGE_STATUS.FAILED]: STATUS_COLOR.WARNING,
-    [INSURANCE_COVERAGE_STATUS.VOIDED]: STATUS_COLOR.NEUTRAL,
-    [INSURANCE_COVERAGE_STATUS.REFUNDED]: STATUS_COLOR.NEUTRAL,
-  };
+export const INSURANCE_COVERAGE_STATUS_COLOR: Readonly<
+  Record<InsuranceCoverageStatus, StatusColor>
+> = {
+  [INSURANCE_COVERAGE_STATUS.PENDING_ISSUE]: STATUS_COLOR.WAITING,
+  [INSURANCE_COVERAGE_STATUS.ISSUING]: STATUS_COLOR.PROCESSING,
+  [INSURANCE_COVERAGE_STATUS.ISSUED]: STATUS_COLOR.SUCCESS,
+  [INSURANCE_COVERAGE_STATUS.FAILED]: STATUS_COLOR.WARNING,
+  [INSURANCE_COVERAGE_STATUS.VOIDED]: STATUS_COLOR.NEUTRAL,
+  [INSURANCE_COVERAGE_STATUS.REFUNDED]: STATUS_COLOR.NEUTRAL,
+};
+
+// ── Phí theo BẬC giá trị xe — bảo hiểm vật chất xe theo chuyến của MIC (ADR 0088) ──────────────
+
+/**
+ * Chủ xe chọn bảo hiểm vật chất xe theo bậc là BẮT BUỘC hay TUỲ CHỌN cho xe của mình (ADR 0091 điều 1)
+ * — cột `rental_policies.insurance_mode`, CHECK ở DB. Mặc định Tuỳ chọn.
+ *
+ *  - `required` — xe đủ điều kiện ⇒ mọi chuyến tự lái có `IV`, khách không bỏ được; xe chưa đủ
+ *    điều kiện ⇒ KHÔNG nhận đặt tự lái.
+ *  - `optional` — ô tích mặc định chưa tích; xe chưa đủ điều kiện ⇒ không có ô, vẫn nhận đặt.
+ */
+export const INSURANCE_MODE = {
+  REQUIRED: 'required',
+  OPTIONAL: 'optional',
+} as const;
+
+export type InsuranceMode = (typeof INSURANCE_MODE)[keyof typeof INSURANCE_MODE];
+
+export const INSURANCE_MODE_VALUES = Object.values(INSURANCE_MODE) as InsuranceMode[];
+
+/** Giá trị của chính sách chưa khai / dòng cũ — khớp DEFAULT của cột. */
+export const INSURANCE_MODE_DEFAULT: InsuranceMode = INSURANCE_MODE.OPTIONAL;
+
+export function isInsuranceMode(value: unknown): value is InsuranceMode {
+  return typeof value === 'string' && (INSURANCE_MODE_VALUES as string[]).includes(value);
+}
+
+/**
+ * Cách một sản phẩm bảo hiểm tính phí.
+ *
+ *  - `daily` — biểu phí THEO NGÀY ở `fee_policies` (luồng tiền v2), khách tự tích chọn.
+ *  - `value_tier` — phí = giá trị xe × % của BẬC thời lượng chuyến (biểu phí VCX theo chuyến của
+ *    MIC, loại xe `M1.11`). Sản phẩm kiểu này là **BẮT BUỘC** với xe đủ điều kiện (ADR 0088 điều 2):
+ *    khách không bỏ chọn được, xe thiếu dữ liệu thì không bán kèm.
+ */
+export const INSURANCE_PREMIUM_BASIS = {
+  DAILY: 'daily',
+  VALUE_TIER: 'value_tier',
+} as const;
+
+export type InsurancePremiumBasis =
+  (typeof INSURANCE_PREMIUM_BASIS)[keyof typeof INSURANCE_PREMIUM_BASIS];
+
+export const INSURANCE_PREMIUM_BASIS_VALUES = Object.values(
+  INSURANCE_PREMIUM_BASIS,
+) as InsurancePremiumBasis[];
+
+export function isInsurancePremiumBasis(value: unknown): value is InsurancePremiumBasis {
+  return typeof value === 'string' && (INSURANCE_PREMIUM_BASIS_VALUES as string[]).includes(value);
+}
+
+/**
+ * Một bậc phí: chuyến dài TỐI ĐA `maxDays` ngày (24 giờ/ngày, giờ lẻ làm tròn LÊN tới bậc) thì phí
+ * = `percent`% giá trị xe. `percent` là chuỗi thập phân (tối đa 4 chữ số lẻ), đã gồm VAT — đúng con
+ * số MIC thu (`ttoan` = `phi` + `thue`).
+ */
+export interface InsurancePremiumTier {
+  maxDays: number;
+  percent: string;
+}
+
+/** Giới hạn biểu phí bậc + giá trị xe — DTO server và form web đọc cùng bảng. */
+export const INSURANCE_VALUE_TIER_LIMITS = {
+  maxTiers: 10,
+  /** MIC chỉ bán VCX theo chuyến tới 30 ngày. */
+  maxDays: 30,
+  percentMax: '10',
+  percentDecimals: 4,
+  /** Giá trị xe nhận bảo hiểm — bội 1.000.000đ, trong khoảng này. */
+  insuredValueMin: 50_000_000,
+  insuredValueMax: 20_000_000_000,
+  insuredValueStep: 1_000_000,
+  claimHotline: { max: 30 },
+} as const;
+
+/**
+ * Biểu phí VCX theo chuyến MIC (loại xe `M1.11` — xe cho thuê tự lái), đo trên sandbox ngày
+ * 11/11/2026 với xe 340.000.000đ: 44.200 · 112.200 · 224.400 · 333.200 · 680.000. Chỉ là GIÁ TRỊ
+ * KHỞI TẠO của seed — admin sửa ở danh mục khi MIC đổi biểu phí production.
+ */
+export const MIC_VCX_TRIP_DEFAULT_TIERS: readonly InsurancePremiumTier[] = [
+  { maxDays: 2, percent: '0.013' },
+  { maxDays: 5, percent: '0.033' },
+  { maxDays: 10, percent: '0.066' },
+  { maxDays: 15, percent: '0.098' },
+  { maxDays: 30, percent: '0.2' },
+];
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const PERCENT_RE = /^\d{1,2}(\.\d{1,4})?$/;
+
+/**
+ * Biểu phí bậc hợp lệ không — `null` = hợp lệ, ngược lại là lý do. Bậc tăng dần ngặt cả số ngày lẫn
+ * %, ngày nguyên 1..30, % > 0 và ≤ `percentMax`.
+ */
+export function insurancePremiumTiersProblem(
+  tiers: readonly InsurancePremiumTier[],
+): string | null {
+  if (tiers.length === 0) return 'Cần ít nhất một bậc phí';
+  if (tiers.length > INSURANCE_VALUE_TIER_LIMITS.maxTiers) {
+    return `Tối đa ${INSURANCE_VALUE_TIER_LIMITS.maxTiers} bậc phí`;
+  }
+  let prevDays = 0;
+  let prevPercent = 0;
+  for (const tier of tiers) {
+    if (
+      !Number.isInteger(tier.maxDays) ||
+      tier.maxDays < 1 ||
+      tier.maxDays > INSURANCE_VALUE_TIER_LIMITS.maxDays
+    ) {
+      return `Số ngày của bậc phải là số nguyên 1-${INSURANCE_VALUE_TIER_LIMITS.maxDays}`;
+    }
+    if (!PERCENT_RE.test(tier.percent)) return `Tỷ lệ phí "${tier.percent}" không hợp lệ`;
+    const percent = Number(tier.percent);
+    if (!(percent > 0) || percent > Number(INSURANCE_VALUE_TIER_LIMITS.percentMax)) {
+      return `Tỷ lệ phí phải lớn hơn 0 và không quá ${INSURANCE_VALUE_TIER_LIMITS.percentMax}%`;
+    }
+    if (tier.maxDays <= prevDays) return 'Số ngày các bậc phải tăng dần';
+    if (percent <= prevPercent) return 'Tỷ lệ phí các bậc phải tăng dần';
+    prevDays = tier.maxDays;
+    prevPercent = percent;
+  }
+  return null;
+}
+
+/** Đọc biểu phí bậc từ JSON (cột `premium_tiers_json`, snapshot) — hỏng hình dạng ⇒ `null`. */
+export function readInsurancePremiumTiers(value: unknown): InsurancePremiumTier[] | null {
+  if (!Array.isArray(value)) return null;
+  const tiers: InsurancePremiumTier[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') return null;
+    const { maxDays, percent } = item as Record<string, unknown>;
+    if (typeof maxDays !== 'number' || typeof percent !== 'string') return null;
+    tiers.push({ maxDays, percent });
+  }
+  return insurancePremiumTiersProblem(tiers) === null ? tiers : null;
+}
+
+/**
+ * Bậc phí phủ một chuyến `pickupAt → returnAt`: bậc ĐẦU TIÊN có `maxDays × 24h ≥ thời lượng`.
+ * `null` khi chuyến dài hơn bậc cuối (ngoài phạm vi sản phẩm) hoặc thời lượng không dương.
+ */
+export function insurancePremiumTierFor(
+  tiers: readonly InsurancePremiumTier[],
+  pickupAt: Date,
+  returnAt: Date,
+): InsurancePremiumTier | null {
+  const duration = returnAt.getTime() - pickupAt.getTime();
+  if (!(duration > 0)) return null;
+  return tiers.find((tier) => tier.maxDays * DAY_MS >= duration) ?? null;
+}
+
+/**
+ * Phí = giá trị xe × `percent`% — đúng tới ĐỒNG, làm tròn nửa lên (ADR 0069: khoản tính ra từ tỷ
+ * lệ không làm tròn 1.000đ). Tính bằng BigInt: giá trị xe 20 tỷ × tỷ lệ 4 chữ số lẻ vượt độ chính
+ * xác của `number` nếu nhân trên số thực.
+ */
+export function computeValueTierPremium(insuredValue: string, percent: string): string {
+  if (!/^\d+$/.test(insuredValue)) throw new Error(`insuredValue không hợp lệ: ${insuredValue}`);
+  if (!PERCENT_RE.test(percent)) throw new Error(`percent không hợp lệ: ${percent}`);
+  const [whole = '0', frac = ''] = percent.split('.');
+  const scaled = BigInt(`${whole}${frac.padEnd(4, '0')}`); // percent × 10^4
+  const denominator = BigInt(100 * 10_000);
+  const numerator = BigInt(insuredValue) * scaled;
+  return ((numerator * BigInt(2) + denominator) / (BigInt(2) * denominator)).toString();
+}
+
+/**
+ * Báo giá bảo hiểm vật chất xe THEO BẬC cho một chuyến — đầu vào của `computeCustomerFees`
+ * (`vehicleProtectionTier`). Có mặt nghĩa là xe MUA ĐƯỢC; có thu hay không là do chế độ của chủ xe
+ * (`INSURANCE_MODE`) và lựa chọn của khách (ADR 0091 điều 1).
+ */
+export interface VehicleProtectionTierQuote {
+  amount: string;
+  insuredValue: string;
+  maxDays: number;
+  percent: string;
+}
+
+/**
+ * Lý do một chiếc xe CHƯA đủ điều kiện bán kèm bảo hiểm vật chất xe theo bậc (ADR 0088 điều 2).
+ * Mã đi trên dây — giao diện chủ xe dịch từng mã thành một việc cần làm.
+ */
+export const INSURANCE_ELIGIBILITY_GAP = {
+  /** Chỉ ô tô — MIC chưa có sản phẩm theo chuyến cho xe máy. */
+  NOT_CAR: 'not_car',
+  /** Chưa nhập giá trị xe. */
+  INSURED_VALUE_MISSING: 'insured_value_missing',
+  /** Thiếu một trong các ảnh bắt buộc của thư viện xe. */
+  PHOTOS_MISSING: 'photos_missing',
+  /** Chưa có cà vẹt mang số khung + tên chủ đăng ký. */
+  REGISTRATION_MISSING: 'registration_missing',
+  /** Thiếu hãng / mẫu / năm sản xuất / số chỗ. */
+  VEHICLE_INFO_MISSING: 'vehicle_info_missing',
+} as const;
+
+export type InsuranceEligibilityGap =
+  (typeof INSURANCE_ELIGIBILITY_GAP)[keyof typeof INSURANCE_ELIGIBILITY_GAP];
+
+export const INSURANCE_ELIGIBILITY_GAP_VALUES = Object.values(
+  INSURANCE_ELIGIBILITY_GAP,
+) as InsuranceEligibilityGap[];
+
+// ── Bảng kê trả phí cho hãng bảo hiểm (ADR 0088 điều 6) ───────────────────────────────────────
+
+/**
+ * Vòng đời một bảng kê tháng:
+ *
+ * ```text
+ *   draft ──► finalized ──► paid
+ *     │
+ *     └── xoá (chỉ khi còn draft) — hợp đồng được nhả về "chưa kê"
+ * ```
+ *
+ * `finalized` = đã chốt số, gửi hãng đối chiếu; không thêm/bớt hợp đồng được nữa. `paid` = đã ghi
+ * nhận chuyển khoản cho hãng (số tiền, ngày, mã giao dịch).
+ */
+export const INSURANCE_REMITTANCE_STATUS = {
+  DRAFT: 'draft',
+  FINALIZED: 'finalized',
+  PAID: 'paid',
+} as const;
+
+export type InsuranceRemittanceStatus =
+  (typeof INSURANCE_REMITTANCE_STATUS)[keyof typeof INSURANCE_REMITTANCE_STATUS];
+
+export const INSURANCE_REMITTANCE_STATUS_VALUES = Object.values(
+  INSURANCE_REMITTANCE_STATUS,
+) as InsuranceRemittanceStatus[];
+
+export function isInsuranceRemittanceStatus(value: unknown): value is InsuranceRemittanceStatus {
+  return (
+    typeof value === 'string' && (INSURANCE_REMITTANCE_STATUS_VALUES as string[]).includes(value)
+  );
+}
+
+export const INSURANCE_REMITTANCE_STATUS_COLOR: Readonly<
+  Record<InsuranceRemittanceStatus, StatusColor>
+> = {
+  [INSURANCE_REMITTANCE_STATUS.DRAFT]: STATUS_COLOR.WAITING,
+  [INSURANCE_REMITTANCE_STATUS.FINALIZED]: STATUS_COLOR.PROCESSING,
+  [INSURANCE_REMITTANCE_STATUS.PAID]: STATUS_COLOR.SUCCESS,
+};
+
+/** Giới hạn trường của bảng kê. Hoa hồng đại lý là % trên tổng phí, 0..50, tối đa 2 chữ số lẻ. */
+export const INSURANCE_REMITTANCE_LIMITS = {
+  commissionPercentMax: 50,
+  bankReference: { max: 100 },
+  note: { max: 1000 },
+} as const;
+
+/** Hoa hồng đại lý = tổng phí × % — đúng tới đồng (ADR 0069). */
+export function insuranceRemittanceCommission(
+  grossPremium: string,
+  commissionPercent: string,
+): string {
+  if (!/^\d+$/.test(grossPremium)) throw new Error(`grossPremium không hợp lệ: ${grossPremium}`);
+  if (!/^\d{1,2}(\.\d{1,2})?$/.test(commissionPercent)) {
+    throw new Error(`commissionPercent không hợp lệ: ${commissionPercent}`);
+  }
+  return computeValueTierPremium(grossPremium, commissionPercent);
+}

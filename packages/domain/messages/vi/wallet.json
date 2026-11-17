@@ -121,7 +121,21 @@
       "actionable": "Việc cần làm",
       "overdue": "Quá hạn ({count})",
       "showOverdue": "Xem lệnh quá hạn"
-    }
+    },
+    "filters": {
+      "search": "Tìm lệnh",
+      "searchPlaceholder": "Mã lệnh, tên chủ ví hoặc 4 số cuối tài khoản",
+      "ownerType": "Loại ví"
+    },
+    "export": {
+      "month": "Tháng chuyển",
+      "button": "Tải bảng kê tháng"
+    },
+    "reviewedBy": "Duyệt: {name}",
+    "paidBy": "Chuyển: {name}",
+    "secondPerson": "Lệnh từ {amount}: cần người khác bạn bấm \"Đã chuyển khoản\".",
+    "secondPersonTag": "Cần hai người",
+    "wallet": "Xem Ví điểm"
   },
   "openLedger": "Xem sổ ví",
   "verified": "Đã xác minh",

@@ -84,6 +84,21 @@ export const WALLET_ENTRY_KIND = {
   WITHDRAWAL_REVERSAL: 'withdrawal_reversal',
   /** ± Điều chỉnh tay của admin — luôn kèm `note` và người thực hiện. */
   ADJUSTMENT: 'adjustment',
+  /**
+   * + Tiền giữ chỗ / phụ lục chuyển tới SAU khi khoản đó đã đóng — admin ghi có vào ví tài khoản
+   * khách thay vì chuyển trả tay (ADR 0092). Nguồn là chính giao dịch ngân hàng.
+   */
+  LATE_PAYMENT_REFUND: 'late_payment_refund',
+  /**
+   * + Phần gian hàng chuyển THỪA cho hoá đơn / phiếu gộp gói — tự ghi có ví gian hàng lúc tiền về
+   * (ADR 0092). Nguồn là chính giao dịch ngân hàng: mỗi khoản chuyển thừa một dòng.
+   */
+  SUBSCRIPTION_OVERPAY: 'subscription_overpay',
+  /**
+   * + Hoàn phí bảo hiểm vật chất xe (`IV`) + phí thu hộ (`X`) vào ví TÀI KHOẢN KHÁCH vì quá giờ trả mà
+   * hợp đồng chưa cấp được (ADR 0091 điều 7). Nguồn là chính hợp đồng bảo hiểm.
+   */
+  INSURANCE_REFUND: 'insurance_refund',
 } as const;
 
 export type WalletEntryKind = (typeof WALLET_ENTRY_KIND)[keyof typeof WALLET_ENTRY_KIND];
@@ -103,6 +118,9 @@ export const WALLET_ENTRY_KIND_LABEL: Readonly<Record<WalletEntryKind, string>> 
   [WALLET_ENTRY_KIND.WITHDRAWAL]: 'Rút về ngân hàng',
   [WALLET_ENTRY_KIND.WITHDRAWAL_REVERSAL]: 'Hoàn lại do rút không thành',
   [WALLET_ENTRY_KIND.ADJUSTMENT]: 'Điều chỉnh',
+  [WALLET_ENTRY_KIND.LATE_PAYMENT_REFUND]: 'Hoàn tiền chuyển muộn',
+  [WALLET_ENTRY_KIND.SUBSCRIPTION_OVERPAY]: 'Hoàn tiền gói chuyển thừa',
+  [WALLET_ENTRY_KIND.INSURANCE_REFUND]: 'Hoàn phí bảo hiểm chưa cấp',
 };
 
 /**
@@ -123,6 +141,10 @@ export const WALLET_ENTRY_SOURCE = {
   MANUAL: 'manual',
   /** Phụ lục gia hạn — ADR 0077. */
   BOOKING_EXTENSION: 'booking_extension',
+  /** Một giao dịch ngân hàng (tiền về muộn, tiền gói chuyển thừa) — ADR 0092. */
+  BANK_TRANSACTION: 'bank_transaction',
+  /** Hợp đồng bảo hiểm của một đơn — tự hoàn khi không cấp được (ADR 0091 điều 7). */
+  BOOKING_INSURANCE_POLICY: 'booking_insurance_policy',
 } as const;
 
 export type WalletEntrySource = (typeof WALLET_ENTRY_SOURCE)[keyof typeof WALLET_ENTRY_SOURCE];

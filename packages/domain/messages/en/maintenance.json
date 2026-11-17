@@ -198,6 +198,8 @@
     "kmUnit": "km",
     "missingOdometer": "No odometer reading",
     "nextDue": "Next due: <b>{km}</b>",
+    "nextDueShort": "Next at {km}",
+    "remaining": "Service due",
     "noNextDue": "No next service mark",
     "cycle": "{percent}% of the {interval} cycle",
     "noCycle": "Oil-change interval not set",

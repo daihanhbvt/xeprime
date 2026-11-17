@@ -1,10 +1,13 @@
 import { memo, useCallback, useMemo, useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { CardTitle } from '@/components/ui/CardTitle';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Image } from 'expo-image';
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
+  HANDOVER_PHOTO_SLOT,
+  handoverExteriorSlotsFor,
   handoverPhotoSlotsFor,
   PERMISSION,
   type HandoverPhotoSlot,
@@ -34,11 +37,13 @@ import {
   type PickedPhoto,
 } from '../photo-upload';
 import type { Handover } from '../api';
+import { HandoverSlotSample } from './HandoverSlotSample';
 import { getErrorMessage } from '@/lib/get-error-message';
-
 
 /** Ô 96×96: đủ để nhận ra góc chụp, và năm ô vẫn xuống hai hàng trên máy hẹp nhất. */
 const CELL = 96;
+/** Hình mẫu góc chụp trong ô trống (tỉ lệ 120×72 của web). */
+const SAMPLE_WIDTH = 64;
 
 /*
   Ảnh lấp KÍN ô — `<Image>` không nhận prop style của Tamagui, nên kích thước ở `StyleSheet`.
@@ -47,12 +52,17 @@ const CELL = 96;
   `overflow: hidden` nên ảnh bị bo theo góc của ô.
 */
 const styles = StyleSheet.create({
-  thumbnail: {
-    ...StyleSheet.absoluteFillObject,
-    width: CELL,
-    height: CELL,
-  },
+  thumbnail: StyleSheet.absoluteFillObject,
 });
+
+/**
+ * Dạng `row` (web `.slotRow`, khổ ≤767): lưới `auto-fill minmax(120px, 1fr)` khe `space-md`, ô tỉ
+ * lệ 188/120, nhãn 14 màu chữ DƯỚI ô.
+ */
+const ROW_MIN_CELL = 96;
+// Figma "Frame 815" (16/11/2026): lưới 3 cột, ô 103 × 88, cách 12.
+const ROW_GAP = 12;
+const ROW_RATIO = 88 / 103;
 
 /**
  * Ghi lại NGUYÊN VĂN vì sao một ảnh không lên được.
@@ -113,8 +123,20 @@ export function HandoverPhotoGrid({
   vehicleType,
   handover,
   ensureHandover,
+  variant = 'grid',
+  disabled = false,
 }: {
   bookingId: string;
+  /**
+   * `grid` (mặc định - màn bổ sung biên bản): hai nhóm có tiêu đề, ngoại thất và đồng hồ KM.
+   * `row` (chi tiết đơn - web `variant="row"`): mọi góc của loại xe chung một lưới, nhãn dưới ảnh.
+   */
+  variant?: 'grid' | 'row';
+  /**
+   * Chỉ xem - không chụp, không gỡ (web `disabled={!editable}`: đơn đã khép, hoặc tab "sau khi
+   * nhận xe" khi chưa giao xe). Quyền vẫn do server chặn lớp cuối.
+   */
+  disabled?: boolean;
   type: HandoverType;
   /**
    * Loại xe của đơn — quyết bộ góc chụp (`handoverPhotoSlotsFor`): ô tô 5 góc, xe máy 3 góc
@@ -133,7 +155,8 @@ export function HandoverPhotoGrid({
 }) {
   const colors = useColors();
   const t = useTranslations('Bookings.handover.photos');
-  const SLOTS = handoverPhotoSlotsFor(vehicleType);
+  // Ổn định theo loại xe - là dependency của `fileIds` bên dưới.
+  const SLOTS = useMemo(() => handoverPhotoSlotsFor(vehicleType), [vehicleType]);
   const toast = useAppToast();
   const permissions = usePermissions();
 
@@ -146,7 +169,15 @@ export function HandoverPhotoGrid({
   /** Ô đang chờ xác nhận GỠ — `null` là không hỏi ai cả. */
   const [removingSlot, setRemovingSlot] = useState<HandoverPhotoSlot | null>(null);
 
-  const canManage = permissions.has(PERMISSION.HANDOVER_MANAGE);
+  const canManagePermission = permissions.has(PERMISSION.HANDOVER_MANAGE);
+  const canManage = canManagePermission && !disabled;
+  const [rowWidth, setRowWidth] = useState(0);
+  // Biến thể lưới: luôn 3 cột đều (Figma Frame 815) cho cả giao/nhận xe, ô tô lẫn xe máy.
+  const rowColumns =
+    variant === 'grid'
+      ? 3
+      : Math.max(1, Math.floor((rowWidth + ROW_GAP) / (ROW_MIN_CELL + ROW_GAP)));
+  const rowCellWidth = rowWidth > 0 ? (rowWidth - ROW_GAP * (rowColumns - 1)) / rowColumns : 0;
   const canViewFiles = permissions.has(PERMISSION.HANDOVER_FILE_VIEW);
   /*
    * `useMemo` bắt buộc: `taken` là dependency của `open`, và một `Map` dựng lại mỗi lần render
@@ -225,41 +256,67 @@ export function HandoverPhotoGrid({
       SLOTS.map((slot) => taken.get(slot)?.fileId).filter(
         (fileId): fileId is string => typeof fileId === 'string',
       ),
-    [taken],
+    [SLOTS, taken],
   );
 
   const photoUrls = useHandoverPhotoUrls(bookingId, type, fileIds, canViewFiles);
 
-  // Không quyền nào trong hai quyền trên: lưới không có việc gì để làm ở đây.
-  if (!canManage && !canViewFiles) return null;
+  /*
+   * Thiếu cả quyền chụp lẫn quyền xem tệp: vẫn dựng lưới KHOÁ như web (`disabled`) - người dùng
+   * còn biết góc nào đã chụp. Ô không mở được, không chụp được.
+   */
+
+  const renderSlot = (slot: HandoverPhotoSlot) => (
+    <PhotoSlot
+      key={slot}
+      slot={slot}
+      filled={taken.has(slot)}
+      busy={busySlot === slot}
+      canOpen={canViewFiles && Boolean(taken.get(slot)?.fileId)}
+      thumbnailUrl={photoUrls[taken.get(slot)?.fileId ?? '']}
+      canManage={canManage}
+      onCapture={setPicking}
+      onOpen={openSlot}
+      onRemove={confirmRemove}
+      width={rowCellWidth}
+      height={rowCellWidth * ROW_RATIO}
+      labelBelow
+    />
+  );
 
   return (
     <YStack gap={space.sm}>
-      <YStack gap={2}>
-        <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-          {t('title')}
-        </Text>
-        <Text col={colors.textMuted} fos={fontSize.label}>
-          {handover?.confirmedAt ? t('afterConfirm') : t('optional')}
-        </Text>
-      </YStack>
+      {variant === 'row' ? (
+        <XStack
+          flexWrap="wrap"
+          gap={ROW_GAP}
+          onLayout={(event) => setRowWidth(event.nativeEvent.layout.width)}
+        >
+          {rowWidth > 0 ? handoverPhotoSlotsFor(vehicleType).map(renderSlot) : null}
+        </XStack>
+      ) : (
+        <YStack gap={space.sm}>
+          <CardTitle icon="camera-outline">{t('title')}</CardTitle>
 
-      <XStack gap={space.xs} flexWrap="wrap">
-        {SLOTS.map((slot) => (
-          <PhotoSlot
-            key={slot}
-            slot={slot}
-            filled={taken.has(slot)}
-            busy={busySlot === slot}
-            canOpen={canViewFiles && Boolean(taken.get(slot)?.fileId)}
-            thumbnailUrl={photoUrls[taken.get(slot)?.fileId ?? '']}
-            canManage={canManage}
-            onCapture={setPicking}
-            onOpen={openSlot}
-            onRemove={confirmRemove}
-          />
-        ))}
-      </XStack>
+      {/*
+        Hai phần như web (`HandoverPhotoGrid` biến thể lưới): góc ngoại thất theo loại xe, rồi
+        "Ảnh đồng hồ KM" đứng riêng - Odo là ảnh bằng chứng KM, không phải một góc thân xe.
+      */}
+          <XStack
+            flexWrap="wrap"
+            gap={ROW_GAP}
+            onLayout={(event) => setRowWidth(event.nativeEvent.layout.width)}
+          >
+            {rowWidth > 0 ? handoverExteriorSlotsFor(vehicleType).map(renderSlot) : null}
+          </XStack>
+          <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} mt={space.xs}>
+            {t('odometerTitle')}
+          </Text>
+          <XStack flexWrap="wrap" gap={ROW_GAP}>
+            {rowWidth > 0 ? renderSlot(HANDOVER_PHOTO_SLOT.ODOMETER) : null}
+          </XStack>
+        </YStack>
+      )}
 
       <BottomSheet
         open={picking !== null}
@@ -326,6 +383,9 @@ export function HandoverPhotoGrid({
  * các lần render) — memo chỉ có tác dụng khi props so sánh bằng nhau, và một closure dựng mới
  * mỗi render ở nơi gọi sẽ vô hiệu hoá nó ngay.
  */
+/** Nút nổi góc ô ảnh bàn giao. */
+const FLOAT_BTN = 28;
+
 const PhotoSlot = memo(function PhotoSlot({
   slot,
   filled,
@@ -336,6 +396,9 @@ const PhotoSlot = memo(function PhotoSlot({
   onCapture,
   onOpen,
   onRemove,
+  width = CELL,
+  height = CELL,
+  labelBelow = false,
 }: {
   slot: HandoverPhotoSlot;
   filled: boolean;
@@ -347,6 +410,10 @@ const PhotoSlot = memo(function PhotoSlot({
   onCapture: (slot: HandoverPhotoSlot) => void;
   onOpen: (slot: HandoverPhotoSlot) => void;
   onRemove: (slot: HandoverPhotoSlot) => void;
+  width?: number;
+  height?: number;
+  /** Dạng `row` của web: nhãn 14 màu chữ nằm DƯỚI ô, ô viền `border-strong` nền `bg-muted`. */
+  labelBelow?: boolean;
 }) {
   const colors = useColors();
   const t = useTranslations('Bookings.handover.photos');
@@ -378,8 +445,8 @@ const PhotoSlot = memo(function PhotoSlot({
         accessibilityState={{ checked: filled, disabled: !press || busy }}
       >
         <YStack
-          w={CELL}
-          h={CELL}
+          w={width}
+          h={height}
           br={radius.md}
           bw={1}
           /*
@@ -390,7 +457,15 @@ const PhotoSlot = memo(function PhotoSlot({
             nhãn trạng thái thay vì một tấm ảnh.
           */
           bg={filled && !thumbnail ? colors.successSurface : colors.surfaceMuted}
-          bc={filled && !thumbnail ? colors.success : colors.border}
+          bc={
+            filled && !thumbnail
+              ? colors.success
+              : labelBelow
+                ? thumbnail
+                  ? 'transparent'
+                  : colors.borderInput
+                : colors.border
+          }
           ai="center"
           jc="center"
           gap={space.xs}
@@ -429,14 +504,16 @@ const PhotoSlot = memo(function PhotoSlot({
                 pos="absolute"
                 bottom={4}
                 right={4}
-                w={24}
-                h={24}
-                br={12}
+                w={FLOAT_BTN}
+                h={FLOAT_BTN}
+                br={FLOAT_BTN / 2}
                 ai="center"
                 jc="center"
-                bg={colors.overlay}
+                bg={colors.primary}
+                bw={2}
+                bc={colors.surface}
               >
-                <Ionicons name="eye" size={iconSize.sm} color={colors.textInverse} />
+                <Ionicons name="eye" size={14} color={colors.onPrimary} />
               </XStack>
             </>
           ) : (
@@ -446,27 +523,56 @@ const PhotoSlot = memo(function PhotoSlot({
                 quyền xem tệp. Ô đã có ảnh mà MỞ ĐƯỢC thì vẽ con MẮT chứ không phải dấu tích:
                 dấu tích chỉ nói "xong rồi", nó không nói rằng chạm vào sẽ mở ảnh ra.
               */}
-              <Ionicons
-                name={filled ? (canOpen ? 'eye' : 'checkmark-circle') : 'camera-outline'}
-                size={iconSize.lg}
-                color={filled ? colors.success : colors.textMuted}
-              />
-              <Text
-                col={filled && canOpen ? colors.success : colors.textMuted}
-                fos={fontSize.label}
-                fow={filled && canOpen ? fontWeight.semibold : fontWeight.regular}
-                numberOfLines={1}
-              >
-                {filled && canOpen ? t('view') : label}
-              </Text>
+              {filled ? (
+                <Ionicons
+                  name={canOpen ? 'eye' : 'checkmark-circle'}
+                  size={iconSize.lg}
+                  color={colors.success}
+                />
+              ) : (
+                // Ô trống: hình MẪU góc cần chụp, như web - không phải một icon máy ảnh chung.
+                <HandoverSlotSample slot={slot} color={colors.textMuted} width={SAMPLE_WIDTH} />
+              )}
+              {/* Nút nổi góc ô (như đổi avatar): máy ảnh = tải lên, mắt = xem (người dùng 16/11/2026). */}
+              {(!filled && canManage) || (filled && canOpen) ? (
+                <XStack
+                  pos="absolute"
+                  bottom={6}
+                  right={6}
+                  w={FLOAT_BTN}
+                  h={FLOAT_BTN}
+                  br={FLOAT_BTN / 2}
+                  ai="center"
+                  jc="center"
+                  bg={colors.primary}
+                  bw={2}
+                  bc={colors.surface}
+                >
+                  <Ionicons name={filled ? 'eye' : 'camera'} size={14} color={colors.onPrimary} />
+                </XStack>
+              ) : null}
+              {labelBelow && !(filled && canOpen) ? null : (
+                <Text
+                  col={filled && canOpen ? colors.success : colors.textMuted}
+                  fos={fontSize.label}
+                  fow={filled && canOpen ? fontWeight.semibold : fontWeight.regular}
+                  numberOfLines={1}
+                >
+                  {filled && canOpen ? t('view') : label}
+                </Text>
+              )}
             </>
           )}
         </YStack>
       </Pressable>
 
-      {filled && canOpen ? (
+      {labelBelow ? (
+        <Text w={width} ta="center" col={colors.text} fos={fontSize.body} numberOfLines={1} mt={2}>
+          {label}
+        </Text>
+      ) : filled && canOpen ? (
         <Text
-          w={CELL}
+          w={width}
           ta="center"
           col={colors.textMuted}
           fos={fontSize.label}
@@ -480,7 +586,7 @@ const PhotoSlot = memo(function PhotoSlot({
       {filled && canManage ? (
         <XStack pos="absolute" top={-4} right={-4}>
           <IconButton
-            icon="close-circle"
+            icon="close"
             label={t('remove')}
             onPress={() => onRemove(slot)}
             size={iconSize.md}

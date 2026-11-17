@@ -37,6 +37,7 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
 import type { PartnerOverview, PartnerProfile } from './api';
 import { usePartnerProfile } from './hooks';
+import { PartnerContactValue } from './PartnerContactValue';
 import { ReadOnlyTag } from './OverviewTab';
 import { KeyValues, useTabState } from './parts';
 import styles from './PartnerDetail.module.css';
@@ -181,8 +182,8 @@ function ShopProfile({
         </div>
 
         <div className={styles.stack}>
-          <OwnerPanel profile={profile} />
-          <ContactPanel profile={profile} isPackage />
+          <OwnerPanel tenantId={overview.identity.id} profile={profile} />
+          <ContactPanel tenantId={overview.identity.id} profile={profile} isPackage />
           <VerificationHistory events={profile.verificationHistory} />
         </div>
       </div>
@@ -224,12 +225,24 @@ function OwnerProfile({
                   {
                     key: 'phone',
                     label: t('owner.phone'),
-                    value: profile.owner.phoneMasked ?? '-',
+                    value: (
+                      <PartnerContactValue
+                        tenantId={overview.identity.id}
+                        field="ownerPhone"
+                        masked={profile.owner.phoneMasked}
+                      />
+                    ),
                   },
                   {
                     key: 'email',
                     label: t('owner.email'),
-                    value: profile.owner.emailMasked ?? '-',
+                    value: (
+                      <PartnerContactValue
+                        tenantId={overview.identity.id}
+                        field="ownerEmail"
+                        masked={profile.owner.emailMasked}
+                      />
+                    ),
                   },
                   {
                     key: 'areas',
@@ -302,7 +315,7 @@ function OwnerProfile({
         </div>
 
         <div className={styles.stack}>
-          <ContactPanel profile={profile} isPackage={false} />
+          <ContactPanel tenantId={overview.identity.id} profile={profile} isPackage={false} />
           <VerificationHistory events={profile.verificationHistory} />
           <DashboardPanel title={t('privacy.title')} icon={<LockOutlined />}>
             <p className={styles.bio}>{t('privacy.body')}</p>
@@ -313,7 +326,7 @@ function OwnerProfile({
   );
 }
 
-function OwnerPanel({ profile }: { profile: PartnerProfile }) {
+function OwnerPanel({ tenantId, profile }: { tenantId: string; profile: PartnerProfile }) {
   const t = useTranslations('AdminTenants.partnerDetail.profile.owner');
   const fmt = useAppFormat();
   return (
@@ -321,8 +334,28 @@ function OwnerPanel({ profile }: { profile: PartnerProfile }) {
       <KeyValues
         items={[
           { key: 'name', label: t('name'), value: profile.owner.name ?? '-' },
-          { key: 'phone', label: t('phone'), value: profile.owner.phoneMasked ?? '-' },
-          { key: 'email', label: t('email'), value: profile.owner.emailMasked ?? '-' },
+          {
+            key: 'phone',
+            label: t('phone'),
+            value: (
+              <PartnerContactValue
+                tenantId={tenantId}
+                field="ownerPhone"
+                masked={profile.owner.phoneMasked}
+              />
+            ),
+          },
+          {
+            key: 'email',
+            label: t('email'),
+            value: (
+              <PartnerContactValue
+                tenantId={tenantId}
+                field="ownerEmail"
+                masked={profile.owner.emailMasked}
+              />
+            ),
+          },
           {
             key: 'status',
             label: t('accountStatus'),
@@ -347,7 +380,15 @@ function OwnerPanel({ profile }: { profile: PartnerProfile }) {
   );
 }
 
-function ContactPanel({ profile, isPackage }: { profile: PartnerProfile; isPackage: boolean }) {
+function ContactPanel({
+  tenantId,
+  profile,
+  isPackage,
+}: {
+  tenantId: string;
+  profile: PartnerProfile;
+  isPackage: boolean;
+}) {
   const t = useTranslations('AdminTenants.partnerDetail.profile.contact');
   return (
     <DashboardPanel title={t('title')} icon={<EnvironmentOutlined />}>
@@ -371,8 +412,28 @@ function ContactPanel({ profile, isPackage }: { profile: PartnerProfile; isPacka
         )}
         <KeyValues
           items={[
-            { key: 'phone', label: t('publicPhone'), value: profile.publicPhoneMasked ?? '-' },
-            { key: 'email', label: t('publicEmail'), value: profile.publicEmailMasked ?? '-' },
+            {
+              key: 'phone',
+              label: t('publicPhone'),
+              value: (
+                <PartnerContactValue
+                  tenantId={tenantId}
+                  field="publicPhone"
+                  masked={profile.publicPhoneMasked}
+                />
+              ),
+            },
+            {
+              key: 'email',
+              label: t('publicEmail'),
+              value: (
+                <PartnerContactValue
+                  tenantId={tenantId}
+                  field="publicEmail"
+                  masked={profile.publicEmailMasked}
+                />
+              ),
+            },
           ]}
         />
       </div>

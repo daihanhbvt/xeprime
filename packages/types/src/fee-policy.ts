@@ -53,6 +53,7 @@ import {
   type BookingHoldPurpose,
 } from './status/hold';
 import type { PromoCodeSnapshot } from './promo-code';
+import type { VehicleProtectionTierQuote } from './status/insurance';
 
 // ── Vòng đời một phiên bản chính sách ───────────────────────────────────────
 
@@ -138,6 +139,15 @@ export const FEE_LINE = {
    * `customer`. ADR 0032 mới hơn và thắng trong phạm vi này.
    */
   VEHICLE_PROTECTION: 'vehicle_protection',
+  /**
+   * `X` — PHÍ THU HỘ BẢO HIỂM của NỀN TẢNG (ADR 0091 điều 3 — Proposed, chờ luật sư): `roundVnd(IV × %)`,
+   * KHÁCH trả, XePrime hưởng. Chỉ có khi chuyến có dòng `IV` và sản phẩm bật công tắc.
+   *
+   * Dòng RIÊNG trong dữ liệu và sổ sách (không gộp vào `IV` — tiền `IV` chuyển hãng, tiền này không);
+   * bề mặt KHÁCH hiện gộp với `IV` kèm ⓘ tách hai số. Hoàn cùng `IV` ở mọi kết cục hoàn; mã khuyến mãi
+   * không trừ vào nó; không vào thuế, hoa hồng hay tiền chủ xe.
+   */
+  INSURANCE_SERVICE_FEE: 'insurance_service_fee',
   /**
    * `D` — PHẦN CỦA CHỦ XE trong tiền giữ chỗ online: `tiền giữ chỗ − S − H − IV − IP`. **Không phải
    * phụ phí**: nó là tiền thuê khách trả trước, nên không cộng vào tổng khách và **không bao giờ
@@ -527,9 +537,17 @@ export interface FeePolicyValues {
    * + công đối soát vượt khoản thu.
    */
   holdMinAmount: string;
-  /** Khách có bấy nhiêu phút để chuyển giữ chỗ sau khi chủ xe duyệt. */
+  /**
+   * TRẦN (phút) của hạn chuyển tiền giữ chỗ — ADR 0066. Hạn thật là ĐỘNG theo
+   * `ΔT = pickupAt − acceptedAt`: `T_pay = clamp(30% × ΔT, 15′, trần này)`, đếm xuôi từ lúc duyệt,
+   * kẹp bởi giờ nhận xe (`holdWindowsFor`). Không phải một cửa sổ cố định cho mọi chuyến.
+   */
   holdPaymentWindowMinutes: number;
-  /** Huỷ trước mốc nhận xe bấy nhiêu giờ thì hoàn toàn bộ khoản giữ chỗ. */
+  /**
+   * TRẦN (giờ) của cửa sổ huỷ miễn phí — ADR 0072. Cửa sổ thật chỉ bắt đầu khi tiền giữ chỗ về ĐỦ:
+   * `T_cancel = clamp(20% × (pickupAt − paidAt), 15′, trần này)`, đếm xuôi từ `paidAt`
+   * (`freeCancelWindowFromPayment`). Không phải "huỷ trước giờ nhận N giờ".
+   */
   freeCancelHours: number;
   /**
    * % PHẦN CHỦ XE `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ `B` (sau khuyến mãi trực tiếp của
@@ -540,8 +558,6 @@ export interface FeePolicyValues {
   depositPercent: number;
   /** Sàn của `D` (VND), áp sau phép nhân %: `D = max(depositPercent% × B, depositMinAmount)`. */
   depositMinAmount: string;
-  /** Trần % của `D` — chặn tiền giữ chỗ biến thành thu tiền thuê trước (ADR 0025 điều 3). */
-  depositMaxPercent: number;
   /** `S` — phí sàn CỐ ĐỊNH mỗi đơn, phía khách, theo loại xe. Áp cho cả hai tuyến. */
   customerPlatformFee: PerVehicleTypeAmount;
   /** `H` — nấc hoa hồng lũy tiến theo ngày của TUYẾN HOA HỒNG, `fromDay` tăng dần từ 1. */
@@ -722,7 +738,13 @@ export interface CustomerFeeBreakdown {
    */
   platformRetainedAmount: string;
   /**
-   * Tiền giữ chỗ online TRƯỚC tài trợ mã khuyến mãi = `D + S + H + IV + IP`, đã nâng đủ các sàn.
+   * `X` — phí thu hộ bảo hiểm của nền tảng (ADR 0091 điều 3). `'0'` khi không có. Tách khỏi
+   * `platformRetainedAmount` vì nó HOÀN cùng `IV` khi chuyến huỷ, còn `S + H` thì không. Vắng ở
+   * snapshot trước 16/11/2026 = `'0'`.
+   */
+  insuranceServiceFeeAmount?: string;
+  /**
+   * Tiền giữ chỗ online TRƯỚC tài trợ mã khuyến mãi = `D + S + H + IV + IP + X`, đã nâng đủ các sàn.
    *
    * Đây là con số phân bổ (`resolveHoldAllocation`) làm việc trên: quyền lợi của chủ xe, hãng
    * bảo hiểm và ngân sách KHÔNG đổi vì XePrime giảm giá cho khách (ADR 0046 điều 2).
@@ -796,6 +818,20 @@ export interface CustomerFeeBreakdown {
    * trường này, không tự suy lại (`taxableBaseOf`). Tuỳ chọn ở kiểu đọc: snapshot cũ không có.
    */
   taxableBaseAmount?: string;
+  /**
+   * Bảo hiểm vật chất xe là BẮT BUỘC cho chuyến này — chủ xe đặt chế độ Bắt buộc (ADR 0091 điều 1;
+   * trước 16/11/2026 mọi xe đủ điều kiện đều bắt buộc — ADR 0088): giao diện hiện dòng `IV` không
+   * có ô bỏ chọn. Vắng ở snapshot cũ = `false`.
+   */
+  vehicleProtectionMandatory?: boolean;
+  /** Báo giá theo bậc ĐÃ MUA — giá trị xe, bậc, % — đóng băng cùng bảng phí. `null` khi không mua. */
+  vehicleProtectionTier?: VehicleProtectionTierQuote | null;
+  /**
+   * Lời CHÀO BÁN bảo hiểm vật chất xe theo bậc cho chuyến này, dù khách đã mua hay chưa (ADR 0091
+   * điều 1): giao diện dựng ô tích (Tuỳ chọn) hoặc dòng cố định (Bắt buộc) từ đây. `null` khi xe/
+   * chuyến không mua được hoặc nền tảng không bán. Vắng ở snapshot cũ.
+   */
+  vehicleProtectionOffer?: VehicleProtectionOffer | null;
   /**
    * Khoản giữ chỗ khách chuyển online = `onlineAmount`, đã kẹp sàn.
    * `null` khi chuyến KHÔNG thu cọc (tuyến gói tắt công tắc, hoặc báo giá tạm tính).
@@ -925,6 +961,28 @@ export function computeCustomerFees(input: {
   /** Khách có GIỮ lựa chọn bảo hiểm tai nạn người (`IP`) không. Mặc định: không. */
   personalAccidentSelected?: boolean;
   /**
+   * Bảo hiểm vật chất xe THEO BẬC giá trị xe (ADR 0088) — thay biểu phí theo ngày khi sản phẩm
+   * `IV` đang bán tính theo bậc:
+   *
+   *  - `undefined` — sản phẩm theo NGÀY: đi đường cũ, khách tự chọn (`vehicleProtectionSelected`).
+   *  - `null` — sản phẩm theo bậc nhưng xe/chuyến KHÔNG đủ điều kiện ⇒ không có dòng `IV`.
+   *  - có giá trị — xe MUA ĐƯỢC: dòng `IV` đúng số tiền này khi chủ xe đặt Bắt buộc
+   *    (`vehicleProtectionRequired`) hoặc khách tích (`vehicleProtectionSelected`) — ADR 0091.
+   *
+   * Cổng của nền tảng và của chính sách vẫn đứng trước: chưa có đối tác thì không thu đồng nào.
+   */
+  vehicleProtectionTier?: VehicleProtectionTierQuote | null;
+  /**
+   * Chủ xe đặt bảo hiểm vật chất xe BẮT BUỘC (ADR 0091 điều 1) — chỉ có nghĩa cùng một báo giá bậc.
+   * Lượt duyệt truyền cột ĐÃ ĐÓNG BĂNG trên yêu cầu, không phải chế độ hôm nay.
+   */
+  vehicleProtectionRequired?: boolean;
+  /**
+   * % phí thu hộ bảo hiểm của nền tảng trên `IV` (ADR 0091 điều 3). `null`/`0`/vắng ⇒ không thu.
+   * Caller chỉ truyền khi sản phẩm `IV` đang bật công tắc này (`InsuranceOfferService`).
+   */
+  insuranceServiceFeePercent?: number | null;
+  /**
    * MÃ KHUYẾN MÃI nền tảng đã áp — snapshot có sẵn `discountApplied` (ADR 0046).
    *
    * Số tiền ở đây do `computePromoDiscount` tính TRƯỚC (nó cần `grossOnlineAmount`, mà con số
@@ -1040,12 +1098,42 @@ export function computeCustomerFees(input: {
    * IV và IP — tuỳ chọn, theo ngày. Chỉ tính khi khách GIỮ lựa chọn VÀ cổng ở chính sách đang mở:
    * cổng thắng lựa chọn, vì chưa có hợp đồng bảo hiểm thật thì không được thu đồng nào (ADR 0028).
    */
+  const tierQuote = input.vehicleProtectionTier;
+  /*
+   * Bảo hiểm theo bậc (ADR 0091 điều 1): xe MUA ĐƯỢC thì chào bán; cộng dòng khi chủ xe đặt Bắt buộc
+   * hoặc khách tích. Một xe Tuỳ chọn mà khách không tích vẫn mang lời chào bán để giao diện hiện ô
+   * tích kèm giá — nhưng không có đồng nào trong tiền.
+   */
+  const offeredQuote =
+    tierQuote != null && offersVehicleProtection && Number(tierQuote.amount) > 0 ? tierQuote : null;
+  const vehicleProtectionMandatory =
+    offeredQuote !== null && input.vehicleProtectionRequired === true;
+  const boughtQuote =
+    offeredQuote !== null &&
+    (vehicleProtectionMandatory || input.vehicleProtectionSelected === true)
+      ? offeredQuote
+      : null;
+  if (boughtQuote) {
+    lines.push({
+      key: FEE_LINE.VEHICLE_PROTECTION,
+      beneficiary: FEE_BENEFICIARY.INSURER,
+      bearer: FEE_BEARER.CUSTOMER,
+      percent: null,
+      amount: boughtQuote.amount,
+      ...insurer,
+    });
+  }
   const vehicleDaily = amountFor(
     p.vehicleProtectionDailyAmount,
     vehicleType,
     'biểu phí bảo hiểm vật chất xe',
   );
-  if (input.vehicleProtectionSelected && offersVehicleProtection && vehicleDaily > 0) {
+  if (
+    tierQuote === undefined &&
+    input.vehicleProtectionSelected &&
+    offersVehicleProtection &&
+    vehicleDaily > 0
+  ) {
     lines.push({
       key: FEE_LINE.VEHICLE_PROTECTION,
       beneficiary: FEE_BENEFICIARY.INSURER,
@@ -1057,6 +1145,32 @@ export function computeCustomerFees(input: {
       ...insurer,
     });
   }
+  /*
+   * `X` — phí thu hộ bảo hiểm của nền tảng (ADR 0091 điều 3): % trên `IV` của CHÍNH chuyến này, đúng
+   * tới đồng. Không có `IV` thì không có `X`. Lời chào bán tính sẵn `X` của phí `IV` để ô tích
+   * Tuỳ chọn hiện đúng số khách sẽ trả nếu tích.
+   */
+  const serviceFeePercent =
+    input.insuranceServiceFeePercent != null && input.insuranceServiceFeePercent > 0
+      ? input.insuranceServiceFeePercent
+      : 0;
+  const vehicleProtectionLineAmount = Number(
+    lines.find((l) => l.key === FEE_LINE.VEHICLE_PROTECTION)?.amount ?? 0,
+  );
+  const insuranceServiceFee =
+    serviceFeePercent > 0 && vehicleProtectionLineAmount > 0
+      ? percentOfVnd(vehicleProtectionLineAmount, serviceFeePercent)
+      : 0;
+  if (insuranceServiceFee > 0) {
+    lines.push({
+      key: FEE_LINE.INSURANCE_SERVICE_FEE,
+      beneficiary: FEE_BENEFICIARY.PLATFORM,
+      bearer: FEE_BEARER.CUSTOMER,
+      percent: serviceFeePercent,
+      amount: String(insuranceServiceFee),
+    });
+  }
+
   const personalDaily = amountFor(
     p.tripInsuranceDailyAmount,
     vehicleType,
@@ -1082,7 +1196,8 @@ export function computeCustomerFees(input: {
   const taxAmount = lineAmount(FEE_LINE.TAX);
   const insuranceTotal =
     lineAmount(FEE_LINE.VEHICLE_PROTECTION) + lineAmount(FEE_LINE.TRIP_INSURANCE);
-  const customerFeeTotal = serviceFee + insuranceTotal;
+  /** `X` — tiền của nền tảng nhưng HOÀN cùng `IV`: cùng nhóm "không phải tiền của chủ xe". */
+  const customerFeeTotal = serviceFee + insuranceTotal + insuranceServiceFee;
   const grossCustomerTotal = base + customerFeeTotal;
 
   /*
@@ -1111,7 +1226,7 @@ export function computeCustomerFees(input: {
   const collectsOnline = !input.quoteIsEstimate;
   const depositRequired =
     (input.depositRequired ?? input.billingMode === BILLING_MODE.COMMISSION) && collectsOnline;
-  const notOwnersMoney = serviceFee + commission + insuranceTotal + taxAmount;
+  const notOwnersMoney = serviceFee + commission + insuranceTotal + insuranceServiceFee + taxAmount;
   const onlineBase = grossCustomerTotal - delivery;
   let grossOnline = 0;
   if (collectsOnline) {
@@ -1120,11 +1235,17 @@ export function computeCustomerFees(input: {
       Number(p.depositMinAmount),
     );
     const floor = depositRequired
-      ? Math.max(serviceFee + commission + insuranceTotal + ownerHoldTarget, notOwnersMoney)
+      ? Math.max(
+          serviceFee + commission + insuranceTotal + insuranceServiceFee + ownerHoldTarget,
+          notOwnersMoney,
+        )
       : notOwnersMoney;
     grossOnline = floor > 0 ? Math.min(onlineBase, Math.max(floor, Number(p.holdMinAmount))) : 0;
   }
-  const deposit = grossOnline > 0 ? grossOnline - serviceFee - commission - insuranceTotal : 0;
+  const deposit =
+    grossOnline > 0
+      ? grossOnline - serviceFee - commission - insuranceTotal - insuranceServiceFee
+      : 0;
 
   /*
    * TÀI TRỢ của XePrime (ADR 0046 điều 2). Kẹp bằng `grossOnline − holdMinAmount`, không bằng
@@ -1138,7 +1259,8 @@ export function computeCustomerFees(input: {
    * (`promoContextFor`) đã chặn ca này; chặn LẠI ở đây vì bất biến không được phụ thuộc vào việc
    * mọi caller đều nhớ làm đúng.
    */
-  const sponsorable = grossOnline > 0 ? grossOnline - insuranceTotal : 0;
+  // Mã khuyến mãi không trừ vào tiền giữ hộ hãng (`IV + IP`) lẫn phí thu hộ `X` (ADR 0091 điều 3).
+  const sponsorable = grossOnline > 0 ? grossOnline - insuranceTotal - insuranceServiceFee : 0;
   const promoRoom = Math.max(0, Math.min(grossOnline - Number(p.holdMinAmount), sponsorable));
   const promoDiscount = input.promo
     ? Math.max(0, Math.min(Number(input.promo.discountApplied), promoRoom))
@@ -1159,6 +1281,7 @@ export function computeCustomerFees(input: {
     depositAmount: String(deposit),
     ownerCommissionAmount: String(commission),
     platformRetainedAmount: String(serviceFee + commission),
+    insuranceServiceFeeAmount: String(insuranceServiceFee),
     grossOnlineAmount: String(grossOnline),
     sponsorableAmount: String(sponsorable),
     promoDiscountAmount: String(promoDiscount),
@@ -1186,7 +1309,33 @@ export function computeCustomerFees(input: {
     taxExemptReason,
     serviceType: input.serviceType ?? null,
     sellerEntityType,
+    vehicleProtectionMandatory,
+    vehicleProtectionTier: boughtQuote,
+    vehicleProtectionOffer: offeredQuote
+      ? {
+          amount: offeredQuote.amount,
+          required: vehicleProtectionMandatory,
+          serviceFeeAmount: String(
+            serviceFeePercent > 0
+              ? percentOfVnd(Number(offeredQuote.amount), serviceFeePercent)
+              : 0,
+          ),
+        }
+      : null,
   };
+}
+
+/** Lời chào bán bảo hiểm vật chất xe theo bậc của một chuyến — xem `vehicleProtectionOffer`. */
+export interface VehicleProtectionOffer {
+  /** Phí `IV` của chuyến nếu mua (VND string). */
+  amount: string;
+  /** Chủ xe đặt Bắt buộc — không có ô bỏ chọn. */
+  required: boolean;
+  /**
+   * Phí thu hộ `X` đi kèm nếu mua (ADR 0091 điều 3) — `'0'` khi công tắc tắt. Khách thấy GỘP
+   * `amount + serviceFeeAmount` với ⓘ tách hai số. Vắng ở API cũ = `'0'`.
+   */
+  serviceFeeAmount?: string;
 }
 
 /** Thuế của một bảng tiền đã đóng băng, ở hình dạng ĐẦY ĐỦ — xem `feeTaxDetailOf`. */
@@ -1292,6 +1441,9 @@ export type PublicCustomerFeeBreakdown = Pick<
   | 'onlineAmount'
   | 'payAtPickupAmount'
   | 'holdAmount'
+  | 'vehicleProtectionMandatory'
+  | 'vehicleProtectionOffer'
+  | 'insuranceServiceFeeAmount'
 > & {
   policy: PublicFeePolicySnapshot;
   /** Chỉ dòng KHÁCH chịu (`bearer = customer`). */
@@ -1320,6 +1472,9 @@ export function toPublicFeeBreakdown(fees: CustomerFeeBreakdown): PublicCustomer
     onlineAmount: fees.onlineAmount,
     payAtPickupAmount: fees.payAtPickupAmount,
     holdAmount: fees.holdAmount,
+    vehicleProtectionMandatory: fees.vehicleProtectionMandatory ?? false,
+    vehicleProtectionOffer: fees.vehicleProtectionOffer ?? null,
+    insuranceServiceFeeAmount: fees.insuranceServiceFeeAmount ?? '0',
     policy: {
       policyId: p.policyId,
       version: p.version,
@@ -1344,6 +1499,7 @@ export const FEE_LINE_LABEL: Readonly<Record<FeeLineKey, string>> = {
   [FEE_LINE.TAX]: 'Thuế khấu trừ/nộp thay',
   [FEE_LINE.TRIP_INSURANCE]: 'Bảo hiểm tai nạn người ngồi trên xe',
   [FEE_LINE.VEHICLE_PROTECTION]: 'Bảo hiểm vật chất xe',
+  [FEE_LINE.INSURANCE_SERVICE_FEE]: 'Phí thu hộ bảo hiểm',
   [FEE_LINE.DEPOSIT]: 'Cọc đặt chuyến',
   [FEE_LINE.PROMO]: 'Mã khuyến mãi XePrime',
   [FEE_LINE.RENT_PREPAID]: 'Phần tiền thuê trả trước',
@@ -1446,8 +1602,8 @@ export function feePolicyActivationBlockers(values: FeePolicyValues): string[] {
   }
   if (
     values.depositPercent < DEPOSIT_PERCENT_MIN ||
-    values.depositPercent > values.depositMaxPercent ||
-    values.depositMaxPercent > DEPOSIT_PERCENT_MAX
+    // Trần cứng: trên mức đó "giữ chỗ" thành thu tiền thuê trước (ADR 0025 điều 3).
+    values.depositPercent > DEPOSIT_PERCENT_MAX
   ) {
     blockers.push('deposit_percent_out_of_range');
   }
@@ -1540,6 +1696,11 @@ export interface HoldMoneyLines {
   /** `IV` */ vehicleInsurance: string;
   /** `IP` */ personalInsurance: string;
   /**
+   * `X` — phí thu hộ bảo hiểm của nền tảng (ADR 0091 điều 3). Bỏ trống ⇒ `'0'`: hold sinh trước
+   * 16/11/2026 không có. Đi CÙNG `IV`: hoàn khách khi `IV` hoàn, thành doanh thu khi chuyến xong.
+   */
+  insuranceServiceFee?: string;
+  /**
    * `P` — tài trợ mã khuyến mãi (ADR 0046). Khách đã chuyển ÍT hơn bốn dòng trên đúng bằng con
    * số này, nên nó là hiệu giữa QUYỀN LỢI (bốn dòng) và TIỀN MẶT (`booking_holds.amount`).
    *
@@ -1594,7 +1755,12 @@ export function adminSettleOutcomes(
   purpose: BookingHoldPurpose,
   lines: Pick<
     HoldMoneyLines,
-    'deposit' | 'serviceFee' | 'ownerCommission' | 'vehicleInsurance' | 'personalInsurance'
+    | 'deposit'
+    | 'serviceFee'
+    | 'ownerCommission'
+    | 'vehicleInsurance'
+    | 'personalInsurance'
+    | 'insuranceServiceFee'
   >,
 ): BookingHoldOutcome[] {
   const hasMoneyLines = [
@@ -1603,6 +1769,7 @@ export function adminSettleOutcomes(
     lines.ownerCommission ?? '0',
     lines.vehicleInsurance,
     lines.personalInsurance,
+    lines.insuranceServiceFee ?? '0',
   ].some((value) => Number(value) > 0);
   return BOOKING_HOLD_OUTCOME_VALUES.filter(
     (outcome) =>
@@ -1639,6 +1806,8 @@ export function resolveHoldAllocation(
   const h = Number(lines.ownerCommission ?? 0);
   const iv = Number(lines.vehicleInsurance);
   const ip = Number(lines.personalInsurance);
+  /** `X` — đi theo `IV`: hoàn khi `IV` hoàn, doanh thu nền tảng khi chuyến hoàn thành. */
+  const x = Number(lines.insuranceServiceFee ?? 0);
   /*
    * TÀI TRỢ mã khuyến mãi (ADR 0046 điều 4). Kẹp `min(d + s + h, …)` để bất biến "tổng phân bổ =
    * tiền mặt đã nhận" không phụ thuộc vào dữ liệu của một bảng khác — cùng lý do `tax` ở dưới
@@ -1679,13 +1848,16 @@ export function resolveHoldAllocation(
       s - (promo - fromDeposit - fromCommission),
     );
     push(FEE_LINE.VEHICLE_PROTECTION, ALLOCATION_TARGET.CUSTOMER_BALANCE, iv);
+    push(FEE_LINE.INSURANCE_SERVICE_FEE, ALLOCATION_TARGET.CUSTOMER_BALANCE, x);
     push(FEE_LINE.TRIP_INSURANCE, ALLOCATION_TARGET.CUSTOMER_BALANCE, ip);
     return out;
   }
 
   if (kind === 'split_late_cancel') {
     // Bảo hiểm chưa mua ⇒ hoàn 100%, không phụ thuộc khả năng hoàn của đối tác (ADR 0032 điều 4).
+    // Phí thu hộ đi cùng `IV`: chưa có hợp đồng thì chưa có dịch vụ thu hộ (ADR 0091 điều 3).
     push(FEE_LINE.VEHICLE_PROTECTION, ALLOCATION_TARGET.CUSTOMER_BALANCE, iv);
+    push(FEE_LINE.INSURANCE_SERVICE_FEE, ALLOCATION_TARGET.CUSTOMER_BALANCE, x);
     push(FEE_LINE.TRIP_INSURANCE, ALLOCATION_TARGET.CUSTOMER_BALANCE, ip);
     /*
      * Chủ xe nhận TRỌN phần cam kết giữ xe `D` (ADR 0066 — thay phép chia đôi `D + S + H` của ADR
@@ -1722,6 +1894,8 @@ export function resolveHoldAllocation(
    */
   pushPlatform(FEE_LINE.SERVICE_FEE, s - promo);
   push(FEE_LINE.OWNER_COMMISSION, ALLOCATION_TARGET.PLATFORM_REVENUE, h);
+  // Phí thu hộ là doanh thu nền tảng — KHÔNG chuyển hãng cùng `IV` (ADR 0091 điều 3).
+  push(FEE_LINE.INSURANCE_SERVICE_FEE, ALLOCATION_TARGET.PLATFORM_REVENUE, x);
   push(FEE_LINE.VEHICLE_PROTECTION, ALLOCATION_TARGET.INSURER_PAYABLE, iv);
   push(FEE_LINE.TRIP_INSURANCE, ALLOCATION_TARGET.INSURER_PAYABLE, ip);
   return out;

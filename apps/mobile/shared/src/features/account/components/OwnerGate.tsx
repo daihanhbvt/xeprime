@@ -14,6 +14,7 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { space } from '@/theme/tokens';
 import { useOwnerAccess } from '../hooks/use-owner-access';
+import { layout } from '@/theme/layout';
 
 /**
  * Cổng của các màn CHỦ XE trong khu tài khoản: danh sách xe, lịch xe, thông tin khai thuế, chi
@@ -132,7 +133,7 @@ export function OwnerGate({
         Lối thứ HAI, bắt buộc: người mở màn này bằng deep link không có gì trong ngăn xếp để lui
         về. Web dẫn về trang tài khoản đối tác (`ROUTES.MANAGE.ACCOUNT`).
       */}
-        <YStack px={space.lg} pb={space.lg}>
+        <YStack px={layout.padXLg} pb={space.lg}>
           <Button
             label={t('backToAccount')}
             variant="ghost"

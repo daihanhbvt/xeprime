@@ -1,5 +1,7 @@
 'use client';
 
+import { CalendarOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
+import { createElement } from 'react';
 import { useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import type { RowAction } from '@/components/data-display/RowActions';
@@ -50,6 +52,8 @@ export function useVehicleRowActions(): (input: VehicleRowActionsInput) => RowAc
         key: 'schedule',
         label: t('schedule'),
         showLabel: true,
+        // Khổ điện thoại (Figma Partner): MỌI nút vàng, kèm icon - giống app.
+        ...(compact ? { primary: true, icon: createElement(CalendarOutlined) } : {}),
         onClick: () => onSchedule(row),
       },
       {
@@ -57,13 +61,15 @@ export function useVehicleRowActions(): (input: VehicleRowActionsInput) => RowAc
         label: editKind === 'manage' ? t('manage') : t('editFull'),
         showLabel: true,
         hidden: !canEdit,
+        ...(compact ? { primary: true, icon: createElement(EditOutlined) } : {}),
         onClick: () => onEdit(row.id),
       },
       {
         key: 'view',
-        label: compact ? t('viewShort') : t('detail'),
+        label: t('detail'),
         showLabel: true,
         primary: true,
+        ...(compact ? { icon: createElement(EyeOutlined) } : {}),
         onClick: () => onView(row.id),
       },
     ],

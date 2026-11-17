@@ -1,9 +1,22 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
-import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
-  ACCOUNT_REALM,
-  PERMISSION,
-} from '@xeprime/types';
+  Body,
+  Controller,
+  Get,
+  Header,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
+import {
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiProduces,
+  ApiTags,
+} from '@nestjs/swagger';
+import { ACCOUNT_REALM, PERMISSION } from '@xeprime/types';
 import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import {
@@ -12,6 +25,7 @@ import {
   PlatformWithdrawalQueryDto,
   RejectWithdrawalDto,
   ReverseWithdrawalDto,
+  WithdrawalMonthExportQueryDto,
 } from './dto/platform-withdrawal.dto';
 import { PlatformWithdrawalService } from './platform-withdrawal.service';
 
@@ -49,11 +63,30 @@ export class PlatformWithdrawalsController {
     return this.withdrawals.list(query);
   }
 
+  @Get('export')
+  @ApiOperation({
+    summary: 'Bảng kê CSV các lệnh đã chuyển trong một tháng (giờ VN) - đối chiếu sao kê chiều RA',
+    description:
+      'Gồm lệnh `paid` và `reversed` (đã chi rồi mới quay về), theo mốc chuyển. File mang số tài khoản ' +
+      'ĐẦY ĐỦ nên MỖI lần xuất ghi audit `withdrawal.month_export` (người xuất, tháng, số dòng). BOM UTF-8 ' +
+      'để Excel đọc đúng tiếng Việt.',
+  })
+  @ApiProduces('text/csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @ApiOkResponse({ schema: { type: 'string' } })
+  exportMonth(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: WithdrawalMonthExportQueryDto,
+  ): Promise<string> {
+    return this.withdrawals.monthCsv(query.month, user.id);
+  }
+
   @Post(':id/approve')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Duyệt - bắt đầu đếm hạn cam kết',
-    description: 'Tiền VẪN bị khoá, chưa rời ngân hàng. Duyệt và chi là hai việc, đôi khi hai người.',
+    description:
+      'Tiền VẪN bị khoá, chưa rời ngân hàng. Duyệt và chi là hai việc, đôi khi hai người.',
   })
   @ApiNoContentResponse()
   approve(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<void> {
@@ -66,7 +99,8 @@ export class PlatformWithdrawalsController {
     summary: 'Đã chuyển khoản - ghi bút toán âm',
     description:
       'Bắt buộc có mã giao dịch ngân hàng: đây là đầu duy nhất của đối soát chiều RA, và DB ' +
-      'cũng chặn một lệnh `paid` không có bằng chứng. `rowVersion` chặn hai admin cùng bấm.',
+      'cũng chặn một lệnh `paid` không có bằng chứng. `rowVersion` chặn hai admin cùng bấm. ' +
+      'Lệnh từ ngưỡng hai người: người bấm phải khác người đã duyệt (409 `WITHDRAWAL_SECOND_PERSON_REQUIRED`).',
   })
   @ApiNoContentResponse()
   markPaid(

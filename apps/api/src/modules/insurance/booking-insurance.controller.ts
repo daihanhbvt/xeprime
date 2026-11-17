@@ -1,5 +1,5 @@
-import { Controller, Get, Param } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Header, Param, StreamableFile } from '@nestjs/common';
+import { ApiOkResponse, ApiOperation, ApiProduces, ApiTags } from '@nestjs/swagger';
 import { ACCOUNT_REALM, PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   BRANCH_SCOPED_RESOURCE,
@@ -12,6 +12,7 @@ import {
 } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
 import { InsuranceCertificateDto, InsuranceCoverageDto } from './dto/insurance.dto';
+import { InsuranceCertificateService } from './insurance-certificate.service';
 import { InsuranceReadService } from './insurance-read.service';
 
 /**
@@ -28,7 +29,32 @@ import { InsuranceReadService } from './insurance-read.service';
 @TenantScoped()
 @Realms(ACCOUNT_REALM.PARTNER)
 export class BookingInsuranceController {
-  constructor(private readonly read: InsuranceReadService) {}
+  constructor(
+    private readonly read: InsuranceReadService,
+    private readonly certificates: InsuranceCertificateService,
+  ) {}
+
+  /** GCN PDF của một hợp đồng thuộc đơn này — tải từ hãng mỗi lần, không lưu (ADR 0088). */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Get(':id/insurance-certificates/:policyId/pdf')
+  @RequirePermissions(PERMISSION.BOOKING_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.BOOKING_VIEW)
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOperation({ summary: 'Tải giấy chứng nhận bảo hiểm (PDF) của một đơn' })
+  @ApiProduces('application/pdf')
+  @ApiOkResponse({ schema: { type: 'string', format: 'binary' } })
+  async pdf(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+    @Param('policyId') policyId: string,
+  ): Promise<StreamableFile> {
+    const pdf = await this.certificates.pdf(policyId, { bookingId: id, tenantId: tenant.tenantId });
+    return new StreamableFile(pdf.file, {
+      type: 'application/pdf',
+      length: pdf.file.length,
+      disposition: `attachment; filename="${pdf.fileName}"`,
+    });
+  }
 
   @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
   @Get(':id/insurance-certificates')

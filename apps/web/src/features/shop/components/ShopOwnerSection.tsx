@@ -6,12 +6,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { STATUS_COLOR, TENANT_ROLE, toLocalVnPhone } from '@xeprime/types';
 
-import {
-  ACCOUNT_SECTION,
-  accountSectionPath,
-  SHOP_SECTION,
-  shopSectionDomId,
-} from '@/constants/routes';
+import { ROUTES, SHOP_SECTION, shopSectionDomId } from '@/constants/routes';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { initialOf } from '@/lib/initials';
 
@@ -86,7 +81,7 @@ export function ShopOwnerSection({ shop }: { shop: MyShop }) {
 
       {isOwner ? (
         <div className={styles.actions}>
-          <Link href={accountSectionPath(ACCOUNT_SECTION.LOGIN)}>
+          <Link href={ROUTES.MANAGE.ACCOUNT}>
             <Button icon={<UserOutlined aria-hidden />}>{t('manageAccount')}</Button>
           </Link>
         </div>

@@ -33,6 +33,7 @@ import { isUnauthenticated } from '@xeprime/api-client';
 import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
+import { useCardGrid } from '@/theme/use-responsive';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { useColors } from '@/theme/ThemeProvider';
 import { space } from '@/theme/tokens';
@@ -107,7 +108,7 @@ export function TripsScreen({
   const [filter, setFilter] = useState<CustomerTripFilter>(CUSTOMER_TRIP_FILTER_DEFAULT);
   /*
    * KHÔNG có bộ lọc chặng ở màn của KHÁCH — đúng web (design "Chuyến của tôi" chỉ có hai tab; nhãn
-   * chặng trên từng thẻ đã nói đủ). Bộ lọc chặng chỉ còn ở màn chuyến của chủ xe (`OwnerTripsScreen`).
+   * chặng trên từng thẻ đã nói đủ). Màn chuyến riêng của chủ xe đã gỡ (web PR #278).
    */
   // App này chỉ phục vụ tài khoản KHÁCH (ADR 0053): chuyến luôn là chuyến mình ĐI THUÊ — web
   // `TripsView` khoá `TRIP_ROLE.RENTER` cùng lý do.
@@ -203,6 +204,8 @@ export function TripsScreen({
     ),
     [openTrip],
   );
+  // iPad: thẻ xếp lưới 2-3 cột trong cột nội dung; điện thoại giữ 1 cột.
+  const grid = useCardGrid(renderTrip, { listKey: 'trips' });
 
   return (
     <>
@@ -291,11 +294,12 @@ export function TripsScreen({
         ) : (
           <ScrollRevealProvider value={listReveal.ctx}>
           <Animated.FlatList
+            key={grid.key}
             data={items}
             onScroll={listReveal.onScroll}
             scrollEventThrottle={16}
             keyExtractor={tripKey}
-            renderItem={renderTrip}
+            {...grid.listProps}
             contentContainerStyle={listContentStyle}
             onEndReached={loadMore}
             refreshControl={refreshControl}

@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { LIST_SEPARATOR } from '@xeprime/domain';
@@ -173,11 +173,11 @@ function TripHistoryCard({ item }: { item: VehicleTripHistoryItem }) {
             label={t('start')}
             value={
               item.pickupAt
-                ? fmt.dateTime(item.pickupAt)
+                ? fmt.shortDateTime(item.pickupAt)
                 : (fmt.packageLabel(item.longTermPackageMonths) ?? fmt.dateTime(null))
             }
           />
-          <DataRow label={t('end')} value={item.returnAt ? fmt.dateTime(item.returnAt) : '-'} />
+          <DataRow label={t('end')} value={item.returnAt ? fmt.shortDateTime(item.returnAt) : '-'} />
           <DataRow
             label={t('total')}
             value={item.totalAmount ? fmt.money(item.totalAmount) : t('awaitingQuote')}

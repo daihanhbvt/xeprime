@@ -290,6 +290,13 @@ export const envSchema = z
     GEO_DAILY_CALL_BUDGET: z.coerce.number().int().positive().default(3000),
 
     /*
+     * Ngưỡng HAI NGƯỜI của lệnh rút Ví điểm (đợt rà Admin 16/11/2026, chủ sản phẩm chốt 10 triệu):
+     * lệnh từ số này trở lên thì người bấm "Đã chuyển" phải khác người đã duyệt — kiểm trong cùng
+     * câu lệnh chốt ở DB, không ở giao diện. Đặt `0` ⇒ mọi lệnh đều cần hai người.
+     */
+    WITHDRAWAL_DUAL_CONTROL_MIN_AMOUNT: z.coerce.number().int().min(0).default(10_000_000),
+
+    /*
      * --- Ngày lễ Việt Nam: đồng bộ từ Google Calendar (26/08/2026) ---
      *
      * Hai biến này do **`apps/worker`** dùng, không phải API — API chỉ ĐỌC bảng
@@ -334,6 +341,13 @@ export const envSchema = z
     DRIVER_LICENCE_OCR: z.enum(['tesseract', 'off']).default('tesseract'),
 
     /*
+     * Đọc ảnh cà vẹt lúc tạo ô tô (ADR 0089) — cùng bộ máy Tesseract với bằng lái.
+     *   tesseract — MẶC ĐỊNH.
+     *   off       — thoát hiểm (CPU quá tải): chủ xe nhập tay số khung, số máy, tên chủ xe.
+     */
+    VEHICLE_REGISTRATION_OCR: z.enum(['tesseract', 'off']).default('tesseract'),
+
+    /*
      * Cổng "phải có bằng lái đã xác thực mới gửi được yêu cầu thuê xe tự lái" (ADR 0057).
      *
      *   on   — MẶC ĐỊNH: chặn thật ở `POST /public/booking-requests`.
@@ -351,8 +365,25 @@ export const envSchema = z
      *   mic_mock — GIẢ LẬP MIC cho dev/staging: phát GCN `MIC-VCX-…`/`MIC-NNTX-…` kèm link tra cứu
      *              để chạy trọn luồng bàn giao → phát hành. **Production từ chối boot** — GCN giả là
      *              khẳng định với khách rằng họ có bảo hiểm thật (ADR 0028 điều 5).
+     *   mic      — adapter MIC THẬT (ADR 0088): bộ `xel_chuyen` + loại xe M1.11, gửi 5 ảnh xe, cấp
+     *              hợp đồng ở mốc giao xe. Cần đủ bộ `MIC_*` dưới; MIC chặn theo IP nên chỉ chạy
+     *              từ máy chủ đã whitelist.
      */
-    INSURANCE_PARTNER: z.enum(['none', 'mic_mock']).default('none'),
+    INSURANCE_PARTNER: z.enum(['none', 'mic_mock', 'mic']).default('none'),
+
+    /*
+     * --- MIC Open API (ADR 0088) — chỉ đọc khi `INSURANCE_PARTNER=mic` ---
+     *
+     * Năm biến là MỘT nhóm (kiểm ở superRefine). Mật khẩu + client secret CHỈ ở GitHub Environment,
+     * không bao giờ ở repo/tài liệu. `MIC_SANDBOX` mặc định `true`: hợp đồng sandbox mang số
+     * `TEST-…` + cờ `is_test`; production phải khai `false` tường minh (và bị chặn nếu để `true`).
+     */
+    MIC_BASE_URL: z.preprocess((v) => (v === '' ? undefined : v), z.string().url().optional()),
+    MIC_USERNAME: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
+    MIC_PASSWORD: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
+    MIC_CLIENT_ID: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
+    MIC_CLIENT_SECRET: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
+    MIC_SANDBOX: z.enum(['true', 'false']).default('true'),
 
     /*
      * --- SePay: đối soát tiền VÀO tài khoản nền tảng (ADR 0016/0022, R2) ---
@@ -471,6 +502,33 @@ export const envSchema = z
     SMTP_FROM: z.string().default('XePrime <no-reply@xeprime.local>'),
   })
   .superRefine((env, ctx) => {
+    // ADR 0088 — adapter MIC thật thiếu một biến là không lấy được token: fail lúc boot.
+    if (env.INSURANCE_PARTNER === 'mic') {
+      const micKeys = [
+        'MIC_BASE_URL',
+        'MIC_USERNAME',
+        'MIC_PASSWORD',
+        'MIC_CLIENT_ID',
+        'MIC_CLIENT_SECRET',
+      ] as const;
+      for (const key of micKeys) {
+        if (!env[key]) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [key],
+            message: `INSURANCE_PARTNER=mic cần ${key}`,
+          });
+        }
+      }
+      if (env.APP_ENV === 'production' && env.MIC_SANDBOX !== 'false') {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['MIC_SANDBOX'],
+          message:
+            'Production không cấp hợp đồng trên sandbox MIC - khai MIC_SANDBOX=false và MIC_BASE_URL production',
+        });
+      }
+    }
     // Một cặp id/secret khai nửa vời là cấu hình gõ thiếu. Fail lúc boot chứ đừng để nó thành
     // "nút Google im lặng không hoạt động" mà không ai biết vì sao.
     const socialPairs = [

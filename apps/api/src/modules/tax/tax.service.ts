@@ -1,4 +1,10 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
@@ -6,8 +12,11 @@ import {
   TAX_WITHHOLDING_STATUS,
   canTransitionTax,
   feeTaxDetailOf,
+  isTaxPeriodEnded,
   isTaxPeriodKey,
+  taxPeriodFilingEarliestDateKey,
   taxPeriodKeyVn,
+  vnDateKey,
   taxRateLabel,
   type BookingPriceSnapshot,
   type SellerEntityType,
@@ -336,40 +345,49 @@ export class TaxService {
   }
 
   /**
-   * Chuyển trạng thái CẢ MỘT KỲ — `accrued → declared` hoặc `declared → remitted`.
+   * KÊ KHAI cả một kỳ — `accrued → declared`, kèm chứng cứ (số tờ khai + ngày nộp tờ khai).
    *
    * Theo kỳ chứ không theo từng dòng vì đó là cách cơ quan thuế làm việc: một tờ khai cho một
-   * tháng. Cho phép bấm từng dòng sẽ sinh ra những kỳ nửa-khai mà không tờ khai nào khớp.
+   * tháng. Chỉ kỳ ĐÃ KẾT THÚC: kê khai giữa tháng là cắt đôi kỳ. Mỗi kỳ kê khai một lần — chứng cứ
+   * nằm ở `tax_period_filings` (writer duy nhất là service này), ghi trong CÙNG transaction với
+   * lượt lật trạng thái + audit.
    *
-   * `updateMany` có điều kiện `status` nên chạy lại chỉ đụng những dòng còn ở trạng thái nguồn —
-   * bấm hai lần không đẩy `declared` thành `remitted`.
+   * Kỳ không còn dòng `accrued` nào (đã kê khai trước khi có chứng cứ, hoặc tờ khai không phát sinh)
+   * vẫn ghi được chứng cứ — lượt lật trạng thái khi đó là 0 dòng.
    */
-  async advancePeriod(
+  async declarePeriod(
     periodKey: string,
-    to: typeof TAX_WITHHOLDING_STATUS.DECLARED | typeof TAX_WITHHOLDING_STATUS.REMITTED,
     actorUserId: string,
+    evidence: { declarationRef: string; declaredOn: string },
+    now: Date = new Date(),
   ): Promise<{ updated: number }> {
-    if (!isTaxPeriodKey(periodKey)) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Kỳ thuế phải có dạng YYYY-MM',
-      });
-    }
-    const from =
-      to === TAX_WITHHOLDING_STATUS.DECLARED
-        ? TAX_WITHHOLDING_STATUS.ACCRUED
-        : TAX_WITHHOLDING_STATUS.DECLARED;
+    assertPeriodFileable(periodKey, now);
+    assertFilingDate(periodKey, evidence.declaredOn, now, 'declaredOn');
+    const declarationRef = evidence.declarationRef.trim();
 
-    const now = new Date();
-    const result = await this.prisma.$transaction(async (tx) => {
-      const { count } = await tx.taxWithholding.updateMany({
-        where: { periodKey, status: from },
+    return this.prisma.$transaction(async (tx) => {
+      await ensureFilingRowWithinTx(tx, periodKey);
+      // Có điều kiện `declaration_ref IS NULL`: hai người cùng bấm thì đúng một người ghi được.
+      const claimed = await tx.taxPeriodFiling.updateMany({
+        where: { periodKey, declarationRef: null },
         data: {
-          status: to,
-          ...(to === TAX_WITHHOLDING_STATUS.DECLARED
-            ? { declaredAt: now }
-            : { remittedAt: now }),
+          declarationRef,
+          declaredOn: dateKeyToDbDate(evidence.declaredOn),
+          declaredBy: actorUserId,
+          declaredAt: now,
         },
+      });
+      if (claimed.count === 0) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.TAX_PERIOD_ALREADY_DECLARED,
+          message: 'Kỳ thuế này đã được ghi kê khai',
+          details: { periodKey },
+        });
+      }
+
+      const { count } = await tx.taxWithholding.updateMany({
+        where: { periodKey, status: TAX_WITHHOLDING_STATUS.ACCRUED },
+        data: { status: TAX_WITHHOLDING_STATUS.DECLARED, declaredAt: now },
       });
       /*
        * Audit KHÔNG gắn `tenantId`: đây là hành động của nền tảng trên một KỲ, không trên một
@@ -379,18 +397,209 @@ export class TaxService {
         {
           actorUserId,
           actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
-          action: `tax_period.${to}`,
+          action: `tax_period.${TAX_WITHHOLDING_STATUS.DECLARED}`,
           targetType: 'tax_period',
           targetId: periodKey,
-          after: { periodKey, from, to, updated: count },
+          after: {
+            periodKey,
+            from: TAX_WITHHOLDING_STATUS.ACCRUED,
+            to: TAX_WITHHOLDING_STATUS.DECLARED,
+            updated: count,
+            declarationRef,
+            declaredOn: evidence.declaredOn,
+          },
         },
         tx,
       );
-      return count;
+      return { updated: count };
     });
-
-    return { updated: result };
   }
+
+  /**
+   * NỘP thuế cả một kỳ — `declared → remitted`, kèm chứng cứ (mã chứng từ, ngày nộp, số đã nộp).
+   *
+   * Không có đường "nộp mà chưa khai": kỳ còn dòng `accrued` thì từ chối. Số đã nộp được phép lệch
+   * tổng trên sổ (người dùng chốt 16/11/2026) nhưng khi đó ghi chú là BẮT BUỘC; tổng trên sổ được
+   * chụp lại (`ledger_amount`) để phần lệch luôn đọc được về sau.
+   *
+   * Tổng trên sổ = mọi dòng `remitted` của kỳ SAU lượt lật — gồm cả dòng đã nộp trước khi có chứng
+   * cứ (kỳ cũ), để lượt ghi chứng cứ cho kỳ cũ không đo nhầm thành 0.
+   */
+  async remitPeriod(
+    periodKey: string,
+    actorUserId: string,
+    evidence: {
+      remittanceRef: string;
+      remittedOn: string;
+      remittedAmount: string;
+      note?: string | null;
+    },
+    now: Date = new Date(),
+  ): Promise<{ updated: number }> {
+    assertPeriodFileable(periodKey, now);
+    assertFilingDate(periodKey, evidence.remittedOn, now, 'remittedOn');
+    const remittanceRef = evidence.remittanceRef.trim();
+    const note = evidence.note?.trim() || null;
+    const remittedAmount = new Prisma.Decimal(evidence.remittedAmount);
+    if (!remittedAmount.isInteger() || remittedAmount.lte(0)) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Số tiền đã nộp phải là số nguyên dương',
+        details: { field: 'remittedAmount' },
+      });
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // Đọc trước để trả đúng lý do; chốt chặn thật là câu ghi có điều kiện ở cuối.
+      const existing = await tx.taxPeriodFiling.findUnique({
+        where: { periodKey },
+        select: { remittanceRef: true },
+      });
+      if (existing?.remittanceRef) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.TAX_PERIOD_ALREADY_REMITTED,
+          message: 'Kỳ thuế này đã được ghi nộp',
+          details: { periodKey },
+        });
+      }
+      const accruedRows = await tx.taxWithholding.count({
+        where: { periodKey, status: TAX_WITHHOLDING_STATUS.ACCRUED },
+      });
+      if (accruedRows > 0) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.TAX_PERIOD_NOT_DECLARED,
+          message: 'Kỳ thuế này còn dòng chưa kê khai',
+          details: { accruedRows },
+        });
+      }
+      await ensureFilingRowWithinTx(tx, periodKey);
+
+      /*
+       * Lật dòng TRƯỚC rồi mới ghi chứng cứ có điều kiện: hai người cùng bấm thì người sau chờ khoá
+       * dòng của người trước, thấy 0 dòng còn `declared`, và thua ở câu ghi chứng cứ bên dưới —
+       * cả transaction của họ cuộn lại.
+       */
+      const { count } = await tx.taxWithholding.updateMany({
+        where: { periodKey, status: TAX_WITHHOLDING_STATUS.DECLARED },
+        data: { status: TAX_WITHHOLDING_STATUS.REMITTED, remittedAt: now },
+      });
+      const ledger = await tx.taxWithholding.aggregate({
+        where: { periodKey, status: TAX_WITHHOLDING_STATUS.REMITTED },
+        _sum: { amount: true },
+      });
+      const ledgerAmount = ledger._sum.amount ?? new Prisma.Decimal(0);
+      if (ledgerAmount.lte(0)) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.TAX_PERIOD_NOT_DECLARED,
+          message: 'Kỳ thuế này không có khoản đã kê khai nào để nộp',
+          details: { accruedRows: 0 },
+        });
+      }
+      if (!remittedAmount.eq(ledgerAmount) && !note) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.TAX_REMITTANCE_NOTE_REQUIRED,
+          message: 'Số đã nộp khác tổng thuế trên sổ của kỳ - cần ghi chú giải thích',
+          details: {
+            ledgerAmount: ledgerAmount.toFixed(0),
+            remittedAmount: remittedAmount.toFixed(0),
+          },
+        });
+      }
+
+      const claimed = await tx.taxPeriodFiling.updateMany({
+        where: { periodKey, remittanceRef: null },
+        data: {
+          remittanceRef,
+          remittedOn: dateKeyToDbDate(evidence.remittedOn),
+          remittedAmount,
+          ledgerAmount,
+          remittanceNote: note,
+          remittedBy: actorUserId,
+          remittedAt: now,
+        },
+      });
+      if (claimed.count === 0) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.TAX_PERIOD_ALREADY_REMITTED,
+          message: 'Kỳ thuế này đã được ghi nộp',
+          details: { periodKey },
+        });
+      }
+
+      await this.audit.record(
+        {
+          actorUserId,
+          actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+          action: `tax_period.${TAX_WITHHOLDING_STATUS.REMITTED}`,
+          targetType: 'tax_period',
+          targetId: periodKey,
+          after: {
+            periodKey,
+            from: TAX_WITHHOLDING_STATUS.DECLARED,
+            to: TAX_WITHHOLDING_STATUS.REMITTED,
+            updated: count,
+            remittanceRef,
+            remittedOn: evidence.remittedOn,
+            remittedAmount: remittedAmount.toFixed(0),
+            ledgerAmount: ledgerAmount.toFixed(0),
+            note,
+          },
+        },
+        tx,
+      );
+      return { updated: count };
+    });
+  }
+}
+
+// ── Chứng cứ theo kỳ ────────────────────────────────────────────────────────
+
+/** Kỳ đúng dạng VÀ đã kết thúc (giờ VN) — chỉ khi đó mới kê khai / nộp được. */
+function assertPeriodFileable(periodKey: string, now: Date): void {
+  if (!isTaxPeriodKey(periodKey)) {
+    throw new BadRequestException({
+      code: API_ERROR_CODE.VALIDATION_FAILED,
+      message: 'Kỳ thuế phải có dạng YYYY-MM',
+      details: { field: 'period' },
+    });
+  }
+  if (!isTaxPeriodEnded(periodKey, now)) {
+    throw new ConflictException({
+      code: API_ERROR_CODE.TAX_PERIOD_NOT_ENDED,
+      message: 'Kỳ thuế này chưa kết thúc - chỉ kê khai và nộp được sau khi hết tháng',
+      details: { periodKey },
+    });
+  }
+}
+
+/**
+ * Ngày trên chứng từ phải là một ngày THẬT, không trước ngày đầu tháng sau kỳ, không sau hôm nay
+ * (giờ VN). Ngày ngoài khoảng đó là nhập nhầm kỳ hoặc nhầm năm.
+ */
+function assertFilingDate(periodKey: string, dateKey: string, now: Date, field: string): void {
+  const parsed = new Date(`${dateKey}T00:00:00.000Z`);
+  const real = !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === dateKey;
+  if (!real || dateKey < taxPeriodFilingEarliestDateKey(periodKey) || dateKey > vnDateKey(now)) {
+    throw new BadRequestException({
+      code: API_ERROR_CODE.VALIDATION_FAILED,
+      message: 'Ngày trên chứng từ phải từ ngày đầu tháng sau kỳ tới hôm nay',
+      details: { field },
+    });
+  }
+}
+
+/** Cột `DATE` của Prisma nhận nửa đêm UTC của ngày lịch (như `platform_bank_balances.date`). */
+function dateKeyToDbDate(dateKey: string): Date {
+  return new Date(`${dateKey}T00:00:00.000Z`);
+}
+
+/** Bảo đảm kỳ có dòng chứng cứ (rỗng) để lượt ghi có điều kiện bên dưới có hàng mà khoá. */
+async function ensureFilingRowWithinTx(
+  tx: Prisma.TransactionClient,
+  periodKey: string,
+): Promise<void> {
+  // `ON CONFLICT DO NOTHING` — một lỗi unique giữa transaction Postgres sẽ làm hỏng cả transaction.
+  await tx.taxPeriodFiling.createMany({ data: [{ periodKey }], skipDuplicates: true });
 }
 
 // ── Hàm thuần ───────────────────────────────────────────────────────────────

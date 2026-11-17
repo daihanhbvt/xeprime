@@ -1,5 +1,10 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { bookingIdsWithOpenSupportCase, hasOpenSupportCase, newId, Prisma } from '@xeprime/prisma';
+import {
+  hasOpenSupportCase,
+  newId,
+  openSupportCaseCategoriesByBooking,
+  Prisma,
+} from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
@@ -9,6 +14,7 @@ import {
   FEE_LINE,
   HOLD_REFUND_REASON,
   HOLD_REFUND_STATUS,
+  HOLD_SETTLE_REASON,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   isOutcomeAllowed,
@@ -18,6 +24,7 @@ import {
   type BookingHoldPurpose,
   type BookingStatus,
   type HoldRefundReason,
+  type SupportCaseCategory,
   REFUND_SETTLEMENT_MODE,
   WALLET_ENTRY_KIND,
   WALLET_ENTRY_SOURCE,
@@ -34,6 +41,7 @@ import { WalletService, type WalletOwner } from '../wallet/wallet.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
 import { formatMoneyVndVi } from '@xeprime/domain';
+import { holdSettleReason, NO_OPEN_SETTLEMENT_CASES } from './hold-settle-queue';
 
 /**
  * CHỐT KẾT CỤC của một khoản giữ chỗ và ghi nhận HOÀN — ADR 0028 điều 6 và 8 (R3).
@@ -153,9 +161,13 @@ export class HoldSettlementService {
   }
 
   /**
-   * Admin chốt tay — cho hold bị tạm giữ vì tranh chấp, hoặc sửa một kết cục bằng quyết định
-   * có lý do. Chỉ chốt được khi `outcome IS NULL`; đã chốt thì đây là chuyện của bút toán đảo
-   * (R4), không phải sửa lịch sử.
+   * Admin chốt tay — CHỈ cho hold thuộc hàng đợi chốt tay (`holdSettleReason`): đơn có case giữ
+   * quyết toán mở, hoặc đơn đã kết thúc mà kết cục chưa chốt được. Đơn còn chạy bình thường thì
+   * kết cục tự chốt khi đơn kết thúc; chốt sớm là trả `D` cho chủ xe trước khi chuyến diễn ra, rồi
+   * khách huỷ trong cửa sổ miễn phí sẽ không còn gì để hoàn.
+   *
+   * Chỉ chốt được khi `outcome IS NULL`; đã chốt thì đây là chuyện của bút toán đảo (R4), không
+   * phải sửa lịch sử.
    */
   async adminSettle(
     holdId: string,
@@ -167,6 +179,7 @@ export class HoldSettlementService {
       select: {
         id: true,
         tenantId: true,
+        bookingId: true,
         purpose: true,
         status: true,
         outcome: true,
@@ -177,6 +190,7 @@ export class HoldSettlementService {
         ownerCommissionAmount: true,
         vehicleInsuranceAmount: true,
         personalInsuranceAmount: true,
+        insuranceServiceFeeAmount: true,
       },
     });
     if (!hold) throw notFound('Không tìm thấy khoản giữ chỗ');
@@ -198,6 +212,7 @@ export class HoldSettlementService {
       ownerCommission: hold.ownerCommissionAmount.toFixed(0),
       vehicleInsurance: hold.vehicleInsuranceAmount.toFixed(0),
       personalInsurance: hold.personalInsuranceAmount.toFixed(0),
+      insuranceServiceFee: hold.insuranceServiceFeeAmount.toFixed(0),
     });
     if (!allowed.includes(input.outcome)) {
       throw new ConflictException({
@@ -206,8 +221,14 @@ export class HoldSettlementService {
         details: { allowed },
       });
     }
-    const applied = await this.prisma.$transaction((tx) =>
-      this.applyOutcomeWithinTx(tx, {
+    const applied = await this.prisma.$transaction(async (tx) => {
+      /*
+       * Chốt chặn đọc TRONG transaction của lượt chốt — cùng luật với hàng đợi
+       * (`holdSettleReason`). Đọc trước transaction thì một case vừa được kết luận, hay đơn vừa
+       * đổi trạng thái, lọt qua khe giữa phép kiểm và lượt ghi.
+       */
+      await this.assertSettleDueWithinTx(tx, hold);
+      return this.applyOutcomeWithinTx(tx, {
         holdId: hold.id,
         tenantId: hold.tenantId,
         purpose: hold.purpose as BookingHoldPurpose,
@@ -221,8 +242,8 @@ export class HoldSettlementService {
         actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
         actorUserId,
         note: input.note,
-      }),
-    );
+      });
+    });
     /*
      * Hai admin cùng chốt: cả hai qua phép kiểm ở trên, người sau thua ở câu `updateMany` có
      * điều kiện. Với ĐƯỜNG TỰ ĐỘNG đó là no-op đúng nghĩa; với một người đang bấm nút thì phải
@@ -245,8 +266,9 @@ export class HoldSettlementService {
    *
    *   có `customerUserId`  → GHI CÓ VÍ ĐIỂM ngay, trạng thái cuối `credited`. Tiền dùng được
    *                           lập tức, không cần khách nhập số tài khoản, không có SLA để lỡ.
-   *   khách vãng lai        → giữ `pending` + `bank_transfer`, admin chuyển tay. XePrime cho đặt
-   *                           xe không cần đăng ký, nên đường này là VĨNH VIỄN.
+   *   không có tài khoản    → giữ `pending` + `bank_transfer`, admin chuyển tay. Từ ADR 0060 mọi
+   *                           yêu cầu đặt xe đều cần tài khoản khách, nên đường này chỉ còn cho
+   *                           dữ liệu CŨ (đơn khách vãng lai trước ADR 0060) - không có đơn mới nào đi vào.
    *
    * Unique `hold_id` ở DB: một hold chỉ có MỘT khoản hoàn. Chuyển thừa rồi lại huỷ sớm là ca
    * hiếm — khi đó tăng số tiền của khoản đang `pending` thay vì tạo cái thứ hai.
@@ -593,8 +615,58 @@ export class HoldSettlementService {
     /** Cùng phép kiểm sự cố tài xế mà lượt huỷ thật sẽ chạy (ADR 0074). */
     driverFault = false,
   ): Promise<CustomerCancelPreview | null> {
+    const preview = await this.previewOutcome(
+      bookingId,
+      {
+        to: BOOKING_STATUS.CANCELLED,
+        actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
+        driverFault,
+        tenantId,
+      },
+      now,
+    );
+    if (!preview) return null;
+    return {
+      outcome: preview.outcome,
+      refundReason: preview.refundReason,
+      paidAmount: preview.paidAmount,
+      refundAmount: preview.refundAmount,
+      insuranceRefundAmount: preview.insuranceRefundAmount,
+      forfeitAmount: preview.forfeitAmount,
+      ownerCompensationAmount: preview.ownerAmount,
+      freeCancelUntil: preview.freeCancelUntil,
+      withinFreeCancel: preview.withinFreeCancel,
+      deferred: await this.hasOpenDispute(this.prisma, bookingId),
+    };
+  }
+
+  /**
+   * XEM TRƯỚC kết cục tiền giữ chỗ nếu đơn chuyển sang `to` NGAY BÂY GIỜ bởi `actorScope` — đọc,
+   * không ghi gì. Nguồn DUY NHẤT của mọi màn xem trước (lượt khách huỷ, hộp kết luận chuyến của nền
+   * tảng — ADR 0095 điều 3): cùng `decideOutcome` (luật kết cục), cùng `allocationForHold` (phép
+   * chia), cùng hold `paid` + `outcome IS NULL` mà `settleForBookingWithinTx` chọn.
+   *
+   * `null` khi đơn không có khoản giữ chỗ đã trả nào chờ chốt, hoặc `to` không phải trạng thái kết
+   * thúc. KHÔNG trả cờ tranh chấp: người gọi biết case nào của chính nó sẽ được khép trước lượt chốt.
+   */
+  async previewOutcome(
+    bookingId: string,
+    input: {
+      to: BookingStatus;
+      actorScope: AuditActorScope;
+      driverFault?: boolean;
+      /** Bề mặt gian hàng/khách khoá theo tenant; nền tảng bỏ trống. */
+      tenantId?: string;
+    },
+    now: Date = new Date(),
+  ): Promise<HoldOutcomePreview | null> {
     const hold = await this.prisma.bookingHold.findFirst({
-      where: { bookingId, tenantId, status: BOOKING_HOLD_STATUS.PAID, outcome: null },
+      where: {
+        bookingId,
+        ...(input.tenantId ? { tenantId: input.tenantId } : {}),
+        status: BOOKING_HOLD_STATUS.PAID,
+        outcome: null,
+      },
       select: {
         ...HOLD_ALLOCATION_SELECT,
         id: true,
@@ -606,18 +678,18 @@ export class HoldSettlementService {
     if (!hold) return null;
 
     const decision = decideOutcome({
-      to: BOOKING_STATUS.CANCELLED,
-      actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
+      to: input.to,
+      actorScope: input.actorScope,
       freeCancelUntil: hold.freeCancelUntil,
       now,
-      driverFault,
+      driverFault: input.driverFault ?? false,
     });
     if (!decision) return null;
 
     const allocation =
       hold.paidAmount.gt(0) ? (allocationForHold(hold, decision.outcome) ?? []) : [];
     const totals = allocationTotals(allocation);
-    // Khoản thừa còn chờ chuyển tay — lượt huỷ cộng dồn phần hoàn vào chính yêu cầu này.
+    // Khoản thừa còn chờ chuyển tay — lượt chốt cộng dồn phần hoàn vào chính yêu cầu này.
     const pendingOverpaid = await this.prisma.holdRefund.findFirst({
       where: {
         holdId: hold.id,
@@ -645,10 +717,12 @@ export class HoldSettlementService {
       insuranceRefundAmount: String(insuranceRefund),
       /** Phần khách MẤT = tiền giữ chỗ − phần phân bổ hoàn khách. Không âm. */
       forfeitAmount: String(Math.max(0, holdAmount - allocatedRefund)),
-      ownerCompensationAmount: totals[ALLOCATION_TARGET.OWNER_BALANCE],
+      ownerAmount: totals[ALLOCATION_TARGET.OWNER_BALANCE],
+      platformAmount: totals[ALLOCATION_TARGET.PLATFORM_REVENUE],
+      insurerAmount: totals[ALLOCATION_TARGET.INSURER_PAYABLE],
+      taxAmount: totals[ALLOCATION_TARGET.TAX_LEDGER],
       freeCancelUntil: hold.freeCancelUntil,
       withinFreeCancel: isWithinFreeCancel(hold.freeCancelUntil, now),
-      deferred: await this.hasOpenDispute(this.prisma, bookingId),
     };
   }
 
@@ -795,11 +869,58 @@ export class HoldSettlementService {
   }
 
   /**
-   * Bản theo LÔ của `hasOpenDispute` — cờ `disputeOpen` của các dòng hold (`BookingHoldsService`)
-   * đọc đúng định nghĩa "tiền đơn này đang bị giữ" với lượt chốt kết cục.
+   * Hold có thuộc hàng đợi chốt tay không — ném `HOLD_SETTLE_NOT_DUE` (409) khi không. Luật ở
+   * `holdSettleReason`, dùng chung với danh sách và số đếm của màn Tài chính.
    */
-  async openDisputeBookingIds(bookingIds: readonly string[]): Promise<Set<string>> {
-    return bookingIdsWithOpenSupportCase(this.prisma, bookingIds);
+  private async assertSettleDueWithinTx(
+    tx: Prisma.TransactionClient,
+    hold: { id: string; status: string; outcome: string | null; bookingId: string | null },
+  ): Promise<void> {
+    const booking = hold.bookingId
+      ? await tx.booking.findUnique({ where: { id: hold.bookingId }, select: { status: true } })
+      : null;
+    const openCaseCategories = hold.bookingId
+      ? ((await openSupportCaseCategoriesByBooking(tx, [hold.bookingId])).get(hold.bookingId) ??
+        NO_OPEN_SETTLEMENT_CASES)
+      : NO_OPEN_SETTLEMENT_CASES;
+    const reason = holdSettleReason({
+      status: hold.status,
+      outcome: hold.outcome,
+      bookingStatus: booking?.status ?? null,
+      openCaseCategories,
+    });
+    if (reason === null) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.HOLD_SETTLE_NOT_DUE,
+        message:
+          'Chưa chốt tay được: đơn còn đang chạy và không có tranh chấp nào mở - kết cục sẽ tự chốt khi đơn kết thúc',
+        details: { bookingStatus: booking?.status ?? null },
+      });
+    }
+    /*
+     * Case "chưa xác nhận giao xe" mở: câu hỏi là CHUYẾN có diễn ra không, và câu trả lời quyết luôn
+     * tiền (ADR 0094) — nhân sự kết luận chuyến ở case, tiền tự chốt theo đó. Chốt tiền tay trước là
+     * để đơn treo ở "Chờ giao xe" với một kết cục có thể trái ngược kết luận đến sau.
+     */
+    if (reason === HOLD_SETTLE_REASON.HANDOVER_UNCONFIRMED) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.HOLD_SETTLE_NEEDS_TRIP_VERDICT,
+        message:
+          'Đơn còn case chưa xác nhận giao xe - kết luận chuyến ở case trước, tiền tự chốt theo kết luận',
+        details: { bookingStatus: booking?.status ?? null },
+      });
+    }
+  }
+
+  /**
+   * Bản theo LÔ của `hasOpenDispute`, kèm loại case — cờ `disputeOpen` và `settleReason` của các
+   * dòng hold (`BookingHoldsService`) đọc đúng định nghĩa "tiền đơn này đang bị giữ" với lượt chốt
+   * kết cục.
+   */
+  async openSettlementCaseCategories(
+    bookingIds: readonly string[],
+  ): Promise<Map<string, Set<SupportCaseCategory>>> {
+    return openSupportCaseCategoriesByBooking(this.prisma, bookingIds);
   }
 }
 
@@ -868,6 +989,7 @@ const HOLD_ALLOCATION_SELECT = {
   ownerCommissionAmount: true,
   vehicleInsuranceAmount: true,
   personalInsuranceAmount: true,
+  insuranceServiceFeeAmount: true,
   promoDiscountAmount: true,
   priceSnapshotJson: true,
 } satisfies Prisma.BookingHoldSelect;
@@ -906,6 +1028,8 @@ export function allocationForHold(
       ownerCommission: hold.ownerCommissionAmount.toFixed(0),
       vehicleInsurance: hold.vehicleInsuranceAmount.toFixed(0),
       personalInsurance: hold.personalInsuranceAmount.toFixed(0),
+      // `X` đi cùng `IV` (ADR 0091 điều 3) — hoàn khi huỷ, doanh thu nền tảng khi chuyến xong.
+      insuranceServiceFee: hold.insuranceServiceFeeAmount.toFixed(0),
       /*
        * TÀI TRỢ mã khuyến mãi (ADR 0046 điều 4) — đọc từ CỘT, không suy từ snapshot.
        *
@@ -918,6 +1042,24 @@ export function allocationForHold(
     kind,
     taxAmount,
   );
+}
+
+/** Kết quả xem trước kết cục tiền giữ chỗ — xem `HoldSettlementService.previewOutcome`. */
+export interface HoldOutcomePreview {
+  outcome: BookingHoldOutcome;
+  refundReason: HoldRefundReason | null;
+  /** Tiền của khách CÒN ở XePrime cho khoản này (giữ chỗ + chuyển thừa chưa trả lại). */
+  paidAmount: string;
+  /** Tổng hoàn khách (phần phân bổ + khoản thừa còn chờ). */
+  refundAmount: string;
+  insuranceRefundAmount: string;
+  forfeitAmount: string;
+  ownerAmount: string;
+  platformAmount: string;
+  insurerAmount: string;
+  taxAmount: string;
+  freeCancelUntil: Date | null;
+  withinFreeCancel: boolean;
 }
 
 /** Kết quả xem trước lượt khách huỷ — xem `HoldSettlementService.previewCustomerCancel`. */

@@ -7,6 +7,7 @@ import {
 import { DEFAULT_PAGE_SIZE, pickFilter } from '@/constants/filters';
 import { startOfAppDay } from '@/lib/datetime';
 import { apiGet, apiPost, apiPut, apiRequest, type QueryParams } from '@/services/api-client';
+import type { VehicleRegistrationImage } from '@/features/admin-vehicles/types';
 import { APPROVAL_STATUS_ANY } from './constants';
 import type {
   VehicleApprovalCheck,
@@ -131,3 +132,10 @@ export const decideVehicleApproval = (
     `${BASE}/${id}/${DECISION_PATH[kind]}`,
     kind === APPROVAL_DECISION.APPROVE ? { expectedCapturedAt } : { reason },
   );
+
+/**
+ * URL ảnh cà vẹt của xe trong phiếu, sống ngắn — mỗi lần gọi là một dòng audit ở server. Chỉ gọi khi
+ * người duyệt bấm mở.
+ */
+export const fetchApprovalRegistrationImage = (id: string): Promise<VehicleRegistrationImage> =>
+  apiGet<VehicleRegistrationImage>(`${BASE}/${encodeURIComponent(id)}/registration-image`);

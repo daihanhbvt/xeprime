@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BOOKING_REQUEST_STATUS, BOOKING_STATUS, PERMISSION } from '@xeprime/types';
 
-import type { TripBooking, TripRequest, TripSummary } from '../types';
+import type { TripBooking, TripDriver, TripRequest, TripSummary } from '../types';
 import { TripOpsView } from './TripOpsView';
 
 /**
@@ -57,6 +57,10 @@ const bookings = vi.hoisted(() => ({ lastFilters: undefined as unknown }) as Que
   items: TripBooking[];
   meta: unknown;
 }> & { lastFilters: unknown });
+const drivers = vi.hoisted(() => ({ lastFilters: undefined as unknown }) as QueryState<{
+  items: TripDriver[];
+  meta: unknown;
+}> & { lastFilters: unknown });
 const remind = vi.hoisted(() => ({
   mutate: vi.fn(),
   isPending: false,
@@ -72,6 +76,10 @@ vi.mock('../hooks/use-admin-trips', () => ({
   useTripBookings: (filters: unknown) => {
     bookings.lastFilters = filters;
     return bookings;
+  },
+  useTripDrivers: (filters: unknown) => {
+    drivers.lastFilters = filters;
+    return drivers;
   },
   useRemindTripRequest: () => remind,
 }));
@@ -108,8 +116,10 @@ function makeSummary(over: Partial<TripSummary['queues']> = {}): TripSummary {
       awaiting_hold: { count: 2, urgentCount: 0 },
       pickup_soon: { count: 5, urgentCount: 2 },
       active: { count: 12, urgentCount: 0 },
+      driver: { count: 3, urgentCount: 1 },
       ...over,
     },
+    driverIssues: { dropped: 1, response_overdue: 0, unassigned: 2 },
   };
 }
 
@@ -173,6 +183,23 @@ function booking(over: Partial<TripBooking> = {}): TripBooking {
   } as TripBooking;
 }
 
+function driverRow(over: Partial<TripDriver> = {}): TripDriver {
+  return {
+    ...booking({ id: 'd1', code: 'DH-TX1', serviceType: 'with_driver', pickupAt: at(90 * MINUTE) }),
+    driverIssue: 'dropped',
+    urgent: true,
+    deadlineAt: at(-10 * MINUTE),
+    driverAssignmentStatus: null,
+    driverName: null,
+    driverRespondBy: null,
+    driverDroppedAt: at(-2 * HOUR),
+    driverReassignBy: at(-10 * MINUTE),
+    ownerName: 'Chị Lan',
+    ownerPhone: '0988111222',
+    ...over,
+  } as TripDriver;
+}
+
 function renderView() {
   return render(
     <App>
@@ -192,6 +219,7 @@ beforeEach(() => {
   Object.assign(summary, settled(makeSummary()));
   Object.assign(requests, settled({ items: [request()], meta: META }));
   Object.assign(bookings, settled({ items: [booking()], meta: META }));
+  Object.assign(drivers, settled({ items: [driverRow()], meta: META }));
   remind.mutate.mockReset();
   remind.isPending = false;
   remind.variables = undefined;
@@ -217,6 +245,7 @@ describe('Vận hành chuyến - khung màn', () => {
       'Chờ chủ xe duyệt4',
       'Chờ khách giữ chỗ2',
       'Sắp giao xe5',
+      'Kẹt tài xế3',
       'Đang thuê12',
     ]);
     expect(within(rail()).getByRole('button', { name: /Chờ chủ xe duyệt/ }).getAttribute('aria-current')).toBe('true');
@@ -341,5 +370,48 @@ describe('Vận hành chuyến - hàng đợi đơn', () => {
 
     expect(drawer.bookingId).toBe('b1');
     expect(screen.getByText('còn 1 giờ')).toBeTruthy();
+  });
+});
+
+describe('Vận hành chuyến - hàng đợi tài xế', () => {
+  it('nhãn vấn đề + hạn từ server, gọi được chủ gian hàng, không có nút gán tài xế', () => {
+    nav.params = new URLSearchParams('queue=driver');
+    Object.assign(
+      drivers,
+      settled({
+        items: [
+          driverRow(),
+          driverRow({
+            id: 'd2',
+            code: 'DH-TX2',
+            driverIssue: 'unassigned',
+            urgent: false,
+            deadlineAt: at(10 * HOUR),
+            pickupAt: at(10 * HOUR),
+            driverAssignmentStatus: 'pending',
+            driverName: 'Anh Tài',
+            driverDroppedAt: null,
+            driverReassignBy: null,
+          }),
+        ],
+        meta: { ...META, total: 2 },
+      }),
+    );
+    renderView();
+
+    expect(screen.getByRole('heading', { level: 2, name: 'Kẹt tài xế' })).toBeTruthy();
+    expect(drivers.lastFilters).not.toHaveProperty('queue');
+    expect(screen.getByText('Tài xế đã rút')).toBeTruthy();
+    expect(screen.getByText(/^Hạn điều phối lại/)).toBeTruthy();
+    // Đang có lượt gán chờ trả lời: nói tên người đang chờ, không nói "chưa gán".
+    expect(screen.getByText('Chờ tài xế nhận')).toBeTruthy();
+    expect(screen.getByText('Đang gán: Anh Tài')).toBeTruthy();
+    expect(screen.getAllByRole('link', { name: 'Gọi chủ xe' })[0]!.getAttribute('href')).toBe(
+      'tel:0988111222',
+    );
+    expect(screen.queryByText(/Gán tài xế/)).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Xem chi tiết đơn DH-TX1' }));
+    expect(lastUrl()).toBe('/admin/trips?queue=driver&open=d1');
   });
 });

@@ -1,17 +1,12 @@
 import { Redirect, useLocalSearchParams } from 'expo-router';
-import { ROUTES } from '@/navigation/routes';
-import { RENTAL_TERMS_ANCHOR, VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
+import { SERVICE_TYPE } from '@xeprime/types';
+import { ownerPolicyHref } from '@/features/vehicle-manage/owner-edit-nav';
 
-/** Đường dẫn CŨ (trước 30/09/2026) — thủ tục có tài xế nay nằm trong "Nhận chuyến & thủ tục". Cùng chuyển hướng với trang web. */
+/**
+ * Đường dẫn CŨ của không gian "Quản lý xe" Owner Lite — Thủ tục có tài xế → "Chính sách thuê", cuộn tới khối điều khoản có tài xế.
+ * Cùng bảng chuyển hướng với web (`editTabOfLegacyManageSection`).
+ */
 export default function LegacyWithDriverTermsRedirect() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  return (
-    <Redirect
-      href={ROUTES.account.vehicleManageSection(
-        id,
-        VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION,
-        { anchor: RENTAL_TERMS_ANCHOR },
-      )}
-    />
-  );
+  return <Redirect href={ownerPolicyHref(id, SERVICE_TYPE.WITH_DRIVER)} />;
 }

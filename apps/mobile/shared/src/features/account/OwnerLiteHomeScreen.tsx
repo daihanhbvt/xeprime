@@ -11,13 +11,13 @@ import { AccountTrackNotice } from './components/AccountTrackNotice';
 import { OwnerGate } from './components/OwnerGate';
 import { useOwnerAccess } from './hooks/use-owner-access';
 import { OwnerRegistrationScreen } from './OwnerRegistrationScreen';
-import { OwnerDashboardScreen } from '@/features/dashboard/OwnerDashboardScreen';
+import { ShopDashboardScreen } from '@/features/dashboard/ShopDashboardScreen';
 
 /**
  * Trang chủ của chủ xe tuyến HOA HỒNG trong app XePrime Partner — bản native của `OwnerLiteHome`
  * bên web (ADR 0053: Owner Lite rời khu tài khoản của app khách, về site/app partner).
  *
- *  - đã có xe lên chợ → Tổng quan chủ xe (`OwnerDashboardScreen`);
+ *  - đã có xe lên chợ → CÙNG Tổng quan với gian hàng (`ShopDashboardScreen`, ADR 0085 điều 1);
  *  - đang đăng ký → tiến trình "Hồ sơ chủ xe → Đăng xe đầu tiên → Lên chợ";
  *  - thành viên không phải chủ → `OwnerGate` giải thích (kèm thanh menu để còn đi nơi khác).
  */
@@ -45,8 +45,8 @@ export function OwnerLiteHomeScreen() {
     );
   }
 
-  // Đã có xe trên chợ → TỔNG QUAN của chủ xe (web PR #170 thay danh sách xe trùng mục "Xe của tôi").
-  if (stage === OWNER_STAGE.OWNER) return <OwnerDashboardScreen />;
+  // Đã có xe trên chợ → CÙNG Tổng quan với gian hàng, khối của gói tự vắng (ADR 0085 điều 1).
+  if (stage === OWNER_STAGE.OWNER) return <ShopDashboardScreen />;
   if (stage === OWNER_STAGE.REGISTERING) return <OwnerRegistrationScreen shell="manage" />;
 
   // Không qua cổng: `OwnerGate` tự vẽ màn giải thích; thanh menu đứng trên để không thành ngõ cụt.

@@ -50,3 +50,19 @@
   font-size: 13px;
   text-align: center;
 }
+
+/* Đợt style Partner theo Figma (16/11/2026) - khổ điện thoại: thẻ "Nhóm thông tin" bo 16, đệm 16, tiêu đề 16/24. */
+@media (max-width: 640px) {
+  .panel {
+    border-radius: 16px;
+    border-color: var(--xp-color-border-secondary);
+    box-shadow: none;
+  }
+  .head {
+    padding: 16px 16px 8px;
+    border-bottom: none;
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+  }
+}

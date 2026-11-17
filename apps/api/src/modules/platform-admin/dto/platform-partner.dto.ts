@@ -73,6 +73,23 @@ export class PartnerOwnerDto {
   joinedAt!: string | null;
 }
 
+/**
+ * Liên hệ ĐẦY ĐỦ của một đối tác — trả về từ lượt bỏ che (`platform.tenants.view_pii`, có audit).
+ * Một lượt bỏ che mở cả bốn ô: drawer hiện chúng ở hai tab, và bắt người trực bấm bốn lần để gọi
+ * một cuộc điện thoại chỉ làm nhật ký dài ra chứ không thêm kiểm soát nào.
+ */
+export class PartnerContactDto {
+  @ApiProperty() tenantId!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'SĐT tài khoản chủ' })
+  ownerPhone!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Email tài khoản chủ' })
+  ownerEmail!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'SĐT công khai gian hàng' })
+  publicPhone!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Email công khai gian hàng' })
+  publicEmail!: string | null;
+}
+
 export class PartnerIdentityDto {
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;

@@ -321,6 +321,43 @@ export const BANK_MATCH_TARGET_TYPE_VALUES = Object.values(
   BANK_MATCH_TARGET_TYPE,
 ) as BankMatchTargetType[];
 
+/**
+ * Đích khớp KHÔNG có mã đối soát riêng (nên không nằm trong `BANK_MATCH_TARGET_TYPE`, nơi mọi đích
+ * đều có tiền tố mã): tiền về được admin GHI CÓ THẲNG vào Ví điểm của tài khoản khách — khoản giữ
+ * chỗ / phụ lục đã đóng mà tiền mới tới (ADR 0092). `matched_ref_id` trỏ vào dòng `wallet_entries`.
+ */
+export const BANK_MATCH_WALLET_CREDIT = 'wallet_credit' as const;
+
+/** Mọi giá trị hợp lệ của `bank_transactions.matched_type`. */
+export const BANK_MATCHED_TYPE_VALUES = [
+  ...BANK_MATCH_TARGET_TYPE_VALUES,
+  BANK_MATCH_WALLET_CREDIT,
+] as const;
+
+/**
+ * Vì sao hệ thống để lại một ghi chú trên giao dịch tiền vào — MÃ đi trên dây, giao diện dịch ra
+ * nhãn (ADR 0012). Trước đây server ghi câu tiếng Việt vào `match_note`, nên giao diện tiếng Anh
+ * hiện chữ Việt và không lọc được theo lý do. `match_note` nay chỉ còn là ghi chú của NGƯỜI.
+ *
+ * Tham số đi kèm ở `match_reason_params` (`{ code, status }`).
+ */
+export const BANK_MATCH_REASON = {
+  HOLD_NOT_FOUND: 'hold_not_found',
+  /** Tiền về sau khi khoản giữ chỗ đã đóng — ghi có ví khách hoặc chuyển trả (ADR 0092). */
+  HOLD_CLOSED: 'hold_closed',
+  EXTENSION_NOT_FOUND: 'extension_not_found',
+  EXTENSION_CLOSED: 'extension_closed',
+  CHECKOUT_NOT_FOUND: 'checkout_not_found',
+  CHECKOUT_CLOSED: 'checkout_closed',
+  INVOICE_NOT_FOUND: 'invoice_not_found',
+  INVOICE_CLOSED: 'invoice_closed',
+  /** Tiền về cho một đích đã đủ — phần thừa đã tự ghi có ví (gói: ví gian hàng — ADR 0092). */
+  OVERPAID: 'overpaid',
+} as const;
+
+export type BankMatchReason = (typeof BANK_MATCH_REASON)[keyof typeof BANK_MATCH_REASON];
+export const BANK_MATCH_REASON_VALUES = Object.values(BANK_MATCH_REASON) as BankMatchReason[];
+
 // ── Mã đối soát ─────────────────────────────────────────────────────────────
 
 /**

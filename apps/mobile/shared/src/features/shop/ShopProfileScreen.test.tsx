@@ -191,6 +191,8 @@ describe('ShopProfileScreen - quyền', () => {
 
     expect(await view.findByText('Bạn chỉ có quyền xem hồ sơ gian hàng.')).toBeTruthy();
     expect(view.queryByText('Lưu thông tin')).toBeNull();
+    // Chỉ-xem: không bút chì, không nút mở tấm sửa (S3 — sửa qua tấm "Cập nhật").
+    expect(view.queryByText('Chỉnh sửa thông tin')).toBeNull();
     // Bảng "còn thiếu gì" không có nghĩa với người chỉ xem — đúng như web (`!readOnly`).
     expect(view.queryByText('Hoàn thiện hồ sơ')).toBeNull();
   });
@@ -258,7 +260,7 @@ describe('ShopProfileScreen - không còn luồng xin xác minh gian hàng', () 
       TENANT_STATUS.ACTIVE,
     );
 
-    expect(await view.findByLabelText('Tên hiển thị')).toBeTruthy();
+    expect(await view.findByText('Thông tin hiển thị')).toBeTruthy();
     expect(view.queryByText('Gửi xác minh')).toBeNull();
     expect(view.queryByText('Gửi lại xác minh')).toBeNull();
     expect(view.queryByText('Hồ sơ đang chờ nền tảng xác minh')).toBeNull();
@@ -273,18 +275,24 @@ describe('ShopProfileScreen - không còn luồng xin xác minh gian hàng', () 
       TENANT_STATUS.ACTIVE,
     );
 
+    // Sửa qua tấm "Chỉnh sửa thông tin" — "Cập nhật" lưu NGAY đúng nhóm hiển thị (S3).
+    await fireEvent.press(await view.findByText('Chỉnh sửa thông tin'));
     await fireEvent.changeText(await view.findByLabelText('Tên hiển thị'), 'Bình Minh Xe');
     expect(view.queryByText('Hồ sơ đang chờ duyệt nên tạm khoá chỉnh sửa.')).toBeNull();
 
-    await fireEvent.press(view.getByText('Lưu thông tin'));
+    await fireEvent.press(view.getByText('Cập nhật'));
     await waitFor(() => expect(view.updateSpy).toHaveBeenCalledTimes(1));
-    expect(view.updateSpy.mock.calls[0]?.[0]).toMatchObject({ displayName: 'Bình Minh Xe' });
+    const body = view.updateSpy.mock.calls[0]?.[0];
+    expect(body).toMatchObject({ displayName: 'Bình Minh Xe' });
+    // Không sửa ô giới thiệu ⇒ KHÔNG gửi `bio` (gửi lại sẽ gỡ bản định dạng soạn ở web), không gửi địa chỉ.
+    expect(body).not.toHaveProperty('bio');
+    expect(body).not.toHaveProperty('provinceCode');
   });
 
   it('đang hoạt động: KHÔNG dựng dải nào - nhãn cạnh tên gian hàng đã nói điều đó', async () => {
     const view = await renderScreen(all, shop(ACTIVE), TENANT_STATUS.ACTIVE);
 
-    expect(await view.findByLabelText('Tên hiển thị')).toBeTruthy();
+    expect(await view.findByText('Thông tin hiển thị')).toBeTruthy();
     expect(view.queryByText('Gian hàng đang bị khoá')).toBeNull();
     expect(view.queryByText('Đã hết thời hạn sử dụng')).toBeNull();
   });
@@ -324,6 +332,7 @@ describe('ShopProfileScreen - checklist "Hoàn thiện hồ sơ"', () => {
   it('đang gõ làm hồ sơ thiếu đi: bảng hiện lại ngay (đọc bản ĐANG NHẬP)', async () => {
     const view = await renderScreen(all, shop(ACTIVE, COMPLETE_PROFILE), TENANT_STATUS.ACTIVE);
 
+    await fireEvent.press(await view.findByText('Chỉnh sửa thông tin'));
     await fireEvent.changeText(await view.findByLabelText('Tên hiển thị'), '');
     expect(await view.findByText('Hoàn thiện hồ sơ')).toBeTruthy();
   });
@@ -381,7 +390,8 @@ describe('ShopProfileScreen - tỉnh của gian hàng', () => {
       ),
     );
 
-    expect(await view.findByText('TP Đà Nẵng')).toBeTruthy();
+    // Thẻ "Địa chỉ & pháp lý" đọc tên tỉnh của chi nhánh mặc định (`ShopLegalCard`).
+    expect(await view.findByText('Đà Nẵng')).toBeTruthy();
     expect(view.queryByText('Hồ Chí Minh')).toBeNull();
   });
 });

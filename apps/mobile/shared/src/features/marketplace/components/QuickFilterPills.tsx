@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';

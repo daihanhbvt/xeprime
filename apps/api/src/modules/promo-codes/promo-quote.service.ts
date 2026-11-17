@@ -135,16 +135,18 @@ export class PromoQuoteService {
     };
   }
 
+  /**
+   * Tính lại trên ĐÚNG chuyến của lượt báo giá (`context.feeTrip` — có xe và lịch). Dựng lại một
+   * `FeeTrip` chỉ từ loại xe + dịch vụ + bảng kê là mất bảo hiểm vật chất xe theo bậc (ADR 0088):
+   * máy giá không biết xe nào, lịch nào nên coi chuyến "không mua được" ⇒ áp mã là `IV` biến mất.
+   */
   private applyToFees(context: PromoQuoteContext, promo: PromoCodeSnapshot) {
-    return this.pricing.applyPromoToFees(
-      context.tenantId,
-      {
-        vehicleType: context.scope.vehicleType,
-        serviceType: context.scope.serviceType,
-        breakdown: context.breakdown,
-      },
-      { quoteIsEstimate: context.quoteIsEstimate, promo, ...context.insurance },
-    );
+    return this.pricing.applyPromoToFees(context.tenantId, context.feeTrip, {
+      quoteIsEstimate: context.quoteIsEstimate,
+      promo,
+      ...context.insurance,
+      insuranceOffered: context.insuranceOffered,
+    });
   }
 }
 

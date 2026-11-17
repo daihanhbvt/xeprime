@@ -2,8 +2,10 @@
 
 import { Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
+import type { RowAction } from '@/components/data-display/RowActions';
 import { vehiclePath } from '@/constants/routes';
 import { cx } from '@/lib/cx';
+import type { VehicleAlertGroup, VehicleListItem, VehicleStats } from '../types';
 import {
   VehicleCardActions,
   VehicleCardIdentity,
@@ -13,16 +15,36 @@ import {
   useVehicleCardFigures,
   type VehicleCardFigures,
 } from './VehicleCardParts';
-import type { VehicleCardProps } from './VehicleManagementCard';
 import styles from './VehicleWideCard.module.css';
 
+export interface VehicleCardProps {
+  vehicle: VehicleListItem;
+  /** Chỉ số của xe này; `undefined` khi chưa tải xong hoặc khi tải hỏng. */
+  stats?: VehicleStats;
+  statsLoading: boolean;
+  /** Thống kê hỏng → hiện "không tải được" thay vì số 0 giả. */
+  statsFailed: boolean;
+  /**
+   * Việc cần làm + KM hiện tại (Wave 8), do server tính. `undefined` = chưa có dữ liệu; hai cờ
+   * dưới đây nói RÕ vì sao, để "đang tải" và "gọi hỏng" không trông giống "xe không có việc".
+   */
+  alerts?: VehicleAlertGroup;
+  alertsLoading?: boolean;
+  alertsFailed?: boolean;
+  actions: RowAction[];
+  /** Đích của tên xe — mặc định Hồ sơ xe. */
+  detailHref?: (id: string) => string;
+}
+
 /**
- * Thẻ xe NGANG — hai hình thái của cùng một nội dung (Figma Partner-XePrime 03/11/2026):
+ * Thẻ xe NGANG — hai hình thái của cùng một nội dung (Figma Partner-XePrime, chốt 16/11/2026):
  *
- *  - `stacked` — đội xe dưới `VEHICLE_LIST_FEW_THRESHOLD` xe (`23655:38951`, hai thẻ một hàng):
+ *  - `stacked` — đội xe từ `VEHICLE_LIST_PAIRS_FROM` xe (`23655:38951`, hai thẻ một hàng):
  *    ảnh 247×156 · danh tính + nhãn kiểm duyệt có biểu tượng · cột nút; khối số liệu xám nằm DƯỚI;
- *  - `row` — kiểu xem "Danh sách" của đội xe đông (`23655:38389`, một xe một hàng): ảnh 256×162 ·
- *    danh tính + chip gọn · khối số liệu xám · cột nút, tất cả trên một hàng.
+ *  - `row` — đội xe dưới số đó (`23655:38389`, một xe một hàng): ảnh 256×162 · danh tính + chip
+ *    gọn · khối số liệu xám · cột nút, tất cả trên một hàng.
+ *
+ * Không có "Xoá" trên thẻ — xoá chỉ ở Hồ sơ xe, nơi đủ ngữ cảnh.
  *
  * Màn hẹp hơn chỗ design vẽ thì các vùng tự xuống hàng theo bề rộng THẬT của thẻ (`@container`),
  * không theo khổ máy — thẻ nằm trong lưới hai cột ở màn 1280 hẹp hơn nhiều so với cả màn.
@@ -52,7 +74,7 @@ export function VehicleWideCard({
 
   const details = (
     <div className={styles.details}>
-      <VehicleCardIdentity vehicle={vehicle} detailHref={detailHref(vehicle.id)} separator="bar" />
+      <VehicleCardIdentity vehicle={vehicle} detailHref={detailHref(vehicle.id)} />
       <div className={styles.detailsFoot}>
         <VehicleCardNotices
           vehicle={vehicle}

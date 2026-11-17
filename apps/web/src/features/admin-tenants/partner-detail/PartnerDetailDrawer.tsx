@@ -16,6 +16,7 @@ import {
   PLATFORM_PARTNER_KIND,
   SHOP_VERIFICATION_META,
   TENANT_STATUS_META,
+  WALLET_OWNER_TYPE,
   isPlatformPartnerKind,
   partnerDetailTabOf,
   type PartnerDetailTab,
@@ -26,6 +27,7 @@ import {
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { shopPath } from '@/constants/routes';
+import { PlatformWalletButton } from '@/features/platform-wallets/components/PlatformWalletButton';
 import { StartSupportDialog } from '@/features/tenant-support/components/StartSupportDialog';
 import { usePermissions } from '@/hooks/use-permissions';
 import { isForbiddenError, isNotFoundError } from '@/lib/http-status';
@@ -219,6 +221,14 @@ function HeaderActions({ overview }: { overview: PartnerOverview }) {
           {t('support')}
         </Button>
       ) : null}
+      {/* Ví gian hàng — chỉ đọc; người không có quyền xem ví không thấy nút. */}
+      <PlatformWalletButton
+        owner={{
+          ownerType: WALLET_OWNER_TYPE.TENANT,
+          ownerId: identity.id,
+          ownerName: identity.name,
+        }}
+      />
       {identity.storefrontAvailable ? (
         <Button
           href={shopPath.detail(identity.slug)}

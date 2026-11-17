@@ -1,19 +1,29 @@
 import { App } from 'antd';
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { VEHICLE_DATA_STATUS, VEHICLE_TYPE } from '@xeprime/types';
 
 import { renderWithIntl } from '@/i18n/test-utils';
+import type {
+  VehicleDataDetail,
+  VehicleDataFilters,
+  VehicleDataListItem,
+  VehicleDataModelCount,
+} from '@/features/vehicle-data/types';
 
 import type { CatalogModelAdmin } from '../use-admin-catalog-models';
 import { CatalogModelFormModal } from './CatalogModelFormModal';
 import { CatalogModelsPanel } from './CatalogModelsPanel';
 
 /**
- * Màn quản trị MẪU XE.
+ * Tab MẪU XE của Danh mục (ADR 0096 — gộp màn Dữ liệu xe, MỘT danh sách).
  *
- * Ba hành vi đáng giữ: (1) cột hãng nói được hãng nào có bao nhiêu mẫu và bao nhiêu mẫu thiếu
- * thông số, (2) mẫu chia nhóm "Đang phân phối" / "Mẫu xe đời trước" theo hãng đang chọn, (3) form
- * chọn hộp số theo nguồn năng lượng — xe điện tự thành "1 cấp", và đọc ra đúng luật điền sẵn.
+ * Hành vi đáng giữ: (1) cột hãng nói được hãng nào có bao nhiêu dòng xe, bao nhiêu xe, bao nhiêu
+ * xe chờ duyệt và bao nhiêu dòng thiếu thông số, (2) bên phải là các DÒNG xe theo nhóm phân phối,
+ * dòng có xe chờ duyệt hay thiếu thông số tự mở sẵn các XE của nó, (3) thiếu thông số được gọi tên
+ * ngay trên hàng và có lối lọc ở dải số liệu lẫn bộ lọc, (4) dòng xe mới do chủ xe gõ hiện ở nhóm
+ * riêng, (5) panel của xe chờ duyệt có Từ chối / Gộp / Lưu và duyệt, (6) form dòng xe chọn hộp số
+ * theo nguồn năng lượng.
  */
 
 const nav = vi.hoisted(() => ({ replace: vi.fn(), params: new URLSearchParams() }));
@@ -61,15 +71,93 @@ function model(overrides: Partial<CatalogModelAdmin>): CatalogModelAdmin {
   } as CatalogModelAdmin;
 }
 
+function count(overrides: Partial<VehicleDataModelCount>): VehicleDataModelCount {
+  return {
+    modelId: 't1',
+    modelLabel: 'Vios',
+    modelPending: false,
+    total: 0,
+    active: 0,
+    hidden: 0,
+    pending: 0,
+    incomplete: 0,
+    matched: 0,
+    ...overrides,
+  };
+}
+
+const ROW_BASE = {
+  vehicleType: VEHICLE_TYPE.CAR,
+  brandKey: 'toyota',
+  brandLabel: 'Toyota',
+  modelPending: false,
+  yearTo: null,
+  seatCount: 5,
+  fuelType: 'gasoline',
+  transmission: 'cvt',
+  bodyType: 'sedan',
+  marketWeekday: null,
+  proposedByTenantName: null,
+  updatedAt: '2026-11-11T08:00:00.000Z',
+  usageCount: 0,
+  listPrice: '545000000',
+  weekdayPrice: '800000',
+  gaps: [],
+};
+const ROWS: VehicleDataListItem[] = [
+  {
+    ...ROW_BASE,
+    id: 'r1',
+    modelId: 't1',
+    modelLabel: 'Vios',
+    variantLabel: '1.5 G CVT',
+    yearFrom: 2023,
+    status: VEHICLE_DATA_STATUS.ACTIVE,
+    origin: 'import',
+  },
+  {
+    ...ROW_BASE,
+    id: 'r3',
+    modelId: 't1',
+    modelLabel: 'Vios',
+    variantLabel: '1.5 E MT',
+    yearFrom: 2023,
+    status: VEHICLE_DATA_STATUS.PENDING,
+    origin: 'owner',
+    proposedByTenantName: 'Shop A',
+  },
+  {
+    ...ROW_BASE,
+    id: 'r2',
+    modelId: 'p1',
+    modelLabel: 'Mới Toanh',
+    modelPending: true,
+    variantLabel: 'Bản Cao',
+    yearFrom: 2024,
+    listPrice: null,
+    status: VEHICLE_DATA_STATUS.PENDING,
+    origin: 'owner',
+    proposedByTenantName: 'Shop A',
+    gaps: ['list_price'],
+  },
+];
+
 const data = vi.hoisted(() => ({
   brands: [] as unknown[],
   summary: [] as unknown[],
   models: [] as unknown[],
+  counts: [] as unknown[],
+  detail: undefined as unknown,
 }));
 const mutations = vi.hoisted(() => ({ create: vi.fn(), update: vi.fn() }));
 
 vi.mock('../use-admin-catalog', () => ({
-  useAdminCatalog: () => ({ data: data.brands, isLoading: false, isError: false, refetch: vi.fn() }),
+  useAdminCatalog: () => ({
+    data: data.brands,
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
 }));
 vi.mock('../use-admin-catalog-models', () => ({
   useCatalogModelBrandSummary: () => ({
@@ -89,6 +177,68 @@ vi.mock('../use-admin-catalog-models', () => ({
   useCreateCatalogModel: () => ({ mutate: mutations.create, isPending: false }),
   useUpdateCatalogModel: () => ({ mutate: mutations.update, isPending: false }),
 }));
+vi.mock('@/features/vehicle-data/hooks', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/vehicle-data/hooks')>()),
+  useVehicleDataModelCounts: () => ({
+    data: data.counts,
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+  }),
+  useVehicleDataList: (filters: VehicleDataFilters) => {
+    const items = ROWS.filter((r) => r.modelId === filters.modelId);
+    return {
+      data: {
+        data: items,
+        meta: { page: 1, limit: 20, total: items.length, hasNext: false },
+        summary: { total: items.length, active: 0, hidden: 0, pending: 0, incomplete: 0 },
+      },
+      isError: false,
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    };
+  },
+  useVehicleDataDetail: () => ({
+    data: data.detail,
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+  useCreateVehicleData: () => ({ mutate: vi.fn(), isPending: false }),
+  useUpdateVehicleData: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }),
+  useApproveVehicleData: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDeleteVehicleData: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useRejectVehicleData: () => ({ mutate: vi.fn(), isPending: false }),
+  useMergeVehicleData: () => ({ mutate: vi.fn(), isPending: false }),
+  useVehicleDataImports: () => ({
+    data: undefined,
+    isFetching: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+  useVehicleDataImport: () => ({ data: undefined, isLoading: false }),
+  useVehicleDataImportRows: () => ({
+    data: undefined,
+    isFetching: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+  useUploadVehicleDataImport: () => ({ mutate: vi.fn(), isPending: false }),
+  useApplyVehicleDataImport: () => ({ mutate: vi.fn(), isPending: false }),
+  useDiscardVehicleDataImport: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+vi.mock('@/features/catalog/use-catalog', async () =>
+  (await import('@/features/catalog/test-catalog')).catalogModuleMock(),
+);
+vi.mock('@/features/catalog/use-catalog-models', () => ({
+  useCatalogModels: () => ({ models: [], isLoading: false }),
+  useCatalogModelGroups: () => [],
+}));
+vi.mock('@/hooks/use-media-query', () => ({
+  useIsMobile: () => false,
+  useMediaQuery: () => false,
+}));
 
 function renderPanel() {
   return renderWithIntl(
@@ -98,18 +248,52 @@ function renderPanel() {
   );
 }
 
+function navReplaceUrl(): string {
+  return String(nav.replace.mock.calls.at(-1)?.[0] ?? '');
+}
+
 beforeEach(() => {
   nav.params = new URLSearchParams();
   nav.replace.mockReset();
   mutations.create.mockReset();
   mutations.update.mockReset();
+  data.detail = undefined;
   data.brands = [brand('toyota', 'Toyota'), brand('vinfast', 'VinFast')];
   data.summary = [
-    { brandKey: 'toyota', total: 2, active: 2, missingSpecs: 1 },
-    { brandKey: 'vinfast', total: 1, active: 1, missingSpecs: 0 },
+    {
+      brandKey: 'toyota',
+      total: 3,
+      active: 3,
+      missingSpecs: 1,
+      vehicleDataTotal: 3,
+      vehicleDataPending: 2,
+    },
+    {
+      brandKey: 'vinfast',
+      total: 1,
+      active: 1,
+      missingSpecs: 0,
+      vehicleDataTotal: 0,
+      vehicleDataPending: 0,
+    },
   ];
   data.models = [
-    model({ id: 't1', key: 'toyota-vios', label: 'Vios', brandKey: 'toyota', fuelTypes: ['gasoline'], transmissions: ['manual', 'cvt'] }),
+    model({
+      id: 't1',
+      key: 'toyota-vios',
+      label: 'Vios',
+      brandKey: 'toyota',
+      fuelTypes: ['gasoline'],
+      transmissions: ['manual', 'cvt'],
+    }),
+    model({
+      id: 't3',
+      key: 'toyota-camry',
+      label: 'Camry',
+      brandKey: 'toyota',
+      fuelTypes: ['gasoline'],
+      transmissions: ['automatic'],
+    }),
     model({
       id: 't2',
       key: 'toyota-innova',
@@ -122,48 +306,166 @@ beforeEach(() => {
     }),
     model({ id: 'v1' }),
   ];
+  data.counts = [
+    count({ modelId: 't1', total: 2, active: 1, pending: 1, matched: 2 }),
+    count({
+      modelId: 'p1',
+      modelLabel: 'Mới Toanh',
+      modelPending: true,
+      total: 1,
+      pending: 1,
+      matched: 1,
+    }),
+  ];
 });
 
 afterEach(cleanup);
 
-describe('CatalogModelsPanel', () => {
-  it('cột hãng hiện số mẫu và số mẫu thiếu thông số của từng hãng', () => {
+describe('CatalogModelsPanel — cột hãng', () => {
+  it('hiện số dòng xe, số xe, số xe chờ duyệt và số dòng thiếu thông số', () => {
     renderPanel();
     const brandColumn = screen.getByRole('navigation', { name: 'Hãng xe' });
     const toyota = within(brandColumn).getByRole('button', { name: /Toyota/ });
-    expect(toyota.textContent).toContain('2 mẫu');
-    expect(within(toyota).getByLabelText('1 mẫu thiếu thông số')).toBeTruthy();
-    expect(within(brandColumn).getByRole('button', { name: /VinFast/ }).textContent).toContain('1 mẫu');
+    expect(toyota.textContent).toContain('3 dòng');
+    expect(toyota.textContent).toContain('3 xe');
+    expect(within(toyota).getByLabelText('2 xe chờ duyệt')).toBeTruthy();
+    expect(within(toyota).getByLabelText('1 dòng thiếu thông số')).toBeTruthy();
+    const vinfast = within(brandColumn).getByRole('button', { name: /VinFast/ });
+    expect(vinfast.textContent).toContain('1 dòng');
+    expect(within(vinfast).queryByLabelText(/chờ duyệt/)).toBeNull();
   });
 
-  it('mở hãng đầu tiên có mẫu và chia mẫu theo nhóm thị trường', () => {
-    renderPanel();
-    expect(screen.getByRole('heading', { level: 2, name: 'Toyota' })).toBeTruthy();
-    expect(screen.getByRole('heading', { level: 3, name: /Đang phân phối/ })).toBeTruthy();
-    expect(screen.getByRole('heading', { level: 3, name: /Mẫu xe đời trước/ })).toBeTruthy();
-    expect(screen.getAllByText('Vios').length).toBeGreaterThan(0);
-    // Mẫu thiếu số chỗ và hộp số được gọi tên, không chỉ để ô trống.
-    expect(screen.getAllByText('Thiếu số chỗ, hộp số').length).toBeGreaterThan(0);
-  });
-
-  it('chọn hãng khác ghi hãng lên URL', () => {
+  it('chọn hãng khác ghi hãng lên URL và bỏ bộ lọc / panel / link chế độ xem cũ của hãng trước', () => {
+    nav.params = new URLSearchParams('status=pending&open=r1&q=vf&missing=true&view=lines');
     renderPanel();
     const brandColumn = screen.getByRole('navigation', { name: 'Hãng xe' });
     fireEvent.click(within(brandColumn).getByRole('button', { name: /VinFast/ }));
-    expect(navReplaceUrl()).toContain('brand=vinfast');
+    const url = navReplaceUrl();
+    expect(url).toContain('brand=vinfast');
+    for (const param of ['status=', 'open=', 'q=', 'missing=', 'view=']) {
+      expect(url).not.toContain(param);
+    }
+  });
+});
+
+describe('CatalogModelsPanel — một danh sách dòng xe → xe', () => {
+  it('không còn hai chế độ xem: dòng xe chia nhóm phân phối, dòng mới chờ duyệt ở nhóm riêng', () => {
+    renderPanel();
+    expect(screen.getByRole('heading', { level: 2, name: 'Toyota' })).toBeTruthy();
+    expect(screen.queryByRole('radio', { name: 'Xe' })).toBeNull();
+    expect(screen.getByRole('heading', { level: 3, name: /Đang phân phối/ })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: /Mẫu xe đời trước/ })).toBeTruthy();
+    const pendingGroup = screen.getByRole('heading', { level: 3, name: /Dòng xe mới chờ duyệt/ });
+    expect(pendingGroup).toBeTruthy();
+    expect(screen.getAllByText('Dòng mới').length).toBeGreaterThan(0);
   });
 
-  it('bộ lọc "thiếu thông số" trên URL chỉ giữ mẫu còn thiếu', () => {
+  it('dòng có xe chờ duyệt tự mở ra các xe của nó; dòng không có gì cần làm thì đóng', () => {
+    renderPanel();
+    // Vios có 1 xe chờ duyệt ⇒ mở sẵn.
+    expect(screen.getByRole('region', { name: 'Xe của dòng Vios' })).toBeTruthy();
+    expect(screen.getAllByText('1.5 G CVT').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('1.5 E MT').length).toBeGreaterThan(0);
+    // Camry không chờ duyệt, không thiếu ⇒ đóng.
+    expect(screen.queryByRole('region', { name: 'Xe của dòng Camry' })).toBeNull();
+  });
+
+  it('dòng thiếu thông số gọi tên thứ còn thiếu và tự mở', () => {
+    renderPanel();
+    expect(screen.getAllByText(/Thiếu số chỗ, hộp số/).length).toBeGreaterThan(0);
+    // Innova chưa có xe nào: mở ra là trạng thái rỗng của dòng (có nút thêm xe), không phải bảng.
+    expect(screen.getAllByText('Dòng này chưa có xe nào')).toHaveLength(1);
+  });
+
+  it('bấm hàng dòng xe thì mở / đóng danh sách xe của nó', () => {
+    renderPanel();
+    // AntD thu gọn bằng cách ẩn hàng con (`display: none`), không gỡ khỏi DOM — đếm phần đang hiện.
+    const openEmptyLines = () =>
+      screen
+        .queryAllByText('Dòng này chưa có xe nào')
+        .filter((el) => (el.closest('tr') as HTMLElement | null)?.style.display !== 'none');
+    // Lúc đầu chỉ Innova (thiếu thông số) mở ra trạng thái rỗng; bấm Camry thì Camry mở thêm.
+    expect(openEmptyLines()).toHaveLength(1);
+    fireEvent.click(screen.getAllByText('Camry')[0]!);
+    expect(openEmptyLines()).toHaveLength(2);
+    fireEvent.click(screen.getAllByText('Camry')[0]!);
+    expect(openEmptyLines()).toHaveLength(1);
+  });
+
+  it('dải số liệu có ô "Dòng thiếu thông số" — bấm là lọc', () => {
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /Dòng thiếu thông số/ }));
+    expect(navReplaceUrl()).toContain('missing=true');
+  });
+
+  it('lọc thiếu thông số trên URL chỉ giữ dòng còn thiếu', () => {
     nav.params = new URLSearchParams('missing=true');
     renderPanel();
     expect(screen.queryAllByText('Vios')).toHaveLength(0);
     expect(screen.getAllByText('Innova').length).toBeGreaterThan(0);
   });
-});
 
-function navReplaceUrl(): string {
-  return String(nav.replace.mock.calls.at(-1)?.[0] ?? '');
-}
+  it('lọc theo trạng thái xe chỉ giữ dòng có xe khớp (theo số đếm của server)', () => {
+    nav.params = new URLSearchParams('status=pending');
+    data.counts = [count({ modelId: 't1', total: 2, pending: 1, matched: 1 })];
+    renderPanel();
+    expect(screen.getAllByText('Vios').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Camry')).toHaveLength(0);
+    expect(screen.queryAllByText('Innova')).toHaveLength(0);
+  });
+
+  it('tìm theo tên vẫn ra dòng chưa có xe nào', () => {
+    nav.params = new URLSearchParams('q=camry');
+    data.counts = [count({ modelId: 't1', total: 2, matched: 0 })];
+    renderPanel();
+    expect(screen.getAllByText('Camry').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Vios')).toHaveLength(0);
+  });
+
+  it('bấm một xe mở panel làm việc của nó', () => {
+    renderPanel();
+    const lineTable = screen.getByRole('region', { name: 'Xe của dòng Vios' });
+    fireEvent.click(within(lineTable).getByText('1.5 G CVT'));
+    expect(navReplaceUrl()).toContain('open=r1');
+  });
+
+  it('panel của xe chờ duyệt có Từ chối / Gộp / Lưu và duyệt', () => {
+    nav.params = new URLSearchParams('open=r2');
+    data.detail = {
+      ...ROWS[2]!,
+      hourlyPrice: null,
+      weekendPrice: null,
+      monthlyPrice: null,
+      withDriverDailyPrice: null,
+      engineDisplacementCc: null,
+      horsepowerHp: null,
+      lengthMm: null,
+      widthMm: null,
+      heightMm: null,
+      curbWeightKg: null,
+      fuelConsumptionCombined: null,
+      electricRangeKm: null,
+      batteryCapacityKwh: null,
+      featureKeys: [],
+      sourceVehicle: null,
+      reviewNote: null,
+      reviewedAt: null,
+      updatedByName: null,
+      createdAt: '2026-11-11T08:00:00.000Z',
+      vehicles: [],
+      market: [],
+      valueByYear: [],
+      similar: [],
+    } as unknown as VehicleDataDetail;
+    renderPanel();
+    // `getByText` thay vì `getByRole`: trang có nhiều bảng AntD, tính tên khả truy cập của mọi
+    // nút trên cả cây làm ca này chậm hàng chục giây trong jsdom.
+    const footer = screen.getByText('Lưu và duyệt').closest('.ant-drawer-footer') as HTMLElement;
+    expect(footer).toBeTruthy();
+    expect(within(footer).getByText('Từ chối')).toBeTruthy();
+    expect(within(footer).getByText('Gộp vào xe có sẵn')).toBeTruthy();
+  });
+});
 
 describe('CatalogModelFormModal', () => {
   function renderForm(current: CatalogModelAdmin | null) {
@@ -191,7 +493,9 @@ describe('CatalogModelFormModal', () => {
     renderForm(null);
     fireEvent.click(screen.getByRole('checkbox', { name: 'Điện' }));
     await waitFor(() =>
-      expect((screen.getByRole('checkbox', { name: '1 cấp (EV)' }) as HTMLInputElement).checked).toBe(true),
+      expect(
+        (screen.getByRole('checkbox', { name: '1 cấp (EV)' }) as HTMLInputElement).checked,
+      ).toBe(true),
     );
     expect(screen.queryByRole('checkbox', { name: 'Số sàn (MT)' })).toBeNull();
     expect(screen.getByText(/Điện - tự điền, khoá/)).toBeTruthy();

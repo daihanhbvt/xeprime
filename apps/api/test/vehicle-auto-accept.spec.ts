@@ -35,6 +35,7 @@ import {
   makeNotificationService,
   makeDriversService,
 } from './helpers/service-factory';
+import { relaxBookingLimits } from './helpers/booking-limits';
 import { cleanupDriverAccounts, seedDriverLink } from './helpers/driver-link';
 import { customerAccountFor } from './helpers/customer-account';
 
@@ -270,6 +271,8 @@ async function submit(
 }
 
 beforeAll(async () => {
+  // Spec đặt xe, không phải spec trần đặt xe (ADR 0091 điều 4) — lịch rải theo bộ đếm ngày.
+  relaxBookingLimits();
   try {
     await prisma.$connect();
     await prisma.$queryRaw`SELECT 1`;

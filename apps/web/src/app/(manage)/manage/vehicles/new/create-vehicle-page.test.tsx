@@ -1,10 +1,13 @@
 import { App } from 'antd';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PERMISSION } from '@xeprime/types';
 import NewVehiclePage from './page';
 
 const nav = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
+vi.mock('@/features/vehicle-data/hooks', async () =>
+  (await import('@/features/vehicle-data/test-vehicle-data')).vehicleDataHooksMock(),
+);
 vi.mock('next/navigation', () => ({
   useRouter: () => nav,
   usePathname: () => '/manage/vehicles/new',
@@ -48,6 +51,20 @@ vi.mock('@/features/vehicles/hooks/use-vehicle-mutations', () => ({
 }));
 
 const submitPublic = vi.hoisted(() => vi.fn());
+/** Cà vẹt (ADR 0089): tải + đọc là một lời gọi; mặc định máy đọc đủ mọi trường. */
+const registrationRead = vi.hoisted(() => vi.fn());
+const FULL_READING = {
+  plateNumber: '51H-100.00',
+  holderName: 'NGUYỄN VĂN AN',
+  holderAddress: null,
+  chassisNumber: 'RL4B29F30K1234567',
+  engineNumber: '2NRX123456',
+};
+// jsdom không có canvas — bỏ bước nén ảnh, trả nguyên tệp.
+vi.mock('@/features/driver-licence/prepare-licence-image', () => ({
+  PrepareImageError: class extends Error {},
+  prepareLicenceImage: async (file: File) => file,
+}));
 /** Cổng 'đủ điều kiện lên chợ' của wizard — mặc định đủ; bộ này kiểm luồng lưu, không kiểm luật. */
 vi.mock('@/features/vehicles/publication', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -56,6 +73,7 @@ vi.mock('@/features/vehicles/publication', async (importOriginal) => ({
 vi.mock('@/features/vehicles/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/vehicles/api')>()),
   submitVehiclePublic: submitPublic,
+  uploadVehicleRegistration: registrationRead,
 }));
 
 /**
@@ -130,6 +148,17 @@ async function goNext(expectedHeading: string) {
 }
 
 /** Đủ NĂM góc ảnh bắt buộc của ô tô — bước ảnh không cho đi tiếp khi còn ô trống. */
+/** Ảnh cà vẹt — ô riêng ở bước Hình ảnh của ô tô. */
+async function uploadRegistration() {
+  const region = screen.getByRole('region', { name: /Cà vẹt xe/ });
+  const input = region.querySelector('input[type="file"]')!;
+  fireEvent.change(input, {
+    target: { files: [new File(['x'], 'ca-vet.jpg', { type: 'image/jpeg' })] },
+  });
+  await waitFor(() => expect(registrationRead).toHaveBeenCalled());
+  return region;
+}
+
 async function uploadPhotos() {
   const inputs = [...document.querySelectorAll('input[type="file"]')].slice(0, 5);
   for (const [index, input] of inputs.entries()) {
@@ -149,6 +178,14 @@ beforeEach(() => {
   mutation.isError = false;
   mutation.error = undefined;
   submitPublic.mockReset();
+  registrationRead.mockReset();
+  registrationRead.mockResolvedValue({
+    uploadId: '01JREGISTRATIONUPLOAD00001',
+    reading: FULL_READING,
+    readerAvailable: true,
+  });
+  globalThis.URL.createObjectURL ??= () => 'blob:test';
+  globalThis.URL.revokeObjectURL ??= () => undefined;
   nav.push.mockReset();
   nav.replace.mockReset();
 });
@@ -164,7 +201,7 @@ describe('/manage/vehicles/new - Wave 3 create wizard', () => {
 
   it('hiện bốn bước gọn, không bắt nhập thông số nâng cao và có bốn hình thức nguồn xe', () => {
     renderPage();
-    for (const label of [/^Cơ bản$/, /Giá/, /Hình ảnh/, /Xác nhận/]) {
+    for (const label of [/^Cơ bản$/, /^Giá (thuê )?& [Cc]hính sách$/, /Hình ảnh/, /Xác nhận/]) {
       expect(screen.getByText(label)).toBeTruthy();
     }
     expect(screen.queryByText(/^Thông số$/)).toBeNull();
@@ -188,6 +225,8 @@ describe('/manage/vehicles/new - Wave 3 create wizard', () => {
     await goNext('2. Giá thuê & chính sách');
     await goNext('3. Hình ảnh, tiện ích & mô tả xe');
     await uploadPhotos();
+    await uploadRegistration();
+    await screen.findByText('Đã đọc đủ thông tin cà vẹt');
     await goNext('4. Xác nhận thông tin hồ sơ xe');
     expect(screen.getByText('Toyota Altis')).toBeTruthy();
     expect(screen.getByText('Trả góp')).toBeTruthy();
@@ -198,8 +237,53 @@ describe('/manage/vehicles/new - Wave 3 create wizard', () => {
       name: 'Toyota Altis',
       sourceType: 'financed',
     });
+    expect(mutation.mutateAsync.mock.calls[0]![0]).toMatchObject({
+      registration: {
+        uploadId: '01JREGISTRATIONUPLOAD00001',
+        holderName: 'NGUYỄN VĂN AN',
+        chassisNumber: 'RL4B29F30K1234567',
+        engineNumber: '2NRX123456',
+      },
+    });
     expect(mutation.mutateAsync.mock.calls[0]![0]).not.toHaveProperty('tenantId');
     expect(mutation.mutateAsync.mock.calls[0]![0]).not.toHaveProperty('publicStatus');
+  });
+
+  it('ô tô: chưa chụp cà vẹt thì không qua được bước Hình ảnh', async () => {
+    renderPage();
+    fireEvent.change(screen.getByLabelText(/Tên xe/), { target: { value: 'Xe thiếu cà vẹt' } });
+    await goNext('2. Giá thuê & chính sách');
+    await goNext('3. Hình ảnh, tiện ích & mô tả xe');
+    await uploadPhotos();
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+    expect(await screen.findByText('Vui lòng chụp hoặc tải ảnh cà vẹt')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: '3. Hình ảnh, tiện ích & mô tả xe' })).toBeTruthy();
+  });
+
+  it('máy đọc thiếu số máy: bắt nhập tay rồi mới đi tiếp', async () => {
+    registrationRead.mockResolvedValue({
+      uploadId: '01JREGISTRATIONUPLOAD00002',
+      reading: { ...FULL_READING, engineNumber: null },
+      readerAvailable: true,
+    });
+    renderPage();
+    fireEvent.change(screen.getByLabelText(/Tên xe/), { target: { value: 'Xe nhập tay' } });
+    await goNext('2. Giá thuê & chính sách');
+    await goNext('3. Hình ảnh, tiện ích & mô tả xe');
+    await uploadPhotos();
+    const region = await uploadRegistration();
+    expect(await within(region).findByText(/Chưa đọc được đủ thông tin/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+    expect(await screen.findByText('Nhập số máy')).toBeTruthy();
+
+    fireEvent.change(within(region).getByLabelText(/Số máy/), { target: { value: '2nr x999' } });
+    await goNext('4. Xác nhận thông tin hồ sơ xe');
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await waitFor(() => expect(mutation.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(mutation.mutateAsync.mock.calls[0]![0]).toMatchObject({
+      registration: { uploadId: '01JREGISTRATIONUPLOAD00002', engineNumber: '2NRX999' },
+    });
   });
 
   it('sau khi lưu nháp hiện success workspace thay vì điều hướng mù', async () => {
@@ -208,6 +292,8 @@ describe('/manage/vehicles/new - Wave 3 create wizard', () => {
     await goNext('2. Giá thuê & chính sách');
     await goNext('3. Hình ảnh, tiện ích & mô tả xe');
     await uploadPhotos();
+    await uploadRegistration();
+    await screen.findByText('Đã đọc đủ thông tin cà vẹt');
     await goNext('4. Xác nhận thông tin hồ sơ xe');
     fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
     expect(await screen.findByText('Tạo xe thành công!')).toBeTruthy();

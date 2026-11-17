@@ -292,9 +292,9 @@ describe('Lối vào Hồ sơ chủ xe', () => {
     render();
 
     expect(screen.getByText('Hồ sơ chủ xe còn thiếu thông tin')).toBeTruthy();
-    // Thiếu SĐT ⇒ thẳng tới phần Thông tin đăng nhập, nơi SĐT được xác thực qua OTP.
+    // Thiếu SĐT ⇒ thẳng tới trang Tài khoản & bảo mật, nơi SĐT được xác thực qua OTP.
     const cta = screen.getByRole('link', { name: /Hoàn thiện hồ sơ/ });
-    expect(cta.getAttribute('href')).toBe('/manage/account?section=login');
+    expect(cta.getAttribute('href')).toBe('/manage/account');
   });
 
   it('hồ sơ đã đủ: không có dải thúc, chỉ còn nút mở hồ sơ ở tiêu đề', () => {

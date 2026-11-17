@@ -9,8 +9,11 @@ import {
   type Paged,
   type QueryParams,
 } from '@/services/api-client';
+import { uploadToR2 } from '@/services/upload';
 import type {
   CreateVehicleInput,
+  VehicleRegistrationPresign,
+  VehicleRegistrationReadResult,
   FleetSummary,
   ListingRepairResult,
   SaveVehicleSourceInput,
@@ -65,6 +68,21 @@ export const deleteVehicle = (id: string): Promise<{ id: string }> =>
   apiDelete<{ id: string }>(`/vehicles/${id}`);
 
 /** Gửi xe đi duyệt công khai (ADR 0008) — backend tạo phiếu duyệt, không tự set approved_public. */
+/**
+ * Ảnh cà vẹt cho ô tô SẮP tạo (ADR 0089): presign → PUT thẳng lên kho riêng tư → server kiểm ảnh
+ * và đọc các trường (vài giây). `uploadId` trả về đi kèm `POST /vehicles`.
+ */
+export async function uploadVehicleRegistration(file: File): Promise<VehicleRegistrationReadResult> {
+  const ticket = await apiPost<VehicleRegistrationPresign>('/vehicle-registration-uploads/presign', {
+    contentType: file.type,
+    fileSize: file.size,
+  });
+  await uploadToR2(ticket.uploadUrl, file);
+  return apiPost<VehicleRegistrationReadResult>(
+    `/vehicle-registration-uploads/${ticket.uploadId}/read`,
+  );
+}
+
 export const submitVehiclePublic = (id: string): Promise<VehicleDetail> =>
   apiPost<VehicleDetail>(`/vehicles/${id}/submit-public`, {});
 

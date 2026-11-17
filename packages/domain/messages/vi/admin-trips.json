@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Vận hành chuyến",
-    "subtitle": "Bốn chặng của một chuyến đang đi qua nền tảng - nhắc đúng người khi một chặng đứng quá lâu.",
+    "subtitle": "Các chặng của một chuyến đang đi qua nền tảng - nhắc đúng người khi một chặng đứng quá lâu.",
     "loading": "Đang tải vận hành chuyến…",
     "updatedAt": "Cập nhật {time}",
     "allBookings": "Tất cả đơn thuê"
@@ -22,7 +22,8 @@
     "pending_approval": "Chờ chủ xe duyệt",
     "awaiting_hold": "Chờ khách giữ chỗ",
     "pickup_soon": "Sắp giao xe",
-    "active": "Đang thuê"
+    "active": "Đang thuê",
+    "driver": "Kẹt tài xế"
   },
   "cards": {
     "label": "Thẻ đếm việc",
@@ -31,20 +32,23 @@
       "pending_approval": "{count, plural, other {# sắp hết hạn}}",
       "awaiting_hold": "{count, plural, other {# sắp hết hạn}}",
       "pickup_soon": "{count, plural, other {# quá giờ giao}}",
-      "active": "{count, plural, other {# quá giờ trả}}"
+      "active": "{count, plural, other {# quá giờ trả}}",
+      "driver": "{count, plural, other {# cần gọi ngay}}"
     },
     "calm": {
       "pending_approval": "Chưa có yêu cầu nào kẹt",
       "awaiting_hold": "Khách còn đủ thời gian",
       "pickup_soon": "Chưa chuyến nào quá giờ",
-      "active": "Chưa chuyến nào quá giờ trả"
+      "active": "Chưa chuyến nào quá giờ trả",
+      "driver": "Chưa chuyến nào kẹt tài xế"
     }
   },
   "intro": {
     "pending_approval": "Hạn trả lời của chủ xe tuỳ khoảng cách tới giờ nhận xe (15 phút - 4 giờ); máy nhắc khi còn 60 phút và còn 15 phút. Còn dưới 15 phút mà chưa có câu trả lời thì gọi hoặc nhắc tay - khách đang chờ để còn đi tìm xe khác.",
     "awaiting_hold": "Chủ xe đã nhận, xe đang được giữ cho khách. Khách có 120 phút để chuyển tiền giữ chỗ; máy tự nhắc ở mốc còn 60 và 15 phút. Hết giờ là xe tự quay lại chợ.",
     "pickup_soon": "Đơn đã giữ chỗ, giao xe trong 24 giờ tới. Quá giờ mà gian hàng chưa bàn giao thì hỏi họ - khách có thể đang đứng chờ.",
-    "active": "Xe đang ở với khách. Quá giờ trả mà chưa bàn giao trả xe thì hỏi gian hàng; quyết toán chỉ chạy sau biên bản trả xe."
+    "active": "Xe đang ở với khách. Quá giờ trả mà chưa bàn giao trả xe thì hỏi gian hàng; quyết toán chỉ chạy sau biên bản trả xe.",
+    "driver": "Đơn có tài xế đang kẹt khâu tài xế: sắp nhận xe trong 24 giờ mà chưa có tài xế nhận, tài xế quá hạn trả lời lượt gán, hoặc tài xế đã rút mà gian hàng chưa điều phối lại. Còn dưới 2 giờ tới giờ nhận hoặc đã quá hạn thì gọi gian hàng - nền tảng không gán tài xế thay họ."
   },
   "filters": {
     "searchLabel": "Tìm trong hàng đợi",
@@ -92,7 +96,8 @@
     "pending_approval": "Không có yêu cầu nào đang chờ chủ xe trả lời.",
     "awaiting_hold": "Không có yêu cầu nào đang chờ khách giữ chỗ.",
     "pickup_soon": "Không có chuyến nào giao xe trong 24 giờ tới.",
-    "active": "Không có chuyến nào đang chạy."
+    "active": "Không có chuyến nào đang chạy.",
+    "driver": "Không có chuyến nào kẹt tài xế."
   },
   "time": {
     "inMinutes": "còn {count} phút",
@@ -107,5 +112,20 @@
     "today": "Hôm nay giao {pickups} · nhận {returns}",
     "open": "Mở vận hành chuyến",
     "loadError": "Không tải được hàng đợi vận hành"
+  },
+  "driver": {
+    "label": "Hàng đợi tài xế",
+    "issueColumn": "Vấn đề tài xế",
+    "issue": {
+      "dropped": "Tài xế đã rút",
+      "response_overdue": "Tài xế quá hạn trả lời",
+      "unassigned": "Chưa gán tài xế",
+      "awaiting": "Chờ tài xế nhận"
+    },
+    "deadline": {
+      "dropped": "Hạn điều phối lại {time}",
+      "response_overdue": "Hạn trả lời {time}"
+    },
+    "assigned": "Đang gán: {name}"
   }
 }

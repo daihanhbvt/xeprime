@@ -12,9 +12,10 @@ export type VehicleDetail = Schemas['VehicleDetailDto'];
 export type ListingRepairResult = Schemas['ListingRepairResultDto'];
 export type CreateVehicleInput = Schemas['CreateVehicleDto'];
 export type UpdateVehicleInput = Schemas['UpdateVehicleDto'];
-
-/** Hai kiểu xem của danh sách xe nhiều xe (Figma `23649:29724` lưới · `23655:36959` danh sách). */
-export type VehicleListView = 'grid' | 'list';
+/** Cà vẹt gửi kèm lượt tạo ô tô (ADR 0089). */
+export type CreateVehicleRegistrationInput = Schemas['CreateVehicleRegistrationDto'];
+export type VehicleRegistrationPresign = Schemas['VehicleRegistrationPresignDto'];
+export type VehicleRegistrationReadResult = Schemas['VehicleRegistrationReadResultDto'];
 
 /** Khớp `VEHICLE_SORT` ở backend DTO. */
 export type VehicleSort = 'newest' | 'name_asc' | 'code_asc' | 'price_asc' | 'price_desc';
@@ -32,11 +33,6 @@ export interface VehicleFilters {
   /** Chi nhánh giữ xe — ô "Chi nhánh" trong thanh bộ lọc của trang, sống trên URL (ADR 0052). */
   branchId?: string;
   sort?: VehicleSort;
-  /**
-   * Kiểu xem khi đội xe từ `VEHICLE_LIST_FEW_THRESHOLD` xe: lưới thẻ (mặc định) hay danh sách hàng
-   * ngang. Chỉ là cách VẼ — `filtersToParams` không gửi nó lên server.
-   */
-  view?: VehicleListView;
   page?: number;
   limit?: number;
 }

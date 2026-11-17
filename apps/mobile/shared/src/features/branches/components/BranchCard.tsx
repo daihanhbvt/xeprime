@@ -71,6 +71,7 @@ function BranchCardImpl({
 }) {
   const colors = useColors();
   const t = useTranslations('Branches');
+  const tAddr = useTranslations('Address');
   const tActions = useTranslations('Common.actions');
   const domainLabel = useDomainLabel();
 
@@ -103,7 +104,9 @@ function BranchCardImpl({
    * Tỉnh vắng mặt khi chi nhánh chưa có tỉnh — chỗ của nó là một viên nhãn CẢNH BÁO ở dải chip,
    * vì đó là việc phải xử lý (xe của chi nhánh không lên chợ được), không phải một ô trống.
    */
-  const location = [branch.address, branch.provinceName].filter(Boolean).join(LIST_SEPARATOR);
+  const location = [branch.address, branch.wardName, branch.provinceName]
+    .filter(Boolean)
+    .join(LIST_SEPARATOR);
 
   const badges: BadgeRowItem[] = [
     ...(branch.isDefault
@@ -128,6 +131,18 @@ function BranchCardImpl({
             ),
           },
         ]),
+    // Địa chỉ cũ chờ soát lại sau đợt gộp tỉnh (ADR 0077) - cùng nhãn với thẻ web.
+    ...(branch.needsLocationReview
+      ? [
+          {
+            key: 'review',
+            label: tAddr('review.badge'),
+            node: (
+              <StatusBadge label={tAddr('review.badge')} color={STATUS_COLOR.WARNING} size="sm" />
+            ),
+          },
+        ]
+      : []),
   ];
 
   /*
@@ -186,7 +201,7 @@ function BranchCardImpl({
               nó xứng đáng vị trí đắt nhất thẻ. Mã ("CN01") thì chỉ là khoá tra cứu: cần khi đối
               chiếu với một chứng từ, không cần khi lướt danh sách. Đứng thành dòng phụ dưới tên,
               nó vẫn ở nguyên chỗ mắt tìm mà không tranh chỗ với thứ mang tin — cùng khuôn
-              tên/email của `MemberCard` và tên/vai của thẻ tài xế.
+              tên/email của `RosterCard` và tên/vai của thẻ tài xế.
             */}
             <XStack ai="center" gap={space.xs}>
               <YStack f={1} minWidth={0} gap={2}>

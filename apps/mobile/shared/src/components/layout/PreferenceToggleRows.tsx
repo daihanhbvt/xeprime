@@ -36,6 +36,9 @@ const THEME_OPTIONS: readonly {
  * medium `text-secondary` · nhóm nút gạt bên phải. Cả dòng KHÔNG bấm được — chỉ các nút gạt.
  */
 
+/** Chờ tấm (Modal) đóng hẳn rồi mới đổi theme - xem `onBeforeChange` dưới. */
+export const THEME_SWITCH_DELAY_MS = 350;
+
 /** Hàng "Giao diện" — palette + hai nút ☀ / ☾ (web `THEME_OPTIONS`, chỉ sáng/tối). */
 /**
  * `onBeforeChange`: hàng nằm trong một `Modal` (menu avatar) thì ĐÓNG tấm trước rồi mới đổi theme —
@@ -45,68 +48,89 @@ const THEME_OPTIONS: readonly {
 export function AppearanceToggleRow({
   onBeforeChange,
 }: { onBeforeChange?: (apply: () => void) => void } = {}) {
+  const t = useTranslations('Navigation.public');
+  return (
+    <PreferenceRow icon="palette" label={t('appearance')}>
+      <AppearanceToggle {...(onBeforeChange ? { onBeforeChange } : {})} />
+    </PreferenceRow>
+  );
+}
+
+/**
+ * Chỉ NHÓM NÚT GẠT ☀ / ☾ — cho nơi tự dựng dòng của mình (màn "Tài khoản của tôi" app Partner, Figma
+ * `_Select Tab` `24183:84545`). Cùng một bản vẽ với hàng ở trên.
+ */
+export function AppearanceToggle({
+  onBeforeChange,
+}: { onBeforeChange?: (apply: () => void) => void } = {}) {
   const colors = useColors();
   const t = useTranslations('Navigation.public');
   const { scheme, setScheme } = useAppScheme();
   return (
-    <PreferenceRow icon="palette" label={t('appearance')}>
-      <Toggle label={t('toggleTheme')}>
-        {THEME_OPTIONS.map((option) => {
-          const active = scheme === option.mode;
-          return (
-            <ToggleButton
-              key={option.mode}
-              active={active}
-              label={t(option.labelKey)}
-              onPress={() => {
-                if (active) return;
-                const apply = () => setScheme(option.mode);
-                if (onBeforeChange) onBeforeChange(apply);
-                else apply();
-              }}
-            >
-              <LineIcon
-                name={option.icon}
-                size={ICON}
-                color={active ? colors.primary : colors.placeholder}
-              />
-            </ToggleButton>
-          );
-        })}
-      </Toggle>
-    </PreferenceRow>
+    <Toggle label={t('toggleTheme')}>
+      {THEME_OPTIONS.map((option) => {
+        const active = scheme === option.mode;
+        return (
+          <ToggleButton
+            key={option.mode}
+            active={active}
+            label={t(option.labelKey)}
+            onPress={() => {
+              if (active) return;
+              const apply = () => setScheme(option.mode);
+              if (onBeforeChange) onBeforeChange(apply);
+              else apply();
+            }}
+          >
+            <LineIcon
+              name={option.icon}
+              size={ICON}
+              color={active ? colors.primary : colors.placeholder}
+            />
+          </ToggleButton>
+        );
+      })}
+    </Toggle>
   );
 }
 
 /** Hàng "Ngôn ngữ" — globe + VI / EN dạng chữ (`.toggleText` body 14 medium). */
 export function LocaleToggleRow() {
+  const tLocale = useTranslations('Common.locale');
+  return (
+    <PreferenceRow icon="globe" label={tLocale('switchLabel')}>
+      <LocaleToggle />
+    </PreferenceRow>
+  );
+}
+
+/** Chỉ NHÓM NÚT GẠT VI / EN — cùng vai với `AppearanceToggle`. */
+export function LocaleToggle() {
   const colors = useColors();
   const tLocale = useTranslations('Common.locale');
   const { locale, setLocale } = useAppLocale();
   return (
-    <PreferenceRow icon="globe" label={tLocale('switchLabel')}>
-      <Toggle label={tLocale('switchLabel')}>
-        {LOCALES.map((value) => {
-          const active = value === locale;
-          return (
-            <ToggleButton
-              key={value}
-              active={active}
-              label={tLocale(value)}
-              onPress={() => setLocale(value)}
+    <Toggle label={tLocale('switchLabel')}>
+      {LOCALES.map((value) => {
+        const active = value === locale;
+        return (
+          <ToggleButton
+            key={value}
+            active={active}
+            label={tLocale(value)}
+            onPress={() => setLocale(value)}
+          >
+            <Text
+              col={active ? colors.primary : colors.placeholder}
+              fos={fontSize.body}
+              fow={fontWeight.medium}
             >
-              <Text
-                col={active ? colors.primary : colors.placeholder}
-                fos={fontSize.body}
-                fow={fontWeight.medium}
-              >
-                {tLocale(`${value}Short`)}
-              </Text>
-            </ToggleButton>
-          );
-        })}
-      </Toggle>
-    </PreferenceRow>
+              {tLocale(`${value}Short`)}
+            </Text>
+          </ToggleButton>
+        );
+      })}
+    </Toggle>
   );
 }
 

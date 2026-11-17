@@ -544,7 +544,7 @@ export const COMMISSION_NAV: readonly NavSection[] = navForTrack(
  *    cứu), cùng cấp. Mục cha "Gian hàng & xe" biến mất. Hai màn vẫn là hai route, hai nguồn dữ liệu.
  *  - **Đối tác** — hai danh sách ĐỘC LẬP, mỗi danh sách một URL: "Gian hàng gói" và "Chủ xe cá
  *    nhân" (`PLATFORM_PARTNER_KIND`). Không phải hai tab: người trực hai nhóm này làm hai loại việc
- *    khác nhau (Full Manage vs Owner Lite). URL cũ `/manage/admin/tenants` chuyển tiếp.
+ *    khác nhau (Full Manage vs Owner Lite). URL cũ `/admin/tenants` đã gỡ (16/11/2026).
  *  - **Đơn & khách hàng** — đơn thuê toàn hệ thống và khách thuê.
  */
 export const PLATFORM_NAV: readonly NavSection[] = [
@@ -659,8 +659,8 @@ export const PLATFORM_NAV: readonly NavSection[] = [
          * "Tài chính" (01/10/2026) gộp hai mục cũ — "Đối soát tiền vào" và "Vận hành tiền" — vào
          * MỘT màn: cùng một người trực, cùng một tài khoản ngân hàng, và bảng đối soát ngày vốn
          * đã đếm tiền vào chưa khớp mà không cho xử lý tại chỗ. Hàng đợi tiền vào vẫn gác bằng
-         * `platform.billing.manage` NGAY TRONG màn (thiếu quyền ⇒ hàng đợi đó ẩn hẳn); URL cũ
-         * `/manage/admin/bank-transactions` chuyển tiếp về đúng hàng đợi.
+         * `platform.billing.manage` NGAY TRONG màn (thiếu quyền ⇒ hàng đợi đó ẩn hẳn). URL cũ
+         * `/admin/bank-transactions` đã gỡ (16/11/2026).
          */
         key: 'admin-money',
         labelKey: 'platform.money',
@@ -1123,7 +1123,8 @@ export function supportNavSections(contextId: string, workspace: SupportWorkspac
 
 export function supportMobileTabs(contextId: string, workspace: SupportWorkspace): MobileTab[] {
   if (workspace === SUPPORT_WORKSPACE.ONBOARDING) return [];
-  const tabs = workspace === SUPPORT_WORKSPACE.MANAGE ? PARTNER_MOBILE_TABS : OWNER_LITE_SUPPORT_TABS;
+  const tabs =
+    workspace === SUPPORT_WORKSPACE.MANAGE ? PARTNER_MOBILE_TABS : OWNER_LITE_SUPPORT_TABS;
   return tabs.flatMap((tab) => {
     const href = tenantSupportHref(contextId, tab.href);
     return href ? [{ ...tab, href }] : [];

@@ -17,8 +17,10 @@ export function VatInvoiceSection({
   canEdit,
   renderHead,
   gap = space.md,
+  variant,
 }: {
   canEdit: boolean;
+  variant?: 'card' | 'row';
   renderHead?: (head: { title: string; subtitle: string }) => ReactNode;
   gap?: number;
 }) {
@@ -45,7 +47,7 @@ export function VatInvoiceSection({
           </Text>
         </YStack>
       )}
-      <VatInvoiceSetting canEdit={canEdit} />
+      <VatInvoiceSetting canEdit={canEdit} {...(variant ? { variant } : {})} />
     </YStack>
   );
 }

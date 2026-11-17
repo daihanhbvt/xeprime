@@ -78,3 +78,15 @@
   align-items: center;
   gap: var(--xp-space-xs);
 }
+
+/* Tải bảng kê tháng lệnh rút đã chuyển (đợt rà Admin 16/11/2026). */
+.exportBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.statusTag {
+  align-self: flex-start;
+}

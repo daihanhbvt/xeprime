@@ -1,4 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
+import { CardTitle as SharedCardTitle } from '@/components/ui/CardTitle';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { BOOKING_STATUS, PERMISSION, type BookingStatus } from '@xeprime/types';
@@ -141,11 +142,8 @@ ${tPermission('requires')} ${PERMISSION.HANDOVER_VIEW}`}
 }
 
 function CardTitle({ children }: { children: string }) {
-  const colors = useColors();
   return (
-    <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-      {children}
-    </Text>
+<SharedCardTitle>{children}</SharedCardTitle>
   );
 }
 

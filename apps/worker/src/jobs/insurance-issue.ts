@@ -1,6 +1,8 @@
 import {
+  recheckPendingInsurancePolicies,
   sweepDueInsurancePolicies,
   type InsurancePartner,
+  type InsuranceRecheckResult,
   type InsuranceSweepResult,
   type PrismaClient,
 } from '@xeprime/prisma';
@@ -41,6 +43,18 @@ export function sweepInsuranceIssue(
   now: Date = new Date(),
 ): Promise<InsuranceIssueResult> {
   return sweepDueInsurancePolicies(prisma, partner, { batch: BATCH, now });
+}
+
+/**
+ * Tra cứu lại hợp đồng đã cấp mà đối tác còn báo chờ ảnh (MIC `ttrang` 3) — ADR 0091 điều 7. Chạy
+ * cùng nhịp với vòng phát hành; mốc hẹn 15 giây chỉ là sàn, nhịp thật là nhịp của vòng lặp.
+ */
+export function recheckInsurancePending(
+  prisma: PrismaClient,
+  partner: InsurancePartner,
+  now: Date = new Date(),
+): Promise<InsuranceRecheckResult> {
+  return recheckPendingInsurancePolicies(prisma, partner, { batch: BATCH, now });
 }
 
 /**

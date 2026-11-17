@@ -4,11 +4,20 @@ import {
   INSURANCE_CERTIFICATE_URL_PLACEHOLDER,
   INSURANCE_ISSUE_ERROR,
   INSURANCE_ISSUING_LEASE_MINUTES,
+  INSURANCE_PARTNER_STATUS,
+  INSURANCE_PENDING_CHECK_INTERVAL_SECONDS,
+  INSURANCE_PENDING_CHECKS_MAX,
   INSURANCE_POLICY_STATUS,
   INSURANCE_PRODUCT_KIND,
   INSURANCE_PROVIDER,
   INSURANCE_TEST_CERTIFICATE_PREFIX,
+  CUSTOMER_DOCUMENT_TYPE,
+  VEHICLE_DOCUMENT_TYPE,
+  INSURANCE_PREMIUM_BASIS,
   insuranceCertificateUrl,
+  readInsurancePremiumTiers,
+  vehicleImageSlotsFor,
+  VEHICLE_IMAGE_TYPE,
   insuranceRetryDelayMinutes,
   type InsuranceConsentSource,
   type BookingPriceSnapshot,
@@ -17,6 +26,8 @@ import {
   type InsuranceProductSnapshot,
 } from '@xeprime/types';
 import { Prisma, type InsuranceProduct, type PrismaClient } from '../generated/client';
+import { MicInsurancePartner } from './mic-insurance-partner';
+import type { MicConfig } from './mic-client';
 
 /**
  * PHÁT HÀNH bảo hiểm chuyến — ADR 0032 điều 4 · ADR 0064.
@@ -77,6 +88,12 @@ export function toInsuranceProductSnapshot(row: InsuranceProductRow): InsuranceP
     maxPayoutNoteVi: row.maxPayoutNoteVi,
     maxPayoutNoteEn: row.maxPayoutNoteEn,
     certificateUrlTemplate: row.certificateUrlTemplate,
+    premiumBasis:
+      row.premiumBasis === INSURANCE_PREMIUM_BASIS.VALUE_TIER
+        ? INSURANCE_PREMIUM_BASIS.VALUE_TIER
+        : INSURANCE_PREMIUM_BASIS.DAILY,
+    premiumTiers: readInsurancePremiumTiers(row.premiumTiersJson),
+    claimHotline: row.claimHotline,
   };
 }
 
@@ -95,8 +112,40 @@ export interface IssuePolicyRequest {
   premiumAmount: string;
   coverageFrom: Date;
   coverageTo: Date;
-  vehicle: { plateNumber: string | null; name: string; vehicleType: string };
-  customer: { name: string; phone: string | null };
+  vehicle: {
+    plateNumber: string | null;
+    name: string;
+    vehicleType: string;
+    // ── Đối tác thật (ADR 0088) — adapter giả lập bỏ qua ──
+    brand?: string | null;
+    model?: string | null;
+    manufactureYear?: number | null;
+    seatCount?: number | null;
+    /** Giá trị xe đã dùng tính phí (snapshot hợp đồng, rơi về giá trị hiện tại của xe). */
+    insuredValue?: string | null;
+    chassisNumber?: string | null;
+    engineNumber?: string | null;
+    /** Tên chủ đăng ký trên cà vẹt — "chủ xe" của hợp đồng MIC. */
+    registrationHolderName?: string | null;
+    ownerPhone?: string | null;
+    /** URL công khai của các ảnh bắt buộc, theo thứ tự trước · trái · phải · sau · nội thất. */
+    photoUrls?: string[];
+  };
+  customer: {
+    name: string;
+    phone: string | null;
+    email?: string | null;
+    /** Số CCCD khách trong sổ khách của gian hàng (nếu có). */
+    idNumber?: string | null;
+    /** Địa chỉ bên mua: sổ khách → địa chỉ nhận xe → địa chỉ chi nhánh. */
+    address?: string | null;
+  };
+  /** Mã giao dịch gửi đối tác (MIC `id_tras`) — sinh một lần, giữ qua mọi lần thử lại. */
+  partnerRef?: string | null;
+  /** Mốc thật của chuyến — đối tác thật tính hiệu lực từ lúc GIAO XE, không từ giờ hẹn. */
+  trip?: { pickupAt: Date; returnAt: Date; handedOverAt: Date | null };
+  /** Ảnh xe đã gửi đối tác ở một lần thử trước — không gửi lại. */
+  photosSent?: boolean;
   /** Bằng chứng khách chọn — đối tác có thể đòi khi đối chiếu. */
   consent: { at: Date; source: InsuranceConsentSource } | null;
   /** Sản phẩm đã bán — mã sản phẩm đối tác + mẫu URL tra cứu GCN. `null` = hợp đồng cũ. */
@@ -113,6 +162,15 @@ export type IssuePolicyResult =
       isTest: boolean;
       /** Nguyên trạng phản hồi của đối tác — bằng chứng, ghi thẳng vào DB. */
       raw: unknown;
+      partnerRef?: string;
+      partnerPolicyId?: string;
+      partnerContractNumber?: string;
+      partnerStatus?: string;
+      partnerPremiumAmount?: string;
+      /** Thời hạn đối tác thật ghi trên hợp đồng — vắng thì là thời gian của chuyến. */
+      coverageFrom?: Date;
+      coverageTo?: Date;
+      photosSent?: boolean;
     }
   | {
       ok: false;
@@ -121,6 +179,8 @@ export type IssuePolicyResult =
       /** `false` = lỗi vĩnh viễn, thử lại vô ích (đối tác từ chối, dữ liệu sai). */
       retryable: boolean;
       raw?: unknown;
+      /** Ảnh đã tới đối tác dù lượt này hỏng — lần sau không gửi lại. */
+      photosSent?: boolean;
     };
 
 export interface InsurancePartner {
@@ -129,6 +189,16 @@ export interface InsurancePartner {
   /** Có cắm đối tác chưa — `false` thì cổng phát hành báo `partner_not_configured`. */
   readonly configured: boolean;
   issue(request: IssuePolicyRequest): Promise<IssuePolicyResult>;
+  /**
+   * Đối tác có bán loại sản phẩm này không. Vắng = bán mọi loại (adapter giả lập). MIC thật chỉ
+   * bán `vehicle_trip` — cổng chào bán đọc hàm này để không thu phí `IP` không ai phát hành.
+   */
+  supportsKind?(kind: InsuranceProductKind): boolean;
+  /**
+   * Tình trạng một hợp đồng ĐÃ cấp phía đối tác (MIC `ttrang`) — `null` khi đối tác không tìm thấy mã
+   * giao dịch. Ném khi mạng/đối tác lỗi. Vắng = đối tác không có khái niệm này (adapter giả lập).
+   */
+  lookupStatus?(partnerRef: string): Promise<string | null>;
 }
 
 /** Ghi log tối thiểu — API truyền `Logger` của Nest, worker truyền `console`. */
@@ -142,6 +212,8 @@ const SILENT: InsuranceLogger = { warn: () => undefined };
 export const INSURANCE_PARTNER_MODE = {
   NONE: 'none',
   MIC_MOCK: 'mic_mock',
+  /** Adapter THẬT của MIC (ADR 0088) — cần bộ `MIC_*`, chỉ chạy được từ IP MIC đã whitelist. */
+  MIC: 'mic',
 } as const;
 
 export type InsurancePartnerMode =
@@ -264,9 +336,21 @@ export class MicMockInsurancePartner implements InsurancePartner {
  */
 export function createInsurancePartner(
   mode: string | undefined,
-  options: { appEnv?: string | undefined; logger?: InsuranceLogger } = {},
+  options: { appEnv?: string | undefined; logger?: InsuranceLogger; mic?: MicConfig | null } = {},
 ): InsurancePartner {
   const normalized = (mode ?? INSURANCE_PARTNER_MODE.NONE).trim().toLowerCase();
+  if (normalized === INSURANCE_PARTNER_MODE.MIC) {
+    if (!options.mic) {
+      throw new Error(
+        'INSURANCE_PARTNER=mic cần đủ MIC_BASE_URL, MIC_USERNAME, MIC_PASSWORD, MIC_CLIENT_ID, MIC_CLIENT_SECRET',
+      );
+    }
+    const appEnv = (options.appEnv ?? 'production').trim().toLowerCase();
+    if (appEnv === 'production' && options.mic.sandbox) {
+      throw new Error('Production không được cấp hợp đồng trên sandbox MIC (MIC_SANDBOX=true)');
+    }
+    return new MicInsurancePartner(options.mic, options.logger ?? SILENT);
+  }
   if (normalized === INSURANCE_PARTNER_MODE.MIC_MOCK) {
     // Không có APP_ENV ⇒ coi là production: an toàn đi về phía không phát GCN giả.
     const appEnv = (options.appEnv ?? 'production').trim().toLowerCase();
@@ -278,7 +362,7 @@ export function createInsurancePartner(
     return new MicMockInsurancePartner(options.logger);
   }
   if (normalized !== INSURANCE_PARTNER_MODE.NONE) {
-    throw new Error(`INSURANCE_PARTNER không hợp lệ: "${mode}" (chỉ nhận none | mic_mock)`);
+    throw new Error(`INSURANCE_PARTNER không hợp lệ: "${mode}" (chỉ nhận none | mic_mock | mic)`);
   }
   return new NoopInsurancePartner(options.logger);
 }
@@ -361,8 +445,20 @@ export type InsuranceIssueOutcome =
       coverageFrom: Date;
       coverageTo: Date;
       raw: unknown;
+      partnerPolicyId?: string;
+      partnerContractNumber?: string;
+      partnerStatus?: string;
+      partnerPremiumAmount?: string;
+      photosSent?: boolean;
     }
-  | { ok: false; code: InsuranceIssueError; message: string; retryable: boolean; raw?: unknown };
+  | {
+      ok: false;
+      code: InsuranceIssueError;
+      message: string;
+      retryable: boolean;
+      raw?: unknown;
+      photosSent?: boolean;
+    };
 
 /**
  * Ghi kết quả một lần gọi đối tác. Chỉ ghi lên dòng đang `issuing` — một admin thu hồi giữa
@@ -391,6 +487,18 @@ export async function applyInsuranceIssueResult(
         lastErrorMessage: null,
         issueAttempts: { increment: 1 },
         responsePayloadJson: toJson(result.raw),
+        ...partnerFields(result, now),
+        /*
+         * Đối tác đã cấp nhưng còn chờ ảnh (MIC `ttrang` 3) ⇒ hẹn tra cứu lại theo nhịp ngắn
+         * (`recheckPendingInsurancePolicies`, ADR 0091 điều 7). Hợp đồng vẫn `issued`: số hợp đồng
+         * đã có, chỉ chờ MIC xác nhận ảnh.
+         */
+        ...(result.partnerStatus === INSURANCE_PARTNER_STATUS.PENDING_PHOTOS
+          ? {
+              nextAttemptAt: new Date(now.getTime() + INSURANCE_PENDING_CHECK_INTERVAL_SECONDS * 1000),
+              partnerPendingChecks: 0,
+            }
+          : {}),
       },
     });
     return count === 1;
@@ -419,9 +527,28 @@ export async function applyInsuranceIssueResult(
       lastErrorMessage: result.message.slice(0, 2000),
       nextAttemptAt,
       responsePayloadJson: toJson(result.raw ?? { code: result.code, at: now.toISOString() }),
+      ...(result.photosSent ? { photosSentAt: now } : {}),
     },
   });
   return count === 1;
+}
+
+/** Trường phía đối tác của một lượt cấp thành công — chỉ ghi thứ đối tác thật sự trả. */
+function partnerFields(
+  result: Extract<InsuranceIssueOutcome, { ok: true }>,
+  now: Date,
+): Prisma.BookingInsurancePolicyUpdateManyMutationInput {
+  return {
+    ...(result.partnerPolicyId ? { partnerPolicyId: result.partnerPolicyId } : {}),
+    ...(result.partnerContractNumber
+      ? { partnerContractNumber: result.partnerContractNumber }
+      : {}),
+    ...(result.partnerStatus ? { partnerStatus: result.partnerStatus } : {}),
+    ...(result.partnerPremiumAmount
+      ? { partnerPremiumAmount: new Prisma.Decimal(result.partnerPremiumAmount) }
+      : {}),
+    ...(result.photosSent ? { photosSentAt: now } : {}),
+  };
 }
 
 /**
@@ -444,18 +571,72 @@ export async function issueInsurancePolicy(
       consentAt: true,
       consentSource: true,
       productSnapshotJson: true,
+      partnerRef: true,
+      photosSentAt: true,
+      insuredValue: true,
       booking: {
         select: {
           pickupAt: true,
           returnAt: true,
+          actualPickupAt: true,
           customerName: true,
           customerPhone: true,
-          vehicle: { select: { name: true, plateNumber: true, vehicleType: true } },
+          pickupAddress: true,
+          tenantCustomer: {
+            select: {
+              address: true,
+              account: { select: { email: true } },
+              documents: {
+                where: { documentType: CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID, deletedAt: null },
+                orderBy: { createdAt: 'desc' },
+                take: 1,
+                select: { documentNumber: true },
+              },
+            },
+          },
+          vehicle: {
+            select: {
+              name: true,
+              plateNumber: true,
+              vehicleType: true,
+              brand: true,
+              model: true,
+              manufactureYear: true,
+              seatCount: true,
+              insuredValue: true,
+              branch: { select: { address: true } },
+              images: { select: { imageUrl: true, imageType: true, sortOrder: true } },
+              documents: {
+                where: { type: VEHICLE_DOCUMENT_TYPE.REGISTRATION, archivedAt: null },
+                orderBy: { updatedAt: 'desc' },
+                take: 1,
+                select: { chassisNumber: true, engineNumber: true, holderName: true },
+              },
+            },
+          },
         },
       },
     },
   });
   if (!policy || policy.status !== INSURANCE_POLICY_STATUS.ISSUING) return 'skipped';
+
+  /*
+   * Mã giao dịch đối tác — sinh MỘT lần, ghi TRƯỚC khi gọi: lượt sau (kể cả sau khi worker chết giữa
+   * chừng) gửi đúng mã cũ, nên đối tác tra cứu ra hợp đồng đã cấp thay vì cấp hợp đồng thứ hai.
+   */
+  let partnerRef = policy.partnerRef;
+  if (!partnerRef) {
+    partnerRef = partnerRefFor(policy.id);
+    await prisma.bookingInsurancePolicy.update({ where: { id: policyId }, data: { partnerRef } });
+  }
+  const booking = policy.booking;
+  const vehicle = booking.vehicle;
+  const registration = vehicle.documents[0] ?? null;
+  const customerAddress =
+    booking.tenantCustomer?.address?.trim() ||
+    booking.pickupAddress?.trim() ||
+    vehicle.branch?.address?.trim() ||
+    null;
 
   const productKind = policy.productKind as InsuranceProductKind;
   /*
@@ -474,11 +655,33 @@ export async function issueInsurancePolicy(
     coverageFrom: policy.booking.pickupAt,
     coverageTo: policy.booking.returnAt,
     vehicle: {
-      name: policy.booking.vehicle.name,
-      plateNumber: policy.booking.vehicle.plateNumber,
-      vehicleType: policy.booking.vehicle.vehicleType,
+      name: vehicle.name,
+      plateNumber: vehicle.plateNumber,
+      vehicleType: vehicle.vehicleType,
+      brand: vehicle.brand,
+      model: vehicle.model,
+      manufactureYear: vehicle.manufactureYear,
+      seatCount: vehicle.seatCount,
+      insuredValue: (policy.insuredValue ?? vehicle.insuredValue)?.toFixed(0) ?? null,
+      chassisNumber: registration?.chassisNumber ?? null,
+      engineNumber: registration?.engineNumber ?? null,
+      registrationHolderName: registration?.holderName ?? null,
+      photoUrls: insurancePhotoUrls(vehicle.vehicleType, vehicle.images),
     },
-    customer: { name: policy.booking.customerName, phone: policy.booking.customerPhone },
+    customer: {
+      name: booking.customerName,
+      phone: booking.customerPhone,
+      email: booking.tenantCustomer?.account?.email ?? null,
+      idNumber: booking.tenantCustomer?.documents[0]?.documentNumber ?? null,
+      address: customerAddress,
+    },
+    partnerRef,
+    trip: {
+      pickupAt: booking.pickupAt,
+      returnAt: booking.returnAt,
+      handedOverAt: booking.actualPickupAt,
+    },
+    photosSent: policy.photosSentAt != null,
     consent:
       policy.consentAt && policy.consentSource
         ? { at: policy.consentAt, source: policy.consentSource as InsuranceConsentSource }
@@ -507,7 +710,10 @@ export async function issueInsurancePolicy(
     };
   }
 
-  if (result.ok && result.isTest !== result.certificateNumber.startsWith(INSURANCE_TEST_CERTIFICATE_PREFIX)) {
+  if (
+    result.ok &&
+    result.isTest !== result.certificateNumber.startsWith(INSURANCE_TEST_CERTIFICATE_PREFIX)
+  ) {
     // Adapter tự mâu thuẫn — CHECK ở DB sẽ từ chối; ghi thành lỗi để người trực thấy.
     result = {
       ok: false,
@@ -530,9 +736,18 @@ export async function issueInsurancePolicy(
             ? {}
             : { partnerProductCode: result.partnerProductCode }),
           isTest: result.isTest,
-          coverageFrom: policy.booking.pickupAt,
-          coverageTo: policy.booking.returnAt,
+          coverageFrom: result.coverageFrom ?? policy.booking.pickupAt,
+          coverageTo: result.coverageTo ?? policy.booking.returnAt,
           raw: result.raw,
+          ...(result.partnerPolicyId ? { partnerPolicyId: result.partnerPolicyId } : {}),
+          ...(result.partnerContractNumber
+            ? { partnerContractNumber: result.partnerContractNumber }
+            : {}),
+          ...(result.partnerStatus ? { partnerStatus: result.partnerStatus } : {}),
+          ...(result.partnerPremiumAmount
+            ? { partnerPremiumAmount: result.partnerPremiumAmount }
+            : {}),
+          ...(result.photosSent ? { photosSent: true } : {}),
         }
       : result,
     now,
@@ -562,6 +777,84 @@ export async function sweepDueInsurancePolicies(
     else if (outcome === 'failed') failed += 1;
   }
   return { claimed: ids.length, issued, failed };
+}
+
+export interface InsuranceRecheckResult {
+  checked: number;
+  confirmed: number;
+  /** Hết lượt tra mà vẫn chờ ảnh — về admin liên hệ đối tác. */
+  exhausted: number;
+}
+
+/**
+ * Tra cứu lại hợp đồng ĐÃ cấp mà đối tác còn báo chờ ảnh (MIC `ttrang` 3) — ADR 0091 điều 7.
+ *
+ * Tối đa `INSURANCE_PENDING_CHECKS_MAX` lần, cách nhau `INSURANCE_PENDING_CHECK_INTERVAL_SECONDS`, theo
+ * nhịp của worker (không ngủ trong job). Hết lượt mà vẫn 3 ⇒ thôi hẹn (`next_attempt_at` NULL): admin
+ * thấy hợp đồng "MIC chưa nhận ảnh" và liên hệ đối tác. Lỗi mạng không tính là một lượt tra.
+ *
+ * Mỗi lượt ghi có điều kiện trên đúng `partner_pending_checks` đã đọc — hai worker cùng nhặt thì chỉ
+ * một bên ghi.
+ */
+export async function recheckPendingInsurancePolicies(
+  prisma: PrismaClient,
+  partner: InsurancePartner,
+  options: { batch?: number; now?: Date } = {},
+): Promise<InsuranceRecheckResult> {
+  const result: InsuranceRecheckResult = { checked: 0, confirmed: 0, exhausted: 0 };
+  if (!partner.lookupStatus) return result;
+  const now = options.now ?? new Date();
+  const due = await prisma.bookingInsurancePolicy.findMany({
+    where: {
+      status: INSURANCE_POLICY_STATUS.ISSUED,
+      partnerStatus: INSURANCE_PARTNER_STATUS.PENDING_PHOTOS,
+      partnerRef: { not: null },
+      nextAttemptAt: { not: null, lte: now },
+    },
+    orderBy: { nextAttemptAt: 'asc' },
+    take: options.batch ?? 50,
+    select: { id: true, partnerRef: true, partnerPendingChecks: true },
+  });
+  for (const row of due) {
+    const guard = {
+      id: row.id,
+      status: INSURANCE_POLICY_STATUS.ISSUED,
+      partnerPendingChecks: row.partnerPendingChecks,
+    };
+    let status: string | null;
+    try {
+      status = await partner.lookupStatus(row.partnerRef!);
+    } catch {
+      // Đối tác/mạng lỗi — không tính lượt, hẹn lại chậm hơn một chút.
+      await prisma.bookingInsurancePolicy.updateMany({
+        where: guard,
+        data: { nextAttemptAt: new Date(now.getTime() + 60_000) },
+      });
+      continue;
+    }
+    result.checked += 1;
+    if (status && status !== INSURANCE_PARTNER_STATUS.PENDING_PHOTOS) {
+      await prisma.bookingInsurancePolicy.updateMany({
+        where: guard,
+        data: { partnerStatus: status, nextAttemptAt: null },
+      });
+      result.confirmed += 1;
+      continue;
+    }
+    const checks = row.partnerPendingChecks + 1;
+    const exhausted = checks >= INSURANCE_PENDING_CHECKS_MAX;
+    await prisma.bookingInsurancePolicy.updateMany({
+      where: guard,
+      data: {
+        partnerPendingChecks: checks,
+        nextAttemptAt: exhausted
+          ? null
+          : new Date(now.getTime() + INSURANCE_PENDING_CHECK_INTERVAL_SECONDS * 1000),
+      },
+    });
+    if (exhausted) result.exhausted += 1;
+  }
+  return result;
 }
 
 // ── Đóng băng sản phẩm lúc duyệt (ADR 0024 · 0064) ──────────────────────────
@@ -615,6 +908,40 @@ export async function freezeInsuranceProducts(
 }
 
 // ── Nội bộ ──────────────────────────────────────────────────────────────────
+
+/**
+ * Mã giao dịch gửi đối tác — `XP` + 18 ký tự cuối ULID của hợp đồng (2 ký tự thời gian + 16 ký
+ * tự ngẫu nhiên), vừa giới hạn 20 ký tự của MIC. Tất định theo id hợp đồng.
+ */
+export function partnerRefFor(policyId: string): string {
+  return `XP${policyId.slice(-18)}`;
+}
+
+/**
+ * Ảnh xe gửi đối tác: đúng các ô BẮT BUỘC của thư viện, theo thứ tự trước · trái · phải · sau ·
+ * nội thất (thứ tự của trang chụp ảnh MIC), mỗi ô một tấm (tấm sắp đầu tiên).
+ */
+export function insurancePhotoUrls(
+  vehicleType: string,
+  images: ReadonlyArray<{ imageUrl: string; imageType: string | null; sortOrder: number }>,
+): string[] {
+  const order: string[] = [
+    VEHICLE_IMAGE_TYPE.FRONT,
+    VEHICLE_IMAGE_TYPE.LEFT,
+    VEHICLE_IMAGE_TYPE.RIGHT,
+    VEHICLE_IMAGE_TYPE.REAR,
+    VEHICLE_IMAGE_TYPE.INTERIOR,
+  ];
+  const required = vehicleImageSlotsFor(vehicleType).filter((s) => s !== VEHICLE_IMAGE_TYPE.OTHER);
+  const slots = [
+    ...order.filter((s) => (required as string[]).includes(s)),
+    ...required.filter((s) => !order.includes(s)),
+  ];
+  const sorted = [...images].sort((a, b) => a.sortOrder - b.sortOrder);
+  return slots
+    .map((slot) => sorted.find((img) => img.imageType === slot)?.imageUrl)
+    .filter((url): url is string => typeof url === 'string');
+}
 
 async function liveProductSnapshot(
   prisma: Db,

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack } from 'tamagui';
 import {
   clockText,

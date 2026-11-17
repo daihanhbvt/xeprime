@@ -105,5 +105,21 @@
       "medium": "Medium",
       "low": "Low"
     }
+  },
+  "lock": {
+    "lock": "Lock account",
+    "unlock": "Unlock",
+    "lockTitle": "Lock customer account",
+    "lockSummary": "The customer is signed out of every browser and app right away and cannot sign in again. Pending requests and existing bookings stay as they are for support to handle.",
+    "unlockTitle": "Unlock customer account",
+    "unlockSummary": "The customer can sign in again as usual.",
+    "reasonLabel": "Reason",
+    "reasonPlaceholder": "e.g. repeated cancellations to collect refunds",
+    "reasonRequired": "Enter a reason (at least 5 characters).",
+    "audience": "Only staff can read the reason; the customer does not see it.",
+    "locked": "Account locked and the customer signed out of every device.",
+    "unlocked": "Account unlocked.",
+    "lockedBanner": "Account locked at {time}",
+    "lockedReason": "Reason: {reason}"
   }
 }

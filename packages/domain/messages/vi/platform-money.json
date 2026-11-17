@@ -2,7 +2,7 @@
   "page": {
     "title": "Tài chính",
     "loadError": "Không tải được dữ liệu.",
-    "holdsEmpty": "Không có khoản giữ chỗ nào.",
+    "holdsEmpty": "Không có khoản giữ chỗ nào cần chốt tay.",
     "holdsTotal": "{count} khoản giữ chỗ",
     "refundsEmpty": "Không có khoản hoàn nào.",
     "refundsTotal": "{count} khoản hoàn",
@@ -14,7 +14,7 @@
     "holdsSearchPlaceholder": "Mã XPH, tên khách, tên gian hàng",
     "status": "Trạng thái",
     "scope": "Phạm vi",
-    "unsettledOnly": "Chờ chốt kết cục",
+    "unsettledOnly": "Cần chốt tay",
     "allHolds": "Tất cả"
   },
   "columns": {
@@ -27,8 +27,13 @@
     "outcome": "Kết cục",
     "reason": "Lý do",
     "createdAt": "Tạo lúc",
-    "disputeOpen": "Đang tranh chấp",
+    "settleReason": {
+      "dispute_open": "Đang tranh chấp",
+      "handover_unconfirmed": "Chưa xác nhận giao xe",
+      "booking_ended": "Đơn đã kết thúc"
+    },
     "settleAction": "Chốt kết cục",
+    "verdictAction": "Kết luận ở hỗ trợ",
     "markPaidAction": "Đã chuyển",
     "rejectAction": "Từ chối",
     "booking": "Đơn thuê",
@@ -46,7 +51,11 @@
     "noteRequired": "Cần nhập lý do (tối thiểu 5 ký tự).",
     "submit": "Chốt",
     "success": "Đã chốt kết cục.",
-    "disputeOpen": "Đơn này còn case tranh chấp hoặc xác minh bàn giao đang mở - kết luận case trước khi chốt tiền.",
+    "reason": {
+      "dispute_open": "Đơn này có tranh chấp đang mở - đọc và kết luận case tranh chấp trước khi chốt tiền.",
+      "handover_unconfirmed": "Đã quá giờ nhận xe mà chủ xe chưa xác nhận giao xe, nên hệ thống tự mở case kiểm tra bàn giao. Không có ai khiếu nại: liên hệ chủ xe và khách, rồi kết luận chuyến ở case hỗ trợ. Tiền tự chốt theo kết luận đó.",
+      "booking_ended": "Đơn đã kết thúc nhưng kết cục chưa được chốt tự động (thường do case từng mở lúc đơn kết thúc). Đọc kết luận của case rồi chốt."
+    },
     "auditHint": "Thao tác này ghi vào nhật ký hệ thống và không hoàn tác được.",
     "received": "Khoản đã nhận",
     "paidTotal": "Tổng đã nhận",
@@ -72,7 +81,9 @@
     },
     "previous": "Khoản giữ chỗ trước",
     "next": "Khoản giữ chỗ sau",
-    "taxWithheld": "Trong phần của chủ xe: thuế khấu trừ khi hoàn thành"
+    "taxWithheld": "Trong phần của chủ xe: thuế khấu trừ khi hoàn thành",
+    "bookingStatus": "Trạng thái đơn",
+    "schedule": "Lịch nhận - trả"
   },
   "refundPaid": {
     "title": "Ghi nhận đã chuyển trả",
@@ -104,7 +115,7 @@
     "balanceSaved": "Đã lưu số dư cuối ngày",
     "platformTitle": "Tiền của XePrime",
     "serviceFeeRecognized": "Phí dịch vụ đã ghi nhận",
-    "subscriptionsCollected": "Tiền gói đã thu",
+    "subscriptionsCollected": "Tiền gói đã thu (theo tiền về tài khoản)",
     "custodiedTitle": "Tiền giữ hộ - nghĩa vụ phải trả",
     "holdsUnsettled": "Giữ chỗ chưa chốt kết cục",
     "walletTotal": "Số dư phải trả",
@@ -114,7 +125,7 @@
     "taxAccrued": "Thuế đã khấu trừ chưa nộp",
     "withdrawalsPaid": "Rút đã chuyển",
     "refundsPaid": "Hoàn đã chuyển",
-    "matchedSubscriptions": "Đã khớp hoá đơn gói",
+    "matchedSubscriptions": "Đã khớp gói (hoá đơn + phiếu gộp)",
     "matchedHolds": "Đã khớp khoản giữ chỗ",
     "unmatched": "Chưa khớp",
     "ignored": "Bỏ qua",
@@ -133,7 +144,17 @@
     "varianceMissing": "Nhập số dư để tính",
     "varianceOff": "Cần kiểm tra",
     "varianceBalanced": "Khớp",
-    "countChip": "{count, plural, other {# khoản}}"
+    "countChip": "{count, plural, other {# khoản}}",
+    "insuranceCommission": "Hoa hồng đại lý bảo hiểm",
+    "insuranceServiceFeeRefunded": "Phí thu hộ bảo hiểm đã hoàn khách",
+    "extensionsUnsettled": "Phụ lục gia hạn chưa quyết toán",
+    "subscriptionsUnapplied": "Tiền gói chưa thành doanh thu",
+    "subscriptionsUnappliedNote": "Hoá đơn trả thiếu và tiền chuyển thừa từ trước khi tự vào ví",
+    "ignoredKept": "Tiền bỏ qua chưa chuyển trả",
+    "matchedExtensions": "Đã khớp phụ lục gia hạn",
+    "manualRefunds": "Đã chuyển trả tiền bỏ qua",
+    "insuranceRemitted": "Đã trả hãng bảo hiểm",
+    "matchedWalletCredits": "Tiền về muộn đã hoàn vào ví khách"
   },
   "tax": {
     "title": "Sổ thuế theo kỳ",
@@ -171,12 +192,13 @@
       "pit": "TNCN"
     },
     "actions": {
-      "export": "Xuất CSV",
-      "markDeclared": "Đánh dấu đã kê khai",
-      "declaredDone": "Đã đánh dấu cả kỳ là đã kê khai",
-      "markRemitted": "Đánh dấu đã nộp",
-      "remittedDone": "Đã đánh dấu cả kỳ là đã nộp",
-      "reverse": "Đảo"
+      "export": "Xuất CSV chi tiết",
+      "markDeclared": "Ghi kê khai",
+      "declaredDone": "Đã ghi kê khai cả kỳ",
+      "markRemitted": "Ghi đã nộp",
+      "remittedDone": "Đã ghi nộp thuế cả kỳ",
+      "reverse": "Đảo",
+      "exportBySeller": "Xuất CSV theo người bán"
     },
     "empty": {
       "title": "Kỳ này chưa có nghĩa vụ nào",
@@ -194,6 +216,48 @@
     "category": {
       "service": "Nhóm dịch vụ",
       "transport": "Nhóm vận tải"
+    },
+    "filing": {
+      "title": "Chứng cứ kê khai và nộp",
+      "declared": "Kê khai",
+      "declaredValue": "Số {ref} - nộp ngày {date}",
+      "remitted": "Nộp tiền",
+      "remittedValue": "Chứng từ {ref} - nộp ngày {date} - {amount}",
+      "recordedBy": "Ghi bởi {name} lúc {time}",
+      "recordedAt": "Ghi lúc {time}",
+      "notYet": "Chưa ghi",
+      "legacyDeclared": "Kỳ đã kê khai trước khi có chứng cứ - có thể ghi bổ sung số tờ khai.",
+      "mismatch": "Số đã nộp lệch tổng trên sổ ({ledger})",
+      "note": "Ghi chú: {note}"
+    },
+    "declareDialog": {
+      "title": "Ghi kê khai kỳ {period}",
+      "hint": "Lượt này chuyển mọi dòng chưa kê khai của kỳ sang đã kê khai, và lưu số tờ khai làm chứng cứ. Mỗi kỳ ghi một lần.",
+      "rows": "Số dòng sẽ kê khai",
+      "amount": "Tổng chưa kê khai",
+      "ref": "Số tờ khai / mã hồ sơ",
+      "refHint": "Số cơ quan thuế cấp khi nộp tờ khai.",
+      "refRequired": "Nhập số tờ khai",
+      "date": "Ngày nộp tờ khai",
+      "dateRequired": "Chọn ngày nộp tờ khai",
+      "dateRange": "Ngày phải từ {from} tới hôm nay",
+      "submit": "Ghi kê khai"
+    },
+    "remitDialog": {
+      "title": "Ghi nộp thuế kỳ {period}",
+      "hint": "Lượt này chuyển mọi dòng đã kê khai của kỳ sang đã nộp, và lưu chứng từ nộp tiền làm chứng cứ. Mỗi kỳ ghi một lần.",
+      "rows": "Số dòng sẽ ghi nộp",
+      "ledger": "Tổng thuế trên sổ của kỳ",
+      "ref": "Mã chứng từ nộp NSNN",
+      "refRequired": "Nhập mã chứng từ",
+      "date": "Ngày nộp tiền",
+      "dateRequired": "Chọn ngày nộp tiền",
+      "amount": "Số tiền đã nộp",
+      "amountRequired": "Nhập số tiền đã nộp",
+      "note": "Ghi chú phần lệch",
+      "noteRequired": "Số đã nộp khác tổng trên sổ - hãy ghi chú giải thích",
+      "mismatch": "Số đã nộp khác tổng trên sổ {ledger}. Vẫn ghi được, nhưng cần ghi chú.",
+      "submit": "Ghi đã nộp"
     }
   },
   "status": {
@@ -219,6 +283,7 @@
     "tax": "Thuế chưa kê khai",
     "oldest": "Cũ nhất {age}",
     "disputes": "{count} đang tranh chấp",
+    "handoverUnconfirmed": "{count} chưa xác nhận giao xe",
     "overdue": "{count} quá hạn",
     "period": "Kỳ {period}",
     "loadError": "Không tải được số liệu hàng đợi",

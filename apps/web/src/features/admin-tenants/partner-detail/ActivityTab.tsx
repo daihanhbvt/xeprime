@@ -38,6 +38,7 @@ import {
 import { usePartnerActivity, usePartnerSupportSessions } from './hooks';
 import { useTabState } from './parts';
 import styles from './PartnerDetail.module.css';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 
 const SEGMENT = { ACTIVITY: 'activity', SESSIONS: 'sessions' } as const;
 type Segment = (typeof SEGMENT)[keyof typeof SEGMENT];
@@ -255,7 +256,9 @@ function ActivityRow({ row }: { row: PartnerActivity }) {
         <span className={styles.activityTitle}>{labels.action(row.action)}</span>
         {row.targetLabel ? <span className={styles.muted}>{labels.target(row)}</span> : null}
         <span className={styles.muted}>
-          {row.actorName ?? t('systemActor')} · {domainLabel('auditActorScope', row.actorScope)}
+          {row.actorName ?? t('systemActor')}
+          {LIST_SEPARATOR}
+          {domainLabel('auditActorScope', row.actorScope)}
           {row.viaSupport ? (
             <Tag className={styles.small} color="gold">
               {t('viaSupport')}

@@ -14,13 +14,15 @@ import type { AdminBookingDetail } from '../types';
 import { BookingDocuments } from './booking-detail/BookingDocuments';
 import { BookingDrawerHeader } from './booking-detail/BookingDrawerHeader';
 import { BookingInformation } from './booking-detail/BookingInformation';
+import { BookingMarketplaceMoney } from './booking-detail/BookingMarketplaceMoney';
 import { BookingPaymentSummary } from './booking-detail/BookingPaymentSummary';
+import { BookingSupportCases } from './booking-detail/BookingSupportCases';
 import { BookingTimeline } from './booking-detail/BookingTimeline';
 
 /**
  * Panel chi tiết một đơn — drawer chuẩn như màn Kiểm duyệt xe (07/10/2026): có mask, bấm ra
  * ngoài hay Esc là đóng, trang phía sau đứng yên. Cỡ `lg`: nội dung một cột (thông tin, lịch
- * trình, thanh toán, hồ sơ) — rộng hơn chỉ là khoảng trống.
+ * trình, thanh toán, tiền marketplace, hồ sơ) — rộng hơn chỉ là khoảng trống.
  *
  * Header (mã + trạng thái) và footer của AntD Drawer nằm ngoài vùng cuộn, nên cả hai dính cố định
  * khi nội dung dài.
@@ -70,9 +72,12 @@ export function AdminBookingDetailDrawer({
 function Body({ booking }: { booking: AdminBookingDetail }) {
   return (
     <div>
+      {/* Case mở đứng đầu: đơn đang bị giữ ở đâu là điều người mở đơn cần biết trước tiên. */}
+      <BookingSupportCases booking={booking} />
       <BookingInformation booking={booking} />
       <BookingTimeline booking={booking} />
       <BookingPaymentSummary booking={booking} />
+      <BookingMarketplaceMoney booking={booking} />
       <BookingDocuments booking={booking} />
     </div>
   );

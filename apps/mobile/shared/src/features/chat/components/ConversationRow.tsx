@@ -1,10 +1,11 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { CHAT_SIDE } from '@xeprime/types';
 import type { ConversationSummary } from '@/features/chat/api';
 import { memo } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { Avatar } from '@/components/ui/Avatar';
 import { CountBadge } from '@/components/ui/CountBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -52,7 +53,14 @@ export const ConversationRow = memo(function ConversationRow({
     <Pressable
       onPress={() => onPress(conversation)}
       accessibilityRole="button"
-      accessibilityLabel={conversation.partyName}
+      // Số chưa đọc chỉ hiện bằng huy hiệu - đọc kèm cho trình đọc màn hình.
+      accessibilityLabel={
+        unread
+          ? [conversation.partyName, t('unreadCount', { count: conversation.unread })].join(
+              LIST_SEPARATOR,
+            )
+          : conversation.partyName
+      }
       /*
        * Phản hồi khi chạm — bản trước KHÔNG có, nên một cú chạm vào dòng trông y hệt một cú
        * chạm trượt cho tới khi màn mới kịp mở. Trên máy chậm khoảng lặng đó đủ để người dùng
@@ -165,11 +173,7 @@ export const ConversationRow = memo(function ConversationRow({
               phải đọc từ trên xuống là ngày → số tin mới → giờ.
             */}
             {conversation.lastMessageAt ? (
-              <Text
-                col={colors.placeholder}
-                fos={fontSize.label}
-                fow={fontWeight.medium}
-              >
+              <Text col={colors.placeholder} fos={fontSize.label} fow={fontWeight.medium}>
                 {fmt.time(conversation.lastMessageAt)}
               </Text>
             ) : null}

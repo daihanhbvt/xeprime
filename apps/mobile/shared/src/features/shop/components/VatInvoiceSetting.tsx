@@ -25,7 +25,17 @@ import { useUpdateVatInvoiceSetting, useVatInvoiceSetting } from '../hooks/use-s
  * trạng thái bằng chữ — không vẽ công tắc cho một hành động không mở. App không có phiên hỗ trợ
  * của nền tảng, nên không có nhánh `useSupportHides` như web.
  */
-export function VatInvoiceSetting({ canEdit }: { canEdit: boolean }) {
+export function VatInvoiceSetting({
+  canEdit,
+  variant = 'card',
+}: {
+  canEdit: boolean;
+  /**
+   * `row` - hàng trong thẻ "Thanh toán & hóa đơn" của Chính sách thuê: mô tả là `rowHint` (ảnh
+   * hưởng hiển thị trên chợ) như web `VatInvoiceSetting variant="row"`.
+   */
+  variant?: 'card' | 'row';
+}) {
   const colors = useColors();
   const t = useTranslations('Shop.vatInvoice');
   const toast = useAppToast();
@@ -78,7 +88,7 @@ export function VatInvoiceSetting({ canEdit }: { canEdit: boolean }) {
           />
         ) : null}
         <Text col={colors.textMuted} fos={fontSize.label}>
-          {t('note')}
+          {variant === 'row' ? t('rowHint') : t('note')}
         </Text>
       </YStack>
     </Card>

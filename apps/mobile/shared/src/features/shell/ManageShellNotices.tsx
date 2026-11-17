@@ -35,8 +35,15 @@ export function expiredFeatureForPath(
   featureStates: Partial<Record<PlanFeature, FeatureState>>,
 ): PlanFeature | null {
   const leaves = flattenManageLeaves(manageNavForTrack(PARTNER_TRACK.PACKAGE));
+  /*
+   * Mục ẨN có đường dẫn riêng (Công nợ `activeAs` sổ Thu-Chi) phải báo đúng tính năng CỦA NÓ - web
+   * dựng dải riêng cho `DEBTS`. Khớp đúng đường dẫn trước, rồi mới rơi về mục đang sáng trên menu.
+   */
+  const exact = leaves.find((leaf) => leaf.href != null && String(leaf.href) === pathname);
   const href = matchActiveHref(pathname, leaves, String(ROUTES.manage.home()));
-  const feature = leaves.find((leaf) => leaf.href != null && String(leaf.href) === href)?.feature;
+  const feature =
+    exact?.feature ??
+    leaves.find((leaf) => leaf.href != null && String(leaf.href) === href)?.feature;
   if (!feature) return null;
   return featureStates[feature] === FEATURE_STATE.READ_ONLY ? feature : null;
 }

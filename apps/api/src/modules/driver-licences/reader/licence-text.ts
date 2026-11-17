@@ -99,7 +99,7 @@ function foldChars(text: string): string {
  * cả khoảng trắng — Tesseract hay dính/tách từ), độ tin cậy của từng ký tự thô, và bảng ánh xạ để
  * từ một đoạn khớp ở khoá quay về đúng chữ thô.
  */
-interface PreparedLine {
+export interface PreparedLine {
   raw: string;
   /** Vị trí ký tự thô → độ tin cậy 0–100 (khoảng trắng nối từ: -1). */
   charConfidence: number[];
@@ -108,7 +108,7 @@ interface PreparedLine {
   keyAt: number[];
 }
 
-function prepareLine(words: OcrLine): PreparedLine {
+export function prepareLine(words: OcrLine): PreparedLine {
   let raw = '';
   const charConfidence: number[] = [];
   words.forEach((word, index) => {
@@ -142,7 +142,7 @@ function prepareLine(words: OcrLine): PreparedLine {
 }
 
 /** Trung bình độ tin cậy của các ký tự (không tính khoảng trắng) trong đoạn thô `[start, end)`. */
-function spanConfidence(line: PreparedLine, start: number, end: number): number {
+export function spanConfidence(line: PreparedLine, start: number, end: number): number {
   let sum = 0;
   let count = 0;
   for (let i = Math.max(0, start); i < Math.min(end, line.charConfidence.length); i += 1) {

@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useState, type ReactNode } from 'react';
 import { Image } from 'expo-image';
 import { useForm } from 'react-hook-form';

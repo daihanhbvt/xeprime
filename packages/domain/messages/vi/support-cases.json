@@ -69,6 +69,42 @@
     "resolutionPlaceholder": "Kết luận…",
     "resolutionRequired": "Nhập kết luận (tối thiểu 5 ký tự).",
     "resolveSubmit": "Kết luận",
-    "resolveSuccess": "Đã kết luận yêu cầu."
+    "resolveSuccess": "Đã kết luận yêu cầu.",
+    "verdict": {
+      "title": "Kết luận chuyến",
+      "hint": "Gọi chủ xe và khách để xác minh, rồi chọn điều đã xảy ra. Đơn thuê đổi trạng thái theo kết luận và tiền giữ chỗ tự chốt theo luật thường.",
+      "optionalHint": "Tranh chấp trước giờ nhận xe: nếu chuyến không diễn ra như hẹn, khép chuyến bằng một kết luận bên dưới. Hai bên đã thoả thuận để chuyến đi tiếp thì kết luận case như thường.",
+      "noteLabel": "Đã xác minh thế nào",
+      "notePlaceholder": "Ví dụ: đã gọi chủ xe và khách lúc 10:15, xe giao lúc 9:00",
+      "noteRequired": "Ghi lại cách đã xác minh (tối thiểu 5 ký tự).",
+      "audience": "Câu này vào kết luận của case, chủ xe đọc được.",
+      "success": "Đã kết luận chuyến.",
+      "action": {
+        "handed_over": "Xe đã giao",
+        "customer_no_show": "Khách không đến",
+        "host_not_delivered": "Chủ xe không giao được xe",
+        "returned": "Xe đã trả",
+        "platform_cancelled": "Huỷ, không tính lỗi bên nào"
+      },
+      "summary": {
+        "handed_over": "Lập biên bản giao xe theo giờ nhận trên đơn. Đơn chuyển sang Đang thuê, thuế và bảo hiểm bắt đầu như khi chủ xe xác nhận.",
+        "customer_no_show": "Đơn chuyển sang Khách không đến, lịch xe được nhả. Tiền giữ chỗ chốt như huỷ muộn: chủ xe nhận phần cọc, bảo hiểm hoàn khách.",
+        "host_not_delivered": "Đơn bị huỷ, lịch xe được nhả, khách được hoàn 100% tiền giữ chỗ. Lượt huỷ tính cho chủ xe.",
+        "returned": "Lập biên bản trả xe theo giờ trả trên đơn. Đơn hoàn thành và tiền giữ chỗ được quyết toán.",
+        "platform_cancelled": "Đơn bị huỷ, lịch xe được nhả, khách được hoàn 100% tiền giữ chỗ. Lượt huỷ không tính cho chủ xe."
+      },
+      "money": {
+        "loading": "Đang tính tiền giữ chỗ...",
+        "loadError": "Chưa tải được số tiền, tiền vẫn chốt theo luật thường khi kết luận.",
+        "later": "Kết luận này chưa chốt tiền: tiền giữ chỗ chốt khi chuyến kết thúc.",
+        "noHold": "Đơn không có tiền giữ chỗ nào chờ chốt.",
+        "customer": "Hoàn khách {amount}",
+        "owner": "chủ xe nhận {amount}",
+        "platform": "XePrime giữ {amount}",
+        "insurer": "trả hãng bảo hiểm {amount}",
+        "tax": "thuế {amount}",
+        "deferred": "Đơn còn tranh chấp khác đang mở nên tiền chờ người trực chốt tay ở màn Tài chính."
+      }
+    }
   }
 }

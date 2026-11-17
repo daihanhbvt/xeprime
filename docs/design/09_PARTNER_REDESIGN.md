@@ -135,7 +135,7 @@ App Partner (mobile) vẫn có `OwnerTripsScreen` đọc `GET /trips?role=host` 
 | --- | --- |
 | Icon bánh răng | **ĐÃ BỎ (09/11/2026, người dùng chốt).** Trước đó mở Tài khoản & bảo mật (02/11); nay lối đó là dòng đầu của menu hồ sơ. Header phải còn: tin nhắn · thông báo · vạch ngăn · ảnh đại diện |
 | Khối hồ sơ | **09/11/2026: CHỈ ảnh đại diện tròn 40px + chấm trực tuyến** (bỏ tên người, dòng "Gian hàng · Vai", mũi tên — chúng đã nằm ở thẻ đầu menu). **Rê chuột là mở menu**; bấm / Enter / Space / ↓ cũng mở (không bật-tắt), Esc đóng. Tên truy cập của nút vẫn mang tên người · "Gian hàng · Vai" (không email). Thẻ người dùng trong drawer mobile giữ bấm-để-mở |
-| Menu hồ sơ | **06/11/2026 — design `24051:85101`** (`PartnerAccountMenu`, header + drawer mobile; khung chung với menu site khách ở `components/account-menu/AccountMenuParts`). Hai biến thể: **gian hàng tuyến gói** — thẻ nền vàng: logo + **dấu tích xanh** (MỌI gian hàng có, tài khoản cá nhân không — dấu nhận diện, KHÔNG phải kết quả xác minh pháp nhân), tên người · vai, dòng "Gian hàng — tên cửa hàng"; dòng "Quản lý gian hàng" (`/shop`, chỉ khi `useShopSettingsAccess`). **Cá nhân (tuyến hoa hồng)** — thẻ xám: ảnh · tên · vai; dòng "Quản lý cho thuê" = Hồ sơ chủ xe (`/account`, chỉ CHỦ), và "Tài khoản & bảo mật" trỏ `/account?section=login`. Bấm thẻ = Tài khoản & bảo mật. Thành viên của chủ xe cá nhân / tài khoản chưa có gói: chỉ "Tài khoản & bảo mật". Dòng **"Giao diện ☀|☾" dựng sẵn nhưng TẮT** (`PARTNER_THEME_SWITCH_ENABLED`) cho tới khi làm dark mode site partner. Chân: Ngôn ngữ VI|EN · Đăng xuất. **Nhãn tuyến/gói** (`AccountTrackBadge`) của menu cũ **đã bỏ** (người dùng chốt) — gói xem ở Thông tin cửa hàng / Hồ sơ chủ xe › Gói dịch vụ; dòng **"Nâng cấp gian hàng →"** (vàng, icon huy chương — 09/11) chỉ cho CHỦ xe tuyến hoa hồng, trỏ vào phễu nâng cấp có sẵn ở Hồ sơ chủ xe › Gói dịch vụ (`/account?section=plan`); đứng trong nhóm có vạch cùng dòng Giao diện. Site quản trị giữ `useAccountMenuItems` (danh tính · Bảo mật · Ngôn ngữ · Đăng xuất) |
+| Menu hồ sơ | **06/11/2026 — design `24051:85101`** (`PartnerAccountMenu`, header + drawer mobile; khung chung với menu site khách ở `components/account-menu/AccountMenuParts`). Hai biến thể: **gian hàng tuyến gói** — thẻ nền vàng: logo + **dấu tích xanh** (MỌI gian hàng có, tài khoản cá nhân không — dấu nhận diện, KHÔNG phải kết quả xác minh pháp nhân), tên người · vai, dòng "Gian hàng — tên cửa hàng"; dòng "Quản lý gian hàng" (`/shop`, chỉ khi `useShopSettingsAccess`). **Cá nhân (tuyến hoa hồng)** — thẻ xám: ảnh · tên · vai; dòng "Quản lý cho thuê" = Hồ sơ chủ xe (`/account`, chỉ CHỦ), và "Tài khoản & bảo mật" trỏ `/account` (17/11: trang không còn `?section=`). Bấm thẻ = Tài khoản & bảo mật. Thành viên của chủ xe cá nhân / tài khoản chưa có gói: chỉ "Tài khoản & bảo mật". Dòng **"Giao diện ☀|☾" dựng sẵn nhưng TẮT** (`PARTNER_THEME_SWITCH_ENABLED`) cho tới khi làm dark mode site partner. Chân: Ngôn ngữ VI|EN · Đăng xuất. **Nhãn tuyến/gói** (`AccountTrackBadge`) của menu cũ **đã bỏ** (người dùng chốt) — gói xem ở Thông tin cửa hàng / Hồ sơ chủ xe › Gói dịch vụ; dòng **"Nâng cấp gian hàng →"** (vàng, icon huy chương — 09/11) chỉ cho CHỦ xe tuyến hoa hồng, trỏ vào phễu nâng cấp có sẵn ở Hồ sơ chủ xe › Gói dịch vụ (`/account?section=plan`); đứng trong nhóm có vạch cùng dòng Giao diện. Site quản trị giữ `useAccountMenuItems` (danh tính · Bảo mật · Ngôn ngữ · Đăng xuất) |
 | Số đếm trên menu | **Chỉ số "cần xử lý"** — việc ĐẾN HẠN, không phải thống kê (chốt lại 04/11, thay bản 02/11): **05/11 — "Đơn thuê xe" gộp mang MỘT số = chờ duyệt + lượt giao/trả đến hạn (`RENTALS_WORK`), đỏ khi có cái gấp; hai mô tả dưới đây (Yêu cầu / Quản lý đơn) nay là hai thành phần của số đó.** **Yêu cầu đặt xe** = chờ duyệt, đỏ khi có yêu cầu sắp hết hạn trả lời (`GET /dashboard/requests`, `pendingUrgent`) · **Quản lý đơn thuê xe** = lượt giao + trả hẹn tới hết hôm nay, gồm cả lượt quá giờ, mỗi đơn một lần (`pickupsDue + returnsDue` của `GET /dashboard/today`), đỏ khi có lượt quá giờ — KHÔNG còn đếm mọi đơn chờ giao / đang thuê · **Lịch thuê xe** KHÔNG mang số (trùng với Đơn ⇒ khối "Vận hành" đếm đôi) — ở cả hai tuyến từ 06/11, khi tuyến hoa hồng dùng chung màn Đơn · **Danh sách xe** = số XE có ít nhất một việc chặn: giấy tờ quá hạn, quá hạn bảo dưỡng, bị trả về/từ chối/ẩn khi đăng chợ, thiếu KM trả (chốt 03/11; `VEHICLE_ALERT_NEEDS_ACTION_KINDS`, nguồn `GET /vehicles/needs-action-count` — cùng phép tính với chip trên thẻ xe). Tài xế, Bảo dưỡng **chưa làm** — cần định nghĩa "cần xử lý" trước. Không đếm tổng xe/tài xế |
 | Số trên mục cấp 1 | Khi dropdown ĐÓNG, tổng số "cần xử lý" của khối hiện cạnh nhãn khối (khuôn `_Badge` của design) — để yêu cầu đang chờ không bị khuất. Màu CẢNH BÁO thay xám của design (04/11, người dùng chốt): cam = chờ xử lý, đỏ = có mục trễ / sắp trễ; tên truy cập được nói thêm "có việc gấp" để màu không là tín hiệu duy nhất. Áp chung cho huy hiệu sidebar/drawer/tab bar (`NavBadge`) |
 | Breadcrumb | Dải dưới header (biến thể Details) chỉ ở **trang con** của một mục (`/vehicles/:id`…) và ở **trang của mục ẩn**: biểu tượng khối › mục menu › `<h1>` của trang |
@@ -167,6 +167,7 @@ Mỗi màn: route · node design · trạng thái · tính năng phải có mặ
 | Chính sách thuê | `/shop/policies` (`?type=motorbike`; `/shop/payment-settings` chuyển hướng tới `#deposit-collection`) | `23874:63907` | **Xong** 06/11/2026 | Xem §3.12 (link "Gói & hạn mức" của P3 trỏ `/shop?section=plan` — đã đúng chỗ) |
 | Thông tin cửa hàng | `/shop` (+ thanh toán trong khung `/shop/payment/:id`, `/shop/payment/checkout/:id`) | section `23999:111044` (9 frame) | **Xong** 06/11/2026 | Xem §3.13 — kèm hoá đơn gộp (ADR 0083) và giới thiệu có định dạng |
 | Nhân viên & Phân quyền | `/members` (+ `/members/roles`; cả phiên hỗ trợ) | section `24035:71005` (3 frame) | **Xong** 09/11/2026 | Xem §3.14 — ADR 0086 |
+| Tài khoản & bảo mật | `/account` (mọi tài khoản partner; `/security` chuyển tiếp) | section `24131:71661` (5 frame) | **Xong** 17/11/2026 | Xem §3.15 |
 
 ### 3.1 Yêu cầu đặt xe — kiểm kê và quyết định (02/11/2026)
 
@@ -424,15 +425,22 @@ Design: Users List `23777:53057` · Details Overview `23777:54975` · History `2
 
 Code: `features/vehicles/components/VehiclesListView` — MỘT màn cho hai tuyến (`scope="shop"` qua
 `ManageVehiclesPage`, `scope="owner"` qua `AccountVehiclesView`; cả hai là vỏ mỏng để route và phiên
-hỗ trợ giữ nguyên import). Thẻ: `VehicleManagementCard` (lưới) · `VehicleWideCard` (`stacked` = ít
-xe, `row` = danh sách) · mảnh chung `VehicleCardParts` · hàng mobile `VehicleListRow`.
+hỗ trợ giữ nguyên import). Thẻ: `VehicleWideCard` (`row` = một xe một hàng, `stacked` = hai thẻ
+một hàng) · mảnh chung `VehicleCardParts` · hàng mobile `VehicleListRow`.
+
+**Đổi bố cục 16/11/2026 (người dùng chốt design mới):** dưới 4 xe (`VEHICLE_LIST_PAIRS_FROM`) = một
+xe một hàng `23655:36959`; từ 4 xe = hai thẻ một hàng `23655:38521`. Lưới thẻ gọn `23649:29724`
+(`VehicleManagementCard`) và nút chuyển Lưới/Danh sách (`?view=`) **gỡ hẳn** — link cũ mang `?view=`
+vẫn mở, tham số bị bỏ qua. Nội dung thẻ không đổi: mọi thứ thẻ lưới có (dòng loại xe · dịch vụ, chip
+việc cần làm, lý do trả về, chip tạm ẩn, bảy con số, ba nút) đều có ở thẻ ngang. Đếm tổng như cũ
+(dòng 3). Dòng 3, 4 dưới đây là quyết định 03/11, đã bị thay bởi đoạn này.
 
 | # | Hạng mục | Dấu | Quyết định |
 | --- | --- | --- | --- |
 | 1 | Tiêu đề + dòng phụ · nút "Thêm xe mới" | ✅ | Theo design. Gian hàng → wizard `/vehicles/new`; chủ xe tuyến hoa hồng → luồng đăng xe `?from=account` (vắng trong phiên hỗ trợ — luồng tạo-và-gửi-duyệt không mở cho phiên, ADR 0050 §13). Màn rỗng giữ nút "Thêm xe đầu tiên" |
 | 2 | Bộ lọc: tìm · chi nhánh · loại xe · dịch vụ · vận hành · trạng thái · "Sắp xếp: …" | ✅ | Ô cao 40 (hình thái mặc định `FilterBar`, như màn Đơn thuê). Tuyến hoa hồng: tìm + dịch vụ + vận hành (chốt 03/11). Giữ chip "đang lọc" gỡ được. ≤1500px: ô thứ 5 vào nút "Bộ lọc" (`inlineFieldLimit`) để không tràn dòng |
-| 3 | Hai kiểu ít / nhiều xe | 🆕 | **Dưới 3 xe** (`VEHICLE_LIST_FEW_THRESHOLD`) = thẻ ngang to 2 thẻ/hàng. Đếm TỔNG xe của chi nhánh đang chọn (`fleet-summary`), KHÔNG theo ô lọc khác — gõ tìm kiếm không làm bố cục nhảy (chốt 03/11). Chưa có tổng ⇒ khung chờ; đếm hỏng ⇒ suy từ trang khi không lọc, đang lọc thì giữ bố cục đông |
-| 4 | Frame hàng ngang `23655:36959` | 🆕 | Chế độ **"Danh sách"** cho đội xe từ 3 xe: nút chuyển Lưới/Danh sách cạnh ô sắp xếp, `?view=list` trên URL, đổi kiểu không về trang 1 (chốt 03/11). Thẻ ít xe không có nút chuyển |
+| 3 | Hai kiểu ít / nhiều xe | 🆕 | ~~**Dưới 3 xe** = thẻ ngang to 2 thẻ/hàng~~ (thay 16/11: dưới 4 xe một hàng một xe, từ 4 xe 2 thẻ/hàng — đoạn trên). Đếm TỔNG xe của chi nhánh đang chọn (`fleet-summary`), KHÔNG theo ô lọc khác — gõ tìm kiếm không làm bố cục nhảy (chốt 03/11). Chưa có tổng ⇒ khung chờ; đếm hỏng ⇒ suy từ trang khi không lọc, đang lọc thì giữ bố cục đông |
+| 4 | Frame hàng ngang `23655:36959` | 🆕 | ~~Chế độ "Danh sách" qua nút chuyển Lưới/Danh sách, `?view=list`~~ (gỡ 16/11 — frame này nay là bố cục cố định của đội xe dưới 4 xe) |
 | 5 | Nhãn kiểm duyệt có biểu tượng ("Đã kiểm duyệt"), viên vận hành nhãn dài ("Sẵn sàng vận hành") ở thẻ ít xe; viên gọn ("Sẵn sàng" · "Chờ duyệt") phủ ảnh ở lưới, dưới danh tính ở danh sách | ✅ | Nhãn riêng của thẻ (`Vehicles.list.review*`, `operation.*`) — nhãn `Domain` dùng chung (admin, mobile) giữ nguyên |
 | 6 | Chip việc cần làm · lý do bị trả về · chip "Chủ xe tạm ẩn" | 🟡 | **Giữ** (chốt 03/11) — chỉ hiện khi có; nằm trên hàng trạng thái |
 | 7 | Dòng "Ô tô · Tự lái · Có tài xế" ở thẻ lưới | 🟡 | **Giữ** (chốt 03/11) — design lưới chỉ vẽ "mã • biển" |
@@ -442,10 +450,17 @@ xe, `row` = danh sách) · mảnh chung `VehicleCardParts` · hàng mobile `Vehi
 | 11 | Huy hiệu "8" trên menu Danh sách xe | 🆕 | Số xe có việc chặn — §2.3 |
 | 12 | Hai thẻ Cẩm nang / Chứng từ của tuyến hoa hồng | 🟡 | **Bỏ** (chốt 03/11) — đã là dòng của khối Trợ giúp |
 
+**Khổ điện thoại v2 (app Partner + web ≤640, Figma MB `24158:103762` · lọc `24158:105500`, người dùng
+chốt 16/11/2026):** thẻ gọn ảnh 63×40 · nút mở/thu số liệu (thu gọn = Tổng doanh thu · Lợi nhuận;
+không có `finance.view` ⇒ hai mức giá); GIỮ mã xe, "-N%", "tạm ẩn", việc cần làm, lý do trả về và
+hàng nút Lịch · Chỉnh sửa · Chi tiết ở chân thẻ. BỎ dải chỉ số đội xe, chip vận hành và dòng "Hiển
+thị x-y"; bỏ nút tài liệu ở đầu trang của design. Tấm Lọc dạng lưới hai cột (`sheetLayout="grid"` web,
+`filterLayout="grid"` app) có ô sắp xếp bên trong, chân "Xoá bộ lọc" · "Lưu bộ lọc".
+
 Tự dựng (design không vẽ): ô trắng bo 16 cho rỗng / không kết quả / lỗi; khung chờ theo bố cục; dòng
 "Hiển thị x-y của N xe" + phân trang dưới danh sách; thẻ trong một hàng cao bằng nhau, hàng nút dồn
 đáy; số liệu tải hỏng / thiếu `finance.view` (cột tiền vắng, không số 0 giả); KM chưa có = "—", gọi
-hỏng = "Không rõ"; lỗ tô đỏ; 1366 lưới 4 cột (sàn thẻ 270px); thẻ ngang tự xuống hàng theo bề rộng
+hỏng = "Không rõ"; lỗ tô đỏ; thẻ đôi dưới 560px bề rộng thì một thẻ một hàng; thẻ ngang tự xuống hàng theo bề rộng
 thật (`@container`); điện thoại giữ dải chỉ số + chip một chạm + hàng ngang, nút cùng kiểu desktop.
 
 **Màn dùng chung dữ liệu xe — tự cập nhật sau thao tác ghi** (mọi key dưới nhánh `vehicles` của
@@ -575,6 +590,20 @@ hỗ trợ, thiếu `vehicles.update`) · dịch vụ đang tắt · xe máy · 
   trong chưa chỉnh từng chi tiết theo design (thẻ nguồn xe dạng ô có icon, bảng giấy tờ). Riêng thẻ
   "Lịch bảo dưỡng sắp tới" + hộp lịch sử bảo dưỡng đã theo design (04/11, xem E20).
 
+**Khổ điện thoại v2 (app Partner + web ≤640, Figma MB `24158:108502` Chi tiết · `24231:108043` Chỉnh sửa,
+người dùng chốt 16/11/2026):**
+- Chi tiết xe: ảnh bìa trọn bề ngang 246 với ← và ⋮ phủ lên ảnh; ⋮ "Thao tác" gom Chỉnh sửa · Xem lịch
+  xe · Xoá (hai nút cuối trang cũ bỏ). Khối tóm tắt trắng (tên 18/28 + nguồn + công tắc "Trên chợ" gọn;
+  mã | biển | KM | loại xe; kiểm duyệt + viên vận hành; "Hiệu suất lũy kế" ba cột) và dải tab gạch
+  chân nằm TRONG khối đó. Thẻ tab Tổng quan xếp: Việc cần làm → Giá thuê & Chính sách (ba ô giá +
+  Giao xe tận nơi) → Lịch thuê sắp tới → Tự động nhận chuyến → Thông số chính → Ảnh → Nguồn xe.
+- Chỉnh sửa xe: MỘT màn dải tab gạch chân, nhóm như web (Thông tin chung · Hình ảnh · Giấy tờ · Dịch vụ
+  & giá · Chính sách thuê · Bảo dưỡng & KM · Nguồn gốc & tài chính) - KHÔNG tách Điều kiện / Giao nhận
+  như Figma (giữ chốt 03/11). Mỗi tab vẫn là một route; `VehicleEditHeader` (←, % hoàn thiện, tab) đứng
+  đầu từng màn và đổi tab bằng `replace`, qua `useLeaveGuard` khi form còn dở. Gốc `/edit` chuyển
+  hướng sang "Thông tin chung" (hub cũ gỡ khỏi cổng quản lý). Owner Lite giữ hub riêng.
+- Web ≤600: tab gạch chân lên đầu, thẻ tóm tắt dưới, nút Hoàn tác · Lưu bám đáy.
+
 ### 3.7 Quản lý tài xế — kiểm kê và quyết định (04/11/2026)
 
 Code: `features/drivers/components/DriversPage` (dùng chung với phiên hỗ trợ, ADR 0050) · thẻ
@@ -604,6 +633,11 @@ Tự dựng (design không vẽ): khung chờ 4 thẻ; rỗng / không kết qu�
 trắng bo 16; "Hiển thị x-y của N tài xế" + phân trang; không quyền xem ⇒ `PermissionState`; khối bằng
 lái "Đang đọc ảnh"; lưới 4 cột sàn 300px (1280 ⇒ 3 cột, điện thoại 1 cột); số đếm hỏng ⇒ dải ẩn,
 danh sách vẫn chạy. Huy hiệu menu "Quản lý tài xế" vẫn **chưa làm** (§2.3).
+
+**Khổ điện thoại v2 (16/11/2026, không có Figma riêng - theo khuôn Đơn thuê / Danh sách xe):** thanh trang
+có nút "+" Mời tài xế; dải trạng thái thành `ChipTabs` kèm số đếm; tấm Lọc dạng lưới; thẻ đệm 16, viên
+hình thức/trạng thái dạng nhãn, hàng nút compact tràn ngang (nút cuối là nút chính). Chi tiết tài xế:
+← + tên + SĐT, dải tab gạch chân.
 
 ### 3.8 Danh sách bảo dưỡng — kiểm kê và quyết định (04/11/2026)
 
@@ -879,6 +913,32 @@ chỉ xem khi gói hết hạn (không menu ghi) · người bị giới hạn c
 phần mình · phiên hỗ trợ (chỉ xem; ma trận mở ở `/admin/tenant-support/:id/members/roles`) · ma trận cuộn
 ngang trong khung khi hẹp. Frame danh sách tô menu "Doanh thu" là vẽ nhầm — khối đúng là Cấu hình.
 
+### 3.15 Tài khoản & bảo mật — kiểm kê và quyết định (17/11/2026)
+
+Design: trang `24131:71662` · đổi SĐT `24131:71845` → mã `24131:72204` · đổi email `24131:71961` → mã `24131:72077`.
+Code: `PartnerAccountPage` (khung hai cột) · `AccountProfileCard` · `LoginMethods` · `AccountPasswordForm`
+(logic chung `useChangePasswordForm` với trang bảo mật site khách/admin) · `ContactVerifyModal` (dùng CHUNG mọi
+nơi: trang tài khoản hai site, `AccountPhoneGate`, wizard đăng xe nhanh) · `AccountDeletionDialog` (chung với site khách).
+
+| # | Mục | Đánh dấu | Quyết định |
+| --- | --- | --- | --- |
+| A1 | Mục lục trái + `?section=profile|login|password|delete` | 🟡 | **Bỏ cả mục lục lẫn deep-link** (người dùng chốt) — một URL `/account`; link cũ có `?section=` vẫn mở trang. Bí danh `address|vat-invoice|tax|plan` vẫn chuyển sang `/shop` (`PartnerAccountRoute`). Link nội bộ (`/security`, Chủ gian hàng › Quản lý tài khoản, thiếu SĐT ở Đăng ký chủ xe) trỏ thẳng `/account` |
+| A2 | Thẻ hồ sơ: ảnh + máy ảnh, tên, viên vai, "gian hàng · gói", ô họ tên, khung ghi chú, Lưu | ✅ | Theo design. Vai = nhãn danh tính chung ("Chủ gian hàng", không "Admin gian hàng" — như M11). Chủ xe hoa hồng: không dòng gian hàng, ghi chú "khách thấy ảnh + họ tên" + "Xem hồ sơ chủ xe" (`/shop`). Định dạng ảnh ghi đúng luật thật (JPG, PNG, WEBP · 10MB) |
+| A3 | Gỡ ảnh đại diện · nút "Huỷ" khi đang sửa | 🟡 | Giữ: nút × nhỏ góc trên ảnh (cùng dáng gỡ logo ở Thông tin cửa hàng); "Huỷ" chỉ hiện khi có thay đổi, đứng cạnh "Lưu thay đổi" |
+| A4 | Hai thẻ SĐT/email + viên Đã/Chưa xác minh + "Thay đổi" | ✅ | Chưa có giá trị ⇒ "Thêm" |
+| A5 | Nút "Xác minh" (vàng) cạnh định danh CHƯA xác minh | 🆕→✅ | Gửi mã thẳng tới định danh hiện có (server cho sẵn, không sửa API), vào bước mã; gửi lỗi ⇒ đứng ở bước nhập, điền sẵn |
+| A6 | Hộp đổi SĐT/email: "Số đang dùng", khung bảo mật, thanh 2 bước, 6 ô mã, "Gửi lại sau 00:56", "Sửa…", câu hết hiệu lực | ✅ | Áp cho MỌI nơi dùng hộp (người dùng chốt). Che số kiểu design (`maskPhoneTail` "***688", `maskEmailHead`). Lệch có chủ đích: bước mã của SĐT ghi "Sửa số điện thoại" (design vẽ nhầm "Sửa email"); câu "Số cũ … hết hiệu lực" chỉ ở lượt ĐỔI |
+| A7 | Luật mật khẩu "Ít nhất 1 ký tự đặc biệt" | ⚠️ | **Giữ luật thật của server** (8 ký tự · chữ cái · chữ số · khác mật khẩu cũ — người dùng chốt); nhãn gọn theo design |
+| A8 | Thanh độ mạnh 4 nấc + "Khá mạnh" | 🆕→✅ | Chỉ hiển thị (`passwordStrength`): số luật đạt + 1 nấc khi dài ≥ 12 hoặc có ký tự đặc biệt; còn luật chưa đạt thì không lên nấc 4 |
+| A9 | "Quên mật khẩu" | 🆕→✅ | Dẫn `/forgot-password` của site partner. Vắng với tài khoản chưa có mật khẩu và tài khoản nhân viên do gian hàng cấp (ADR 0087) |
+| A10 | Đặt mật khẩu lần đầu (tài khoản Google/Facebook) | 🟡 | Giữ: thông báo + hai ô, nút "Đặt mật khẩu" |
+| A11 | Xoá tài khoản (khối nhúng cũ) | 🟡 | Thành dòng đỏ "Yêu cầu xóa tài khoản" dưới thẻ hồ sơ → hộp `AccountDeletionDialog` (điều kiện · gửi · trạng thái · rút yêu cầu); nút "Rút tiền" trong hộp trỏ ví của site đang đứng |
+
+Trạng thái tự dựng: đang tải (khung giữ chỗ hai cột) · lỗi + thử lại · dưới 1024px một cột, ba ô mật khẩu xếp dọc ·
+điện thoại: hai thẻ đăng nhập xếp chồng, nút chia đôi. Icon mới của bộ `LineIcon`: `camera` `edit` `delete` `mail`;
+nền vàng đầu thẻ `public/partner/account-profile-cover.webp`. Gỡ: `AccountSecuritySections`, `AccountProfileForm`,
+`DeleteAccountView`, `AccountDeletionImpact`, chế độ `embedded` của `ChangePasswordForm`.
+
 ## 4. Node Figma đã dùng
 
 Ghi lại để phiên sau khỏi tốn lượt đọc lại.
@@ -902,7 +962,7 @@ Ghi lại để phiên sau khỏi tốn lượt đọc lại.
 | `23746:50954` | Nút chuyển (`_switch`) Active yes/no |
 | `23672:25621` | Section Chi tiết xe: Tổng quan `23670:3440` (thẻ xe `23797:53034`, tab `23672:4701`, thẻ "Nhóm thông tin" `23670:3504`, cột phải `23672:25630`) · Thông số `23672:3988` · Tài chính (trống) `23672:5931` · Tiện ích `23672:4755` · Bảo dưỡng & KM `23672:6379` |
 | `23731:37932` | Section Chỉnh sửa xe: Thông tin chung `23683:17598` · Ảnh `23707:25596` · Giấy tờ `23713:7609` · Tự lái `23713:21048` · Có tài xế `23716:27912` · Dài hạn `23716:29056` · Điều kiện `23721:30416` · Giao nhận `23721:31485` · Bảo dưỡng `23724:10374` (hộp thêm KM `23731:39262`, thêm lịch `23724:29202`, lịch sử `23724:32002`) · Nguồn gốc & tài chính `23730:32702` |
-| `23672:25620` | Section Danh sách xe: ít xe `23655:38521` (thẻ `23655:38951`) · lưới `23649:29724` (thẻ `23655:36682`, page header + hàng lọc `23649:30744`) · danh sách `23655:36959` (hàng `23655:38389`) |
+| `23672:25620` | Section Danh sách xe: từ 4 xe `23655:38521` (thẻ `23655:38951`) · dưới 4 xe `23655:36959` (hàng `23655:38389`) · lưới `23649:29724` (thẻ `23655:36682`) — KHÔNG còn dùng từ 16/11, chỉ còn đọc page header + hàng lọc `23649:30744` |
 | `23737:45750` | Section Quản lý tài xế: danh sách `23737:41945` (thẻ `23737:43826`, dải số `23737:44163`; menu "…" đang mở vẽ ngay trong frame này) · hộp Mời tài xế mới `23737:45751` |
 | `23733:41941` | Section Danh sách bảo dưỡng: frame `23754:28662`, hàng xe `23754:29574` |
 | `I23661:27390;23649:28221` | Icon xe của dòng "Danh sách xe" — xuất qua instance cha trả nhầm icon tài liệu |
@@ -912,6 +972,7 @@ Ghi lại để phiên sau khỏi tốn lượt đọc lại.
 | `23874:63907` | Chính sách thuê: page header `23874:64498` (tab loại xe) · Thanh toán & hóa đơn `23874:68740` · Thủ tục & điều khoản `23979:96566` · Giao nhận xe + thời gian chết `24047:77366` · Ưu đãi dài hạn `24047:77588` · cột phải `24051:80740` |
 | `24051:85101` | Menu hồ sơ: biến thể gian hàng `24051:85100` · cá nhân `24051:85102` (tên biến thể trong Figma ĐẢO: "Personal" là gian hàng, "Pro" là cá nhân — đọc theo chữ). Nền vàng thẻ gian hàng → `public/partner/account-card-bg.webp`, dấu tích → `public/partner/verified-shop.svg`. Dòng "Nâng cấp gian hàng" `24051:85746` (icon Award 2 → `public/icons/menu/award.svg`, `LineIcon` `award`) |
 | `23999:111044` | Section Thông tin cửa hàng: thường `23999:111274` (tiêu đề `23999:111277`, ba thẻ `23999:111298`, chi nhánh `23999:111349`, gói `23999:111391`, hoá đơn `23999:111432`, cột hiển thị `23999:111472`) · doanh nghiệp `23999:111045` · nhân viên `23999:111476` · hộp mua gói `24024:26537` (trong `23999:115279`) · hộp địa chỉ `23999:111878` · hộp thuế `23999:112100` · hộp chi nhánh `23999:112321` · hộp hiển thị `24047:78679` · trang thanh toán `24051:79507`. Huy hiệu bậc + nền doanh nghiệp đã tải về `public/shops/plans/` |
+| `24131:71661` | Section Tài khoản & bảo mật: trang `24131:71662` (cột trái `24131:71667`, thẻ hồ sơ `24131:71668`, nền `24131:71671`, cột phải `24131:71695`, page header `24131:71665`) · đổi SĐT `24131:71753` (hộp `24131:71845`) → mã `24131:72112` (hộp `24131:72204`) · đổi email `24131:71869` (hộp `24131:71961`) → mã `24131:71985` (hộp `24131:72077`) |
 | `24035:71005` | Section Nhân viên & Phân quyền: danh sách `24035:69458` (menu "…" `24035:69512`) · hộp Mời thành viên `24035:69694` (trong frame `24035:69639`) · Vai trò & quyền `24035:69513` |
 | `23874:63125` | Section Lịch sử giao dịch / Công nợ: danh sách `23857:58932` · chi tiết công nợ đơn `23872:60137` (hộp `23872:60767`) · thu tiền đơn `23872:61964` (hộp `23872:62755`) |
 

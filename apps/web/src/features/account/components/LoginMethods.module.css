@@ -1,125 +1,102 @@
 /*
- * "Phương thức đăng nhập" — danh sách dòng cài đặt, nằm trong một `SectionCard`.
- *
- * Mỗi dòng: ô biểu tượng · nhãn + giá trị · tình trạng · nút. Desktop là một hàng; màn hẹp thì
- * tình trạng và nút xuống dòng dưới giá trị, nút vẫn bám phải để ngón cái với tới.
+ * "Thông tin đăng nhập" - hai thẻ cạnh nhau (design `24131:71698`): viền xám nhạt, bo 16, đệm 20,
+ * cách 20. Hẹp quá chỗ cho hai thẻ thì xếp chồng; trên điện thoại hai nút xuống dòng dưới giá trị.
  */
-.rows {
-  display: flex;
+.cards {
+  display: grid;
   min-width: 0;
-  flex-direction: column;
+  gap: var(--xp-space-20);
   margin: 0;
   padding: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
   list-style: none;
 }
 
-.row {
-  display: grid;
+.card {
+  display: flex;
   min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-20);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+.head {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
   align-items: center;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  padding: var(--xp-space-md) 0;
-  border-bottom: 1px solid var(--xp-color-border-subtle);
-  gap: var(--xp-space-sm) var(--xp-space-md);
+  gap: var(--xp-space-12);
 }
 
-.row:first-child {
-  padding-top: 0;
-}
-
-.row:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
-}
-
+/* Ô biểu tượng 48: nền vàng nhạt, icon 24 vàng. */
 .icon {
-  display: inline-grid;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-layout);
-  color: var(--xp-color-text-secondary);
-  font-size: 18px;
-  place-items: center;
+  display: inline-flex;
+  flex: none;
+  padding: var(--xp-space-12);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary);
+  font-size: 24px;
+  line-height: 0;
 }
 
 .body {
   display: flex;
   min-width: 0;
+  flex: 1 1 160px;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--xp-space-2);
+}
+
+.labelRow {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
 }
 
 .label {
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
 }
 
-/* Giá trị là thứ người dùng quét mắt tìm — nó đậm hơn nhãn. */
-.value {
-  min-width: 0;
-  color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-semibold);
+.value,
+.empty {
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
   overflow-wrap: anywhere;
 }
 
+.value {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
 .empty {
-  color: var(--xp-color-text-tertiary);
-  font-style: italic;
+  color: var(--xp-color-text-placeholder);
 }
 
-/*
- * Viên trạng thái: màu nằm ở `background` + chữ, không chỉ ở biểu tượng — `color` của biểu tượng
- * AntD kế thừa từ hàng, chỉ cần một quy tắc khác trúng cha là dấu tích lặng lẽ đen trở lại.
- */
-.status {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px var(--xp-space-sm);
-  border-radius: var(--xp-border-radius-pill);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-medium);
-  gap: var(--xp-space-xs);
-  white-space: nowrap;
+.actions {
+  display: flex;
+  flex: none;
+  gap: var(--xp-space-12);
 }
 
-.verified {
-  background: var(--xp-color-success-bg);
-  color: var(--xp-color-success);
-}
-
-.unverified {
-  background: var(--xp-color-warning-bg);
-  color: var(--xp-color-warning);
-}
-
-.action {
-  justify-self: end;
+.description {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
 }
 
 @media (max-width: 640px) {
-  .row {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-areas:
-      'icon body action'
-      'icon status status';
-  }
-
-  .icon {
-    grid-area: icon;
-    align-self: start;
-  }
-
-  .body {
-    grid-area: body;
-  }
-
-  .status {
-    grid-area: status;
-    justify-self: start;
-  }
-
-  .action {
-    grid-area: action;
+  .actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }

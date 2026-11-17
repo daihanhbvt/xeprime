@@ -21,11 +21,13 @@ export function vehicleSchedulePath(
      * `basePath: paths.calendar` bên web. Bỏ trống = lịch cổng quản lý.
      */
     customerScope?: boolean;
+    branchId?: string | undefined;
   },
 ): Href {
   const filters = {
     q: vehicle.plateNumber || vehicle.name,
     ...(options?.back ? { back: true } : {}),
+    ...(options?.branchId ? { branchId: options.branchId } : {}),
   };
   return options?.customerScope
     ? ROUTES.account.calendar(filters)

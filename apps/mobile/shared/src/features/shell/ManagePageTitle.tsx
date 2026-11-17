@@ -41,8 +41,9 @@ export function ManagePageTitle({
   const colors = useColors();
   return (
     <XStack ai="center" gap={space.sm} px={layout.screenX} pt={space.md} pb={space.xs}>
-      <YStack f={1} gap={1}>
-        <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold} numberOfLines={1}>
+      {/* Web `ManagePageHeader`: tiêu đề h2 đậm vừa, tự xuống dòng; mô tả 12 cách 4 (`--xp-space-xs`). */}
+      <YStack f={1} gap={space.xs}>
+        <Text col={colors.text} fos={fontSize.pageTitle} fow={fontWeight.semibold}>
           {title}
         </Text>
         {subtitle ? (

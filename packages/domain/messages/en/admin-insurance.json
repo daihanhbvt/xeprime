@@ -6,7 +6,8 @@
   },
   "tabs": {
     "products": "Products",
-    "certificates": "Certificates"
+    "certificates": "Certificates",
+    "remittances": "Premium statements"
   },
   "products": {
     "tableLabel": "Insurance product catalogue",
@@ -38,7 +39,9 @@
       "naming": "Display name",
       "coverage": "Coverage",
       "amounts": "Deductible & payout",
-      "operation": "Operations"
+      "operation": "Operations",
+      "premium": "Premium by car value tier",
+      "serviceFee": "Insurance collection fee"
     },
     "fields": {
       "nameVi": "Name (Vietnamese)",
@@ -55,12 +58,24 @@
       "certificateUrlTemplate": "Certificate lookup URL template",
       "displayOrder": "Display order",
       "isActive": "On",
-      "isActiveDescription": "When off, customers no longer see this option. Policies already sold are not affected."
+      "isActiveDescription": "When off, customers no longer see this option. Policies already sold are not affected.",
+      "premiumTiers": "Premium tiers",
+      "tierMaxDays": "Trip up to",
+      "tierDaysSuffix": "days",
+      "tierPercent": "% of car value",
+      "claimHotline": "Incident hotline",
+      "serviceFeeEnabled": "Charge a collection fee",
+      "serviceFeeEnabledDescription": "When on, every trip with vehicle damage insurance adds a collection fee = % of the premium. Renters see it merged into the insurance line with an ⓘ splitting the two amounts; it is refunded with the premium, and promo codes never reduce it.",
+      "serviceFeePercent": "% of the premium"
     },
     "help": {
       "amountEmpty": "Leave empty if not applicable.",
       "maxPayoutNote": "For example: “Up to the vehicle’s actual value”, “Per person, per incident”.",
-      "certificateUrlTemplate": "Starts with https:// and contains '{certCode}' - where the certificate number goes."
+      "certificateUrlTemplate": "Starts with https:// and contains '{certCode}' - where the certificate number goes.",
+      "premiumTiers": "Tiers must increase in both days and rate. Partial days round up to the next tier.",
+      "valueTierIntro": "Sold with eligible self-drive cars; each owner chooses Required or Optional for their cars. Premium = car value × the rate of the trip duration tier (VAT included), per MIC tariff for vehicle type M1.11.",
+      "claimHotline": "Shown next to the certificate for renters and owners.",
+      "serviceFeeLegal": "Do NOT turn this on in production until the lawyer has signed off (ADR 0091 clause 3). A new rate applies to quotes and approvals from the moment you save - existing bookings and reservation payments keep their locked amounts."
     },
     "validation": {
       "required": "Required.",
@@ -70,9 +85,16 @@
       "amountMin": "The amount cannot be negative.",
       "urlTemplate": "The template must start with https:// and contain '{certCode}'.",
       "displayOrder": "Order must be between {min} and {max}.",
-      "amountMax": "The amount is too large."
+      "amountMax": "The amount is too large.",
+      "tiers": "Invalid tiers: days 1-30, rate above 0 with up to 4 decimals, both increasing.",
+      "serviceFeePercent": "Rate from 0 to {max}%, up to 2 decimals.",
+      "serviceFeePercentRequired": "The rate must be above 0 when the fee is on."
     },
-    "saved": "Saved product {name}."
+    "saved": "Saved product {name}.",
+    "actions": {
+      "addTier": "Add tier",
+      "removeTier": "Remove this tier"
+    }
   },
   "certificates": {
     "tableLabel": "Insurance certificate queue",
@@ -117,6 +139,13 @@
     "emptyAll": {
       "title": "No insurance policies yet",
       "description": "Insurance policies for trips will appear here."
+    },
+    "attention": {
+      "title": "{count, plural, one {# policy needs} other {# policies need}} urgent attention",
+      "reasonOverdue": "Handed over at {at}, not issued after 2 hours",
+      "reasonOverdueNoTime": "Not issued 2 hours after handover",
+      "reasonPhotos": "MIC has not received the car photos - contact MIC",
+      "more": "and {count, plural, one {# more policy} other {# more policies}} in the queue"
     }
   },
   "drawer": {
@@ -145,7 +174,9 @@
       "idempotencyKey": "Idempotency key",
       "createdAt": "Created at",
       "cancelledAt": "Cancelled at",
-      "voidedAt": "Voided at"
+      "voidedAt": "Voided at",
+      "voidReason": "Void reason",
+      "voidPartnerReference": "Insurer reconciliation reference"
     },
     "payload": {
       "request": "Request sent to the partner",
@@ -160,19 +191,163 @@
     "footer": {
       "failed": "Failed policy: retry issuing, or void it if it cannot be issued.",
       "issued": "Certificate issued. Void it if the trip is cancelled after handover.",
-      "other": "No actions are available for this status."
+      "other": "No actions are available for this status.",
+      "remitted": "This policy is already on an insurer statement - reconcile with the insurer before cancelling it."
     },
     "retry": "Retry issuing",
     "retryQueued": "Queued for re-issue - the worker picks it up within about a minute.",
     "void": "Void",
     "voidDialog": {
-      "title": "Void insurance policy",
-      "summary": "The {amount} premium for booking {code} will be settled separately with the partner.",
       "hint": "The reason is written to the system log and the partner case file.",
       "reasonLabel": "Reason for voiding",
       "reasonPlaceholder": "e.g. Trip cancelled after handover, partner confirmed cancellation",
       "reasonRequired": "Enter a reason (at least 5 characters).",
-      "done": "Policy voided."
+      "titleCancel": "Cancel the policy and refund the customer",
+      "titleKeep": "Void a policy that is in force",
+      "summaryRefundNow": "The policy for booking {code} never took effect: cancel it and refund {amount} to the customer points wallet now.",
+      "summaryRefundLater": "The policy for booking {code} never took effect: cancel it now; {amount} is refunded to the customer points wallet once the reservation payment is settled.",
+      "summaryViaHold": "The policy for booking {code} never took effect: cancel it with no extra refund - the premium already went back to the customer through the reservation payment.",
+      "summaryNoRefund": "The policy for booking {code} never took effect: cancel it with no points wallet refund - the premium was not collected through XePrime.",
+      "summaryKeepPayable": "The policy for booking {code} is in force: voiding it does NOT refund the customer, and the {amount} premium stays on the insurer statement until the insurer confirms the cancellation.",
+      "referenceLabel": "Insurer cancellation code / reconciliation reference",
+      "referencePlaceholder": "E.g. MIC cancellation document or reconciliation record number",
+      "referenceRequired": "Enter the insurer cancellation code or reconciliation reference.",
+      "submitCancel": "Cancel and refund",
+      "doneRefunded": "Policy cancelled and {amount} refunded to the customer points wallet.",
+      "doneRefundLater": "Policy cancelled - the premium is refunded once the reservation payment is settled.",
+      "doneCancelled": "Policy cancelled.",
+      "doneKept": "Policy voided - the premium stays on the insurer statement."
+    },
+    "pricing": {
+      "title": "Insurance premium",
+      "loadError": "Could not load this policy's premium.",
+      "insuredValue": "Car value",
+      "tier": "Premium tier",
+      "tierValue": "Up to {days} days - {percent}% of car value",
+      "collected": "Collected from renter",
+      "partner": "MIC premium at issue",
+      "notIssued": "Not issued",
+      "difference": "Difference",
+      "differenceNone": "Matches",
+      "differenceOver": "Collected {amount} more",
+      "differenceUnder": "XePrime covers {amount}",
+      "serviceFee": "Collection fee (XePrime)",
+      "refunded": "Refunded to points wallet",
+      "refundedValue": "{amount} to the renter’s points wallet - {at}"
+    }
+  },
+  "remittances": {
+    "tableLabel": "Insurance premium statements",
+    "loadError": "Could not load statements.",
+    "total": "{count, plural, one {# statement} other {# statements}}",
+    "empty": {
+      "title": "No statements yet",
+      "description": "Create a statement for a finished month to reconcile and pay MIC."
+    },
+    "pending": {
+      "loading": "Loading unbilled policies…",
+      "some": "{count, plural, one {# issued policy} other {# issued policies}} not billed yet - total premium {amount}",
+      "none": "Every issued policy is already in a statement",
+      "oldest": "Oldest unbilled policy issued on {date}.",
+      "hint": "Each month: create a statement, finalize it, send it to MIC, then record the transfer."
+    },
+    "columns": {
+      "period": "Period",
+      "status": "Status",
+      "policies": "Policies",
+      "gross": "Gross premium",
+      "commission": "Agency commission",
+      "payable": "Payable",
+      "paid": "Paid",
+      "open": "Open"
+    },
+    "card": {
+      "policies": "{count, plural, one {# policy} other {# policies}}",
+      "payable": "Payable {amount}"
+    },
+    "status": {
+      "draft": "Draft",
+      "finalized": "Finalized",
+      "paid": "Paid"
+    },
+    "actions": {
+      "create": "Create statement",
+      "export": "Export CSV",
+      "finalize": "Finalize",
+      "pay": "Record transfer",
+      "delete": "Delete draft"
+    },
+    "drawer": {
+      "title": "MIC premium statement"
+    },
+    "hint": {
+      "draft": "Draft - check the numbers, then finalize. Deleting returns the policies to \"unbilled\".",
+      "finalized": "Finalized - send the CSV to MIC, transfer the money, then record it.",
+      "paid": "Paid - this statement is closed."
+    },
+    "facts": {
+      "policies": "Policies",
+      "gross": "Premium paid by renters",
+      "commission": "Agency commission ({percent}%)",
+      "payable": "Payable to MIC",
+      "partnerTotal": "Premium charged by MIC at issue",
+      "test": "Test",
+      "testCount": "{count, plural, one {# sandbox policy} other {# sandbox policies}}",
+      "paid": "Transferred",
+      "paidAt": "Transfer date",
+      "bankReference": "Bank reference",
+      "note": "Note"
+    },
+    "mismatch": "MIC premium differs from what renters paid - check each policy before finalizing.",
+    "lines": {
+      "label": "Policies in this statement",
+      "booking": "Booking",
+      "contract": "Contract no.",
+      "plate": "Plate",
+      "customer": "Renter",
+      "coverage": "Coverage",
+      "premium": "Renter premium",
+      "partnerPremium": "MIC premium",
+      "test": "TEST",
+      "empty": "No policies",
+      "total": "{count, plural, one {# policy} other {# policies}}"
+    },
+    "confirmFinalize": {
+      "title": "Finalize this statement?",
+      "body": "Once finalized, policies cannot be added or removed. Payable to MIC: {amount}."
+    },
+    "confirmDelete": {
+      "title": "Delete this draft?",
+      "body": "Its policies will return to \"unbilled\"."
+    },
+    "finalized": "Statement finalized",
+    "deleted": "Draft statement deleted",
+    "create": {
+      "title": "Create MIC premium statement",
+      "intro": "Collects every issued, unbilled policy issued before the end of the selected month.",
+      "period": "Month",
+      "commission": "Agency commission",
+      "commissionHelp": "Per the agency agreement with MIC. Leave 0 if MIC pays commission separately.",
+      "note": "Note",
+      "submit": "Create statement",
+      "done": "Statement created with {count, plural, one {# policy} other {# policies}}",
+      "validation": {
+        "required": "Required",
+        "commission": "From 0 to {max}%"
+      }
+    },
+    "pay": {
+      "title": "Record transfer - period {period}",
+      "amount": "Amount transferred",
+      "paidAt": "Transferred at",
+      "bankReference": "Bank transaction reference",
+      "note": "Note",
+      "submit": "Record",
+      "done": "Transfer to MIC recorded",
+      "validation": {
+        "required": "Required",
+        "amount": "Amount must be above 0"
+      }
     }
   }
 }

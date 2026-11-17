@@ -8,9 +8,10 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
+import { elevation } from '@/theme/elevation';
 import { duration, easing } from '@/theme/motion';
 import { useAppScheme, useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space, typeScale } from '@/theme/tokens';
 
 export interface SegmentedTabItem<K extends string> {
   key: K;
@@ -23,6 +24,13 @@ export interface SegmentedTabItem<K extends string> {
 
 const TRAY_PAD = 4;
 const TRAY_GAP = 4;
+/**
+ * Biến thể `neutral` - "Horizontal tabs" của design v2 (Figma `24175:52486`, thẻ thu chi Tổng quan
+ * Partner): khay `bg/gray-50` viền `gray-low200` bo 12, KHÔNG đệm, ô cách 2; ô chọn nền trắng viền
+ * `gray-low300` bo 12 + bóng `shadow-xs`, chữ `text/gray/medium`; ô khác chữ `text/gray/low`.
+ */
+const NEUTRAL_PAD = 0;
+const NEUTRAL_GAP = 2;
 
 /**
  * Dải chọn PHÂN ĐOẠN — khuôn tab web `TripFilterTabs` (người dùng chốt 28/10/2026): ô chọn nền trắng viền, chữ vàng, viên
@@ -37,12 +45,22 @@ export function SegmentedTabs<K extends string>({
   items,
   value,
   onChange,
+  variant = 'brand',
+  fit = false,
 }: {
+  /** Ô rộng theo NHÃN thay vì chia đều - nhãn dài ("Chuyến & thời gian") có đủ chỗ. */
+  fit?: boolean;
   items: ReadonlyArray<SegmentedTabItem<K>>;
   value: K;
   onChange: (next: K) => void;
+  /** `brand` (mặc định) = khuôn TripFilterTabs; `neutral` = tab xám của design v2. */
+  variant?: 'brand' | 'neutral';
 }) {
   const colors = useColors();
+  const neutral = variant === 'neutral';
+  const pad = neutral ? NEUTRAL_PAD : TRAY_PAD;
+  const gap = neutral ? NEUTRAL_GAP : TRAY_GAP;
+  const segmentRadius = neutral ? radius.control : 10;
   // Giao diện tối (Figma 19879:66136): ô chưa chọn chữ xám placeholder, ô chọn nền nổi.
   const dark = useAppScheme().scheme === 'dark';
   const idleFg = dark ? colors.textPlaceholder : colors.text;
@@ -56,21 +74,25 @@ export function SegmentedTabs<K extends string>({
   );
   const segmentWidth =
     trayWidth > 0 && items.length > 0
-      ? (trayWidth - TRAY_PAD * 2 - 2 - TRAY_GAP * (items.length - 1)) / items.length
+      ? (trayWidth - pad * 2 - 2 - gap * (items.length - 1)) / items.length
       : 0;
-  const measured = segmentWidth > 0;
+  // `fit`: vị trí/bề rộng từng ô đo thật (onLayout) thay vì chia đều.
+  const [cells, setCells] = useState<Record<number, { x: number; w: number }>>({});
+  const activeCell = fit ? cells[activeIndex] : undefined;
+  const indicatorWidth = fit ? (activeCell?.w ?? 0) : segmentWidth;
+  const measured = fit ? activeCell !== undefined : segmentWidth > 0;
   const offset = useSharedValue(0);
   const placed = useSharedValue(false);
   useEffect(() => {
     if (!measured) return;
-    const target = activeIndex * (segmentWidth + TRAY_GAP);
+    const target = fit ? (activeCell?.x ?? 0) - pad : activeIndex * (segmentWidth + gap);
     // Lần đặt đầu (vừa đo xong) thì đặt thẳng — không trượt từ ô 0 sang.
     offset.value =
       reduceMotion || !placed.value
         ? target
         : withTiming(target, { duration: duration.base, easing: Easing.bezier(...easing.standard) });
     placed.value = true;
-  }, [activeIndex, segmentWidth, measured, reduceMotion, offset, placed]);
+  }, [activeIndex, segmentWidth, gap, measured, reduceMotion, offset, placed, fit, activeCell, pad]);
   const indicatorStyle = useAnimatedStyle(() => ({ transform: [{ translateX: offset.value }] }));
 
   const onTrayLayout = (event: LayoutChangeEvent) => {
@@ -81,13 +103,13 @@ export function SegmentedTabs<K extends string>({
   return (
     <XStack
       f={1}
-      p={TRAY_PAD}
-      gap={TRAY_GAP}
+      p={pad}
+      gap={gap}
       // Figma: khay bo 12 (không viên thuốc), ô trong bo 10, ô chọn nền trắng + bóng mảnh, không viền vàng.
       br={radius.control}
       bw={1}
-      bc={colors.borderSubtle}
-      bg={colors.surfaceMuted}
+      bc={neutral ? colors.border : colors.borderSubtle}
+      bg={neutral ? colors.background : colors.surfaceMuted}
       accessibilityRole="tablist"
       onLayout={onTrayLayout}
     >
@@ -96,17 +118,36 @@ export function SegmentedTabs<K extends string>({
           pointerEvents="none"
           style={[
             styles.indicator,
-            { width: segmentWidth, backgroundColor: activeBg, borderColor: colors.borderSubtle },
+            {
+              width: indicatorWidth,
+              backgroundColor: activeBg,
+              borderColor: neutral ? colors.borderInput : colors.borderSubtle,
+              top: pad,
+              bottom: pad,
+              left: pad,
+              borderRadius: segmentRadius,
+            },
+            neutral ? elevation.xs : null,
             indicatorStyle,
           ]}
         />
       ) : null}
-      {items.map((item) => {
+      {items.map((item, index) => {
         const active = value === item.key;
         return (
           <Pressable
             key={item.key}
-            style={styles.segment}
+            style={fit ? styles.segmentFit : styles.segment}
+            {...(fit
+              ? {
+                  onLayout: (e: LayoutChangeEvent) => {
+                    const { x, width } = e.nativeEvent.layout;
+                    setCells((prev) =>
+                      prev[index]?.x === x && prev[index]?.w === width ? prev : { ...prev, [index]: { x, w: width } },
+                    );
+                  },
+                }
+              : {})}
             onPress={() => onChange(item.key)}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
@@ -117,17 +158,20 @@ export function SegmentedTabs<K extends string>({
               ai="center"
               jc="center"
               gap={space.xs}
-              px={space.sm}
-              br={10}
+              px={neutral ? space.xs : space.sm}
+              br={segmentRadius}
               bw={1}
-              bc={active && !measured ? colors.borderSubtle : 'transparent'}
+              bc={active && !measured ? (neutral ? colors.borderInput : colors.borderSubtle) : 'transparent'}
               bg={active && !measured ? activeBg : 'transparent'}
             >
               <Text
                 flexShrink={1}
-                col={active ? colors.accentText : idleFg}
+                col={
+                  neutral ? (active ? colors.textMuted : colors.placeholder) : active ? colors.accentText : idleFg
+                }
                 fos={fontSize.body}
-                fow={active ? fontWeight.semibold : fontWeight.medium}
+                {...(neutral ? { lh: typeScale.body.lineHeight } : {})}
+                fow={neutral || active ? fontWeight.semibold : fontWeight.medium}
                 numberOfLines={1}
               >
                 {item.label}
@@ -163,13 +207,10 @@ export function SegmentedTabs<K extends string>({
 
 const styles = StyleSheet.create({
   segment: { flex: 1 },
+  segmentFit: { flexGrow: 1, flexShrink: 1, flexBasis: 'auto' },
   // Nằm trong vùng đệm của khay (absolute tính từ mép TRONG viền 1px) — trùng khít ô đầu.
   indicator: {
     position: 'absolute',
-    top: TRAY_PAD,
-    bottom: TRAY_PAD,
-    left: TRAY_PAD,
-    borderRadius: 10,
     borderWidth: 1,
   },
 });

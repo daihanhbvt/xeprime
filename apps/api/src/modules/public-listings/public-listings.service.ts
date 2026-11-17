@@ -273,12 +273,12 @@ export class PublicListingsService {
      * Ngữ cảnh lọc CỨNG của khối: dịch vụ, loại xe, và xe còn rảnh trong khoảng khách đang chọn.
      * Tỉnh CỐ Ý không có mặt ở đây - nó đi vào thứ tự, không vào điều kiện.
      */
-    const filter: ListingFilterQuery = {
+    const filter: ListingFilterQuery = await this.withInsuranceGate({
       vehicleType: query.vehicleType,
       serviceType: query.serviceType,
       pickupAt: query.pickupAt,
       returnAt: query.returnAt,
-    };
+    });
 
     /*
      * Bậc địa lý. Một biểu thức chứ không phải ba truy vấn nối nhau: ba truy vấn sẽ phải tự
@@ -386,7 +386,9 @@ export class PublicListingsService {
     });
     // Phân giải từ khoá TRONG `wrap`: trúng cache thì không tốn truy vấn ứng viên nào.
     return this.facetsCache.wrap(key, async () =>
-      this.computeFacets(await this.withResolvedKeyword(query, new Date())),
+      this.computeFacets(
+        await this.withInsuranceGate(await this.withResolvedKeyword(query, new Date())),
+      ),
     );
   }
 
@@ -585,7 +587,19 @@ export class PublicListingsService {
    */
   /** Query thô → bộ lọc dựng được: tỉnh quy về mã, từ khoá đã phân giải tên công khai. */
   private async toListingFilter<T extends ListingFilterQuery>(query: T, now: Date): Promise<T> {
-    return this.withResolvedKeyword(await this.withResolvedProvince(query), now);
+    return this.withInsuranceGate(
+      await this.withResolvedKeyword(await this.withResolvedProvince(query), now),
+    );
+  }
+
+  /**
+   * Gắn cổng bảo hiểm (ADR 0091 điều 1): chỉ khi nền tảng đang bán bảo hiểm theo bậc thì tìm xe tự
+   * lái mới loại xe Bắt buộc thiếu dữ liệu — tắt đối tác thì không xe nào bị ẩn vì một sản phẩm
+   * không ai bán. Chỉ hỏi khi đang tìm tự lái.
+   */
+  private async withInsuranceGate<T extends ListingFilterQuery>(query: T): Promise<T> {
+    if (query.serviceType !== SERVICE_TYPE.SELF_DRIVE) return query;
+    return { ...query, insuranceGate: await this.pricing.vehicleProtectionTierPricingActive() };
   }
 
   /** Gắn `keyword` (xem `keyword-match.ts`) - query không có từ khoá thì trả nguyên. */
@@ -1205,14 +1219,16 @@ export class PublicListingsService {
     // xe ở tỉnh đã bị ẩn cũng không hiện ở trang shop - nếu không, trang shop thành đường vòng qua
     // luật hiển thị - và chip ở đây nghĩa đúng như chip cùng tên ở trang tìm kiếm.
     const where: Prisma.PublicListingWhereInput = {
-      ...buildListingWhere({
-        provinceCode: query.provinceCode,
-        serviceType: query.serviceType,
-        delivery: query.delivery,
-        instantBook: query.instantBook,
-        noCollateral: query.noCollateral,
-        vatInvoice: query.vatInvoice,
-      }),
+      ...buildListingWhere(
+        await this.withInsuranceGate({
+          provinceCode: query.provinceCode,
+          serviceType: query.serviceType,
+          delivery: query.delivery,
+          instantBook: query.instantBook,
+          noCollateral: query.noCollateral,
+          vatInvoice: query.vatInvoice,
+        }),
+      ),
       shopSlug: slug,
     };
 
@@ -1238,6 +1254,19 @@ export class PublicListingsService {
    * Chi tiết một xe trên marketplace - chỉ trả xe đã duyệt của shop đang hoạt động (cùng điều
    * kiện scope với danh sách). Không lộ dữ liệu nội bộ (biển số, tenantId…).
    */
+  /**
+   * Cờ chặn tự lái vì bảo hiểm của một xe (ADR 0091 điều 1) — đọc snapshot chợ (writer
+   * `ListingsService`) và chỉ có hiệu lực khi nền tảng đang bán bảo hiểm theo bậc.
+   */
+  private async selfDriveInsuranceBlocked(vehicleId: string): Promise<boolean> {
+    const listing = await this.prisma.publicListing.findUnique({
+      where: { vehicleId },
+      select: { selfDriveInsuranceBlocked: true },
+    });
+    if (!listing?.selfDriveInsuranceBlocked) return false;
+    return this.pricing.vehicleProtectionTierPricingActive();
+  }
+
   async getById(id: string): Promise<PublicListingDetailDto> {
     const now = new Date();
     const v = await this.prisma.vehicle.findFirst({
@@ -1505,6 +1534,7 @@ export class PublicListingsService {
       longTermPackages,
       pickupPoint,
       deliveryAvailable: policy?.values.deliveryEnabled ?? false,
+      selfDriveInsuranceBlocked: await this.selfDriveInsuranceBlocked(v.id),
       // Điều kiện bảo đảm lấy từ CHÍNH SÁCH HIỆU LỰC - cùng nguồn với nhãn "Miễn thế chấp" trên
       // thẻ xe. Chưa có chính sách thì null: nói "chưa công bố" đúng hơn là hứa miễn thế chấp.
       collateral: policy

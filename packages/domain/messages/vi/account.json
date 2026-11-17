@@ -69,7 +69,27 @@
     "securePhoneTitle": "Số điện thoại của bạn được bảo mật",
     "securePhoneBody": "Chỉ dùng để xác thực tài khoản, hỗ trợ liên hệ và thông báo liên quan đến việc cho thuê xe.",
     "secureEmailTitle": "Email của bạn được bảo mật",
-    "secureEmailBody": "Chỉ dùng để xác thực tài khoản và gửi thông báo về đơn thuê của bạn."
+    "secureEmailBody": "Chỉ dùng để xác thực tài khoản và gửi thông báo về đơn thuê của bạn.",
+    "updatePhoneTitle": "Cập nhật số điện thoại",
+    "updateEmailTitle": "Cập nhật email",
+    "verifyPhoneTitle": "Xác minh số điện thoại",
+    "verifyEmailTitle": "Xác minh email",
+    "phoneSubtitle": "Nhập số điện thoại để nhận mã OTP xác thực qua SMS",
+    "emailSubtitle": "Nhập địa chỉ email để nhận mã xác thực",
+    "currentPhone": "Số đang dùng: <strong>{value}</strong>",
+    "currentEmail": "Email đang dùng: <strong>{value}</strong>",
+    "codeTitle": "Nhập mã xác minh",
+    "codeSentPhone": "Mã 6 số đã được gửi tới số điện thoại <strong>{target}</strong>",
+    "codeSentEmail": "Mã 6 số đã được gửi tới email <strong>{target}</strong>",
+    "noCode": "Chưa nhận được mã?",
+    "resendAfter": "Gửi lại sau <strong>{time}</strong>",
+    "editPhoneFull": "Sửa số điện thoại",
+    "phoneChangeNote": "Sau khi thay đổi, bạn sẽ đăng nhập bằng số điện thoại mới. Số cũ {old} sẽ không còn hiệu lực.",
+    "emailChangeNote": "Sau khi thay đổi, thông báo và hỗ trợ sẽ được gửi vào email mới. Email cũ sẽ không còn hiệu lực.",
+    "confirmPhoneChange": "Xác nhận đổi số",
+    "confirmEmailChange": "Xác nhận đổi email",
+    "verify": "Xác minh",
+    "verifyAria": "Xác minh {field}"
   },
   "sidebar": {
     "userCard": "Người đang đăng nhập"
@@ -474,5 +494,46 @@
     "pick": "Chọn ảnh",
     "remove": "Xoá ảnh đại diện",
     "displayName": "Họ & tên hiển thị"
+  },
+  "securityPage": {
+    "title": "Tài khoản và bảo mật",
+    "subtitle": "Quản lý hồ sơ cá nhân, thông tin đăng nhập và bảo mật tài khoản của bạn.",
+    "loadError": "Không tải được thông tin tài khoản",
+    "loginTitle": "Thông tin đăng nhập",
+    "loginHint": "Số điện thoại dùng để đăng nhập, email dùng để nhận thông báo. Mỗi lần thay đổi, cần xác minh bằng mã OTP 6 số gửi đến thông tin mới.",
+    "passwordTitle": "Mật khẩu",
+    "passwordHint": "Cập nhật mật khẩu để bảo vệ tài khoản. Sử dụng mật khẩu mạnh và không chia sẻ với người khác.",
+    "deleteLink": "Yêu cầu xóa tài khoản",
+    "login": {
+      "phoneBody": "Số điện thoại được sử dụng để đăng nhập và xác minh tài khoản. Bạn có thể thay đổi khi cần, thông qua mã OTP xác thực.",
+      "emailBody": "Email được sử dụng để nhận thông báo, cập nhật trạng thái đơn hàng và các thông tin quan trọng liên quan đến tài khoản."
+    },
+    "password": {
+      "forgot": "Quên mật khẩu",
+      "strength": {
+        "weak": "Yếu",
+        "fair": "Trung bình",
+        "good": "Khá mạnh",
+        "strong": "Mạnh"
+      },
+      "rules": {
+        "passwordTooShort": "Ít nhất {min} ký tự",
+        "passwordNeedsLetter": "Ít nhất 1 chữ cái",
+        "passwordNeedsDigit": "Ít nhất 1 chữ số",
+        "notSameAsCurrent": "Khác với mật khẩu hiện tại"
+      }
+    },
+    "profile": {
+      "cardLabel": "Hồ sơ cá nhân",
+      "changeAvatar": "Đổi ảnh đại diện",
+      "removeAvatar": "Gỡ ảnh đại diện",
+      "displayName": "Họ & tên hiển thị",
+      "displayNamePlaceholder": "Nguyễn Văn A",
+      "avatarHelp": "Tải lên ảnh đại diện định dạng <strong>JPG, PNG hoặc WEBP</strong> (kích thước tối đa {max}MB, ảnh vuông).",
+      "notShop": "Tên và ảnh đại diện dùng cho tài khoản cá nhân. Thông tin tên, logo và số điện thoại hiển thị với khách hàng được quản lý tại <strong>Cài đặt gian hàng</strong>.",
+      "personalStorefront": "Ảnh và họ tên này chính là thông tin khách thấy trên <strong>trang chủ xe</strong> của bạn.",
+      "shopSettingsLink": "Xem cài đặt gian hàng",
+      "ownerProfileLink": "Xem hồ sơ chủ xe"
+    }
   }
 }

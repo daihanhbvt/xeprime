@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
 import type { IconName } from '@/components/ui/Chip';
 import { themed, useColors } from '@/theme/ThemeProvider';

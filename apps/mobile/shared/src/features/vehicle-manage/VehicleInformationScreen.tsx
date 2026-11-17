@@ -8,7 +8,8 @@ import { mapExternalUrl, toGeoPoint } from '@xeprime/domain';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { MapPreview } from '@/components/map/MapPreview';
-import { BlockLink, BlockTitle } from '@/components/ui/BlockTitle';
+import { BlockLink } from '@/components/ui/BlockTitle';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { BranchFormSheet } from '@/features/branches/components/BranchFormSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
@@ -171,7 +172,7 @@ function InformationForm({
 
       <Card>
         <YStack gap={space.md}>
-          <BlockTitle>{t('plateTitle')}</BlockTitle>
+          <SectionHeader icon="card-outline">{t('plateTitle')}</SectionHeader>
           <TextField
             control={control}
             name="plateNumber"
@@ -194,7 +195,7 @@ function InformationForm({
 
       <Card>
         <YStack gap={space.md}>
-          <BlockTitle>{t('basicTitle')}</BlockTitle>
+          <SectionHeader icon="car-outline">{t('basicTitle')}</SectionHeader>
 
           {/*
             Hãng xe → Dòng xe (mẫu chuẩn), rồi phân loại theo loại xe. CÙNG component với wizard
@@ -259,7 +260,7 @@ function InformationForm({
 
       <Card>
         <YStack gap={space.md}>
-          <BlockTitle>{t('descriptionTitle')}</BlockTitle>
+          <SectionHeader icon="document-text-outline">{t('descriptionTitle')}</SectionHeader>
           <TextField
             control={control}
             name="description"
@@ -273,7 +274,7 @@ function InformationForm({
 
       <Card>
         <YStack gap={space.md}>
-          <BlockTitle>{t('featuresTitle')}</BlockTitle>
+          <SectionHeader icon="checkmark-done-outline">{t('featuresTitle')}</SectionHeader>
           <FeaturesField control={control} vehicleType={vehicleType} disabled={!canEdit} />
         </YStack>
       </Card>
@@ -351,7 +352,7 @@ function AddressCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
   return (
     <Card>
       <YStack gap={space.sm}>
-        <BlockTitle
+        <SectionHeader
           action={
             branch && canEdit ? (
               <BlockLink label={t('addressEdit')} onPress={() => setEditing(true)} />
@@ -359,7 +360,7 @@ function AddressCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
           }
         >
           {t('addressTitle')}
-        </BlockTitle>
+        </SectionHeader>
 
         {!vehicle.branch ? (
           <Callout tone="warning">{t('addressMissing')}</Callout>

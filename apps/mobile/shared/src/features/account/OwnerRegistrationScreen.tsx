@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useEffect, type ReactNode } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -28,12 +28,12 @@ import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useMyShop } from '@/features/shop/hooks/use-shop';
 import { useVehiclesPage } from '@/features/vehicles/hooks/use-vehicles';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { goBackOr } from '@/navigation/go-back-or';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useDomainLabel } from '@/i18n/domain';
-import { ACCOUNT_SECTION, type AccountSection } from '@/navigation/account-section';
-import { ROUTES } from '@/navigation/routes';
+import { ACCOUNT_SECTION } from '@/navigation/account-section';
+import { ROUTES, SHOP_SECTION } from '@/navigation/routes';
 import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
@@ -50,14 +50,15 @@ const IN_FLIGHT: readonly VehiclePublicStatus[] = [
 const VEHICLE_PAGE = { page: 1, limit: 20 };
 
 /**
- * Mục hồ sơ còn thiếu → section của "Hồ sơ chủ xe" sửa được nó (web `REQUIREMENT_SECTION`, PR
- * #156). `Record` đầy đủ: thêm một yêu cầu mà quên chỗ sửa sẽ đỏ ngay ở đây.
+ * Mục hồ sơ còn thiếu → chỗ sửa được nó (web `REQUIREMENT_HREF`, ADR 0085). Họ tên ở thẻ thông tin
+ * chủ xe của trang "Hồ sơ chủ xe" (`/manage/shop`), SĐT là SĐT ĐĂNG NHẬP (ở "Tài khoản & bảo mật"),
+ * tỉnh ở thẻ địa chỉ. `Record` đầy đủ: thêm một yêu cầu mà quên chỗ sửa sẽ đỏ ngay ở đây.
  */
-export const REQUIREMENT_SECTION: Readonly<Record<ShopProfileRequirement, AccountSection>> = {
-  [SHOP_PROFILE_REQUIREMENT.OWNER_NAME]: ACCOUNT_SECTION.PROFILE,
-  [SHOP_PROFILE_REQUIREMENT.OWNER_PHONE]: ACCOUNT_SECTION.LOGIN,
-  [SHOP_PROFILE_REQUIREMENT.DISPLAY_NAME]: ACCOUNT_SECTION.PROFILE,
-  [SHOP_PROFILE_REQUIREMENT.PROVINCE]: ACCOUNT_SECTION.ADDRESS,
+export const REQUIREMENT_HREF: Readonly<Record<ShopProfileRequirement, Href>> = {
+  [SHOP_PROFILE_REQUIREMENT.OWNER_NAME]: ROUTES.manage.shop({ section: SHOP_SECTION.PROFILE }),
+  [SHOP_PROFILE_REQUIREMENT.OWNER_PHONE]: ROUTES.manage.account(ACCOUNT_SECTION.LOGIN),
+  [SHOP_PROFILE_REQUIREMENT.DISPLAY_NAME]: ROUTES.manage.shop({ section: SHOP_SECTION.PROFILE }),
+  [SHOP_PROFILE_REQUIREMENT.PROVINCE]: ROUTES.manage.shop({ section: SHOP_SECTION.LEGAL }),
 };
 
 /**
@@ -133,9 +134,7 @@ export function OwnerRegistrationScreen({
   // CTA đưa thẳng tới mục ĐẦU TIÊN còn thiếu, không bắt người dùng đi tìm trong các section.
   const firstMissing = missing[0];
   const openProfile = () =>
-    navigateOnce(
-      ROUTES.manage.account(firstMissing ? REQUIREMENT_SECTION[firstMissing] : undefined),
-    );
+    navigateOnce(firstMissing ? REQUIREMENT_HREF[firstMissing] : ROUTES.manage.shop());
 
   const current = !profileDone ? 0 : publicCount > 0 ? 2 : 1;
 
@@ -148,7 +147,7 @@ export function OwnerRegistrationScreen({
           variant="ghost"
           size="sm"
           block={false}
-          onPress={() => navigateOnce(ROUTES.manage.account())}
+          onPress={() => navigateOnce(ROUTES.manage.shop())}
         />
       ) : null}
       {hasVehicle ? (

@@ -1,7 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useState } from 'react';
 import { SvgXml } from 'react-native-svg';
-import { Linking, StyleSheet } from 'react-native';
+import { Linking, StyleSheet, useWindowDimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -24,6 +24,7 @@ import { fireAndForget } from '@/lib/fire-and-forget';
 import { goBackOr } from '@/navigation/go-back-or';
 import { PARTNER_HANDOFF_INTENT, ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
+import { columnStyle } from '@/theme/use-responsive';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import {
@@ -75,6 +76,8 @@ export function PartnerHandoffScreen() {
   const reveal = useScrollRevealList();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  // iPad: nội dung và lối hành động là một cột giữa màn.
+  const column = columnStyle(useWindowDimensions().width);
   const [openState, setOpenState] = useState<OpenState>('idle');
 
   const { intent, token, track } = useLocalSearchParams<{
@@ -113,7 +116,7 @@ export function PartnerHandoffScreen() {
 
       <ScrollRevealProvider value={reveal.ctx}>
       <Animated.ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, column]}
         onScroll={reveal.onScroll}
         scrollEventThrottle={16}
       >
@@ -168,7 +171,7 @@ export function PartnerHandoffScreen() {
       </ScrollRevealProvider>
 
       {/* Lối hành động ghim đáy — tài khoản ĐỐI TÁC tách với tài khoản khách (ADR 0053). */}
-      <YStack px={layout.screenX} pt={space.sm} gap={space.xs}>
+      <YStack px={layout.screenX} pt={space.sm} gap={space.xs} style={column}>
         {isRegister ? (
           !SHOW_PARTNER_REGISTER_ACTIONS ? null : (
           <>

@@ -19,6 +19,8 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { popInClass, staggerFastClass } from '@/components/motion/motion-classes';
 import { cx } from '@/lib/cx';
+import { ZONE } from '@/zones';
+import { useZone } from '@/zones/ZoneProvider';
 
 import {
   ACCOUNT_DELETION_ITEMS,
@@ -29,11 +31,11 @@ import {
 import styles from './AccountDeletionDialog.module.css';
 
 /**
- * Hộp "Yêu cầu xoá tài khoản" của trang Bảo mật tài khoản — SITE KHÁCH (design Account / Security -
+ * Hộp "Yêu cầu xoá tài khoản" — trang Bảo mật tài khoản SITE KHÁCH (design Account / Security -
  * Delete, Figma `21621:68914` · `21621:69376`).
  *
  * Vẫn là một YÊU CẦU (support case `account_deletion`, nền tảng xử lý tay), không phải nút xoá —
- * cùng hook với khối nhúng `DeleteAccountView` của site partner. Hai trạng thái:
+ * dùng chung với trang Tài khoản & bảo mật SITE PARTNER (dòng "Yêu cầu xóa tài khoản"). Hai trạng thái:
  *
  *  - Chưa có yêu cầu: "Kiểm tra điều kiện" (số dư ví điểm, lệnh rút còn giữ tiền, chuyến đi thuê
  *    chưa khép) → quy trình xử lý → dữ liệu bị xử lý → tick xác nhận → gửi. Điều kiện KHÔNG chặn
@@ -170,6 +172,7 @@ function Conditions() {
   const t = useTranslations('Account.deleteAccount');
   const tImpact = useTranslations('Account.deletionImpact');
   const fmt = useAppFormat();
+  const zone = useZone();
   const { user, wallet, holding, openTrips, loading, failed } = useAccountDeletionImpact();
 
   const checks = [
@@ -197,7 +200,11 @@ function Conditions() {
                 </div>
                 {/* Rút tiền là việc của mục Quản lý thanh toán — đây chỉ là lối tắt tới đó. */}
                 {Number(wallet.available) > 0 ? (
-                  <CtaButton href={ROUTES.ACCOUNT.BALANCE} variant="neutral">
+                  <CtaButton
+                    // Ví của tài khoản đối tác là ví gian hàng (chỉ CHỦ có ví - ADR 0053 điều 8).
+                    href={zone === ZONE.PARTNER ? ROUTES.MANAGE.BALANCE : ROUTES.ACCOUNT.BALANCE}
+                    variant="neutral"
+                  >
                     {t('withdrawNow')}
                   </CtaButton>
                 ) : null}

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
 import {
+  runOnJS,
   useAnimatedScrollHandler,
   useSharedValue,
   type SharedValue,
@@ -43,7 +44,18 @@ export interface CollapseOnScroll {
  * thì thôi" sẽ chặn vĩnh viễn và khối không bao giờ thu lại. Shared value thì worklet đọc giá trị
  * hiện tại ở mỗi khung hình.
  */
-export function useCollapseOnScroll(): CollapseOnScroll {
+export interface ScrollEdges {
+  /** Gần chạm đáy (còn < 1,5 màn) - bắn MỘT lần mỗi lượt chạm, dùng để tải trang kế (cuộn vô hạn). */
+  onNearEnd?: () => void;
+  /** Đã cuộn quá 1 màn / quay lại gần đầu - bắn khi ĐỔI trạng thái (nút "Về đầu trang"). */
+  onPastTopChange?: (past: boolean) => void;
+}
+
+export function useCollapseOnScroll(edges: ScrollEdges = {}): CollapseOnScroll {
+  const { onNearEnd, onPastTopChange } = edges;
+  // Cờ trên luồng UI: chỉ gọi sang JS khi trạng thái ĐỔI - cuộn 60fps không bắn 60 lượt runOnJS.
+  const nearEnd = useSharedValue(false);
+  const pastTop = useSharedValue(false);
   const [height, setHeight] = useState(0);
   const heightValue = useSharedValue(0);
   const progress = useSharedValue(1);
@@ -69,6 +81,20 @@ export function useCollapseOnScroll(): CollapseOnScroll {
       const y = event.contentOffset.y;
       const delta = y - lastOffset.value;
       lastOffset.value = y;
+
+      const viewport = event.layoutMeasurement.height;
+      if (onNearEnd) {
+        const near = y + viewport >= event.contentSize.height - viewport * 1.5;
+        if (near && !nearEnd.value) runOnJS(onNearEnd)();
+        nearEnd.value = near;
+      }
+      if (onPastTopChange) {
+        const past = y > viewport;
+        if (past !== pastTop.value) {
+          pastTop.value = past;
+          runOnJS(onPastTopChange)(past);
+        }
+      }
 
       // Chạm đỉnh là hiện lại nguyên vẹn — kể cả khi cú nảy của `RefreshControl` cho y âm.
       if (y <= 0) {

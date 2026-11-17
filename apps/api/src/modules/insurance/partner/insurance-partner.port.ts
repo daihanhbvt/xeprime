@@ -9,11 +9,10 @@
  * Cắm đối tác thật = thêm một adapter cạnh hai adapter kia + một nhánh ở `createInsurancePartner`.
  * `InsuranceService` và luồng kế toán không đổi dòng nào.
  */
-export type {
-  InsurancePartner,
-  IssuePolicyRequest,
-  IssuePolicyResult,
-} from '@xeprime/prisma';
+export type { InsurancePartner, IssuePolicyRequest, IssuePolicyResult } from '@xeprime/prisma';
 
 /** Token DI — interface không tồn tại lúc chạy nên Nest cần một chuỗi để tra provider. */
 export const INSURANCE_PARTNER = 'INSURANCE_PARTNER';
+
+/** Token DI của `MicClient` (ADR 0088) — `null` khi không chạy adapter MIC thật. */
+export const MIC_CLIENT = 'MIC_CLIENT';

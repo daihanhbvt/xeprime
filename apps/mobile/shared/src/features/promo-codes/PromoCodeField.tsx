@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useState } from 'react';
 import { Pressable, TextInput } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -25,6 +25,7 @@ import {
   type PromoPreview,
   type PromoTripParams,
 } from '@/api/promo-codes/api';
+import { layout } from '@/theme/layout';
 
 /**
  * Ô ÁP MÃ KHUYẾN MÃI của luồng đặt xe trên APP — bản native của `PromoCodeField` bên web
@@ -396,7 +397,7 @@ function PickerRow({
     <XStack
       ai="flex-start"
       gap={space.sm}
-      px={space.md}
+      px={layout.padX}
       py={space.sm}
       br={radius.sm}
       bw={1}

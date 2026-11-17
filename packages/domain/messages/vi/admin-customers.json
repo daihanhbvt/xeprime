@@ -105,5 +105,21 @@
       "medium": "Trung bình",
       "low": "Thấp"
     }
+  },
+  "lock": {
+    "lock": "Khoá tài khoản",
+    "unlock": "Mở khoá",
+    "lockTitle": "Khoá tài khoản khách",
+    "lockSummary": "Khách bị đăng xuất khỏi mọi trình duyệt và app ngay lập tức và không đăng nhập lại được. Yêu cầu đang chờ và đơn đã có giữ nguyên để hỗ trợ xử lý.",
+    "unlockTitle": "Mở khoá tài khoản khách",
+    "unlockSummary": "Khách đăng nhập lại được như bình thường.",
+    "reasonLabel": "Lý do",
+    "reasonPlaceholder": "Ví dụ: nhiều lần huỷ chuyến để lấy tiền hoàn",
+    "reasonRequired": "Nhập lý do (tối thiểu 5 ký tự).",
+    "audience": "Lý do chỉ nội bộ đọc, khách không thấy.",
+    "locked": "Đã khoá tài khoản và đăng xuất khách khỏi mọi thiết bị.",
+    "unlocked": "Đã mở khoá tài khoản.",
+    "lockedBanner": "Tài khoản bị khoá lúc {time}",
+    "lockedReason": "Lý do: {reason}"
   }
 }

@@ -23,7 +23,8 @@ export function DriverProfileTab({ driver }: { driver: Driver }) {
   const domainLabel = useDomainLabel();
   const ended = driver.linkStatus === DRIVER_LINK_STATUS.ENDED;
 
-  const facts: WorkDrawerFact[] = [
+  // Ba nhóm trong thẻ riêng có tiêu đề (người dùng 16/11/2026), thay cho MỘT lưới dài.
+  const infoFacts: WorkDrawerFact[] = [
     { key: 'name', label: t('name'), value: driver.name },
     { key: 'phone', label: t('phone'), value: driver.phone },
     {
@@ -36,11 +37,16 @@ export function DriverProfileTab({ driver }: { driver: Driver }) {
       label: t('type'),
       value: <Tag>{domainLabel('driverType', driver.driverType, driver.driverType)}</Tag>,
     },
+  ];
+  const licenceFacts: WorkDrawerFact[] = [
     {
       key: 'licence',
       label: t('licence'),
       value: <DriverLicenceStateTag licence={driver.licence} invitedName={driver.name} />,
+      wide: true,
     },
+  ];
+  const linkFacts: WorkDrawerFact[] = [
     {
       key: 'status',
       label: t('status'),
@@ -80,6 +86,8 @@ export function DriverProfileTab({ driver }: { driver: Driver }) {
           },
         ]
       : []),
+  ];
+  const noteFacts: WorkDrawerFact[] = [
     {
       key: 'note',
       label: t('note'),
@@ -89,9 +97,19 @@ export function DriverProfileTab({ driver }: { driver: Driver }) {
     },
   ];
 
+  const section = (key: string, title: string, items: WorkDrawerFact[]) => (
+    <section key={key} className={styles.profileSection} aria-label={title}>
+      <h3 className={styles.profileSectionTitle}>{title}</h3>
+      <WorkDrawerFacts items={items} />
+    </section>
+  );
+
   return (
     <div className={styles.tabBody}>
-      <WorkDrawerFacts items={facts} />
+      {section('info', t('sectionInfo'), infoFacts)}
+      {section('licence', t('sectionLicence'), licenceFacts)}
+      {section('link', t('sectionLink'), linkFacts)}
+      {section('note', t('sectionNote'), noteFacts)}
     </div>
   );
 }

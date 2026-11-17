@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/queries/query-keys';
-import { shopPoliciesApi, type SaveRentalPolicyInput } from '../api';
+import {
+  shopOperationDefaultsApi,
+  shopPoliciesApi,
+  type SaveRentalPolicyInput,
+  type SaveShopOperationDefaultsInput,
+} from '../api';
 
 /**
  * Chính sách thuê MẶC ĐỊNH của gian hàng, theo LOẠI XE (SHP-04).
@@ -36,6 +41,31 @@ export function useSaveShopPolicy(vehicleType: string) {
     mutationFn: (body: SaveRentalPolicyInput) => shopPoliciesApi.save(vehicleType, body),
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.rentalPolicies.shop(vehicleType), data);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
+    },
+  });
+}
+
+/** Thời gian chết mặc định của gian hàng theo loại xe (PR #280) — cùng key với web. */
+export function useShopOperationDefaults(vehicleType: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.rentalPolicies.operationDefaults(vehicleType),
+    queryFn: () => shopOperationDefaultsApi.get(vehicleType),
+    enabled,
+  });
+}
+
+/**
+ * Lưu thời gian chết mặc định. Xe đang theo mặc định đổi số hiệu lực ⇒ thiết lập vận hành theo xe
+ * (`vehicles` → operation settings) phải đọc lại, như web.
+ */
+export function useSaveShopOperationDefaults(vehicleType: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SaveShopOperationDefaultsInput) =>
+      shopOperationDefaultsApi.save(vehicleType, body),
+    onSuccess: (data) => {
+      queryClient.setQueryData(queryKeys.rentalPolicies.operationDefaults(vehicleType), data);
       void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
     },
   });
