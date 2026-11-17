@@ -198,7 +198,14 @@
       "depositHintLabel": "What the security deposit is",
       "holdHintLabel": "What the reservation payment is",
       "totalHintLabel": "What the total includes",
-      "dailyRate": "{days, plural, one {# day} other {# days}} × {amount}"
+      "dailyRate": "{days, plural, one {# day} other {# days}} × {amount}",
+      "insuranceFee": {
+        "hintLabel": "What the vehicle damage insurance charge includes",
+        "premium": "Insurance premium: {amount}",
+        "serviceFee": "Insurance collection fee: {amount}",
+        "serviceFeePercent": "Insurance collection fee ({percent}%): {amount}",
+        "refund": "Both are refunded if the trip is cancelled or the certificate cannot be issued."
+      }
     },
     "filterBar": {
       "allOf": "{label}: All",

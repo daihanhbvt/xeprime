@@ -1,4 +1,5 @@
 import { DEFAULT_PAGE_SIZE, pickFilter } from '@/constants/filters';
+import { browserApiHref } from '@/lib/api-href';
 import { startOfAppDay } from '@/lib/datetime';
 import {
   apiGet,
@@ -51,3 +52,13 @@ export const fetchAdminBooking = (id: string): Promise<AdminBookingDetail> =>
 /** Bỏ che SĐT khách. Mỗi lần gọi là một dòng audit ở backend — không gọi ngầm/tự động. */
 export const revealBookingContact = (id: string): Promise<BookingContact> =>
   apiPost<BookingContact>(`/platform/bookings/${id}/contact`);
+
+/**
+ * Link tải GCN bảo hiểm của một hợp đồng (ADR 0088) — trình duyệt tự tải, cùng gốc với API. Endpoint
+ * gác bằng `platform.money.manage`: chỉ hiện link cho người có quyền đó.
+ */
+export function platformCertificatePdfHref(policyId: string): string {
+  return browserApiHref(
+    `/platform/money/insurance/${encodeURIComponent(policyId)}/certificate.pdf`,
+  );
+}

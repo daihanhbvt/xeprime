@@ -105,19 +105,33 @@ export async function hasOpenSupportCase(
   return hit !== null;
 }
 
-/** Bản theo LÔ của `hasOpenSupportCase` — một truy vấn cho cả trang, không N+1. */
-export async function bookingIdsWithOpenSupportCase(
+/**
+ * Bản theo LÔ của `hasOpenSupportCase`, kèm LOẠI case: đơn → tập loại case còn mở. Đơn không có
+ * case nào thì vắng mặt trong Map. Một truy vấn cho cả trang, không N+1.
+ *
+ * Trả loại chứ không chỉ "có/không": màn tiền nền tảng phải phân biệt tranh chấp thật với một
+ * lượt chủ xe quên bấm giao xe (`handover_unconfirmed`) — cả hai cùng giữ tiền, nhưng người trực
+ * xử lý khác hẳn nhau.
+ */
+export async function openSupportCaseCategoriesByBooking(
   db: SupportCaseReader,
   bookingIds: readonly string[],
   categories: readonly SupportCaseCategory[] = SUPPORT_CASE_SETTLEMENT_FREEZING_CATEGORIES,
-): Promise<Set<string>> {
-  if (bookingIds.length === 0) return new Set();
+): Promise<Map<string, Set<SupportCaseCategory>>> {
+  const result = new Map<string, Set<SupportCaseCategory>>();
+  if (bookingIds.length === 0) return result;
   const rows = await db.supportCase.findMany({
     where: { bookingId: { in: [...bookingIds] }, ...openSupportCaseWhere(categories) },
-    select: { bookingId: true },
-    distinct: ['bookingId'],
+    select: { bookingId: true, category: true },
+    distinct: ['bookingId', 'category'],
   });
-  return new Set(rows.map((r) => r.bookingId).filter((v): v is string => v !== null));
+  for (const row of rows) {
+    if (row.bookingId === null) continue;
+    const set = result.get(row.bookingId) ?? new Set<SupportCaseCategory>();
+    set.add(row.category as SupportCaseCategory);
+    result.set(row.bookingId, set);
+  }
+  return result;
 }
 
 /**

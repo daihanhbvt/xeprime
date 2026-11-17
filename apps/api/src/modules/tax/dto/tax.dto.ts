@@ -1,9 +1,21 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 import {
   SELLER_ENTITY_TYPE_VALUES,
   TAX_CATEGORY_VALUES,
+  TAX_EXPORT_GROUP_BY_VALUES,
+  type TaxExportGroupBy,
   TAX_WITHHOLDING_STATUS,
   TAX_WITHHOLDING_STATUS_VALUES,
   type SellerEntityType,
@@ -22,6 +34,16 @@ export class TaxPeriodQueryDto {
   @ApiProperty({ example: '2026-09', description: 'Kỳ YYYY-MM theo giờ Việt Nam' })
   @Matches(PERIOD_PATTERN, { message: 'Kỳ thuế phải có dạng YYYY-MM' })
   period!: string;
+}
+
+export class TaxExportQueryDto extends TaxPeriodQueryDto {
+  @ApiPropertyOptional({
+    enum: TAX_EXPORT_GROUP_BY_VALUES,
+    description: 'Vắng = từng dòng theo chuyến; `seller` = một dòng mỗi người bán',
+  })
+  @IsOptional()
+  @IsIn(TAX_EXPORT_GROUP_BY_VALUES)
+  groupBy?: TaxExportGroupBy;
 }
 
 export class TaxRowsQueryDto {
@@ -162,6 +184,32 @@ export class TaxTenantBreakdownDto {
   @ApiProperty() rows!: number;
 }
 
+/** Chứng cứ đã ghi của một kỳ — `null` ở từng nhóm khi bước đó chưa làm. */
+export class TaxPeriodFilingDto {
+  @ApiPropertyOptional({ type: String, nullable: true }) declarationRef!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'YYYY-MM-DD' })
+  declaredOn!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Lúc ghi vào hệ thống' })
+  declaredAt!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) declaredByName!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) remittanceRef!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'YYYY-MM-DD' })
+  remittedOn!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Số đã nộp theo chứng từ' })
+  remittedAmount!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Tổng thuế trên sổ của kỳ tại lúc ghi nộp - lệch với `remittedAmount` thì có ghi chú',
+  })
+  ledgerAmount!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) remittanceNote!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Lúc ghi vào hệ thống' })
+  remittedAt!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) remittedByName!: string | null;
+}
+
 /**
  * Tờ khai một KỲ.
  *
@@ -191,6 +239,22 @@ export class TaxPeriodSummaryDto {
   @ApiProperty({ description: 'Đã khấu trừ, CHƯA kê khai' }) accruedAmount!: string;
   @ApiProperty({ description: 'Đã kê khai, chưa nộp' }) declaredAmount!: string;
   @ApiProperty({ description: 'Đã nộp' }) remittedAmount!: string;
+  @ApiProperty({ description: 'Số dòng CHƯA kê khai - lượt kê khai sẽ lật đúng chừng này dòng' })
+  accruedRows!: number;
+  @ApiProperty({ description: 'Số dòng đã kê khai chưa nộp - lượt nộp sẽ lật đúng chừng này dòng' })
+  declaredRows!: number;
+
+  @ApiProperty({
+    description:
+      'Kỳ đã kết thúc (giờ VN) chưa - chỉ kỳ đã qua mới kê khai / nộp được (server kiểm lại khi ghi)',
+  })
+  periodEnded!: boolean;
+  @ApiPropertyOptional({
+    type: TaxPeriodFilingDto,
+    nullable: true,
+    description: 'Chứng cứ kê khai / nộp đã ghi; `null` = kỳ chưa có lượt nào',
+  })
+  filing!: TaxPeriodFilingDto | null;
 
   @ApiProperty({ type: [TaxEntityBreakdownDto] }) byEntityType!: TaxEntityBreakdownDto[];
   @ApiProperty({ type: [TaxTenantBreakdownDto] }) byTenant!: TaxTenantBreakdownDto[];
@@ -226,4 +290,58 @@ export class TaxPeriodAdvancedDto {
   @ApiProperty({ description: 'Số dòng vừa chuyển trạng thái' }) updated!: number;
   @ApiProperty({ enum: [TAX_WITHHOLDING_STATUS.DECLARED, TAX_WITHHOLDING_STATUS.REMITTED] })
   status!: TaxWithholdingStatus;
+}
+
+/** Ngày lịch `YYYY-MM-DD` (giờ Việt Nam). */
+const DATE_KEY_PATTERN = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+/** Số tiền VND nguyên dương, dạng chuỗi chữ số (ADR 0007). */
+const MONEY_PATTERN = /^[1-9]\d{0,11}$/;
+
+const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
+
+/** Chứng cứ của lượt KÊ KHAI một kỳ. */
+export class DeclareTaxPeriodDto {
+  @ApiProperty({ description: 'Số tờ khai / mã hồ sơ cơ quan thuế cấp', example: '11320260001234' })
+  @Transform(trim)
+  @IsString()
+  @MinLength(3)
+  @MaxLength(120)
+  declarationRef!: string;
+
+  @ApiProperty({
+    example: '2026-11-15',
+    description: 'Ngày nộp tờ khai (YYYY-MM-DD, giờ VN) - từ ngày đầu tháng sau kỳ tới hôm nay',
+  })
+  @Matches(DATE_KEY_PATTERN, { message: 'Ngày phải có dạng YYYY-MM-DD' })
+  declaredOn!: string;
+}
+
+/** Chứng cứ của lượt NỘP thuế một kỳ. */
+export class RemitTaxPeriodDto {
+  @ApiProperty({ description: 'Mã chứng từ nộp tiền vào ngân sách nhà nước' })
+  @Transform(trim)
+  @IsString()
+  @MinLength(3)
+  @MaxLength(120)
+  remittanceRef!: string;
+
+  @ApiProperty({
+    example: '2026-11-18',
+    description: 'Ngày nộp tiền (YYYY-MM-DD, giờ VN) - từ ngày đầu tháng sau kỳ tới hôm nay',
+  })
+  @Matches(DATE_KEY_PATTERN, { message: 'Ngày phải có dạng YYYY-MM-DD' })
+  remittedOn!: string;
+
+  @ApiProperty({ example: '1250000', description: 'Số tiền đã nộp theo chứng từ (VND, chuỗi số)' })
+  @Matches(MONEY_PATTERN, { message: 'Số tiền phải là số nguyên dương' })
+  remittedAmount!: string;
+
+  @ApiPropertyOptional({
+    description: 'Bắt buộc khi số đã nộp khác tổng thuế trên sổ của kỳ - giải thích phần lệch',
+  })
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(1000)
+  note?: string;
 }

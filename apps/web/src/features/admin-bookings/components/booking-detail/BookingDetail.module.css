@@ -399,3 +399,134 @@
   font-size: var(--xp-font-size-body-sm);
   color: var(--xp-color-text-tertiary);
 }
+
+/* ---------------------------------------------------------------- Tiền marketplace */
+
+.mpStack {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+/* Ba phía (khách · chủ xe · XePrime) đứng cạnh nhau khi đủ rộng, xuống hàng khi hẹp. */
+.mpGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  align-items: start;
+  gap: var(--xp-space-md);
+}
+
+.mpGroup {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.mpGroupTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text-secondary);
+}
+
+/* Dòng "trong đó" - con của dòng phía trên, không cộng thêm vào tổng. */
+.moneyRowSub dt {
+  padding-inline-start: var(--xp-space-md);
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.moneyRowSub dd {
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.mpSub {
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.mpMuted {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+}
+
+.mpCode {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.mpList {
+  composes: surface;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mpItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+}
+
+.mpItem + .mpItem {
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.mpItemMain {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mpAction {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- Case hỗ trợ đang mở (ADR 0095) */
+
+.supportCases {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.supportCase {
+  composes: card;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-xs);
+}
+
+.supportCaseMain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.supportCaseCode {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.supportCaseMeta {
+  color: var(--xp-color-text-secondary);
+}
+
+.supportHint {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+}

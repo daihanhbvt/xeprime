@@ -9,6 +9,7 @@ import {
 import { Skeleton } from 'antd';
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { cx } from '@/lib/cx';
 import {
@@ -58,8 +59,8 @@ interface FinanceSummaryStripProps {
  * không". Mỗi thẻ đếm là một nút — bấm là chuyển sang đúng hàng đợi sinh ra con số đó, và số trên
  * thẻ đếm ĐÚNG tập mà hàng đợi hiện khi không lọc (`PlatformMoneySummaryService`).
  *
- * Vạch màu bên trái nói mức cần để mắt: đỏ = có thứ quá hạn/đang tranh chấp/lỗi, cam = có việc,
- * không vạch = yên. Không thẻ nào đỏ chỉ vì CÓ SỐ — giữ chỗ chờ chốt phần lớn là chuyến đang
+ * Vạch màu bên trái nói mức cần để mắt: đỏ = có thứ quá hạn/đang tranh chấp/lỗi, cam = có việc
+ * (vd. chủ xe chưa xác nhận giao xe), không vạch = yên. Không thẻ nào đỏ chỉ vì CÓ SỐ — giữ chỗ chờ chốt phần lớn là chuyến đang
  * chạy bình thường.
  */
 export function FinanceSummaryStrip({
@@ -102,11 +103,22 @@ export function FinanceSummaryStrip({
       {
         queue: FINANCE_QUEUE.HOLDS,
         label: t('cards.holds'),
-        tone: s.holds.disputeCount > 0 ? 'urgent' : 'idle',
-        hint:
+        // Tranh chấp thật mới là việc gấp; chủ xe chưa bấm giao xe là việc cần làm, không cháy nhà.
+        tone:
           s.holds.disputeCount > 0
-            ? t('cards.disputes', { count: s.holds.disputeCount })
-            : undefined,
+            ? 'urgent'
+            : s.holds.handoverUnconfirmedCount > 0
+              ? 'attention'
+              : 'idle',
+        hint:
+          [
+            s.holds.disputeCount > 0 ? t('cards.disputes', { count: s.holds.disputeCount }) : null,
+            s.holds.handoverUnconfirmedCount > 0
+              ? t('cards.handoverUnconfirmed', { count: s.holds.handoverUnconfirmedCount })
+              : null,
+          ]
+            .filter(Boolean)
+            .join(LIST_SEPARATOR) || undefined,
       },
       {
         queue: FINANCE_QUEUE.REFUNDS,

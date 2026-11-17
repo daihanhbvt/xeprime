@@ -69,6 +69,42 @@
     "resolutionPlaceholder": "Resolution…",
     "resolutionRequired": "Enter a resolution (at least 5 characters).",
     "resolveSubmit": "Resolve",
-    "resolveSuccess": "Request resolved."
+    "resolveSuccess": "Request resolved.",
+    "verdict": {
+      "title": "Trip verdict",
+      "hint": "Call the owner and the customer to verify, then pick what happened. The booking moves to the matching status and the booking hold settles under the usual rules.",
+      "optionalHint": "Dispute before pickup: if the trip did not go ahead as booked, close it with a verdict below. If both sides agreed to keep the trip, resolve the case as usual.",
+      "noteLabel": "How it was verified",
+      "notePlaceholder": "e.g. called the owner and the customer at 10:15, vehicle handed over at 9:00",
+      "noteRequired": "Record how it was verified (at least 5 characters).",
+      "audience": "This goes into the case conclusion, which the owner can read.",
+      "success": "Trip verdict recorded.",
+      "action": {
+        "handed_over": "Vehicle handed over",
+        "customer_no_show": "Customer no-show",
+        "host_not_delivered": "Owner could not hand over",
+        "returned": "Vehicle returned",
+        "platform_cancelled": "Cancel, no one at fault"
+      },
+      "summary": {
+        "handed_over": "Creates the pickup handover at the booked pickup time. The booking moves to Active, and tax and insurance start as if the owner had confirmed.",
+        "customer_no_show": "The booking moves to No-show and the vehicle schedule is released. The hold settles as a late cancellation: the owner gets the deposit share, insurance is refunded to the customer.",
+        "host_not_delivered": "The booking is cancelled, the vehicle schedule is released and the customer gets a 100% refund of the hold. The cancellation counts against the owner.",
+        "returned": "Creates the return handover at the booked return time. The booking completes and the hold is settled.",
+        "platform_cancelled": "The booking is cancelled, the vehicle schedule is released and the customer gets a 100% refund of the hold. The cancellation does not count against the owner."
+      },
+      "money": {
+        "loading": "Calculating the hold amounts...",
+        "loadError": "Could not load the amounts. The hold still settles under the usual rules.",
+        "later": "This verdict settles no money now: the hold settles when the trip ends.",
+        "noHold": "The booking has no paid hold waiting to settle.",
+        "customer": "Customer refund {amount}",
+        "owner": "owner gets {amount}",
+        "platform": "XePrime keeps {amount}",
+        "insurer": "insurer payable {amount}",
+        "tax": "tax {amount}",
+        "deferred": "Another dispute is still open on this booking, so the money waits for manual settlement on the Finance screen."
+      }
+    }
   }
 }

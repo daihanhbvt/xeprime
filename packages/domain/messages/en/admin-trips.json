@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Trip operations",
-    "subtitle": "The four stages a trip goes through on the platform - nudge the right person when a stage stalls.",
+    "subtitle": "The stages a trip goes through on the platform - nudge the right person when a stage stalls.",
     "loading": "Loading trip operations…",
     "updatedAt": "Updated {time}",
     "allBookings": "All bookings"
@@ -22,7 +22,8 @@
     "pending_approval": "Awaiting host approval",
     "awaiting_hold": "Awaiting customer hold",
     "pickup_soon": "Pickup soon",
-    "active": "On the road"
+    "active": "On the road",
+    "driver": "Driver issues"
   },
   "cards": {
     "label": "Work counters",
@@ -31,20 +32,23 @@
       "pending_approval": "{count, plural, one {# expiring} other {# expiring}}",
       "awaiting_hold": "{count, plural, one {# expiring} other {# expiring}}",
       "pickup_soon": "{count, plural, one {# pickup overdue} other {# pickups overdue}}",
-      "active": "{count, plural, one {# return overdue} other {# returns overdue}}"
+      "active": "{count, plural, one {# return overdue} other {# returns overdue}}",
+      "driver": "{count, plural, one {# to call now} other {# to call now}}"
     },
     "calm": {
       "pending_approval": "Nothing is stuck",
       "awaiting_hold": "Customers still have time",
       "pickup_soon": "No overdue pickup",
-      "active": "No overdue return"
+      "active": "No overdue return",
+      "driver": "No trip is stuck on a driver"
     }
   },
   "intro": {
     "pending_approval": "The host's response deadline depends on how soon pick-up is (15 minutes to 4 hours); the system reminds them at 60 and 15 minutes left. Under 15 minutes left with no answer: call them or send a nudge - the customer is waiting to look elsewhere.",
     "awaiting_hold": "The host accepted and the vehicle is held for the customer. They have 120 minutes to pay the hold; the system reminds them at 60 and 15 minutes left. When time runs out the vehicle returns to the marketplace by itself.",
     "pickup_soon": "Paid bookings picking up within the next 24 hours. Past the pickup time with no handover: ask the shop - the customer may be standing there.",
-    "active": "Vehicles currently with customers. Past the return time with no return handover: ask the shop; settlement only runs after the return record."
+    "active": "Vehicles currently with customers. Past the return time with no return handover: ask the shop; settlement only runs after the return record.",
+    "driver": "Trips with a driver that are stuck on the driver: pickup within 24 hours with no driver who accepted, a driver who missed the response deadline, or a driver who dropped out and the shop has not reassigned. Under 2 hours to pickup or past the deadline: call the shop - the platform does not assign drivers on their behalf."
   },
   "filters": {
     "searchLabel": "Search this queue",
@@ -92,7 +96,8 @@
     "pending_approval": "No request is waiting for a host right now.",
     "awaiting_hold": "No request is waiting for a customer's hold.",
     "pickup_soon": "No pickup in the next 24 hours.",
-    "active": "No trip is on the road."
+    "active": "No trip is on the road.",
+    "driver": "No trip is stuck on a driver."
   },
   "time": {
     "inMinutes": "{count} min left",
@@ -107,5 +112,20 @@
     "today": "Today: {pickups} pickups · {returns} returns",
     "open": "Open trip operations",
     "loadError": "Could not load the operations queues"
+  },
+  "driver": {
+    "label": "Driver queue",
+    "issueColumn": "Driver issue",
+    "issue": {
+      "dropped": "Driver dropped out",
+      "response_overdue": "Driver response overdue",
+      "unassigned": "No driver assigned",
+      "awaiting": "Waiting for driver to accept"
+    },
+    "deadline": {
+      "dropped": "Reassign by {time}",
+      "response_overdue": "Respond by {time}"
+    },
+    "assigned": "Assigned: {name}"
   }
 }

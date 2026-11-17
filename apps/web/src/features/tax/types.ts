@@ -6,6 +6,11 @@ type Schemas = components['schemas'];
 export type TaxPeriodSummary = Schemas['TaxPeriodSummaryDto'];
 export type TaxRow = Schemas['TaxRowDto'];
 export type TaxRowPage = Schemas['TaxRowPageDto'];
+/** Chứng cứ kê khai / nộp đã ghi của một kỳ. */
+export type TaxPeriodFiling = Schemas['TaxPeriodFilingDto'];
+export type DeclareTaxPeriodInput = Schemas['DeclareTaxPeriodDto'];
+export type RemitTaxPeriodInput = Schemas['RemitTaxPeriodDto'];
+export type TaxPeriodAdvanced = Schemas['TaxPeriodAdvancedDto'];
 /** "Thuế đã khấu trừ trong kỳ" nhìn từ CHỦ XE. */
 export type TenantTaxSummary = Schemas['TenantTaxSummaryDto'];
 

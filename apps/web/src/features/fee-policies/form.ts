@@ -1,5 +1,7 @@
 import * as yup from 'yup';
 import {
+  BOOKING_LIMITS_BOUNDS,
+  BOOKING_LIMITS_DEFAULTS,
   DEPOSIT_PERCENT_MAX,
   DEPOSIT_PERCENT_MIN,
   FEE_SCHEDULE_DEFAULTS,
@@ -97,10 +99,13 @@ export interface FeePolicyFormValues {
   ownerCommissionTiers: CommissionTierFormValue[];
   depositPercent: number | null;
   depositMinAmount: MoneyValue;
-  depositMaxPercent: number | null;
   holdMinAmount: MoneyValue;
   holdPaymentWindowMinutes: number | null;
   freeCancelHours: number | null;
+  /** Khách trên chợ đặt trước tối đa N ngày (ADR 0091 điều 4). */
+  maxAdvanceBookingDays: number | null;
+  /** Chuyến tự lái của khách dài tối đa N ngày (ADR 0091 điều 4). */
+  selfDriveMaxDays: number | null;
   vehicleProtectionEnabled: boolean;
   vehicleProtectionDailyAmount: PerVehicleTypeFormValue;
   tripInsuranceEnabled: boolean;
@@ -223,10 +228,11 @@ export function feePolicyFormDefaults(source: FeePolicy | null): FeePolicyFormVa
       depositPercent: FEE_SCHEDULE_DEFAULTS.depositPercent,
       depositMinAmount: Number(FEE_SCHEDULE_DEFAULTS.depositMinAmount),
       // Trần không thấp hơn % giữ chỗ mặc định — cùng cách migration v8 nâng trần (`GREATEST(…, 15)`, ADR 0066).
-      depositMaxPercent: FEE_SCHEDULE_DEFAULTS.depositPercent,
       holdMinAmount: HOLD_MIN_AMOUNT,
       holdPaymentWindowMinutes: HOLD_PAYMENT_WINDOW_MINUTES,
       freeCancelHours: HOLD_FREE_CANCEL_HOURS,
+      maxAdvanceBookingDays: BOOKING_LIMITS_DEFAULTS.maxAdvanceBookingDays,
+      selfDriveMaxDays: BOOKING_LIMITS_DEFAULTS.selfDriveMaxDays,
       vehicleProtectionEnabled: false,
       vehicleProtectionDailyAmount: perVehicleToForm(
         FEE_SCHEDULE_DEFAULTS.vehicleProtectionDailyAmount,
@@ -251,10 +257,11 @@ export function feePolicyFormDefaults(source: FeePolicy | null): FeePolicyFormVa
     })),
     depositPercent: source.depositPercent,
     depositMinAmount: Number(source.depositMinAmount),
-    depositMaxPercent: source.depositMaxPercent,
     holdMinAmount: Number(source.holdMinAmount),
     holdPaymentWindowMinutes: source.holdPaymentWindowMinutes,
     freeCancelHours: source.freeCancelHours,
+    maxAdvanceBookingDays: source.maxAdvanceBookingDays,
+    selfDriveMaxDays: source.selfDriveMaxDays,
     vehicleProtectionEnabled: source.vehicleProtectionEnabled,
     vehicleProtectionDailyAmount: perVehicleToForm(source.vehicleProtectionDailyAmount),
     tripInsuranceEnabled: source.tripInsuranceEnabled,
@@ -292,10 +299,12 @@ export function toUpsertFeePolicyBody(values: FeePolicyFormValues): UpsertFeePol
     })),
     depositPercent: values.depositPercent ?? 0,
     depositMinAmount: String(values.depositMinAmount ?? 0),
-    depositMaxPercent: values.depositMaxPercent ?? 0,
     holdMinAmount: String(values.holdMinAmount ?? 0),
     holdPaymentWindowMinutes: values.holdPaymentWindowMinutes ?? 0,
     freeCancelHours: values.freeCancelHours ?? 0,
+    maxAdvanceBookingDays:
+      values.maxAdvanceBookingDays ?? BOOKING_LIMITS_DEFAULTS.maxAdvanceBookingDays,
+    selfDriveMaxDays: values.selfDriveMaxDays ?? BOOKING_LIMITS_DEFAULTS.selfDriveMaxDays,
     vehicleProtectionEnabled: values.vehicleProtectionEnabled,
     vehicleProtectionDailyAmount: perVehicleToWire(values.vehicleProtectionDailyAmount),
     tripInsuranceEnabled: values.tripInsuranceEnabled,
@@ -325,7 +334,6 @@ export function formToPolicyValues(values: FeePolicyFormValues): FeePolicyValues
     freeCancelHours: values.freeCancelHours ?? Number.NaN,
     depositPercent: values.depositPercent ?? Number.NaN,
     depositMinAmount: body.depositMinAmount,
-    depositMaxPercent: values.depositMaxPercent ?? Number.NaN,
     customerPlatformFee: perVehicleToWire(values.customerPlatformFee),
     ownerCommissionTiers: tiersFromForm(values.ownerCommissionTiers),
     taxEnabled: values.taxEnabled,
@@ -478,7 +486,11 @@ export function buildFeePolicySchema(m: FeePolicyFormMessages) {
       .defined()
       .min(0, m.range)
       .max(max, m.range)
-      .test('two-decimals', m.range, (v) => v == null || Math.abs(v * 100 - Math.round(v * 100)) < 1e-9);
+      .test(
+        'two-decimals',
+        m.range,
+        (v) => v == null || Math.abs(v * 100 - Math.round(v * 100)) < 1e-9,
+      );
 
   const percent = (min: number, max: number) =>
     yup
@@ -489,140 +501,168 @@ export function buildFeePolicySchema(m: FeePolicyFormMessages) {
       .min(min, m.range)
       .max(max, m.range);
 
-  return yup
-    .object({
-      name: yup.string().trim().required(m.nameRequired).max(120).defined(),
-      note: yup.string().trim().max(2000).defined(),
-      customerPlatformFee: perVehicle(),
-      ownerCommissionTiers: yup
-        .array(
-          yup.object({
-            fromDay: yup
-              .number()
-              .nullable()
-              .defined()
-              .test('required', m.required, (v) => v != null)
-              .integer(m.integer)
-              .min(1, m.range)
-              .max(OWNER_COMMISSION_FROM_DAY_MAX, m.range),
-            percent: percent(0, OWNER_COMMISSION_PERCENT_MAX),
+  return (
+    yup
+      .object({
+        name: yup.string().trim().required(m.nameRequired).max(120).defined(),
+        note: yup.string().trim().max(2000).defined(),
+        customerPlatformFee: perVehicle(),
+        ownerCommissionTiers: yup
+          .array(
+            yup.object({
+              fromDay: yup
+                .number()
+                .nullable()
+                .defined()
+                .test('required', m.required, (v) => v != null)
+                .integer(m.integer)
+                .min(1, m.range)
+                .max(OWNER_COMMISSION_FROM_DAY_MAX, m.range),
+              percent: percent(0, OWNER_COMMISSION_PERCENT_MAX),
+            }),
+          )
+          .min(1, m.blocker('owner_commission_tiers_invalid'))
+          .max(OWNER_COMMISSION_TIERS_MAX, m.range)
+          .defined(),
+        depositPercent: percent(DEPOSIT_PERCENT_MIN, DEPOSIT_PERCENT_MAX),
+        depositMinAmount: money(),
+        holdMinAmount: money(),
+        holdPaymentWindowMinutes: yup
+          .number()
+          .nullable()
+          .defined()
+          .test('required', m.required, (v) => v != null)
+          .integer(m.integer)
+          // Cùng sàn với `feePolicyActivationBlockers`: dưới ngưỡng này không hold nào phát được QR.
+          .min(HOLD_MIN_USABLE_WINDOW_MINUTES, m.range)
+          .max(HOLD_PAYMENT_WINDOW_MINUTES_MAX, m.range),
+        freeCancelHours: yup
+          .number()
+          .nullable()
+          .defined()
+          .test('required', m.required, (v) => v != null)
+          .integer(m.integer)
+          .min(0, m.range)
+          .max(FREE_CANCEL_HOURS_MAX, m.range),
+        maxAdvanceBookingDays: yup
+          .number()
+          .nullable()
+          .defined()
+          .test('required', m.required, (v) => v != null)
+          .integer(m.integer)
+          .min(BOOKING_LIMITS_BOUNDS.maxAdvanceBookingDays.min, m.range)
+          .max(BOOKING_LIMITS_BOUNDS.maxAdvanceBookingDays.max, m.range),
+        selfDriveMaxDays: yup
+          .number()
+          .nullable()
+          .defined()
+          .test('required', m.required, (v) => v != null)
+          .integer(m.integer)
+          .min(BOOKING_LIMITS_BOUNDS.selfDriveMaxDays.min, m.range)
+          .max(BOOKING_LIMITS_BOUNDS.selfDriveMaxDays.max, m.range),
+        vehicleProtectionEnabled: yup.boolean().defined(),
+        vehicleProtectionDailyAmount: ratesWhenOn('vehicleProtectionEnabled'),
+        tripInsuranceEnabled: yup.boolean().defined(),
+        tripInsuranceDailyAmount: ratesWhenOn('tripInsuranceEnabled'),
+        insurancePartnerName: yup
+          .string()
+          .trim()
+          .max(120)
+          .defined()
+          .when(['tripInsuranceEnabled', 'vehicleProtectionEnabled'], {
+            is: (a: boolean, b: boolean) => a || b,
+            then: (s) => s.test('required', m.partnerRequired, (v) => Boolean(v)),
           }),
+        taxEnabled: yup.boolean().defined(),
+        taxLegalBasis: yup
+          .string()
+          .trim()
+          .max(TAX_LEGAL_BASIS_MAX_LENGTH, m.range)
+          .defined()
+          .when('taxEnabled', {
+            is: true,
+            then: (s) => s.test('required', m.taxLegalBasisRequired, (v) => Boolean(v)),
+          }),
+        taxRates: yup
+          .object(
+            Object.fromEntries(
+              TAX_SERVICE_TYPES.map((type) => [
+                type,
+                yup.object({
+                  vatPercent: taxRate(TAX_VAT_PERCENT_MAX),
+                  pitPercent: taxRate(TAX_PIT_PERCENT_MAX),
+                }),
+              ]),
+            ),
+          )
+          .required() as unknown as yup.ObjectSchema<TaxRatesFormValue>,
+        withDriverLimits: yup
+          .object({
+            priceMin: money().test('positive', m.range, (v) => v == null || v > 0),
+            priceMax: money(),
+            wageMin: money().test('positive', m.range, (v) => v == null || v > 0),
+            wageMax: money(),
+            wageSuggested: money(),
+          })
+          .required() as yup.ObjectSchema<WithDriverLimitsFormValue>,
+      })
+      /* Giới hạn chuyến có tài xế: tối thiểu < tối đa — cùng luật `withDriverLimitsValid` của server. */
+      .test('with-driver-limits-order', function limitsOrder(raw) {
+        const limits = (raw as unknown as FeePolicyFormValues | undefined)?.withDriverLimits;
+        if (!limits) return true;
+        const errors = (
+          [
+            ['priceMin', 'priceMax'],
+            ['wageMin', 'wageMax'],
+          ] as const
         )
-        .min(1, m.blocker('owner_commission_tiers_invalid'))
-        .max(OWNER_COMMISSION_TIERS_MAX, m.range)
-        .defined(),
-      depositPercent: percent(DEPOSIT_PERCENT_MIN, DEPOSIT_PERCENT_MAX),
-      depositMinAmount: money(),
-      depositMaxPercent: percent(DEPOSIT_PERCENT_MIN, DEPOSIT_PERCENT_MAX),
-      holdMinAmount: money(),
-      holdPaymentWindowMinutes: yup
-        .number()
-        .nullable()
-        .defined()
-        .test('required', m.required, (v) => v != null)
-        .integer(m.integer)
-        // Cùng sàn với `feePolicyActivationBlockers`: dưới ngưỡng này không hold nào phát được QR.
-        .min(HOLD_MIN_USABLE_WINDOW_MINUTES, m.range)
-        .max(HOLD_PAYMENT_WINDOW_MINUTES_MAX, m.range),
-      freeCancelHours: yup
-        .number()
-        .nullable()
-        .defined()
-        .test('required', m.required, (v) => v != null)
-        .integer(m.integer)
-        .min(0, m.range)
-        .max(FREE_CANCEL_HOURS_MAX, m.range),
-      vehicleProtectionEnabled: yup.boolean().defined(),
-      vehicleProtectionDailyAmount: ratesWhenOn('vehicleProtectionEnabled'),
-      tripInsuranceEnabled: yup.boolean().defined(),
-      tripInsuranceDailyAmount: ratesWhenOn('tripInsuranceEnabled'),
-      insurancePartnerName: yup
-        .string()
-        .trim()
-        .max(120)
-        .defined()
-        .when(['tripInsuranceEnabled', 'vehicleProtectionEnabled'], {
-          is: (a: boolean, b: boolean) => a || b,
-          then: (s) => s.test('required', m.partnerRequired, (v) => Boolean(v)),
-        }),
-      taxEnabled: yup.boolean().defined(),
-      taxLegalBasis: yup
-        .string()
-        .trim()
-        .max(TAX_LEGAL_BASIS_MAX_LENGTH, m.range)
-        .defined()
-        .when('taxEnabled', {
-          is: true,
-          then: (s) => s.test('required', m.taxLegalBasisRequired, (v) => Boolean(v)),
-        }),
-      taxRates: yup
-        .object(
-          Object.fromEntries(
-            TAX_SERVICE_TYPES.map((type) => [
-              type,
-              yup.object({ vatPercent: taxRate(TAX_VAT_PERCENT_MAX), pitPercent: taxRate(TAX_PIT_PERCENT_MAX) }),
-            ]),
-          ),
-        )
-        .required() as unknown as yup.ObjectSchema<TaxRatesFormValue>,
-      withDriverLimits: yup
-        .object({
-          priceMin: money().test('positive', m.range, (v) => v == null || v > 0),
-          priceMax: money(),
-          wageMin: money().test('positive', m.range, (v) => v == null || v > 0),
-          wageMax: money(),
-          wageSuggested: money(),
-        })
-        .required() as yup.ObjectSchema<WithDriverLimitsFormValue>,
-    })
-    /* Giới hạn chuyến có tài xế: tối thiểu < tối đa — cùng luật `withDriverLimitsValid` của server. */
-    .test('with-driver-limits-order', function limitsOrder(raw) {
-      const limits = (raw as unknown as FeePolicyFormValues | undefined)?.withDriverLimits;
-      if (!limits) return true;
-      const errors = (
-        [
-          ['priceMin', 'priceMax'],
-          ['wageMin', 'wageMax'],
-        ] as const
-      )
-        .filter(([lo, hi]) => limits[lo] != null && limits[hi] != null && limits[lo]! >= limits[hi]!)
-        .map(([, hi]) => this.createError({ path: `withDriverLimits.${hi}`, message: m.limitOrder }));
-      // Mức gợi ý nằm trong khoảng tiền công — cùng `withDriverLimitsValid` của server.
-      const { wageMin, wageMax, wageSuggested } = limits;
-      if (
-        wageSuggested != null &&
-        ((wageMin != null && wageSuggested < wageMin) || (wageMax != null && wageSuggested > wageMax))
-      ) {
-        errors.push(
-          this.createError({ path: 'withDriverLimits.wageSuggested', message: m.suggestedInRange }),
+          .filter(
+            ([lo, hi]) => limits[lo] != null && limits[hi] != null && limits[lo]! >= limits[hi]!,
+          )
+          .map(([, hi]) =>
+            this.createError({ path: `withDriverLimits.${hi}`, message: m.limitOrder }),
+          );
+        // Mức gợi ý nằm trong khoảng tiền công — cùng `withDriverLimitsValid` của server.
+        const { wageMin, wageMax, wageSuggested } = limits;
+        if (
+          wageSuggested != null &&
+          ((wageMin != null && wageSuggested < wageMin) ||
+            (wageMax != null && wageSuggested > wageMax))
+        ) {
+          errors.push(
+            this.createError({
+              path: 'withDriverLimits.wageSuggested',
+              message: m.suggestedInRange,
+            }),
+          );
+        }
+        return errors.length > 0 ? new yup.ValidationError(errors) : true;
+      })
+      /*
+       * Bật thuế thì MỌI ô của bảng mức phải có số — kiểm ở gốc vì `.when` trong object lồng không
+       * nhìn thấy `taxEnabled` ở cấp trên. Lỗi gắn đúng ô trống.
+       */
+      .test('tax-rates-required', function taxRatesRequired(raw) {
+        const values = raw as unknown as FeePolicyFormValues | undefined;
+        if (!values?.taxEnabled) return true;
+        const errors = TAX_SERVICE_TYPES.flatMap((type) =>
+          (['vatPercent', 'pitPercent'] as const)
+            .filter((field) => values.taxRates?.[type]?.[field] == null)
+            .map((field) =>
+              this.createError({ path: `taxRates.${type}.${field}`, message: m.taxRateRequired }),
+            ),
         );
-      }
-      return errors.length > 0 ? new yup.ValidationError(errors) : true;
-    })
-    /*
-     * Bật thuế thì MỌI ô của bảng mức phải có số — kiểm ở gốc vì `.when` trong object lồng không
-     * nhìn thấy `taxEnabled` ở cấp trên. Lỗi gắn đúng ô trống.
-     */
-    .test('tax-rates-required', function taxRatesRequired(raw) {
-      const values = raw as unknown as FeePolicyFormValues | undefined;
-      if (!values?.taxEnabled) return true;
-      const errors = TAX_SERVICE_TYPES.flatMap((type) =>
-        (['vatPercent', 'pitPercent'] as const)
-          .filter((field) => values.taxRates?.[type]?.[field] == null)
-          .map((field) =>
-            this.createError({ path: `taxRates.${type}.${field}`, message: m.taxRateRequired }),
-          ),
-      );
-      return errors.length > 0 ? new yup.ValidationError(errors) : true;
-    })
-    .test('activation-rules', function activationRules(raw) {
-      if (!raw) return true;
-      const values = raw as unknown as FeePolicyFormValues;
-      const errors = feePolicyActivationBlockers(formToPolicyValues(values))
-        .filter((code) => code in BLOCKER_FIELD)
-        .map((code) => this.createError({ path: BLOCKER_FIELD[code], message: m.blocker(code) }));
-      return errors.length > 0 ? new yup.ValidationError(errors) : true;
-    });
+        return errors.length > 0 ? new yup.ValidationError(errors) : true;
+      })
+      .test('activation-rules', function activationRules(raw) {
+        if (!raw) return true;
+        const values = raw as unknown as FeePolicyFormValues;
+        const errors = feePolicyActivationBlockers(formToPolicyValues(values))
+          .filter((code) => code in BLOCKER_FIELD)
+          .map((code) => this.createError({ path: BLOCKER_FIELD[code], message: m.blocker(code) }));
+        return errors.length > 0 ? new yup.ValidationError(errors) : true;
+      })
+  );
 }
 
 /** Loại xe theo thứ tự hiển thị — ô tô trước. */

@@ -11,8 +11,11 @@ import {
   USER_STATUS,
   VEHICLE_TYPE,
 } from '@xeprime/types';
+import type { ConfigService } from '@nestjs/config';
 import { normalizePhone } from '../src/common/phone';
 import { AuditService } from '../src/modules/audit/audit.service';
+import { NativeSessionService } from '../src/modules/auth/native-session.service';
+import { SessionService } from '../src/modules/auth/session.service';
 import { PlatformCustomersService } from '../src/modules/platform-admin/platform-customers.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
@@ -26,7 +29,30 @@ import type { PrismaService } from '../src/prisma/prisma.service';
  */
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
-const service = new PlatformCustomersService(asService, new AuditService(asService));
+const ENV: Record<string, unknown> = {
+  NODE_ENV: 'test',
+  SESSION_JWT_SECRET: 'test-session-secret-platform-customers-0123456789',
+  SESSION_COOKIE_SECURE: false,
+  MOBILE_ACCESS_TTL_MINUTES: 15,
+  MOBILE_REFRESH_TTL_DAYS: 60,
+  MOBILE_JWT_AUDIENCE: 'xeprime-mobile-test',
+};
+const config = {
+  get: (k: string) => ENV[k],
+  getOrThrow: (k: string) => {
+    const v = ENV[k];
+    if (v === undefined) throw new Error(`missing ${k}`);
+    return v;
+  },
+} as unknown as ConfigService;
+const webSessions = new SessionService(config, asService);
+const nativeSessions = new NativeSessionService(config, asService);
+const service = new PlatformCustomersService(
+  asService,
+  new AuditService(asService),
+  webSessions,
+  nativeSessions,
+);
 
 let dbAvailable = false;
 let tag: string;
@@ -186,6 +212,8 @@ beforeAll(async () => {
 afterAll(async () => {
   if (dbAvailable) {
     await prisma.auditLog.deleteMany({ where: { targetId: { in: userIds() } } });
+    await prisma.webSession.deleteMany({ where: { userId: { in: userIds() } } });
+    await prisma.nativeAuthSession.deleteMany({ where: { userId: { in: userIds() } } });
     await prisma.bookingRequest.deleteMany({ where: { tenantId } });
     await prisma.booking.deleteMany({ where: { tenantId } });
     await prisma.vehicle.deleteMany({ where: { tenantId } });
@@ -299,6 +327,61 @@ describe('Platform customers (Phase 7)', () => {
 
   maybe('id lạ → NOT_FOUND', async () => {
     await expect(service.revealContact(newId(), platformStaffId)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.NOT_FOUND },
+    });
+  });
+});
+
+/**
+ * Đợt rà Admin 16/11/2026: khoá tài khoản khách giết MỌI phiên (web + app) trong cùng transaction,
+ * và mở khoá trả lại trạng thái hoạt động. Hai lượt bấm trùng ⇒ lượt sau 409, không ghi đè.
+ */
+describe('Platform customers - khoá / mở khoá', () => {
+  maybe('khoá: lật locked + lý do, thu hồi phiên web và app, audit; khoá lần hai 409', async () => {
+    const web = await webSessions.issue(customerId);
+    await nativeSessions.issueSession(customerId);
+    expect(await webSessions.isSessionUsable(web.sessionId, customerId)).toBe(true);
+
+    const detail = await service.lock(customerId, platformStaffId, 'Gian lận hoàn tiền nhiều lần');
+    expect(detail.status).toBe(USER_STATUS.LOCKED);
+    expect(detail.lockedReason).toBe('Gian lận hoàn tiền nhiều lần');
+    expect(detail.lockedAt).not.toBeNull();
+
+    expect(await webSessions.isSessionUsable(web.sessionId, customerId)).toBe(false);
+    expect(
+      await prisma.nativeAuthSession.count({ where: { userId: customerId, revokedAt: null } }),
+    ).toBe(0);
+    expect(
+      await prisma.auditLog.count({
+        where: { targetId: customerId, action: 'customer.lock', actorUserId: platformStaffId },
+      }),
+    ).toBe(1);
+
+    await expect(service.lock(customerId, platformStaffId, 'Bấm lần hai')).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.CUSTOMER_ACCOUNT_STATE_CONFLICT },
+    });
+  });
+
+  maybe('mở khoá: về active, xoá mốc + lý do, audit; mở lần hai 409', async () => {
+    const detail = await service.unlock(customerId, platformStaffId, 'Đã xác minh với khách');
+    expect(detail.status).toBe(USER_STATUS.ACTIVE);
+    expect(detail.lockedAt).toBeNull();
+    expect(detail.lockedReason).toBeNull();
+    expect(
+      await prisma.auditLog.count({ where: { targetId: customerId, action: 'customer.unlock' } }),
+    ).toBe(1);
+    await expect(service.unlock(customerId, platformStaffId, 'Mở lần hai')).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.CUSTOMER_ACCOUNT_STATE_CONFLICT },
+    });
+  });
+
+  maybe('không khoá được tài khoản realm khác (chủ shop) hay id lạ', async () => {
+    await expect(
+      service.lock(shopMemberId, platformStaffId, 'Nhầm tài khoản'),
+    ).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.NOT_FOUND },
+    });
+    await expect(service.lock(newId(), platformStaffId, 'Id lạ hoắc')).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.NOT_FOUND },
     });
   });

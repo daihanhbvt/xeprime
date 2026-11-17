@@ -4,7 +4,8 @@
     "benefits": "Coverage details",
     "mandatory": "Required",
     "tripRate": "+{price}",
-    "mandatoryNote": "This car requires MIC vehicle damage insurance for the whole trip - the premium is included in the price."
+    "mandatoryNote": "The owner requires MIC vehicle damage insurance for the whole trip - the premium is included in the price.",
+    "benefitsPage": "See benefits and who bears the deductible"
   },
   "benefits": {
     "coverage": "What's covered",
@@ -49,5 +50,63 @@
       "refunded": "The trip was cancelled before handover - the insurance premium has been refunded."
     },
     "loadError": "Couldn't load the insurance details."
+  },
+  "info": {
+    "meta": {
+      "title": "Vehicle damage insurance benefits",
+      "description": "MIC per-trip vehicle damage insurance for self-drive cars on XePrime: benefits, deductible, who bears it and how to report an incident."
+    },
+    "hero": {
+      "eyebrow": "Trip insurance",
+      "title": "Vehicle damage insurance benefits",
+      "lead": "MIC per-trip vehicle damage insurance for self-drive cars. Each owner chooses Required or Optional for their cars; the premium depends on the car value and rental days."
+    },
+    "benefits": {
+      "heading": "Benefits",
+      "coverage": "Coverage",
+      "deductible": "Deductible",
+      "deductibleValue": "{amount} per incident",
+      "noDeductible": "No deductible",
+      "maxPayout": "Maximum payout",
+      "hotline": "Incident hotline"
+    },
+    "deductible": {
+      "heading": "Who bears the deductible",
+      "body": "When there is a loss, the renter bears the per-incident deductible stated on the insurance certificate; the insurer pays the rest under MIC's rules."
+    },
+    "rules": {
+      "heading": "How it applies",
+      "scope": {
+        "title": "Covered cars and trips",
+        "desc": "Self-drive cars, trips of up to 30 days. Motorbikes, with-driver trips and long-term rentals are not covered by this insurance yet."
+      },
+      "coverage": {
+        "title": "Coverage period",
+        "desc": "From the owner's handover (plus 5 minutes) to the return time on the booking. The certificate shows in your trip once issued."
+      },
+      "cancel": {
+        "title": "Cancellations",
+        "desc": "Cancelling before pickup refunds 100% of what you paid for insurance, because the policy is only issued when the owner hands the car over."
+      },
+      "unissued": {
+        "title": "If no certificate is issued",
+        "desc": "If the certificate has still not been issued by the return time, XePrime automatically refunds everything you paid for insurance to your points wallet."
+      }
+    },
+    "claim": {
+      "heading": "If something happens",
+      "safety": {
+        "title": "Stay safe and keep the scene",
+        "desc": "Move people and the car to safety, and take photos of the scene and related documents."
+      },
+      "hotline": {
+        "title": "Call the insurance hotline",
+        "desc": "Report the incident to MIC via the hotline on the certificate, quoting the certificate number from your trip."
+      },
+      "owner": {
+        "title": "Tell the owner",
+        "desc": "Message the owner in your trip to coordinate the assessment and repairs as MIC instructs."
+      }
+    }
   }
 }

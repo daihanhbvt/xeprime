@@ -1,5 +1,6 @@
 import type { VehicleType } from '@xeprime/types';
-import { apiGet } from '@/services/api-client';
+import { REVALIDATE_CATALOG_SECONDS } from '@/constants/cache';
+import { apiGet, getApiBaseUrl } from '@/services/api-client';
 import type { InsuranceCertificate, InsuranceCoverage, PublicInsuranceProduct } from './types';
 import { browserApiHref } from '@/lib/api-href';
 
@@ -8,6 +9,26 @@ export const fetchPublicInsuranceProducts = (
   vehicleType: VehicleType,
 ): Promise<PublicInsuranceProduct[]> =>
   apiGet<PublicInsuranceProduct[]>('/public/insurance-products', { vehicleType });
+
+/**
+ * Server component (trang "Quyền lợi bảo hiểm", ADR 0091 điều 8): fetch thẳng, cache như danh mục —
+ * mô tả sản phẩm đổi vài lần một năm. Lỗi thì trả mảng rỗng: trang vẫn nói được ai chịu khấu trừ.
+ */
+export async function fetchPublicInsuranceProductsServer(
+  vehicleType: VehicleType,
+): Promise<PublicInsuranceProduct[]> {
+  try {
+    const res = await fetch(
+      `${getApiBaseUrl()}/public/insurance-products?vehicleType=${encodeURIComponent(vehicleType)}`,
+      { cache: 'force-cache', next: { revalidate: REVALIDATE_CATALOG_SECONDS } },
+    );
+    if (!res.ok) return [];
+    const body = (await res.json()) as { data: PublicInsuranceProduct[] };
+    return body.data;
+  } catch {
+    return [];
+  }
+}
 
 /** GCN đã cấp của một đơn — phía gian hàng/chủ xe (tenant lấy từ phiên, không từ client). */
 export const fetchBookingInsuranceCertificates = (

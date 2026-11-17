@@ -14,6 +14,7 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { useMarkWithdrawalPaid } from '../hooks/use-platform-money';
 import type { PlatformWithdrawal } from '../types';
 import styles from './WithdrawalPaidModal.module.css';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 
 /** Cùng sàn/trần với `MarkWithdrawalPaidDto.bankReference`. */
 const BANK_REFERENCE_MIN = 3;
@@ -107,7 +108,9 @@ export function WithdrawalPaidModal({
             {fmt.money(withdrawal.amount)}
           </Descriptions.Item>
           <Descriptions.Item label={tCol('account')}>
-            {withdrawal.bankCode} · {withdrawal.bankAccountNumber}
+            {withdrawal.bankCode}
+            {LIST_SEPARATOR}
+            {withdrawal.bankAccountNumber}
             <br />
             {withdrawal.bankAccountName}
           </Descriptions.Item>

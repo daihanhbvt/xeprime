@@ -19,6 +19,7 @@ import {
   ThunderboltOutlined,
   IdcardOutlined,
   SolutionOutlined,
+  WalletOutlined,
 } from '@ant-design/icons';
 import { NOTIFICATION_TARGET_TYPE, NOTIFICATION_TYPE, type NotificationType } from '@xeprime/types';
 import {
@@ -87,6 +88,9 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   [NOTIFICATION_TYPE.HOLD_EXPIRED]: <HourglassOutlined />,
   [NOTIFICATION_TYPE.HOLD_REFUNDED]: <RollbackOutlined />,
   [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: <RollbackOutlined />,
+  [NOTIFICATION_TYPE.WITHDRAWAL_PAID]: <WalletOutlined />,
+  [NOTIFICATION_TYPE.WITHDRAWAL_REJECTED]: <WalletOutlined />,
+  [NOTIFICATION_TYPE.WITHDRAWAL_REVERSED]: <WalletOutlined />,
   /*
    * Mã khuyến mãi không còn áp được (ADR 0046) — icon QUÀ, cùng ký hiệu với ô áp mã ở luồng đặt
    * xe, để khách nhận ra ngay tin này nói về cái gì. Không dùng icon cảnh báo: đây là tin về một
@@ -172,6 +176,9 @@ export function notificationHref(
           : drivingTripPath.list;
       case NOTIFICATION_TARGET_TYPE.DRIVER_LINK:
         return ROUTES.ACCOUNT.DRIVING;
+      // Lệnh rút khỏi Ví điểm của tài khoản khách.
+      case NOTIFICATION_TARGET_TYPE.WITHDRAWAL:
+        return ROUTES.ACCOUNT.BALANCE;
       // Thông báo về XE/GIAN HÀNG chỉ tới tài khoản đối tác — khách không bao giờ nhận.
       default:
         return null;
@@ -197,6 +204,9 @@ export function notificationHref(
     // Cả hai tuyến quản lý tài xế ở cùng một trang (ADR 0063).
     case NOTIFICATION_TARGET_TYPE.DRIVER_LINK:
       return ROUTES.MANAGE.DRIVERS;
+    // Ví gian hàng chỉ chủ gian hàng nhận tin (ADR 0038 điều 3) — đích là màn Ví điểm.
+    case NOTIFICATION_TARGET_TYPE.WITHDRAWAL:
+      return ROUTES.MANAGE.BALANCE;
     default:
       return null;
   }

@@ -391,6 +391,9 @@
     "hold_expired": "Hết hạn thanh toán giữ chỗ",
     "hold_refunded": "Chuyến không thành - đã hoàn",
     "hold_refund_paid": "Đã hoàn tiền giữ chỗ",
+    "withdrawal_paid": "Đã chuyển tiền rút",
+    "withdrawal_rejected": "Lệnh rút bị từ chối",
+    "withdrawal_reversed": "Lệnh rút chuyển không thành công",
     "booking_request_slot_reopened": "Xe bạn hỏi đã rảnh lại",
     "booking_cancelled_by_host": "Chủ xe đã huỷ chuyến",
     "driver_invited": "Lời mời làm tài xế",
@@ -745,7 +748,8 @@
     "vehicle_protection": "Bảo hiểm vật chất xe",
     "deposit": "Cọc đặt chuyến",
     "promo": "Mã khuyến mãi XePrime",
-    "rent_prepaid": "Phần tiền thuê trả trước"
+    "rent_prepaid": "Phần tiền thuê trả trước",
+    "insurance_service_fee": "Phí thu hộ bảo hiểm"
   },
   "promoCodeState": {
     "disabled": "Đã tắt",
@@ -877,6 +881,7 @@
     "account_deletion": "Yêu cầu xoá tài khoản",
     "plan_consultation": "Tư vấn gói",
     "handover_unconfirmed": "Chưa xác nhận bàn giao xe",
+    "return_unconfirmed": "Chưa xác nhận trả xe",
     "other": "Khác"
   },
   "supportCaseParty": {
@@ -975,7 +980,7 @@
     "body_type": "Hiện thành thẻ có ảnh khi tạo/sửa xe, ở bộ lọc \"Loại xe\" ngoài chợ, và - khi bật \"Hiện ở trang chủ\" - ở khối \"Loại xe\" trang chủ.",
     "fuel_type": "Hiện ở ô \"Nguồn năng lượng\" khi tạo/sửa xe và ở bộ lọc ngoài chợ.",
     "vehicle_feature": "Hiện ở phần \"Tiện ích\" khi tạo/sửa xe và ở bộ lọc ngoài chợ.",
-    "vehicle_model": "Hiện ở ô \"Mẫu xe\" sau khi chọn hãng. Mỗi mẫu thuộc một hãng và một loại xe."
+    "vehicle_model": "Chọn hãng bên trái. Xe: từng phiên bản theo đời với thông số, giá bán, giá thuê tham khảo và dữ liệu chủ xe gửi chờ duyệt. Dòng xe: thông số chung của dòng, hiện ở ô \"Mẫu xe\" khi đăng xe."
   },
   "walletEntryKind": {
     "hold_forfeit": "Bồi thường huỷ chuyến",
@@ -986,7 +991,14 @@
     "withdrawal_reversal": "Hoàn lại do rút không thành",
     "adjustment": "Điều chỉnh",
     "extension_release": "Tiền giữ chỗ phần gia hạn",
-    "extension_refund": "Hoàn tiền gia hạn"
+    "extension_refund": "Hoàn tiền gia hạn",
+    "late_payment_refund": "Hoàn tiền chuyển muộn",
+    "subscription_overpay": "Hoàn tiền gói chuyển thừa",
+    "insurance_refund": "Hoàn phí bảo hiểm chưa cấp"
+  },
+  "walletStatus": {
+    "active": "Hoạt động",
+    "frozen": "Tạm khoá"
   },
   "withdrawalStatus": {
     "pending": "Chờ duyệt",
@@ -1398,6 +1410,7 @@
       "submit_review": "Gửi duyệt gian hàng",
       "lock": "Khoá gian hàng",
       "unlock": "Mở khoá gian hàng",
+      "contact_reveal": "Xem liên hệ đối tác",
       "free_trips_exhausted": "Hết lượt chuyến miễn phí",
       "vat_invoice": {
         "update": "Đổi hỗ trợ xuất hoá đơn VAT (mọi xe)"
@@ -1714,5 +1727,16 @@
     "request_hold_expired": "Hết hạn thanh toán",
     "request_slot_taken": "Xe đã có khách khác nhận",
     "request_cancelled_by_host": "Bạn đã huỷ khi chờ thanh toán"
+  },
+  "insuranceMode": {
+    "required": "Bắt buộc",
+    "optional": "Tuỳ chọn"
+  },
+  "insuranceEligibilityGap": {
+    "not_car": "Không phải ô tô",
+    "insured_value_missing": "Chưa khai giá trị xe",
+    "photos_missing": "Thiếu ảnh bắt buộc của xe",
+    "registration_missing": "Chưa có cà vẹt (số khung + tên chủ)",
+    "vehicle_info_missing": "Thiếu hãng, mẫu, năm sản xuất hoặc số chỗ"
   }
 }

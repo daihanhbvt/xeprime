@@ -22,6 +22,14 @@
   gap: var(--xp-space-xs);
 }
 
+/* Mục "Phí bảo hiểm" (ADR 0091) — cùng cỡ chữ tiêu đề với khối payload. */
+.sectionTitle {
+  margin: 0 0 var(--xp-space-xs);
+  font-size: var(--xp-font-size-sm);
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
 .payload {
   display: flex;
   flex-direction: column;

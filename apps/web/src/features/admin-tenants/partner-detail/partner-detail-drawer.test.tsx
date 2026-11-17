@@ -618,3 +618,37 @@ describe('Drawer chi tiết đối tác - tiếng Anh', () => {
     expect(screen.getByRole('button', { name: /Open support mode/ })).toBeTruthy();
   });
 });
+
+/* ─────────────────────────────── bỏ che liên hệ ─────────────────────────────── */
+
+describe('Drawer chi tiết đối tác - bỏ che liên hệ', () => {
+  const REVEAL = 'Xem đầy đủ - thao tác này được ghi vào nhật ký hệ thống';
+
+  it('thiếu quyền view_pii: chỉ bản đã che, không có nút xem', async () => {
+    renderDrawer({ tenantId: 't-shop' });
+    await screen.findAllByText('09•••218');
+    expect(screen.queryByRole('button', { name: REVEAL })).toBeNull();
+  });
+
+  it('có quyền: MỘT lượt bấm mở cả SĐT lẫn email, kèm nút sao chép', async () => {
+    permissions.granted.add(PERMISSION.PLATFORM_TENANT_PII_VIEW);
+    http.apiPost.mockResolvedValue({
+      tenantId: 't-shop',
+      ownerPhone: '0912345218',
+      ownerEmail: 'minh.chu@gmail.com',
+      publicPhone: '0243999888',
+      publicEmail: 'lienhe@vietcar.vn',
+    });
+    renderDrawer({ tenantId: 't-shop' });
+    await screen.findAllByText('09•••218');
+
+    fireEvent.click(screen.getAllByRole('button', { name: REVEAL })[0]!);
+
+    await screen.findByText('0912345218');
+    expect(screen.getByText('minh.chu@gmail.com')).toBeTruthy();
+    expect(http.apiPost).toHaveBeenCalledTimes(1);
+    expect(http.apiPost).toHaveBeenCalledWith('/platform/partners/t-shop/contact');
+    expect(screen.queryByRole('button', { name: REVEAL })).toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Sao chép' }).length).toBeGreaterThanOrEqual(2);
+  });
+});

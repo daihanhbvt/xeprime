@@ -9,6 +9,14 @@
   overflow-wrap: anywhere;
 }
 
+/* Lý do hệ thống ghi (tiền về muộn, chuyển thừa…) — dòng phụ dưới nội dung chuyển khoản. */
+.reason {
+  display: block;
+  margin-top: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-warning-strong);
+}
+
 /* Mã rút được hiện như một con chip đọc lại được — ký tự cách đều, nền xám nhạt. */
 .code {
   display: inline-block;

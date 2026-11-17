@@ -5,7 +5,8 @@ import { PLATFORM_TRIP_QUEUE, type PlatformTripQueue } from '@xeprime/types';
  * (ADR 0044): khách hỏi → chủ xe nhận → khách giữ chỗ → giao xe → trả xe.
  *
  *  - **Trước chuyến**: chưa có đơn; việc của người trực là nhắc đúng người (chủ xe, rồi khách).
- *  - **Trong chuyến**: đã có đơn; việc là theo dõi giờ giao/trả, hỏi gian hàng khi quá giờ.
+ *  - **Trong chuyến**: đã có đơn; việc là theo dõi giờ giao/trả, hỏi gian hàng khi quá giờ, và gọi
+ *    bên thuê khi đơn có tài xế kẹt khâu tài xế.
  *
  * Mã hàng đợi là giá trị URL (`?queue=`), cùng một bộ với `counts` server trả; nhãn ở
  * `AdminTrips.queues`.
@@ -15,7 +16,15 @@ export const TRIP_QUEUE_GROUPS = [
     key: 'before',
     queues: [PLATFORM_TRIP_QUEUE.PENDING_APPROVAL, PLATFORM_TRIP_QUEUE.AWAITING_HOLD],
   },
-  { key: 'during', queues: [PLATFORM_TRIP_QUEUE.PICKUP_SOON, PLATFORM_TRIP_QUEUE.ACTIVE] },
+  {
+    key: 'during',
+    // Tài xế đứng giữa "sắp giao" và "đang thuê": nó chặn đúng chặng giao xe của đơn có tài xế.
+    queues: [
+      PLATFORM_TRIP_QUEUE.PICKUP_SOON,
+      PLATFORM_TRIP_QUEUE.DRIVER,
+      PLATFORM_TRIP_QUEUE.ACTIVE,
+    ],
+  },
 ] as const satisfies readonly { key: string; queues: readonly PlatformTripQueue[] }[];
 
 export type TripQueueGroupKey = (typeof TRIP_QUEUE_GROUPS)[number]['key'];

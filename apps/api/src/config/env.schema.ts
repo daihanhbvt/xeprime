@@ -290,6 +290,13 @@ export const envSchema = z
     GEO_DAILY_CALL_BUDGET: z.coerce.number().int().positive().default(3000),
 
     /*
+     * Ngưỡng HAI NGƯỜI của lệnh rút Ví điểm (đợt rà Admin 16/11/2026, chủ sản phẩm chốt 10 triệu):
+     * lệnh từ số này trở lên thì người bấm "Đã chuyển" phải khác người đã duyệt — kiểm trong cùng
+     * câu lệnh chốt ở DB, không ở giao diện. Đặt `0` ⇒ mọi lệnh đều cần hai người.
+     */
+    WITHDRAWAL_DUAL_CONTROL_MIN_AMOUNT: z.coerce.number().int().min(0).default(10_000_000),
+
+    /*
      * --- Ngày lễ Việt Nam: đồng bộ từ Google Calendar (26/08/2026) ---
      *
      * Hai biến này do **`apps/worker`** dùng, không phải API — API chỉ ĐỌC bảng

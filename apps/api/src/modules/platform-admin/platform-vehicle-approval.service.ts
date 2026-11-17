@@ -40,6 +40,7 @@ import {
   VehicleApprovalPageDto,
 } from './dto/vehicle-approval.dto';
 import { PlatformApprovalService, type ApprovalDecisionKind } from './platform-approval.service';
+import { PlatformVehicleInsuranceReviewService } from './platform-vehicle-insurance-review.service';
 
 /** Mốc hàng đợi `approval_tasks.target_type` — cố định cho MỌI truy vấn của service này. */
 const VEHICLE_TARGET = APPROVAL_TARGET_TYPE.VEHICLE;
@@ -67,6 +68,7 @@ export class PlatformVehicleApprovalService {
     private readonly audit: AuditService,
     private readonly pricing: PricingService,
     private readonly approvals: PlatformApprovalService,
+    private readonly insuranceReview: PlatformVehicleInsuranceReviewService,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -228,7 +230,10 @@ export class PlatformVehicleApprovalService {
     // Không có hình chiếu = phiếu mồ côi (xe đã bị xoá cứng) — không còn gì để duyệt.
     if (!task?.vehicleSubject) throw approvalNotFound();
 
-    const { snapshot, basis, live } = await this.reviewData(task);
+    const [{ snapshot, basis, live }, insuranceReview] = await Promise.all([
+      this.reviewData(task),
+      this.insuranceReview.review(task.targetId),
+    ]);
     const approvalBlockers: VehicleApprovalBlockers =
       task.status === APPROVAL_STATUS.PENDING && live
         ? vehicleApprovalBlockers(live, basis === VEHICLE_REVIEW_BASIS.SNAPSHOT ? snapshot : null)
@@ -250,6 +255,7 @@ export class PlatformVehicleApprovalService {
       pickup: snapshot.pickup,
       source: snapshot.source,
       approvalBlockers,
+      insuranceReview,
       owner: task.tenant?.owner ? personOf(task.tenant.owner) : null,
       submitter: personOf(task.submitter),
       manualChecks: checksOf(task.reviewChecks),
@@ -267,6 +273,16 @@ export class PlatformVehicleApprovalService {
         createdAt: log.createdAt.toISOString(),
       })),
     };
+  }
+
+  /** Xe của một phiếu duyệt xe — 404 cho phiếu không phải xe / phiếu mồ côi. */
+  async vehicleIdOf(id: string): Promise<string> {
+    const task = await this.prisma.approvalTask.findFirst({
+      where: { id, targetType: VEHICLE_TARGET },
+      select: { targetId: true, vehicleSubject: { select: { approvalTaskId: true } } },
+    });
+    if (!task?.vehicleSubject) throw approvalNotFound();
+    return task.targetId;
   }
 
   /**

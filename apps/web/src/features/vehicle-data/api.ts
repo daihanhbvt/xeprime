@@ -21,6 +21,7 @@ import type {
   VehicleDataImport,
   VehicleDataImportRow,
   VehicleDataInput,
+  VehicleDataModelCount,
   VehicleDataOption,
   VehicleDataPage,
   VehicleDataReviewResult,
@@ -39,6 +40,7 @@ export function vehicleDataFiltersToParams(filters: VehicleDataFilters): QueryPa
     search: filters.q ?? null,
     vehicleType: filters.vehicleType ?? null,
     brandKey: filters.brandKey ?? null,
+    modelId: filters.modelId ?? null,
     status: filters.status ?? null,
     origin: filters.origin ?? null,
     gap: filters.gap ?? null,
@@ -70,6 +72,32 @@ export async function fetchVehicleDataPage(params: QueryParams): Promise<Vehicle
     summary: page.summary ?? EMPTY_SUMMARY,
   };
 }
+
+/** Bộ lọc xe của số đếm theo dòng - cùng nghĩa với danh sách, phạm vi bắt buộc là loại xe + hãng. */
+export interface VehicleDataModelCountsParams {
+  vehicleType: string;
+  brandKey: string;
+  q?: string;
+  status?: string;
+  gap?: string;
+  origin?: string;
+}
+
+export function vehicleDataModelCountsToParams(params: VehicleDataModelCountsParams): QueryParams {
+  return {
+    vehicleType: params.vehicleType,
+    brandKey: params.brandKey,
+    search: params.q ?? null,
+    status: params.status ?? null,
+    gap: params.gap ?? null,
+    origin: params.origin ?? null,
+  };
+}
+
+export const fetchVehicleDataModelCounts = (
+  params: QueryParams,
+): Promise<VehicleDataModelCount[]> =>
+  apiGet<VehicleDataModelCount[]>(`${ADMIN}/model-counts`, params);
 
 export const fetchVehicleDataDetail = (id: string): Promise<VehicleDataDetail> =>
   apiGet<VehicleDataDetail>(`${ADMIN}/${encodeURIComponent(id)}`);

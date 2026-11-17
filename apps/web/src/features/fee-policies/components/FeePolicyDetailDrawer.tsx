@@ -20,6 +20,7 @@ import { useTierRangeLabel } from '../hooks/use-tier-range-label';
 import type { FeePolicy } from '../types';
 import { TaxRatesView } from './TaxRatesTable';
 import styles from './FeePolicyDetailDrawer.module.css';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 
 /**
  * Panel CHỈ ĐỌC của một phiên bản chính sách phí — đủ mọi con số của luồng tiền v2, kể cả với
@@ -79,7 +80,11 @@ function Body({ policy }: { policy: FeePolicy }) {
   const perDay = (value: string) => t('perDay', { value: fmt.money(value) });
 
   const general: WorkDrawerFact[] = [
-    { key: 'effectiveFrom', label: t('facts.effectiveFrom'), value: fmt.dateTime(policy.effectiveFrom) },
+    {
+      key: 'effectiveFrom',
+      label: t('facts.effectiveFrom'),
+      value: fmt.dateTime(policy.effectiveFrom),
+    },
     { key: 'effectiveTo', label: t('facts.effectiveTo'), value: fmt.dateTime(policy.effectiveTo) },
     { key: 'activatedBy', label: t('facts.activatedBy'), value: policy.activatedByName ?? empty },
     { key: 'createdBy', label: t('facts.createdBy'), value: policy.createdByName ?? empty },
@@ -103,9 +108,16 @@ function Body({ policy }: { policy: FeePolicy }) {
   );
 
   const deposit: WorkDrawerFact[] = [
-    { key: 'depositPercent', label: tForm('depositPercent'), value: pf.percent(policy.depositPercent) },
-    { key: 'depositMinAmount', label: tForm('depositMinAmount'), value: fmt.money(policy.depositMinAmount) },
-    { key: 'depositMaxPercent', label: tForm('depositMaxPercent'), value: pf.percent(policy.depositMaxPercent) },
+    {
+      key: 'depositPercent',
+      label: tForm('depositPercent'),
+      value: pf.percent(policy.depositPercent),
+    },
+    {
+      key: 'depositMinAmount',
+      label: tForm('depositMinAmount'),
+      value: fmt.money(policy.depositMinAmount),
+    },
     { key: 'holdMinAmount', label: tForm('holdMinAmount'), value: fmt.money(policy.holdMinAmount) },
     {
       key: 'holdPaymentWindowMinutes',
@@ -116,6 +128,16 @@ function Body({ policy }: { policy: FeePolicy }) {
       key: 'freeCancelHours',
       label: tForm('freeCancelHours'),
       value: tCommon('units.hour', { count: policy.freeCancelHours }),
+    },
+    {
+      key: 'maxAdvanceBookingDays',
+      label: tForm('maxAdvanceBookingDays'),
+      value: tCommon('units.day', { count: policy.maxAdvanceBookingDays }),
+    },
+    {
+      key: 'selfDriveMaxDays',
+      label: tForm('selfDriveMaxDays'),
+      value: tCommon('units.day', { count: policy.selfDriveMaxDays }),
     },
   ];
 
@@ -150,15 +172,27 @@ function Body({ policy }: { policy: FeePolicy }) {
         off
       ),
     },
-    { key: 'partner', label: t('facts.insurancePartner'), value: policy.insurancePartnerName ?? empty },
+    {
+      key: 'partner',
+      label: t('facts.insurancePartner'),
+      value: policy.insurancePartnerName ?? empty,
+    },
   ];
 
   /* Giới hạn chặn số vô lý của chuyến có tài xế (ADR 0075) — không phải dòng tiền. */
   const range = (r: { min: string; max: string }) =>
     t('rangePerDay', { min: fmt.money(r.min), max: fmt.money(r.max) });
   const withDriver = [
-    { key: 'priceDaily', label: t('facts.withDriverPrice'), value: range(policy.withDriverLimits.priceDaily) },
-    { key: 'wageDaily', label: t('facts.driverWage'), value: range(policy.withDriverLimits.wageDaily) },
+    {
+      key: 'priceDaily',
+      label: t('facts.withDriverPrice'),
+      value: range(policy.withDriverLimits.priceDaily),
+    },
+    {
+      key: 'wageDaily',
+      label: t('facts.driverWage'),
+      value: range(policy.withDriverLimits.wageDaily),
+    },
     {
       key: 'wageSuggested',
       label: t('facts.driverWageSuggested'),
@@ -181,7 +215,12 @@ function Body({ policy }: { policy: FeePolicy }) {
             value: policy.taxLegalBasis ?? empty,
             wide: true,
           },
-          { key: 'taxScope', label: t('facts.taxScope'), value: tForm('taxScopeValue'), wide: true },
+          {
+            key: 'taxScope',
+            label: t('facts.taxScope'),
+            value: tForm('taxScopeValue'),
+            wide: true,
+          },
         ]
       : [
           {
@@ -195,10 +234,22 @@ function Body({ policy }: { policy: FeePolicy }) {
   /* Số của mô hình cũ — chỉ hiện khi phiên bản thật sự mang chúng (bản đời trước luồng tiền v2). */
   const legacy: WorkDrawerFact[] = [
     ...(policy.serviceFeePercent > 0
-      ? [{ key: 'serviceFee', label: t('facts.serviceFeePercent'), value: pf.percent(policy.serviceFeePercent) }]
+      ? [
+          {
+            key: 'serviceFee',
+            label: t('facts.serviceFeePercent'),
+            value: pf.percent(policy.serviceFeePercent),
+          },
+        ]
       : []),
     ...(policy.tripInsurancePercent != null
-      ? [{ key: 'trip', label: t('facts.tripInsurancePercent'), value: pf.percent(policy.tripInsurancePercent) }]
+      ? [
+          {
+            key: 'trip',
+            label: t('facts.tripInsurancePercent'),
+            value: pf.percent(policy.tripInsurancePercent),
+          },
+        ]
       : []),
     ...(policy.vehicleProtectionPercent != null
       ? [
@@ -222,7 +273,11 @@ function Body({ policy }: { policy: FeePolicy }) {
       <Section title={t('sections.commission')}>
         {/* Nấc này không áp cho gian hàng có gói (H = 0) — nói ngay trên đầu, không để người đọc suy. */}
         <Alert type="info" showIcon title={tScope('title')} className={styles.alert} />
-        {commission.length > 0 ? <WorkDrawerFacts items={commission} /> : <p className={styles.muted}>{empty}</p>}
+        {commission.length > 0 ? (
+          <WorkDrawerFacts items={commission} />
+        ) : (
+          <p className={styles.muted}>{empty}</p>
+        )}
       </Section>
       <Section title={t('sections.deposit')}>
         <WorkDrawerFacts items={deposit} />
@@ -250,7 +305,7 @@ function Body({ policy }: { policy: FeePolicy }) {
           title={tForm('activationBlocked')}
           description={policy.activationBlockers
             .map((code) => domainLabel('feePolicyActivationBlocker', code))
-            .join(' · ')}
+            .join(LIST_SEPARATOR)}
         />
       ) : null}
     </div>

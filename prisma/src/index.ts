@@ -75,6 +75,18 @@ export {
 export { readListingCardExtras, selfDriveDailyPrice, type ListingCardExtras } from './listing-card';
 
 /**
+ * Dữ liệu xe cho điều kiện bảo hiểm theo bậc + thứ tự ưu tiên chế độ Bắt buộc/Tuỳ chọn (ADR 0088 ·
+ * ADR 0091) — dùng chung cho báo giá và snapshot chợ. Xem docblock `insurance-eligibility.ts`.
+ */
+export {
+  INSURANCE_ELIGIBILITY_VEHICLE_SELECT,
+  insuranceEligibilityInputOf,
+  resolveInsuranceMode,
+  selfDriveInsuranceBlockedOf,
+  type InsuranceEligibilityVehicleRow,
+} from './insurance-eligibility';
+
+/**
  * Hàng đợi đẩy thông báo — dùng chung cho API và worker, hai tiến trình cùng phát thông báo.
  * Xem docblock của `push-outbox.ts` để biết vì sao nó ở đây chứ không ở `apps/api`.
  */
@@ -118,10 +130,10 @@ export {
  * `handover_unconfirmed` do hệ thống mở, ADR 0066). Xem docblock `support-case.ts`.
  */
 export {
-  bookingIdsWithOpenSupportCase,
   createSupportCaseWithinTx,
   findOpenTripNotReceivedReport,
   hasOpenSupportCase,
+  openSupportCaseCategoriesByBooking,
   openSupportCaseWhere,
   openTripNotReceivedReports,
   supportCaseCode,
@@ -162,6 +174,7 @@ export {
   issueInsurancePolicy,
   partnerRefFor,
   readInsuranceProductSnapshot,
+  recheckPendingInsurancePolicies,
   sweepDueInsurancePolicies,
   toInsuranceProductSnapshot,
   type InsuranceIssueOutcome,
@@ -170,6 +183,7 @@ export {
   type InsurancePartnerMode,
   type InsuranceProductRow,
   type InsuranceProductSnapshot,
+  type InsuranceRecheckResult,
   type InsuranceSweepResult,
   type IssuePolicyRequest,
   type IssuePolicyResult,

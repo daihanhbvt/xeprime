@@ -27,6 +27,8 @@ import {
   type VehicleDataListItemDto,
   type VehicleDataListQueryDto,
   type VehicleDataMarketStatDto,
+  type VehicleDataModelCountDto,
+  type VehicleDataModelCountsQueryDto,
   type VehicleDataPageDto,
   type VehicleDataSimilarDto,
   type VehicleDataSummaryDto,
@@ -93,7 +95,11 @@ export class VehicleDataQueryService {
         take: paging.take,
         select: LIST_SELECT,
       }),
-      this.summary(),
+      this.summary({
+        vehicleType: query.vehicleType,
+        brandKey: query.brandKey,
+        modelId: query.modelId,
+      }),
     ]);
     const ids = rows.map((r) => r.id);
     const [usage, market, brands] = await Promise.all([
@@ -132,9 +138,26 @@ export class VehicleDataQueryService {
     return { data, meta: paginationMeta(paging, total), summary };
   }
 
-  /** Số liệu đầu màn: tổng · đang gợi ý · đã ẩn · chờ duyệt · đang gợi ý mà thiếu dữ liệu. */
-  async summary(): Promise<VehicleDataSummaryDto> {
-    const base = { ...LIVE, model: LIVE } satisfies Prisma.VehicleCatalogVariantWhereInput;
+  /**
+   * Số liệu đầu màn: tổng · đang gợi ý · đã ẩn · chờ duyệt · đang gợi ý mà thiếu dữ liệu — trong
+   * PHẠM VI loại xe + hãng đang xem (ADR 0096: dải số liệu nằm trên danh sách đã lọc theo hãng; đếm
+   * toàn sàn ở đó là để "Chờ duyệt: 5" đứng trên một danh sách rỗng). Bộ lọc còn lại (trạng thái,
+   * thiếu dữ liệu…) KHÔNG thu hẹp dải: bấm ô số liệu chính là đổi các bộ lọc đó.
+   */
+  async summary(
+    scope: { vehicleType?: string; brandKey?: string; modelId?: string } = {},
+  ): Promise<VehicleDataSummaryDto> {
+    const base = {
+      ...LIVE,
+      // Danh sách xe của MỘT dòng (tab Mẫu xe mở một dòng ra): đếm trong dòng đó - vài chục dòng,
+      // qua chỉ mục `model_id`, thay vì đếm lại cả hãng cho mỗi dòng đang mở.
+      ...(scope.modelId ? { modelId: scope.modelId } : {}),
+      model: {
+        ...LIVE,
+        ...(scope.vehicleType ? { vehicleType: scope.vehicleType } : {}),
+        ...(scope.brandKey ? { brandKey: scope.brandKey } : {}),
+      },
+    } satisfies Prisma.VehicleCatalogVariantWhereInput;
     const approved = { ...base, reviewStatus: CATALOG_REVIEW_STATUS.APPROVED };
     const [total, active, hidden, pending, incomplete] = await Promise.all([
       this.prisma.vehicleCatalogVariant.count({ where: base }),
@@ -148,6 +171,53 @@ export class VehicleDataQueryService {
       }),
     ]);
     return { total, active, hidden, pending, incomplete };
+  }
+
+  /**
+   * Số xe chuẩn theo từng dòng của MỘT hãng (ADR 0096): cột "xe" của mỗi dòng, dòng nào có xe chờ
+   * duyệt / thiếu dữ liệu để mở sẵn, và dòng nào khớp bộ lọc xe đang bật. Dải số liệu đầu màn là
+   * tổng của các con số này - không cần một lượt đếm riêng.
+   *
+   * Đếm bằng `groupBy` ở DB; phạm vi hãng đi qua chỉ mục `(vehicle_type, brand_key, …)` của dòng xe
+   * rồi chỉ mục `(model_id, …)` của xe chuẩn - đo 17/11/2026 với 120.000 xe chuẩn: ~1-3ms mỗi câu.
+   */
+  async modelCounts(query: VehicleDataModelCountsQueryDto): Promise<VehicleDataModelCountDto[]> {
+    const base = {
+      ...LIVE,
+      model: { ...LIVE, vehicleType: query.vehicleType, brandKey: query.brandKey },
+    } satisfies Prisma.VehicleCatalogVariantWhereInput;
+    const approved = { ...base, reviewStatus: CATALOG_REVIEW_STATUS.APPROVED };
+    const filtered = Boolean(query.search || query.status || query.gap || query.origin);
+    const count = (where: Prisma.VehicleCatalogVariantWhereInput) =>
+      this.prisma.vehicleCatalogVariant
+        .groupBy({ by: ['modelId'], where, _count: { _all: true } })
+        .then((rows) => new Map(rows.map((r) => [r.modelId, r._count._all])));
+
+    const [total, active, hidden, pending, incomplete, matched] = await Promise.all([
+      count(base),
+      count({ ...approved, active: true }),
+      count({ ...approved, active: false }),
+      count({ ...base, reviewStatus: CATALOG_REVIEW_STATUS.PENDING }),
+      count({ ...approved, active: true, OR: Object.values(GAP_WHERE) }),
+      filtered ? this.buildWhere(query).then(count) : null,
+    ]);
+    if (total.size === 0) return [];
+    const models = await this.prisma.vehicleCatalogModel.findMany({
+      where: { id: { in: [...total.keys()] } },
+      select: { id: true, label: true, reviewStatus: true },
+      orderBy: { label: 'asc' },
+    });
+    return models.map((m) => ({
+      modelId: m.id,
+      modelLabel: m.label,
+      modelPending: m.reviewStatus === CATALOG_REVIEW_STATUS.PENDING,
+      total: total.get(m.id) ?? 0,
+      active: active.get(m.id) ?? 0,
+      hidden: hidden.get(m.id) ?? 0,
+      pending: pending.get(m.id) ?? 0,
+      incomplete: incomplete.get(m.id) ?? 0,
+      matched: matched ? (matched.get(m.id) ?? 0) : (total.get(m.id) ?? 0),
+    }));
   }
 
   async detail(id: string): Promise<VehicleDataDetailDto> {

@@ -3,17 +3,22 @@
 import { App, Alert, Button, Checkbox, Descriptions, Input, Skeleton, Tag } from 'antd';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import {
   SUPPORT_CASE_SETTLEMENT_FREEZING_CATEGORIES,
   SUPPORT_CASE_STATUS,
   SUPPORT_CASE_STATUS_META,
   SUPPORT_CASE_STATUS_VALUES,
   SUPPORT_EVENT_VISIBILITY,
+  TRIP_VERDICT,
   canTransitionSupportCase,
+  isTripVerdict,
   type SupportCaseCategory,
   type SupportCaseStatus,
+  type TripVerdict,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { ReasonDialog } from '@/components/overlay/ReasonDialog';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -23,9 +28,18 @@ import {
   useResolveSupportCase,
   useSupportCase,
   useTransitionSupportCase,
+  useTripVerdict,
+  useTripVerdictPreview,
 } from '../hooks/use-support-cases';
-import { SUPPORT_SURFACE, type SupportSurface } from '../types';
+import { SUPPORT_SURFACE, type SupportSurface, type TripVerdictMoney } from '../types';
 import styles from './SupportCaseDetailPanel.module.css';
+
+/** Kết luận khép chuyến lại theo hướng có người chịu thiệt — nút và hộp xác nhận màu nguy hiểm. */
+const NEGATIVE_VERDICTS: ReadonlySet<TripVerdict> = new Set([
+  TRIP_VERDICT.CUSTOMER_NO_SHOW,
+  TRIP_VERDICT.HOST_NOT_DELIVERED,
+  TRIP_VERDICT.PLATFORM_CANCELLED,
+]);
 
 /**
  * Chi tiết một case + dòng thời gian append-only.
@@ -51,14 +65,24 @@ export function SupportCaseDetailPanel({
   const post = usePostSupportMessage(surface);
   const transition = useTransitionSupportCase(surface);
   const resolve = useResolveSupportCase();
+  const tripVerdict = useTripVerdict();
 
   const [body, setBody] = useState('');
   const [internal, setInternal] = useState(false);
   const [resolution, setResolution] = useState('');
+  /** Kết luận đang mở hộp xác nhận — gắn với id case, nên đổi case không mang lựa chọn theo. */
+  const [pendingVerdict, setPendingVerdict] = useState<{
+    caseId: string;
+    verdict: TripVerdict;
+  } | null>(null);
 
   const isPlatform = surface === SUPPORT_SURFACE.PLATFORM;
   const canWrite = useCanWriteSupportCase(surface);
   const row = detail.data;
+  const openVerdict =
+    pendingVerdict && pendingVerdict.caseId === id ? pendingVerdict.verdict : null;
+  // Tiền của kết luận chỉ xin khi hộp xác nhận mở — cùng phép tính lượt thật (ADR 0095 điều 3).
+  const verdictPreview = useTripVerdictPreview(isPlatform && openVerdict ? id : null);
 
   if (!id) return <div className={styles.placeholder}>{t('detail.pickOne')}</div>;
   if (detail.isLoading) return <Skeleton active paragraph={{ rows: 8 }} />;
@@ -119,20 +143,70 @@ export function SupportCaseDetailPanel({
     );
   }
 
+  function submitVerdict(note: string) {
+    if (!id || !pendingVerdict || tripVerdict.isPending) return;
+    tripVerdict.mutate(
+      { id, verdict: pendingVerdict.verdict, note: note.trim() },
+      {
+        onSuccess: () => {
+          setPendingVerdict(null);
+          message.success(t('detail.verdict.success'));
+        },
+        onError: (err) => message.error(errorMessage(err)),
+      },
+    );
+  }
+
   // Case GIỮ tiền của chuyến (tranh chấp, chưa xác nhận bàn giao) chỉ nền tảng đóng/kết luận —
   // server từ chối `SUPPORT_CASE_PLATFORM_RESOLVE_ONLY`, nên bên còn lại không thấy nút nào.
   const platformResolveOnly = SUPPORT_CASE_SETTLEMENT_FREEZING_CATEGORIES.includes(
     row.category as SupportCaseCategory,
   );
+  /*
+   * Case xác minh bàn giao mà đơn còn treo (ADR 0094): server trả các kết luận CHUYẾN dùng được và
+   * chặn kết luận/đóng trần (`SUPPORT_CASE_TRIP_VERDICT_REQUIRED`) — nên ở đây ẩn hai nút đó, chỉ
+   * còn các nút kết luận chuyến. Tranh chấp trước giờ nhận (ADR 0095) có kết luận nhưng KHÔNG bắt
+   * buộc (`tripVerdictRequired = false`): giữ cả ô kết luận trần.
+   */
+  const verdicts = isPlatform ? (row.tripVerdicts ?? []).filter(isTripVerdict) : [];
+  const verdictPending = verdicts.length > 0;
+  const verdictRequired = isPlatform && row.tripVerdictRequired === true;
+  const verdictMoney = openVerdict
+    ? verdictPreview.data?.items.find((item) => item.verdict === openVerdict)
+    : undefined;
+
+  /** Câu tiền của kết luận đang mở: ai nhận bao nhiêu, theo đúng con số lượt bấm sẽ ghi. */
+  function moneySummary(verdict: TripVerdict, money: TripVerdictMoney | undefined): string {
+    if (verdictPreview.isLoading) return t('detail.verdict.money.loading');
+    if (verdictPreview.isError) return t('detail.verdict.money.loadError');
+    if (!money || money.outcome == null) {
+      return verdict === TRIP_VERDICT.HANDED_OVER
+        ? t('detail.verdict.money.later')
+        : t('detail.verdict.money.noHold');
+    }
+    const parts = [
+      t('detail.verdict.money.customer', { amount: fmt.money(money.customerAmount) }),
+      t('detail.verdict.money.owner', { amount: fmt.money(money.ownerAmount) }),
+      t('detail.verdict.money.platform', { amount: fmt.money(money.platformAmount) }),
+    ];
+    if (Number(money.insurerAmount) > 0) {
+      parts.push(t('detail.verdict.money.insurer', { amount: fmt.money(money.insurerAmount) }));
+    }
+    if (Number(money.taxAmount) > 0) {
+      parts.push(t('detail.verdict.money.tax', { amount: fmt.money(money.taxAmount) }));
+    }
+    const line = parts.join(LIST_SEPARATOR);
+    return money.deferred ? `${line}. ${t('detail.verdict.money.deferred')}` : `${line}.`;
+  }
   const allowedTransitions = SUPPORT_CASE_STATUS_VALUES.filter(
     (next) =>
       canTransitionSupportCase(status, next) &&
       // `resolved` đi qua nút Kết luận (bắt buộc có kết luận), không qua nút đổi trạng thái trần.
       next !== SUPPORT_CASE_STATUS.RESOLVED &&
+      !(verdictRequired && next === SUPPORT_CASE_STATUS.CLOSED) &&
       // Gian hàng và khách chỉ được ĐÓNG case của chính họ; mọi bước xử lý là việc của nền tảng.
       (isPlatform || (next === SUPPORT_CASE_STATUS.CLOSED && !platformResolveOnly)),
   );
-
   return (
     <div className={styles.panel}>
       <header className={styles.header}>
@@ -148,7 +222,8 @@ export function SupportCaseDetailPanel({
       <Descriptions size="small" column={1} bordered>
         <Descriptions.Item label={t('detail.openedBy')}>
           {/* `null` = case do hệ thống mở (worker — ADR 0066), không có người nào bấm nút. */}
-          {row.openedByName ?? t('detail.openedBySystem')} ·{' '}
+          {row.openedByName ?? t('detail.openedBySystem')}
+          {LIST_SEPARATOR}
           {domainLabel('supportCaseParty', row.openedByScope, row.openedByScope)}
         </Descriptions.Item>
         {row.tenantName ? (
@@ -246,7 +321,48 @@ export function SupportCaseDetailPanel({
             ))}
           </div>
 
-          {isPlatform && canTransitionSupportCase(status, SUPPORT_CASE_STATUS.RESOLVED) ? (
+          {verdictPending ? (
+            <div className={styles.resolveBox}>
+              <h4 className={styles.sectionTitle}>{t('detail.verdict.title')}</h4>
+              <p className={styles.hint}>
+                {verdictRequired ? t('detail.verdict.hint') : t('detail.verdict.optionalHint')}
+              </p>
+              <div className={styles.actions}>
+                {verdicts.map((verdict) => (
+                  <Button
+                    key={verdict}
+                    danger={NEGATIVE_VERDICTS.has(verdict)}
+                    onClick={() => setPendingVerdict({ caseId: id, verdict })}
+                  >
+                    {t(`detail.verdict.action.${verdict}`)}
+                  </Button>
+                ))}
+              </div>
+              <ReasonDialog
+                open={openVerdict !== null}
+                title={openVerdict ? t(`detail.verdict.action.${openVerdict}`) : ''}
+                summary={
+                  openVerdict
+                    ? `${t(`detail.verdict.summary.${openVerdict}`)} ${moneySummary(openVerdict, verdictMoney)}`
+                    : undefined
+                }
+                audienceHint={t('detail.verdict.audience')}
+                label={t('detail.verdict.noteLabel')}
+                placeholder={t('detail.verdict.notePlaceholder')}
+                requiredMessage={t('detail.verdict.noteRequired')}
+                minLength={5}
+                maxLength={2000}
+                submitText={openVerdict ? t(`detail.verdict.action.${openVerdict}`) : ''}
+                destructive={openVerdict !== null && NEGATIVE_VERDICTS.has(openVerdict)}
+                loading={tripVerdict.isPending}
+                onSubmit={submitVerdict}
+                onClose={() => setPendingVerdict(null)}
+              />
+            </div>
+          ) : null}
+          {!verdictRequired &&
+          isPlatform &&
+          canTransitionSupportCase(status, SUPPORT_CASE_STATUS.RESOLVED) ? (
             <div className={styles.resolveBox}>
               <h4 className={styles.sectionTitle}>{t('detail.resolveTitle')}</h4>
               <p className={styles.hint}>{t('detail.resolveHint')}</p>

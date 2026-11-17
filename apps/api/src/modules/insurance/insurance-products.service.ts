@@ -139,6 +139,22 @@ export class InsuranceProductsService {
         }));
       }
       if (dto.claimHotline !== undefined) data.claimHotline = dto.claimHotline?.trim() || null;
+      /*
+       * Phí thu hộ bảo hiểm của nền tảng (ADR 0091 điều 3): chỉ vật chất xe, bật thì % > 0 — nói rõ ở
+       * đây; CHECK `insurance_products_service_fee_scope_check` là chốt sau.
+       */
+      const feeEnabled = dto.serviceFeeEnabled ?? before.serviceFeeEnabled;
+      const feePercent = dto.serviceFeePercent ?? Number(before.serviceFeePercent);
+      if (feeEnabled && before.kind !== INSURANCE_PRODUCT_KIND.VEHICLE_TRIP) {
+        throw invalidProduct('Chỉ bảo hiểm vật chất xe có phí thu hộ', 'serviceFeeEnabled');
+      }
+      if (feeEnabled && !(feePercent > 0)) {
+        throw invalidProduct('Bật phí thu hộ thì % phải lớn hơn 0', 'serviceFeePercent');
+      }
+      if (dto.serviceFeeEnabled !== undefined) data.serviceFeeEnabled = dto.serviceFeeEnabled;
+      if (dto.serviceFeePercent !== undefined) {
+        data.serviceFeePercent = new Prisma.Decimal(dto.serviceFeePercent);
+      }
       const assign = <K extends keyof UpdateInsuranceProductDto>(key: K) => {
         if (dto[key] !== undefined) (data as Record<string, unknown>)[key] = dto[key];
       };
@@ -224,5 +240,7 @@ function toAdminDto(r: ProductRow): InsuranceProductDto {
         : INSURANCE_PREMIUM_BASIS.DAILY,
     premiumTiers: readInsurancePremiumTiers(r.premiumTiersJson),
     claimHotline: r.claimHotline,
+    serviceFeeEnabled: r.serviceFeeEnabled,
+    serviceFeePercent: Number(r.serviceFeePercent),
   };
 }

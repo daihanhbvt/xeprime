@@ -30,6 +30,7 @@ import {
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 import { ApprovalLogEntryDto } from './approval.dto';
+import { VehicleInsuranceReviewDto } from './vehicle-insurance-review.dto';
 
 export const VEHICLE_APPROVAL_DEFAULT_LIMIT = 20;
 export const VEHICLE_APPROVAL_MAX_LIMIT = 100;
@@ -354,6 +355,13 @@ export class VehicleApprovalDetailDto {
   @ApiProperty({ type: VehicleApprovalSourceDto }) source!: VehicleApprovalSourceDto;
   @ApiProperty({ type: VehicleApprovalBlockersDto })
   approvalBlockers!: VehicleApprovalBlockersDto;
+  @ApiPropertyOptional({
+    type: VehicleInsuranceReviewDto,
+    nullable: true,
+    description:
+      'Bảo hiểm và giấy tờ - dữ liệu SỐNG của xe (giá trị khai, giá tham khảo, điều kiện còn thiếu, cà vẹt). `null` khi xe đã xoá',
+  })
+  insuranceReview!: VehicleInsuranceReviewDto | null;
 
   @ApiPropertyOptional({ type: VehicleApprovalPersonDto, nullable: true })
   owner!: VehicleApprovalPersonDto | null;

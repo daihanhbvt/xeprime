@@ -124,4 +124,38 @@ describe('PriceBreakdown - phụ phí phía khách', () => {
     // Tổng khách KHÔNG đổi vì dòng đó vốn chưa từng nằm trong đó.
     expect(screen.getAllByText(moneyText('1.100.000 ₫'))[0]).toBeTruthy();
   });
+
+  /** ADR 0091 điều 3: khách thấy MỘT khoản bảo hiểm (IV + X), ⓘ tách hai số; chủ xe thấy hai dòng. */
+  const WITH_SERVICE_FEE: PriceBreakdownFees = {
+    lines: [
+      { key: 'vehicle_protection', bearer: 'customer', percent: null, amount: '224400' },
+      { key: 'insurance_service_fee', bearer: 'customer', percent: 10, amount: '22440' },
+    ],
+    customerTotalAmount: '1246840',
+    holdAmount: null,
+  };
+
+  it('KHÁCH đọc: phí thu hộ gộp vào dòng bảo hiểm, ⓘ kể phí bảo hiểm và phí thu hộ', () => {
+    renderIt(WITH_SERVICE_FEE);
+
+    expect(screen.queryByText('Phí thu hộ bảo hiểm')).toBeNull();
+    expect(screen.getByText(moneyText('246.840 ₫'))).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Phí bảo hiểm vật chất xe gồm những gì' }),
+    ).toBeTruthy();
+    // Nội dung ⓘ luôn có bản ẩn-thị-giác (InfoHint) — đọc được mà không cần mở tooltip.
+    expect(screen.getByText(moneyText('Phí bảo hiểm: 224.400 ₫'))).toBeTruthy();
+    expect(screen.getByText(moneyText('Phí thu hộ bảo hiểm (10%): 22.440 ₫'))).toBeTruthy();
+  });
+
+  it('CHỦ XE đọc: hai dòng riêng, không có ⓘ gộp', () => {
+    renderIt(WITH_SERVICE_FEE, 'owner');
+
+    expect(screen.getByText('Phí thu hộ bảo hiểm')).toBeTruthy();
+    expect(screen.getByText(moneyText('224.400 ₫'))).toBeTruthy();
+    expect(screen.getByText(moneyText('22.440 ₫'))).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: 'Phí bảo hiểm vật chất xe gồm những gì' }),
+    ).toBeNull();
+  });
 });

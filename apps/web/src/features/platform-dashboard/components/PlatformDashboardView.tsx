@@ -20,7 +20,7 @@ import {
   TENANT_STATUS_VALUES,
   type TenantStatus,
 } from '@xeprime/types';
-import { countChangePercent, moneyChangePercent } from '@xeprime/domain';
+import { countChangePercent, LIST_SEPARATOR, moneyChangePercent } from '@xeprime/domain';
 import { MoneyVolumeChart } from '@/components/chart/MoneyVolumeChart';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { ROUTES, adminPartnerPath } from '@/constants/routes';
@@ -42,7 +42,7 @@ import { PlatformWorkQueues, usePlatformQueueTiles } from './PlatformWorkQueues'
 import styles from './PlatformDashboardView.module.css';
 
 /** Dấu ngăn các vế của câu trả lời đầu trang. */
-const PART_SEPARATOR = ' · ';
+const PART_SEPARATOR = LIST_SEPARATOR;
 
 /**
  * TỔNG QUAN NỀN TẢNG (`admin.xeprime.vn`) — cùng khuôn với Tổng quan partner (UX §1.5):

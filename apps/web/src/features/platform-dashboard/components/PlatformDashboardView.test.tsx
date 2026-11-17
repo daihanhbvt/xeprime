@@ -71,7 +71,7 @@ vi.mock('@/features/platform-money/api', async (importOriginal) => ({
     state.calls.money += 1;
     return Promise.resolve({
       bankIn: { count: 0, amount: '0', oldestAt: null },
-      holds: { count: 0, amount: '0', disputeCount: 0 },
+      holds: { count: 0, amount: '0', disputeCount: 0, handoverUnconfirmedCount: 0 },
       refunds: { count: 1, amount: '200000' },
       withdrawals: { count: 4, amount: '9000000', overdueCount: 1 },
       insurance: { count: 0, amount: '0' },

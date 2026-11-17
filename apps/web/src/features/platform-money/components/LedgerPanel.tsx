@@ -124,6 +124,24 @@ export function LedgerPanel({
       amount: data.custodied.taxAccrued,
       queue: FINANCE_QUEUE.TAX,
     },
+    {
+      key: 'extensions',
+      label: t('extensionsUnsettled'),
+      amount: data.custodied.extensionsUnsettled,
+    },
+    {
+      key: 'subsUnapplied',
+      label: t('subscriptionsUnapplied'),
+      amount: data.custodied.subscriptionsUnapplied,
+      note: t('subscriptionsUnappliedNote'),
+      queue: FINANCE_QUEUE.BANK_IN,
+    },
+    {
+      key: 'ignoredKept',
+      label: t('ignoredKept'),
+      amount: data.custodied.ignoredKept,
+      queue: FINANCE_QUEUE.BANK_IN,
+    },
   ];
 
   const platformRows: LedgerRow[] = [
@@ -133,11 +151,34 @@ export function LedgerPanel({
       label: t('subscriptionsCollected'),
       amount: data.platform.subscriptionsCollected,
     },
+    {
+      key: 'insuranceCommission',
+      label: t('insuranceCommission'),
+      amount: data.platform.insuranceCommission,
+      queue: FINANCE_QUEUE.INSURANCE,
+    },
+    // Phí thu hộ bảo hiểm đã hoàn khách (ADR 0091 điều 7) — số âm, chỉ hiện khi có.
+    ...(Number(data.platform.insuranceServiceFeeRefunded ?? 0) !== 0
+      ? [
+          {
+            key: 'insuranceServiceFeeRefunded',
+            label: t('insuranceServiceFeeRefunded'),
+            amount: data.platform.insuranceServiceFeeRefunded,
+            queue: FINANCE_QUEUE.INSURANCE,
+          },
+        ]
+      : []),
   ];
 
   const inflowRows: LedgerRow[] = [
     { key: 'subs', label: t('matchedSubscriptions'), amount: data.inflow.matchedSubscriptions },
     { key: 'holds', label: t('matchedHolds'), amount: data.inflow.matchedHolds },
+    { key: 'extensions', label: t('matchedExtensions'), amount: data.inflow.matchedExtensions },
+    {
+      key: 'walletCredits',
+      label: t('matchedWalletCredits'),
+      amount: data.inflow.matchedWalletCredits,
+    },
     {
       key: 'unmatched',
       label: t('unmatched'),
@@ -163,6 +204,18 @@ export function LedgerPanel({
       amount: data.outflow.refundsPaid,
       count: data.outflow.refundsPaidCount,
       queue: FINANCE_QUEUE.REFUNDS,
+    },
+    {
+      key: 'manualRefunds',
+      label: t('manualRefunds'),
+      amount: data.outflow.manualRefunds,
+      queue: FINANCE_QUEUE.BANK_IN,
+    },
+    {
+      key: 'insuranceRemitted',
+      label: t('insuranceRemitted'),
+      amount: data.outflow.insuranceRemitted,
+      queue: FINANCE_QUEUE.INSURANCE,
     },
   ];
 

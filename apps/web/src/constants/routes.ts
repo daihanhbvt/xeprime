@@ -37,6 +37,8 @@ export const ROUTES = {
    * mô hình hai tuyến (ADR 0028) bằng ngôn ngữ người dùng thay vì ngôn ngữ ADR.
    */
   ABOUT: '/about',
+  /** Quyền lợi bảo hiểm vật chất xe + người chịu khấu trừ (ADR 0091 điều 8). */
+  INSURANCE: '/insurance',
   /**
    * Giới thiệu ỨNG DỤNG di động - trang đích của mục "Tải ứng dụng" ở chân trang.
    *
@@ -332,7 +334,6 @@ export const ROUTES = {
      * ⚠️ KHÔNG xoá như một route "legacy": `adminPartnerPath.resolveTenant` dựa vào nó cho chi tiết
      * đơn thuê, lối thoát phiên hỗ trợ và dashboard nền tảng.
      */
-    TENANTS: admin('/tenants'),
     /** Gốc hai danh sách đối tác - chuyển tiếp về "Gian hàng gói". */
     PARTNERS: admin('/partners'),
     PARTNER_SHOPS: admin('/partners/shops'),
@@ -348,17 +349,14 @@ export const ROUTES = {
     STAFF: admin('/staff'),
     PLANS: admin('/plans'),
     /** URL CŨ của hàng đợi tiền vào - chuyển tiếp về `MONEY?queue=bank-in` (01/10/2026). */
-    BANK_TRANSACTIONS: admin('/bank-transactions'),
     CATALOG: admin('/catalog'),
     /** Dữ liệu xe chuẩn (ADR 0090) - thông số, giá bán, giá thuê tham khảo; nguồn gợi ý cho chủ xe. */
-    VEHICLE_DATA: admin('/vehicle-data'),
     /** Danh mục hành chính (tỉnh/thành) - dữ liệu dùng chung cho mọi gian hàng. */
     LOCATIONS: admin('/locations'),
     BANNERS: admin('/marketplace-banners'),
     /** Hàng đợi xác minh người bán (R3 - ADR 0028 release gate 1). */
     SELLERS: admin('/sellers'),
     /** Đường cũ của hàng đợi bằng lái (ADR 0070 gỡ) - chỉ còn chuyển tiếp về Khách thuê. */
-    DRIVER_LICENCES: admin('/driver-licences'),
     /** Quản trị chính sách phí có phiên bản (R3 - ADR 0028 điều 2-3). */
     FEE_POLICIES: admin('/fee-policies'),
     PROMO_CODES: admin('/promo-codes'),
@@ -742,7 +740,7 @@ const ADMIN_PARTNER_LIST_ROUTE: Readonly<Record<PlatformPartnerKind, string>> = 
  * Hai danh sách đối tác của Platform Admin - MỘT chỗ ghép URL.
  *
  * `resolveTenant` dành cho nơi biết gian hàng nhưng KHÔNG biết loại (một đơn thuê, lối thoát phiên
- * hỗ trợ): nó đi qua URL cũ `ADMIN_TENANTS`, nơi server nói gian hàng thuộc danh sách nào. Client
+ * hỗ trợ): nó đi qua gốc khối "Đối tác" (`?tenant=`), nơi server nói gian hàng thuộc danh sách nào. Client
  * không bao giờ tự đoán loại.
  */
 export const adminPartnerPath = {
@@ -750,7 +748,7 @@ export const adminPartnerPath = {
   tenant: (kind: PlatformPartnerKind, tenantId: string): string =>
     `${ADMIN_PARTNER_LIST_ROUTE[kind]}?${new URLSearchParams({ [ADMIN_PARTNER_TENANT_PARAM]: tenantId })}`,
   resolveTenant: (tenantId: string): string =>
-    `${ROUTES.ADMIN.TENANTS}?${new URLSearchParams({ [ADMIN_PARTNER_TENANT_PARAM]: tenantId })}`,
+    `${ROUTES.ADMIN.PARTNERS}?${new URLSearchParams({ [ADMIN_PARTNER_TENANT_PARAM]: tenantId })}`,
 };
 
 /** Tham số URL mở sẵn chi tiết MỘT xe trên màn "Xe toàn hệ thống" (ADR 0004 - sống qua F5, gửi link được). */

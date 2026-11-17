@@ -1,10 +1,20 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  BANK_MATCHED_TYPE_VALUES,
+  BANK_MATCH_REASON_VALUES,
   BANK_MATCH_STATUS_VALUES,
-  BANK_MATCH_TARGET_TYPE_VALUES,
+  BANK_MATCH_TARGET_TYPE,
   BANK_TX_CODE_FILTER_VALUES,
+  type BankMatchReason,
   type BankTxCodeFilter,
 } from '@xeprime/types';
+
+/** Hai loại khoản của KHÁCH mà một giao dịch tiền vào có thể thuộc về (ADR 0092). */
+export const BANK_TX_RECEIVABLE_TYPES = [
+  BANK_MATCH_TARGET_TYPE.BOOKING_HOLD,
+  BANK_MATCH_TARGET_TYPE.BOOKING_EXTENSION,
+] as const;
+export type BankTxReceivableType = (typeof BANK_TX_RECEIVABLE_TYPES)[number];
 import { Transform, Type } from 'class-transformer';
 import {
   IsIn,
@@ -27,6 +37,13 @@ const MAX_LIMIT = 100;
 
 export { DEFAULT_LIMIT as BANK_TX_DEFAULT_LIMIT, MAX_LIMIT as BANK_TX_MAX_LIMIT };
 
+export class BankMatchReasonParamsDto {
+  @ApiPropertyOptional({ description: 'Mã đối soát rút được từ nội dung chuyển khoản' })
+  code?: string;
+  @ApiPropertyOptional({ description: 'Trạng thái của đích lúc tiền về (vd `expired`)' })
+  status?: string;
+}
+
 export class BankTransactionListQueryDto {
   @ApiPropertyOptional({
     enum: BANK_MATCH_STATUS_VALUES,
@@ -36,11 +53,31 @@ export class BankTransactionListQueryDto {
   @IsIn(BANK_MATCH_STATUS_VALUES)
   matchStatus?: string;
 
-  @ApiPropertyOptional({ description: 'Tìm theo nội dung chuyển khoản hoặc mã đối soát' })
+  @ApiPropertyOptional({
+    description:
+      'Tìm theo nội dung chuyển khoản, mã đối soát XePrime, hoặc mã tham chiếu phía ngân hàng (FT…)',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(120)
   q?: string;
+
+  @ApiPropertyOptional({
+    description: 'Số tiền vào CHÍNH XÁC (VND, chuỗi số) - người trực thường tra theo số tiền + giờ',
+    example: '420000',
+  })
+  @IsOptional()
+  @Matches(/^[1-9]\d{0,11}$/, { message: 'Số tiền phải là số nguyên dương' })
+  amount?: string;
+
+  @ApiPropertyOptional({
+    enum: BANK_MATCH_REASON_VALUES,
+    description:
+      'Lý do hệ thống ghi - ví dụ `hold_closed` (tiền về muộn), `overpaid` (chuyển thừa)',
+  })
+  @IsOptional()
+  @IsIn(BANK_MATCH_REASON_VALUES)
+  reason?: BankMatchReason;
 
   @ApiPropertyOptional({
     enum: BANK_TX_CODE_FILTER_VALUES,
@@ -100,10 +137,35 @@ export class BankTransactionDto {
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC' })
   bankTime!: string | null;
   @ApiProperty({ enum: BANK_MATCH_STATUS_VALUES }) matchStatus!: string;
-  @ApiPropertyOptional({ enum: BANK_MATCH_TARGET_TYPE_VALUES, nullable: true })
+  @ApiPropertyOptional({ enum: BANK_MATCHED_TYPE_VALUES, nullable: true })
   matchedType!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) matchedRefId!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) matchNote!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Ghi chú của NGƯỜI (khớp tay / bỏ qua). Dòng cũ có thể còn câu chữ máy ghi trước đây',
+  })
+  matchNote!: string | null;
+  @ApiPropertyOptional({
+    enum: BANK_MATCH_REASON_VALUES,
+    nullable: true,
+    type: String,
+    description: 'MÃ lý do hệ thống ghi - giao diện dịch ra nhãn (ADR 0012)',
+  })
+  matchReasonCode!: string | null;
+  @ApiPropertyOptional({
+    type: () => BankMatchReasonParamsDto,
+    nullable: true,
+    description: 'Tham số của lý do: mã đối soát và trạng thái của đích lúc tiền về',
+  })
+  matchReasonParams!: BankMatchReasonParamsDto | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Mã khoản giữ chỗ (XPH) / phụ lục (XPE) đã khớp hoặc đã ghi có ví thay',
+  })
+  matchedTargetCode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC' })
   matchedAt!: string | null;
   @ApiPropertyOptional({
@@ -191,6 +253,82 @@ export class BankTransactionDetailDto extends BankTransactionDto {
     description: 'Hoá đơn đang chờ tiền, sắp theo mức khớp số tiền rồi tới mới nhất',
   })
   suggestions!: BankTransactionSuggestionDto[];
+  @ApiProperty({
+    type: () => [BankTxReceivableSuggestionDto],
+    description:
+      'Khoản giữ chỗ / phụ lục CÒN NHẬN TIỀN (chưa quá hạn), khoản khớp đúng số tiền lên trước - chỉ gợi ý (ADR 0022 điều 4)',
+  })
+  receivableSuggestions!: BankTxReceivableSuggestionDto[];
+  @ApiPropertyOptional({
+    type: () => BankTxLateCreditDto,
+    nullable: true,
+    description:
+      'Mã trong nội dung trỏ tới một khoản giữ chỗ / phụ lục ĐÃ ĐÓNG ⇒ đích của "Ghi có Ví điểm khách" (ADR 0092)',
+  })
+  lateCredit!: BankTxLateCreditDto | null;
+}
+
+/** Một khoản của KHÁCH còn nhận tiền — gợi ý để khớp tay (ADR 0092). */
+export class BankTxReceivableSuggestionDto {
+  @ApiProperty({ enum: BANK_TX_RECEIVABLE_TYPES }) targetType!: string;
+  @ApiProperty() targetId!: string;
+  @ApiProperty({ description: 'Mã XPH / XPE' }) code!: string;
+  @ApiProperty() customerName!: string;
+  @ApiProperty() tenantName!: string;
+  @ApiProperty({ description: 'Phải chuyển, string' }) amount!: string;
+  @ApiProperty({ description: 'Đã nhận, string' }) paidAmount!: string;
+  @ApiProperty({ description: 'Còn thiếu, string' }) remainingAmount!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Hạn chuyển, ISO-8601 UTC' })
+  expiresAt!: string | null;
+  @ApiProperty({ description: 'Số tiền giao dịch khớp đúng phần còn thiếu - chỉ để sắp xếp' })
+  amountMatches!: boolean;
+}
+
+/** Khoản ĐÃ ĐÓNG mà tiền mới về — đích của lượt ghi có Ví điểm khách (ADR 0092). */
+export class BankTxLateCreditDto {
+  @ApiProperty({ enum: BANK_TX_RECEIVABLE_TYPES }) targetType!: string;
+  @ApiProperty() targetId!: string;
+  @ApiProperty({ description: 'Mã XPH / XPE' }) code!: string;
+  @ApiProperty({ description: 'Trạng thái của khoản lúc này (vd `expired`)' }) status!: string;
+  @ApiProperty() customerName!: string;
+  @ApiProperty({
+    description: 'Có tài khoản khách để ghi có không - không có thì chỉ còn chuyển trả tay',
+  })
+  hasCustomerAccount!: boolean;
+}
+
+/** Khớp tay vào một khoản giữ chỗ / phụ lục còn nhận tiền. */
+export class MatchReceivableDto {
+  @ApiProperty({ enum: BANK_TX_RECEIVABLE_TYPES })
+  @IsIn(BANK_TX_RECEIVABLE_TYPES)
+  targetType!: BankTxReceivableType;
+
+  @ApiProperty() @IsString() @MaxLength(26) targetId!: string;
+
+  @ApiProperty({
+    description: 'Lý do/ghi chú - BẮT BUỘC: mỗi lần khớp tay là một người chịu trách nhiệm',
+  })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(500)
+  note!: string;
+}
+
+/** Ghi có Ví điểm khách cho tiền về muộn của một khoản đã đóng. */
+export class CreditCustomerDto {
+  @ApiProperty({ enum: BANK_TX_RECEIVABLE_TYPES })
+  @IsIn(BANK_TX_RECEIVABLE_TYPES)
+  targetType!: BankTxReceivableType;
+
+  @ApiProperty() @IsString() @MaxLength(26) targetId!: string;
+
+  @ApiProperty({ description: 'Ghi chú - BẮT BUỘC, vào audit và vào giao dịch' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(500)
+  note!: string;
 }
 
 export class MatchBankTransactionDto {

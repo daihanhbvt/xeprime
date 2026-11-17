@@ -91,6 +91,8 @@ const SUPPORT_ALLOWLIST = [
   // `ShopOperationDefaultsController.save` (PUT) CỐ Ý không vào phiên.
   'ShopOperationDefaultsController.get',
   'ShopPoliciesController.get',
+  // Cảnh báo đổi sang bảo hiểm Bắt buộc (ADR 0091) — CHỈ ĐỌC, cùng capability với chính sách thuê.
+  'ShopPoliciesController.insuranceImpact',
   // Một phiếu thanh toán gộp theo id (ADR 0083) — CHỈ ĐỌC, cùng `subscription_status.view` với
   // hoá đơn. Lối MUA (`purchase` · `createCheckout`) CỐ Ý không vào phiên.
   'SubscriptionController.checkout',

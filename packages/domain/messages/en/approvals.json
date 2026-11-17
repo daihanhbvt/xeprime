@@ -70,7 +70,8 @@
     "pricing": "Pricing & rental policy",
     "pickup": "Pickup point & lister",
     "features": "Features & description",
-    "history": "Review history"
+    "history": "Review history",
+    "insurance": "Insurance & documents"
   },
   "gallery": {
     "count": "{count, plural, one {# photo} other {# photos}}",

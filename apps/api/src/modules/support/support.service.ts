@@ -33,6 +33,8 @@ import {
   SUPPORT_PARTY,
   canTransitionSupportCase,
   isSupportCaseOpen,
+  tripVerdictRequired,
+  tripVerdictsFor,
   type PaginationMeta,
   type SupportCaseCategory,
   type SupportCaseStatus,
@@ -77,7 +79,7 @@ const SELECT = {
   createdAt: true,
   updatedAt: true,
   tenant: { select: { name: true } },
-  booking: { select: { code: true } },
+  booking: { select: { code: true, status: true } },
   opener: { select: { displayName: true } },
   assignee: { select: { displayName: true } },
 } satisfies Prisma.SupportCaseSelect;
@@ -617,6 +619,16 @@ export class SupportService {
         attachmentName: e.attachmentName,
         createdAt: e.createdAt.toISOString(),
       })),
+      // Chỉ nền tảng kết luận chuyến (ADR 0094) — hai bên còn lại không có gì để bấm.
+      tripVerdicts:
+        actor.scope === SUPPORT_PARTY.PLATFORM && isSupportCaseOpen(row.status as SupportCaseStatus)
+          ? [...tripVerdictsFor(row.category, row.booking?.status)]
+          : [],
+      // Tranh chấp có kết luận nhưng KHÔNG bắt buộc (ADR 0095 điều 2) — màn hỗ trợ giữ nút trần.
+      tripVerdictRequired:
+        actor.scope === SUPPORT_PARTY.PLATFORM &&
+        isSupportCaseOpen(row.status as SupportCaseStatus) &&
+        tripVerdictRequired(row.category, row.booking?.status),
     };
   }
 
@@ -698,6 +710,9 @@ export class SupportService {
         message: `Không chuyển được case từ "${row.status}" sang "${to}"`,
       });
     }
+    if (to === SUPPORT_CASE_STATUS.RESOLVED || to === SUPPORT_CASE_STATUS.CLOSED) {
+      assertNoTripVerdictPending(row);
+    }
 
     await this.prisma.$transaction(async (tx) => {
       const claimed = await tx.supportCase.updateMany({
@@ -753,50 +768,74 @@ export class SupportService {
   ): Promise<SupportCaseDetailDto> {
     const actor = { userId: actorUserId, scope: SUPPORT_PARTY.PLATFORM, tenantId: null } as const;
     const row = await this.requireOpen(id, actor);
+    assertNoTripVerdictPending(row);
 
     await this.prisma.$transaction(async (tx) => {
-      const claimed = await tx.supportCase.updateMany({
-        where: { id, status: { in: [...SUPPORT_CASE_STATUS_OPEN] } },
-        data: {
-          status: SUPPORT_CASE_STATUS.RESOLVED,
-          resolution: resolution.trim(),
-          resolvedAt: new Date(),
-        },
-      });
-      if (claimed.count === 0) {
-        throw new ConflictException({
-          code: API_ERROR_CODE.CONFLICT,
-          message: 'Case vừa được người khác xử lý',
-        });
-      }
-      await tx.supportCaseEvent.create({
-        data: {
-          id: newId(),
-          caseId: id,
-          actorUserId,
-          actorScope: SUPPORT_PARTY.PLATFORM,
-          kind: SUPPORT_CASE_EVENT_KIND.RESOLUTION,
-          visibility: SUPPORT_EVENT_VISIBILITY.PUBLIC,
-          body: resolution.trim(),
-          fromStatus: row.status,
-          toStatus: SUPPORT_CASE_STATUS.RESOLVED,
-        },
-      });
-      await this.audit.record(
-        {
-          tenantId: row.tenantId,
-          actorUserId,
-          actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
-          action: SUPPORT_CASE_AUDIT_ACTION.RESOLVE,
-          targetType: AUDIT_TARGET_TYPE.SUPPORT_CASE,
-          targetId: id,
-          after: { resolution: resolution.trim() },
-        },
-        tx,
-      );
-      await this.notifyOtherParties(tx, row, actor, `${row.code} đã có kết luận`);
+      // Đọc lại TRONG transaction rồi khoá: đơn có thể vừa đổi trạng thái giữa hai câu.
+      await this.resolveWithinTx(tx, id, actorUserId, resolution, { guardTripVerdict: true });
     });
     return this.detail(id, actor);
+  }
+
+  /**
+   * Kết luận một case CÒN MỞ của nền tảng, TRONG transaction của người gọi — lõi dùng chung của
+   * `resolve` và lượt kết luận chuyến (`TripVerdictService`, ADR 0094). Khoá dòng case trước khi
+   * đọc, nên hai lượt kết luận song song chỉ một bên khớp; bên thua nhận 409.
+   *
+   * `guardTripVerdict`: chặn khi case còn phải kết luận CHUYẾN (đường kết luận trần). Lượt kết luận
+   * chuyến tắt nó — chính nó là câu trả lời mà phép chặn đòi.
+   */
+  async resolveWithinTx(
+    tx: Prisma.TransactionClient,
+    id: string,
+    actorUserId: string,
+    resolution: string,
+    opts: { guardTripVerdict: boolean; audit?: Record<string, unknown> },
+  ): Promise<void> {
+    const actor = { userId: actorUserId, scope: SUPPORT_PARTY.PLATFORM, tenantId: null } as const;
+    await tx.$queryRaw`SELECT 1 FROM "public"."support_cases" WHERE "id" = ${id} FOR UPDATE`;
+    const row = await tx.supportCase.findUnique({ where: { id }, select: SELECT });
+    if (!row) throw notFound();
+    if (!isSupportCaseOpen(row.status as SupportCaseStatus)) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.CONFLICT,
+        message: 'Case vừa được người khác xử lý',
+      });
+    }
+    if (opts.guardTripVerdict) assertNoTripVerdictPending(row);
+
+    const text = resolution.trim();
+    await tx.supportCase.update({
+      where: { id },
+      data: { status: SUPPORT_CASE_STATUS.RESOLVED, resolution: text, resolvedAt: new Date() },
+    });
+    await tx.supportCaseEvent.create({
+      data: {
+        id: newId(),
+        caseId: id,
+        actorUserId,
+        actorScope: SUPPORT_PARTY.PLATFORM,
+        kind: SUPPORT_CASE_EVENT_KIND.RESOLUTION,
+        visibility: SUPPORT_EVENT_VISIBILITY.PUBLIC,
+        body: text,
+        fromStatus: row.status,
+        toStatus: SUPPORT_CASE_STATUS.RESOLVED,
+      },
+    });
+    await this.audit.record(
+      {
+        tenantId: row.tenantId,
+        actorUserId,
+        actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+        action: SUPPORT_CASE_AUDIT_ACTION.RESOLVE,
+        targetType: AUDIT_TARGET_TYPE.SUPPORT_CASE,
+        targetId: id,
+        before: { status: row.status },
+        after: { resolution: text, ...(opts.audit ?? {}) },
+      },
+      tx,
+    );
+    await this.notifyOtherParties(tx, row, actor, `${row.code} đã có kết luận`);
   }
 
   async assign(
@@ -948,6 +987,23 @@ function toDto(row: Row): SupportCaseDto {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+}
+
+/**
+ * Case xác minh bàn giao mà đơn VẪN treo ở mốc đó chỉ kết thúc bằng một kết luận CHUYẾN (ADR 0094)
+ * — kết luận/đóng trần sẽ để đơn ở "Chờ giao xe" / "Đang thuê" mãi, lịch xe bị chiếm và tiền giữ
+ * chỗ không bao giờ tự chốt. Đơn đã đi tiếp (ai đó vừa xác nhận / huỷ) thì không còn gì để kết luận
+ * và case đóng trần được như mọi case.
+ */
+function assertNoTripVerdictPending(row: Row): void {
+  // Tranh chấp có kết luận chuyến nhưng khép trần được (ADR 0095 điều 2).
+  if (!tripVerdictRequired(row.category, row.booking?.status)) return;
+  const verdicts = tripVerdictsFor(row.category, row.booking?.status);
+  throw new ConflictException({
+    code: API_ERROR_CODE.SUPPORT_CASE_TRIP_VERDICT_REQUIRED,
+    message: 'Case này cần kết luận chuyến (xe đã giao / khách không đến / ...) thay vì đóng trần',
+    details: { verdicts },
+  });
 }
 
 function scopeToAudit(scope: SupportParty) {

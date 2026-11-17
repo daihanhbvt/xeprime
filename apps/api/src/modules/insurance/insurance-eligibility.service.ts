@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '@xeprime/prisma';
+import {
+  INSURANCE_ELIGIBILITY_VEHICLE_SELECT,
+  insuranceEligibilityInputOf,
+  type Prisma,
+} from '@xeprime/prisma';
 import {
   insuranceEligibilityGaps,
-  VEHICLE_DOCUMENT_TYPE,
   vehicleProtectionTierQuote,
   type InsuranceEligibilityGap,
   type InsuranceEligibilityInput,
@@ -41,7 +44,7 @@ export class InsuranceEligibilityService {
    *
    *  - `undefined` — sản phẩm đang bán tính theo NGÀY (hoặc không bán): đi đường cũ;
    *  - `null` — sản phẩm theo bậc nhưng xe/chuyến không đủ điều kiện ⇒ không có dòng `IV`;
-   *  - báo giá — BẮT BUỘC, đúng số tiền này.
+   *  - báo giá — xe MUA ĐƯỢC; thu hay không do chế độ chủ xe + lựa chọn khách (ADR 0091).
    */
   async tierQuoteFor(
     input: { vehicleId: string; serviceType: string; pickupAt: Date; returnAt: Date },
@@ -80,32 +83,8 @@ export class InsuranceEligibilityService {
   ): Promise<InsuranceEligibilityInput | null> {
     const vehicle = await db.vehicle.findFirst({
       where: { id: vehicleId, deletedAt: null },
-      select: {
-        vehicleType: true,
-        insuredValue: true,
-        brand: true,
-        model: true,
-        manufactureYear: true,
-        seatCount: true,
-        images: { select: { imageType: true } },
-        documents: {
-          where: { type: VEHICLE_DOCUMENT_TYPE.REGISTRATION, archivedAt: null },
-          orderBy: { updatedAt: 'desc' },
-          take: 1,
-          select: { chassisNumber: true, holderName: true },
-        },
-      },
+      select: INSURANCE_ELIGIBILITY_VEHICLE_SELECT,
     });
-    if (!vehicle) return null;
-    return {
-      vehicleType: vehicle.vehicleType,
-      insuredValue: vehicle.insuredValue?.toFixed(0) ?? null,
-      brand: vehicle.brand,
-      model: vehicle.model,
-      manufactureYear: vehicle.manufactureYear,
-      seatCount: vehicle.seatCount,
-      imageTypes: vehicle.images.map((i) => i.imageType),
-      registration: vehicle.documents[0] ?? null,
-    };
+    return vehicle ? insuranceEligibilityInputOf(vehicle) : null;
   }
 }

@@ -50,7 +50,6 @@ const POLICY: FeePolicySnapshot = {
   holdPaymentWindowMinutes: 120,
   freeCancelHours: 4,
   // depositPercent 15 · depositMinAmount '0' — FEE_SCHEDULE_DEFAULTS (chính sách v8, ADR 0066).
-  depositMaxPercent: 30,
   taxEnabled: false,
   taxRates: null,
   taxLegalBasis: null,

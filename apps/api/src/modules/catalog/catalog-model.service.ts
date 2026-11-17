@@ -136,6 +136,23 @@ export class CatalogModelService {
    * chỉ vài trăm dòng mỗi loại xe, nên một lượt quét là đủ rẻ.
    */
   async brandSummary(vehicleType: string): Promise<CatalogModelBrandSummaryDto[]> {
+    /*
+     * Dữ liệu xe (ADR 0090) theo hãng — cột hãng của tab "Mẫu xe" nói hãng nào có xe CHỜ DUYỆT
+     * (ADR 0096). Đếm ở SQL: bảng xe chuẩn dài hơn bảng dòng xe nhiều, kéo về app để đếm là phí.
+     */
+    const variantCounts = await this.prisma.$queryRaw<
+      { brand_key: string; total: number; pending: number }[]
+    >`
+      SELECT m."brand_key",
+             count(*)::int AS "total",
+             count(*) FILTER (WHERE v."review_status" = ${CATALOG_REVIEW_STATUS.PENDING})::int AS "pending"
+      FROM "public"."vehicle_catalog_variants" v
+      JOIN "public"."vehicle_catalog_models" m ON m."id" = v."model_id"
+      WHERE v."deleted_at" IS NULL
+        AND m."deleted_at" IS NULL
+        AND m."vehicle_type" = ${vehicleType}
+      GROUP BY m."brand_key"
+    `;
     const rows = await this.prisma.vehicleCatalogModel.findMany({
       where: { vehicleType, ...NOT_DELETED, ...APPROVED },
       select: {
@@ -151,16 +168,18 @@ export class CatalogModelService {
 
     const byBrand = new Map<string, CatalogModelBrandSummaryDto>();
     for (const row of rows) {
-      const entry = byBrand.get(row.brandKey) ?? {
-        brandKey: row.brandKey,
-        total: 0,
-        active: 0,
-        missingSpecs: 0,
-      };
+      const entry = byBrand.get(row.brandKey) ?? emptyBrandSummary(row.brandKey);
       entry.total += 1;
       if (row.active) entry.active += 1;
       if (catalogModelMissingSpecs(row).length > 0) entry.missingSpecs += 1;
       byBrand.set(row.brandKey, entry);
+    }
+    // Hãng chỉ có dữ liệu chờ duyệt (dòng xe gõ mới, chưa duyệt) vẫn phải hiện để người duyệt thấy.
+    for (const count of variantCounts) {
+      const entry = byBrand.get(count.brand_key) ?? emptyBrandSummary(count.brand_key);
+      entry.vehicleDataTotal = count.total;
+      entry.vehicleDataPending = count.pending;
+      byBrand.set(count.brand_key, entry);
     }
     return [...byBrand.values()];
   }
@@ -376,6 +395,17 @@ export class CatalogModelService {
         throw new ConflictException({
           code: API_ERROR_CODE.CATALOG_MODEL_IN_USE,
           message: `Đang có ${used} xe gắn mẫu này - hãy tắt thay vì xoá để xe cũ vẫn giữ liên kết`,
+        });
+      }
+      // Xe chuẩn còn sống mà dòng bị xoá là xe chuẩn MỒ CÔI: danh sách dữ liệu xe chỉ đọc dòng còn
+      // sống, nên chúng biến mất mà vẫn chiếm định danh (ADR 0096 - hai thứ nay chung một màn).
+      const variants = await tx.vehicleCatalogVariant.count({
+        where: { modelId: id, deletedAt: null },
+      });
+      if (variants > 0) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.CATALOG_MODEL_HAS_VEHICLE_DATA,
+          message: `Dòng xe còn ${variants} xe chuẩn - xoá hoặc gộp các xe đó trước, hoặc tắt dòng`,
         });
       }
       await tx.vehicleCatalogModel.update({
@@ -894,4 +924,15 @@ export class CatalogModelService {
     }
     return map;
   }
+}
+
+function emptyBrandSummary(brandKey: string): CatalogModelBrandSummaryDto {
+  return {
+    brandKey,
+    total: 0,
+    active: 0,
+    missingSpecs: 0,
+    vehicleDataTotal: 0,
+    vehicleDataPending: 0,
+  };
 }

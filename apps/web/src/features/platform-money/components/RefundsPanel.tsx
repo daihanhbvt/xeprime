@@ -24,6 +24,7 @@ import type { PlatformHoldRefund } from '../types';
 import { QueueViewSwitch } from './QueueViewSwitch';
 import { RefundPaidModal } from './RefundPaidModal';
 import styles from './MoneyQueue.module.css';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 
 const MIN_TABLE_WIDTH = 1080;
 /** Cùng sàn với `RejectRefundDto` — khách đọc lý do này, nên một chữ "ko" là không đủ. */
@@ -108,7 +109,9 @@ export function RefundsPanel() {
           <div className={styles.stack}>
             <span className={styles.inlineCode}>
               <span className={styles.mono}>
-                {row.bankCode} · {row.bankAccountNumber}
+                {row.bankCode}
+                {LIST_SEPARATOR}
+                {row.bankAccountNumber}
               </span>
               <CopyButton value={row.bankAccountNumber} label={t('refundPaid.account')} />
             </span>

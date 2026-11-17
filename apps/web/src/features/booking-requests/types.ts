@@ -55,6 +55,8 @@ export type BookingRequestDecisionTarget = Omit<
   readonly pickupPreference?: string | null;
 };
 export type CreateBookingRequestInput = Schemas['CreateBookingRequestDto'];
+/** Trần thời gian đặt xe của khách trên chợ (ADR 0091 điều 4). */
+export type BookingLimitsInfo = Schemas['BookingLimitsDto'];
 
 /**
  * Thứ khách ĐÃ chọn ở thẻ đặt xe của trang chi tiết — TOÀN BỘ chuyến. Hộp yêu cầu thuê không còn

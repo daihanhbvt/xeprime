@@ -6,13 +6,17 @@ import {
   fetchBankTransaction,
   fetchBankTransactions,
   filtersToParams,
+  creditCustomer,
   ignoreBankTransaction,
   matchBankTransaction,
+  matchReceivable,
 } from '../api';
 import type {
   BankTransactionFilters,
+  CreditCustomerInput,
   IgnoreBankTransactionInput,
   MatchBankTransactionInput,
+  MatchReceivableInput,
 } from '../types';
 
 export function useBankTransactions(filters: BankTransactionFilters) {
@@ -67,6 +71,24 @@ export function useIgnoreBankTransaction() {
   return useMutation({
     mutationFn: ({ id, ...body }: { id: string } & IgnoreBankTransactionInput) =>
       ignoreBankTransaction(id, body),
+    onSuccess: invalidate,
+  });
+}
+
+/** Khớp tay vào khoản giữ chỗ / phụ lục — có thể tạo đơn ngay, nên làm mới cả nhánh tiền. */
+export function useMatchReceivable() {
+  const invalidate = useInvalidateAfterHandling();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string } & MatchReceivableInput) =>
+      matchReceivable(id, body),
+    onSuccess: invalidate,
+  });
+}
+
+export function useCreditCustomer() {
+  const invalidate = useInvalidateAfterHandling();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string } & CreditCustomerInput) => creditCustomer(id, body),
     onSuccess: invalidate,
   });
 }

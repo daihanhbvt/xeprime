@@ -5,6 +5,7 @@ export type VehicleDataListItem = components['schemas']['VehicleDataListItemDto'
 export type VehicleDataDetail = components['schemas']['VehicleDataDetailDto'];
 export type VehicleDataSummary = components['schemas']['VehicleDataSummaryDto'];
 export type VehicleDataPage = components['schemas']['VehicleDataPageDto'];
+export type VehicleDataModelCount = components['schemas']['VehicleDataModelCountDto'];
 export type VehicleDataMarketStat = components['schemas']['VehicleDataMarketStatDto'];
 export type VehicleDataVehicle = components['schemas']['VehicleDataVehicleDto'];
 export type VehicleDataSimilar = components['schemas']['VehicleDataSimilarDto'];
@@ -27,6 +28,8 @@ export interface VehicleDataFilters {
   q?: string;
   vehicleType?: string;
   brandKey?: string;
+  /** Chỉ xe của một dòng - danh sách xe khi mở một dòng ở tab Mẫu xe (ADR 0096). Không lên URL. */
+  modelId?: string;
   status?: string;
   origin?: string;
   gap?: string;

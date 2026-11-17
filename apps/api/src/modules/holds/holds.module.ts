@@ -4,6 +4,7 @@ import { BookingsModule } from '../bookings/bookings.module';
 import { CalendarModule } from '../calendar/calendar.module';
 import { BookingHoldsService } from './booking-holds.service';
 import { HoldSettlementModule } from './hold-settlement.module';
+import { PaymentGatewayConfig } from '../payment-gateway/payment-gateway.config';
 import { InsuranceModule } from '../insurance/insurance.module';
 import { TaxModule } from '../tax/tax.module';
 import { VehicleSettingsModule } from '../vehicle-settings/vehicle-settings.module';
@@ -31,7 +32,11 @@ import { PlatformMoneySummaryService } from './platform-money-summary.service';
     VehicleSettingsModule,
   ],
   controllers: [PlatformMoneyController],
-  providers: [BookingHoldsService, PlatformMoneySummaryService],
+  /*
+   * `PaymentGatewayConfig` chỉ ĐỌC env — khai lại ở đây thay vì import `PaymentGatewayModule`
+   * (module đó import ngược `HoldsModule`): số đếm màn Tài chính cần biết cổng có đang dùng không.
+   */
+  providers: [BookingHoldsService, PlatformMoneySummaryService, PaymentGatewayConfig],
   // Re-export MODULE, không phải service: `HoldSettlementService` thuộc `HoldSettlementModule`,
   // và Nest không cho một module export provider mà nó không sở hữu.
   exports: [BookingHoldsService, HoldSettlementModule],

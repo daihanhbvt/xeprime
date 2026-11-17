@@ -8,7 +8,12 @@ import { BankInQueue } from '@/features/bank-transactions/components/BankInQueue
 import { TaxPeriodPanel } from '@/features/tax/components/TaxPeriodPanel';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { DAY_PARAM_FORMAT, dayjs, nowInAppTz, type Dayjs } from '@/lib/datetime';
-import { FINANCE_QUEUE, type FinanceQueue } from '../finance-queues';
+import {
+  FINANCE_QUEUE,
+  isGatewayQueueRetired,
+  listedFinanceQueues,
+  type FinanceQueue,
+} from '../finance-queues';
 import { useFinanceQueue } from '../hooks/use-finance-queue';
 import { useDailyReconciliation, useMoneySummary } from '../hooks/use-platform-money';
 import { FinanceQueueRail, useFinanceQueueLabel } from './FinanceQueueRail';
@@ -38,8 +43,15 @@ export function FinanceView() {
   const t = useTranslations('PlatformMoney');
   const fmt = useAppFormat();
   const queueLabel = useFinanceQueueLabel();
-  const { queue, visibleQueues, permissionsLoading, date, isToday, selectQueue, selectDate } =
-    useFinanceQueue();
+  const {
+    queue: requestedQueue,
+    visibleQueues,
+    permissionsLoading,
+    date,
+    isToday,
+    selectQueue,
+    selectDate,
+  } = useFinanceQueue();
 
   /*
    * Dải tóm tắt (thẻ đếm + kết luận đối soát) và ngày đối soát đọc hai endpoint gác bằng quyền
@@ -49,6 +61,17 @@ export function FinanceView() {
   const canReadMoney = visibleQueues.includes(FINANCE_QUEUE.LEDGER);
   const summary = useMoneySummary({ enabled: canReadMoney });
   const reconciliation = useDailyReconciliation(date, { enabled: canReadMoney });
+
+  /*
+   * Hàng đợi hết việc thì rời danh sách (đợt rà Admin 16/11/2026): cổng MoMo/VNPAY không dùng, và
+   * "Chuyển trả" không còn khoản chờ. Cổng nghỉ thì ẩn HẲN — link cũ `?queue=gateway-in` rơi về
+   * hàng đợi đầu tiên; "Chuyển trả" vẫn mở được bằng URL để tra lịch sử.
+   */
+  const listedQueues = listedFinanceQueues(visibleQueues, summary.data);
+  const queue =
+    requestedQueue === FINANCE_QUEUE.GATEWAY_IN && isGatewayQueueRetired(summary.data)
+      ? (listedQueues[0] ?? null)
+      : requestedQueue;
 
   const dateLabel = fmt.dateKey(date);
   const today = nowInAppTz();
@@ -102,7 +125,7 @@ export function FinanceView() {
           reconciliation={reconciliation.data}
           reconciliationLoading={reconciliation.isLoading}
           reconciliationError={reconciliation.isError}
-          visibleQueues={visibleQueues}
+          visibleQueues={listedQueues}
           activeQueue={queue}
           onSelect={selectQueue}
         />
@@ -110,7 +133,7 @@ export function FinanceView() {
 
       <div className={styles.body}>
         <FinanceQueueRail
-          visibleQueues={visibleQueues}
+          visibleQueues={listedQueues}
           activeQueue={queue}
           summary={summary.data}
           onSelect={selectQueue}

@@ -698,7 +698,7 @@ describe('matchSelectedKey - quy tắc mục đang mở', () => {
    */
   it('"Kiểm duyệt xe" chỉ khớp tuyệt đối - không nhận route con nào', () => {
     expect(matchSelectedKey(ROUTES.ADMIN.ROOT, platformLeaves)).toBe(ROUTES.ADMIN.ROOT);
-    expect(matchSelectedKey(ROUTES.ADMIN.TENANTS, platformLeaves)).toBeUndefined();
+    expect(matchSelectedKey('/admin/no-such-page', platformLeaves)).toBeUndefined();
     expect(matchSelectedKey(ROUTES.ADMIN.PARTNERS, platformLeaves)).toBeUndefined();
     expect(matchSelectedKey('/manage/admin/khong-ton-tai', platformLeaves)).toBeUndefined();
   });

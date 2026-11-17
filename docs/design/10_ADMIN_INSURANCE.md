@@ -13,7 +13,7 @@ cho thuê tự lái) như một dòng `IV` trên đơn thuê. XePrime **giữ h�
 tháng**, trừ hoa hồng đại lý.
 
 ```text
-Chủ xe khai xe đủ điều kiện ─► Khách đặt xe: báo giá có dòng IV bắt buộc (không gọi MIC)
+Chủ xe khai xe đủ điều kiện + chọn Bắt buộc/Tuỳ chọn ─► Khách đặt xe: báo giá có dòng IV khi xe Bắt buộc hoặc khách tích (không gọi MIC)
         ─► Tiền giữ chỗ về đủ: đơn thuê ra đời, lượt bảo hiểm ở trạng thái "reserved"
         ─► Mốc giao xe: worker tra cứu id_tras → gửi ảnh xe → validate → cấp GCN ("issued")
         ─► Cuối tháng: admin lập bảng kê → chốt → chuyển tiền MIC → đánh dấu "đã trả"
@@ -46,7 +46,7 @@ Mỗi dòng là một lượt bảo hiểm của một đơn. Trạng thái (`IN
 | --- | --- | --- |
 | `reserved` | Đơn đã có, chưa tới mốc giao xe | Không làm gì |
 | `issuing` | Worker đang cấp | Chờ; kẹt quá lâu thì xem log worker |
-| `issued` | Đã có GCN (mã MIC, hiệu lực từ giao xe + 5 phút) | Tải PDF khi khách/chủ xe hỏi — PDF lấy từ MIC mỗi lần, không lưu |
+| `issued` | Đã có GCN (mã MIC, hiệu lực từ giao xe + 5 phút) | Tải PDF khi khách/chủ xe hỏi — bản lưu R2 riêng tư (vòng quét API lưu trước sau khi cấp; chưa có thì tải MIC rồi lưu — ADR 0091) |
 | `failed` | Cấp thất bại | Đọc mã lỗi, sửa nguyên nhân, bấm **Thử lại** |
 
 Mã lỗi (`INSURANCE_ISSUE_ERROR`) và cách xử lý:
@@ -86,7 +86,7 @@ Sản phẩm tai nạn người (`personal_accident`) đang **tắt** (MIC chưa
 
 ## 3. Điều kiện để một xe được bán kèm bảo hiểm
 
-Một ô tô tự lái, chuyến ≤ 30 ngày, có `IV` bắt buộc khi đủ cả năm điều (`insuranceEligibilityGaps`,
+Một ô tô tự lái, chuyến ≤ 30 ngày, được chào bán `IV` khi đủ cả năm điều (`insuranceEligibilityGaps`,
 `GET /vehicles/:id/insurance-eligibility`):
 
 | Mã thiếu | Chủ xe cần làm |
@@ -151,3 +151,24 @@ trạng thái hồ sơ phía MIC.
 
 Mở khi MIC có sản phẩm tương ứng cho XePrime; bật sản phẩm ở tab Sản phẩm + mở rộng
 `insuranceEligibilityGaps`.
+
+## ADR 0091 (16/11/2026) — chế độ của chủ xe, theo dõi hợp đồng
+
+- **Chế độ Bắt buộc/Tuỳ chọn** do chủ xe chọn ở chính sách thuê (gian hàng theo loại xe, ghi đè theo
+  xe; chủ xe tuyến hoa hồng đặt trên từng xe). Mặc định Tuỳ chọn. Xe Bắt buộc mà thiếu dữ liệu không
+  nhận đặt tự lái (`VEHICLE_INSURANCE_NOT_READY`) và bị ẩn khỏi tìm xe tự lái.
+- **Khối "Cần xử lý gấp"** ở đầu tab Chứng nhận (`GET /platform/money/insurance/attention`): hợp đồng
+  quá 2 giờ sau giao xe chưa cấp (vòng quét API đánh dấu `escalated_at` mỗi 5 phút), và hợp đồng MIC
+  hết 4 lượt tra mà vẫn chờ ảnh (`ttrang` 3). Bấm mã đơn mở đúng hợp đồng.
+- **Mục "Phí bảo hiểm"** trong ngăn chi tiết (`GET /platform/money/insurance/:id/pricing`): giá trị xe,
+  bậc đã áp, đã thu của khách, MIC tính lúc cấp, chênh lệch (thu dư / XePrime bù).
+- **Phí thu hộ bảo hiểm** (ADR 0091 điều 3): tab Sản phẩm → sửa "Bảo hiểm vật chất xe" → khối "Phí thu hộ
+  bảo hiểm": công tắc + % trên phí bảo hiểm (0-50, hai chữ số lẻ). **Mặc định tắt; KHÔNG bật ở production
+  khi luật sư chưa trả lời.** Đổi % áp cho báo giá và lượt duyệt từ lúc lưu (như mọi khoản phí khác, giá chốt ở lượt duyệt); đơn và
+  khoản giữ chỗ đã có giữ số đã chốt. Khách thấy gộp vào dòng bảo hiểm kèm ⓘ; ngăn
+  chi tiết hợp đồng có dòng "Phí thu hộ (XePrime)"; khoản này là doanh thu XePrime, KHÔNG vào bảng kê
+  chuyển MIC. Màn đối soát ba vế có dòng "Phí thu hộ bảo hiểm đã hoàn khách" (số âm) khi có lượt tự hoàn.
+- **Tự hoàn khi quá giờ trả chưa cấp** (điều 7): vòng quét 5 phút tra MIC lần cuối; không có hợp đồng ⇒
+  hợp đồng `cancelled`, hoàn phí bảo hiểm + phí thu hộ vào Ví điểm khách. Chỉ chạy khi khoản giữ chỗ
+  của đơn đã quyết toán. Ngăn chi tiết hiện dòng "Đã tự hoàn" kèm số và giờ. Hợp đồng đã tự hoàn rời
+  khối "Cần xử lý gấp"; người trực không phải hoàn tay.

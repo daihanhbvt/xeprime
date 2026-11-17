@@ -160,11 +160,26 @@ function toNumber(value: string | null | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function defaultsFrom(detail: VehicleDataDetail | null): VehicleDataFormValues {
+/**
+ * Phạm vi điền sẵn cho xe MỚI — loại xe + hãng đang chọn ở cột hãng của tab Mẫu xe, và dòng xe
+ * khi bấm "Thêm xe" trên một dòng (ADR 0096).
+ */
+export interface VehicleDataNewScope {
+  vehicleType: string;
+  brandKey: string | null;
+  modelId?: string | null;
+}
+
+function defaultsFrom(
+  detail: VehicleDataDetail | null,
+  scope?: VehicleDataNewScope,
+): VehicleDataFormValues {
   return {
-    vehicleType: (detail?.vehicleType ?? VEHICLE_TYPE.CAR) as VehicleDataFormValues['vehicleType'],
-    brandKey: detail?.brandKey ?? null,
-    modelId: detail?.modelId ?? null,
+    vehicleType: (detail?.vehicleType ??
+      scope?.vehicleType ??
+      VEHICLE_TYPE.CAR) as VehicleDataFormValues['vehicleType'],
+    brandKey: detail?.brandKey ?? scope?.brandKey ?? null,
+    modelId: detail?.modelId ?? scope?.modelId ?? null,
     newModelLabel: null,
     variantLabel: detail?.variantLabel ?? '',
     yearFrom: detail?.yearFrom ?? null,
@@ -240,12 +255,15 @@ export function VehicleDataDrawer({
   openId,
   previousId,
   nextId,
+  newScope,
   onNavigate,
   onClose,
 }: {
   openId: string | null;
   previousId: string | null;
   nextId: string | null;
+  /** Thêm xe từ một hãng đang chọn ⇒ form điền sẵn loại xe + hãng. */
+  newScope?: VehicleDataNewScope;
   onNavigate: (id: string) => void;
   onClose: () => void;
 }) {
@@ -268,7 +286,7 @@ export function VehicleDataDrawer({
   // của xe trước sang xe sau.
   const recordKey = isNew ? NEW_RECORD : detail ? `${detail.id}:${detail.updatedAt}` : null;
   useEffect(() => {
-    if (recordKey) reset(defaultsFrom(detail));
+    if (recordKey) reset(defaultsFrom(detail, isNew ? newScope : undefined));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordKey]);
 

@@ -1,8 +1,14 @@
 import { Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ACCOUNT_REALM, PERMISSION } from '@xeprime/types';
-import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
-import type { AuthenticatedUser } from '../../common/types/request-context';
+import {
+  CurrentPlatform,
+  CurrentUser,
+  PlatformOnly,
+  Realms,
+  RequirePermissions,
+} from '../../common/decorators';
+import type { AuthenticatedUser, PlatformContext } from '../../common/types/request-context';
 import {
   BookingContactDto,
   PlatformBookingDetailDto,
@@ -31,10 +37,16 @@ export class PlatformBookingsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Chi tiết một đơn thuê (SĐT khách ở dạng đã che)' })
+  @ApiOperation({
+    summary:
+      'Chi tiết một đơn thuê kèm tiền marketplace (SĐT khách đã che; chứng từ ngân hàng chỉ với quyền tiền)',
+  })
   @ApiOkResponse({ type: PlatformBookingDetailDto })
-  getOne(@Param('id') id: string): Promise<PlatformBookingDetailDto> {
-    return this.bookings.getOne(id);
+  getOne(
+    @Param('id') id: string,
+    @CurrentPlatform() platform: PlatformContext,
+  ): Promise<PlatformBookingDetailDto> {
+    return this.bookings.getOne(id, platform);
   }
 
   // Liệt kê lại quyền đọc: `RequirePermissions` ở handler GHI ĐÈ cấp class (getAllAndOverride),

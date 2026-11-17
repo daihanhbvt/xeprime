@@ -36,3 +36,10 @@
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
 }
+
+/* Số nộp lệch sổ — chữ nói rõ lệch bao nhiêu, màu chỉ là tín hiệu phụ. */
+.warning {
+  margin: 0;
+  color: var(--xp-color-warning-strong);
+  font-size: var(--xp-font-size-body-sm);
+}

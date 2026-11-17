@@ -1,4 +1,9 @@
-import { COLLATERAL_MODE, isPerKmDeliveryTier, type LongTermPackageMonths } from '@xeprime/types';
+import {
+  COLLATERAL_MODE,
+  INSURANCE_MODE_DEFAULT,
+  isPerKmDeliveryTier,
+  type LongTermPackageMonths,
+} from '@xeprime/types';
 import type { PolicyFormValues, VehiclePricingFormValues } from './schema';
 import type { RentalPolicyValues, SaveRentalPolicyInput } from './types';
 
@@ -30,6 +35,8 @@ export const EMPTY_POLICY_FORM: PolicyFormValues = {
   overtimeRoundingMinutes: null,
   discountEnabled: false,
   discountTiers: [],
+  // Gian hàng mới mặc định Tuỳ chọn (ADR 0091 điều 1) — Bắt buộc là lựa chọn chủ động của chủ xe.
+  insuranceMode: INSURANCE_MODE_DEFAULT,
 };
 
 export function policyToForm(policy: RentalPolicyValues | null | undefined): PolicyFormValues {
@@ -70,6 +77,7 @@ export function policyToForm(policy: RentalPolicyValues | null | undefined): Pol
       percent: t.percent,
       note: t.note ?? '',
     })),
+    insuranceMode: policy.insuranceMode ?? INSURANCE_MODE_DEFAULT,
   };
 }
 
@@ -121,6 +129,8 @@ export function formToSaveInput(values: PolicyFormValues): SaveRentalPolicyInput
       percent: t.percent ?? 1,
       ...(t.note?.trim() ? { note: t.note.trim() } : {}),
     })),
+    // Có ô chọn thì gửi; form không có ô này để trống ⇒ server giữ chế độ đang lưu (ADR 0091).
+    ...(values.insuranceMode ? { insuranceMode: values.insuranceMode } : {}),
   };
 }
 

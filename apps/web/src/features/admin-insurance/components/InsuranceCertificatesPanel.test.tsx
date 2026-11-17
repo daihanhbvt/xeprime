@@ -15,6 +15,22 @@ import { InsuranceCertificatesPanel } from './InsuranceCertificatesPanel';
 const state = vi.hoisted(() => ({
   filters: {} as CertificateFilters,
   setFilters: vi.fn(),
+  /** Khối "Cần xử lý gấp" (ADR 0091) — mặc định không có hợp đồng nào. */
+  attention: { total: 0, items: [] } as {
+    total: number;
+    items: {
+      policyId: string;
+      status: string;
+      partnerStatus: string | null;
+      lastErrorCode: string | null;
+      escalatedAt: string | null;
+      bookingId: string;
+      bookingCode: string;
+      plateNumber: string | null;
+      handedOverAt: string | null;
+      returnAt: string;
+    }[];
+  },
 }));
 
 vi.mock('../hooks', () => ({
@@ -26,8 +42,10 @@ vi.mock('../hooks', () => ({
     refetch: vi.fn(),
   }),
   useCertificateDetail: () => ({ data: undefined, isLoading: false, isError: false }),
+  useCertificatePricing: () => ({ data: undefined, isLoading: false, isError: false }),
   useRetryCertificate: () => ({ mutate: vi.fn(), isPending: false }),
   useVoidCertificate: () => ({ mutate: vi.fn(), isPending: false }),
+  useInsuranceAttention: () => ({ data: state.attention }),
 }));
 
 vi.mock('@/hooks/use-media-query', () => ({
@@ -56,6 +74,31 @@ describe('InsuranceCertificatesPanel - góc nhìn', () => {
     expect(screen.getByText(/Đang xem hợp đồng LỖI/)).toBeTruthy();
     expect(screen.queryByText('Trạng thái')).toBeNull();
     expect(screen.getByText('Không có hợp đồng nào cần xử lý')).toBeTruthy();
+  });
+
+  it('có hợp đồng quá 2 giờ chưa cấp ⇒ khối cần xử lý gấp, bấm mã đơn mở đúng hợp đồng', () => {
+    state.attention = {
+      total: 1,
+      items: [
+        {
+          policyId: 'POL_1',
+          status: INSURANCE_POLICY_STATUS.FAILED,
+          partnerStatus: null,
+          lastErrorCode: 'partner_unavailable',
+          escalatedAt: '2026-11-16T08:00:00.000Z',
+          bookingId: 'BK_1',
+          bookingCode: 'DH-0001',
+          plateNumber: '51H-12345',
+          handedOverAt: '2026-11-16T05:00:00.000Z',
+          returnAt: '2026-11-18T05:00:00.000Z',
+        },
+      ],
+    };
+    renderPanel();
+    expect(screen.getByText('1 hợp đồng cần xử lý gấp')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'DH-0001' }));
+    expect(state.setFilters).toHaveBeenCalledWith({ open: 'POL_1' }, { resetPage: false });
+    state.attention = { total: 0, items: [] };
   });
 
   it('chuyển sang "Tất cả" ⇒ ghi status = any', () => {

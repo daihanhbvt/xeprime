@@ -38,9 +38,12 @@ Không có cột "nguồn": giá và thông số là dữ liệu vận hành đ�
 
 ## 3. Màn quản trị "Dữ liệu xe"
 
-Menu riêng ở khối **Chợ xe**, ngay dưới "Tất cả xe" (`/admin/vehicle-data`). Cùng quyền với Danh mục
-(`platform.catalog.manage`). Màn **Danh mục** chỉ còn là danh mục bộ lọc (hãng, dòng xe, kiểu dáng,
-nhiên liệu, tiện ích) — không chứa dữ liệu xe.
+> ⚠️ Cập nhật 17/11/2026 (ADR 0096): màn này KHÔNG còn menu riêng. Nó nằm ở tab **Mẫu xe** của
+> **Danh mục** (`/admin/catalog?type=vehicle_model`): chọn loại xe, chọn hãng bên trái, bên phải là
+> MỘT danh sách — mỗi dòng xe một hàng, bấm để xổ ra các xe chuẩn của dòng; dòng có xe chờ duyệt / thiếu
+> thông số tự mở. Toàn bộ mục 3.1 – 3.x dưới đây giữ nguyên chức năng, trong phạm vi loại xe + hãng đang
+> chọn; loại xe và hãng không còn là bộ lọc. Cùng quyền `platform.catalog.manage`. Dữ liệu, API và phần
+> gợi ý cho chủ xe giữ nguyên. Chi tiết bố cục: ADR 0096 điều 2-3.
 
 ### 3.1 Danh sách
 

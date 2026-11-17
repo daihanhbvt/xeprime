@@ -10,24 +10,38 @@ import {
   API_ERROR_CODE,
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
+  DRIVER_ASSIGNMENT_STATUS,
+  DRIVER_REASSIGNABLE_BOOKING_STATUSES,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
+  PLATFORM_TRIP_DRIVER_ISSUE,
   PLATFORM_TRIP_QUEUE,
+  SERVICE_TYPE,
+  TRIP_DRIVER_URGENT_MINUTES,
   TRIP_HOLD_URGENT_MINUTES,
   TRIP_PICKUP_WINDOW_HOURS,
   TRIP_PLATFORM_REMIND_COOLDOWN_MINUTES,
   TRIP_REQUEST_URGENT_MINUTES,
   type PaginationMeta,
+  type PlatformTripDriverIssue,
 } from '@xeprime/types';
+import {
+  emptyMoneySides,
+  loadBookingMoneySides,
+  type BookingMoneySides,
+} from '../../common/booking-money';
 import { dayEndUtc, dayStartUtc, vnDateKey } from '../../common/day-range';
 import { maskPhone } from '../../common/mask';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
+import { toPlatformBookingItem } from './platform-bookings.service';
 import {
   PLATFORM_TRIP_DEFAULT_LIMIT,
   PLATFORM_TRIP_MAX_LIMIT,
+  PlatformTripDriverDto,
+  PlatformTripDriverListQueryDto,
   PlatformTripRemindResultDto,
   PlatformTripRequestDto,
   PlatformTripRequestListQueryDto,
@@ -74,6 +88,116 @@ const REQUEST_SELECT = {
 
 type RequestRow = Prisma.BookingRequestGetPayload<{ select: typeof REQUEST_SELECT }>;
 
+const DRIVER_ROW_SELECT = {
+  id: true,
+  code: true,
+  status: true,
+  serviceType: true,
+  customerName: true,
+  customerPhone: true,
+  pickupAt: true,
+  returnAt: true,
+  totalAmount: true,
+  paidAmount: true,
+  tenantId: true,
+  vehicleId: true,
+  createdAt: true,
+  driverAssignmentStatus: true,
+  driverRespondBy: true,
+  driverDroppedAt: true,
+  driverReassignBy: true,
+  driver: { select: { name: true } },
+  tenant: {
+    select: { name: true, status: true, owner: { select: { displayName: true, phone: true } } },
+  },
+  vehicle: { select: { name: true, plateNumber: true } },
+} satisfies Prisma.BookingSelect;
+
+type DriverRow = Prisma.BookingGetPayload<{ select: typeof DRIVER_ROW_SELECT }>;
+
+/** Chưa có tài xế NHẬN: chưa gán, hoặc lượt gán còn chờ trả lời. Tài xế ngoài hệ thống (đơn cũ) coi là đã phủ. */
+const NOT_COVERED: Prisma.BookingWhereInput = {
+  externalDriverPhone: null,
+  OR: [
+    { driverAssignmentStatus: null },
+    { driverAssignmentStatus: DRIVER_ASSIGNMENT_STATUS.PENDING },
+  ],
+};
+
+/**
+ * Ba điều kiện của hàng đợi TÀI XẾ (`PLATFORM_TRIP_DRIVER_ISSUE`) dưới dạng WHERE — một chỗ cho số
+ * đếm của dải tóm tắt lẫn danh sách, để con số trên thẻ và số dòng trong bảng là một.
+ *
+ * `driverIssueOf` bên dưới là cùng luật đó trên MỘT dòng (để gắn nhãn + mốc); hai nơi phải sửa cùng
+ * nhau, và `platform-trips.spec` khoá chúng khớp nhau.
+ */
+function driverQueueWhere(now: Date, tenantId: string | undefined) {
+  const pickupHorizon = new Date(now.getTime() + TRIP_PICKUP_WINDOW_HOURS * HOUR_MS);
+  const urgentBy = new Date(now.getTime() + TRIP_DRIVER_URGENT_MINUTES * MINUTE_MS);
+  const scope: Prisma.BookingWhereInput = {
+    deletedAt: null,
+    serviceType: SERVICE_TYPE.WITH_DRIVER,
+    // Đơn đã giao xe thì không còn chuyện điều phối tài xế (`DRIVER_ASSIGNMENT_LOCKED`).
+    status: { in: [...DRIVER_REASSIGNABLE_BOOKING_STATUSES] },
+    ...(tenantId ? { tenantId } : {}),
+  };
+  // Tài xế ĐÃ NHẬN rồi rút, chưa ai nhận lại (ADR 0074) - khép theo `driverIncidentState`.
+  const dropped: Prisma.BookingWhereInput = {
+    driverDroppedAt: { not: null },
+    driverReassignBy: { not: null },
+    ...NOT_COVERED,
+  };
+  const droppedDue: Prisma.BookingWhereInput = {
+    AND: [
+      dropped,
+      { OR: [{ driverReassignBy: { lte: now } }, { pickupAt: { lte: pickupHorizon } }] },
+    ],
+  };
+  const pendingOverdue: Prisma.BookingWhereInput = {
+    driverAssignmentStatus: DRIVER_ASSIGNMENT_STATUS.PENDING,
+    driverRespondBy: { lte: now },
+  };
+  // Ba nhóm LOẠI TRỪ nhau, ưu tiên rút > quá hạn trả lời > chưa có ai nhận.
+  const responseOverdue: Prisma.BookingWhereInput = {
+    AND: [pendingOverdue, { NOT: droppedDue }],
+  };
+  // Viết bằng OR tường minh, KHÔNG bằng `NOT: pendingOverdue`: với đơn chưa gán, cột trạng thái là
+  // NULL và `NOT (NULL AND …)` trong SQL vẫn là NULL ⇒ dòng bị loại âm thầm.
+  const unassigned: Prisma.BookingWhereInput = {
+    driverDroppedAt: null,
+    externalDriverPhone: null,
+    pickupAt: { lte: pickupHorizon },
+    OR: [
+      { driverAssignmentStatus: null },
+      { driverAssignmentStatus: DRIVER_ASSIGNMENT_STATUS.PENDING, driverRespondBy: { gt: now } },
+    ],
+  };
+  const any: Prisma.BookingWhereInput = {
+    AND: [scope, { OR: [droppedDue, responseOverdue, unassigned] }],
+  };
+  const urgent: Prisma.BookingWhereInput = {
+    AND: [
+      any,
+      {
+        OR: [
+          { driverDroppedAt: { not: null }, driverReassignBy: { lte: now } },
+          pendingOverdue,
+          { pickupAt: { lte: urgentBy } },
+        ],
+      },
+    ],
+  };
+  return {
+    any,
+    urgent,
+    byIssue: {
+      [PLATFORM_TRIP_DRIVER_ISSUE.DROPPED]: { AND: [scope, droppedDue] },
+      [PLATFORM_TRIP_DRIVER_ISSUE.RESPONSE_OVERDUE]: { AND: [scope, responseOverdue] },
+      [PLATFORM_TRIP_DRIVER_ISSUE.UNASSIGNED]: { AND: [scope, unassigned] },
+    } satisfies Record<PlatformTripDriverIssue, Prisma.BookingWhereInput>,
+  };
+}
+
 /**
  * VẬN HÀNH CHUYẾN cho nhân sự nền tảng — chỉ ĐỌC, trừ một việc: nhắc tay chủ xe.
  *
@@ -102,6 +226,7 @@ export class PlatformTripsService {
     const requestUrgentBy = new Date(now.getTime() + TRIP_REQUEST_URGENT_MINUTES * MINUTE_MS);
     const holdUrgentBy = new Date(now.getTime() + TRIP_HOLD_URGENT_MINUTES * MINUTE_MS);
     const scope = query.tenantId ? { tenantId: query.tenantId } : {};
+    const drivers = driverQueueWhere(now, query.tenantId);
 
     const pending: Prisma.BookingRequestWhereInput = {
       ...scope,
@@ -139,6 +264,11 @@ export class PlatformTripsService {
       activeOverdue,
       pickupsToday,
       returnsToday,
+      driverCount,
+      driverUrgent,
+      driverDropped,
+      driverResponseOverdue,
+      driverUnassigned,
     ] = await Promise.all([
       this.prisma.bookingRequest.count({ where: pending }),
       this.prisma.bookingRequest.count({
@@ -155,6 +285,13 @@ export class PlatformTripsService {
       this.prisma.booking.count({ where: { ...active, returnAt: { lt: now } } }),
       this.prisma.booking.count({ where: { ...live, pickupAt: today } }),
       this.prisma.booking.count({ where: { ...live, returnAt: today } }),
+      this.prisma.booking.count({ where: drivers.any }),
+      this.prisma.booking.count({ where: drivers.urgent }),
+      this.prisma.booking.count({ where: drivers.byIssue[PLATFORM_TRIP_DRIVER_ISSUE.DROPPED] }),
+      this.prisma.booking.count({
+        where: drivers.byIssue[PLATFORM_TRIP_DRIVER_ISSUE.RESPONSE_OVERDUE],
+      }),
+      this.prisma.booking.count({ where: drivers.byIssue[PLATFORM_TRIP_DRIVER_ISSUE.UNASSIGNED] }),
     ]);
 
     return {
@@ -165,7 +302,60 @@ export class PlatformTripsService {
         [PLATFORM_TRIP_QUEUE.AWAITING_HOLD]: { count: awaitingCount, urgentCount: awaitingUrgent },
         [PLATFORM_TRIP_QUEUE.PICKUP_SOON]: { count: pickupCount, urgentCount: pickupOverdue },
         [PLATFORM_TRIP_QUEUE.ACTIVE]: { count: activeCount, urgentCount: activeOverdue },
+        [PLATFORM_TRIP_QUEUE.DRIVER]: { count: driverCount, urgentCount: driverUrgent },
       },
+      driverIssues: {
+        [PLATFORM_TRIP_DRIVER_ISSUE.DROPPED]: driverDropped,
+        [PLATFORM_TRIP_DRIVER_ISSUE.RESPONSE_OVERDUE]: driverResponseOverdue,
+        [PLATFORM_TRIP_DRIVER_ISSUE.UNASSIGNED]: driverUnassigned,
+      },
+    };
+  }
+
+  /**
+   * Hàng đợi TÀI XẾ — đơn có tài xế đang kẹt khâu tài xế, giờ nhận gần nhất lên đầu (quá giờ nhận
+   * tự lên trên cùng). Chỉ ĐỌC: nền tảng gọi bên thuê, không gán tài xế thay họ (ADR 0063).
+   */
+  async drivers(
+    query: PlatformTripDriverListQueryDto,
+    now: Date = new Date(),
+  ): Promise<{ data: PlatformTripDriverDto[]; meta: PaginationMeta }> {
+    const paging = resolvePaging(query, PLATFORM_TRIP_DEFAULT_LIMIT, PLATFORM_TRIP_MAX_LIMIT);
+    const q = query.q?.trim();
+    const where: Prisma.BookingWhereInput = {
+      AND: [
+        driverQueueWhere(now, query.tenantId).any,
+        q
+          ? {
+              OR: [
+                { code: { contains: q, mode: 'insensitive' } },
+                { customerName: { contains: q, mode: 'insensitive' } },
+                { vehicle: { name: { contains: q, mode: 'insensitive' } } },
+                { vehicle: { plateNumber: { contains: q, mode: 'insensitive' } } },
+                { tenant: { name: { contains: q, mode: 'insensitive' } } },
+              ],
+            }
+          : {},
+      ],
+    };
+
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.booking.count({ where }),
+      this.prisma.booking.findMany({
+        where,
+        orderBy: [{ pickupAt: 'asc' }, { id: 'asc' }],
+        skip: paging.skip,
+        take: paging.take,
+        select: DRIVER_ROW_SELECT,
+      }),
+    ]);
+    const sides = await loadBookingMoneySides(
+      this.prisma,
+      rows.map((r) => r.id),
+    );
+    return {
+      data: rows.map((row) => toDriverItem(row, sides.get(row.id) ?? emptyMoneySides(), now)),
+      meta: paginationMeta(paging, total),
     };
   }
 
@@ -374,4 +564,65 @@ function notFound(): NotFoundException {
     code: API_ERROR_CODE.NOT_FOUND,
     message: 'Không tìm thấy yêu cầu thuê',
   });
+}
+
+/**
+ * Vấn đề tài xế của MỘT dòng — cùng luật với `driverQueueWhere` (ưu tiên rút > quá hạn trả lời >
+ * chưa có ai nhận) để nhãn trên dòng khớp nhóm đã đếm.
+ */
+function driverIssueOf(
+  b: Pick<
+    DriverRow,
+    | 'pickupAt'
+    | 'driverAssignmentStatus'
+    | 'driverRespondBy'
+    | 'driverDroppedAt'
+    | 'driverReassignBy'
+  >,
+  now: Date,
+): { issue: PlatformTripDriverIssue; deadlineAt: Date; urgent: boolean } {
+  const nowMs = now.getTime();
+  const pickupMs = b.pickupAt.getTime();
+  const pendingOverdue =
+    b.driverAssignmentStatus === DRIVER_ASSIGNMENT_STATUS.PENDING &&
+    b.driverRespondBy != null &&
+    b.driverRespondBy.getTime() <= nowMs;
+  const reassignOverdue = b.driverReassignBy != null && b.driverReassignBy.getTime() <= nowMs;
+  const urgent =
+    (b.driverDroppedAt != null && reassignOverdue) ||
+    pendingOverdue ||
+    pickupMs <= nowMs + TRIP_DRIVER_URGENT_MINUTES * MINUTE_MS;
+
+  if (
+    b.driverDroppedAt &&
+    b.driverReassignBy &&
+    (reassignOverdue || pickupMs <= nowMs + TRIP_PICKUP_WINDOW_HOURS * HOUR_MS)
+  ) {
+    return { issue: PLATFORM_TRIP_DRIVER_ISSUE.DROPPED, deadlineAt: b.driverReassignBy, urgent };
+  }
+  if (pendingOverdue) {
+    return {
+      issue: PLATFORM_TRIP_DRIVER_ISSUE.RESPONSE_OVERDUE,
+      deadlineAt: b.driverRespondBy!,
+      urgent,
+    };
+  }
+  return { issue: PLATFORM_TRIP_DRIVER_ISSUE.UNASSIGNED, deadlineAt: b.pickupAt, urgent };
+}
+
+function toDriverItem(row: DriverRow, sides: BookingMoneySides, now: Date): PlatformTripDriverDto {
+  const { issue, deadlineAt, urgent } = driverIssueOf(row, now);
+  return {
+    ...toPlatformBookingItem(row, sides),
+    driverIssue: issue,
+    urgent,
+    deadlineAt: deadlineAt.toISOString(),
+    driverAssignmentStatus: row.driverAssignmentStatus,
+    driverName: row.driver?.name ?? null,
+    driverRespondBy: iso(row.driverRespondBy),
+    driverDroppedAt: iso(row.driverDroppedAt),
+    driverReassignBy: iso(row.driverReassignBy),
+    ownerName: row.tenant.owner?.displayName ?? null,
+    ownerPhone: row.tenant.owner?.phone ?? null,
+  };
 }

@@ -5,14 +5,23 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
-import { TURNAROUND_BUFFER_MAX_MINUTES, type VehicleType } from '@xeprime/types';
+import {
+  INSURANCE_MODE,
+  TURNAROUND_BUFFER_MAX_MINUTES,
+  VEHICLE_TYPE,
+  type VehicleType,
+} from '@xeprime/types';
 
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
 import { formToSaveInput, policyToForm } from '../form';
-import { useSaveShopOperationDefaults, useSaveShopPolicy } from '../hooks/use-shop-policy';
+import {
+  useSaveShopOperationDefaults,
+  useSaveShopPolicy,
+  useShopInsuranceImpact,
+} from '../hooks/use-shop-policy';
 import { policyFormSchema } from '../schema';
 import type {
   RentalPolicyValues,
@@ -20,6 +29,7 @@ import type {
   ShopOperationDefaults,
   ShopRentalPolicy,
 } from '../types';
+import { InsuranceModeBlock } from './InsuranceModeBlock';
 import { PolicyCard } from './PolicyCard';
 import { PolicyInfoTip } from './PolicyInfoTip';
 import {
@@ -115,6 +125,12 @@ export function ShopPolicyForm({
     resetOptions: { keepDirtyValues: true },
   });
   const dirty = formState.isDirty && canEdit;
+  /*
+   * Bảo hiểm vật chất xe chỉ bán cho Ô TÔ và chỉ khi nền tảng đang bán theo bậc (ADR 0091 điều 1) —
+   * `applies` của cảnh báo nói đúng điều đó, nên một câu hỏi phục vụ cả hai: ẩn khối hay hiện.
+   */
+  const insuranceImpact = useShopInsuranceImpact(vehicleType, vehicleType === VEHICLE_TYPE.CAR);
+  const insuranceApplies = vehicleType === VEHICLE_TYPE.CAR && insuranceImpact.data?.applies === true;
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 
@@ -141,12 +157,27 @@ export function ShopPolicyForm({
 
   const confirmThenSubmit = handleSubmit((next) => {
     if (submitting) return;
+    // Chuyển sang Bắt buộc mà có xe kế thừa thiếu dữ liệu ⇒ nói rõ xe nào sẽ ngừng nhận tự lái.
+    const becomingRequired =
+      insuranceApplies &&
+      next.insuranceMode === INSURANCE_MODE.REQUIRED &&
+      values.insuranceMode !== INSURANCE_MODE.REQUIRED;
+    const affected = becomingRequired ? (insuranceImpact.data?.total ?? 0) : 0;
+    const scope =
+      initial.inheritingVehicles > 0
+        ? t('confirm.bodyInheriting', { count: initial.inheritingVehicles })
+        : t('confirm.body');
     modal.confirm({
       title: t('confirm.title'),
       content:
-        initial.inheritingVehicles > 0
-          ? t('confirm.bodyInheriting', { count: initial.inheritingVehicles })
-          : t('confirm.body'),
+        affected > 0 ? (
+          <>
+            <p>{scope}</p>
+            <p>{t('confirm.insuranceRequired', { count: affected })}</p>
+          </>
+        ) : (
+          scope
+        ),
       okText: t('confirm.ok'),
       cancelText: tActions('cancel'),
       onOk: () => persist(next),
@@ -190,6 +221,13 @@ export function ShopPolicyForm({
               overriddenVehicles={initial.overriddenVehicles}
             />
             <LimitBlocks control={control} disabled={disabled} />
+            {insuranceApplies ? (
+              <InsuranceModeBlock
+                control={control}
+                disabled={disabled}
+                impact={insuranceImpact.data}
+              />
+            ) : null}
           </PolicyCard>
         </div>
 

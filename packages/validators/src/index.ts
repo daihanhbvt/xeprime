@@ -22,6 +22,7 @@ import {
   COLLATERAL_ASSET_TYPE_VALUES,
   COLLATERAL_MODE,
   COLLATERAL_MODE_VALUES,
+  INSURANCE_MODE_VALUES,
   DRIVER_TYPE,
   DRIVER_TYPE_VALUES,
   type DriverType,
@@ -1683,6 +1684,14 @@ export const policyFormSchema = yup.object({
    * tắc (app native) để trống thì không có luật nào đổi.
    */
   overtimeEnabled: yup.boolean().optional(),
+  /*
+   * Bảo hiểm vật chất xe MIC Bắt buộc hay Tuỳ chọn (ADR 0091 điều 1). TUỲ CHỌN trong schema: form
+   * chưa có ô này (app native) để trống thì server giữ chế độ đang lưu, không hạ về Tuỳ chọn.
+   */
+  insuranceMode: yup
+    .string()
+    .oneOf([...INSURANCE_MODE_VALUES])
+    .optional(),
   overtimeFeePerHour: optionalPolicyMoney().when(['overtimeEnabled', '$policyEditable'], {
     is: (enabled?: boolean, editable?: boolean) => enabled === true && editable !== false,
     then: (s) => s.test('required', 'overtimeFeeRequired', (value) => value != null),

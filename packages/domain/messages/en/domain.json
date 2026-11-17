@@ -391,6 +391,9 @@
     "hold_expired": "Payment window closed",
     "hold_refunded": "Trip fell through - refunded",
     "hold_refund_paid": "Reservation payment refunded",
+    "withdrawal_paid": "Withdrawal transferred",
+    "withdrawal_rejected": "Withdrawal rejected",
+    "withdrawal_reversed": "Withdrawal transfer failed",
     "booking_request_slot_reopened": "That car is free again",
     "booking_cancelled_by_host": "Host cancelled the trip",
     "driver_invited": "Driver invitation",
@@ -745,7 +748,8 @@
     "vehicle_protection": "Vehicle damage insurance",
     "deposit": "Booking deposit",
     "promo": "XePrime promo code",
-    "rent_prepaid": "Rent paid in advance"
+    "rent_prepaid": "Rent paid in advance",
+    "insurance_service_fee": "Insurance collection fee"
   },
   "promoCodeState": {
     "disabled": "Paused",
@@ -877,6 +881,7 @@
     "account_deletion": "Account deletion request",
     "plan_consultation": "Plan consultation",
     "handover_unconfirmed": "Handover not confirmed",
+    "return_unconfirmed": "Return not confirmed",
     "other": "Other"
   },
   "supportCaseParty": {
@@ -975,7 +980,7 @@
     "body_type": "Shown as picture cards when adding a vehicle, in the marketplace \"Type\" filter and - when \"Show on home page\" is on - in the home page \"Vehicle types\" section.",
     "fuel_type": "Shown in the \"Energy source\" field when adding a vehicle, and in filters.",
     "vehicle_feature": "Shown under \"Features\" when adding a vehicle, and in marketplace filters.",
-    "vehicle_model": "Shown in the \"Model\" field once a brand is picked. Each model belongs to one brand and one vehicle type."
+    "vehicle_model": "Pick a brand on the left. Vehicles: each variant by model year with specs, list price, reference rental prices and owner submissions awaiting review. Model lines: shared specs of a line, shown in the \"Model\" field when listing a vehicle."
   },
   "walletEntryKind": {
     "hold_forfeit": "Late-cancellation compensation",
@@ -986,7 +991,14 @@
     "withdrawal_reversal": "Returned - transfer failed",
     "adjustment": "Adjustment",
     "extension_release": "Extension reservation payout",
-    "extension_refund": "Extension refund"
+    "extension_refund": "Extension refund",
+    "late_payment_refund": "Late payment refund",
+    "subscription_overpay": "Plan overpayment refund",
+    "insurance_refund": "Refund of unissued insurance"
+  },
+  "walletStatus": {
+    "active": "Active",
+    "frozen": "Frozen"
   },
   "withdrawalStatus": {
     "pending": "Awaiting review",
@@ -1398,6 +1410,7 @@
       "submit_review": "Submit shop for review",
       "lock": "Lock shop",
       "unlock": "Unlock shop",
+      "contact_reveal": "Reveal partner contact",
       "free_trips_exhausted": "Free trips exhausted",
       "vat_invoice": {
         "update": "Change VAT invoice support (all vehicles)"
@@ -1714,5 +1727,16 @@
     "request_hold_expired": "Payment expired",
     "request_slot_taken": "Taken by another customer",
     "request_cancelled_by_host": "Cancelled by you before payment"
+  },
+  "insuranceMode": {
+    "required": "Required",
+    "optional": "Optional"
+  },
+  "insuranceEligibilityGap": {
+    "not_car": "Not a car",
+    "insured_value_missing": "Vehicle value not declared",
+    "photos_missing": "Required vehicle photos missing",
+    "registration_missing": "No registration certificate (chassis number + owner name)",
+    "vehicle_info_missing": "Brand, model, year or seat count missing"
   }
 }

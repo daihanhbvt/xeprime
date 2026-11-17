@@ -97,6 +97,9 @@ const ICONS: Readonly<Record<NotificationType, IconName>> = {
   [NOTIFICATION_TYPE.HOLD_EXPIRED]: 'hourglass-outline',
   [NOTIFICATION_TYPE.HOLD_REFUNDED]: 'arrow-undo-outline',
   [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: 'arrow-undo-outline',
+  [NOTIFICATION_TYPE.WITHDRAWAL_PAID]: 'wallet-outline',
+  [NOTIFICATION_TYPE.WITHDRAWAL_REJECTED]: 'wallet-outline',
+  [NOTIFICATION_TYPE.WITHDRAWAL_REVERSED]: 'wallet-outline',
   /* Mã khuyến mãi không còn áp được (ADR 0046) — icon QUÀ, cùng ký hiệu với ô áp mã ở luồng đặt xe. */
   [NOTIFICATION_TYPE.PROMO_CODE_DROPPED]: 'gift-outline',
   // Hồ sơ người bán — icon chứng nhận, không phải icon gian hàng: đây là danh tính pháp lý.

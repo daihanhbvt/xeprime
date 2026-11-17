@@ -1,6 +1,11 @@
+import type { TaxExportGroupBy } from '@xeprime/types';
 import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
+import { browserApiHref } from '@/lib/api-href';
 import { apiGet, apiPost, type QueryParams } from '@/services/api-client';
 import type {
+  DeclareTaxPeriodInput,
+  RemitTaxPeriodInput,
+  TaxPeriodAdvanced,
   TaxPeriodSummary,
   TaxRowFilters,
   TaxRowPage,
@@ -25,11 +30,17 @@ export const fetchTaxPeriodSummary = (period: string): Promise<TaxPeriodSummary>
 export const fetchTaxRows = (params: QueryParams): Promise<TaxRowPage> =>
   apiGet<TaxRowPage>('/platform/money/tax/rows', params);
 
-export const markPeriodDeclared = (period: string): Promise<unknown> =>
-  apiPost(`/platform/money/tax/periods/${period}/declared`);
+export const markPeriodDeclared = (
+  period: string,
+  body: DeclareTaxPeriodInput,
+): Promise<TaxPeriodAdvanced> =>
+  apiPost<TaxPeriodAdvanced>(`/platform/money/tax/periods/${period}/declared`, body);
 
-export const markPeriodRemitted = (period: string): Promise<unknown> =>
-  apiPost(`/platform/money/tax/periods/${period}/remitted`);
+export const markPeriodRemitted = (
+  period: string,
+  body: RemitTaxPeriodInput,
+): Promise<TaxPeriodAdvanced> =>
+  apiPost<TaxPeriodAdvanced>(`/platform/money/tax/periods/${period}/remitted`, body);
 
 export const reverseTaxRow = (id: string, body: { reason: string }): Promise<void> =>
   apiPost<void>(`/platform/money/tax/rows/${id}/reverse`, body);
@@ -46,10 +57,13 @@ export const fetchShopTaxSummary = (period?: string): Promise<TenantTaxSummary> 
  * `<a>` mang đủ credential). Đọc cả file vào bộ nhớ chỉ để dựng một blob là thêm một bản sao
  * của dữ liệu vài nghìn dòng mà không đổi được gì cho người dùng.
  *
- * Base URL đọc cùng biến với `api-client` — hai nguồn sẽ trôi khỏi nhau đúng lúc deploy lên một
- * môi trường khác localhost.
+ * Gốc URL đi qua `browserApiHref` — cùng gốc `/api` (cùng origin, cookie host-only của đúng site)
+ * với mọi request web. Bản trước tự đọc biến môi trường và rơi về `http://localhost:4000` khi thiếu:
+ * ở môi trường không đặt biến đó, nút tải trỏ sang máy của chính người bấm.
+ *
+ * `groupBy = seller` ⇒ một dòng mỗi người bán thay vì từng dòng theo chuyến.
  */
-export const taxExportUrl = (period: string): string => {
-  const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
-  return `${base}/platform/money/tax/export?period=${encodeURIComponent(period)}`;
+export const taxExportUrl = (period: string, groupBy?: TaxExportGroupBy): string => {
+  const query = new URLSearchParams({ period, ...(groupBy ? { groupBy } : {}) });
+  return browserApiHref(`/platform/money/tax/export?${query.toString()}`);
 };

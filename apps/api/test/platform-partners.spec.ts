@@ -37,6 +37,12 @@ import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter
 import { PermissionGuard } from '../src/common/guards/permission.guard';
 import { PlatformScopeGuard } from '../src/common/guards/platform-scope.guard';
 import type { RequestContext } from '../src/common/types/request-context';
+import { AuditService } from '../src/modules/audit/audit.service';
+import { PlatformPartnerContactController } from '../src/modules/platform-admin/platform-partner-contact.controller';
+import {
+  PARTNER_CONTACT_REVEAL_AUDIT_ACTION,
+  PlatformPartnerContactService,
+} from '../src/modules/platform-admin/platform-partner-contact.service';
 import { PlatformPartnerDetailService } from '../src/modules/platform-admin/platform-partner-detail.service';
 import { PlatformPartnerOperationsService } from '../src/modules/platform-admin/platform-partner-operations.service';
 import { PlatformPartnersController } from '../src/modules/platform-admin/platform-partners.controller';
@@ -434,12 +440,16 @@ beforeAll(async () => {
   });
 
   const moduleRef = await Test.createTestingModule({
-    controllers: [PlatformPartnersController],
+    controllers: [PlatformPartnersController, PlatformPartnerContactController],
     providers: [
       Reflector,
       { provide: PrismaServiceToken, useValue: asService },
       { provide: RbacService, useValue: new RbacService(asService) },
       { provide: VehicleAlertsService, useValue: new VehicleAlertsService(asService) },
+      {
+        provide: PlatformPartnerContactService,
+        useValue: new PlatformPartnerContactService(asService, new AuditService(asService)),
+      },
       PlatformPartnerOperationsService,
       {
         provide: PlatformPartnerDetailService,
@@ -677,9 +687,15 @@ describe('Drawer chi tiết đối tác — quyền', () => {
         reason: 'plan',
       });
       // ADR 0065 điều 1: trần chi nhánh không còn là hạn mức — kể cả khi snapshot cũ ghi 5.
-      expect(shop.quota.branches).toMatchObject({ kind: PARTNER_QUOTA_KIND.UNLIMITED, limit: null });
+      expect(shop.quota.branches).toMatchObject({
+        kind: PARTNER_QUOTA_KIND.UNLIMITED,
+        limit: null,
+      });
       // Phạm vi `all` (bậc cũ) ⇒ hai loại dùng CHUNG trần 30.
-      expect(shop.quota.vehiclesByType.car).toMatchObject({ kind: PARTNER_QUOTA_KIND.TOTAL, limit: 30 });
+      expect(shop.quota.vehiclesByType.car).toMatchObject({
+        kind: PARTNER_QUOTA_KIND.TOTAL,
+        limit: 30,
+      });
       expect(shop.quota.vehiclesByType.motorbike).toMatchObject({
         kind: PARTNER_QUOTA_KIND.TOTAL,
         limit: 30,
@@ -832,4 +848,70 @@ describe('Drawer chi tiết đối tác — nhật ký', () => {
       expectNoRawPii(res);
     },
   );
+});
+
+/**
+ * Bỏ che liên hệ của đối tác — controller RIÊNG (POST, ghi audit), để lời hứa "chỉ GET, đọc không
+ * để lại dấu" của drawer vẫn nguyên. Đặt CUỐI file: các test đếm audit ở trên không được thấy
+ * dòng `tenant.contact_reveal` của khối này.
+ */
+describe('Bỏ che liên hệ đối tác', () => {
+  const reveal = (tenantId: string, userId: string) =>
+    request(app.getHttpServer()).post(`/platform/partners/${tenantId}/contact`).set(as(userId));
+
+  maybe('platform_admin / support / finance_admin xem được đầy đủ', async () => {
+    for (const userId of [ids.superAdmin, ids.support, ids.finance]) {
+      const res = await reveal(ids.shop, userId);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        tenantId: ids.shop,
+        ownerPhone: RAW.ownerPhone,
+        ownerEmail: RAW.ownerEmail,
+        publicPhone: RAW.ownerPhone,
+        publicEmail: RAW.ownerEmail,
+      });
+    }
+  });
+
+  maybe(
+    'thiếu quyền view_pii (platform_staff, vai tuỳ biến chỉ xem) → 403, không audit',
+    async () => {
+      const before = await prisma.auditLog.count({
+        where: { action: PARTNER_CONTACT_REVEAL_AUDIT_ACTION, targetId: ids.lite },
+      });
+      for (const userId of [ids.staff, ids.auditor]) {
+        const res = await reveal(ids.lite, userId);
+        expect(res.status).toBe(403);
+        expectNoRawPii(res.body);
+      }
+      const after = await prisma.auditLog.count({
+        where: { action: PARTNER_CONTACT_REVEAL_AUDIT_ACTION, targetId: ids.lite },
+      });
+      expect(after).toBe(before);
+    },
+  );
+
+  maybe('mỗi lượt xem ghi MỘT dòng audit gắn người xem — không chép giá trị PII', async () => {
+    const res = await reveal(ids.lite, ids.support);
+    expect(res.status).toBe(200);
+    const logs = await prisma.auditLog.findMany({
+      where: { action: PARTNER_CONTACT_REVEAL_AUDIT_ACTION, targetId: ids.lite },
+    });
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toMatchObject({
+      actorUserId: ids.support,
+      actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+      targetType: 'tenant',
+      tenantId: ids.lite,
+    });
+    const json = JSON.stringify(logs[0]);
+    expect(json).not.toContain(RAW.ownerPhone);
+    expect(json).not.toContain(RAW.ownerEmail);
+  });
+
+  maybe('đối tác không tồn tại → 404', async () => {
+    const res = await reveal(newId(), ids.superAdmin);
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe(API_ERROR_CODE.NOT_FOUND);
+  });
 });

@@ -198,7 +198,14 @@
       "depositHintLabel": "Cọc thế chấp khi nhận xe là gì",
       "holdHintLabel": "Tiền giữ chỗ là gì",
       "totalHintLabel": "Tổng bạn trả gồm những gì",
-      "dailyRate": "{days, plural, other {# ngày}} × {amount}"
+      "dailyRate": "{days, plural, other {# ngày}} × {amount}",
+      "insuranceFee": {
+        "hintLabel": "Phí bảo hiểm vật chất xe gồm những gì",
+        "premium": "Phí bảo hiểm: {amount}",
+        "serviceFee": "Phí thu hộ bảo hiểm: {amount}",
+        "serviceFeePercent": "Phí thu hộ bảo hiểm ({percent}%): {amount}",
+        "refund": "Hoàn cả hai khoản khi chuyến bị huỷ hoặc giấy chứng nhận không cấp được."
+      }
     },
     "filterBar": {
       "allOf": "{label}: Tất cả",

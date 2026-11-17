@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  BOOKING_LIMITS_BOUNDS,
   DEPOSIT_PERCENT_MAX,
   DEPOSIT_PERCENT_MIN,
   FEE_POLICY_STATUS_VALUES,
@@ -223,6 +224,30 @@ export class UpsertFeePolicyDto {
   @Max(FREE_CANCEL_HOURS_MAX)
   freeCancelHours!: number;
 
+  @ApiPropertyOptional({
+    description:
+      'Khách trên chợ đặt trước tối đa N ngày lịch (tự lái + có tài xế) - ADR 0091 điều 4. ' +
+      'Vắng ⇒ giữ số của bản nháp (sửa) / mặc định nền tảng (tạo mới).',
+    example: 15,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(BOOKING_LIMITS_BOUNDS.maxAdvanceBookingDays.min)
+  @Max(BOOKING_LIMITS_BOUNDS.maxAdvanceBookingDays.max)
+  maxAdvanceBookingDays?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Chuyến tự lái của khách trên chợ dài tối đa N ngày (× 24 giờ); dài hơn phải thuê dài hạn - ' +
+      'ADR 0091 điều 4. Vắng ⇒ giữ số của bản nháp (sửa) / mặc định nền tảng (tạo mới).',
+    example: 30,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(BOOKING_LIMITS_BOUNDS.selfDriveMaxDays.min)
+  @Max(BOOKING_LIMITS_BOUNDS.selfDriveMaxDays.max)
+  selfDriveMaxDays?: number;
+
   @ApiProperty({
     description:
       '% phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi trực tiếp của xe, ' +
@@ -241,12 +266,6 @@ export class UpsertFeePolicyDto {
   @IsNumberString()
   @IsMoneyStep({ message: 'Sàn phần giữ chỗ của chủ xe phải là bội của 1.000đ' })
   depositMinAmount!: string;
-
-  @ApiProperty({ description: 'Trần % của `D` ở chính sách này', example: 30 })
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(DEPOSIT_PERCENT_MIN)
-  @Max(DEPOSIT_PERCENT_MAX)
-  depositMaxPercent!: number;
 
   @ApiProperty({ description: 'Cổng khấu trừ thuế thay chủ xe (ADR 0068)' })
   @IsBoolean()
@@ -381,9 +400,12 @@ export class FeePolicyDto {
   @ApiProperty() holdMinAmount!: string;
   @ApiProperty() holdPaymentWindowMinutes!: number;
   @ApiProperty() freeCancelHours!: number;
+  @ApiProperty({ description: 'Đặt trước tối đa N ngày lịch (ADR 0091 điều 4)' })
+  maxAdvanceBookingDays!: number;
+  @ApiProperty({ description: 'Chuyến tự lái dài tối đa N ngày (ADR 0091 điều 4)' })
+  selfDriveMaxDays!: number;
   @ApiProperty() depositPercent!: number;
   @ApiProperty() depositMinAmount!: string;
-  @ApiProperty() depositMaxPercent!: number;
   @ApiProperty() taxEnabled!: boolean;
   @ApiPropertyOptional({
     type: TaxRatesDto,
@@ -433,4 +455,15 @@ export class FeePolicyDto {
    * dòng để form admin báo ngay, không phải bấm rồi mới biết.
    */
   @ApiProperty({ type: [String] }) activationBlockers!: string[];
+}
+
+/** Giới hạn đặt xe của khách trên chợ theo chính sách đang hiệu lực (ADR 0091 điều 4). */
+export class BookingLimitsDto {
+  @ApiProperty({
+    description: 'Ngày nhận (giờ VN) không quá hôm gửi + N ngày - tự lái và có tài xế',
+  })
+  maxAdvanceBookingDays!: number;
+
+  @ApiProperty({ description: 'Chuyến tự lái dài tối đa N × 24 giờ - dài hơn phải thuê dài hạn' })
+  selfDriveMaxDays!: number;
 }

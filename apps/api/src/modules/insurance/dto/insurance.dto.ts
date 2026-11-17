@@ -4,6 +4,7 @@ import {
   ArrayMaxSize,
   IsArray,
   IsBoolean,
+  IsNumber,
   IsIn,
   IsInt,
   IsOptional,
@@ -19,9 +20,12 @@ import {
   INSURANCE_COVERAGE_STATUS_VALUES,
   INSURANCE_ELIGIBILITY_GAP_VALUES,
   INSURANCE_PREMIUM_BASIS_VALUES,
+  INSURANCE_SERVICE_FEE_PERCENT_MAX,
   INSURANCE_VALUE_TIER_LIMITS,
   type InsurancePremiumBasis,
   INSURANCE_POLICY_STATUS_VALUES,
+  INSURANCE_VOID_BRANCH_VALUES,
+  INSURANCE_VOID_REFUND_TIMING_VALUES,
   INSURANCE_PRODUCT_KIND_VALUES,
   INSURANCE_PRODUCT_LIMITS,
   INSURANCE_PROVIDER_VALUES,
@@ -155,11 +159,51 @@ export class PlatformInsurancePageDto {
  * Chi tiết một hợp đồng — thêm bằng chứng hai chiều với đối tác. Payload là JSON nguyên trạng:
  * đây là thứ người trực đưa cho đối tác khi đối chiếu, nên không được "làm đẹp".
  */
+/**
+ * Lượt thu hồi SẼ làm gì với hợp đồng này (ADR 0093) — server tính bằng `insuranceVoidPlan`, hộp thu hồi
+ * hiện đúng nhánh và đúng số tiền. `null` ở hợp đồng không thu hồi được.
+ */
+export class InsuranceVoidPlanDto {
+  @ApiProperty({ enum: INSURANCE_VOID_BRANCH_VALUES }) branch!: string;
+  @ApiProperty({ description: 'Hợp đồng đã có bên đối tác ⇒ bắt buộc mã huỷ / biên bản đối chiếu' })
+  partnerReferenceRequired!: boolean;
+  @ApiProperty({ enum: INSURANCE_VOID_REFUND_TIMING_VALUES }) refundTiming!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Số sẽ hoàn vào Ví điểm khách (phí + phí thu hộ, VND string) - `null` khi không hoàn qua ví',
+  })
+  refundAmount!: string | null;
+  @ApiProperty({ description: 'Đã nằm trong bảng kê trả hãng ⇒ không huỷ-hoàn được' })
+  blockedByRemittance!: boolean;
+}
+
 export class PlatformInsurancePolicyDetailDto extends PlatformInsurancePolicyDto {
   @ApiPropertyOptional({ type: String, nullable: true }) consentSource!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) lastAttemptAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) cancelledAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) voidedAt!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Lý do thu hồi / huỷ (ADR 0093)',
+  })
+  voidReason!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Mã huỷ / biên bản đối chiếu bên đối tác (ADR 0093)',
+  })
+  voidPartnerReference!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Lúc phí + phí thu hộ đã hoàn vào Ví điểm khách',
+  })
+  refundedAt!: string | null;
+  @ApiPropertyOptional({ type: InsuranceVoidPlanDto, nullable: true })
+  voidPlan!: InsuranceVoidPlanDto | null;
   @ApiProperty() idempotencyKey!: string;
   @ApiPropertyOptional({
     type: 'object',
@@ -184,13 +228,39 @@ export class PlatformInsurancePolicyDetailDto extends PlatformInsurancePolicyDto
   productSnapshot!: Record<string, unknown> | null;
 }
 
-/** Thu hồi một hợp đồng — lý do BẮT BUỘC, nó đi vào audit và vào hồ sơ làm việc với đối tác. */
+/**
+ * Thu hồi một hợp đồng — lý do BẮT BUỘC, nó đi vào audit và vào hồ sơ làm việc với đối tác. Hợp đồng đã
+ * có bên đối tác thì bắt buộc thêm mã huỷ / biên bản đối chiếu (ADR 0093).
+ */
 export class VoidInsurancePolicyDto {
   @ApiProperty({ description: 'Vì sao thu hồi - bắt buộc, ghi vào audit' })
   @IsString()
   @MinLength(5)
   @MaxLength(500)
   reason!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Mã huỷ / số biên bản đối chiếu bên đối tác - bắt buộc khi hợp đồng đã cấp ' +
+      '(`INSURANCE_VOID_REFERENCE_REQUIRED`)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  partnerReference?: string;
+}
+
+/** Kết quả lượt thu hồi — nhánh đã đi và khoản đã hoàn (nếu hoàn ngay). */
+export class VoidInsurancePolicyResultDto {
+  @ApiProperty({ enum: INSURANCE_VOID_BRANCH_VALUES }) branch!: string;
+  @ApiProperty({ enum: INSURANCE_POLICY_STATUS_VALUES }) status!: string;
+  @ApiProperty({ enum: INSURANCE_VOID_REFUND_TIMING_VALUES }) refundTiming!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Số đã hoàn vào Ví điểm khách ngay trong lượt này (VND string)',
+  })
+  refundedAmount!: string | null;
 }
 
 // ── Danh mục sản phẩm ────────────────────────────────────────────────────────
@@ -231,12 +301,19 @@ export class InsuranceProductDto {
   @ApiProperty({
     enum: INSURANCE_PREMIUM_BASIS_VALUES,
     description:
-      'daily = biểu phí ngày ở chính sách phí; value_tier = % giá trị xe theo bậc, BẮT BUỘC (ADR 0088)',
+      'daily = biểu phí ngày ở chính sách phí; value_tier = % giá trị xe theo bậc (ADR 0088) - Bắt buộc/Tuỳ chọn do chủ xe chọn (ADR 0091)',
   })
   premiumBasis!: InsurancePremiumBasis;
   @ApiPropertyOptional({ type: () => [InsurancePremiumTierDto], nullable: true })
   premiumTiers!: InsurancePremiumTierDto[] | null;
   @ApiPropertyOptional({ type: String, nullable: true }) claimHotline!: string | null;
+  @ApiProperty({
+    description:
+      'Thu phí thu hộ bảo hiểm của nền tảng trên IV (ADR 0091 điều 3 - Proposed, chờ luật sư)',
+  })
+  serviceFeeEnabled!: boolean;
+  @ApiProperty({ description: '% phí thu hộ trên IV, 0..50, hai chữ số lẻ' })
+  serviceFeePercent!: number;
 }
 
 /** Một bậc phí: chuyến tối đa `maxDays` ngày ⇒ phí = `percent`% giá trị xe (đã gồm VAT). */
@@ -376,6 +453,23 @@ export class UpdateInsuranceProductDto {
   @IsString()
   @MaxLength(INSURANCE_VALUE_TIER_LIMITS.claimHotline.max)
   claimHotline?: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Bật phí thu hộ bảo hiểm của nền tảng (ADR 0091 điều 3). Chỉ vật chất xe; bật thì % > 0. ' +
+      'Chưa có ý kiến luật sư thì KHÔNG bật ở production.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  serviceFeeEnabled?: boolean;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: INSURANCE_SERVICE_FEE_PERCENT_MAX })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(INSURANCE_SERVICE_FEE_PERCENT_MAX)
+  serviceFeePercent?: number;
 }
 
 /** Danh mục CÔNG KHAI — đúng loại xe khách đang xem, không có trường quản trị. */
@@ -408,7 +502,7 @@ export class PublicInsuranceProductDto {
   @ApiPropertyOptional({ type: String, nullable: true }) maxPayoutNoteEn!: string | null;
   @ApiProperty({
     description:
-      'Bắt buộc với xe đủ điều kiện (phí theo bậc giá trị xe - ADR 0088): khách không bỏ chọn được',
+      'Sản phẩm tính theo bậc giá trị xe (ADR 0088) - Bắt buộc hay Tuỳ chọn do chủ xe quyết (ADR 0091), báo giá chào qua vehicleProtectionOffer. Tên giữ cho app cũ',
   })
   mandatory!: boolean;
   @ApiPropertyOptional({ type: String, nullable: true }) claimHotline!: string | null;
@@ -479,7 +573,10 @@ export class InsuranceCoverageDto {
 export class VehicleInsuranceStatusDto {
   @ApiProperty({ description: 'Nền tảng đang bán bảo hiểm vật chất xe theo bậc giá trị xe' })
   applies!: boolean;
-  @ApiProperty({ description: 'Xe đủ điều kiện - khách thuê tự lái được bán kèm (bắt buộc)' })
+  @ApiProperty({
+    description:
+      'Xe đủ điều kiện - chuyến tự lái được chào bán kèm (Bắt buộc/Tuỳ chọn theo chủ xe)',
+  })
   eligible!: boolean;
   @ApiProperty({ enum: INSURANCE_ELIGIBILITY_GAP_VALUES, isArray: true })
   gaps!: InsuranceEligibilityGap[];

@@ -11,6 +11,8 @@ import {
   type SupportCaseFilters,
   type SupportSurface,
   type TransitionSupportCaseInput,
+  type TripVerdictInput,
+  type TripVerdictPreview,
 } from './types';
 
 export const SUPPORT_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
@@ -74,3 +76,11 @@ export const resolveSupportCase = (
   body: ResolveSupportCaseInput,
 ): Promise<SupportCaseDetail> =>
   apiPost<SupportCaseDetail>(`/platform/support/cases/${id}/resolve`, body);
+
+/** Kết luận CHUYẾN của case chưa xác nhận giao/trả xe — CHỈ nền tảng (ADR 0094). */
+/** Tiền của từng kết luận chuyến nếu bấm ngay bây giờ — cùng phép tính lượt thật (ADR 0095). */
+export const fetchTripVerdictPreview = (id: string): Promise<TripVerdictPreview> =>
+  apiGet<TripVerdictPreview>(`/platform/support/cases/${id}/trip-verdict-preview`);
+
+export const submitTripVerdict = (id: string, body: TripVerdictInput): Promise<SupportCaseDetail> =>
+  apiPost<SupportCaseDetail>(`/platform/support/cases/${id}/trip-verdict`, body);

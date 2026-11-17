@@ -28,9 +28,14 @@ export class BankInQueueSummaryDto extends MoneyQueueCountDto {
 export class HoldQueueSummaryDto extends MoneyQueueCountDto {
   @ApiProperty({
     description:
-      'Trong số đó, bao nhiêu khoản đang bị tạm giữ vì case giữ quyết toán còn mở (tranh chấp, chưa xác nhận bàn giao - ADR 0066)',
+      'Trong số đó, bao nhiêu khoản có case TRANH CHẤP còn mở (`settleReason = dispute_open`)',
   })
   disputeCount!: number;
+  @ApiProperty({
+    description:
+      'Trong số đó, bao nhiêu khoản chỉ bị giữ vì case "chưa xác nhận bàn giao" do hệ thống mở, không có tranh chấp (`settleReason = handover_unconfirmed` - ADR 0066)',
+  })
+  handoverUnconfirmedCount!: number;
 }
 
 export class WithdrawalQueueSummaryDto extends MoneyQueueCountDto {
@@ -61,6 +66,12 @@ export class PlatformMoneySummaryDto {
     description: 'Lượt thanh toán qua cổng MoMo/VNPAY CẦN NGƯỜI XỬ LÝ (ADR 0058)',
   })
   gatewayIn!: MoneyQueueCountDto;
+  @ApiProperty({
+    description:
+      'Cổng MoMo/VNPAY đang dùng cho ít nhất một luồng (ADR 0058). Tắt mà không còn lượt cần xử lý ' +
+      '⇒ giao diện ẩn hẳn hàng đợi cổng',
+  })
+  gatewayEnabled!: boolean;
   @ApiProperty({ type: HoldQueueSummaryDto, description: 'Giữ chỗ ĐÃ TRẢ, chưa chốt kết cục' })
   holds!: HoldQueueSummaryDto;
   @ApiProperty({ type: MoneyQueueCountDto, description: 'Khoản hoàn CHỜ CHUYỂN tay' })

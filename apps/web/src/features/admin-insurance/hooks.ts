@@ -14,7 +14,9 @@ import { queryKeys } from '@/services/query-keys';
 import {
   certificateFiltersToParams,
   fetchCertificateDetail,
+  fetchCertificatePricing,
   fetchCertificates,
+  fetchInsuranceAttention,
   fetchInsuranceProducts,
   retryCertificate,
   updateInsuranceProduct,
@@ -35,6 +37,7 @@ import type {
   PayInsuranceRemittanceInput,
   RemittanceFilters,
   UpdateInsuranceProductInput,
+  VoidInsurancePolicyInput,
 } from './types';
 
 // ── Danh mục sản phẩm ───────────────────────────────────────────────────────
@@ -108,6 +111,25 @@ export function useCertificateDetail(id: string | null) {
   });
 }
 
+/** Phí thực tế của một hợp đồng — ngăn chi tiết (ADR 0091 điều 2). */
+export function useCertificatePricing(id: string | null) {
+  return useQuery({
+    queryKey: queryKeys.platformInsurance.pricing(id ?? ''),
+    queryFn: () => fetchCertificatePricing(id as string),
+    enabled: Boolean(id),
+  });
+}
+
+/** Hợp đồng cần xử lý gấp — khối cảnh báo đầu tab Chứng nhận (ADR 0091 điều 7). */
+export function useInsuranceAttention(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.platformInsurance.attention,
+    queryFn: fetchInsuranceAttention,
+    enabled,
+    staleTime: 60_000,
+  });
+}
+
 /**
  * Thử lại / thu hồi đổi trạng thái một hợp đồng VÀ con số "phí bảo hiểm đang giữ hộ" của đối soát
  * — làm mới cả nhánh bảo hiểm lẫn nhánh tiền.
@@ -128,7 +150,8 @@ export function useRetryCertificate() {
 export function useVoidCertificate() {
   const invalidate = useInvalidateCertificates();
   return useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) => voidCertificate(id, reason),
+    mutationFn: ({ id, ...input }: { id: string } & VoidInsurancePolicyInput) =>
+      voidCertificate(id, input),
     onSuccess: invalidate,
   });
 }

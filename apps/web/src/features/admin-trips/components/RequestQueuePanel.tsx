@@ -25,6 +25,7 @@ import type { TripRequest } from '../types';
 import { useNow } from '@/hooks/use-now';
 import { HoldCountdown, RespondByCountdown } from './TripDeadline';
 import styles from './TripQueuePanels.module.css';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 
 const MINUTE_MS = 60_000;
 
@@ -146,7 +147,7 @@ export function RequestQueuePanel({ queue }: { queue: PlatformTripRequestQueue }
               {/* SĐT CHỦ XE hiện đủ: gọi chủ xe là việc của chính hàng đợi này. */}
               {r.ownerPhone ? (
                 <>
-                  {' · '}
+                  {LIST_SEPARATOR}
                   <a href={`tel:${r.ownerPhone}`} aria-label={t('request.callOwner')}>
                     {r.ownerPhone}
                   </a>

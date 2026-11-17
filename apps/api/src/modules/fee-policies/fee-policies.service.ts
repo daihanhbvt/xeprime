@@ -9,6 +9,7 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
+  BOOKING_LIMITS_DEFAULTS,
   FEE_POLICY_STATUS,
   FEE_SCHEDULE_DEFAULTS,
   VEHICLE_TYPE,
@@ -18,6 +19,7 @@ import {
   parseWithDriverLimits,
   WITH_DRIVER_LIMITS_DEFAULTS,
   withDriverLimitsValid,
+  type BookingLimits,
   type WithDriverLimits,
   type FeePolicySnapshot,
   type FeePolicyValues,
@@ -39,9 +41,10 @@ const SELECT = {
   holdMinAmount: true,
   holdPaymentWindowMinutes: true,
   freeCancelHours: true,
+  maxAdvanceBookingDays: true,
+  selfDriveMaxDays: true,
   depositPercent: true,
   depositMinAmount: true,
-  depositMaxPercent: true,
   taxEnabled: true,
   taxRates: true,
   taxLegalBasis: true,
@@ -130,6 +133,20 @@ export class FeePoliciesService {
     return parseWithDriverLimits(row?.withDriverLimits) ?? WITH_DRIVER_LIMITS_DEFAULTS;
   }
 
+  /**
+   * Giới hạn đặt xe của khách trên chợ (ADR 0091 điều 4) theo bản đang hiệu lực — chưa có bản nào
+   * thì mặc định nền tảng. Không phải dòng tiền: KHÔNG nằm trong snapshot phí của đơn.
+   */
+  async bookingLimits(
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<BookingLimits> {
+    const row = await db.feePolicy.findFirst({
+      where: { status: FEE_POLICY_STATUS.ACTIVE },
+      select: { maxAdvanceBookingDays: true, selfDriveMaxDays: true },
+    });
+    return row ? bookingLimitsOf(row) : { ...BOOKING_LIMITS_DEFAULTS };
+  }
+
   async list(): Promise<FeePolicyDto[]> {
     const rows = await this.prisma.feePolicy.findMany({
       orderBy: { version: 'desc' },
@@ -154,6 +171,9 @@ export class FeePoliciesService {
           status: FEE_POLICY_STATUS.DRAFT,
           createdBy: actorUserId,
           ...valuesData(dto, null),
+          maxAdvanceBookingDays:
+            dto.maxAdvanceBookingDays ?? BOOKING_LIMITS_DEFAULTS.maxAdvanceBookingDays,
+          selfDriveMaxDays: dto.selfDriveMaxDays ?? BOOKING_LIMITS_DEFAULTS.selfDriveMaxDays,
           withDriverLimits: limitsJson(dto.withDriverLimits ?? WITH_DRIVER_LIMITS_DEFAULTS),
         },
         select: SELECT,
@@ -165,7 +185,11 @@ export class FeePoliciesService {
           action: 'fee_policy.create_draft',
           targetType: 'fee_policy',
           targetId: created.id,
-          after: { version: created.version, ...auditValues(toValues(created)) },
+          after: {
+            version: created.version,
+            ...auditValues(toValues(created)),
+            ...bookingLimitsOf(created),
+          },
         },
         tx,
       );
@@ -188,6 +212,11 @@ export class FeePoliciesService {
         where: { id, status: FEE_POLICY_STATUS.DRAFT },
         data: {
           ...valuesData(dto, toValues(before)),
+          // Vắng trên dây ⇒ giữ đúng số đang lưu của bản nháp.
+          ...(dto.maxAdvanceBookingDays == null
+            ? {}
+            : { maxAdvanceBookingDays: dto.maxAdvanceBookingDays }),
+          ...(dto.selfDriveMaxDays == null ? {} : { selfDriveMaxDays: dto.selfDriveMaxDays }),
           // Vắng trên dây ⇒ giữ đúng giá trị đang lưu (kể cả NULL = mặc định nền tảng).
           ...(dto.withDriverLimits ? { withDriverLimits: limitsJson(dto.withDriverLimits) } : {}),
         },
@@ -201,8 +230,8 @@ export class FeePoliciesService {
           action: 'fee_policy.update_draft',
           targetType: 'fee_policy',
           targetId: id,
-          before: auditValues(toValues(before)),
-          after: auditValues(toValues(after)),
+          before: { ...auditValues(toValues(before)), ...bookingLimitsOf(before) },
+          after: { ...auditValues(toValues(after)), ...bookingLimitsOf(after) },
         },
         tx,
       );
@@ -384,7 +413,6 @@ function toValues(row: Row): FeePolicyValues {
     freeCancelHours: row.freeCancelHours,
     depositPercent: Number(row.depositPercent),
     depositMinAmount: row.depositMinAmount.toFixed(0),
-    depositMaxPercent: Number(row.depositMaxPercent),
     taxEnabled: row.taxEnabled,
     // Hỏng/thiếu khoá ⇒ null — blocker `tax_requires_rates_and_basis` chặn kích hoạt (ADR 0068).
     taxRates: parseTaxRates(row.taxRates),
@@ -437,6 +465,16 @@ export function parseCommissionTiers(raw: Prisma.JsonValue): OwnerCommissionTier
   });
 }
 
+/** Hai số chặn thời gian đặt xe của một bản chính sách (ADR 0091 điều 4) — không vào snapshot phí. */
+function bookingLimitsOf(
+  row: Pick<Row, 'maxAdvanceBookingDays' | 'selfDriveMaxDays'>,
+): BookingLimits {
+  return {
+    maxAdvanceBookingDays: row.maxAdvanceBookingDays,
+    selfDriveMaxDays: row.selfDriveMaxDays,
+  };
+}
+
 /** Snapshot đóng băng lên đơn/hold — chính là `values` + định danh phiên bản. */
 export function toSnapshot(row: Row): FeePolicySnapshot {
   return { policyId: row.id, version: row.version, ...toValues(row) };
@@ -451,6 +489,7 @@ function toDto(row: Row): FeePolicyDto {
     name: row.name,
     note: row.note,
     ...values,
+    ...bookingLimitsOf(row),
     withDriverLimits: parseWithDriverLimits(row.withDriverLimits) ?? WITH_DRIVER_LIMITS_DEFAULTS,
     effectiveFrom: row.effectiveFrom?.toISOString() ?? null,
     effectiveTo: row.effectiveTo?.toISOString() ?? null,
@@ -494,7 +533,6 @@ function valuesData(dto: UpsertFeePolicyDto, base: FeePolicyValues | null) {
     freeCancelHours: dto.freeCancelHours,
     depositPercent: new Prisma.Decimal(dto.depositPercent),
     depositMinAmount: new Prisma.Decimal(dto.depositMinAmount),
-    depositMaxPercent: new Prisma.Decimal(dto.depositMaxPercent),
     taxEnabled: dto.taxEnabled,
     /*
      * ADR 0068: bảng mức theo loại dịch vụ + căn cứ pháp lý. Chỉ ba khoá × hai trường khai báo đi
@@ -554,7 +592,6 @@ function auditValues(v: FeePolicyValues): Record<string, unknown> {
     freeCancelHours: v.freeCancelHours,
     depositPercent: v.depositPercent,
     depositMinAmount: v.depositMinAmount,
-    depositMaxPercent: v.depositMaxPercent,
     taxEnabled: v.taxEnabled,
     taxRates: v.taxRates,
     taxLegalBasis: v.taxLegalBasis,

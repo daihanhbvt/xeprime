@@ -5,6 +5,7 @@ import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import { giveTenantPlan } from './helpers/billing-fixture';
 import {
   ACCOUNT_REALM,
+  API_ERROR_CODE,
   BILLING_MODE,
   BOOKING_REQUEST_STATUS,
   MEMBERSHIP_STATUS,
@@ -19,6 +20,7 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { BankAccountsService } from '../src/modules/bank-accounts/bank-accounts.service';
 import { ContractsService } from '../src/modules/contracts/contracts.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
+import { PricingService } from '../src/modules/pricing/pricing.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { customerAccountFor } from './helpers/customer-account';
 import {
@@ -28,6 +30,7 @@ import {
   makeNotificationService,
   makePricingService,
 } from './helpers/service-factory';
+import { relaxBookingLimits } from './helpers/booking-limits';
 
 /**
  * Hành trình chuyến CÓ TÀI XẾ đi trọn vòng đời (đợt hoàn thiện 17/08), trên PostgreSQL THẬT:
@@ -72,6 +75,8 @@ const BASE = new Date('2027-06-01T02:00:00.000Z');
 const hours = (n: number) => new Date(BASE.getTime() + n * 3_600_000);
 
 beforeAll(async () => {
+  // Spec đặt xe, không phải spec trần đặt xe (ADR 0091 điều 4) — lịch rải theo bộ đếm ngày.
+  relaxBookingLimits();
   try {
     await prisma.$connect();
     await prisma.$queryRaw`SELECT 1`;
@@ -183,6 +188,59 @@ describe('Yêu cầu → duyệt → đơn GIỮ nguyên hành trình', () => {
     expect(contract.snapshot.rental.routeType).toBe(ROUTE_TYPE.INTER_CITY);
     expect(contract.snapshot.rental.pickupAddress).toBe('12 Lê Lợi, Q.1, TP.HCM');
     expect(contract.snapshot.rental.destination).toBe('TP. Đà Lạt, Lâm Đồng');
+  });
+});
+
+describe('Trần thời gian đặt xe của nền tảng (ADR 0091 điều 4)', () => {
+  const DAY = 86_400_000;
+  // Spec này kiểm CHÍNH trần đó: chạy luật thật, xong thì nới lại cho các khối sau.
+  beforeAll(() => jest.spyOn(PricingService.prototype, 'bookingLimits').mockRestore());
+  afterAll(() => {
+    relaxBookingLimits();
+  });
+
+  const submit = (pickupAt: Date, returnAt: Date, serviceType: string) =>
+    requests.submitPublic(
+      {
+        vehicleId,
+        pickupAt: pickupAt.toISOString(),
+        returnAt: returnAt.toISOString(),
+        serviceType,
+        ...(serviceType === SERVICE_TYPE.WITH_DRIVER
+          ? { routeType: ROUTE_TYPE.IN_CITY, pickupAddress: '12 Lê Lợi, Q.1, TP.HCM' }
+          : {}),
+      },
+      customerId,
+    );
+
+  maybe('ngày nhận quá xa ⇒ 400 BOOKING_TOO_FAR_AHEAD, áp cả có tài xế', async () => {
+    const limits = await pricing.bookingLimits();
+    const far = new Date(Date.now() + (limits.maxAdvanceBookingDays + 2) * DAY);
+    for (const serviceType of [SERVICE_TYPE.SELF_DRIVE, SERVICE_TYPE.WITH_DRIVER]) {
+      await expect(submit(far, new Date(far.getTime() + DAY), serviceType)).rejects.toMatchObject({
+        response: {
+          code: API_ERROR_CODE.BOOKING_TOO_FAR_AHEAD,
+          details: { maxAdvanceBookingDays: limits.maxAdvanceBookingDays },
+        },
+      });
+    }
+  });
+
+  maybe('tự lái dài hơn trần ⇒ 400 SELF_DRIVE_TOO_LONG', async () => {
+    const limits = await pricing.bookingLimits();
+    const pickup = new Date(Date.now() + 2 * DAY);
+    await expect(
+      submit(
+        pickup,
+        new Date(pickup.getTime() + (limits.selfDriveMaxDays + 1) * DAY),
+        SERVICE_TYPE.SELF_DRIVE,
+      ),
+    ).rejects.toMatchObject({
+      response: {
+        code: API_ERROR_CODE.SELF_DRIVE_TOO_LONG,
+        details: { selfDriveMaxDays: limits.selfDriveMaxDays },
+      },
+    });
   });
 });
 

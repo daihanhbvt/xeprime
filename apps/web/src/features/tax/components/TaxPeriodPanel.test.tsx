@@ -77,6 +77,10 @@ function makeSummary(over: Partial<TaxPeriodSummary> = {}): TaxPeriodSummary {
     accruedAmount: '140000',
     declaredAmount: '0',
     remittedAmount: '0',
+    accruedRows: 1,
+    declaredRows: 0,
+    periodEnded: true,
+    filing: null,
     byEntityType: [
       {
         entityType: SELLER_ENTITY_TYPE.HOUSEHOLD_BUSINESS,
@@ -336,5 +340,81 @@ describe('TaxPeriodPanel', () => {
       target: { value: 'Sai tỷ lệ cho hộ kinh doanh' },
     });
     expect(confirm).toHaveProperty('disabled', false);
+  });
+});
+
+/**
+ * Kê khai / nộp đổi trạng thái CẢ KỲ và không có đường lùi — nút chỉ hiện khi làm được, và lượt
+ * ghi đi qua hộp nhập CHỨNG CỨ (số tờ khai, chứng từ nộp) chứ không phải một cú bấm.
+ */
+describe('TaxPeriodPanel - ghi kê khai / nộp kèm chứng cứ', () => {
+  it('kỳ CHƯA kết thúc: không có nút kê khai lẫn nộp', () => {
+    summary.data = makeSummary({ periodEnded: false });
+    renderPanel();
+    expect(screen.queryByRole('button', { name: 'Ghi kê khai' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Ghi đã nộp' })).toBeNull();
+  });
+
+  it('kỳ đã kết thúc còn dòng chưa kê khai: chỉ mời kê khai, mở hộp nhập số tờ khai', () => {
+    renderPanel('period=2026-09');
+    expect(screen.queryByRole('button', { name: 'Ghi đã nộp' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Ghi kê khai' }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Ghi kê khai kỳ 2026-09')).toBeTruthy();
+    expect(within(dialog).getByLabelText(/Số tờ khai/)).toBeTruthy();
+  });
+
+  it('đã kê khai đủ: không còn nút kê khai, mời ghi nộp; chứng cứ kê khai hiện trên màn', () => {
+    summary.data = makeSummary({
+      accruedAmount: '0',
+      declaredAmount: '140000',
+      accruedRows: 0,
+      declaredRows: 1,
+      filing: {
+        declarationRef: 'TK-0001',
+        declaredOn: '2026-10-05',
+        declaredAt: '2026-10-05T03:00:00.000Z',
+        declaredByName: 'Kế toán A',
+        remittanceRef: null,
+        remittedOn: null,
+        remittedAmount: null,
+        ledgerAmount: null,
+        remittanceNote: null,
+        remittedAt: null,
+        remittedByName: null,
+      },
+    });
+    renderPanel();
+    expect(screen.queryByRole('button', { name: 'Ghi kê khai' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Ghi đã nộp' })).toBeTruthy();
+    expect(screen.getByText(/TK-0001/)).toBeTruthy();
+  });
+
+  it('đã nộp LỆCH sổ: hiện số lệch và ghi chú đã lưu, không còn nút nào', () => {
+    summary.data = makeSummary({
+      accruedAmount: '0',
+      remittedAmount: '140000',
+      accruedRows: 0,
+      filing: {
+        declarationRef: 'TK-0001',
+        declaredOn: '2026-10-05',
+        declaredAt: '2026-10-05T03:00:00.000Z',
+        declaredByName: 'Kế toán A',
+        remittanceRef: 'CT-0009',
+        remittedOn: '2026-10-20',
+        remittedAmount: '139000',
+        ledgerAmount: '140000',
+        remittanceNote: 'Làm tròn theo giấy nộp tiền',
+        remittedAt: '2026-10-20T03:00:00.000Z',
+        remittedByName: 'Kế toán A',
+      },
+    });
+    renderPanel();
+    expect(screen.queryByRole('button', { name: 'Ghi kê khai' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Ghi đã nộp' })).toBeNull();
+    expect(screen.getByText(/CT-0009/)).toBeTruthy();
+    expect(screen.getByText(/Số đã nộp lệch tổng trên sổ/)).toBeTruthy();
+    expect(screen.getByText(/Làm tròn theo giấy nộp tiền/)).toBeTruthy();
   });
 });

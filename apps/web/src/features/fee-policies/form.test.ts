@@ -196,9 +196,10 @@ describe('tiền cấu hình & luật nhiều ô', () => {
     expect(errors['customerPlatformFee.car']).toBe('thousandStep');
   });
 
-  it('% cọc vượt trần của chính sách', () => {
-    const errors = errorsOf(valid({ depositPercent: 40, depositMaxPercent: 30 }));
-    expect(errors.depositPercent).toBe('blocker:deposit_percent_out_of_range');
+  it('% phần giữ chỗ vượt trần cứng 50% (ADR 0025 điều 3)', () => {
+    const errors = errorsOf(valid({ depositPercent: 60 }));
+    expect(errors.depositPercent).toBeDefined();
+    expect(errorsOf(valid({ depositPercent: 50 })).depositPercent).toBeUndefined();
   });
 
   it('huỷ miễn phí ngắn hơn cửa sổ chuyển khoản', () => {

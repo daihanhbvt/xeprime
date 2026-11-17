@@ -1085,10 +1085,10 @@ export class VehiclesService {
      * hàng. Không có lần lưu nào để hai nguồn lệch nhau nữa. `null` = gian hàng chưa có chính
      * sách ⇒ giữ nguyên cờ.
      */
+    const shopValues = await this.pricing.shopPolicyValues(tenantId, current.vehicleType);
     const deliverySync = overriding
       ? dto.policy!.deliveryEnabled
-      : ((await this.pricing.shopPolicyValues(tenantId, current.vehicleType))?.deliveryEnabled ??
-        null);
+      : (shopValues?.deliveryEnabled ?? null);
 
     await this.prisma.$transaction(async (tx) => {
       const existingOverride = await tx.rentalPolicy.findUnique({
@@ -1102,7 +1102,21 @@ export class VehiclesService {
         if (existingOverride) {
           await tx.rentalPolicy.update({ where: { id: existingOverride.id }, data });
         } else {
-          await tx.rentalPolicy.create({ data: { id: newId(), tenantId, vehicleId: id, ...data } });
+          /*
+           * Bản ghi đè MỚI mà client không gửi chế độ bảo hiểm (app cũ) ⇒ chép chế độ của chính
+           * sách gian hàng: tách một xe ra để sửa cọc không được phép lặng lẽ hạ Bắt buộc về
+           * Tuỳ chọn (ADR 0091 điều 1).
+           */
+          const insuranceMode = dto.policy!.insuranceMode ?? shopValues?.insuranceMode;
+          await tx.rentalPolicy.create({
+            data: {
+              id: newId(),
+              tenantId,
+              vehicleId: id,
+              ...data,
+              ...(insuranceMode ? { insuranceMode } : {}),
+            },
+          });
         }
         policyChanged = true;
       } else if (existingOverride) {
@@ -1468,6 +1482,14 @@ export class VehiclesService {
     }
 
     return this.getOne(tenantId, id);
+  }
+
+  /**
+   * Cà vẹt / dữ liệu xe đổi ngoài lượt lưu xe ⇒ đồng bộ cờ "không nhận đặt tự lái vì thiếu bảo hiểm
+   * Bắt buộc" trên chợ (ADR 0091 điều 1). Writer vẫn là `ListingsService` (ADR 0008).
+   */
+  syncInsuranceBlockWithinTx(vehicleId: string, tx?: Prisma.TransactionClient): Promise<void> {
+    return this.listings.syncInsuranceBlockForVehicle(vehicleId, tx);
   }
 
   /**

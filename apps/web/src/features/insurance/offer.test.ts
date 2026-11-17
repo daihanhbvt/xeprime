@@ -104,6 +104,62 @@ describe('insuranceOfferItems - ADR 0064', () => {
     expect(insuranceOfferItems(quote({ noFees: true }), VEHICLE_TYPE.CAR, undefined)).toEqual([]);
   });
 
+  describe('bảo hiểm theo bậc - chủ xe chọn chế độ (ADR 0091)', () => {
+    const tierProduct = { ...product(INSURANCE_PRODUCT_KIND.VEHICLE_TRIP), mandatory: true };
+    const withOffer = (
+      offer: { amount: string; required: boolean; serviceFeeAmount?: string } | null,
+    ) => {
+      const q = quote({}) as unknown as { breakdown: { fees: Record<string, unknown> } };
+      q.breakdown.fees.vehicleProtectionOffer = offer;
+      q.breakdown.fees.lines = [];
+      return q as unknown as PublicQuote;
+    };
+
+    it('Tuỳ chọn ⇒ ô tích bỏ được, phí cả chuyến từ lời chào bán', () => {
+      const items = insuranceOfferItems(
+        withOffer({ amount: '224400', required: false }),
+        VEHICLE_TYPE.CAR,
+        [tierProduct],
+      )!;
+      expect(items).toHaveLength(1);
+      expect(items[0]).toMatchObject({ mandatory: false, tripAmount: '224400', dailyAmount: null });
+    });
+
+    it('Bắt buộc ⇒ dòng cố định không bỏ được', () => {
+      const items = insuranceOfferItems(
+        withOffer({ amount: '224400', required: true }),
+        VEHICLE_TYPE.CAR,
+        [tierProduct],
+      )!;
+      expect(items[0]).toMatchObject({ mandatory: true, tripAmount: '224400' });
+    });
+
+    it('phí thu hộ đi kèm lời chào bán (ADR 0091 điều 3) - "0" hay vắng ⇒ null', () => {
+      const [withFee] = insuranceOfferItems(
+        withOffer({ amount: '224400', required: false, serviceFeeAmount: '22440' }),
+        VEHICLE_TYPE.CAR,
+        [tierProduct],
+      )!;
+      expect(withFee).toMatchObject({ tripAmount: '224400', serviceFeeAmount: '22440' });
+      const [zero] = insuranceOfferItems(
+        withOffer({ amount: '224400', required: false, serviceFeeAmount: '0' }),
+        VEHICLE_TYPE.CAR,
+        [tierProduct],
+      )!;
+      expect(zero!.serviceFeeAmount).toBeNull();
+      const [legacy] = insuranceOfferItems(
+        withOffer({ amount: '224400', required: false }),
+        VEHICLE_TYPE.CAR,
+        [tierProduct],
+      )!;
+      expect(legacy!.serviceFeeAmount).toBeNull();
+    });
+
+    it('sản phẩm bậc mà báo giá không chào (xe chưa đủ điều kiện) ⇒ không rơi về ô theo ngày', () => {
+      expect(insuranceOfferItems(withOffer(null), VEHICLE_TYPE.CAR, [tierProduct])).toEqual([]);
+    });
+  });
+
   it('sameOfferItems so theo nội dung', () => {
     const a = insuranceOfferItems(quote({}), VEHICLE_TYPE.CAR, undefined);
     const b = insuranceOfferItems(quote({}), VEHICLE_TYPE.CAR, undefined);

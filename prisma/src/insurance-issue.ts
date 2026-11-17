@@ -4,6 +4,9 @@ import {
   INSURANCE_CERTIFICATE_URL_PLACEHOLDER,
   INSURANCE_ISSUE_ERROR,
   INSURANCE_ISSUING_LEASE_MINUTES,
+  INSURANCE_PARTNER_STATUS,
+  INSURANCE_PENDING_CHECK_INTERVAL_SECONDS,
+  INSURANCE_PENDING_CHECKS_MAX,
   INSURANCE_POLICY_STATUS,
   INSURANCE_PRODUCT_KIND,
   INSURANCE_PROVIDER,
@@ -191,6 +194,11 @@ export interface InsurancePartner {
    * bán `vehicle_trip` — cổng chào bán đọc hàm này để không thu phí `IP` không ai phát hành.
    */
   supportsKind?(kind: InsuranceProductKind): boolean;
+  /**
+   * Tình trạng một hợp đồng ĐÃ cấp phía đối tác (MIC `ttrang`) — `null` khi đối tác không tìm thấy mã
+   * giao dịch. Ném khi mạng/đối tác lỗi. Vắng = đối tác không có khái niệm này (adapter giả lập).
+   */
+  lookupStatus?(partnerRef: string): Promise<string | null>;
 }
 
 /** Ghi log tối thiểu — API truyền `Logger` của Nest, worker truyền `console`. */
@@ -480,6 +488,17 @@ export async function applyInsuranceIssueResult(
         issueAttempts: { increment: 1 },
         responsePayloadJson: toJson(result.raw),
         ...partnerFields(result, now),
+        /*
+         * Đối tác đã cấp nhưng còn chờ ảnh (MIC `ttrang` 3) ⇒ hẹn tra cứu lại theo nhịp ngắn
+         * (`recheckPendingInsurancePolicies`, ADR 0091 điều 7). Hợp đồng vẫn `issued`: số hợp đồng
+         * đã có, chỉ chờ MIC xác nhận ảnh.
+         */
+        ...(result.partnerStatus === INSURANCE_PARTNER_STATUS.PENDING_PHOTOS
+          ? {
+              nextAttemptAt: new Date(now.getTime() + INSURANCE_PENDING_CHECK_INTERVAL_SECONDS * 1000),
+              partnerPendingChecks: 0,
+            }
+          : {}),
       },
     });
     return count === 1;
@@ -758,6 +777,84 @@ export async function sweepDueInsurancePolicies(
     else if (outcome === 'failed') failed += 1;
   }
   return { claimed: ids.length, issued, failed };
+}
+
+export interface InsuranceRecheckResult {
+  checked: number;
+  confirmed: number;
+  /** Hết lượt tra mà vẫn chờ ảnh — về admin liên hệ đối tác. */
+  exhausted: number;
+}
+
+/**
+ * Tra cứu lại hợp đồng ĐÃ cấp mà đối tác còn báo chờ ảnh (MIC `ttrang` 3) — ADR 0091 điều 7.
+ *
+ * Tối đa `INSURANCE_PENDING_CHECKS_MAX` lần, cách nhau `INSURANCE_PENDING_CHECK_INTERVAL_SECONDS`, theo
+ * nhịp của worker (không ngủ trong job). Hết lượt mà vẫn 3 ⇒ thôi hẹn (`next_attempt_at` NULL): admin
+ * thấy hợp đồng "MIC chưa nhận ảnh" và liên hệ đối tác. Lỗi mạng không tính là một lượt tra.
+ *
+ * Mỗi lượt ghi có điều kiện trên đúng `partner_pending_checks` đã đọc — hai worker cùng nhặt thì chỉ
+ * một bên ghi.
+ */
+export async function recheckPendingInsurancePolicies(
+  prisma: PrismaClient,
+  partner: InsurancePartner,
+  options: { batch?: number; now?: Date } = {},
+): Promise<InsuranceRecheckResult> {
+  const result: InsuranceRecheckResult = { checked: 0, confirmed: 0, exhausted: 0 };
+  if (!partner.lookupStatus) return result;
+  const now = options.now ?? new Date();
+  const due = await prisma.bookingInsurancePolicy.findMany({
+    where: {
+      status: INSURANCE_POLICY_STATUS.ISSUED,
+      partnerStatus: INSURANCE_PARTNER_STATUS.PENDING_PHOTOS,
+      partnerRef: { not: null },
+      nextAttemptAt: { not: null, lte: now },
+    },
+    orderBy: { nextAttemptAt: 'asc' },
+    take: options.batch ?? 50,
+    select: { id: true, partnerRef: true, partnerPendingChecks: true },
+  });
+  for (const row of due) {
+    const guard = {
+      id: row.id,
+      status: INSURANCE_POLICY_STATUS.ISSUED,
+      partnerPendingChecks: row.partnerPendingChecks,
+    };
+    let status: string | null;
+    try {
+      status = await partner.lookupStatus(row.partnerRef!);
+    } catch {
+      // Đối tác/mạng lỗi — không tính lượt, hẹn lại chậm hơn một chút.
+      await prisma.bookingInsurancePolicy.updateMany({
+        where: guard,
+        data: { nextAttemptAt: new Date(now.getTime() + 60_000) },
+      });
+      continue;
+    }
+    result.checked += 1;
+    if (status && status !== INSURANCE_PARTNER_STATUS.PENDING_PHOTOS) {
+      await prisma.bookingInsurancePolicy.updateMany({
+        where: guard,
+        data: { partnerStatus: status, nextAttemptAt: null },
+      });
+      result.confirmed += 1;
+      continue;
+    }
+    const checks = row.partnerPendingChecks + 1;
+    const exhausted = checks >= INSURANCE_PENDING_CHECKS_MAX;
+    await prisma.bookingInsurancePolicy.updateMany({
+      where: guard,
+      data: {
+        partnerPendingChecks: checks,
+        nextAttemptAt: exhausted
+          ? null
+          : new Date(now.getTime() + INSURANCE_PENDING_CHECK_INTERVAL_SECONDS * 1000),
+      },
+    });
+    if (exhausted) result.exhausted += 1;
+  }
+  return result;
 }
 
 // ── Đóng băng sản phẩm lúc duyệt (ADR 0024 · 0064) ──────────────────────────

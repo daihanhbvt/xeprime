@@ -3,6 +3,7 @@
 import {
   CarOutlined,
   DollarOutlined,
+  IdcardOutlined,
   KeyOutlined,
   UserSwitchOutlined,
 } from '@ant-design/icons';
@@ -20,6 +21,7 @@ export const TRIP_QUEUE_ICON: Readonly<
   [PLATFORM_TRIP_QUEUE.AWAITING_HOLD]: DollarOutlined,
   [PLATFORM_TRIP_QUEUE.PICKUP_SOON]: KeyOutlined,
   [PLATFORM_TRIP_QUEUE.ACTIVE]: CarOutlined,
+  [PLATFORM_TRIP_QUEUE.DRIVER]: IdcardOutlined,
 };
 
 /** Nhãn hàng đợi — dùng chung cho cột hàng đợi, thẻ đếm và tiêu đề vùng nội dung. */

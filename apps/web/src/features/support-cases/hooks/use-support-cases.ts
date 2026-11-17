@@ -7,10 +7,12 @@ import { queryKeys } from '@/services/query-keys';
 import {
   fetchSupportCase,
   fetchSupportCases,
+  fetchTripVerdictPreview,
   filtersToParams,
   openSupportCase,
   postSupportMessage,
   resolveSupportCase,
+  submitTripVerdict,
   transitionSupportCase,
   withdrawAccountDeletionCase,
 } from '../api';
@@ -21,6 +23,7 @@ import type {
   SupportCaseFilters,
   SupportSurface,
   TransitionSupportCaseInput,
+  TripVerdictInput,
 } from '../types';
 import { SUPPORT_SURFACE } from '../types';
 
@@ -36,6 +39,19 @@ export function useSupportCase(surface: SupportSurface, id: string | null) {
   return useQuery({
     queryKey: queryKeys.supportCases.detail(`${surface}:${id ?? ''}`),
     queryFn: () => fetchSupportCase(surface, id!),
+    enabled: Boolean(id),
+    staleTime: 0,
+  });
+}
+
+/**
+ * Xem trước tiền của các kết luận chuyến — chỉ xin khi hộp kết luận mở (`id` khác null). Khoá nằm
+ * dưới nhánh `supportCases` nên lượt kết luận / trả lời làm mới nó cùng chi tiết case.
+ */
+export function useTripVerdictPreview(id: string | null) {
+  return useQuery({
+    queryKey: [...queryKeys.supportCases.detail(`platform:${id ?? ''}`), 'verdict-preview'],
+    queryFn: () => fetchTripVerdictPreview(id!),
     enabled: Boolean(id),
     staleTime: 0,
   });
@@ -95,6 +111,23 @@ export function useResolveSupportCase() {
       invalidate();
       // Kết luận tranh chấp mở khoá hàng đợi chốt tiền — làm mới cả nhánh money.
       void queryClient.invalidateQueries({ queryKey: queryKeys.platformMoney.all });
+    },
+  });
+}
+
+/**
+ * Kết luận CHUYẾN (ADR 0094) — đổi trạng thái đơn và có thể chốt tiền giữ chỗ, nên làm mới cả case,
+ * màn tiền nền tảng và danh sách đơn.
+ */
+export function useTripVerdict() {
+  const invalidate = useInvalidateSupport();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string } & TripVerdictInput) => submitTripVerdict(id, body),
+    onSuccess: () => {
+      invalidate();
+      void queryClient.invalidateQueries({ queryKey: queryKeys.platformMoney.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
     },
   });
 }

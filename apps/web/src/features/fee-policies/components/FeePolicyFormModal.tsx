@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import { DEPOSIT_PERCENT_MAX, DEPOSIT_PERCENT_MIN } from '@xeprime/types';
 import { DialogForm } from '@/components/form/DialogForm';
 import { NumberField } from '@/components/form/NumberField';
+import { InfoHint } from '@/components/data-display/InfoHint';
 import { SwitchField } from '@/components/form/SwitchField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
@@ -27,6 +28,7 @@ import type { FeePolicy } from '../types';
 import { CommissionTiersField } from './CommissionTiersField';
 import { TaxRatesField } from './TaxRatesTable';
 import styles from './FeePolicyFormModal.module.css';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 
 /**
  * Tạo/sửa BẢN NHÁP chính sách phí — luồng tiền v2 trên nền ADR 0028 điều 2–5, ADR 0029 (R3).
@@ -191,16 +193,6 @@ export function FeePolicyFormModal({
         />
         <NumberField
           control={control}
-          name="depositMaxPercent"
-          label={t('form.depositMaxPercent')}
-          percent
-          min={DEPOSIT_PERCENT_MIN}
-          max={DEPOSIT_PERCENT_MAX}
-          precision={0}
-          required
-        />
-        <NumberField
-          control={control}
           name="holdMinAmount"
           label={t('form.holdMinAmount')}
           money
@@ -212,6 +204,9 @@ export function FeePolicyFormModal({
           control={control}
           name="holdPaymentWindowMinutes"
           label={t('form.holdPaymentWindowMinutes')}
+          labelAccessory={
+            <InfoHint label={t('form.windowHintLabel')} content={t('form.holdPaymentWindowHint')} />
+          }
           min={0}
           precision={0}
           addonAfter={t('form.minutesUnit')}
@@ -221,9 +216,33 @@ export function FeePolicyFormModal({
           control={control}
           name="freeCancelHours"
           label={t('form.freeCancelHours')}
+          labelAccessory={
+            <InfoHint label={t('form.windowHintLabel')} content={t('form.freeCancelHint')} />
+          }
           min={0}
           precision={0}
           addonAfter={t('form.hoursUnit')}
+          required
+        />
+
+        <Divider plain>{t('form.sectionBookingLimits')}</Divider>
+        <Alert type="info" showIcon title={t('form.bookingLimitsHint')} className={styles.alert} />
+        <NumberField
+          control={control}
+          name="maxAdvanceBookingDays"
+          label={t('form.maxAdvanceBookingDays')}
+          min={0}
+          precision={0}
+          addonAfter={t('form.daysUnit')}
+          required
+        />
+        <NumberField
+          control={control}
+          name="selfDriveMaxDays"
+          label={t('form.selfDriveMaxDays')}
+          min={0}
+          precision={0}
+          addonAfter={t('form.daysUnit')}
           required
         />
 
@@ -359,7 +378,7 @@ export function FeePolicyFormModal({
             title={t('form.activationBlocked')}
             description={policy.activationBlockers
               .map((code) => domainLabel('feePolicyActivationBlocker', code))
-              .join(' · ')}
+              .join(LIST_SEPARATOR)}
           />
         ) : null}
       </DialogForm>

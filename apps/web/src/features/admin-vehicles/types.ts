@@ -6,6 +6,9 @@ type Schemas = components['schemas'];
 export type AdminVehicle = Schemas['PlatformVehicleDto'];
 export type AdminVehicleDetail = Schemas['PlatformVehicleDetailDto'];
 export type AdminVehicleCounts = Schemas['PlatformVehicleCountsDto'];
+/** Khối "Bảo hiểm và giấy tờ" (đợt rà Admin 16/11/2026) — dùng chung cho màn duyệt xe và Xe trên sàn. */
+export type VehicleInsuranceReview = Schemas['VehicleInsuranceReviewDto'];
+export type VehicleRegistrationImage = Schemas['VehicleRegistrationImageDto'];
 
 /** Bộ lọc + sắp xếp danh sách xe — ở URL searchParams (ADR 0004). */
 export interface AdminVehicleFilters {

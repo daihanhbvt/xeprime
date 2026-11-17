@@ -59,6 +59,9 @@ model User {
   managedByTenantId String?   @map("managed_by_tenant_id") @db.Char(26)
   /// @xeprime/types → UserStatus
   status            String    @default("active") @db.VarChar(50)
+  /// Lượt khoá tài khoản KHÁCH của nền tảng (đợt rà Admin 16/11/2026) — người khoá ở audit `customer.lock`.
+  lockedAt          DateTime? @map("locked_at") @db.Timestamptz(3)
+  lockedReason      String?   @map("locked_reason") @db.Text
   lastLoginAt       DateTime? @map("last_login_at") @db.Timestamptz(3)
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -122,6 +125,8 @@ model User {
   updatedTenantPaymentSettings TenantPaymentSettings[]   @relation("tenant_payment_settings_updated_by")
   enteredBankBalances          PlatformBankBalance[]     @relation("platform_bank_balance_entered_by")
   createdTaxWithholdings       TaxWithholding[]          @relation("tax_withholding_creator")
+  declaredTaxPeriods           TaxPeriodFiling[]         @relation("tax_period_filing_declared_by")
+  remittedTaxPeriods           TaxPeriodFiling[]         @relation("tax_period_filing_remitted_by")
   createdPromoCodes            PromoCode[]               @relation("promo_code_creator")
   promoRedemptions             PromoRedemption[]         @relation("promo_redemption_customer")
   supportContextsOpened        TenantSupportContext[]    @relation("tenant_support_context_actor")
@@ -2043,6 +2048,10 @@ model PublicListing {
   withDriverOneWayPrice    Decimal? @map("with_driver_one_way_price") @db.Decimal(14, 2)
   deliveryEnabled          Boolean  @default(false) @map("delivery_enabled")
   noCollateral             Boolean  @default(false) @map("no_collateral")
+  /// Chủ xe đặt bảo hiểm Bắt buộc mà xe chưa đủ điều kiện bảo hiểm ⇒ KHÔNG nhận đặt tự lái (ADR
+  /// 0091 điều 1). Tìm xe tự lái loại các dòng này khi nền tảng đang bán bảo hiểm theo bậc. Chỉ
+  /// ListingsService ghi (ADR 0008) — suy từ chế độ + `insuranceEligibilityGaps`.
+  selfDriveInsuranceBlocked Boolean @default(false) @map("self_drive_insurance_blocked")
   /// @xeprime/types → BillingMode — denormalize từ gói HIỆN HÀNH của tenant (ADR 0024 ràng buộc 1):
   /// card chợ phải nói được "giá này chưa gồm phí dịch vụ X%" mà không join subscription.
   /// Chỉ ListingsService ghi (ADR 0008); BillingService gọi `syncBillingForTenant` khi gói đổi.
@@ -2243,6 +2252,11 @@ model Booking {
   /// chủ xe báo "khách chưa trả xe" thì cả hai về NULL. Quá hạn mà vẫn `active` ⇒ API tự lập biên bản trả xe.
   customerReturnedAt      DateTime? @map("customer_returned_at") @db.Timestamptz(3)
   returnAutoCompleteAt    DateTime? @map("return_auto_complete_at") @db.Timestamptz(3)
+  /// Mốc worker đánh dấu đơn QUÁ ân hạn trả xe (ADR 0094): `return_at + 24h` mà vẫn `active`, chưa
+  /// biên bản trả xe, khách chưa báo trả ⇒ đã mở case `return_unconfirmed`. Cột CLAIM như
+  /// `handoverOverdueAt`. Partial index viết tay `bookings_return_unconfirmed_sweep_idx`
+  /// (migration 20261116200000) — `migrate dev` đòi DROP thì đừng nhận.
+  returnUnconfirmedAt     DateTime? @map("return_unconfirmed_at") @db.Timestamptz(3)
   /// Hồ sơ khách trong SỔ KHÁCH của gian hàng (S-01). NULL với đơn lịch sử không có SĐT dùng
   /// được — snapshot `customer_name`/`customer_phone` ở trên vẫn là sự thật của đơn và KHÔNG
   /// bị hồ sơ khách ghi đè khi ai đó sửa tên khách về sau.
@@ -2520,6 +2534,9 @@ model BookingRequest {
   /// đọc hai cột này — không đọc thì khách thấy bảo hiểm trong báo giá rồi bị bỏ mất lúc duyệt.
   /// Cổng ở chính sách phí vẫn thắng: chính sách tắt bảo hiểm thì lựa chọn không sinh dòng nào.
   vehicleProtectionSelected Boolean   @default(false) @map("vehicle_protection_selected")
+  /// Chế độ bảo hiểm của xe LÚC GỬI là Bắt buộc (ADR 0091 điều 1) — khi đó server đã tự đặt
+  /// `vehicle_protection_selected = true`. Lượt duyệt đọc hai cột này, không đọc chế độ hôm nay.
+  vehicleProtectionRequired Boolean   @default(false) @map("vehicle_protection_required")
   personalAccidentSelected  Boolean   @default(false) @map("personal_accident_selected")
   createdAt                 DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt                 DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -2980,6 +2997,10 @@ model RentalPolicy {
   /// giờ và KHÔNG áp cho tự lái/có tài xế. Phần tử mang cờ legacy là mốc cũ theo ngày không
   /// quy đổi được — giữ để khỏi mất cấu hình, máy giá bỏ qua (types → LegacyDiscountTier).
   discountTiers            Json     @default("[]") @map("discount_tiers_json") @db.JsonB
+  /// @xeprime/types → InsuranceMode (`required` | `optional`; CHECK). Chủ xe chọn bảo hiểm vật
+  /// chất xe MIC Bắt buộc hay Tuỳ chọn (ADR 0091 điều 1): dòng mặc định của gian hàng theo loại xe,
+  /// dòng ghi đè theo xe. Đọc qua `InsuranceModeService` — một chỗ phân giải thứ tự ưu tiên.
+  insuranceMode            String   @default("optional") @map("insurance_mode") @db.VarChar(20)
   createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -4644,6 +4665,10 @@ model BankTransaction {
   matchedRefId    String?   @map("matched_ref_id") @db.Char(26)
   /// Lý do khi khớp tay / bỏ qua — dòng `manual`/`ignored` không có ghi chú là không truy được.
   matchNote       String?   @map("match_note") @db.Text
+  /// MÃ lý do do HỆ THỐNG ghi (@xeprime/types → BankMatchReason; CHECK ở DB) — giao diện dịch ra
+  /// nhãn (ADR 0012). Tham số kèm theo (`{ code, status }`) ở `matchReasonParams` (ADR 0092).
+  matchReasonCode   String? @map("match_reason_code") @db.VarChar(40)
+  matchReasonParams Json?   @map("match_reason_params") @db.JsonB
   /// Admin thao tác tay (NULL với dòng máy tự khớp) — mỗi dòng `manual` là một người chịu trách nhiệm.
   matchedBy       String?   @map("matched_by") @db.Char(26)
   matchedAt       DateTime? @map("matched_at") @db.Timestamptz(3)
@@ -4662,6 +4687,7 @@ model BankTransaction {
   @@index([direction, bankTime])
   /// Lịch sử giao dịch của khách: hold → các khoản chuyển khớp vào nó.
   @@index([matchedType, matchedRefId], map: "bank_transactions_matched_type_ref_idx")
+  @@index([matchStatus, matchReasonCode], map: "bank_transactions_match_status_reason_idx")
   @@map("bank_transactions")
 }
 
@@ -5012,6 +5038,13 @@ model FeePolicy {
   /// `ΔT` (`holdWindowsFor`, ADR 0066 điều 3). 0 = chính sách TẮT huỷ miễn phí. Khớp hằng
   /// `HOLD_FREE_CANCEL_HOURS` của `@xeprime/types`.
   freeCancelHours          Int     @default(2) @map("free_cancel_hours")
+  /// Yêu cầu của KHÁCH trên chợ (tự lái + có tài xế): NGÀY nhận (giờ VN) không quá hôm gửi + N
+  /// ngày — `bookingLimitViolation` (ADR 0091 điều 4). Không phải dòng tiền: KHÔNG vào snapshot
+  /// phí của đơn. CHECK 1..365.
+  maxAdvanceBookingDays    Int     @default(15) @map("max_advance_booking_days")
+  /// Chuyến TỰ LÁI của khách trên chợ dài tối đa N × 24 giờ — dài hơn thì đặt thuê dài hạn
+  /// (ADR 0091 điều 4). Giữ mọi chuyến tự lái trong bậc phí MIC 30 ngày. CHECK 1..90.
+  selfDriveMaxDays         Int     @default(30) @map("self_drive_max_days")
 
   /// `D` — % PHẦN CHỦ XE trong tiền giữ chỗ, tính trên TIỀN THUÊ `B` (sau khuyến mãi trực tiếp
   /// của xe, KHÔNG gồm phí giao xe) — ADR 0066. NỀN TẢNG đặt, không phải gian hàng (ADR 0033
@@ -5020,7 +5053,6 @@ model FeePolicy {
   /// Sàn của `D` (VND) — áp sau phép nhân % (`D = max(% × B, sàn)`); 0 = không sàn.
   depositMinAmount  Decimal @default(0) @map("deposit_min_amount") @db.Decimal(14, 2)
   /// Trần % cọc của CHÍNH SÁCH này. Trần cứng của code là `DEPOSIT_PERCENT_MAX` (ADR 0025 điều 3).
-  depositMaxPercent Decimal @default(30) @map("deposit_max_percent") @db.Decimal(5, 2)
 
   taxEnabled    Boolean  @default(false) @map("tax_enabled")
   /// Bảng mức khấu trừ theo LOẠI DỊCH VỤ, tách GTGT/TNCN — ADR 0068 điều 1:
@@ -5286,6 +5318,9 @@ model BookingHold {
   ownerCommissionAmount   Decimal @default(0) @map("owner_commission_amount") @db.Decimal(14, 2)
   vehicleInsuranceAmount  Decimal @default(0) @map("vehicle_insurance_amount") @db.Decimal(14, 2)
   personalInsuranceAmount Decimal @default(0) @map("personal_insurance_amount") @db.Decimal(14, 2)
+  /// `X` — phí thu hộ bảo hiểm của NỀN TẢNG (ADR 0091 điều 3). Hoàn khách ở mọi kết cục hoàn `IV`;
+  /// chuyến hoàn thành ⇒ doanh thu nền tảng. Mã khuyến mãi KHÔNG trừ vào nó. Cùng các CHECK tổng.
+  insuranceServiceFeeAmount Decimal @default(0) @map("insurance_service_fee_amount") @db.Decimal(14, 2)
 
   /// `P` — TÀI TRỢ mã khuyến mãi của XePrime (ADR 0046 điều 4).
   ///
@@ -5429,7 +5464,8 @@ model BookingInsurancePolicy {
   /// bề mặt hiện nhãn THỬ NGHIỆM khi cờ này bật. CHECK: chỉ `true` khi số GCN mang tiền tố `TEST-`.
   isTest              Boolean @default(false) @map("is_test")
 
-  /// Bằng chứng khách CHỌN `IP` (ADR 0028 điều 5). NULL với `IV` — nó bắt buộc, không phải chọn.
+  /// Bằng chứng khách CHỌN mua (ADR 0028 điều 5). NULL với `IV` mà chủ xe đặt Bắt buộc — khách
+  /// không chọn gì (ADR 0091 điều 1).
   consentAt     DateTime? @map("consent_at") @db.Timestamptz(3)
   /// @xeprime/types → InsuranceConsentSource
   consentSource String?   @map("consent_source") @db.VarChar(50)
@@ -5455,6 +5491,24 @@ model BookingInsurancePolicy {
   photosSentAt          DateTime? @map("photos_sent_at") @db.Timestamptz(3)
   /// Bảng kê trả phí cho hãng đã gom hợp đồng này (ADR 0088 điều 6). NULL = chưa kê.
   remittanceId          String?   @map("remittance_id") @db.Char(26)
+  /// Khoá R2 RIÊNG TƯ của GCN PDF đã lưu (ADR 0091 điều 6). NULL = chưa lưu — endpoint tải từ đối
+  /// tác, lưu rồi trả. Không có đường công khai nào tới khoá này.
+  certificateObjectKey  String?   @map("certificate_object_key") @db.VarChar(255)
+  /// Số lần đối tác báo hợp đồng còn chờ ảnh (MIC `ttrang` 3) sau khi cấp — quá
+  /// `INSURANCE_PENDING_CHECKS_MAX` thì về hàng đợi admin (ADR 0091 điều 7).
+  partnerPendingChecks  Int       @default(0) @map("partner_pending_checks")
+  /// Mốc đã báo khẩn admin vì quá 2 giờ sau giao xe mà chưa cấp — báo MỘT lần (ADR 0091 điều 7).
+  escalatedAt           DateTime? @map("escalated_at") @db.Timestamptz(3)
+  /// Phí thu hộ bảo hiểm khách đã trả kèm hợp đồng này (ADR 0091 điều 3) — snapshot từ dòng phí.
+  serviceFeeAmount      Decimal   @default(0) @map("service_fee_amount") @db.Decimal(14, 2)
+  /// Mốc đã TỰ HOÀN `premium_amount + service_fee_amount` vào Ví điểm khách vì quá giờ trả mà chưa
+  /// cấp được (ADR 0091 điều 7). CHECK: chỉ khi `status = cancelled`.
+  refundedAt            DateTime? @map("refunded_at") @db.Timestamptz(3)
+  /// Lý do admin thu hồi / huỷ hợp đồng (ADR 0093) — không còn ghi đè `last_error_message`.
+  voidReason            String?   @map("void_reason") @db.Text
+  /// Mã huỷ / biên bản đối chiếu bên đối tác (ADR 0093). CHECK: bắt buộc khi `voided` một hợp đồng
+  /// đã từng cấp (`issued_at` khác NULL).
+  voidPartnerReference  String?   @map("void_partner_reference") @db.VarChar(100)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -5473,6 +5527,8 @@ model BookingInsurancePolicy {
   /// Lập bảng kê: hợp đồng đã cấp, chưa kê, theo mốc cấp.
   @@index([issuedAt], map: "booking_insurance_policies_unremitted_idx")
   @@index([remittanceId], map: "booking_insurance_policies_remittance_idx")
+  // Index một phần `booking_insurance_policies_refund_due_idx` (hợp đồng đã huỷ chưa hoàn) viết tay ở
+  // migration 20261116180000 — Prisma không mô tả được điều kiện WHERE.
   @@map("booking_insurance_policies")
 }
 
@@ -5546,13 +5602,17 @@ model InsuranceProduct {
   certificateUrlTemplate String   @map("certificate_url_template") @db.Text
   displayOrder           Int      @default(0) @map("display_order")
   isActive               Boolean  @default(true) @map("is_active")
-  /// @xeprime/types → InsurancePremiumBasis (ADR 0088). `value_tier` = phí theo bậc giá trị xe,
-  /// BẮT BUỘC với xe đủ điều kiện. CHECK: chỉ `vehicle_trip` được tính theo bậc.
+  /// @xeprime/types → InsurancePremiumBasis (ADR 0088). `value_tier` = phí theo bậc giá trị xe; chủ
+  /// xe chọn Bắt buộc/Tuỳ chọn (ADR 0091). CHECK: chỉ `vehicle_trip` được tính theo bậc.
   premiumBasis           String   @default("daily") @map("premium_basis") @db.VarChar(20)
   /// Biểu phí bậc `[{maxDays, percent}]` — bắt buộc khi `premium_basis = value_tier`.
   premiumTiersJson       Json?    @map("premium_tiers_json") @db.JsonB
   /// Hotline báo sự cố / bồi thường của hãng — hiện cạnh GCN cho khách và chủ xe.
   claimHotline           String?  @map("claim_hotline") @db.VarChar(30)
+  /// Phí thu hộ bảo hiểm của NỀN TẢNG (ADR 0091 điều 3 — Proposed, chờ luật sư): bật thì mỗi chuyến
+  /// có `IV` thu thêm `roundVnd(IV × %)`. CHECK: chỉ `vehicle_trip`, bật thì % > 0, % trong 0..50.
+  serviceFeeEnabled      Boolean  @default(false) @map("service_fee_enabled")
+  serviceFeePercent      Decimal  @default(0) @map("service_fee_percent") @db.Decimal(5, 2)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -5651,6 +5711,45 @@ model TaxWithholding {
   @@index([periodKey, status], map: "tax_withholdings_period_status_idx")
   @@index([tenantId, periodKey], map: "tax_withholdings_tenant_period_idx")
   @@map("tax_withholdings")
+}
+
+/// CHỨNG CỨ kê khai và nộp thuế của MỘT kỳ (`YYYY-MM`, giờ Việt Nam) — rà soát Admin 16/11/2026.
+///
+/// Trước bảng này, "đã kê khai" / "đã nộp" chỉ là một cú bấm lật trạng thái cả kỳ, không để lại
+/// số tờ khai hay chứng từ nộp nào — không ai đối chiếu được sổ với cơ quan thuế. Một kỳ có đúng
+/// một lần kê khai và một lần nộp: dòng thuế mới luôn rơi vào kỳ HIỆN TẠI, dòng đảo ở lại kỳ gốc với
+/// trạng thái `reversed`, nên một kỳ đã qua không bao giờ có dòng `accrued` mới.
+///
+/// Writer DUY NHẤT: `TaxService.advancePeriod`, trong CÙNG transaction với lượt lật trạng thái các
+/// dòng của kỳ + audit. Nhóm cột kê khai và nhóm cột nộp mỗi nhóm cùng có hoặc cùng vắng (CHECK).
+/// Nhóm kê khai được vắng ở kỳ đã kê khai TRƯỚC khi có bảng này rồi mới ghi nộp.
+model TaxPeriodFiling {
+  /// Kỳ `YYYY-MM` theo giờ Việt Nam — khoá tự nhiên, một kỳ một dòng (như `platform_bank_balances`).
+  periodKey      String    @id @map("period_key") @db.VarChar(7)
+  /// Số tờ khai / mã hồ sơ cơ quan thuế cấp khi nộp tờ khai.
+  declarationRef String?   @map("declaration_ref") @db.VarChar(120)
+  /// NGÀY nộp tờ khai (ngày lịch, giờ VN) — khác `declaredAt` là lúc người trực ghi vào hệ thống.
+  declaredOn     DateTime? @map("declared_on") @db.Date
+  declaredBy     String?   @map("declared_by") @db.Char(26)
+  declaredAt     DateTime? @map("declared_at") @db.Timestamptz(3)
+  /// Mã chứng từ nộp tiền vào ngân sách nhà nước.
+  remittanceRef  String?   @map("remittance_ref") @db.VarChar(120)
+  remittedOn     DateTime? @map("remitted_on") @db.Date
+  /// Số tiền ĐÃ NỘP theo chứng từ — người trực nhập, có thể lệch sổ.
+  remittedAmount Decimal?  @map("remitted_amount") @db.Decimal(14, 2)
+  /// Tổng thuế trên SỔ của kỳ tại lúc ghi nộp — chụp lại để lệch giữa hai con số luôn đọc được.
+  ledgerAmount   Decimal?  @map("ledger_amount") @db.Decimal(14, 2)
+  /// Bắt buộc khi `remittedAmount` khác `ledgerAmount` (kiểm ở service, có audit).
+  remittanceNote String?   @map("remittance_note") @db.Text
+  remittedBy     String?   @map("remitted_by") @db.Char(26)
+  remittedAt     DateTime? @map("remitted_at") @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  declaredByUser User? @relation("tax_period_filing_declared_by", fields: [declaredBy], references: [id], onDelete: SetNull)
+  remittedByUser User? @relation("tax_period_filing_remitted_by", fields: [remittedBy], references: [id], onDelete: SetNull)
+
+  @@map("tax_period_filings")
 }
 
 /// Yêu cầu CHUYỂN TRẢ khoản giữ chỗ — ADR 0028 điều 8 (R3).
@@ -5856,6 +5955,8 @@ model WithdrawalRequest {
 
   @@index([status, createdAt])
   @@index([walletId, createdAt])
+  // + partial index viết tay `withdrawal_requests_paid_at_idx (paid_at) WHERE paid_at IS NOT NULL`
+  //   (migration 20261117090000) — bảng kê tháng lệnh đã chuyển.
   @@map("withdrawal_requests")
 }
 

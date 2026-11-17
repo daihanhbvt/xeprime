@@ -368,7 +368,7 @@
       },
       "privacy": {
         "title": "Privacy",
-        "body": "Phone numbers, emails and document numbers are partially masked by the server. This screen never shows full values or document files - those open only on the dedicated screens, behind their own permissions and with audit logging."
+        "body": "Phone numbers, emails and document numbers are partially masked by the server. Staff with permission can reveal the full phone number and email here - every reveal is recorded in the audit log. Document numbers and files open only on the dedicated screens."
       }
     },
     "billing": {

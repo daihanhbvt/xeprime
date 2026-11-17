@@ -97,6 +97,17 @@ function detailOf(row: AdminBooking) {
     paymentCount: 0,
     hasContract: false,
     updatedAt: row.createdAt,
+    // Đơn lập tay: không đi qua thanh toán của XePrime.
+    marketplace: {
+      fees: null,
+      hold: null,
+      bankTransactions: null,
+      insurancePolicies: [],
+      taxRows: [],
+      cancellation: null,
+    },
+    // Case hỗ trợ còn mở của đơn (ADR 0095) — không có case nào.
+    openSupportCases: [],
   };
 }
 

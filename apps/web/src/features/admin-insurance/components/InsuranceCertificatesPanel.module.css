@@ -77,3 +77,20 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* Khối "Cần xử lý gấp" (ADR 0091) — mỗi dòng: mã đơn, biển số, lý do. */
+.attentionList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.attentionItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}

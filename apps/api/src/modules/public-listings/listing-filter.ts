@@ -4,6 +4,7 @@ import {
   LISTING_STATUS,
   SEAT_BUCKET_RANGE,
   SEAT_BUCKET_VALUES,
+  SERVICE_TYPE,
   TENANT_STATUS,
   type SeatBucket,
 } from '@xeprime/types';
@@ -45,7 +46,17 @@ export type FacetDimension =
 export type ListingFilterQuery = Omit<PublicListingQueryDto, 'sort' | 'page' | 'limit'> & {
   /** `q` ĐÃ PHÂN GIẢI bằng `resolveKeyword` — hai bản dựng điều kiện chỉ đọc trường này. */
   keyword?: ResolvedKeyword;
+  /**
+   * Nền tảng ĐANG bán bảo hiểm vật chất xe theo bậc — chỉ khi đó tìm xe tự lái mới loại xe Bắt buộc
+   * mà thiếu dữ liệu bảo hiểm (ADR 0091 điều 1). Service đặt, không bao giờ đến từ query của khách.
+   */
+  insuranceGate?: boolean;
 };
+
+/** Tìm xe TỰ LÁI khi nền tảng đang bán bảo hiểm theo bậc ⇒ loại xe bị chặn vì bảo hiểm (ADR 0091). */
+function insuranceGated(query: ListingFilterQuery): boolean {
+  return query.insuranceGate === true && query.serviceType === SERVICE_TYPE.SELF_DRIVE;
+}
 
 /**
  * Điều kiện để một snapshot ĐƯỢC PHÉP xuất hiện công khai — dùng chung cho search, facets,
@@ -173,6 +184,7 @@ export function buildListingWhere(
   }
   if (query.vehicleType) and.push({ vehicleType: query.vehicleType });
   if (query.serviceType) and.push(serviceTypeFilter(query.serviceType));
+  if (insuranceGated(query)) and.push({ selfDriveInsuranceBlocked: false });
   if (query.minSeats) and.push({ seatCount: { gte: query.minSeats } });
   if (query.instantBook) and.push(instantBookFilter(query.serviceType));
   // `rating_avg` NULL (chưa có điểm) không thoả `gte` — xe chưa được đánh giá bị loại.
@@ -282,6 +294,7 @@ export function buildListingWhereSql(
   if (query.serviceType) {
     and.push(Prisma.sql`pl."service_types" @> ARRAY[${query.serviceType}]::varchar[]`);
   }
+  if (insuranceGated(query)) and.push(Prisma.sql`pl."self_drive_insurance_blocked" = false`);
   if (query.minSeats) and.push(Prisma.sql`pl."seat_count" >= ${query.minSeats}`);
   if (query.instantBook) {
     and.push(

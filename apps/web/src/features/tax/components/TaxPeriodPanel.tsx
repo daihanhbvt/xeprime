@@ -16,6 +16,7 @@ import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import {
   TAX_CATEGORY,
+  TAX_EXPORT_GROUP_BY,
   TAX_WITHHOLDING_STATUS,
   TAX_WITHHOLDING_STATUS_META,
 } from '@xeprime/types';
@@ -28,14 +29,9 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { taxExportUrl } from '../api';
-import {
-  useMarkPeriodDeclared,
-  useMarkPeriodRemitted,
-  useReverseTaxRow,
-  useTaxPeriodSummary,
-  useTaxRows,
-} from '../hooks/use-tax';
-import type { TaxRow } from '../types';
+import { useReverseTaxRow, useTaxPeriodSummary, useTaxRows } from '../hooks/use-tax';
+import type { TaxPeriodSummary, TaxRow } from '../types';
+import { DeclarePeriodDialog, RemitPeriodDialog } from './TaxFilingDialogs';
 import { TaxAmount, TaxSplitAmount } from './TaxSplitAmount';
 
 import styles from './TaxPeriodPanel.module.css';
@@ -64,7 +60,8 @@ function parse(params: URLSearchParams): TaxUrlFilters {
  *
  * Màn này phục vụ một việc có thật: người làm tờ khai mở nó, đọc tổng của kỳ, đối chiếu phần
  * chia theo LOẠI CHỦ THỂ (vì cá nhân / hộ kinh doanh / doanh nghiệp đi vào những tờ khai khác
- * nhau), xuất CSV, rồi đánh dấu kỳ đã khai và đã nộp.
+ * nhau), xuất CSV (chi tiết hoặc gộp theo người bán), rồi ghi kỳ đã kê khai và đã nộp KÈM CHỨNG CỨ
+ * (số tờ khai, chứng từ nộp tiền). Hai lượt ghi đó chỉ hiện với kỳ đã kết thúc và bước chưa ghi.
  *
  * Hai điều cố ý:
  *
@@ -89,11 +86,11 @@ export function TaxPeriodPanel() {
   const page = filters.page ?? 1;
   const [reversing, setReversing] = useState<TaxRow | null>(null);
   const [reason, setReason] = useState('');
+  /** Hộp ghi chứng cứ đang mở — kê khai hay nộp. */
+  const [filing, setFiling] = useState<'declare' | 'remit' | null>(null);
 
   const summary = useTaxPeriodSummary(period);
   const rows = useTaxRows({ period, page });
-  const declare = useMarkPeriodDeclared();
-  const remit = useMarkPeriodRemitted();
   const reverse = useReverseTaxRow();
 
   const items = useMemo(() => rows.data?.data ?? [], [rows.data]);
@@ -211,6 +208,19 @@ export function TaxPeriodPanel() {
   );
 
   const data = summary.data;
+  const filingRecord = data?.filing ?? null;
+  /*
+   * Kê khai: kỳ đã kết thúc và chưa ghi chứng cứ kê khai (kỳ kê khai trước khi có chứng cứ vẫn ghi
+   * bổ sung được). Nộp: kỳ đã kết thúc, không còn dòng chưa kê khai, chưa ghi chứng cứ nộp, và có
+   * khoản để nộp.
+   */
+  const canDeclare = Boolean(data?.periodEnded && !filingRecord?.declarationRef);
+  const canRemit = Boolean(
+    data?.periodEnded &&
+    data.accruedRows === 0 &&
+    !filingRecord?.remittanceRef &&
+    (data.declaredRows > 0 || isPositiveMoney(data.remittedAmount)),
+  );
 
   return (
     <div className={styles.panel}>
@@ -238,28 +248,24 @@ export function TaxPeriodPanel() {
             {t('actions.export')}
           </Button>
           <Button
-            loading={declare.isPending}
-            onClick={() =>
-              declare.mutate(period, {
-                onSuccess: () => message.success(t('actions.declaredDone')),
-                onError: (error) => message.error(errorMessage(error)),
-              })
-            }
+            href={taxExportUrl(period, TAX_EXPORT_GROUP_BY.SELLER)}
+            target="_blank"
+            rel="noreferrer"
           >
-            {t('actions.markDeclared')}
+            {t('actions.exportBySeller')}
           </Button>
-          <Button
-            type="primary"
-            loading={remit.isPending}
-            onClick={() =>
-              remit.mutate(period, {
-                onSuccess: () => message.success(t('actions.remittedDone')),
-                onError: (error) => message.error(errorMessage(error)),
-              })
-            }
-          >
-            {t('actions.markRemitted')}
-          </Button>
+          {/*
+            Hai lượt đổi trạng thái CẢ KỲ chỉ hiện khi làm được: kỳ đã kết thúc (server nói,
+            `periodEnded`) và bước đó chưa ghi. Server kiểm lại mọi điều kiện khi ghi.
+          */}
+          {canDeclare ? (
+            <Button onClick={() => setFiling('declare')}>{t('actions.markDeclared')}</Button>
+          ) : null}
+          {canRemit ? (
+            <Button type="primary" onClick={() => setFiling('remit')}>
+              {t('actions.markRemitted')}
+            </Button>
+          ) : null}
         </Space>
       </div>
 
@@ -280,6 +286,7 @@ export function TaxPeriodPanel() {
 
       {data ? (
         <>
+          <FilingEvidence summary={data} />
           <div className={styles.stats}>
             <Statistic title={t('stats.total')} value={fmt.money(data.totalAmount)} />
             <Statistic title={t('stats.vat')} value={fmt.money(data.totalVatAmount)} />
@@ -383,7 +390,95 @@ export function TaxPeriodPanel() {
           onChange={(e) => setReason(e.target.value)}
         />
       </Modal>
+
+      {data ? (
+        <>
+          <DeclarePeriodDialog
+            period={period}
+            summary={data}
+            open={filing === 'declare'}
+            onClose={() => setFiling(null)}
+          />
+          <RemitPeriodDialog
+            period={period}
+            summary={data}
+            open={filing === 'remit'}
+            onClose={() => setFiling(null)}
+          />
+        </>
+      ) : null}
     </div>
   );
 }
 
+/**
+ * Chứng cứ kê khai / nộp đã ghi của kỳ — chỉ hiện khi có ít nhất một bước đã ghi (hoặc kỳ đã kê
+ * khai trước khi có chứng cứ). Số nộp lệch sổ thì nói rõ lệch bao nhiêu và ghi chú đã lưu.
+ */
+function FilingEvidence({ summary }: { summary: TaxPeriodSummary }) {
+  const t = useTranslations('PlatformMoney.tax');
+  const fmt = useAppFormat();
+  const filing = summary.filing;
+  // Kỳ cũ: đã có dòng kê khai / nộp nhưng chưa có chứng cứ kê khai.
+  const legacyDeclared =
+    !filing?.declarationRef &&
+    (summary.declaredRows > 0 || isPositiveMoney(summary.remittedAmount));
+  if (!filing && !legacyDeclared) return null;
+
+  const recorded = (name: string | null | undefined, at: string | null | undefined) =>
+    at
+      ? name
+        ? t('filing.recordedBy', { name, time: fmt.dateTime(at) })
+        : t('filing.recordedAt', { time: fmt.dateTime(at) })
+      : null;
+  const mismatch =
+    filing?.remittedAmount != null &&
+    filing.ledgerAmount != null &&
+    filing.remittedAmount !== filing.ledgerAmount;
+
+  return (
+    <Descriptions size="small" column={1} bordered title={t('filing.title')}>
+      <Descriptions.Item label={t('filing.declared')}>
+        {filing?.declarationRef && filing.declaredOn ? (
+          <>
+            <p>
+              {t('filing.declaredValue', {
+                ref: filing.declarationRef,
+                date: fmt.dateKey(filing.declaredOn),
+              })}
+            </p>
+            <p className={styles.muted}>{recorded(filing.declaredByName, filing.declaredAt)}</p>
+          </>
+        ) : legacyDeclared ? (
+          t('filing.legacyDeclared')
+        ) : (
+          t('filing.notYet')
+        )}
+      </Descriptions.Item>
+      <Descriptions.Item label={t('filing.remitted')}>
+        {filing?.remittanceRef && filing.remittedOn && filing.remittedAmount ? (
+          <>
+            <p>
+              {t('filing.remittedValue', {
+                ref: filing.remittanceRef,
+                date: fmt.dateKey(filing.remittedOn),
+                amount: fmt.money(filing.remittedAmount),
+              })}
+            </p>
+            {mismatch && filing.ledgerAmount ? (
+              <p className={styles.warning}>
+                {t('filing.mismatch', { ledger: fmt.money(filing.ledgerAmount) })}
+              </p>
+            ) : null}
+            {filing.remittanceNote ? (
+              <p className={styles.muted}>{t('filing.note', { note: filing.remittanceNote })}</p>
+            ) : null}
+            <p className={styles.muted}>{recorded(filing.remittedByName, filing.remittedAt)}</p>
+          </>
+        ) : (
+          t('filing.notYet')
+        )}
+      </Descriptions.Item>
+    </Descriptions>
+  );
+}

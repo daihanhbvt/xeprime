@@ -4,7 +4,12 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { newId, Prisma } from '@xeprime/prisma';
+import {
+  INSURANCE_ELIGIBILITY_VEHICLE_SELECT,
+  insuranceEligibilityInputOf,
+  newId,
+  Prisma,
+} from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   COLLATERAL_MODE,
@@ -38,6 +43,12 @@ import {
 import {
   computeCustomerFees,
   isServiceType,
+  INSURANCE_MODE,
+  INSURANCE_MODE_DEFAULT,
+  insuranceEligibilityGaps,
+  isInsuranceMode,
+  type BookingLimits,
+  type InsuranceMode,
   taxSellerEntityOf,
   type CustomerFeeBreakdown,
   type FeePolicySnapshot,
@@ -62,9 +73,13 @@ import {
   QuoteBreakdownDto,
   RentalPolicyValuesDto,
   SaveRentalPolicyDto,
+  ShopInsuranceImpactDto,
   ShopRentalPolicyDto,
 } from './dto/pricing.dto';
 import { SaveDailyPricesDto, VehicleDailyPriceDto } from './dto/vehicle-daily-price.dto';
+
+/** Số xe tối đa trả về ở cảnh báo đổi chế độ bảo hiểm (`shopInsuranceImpact`). */
+const INSURANCE_IMPACT_LIST_LIMIT = 50;
 
 const POLICY_SELECT = {
   id: true,
@@ -83,6 +98,7 @@ const POLICY_SELECT = {
   discountTiers: true,
   includedDistanceKmPerDay: true,
   excessDistanceFeePerKm: true,
+  insuranceMode: true,
   updatedAt: true,
 } satisfies Prisma.RentalPolicySelect;
 
@@ -95,6 +111,11 @@ type PolicyRow = Prisma.RentalPolicyGetPayload<{ select: typeof POLICY_SELECT }>
 export interface InsuranceSelection {
   vehicleProtectionSelected?: boolean;
   personalAccidentSelected?: boolean;
+  /**
+   * Chủ xe đặt bảo hiểm vật chất xe Bắt buộc (ADR 0091 điều 1). Bỏ trống ⇒ máy giá tự đọc chế độ
+   * HIỆN HÀNH của xe (báo giá). Lượt duyệt truyền cột ĐÃ ĐÓNG BĂNG trên yêu cầu.
+   */
+  vehicleProtectionRequired?: boolean;
 }
 
 /**
@@ -211,6 +232,14 @@ export class PricingService {
   // -------------------------------------------------------------------------
 
   /**
+   * Giới hạn đặt xe của khách trên chợ (ADR 0091 điều 4) theo chính sách phí đang hiệu lực — một cửa
+   * cho mọi đường gửi yêu cầu, như các số khác của chính sách.
+   */
+  bookingLimits(): Promise<BookingLimits> {
+    return this.feePolicies.bookingLimits();
+  }
+
+  /**
    * Bảng tiền của một chuyến trên xe của `tenantId` — luồng tiền v2 (`computeCustomerFees`).
    *
    * `B` = tổng bảng kê giá thuê (gồm phí giao xe). Hoa hồng `H` tính trên giá thuê TỪNG NGÀY
@@ -289,6 +318,15 @@ export class PricingService {
     const vehicleProtectionTier = opts.platformFeesWaived
       ? undefined
       : await this.vehicleProtectionTierFor(trip);
+    /*
+     * Chế độ của chủ xe chỉ có nghĩa khi xe MUA ĐƯỢC (có báo giá bậc) — không có thì khỏi hỏi DB.
+     * Lượt duyệt truyền cột đóng băng; báo giá đọc chế độ hiện hành (ADR 0091 điều 1).
+     */
+    const vehicleProtectionRequired =
+      vehicleProtectionTier != null && trip.vehicleId
+        ? (opts.vehicleProtectionRequired ??
+          (await this.insuranceModeFor(tenantId, trip.vehicleId)) === INSURANCE_MODE.REQUIRED)
+        : false;
     const fees = computeCustomerFees({
       billingMode: deposit.billingMode,
       policy,
@@ -319,6 +357,11 @@ export class PricingService {
       quoteIsEstimate,
       depositRequired: opts.depositRequired ?? deposit.required,
       vehicleProtectionSelected: opts.vehicleProtectionSelected === true,
+      vehicleProtectionRequired,
+      // Phí thu hộ bảo hiểm của nền tảng (ADR 0091 điều 3) — phụ lục gia hạn không bán bảo hiểm.
+      insuranceServiceFeePercent: opts.platformFeesWaived
+        ? null
+        : await this.insuranceOffer.vehicleTripServiceFeePercent(),
       personalAccidentSelected: opts.personalAccidentSelected === true,
       ...(vehicleProtectionTier === undefined ? {} : { vehicleProtectionTier }),
       ...(opts.promo === undefined ? {} : { promo: opts.promo }),
@@ -572,6 +615,8 @@ export class PricingService {
        * có thể sai vô thời hạn. Cùng transaction: chính sách và snapshot không được lệch nhau.
        */
       await this.listings.syncCollateralForPolicy(tenantId, tx);
+      // Chế độ bảo hiểm Bắt buộc của gian hàng có thể chặn/mở tự lái cho xe kế thừa (ADR 0091).
+      await this.listings.syncInsuranceBlockForTenant(tenantId, tx);
 
       // Thay đổi nhạy cảm (ảnh hưởng giá mọi lượt đặt mới của cả gian hàng) → audit đầy đủ.
       await this.audit.record(
@@ -590,6 +635,41 @@ export class PricingService {
     });
 
     return this.getShopPolicy(tenantId, vehicleType);
+  }
+
+  /**
+   * Xe KẾ THỪA chính sách gian hàng (theo loại xe) mà chưa đủ điều kiện bảo hiểm — thứ sẽ ngừng nhận
+   * đặt tự lái nếu gian hàng chọn Bắt buộc (ADR 0091 điều 1). Hai câu đọc, giới hạn 50 xe trả về.
+   */
+  async shopInsuranceImpact(
+    tenantId: string,
+    vehicleType?: string,
+  ): Promise<ShopInsuranceImpactDto> {
+    const applies = await this.insuranceEligibility.tierPricingActive();
+    if (!applies) return { applies, total: 0, vehicles: [] };
+    const rows = await this.prisma.vehicle.findMany({
+      where: {
+        tenantId,
+        deletedAt: null,
+        rentalPolicy: null,
+        ...(vehicleType ? { vehicleType } : {}),
+      },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, plateNumber: true, ...INSURANCE_ELIGIBILITY_VEHICLE_SELECT },
+    });
+    const missing = rows
+      .map((row) => ({ row, gaps: insuranceEligibilityGaps(insuranceEligibilityInputOf(row)) }))
+      .filter((item) => item.gaps.length > 0);
+    return {
+      applies,
+      total: missing.length,
+      vehicles: missing.slice(0, INSURANCE_IMPACT_LIST_LIMIT).map(({ row, gaps }) => ({
+        id: row.id,
+        name: row.name,
+        plateNumber: row.plateNumber,
+        gaps,
+      })),
+    };
   }
 
   // -------------------------------------------------------------------------
@@ -628,6 +708,69 @@ export class PricingService {
     const legacy = rows.find((r) => r.vehicleId === null && r.vehicleType === null);
     if (legacy) return { values: toValues(legacy), source: POLICY_SOURCE.SHOP };
     return null;
+  }
+
+  /** Nền tảng đang bán bảo hiểm vật chất xe theo bậc (ADR 0088) — cổng cho các phép chặn của ADR 0091. */
+  vehicleProtectionTierPricingActive(): Promise<boolean> {
+    return this.insuranceEligibility.tierPricingActive();
+  }
+
+  /**
+   * Lựa chọn bảo hiểm vật chất xe ĐÓNG BĂNG lên một yêu cầu lúc gửi (ADR 0091 điều 1):
+   *
+   *  - sản phẩm theo ngày (không có bảng bậc) ⇒ đúng lựa chọn của khách, như trước;
+   *  - xe mua được + chủ xe đặt Bắt buộc ⇒ `required = selected = true` bất kể payload;
+   *  - xe mua được + Tuỳ chọn ⇒ đúng lựa chọn của khách;
+   *  - xe KHÔNG mua được ⇒ không mua; riêng chuyến tự lái của xe Bắt buộc thì `blocked` — xe tạm
+   *    không nhận đặt tự lái (caller ném `VEHICLE_INSURANCE_NOT_READY`).
+   */
+  async vehicleProtectionChoice(input: {
+    tenantId: string;
+    vehicleId: string;
+    serviceType: string;
+    pickupAt: Date | null;
+    returnAt: Date | null;
+    customerSelected: boolean;
+  }): Promise<{ required: boolean; selected: boolean; blocked: boolean }> {
+    const tier =
+      input.pickupAt && input.returnAt
+        ? await this.insuranceEligibility.tierQuoteFor({
+            vehicleId: input.vehicleId,
+            serviceType: input.serviceType,
+            pickupAt: input.pickupAt,
+            returnAt: input.returnAt,
+          })
+        : (await this.insuranceEligibility.tierPricingActive())
+          ? null
+          : undefined;
+    if (tier === undefined) {
+      return { required: false, selected: input.customerSelected, blocked: false };
+    }
+    const required =
+      (await this.insuranceModeFor(input.tenantId, input.vehicleId)) === INSURANCE_MODE.REQUIRED;
+    if (tier === null) {
+      return {
+        required: false,
+        selected: false,
+        blocked: required && input.serviceType === SERVICE_TYPE.SELF_DRIVE,
+      };
+    }
+    return required
+      ? { required: true, selected: true, blocked: false }
+      : { required: false, selected: input.customerSelected, blocked: false };
+  }
+
+  /**
+   * Chế độ bảo hiểm vật chất xe của một xe (ADR 0091 điều 1) — cùng thứ tự ưu tiên với
+   * `effectivePolicy`: bản ghi đè → mặc định theo loại xe → mặc định chung → Tuỳ chọn.
+   */
+  async insuranceModeFor(
+    tenantId: string,
+    vehicleId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<InsuranceMode> {
+    const policy = await this.effectivePolicy(tenantId, vehicleId, tx);
+    return policy?.values.insuranceMode ?? INSURANCE_MODE_DEFAULT;
   }
 
   /** Chính sách mặc định gian hàng (đối chiếu trên màn giá theo xe) — theo loại xe nếu có. */
@@ -1822,6 +1965,8 @@ function toValues(row: PolicyRow): RentalPolicyValuesDto {
     excessDistanceFeePerKm: row.excessDistanceFeePerKm
       ? row.excessDistanceFeePerKm.toFixed(0)
       : null,
+    // CHECK ở DB giữ hai giá trị; đọc qua cổng để một chuỗi lạ không thành "Bắt buộc".
+    insuranceMode: isInsuranceMode(row.insuranceMode) ? row.insuranceMode : INSURANCE_MODE_DEFAULT,
     updatedAt: row.updatedAt.toISOString(),
   };
 }
@@ -1850,6 +1995,9 @@ export function policyData(dto: SaveRentalPolicyDto) {
     includedDistanceKmPerDay: dto.includedDistanceKmPerDay ?? null,
     excessDistanceFeePerKm:
       dto.excessDistanceFeePerKm != null ? new Prisma.Decimal(dto.excessDistanceFeePerKm) : null,
+    // Vắng (client cũ) ⇒ không đụng cột: lưu một form chưa biết ô này không được hạ Bắt buộc
+    // về Tuỳ chọn. Bản ghi mới nhận DEFAULT của cột, hoặc chế độ caller chép sang.
+    ...(dto.insuranceMode ? { insuranceMode: dto.insuranceMode } : {}),
   };
 }
 
@@ -1866,6 +2014,7 @@ function auditShape(data: {
   overtimeRoundingMinutes: number | null;
   discountEnabled: boolean;
   discountTiers: unknown;
+  insuranceMode?: string;
 }): Record<string, unknown> {
   return {
     collateralMode: data.collateralMode,
@@ -1879,6 +2028,7 @@ function auditShape(data: {
     overtimeRoundingMinutes: data.overtimeRoundingMinutes,
     discountEnabled: data.discountEnabled,
     discountTiers: data.discountTiers,
+    ...(data.insuranceMode ? { insuranceMode: data.insuranceMode } : {}),
   };
 }
 

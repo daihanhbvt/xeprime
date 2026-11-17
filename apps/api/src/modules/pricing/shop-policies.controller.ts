@@ -9,6 +9,7 @@ import { CurrentTenant, CurrentUser, Realms, RequirePermissions, SupportAction, 
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
   SaveRentalPolicyDto,
+  ShopInsuranceImpactDto,
   ShopPolicyQueryDto,
   ShopRentalPolicyDto,
 } from './dto/pricing.dto';
@@ -38,6 +39,21 @@ export class ShopPoliciesController {
     @Query() query: ShopPolicyQueryDto,
   ): Promise<ShopRentalPolicyDto> {
     return this.pricing.getShopPolicy(tenant.tenantId, query.vehicleType);
+  }
+
+  @Get('insurance-impact')
+  @RequirePermissions(PERMISSION.TENANT_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.RENTAL_POLICY_VIEW)
+  @ApiOperation({
+    summary:
+      'Xe kế thừa chính sách gian hàng mà thiếu dữ liệu bảo hiểm - sẽ ngừng nhận đặt tự lái nếu chọn Bắt buộc (ADR 0091)',
+  })
+  @ApiOkResponse({ type: ShopInsuranceImpactDto })
+  insuranceImpact(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: ShopPolicyQueryDto,
+  ): Promise<ShopInsuranceImpactDto> {
+    return this.pricing.shopInsuranceImpact(tenant.tenantId, query.vehicleType);
   }
 
   @Put()

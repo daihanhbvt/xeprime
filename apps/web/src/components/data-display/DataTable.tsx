@@ -2,7 +2,13 @@
 
 import { Pagination, Table } from 'antd';
 import type { ColumnType } from 'antd/es/table';
-import { isValidElement, type Key, type MouseEvent, type ReactNode } from 'react';
+import {
+  isValidElement,
+  type Key,
+  type MouseEvent,
+  type ReactNode,
+  type SyntheticEvent,
+} from 'react';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingState } from '@/components/feedback/LoadingState';
@@ -119,6 +125,12 @@ export interface DataTableExpandable<T> {
   rowExpandable?: (row: T) => boolean;
   /** Nhãn nút mở chi tiết trên thẻ mobile — "Chi tiết tiền của chuyến". */
   label: string;
+  /**
+   * Dòng đang mở, do bên ngoài giữ (tab Mẫu xe mở sẵn dòng có xe chờ duyệt). Bỏ trống = bảng tự
+   * giữ. Có thì phải đi cùng `onExpandedChange`.
+   */
+  expandedKeys?: readonly string[];
+  onExpandedChange?: (key: string, expanded: boolean) => void;
 }
 
 function defaultRowKey<T>(row: T): string {
@@ -277,7 +289,10 @@ export function DataTable<T>({
          * quy tắc chữ hoa/thường khác nhau giữa các ngôn ngữ (chữ İ của tiếng Thổ là ví dụ kinh
          * điển), và tiếng Anh cũng đọc tự nhiên hơn ở dạng thường trong câu này.
          */
-        label={loadingLabel ?? tCommon('components.loadingNamed', { label: label.toLocaleLowerCase(locale) })}
+        label={
+          loadingLabel ??
+          tCommon('components.loadingNamed', { label: label.toLocaleLowerCase(locale) })
+        }
       />
     );
   }
@@ -327,7 +342,20 @@ export function DataTable<T>({
                 <GenericMobileCard columns={columns} row={row} index={index} />
               )}
               {expandable && canExpand(row) ? (
-                <details className={styles.cardExpand}>
+                <details
+                  className={styles.cardExpand}
+                  {...(expandable.expandedKeys
+                    ? {
+                        open: expandable.expandedKeys.includes(rowKey(row)),
+                        onToggle: (event: SyntheticEvent<HTMLDetailsElement>) => {
+                          const open = event.currentTarget.open;
+                          if (open !== expandable.expandedKeys?.includes(rowKey(row))) {
+                            expandable.onExpandedChange?.(rowKey(row), open);
+                          }
+                        },
+                      }
+                    : {})}
+                >
                   <summary className={styles.cardExpandToggle}>{expandable.label}</summary>
                   <div className={styles.cardExpandBody}>{expandable.render(row)}</div>
                 </details>
@@ -371,6 +399,13 @@ export function DataTable<T>({
             ? {
                 expandedRowRender: (row) => expandable.render(row),
                 rowExpandable: canExpand,
+                ...(expandable.expandedKeys
+                  ? {
+                      expandedRowKeys: [...expandable.expandedKeys],
+                      onExpand: (expanded: boolean, row: T) =>
+                        expandable.onExpandedChange?.(rowKey(row), expanded),
+                    }
+                  : {}),
               }
             : undefined
         }

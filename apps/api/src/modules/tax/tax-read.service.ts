@@ -4,12 +4,16 @@ import {
   AUDIT_ACTOR_SCOPE,
   SELLER_ENTITY_TYPE,
   TAX_CATEGORY_VALUES,
+  TAX_EXPORT_GROUP_BY,
   TAX_WITHHOLDING_STATUS,
   TAX_WITHHOLDING_STATUS_UNPAID,
+  VN_UTC_OFFSET_MS,
+  isTaxPeriodEnded,
   taxPeriodKeyVn,
   type PaginationMeta,
   type SellerEntityType,
   type TaxCategory,
+  type TaxExportGroupBy,
   type TaxWithholdingStatus,
 } from '@xeprime/types';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
@@ -79,8 +83,8 @@ export class TaxReadService {
    * `unknown` là gian hàng CHƯA khai hồ sơ người bán — nó phải hiện ra chứ không bị gộp vào
    * "cá nhân", vì gộp là đoán hộ họ một nghĩa vụ pháp lý.
    */
-  async periodSummary(periodKey: string): Promise<TaxPeriodSummaryDto> {
-    const [totals, byStatus, byEntity, byTenant] = await Promise.all([
+  async periodSummary(periodKey: string, now: Date = new Date()): Promise<TaxPeriodSummaryDto> {
+    const [totals, byStatus, byEntity, byTenant, filing] = await Promise.all([
       this.prisma.taxWithholding.aggregate({
         where: { periodKey },
         _sum: { amount: true, taxableBase: true, vatAmount: true, pitAmount: true },
@@ -152,11 +156,20 @@ export class TaxReadService {
                   COALESCE(tw.seller_legal_name, sp.legal_name)
          ORDER BY amount DESC
       `,
+      this.prisma.taxPeriodFiling.findUnique({
+        where: { periodKey },
+        include: {
+          declaredByUser: { select: { displayName: true } },
+          remittedByUser: { select: { displayName: true } },
+        },
+      }),
     ]);
 
     const zero = new Prisma.Decimal(0);
     const statusOf = (status: TaxWithholdingStatus) =>
       byStatus.find((s) => s.status === status)?._sum.amount ?? zero;
+    const rowsOf = (status: TaxWithholdingStatus) =>
+      byStatus.find((s) => s.status === status)?._count._all ?? 0;
 
     return {
       periodKey,
@@ -165,6 +178,24 @@ export class TaxReadService {
       accruedAmount: statusOf(TAX_WITHHOLDING_STATUS.ACCRUED).toFixed(0),
       declaredAmount: statusOf(TAX_WITHHOLDING_STATUS.DECLARED).toFixed(0),
       remittedAmount: statusOf(TAX_WITHHOLDING_STATUS.REMITTED).toFixed(0),
+      accruedRows: rowsOf(TAX_WITHHOLDING_STATUS.ACCRUED),
+      declaredRows: rowsOf(TAX_WITHHOLDING_STATUS.DECLARED),
+      periodEnded: isTaxPeriodEnded(periodKey, now),
+      filing: filing
+        ? {
+            declarationRef: filing.declarationRef,
+            declaredOn: filing.declaredOn ? dbDateToKey(filing.declaredOn) : null,
+            declaredAt: filing.declaredAt?.toISOString() ?? null,
+            declaredByName: filing.declaredByUser?.displayName ?? null,
+            remittanceRef: filing.remittanceRef,
+            remittedOn: filing.remittedOn ? dbDateToKey(filing.remittedOn) : null,
+            remittedAmount: filing.remittedAmount?.toFixed(0) ?? null,
+            ledgerAmount: filing.ledgerAmount?.toFixed(0) ?? null,
+            remittanceNote: filing.remittanceNote,
+            remittedAt: filing.remittedAt?.toISOString() ?? null,
+            remittedByName: filing.remittedByUser?.displayName ?? null,
+          }
+        : null,
       byEntityType: byEntity.map((r) => ({
         entityType: normalizeEntityType(r.entityType),
         amount: new Prisma.Decimal(r.amount).toFixed(0),
@@ -216,79 +247,29 @@ export class TaxReadService {
    * Xuất ở server thay vì dựng ở client: dữ liệu của một kỳ có thể vài nghìn dòng, và tải hết
    * về trình duyệt chỉ để ghép chuỗi là cách chắc chắn để màn hình treo ở kỳ đầu tiên đông đơn.
    */
-  async periodCsv(periodKey: string, actorUserId: string): Promise<string> {
+  async periodCsv(
+    periodKey: string,
+    actorUserId: string,
+    groupBy?: TaxExportGroupBy,
+  ): Promise<string> {
     const rows = await this.prisma.taxWithholding.findMany({
       where: { periodKey },
       select: ROW_SELECT,
       orderBy: [{ accruedAt: 'asc' }, { id: 'asc' }],
     });
 
-    /*
-     * Cột theo yêu cầu kê khai của NĐ 117 (ADR 0068 điều 4): người bán (loại chủ thể, MST, số định
-     * danh, tên pháp lý — SNAPSHOT lúc ghi sổ), doanh thu, GTGT và TNCN tách riêng kèm tỷ lệ, và
-     * nhóm ngành nghề. Dòng trước đợt này (một mức) để trống các cột tách — không bịa phép tách.
-     */
-    const header = [
-      'ky',
-      'ma_don',
-      'gian_hang',
-      'loai_chu_the',
-      'khau_tru_nhu',
-      'ma_so_thue',
-      'so_dinh_danh',
-      'ten_phap_ly',
-      'nhom',
-      'gia_tri_chiu_thue',
-      'ty_le',
-      'ty_le_gtgt',
-      'ty_le_tncn',
-      'thue_gtgt',
-      'thue_tncn',
-      'nhan',
-      'so_tien',
-      'trang_thai',
-      'ngay_phat_sinh',
-      'ngay_ke_khai',
-      'ngay_nop',
-      'dao_cua',
-      'ly_do_dao',
-    ];
-    const lines = rows.map((r) =>
-      [
-        r.periodKey,
-        r.booking.code,
-        r.tenant.name,
-        declaredEntityTypeOf(r),
-        // Chủ thể ÁP THUẾ đã đóng băng (không hồ sơ / doanh nghiệp chưa xác minh ⇒ cá nhân).
-        // Trống ở dòng một-mức cũ: khi đó mọi chủ thể bị khấu trừ, không có phép phân loại.
-        r.taxSubjectType ?? '',
-        r.sellerTaxId ?? r.sellerProfile?.taxId ?? '',
-        r.sellerIdNumber ?? '',
-        r.sellerLegalName ?? r.sellerProfile?.legalName ?? '',
-        r.taxCategory ?? '',
-        r.taxableBase.toFixed(0),
-        r.percent.toFixed(2),
-        r.vatPercent?.toFixed(2) ?? '',
-        r.pitPercent?.toFixed(2) ?? '',
-        r.vatAmount?.toFixed(0) ?? '',
-        r.pitAmount?.toFixed(0) ?? '',
-        r.label,
-        r.amount.toFixed(0),
-        r.status,
-        r.accruedAt.toISOString(),
-        r.declaredAt?.toISOString() ?? '',
-        r.remittedAt?.toISOString() ?? '',
-        r.reversalOfId ?? '',
-        r.reversalReason ?? '',
-      ].map(csvCell),
-    );
+    const table =
+      groupBy === TAX_EXPORT_GROUP_BY.SELLER ? sellerCsvTable(rows) : detailCsvTable(rows);
 
     /*
      * BOM UTF-8 ở đầu file: Excel trên Windows đọc CSV không BOM bằng codepage hệ thống và mọi
      * tên gian hàng có dấu sẽ thành ký tự lạ. Người làm tờ khai mở file này bằng Excel, không
      * bằng editor.
      */
-    const body = [header.join(','), ...lines.map((c) => c.join(','))].join('\r\n');
+    const body = [
+      table.header.join(','),
+      ...table.lines.map((cells) => cells.map(csvCell).join(',')),
+    ].join('\r\n');
 
     /*
      * File này mang SỐ CCCD ĐẦY ĐỦ và MST của mọi người bán trong kỳ — một lần tải là một lần dữ
@@ -304,8 +285,9 @@ export class TaxReadService {
       targetId: periodKey,
       after: {
         periodKey,
-        rows: rows.length,
-        withIdNumber: rows.filter((r) => r.sellerIdNumber).length,
+        groupBy: groupBy ?? null,
+        rows: table.lines.length,
+        withIdNumber: table.withIdNumber,
       },
     });
 
@@ -461,4 +443,170 @@ function normalizeTaxCategory(value: string | null): TaxCategory | null {
 /** Bọc một ô CSV — dấu phẩy, dấu ngoặc kép và xuống dòng trong tên gian hàng đều có thật. */
 function csvCell(value: string): string {
   return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+}
+
+/** Cột `DATE` (nửa đêm UTC của ngày lịch) → `YYYY-MM-DD`. */
+function dbDateToKey(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
+
+/**
+ * Mốc thời gian → `YYYY-MM-DD HH:mm:ss` theo GIỜ VIỆT NAM. File CSV trước đây ghi ISO UTC: một
+ * chuyến bắt đầu 06:30 ngày 01/04 giờ VN hiện thành 23:30 ngày 31/03, và người làm tờ khai đọc nhầm
+ * kỳ của nó dù cột `ky` vẫn đúng.
+ */
+function vnDateTime(at: Date): string {
+  return new Date(at.getTime() + VN_UTC_OFFSET_MS).toISOString().replace('T', ' ').slice(0, 19);
+}
+
+interface CsvTable {
+  header: string[];
+  lines: string[][];
+  /** Số dòng của file mang số định danh đầy đủ — đi vào audit (chỉ đếm, không ghi số). */
+  withIdNumber: number;
+}
+
+/**
+ * Từng dòng theo chuyến. Cột theo yêu cầu kê khai của NĐ 117 (ADR 0068 điều 4): người bán (loại
+ * chủ thể, MST, số định danh, tên pháp lý — SNAPSHOT lúc ghi sổ), doanh thu, GTGT và TNCN tách riêng
+ * kèm tỷ lệ, và nhóm ngành nghề. Dòng trước đợt này (một mức) để trống các cột tách — không bịa phép
+ * tách.
+ */
+function detailCsvTable(rows: readonly Row[]): CsvTable {
+  const header = [
+    'ky',
+    'ma_don',
+    'gian_hang',
+    'loai_chu_the',
+    'khau_tru_nhu',
+    'ma_so_thue',
+    'so_dinh_danh',
+    'ten_phap_ly',
+    'nhom',
+    'gia_tri_chiu_thue',
+    'ty_le',
+    'ty_le_gtgt',
+    'ty_le_tncn',
+    'thue_gtgt',
+    'thue_tncn',
+    'nhan',
+    'so_tien',
+    'trang_thai',
+    'ngay_phat_sinh',
+    'ngay_ke_khai',
+    'ngay_nop',
+    'dao_cua',
+    'ly_do_dao',
+  ];
+  const lines = rows.map((r) => [
+    r.periodKey,
+    r.booking.code,
+    r.tenant.name,
+    declaredEntityTypeOf(r),
+    // Chủ thể ÁP THUẾ đã đóng băng (không hồ sơ / doanh nghiệp chưa xác minh ⇒ cá nhân).
+    // Trống ở dòng một-mức cũ: khi đó mọi chủ thể bị khấu trừ, không có phép phân loại.
+    r.taxSubjectType ?? '',
+    r.sellerTaxId ?? r.sellerProfile?.taxId ?? '',
+    r.sellerIdNumber ?? '',
+    r.sellerLegalName ?? r.sellerProfile?.legalName ?? '',
+    r.taxCategory ?? '',
+    r.taxableBase.toFixed(0),
+    r.percent.toFixed(2),
+    r.vatPercent?.toFixed(2) ?? '',
+    r.pitPercent?.toFixed(2) ?? '',
+    r.vatAmount?.toFixed(0) ?? '',
+    r.pitAmount?.toFixed(0) ?? '',
+    r.label,
+    r.amount.toFixed(0),
+    r.status,
+    vnDateTime(r.accruedAt),
+    r.declaredAt ? vnDateTime(r.declaredAt) : '',
+    r.remittedAt ? vnDateTime(r.remittedAt) : '',
+    r.reversalOfId ?? '',
+    r.reversalReason ?? '',
+  ]);
+  return { header, lines, withIdNumber: rows.filter((r) => r.sellerIdNumber).length };
+}
+
+/**
+ * Một dòng mỗi NGƯỜI BÁN của kỳ — dạng người làm tờ khai cần để lập bảng kê kèm tờ khai nộp thay
+ * (định danh + doanh thu chịu thuế + GTGT + TNCN).
+ *
+ * Chỉ cộng dòng CÒN HIỆU LỰC (`status ≠ reversed`): dòng gốc bị đảo và dòng đảo của nó đều mang
+ * `reversed`, và dòng đảo giữ nguyên `taxable_base` dương — cộng cả hai là đếm đôi doanh thu.
+ * Người bán = bộ định danh đã chụp lúc ghi sổ + gian hàng; một người đổi MST giữa kỳ hiện hai dòng,
+ * đúng như hai lần khai khác nhau.
+ */
+function sellerCsvTable(rows: readonly Row[]): CsvTable {
+  interface SellerGroup {
+    cells: [string, string, string, string, string, string, string];
+    trips: number;
+    taxableBase: Prisma.Decimal;
+    vat: Prisma.Decimal;
+    pit: Prisma.Decimal;
+    unsplit: Prisma.Decimal;
+    total: Prisma.Decimal;
+  }
+  const zero = new Prisma.Decimal(0);
+  const groups = new Map<string, SellerGroup>();
+  for (const r of rows) {
+    if (r.status === TAX_WITHHOLDING_STATUS.REVERSED) continue;
+    const cells: SellerGroup['cells'] = [
+      r.periodKey,
+      declaredEntityTypeOf(r),
+      r.taxSubjectType ?? '',
+      r.sellerTaxId ?? r.sellerProfile?.taxId ?? '',
+      r.sellerIdNumber ?? '',
+      r.sellerLegalName ?? r.sellerProfile?.legalName ?? '',
+      r.tenant.name,
+    ];
+    const key = JSON.stringify([r.tenantId, ...cells.slice(1, 6)]);
+    const group = groups.get(key) ?? {
+      cells,
+      trips: 0,
+      taxableBase: zero,
+      vat: zero,
+      pit: zero,
+      unsplit: zero,
+      total: zero,
+    };
+    group.trips += 1;
+    group.taxableBase = group.taxableBase.add(r.taxableBase);
+    if (r.vatAmount !== null && r.pitAmount !== null) {
+      group.vat = group.vat.add(r.vatAmount);
+      group.pit = group.pit.add(r.pitAmount);
+    } else {
+      group.unsplit = group.unsplit.add(r.amount);
+    }
+    group.total = group.total.add(r.amount);
+    groups.set(key, group);
+  }
+
+  const sorted = [...groups.values()].sort((a, b) => b.total.comparedTo(a.total));
+  const header = [
+    'ky',
+    'loai_chu_the',
+    'khau_tru_nhu',
+    'ma_so_thue',
+    'so_dinh_danh',
+    'ten_phap_ly',
+    'gian_hang',
+    'so_chuyen',
+    'gia_tri_chiu_thue',
+    'thue_gtgt',
+    'thue_tncn',
+    // Dòng một-mức trước 22/10/2026 không tách GTGT/TNCN — phần đó hiện riêng, không bịa phép tách.
+    'thue_chua_tach',
+    'tong_thue',
+  ];
+  const lines = sorted.map((g) => [
+    ...g.cells,
+    String(g.trips),
+    g.taxableBase.toFixed(0),
+    g.vat.toFixed(0),
+    g.pit.toFixed(0),
+    g.unsplit.toFixed(0),
+    g.total.toFixed(0),
+  ]);
+  return { header, lines, withIdNumber: sorted.filter((g) => g.cells[4] !== '').length };
 }

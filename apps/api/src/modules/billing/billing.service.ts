@@ -89,11 +89,17 @@ import {
   checkSlotSelection,
   planSlotGroups,
   slotScopeVehicleType,
+  BANK_DIRECTION,
+  BANK_MATCH_STATUS,
+  WALLET_ENTRY_KIND,
+  WALLET_ENTRY_SOURCE,
+  WALLET_OWNER_TYPE,
 } from '@xeprime/types';
 import { ListingsService } from '../public-listings/listings.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
+import { WalletService } from '../wallet/wallet.service';
 import {
   AssignSubscriptionDto,
   CreatePlanDto,
@@ -290,6 +296,8 @@ export class BillingService {
     /** ADR 0024 ràng buộc 2: BillingService GỌI writer của `public_listings`, không tự ghi. */
     private readonly listings: ListingsService,
     private readonly config: ConfigService,
+    /** Sổ công nợ phải trả — writer duy nhất của ví; phần gói chuyển thừa ghi có qua đây (ADR 0092). */
+    private readonly wallet: WalletService,
   ) {}
 
   /**
@@ -2563,9 +2571,97 @@ export class BillingService {
    *
    * Thiếu → `partially_paid`, KHÔNG kích hoạt, giữ nguyên mã để chuyển bù (`expiresAt` được
    * XOÁ: hoá đơn đã có tiền thật thì không được để job lật `void` - tiền về sau hạn vài phút
-   * mà mã chết là admin phải xử lý tay một ca lẽ ra tự xong). Thừa → ghi có kỳ sau: `paidAmount`
-   * giữ nguyên phần dư làm bằng chứng, admin thấy chênh lệch ở màn đối soát.
+   * mà mã chết là admin phải xử lý tay một ca lẽ ra tự xong). Thừa → `paidAmount` giữ nguyên phần
+   * dư làm bằng chứng; phần dư được ghi có ví gian hàng ở `creditSubscriptionOverpayWithinTx`.
    */
+  /**
+   * Phần CHUYỂN THỪA của một khoản tiền gói ⇒ ghi có Ví điểm của GIAN HÀNG (ADR 0092). Người gọi
+   * (`SepayService` / khớp tay) gọi NGAY SAU lượt áp tiền, trong cùng transaction.
+   *
+   * Phần thừa đo bằng TIỀN THẬT đã khớp vào đích (hoá đơn lẻ, hoặc phiếu gộp — gồm cả khoản khớp tay
+   * vào hoá đơn con của phiếu), KHÔNG bằng `paid_amount`: gói do admin GÁN TAY sinh hoá đơn `paid`
+   * mà không có đồng nào về ("thu ngoài luồng"); khi khoản chuyển khoản thật của gian hàng được khớp
+   * vào hoá đơn đó, nó là TIỀN TRẢ GÓI, không phải tiền thừa để hoàn lại.
+   *
+   * ```text
+   *   thừa của lượt này = max(0, trước + lượt này − tổng) − max(0, trước − tổng)
+   * ```
+   *
+   * Chống ghi đôi: nguồn bút toán là chính giao dịch ngân hàng (unique 4 cột của sổ ví). Gọi sau
+   * lượt áp tiền nên đã đứng sau khoá hàng của đích — hai khoản song song đọc được tiền của nhau.
+   *
+   * @returns số tiền đã ghi có (0 khi không thừa).
+   */
+  async creditSubscriptionOverpayWithinTx(
+    tx: Prisma.TransactionClient,
+    input: {
+      matchedType:
+        | typeof BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE
+        | typeof BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_CHECKOUT;
+      refId: string;
+      amount: Prisma.Decimal;
+      bankTransactionId: string;
+    },
+  ): Promise<Prisma.Decimal> {
+    const zero = new Prisma.Decimal(0);
+    let checkoutId: string | null =
+      input.matchedType === BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_CHECKOUT ? input.refId : null;
+    let target: { tenantId: string; code: string; totalAmount: Prisma.Decimal } | null = null;
+    if (!checkoutId) {
+      const invoice = await tx.subscriptionInvoice.findUnique({
+        where: { id: input.refId },
+        select: { tenantId: true, code: true, totalAmount: true, checkoutId: true },
+      });
+      if (!invoice) return zero;
+      checkoutId = invoice.checkoutId;
+      target = invoice;
+    }
+    if (checkoutId) {
+      target = await tx.subscriptionCheckout.findUnique({
+        where: { id: checkoutId },
+        select: { tenantId: true, code: true, totalAmount: true },
+      });
+    }
+    if (!target) return zero;
+
+    const [row] = checkoutId
+      ? await tx.$queryRaw<Array<{ cash: Prisma.Decimal }>>`
+          SELECT COALESCE(SUM(bt.amount_in), 0) AS cash
+            FROM bank_transactions bt
+            LEFT JOIN subscription_invoices si
+              ON bt.matched_type = ${BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE} AND si.id = bt.matched_ref_id
+           WHERE bt.id <> ${input.bankTransactionId}
+             AND bt.direction = ${BANK_DIRECTION.IN}
+             AND bt.match_status IN (${BANK_MATCH_STATUS.MATCHED}, ${BANK_MATCH_STATUS.MANUAL})
+             AND ((bt.matched_type = ${BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_CHECKOUT} AND bt.matched_ref_id = ${checkoutId})
+                  OR si.checkout_id = ${checkoutId})
+        `
+      : await tx.$queryRaw<Array<{ cash: Prisma.Decimal }>>`
+          SELECT COALESCE(SUM(amount_in), 0) AS cash
+            FROM bank_transactions
+           WHERE id <> ${input.bankTransactionId}
+             AND direction = ${BANK_DIRECTION.IN}
+             AND match_status IN (${BANK_MATCH_STATUS.MATCHED}, ${BANK_MATCH_STATUS.MANUAL})
+             AND matched_type = ${BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE}
+             AND matched_ref_id = ${input.refId}
+        `;
+    const before = new Prisma.Decimal(row?.cash ?? 0);
+    const over = (cash: Prisma.Decimal) => Prisma.Decimal.max(zero, cash.sub(target.totalAmount));
+    const excess = over(before.add(input.amount)).sub(over(before));
+    if (excess.lte(0)) return zero;
+
+    const credited = await this.wallet.creditWithinTx(tx, {
+      owner: { type: WALLET_OWNER_TYPE.TENANT, tenantId: target.tenantId },
+      kind: WALLET_ENTRY_KIND.SUBSCRIPTION_OVERPAY,
+      sourceType: WALLET_ENTRY_SOURCE.BANK_TRANSACTION,
+      sourceRefId: input.bankTransactionId,
+      amount: excess,
+      note: `Chuyển thừa tiền gói ${target.code}`,
+    });
+    // `null` = giao dịch này đã ghi có từ trước (chạy lại) — không cộng đôi, không báo là vừa ghi.
+    return credited ? excess : zero;
+  }
+
   async applyBankPaymentWithinTx(
     tx: Prisma.TransactionClient,
     args: { code: string; amount: Prisma.Decimal; providerTxId: string },
@@ -2747,7 +2843,8 @@ export class BillingService {
    *    các luật đã có (chặn mua mới cùng loại xe, job không void) tự áp lên từng hoá đơn con;
    *  - đủ ⇒ phiếu `paid`; mỗi hoá đơn con `paid` với `paid_amount` = đúng tổng của nó (phân bổ),
    *    rồi kích hoạt LẦN LƯỢT - một kỳ hỏng thì cả transaction đổ, SePay gửi lại, không nửa vời;
-   *  - thừa / tiền về lần nữa ⇒ cộng vào `paid_amount` của PHIẾU làm bằng chứng chênh lệch.
+   *  - thừa / tiền về lần nữa ⇒ cộng vào `paid_amount` của PHIẾU làm bằng chứng chênh lệch; phần
+   *    thừa được ghi có ví gian hàng ở `creditSubscriptionOverpayWithinTx` (người gọi gọi sau lượt này).
    */
   async applyCheckoutPaymentWithinTx(
     tx: Prisma.TransactionClient,

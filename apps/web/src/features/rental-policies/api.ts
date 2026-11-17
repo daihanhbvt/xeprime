@@ -5,6 +5,7 @@ import type {
   SaveRentalPolicyInput,
   SaveShopOperationDefaultsInput,
   SaveVehiclePricingInput,
+  ShopInsuranceImpact,
   ShopOperationDefaults,
   ShopRentalPolicy,
   VehiclePricing,
@@ -19,6 +20,13 @@ export const saveShopPolicy = (
   vehicleType: string,
 ): Promise<ShopRentalPolicy> =>
   apiPut<ShopRentalPolicy>(`/shop/rental-policies?vehicleType=${vehicleType}`, body);
+
+/**
+ * Xe đang kế thừa chính sách gian hàng mà thiếu dữ liệu bảo hiểm — sẽ ngừng nhận đặt tự lái nếu chọn
+ * Bắt buộc (ADR 0091 điều 1). `applies = false` khi nền tảng chưa bán bảo hiểm theo bậc.
+ */
+export const fetchShopInsuranceImpact = (vehicleType: string): Promise<ShopInsuranceImpact> =>
+  apiGet<ShopInsuranceImpact>('/shop/rental-policies/insurance-impact', { vehicleType });
 
 /** Thời gian chết mặc định theo loại xe — đứng cạnh chính sách thuê trên cùng một trang. */
 export const fetchShopOperationDefaults = (vehicleType: string): Promise<ShopOperationDefaults> =>

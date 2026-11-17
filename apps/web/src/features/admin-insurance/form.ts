@@ -2,7 +2,9 @@ import * as yup from 'yup';
 import {
   INSURANCE_CERTIFICATE_URL_PLACEHOLDER,
   INSURANCE_PREMIUM_BASIS,
+  INSURANCE_PRODUCT_KIND,
   INSURANCE_PRODUCT_LIMITS,
+  INSURANCE_SERVICE_FEE_PERCENT_MAX,
   INSURANCE_VALUE_TIER_LIMITS,
   insurancePremiumTiersProblem,
   MONEY_STEP_VND,
@@ -50,6 +52,15 @@ export interface InsuranceProductFormMessages {
   displayOrder: (min: number, max: number) => string;
   /** Biểu phí bậc sai (ADR 0088) — câu từ `insurancePremiumTiersProblem` không hiện cho admin. */
   tiers: string;
+  /** % phí thu hộ ngoài 0..`INSURANCE_SERVICE_FEE_PERCENT_MAX` hoặc quá hai chữ số lẻ. */
+  serviceFeePercent: (max: number) => string;
+  /** Bật phí thu hộ mà % = 0. */
+  serviceFeePercentRequired: string;
+}
+
+/** Phí thu hộ bảo hiểm chỉ có ở bảo hiểm VẬT CHẤT XE (ADR 0091 điều 3) — cùng luật CHECK ở DB. */
+export function offersServiceFee(product: Pick<InsuranceProduct, 'kind'> | null | undefined) {
+  return product?.kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP;
 }
 
 export function buildInsuranceProductSchema(m: InsuranceProductFormMessages) {
@@ -126,6 +137,28 @@ export function buildInsuranceProductSchema(m: InsuranceProductFormMessages) {
               tiers.map((t) => ({ maxDays: Number(t.maxDays), percent: String(t.percent).trim() })),
             ) === null,
       ),
+    /*
+     * Phí thu hộ bảo hiểm của nền tảng (ADR 0091 điều 3) — % trên `IV`, 0..50, hai chữ số lẻ; bật thì
+     * % > 0. Cùng luật DTO + CHECK `insurance_products_service_fee_*` ở server.
+     */
+    serviceFeeEnabled: yup.boolean().required(),
+    serviceFeePercent: yup
+      .number()
+      .required(m.serviceFeePercent(INSURANCE_SERVICE_FEE_PERCENT_MAX))
+      .min(0, m.serviceFeePercent(INSURANCE_SERVICE_FEE_PERCENT_MAX))
+      .max(
+        INSURANCE_SERVICE_FEE_PERCENT_MAX,
+        m.serviceFeePercent(INSURANCE_SERVICE_FEE_PERCENT_MAX),
+      )
+      .test(
+        'decimals',
+        m.serviceFeePercent(INSURANCE_SERVICE_FEE_PERCENT_MAX),
+        (v) => v == null || Math.abs(Math.round(v * 100) - v * 100) < 1e-6,
+      )
+      .when('serviceFeeEnabled', {
+        is: true,
+        then: (s) => s.moreThan(0, m.serviceFeePercentRequired),
+      }),
   });
 }
 
@@ -156,13 +189,15 @@ export function insuranceProductFormDefaults(
     isActive: product.isActive,
     claimHotline: product.claimHotline ?? '',
     premiumTiers: (product.premiumTiers ?? []).map((t) => ({ ...t })),
+    serviceFeeEnabled: product.serviceFeeEnabled,
+    serviceFeePercent: product.serviceFeePercent,
   };
 }
 
 /** Payload PATCH — tiền là chuỗi số nguyên đồng (ADR 0007); ô trống = không áp dụng (`null`). */
 export function toUpdateInsuranceProductBody(
   form: InsuranceProductFormValues,
-  product?: Pick<InsuranceProduct, 'premiumBasis'>,
+  product?: Pick<InsuranceProduct, 'premiumBasis' | 'kind'>,
 ): UpdateInsuranceProductInput {
   const body: UpdateInsuranceProductInput = {
     nameVi: form.nameVi,
@@ -184,6 +219,10 @@ export function toUpdateInsuranceProductBody(
             percent: String(t.percent).trim(),
           })),
         }
+      : {}),
+    // Phí thu hộ chỉ gửi cho vật chất xe — server từ chối bật nó ở sản phẩm khác (ADR 0091 điều 3).
+    ...(offersServiceFee(product)
+      ? { serviceFeeEnabled: form.serviceFeeEnabled, serviceFeePercent: form.serviceFeePercent }
       : {}),
   };
   for (const field of INSURANCE_MONEY_FIELDS) {

@@ -1,12 +1,12 @@
 import { isValidElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LegacyTenantRedirect } from '@/features/admin-tenants/components/LegacyTenantRedirect';
+import { PartnerTenantResolver } from '@/features/admin-tenants/components/PartnerTenantResolver';
 
 /**
- * URL cũ của danh sách gian hàng chung (`/admin/tenants`) và gốc khối "Đối tác" không
- * được thành trang 404 sau đợt tách 28/09/2026 — bookmark, link trong đơn thuê và lối thoát phiên
- * hỗ trợ đều mang chúng.
+ * Gốc khối "Đối tác" (`/admin/partners`) — điểm vào của hai việc: tra gian hàng chưa biết loại
+ * (`?tenant=`, lối của chi tiết đơn thuê và lối thoát phiên hỗ trợ) và người gõ tắt URL. URL cũ
+ * `/admin/tenants` đã gỡ (16/11/2026); việc tra gian hàng chuyển về đây.
  */
 const redirect = vi.hoisted(() =>
   vi.fn((href: string) => {
@@ -18,8 +18,8 @@ vi.mock('next/navigation', () => ({ redirect }));
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
-async function legacyTenantsPage(params: SearchParams) {
-  const { default: Page } = await import('./tenants/page');
+async function partnersIndex(params: SearchParams) {
+  const { default: Page } = await import('./partners/page');
   return Page({ searchParams: Promise.resolve(params) });
 }
 
@@ -32,16 +32,14 @@ beforeEach(() => {
   redirect.mockClear();
 });
 
-describe('Route cũ của danh sách gian hàng vẫn tới nơi', () => {
-  it('/admin/tenants → "Gian hàng gói"', async () => {
-    expect(await redirectTargetOf(() => legacyTenantsPage({}))).toBe(
-      '/admin/partners/shops',
-    );
+describe('Gốc khối "Đối tác"', () => {
+  it('không tham số → "Gian hàng gói"', async () => {
+    expect(await redirectTargetOf(() => partnersIndex({}))).toBe('/admin/partners/shops');
   });
 
-  it('giữ nguyên bộ lọc cũ (q, status, page) khi chuyển tiếp', async () => {
+  it('giữ nguyên bộ lọc (q, status, page) khi chuyển tiếp', async () => {
     const target = await redirectTargetOf(() =>
-      legacyTenantsPage({ q: 'Gian hàng ABC', status: 'active', page: '2' }),
+      partnersIndex({ q: 'Gian hàng ABC', status: 'active', page: '2' }),
     );
     const url = new URL(target, 'http://x');
     expect(url.pathname).toBe('/admin/partners/shops');
@@ -51,22 +49,17 @@ describe('Route cũ của danh sách gian hàng vẫn tới nơi', () => {
   });
 
   it('?tenant=<id> KHÔNG đoán loại ở client - giao cho bộ tra loại phía server', async () => {
-    const element = await legacyTenantsPage({ tenant: '01HTENANT' });
+    const element = await partnersIndex({ tenant: '01HTENANT' });
 
     expect(redirect).not.toHaveBeenCalled();
     expect(isValidElement(element)).toBe(true);
-    expect((element as { type: unknown }).type).toBe(LegacyTenantRedirect);
+    expect((element as { type: unknown }).type).toBe(PartnerTenantResolver);
     expect((element as { props: { tenantId: string } }).props.tenantId).toBe('01HTENANT');
   });
 
   it('?tenant= rỗng/trắng coi như không có - về danh sách mặc định', async () => {
-    expect(await redirectTargetOf(() => legacyTenantsPage({ tenant: '  ' }))).toContain(
+    expect(await redirectTargetOf(() => partnersIndex({ tenant: '  ' }))).toContain(
       '/admin/partners/shops',
     );
-  });
-
-  it('/admin/partners → "Gian hàng gói"', async () => {
-    const { default: Page } = await import('./partners/page');
-    expect(() => Page()).toThrow('NEXT_REDIRECT:/admin/partners/shops');
   });
 });

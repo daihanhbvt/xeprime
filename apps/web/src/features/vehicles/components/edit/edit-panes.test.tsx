@@ -108,6 +108,11 @@ vi.mock('@/features/rental-policies/hooks/use-vehicle-pricing', () => ({
   useSaveVehiclePricing: () => savePricing,
 }));
 
+/** Tình trạng bảo hiểm của xe (ADR 0091) — mặc định nền tảng CHƯA bán theo bậc ⇒ không có khối chọn. */
+vi.mock('@/features/vehicle-documents/hooks', () => ({
+  useVehicleInsuranceStatus: () => ({ data: { applies: false, eligible: false, gaps: [] } }),
+}));
+
 const updateVehicle = vi.hoisted(() => ({
   mutateAsync: vi.fn(async (_body?: Record<string, unknown>) => undefined),
   isPending: false,

@@ -1,17 +1,22 @@
+import type { ConfigService } from '@nestjs/config';
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
+  NOTIFICATION_TARGET_TYPE,
+  NOTIFICATION_TYPE,
   WALLET_ENTRY_KIND,
   WALLET_ENTRY_SOURCE,
   WALLET_OWNER_TYPE,
   WITHDRAWAL_STATUS,
   WITHDRAWAL_TERMS,
+  taxPeriodKeyVn,
 } from '@xeprime/types';
 import { BankAccountsService } from '../src/modules/bank-accounts/bank-accounts.service';
 import { WalletService } from '../src/modules/wallet/wallet.service';
 import { WithdrawalService } from '../src/modules/wallet/withdrawal.service';
 import { PlatformWithdrawalService } from '../src/modules/wallet/platform-withdrawal.service';
+import { PlatformWalletReadService } from '../src/modules/wallet/platform-wallet-read.service';
 import type { NotificationService } from '../src/modules/notification/notification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { AuditService } from '../src/modules/audit/audit.service';
@@ -29,11 +34,15 @@ const audit = new AuditService(prisma);
 const withdrawals = new WithdrawalService(prisma, wallet, bankAccounts, audit);
 /** Thông báo là tác dụng phụ — chỉ cần biết AI được báo, không cần đẩy push thật. */
 const notifications = { emitToUser: jest.fn(), emitToTenantMembers: jest.fn() };
+/** Ngưỡng hai người của lệnh rút — spec đặt tường minh để không phụ thuộc .env. */
+const DUAL_CONTROL_MIN = 10_000_000;
+const dualControlConfig = { getOrThrow: () => DUAL_CONTROL_MIN };
 const platform = new PlatformWithdrawalService(
   prisma,
   wallet,
   audit,
   notifications as unknown as NotificationService,
+  dualControlConfig as unknown as ConfigService,
 );
 
 let dbAvailable = false;
@@ -357,5 +366,189 @@ describe('Đối chiếu — sổ phải giải thích được số dư ở m�
     });
     const sum = entries.reduce((t, e) => t.add(e.amount), new Prisma.Decimal(0));
     expect(sum.toFixed(0)).toBe((await wallet.summaryFor(owner())).total);
+  });
+});
+
+/**
+ * Đợt rà Admin 16/11/2026: lệnh từ ngưỡng hai người trở lên thì người chuyển phải KHÁC người duyệt
+ * (kiểm trong câu lệnh chốt); cả ba hành động báo đúng chủ ví bằng loại thông báo đúng nghĩa; tra
+ * cứu theo 4 số cuối; bảng kê tháng ghi audit.
+ */
+describe('Rút tiền — hai người, thông báo, tra cứu, bảng kê', () => {
+  /** Ngưỡng thấp để thử bằng số dư 500.000đ của spec — cùng code, khác cấu hình. */
+  const strict = new PlatformWithdrawalService(
+    prisma,
+    wallet,
+    audit,
+    notifications as unknown as NotificationService,
+    { getOrThrow: () => 40_000 } as unknown as ConfigService,
+  );
+  let secondAdminId: string;
+
+  beforeAll(async () => {
+    if (!dbAvailable) return;
+    secondAdminId = newId();
+    await prisma.user.create({
+      data: {
+        realm: ACCOUNT_REALM.PLATFORM,
+        id: secondAdminId,
+        displayName: 'Người chuyển thứ hai',
+        status: 'active',
+      },
+    });
+  });
+
+  afterAll(async () => {
+    if (dbAvailable) await prisma.user.deleteMany({ where: { id: secondAdminId } });
+  });
+
+  async function approved(amount: number) {
+    const created = await withdrawals.create(owner(), userId, {
+      amount: String(amount),
+      bankAccountId: accountId,
+    });
+    await strict.approve(created.id, userId);
+    return prisma.withdrawalRequest.findUniqueOrThrow({ where: { id: created.id } });
+  }
+
+  maybe(
+    'từ ngưỡng: người duyệt tự chuyển ⇒ 409, lệnh vẫn chờ chuyển; người khác chuyển được',
+    async () => {
+      const row = await approved(50_000);
+      await expect(
+        strict.markPaid(row.id, userId, { bankReference: 'FT-SELF', rowVersion: row.rowVersion }),
+      ).rejects.toMatchObject({
+        response: {
+          code: API_ERROR_CODE.WITHDRAWAL_SECOND_PERSON_REQUIRED,
+          details: { minAmount: '40000' },
+        },
+      });
+      const still = await prisma.withdrawalRequest.findUniqueOrThrow({ where: { id: row.id } });
+      expect(still.status).toBe(WITHDRAWAL_STATUS.APPROVED);
+
+      const page = await strict.list({ q: row.code });
+      expect(page.items[0]).toMatchObject({ requiresSecondPerson: true, reviewedById: userId });
+      expect(page.dualControlMinAmount).toBe('40000');
+
+      notifications.emitToUser.mockClear();
+      await strict.markPaid(row.id, secondAdminId, {
+        bankReference: 'FT-SECOND',
+        rowVersion: row.rowVersion,
+      });
+      const paid = await prisma.withdrawalRequest.findUniqueOrThrow({ where: { id: row.id } });
+      expect(paid.status).toBe(WITHDRAWAL_STATUS.PAID);
+      expect(paid.paidBy).toBe(secondAdminId);
+      expect(notifications.emitToUser).toHaveBeenCalledTimes(1);
+      expect(notifications.emitToUser.mock.calls[0]![0]).toBe(userId);
+      expect(notifications.emitToUser.mock.calls[0]![1]).toMatchObject({
+        type: NOTIFICATION_TYPE.WITHDRAWAL_PAID,
+        targetType: NOTIFICATION_TARGET_TYPE.WITHDRAWAL,
+        targetId: row.id,
+      });
+    },
+  );
+
+  maybe('dưới ngưỡng: một người duyệt rồi chuyển vẫn được', async () => {
+    const row = await approved(30_000);
+    await strict.markPaid(row.id, userId, {
+      bankReference: 'FT-SMALL',
+      rowVersion: row.rowVersion,
+    });
+    const paid = await prisma.withdrawalRequest.findUniqueOrThrow({ where: { id: row.id } });
+    expect(paid.status).toBe(WITHDRAWAL_STATUS.PAID);
+  });
+
+  maybe(
+    'từ chối ⇒ báo chủ ví loại "bị từ chối"; đảo ⇒ loại "chuyển không thành công"',
+    async () => {
+      const row = await approved(20_000);
+      notifications.emitToUser.mockClear();
+      await strict.reject(row.id, userId, { reason: 'Tên tài khoản không khớp' });
+      expect(notifications.emitToUser.mock.calls[0]![1]).toMatchObject({
+        type: NOTIFICATION_TYPE.WITHDRAWAL_REJECTED,
+        targetType: NOTIFICATION_TARGET_TYPE.WITHDRAWAL,
+      });
+
+      const paid = await paidWithdrawal(25_000, 'FT-REV-NOTICE');
+      notifications.emitToUser.mockClear();
+      await platform.reverse(paid.id, userId, {
+        reason: 'Ngân hàng trả về',
+        rowVersion: paid.rowVersion,
+      });
+      expect(notifications.emitToUser.mock.calls[0]![1]).toMatchObject({
+        type: NOTIFICATION_TYPE.WITHDRAWAL_REVERSED,
+      });
+    },
+  );
+
+  maybe('tra 4 số cuối tài khoản tìm ở mọi trạng thái; lọc loại ví', async () => {
+    const found = await platform.list({ q: '4567', ownerType: WALLET_OWNER_TYPE.USER, limit: 100 });
+    expect(found.total).toBeGreaterThan(0);
+    expect(found.items.every((i) => i.bankAccountNumber.endsWith('4567'))).toBe(true);
+    expect(found.items.some((i) => i.status === WITHDRAWAL_STATUS.PAID)).toBe(true);
+
+    const tenantOnly = await platform.list({ q: '4567', ownerType: WALLET_OWNER_TYPE.TENANT });
+    expect(tenantOnly.items.find((i) => i.ownerId === userId)).toBeUndefined();
+  });
+
+  maybe(
+    'bảng kê tháng: lệnh đã chi trong tháng (gồm đã đảo), số tài khoản đầy đủ, audit đếm dòng',
+    async () => {
+      const month = taxPeriodKeyVn(new Date());
+      const csv = await platform.monthCsv(month, userId);
+      expect(csv.charCodeAt(0)).toBe(0xfeff);
+      expect(csv).toContain('"0011001234567"');
+      expect(csv).toContain('"FT-SECOND"');
+      expect(csv).toContain(`"${WITHDRAWAL_STATUS.REVERSED}"`);
+      const log = await prisma.auditLog.findFirst({
+        where: { action: 'withdrawal.month_export', targetId: month, actorUserId: userId },
+        orderBy: { createdAt: 'desc' },
+      });
+      expect((log?.afterJson as { rows?: number } | null)?.rows).toBeGreaterThan(0);
+      await prisma.auditLog.deleteMany({
+        where: { action: 'withdrawal.month_export', actorUserId: userId },
+      });
+    },
+  );
+});
+
+/** Ví điểm chỉ đọc cho admin: số khớp sổ, nguồn của bút toán, ngân hàng chỉ cho người có quyền tiền. */
+describe('Ví điểm của chủ ví nhìn từ admin', () => {
+  const adminRead = new PlatformWalletReadService(prisma, wallet);
+
+  maybe(
+    'tổng sổ = khả dụng + đang rút; bút toán rút mang mã lệnh, ngân hàng theo quyền',
+    async () => {
+      const summary = await adminRead.summary(WALLET_OWNER_TYPE.USER, userId);
+      expect(summary.exists).toBe(true);
+      expect(summary.reconciled).toBe(true);
+      expect(summary.ledgerTotal).toBe(summary.total);
+      expect(summary.ownerName).toBe('Chủ ví');
+
+      const support = await adminRead.entries(
+        WALLET_OWNER_TYPE.USER,
+        userId,
+        { limit: 100 },
+        false,
+      );
+      const out = support.items.find((e) => e.kind === WALLET_ENTRY_KIND.WITHDRAWAL);
+      expect(out?.withdrawal?.code).toMatch(/^XPW/);
+      expect(out?.withdrawal?.bankAccountMasked).toBeNull();
+      expect(JSON.stringify(support)).not.toContain('0011001234567');
+
+      const finance = await adminRead.entries(WALLET_OWNER_TYPE.USER, userId, { limit: 100 }, true);
+      const outFinance = finance.items.find((e) => e.kind === WALLET_ENTRY_KIND.WITHDRAWAL);
+      expect(outFinance?.withdrawal?.bankAccountMasked).toMatch(/4567$/);
+      expect(JSON.stringify(finance)).not.toContain('0011001234567');
+    },
+  );
+
+  maybe('loại chủ ví lạ ⇒ 400; chủ ví không tồn tại ⇒ 404', async () => {
+    await expect(adminRead.summary('bogus', userId)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.VALIDATION_FAILED },
+    });
+    await expect(adminRead.summary(WALLET_OWNER_TYPE.TENANT, newId())).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.NOT_FOUND },
+    });
   });
 });

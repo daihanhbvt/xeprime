@@ -13,6 +13,9 @@ import { formatMoneyVndVi, licenceTripLastDayKey, subtractMoney } from '@xeprime
 import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
+  BOOKING_LIMIT_VIOLATION,
+  bookingLimitViolation,
+  lastBookablePickupDateKey,
   MEMBERSHIP_STATUS,
   AUDIT_ACTOR_SCOPE,
   AUTO_ACCEPT_BLOCKER,
@@ -332,6 +335,34 @@ export class BookingRequestsService {
 
   private readonly logger = new Logger(BookingRequestsService.name);
 
+  /** Trần thời gian đặt xe của nền tảng (ADR 0091 điều 4) — ném 400 kèm con số để giao diện nói đúng. */
+  private async assertWithinBookingLimits(
+    serviceType: string,
+    pickupAt: Date | null,
+    returnAt: Date | null,
+  ): Promise<void> {
+    const limits = await this.pricing.bookingLimits();
+    const now = new Date();
+    const violation = bookingLimitViolation({ serviceType, now, pickupAt, returnAt, limits });
+    if (violation === BOOKING_LIMIT_VIOLATION.TOO_FAR_AHEAD) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.BOOKING_TOO_FAR_AHEAD,
+        message: `Chỉ đặt trước được tối đa ${limits.maxAdvanceBookingDays} ngày`,
+        details: {
+          maxAdvanceBookingDays: limits.maxAdvanceBookingDays,
+          lastPickupDate: lastBookablePickupDateKey(now, limits),
+        },
+      });
+    }
+    if (violation === BOOKING_LIMIT_VIOLATION.SELF_DRIVE_TOO_LONG) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.SELF_DRIVE_TOO_LONG,
+        message: `Chuyến tự lái dài tối đa ${limits.selfDriveMaxDays} ngày - dài hơn hãy thuê dài hạn`,
+        details: { selfDriveMaxDays: limits.selfDriveMaxDays },
+      });
+    }
+  }
+
   /**
    * Xe khả dụng để đặt — cùng bốn vế với mọi đường đi thẳng tới một chiếc xe
    * (`marketplaceVehicleWhere`): chưa xoá, nền tảng đã duyệt, CHỦ XE ĐANG BẬT HIỂN THỊ
@@ -464,6 +495,12 @@ export class BookingRequestsService {
         });
       }
     }
+    /*
+     * Trần thời gian đặt xe của NỀN TẢNG (ADR 0091 điều 4): đặt trước tối đa N ngày lịch, tự lái
+     * tối đa M ngày — dài hơn thì đặt thuê dài hạn. Kiểm ở SERVER trước mọi tác dụng phụ; bộ chọn
+     * ngày ở web chỉ là báo sớm. Thuê dài hạn đi luật của gói (`bookingLimitViolation` bỏ qua nó).
+     */
+    await this.assertWithinBookingLimits(serviceType, pickupAt, returnAt);
     const withDriver = serviceType === SERVICE_TYPE.WITH_DRIVER;
     // MỘT nguồn luật hành trình cho cả yêu cầu của khách lẫn đơn shop lập tay (common/route-context).
     const route = normalizeRouteContext({
@@ -618,6 +655,26 @@ export class BookingRequestsService {
     );
 
     /*
+     * BẢO HIỂM VẬT CHẤT XE — lựa chọn ĐÓNG BĂNG lúc gửi (ADR 0091 điều 1). Chủ xe đặt Bắt buộc ⇒
+     * server tự đặt "khách mua" bất kể payload; Bắt buộc mà xe chưa đủ điều kiện ⇒ xe tạm không
+     * nhận đặt tự lái. Đứng TRƯỚC mã khuyến mãi: khoản online (mẫu số trần tài trợ) phụ thuộc nó.
+     */
+    const protection = await this.pricing.vehicleProtectionChoice({
+      tenantId: vehicle.tenantId,
+      vehicleId: vehicle.id,
+      serviceType,
+      pickupAt,
+      returnAt,
+      customerSelected: dto.vehicleProtectionSelected === true,
+    });
+    if (protection.blocked) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.VEHICLE_INSURANCE_NOT_READY,
+        message: 'Xe tạm chưa nhận đặt tự lái vì chưa đủ thông tin bảo hiểm bắt buộc',
+      });
+    }
+
+    /*
      * MÃ KHUYẾN MÃI — cửa kiểm THỨ HAI của ba cửa (ADR 0046 điều 7).
      *
      * Đặt ở ĐÚNG đây: sau `loadBookingCustomer` (danh tính đã xác thực để gác "khách hàng mới"
@@ -629,7 +686,13 @@ export class BookingRequestsService {
      * số họ vừa đồng ý, và họ chỉ phát hiện ra lúc nhìn mã QR.
      */
     const promo = dto.promoCode?.trim()
-      ? await this.evaluateSubmittedPromo(dto, vehicle.id, customerUserId, serviceType)
+      ? await this.evaluateSubmittedPromo(
+          dto,
+          vehicle.id,
+          customerUserId,
+          serviceType,
+          protection.selected,
+        )
       : null;
 
     const id = newId();
@@ -700,8 +763,9 @@ export class BookingRequestsService {
             // Chỉ có khoảng trắng là KHÔNG có lời nhắn: hộp thư của chủ xe dựng khung ghi chú
             // theo có/không, lưu `'   '` là một khung rỗng nằm giữa thẻ yêu cầu.
             note: dto.note?.trim() || null,
-            // Lựa chọn bảo hiểm (luồng tiền v2) — lượt chốt giá đọc lại đúng hai cột này.
-            vehicleProtectionSelected: dto.vehicleProtectionSelected === true,
+            // Lựa chọn bảo hiểm ĐÃ ĐÓNG BĂNG (ADR 0091 điều 1) — lượt chốt giá đọc lại đúng các cột này.
+            vehicleProtectionSelected: protection.selected,
+            vehicleProtectionRequired: protection.required,
             personalAccidentSelected: dto.personalAccidentSelected === true,
             deliveryRequested,
             /*
@@ -878,6 +942,25 @@ export class BookingRequestsService {
   }
 
   /**
+   * Khách đã MUA bảo hiểm vật chất xe mà lúc chốt giá xe không còn bán được (chủ xe gỡ ảnh, cà vẹt,
+   * giá trị xe…) ⇒ chặn lượt duyệt, không tự bỏ dòng khách đã chọn (ADR 0091 điều 1). "Đặt ngay"
+   * rơi về chờ chủ xe duyệt tay. Cổng của nền tảng đứng trước: sản phẩm bậc không bán thì không chặn.
+   */
+  private async assertVehicleProtectionKept(
+    req: PendingRequestRow,
+    fees: CustomerFeeBreakdown | null,
+  ): Promise<void> {
+    if (!req.vehicleProtectionSelected || req.serviceType !== SERVICE_TYPE.SELF_DRIVE) return;
+    if (!fees || fees.vehicleProtectionTier != null) return;
+    if (!(await this.pricing.vehicleProtectionTierPricingActive())) return;
+    throw new ConflictException({
+      code: API_ERROR_CODE.VEHICLE_PROTECTION_UNAVAILABLE,
+      message:
+        'Khách đã chọn mua bảo hiểm nhưng xe chưa đủ thông tin bảo hiểm - bổ sung rồi duyệt lại',
+    });
+  }
+
+  /**
    * BẢNG PHÍ ĐÓNG BĂNG của một lượt duyệt, đã áp mã khuyến mãi — cửa kiểm THỨ BA, và là điểm
    * CHỐT GIÁ (ADR 0024 · ADR 0046 điều 7).
    *
@@ -918,16 +1001,21 @@ export class BookingRequestsService {
     const feeOpts = {
       depositRequired: deposit.required,
       vehicleProtectionSelected: req.vehicleProtectionSelected,
+      // Chế độ LÚC GỬI, không phải hôm nay — chủ xe đổi chế độ giữa chừng không viết lại lựa
+      // chọn khách đã thấy (ADR 0091 điều 1).
+      vehicleProtectionRequired: req.vehicleProtectionRequired,
       personalAccidentSelected: req.personalAccidentSelected,
     };
 
     const frozen = this.promos.frozenTermsOf(req);
     if (!frozen) {
       const fees = await this.pricing.customerFeesFor(tenantId, trip, quoteIsEstimate, feeOpts);
+      await this.assertVehicleProtectionKept(req, fees);
       return { fees, promoDropped: false };
     }
 
     const baseFees = await this.pricing.customerFeesFor(tenantId, trip, quoteIsEstimate, feeOpts);
+    await this.assertVehicleProtectionKept(req, baseFees);
     const applied = this.promos.applyFrozenTerms({
       snapshot: frozen,
       money: {
@@ -973,6 +1061,7 @@ export class BookingRequestsService {
     vehicleId: string,
     customerUserId: string,
     serviceType: string,
+    vehicleProtectionSelected: boolean,
   ): Promise<PromoCodeSnapshot> {
     const context = await this.pricing.promoContextFor(vehicleId, {
       ...(dto.pickupAt === undefined ? {} : { pickupAt: dto.pickupAt }),
@@ -982,8 +1071,8 @@ export class BookingRequestsService {
       ...(dto.longTermPackageMonths === undefined
         ? {}
         : { packageMonths: dto.longTermPackageMonths }),
-      // Bảo hiểm đổi khoản online — mẫu số của trần tài trợ — nên phải là lựa chọn THẬT khách gửi.
-      vehicleProtectionSelected: dto.vehicleProtectionSelected === true,
+      // Bảo hiểm đổi khoản online — mẫu số của trần tài trợ — nên phải là lựa chọn ĐÃ ĐÓNG BĂNG.
+      vehicleProtectionSelected,
       personalAccidentSelected: dto.personalAccidentSelected === true,
     });
     if (!context) {
@@ -2821,6 +2910,7 @@ const PENDING_SELECT = {
   promoSnapshot: true,
   /// Lựa chọn bảo hiểm của khách lúc gửi (luồng tiền v2) — lượt chốt giá tính đúng theo nó.
   vehicleProtectionSelected: true,
+  vehicleProtectionRequired: true,
   personalAccidentSelected: true,
   vehicle: {
     select: {

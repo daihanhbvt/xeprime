@@ -33,6 +33,7 @@ import {
   makePricingService,
   makeDriversService,
 } from './helpers/service-factory';
+import { relaxBookingLimits } from './helpers/booking-limits';
 
 /**
  * CÔNG TẮC THU CỌC CỦA GIAN HÀNG — Phase 6, trên PostgreSQL THẬT.
@@ -241,6 +242,8 @@ async function submit(shop: Shop, offsetDays = 5, via = requests) {
 }
 
 beforeAll(async () => {
+  // Spec đặt xe, không phải spec trần đặt xe (ADR 0091 điều 4) — lịch rải theo bộ đếm ngày.
+  relaxBookingLimits();
   try {
     await prisma.$connect();
     await prisma.$queryRaw`SELECT 1`;

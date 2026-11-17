@@ -66,6 +66,12 @@ export class MicInsurancePartner implements InsurancePartner {
     return kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP;
   }
 
+  /** Tình trạng hợp đồng phía MIC (`ttrang`) theo mã giao dịch — ADR 0091 điều 7. */
+  async lookupStatus(partnerRef: string): Promise<string | null> {
+    const found = await this.client.lookup(partnerRef);
+    return found?.ttrang ?? null;
+  }
+
   async issue(request: IssuePolicyRequest): Promise<IssuePolicyResult> {
     if (!this.supportsKind(request.productKind)) {
       return reject(INSURANCE_ISSUE_ERROR.PARTNER_REJECTED, 'MIC chỉ bán bảo hiểm vật chất xe');

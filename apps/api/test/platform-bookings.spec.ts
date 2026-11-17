@@ -3,6 +3,12 @@ import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
   BOOKING_STATUS,
+  PERMISSION,
+  PLATFORM_ROLE,
+  SUPPORT_CASE_CATEGORY,
+  SUPPORT_CASE_PRIORITY,
+  SUPPORT_CASE_STATUS,
+  SUPPORT_PARTY,
   TENANT_STATUS,
   VEHICLE_TYPE,
 } from '@xeprime/types';
@@ -20,6 +26,16 @@ const asService = prisma as unknown as PrismaService;
 const service = new PlatformBookingsService(asService, new AuditService(asService));
 
 const FULL_PHONE = '0912345678';
+
+/** Người trực chỉ có quyền xem đơn (CSKH) và người có cả quyền tiền (tài chính). */
+const VIEW_ONLY = {
+  roleKey: PLATFORM_ROLE.SUPPORT,
+  permissions: [PERMISSION.PLATFORM_BOOKING_VIEW],
+};
+const FINANCE = {
+  roleKey: PLATFORM_ROLE.FINANCE_ADMIN,
+  permissions: [PERMISSION.PLATFORM_BOOKING_VIEW, PERMISSION.PLATFORM_MONEY_MANAGE],
+};
 
 let dbAvailable = false;
 let adminId: string;
@@ -122,6 +138,7 @@ beforeAll(async () => {
 afterAll(async () => {
   if (dbAvailable) {
     await prisma.auditLog.deleteMany({ where: { tenantId } });
+    await prisma.supportCase.deleteMany({ where: { tenantId } });
     await prisma.booking.deleteMany({ where: { tenantId } });
     await prisma.vehicle.deleteMany({ where: { tenantId } });
     await prisma.tenant.deleteMany({ where: { id: tenantId } });
@@ -193,13 +210,66 @@ describe('Platform bookings (Phase 7)', () => {
   });
 
   maybe('getOne: trả chi tiết tiền + cờ hợp đồng, vẫn che SĐT', async () => {
-    const detail = await service.getOne(debtBooking);
+    const detail = await service.getOne(debtBooking, VIEW_ONLY);
     expect(detail.customerPhoneMasked).toBe('091****678');
     expect(detail.hasContract).toBe(false);
     expect(detail.receiptCount).toBe(0);
     expect(detail.paymentCount).toBe(0);
     expect(JSON.stringify(detail)).not.toContain(FULL_PHONE);
   });
+
+  maybe(
+    'getOne: đơn lập tay không có bảng phí ⇒ khối tiền marketplace rỗng, không bịa số 0',
+    async () => {
+      const viewOnly = await service.getOne(debtBooking, VIEW_ONLY);
+      expect(viewOnly.marketplace).toEqual({
+        fees: null,
+        hold: null,
+        // Không có quyền tiền ⇒ server bỏ hẳn chứng từ ngân hàng (null), không trả mảng rỗng.
+        bankTransactions: null,
+        insurancePolicies: [],
+        taxRows: [],
+        cancellation: null,
+      });
+      const finance = await service.getOne(debtBooking, FINANCE);
+      expect(finance.marketplace.bankTransactions).toEqual([]);
+    },
+  );
+
+  maybe(
+    'getOne: case hỗ trợ CÒN MỞ của đơn, cờ kết luận theo trạng thái đơn (ADR 0095)',
+    async () => {
+      const mk = (status: string, category: string) => {
+        const id = newId();
+        return prisma.supportCase
+          .create({
+            data: {
+              id,
+              code: `SC${id.slice(-6).toUpperCase()}`,
+              tenantId,
+              bookingId: debtBooking,
+              openedByUserId: null,
+              openedByScope: SUPPORT_PARTY.PLATFORM,
+              category,
+              priority: SUPPORT_CASE_PRIORITY.NORMAL,
+              status,
+              subject: 'Case của spec',
+              description: 'Case của spec',
+            },
+          })
+          .then(() => id);
+      };
+      const open = await mk(SUPPORT_CASE_STATUS.OPEN, SUPPORT_CASE_CATEGORY.RETURN_UNCONFIRMED);
+      await mk(SUPPORT_CASE_STATUS.CLOSED, SUPPORT_CASE_CATEGORY.DISPUTE);
+
+      const detail = await service.getOne(debtBooking, VIEW_ONLY);
+      // Đơn đang chạy: case trả xe có kết luận; case đã đóng không hiện.
+      expect(detail.openSupportCases).toEqual([
+        expect.objectContaining({ id: open, tripVerdictAvailable: true }),
+      ]);
+      await prisma.supportCase.deleteMany({ where: { bookingId: debtBooking } });
+    },
+  );
 
   maybe('revealContact: trả số đầy đủ VÀ ghi audit', async () => {
     const before = await prisma.auditLog.count({
@@ -225,7 +295,7 @@ describe('Platform bookings (Phase 7)', () => {
   });
 
   maybe('id lạ → NOT_FOUND (cả getOne lẫn revealContact)', async () => {
-    await expect(service.getOne(newId())).rejects.toMatchObject({
+    await expect(service.getOne(newId(), VIEW_ONLY)).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.NOT_FOUND },
     });
     await expect(service.revealContact(newId(), adminId)).rejects.toMatchObject({

@@ -82,6 +82,44 @@ export function isInsurancePolicyStatus(value: unknown): value is InsurancePolic
   return typeof value === 'string' && (INSURANCE_POLICY_STATUS_VALUES as string[]).includes(value);
 }
 
+/**
+ * Lượt THU HỒI hợp đồng chia hai nhánh theo HIỆU LỰC — ADR 0093. Server quyết, client chỉ hiện.
+ *
+ *  - `cancel_refund`: hợp đồng chưa từng có hiệu lực ⇒ `cancelled` + hoàn phí vào Ví điểm khách.
+ *  - `void_keep_payable`: hợp đồng đã có hiệu lực ⇒ `voided`, không hoàn, phí vẫn kê trả hãng.
+ */
+export const INSURANCE_VOID_BRANCH = {
+  CANCEL_REFUND: 'cancel_refund',
+  VOID_KEEP_PAYABLE: 'void_keep_payable',
+} as const;
+
+export type InsuranceVoidBranch =
+  (typeof INSURANCE_VOID_BRANCH)[keyof typeof INSURANCE_VOID_BRANCH];
+export const INSURANCE_VOID_BRANCH_VALUES = Object.values(
+  INSURANCE_VOID_BRANCH,
+) as InsuranceVoidBranch[];
+
+/**
+ * Khi nào khoản hoàn của nhánh `cancel_refund` vào ví — đi theo khoản giữ chỗ để không phân bổ hai lần.
+ *
+ *  - `now`: hold đã chốt `settled` ⇒ hoàn trong chính lượt thu hồi;
+ *  - `after_settlement`: hold còn mở ⇒ vòng tự hoàn làm sau khi hold chốt `settled`;
+ *  - `via_hold`: hold đã chốt kết cục khác ⇒ phí đã về khách qua chính hold;
+ *  - `none`: không có hold / tài khoản khách, hoặc nhánh `void_keep_payable`.
+ */
+export const INSURANCE_VOID_REFUND_TIMING = {
+  NOW: 'now',
+  AFTER_SETTLEMENT: 'after_settlement',
+  VIA_HOLD: 'via_hold',
+  NONE: 'none',
+} as const;
+
+export type InsuranceVoidRefundTiming =
+  (typeof INSURANCE_VOID_REFUND_TIMING)[keyof typeof INSURANCE_VOID_REFUND_TIMING];
+export const INSURANCE_VOID_REFUND_TIMING_VALUES = Object.values(
+  INSURANCE_VOID_REFUND_TIMING,
+) as InsuranceVoidRefundTiming[];
+
 export const INSURANCE_POLICY_STATUS_META: Readonly<Record<InsurancePolicyStatus, StatusMeta>> = {
   [INSURANCE_POLICY_STATUS.RESERVED]: {
     label: 'Đã thu phí, chờ bàn giao',
@@ -149,6 +187,28 @@ export function insuranceRetryDelayMinutes(attempts: number): number {
  * đổi qua các lần thử, đối tác trả lại đúng GCN cũ — nhưng không có lý do để mời nó.
  */
 export const INSURANCE_ISSUING_LEASE_MINUTES = 10;
+
+/**
+ * Tình trạng hợp đồng phía MIC (`ttrang`) mà XePrime phải theo dõi sau khi cấp (ADR 0091 điều 7):
+ * `3` = MIC chưa nhận ảnh xe, `4` = thành công. Ảnh gửi TRƯỚC khi cấp nên thường ra 4 ngay; còn 3
+ * thì tra cứu lại theo nhịp dưới đây.
+ */
+export const INSURANCE_PARTNER_STATUS = {
+  PENDING_PHOTOS: '3',
+  ISSUED: '4',
+} as const;
+
+/** Số lần tra cứu lại một hợp đồng còn chờ ảnh — quá số này thì để admin liên hệ đối tác. */
+export const INSURANCE_PENDING_CHECKS_MAX = 4;
+
+/** Khoảng giữa hai lần tra cứu lại hợp đồng chờ ảnh. */
+export const INSURANCE_PENDING_CHECK_INTERVAL_SECONDS = 15;
+
+/** Quá chừng này sau mốc giao xe mà hợp đồng chưa cấp ⇒ báo khẩn admin MỘT lần (ADR 0091 điều 7). */
+export const INSURANCE_ESCALATE_AFTER_MINUTES = 120;
+
+/** Trần % phí thu hộ bảo hiểm của nền tảng trên `IV` (ADR 0091 điều 3) — khớp CHECK ở DB. */
+export const INSURANCE_SERVICE_FEE_PERCENT_MAX = 50;
 
 /** Trần chờ một lần gọi đối tác phát hành — adapter thật phải tôn trọng nó. */
 export const INSURANCE_PARTNER_TIMEOUT_MS = 60_000;
@@ -361,6 +421,30 @@ export const INSURANCE_COVERAGE_STATUS_COLOR: Readonly<
 // ── Phí theo BẬC giá trị xe — bảo hiểm vật chất xe theo chuyến của MIC (ADR 0088) ──────────────
 
 /**
+ * Chủ xe chọn bảo hiểm vật chất xe theo bậc là BẮT BUỘC hay TUỲ CHỌN cho xe của mình (ADR 0091 điều 1)
+ * — cột `rental_policies.insurance_mode`, CHECK ở DB. Mặc định Tuỳ chọn.
+ *
+ *  - `required` — xe đủ điều kiện ⇒ mọi chuyến tự lái có `IV`, khách không bỏ được; xe chưa đủ
+ *    điều kiện ⇒ KHÔNG nhận đặt tự lái.
+ *  - `optional` — ô tích mặc định chưa tích; xe chưa đủ điều kiện ⇒ không có ô, vẫn nhận đặt.
+ */
+export const INSURANCE_MODE = {
+  REQUIRED: 'required',
+  OPTIONAL: 'optional',
+} as const;
+
+export type InsuranceMode = (typeof INSURANCE_MODE)[keyof typeof INSURANCE_MODE];
+
+export const INSURANCE_MODE_VALUES = Object.values(INSURANCE_MODE) as InsuranceMode[];
+
+/** Giá trị của chính sách chưa khai / dòng cũ — khớp DEFAULT của cột. */
+export const INSURANCE_MODE_DEFAULT: InsuranceMode = INSURANCE_MODE.OPTIONAL;
+
+export function isInsuranceMode(value: unknown): value is InsuranceMode {
+  return typeof value === 'string' && (INSURANCE_MODE_VALUES as string[]).includes(value);
+}
+
+/**
  * Cách một sản phẩm bảo hiểm tính phí.
  *
  *  - `daily` — biểu phí THEO NGÀY ở `fee_policies` (luồng tiền v2), khách tự tích chọn.
@@ -502,7 +586,8 @@ export function computeValueTierPremium(insuredValue: string, percent: string): 
 
 /**
  * Báo giá bảo hiểm vật chất xe THEO BẬC cho một chuyến — đầu vào của `computeCustomerFees`
- * (`vehicleProtectionTier`). Có mặt nghĩa là BẮT BUỘC: khách không bỏ chọn được.
+ * (`vehicleProtectionTier`). Có mặt nghĩa là xe MUA ĐƯỢC; có thu hay không là do chế độ của chủ xe
+ * (`INSURANCE_MODE`) và lựa chọn của khách (ADR 0091 điều 1).
  */
 export interface VehicleProtectionTierQuote {
   amount: string;

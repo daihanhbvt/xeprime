@@ -45,7 +45,6 @@ const PILOT: FeePolicySnapshot = {
   holdPaymentWindowMinutes: 120,
   freeCancelHours: 4,
   // depositPercent 15 · depositMinAmount '0' — đọc từ FEE_SCHEDULE_DEFAULTS (chính sách v8, ADR 0066).
-  depositMaxPercent: 50,
   taxEnabled: false,
   taxRates: null,
   taxLegalBasis: null,
@@ -98,6 +97,7 @@ function holdLinesOf(r: CustomerFeeBreakdown): HoldMoneyLines {
     ownerCommission: r.ownerCommissionAmount,
     vehicleInsurance: String(amountOf(r, FEE_LINE.VEHICLE_PROTECTION)),
     personalInsurance: String(amountOf(r, FEE_LINE.TRIP_INSURANCE)),
+    insuranceServiceFee: String(amountOf(r, FEE_LINE.INSURANCE_SERVICE_FEE)),
     promoDiscount: r.promoDiscountAmount,
   };
 }
@@ -348,20 +348,49 @@ describe('computeCustomerFees — ví dụ chuẩn ADR 0064: thuế 10% trên ti
     expect(totals[ALLOCATION_TARGET.PLATFORM_REVENUE]).toBe('460000');
   });
 
-  describe('bảo hiểm vật chất xe theo BẬC giá trị xe (ADR 0088)', () => {
+  describe('bảo hiểm vật chất xe theo BẬC giá trị xe (ADR 0088 · ADR 0091)', () => {
     const tier = { amount: '224400', insuredValue: '340000000', maxDays: 10, percent: '0.066' };
 
-    it('bắt buộc: có dòng IV dù khách không chọn, đi vào tiền giữ chỗ và vế phải trả hãng', () => {
-      const r = trip({ vehicleProtectionTier: tier });
+    it('chủ xe đặt Bắt buộc: có dòng IV dù khách không chọn, vào tiền giữ chỗ và vế phải trả hãng', () => {
+      const r = trip({ vehicleProtectionTier: tier, vehicleProtectionRequired: true });
       expect(amountOf(r, FEE_LINE.VEHICLE_PROTECTION)).toBe(224400);
       expect(r.vehicleProtectionMandatory).toBe(true);
       expect(r.vehicleProtectionTier).toEqual(tier);
+      expect(r.vehicleProtectionOffer).toEqual({
+        amount: '224400',
+        required: true,
+        serviceFeeAmount: '0',
+      });
       expect(r.onlineAmount).toBe('1434400'); // S 50.000 + H 410.000 + IV 224.400 + D 750.000
       expect(settled(r)[ALLOCATION_TARGET.INSURER_PAYABLE]).toBe('224400');
     });
 
-    it('thay hẳn biểu phí ngày: khách tích chọn cũng không cộng thêm 50.000/ngày', () => {
+    it('Tuỳ chọn, khách không tích: không có đồng IV nào nhưng vẫn mang lời chào bán', () => {
+      const r = trip({ vehicleProtectionTier: tier });
+      expect(amountOf(r, FEE_LINE.VEHICLE_PROTECTION)).toBe(0);
+      expect(r.vehicleProtectionMandatory).toBe(false);
+      expect(r.vehicleProtectionTier).toBeNull();
+      expect(r.vehicleProtectionOffer).toEqual({
+        amount: '224400',
+        required: false,
+        serviceFeeAmount: '0',
+      });
+      expect(r.onlineAmount).toBe('1210000'); // S 50.000 + H 410.000 + D 750.000
+    });
+
+    it('Tuỳ chọn, khách tích: cộng IV, không phải bắt buộc', () => {
       const r = trip({ vehicleProtectionTier: tier, vehicleProtectionSelected: true });
+      expect(amountOf(r, FEE_LINE.VEHICLE_PROTECTION)).toBe(224400);
+      expect(r.vehicleProtectionMandatory).toBe(false);
+      expect(r.vehicleProtectionTier).toEqual(tier);
+    });
+
+    it('thay hẳn biểu phí ngày: khách tích chọn cũng không cộng thêm 50.000/ngày', () => {
+      const r = trip({
+        vehicleProtectionTier: tier,
+        vehicleProtectionRequired: true,
+        vehicleProtectionSelected: true,
+      });
       expect(r.lines.filter((l) => l.key === FEE_LINE.VEHICLE_PROTECTION)).toHaveLength(1);
       expect(amountOf(r, FEE_LINE.VEHICLE_PROTECTION)).toBe(224400);
     });
@@ -372,11 +401,70 @@ describe('computeCustomerFees — ví dụ chuẩn ADR 0064: thuế 10% trên ti
       expect(r.vehicleProtectionMandatory).toBe(false);
     });
 
+    describe('phí thu hộ bảo hiểm của nền tảng X (ADR 0091 điều 3)', () => {
+      const withFee = (over: Partial<FeeInput> = {}) =>
+        trip({
+          vehicleProtectionTier: tier,
+          vehicleProtectionRequired: true,
+          insuranceServiceFeePercent: 10,
+          ...over,
+        });
+
+      it('X = 10% × IV, dòng riêng phía khách, cộng vào tổng khách và tiền giữ chỗ', () => {
+        const r = withFee();
+        expect(amountOf(r, FEE_LINE.INSURANCE_SERVICE_FEE)).toBe(22440);
+        expect(r.insuranceServiceFeeAmount).toBe('22440');
+        const line = lineOf(r, FEE_LINE.INSURANCE_SERVICE_FEE)!;
+        expect(line.bearer).toBe('customer');
+        expect(line.beneficiary).toBe('platform');
+        // S 50.000 + H 410.000 + IV 224.400 + X 22.440 + D 750.000
+        expect(r.onlineAmount).toBe('1456840');
+        // Phần chủ xe D không đổi vì X — X không phải tiền của chủ xe.
+        expect(r.depositAmount).toBe('750000');
+        expect(r.platformRetainedAmount).toBe('460000');
+        expect(r.vehicleProtectionOffer).toEqual({
+          amount: '224400',
+          required: true,
+          serviceFeeAmount: '22440',
+        });
+      });
+
+      it('không có IV thì không có X (Tuỳ chọn, khách không tích)', () => {
+        const r = withFee({ vehicleProtectionRequired: false });
+        expect(amountOf(r, FEE_LINE.INSURANCE_SERVICE_FEE)).toBe(0);
+        // Lời chào bán vẫn nói trước X nếu khách tích.
+        expect(r.vehicleProtectionOffer?.serviceFeeAmount).toBe('22440');
+      });
+
+      it('mã khuyến mãi không trừ vào X: phần tài trợ được = D + S + H', () => {
+        const r = withFee();
+        expect(r.sponsorableAmount).toBe(String(750000 + 50000 + 410000));
+      });
+
+      it('hoàn khách cùng IV khi huỷ; thành doanh thu nền tảng khi chuyến xong', () => {
+        const r = withFee();
+        const refund = allocationTotals(resolveHoldAllocation(holdLinesOf(r), 'refund_all'));
+        expect(refund[ALLOCATION_TARGET.CUSTOMER_BALANCE]).toBe(r.onlineAmount);
+        const late = resolveHoldAllocation(holdLinesOf(r), 'split_late_cancel');
+        expect(late.find((e) => e.key === FEE_LINE.INSURANCE_SERVICE_FEE)?.target).toBe(
+          ALLOCATION_TARGET.CUSTOMER_BALANCE,
+        );
+        const done = settled(r);
+        expect(done[ALLOCATION_TARGET.PLATFORM_REVENUE]).toBe(String(50000 + 410000 + 22440));
+        expect(done[ALLOCATION_TARGET.INSURER_PAYABLE]).toBe('224400');
+      });
+    });
+
     it('cổng nền tảng đóng ⇒ không thu đồng nào dù có báo giá bậc', () => {
-      const r = trip({ vehicleProtectionTier: tier, insuranceOffered: false });
+      const r = trip({
+        vehicleProtectionTier: tier,
+        vehicleProtectionRequired: true,
+        insuranceOffered: false,
+      });
       expect(amountOf(r, FEE_LINE.VEHICLE_PROTECTION)).toBe(0);
       expect(r.vehicleProtectionMandatory).toBe(false);
       expect(r.vehicleProtectionTier).toBeNull();
+      expect(r.vehicleProtectionOffer).toBeNull();
     });
   });
 

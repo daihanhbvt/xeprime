@@ -5,8 +5,15 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { isZeroMoney } from '@xeprime/domain';
 import { FEE_BEARER, FEE_LINE, PRICE_ROW } from '@xeprime/types';
-import { payAtPickupAmount, visibleFeeLines, visiblePriceRows } from '@/lib/customer-price-view';
+import {
+  customerFeeLines,
+  payAtPickupAmount,
+  visibleFeeLines,
+  visiblePriceRows,
+  type CustomerFeeLine,
+} from '@/lib/customer-price-view';
 import { InfoHint } from './InfoHint';
+import { InsuranceFeeHint } from './InsuranceFeeHint';
 import styles from './PriceBreakdown.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -151,7 +158,14 @@ export function PriceBreakdown({
    *     Chỉ ẩn ở UI — và TỔNG thì không bao giờ ẩn, kể cả khi bằng 0.
    */
   const visibleRows = visiblePriceRows(rows);
-  const feeLinesShown = visibleFeeLines(fees?.lines ?? [], audience);
+  /*
+   * Khách đọc phí thu hộ bảo hiểm GỘP vào dòng bảo hiểm vật chất xe, ⓘ tách hai số (ADR 0091
+   * điều 3); chủ xe thấy hai dòng riêng như dữ liệu.
+   */
+  const feeLinesShown: CustomerFeeLine<NonNullable<typeof fees>['lines'][number]>[] =
+    audience === 'customer'
+      ? customerFeeLines(fees?.lines ?? [])
+      : visibleFeeLines(fees?.lines ?? [], audience);
   const promoDiscount = fees?.promoDiscountAmount ?? '0';
   const hasPromo = !isZeroMoney(promoDiscount);
   /*
@@ -254,7 +268,15 @@ export function PriceBreakdown({
               {feeLinesShown.map((line) => (
                 <div key={line.key} className={styles.row}>
                   <dt className={styles.rowLabel}>
-                    <span>{domainLabel('feeLine', line.key)}</span>
+                    <span>
+                      {domainLabel('feeLine', line.key)}
+                      {line.includedServiceFee ? (
+                        <InsuranceFeeHint
+                          fee={line.includedServiceFee}
+                          className={styles.depositInfo}
+                        />
+                      ) : null}
+                    </span>
                     {/*
                       Dòng do CHỦ XE chịu (bảo vệ xe) không cộng vào tổng khách — nói rõ ngay tại
                       dòng, nếu không khách sẽ tự cộng vào và thấy tổng không khớp.
