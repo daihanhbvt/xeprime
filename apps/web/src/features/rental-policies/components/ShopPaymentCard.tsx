@@ -1,6 +1,7 @@
 'use client';
 
-import { App, Button, Result, Switch } from 'antd';
+import { App, Button, Switch } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { PERMISSION } from '@xeprime/types';
@@ -58,10 +59,10 @@ function DepositCollectionRow() {
   if (isError && !data) {
     return (
       <div className={styles.rowBox}>
-        <Result
-          status="error"
+        <EmptyState
+          variant="error"
           title={t('loadError')}
-          extra={
+          action={
             <Button type="primary" onClick={() => void refetch()}>
               {tCommon('actions.retry')}
             </Button>

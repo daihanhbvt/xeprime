@@ -105,14 +105,29 @@ vi.mock('../api', async (importOriginal) => {
   };
 });
 
-// Biểu đồ (recharts cần đo kích thước — jsdom không có) và panel phụ có test riêng.
-vi.mock('@/components/chart/RevenueTrendChart', () => ({
-  RevenueTrendChart: () => <div data-testid="revenue-chart" />,
+// Hai thẻ biểu đồ và panel phụ có test riêng — ở đây chỉ kiểm màn dựng khối nào, với props nào.
+vi.mock('./TrendCards', () => ({
+  RevenueCard: () => <div data-testid="revenue-chart" />,
+  TripsCard: () => <div data-testid="trend-chart" />,
 }));
-vi.mock('@/components/chart/CountTrendChart', () => ({
-  CountTrendChart: () => <div data-testid="trend-chart" />,
+vi.mock('./FleetPlanPanel', () => ({
+  FleetPlanPanel: ({
+    showPlan,
+    showMarket,
+    fleet,
+  }: {
+    showPlan: boolean;
+    showMarket: boolean;
+    fleet: unknown;
+  }) => (
+    <div
+      data-testid="fleet-plan"
+      data-plan={String(showPlan)}
+      data-market={String(showMarket)}
+      data-fleet={String(fleet !== null)}
+    />
+  ),
 }));
-vi.mock('./PlanPanel', () => ({ PlanPanel: () => <div data-testid="plan-panel" /> }));
 vi.mock('./WalletPanel', () => ({
   WalletPanel: ({ showIncome }: { showIncome: boolean }) => (
     <div data-testid="wallet-panel" data-income={String(showIncome)} />
@@ -122,7 +137,6 @@ vi.mock('./ReputationPanel', () => ({ ReputationPanel: () => null }));
 vi.mock('./ShopOnboardingCard', () => ({
   ShopOnboardingCard: () => <div data-testid="shop-onboarding" />,
 }));
-vi.mock('./MarketPanel', () => ({ MarketPanel: () => <div data-testid="market-panel" /> }));
 vi.mock('./OwnerVehiclesPanel', () => ({
   OwnerVehiclesPanel: () => <div data-testid="owner-vehicles" />,
 }));
@@ -243,9 +257,17 @@ beforeEach(() => {
 describe('Tổng quan gian hàng - việc cần làm', () => {
   it('câu trả lời đầu trang dựng từ chính các ô: quá giờ → yêu cầu → giao xe', async () => {
     await renderView();
-    expect(
-      await screen.findByText('Hôm nay: 1 việc đã quá giờ · 3 yêu cầu chờ bạn trả lời · giao 2 xe.'),
-    ).toBeTruthy();
+    await screen.findByText('1 việc đã quá giờ');
+    const subtitle = screen.getByRole('heading', { level: 1 }).nextElementSibling;
+    expect(subtitle?.textContent).toContain(
+      'Hôm nay: 1 việc đã quá giờ · 3 yêu cầu chờ bạn trả lời · giao 2 xe.',
+    );
+  });
+
+  it('lời chào theo tên cho CẢ gian hàng (chốt 17/11/2026 - như app Partner)', async () => {
+    await renderView();
+    await screen.findByText('Chờ giao xe');
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/Chủ shop$/);
   });
 
   it('mỗi ô dẫn tới đúng danh sách lọc sẵn tạo nên con số', async () => {
@@ -254,7 +276,7 @@ describe('Tổng quan gian hàng - việc cần làm', () => {
     const requests = await tile('Yêu cầu chờ duyệt');
     expect(requests.getAttribute('href')).toBe(`${ROUTES.MANAGE.BOOKINGS}?preset=needs_action`);
     expect(within(requests).getByText('3')).toBeTruthy();
-    expect(within(requests).getByText('1 sắp hết hạn trả lời')).toBeTruthy();
+    expect(within(requests).getByText('1 sắp hết hạn')).toBeTruthy();
 
     const payment = await tile('Chờ khách thanh toán');
     expect(payment.getAttribute('href')).toBe(`${ROUTES.MANAGE.BOOKINGS}?preset=awaiting_payment`);
@@ -263,7 +285,7 @@ describe('Tổng quan gian hàng - việc cần làm', () => {
     expect(pickups.getAttribute('href')).toBe(
       bookingsGroupPath(BOOKING_LIST_PRESET.AWAITING_PICKUP),
     );
-    expect(within(pickups).getByText('1 đã quá giờ')).toBeTruthy();
+    expect(within(pickups).getByText('1 quá hạn')).toBeTruthy();
     expect(within(pickups).getByText('2 hẹn hôm nay')).toBeTruthy();
 
     const active = await tile('Đang cho thuê');
@@ -303,12 +325,13 @@ describe('Tổng quan gian hàng - việc cần làm', () => {
     expect(screen.getByText('Không có lịch giao hay nhận xe nào trong 7 ngày tới.')).toBeTruthy();
   });
 
-  it('lịch giao nhận: mốc quá giờ đứng trong nhóm riêng và dẫn thẳng vào chi tiết đơn', async () => {
+  it('lịch giao nhận: mốc quá giờ mang nhãn "Trễ" và nút "Chi tiết" dẫn thẳng vào đơn', async () => {
     await renderView();
 
-    expect(await screen.findByText('Đã quá giờ')).toBeTruthy();
-    const row = screen.getByText('Toyota Vios · 51A-123.45').closest('a') as HTMLAnchorElement;
-    expect(row.getAttribute('href')).toBe(bookingPath.detail('01HBOOKING00000000000000AA'));
+    expect(await screen.findByText('Trễ 1 giờ')).toBeTruthy();
+    expect(screen.getByText('Toyota Vios · 51A-123.45')).toBeTruthy();
+    const detail = screen.getByText('Chi tiết').closest('a') as HTMLAnchorElement;
+    expect(detail.getAttribute('href')).toBe(bookingPath.detail('01HBOOKING00000000000000AA'));
   });
 });
 
@@ -317,9 +340,9 @@ describe('Tổng quan gian hàng - KPI tháng này', () => {
     await renderView();
 
     expect(await screen.findByText('72,5%')).toBeTruthy();
-    expect(screen.getByText('+4,5 điểm')).toBeTruthy();
+    expect(screen.getByText('4,5 điểm so với tháng trước (68%)')).toBeTruthy();
     // 12 đơn so với 10 cùng kỳ.
-    expect(screen.getByText('+20%')).toBeTruthy();
+    expect(screen.getByText('20% so với tháng trước (10)')).toBeTruthy();
     // 8 chuyến so với 0 — không phải "+∞%", cũng không phải "0%".
     expect(screen.getAllByText('Chưa có số cùng kỳ để so').length).toBeGreaterThan(0);
   });
@@ -336,27 +359,17 @@ describe('Tổng quan gian hàng - khối tiền dùng dữ liệu thật', () =
     await renderView();
 
     expect(await screen.findByText('12.500.000 ₫')).toBeTruthy();
+    // Cọc đang giữ là ô cuối của khối so sánh tháng (chốt 17/11/2026).
     expect(screen.getByText('3.000.000 ₫')).toBeTruthy();
-    expect(screen.getByText('Tháng này', { selector: 'div' })).toBeTruthy();
-    expect(screen.getByText('2 đơn còn giữ cọc')).toBeTruthy();
-    expect(await screen.findByText('+25%')).toBeTruthy();
+    expect(screen.getByText('Tiền cọc đang giữ')).toBeTruthy();
+    expect(await screen.findByText(/^25% so với tháng trước/)).toBeTruthy();
   });
 
-  it('phiếu hôm nay hiện trong panel, dòng CHI mang dấu trừ', async () => {
-    state.receipts = [
-      makeReceipt(),
-      makeReceipt({
-        id: '01HRECEIPT000000000000001',
-        receiptNo: 'PC-001',
-        type: RECEIPT_TYPE.EXPENSE,
-        amount: '200000',
-        categoryName: 'Xăng dầu',
-      }),
-    ];
+  it('"Thu chi hôm nay" đã rời Tổng quan - có ở Lịch sử giao dịch (chốt 17/11/2026)', async () => {
+    state.receipts = [makeReceipt()];
     await renderView();
-
-    expect(await screen.findByText('Tiền thuê xe')).toBeTruthy();
-    expect(screen.getByText('−200.000 ₫')).toBeTruthy();
+    await screen.findByText('12.500.000 ₫');
+    expect(screen.queryByText('Thu Chi hôm nay')).toBeNull();
   });
 
   it('gói hết hạn (read_only): VẪN xem được sổ của chính mình - ADR 0027 điều 3', async () => {
@@ -370,8 +383,8 @@ describe('Tổng quan gian hàng - khối tiền dùng dữ liệu thật', () =
     state.featureState = FEATURE_STATE.HIDDEN;
     await renderView();
 
-    // Thẻ đội xe vẫn phải có — chặn khối tiền không được làm hỏng phần còn lại.
-    expect(await screen.findByText('Xe sẵn sàng')).toBeTruthy();
+    // Đội xe ("Xe sẵn sàng") vẫn phải có — chặn khối tiền không được làm hỏng phần còn lại.
+    expect((await screen.findByTestId('fleet-plan')).getAttribute('data-fleet')).toBe('true');
     expect(screen.queryByText('Doanh thu')).toBeNull();
     expect(screen.queryByText('Tiền cọc đang giữ')).toBeNull();
     expect(screen.queryByText('Thu Chi hôm nay')).toBeNull();
@@ -384,7 +397,7 @@ describe('Tổng quan gian hàng - khối tiền dùng dữ liệu thật', () =
     state.permissions = [PERMISSION.BOOKING_VIEW, PERMISSION.VEHICLE_VIEW];
     await renderView();
 
-    expect(await screen.findByText('Xe sẵn sàng')).toBeTruthy();
+    expect((await screen.findByTestId('fleet-plan')).getAttribute('data-fleet')).toBe('true');
     expect(screen.queryByText('Doanh thu')).toBeNull();
     expect(state.summaryCalls).toBe(0);
   });
@@ -428,8 +441,9 @@ describe('Tổng quan - chủ xe cá nhân (tuyến hoa hồng) dùng chung màn
     expect(await screen.findByTestId('owner-vehicles')).toBeTruthy();
     // Tổng quan của MỘT người: lời chào theo tên thay tiêu đề của gian hàng.
     expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/Chủ shop$/);
-    expect(screen.queryByTestId('market-panel')).toBeNull();
-    expect(screen.queryByTestId('plan-panel')).toBeNull();
+    const fleet = screen.getByTestId('fleet-plan');
+    expect(fleet.getAttribute('data-market')).toBe('false');
+    expect(fleet.getAttribute('data-plan')).toBe('false');
     expect(screen.queryByTestId('shop-onboarding')).toBeNull();
   });
 
@@ -447,8 +461,9 @@ describe('Tổng quan - chủ xe cá nhân (tuyến hoa hồng) dùng chung màn
     state.featureState = FEATURE_STATE.ENABLED;
     await renderView();
 
-    expect(await screen.findByTestId('market-panel')).toBeTruthy();
-    expect(screen.getByTestId('plan-panel')).toBeTruthy();
+    const fleet = await screen.findByTestId('fleet-plan');
+    expect(fleet.getAttribute('data-market')).toBe('true');
+    expect(fleet.getAttribute('data-plan')).toBe('true');
     expect(screen.getByTestId('shop-onboarding')).toBeTruthy();
     expect(screen.queryByTestId('owner-vehicles')).toBeNull();
     expect(screen.getByTestId('wallet-panel').getAttribute('data-income')).toBe('false');

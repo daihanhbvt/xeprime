@@ -1,21 +1,11 @@
 'use client';
 
-import { CarOutlined, DollarOutlined, LockOutlined, SwapOutlined } from '@ant-design/icons';
-import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import type { UseQueryResult } from '@tanstack/react-query';
-import {
-  DASHBOARD_TREND_MONTHS,
-  PERMISSION,
-  RECEIPT_SOURCE_GROUP,
-  RECEIPT_STATUS,
-  RECEIPT_TYPE,
-} from '@xeprime/types';
-import { moneyChangePercent } from '@xeprime/domain';
-import { CountTrendChart } from '@/components/chart/CountTrendChart';
-import { RevenueTrendChart } from '@/components/chart/RevenueTrendChart';
+import { Fragment, type ReactNode } from 'react';
+import { PERMISSION, RECEIPT_SOURCE_GROUP, RECEIPT_STATUS, RECEIPT_TYPE } from '@xeprime/types';
+import { LIST_SEPARATOR, countChangePercent, moneyChangePercent } from '@xeprime/domain';
 import { isShopOwner } from '@/constants/account-nav';
-import { receiptsPath } from '@/constants/routes';
+import { ROUTES, receiptsPath } from '@/constants/routes';
 import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/auth/post-auth-destination';
 import { withBranchParam } from '@/features/branches/branch-link';
 import { BranchFilterSelect } from '@/features/branches/components/BranchFilterSelect';
@@ -25,72 +15,53 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { dayjs } from '@/lib/datetime';
-import { DASHBOARD_REVENUE_DAYS, dashboardMonthRange, dashboardTodayRange } from '../api';
-import { greetingKey, todayLabel } from '../dashboard-model';
-import { useDashboardAnswer } from '../hooks/use-dashboard-answer';
+import { dayjs, toAppTz } from '@/lib/datetime';
+import { cx } from '@/lib/cx';
+import { dashboardMonthRange } from '../api';
+import { answerParts, greetingKey, todayLabel, utilizationPointChange } from '../dashboard-model';
 import { useDashboardLinks } from '../hooks/use-dashboard-links';
 import { useDashboardMoney } from '../hooks/use-dashboard-money';
 import { usePartnerOverview } from '../hooks/use-partner-overview';
+import type { PartnerOverview } from '../types';
 import { AgendaPanel } from './AgendaPanel';
-import { ChangeBadge } from './ChangeBadge';
-import { DashboardHeader } from './DashboardHeader';
-import { DashboardPanel } from './DashboardPanel';
-import { MarketPanel } from './MarketPanel';
-import { MonthKpis } from './MonthKpis';
+import { FleetPlanPanel } from './FleetPlanPanel';
+import { MonthKpis, type MonthKpiCell } from './MonthKpis';
 import { OwnerVehiclesPanel } from './OwnerVehiclesPanel';
-import { PlanPanel } from './PlanPanel';
-import { ReceiptMiniList } from './ReceiptMiniList';
 import { ReputationPanel } from './ReputationPanel';
 import { ShopOnboardingCard } from './ShopOnboardingCard';
-import { StatCard } from './StatCard';
 import { TodayFocus } from './TodayFocus';
+import { RevenueCard, TripsCard } from './TrendCards';
 import { WalletPanel } from './WalletPanel';
 import styles from './DashboardView.module.css';
 
 /**
- * TỔNG QUAN của site partner — gian hàng tuyến gói VÀ chủ xe cá nhân (ADR 0085 điều 1: một màn, khối
- * không áp dụng thì vắng). Đúng khuôn bảng điều khiển của UX §1.5:
+ * TỔNG QUAN của site partner — Figma Partner-XePrime "Overview" `24138:80351`, MỘT màn cho gian
+ * hàng tuyến gói và chủ xe cá nhân (ADR 0085 điều 1: khối không áp dụng thì vắng).
  *
- *  1. Câu trả lời ("Hôm nay: giao 3 xe · 1 yêu cầu chờ bạn trả lời") + bốn ô VIỆC CẦN LÀM;
- *  2. KPI tháng này, mỗi thẻ so cùng kỳ tháng trước và dẫn tới danh sách tạo nên nó;
- *  3. Lịch giao/nhận 7 ngày + biểu đồ; cột phải là tiền, gói, uy tín, xe trên chợ.
+ * Bố cục: lời chào + câu tóm tắt · bốn ô việc · hai cột [lịch giao & nhận · so sánh tháng · thu chi
+ * 30 ngày + đơn & chuyến 6 tháng | ví · đội xe & gói · uy tín].
  *
- * Mỗi khối tự ẩn khi người xem không có quyền của nó (server trả `null`, hoặc nơi gọi không chạy
- * truy vấn) — một `shop_staff` không thấy thẻ doanh thu, một `shop_viewer` không thấy gói. Tiền
- * đọc từ sổ thu chi (`useDashboardMoney`), không phải từ `/dashboard/overview`.
+ * Logic giữ nguyên bản trước và ĐỒNG BỘ với app Partner (`ShopDashboardScreen`): mỗi khối tự vắng
+ * khi người xem không có quyền của nó; tiền đọc từ sổ thu chi (`useDashboardMoney`); ô chi nhánh
+ * lọc mọi khối xe/đơn/tiền (ADR 0052). Quyết định 17/11/2026 khi đổi bản vẽ: lời chào theo tên cho
+ * CẢ HAI tuyến; "Xe sẵn sàng" vào thẻ Đội xe; "Tiền cọc đang giữ" là một ô của khối so sánh tháng;
+ * "Thu chi hôm nay" rời Tổng quan (đã có ở Lịch sử giao dịch).
  *
- * Cũng là Tổng quan trong phiên hỗ trợ gian hàng (ADR 0050): ví ẩn vì phiên không bao giờ là chủ,
- * khối tiền ẩn vì phiên không có `finance.view`.
- *
- * ## Chủ xe cá nhân (tuyến hoa hồng)
- *
- * Sổ tổng hợp là năng lực gói (ADR 0027 điều 1): thẻ doanh thu, biểu đồ, sổ quỹ tự vắng theo cờ
- * `finance`, server không trả `trend`. Thêm ba khác biệt có chủ đích, giữ lại từ Tổng quan riêng cũ
- * của họ để không mất tính năng:
- *  - "Xe của bạn" (`OwnerVehiclesPanel`) thay số đếm "Xe trên chợ": 1–3 xe thì cần thấy chính chiếc
- *    xe và vì sao nó chưa hiện, kèm lời mời lên gói khi chạm trần;
- *  - ví hiện THU NHẬP tháng (không có thẻ doanh thu nào khác nói con số đó);
- *  - không thẻ Gói (dòng hoa hồng 0đ không có "ngày hết hạn" nào để gia hạn) và không thẻ ba bước
- *    mở gian hàng (luồng đăng ký của họ là `OwnerRegistrationView`).
+ * Chủ xe cá nhân (tuyến hoa hồng): sổ tổng hợp là năng lực gói (ADR 0027 điều 1) — ô doanh thu,
+ * thu chi 30 ngày tự vắng theo cờ `finance`, server không trả `trend`; "Xe của bạn" thay phần chợ;
+ * ví hiện thêm thu nhập tháng; không phần gói, không thẻ ba bước mở gian hàng.
  */
 export function DashboardView() {
   const t = useTranslations('Dashboard');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
-  const router = useRouter();
   const { has } = usePermissions();
   const { data: user } = useCurrentUser();
   const commission = resolvePartnerTrack(user) === PARTNER_TRACK.COMMISSION;
-  // Chủ xe cá nhân: lời chào theo tên — Tổng quan của MỘT người, không của một gian hàng.
-  const greetName = commission ? user?.displayName?.trim() : undefined;
-  const title = greetName ? t(`greeting.${greetingKey(dayjs())}`, { name: greetName }) : t('title');
+  const now = dayjs();
+  const greetName = user?.displayName?.trim();
+  const title = greetName ? t(`greeting.${greetingKey(now)}`, { name: greetName }) : t('title');
 
-  /*
-   * Ô "Chi nhánh" của Tổng quan — ADR 0052. Làm TRỌN: mọi thẻ xe/đơn/tiền đi theo cùng một chi
-   * nhánh; một con số của chi nhánh đứng cạnh một con số của cả gian hàng là đúng cái hiểu lầm mà
-   * ADR này gỡ đi. Uy tín và gói là của cả gian hàng — hai panel đó nói đúng như vậy.
-   */
   const { filters, setFilters } = useUrlFilters<{ branchId?: string }>((sp) => ({
     branchId: sp.get('branchId') ?? undefined,
   }));
@@ -100,133 +71,150 @@ export function DashboardView() {
     onChange: (next) => setFilters({ branchId: next }),
   });
 
+  const canViewVehicles = has(PERMISSION.VEHICLE_VIEW);
   const overview = usePartnerOverview(branchId);
   const money = useDashboardMoney(branchId);
-  const fleet = useFleetSummary(has(PERMISSION.VEHICLE_VIEW), branchId);
+  const fleet = useFleetSummary(canViewVehicles, branchId);
   const links = useDashboardLinks(branchId);
-  const answer = useDashboardAnswer(overview.data);
   const data = overview.data;
-
   const withBranch = (href: string) => withBranchParam(href, branchId ?? null);
 
-  /*
-   * Đích của hai thẻ tiền LỌC ĐÚNG bộ mà con số được cộng ra — cùng tham số `FinanceOverviewCards`
-   * dùng: `revenue` đã LOẠI tiền giữ hộ và chỉ tính phiếu đã duyệt; thẻ cọc là số TẠI THỜI ĐIỂM
-   * NÀY nên không mang kỳ.
-   */
-  const revenueHref = withBranch(
-    receiptsPath.filtered({
-      ...dashboardMonthRange(),
-      status: RECEIPT_STATUS.APPROVED,
-      type: RECEIPT_TYPE.INCOME,
-      sourceGroup: RECEIPT_SOURCE_GROUP.BUSINESS,
-    }),
-  );
-  const depositHref = withBranch(
-    receiptsPath.filtered({ status: RECEIPT_STATUS.APPROVED, sourceGroup: RECEIPT_SOURCE_GROUP.HELD_FUNDS }),
-  );
+  const moneyText = (isError: boolean, value: string | undefined) =>
+    isError ? tCommon('states.error') : (value ?? tCommon('labels.emptyValue'));
 
-  /**
-   * Giá trị của một thẻ tiền: lỗi nói ra thành chữ, chưa có dữ liệu thì để `loading` của `StatCard`
-   * lo. Nuốt lỗi thành `—` là cách một thẻ hỏng trông y hệt một gian hàng chưa có doanh thu.
-   */
-  function moneyValue<T>(query: UseQueryResult<T>, render: (value: T) => string): string {
-    if (query.isError) return tCommon('states.error');
-    if (!query.data) return tCommon('labels.emptyValue');
-    return render(query.data);
+  // Ô của khối so sánh tháng — cùng tập, cùng thứ tự với `MonthKpis` của app Partner.
+  const cells: MonthKpiCell[] = [];
+  if (money.visible) {
+    const s = money.summary.data;
+    const prev = money.previousSummary.data;
+    cells.push({
+      key: 'revenue',
+      label: t('stats.revenue'),
+      value: moneyText(money.summary.isError, s ? fmt.money(s.revenue) : undefined),
+      href: withBranch(
+        receiptsPath.filtered({
+          ...dashboardMonthRange(),
+          status: RECEIPT_STATUS.APPROVED,
+          type: RECEIPT_TYPE.INCOME,
+          sourceGroup: RECEIPT_SOURCE_GROUP.BUSINESS,
+        }),
+      ),
+      loading: money.summary.isPending,
+      ...(s && prev
+        ? {
+            change: {
+              value: moneyChangePercent(s.revenue, prev.revenue),
+              previous: fmt.moneyCompact(prev.revenue),
+            },
+          }
+        : {}),
+    });
+  }
+  const month = data?.month;
+  if (month !== null) {
+    const loading = !month && !overview.isError;
+    const missing = tCommon('labels.emptyValue');
+    cells.push(
+      {
+        key: 'newBookings',
+        label: t('kpi.newBookings'),
+        value: month ? fmt.count(month.newBookings) : missing,
+        href: links.allBookings,
+        loading,
+        ...(month
+          ? {
+              change: {
+                value: countChangePercent(month.newBookings, month.newBookingsPrevious),
+                previous: fmt.count(month.newBookingsPrevious),
+              },
+            }
+          : {}),
+      },
+      {
+        key: 'completedTrips',
+        label: t('kpi.completedTrips'),
+        value: month ? fmt.count(month.completedTrips) : missing,
+        href: links.completed,
+        loading,
+        ...(month
+          ? {
+              change: {
+                value: countChangePercent(month.completedTrips, month.completedTripsPrevious),
+                previous: fmt.count(month.completedTripsPrevious),
+              },
+            }
+          : {}),
+      },
+      {
+        key: 'utilization',
+        label: t('kpi.utilization'),
+        value: month
+          ? month.utilizationPercent === null
+            ? t('kpi.utilizationEmpty')
+            : t('kpi.utilizationValue', { value: month.utilizationPercent })
+          : missing,
+        href: links.calendar,
+        loading,
+        ...(month && month.utilizationPercent !== null
+          ? {
+              change: {
+                value: utilizationPointChange(
+                  month.utilizationPercent,
+                  month.utilizationPercentPrevious,
+                ),
+                unit: 'points' as const,
+                ...(month.utilizationPercentPrevious != null
+                  ? {
+                      previous: t('kpi.utilizationValue', {
+                        value: month.utilizationPercentPrevious,
+                      }),
+                    }
+                  : {}),
+              },
+            }
+          : {}),
+      },
+    );
+  }
+  if (money.visible) {
+    cells.push({
+      key: 'deposit',
+      label: t('stats.deposit'),
+      value: moneyText(
+        money.summary.isError,
+        money.summary.data ? fmt.money(money.summary.data.depositHeld) : undefined,
+      ),
+      href: withBranch(
+        receiptsPath.filtered({
+          status: RECEIPT_STATUS.APPROVED,
+          sourceGroup: RECEIPT_SOURCE_GROUP.HELD_FUNDS,
+        }),
+      ),
+      loading: money.summary.isPending,
+    });
   }
 
-  const fleetCards = has(PERMISSION.VEHICLE_VIEW) ? (
-    <StatCard
-      label={t('stats.available')}
-      value={fleet.data ? `${fmt.count(fleet.data.available)}/${fmt.count(fleet.data.total)}` : '-'}
-      hint={
-        fleet.data
-          ? t('kpi.fleetHint', {
-              renting: fmt.count(fleet.data.renting),
-              maintenance: fmt.count(fleet.data.maintenance),
-            })
-          : undefined
-      }
-      icon={CarOutlined}
-      tone="green"
-      loading={fleet.isLoading}
-      href={links.availableVehicles}
-    />
-  ) : null;
-
-  const revenueCard = money.visible ? (
-    <StatCard
-      label={t('stats.revenue')}
-      value={moneyValue(money.summary, (s) => fmt.money(s.revenue))}
-      hint={t('stats.revenueHint')}
-      icon={DollarOutlined}
-      tone="gold"
-      loading={money.summary.isLoading}
-      href={revenueHref}
-      change={
-        money.summary.data && money.previousSummary.data ? (
-          <ChangeBadge
-            value={moneyChangePercent(money.summary.data.revenue, money.previousSummary.data.revenue)}
-          />
-        ) : null
-      }
-    />
-  ) : null;
-
-  const depositCard = money.visible ? (
-    <StatCard
-      label={t('stats.deposit')}
-      value={moneyValue(money.summary, (s) => fmt.money(s.depositHeld))}
-      // Mẫu số chỉ có nghĩa khi con số bên trên có nghĩa — lỗi thì bỏ trống.
-      hint={
-        money.summary.data
-          ? t('stats.depositHint', { count: money.summary.data.depositHeldBookings })
-          : undefined
-      }
-      icon={LockOutlined}
-      tone="gold"
-      loading={money.summary.isLoading}
-      href={depositHref}
-    />
-  ) : null;
-
-  const seriesEmpty =
-    money.series.data !== undefined &&
-    money.series.data.buckets.every((b) => b.revenue === '0' && b.cost === '0');
   const trend = data?.trend ?? null;
-  const trendEmpty = trend !== null && trend.every((p) => p.newBookings === 0 && p.completedTrips === 0);
-  const showCharts = money.visible || trend !== null;
+  const showTrips = data ? trend !== null : overview.isError;
+  const showCharts = money.visible || showTrips;
 
   return (
     <div className={styles.wrap}>
-      <DashboardHeader
-        title={title}
-        subtitle={todayLabel(fmt, dayjs())}
-        answer={answer}
-        actions={<BranchFilterSelect branch={branch} value={branchId} className={styles.branch} />}
-      />
+      <header className={styles.header}>
+        <div className={styles.heading}>
+          <h1 className={styles.title}>{title}</h1>
+          <p className={styles.subtitle}>
+            {todayLabel(fmt, now)}
+            {data && answerParts(data) !== null ? '.' : null}
+            {data ? <AnswerText overview={data} /> : null}
+          </p>
+        </div>
+        <BranchFilterSelect branch={branch} value={branchId} className={styles.branch} />
+      </header>
 
-      {/*
-        Gian hàng chưa có xe / chưa duyệt xong: ba bước cần làm đứng TRƯỚC mọi con số, vì lúc đó
-        mọi ô đều là 0 và không ô nào nói được việc gì tiếp theo. Thẻ tự ẩn khi hết việc.
-      */}
       {commission ? null : <ShopOnboardingCard vehicleCount={fleet.data?.total} />}
 
       <TodayFocus overview={data} isError={overview.isError} links={links} />
-
-      <MonthKpis
-        month={data?.month}
-        loading={overview.isLoading}
-        links={links}
-        leading={revenueCard}
-        trailing={
-          <>
-            {fleetCards}
-            {depositCard}
-          </>
-        }
-      />
 
       <div className={styles.columns}>
         <div className={styles.main}>
@@ -241,54 +229,27 @@ export function DashboardView() {
             />
           ) : null}
 
-          {/* Chủ xe 1–3 xe: thấy CHÍNH chiếc xe thay vì số đếm "Xe trên chợ" của gian hàng. */}
           {commission ? <OwnerVehiclesPanel links={links} /> : null}
 
+          <MonthKpis
+            month={toAppTz(now).month() + 1}
+            cells={cells}
+            {...(money.visible
+              ? { report: { href: withBranch(ROUTES.MANAGE.FINANCE), label: t('kpi.report') } }
+              : {})}
+          />
+
           {showCharts ? (
-            <div className={styles.charts}>
-              {money.visible ? (
-                <RevenueTrendChart
-                  points={money.series.data?.buckets ?? []}
-                  labelOf={(bucket) => fmt.dateKey(bucket)}
-                  title={t('charts.revenueTitle', { days: DASHBOARD_REVENUE_DAYS })}
-                  description={t('charts.revenueDescription')}
-                  height={240}
-                  loading={money.series.isLoading}
-                  error={
-                    money.series.isError && !money.series.data
-                      ? { title: t('charts.revenueError'), onRetry: () => void money.series.refetch() }
-                      : null
-                  }
-                  empty={
-                    seriesEmpty
-                      ? {
-                          title: t('charts.revenueEmpty', { days: DASHBOARD_REVENUE_DAYS }),
-                          description: t('charts.revenueEmptyHint'),
-                        }
-                      : null
-                  }
-                />
-              ) : null}
-              {trend !== null ? (
-                <CountTrendChart
-                  points={(trend ?? []).map((p) => ({
-                    key: p.period,
-                    values: { newBookings: p.newBookings, completedTrips: p.completedTrips },
-                  }))}
-                  series={[
-                    { key: 'newBookings', label: t('charts.newBookings') },
-                    { key: 'completedTrips', label: t('charts.completedTrips') },
-                  ]}
-                  labelOf={(period) => fmt.monthYear(new Date(`${period}-15T12:00:00Z`))}
-                  title={t('charts.tripsTitle', { months: DASHBOARD_TREND_MONTHS })}
-                  description={t('charts.tripsDescription')}
-                  loading={overview.isLoading}
-                  error={
-                    overview.isError && !data
-                      ? { title: t('charts.tripsError'), onRetry: () => void overview.refetch() }
-                      : null
-                  }
-                  empty={trendEmpty ? { title: t('charts.tripsEmpty', { months: DASHBOARD_TREND_MONTHS }) } : null}
+            <div
+              className={cx(styles.charts, !(money.visible && showTrips) && styles.chartsSingle)}
+            >
+              {money.visible ? <RevenueCard series={money.series} /> : null}
+              {showTrips ? (
+                <TripsCard
+                  trend={trend ?? undefined}
+                  loading={overview.isPending}
+                  isError={overview.isError}
+                  onRetry={() => void overview.refetch()}
                 />
               ) : null}
             </div>
@@ -297,28 +258,51 @@ export function DashboardView() {
 
         <aside className={styles.side}>
           {isShopOwner(user) ? <WalletPanel showIncome={commission} href={links.balance} /> : null}
-          {has(PERMISSION.SUBSCRIPTION_VIEW) && !commission ? (
-            <PlanPanel href={links.subscription} />
-          ) : null}
-          {data?.market !== null && !commission ? (
-            <MarketPanel market={data?.market ?? undefined} links={links} />
-          ) : null}
+          <FleetPlanPanel
+            showPlan={has(PERMISSION.SUBSCRIPTION_VIEW) && !commission}
+            showMarket={data?.market !== null && !commission}
+            market={data?.market ?? undefined}
+            fleet={canViewVehicles ? fleet : null}
+            links={links}
+          />
           <ReputationPanel metrics={data?.reputation} />
-          {/* Sổ quỹ hôm nay đi cùng điều kiện với thẻ tiền — cùng một tính năng, cùng một quyền. */}
-          {money.visible ? (
-            <DashboardPanel title={t('panels.receipts')} icon={<SwapOutlined />}>
-              <ReceiptMiniList
-                items={money.todayReceipts.data?.items ?? []}
-                loading={money.todayReceipts.isLoading}
-                empty={
-                  money.todayReceipts.isError ? tCommon('states.error') : t('panels.receiptsEmpty')
-                }
-                onSelect={() => router.push(withBranch(receiptsPath.filtered(dashboardTodayRange())))}
-              />
-            </DashboardPanel>
-          ) : null}
         </aside>
       </div>
     </div>
+  );
+}
+
+/**
+ * Câu tóm tắt sau ngày — "Hôm nay: 13 việc đã quá giờ · 3 yêu cầu chờ bạn trả lời." Cùng
+ * `answerParts` với app Partner; phần quá giờ tô đỏ, phần yêu cầu tô đậm như bản vẽ.
+ */
+function AnswerText({ overview }: { overview: PartnerOverview }) {
+  const t = useTranslations('Dashboard.answer');
+  const parts = answerParts(overview);
+  if (parts === null) return null;
+  if (parts.length === 0) return <> {t('calm')}</>;
+
+  const MARK = '\u0000';
+  const [before = '', after = ''] = t('busy', { parts: MARK }).split(MARK);
+  const nodes: ReactNode[] = parts.map((part, index) => (
+    <Fragment key={part.key}>
+      {index > 0 ? LIST_SEPARATOR : null}
+      <span
+        className={cx(
+          part.key === 'overdue' && styles.answerDanger,
+          part.key === 'requests' && styles.answerStrong,
+        )}
+      >
+        {t(part.key, { count: part.count })}
+      </span>
+    </Fragment>
+  ));
+  return (
+    <>
+      {' '}
+      {before}
+      {nodes}
+      {after}
+    </>
   );
 }

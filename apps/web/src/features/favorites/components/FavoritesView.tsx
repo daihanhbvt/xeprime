@@ -1,6 +1,7 @@
 'use client';
 
-import { Alert, Button, Empty, Result, Tabs } from 'antd';
+import { Alert, Button, Result, Tabs } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { VEHICLE_TYPE, VEHICLE_TYPE_VALUES, type VehicleType } from '@xeprime/types';
@@ -28,8 +29,12 @@ export function FavoritesView() {
   const { vehicleType, setVehicleType } = useFavoriteTab();
 
   return (
-    <AccountPanel as="h1" title={t('page.title')} subtitle={t('page.subtitle')} className={styles.page}>
-
+    <AccountPanel
+      as="h1"
+      title={t('page.title')}
+      subtitle={t('page.subtitle')}
+      className={styles.page}
+    >
       <Tabs
         className={styles.tabs}
         activeKey={vehicleType}
@@ -62,7 +67,10 @@ function FavoriteTabLabel({ vehicleType, label }: { vehicleType: VehicleType; la
   if (isInitialLoading || initialError) return label;
   // Số xe là huy hiệu tròn cạnh nhãn (Figma `21636:83301`); `aria-label` đọc trọn câu "Ô tô (5 xe)".
   return (
-    <span className={styles.tabLabel} aria-label={t('tabs.withCount', { type: label, count: total })}>
+    <span
+      className={styles.tabLabel}
+      aria-label={t('tabs.withCount', { type: label, count: total })}
+    >
       <span aria-hidden="true">{label}</span>
       <span aria-hidden="true" className={styles.tabCount}>
         {total}
@@ -110,22 +118,16 @@ function FavoritesTab({
 
   if (list.items.length === 0) {
     return (
-      <Empty
-        className={styles.empty}
-        image={Empty.PRESENTED_IMAGE_SIMPLE}
-        description={
-          <span className={styles.emptyText}>
-            <strong>
-              {t(vehicleType === VEHICLE_TYPE.MOTORBIKE ? 'empty.motorbike' : 'empty.car')}
-            </strong>
-            <span>{t('empty.body')}</span>
-          </span>
+      <EmptyState
+        variant="empty"
+        title={t(vehicleType === VEHICLE_TYPE.MOTORBIKE ? 'empty.motorbike' : 'empty.car')}
+        description={t('empty.body')}
+        action={
+          <Link href={marketplaceSearchHref({ vehicleType })} className={styles.emptyCta}>
+            {t('empty.cta')}
+          </Link>
         }
-      >
-        <Link href={marketplaceSearchHref({ vehicleType })} className={styles.emptyCta}>
-          {t('empty.cta')}
-        </Link>
-      </Empty>
+      />
     );
   }
 

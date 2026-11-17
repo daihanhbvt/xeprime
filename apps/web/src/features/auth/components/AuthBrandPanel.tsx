@@ -1,18 +1,16 @@
 'use client';
 
 import Image from 'next/image';
-import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { APP_NAME } from '@/constants/app-name';
-import { ROUTES } from '@/constants/routes';
 import { APP_DOWNLOAD_QR } from '@/features/content-page/app-download';
 import { cx } from '@/lib/cx';
 import styles from './AuthBrandPanel.module.css';
 
 /** Tên cửa hàng là danh từ riêng — lấy từ cùng nguồn với mã QR tải app, không chép lại. */
-const STORE_NAME = Object.fromEntries(APP_DOWNLOAD_QR.map((s) => [s.key, s.store])) as Record<
+const STORE = Object.fromEntries(APP_DOWNLOAD_QR.map((s) => [s.key, s])) as Record<
   (typeof APP_DOWNLOAD_QR)[number]['key'],
-  string
+  (typeof APP_DOWNLOAD_QR)[number]
 >;
 
 /** Hai huy hiệu theo thứ tự bản vẽ: Google Play trên, App Store dưới. */
@@ -26,8 +24,8 @@ const BADGES = [
  * nền vàng-đen, logo, "Hiện đã có mặt trên GooglePlay & App Store", hai huy hiệu cửa hàng và
  * mockup điện thoại bị khung cắt ở mép phải/dưới.
  *
- * Cùng bộ chữ và cùng đích với banner tải ứng dụng ở trang chủ (`AppBanner`): huy hiệu dẫn tới
- * `/app` — trang DUY NHẤT nói trạng thái phát hành của ứng dụng — chứ không thẳng ra store.
+ * Cùng bộ chữ và cùng đích với banner tải ứng dụng ở trang chủ (`AppBanner`): huy hiệu mở thẳng
+ * trang app trên cửa hàng (cùng link với mã QR), tab mới - app đã phát hành.
  * Chỉ hiện từ tablet ngang trở lên; màn hẹp hơn hộp chỉ còn cột form.
  */
 export function AuthBrandPanel({ className }: { className?: string }) {
@@ -68,13 +66,18 @@ export function AuthBrandPanel({ className }: { className?: string }) {
       <ul className={styles.badges}>
         {BADGES.map((badge) => (
           <li key={badge.key}>
-            <Link href={ROUTES.APP} className={styles.badge}>
+            <a
+              href={STORE[badge.key].value}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.badge}
+            >
               <Image src={badge.icon} alt="" width={36} height={36} unoptimized />
               <span className={styles.badgeText}>
                 <span className={styles.badgeCaption}>{t(badge.captionKey)}</span>
-                <span className={styles.badgeStore}>{STORE_NAME[badge.key]}</span>
+                <span className={styles.badgeStore}>{STORE[badge.key].store}</span>
               </span>
-            </Link>
+            </a>
           </li>
         ))}
       </ul>

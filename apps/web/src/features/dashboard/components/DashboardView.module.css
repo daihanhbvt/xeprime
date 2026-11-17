@@ -1,63 +1,111 @@
 /*
- * Khuôn Tổng quan (UX §1.5): việc cần làm → KPI → hai cột (lịch giao nhận + biểu đồ | tiền, gói,
- * uy tín). Bề rộng nội dung do khung trang giới hạn (`--xp-shell-workspace-max-width`).
+ * Tổng quan partner — Figma `24138:80351`: các khối cách 20; hai cột 1164 | 376 (khe 20).
  */
 .wrap {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
 }
 
-/* Ô chọn chi nhánh nằm ở đầu trang: màn này không có bộ lọc nào khác (ADR 0052). */
+/* Đầu trang — Figma "Page Header" `24138:80354`: tiêu đề 20/30 semibold, dòng phụ 14/20. */
+.header {
+  display: flex;
+  min-height: 52px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.heading {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 320px;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-lead);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-lead);
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.answerDanger {
+  color: #d92d20;
+}
+
+.answerStrong {
+  color: var(--xp-color-text);
+}
+
 .branch {
-  min-width: 220px;
+  min-width: 160px;
 }
 
 .columns {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 376px);
   align-items: start;
-  gap: 16px;
+  gap: 20px;
 }
 
 .main,
 .side {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
   min-width: 0;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .charts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
 }
 
-@media (max-width: 1024px) {
+.chartsSingle {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 1200px) {
   .columns {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  /* Hai cột thành một: các panel phụ xếp đôi để màn tablet không dài lê thê. */
   .side {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    align-items: start;
+  }
+}
+
+@media (max-width: 900px) {
+  .charts {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
 @media (max-width: 640px) {
-  .wrap {
-    gap: 14px;
+  .wrap,
+  .main,
+  .side,
+  .columns {
+    gap: 16px;
   }
 
   .branch {
     width: 100%;
     min-width: 0;
-  }
-
-  .charts {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .side {

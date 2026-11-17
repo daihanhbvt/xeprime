@@ -1,7 +1,8 @@
 'use client';
 
 import { CalendarOutlined } from '@ant-design/icons';
-import { Alert, App, Button, DatePicker, Empty, Pagination, Popconfirm, Skeleton } from 'antd';
+import { Alert, App, Button, DatePicker, Pagination, Popconfirm, Skeleton } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -132,7 +133,10 @@ export function AccountPaymentsView() {
           format={datePattern.date}
           suffixIcon={<CalendarOutlined />}
           allowEmpty={[true, true]}
-          value={[from ? dayjs(from, DAY_PARAM_FORMAT) : null, to ? dayjs(to, DAY_PARAM_FORMAT) : null]}
+          value={[
+            from ? dayjs(from, DAY_PARAM_FORMAT) : null,
+            to ? dayjs(to, DAY_PARAM_FORMAT) : null,
+          ]}
           onChange={(dates) =>
             go({
               from: dates?.[0] ? dates[0].format(DAY_PARAM_FORMAT) : null,
@@ -159,9 +163,9 @@ export function AccountPaymentsView() {
 
       {data ? (
         data.meta.total === 0 ? (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={filtered ? t('empty.filtered') : t('empty.all')}
+          <EmptyState
+            variant={filtered ? 'no-results' : 'empty'}
+            title={filtered ? t('empty.filtered') : t('empty.all')}
           />
         ) : (
           <>

@@ -75,7 +75,9 @@ export function AppStoreQr({
             <span className={styles.code} role="img" aria-label={t('download.qrAlt', { store })}>
               <QRCode value={value} size={size} type="svg" bordered={false} />
             </span>
-            <span className={styles.store}>
+            {/* Người xem trên điện thoại không quét được mã của chính màn hình mình - nhãn cửa
+                hàng là link mở thẳng trang app. */}
+            <a href={value} target="_blank" rel="noopener noreferrer" className={styles.store}>
               {isFooter ? (
                 <Image src={STORE_LOGO[key]} alt="" width={16} height={16} unoptimized />
               ) : (
@@ -85,7 +87,7 @@ export function AppStoreQr({
                 {withCaption && <small>{t('download.downloadOn')}</small>}
                 {store}
               </span>
-            </span>
+            </a>
           </li>
         );
       })}

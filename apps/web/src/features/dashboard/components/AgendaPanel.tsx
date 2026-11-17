@@ -1,28 +1,36 @@
 'use client';
 
-import { CalendarOutlined, RightOutlined } from '@ant-design/icons';
 import { Skeleton } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { useMemo, useState } from 'react';
 import { DASHBOARD_AGENDA_DAYS, DASHBOARD_AGENDA_KIND } from '@xeprime/types';
+import { LIST_SEPARATOR, toAppTz, type Dayjs } from '@xeprime/domain';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { InfoCard } from '@/components/layout/InfoCard';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { dayjs } from '@/lib/datetime';
 import { cx } from '@/lib/cx';
-import { groupAgenda, type AgendaGroup } from '../dashboard-model';
+import { groupAgenda } from '../dashboard-model';
 import type { PartnerAgendaItem, PartnerOverviewAgenda } from '../types';
-import { DashboardPanel } from './DashboardPanel';
+import { HeadLink } from './HeadLink';
 import styles from './AgendaPanel.module.css';
 
+type AgendaTab = 'all' | 'overdue' | 'today' | 'upcoming';
+const TABS: readonly AgendaTab[] = ['all', 'overdue', 'today', 'upcoming'];
+
+interface AgendaRowModel {
+  item: PartnerAgendaItem;
+  overdue: boolean;
+}
+
 /**
- * "Lịch giao & nhận xe" — việc kế tiếp theo GIỜ, gom theo ngày: quá giờ → hôm nay → ngày mai →
- * các ngày sau, trong `DASHBOARD_AGENDA_DAYS` ngày tới.
+ * "Lịch giao & nhận xe" — Figma `24138:80394`: bốn tab (Tất cả · Quá giờ · Hôm nay · N ngày tới)
+ * kèm số, bảng Thời gian · Loại · Xe · Trạng thái · Thao tác, link "Xem tất cả trong Đơn thuê xe".
  *
- * Mỗi dòng là một `<Link>` tới chi tiết đơn (`/bookings/<id>` — màn dùng chung hai tuyến, nơi bàn
- * giao xe), nên từ Tổng quan tới nút "Giao xe" là đúng một cú bấm.
- *
- * `agenda === undefined` là đang tải (hoặc lỗi chưa có dữ liệu cũ); thiếu quyền xem đơn thì nơi
- * gọi không dựng panel này.
+ * Cùng phép chia tab với `AgendaPanel` của app Partner (`groupAgenda` theo mốc `generatedAt` của
+ * server): quá giờ → "Trễ N ngày/giờ/phút", còn lại "Sắp tới". Cột "Hình thức giao/nhận" của bản
+ * vẽ CỐ Ý vắng — API chưa trả (chốt với người dùng 17/11/2026).
  */
 export function AgendaPanel({
   agenda,
@@ -33,7 +41,6 @@ export function AgendaPanel({
   moreHref,
 }: {
   agenda: PartnerOverviewAgenda | undefined;
-  /** Mốc "bây giờ" của server — chia nhóm theo CÙNG thời điểm với con số trên các ô việc. */
   generatedAt: string | undefined;
   isError: boolean;
   onRetry: () => void;
@@ -41,15 +48,68 @@ export function AgendaPanel({
   moreHref: string;
 }) {
   const t = useTranslations('Dashboard.agenda');
+  const [tab, setTab] = useState<AgendaTab>('all');
+  const now = useMemo(() => (generatedAt ? dayjs(generatedAt) : dayjs()), [generatedAt]);
+
+  const buckets = useMemo(() => {
+    const result: Record<AgendaTab, AgendaRowModel[]> = {
+      all: [],
+      overdue: [],
+      today: [],
+      upcoming: [],
+    };
+    if (!agenda) return result;
+    for (const group of groupAgenda(agenda.items, now)) {
+      const overdue = group.kind === 'overdue';
+      for (const item of group.items) {
+        const row = { item, overdue };
+        result.all.push(row);
+        if (overdue) result.overdue.push(row);
+        else if (group.kind === 'today') result.today.push(row);
+        else result.upcoming.push(row);
+      }
+    }
+    return result;
+  }, [agenda, now]);
+
+  const hasItems = buckets.all.length > 0;
+  const rows = buckets[tab];
+
+  const tabs = hasItems ? (
+    <div className={styles.tabs} role="tablist" aria-label={t('title')}>
+      {TABS.map((key) => (
+        <button
+          key={key}
+          type="button"
+          role="tab"
+          aria-selected={tab === key}
+          className={cx(styles.tab, tab === key && styles.tabActive)}
+          onClick={() => setTab(key)}
+        >
+          {key === 'upcoming'
+            ? t('tabs.upcoming', { days: DASHBOARD_AGENDA_DAYS })
+            : t(`tabs.${key}`)}
+          <span
+            className={cx(
+              styles.tabCount,
+              key === 'overdue' && buckets.overdue.length > 0 && styles.tabUrgent,
+            )}
+          >
+            {buckets[key].length}
+          </span>
+        </button>
+      ))}
+    </div>
+  ) : null;
 
   let body;
   if (!agenda) {
     body = isError ? (
       <EmptyState variant="error" title={t('loadError')} onRetry={onRetry} />
     ) : (
-      <Skeleton active title={false} paragraph={{ rows: 4 }} />
+      <Skeleton active title={false} paragraph={{ rows: 5 }} />
     );
-  } else if (agenda.items.length === 0) {
+  } else if (!hasItems) {
     body = (
       <EmptyState
         variant="empty"
@@ -57,115 +117,118 @@ export function AgendaPanel({
         description={t('emptyHint')}
       />
     );
+  } else if (rows.length === 0) {
+    body = <p className={styles.tabEmpty}>{t(`tabEmpty.${tab as Exclude<AgendaTab, 'all'>}`)}</p>;
   } else {
-    const now = generatedAt ? dayjs(generatedAt) : dayjs();
     body = (
-      <div className={styles.groups}>
-        {groupAgenda(agenda.items, now).map((group) => (
-          <AgendaGroupBlock key={group.key} group={group} bookingHref={bookingHref} />
-        ))}
+      <div className={styles.tableWrap}>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>{t('columns.time')}</th>
+              <th>{t('columns.kind')}</th>
+              <th>{t('columns.vehicle')}</th>
+              <th>{t('columns.status')}</th>
+              <th className={styles.actionsCol}>{t('columns.actions')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <AgendaRow
+                key={`${row.item.kind}-${row.item.bookingId}`}
+                row={row}
+                now={now}
+                href={bookingHref(row.item.bookingId)}
+              />
+            ))}
+          </tbody>
+        </table>
       </div>
     );
   }
 
   return (
-    <DashboardPanel
-      title={t('title')}
-      icon={<CalendarOutlined />}
-      extra={<span className={styles.window}>{t('window', { days: DASHBOARD_AGENDA_DAYS })}</span>}
-    >
+    <InfoCard title={t('title')} extra={tabs}>
       {body}
-      {agenda && agenda.items.length > 0 ? (
+      {hasItems ? (
         <div className={styles.foot}>
-          <Link href={moreHref} className={styles.more}>
-            {t('more')}
-            <RightOutlined aria-hidden />
-          </Link>
+          <HeadLink href={moreHref} label={t('moreAll')} />
         </div>
       ) : null}
-    </DashboardPanel>
+    </InfoCard>
   );
 }
 
-function AgendaGroupBlock({
-  group,
-  bookingHref,
-}: {
-  group: AgendaGroup;
-  bookingHref: (id: string) => string;
-}) {
+function AgendaRow({ row, now, href }: { row: AgendaRowModel; now: Dayjs; href: string }) {
   const t = useTranslations('Dashboard.agenda');
   const fmt = useAppFormat();
-  const overdue = group.kind === 'overdue';
-
-  let heading: string;
-  if (group.kind === 'overdue') heading = t('overdue');
-  else if (group.kind === 'today') heading = t('today');
-  else if (group.kind === 'tomorrow') heading = t('tomorrow');
-  else if (group.day) heading = `${fmt.weekdayLong(group.day)} · ${fmt.dateKey(group.key)}`;
-  else heading = group.key;
-
-  return (
-    <section className={styles.group} aria-label={heading}>
-      <h3 className={cx(styles.groupTitle, overdue && styles.groupOverdue)}>
-        {heading}
-        <span className={styles.groupCount}>{group.items.length}</span>
-      </h3>
-      <ul className={styles.list}>
-        {group.items.map((item) => (
-          <AgendaRow
-            key={`${item.kind}-${item.bookingId}`}
-            item={item}
-            overdue={overdue}
-            href={bookingHref(item.bookingId)}
-          />
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function AgendaRow({
-  item,
-  overdue,
-  href,
-}: {
-  item: PartnerAgendaItem;
-  overdue: boolean;
-  href: string;
-}) {
-  const t = useTranslations('Dashboard.agenda');
-  const fmt = useAppFormat();
+  const { item, overdue } = row;
   const pickup = item.kind === DASHBOARD_AGENDA_KIND.PICKUP;
   const kindLabel = t(pickup ? 'kind.pickup' : 'kind.return');
-  // Mốc quá giờ có thể từ hôm qua — phải kèm NGÀY, không chỉ giờ.
-  const when = overdue ? fmt.shortDateTime(item.at) : fmt.time(item.at);
-  const vehicle = item.plateNumber ? `${item.vehicleName} · ${item.plateNumber}` : item.vehicleName;
+  const at = toAppTz(item.at);
+  const vehicle = item.plateNumber
+    ? `${item.vehicleName}${LIST_SEPARATOR}${item.plateNumber}`
+    : item.vehicleName;
 
   return (
-    <li>
-      <Link
-        href={href}
-        className={cx(styles.row, overdue && styles.rowOverdue)}
-        aria-label={t('itemAria', {
-          kind: kindLabel,
-          vehicle,
-          customer: item.customerName,
-          time: when,
-        })}
-      >
-        <span className={styles.time}>{when}</span>
-        <span className={cx(styles.kind, pickup ? styles.kindPickup : styles.kindReturn)}>
+    <tr>
+      <td>
+        <span className={styles.time}>{fmt.time(item.at)}</span>
+        <span className={styles.sub}>
+          {t('dayLabel', { weekday: fmt.weekdayShort(at), date: fmt.dayMonth(item.at) })}
+        </span>
+      </td>
+      <td>
+        <span className={cx(styles.pill, pickup ? styles.pillInfo : styles.pillSuccess)}>
           {kindLabel}
         </span>
-        <span className={styles.main}>
-          <span className={styles.vehicle}>{vehicle}</span>
-          <span className={styles.sub}>
-            {item.customerName} · {item.code}
-          </span>
+      </td>
+      <td>
+        <span className={styles.vehicle}>{vehicle}</span>
+        <span className={styles.sub}>{item.customerName}</span>
+      </td>
+      <td>
+        <span
+          className={cx(
+            styles.pill,
+            styles.dotPill,
+            overdue ? styles.pillDanger : styles.pillWarning,
+          )}
+        >
+          {overdue ? lateLabel(t, at, now) : t('upcoming')}
         </span>
-        <RightOutlined className={styles.chevron} aria-hidden />
-      </Link>
-    </li>
+      </td>
+      <td className={styles.actionsCol}>
+        <Link
+          href={href}
+          className={styles.detail}
+          aria-label={t('itemAria', {
+            kind: kindLabel,
+            vehicle,
+            customer: item.customerName,
+            time: fmt.shortDateTime(item.at),
+          })}
+        >
+          {t('detail')}
+        </Link>
+      </td>
+    </tr>
   );
+}
+
+const MINUTES_PER_HOUR = 60;
+const MINUTES_PER_DAY = 24 * MINUTES_PER_HOUR;
+
+/** Cùng bậc với app Partner: ≥1 ngày → ngày, ≥1 giờ → giờ, còn lại phút (tối thiểu 1). */
+function lateLabel(
+  t: ReturnType<typeof useTranslations<'Dashboard.agenda'>>,
+  at: Dayjs,
+  now: Dayjs,
+): string {
+  const minutes = Math.max(1, now.diff(at, 'minute'));
+  if (minutes >= MINUTES_PER_DAY)
+    return t('lateDays', { count: Math.floor(minutes / MINUTES_PER_DAY) });
+  if (minutes >= MINUTES_PER_HOUR)
+    return t('lateHours', { count: Math.floor(minutes / MINUTES_PER_HOUR) });
+  return t('lateMinutes', { count: minutes });
 }

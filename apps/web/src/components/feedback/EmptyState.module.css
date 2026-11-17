@@ -1,47 +1,59 @@
-/* `min-height` giữ chỗ để bảng không co sập khi chuyển giữa có-dữ-liệu và rỗng
-   (Figma 134:2011 R3 — tránh nhảy bố cục). */
+/*
+ * Trạng thái dùng chung — Figma "States Page" `22306:65271`: hình 320 · khe 16 · tiêu đề 30/38
+ * semibold `Text/Gray/high` · mô tả 16/24 `Text/Gray/low` (cách tiêu đề 6) · nút cách 16.
+ *
+ * `container-type: inline-size` để cỡ đi theo CHỖ ĐẶT, không theo màn hình: một bảng rộng 1320
+ * thấy đúng bản vẽ, một ô 360 trong cột phải thấy bản thu nhỏ. `min-height` giữ chỗ để bảng không
+ * co sập khi chuyển giữa có-dữ-liệu và rỗng (Figma 134:2011 R3).
+ */
 .root {
+  container-type: inline-size;
   display: flex;
+  width: 100%;
   min-height: 220px;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+
+.inner {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
   padding: var(--xp-space-xl) var(--xp-space-md);
   text-align: center;
 }
 
-.icon,
-.iconError {
-  font-size: 40px;
-  line-height: 1;
+.art {
+  width: 320px;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  user-select: none;
 }
 
-.icon {
-  color: var(--xp-color-text-secondary);
-}
-
-.iconError {
-  color: var(--xp-color-error);
+.text {
+  display: flex;
+  max-width: 560px;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
 }
 
 .title {
-  margin: var(--xp-space-md) 0 0;
+  margin: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-lg);
+  font-size: var(--xp-font-size-h1);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-body-lg);
+  line-height: var(--xp-line-height-h1);
 }
 
-/*
- * Cố ý dùng `text-secondary` chứ không `text-tertiary`: tỉ lệ tương phản của tertiary đo được
- * 2.72 — trượt AA (backlog P18). Dòng này mang thông tin nên phải đọc được.
- */
 .description {
-  max-width: 42ch;
-  margin: var(--xp-space-xs) 0 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
 }
 
 .actions {
@@ -49,5 +61,53 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: var(--xp-space-sm);
-  margin-top: var(--xp-space-md);
+}
+
+/* Biến thể giữ class riêng (không đổi kích thước) — để test và CSS phân biệt được nguyên nhân. */
+.art_empty,
+.art_no-results,
+.art_error,
+.art_not-found,
+.art_maintenance,
+.art_coming-soon {
+  flex: none;
+}
+
+/* Chỗ đặt vừa (thẻ, ô nửa trang, web khổ điện thoại): hình 200, tiêu đề 20/30, mô tả 14/20. */
+@container (max-width: 599px) {
+  .inner {
+    gap: 12px;
+    padding: var(--xp-space-lg) var(--xp-space-md);
+  }
+
+  .art {
+    width: 200px;
+  }
+
+  .title {
+    font-size: var(--xp-font-size-lead);
+    line-height: var(--xp-line-height-lead);
+  }
+
+  .description {
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
+  }
+}
+
+/* Chỗ đặt hẹp (cột phải, ô biểu đồ): hình 120, tiêu đề 16/24. */
+@container (max-width: 359px) {
+  .inner {
+    gap: 8px;
+    padding: var(--xp-space-md) var(--xp-space-sm);
+  }
+
+  .art {
+    width: 120px;
+  }
+
+  .title {
+    font-size: var(--xp-font-size-body-lg);
+    line-height: var(--xp-line-height-body-lg);
+  }
 }

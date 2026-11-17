@@ -72,14 +72,7 @@ export function ListYourVehicleLanding({
   showBack = true,
   openInNewTab = false,
 }: ListYourVehicleLandingProps) {
-  const linkTarget = openInNewTab ? { target: '_blank', rel: 'noopener noreferrer' } : {};
   const t = useTranslations('ListYourVehicle.landing');
-  // Khoảng % hoa hồng đọc từ chính sách phí hiện hành; chưa có thì giữ câu chung, không đoán số.
-  const offer = usePartnerOffer().data;
-  const commissionRange =
-    offer?.minOwnerCommissionPercent != null && offer.maxOwnerCommissionPercent != null
-      ? { min: offer.minOwnerCommissionPercent, max: offer.maxOwnerCommissionPercent }
-      : null;
   // Có đầu trang thì `h1` là "Trở thành chủ xe" của đầu trang — mỗi trang đúng một `h1`.
   const heroLevel = showBack ? 'h2' : 'h1';
   const cardLevel = showBack ? 'h3' : 'h2';
@@ -98,74 +91,106 @@ export function ListYourVehicleLanding({
           <p className={styles.subtitle}>{t.rich('subtitle', { br: () => <br /> })}</p>
         </header>
 
-        <div className={cx(styles.tracks, staggerFastClass)}>
-          <TrackCard
-            variant="personal"
-            headingLevel={cardLevel}
-            badge={t('personal.badge')}
-            title={t('personal.title')}
-            tagline={t('personal.tagline')}
-            body={t('personal.body', { maxVehicles: BASIC_OWNER_VEHICLE_CAP })}
-            features={[
-              { key: 'noFee', icon: <TagOutlined />, label: t('personal.features.noFee') },
-              {
-                key: 'vehicleCap',
-                icon: <CarOutlined />,
-                label: t('personal.features.vehicleCap', { maxVehicles: BASIC_OWNER_VEHICLE_CAP }),
-              },
-              { key: 'simple', icon: <SettingOutlined />, label: t('personal.features.simple') },
-            ]}
-            art={{ src: '/list-your-vehicle/owner-personal.webp', width: 884, height: 729 }}
-            offerTitle={t('personal.offerTitle')}
-            offerBody={
-              commissionRange
-                ? t.rich('personal.offerBodyRange', {
-                    ...commissionRange,
-                    strong: (chunks) => <strong>{chunks}</strong>,
-                  })
-                : t.rich('personal.offerBody', {
-                    strong: (chunks) => <strong>{chunks}</strong>,
-                  })
-            }
-            cta={
-              <Link
-                href={personalHref}
-                {...linkTarget}
-                className={cx(styles.cta, styles.ctaOutline)}
-              >
-                {t('personal.cta')}
-                <ArrowRightOutlined aria-hidden="true" />
-              </Link>
-            }
-          />
-
-          <TrackCard
-            variant="shop"
-            headingLevel={cardLevel}
-            ribbon={t('shop.recommended')}
-            badge={t('shop.badge')}
-            title={t('shop.title')}
-            tagline={t('shop.tagline')}
-            body={t.rich('shop.body', { strong: (chunks) => <strong>{chunks}</strong> })}
-            features={[
-              { key: 'fleet', icon: <BankOutlined />, label: t('shop.features.fleet') },
-              { key: 'operations', icon: <CarOutlined />, label: t('shop.features.operations') },
-              { key: 'reports', icon: <SettingOutlined />, label: t('shop.features.reports') },
-            ]}
-            art={{ src: '/list-your-vehicle/owner-shop.webp', width: 829, height: 734 }}
-            offerTitle={t.rich('shop.offerHighlight', {
-              big: (chunks) => <span className={styles.offerBig}>{chunks}</span>,
-            })}
-            offerBody={t('shop.offerBody')}
-            cta={
-              <Link href={shopHref} {...linkTarget} className={cx(styles.cta, styles.ctaPrimary)}>
-                {t('shop.cta')}
-                <ArrowRightOutlined aria-hidden="true" />
-              </Link>
-            }
-          />
-        </div>
+        <PartnerTrackCards
+          personalHref={personalHref}
+          shopHref={shopHref}
+          headingLevel={cardLevel}
+          openInNewTab={openInNewTab}
+        />
       </div>
+    </div>
+  );
+}
+
+/**
+ * Hai thẻ tuyến hợp tác (hoa hồng · gian hàng) — dùng chung cho landing "Trở thành chủ xe" và khối
+ * "Hợp tác cùng XePrime" của trang Về chúng tôi (Figma `22306:64939`), để hai nơi không lệch nhau.
+ */
+export function PartnerTrackCards({
+  personalHref,
+  shopHref,
+  headingLevel,
+  openInNewTab = false,
+  className,
+}: {
+  personalHref: string;
+  shopHref: string;
+  headingLevel: 'h2' | 'h3';
+  openInNewTab?: boolean;
+  className?: string;
+}) {
+  const linkTarget = openInNewTab ? { target: '_blank', rel: 'noopener noreferrer' } : {};
+  const t = useTranslations('ListYourVehicle.landing');
+  // Khoảng % hoa hồng đọc từ chính sách phí hiện hành; chưa có thì giữ câu chung, không đoán số.
+  const offer = usePartnerOffer().data;
+  const commissionRange =
+    offer?.minOwnerCommissionPercent != null && offer.maxOwnerCommissionPercent != null
+      ? { min: offer.minOwnerCommissionPercent, max: offer.maxOwnerCommissionPercent }
+      : null;
+
+  return (
+    <div className={cx(styles.tracks, staggerFastClass, className)}>
+      <TrackCard
+        variant="personal"
+        headingLevel={headingLevel}
+        badge={t('personal.badge')}
+        title={t('personal.title')}
+        tagline={t('personal.tagline')}
+        body={t('personal.body', { maxVehicles: BASIC_OWNER_VEHICLE_CAP })}
+        features={[
+          { key: 'noFee', icon: <TagOutlined />, label: t('personal.features.noFee') },
+          {
+            key: 'vehicleCap',
+            icon: <CarOutlined />,
+            label: t('personal.features.vehicleCap', { maxVehicles: BASIC_OWNER_VEHICLE_CAP }),
+          },
+          { key: 'simple', icon: <SettingOutlined />, label: t('personal.features.simple') },
+        ]}
+        art={{ src: '/list-your-vehicle/owner-personal.webp', width: 884, height: 729 }}
+        offerTitle={t('personal.offerTitle')}
+        offerBody={
+          commissionRange
+            ? t.rich('personal.offerBodyRange', {
+                ...commissionRange,
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })
+            : t.rich('personal.offerBody', {
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })
+        }
+        cta={
+          <Link href={personalHref} {...linkTarget} className={cx(styles.cta, styles.ctaOutline)}>
+            {t('personal.cta')}
+            <ArrowRightOutlined aria-hidden="true" />
+          </Link>
+        }
+      />
+
+      <TrackCard
+        variant="shop"
+        headingLevel={headingLevel}
+        ribbon={t('shop.recommended')}
+        badge={t('shop.badge')}
+        title={t('shop.title')}
+        tagline={t('shop.tagline')}
+        body={t.rich('shop.body', { strong: (chunks) => <strong>{chunks}</strong> })}
+        features={[
+          { key: 'fleet', icon: <BankOutlined />, label: t('shop.features.fleet') },
+          { key: 'operations', icon: <CarOutlined />, label: t('shop.features.operations') },
+          { key: 'reports', icon: <SettingOutlined />, label: t('shop.features.reports') },
+        ]}
+        art={{ src: '/list-your-vehicle/owner-shop.webp', width: 829, height: 734 }}
+        offerTitle={t.rich('shop.offerHighlight', {
+          big: (chunks) => <span className={styles.offerBig}>{chunks}</span>,
+        })}
+        offerBody={t('shop.offerBody')}
+        cta={
+          <Link href={shopHref} {...linkTarget} className={cx(styles.cta, styles.ctaPrimary)}>
+            {t('shop.cta')}
+            <ArrowRightOutlined aria-hidden="true" />
+          </Link>
+        }
+      />
     </div>
   );
 }
