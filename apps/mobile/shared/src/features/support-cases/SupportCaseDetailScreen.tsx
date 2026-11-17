@@ -10,14 +10,18 @@ import {
   SUPPORT_CASE_STATUS_VALUES,
   SUPPORT_CASE_SETTLEMENT_FREEZING_CATEGORIES,
   canTransitionSupportCase,
+  PERMISSION,
   type SupportCaseCategory,
   STATUS_COLOR,
   type SupportCaseStatus,
 } from '@xeprime/types';
 import { useAppToast } from '@/components/feedback/use-app-toast';
-import { AppHeader } from '@/components/layout/AppHeader';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
+import { useHideTabBar } from '@/components/layout/tab-bar-visibility';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenError } from '@/components/state/ScreenError';
+import { ScreenMessage } from '@/components/state/ScreenMessage';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { BlockTitle } from '@/components/ui/BlockTitle';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
@@ -47,7 +51,7 @@ import {
 } from './hooks/use-support-cases';
 
 /**
- * Một yêu cầu hỗ trợ — bản native của `SupportCaseDetailPanel`, bề mặt KHÁCH.
+ * Một yêu cầu hỗ trợ — bản native của `SupportCaseDetailPanel`, bề mặt KHÁCH và GIAN HÀNG.
  *
  * Ba thứ của bề mặt nền tảng KHÔNG có ở đây, đúng như web: nhãn mức ưu tiên, ô đánh dấu "ghi chú
  * nội bộ", và hộp kết luận. Ghi chú nội bộ đã bị server lọc khỏi dòng thời gian trước khi trả —
@@ -60,9 +64,23 @@ export function SupportCaseDetailScreen({
   caseId: string;
   surface: SupportSurface;
 }) {
+  // Chi tiết yêu cầu hỗ trợ nằm TRONG một tab: ẩn thanh tab nổi như màn chi tiết khác.
+  useHideTabBar();
   const t = useTranslations('SupportCases.detail');
+  const tPage = useTranslations('SupportCases.page');
+  const tPermission = useTranslations('ManageCommon.permission');
   const router = useRouter();
-  const query = useSupportCase(surface, caseId);
+  const permissions = usePermissions();
+  /*
+   * Bề mặt GIAN HÀNG gác bằng `support.view` như danh sách — web chỉ mở chi tiết trong hộp thoại
+   * của trang đã gác, còn app có route riêng (deep link, thông báo) nên phải tự gác. Không gọi API
+   * khi biết chắc sẽ nhận 403.
+   */
+  const forbidden =
+    surface === SUPPORT_SURFACE.TENANT &&
+    !permissions.isLoading &&
+    !permissions.has(PERMISSION.SUPPORT_VIEW);
+  const query = useSupportCase(surface, forbidden ? null : caseId);
   // Kéo để làm mới — case đang mở có thể vừa được nền tảng trả lời.
   const pull = usePullRefresh(query.refetch);
 
@@ -72,10 +90,27 @@ export function SupportCaseDetailScreen({
       surface === SUPPORT_SURFACE.TENANT ? ROUTES.manage.supportCases() : ROUTES.account.support(),
     );
 
+  if (forbidden) {
+    return (
+      <>
+        <ManagePageHeader title={t('title')} onBack={back} />
+        <Screen edges={['left', 'right', 'bottom']} scroll={false}>
+          <ScreenMessage
+            icon="lock-closed-outline"
+            title={tPage('noPermissionTitle')}
+            description={`${tPage('noPermission')}\n${tPermission('requires')} ${PERMISSION.SUPPORT_VIEW}`}
+            actionLabel={tPage('backHome')}
+            onAction={() => router.replace(ROUTES.manage.home())}
+          />
+        </Screen>
+      </>
+    );
+  }
+
   if (query.isPending) {
     return (
       <>
-        <AppHeader title={t('title')} onBack={back} />
+        <ManagePageHeader title={t('title')} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']}>
           <MiniRowsSkeleton rows={6} />
         </Screen>
@@ -86,7 +121,7 @@ export function SupportCaseDetailScreen({
   if (query.isError || !query.data) {
     return (
       <>
-        <AppHeader title={t('title')} onBack={back} />
+        <ManagePageHeader title={t('title')} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenError
             error={query.error}
@@ -100,7 +135,7 @@ export function SupportCaseDetailScreen({
 
   return (
     <>
-      <AppHeader title={t('title')} onBack={back} />
+      <ManagePageHeader title={t('title')} onBack={back} />
       <Screen
         edges={['left', 'right', 'bottom']}
         refreshing={pull.refreshing}
@@ -152,7 +187,7 @@ function SupportCaseBody({ row, surface }: { row: SupportCaseDetail; surface: Su
           <DataRow
             label={t('openedBy')}
             // `null` = case do hệ thống mở (worker — ADR 0066), không có người nào bấm nút.
-            value={`${row.openedByName ?? t('openedBySystem')}${LIST_SEPARATOR}${domainLabel('supportCaseParty', row.openedByScope)}`}
+            value={`${row.openedByName ?? t('openedBySystem')}${LIST_SEPARATOR}${domainLabel('supportCaseParty', row.openedByScope, row.openedByScope)}`}
           />
           {row.tenantName ? <DataRow label={t('tenant')} value={row.tenantName} /> : null}
           {row.bookingCode ? <DataRow label={t('booking')} value={row.bookingCode} /> : null}

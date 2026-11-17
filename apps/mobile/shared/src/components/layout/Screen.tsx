@@ -1,4 +1,4 @@
-import { useTabBarInset } from './tab-bar-inset';
+import { useBottomInsetConsumed, useTabBarInset } from './tab-bar-inset';
 import {
   useCallback,
   useEffect,
@@ -8,7 +8,7 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import { Dimensions, Keyboard, RefreshControl, ScrollView, View } from 'react-native';
+import { Dimensions, Keyboard, RefreshControl, ScrollView, useWindowDimensions, View } from 'react-native';
 import Animated, {
   KeyboardState,
   runOnJS,
@@ -28,7 +28,8 @@ import {
   type KeyboardHold,
 } from './focus-reveal';
 import { ScrollRevealProvider, useScrollRevealDefault } from '@/components/motion/ScrollReveal';
-import { layout } from '@/theme/layout';
+import { CONTENT_MAX_WIDTH, FORM_MAX_WIDTH, layout, WIDE_CONTENT_MAX_WIDTH } from '@/theme/layout';
+import { columnStyle, ContentColumnContext } from '@/theme/use-responsive';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
 import { space } from '@/theme/tokens';
 
@@ -84,6 +85,14 @@ interface ScreenProps {
    * `Screen` — và mất theo cả safe area lẫn xử lý bàn phím.
    */
   padded?: boolean;
+  /**
+   * Bề rộng tối đa của cột nội dung trên màn rộng (iPad). Điện thoại luôn trải hết màn.
+   * - `content` (mặc định): cột đọc 880dp.
+   * - `wide`: màn duyệt lưới thẻ (trang chủ, tìm kiếm, gian hàng, yêu thích) - 1200dp.
+   * - `form`: đăng nhập / đăng ký / OTP / form ngắn - 560dp.
+   * - `full`: không giới hạn (bản đồ, lịch dạng lưới).
+   */
+  maxWidth?: 'content' | 'wide' | 'form' | 'full';
   /**
    * Thanh cố định dưới đáy, NGOÀI vùng cuộn và trong lớp tránh bàn phím.
    *
@@ -145,6 +154,7 @@ export function Screen({
   edges,
   centered = false,
   padded = true,
+  maxWidth = 'content',
   footer,
   refreshing = false,
   onRefresh,
@@ -181,6 +191,11 @@ export function Screen({
   /** Giá trị đã đẩy sang JS lần gần nhất — chốt chặn để không gọi lại với cùng con số. */
   const lastPushed = useSharedValue(-1);
   const insets = useSafeAreaInsets();
+  // Thanh tab Partner đã đệm vạch home - màn bên trong bỏ cạnh dưới (`BottomInsetConsumedContext`).
+  const bottomConsumed = useBottomInsetConsumed();
+  const safeEdges: readonly Edge[] | undefined = bottomConsumed
+    ? (edges ?? (['top', 'left', 'right', 'bottom'] as const)).filter((e) => e !== 'bottom')
+    : edges;
   // Thanh tab nổi đè lên nội dung — màn cuộn chừa đuôi bằng chiều cao của nó (0 ngoài bộ tab).
   const tabBarInset = useTabBarInset();
   /**
@@ -368,9 +383,26 @@ export function Screen({
     keyboardTop.current = Dimensions.get('window').height - imeHeight;
   }, [imeHeight]);
 
+  /*
+   * Màn rộng (iPad, xoay ngang, Split View): nội dung thành một CỘT giữa màn thay vì trải sát hai
+   * mép. Cột cấp bề rộng của nó xuống qua `ContentColumnContext`, nên `px={layout.screenX}` bên
+   * trong vẫn đúng và thứ đo theo bề rộng (băng chuyền, số cột lưới) đo theo cột.
+   */
+  const { width: windowWidth } = useWindowDimensions();
+  const maxPx =
+    maxWidth === 'wide'
+      ? WIDE_CONTENT_MAX_WIDTH
+      : maxWidth === 'form'
+        ? FORM_MAX_WIDTH
+        : maxWidth === 'full'
+          ? Number.POSITIVE_INFINITY
+          : CONTENT_MAX_WIDTH;
+  const column = maxWidth === 'full' ? null : columnStyle(windowWidth, maxPx);
+  const columnWidth = column ? Math.min(windowWidth, maxPx) : null;
   const contentStyle = [
     styles.content,
     padded ? styles.padded : null,
+    column,
     centered ? styles.centered : null,
   ];
 
@@ -422,13 +454,14 @@ export function Screen({
    * SafeAreaView vẫn cộng `insets.bottom` khi màn khai cạnh dưới (giữ nguyên phép bù bàn phím đang dựa
    * vào nó), nên thanh chỉ thêm PHẦN CÒN THIẾU tới tổng đó. Bàn phím mở thì giữ đệm thường.
    */
-  const bottomEdge = !edges || edges.includes('bottom');
-  const footerBottom = keyboardOpen
-    ? space.md
-    : Math.max(insets.bottom, space.md) + space.sm - (bottomEdge ? insets.bottom : 0);
+  const bottomEdge = !safeEdges || safeEdges.includes('bottom');
+  const footerBottom =
+    keyboardOpen || bottomConsumed
+      ? space.md
+      : Math.max(insets.bottom, space.md) + space.sm - (bottomEdge ? insets.bottom : 0);
 
   return (
-    <SafeAreaView style={styles.flex} {...(edges ? { edges } : {})}>
+    <SafeAreaView style={styles.flex} {...(safeEdges ? { edges: safeEdges } : {})}>
       {/*
         CÙNG cơ chế với `BottomSheet` (`behavior="padding"` cho cả hai nền), cộng thêm thứ tấm
         trượt không cần: `keyboardVerticalOffset`.
@@ -446,10 +479,14 @@ export function Screen({
         */}
         <FocusRevealProvider reveal={revealOnFocus}>
           <KeyboardHoldProvider value={keyboardHold}>
-            {body}
-            {footer && !(hideFooterWhileTyping && keyboardOpen) ? (
-              <View style={[styles.footer, { paddingBottom: footerBottom }]}>{footer}</View>
-            ) : null}
+            <ContentColumnContext.Provider value={columnWidth}>
+              {body}
+              {footer && !(hideFooterWhileTyping && keyboardOpen) ? (
+                <View style={[styles.footer, { paddingBottom: footerBottom }]}>
+                  <View style={column}>{footer}</View>
+                </View>
+              ) : null}
+            </ContentColumnContext.Provider>
           </KeyboardHoldProvider>
         </FocusRevealProvider>
       </Animated.View>

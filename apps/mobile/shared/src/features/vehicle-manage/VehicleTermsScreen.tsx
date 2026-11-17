@@ -1,4 +1,4 @@
-import { yupResolver } from '@hookform/resolvers/yup';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
@@ -20,6 +20,7 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { InlineAction } from '@/components/ui/InlineAction';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { RadioField } from '@/components/ui/RadioField';
@@ -42,7 +43,7 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { Controller } from 'react-hook-form';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { fontSize, space } from '@/theme/tokens';
 import type { VehicleServiceSetting } from './api';
 import {
   usePatchVehicleServiceSetting,
@@ -64,6 +65,11 @@ const settingSchema = yup.object({
   requireTermsAcceptance: yup.boolean().defined(),
   termsText: yup.string().max(RENTAL_TERMS_MAX_LENGTH).defined().default(''),
 });
+/*
+ * Schema ghép chính sách + thủ tục. Message là MÃ (`@xeprime/validators`) nên resolver đi qua
+ * `useValidationResolver` - vừa dịch mã lỗi, vừa nhận đúng kiểu `FormValues` (như `ShopPolicyScreen`).
+ */
+const termsFormSchema = policyFormSchema.concat(settingSchema);
 type SettingValues = yup.InferType<typeof settingSchema>;
 type FormValues = PolicyFormValues & SettingValues;
 
@@ -83,12 +89,18 @@ export function TermsBody({
   serviceType,
   canEdit,
   isManage = true,
+  showRules = true,
 }: {
   vehicleId: string;
   serviceType: ServiceType;
   canEdit: boolean;
   /** Cổng quản lý (mặc định) hay khu tài khoản — xem docblock trên. */
   isManage?: boolean;
+  /**
+   * Khối cọc · hạn mức km của tự lái. `false` khi nơi gọi đã vẽ hai khối đó ở chính sách của xe
+   * (mục "Chính sách thuê" — web `TermsCards` chỉ còn giấy tờ & điều khoản).
+   */
+  showRules?: boolean;
 }) {
   const t = useTranslations('VehicleManage');
   const settings = useVehicleServiceSettings(vehicleId);
@@ -118,6 +130,7 @@ export function TermsBody({
       vehicleId={vehicleId}
       canEdit={canEdit}
       isManage={isManage}
+      showRules={showRules}
     />
   );
 }
@@ -129,8 +142,10 @@ function TermsForm({
   vehicleId,
   canEdit,
   isManage,
+  showRules,
 }: {
   isManage: boolean;
+  showRules: boolean;
   setting: VehicleServiceSetting;
   pricing: VehiclePricing;
   serviceType: ServiceType;
@@ -162,7 +177,7 @@ function TermsForm({
    * ràng buộc của khối cũng chỉ bật lúc đó.
    */
   const [editingCollateral, setEditingCollateral] = useState(overriding || !isManage);
-  const collateralEditable = !withDriver && editingCollateral;
+  const collateralEditable = !withDriver && showRules && editingCollateral;
   /** Ô chính sách đã đổi chưa — ref vì RHF đọc `context` lúc validate, ngoài render. */
   const policyTouchedRef = useRef(false);
 
@@ -178,8 +193,9 @@ function TermsForm({
     }),
     [pricing.policy, pricing.shopPolicy, setting],
   );
+  const resolver = useValidationResolver<FormValues>(termsFormSchema, 'Vehicles.pricing.validation');
   const { control, handleSubmit, reset, formState } = useForm<FormValues>({
-    resolver: yupResolver(policyFormSchema.concat(settingSchema)),
+    resolver,
     // Ràng buộc khối bảo đảm chỉ bật khi chủ xe thật sự mở nó ra sửa (đúng getter của web).
     context: {
       get policyEditable() {
@@ -254,7 +270,7 @@ function TermsForm({
 
   return (
     <YStack gap={space.md}>
-      {withDriver ? null : (
+      {withDriver || !showRules ? null : (
         <Card>
           <YStack gap={space.sm}>
             {!editingCollateral ? (
@@ -289,12 +305,12 @@ function TermsForm({
 
       <Card>
         <YStack gap={space.sm}>
-          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+          <SectionHeader
+            icon="id-card-outline"
+            lead={withDriver ? t('documentsSubtitleDriver') : t('documentsSubtitle')}
+          >
             {t('documentsTitle')}
-          </Text>
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {withDriver ? t('documentsSubtitleDriver') : t('documentsSubtitle')}
-          </Text>
+          </SectionHeader>
           <RadioField
             control={control}
             name="identityDocument"
@@ -339,12 +355,9 @@ function TermsForm({
 
       <Card>
         <YStack gap={space.sm}>
-          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+          <SectionHeader lead={t('termsSubtitle')}>
             {withDriver ? t('termsTitleDriver') : t('termsTitle')}
-          </Text>
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {t('termsSubtitle')}
-          </Text>
+          </SectionHeader>
           <TextField
             control={control}
             name="termsText"

@@ -1,11 +1,14 @@
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
 import type { MaintenanceBoardItem } from '@/api/vehicle-maintenance/api';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { getErrorCode } from '@/lib/api-client';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, space } from '@/theme/tokens';
 import { useMaintenanceProfile, useTransitionMaintenanceRecord } from '../hooks/use-maintenance';
@@ -43,6 +46,7 @@ export function BoardActionSheets({
   const t = useTranslations('Maintenance');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
+  const { has } = usePermissions();
 
   const vehicleId = action?.row.vehicleId ?? '';
   const profile = useMaintenanceProfile(vehicleId, action?.kind === 'odometer');
@@ -75,7 +79,13 @@ export function BoardActionSheets({
                 onClose();
                 toast.showSuccess(t('toast.canceled'));
               },
-              onError: (error) => toast.showError(errorMessage(error)),
+              // Web `MaintenanceBoardPage`: phiếu đã đổi ở nơi khác thì nói "phiếu đã cũ".
+              onError: (error) =>
+                toast.showError(
+                  getErrorCode(error) === API_ERROR_CODE.CONFLICT
+                    ? t('toast.staleRecord')
+                    : errorMessage(error),
+                ),
             },
           );
         }}
@@ -123,6 +133,7 @@ export function BoardActionSheets({
           ? { mode: action.kind === 'complete' ? 'complete' : 'edit', record }
           : { mode: 'create' }
       }
+      canViewFiles={has(PERMISSION.VEHICLE_MAINTENANCE_FILE_VIEW)}
       onClose={onClose}
     />
   );

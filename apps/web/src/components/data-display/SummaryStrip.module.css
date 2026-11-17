@@ -131,3 +131,72 @@
     padding: var(--xp-space-12);
   }
 }
+
+/*
+ * Dải số liệu kiêm bộ lọc nhanh (Tài xế...) ở khổ điện thoại: thay lưới 2 cột × 3 hàng bằng dải TAB
+ * viên cuộn ngang - nhãn + số đếm, cùng ngôn ngữ dải tab của Đơn thuê (người dùng 16/11/2026).
+ * Chỉ CSS; dải chỉ-đọc (không `onSelect`) giữ nguyên lưới.
+ */
+@media (max-width: 640px) {
+  .strip:has(.selectable) {
+    display: flex;
+    gap: var(--xp-space-sm);
+    padding: 0;
+    overflow-x: auto;
+    border: 0;
+    background: none;
+    scrollbar-width: none;
+  }
+
+  .strip:has(.selectable)::-webkit-scrollbar {
+    display: none;
+  }
+
+  .strip .selectable {
+    flex: none;
+    margin: 0;
+    padding: var(--xp-space-sm) var(--xp-space-12);
+    border-color: var(--xp-color-border);
+    border-radius: var(--xp-border-radius-pill);
+    background: var(--xp-color-bg-container);
+    white-space: nowrap;
+  }
+
+  .strip .selectable .icon {
+    display: none;
+  }
+
+  /* DOM là số rồi nhãn: đảo lại thành "Nhãn (số)". */
+  .strip .selectable .text {
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: var(--xp-space-sm);
+  }
+
+  .strip .selectable .label {
+    color: var(--xp-color-text);
+    font-size: var(--xp-font-size-body);
+    font-weight: var(--xp-font-weight-medium);
+  }
+
+  .strip .selectable .value {
+    min-width: 22px;
+    padding: 0 var(--xp-space-6);
+    border: 1px solid var(--xp-color-border);
+    border-radius: var(--xp-border-radius-pill);
+    background: var(--xp-color-bg-muted);
+    font-size: var(--xp-font-size-label);
+    line-height: 18px;
+    text-align: center;
+  }
+
+  .strip .selectable.active {
+    border-color: var(--xp-color-primary-border);
+    background: var(--xp-color-primary-light);
+  }
+
+  .strip .selectable.active .value {
+    border-color: var(--xp-color-primary-border);
+    background: var(--xp-color-bg-container);
+  }
+}

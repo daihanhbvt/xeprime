@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Tabs, useSegments } from 'expo-router';
 import Animated, {
   Easing,
@@ -39,6 +39,8 @@ import { useBadges } from '@/features/badges/hooks/use-badges';
 import { useDriverPendingCounts } from '@/features/driving/hooks';
 import { FavoriteIntentResumer } from '@/features/favorites/components/FavoriteIntentResumer';
 import { FONT_FAMILY } from '@/theme/fonts';
+import { SHEET_MAX_WIDTH } from '@/theme/layout';
+import { useResponsive } from '@/theme/use-responsive';
 import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { fontSize, iconSize, space } from '@/theme/tokens';
 import { elevation } from '@/theme/elevation';
@@ -160,6 +162,7 @@ function AppTabBar({
     transform: [{ translateY: hide.value * height }],
   }));
   const focusedOptions = descriptors[state.routes[state.index]!.key]!.options;
+  const { isTablet } = useResponsive();
   const barStyle = focusedOptions.tabBarStyle as StyleProp<ViewStyle>;
   if (StyleSheet.flatten(barStyle)?.display === 'none') return null;
   const visibleCount = state.routes.filter(
@@ -177,6 +180,8 @@ function AppTabBar({
       style={[
         styles.bar,
         visibleCount < 3 && styles.barFew,
+        // iPad: viên thanh tab có trần bề rộng và nằm giữa, không kéo dài hết màn.
+        isTablet && { width: '100%', maxWidth: SHEET_MAX_WIDTH, alignSelf: 'center' },
         elevation.raised,
         { backgroundColor: colors.surface, borderColor: colors.borderSubtle },
       ]}

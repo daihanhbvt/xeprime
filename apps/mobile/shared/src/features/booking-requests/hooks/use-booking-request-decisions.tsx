@@ -138,6 +138,15 @@ export function useBookingRequestDecisions(): BookingRequestDecisions {
           onClose={() => setApproving(null)}
           request={approving}
           onConfirm={confirmApprove}
+          /*
+            "Từ chối" ở chân tấm duyệt (Figma v2): đóng tấm duyệt, mở tấm từ chối của CÙNG yêu cầu.
+            Cùng cổng với nút "Từ chối" trên thẻ - ai mở được tấm duyệt thì cũng từ chối được
+            (`BOOKING_REQUEST_APPROVE` gác cả hai endpoint).
+          */
+          onReject={() => {
+            setApproving(null);
+            setRejecting(approving);
+          }}
           loading={approve.isPending}
         />
       ) : null}

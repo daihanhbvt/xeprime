@@ -13,6 +13,7 @@ import {
 import viAccount from '@xeprime/domain/messages/vi/account.json';
 import viCommon from '@xeprime/domain/messages/vi/common.json';
 import viShop from '@xeprime/domain/messages/vi/shop.json';
+import viNavigation from '@xeprime/domain/messages/vi/navigation.json';
 import { appConfigApi } from '@/api/app-config/api';
 import * as authApi from '@/features/auth/api';
 import { locationsApi } from '@/features/locations/api';
@@ -20,7 +21,7 @@ import { tenantsApi, type MyShop } from '@/features/shop/api';
 import { withIntl } from '@/i18n/test-utils';
 import { store } from '@/store';
 import { accountApi, type UserProfile } from './api';
-import { ManageAccountScreen } from './ManageAccountScreen';
+import { OwnerProfileScreen } from './OwnerProfileScreen';
 
 const mockUseEffect = useEffect;
 
@@ -148,7 +149,7 @@ async function renderScreen(
     withIntl(
       <ReduxProvider store={store}>
         <QueryClientProvider client={queryClient}>
-          <ManageAccountScreen />
+          <OwnerProfileScreen />
         </QueryClientProvider>
       </ReduxProvider>,
     ),
@@ -160,7 +161,7 @@ const OWNER: Permission[] = [PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE];
 
 beforeEach(() => jest.restoreAllMocks());
 
-describe('OwnerProfileScreen - "Hồ sơ chủ xe" của chủ xe tuyến hoa hồng (PR #156)', () => {
+describe('OwnerProfileScreen - "Hồ sơ chủ xe" = trang Thông tin /manage/shop của chủ xe tuyến hoa hồng (ADR 0085)', () => {
   it('chủ xe hoa hồng có tenant.view: dựng hồ sơ chủ xe, không có ô tên/SĐT/email của gian hàng', async () => {
     const view = await renderScreen(OWNER);
 
@@ -170,8 +171,9 @@ describe('OwnerProfileScreen - "Hồ sơ chủ xe" của chủ xe tuyến hoa h�
     expect(view.getAllByText(PROFILE.displayName).length).toBeGreaterThan(0);
     expect(view.queryByText(viShop.form.display.displayName.label)).toBeNull();
     expect(view.queryByText(viShop.form.display.phone.label)).toBeNull();
-    // Gợi ý tỉnh của mặt tiền cá nhân.
-    expect(view.getByText(viShop.personal.provinceHelp)).toBeTruthy();
+    // Địa chỉ nhận xe sửa qua tấm "Cập nhật" (S3); gợi ý tỉnh của mặt tiền cá nhân nằm trong tấm.
+    fireEvent.press(view.getByLabelText(viShop.info.legal.edit));
+    expect(await view.findByText(viShop.personal.provinceHelp)).toBeTruthy();
   });
 
   it('checklist bản CÁ NHÂN: ảnh đại diện là mục bắt buộc, không có tên gian hàng hay ảnh bìa', async () => {
@@ -252,18 +254,11 @@ describe('OwnerProfileScreen - "Hồ sơ chủ xe" của chủ xe tuyến hoa h�
     expect(view.queryByText(HUB.sections.appPlan)).toBeNull();
   });
 
-  /*
-   * TẠM BỎ QUA (08/10/2026): test này đỏ mà chưa rõ nguyên nhân — nhánh tuyến gói chỉ là 3 dòng rẽ
-   * ở `ManageAccountScreen` (gian hàng gói vẫn vào `PartnerAccountScreen` như trước PR #156), và
-   * 6 test tuyến hoa hồng còn lại xanh. Mở lại khi bóc được thông báo lỗi.
-   */
-  it.skip('tuyến gói: vẫn là "Tài khoản & bảo mật", không gọi hồ sơ gian hàng', async () => {
-    const view = await renderScreen(OWNER, 'package');
+  it('đăng nhập · mật khẩu · xoá tài khoản rời trang này - chỉ còn dòng dẫn sang "Tài khoản & bảo mật"', async () => {
+    const view = await renderScreen(OWNER);
+    await view.findByText(HUB.sections.profile);
 
-    expect(
-      (await view.findAllByText(viAccount.hub.sections.profile, {}, { timeout: 5000 })).length,
-    ).toBeGreaterThan(0);
-    expect(view.queryByText(HUB.sections.address)).toBeNull();
-    expect(view.shopSpy).not.toHaveBeenCalled();
+    expect(view.queryByText(viAccount.hub.sections.login)).toBeNull();
+    expect(view.getByText(viNavigation.manage.security)).toBeTruthy();
   });
 });

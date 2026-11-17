@@ -1,70 +1,85 @@
 import { PERMISSION } from '@xeprime/types';
-import { resolveSections } from './ManageDrawer';
+import { resolveSections } from './manage-menu';
 import { PARTNER_TRACK } from './partner-track';
 import { MANAGE_NAV_BADGE } from './manage-nav';
 import type { ManageNavBadgeCounts } from './use-manage-nav-badges';
 
 /**
- * Huy hiệu DỒN lên mục cha khi nhánh gập lại.
+ * Huy hiệu DỒN lên nhãn khối khi khối gập lại (web `hiddenCount` / `badgeTotalOf`).
  *
- * Không có nó thì gập "Đơn thuê" là mất luôn dấu hiệu có yêu cầu đang chờ — trong khi hạn phản
- * hồi 60 phút vẫn đang chạy. Đây là lỗi im lặng: menu trông bình thường, chỉ là thiếu một con số.
+ * Không có nó thì gập "Vận hành" là mất luôn dấu hiệu có yêu cầu đang chờ — trong khi hạn phản hồi
+ * vẫn đang chạy. Đây là lỗi im lặng: menu trông bình thường, chỉ là thiếu một con số.
  */
-const ALL_BADGES: ManageNavBadgeCounts = {
-  [MANAGE_NAV_BADGE.BOOKING_REQUESTS_PENDING]: 3,
-  [MANAGE_NAV_BADGE.CHAT_UNREAD]: 0,
-  [MANAGE_NAV_BADGE.HANDOVERS_DUE]: 0,
-  [MANAGE_NAV_BADGE.VEHICLES_NEEDS_ACTION]: 0,
+const BADGES: ManageNavBadgeCounts = {
+  [MANAGE_NAV_BADGE.RENTALS_WORK]: 3,
+  [MANAGE_NAV_BADGE.CHAT_UNREAD]: 5,
+  [MANAGE_NAV_BADGE.VEHICLES_NEEDS_ACTION]: 2,
 };
 
-function branches(badges: ManageNavBadgeCounts) {
-  return resolveSections(PARTNER_TRACK.PACKAGE, () => true, {}, badges)
-    .flatMap((section) => section.nodes)
-    .filter((node) => node.kind === 'branch');
+function section(key: string, sections: ReturnType<typeof resolveSections>) {
+  return sections.find((entry) => entry.section.key === key);
 }
 
-describe('dồn huy hiệu lên mục cha', () => {
-  it('mục cha mang TỔNG số của các mục con', () => {
-    const orders = branches(ALL_BADGES).find((node) => node.branch.key === 'orders');
+describe('dồn huy hiệu lên nhãn khối', () => {
+  const sections = resolveSections(PARTNER_TRACK.PACKAGE, () => true, {}, BADGES, true);
 
-    expect(orders).toBeDefined();
-    expect(orders?.badge).toBe(3);
+  it('"Vận hành" mang số của "Đơn thuê xe"', () => {
+    expect(section('operations', sections)?.badge).toBe(3);
   });
 
-  /** Tổng phải bằng đúng tổng các con — lệch nghĩa là đếm hai lần hoặc bỏ sót một mục. */
-  it('tổng bằng đúng tổng các mục con, không hơn không kém', () => {
-    for (const node of branches(ALL_BADGES)) {
-      const sum = node.children.reduce((total, child) => total + child.badge, 0);
-      expect(node.badge).toBe(sum);
-    }
+  it('"Xe & Tài xế" mang số xe cần xử lý', () => {
+    expect(section('fleet', sections)?.badge).toBe(2);
   });
 
-  it('không có gì chờ thì mục cha KHÔNG mang số', () => {
-    const quiet: ManageNavBadgeCounts = {
-      [MANAGE_NAV_BADGE.BOOKING_REQUESTS_PENDING]: 0,
-      [MANAGE_NAV_BADGE.CHAT_UNREAD]: 0,
-      [MANAGE_NAV_BADGE.HANDOVERS_DUE]: 0,
-      [MANAGE_NAV_BADGE.VEHICLES_NEEDS_ACTION]: 0,
-    };
-
-    for (const node of branches(quiet)) {
-      expect(node.badge).toBe(0);
-    }
+  it('tin nhắn KHÔNG dồn vào khối nào - nó là icon ở thanh trên', () => {
+    const total = sections.reduce((sum, entry) => sum + entry.badge, 0);
+    expect(total).toBe(5);
   });
 
-  /** Mục con bị quyền chặn thì số của nó cũng không được tính lên cha. */
-  it('mục con KHÔNG có quyền xem thì số của nó không dồn lên', () => {
-    const sections = resolveSections(
+  it('khẩn ở một mục thì nhãn khối cũng khẩn', () => {
+    const urgent = resolveSections(PARTNER_TRACK.PACKAGE, () => true, {}, BADGES, true, {
+      [MANAGE_NAV_BADGE.RENTALS_WORK]: true,
+    });
+    expect(section('operations', urgent)?.urgent).toBe(true);
+    expect(section('fleet', urgent)?.urgent).toBe(false);
+  });
+
+  it('mục ẩn không được vẽ nhưng vẫn khớp đường dẫn', () => {
+    const operations = section('operations', sections);
+    const drawn = operations?.nodes.map((node) => (node.kind === 'leaf' ? node.leaf.key : ''));
+    expect(drawn).toEqual(['bookings', 'calendar', 'customers']);
+    expect(operations?.allLeaves.map((leaf) => leaf.key)).toContain('bookings-ended');
+  });
+
+  /** Mục KHÔNG có quyền xem thì số của nó không dồn lên. */
+  it('thiếu cả hai quyền yêu cầu/đơn: "Đơn thuê xe" vắng và số của nó không dồn', () => {
+    const limited = resolveSections(
       PARTNER_TRACK.PACKAGE,
-      (permission) => permission !== PERMISSION.BOOKING_REQUEST_VIEW,
+      (permission) =>
+        permission !== PERMISSION.BOOKING_REQUEST_VIEW && permission !== PERMISSION.BOOKING_VIEW,
       {},
-      ALL_BADGES,
+      BADGES,
+      true,
     );
-    const orders = sections
-      .flatMap((section) => section.nodes)
-      .filter((node) => node.kind === 'branch')
-      .find((node) => node.branch.key === 'orders');
+    expect(section('operations', limited)?.badge ?? 0).toBe(0);
+  });
 
-    expect(orders?.badge ?? 0).toBe(0);
+  it('có MỘT trong hai quyền là thấy "Đơn thuê xe"', () => {
+    const requestsOnly = resolveSections(
+      PARTNER_TRACK.PACKAGE,
+      (permission) => permission !== PERMISSION.BOOKING_VIEW,
+      {},
+      BADGES,
+      true,
+    );
+    expect(section('operations', requestsOnly)?.badge).toBe(3);
+  });
+
+  it('ví chỉ hiện cho CHỦ', () => {
+    const member = resolveSections(PARTNER_TRACK.PACKAGE, () => true, {}, BADGES, false);
+    const revenue = section('revenue', member)?.nodes.map((node) =>
+      node.kind === 'leaf' ? node.leaf.key : '',
+    );
+    expect(revenue).not.toContain('balance');
   });
 });

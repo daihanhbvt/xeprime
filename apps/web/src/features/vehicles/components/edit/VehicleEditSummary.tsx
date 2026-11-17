@@ -1,5 +1,9 @@
 'use client';
 
+import { vehicleGalleryItems } from '../../media';
+import { useImageSlotLabel } from '../../hooks/use-image-slot-label';
+import { useIsMobile } from '@/hooks/use-media-query';
+import { ListingGallery } from '@/features/marketplace/components/ListingGallery';
 import {
   CarOutlined,
   CheckOutlined,
@@ -109,6 +113,9 @@ export function VehicleEditSummary({
   const percent =
     completeness.total > 0 ? Math.round((completeness.done / completeness.total) * 100) : 100;
   const stats = summary.data?.stats;
+  const isMobile = useIsMobile();
+  const slotLabel = useImageSlotLabel();
+  const gallery = vehicleGalleryItems(vehicle, slotLabel);
   const sourceType = vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED;
 
   const image = vehicle.mainImageUrl ? (
@@ -122,7 +129,15 @@ export function VehicleEditSummary({
 
   return (
     <section className={styles.summary} aria-label={t('label')}>
-      <div className={styles.summaryMedia}>
+      {/* Khổ điện thoại: ảnh lớn + dải ảnh nhỏ như app (người dùng chốt 17/11/2026). */}
+      {isMobile && gallery.length > 0 ? (
+        <ListingGallery
+          name={vehicle.name}
+          mainImageUrl={gallery[0]?.url ?? null}
+          images={gallery.map((item) => item.url)}
+        />
+      ) : null}
+      <div className={styles.summaryMedia} hidden={isMobile && gallery.length > 0}>
         {onOpenMedia ? (
           <Tooltip title={t('openMedia')}>
             <button

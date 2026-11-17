@@ -24,6 +24,10 @@
     "vehicleCount": "Vehicles"
   },
   "labels": {
+    "code": "Branch code",
+    "area": "Area",
+    "address": "Address",
+    "vehiclesTitle": "Vehicles · Contact",
     "default": "Default",
     "noProvince": "No province yet",
     "vehicles": "{count, plural, one {# vehicle} other {# vehicles}}"
@@ -73,7 +77,9 @@
   "filter": {
     "label": "Branch",
     "empty": "Nothing here yet for {branch}",
-    "emptyHint": "Pick \"All branches\" to see the whole shop."
+    "emptyHint": "Pick \"All branches\" to see the whole shop.",
+    "scopeTitle": "Branch scope",
+    "count": "{count, plural, one {# location} other {# locations}}"
   },
   "toast": {
     "created": "Branch {name} created",

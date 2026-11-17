@@ -98,6 +98,7 @@ export function CustomerTable({
           subtitle={[row.phone, row.email].filter(Boolean).join(LIST_SEPARATOR)}
           kind="person"
           initialSource={row.fullName}
+          imageUrl={row.avatarUrl}
         />
       ),
     },
@@ -184,6 +185,7 @@ export function CustomerTable({
           kind="person"
           size="sm"
           initialSource={row.fullName}
+          imageUrl={row.avatarUrl}
         />
         {statusBadge(row)}
       </header>

@@ -8,10 +8,10 @@ import {
   type FinanceGranularity,
 } from '@xeprime/types';
 import { buildPeriodRange, isNegativeMoney, isZeroMoney } from '@xeprime/domain';
-import { BlockTitle } from '@/components/ui/BlockTitle';
+import { SectionHeader } from '@/components/ui/CardTitle';
+import { ChipTabs } from '@/components/ui/ChipTabs';
 import { Card } from '@/components/ui/Card';
 import { InlineAction } from '@/components/ui/InlineAction';
-import { Chip } from '@/components/ui/Chip';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { StatGrid, type StatCell } from '@/components/ui/StatGrid';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -20,7 +20,7 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { FINANCE_OVERVIEW_DEFAULT_PERIOD, FINANCE_OVERVIEW_PERIOD_VALUES } from '../constants';
 import { useFinanceSeries, useFinanceSummary } from '../hooks/use-finance';
 import { FinancePeriodBar } from './FinancePeriodBar';
@@ -164,8 +164,10 @@ export function FinanceEntityPanel({
     : [];
 
   return (
+    // Một thẻ có tiêu đề như các khối chi tiết đơn (người dùng 16/11/2026).
+    <Card>
     <YStack gap={space.md}>
-      <BlockTitle>{t(`title.${kind}`)}</BlockTitle>
+      <SectionHeader icon="stats-chart-outline">{t(`title.${kind}`)}</SectionHeader>
 
       <FinancePeriodBar
         periods={FINANCE_OVERVIEW_PERIOD_VALUES}
@@ -184,28 +186,24 @@ export function FinanceEntityPanel({
       ) : !data ? (
         <SkeletonText lines={3} />
       ) : (
-        <Card padded={false}>
+        <YStack br={radius.md} bw={1} bc={colors.border} ov="hidden">
           <StatGrid cells={cells} columns={2} />
-        </Card>
+        </YStack>
       )}
 
       {/* Tiêu đề biểu đồ — web đặt nó trên khung biểu đồ, giữ nguyên ở đây. */}
-      <Text col={colors.textMuted} fos={fontSize.bodySm}>
+      <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
         {t('chartTitle')}
       </Text>
 
       {/* Ba tab của web, giữ nguyên hình thái "một cú bấm là đổi". */}
-      <XStack gap={space.xs} flexWrap="wrap" accessibilityLabel={t('every.label')}>
-        {granularityOptions.map((option) => (
-          <Chip
-            key={option.value}
-            label={option.label}
-            selected={granularity === option.value}
-            size="sm"
-            onPress={() => setGranularity(option.value)}
-          />
-        ))}
-      </XStack>
+      <ChipTabs
+        label={t('every.label')}
+        items={granularityOptions.map((option) => ({ value: option.value, label: option.label }))}
+        value={granularity}
+        onSelect={setGranularity}
+        gutter={0}
+      />
 
       {series.isError && !series.data ? (
         <ScreenError
@@ -261,5 +259,6 @@ export function FinanceEntityPanel({
         }
       />
     </YStack>
+    </Card>
   );
 }

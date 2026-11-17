@@ -52,6 +52,9 @@ export function AccountPhoneGate() {
   const needsPhone =
     user != null &&
     user.realm !== ACCOUNT_REALM.PLATFORM &&
+    // Tài khoản nhân viên do gian hàng CẤP (ADR 0087) đăng nhập bằng tên đăng nhập, không có và
+    // không cần SĐT: họ không mở gian hàng, không nhận lời mời — như web `AccountPhoneGate`.
+    !user.managedAccount &&
     !user.phoneVerified &&
     !onRegisterScreen;
   if (!needsPhone) return null;

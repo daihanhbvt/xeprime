@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Callout } from '@/components/ui/Callout';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { PERMISSION } from '@xeprime/types';
@@ -9,8 +10,13 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ShopListingGateAlert } from '@/features/shop/components/ShopListingGateAlert';
 // Lỗi hạn mức gói (ADR 0065) nói đúng loại xe + con số thay cho câu chung — như web.
-import { usePlanAwareErrorMessage } from '@/features/subscription/plan-quota-gate';
+import {
+  planQuotaGateFrom,
+  usePlanAwareErrorMessage,
+} from '@/features/subscription/plan-quota-gate';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { useCurrentUser } from '@/features/auth/hooks/use-auth';
+import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/shell/partner-track';
 import { ROUTES } from '@/navigation/routes';
 import { vehicleEditPartHref } from '../workspace-links';
 import { themed, useColors } from '@/theme/ThemeProvider';
@@ -74,6 +80,7 @@ export function VehiclePublicationTaskItem({
   const errorMessage = usePlanAwareErrorMessage();
   const { has } = usePermissions();
   const navigateOnce = useNavigateOnce();
+  const commission = resolvePartnerTrack(useCurrentUser().data) === PARTNER_TRACK.COMMISSION;
   const submit = useSubmitVehiclePublic(vehicle.id);
 
   /**
@@ -85,6 +92,7 @@ export function VehiclePublicationTaskItem({
    */
   const [listingGate, setListingGate] =
     useState<ReturnType<typeof packageShopListingGateFrom>>(null);
+  const [quotaMessage, setQuotaMessage] = useState<string | null>(null);
 
   const canSubmit = has(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
   const canEdit = has(PERMISSION.VEHICLE_UPDATE);
@@ -93,6 +101,7 @@ export function VehiclePublicationTaskItem({
     submit.mutate(undefined, {
       onSuccess: () => {
         setListingGate(null);
+        setQuotaMessage(null);
         toast.showSuccess(t('submitted'));
       },
       onError: (error) => {
@@ -100,7 +109,13 @@ export function VehiclePublicationTaskItem({
         // một toast — chúng không có lối đi nào ngoài "thử lại".
         const gate = packageShopListingGateFrom(error);
         setListingGate(gate);
-        if (!gate) toast.showError(errorMessage(error));
+        /*
+         * Hết trần gói theo loại xe (ADR 0065): web giữ một dải cảnh báo ĐỨNG YÊN (`PlanQuotaGateAlert`).
+         * App giữ cùng dải nhưng chỉ có chữ - không đưa lối mua/nâng gói vào app (người dùng chốt).
+         */
+        const quota = planQuotaGateFrom(error) ? errorMessage(error) : null;
+        setQuotaMessage(quota);
+        if (!gate && !quota) toast.showError(errorMessage(error));
       },
     });
   }
@@ -114,7 +129,7 @@ export function VehiclePublicationTaskItem({
   function action(spec: VehiclePublicationAction | null, isPrimary: boolean) {
     if (!spec) return null;
     const label = t(`actions.${spec.cta}`);
-    const variant = isPrimary ? 'primary' : 'secondary';
+    const variant = isPrimary ? 'primary' : 'outline';
 
     switch (spec.kind) {
       case 'submit':
@@ -158,7 +173,14 @@ export function VehiclePublicationTaskItem({
             variant={variant}
             block={false}
             onPress={() =>
-              navigateOnce(customerScope ? ROUTES.account.support() : ROUTES.manage.supportPage())
+              navigateOnce(
+                customerScope
+                  ? ROUTES.account.support()
+                  : // Web `paths.support`: tuyến gói → Trung tâm hỗ trợ; tuyến hoa hồng → Hồ sơ hỗ trợ.
+                    commission
+                    ? ROUTES.manage.supportCases()
+                    : ROUTES.manage.supportPage(),
+              )
             }
           />
         );
@@ -172,10 +194,10 @@ export function VehiclePublicationTaskItem({
     <XStack
       gap={space.sm}
       p={space.sm}
-      br={radius.sm}
+      br={radius.control}
       bg={colors.surfaceMuted}
-      borderLeftWidth={3}
-      borderLeftColor={TONE_COLOR[task.tone]}
+      bw={1}
+      bc={TONE_COLOR[task.tone]}
     >
       <YStack f={1} gap={space.xs}>
         <XStack ai="center" gap={4} flexWrap="wrap">
@@ -213,6 +235,7 @@ export function VehiclePublicationTaskItem({
         ) : null}
 
         {listingGate ? <ShopListingGateAlert missing={listingGate} /> : null}
+        {quotaMessage ? <Callout tone="warning">{quotaMessage}</Callout> : null}
 
         {primary || secondary ? (
           <XStack gap={space.xs} flexWrap="wrap">

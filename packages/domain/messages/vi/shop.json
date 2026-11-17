@@ -1,5 +1,6 @@
 {
   "page": {
+    "title": "Thông tin cửa hàng",
     "subtitle": "Thông tin và thiết lập của gian hàng.",
     "viewPublicPage": "Xem gian hàng",
     "loadError": "Không tải được hồ sơ gian hàng",
@@ -452,7 +453,8 @@
       "phoneField": "Số điện thoại hiển thị",
       "email": "Email liên hệ",
       "bio": "Giới thiệu",
-      "bioPlaceholder": "Nhập giới thiệu gian hàng"
+      "bioPlaceholder": "Nhập giới thiệu gian hàng",
+      "bioPlainNote": "Giới thiệu có định dạng soạn trên web sẽ thành chữ thuần nếu bạn sửa ở đây."
     }
   }
 }

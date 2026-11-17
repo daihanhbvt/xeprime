@@ -1,4 +1,4 @@
-import { LIST_SEPARATOR } from '@xeprime/domain';
+import { auditActionLabel } from '@xeprime/domain';
 import {
   AUDIT_ACTOR_SCOPE,
   AUDIT_TARGET_TYPE,
@@ -50,16 +50,12 @@ export function createAuditLabels(domain: DomainMessages, domainLabel: DomainLab
   const fields = domain.auditField as MessageTree;
 
   return {
-    action: (action) => {
-      const full = lookup(actions, action);
-      if (full) return full;
-      // Chưa có nhãn đầy đủ → ghép "Nhóm · Động từ" từ hai bảng cũ; vẫn không có động từ thì
-      // hiện mã thô, để một hành động mới KHÔNG BAO GIỜ thành ô trống.
-      const verb = action.slice(action.lastIndexOf('.') + 1);
-      const verbLabel = domainLabel('auditActionVerb', verb, '');
-      const category = domainLabel('auditActionCategory', auditActionCategoryOf(action));
-      return verbLabel ? `${category}${LIST_SEPARATOR}${verbLabel}` : action;
-    },
+    // Logic dùng chung với app (`@xeprime/domain`): nhãn đầy đủ → "Nhóm · Động từ" → mã thô.
+    action: (action) =>
+      auditActionLabel(actions, action, {
+        verb: (verb) => domainLabel('auditActionVerb', verb, ''),
+        category: (category) => domainLabel('auditActionCategory', category),
+      }),
     actionCategory: (action) => domainLabel('auditActionCategory', auditActionCategoryOf(action)),
     targetType: (targetType) => lookup(targetTypes, targetType) ?? humanize(targetType),
     target: (row) => {

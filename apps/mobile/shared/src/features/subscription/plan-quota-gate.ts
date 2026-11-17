@@ -99,7 +99,11 @@ export function usePlanAwareErrorMessage(): (error: unknown) => string {
       const values = { used: gate.used, limit: gate.limit };
       switch (gate.source) {
         case SOURCE.OWNER_LITE:
-          return t('ownerLite', values);
+          // Ở CHỢ (ADR 0085 điều 4) trần là số xe đang hiển thị, không phải số xe đã đăng — như web.
+          return t(
+            gate.point === PLAN_QUOTA_GATE_POINT.MARKETPLACE ? 'ownerLiteMarketplace' : 'ownerLite',
+            values,
+          );
         case SOURCE.SHARED_PLAN:
           return t(`shared.${gate.point}`, values);
         case SOURCE.LANE_PLAN:

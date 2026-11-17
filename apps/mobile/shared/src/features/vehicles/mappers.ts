@@ -113,6 +113,7 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
   return {
     code: v.code,
     name: v.name,
+    insuredValue: null, // chỉ web nhập; app chưa có ô này
     // Xe dữ liệu cũ có thể chưa gán chi nhánh — để rỗng thì Select hiện placeholder và schema
     // bắt chọn khi lưu, thay vì gửi một id không tồn tại.
     branchId: v.branch?.id ?? '',

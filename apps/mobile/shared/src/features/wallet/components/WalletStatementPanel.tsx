@@ -14,7 +14,7 @@ import {
   WALLET_STATEMENT_UNIT,
   resolveAccountTrack,
 } from '@xeprime/types';
-import { BlockTitle } from '@/components/ui/BlockTitle';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
@@ -26,7 +26,7 @@ import { IconDisc } from '@/components/ui/IconDisc';
 import { Pagination } from '@/components/ui/Pagination';
 import { MONTH_PERIOD_FORMAT, MonthPeriodField } from '@/components/ui/MonthPeriodField';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
-import { StatusBadge } from '@/components/ui/StatusBadge';
+import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { OwnerPayoutTable } from '@/features/bookings/components/OwnerPayoutTable';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -39,6 +39,7 @@ import {
   type WalletStatementTrip,
 } from '@/api/wallet/api';
 import { useWalletStatement } from '../hooks/use-wallet';
+import { layout } from '@/theme/layout';
 
 /**
  * BẢNG TỔNG HỢP GIAO DỊCH — một tháng làm ăn của gian hàng, đọc từ `/shop/wallet/statement`.
@@ -96,7 +97,7 @@ export function WalletStatementPanel({
 
   return (
     <YStack gap={space.sm}>
-      <BlockTitle>{t('title')}</BlockTitle>
+      <SectionHeader icon="document-text-outline">{t('title')}</SectionHeader>
 
       <MonthPeriodField
         label={t('period')}
@@ -234,7 +235,7 @@ export function WalletMonthSummary({ filters }: { filters: WalletStatementFilter
 
   return (
     <YStack gap={space.sm}>
-      <BlockTitle>{tWallet('month.title', { month: `${month}/${year}` })}</BlockTitle>
+      <SectionHeader icon="document-text-outline">{tWallet('month.title', { month: `${month}/${year}` })}</SectionHeader>
       {query.isPending && !query.data ? <MiniRowsSkeleton rows={4} /> : null}
       {query.isError && !query.data ? (
         <Callout tone="danger" title={t('loadError')}>
@@ -315,7 +316,7 @@ export function WalletMonthSummary({ filters }: { filters: WalletStatementFilter
             />
           </YStack>
           <Divider />
-          <YStack px={space.md} py={space.sm} bg={colors.primaryLight}>
+          <YStack px={layout.padX} py={space.sm} bg={colors.primaryLight}>
             <SummaryRow
               label={t(`totals.${incomeLabelKey}`)}
               hint={t('totals.appOwnerIncomeHint')}
@@ -377,10 +378,9 @@ function TripCard({
               <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
                 {`${fmt.shortDateTime(trip.pickupAt)} → ${fmt.shortDateTime(trip.returnAt)}`}
               </Text>
-              <StatusBadge
+              <Pill
                 label={domainLabel('serviceType', trip.serviceType, trip.serviceType)}
-                color={STATUS_COLOR.ACCENT}
-                size="sm"
+                tone={pillToneOfStatusColor(STATUS_COLOR.ACCENT)}
               />
             </YStack>
 

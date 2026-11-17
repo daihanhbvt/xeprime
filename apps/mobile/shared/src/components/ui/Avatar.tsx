@@ -11,6 +11,11 @@ interface AvatarProps {
   url?: string | null;
   size?: number;
   /**
+   * Nền vàng NHẠT + viền xám + chữ vàng đậm - web `CustomerIdentity .avatar` (khách trên thẻ
+   * "Đơn thuê xe"). Mặc định vẫn là nền gold đặc chữ trắng.
+   */
+  soft?: boolean;
+  /**
    * Vòng nhấn thương hiệu quanh ảnh — dành cho GIAN HÀNG đã xác minh (ADR 0028).
    *
    * Là một vòng RỜI có khe trắng chứ không phải viền dán sát: nền avatar vốn đã là gold đặc, nên
@@ -36,6 +41,11 @@ interface AvatarProps {
    * `color-primary-active`.
    */
   gradient?: boolean;
+  /**
+   * Khung VUÔNG bo 12 (`--xp-border-radius-control`) thay cho tròn - logo GIAN HÀNG ở đầu trang
+   * Thông tin cửa hàng (`Avatar shape="square"` của `ShopWorkspace` web). Không đi cùng `ring`.
+   */
+  square?: boolean;
 }
 
 /**
@@ -92,9 +102,11 @@ export function Avatar({
   name,
   url,
   size = 40,
+  soft = false,
   ring = false,
   verifiedLabel,
   gradient = false,
+  square = false,
 }: AvatarProps) {
   const colors = useColors();
   const initial = name.trim().charAt(0).toLocaleUpperCase();
@@ -106,8 +118,9 @@ export function Avatar({
     <YStack
       w={inner}
       h={inner}
-      br={radius.pill}
-      bg={colors.primary}
+      br={square ? radius.control : radius.pill}
+      bg={soft ? colors.primaryLight : colors.primary}
+      {...(soft ? { bw: 1, bc: colors.border } : {})}
       ai="center"
       jc="center"
       ov="hidden"
@@ -129,7 +142,11 @@ export function Avatar({
           cachePolicy="memory-disk"
         />
       ) : (
-        <Text col={colors.onPrimary} fos={inner / 2.5} fow={fontWeight.bold}>
+        <Text
+          col={soft ? colors.primaryStrong : colors.onPrimary}
+          fos={inner / 2.5}
+          fow={soft ? fontWeight.semibold : fontWeight.bold}
+        >
           {initial || '?'}
         </Text>
       )}

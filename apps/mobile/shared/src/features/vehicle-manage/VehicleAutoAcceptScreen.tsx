@@ -1,6 +1,6 @@
 import { yupResolver } from '@hookform/resolvers/yup';
-import { Ionicons } from '@expo/vector-icons';
-import { useMemo } from 'react';
+import { Ionicons } from '@/components/icons/Ionicons';
+import { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -16,6 +16,7 @@ import {
 import { ScreenError } from '@/components/state/ScreenError';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { Button } from '@/components/ui/Button';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { CheckMark } from '@/components/ui/CheckMark';
@@ -39,6 +40,15 @@ import {
 
 /** Bốn điều kiện server dùng để tự nhận — chỉ là danh sách khoá nhãn, không đổi theo render. */
 const RULES = ['schedule', 'window', 'quote', 'longTerm'] as const;
+/** Danh sách luật của hàng "Nhận chuyến tự động" ở web `ServicesPane.AutoAcceptRow`. */
+const PANE_RULES = ['schedule', 'quote', 'longTerm'] as const;
+
+/**
+ * `all` = màn riêng cũ (mục lục quản lý xe khu tài khoản). Màn "Dịch vụ & giá" dựng theo web
+ * `ServicesPane`: `toggle` = hàng công tắc + năng lực tài xế + luật (ⓘ) trong MỘT thẻ, đặt ngay dưới
+ * thẻ dịch vụ; `extras` = thẻ "Khác" của có tài xế (phân khúc ưu tiên rồi thời gian tối thiểu).
+ */
+export type AutoAcceptPart = 'all' | 'toggle' | 'extras';
 
 const HOUR = 60;
 
@@ -65,17 +75,22 @@ export function AutoAcceptBody({
   vehicleId,
   serviceType,
   canEdit,
+  part = 'all',
 }: {
   vehicleId: string;
   serviceType: ServiceType;
   canEdit: boolean;
+  part?: AutoAcceptPart;
 }) {
   const t = useTranslations('VehicleManage');
   const settings = useVehicleServiceSettings(vehicleId);
   const setting = settings.data?.find((s) => s.serviceType === serviceType);
 
-  if (settings.isLoading) return <MiniRowsSkeleton rows={6} />;
+  if (part === 'extras' && serviceType !== SERVICE_TYPE.WITH_DRIVER) return null;
+  if (settings.isLoading) return <MiniRowsSkeleton rows={part === 'all' ? 6 : 2} />;
   if (settings.isError || !setting) {
+    // Thẻ "Khác" không lặp lỗi đã hiện ở thẻ công tắc ngay trên.
+    if (part === 'extras') return null;
     return (
       <ScreenError
         error={settings.error}
@@ -91,6 +106,7 @@ export function AutoAcceptBody({
       serviceType={serviceType}
       vehicleId={vehicleId}
       canEdit={canEdit}
+      part={part}
     />
   );
 }
@@ -100,14 +116,18 @@ function AutoAcceptForm({
   serviceType,
   vehicleId,
   canEdit,
+  part,
 }: {
   setting: VehicleServiceSetting;
   serviceType: ServiceType;
   vehicleId: string;
   canEdit: boolean;
+  part: AutoAcceptPart;
 }) {
   const colors = useColors();
   const t = useTranslations('VehicleManage');
+  const tEditor = useTranslations('Vehicles.editor.services');
+  const [rulesOpen, setRulesOpen] = useState(false);
   const tActions = useTranslations('Common.actions');
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
@@ -160,6 +180,171 @@ function AutoAcceptForm({
     );
   });
 
+  const capabilityCallout =
+    withDriver && capability ? (
+      <Callout tone={capability.available ? 'success' : 'warning'}>
+        {capability.available
+          ? t('autoAccept.capabilityOk', { count: capability.activeDrivers })
+          : capability.driversFeatureEnabled
+            ? t('autoAccept.capabilityNoDriver')
+            : t('autoAccept.appCapabilityNoFeature')}
+      </Callout>
+    ) : null;
+
+  if (part === 'toggle') {
+    // Web `AutoAcceptRow`: MỘT hàng công tắc, cảnh báo năng lực tài xế kèm nút "Mở tài xế", danh sách
+    // luật mở/đóng tại chỗ (nút ⓘ của web).
+    return (
+      <Card>
+        <YStack gap={space.sm}>
+          <ToggleRow
+            label={t('autoAccept.toggleTitle')}
+            hint={t('autoAccept.toggleBody')}
+            checked={enabled}
+            disabled={toggleAuto.disabled}
+            onToggle={() => toggleAuto.change(!enabled)}
+          />
+          {capabilityCallout}
+          {withDriver && capability?.driversFeatureEnabled ? (
+            <XStack>
+              <Button
+                label={t('autoAccept.openDrivers')}
+                variant="outline"
+                size="sm"
+                onPress={() => switchTo(APP_SCOPE.MANAGE, ROUTES.manage.drivers())}
+              />
+            </XStack>
+          ) : null}
+          <InlineAction
+            label={t('autoAccept.rulesTitle')}
+            onPress={() => setRulesOpen((open) => !open)}
+          />
+          {rulesOpen ? (
+            <YStack gap={space.xs}>
+              {PANE_RULES.map((rule) => (
+                <Text key={rule} col={colors.textMuted} fos={fontSize.label}>
+                  {`• ${t(`autoAccept.rules.${rule}` as never)}`}
+                </Text>
+              ))}
+              {withDriver ? (
+                <>
+                  <Text col={colors.textMuted} fos={fontSize.label}>
+                    {`• ${t('autoAccept.rules.driver')}`}
+                  </Text>
+                  <Text col={colors.textMuted} fos={fontSize.label}>
+                    {`• ${t('autoAccept.rules.appHold')}`}
+                  </Text>
+                </>
+              ) : null}
+              <Text col={colors.text} fos={fontSize.label} fow={fontWeight.semibold}>
+                {t('autoAccept.policyTitle')}
+              </Text>
+              <Text col={colors.textMuted} fos={fontSize.label}>
+                {t('autoAccept.policyBody')}
+              </Text>
+            </YStack>
+          ) : null}
+        </YStack>
+      </Card>
+    );
+  }
+
+  const routesField = (
+    <Controller
+      control={control}
+      name="preferredRouteTypes"
+      render={({ field }) => (
+        <YStack gap={space.xs}>
+          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+            {t('autoAccept.routesTitle')}
+          </Text>
+          {ROUTE_TYPE_VALUES.map((value) => {
+            const checked = field.value.includes(value);
+            return (
+              <Pressable
+                key={value}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked, disabled: !canEdit }}
+                accessibilityLabel={domainLabel('routeType', value)}
+                disabled={!canEdit}
+                onPress={() =>
+                  field.onChange(
+                    checked
+                      ? field.value.filter((v: string) => v !== value)
+                      : [...field.value, value],
+                  )
+                }
+                style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+              >
+                <XStack ai="center" gap={space.sm} minHeight={sizing.touchTarget}>
+                  <CheckMark checked={checked} />
+                  <Text f={1} col={colors.text} fos={fontSize.bodySm}>
+                    {domainLabel('routeType', value)}
+                  </Text>
+                </XStack>
+              </Pressable>
+            );
+          })}
+          <Text col={colors.textMuted} fos={fontSize.label}>
+            {t('autoAccept.routesHint')}
+          </Text>
+        </YStack>
+      )}
+    />
+  );
+
+  const minRentalField = (
+    <SelectField
+      control={control}
+      name="minRentalMinutes"
+      label={t('autoAccept.minRental')}
+      options={minRentalOptions}
+      // Bỏ trống = KHÔNG đặt sàn thời lượng, một câu trả lời khác hẳn "sàn 1 giờ".
+      allowClear
+      hint={t('autoAccept.minRentalHint')}
+      disabled={!canEdit}
+    />
+  );
+
+  const saveRow =
+    canEdit && withDriver ? (
+      <XStack gap={space.sm}>
+        {formState.isDirty ? (
+          <YStack flexShrink={0}>
+            <Button
+              label={tActions('cancel')}
+              variant="ghost"
+              disabled={patch.isPending}
+              onPress={() => reset(values)}
+            />
+          </YStack>
+        ) : null}
+        <YStack f={1}>
+          <Button
+            label={tActions('saveChanges')}
+            icon="checkmark-outline"
+            loading={patch.isPending}
+            disabled={!formState.isDirty}
+            onPress={() => void submit()}
+          />
+        </YStack>
+      </XStack>
+    ) : null;
+
+  if (part === 'extras') {
+    // Web `WithDriverExtras`: thẻ "Khác" - phân khúc chuyến ưu tiên TRƯỚC, thời gian tối thiểu SAU.
+    return (
+      <Card>
+        <YStack gap={space.md}>
+          <SectionHeader icon="options-outline">{tEditor('extras')}</SectionHeader>
+          {routesField}
+          {minRentalField}
+          {saveRow}
+        </YStack>
+      </Card>
+    );
+  }
+
   return (
     <YStack gap={space.md}>
       <Card tone={enabled ? 'accent' : 'muted'} lift="flat">
@@ -180,15 +365,7 @@ function AutoAcceptForm({
         </XStack>
       </Card>
 
-      {withDriver && capability ? (
-        <Callout tone={capability.available ? 'success' : 'warning'}>
-          {capability.available
-            ? t('autoAccept.capabilityOk', { count: capability.activeDrivers })
-            : capability.driversFeatureEnabled
-              ? t('autoAccept.capabilityNoDriver')
-              : t('autoAccept.appCapabilityNoFeature')}
-        </Callout>
-      ) : null}
+      {capabilityCallout}
       {withDriver && capability?.driversFeatureEnabled ? (
         <InlineAction
           label={t('autoAccept.openDrivers')}
@@ -212,57 +389,8 @@ function AutoAcceptForm({
             <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
               {t('autoAccept.withDriverTitle')}
             </Text>
-            <SelectField
-              control={control}
-              name="minRentalMinutes"
-              label={t('autoAccept.minRental')}
-              options={minRentalOptions}
-              // Bỏ trống = KHÔNG đặt sàn thời lượng, một câu trả lời khác hẳn "sàn 1 giờ".
-              allowClear
-              hint={t('autoAccept.minRentalHint')}
-              disabled={!canEdit}
-            />
-            <Controller
-              control={control}
-              name="preferredRouteTypes"
-              render={({ field }) => (
-                <YStack gap={space.xs}>
-                  <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                    {t('autoAccept.routesTitle')}
-                  </Text>
-                  {ROUTE_TYPE_VALUES.map((value) => {
-                    const checked = field.value.includes(value);
-                    return (
-                      <Pressable
-                        key={value}
-                        accessibilityRole="checkbox"
-                        accessibilityState={{ checked, disabled: !canEdit }}
-                        accessibilityLabel={domainLabel('routeType', value)}
-                        disabled={!canEdit}
-                        onPress={() =>
-                          field.onChange(
-                            checked
-                              ? field.value.filter((v: string) => v !== value)
-                              : [...field.value, value],
-                          )
-                        }
-                        style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
-                      >
-                        <XStack ai="center" gap={space.sm} minHeight={sizing.touchTarget}>
-                          <CheckMark checked={checked} />
-                          <Text f={1} col={colors.text} fos={fontSize.bodySm}>
-                            {domainLabel('routeType', value)}
-                          </Text>
-                        </XStack>
-                      </Pressable>
-                    );
-                  })}
-                  <Text col={colors.textMuted} fos={fontSize.label}>
-                    {t('autoAccept.routesHint')}
-                  </Text>
-                </YStack>
-              )}
-            />
+            {minRentalField}
+            {routesField}
           </YStack>
         </Card>
       ) : null}
@@ -297,29 +425,7 @@ function AutoAcceptForm({
       </Card>
 
       {/* Nút Lưu chỉ còn ở có tài xế — đúng web. */}
-      {canEdit && withDriver ? (
-        <XStack gap={space.sm}>
-          {formState.isDirty ? (
-            <YStack flexShrink={0}>
-              <Button
-                label={tActions('cancel')}
-                variant="ghost"
-                disabled={patch.isPending}
-                onPress={() => reset(values)}
-              />
-            </YStack>
-          ) : null}
-          <YStack f={1}>
-            <Button
-              label={tActions('saveChanges')}
-              icon="checkmark-outline"
-              loading={patch.isPending}
-              disabled={!formState.isDirty}
-              onPress={() => void submit()}
-            />
-          </YStack>
-        </XStack>
-      ) : null}
+      {saveRow}
     </YStack>
   );
 }

@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import type { IconName } from '@/components/ui/Chip';
 import { DashedDivider } from '@/components/ui/DashedDivider';
 import { useMemo, useState, type ReactNode } from 'react';
@@ -45,7 +45,7 @@ import {
   usePriceBandLabel,
 } from '../filter-constants';
 import { SERVICE_ICON, SERVICE_LABEL_KEY, VEHICLE_ICON } from '../search-items';
-import { modalColumn } from '@/theme/layout';
+import { layout, modalColumn } from '@/theme/layout';
 
 /** Số mục hiện trước "Xem thêm" — Figma vẽ 3 hàng × 2 cột (web `COLLAPSED_COUNT`). */
 const COLLAPSED_COUNT = 6;

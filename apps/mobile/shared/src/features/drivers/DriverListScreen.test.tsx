@@ -24,6 +24,10 @@ jest.mock('expo-router', () => ({
 jest.mock('@/features/shell/ManageHeader', () => ({ ManageHeader: () => null }));
 
 const DRIVER_ID = '01JQZX0000000000000000000D';
+const INVITE = 'Mời tài xế mới';
+const EDIT = 'Chỉnh sửa thông tin';
+/** Nút "…" của thẻ — tạm khoá / mở khoá / ngừng hợp tác / thu hồi nằm trong tấm trượt của nó. */
+const MENU = 'Thao tác cho Trần Văn B';
 
 function currentUser(permissions: Permission[]): authApi.CurrentUser {
   return {
@@ -123,14 +127,14 @@ describe('DriverListScreen - quyền', () => {
     const view = await renderScreen([PERMISSION.DRIVER_VIEW]);
 
     await view.findByText('Trần Văn B');
-    expect(view.queryByLabelText('Mời tài xế')).toBeNull();
-    expect(view.queryByText('Sửa')).toBeNull();
+    expect(view.queryByLabelText(INVITE)).toBeNull();
+    expect(view.queryByText(EDIT)).toBeNull();
   });
 
   it('tuyến hoa hồng không cờ gói: thao tác vẫn mở (không sau cờ gói)', async () => {
     const view = await renderScreen([PERMISSION.DRIVER_VIEW, PERMISSION.DRIVER_MANAGE]);
 
-    const invite = await view.findByLabelText('Mời tài xế');
+    const invite = await view.findByLabelText(INVITE);
     expect(invite.props.accessibilityState?.disabled).not.toBe(true);
   });
 });
@@ -141,7 +145,7 @@ describe('DriverListScreen - mời và vòng đời liên kết', () => {
   it('thiếu tên/SĐT: chặn ở client, KHÔNG gọi API', async () => {
     const view = await renderScreen(manage);
 
-    await fireEvent.press(await view.findByLabelText('Mời tài xế'));
+    await fireEvent.press(await view.findByLabelText(INVITE));
     await fireEvent.press(await view.findByRole('button', { name: 'Gửi lời mời' }));
 
     expect(await view.findByText('Nhập tên tài xế')).toBeTruthy();
@@ -152,9 +156,9 @@ describe('DriverListScreen - mời và vòng đời liên kết', () => {
   it('mời đủ trường: gửi đúng payload', async () => {
     const view = await renderScreen(manage);
 
-    await fireEvent.press(await view.findByLabelText('Mời tài xế'));
+    await fireEvent.press(await view.findByLabelText(INVITE));
     await fireEvent.changeText(await view.findByLabelText('Số điện thoại tài khoản'), '0912345678');
-    await fireEvent.changeText(view.getByLabelText('Tên gọi'), 'Nguyễn Văn C');
+    await fireEvent.changeText(view.getByLabelText('Tên tài xế'), 'Nguyễn Văn C');
     await fireEvent.press(view.getByRole('button', { name: 'Gửi lời mời' }));
 
     await waitFor(() => expect(view.inviteSpy).toHaveBeenCalled());
@@ -168,7 +172,8 @@ describe('DriverListScreen - mời và vòng đời liên kết', () => {
   it('TẠM KHOÁ phải xác nhận', async () => {
     const view = await renderScreen(manage);
 
-    await fireEvent.press(await view.findByText('Tạm khoá'));
+    await fireEvent.press(await view.findByLabelText(MENU));
+    await fireEvent.press(await view.findByRole('button', { name: 'Tạm khoá' }));
     expect(
       await view.findByText(
         'Tạm khoá tài xế này? Liên kết vẫn giữ, nhưng không gán được vào chuyến mới.',
@@ -184,24 +189,35 @@ describe('DriverListScreen - mời và vòng đời liên kết', () => {
   it('MỞ KHOÁ thì không hỏi', async () => {
     const view = await renderScreen(manage, [driver({ linkStatus: DRIVER_LINK_STATUS.SUSPENDED })]);
 
-    await fireEvent.press(await view.findByText('Mở khoá'));
+    await fireEvent.press(await view.findByLabelText(MENU));
+    await fireEvent.press(await view.findByRole('button', { name: 'Mở khoá' }));
     await waitFor(() => expect(view.resumeSpy).toHaveBeenCalledWith(DRIVER_ID));
   });
 
-  it('lời mời đang chờ: "Thu hồi lời mời" (không phải "Kết thúc liên kết")', async () => {
+  it('lời mời đang chờ: "Thu hồi lời mời" (không phải "Ngừng hợp tác")', async () => {
     const view = await renderScreen(manage, [driver({ linkStatus: DRIVER_LINK_STATUS.INVITED })]);
 
-    await fireEvent.press(await view.findByText('Thu hồi lời mời'));
+    await fireEvent.press(await view.findByLabelText(MENU));
+    expect(view.queryByText('Ngừng hợp tác')).toBeNull();
+    await fireEvent.press(await view.findByRole('button', { name: 'Thu hồi lời mời' }));
     expect(await view.findByText('Thu hồi lời mời này?')).toBeTruthy();
-    expect(view.queryByText('Kết thúc liên kết')).toBeNull();
+    expect(view.queryByText('Ngừng hợp tác')).toBeNull();
+    expect(view.endSpy).not.toHaveBeenCalled();
   });
 
   it('liên kết đã kết thúc: không còn thao tác nào', async () => {
     const view = await renderScreen(manage, [driver({ linkStatus: DRIVER_LINK_STATUS.ENDED })]);
 
     await view.findByText('Trần Văn B');
-    expect(view.queryByText('Sửa')).toBeNull();
-    expect(view.queryByText('Kết thúc liên kết')).toBeNull();
+    expect(view.queryByText(EDIT)).toBeNull();
+
+    // Menu "…" chỉ còn "Xem chi tiết".
+    await fireEvent.press(await view.findByLabelText(MENU));
+    expect(await view.findByRole('button', { name: 'Xem chi tiết' })).toBeTruthy();
+    expect(view.queryByText('Tạm khoá')).toBeNull();
+    expect(view.queryByText('Mở khoá')).toBeNull();
+    expect(view.queryByText('Ngừng hợp tác')).toBeNull();
+    expect(view.queryByText('Thu hồi lời mời')).toBeNull();
   });
 });
 
@@ -215,12 +231,13 @@ describe('DriverListScreen - bằng lái', () => {
             state: DRIVER_LICENCE_STATE.VERIFIED,
             classes: ['B'],
             expiresOn: '2030-01-01',
-          },
+            fullName: 'Trần Văn B',
+          } as Driver['licence'],
         }),
       ],
     );
 
-    expect(await view.findByText('Bằng lái đã xác thực')).toBeTruthy();
+    expect(await view.findByText('Đã xác thực')).toBeTruthy();
     expect(view.getByText(/Hạng B/)).toBeTruthy();
   });
 });

@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -36,6 +36,7 @@ import { ROUTES } from '@/navigation/routes';
 import { queryKeys } from '@/queries/query-keys';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 
 interface ChangePasswordValues {
   currentPassword: string;
@@ -296,7 +297,7 @@ export function ChangePasswordScreen({
           */}
           {isSecurity ? (
             <Card padded={false}>
-              <YStack px={space.md} py={space.xs}>
+              <YStack px={layout.padX} py={space.xs}>
                 <SettingRow
                   icon="trash-outline"
                   label={tDelete('title')}

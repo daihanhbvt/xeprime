@@ -395,6 +395,9 @@
       }
     },
     "tiles": {
+      "cashTitle": "Dòng tiền",
+      "cashIn": "Tiền vào",
+      "cashOut": "Tiền ra",
       "label": "Số liệu tài chính của kỳ",
       "revenue": "Doanh thu",
       "cost": "Chi phí",
@@ -455,7 +458,9 @@
     "vehicles": {
       "title": "Hiệu quả theo xe",
       "total": "{count, plural, other {# xe}}",
+      "tripsCount": "{trips, plural, other {# chuyến}}",
       "marginValue": "{value}%",
+      "marginLine": "Biên lợi nhuận: {value}",
       "cardLine": "Thu {revenue} · Chi {cost} · {trips, plural, other {# chuyến}}",
       "unassigned": "Chi phí chung chưa gắn xe: {value}. Số này không nằm trong dòng nào của bảng.",
       "error": "Không tải được hiệu quả theo xe",

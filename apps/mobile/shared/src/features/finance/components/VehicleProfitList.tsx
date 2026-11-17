@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { RemoteImage } from '@/components/ui/RemoteImage';
+import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -10,12 +11,10 @@ import {
   VEHICLE_PROFIT_SORT_VALUES,
   type PaginationMeta,
 } from '@xeprime/types';
-import { isNegativeMoney, isZeroMoney } from '@xeprime/domain';
-import { BlockTitle } from '@/components/ui/BlockTitle';
-import { Card } from '@/components/ui/Card';
-import { CardAccent } from '@/components/ui/CardAccent';
-import { DetailChevron } from '@/components/ui/DetailArrow';
-import { Pagination } from '@/components/ui/Pagination';
+import { isNegativeMoney, isZeroMoney, LIST_SEPARATOR } from '@xeprime/domain';
+import { SectionHeader } from '@/components/ui/CardTitle';
+import { Button } from '@/components/ui/Button';
+import { VehicleThumb } from '@/components/ui/VehicleThumb';
 import { SelectControl } from '@/components/ui/SelectControl';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -25,7 +24,7 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import type { VehicleProfit } from '../api';
 
 /** Ô biểu tượng đầu thẻ — vừa đúng chiều cao hai dòng chữ (tên xe + biển số). */
@@ -52,6 +51,7 @@ export function VehicleProfitList({
   error,
   onSortChange,
   onPageChange,
+  embedded = false,
 }: {
   items: readonly VehicleProfit[];
   meta: PaginationMeta;
@@ -62,10 +62,16 @@ export function VehicleProfitList({
   error: { error: unknown; onRetry: () => void } | null;
   onSortChange: (next: string) => void;
   onPageChange: (page: number) => void;
+  /**
+   * Nằm TRONG thẻ "Hiệu suất kinh doanh" (web `BusinessPerformanceCard`, ledger 09 §3.9): thẻ đã
+   * có tiêu đề + tab, nên dải không in tiêu đề riêng của nó.
+   */
+  embedded?: boolean;
 }) {
   const colors = useColors();
   const t = useTranslations('Finance.overview.vehicles');
   const tLabels = useTranslations('Common.labels');
+  const tActions = useTranslations('Common.actions');
   const fmt = useAppFormat();
   const permissions = usePermissions();
   const navigateOnce = useNavigateOnce();
@@ -79,7 +85,7 @@ export function VehicleProfitList({
 
   return (
     <YStack gap={space.sm}>
-      <BlockTitle>{t('title')}</BlockTitle>
+      {embedded ? null : <SectionHeader icon="car-outline">{t('title')}</SectionHeader>}
 
       <SelectControl
         label={t('sort.label')}
@@ -100,154 +106,76 @@ export function VehicleProfitList({
             {t('total', { count: meta.total })}
           </Text>
 
-          {items.map((row) => {
+          {items.map((row, index) => {
             const loss = isNegativeMoney(row.profit);
-            /*
-              Màu theo DẤU: lãi xanh, lỗ đỏ.
-              Cùng luật với ba thẻ ở đầu màn (`FinanceOverviewCards`) và với dải doanh thu theo
-              khách ngay bên dưới — ba chỗ cùng bày tiền trên một màn thì không được mỗi chỗ một
-              quy ước màu, nếu không người đọc phải học lại bảng màu ở từng khối.
-            */
             const profitTone = loss ? colors.danger : colors.success;
+            const margin = row.profitMarginPercent;
+            // Biên: âm đỏ · thấp (<40%) cam · cao xanh - như Figma "Hiệu suất kinh doanh"; `null` là "-".
+            const marginTone =
+              margin == null ? colors.textMuted : margin < 0 ? colors.danger : margin < 40 ? colors.warning : colors.success;
 
             return (
-              <Card
+              // Hàng phẳng như Figma (`24228:98928`): ảnh + tên/biển·chuyến + lợi nhuận/biên, rồi hai ô Thu / Chi.
+              <Pressable
                 key={row.vehicleId}
-                padded={false}
-                {...(canOpenVehicle
-                  ? {
-                      onPress: () => navigateOnce(ROUTES.manage.vehicleDetail(row.vehicleId)),
-                      accessibilityLabel: row.vehicleName,
-                    }
-                  : {})}
+                disabled={!canOpenVehicle}
+                onPress={() => navigateOnce(ROUTES.manage.vehicleDetail(row.vehicleId))}
+                accessibilityRole={canOpenVehicle ? 'button' : undefined}
+                accessibilityLabel={row.vehicleName}
               >
-                {/*
-                  Vạch mép trái mang ĐÚNG dấu của lợi nhuận — cùng màu với con số bên phải, không
-                  phải một quy ước thứ hai.
-
-                  Dải này tồn tại để lướt hai mươi xe tìm xe đang LỖ (xem chú thích bố cục bên
-                  dưới), mà con số lỗ nằm ở mép phải và chỉ khác con số lãi ở màu chữ. Một mép màu
-                  liền mạch cho thấy ngay cụm đỏ nằm ở đâu trong bảng xếp hạng.
-                */}
-                <XStack>
-                  <CardAccent color={loss ? STATUS_COLOR.DANGER : STATUS_COLOR.SUCCESS} />
-
-                  <YStack f={1} minWidth={0} p={space.md}>
-                    {/*
-                      HAI DÒNG, đúng thẻ web ở bề rộng điện thoại: danh tính bên trái, LỢI NHUẬN bên
-                      phải; dòng dưới là biển số và một câu tóm tắt mờ.
-
-                      Bản trước tách thu/chi/chuyến thành ba hàng riêng có huy hiệu — mỗi thẻ cao gần
-                      gấp đôi, mà một dải XẾP HẠNG thì việc chính là lướt qua hai mươi xe để tìm xe
-                      đang lỗ, không phải đọc kỹ từng xe. Xe nào đáng đọc kỹ thì chạm vào là mở hồ sơ.
-
-                      Ba số phụ dùng dạng RÚT GỌN (`Thu 902k`) — cũng là lựa chọn của web ở chính chỗ
-                      này. Chúng chia nhau phần bề ngang còn lại sau biển số, viết đủ thì chắc chắn bị
-                      cắt; mà con số quan trọng nhất — lợi nhuận — vẫn viết đủ từng đồng ở dòng trên.
-                    */}
-                    <XStack ai="center" gap={space.sm}>
-                      {/*
-                        HÌNH XE, không phải chữ cái đầu tên xe: "Toyota Vios" và "Toyota Innova" cho
-                        ra cùng một chữ T, nên chữ cái ở đây không phân biệt được gì — nó chỉ là một
-                        ô chữ ngẫu nhiên cạnh tên xe đã nằm ngay bên phải. Một hình xe thì nói ngay
-                        hàng này là một CHIẾC XE, và cả dải đọc ra là dải xe.
-                      */}
-                      <YStack
-                        w={TILE_SIZE}
-                        h={TILE_SIZE}
-                        br={radius.md}
-                        ov="hidden"
-                        ai="center"
-                        jc="center"
-                        bg={colors.primaryLight}
-                      >
-                        {/* Ảnh đại diện của xe (PR #276) — thiếu ảnh thì về biểu tượng. */}
-                        <RemoteImage
-                          uri={row.mainImageUrl}
-                          recyclingKey={row.vehicleId}
-                          radius={radius.md}
-                          fallback={
-                            <Ionicons
-                              name="car-sport-outline"
-                              size={iconSize.md}
-                              color={colors.primaryActive}
-                            />
-                          }
-                        />
-                      </YStack>
-
-                      <YStack f={1} minWidth={0} gap={2}>
-                        <XStack ai="center" gap={space.sm}>
-                          <Text
-                            f={1}
-                            minWidth={0}
-                            col={colors.text}
-                            fos={fontSize.bodySm}
-                            fow={fontWeight.semibold}
-                            numberOfLines={1}
-                          >
-                            {row.vehicleName}
-                          </Text>
-                          {/*
-                            Số tiền KHÔNG co: hết chỗ thì tên xe cắt bớt, không phải con số.
-
-                            `fontSize.body` — CÙNG bậc với con số của dải "Doanh thu theo khách" ngay
-                            dưới. Hai dải xếp hạng đứng liền nhau trên một màn mà số của dải này nhỏ
-                            hơn dải kia thì đọc ra như dải trên kém quan trọng hơn, trong khi chúng
-                            ngang vai.
-                          */}
-                          <Text
-                            flexShrink={0}
-                            col={profitTone}
-                            fos={fontSize.body}
-                            fow={fontWeight.bold}
-                            numberOfLines={1}
-                          >
-                            {fmt.money(row.profit)}
-                          </Text>
-                        </XStack>
-
-                        <Text
-                          col={colors.textMuted}
-                          fos={fontSize.label}
-                          letterSpacing={PLATE_TRACKING}
-                          numberOfLines={1}
-                        >
-                          {row.plateNumber ?? tLabels('emptyValue')}
-                        </Text>
-
-                        {/*
-                          Dòng thứ ba đứng RIÊNG, không chen cạnh biển số — và vì đứng riêng nên nó có
-                          đủ bề ngang để viết SỐ ĐẦY ĐỦ.
-
-                          Ép nó chung hàng với biển số thì mỗi bên còn chưa tới 140dp, và `Thu
-                          82.500.000 ₫ · Chi 19.300.000 ₫ · 7 chuyến` chỉ còn cách rút gọn — mà rút
-                          gọn ở đây là mất thông tin thật: `902k` không nói được 902.000 hay 902.400.
-                          Cho phép xuống hai dòng thay vì cắt: một số tiền cụt là con số sai.
-                        */}
-                        <Text col={colors.placeholder} fos={fontSize.label} numberOfLines={2}>
-                          {t('cardLine', {
-                            revenue: fmt.money(row.revenue),
-                            cost: fmt.money(row.cost),
-                            trips: row.trips,
-                          })}
-                        </Text>
-                      </YStack>
-
-                      {canOpenVehicle ? <DetailChevron /> : null}
-                    </XStack>
-                  </YStack>
-                </XStack>
-              </Card>
+                <YStack gap={space.sm} py={space.sm} borderTopWidth={index === 0 ? 0 : 1} borderTopColor={colors.borderSubtle}>
+                  <XStack ai="center" gap={space.sm}>
+                    <VehicleThumb uri={row.mainImageUrl} accessibilityLabel={row.vehicleName} />
+                    <YStack f={1} minWidth={0} gap={2}>
+                      <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.semibold} numberOfLines={1}>
+                        {row.vehicleName}
+                      </Text>
+                      <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+                        {[row.plateNumber ?? tLabels('emptyValue'), t('tripsCount', { trips: row.trips })].join(LIST_SEPARATOR)}
+                      </Text>
+                    </YStack>
+                    <YStack ai="flex-end" gap={2} flexShrink={0}>
+                      <Text col={profitTone} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.bold} numberOfLines={1}>
+                        {fmt.money(row.profit)}
+                      </Text>
+                      <Text col={marginTone} fos={fontSize.label} numberOfLines={1}>
+                        {t('marginLine', {
+                          value: margin == null ? tLabels('emptyValue') : t('marginValue', { value: margin }),
+                        })}
+                      </Text>
+                    </YStack>
+                  </XStack>
+                  <XStack gap={space.sm}>
+                    <YStack f={1} minWidth={0} br={radius.md} bg={colors.surfaceMuted} p={space.sm} gap={2}>
+                      <Text col={colors.textMuted} fos={fontSize.label}>
+                        {t('columns.revenue')}
+                      </Text>
+                      <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.bold} numberOfLines={1}>
+                        {fmt.money(row.revenue)}
+                      </Text>
+                    </YStack>
+                    <YStack f={1} minWidth={0} br={radius.md} bg={colors.surfaceMuted} p={space.sm} gap={2}>
+                      <Text col={colors.textMuted} fos={fontSize.label}>
+                        {t('columns.cost')}
+                      </Text>
+                      <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.bold} numberOfLines={1}>
+                        {fmt.money(row.cost)}
+                      </Text>
+                    </YStack>
+                  </XStack>
+                </YStack>
+              </Pressable>
             );
           })}
 
-          {meta.total > meta.limit ? (
-            <Pagination
-              page={meta.page}
-              limit={meta.limit}
-              total={meta.total}
-              onChange={onPageChange}
+          {/* Cuộn/dồn trang như Đơn thuê: "Xem thêm" tải trang kế, danh sách dồn lại (người dùng 17/11/2026). */}
+          {meta.page * meta.limit < meta.total ? (
+            <Button
+              label={tActions('viewMore')}
+              variant="outline"
+              size="compact"
+              loading={loading}
+              onPress={() => onPageChange(meta.page + 1)}
             />
           ) : null}
         </>

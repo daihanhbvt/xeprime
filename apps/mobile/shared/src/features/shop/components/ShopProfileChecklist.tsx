@@ -1,4 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
+import CheckCircleFilled from '@ant-design/icons-svg/es/asn/CheckCircleFilled';
+import MinusCircleOutlined from '@ant-design/icons-svg/es/asn/MinusCircleOutlined';
+import Svg, { Circle } from 'react-native-svg';
 import { useFormState, useWatch, type Control } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -17,10 +19,17 @@ import {
 } from '@xeprime/types';
 import type { ShopProfileWithContactValues } from '@xeprime/validators';
 import type { ShopOwnerAccount } from '../api';
-import { Card } from '@/components/ui/Card';
-import { ProgressBar } from '@/components/ui/ProgressBar';
+import { AntIcon } from '@/components/icons/AntIcon';
+import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+
+/** Vòng tiến độ 40px của web (`<Progress type="circle" size={40}>`), nét 6% đường kính như AntD. */
+const RING_SIZE = 40;
+const RING_STROKE = 4;
+/** Hàng mục: cao tối thiểu 28, icon 14 (`.row`). */
+const ROW_MIN_HEIGHT = 28;
+const ROW_ICON = 14;
 
 type ChecklistItem = ShopProfileRequirement | ShopProfileSuggestion;
 
@@ -137,35 +146,74 @@ export function ShopProfileChecklist({
   const ready = missingRequired.size === 0;
 
   return (
-    <Card>
-      <YStack gap={space.md}>
-        <YStack gap={space.xs}>
-          <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-            {t('title')}
-          </Text>
-          <ProgressBar
-            percent={Math.round((done / total) * 100)}
-            tone={ready ? 'success' : 'active'}
-            label={`${done}/${total}`}
-          />
-        </YStack>
+    <YStack
+      gap={space.md}
+      p={layout.cardPad}
+      br={radius.lg}
+      bw={1}
+      bc={colors.borderSubtle}
+      bg={colors.surface}
+    >
+      <XStack ai="center" jc="space-between" gap={space.md}>
+        <Text f={1} col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold}>
+          {t('title')}
+        </Text>
+        <ProgressRing done={done} total={total} ready={ready} />
+      </XStack>
 
-        <Group
-          label={ready ? t('profileRequiredDone') : t('profileRequiredTitle')}
-          items={requiredItems}
-          missing={missingRequired}
-          tone={ready ? 'done' : 'required'}
-          labelOf={labelOf}
+      <Group
+        label={ready ? t('profileRequiredDone') : t('profileRequiredTitle')}
+        items={requiredItems}
+        missing={missingRequired}
+        tone={ready ? 'done' : 'required'}
+        labelOf={labelOf}
+      />
+      <Group
+        label={personal ? tPersonal('suggestedTitle') : t('suggestedTitle')}
+        items={suggestedItems}
+        missing={missingSuggested}
+        tone="suggested"
+        labelOf={labelOf}
+      />
+    </YStack>
+  );
+}
+
+/** Vòng tròn "done/total" - `Progress type="circle"` của web: vàng khi còn thiếu, xanh khi đủ mục chặn. */
+function ProgressRing({ done, total, ready }: { done: number; total: number; ready: boolean }) {
+  const colors = useColors();
+  const r = (RING_SIZE - RING_STROKE) / 2;
+  const length = 2 * Math.PI * r;
+  const ratio = total > 0 ? done / total : 0;
+  return (
+    <YStack
+      w={RING_SIZE}
+      h={RING_SIZE}
+      ai="center"
+      jc="center"
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 0, max: total, now: done }}
+    >
+      <Svg width={RING_SIZE} height={RING_SIZE} style={{ position: 'absolute' }}>
+        <Circle cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={r} stroke={colors.borderSubtle} strokeWidth={RING_STROKE} fill="none" />
+        <Circle
+          cx={RING_SIZE / 2}
+          cy={RING_SIZE / 2}
+          r={r}
+          stroke={ready ? colors.success : colors.primary}
+          strokeWidth={RING_STROKE}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={`${length} ${length}`}
+          strokeDashoffset={length * (1 - ratio)}
+          transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
         />
-        <Group
-          label={personal ? tPersonal('suggestedTitle') : t('suggestedTitle')}
-          items={suggestedItems}
-          missing={missingSuggested}
-          tone="suggested"
-          labelOf={labelOf}
-        />
-      </YStack>
-    </Card>
+      </Svg>
+      <Text col={colors.text} fos={fontSize.label} fow={fontWeight.medium}>
+        {done}/{total}
+      </Text>
+    </YStack>
   );
 }
 
@@ -229,32 +277,34 @@ function Group({
     <YStack gap={space.xs}>
       <Text
         col={tone === 'done' ? colors.success : colors.textMuted}
-        fos={fontSize.label}
-        fow={fontWeight.semibold}
+        fos={fontSize.bodySm}
+        fow={fontWeight.medium}
       >
         {label}
       </Text>
-      {items.map((item) => {
-        const isMissing = missing.has(item);
-        return (
-          <XStack key={item} ai="center" gap={space.xs}>
-            <Ionicons
-              name={isMissing ? 'ellipse-outline' : 'checkmark-circle'}
-              size={iconSize.sm}
-              color={
-                isMissing
-                  ? tone === 'suggested'
-                    ? colors.textMuted
-                    : colors.warning
-                  : colors.success
-              }
-            />
-            <Text f={1} col={isMissing ? colors.text : colors.textMuted} fos={fontSize.bodySm}>
-              {labelOf(item)}
-            </Text>
-          </XStack>
-        );
-      })}
+      <YStack gap={2}>
+        {items.map((item) => {
+          const isMissing = missing.has(item);
+          return (
+            <XStack key={item} ai="center" gap={space.sm} minHeight={ROW_MIN_HEIGHT}>
+              <AntIcon
+                icon={isMissing ? MinusCircleOutlined : CheckCircleFilled}
+                size={ROW_ICON}
+                color={
+                  isMissing
+                    ? tone === 'suggested'
+                      ? colors.textDisabled
+                      : colors.warning
+                    : colors.success
+                }
+              />
+              <Text f={1} col={isMissing ? colors.text : colors.placeholder} fos={fontSize.bodySm}>
+                {labelOf(item)}
+              </Text>
+            </XStack>
+          );
+        })}
+      </YStack>
     </YStack>
   );
 }

@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   isBookingRequestPastDue,
   LONG_TERM_PACKAGE_MONTHS,
+  PERMISSION,
   PICKUP_PREFERENCE,
   SERVICE_TYPE,
   holdWindowsPreview,
@@ -28,17 +29,23 @@ import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { queryKeys } from '@/queries/query-keys';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { DataRow } from '@/components/ui/DataRow';
+import { FieldBox } from '@/components/ui/FieldBox';
+import { SummaryRow } from '@/components/ui/SummaryRow';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { requestPaymentRows } from './BookingRequestCard';
 import { Chip } from '@/components/ui/Chip';
 import { RentalRangeSheet } from '@/features/marketplace/components/RentalRangeSheet';
 import { useNow } from '@/hooks/use-now';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
-import { fieldFontSize, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fieldFontSize, fontSize, fontWeight, space } from '@/theme/tokens';
+import { ApprovalPaymentGroup, ApprovalTripCard } from './ApproveSheetParts';
 import type { ApproveBookingRequestInput, BookingRequestDecisionTarget } from '../api';
 import { ApprovalPreviewSummary, type ApprovalWindows } from './ApprovalPreviewSummary';
-import { DecisionFooter, DecisionLead, richBold } from './DecisionSheetParts';
+import { VehicleStillOutAlert } from './VehicleStillOutAlert';
+import { DecisionFooter, richBold } from './DecisionSheetParts';
 
 /** Giờ nhận mặc định khi điền sẵn từ một NGÀY nguyện vọng — cùng hằng với web. */
 const DEFAULT_PICKUP_HOUR = 9;
@@ -71,24 +78,35 @@ function pickupWithinWish(request: BookingRequestDecisionTarget, day: Dayjs): bo
  *
  * Quá hạn thì so `respondBy` chứ không so cột `status`: worker ghi `expired` trễ một nhịp, và cửa
  * sổ đó là một lỗ để duyệt yêu cầu đã chết.
+ *
+ * Hình theo Figma v2 (`24145:94422`): đầu tấm v2 + câu dẫn, thẻ xe/chuyến/khách, nhóm "Thanh toán"
+ * và "Lợi nhuận chuyến" thu/mở được (mặc định mở), ô cửa sổ thanh toán; chân tấm "Từ chối" viền đỏ
+ * + "Xác nhận yêu cầu". "Từ chối" chỉ hiện khi nơi gọi truyền `onReject` (cùng cổng quyền với nút
+ * từ chối trên thẻ) - nó đóng tấm này rồi mở tấm từ chối của CÙNG yêu cầu.
  */
 export function ApproveRequestSheet({
   open,
   onClose,
   request,
   onConfirm,
+  onReject,
   loading,
 }: {
   open: boolean;
   onClose: () => void;
   request: BookingRequestDecisionTarget;
   onConfirm: (body?: ApproveBookingRequestInput) => void;
+  /** Chuyển sang tấm từ chối của cùng yêu cầu - bỏ trống (không có quyền) thì ẩn nút "Từ chối". */
+  onReject?: () => void;
   loading: boolean;
 }) {
   const colors = useColors();
   const t = useTranslations('BookingRequests');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
+  const permissions = usePermissions();
+  const navigateOnce = useNavigateOnce();
+  const paymentRows = requestPaymentRows(request, t);
 
   const longTerm = request.serviceType === SERVICE_TYPE.LONG_TERM;
   const pastDue = isBookingRequestPastDue(request.respondBy);
@@ -136,6 +154,28 @@ export function ApproveRequestSheet({
   });
   const approvalPreview =
     (fresh.data?.id === request.id ? fresh.data.approvalPreview : request.approvalPreview) ?? null;
+  // "Xe chưa về" (PR #278) — chỉ CHI TIẾT mang nó (dòng hộp thư không), nên đọc từ lượt đọc lại.
+  const stillOut = fresh.data?.id === request.id ? (fresh.data.vehicleStillOut ?? null) : null;
+  /*
+   * Bản để HIỂN THỊ: dòng nơi gọi đưa + lượt đọc lại (ảnh xe, mã xe, địa chỉ giao, khách quen) -
+   * như web `ApproveBookingRequestDialog`. Mọi phép quyết định bên dưới vẫn đọc `request`.
+   */
+  const view = useMemo<BookingRequestDecisionTarget>(
+    () => (fresh.data?.id === request.id ? { ...request, ...fresh.data } : request),
+    [fresh.data, request],
+  );
+
+  /* "Lịch xe" (web: `has(VEHICLE_VIEW)`): đóng tấm trước - `Modal` nằm trên mọi màn được mở. */
+  const canViewSchedule = permissions.has(PERMISSION.VEHICLE_VIEW);
+  const openSchedule = useCallback(() => {
+    onClose();
+    navigateOnce(
+      vehicleSchedulePath(
+        { name: request.vehicleName, plateNumber: request.vehiclePlate },
+        { back: true },
+      ),
+    );
+  }, [onClose, navigateOnce, request.vehicleName, request.vehiclePlate]);
 
   /*
    * Dài hạn: hai cửa sổ của khách NẾU duyệt ngay với giờ nhận vừa chọn — CÙNG `holdWindowsPreview`
@@ -204,15 +244,42 @@ export function ApproveRequestSheet({
     <BottomSheet
       open={open}
       onClose={onClose}
+      chrome="v2"
+      headerDivider
       title={longTerm ? t('longTerm.title') : t('approve.title')}
+      /*
+        Câu dẫn của web (05/11/2026): duyệt xong thẻ sang nhóm nào — "Chờ thanh toán" khi có thu
+        tiền giữ chỗ, "Chờ nhận xe" khi đơn có ngay. Dài hạn giữ lời dẫn riêng của tấm. Figma đặt
+        dòng phụ ở đầu tấm (chỗ mã đơn - yêu cầu chưa có mã).
+      */
+      // Dòng phụ: mã đơn khi đã có, chưa có (chưa duyệt) thì "Gửi lúc … · khách" (người dùng 16/11/2026).
+      subtitle={[
+        request.bookingCode
+          ? t('card.bookingCode', { code: request.bookingCode })
+          : request.createdAt
+            ? t('card.sentAt', { value: fmt.dateTime(request.createdAt) })
+            : null,
+        request.customerName,
+      ]
+        .filter(Boolean)
+        .join(LIST_SEPARATOR)}
       footer={
         <DecisionFooter
-          backLabel={t('approve.back')}
-          onBack={onClose}
+          leading={
+            onReject ? (
+              <Button
+                label={t('actions.reject')}
+                variant="dangerOutline"
+                block={false}
+                disabled={loading}
+                onPress={onReject}
+              />
+            ) : null
+          }
           confirm={
             <Button
               label={longTerm ? t('longTerm.confirm') : t('approve.confirm')}
-              icon="checkmark-circle-outline"
+              variant="gradient"
               loading={loading}
               disabled={!ready}
               onPress={confirm}
@@ -221,95 +288,38 @@ export function ApproveRequestSheet({
         />
       }
     >
-      {/*
-        Câu dẫn của web (05/11/2026): duyệt xong thẻ sang nhóm nào — "Chờ thanh toán" khi có thu
-        tiền giữ chỗ, "Chờ nhận xe" khi đơn có ngay. Dài hạn giữ lời dẫn riêng của tấm.
-      */}
-      {!longTerm && approvalPreview ? (
-        <DecisionLead>
-          {approvalPreview.collectsHold
-            ? t.rich('approve.subtitleHold', { b: richBold })
-            : t.rich('approve.subtitleNoHold', { b: richBold })}
-        </DecisionLead>
-      ) : null}
-      {pastDue ? (
-        <YStack bg={colors.dangerSurface} p={space.md} br={radius.md}>
-          <Text col={colors.danger} fos={fontSize.bodySm}>
-            {t('approve.expired')}
-          </Text>
-        </YStack>
-      ) : null}
+      {pastDue ? <Callout tone="danger" title={t('approve.expired')} /> : null}
 
-      <Card tone="muted" lift="flat">
-        <YStack gap={space.xs}>
-          <DataRow
-            label={t('approve.vehicle')}
-            value={`${request.vehicleName}${request.vehiclePlate ? `${LIST_SEPARATOR}${request.vehiclePlate}` : ''}`}
-          />
-          {/*
-            Nối bằng `filter(Boolean)`, không phải chuỗi mẫu: chuyến tuyến hoa hồng còn chờ duyệt
-            KHÔNG trả SĐT (ADR 0028 điều 9), và `${null}` in ra đúng bốn chữ "null" ngay cạnh tên
-            khách. Web thoát điều đó nhờ JSX bỏ qua `null`; ở đây phải nói ra.
-          */}
-          <DataRow
-            label={t('approve.customer')}
-            value={
-              [request.customerName, request.customerPhone].filter(Boolean).join(LIST_SEPARATOR) +
-              // Như web: số tài khoản đã xác minh đi kèm khi khách để lại số liên hệ khác nó.
-              (request.customerAccountPhone
-                ? ` (${t('customer.accountPhone', { phone: request.customerAccountPhone })})`
-                : '')
-            }
-          />
-          {longTerm ? (
-            <DataRow
-              label={t('longTerm.pickupWish')}
-              value={
-                request.pickupPreference == null
-                  ? t('longTerm.wishLegacy')
-                  : fmt.pickupWish(request)
-              }
-            />
-          ) : request.pickupAt && request.returnAt ? (
-            // Như web: hai mốc + thời lượng thuê.
-            <DataRow
-              label={t('approve.schedule')}
-              value={`${fmt.rentalPoint(toAppTz(request.pickupAt))} → ${fmt.rentalPoint(
-                toAppTz(request.returnAt),
-              )}${LIST_SEPARATOR}${fmt.rentalDuration(
-                toAppTz(request.pickupAt),
-                toAppTz(request.returnAt),
-              )}`}
-            />
-          ) : null}
-          {/* Như web `ApproveBookingRequestDialog` (#213): tiền thuê + tổng khách — số của server. */}
-          {request.pricing ? (
-            <>
-              <DataRow
-                label={t('approve.rentalTotal')}
-                value={fmt.money(request.pricing.rentalTotal)}
-              />
-              <DataRow
-                label={t('approve.customerTotal')}
-                value={fmt.money(request.pricing.customerTotalAmount)}
-                strong
-              />
-            </>
-          ) : null}
-        </YStack>
-      </Card>
+      <ApprovalTripCard
+        request={view}
+        longTerm={longTerm}
+        pickupWish={request.pickupPreference == null ? null : fmt.pickupWish(request)}
+        {...(canViewSchedule ? { onOpenSchedule: openSchedule } : {})}
+      />
+
+      {/*
+        Web `ApproveBookingRequestDialog`: khối "Thanh toán" + nhãn "Tạm tính" với CÙNG các dòng
+        của thẻ (`requestPaymentRows`) - giữ chỗ dự kiến, trả khi nhận xe dự kiến - số của server.
+      */}
+      {request.pricing ? (
+        <ApprovalPaymentGroup
+          rows={paymentRows}
+          isEstimate={request.pricing.isEstimate}
+          payout={approvalPreview?.ownerPayout ?? null}
+        />
+      ) : null}
 
       {longTerm ? (
         <>
           {/* Yêu cầu LEGACY không mang gói: cố ý KHÔNG suy từ khoảng ngày cũ, gian hàng tự chọn. */}
           {request.longTermPackageMonths ? (
-            <DataRow
+            <SummaryRow
               label={t('longTerm.chosenPackageLabel')}
               value={fmt.packageLabel(request.longTermPackageMonths) ?? ''}
             />
           ) : (
             <YStack gap={space.xs}>
-              <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+              <Text col={colors.text} fos={fieldFontSize.label} fow={fontWeight.semibold}>
                 {t('longTerm.legacyPackageLabel')}
               </Text>
               <XStack gap={space.xs} flexWrap="wrap">
@@ -329,27 +339,22 @@ export function ApproveRequestSheet({
             </YStack>
           )}
 
-          <YStack gap={space.xs}>
-            <Text col={colors.text} fos={fieldFontSize.label} fow={fontWeight.semibold}>
-              {t('longTerm.pickupLabel')}
-            </Text>
-            <Card onPress={() => setPicking(true)} accessibilityLabel={t('longTerm.pickupLabel')}>
-              <Text
-                col={pickupAt ? colors.text : colors.placeholder}
-                fos={fieldFontSize.value}
-                fow={fontWeight.medium}
-              >
-                {pickupAt ? fmt.rentalPoint(pickupAt) : t('longTerm.pickupPlaceholder')}
-              </Text>
-            </Card>
-            <Text col={outsideWish ? colors.danger : colors.textMuted} fos={fieldFontSize.message}>
-              {t('longTerm.pickupHint')}
-            </Text>
-          </YStack>
+          {/* Ngoài nguyện vọng ⇒ lời dẫn chuyển sang màu lỗi (nút duyệt đã tắt theo `ready`). */}
+          <FieldBox
+            label={t('longTerm.pickupLabel')}
+            value={pickupAt ? fmt.rentalPoint(pickupAt) : ''}
+            placeholder={t('longTerm.pickupPlaceholder')}
+            icon="calendar-outline"
+            required
+            onPress={() => setPicking(true)}
+            {...(outsideWish
+              ? { error: t('longTerm.pickupHint') }
+              : { hint: t('longTerm.pickupHint') })}
+          />
 
           {/* Ngày trả TÍNH bằng `longTermReturnAt` — cùng hàm tháng lịch server dùng (ADR 0011). */}
           <YStack gap={space.xs}>
-            <DataRow
+            <SummaryRow
               label={t('longTerm.returnLabel')}
               value={returnAt ? fmt.rentalPoint(returnAt) : tCommon('labels.emptyValue')}
             />
@@ -389,9 +394,9 @@ export function ApproveRequestSheet({
       ) : null}
 
       {/*
-        Xem trước lượt duyệt (ADR 0064): khách chuyển bao nhiêu qua QR, trả bạn bao nhiêu lúc nhận
-        xe, hoa hồng/thuế, ví điểm nhận gì — và khách có bao lâu để trả / huỷ miễn phí nếu duyệt
-        NGAY. Dài hạn legacy chưa mang gói: chỉ hiện hai cửa sổ (tiền xem ở bảng giá gói phía trên).
+        Xem trước lượt duyệt (ADR 0064): "Lợi nhuận chuyến" (hoa hồng/thuế, ví điểm nhận gì) và ô
+        cửa sổ của khách NẾU duyệt NGAY. Dài hạn legacy chưa mang gói: chỉ hiện hai cửa sổ (tiền
+        xem ở bảng giá gói phía trên).
       */}
       {approvalPreview ? (
         longTerm ? (
@@ -400,15 +405,21 @@ export function ApproveRequestSheet({
             windows={longTermWindows}
             windowsPendingHint={t('approvalPreview.longTermPickPickup')}
             showMoney={requestPackage != null}
+            onLeave={onClose}
           />
         ) : (
-          <ApprovalPreviewSummary preview={approvalPreview} heading={t('approve.profitHeading')} />
+          <ApprovalPreviewSummary
+            preview={approvalPreview}
+            heading={t('approve.profitHeading')}
+            onLeave={onClose}
+          />
         )
       ) : null}
 
       <Text col={colors.textMuted} fos={fontSize.label}>
         {t('approve.effect')}
       </Text>
+      <VehicleStillOutAlert stillOut={stillOut} />
       {request.deliveryRequested ? <Callout tone="info" title={t('approve.deliveryNote')} /> : null}
     </BottomSheet>
   );

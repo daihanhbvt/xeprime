@@ -119,6 +119,13 @@ interface FilterBarProps {
    * Chỉ dùng cho bố cục ngoài rìa; hình thức bên trong vẫn do component quyết.
    */
   className?: string;
+  /**
+   * Hình thái bottom sheet ở ≤640px. `grid` = design v2 (Figma Partner "_Filter Modal"
+   * `24158:105500`): ô tìm kiếm lặp lại trong tấm, các ô lọc lưới HAI cột, `actions` (VD ô sắp
+   * xếp) dời VÀO tấm làm ô cuối, chân luôn có "Xoá bộ lọc" · "Lưu bộ lọc". Lọc vẫn áp ngay như
+   * cũ - chỉ khác cách trình bày. Bỏ trống = xếp dọc như trước.
+   */
+  sheetLayout?: 'stack' | 'grid';
 }
 
 /** Cùng độ trễ với `VehicleFiltersBar` đang chạy — giữ nguyên cảm giác gõ đã quen. */
@@ -348,6 +355,7 @@ export function FilterBar({
   compactFields = false,
   inlineFieldLimit,
   className,
+  sheetLayout = 'stack',
 }: FilterBarProps) {
   const tCommon = useTranslations('Common');
   const datePattern = useDatePickerPattern();
@@ -442,36 +450,87 @@ export function FilterBar({
             </Badge>
           ) : null}
         </div>
-        {actions ? <div className={styles.mobileActions}>{actions}</div> : null}
+        {actions && sheetLayout !== 'grid' ? (
+          <div className={styles.mobileActions}>{actions}</div>
+        ) : null}
         {chipRow}
 
         <ResponsiveDialog
-          title={tCommon('actions.filter')}
+          title={sheetLayout === 'grid' ? tCommon('filters.title') : tCommon('actions.filter')}
           open={sheetOpen}
           onClose={() => setSheetOpen(false)}
           size="sm"
           mobileMode="sheet"
           footer={
-            <div className={styles.sheetFooter}>
-              {clearButton}
-              <Button type="primary" onClick={() => setSheetOpen(false)}>
-                {tCommon('actions.apply')}
-              </Button>
-            </div>
+            sheetLayout === 'grid' ? (
+              <div className={styles.sheetFooterGrid}>
+                <Button
+                  size="large"
+                  disabled={!onClear || activeCount === 0}
+                  onClick={() => {
+                    onClear?.();
+                    setSheetOpen(false);
+                  }}
+                >
+                  {tCommon('filters.clearAll')}
+                </Button>
+                <Button size="large" type="primary" onClick={() => setSheetOpen(false)}>
+                  {tCommon('filters.save')}
+                </Button>
+              </div>
+            ) : (
+              <div className={styles.sheetFooter}>
+                {clearButton}
+                <Button type="primary" onClick={() => setSheetOpen(false)}>
+                  {tCommon('actions.apply')}
+                </Button>
+              </div>
+            )
           }
         >
-          <div className={styles.sheetFields}>
-            {sheetFields.map((field) => (
-              <FieldControl
-                key={field.kind === 'dateRange' ? field.fromKey : field.key}
-                field={field}
-                values={values}
-                onChange={onChange}
-                searchDebounceMs={searchDebounceMs}
-                compact={compactFields}
-              />
-            ))}
-          </div>
+          {sheetLayout === 'grid' ? (
+            <div className={styles.sheetGrid}>
+              {searchFields.map((field) => (
+                <div key={field.key} className={styles.sheetGridWide}>
+                  <FieldControl
+                    field={field}
+                    values={values}
+                    onChange={onChange}
+                    searchDebounceMs={searchDebounceMs}
+                    compact={compactFields}
+                  />
+                </div>
+              ))}
+              {sheetFields.map((field) => (
+                <div
+                  key={field.kind === 'dateRange' ? field.fromKey : field.key}
+                  className={field.kind === 'dateRange' ? styles.sheetGridWide : undefined}
+                >
+                  <FieldControl
+                    field={field}
+                    values={values}
+                    onChange={onChange}
+                    searchDebounceMs={searchDebounceMs}
+                    compact={compactFields}
+                  />
+                </div>
+              ))}
+              {actions}
+            </div>
+          ) : (
+            <div className={styles.sheetFields}>
+              {sheetFields.map((field) => (
+                <FieldControl
+                  key={field.kind === 'dateRange' ? field.fromKey : field.key}
+                  field={field}
+                  values={values}
+                  onChange={onChange}
+                  searchDebounceMs={searchDebounceMs}
+                  compact={compactFields}
+                />
+              ))}
+            </div>
+          )}
         </ResponsiveDialog>
       </div>
     );

@@ -10,7 +10,7 @@
     "ios": {
       "bundleIdentifier": "vn.xeprime.partnerapp",
       "buildNumber": "1",
-      "supportsTablet": false
+      "supportsTablet": true
     },
     "android": {
       "package": "vn.xeprime.partnerapp",

@@ -1,17 +1,11 @@
-import { useLocalSearchParams } from 'expo-router';
-import { OWNER_STAGE } from '@xeprime/types';
-import { OwnerGate } from '@/features/account/components/OwnerGate';
-import { VehicleManagePricingScreen } from '@/features/vehicle-manage/VehicleManagePricingScreen';
+import { Redirect, useLocalSearchParams } from 'expo-router';
+import { ownerServicesHref } from '@/features/vehicle-manage/owner-edit-nav';
 
 /**
- * Mục "Giá & chính sách" — web `VehiclePricingSection`: giá mọi dịch vụ + cọc · giao xe · km,
- * một nút Lưu, `PUT /vehicles/:id/pricing`. Thay ba mục cũ (giá tự lái, giá có tài xế, giao xe).
+ * Đường dẫn CŨ của không gian "Quản lý xe" Owner Lite — "Giá & chính sách" (trước 03/11/2026) → "Dịch vụ & giá", tab của dịch vụ đầu tiên xe đang phục vụ.
+ * Cùng bảng chuyển hướng với web (`editTabOfLegacyManageSection`).
  */
-export default function ManageOwnerLiteVehicleManagePricingRoute() {
+export default function LegacyOwnerPricingRedirect() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  return (
-    <OwnerGate minStage={OWNER_STAGE.REGISTERING}>
-      <VehicleManagePricingScreen vehicleId={id} />
-    </OwnerGate>
-  );
+  return <Redirect href={ownerServicesHref(id)} />;
 }

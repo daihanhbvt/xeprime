@@ -1,16 +1,17 @@
-import { Text, YStack } from 'tamagui';
+import { Pressable, StyleSheet } from 'react-native';
+import { Text, XStack, YStack } from 'tamagui';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useTranslations } from 'use-intl';
 import { RECEIPT_SOURCE_GROUP, RECEIPT_STATUS, RECEIPT_TYPE } from '@xeprime/types';
 import { isNegativeMoney, isZeroMoney } from '@xeprime/domain';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { SkeletonText } from '@/components/ui/Skeleton';
-import { StatCardFooter, StatGrid, type StatCell } from '@/components/ui/StatGrid';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, space } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
 import type { FinancePeriodFilters, FinanceSummary } from '../api';
 
 /**
@@ -53,96 +54,247 @@ export function FinanceOverviewCards({
   const receiptsHint = (count: number | undefined) =>
     count === undefined ? t('exDeposit') : t('receipts', { count });
 
-  const cells: StatCell[] = [
-    {
-      key: 'revenue',
-      icon: 'trending-up-outline',
-      label: t('revenue'),
-      value: fmt.money(data.revenue),
-      tone: colors.success,
-      surface: colors.successSurface,
-      valueTone: colors.success,
-      hint: receiptsHint(revenueReceipts),
-      onPress: openLedger({ type: RECEIPT_TYPE.INCOME, sourceGroup: RECEIPT_SOURCE_GROUP.BUSINESS }),
-    },
-    {
-      key: 'cost',
-      icon: 'trending-down-outline',
-      label: t('cost'),
-      value: fmt.money(data.cost),
-      tone: colors.danger,
-      surface: colors.dangerSurface,
-      valueTone: colors.danger,
-      hint: receiptsHint(costReceipts),
-      onPress: openLedger({ type: RECEIPT_TYPE.EXPENSE, sourceGroup: RECEIPT_SOURCE_GROUP.BUSINESS }),
-    },
-    {
-      key: 'profit',
-      icon: 'wallet-outline',
-      label: t('profit'),
-      value: fmt.money(data.profit),
-      tone: colors.primaryActive,
-      valueTone: isNegativeMoney(data.profit) ? colors.danger : colors.success,
-      hint:
-        data.profitMarginPercent == null
-          ? t('marginUnknown')
-          : t('margin', { value: data.profitMarginPercent }),
-    },
-    {
-      key: 'netCash',
-      icon: 'swap-vertical-outline',
-      label: t('netCash'),
-      value: fmt.money(data.balance),
-      tone: colors.textMuted,
-      ...(isNegativeMoney(data.balance) ? { valueTone: colors.danger } : {}),
-      hint: t('cashFlow', { in: fmt.money(data.totalIncome), out: fmt.money(data.totalExpense) }),
-      onPress: openLedger({}),
-    },
-    {
-      key: 'depositHeld',
-      icon: 'lock-closed-outline',
-      label: t('depositHeld'),
-      value: fmt.money(data.depositHeld),
-      tone: colors.info,
-      surface: colors.infoSurface,
-      hint: t('bookingsNow', { count: data.depositHeldBookings }),
-      onPress: () =>
-        navigateOnce(
-          ROUTES.manage.receipts({
-            status: RECEIPT_STATUS.APPROVED,
-            sourceGroup: RECEIPT_SOURCE_GROUP.HELD_FUNDS,
-          }),
-        ),
-    },
-    {
-      key: 'debt',
-      icon: 'alert-circle-outline',
-      label: t('debt'),
-      value: fmt.money(data.totalDebt),
-      tone: colors.warning,
-      surface: colors.warningSurface,
-      hint: t('bookings', { count: data.debtBookings }),
-      ...(isZeroMoney(data.totalDebt) ? {} : { valueTone: colors.danger }),
-      onPress: () => navigateOnce(ROUTES.manage.debts()),
-    },
-  ];
+  const profitNegative = isNegativeMoney(data.profit);
+  const marginLabel =
+    data.profitMarginPercent == null ? t('marginUnknown') : t('margin', { value: data.profitMarginPercent });
+  const openDeposits = () =>
+    navigateOnce(
+      ROUTES.manage.receipts({
+        status: RECEIPT_STATUS.APPROVED,
+        sourceGroup: RECEIPT_SOURCE_GROUP.HELD_FUNDS,
+      }),
+    );
 
+  /*
+    Bố cục Figma "Tổng quan doanh thu" (`24228:98928`, 17/11/2026): thẻ Lợi nhuận (số lớn + biên +
+    hai ô Doanh thu/Chi phí) · thẻ Dòng tiền ba cột · hai ô Cọc đang giữ / Khách còn nợ có mũi tên.
+    Số liệu, điều hướng và quyền GIỮ NGUYÊN - chỉ đổi cách trình bày.
+  */
   return (
-    <Card padded={false} accessibilityLabel={t('label')}>
-      {/* Mờ đi khi đang tải, nhưng VIỀN thẻ giữ nguyên — mờ cả thẻ thì nhìn ra một thẻ hỏng. */}
-      <YStack opacity={loading ? 0.6 : 1}>
-        <StatGrid variant="list" cells={cells} />
-        <StatCardFooter>
-          <YStack gap={space.xs}>
-            <Text col={colors.textMuted} fos={fontSize.label}>
-              {t('businessNote')}
+    <YStack gap={space.md} opacity={loading ? 0.6 : 1} accessibilityLabel={t('label')}>
+      <Card>
+        <YStack gap={space.sm}>
+          <XStack ai="center" jc="space-between" gap={space.sm}>
+            <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+              {t('profit')}
             </Text>
-            <Text col={colors.textMuted} fos={fontSize.label}>
-              {t('cashNote')}
+            <Text
+              col={profitNegative ? colors.danger : colors.success}
+              fos={fontSize.label}
+              fow={fontWeight.medium}
+            >
+              {marginLabel}
             </Text>
-          </YStack>
-        </StatCardFooter>
-      </YStack>
-    </Card>
+          </XStack>
+          <Text
+            col={profitNegative ? colors.danger : colors.text}
+            fos={fontSize.h3}
+            fow={fontWeight.bold}
+            numberOfLines={1}
+          >
+            {fmt.money(data.profit)}
+          </Text>
+          <XStack gap={space.sm}>
+            <MiniTile
+              label={t('revenue')}
+              value={fmt.money(data.revenue)}
+              bg={colors.primaryLight}
+              onPress={openLedger({
+                type: RECEIPT_TYPE.INCOME,
+                sourceGroup: RECEIPT_SOURCE_GROUP.BUSINESS,
+              })}
+            />
+            <MiniTile
+              label={t('cost')}
+              value={fmt.money(data.cost)}
+              bg={colors.surfaceMuted}
+              onPress={openLedger({
+                type: RECEIPT_TYPE.EXPENSE,
+                sourceGroup: RECEIPT_SOURCE_GROUP.BUSINESS,
+              })}
+            />
+          </XStack>
+          <Text col={colors.textMuted} fos={fontSize.label}>
+            {t('businessNote')}
+          </Text>
+        </YStack>
+      </Card>
+
+      <Card onPress={openLedger({})} accessibilityLabel={t('cashTitle')}>
+        <YStack gap={space.sm}>
+          <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.semibold}>
+            {t('cashTitle')}
+          </Text>
+          <XStack gap={space.sm}>
+            <CashCol
+              icon="arrow-down"
+              tone={colors.success}
+              label={t('cashIn')}
+              value={fmt.money(data.totalIncome)}
+              valueTone={colors.success}
+            />
+            <CashCol
+              icon="arrow-up"
+              tone={colors.danger}
+              label={t('cashOut')}
+              value={fmt.money(data.totalExpense)}
+              valueTone={colors.danger}
+            />
+            <CashCol
+              label={t('netCash')}
+              value={fmt.money(data.balance)}
+              valueTone={isNegativeMoney(data.balance) ? colors.danger : colors.text}
+            />
+          </XStack>
+          <Text col={colors.textMuted} fos={fontSize.label}>
+            {t('cashNote')}
+          </Text>
+        </YStack>
+      </Card>
+
+      <XStack gap={space.sm}>
+        <NavTile
+          label={t('depositHeld')}
+          value={fmt.money(data.depositHeld)}
+          hint={t('bookingsNow', { count: data.depositHeldBookings })}
+          onPress={openDeposits}
+        />
+        <NavTile
+          label={t('debt')}
+          value={fmt.money(data.totalDebt)}
+          valueTone={isZeroMoney(data.totalDebt) ? colors.text : colors.danger}
+          hint={t('bookings', { count: data.debtBookings })}
+          onPress={() => navigateOnce(ROUTES.manage.debts())}
+        />
+      </XStack>
+    </YStack>
   );
 }
+
+/** Ô nhỏ trong thẻ Lợi nhuận (Doanh thu / Chi phí) - chạm mở sổ thu chi đã lọc. */
+function MiniTile({
+  label,
+  value,
+  bg,
+  onPress,
+}: {
+  label: string;
+  value: string;
+  bg: string;
+  onPress: () => void;
+}) {
+  const colors = useColors();
+  return (
+    <Pressable
+      style={styles.flex}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${value}`}
+    >
+      <YStack br={radius.md} bg={bg} p={space.sm} gap={2}>
+        <Text col={colors.textMuted} fos={fontSize.label}>
+          {label}
+        </Text>
+        <Text
+          col={colors.text}
+          fos={typeScale.body.fontSize}
+          lh={typeScale.body.lineHeight}
+          fow={fontWeight.bold}
+          numberOfLines={1}
+        >
+          {value}
+        </Text>
+      </YStack>
+    </Pressable>
+  );
+}
+
+/** Một cột của thẻ Dòng tiền (Tiền vào · Tiền ra · Ròng trong kỳ). */
+function CashCol({
+  icon,
+  tone,
+  label,
+  value,
+  valueTone,
+}: {
+  icon?: 'arrow-down' | 'arrow-up';
+  tone?: string;
+  label: string;
+  value: string;
+  valueTone: string;
+}) {
+  const colors = useColors();
+  return (
+    <YStack f={1} minWidth={0} gap={2}>
+      <XStack ai="center" gap={space.xs}>
+        {icon && tone ? <Ionicons name={icon} size={iconSize.xs} color={tone} /> : null}
+        <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={2}>
+          {label}
+        </Text>
+      </XStack>
+      <Text
+        col={valueTone}
+        fos={typeScale.body.fontSize}
+        lh={typeScale.body.lineHeight}
+        fow={fontWeight.bold}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.8}
+      >
+        {value}
+      </Text>
+    </YStack>
+  );
+}
+
+/** Ô điều hướng có mũi tên (Cọc đang giữ / Khách còn nợ). */
+function NavTile({
+  label,
+  value,
+  hint,
+  valueTone,
+  onPress,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  valueTone?: string;
+  onPress: () => void;
+}) {
+  const colors = useColors();
+  return (
+    <Pressable
+      style={styles.flex}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${value}`}
+    >
+      <Card>
+        <YStack gap={2}>
+          <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.medium} textTransform="uppercase" numberOfLines={1}>
+            {label}
+          </Text>
+          <XStack ai="center" jc="space-between" gap={space.xs}>
+            <Text
+              f={1}
+              minWidth={0}
+              col={valueTone ?? colors.text}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+              fow={fontWeight.bold}
+              numberOfLines={1}
+            >
+              {value}
+            </Text>
+            <Ionicons name="arrow-forward" size={iconSize.sm} color={colors.info} />
+          </XStack>
+          <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+            {hint}
+          </Text>
+        </YStack>
+      </Card>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({ flex: { flex: 1 } });

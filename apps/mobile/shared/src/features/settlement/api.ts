@@ -12,6 +12,9 @@ export type {
   DepositRefund,
   ExcessMileageSuggestion,
   OvertimeSuggestion,
+  PreviewReturnSettlementInput,
+  ReturnSettlementPreview,
+  ReturnSurchargeDraft,
   RecordRefundInput,
   SaveSurchargeInput,
 } from '@/api/settlement/api';

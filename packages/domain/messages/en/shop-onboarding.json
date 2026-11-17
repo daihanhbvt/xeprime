@@ -123,10 +123,12 @@
     "title": "Shop registered successfully!",
     "status": "Awaiting activation",
     "next": {
-      "review": "XePrime is reviewing your shop details.",
-      "notify": "You will be notified as soon as your account is approved.",
-      "refresh": "This screen updates automatically once your account is approved."
-    }
+      "review": "XePrime will contact you to recommend a suitable plan for your shop.",
+      "notify": "You will be notified as soon as your shop is activated.",
+      "refresh": "This screen updates automatically once your shop is activated."
+    },
+    "webHint": "Choose a plan and pay by bank transfer on the XePrime Partner website. Your shop activates automatically once the payment arrives.",
+    "openWeb": "Choose a plan on the website"
   },
   "signup": {
     "title": {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { useFormState, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
-import { YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   CATALOG_TYPE,
@@ -178,34 +178,40 @@ export function VehicleEnergyFields({
 
   return (
     <YStack gap={space.md}>
-      <SelectField
-        control={control}
-        name="fuelType"
-        label={tSpecs('fuelType')}
-        options={fuelOptions}
-        placeholder={
-          vehicleType === VEHICLE_TYPE.CAR
-            ? tSpecs('fuelPlaceholderCar')
-            : tSpecs('fuelPlaceholderMotorbike')
-        }
-        disabled={disabled || fuelLocked}
-        required={fuelTypeRequired}
-        {...(fuelHint ? { hint: fuelHint } : {})}
-      />
-
-      {policy.transmission !== 'hidden' ? (
-        <SelectField
-          control={control}
-          name="transmission"
-          label={t('transmission')}
-          options={gearOptions}
-          placeholder={t('transmissionPlaceholder')}
-          required={policy.transmission === 'required'}
-          disabled={disabled || Boolean(fixedTransmission) || gearLocked}
-          allowClear={!fixedTransmission && !gearLocked}
-          {...(transmissionHint ? { hint: transmissionHint } : {})}
-        />
-      ) : null}
+      {/* Figma: Nhiên liệu | Hộp số cùng một hàng. */}
+      <XStack gap={space.md}>
+        <YStack f={1} minWidth={0}>
+          <SelectField
+            control={control}
+            name="fuelType"
+            label={tSpecs('fuelType')}
+            options={fuelOptions}
+            placeholder={
+              vehicleType === VEHICLE_TYPE.CAR
+                ? tSpecs('fuelPlaceholderCar')
+                : tSpecs('fuelPlaceholderMotorbike')
+            }
+            disabled={disabled || fuelLocked}
+            required={fuelTypeRequired}
+            {...(fuelHint ? { hint: fuelHint } : {})}
+          />
+        </YStack>
+        {policy.transmission !== 'hidden' ? (
+          <YStack f={1} minWidth={0}>
+                <SelectField
+                  control={control}
+                  name="transmission"
+                  label={t('transmission')}
+                  options={gearOptions}
+                  placeholder={t('transmissionPlaceholder')}
+                  required={policy.transmission === 'required'}
+                  disabled={disabled || Boolean(fixedTransmission) || gearLocked}
+                  allowClear={!fixedTransmission && !gearLocked}
+                  {...(transmissionHint ? { hint: transmissionHint } : {})}
+                />
+          </YStack>
+        ) : null}
+      </XStack>
 
       {policy.fuelConsumption !== 'hidden' ? (
         <NumberField

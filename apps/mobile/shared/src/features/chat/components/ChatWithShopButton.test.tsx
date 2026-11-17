@@ -60,7 +60,7 @@ describe('ChatWithShopButton', () => {
     fireEvent.press(view.getByRole('button', { name: 'Nhắn shop' }));
 
     await waitFor(() => expect(api.start).toHaveBeenCalledWith({ vehicleId: 'veh-1' }));
-    expect(mockPush).toHaveBeenCalledWith(ROUTES.chat.thread('conv-1', 'veh-1'));
+    expect(mockPush).toHaveBeenCalledWith(ROUTES.chat.thread('conv-1', { vehicleId: 'veh-1' }));
   });
 
   it('đóng lớp phủ TRƯỚC khi rời màn', async () => {

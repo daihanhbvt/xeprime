@@ -4,19 +4,19 @@ import '@/lib/api-client';
 export {
   membersApi,
   inviteAnswersApi,
-  memberFiltersToParams,
-  inviteFiltersToParams,
+  rosterFiltersToParams,
   MEMBERS_DEFAULT_LIMIT,
 } from '@/api/members/api';
 
 export type {
-  CreateInviteInput,
-  CreateInviteResult,
+  CreateMemberAccountInput,
   Invite,
   InviteAnswer,
-  InviteFilters,
   InvitePreview,
   Member,
-  MemberFilters,
+  MemberActivity,
+  MemberRoleSummary,
+  MemberRosterItem,
+  RosterFilters,
   UpdateMemberRoleInput,
 } from '@/api/members/api';

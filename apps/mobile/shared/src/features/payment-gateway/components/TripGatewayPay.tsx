@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { ActivityIndicator, Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useLocale, useTranslations } from 'use-intl';
@@ -302,7 +302,7 @@ export function TripGatewayPay({
                     <XStack
                       ai="center"
                       gap={space.md}
-                      px={space.md}
+                      px={layout.padX}
                       py={space.sm}
                       minHeight={sizing.touchTarget + space.md}
                       bw={1}

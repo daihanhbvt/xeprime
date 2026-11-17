@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFormState, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
-import { YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { CATALOG_TYPE, VEHICLE_TYPE } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
@@ -117,30 +117,37 @@ export function VehicleIdentityFields({
 
   return (
     <YStack gap={space.md}>
-      <SelectField
-        control={control}
-        name="brand"
-        label={t('brand')}
-        required={required}
-        options={brandOptions}
-        placeholder={t('brandPlaceholder')}
-        disabled={disabled}
-        {...(lockedNotice ? { hint: lockedNotice } : {})}
-      />
-      <SelectField
-        control={control}
-        name="vehicleCatalogModelId"
-        label={t('model')}
-        required={required}
-        options={modelOptions}
-        placeholder={t('modelPlaceholder')}
-        // Khoá tới khi có hãng: danh sách mẫu xe không kèm hãng là vài trăm dòng vô nghĩa.
-        disabled={disabled || !brand}
-        hint={brand ? t('modelHelp') : t('modelPickBrandFirst')}
-        onSearch={setModelSearch}
-        searchPlaceholder={t('modelPlaceholder')}
-        emptyText={isLoading ? undefined : t('modelEmpty')}
-      />
+      {/* Figma: Hãng xe | Dòng xe cùng một hàng, hai cột bằng nhau. */}
+      <XStack gap={space.md}>
+        <YStack f={1} minWidth={0}>
+          <SelectField
+            control={control}
+            name="brand"
+            label={t('brand')}
+            required={required}
+            options={brandOptions}
+            placeholder={t('brandPlaceholder')}
+            disabled={disabled}
+            {...(lockedNotice ? { hint: lockedNotice } : {})}
+          />
+        </YStack>
+        <YStack f={1} minWidth={0}>
+          <SelectField
+            control={control}
+            name="vehicleCatalogModelId"
+            label={t('model')}
+            required={required}
+            options={modelOptions}
+            placeholder={t('modelPlaceholder')}
+            // Khoá tới khi có hãng: danh sách mẫu xe không kèm hãng là vài trăm dòng vô nghĩa.
+            disabled={disabled || !brand}
+            hint={brand ? t('modelHelp') : t('modelPickBrandFirst')}
+            onSearch={setModelSearch}
+            searchPlaceholder={t('modelPlaceholder')}
+            emptyText={isLoading ? undefined : t('modelEmpty')}
+          />
+        </YStack>
+      </XStack>
     </YStack>
   );
 }

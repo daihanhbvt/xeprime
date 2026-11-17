@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -11,6 +11,7 @@ import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { ResourceList, openOwnerResource } from './components/ResourceList';
+import { layout } from '@/theme/layout';
 
 /**
  * Hợp đồng & Chứng từ — THƯ VIỆN BIỂU MẪU (PDF từ manifest), không phải danh sách hợp đồng phát
@@ -67,7 +68,7 @@ export function ContractsDocumentsScreen({
                       ai="center"
                       gap={space.sm}
                       minHeight={sizing.touchTarget}
-                      px={space.md}
+                      px={layout.padX}
                       br={radius.md}
                       bw={1}
                       bc={colors.primary}

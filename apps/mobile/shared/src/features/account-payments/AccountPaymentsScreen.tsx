@@ -49,6 +49,7 @@ import { queryKeys } from '@/queries/query-keys';
 import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 
 /** "19:00:39 16/07/2026" như bản vẽ, giờ Việt Nam. */
 const ROW_TIME_FORMAT = 'HH:mm:ss DD/MM/YYYY';
@@ -108,7 +109,7 @@ export function AccountPaymentsScreen() {
         Thanh lọc ĐỨNG YÊN dưới dải tab (người dùng chốt 29/10/2026): chip trạng thái chạm một lần là
         lọc; dưới là ô "Từ ngày → Đến ngày" dùng chung với màn Chuyến đi (`DateRangeField`).
       */}
-      <YStack px={space.md} pt={space.sm} gap={space.sm}>
+      <YStack px={layout.padX} pt={space.sm} gap={space.sm}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <XStack gap={space.xs}>
             {statusChips.map((chip) => (

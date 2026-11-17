@@ -67,7 +67,7 @@ export function RegisterScreen({
       {registered ? (
         <RegisterSuccess onContinue={onRegistered} onOpenAccount={onOpenAccount} />
       ) : (
-        <Screen edges={['left', 'right', 'bottom']}>
+        <Screen edges={['left', 'right', 'bottom']} maxWidth="form">
           <YStack gap={space.xl}>
             <YStack gap={space.xs}>
               <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold}>

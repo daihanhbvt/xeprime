@@ -38,8 +38,9 @@ const DESCRIPTION_MAX = 5000;
  * `SUPPORT_CASE_CATEGORY_NOT_ALLOWED`.
  *
  * Quyết định người dùng (27/10/2026): ẨN "Tư vấn gói" ở CẢ HAI app (khách lẫn Partner) — web vẫn bày
- * nó trong `OpenCaseModal`. Đây là khác biệt CÓ CHỦ ĐÍCH (app Partner mua gói qua IAP, không mời
- * tư vấn gói), không phải thiếu sót cần đồng bộ.
+ * nó trong `OpenCaseModal`, nhưng `SupportService.open` từ chối nó (`SUPPORT_CASE_CATEGORY_NOT_ALLOWED`),
+ * nên bày ra là một lựa chọn chắc chắn hỏng. Đây là khác biệt CÓ CHỦ ĐÍCH, không phải thiếu sót cần
+ * đồng bộ (12/11/2026: app không có IAP, tư vấn gói đi qua cờ khuyến mãi gói riêng).
  */
 const OPENABLE_CATEGORIES = SUPPORT_CASE_CATEGORY_VALUES.filter(
   (value) =>

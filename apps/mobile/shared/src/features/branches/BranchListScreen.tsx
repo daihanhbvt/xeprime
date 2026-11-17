@@ -1,16 +1,17 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { YStack } from 'tamagui';
+import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { BRANCH_STATUS, PERMISSION, PLAN_FEATURE } from '@xeprime/types';
 import { Screen } from '@/components/layout/Screen';
+import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Callout } from '@/components/ui/Callout';
 import { IconButton } from '@/components/ui/IconButton';
+import { InlineAction } from '@/components/ui/InlineAction';
 import { ActionCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
-import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useFeature } from '@/features/auth/hooks/use-feature';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ManageHeader } from '@/features/shell/ManageHeader';
@@ -19,15 +20,17 @@ import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { layout } from '@/theme/layout';
+import { useCardGrid } from '@/theme/use-responsive';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
 import { useColors } from '@/theme/ThemeProvider';
-import { BRANCH_ACTION, type Branch, type BranchAction } from './api';
-import { BranchCard, type BranchCardActionState } from './components/BranchCard';
+import { fontSize, space } from '@/theme/tokens';
+import type { Branch } from './api';
+import { BranchCard } from './components/BranchCard';
 import { BranchFormSheet } from './components/BranchFormSheet';
-import { useBranchAction, useBranches } from './hooks/use-branches';
+import { useBranchRowActions } from './hooks/use-branch-row-actions';
+import { useBranches } from './hooks/use-branches';
 
 const SKELETON_ROWS = 3;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -58,12 +61,9 @@ export function BranchListScreen() {
   const tActions = useTranslations('Common.actions');
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
-  const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   const permissions = usePermissions();
   const branchesFeature = useFeature(PLAN_FEATURE.BRANCHES);
 
-  const tFeature = useTranslations('ManageCommon.feature');
 
   const canView = permissions.has(PERMISSION.BRANCH_VIEW);
   const canManage = permissions.has(PERMISSION.BRANCH_MANAGE);
@@ -82,10 +82,12 @@ export function BranchListScreen() {
     },
     canView,
   );
-  const action = useBranchAction();
 
   const items = query.data?.items ?? [];
   const needsReview = query.data?.needsReviewCount ?? 0;
+  // Chi nhánh đầu tiên cần sửa - thiếu tỉnh hoặc địa chỉ chờ soát lại (cùng phép chọn với web).
+  const firstToReview =
+    items.find((row) => !row.provinceCode || row.needsLocationReview) ?? null;
 
   const openCreate = useCallback(() => {
     setEditing(null);
@@ -97,27 +99,12 @@ export function BranchListScreen() {
     setFormOpen(true);
   }, []);
 
-  const runAction = useCallback(
-    (branch: Branch, next: BranchAction) => {
-      action.mutate(
-        { id: branch.id, action: next },
-        {
-          onSuccess: () =>
-            toast.showSuccess(
-              next === BRANCH_ACTION.SET_DEFAULT
-                ? t('toast.setDefault')
-                : next === BRANCH_ACTION.ACTIVATE
-                  ? t('toast.activated')
-                  : t('toast.deactivated'),
-            ),
-          // Xung đột (còn xe / còn đơn) dịch từ MÃ như mọi lỗi khác — `message` của backend là
-          // tiếng Việt và không bao giờ lên màn hình tiếng Anh (ADR 0012).
-          onError: (err) => toast.showError(errorMessage(err)),
-        },
-      );
-    },
-    [action, errorMessage, t, toast],
-  );
+  const {
+    runAction,
+    actionStateOf,
+    pending: pendingIdAction,
+    deactivateConfirm,
+  } = useBranchRowActions();
 
   const changeSearch = useCallback((next: string) => setSearch(next), []);
   const changeFilter = useCallback((_groupKey: string, value: string) => setStatus(value), []);
@@ -144,38 +131,6 @@ export function BranchListScreen() {
     [status, t, tLabels],
   );
 
-  /**
-   * Luật nghiệp vụ chặn từng thao tác — tính MỘT chỗ, dùng cho mọi thẻ.
-   *
-   * Đây là bản sao của điều kiện `disabled`/`disabledReason` bên web, và nó chỉ là lớp trải
-   * nghiệm: backend vẫn từ chối bằng 409 kèm mã lỗi, nên client không "đoán khả năng thao tác"
-   * mà chỉ nói trước những gì nó chắc chắn biết (chi nhánh mặc định, chi nhánh chưa có tỉnh).
-   */
-  const actionStateOf = useCallback(
-    (branch: Branch): Readonly<Record<BranchAction, BranchCardActionState>> => {
-      const canWrite = branchesFeature.canWrite;
-      // Gói hết hạn: nói RÕ lý do khoá thay vì để ô mờ đi không giải thích (ADR 0027 điều 3).
-      const lockedByPlan = canWrite
-        ? undefined
-        : { enabled: false, reason: tFeature('appReadOnlyTooltip') };
-      return {
-        [BRANCH_ACTION.SET_DEFAULT]:
-          branch.status !== BRANCH_STATUS.ACTIVE
-            ? { enabled: false, reason: t('blocked.inactive') }
-            : !branch.provinceCode
-              ? { enabled: false, reason: t('blocked.noProvince') }
-              : (lockedByPlan ?? { enabled: canWrite }),
-        [BRANCH_ACTION.DEACTIVATE]: branch.isDefault
-          ? { enabled: false, reason: t('blocked.isDefault') }
-          : (lockedByPlan ?? { enabled: canWrite }),
-        [BRANCH_ACTION.ACTIVATE]: lockedByPlan ?? { enabled: canWrite },
-      };
-    },
-    [branchesFeature.canWrite, t, tFeature],
-  );
-
-  const pendingIdAction = action.isPending ? action.variables : null;
-
   const renderItem = useCallback<ListRenderItem<Branch>>(
     ({ item }) => (
       <BranchCard
@@ -189,6 +144,8 @@ export function BranchListScreen() {
     ),
     [actionStateOf, canManage, openEdit, pendingIdAction, runAction],
   );
+  // iPad: thẻ xếp lưới 2 cột trong cột nội dung; điện thoại giữ 1 cột.
+  const grid = useCardGrid(renderItem, { listKey: 'branches' });
 
   const filtered = status !== STATUS_ALL || trimmedSearch.length > 0;
 
@@ -224,6 +181,7 @@ export function BranchListScreen() {
       <Screen edges={['left', 'right', 'bottom']} scroll={false} padded={false}>
         <ManageListShell
           title={t('page.title')}
+          subtitle={t('page.subtitle')}
           {...(query.data
             ? {
                 total: t('toolbar.summary', {
@@ -298,18 +256,30 @@ export function BranchListScreen() {
               )
             ) : (
               <Animated.FlatList
+                key={grid.key}
                 ref={bindList}
                 data={items}
                 keyExtractor={keyOf}
                 {...LIST_TUNING}
-                renderItem={renderItem}
+                {...grid.listProps}
                 contentContainerStyle={contentContainerStyle}
                 onScroll={onScroll}
                 scrollEventThrottle={scrollThrottle.frame}
                 ListHeaderComponent={
                   needsReview > 0 ? (
                     <Callout tone="warning" title={t('page.needsReview', { count: needsReview })}>
-                      {t('page.needsReviewHint')}
+                      <YStack gap={space.sm}>
+                        <Text col={colors.text} fos={fontSize.bodySm}>
+                          {t('page.needsReviewHint')}
+                        </Text>
+                        {/* "Sửa ngay" mở thẳng chi nhánh đầu tiên cần sửa - như web `BranchesView`. */}
+                        {canManage && firstToReview ? (
+                          <InlineAction
+                            label={t('page.fixNow')}
+                            onPress={() => openEdit(firstToReview)}
+                          />
+                        ) : null}
+                      </YStack>
                     </Callout>
                   ) : null
                 }
@@ -328,6 +298,7 @@ export function BranchListScreen() {
       </Screen>
 
       <BranchFormSheet open={formOpen} branch={editing} onClose={() => setFormOpen(false)} />
+      <AlertDialog {...deactivateConfirm} />
     </>
   );
 }

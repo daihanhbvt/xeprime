@@ -33,6 +33,32 @@
     "more": "Thêm",
     "openMenu": "Mở menu quản lý"
   },
+  "manageMenu": {
+    "system": "Hệ thống",
+    "appearanceHint": "Tùy chỉnh giao diện sáng / tối",
+    "localeHint": "Lựa chọn ngôn ngữ hiển thị",
+    "needsAction": "{count} cần xử lý",
+    "descriptions": {
+      "bookings": "Quản lý đơn đặt xe và đơn thuê",
+      "calendar": "Quản lý danh sách lịch đặt xe của bạn",
+      "customers": "Quản lý thông tin khách hàng của bạn",
+      "vehicles": "Thông tin, trạng thái và hoạt động xe",
+      "drivers": "Theo dõi, quản lý đội ngũ tài xế",
+      "maintenance": "Theo dõi lịch bảo dưỡng và tình trạng xe",
+      "financeOverview": "Doanh thu, chi phí và lợi nhuận theo thời gian",
+      "balance": "Số dư Ví điểm và yêu cầu rút tiền",
+      "receipts": "Giao dịch thu chi và công nợ",
+      "shop": "Quản lý thông tin và hồ sơ gian hàng",
+      "ownerProfile": "Thông tin chủ xe, thuế và tài khoản nhận tiền",
+      "shopPolicies": "Thiết lập giá thuê, quy định và điều khoản",
+      "members": "Quản lý thông tin nhân sự & phân quyền",
+      "support": "Giải đáp thắc mắc và xử lý sự cố gian hàng",
+      "hostGuide": "Hướng dẫn cho thuê xe trên XePrime",
+      "contractsDocuments": "Hợp đồng và chứng từ của các chuyến",
+      "dataProtection": "Cách XePrime bảo vệ dữ liệu của bạn",
+      "supportCases": "Hỗ trợ và xử lý các vấn đề, tranh chấp"
+    }
+  },
   "manageHome": {
     "greeting": "Xin chào, {name}",
     "shopStatus": "Trạng thái gian hàng",

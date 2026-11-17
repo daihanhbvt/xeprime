@@ -10,8 +10,10 @@ import {
   cancellationReasonNeedsText,
   type CancellationReasonCategory,
 } from '@xeprime/types';
-import { isZeroMoney } from '@xeprime/domain';
+import { LIST_SEPARATOR, isZeroMoney } from '@xeprime/domain';
 import { FieldLabel } from '@/components/ui/Field';
+import { InfoHint } from '@/components/ui/InfoHint';
+import { richBold } from '@/features/booking-requests/components/DecisionSheetParts';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -72,7 +74,7 @@ export function BookingStatusSheet({
    * `reasonCategory` chỉ đi kèm lượt HUỶ — DTO chỉ đòi nó khi `status = cancelled`, và gửi thừa
    * ở `no_show` là nói dối dữ liệu.
    */
-  onConfirm: (input: { reason: string; reasonCategory?: CancellationReasonCategory }) => void;
+  onConfirm: (input: { reason?: string; reasonCategory?: CancellationReasonCategory }) => void;
   loading: boolean;
   /**
    * Nhóm lý do chọn sẵn — lối "Huỷ chuyến do thiếu tài xế" của khối Tài xế (ADR 0074) mở tấm với
@@ -82,6 +84,8 @@ export function BookingStatusSheet({
 }) {
   const colors = useColors();
   const t = useTranslations('Bookings.statusActions.dialog');
+  // Giải thích chỉ số uy tín dùng chung với tấm huỷ yêu cầu — một câu, một bản dịch.
+  const tRequestCancel = useTranslations('BookingRequests.cancel');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
 
@@ -96,8 +100,18 @@ export function BookingStatusSheet({
     defaultReasonCategory ?? null,
   );
   const [categoryTouched, setCategoryTouched] = useState(false);
-  /* "Lý do khác" thì ô chữ phải nói được điều nhóm không nói — đổi GỢI Ý, không đổi ràng buộc. */
-  const needsText = category !== null && cancellationReasonNeedsText(category);
+  /** Đơn sinh ra từ một yêu cầu trên chợ — có tài khoản khách, có chỉ số uy tín, có giữ chỗ. */
+  const fromMarketplace = booking.bookingRequestId != null;
+  /**
+   * Lượt HUỶ đơn qua chợ gửi nguyên ghi chú này cho khách trong thông báo huỷ (web, PR #278). Lý do
+   * no-show và lý do huỷ đơn tự lập chỉ vào nhật ký — nhãn phải nói đúng ai sẽ đọc nó.
+   */
+  const noteForCustomer = cancelling && fromMarketplace;
+  /*
+   * Khi nào ô chữ BẮT BUỘC — cùng luật `transitionNeedsReason` của DTO: no-show luôn cần; huỷ chỉ
+   * khi nhóm là "Lý do khác".
+   */
+  const textRequired = !cancelling || (category !== null && cancellationReasonNeedsText(category));
 
   const schema = useMemo(
     () =>
@@ -105,10 +119,15 @@ export function BookingStatusSheet({
         reason: yup
           .string()
           .trim()
-          .required(t('reasonRequired'))
-          .max(REASON_MAX, t('reasonTooLong')),
+          .max(REASON_MAX, t('reasonTooLong'))
+          .default('')
+          .test(
+            'reason-required',
+            noteForCustomer ? t('customerNoteRequired') : t('reasonRequired'),
+            (value) => !textRequired || (value ?? '').length > 0,
+          ),
       }),
-    [t],
+    [t, noteForCustomer, textRequired],
   );
 
   const { control, handleSubmit } = useForm<{ reason: string }>({
@@ -119,8 +138,10 @@ export function BookingStatusSheet({
   const submit = handleSubmit((values) => {
     // Huỷ mà chưa chọn nhóm thì dừng tại chỗ: gửi lên chỉ để nhận 400 là bắt người ta gõ lại lý do.
     if (cancelling && category === null) return;
+    const reason = values.reason.trim();
     onConfirm({
-      reason: values.reason,
+      // Ghi chú tuỳ chọn để trống thì không gửi — không có "lý do rỗng" trong audit.
+      ...(reason ? { reason } : {}),
       ...(cancelling && category ? { reasonCategory: category } : {}),
     });
   });
@@ -149,30 +170,43 @@ export function BookingStatusSheet({
           : t('noShowTitle', { code: booking.code })
       }
       footer={
-        <>
-          <Button
-            label={cancelling ? t('cancelOk') : t('noShowOk')}
-            icon="close-circle-outline"
-            variant="danger"
-            loading={loading}
-            onPress={pressConfirm}
-          />
-          <Button label={t('keep')} variant="ghost" onPress={onClose} />
-        </>
+        // Một hàng như tấm huỷ chuyến của app khách: lối thoát co vừa chữ bên trái, hành động chính bên phải.
+        <XStack gap={space.sm}>
+          <YStack flexShrink={0}>
+            <Button label={t('back')} variant="ghost" onPress={onClose} />
+          </YStack>
+          <YStack f={1}>
+            <Button
+              label={cancelling ? t('cancelOk') : t('noShowOk')}
+              icon="close-circle-outline"
+              variant="danger"
+              loading={loading}
+              onPress={pressConfirm}
+            />
+          </YStack>
+        </XStack>
       }
     >
       <Text col={colors.text} fos={fontSize.bodySm}>
-        {cancelling ? t('cancelLead') : t('noShowLead')}
+        {cancelling
+          ? t.rich('cancelSubtitle', {
+              b: richBold,
+              status: domainLabel('bookingStatus', booking.status),
+            })
+          : t('noShowLead')}
       </Text>
 
+      {/* Nói rõ đang đụng vào ĐƠN NÀO: khách · xe · biển số, rồi khung giờ. */}
       <Card tone="muted" lift="flat">
         <YStack gap={space.xs}>
-          <Line label={t('customer')} value={booking.customerName} />
-          <Line label={t('vehicle')} value={booking.vehicleName} />
-          <Line
-            label={t('period')}
-            value={fmt.rentalRange(booking.pickupAt, booking.returnAt)}
-          />
+          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+            {[booking.customerName, booking.vehicleName, booking.vehiclePlate]
+              .filter(Boolean)
+              .join(LIST_SEPARATOR)}
+          </Text>
+          <Text col={colors.textMuted} fos={fontSize.label}>
+            {fmt.shortDateTimeRange(booking.pickupAt, booking.returnAt)}
+          </Text>
         </YStack>
       </Card>
 
@@ -197,7 +231,7 @@ export function BookingStatusSheet({
       */}
       {cancelling ? (
         <YStack gap={space.sm} p={space.md} br={radius.md} bg={colors.surfaceMuted}>
-          <FieldLabel label={t('categoryLabel')} required />
+          <FieldLabel label={t('cancelReasonLabel')} required />
           <XStack gap={space.xs} flexWrap="wrap">
             {CANCELLATION_REASON_CATEGORY_VALUES.map((value) => (
               <Chip
@@ -214,41 +248,59 @@ export function BookingStatusSheet({
           </XStack>
           {categoryTouched && category === null ? (
             <Text col={colors.danger} fos={fontSize.label}>
-              {t('categoryRequired')}
+              {t('cancelReasonRequired')}
             </Text>
-          ) : (
-            <Text col={colors.placeholder} fos={fontSize.label}>
-              {t('categoryHelp')}
-            </Text>
-          )}
+          ) : null}
         </YStack>
       ) : null}
 
       <TextField
         control={control}
         name="reason"
-        label={t('reasonLabel')}
-        placeholder={t('reasonPlaceholder')}
-        hint={needsText ? t('reasonHelpOther') : t('reasonHelp')}
+        label={
+          noteForCustomer
+            ? t('customerNoteLabel')
+            : cancelling
+              ? t('internalNoteLabel')
+              : t('reasonLabel')
+        }
+        placeholder={noteForCustomer ? t('customerNotePlaceholder') : t('reasonPlaceholder')}
         multiline
         rows={3}
         maxLength={REASON_MAX}
-        required
+        required={textRequired}
       />
+
+      {/*
+        Hệ quả là chữ chính — người bấm nút đỏ cần biết uy tín và tiền đi đâu TRƯỚC khi bấm. Chỉ đơn
+        đặt qua CHỢ: đơn tự lập không vào mẫu số chỉ số uy tín và không có tiền giữ chỗ để hoàn.
+      */}
+      {cancelling && fromMarketplace ? (
+        <YStack
+          gap={space.xs}
+          p={space.md}
+          br={radius.md}
+          bw={1}
+          bc={colors.danger}
+          bg={colors.dangerSurface}
+          accessibilityRole="text"
+        >
+          <XStack ai="flex-start" gap={space.xs}>
+            <Text f={1} col={colors.text} fos={fontSize.bodySm}>
+              {t.rich('cancelWarning', { b: richBold })}
+            </Text>
+            <InfoHint
+              label={tRequestCancel('effects.metricsHintLabel')}
+              content={tRequestCancel('effects.metricsHint')}
+              size={fontSize.bodySm}
+            />
+          </XStack>
+          <Text col={colors.text} fos={fontSize.bodySm}>
+            {t('cancelWarningMoney')}
+          </Text>
+        </YStack>
+      ) : null}
     </BottomSheet>
   );
 }
 
-function Line({ label, value }: { label: string; value: string }) {
-  const colors = useColors();
-  return (
-    <YStack gap={2}>
-      <Text col={colors.textMuted} fos={fontSize.label}>
-        {label}
-      </Text>
-      <Text col={colors.text} fos={fontSize.bodySm}>
-        {value}
-      </Text>
-    </YStack>
-  );
-}

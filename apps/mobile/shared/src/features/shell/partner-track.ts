@@ -83,12 +83,6 @@ export const PARTNER_PATH = {
   SUPPORT: '/manage/support',
   HELP: '/manage/help',
   ACCOUNT: '/manage/account',
-  /**
-   * "Hồ sơ chủ xe" của chủ xe tuyến hoa hồng — section đầu của trang tài khoản (web PR #156:
-   * `accountSectionPath(ACCOUNT_SECTION.PROFILE)`). Đích của `/manage/shop` và alias
-   * `/manage/registration` với tuyến này.
-   */
-  ACCOUNT_PROFILE: '/manage/account?section=profile',
   SHOP: '/manage/shop',
   /** Các khối của trang Cửa hàng — cùng `?section=` với web `shopSectionPath`. */
   SHOP_LEGAL: '/manage/shop?section=legal',
@@ -180,8 +174,8 @@ function packageEquivalent(pathname: string): string | null {
     return PARTNER_PATH.SHOP_TAX;
   if (pathname === PARTNER_PATH.BANK_ACCOUNTS) return PARTNER_PATH.BALANCE_PAYOUT;
   if (pathname === PARTNER_PATH.REGISTER) return PARTNER_PATH.HOME;
-  // "Chuyến cho thuê" là màn của Owner Lite — tuyến gói đọc yêu cầu ở hộp thư.
-  if (pathname === PARTNER_PATH.TRIPS) return PARTNER_PATH.REQUESTS;
+  // `/manage/trips` cũ (Owner Lite "Chuyến cho thuê", gỡ ở web PR #278) về màn Đơn thuê.
+  if (pathname === PARTNER_PATH.TRIPS) return PARTNER_PATH.BOOKINGS;
   return null;
 }
 
@@ -208,28 +202,12 @@ function memberAliasRedirect(
 }
 
 /**
- * Hộp thư + bảng đơn của gian hàng — CHỦ xe tuyến hoa hồng đọc chúng gộp ở "Chuyến cho thuê".
- * Chi tiết `/manage/bookings/<id>` KHÔNG nằm đây: đó là màn đơn dùng chung, nơi bàn giao.
+ * "Chuyến cho thuê" riêng của chủ xe đã gỡ (web PR #278, 06/11/2026): cả chủ lẫn thành viên tuyến
+ * hoa hồng dùng CÙNG hộp thư + màn "Đơn thuê xe" với gian hàng. `/manage/trips` cũ (thông báo, liên
+ * kết đã lưu) chuyển về màn Đơn thuê — gương `legacyOwnerTripsTarget` của web.
  */
-const OWNER_TRIPS_REPLACES: readonly string[] = [
-  PARTNER_PATH.REQUESTS,
-  PARTNER_PATH.BOOKINGS,
-  PARTNER_PATH.BOOKINGS_AWAITING_PICKUP,
-];
-
-/**
- * Tuyến hoa hồng: yêu cầu + đơn ở đâu tuỳ người xem là CHỦ hay THÀNH VIÊN (`null` = ở lại) —
- * gương `ownerTripsRedirect` của web. Thành viên mở `/manage/trips` về hộp thư: `GET /trips`
- * với họ là một trang rỗng, trong khi họ vẫn phải bàn giao những chuyến đang chạy.
- */
-function ownerTripsRedirect(
-  user: CurrentUserLike | null | undefined,
-  pathname: string,
-): string | null {
-  if (isCommissionOwner(user)) {
-    return OWNER_TRIPS_REPLACES.includes(pathname) ? PARTNER_PATH.TRIPS : null;
-  }
-  return pathname === PARTNER_PATH.TRIPS ? PARTNER_PATH.REQUESTS : null;
+function ownerTripsRedirect(pathname: string): string | null {
+  return pathname === PARTNER_PATH.TRIPS ? PARTNER_PATH.BOOKINGS : null;
 }
 
 /**
@@ -253,18 +231,19 @@ export function partnerPathRedirect(
       // Onboarding tự đưa gian hàng hoa hồng về tiến trình đăng ký của nó.
       if (pathname === PARTNER_PATH.ONBOARDING) return null;
       {
-        const trips = ownerTripsRedirect(user, pathname);
+        const trips = ownerTripsRedirect(pathname);
         if (trips) return trips;
       }
-      // Chiều ngược của `packageEquivalent`: thông báo gian hàng (`/manage/shop`) với chủ xe tuyến
-      // hoa hồng là hồ sơ chủ xe — web `notificationHref` ngữ cảnh `owner` cũng trỏ vào đó.
-      // Từ PR #156 hồ sơ chủ xe là section "profile" của trang tài khoản; `/manage/registration`
-      // chỉ còn là alias chuyển tiếp tới đó (web `OwnerRegistrationRedirect`).
-      if (
-        pathname === PARTNER_PATH.SHOP ||
-        matchesPage(pathname, { href: PARTNER_PATH.REGISTRATION })
-      )
-        return PARTNER_PATH.ACCOUNT_PROFILE;
+      // Trang Thông tin `/manage/shop` là "Hồ sơ chủ xe" của CHỦ (ADR 0085 điều 2) - thành viên
+      // không có nó (về trang chủ ở dòng cuối). `/manage/registration` chỉ còn là alias chuyển tiếp
+      // tới đó (web `OwnerRegistrationRedirect`).
+      if (pathname === PARTNER_PATH.SHOP && isCommissionOwner(user)) return null;
+      // `/manage/tax` cũ: khai thuế là khối của "Hồ sơ chủ xe" (web `commissionEquivalent`,
+      // PR #284). Thành viên đã được `memberAliasRedirect` đưa về trang tài khoản ở trên.
+      if (pathname === PARTNER_PATH.TAX && isCommissionOwner(user)) return PARTNER_PATH.SHOP_TAX;
+      if (matchesPage(pathname, { href: PARTNER_PATH.REGISTRATION })) {
+        return isCommissionOwner(user) ? PARTNER_PATH.SHOP : PARTNER_PATH.HOME;
+      }
       // `/manage/register` (chọn cách cho thuê) KHÔNG trong danh sách trắng: người đã có gian hàng
       // về trang chủ — web `PartnerRegisterView` cũng chuyển họ về `partnerHomeHref`.
       return isCommissionPath(pathname) ? null : PARTNER_PATH.HOME;

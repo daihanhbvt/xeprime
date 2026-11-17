@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { useTranslations } from 'use-intl';
 import { PLAN_FEATURE } from '@xeprime/types';
-import { Chip } from '@/components/ui/Chip';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { useFeature } from '@/features/auth/hooks/use-feature';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
@@ -18,9 +18,10 @@ const VIEWS: readonly TransactionHistoryView[] = [
 ];
 
 /**
- * Hai tab của "Lịch sử giao dịch" — bản native của nút chuyển `Segmented` ở `/manage/receipts`
- * (web, PR #276): "Giao dịch thu chi" và "Công nợ". Web gộp hai màn vào MỘT route; app giữ hai
- * màn (mỗi màn một bộ lọc riêng — đúng như web đi tới URL sạch của tab kia), dải tab này nối chúng.
+ * Hai tab của "Lịch sử giao dịch" — bản native của nút chuyển `Segmented` có khung viền ở
+ * `/manage/receipts` (web, ledger 09 §3.11): "Giao dịch thu chi" và "Công nợ". Web gộp hai màn vào
+ * MỘT route; app giữ hai màn (mỗi màn một bộ lọc riêng — đúng như web đi tới URL sạch của tab kia),
+ * dải tab này nối chúng.
  *
  * Tab Công nợ mang cờ gói RIÊNG (`PLAN_FEATURE.DEBTS`): gói không có thì dải tab vắng hẳn, như web.
  * Đổi tab là THAY màn (`replace`), không chồng thêm một tầng để nút lui quay vòng giữa hai tab.
@@ -33,22 +34,20 @@ export function TransactionHistoryTabs({ value }: { value: TransactionHistoryVie
 
   return (
     <View style={styles.row} accessibilityLabel={t('label')}>
-      {VIEWS.map((view) => (
-        <Chip
-          key={view}
-          label={t(view)}
-          selected={value === view}
-          size="sm"
-          onPress={() => {
-            if (view === value) return;
-            router.replace(
-              view === TRANSACTION_HISTORY_VIEW.DEBTS
-                ? ROUTES.manage.debts()
-                : ROUTES.manage.receipts(),
-            );
-          }}
-        />
-      ))}
+      <SegmentedTabs
+        fit
+        variant="neutral"
+        items={VIEWS.map((view) => ({ key: view, label: t(view) }))}
+        value={value}
+        onChange={(view) => {
+          if (view === value) return;
+          router.replace(
+            view === TRANSACTION_HISTORY_VIEW.DEBTS
+              ? ROUTES.manage.debts()
+              : ROUTES.manage.receipts(),
+          );
+        }}
+      />
     </View>
   );
 }
@@ -56,7 +55,6 @@ export function TransactionHistoryTabs({ value }: { value: TransactionHistoryVie
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    gap: space.xs,
     paddingHorizontal: layout.screenX,
     paddingTop: space.sm,
   },

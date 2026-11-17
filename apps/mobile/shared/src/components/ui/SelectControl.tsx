@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Pressable, TextInput } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -9,6 +9,7 @@ import { MenuOption, MenuOptionList } from './MenuOption';
 import { FONT_FAMILY } from '@/theme/fonts';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
 import { fieldFontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 
 /**
  * `fontFamily` PHẢI khai: `TextInput` là primitive của RN, nằm NGOÀI cây Tamagui nên không nhận
@@ -63,6 +64,7 @@ export function SelectControl({
   searchPlaceholder,
   emptyText,
   allowClear = false,
+  hideLabel = false,
 }: {
   label: string;
   value: string | null;
@@ -101,6 +103,11 @@ export function SelectControl({
    * người dùng phải đoán xem giá trị nhỏ nhất có phải là "tắt" hay không.
    */
   allowClear?: boolean;
+  /**
+   * Không vẽ nhãn phía trên (vẫn là tên trợ năng + tiêu đề tấm chọn) - ô lọc của thanh công cụ, nơi
+   * web dùng `Select` trần với `aria-label` (nhãn đứng trên đẩy ô lệch khỏi nút cùng hàng).
+   */
+  hideLabel?: boolean;
 }) {
   const colors = useColors();
   const styles = useStyles();
@@ -112,7 +119,9 @@ export function SelectControl({
 
   return (
     <YStack gap={space.xs}>
-      <FieldLabel label={label} required={required} publishRequired={publishRequired} />
+      {hideLabel ? null : (
+        <FieldLabel label={label} required={required} publishRequired={publishRequired} />
+      )}
 
       {/*
         Vỏ chạm là `Pressable`: vai "button" đặt trên stack Tamagui không nổi lên cây khả truy
@@ -175,7 +184,7 @@ export function SelectControl({
           <XStack
             ai="center"
             gap={space.sm}
-            px={space.md}
+            px={layout.padX}
             h={sizing.touchTarget}
             br={radius.md}
             bw={1}

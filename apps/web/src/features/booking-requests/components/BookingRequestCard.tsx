@@ -861,7 +861,11 @@ function requestBoardMoney(
       ? {
           label: tKanban('money.hold'),
           state: holdRow.holdState,
-          stateLabel: tKanban(`holdState.${holdRow.holdState}`),
+          // Chưa duyệt: "Chờ duyệt" thay "Dự kiến" (người dùng 16/11/2026, cả app).
+          stateLabel:
+            holdRow.holdState === 'expected'
+              ? tKanban('holdState.awaitingApproval')
+              : tKanban(`holdState.${holdRow.holdState}`),
         }
       : null;
   return {

@@ -1,7 +1,7 @@
 import { isCommissionPath } from '@/features/shell/partner-track';
 import { SERVICE_TYPE } from '@xeprime/types';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
-import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
+import { RENTAL_TERMS_ANCHOR, VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
 import { ROUTES } from '@/navigation/routes';
 import { vehicleSchedulePath } from './calendar-link';
 import {
@@ -45,7 +45,7 @@ describe('workspace-links - Owner Lite chỉ dẫn vào trang của tuyến hoa 
     expect(!path.startsWith('/manage') || isCommissionPath(path)).toBe(true);
   });
 
-  it('tab sửa → mục tương ứng của không gian quản lý xe', () => {
+  it('tab sửa → mục tương ứng của màn sửa xe Owner Lite', () => {
     expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.DOCUMENTS, true)).toEqual(
       ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.DOCUMENTS),
     );
@@ -69,11 +69,22 @@ describe('workspace-links - Owner Lite chỉ dẫn vào trang của tuyến hoa 
     expect(vehicleBookingsHref(ID)).toEqual(ROUTES.manage.bookings({ vehicleId: ID }));
   });
 
-  it('tối ưu: xe chỉ có tài xế → mục tối ưu CÓ TÀI XẾ', () => {
+  it('tối ưu: xe chỉ có tài xế → tab CÓ TÀI XẾ của "Dịch vụ & giá" (web resolveEditTab)', () => {
     expect(
       vehicleOptimizationHref({ id: ID, serviceTypes: [SERVICE_TYPE.WITH_DRIVER] }, true),
     ).toEqual(
-      ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION),
+      ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.SERVICES, {
+        service: SERVICE_TYPE.WITH_DRIVER,
+      }),
+    );
+  });
+
+  it('giá → "Dịch vụ & giá"; chính sách → "Chính sách thuê"', () => {
+    expect(vehiclePricingHref(ID, true)).toEqual(
+      ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.SERVICES),
+    );
+    expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.POLICY, true)).toEqual(
+      ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.POLICY),
     );
   });
 });
@@ -83,12 +94,20 @@ describe('vehicleEditPartHref - mục không có ở khu tài khoản thì null 
     expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.MAINTENANCE, true)).toBeNull();
     expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.SOURCE, true)).toBeNull();
   });
-  it('mục vận hành mới ánh xạ một-một sang mục của không gian quản lý xe', () => {
+  it('bí danh cũ đi đúng nơi web `resolveEditTab` đưa', () => {
     expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES, true)).toEqual(
-      ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION),
+      ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.SERVICES, {
+        service: SERVICE_TYPE.WITH_DRIVER,
+      }),
     );
     expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.OPERATIONS, true)).toEqual(
-      ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.HANDOVER_TIME),
+      ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.POLICY),
+    );
+    expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.SELF_DRIVE_TERMS, true)).toEqual(
+      ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.POLICY, {
+        anchor: RENTAL_TERMS_ANCHOR,
+        service: SERVICE_TYPE.SELF_DRIVE,
+      }),
     );
   });
 });

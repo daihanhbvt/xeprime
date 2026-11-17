@@ -1,12 +1,16 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import type { ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Text, XStack } from 'tamagui';
 import { useFieldFeedback } from '@/components/motion/use-field-feedback';
 import { useTranslations } from 'use-intl';
+import { InfoHint } from './InfoHint';
 import { useColors } from '@/theme/ThemeProvider';
 import { fieldFontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+
+/** Gợi ý dài hơn mức này thì gọn vào dấu ⓘ. */
+const HINT_INLINE_MAX = 60;
 
 export function FieldLabel({
   label,
@@ -58,6 +62,7 @@ export function FieldMessage({
   hint?: string | undefined;
 }) {
   const colors = useColors();
+  const tLabels = useTranslations('Common.labels');
   if (error) {
     return (
       <XStack ai="center" gap={space.xs}>
@@ -69,6 +74,18 @@ export function FieldMessage({
     );
   }
   if (hint) {
+    // Gợi ý DÀI không chiếm chỗ dưới ô: gọn thành dấu ⓘ + "Ghi chú", chạm mở tấm trượt đọc đủ
+    // (người dùng 17/11/2026). Gợi ý ngắn vẫn hiện thẳng.
+    if (hint.length > HINT_INLINE_MAX) {
+      return (
+        <XStack ai="center" gap={space.xs}>
+          <InfoHint content={hint} label={tLabels('note')} size={iconSize.sm} />
+          <Text col={colors.textMuted} fos={fieldFontSize.message}>
+            {tLabels('note')}
+          </Text>
+        </XStack>
+      );
+    }
     return (
       <Text col={colors.textMuted} fos={fieldFontSize.message}>
         {hint}

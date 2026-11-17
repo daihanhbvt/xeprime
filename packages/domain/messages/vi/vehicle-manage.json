@@ -95,6 +95,10 @@
   "images": {
     "reorderToggle": "Cho phép kéo thả để sắp xếp thứ tự hình ảnh.",
     "reorderLabel": "Bật kéo thả sắp xếp ảnh",
+    "coverBadge": "Ảnh bìa",
+    "appReorderToggle": "Cho phép đổi chỗ hình ảnh giữa các ô.",
+    "appReorderLabel": "Bật đổi chỗ ảnh",
+    "appReorderHint": "Chạm một ảnh để chọn, rồi chạm ô cần chuyển tới - hai ảnh đổi chỗ cho nhau.",
     "minimumHint": "Mỗi ô giữ một ảnh và không ô nào được để trống (tối đa {max} ảnh thư viện).",
     "galleryTitle": "Ảnh xe",
     "coverFromFront": "Ảnh mặt trước được dùng làm ảnh bìa trên thẻ xe và trang xe - nên chọn tấm rõ nét nhất.",

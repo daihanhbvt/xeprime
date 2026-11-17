@@ -8,6 +8,7 @@ import {
   MAINTENANCE_DUE_STATUS,
   MAINTENANCE_DUE_STATUS_META,
   MAINTENANCE_STATUS,
+  MAINTENANCE_STATUS_HOLDING_SCHEDULE,
   MAINTENANCE_STATUS_META,
   PERMISSION,
   STATUS_COLOR,
@@ -20,13 +21,15 @@ import {
 } from '@xeprime/validators';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { metaColor, metaLabel } from '@/lib/status-meta';
-import { AppHeader } from '@/components/layout/AppHeader';
+import { VehicleEditHeader } from '@/features/vehicles/components/VehicleEditHeader';
+import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { Screen } from '@/components/layout/Screen';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { OdometerCorrectionSheet } from './components/OdometerCorrectionSheet';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Button } from '@/components/ui/Button';
-import { BlockLink, BlockTitle } from '@/components/ui/BlockTitle';
+import { BlockLink } from '@/components/ui/BlockTitle';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { Divider } from '@/components/ui/DataRow';
@@ -34,7 +37,7 @@ import { NumberField } from '@/components/ui/NumberField';
 import { Pagination } from '@/components/ui/Pagination';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { SkeletonText } from '@/components/ui/Skeleton';
-import { StatusBadge } from '@/components/ui/StatusBadge';
+import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
 import { TextField } from '@/components/ui/TextField';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
@@ -91,18 +94,13 @@ export function VehicleMaintenanceScreen({ vehicleId }: { vehicleId: string }) {
 
   return (
     <>
-      <AppHeader
-        title={title}
-        {...(vehicle.data
-          ? {
-              subtitle: [vehicle.data.name, vehicle.data.plateNumber]
-                .filter(Boolean)
-                .join(LIST_SEPARATOR),
-            }
-          : {})}
+      <VehicleEditHeader
+        vehicleId={vehicleId}
+        tab={VEHICLE_EDIT_TAB.MAINTENANCE}
+        title={tEdit('title')}
         onBack={back}
       />
-      <Screen
+      <Screen scrollReveal
         edges={['left', 'right', 'bottom']}
         refreshing={profile.isRefetching}
         onRefresh={() => {
@@ -157,16 +155,22 @@ export function VehicleMaintenanceWorkspace({ vehicleId }: { vehicleId: string }
     );
   }
 
-  const upcoming = (records.data ?? []).filter(
-    (record) =>
-      record.status === MAINTENANCE_STATUS.SCHEDULED ||
-      record.status === MAINTENANCE_STATUS.IN_PROGRESS,
-  );
-  const history = (records.data ?? []).filter(
-    (record) =>
-      record.status !== MAINTENANCE_STATUS.SCHEDULED &&
-      record.status !== MAINTENANCE_STATUS.IN_PROGRESS,
-  );
+  // Sắp tới: ngày dự kiến gần nhất trước, phiếu chưa có ngày xuống cuối — như web.
+  const upcoming = (records.data ?? [])
+    .filter((record) =>
+      MAINTENANCE_STATUS_HOLDING_SCHEDULE.includes(record.status as MaintenanceStatus),
+    )
+    .sort((a, b) =>
+      (a.plannedStartAt ?? '￿').localeCompare(b.plannedStartAt ?? '￿'),
+    );
+  // Lịch sử: chỉ phiếu đã hoàn tất / đã huỷ, mới nhất trước (phiếu huỷ xếp theo lần cập nhật).
+  const history = (records.data ?? [])
+    .filter(
+      (record) =>
+        record.status === MAINTENANCE_STATUS.COMPLETED ||
+        record.status === MAINTENANCE_STATUS.CANCELED,
+    )
+    .sort((a, b) => (b.completedAt ?? b.updatedAt).localeCompare(a.completedAt ?? a.updatedAt));
 
   return (
     <>
@@ -238,9 +242,9 @@ function OdometerCard({ vehicleId, profile }: { vehicleId: string; profile: Main
     : t('noReading');
 
   return (
-    <Card>
+    <Card lift="flat">
       <YStack gap={space.sm}>
-        <BlockTitle>{t('title')}</BlockTitle>
+        <SectionHeader>{t('title')}</SectionHeader>
 
         {/*
           Số lớn bên trái, liên kết lịch sử bên phải — đúng `odometerRow` bên web. Liên kết đứng
@@ -268,9 +272,10 @@ function OdometerCard({ vehicleId, profile }: { vehicleId: string; profile: Main
         {has(PERMISSION.VEHICLE_ODOMETER_CORRECT) ? (
           <Button
             label={t('correct')}
-            icon="speedometer-outline"
-            variant="secondary"
-            size="sm"
+            icon="add-outline"
+            variant="neutral"
+            size="compact"
+            block={false}
             onPress={() => setCorrecting(true)}
           />
         ) : null}
@@ -318,11 +323,7 @@ function OdometerCard({ vehicleId, profile }: { vehicleId: string; profile: Main
                     </Text>
                   ) : null}
                   {reading.isDecrease ? (
-                    <StatusBadge
-                      label={t('historyDecrease')}
-                      color={STATUS_COLOR.DANGER}
-                      size="sm"
-                    />
+                    <Pill label={t('historyDecrease')} tone={pillToneOfStatusColor(STATUS_COLOR.DANGER)} />
                   ) : null}
                 </XStack>
                 <Text col={colors.textMuted} fos={fontSize.bodySm}>
@@ -412,23 +413,22 @@ function OilCard({ vehicleId, profile }: { vehicleId: string; profile: Maintenan
     profile.nextMaintenanceKm != null && profile.remainingKm != null && profile.usedPercent != null;
 
   return (
-    <Card>
+    <Card lift="flat">
       <YStack gap={space.sm}>
-        <BlockTitle>{t('title')}</BlockTitle>
+        <SectionHeader>{t('title')}</SectionHeader>
 
         {/*
           Nhãn hạn đứng RIÊNG một hàng, không nhét vào hàng tiêu đề như `extra` bên web: tiêu đề
           viết hoa ở đây dài gần trọn bề ngang, mà nhãn dài nhất ("Chưa đủ dữ liệu") lại là nhãn
           hay gặp nhất khi xe mới nhập.
         */}
-        <StatusBadge
+        <Pill
           label={domainLabel(
             'maintenanceDueStatus',
             dueStatus,
             metaLabel(MAINTENANCE_DUE_STATUS_META, dueStatus),
           )}
-          color={metaColor(MAINTENANCE_DUE_STATUS_META, dueStatus)}
-          size="sm"
+          tone={pillToneOfStatusColor(metaColor(MAINTENANCE_DUE_STATUS_META, dueStatus))}
         />
 
         <NumberField
@@ -557,7 +557,7 @@ function RecordsCard({
   const canManage = has(PERMISSION.VEHICLE_MAINTENANCE_MANAGE);
 
   return (
-    <Card>
+    <Card lift="flat">
       <YStack gap={space.sm}>
         {/*
           "Thêm bảo dưỡng" nằm CUỐI thẻ, không phải ở hàng tiêu đề như `extra` bên web: tiêu đề
@@ -565,7 +565,7 @@ function RecordsCard({
           nút bị đẩy xuống dòng và hàng tiêu đề cao gấp đôi hàng của ba thẻ còn lại. Đặt dưới
           cùng cũng cho nó vùng chạm 44pt thật, thay vì một liên kết chữ nhỏ.
         */}
-        <BlockTitle>{title}</BlockTitle>
+        <SectionHeader>{title}</SectionHeader>
 
         {loading ? (
           <SkeletonText lines={3} />
@@ -576,7 +576,7 @@ function RecordsCard({
             <Button
               label={tActions('retry')}
               icon="refresh-outline"
-              variant="secondary"
+              variant="outline"
               size="sm"
               onPress={onRetry}
             />
@@ -612,7 +612,7 @@ function RecordsCard({
           <Button
             label={t('add')}
             icon="add-outline"
-            variant="secondary"
+            variant="outline"
             size="sm"
             onPress={() => onOpenSheet({ mode: 'create' })}
           />
@@ -698,11 +698,7 @@ function RecordRow({
         <Text f={1} col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
           {record.title || domainLabel('maintenanceType', record.type)}
         </Text>
-        <StatusBadge
-          label={domainLabel('maintenanceStatus', status, meta.label)}
-          color={meta.color}
-          size="sm"
-        />
+        <Pill label={domainLabel('maintenanceStatus', status, meta.label)} tone={pillToneOfStatusColor(meta.color)} />
       </XStack>
 
       {line ? (
@@ -738,7 +734,7 @@ function RecordRow({
             <Button
               label={t('edit')}
               icon="create-outline"
-              variant="secondary"
+              variant="outline"
               size="sm"
               onPress={() => onOpenSheet({ mode: 'edit', record })}
             />

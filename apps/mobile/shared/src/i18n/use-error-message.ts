@@ -1,8 +1,9 @@
 import { useCallback } from 'react';
 import { useTranslations } from 'use-intl';
-import { getErrorCode } from '@/lib/api-client';
+import { getErrorCode, getRetryAfterSeconds } from '@/lib/api-client';
 import { logger } from '@/lib/logger';
 import type { AppMessages } from './messages';
+import { useAppFormat } from './use-app-format';
 
 type ErrorCodeKey = keyof AppMessages['Errors']['code'];
 type AppErrorCodeKey = keyof AppMessages['Errors']['appCode'];
@@ -32,8 +33,25 @@ type AppErrorCodeKey = keyof AppMessages['Errors']['appCode'];
  *
  * Mã lạ (backend mới hơn app) rơi về câu chung — không bao giờ in mã thô cho người dùng đọc.
  */
+/**
+ * "42 giây", "15 phút", "1 giờ 5 phút" — thời gian còn phải chờ của một lỗi "chờ rồi thử lại"
+ * (web `useWaitDuration`, PR #278). Từ một phút trở lên làm tròn LÊN tới phút.
+ */
+function useWaitDuration(): (seconds: number) => string {
+  const t = useTranslations('Errors');
+  const format = useAppFormat();
+  return useCallback(
+    (seconds: number) =>
+      seconds < 60
+        ? t('wait.seconds', { count: seconds })
+        : format.minutesDuration(Math.ceil(seconds / 60)),
+    [t, format],
+  );
+}
+
 export function useErrorMessage(): (error: unknown) => string {
   const t = useTranslations('Errors');
+  const waitDuration = useWaitDuration();
 
   return useCallback(
     (error: unknown) => {
@@ -47,6 +65,15 @@ export function useErrorMessage(): (error: unknown) => string {
          */
         const appKey = `appCode.${code}` as `appCode.${AppErrorCodeKey}`;
         if (t.has(appKey)) return t(appKey);
+        /*
+         * Lỗi "chờ rồi thử lại" (`RATE_LIMITED`, `LOGIN_TEMPORARILY_LOCKED`, `OTP_COOLDOWN`,
+         * `OTP_TOO_MANY`) mang `details.retryAfterSeconds` ⇒ câu `codeWithWait` nói ĐÚNG bao lâu nữa.
+         */
+        const retryAfter = getRetryAfterSeconds(error);
+        const waitKey = `codeWithWait.${code}` as `code.${ErrorCodeKey}`;
+        if (retryAfter !== null && t.has(waitKey)) {
+          return t(waitKey, { wait: waitDuration(retryAfter) } as never);
+        }
         const key = `code.${code}` as `code.${ErrorCodeKey}`;
         if (t.has(key)) return t(key);
       }
@@ -59,6 +86,6 @@ export function useErrorMessage(): (error: unknown) => string {
       });
       return t('fallback');
     },
-    [t],
+    [t, waitDuration],
   );
 }

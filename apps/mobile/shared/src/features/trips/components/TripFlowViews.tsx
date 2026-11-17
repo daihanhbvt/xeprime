@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Reveal } from '@/components/motion/Reveal';
 import { useRef, useState, type RefObject } from 'react';
 import { Pressable, View, type ScrollView } from 'react-native';
@@ -45,6 +45,7 @@ import { FreeCancelCountdown } from './FreeCancelCountdown';
 import { TripDriverCard } from './TripDriverCard';
 import { TripExtensionPanel } from './TripExtensionPanel';
 import { TripFinanceCard } from './TripFinanceCard';
+import { TripHandoverWord } from './TripHandoverWord';
 import { TripNotReceivedReport } from './TripNotReceivedReport';
 import { TripOwnerActions } from './TripOutcomeViews';
 import { TripHoldPanel } from './TripHoldPanel';
@@ -59,6 +60,7 @@ import {
   TripRequestTripCard,
   TripRequirementsCard,
 } from './TripRequestCards';
+import { layout } from '@/theme/layout';
 
 type Hold = NonNullable<CustomerTripDetail['hold']>;
 
@@ -146,7 +148,7 @@ export function TripPendingApprovalView({ trip }: FlowViewProps) {
         {/* Thiếu câu này, "đã được tiếp nhận" đọc như "đã đặt được xe". */}
         {/* = web `.guidance`: hộp nền vàng nhạt, chữ cam cảnh báo. */}
         <Text
-          px={space.md}
+          px={layout.padX}
           py={space.sm}
           br={radius.control}
           bg={colors.primarySubtle}
@@ -327,7 +329,7 @@ export function HoldPaymentCard({
         </XStack>
 
         <Text col={colors.primary} fos={fontSize.h3} lh={28} fow={fontWeight.semibold}>
-          {amount}
+          {fmt.money(hold.remainingAmount)}
         </Text>
         <Countdown
           deadline={hold.expiresAt}
@@ -463,6 +465,8 @@ export function TripConfirmedView({ trip, scrollRef, onCancel }: FlowViewProps) 
       </Reveal>
 
       {/* Việc chính (`priority` web): "Chưa nhận được xe" (ADR 0066) · khoản hoàn khi chuyển THỪA · lời nhắc thu cọc trực tiếp. */}
+      {/* "Đã nhận xe" (ADR 0081) — khách tự khép mốc giao xe khi chủ xe quên bấm. */}
+      <TripHandoverWord trip={trip} />
       <TripNotReceivedReport trip={trip} />
       {/* Gia hạn chuyến dài hạn (ADR 0077) — QR của phụ lục đang chờ; không có thì im lặng. */}
       <TripExtensionPanel tripId={trip.id} />

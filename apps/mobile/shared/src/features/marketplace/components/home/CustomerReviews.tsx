@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import Animated from 'react-native-reanimated';
 import { useRevealPop } from '@/components/motion/reveal-effects';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useState } from 'react';
 import Svg, { Path } from 'react-native-svg';
 import { Text, XStack, YStack } from 'tamagui';

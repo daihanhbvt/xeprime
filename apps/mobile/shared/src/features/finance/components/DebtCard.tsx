@@ -1,20 +1,19 @@
 import { memo } from 'react';
-import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { BOOKING_STATUS_META, type BookingStatus } from '@xeprime/types';
 import { LIST_SEPARATOR, overdueDays } from '@xeprime/domain';
 import { metaColor, metaLabel } from '@/lib/status-meta';
 import { Card } from '@/components/ui/Card';
-import { CardAccent } from '@/components/ui/CardAccent';
-import { CardActionBar, type CardAction } from '@/components/ui/CardActionBar';
+import { Button } from '@/components/ui/Button';
+import type { CardAction } from '@/components/ui/CardActionBar';
+import { FactRow } from '@/components/ui/FactRow';
+import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
 import type { IconName } from '@/components/ui/Chip';
-import { Divider } from '@/components/ui/DataRow';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import type { DebtItem } from '../api';
 
 /** Chiều cao thanh thu hồi — mảnh hơn `ProgressBar` (8pt) vì nó là nét phụ, không phải số liệu chính. */
@@ -29,11 +28,11 @@ const FULL_PERCENT = 100;
  * con số hiện cho người dùng — mọi số tiền trong thẻ vẫn đi thẳng từ chuỗi qua `fmt.money` (ADR 0007).
  */
 function paidPercent(paid: string, total: string): number {
+  // Web `DebtTable.paidPercent`: tổng ≤ 0 ⇒ 0%, làm tròn XUỐNG.
   const totalValue = Number(total);
-  if (!Number.isFinite(totalValue) || totalValue <= 0) return FULL_PERCENT;
-  const ratio = (Number(paid) / totalValue) * FULL_PERCENT;
-  if (!Number.isFinite(ratio)) return 0;
-  return Math.min(FULL_PERCENT, Math.max(0, ratio));
+  const paidValue = Number(paid);
+  if (!Number.isFinite(totalValue) || !Number.isFinite(paidValue) || totalValue <= 0) return 0;
+  return Math.min(FULL_PERCENT, Math.max(0, Math.floor((paidValue / totalValue) * FULL_PERCENT)));
 }
 
 /**
@@ -100,108 +99,63 @@ function DebtCardImpl({
   ];
 
   return (
-    <Card padded={false}>
-      <XStack>
-        <CardAccent color={metaColor(BOOKING_STATUS_META, status)} />
-
-        <YStack f={1} minWidth={0}>
-          <YStack p={space.md} gap={space.sm}>
-            {/*
-              Tầng 1 — DANH TÍNH bên trái, TRẠNG THÁI bên phải.
-              `f={1} minWidth={0}` ở cột trái là thứ giữ viên nhãn không bị đẩy khỏi mép phải khi tên
-              khách dài: trong React Native khối flex không tự co dưới nội dung của nó.
-            */}
-            <XStack ai="flex-start" gap={space.sm}>
-              <YStack f={1} minWidth={0} gap={2}>
-                <Text
-                  col={colors.text}
-                  fos={fontSize.body}
-                  fow={fontWeight.semibold}
-                  numberOfLines={1}
-                >
-                  {debt.customerName}
-                </Text>
-                <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
-                  {[debt.code, debt.customerPhone].filter(Boolean).join(LIST_SEPARATOR)}
-                </Text>
-              </YStack>
-              <StatusBadge
-                label={domainLabel('bookingStatus', status, metaLabel(BOOKING_STATUS_META, status))}
-                color={metaColor(BOOKING_STATUS_META, status)}
-                size="sm"
-              />
-            </XStack>
-
-            {/*
-              Tầng 2 — XE và HẠN TRẢ trên MỘT dòng, có biểu tượng dẫn.
-              Hai dòng `DataRow` nhãn-giá-trị cho hai giá trị ngắn này ăn hết nửa chiều cao thẻ mà
-              không nói thêm gì: "Xe" và "Đến hạn trả" đọc ra được từ chính giá trị và biểu tượng.
-            */}
-            <XStack ai="center" gap={space.md}>
-              <XStack f={1} minWidth={0} ai="center" gap={space.xs}>
-                <Ionicons name="car-outline" size={iconSize.sm} color={colors.textMuted} />
-                <Text f={1} col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
-                  {[debt.vehicleName, debt.plateNumber].filter(Boolean).join(LIST_SEPARATOR)}
-                </Text>
-              </XStack>
-              <XStack ai="center" gap={space.xs}>
-                <Ionicons name="calendar-outline" size={iconSize.sm} color={colors.textMuted} />
-                <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
-                  {fmt.date(debt.returnAt)}
-                </Text>
-                {late > 0 ? (
-                  <Text col={colors.danger} fos={fontSize.label} fow={fontWeight.semibold}>
-                    {t('overdueDays', { count: late })}
-                  </Text>
-                ) : null}
-              </XStack>
-            </XStack>
-
-            <Divider />
-
-            {/*
-              Tầng 3 — CÒN NỢ là con số người thu đọc to, đứng một mình bên phải ở cỡ tiêu đề; nhãn
-              "Còn nợ" và cặp "đã trả / tổng" nằm bên trái ở cỡ chữ phụ. Không tô nền đỏ cả khối nữa:
-              trong một danh sách dài, hai chục mảng đỏ liền nhau làm mất hẳn tác dụng cảnh báo của
-              màu — chỉ CON SỐ ăn màu, phần nền để yên.
-            */}
-            <XStack ai="flex-end" jc="space-between" gap={space.sm}>
-              <YStack f={1} minWidth={0} gap={2}>
-                <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.medium}>
-                  {t('columns.debt')}
-                </Text>
-                <Text col={colors.placeholder} fos={fontSize.label} numberOfLines={1}>
-                  {t('paidOf', {
-                    paid: fmt.money(debt.paidAmount),
-                    total: fmt.money(debt.totalAmount),
-                  })}
-                </Text>
-              </YStack>
-              <Text col={colors.danger} fos={fontSize.h4} fow={fontWeight.bold} numberOfLines={1}>
-                {fmt.money(debt.debtAmount)}
-              </Text>
-            </XStack>
-
-            {/*
-              Thanh THU HỒI: phần đã thu trên tổng phải thu. Nó là thứ phân biệt được ngay "đơn mới
-              đặt chưa trả đồng nào" với "đơn đã trả gần hết còn thiếu ít" — hai việc rất khác nhau
-              mà ba con số tiền đứng cạnh nhau bắt người đọc tự nhẩm mới ra.
-            */}
-            <YStack
-              h={TRACK_HEIGHT}
-              br={radius.pill}
-              bg={colors.surfaceMuted}
-              ov="hidden"
-              accessibilityRole="progressbar"
-              accessibilityValue={{ min: 0, max: FULL_PERCENT, now: Math.round(percent) }}
-            >
-              <YStack h={TRACK_HEIGHT} br={radius.pill} bg={colors.success} width={`${percent}%`} />
-            </YStack>
-          </YStack>
-
-          <CardActionBar actions={actions} />
+    // Khuôn thẻ danh sách chuẩn: mã đơn + viên trạng thái, khách, dòng FactRow, thanh thu hồi, 2 nút vàng.
+    <Card>
+      <YStack gap={space.sm}>
+        <XStack ai="center" jc="space-between" gap={space.sm}>
+          <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.medium} numberOfLines={1} flexShrink={1}>
+            {`#${debt.code}`}
+          </Text>
+          <Pill
+            label={domainLabel('bookingStatus', status, metaLabel(BOOKING_STATUS_META, status))}
+            tone={pillToneOfStatusColor(metaColor(BOOKING_STATUS_META, status))}
+          />
+        </XStack>
+        <FactRow label={t('columns.customer')} sub={debt.customerPhone ?? null}>
+          {debt.customerName}
+        </FactRow>
+        <FactRow label={t('columns.vehicleFull')}>
+          {[debt.vehicleName, debt.plateNumber].filter(Boolean).join(LIST_SEPARATOR)}
+        </FactRow>
+        <FactRow
+          label={t('columns.dueAt')}
+          {...(late > 0 ? { tone: colors.danger } : {})}
+          sub={late > 0 ? t('overdueDays', { count: late }) : null}
+        >
+          {fmt.date(debt.returnAt)}
+        </FactRow>
+        <FactRow label={t('columns.total')}>{fmt.money(debt.totalAmount)}</FactRow>
+        <FactRow label={t('columns.paid')}>{fmt.money(debt.paidAmount)}</FactRow>
+        <FactRow label={t('columns.debt')} tone={colors.danger}>
+          {fmt.money(debt.debtAmount)}
+        </FactRow>
+        {/* Thanh thu hồi: phần đã thu trên tổng phải thu. */}
+        <YStack
+          h={TRACK_HEIGHT}
+          br={radius.pill}
+          bg={colors.surfaceMuted}
+          ov="hidden"
+          accessibilityRole="progressbar"
+          accessibilityValue={{ min: 0, max: FULL_PERCENT, now: Math.round(percent) }}
+        >
+          <YStack h={TRACK_HEIGHT} br={radius.pill} bg={colors.success} width={`${percent}%`} />
         </YStack>
-      </XStack>
+        {actions.length > 0 ? (
+          <XStack gap={space.sm} pt={space.xs}>
+            {actions.map((action) => (
+              <YStack key={action.key} f={1} minWidth={0}>
+                <Button
+                  label={action.label}
+                  icon={action.icon}
+                  variant="gradient"
+                  size="compact"
+                  onPress={action.onPress}
+                />
+              </YStack>
+            ))}
+          </XStack>
+        ) : null}
+      </YStack>
     </Card>
   );
 }

@@ -1,26 +1,34 @@
 /*
- * Hàng xe ở mobile — Figma `186:2408`. Ảnh 80×60, nội dung 274px, padding 12.
- * Các hàng nối nhau bằng một đường kẻ, không phải thẻ rời có bóng.
+ * Thẻ xe khổ điện thoại — Figma Partner "Vehicle Summary" (Danh sách xe MB `24158:103762`).
+ * Thẻ đệm 12, khối cách 8, viền `stroke/gray-low200`, bo 16; ảnh 63×40 bo 8 cách cột chữ 12.
  */
-.row {
+.card {
   display: flex;
-  padding: var(--xp-space-sm);
-  border-bottom: 1px solid var(--xp-color-border-secondary);
+  min-width: 0;
+  flex-direction: column;
+  padding: var(--xp-space-12);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
   background: var(--xp-color-bg-container);
   gap: var(--xp-space-sm);
 }
 
-/* Ảnh vuông 90×90 (Figma `236:4674`) — khung cố định + `object-fit: cover`, ảnh nguồn tỉ lệ nào
-   cũng không kéo lệch hàng. */
+.head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--xp-space-12);
+}
+
 .thumb {
   display: flex;
   overflow: hidden;
-  width: 90px;
-  height: 90px;
+  width: 63px;
+  height: 40px;
   flex: none;
   align-items: center;
   justify-content: center;
-  border-radius: var(--xp-border-radius-sm);
+  border-radius: 8px;
   background: var(--xp-color-bg-muted);
 }
 
@@ -32,97 +40,185 @@
 
 .thumbFallback {
   color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-lg);
+  font-size: 18px;
 }
 
-.content {
+.headText {
   display: flex;
   min-width: 0;
   flex: 1;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--xp-space-xs);
 }
 
 .titleRow {
   display: flex;
   min-width: 0;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--xp-space-xs);
+  gap: var(--xp-space-sm);
 }
 
+.titleMain {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+/* Tên 14/20 semibold, cắt "..." khi dài. */
 .name {
   overflow: hidden;
+  min-width: 0;
   color: var(--xp-color-text);
   font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.name:focus-visible {
-  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
-  outline-offset: 2px;
-}
-
-.meta {
-  overflow: hidden;
-  margin: 0;
+/* Viên nguồn xe — `_Badge` nền `bg/gray-50`, đệm 2/8, bo 16, chữ 12/18 medium. */
+.source {
+  flex: none;
+  padding: var(--xp-space-2) var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg);
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  text-overflow: ellipsis;
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
   white-space: nowrap;
 }
 
-/* Chỉ số gộp một dòng; cho phép xuống dòng khi tên/tiền dài bất thường. */
-.metrics {
+/* Nút mở/thu tròn 24: nền `bg/gray-100`, khi mở nền `bg/primary-low` mũi tên vàng. */
+.toggle {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.toggleOpen {
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary);
+}
+
+.metaRow {
   display: flex;
+  min-width: 0;
   flex-wrap: wrap;
-  margin: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-2) var(--xp-space-sm);
+}
+
+.identity {
+  overflow: hidden;
+  min-width: 0;
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  gap: 0 var(--xp-space-xs);
+  font-size: var(--xp-font-size-body);
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.metrics b {
-  color: var(--xp-color-text);
-  font-variant-numeric: tabular-nums;
+/* "Ô tô • Tự lái • Có tài xế" — chữ 12/18, chấm 4 cách 8. */
+.kinds {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
 }
 
-.metricsUnavailable {
+.kind {
+  display: inline-flex;
+  align-items: center;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-label);
+  line-height: 18px;
+  white-space: nowrap;
+  gap: var(--xp-space-sm);
+}
+
+.kind + .kind::before {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--xp-color-border);
+  content: '';
+}
+
+.reviewReason {
+  margin: 0;
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-label);
+  line-height: 18px;
+}
+
+.unavailable {
   margin: 0;
   color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
+  font-size: var(--xp-font-size-label);
+  line-height: 18px;
 }
 
-/* KM hiện tại (Wave 8) — một dòng gọn, không đẩy chiều cao hàng. */
-.odometer {
-  margin: 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-.income {
-  color: var(--xp-color-success);
-}
-
-.expense {
-  color: var(--xp-color-error);
-}
-
-.actions {
+/* Figma "Vehicle Metrics": nền `bg/gray-50`, bo 12, đệm 8, dòng 12/18 cách 6. */
+.metrics {
   display: flex;
-  padding-top: 6px;
-  border-top: 1px solid var(--xp-color-border-secondary);
+  flex-direction: column;
+  padding: var(--xp-space-sm);
+  margin: 0;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+  gap: var(--xp-space-6);
 }
 
-/* Lý do người duyệt trả xe về — cùng luật với thẻ desktop, tối đa hai dòng. */
-.reviewReason {
-  display: -webkit-box;
-  overflow: hidden;
+.metric {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-label);
+  line-height: 18px;
+}
+
+.metric dt {
+  color: var(--xp-color-text-tertiary);
+}
+
+.metric dd {
   margin: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  white-space: nowrap;
+}
+
+.metric dd.gain {
+  color: var(--xp-color-success);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.metric dd.loss {
   color: var(--xp-color-error);
-  font-size: var(--xp-font-size-body-sm);
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Chân thẻ: các nút chia đều hàng (khuôn thẻ Đơn thuê). */
+.actions > * {
+  width: 100%;
+}
+
+.actions > * > * {
+  min-width: 0;
+  flex: 1 1 0;
 }

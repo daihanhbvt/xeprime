@@ -70,7 +70,7 @@ export function LoginScreen({
       <AppHeader onBack={onCancel} />
 
       {/* Header tự cộng inset trên, nên `Screen` chỉ giữ ba cạnh còn lại. */}
-      <Screen edges={['left', 'right', 'bottom']}>
+      <Screen edges={['left', 'right', 'bottom']} maxWidth="form">
         <YStack gap={space.xl}>
           <YStack gap={space.xs}>
             {/*

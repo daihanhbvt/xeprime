@@ -1,14 +1,16 @@
-import { Ionicons } from '@expo/vector-icons';
+import CheckOutlined from '@ant-design/icons-svg/es/asn/CheckOutlined';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { STATUS_COLOR, TENANT_ROLE, toLocalVnPhone } from '@xeprime/types';
 
+import { AntIcon } from '@/components/icons/AntIcon';
+import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
+import { InfoCard, InfoRow, InfoRows } from '@/components/ui/InfoCard';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import type { ShopOwnerAccount } from '../api';
 
 /**
@@ -29,6 +31,15 @@ import type { ShopOwnerAccount } from '../api';
  * Lối sang màn bảo mật chỉ hiện với CHÍNH CHỦ: với quản lý/nhân viên, nút nằm dưới thông tin của
  * NGƯỜI KHÁC nhưng lại mở tài khoản của chính họ — một nút nói dối về việc nó làm gì.
  */
+const OWNER_AVATAR_SIZE = 40;
+/** Dấu tích xanh 16px của web `.verifiedMark` (`ShopOwnerSection.module.css`). */
+const VERIFIED_MARK = 16;
+
+/**
+ * Bố cục đúng `ShopOwnerSection` web ở khổ điện thoại (design `23999:111299`): khung `InfoCard`,
+ * ảnh 40 + tên (14 đậm, khe 16), hai dòng nhãn ↔ giá trị căn phải với dấu tích xanh hoặc nhãn
+ * "Chưa xác minh", rồi nút viền "Quản lý tài khoản".
+ */
 export function ShopOwnerCard({
   owner,
   onOpenSecurity,
@@ -44,64 +55,53 @@ export function ShopOwnerCard({
   const isOwner = user?.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER && user.id === owner.userId;
 
   return (
-    <Card>
-      <YStack gap={space.sm}>
-        <YStack gap={2}>
-          <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.semibold}>
-            {t('title')}
-          </Text>
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t('hint')}
-          </Text>
-        </YStack>
-
-        <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+    <InfoCard title={t('title')} hint={t('hint')}>
+      <XStack ai="center" gap={space.md}>
+        <Avatar name={owner.displayName} url={owner.avatarUrl ?? null} size={OWNER_AVATAR_SIZE} />
+        <Text f={1} col={colors.text} fos={fontSize.body} lineHeight={20} fow={fontWeight.semibold}>
           {owner.displayName}
         </Text>
+      </XStack>
 
-        <YStack gap={space.xs}>
-          <ContactRow
-            icon="mail-outline"
-            label={t('email')}
-            value={owner.email ?? null}
-            emptyLabel={t('noEmail')}
-            verified={owner.emailVerified}
-          />
-          <ContactRow
-            icon="call-outline"
-            label={t('phone')}
-            /* SĐT lưu dạng `0…` (ADR 0082); vẫn quy để hàng cũ còn `84…` hiện đúng. */
-            value={owner.phone ? toLocalVnPhone(owner.phone) : null}
-            emptyLabel={t('noPhone')}
-            verified={owner.phoneVerified}
-          />
-        </YStack>
+      <InfoRows>
+        <ContactRow
+          label={t('email')}
+          value={owner.email ?? null}
+          emptyLabel={t('noEmail')}
+          verified={owner.emailVerified}
+        />
+        <ContactRow
+          label={t('phone')}
+          /* SĐT lưu dạng `0…` (ADR 0082); vẫn quy để hàng cũ còn `84…` hiện đúng. */
+          value={owner.phone ? toLocalVnPhone(owner.phone) : null}
+          emptyLabel={t('noPhone')}
+          verified={owner.phoneVerified}
+        />
+      </InfoRows>
 
-        {isOwner ? (
-          <XStack>
-            <Button
-              label={t('manageLogin')}
-              variant="secondary"
-              size="sm"
-              block={false}
-              icon="key-outline"
-              onPress={onOpenSecurity}
-            />
-          </XStack>
-        ) : null}
-      </YStack>
-    </Card>
+      {isOwner ? (
+        <XStack flexWrap="wrap" gap={space.sm}>
+          <Button
+            label={t('manageAccount')}
+            variant="secondary"
+            size="md"
+            shape="square"
+            block={false}
+            icon="person-outline"
+            onPress={onOpenSecurity}
+          />
+        </XStack>
+      ) : null}
+    </InfoCard>
   );
 }
 
 function ContactRow({
-  icon,
   label,
   value,
   emptyLabel,
   verified,
 }: {
-  icon: 'mail-outline' | 'call-outline';
   label: string;
   value: string | null;
   emptyLabel: string;
@@ -109,31 +109,32 @@ function ContactRow({
 }) {
   const colors = useColors();
   const t = useTranslations('Shop.owner');
-
   return (
-    <XStack ai="center" gap={space.sm}>
-      <XStack ai="center" gap={space.xs} w={132} flexShrink={0}>
-        <Ionicons name={icon} size={iconSize.xs} color={colors.textMuted} />
-        <Text col={colors.textMuted} fos={fontSize.label}>
-          {label}
-        </Text>
-      </XStack>
-      <XStack f={1} minWidth={0} ai="center" gap={space.xs} jc="flex-end">
-        <Text
-          col={value ? colors.text : colors.placeholder}
-          fos={fontSize.bodySm}
-          numberOfLines={1}
-        >
-          {value ?? emptyLabel}
-        </Text>
-        {value ? (
-          <StatusBadge
-            label={verified ? t('verified') : t('unverified')}
-            color={verified ? STATUS_COLOR.SUCCESS : STATUS_COLOR.WARNING}
-            size="sm"
-          />
-        ) : null}
-      </XStack>
-    </XStack>
+    <InfoRow
+      label={label}
+      value={value}
+      emptyLabel={emptyLabel}
+      suffix={
+        value ? (
+          verified ? (
+            <YStack
+              w={VERIFIED_MARK}
+              h={VERIFIED_MARK}
+              br={VERIFIED_MARK / 2}
+              bg={colors.success}
+              ai="center"
+              jc="center"
+              accessible
+              accessibilityRole="image"
+              accessibilityLabel={t('verified')}
+            >
+              <AntIcon icon={CheckOutlined} size={9} color={colors.textInverse} />
+            </YStack>
+          ) : (
+            <StatusBadge label={t('unverified')} color={STATUS_COLOR.WARNING} size="sm" />
+          )
+        ) : null
+      }
+    />
   );
 }

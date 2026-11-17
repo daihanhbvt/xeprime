@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useEffect, type RefObject } from 'react';
 import { Pressable } from 'react-native';
 import { useController, useWatch, type Control } from 'react-hook-form';

@@ -1,7 +1,15 @@
 import { useMemo } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { compactPhoneInput } from '@xeprime/types';
-import { buildPhoneLoginSchema, type PhoneLoginValues } from '@xeprime/validators';
+import {
+  LOGIN_IDENTIFIER_KIND,
+  MOBILE_CLIENT_APP,
+  compactPhoneInput,
+  detectLoginIdentifierKind,
+  normalizeStaffUsername,
+} from '@xeprime/types';
+import * as yup from 'yup';
+import { buildLoginPhoneSchema, buildPartnerLoginSchema } from '@xeprime/validators';
+import { APP_PROFILE } from '@/app-profile';
 import { useAuthSchemaLabels } from '../use-auth-schema-labels';
 import { useForm } from 'react-hook-form';
 import { Pressable, StyleSheet } from 'react-native';
@@ -15,6 +23,11 @@ import { useLogin } from '@/features/auth/hooks/use-auth';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
+
+interface LoginFormValues {
+  identifier: string;
+  password: string;
+}
 
 interface LoginFormProps {
   /** Nhận cả hồ sơ: đích sau đăng nhập phụ thuộc `hasPassword`, và chỉ nơi gọi mới biết đi đâu. */
@@ -35,21 +48,39 @@ export function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
    * phím gõ.
    */
   const labels = useAuthSchemaLabels();
-  const schema = useMemo(() => buildPhoneLoginSchema(labels), [labels]);
+  /*
+   * App Partner = site partner: MỘT ô nhận SĐT HOẶC tên đăng nhập nhân viên do chủ gian hàng cấp
+   * (ADR 0087), server phân loại theo hình dạng. App khách chỉ nhận SĐT (ADR 0060) — tên đăng nhập
+   * ở realm khách bị server từ chối, nên không mời người dùng gõ nó.
+   */
+  const isPartnerApp = APP_PROFILE.clientApp === MOBILE_CLIENT_APP.PARTNER;
+  const schema = useMemo(
+    () =>
+      isPartnerApp
+        ? buildPartnerLoginSchema(labels)
+        : // Cùng luật `buildPhoneLoginSchema`, chỉ đặt tên ô là `identifier` để hai app chung một form.
+          yup.object({
+            identifier: buildLoginPhoneSchema(labels),
+            password: yup.string().required(labels.passwordRequired),
+          }),
+    [labels, isPartnerApp],
+  );
 
-  const {
-    control,
-    handleSubmit,
-  } = useForm<PhoneLoginValues>({
+  const { control, handleSubmit } = useForm<LoginFormValues>({
     mode: 'onChange',
-    resolver: yupResolver(schema),
-    defaultValues: { phone: '', password: '' },
+    // Hai nhánh cùng hình `{ identifier, password }` — ép về một kiểu để RHF không thấy hợp hai schema.
+    resolver: yupResolver(schema as yup.ObjectSchema<LoginFormValues>),
+    defaultValues: { identifier: '', password: '' },
   });
 
   const onSubmit = handleSubmit((values) => {
-    // Định danh CHỈ là SĐT (ADR 0060); dấu cách/chấm/gạch chép từ danh bạ bỏ đi như web.
+    // SĐT: bỏ dấu cách/chấm/gạch chép từ danh bạ như web; tên đăng nhập: chữ thường, bỏ khoảng trắng.
+    const identifier =
+      detectLoginIdentifierKind(values.identifier) === LOGIN_IDENTIFIER_KIND.USERNAME
+        ? normalizeStaffUsername(values.identifier)
+        : compactPhoneInput(values.identifier);
     login.mutate(
-      { identifier: compactPhoneInput(values.phone), password: values.password },
+      { identifier, password: values.password },
       {
         onSuccess,
         onError: (error) => toast.showError(errorMessage(error)),
@@ -61,14 +92,15 @@ export function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
     <YStack gap={space.md}>
       <TextField
         control={control}
-        name="phone"
+        name="identifier"
         required
-        label={t('login.phone')}
-        placeholder={t('login.phonePlaceholder')}
-        icon="call-outline"
+        label={t(isPartnerApp ? 'login.partnerIdentifier' : 'login.phone')}
+        placeholder={t(isPartnerApp ? 'login.partnerIdentifierPlaceholder' : 'login.phonePlaceholder')}
+        hint={isPartnerApp ? t('login.partnerIdentifierHint') : undefined}
+        icon={isPartnerApp ? 'person-outline' : 'call-outline'}
         autoCapitalize="none"
-        autoComplete="tel"
-        keyboardType="phone-pad"
+        autoComplete={isPartnerApp ? 'username' : 'tel'}
+        keyboardType={isPartnerApp ? 'default' : 'phone-pad'}
         editable={!login.isPending}
       />
 

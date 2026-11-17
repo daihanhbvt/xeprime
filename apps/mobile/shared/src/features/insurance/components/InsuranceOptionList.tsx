@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useState } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -11,6 +11,7 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useLocalizedText } from '@/i18n/localized';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 
 /** Lùi phần dưới cho thẳng hàng với TÊN sản phẩm, không với ô chọn — `margin-left: 24px` của web. */
 const NAME_INDENT = 24;
@@ -70,7 +71,7 @@ function InsuranceOption({
     <YStack
       gap={space.xs}
       py={space.sm}
-      px={space.md}
+      px={layout.padX}
       bw={1}
       bc={checked ? colors.primary : colors.border}
       br={radius.md}

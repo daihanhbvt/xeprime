@@ -1,4 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
+import { CardSpecIcon } from '@/components/icons/CardSpecIcon';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { SvgXml } from 'react-native-svg';
 import { memo } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -37,6 +38,7 @@ import { HighlightZoom } from '@/components/ui/HighlightZoom';
 import { CARD_ICON_XML } from './cardIcons';
 import { HomeCardAvatar } from './home/HomeCardAvatar';
 import { ShopLocationIcon } from './shop-icons';
+import { layout } from '@/theme/layout';
 
 /**
  * Ảnh 16:9 — đủ cao để nhận ra chiếc xe, đủ thấp để thẻ sau lộ ra ở cuối màn (hạ từ 16:10 cho thẻ
@@ -318,7 +320,8 @@ function VehicleCardImpl({
             ) : null}
             {location ? (
               <XStack ai="center" gap={space.xs}>
-                <Ionicons name="location-outline" size={iconSize.xs} color={colors.placeholder} />
+                {/* Web `card-location.svg`. */}
+                <CardSpecIcon kind="location" size={iconSize.xs} color={colors.placeholder} />
                 <Text f={1} col={colors.textMuted} fos={fontSize.bodySm} numberOfLines={1}>
                   {location}
                 </Text>
@@ -471,7 +474,7 @@ function VehicleCardImpl({
           : {})}
       >
         {/* `.listMedia` ≤860px (Figma List): ảnh rộng hết thẻ, đệm 16 ba phía, ảnh bo 12. */}
-        <YStack px={space.md} pt={space.md}>
+        <YStack px={layout.padX} pt={space.md}>
           <YStack h={LIST_PHOTO_HEIGHT} br={radius.control} ov="hidden">
             <RemoteImage
               uri={listing.mainImageUrl}

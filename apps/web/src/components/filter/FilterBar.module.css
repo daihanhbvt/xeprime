@@ -205,6 +205,40 @@
   min-width: 0;
 }
 
+/*
+ * Tấm lọc v2 (`sheetLayout="grid"`, Figma Partner "_Filter Modal" `24158:105500`): ô tìm kiếm trọn
+ * hàng, các ô chọn lưới HAI cột cách 12, ô bo 12 cao 40; chân hai nút chia đôi, cao 40.
+ */
+.sheetGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-12, 12px);
+}
+
+.sheetGrid > *,
+.sheetGrid .select,
+.sheetGrid .range,
+.sheetGrid :global(.ant-select) {
+  width: 100%;
+  min-width: 0;
+}
+
+.sheetGridWide {
+  grid-column: 1 / -1;
+}
+
+.sheetGrid :global(.ant-select-selector),
+.sheetGrid :global(.ant-input-affix-wrapper) {
+  border-radius: var(--xp-border-radius-control) !important;
+}
+
+.sheetFooterGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-12, 12px);
+  width: 100%;
+}
+
 .sheetFooter {
   display: flex;
   justify-content: flex-end;

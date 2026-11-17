@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet } from 'react-native';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';

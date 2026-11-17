@@ -217,9 +217,7 @@ describe('ReceiptListScreen - gói hết hạn (read_only)', () => {
     // Dữ liệu cũ vẫn nguyên — "không ai mất quyền xem sổ sách của chính mình" (ADR 0027).
     expect(await findByText(/PT-0001/)).toBeTruthy();
     // Lý do 'chỉ xem' do dải `ManageShellNotices` (trong `ManageHeader`) nói — không lặp ở màn.
-    expect(
-      queryByText(/chế độ chỉ xem/),
-    ).toBeNull();
+    expect(queryByText(/chế độ chỉ xem/)).toBeNull();
 
     const create = await findByLabelText('Tạo phiếu');
     expect(create.props.accessibilityState?.disabled).toBe(true);
@@ -315,37 +313,38 @@ describe('ReceiptListScreen - thẻ tổng', () => {
     expect(summaryArgs.to).toBe(listArgs.to);
   });
 
-  /**
-   * Khối thống kê MẶC ĐỊNH thu gọn — sổ là màn để tra một phiếu, không phải để đọc số tổng.
-   *
-   * Nên ba phép thử dưới đây đều phải MỞ nó ra trước. Chúng cũng chính là chỗ khoá cái mặc định
-   * đó lại: nếu ai đó đổi về mở sẵn, `expand` sẽ đóng khối và cả ba cùng đỏ.
-   */
-  it('mặc định THU GỌN - mở ra thì hiện đủ các con số của bộ lọc đang xem', async () => {
-    const { findByText, queryByText } = await renderScreen([PERMISSION.FINANCE_VIEW]);
+  /** Bốn thẻ của web (ledger 09 §3.11 #2) bày sẵn, không còn khối thu gọn "Thống kê". */
+  it('bày sẵn bốn thẻ của bộ lọc đang xem (thẻ Công nợ vắng khi gói không có tab đó)', async () => {
+    const { findAllByText, findByText, queryByText } = await renderScreen([
+      PERMISSION.FINANCE_VIEW,
+    ]);
 
-    await findByText('THỐNG KÊ');
-    expect(queryByText('1.500.000 ₫')).toBeNull();
-
-    await fireEvent.press(await findByText('THỐNG KÊ'));
-
-    expect(await findByText('1.500.000 ₫')).toBeTruthy();
-    expect(await findByText('300.000 ₫')).toBeTruthy();
-    expect(await findByText('1.200.000 ₫')).toBeTruthy();
+    expect(await findByText('Tổng thu')).toBeTruthy();
+    expect((await findAllByText('1.500.000 ₫')).length).toBeGreaterThan(0);
+    expect((await findAllByText('300.000 ₫')).length).toBeGreaterThan(0);
+    expect((await findAllByText('1.200.000 ₫')).length).toBeGreaterThan(0);
+    // Ô "Số phiếu đã duyệt" cũ đã gỡ (ledger 09 §3.11 #2); gói không có `debts` ⇒ không thẻ Công nợ.
+    expect(queryByText('Công nợ khách hàng')).toBeNull();
   });
 
-  it('không lọc gì thì chú thích nói "toàn bộ sổ"', async () => {
+  it('không lọc gì thì câu giải thích nói "toàn bộ sổ"', async () => {
     const { findByText } = await renderScreen([PERMISSION.FINANCE_VIEW]);
-    await fireEvent.press(await findByText('THỐNG KÊ'));
-    expect(await findByText('Toàn bộ sổ · phiếu chờ duyệt chưa tính')).toBeTruthy();
+    expect(
+      await findByText(
+        'Chỉ cộng phiếu ĐÃ DUYỆT của toàn bộ sổ - phiếu chờ duyệt chưa là tiền thật.',
+      ),
+    ).toBeTruthy();
   });
 
-  it('đang lọc thì chú thích đổi sang "trong bộ lọc đang xem"', async () => {
+  it('đang lọc thì câu giải thích đổi sang "bộ lọc đang xem"', async () => {
     const { findByText } = await renderScreen([PERMISSION.FINANCE_VIEW], {
       params: { tenantCustomerId: 'c1' },
     });
-    await fireEvent.press(await findByText('THỐNG KÊ'));
-    expect(await findByText('Trong bộ lọc đang xem')).toBeTruthy();
+    expect(
+      await findByText(
+        'Chỉ cộng phiếu ĐÃ DUYỆT trong bộ lọc đang xem - phiếu chờ duyệt chưa là tiền thật.',
+      ),
+    ).toBeTruthy();
   });
 });
 

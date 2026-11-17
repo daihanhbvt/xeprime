@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ScrollView, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import Animated, { Keyframe, ReduceMotion } from 'react-native-reanimated';
 import { XP_TOKENS, toPx } from '@xeprime/ui';
 import { motionMs } from '@/theme/motion';

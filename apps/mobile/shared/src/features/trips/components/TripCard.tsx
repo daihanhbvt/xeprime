@@ -1,6 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
+import { StatTile } from '@/components/ui/StatTile';
 import { Image } from 'expo-image';
-import { memo, useCallback, type ReactNode } from 'react';
+import { memo, useCallback } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -241,6 +242,7 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
             }) ? (
               <ChatWithShopButton
                 vehicleId={trip.vehicle.id}
+                tripId={trip.id}
                 label={t('confirmed.chatOwner')}
                 iconOnly
                 compact
@@ -252,7 +254,7 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
 
         {/* Ba cột tiền — Tổng | Đã thanh toán | Còn lại (tô vàng). Phép trừ trên CHUỖI tiền (ADR 0007). */}
         <XStack gap={space.sm} pt={space.xs} ai="stretch">
-          <MoneyCell label={t('card.total')}>
+          <StatTile label={t('card.total')}>
             {trip.totalAmount ? (
               fmt.moneyThousands(trip.totalAmount)
             ) : (
@@ -260,13 +262,13 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
                 {t('card.awaitingQuote')}
               </Text>
             )}
-          </MoneyCell>
-          <MoneyCell label={t('card.paid')}>
+          </StatTile>
+          <StatTile label={t('card.paid')}>
             {trip.totalAmount ? fmt.moneyThousands(paid) : '-'}
-          </MoneyCell>
-          <MoneyCell label={t('card.remaining')} highlight>
+          </StatTile>
+          <StatTile label={t('card.remaining')} highlight>
             {trip.totalAmount ? fmt.moneyThousands(remaining) : '-'}
-          </MoneyCell>
+          </StatTile>
         </XStack>
 
           {/*
@@ -362,7 +364,6 @@ function TripInfoChips({ trip }: { trip: CustomerTrip }) {
  * vọng đó; đoán ở đây là mỗi màn ngụ ý một mức chắc chắn khác nhau với khách.
  */
 function ScheduleLine({ trip }: { trip: CustomerTrip }) {
-  const colors = useColors();
   const fmt = useAppFormat();
   const t = useTranslations('Trips.detail');
 
@@ -489,38 +490,3 @@ function TripHost({ trip }: { trip: CustomerTrip }) {
   );
 }
 
-/**
- * Một cột tiền — `MoneyCell` + `.moneyCell` web: căn giữa, nhãn `text-tertiary` cỡ label, số
- * `color-text` body medium 22px không xuống dòng; `highlight` tô `color-primary` ("Còn lại").
- */
-function MoneyCell({
-  label,
-  highlight = false,
-  children,
-}: {
-  label: string;
-  highlight?: boolean;
-  children: ReactNode;
-}) {
-  const colors = useColors();
-  return (
-    <YStack f={1} minWidth={0} ai="center" gap={2}>
-      <Text col={colors.placeholder} fos={fontSize.label} numberOfLines={1}>
-        {label}
-      </Text>
-      {typeof children === 'string' ? (
-        <Text
-          col={highlight ? colors.primary : colors.text}
-          fos={fontSize.body}
-          fow={fontWeight.medium}
-          lh={22}
-          numberOfLines={1}
-        >
-          {children}
-        </Text>
-      ) : (
-        children
-      )}
-    </YStack>
-  );
-}

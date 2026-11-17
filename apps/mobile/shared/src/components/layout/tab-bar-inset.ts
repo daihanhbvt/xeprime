@@ -15,6 +15,17 @@ export function useTabBarInset(): number {
 }
 
 /**
+ * `true` khi một thanh tab ĐỨNG TRONG DÒNG CHẢY (app Partner, `ManageTabBar`) đã đệm vùng an toàn
+ * dưới đáy. Màn bên trong khi đó KHÔNG được đệm thêm `insets.bottom`, không thì giữa nội dung và
+ * thanh tab hở một dải trống đúng bằng vạch home (đo trên emulator 10/11/2026).
+ */
+export const BottomInsetConsumedContext = createContext(false);
+
+export function useBottomInsetConsumed(): boolean {
+  return useContext(BottomInsetConsumedContext);
+}
+
+/**
  * Thanh tab ẩn/hiện theo hướng cuộn (kiểu Facebook — người dùng chốt 29/10/2026): 0 = hiện,
  * 1 = trượt xuống khỏi màn. CHỈ màn Trang chủ ghi vào; layout bộ tab trả về 0 mỗi lần đổi tab, nên
  * các màn khác giữ thanh như cũ. Ngoài bộ tab giá trị là `null` — màn dùng chung tự bỏ qua.

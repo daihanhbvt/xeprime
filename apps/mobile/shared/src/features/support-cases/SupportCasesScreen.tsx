@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useAccumulatedPages } from '@/hooks/use-accumulated-pages';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { RefreshControl } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -22,8 +23,14 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ChipTabs, type ChipTabItem } from '@/components/ui/ChipTabs';
+import { FactRow } from '@/components/ui/FactRow';
+import { IconSquareButton } from '@/components/ui/IconSquareButton';
+import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
+import { LineIcon } from '@/components/icons/LineIcon';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
+import { useResponsive } from '@/theme/use-responsive';
 import { CardAccent } from '@/components/ui/CardAccent';
-import { IconButton } from '@/components/ui/IconButton';
 import { IconLine } from '@/components/ui/IconLine';
 import { ActionCardSkeleton } from '@/components/ui/Skeleton';
 import { ManageListShell } from '@/features/shell/ManageListShell';
@@ -47,7 +54,7 @@ import { FILTER_ALL } from '@/constants/filters';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, space, typeScale } from '@/theme/tokens';
 import {
   SUPPORT_CASES_PAGE_SIZE,
   SUPPORT_SURFACE,
@@ -105,6 +112,20 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
   const [page, setPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
 
+  /*
+   * Mở xong thì vào thẳng yêu cầu vừa tạo — web `SupportCasesView` cũng mở hộp chi tiết của nó
+   * (`onOpened={setOpenId}`): người dùng vừa gửi là muốn theo dõi chính yêu cầu đó.
+   */
+  const openDetail = useCallback(
+    (id: string) =>
+      router.push(
+        surface === SUPPORT_SURFACE.TENANT
+          ? ROUTES.manage.supportCase(id)
+          : ROUTES.account.supportCase(id),
+      ),
+    [router, surface],
+  );
+
   const q = debouncedSearch.trim();
   const query = useSupportCases(surface, {
     ...(status === ALL ? {} : { status }),
@@ -112,9 +133,15 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
     ...(q ? { q } : {}),
     page,
     limit: SUPPORT_CASES_PAGE_SIZE,
+  }, {
+    // Như web `ShopSupportCasesPage`: chưa biết quyền thì chưa gọi, thiếu `support.view` thì không gọi.
+    enabled: !isTenant || (!permissions.isLoading && permissions.has(PERMISSION.SUPPORT_VIEW)),
   });
+  /** Lúc quyền còn đang tải, query bị tắt nên `isLoading` = false - vẫn phải hiện khung chờ. */
+  const listLoading = query.isLoading || (isTenant && permissions.isLoading);
 
-  const items = query.data?.items ?? [];
+  // Cuộn vô hạn trên mobile: gộp các trang đã tải (`useAccumulatedPages`).
+  const items = useAccumulatedPages(query.data?.items, query.data?.meta?.page);
   const total = query.data?.meta?.total ?? 0;
   const filtered = status !== ALL || category !== ALL || q !== '';
 
@@ -161,13 +188,6 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
   const groups = useMemo<readonly FilterGroup[]>(
     () => [
       {
-        key: 'status',
-        label: t('filters.status'),
-        value: status,
-        resetValue: ALL,
-        options: [{ value: ALL, label: tLabels('all') }, ...statusOptions.slice(1)],
-      },
-      {
         key: 'category',
         label: t('filters.category'),
         value: category,
@@ -175,8 +195,25 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
         options: [{ value: ALL, label: tLabels('all') }, ...categoryOptions.slice(1)],
       },
     ],
-    [t, tLabels, status, category, statusOptions, categoryOptions],
+    [t, tLabels, category, categoryOptions],
   );
+
+  /** Trạng thái là NHÓM chính của màn - dải `ChipTabs` như chặng của Đơn thuê; Loại ở tấm Lọc. */
+  const { gutter } = useResponsive();
+  const statusTabs = useMemo<ChipTabItem<SupportCaseStatus | typeof ALL>[]>(
+    () => [
+      { value: ALL, label: tLabels('all') },
+      ...SUPPORT_CASE_STATUS_VALUES.map((value) => ({
+        value,
+        label: domainLabel('supportCaseStatus', value),
+      })),
+    ],
+    [tLabels, domainLabel],
+  );
+  const selectStatus = useCallback((next: SupportCaseStatus | typeof ALL) => {
+    setStatus(next);
+    setPage(1);
+  }, []);
 
   const changeFilter = useCallback((groupKey: string, value: string) => {
     if (groupKey === 'status') setStatus(isSupportCaseStatus(value) ? value : ALL);
@@ -200,7 +237,7 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
   if (isTenant && !permissions.isLoading && !permissions.has(PERMISSION.SUPPORT_VIEW)) {
     return (
       <>
-        <ManageHeader />
+        <ManagePageHeader title={t('page.tenantTitle')} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
@@ -217,7 +254,16 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
   if (isTenant) {
     return (
       <>
-        <ManageHeader />
+        <ManagePageHeader
+          title={t('page.tenantTitle')}
+          actions={
+            canOpen ? (
+              <IconSquareButton label={t('page.openButton')} tone="brand" onPress={() => setFormOpen(true)}>
+                <LineIcon name="plus" size={iconSize.lg} color={colors.onPrimary} />
+              </IconSquareButton>
+            ) : null
+          }
+        />
         <Screen edges={['left', 'right', 'bottom']} scroll={false} padded={false}>
           {/*
             Cùng khung với mọi danh sách của khu quản lý (`ManageListShell`): nút "+" tròn ở hàng
@@ -225,17 +271,18 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
             dàn hàng dọc và nút "Mở yêu cầu" trải ngang.
           */}
           <ManageListShell
+            variant="page"
             title={t('page.tenantTitle')}
+            subtitle={t('page.tenantSubtitle')}
             {...(total > 0 ? { total: t('page.total', { count: total }) } : {})}
-            action={
-              canOpen ? (
-                <IconButton
-                  icon="add"
-                  label={t('page.openButton')}
-                  tone="primary"
-                  onPress={() => setFormOpen(true)}
-                />
-              ) : null
+            tabs={
+              <ChipTabs
+                label={t('filters.status')}
+                items={statusTabs}
+                value={status}
+                onSelect={selectStatus}
+                gutter={gutter}
+              />
             }
             searchValue={search}
             searchLabel={t('filters.search')}
@@ -246,6 +293,7 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
             hasRows={items.length > 0}
             {...(total > 0 ? { meta: { page, limit: SUPPORT_CASES_PAGE_SIZE, total } } : {})}
             onPageChange={setPage}
+            loadingMore={query.isFetching && page > 1}
           >
             {({ onScroll, headerHeight, contentContainerStyle, bindList }) => {
               const inStateScroll = (body: ReactNode) => (
@@ -258,7 +306,7 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
                   {body}
                 </ManageStateScroll>
               );
-              return query.isLoading ? (
+              return listLoading ? (
                 inStateScroll(
                   <YStack px={layout.screenX} gap={layout.inline}>
                     {Array.from({ length: SKELETON_ROWS }, (_, i) => (
@@ -284,8 +332,14 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
                       onAction={clearFilters}
                     />
                   ) : (
-                    // Nút "mở" đã ở hàng tiêu đề — không lặp lại ở đây.
-                    <ScreenMessage icon="chatbubbles-outline" title={t('page.empty')} />
+                    // Web `SupportCasesView`: khối rỗng có nút "Mở yêu cầu" (khi được mở).
+                    <ScreenMessage
+                      icon="chatbubbles-outline"
+                      title={t('page.empty')}
+                      {...(canOpen
+                        ? { actionLabel: t('page.openButton'), onAction: () => setFormOpen(true) }
+                        : {})}
+                    />
                   ),
                 )
               ) : (
@@ -312,7 +366,12 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
           </ManageListShell>
         </Screen>
 
-        <OpenCaseSheet surface={surface} open={formOpen} onClose={() => setFormOpen(false)} />
+        <OpenCaseSheet
+          surface={surface}
+          open={formOpen}
+          onClose={() => setFormOpen(false)}
+          onOpened={openDetail}
+        />
       </>
     );
   }
@@ -360,7 +419,7 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
             />
           </YStack>
 
-          {query.isLoading ? (
+          {listLoading ? (
             <MiniRowsSkeleton rows={4} />
           ) : query.isError ? (
             <ScreenError
@@ -399,7 +458,12 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
         </YStack>
       </Screen>
 
-      <OpenCaseSheet surface={surface} open={formOpen} onClose={() => setFormOpen(false)} />
+      <OpenCaseSheet
+          surface={surface}
+          open={formOpen}
+          onClose={() => setFormOpen(false)}
+          onOpened={openDetail}
+        />
     </>
   );
 }
@@ -420,6 +484,39 @@ function SupportCaseRow({ row, surface }: { row: SupportCase; surface: SupportSu
     surface === SUPPORT_SURFACE.TENANT
       ? ROUTES.manage.supportCase(row.id)
       : ROUTES.account.supportCase(row.id);
+
+  if (surface === SUPPORT_SURFACE.TENANT) {
+    /* Khuôn thẻ Partner (chuẩn Đơn thuê): đầu = tiêu đề + mã, viên trạng thái góc phải; thân = FactRow. */
+    return (
+      <Card onPress={() => router.push(detailHref)} accessibilityLabel={row.subject}>
+          <YStack gap={space.sm}>
+            <XStack ai="flex-start" gap={space.sm}>
+              <YStack f={1} minWidth={0} gap={2}>
+                <Text
+                  col={colors.text}
+                  fos={typeScale.body.fontSize}
+                  lh={typeScale.body.lineHeight}
+                  fow={fontWeight.semibold}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+                >
+                  {row.subject}
+                </Text>
+                <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} numberOfLines={1}>
+                  {row.code}
+                </Text>
+              </YStack>
+              <Pill
+                label={domainLabel('supportCaseStatus', row.status, meta?.label)}
+                tone={pillToneOfStatusColor(statusColor)}
+              />
+            </XStack>
+            <FactRow label={t('columns.category')}>{domainLabel('supportCaseCategory', row.category)}</FactRow>
+            <FactRow label={t('columns.updatedAt')}>{fmt.dateTime(row.updatedAt)}</FactRow>
+          </YStack>
+      </Card>
+    );
+  }
 
   return (
     /* Ngôn ngữ thẻ danh sách chung: vạch màu trạng thái ở mép trái, nhãn trạng thái góc phải. */

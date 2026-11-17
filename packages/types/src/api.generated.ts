@@ -24528,6 +24528,8 @@ export interface components {
             /** @description Lý do rủi ro - NỘI BỘ, chỉ đi tới người trong gian hàng */
             riskReason?: string | null;
             hasAccount: boolean;
+            /** @description Ảnh đại diện của tài khoản khách đã liên kết */
+            avatarUrl?: string | null;
             archivedAt?: string | null;
             /** @description ISO-8601 UTC */
             createdAt: string;
@@ -24568,6 +24570,8 @@ export interface components {
             source: "manual" | "booking" | "marketplace";
             /** @description Đã liên kết tài khoản trên nền tảng */
             hasAccount: boolean;
+            /** @description Ảnh đại diện của tài khoản khách đã liên kết */
+            avatarUrl?: string | null;
             /** @description ISO - null = đang hoạt động */
             archivedAt?: string | null;
         };

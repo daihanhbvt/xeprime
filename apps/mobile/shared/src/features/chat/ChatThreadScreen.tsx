@@ -1,5 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
-import { CHAT_SIDE, type ChatSide } from '@xeprime/types';
+import { Ionicons } from '@/components/icons/Ionicons';
+import { CHAT_SIDE, PERMISSION, type ChatSide } from '@xeprime/types';
 import {
   DAY_PARAM_FORMAT,
   groupThreadMessages,
@@ -11,7 +11,13 @@ import { useRouter } from 'expo-router';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, type ListRenderItemInfo } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  type ListRenderItemInfo,
+} from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -20,6 +26,7 @@ import { Screen } from '@/components/layout/Screen';
 import { PhotoViewer } from '@/components/ui/PhotoViewer';
 import { ScreenError } from '@/components/state/ScreenError';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
@@ -28,10 +35,12 @@ import { ChatThreadSkeleton } from './components/ChatThreadSkeleton';
 import { BlockedNotice } from './components/BlockedNotice';
 import { ChatThreadActions } from './components/ChatThreadActions';
 import { MessageBubble } from './components/MessageBubble';
+import type { ChatMessage } from './api';
 import { resolveChatInbox } from './chat-inbox';
 import { useConversation } from './hooks/use-chat';
 import { useThread, type ThreadEntry } from './hooks/use-thread';
-import { useVehicleContext } from './hooks/use-vehicle-context';
+import { useTripContext, useVehicleContext } from './hooks/use-vehicle-context';
+import { layout } from '@/theme/layout';
 
 /** Cuộn xa đáy quá ngưỡng này thì tin mới KHÔNG kéo màn xuống — chỉ hiện nút "có tin mới". */
 const NEAR_BOTTOM_PX = 120;
@@ -76,11 +85,14 @@ export function ChatThreadScreen({
   conversationId,
   side,
   pendingVehicleId,
+  pendingTripId,
 }: {
   conversationId: string;
   side: ChatSide;
   /** Xe vừa mở chat từ tin đăng của nó — chờ gắn vào câu nhắn ĐẦU TIÊN. Vai của `?v=` bên web. */
   pendingVehicleId?: string | null;
+  /** Chuyến (id yêu cầu) vừa mở chat từ chuyến đi / đơn thuê — thắng `pendingVehicleId` (`?t=` web). */
+  pendingTripId?: string | null;
 }) {
   const colors = useColors();
   const styles = useStyles();
@@ -111,9 +123,18 @@ export function ChatThreadScreen({
    * qua F5. Native không có cả hai chuyện đó — ngăn xếp điều hướng đã giữ chỗ — nên một biến
    * state là bản dịch đúng: cùng vòng đời "gắn một lần rồi thôi", không phải ghi lại đường dẫn.
    */
-  const [vehicleContextId, setVehicleContextId] = useState<string | null>(pendingVehicleId ?? null);
+  const [vehicleContextId, setVehicleContextId] = useState<string | null>(
+    pendingTripId ? null : (pendingVehicleId ?? null),
+  );
+  const [tripContextId, setTripContextId] = useState<string | null>(pendingTripId ?? null);
   const vehicleContext = useVehicleContext(vehicleContextId);
-  const clearVehicleContext = useCallback(() => setVehicleContextId(null), []);
+  const tripContext = useTripContext(side, tripContextId);
+  const clearContext = useCallback(() => {
+    setVehicleContextId(null);
+    setTripContextId(null);
+  }, []);
+  const permissions = usePermissions();
+  const canViewBooking = permissions.has(PERMISSION.BOOKING_VIEW);
 
   // Danh sách đảo: offset 0 CHÍNH LÀ tin mới nhất.
   const jumpToLatest = useCallback(
@@ -137,6 +158,27 @@ export function ChatThreadScreen({
           : ROUTES.explore.listingDetail(vehicleId),
       ),
     [navigateOnce, side],
+  );
+
+  /*
+   * Thẻ CHUYẾN — web `messageTripHref`. Khách: trang chuyến đi (`/trips/:id` nhận id yêu cầu ở mọi
+   * chặng). Gian hàng: chi tiết ĐƠN khi đã thành đơn (và có quyền xem đơn); chưa thì mở sẵn chi tiết
+   * YÊU CẦU ở hộp thư yêu cầu — chung cho mọi tuyến kể từ web PR #278.
+   */
+  const openTrip = useCallback(
+    (trip: NonNullable<ChatMessage['trip']>) => {
+      if (side !== CHAT_SIDE.SHOP) {
+        navigateOnce(ROUTES.booking.detail(trip.id));
+        return;
+      }
+      if (trip.bookingId && canViewBooking) {
+        navigateOnce(ROUTES.manage.bookingDetail(trip.bookingId));
+        return;
+      }
+      // Mọi tuyến dùng CÙNG hộp thư (web PR #278 gỡ "Chuyến cho thuê" của chủ xe).
+      navigateOnce(ROUTES.manage.requestDetail(trip.id));
+    },
+    [navigateOnce, side, canViewBooking],
   );
 
   const rows = useMemo<ThreadRow[]>(() => {
@@ -200,7 +242,9 @@ export function ChatThreadScreen({
             clientMessageId={message.clientMessageId}
             onPressImage={setViewerUrl}
             {...(message.vehicle ? { vehicle: message.vehicle } : {})}
+            {...(message.trip ? { trip: message.trip } : {})}
             onPressVehicle={openListing}
+            onPressTrip={openTrip}
             /*
              * Truyền THẲNG hai hàm đã `useCallback`, không bọc closure quanh `clientMessageId`.
              *
@@ -214,7 +258,7 @@ export function ChatThreadScreen({
         </YStack>
       );
     },
-    [openListing, retryMessage, discardMessage],
+    [openListing, openTrip, retryMessage, discardMessage],
   );
 
   const onScroll = useCallback(
@@ -331,8 +375,8 @@ export function ChatThreadScreen({
                 <ChatComposer
                   onSend={thread.send}
                   disabled={thread.loading || Boolean(thread.error)}
-                  vehicleContext={vehicleContext}
-                  onClearVehicleContext={clearVehicleContext}
+                  context={tripContext ?? vehicleContext}
+                  onClearContext={clearContext}
                 />
               ),
             })}
@@ -367,8 +411,20 @@ export function ChatThreadScreen({
               scrollEventThrottle={64}
               // Đảo ngược ⇒ "cuối danh sách" là tin CŨ NHẤT, nên đây là nối trang LỊCH SỬ.
               onEndReached={thread.loadOlder}
+              // Đảo ngược ⇒ footer nằm ở ĐỈNH luồng tin: vòng quay khi đang nối trang lịch sử.
+              ListFooterComponent={
+                thread.loadingOlder ? (
+                  <YStack py={space.md} ai="center">
+                    <ActivityIndicator
+                      color={colors.textMuted}
+                      accessibilityLabel={t('loadingOlder')}
+                    />
+                  </YStack>
+                ) : null
+              }
               keyboardDismissMode="interactive"
               keyboardShouldPersistTaps="handled"
+              // iPad: `<Screen>` đã dựng cột giữa màn - luồng tin nằm trong cột đó.
               contentContainerStyle={styles.listContent}
               /*
                 MEDIA chứ không LIST: thread có ảnh đính kèm, và `removeClippedSubviews` tính
@@ -416,7 +472,7 @@ function DaySeparator({ day }: { day: string }) {
   return (
     <YStack ai="center" py={space.sm}>
       <Text
-        px={space.md}
+        px={layout.padX}
         py={2}
         br={radius.pill}
         bg={colors.surfaceMuted}
@@ -473,7 +529,7 @@ const useStyles = makeStyles((colors) => ({
     borderRadius: radius.pill,
     flexDirection: 'row',
     gap: space.xs,
-    paddingHorizontal: space.md,
+    paddingHorizontal: layout.padX,
     paddingVertical: space.xs,
   },
 }));

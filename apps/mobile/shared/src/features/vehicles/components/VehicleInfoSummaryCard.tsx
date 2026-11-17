@@ -7,7 +7,7 @@ import {
   VEHICLE_TYPE,
   type VehicleOperationStatus,
 } from '@xeprime/types';
-import { BlockTitle } from '@/components/ui/BlockTitle';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { Card } from '@/components/ui/Card';
 import { DataRow } from '@/components/ui/DataRow';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -48,7 +48,7 @@ export function VehicleInfoSummaryCard({ vehicle }: { vehicle: VehicleDetail }) 
   return (
     <Card>
       <YStack gap={space.sm}>
-        <BlockTitle>{t('summaryTitle')}</BlockTitle>
+        <SectionHeader icon="document-text-outline">{t('summaryTitle')}</SectionHeader>
         <DataRow label={t('vehicleType')} value={domainLabel('vehicleType', vehicle.vehicleType)} />
         {vehicle.vehicleType === VEHICLE_TYPE.CAR ? (
           <DataRow

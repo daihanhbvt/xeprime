@@ -1,5 +1,6 @@
 import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
+import { AntIcon, type AntIconDefinition } from '@/components/icons/AntIcon';
 import { ActivityIndicator, Pressable } from 'react-native';
 import { XStack } from 'tamagui';
 import { themed, useColors } from '@/theme/ThemeProvider';
@@ -76,8 +77,12 @@ interface IconButtonProps {
    * đổi chỉ đáng khi bề ngang thật sự không đủ.
    */
   compact?: boolean;
+  /** Cạnh hộp tuỳ biến (dp) - thắng `compact`; vùng chạm vẫn bù đủ 44pt bằng `hitSlop`. */
+  boxSize?: number;
   /** Vẽ bằng icon Figma (`LineIcon`) thay Ionicons — `icon` vẫn khai làm dự phòng. */
   lineIcon?: LineIconName;
+  /** Vẽ đúng icon AntD của web (`AntIcon`) - thắng `lineIcon` và `icon`. */
+  antIcon?: AntIconDefinition;
 }
 
 /** Nút chỉ có biểu tượng, luôn đủ 44pt/48dp vùng chạm dù biểu tượng nhỏ tới đâu. */
@@ -90,13 +95,15 @@ export function IconButton({
   disabled = false,
   loading = false,
   compact = false,
+  boxSize,
   lineIcon,
+  antIcon,
 }: IconButtonProps) {
   const colors = useColors();
   const TONE = useTone();
   const skin = TONE[tone];
   const blocked = disabled || loading;
-  const box = compact ? sizing.compactBox : sizing.touchTarget;
+  const box = boxSize ?? (compact ? sizing.compactBox : sizing.touchTarget);
   const slop = Math.ceil((sizing.touchTarget - box) / 2);
 
   return (
@@ -122,7 +129,9 @@ export function IconButton({
         {loading ? (
           <ActivityIndicator color={skin.fg} size="small" />
         ) : (
-          lineIcon ? (
+          antIcon ? (
+            <AntIcon icon={antIcon} size={size} color={disabled ? colors.textDisabled : skin.fg} />
+          ) : lineIcon ? (
             <LineIcon name={lineIcon} size={size} color={disabled ? colors.textDisabled : skin.fg} />
           ) : (
             <Ionicons name={icon} size={size} color={disabled ? colors.textDisabled : skin.fg} />

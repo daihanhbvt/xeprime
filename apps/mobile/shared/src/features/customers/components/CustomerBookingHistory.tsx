@@ -1,39 +1,49 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { BOOKING_STATUS_META, BOOKING_STATUS_SELECTABLE_VALUES } from '@xeprime/types';
-import { isZeroMoney } from '@xeprime/domain';
-import { metaColor } from '@/lib/status-meta';
+import { BOOKING_STATUS_META, BOOKING_STATUS_SELECTABLE_VALUES, SERVICE_TYPE } from '@xeprime/types';
+import { isZeroMoney, toAppTz } from '@xeprime/domain';
+import { Ionicons } from '@/components/icons/Ionicons';
+import { BottomSheet } from '@/components/ui/BottomSheet';
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Chip } from '@/components/ui/Chip';
-import { SearchInput } from '@/components/ui/SearchInput';
-import { useDebouncedValue } from '@/hooks/use-debounced-value';
-import { DataRow } from '@/components/ui/DataRow';
-import { DetailChevron } from '@/components/ui/DetailArrow';
-import { Pagination } from '@/components/ui/Pagination';
+import { ChipTabs } from '@/components/ui/ChipTabs';
+import { DateRangeField, type DateRangeValue } from '@/components/ui/DateRangeField';
+import { FactRow } from '@/components/ui/FactRow';
+import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
+import { RemoteImage } from '@/components/ui/RemoteImage';
 import { RecordCardSkeleton } from '@/components/ui/Skeleton';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
+import { ListSearchBar } from '@/features/shell/ListSearchBar';
+import { useAccumulatedPages } from '@/hooks/use-accumulated-pages';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
+import { metaColor } from '@/lib/status-meta';
 import { ROUTES } from '@/navigation/routes';
 import { FIRST_PAGE } from '@/queries/use-clamped-page';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
 import { useCustomerBookingHistory } from '../hooks/use-customers';
+import type { CustomerBooking } from '../api';
 
 const SEARCH_DEBOUNCE_MS = 300;
-
 const SKELETON_ROWS = 3;
+/** Sentinel "Tất cả" của dải tab trạng thái - không gửi lên server. */
+const ALL = 'all';
+/** Ảnh xe 80 × 52 - cùng thẻ Lịch sử đơn thuê. */
+const THUMB_W = 80;
+const THUMB_H = 52;
+const body = { fos: typeScale.body.fontSize, lh: typeScale.body.lineHeight } as const;
 
 /**
- * Lịch sử thuê của một khách — phân trang SERVER (`limit` 10, đúng con số web dùng), không tải
- * hết rồi cắt ở client: một khách quen của shop lớn có hàng trăm chuyến.
+ * Lịch sử thuê của một khách - khuôn danh sách màn Đơn thuê (người dùng 16/11/2026): ô tìm + nút
+ * "Lọc" (`ListSearchBar`, tấm Lọc giữ khoảng ngày nhận xe), trạng thái thành dải tab, thẻ đơn như
+ * thẻ Lịch sử đơn thuê, tải thêm dồn trang (server vẫn phân trang `limit` 10 như web).
  *
- * Khối này chỉ được render khi người dùng có `bookings.view`; endpoint đòi CẢ HAI quyền và trả
- * 403 khi thiếu, nên nơi gọi phải gác trước — xem `CustomerDetailScreen`.
+ * Chỉ render khi có `bookings.view` - endpoint trả 403 khi thiếu, nơi gọi gác trước.
  */
 export function CustomerBookingHistory({
   customerId,
@@ -42,28 +52,36 @@ export function CustomerBookingHistory({
   customerId: string;
   canViewFinance: boolean;
 }) {
-  const colors = useColors();
   const t = useTranslations('Customers.history');
-  const fmt = useAppFormat();
+  const tFilter = useTranslations('Customers.profile.history');
+  const tRange = useTranslations('Common.components.dateRange');
+  const tActions = useTranslations('Common.actions');
+  const tFilters = useTranslations('Common.filters');
   const domainLabel = useDomainLabel();
   const navigateOnce = useNavigateOnce();
 
-  const tFilter = useTranslations('Customers.profile.history');
   const [page, setPage] = useState(FIRST_PAGE);
-  /* Tìm + lọc trạng thái ở SERVER (02/11/2026, web `useCustomerBookingHistory`). */
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<string | undefined>(undefined);
+  const [status, setStatus] = useState<string>(ALL);
+  const [range, setRange] = useState<DateRangeValue>({});
+  const [filterOpen, setFilterOpen] = useState(false);
   const q = useDebouncedValue(search, SEARCH_DEBOUNCE_MS).trim();
-  const { data, isLoading, isError, error, refetch } = useCustomerBookingHistory(customerId, {
+  const { data, isLoading, isFetching, isError, error, refetch } = useCustomerBookingHistory(customerId, {
     ...(q ? { q } : {}),
-    ...(status ? { status } : {}),
+    ...(status !== ALL ? { status } : {}),
+    ...(range.from ? { from: range.from } : {}),
+    ...(range.to ? { to: range.to } : {}),
     page,
   });
-  const filtered = q.length > 0 || status !== undefined;
+  const items = useAccumulatedPages(data?.items, data?.meta?.page);
+  const meta = data?.meta;
+  const hasMore = meta ? meta.page * meta.limit < meta.total : false;
+  const rangeActive = Boolean(range.from || range.to);
+  const filtered = q.length > 0 || status !== ALL || rangeActive;
 
-  const filters = (
+  const header = (
     <YStack gap={space.sm}>
-      <SearchInput
+      <ListSearchBar
         value={search}
         onChange={(next) => {
           setSearch(next);
@@ -71,175 +89,166 @@ export function CustomerBookingHistory({
         }}
         label={tFilter('searchPlaceholder')}
         placeholder={tFilter('searchPlaceholder')}
+        filterCount={rangeActive ? 1 : 0}
+        onFilterPress={() => setFilterOpen(true)}
       />
-      <XStack flexWrap="wrap" gap={space.xs}>
-        <Chip
-          label={tFilter('statusAll')}
-          size="sm"
-          selected={status === undefined}
-          onPress={() => {
-            setStatus(undefined);
-            setPage(FIRST_PAGE);
-          }}
-        />
-        {BOOKING_STATUS_SELECTABLE_VALUES.map((value) => (
-          <Chip
-            key={value}
-            label={domainLabel('bookingStatus', value)}
-            size="sm"
-            selected={status === value}
-            onPress={() => {
-              setStatus(value);
-              setPage(FIRST_PAGE);
-            }}
-          />
-        ))}
-      </XStack>
+      <ChipTabs
+        label={tFilter('status')}
+        items={[
+          { value: ALL, label: tFilter('statusAll') },
+          ...BOOKING_STATUS_SELECTABLE_VALUES.map((value) => ({
+            value: value as string,
+            label: domainLabel('bookingStatus', value),
+          })),
+        ]}
+        value={status}
+        onSelect={(next) => {
+          setStatus(next);
+          setPage(FIRST_PAGE);
+        }}
+        gutter={0}
+      />
     </YStack>
   );
 
-  const items = data?.items ?? [];
-  const meta = data?.meta;
+  const filterSheet = (
+    <BottomSheet
+      open={filterOpen}
+      onClose={() => setFilterOpen(false)}
+      title={tFilters('title')}
+      footer={<Button label={tActions('apply')} variant="gradient" onPress={() => setFilterOpen(false)} />}
+    >
+      <DateRangeField
+        value={range}
+        onChange={(next) => {
+          setRange(next);
+          setPage(FIRST_PAGE);
+        }}
+        labels={{ field: tFilter('time'), from: tRange('fromDate'), to: tRange('toDate'), clear: tActions('clear') }}
+      />
+    </BottomSheet>
+  );
 
-  if (isLoading && !data) {
-    return (
-      <YStack gap={space.md}>
-        {filters}
-        {Array.from({ length: SKELETON_ROWS }, (_, i) => (
-          <RecordCardSkeleton key={i} />
-        ))}
-      </YStack>
+  let content;
+  if (isLoading && items.length === 0) {
+    content = Array.from({ length: SKELETON_ROWS }, (_, i) => <RecordCardSkeleton key={i} />);
+  } else if (isError && !data) {
+    content = <ScreenError error={error} title={t('errorTitle')} onRetry={() => void refetch()} />;
+  } else if (items.length === 0) {
+    content = filtered ? (
+      <ScreenMessage icon="search-outline" title={tFilter('emptyTitle')} description={tFilter('emptyBody')} />
+    ) : (
+      <ScreenMessage icon="document-text-outline" title={t('emptyTitle')} description={t('emptyBody')} />
     );
-  }
-
-  if (isError && !data) {
-    return <ScreenError error={error} title={t('errorTitle')} onRetry={() => void refetch()} />;
-  }
-
-  if (items.length === 0) {
-    return (
-      <YStack gap={space.md}>
-        {filters}
-        {filtered ? (
-          <ScreenMessage
-            icon="search-outline"
-            title={tFilter('emptyTitle')}
-            description={tFilter('emptyBody')}
+  } else {
+    content = (
+      <>
+        {items.map((booking) => (
+          <HistoryCard
+            key={booking.id}
+            booking={booking}
+            canViewFinance={canViewFinance}
+            onPress={() => navigateOnce(ROUTES.manage.bookingDetail(booking.id))}
           />
-        ) : (
-          <ScreenMessage
-            icon="document-text-outline"
-            title={t('emptyTitle')}
-            description={t('emptyBody')}
+        ))}
+        {hasMore ? (
+          <Button
+            label={tActions('viewMore')}
+            variant="outline"
+            size="compact"
+            loading={isFetching}
+            onPress={() => setPage((p) => p + 1)}
           />
-        )}
-      </YStack>
+        ) : null}
+      </>
     );
   }
 
   return (
     <YStack gap={space.md}>
-      {filters}
-      {items.map((booking) => (
-        <Card
-          key={booking.id}
-          onPress={() => navigateOnce(ROUTES.manage.bookingDetail(booking.id))}
-          accessibilityLabel={booking.code}
-        >
-          <YStack gap={space.xs}>
-            {/*
-              Mã đơn ↔ nhãn trạng thái nằm ở HAI MÉP, không có gì chen giữa — đúng `.cardHead`
-              (`justify-content: space-between`) của thẻ mobile bên web.
-
-              Mũi tên "mở được" từng đứng ở đây, sau nhãn trạng thái, và đẩy nhãn thụt vào ~20dp
-              nên hàng đọc ra thành ba cụm chứ không thành hai mép. Nó xuống hàng cuối — đúng chỗ
-              `DetailArrow` tự ghi là nó phải ở: "góc trên là chỗ của nhãn trạng thái".
-            */}
-            <XStack ai="center" gap={space.sm}>
-              <Text
-                f={1}
-                minWidth={0}
-                col={colors.primaryActive}
-                fos={fontSize.bodySm}
-                fow={fontWeight.semibold}
-                numberOfLines={1}
-              >
-                {booking.code}
-              </Text>
-              <StatusBadge
-                label={domainLabel('bookingStatus', booking.status)}
-                color={metaColor(BOOKING_STATUS_META, booking.status)}
-                size="sm"
-              />
-            </XStack>
-
-            <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={2}>
-              {booking.vehicleName}
-              {booking.vehiclePlate ? ` · ${booking.vehiclePlate}` : ''}
-            </Text>
-
-            {/*
-              Hàng CUỐI mang mũi tên, mà hàng nào là "cuối" thì tuỳ quyền: có `finance.view` thì
-              là hàng tiền, không có thì là hàng thời gian. Neo mũi tên cứng vào hàng tiền sẽ làm
-              nó biến mất với người không được xem tiền — và thẻ mất luôn dấu hiệu mở được.
-            */}
-            {canViewFinance ? (
-              <>
-                <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={2}>
-                  {fmt.dateTimeRange(booking.pickupAt, booking.returnAt)}
-                </Text>
-
-                {/*
-                  Tiền: MỖI khoản một hàng, nhãn trái — số căn phải.
-
-                  Xếp cả hai vào một hàng hai mép (đúng `.cardMoney` của web) thì ở màn hẹp gặp
-                  hai số bảy chữ số là hàng gãy làm đôi, và lúc đó "Còn nợ" rơi xuống nằm ngay
-                  dưới "Tổng tiền" — thành hai hàng nhưng lệch mép, xấu hơn hẳn hai hàng thẳng
-                  thớm. Hai hàng cố định thì cột số luôn thẳng, kể cả giữa các thẻ khác nhau.
-
-                  Hai con số CHỈ tồn tại khi có `finance.view` — server trả `null` khi thiếu,
-                  không trả 0 giả.
-                */}
-                <XStack ai="center" gap={space.sm}>
-                  <YStack f={1} minWidth={0} gap={space.xs}>
-                    <DataRow label={t('total')} value={fmt.money(booking.totalAmount)} />
-                    {/*
-                      "Còn nợ" chỉ hiện khi THẬT SỰ còn nợ — đúng luật thẻ mobile của web. Một
-                      dòng "Còn nợ 0 ₫" trên mọi đơn đã tất toán là nhiễu, và làm khoản nợ thật
-                      chìm đi giữa những số 0.
-                    */}
-                    {booking.debtAmount != null && !isZeroMoney(booking.debtAmount) ? (
-                      <DataRow
-                        label={t('debt')}
-                        value={fmt.money(booking.debtAmount)}
-                        tone="danger"
-                      />
-                    ) : null}
-                  </YStack>
-                  <DetailChevron />
-                </XStack>
-              </>
-            ) : (
-              <XStack ai="center" gap={space.sm}>
-                <Text
-                  f={1}
-                  minWidth={0}
-                  col={colors.textMuted}
-                  fos={fontSize.label}
-                  numberOfLines={2}
-                >
-                  {fmt.dateTimeRange(booking.pickupAt, booking.returnAt)}
-                </Text>
-                <DetailChevron />
-              </XStack>
-            )}
-          </YStack>
-        </Card>
-      ))}
-
-      {meta && meta.total > meta.limit ? (
-        <Pagination page={meta.page} limit={meta.limit} total={meta.total} onChange={setPage} />
-      ) : null}
+      {header}
+      {content}
+      {filterSheet}
     </YStack>
   );
 }
+
+const HistoryCard = memo(function HistoryCard({
+  booking,
+  canViewFinance,
+  onPress,
+}: {
+  booking: CustomerBooking;
+  canViewFinance: boolean;
+  onPress: () => void;
+}) {
+  const colors = useColors();
+  const t = useTranslations('Customers.history');
+  const tFilter = useTranslations('Customers.profile.history');
+  const tActions = useTranslations('Common.actions');
+  const tDriverTitle = useTranslations('Bookings.driver');
+  const tDriver = useTranslations('Drivers.booking');
+  const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
+  const pickup = toAppTz(booking.pickupAt);
+  const dropoff = toAppTz(booking.returnAt);
+  const showDriver = Boolean(booking.driver) || booking.serviceType === SERVICE_TYPE.WITH_DRIVER;
+  const owing = booking.debtAmount != null && !isZeroMoney(booking.debtAmount);
+
+  return (
+    <Card onPress={onPress} accessibilityLabel={booking.code}>
+      <YStack gap={space.sm}>
+        <XStack ai="center" jc="space-between" gap={space.sm}>
+          <Text col={colors.text} {...body} fow={fontWeight.medium} numberOfLines={1} flexShrink={1}>
+            {`#${booking.code}`}
+          </Text>
+          <Pill
+            label={domainLabel('bookingStatus', booking.status)}
+            tone={pillToneOfStatusColor(metaColor(BOOKING_STATUS_META, booking.status))}
+          />
+        </XStack>
+        <XStack gap={12} ai="center">
+          <YStack w={THUMB_W} h={THUMB_H} br={radius.sm} ov="hidden" bg={colors.surfaceMuted} flexShrink={0}>
+            <RemoteImage
+              uri={booking.vehicleImageUrl}
+              recyclingKey={booking.id}
+              radius={radius.sm}
+              fallback={<Ionicons name="car-outline" size={iconSize.md} color={colors.placeholder} />}
+            />
+          </YStack>
+          <YStack f={1} minWidth={0} gap={2}>
+            <Text col={colors.text} {...body} fow={fontWeight.semibold} numberOfLines={1}>
+              {booking.vehicleName}
+            </Text>
+            {booking.vehiclePlate ? (
+              <Text col={colors.textMuted} {...body} numberOfLines={1}>
+                {booking.vehiclePlate}
+              </Text>
+            ) : null}
+          </YStack>
+        </XStack>
+        <FactRow label={tFilter('colService')}>{domainLabel('serviceType', booking.serviceType)}</FactRow>
+        {showDriver ? (
+          <FactRow label={tDriverTitle('title')}>{booking.driver?.name ?? tDriver('unassigned')}</FactRow>
+        ) : null}
+        <FactRow label={tFilter('colTime')} sub={fmt.rentalDuration(pickup, dropoff)}>
+          {`${fmt.rentalPoint(pickup)} → ${fmt.rentalPoint(dropoff)}`}
+        </FactRow>
+        {canViewFinance ? (
+          <>
+            <FactRow label={t('total')}>{fmt.money(booking.totalAmount)}</FactRow>
+            <FactRow label={tFilter('paid')}>{fmt.money(booking.paidAmount)}</FactRow>
+            {owing ? (
+              <FactRow label={t('debt')} tone={colors.danger}>
+                {fmt.money(booking.debtAmount)}
+              </FactRow>
+            ) : null}
+          </>
+        ) : null}
+        <YStack pt={space.xs}>
+          <Button label={tActions('viewDetail')} variant="gradient" size="compact" onPress={onPress} />
+        </YStack>
+      </YStack>
+    </Card>
+  );
+});

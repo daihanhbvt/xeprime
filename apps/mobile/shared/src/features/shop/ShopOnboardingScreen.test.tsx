@@ -1,25 +1,19 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Provider as ReduxProvider } from 'react-redux';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import {
-  API_ERROR_CODE,
-  REGISTRATION_TRACK,
-  SHOP_VERIFICATION,
-  TENANT_TYPE,
-  type RegistrationTrack,
-} from '@xeprime/types';
-import { ApiClientError } from '@xeprime/api-client';
+import { render, waitFor } from '@testing-library/react-native';
+import { PERMISSION, REGISTRATION_TRACK, type Permission, type RegistrationTrack } from '@xeprime/types';
 import { appConfigApi } from '@/api/app-config/api';
 import * as authApi from '@/features/auth/api';
-import { locationsApi } from '@/features/locations/api';
 import { withIntl } from '@/i18n/test-utils';
+import { ROUTES } from '@/navigation/routes';
 import { store } from '@/store';
-import { tenantsApi, type MyShop } from './api';
 import { ShopOnboardingScreen } from './ShopOnboardingScreen';
 
 const mockReplace = jest.fn();
 /* Đổi khu đi bằng `dismissTo` (POP_TO) — không dựng `(tabs)` thứ hai trên ngăn xếp gốc. */
 const mockDismissTo = jest.fn();
+/** Ghi lại đích của `<Redirect>` - chưa có gian hàng thì màn chuyển sang form đăng ký một trang. */
+const mockRedirect = jest.fn();
 
 // Màn chờ kích hoạt nghe số chưa đọc của bản chiếu huy hiệu (`usePackageActivationWatch`).
 jest.mock('@/features/badges/hooks/use-badges', () => ({
@@ -34,10 +28,22 @@ jest.mock('expo-router', () => ({
     dismissTo: mockDismissTo,
     back: jest.fn(),
   }),
+  Redirect: ({ href }: { href: unknown }) => {
+    mockRedirect(href);
+    return null;
+  },
+  /** `usePartnerAppConfig` đọc lại cờ khi màn được focus; ở test chạy callback một lần sau mount. */
+  useFocusEffect: (callback: () => void | (() => void)) => {
+    const { useEffect } = jest.requireActual<typeof import('react')>('react');
+    useEffect(() => callback(), [callback]);
+  },
 }));
 
 /** Người dùng đã đăng nhập nhưng CHƯA có gian hàng — đúng đối tượng của SHP-01. */
-function customerUser(tenant: authApi.CurrentUser['tenant'] = null): authApi.CurrentUser {
+function customerUser(
+  tenant: authApi.CurrentUser['tenant'] = null,
+  permissions: Permission[] = [],
+): authApi.CurrentUser {
   return {
     id: '01JQZX0000000000000000000U',
     displayName: 'Khách thuê xe',
@@ -49,51 +55,9 @@ function customerUser(tenant: authApi.CurrentUser['tenant'] = null): authApi.Cur
     tenant,
     openRenterTripCount: 0,
     platformRole: null,
-    permissions: [],
+    permissions,
   };
 }
-
-const SHOP: MyShop = {
-  id: '01JQZX0000000000000000000T',
-  code: 'SHOP01',
-  slug: 'binh-minh',
-  name: 'Cho thuê xe Bình Minh',
-  tenantType: TENANT_TYPE.INDIVIDUAL,
-  status: 'draft',
-  // ADR 0036: trục XÁC MINH tách khỏi `status`. Fixture giữ nguyên `draft` (dữ liệu cũ).
-  verification: SHOP_VERIFICATION.UNVERIFIED,
-  onboardingState: 'commission',
-  phone: null,
-  email: null,
-  profile: {
-    displayName: null,
-    bio: null,
-    logoUrl: null,
-    coverUrl: null,
-    address: null,
-    provinceCode: '48',
-    provinceName: 'Đà Nẵng',
-    taxCode: null,
-    businessLicenseNo: null,
-  },
-  ownerAccount: {
-    userId: '01JQZX00000000000000000OW',
-    displayName: 'Nguyễn Văn A',
-    email: null,
-    phone: '84901111111',
-    emailVerified: false,
-    phoneVerified: true,
-  },
-  latestApproval: null,
-  defaultBranch: {
-    id: '01JQZX0000000000000000000B',
-    code: 'CN01',
-    name: 'Chi nhánh chính',
-    provinceCode: '48',
-    provinceName: 'Đà Nẵng',
-    needsLocationReview: false,
-  },
-};
 
 const PENDING_TENANT = {
   id: '01JQZX0000000000000000000T',
@@ -117,15 +81,14 @@ const PENDING_TENANT = {
 
 async function renderScreen(
   tenant: authApi.CurrentUser['tenant'] = null,
-  { isPlanPromotionEnabled = false, track }: { isPlanPromotionEnabled?: boolean; track?: RegistrationTrack } = {},
+  {
+    isPlanPromotionEnabled = false,
+    track,
+    permissions = [],
+  }: { isPlanPromotionEnabled?: boolean; track?: RegistrationTrack; permissions?: Permission[] } = {},
 ) {
-  jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue(customerUser(tenant));
+  jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue(customerUser(tenant, permissions));
   jest.spyOn(appConfigApi, 'partner').mockResolvedValue({ isPlanPromotionEnabled, version: 1 });
-  jest
-    .spyOn(locationsApi, 'provinces')
-    .mockResolvedValue([
-      { code: '48', name: 'Đà Nẵng', administrativeType: 'municipality', slug: 'da-nang' },
-    ]);
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -146,23 +109,40 @@ beforeEach(() => {
   jest.restoreAllMocks();
   mockReplace.mockClear();
   mockDismissTo.mockClear();
+  mockRedirect.mockClear();
+  delete process.env.EXPO_PUBLIC_PARTNER_WEB_URL;
 });
 
 describe('ShopOnboardingScreen (SHP-01)', () => {
-  it('chưa có gian hàng: hiện form tạo, KHÔNG ép ai phải mở shop', async () => {
+  /*
+   * Form tạo hồ sơ cũ (tên/tỉnh/"Loại hình") đã gỡ 13/11/2026: chưa có gian hàng thì màn chuyển
+   * sang form đăng ký MỘT TRANG `/manage/register?track=` - y như web chuyển tới
+   * `partnerSignupHref(track)`.
+   */
+  it('chưa có gian hàng (mặc định tuyến hoa hồng): chuyển tới form đăng ký một trang', async () => {
     const view = await renderScreen();
 
-    expect(await view.findByRole('button', { name: 'Tạo gian hàng' })).toBeTruthy();
-    /*
-     * Lối ra (neo ở thanh đáy, dưới nút chính) là ĐĂNG XUẤT, không còn "Quay lại marketplace" (06/10/2026).
-     *
-     * Nút cũ dẫn về `/manage`, mà ở app Partner KHÔNG có marketplace nào để về — chợ xe nằm ở app
-     * XePrime, một realm khác (ADR 0053). Với tuyến gói chưa trả tiền nó còn chết hẳn:
-     * `partnerPathRedirect` chỉ cho họ ở đúng màn này (ADR 0040 điều 3) nên `ScopeGuard` ném
-     * ngược lại ngay.
-     */
-    expect(view.queryByRole('button', { name: 'Quay lại marketplace' })).toBeNull();
-    expect(view.getByRole('button', { name: new RegExp('Đăng xuất$') })).toBeTruthy();
+    await waitFor(() =>
+      expect(mockRedirect).toHaveBeenCalledWith(ROUTES.manage.register(REGISTRATION_TRACK.COMMISSION)),
+    );
+    expect(mockRedirect).toHaveBeenLastCalledWith({
+      pathname: '/manage/register',
+      params: { track: REGISTRATION_TRACK.COMMISSION },
+    });
+    expect(view.queryByRole('button', { name: 'Tạo gian hàng' })).toBeNull();
+    expect(mockDismissTo).not.toHaveBeenCalled();
+  });
+
+  it('chưa có gian hàng, tuyến gói: chuyển tới form đăng ký mang `?track=package`', async () => {
+    await renderScreen(null, { track: REGISTRATION_TRACK.PACKAGE });
+
+    await waitFor(() =>
+      expect(mockRedirect).toHaveBeenCalledWith({
+        pathname: '/manage/register',
+        params: { track: REGISTRATION_TRACK.PACKAGE },
+      }),
+    );
+    expect(mockDismissTo).not.toHaveBeenCalled();
   });
 
   it('bước 2 (package_pending): màn CHỜ KÍCH HOẠT, không bộ chọn gói, không QR, không hoá đơn', async () => {
@@ -170,18 +150,38 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
 
     expect(await view.findByText('Đăng ký gian hàng thành công!')).toBeTruthy();
     expect(view.getByText('Đang chờ kích hoạt')).toBeTruthy();
-    expect(view.getByText('XePrime đang xem xét thông tin gian hàng của bạn.')).toBeTruthy();
-    expect(view.getByText('Bạn sẽ nhận được thông báo ngay khi tài khoản được duyệt.')).toBeTruthy();
-    expect(view.getByText('Màn này tự cập nhật khi tài khoản được duyệt.')).toBeTruthy();
-    // Footer chỉ còn Đăng xuất — không có nút làm mới / về trang chính.
+    expect(view.getByText('XePrime sẽ liên hệ tư vấn gói phù hợp cho gian hàng của bạn.')).toBeTruthy();
+    expect(view.getByText('Bạn sẽ nhận được thông báo ngay khi gian hàng được kích hoạt.')).toBeTruthy();
+    expect(view.getByText('Màn này tự cập nhật khi gian hàng được kích hoạt.')).toBeTruthy();
+    // Footer chỉ còn Đăng xuất - không có nút làm mới / về trang chính.
     expect(view.queryByRole('button', { name: 'Về trang chính' })).toBeNull();
     expect(view.queryByRole('button', { name: 'Làm mới trạng thái' })).toBeNull();
     // Không có một bước thanh toán nào.
     expect(view.queryByText(/hoá đơn|QR|chuyển khoản/i)).toBeNull();
-    expect(view.queryByRole('button', { name: 'Tạo gian hàng' })).toBeNull();
-    // Không còn "Liên hệ tư vấn" ở màn chờ.
+    // Cờ khuyến mãi gói TẮT ⇒ không lối mua gói, không "Liên hệ tư vấn".
+    expect(view.queryByRole('button', { name: 'Chọn gói trên website' })).toBeNull();
     expect(view.queryByRole('button', { name: 'Liên hệ tư vấn' })).toBeNull();
     expect(view.getByRole('button', { name: new RegExp('Đăng xuất$') })).toBeTruthy();
+    expect(mockRedirect).not.toHaveBeenCalled();
+  });
+
+  it('bước 2 + cờ khuyến mãi gói BẬT, có quyền mua gói: lối chọn gói trên web và "Liên hệ tư vấn"', async () => {
+    process.env.EXPO_PUBLIC_PARTNER_WEB_URL = 'https://partner.example.test';
+    const view = await renderScreen(PENDING_TENANT, {
+      isPlanPromotionEnabled: true,
+      permissions: [PERMISSION.SUBSCRIPTION_PURCHASE],
+    });
+
+    expect(await view.findByRole('button', { name: 'Chọn gói trên website' })).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Liên hệ tư vấn' })).toBeTruthy();
+  });
+
+  it('bước 2 + cờ BẬT nhưng KHÔNG có quyền mua gói: chỉ còn "Liên hệ tư vấn"', async () => {
+    process.env.EXPO_PUBLIC_PARTNER_WEB_URL = 'https://partner.example.test';
+    const view = await renderScreen(PENDING_TENANT, { isPlanPromotionEnabled: true });
+
+    expect(await view.findByRole('button', { name: 'Liên hệ tư vấn' })).toBeTruthy();
+    expect(view.queryByRole('button', { name: 'Chọn gói trên website' })).toBeNull();
   });
 
   it('tự cập nhật: gói đã kích hoạt trên web ⇒ vào Manage', async () => {
@@ -207,24 +207,8 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
     );
   });
 
-  it('tuyến gói: bước 2 là "Chờ kích hoạt", không có bước chọn gói/thanh toán', async () => {
-    const view = await renderScreen(null, { track: REGISTRATION_TRACK.PACKAGE });
-
-    expect(await view.findByRole('button', { name: 'Đăng ký gian hàng' })).toBeTruthy();
-    expect(view.getByText('Chờ kích hoạt')).toBeTruthy();
-    expect(view.queryByText('Gói và thanh toán')).toBeNull();
-    expect(view.queryByText(/QR|hoá đơn/i)).toBeNull();
-
-    // Đăng ký xong (`/auth/me` về `package_pending`) ⇒ thẳng màn chờ, không qua bước trả tiền.
-    jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue(customerUser(PENDING_TENANT));
-    await view.queryClient.invalidateQueries();
-
-    expect(await view.findByText('Đăng ký gian hàng thành công!')).toBeTruthy();
-    expect(view.queryByText(/QR|hoá đơn|chuyển khoản/i)).toBeNull();
-  });
-
-  it('đã có gian hàng: không dựng form, đưa thẳng tới hồ sơ gian hàng', async () => {
-    const view = await renderScreen({
+  it('đã có gian hàng: không chuyển sang form đăng ký, đưa thẳng tới hồ sơ gian hàng', async () => {
+    await renderScreen({
       id: '01JQZX0000000000000000000T',
       name: 'Gian hàng Đà Nẵng',
       slug: 'da-nang',
@@ -246,7 +230,7 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
 
     /*
      * `?welcome=1`: gian hàng tuyến gói đã có thuê bao hiệu lực tới đây nghĩa là vừa thanh toán
-     * xong, và dải chào một-lần sống ở màn hồ sơ (ADR 0040). Tham số không mở/khoá gì — chính
+     * xong, và dải chào một-lần sống ở màn hồ sơ (ADR 0040). Tham số không mở/khoá gì - chính
      * `ShopProfileScreen` còn lọc lại theo `isEstablishedPackageShop`.
      */
     await waitFor(() =>
@@ -255,68 +239,6 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
         params: { welcome: '1' },
       }),
     );
-    expect(view.queryByRole('button', { name: 'Tạo gian hàng' })).toBeNull();
-  });
-
-  it('thiếu tên/tỉnh: chặn ở client, KHÔNG gọi API', async () => {
-    const registerSpy = jest.spyOn(tenantsApi, 'register').mockResolvedValue(SHOP);
-    const view = await renderScreen();
-
-    /*
-     * Xoá TRẮNG ô tên trước khi gửi: form điền sẵn tên tài khoản (đúng như web), nên bấm gửi ngay
-     * sẽ qua được luật `nameRequired` và test không còn kiểm thứ nó định kiểm.
-     */
-    await fireEvent.changeText(await view.findByLabelText('Tên gian hàng'), '');
-    await fireEvent.press(await view.findByRole('button', { name: 'Tạo gian hàng' }));
-
-    expect(await view.findByText('Tên gian hàng là bắt buộc')).toBeTruthy();
-    expect(view.getByText('Chọn tỉnh/thành nơi đặt gian hàng')).toBeTruthy();
-    expect(registerSpy).not.toHaveBeenCalled();
-  });
-
-  it('tạo thành công: gửi đúng payload và làm mới phiên để vỏ app thấy gian hàng mới', async () => {
-    const registerSpy = jest.spyOn(tenantsApi, 'register').mockResolvedValue(SHOP);
-    const view = await renderScreen();
-
-    await fireEvent.changeText(
-      await view.findByLabelText('Tên gian hàng'),
-      'Cho thuê xe Bình Minh',
-    );
-    await fireEvent.press(view.getByLabelText('Tỉnh/thành phố'));
-    await fireEvent.press(await view.findByText('TP Đà Nẵng'));
-    await fireEvent.press(view.getByRole('button', { name: 'Tạo gian hàng' }));
-
-    await waitFor(() => expect(registerSpy).toHaveBeenCalled());
-    expect(registerSpy.mock.calls[0]?.[0]).toMatchObject({
-      name: 'Cho thuê xe Bình Minh',
-      provinceCode: '48',
-      tenantType: TENANT_TYPE.INDIVIDUAL,
-    });
-    // Client KHÔNG gửi trạng thái — backend quyết định gian hàng ra đời ở `draft`.
-    expect(registerSpy.mock.calls[0]?.[0]).not.toHaveProperty('status');
-  });
-
-  it('backend từ chối (đã có gian hàng): giữ nguyên dữ liệu đã nhập để gửi lại', async () => {
-    jest.spyOn(tenantsApi, 'register').mockRejectedValue(
-      new ApiClientError({
-        status: 409,
-        code: API_ERROR_CODE.CONFLICT,
-        message: 'Bạn đã có gian hàng',
-      }),
-    );
-    const view = await renderScreen();
-
-    const nameField = await view.findByLabelText('Tên gian hàng');
-    await fireEvent.changeText(nameField, 'Cho thuê xe Bình Minh');
-    await fireEvent.press(view.getByLabelText('Tỉnh/thành phố'));
-    await fireEvent.press(await view.findByText('TP Đà Nẵng'));
-    await fireEvent.press(view.getByRole('button', { name: 'Tạo gian hàng' }));
-
-    // Form KHÔNG bị reset: người dùng chỉ cần đọc lỗi rồi bấm lại.
-    await waitFor(() =>
-      expect(view.getByLabelText('Tên gian hàng').props.value).toBe('Cho thuê xe Bình Minh'),
-    );
-    expect(mockReplace).not.toHaveBeenCalled();
-    expect(mockDismissTo).not.toHaveBeenCalled();
+    expect(mockRedirect).not.toHaveBeenCalled();
   });
 });

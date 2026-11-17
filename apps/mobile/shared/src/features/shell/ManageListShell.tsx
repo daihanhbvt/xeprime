@@ -1,16 +1,30 @@
-import { Ionicons } from '@expo/vector-icons';
+import FilterOutlined from '@ant-design/icons-svg/es/asn/FilterOutlined';
+import { AntIcon } from '@/components/icons/AntIcon';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { CountBadge } from '@/components/ui/CountBadge';
-import { Pagination } from '@/components/ui/Pagination';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { BackToTopButton } from '@/components/ui/BackToTopButton';
+import { ActivityIndicator } from 'react-native';
 import { useCollapseOnScroll, type CollapseOnScroll } from '@/hooks/use-collapse-on-scroll';
 import { layout } from '@/theme/layout';
+import { useResponsive } from '@/theme/use-responsive';
+import { useTabBarInset } from '@/components/layout/tab-bar-inset';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, radius, sizing, space, typeScale } from '@/theme/tokens';
+import { FilterButton } from '@/components/ui/FilterButton';
+import { ListSearchBar } from './ListSearchBar';
 import { activeFilterCount, ManageFilterSheet, type FilterGroup } from './ManageFilterSheet';
+import {
+  applyBranchFilterGroup,
+  BRANCH_FILTER_GROUP_KEY,
+  useBranchFilterGroup,
+} from '@/features/branches/components/BranchFilterField';
+import type { BranchFilterState } from '@/features/branches/hooks/use-branch-filter';
 
 const useStyles = makeStyles((colors) => ({
   /**
@@ -79,31 +93,58 @@ const useStyles = makeStyles((colors) => ({
  */
 export function ManageListShell({
   title,
+  subtitle,
   total,
   action,
-  branch,
+  actions,
+  branchFilter,
   summary,
   tabs,
   searchValue,
   searchLabel,
   searchPlaceholder,
   onSearchChange,
-  groups,
-  onFilterChange,
+  groups: screenGroups,
+  onFilterChange: onScreenFilterChange,
   hasRows,
   meta,
   onPageChange,
+  loadingMore = false,
+  variant = 'classic',
+  filterLayout = 'chips',
   children,
 }: {
+  /**
+   * Cách trình bày tấm "Lọc": `grid` = design v2 (Figma "_Filter Modal" `24158:105500` - ô tìm +
+   * lưới ô chọn hai cột, "Xoá bộ lọc" · "Lưu bộ lọc"); `chips` = nhóm chip (màn chưa chuyển).
+   */
+  filterLayout?: 'chips' | 'grid';
+  /**
+   * `page` — khuôn design v2 (Figma "Rental Request - MB", người dùng chốt 13/11/2026): tiêu đề và
+   * nút của trang đã lên THANH TRANG (`ManagePageHeader`), nên khối đầu trang chỉ còn câu mô tả,
+   * hàng ô tìm v2 + nút "Lọc" v2 (`SearchInput variant="field"`, `FilterButton`), dải chỉ số và
+   * dải tab. `title`/`actions` không vẽ ở đây. Màn chưa chuyển giữ `classic`.
+   */
+  variant?: 'classic' | 'page';
   title: string;
+  /**
+   * Phụ đề trang — web `ManagePageHeader subtitle` hiện ở mọi khổ (khổ hẹp chỉ thu icon), và mọi
+   * trang danh sách web truyền một câu. Thu cùng khối đầu trang khi cuộn.
+   */
+  subtitle?: string;
   total?: string;
+  /** Nút cũ ở hàng tiêu đề - chỉ còn cho màn CHƯA chuyển sang `actions`. */
   action?: ReactNode;
   /**
-   * Ô "Chi nhánh" của màn (`BranchFilterField`) — ADR 0052. Nằm NGOÀI tấm lọc, ngay dưới tiêu
-   * đề: chi nhánh định nghĩa đội xe đang xem, giấu nó sau một lần mở tấm là để người dùng nhìn
-   * một danh sách ngắn bất thường mà không biết vì sao.
+   * Hàng nút đầu trang - web `ManagePageHeader extra` khổ ≤640 (`.headerActions > * { flex: 1;
+   * min-height: 44px }`): rộng hết khổ, các nút chia đều, nằm dưới tiêu đề + mô tả.
    */
-  branch?: ReactNode;
+  actions?: readonly ReactNode[];
+  /**
+   * Bộ lọc "Chi nhánh" của màn - ADR 0052. Web đặt `branch.field` trong `FilterBar`, nên ở khổ
+   * ≤640 nó là chiều ĐẦU TIÊN của tấm "Lọc" (sau ô tìm kiếm) và được đếm trên huy hiệu nút.
+   */
+  branchFilter?: { filter: BranchFilterState; value: string | undefined };
   /**
    * Dải CHỈ SỐ tóm tắt, nằm giữa tiêu đề và dải tab.
    *
@@ -146,6 +187,8 @@ export function ManageListShell({
    * đó cần chỗ để gọi khi người dùng bấm. Màn cuộn vô hạn không truyền cái nào cả.
    */
   onPageChange?: (page: number) => void;
+  /** Đang tải trang kế (cuộn vô hạn) - hiện vòng xoay ở đáy, chặn xin trùng. */
+  loadingMore?: boolean;
   /**
    * Danh sách.
    *
@@ -176,7 +219,21 @@ export function ManageListShell({
 }) {
   const colors = useColors();
   const styles = useStyles();
+  const tFilters = useTranslations('Common.filters');
   const [filtering, setFiltering] = useState(false);
+  const branchGroup = useBranchFilterGroup(branchFilter?.filter, branchFilter?.value);
+  const groups = useMemo<readonly FilterGroup[]>(
+    () => (branchGroup ? [branchGroup, ...screenGroups] : screenGroups),
+    [branchGroup, screenGroups],
+  );
+  const branchState = branchFilter?.filter;
+  const onFilterChange = useCallback(
+    (key: string, next: string) => {
+      if (key === BRANCH_FILTER_GROUP_KEY && branchState) applyBranchFilterGroup(branchState, next);
+      else onScreenFilterChange(key, next);
+    },
+    [branchState, onScreenFilterChange],
+  );
 
   /**
    * Đổi trang là ĐƯA DANH SÁCH VỀ ĐẦU.
@@ -208,13 +265,16 @@ export function ManageListShell({
     setList(node as { scrollToOffset?: (params: { offset: number }) => void } | null);
   }, []);
 
-  const changePage = useCallback(
-    (page: number) => {
-      onPageChange?.(page);
-      list?.scrollToOffset?.({ offset: 0, animated: false });
-    },
-    [list, onPageChange],
-  );
+  /*
+   * Mobile: CUỘN VÔ HẠN thay thanh phân trang (người dùng 16/11/2026). Gần đáy thì xin trang kế;
+   * màn gộp các trang bằng `useAccumulatedPages`. Không còn đổi trang kiểu bấm số.
+   */
+  const hasMore = meta !== undefined && meta.page * meta.limit < meta.total;
+  const loadMore = useCallback(() => {
+    if (meta && hasMore && !loadingMore) onPageChange?.(meta.page + 1);
+  }, [meta, hasMore, loadingMore, onPageChange]);
+  const [pastTop, setPastTop] = useState(false);
+  const backToTop = useCallback(() => list?.scrollToOffset?.({ offset: 0, animated: true }), [list]);
   const openFilters = useCallback(() => setFiltering(true), []);
   const closeFilters = useCallback(() => setFiltering(false), []);
 
@@ -228,16 +288,20 @@ export function ManageListShell({
     height: headHeight,
     heightValue: headHeightSv,
     onLayout: measureHead,
-  } = useCollapseOnScroll();
+  } = useCollapseOnScroll({ onNearEnd: loadMore, onPastTopChange: setPastTop });
 
+  // Màn rộng (iPad): danh sách thẻ và khối đầu trang cùng nằm trong một cột giữa màn.
+  const { gutter } = useResponsive();
+  // Thanh tab Partner NỔI đè nội dung - thẻ cuối phải cuộn lên được khỏi viên.
+  const tabBarInset = useTabBarInset();
   const contentContainerStyle = useMemo<ViewStyle>(
     () => ({
-      paddingHorizontal: layout.screenX,
+      paddingHorizontal: gutter,
       paddingTop: headHeight,
-      paddingBottom: layout.screenX,
+      paddingBottom: layout.screenX + tabBarInset,
       gap: layout.inline,
     }),
-    [headHeight],
+    [headHeight, gutter, tabBarInset],
   );
 
   /*
@@ -247,7 +311,8 @@ export function ManageListShell({
    * không đếm nó, người dùng gõ một từ khoá rồi thấy danh sách ngắn lại mà không còn dấu vết
    * nào trên màn giải thích vì sao.
    */
-  const count = activeFilterCount(groups) + (searchValue.trim() ? 1 : 0);
+  /* Ô tìm kiếm hiện NGAY trên màn (web `FilterBar` khổ ≤640) nên không tính vào số bộ lọc. */
+  const count = activeFilterCount(groups);
 
   /*
    * Khối đầu trang MỞ LẠI khi không còn gì để cuộn — SUY ở đây, không ghi vào `progress`.
@@ -301,68 +366,113 @@ export function ManageListShell({
         {children({ onScroll, headerHeight: headHeight, contentContainerStyle, bindList })}
 
         <Animated.View style={[styles.head, headStyle]} onLayout={measureHead}>
-          <XStack ai="center" gap={space.sm} px={layout.screenX} pt={space.md} pb={space.xs}>
-            <YStack f={1} gap={1}>
-              <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold} numberOfLines={1}>
-                {title}
-              </Text>
-              {total ? (
-                <Text col={colors.textMuted} fos={fontSize.bodySm} numberOfLines={1}>
-                  {total}
+          {variant === 'page' ? (
+            <YStack pt={PAGE_HEAD_PAD_TOP} pb={PAGE_HEAD_PAD_BOTTOM} gap={PAGE_HEAD_GAP}>
+              {subtitle ? (
+                <Text
+                  px={gutter}
+                  col={colors.placeholder}
+                  fos={typeScale.label.fontSize}
+                  lh={typeScale.label.lineHeight}
+                >
+                  {subtitle}
                 </Text>
               ) : null}
+              {/* Figma "Tab List" `24175:57178`: ô tìm co giãn · nút "Lọc", cách 12. */}
+              <ListSearchBar
+                value={searchValue}
+                onChange={onSearchChange}
+                label={searchLabel}
+                placeholder={searchPlaceholder}
+                filterCount={count}
+                {...(groups.length > 0 ? { onFilterPress: openFilters } : {})}
+                gutter={gutter}
+              />
+              {summary}
+              {tabs}
             </YStack>
-            {/*
-              Thêm + Lọc đi CHUNG một cụm (`gap={space.xs}`, hẹp hơn khoảng cách với tiêu đề) —
-              hai nút cùng bo `radius.pill`, cùng chiều cao `sizing.touchTarget`, nên đọc ra là
-              MỘT nhóm hành động của hàng tiêu đề thay vì hai nút rời rạc trôi nổi cạnh nhau.
+          ) : (
+            <>
+              {/*
+                Web `ManagePageHeader` khổ ≤640: tiêu đề h2 đậm vừa tự xuống dòng, mô tả 12 cách 4;
+                `action` cũ (màn chưa chuyển) vẫn đứng cạnh tiêu đề.
+              */}
+              <XStack ai="center" gap={space.sm} px={gutter} pt={space.md}>
+                <YStack f={1} gap={space.xs}>
+                  <Text col={colors.text} fos={fontSize.pageTitle} fow={fontWeight.semibold}>
+                    {title}
+                  </Text>
+                  {subtitle ? (
+                    <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                      {subtitle}
+                    </Text>
+                  ) : null}
+                  {total ? (
+                    <Text col={colors.textMuted} fos={fontSize.bodySm} numberOfLines={1}>
+                      {total}
+                    </Text>
+                  ) : null}
+                </YStack>
+                {action ? (
+                  <XStack ai="center" gap={space.xs} flexShrink={0}>
+                    {action}
+                  </XStack>
+                ) : null}
+              </XStack>
 
-              `flexShrink={0}` trên cả cụm: tiêu đề bên trái là `f={1}`, thiếu dòng này thì màn
-              hẹp + tiêu đề dài sẽ bóp cả cụm lại.
-            */}
-            <XStack ai="center" gap={space.xs} flexShrink={0}>
-              {action}
+              {actions && actions.length > 0 ? (
+                <XStack px={gutter} pt={space.sm} gap={HEADER_ACTIONS_GAP}>
+                  {actions.map((node, index) => (
+                    <YStack key={index} f={1} flexBasis={0} minWidth={0}>
+                      {node}
+                    </YStack>
+                  ))}
+                </XStack>
+              ) : null}
 
               {/*
-                Nút lọc nằm ĐỐI DIỆN tiêu đề chứ không phải một hàng riêng: hàng tiêu đề vốn bỏ
-                trống cột phải ở hầu hết các màn, nên đưa nút về đó tiết kiệm trọn một hàng mà
-                không mất gì — khối đầu trang càng cao thì càng lâu mới thấy bản ghi đầu tiên.
-
-                Nút có NHÃN CHỮ, không chỉ biểu tượng — web ghi rõ "Bộ lọc" kèm phễu, và một từ ở
-                đây bỏ hẳn được phần đoán. Con số bộ lọc đang bật nằm trên chính nút: thiếu nó thì
-                người dùng phải mở tấm trượt mới biết vì sao danh sách ngắn bất thường.
+                Web `FilterBar` khổ ≤640 (`.mobileTop`): ô tìm kiếm LUÔN hiện, nút "Lọc" bên phải mở
+                tấm chứa các ô lọc còn lại; số bộ lọc đang bật là huy hiệu ở góc nút.
               */}
-              <ManageFilterButton count={count} onPress={openFilters} />
-            </XStack>
-          </XStack>
+              <XStack ai="center" gap={space.sm} px={gutter} pt={space.md} pb={space.sm}>
+                <YStack f={1} minWidth={0}>
+                  <SearchInput
+                    value={searchValue}
+                    onChange={onSearchChange}
+                    label={searchLabel}
+                    placeholder={searchPlaceholder}
+                    variant="boxed"
+                  />
+                </YStack>
+                {groups.length > 0 ? <ListFilterButton count={count} onPress={openFilters} /> : null}
+              </XStack>
 
-          {branch ? (
-            <XStack px={layout.screenX} pb={space.xs}>
-              {branch}
-            </XStack>
-          ) : null}
+              {summary}
 
-          {summary}
-
-          {/* Dải tab là hàng CUỐI của khối đầu trang từ khi ô tìm kiếm dời vào tấm lọc. */}
-          <YStack pb={space.sm}>{tabs}</YStack>
+              {/* Dải tab là hàng CUỐI của khối đầu trang từ khi ô tìm kiếm dời vào tấm lọc. */}
+              <YStack pb={space.sm}>{tabs}</YStack>
+            </>
+          )}
         </Animated.View>
       </YStack>
 
       {/* NGOÀI vùng cuộn và KHÔNG ẩn theo cuộn — xem ghi chú ở `Pagination` và ở đầu file. */}
-      {meta && onPageChange ? (
-        <Pagination page={meta.page} limit={meta.limit} total={meta.total} onChange={changePage} />
+      {loadingMore ? (
+        <YStack pos="absolute" left={0} right={0} bottom={tabBarInset + space.sm} ai="center" pointerEvents="none">
+          <ActivityIndicator color={colors.primary} />
+        </YStack>
       ) : null}
+      <BackToTopButton visible={pastTop} onPress={backToTop} bottom={tabBarInset + space.md} />
 
       <ManageFilterSheet
         open={filtering}
         groups={groups}
         onChange={onFilterChange}
-        searchValue={searchValue}
-        searchLabel={searchLabel}
-        searchPlaceholder={searchPlaceholder}
-        onSearchChange={onSearchChange}
         onClose={closeFilters}
+        layout={filterLayout}
+        {...(filterLayout === 'grid'
+          ? { searchValue, searchLabel, searchPlaceholder, onSearchChange }
+          : {})}
       />
     </>
   );
@@ -402,3 +512,57 @@ export function ManageFilterButton({ count, onPress }: { count: number; onPress:
     </Pressable>
   );
 }
+
+/** Khuôn `page` (Figma "Rental Request - MB"): đệm trên 16, các hàng cách 12, ô tìm cách nút lọc 12. */
+const PAGE_HEAD_PAD_TOP = 16;
+const PAGE_HEAD_PAD_BOTTOM = 12;
+const PAGE_HEAD_GAP = 12;
+
+/** Web `.headerActions { gap: var(--xp-space-12) }`. */
+const HEADER_ACTIONS_GAP = 12;
+
+/**
+ * Nút "Lọc" của khung danh sách - web `FilterBar` khổ ≤640: `Button size="large"` viền
+ * `border-input`, bo 10, icon `FilterOutlined` + chữ "Lọc"; số bộ lọc đang bật là `Badge` đỏ ở GÓC.
+ */
+function ListFilterButton({ count, onPress }: { count: number; onPress: () => void }) {
+  const colors = useColors();
+  const t = useTranslations('Common.filters');
+  const tActions = useTranslations('Common.actions');
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={count > 0 ? `${t('title')}, ${t('activeCount', { count })}` : t('open')}
+      hitSlop={4}
+    >
+      {({ pressed }) => (
+        <XStack
+          ai="center"
+          gap={space.sm}
+          minHeight={sizing.touchTarget}
+          px={FILTER_BUTTON_PAD_X}
+          bg={colors.surface}
+          bw={1}
+          bc={colors.borderInput}
+          br={radius.md}
+          opacity={pressed ? 0.7 : 1}
+        >
+          <AntIcon icon={FilterOutlined} color={colors.text} size={iconSize.sm} />
+          <Text col={colors.text} fos={fontSize.body}>
+            {tActions('filter')}
+          </Text>
+          {count > 0 ? (
+            <YStack pos="absolute" top={-FILTER_BADGE_OFFSET} right={-FILTER_BADGE_OFFSET}>
+              <CountBadge count={count} tone="danger" size="sm" />
+            </YStack>
+          ) : null}
+        </XStack>
+      )}
+    </Pressable>
+  );
+}
+
+/** AntD `Button size="large"`: đệm ngang 15 (16 trừ viền 1); `Badge size="small"` lệch ra góc ~6. */
+const FILTER_BUTTON_PAD_X = 15;
+const FILTER_BADGE_OFFSET = 6;

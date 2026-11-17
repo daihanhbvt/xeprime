@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -12,14 +12,13 @@ import { DAY_PARAM_FORMAT, startOfAppDay, toAppTz } from '@xeprime/domain';
 import { DateField } from '@/components/ui/DateField';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
-import { Callout, CalloutBody } from '@/components/ui/Callout';
+import { Callout } from '@/components/ui/Callout';
 import { MoneyField } from '@/components/ui/MoneyField';
 import { NumberField } from '@/components/ui/NumberField';
 import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
@@ -36,20 +35,12 @@ export type RecordSheetMode =
   | { mode: 'edit'; record: MaintenanceRecord }
   | { mode: 'complete'; record: MaintenanceRecord };
 
-/** Khoảng đã bị chiếm mà server trả kèm 409 - đúng hình dạng `details.conflicts` bên web. */
-interface ScheduleConflict {
-  sourceType: string;
-  startAt: string;
-  endAt: string;
-  label: string;
-}
-
 /**
  * Tấm trượt phiếu bảo dưỡng - bản native của `MaintenanceRecordDialog` bên web, cùng nhãn và
  * cùng thứ tự ô.
  *
- * **Hoàn tất chỉ hỏi bốn ô** (KM, chi phí, mã chứng từ, ghi chú) - loại hạng mục và khoảng thời
- * gian đã chốt lúc tạo, hỏi lại là mời người dùng sửa một thứ họ không định sửa.
+ * **Hoàn tất chỉ SỬA bốn ô** (KM, chi phí, mã chứng từ, ghi chú) - loại hạng mục hiện chỉ đọc như web,
+ * các ô lịch đã chốt lúc tạo nên ẩn.
  *
  * Thời gian đi lên API dạng **ISO UTC** (CLAUDE.md §9: lưu UTC, hiển thị `Asia/Ho_Chi_Minh`), và
  * phải đủ CẶP thì phiếu mới giữ chỗ trên lịch xe (ADR 0006) - schema chặn trước, backend chặn thật.
@@ -79,14 +70,12 @@ export function MaintenanceRecordSheet({
   const t = useTranslations('Vehicles.maintenance.records');
   /* Dòng chứng từ dùng CHUNG khoá với web, và khoá đó sống ở namespace `Maintenance`. */
   const tMaintenance = useTranslations('Maintenance');
-  const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
 
   const save = useSaveMaintenanceRecord(vehicleId);
   const transition = useTransitionMaintenanceRecord(vehicleId);
-  const [conflicts, setConflicts] = useState<ScheduleConflict[]>([]);
 
   const record = state.mode === 'create' ? null : state.record;
   const completing = state.mode === 'complete';
@@ -130,18 +119,18 @@ export function MaintenanceRecordSheet({
 
   const pending = save.isPending || transition.isPending;
 
+  /* Web `MaintenanceRecordDialog`: phiên bản cũ / KM thấp hơn có câu riêng. Bảo dưỡng không còn
+     giữ chỗ trên lịch (ADR 0079) nên không còn nhánh trùng lịch. */
   function fail(error: unknown) {
-    if (getErrorCode(error) === API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT) {
-      const details = (error as { details?: { conflicts?: ScheduleConflict[] } }).details;
-      setConflicts(details?.conflicts ?? []);
-      return;
-    }
-    toast.showError(errorMessage(error));
+    const code = getErrorCode(error);
+    if (code === API_ERROR_CODE.CONFLICT) toast.showError(tMaintenance('toast.staleRecord'));
+    else if (code === API_ERROR_CODE.ODOMETER_DECREASE_FORBIDDEN)
+      toast.showError(tMaintenance('toast.odometerTooLow'));
+    else toast.showError(errorMessage(error));
   }
 
   function submit() {
     void handleSubmit((values) => {
-      setConflicts([]);
       const text = (value: string | null | undefined) => (value?.trim() ? value.trim() : null);
 
       if (completing && record) {
@@ -227,45 +216,42 @@ export function MaintenanceRecordSheet({
       open
       onClose={onClose}
       title={title}
-      footer={<Button label={submitLabel} icon={submitIcon} loading={pending} onPress={submit} />}
+      footer={
+        <Button
+          variant="gradient"
+          label={submitLabel}
+          icon={submitIcon}
+          loading={pending}
+          onPress={submit}
+        />
+      }
     >
       <YStack gap={space.sm}>
-        {conflicts.length > 0 ? (
-          <Callout tone="danger" title={t('form.conflictTitle')}>
-            <YStack gap={2}>
-              {conflicts.map((conflict) => (
-                <CalloutBody key={`${conflict.sourceType}-${conflict.startAt}`}>
-                  {t('form.conflictRow', {
-                    label: conflict.label,
-                    range: fmt.dateTimeRange(conflict.startAt, conflict.endAt),
-                  })}
-                </CalloutBody>
-              ))}
-            </YStack>
-          </Callout>
-        ) : null}
 
+        {/* Hoàn tất: loại hạng mục vẫn hiện, chỉ đọc (web `disabled={completing}`). */}
+        <SelectField
+          control={control}
+          name="type"
+          label={t('form.type')}
+          disabled={completing}
+          options={MAINTENANCE_TYPE_VALUES.map((value) => ({
+            value,
+            label: domainLabel('maintenanceType', value),
+          }))}
+          required
+        />
+        {type === MAINTENANCE_TYPE.OTHER ? (
+          <TextField
+            control={control}
+            name="customTypeName"
+            label={t('form.customTypeName')}
+            placeholder={t('form.customTypeNamePlaceholder')}
+            editable={!completing}
+            required
+          />
+        ) : null}
         {completing ? null : (
           <>
-            <SelectField
-              control={control}
-              name="type"
-              label={t('form.type')}
-              options={MAINTENANCE_TYPE_VALUES.map((value) => ({
-                value,
-                label: domainLabel('maintenanceType', value),
-              }))}
-              required
-            />
-            {type === MAINTENANCE_TYPE.OTHER ? (
-              <TextField
-                control={control}
-                name="customTypeName"
-                label={t('form.customTypeName')}
-                placeholder={t('form.customTypeNamePlaceholder')}
-                required
-              />
-            ) : null}
             <TextField
               control={control}
               name="title"
@@ -274,7 +260,11 @@ export function MaintenanceRecordSheet({
             />
 
             {/* Chỉ để nhắc - không giữ chỗ trên lịch xe (ADR 0079). */}
-            <DateField control={control} name="plannedDate" label={tMaintenance('record.plannedDate')} />
+            <DateField
+              control={control}
+              name="plannedDate"
+              label={tMaintenance('record.plannedDate')}
+            />
 
             <TextField
               control={control}
@@ -330,4 +320,3 @@ export function MaintenanceRecordSheet({
     </BottomSheet>
   );
 }
-

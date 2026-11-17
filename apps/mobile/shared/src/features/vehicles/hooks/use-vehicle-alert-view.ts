@@ -1,6 +1,10 @@
 import { useCallback } from 'react';
 import type { Href } from 'expo-router';
-import { VEHICLE_ALERT_KIND, type VehicleAlertKind } from '@xeprime/types';
+import {
+  MAINTENANCE_BOARD_FILTER,
+  VEHICLE_ALERT_KIND,
+  type VehicleAlertKind,
+} from '@xeprime/types';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB, type VehicleEditTab } from '@/navigation/vehicle-edit-tab';
 import {
@@ -17,9 +21,11 @@ export type VehicleAlertView = VehicleAlertItem & { target: Href | null };
  * Đích của từng loại cảnh báo trong CẢ HAI hệ toạ độ — bản native của `ALERT_TARGET` bên web
  * (`hooks/use-vehicle-alert-view.ts`). `section: null` = việc đó chỉ xử lý được ở cổng quản lý.
  *
- * App không dùng `alert.href` của server: đó là đường dẫn web (`/manage/...`), không phải route
- * của app. Cảnh báo ngoài bảng (bàn giao thiếu KM trả, nghĩa vụ nguồn xe) không có đích tương
- * đương chắc chắn trong module xe nên giữ câu cảnh báo, bỏ lối đi.
+ * App không dùng `alert.href` của server làm route: đó là đường dẫn web (`/manage/...`). Cảnh báo
+ * ngoài bảng (nghĩa vụ nguồn xe) không có đích tương đương chắc chắn nên giữ câu cảnh báo, bỏ lối đi.
+ * Riêng "Thiếu KM trả" (PR #280): server đã quyết người xem VÀO ĐƯỢC hàng đợi hay không (`href`
+ * khác null) và có kèm `resolve=<bookingId>` hay không — app chỉ dịch đúng quyết định đó sang
+ * route của Trung tâm bảo dưỡng (`missingReturnOdometerTarget`).
  */
 const ALERT_TARGET: Partial<
   Record<VehicleAlertKind, { tab: VehicleEditTab; section: VehicleManageSection | null }>
@@ -49,6 +55,19 @@ const ALERT_TARGET: Partial<
   [VEHICLE_ALERT_KIND.MISSING_ODOMETER]: { tab: VEHICLE_EDIT_TAB.MAINTENANCE, section: null },
 };
 
+/**
+ * Đích của cảnh báo "Thiếu KM trả" ở app Partner — hàng đợi Thiếu KM trả của Trung tâm bảo dưỡng,
+ * kèm `resolve` khi server gắn (đúng một biên bản + có quyền xem đơn). `href` null = không lối đi.
+ */
+export function missingReturnOdometerTarget(href: string | null | undefined): Href | null {
+  if (!href) return null;
+  const resolve = /[?&]resolve=([^&#]+)/.exec(href)?.[1];
+  return ROUTES.manage.maintenance({
+    filter: MAINTENANCE_BOARD_FILTER.MISSING_RETURN_KM,
+    ...(resolve ? { resolve: decodeURIComponent(resolve) } : {}),
+  });
+}
+
 /** Cảnh báo chỉ có nghĩa khi người đọc CÓ module bảo dưỡng (tuyến gói — ADR 0027 điều 1). */
 export const MAINTENANCE_ALERTS: readonly string[] = [
   VEHICLE_ALERT_KIND.MAINTENANCE_OVERDUE,
@@ -75,6 +94,10 @@ export function vehicleAlertView(
   return alerts
     .filter((alert) => canMaintenance || !MAINTENANCE_ALERTS.includes(alert.kind))
     .map((alert) => {
+      if (alert.kind === VEHICLE_ALERT_KIND.MISSING_RETURN_ODOMETER) {
+        // Trung tâm bảo dưỡng chỉ ở app Partner — khu tài khoản không có đích.
+        return { ...alert, target: customerScope ? null : missingReturnOdometerTarget(alert.href) };
+      }
       const target = ALERT_TARGET[alert.kind as VehicleAlertKind];
       if (!target) return { ...alert, target: null };
       if (!customerScope) {

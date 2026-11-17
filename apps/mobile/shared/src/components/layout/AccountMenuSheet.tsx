@@ -6,7 +6,11 @@ import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { CHAT_SIDE } from '@xeprime/types';
 import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
-import { AppearanceToggleRow, LocaleToggleRow } from '@/components/layout/PreferenceToggleRows';
+import {
+  AppearanceToggleRow,
+  LocaleToggleRow,
+  THEME_SWITCH_DELAY_MS,
+} from '@/components/layout/PreferenceToggleRows';
 import { Avatar } from '@/components/ui/Avatar';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { CountBadge, HEADER_BADGE_MAX } from '@/components/ui/CountBadge';
@@ -37,7 +41,6 @@ const IDENTITY_AVATAR = 40;
  * báo và avatar.
  */
 /** Chờ tấm trượt đóng hẳn (hoạt ảnh slide ~300ms) rồi mới đổi theme. */
-const THEME_SWITCH_DELAY_MS = 350;
 
 export function AccountMenuSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const colors = useColors();

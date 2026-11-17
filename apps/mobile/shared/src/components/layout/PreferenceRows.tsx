@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Switch } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -6,6 +6,7 @@ import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
 import type { IconName } from '@/components/ui/Chip';
 import { makeStyles, themed, useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 
 const useSwitchTrack = themed((colors) => ({ false: colors.borderInput, true: colors.primary }));
 
@@ -54,7 +55,7 @@ function Row({
   const colors = useColors();
   const styles = useStyles();
   return (
-    <XStack ai="center" gap={space.sm} px={space.md} minHeight={sizing.touchTarget} py={space.xs}>
+    <XStack ai="center" gap={space.sm} px={layout.padX} minHeight={sizing.touchTarget} py={space.xs}>
       <YStack style={styles.dot}>
         <Ionicons name={icon} size={iconSize.sm} color={colors.accentText} />
       </YStack>

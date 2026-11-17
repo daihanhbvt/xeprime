@@ -45,7 +45,7 @@ export function VehicleSectionDisabled({
   return (
     <>
       {header}
-      <Screen edges={['left', 'right', 'bottom']} scroll={false}>
+      <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
         <ScreenMessage
           icon="power-outline"
           title={t('disabledSection.title', { service: label })}

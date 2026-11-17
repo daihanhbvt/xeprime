@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, View } from 'react-native';
 import { useTranslations } from 'use-intl';
 import { useIsOnline } from '@/hooks/use-is-online';

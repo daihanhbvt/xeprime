@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Reveal } from '@/components/motion/Reveal';
 import { Fragment, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'expo-router';
@@ -29,6 +29,7 @@ import {
   resolveAccountNav,
   type AccountNavItem,
 } from '../account-nav';
+import { layout } from '@/theme/layout';
 
 /** Bề rộng vạch trạng thái ở mép trái — luôn có chỗ, chỉ đổi màu (mục không nhảy ngang khi chọn). */
 const RAIL_WIDTH = 3;
@@ -116,7 +117,7 @@ export function AccountNav() {
                     fos={fontSize.meta}
                     fow={fontWeight.semibold}
                     letterSpacing={0.8}
-                    px={space.md}
+                    px={layout.padX}
                     pb={space.xs}
                   >
                     {t(group.labelKey).toLocaleUpperCase()}
@@ -152,7 +153,7 @@ export function AccountNav() {
                 ai="center"
                 gap={space.sm}
                 minHeight={sizing.touchTarget}
-                px={space.md}
+                px={layout.padX}
                 py={space.xs}
                 borderLeftWidth={RAIL_WIDTH}
                 borderLeftColor="transparent"

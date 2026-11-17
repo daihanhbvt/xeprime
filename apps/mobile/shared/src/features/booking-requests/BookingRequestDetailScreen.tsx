@@ -1,6 +1,15 @@
 import { Linking, Pressable } from 'react-native';
+import { bareLabel } from '@/features/bookings/components/rental-card/RentalCard';
+import { useHideTabBar } from '@/components/layout/tab-bar-visibility';
+import { StickyActionBar } from '@/components/ui/StickyActionBar';
+import { Timeline } from '@/components/ui/Timeline';
+import { IconSquareButton } from '@/components/ui/IconSquareButton';
+import { BOOKING_REQUEST_CLOSED_STATUSES } from './api';
+import { VehicleThumb } from '@/components/ui/VehicleThumb';
+import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -26,6 +35,7 @@ import { Chip } from '@/components/ui/Chip';
 import { DetailChevron } from '@/components/ui/DetailArrow';
 import { DataRow } from '@/components/ui/DataRow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { requestPaymentRows } from './components/BookingRequestCard';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useCustomerProfileAccess } from './hooks/use-customer-profile-access';
 import { ROUTES } from '@/navigation/routes';
@@ -35,14 +45,12 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
 import type { BookingRequestItem } from './api';
 
-const VEHICLE_THUMB = { width: 96, height: 72 } as const;
 const AVATAR_SIZE = 44;
 
 /** Không phụ thuộc prop/state — dựng MỘT lần ở module scope, không phải mỗi lần render. */
-const VEHICLE_THUMB_STYLE = { ...VEHICLE_THUMB, borderRadius: radius.sm };
 const AVATAR_STYLE = { width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: radius.pill };
 
 /**
@@ -70,6 +78,18 @@ export function BookingRequestDetailScreen({
   const t = useTranslations('BookingRequests');
   const tCommon = useTranslations('Common.actions');
   const fmt = useAppFormat();
+  const paymentRows = requestPaymentRows(request, t);
+  const tKanban = useTranslations('Bookings.board.kanban');
+  const holdRowState = paymentRows.find((row) => row.key === 'hold')?.state;
+  const holdState = holdRowState === 'awaiting' ? 'unpaid' : holdRowState;
+  const requestClosed = (BOOKING_REQUEST_CLOSED_STATUSES as readonly string[]).includes(request.status);
+  const holdChip =
+    !requestClosed && (holdState === 'paid' || holdState === 'unpaid' || holdState === 'expected') ? (
+      <Pill
+        label={holdState === 'expected' ? tKanban('holdState.awaitingApproval') : tKanban(`holdState.${holdState}`)}
+        tone={holdState === 'paid' ? 'success' : holdState === 'unpaid' ? 'danger' : 'warning'}
+      />
+    ) : null;
   const domainLabel = useDomainLabel();
   const permissions = usePermissions();
   const navigateOnce = useNavigateOnce();
@@ -93,6 +113,22 @@ export function BookingRequestDetailScreen({
   const pastDue = isBookingRequestPastDue(request.respondBy);
   const decidable = needsDecision && !pastDue;
   const canApprove = permissions.has(PERMISSION.BOOKING_REQUEST_APPROVE);
+  /* Nút DÍNH ĐÁY như màn chi tiết đơn (16/11/2026): từ chối/huỷ trái · duyệt phải. */
+  const footer =
+    decidable && canApprove ? (
+      <StickyActionBar
+        secondary={
+          <Button label={t('actions.reject')} variant="dangerOutline" block={false} onPress={() => onReject(request)} />
+        }
+        primary={<Button label={t('approve.confirm')} variant="gradient" onPress={() => onApprove(request)} />}
+      />
+    ) : request.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD && canApprove ? (
+      <StickyActionBar
+        primary={<Button label={t('actions.cancel')} variant="dangerOutline" onPress={() => onCancel(request)} />}
+      />
+    ) : null;
+  // Màn chi tiết che thanh tab như màn chi tiết đơn (người dùng 16/11/2026).
+  useHideTabBar();
   const canViewVehicle = permissions.has(PERMISSION.VEHICLE_VIEW);
 
   const vehicleMeta = [request.vehicleCode, request.vehiclePlate]
@@ -120,8 +156,29 @@ export function BookingRequestDetailScreen({
   return (
     <>
       {/* Trạng thái đi cùng hàng tiêu đề của khối XE đầu tiên — xem chú thích ở khối đó. */}
-      <AppHeader title={t('detail.title')} onBack={onClose} />
-      <Screen edges={['left', 'right', 'bottom']}>
+      {/* Cùng ngôn ngữ màn chi tiết đơn (16/11/2026): ← tiêu đề, viên trạng thái ở dòng phụ. */}
+      <ManagePageHeader
+        title={t('detail.title')}
+        onBack={onClose}
+        subtitle={
+          <XStack ai="center" jc="space-between" gap={space.sm}>
+            <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} numberOfLines={1} flexShrink={1}>
+              {t('card.sentAt', { value: fmt.dateTime(request.createdAt) })}
+            </Text>
+            {/* Cùng viên với thẻ: yêu cầu còn mở có giữ chỗ thì nói trạng thái GIỮ CHỖ (web 16/11/2026). */}
+            {holdChip ?? (
+              <Pill
+                label={domainLabel('bookingRequestStatus', status, meta.label)}
+                tone={(BOOKING_REQUEST_CLOSED_STATUSES as readonly string[]).includes(request.status) ? 'danger' : pillToneOfStatusColor(meta.color)}
+              />
+            )}
+          </XStack>
+        }
+      />
+      <Screen
+        edges={['left', 'right', 'bottom']}
+        {...(footer ? { footer } : {})}
+      >
         <YStack gap={layout.section}>
           {/*
             Mở được HỒ SƠ 360 của xe ngay từ đây — web cũng vậy (`VehicleDetailDialog` mở từ hộp
@@ -133,208 +190,173 @@ export function BookingRequestDetailScreen({
 
             Gác `vehicles.view`: thiếu quyền thì khối vẫn hiện đủ thông tin, chỉ không bấm được.
           */}
-          <Card
-            {...(canViewVehicle
-              ? {
-                  onPress: () => navigateOnce(ROUTES.manage.vehicleDetail(request.vehicleId)),
-                  accessibilityLabel: request.vehicleName,
-                }
-              : {})}
-          >
-            <YStack gap={space.sm}>
-              {/*
-                Trạng thái đi cùng HÀNG TIÊU ĐỀ của khối đầu tiên (người dùng chốt 24/09/2026).
-
-                Trước đó nó là một `Card tone="accent"` chỉ chở đúng một viên nhãn: viên đó đứng
-                một mình nên đọc ra như một NÚT BẤM — cùng hình pill, cùng sắc độ xám với những nút
-                thật trên màn. Thử tiếp ở `AppHeader.badge` thì nhãn dài ("Khung giờ đã có khách
-                khác") chạm sát mép phải và ép tiêu đề màn phải cắt bớt; hàng tiêu đề khối có sẵn
-                cả một khoảng trống bên phải.
-              */}
-              <XStack ai="center" gap={space.sm}>
-                <YStack f={1} minWidth={0}>
-                  <SectionTitle>{t('vehicle.heading')}</SectionTitle>
-                </YStack>
-                {/*
-                  Nhãn KHÔNG co: tiêu đề khối ("Xe được yêu cầu") ngắn và còn thừa ~190dp bên phải
-                  ở màn 360dp, đủ cho cả nhãn dài nhất — ở đây không phải cắt chữ nào.
-                */}
-                <StatusBadge
-                  label={domainLabel('bookingRequestStatus', status, meta.label)}
-                  color={meta.color}
-                  size="sm"
-                />
-              </XStack>
-              {/*
-                Cả thẻ đã bắt chạm (`onPress` ở trên) nên mũi tên chỉ đi KÈM nội dung, không phải
-                một đích chạm riêng — thêm `DetailArrow` nổi ở đây sẽ là lối vào thứ hai cho đúng
-                một việc.
-              */}
-              <XStack ai="center" gap={space.sm}>
-                {request.vehicleImageUrl ? (
-                  <Image
-                    source={{ uri: request.vehicleImageUrl }}
-                    style={VEHICLE_THUMB_STYLE}
-                    contentFit="cover"
-                    cachePolicy="memory-disk"
-                    transition={150}
-                    accessibilityLabel={request.vehicleName}
-                  />
-                ) : (
-                  <YStack
-                    {...VEHICLE_THUMB}
-                    br={radius.sm}
-                    bg={colors.surfaceMuted}
-                    ai="center"
-                    jc="center"
-                  >
-                    <Ionicons name="car-outline" size={iconSize.lg} color={colors.placeholder} />
-                  </YStack>
-                )}
-                <YStack f={1} gap={space.xs}>
-                  <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+          {/*
+            Cùng bố cục thẻ xe của màn CHI TIẾT ĐƠN (chuẩn "Chờ giao xe", người dùng 16/11/2026) và web
+            `BookingRequestDetailDialog`: ảnh · tên · biển số · nút lịch; "Hình thức"; dòng thời gian
+            nhận → trả kèm nơi đổi tay; dài hạn chưa chốt lịch thì gói + nguyện vọng.
+          */}
+          <Card>
+            <YStack gap={12}>
+              <XStack ai="center" gap={12}>
+                <Pressable
+                  disabled={!canViewVehicle}
+                  onPress={() => navigateOnce(ROUTES.manage.vehicleDetail(request.vehicleId))}
+                  accessibilityRole="link"
+                  accessibilityLabel={request.vehicleName}
+                >
+                  <VehicleThumb uri={request.vehicleImageUrl ?? null} accessibilityLabel={request.vehicleName} />
+                </Pressable>
+                <YStack f={1} minWidth={0} gap={space.xs} ai="flex-start">
+                  <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold} numberOfLines={1}>
                     {request.vehicleName}
                   </Text>
-                  {vehicleMeta ? (
-                    <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                      {vehicleMeta}
-                    </Text>
-                  ) : null}
-                  <XStack flexWrap="wrap" gap={space.xs}>
-                    {request.vehicleType ? (
-                      <Chip
-                        label={domainLabel('vehicleType', request.vehicleType as VehicleType)}
-                        size="sm"
-                      />
-                    ) : null}
-                    <Chip label={domainLabel('serviceType', request.serviceType)} size="sm" />
-                  </XStack>
-
-                  {/*
-                    Lịch của CHÍNH chiếc xe này — web có lối này ở CẢ thẻ lẫn chi tiết
-                    (`BookingRequestDetailDialog`), và chi tiết mới là nơi quyết định duyệt hay
-                    từ chối được đưa ra. Bỏ nó ở đây là bỏ đúng chỗ nó cần nhất.
-
-                    HÀNG RIÊNG, không chen vào dải viên nhãn ở trên (đổi 24/09/2026): ở đó nó là
-                    hình pill thứ ba đứng cạnh "Ô tô" và "Tự lái" — ba hình giống hệt nhau mà chỉ
-                    một cái bấm được. Web cũng tách nó thành một dòng riêng dưới dải nhãn.
-                  */}
-                  {canViewVehicle ? (
-                    <XStack>
-                      <Chip
-                        label={t('vehicle.viewSchedule')}
-                        icon="calendar-outline"
-                        tone="accent"
-                        role="button"
-                        size="sm"
-                        onPress={() =>
-                          navigateOnce(
-                            vehicleSchedulePath(
-                              { name: request.vehicleName, plateNumber: request.vehiclePlate },
-                              { back: true },
-                            ),
-                          )
-                        }
-                      />
-                    </XStack>
-                  ) : null}
+                  {vehicleMeta ? <Pill label={vehicleMeta} tone="neutral" /> : null}
                 </YStack>
-                {canViewVehicle ? <DetailChevron /> : null}
-              </XStack>
-            </YStack>
-          </Card>
-
-          <Card>
-            <YStack gap={space.sm}>
-              <SectionTitle>{t('customer.heading')}</SectionTitle>
-              <XStack ai="center" gap={space.sm}>
-                {request.customerAvatarUrl ? (
-                  <Image
-                    source={{ uri: request.customerAvatarUrl }}
-                    style={AVATAR_STYLE}
-                    contentFit="cover"
-                    cachePolicy="memory-disk"
-                  />
-                ) : (
-                  <YStack
-                    w={AVATAR_SIZE}
-                    h={AVATAR_SIZE}
-                    br={radius.pill}
-                    bg={colors.primaryLight}
-                    ai="center"
-                    jc="center"
-                  >
-                    <Text col={colors.accentText} fos={fontSize.body} fow={fontWeight.bold}>
-                      {request.customerName.charAt(0).toUpperCase()}
-                    </Text>
-                  </YStack>
-                )}
-                <YStack f={1} gap={1}>
-                  <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                    {request.customerName}
-                  </Text>
-                  {request.customerEmail ? (
-                    <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                      {request.customerEmail}
-                    </Text>
-                  ) : null}
-                </YStack>
-              </XStack>
-
-              {/*
-                "Mở hồ sơ khách" — cùng điều kiện web (`request.tenantCustomerId` + `customers.view` +
-                tuyến GÓI, vì sổ khách là `@SubscriptionTrackOnly` — ADR 0056): khách đã có hồ sơ
-                trong sổ khách VÀ người xem mở được sổ. Web mở hộp thoại hồ sơ khách; native đẩy màn hồ sơ và
-                nút Lui trả về đúng đây.
-              */}
-              {customerProfileAccess && request.tenantCustomerId ? (
-                <XStack>
-                  <Button
-                    label={t('detail.openCustomer')}
-                    icon="person-outline"
-                    variant="secondary"
-                    size="sm"
-                    block={false}
+                {canViewVehicle ? (
+                  <IconSquareButton
+                    label={t('vehicle.viewSchedule')}
                     onPress={() =>
-                      navigateOnce(ROUTES.manage.customerDetail(request.tenantCustomerId as string))
+                      navigateOnce(
+                        vehicleSchedulePath(
+                          { name: request.vehicleName, plateNumber: request.vehiclePlate },
+                          { back: true },
+                        ),
+                      )
                     }
+                  >
+                    <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+                  </IconSquareButton>
+                ) : null}
+              </XStack>
+              <XStack
+                jc="space-between"
+                ai="center"
+                pb={12}
+                borderBottomWidth={1}
+                borderBottomColor={colors.borderSubtle}
+              >
+                <Text col={colors.textMuted} fos={fontSize.body}>
+                  {t('detail.service')}
+                </Text>
+                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium}>
+                  {domainLabel('serviceType', request.serviceType)}
+                </Text>
+              </XStack>
+              {pickup && dropoff ? (
+                <Timeline
+                  items={[
+                    {
+                      key: 'pickup',
+                      dot: 'pickup',
+                      title: `${fmt.rentalPoint(pickup)} - ${
+                        request.deliveryRequested
+                          ? t('schedule.handoverDelivery')
+                          : t('schedule.handoverAtShop')
+                      }`,
+                      ...(request.deliveryRequested && request.deliveryAddress
+                        ? { lines: [request.deliveryAddress] }
+                        : {}),
+                      meta: fmt.rentalDuration(pickup, dropoff),
+                    },
+                    { key: 'return', dot: 'return', title: fmt.rentalPoint(dropoff) },
+                  ]}
+                />
+              ) : (
+                <>
+                  <DataRow size="md"
+                    label={t('schedule.package')}
+                    value={
+                      fmt.packageLabel(request.longTermPackageMonths) ?? t('schedule.packageMissing')
+                    }
+                  />
+                  <DataRow size="md" label={t('schedule.pickupWish')} value={fmt.pickupWish(request)} />
+                </>
+              )}
+              {hasSchedule && isLongTerm && request.longTermPackageMonths ? (
+                <DataRow size="md"
+                  label={t('schedule.package')}
+                  value={fmt.packageLabel(request.longTermPackageMonths) ?? ''}
+                />
+              ) : null}
+              {isWithDriver && routeType ? (
+                <XStack ai="center" jc="space-between" gap={space.sm}>
+                  <Text f={1} col={colors.textMuted} fos={fontSize.body}>
+                    {t('schedule.route')}
+                  </Text>
+                  {/* Đường dài tô CẢNH BÁO — chuyến ra khỏi tỉnh là rủi ro khác hẳn nội thành. */}
+                  <StatusBadge
+                    label={domainLabel('routeType', routeType)}
+                    color={longDistance ? STATUS_COLOR.WARNING : STATUS_COLOR.NEUTRAL}
+                    size="sm"
                   />
                 </XStack>
               ) : null}
-
-              {/*
-                Số điện thoại bấm gọi được — trên điện thoại đó là việc gần nhất làm được.
-
-                `null` = CHƯA ĐƯỢC PHÉP xem (ADR 0056: tuyến hoa hồng chỉ thấy khi đã có đơn),
-                nên ẩn hẳn hàng thay vì hiện một ô trống — ô trống đọc ra như dữ liệu bị thiếu.
-              */}
-              {request.customerPhone ? (
-                <DataRow
-                  label={t('detail.phone')}
-                  value={request.customerPhone}
-                  {...(tel
-                    ? {
-                        action: (
-                          <Pressable
-                            onPress={() => void Linking.openURL(tel)}
-                            accessibilityRole="button"
-                            accessibilityLabel={t('actions.call')}
-                            hitSlop={space.sm}
-                          >
-                            <Ionicons
-                              name="call-outline"
-                              size={iconSize.sm}
-                              color={colors.accentText}
-                            />
-                          </Pressable>
-                        ),
-                      }
-                    : {})}
-                />
+              {isWithDriver && request.pickupAddress ? (
+                <DataRow size="md" label={t('schedule.pickupAddress')} value={request.pickupAddress} block />
               ) : null}
-              {/* Số tài khoản đã xác minh — chỉ có khi khách để lại số liên hệ khác nó. */}
+              {isWithDriver && request.destination ? (
+                <DataRow size="md" label={t('schedule.destination')} value={request.destination} block />
+              ) : null}
+
+              {isLongTerm && !hasSchedule ? <Hint>{t('schedule.pickupWishHint')}</Hint> : null}
+              {request.deliveryRequested ? <Hint>{t('schedule.deliveryFeeHint')}</Hint> : null}
+            </YStack>
+          </Card>
+
+          {/* Thẻ khách - cùng `CustomerSideCard` của chi tiết đơn: tên + "Khách quen", SĐT · Zalo, lối tắt. */}
+          <Card>
+            <YStack gap={space.sm}>
+              <XStack ai="center" flexWrap="wrap" gap={space.sm}>
+                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+                  {request.customerName}
+                </Text>
+                {request.customerIsRegular ? <Pill label={t('detail.regular')} tone="success" /> : null}
+              </XStack>
+              {request.customerPhone ? (
+                <XStack ai="center" gap={space.md}>
+                  <Text
+                    col={colors.text}
+                    fos={fontSize.body}
+                    {...(tel
+                      ? { onPress: () => void Linking.openURL(tel), accessibilityRole: 'link' as const }
+                      : {})}
+                  >
+                    {request.customerPhone}
+                  </Text>
+                  {zalo ? (
+                    <Text
+                      col={colors.infoStrong}
+                      fos={fontSize.body}
+                      fow={fontWeight.semibold}
+                      onPress={() => void Linking.openURL(zalo)}
+                      accessibilityRole="link"
+                    >
+                      {t('actions.zalo')}
+                    </Text>
+                  ) : null}
+                </XStack>
+              ) : null}
+              {request.customerEmail ? (
+                <Text col={colors.textMuted} fos={fontSize.body}>
+                  {request.customerEmail}
+                </Text>
+              ) : null}
+              {customerProfileAccess && request.tenantCustomerId ? (
+                <Text
+                  alignSelf="flex-start"
+                  col={colors.accentText}
+                  fos={fontSize.body}
+                  fow={fontWeight.semibold}
+                  accessibilityRole="link"
+                  onPress={() =>
+                    navigateOnce(ROUTES.manage.customerDetail(request.tenantCustomerId as string))
+                  }
+                >
+                  {t('detail.viewProfile')}
+                </Text>
+              ) : null}
               {request.customerAccountPhone ? (
-                <DataRow
+                <DataRow size="md"
                   label={t('detail.accountPhone')}
                   value={request.customerAccountPhone}
                   {...(accountTel
@@ -360,26 +382,6 @@ export function BookingRequestDetailScreen({
                     : {})}
                 />
               ) : null}
-              {zalo && request.customerPhone ? (
-                <DataRow
-                  label={t('actions.zalo')}
-                  value={request.customerPhone}
-                  action={
-                    <Pressable
-                      onPress={() => void Linking.openURL(zalo)}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('actions.zalo')}
-                      hitSlop={space.sm}
-                    >
-                      <Ionicons
-                        name="open-outline"
-                        size={iconSize.sm}
-                        color={colors.accentText}
-                      />
-                    </Pressable>
-                  }
-                />
-              ) : null}
 
               {showRisk ? (
                 <Text col={colors.warning} fos={fontSize.label}>
@@ -396,79 +398,6 @@ export function BookingRequestDetailScreen({
             </YStack>
           </Card>
 
-          <Card>
-            <YStack gap={space.xs}>
-              <SectionTitle>{t('schedule.heading')}</SectionTitle>
-
-              {hasSchedule ? (
-                <>
-                  <DataRow label={t('schedule.pickup')} value={fmt.rentalPoint(pickup)} />
-                  <DataRow label={t('schedule.return')} value={fmt.rentalPoint(dropoff)} />
-                  <DataRow
-                    label={t('schedule.duration')}
-                    value={fmt.rentalDuration(pickup, dropoff)}
-                  />
-                  {isLongTerm && request.longTermPackageMonths ? (
-                    <DataRow
-                      label={t('schedule.package')}
-                      value={fmt.packageLabel(request.longTermPackageMonths) ?? ''}
-                    />
-                  ) : null}
-                </>
-              ) : (
-                // Dài hạn chưa duyệt KHÔNG có lịch (ADR 0011) — nói gói + nguyện vọng.
-                <>
-                  <DataRow
-                    label={t('schedule.package')}
-                    value={
-                      fmt.packageLabel(request.longTermPackageMonths) ??
-                      t('schedule.packageMissing')
-                    }
-                  />
-                  <DataRow label={t('schedule.pickupWish')} value={fmt.pickupWish(request)} />
-                </>
-              )}
-
-              {isWithDriver && routeType ? (
-                <XStack ai="center" jc="space-between" gap={space.sm}>
-                  <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
-                    {t('schedule.route')}
-                  </Text>
-                  {/* Đường dài tô CẢNH BÁO — chuyến ra khỏi tỉnh là rủi ro khác hẳn nội thành. */}
-                  <StatusBadge
-                    label={domainLabel('routeType', routeType)}
-                    color={longDistance ? STATUS_COLOR.WARNING : STATUS_COLOR.NEUTRAL}
-                    size="sm"
-                  />
-                </XStack>
-              ) : null}
-              {isWithDriver && request.pickupAddress ? (
-                <DataRow label={t('schedule.pickupAddress')} value={request.pickupAddress} block />
-              ) : null}
-              {isWithDriver && request.destination ? (
-                <DataRow label={t('schedule.destination')} value={request.destination} block />
-              ) : null}
-
-              <DataRow
-                label={t('schedule.handoverHeading')}
-                value={
-                  request.deliveryRequested
-                    ? t('schedule.handoverDelivery')
-                    : t('schedule.handoverAtShop')
-                }
-              />
-              {request.deliveryRequested && request.deliveryAddress ? (
-                <DataRow
-                  label={t('schedule.deliveryAddress')}
-                  value={request.deliveryAddress}
-                  block
-                />
-              ) : null}
-
-              {isLongTerm && !hasSchedule ? <Hint>{t('schedule.pickupWishHint')}</Hint> : null}
-              {request.deliveryRequested ? <Hint>{t('schedule.deliveryFeeHint')}</Hint> : null}
-            </YStack>
-          </Card>
 
           {/*
             TIỀN — CÙNG dữ liệu đã hiện trên thẻ (`request.pricing`), không gọi API lần hai.
@@ -477,29 +406,44 @@ export function BookingRequestDetailScreen({
           {request.pricing ? (
             <Card>
               <YStack gap={space.xs}>
-                <SectionTitle>{t('pricing.heading')}</SectionTitle>
-                <DataRow
-                  label={t('pricing.rentalTotal')}
-                  value={fmt.money(request.pricing.rentalTotal)}
-                />
-                {request.pricing.customerTotalAmount !== request.pricing.rentalTotal ? (
-                  <DataRow
-                    label={t('pricing.customerTotal')}
-                    value={fmt.money(request.pricing.customerTotalAmount)}
-                  />
-                ) : null}
-                {request.pricing.paidAmount != null ? (
-                  <DataRow
-                    label={t('pricing.paidViaPlatform')}
-                    value={fmt.money(request.pricing.paidAmount)}
-                  />
-                ) : null}
-                {request.pricing.remainingAmount != null ? (
-                  <DataRow
-                    label={t('pricing.payAtHandover')}
-                    value={fmt.money(request.pricing.remainingAmount)}
-                  />
-                ) : null}
+                {/*
+                  Web `BookingRequestDetailDialog`: "Thanh toán" + nhãn "Tạm tính", rồi CÙNG các dòng
+                  của thẻ (`requestPaymentRows`: giữ chỗ dự kiến / chờ khách trả / đã giữ chỗ / trả
+                  khi nhận xe), dòng cuối nổi bật.
+                */}
+                <XStack ai="center" jc="space-between" gap={space.sm}>
+                  <SectionTitle>{t('detail.paymentHeading')}</SectionTitle>
+                  {request.pricing.isEstimate ? (
+                    <StatusBadge label={t('card.estimate')} color={STATUS_COLOR.WARNING} size="sm" />
+                  ) : null}
+                </XStack>
+                {/*
+                  Cùng hàng tiền của thẻ "Thanh toán" ở chi tiết đơn (chuẩn "Chờ giao xe", 16/11/2026):
+                  nhãn chiếm phần còn lại, số tiền không co - nhãn dài không bị ép xuống dòng.
+                */}
+                {paymentRows.map((row, index) => {
+                  const last = index === paymentRows.length - 1;
+                  return (
+                    <XStack key={row.key} ai="center" jc="space-between" gap={space.md} py={2}>
+                      <Text
+                        f={1}
+                        col={last ? colors.text : colors.textMuted}
+                        fos={fontSize.body}
+                        fow={last ? fontWeight.semibold : fontWeight.regular}
+                      >
+                        {bareLabel(row.label)}
+                      </Text>
+                      <Text
+                        flexShrink={0}
+                        col={last ? colors.brandLink : colors.text}
+                        fos={last ? fontSize.bodyLg : fontSize.body}
+                        fow={last ? fontWeight.bold : fontWeight.medium}
+                      >
+                        {fmt.money(row.amount)}
+                      </Text>
+                    </XStack>
+                  );
+                })}
                 {request.pricing.isEstimate ? <Hint>{t('pricing.estimateHint')}</Hint> : null}
               </YStack>
             </Card>
@@ -510,7 +454,7 @@ export function BookingRequestDetailScreen({
               <YStack gap={space.xs}>
                 <SectionTitle>{t('note.label')}</SectionTitle>
                 {/* Ở màn chi tiết KHÔNG cắt dòng: đây đúng là chỗ để đọc hết. */}
-                <Text col={colors.text} fos={fontSize.bodySm}>
+                <Text col={colors.text} fos={fontSize.body}>
                   {request.note}
                 </Text>
               </YStack>
@@ -521,7 +465,7 @@ export function BookingRequestDetailScreen({
             <Card>
               <YStack gap={space.xs}>
                 <SectionTitle>{t('trace.rejectReason')}</SectionTitle>
-                <Text col={colors.text} fos={fontSize.bodySm}>
+                <Text col={colors.text} fos={fontSize.body}>
                   {request.rejectReason}
                 </Text>
               </YStack>
@@ -529,13 +473,13 @@ export function BookingRequestDetailScreen({
           ) : null}
 
           <Card>
-            <YStack gap={space.xs}>
-              <DataRow label={t('detail.createdAt')} value={fmt.dateTime(request.createdAt)} />
+            <YStack gap={space.sm}>
+              <DataRow size="md" label={t('detail.createdAt')} value={fmt.dateTime(request.createdAt)} />
               {needsDecision ? (
-                <DataRow label={t('deadline.label')} value={fmt.dateTime(request.respondBy)} />
+                <DataRow size="md" label={t('deadline.label')} value={fmt.dateTime(request.respondBy)} />
               ) : null}
               {request.decidedAt ? (
-                <DataRow label={t('detail.decidedAt')} value={fmt.dateTime(request.decidedAt)} />
+                <DataRow size="md" label={t('detail.decidedAt')} value={fmt.dateTime(request.decidedAt)} />
               ) : null}
             </YStack>
           </Card>
@@ -545,45 +489,11 @@ export function BookingRequestDetailScreen({
             tiết chỉ nói mốc hạn TUYỆT ĐỐI (`deadline.label` ở khối trên). Đồng hồ sống ở thẻ trong
             hộp thư, nơi người trực lướt tìm yêu cầu sắp hết hạn.
           */}
-          {decidable && canApprove ? (
-            <YStack gap={space.sm}>
-              <Button
-                label={t('actions.approve')}
-                icon="checkmark-circle-outline"
-                size="lg"
-                onPress={() => onApprove(request)}
-              />
-              <Button
-                label={t('actions.reject')}
-                icon="close-circle-outline"
-                variant="secondary"
-                onPress={() => onReject(request)}
-              />
-            </YStack>
-          ) : needsDecision && pastDue ? (
-            /*
-              Quá hạn mà bản ghi CHƯA kịp đổi trạng thái: nói rõ vì sao không còn nút, và nói việc
-              còn làm được (gọi khách). Một khoảng trống ở đây đọc ra như màn hình bị hỏng.
-            */
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {needsDecision && pastDue && !decidable ? (
+            <Text col={colors.textMuted} fos={fontSize.body}>
               {t('deadline.pastDueHint')}
             </Text>
-          ) : request.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD && canApprove ? (
-            /*
-             * Chuyến đã nhận, đang chờ khách trả tiền: việc chính là ĐỢI, nên chỗ này chỉ có một
-             * lối thoát. Nút nhỏ, nền nhạt — người mở chi tiết ra hiếm khi để huỷ; họ mở để đọc
-             * lại lịch trình rồi gọi cho khách (ADR 0045 điều 1).
-             */
-            <Button
-              label={t('actions.cancel')}
-              icon="close-circle-outline"
-              variant="danger"
-              size="sm"
-              onPress={() => onCancel(request)}
-            />
           ) : null}
-
-          <Button label={tCommon('close')} variant="ghost" onPress={onClose} />
         </YStack>
       </Screen>
     </>
@@ -593,12 +503,10 @@ export function BookingRequestDetailScreen({
 function SectionTitle({ children }: { children: string }) {
   const colors = useColors();
   return (
-    <XStack ai="center" gap={space.xs}>
-      <YStack w={3} h={iconSize.sm} br={radius.pill} bg={colors.primary} />
-      <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.semibold}>
-        {children.toUpperCase()}
-      </Text>
-    </XStack>
+    // Tiêu đề khối như "Nhóm thông tin" của Figma / thẻ chi tiết đơn: 16/24 semibold, không vạch.
+    <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold}>
+      {children}
+    </Text>
   );
 }
 

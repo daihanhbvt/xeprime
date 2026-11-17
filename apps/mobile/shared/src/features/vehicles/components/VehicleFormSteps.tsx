@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { Controller, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
@@ -15,7 +15,7 @@ import {
   type VehicleSourceType,
 } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
-import { BlockTitle } from '@/components/ui/BlockTitle';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { FieldLabel } from '@/components/ui/Field';
@@ -44,12 +44,21 @@ interface StepProps {
   isCar: boolean;
 }
 
-/** Nhãn nhóm bên trong một bước — nhỏ, viết hoa, mờ. */
+/**
+ * Tiêu đề nhóm con bên trong một bước — kiểu tiêu đề phụ của app KHÁCH (14 Semibold, màu chữ chính,
+ * giữ hoa/thường như message), thay nhãn chữ hoa nhỏ mờ của khu quản lý cũ (người dùng chốt
+ * 10/11/2026: màn quản lý lấy phong cách hiển thị của app khách).
+ */
 function GroupTitle({ children }: { children: string }) {
   const colors = useColors();
   return (
-    <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.semibold}>
-      {children.toUpperCase()}
+    <Text
+      col={colors.text}
+      fos={fontSize.body}
+      fow={fontWeight.semibold}
+      accessibilityRole="header"
+    >
+      {children}
     </Text>
   );
 }
@@ -649,7 +658,7 @@ export function MediaStep({ control }: StepProps) {
     <YStack gap={layout.section}>
       <Card>
         <YStack gap={space.md}>
-          <BlockTitle>{tCards('images')}</BlockTitle>
+          <SectionHeader icon="images-outline">{tCards('images')}</SectionHeader>
           {/*
             Ảnh theo GÓC CHỤP (`media[{url,type}]`) + ảnh đại diện — cùng `TypedMediaFields` với
             wizard đăng nhanh, đúng `ImagesSection` của web. Ảnh xe đi qua endpoint riêng của xe.
@@ -660,7 +669,7 @@ export function MediaStep({ control }: StepProps) {
 
       <Card>
         <YStack gap={space.md}>
-          <BlockTitle>{tCards('featuresDescription')}</BlockTitle>
+          <SectionHeader icon="list-outline">{tCards('featuresDescription')}</SectionHeader>
           <FeaturesField control={control} features={features} />
           <TextField
             control={control}

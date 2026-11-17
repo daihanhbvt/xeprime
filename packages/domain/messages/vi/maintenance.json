@@ -198,6 +198,8 @@
     "kmUnit": "km",
     "missingOdometer": "Chưa có số KM",
     "nextDue": "Mốc tiếp theo: <b>{km}</b>",
+    "nextDueShort": "Mốc tiếp theo {km}",
+    "remaining": "Đến hạn bảo dưỡng",
     "noNextDue": "Chưa có mốc tiếp theo",
     "cycle": "{percent}% chu kỳ {interval}",
     "noCycle": "Chưa đặt chu kỳ thay nhớt",

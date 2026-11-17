@@ -30,6 +30,7 @@
     "allOperations": "All",
     "onTrip": "On a trip",
     "idle": "Available",
+    "summary": "Summary",
     "status": "Status",
     "openLinks": "Invited / linked",
     "allStatuses": "Any status",
@@ -260,6 +261,7 @@
     "next": "Next driver",
     "notFound": "This driver could not be found - the link may have been removed.",
     "loadError": "Couldn't load the driver's details.",
+    "menuTitle": "Actions",
     "edit": "Edit details",
     "tabs": {
       "overview": "Overview",
@@ -269,6 +271,7 @@
     "overview": {
       "period": "Figures for {month} · wages are recorded amounts, counted by the month a trip ended",
       "stats": {
+        "title": "Monthly figures",
         "wageTotal": "Recorded wages",
         "completedTrips": "Completed trips",
         "drivenDays": "{count, plural, one {# driving day} other {# driving days}}",
@@ -316,6 +319,8 @@
       }
     },
     "trips": {
+      "period": "Rental period",
+      "wage": "Wage",
       "summary": "<b>{trips, plural, one {# completed trip} other {# completed trips}}</b> · total recorded <b>{amount}</b>",
       "export": "Download statement",
       "exported": "{count, plural, one {Downloaded a statement of # trip} other {Downloaded a statement of # trips}}",
@@ -345,6 +350,10 @@
       }
     },
     "profile": {
+      "sectionInfo": "Driver details",
+      "sectionLicence": "Licence",
+      "sectionLink": "Link",
+      "sectionNote": "Note",
       "name": "Name",
       "phone": "Phone number",
       "account": "Account name",
@@ -393,6 +402,7 @@
     "monthWageValue": "{amount} · {count, plural, one {# trip} other {# trips}}",
     "drops": "Dropped trips {count, plural, one {# time} other {# times}} in 90 days",
     "dropsCritical": "{count, plural, other {# close to pickup}}",
+    "edit": "Edit",
     "editInfo": "Edit details",
     "viewTrips": "View trips"
   }

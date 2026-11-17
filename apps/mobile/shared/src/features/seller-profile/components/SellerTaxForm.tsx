@@ -49,12 +49,25 @@ export function SellerTaxForm({
   profile,
   fieldsFooter,
   children,
+  variant = 'page',
+  onCancel,
+  onSaved,
 }: {
   profile: SellerProfile;
   fieldsFooter?: ReactNode;
   children?: ReactNode;
+  /**
+   * `page` (mặc định) = màn "Thông tin khai thuế" của chủ xe: lời nhắc trạng thái + khung thẻ + nút
+   * Lưu. `sheet` = thân tấm sửa của thẻ "Thông tin khai thuế" trên trang Cửa hàng (`ShopTaxCard`
+   * web, hộp `23999:112100`): chỉ các ô + chân "Hủy · Cập nhật"; trạng thái đã nằm trên thẻ.
+   */
+  variant?: 'page' | 'sheet';
+  onCancel?: () => void;
+  /** Gọi sau khi lưu xong - tấm tự đóng. */
+  onSaved?: () => void;
 }) {
   const t = useTranslations('Account.tax');
+  const tCommon = useTranslations('Common');
   const tSeller = useTranslations('SellerProfile');
   const toast = useAppToast();
   const domainLabel = useDomainLabel();
@@ -109,11 +122,87 @@ export function SellerTaxForm({
         idNumber: values.idNumber || null,
       },
       {
-        onSuccess: () => toast.showSuccess(t('saved')),
+        onSuccess: () => {
+          toast.showSuccess(t('saved'));
+          onSaved?.();
+        },
         onError: (err) => toast.showError(errorMessage(err)),
       },
     );
   });
+
+  const fieldsBlock = (
+    <YStack gap={space.md}>
+      <SelectField
+        control={control}
+        name="entityType"
+        label={t('entityType')}
+        required
+        disabled={locked}
+        options={entityTypeOptions}
+        hint={t('entityHint')}
+      />
+
+      {fieldsFooter}
+
+      <TextField
+        control={control}
+        name="legalName"
+        label={isIndividual ? t('legalName') : t('legalNameBusiness')}
+        autoComplete="name"
+        editable={!locked}
+      />
+
+      {isIndividual ? (
+        <TextField
+          control={control}
+          name="idNumber"
+          label={t('idNumber')}
+          hint={t('idNumberHint')}
+          autoCapitalize="characters"
+          editable={!locked}
+        />
+      ) : (
+        <TextField
+          control={control}
+          name="taxId"
+          label={t('taxId')}
+          hint={tSeller('form.taxIdHint')}
+          keyboardType="number-pad"
+          editable={!locked}
+        />
+      )}
+    </YStack>
+  );
+
+  if (variant === 'sheet') {
+    return (
+      <YStack gap={space.md}>
+        {fieldsBlock}
+        <XStack gap={space.sm}>
+          <YStack f={1}>
+            <Button
+              label={tCommon('actions.cancel')}
+              variant="secondary"
+              disabled={save.isPending}
+              onPress={() => {
+                reset();
+                onCancel?.();
+              }}
+            />
+          </YStack>
+          <YStack f={1}>
+            <Button
+              label={tCommon('actions.update')}
+              loading={save.isPending}
+              disabled={readOnly}
+              onPress={() => void onSave()}
+            />
+          </YStack>
+        </XStack>
+      </YStack>
+    );
+  }
 
   return (
     <YStack gap={space.md}>
@@ -140,47 +229,7 @@ export function SellerTaxForm({
       ) : null}
 
       <Card>
-        <YStack gap={space.md}>
-          <SelectField
-            control={control}
-            name="entityType"
-            label={t('entityType')}
-            required
-            disabled={locked}
-            options={entityTypeOptions}
-            hint={t('entityHint')}
-          />
-
-          {fieldsFooter}
-
-          <TextField
-            control={control}
-            name="legalName"
-            label={isIndividual ? t('legalName') : t('legalNameBusiness')}
-            autoComplete="name"
-            editable={!locked}
-          />
-
-          {isIndividual ? (
-            <TextField
-              control={control}
-              name="idNumber"
-              label={t('idNumber')}
-              hint={t('idNumberHint')}
-              autoCapitalize="characters"
-              editable={!locked}
-            />
-          ) : (
-            <TextField
-              control={control}
-              name="taxId"
-              label={t('taxId')}
-              hint={tSeller('form.taxIdHint')}
-              keyboardType="number-pad"
-              editable={!locked}
-            />
-          )}
-        </YStack>
+        {fieldsBlock}
       </Card>
 
       {children}

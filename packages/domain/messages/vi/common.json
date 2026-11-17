@@ -5,6 +5,7 @@
     "defaultDescription": "Nền tảng cho thuê xe: tìm xe, đặt xe và quản lý gian hàng cho thuê."
   },
   "actions": {
+    "backToTop": "Về đầu trang",
     "save": "Lưu",
     "saveChanges": "Lưu thay đổi",
     "cancel": "Huỷ",
@@ -291,9 +292,12 @@
     "activeCount": "{count, plural, other {# bộ lọc đang bật}}",
     "reset": "Xoá lọc",
     "open": "Mở bộ lọc",
+    "short": "Lọc",
     "subtitle": "Chọn tiêu chí để thu hẹp danh sách",
     "chip": "{label}: {value}",
-    "none": "Chưa áp dụng bộ lọc nào"
+    "none": "Chưa áp dụng bộ lọc nào",
+    "clearAll": "Xoá bộ lọc",
+    "save": "Lưu bộ lọc"
   },
   "permissions": {
     "cameraDenied": "Chưa có quyền dùng máy ảnh. Vào Cài đặt → XePrime để bật quyền Máy ảnh.",

@@ -26,6 +26,7 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
+import { useCardGrid } from '@/theme/use-responsive';
 import { layout } from '@/theme/layout';
 import { space } from '@/theme/tokens';
 import { FavoriteVehicleCard, FavoriteVehicleCardSkeleton } from './components/FavoriteVehicleCard';
@@ -51,7 +52,7 @@ export function FavoritesScreen() {
         subtitle={t('page.subtitle')}
       />
       <FavoriteTabs value={vehicleType} onChange={setVehicleType} />
-      <Screen edges={['left', 'right', 'bottom']} padded={false} scroll={false}>
+      <Screen edges={['left', 'right', 'bottom']} padded={false} scroll={false} maxWidth="wide">
         {/* `key` theo tab: đổi tab là một danh sách mới, không mang trạng thái của tab trước. */}
         <FavoritesTab key={vehicleType} vehicleType={vehicleType} />
       </Screen>
@@ -120,6 +121,8 @@ function FavoritesTab({ vehicleType }: { vehicleType: VehicleType }) {
     ),
     [],
   );
+  // iPad: thẻ xếp lưới 2-3 cột trong cột nội dung; điện thoại giữ 1 cột.
+  const grid = useCardGrid(renderItem, { listKey: 'favorites', gap: space.md });
 
   if (list.isInitialLoading) {
     return (
@@ -138,12 +141,14 @@ function FavoritesTab({ vehicleType }: { vehicleType: VehicleType }) {
   return (
     <ScrollRevealProvider value={listReveal.ctx}>
     <Animated.FlatList
+      key={grid.key}
       data={list.items}
       keyExtractor={keyOf}
       onScroll={listReveal.onScroll}
       scrollEventThrottle={16}
-      renderItem={renderItem}
-      itemLayoutAnimation={listLayoutTransition}
+      {...grid.listProps}
+      // Reanimated không hỗ trợ hiệu ứng bố cục cho FlatList nhiều cột - chỉ bật ở 1 cột.
+      {...(grid.columns === 1 ? { itemLayoutAnimation: listLayoutTransition } : {})}
       onEndReached={() => {
         // Đang lỗi tải thêm thì đợi khách bấm "Thử lại" — không tự gọi lại liên tục.
         if (!list.appendError) list.fetchNextPage();
@@ -159,7 +164,7 @@ function FavoritesTab({ vehicleType }: { vehicleType: VehicleType }) {
         />
       }
       ListEmptyComponent={
-        <YStack f={1} jc="center" gap={space.md} py={space.xl} px={space.md}>
+        <YStack f={1} jc="center" gap={space.md} py={space.xl} px={layout.padX}>
           <ScreenMessage
             icon="file-tray-outline"
             title={t(vehicleType === VEHICLE_TYPE.MOTORBIKE ? 'empty.motorbike' : 'empty.car')}

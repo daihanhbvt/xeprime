@@ -692,6 +692,8 @@
     }
   },
   "overview": {
+    "odometerLabel": "Odometer:",
+    "actionsMenu": "More actions",
     "profileLabel": "Vehicle profile",
     "plate": "Licence plate: <b>{value}</b>",
     "odometer": "Odometer: <b>{value}</b>",
@@ -1448,6 +1450,8 @@
     "ocrNoteTitle": "AI-assisted data extraction (OCR review)",
     "ocrNoteBody": "OCR output is only a draft to speed up data entry - you must check it against the original document and pick each field yourself before saving it to the vehicle record.",
     "row": {
+      "moreActions": "More actions",
+      "view": "View",
       "expiry": "Expires on: <b>{value}</b>",
       "updatedAt": "Updated: <b>{value}</b>",
       "noExpiry": "No expiry",

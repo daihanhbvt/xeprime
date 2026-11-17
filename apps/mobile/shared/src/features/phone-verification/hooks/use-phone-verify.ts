@@ -1,19 +1,20 @@
 import { useMutation } from '@tanstack/react-query';
-import { API_ERROR_CODE, type PhoneVerificationPurpose } from '@xeprime/types';
-import { getErrorCode } from '@/lib/api-client';
+import { API_ERROR_CODE, OTP_POLICY, type PhoneVerificationPurpose } from '@xeprime/types';
+import { getErrorCode, getRetryAfterSeconds } from '@/lib/api-client';
 import { useCallback, useEffect, useState } from 'react';
 import { sendOtp, verifyOtp } from '../api';
 import { useOtpTestCodeEnabled } from './use-otp-config';
 
 export type PhoneVerifyStatus = 'idle' | 'code_sent' | 'verified';
 
-const RESEND_COOLDOWN_SEC = 60;
+/**
+ * Mã đã CHẾT (khoá vì sai quá số lần, hoặc hết hạn) — gõ tiếp vô ích, chỉ còn "Gửi lại mã"
+ * (web `use-phone-verify`, PR #278).
+ */
+const DEAD_CODE_ERRORS = new Set<string>([API_ERROR_CODE.OTP_LOCKED, API_ERROR_CODE.OTP_EXPIRED]);
 
-function serverCooldownSec(error: unknown): number {
-  if (getErrorCode(error) !== API_ERROR_CODE.OTP_COOLDOWN) return 0;
-  const seconds = Number(/(\d+)\s*s/.exec(String((error as Error)?.message ?? ''))?.[1]);
-  return Number.isFinite(seconds) && seconds > 0 ? seconds : RESEND_COOLDOWN_SEC;
-}
+/** Server nói phải chờ bao lâu mới gửi được mã tiếp — đồng hồ "Gửi lại mã" bám theo con số đó. */
+const SEND_WAIT_ERRORS = new Set<string>([API_ERROR_CODE.OTP_COOLDOWN, API_ERROR_CODE.OTP_TOO_MANY]);
 
 export function usePhoneVerify(purpose: PhoneVerificationPurpose) {
   const testCodeEnabled = useOtpTestCodeEnabled();
@@ -21,6 +22,11 @@ export function usePhoneVerify(purpose: PhoneVerificationPurpose) {
   const [cooldown, setCooldown] = useState(0);
   const [devCode, setDevCode] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);
+  const [codeDead, setCodeDead] = useState(false);
+  const noteCodeError = useCallback((e: unknown) => {
+    const code = getErrorCode(e);
+    if (code && DEAD_CODE_ERRORS.has(code)) setCodeDead(true);
+  }, []);
 
   const running = cooldown > 0;
   // Timer đọc giá trị mới nhất qua setState functional, nên effect chỉ cần chạy lại khi
@@ -37,12 +43,14 @@ export function usePhoneVerify(purpose: PhoneVerificationPurpose) {
       setStatus('code_sent');
       setDevCode(res.devCode ?? null);
       setError(null);
-      setCooldown(RESEND_COOLDOWN_SEC);
+      setCodeDead(false);
+      setCooldown(OTP_POLICY.RESEND_COOLDOWN_SECONDS);
     },
     onError: (error) => {
       setError(error);
-      const wait = serverCooldownSec(error);
-      if (wait > 0) setCooldown(wait);
+      const code = getErrorCode(error);
+      const wait = getRetryAfterSeconds(error);
+      if (code && SEND_WAIT_ERRORS.has(code) && wait !== null) setCooldown(wait);
     },
   });
 
@@ -53,7 +61,10 @@ export function usePhoneVerify(purpose: PhoneVerificationPurpose) {
       setStatus('verified');
       setError(null);
     },
-    onError: setError,
+    onError: (e) => {
+      setError(e);
+      noteCodeError(e);
+    },
   });
 
   const reset = useCallback(() => {
@@ -61,6 +72,7 @@ export function usePhoneVerify(purpose: PhoneVerificationPurpose) {
     setDevCode(null);
     setError(null);
     setCooldown(0);
+    setCodeDead(false);
   }, []);
 
   return {
@@ -93,6 +105,10 @@ export function usePhoneVerify(purpose: PhoneVerificationPurpose) {
       options?: { onError?: (error: unknown) => void; onSuccess?: () => void },
     ) => verifyMutation.mutate({ phone, code }, options),
     clearError: () => setError(null),
+    /** Mã vừa nhập đã chết (`OTP_LOCKED`/`OTP_EXPIRED`) — khoá ô nhập, chỉ còn gửi lại mã. */
+    codeDead,
+    /** Lỗi của một lượt đối chiếu mã qua endpoint KHÁC (đăng ký, đặt lại mật khẩu) — xem `codeDead`. */
+    noteCodeError,
     reset,
   };
 }

@@ -8,6 +8,7 @@ import { DayCell, MonthGrid, type DayMark, visibleDays } from './MonthGrid';
 import { StepSlider } from './StepSlider';
 import { useColors } from '@/theme/ThemeProvider';
 import { fieldFontSize, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 
 /**
  * Kéo theo TỪNG PHÚT, không nhảy 15 một.
@@ -233,7 +234,7 @@ export function MomentPickerSheet({
             {title}
           </Text>
           {/* Kết quả đọc to và tách khung: đây là con số người dùng đang chỉnh, không phải chú thích. */}
-          <XStack px={space.md} py={space.xs} br={radius.md} bw={1} bc={colors.primary}>
+          <XStack px={layout.padX} py={space.xs} br={radius.md} bw={1} bc={colors.primary}>
             <Text col={colors.accentText} fos={fontSize.h4} fow={fontWeight.bold}>
               {draft.format('HH:mm')}
             </Text>
