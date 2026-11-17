@@ -115,7 +115,7 @@ export function ChangePasswordForm({
             <CtaButton
               type="submit"
               loading={saving}
-              disabled={!formState.isDirty}
+              disabled={!formState.isValid}
               className={styles.ctaSubmit}
             >
               {hasPassword ? t('submit') : t('submitFirstTime')}
@@ -125,7 +125,7 @@ export function ChangePasswordForm({
               type="primary"
               htmlType="submit"
               loading={saving}
-              disabled={!formState.isDirty && !saving}
+              disabled={!formState.isValid && !saving}
             >
               {hasPassword ? t('submit') : t('submitFirstTime')}
             </Button>

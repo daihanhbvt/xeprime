@@ -143,7 +143,11 @@ export function AccountPasswordForm() {
             type="primary"
             htmlType="submit"
             loading={saving}
-            disabled={!formState.isDirty && !saving}
+            /*
+              Sáng khi CẢ form hợp lệ (đủ ô, đạt luật, nhập lại khớp) - không phải "đã gõ gì đó".
+              `isValid` chạy schema trên mỗi lần gõ; lượt submit (Enter) vẫn qua `handleSubmit`.
+            */
+            disabled={!formState.isValid && !saving}
           >
             {hasPassword ? t('submit') : t('submitFirstTime')}
           </Button>

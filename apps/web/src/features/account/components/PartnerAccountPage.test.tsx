@@ -1,6 +1,6 @@
 import { App } from 'antd';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BILLING_MODE, SHOP_ONBOARDING_STATE, TENANT_ROLE } from '@xeprime/types';
 
@@ -248,6 +248,32 @@ describe('Tài khoản & bảo mật - mật khẩu', () => {
       target: { value: 'abcdefg1!' },
     });
     expect(password.getByText('Mạnh')).toBeTruthy();
+  });
+
+  it('"Cập nhật mật khẩu" chỉ sáng khi cả form hợp lệ', async () => {
+    renderPage();
+
+    const password = card('Mật khẩu');
+    const submit = password.getByRole('button', { name: 'Cập nhật mật khẩu' });
+    const type = (label: RegExp, value: string) =>
+      fireEvent.change(password.getByLabelText(label), { target: { value } });
+    const enabled = () => !(submit as HTMLButtonElement).disabled;
+
+    expect(enabled()).toBe(false);
+
+    type(/Mật khẩu hiện tại/, 'Abcd1234@');
+    type(/^Mật khẩu mới/, 'abcdefg1');
+    // Nhập lại chưa có / không khớp ⇒ vẫn mờ.
+    await waitFor(() => expect(enabled()).toBe(false));
+    type(/Xác nhận mật khẩu mới/, 'abcdefg2');
+    await waitFor(() => expect(enabled()).toBe(false));
+
+    type(/Xác nhận mật khẩu mới/, 'abcdefg1');
+    await waitFor(() => expect(enabled()).toBe(true));
+
+    // Mật khẩu mới rơi khỏi luật (không có chữ số) ⇒ mờ lại.
+    type(/^Mật khẩu mới/, 'abcdefgh');
+    await waitFor(() => expect(enabled()).toBe(false));
   });
 
   it('"Quên mật khẩu" dẫn về luồng của site partner', () => {
