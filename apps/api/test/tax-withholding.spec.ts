@@ -755,7 +755,10 @@ describe('Báo cáo', () => {
     await tax.reverse(toReverse.id, ownerId, 'Ghi nhầm chuyến');
 
     const csv = await read.periodCsv(period, ownerId, TAX_EXPORT_GROUP_BY.SELLER);
-    const lines = csv.replace(/^﻿/, '').trim().split('\r\n');
+    const lines = csv
+      .replace(/^\uFEFF/, '')
+      .trim()
+      .split('\r\n');
     expect(lines[0]).toContain('so_chuyen');
     expect(lines).toHaveLength(2);
     const cells = lines[1]!.split(',');

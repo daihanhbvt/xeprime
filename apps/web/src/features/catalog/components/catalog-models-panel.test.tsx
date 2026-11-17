@@ -373,14 +373,23 @@ describe('CatalogModelsPanel — một danh sách dòng xe → xe', () => {
   it('dòng thiếu thông số gọi tên thứ còn thiếu và tự mở', () => {
     renderPanel();
     expect(screen.getAllByText(/Thiếu số chỗ, hộp số/).length).toBeGreaterThan(0);
-    expect(screen.getByRole('region', { name: 'Xe của dòng Innova' })).toBeTruthy();
-    expect(screen.getAllByText('Dòng này chưa có xe nào').length).toBeGreaterThan(0);
+    // Innova chưa có xe nào: mở ra là trạng thái rỗng của dòng (có nút thêm xe), không phải bảng.
+    expect(screen.getAllByText('Dòng này chưa có xe nào')).toHaveLength(1);
   });
 
   it('bấm hàng dòng xe thì mở / đóng danh sách xe của nó', () => {
     renderPanel();
+    // AntD thu gọn bằng cách ẩn hàng con (`display: none`), không gỡ khỏi DOM — đếm phần đang hiện.
+    const openEmptyLines = () =>
+      screen
+        .queryAllByText('Dòng này chưa có xe nào')
+        .filter((el) => (el.closest('tr') as HTMLElement | null)?.style.display !== 'none');
+    // Lúc đầu chỉ Innova (thiếu thông số) mở ra trạng thái rỗng; bấm Camry thì Camry mở thêm.
+    expect(openEmptyLines()).toHaveLength(1);
     fireEvent.click(screen.getAllByText('Camry')[0]!);
-    expect(screen.getByRole('region', { name: 'Xe của dòng Camry' })).toBeTruthy();
+    expect(openEmptyLines()).toHaveLength(2);
+    fireEvent.click(screen.getAllByText('Camry')[0]!);
+    expect(openEmptyLines()).toHaveLength(1);
   });
 
   it('dải số liệu có ô "Dòng thiếu thông số" — bấm là lọc', () => {
@@ -449,9 +458,12 @@ describe('CatalogModelsPanel — một danh sách dòng xe → xe', () => {
       similar: [],
     } as unknown as VehicleDataDetail;
     renderPanel();
-    expect(screen.getByRole('button', { name: 'Từ chối' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Gộp vào xe có sẵn' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Lưu và duyệt' })).toBeTruthy();
+    // `getByText` thay vì `getByRole`: trang có nhiều bảng AntD, tính tên khả truy cập của mọi
+    // nút trên cả cây làm ca này chậm hàng chục giây trong jsdom.
+    const footer = screen.getByText('Lưu và duyệt').closest('.ant-drawer-footer') as HTMLElement;
+    expect(footer).toBeTruthy();
+    expect(within(footer).getByText('Từ chối')).toBeTruthy();
+    expect(within(footer).getByText('Gộp vào xe có sẵn')).toBeTruthy();
   });
 });
 

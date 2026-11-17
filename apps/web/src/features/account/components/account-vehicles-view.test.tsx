@@ -166,9 +166,11 @@ describe('AccountVehiclesView', () => {
     expect(screen.getByRole('button', { name: 'Chi tiết' })).toBeTruthy();
   });
 
-  it('dưới 3 xe: bố cục thẻ to (ít xe)', () => {
+  // Luật chốt 16/11/2026 (`VEHICLE_LIST_PAIRS_FROM`): dưới 4 xe một xe một hàng, từ 4 xe hai thẻ
+  // một hàng — bố cục "ít xe" (`few`) đã bỏ.
+  it('dưới 4 xe: một xe một hàng', () => {
     renderView();
-    expect(grid.layout).toBe('few');
+    expect(grid.layout).toBe('list');
   });
 
   it('"Thêm xe mới" mở luồng đăng xe của chủ xe; trong phiên hỗ trợ thì vắng hẳn', () => {

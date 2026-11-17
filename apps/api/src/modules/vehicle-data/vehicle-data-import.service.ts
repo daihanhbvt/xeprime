@@ -424,7 +424,9 @@ export class VehicleDataImportService {
           fields: op.fields,
           active: op.active ?? (op.existingId ? (currentActive.get(op.existingId) ?? true) : true),
           origin: op.existingId ? null : VEHICLE_DATA_ORIGIN.IMPORT,
-          auditAction: 'vehicle_data.import',
+          // `.row`: mã `vehicle_data.import` trơn trùng tên NHÁNH `import.apply` / `import.discard`
+          // của cây nhãn audit (Domain.auditAction) — một mã không thể vừa là lá vừa là nhánh.
+          auditAction: 'vehicle_data.import.row',
         });
         const result = results[op.rowIndex];
         if (result && result.action !== VEHICLE_DATA_ROW_ACTION.ERROR) result.recordId = recordId;

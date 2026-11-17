@@ -1185,7 +1185,9 @@
     },
     "bank_transaction": {
       "ignore": "Ignore bank transaction",
-      "match_manual": "Manually match bank transaction"
+      "match_manual": "Manually match bank transaction",
+      "credit_customer": "Credit customer points wallet from bank transaction",
+      "match_receivable": "Match bank transaction to receivable"
     },
     "payment_gateway_order": {
       "resolve": "Close gateway payment",
@@ -1264,14 +1266,19 @@
       "reorder": "Reorder catalog",
       "model": {
         "update": "Update vehicle model",
-        "delete": "Delete vehicle model"
+        "delete": "Delete vehicle model",
+        "create": "Create model line",
+        "approve": "Approve model line",
+        "reject": "Reject model line"
       }
     },
     "contract": {
       "create": "Create rental contract"
     },
     "customer": {
-      "contact_reveal": "Reveal customer contact"
+      "contact_reveal": "Reveal customer contact",
+      "lock": "Lock customer account",
+      "unlock": "Unlock customer account"
     },
     "driver_licence": {
       "submit": "Submit driving licence photo",
@@ -1524,7 +1531,8 @@
       "rejected": "Withdrawal rejected",
       "paid": "Withdrawal paid",
       "cancelled": "Withdrawal cancelled",
-      "reversed": "Withdrawal reversed"
+      "reversed": "Withdrawal reversed",
+      "month_export": "Export monthly withdrawals"
     },
     "app_config": {
       "update": "Change Partner app config"
@@ -1545,6 +1553,25 @@
     },
     "subscription_checkout": {
       "issue": "Issue combined payment"
+    },
+    "insurance_remittance": {
+      "create": "Create insurance remittance statement",
+      "delete": "Delete insurance remittance statement"
+    },
+    "vehicle_data": {
+      "capture": "Capture vehicle data from an owner's vehicle",
+      "delete": "Delete vehicle data",
+      "import": {
+        "row": "Save vehicle from import file",
+        "apply": "Apply vehicle data import",
+        "discard": "Discard vehicle data import"
+      },
+      "model": {
+        "create": "Create model line from vehicle data"
+      }
+    },
+    "vehicle_document": {
+      "view_registration_image": "View registration image"
     }
   },
   "auditTargetType": {
@@ -1600,7 +1627,11 @@
     "vehicle_maintenance_record": "Maintenance record",
     "vehicle_private_file": "Vehicle private file",
     "withdrawal_request": "Withdrawal request",
-    "subscription_checkout": "Combined payment"
+    "subscription_checkout": "Combined payment",
+    "insurance_remittance": "Insurance remittance statement",
+    "vehicle_catalog_import": "Vehicle data import",
+    "vehicle_catalog_variant": "Standard vehicle (vehicle data)",
+    "withdrawal_month": "Withdrawal month"
   },
   "auditField": {
     "planCode": "Plan code",
