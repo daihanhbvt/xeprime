@@ -3,6 +3,7 @@ import {
   VEHICLE_TYPE,
   VEHICLE_SOURCE_TYPE,
   vehicleFeatureAppliesTo,
+  vehicleFieldPolicy,
   vehicleImageTypeOf,
   type BodyType,
   type FuelType,
@@ -122,6 +123,29 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
  * Các trường enum ở đây do backend bảo đảm hợp lệ (contract), nên ép về union là trung thực.
  */
 export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
+  const values = rawVehicleToFormValues(v);
+  /*
+   * Các ô không còn nghĩa với loại xe / nguồn năng lượng bị form tự xoá ngay lúc mở
+   * (`VehicleClassificationFields`, `VehicleEnergyFields`). Xe cũ lưu dư (xe máy có số chỗ…) mà để
+   * baseline giữ giá trị đó thì mở màn sửa là form đã "chưa lưu" dù chưa ai chạm vào — nên dọn
+   * ngay ở baseline, cùng luật với form.
+   */
+  const policy = vehicleFieldPolicy(values.vehicleType, values.fuelType);
+  if (policy.seatCount === 'hidden') values.seatCount = null;
+  if (policy.bodyType === 'hidden') values.bodyType = null;
+  if (policy.motorbikeCategory === 'hidden') values.motorbikeCategory = null;
+  if (values.fuelType) {
+    if (policy.fuelConsumption === 'hidden') values.fuelConsumptionCombined = null;
+    if (policy.electricRangeKm === 'hidden') values.electricRangeKm = null;
+    if (policy.batteryCapacityKwh === 'hidden') values.batteryCapacityKwh = null;
+    if (policy.electricConsumption === 'hidden') values.electricConsumptionKwhPer100Km = null;
+    if (policy.engineDisplacementCc === 'hidden') values.engineDisplacementCc = null;
+    if (policy.transmission === 'hidden') values.transmission = null;
+  }
+  return values;
+}
+
+function rawVehicleToFormValues(v: VehicleDetail): VehicleFormValues {
   return {
     code: v.code,
     name: v.name,
