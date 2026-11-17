@@ -19,10 +19,8 @@ import {
 
 import { StatusTag } from '@/components/data-display/StatusTag';
 import {
-  ACCOUNT_SECTION,
   ROUTES,
   SHOP_SECTION,
-  accountSectionPath,
   ownerVehiclePath,
   shopSectionPath,
 } from '@/constants/routes';
@@ -59,7 +57,7 @@ const IN_FLIGHT: readonly VehiclePublicStatus[] = [
  */
 const REQUIREMENT_HREF: Readonly<Record<ShopProfileRequirement, string>> = {
   [SHOP_PROFILE_REQUIREMENT.OWNER_NAME]: shopSectionPath(SHOP_SECTION.PROFILE),
-  [SHOP_PROFILE_REQUIREMENT.OWNER_PHONE]: accountSectionPath(ACCOUNT_SECTION.LOGIN),
+  [SHOP_PROFILE_REQUIREMENT.OWNER_PHONE]: ROUTES.MANAGE.ACCOUNT,
   [SHOP_PROFILE_REQUIREMENT.DISPLAY_NAME]: shopSectionPath(SHOP_SECTION.PROFILE),
   [SHOP_PROFILE_REQUIREMENT.PROVINCE]: shopSectionPath(SHOP_SECTION.LEGAL),
 };

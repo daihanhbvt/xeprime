@@ -1,6 +1,6 @@
 /*
- * Trang Tài khoản & bảo mật — cùng khuôn với trang Cửa hàng: mục lục 220px dính bên trái, section
- * xếp dọc bên phải. Dưới 1024px mục lục thành ô chọn dính (xem `SectionNav`) và lưới về một cột.
+ * Trang Tài khoản & bảo mật - design `24131:71666`: cột trái 400 (thẻ hồ sơ + dòng xoá tài khoản),
+ * cột phải co giãn, cách 20; các thẻ trong mỗi cột cách 20. Dưới 1024px về một cột.
  */
 .page {
   display: flex;
@@ -12,29 +12,36 @@
   display: grid;
   min-width: 0;
   align-items: start;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: var(--xp-space-lg);
+  grid-template-columns: 400px minmax(0, 1fr);
+  gap: var(--xp-space-20);
 }
 
+.aside,
 .content {
   display: flex;
   min-width: 0;
-  /* Đọc thoải mái trên màn rộng — form trải hết 1600px là mắt phải chạy quá xa. */
-  max-width: 960px;
   flex-direction: column;
-  gap: var(--xp-space-lg);
+  gap: var(--xp-space-20);
 }
 
-/* Khung giữ chỗ lúc đang tải — cùng kích thước với `SectionCard` để trang không nhảy. */
+/* "Yêu cầu xóa tài khoản" - chữ đỏ 14 đậm, icon thùng rác 20, không đệm (design `24131:71694`). */
+.delete:global(.ant-btn) {
+  align-self: flex-start;
+  height: auto;
+  padding: 0;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.delete :global(.ant-btn-icon) {
+  font-size: 20px;
+}
+
+/* Khung giữ chỗ lúc đang tải - cùng khung với thẻ thật để trang không nhảy. */
 .skeletonCard {
-  padding: var(--xp-space-lg);
+  padding: var(--xp-space-20);
   border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
+  border-radius: var(--xp-border-radius-card);
   background: var(--xp-color-bg-container);
-}
-
-.navSkeleton {
-  padding-top: var(--xp-space-lg);
 }
 
 @media (max-width: 1024px) {
@@ -43,12 +50,8 @@
     gap: var(--xp-space-md);
   }
 
-  .navSkeleton {
-    display: none;
-  }
-
+  .aside,
   .content {
-    max-width: none;
     gap: var(--xp-space-md);
   }
 }

@@ -37,8 +37,8 @@ interface AccountDeletionValues {
  * Yêu cầu xoá tài khoản của CHÍNH người đang đăng nhập — một support case `account_deletion`,
  * nền tảng xử lý tay (không phải nút xoá).
  *
- * Một nguồn cho mọi bề mặt hiện yêu cầu này (khối nhúng của site partner `DeleteAccountView`, hộp
- * thoại của trang Bảo mật tài khoản ở site khách): đọc case đang mở (server giữ tối đa MỘT case
+ * Một nguồn cho mọi bề mặt hiện yêu cầu này (hộp `AccountDeletionDialog` - trang tài khoản của site
+ * khách lẫn site partner): đọc case đang mở (server giữ tối đa MỘT case
  * loại này còn mở cho mỗi người — danh sách mặc định chỉ trả case còn mở), mở case, rút case.
  */
 export function useAccountDeletionRequest() {

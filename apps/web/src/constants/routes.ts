@@ -1290,19 +1290,17 @@ export function accountDeletionPath(): string {
 /**
  * ── TÀI KHOẢN (site partner, 05/10/2026) ─────────────────────────────────────────────────────
  *
- * MỘT trang cho mọi thứ của CON NGƯỜI đang đăng nhập - gộp "Hồ sơ cá nhân" và "Bảo mật tài
- * khoản" vốn là hai trang lặp nhau (cả hai đều hiện email/SĐT). Cùng khuôn với trang Cửa hàng:
- * section xếp dọc, mục lục dính, `?section=` ở URL để link/F5/Quay lại đúng chỗ.
+ * MỘT trang cho mọi thứ của CON NGƯỜI đang đăng nhập (hồ sơ, đăng nhập, mật khẩu, yêu cầu xoá).
+ * Từ 17/11/2026 (design `24131:71661`) trang không còn mục lục hay `?section=` của riêng nó: đủ gọn
+ * để nhìn hết một lượt, mọi link trỏ thẳng `ROUTES.MANAGE.ACCOUNT`; link cũ mang `?section=` vẫn
+ * mở trang.
  *
  * Từ ADR 0085 đây là "Tài khoản & bảo mật" của MỌI tài khoản partner, kể cả chủ xe tuyến hoa hồng
- * (hồ sơ chủ xe của họ là trang Thông tin `/shop`). `ADDRESS`, `VAT_INVOICE`, `TAX`, `PLAN` chỉ còn
- * là BÍ DANH của bản "Hồ sơ chủ xe" cũ: `PartnerAccountRoute` chuyển chúng sang section cùng vai của
- * `/shop` (`shopSectionForAccountSection`). Bookmark cũ `?section=storefront` (trước 07/10/2026) rơi
- * về `PROFILE`.
+ * (hồ sơ chủ xe của họ là trang Thông tin `/shop`). Bốn giá trị dưới đây chỉ còn là BÍ DANH của bản
+ * "Hồ sơ chủ xe" cũ: `PartnerAccountRoute` chuyển chúng sang section cùng vai của `/shop`
+ * (`shopSectionForAccountSection`) - thông báo, bookmark và `/subscription`, `/tax` vẫn mang chúng.
  */
 export const ACCOUNT_SECTION = {
-  /** Tên và ảnh đại diện của tài khoản - với chủ xe cá nhân cũng là thứ khách thấy (ADR 0054). */
-  PROFILE: 'profile',
   /** Bí danh → `/shop?section=legal` (địa chỉ nhận xe). */
   ADDRESS: 'address',
   /** Bí danh → `/shop?section=vat-invoice` (hoá đơn VAT của chủ xe cá nhân, ADR 0059). */
@@ -1311,40 +1309,13 @@ export const ACCOUNT_SECTION = {
   TAX: 'tax',
   /** Bí danh → `/shop?section=plan` (gói + phễu nâng cấp lên gian hàng). */
   PLAN: 'plan',
-  /** Email và SĐT đăng nhập - đổi qua OTP. */
-  LOGIN: 'login',
-  /** Đổi (hoặc đặt lần đầu) mật khẩu. */
-  PASSWORD: 'password',
-  /** Yêu cầu xoá tài khoản - một support case, không phải nút xoá. */
-  DELETE: 'delete',
 } as const;
 
 export type AccountSection = (typeof ACCOUNT_SECTION)[keyof typeof ACCOUNT_SECTION];
-export const ACCOUNT_SECTION_VALUES = Object.values(ACCOUNT_SECTION) as AccountSection[];
 
-/** Section của trang "Tài khoản & bảo mật" thường (tuyến gói, thành viên) - không có phần gian hàng. */
-export const PERSONAL_ACCOUNT_SECTIONS: readonly AccountSection[] = [
-  ACCOUNT_SECTION.PROFILE,
-  ACCOUNT_SECTION.LOGIN,
-  ACCOUNT_SECTION.PASSWORD,
-  ACCOUNT_SECTION.DELETE,
-];
-
-/** `?section=` → section hợp lệ; giá trị lạ rơi về `profile` (cùng luật với `shopSectionOf`). */
-export function accountSectionOf(value: string | null | undefined): AccountSection {
-  return (ACCOUNT_SECTION_VALUES as string[]).includes(value ?? '')
-    ? (value as AccountSection)
-    : ACCOUNT_SECTION.PROFILE;
-}
-
-/** Đường dẫn tới một section của trang tài khoản partner. */
+/** Đường dẫn BÍ DANH (link cũ) - `PartnerAccountRoute` chuyển nó sang section cùng vai của `/shop`. */
 export function accountSectionPath(section: AccountSection): string {
   return `${ROUTES.MANAGE.ACCOUNT}?${SECTION_PARAM}=${section}`;
-}
-
-/** Id của phần tử section trong DOM - đích của anchor và của cuộn. */
-export function accountSectionDomId(section: AccountSection): string {
-  return `account-section-${section}`;
 }
 
 /**
@@ -1353,7 +1324,7 @@ export function accountSectionDomId(section: AccountSection): string {
  * gian hàng hết gói rồi gia hạn) đi qua đây. `null` = section của CON NGƯỜI (hồ sơ tài khoản, đăng
  * nhập, mật khẩu…) - vẫn ở trang tài khoản.
  *
- * Nhận chuỗi thô của `?section=` (không qua `accountSectionOf`): giá trị vắng/lạ không phải là lời
+ * Nhận chuỗi thô của `?section=`: giá trị vắng/lạ không phải là lời
  * mời sang trang khác.
  */
 export function shopSectionForAccountSection(value: string | null | undefined): ShopSection | null {

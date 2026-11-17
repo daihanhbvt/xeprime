@@ -482,7 +482,7 @@ describe('Trang Thông tin cửa hàng - chủ gian hàng', () => {
       card('shop-section-owner')
         .getByRole('link', { name: /Quản lý tài khoản/ })
         .getAttribute('href'),
-    ).toBe('/manage/account?section=login');
+    ).toBe('/manage/account');
   });
 
   it('quản lý gian hàng KHÔNG thấy nút đó - nó sẽ mở tài khoản của chính họ, không phải của chủ', () => {

@@ -64,11 +64,11 @@ describe('Route cũ của cổng quản lý vẫn tới nơi', () => {
   });
 
   /*
-   * 05/10/2026: "Bảo mật tài khoản" gộp vào trang Tài khoản & bảo mật. Bookmark cũ rơi thẳng vào
-   * section "Thông tin đăng nhập" — phần gần nhất với điều người bấm "Bảo mật" đi tìm.
+   * 05/10/2026: "Bảo mật tài khoản" gộp vào trang Tài khoản & bảo mật. Từ 17/11/2026 trang đó
+   * không còn `?section=` - bookmark cũ rơi thẳng vào trang.
    */
-  it('/manage/security → section "Thông tin đăng nhập" của trang Tài khoản & bảo mật', async () => {
-    expect(await targetOf(() => import('./security/page'))).toBe('/manage/account?section=login');
+  it('/manage/security → trang Tài khoản & bảo mật', async () => {
+    expect(await targetOf(() => import('./security/page'))).toBe('/manage/account');
   });
 });
 
