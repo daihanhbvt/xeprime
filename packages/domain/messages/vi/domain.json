@@ -1185,7 +1185,9 @@
     },
     "bank_transaction": {
       "ignore": "Bỏ qua giao dịch ngân hàng",
-      "match_manual": "Khớp tay giao dịch ngân hàng"
+      "match_manual": "Khớp tay giao dịch ngân hàng",
+      "credit_customer": "Ghi có Ví điểm cho khách từ giao dịch ngân hàng",
+      "match_receivable": "Khớp giao dịch ngân hàng vào khoản phải thu"
     },
     "payment_gateway_order": {
       "resolve": "Đóng lượt thanh toán qua cổng",
@@ -1264,14 +1266,19 @@
       "reorder": "Sắp xếp lại danh mục",
       "model": {
         "update": "Cập nhật mẫu xe",
-        "delete": "Xoá mẫu xe"
+        "delete": "Xoá mẫu xe",
+        "create": "Tạo dòng xe",
+        "approve": "Duyệt dòng xe",
+        "reject": "Từ chối dòng xe"
       }
     },
     "contract": {
       "create": "Tạo hợp đồng thuê"
     },
     "customer": {
-      "contact_reveal": "Xem liên hệ khách"
+      "contact_reveal": "Xem liên hệ khách",
+      "lock": "Khoá tài khoản khách",
+      "unlock": "Mở khoá tài khoản khách"
     },
     "driver_licence": {
       "submit": "Nộp ảnh bằng lái",
@@ -1524,7 +1531,8 @@
       "rejected": "Từ chối yêu cầu rút điểm",
       "paid": "Đã chi tiền rút điểm",
       "cancelled": "Huỷ yêu cầu rút điểm",
-      "reversed": "Đảo bút toán rút điểm"
+      "reversed": "Đảo bút toán rút điểm",
+      "month_export": "Xuất bảng kê rút điểm theo tháng"
     },
     "app_config": {
       "update": "Đổi cấu hình app Partner"
@@ -1545,6 +1553,25 @@
     },
     "subscription_checkout": {
       "issue": "Phát hành phiếu thanh toán gộp"
+    },
+    "insurance_remittance": {
+      "create": "Lập bảng kê trả hãng bảo hiểm",
+      "delete": "Xoá bảng kê trả hãng bảo hiểm"
+    },
+    "vehicle_data": {
+      "capture": "Tự ghi nhận dữ liệu xe từ xe của chủ xe",
+      "delete": "Xoá dữ liệu xe",
+      "import": {
+        "row": "Ghi xe chuẩn từ file nhập",
+        "apply": "Áp file nhập dữ liệu xe",
+        "discard": "Huỷ lượt nhập dữ liệu xe"
+      },
+      "model": {
+        "create": "Tạo dòng xe từ dữ liệu xe"
+      }
+    },
+    "vehicle_document": {
+      "view_registration_image": "Xem ảnh cà vẹt"
     }
   },
   "auditTargetType": {
@@ -1600,7 +1627,11 @@
     "vehicle_maintenance_record": "Phiếu bảo dưỡng",
     "vehicle_private_file": "Tệp riêng của xe",
     "withdrawal_request": "Yêu cầu rút điểm",
-    "subscription_checkout": "Phiếu thanh toán gộp"
+    "subscription_checkout": "Phiếu thanh toán gộp",
+    "insurance_remittance": "Bảng kê trả hãng bảo hiểm",
+    "vehicle_catalog_import": "Lượt nhập dữ liệu xe",
+    "vehicle_catalog_variant": "Xe chuẩn (dữ liệu xe)",
+    "withdrawal_month": "Tháng rút điểm"
   },
   "auditField": {
     "planCode": "Mã gói",

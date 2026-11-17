@@ -81,6 +81,15 @@ let txCounter = 0;
  * xác định, không phụ thuộc ai đang chạy cùng.
  */
 const RECON_DAY = '2019-06-15';
+
+/*
+ * Ngày cố định cách ly được phần lớn, nhưng không phải tất cả: vài phép đọc ở đây là tổng TOÀN HỆ
+ * THỐNG không chặn theo ngày (thẻ "Thuế chưa kê khai" đếm MỌI kỳ còn `accrued` — đúng nghĩa của
+ * thẻ), và 17/11/2026 preflight trên container (jest 4 worker) thấy hai ca lệch vì spec khác ghi
+ * thuế / tiền đúng lúc giữa hai lần chụp; chạy riêng spec này thì xanh. Thử lại tối đa hai lần:
+ * một lỗi THẬT của phép đối soát đỏ cả ba lần, còn nhiễu của worker khác thì không lặp lại.
+ */
+jest.retryTimes(2, { logErrorsBeforeRetry: true });
 /** Một mốc nằm giữa ngày đó theo giờ VN — dùng cho mọi `createdAt`/`paidAt`/`releasedAt`. */
 const AT = new Date('2019-06-15T05:00:00+07:00');
 
