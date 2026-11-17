@@ -5,6 +5,7 @@
     "defaultDescription": "A car rental platform: find a vehicle, book it, and run your rental shop."
   },
   "actions": {
+    "backToTop": "Back to top",
     "save": "Save",
     "saveChanges": "Save changes",
     "cancel": "Cancel",
@@ -284,9 +285,12 @@
     "activeCount": "{count, plural, one {# filter active} other {# filters active}}",
     "reset": "Clear filters",
     "open": "Open filters",
+    "short": "Filter",
     "subtitle": "Narrow the list down by criteria",
     "chip": "{label}: {value}",
-    "none": "No filters applied yet"
+    "none": "No filters applied yet",
+    "clearAll": "Clear filters",
+    "save": "Save filters"
   },
   "permissions": {
     "cameraDenied": "Camera access is off. Open Settings → XePrime and allow Camera.",

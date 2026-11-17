@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { ActivityIndicator, Linking, Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
@@ -248,7 +248,7 @@ export function SourceContractFiles<T extends FieldValues>({
         <Button
           label={t('upload')}
           icon="cloud-upload-outline"
-          variant="secondary"
+          variant="outline"
           size="sm"
           block={false}
           loading={busy}
@@ -261,13 +261,13 @@ export function SourceContractFiles<T extends FieldValues>({
           <Button
             label={tImage('takePhoto')}
             icon="camera-outline"
-            variant="secondary"
+            variant="outline"
             onPress={() => void add(IMAGE_SOURCE.CAMERA)}
           />
           <Button
             label={tImage('chooseFromLibrary')}
             icon="images-outline"
-            variant="secondary"
+            variant="outline"
             onPress={() => void add(IMAGE_SOURCE.LIBRARY)}
           />
         </YStack>

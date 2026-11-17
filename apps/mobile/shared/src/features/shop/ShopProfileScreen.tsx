@@ -1,6 +1,7 @@
+import SafetyCertificateOutlined from '@ant-design/icons-svg/es/asn/SafetyCertificateOutlined';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useRef } from 'react';
-import type { LayoutChangeEvent, ScrollView } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { Linking, type LayoutChangeEvent, type ScrollView } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import type { ReactNode } from 'react';
@@ -9,6 +10,9 @@ import {
   isEstablishedPackageShop,
   isPackageShopTrack,
   PERMISSION,
+  PLAN_FEATURE,
+  TENANT_STATUS,
+  TENANT_STATUS_META,
   type TenantStatus,
   toLocalVnPhone,
 } from '@xeprime/types';
@@ -17,83 +21,56 @@ import {
   shopProfileWithContactSchema,
   type ShopProfileWithContactValues,
 } from '@xeprime/validators';
+import { AntIcon } from '@/components/icons/AntIcon';
 import { Screen } from '@/components/layout/Screen';
+import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
-import { FormSection } from '@/components/ui/FormSection';
-import { InlineAction } from '@/components/ui/InlineAction';
-import { AddressFields } from '@/components/form/AddressFields';
 import { ShopProfileSkeleton } from '@/components/ui/Skeleton';
-import { TextField } from '@/components/ui/TextField';
+import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { useFeature } from '@/features/auth/hooks/use-feature';
 import { usePartnerAppConfig } from '@/features/app-config/use-partner-app-config';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
-import { ManageHeader } from '@/features/shell/ManageHeader';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
+import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { usePartnerProfileRefresh } from '@/hooks/use-partner-profile-refresh';
+import { metaColor } from '@/lib/status-meta';
+import { resolveWebBaseUrl } from '@/lib/web-base-url';
 import { ROUTES, SHOP_SECTION, type ShopSection } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { fontSize, fontWeight, market, radius, space } from '@/theme/tokens';
 import type { MyShop, UpdateShopProfileInput } from './api';
-import { SubscriptionWorkspace } from '@/features/subscription/SubscriptionScreen';
-import { SellerTaxSection } from '@/features/seller-profile/components/SellerTaxSection';
-import { ShopIdentityCard } from './components/ShopIdentityCard';
+import { ShopBranchesCard } from './components/ShopBranchesCard';
+import {
+  ShopDisplayCard,
+  ShopDisplaySheet,
+  ShopLegalCard,
+  ShopLegalSheet,
+} from './components/ShopInfoCards';
 import { ShopOwnerCard } from './components/ShopOwnerCard';
+import { ShopPlanCard } from './components/ShopPlanCard';
 import { ShopProfileChecklist } from './components/ShopProfileChecklist';
 import { ShopStatusBanner } from './components/ShopStatusBanner';
+import { ShopTaxCard } from './components/ShopTaxCard';
 import { ShopWelcomeBanner } from './components/ShopWelcomeBanner';
 import { useVehiclesPage } from '@/features/vehicles/hooks/use-vehicles';
 import { useMyShop, useUpdateShopProfile } from './hooks/use-shop';
 
-/** Tên trường địa chỉ trong `shopProfileSchema` — hằng ngoài component, định danh ổn định. */
-const ADDRESS_FIELD_NAMES = {
-  provinceCode: 'provinceCode',
-  wardCode: 'wardCode',
-  addressLine: 'addressLine',
-} as const;
-const ADDRESS_PIN_NAMES = {
-  placeId: 'placeId',
-  latitude: 'latitude',
-  longitude: 'longitude',
-  locationSource: 'locationSource',
-} as const;
+/** Logo đầu trang 54px (`Avatar size={54}` của `ShopWorkspace` web). */
+const HEAD_LOGO = 54;
+/** Viên vai cao 40 (`.roleChip` web). */
+const ROLE_CHIP_HEIGHT = 40;
 
 /** Dải chào chỉ hỏi "đã có xe nào chưa" — MỘT bản ghi là đủ để trả lời, đúng cỡ web hỏi. */
 const WELCOME_VEHICLE_PAGE = { page: 1, limit: 1 };
-
-/** Giá trị form → thân request của lượt Lưu. */
-function toBody(v: ShopProfileWithContactValues): UpdateShopProfileInput {
-  return {
-    displayName: v.displayName,
-    // Liên hệ của GIAN HÀNG (khách thấy) — khác SĐT/email đăng nhập. Chuỗi rỗng = gỡ (DTO
-    // `ValidateIf(hasText)`), nên gửi nguyên, không đổi thành `undefined`.
-    phone: v.phone,
-    email: v.email,
-    bio: v.bio,
-    // Chỉ gửi MÃ + phần chi tiết — tên tỉnh/xã và chuỗi hiển thị do server ghép, rồi chuyển tiếp
-    // cho chi nhánh mặc định (writer duy nhất của địa chỉ vận hành).
-    provinceCode: v.provinceCode,
-    /*
-     * Chuỗi RỖNG không được gửi: DTO khai `@IsOptional()` kèm `@Length(5, 5)`, mà `@IsOptional`
-     * chỉ bỏ qua `null`/`undefined`. Từ ADR 0042 form không còn ô Xã/phường, nên hồ sơ chưa từng
-     * khai mã xã sẽ luôn rơi vào nhánh này — thiếu dòng này thì nút Lưu chết với một lỗi độ dài
-     * trỏ vào một ô không tồn tại trên màn.
-     */
-    wardCode: v.wardCode || undefined,
-    addressLine: v.addressLine,
-    // Mã số thuế KHÔNG gửi từ đây (PR #159): nó sống ở hồ sơ người bán (`seller_profiles.tax_id`);
-    // gửi lại làm cả lượt Lưu hỏng vì 403/SELLER_PROFILE_NOT_EDITABLE/sai định dạng.
-    businessLicenseNo: v.businessLicenseNo,
-    logoUrl: v.logoUrl ?? '',
-    coverUrl: v.coverUrl ?? '',
-  };
-}
 
 /**
  * Giá trị khởi tạo của form.
@@ -115,6 +92,8 @@ export function toValues(shop: MyShop): ShopProfileWithContactValues {
     phone: shop.phone ? toLocalVnPhone(shop.phone) : '',
     email: shop.email ?? '',
     bio: p.bio ?? '',
+    // Bản định dạng của web editor - chỉ để form đủ trường; `toPatch` không gửi nó lên.
+    bioHtml: p.bioHtml ?? '',
     provinceCode: shop.defaultBranch?.provinceCode ?? p.provinceCode ?? '',
     wardCode: shop.defaultBranch?.wardCode ?? p.wardCode ?? '',
     /*
@@ -196,7 +175,8 @@ export function ShopProfileScreen({
 } = {}) {
   const t = useTranslations('Shop');
   const tRegistration = useTranslations('Account.registration');
-  const shell = header ?? <ManageHeader />;
+  const navigateOnce = useNavigateOnce();
+  const shell = header ?? <ManagePageHeader title={t('page.title')} />;
   const permissions = usePermissions();
   const { tenant } = useTenantScope();
 
@@ -214,6 +194,8 @@ export function ShopProfileScreen({
             icon="lock-closed-outline"
             title={t('page.forbidden.title')}
             description={t('page.forbidden.description')}
+            actionLabel={t('page.forbidden.backHome')}
+            onAction={() => navigateOnce(ROUTES.manage.home())}
           />
         </Screen>
       </>
@@ -296,52 +278,97 @@ function NoTenantState({ shell }: { shell: ReactNode }) {
   );
 }
 
+/**
+ * NHÓM Ô của trang Thông tin cửa hàng — mỗi tấm "Cập nhật" lưu đúng nhóm của nó (web
+ * `SHOP_PROFILE_GROUP`, `shop-profile-form.ts`): một lượt lưu địa chỉ không viết lại tên hiển thị.
+ */
+const SHOP_PROFILE_GROUP = {
+  DISPLAY: 'display',
+  LEGAL: 'legal',
+  MEDIA: 'media',
+} as const;
+type ShopProfileGroup = (typeof SHOP_PROFILE_GROUP)[keyof typeof SHOP_PROFILE_GROUP];
+
+const SHOP_PROFILE_GROUP_FIELDS = {
+  [SHOP_PROFILE_GROUP.DISPLAY]: ['displayName', 'phone', 'email', 'bio'],
+  [SHOP_PROFILE_GROUP.LEGAL]: ['provinceCode', 'wardCode', 'addressLine', 'businessLicenseNo'],
+  [SHOP_PROFILE_GROUP.MEDIA]: ['logoUrl', 'coverUrl'],
+} as const satisfies Record<ShopProfileGroup, readonly (keyof ShopProfileWithContactValues)[]>;
+
+/**
+ * Thân request của MỘT nhóm — chuỗi rỗng = gỡ (DTO `ValidateIf(hasText)`); mã xã rỗng KHÔNG gửi (DTO `@Length(5, 5)`).
+ *
+ * `bio` CHỈ gửi khi người dùng thật sự sửa ô đó: server gỡ bản định dạng (`bioHtml`) mỗi khi nhận
+ * `bio` không kèm `bioHtml`, nên gửi lại nguyên văn chữ thuần lúc chỉ đổi tên là xoá mất phần định
+ * dạng gian hàng đã soạn ở web.
+ */
+function toPatch(
+  v: ShopProfileWithContactValues,
+  group: ShopProfileGroup,
+  bioChanged: boolean,
+): UpdateShopProfileInput {
+  switch (group) {
+    case SHOP_PROFILE_GROUP.DISPLAY:
+      return {
+        displayName: v.displayName,
+        phone: v.phone,
+        email: v.email,
+        ...(bioChanged ? { bio: v.bio } : {}),
+      };
+    case SHOP_PROFILE_GROUP.LEGAL:
+      return {
+        provinceCode: v.provinceCode,
+        wardCode: v.wardCode || undefined,
+        addressLine: v.addressLine,
+        businessLicenseNo: v.businessLicenseNo,
+      };
+    case SHOP_PROFILE_GROUP.MEDIA:
+      return { logoUrl: v.logoUrl ?? '', coverUrl: v.coverUrl ?? '' };
+  }
+}
+
 function ProfileForm({
   shell,
   intro,
   shop,
   canEdit,
   welcome,
-  variant,
   section,
 }: {
   shell: ReactNode;
   section?: ShopSection;
-  /** Khối của khu gọi, đặt TRÊN biểu mẫu — tiến trình đăng ký ở khu khách, không có gì ở Manage. */
+  /** Khối của khu gọi, đặt TRÊN các thẻ. */
   intro?: ReactNode;
   shop: MyShop;
   canEdit: boolean;
   /** Đã lọc theo tuyến ở nơi gọi — ở đây chỉ còn là "có dựng dải chào hay không". */
   welcome: boolean;
-  /** Xem docblock cùng tên ở `ShopProfileScreen`. */
+  /** Giữ chữ ký cũ; trang chỉ còn MỘT bố cục (`ShopWorkspace` web). */
   variant: 'settings' | 'profileForm';
 }) {
   const colors = useColors();
-  /** Trang Cửa hàng đầy đủ của cổng quản lý — ba khối cuối chỉ thuộc về nó. */
-  const isSettings = variant === 'settings';
   const pull = usePartnerProfileRefresh();
   const t = useTranslations('Shop');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
   const navigateOnce = useNavigateOnce();
-
+  const domainLabel = useDomainLabel();
   const { tenant } = useTenantScope();
   const permissions = usePermissions();
+  const branches = useFeature(PLAN_FEATURE.BRANCHES);
   const updateProfile = useUpdateShopProfile();
-  /**
-   * Hàm mở tấm chọn ảnh LOGO, do `ShopIdentityCard` đặt vào — CTA của dải chào gọi nó.
-   *
-   * Web cuộn tới ô logo rồi `focus()` vào nút mở hộp chọn file; native không có DOM để hỏi, nên
-   * khối sở hữu tấm chọn phải tự đưa tay ra. Chỉ có `welcome` cần tới, và chỉ ở một nhánh.
-   */
-  const logoPicker = useRef<(() => void) | null>(null);
+  const [editing, setEditing] = useState<ShopProfileGroup | null>(null);
 
   /*
-   * Cuộn tới khối được yêu cầu (`section`) — MỘT lần, khi đã đo được vị trí. Toạ độ của khối là
-   * tương đối với cột nội dung, cột đó lại nằm dưới thẻ danh tính, nên cộng hai lớp. Không cuộn lại
-   * ở các lần đo sau (form mở rộng, danh sách tài khoản tải xong) để không giật trang người đang đọc.
+   * Cuộn tới thẻ được yêu cầu (`?section=`) — MỘT lần mỗi lần màn được focus, khi đã đo được vị trí.
+   * Toạ độ thẻ tương đối với cột nội dung, nên cộng hai lớp.
    */
   const scrollRef = useRef<ScrollView | null>(null);
+  /** Hàm mở bộ chọn logo do thẻ hiển thị trao lên - dải chào "Tải logo" gọi nó (web bấm hộ nút logo). */
+  const openLogoPicker = useRef<(() => void) | null>(null);
+  const onLogoPickerReady = useCallback((open: () => void) => {
+    openLogoPicker.current = open;
+  }, []);
   const columnY = useRef<number | null>(null);
   const sectionY = useRef<Partial<Record<ShopSection, number>>>({});
   const scrolled = useRef(false);
@@ -352,10 +379,6 @@ function ProfileForm({
     scrolled.current = true;
     scrollRef.current?.scrollTo({ y: Math.max(0, columnY.current + y - space.md), animated: true });
   }, [section]);
-  /*
-   * Màn này nằm trong bộ tab — KHÔNG dựng lại giữa các lần mở. Mỗi lần được focus (hoặc đổi
-   * `section`) thì cho phép cuộn lại một lần, như web cuộn mỗi khi vào `?section=`.
-   */
   useFocusEffect(
     useCallback(() => {
       scrolled.current = false;
@@ -369,364 +392,258 @@ function ProfileForm({
     },
     [scrollToSection],
   );
-  const onLegalLayout = useCallback(
-    (event: LayoutChangeEvent) => {
-      sectionY.current[SHOP_SECTION.LEGAL] = event.nativeEvent.layout.y;
+  const measure = useCallback(
+    (key: ShopSection) => (event: LayoutChangeEvent) => {
+      sectionY.current[key] = event.nativeEvent.layout.y;
       scrollToSection();
     },
     [scrollToSection],
   );
-  const onTaxLayout = useCallback(
-    (event: LayoutChangeEvent) => {
-      sectionY.current[SHOP_SECTION.TAX] = event.nativeEvent.layout.y;
-      scrollToSection();
-    },
-    [scrollToSection],
-  );
-  const onPlanLayout = useCallback(
-    (event: LayoutChangeEvent) => {
-      sectionY.current[SHOP_SECTION.PLAN] = event.nativeEvent.layout.y;
-      scrollToSection();
-    },
-    [scrollToSection],
-  );
-  /*
-   * Chỉ cần BIẾT có xe nào chưa — dải chào đổi câu theo đó. Trang đầu là đủ để trả lời, nên không
-   * kéo bộ lọc của màn danh sách vào một màn không có ô lọc nào.
-   *
-   * `enabled` theo `welcome`: gian hàng không ở trong khoảnh khắc vừa-thanh-toán thì không phải
-   * trả một lượt gọi danh sách xe cho một dải không dựng.
-   */
+
   const vehicles = useVehiclesPage(WELCOME_VEHICLE_PAGE, welcome);
-  /*
-   * ĐANG TẢI tính là CÓ xe — mặc định im lặng, đúng như web.
-   *
-   * Trong lúc lượt đếm còn bay, `data` rỗng; coi đó là "chưa có xe" sẽ nháy đúng dòng "Sẵn sàng rồi
-   * · Đăng xe đầu tiên" vào mặt một gian hàng mười xe. Dải này vốn được thiết kế để im khi không có
-   * gì để nói, nên im cũng là câu trả lời đúng cho "chưa biết". `isLoading` là `false` với query bị
-   * tắt, nên cổng `enabled: welcome` vẫn nguyên tác dụng.
-   */
   const hasVehicle = vehicles.isLoading || (vehicles.data?.items.length ?? 0) > 0;
 
   const resolver = useValidationResolver<ShopProfileWithContactValues>(
     shopProfileWithContactSchema,
     'Shop.validation',
   );
-  /*
-   * `values` (không phải `defaultValues`): sau khi lưu, query trả hồ sơ mới và form phải theo —
-   * nếu không, "Huỷ bỏ" mời người dùng hoàn tác thứ đã lưu xong rồi.
-   */
-  const { control, handleSubmit, reset, formState } = useForm<ShopProfileWithContactValues>({
+  const form = useForm<ShopProfileWithContactValues>({
     resolver,
     values: toValues(shop),
+    resetOptions: { keepDirtyValues: true },
   });
+  const dirtyFields = form.formState.dirtyFields;
+  const mediaDirty = Boolean(dirtyFields.logoUrl || dirtyFields.coverUrl);
 
   const status = shop.status as TenantStatus;
-  /*
-   * Chỉ-xem CHỈ vì thiếu quyền. Tới 24/09/2026 hồ sơ còn bị khoá suốt lúc chờ XÁC MINH; nền tảng
-   * đã tạm ngừng xác minh gian hàng, nên một phiếu chờ không còn ai xử lý và cái khoá đó thành
-   * vĩnh viễn — backend cũng đã gỡ nó (`TenantsService.updateProfile`). Cùng luật với web.
-   */
-  const readOnly = !canEdit;
+  const saving = updateProfile.isPending;
   const readOnlyReason = canEdit ? null : t('form.readOnly');
 
-  /*
-   * "Gói & hạn mức" có mặt cuối màn theo `subscription.view`, đúng quyền mà mục menu cũ mang
-   * và khớp guard của API. ("Tài khoản nhận tiền" đã sang trang Số dư — PR #159.)
-   */
-  // Cờ nền tảng tắt (mặc định, quy định store) ⇒ khối không dựng; `?section=plan` không đo được toạ
-  // độ nên màn mở ở đầu trang thay vì cuộn tới khoảng trống.
   const { isPlanPromotionEnabled } = usePartnerAppConfig();
   const canSeePlan = isPlanPromotionEnabled && permissions.has(PERMISSION.SUBSCRIPTION_VIEW);
-  /*
-   * "Thông tin khai thuế" theo `seller_profile.view` (`GET /seller-profile`) — web `canSeeTax`.
-   * Sửa cần `seller_profile.manage`; `SellerTaxForm` tự chuyển chỉ-xem khi thiếu.
-   */
   const canSeeTax = permissions.has(PERMISSION.SELLER_PROFILE_VIEW);
+  // Web `ShopWorkspace`: `!personal && BRANCH_VIEW && cờ branches visible` - màn này là bản GIAN
+  // HÀNG (bản cá nhân là `OwnerProfileScreen`), không gác thêm theo tuyến.
+  const canSeeBranches = permissions.has(PERMISSION.BRANCH_VIEW) && branches.isVisible;
 
-  const dirty = formState.isDirty && !readOnly;
-  const saving = updateProfile.isPending;
+  /** Trả các ô của MỘT nhóm về bản đã lưu — đóng tấm sửa, hoặc "Hủy" của ảnh. */
+  function resetGroup(group: ShopProfileGroup) {
+    const saved = toValues(shop);
+    for (const field of SHOP_PROFILE_GROUP_FIELDS[group]) {
+      form.resetField(field, { defaultValue: saved[field] });
+    }
+  }
 
-  const save = handleSubmit((v) =>
-    updateProfile.mutate(toBody(v), {
-      onSuccess: () => toast.showSuccess(t('form.saved')),
-      onError: (err) => toast.showError(errorMessage(err)),
-    }),
-  );
+  async function saveGroup(group: ShopProfileGroup) {
+    // Một lượt đang bay thì không gửi lượt thứ hai.
+    if (saving) return;
+    const valid = await form.trigger([...SHOP_PROFILE_GROUP_FIELDS[group]]);
+    if (!valid) return;
+    const values = form.getValues();
+    try {
+      await updateProfile.mutateAsync(toPatch(values, group, form.getFieldState('bio').isDirty));
+    } catch (err) {
+      // Giữ nguyên tấm + giá trị đang sửa để sửa và gửi lại.
+      toast.showError(errorMessage(err));
+      return;
+    }
+    toast.showSuccess(t('form.saved'));
+    // Bản vừa lưu thành mốc "chưa sửa" của nhóm — nhóm khác đang sửa dở không bị đụng.
+    for (const field of SHOP_PROFILE_GROUP_FIELDS[group]) {
+      form.resetField(field, { defaultValue: values[field] });
+    }
+    setEditing(null);
+  }
 
-  const editable = !readOnly && !saving;
+  function closeSheet() {
+    if (editing) resetGroup(editing);
+    setEditing(null);
+  }
 
-  /*
-   * Checklist chỉ hiện khi người xem SỬA được hồ sơ — bảng "còn thiếu gì" không có nghĩa với người
-   * chỉ xem. Không còn gắn với trạng thái xác minh: web đã bỏ luồng đó (24/09/2026). Nó tự im lặng
-   * khi hồ sơ đã đủ hết (xem `ShopProfileChecklist`).
-   */
-  const checklist = readOnly ? null : (
-    <ShopProfileChecklist
-      control={control}
-      ownerAccount={shop.ownerAccount}
-      /*
-       * Logo là mục CHẶN với gian hàng TUYẾN GÓI (ADR 0040 điều 7): thiếu nó thì
-       * `submitForPublicReview` từ chối thật. Chủ xe tuyến hoa hồng không bị cổng đó chạm tới —
-       * bắt một người có một chiếc xe phải có logo gian hàng là dựng lại đúng rào cản mà ADR 0036
-       * vừa gỡ.
-       */
-      logoRequired={isPackageShopTrack(tenant)}
-    />
-  );
+  const roleKey = tenant?.roleKey;
+  const isActive = status === TENANT_STATUS.ACTIVE;
+
+  /** Cuộn tới thẻ Chi nhánh NGAY trên trang - web cuộn theo `?section=branches`. */
+  const scrollToBranches = () => {
+    const y = sectionY.current[SHOP_SECTION.BRANCHES];
+    if (columnY.current === null || y === undefined) return;
+    scrollRef.current?.scrollTo({
+      y: Math.max(0, columnY.current + y - space.md),
+      animated: true,
+    });
+  };
 
   return (
     <>
       {shell}
       <Screen
         edges={['left', 'right', 'bottom']}
-        padded={false}
         scrollRef={scrollRef}
         refreshing={pull.refreshing}
         onRefresh={pull.onRefresh}
-        /*
-          Hành động Lưu neo ở ĐÁY MÀN và LUÔN có mặt khi form sửa được — mờ đi cho tới khi thật
-          sự có thay đổi, đúng như `ShopProfileWorkspace` bên web.
-
-          Bản trước ẩn cả thanh cho tới lúc form dirty. Với một chủ xe tuyến hoa hồng đã được
-          duyệt, màn "Hồ sơ chủ xe" khi đó KHÔNG CÒN CÁI NÚT NÀO, và người dùng đọc màn đó ra là
-          một trang chỉ để xem. Một nút mờ nói "sửa đi rồi lưu được"; không có nút thì không nói gì cả.
-
-          "Đặt lại" thì vẫn chỉ mọc khi có thay đổi — nó là thao tác HOÀN TÁC, và một nút hoàn
-          tác thường trực mời người ta bấm vào thứ chẳng có gì để hoàn.
-
-          Neo ở đáy chứ không đặt cuối trang: biểu mẫu này dài bốn khối, sửa một ô ở khối đầu mà
-          phải cuộn hết phần còn lại mới lưu được là bắt người dùng đi một quãng vô ích.
-        */
-        footer={
-          readOnly ? null : (
-            <XStack gap={space.sm}>
-              {dirty ? (
-                <YStack flexShrink={0}>
-                  <Button
-                    label={t('form.reset')}
-                    icon="refresh-outline"
-                    variant="secondary"
-                    disabled={saving}
-                    onPress={() => reset()}
+      >
+        <YStack gap={layout.section} onLayout={onColumnLayout}>
+          {/*
+            Đầu trang (design `23999:111044`, `ShopWorkspace.module.css` `.header`): logo VUÔNG 54
+            bo 12 nền vàng chuyển · tên 20/30 đậm vừa + viên trạng thái cùng dòng · dòng phụ 14 xám;
+            rồi viên vai (đen, chữ vàng, cao 40 bo 12) + nút viền "Xem gian hàng" cao 40.
+          */}
+          <YStack gap={space.md}>
+            <XStack ai="center" gap={12}>
+              <Avatar
+                name={shop.name}
+                url={shop.profile.logoUrl ?? null}
+                size={HEAD_LOGO}
+                square
+                gradient
+              />
+              <YStack f={1} minWidth={0}>
+                <XStack ai="center" gap={space.sm} flexWrap="wrap">
+                  <Text
+                    col={colors.text}
+                    fos={fontSize.lead}
+                    lineHeight={30}
+                    fow={fontWeight.semibold}
+                    flexShrink={1}
+                  >
+                    {shop.name}
+                  </Text>
+                  <Pill
+                    label={domainLabel('tenantStatus', status)}
+                    tone={pillToneOfStatusColor(metaColor(TENANT_STATUS_META, status))}
                   />
-                </YStack>
-              ) : null}
-              <YStack f={1}>
-                <Button
-                  label={t('form.submit')}
-                  icon="save-outline"
-                  disabled={!dirty}
-                  loading={saving}
-                  onPress={() => void save()}
-                />
+                </XStack>
+                <Text col={colors.placeholder} fos={fontSize.body} lineHeight={20}>
+                  {t('page.subtitle')}
+                </Text>
               </YStack>
             </XStack>
-          )
-        }
-      >
-        {/*
-          Chỉ gian hàng ĐANG HOẠT ĐỘNG mới có lối sang trang công khai — y như web, vì liên kết
-          tới một trang 404 là một hành động giả.
-        */}
-        <ShopIdentityCard
-          control={control}
-          fallbackName={shop.name}
-          status={status}
-          description={t('page.subtitle')}
-          editable={editable}
-          logoPickerRef={logoPicker}
-        />
+            {roleKey || isActive ? (
+              <XStack ai="center" gap={12} flexWrap="wrap">
+                {roleKey ? (
+                  <XStack
+                    ai="center"
+                    gap={6}
+                    h={ROLE_CHIP_HEIGHT}
+                    px={12}
+                    br={radius.control}
+                    bg={market.inverse}
+                  >
+                    <AntIcon icon={SafetyCertificateOutlined} size={14} color={colors.goldOnDark} />
+                    <Text col={colors.goldOnDark} fos={fontSize.body} lineHeight={20} fow={fontWeight.medium}>
+                      {domainLabel('tenantRole', roleKey)}
+                    </Text>
+                  </XStack>
+                ) : null}
+                {isActive ? (
+                  <Button
+                    label={t('page.viewPublicPage')}
+                    icon="open-outline"
+                    variant="secondary"
+                    size="md"
+                    shape="square"
+                    block={false}
+                    onPress={() => void Linking.openURL(`${resolveWebBaseUrl()}/shops/${shop.slug}`)}
+                  />
+                ) : null}
+              </XStack>
+            ) : null}
+          </YStack>
 
-        <YStack
-          px={layout.screenX}
-          pt={layout.section}
-          gap={layout.section}
-          pb={layout.section}
-          onLayout={onColumnLayout}
-        >
-          {/*
-            Khối của khu gọi — tiến trình đăng ký ở khu khách, không có gì ở khu quản lý. Đặt TRÊN
-            dải trạng thái: người mới đăng ký cần biết mình đang ở bước nào trước khi đọc bất cứ
-            tin gì khác.
-          */}
           {intro}
-
-          {/*
-            Dải chào sau lượt thanh toán gói đầu tiên (ADR 0040). Tự im lặng khi không còn gì để
-            nói — xem `ShopWelcomeBanner`, "hình dạng thứ ba".
-          */}
           {welcome ? (
             <ShopWelcomeBanner
               missingLogo={!shop.profile.logoUrl}
               hasVehicle={hasVehicle}
-              onPickLogo={() => logoPicker.current?.()}
+              onPickLogo={() => {
+                scrollRef.current?.scrollTo({ y: 0, animated: true });
+                openLogoPicker.current?.();
+              }}
             />
           ) : null}
-
           <ShopStatusBanner shop={shop} />
-
-          {/*
-            "Hồ sơ chủ xe" (`ShopProfileWorkspace` bên web): checklist đứng ngay dưới dải trạng
-            thái. Trang Cửa hàng (`ShopWorkspace`) thì đặt nó TRONG khối địa chỉ & pháp lý — nơi
-            còn ô để điền; xem khối đó bên dưới.
-          */}
-          {isSettings ? null : checklist}
-
           {readOnlyReason ? <Callout tone="info">{readOnlyReason}</Callout> : null}
 
-          {/* Khối CÔNG KHAI — thứ khách nhìn thấy trên marketplace. */}
-          <FormSection title={t('form.display.title')} icon="storefront-outline">
-            <TextField
-              control={control}
-              name="displayName"
-              label={t('form.display.displayName.label')}
-              placeholder={t('form.display.displayName.placeholder')}
-              required
-              editable={editable}
+          {/* Màn hẹp: "Thông tin hiển thị" lên ĐẦU — thứ khách thấy (S1); checklist ngay dưới (S12). */}
+          <YStack onLayout={measure(SHOP_SECTION.PROFILE)} gap={space.md}>
+            <ShopDisplayCard
+              shop={shop}
+              control={form.control}
+              canEdit={canEdit}
+              mediaDirty={mediaDirty}
+              saving={saving}
+              onEdit={() => setEditing(SHOP_PROFILE_GROUP.DISPLAY)}
+              onMediaCancel={() => resetGroup(SHOP_PROFILE_GROUP.MEDIA)}
+              onMediaSave={() => void saveGroup(SHOP_PROFILE_GROUP.MEDIA)}
+              onLogoPickerReady={onLogoPickerReady}
             />
-            <TextField
-              control={control}
-              name="phone"
-              label={t('form.display.phone.label')}
-              placeholder={t('form.display.phone.placeholder')}
-              keyboardType="phone-pad"
-              autoComplete="tel"
-              editable={editable}
-            />
-            <TextField
-              control={control}
-              name="email"
-              label={t('form.display.email.label')}
-              placeholder={t('form.display.email.placeholder')}
-              keyboardType="email-address"
-              autoComplete="email"
-              autoCapitalize="none"
-              editable={editable}
-            />
-            <Text col={colors.textMuted} fos={fontSize.label}>
-              {t('form.display.contactHint')}
-            </Text>
-            <TextField
-              control={control}
-              name="bio"
-              label={t('form.display.bio.label')}
-              placeholder={t('form.display.bio.placeholder')}
-              multiline
-              rows={3}
-              maxLength={2000}
-              editable={editable}
-            />
-          </FormSection>
-
-          {/*
-            CHỦ GIAN HÀNG — chỉ ĐỌC, đúng khối thứ hai của trang Cửa hàng bên web.
-
-            Không có ô nhập nào: ba cột `tenant_profiles.owner_*` đã drop, danh tính chủ đọc từ
-            tài khoản (`MyShopDto.ownerAccount`) và đổi qua đúng luồng của nó — tên ở hồ sơ cá
-            nhân, email/SĐT qua xác minh OTP — chứ không qua một form mà bất kỳ ai có
-            `tenant.update` cũng ghi được (ADR 0038 điều 3).
-          */}
-          {isSettings ? (
-            <ShopOwnerCard
-              owner={shop.ownerAccount}
-              onOpenSecurity={() => navigateOnce(ROUTES.manage.account())}
-            />
-          ) : null}
-
-          <YStack onLayout={onLegalLayout}>
-            <FormSection title={t('form.address.title')} icon="location-outline">
-              {isSettings ? checklist : null}
-              {/* Mã số thuế khai ở Thông tin khai thuế, không ở đây nữa (PR #159) — đúng web. */}
-              <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {t('sections.legalHint')}
-              </Text>
-              {/*
-              Địa chỉ ở đây là địa chỉ của CHI NHÁNH MẶC ĐỊNH: đổi nó là backend dời chi nhánh đó
-              và đồng bộ lại vị trí công khai của mọi xe thuộc nó. Không có nguồn địa chỉ thứ hai
-              nào ở client.
-            */}
-              <AddressFields
-                control={control}
-                names={ADDRESS_FIELD_NAMES}
-                pin={ADDRESS_PIN_NAMES}
-                required
-                wardRequired={false}
-                addressLineRequired={false}
-                disabled={!editable}
+            {canEdit ? (
+              <ShopProfileChecklist
+                control={form.control}
+                ownerAccount={shop.ownerAccount}
+                logoRequired={isPackageShopTrack(tenant)}
               />
-              {/*
-              Lối sang màn Chi nhánh là một LIÊN KẾT CHỮ, không phải nút.
-
-              `Button` mang theo hộp cao 48dp và lề ngang 16 kể cả ở biến thể ghost — cho một
-              dòng chữ phụ chen giữa hai ô nhập thì đó là một khoảng trống cắt ngang khối, và nó
-              đọc ra ngang hàng với hành động chính của cả biểu mẫu. `InlineAction` giữ vùng chạm
-              44pt bằng `hitSlop`, không bằng kích thước vẽ ra.
-
-              Bọc `XStack` để vùng chạm ôm đúng chữ: trong `YStack` thì `Pressable` giãn hết bề
-              ngang thẻ, và chạm vào khoảng trắng bên phải cũng điều hướng.
-            */}
-              {/*
-                CHỈ tuyến GÓI: chi nhánh là năng lực của Full Manage (ADR 0027 điều 1 · ADR 0041).
-                Chủ xe tuyến hoa hồng chỉ có một địa chỉ mặc định và `OWNER_LITE_NAV` không có mục
-                Chi nhánh nào — để link ở đây là mời họ vào một màn sẽ từ chối họ. Web gác cùng chỗ
-                bằng `isManage` trong `ShopLegalFields`.
-              */}
-              {isPackageShopTrack(tenant) ? (
-                <XStack>
-                  <InlineAction
-                    label={t('form.address.province.branchLink')}
-                    onPress={() => navigateOnce(ROUTES.manage.shopBranches())}
-                  />
-                </XStack>
-              ) : null}
-              <TextField
-                control={control}
-                name="businessLicenseNo"
-                label={t('form.address.businessLicenseNo.label')}
-                placeholder={t('form.address.businessLicenseNo.placeholder')}
-                editable={editable}
-              />
-            </FormSection>
+            ) : null}
           </YStack>
 
-          {/*
-            TÀI KHOẢN NHẬN TIỀN đã rời trang Cửa hàng (PR #159) — nó là khối của trang Số dư, nơi
-            lệnh rút đọc nó. `?section=payout` cũ được route chuyển tiếp sang đó.
-          */}
-          {/*
-            THÔNG TIN KHAI THUẾ — hồ sơ người bán, nguồn duy nhất của MST (web PR #159
-            `SellerTaxSection`). Nút Lưu RIÊNG, đứng ngoài biểu mẫu hồ sơ gian hàng ở trên: hai bản
-            ghi, hai endpoint.
-          */}
-          {isSettings && canSeeTax ? (
-            <YStack onLayout={onTaxLayout}>
-              <SellerTaxSection />
-            </YStack>
-          ) : null}
+          <ShopOwnerCard
+            owner={shop.ownerAccount}
+            onOpenSecurity={() => navigateOnce(ROUTES.manage.account())}
+          />
+
+          <YStack onLayout={measure(SHOP_SECTION.LEGAL)}>
+            <ShopLegalCard
+              shop={shop}
+              {...(canEdit ? { onEdit: () => setEditing(SHOP_PROFILE_GROUP.LEGAL) } : {})}
+              {...(canSeeBranches
+                ? {
+                    // Web: link "Quản lý" cuộn tới thẻ Chi nhánh NGAY trên trang (`?section=branches`).
+                    onManageBranches: scrollToBranches,
+                  }
+                : {})}
+            />
+          </YStack>
+
+          {canSeeTax ? <ShopTaxCard onLayout={measure(SHOP_SECTION.TAX)} /> : null}
+
+          {canSeeBranches ? <ShopBranchesCard onLayout={measure(SHOP_SECTION.BRANCHES)} /> : null}
 
           {/*
-            GÓI & HẠN MỨC — khối thứ NĂM của trang Cửa hàng, nhúng nguyên thân màn gói vào đây
-            đúng như web (`<SubscriptionWorkspace header={null} />` trong `ShopSectionCard`).
-
-            Nhúng THÂN chứ không nhúng màn: `SubscriptionWorkspace` không mang `<Screen>` nên
-            không có vùng cuộn thứ hai lồng trong vùng cuộn của màn này. Tấm trượt mua gói và
-            luồng nâng cấp là anh em của khối, không phải con của biểu mẫu — native không có
-            thẻ `<form>` để chúng lọt vào, nên hai luồng nút bấm không giẫm lên nhau.
-
-            Không bọc thêm `<Card>`: từng khối bên trong (gói hiện hành, chỗ xe, lượt miễn phí,
-            hoá đơn) đã tự mang thẻ của nó — đó chính là chỗ web phải tắt `framed`.
+            Gói & hạn mức — sau cờ của nền tảng (app không bán gói, quy định store). Thân màn gói nằm
+            trong một thẻ, đúng `ShopPlanSection` web.
           */}
-          {isSettings && canSeePlan ? (
-            <YStack gap={space.md} onLayout={onPlanLayout}>
-              <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.semibold}>
-                {t('sections.appPlan')}
-              </Text>
-              <SubscriptionWorkspace />
-            </YStack>
-          ) : null}
+          {canSeePlan ? <ShopPlanCard onLayout={measure(SHOP_SECTION.PLAN)} /> : null}
         </YStack>
       </Screen>
+
+      {canEdit ? (
+        <>
+          <ShopDisplaySheet
+            open={editing === SHOP_PROFILE_GROUP.DISPLAY}
+            control={form.control}
+            saving={saving}
+            hasFormattedBio={Boolean(shop.profile.bioHtml)}
+            onCancel={closeSheet}
+            onSubmit={() => void saveGroup(SHOP_PROFILE_GROUP.DISPLAY)}
+          />
+          <ShopLegalSheet
+            open={editing === SHOP_PROFILE_GROUP.LEGAL}
+            control={form.control}
+            saving={saving}
+            onCancel={closeSheet}
+            onSubmit={() => void saveGroup(SHOP_PROFILE_GROUP.LEGAL)}
+            {...(canSeeBranches
+              ? {
+                  // Đóng tấm (bỏ phần đang sửa dở như "Hủy") rồi cuộn tới thẻ Chi nhánh.
+                  onManageBranches: () => {
+                    closeSheet();
+                    scrollToBranches();
+                  },
+                }
+              : {})}
+          />
+        </>
+      ) : null}
     </>
   );
 }

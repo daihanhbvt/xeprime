@@ -10,7 +10,7 @@ import { walletApi, type WalletStatement } from '@/api/wallet/api';
 import { withIntl } from '@/i18n/test-utils';
 import { store } from '@/store';
 import { dashboardApi, type PartnerOverview } from './api';
-import { OwnerDashboardScreen } from './OwnerDashboardScreen';
+import { ShopDashboardScreen } from './ShopDashboardScreen';
 
 jest.mock('expo-router', () => ({
   useNavigation: () => ({ isFocused: () => true }),
@@ -23,7 +23,8 @@ jest.mock('expo-router', () => ({
 jest.mock('@/features/shell/ManageHeader', () => ({ ManageHeader: () => null }));
 
 /**
- * Tổng quan chủ xe tuyến hoa hồng (PR #170): tiền đọc SỔ VÍ, KHÔNG gọi sổ thu chi; không biểu đồ.
+ * Tổng quan của chủ xe tuyến hoa hồng — CÙNG màn với gian hàng từ ADR 0085 điều 1 (web
+ * `DashboardView`): tiền đọc SỔ VÍ, KHÔNG gọi sổ thu chi; không biểu đồ, không thẻ Gói / chợ.
  */
 function user(roleKey: string, permissions: Permission[]): authApi.CurrentUser {
   return {
@@ -104,7 +105,7 @@ async function renderScreen(roleKey: string) {
     withIntl(
       <ReduxProvider store={store}>
         <QueryClientProvider client={client}>
-          <OwnerDashboardScreen />
+          <ShopDashboardScreen />
         </QueryClientProvider>
       </ReduxProvider>,
     ),
@@ -114,7 +115,7 @@ async function renderScreen(roleKey: string) {
 
 beforeEach(() => jest.restoreAllMocks());
 
-describe('OwnerDashboardScreen', () => {
+describe('ShopDashboardScreen - chủ xe tuyến hoa hồng', () => {
   it('chủ: thu nhập tháng từ sổ ví, câu "yên ả", không gọi sổ thu chi, không biểu đồ', async () => {
     const view = await renderScreen('shop_owner');
 

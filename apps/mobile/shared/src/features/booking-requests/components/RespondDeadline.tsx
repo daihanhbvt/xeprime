@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -10,10 +10,9 @@ import {
 } from '@xeprime/types';
 import { useNow } from '@/hooks/use-now';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
+import { LineIcon } from '@/components/icons/LineIcon';
 
-/** Dưới mốc này thì đổi sang màu cảnh báo — cùng con số với lần nhắc cuối (như web). */
-const URGENT_MS = BOOKING_REQUEST_REMINDER_REMAINING_MINUTES.FINAL * 60_000;
 
 /**
  * Đếm ngược tới `respondBy` — mốc do SERVER tính, ở đây chỉ đếm.
@@ -25,8 +24,18 @@ export function RespondDeadline({
   respondBy,
   label,
   expiredLabel,
+  urgentMinutes = BOOKING_REQUEST_REMINDER_REMAINING_MINUTES.FINAL,
+  variant = 'pill',
 }: {
   respondBy: string;
+  /**
+   * `inline` — đồng hồ ở chân thẻ đơn v2 (Figma "Confirmation Status": icon "Time Circle" 16 +
+   * giờ 14/20 nghiêng màu đỏ). Nhãn không hiện (nhóm và viên trạng thái đã nói đây là hạn gì) nhưng
+   * vẫn là tên cho trình đọc màn hình. `pill` — khuôn cũ (web `RespondDeadline`).
+   */
+  variant?: 'pill' | 'inline';
+  /** Ngưỡng đổi màu khẩn - hạn THANH TOÁN truyền `HOLD_PAYMENT_REMINDER_REMAINING_MINUTES.FINAL` (web). */
+  urgentMinutes?: number;
   /** Nhãn trước đồng hồ — vắng = "Còn lại". Dùng lại cho hạn THANH TOÁN (web `CountdownClock`). */
   label?: string;
   /** Câu thay đồng hồ khi hết hạn — vắng = câu hạn phản hồi. */
@@ -57,7 +66,31 @@ export function RespondDeadline({
     );
   }
 
-  const urgent = remaining <= URGENT_MS;
+  const urgent = remaining <= urgentMinutes * 60_000;
+
+  if (variant === 'inline') {
+    const clock = longClockText(remaining);
+    return (
+      <XStack
+        ai="center"
+        gap={space.xs}
+        accessible
+        accessibilityLabel={`${label ?? t('remaining')} ${clock}`}
+      >
+        <LineIcon name="time-circle" size={iconSize.sm} color={colors.danger} />
+        <Text
+          col={colors.danger}
+          fos={typeScale.body.fontSize}
+          lh={typeScale.body.lineHeight}
+          fow={urgent ? fontWeight.semibold : fontWeight.regular}
+          fontStyle="italic"
+          fontVariant={TABULAR}
+        >
+          {clock}
+        </Text>
+      </XStack>
+    );
+  }
 
   return (
     // = web `RespondDeadline.module.css`: icon đồng hồ, chữ 13 xám; dưới 15 phút thành viên thuốc cảnh báo.
@@ -80,3 +113,6 @@ export function RespondDeadline({
     </XStack>
   );
 }
+
+/** Chữ số đều bề ngang - đồng hồ không nhảy khi đếm. */
+const TABULAR = ['tabular-nums'] as ['tabular-nums'];

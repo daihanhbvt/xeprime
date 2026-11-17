@@ -31,6 +31,8 @@ const useTone = themed(
       primary: { bg: colors.primary, fg: colors.onPrimary },
       /** Đếm việc CẦN LÀM — đỏ, đúng `<Badge count>` mặc định của AntD bên web. */
       danger: { bg: colors.danger, fg: colors.textInverse },
+      /** Đếm thông tin, không phải việc (số "Đơn đã kết thúc" trên nút thanh trang) — xám, không báo động. */
+      neutral: { bg: colors.textMuted, fg: colors.surface },
     }) as const,
 );
 

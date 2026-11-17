@@ -6,7 +6,7 @@ import {
   SYSTEM_FINANCE_CATEGORY_VALUES,
   type SystemFinanceCategoryKey,
 } from '@xeprime/types';
-import { BlockTitle } from '@/components/ui/BlockTitle';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { DetailChevron } from '@/components/ui/DetailArrow';
@@ -75,7 +75,7 @@ export function CategoryBreakdown({
 
   return (
     <YStack gap={space.sm}>
-      <BlockTitle>{title}</BlockTitle>
+      <SectionHeader icon="pie-chart-outline">{title}</SectionHeader>
 
       {error && !data ? (
         <Callout tone="warning">{t('error')}</Callout>

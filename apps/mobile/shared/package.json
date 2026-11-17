@@ -16,6 +16,7 @@
     "sync:brand-art": "node scripts/sync-brand-art.mjs"
   },
   "dependencies": {
+    "@ant-design/icons-svg": "4.5.0",
     "@expo/metro-runtime": "catalog:",
     "@expo/vector-icons": "catalog:",
     "@formatjs/intl-datetimeformat": "catalog:",

@@ -3,53 +3,58 @@ import { keepPageData } from '@/queries/keep-page-data';
 import { queryKeys } from '@/queries/query-keys';
 import {
   inviteAnswersApi,
-  inviteFiltersToParams,
   membersApi,
-  memberFiltersToParams,
-  type CreateInviteInput,
-  type InviteFilters,
-  type MemberFilters,
+  rosterFiltersToParams,
+  type CreateMemberAccountInput,
+  type RosterFilters,
   type UpdateMemberRoleInput,
 } from '../api';
 
 /**
- * Số thành viên mỗi trang.
+ * Số dòng mỗi trang.
  *
  * 10 chứ không phải 20 của contract: `LIST_TUNING` — cửa sổ dựng dùng chung của mọi danh sách
  * trong app — được đặt quanh một trang 10 mục. Cùng lý do với sổ khách.
  */
 export const MEMBERS_PAGE_SIZE = 10;
 
-/** MỘT trang thành viên. Lọc và cắt trang đều ở SERVER. */
-export function useMembersPage(filters: MemberFilters, enabled = true) {
+/**
+ * MỘT trang của danh sách GỘP thành viên + lời mời cũ còn chờ (`GET /members/roster`, ADR 0086
+ * điều 5). Lọc theo tên/SĐT/email, vai, trạng thái và cắt trang đều ở SERVER.
+ */
+export function useRosterPage(filters: RosterFilters, enabled = true) {
   const withLimit = { ...filters, limit: MEMBERS_PAGE_SIZE };
-  const params = memberFiltersToParams(withLimit);
+  const params = rosterFiltersToParams(withLimit);
 
   return useQuery({
-    queryKey: queryKeys.members.list(params),
-    queryFn: () => membersApi.list(withLimit),
-    placeholderData: keepPageData<Awaited<ReturnType<typeof membersApi.list>>>(params),
+    queryKey: queryKeys.members.roster(params),
+    queryFn: () => membersApi.roster(withLimit),
+    placeholderData: keepPageData<Awaited<ReturnType<typeof membersApi.roster>>>(params),
     enabled,
   });
 }
 
-/** Lời mời của gian hàng — mặc định server chỉ trả những lời ĐANG CHỜ. */
-export function useInvites(filters: InviteFilters, enabled = true) {
-  const withLimit = { ...filters, limit: MEMBERS_PAGE_SIZE };
-  const params = inviteFiltersToParams(withLimit);
-
+/** Bốn vai kèm khoá quyền + số người — nuôi ma trận "Vai trò & quyền" (ADR 0086 điều 1). */
+export function useMemberRoles(enabled = true) {
   return useQuery({
-    queryKey: queryKeys.members.invites(params),
-    queryFn: () => membersApi.invites(withLimit),
-    placeholderData: keepPageData<Awaited<ReturnType<typeof membersApi.invites>>>(params),
+    queryKey: queryKeys.members.roles(),
+    queryFn: () => membersApi.roles(),
     enabled,
+  });
+}
+
+/** Việc gần đây của một thành viên — chỉ tải khi tấm chi tiết đang mở đúng người đó. */
+export function useMemberActivity(userId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.members.activity(userId ?? ''),
+    queryFn: () => membersApi.activity(userId as string),
+    enabled: Boolean(userId),
   });
 }
 
 /**
- * Mọi thay đổi nhân sự làm mới nhánh `members` — nhánh đó BAO cả lời mời
- * (`queryKeys.members.invites`): gửi/thu hồi một lời mời đổi danh sách mời, còn nhận một lời mời
- * đổi danh sách thành viên. Một cổng invalidate cho cả hai.
+ * Mọi thay đổi nhân sự làm mới nhánh `members` — nhánh đó BAO cả danh sách gộp, ma trận vai (số
+ * người theo vai đổi) và nhật ký hoạt động.
  *
  * `auth.me` cũng phải làm mới: đổi vai trò hay gỡ người có thể đụng vào CHÍNH người đang đăng
  * nhập, và quyền của họ đọc từ đó. Không có bước này thì người vừa bị hạ vai vẫn thấy đủ nút cho
@@ -63,11 +68,23 @@ function useInvalidateMembers() {
   };
 }
 
-export function useCreateInvite() {
+/** Cấp tài khoản nhân viên (ADR 0087) — thay cho gửi lời mời bằng SĐT. */
+export function useCreateMemberAccount() {
   const invalidate = useInvalidateMembers();
   return useMutation({
-    mutationFn: (body: CreateInviteInput) => membersApi.createInvite(body),
+    mutationFn: (body: CreateMemberAccountInput) => membersApi.createAccount(body),
     onSuccess: invalidate,
+  });
+}
+
+/**
+ * Chủ đặt lại mật khẩu cho tài khoản do gian hàng cấp. Mật khẩu chỉ đi qua biến của lượt gọi —
+ * không vào cache, không vào log.
+ */
+export function useResetMemberPassword() {
+  return useMutation({
+    mutationFn: ({ userId, password }: { userId: string; password: string }) =>
+      membersApi.resetPassword(userId, password),
   });
 }
 
@@ -86,6 +103,16 @@ export function useUpdateMemberRole() {
     // (ADR 0052) — và mọi trường DTO thêm về sau.
     mutationFn: ({ userId, ...body }: { userId: string } & UpdateMemberRoleInput) =>
       membersApi.updateRole(userId, body),
+    onSuccess: invalidate,
+  });
+}
+
+/** Tạm khoá / mở khoá — `locked = true` là khoá (ADR 0086 điều 7). */
+export function useSetMemberLock() {
+  const invalidate = useInvalidateMembers();
+  return useMutation({
+    mutationFn: ({ userId, locked }: { userId: string; locked: boolean }) =>
+      locked ? membersApi.lock(userId) : membersApi.unlock(userId),
     onSuccess: invalidate,
   });
 }

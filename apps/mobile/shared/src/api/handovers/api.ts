@@ -62,6 +62,11 @@ export const handoversApi = {
     return getApiClient().post<HandoverContext>(`${base(bookingId)}/${type}/confirm`, body);
   },
 
+  /** "Khách chưa trả xe" — phản đối lời báo trả xe của khách (ADR 0081): huỷ lời báo, mở tranh chấp. */
+  rejectCustomerReturn(bookingId: string): Promise<HandoverContext> {
+    return getApiClient().post<HandoverContext>(`${base(bookingId)}/return/customer-report/reject`, {});
+  },
+
   cancel(
     bookingId: string,
     type: HandoverType,

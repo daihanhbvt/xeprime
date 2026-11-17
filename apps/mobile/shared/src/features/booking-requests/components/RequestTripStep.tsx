@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Controller, useWatch } from 'react-hook-form';
 import { Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import type { components } from '@xeprime/types';
@@ -53,6 +53,7 @@ import type { DeliveryDistance } from '../api';
 import { DELIVERY_ADDRESS_DEBOUNCE_MS, deliveryEstimateState } from '../delivery-estimate-state';
 import { useDeliveryDistance } from '../hooks/use-booking-request-flow';
 import type { RequestForm } from '../RequestBookingScreen';
+import { layout } from '@/theme/layout';
 
 /** Một gói dài hạn kèm giá và mốc ưu đãi — server tính, shape từ OpenAPI (ADR 0007). */
 type LongTermPackageOption = components['schemas']['LongTermPackageOptionDto'];
@@ -361,7 +362,7 @@ export function RequestTripStep({
           <XStack
             ai="center"
             gap={space.sm}
-            px={space.md}
+            px={layout.padX}
             py={space.sm}
             br={radius.md}
             bw={1}
@@ -447,7 +448,7 @@ export function PickupOption({
       <XStack
         ai="center"
         gap={space.sm}
-        px={space.md}
+        px={layout.padX}
         py={space.sm}
         br={radius.md}
         bw={1}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { useForm, useWatch } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
@@ -15,7 +15,7 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Button } from '@/components/ui/Button';
-import { BlockTitle } from '@/components/ui/BlockTitle';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { Card } from '@/components/ui/Card';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -35,21 +35,23 @@ import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { VehicleEditHeader } from './components/VehicleEditHeader';
 import { VehicleEditHeaderCard } from './components/VehicleEditHeaderCard';
 import { VehicleInfoSummaryCard } from './components/VehicleInfoSummaryCard';
+import { BodyTypePicker } from './components/VehicleFormSteps';
 import {
   ConsumptionFields,
+  DescriptionField,
   DimensionsFields,
   EngineOutputFields,
-  FeaturesDescriptionFields,
-  PaneTab,
+  FeaturesOnlyFields,
   VehicleEnergyCardFields,
   VehicleGeneralFields,
   VehicleIdentityCardFields,
-  VehicleServiceChips,
 } from './components/VehicleInfoFormSections';
 import { informationValuesToInput, vehicleToFormValues } from './mappers';
 import { useUpdateVehicle, useVehicle } from './hooks/use-vehicle';
+import { useVehicleCapabilities } from './hooks/use-vehicle-capabilities';
 import { branchLabel, type VehicleDetail } from './api';
 
 /**
@@ -84,23 +86,6 @@ export const INFORMATION_FIELDS: ReadonlyArray<keyof VehicleFormValues> = [
 ];
 
 /**
- * Trường có ô ở tab "Thông số kỹ thuật nâng cao" — nhóm `specs` của web trừ
- * `fuelConsumptionCombined` (ô đó ở khối năng lượng, tab cơ bản).
- */
-const ADVANCED_ONLY: ReadonlySet<string> = new Set([
-  'lengthMm',
-  'widthMm',
-  'heightMm',
-  'curbWeightKg',
-  'horsepowerHp',
-  'fuelConsumptionCity',
-  'fuelConsumptionHighway',
-]);
-
-const INFO_PANE = { BASIC: 'basic', ADVANCED: 'advanced' } as const;
-type InfoPane = (typeof INFO_PANE)[keyof typeof INFO_PANE];
-
-/**
  * Mục "Thông tin xe & tiện ích" của màn sửa xe (cổng quản lý) — bản native của tab Thông tin
  * trong `VehicleEditWorkspace` bên web.
  *
@@ -127,7 +112,7 @@ export function VehicleEditFormScreen({ vehicleId }: { vehicleId: string }) {
     return (
       <>
         <AppHeader title={title} onBack={back} />
-        <Screen edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
             title={tPage('forbiddenTitle')}
@@ -145,7 +130,7 @@ ${tPermission('requires')} ${PERMISSION.VEHICLE_UPDATE}`}
     return (
       <>
         <AppHeader title={title} onBack={back} />
-        <Screen edges={['left', 'right', 'bottom']}>
+        <Screen scrollReveal edges={['left', 'right', 'bottom']}>
           <SkeletonText lines={10} />
         </Screen>
       </>
@@ -156,7 +141,7 @@ ${tPermission('requires')} ${PERMISSION.VEHICLE_UPDATE}`}
     return (
       <>
         <AppHeader title={title} onBack={back} />
-        <Screen edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenError error={query.error} title={title} onRetry={() => void query.refetch()} />
         </Screen>
       </>
@@ -192,7 +177,7 @@ function EditForm({
 }) {
   const colors = useColors();
   const t = useTranslations('Vehicles.edit');
-  const tAdvanced = useTranslations('Vehicles.form.advanced');
+  const tInfo = useTranslations('Vehicles.editor.information');
   const tActions = useTranslations('Common.actions');
   const tBranches = useTranslations('Branches');
   const toast = useAppToast();
@@ -200,7 +185,8 @@ function EditForm({
   const errorMessage = useErrorMessage();
   const navigateOnce = useNavigateOnce();
   const update = useUpdateVehicle(vehicle.id);
-  const [pane, setPane] = useState<InfoPane>(INFO_PANE.BASIC);
+  // Nhãn nguồn xe ở thẻ đầu — chỉ khi có năng lực nguồn xe (web `showSource={isManage && can.source}`).
+  const can = useVehicleCapabilities();
 
   const initialValues = useMemo(() => vehicleToFormValues(vehicle), [vehicle]);
   const resolver = useValidationResolver<VehicleFormValues>(
@@ -265,10 +251,6 @@ function EditForm({
   const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
   const lockedNotice = isPublic ? t('lockedField') : undefined;
   const activeErrors = INFORMATION_FIELDS.filter((field) => errors[field]).length;
-  const advancedErrors = INFORMATION_FIELDS.filter(
-    (field) => errors[field] && ADVANCED_ONLY.has(field),
-  ).length;
-  const basicErrors = activeErrors - advancedErrors;
 
   /** Mở mục Hình ảnh từ thẻ đầu xe — qua cùng câu hỏi "bỏ thay đổi?" như mọi lối rời màn. */
   const openImages = () =>
@@ -278,16 +260,7 @@ function EditForm({
 
   async function save() {
     const valid = await trigger([...INFORMATION_FIELDS]);
-    if (!valid) {
-      // Lỗi CHỈ nằm ở tab nâng cao ⇒ mở tab đó; còn lại về tab cơ bản (web `revealErrors`).
-      const invalid = INFORMATION_FIELDS.filter((field) => getFieldError(field));
-      setPane(
-        invalid.length > 0 && invalid.every((field) => ADVANCED_ONLY.has(field))
-          ? INFO_PANE.ADVANCED
-          : INFO_PANE.BASIC,
-      );
-      return;
-    }
+    if (!valid) return;
     try {
       const updated = await update.mutateAsync(informationValuesToInput(getValues()));
       reset(vehicleToFormValues(updated));
@@ -299,19 +272,18 @@ function EditForm({
     }
   }
 
-  // `trigger` đã cập nhật `errors` khi nó resolve — đọc qua `control` để lấy bản mới nhất.
-  function getFieldError(field: keyof VehicleFormValues) {
-    return control.getFieldState(field).error;
-  }
-
   return (
     <>
-      <AppHeader
-        title={title}
-        subtitle={[vehicle.name, vehicle.plateNumber].filter(Boolean).join(LIST_SEPARATOR)}
-        onBack={() => leave.guard(onBack)}
+      {/* Figma "Chỉnh sửa xe" MB: ← + % hoàn thiện + dải tab gạch chân; đổi tab hỏi "bỏ thay đổi?" như nút Lui. */}
+      <VehicleEditHeader
+        vehicleId={vehicle.id}
+        tab={VEHICLE_EDIT_TAB.INFORMATION}
+        title={t('title')}
+        guard={leave.guard}
+        onBack={onBack}
       />
       <Screen
+        scrollReveal
         edges={['left', 'right', 'bottom']}
         {...refresh}
         footer={
@@ -320,14 +292,15 @@ function EditForm({
               <YStack f={1}>
                 <Button
                   label={isDirty ? t('revert') : tActions('cancel')}
-                  variant="secondary"
+                  variant="outline"
                   onPress={() => (isDirty ? reset(initialValues) : onBack())}
                 />
               </YStack>
               <YStack f={1}>
                 <Button
+                  variant="gradient"
                   label={tActions('saveChanges')}
-                  icon="save-outline"
+                  icon="checkmark-outline"
                   loading={update.isPending}
                   disabled={!isDirty}
                   onPress={() => void save()}
@@ -343,6 +316,7 @@ function EditForm({
             vehicle={vehicle}
             onEditImages={openImages}
             statusEditable={canUpdate}
+            showSource={can.source}
           />
 
           {activeErrors > 0 ? (
@@ -351,90 +325,87 @@ function EditForm({
             </Text>
           ) : null}
 
-          <XStack gap={space.xs} accessibilityRole="tablist">
-            <PaneTab
-              label={t('infoTabs.basic')}
-              errors={basicErrors}
-              selected={pane === INFO_PANE.BASIC}
-              onPress={() => setPane(INFO_PANE.BASIC)}
-            />
-            <PaneTab
-              label={t('infoTabs.advanced')}
-              errors={advancedErrors}
-              selected={pane === INFO_PANE.ADVANCED}
-              onPress={() => setPane(INFO_PANE.ADVANCED)}
-            />
-          </XStack>
-
-          {pane === INFO_PANE.BASIC ? (
-            <>
-              <Card>
-                <YStack gap={space.md}>
-                  <BlockTitle>{t('cards.general')}</BlockTitle>
-                  <VehicleGeneralFields
-                    control={control}
-                    branchOptions={branchOptions}
-                    branchLoading={branches.isPending}
-                    branchDisabled={!canUpdate}
-                  />
-                  {/* Loại dịch vụ: nhãn bấm là lưu ngay — cùng đường ghi với công tắc trên mục lục. */}
-                  <VehicleServiceChips vehicle={vehicle} canEdit={canUpdate} />
+          {/*
+            MỘT trang cuộn, đúng thứ tự thẻ của `InformationPane` web (sổ redesign §3.6 E6-E7):
+            Thông tin chung · Kiểu dáng xe (ô tô) · Động cơ & nhiên liệu · Tiện ích xe · Thông số
+            nâng cao · Mô tả xe. Không còn hai tab Cơ bản / Nâng cao.
+          */}
+          <Card lift="flat">
+            <YStack gap={space.md}>
+              <SectionHeader icon="car-outline">{tInfo('general')}</SectionHeader>
+              <VehicleGeneralFields
+                control={control}
+                branchOptions={branchOptions}
+                branchLoading={branches.isPending}
+                branchDisabled={!canUpdate}
+              />
+              <VehicleIdentityCardFields
+                control={control}
+                isCar={isCar}
+                lockedNotice={lockedNotice}
+                setValue={setValue}
+                bodyTypeElsewhere
+              />
+            </YStack>
+          </Card>
+          {isCar ? (
+            <Card lift="flat">
+              <YStack gap={space.md}>
+                <YStack gap={space.xs}>
+                  <SectionHeader icon="car-sport-outline">{tInfo('bodyType')}</SectionHeader>
+                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                    {tInfo('bodyTypeHint')}
+                  </Text>
                 </YStack>
-              </Card>
-              <Card>
-                <YStack gap={space.md}>
-                  <BlockTitle>{t('cards.identity')}</BlockTitle>
-                  <VehicleIdentityCardFields
-                    control={control}
-                    isCar={isCar}
-                    lockedNotice={lockedNotice}
-                    setValue={setValue}
-                  />
-                </YStack>
-              </Card>
-              <Card>
-                <YStack gap={space.md}>
-                  <BlockTitle>{t('cards.energy')}</BlockTitle>
-                  <VehicleEnergyCardFields
-                    control={control}
-                    isCar={isCar}
-                    lockedNotice={lockedNotice}
-                    setValue={setValue}
-                  />
-                </YStack>
-              </Card>
-              <Card>
-                <YStack gap={space.md}>
-                  <BlockTitle>{t('cards.featuresDescription')}</BlockTitle>
-                  <FeaturesDescriptionFields control={control} isCar={isCar} />
-                </YStack>
-              </Card>
-            </>
-          ) : (
-            <>
-              <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {t('advanced.hint')}
+                <BodyTypePicker control={control} />
+              </YStack>
+            </Card>
+          ) : null}
+          <Card lift="flat">
+            <YStack gap={space.md}>
+              <SectionHeader icon="flash-outline">{tInfo('energy')}</SectionHeader>
+              <VehicleEnergyCardFields
+                control={control}
+                isCar={isCar}
+                lockedNotice={lockedNotice}
+                setValue={setValue}
+              />
+            </YStack>
+          </Card>
+          <Card lift="flat">
+            <YStack gap={space.md}>
+              <SectionHeader icon="checkmark-done-outline">{tInfo('features')}</SectionHeader>
+              <FeaturesOnlyFields control={control} isCar={isCar} />
+            </YStack>
+          </Card>
+          <Card lift="flat">
+            <YStack gap={space.md}>
+              <YStack gap={space.xs}>
+                <SectionHeader icon="construct-outline">{tInfo('advanced')}</SectionHeader>
+                <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                  {tInfo('advancedHint')}
+                </Text>
+              </YStack>
+              <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+                {tInfo('dimensions')}
               </Text>
-              <Card>
-                <YStack gap={space.md}>
-                  <BlockTitle>{tAdvanced('dimensionsTitle')}</BlockTitle>
-                  <DimensionsFields control={control} />
-                </YStack>
-              </Card>
-              <Card>
-                <YStack gap={space.md}>
-                  <BlockTitle>{tAdvanced('engineTitle')}</BlockTitle>
-                  <EngineOutputFields control={control} />
-                </YStack>
-              </Card>
-              <Card>
-                <YStack gap={space.md}>
-                  <BlockTitle>{tAdvanced('consumptionTitle')}</BlockTitle>
-                  <ConsumptionFields control={control} />
-                </YStack>
-              </Card>
-            </>
-          )}
+              <DimensionsFields control={control} />
+              <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+                {tInfo('engine')}
+              </Text>
+              <EngineOutputFields control={control} />
+              <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+                {tInfo('consumption')}
+              </Text>
+              <ConsumptionFields control={control} />
+            </YStack>
+          </Card>
+          <Card lift="flat">
+            <YStack gap={space.md}>
+              <SectionHeader icon="document-text-outline">{tInfo('description')}</SectionHeader>
+              <DescriptionField control={control} label={tInfo('description')} />
+            </YStack>
+          </Card>
 
           <VehicleInfoSummaryCard vehicle={vehicle} />
         </YStack>

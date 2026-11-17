@@ -262,3 +262,20 @@
     flex: 1;
   }
 }
+
+/* Figma "Phê duyệt yêu cầu" (16/11/2026) - khổ điện thoại: thẻ bo 16, đệm 16, khối cách 12. Vẫn là modal của web. */
+@media (max-width: 640px) {
+  .body {
+    gap: 12px;
+  }
+  .card {
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid var(--xp-color-border-secondary);
+  }
+  .cardTitle {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+  }
+}

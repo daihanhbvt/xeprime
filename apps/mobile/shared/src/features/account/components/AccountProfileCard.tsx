@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Image } from 'expo-image';
 import { useController, useForm, type Control } from 'react-hook-form';
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
@@ -26,6 +26,7 @@ import { CONTACT_CHANNEL, type ContactChannel, type UserProfile } from '../api';
 import { useUpdateMyProfile } from '../hooks/use-account';
 import { useAccountIdentityLabel } from '../use-account-identity-label';
 import { ContactVerifySheet } from './ContactVerifySheet';
+import { layout } from '@/theme/layout';
 
 /** Trần dung lượng ảnh hiện trong gợi ý — đọc từ hằng của server, không gõ tay một con số. */
 const AVATAR_MAX_MB = Math.round(IMAGE_UPLOAD_MAX_BYTES / (1024 * 1024));
@@ -302,7 +303,7 @@ function ContactRow({
       ai="flex-start"
       gap={GAP_12}
       py={GAP_12}
-      px={space.md}
+      px={layout.padX}
       br={radius.control}
       bg={colors.background}
     >

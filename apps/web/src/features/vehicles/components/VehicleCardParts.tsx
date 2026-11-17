@@ -2,7 +2,6 @@
 
 import {
   CarOutlined,
-  CheckOutlined,
   ClockCircleOutlined,
   CloseOutlined,
   EditOutlined,
@@ -31,6 +30,7 @@ import { ToneDotBadge } from '@/components/data-display/StatusBadge';
 import { statusColorClass } from '@/components/data-display/status-color';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { CheckGlyph } from '@/components/icons/CheckGlyph';
 import { cx } from '@/lib/cx';
 import { isNegativeMoney, subtractMoney } from '@/lib/money';
 import type { VehicleAlertGroup, VehicleListItem, VehicleStats } from '../types';
@@ -63,7 +63,8 @@ const PAUSED_REASONS: readonly MarketplaceVisibilityReason[] = [
 const REVIEW_ICON: Readonly<Record<VehiclePublicStatus, ReactNode>> = {
   [VEHICLE_PUBLIC_STATUS.DRAFT]: <EditOutlined />,
   [VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW]: <ClockCircleOutlined />,
-  [VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC]: <CheckOutlined />,
+  // Dấu tích Figma "Check icon" (`Check-Cross`) - bộ icon nét `tick`, không phải CheckOutlined.
+  [VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC]: <CheckGlyph />,
   [VEHICLE_PUBLIC_STATUS.NEEDS_REVISION]: <ExclamationOutlined />,
   [VEHICLE_PUBLIC_STATUS.REJECTED]: <CloseOutlined />,
   [VEHICLE_PUBLIC_STATUS.HIDDEN]: <EyeInvisibleOutlined />,
@@ -180,6 +181,7 @@ export function VehicleStatusBadges({
   vehicle,
   variant,
   className,
+  compact = false,
 }: {
   /** Chỉ ba trường trạng thái — thẻ danh sách và Hồ sơ xe (bản ghi chi tiết) cùng truyền được. */
   vehicle: Pick<
@@ -188,6 +190,8 @@ export function VehicleStatusBadges({
   >;
   variant: 'short' | 'detailed';
   className?: string;
+  /** `detailed` cỡ nhỏ của thẻ khổ điện thoại (Figma "Vehicle Status": chữ 12/18, đĩa 20, cách 32). */
+  compact?: boolean;
 }) {
   const t = useTranslations('Vehicles.list');
   const domainLabel = useDomainLabel();
@@ -219,7 +223,7 @@ export function VehicleStatusBadges({
   }
 
   return (
-    <div className={cx(styles.detailedStatus, className)}>
+    <div className={cx(styles.detailedStatus, compact && styles.detailedCompact, className)}>
       <span className={cx(styles.review, statusColorClass(reviewColor))}>
         <span className={styles.reviewIcon} aria-hidden="true">
           {REVIEW_ICON[review]}

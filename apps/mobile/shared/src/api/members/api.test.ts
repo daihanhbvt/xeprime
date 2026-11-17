@@ -1,6 +1,6 @@
 import { branchFiltersToParams } from '../branches/api';
 import { driverFiltersToParams } from '../drivers/api';
-import { inviteFiltersToParams, memberFiltersToParams, MEMBERS_DEFAULT_LIMIT } from './api';
+import { MEMBERS_DEFAULT_LIMIT, rosterFiltersToParams } from './api';
 
 /**
  * Bộ lọc của ba màn Gian hàng KHÔNG có trong contract OpenAPI — chúng là trạng thái của MÀN
@@ -11,33 +11,21 @@ import { inviteFiltersToParams, memberFiltersToParams, MEMBERS_DEFAULT_LIMIT } f
  * Đó là lý do những test này soi ĐÚNG hình dạng object, không chỉ soi vài khoá.
  */
 
-describe('memberFiltersToParams', () => {
+describe('rosterFiltersToParams', () => {
   it('bộ lọc rỗng: mọi chiều là `null`, trang 1, giới hạn mặc định', () => {
-    expect(memberFiltersToParams({})).toEqual({
+    expect(rosterFiltersToParams({})).toEqual({
       q: null,
       roleKey: null,
+      status: null,
       page: 1,
       limit: MEMBERS_DEFAULT_LIMIT,
     });
   });
 
   it('giữ nguyên giá trị đã đặt, kể cả `limit` do màn hình ghi đè', () => {
-    expect(memberFiltersToParams({ q: 'an', roleKey: 'shop_staff', page: 3, limit: 10 })).toEqual({
-      q: 'an',
-      roleKey: 'shop_staff',
-      page: 3,
-      limit: 10,
-    });
-  });
-});
-
-describe('inviteFiltersToParams', () => {
-  it('không tự đặt `status`: mặc định của server là "đang chờ", client không đoán thay', () => {
-    expect(inviteFiltersToParams({})).toEqual({
-      status: null,
-      page: 1,
-      limit: MEMBERS_DEFAULT_LIMIT,
-    });
+    expect(
+      rosterFiltersToParams({ q: 'an', roleKey: 'shop_staff', status: 'locked', page: 3, limit: 10 }),
+    ).toEqual({ q: 'an', roleKey: 'shop_staff', status: 'locked', page: 3, limit: 10 });
   });
 });
 

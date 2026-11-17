@@ -18,7 +18,7 @@ import { useCustomerSummary } from '../hooks/use-customers';
 const SKELETON_HEIGHT = 112;
 
 /**
- * Dải chỉ số đầu sổ khách — bốn con số của web, cùng phép đếm (backend `groupBy`), nói về CẢ sổ
+ * Dải chỉ số đầu sổ khách — sáu con số của web (hai ô tiền cần `finance.view`), cùng phép đếm (backend `groupBy`), nói về CẢ sổ
  * chứ không phụ thuộc trang hay bộ lọc hiện tại.
  *
  * Bảng số do `<StatGrid>` vẽ — cùng component với dải chỉ số của hồ sơ khách, nên hai màn không
@@ -51,32 +51,41 @@ export function CustomerSummaryBar({
   const cells = useMemo<StatCell[]>(() => {
     if (!data) return [];
 
-    const riskCount = data.watchlistCustomers + data.blockedCustomers;
     const showDebt = canViewFinance && data.totalDebt !== null;
     const hasDebt = (data.debtCustomers ?? 0) > 0;
 
     return [
+      // Thứ tự của web `CustomerSummaryCards`: khách · lượt thuê · doanh thu* · nợ* · khách quen · rủi ro.
       {
         key: 'active',
         icon: 'people-outline',
-        label: t('activeShort'),
-        fullLabel: t('active'),
+        label: t('totalCustomers'),
         value: fmt.count(data.activeCustomers),
-        tone: colors.info,
+        tone: colors.textMuted,
       },
       {
-        key: 'returning',
-        icon: 'ribbon-outline',
-        label: t('returningShort', { count: TENANT_CUSTOMER_RETURNING_MIN_RENTALS }),
-        fullLabel: t('returning', { count: TENANT_CUSTOMER_RETURNING_MIN_RENTALS }),
-        value: fmt.count(data.returningCustomers),
-        tone: colors.success,
+        key: 'rentals',
+        icon: 'checkmark-circle-outline',
+        label: t('totalRentals'),
+        value: fmt.count(data.totalRentals),
+        tone: colors.info,
       },
+      ...(canViewFinance && data.totalRevenue != null
+        ? [
+            {
+              key: 'revenue',
+              icon: 'wallet-outline' as const,
+              label: t('totalRevenue'),
+              value: fmt.money(data.totalRevenue),
+              tone: colors.success,
+            },
+          ]
+        : []),
       ...(showDebt
         ? [
             {
               key: 'debt',
-              icon: 'wallet-outline' as const,
+              icon: 'cash-outline' as const,
               label: t('debtShort', { count: data.debtCustomers ?? 0 }),
               fullLabel: t('debt', { count: data.debtCustomers ?? 0 }),
               /*
@@ -90,15 +99,7 @@ export function CustomerSummaryBar({
             },
           ]
         : []),
-      {
-        key: 'risk',
-        icon: riskCount > 0 ? 'alert-circle-outline' : 'shield-checkmark-outline',
-        label: t('riskShort'),
-        fullLabel: t('risk'),
-        value: fmt.count(riskCount),
-        tone: riskCount > 0 ? colors.danger : colors.textMuted,
-        ...(riskCount > 0 ? { valueTone: colors.danger } : {}),
-      },
+      // Bỏ ô Khách quen + Lưu ý/từ chối trên app (người dùng 16/11/2026) - nhóm đó đã có ở dải tab.
     ];
   }, [colors, data, canViewFinance, t, fmt]);
 

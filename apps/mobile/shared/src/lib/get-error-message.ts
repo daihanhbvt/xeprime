@@ -26,6 +26,14 @@ export function getErrorMessage(error: unknown): string {
   if (error instanceof ImageUploadError && error.cause !== undefined) {
     return getErrorMessage(error.cause);
   }
+  /*
+   * Ảnh bàn giao bọc lỗi trong `HandoverUploadError` (`features/handovers/photo-upload.ts`) với câu
+   * kỹ thuật cho log; người dùng phải đọc câu của server ở `cause`. So theo `name` để `lib/` không
+   * phụ thuộc ngược vào một feature.
+   */
+  if (error instanceof Error && error.name === 'HandoverUploadError' && error.cause !== undefined) {
+    return getErrorMessage(error.cause);
+  }
   if (error instanceof ApiClientError) return error.message;
   if (error instanceof Error) return error.message || FALLBACK_ERROR_MESSAGE;
   return FALLBACK_ERROR_MESSAGE;

@@ -70,7 +70,8 @@
       "label": "Requests to review",
       "urgent": "{count, plural, one {# close to its reply deadline} other {# close to their reply deadline}}",
       "next": "Next reply deadline {time}",
-      "none": "No new requests"
+      "none": "No new requests",
+      "urgentShort": "{count, plural, other {# due soon}}"
     },
     "awaitingPayment": {
       "label": "Awaiting customer payment",
@@ -81,13 +82,15 @@
       "label": "Awaiting handover",
       "today": "{count, plural, other {# due today}}",
       "overdue": "{count, plural, other {# overdue}}",
-      "none": "No cars waiting to be handed over"
+      "none": "No cars waiting to be handed over",
+      "overdueShort": "{count, plural, other {# overdue}}"
     },
     "active": {
       "label": "Currently rented",
       "returnsToday": "{count, plural, other {# due back today}}",
       "overdue": "{count, plural, other {# overdue for return}}",
-      "none": "No cars out with customers"
+      "none": "No cars out with customers",
+      "overdueShort": "{count, plural, other {# overdue}}"
     }
   },
   "agenda": {
@@ -104,7 +107,23 @@
       "pickup": "Hand over",
       "return": "Take back"
     },
-    "itemAria": "{kind} {vehicle} - {customer}, {time}"
+    "itemAria": "{kind} {vehicle} - {customer}, {time}",
+    "tabs": {
+      "all": "All",
+      "overdue": "Overdue",
+      "today": "Today",
+      "upcoming": "Next {days} days"
+    },
+    "tabEmpty": {
+      "overdue": "No overdue handovers or returns.",
+      "today": "No handovers or returns today.",
+      "upcoming": "No handovers or returns after today."
+    },
+    "moreAll": "View all in Rental bookings",
+    "dayLabel": "{weekday}, {date}",
+    "lateDays": "{count, plural, one {# day late} other {# days late}}",
+    "lateHours": "{count, plural, one {# hour late} other {# hours late}}",
+    "lateMinutes": "{count, plural, one {# min late} other {# mins late}}"
   },
   "kpi": {
     "title": "This month",
@@ -114,7 +133,9 @@
     "utilizationValue": "{value, number}%",
     "utilizationHint": "Time cars were rented out over time they were available",
     "utilizationEmpty": "No cars in this period",
-    "fleetHint": "{renting} rented · {maintenance} in maintenance"
+    "fleetHint": "{renting} rented · {maintenance} in maintenance",
+    "titleVsPrevious": "{month, select, other {This month}} vs last month",
+    "report": "Reports"
   },
   "change": {
     "up": "+{value, number}%",
@@ -123,7 +144,11 @@
     "pointsUp": "+{value, number} pts",
     "pointsDown": "−{value, number} pts",
     "none": "Nothing to compare yet",
-    "suffix": "vs. the same period last month"
+    "suffix": "vs. the same period last month",
+    "percent": "{value, number}%",
+    "points": "{value, number} pts",
+    "vsPrevious": "vs last month ({value})",
+    "vsPreviousBare": "vs last month"
   },
   "charts": {
     "revenueTitle": "Revenue, last {days} days",
@@ -136,7 +161,12 @@
     "tripsEmpty": "No bookings in the last {months} months",
     "tripsError": "Couldn't load the trips chart.",
     "newBookings": "New bookings",
-    "completedTrips": "Completed trips"
+    "completedTrips": "Completed trips",
+    "revenueTab": "Income & costs {days} days",
+    "tripsTab": "Bookings & trips {months} months",
+    "revenue": "Revenue",
+    "cost": "Costs",
+    "profit": "Profit"
   },
   "market": {
     "title": "Cars on the marketplace",
@@ -146,7 +176,10 @@
     "draft": "Not submitted",
     "manage": "Manage cars",
     "empty": "No cars yet. Add your first car so customers can find you.",
-    "add": "Add a car"
+    "add": "Add a car",
+    "statusTitle": "Marketplace status",
+    "totalValue": "{count, plural, one {# vehicle} other {# vehicles}}",
+    "legendLabel": "{label}:"
   },
   "reputation": {
     "title": "Reputation with customers",
@@ -175,7 +208,8 @@
     "incomeHint": "{count, plural, one {# completed trip} other {# completed trips}} · after withheld tax",
     "open": "Balance & withdrawals",
     "frozen": "Your balance is temporarily frozen - contact XePrime for help.",
-    "loadError": "Couldn't load your balance."
+    "loadError": "Couldn't load your balance.",
+    "pendingShort": "Pending"
   },
   "ownerVehicles": {
     "title": "Your cars",
@@ -199,5 +233,9 @@
     "open": "View details",
     "none": "No limit information yet.",
     "loadError": "Could not load account information."
+  },
+  "fleetPlan": {
+    "title": "Fleet & plan",
+    "fleetTitle": "Fleet"
   }
 }

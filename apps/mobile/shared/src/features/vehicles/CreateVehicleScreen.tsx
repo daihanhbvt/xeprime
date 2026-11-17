@@ -362,7 +362,7 @@ export function CreateVehicleScreen() {
     return (
       <>
         <AppHeader title={tCreate('title')} onBack={back} />
-        <Screen edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
             title={tCreate('forbiddenTitle')}
@@ -399,6 +399,7 @@ export function CreateVehicleScreen() {
         onBack={() => (isDirty ? setConfirmCancel(true) : back())}
       />
       <Screen
+        scrollReveal
         edges={['left', 'right', 'bottom']}
         footer={
           <XStack gap={space.sm}>
@@ -418,7 +419,7 @@ export function CreateVehicleScreen() {
               <YStack flexShrink={0}>
                 <Button
                   label={tCommon('back')}
-                  variant="secondary"
+                  variant="outline"
                   onPress={() => setStep(step - 1)}
                 />
               </YStack>
@@ -426,6 +427,7 @@ export function CreateVehicleScreen() {
             {step < lastStep ? (
               <YStack f={1}>
                 <Button
+                  variant="gradient"
                   label={tCommon('next')}
                   icon="arrow-forward"
                   onPress={() => void goNext()}
@@ -440,13 +442,14 @@ export function CreateVehicleScreen() {
                 <YStack flexShrink={0}>
                   <Button
                     label={t('wizard.saveDraft')}
-                    variant="secondary"
+                    variant="outline"
                     loading={create.isPending}
                     onPress={() => submitNow(false)}
                   />
                 </YStack>
                 <YStack f={1}>
                   <Button
+                    variant="gradient"
                     label={t('wizard.saveAndSubmit')}
                     icon="send-outline"
                     loading={create.isPending}

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { themed, useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { fontWeight, typeScale } from '@/theme/tokens';
 
 /**
  * Nền của một dòng đang bị nhấn — SÁNG lên, không mờ đi.
@@ -20,19 +20,9 @@ const usePressedRow = themed((colors) => ({ backgroundColor: colors.surfaceMuted
  * điện thoại thiếu hẳn tên khách và số tiền, tức thiếu đúng hai thứ quyết định người vận hành có
  * cần mở đơn đó ra hay không.
  *
- * **Cột phải XẾP DỌC** (nhãn trên, tiền dưới), khác web xếp ngang: ở 390dp, tiền và nhãn nằm
- * cùng hàng ăn hết ~140dp và dòng meta bên trái chỉ còn chỗ cho "Toyota Vios · 08/…". Xếp dọc
- * thì cột phải rộng bằng mẩu rộng nhất trong hai mẩu, trả lại gần 70dp cho phần chữ.
- *
- * **Meta dùng bậc chữ nhỏ nhất** (`fontSize.meta`, 11px) — nó là dòng phụ của dòng ngay trên nó,
- * và ở 12px thì chuỗi ba mẩu nối bằng ` · ` bị cắt trên máy hẹp.
- *
- * KHÔNG có đĩa hình dẫn đầu: 40dp đầu dòng là 40dp lấy mất của chính phần thông tin mà khối này
- * tồn tại để hiện, và màu trạng thái đã nằm ở nhãn bên phải rồi. Màu của KHỐI do đầu khối mang
- * (xem `DashboardPanel`).
- *
- * Đệm ngang nằm ở DÒNG chứ không ở thân khối: xem docblock của `DashboardPanel` về nét kẻ chạm
- * mép thẻ.
+ * **MỘT hàng như web** (`MiniList .rowBtn`): (tên 13.5 đậm vừa · meta 12 mờ) | (số tiền 13 đậm
+ * vừa + nhãn trạng thái), đệm 10/2. Đệm ngang của khối do thân `DashboardPanel` (14/16) mang, kẻ
+ * giữa các dòng là `Divider` của nơi gọi.
  */
 export function MiniListRow({
   title,
@@ -63,50 +53,33 @@ export function MiniListRow({
       accessibilityLabel={accessibilityLabel}
       style={({ pressed }) => (pressed ? pressedRow : null)}
     >
-      <XStack ai="center" gap={space.sm} px={space.md} py={space.sm}>
-        <YStack f={1} minWidth={0} gap={2}>
-          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold} numberOfLines={1}>
+      {/*
+        Web `MiniList .rowBtn`: MỘT hàng - (tên 13.5 đậm vừa · dòng phụ 12 mờ) | (số tiền 13 đậm vừa
+        rồi nhãn trạng thái, cách 10), đệm 10/2; thân khối đã đệm 14/16 nên hàng không tự đệm lề.
+        `flexShrink={0}` cột phải: hết chỗ thì cắt chữ bên trái, số tiền không bao giờ cụt.
+      */}
+      <XStack ai="center" jc="space-between" gap={ROW_GAP} px={ROW_PAD_X} py={ROW_PAD_Y}>
+        <YStack f={1} minWidth={0}>
+          <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.medium} numberOfLines={1}>
             {title}
           </Text>
-          <Text col={colors.placeholder} fos={fontSize.meta} numberOfLines={1}>
+          <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} numberOfLines={1}>
             {meta}
           </Text>
         </YStack>
-
-        {/*
-          Nhãn TRẠNG THÁI đứng trên, số tiền xuống dưới — hai cột khớp nhau theo VAI: dòng trên là
-          định danh (ai / bước nào), dòng dưới là số liệu (xe + giờ / bao nhiêu tiền). Đảo lại thì
-          một viên nhãn có nền và viền nằm ngang hàng với dòng meta 11px mờ, và nó kéo mắt xuống
-          dòng phụ thay vì dòng chính.
-
-          `flexShrink={0}`: hết chỗ thì dòng chữ bên trái cắt bớt, cột phải không bao giờ cắt —
-          một số tiền cụt là một số SAI, còn một tên xe cụt vẫn đọc ra được xe nào.
-        */}
-        <YStack flexShrink={0} ai="stretch" gap={2}>
-          {/*
-            Viên nhãn phải được ĐẨY sang phải bằng `jc` của một hàng bọc, không bằng `ai` của cột.
-
-            `StatusBadge` khai `alignSelf: flex-start` bên trong chính nó — cần thiết ở mọi chỗ
-            khác (một viên nhãn trong cột dọc không được kéo dài hết bề ngang), nhưng `alignSelf`
-            của con luôn thắng `alignItems` của cha. Đặt `ai="flex-end"` cho cả cột thì con số
-            nghe theo còn viên nhãn thì không: nó dạt về mép TRÁI của cột — đúng cảnh viên "Đã
-            duyệt" lệch khỏi cột tiền ở khối Thu Chi.
-
-            Cột `ai="stretch"` (rộng bằng mẩu rộng nhất) + hàng bọc `jc="flex-end"` + `ta="right"`
-            cho con số: cả hai mẩu khớp một mép phải, bất kể mẩu nào rộng hơn.
-          */}
-          <XStack jc="flex-end">{badge}</XStack>
-          <Text
-            col={amountTone}
-            fos={fontSize.bodySm}
-            fow={fontWeight.semibold}
-            ta="right"
-            numberOfLines={1}
-          >
+        <XStack flexShrink={0} ai="center" gap={RIGHT_GAP}>
+          <Text col={amountTone} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.semibold} numberOfLines={1}>
             {amount}
           </Text>
-        </YStack>
+          {badge}
+        </XStack>
       </XStack>
     </Pressable>
   );
 }
+
+/** Web `.rowBtn { gap: 12px; padding: 10px 2px }`, `.right { gap: 10px }`. */
+const ROW_GAP = 12;
+const ROW_PAD_X = 0;
+const ROW_PAD_Y = 8;
+const RIGHT_GAP = 10;

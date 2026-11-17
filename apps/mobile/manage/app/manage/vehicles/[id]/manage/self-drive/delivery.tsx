@@ -1,11 +1,11 @@
 import { Redirect, useLocalSearchParams } from 'expo-router';
-import { ROUTES } from '@/navigation/routes';
-import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
+import { ownerPolicyHref } from '@/features/vehicle-manage/owner-edit-nav';
 
-/** Đường dẫn CŨ (trước 30/09/2026) — giao xe tận nơi nay nằm trong "Giá & chính sách". Cùng chuyển hướng với trang web. */
+/**
+ * Đường dẫn CŨ của không gian "Quản lý xe" Owner Lite — Giao xe tận nơi (trước 30/09/2026) → "Chính sách thuê".
+ * Cùng bảng chuyển hướng với web (`editTabOfLegacyManageSection`).
+ */
 export default function LegacySelfDriveDeliveryRedirect() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  return (
-    <Redirect href={ROUTES.account.vehicleManageSection(id, VEHICLE_MANAGE_SECTION.PRICING)} />
-  );
+  return <Redirect href={ownerPolicyHref(id)} />;
 }

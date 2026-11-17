@@ -1,6 +1,7 @@
 import { XStack, YStack } from 'tamagui';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 
 /**
  * Khung chờ cho vùng trò chuyện — bong bóng xen kẽ hai phía như một hội thoại thật, thay vòng
@@ -18,7 +19,7 @@ const BUBBLES: readonly { mine: boolean; width: `${number}%`; height: number }[]
 
 export function ChatThreadSkeleton() {
   return (
-    <YStack f={1} jc="flex-end" px={space.md} py={space.md} gap={space.sm}>
+    <YStack f={1} jc="flex-end" px={layout.padX} py={space.md} gap={space.sm}>
       {BUBBLES.map((bubble, index) => (
         <XStack key={index} jc={bubble.mine ? 'flex-end' : 'flex-start'}>
           <YStack w={bubble.width}>

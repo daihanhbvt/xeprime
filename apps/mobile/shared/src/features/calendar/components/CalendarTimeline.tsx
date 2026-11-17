@@ -8,7 +8,7 @@ import Animated, {
   useScrollViewOffset,
   type SharedValue,
 } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { OCCUPANCY_SOURCE_TYPE_META, type OccupancySourceType } from '@xeprime/types';

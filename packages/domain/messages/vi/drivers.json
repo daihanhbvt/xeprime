@@ -30,6 +30,7 @@
     "allOperations": "Tất cả vận hành",
     "onTrip": "Đang có chuyến",
     "idle": "Đang rảnh",
+    "summary": "Thống kê",
     "status": "Trạng thái",
     "openLinks": "Đang mời / liên kết",
     "allStatuses": "Mọi trạng thái",
@@ -260,6 +261,7 @@
     "next": "Tài xế sau",
     "notFound": "Không tìm thấy tài xế này - có thể liên kết đã bị gỡ.",
     "loadError": "Không tải được thông tin tài xế.",
+    "menuTitle": "Thao tác",
     "edit": "Sửa thông tin",
     "tabs": {
       "overview": "Tổng quan",
@@ -269,6 +271,7 @@
     "overview": {
       "period": "Số liệu {month} · tiền công là số ghi nhận, tính theo tháng chuyến kết thúc",
       "stats": {
+        "title": "Số liệu tháng",
         "wageTotal": "Tiền công ghi nhận",
         "completedTrips": "Chuyến hoàn thành",
         "drivenDays": "{count, plural, other {# ngày lái}}",
@@ -316,6 +319,8 @@
       }
     },
     "trips": {
+      "period": "Thời gian thuê",
+      "wage": "Tiền công",
       "summary": "<b>{trips, plural, other {# chuyến hoàn thành}}</b> · tổng ghi nhận <b>{amount}</b>",
       "export": "Tải bảng kê",
       "exported": "{count, plural, other {Đã tải bảng kê # chuyến}}",
@@ -345,6 +350,10 @@
       }
     },
     "profile": {
+      "sectionInfo": "Thông tin tài xế",
+      "sectionLicence": "Bằng lái",
+      "sectionLink": "Liên kết",
+      "sectionNote": "Ghi chú",
       "name": "Tên gọi",
       "phone": "Số điện thoại",
       "account": "Tên tài khoản",
@@ -393,6 +402,7 @@
     "monthWageValue": "{amount} · {count, plural, other {# chuyến}}",
     "drops": "Rút chuyến {count, plural, other {# lần}} trong 90 ngày",
     "dropsCritical": "{count, plural, other {# lần sát giờ}}",
+    "edit": "Chỉnh sửa",
     "editInfo": "Chỉnh sửa thông tin",
     "viewTrips": "Xem chuyến"
   }

@@ -310,7 +310,7 @@ describe('ChatComposer - đính kèm (COM-03)', () => {
 });
 
 describe('ChatComposer - ngữ cảnh xe', () => {
-  const VEHICLE = { id: 'veh-1', name: 'VinFast VF8', imageUrl: null };
+  const VEHICLE = { kind: 'vehicle' as const, id: 'veh-1', name: 'VinFast VF8', imageUrl: null };
 
   it('gắn `vehicleId` vào câu ĐẦU TIÊN rồi gọi dọn thẻ', async () => {
     const onSend = jest.fn().mockResolvedValue(undefined);
@@ -318,7 +318,7 @@ describe('ChatComposer - ngữ cảnh xe', () => {
 
     const view = await render(
       withIntl(
-        <ChatComposer onSend={onSend} vehicleContext={VEHICLE} onClearVehicleContext={onClear} />,
+        <ChatComposer onSend={onSend} context={VEHICLE} onClearContext={onClear} />,
       ),
     );
 
@@ -338,7 +338,7 @@ describe('ChatComposer - ngữ cảnh xe', () => {
 
     const view = await render(
       withIntl(
-        <ChatComposer onSend={onSend} vehicleContext={VEHICLE} onClearVehicleContext={onClear} />,
+        <ChatComposer onSend={onSend} context={VEHICLE} onClearContext={onClear} />,
       ),
     );
     await fireEvent.changeText(view.getByLabelText('Nhập tin nhắn của bạn…'), 'Xe này còn không?');
@@ -352,15 +352,50 @@ describe('ChatComposer - ngữ cảnh xe', () => {
     const onClear = jest.fn();
     const view = await render(
       withIntl(
-        <ChatComposer
-          onSend={jest.fn()}
-          vehicleContext={VEHICLE}
-          onClearVehicleContext={onClear}
-        />,
+        <ChatComposer onSend={jest.fn()} context={VEHICLE} onClearContext={onClear} />,
       ),
     );
 
     await fireEvent.press(view.getByRole('button', { name: 'Bỏ ngữ cảnh xe' }));
+    expect(onClear).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ChatComposer - ngữ cảnh chuyến', () => {
+  const TRIP = {
+    kind: 'trip' as const,
+    id: 'req-1',
+    name: 'VinFast VF8',
+    imageUrl: null,
+    pickupAt: null,
+    returnAt: null,
+  };
+
+  it('gắn `bookingRequestId` (không `vehicleId`) vào câu ĐẦU TIÊN rồi gọi dọn thẻ', async () => {
+    const onSend = jest.fn().mockResolvedValue(undefined);
+    const onClear = jest.fn();
+
+    const view = await render(
+      withIntl(<ChatComposer onSend={onSend} context={TRIP} onClearContext={onClear} />),
+    );
+
+    expect(view.getByText('Về chuyến')).toBeTruthy();
+    await fireEvent.changeText(view.getByLabelText('Nhập tin nhắn của bạn…'), 'Mấy giờ giao xe?');
+    await fireEvent.press(view.getByRole('button', { name: 'Gửi' }));
+
+    await waitFor(() =>
+      expect(onSend).toHaveBeenCalledWith({ text: 'Mấy giờ giao xe?', bookingRequestId: 'req-1' }),
+    );
+    expect(onClear).toHaveBeenCalledTimes(1);
+  });
+
+  it('bấm X trên thẻ chuyến thì bỏ ngữ cảnh', async () => {
+    const onClear = jest.fn();
+    const view = await render(
+      withIntl(<ChatComposer onSend={jest.fn()} context={TRIP} onClearContext={onClear} />),
+    );
+
+    await fireEvent.press(view.getByRole('button', { name: 'Bỏ ngữ cảnh chuyến' }));
     expect(onClear).toHaveBeenCalledTimes(1);
   });
 });

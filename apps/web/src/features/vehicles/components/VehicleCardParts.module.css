@@ -149,6 +149,23 @@
   font-size: 12px;
 }
 
+/* Thẻ khổ điện thoại (Figma "Vehicle Status" `24158:103762`): chữ 12/18, đĩa 20, cách 32. */
+.detailedCompact {
+  /* 32 cố định - `--xp-space-xl` co về 24 ở ≤640. */
+  column-gap: 32px;
+}
+
+.detailedCompact .review {
+  font-size: var(--xp-font-size-label, 12px);
+  line-height: 18px;
+}
+
+.detailedCompact .reviewIcon {
+  width: 20px;
+  height: 20px;
+  font-size: 10px;
+}
+
 /* ─── Việc cần làm ────────────────────────────────────────────────────────── */
 
 .notices {

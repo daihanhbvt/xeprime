@@ -2,25 +2,22 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { isShopProfileSubmittable, PERMISSION } from '@xeprime/types';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { IconDisc } from '@/components/ui/IconDisc';
+import { InfoGroupCard } from '@/components/ui/InfoGroupCard';
+import CheckCircleFilled from '@ant-design/icons-svg/es/asn/CheckCircleFilled';
+import { AntIcon } from '@/components/icons/AntIcon';
+import ClockCircleOutlined from '@ant-design/icons-svg/es/asn/ClockCircleOutlined';
+import type { IconName } from '@/components/ui/Chip';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
 import { useMyShop } from '@/features/shop/hooks/use-shop';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, radius, typeScale } from '@/theme/tokens';
 import type { Href } from 'expo-router';
 
 type StepKey = 'profile' | 'vehicle' | 'review';
 type StepState = 'todo' | 'waiting' | 'done';
-
-/** Đường kính đĩa của một bước — bằng đĩa đầu khối, để hai thẻ cạnh nhau cùng một nhịp. */
-const STEP_DISC = 28;
-
-/** Bề dày sợi nối hai bước. Mảnh hơn thì đứt quãng trên màn mật độ thấp, dày hơn thì thành cột. */
-const RAIL_WIDTH = 2;
 
 /**
  * Ba bước từ "vừa mở gian hàng" tới "bán được xe", đặt ở ĐẦU Tổng quan — bản native của web
@@ -41,10 +38,6 @@ const RAIL_WIDTH = 2;
  * Trạng thái từng bước đọc từ dữ liệu THẬT, không phải một cờ "đã xem hướng dẫn": hồ sơ đủ chưa
  * chấm bằng đúng quy tắc backend dùng để chặn gửi duyệt (`isShopProfileSubmittable`), nên bước 1
  * không bao giờ xanh trong khi nút Gửi duyệt vẫn bị từ chối.
- *
- * **Hình thức là một cái THANG DỌC**, không phải ba đoạn văn xếp chồng: ba việc này có THỨ TỰ —
- * hồ sơ xong mới thêm xe, thêm xe xong mới chờ duyệt xe. Sợi nối giữa hai đĩa là thứ nói ra
- * quan hệ đó, và nó đổi sang màu xanh ở phần đã đi qua nên nhìn một cái là biết còn mấy bước.
  */
 export function ShopOnboardingCard({ vehicleCount }: { vehicleCount: number | undefined }) {
   const colors = useColors();
@@ -93,118 +86,101 @@ export function ShopOnboardingCard({ vehicleCount }: { vehicleCount: number | un
     },
   ];
 
+  /*
+   * Web `ShopOnboardingCard.module.css` khổ ≤640: thẻ đệm 12, viền `border-subtle`, bo 10, KHÔNG
+   * bóng; mỗi bước là một HÀNG CÓ VIỀN (bước xong: nền xám, không viền), nút của bước xuống dòng,
+   * rộng hết khổ, thụt bằng dấu thứ tự + khoảng cách.
+   */
   return (
-    <Card padded={false}>
-      <XStack
-        ai="center"
-        gap={space.sm}
-        px={space.md}
-        py={space.md}
-        bg={colors.primaryLight}
-        borderBottomWidth={1}
-        bc={colors.borderSubtle}
-      >
-        <IconDisc icon="rocket" tone={colors.primaryActive} size={STEP_DISC} filled />
-        <YStack f={1} gap={2}>
-          <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
-            {t('title')}
-          </Text>
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t('subtitle')}
-          </Text>
-        </YStack>
-      </XStack>
+    <InfoGroupCard title={t('title')}>
+        <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+          {t('subtitle')}
+        </Text>
 
-      <YStack px={space.md} pt={space.md}>
-        {steps.map((step, index) => {
-          const last = index === steps.length - 1;
-
-          return (
-            /*
-              `ai="stretch"` là thứ cho cột trái cao bằng cả bước, để sợi nối `f={1}` biết mình
-              phải kéo dài tới đâu. Bỏ nó thì sợi nối co về 0 và thang đứt thành ba đĩa rời.
-            */
-            <XStack key={step.key} gap={space.sm} ai="stretch">
-              <YStack ai="center" w={STEP_DISC}>
-                <StepDisc index={index} state={step.state} />
-                {last ? null : (
-                  <YStack
-                    f={1}
-                    w={RAIL_WIDTH}
-                    my={space.xs}
-                    br={radius.pill}
-                    bg={step.state === 'done' ? colors.success : colors.border}
-                  />
-                )}
-              </YStack>
-
-              <YStack f={1} gap={space.xs} pb={space.md}>
-                <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                  {t(`steps.${step.key}.title` as 'steps.profile.title')}
-                </Text>
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {t(`steps.${step.key}.body` as 'steps.profile.body')}
-                </Text>
-                {step.state === 'done' ? (
-                  <Text col={colors.success} fos={fontSize.label} fow={fontWeight.semibold}>
-                    {t('done')}
-                  </Text>
-                ) : step.state === 'waiting' ? (
-                  <Text col={colors.warning} fos={fontSize.label} fow={fontWeight.semibold}>
-                    {t('waiting')}
-                  </Text>
-                ) : step.href ? (
-                  <XStack pt={space.xs}>
+        <YStack gap={STEPS_GAP}>
+          {steps.map((step, index) => {
+            const done = step.state === 'done';
+            return (
+              <YStack
+                key={step.key}
+                gap={STEP_GAP}
+                px={STEP_PAD_X}
+                py={STEP_PAD_Y}
+                bw={1}
+                bc={done ? 'transparent' : colors.borderSubtle}
+                bg={done ? colors.borderSubtle : 'transparent'}
+                br={radius.md}
+              >
+                <XStack ai="center" gap={STEP_GAP}>
+                  <StepMarker index={index} done={done} />
+                  <YStack f={1} minWidth={0} gap={1}>
+                    <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
+                      {t(`steps.${step.key}.title` as 'steps.profile.title')}
+                    </Text>
+                    <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                      {t(`steps.${step.key}.body` as 'steps.profile.body')}
+                    </Text>
+                  </YStack>
+                  {done ? (
+                    <Text col={colors.success} fos={fontSize.bodySm}>
+                      {t('done')}
+                    </Text>
+                  ) : step.state === 'waiting' ? (
+                    <XStack ai="center" gap={WAITING_GAP}>
+                      <AntIcon icon={ClockCircleOutlined} size={iconSize.xs} color={colors.textMuted} />
+                      <Text col={colors.textMuted} fos={fontSize.bodySm} numberOfLines={1}>
+                        {t('waiting')}
+                      </Text>
+                    </XStack>
+                  ) : null}
+                </XStack>
+                {!done && step.state !== 'waiting' && step.href ? (
+                  <YStack paddingLeft={MARKER + STEP_GAP}>
                     <Button
                       label={t(`steps.${step.key}.action` as 'steps.profile.action')}
-                      variant="accent"
-                      size="sm"
-                      shape="square"
-                      block={false}
+                      icon={STEP_ICON[step.key]}
                       onPress={() => step.href && navigateOnce(step.href)}
                     />
-                  </XStack>
+                  </YStack>
                 ) : null}
               </YStack>
-            </XStack>
-          );
-        })}
-      </YStack>
-    </Card>
+            );
+          })}
+        </YStack>
+    </InfoGroupCard>
   );
 }
 
-/**
- * Đĩa của một bước: xong thì dấu tích xanh ĐẶC, đang chờ thì đồng hồ cam đặc, còn lại là SỐ THỨ
- * TỰ trên nền gold nhạt.
- *
- * Bước chưa làm giữ con số chứ không mượn một biểu tượng: cả thẻ nói về THỨ TỰ, và "1 · 2 · 3"
- * là cách nói thứ tự mà không cần chú giải. Đĩa xong/đang chờ thì ngược lại — ở đó con số hết
- * việc, cái cần đọc là kết quả.
- */
-function StepDisc({ index, state }: { index: number; state: StepState }) {
-  const colors = useColors();
-  if (state === 'done') {
-    return <IconDisc icon="checkmark" tone={colors.success} size={STEP_DISC} filled />;
-  }
-  if (state === 'waiting') {
-    return <IconDisc icon="hourglass" tone={colors.warning} size={STEP_DISC} filled />;
-  }
+/** Web khổ ≤640: `.card` đệm/khoảng `--xp-space-md` = 12; `.steps` cách `--xp-space-sm` = 8. */
+const STEPS_GAP = 8;
+/** `.step { padding: var(--xp-space-sm) var(--xp-space-md); gap: var(--xp-space-md) }` = 8/12, 12. */
+const STEP_PAD_Y = 8;
+const STEP_PAD_X = 12;
+const STEP_GAP = 12;
+/** `.marker` 26, `.markerDone` 18, `.waitingLabel { gap: 6px }`. */
+const MARKER = 26;
+const MARKER_DONE = 18;
+const WAITING_GAP = 6;
 
+/** Icon nút hành động của từng bước - web `STEP_ICON` (Solution · Car · Send, qua lớp ghép icon). */
+const STEP_ICON: Record<StepKey, IconName> = {
+  profile: 'reader-outline',
+  vehicle: 'car-outline',
+  review: 'send-outline',
+};
+
+/** Dấu thứ tự - web `.marker`: tròn 26 nền `primary-light`, số 12 đậm vừa màu `primary`; xong = tích xanh 18. */
+function StepMarker({ index, done }: { index: number; done: boolean }) {
+  const colors = useColors();
   return (
-    <YStack
-      w={STEP_DISC}
-      h={STEP_DISC}
-      br={radius.pill}
-      bg={colors.primaryLight}
-      bw={1}
-      bc={colors.primary}
-      ai="center"
-      jc="center"
-    >
-      <Text col={colors.primaryActive} fos={fontSize.label} fow={fontWeight.bold}>
-        {index + 1}
-      </Text>
+    <YStack w={MARKER} h={MARKER} br={radius.pill} bg={colors.primaryLight} ai="center" jc="center">
+      {done ? (
+        <AntIcon icon={CheckCircleFilled} size={MARKER_DONE} color={colors.success} />
+      ) : (
+        <Text col={colors.primary} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+          {index + 1}
+        </Text>
+      )}
     </YStack>
   );
 }

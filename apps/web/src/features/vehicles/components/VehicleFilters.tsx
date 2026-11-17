@@ -125,6 +125,8 @@ export function VehicleFiltersBar({
       onClear={onClear}
       // Filter đang bật — kể cả tham số URL mà tuyến này không vẽ ô — hiện thành chip gỡ được.
       showActiveChips
+      // Khổ điện thoại: tấm lọc v2 (Figma `24158:105500`) - lưới hai cột, ô sắp xếp nằm trong tấm.
+      sheetLayout="grid"
       inlineFieldLimit={narrowDesktop ? NARROW_DESKTOP_INLINE_FIELDS : undefined}
       actions={
         <>

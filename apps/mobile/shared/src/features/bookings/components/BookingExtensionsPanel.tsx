@@ -8,7 +8,8 @@ import {
   PERMISSION,
   SERVICE_TYPE,
 } from '@xeprime/types';
-import { BlockLink, BlockTitle } from '@/components/ui/BlockTitle';
+import { BlockLink } from '@/components/ui/BlockTitle';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -50,7 +51,7 @@ export function BookingExtensionsPanel({ booking }: { booking: BookingDetail }) 
     <>
       <Card>
         <YStack gap={space.sm}>
-          <BlockTitle
+          <SectionHeader icon="calendar-outline"
             action={
               canExtend ? (
                 <BlockLink
@@ -61,25 +62,25 @@ export function BookingExtensionsPanel({ booking }: { booking: BookingDetail }) 
             }
           >
             {t('panelTitle')}
-          </BlockTitle>
+          </SectionHeader>
           {extensions.isError ? (
             <Callout tone="danger">{errorMessage(extensions.error)}</Callout>
           ) : rows.length === 0 ? (
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            <Text col={colors.textMuted} fos={fontSize.body}>
               {t('freeNote')}
             </Text>
           ) : (
             rows.map((e) => (
               <XStack key={e.id} ai="center" gap={space.sm}>
                 <YStack f={1} gap={2}>
-                  <Text col={colors.text} fos={fontSize.bodySm}>
+                  <Text col={colors.text} fos={fontSize.body}>
                     {t('rowSummary', {
                       months: e.months,
                       from: fmt.shortDateTime(e.fromAt),
                       to: fmt.shortDateTime(e.toAt),
                     })}
                   </Text>
-                  <Text col={colors.price} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                  <Text col={colors.price} fos={fontSize.body} fow={fontWeight.semibold}>
                     {fmt.money(e.rentalAmount)}
                   </Text>
                 </YStack>

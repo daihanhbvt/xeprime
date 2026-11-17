@@ -15,6 +15,7 @@ import { SHOP_LOGO, useShopCoverHeight } from './ShopCover';
 import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { radius, space } from '@/theme/tokens';
 import { motionMs } from '@/theme/motion';
+import { layout } from '@/theme/layout';
 
 interface SkeletonProps {
   width?: number | `${number}%`;
@@ -251,7 +252,7 @@ export function MiniRowsSkeleton({ rows = 3 }: { rows?: number }) {
       {Array.from({ length: rows }, (_, i) => (
         <YStack key={i}>
           {i > 0 ? <YStack h={1} bg={colors.borderSubtle} /> : null}
-          <XStack ai="center" gap={space.sm} px={space.md} py={space.sm}>
+          <XStack ai="center" gap={space.sm} px={layout.padX} py={space.sm}>
             <YStack f={1} gap={space.xs}>
               <Skeleton width="55%" height={13} />
               <Skeleton width="80%" height={11} />
@@ -429,7 +430,7 @@ export function ShopProfileSkeleton() {
     <YStack>
       <Skeleton height={coverHeight} />
 
-      <YStack px={space.md} gap={space.lg} mt={-SHOP_LOGO / 2}>
+      <YStack px={layout.padX} gap={space.lg} mt={-SHOP_LOGO / 2}>
         <YStack gap={space.sm}>
           <Skeleton width={SHOP_LOGO} height={SHOP_LOGO} round />
           <Skeleton width="55%" height={20} />
@@ -496,7 +497,7 @@ const SHOP_CARD_AVATAR = 56;
 export function ShopDetailSkeleton() {
   const colors = useColors();
   return (
-    <YStack px={space.md} pt={space.md} gap={space.lg}>
+    <YStack px={layout.padX} pt={space.md} gap={space.lg}>
       {/* Thẻ hồ sơ — web `.card`: đệm md, viền `border` 1px, bo `radius-card`. */}
       <YStack p={space.md} gap={space.md} bw={1} bc={colors.border} br={radius.card}>
         <XStack gap={space.sm + space.xs} ai="flex-start">

@@ -1,5 +1,5 @@
 import { celebrate } from '@/components/motion/Confetti';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useCallback, useEffect, useRef } from 'react';
 import { BackHandler } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -326,6 +326,7 @@ function DoneResult({
               <ShopChatButton
                 shopSlug={listing.shopSlug}
                 vehicleId={listing.id}
+                {...(receipt?.id ? { tripId: receipt.id } : {})}
                 publicChatOpen={listing.shopChatOpen}
                 label={t('done.chatHost')}
                 variant="primary"

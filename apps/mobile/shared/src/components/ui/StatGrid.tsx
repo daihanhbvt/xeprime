@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Fragment, type ReactNode } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -8,6 +8,7 @@ import { Divider } from './DataRow';
 import { DetailChevron } from './DetailArrow';
 import { IconDisc } from './IconDisc';
 import type { IconName } from './Chip';
+import { layout } from '@/theme/layout';
 
 /**
  * Sàn co chữ của ô số.
@@ -220,7 +221,7 @@ function Cell({ cell }: { cell: StatCell }) {
     <YStack
       f={1}
       minWidth={0}
-      px={space.md}
+      px={layout.padX}
       py={space.sm}
       gap={2}
       accessible
@@ -319,7 +320,7 @@ function ListRow({
 
   const body = (
     <YStack
-      px={space.md}
+      px={layout.padX}
       py={space.sm}
       gap={2}
       accessible
@@ -410,7 +411,7 @@ function TotalRow({ cell, chevronSlot }: { cell: StatCell; chevronSlot: boolean 
   const pressedRow = usePressedRow();
   const body = (
     <YStack
-      px={space.md}
+      px={layout.padX}
       py={space.sm}
       gap={2}
       {...(cell.surface ? { bg: cell.surface } : {})}
@@ -511,7 +512,7 @@ export function StatCardFooter({ children }: { children: ReactNode }) {
   return (
     <>
       <Divider />
-      <YStack px={space.md} py={space.sm} bg={colors.surfaceMuted}>
+      <YStack px={layout.padX} py={space.sm} bg={colors.surfaceMuted}>
         {children}
       </YStack>
     </>

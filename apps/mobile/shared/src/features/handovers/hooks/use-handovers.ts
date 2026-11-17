@@ -52,7 +52,7 @@ export function useHandoverContext(bookingId: string, enabled = true) {
  * MỘT hàm cho cả xác nhận lẫn sửa KM: hai đường ghi khác nhau nhưng cùng đụng đúng những nhánh
  * này, và nếu mỗi bên tự liệt kê thì sớm muộn một bên sẽ thiếu một cái.
  */
-function useInvalidateHandover(bookingId: string): () => void {
+export function useInvalidateHandover(bookingId: string): () => void {
   const queryClient = useQueryClient();
   return useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.handovers(bookingId) });
@@ -250,5 +250,21 @@ export function useMissingOdometerQueue(
     enabled,
     // Đổi trang GIỮ nguyên danh sách cũ trên màn — không nháy về khung xương giữa hai trang.
     placeholderData: keepPageData<Awaited<ReturnType<typeof handoversApi.missingOdometer>>>(params),
+  });
+}
+
+/**
+ * "Khách chưa trả xe" (ADR 0081) — gian hàng phản đối lời báo trả xe của khách: server huỷ lời
+ * báo và mở tranh chấp. Bản native của mutation trong web `CustomerReturnReport`.
+ */
+export function useRejectCustomerReturn(bookingId: string) {
+  const queryClient = useQueryClient();
+  const invalidate = useInvalidateHandover(bookingId);
+  return useMutation({
+    mutationFn: () => handoversApi.rejectCustomerReturn(bookingId),
+    onSuccess: (context) => {
+      queryClient.setQueryData(queryKeys.bookings.handovers(bookingId), context);
+      invalidate();
+    },
   });
 }

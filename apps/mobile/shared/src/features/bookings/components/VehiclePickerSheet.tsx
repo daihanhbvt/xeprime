@@ -1,4 +1,7 @@
 import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+import { Pill } from '@/components/ui/Pill';
+import { RemoteImage } from '@/components/ui/RemoteImage';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -41,7 +44,10 @@ export function VehiclePickerSheet({
   selectedId,
   onSelect,
   initialBranchId,
+  inline = false,
 }: {
+  /** Dựng THẲNG trong màn thay vì tấm trượt - như web (màn "Chọn xe cho đơn thuê", 16/11/2026). */
+  inline?: boolean;
   open: boolean;
   onClose: () => void;
   selectedId: string | null;
@@ -61,12 +67,13 @@ export function VehiclePickerSheet({
   const items = useMemo(() => query.data?.items ?? [], [query.data]);
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={t('title')}>
+    <Shell inline={inline} open={open} onClose={onClose} title={t('title')}>
       <SearchInput
         value={search}
         onChange={setSearch}
         label={t('searchLabel')}
         placeholder={t('searchPlaceholder')}
+        variant="field"
       />
 
       <BranchFilterField filter={branch} value={branchId} />
@@ -119,6 +126,28 @@ export function VehiclePickerSheet({
           />
         ))
       )}
+    </Shell>
+  );
+}
+
+function Shell({
+  inline,
+  open,
+  onClose,
+  title,
+  children,
+}: {
+  inline: boolean;
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+}) {
+  return inline ? (
+    <YStack gap={space.sm}>{children}</YStack>
+  ) : (
+    <BottomSheet open={open} onClose={onClose} title={title}>
+      {children}
     </BottomSheet>
   );
 }
@@ -144,35 +173,45 @@ function VehicleRow({
       accessibilityState={{ selected }}
       style={({ pressed }) => (pressed ? { opacity: 0.7 } : null)}
     >
+      {/* Như hàng xe của web `StaffVehiclePicker`: ảnh · tên · biển số · mã · viên trạng thái + giá/ngày. */}
       <XStack
         ai="center"
-        gap={space.md}
-        p={space.md}
-        br={radius.lg}
+        gap={12}
+        p={space.sm}
+        br={radius.control}
         bw={1}
-        bg={selected ? colors.surfaceSelected : colors.surface}
+        bg={selected ? colors.primarySubtle : colors.surface}
         bc={selected ? colors.primary : colors.border}
-        minHeight={sizing.touchTarget}
       >
-        <Ionicons name="car-outline" size={iconSize.lg} color={colors.textMuted} />
-        <YStack f={1} gap={2}>
-          <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium} numberOfLines={1}>
+        <YStack w={THUMB} h={THUMB} br={radius.sm} ov="hidden" bg={colors.surfaceMuted} flexShrink={0}>
+          <RemoteImage
+            uri={vehicle.mainImageUrl ?? null}
+            recyclingKey={vehicle.id}
+            radius={radius.sm}
+            fallback={<Ionicons name="car-outline" size={iconSize.lg} color={colors.placeholder} />}
+          />
+        </YStack>
+        <YStack f={1} minWidth={0} gap={2}>
+          <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={1}>
             {vehicle.name}
           </Text>
           <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
             {[vehicle.plateNumber, vehicle.code].filter(Boolean).join(LIST_SEPARATOR)}
           </Text>
-          {unavailable ? (
-            <Text col={colors.warning} fos={fontSize.label}>
-              {t('unavailable')}
-            </Text>
-          ) : null}
+          <XStack ai="center" gap={space.sm} flexWrap="wrap">
+            <Pill
+              size="sm"
+              shape="tag"
+              tone={unavailable ? 'warning' : 'success'}
+              label={unavailable ? t('unavailable') : t('available')}
+            />
+            {vehicle.weekdayPrice ? (
+              <Text col={colors.textMuted} fos={fontSize.label}>
+                {t('pricePerDay', { price: fmt.money(vehicle.weekdayPrice) })}
+              </Text>
+            ) : null}
+          </XStack>
         </YStack>
-        {vehicle.weekdayPrice ? (
-          <Text col={colors.price} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-            {fmt.money(vehicle.weekdayPrice)}
-          </Text>
-        ) : null}
         {selected ? (
           <Ionicons name="checkmark-circle" size={iconSize.lg} color={colors.primaryActive} />
         ) : null}
@@ -180,3 +219,6 @@ function VehicleRow({
     </Pressable>
   );
 }
+
+/** Ảnh xe trong hàng chọn xe (web 56). */
+const THUMB = 56;

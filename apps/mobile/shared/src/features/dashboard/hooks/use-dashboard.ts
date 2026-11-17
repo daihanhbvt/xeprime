@@ -10,7 +10,6 @@ import type { Href } from 'expo-router';
 import {
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
-  CUSTOMER_TRIP_FILTER,
   PERMISSION,
   PLAN_FEATURE,
   TENANT_ROLE,
@@ -32,7 +31,6 @@ import {
   type FinanceSummary,
   type Receipt,
 } from '@/features/finance/api';
-import { isCommissionOwner } from '@/features/shell/partner-track';
 import type { BookingSort } from '@/features/bookings/api';
 import { vehiclesApi, type FleetSummary } from '@/features/vehicles/api';
 import { ROUTES } from '@/navigation/routes';
@@ -158,8 +156,8 @@ export interface DashboardLinks {
 /**
  * Đích của MỌI thẻ trên Tổng quan — bản native của `useDashboardLinks` bên web.
  *
- *  - CHỦ xe tuyến hoa hồng đọc yêu cầu + đơn gộp ở "Chuyến cho thuê" — trỏ thẳng vào đó;
- *  - thành viên và tuyến gói dùng hộp thư + bảng đơn / màn "Chờ giao xe".
+ *  - MỌI tuyến (gian hàng gói, chủ xe tuyến hoa hồng và thành viên) dùng hộp thư + bảng đơn / màn
+ *    "Chờ giao xe" — "Chuyến cho thuê" riêng của chủ xe đã gỡ ở web PR #278.
  *
  * Bộ lọc đi trên THAM SỐ ROUTE cùng tên với query web (`status`, `sort`, `filter`,
  * `operationStatus`, `publicStatus`) — màn danh sách đọc chúng làm giá trị KHỞI TẠO
@@ -169,26 +167,16 @@ export interface DashboardLinks {
 const ACTIVE_SORT: BookingSort = 'return_asc';
 
 export function useDashboardLinks(branchId?: string): DashboardLinks {
-  const { data: user } = useCurrentUser();
-  const ownerTrips = isCommissionOwner(user);
-
   return useMemo(() => {
     const branch = (href: Href) => withBranchParam(href, branchId ?? null);
     const m = ROUTES.manage;
-    const trips = m.trips();
     return {
-      requests: ownerTrips ? trips : branch(m.requests()),
-      awaitingPayment: ownerTrips
-        ? trips
-        : branch(m.requests({ status: BOOKING_REQUEST_STATUS.AWAITING_HOLD })),
-      awaitingPickup: ownerTrips ? trips : branch(m.bookingsAwaitingPickup()),
-      active: ownerTrips
-        ? trips
-        : branch(m.bookings({ status: BOOKING_STATUS.ACTIVE, sort: ACTIVE_SORT })),
-      allBookings: ownerTrips ? trips : branch(m.bookings()),
-      completed: ownerTrips
-        ? m.trips({ filter: CUSTOMER_TRIP_FILTER.HISTORY })
-        : branch(m.bookings({ status: BOOKING_STATUS.COMPLETED })),
+      requests: branch(m.requests()),
+      awaitingPayment: branch(m.requests({ status: BOOKING_REQUEST_STATUS.AWAITING_HOLD })),
+      awaitingPickup: branch(m.bookingsAwaitingPickup()),
+      active: branch(m.bookings({ status: BOOKING_STATUS.ACTIVE, sort: ACTIVE_SORT })),
+      allBookings: branch(m.bookings()),
+      completed: branch(m.bookings({ status: BOOKING_STATUS.COMPLETED })),
       calendar: branch(m.calendar()),
       availableVehicles: branch(m.vehicles({ operationStatus: VEHICLE_OPERATION_STATUS.AVAILABLE })),
       booking: (id: string) => m.bookingDetail(id),
@@ -200,7 +188,7 @@ export function useDashboardLinks(branchId?: string): DashboardLinks {
       subscription: m.plan(),
       balance: m.balance(),
     };
-  }, [branchId, ownerTrips]);
+  }, [branchId]);
 }
 
 /**

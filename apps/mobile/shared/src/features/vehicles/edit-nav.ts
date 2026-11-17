@@ -1,135 +1,94 @@
+import AppstoreOutlined from '@ant-design/icons-svg/es/asn/AppstoreOutlined';
+import CarOutlined from '@ant-design/icons-svg/es/asn/CarOutlined';
+import FileTextOutlined from '@ant-design/icons-svg/es/asn/FileTextOutlined';
+import HistoryOutlined from '@ant-design/icons-svg/es/asn/HistoryOutlined';
+import PictureOutlined from '@ant-design/icons-svg/es/asn/PictureOutlined';
+import SafetyCertificateOutlined from '@ant-design/icons-svg/es/asn/SafetyCertificateOutlined';
+import SettingOutlined from '@ant-design/icons-svg/es/asn/SettingOutlined';
+import WalletOutlined from '@ant-design/icons-svg/es/asn/WalletOutlined';
 import { SERVICE_TYPE, type ServiceType } from '@xeprime/types';
-import type { IconName } from '@/components/ui/Chip';
+import type { AntIconDefinition } from '@/components/icons/AntIcon';
 import { VEHICLE_EDIT_TAB, type VehicleEditTab } from '@/navigation/vehicle-edit-tab';
-import type { VehicleManageMenuKey } from '@/navigation/vehicle-manage-section';
+
+/** Khoá dưới `Vehicles.editor.menu.items` - CÙNG nhãn với menu trái web (`VehicleEditMenu`). */
+export type EditMenuLabelKey =
+  | 'information'
+  | 'media'
+  | 'documents'
+  | 'trip-history'
+  | 'services'
+  | 'policy'
+  | 'maintenance'
+  | 'source';
 
 export interface EditNavItem {
   readonly tab: VehicleEditTab;
-  /** Khoá dưới `VehicleManage.menu` — CÙNG nhãn với menu trái bên web. */
-  readonly labelKey: VehicleManageMenuKey;
-  readonly icon: IconName;
+  readonly labelKey: EditMenuLabelKey;
+  /** CÙNG glyph AntD với web `EDIT_MENU_ICON`. */
+  readonly icon: AntIconDefinition;
 }
 
 export interface EditNavGroup {
-  readonly key: 'info' | 'services' | 'policy' | 'selfDrive' | 'withDriver' | 'longTerm' | 'advanced';
-  readonly labelKey: VehicleManageMenuKey;
-  /** Dịch vụ của nhóm — nhóm dịch vụ có công tắc bật/tắt trên tiêu đề; `null` = nhóm chung. */
-  readonly serviceType: ServiceType | null;
-  /** Dịch vụ của nhóm đang TẮT trên xe — nhóm vẫn hiện nhưng mờ đi. */
-  readonly dimmed: boolean;
+  /** Khoá dưới `Vehicles.editor.menu.groups` - CÙNG ba nhóm với menu trái web. */
+  readonly key: 'profile' | 'rental' | 'advanced';
   readonly items: readonly EditNavItem[];
 }
 
 const item = (
   tab: VehicleEditTab,
-  labelKey: VehicleManageMenuKey,
-  icon: IconName,
-): EditNavItem => ({
-  tab,
-  labelKey,
-  icon,
-});
+  labelKey: EditMenuLabelKey,
+  icon: AntIconDefinition,
+): EditNavItem => ({ tab, labelKey, icon });
 
 /**
- * MENU của màn sửa xe ở app Partner — bản native của `editNavGroups` bên web
- * (`apps/web/src/features/vehicles/components/vehicle-edit-nav.ts`), cùng sáu nhóm, cùng thứ tự:
+ * MENU của màn sửa xe ở app Partner - bản native của `EDIT_MENU_GROUPS` web
+ * (`apps/web/src/features/vehicles/components/vehicle-edit-nav.ts`, ledger §3.6 E1), BA nhóm:
  *
  * | Nhóm | Mục |
  * | --- | --- |
- * | Thông tin xe | Thông tin xe & tiện ích · Hình ảnh · Giấy tờ xe |
- * | Giá & giao nhận | Giá & chính sách · Thời gian giao nhận |
- * | Cho thuê tự lái [công tắc] | Nhận chuyến & thủ tục |
- * | Cho thuê có tài xế [công tắc] | Nhận chuyến & thủ tục · Phụ phí |
- * | Cho thuê dài hạn [công tắc] | — (giá tháng nằm ở Giá & chính sách) |
- * | Nâng cao | Nguồn xe & tài chính · Bảo dưỡng & KM |
+ * | Hồ sơ xe | Thông tin chung · Hình ảnh · Giấy tờ xe · Lịch sử chuyến |
+ * | Hình thức cho thuê | Dịch vụ & giá · Chính sách thuê |
+ * | Vận hành nâng cao | Bảo dưỡng & số KM · Nguồn gốc & tài chính xe |
  *
- * `enabled` là năng lực của NGƯỜI NÀY (web `tabEnabled`: giấy tờ/nguồn xe/bảo dưỡng theo
- * `useVehicleCapabilities`). Nhóm rỗng bị bỏ, TRỪ nhóm dịch vụ — nó mang công tắc.
- *
- * Hàm THUẦN để thứ tự và luật lọc kiểm được bằng test.
+ * "Dịch vụ & giá" gồm tab dịch vụ, công tắc, nhận chuyến tự động, giá (web `ServicesPane`);
+ * "Chính sách thuê" gồm nguồn chính sách, giao nhận, thời gian chết, điều kiện thuê (web
+ * `PolicyPane`). `enabled` là năng lực của NGƯỜI NÀY; nhóm rỗng bị bỏ. Hàm THUẦN để test được.
  */
 export function vehicleEditNavGroups({
   enabled,
-  services,
 }: {
   enabled: (tab: VehicleEditTab) => boolean;
-  services: readonly string[];
 }): EditNavGroup[] {
-  const service = (
-    key: EditNavGroup['key'],
-    labelKey: VehicleManageMenuKey,
-    serviceType: ServiceType,
-    items: EditNavItem[],
-  ): EditNavGroup => ({
-    key,
-    labelKey,
-    serviceType,
-    dimmed: !services.includes(serviceType),
-    items,
-  });
-
   const groups: EditNavGroup[] = [
     {
-      key: 'info',
-      labelKey: 'groups.info',
-      serviceType: null,
-      dimmed: false,
+      key: 'profile',
       items: [
-        item(VEHICLE_EDIT_TAB.INFORMATION, 'items.information', 'car-outline'),
-        item(VEHICLE_EDIT_TAB.MEDIA, 'items.images', 'images-outline'),
-        item(VEHICLE_EDIT_TAB.DOCUMENTS, 'items.documents', 'document-text-outline'),
-        item(VEHICLE_EDIT_TAB.TRIP_HISTORY, 'items.tripHistory', 'time-outline'),
+        item(VEHICLE_EDIT_TAB.INFORMATION, 'information', CarOutlined),
+        item(VEHICLE_EDIT_TAB.MEDIA, 'media', PictureOutlined),
+        item(VEHICLE_EDIT_TAB.DOCUMENTS, 'documents', FileTextOutlined),
+        item(VEHICLE_EDIT_TAB.TRIP_HISTORY, 'trip-history', HistoryOutlined),
       ],
     },
     {
-      // "Dịch vụ & giá" và "Chính sách thuê" — hai mục của màn sửa xe web (Figma 03/11/2026). Áp
-      // cho CẢ chiếc xe, không nằm dưới công tắc dịch vụ nào. Khung giờ giao nhận đã gỡ (ADR 0078).
-      key: 'services',
-      labelKey: 'groups.services',
-      serviceType: null,
-      dimmed: false,
-      items: [item(VEHICLE_EDIT_TAB.PRICING, 'items.services', 'cash-outline')],
+      key: 'rental',
+      items: [
+        item(VEHICLE_EDIT_TAB.PRICING, 'services', AppstoreOutlined),
+        item(VEHICLE_EDIT_TAB.POLICY, 'policy', SafetyCertificateOutlined),
+      ],
     },
-    {
-      key: 'policy',
-      labelKey: 'groups.policy',
-      serviceType: null,
-      dimmed: false,
-      items: [item(VEHICLE_EDIT_TAB.HANDOVER_TIME, 'items.turnaround', 'hourglass-outline')],
-    },
-    service('selfDrive', 'groups.selfDrive', SERVICE_TYPE.SELF_DRIVE, [
-      item(
-        VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION,
-        'items.bookingTerms',
-        'shield-checkmark-outline',
-      ),
-    ]),
-    service('withDriver', 'groups.withDriver', SERVICE_TYPE.WITH_DRIVER, [
-      item(
-        VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION,
-        'items.bookingTerms',
-        'shield-checkmark-outline',
-      ),
-
-    ]),
-    // Dài hạn không có thiết lập vận hành nào — nhóm chỉ mang công tắc + lời nhắc giá tháng.
-    service('longTerm', 'groups.longTerm', SERVICE_TYPE.LONG_TERM, []),
     {
       key: 'advanced',
-      labelKey: 'groups.advanced',
-      serviceType: null,
-      dimmed: false,
       items: [
-        // Bảo dưỡng TRƯỚC nguồn xe — đúng thứ tự nhóm Nâng cao bên web.
-        item(VEHICLE_EDIT_TAB.MAINTENANCE, 'items.maintenance', 'construct-outline'),
-        item(VEHICLE_EDIT_TAB.SOURCE, 'items.source', 'wallet-outline'),
+        // Bảo dưỡng TRƯỚC nguồn xe - đúng thứ tự nhóm bên web.
+        item(VEHICLE_EDIT_TAB.MAINTENANCE, 'maintenance', SettingOutlined),
+        item(VEHICLE_EDIT_TAB.SOURCE, 'source', WalletOutlined),
       ],
     },
   ];
 
   return groups
     .map((group) => ({ ...group, items: group.items.filter((entry) => enabled(entry.tab)) }))
-    .filter((group) => group.items.length > 0 || group.serviceType !== null);
+    .filter((group) => group.items.length > 0);
 }
 
 /** Dịch vụ mà một mục thuộc về — web `editTabServiceType`. `null` = nhóm chung. */

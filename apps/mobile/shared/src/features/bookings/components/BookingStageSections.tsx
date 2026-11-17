@@ -1,18 +1,27 @@
-import { Ionicons } from '@expo/vector-icons';
+import CheckOutlined from '@ant-design/icons-svg/es/asn/CheckOutlined';
+import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
+import { AntIcon } from '@/components/icons/AntIcon';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { isZeroMoney, rentalProgress } from '@xeprime/domain';
-import { BOOKING_STATUS, PERMISSION, type BookingStatus } from '@xeprime/types';
-import { BlockTitle } from '@/components/ui/BlockTitle';
-import { Callout } from '@/components/ui/Callout';
-import { Card } from '@/components/ui/Card';
-import { ProgressBar } from '@/components/ui/ProgressBar';
+import { isZeroMoney, rentalProgress, toAppTz } from '@xeprime/domain';
+import {
+  BOOKING_HISTORY_OUTCOME,
+  BOOKING_STATUS,
+  CANCELLATION_PARTY,
+  HANDOVER_CONFIRM_SOURCE,
+  PERMISSION,
+  STATUS_COLOR,
+  type BookingStatus,
+  type StatusColor,
+} from '@xeprime/types';
+import { ToneDotBadge } from '@/components/ui/ToneDotBadge';
+import { SectionCard } from '@/components/ui/SectionCard';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useHandoverContext } from '@/features/handovers/hooks/use-handovers';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import type { BookingDetail } from '../api';
 
 type Stage = 'awaitingPickup' | 'renting' | 'completed' | 'cancelled' | 'noShow';
@@ -39,16 +48,36 @@ export function bookingStageOf(status: string): Stage {
  * `BookingStepper` (web, 03/11/2026). Đơn huỷ / khách không đến: KHÔNG có thanh bước (web 05/11/2026) —
  * banner kết cục nói đủ.
  */
-export function BookingStepper({ booking }: { booking: BookingDetail }) {
+export function BookingStepper({
+  booking,
+  variant = 'dots',
+}: {
+  booking: BookingDetail;
+  /** `bar` = thanh 4 đoạn trong thanh trên (Figma "Status Labels" `24145:102674`). */
+  variant?: 'dots' | 'bar';
+}) {
   const t = useTranslations('Bookings.detailPage');
   const colors = useColors();
   const fmt = useAppFormat();
+  const permissions = usePermissions();
+  const handover = useHandoverContext(booking.id, permissions.has(PERMISSION.HANDOVER_VIEW)).data;
   const stage = bookingStageOf(booking.status);
   const ended = stage === 'cancelled' || stage === 'noShow';
   // Đơn huỷ / khách không đến KHÔNG có thanh bước (web 05/11/2026) — banner kết cục nói đủ.
   if (ended) return null;
+  // Biên bản do LỜI CỦA KHÁCH (ADR 0081) — thanh bước nói rõ không phải gian hàng đã kiểm xe.
+  const pickupByCustomer = handover?.pickup?.confirmSource === HANDOVER_CONFIRM_SOURCE.CUSTOMER;
+  const returnAuto = handover?.return?.confirmSource === HANDOVER_CONFIRM_SOURCE.AUTO;
   const at = (
-    key: 'confirmed' | 'holdPaid' | 'pickupDue' | 'pickedUp' | 'returnDue' | 'returned',
+    key:
+      | 'confirmed'
+      | 'holdPaid'
+      | 'pickupDue'
+      | 'pickedUp'
+      | 'pickedUpByCustomer'
+      | 'returnDue'
+      | 'returned'
+      | 'returnedAuto',
     iso: string,
   ) => t(`stepAt.${key}`, { time: fmt.shortDateTime(iso) });
 
@@ -62,20 +91,28 @@ export function BookingStepper({ booking }: { booking: BookingDetail }) {
     {
       key: 'awaitingPickup',
       label: t('stage.awaitingPickup'),
-      hint: booking.holdPaidAt ? at('holdPaid', booking.holdPaidAt) : null,
+      // Kèm SỐ TIỀN đã về (06/11/2026) — số khách thực chuyển cho XePrime.
+      hint: booking.holdPaidAt
+        ? booking.holdPaidAmount
+          ? t('stepAt.holdPaidAmount', {
+              amount: fmt.money(booking.holdPaidAmount),
+              time: fmt.shortDateTime(booking.holdPaidAt),
+            })
+          : at('holdPaid', booking.holdPaidAt)
+        : null,
     },
     {
       key: 'renting',
       label: t('stage.renting'),
       hint: booking.actualPickupAt
-        ? at('pickedUp', booking.actualPickupAt)
+        ? at(pickupByCustomer ? 'pickedUpByCustomer' : 'pickedUp', booking.actualPickupAt)
         : at('pickupDue', booking.pickupAt),
     },
     {
       key: 'completed',
       label: t('stage.completed'),
       hint: booking.actualReturnAt
-        ? at('returned', booking.actualReturnAt)
+        ? at(returnAuto ? 'returnedAuto' : 'returned', booking.actualReturnAt)
         : at('returnDue', booking.returnAt),
     },
   ];
@@ -90,57 +127,115 @@ export function BookingStepper({ booking }: { booking: BookingDetail }) {
               : 'todo',
       }));
 
-  const dotColor: Record<StepState, string> = {
-    done: colors.success,
-    current: colors.primary,
-    todo: colors.borderInput,
-    failed: colors.danger,
-  };
+  if (variant === 'bar') {
+    return (
+      <XStack gap={STEP_BAR_GAP} accessibilityLabel={t('stepperLabel')} accessibilityRole="list">
+        {steps.map((step) => (
+          <YStack key={step.key} f={1} gap={6} ai="center" minWidth={0}>
+            <YStack
+              w="100%"
+              h={STEP_BAR_H}
+              br={STEP_BAR_H}
+              bg={step.state === 'todo' ? colors.surfaceMuted : colors.primary}
+            />
+            <Text
+              col={step.state === 'todo' ? colors.placeholder : colors.text}
+              fos={typeScale.caption.fontSize}
+              lh={typeScale.caption.lineHeight}
+              fow={step.state === 'current' ? fontWeight.semibold : fontWeight.regular}
+              numberOfLines={1}
+            >
+              {step.label}
+            </Text>
+          </YStack>
+        ))}
+      </XStack>
+    );
+  }
 
   return (
-    <Card accessibilityLabel={t('stepperLabel')}>
-      <YStack gap={0}>
-        {steps.map((step, index) => (
-          <XStack key={step.key} gap={space.sm} ai="stretch">
-            <YStack ai="center" w={22}>
+    /*
+      Web `.stepper`: MỘT hàng ngang bốn bước chia đều, đệm dọc 8, KHÔNG khung thẻ. Mỗi bước: chấm
+      24 (viền 2), nhãn 14/500 căn giữa, mốc giờ 12 màu phụ; đường nối 2px ở cao 11 giữa hai chấm,
+      tô vàng khi bước trước đã xong.
+    */
+    <XStack py={space.sm} accessibilityLabel={t('stepperLabel')} accessibilityRole="list">
+      {steps.map((step, index) => {
+        const current = step.state === 'current';
+        return (
+          <YStack key={step.key} f={1} ai="center" gap={space.sm} minWidth={0}>
+            {index > 0 ? (
               <YStack
-                w={18}
-                h={18}
-                br={radius.pill}
-                ai="center"
-                jc="center"
-                bg={step.state === 'todo' ? 'transparent' : dotColor[step.state]}
-                bw={step.state === 'todo' ? 1.5 : 0}
-                bc={dotColor.todo}
-              >
-                {step.state === 'done' ? (
-                  <Ionicons name="checkmark" size={12} color={colors.onPrimary} />
-                ) : step.state === 'failed' ? (
-                  <Ionicons name="close" size={12} color={colors.onPrimary} />
-                ) : null}
-              </YStack>
-              {index < steps.length - 1 ? (
-                <YStack f={1} w={2} minHeight={14} bg={colors.borderSubtle} />
+                pos="absolute"
+                top={STEP_LINE_TOP}
+                left="-50%"
+                right="50%"
+                h={2}
+                bg={steps[index - 1]?.state === 'done' ? colors.primary : colors.border}
+              />
+            ) : null}
+            <YStack
+              w={STEP_DOT}
+              h={STEP_DOT}
+              br={radius.pill}
+              bw={2}
+              bc={step.state === 'todo' ? colors.border : colors.primary}
+              bg={step.state === 'todo' ? colors.surface : current ? colors.surface : colors.primary}
+              ai="center"
+              jc="center"
+              zIndex={1}
+            >
+              {/* `.step_current`: nền vàng thụt vào trong một vòng trắng 4px. */}
+              {current ? <YStack w={STEP_DOT - 12} h={STEP_DOT - 12} br={radius.pill} bg={colors.primary} /> : null}
+              {step.state === 'done' ? (
+                <AntIcon icon={CheckOutlined} size={12} color={colors.onPrimary} />
               ) : null}
             </YStack>
-            <YStack f={1} pb={index < steps.length - 1 ? space.sm : 0} gap={2}>
-              <Text
-                col={step.state === 'failed' ? colors.danger : colors.text}
-                fos={fontSize.bodySm}
-                fow={step.state === 'current' ? fontWeight.bold : fontWeight.semibold}
-              >
-                {step.label}
+            <Text
+              col={current ? colors.primaryStrong : colors.text}
+              fos={fontSize.label}
+              fow={fontWeight.medium}
+              ta="center"
+            >
+              {step.label}
+            </Text>
+            {step.hint ? (
+              <Text col={current ? colors.primaryStrong : colors.textMuted} fos={typeScale.caption.fontSize} lh={typeScale.caption.lineHeight} ta="center">
+                {step.hint}
               </Text>
-              {step.hint ? (
-                <Text col={colors.textMuted} fos={fontSize.label}>
-                  {step.hint}
-                </Text>
-              ) : null}
-            </YStack>
-          </XStack>
-        ))}
-      </YStack>
-    </Card>
+            ) : null}
+          </YStack>
+        );
+      })}
+    </XStack>
+  );
+}
+
+/** Web `.stepDot { width: 24px }` · `.step + .step::before { top: 11px }`. */
+const STEP_DOT = 24;
+const STEP_LINE_TOP = 11;
+
+/**
+ * Banner kết cục - web `Alert type="success|error"` (chỉ tiêu đề, không icon) bo `border-radius-control`:
+ * nền + viền cùng sắc, đệm 8/12, chữ 14 màu chữ chính.
+ */
+function OutcomeAlert({ tone, children }: { tone: 'success' | 'danger'; children: string }) {
+  const colors = useColors();
+  const success = tone === 'success';
+  return (
+    <YStack
+      px={space.md}
+      py={space.sm}
+      br={radius.control}
+      bw={1}
+      bc={success ? colors.successBorder : colors.dangerBorder}
+      bg={success ? colors.successSurface : colors.dangerSurface}
+      accessibilityRole="alert"
+    >
+      <Text col={colors.text} fos={fontSize.body}>
+        {children}
+      </Text>
+    </YStack>
   );
 }
 
@@ -153,11 +248,11 @@ export function BookingOutcomeBanner({ booking }: { booking: BookingDetail }) {
   if (stage === 'completed') {
     const payable = booking.ownerPayout?.ownerPayableAmount;
     return (
-      <Callout tone="success">
+      <OutcomeAlert tone="success">
         {payable && !isZeroMoney(payable)
           ? t('completedBanner', { amount: fmt.money(payable) })
           : t('completedBannerPlain')}
-      </Callout>
+      </OutcomeAlert>
     );
   }
   if (stage === 'cancelled' || stage === 'noShow') {
@@ -169,15 +264,15 @@ export function BookingOutcomeBanner({ booking }: { booking: BookingDetail }) {
       booking.cancellationReason?.trim() || null,
     ]
       .filter(Boolean)
-      .join(' — ');
+      .join(' - ');
     return (
-      <Callout tone="danger">
+      <OutcomeAlert tone="danger">
         {stage === 'noShow'
           ? t('noShowBanner')
           : reason
             ? t('cancelledBannerWithReason', { reason })
             : t('cancelledBanner')}
-      </Callout>
+      </OutcomeAlert>
     );
   }
   return null;
@@ -228,56 +323,98 @@ export function TripScheduleCard({ booking }: { booking: BookingDetail }) {
           .join(' · ')
       : stage === 'renting'
         ? overdue
-          ? t('overdue', { duration: fmt.minutesDuration(progress.overdueMinutes) })
-          : t('remaining', { duration: fmt.minutesDuration(progress.remainingMinutes) })
+          ? t('overdue', { duration: fmt.roughDuration(progress.overdueMinutes) })
+          : t('remaining', { duration: fmt.roughDuration(progress.remainingMinutes) })
         : null;
 
   return (
-    <Card>
-      <YStack gap={space.sm}>
-        <BlockTitle>{t('title')}</BlockTitle>
-        <YStack gap={space.xs}>
-          <XStack jc="space-between" gap={space.sm}>
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {t('pickup')}
-            </Text>
-            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-              {fmt.shortDateTime(booking.pickupAt)}
-            </Text>
-          </XStack>
-          <ProgressBar
-            percent={Math.max(percent, 1)}
-            tone={overdue ? 'exception' : 'active'}
-            size="sm"
-          />
-          {pickupLine ? (
-            <Text col={colors.textMuted} fos={fontSize.label}>
-              {pickupLine}
-            </Text>
-          ) : null}
-        </YStack>
-        <YStack gap={space.xs}>
-          <XStack jc="space-between" gap={space.sm}>
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {t('return')}
-            </Text>
-            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-              {fmt.shortDateTime(booking.returnAt)}
-            </Text>
-          </XStack>
-          <Text
-            col={overdue ? colors.danger : returnLine ? colors.textMuted : colors.placeholder}
-            fos={fontSize.label}
-          >
-            {returnLine ?? t('notRecorded')}
+    <SectionCard title={t('title')}>
+      {/* Web `.tripBlock`: đầu dòng 14 (nhãn · giờ đậm), rãnh 6, câu tình trạng 12. */}
+      <YStack gap={space.sm} minWidth={0}>
+        <XStack jc="space-between" gap={space.md}>
+          <Text col={colors.text} fos={fontSize.body}>
+            {t('pickup')}
           </Text>
+          <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
+            {fmt.rentalPoint(toAppTz(booking.pickupAt))}
+          </Text>
+        </XStack>
+        <YStack h={TRIP_TRACK} br={radius.pill} bg={colors.surfaceMuted} ov="hidden">
+          <YStack
+            h={TRIP_TRACK}
+            br={radius.pill}
+            w={`${Math.max(percent, 1)}%`}
+            bg={overdue ? colors.danger : colors.success}
+          />
         </YStack>
-        {notes.length > 0 ? (
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {t('note', { note: notes.join(' · ') })}
+        {pickupLine ? (
+          <Text col={colors.text} fos={fontSize.body}>
+            {pickupLine}
           </Text>
         ) : null}
       </YStack>
-    </Card>
+      <YStack gap={space.sm} minWidth={0} mt={space.lg}>
+        <XStack jc="space-between" gap={space.md}>
+          <Text col={colors.text} fos={fontSize.body}>
+            {t('return')}
+          </Text>
+          <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
+            {fmt.rentalPoint(toAppTz(booking.returnAt))}
+          </Text>
+        </XStack>
+        <Text
+          col={overdue ? colors.danger : returnLine ? colors.text : colors.placeholder}
+          fos={fontSize.body}
+          fontStyle={returnLine ? 'normal' : 'italic'}
+        >
+          {returnLine ?? t('notRecorded')}
+        </Text>
+      </YStack>
+      {notes.length > 0 ? (
+        <Text col={colors.textMuted} fos={fontSize.label} mt={GAP_12}>
+          {t('note', { note: notes.join(' · ') })}
+        </Text>
+      ) : null}
+    </SectionCard>
   );
 }
+
+/** Web `.tripTrack { height: 6px }` · `.tripNote { margin-top: 12px }`. */
+const TRIP_TRACK = 6;
+const GAP_12 = 12;
+
+const STAGE_COLOR: Record<Stage, StatusColor> = {
+  awaitingPickup: STATUS_COLOR.WARNING,
+  renting: STATUS_COLOR.INFO,
+  completed: STATUS_COLOR.SUCCESS,
+  cancelled: STATUS_COLOR.DANGER,
+  noShow: STATUS_COLOR.DANGER,
+};
+
+/**
+ * Chip chặng ở đầu trang - web `BookingStageChip`: cùng nhãn với thanh bước, `ToneDotBadge`. Đơn huỷ
+ * nói AI huỷ ("Khách hàng đã huỷ" / "Bạn đã huỷ"); phía huỷ do SERVER suy (ADR 0045 điều 2).
+ */
+export function BookingStageChip({
+  status,
+  cancellationParty,
+}: {
+  status: string;
+  cancellationParty?: string | null;
+}) {
+  const t = useTranslations('Bookings.detailPage.stage');
+  const domainLabel = useDomainLabel();
+  const stage = bookingStageOf(status);
+  const label =
+    stage === 'cancelled' && cancellationParty === CANCELLATION_PARTY.CUSTOMER
+      ? domainLabel('bookingHistoryOutcome', BOOKING_HISTORY_OUTCOME.CANCELLED_BY_CUSTOMER)
+      : stage === 'cancelled' && cancellationParty === CANCELLATION_PARTY.HOST
+        ? domainLabel('bookingHistoryOutcome', BOOKING_HISTORY_OUTCOME.CANCELLED_BY_HOST)
+        : t(stage);
+  // Figma "_Badge": viên bo tròn có viền, không chấm (16/11/2026).
+  return <Pill label={label} tone={pillToneOfStatusColor(STAGE_COLOR[stage])} />;
+}
+
+/** Figma "Progress": vạch 4 cao, các đoạn cách 10. */
+const STEP_BAR_H = 4;
+const STEP_BAR_GAP = 10;

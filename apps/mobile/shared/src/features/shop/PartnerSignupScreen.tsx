@@ -52,10 +52,19 @@ const ADDRESS_PIN_NAMES = {
  */
 export function PartnerSignupScreen({
   initialTrack = null,
+  lockTrack = false,
+  onExit,
   onSwitchToLogin,
   footer,
 }: {
   initialTrack?: RegistrationTrack | null;
+  /**
+   * Tuyến đã được chọn TRƯỚC khi vào app (mở từ app XePrime kèm `?next=`) — không mời đổi tuyến,
+   * đúng web ẩn "Đổi cách cho thuê" khi tới từ site khách (`source=market`). Nút lui khi đó là `onExit`.
+   */
+  lockTrack?: boolean;
+  /** Lối lui của form khi `lockTrack` — vắng thì header không có nút lui. */
+  onExit?: () => void;
   /** Có ⇒ hiện "Đã có tài khoản? Đăng nhập" (chỉ khi chưa có phiên). */
   onSwitchToLogin?: () => void;
   /** Đuôi riêng của màn chọn tuyến (vd. Đăng xuất cho người đã đăng nhập). */
@@ -90,7 +99,11 @@ export function PartnerSignupScreen({
   }
 
   return (
-    <PartnerSignupForm track={track} onChangeTrack={() => setTrack(null)} loginHint={loginHint} />
+    <PartnerSignupForm
+      track={track}
+      onBack={lockTrack && initialTrack ? onExit : () => setTrack(null)}
+      loginHint={loginHint}
+    />
   );
 }
 
@@ -107,11 +120,12 @@ export function PartnerSignupScreen({
  */
 export function PartnerSignupForm({
   track,
-  onChangeTrack,
+  onBack,
   loginHint,
 }: {
   track: RegistrationTrack;
-  onChangeTrack: () => void;
+  /** Mũi tên lui: đổi tuyến (mặc định) hoặc thoát khi tuyến bị khoá. Vắng = không có nút lui. */
+  onBack?: (() => void) | undefined;
   loginHint?: ReactNode;
 }) {
   const colors = useColors();
@@ -255,6 +269,8 @@ export function PartnerSignupForm({
         icon="call-outline"
         keyboardType="phone-pad"
         autoComplete="tel"
+        // Số LIÊN HỆ gian hàng, không phải số đăng nhập (web `form.fields.phone.shopHelp`).
+        hint={t('form.fields.phone.shopHelp')}
       />
       <TextField
         control={control}
@@ -272,7 +288,7 @@ export function PartnerSignupForm({
 
   return (
     <>
-      <AppHeader onBack={onChangeTrack} />
+      <AppHeader {...(onBack ? { onBack } : {})} />
       <Screen
         edges={['left', 'right', 'bottom']}
         footer={

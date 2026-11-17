@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CHAT_SIDE } from '@xeprime/types';
 import { useState } from 'react';
@@ -18,6 +18,7 @@ import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { makeStyles, useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, gradients, radius, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 
 /** Avatar 32 + mũi tên nét 16 (`caret-up`) — `.trigger` của `MarketAccountMenu` web. */
 /** Avatar bằng chip Tin nhắn/Thông báo (40) — người dùng chốt 27/10: avatar 32 trông nhỏ hơn hai chip cạnh nó. */
@@ -98,7 +99,7 @@ export function HeaderActions() {
           gap={space.xs}
           bg={colors.primary}
           br={radius.pill}
-          px={space.md}
+          px={layout.padX}
           minHeight={HEADER_CHIP_SIZE}
           overflow="hidden"
         >

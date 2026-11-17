@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Image } from 'expo-image';
 import { useRef, useState } from 'react';
 import { Pressable, TextInput } from 'react-native';
@@ -6,6 +6,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useImageErrorMessage } from '@/lib/image-permission-message';
 import { chatDebug } from '@/lib/chat-debug';
@@ -39,7 +40,8 @@ import { FONT_FAMILY } from '@/theme/fonts';
 import { useIsOnline } from '@/hooks/use-is-online';
 import { OfflineActionHint } from '@/components/network/OfflineActionHint';
 import type { SendAttachment } from '../hooks/use-thread';
-import type { PendingVehicleContext } from '../hooks/use-vehicle-context';
+import type { PendingChatContext } from '../hooks/use-vehicle-context';
+import { layout } from '@/theme/layout';
 
 const MAX_ATTACHMENTS = CHAT_ATTACHMENT_MAX_COUNT;
 
@@ -83,22 +85,24 @@ interface PendingAttachment {
 export function ChatComposer({
   onSend,
   disabled,
-  vehicleContext,
-  onClearVehicleContext,
+  context,
+  onClearContext,
 }: {
   onSend: (input: {
     text?: string;
     attachments?: SendAttachment[];
     vehicleId?: string;
+    bookingRequestId?: string;
   }) => Promise<void>;
   disabled?: boolean;
-  /** Xe vừa mở chat từ tin đăng của nó — gắn vào câu ĐẦU TIÊN rồi thôi. */
-  vehicleContext?: PendingVehicleContext | null;
-  onClearVehicleContext?: () => void;
+  /** Xe / chuyến vừa mở chat từ đó — gắn vào câu ĐẦU TIÊN rồi thôi (web `MessageComposer.context`). */
+  context?: PendingChatContext | null;
+  onClearContext?: () => void;
 }) {
   const colors = useColors();
   const styles = useStyles();
   const t = useTranslations('Chat');
+  const fmt = useAppFormat();
   // Gửi tin phải tới server — offline thì khoá nút gửi (vẫn gõ được) và nói lý do.
   const online = useIsOnline();
   const toast = useAppToast();
@@ -139,11 +143,12 @@ export function ChatComposer({
       await onSend({
         ...(trimmed ? { text: trimmed } : {}),
         ...(ready.length ? { attachments: ready } : {}),
-        ...(vehicleContext ? { vehicleId: vehicleContext.id } : {}),
+        ...(context?.kind === 'trip' ? { bookingRequestId: context.id } : {}),
+        ...(context?.kind === 'vehicle' ? { vehicleId: context.id } : {}),
       });
       // Thẻ chỉ đi kèm câu ĐẦU TIÊN: những câu sau vẫn trong cùng chủ đề, lặp thẻ ở mỗi bong
       // bóng chỉ làm dòng hội thoại rối chứ không thêm thông tin.
-      onClearVehicleContext?.();
+      onClearContext?.();
     } catch (error) {
       // Tin đã chuyển sang `failed` kèm đủ nội dung để bấm gửi lại — chỉ cần nói ra.
       toast.showError(errorMessage(error));
@@ -250,27 +255,34 @@ export function ChatComposer({
   return (
     /* Nền, nét kẻ trên và lề đều do khung `footer` của `Screen` lo — xem chú thích ở hàng dưới. */
     <YStack>
-      {vehicleContext ? (
+      {context ? (
         <XStack ai="center" gap={space.sm} pb={space.sm}>
-          {vehicleContext.imageUrl ? (
+          {context.imageUrl ? (
             <Image
-              source={{ uri: vehicleContext.imageUrl }}
+              source={{ uri: context.imageUrl }}
               style={styles.contextThumb}
               contentFit="cover"
             />
           ) : null}
           <YStack f={1}>
             <Text col={colors.textMuted} fos={fieldFontSize.message}>
-              {t('aboutVehicle')}
+              {context.kind === 'trip' ? t('aboutTrip') : t('aboutVehicle')}
             </Text>
             <Text col={colors.text} fos={fieldFontSize.value} numberOfLines={1}>
-              {vehicleContext.name}
+              {context.name}
             </Text>
+            {context.kind === 'trip' && context.pickupAt ? (
+              <Text col={colors.textMuted} fos={fieldFontSize.message} numberOfLines={1}>
+                {fmt.shortDateTimeRange(context.pickupAt, context.returnAt)}
+              </Text>
+            ) : null}
           </YStack>
           <Pressable
-            onPress={onClearVehicleContext}
+            onPress={onClearContext}
             accessibilityRole="button"
-            accessibilityLabel={t('clearVehicleContext')}
+            accessibilityLabel={
+              context.kind === 'trip' ? t('clearTripContext') : t('clearVehicleContext')
+            }
             hitSlop={space.sm}
           >
             <Ionicons name="close" size={iconSize.sm} color={colors.textMuted} />
@@ -520,7 +532,7 @@ const useStyles = makeStyles((colors) => ({
     fontSize: fieldFontSize.value,
     maxHeight: MAX_INPUT_HEIGHT,
     minHeight: SEND_SIZE,
-    paddingHorizontal: space.md,
+    paddingHorizontal: layout.padX,
     paddingVertical: space.sm,
   },
   sendButton: {

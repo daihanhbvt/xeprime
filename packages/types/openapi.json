@@ -112825,6 +112825,11 @@
           "hasAccount": {
             "type": "boolean"
           },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ảnh đại diện của tài khoản khách đã liên kết"
+          },
           "archivedAt": {
             "type": "string",
             "nullable": true
@@ -112954,6 +112959,11 @@
           "hasAccount": {
             "type": "boolean",
             "description": "Đã liên kết tài khoản trên nền tảng"
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ảnh đại diện của tài khoản khách đã liên kết"
           },
           "archivedAt": {
             "type": "string",

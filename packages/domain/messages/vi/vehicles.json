@@ -601,6 +601,8 @@
     }
   },
   "overview": {
+    "odometerLabel": "Số KM:",
+    "actionsMenu": "Thao tác khác",
     "profileLabel": "Hồ sơ xe",
     "plate": "Biển số: <b>{value}</b>",
     "odometer": "Số KM: <b>{value}</b>",
@@ -777,7 +779,7 @@
     }
   },
   "edit": {
-    "title": "Sửa hồ sơ xe",
+    "title": "Chỉnh sửa xe",
     "tabs": {
       "information": "Thông tin xe & tiện ích",
       "media": "Hình ảnh",
@@ -1357,6 +1359,8 @@
     "ocrNoteTitle": "Quy trình trích xuất thông tin tự động bằng AI (OCR Review)",
     "ocrNoteBody": "Kết quả trích xuất OCR luôn chỉ là bản nháp hỗ trợ nhập liệu - bạn bắt buộc đối soát với tài liệu gốc và tự chọn từng trường trước khi lưu vào hồ sơ xe.",
     "row": {
+      "moreActions": "Thao tác khác",
+      "view": "Xem",
       "expiry": "Ngày hết hạn: <b>{value}</b>",
       "updatedAt": "Cập nhật: <b>{value}</b>",
       "noExpiry": "Không thời hạn",
@@ -1369,7 +1373,7 @@
       "ocr": "Nhập từ OCR",
       "history": "Lịch sử phiên bản",
       "upload": "Tải lên tài liệu",
-      "replaceFile": "Thay thế file",
+      "replaceFile": "Thay file",
       "delete": "Xoá",
       "uploadFor": "Tải lên tài liệu cho {title}",
       "downloadFor": "Mở file {title}"

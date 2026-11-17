@@ -10,6 +10,7 @@ import { useOpenLegalDoc } from '@/features/legal/use-open-legal-doc';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
 import { DashedDivider } from '@/components/ui/DashedDivider';
+import { SummaryRow } from '@/components/ui/SummaryRow';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 export type OwnerPayout = components['schemas']['OwnerPayoutDto'];
@@ -32,7 +33,22 @@ const ROW_GAP = 2;
  * Chỉ HIỆN số server dựng — client không cộng trừ, không làm tròn (ADR 0069). Chỉ ở phía đối tác.
  * `collectsHold = false` thì không có khoản nào qua XePrime nên (b) và (a − b) ẩn.
  */
-export function OwnerPayoutTable({ payout, label }: { payout: OwnerPayout; label?: string }) {
+export function OwnerPayoutTable({
+  payout,
+  label,
+  variant = 'default',
+  summaryOnly = false,
+}: {
+  payout: OwnerPayout;
+  label?: string;
+  /**
+   * `v2` = "Nhóm thông tin" của tấm duyệt (Figma `24145:96837`): dòng `SummaryRow` cách 12, không
+   * vạch đứt, dòng CUỐI là tổng 16/24 xanh. Cùng các dòng, cùng số - chỉ khác hình.
+   */
+  variant?: 'default' | 'v2';
+  /** Chỉ dòng CUỐI (tổng) - thân khối khi thu gọn (Figma `24145:96975`). */
+  summaryOnly?: boolean;
+}) {
   const colors = useColors();
   const t = useTranslations('Bookings.ownerPayout');
   const fmt = useAppFormat();
@@ -63,87 +79,148 @@ export function OwnerPayoutTable({ payout, label }: { payout: OwnerPayout; label
         : t('tax');
 
   const muted = (text: string) => (
-    <Text col={colors.placeholder} fos={fontSize.bodySm}>
+    <Text col={colors.placeholder} fos={fontSize.label}>
       {text}
     </Text>
   );
 
+  const rows: RowSpec[] = [];
+  if (payout.unitAmount != null && payout.rentalDays > 0) {
+    rows.push({ key: 'unit', label: t('unitPrice'), value: fmt.pricePerDay(payout.unitAmount) });
+    rows.push({
+      key: 'days',
+      label: t('rentalDays'),
+      value: t('rentalDaysValue', { count: payout.rentalDays }),
+    });
+  } else {
+    rows.push({
+      key: 'rent',
+      label:
+        payout.rentalDays > 0 ? t('rentForDays', { count: payout.rentalDays }) : t('rentPlain'),
+      value: muted(t('variesByDay')),
+    });
+  }
+  rows.push({
+    key: 'revenue',
+    groupStart: true,
+    label: t('revenue'),
+    hint: hint(t('revenue'), t('revenueHint')),
+    value: fmt.money(payout.rentAmount),
+  });
+  if (isPositiveMoney(payout.ownerCommissionAmount)) {
+    rows.push({
+      key: 'commission',
+      label: t('commission'),
+      hint: hint(
+        t('commission'),
+        <>
+          {hintText(
+            tierSummary
+              ? t('commissionHintTiers', { tiers: tierSummary })
+              : t('commissionHintGeneric'),
+          )}
+          {hintText(t('commissionHintBody'))}
+        </>,
+      ),
+      value: <DeductedAmount value={payout.ownerCommissionAmount} />,
+    });
+  }
+  if (showTax) {
+    rows.push({
+      key: 'tax',
+      label: taxLabel,
+      hint: hint(
+        t('tax'),
+        <>
+          {hintText(t('taxHint'))}
+          <Text
+            col={colors.text}
+            fos={fontSize.body}
+            fow={fontWeight.semibold}
+            textDecorationLine="underline"
+            onPress={() => openDoc(LEGAL_DOC.OWNER_TAX)}
+            accessibilityRole="link"
+          >
+            {t('taxPolicyLink')}
+          </Text>
+        </>,
+      ),
+      value: exempt ? muted(t('taxExempt')) : <DeductedAmount value={payout.taxAmount} />,
+    });
+  }
+  rows.push({
+    key: 'ownerNet',
+    groupStart: true,
+    strong: true,
+    label: t('ownerNet'),
+    value: fmt.money(payout.ownerNetAmount),
+  });
+  if (payout.collectsHold) {
+    rows.push({
+      key: 'payAtPickup',
+      label: t('payAtPickup'),
+      hint: hint(t('payAtPickup'), t('payAtPickupHint')),
+      value: fmt.money(payout.payAtPickupRentAmount),
+    });
+    rows.push({
+      key: 'walletCredit',
+      highlight: true,
+      label: t('walletCredit'),
+      hint: hint(t('walletCredit'), t('walletCreditHint')),
+      value: fmt.money(payout.ownerPayableAmount),
+    });
+  }
+
+  const shown = summaryOnly ? rows.slice(-1) : rows;
+
+  if (variant === 'v2') {
+    return (
+      <YStack gap={V2_ROW_GAP} accessibilityLabel={label}>
+        {shown.map((row) => {
+          const final = row.key === rows[rows.length - 1]?.key;
+          return (
+            <SummaryRow
+              key={row.key}
+              label={row.label}
+              {...(row.hint ? { labelExtra: row.hint } : {})}
+              value={row.value}
+              emphasis={final ? 'success' : 'none'}
+            />
+          );
+        })}
+      </YStack>
+    );
+  }
+
   return (
     <YStack gap={ROW_GAP} accessibilityLabel={label}>
-      {payout.unitAmount != null ? (
-        <>
-          <Row label={t('unitPrice')} value={fmt.pricePerDay(payout.unitAmount)} />
-          <Row label={t('rentalDays')} value={t('rentalDaysValue', { count: payout.rentalDays })} />
-        </>
-      ) : (
-        <Row label={t('rentForDays', { count: payout.rentalDays })} value={muted(t('variesByDay'))} />
-      )}
-
-      <Row
-        groupStart
-        label={t('revenue')}
-        hint={hint(t('revenue'), t('revenueHint'))}
-        value={fmt.money(payout.rentAmount)}
-      />
-      {isPositiveMoney(payout.ownerCommissionAmount) ? (
+      {shown.map((row) => (
         <Row
-          label={t('commission')}
-          hint={hint(
-            t('commission'),
-            <>
-              {hintText(
-                tierSummary
-                  ? t('commissionHintTiers', { tiers: tierSummary })
-                  : t('commissionHintGeneric'),
-              )}
-              {hintText(t('commissionHintBody'))}
-            </>,
-          )}
-          value={<DeductedAmount value={payout.ownerCommissionAmount} />}
+          key={row.key}
+          label={row.label}
+          {...(row.hint ? { hint: row.hint } : {})}
+          value={row.value}
+          {...(row.groupStart && !summaryOnly ? { groupStart: true } : {})}
+          {...(row.strong ? { strong: true } : {})}
+          {...(row.highlight ? { highlight: true } : {})}
         />
-      ) : null}
-      {showTax ? (
-        <Row
-          label={taxLabel}
-          hint={hint(
-            t('tax'),
-            <>
-              {hintText(t('taxHint'))}
-              <Text
-                col={colors.text}
-                fos={fontSize.body}
-                fow={fontWeight.semibold}
-                textDecorationLine="underline"
-                onPress={() => openDoc(LEGAL_DOC.OWNER_TAX)}
-                accessibilityRole="link"
-              >
-                {t('taxPolicyLink')}
-              </Text>
-            </>,
-          )}
-          value={exempt ? muted(t('taxExempt')) : <DeductedAmount value={payout.taxAmount} />}
-        />
-      ) : null}
-
-      <Row groupStart strong label={t('ownerNet')} value={fmt.money(payout.ownerNetAmount)} />
-      {payout.collectsHold ? (
-        <>
-          <Row
-            label={t('payAtPickup')}
-            hint={hint(t('payAtPickup'), t('payAtPickupHint'))}
-            value={fmt.money(payout.payAtPickupRentAmount)}
-          />
-          <Row
-            highlight
-            label={t('walletCredit')}
-            hint={hint(t('walletCredit'), t('walletCreditHint'))}
-            value={fmt.money(payout.ownerPayableAmount)}
-          />
-        </>
-      ) : null}
+      ))}
     </YStack>
   );
 }
+
+interface RowSpec {
+  key: string;
+  label: string;
+  hint?: ReactNode;
+  value: ReactNode;
+  groupStart?: boolean;
+  strong?: boolean;
+  highlight?: boolean;
+}
+
+/** Figma "Vehicle Pricing" v2: các dòng cách 12. */
+const V2_ROW_GAP = 12;
 
 /** Một cặp nhãn–giá trị; `groupStart` kẻ đường đứt phía trên như hai vạch "───" của đặc tả. */
 function Row({
@@ -186,7 +263,7 @@ function Row({
         : null)}
     >
       <XStack f={1} minWidth={0} ai="center" gap={space.xs}>
-        <Text flexShrink={1} col={labelColor} fos={fontSize.bodySm} fow={labelWeight}>
+        <Text flexShrink={1} col={labelColor} fos={fontSize.body} fow={labelWeight}>
           {label}
         </Text>
         {hint}

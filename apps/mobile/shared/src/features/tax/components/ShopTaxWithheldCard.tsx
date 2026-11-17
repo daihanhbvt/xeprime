@@ -9,19 +9,18 @@ import {
   type TaxWithholdingStatus,
 } from '@xeprime/types';
 import { ScreenError } from '@/components/state/ScreenError';
-import { BlockTitle } from '@/components/ui/BlockTitle';
+import { ScreenMessage } from '@/components/state/ScreenMessage';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { Callout } from '@/components/ui/Callout';
-import { Card } from '@/components/ui/Card';
-import { Divider } from '@/components/ui/DataRow';
 import { MonthPeriodField } from '@/components/ui/MonthPeriodField';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
-import { StatGrid, type StatCell } from '@/components/ui/StatGrid';
-import { StatusBadge } from '@/components/ui/StatusBadge';
+import type { StatCell } from '@/components/ui/StatGrid';
+import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import { TAX_PERIOD_FORMAT, type TaxRow } from '@/api/tax/api';
 import { useShopTaxSummary } from '../hooks/use-tax';
 
@@ -39,13 +38,29 @@ import { useShopTaxSummary } from '../hooks/use-tax';
  * từ membership ở server (CLAUDE §6.1), nên thêm một điều kiện `tenant` ở client vừa không tăng
  * bảo mật vừa buộc khối này phụ thuộc một hook không khối nào khác trên màn dùng.
  */
-export function ShopTaxWithheldCard() {
+export function ShopTaxWithheldCard({
+  embedded = false,
+  initialPeriod,
+}: {
+  /**
+   * Nằm trong một tấm trượt đã mang tiêu đề (ô ghi chú thuế ở trang Số dư) - web `embedded`:
+   * bỏ tiêu đề riêng của thẻ, không lặp cùng một dòng hai lần.
+   */
+  embedded?: boolean;
+  /**
+   * Tháng mở sẵn (`YYYY-MM`) — "Chi tiết" ở ô ghi chú thuế trang Quản lý ví mở đúng tháng trang
+   * đang xem (web `initialPeriod`, ledger 09 §3.10 #7). Bỏ trống = tháng này.
+   */
+  initialPeriod?: string;
+} = {}) {
   const colors = useColors();
   const t = useTranslations('Finance.taxWithheld');
   const fmt = useAppFormat();
   const { has } = usePermissions();
 
-  const [period, setPeriod] = useState(() => nowInAppTz().format(TAX_PERIOD_FORMAT));
+  const [period, setPeriod] = useState(
+    () => initialPeriod ?? nowInAppTz().format(TAX_PERIOD_FORMAT),
+  );
   const canView = has(PERMISSION.FINANCE_VIEW);
 
   const { data, isLoading, isError, error, refetch } = useShopTaxSummary(period, canView);
@@ -114,7 +129,7 @@ export function ShopTaxWithheldCard() {
 
   return (
     <YStack gap={space.sm}>
-      <BlockTitle>{t('title')}</BlockTitle>
+      {embedded ? null : <SectionHeader icon="receipt-outline">{t('title')}</SectionHeader>}
 
       {/*
         Web: `DatePicker picker="month"` KHÔNG đặt trần ở thẻ này — nên không truyền `maxPeriod`.
@@ -136,25 +151,29 @@ export function ShopTaxWithheldCard() {
 
       {data ? (
         data.rows === 0 ? (
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t('empty')}
-          </Text>
+          // Như web (`<Empty description>`): biểu tượng + câu "chưa có", không phải một dòng chữ trơ.
+          <ScreenMessage icon="receipt-outline" title={t('empty')} />
         ) : (
           <>
-            <Card padded={false}>
-              <StatGrid cells={stats} variant="list" />
-            </Card>
+            {/* Lưới 2 cột căn giữa như Figma: nhãn nhỏ trên, số đậm dưới. */}
+            <XStack flexWrap="wrap" rowGap={space.md}>
+              {stats.map((cell) => (
+                <YStack key={cell.key} w="50%" ai="center" gap={2} px={space.xs}>
+                  <Text col={colors.textMuted} fos={fontSize.label} ta="center" numberOfLines={2}>
+                    {cell.label}
+                  </Text>
+                  <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.bold} ta="center" numberOfLines={1}>
+                    {cell.value}
+                  </Text>
+                </YStack>
+              ))}
+            </XStack>
 
-            <Card padded={false}>
-              <YStack p={space.md} gap={space.sm}>
-                {data.items.map((row, index) => (
-                  <YStack key={row.id} gap={space.sm}>
-                    {index > 0 ? <Divider /> : null}
-                    <TaxRowLine row={row} />
-                  </YStack>
-                ))}
-              </YStack>
-            </Card>
+            <YStack gap={space.sm}>
+              {data.items.map((row) => (
+                <TaxRowLine key={row.id} row={row} />
+              ))}
+            </YStack>
           </>
         )
       ) : null}
@@ -185,80 +204,78 @@ function TaxRowLine({ row }: { row: TaxRow }) {
 
   // Tiền đọc trên CHUỖI, không qua `Number` (ADR 0007).
   const negative = isNegativeMoney(row.amount);
+  const statusColor =
+    TAX_WITHHOLDING_STATUS_META[row.status as TaxWithholdingStatus]?.color ?? STATUS_COLOR.NEUTRAL;
+  const body = { fos: typeScale.body.fontSize, lh: typeScale.body.lineHeight } as const;
 
+  // Thẻ viền như Figma (`24228:98928`): mã + viên trạng thái · giá trị chịu thuế (trái) + số thuế lớn (phải) ·
+  // ba cột GTGT / TNCN / Đã khấu trừ (hai sắc thuế riêng - ADR 0068; dòng một-mức cũ không bịa phép tách).
   return (
-    <XStack ai="flex-start" gap={space.sm}>
-      <YStack f={1} minWidth={0} gap={2}>
-        <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
+    <YStack gap={space.sm} p={space.md} br={radius.md} bw={1} bc={colors.border}>
+      <XStack ai="center" jc="space-between" gap={space.sm}>
+        <Text col={colors.text} {...body} fow={fontWeight.semibold} numberOfLines={1} flexShrink={1}>
           {row.bookingCode}
         </Text>
-        <Text col={colors.textMuted} fos={fontSize.label}>
-          {row.label}
-        </Text>
-        <Text col={colors.placeholder} fos={fontSize.label}>
-          {fmt.money(row.taxableBase)} ·{' '}
-          {row.vatPercent != null && row.pitPercent != null
-            ? t('ratePair', { vat: row.vatPercent, pit: row.pitPercent })
-            : t('percentOf', { percent: row.percent })}
-        </Text>
-        {/* Hai sắc thuế riêng (ADR 0068); dòng một-mức cũ không bịa phép tách. */}
-        <XStack gap={space.sm} flexWrap="wrap">
-          <TaxSplitLine label={t('columns.vat')} value={row.vatAmount ?? null} fallback={t('notSplit')} />
-          <TaxSplitLine label={t('columns.pit')} value={row.pitAmount ?? null} fallback={t('notSplit')} />
-        </XStack>
-      </YStack>
+        <Pill
+          label={domainLabel('taxWithholdingStatus', row.status)}
+          tone={pillToneOfStatusColor(statusColor)}
+        />
+      </XStack>
 
-      <YStack ai="flex-end" gap={space.xs}>
-        <Text
-          col={negative ? colors.danger : colors.text}
-          fos={fontSize.bodySm}
-          fow={fontWeight.semibold}
-        >
+      <XStack ai="flex-end" jc="space-between" gap={space.sm}>
+        <YStack f={1} minWidth={0} gap={2}>
+          <Text col={colors.textMuted} fos={fontSize.label}>
+            {t('stats.base')}
+          </Text>
+          <Text col={colors.text} {...body} fow={fontWeight.medium} numberOfLines={1}>
+            {fmt.money(row.taxableBase)}
+          </Text>
+          <Text col={colors.placeholder} fos={fontSize.label}>
+            {row.vatPercent != null && row.pitPercent != null
+              ? t('ratePair', { vat: row.vatPercent, pit: row.pitPercent })
+              : t('percentOf', { percent: row.percent })}
+          </Text>
+        </YStack>
+        <Text col={negative ? colors.danger : colors.text} fos={fontSize.h4} fow={fontWeight.bold} numberOfLines={1} flexShrink={0}>
           {fmt.money(row.amount)}
         </Text>
-        <StatusBadge
-          label={domainLabel('taxWithholdingStatus', row.status)}
-          color={
-            TAX_WITHHOLDING_STATUS_META[row.status as TaxWithholdingStatus]?.color ??
-            STATUS_COLOR.NEUTRAL
-          }
-          size="sm"
-        />
-      </YStack>
-    </XStack>
+      </XStack>
+
+      <XStack gap={space.sm} pt={space.sm} borderTopWidth={1} borderTopColor={colors.borderSubtle}>
+        <TaxCol label={t('columns.vat')} value={row.vatAmount ?? null} fallback={t('notSplit')} />
+        <TaxCol label={t('columns.pit')} value={row.pitAmount ?? null} fallback={t('notSplit')} />
+        <TaxCol label={t('stats.total')} value={row.amount} fallback={t('notSplit')} strong />
+      </XStack>
+    </YStack>
   );
 }
 
-/**
- * Một sắc thuế (GTGT hoặc TNCN) của một dòng — bản native của web `TaxSplitAmount`. `null` ⇒ dòng
- * một-mức trước ADR 0068: hiện chữ "không tách", không bịa phép tách. Âm (bút toán đảo) tô màu lỗi;
- * dấu trừ do `fmt.money` in mới là tín hiệu mang nghĩa.
- */
-function TaxSplitLine({
+function TaxCol({
   label,
   value,
   fallback,
+  strong = false,
 }: {
   label: string;
   value: string | null;
   fallback: string;
+  strong?: boolean;
 }) {
   const colors = useColors();
   const fmt = useAppFormat();
   return (
-    <Text col={colors.textMuted} fos={fontSize.label}>
-      {label}:{' '}
-      {value == null ? (
-        fallback
-      ) : (
-        <Text
-          col={isNegativeMoney(value) ? colors.danger : colors.text}
-          fos={fontSize.label}
-          fow={fontWeight.medium}
-        >
-          {fmt.money(value)}
-        </Text>
-      )}
-    </Text>
+    <YStack f={1} minWidth={0} gap={2}>
+      <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+        {label}
+      </Text>
+      <Text
+        col={value != null && isNegativeMoney(value) ? colors.danger : colors.text}
+        fos={fontSize.label}
+        fow={strong ? fontWeight.bold : fontWeight.medium}
+        numberOfLines={1}
+      >
+        {value == null ? fallback : fmt.money(value)}
+      </Text>
+    </YStack>
   );
 }

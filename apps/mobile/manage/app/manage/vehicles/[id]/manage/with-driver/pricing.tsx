@@ -1,11 +1,12 @@
 import { Redirect, useLocalSearchParams } from 'expo-router';
-import { ROUTES } from '@/navigation/routes';
-import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
+import { SERVICE_TYPE } from '@xeprime/types';
+import { ownerServicesHref } from '@/features/vehicle-manage/owner-edit-nav';
 
-/** Đường dẫn CŨ (trước 30/09/2026) — giá có tài xế nay nằm trong "Giá & chính sách". Cùng chuyển hướng với trang web. */
+/**
+ * Đường dẫn CŨ của không gian "Quản lý xe" Owner Lite — Giá có tài xế (trước 30/09/2026) → tab Có tài xế của "Dịch vụ & giá".
+ * Cùng bảng chuyển hướng với web (`editTabOfLegacyManageSection`).
+ */
 export default function LegacyWithDriverPricingRedirect() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  return (
-    <Redirect href={ROUTES.account.vehicleManageSection(id, VEHICLE_MANAGE_SECTION.PRICING)} />
-  );
+  return <Redirect href={ownerServicesHref(id, SERVICE_TYPE.WITH_DRIVER)} />;
 }

@@ -1,5 +1,6 @@
 {
   "page": {
+    "title": "Shop information",
     "subtitle": "Your shop’s details and settings.",
     "viewPublicPage": "View shop page",
     "loadError": "Couldn't load your shop profile",
@@ -442,7 +443,8 @@
       "phoneField": "Displayed phone number",
       "email": "Contact email",
       "bio": "About",
-      "bioPlaceholder": "Introduce your shop"
+      "bioPlaceholder": "Introduce your shop",
+      "bioPlainNote": "Formatting added on the website is removed if you edit the introduction here."
     }
   }
 }

@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { CameraView, useCameraPermissions, type CameraType, type FlashMode } from 'expo-camera';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, View } from 'react-native';
@@ -12,6 +12,7 @@ import {
   registerInAppCameraHost,
   type CapturedPhoto,
 } from './in-app-camera';
+import { layout } from '@/theme/layout';
 
 /**
  * Chất lượng JPEG lúc chụp. Bản nén thật vẫn do `pickImages`/`pickHandoverPhoto` làm sau đó ở
@@ -212,7 +213,7 @@ export function InAppCameraProvider() {
           left={0}
           right={0}
           pb={insets.bottom + space.lg}
-          px={space.lg}
+          px={layout.padXLg}
         >
           {blocked ? (
             <Text col={ON_CAMERA} fos={fieldFontSize.message} ta="center" pb={space.md}>

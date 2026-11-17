@@ -7,6 +7,7 @@ import { HeaderActions } from './HeaderActions';
 import { useColors } from '@/theme/ThemeProvider';
 import { space } from '@/theme/tokens';
 import { HEADER_RULE, HEADER_RULE_OPACITY } from './AppHeader';
+import { layout } from '@/theme/layout';
 
 /** Logo thanh gốc của app, lớn hơn logo header màn con (`AppHeader` dùng 24). */
 const BRAND_LOGO = 30;
@@ -24,7 +25,7 @@ export function AppTopBar() {
         ai="center"
         jc="space-between"
         gap={space.sm}
-        px={space.md}
+        px={layout.padX}
         py={space.sm}
         bg={colors.background}
       >

@@ -8,7 +8,7 @@ import {
   type VehicleAlertSeverity,
 } from '@xeprime/types';
 import { useDomainLabel } from '@/i18n/domain';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import type { Href } from 'expo-router';
 import { useColors } from '@/theme/ThemeProvider';
 import type { AppColors } from '@/theme/tokens';

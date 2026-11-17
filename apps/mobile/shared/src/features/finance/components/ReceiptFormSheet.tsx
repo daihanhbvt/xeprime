@@ -13,7 +13,6 @@ import {
   dayjs,
   isNegativeMoney,
   isZeroMoney,
-  moneyToVietnameseWords,
   vehicleLabel,
 } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -47,6 +46,7 @@ import { branchLabel } from '@/api/branches/api';
 import { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { receiptFormSchema, type ReceiptFormValues } from '../schema';
 import { ReceiptAttachmentsField } from './ReceiptAttachmentsField';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { BookingLinkCard, VehicleLinkCard } from './ReceiptLinkCard';
 import { BookingPickerSheet, VehiclePickerSheet } from './ReceiptLinkPicker';
 import type { CreateReceiptInput, ReceiptBookingOption, ReceiptVehicleOption } from '../api';
@@ -115,6 +115,7 @@ export function ReceiptFormSheet({
   /** Xe chọn sẵn khi form mở từ sổ đang lọc theo một chiếc xe. Chỉ là giá trị KHỞI TẠO. */
   initialVehicleId?: string | null;
 }) {
+  const fmt = useAppFormat();
   const colors = useColors();
   const t = useTranslations('Finance.receipts.form');
   const tActions = useTranslations('Common.actions');
@@ -480,7 +481,7 @@ export function ReceiptFormSheet({
         {/* Số tiền bằng chữ NGAY DƯỚI ô nhập — chỗ duy nhất bắt được lỗi thừa một số 0. */}
         {amount == null ? null : (
           <Text col={colors.textMuted} fos={fontSize.label}>
-            {moneyToVietnameseWords(String(amount))}
+            {fmt.moneyWords(String(amount))}
           </Text>
         )}
       </YStack>
@@ -496,6 +497,7 @@ export function ReceiptFormSheet({
         control={control}
         name="description"
         label={t('description')}
+        placeholder={t('descriptionPlaceholder')}
         required
         multiline
         rows={3}

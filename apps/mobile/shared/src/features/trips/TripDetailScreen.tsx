@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Image } from 'expo-image';
 import { Linking, Pressable, type ScrollView } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
@@ -78,6 +78,7 @@ import { TripActiveView, TripClosedView } from './components/TripOutcomeViews';
 import { BookingJourney } from '@/features/booking-requests/components/BookingJourney';
 import { hasHoldStage, TRIP_FLOW_VIEW, tripFlowView, type TripFlowView } from './trip-flow';
 import { closedNotice, stageNotice } from './stage-notice';
+import { TripHandoverWord } from './components/TripHandoverWord';
 import { TripNotReceivedReport } from './components/TripNotReceivedReport';
 import { useCancelTrip, useTrip } from './hooks/use-trips';
 import { StaleDataNote } from '@/components/network/StaleDataNote';
@@ -416,6 +417,7 @@ function TripDetailBody({
             sau giờ nhận xe đây là việc gấp nhất khách có thể cần. Chủ xe chỉ thấy khối "đang có
             khiếu nại" khi có — server không bao giờ bật nút cho phía họ.
           */}
+          <TripHandoverWord trip={trip} />
           <TripNotReceivedReport trip={trip} />
 
           {/*
@@ -1074,11 +1076,19 @@ function TripActions({
         {/* Nhắn tin theo `canShowHostChatOnTrip` (gian hàng: mọi chặng); gọi điện vẫn theo `canContact`. */}
         {canShowHostChatOnTrip({ shopKind: trip.shop.shopKind, hasBooking: Boolean(trip.code) }) &&
         !trip.canContact ? (
-          <ChatWithShopButton vehicleId={trip.vehicle.id} label={t('contactShop')} />
+          <ChatWithShopButton
+            vehicleId={trip.vehicle.id}
+            tripId={trip.id}
+            label={t('contactShop')}
+          />
         ) : null}
         {trip.canContact ? (
           <>
-            <ChatWithShopButton vehicleId={trip.vehicle.id} label={t('contactShop')} />
+            <ChatWithShopButton
+            vehicleId={trip.vehicle.id}
+            tripId={trip.id}
+            label={t('contactShop')}
+          />
             {tel ? (
               <Button
                 label={t('call')}

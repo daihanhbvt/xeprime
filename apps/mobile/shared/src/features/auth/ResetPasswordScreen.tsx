@@ -120,7 +120,7 @@ function ResetPasswordForm({
     <>
       <AppHeader onBack={onBack} />
 
-      <Screen edges={['left', 'right', 'bottom']}>
+      <Screen edges={['left', 'right', 'bottom']} maxWidth="form">
         <YStack gap={space.xl}>
           <YStack gap={space.xs}>
             <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold}>
@@ -195,7 +195,7 @@ function Outcome({
   return (
     <>
       <AppHeader {...(onBack ? { onBack } : {})} />
-      <Screen edges={['left', 'right', 'bottom']}>
+      <Screen edges={['left', 'right', 'bottom']} maxWidth="form">
         <YStack ai="center" gap={space.lg}>
           <StatusIcon icon={icon} tone={tone} />
           <YStack ai="center" gap={space.xs}>

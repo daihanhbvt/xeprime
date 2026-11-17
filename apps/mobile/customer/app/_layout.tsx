@@ -15,6 +15,7 @@ import 'react-native-reanimated';
 
 import { AppErrorScreen } from '@/components/state/AppErrorScreen';
 import { AppToastProvider } from '@/components/feedback/AppToast';
+import { SheetPortalProvider } from '@/components/ui/SheetPortal';
 import { ScrollRevealDefaultProvider } from '@/components/motion/ScrollReveal';
 import { AccountPhoneReminderProvider } from '@/features/auth/AccountPhoneGate';
 import { SessionBoundary } from '@/features/auth/SessionBoundary';
@@ -158,6 +159,8 @@ export default function RootLayout() {
                         đúng lúc gửi yêu cầu (`useAccountPhonePrompt`); tấm render SAU `Stack` nên nằm
                         trên mọi màn.
                       */}
+                        {/* Host của mọi `BottomSheet` (phủ cả màn tới mép dưới) - xem `SheetPortal.tsx`. */}
+                        <SheetPortalProvider>
                         <AccountPhoneReminderProvider>
                           <ThemedStack>
                             {/* Đăng nhập là việc chen ngang rồi quay lại, không phải một nấc sâu hơn. */}
@@ -189,6 +192,7 @@ export default function RootLayout() {
                             <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
                           </ThemedStack>
                         </AccountPhoneReminderProvider>
+                        </SheetPortalProvider>
                       </BadgeRealtimeProvider>
                     </ChatRealtimeProvider>
                   </SessionBoundary>

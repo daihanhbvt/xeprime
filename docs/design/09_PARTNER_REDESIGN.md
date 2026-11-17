@@ -442,6 +442,13 @@ xe, `row` = danh sách) · mảnh chung `VehicleCardParts` · hàng mobile `Vehi
 | 11 | Huy hiệu "8" trên menu Danh sách xe | 🆕 | Số xe có việc chặn — §2.3 |
 | 12 | Hai thẻ Cẩm nang / Chứng từ của tuyến hoa hồng | 🟡 | **Bỏ** (chốt 03/11) — đã là dòng của khối Trợ giúp |
 
+**Khổ điện thoại v2 (app Partner + web ≤640, Figma MB `24158:103762` · lọc `24158:105500`, người dùng
+chốt 16/11/2026):** thẻ gọn ảnh 63×40 · nút mở/thu số liệu (thu gọn = Tổng doanh thu · Lợi nhuận;
+không có `finance.view` ⇒ hai mức giá); GIỮ mã xe, "-N%", "tạm ẩn", việc cần làm, lý do trả về và
+hàng nút Lịch · Chỉnh sửa · Chi tiết ở chân thẻ. BỎ dải chỉ số đội xe, chip vận hành và dòng "Hiển
+thị x-y"; bỏ nút tài liệu ở đầu trang của design. Tấm Lọc dạng lưới hai cột (`sheetLayout="grid"` web,
+`filterLayout="grid"` app) có ô sắp xếp bên trong, chân "Xoá bộ lọc" · "Lưu bộ lọc".
+
 Tự dựng (design không vẽ): ô trắng bo 16 cho rỗng / không kết quả / lỗi; khung chờ theo bố cục; dòng
 "Hiển thị x-y của N xe" + phân trang dưới danh sách; thẻ trong một hàng cao bằng nhau, hàng nút dồn
 đáy; số liệu tải hỏng / thiếu `finance.view` (cột tiền vắng, không số 0 giả); KM chưa có = "—", gọi
@@ -575,6 +582,20 @@ hỗ trợ, thiếu `vehicles.update`) · dịch vụ đang tắt · xe máy · 
   trong chưa chỉnh từng chi tiết theo design (thẻ nguồn xe dạng ô có icon, bảng giấy tờ). Riêng thẻ
   "Lịch bảo dưỡng sắp tới" + hộp lịch sử bảo dưỡng đã theo design (04/11, xem E20).
 
+**Khổ điện thoại v2 (app Partner + web ≤640, Figma MB `24158:108502` Chi tiết · `24231:108043` Chỉnh sửa,
+người dùng chốt 16/11/2026):**
+- Chi tiết xe: ảnh bìa trọn bề ngang 246 với ← và ⋮ phủ lên ảnh; ⋮ "Thao tác" gom Chỉnh sửa · Xem lịch
+  xe · Xoá (hai nút cuối trang cũ bỏ). Khối tóm tắt trắng (tên 18/28 + nguồn + công tắc "Trên chợ" gọn;
+  mã | biển | KM | loại xe; kiểm duyệt + viên vận hành; "Hiệu suất lũy kế" ba cột) và dải tab gạch
+  chân nằm TRONG khối đó. Thẻ tab Tổng quan xếp: Việc cần làm → Giá thuê & Chính sách (ba ô giá +
+  Giao xe tận nơi) → Lịch thuê sắp tới → Tự động nhận chuyến → Thông số chính → Ảnh → Nguồn xe.
+- Chỉnh sửa xe: MỘT màn dải tab gạch chân, nhóm như web (Thông tin chung · Hình ảnh · Giấy tờ · Dịch vụ
+  & giá · Chính sách thuê · Bảo dưỡng & KM · Nguồn gốc & tài chính) - KHÔNG tách Điều kiện / Giao nhận
+  như Figma (giữ chốt 03/11). Mỗi tab vẫn là một route; `VehicleEditHeader` (←, % hoàn thiện, tab) đứng
+  đầu từng màn và đổi tab bằng `replace`, qua `useLeaveGuard` khi form còn dở. Gốc `/edit` chuyển
+  hướng sang "Thông tin chung" (hub cũ gỡ khỏi cổng quản lý). Owner Lite giữ hub riêng.
+- Web ≤600: tab gạch chân lên đầu, thẻ tóm tắt dưới, nút Hoàn tác · Lưu bám đáy.
+
 ### 3.7 Quản lý tài xế — kiểm kê và quyết định (04/11/2026)
 
 Code: `features/drivers/components/DriversPage` (dùng chung với phiên hỗ trợ, ADR 0050) · thẻ
@@ -604,6 +625,11 @@ Tự dựng (design không vẽ): khung chờ 4 thẻ; rỗng / không kết qu�
 trắng bo 16; "Hiển thị x-y của N tài xế" + phân trang; không quyền xem ⇒ `PermissionState`; khối bằng
 lái "Đang đọc ảnh"; lưới 4 cột sàn 300px (1280 ⇒ 3 cột, điện thoại 1 cột); số đếm hỏng ⇒ dải ẩn,
 danh sách vẫn chạy. Huy hiệu menu "Quản lý tài xế" vẫn **chưa làm** (§2.3).
+
+**Khổ điện thoại v2 (16/11/2026, không có Figma riêng - theo khuôn Đơn thuê / Danh sách xe):** thanh trang
+có nút "+" Mời tài xế; dải trạng thái thành `ChipTabs` kèm số đếm; tấm Lọc dạng lưới; thẻ đệm 16, viên
+hình thức/trạng thái dạng nhãn, hàng nút compact tràn ngang (nút cuối là nút chính). Chi tiết tài xế:
+← + tên + SĐT, dải tab gạch chân.
 
 ### 3.8 Danh sách bảo dưỡng — kiểm kê và quyết định (04/11/2026)
 

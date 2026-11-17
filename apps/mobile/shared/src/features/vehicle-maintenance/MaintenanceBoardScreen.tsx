@@ -1,3 +1,5 @@
+import { useLocalSearchParams } from 'expo-router';
+import { useAccumulatedPages } from '@/hooks/use-accumulated-pages';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -5,6 +7,10 @@ import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   MAINTENANCE_BOARD_FILTER,
+  MAINTENANCE_BOARD_FILTER_VALUES,
+  MAINTENANCE_BOARD_SORT,
+  MAINTENANCE_BOARD_SORT_VALUES,
+  type MaintenanceBoardSort,
   MAINTENANCE_TYPE_VALUES,
   PERMISSION,
   PLAN_FEATURE,
@@ -15,7 +21,6 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import {
-  BranchFilterField,
   useBranchEmptyCopy,
 } from '@/features/branches/components/BranchFilterField';
 import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
@@ -23,16 +28,19 @@ import { MissingOdometerCard } from '@/features/handovers/components/MissingOdom
 import { ResolveQueueSheet } from '@/features/handovers/components/ResolveQueueSheet';
 import { useMissingOdometerQueue } from '@/features/handovers/hooks/use-handovers';
 import type { MissingOdometerItem } from '@/features/handovers/api';
-import { ManageHeader } from '@/features/shell/ManageHeader';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { ManageListShell } from '@/features/shell/ManageListShell';
 import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { useListParam, useListParamChange } from '@/navigation/list-params';
 import { useDomainLabel } from '@/i18n/domain';
+import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { ROUTES } from '@/navigation/routes';
 import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
+import { useCardGrid } from '@/theme/use-responsive';
 import { LIST_TUNING, MEDIA_LIST_TUNING } from '@/theme/list-tuning';
 import { useColors } from '@/theme/ThemeProvider';
 import { scrollThrottle } from '@/theme/motion';
@@ -40,12 +48,14 @@ import { BoardActionSheets, type BoardAction } from './components/BoardActionShe
 import { FeatureReadOnlyNotice } from '@/components/feedback/FeatureReadOnlyNotice';
 import { useFeature } from '@/features/auth/hooks/use-feature';
 import { MaintenanceBoardCard } from './components/MaintenanceBoardCard';
-import { useMaintenanceBoard } from './hooks/use-maintenance';
+import { useMaintenanceBoard, useMaintenanceBoardSummary } from './hooks/use-maintenance';
+import { ChipTabs } from '@/components/ui/ChipTabs';
+import type { MaintenanceBoardSummary } from '@/api/vehicle-maintenance/api';
 import type { MaintenanceBoardItem } from './api';
 
-/** Khớp `MAINTENANCE_BOARD_SORT` ở backend DTO. */
-const SORT_VALUES = ['remaining_asc', 'remaining_desc', 'name_asc', 'updated_desc'] as const;
-type BoardSort = (typeof SORT_VALUES)[number];
+/** Hằng dùng chung với web — không gõ lại chuỗi sắp xếp (ADR 0005). */
+const SORT_VALUES = MAINTENANCE_BOARD_SORT_VALUES;
+type BoardSort = MaintenanceBoardSort;
 
 /**
  * Nhóm việc hiện ra cho người dùng — chép ĐÚNG dải tab của `MaintenanceBoardTabs`, không phải
@@ -69,7 +79,21 @@ const BOARD_FILTER_VALUES = [
 /** Nhóm việc đọc bảng KHÁC (biên bản bàn giao), chỉ mở cho người có quyền xem bàn giao. */
 const QUEUE_FILTER = MAINTENANCE_BOARD_FILTER.MISSING_RETURN_KM;
 
-const DEFAULT_SORT: BoardSort = 'remaining_asc';
+/**
+ * Số đếm của từng nhóm việc — đúng `MaintenanceBoardTabs` web. Lấy từ endpoint summary riêng nên
+ * KHÔNG phụ thuộc trang/bộ lọc đang xem: "3 xe quá hạn" đúng với cả đội xe.
+ */
+const TAB_COUNT: Record<string, (summary: MaintenanceBoardSummary) => number> = {
+  [MAINTENANCE_BOARD_FILTER.ALL]: (s) => s.total,
+  [MAINTENANCE_BOARD_FILTER.OVERDUE]: (s) => s.overdue,
+  [MAINTENANCE_BOARD_FILTER.DUE_SOON]: (s) => s.dueSoon,
+  [MAINTENANCE_BOARD_FILTER.IN_PROGRESS]: (s) => s.inProgress,
+  [MAINTENANCE_BOARD_FILTER.MISSING_ODOMETER]: (s) => s.missingOdometer,
+  [MAINTENANCE_BOARD_FILTER.UPCOMING]: (s) => s.upcoming,
+  [MAINTENANCE_BOARD_FILTER.MISSING_RETURN_KM]: (s) => s.missingReturnKm,
+};
+
+const DEFAULT_SORT: BoardSort = MAINTENANCE_BOARD_SORT.REMAINING_ASC;
 const SKELETON_ROWS = 3;
 const SEARCH_DEBOUNCE_MS = 350;
 const ALL = 'all';
@@ -91,13 +115,30 @@ const queueKeyOf = (item: MissingOdometerItem) => item.handoverId;
 export function MaintenanceBoardScreen() {
   const colors = useColors();
   const t = useTranslations('Vehicles.maintenance.board');
+  const tMaintenance = useTranslations('Maintenance');
   const tFilters = useTranslations('Maintenance.filters');
   const tMissing = useTranslations('Bookings.missingKm');
   const navigateOnce = useNavigateOnce();
   const permissions = usePermissions();
   const domainLabel = useDomainLabel();
 
-  const [filter, setFilter] = useState<string>(ALL);
+  /*
+   * `filter` / `resolve` từ route (`ROUTES.manage.maintenance`) — đích "Xử lý ngay" của cảnh báo
+   * Thiếu KM trả: mở tab hàng đợi và mở NGAY tấm bổ sung KM của biên bản đó (web `?resolve=`).
+   * `resolve` không phải bộ lọc — không gửi xuống API.
+   */
+  const routeFilter = useListParam('filter', MAINTENANCE_BOARD_FILTER_VALUES);
+  const { resolve: resolveParam } = useLocalSearchParams<{ resolve?: string }>();
+  const [filter, setFilter] = useState<string>(routeFilter ?? ALL);
+  const [requestedResolve, setRequestedResolve] = useState<string | null>(
+    typeof resolveParam === 'string' && resolveParam ? resolveParam : null,
+  );
+  // Tham số MỚI khi màn đang sống (tab không dựng lại) ⇒ ý định mới — chỉnh ngay trong render.
+  const [seenResolve, setSeenResolve] = useState(resolveParam);
+  if (resolveParam !== seenResolve) {
+    setSeenResolve(resolveParam);
+    if (typeof resolveParam === 'string' && resolveParam) setRequestedResolve(resolveParam);
+  }
   const [type, setType] = useState<string>(ALL);
   const [sort, setSort] = useState<BoardSort>(DEFAULT_SORT);
   const [search, setSearch] = useState('');
@@ -106,7 +147,8 @@ export function MaintenanceBoardScreen() {
   const [to, setTo] = useState('');
   const [page, setPage] = useState(FIRST_PAGE);
   const [action, setAction] = useState<BoardAction | null>(null);
-  const [resolving, setResolving] = useState<MissingOdometerItem | null>(null);
+  /** `bookingId` của biên bản đang bổ sung KM — bấm một dòng thắng biên bản từ route. */
+  const [resolving, setResolving] = useState<string | null>(null);
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   /*
    * Ô "Chi nhánh" (ADR 0052) — MỘT phạm vi cho mọi tab của màn, kể cả "Thiếu KM trả" đọc endpoint
@@ -115,9 +157,16 @@ export function MaintenanceBoardScreen() {
   const { branchId, filter: branchFilter } = useScreenBranchFilter(() => setPage(FIRST_PAGE));
   const branchEmpty = useBranchEmptyCopy(branchFilter, branchId);
 
+  const tCommonActions = useTranslations('Common.actions');
   const canView = permissions.has(PERMISSION.VEHICLE_MAINTENANCE_VIEW);
   const canManage = permissions.has(PERMISSION.VEHICLE_MAINTENANCE_MANAGE);
   const canCorrectOdometer = permissions.has(PERMISSION.VEHICLE_ODOMETER_CORRECT);
+  // Biên bản từ route chỉ mở khi có quyền chỉnh KM — thiếu quyền thì chỉ hiện hàng đợi (như web).
+  const openBookingId = resolving ?? (canCorrectOdometer ? requestedResolve : null);
+  useListParamChange('filter', routeFilter, (next) => {
+    setFilter(next);
+    setPage(FIRST_PAGE);
+  });
   /*
    * Bảo dưỡng là năng lực của GÓI (ADR 0027): ở `read_only` thao tác GHI khoá kèm lý do chứ không
    * ẩn — đúng web `MaintenanceBoardTable` (`writeBlock`). Đường ĐỌC (mở chi tiết) không khoá.
@@ -132,6 +181,7 @@ export function MaintenanceBoardScreen() {
    * `GET /handovers/missing-odometer` vẫn chặn.
    */
   const isQueue = filter === QUEUE_FILTER && canViewHandovers;
+  const boardSummary = useMaintenanceBoardSummary(canView, branchId);
   const boardFilter = filter === QUEUE_FILTER && !canViewHandovers ? ALL : filter;
   const searchTerm = debouncedSearch.trim();
 
@@ -155,7 +205,8 @@ export function MaintenanceBoardScreen() {
 
   /** Truy vấn ĐANG cầm lái màn hình — hai nhóm việc, hai endpoint, chung một khung trạng thái. */
   const active = isQueue ? queue : query;
-  const items = query.data?.items ?? [];
+  // Cuộn vô hạn trên mobile: gộp các trang đã tải (`useAccumulatedPages`).
+  const items = useAccumulatedPages(query.data?.items, query.data?.meta?.page, (row) => row.vehicleId);
   const queueItems = queue.data?.items ?? [];
 
   /**
@@ -176,7 +227,11 @@ export function MaintenanceBoardScreen() {
   }, []);
 
   const changeFilter = useCallback((groupKey: string, value: string) => {
-    if (groupKey === 'filter') setFilter(value);
+    if (groupKey === 'filter') {
+      setFilter(value);
+      // Rời tab thì bỏ luôn biên bản đang chờ mở — quay lại tab không được tự bật tấm cũ (như web).
+      setRequestedResolve(null);
+    }
     else if (groupKey === 'type') setType(value);
     else if (groupKey === 'from') setFrom(value);
     else if (groupKey === 'to') setTo(value);
@@ -243,7 +298,9 @@ export function MaintenanceBoardScreen() {
   );
 
   const openVehicle = useCallback(
-    (item: MaintenanceBoardItem) => navigateOnce(ROUTES.manage.vehicleDetail(item.vehicleId)),
+    // Web `maintenanceTabHref`: mục Bảo dưỡng của màn sửa xe, không phải Hồ sơ 360.
+    (item: MaintenanceBoardItem) =>
+      navigateOnce(ROUTES.manage.vehicleEditTab(item.vehicleId, VEHICLE_EDIT_TAB.MAINTENANCE)),
     [navigateOnce],
   );
 
@@ -260,9 +317,13 @@ export function MaintenanceBoardScreen() {
     ),
     [canManage, canCorrectOdometer, writeLocked, openVehicle],
   );
+  // iPad: thẻ xếp lưới 2-3 cột trong cột nội dung; điện thoại giữ 1 cột.
+  const grid = useCardGrid(renderItem, { listKey: 'maintenance' });
 
   const renderQueueItem = useCallback<ListRenderItem<MissingOdometerItem>>(
-    ({ item }) => <MissingOdometerCard item={item} onFix={setResolving} />,
+    ({ item }) => (
+      <MissingOdometerCard item={item} onFix={(row) => setResolving(row.bookingId)} />
+    ),
     [],
   );
 
@@ -276,12 +337,22 @@ export function MaintenanceBoardScreen() {
   const filtered = isQueue
     ? searchTerm.length > 0
     : filter !== ALL || type !== ALL || Boolean(from) || Boolean(to) || searchTerm.length > 0;
+  /* Web `CLEARED`: về tab "Tất cả", gỡ hạng mục, khoảng lịch, tìm kiếm và chi nhánh. */
+  const clearFilters = () => {
+    setFilter(ALL);
+    setType(ALL);
+    setFrom('');
+    setTo('');
+    setSearch('');
+    branchFilter.select(undefined);
+    setPage(FIRST_PAGE);
+  };
 
   if (!permissions.isLoading && !canView) {
     return (
       <>
-        <ManageHeader />
-        <Screen edges={['left', 'right', 'bottom']} scroll={false}>
+        <ManagePageHeader title={t('title')} />
+        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage icon="lock-closed-outline" title={t('title')} />
         </Screen>
       </>
@@ -290,16 +361,19 @@ export function MaintenanceBoardScreen() {
 
   return (
     <>
-      <ManageHeader />
-      <Screen edges={['left', 'right', 'bottom']} scroll={false} padded={false}>
+      {/* Chuẩn màn Đơn thuê (16/11/2026): thanh trang + khung danh sách `page`. */}
+      <ManagePageHeader title={t('title')} />
+      <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false} padded={false}>
         <ManageListShell
+          variant="page"
           title={t('title')}
+          subtitle={tMaintenance('page.subtitle')}
           {...(meta === undefined ? {} : { total: t('total', { count: meta.total }) })}
           searchValue={search}
           searchLabel={isQueue ? tFilters('queueSearch') : t('searchLabel')}
           searchPlaceholder={isQueue ? tFilters('queueSearchPlaceholder') : t('searchPlaceholder')}
           onSearchChange={changeSearch}
-          branch={<BranchFilterField filter={branchFilter} value={branchId} />}
+          branchFilter={{ filter: branchFilter, value: branchId }}
           hasRows={rows.length > 0}
           groups={groups}
           onFilterChange={changeFilter}
@@ -307,7 +381,27 @@ export function MaintenanceBoardScreen() {
           summary={
             <FeatureReadOnlyNotice show={writeLocked && (canManage || canCorrectOdometer)} />
           }
+          tabs={
+            /*
+              Dải chip "việc cần làm" kèm số đếm ngay dưới hàng lọc (web `MaintenanceBoardTabs`,
+              ledger §3.8 #4). Cùng state `filter` với ô "Nhóm việc" trong tấm lọc.
+            */
+            <ChipTabs
+              label={tMaintenance('tabsAria')}
+              value={filter}
+              onSelect={(value) => changeFilter('filter', value)}
+              gutter={layout.screenX}
+              items={[...BOARD_FILTER_VALUES, ...(canViewHandovers ? [QUEUE_FILTER] : [])].map(
+                (value) => ({
+                  value: value as string,
+                  label: domainLabel('maintenanceBoardFilter', value),
+                  count: boardSummary.data ? (TAB_COUNT[value]?.(boardSummary.data) ?? undefined) : undefined,
+                }),
+              )}
+            />
+          }
           onPageChange={setPage}
+          loadingMore={query.isFetching && page > 1}
         >
           {({ onScroll, headerHeight, contentContainerStyle, bindList }) => {
             // Là HÀM trả JSX chứ không phải component khai trong render — component mới mỗi lần
@@ -331,7 +425,7 @@ export function MaintenanceBoardScreen() {
                   ))}
                 </YStack>,
               )
-            ) : active.isError ? (
+            ) : active.isError && !active.data ? (
               inStateScroll(
                 <ScreenError
                   error={active.error}
@@ -352,6 +446,8 @@ export function MaintenanceBoardScreen() {
                     icon="search-outline"
                     title={t('emptyFilteredTitle')}
                     description={t('emptyFilteredBody')}
+                    actionLabel={tCommonActions('clear')}
+                    onAction={clearFilters}
                   />
                 ) : isQueue ? (
                   /* Hàng đợi rỗng là TIN VUI, không phải "chưa có dữ liệu" — nói đúng như vậy. */
@@ -389,11 +485,12 @@ export function MaintenanceBoardScreen() {
               />
             ) : (
               <Animated.FlatList
+                key={grid.key}
                 ref={bindList}
                 data={items}
                 keyExtractor={keyOf}
                 {...MEDIA_LIST_TUNING}
-                renderItem={renderItem}
+                {...grid.listProps}
                 contentContainerStyle={contentContainerStyle}
                 onScroll={onScroll}
                 scrollEventThrottle={scrollThrottle.frame}
@@ -422,10 +519,14 @@ export function MaintenanceBoardScreen() {
         ghi: tấm mở ra là `ResolveOdometerSheet` của chính màn biên bản, kèm mã lý do và diễn
         giải bắt buộc vào `audit_logs`.
       */}
-      {resolving ? (
+      {openBookingId ? (
         <ResolveQueueSheet
-          item={resolving}
-          onClose={() => setResolving(null)}
+          key={openBookingId}
+          bookingId={openBookingId}
+          onClose={() => {
+            setResolving(null);
+            setRequestedResolve(null);
+          }}
           onResolved={() => void queue.refetch()}
         />
       ) : null}
@@ -439,11 +540,11 @@ function sortLabel(
   sort: BoardSort,
 ): string {
   switch (sort) {
-    case 'remaining_desc':
+    case MAINTENANCE_BOARD_SORT.REMAINING_DESC:
       return t('sort.remaining_desc');
-    case 'name_asc':
+    case MAINTENANCE_BOARD_SORT.NAME_ASC:
       return t('sort.name_asc');
-    case 'updated_desc':
+    case MAINTENANCE_BOARD_SORT.UPDATED_DESC:
       return t('sort.updated_desc');
     default:
       return t('sort.remaining_asc');

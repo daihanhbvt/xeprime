@@ -1,62 +1,9 @@
-import { useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
-import { Text, XStack } from 'tamagui';
-import { useTranslations } from 'use-intl';
-import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
-import { Screen } from '@/components/layout/Screen';
-import { Card } from '@/components/ui/Card';
-import { ManageHeader } from '@/features/shell/ManageHeader';
-import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
-import { ScopeSwitcherSheet } from '@/features/shell/ScopeSwitcher';
-import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, iconSize, space } from '@/theme/tokens';
+import { ManageAccountMenuScreen } from '@/features/shell/ManageAccountMenuScreen';
 
 /**
- * Ngăn "Thêm" của khu quản lý.
- *
- * Đợt này chỉ có lối về chế độ khách và bộ đổi ngôn ngữ — các mục quản lý khác (xe, lịch, tài
- * chính, nhân sự) mở dần ở những đợt sau. Nói thẳng điều đó bằng một câu còn hơn để một ngăn
- * trống mà người dùng tưởng là lỗi.
+ * `/manage/more` — "Tài khoản của tôi", đích của ô Tài khoản trên thanh menu dưới đáy (Figma
+ * Partner-XePrime `Full Menu MB`). Giữ nguyên URL cũ của ngăn "Thêm" để deep link không gãy.
  */
 export default function ManageMoreRoute() {
-  const colors = useColors();
-  const t = useTranslations('MobileShell.more');
-  const tAccount = useTranslations('Account');
-  const [switching, setSwitching] = useState(false);
-
-  return (
-    <>
-      <ManageHeader />
-      <ManagePageTitle title={t('title')} />
-      <Screen edges={['left', 'right', 'bottom']}>
-        <Card onPress={() => setSwitching(true)} accessibilityLabel={t('switchScope')}>
-          <XStack ai="center" gap={space.md}>
-            <Ionicons
-              name="swap-horizontal-outline"
-              size={iconSize.lg}
-              color={colors.primaryActive}
-            />
-            <Text f={1} col={colors.text} fos={fontSize.body}>
-              {t('switchScope')}
-            </Text>
-            <Ionicons name="chevron-forward" size={iconSize.md} color={colors.textMuted} />
-          </XStack>
-        </Card>
-
-        <Card lift="flat" padded={false}>
-          <XStack ai="center" jc="space-between" gap={space.sm} p={space.md}>
-            <XStack ai="center" gap={space.sm} f={1}>
-              <Ionicons name="language-outline" size={iconSize.sm} color={colors.textMuted} />
-              <Text col={colors.text} fos={fontSize.body}>
-                {tAccount('title')}
-              </Text>
-            </XStack>
-            <LocaleSwitcher />
-          </XStack>
-        </Card>
-      </Screen>
-
-      <ScopeSwitcherSheet open={switching} onClose={() => setSwitching(false)} />
-    </>
-  );
+  return <ManageAccountMenuScreen />;
 }

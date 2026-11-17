@@ -15,6 +15,7 @@ import 'react-native-reanimated';
 
 import { AppErrorScreen } from '@/components/state/AppErrorScreen';
 import { AppToastProvider } from '@/components/feedback/AppToast';
+import { SheetPortalProvider } from '@/components/ui/SheetPortal';
 import { AccountPhoneGate } from '@/features/auth/AccountPhoneGate';
 import { SessionBoundary } from '@/features/auth/SessionBoundary';
 import { BadgeRealtimeProvider } from '@/features/badges/BadgeRealtimeProvider';
@@ -95,6 +96,11 @@ export default function RootLayout() {
                 <SessionBoundary>
                   <ChatRealtimeProvider>
                     <BadgeRealtimeProvider>
+                      {/*
+                        Host của mọi `BottomSheet` (vẽ SAU navigator ⇒ phủ cả màn, tới mép dưới) -
+                        trong cùng các provider mà nội dung tấm cần. Xem `SheetPortal.tsx`.
+                      */}
+                      <SheetPortalProvider>
                       <ThemedStack>
                         <Stack.Screen
                           name="login"
@@ -108,6 +114,7 @@ export default function RootLayout() {
                       </ThemedStack>
                       {/* SAU `Stack` để tấm bắt buộc nằm trên mọi màn — ADR 0060, xem `AccountPhoneGate`. */}
                       <AccountPhoneGate />
+                      </SheetPortalProvider>
                     </BadgeRealtimeProvider>
                   </ChatRealtimeProvider>
                 </SessionBoundary>

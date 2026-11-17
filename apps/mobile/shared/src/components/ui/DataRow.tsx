@@ -13,7 +13,10 @@ export function DataRow({
   strong = false,
   block = false,
   labelWide = false,
+  size = 'sm',
 }: {
+  /** `md` = chữ 14 như thẻ chi tiết đơn/yêu cầu (đồng nhất cỡ chữ 16/11/2026); mặc định `sm` (12). */
+  size?: 'sm' | 'md';
   label: string;
   /**
    * Dòng phụ dưới NHÃN — giải thích nhãn nghĩa là gì.
@@ -74,7 +77,7 @@ export function DataRow({
         <Text
           col={valueColor}
           flexShrink={1}
-          fos={strong ? fontSize.body : fontSize.bodySm}
+          fos={strong || size === 'md' ? fontSize.body : fontSize.bodySm}
           fow={strong ? fontWeight.bold : fontWeight.medium}
           ta={block ? 'left' : 'right'}
           {...(block
@@ -107,7 +110,7 @@ export function DataRow({
       <Text
         col={colors.textMuted}
         flexShrink={1}
-        fos={fontSize.bodySm}
+        fos={size === 'md' ? fontSize.body : fontSize.bodySm}
         fow={strong ? fontWeight.semibold : fontWeight.regular}
       >
         {label}

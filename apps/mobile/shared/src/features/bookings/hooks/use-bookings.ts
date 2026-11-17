@@ -28,7 +28,14 @@ import {
  * Giữ dữ liệu cũ khi ĐỔI TRANG — thiếu nó thì mỗi cú bấm số làm danh sách trắng một nhịp rồi
  * mới có nội dung, và chiều cao nhảy theo. Nhưng KHÔNG giữ khi đổi bộ lọc: xem `keepPageData`.
  */
-export function useBookingsPage(filters: BookingFilters, options?: { enabled?: boolean }) {
+export function useBookingsPage(
+  filters: BookingFilters,
+  options?: {
+    enabled?: boolean;
+    /** Làm mới nền khi màn đang mở — "Đơn thuê xe" gộp nạp lại 30 giây/lần (sổ cái §3.2b dòng 17). */
+    refetchInterval?: number | false;
+  },
+) {
   // `branchId` là ô lọc của CHÍNH màn (ADR 0052), đi trong `filters` như mọi chiều khác.
   const scoped = filters;
   const params = bookingFiltersToParams(scoped);
@@ -38,14 +45,15 @@ export function useBookingsPage(filters: BookingFilters, options?: { enabled?: b
     queryFn: () => bookingsApi.list(scoped),
     placeholderData: keepPageData<Awaited<ReturnType<typeof bookingsApi.list>>>(params),
     enabled: options?.enabled ?? true,
+    refetchInterval: options?.refetchInterval ?? false,
   });
 }
 
-export function useBooking(id: string) {
+export function useBooking(id: string, enabled = true) {
   return useQuery({
     queryKey: queryKeys.bookings.detail(id),
     queryFn: () => bookingsApi.detail(id),
-    enabled: Boolean(id),
+    enabled: Boolean(id) && enabled,
   });
 }
 

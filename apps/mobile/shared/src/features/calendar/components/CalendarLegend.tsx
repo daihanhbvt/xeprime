@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { ScrollView } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { BOOKING_STATUS_META, OCCUPANCY_SOURCE_TYPE_META } from '@xeprime/types';
 import type { IconName } from '@/components/ui/Chip';
 import { useDomainLabel } from '@/i18n/domain';

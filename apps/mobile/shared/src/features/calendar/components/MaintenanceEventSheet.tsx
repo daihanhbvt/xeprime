@@ -125,7 +125,6 @@ export function MaintenanceEventSheet({
                 <>
                   <Button
                     label={t('maintenance.start')}
-                    icon="play-outline"
                     onPress={() => start(record)}
                     loading={transition.isPending}
                   />

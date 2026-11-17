@@ -58,33 +58,25 @@ async function renderCard(props: Partial<Parameters<typeof VehicleCard>[0]> = {}
 }
 
 describe('VehicleCard', () => {
-  it('hiện đủ ba dòng chỉ số: KM · đơn · thu và lãi', async () => {
+  it('lưới chỉ số như web: giá · KM · chuyến đã đi · tổng thu · tổng chi · lợi nhuận', async () => {
     const { getByText } = await renderCard();
 
-    expect(getByText(/KM hiện tại/)).toBeTruthy();
+    expect(getByText('Số KM hiện tại')).toBeTruthy();
     expect(getByText(/42.500 km/)).toBeTruthy();
-    expect(getByText(/Đơn:/)).toBeTruthy();
-    expect(getByText(/Lãi:/)).toBeTruthy();
+    expect(getByText('Chuyến đã đi')).toBeTruthy();
+    expect(getByText('Tổng doanh thu')).toBeTruthy();
+    expect(getByText('Lợi nhuận thực tế')).toBeTruthy();
   });
 
-  it('LỖ ăn nhãn riêng - không phải một con số âm để người đọc tự suy', async () => {
-    const { getByText, queryByText } = await renderCard({
-      stats: { ...stats, totalIncome: '10000000.00', totalExpense: '17300000.00' },
-    });
-
-    expect(getByText(/Lỗ:/)).toBeTruthy();
-    expect(queryByText(/Lãi:/)).toBeNull();
-  });
-
-  it('thiếu quyền finance.view thì KHÔNG có ô tiền, hai ô còn lại vẫn đủ', async () => {
+  it('thiếu quyền finance.view thì KHÔNG có ô tiền, các ô còn lại vẫn đủ', async () => {
     const { getByText, queryByText } = await renderCard({
       stats: { vehicleId: vehicle.id, activeBookings: 2, completedBookings: 5, ratingCount: 0 },
     });
 
-    expect(queryByText(/Lãi:/)).toBeNull();
-    expect(queryByText(/Thu:/)).toBeNull();
-    expect(getByText(/KM hiện tại/)).toBeTruthy();
-    expect(getByText(/Đơn:/)).toBeTruthy();
+    expect(queryByText('Tổng doanh thu')).toBeNull();
+    expect(queryByText('Lợi nhuận thực tế')).toBeNull();
+    expect(getByText('Số KM hiện tại')).toBeTruthy();
+    expect(getByText('Chuyến đã đi')).toBeTruthy();
   });
 
   it('giá hiện là giá ĐÃ giảm, kèm viên -N% (khuyến mãi chỉ áp cho tự lái - ADR 0011)', async () => {

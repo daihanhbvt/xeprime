@@ -86,6 +86,17 @@ export const elevation = {
   raised: shadow('raised', 'shadow-raised'),
   /** `--xp-elevation-panel` — bảng ô nhập của thẻ tìm kiếm trang chủ (`SearchCard .panel`). */
   panel: shadow('panel', 'elevation-panel'),
+  /**
+   * `--xp-elevation-ambient` (`0 0 8px rgba(10,13,18,0.04)`, Figma "New/8-4") — quầng bóng đều
+   * bốn phía của ô việc cần làm Tổng quan Partner.
+   */
+  ambient: shadow('xs', 'elevation-ambient'),
+  /** Figma "New/Sm Card" (`0 0 6px rgba(10,13,18,0.04)`) — thẻ ví Tổng quan Partner. */
+  ambientSm: Platform.select<ViewStyle>({
+    ios: parseBoxShadow('0 0 6px 0 rgba(10, 13, 18, 0.04)'),
+    android: { elevation: ANDROID_ELEVATION.xs },
+    default: {},
+  }) as ViewStyle,
   /** Lớp phủ: modal, sheet. */
   overlay: shadow('overlay', 'shadow-overlay'),
 } as const;

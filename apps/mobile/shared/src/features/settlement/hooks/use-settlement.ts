@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 import { queryKeys } from '@/queries/query-keys';
 import {
   paymentsApi,
@@ -6,6 +12,7 @@ import {
   type BookingSettlement,
   type CorrectRefundInput,
   type Payment,
+  type PreviewReturnSettlementInput,
   type RecordPaymentInput,
   type RecordRefundInput,
   type SaveSurchargeInput,
@@ -48,7 +55,7 @@ function adoptSettlement(queryClient: QueryClient, bookingId: string) {
  * giữ số cũ cho tới khi cache tự hết hạn — đúng lúc người vừa thu tiền đi đối chiếu.
  * `customers` vì ba ô tiền ở hồ sơ khách đọc cùng dữ liệu đó.
  */
-function invalidateMoneyBranches(queryClient: QueryClient): void {
+export function invalidateMoneyBranches(queryClient: QueryClient): void {
   void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
   void queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
   void queryClient.invalidateQueries({ queryKey: queryKeys.receipts.all });
@@ -149,5 +156,24 @@ export function useVoidPayment(bookingId: string) {
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.settlement(bookingId) });
       invalidateMoneyBranches(queryClient);
     },
+  });
+}
+
+/**
+ * Quyết toán XEM TRƯỚC của màn nhận lại xe (06/11/2026) — bản native của web
+ * `useReturnSettlementPreview`. Nơi gọi truyền bộ số đã DEBOUNCE; giữ câu trả lời trước trong lúc
+ * chờ câu mới để khối tiền không nháy về trống mỗi lần gõ một chữ số. Server tính hết (ADR 0007).
+ */
+export function useReturnSettlementPreview(
+  bookingId: string,
+  input: PreviewReturnSettlementInput,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: queryKeys.bookings.returnPreview(bookingId, input),
+    queryFn: () => settlementApi.previewReturn(bookingId, input),
+    enabled: enabled && Boolean(bookingId),
+    placeholderData: keepPreviousData,
+    retry: false,
   });
 }

@@ -144,3 +144,14 @@
     transform: none;
   }
 }
+
+/* Figma "Overview Metrics" (16/11/2026) - khổ điện thoại: ô trắng bo 12, đệm 12, bóng tản nhẹ, không viền. */
+@media (max-width: 640px) {
+  .tile {
+    min-height: 0;
+    padding: 12px;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 0 8px rgba(10, 13, 18, 0.04);
+  }
+}

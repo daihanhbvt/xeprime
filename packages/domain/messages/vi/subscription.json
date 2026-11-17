@@ -291,11 +291,11 @@
     "defaultName": "Gói doanh nghiệp",
     "tag": "Doanh nghiệp",
     "activeTag": "Đang dùng",
-    "activeSummary": "Một gói cho cả đội xe - không giới hạn xe máy và ô tô, giá theo thoả thuận với XePrime.",
+    "activeSummary": "Một gói cho cả đội xe - không giới hạn xe máy và ô tô.",
     "contactSummary": "Cho đội xe lớn hơn 10 xe một loại, hoặc cần cấu hình riêng.",
     "coversBoth": "Không giới hạn xe máy và ô tô",
     "activeUntil": "Hiệu lực tới {date}",
-    "changeHint": "Muốn đổi hoặc gia hạn gói doanh nghiệp? Đội ngũ XePrime sẽ hỗ trợ trực tiếp.",
+    "changeHint": "Cần hỗ trợ thêm? Đội ngũ XePrime luôn sẵn lòng giải đáp.",
     "contactHint": "Gói doanh nghiệp được báo giá theo quy mô - không mua trực tiếp trên trang.",
     "contactCta": "Liên hệ tư vấn"
   },
@@ -332,8 +332,8 @@
     }
   },
   "shopPlan": {
-    "title": "Gói & hạn mức",
-    "hint": "Quản lý gói dịch vụ và hạn mức sử dụng của gian hàng.",
+    "title": "Gói dịch vụ",
+    "hint": "Thông tin gói dịch vụ và mức sử dụng xe của gian hàng.",
     "change": "Nâng cấp / Đổi gói",
     "buy": "Mua gói",
     "upgradeNow": "Nâng cấp ngay",

@@ -1,4 +1,4 @@
-import type { ReactNode, RefObject } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode, type RefObject } from 'react';
 import type { ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { YStack } from 'tamagui';
@@ -6,6 +6,8 @@ import { useTranslations } from 'use-intl';
 import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
 import { getErrorCode } from '@xeprime/api-client';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { VehicleEditHeader } from '@/features/vehicles/components/VehicleEditHeader';
+import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { Callout } from '@/components/ui/Callout';
@@ -16,19 +18,37 @@ import type { VehicleDetail } from '@/features/vehicles/api';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import {
+  sectionEditMenuKeyOf,
   sectionLabelKeyOf,
   sectionServiceType,
+  VEHICLE_MANAGE_SECTION,
   type VehicleManageSection,
 } from '@/navigation/vehicle-manage-section';
 import { space } from '@/theme/tokens';
 import { isServiceOff, VehicleSectionDisabled } from './VehicleSectionDisabled';
 
+/**
+ * Khe CHÂN TRANG của shell: mục con đặt thanh nút dính đáy màn (Figma "Hoàn tác · Lưu thay đổi")
+ * bằng `useShellFooter` - state của form nằm trong mục con nên shell không tự dựng được.
+ */
+const FooterSlot = createContext<((node: ReactNode) => void) | null>(null);
+
+/** Đặt `node` làm chân trang; `deps` là những thứ làm nó đổi (nút gọi hàm mới mỗi lần render). */
+export function useShellFooter(build: () => ReactNode, deps: readonly unknown[]): void {
+  const set = useContext(FooterSlot);
+  useEffect(() => {
+    set?.(build());
+    return () => set?.(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [set, ...deps]);
+}
+
 interface Props {
   vehicleId: string;
   section: VehicleManageSection;
   /**
-   * Tiêu đề của mục. Bỏ trống = nhãn MENU của mục (`VehicleManage.menu.items.*`) — đúng chữ ở
-   * breadcrumb bên web, để một mục mang một tên ở mục lục và ở đầu màn.
+   * Tiêu đề của mục. Bỏ trống = nhãn MENU của mục (`Vehicles.editor.menu.items.*`; mục cũ:
+   * `VehicleManage.menu.items.*`), để một mục mang một tên ở menu và ở đầu màn.
    */
   title?: string;
   subtitle?: string;
@@ -68,9 +88,16 @@ export function VehicleManageShell({
   workspace = 'account',
 }: Props) {
   const t = useTranslations('VehicleManage');
+  const [footer, setFooter] = useState<ReactNode>(null);
   const tMenu = useTranslations('VehicleManage.menu');
+  const tEditorMenu = useTranslations('Vehicles.editor.menu.items');
+  const tEdit = useTranslations('Vehicles.edit');
+  /* Mục của menu sửa xe: CÙNG nhãn đã chạm trên menu (web `VehicleEditMenu`); mục cũ giữ nhãn cũ. */
+  const editMenuKey = sectionEditMenuKeyOf(section);
   const labelKey = sectionLabelKeyOf(section);
-  const title = titleOverride ?? (labelKey ? tMenu(labelKey) : t('title'));
+  const title =
+    titleOverride ??
+    (editMenuKey ? tEditorMenu(editMenuKey) : labelKey ? tMenu(labelKey) : t('title'));
   const router = useRouter();
   const { has } = usePermissions();
   const canView = has(PERMISSION.VEHICLE_VIEW);
@@ -84,13 +111,27 @@ export function VehicleManageShell({
       isManage ? ROUTES.manage.vehicleEdit(vehicleId) : ROUTES.account.vehicleManage(vehicleId),
     );
   const listHref = isManage ? ROUTES.manage.vehicles() : ROUTES.account.vehicles();
-  const header = <AppHeader onBack={back} title={title} {...(subtitle ? { subtitle } : {})} />;
+  /*
+   * Mục của màn SỬA XE ở cổng quản lý (Hình ảnh): thanh ← + % hoàn thiện + dải tab gạch chân (Figma
+   * "Chỉnh sửa xe" MB). Section khác / khu tài khoản giữ thanh tiêu đề thường.
+   */
+  const header =
+    isManage && section === VEHICLE_MANAGE_SECTION.IMAGES ? (
+      <VehicleEditHeader
+        vehicleId={vehicleId}
+        tab={VEHICLE_EDIT_TAB.MEDIA}
+        title={tEdit('title')}
+        onBack={back}
+      />
+    ) : (
+      <AppHeader onBack={back} title={title} {...(subtitle ? { subtitle } : {})} />
+    );
 
   if (!canView) {
     return (
       <>
         {header}
-        <Screen edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
             title={t('forbiddenTitle')}
@@ -107,7 +148,7 @@ export function VehicleManageShell({
     return (
       <>
         {header}
-        <Screen edges={['left', 'right', 'bottom']}>
+        <Screen scrollReveal edges={['left', 'right', 'bottom']}>
           <MiniRowsSkeleton rows={6} />
         </Screen>
       </>
@@ -119,7 +160,7 @@ export function VehicleManageShell({
     return (
       <>
         {header}
-        <Screen edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="alert-circle-outline"
             title={notFound ? t('notFoundTitle') : t('loadErrorTitle')}
@@ -157,11 +198,18 @@ export function VehicleManageShell({
   return (
     <>
       {header}
-      <Screen edges={['left', 'right', 'bottom']} {...(scrollRef ? { scrollRef } : {})}>
-        <YStack gap={space.md}>
-          {!canEdit ? <Callout tone="info">{t('readOnlyNotice')}</Callout> : null}
-          {children({ vehicle, canEdit })}
-        </YStack>
+      <Screen
+        scrollReveal
+        edges={['left', 'right', 'bottom']}
+        {...(scrollRef ? { scrollRef } : {})}
+        {...(footer ? { footer } : {})}
+      >
+        <FooterSlot.Provider value={setFooter}>
+          <YStack gap={space.md}>
+            {!canEdit ? <Callout tone="info">{t('readOnlyNotice')}</Callout> : null}
+            {children({ vehicle, canEdit })}
+          </YStack>
+        </FooterSlot.Provider>
       </Screen>
     </>
   );

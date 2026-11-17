@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { CardTitle } from '@/components/ui/CardTitle';
 import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -8,11 +9,13 @@ import {
   PAYMENT_KIND,
   PERMISSION,
   SURCHARGE_CATEGORY_META,
+  isBookingClosedWithoutTrip,
+  type BookingStatus,
   type DepositStatus,
   type SurchargeCategory,
 } from '@xeprime/types';
 import { isNegativeMoney, isZeroMoney, subtractMoney } from '@xeprime/domain';
-import { AppHeader } from '@/components/layout/AppHeader';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
@@ -62,7 +65,7 @@ export function SettlementScreen({ bookingId }: { bookingId: string }) {
   if (query.isPending) {
     return (
       <>
-        <AppHeader title={t('title')} onBack={back} />
+        <ManagePageHeader title={t('title')} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']} refreshing={refreshing} onRefresh={onRefresh}>
           <YStack gap={layout.section}>
             <Skeleton height={140} />
@@ -77,7 +80,7 @@ export function SettlementScreen({ bookingId }: { bookingId: string }) {
   if (query.isError) {
     return (
       <>
-        <AppHeader title={t('title')} onBack={back} />
+        <ManagePageHeader title={t('title')} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenError
             messageFrom="backend"
@@ -127,7 +130,15 @@ function SettlementBody({
   const [takingDeposit, setTakingDeposit] = useState(false);
 
   // Loại dịch vụ của đơn (đọc từ cache chi tiết đơn) — tấm phụ phí bỏ danh mục không ghi được (ADR 0075).
-  const serviceType = useBooking(bookingId).data?.serviceType ?? null;
+  const bookingData = useBooking(bookingId).data;
+  const serviceType = bookingData?.serviceType ?? null;
+  /*
+   * Đơn huỷ / khách không đến (`isBookingClosedWithoutTrip`): không ghi phát sinh hay thu cọc MỚI —
+   * server từ chối `BOOKING_MONEY_CLOSED`. Hoàn cọc đã thu vẫn mở. Như web `SettlementCard`.
+   */
+  const moneyClosed = bookingData
+    ? isBookingClosedWithoutTrip(bookingData.status as BookingStatus)
+    : false;
   const addSurcharge = useAddSurcharge(bookingId);
   const voidSurcharge = useVoidSurcharge(bookingId);
 
@@ -160,27 +171,29 @@ function SettlementBody({
    * nhận thu cọc nào, nên `depositReceived` vĩnh viễn bằng 0 và cả khối quyết toán chạy không tải.
    */
   const canTakeDeposit =
+    !moneyClosed &&
     !isNegativeMoney(depositOutstanding) &&
     !isZeroMoney(depositOutstanding) &&
     (depositStatus === DEPOSIT_STATUS.NOT_RECEIVED || depositStatus === DEPOSIT_STATUS.RECEIVED);
 
   return (
     <>
-      <AppHeader title={t('title')} onBack={onBack} />
+      <ManagePageHeader title={t('title')} onBack={onBack} />
       <Screen edges={['left', 'right', 'bottom']} refreshing={refreshing} onRefresh={onRefresh}>
         <YStack gap={layout.section}>
           <Card>
             <YStack gap={space.sm}>
-              <XStack ai="center" jc="space-between" gap={space.sm}>
-                <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-                  {t('title')}
-                </Text>
-                <StatusBadge
-                  label={domainLabel('depositStatus', depositStatus, depositMeta.label)}
-                  color={depositMeta.color}
-                  size="sm"
-                />
-              </XStack>
+              {/* Nhãn trạng thái cọc đứng DƯỚI tiêu đề - chung hàng thì bóp tiêu đề (đo trên emulator 12/11). */}
+              <YStack gap={space.xs}>
+                <CardTitle icon="receipt-outline">{t('title')}</CardTitle>
+                <XStack>
+                  <StatusBadge
+                    label={domainLabel('depositStatus', depositStatus, depositMeta.label)}
+                    color={depositMeta.color}
+                    size="sm"
+                  />
+                </XStack>
+              </YStack>
 
               {/*
                 Hai dòng cọc KHÔNG được gộp: "đơn khai 3 triệu" và "đã thu 0" là hai sự thật khác
@@ -191,9 +204,12 @@ function SettlementBody({
                 hint={t('depositRequiredHint')}
                 value={fmt.money(settlement.depositRequired)}
                 tone="muted"
+                labelWide
               />
               <DataRow
                 label={t('depositReceived')}
+                // Giá trị + nút "Xác nhận đã thu cọc" dài - xếp DƯỚI nhãn thay vì gãy dòng cạnh nó.
+                block
                 /* Chưa có bằng chứng thu tiền thì nói THẲNG, không hiện một số 0 mập mờ. */
                 value={
                   depositStatus === DEPOSIT_STATUS.NOT_RECEIVED
@@ -269,9 +285,7 @@ function SettlementBody({
 
           <Card>
             <YStack gap={space.sm}>
-              <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-                {t('surcharges.title')}
-              </Text>
+              <CardTitle icon="add-circle-outline">{t('surcharges.title')}</CardTitle>
 
               {settlement.surcharges.length === 0 ? (
                 <Text col={colors.textMuted} fos={fontSize.bodySm}>
@@ -282,7 +296,8 @@ function SettlementBody({
                   <SurchargeRow
                     key={row.id}
                     surcharge={row}
-                    canRemove={canVoid}
+                    // Web `SurchargeDialog` + server gác `payments.record`; đơn đã đóng tiền thì không gỡ.
+                    canRemove={canRecord && !moneyClosed}
                     loading={voidSurcharge.isPending}
                     onRemove={() =>
                       voidSurcharge.mutate(
@@ -297,7 +312,7 @@ function SettlementBody({
                 ))
               )}
 
-              {canRecord ? (
+              {canRecord && !moneyClosed ? (
                 <Button
                   label={t('surcharges.add')}
                   variant="secondary"
@@ -310,9 +325,7 @@ function SettlementBody({
 
           <Card>
             <YStack gap={space.sm}>
-              <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-                {t('refund.title')}
-              </Text>
+              <CardTitle icon="return-up-back-outline">{t('refund.title')}</CardTitle>
 
               {settlement.refund ? (
                 <>
@@ -326,7 +339,7 @@ function SettlementBody({
                     value={domainLabel('refundMethod', settlement.refund.refundMethod)}
                   />
                   <DataRow
-                    label={t('refund.noteLabel')}
+                    label={t('refundedAt')}
                     value={fmt.dateTime(settlement.refund.refundedAt)}
                   />
                   {settlement.refund.reference ? (

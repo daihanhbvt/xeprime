@@ -1,5 +1,5 @@
 import { Floating } from '@/components/motion/Floating';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Image, type ImageSourcePropType } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { Button } from '@/components/ui/Button';

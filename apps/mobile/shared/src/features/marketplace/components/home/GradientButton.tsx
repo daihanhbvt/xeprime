@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet } from 'react-native';
 import { Text, XStack } from 'tamagui';
@@ -17,6 +17,7 @@ import {
   radius,
   space,
 } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 
 const SLOP_MD = buttonHitSlop(buttonHeight.md);
 
@@ -81,7 +82,7 @@ export function GradientButton({
         style={[styles.fill, { borderRadius: corner }]}
       >
         {shine ? <ShineSweep /> : null}
-        <XStack ai="center" jc="center" gap={space.sm} h={height} px={space.lg}>
+        <XStack ai="center" jc="center" gap={space.sm} h={height} px={layout.padXLg}>
           {iconStart ? <Ionicons name={iconStart} size={19} color={colors.onPrimary} /> : null}
           <Text col={colors.onPrimary} fos={fontSize.body} fow={fontWeight.semibold}>
             {label}
@@ -121,7 +122,7 @@ export function OutlineAction({
         ai="center"
         jc="center"
         minHeight={buttonHeight.md}
-        px={space.md}
+        px={layout.padX}
         br={radius.control}
         bw={1}
         bc={dark ? '#717680' : colors.primaryLight}

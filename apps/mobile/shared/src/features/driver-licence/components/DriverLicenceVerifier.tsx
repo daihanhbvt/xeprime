@@ -1,5 +1,5 @@
 import { useState, type ComponentProps, type ReactNode } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Image } from 'expo-image';
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';

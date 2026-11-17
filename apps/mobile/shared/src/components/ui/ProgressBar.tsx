@@ -36,11 +36,14 @@ export function ProgressBar({
   tone = 'active',
   size = 'md',
   label,
+  color,
 }: {
   percent: number;
   tone?: Tone;
   size?: Size;
   label?: string;
+  /** Màu thanh riêng (vd `successVivid` của design v2) - thắng `tone`. */
+  color?: string;
 }) {
   const colors = useColors();
   const TONE = useTone();
@@ -65,7 +68,7 @@ export function ProgressBar({
         accessibilityRole="progressbar"
         accessibilityValue={{ min: 0, max: 100, now: Math.round(clamped) }}
       >
-        <GrowFill fraction={clamped / 100} color={TONE[tone]} style={{ borderRadius: radius.pill }} />
+        <GrowFill fraction={clamped / 100} color={color ?? TONE[tone]} style={{ borderRadius: radius.pill }} />
       </YStack>
     </YStack>
   );

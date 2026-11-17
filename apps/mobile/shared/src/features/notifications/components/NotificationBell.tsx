@@ -1,10 +1,11 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, type ListRenderItemInfo } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { HeaderChip } from '@/components/layout/HeaderChip';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { badgeOffset, CountBadge, HEADER_BADGE_MAX } from '@/components/ui/CountBadge';
 import { ListEnd } from '@/components/ui/ListEnd';
@@ -25,10 +26,12 @@ import {
   useNotificationsInfinite,
 } from '../hooks/use-notifications';
 import {
+  NOTIFICATION_CONTEXT,
   notificationHref,
   notificationIcon,
   type NotificationContext,
 } from '../notification-display';
+import { layout } from '@/theme/layout';
 
 const SKELETON_ROWS = 5;
 
@@ -156,8 +159,9 @@ export function NotificationBell({
           hitSlop={compact ? Math.ceil((sizing.touchTarget - sizing.compactBox) / 2) : space.xs}
           style={compact ? styles.bellCompact : styles.bell}
         >
-          <Ionicons
-            name="notifications-outline"
+          {/* Web: site partner `LineIcon name="notification"`, site khách `LineIcon name="bell"`. */}
+          <LineIcon
+            name={context === NOTIFICATION_CONTEXT.CUSTOMER ? 'bell' : 'notification'}
             size={compact ? iconSize.sm : iconSize.md}
             color={colors.text}
           />
@@ -189,7 +193,7 @@ export function NotificationBell({
         */
         scroll={false}
       >
-        <XStack ai="center" jc="flex-end" px={space.md} pb={space.xs}>
+        <XStack ai="center" jc="flex-end" px={layout.padX} pb={space.xs}>
           <Pressable
             onPress={() => markAll.mutate()}
             disabled={unreadCount === 0 || markAll.isPending}
@@ -355,7 +359,7 @@ const useStyles = makeStyles((colors) => ({
     borderBottomColor: colors.border,
     borderBottomWidth: ROW_DIVIDER,
     minHeight: sizing.touchTarget,
-    paddingHorizontal: space.md,
+    paddingHorizontal: layout.padX,
     paddingVertical: space.sm,
   },
   rowUnread: {

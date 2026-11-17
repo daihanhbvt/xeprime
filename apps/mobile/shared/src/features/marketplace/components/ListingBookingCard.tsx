@@ -1,5 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Ionicons } from '@/components/icons/Ionicons';
+import { Children, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -518,7 +518,7 @@ export function ListingBookingCard({
         // `.tabHeader` ≤640px: khay `bg-muted`, cao 50; tab bo trên 12 (tab đầu 16), chữ 14.
         // Chia bề ngang THEO ĐỘ DÀI nhãn (flexGrow 1 + flexBasis auto) thay vì 3 phần bằng nhau;
         // máy hẹp/tiếng Anh vẫn thiếu chỗ thì nhãn xuống 2 dòng căn giữa, không cắt "…".
-        <XStack mih={50} bg={colors.surfaceMuted}>
+        <XStack minHeight={50} bg={colors.surfaceMuted}>
           {visibleTabs.map((tab, index) => {
             const active = trip.serviceType === tab.value;
             return (
@@ -1426,7 +1426,7 @@ function TimeFrame({
       >
         <XStack
           ai="center"
-          px={space.md}
+          px={layout.padX}
           py={12}
           br={radius.control}
           bw={1}

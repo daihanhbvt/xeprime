@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useEffect, useRef, useState } from 'react';
 import {
   useController,
@@ -30,6 +30,7 @@ import { placeMapUri } from '@/lib/map-static';
 import { readRememberedProvince, rememberProvince } from '@/lib/province-memory';
 import { useColors } from '@/theme/ThemeProvider';
 import { fieldFontSize, fontSize, iconSize, radius, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 
 /** Tên ba trường HÀNH CHÍNH + chi tiết — bản native của `AddressFieldNames` bên web. */
 export interface AddressFieldNames<T extends FieldValues> {
@@ -745,7 +746,7 @@ export function ConfirmedPlaceField<T extends FieldValues>({
       <XStack
         ai="center"
         gap={space.sm}
-        px={space.md}
+        px={layout.padX}
         py={space.sm}
         borderTopWidth={1}
         borderTopColor={colors.borderSubtle}
@@ -785,18 +786,18 @@ export function ConfirmedPlaceField<T extends FieldValues>({
       accessibilityRole="menu"
     >
       {suggestions.isFetching && items.length === 0 ? (
-        <XStack ai="center" jc="center" gap={space.sm} px={space.md} py={space.md}>
+        <XStack ai="center" jc="center" gap={space.sm} px={layout.padX} py={space.md}>
           <ActivityIndicator size="small" color={colors.accentText} />
         </XStack>
       ) : suggestions.isError || suggestions.data?.available === false ? (
-        <XStack ai="center" gap={space.sm} px={space.md} py={space.md}>
+        <XStack ai="center" gap={space.sm} px={layout.padX} py={space.md}>
           <Ionicons name="cloud-offline-outline" size={iconSize.sm} color={colors.textMuted} />
           <Text f={1} col={colors.textMuted} fos={fontSize.label}>
             {t('placeUnavailable')}
           </Text>
         </XStack>
       ) : items.length === 0 ? (
-        <XStack ai="center" gap={space.sm} px={space.md} py={space.md}>
+        <XStack ai="center" gap={space.sm} px={layout.padX} py={space.md}>
           <Ionicons name="search-outline" size={iconSize.sm} color={colors.textMuted} />
           <Text f={1} col={colors.textMuted} fos={fontSize.label}>
             {t('placeEmpty')}
@@ -817,7 +818,7 @@ export function ConfirmedPlaceField<T extends FieldValues>({
             <XStack
               ai="flex-start"
               gap={space.sm}
-              px={space.md}
+              px={layout.padX}
               py={space.sm}
               {...(index > 0 ? { borderTopWidth: 1, borderTopColor: colors.borderSubtle } : {})}
             >

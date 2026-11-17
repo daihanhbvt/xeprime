@@ -9,10 +9,10 @@ import {
 } from '@xeprime/types';
 import { isZeroMoney } from '@xeprime/domain';
 import { Avatar } from '@/components/ui/Avatar';
-import { BlockTitle } from '@/components/ui/BlockTitle';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { Card } from '@/components/ui/Card';
 import { DetailChevron } from '@/components/ui/DetailArrow';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui/Button';
 import { SelectControl } from '@/components/ui/SelectControl';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -51,6 +51,7 @@ export function CustomerRevenueList({
   error,
   onSortChange,
   onPageChange,
+  embedded = false,
 }: {
   items: readonly CustomerRevenue[];
   meta: PaginationMeta;
@@ -61,10 +62,16 @@ export function CustomerRevenueList({
   error: { error: unknown; onRetry: () => void } | null;
   onSortChange: (next: string) => void;
   onPageChange: (page: number) => void;
+  /**
+   * Nằm TRONG thẻ "Hiệu suất kinh doanh" (web `BusinessPerformanceCard`, ledger 09 §3.9): thẻ đã
+   * có tiêu đề + tab, nên dải không in tiêu đề riêng của nó.
+   */
+  embedded?: boolean;
 }) {
   const METRIC_TONE = useMetricTone();
   const colors = useColors();
   const t = useTranslations('Finance.overview.customers');
+  const tActions = useTranslations('Common.actions');
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
   const permissions = usePermissions();
@@ -86,7 +93,7 @@ export function CustomerRevenueList({
 
   return (
     <YStack gap={space.sm}>
-      <BlockTitle>{t('title')}</BlockTitle>
+      {embedded ? null : <SectionHeader icon="people-outline">{t('title')}</SectionHeader>}
 
       <SelectControl
         label={t('sort.label')}
@@ -205,12 +212,14 @@ export function CustomerRevenueList({
             );
           })}
 
-          {meta.total > meta.limit ? (
-            <Pagination
-              page={meta.page}
-              limit={meta.limit}
-              total={meta.total}
-              onChange={onPageChange}
+          {/* Cuộn/dồn trang như Đơn thuê: "Xem thêm" tải trang kế, danh sách dồn lại (người dùng 17/11/2026). */}
+          {meta.page * meta.limit < meta.total ? (
+            <Button
+              label={tActions('viewMore')}
+              variant="outline"
+              size="compact"
+              loading={loading}
+              onPress={() => onPageChange(meta.page + 1)}
             />
           ) : null}
         </>

@@ -21,6 +21,8 @@ import {
 import { withBranchReturn } from '@/features/branches/branch-link';
 import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
+import { VehicleStatusChips } from './VehicleStatusChips';
+import { useVehicleOptions } from '../hooks/use-vehicle-options';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
 import { VEHICLES_DEFAULT_LIMIT } from '../api';
@@ -28,14 +30,11 @@ import { vehicleSchedulePath } from '../calendar-link';
 import { VEHICLE_LIST_FEW_THRESHOLD, VEHICLE_LIST_VIEW } from '../constants';
 import { useFleetSummary } from '../hooks/use-fleet-summary';
 import { useVehicleFilters } from '../hooks/use-vehicle-filters';
-import { useVehicleOptions } from '../hooks/use-vehicle-options';
 import { useVehicleRowActions } from '../hooks/use-vehicle-row-actions';
 import { useVehicles } from '../hooks/use-vehicles';
 import type { VehicleListItem, VehicleListView } from '../types';
-import { FleetSummaryBar } from './FleetSummaryBar';
 import { VehicleCardGrid, type VehicleGridLayout } from './VehicleCardGrid';
 import { VehicleFiltersBar, type VehicleFiltersScope } from './VehicleFilters';
-import { VehicleStatusChips } from './VehicleStatusChips';
 import styles from './VehiclesListView.module.css';
 
 /**
@@ -201,28 +200,9 @@ function VehiclesListBody({ scope }: { scope: VehicleFiltersScope }) {
       <ManagePageHeader title={t('title')} subtitle={t('subtitle')} extra={createButton} />
 
       {/*
-        Hai khối chỉ-mobile (Figma `236:4632`): dải chỉ số đội xe + chip lọc một-chạm. Gian hàng
-        lọc theo VẬN HÀNH; chủ xe vài chiếc hỏi "xe tự lái của tôi đâu" trước, nên lọc DỊCH VỤ.
+        Khổ điện thoại (Figma Partner "Vehice / List" MB): ô tìm + nút "Lọc" và dải tab trạng thái
+        (Tất cả · Sẵn sàng · Đang thuê…) như màn Đơn thuê; dải chỉ số đội xe đã bỏ.
       */}
-      {isMobile ? (
-        <>
-          <FleetSummaryBar enabled branchId={filters.branchId} />
-          {isOwner ? (
-            <VehicleStatusChips
-              value={filters.serviceType}
-              onChange={(serviceType) => setFilters({ serviceType })}
-              options={options.serviceType}
-              ariaLabel={t('serviceChipsLabel')}
-            />
-          ) : (
-            <VehicleStatusChips
-              value={filters.operationStatus}
-              onChange={(operationStatus) => setFilters({ operationStatus })}
-            />
-          )}
-        </>
-      ) : null}
-
       <VehicleFiltersBar
         scope={scope}
         filters={filters}
@@ -242,6 +222,22 @@ function VehiclesListBody({ scope }: { scope: VehicleFiltersScope }) {
         onClear={clearFilters}
         extraActions={viewToggle}
       />
+
+      {isMobile ? (
+        isOwner ? (
+          <VehicleStatusChips
+            value={filters.serviceType}
+            onChange={(serviceType) => setFilters({ serviceType })}
+            options={options.serviceType}
+            ariaLabel={t('serviceChipsLabel')}
+          />
+        ) : (
+          <VehicleStatusChips
+            value={filters.operationStatus}
+            onChange={(operationStatus) => setFilters({ operationStatus })}
+          />
+        )
+      ) : null}
 
       <VehicleCardGrid
         layout={layout}

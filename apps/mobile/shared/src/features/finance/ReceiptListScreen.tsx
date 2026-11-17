@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useAccumulatedPages } from '@/hooks/use-accumulated-pages';
 import { RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import {
   PAYMENT_METHOD_VALUES,
   PERMISSION,
@@ -16,17 +18,19 @@ import {
 import { Screen } from '@/components/layout/Screen';
 import { Callout } from '@/components/ui/Callout';
 import { Chip } from '@/components/ui/Chip';
-import { IconButton } from '@/components/ui/IconButton';
 import { RecordCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useFeature } from '@/features/auth/hooks/use-feature';
+import { ROUTES } from '@/navigation/routes';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { ManageHeader } from '@/features/shell/ManageHeader';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
+import { IconSquareButton } from '@/components/ui/IconSquareButton';
+import { LineIcon } from '@/components/icons/LineIcon';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { ManageListShell } from '@/features/shell/ManageListShell';
 import { InlineAction } from '@/components/ui/InlineAction';
 import {
-  BranchFilterField,
   useBranchEmptyCopy,
 } from '@/features/branches/components/BranchFilterField';
 import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
@@ -39,7 +43,7 @@ import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, space } from '@/theme/tokens';
+import { fontSize, space, iconSize } from '@/theme/tokens';
 import { CategoryManagerSheet } from './components/CategoryManagerSheet';
 import { FinancePeriodBar } from './components/FinancePeriodBar';
 import { ReceiptCard } from './components/ReceiptCard';
@@ -52,7 +56,12 @@ import {
 } from './components/TransactionHistoryTabs';
 import { FILTER_ALL, RECEIPT_PERIOD_VALUES } from './constants';
 import { hasReceiptFilters, type Receipt, type ReceiptFilters } from './api';
-import { useFinanceCategories, useReceipts, useReceiptSummary } from './hooks/use-finance';
+import {
+  useDebtSummary,
+  useFinanceCategories,
+  useReceipts,
+  useReceiptSummary,
+} from './hooks/use-finance';
 
 const SKELETON_ROWS = 4;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -90,9 +99,14 @@ export function ReceiptListScreen() {
     from?: string;
     to?: string;
     create?: string;
+    /** Link dạng web `?view=debts` (tab Công nợ của trang sổ). */
+    view?: string;
   }>();
 
   const t = useTranslations('Finance.receipts');
+  const navigateOnce = useNavigateOnce();
+  // Hai tab của "Lịch sử giao dịch" dùng CHUNG tiêu đề + mô tả của web (ledger 09 §3.11).
+  const tHistory = useTranslations('Finance.history.page');
   const tActions = useTranslations('Common.actions');
   const tLabels = useTranslations('Common.labels');
   const domainLabel = useDomainLabel();
@@ -248,6 +262,18 @@ export function ReceiptListScreen() {
 
   const query = useReceipts(filters, canViewFinance);
   const summary = useReceiptSummary(filters, canViewFinance);
+  /*
+   * Thẻ "Công nợ khách hàng" (web, ledger 09 §3.11 #2) — theo CÙNG chi nhánh đang lọc, số tại lúc
+   * này, không theo kỳ. Gói không có tab Công nợ (`PLAN_FEATURE.DEBTS`) thì thẻ vắng hẳn.
+   */
+  const debtsFeature = useFeature(PLAN_FEATURE.DEBTS);
+  const debtsVisible = debtsFeature.isVisible;
+  // Web `receipts/page.tsx`: `?view=debts` mở tab Công nợ - app có màn riêng nên chuyển sang đó.
+  const viewDebts = params.view === 'debts' && debtsVisible;
+  useEffect(() => {
+    if (viewDebts) router.replace(ROUTES.manage.debts(branchId ? { branchId } : undefined));
+  }, [viewDebts, branchId]);
+  const debtSummary = useDebtSummary(branchId ? { branchId } : {}, canViewFinance && debtsVisible);
   /* Danh mục nạp sẵn cho ô lọc: người dùng phải THẤY có những nhóm nào rồi mới chọn được. */
   const { data: categories } = useFinanceCategories(undefined, canViewFinance);
 
@@ -255,7 +281,8 @@ export function ReceiptListScreen() {
    * `?? []` dựng mảng MỚI mỗi lần render — đưa thẳng vào deps của `useMemo` bên dưới là nó tính
    * lại ở mọi lần render, và dải viên phạm vi dựng lại theo.
    */
-  const items = useMemo(() => query.data?.items ?? [], [query.data]);
+  // Cuộn vô hạn trên mobile: gộp các trang đã tải (`useAccumulatedPages`).
+  const items = useAccumulatedPages(query.data?.items, query.data?.meta?.page);
   const meta = query.data?.meta;
   /* Số khoản chung bị bỏ khi lọc chi nhánh — chỉ > 0 khi đang lọc (ADR 0052 điều 3). */
   const unassignedCount = meta?.unassignedCount ?? 0;
@@ -454,7 +481,9 @@ export function ReceiptListScreen() {
     setTo('');
     setSearch('');
     setPage(FIRST_PAGE);
-  }, []);
+    // Web "Xoá lọc" gỡ cả chi nhánh.
+    branchFilter.select(undefined);
+  }, [branchFilter]);
 
   const renderItem = useCallback<ListRenderItem<Receipt>>(
     ({ item }) => <ReceiptCard receipt={item} showDescription onPress={setDetailId} />,
@@ -478,10 +507,6 @@ export function ReceiptListScreen() {
   const summaryBlock = useMemo(
     () => (
       <YStack px={layout.screenX} pb={space.sm} gap={space.sm}>
-        <Text col={colors.textMuted} fos={fontSize.label}>
-          {t('page.subtitle')}
-        </Text>
-
         {/* Phạm vi đang cắt danh sách — mỗi chiều một viên, gỡ được ngay tại chỗ. */}
         {scopeChips.length > 0 ? (
           <XStack flexWrap="wrap" gap={space.xs}>
@@ -504,6 +529,18 @@ export function ReceiptListScreen() {
           loading={summary.isFetching}
           error={summary.isError}
           filtered={filtered}
+          debt={
+            debtsVisible
+              ? {
+                  data: debtSummary.data,
+                  loading: debtSummary.isFetching,
+                  // Sang tab Công nợ — cùng cách đổi tab của `TransactionHistoryTabs` (thay màn).
+                  // Web: sang Công nợ kèm chi nhánh đang lọc.
+                  onPress: () =>
+                    router.replace(ROUTES.manage.debts(branchId ? { branchId } : undefined)),
+                }
+              : null
+          }
         />
 
         {/*
@@ -552,6 +589,9 @@ export function ReceiptListScreen() {
       summary.isFetching,
       summary.isError,
       filtered,
+      debtsVisible,
+      debtSummary.data,
+      debtSummary.isFetching,
       from,
       to,
       changeRange,
@@ -565,12 +605,14 @@ export function ReceiptListScreen() {
   if (!permissions.isLoading && !canViewFinance) {
     return (
       <>
-        <ManageHeader />
+        <ManagePageHeader title={tHistory('title')} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
             title={t('forbidden.title')}
             description={t('forbidden.description')}
+            actionLabel={t('forbidden.home')}
+            onAction={() => navigateOnce(ROUTES.manage.home())}
           />
         </Screen>
       </>
@@ -579,45 +621,33 @@ export function ReceiptListScreen() {
 
   return (
     <>
-      <ManageHeader />
+      {/* Chuẩn màn Đơn thuê (16/11/2026): thanh trang + hai nút tròn Danh mục / Tạo phiếu. */}
+      <ManagePageHeader
+        title={tHistory('title')}
+        actions={
+          <>
+            <IconSquareButton label={t('actions.categories')} onPress={() => setCategoriesOpen(true)}>
+              <Ionicons name="pricetags-outline" size={iconSize.lg} color={colors.text} />
+            </IconSquareButton>
+            {canCreate ? (
+              <IconSquareButton
+                label={t('actions.create')}
+                tone="brand"
+                disabled={!finance.canWrite}
+                onPress={() => setFormOpen(true)}
+              >
+                <LineIcon name="plus" size={iconSize.lg} color={colors.onPrimary} />
+              </IconSquareButton>
+            ) : null}
+          </>
+        }
+      />
       <Screen edges={['left', 'right', 'bottom']} scroll={false} padded={false}>
         <ManageListShell
-          title={t('page.title')}
+          variant="page"
+          title={tHistory('title')}
+          subtitle={tHistory('subtitle')}
           {...(meta === undefined ? {} : { total: t('table.totalLabel', { count: meta.total }) })}
-          /*
-            Hai lối đi của sổ nằm trên HÀNG TIÊU ĐỀ, cạnh nhau — đúng chỗ web đặt "Danh mục" và
-            "Tạo phiếu". Trước đây "Danh mục" là một viên nằm lẫn trong khối thống kê: nó không
-            phải bộ lọc, không phải con số, nên đứng giữa dải kỳ và thẻ tổng thì vừa khó tìm vừa
-            làm khối đó cao thêm một hàng.
-          */
-          action={
-            <XStack ai="center" gap={space.xs} flexWrap="wrap">
-              {/*
-                `accent` — nền gold nhạt, viền và hình gold đậm.
-
-                Tông mặc định để hình vẽ đứng trần trên nền trắng: nó đọc ra như một biểu tượng
-                trang trí chứ không như một nút. `surface` (xám) thì bấm được nhưng lại nói "phụ",
-                trong khi đây là lối đi duy nhất tới màn quản lý danh mục. Gold nhạt đứng cạnh nút
-                "Tạo phiếu" gold ĐẶC thành một cặp cùng họ, khác trọng lượng — không phải hai màu
-                đấu nhau, và cũng không phải hai nút trông giống hệt nhau.
-              */}
-              <IconButton
-                icon="pricetags-outline"
-                label={t('actions.categories')}
-                tone="accent"
-                onPress={() => setCategoriesOpen(true)}
-              />
-              {canCreate ? (
-                <IconButton
-                  icon="add"
-                  label={t('actions.create')}
-                  tone="primary"
-                  disabled={!finance.canWrite}
-                  onPress={() => setFormOpen(true)}
-                />
-              ) : null}
-            </XStack>
-          }
           summary={
             <>
               <TransactionHistoryTabs value={TRANSACTION_HISTORY_VIEW.LEDGER} />
@@ -628,12 +658,13 @@ export function ReceiptListScreen() {
           searchLabel={t('filters.searchLabel')}
           searchPlaceholder={t('filters.searchPlaceholder')}
           onSearchChange={changeSearch}
-          branch={<BranchFilterField filter={branchFilter} value={branchId} />}
+          branchFilter={{ filter: branchFilter, value: branchId }}
           hasRows={items.length > 0}
           groups={groups}
           onFilterChange={changeFilter}
           {...(meta === undefined ? {} : { meta })}
           onPageChange={setPage}
+          loadingMore={query.isFetching && page > 1}
         >
           {({ onScroll, headerHeight, contentContainerStyle, bindList }) => {
             const inStateScroll = (children: ReactNode) => (

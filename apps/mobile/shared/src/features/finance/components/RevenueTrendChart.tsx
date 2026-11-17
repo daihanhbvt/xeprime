@@ -20,11 +20,28 @@ import {
 import type { FinanceSeriesBucket } from '../api';
 import { useContentWidth } from '@/theme/use-content-width';
 
-/** Chiều cao vùng vẽ — cùng tỉ lệ với `height={220}` mà web dùng cho khối nhúng trong hồ sơ. */
+/**
+ * Chiều cao vùng vẽ MẶC ĐỊNH — cùng tỉ lệ với `height={220}` mà web dùng cho khối nhúng trong hồ sơ.
+ *
+ * `height` của web là TỔNG khung (vùng vẽ + trục X + chú giải); ở đây là riêng vùng vẽ, nên mỗi nơi
+ * gọi trừ đi phần trục + chú giải (~40) - xem {@link REVENUE_TREND_PLOT_HEIGHT}.
+ */
 const PLOT_HEIGHT = 160;
+
+/**
+ * Chiều cao vùng vẽ theo NƠI DÙNG, đối chiếu `height` web trừ phần trục + chú giải:
+ * Tổng quan doanh thu `height={260}` · Tổng quan (dashboard) `height={240}` · hồ sơ xe/khách `220`.
+ */
+export const REVENUE_TREND_PLOT_HEIGHT = {
+  financeOverview: 220,
+  dashboard: 200,
+  entity: PLOT_HEIGHT,
+} as const;
 
 /** Bề rộng cột nhãn trục Y — đủ cho `12,5tr` ở cỡ chữ nhãn. */
 const Y_AXIS_WIDTH = 46;
+/** Một triệu đồng — đơn vị trục Y ở chế độ `million`. */
+const MILLION = 1_000_000;
 
 /** Bo góc cột: 4px ở ĐẦU DỮ LIỆU, chân vuông vì nó neo vào đường 0 — `CHART_BAR_RADIUS` của web. */
 const BAR_RADIUS = 4;
@@ -129,12 +146,21 @@ export function RevenueTrendChart({
   buckets,
   labelOf,
   titleOf,
+  yAxis = 'compact',
+  plotHeight = PLOT_HEIGHT,
 }: {
   buckets: readonly FinanceSeriesBucket[];
+  /**
+   * Cách ghi trục Y — `compact` (mặc định, `12,7tr`) hay `million`: số TRIỆU trần kèm dòng
+   * "Đơn vị: triệu đồng", như design Tổng quan doanh thu (web `yAxis="million"`, ledger 09 §3.9).
+   */
+  yAxis?: 'compact' | 'million';
   /** Nhãn trục X đã dựng sẵn theo độ mịn — component không tự đoán ngày. Xem `useBucketLabels`. */
   labelOf: (bucket: string) => string;
   /** Tên ĐẦY ĐỦ của mốc, cho thẻ chi tiết và trình đọc màn hình — trục quá hẹp để chứa nó. */
   titleOf: (bucket: string) => string;
+  /** Chiều cao vùng vẽ (dp) - xem {@link REVENUE_TREND_PLOT_HEIGHT}. */
+  plotHeight?: number;
 }) {
   const colors = useColors();
   const chartColors = useChartColors();
@@ -241,8 +267,8 @@ export function RevenueTrendChart({
       (high, bucket) => Math.max(high, chartValue(bucket.profit)),
       0,
     );
-    return axisWithDotHeadroom(niceAxis(values), topProfit, PLOT_HEIGHT, ACTIVE_DOT_RADIUS);
-  }, [buckets, values]);
+    return axisWithDotHeadroom(niceAxis(values), topProfit, plotHeight, ACTIVE_DOT_RADIUS);
+  }, [buckets, values, plotHeight]);
   const line = profitLineSpacing(layout);
   /* Cột mảnh hơn 8dp mà bo 4dp thì đỉnh cột thành hình vòm — bo không bao giờ quá nửa bề rộng. */
   const barRadius = Math.min(BAR_RADIUS, layout.barWidth / 2);
@@ -261,6 +287,11 @@ export function RevenueTrendChart({
         <LegendDot color={chartColors.cost} label={t('cost')} />
         <LegendDot color={chartColors.profit} label={t('profit')} />
       </XStack>
+      {yAxis === 'million' ? (
+        <Text col={colors.textMuted} fos={fontSize.label}>
+          {tChart('yAxisUnit')}
+        </Text>
+      ) : null}
 
       {/*
         VÙNG CUỘN LÀ CỦA CHÚNG TA, không phải của thư viện — và đó là toàn bộ mấu chốt của việc
@@ -289,10 +320,10 @@ export function RevenueTrendChart({
             data={bars}
             /*
             `height` của thư viện là chiều cao NỬA TRÊN đường 0, không phải cả biểu đồ — nửa dưới
-            được nối thêm bên dưới. Chia lại để khối luôn cao đúng `PLOT_HEIGHT` dù kỳ có lỗ hay
+            được nối thêm bên dưới. Chia lại để khối luôn cao đúng `plotHeight` dù kỳ có lỗ hay
             không, thay vì nhảy gấp đôi mỗi lần đường lợi nhuận thủng đáy.
           */
-            height={positiveHeight(axis, PLOT_HEIGHT)}
+            height={positiveHeight(axis, plotHeight)}
             /*
             Bề rộng khai cho thư viện là bề rộng NỘI DUNG, không phải khung nhìn: nó vẽ trọn dải
             cột ra rồi để vùng cuộn bên ngoài lo phần bị che. Thiếu con số này thì vùng vẽ là một
@@ -332,7 +363,9 @@ export function RevenueTrendChart({
             yAxisTextStyle={AXIS_LABEL_STYLE}
             /* Xem `PLOT_HEADROOM`: 4dp mặc định không đủ cho chữ, nắp cột và chỗ vồng của đường. */
             yAxisExtraHeight={PLOT_HEADROOM}
-            formatYLabel={(label: string) => fmt.moneyCompact(label)}
+            formatYLabel={(label: string) =>
+              yAxis === 'million' ? fmt.measure(Number(label) / MILLION) : fmt.moneyCompact(label)
+            }
             // ── Lưới nét ĐỨT, chỉ kẻ ngang — `CHART_GRID` của web ──────────────────────
             rulesType="dashed"
             rulesColor={chartColors.grid}

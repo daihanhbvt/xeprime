@@ -64,7 +64,7 @@ export const MissingOdometerCard = memo(function MissingOdometerCard({
             {item.vehicleName}
           </Text>
         </Pressable>
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+        <Text col={colors.textMuted} fos={fontSize.body}>
           {item.plateNumber ?? t('noPlate')}
         </Text>
 
@@ -75,11 +75,11 @@ export const MissingOdometerCard = memo(function MissingOdometerCard({
             accessibilityLabel={t('bookingLine', { code: item.bookingCode })}
             hitSlop={space.xs}
           >
-            <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.medium}>
+            <Text col={colors.primaryActive} fos={fontSize.body} fow={fontWeight.medium}>
               {t('bookingLine', { code: item.bookingCode })}
             </Text>
           </Pressable>
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          <Text col={colors.textMuted} fos={fontSize.body}>
             {LIST_SEPARATOR}
             {fmt.dateTime(item.confirmedAt)}
           </Text>
@@ -98,13 +98,13 @@ export const MissingOdometerCard = memo(function MissingOdometerCard({
           `fmt.km(null)` tự nói "Chưa có" — biên bản GIAO cũng chưa có số thì không có mốc sàn để
           đối chiếu, và dựng 0 km ở đây là bịa ra một số đo.
         */}
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+        <Text col={colors.textMuted} fos={fontSize.body}>
           {t('pickupKmLine', { value: fmt.km(item.pickupOdometerKm) })}
         </Text>
 
         {canResolve ? (
           <YStack pt={space.xs}>
-            <Button label={t('fix')} icon="speedometer-outline" onPress={() => onFix(item)} />
+            <Button label={t('fix')} icon="speedometer-outline" variant="gradient" size="compact" onPress={() => onFix(item)} />
           </YStack>
         ) : (
           <Text col={colors.textMuted} fos={fontSize.label}>

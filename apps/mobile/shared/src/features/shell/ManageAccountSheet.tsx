@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -14,7 +14,6 @@ import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import type { IconName } from '@/components/ui/Chip';
 import { LogoutRow } from './LogoutRow';
-import { useManageDrawer } from './ManageDrawerHost';
 import { useShopSettingsAccess } from '@/features/shop/hooks/use-shop-settings-access';
 
 /**
@@ -44,7 +43,6 @@ export function ManageAccountSheet({ open, onClose }: { open: boolean; onClose: 
   const colors = useColors();
   const t = useTranslations('ManageCommon.shell');
   const navigateOnce = useNavigateOnce();
-  const drawer = useManageDrawer();
   const { data: user } = useCurrentUser();
 
   /*
@@ -53,10 +51,9 @@ export function ManageAccountSheet({ open, onClose }: { open: boolean; onClose: 
    */
   const canOpenShopSettings = useShopSettingsAccess();
 
-  /** Đóng cả tấm trượt LẪN drawer trước khi đi: để ngỏ thì màn mới mở ra sau hai lớp phủ. */
+  /** Đóng tấm trượt trước khi đi: để ngỏ thì màn mới mở ra sau lớp phủ. */
   const go = (href: Href) => {
     onClose();
-    drawer.close();
     navigateOnce(href);
   };
 
@@ -125,12 +122,7 @@ export function ManageAccountSheet({ open, onClose }: { open: boolean; onClose: 
 
           <Divider />
 
-          <LogoutRow
-            onDone={() => {
-              onClose();
-              drawer.close();
-            }}
-          />
+          <LogoutRow onDone={onClose} />
         </YStack>
       </BottomSheet>
     </>

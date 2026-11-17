@@ -92,7 +92,8 @@ const DRIVING: AccountNavItem = {
   key: 'driving',
   labelKey: 'account.driving',
   href: ROUTES.driving.links(),
-  icon: 'id-card-outline',
+  // Web `account-nav` `SolutionOutlined`.
+  icon: 'reader-outline',
   target: NAV_TARGET.SCREEN,
   badge: ACCOUNT_NAV_BADGE.DRIVER_INVITES,
 };

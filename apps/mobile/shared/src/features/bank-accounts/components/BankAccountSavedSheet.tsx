@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { BottomSheet } from '@/components/ui/BottomSheet';

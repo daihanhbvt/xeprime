@@ -6,6 +6,7 @@ import { useTranslations } from 'use-intl';
 import { IconButton } from './IconButton';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
 
 /** Nền của trình xem: gần đen tuyệt đối để ảnh là thứ duy nhất còn sáng trên màn. */
 const VIEWER_BACKDROP = 'rgba(0,0,0,0.92)';
@@ -64,7 +65,7 @@ export function PhotoViewer({
             onLoad={() => setFailed(false)}
           />
         ) : (
-          <Text col={colors.textInverse} fos={fontSize.body} ta="center" px={space.md}>
+          <Text col={colors.textInverse} fos={fontSize.body} ta="center" px={layout.padX}>
             {unavailableLabel}
           </Text>
         )}

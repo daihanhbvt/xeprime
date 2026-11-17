@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { ActivityIndicator, Linking, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useForm, useWatch } from 'react-hook-form';
@@ -26,10 +26,13 @@ import {
 } from '@xeprime/validators';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { VehicleEditHeader } from '@/features/vehicles/components/VehicleEditHeader';
+import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { Screen } from '@/components/layout/Screen';
 import { AlertDialog } from '@/components/ui/AlertDialog';
-import { BlockTitle } from '@/components/ui/BlockTitle';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+import { ImageSourceSheet } from '@/components/ui/ImageSourceSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
@@ -37,6 +40,7 @@ import type { IconName } from '@/components/ui/Chip';
 import { CheckOption } from '@/components/ui/RadioOption';
 import { SelectField } from '@/components/ui/SelectField';
 import { SkeletonText } from '@/components/ui/Skeleton';
+import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
 import { StatusBadge, statusTone } from '@/components/ui/StatusBadge';
 import { TextField } from '@/components/ui/TextField';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -62,7 +66,7 @@ import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { themed, useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, radius, sizing, space, typeScale } from '@/theme/tokens';
 import {
   useApplyVehicleDocumentOcr,
   useArchiveVehicleDocument,
@@ -94,7 +98,8 @@ const STANDARD_TYPES: readonly VehicleDocumentType[] = [
  * phần lớn giấy tờ xe là PDF. Ảnh thu nhỏ thật cần một bước sinh thumbnail ở server.
  */
 const TYPE_ICON: Readonly<Record<VehicleDocumentType, IconName>> = {
-  [VEHICLE_DOCUMENT_TYPE.REGISTRATION]: 'card-outline',
+  // CÙNG glyph với web `TYPE_ICON` (IdcardOutlined · SafetyCertificate · Insurance · FileText).
+  [VEHICLE_DOCUMENT_TYPE.REGISTRATION]: 'id-card-outline',
   [VEHICLE_DOCUMENT_TYPE.INSPECTION]: 'shield-checkmark-outline',
   [VEHICLE_DOCUMENT_TYPE.INSURANCE]: 'umbrella-outline',
   [VEHICLE_DOCUMENT_TYPE.OTHER]: 'document-text-outline',
@@ -114,7 +119,10 @@ const TYPE_TONE: Readonly<Record<VehicleDocumentType, StatusColor>> = {
 };
 
 /** Cạnh ô biểu tượng đầu hàng — vuông, đủ ngưỡng chạm khi nó mang hành động. */
-const TILE = sizing.touchTarget;
+/** Figma ô ảnh giấy tờ 62; nút ⋮ vuông 40; thẻ cách nhau 12. */
+const TILE = 62;
+const MORE_BUTTON = 40;
+const CARD_GAP = 12;
 
 /** Đường kính huy hiệu góc của ô — bản native của `.rowTileHint` bên web. */
 const TILE_HINT = 20;
@@ -386,7 +394,7 @@ export function VehicleDocumentsScreen({
     return (
       <>
         <AppHeader title={title} onBack={back} />
-        <Screen edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
             title={t('noPermissionTitle')}
@@ -399,24 +407,39 @@ export function VehicleDocumentsScreen({
 
   return (
     <>
-      <AppHeader
-        title={title}
-        {...(vehicle.data
-          ? {
-              subtitle: [vehicle.data.name, vehicle.data.plateNumber]
-                .filter(Boolean)
-                .join(LIST_SEPARATOR),
-            }
-          : {})}
-        onBack={back}
-      />
+      {customerScope ? (
+        <AppHeader
+          title={title}
+          {...(vehicle.data
+            ? {
+                subtitle: [vehicle.data.name, vehicle.data.plateNumber]
+                  .filter(Boolean)
+                  .join(LIST_SEPARATOR),
+              }
+            : {})}
+          onBack={back}
+        />
+      ) : (
+        <VehicleEditHeader
+          vehicleId={vehicleId}
+          tab={VEHICLE_EDIT_TAB.DOCUMENTS}
+          title={tEdit('title')}
+          onBack={back}
+        />
+      )}
       <Screen
+        scrollReveal
         edges={['left', 'right', 'bottom']}
         refreshing={documents.isRefetching}
         onRefresh={() => void documents.refetch()}
         footer={
           canManage ? (
-            <Button label={t('addType')} icon="add-outline" onPress={() => setAdding(true)} />
+            <Button
+              variant="neutral"
+              label={t('addType')}
+              icon="add-outline"
+              onPress={() => setAdding(true)}
+            />
           ) : undefined
         }
       >
@@ -432,45 +455,38 @@ export function VehicleDocumentsScreen({
           <YStack gap={layout.section}>
             {!canManage ? <Callout tone="info">{t('readOnly')}</Callout> : null}
 
-            <Card>
-              <YStack gap={space.sm}>
-                <BlockTitle>{t('cardTitle')}</BlockTitle>
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {t('cardSubtitle')}
-                </Text>
-
-                <YStack gap={space.md} pt={space.xs}>
-                  {rows.map((row, index) => (
-                    <YStack key={row.key} gap={space.md}>
-                      {index > 0 ? <YStack h={1} bg={colors.borderSubtle} /> : null}
-                      <DocumentRow
-                        row={row}
-                        title={titleOf(row.type, row.document, domainLabel)}
-                        uploading={uploads[row.key] ?? null}
-                        canManage={canManage}
-                        canViewDetails={canViewDetails}
-                        canViewFiles={canViewFiles}
-                        downloading={downloadingId === row.document?.id}
-                        ocrBusy={ocrBusyId === row.document?.id}
-                        onPick={(source) => void pickAndUpload(row, source)}
-                        onRetry={() => {
-                          const state = uploads[row.key];
-                          if (state) void startUpload(row, state.image);
-                        }}
-                        onCancelUpload={() => setUploadState(row.key, null)}
-                        onOpen={() => row.document && void openFile(row.document)}
-                        onOcr={() => row.document && void runOcr(row.document)}
-                        onDetail={() =>
-                          row.document && setDetailFor({ document: row.document, mode: 'view' })
-                        }
-                        onHistory={() => row.document && setHistoryFor(row.document)}
-                        onRemove={() => removeDocument(row)}
-                      />
-                    </YStack>
-                  ))}
-                </YStack>
-              </YStack>
-            </Card>
+            {/* Figma `24231:107422`: mỗi giấy tờ là MỘT thẻ riêng (đệm 16, bo 16), cách nhau 12. */}
+            <YStack gap={CARD_GAP}>
+              {rows.map((row) => (
+                <Card key={row.key} padded={false} lift="flat">
+                  <YStack p={layout.cardPad}>
+                    <DocumentRow
+                      row={row}
+                      title={titleOf(row.type, row.document, domainLabel)}
+                      uploading={uploads[row.key] ?? null}
+                      canManage={canManage}
+                      canViewDetails={canViewDetails}
+                      canViewFiles={canViewFiles}
+                      downloading={downloadingId === row.document?.id}
+                      ocrBusy={ocrBusyId === row.document?.id}
+                      onPick={(source) => void pickAndUpload(row, source)}
+                      onRetry={() => {
+                        const state = uploads[row.key];
+                        if (state) void startUpload(row, state.image);
+                      }}
+                      onCancelUpload={() => setUploadState(row.key, null)}
+                      onOpen={() => row.document && void openFile(row.document)}
+                      onOcr={() => row.document && void runOcr(row.document)}
+                      onDetail={() =>
+                        row.document && setDetailFor({ document: row.document, mode: 'view' })
+                      }
+                      onHistory={() => row.document && setHistoryFor(row.document)}
+                      onRemove={() => removeDocument(row)}
+                    />
+                  </YStack>
+                </Card>
+              ))}
+            </YStack>
 
             <Callout tone="info" title={t('ocrNoteTitle')}>
               {t('ocrNoteBody')}
@@ -759,8 +775,39 @@ function DocumentRow({
     </YStack>
   );
 
+  /* Việc phụ nằm sau nút ⋮: "Xem" và "Thay file" đã là nút thật ở hàng nút (Figma `24231:107422`). */
+  const trayActions = actions.filter((action) => action.key !== 'download' && action.key !== 'upload');
+  const canView = (hasFile && canViewFiles) || (doc != null && canViewDetails);
+  const view = hasFile && canViewFiles ? onOpen : onDetail;
+  const canReplace = canManage && !busy;
+  /* Tấm "Thao tác khác": Xem · Thay file / Tải lên · rồi các việc phụ (chi tiết, OCR, lịch sử, xoá). */
+  const menuActions: {
+    key: string;
+    label: string;
+    icon: IconName;
+    danger?: boolean;
+    loading?: boolean;
+    onPress: () => void;
+  }[] = [
+    ...(canView
+      ? [{ key: 'view', label: t('row.view'), icon: 'eye-outline' as IconName, onPress: close(view) }]
+      : []),
+    ...(canReplace
+      ? [
+          {
+            key: 'replace',
+            label: hasFile ? t('row.replaceFile') : t('row.upload'),
+            icon: 'cloud-upload-outline' as IconName,
+            onPress: () => setTray('source'),
+          },
+        ]
+      : []),
+    ...trayActions,
+  ];
+
   return (
     <YStack gap={space.sm}>
+      {/* Figma: ô ảnh 62 · tên (14/20 đậm) + viên trạng thái; Hạn trái · Cập nhật phải. */}
       <XStack gap={space.sm} ai="flex-start">
         {tileMode ? (
           <Pressable
@@ -779,49 +826,62 @@ function DocumentRow({
           tile
         )}
 
-        <YStack f={1} gap={2}>
-          <XStack ai="center" gap={space.xs}>
-            <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+        <YStack f={1} minWidth={0} gap={space.sm}>
+          <XStack ai="center" gap={space.sm} flexWrap="wrap">
+            <Text
+              flexShrink={1}
+              col={colors.text}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+              fow={fontWeight.semibold}
+              numberOfLines={2}
+            >
               {title}
             </Text>
-            <StatusBadge
+            <Pill
               label={domainLabel('vehicleDocumentPresentation', presentation, meta.label)}
-              color={meta.color}
-              size="sm"
+              tone={pillToneOfStatusColor(meta.color)}
+              size="md"
             />
           </XStack>
 
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t.rich('row.expiry', {
-              value: expiryDate ?? (hasFile ? t('row.noExpiry') : t('row.expiryUnknown')),
-              b: strong,
-            })}
-          </Text>
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t.rich('row.updatedAt', {
-              // Hàng chưa có hồ sơ thì không có mốc cập nhật nào để nói — giữ đúng dấu gạch của
-              // ô ngày hết hạn thay vì bịa ra ngày tạo.
-              value: doc ? fmt.date(doc.updatedAt) : tCommon('labels.emptyValue'),
-              b: strong,
-            })}
-          </Text>
+          {/* Hạn và Cập nhật xếp HAI HÀNG - cạnh nhau thì ngày bị cắt trên màn hẹp. */}
+          <YStack gap={2}>
+            <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+              {t.rich('row.expiry', {
+                value: expiryDate ?? (hasFile ? t('row.noExpiry') : t('row.expiryUnknown')),
+                b: strong,
+              })}
+            </Text>
+            <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+              {t.rich('row.updatedAt', {
+                // Hàng chưa có hồ sơ thì không có mốc cập nhật nào để nói — giữ đúng dấu gạch của
+                // ô ngày hết hạn thay vì bịa ra ngày tạo.
+                value: doc ? fmt.date(doc.updatedAt) : tCommon('labels.emptyValue'),
+                b: strong,
+              })}
+            </Text>
+          </YStack>
         </YStack>
-
-        {actions.length > 0 ? (
+        {/* Mọi thao tác nằm sau nút ⋮ (người dùng chốt 17/11/2026) - mở tấm "Thao tác khác". */}
+        {menuActions.length > 0 ? (
           <Pressable
-            onPress={() => setTray((current) => (current === null ? 'actions' : null))}
-            style={({ pressed }) => (pressed ? styles.pressed : null)}
+            onPress={() => setTray('actions')}
             accessibilityRole="button"
-            accessibilityState={{ expanded: tray !== null }}
             accessibilityLabel={t('row.actionsAria', { title })}
-            hitSlop={space.xs}
+            hitSlop={space.sm}
           >
-            <XStack w={TILE} h={TILE} ai="center" jc="center">
-              <Ionicons
-                name={tray === null ? 'ellipsis-horizontal' : 'chevron-up'}
-                size={iconSize.lg}
-                color={colors.textMuted}
-              />
+            <XStack
+              w={MORE_BUTTON}
+              h={MORE_BUTTON}
+              ai="center"
+              jc="center"
+              br={radius.control}
+              bw={1}
+              bc={colors.borderInput}
+              bg={colors.surface}
+            >
+              <Ionicons name="ellipsis-vertical" size={iconSize.md} color={colors.textMuted} />
             </XStack>
           </Pressable>
         ) : null}
@@ -840,7 +900,7 @@ function DocumentRow({
             <YStack flexShrink={0}>
               <Button
                 label={tCommon('actions.cancel')}
-                variant="secondary"
+                variant="outline"
                 size="sm"
                 shape="square"
                 onPress={onCancelUpload}
@@ -866,70 +926,42 @@ function DocumentRow({
         </XStack>
       ) : null}
 
-      {/* Mục ĐẦU TIÊN của web được kéo ra thành nút thật khi hàng chưa có file (`maxInline={1}`). */}
-      {uploadFirst ? (
-        <Button
-          label={t('row.upload')}
-          icon="cloud-upload-outline"
-          variant="accent"
-          size="sm"
-          shape="square"
-          onPress={() => setTray('source')}
-        />
-      ) : null}
+      {/* Tấm chọn nguồn DÙNG CHUNG (Chụp ảnh · Thư viện) - như mọi ô tải ảnh khác của app. */}
+      <ImageSourceSheet
+        open={tray === 'source'}
+        onClose={() => setTray(null)}
+        title={hasFile ? t('row.replaceFile') : t('row.upload')}
+        onPick={(source) => {
+          setTray(null);
+          onPick(source);
+        }}
+      />
 
-      {tray === 'source' ? (
-        <YStack gap={space.xs}>
-          {/*
-            Web mở `<input type="file">` nên chọn được cả PDF; native phải hỏi trước lấy ảnh từ
-            đâu, vì máy ảnh và thư viện là hai quyền hệ thống khác nhau.
-          */}
-          <Button
-            label={tImage('takePhoto')}
-            icon="camera-outline"
-            variant="secondary"
-            size="sm"
-            shape="square"
-            onPress={() => {
-              setTray(null);
-              onPick(IMAGE_SOURCE.CAMERA);
-            }}
-          />
-          <Button
-            label={tImage('chooseFromLibrary')}
-            icon="images-outline"
-            variant="secondary"
-            size="sm"
-            shape="square"
-            onPress={() => {
-              setTray(null);
-              onPick(IMAGE_SOURCE.LIBRARY);
-            }}
-          />
-          <Button
-            label={tCommon('actions.cancel')}
-            variant="ghost"
-            size="sm"
-            shape="square"
-            onPress={() => setTray(null)}
-          />
+      <BottomSheet
+        open={tray === 'actions'}
+        onClose={() => setTray(null)}
+        title={t('row.moreActions')}
+        chrome="v2"
+        headerDivider
+      >
+        <YStack gap={space.md} alignSelf="stretch">
+          <XStack flexWrap="wrap" gap={space.sm}>
+            {menuActions.map((action) => (
+              <YStack key={action.key} w="48.5%">
+                <Button
+                  label={action.label}
+                  icon={action.icon}
+                  variant={action.danger ? 'dangerOutline' : 'gradient'}
+                  size="compact"
+                  loading={action.loading ?? false}
+                  onPress={action.onPress}
+                />
+              </YStack>
+            ))}
+          </XStack>
+          <Button label={tCommon('actions.close')} variant="ghost" onPress={() => setTray(null)} />
         </YStack>
-      ) : tray === 'actions' ? (
-        <YStack gap={space.xs}>
-          {actions.map((action) => (
-            <Button
-              key={action.key}
-              label={action.label}
-              icon={action.icon}
-              variant={action.danger ? 'danger' : 'secondary'}
-              size="sm"
-              shape="square"
-              loading={action.loading ?? false}
-              onPress={action.onPress}
-            />
-          ))}
-        </YStack>
-      ) : null}
+      </BottomSheet>
 
       {/* Web hỏi bằng `Popconfirm` ngay trong menu; native dùng hộp xác nhận chuẩn của app. */}
       <AlertDialog
@@ -1074,13 +1106,14 @@ function AddDocumentSheet({
           <YStack flexShrink={0}>
             <Button
               label={tCommon('actions.cancel')}
-              variant="secondary"
+              variant="outline"
               disabled={saving}
               onPress={onClose}
             />
           </YStack>
           <YStack f={1}>
             <Button
+              variant="gradient"
               icon="cloud-upload-outline"
               label={t('add.submit')}
               loading={saving}
@@ -1131,46 +1164,54 @@ function AddDocumentSheet({
             </XStack>
           ) : null}
 
-          {picking ? (
-            <XStack gap={space.xs}>
-              <YStack f={1}>
-                <Button
-                  label={tImage('takePhoto')}
-                  icon="camera-outline"
-                  variant="secondary"
-                  size="sm"
-                  shape="square"
-                  disabled={saving}
-                  onPress={() => void pick(IMAGE_SOURCE.CAMERA)}
-                />
+          {/* Vùng "Tải file" bấm mở tấm chọn nguồn dùng chung (Chụp ảnh · Thư viện). */}
+          <Pressable
+            onPress={() => setPicking(true)}
+            disabled={saving}
+            accessibilityRole="button"
+            accessibilityLabel={t('add.pickFile')}
+          >
+            {/* Vùng tải lên kiểu Figma "Upload": viền đứt vàng, nền vàng nhạt, đĩa icon trắng. */}
+            <YStack
+              ai="center"
+              jc="center"
+              gap={space.sm}
+              py={space.lg}
+              px={space.md}
+              br={radius.card}
+              bw={1}
+              borderStyle="dashed"
+              bc={colors.brandBorder}
+              bg={colors.primarySubtle}
+              opacity={saving ? 0.6 : 1}
+            >
+              <YStack
+                w={44}
+                h={44}
+                br={radius.pill}
+                ai="center"
+                jc="center"
+                bg={colors.surface}
+                bw={1}
+                bc={colors.brandBorder}
+              >
+                <Ionicons name="cloud-upload-outline" size={iconSize.md} color={colors.brandLink} />
               </YStack>
-              <YStack f={1}>
-                <Button
-                  label={tImage('chooseFromLibrary')}
-                  icon="images-outline"
-                  variant="secondary"
-                  size="sm"
-                  shape="square"
-                  disabled={saving}
-                  onPress={() => void pick(IMAGE_SOURCE.LIBRARY)}
-                />
-              </YStack>
-            </XStack>
-          ) : (
-            <Button
-              label={t('add.pickFile')}
-              icon="cloud-upload-outline"
-              variant="secondary"
-              size="sm"
-              block={false}
-              disabled={saving}
-              onPress={() => setPicking(true)}
-            />
-          )}
+              <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.semibold}>
+                {image ? tImage('changeImage') : t('add.pickFile')}
+              </Text>
+              <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} ta="center">
+                {t('add.fileHint')}
+              </Text>
+            </YStack>
+          </Pressable>
+          <ImageSourceSheet
+            open={picking}
+            onClose={() => setPicking(false)}
+            title={t('add.fileLabel')}
+            onPick={(source) => void pick(source)}
+          />
 
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {t('add.fileHint')}
-          </Text>
         </YStack>
       </YStack>
     </BottomSheet>
@@ -1382,13 +1423,14 @@ function DocumentDetailSheet({
             <YStack flexShrink={0}>
               <Button
                 label={tCommon('actions.cancel')}
-                variant="secondary"
+                variant="outline"
                 disabled={save.isPending}
                 onPress={onClose}
               />
             </YStack>
             <YStack f={1}>
               <Button
+                variant="gradient"
                 icon="save-outline"
                 label={t('metadata.save')}
                 loading={save.isPending}
@@ -1398,7 +1440,7 @@ function DocumentDetailSheet({
           </XStack>
         ) : (
           /* Xem là bề mặt CHỈ ĐỌC — chỉ một đường ra, không kèm một nút "Huỷ" nói cùng việc. */
-          <Button label={tCommon('actions.close')} variant="secondary" onPress={onClose} />
+          <Button label={tCommon('actions.close')} variant="outline" onPress={onClose} />
         )
       }
     >
@@ -1439,7 +1481,7 @@ function DocumentDetailSheet({
                 <Button
                   label={t('detail.edit')}
                   icon="create-outline"
-                  variant="secondary"
+                  variant="outline"
                   size="sm"
                   shape="square"
                   onPress={() => onModeChange('edit')}
@@ -1761,7 +1803,7 @@ function OcrReviewSheet({
           <YStack flexShrink={0}>
             <Button
               label={tCommon('actions.close')}
-              variant="secondary"
+              variant="outline"
               disabled={apply.isPending}
               onPress={onClose}
             />
@@ -1825,7 +1867,7 @@ function OcrReviewSheet({
             hành động chính, và đứng cạnh "Cập nhật đã chọn" thì hai cái tranh nhau. */}
         <Button
           label={t('skip')}
-          variant="secondary"
+          variant="outline"
           disabled={apply.isPending}
           onPress={() => run([])}
         />

@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { CHAT_SIDE, type ChatSide } from '@xeprime/types';
 import { Pressable, StyleSheet } from 'react-native';
 import { YStack } from 'tamagui';
@@ -61,11 +61,8 @@ export function ChatBadgeButton({
       hitSlop={compact ? Math.ceil((sizing.touchTarget - sizing.compactBox) / 2) : space.xs}
       style={compact ? styles.boxCompact : styles.box}
     >
-      <Ionicons
-        name="chatbubble-ellipses-outline"
-        size={compact ? iconSize.sm : iconSize.md}
-        color={colors.text}
-      />
+      {/* Web `PartnerHeader`/`MarketHeader`: `<LineIcon name="message" />`. */}
+      <LineIcon name="message" size={compact ? iconSize.sm : iconSize.md} color={colors.text} />
       {chat.count > 0 ? (
         <YStack
           pos="absolute"

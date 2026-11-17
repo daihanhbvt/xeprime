@@ -305,6 +305,8 @@ export const queryKeys = {
      */
     returnPreview: (id: string, input: unknown) =>
       ['bookings', 'return-preview', id, input] as const,
+    /** Tiền tố mọi bản xem trước của MỘT đơn - để làm mới sau khi xác nhận, không cắt mảng tay. */
+    returnPreviewAll: (id: string) => ['bookings', 'return-preview', id] as const,
     /**
      * Báo giá NỘI BỘ cho luồng đặt hộ tại quầy. Khoá theo nguyên bộ tham số vì giá đổi theo
      * xe, dịch vụ, lộ trình VÀ khoảng thời gian - bỏ sót một chiều là hiện lại giá của lần

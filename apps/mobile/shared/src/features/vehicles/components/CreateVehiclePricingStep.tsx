@@ -3,7 +3,7 @@ import { useTranslations } from 'use-intl';
 import type { Control } from 'react-hook-form';
 import { VEHICLE_TYPE } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
-import { BlockTitle } from '@/components/ui/BlockTitle';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { DiscountTag } from '@/components/ui/DiscountTag';
@@ -46,7 +46,7 @@ export function CreateVehiclePricingStep({
     <YStack gap={layout.section}>
       <Card>
         <YStack gap={space.sm}>
-          <BlockTitle>{t('shopPolicyTitle')}</BlockTitle>
+          <SectionHeader icon="shield-checkmark-outline">{t('shopPolicyTitle')}</SectionHeader>
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
             {t('shopPolicyBody')}
           </Text>
@@ -73,7 +73,7 @@ export function CreateVehiclePricingStep({
 
       <Card>
         <YStack gap={space.sm}>
-          <BlockTitle>{t('vehiclePriceTitle')}</BlockTitle>
+          <SectionHeader icon="pricetag-outline">{t('vehiclePriceTitle')}</SectionHeader>
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
             {t('vehiclePriceBody')}
           </Text>

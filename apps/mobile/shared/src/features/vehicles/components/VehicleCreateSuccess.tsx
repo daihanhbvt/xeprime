@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Image } from 'expo-image';
 import { Pressable } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
@@ -99,14 +99,16 @@ export function VehicleCreateSuccess({
     <>
       <AppHeader title={t('title')} onBack={onClose} />
       <Screen
+        scrollReveal
         edges={['left', 'right', 'bottom']}
         footer={
           <YStack gap={space.sm}>
             <Button
+              variant="gradient"
               label={t('viewDetail')}
               onPress={() => router.replace(ROUTES.manage.vehicleDetail(vehicle.id))}
             />
-            <Button label={t('createAnother')} variant="secondary" onPress={onCreateAnother} />
+            <Button label={t('createAnother')} variant="outline" onPress={onCreateAnother} />
           </YStack>
         }
       >

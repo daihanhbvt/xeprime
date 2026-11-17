@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -60,6 +60,7 @@ export function RegisterSuccess({
   return (
     <Screen
       edges={['left', 'right', 'bottom']}
+      maxWidth="form"
       footer={
         <YStack gap={space.sm}>
           {partner ? (

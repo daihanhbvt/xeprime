@@ -104,6 +104,16 @@ interface AppHeaderProps {
    * Có nó thì thanh dùng khuôn TRANG: nút lui tròn có nền, tiêu đề to đậm (người dùng chốt 28/10/2026).
    */
   below?: ReactNode;
+  /**
+   * Cao logo khi thanh hiện thương hiệu thay tiêu đề. Mặc định 24 (màn con); thanh GỐC của khu
+   * partner dùng 30 bằng `AppTopBar` của app khách (người dùng chốt 12/11/2026).
+   */
+  brandLogoHeight?: number;
+  /**
+   * Đệm ngang của thanh - mặc định `space.sm` (đủ khi hai mép là nút tròn tự có vùng đệm). Thanh
+   * gốc chỉ có logo bên trái thì truyền lề trang, không thì logo/nút dính sát mép màn hình.
+   */
+  edgeInset?: number;
 }
 
 /**
@@ -126,6 +136,8 @@ export function AppHeader({
   showTitle = true,
   flushTop = false,
   below,
+  brandLogoHeight,
+  edgeInset = space.sm,
 }: AppHeaderProps) {
   const colors = useColors();
   const t = useTranslations('Common.actions');
@@ -147,7 +159,7 @@ export function AppHeader({
     <XStack
       ai="center"
       gap={space.xs}
-      px={space.sm}
+      px={edgeInset}
       py={below ? 0 : space.xs}
       // Khuôn trang (có prop below) gọn hơn: thanh 48 thay vì 56 — người dùng 04/11/2026 thấy header
       // + khối tiến trình chiếm gần 1/3 màn chi tiết chuyến.
@@ -174,7 +186,7 @@ export function AppHeader({
 
         <YStack f={1} gap={0}>
           {showBrandMark ? (
-            <BrandMark tone={tone} />
+            <BrandMark tone={tone} logoHeight={brandLogoHeight} />
           ) : showTitle && title ? (
             <>
               {/*
@@ -290,7 +302,7 @@ const styles = StyleSheet.create({
  * Nền vàng `brand` thì không dùng được — chữ "xe" trong lockup cũng màu vàng và sẽ chìm mất;
  * ở đó là biểu tượng vuông cộng tên viết bằng `onPrimary`.
  */
-function BrandMark({ tone }: { tone: Tone }) {
+function BrandMark({ tone, logoHeight = BRAND_LOGO }: { tone: Tone; logoHeight?: number }) {
   const colors = useColors();
   if (tone === 'brand') {
     return (
@@ -305,6 +317,6 @@ function BrandMark({ tone }: { tone: Tone }) {
   }
 
   return (
-    <BrandLogo height={BRAND_LOGO} />
+    <BrandLogo height={logoHeight} />
   );
 }

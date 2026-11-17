@@ -10,6 +10,7 @@ import { VerifiedName } from '@/components/ui/VerifiedName';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { AccountTrackBadge } from './AccountTrackBadge';
+import { layout } from '@/theme/layout';
 
 /**
  * KHỐI NHẬN DIỆN của một con người — "tôi là ai trên sàn này".
@@ -51,7 +52,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
-    paddingHorizontal: space.md,
+    paddingHorizontal: layout.padX,
     paddingVertical: space.md,
   },
 });

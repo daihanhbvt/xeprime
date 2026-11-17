@@ -1,5 +1,9 @@
 'use client';
 
+import { vehicleGalleryItems } from '../media';
+import { useImageSlotLabel } from '../hooks/use-image-slot-label';
+import { useIsMobile } from '@/hooks/use-media-query';
+import { ListingGallery } from '@/features/marketplace/components/ListingGallery';
 import { CarOutlined, StarFilled } from '@ant-design/icons';
 import { Skeleton, Tabs } from 'antd';
 import { Fragment, useId, useState, type ReactNode } from 'react';
@@ -255,11 +259,22 @@ function ProfileCard({
   ];
   // KM có thẩm quyền + NGUỒN của nó: người đọc biết số đến từ bàn giao, bảo dưỡng hay chỉnh tay.
   const odometer = summaryLoading ? null : fmt.km(summary?.currentOdometerKm ?? null);
+  const isMobile = useIsMobile();
+  const slotLabel = useImageSlotLabel();
+  const gallery = vehicleGalleryItems(vehicle, slotLabel);
 
   return (
     <section className={styles.profile} aria-label={t('profileLabel')}>
       <div className={styles.profileMain}>
-        <div className={styles.profileMedia}>
+        {isMobile && gallery.length > 0 ? (
+          /* Khổ điện thoại: ảnh lớn + dải ảnh nhỏ như app (người dùng chốt 17/11/2026). */
+          <ListingGallery
+            name={vehicle.name}
+            mainImageUrl={gallery[0]?.url ?? null}
+            images={gallery.map((item) => item.url)}
+          />
+        ) : null}
+        <div className={styles.profileMedia} hidden={isMobile && gallery.length > 0}>
           {vehicle.mainImageUrl ? (
             <PreviewImage
               className={styles.profileImage}

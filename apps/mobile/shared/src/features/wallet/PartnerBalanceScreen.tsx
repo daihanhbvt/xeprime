@@ -4,8 +4,10 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenLoading } from '@/components/state/ScreenLoading';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
-import { ManageHeader } from '@/features/shell/ManageHeader';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { useTranslations } from 'use-intl';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { ROUTES } from '@/navigation/routes';
 import { walletScopeFor } from './wallet-scope';
 import { WalletScreen } from './WalletScreen';
 
@@ -18,12 +20,14 @@ import { WalletScreen } from './WalletScreen';
  */
 export function PartnerBalanceScreen({ focusPayout = false }: { focusPayout?: boolean }) {
   const t = useTranslations('Wallet.ownerOnly');
+  const navigateOnce = useNavigateOnce();
+  const tCommon = useTranslations('ManageCommon');
   const me = useCurrentUser();
 
   if (me.isPending) {
     return (
       <>
-        <ManageHeader />
+        <ManagePageHeader title={t('title')} />
         <Screen scroll={false}>
           <ScreenLoading />
         </Screen>
@@ -34,7 +38,7 @@ export function PartnerBalanceScreen({ focusPayout = false }: { focusPayout?: bo
   if (me.isError) {
     return (
       <>
-        <ManageHeader />
+        <ManagePageHeader title={t('title')} />
         <Screen scroll={false}>
           <ScreenError error={me.error} onRetry={() => void me.refetch()} />
         </Screen>
@@ -45,12 +49,15 @@ export function PartnerBalanceScreen({ focusPayout = false }: { focusPayout?: bo
   if (walletScopeFor(me.data) !== WALLET_SCOPE.SHOP) {
     return (
       <>
-        <ManageHeader />
+        <ManagePageHeader title={t('title')} />
         <Screen scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
             title={t('title')}
             description={t('description')}
+            // Web `PartnerBalanceView`: "Về trang chủ".
+            actionLabel={tCommon('permission.backHome')}
+            onAction={() => navigateOnce(ROUTES.manage.home())}
           />
         </Screen>
       </>

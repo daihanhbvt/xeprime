@@ -4,6 +4,7 @@ import { useTranslations } from 'use-intl';
 import { LIST_SEPARATOR, isNegativeMoney, isZeroMoney, overdueDays, subtractMoney } from '@xeprime/domain';
 import {
   BOOKING_STATUS_META,
+  isBookingClosedWithoutTrip,
   PAYMENT_STATUS,
   PAYMENT_STATUS_META,
   PERMISSION,
@@ -12,18 +13,24 @@ import {
   type PaymentStatus,
 } from '@xeprime/types';
 import { ScreenError } from '@/components/state/ScreenError';
-import { Avatar } from '@/components/ui/Avatar';
-import { BlockTitle } from '@/components/ui/BlockTitle';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { DataRow, Divider } from '@/components/ui/DataRow';
-import { RemoteImage } from '@/components/ui/RemoteImage';
 import { MiniRowsSkeleton, SkeletonText } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useFeature } from '@/features/auth/hooks/use-feature';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useBooking } from '@/features/bookings/hooks/use-bookings';
+import {
+  CustomerSideCard,
+  PaymentSideCard,
+  VehicleSideCard,
+} from '@/features/bookings/components/BookingDetailSide';
+import { RentalContactButtons } from '@/features/bookings/components/rental-card/RentalCard';
+import { useCustomerProfileAccess } from '@/features/booking-requests/hooks/use-customer-profile-access';
+import { useStartBookingRequestConversation } from '@/features/booking-requests/hooks/use-booking-requests';
 import { useCreateContract } from '@/features/contracts/hooks/use-contract';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -37,7 +44,6 @@ import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 const TRACK_HEIGHT = 6;
-const THUMB = 56;
 
 function paidPercent(paid: string, total: string): number {
   const p = Number(paid);
@@ -77,7 +83,16 @@ export function DebtDetailSheet({
 
   const query = useBooking(bookingId ?? '');
   const booking = bookingId ? query.data : undefined;
-  const canCollect = permissions.has(PERMISSION.PAYMENT_RECORD) && finance.isVisible;
+  // Web `can.collect`: đơn huỷ / khách không đến không nhận tiền mới (`BOOKING_MONEY_CLOSED`).
+  const moneyClosed = booking
+    ? isBookingClosedWithoutTrip(booking.status as BookingStatus)
+    : false;
+  const canCollect =
+    permissions.has(PERMISSION.PAYMENT_RECORD) && finance.isVisible && !moneyClosed;
+  const customerProfileAccess = useCustomerProfileAccess();
+  const canDocuments = permissions.has(PERMISSION.CUSTOMER_DOCUMENT_MANAGE);
+  const startConversation = useStartBookingRequestConversation();
+  const tRequestActions = useTranslations('BookingRequests.actions');
   const canHistory = finance.isVisible;
   const history = usePaymentHistory(bookingId ?? '', Boolean(bookingId) && canHistory);
 
@@ -156,10 +171,13 @@ export function DebtDetailSheet({
               : {})}
           />
 
-          {/* Lịch sử thu tiền + cọc + phát sinh — khối "Thanh toán" của web. */}
+          {/* Web `DebtDetailDialog`: khối "Thanh toán" (`PaymentSideCard`) đứng trước lịch sử thu. */}
+          <PaymentSideCard booking={booking} />
+
+          {/* Lịch sử thu tiền + cọc + phát sinh. */}
           <Card lift="flat">
             <YStack gap={space.sm}>
-              <BlockTitle>{t('history')}</BlockTitle>
+              <SectionHeader icon="receipt-outline">{t('history')}</SectionHeader>
               {canHistory ? (
                 history.isPending ? (
                   <MiniRowsSkeleton rows={2} />
@@ -246,49 +264,66 @@ export function DebtDetailSheet({
             </YStack>
           </Card>
 
-          {/* Xe + khách — hai khối bên phải của hộp web. */}
-          <Card lift="flat">
-            <XStack ai="center" gap={space.sm}>
-              <YStack w={THUMB} h={THUMB} br={radius.md} ov="hidden" bg={colors.surfaceMuted}>
-                <RemoteImage
-                  uri={booking.vehicleImageUrl ?? null}
-                  recyclingKey={booking.vehicleId}
-                  fallback={null}
-                  radius={radius.md}
-                />
-              </YStack>
-              <YStack f={1} minWidth={0} gap={2}>
-                <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold} numberOfLines={2}>
-                  {booking.vehicleName}
-                </Text>
-                {booking.vehiclePlate ? (
-                  <Text col={colors.textMuted} fos={fontSize.label}>
-                    {booking.vehiclePlate}
-                  </Text>
-                ) : null}
-                <Text col={colors.placeholder} fos={fontSize.label}>
-                  {fmt.shortDateTimeRange(booking.pickupAt, booking.returnAt)}
-                </Text>
-              </YStack>
-            </XStack>
-          </Card>
-
-          <Card lift="flat">
-            <XStack ai="center" gap={space.sm}>
-              <Avatar name={booking.customerName} url={booking.customerAvatarUrl ?? null} size={40} />
-              <YStack f={1} minWidth={0} gap={2}>
-                <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold} numberOfLines={1}>
-                  {booking.customerName}
-                </Text>
-                {booking.customerPhone ? (
-                  <Text col={colors.textMuted} fos={fontSize.label}>
-                    {booking.customerPhone}
-                  </Text>
-                ) : null}
-              </YStack>
-            </XStack>
-          </Card>
-
+          {/*
+            Xe + khách - web `VehicleSideCard` · `CustomerSideCard` · `ContactButtons`: liên kết xe
+            (`vehicles.view`), hồ sơ khách (sổ khách theo quyền + tuyến), giấy tờ, gọi/nhắn/Zalo.
+          */}
+          <VehicleSideCard
+            booking={booking}
+            onOpenVehicle={
+              permissions.has(PERMISSION.VEHICLE_VIEW)
+                ? () => {
+                    onClose();
+                    navigateOnce(ROUTES.manage.vehicleDetail(booking.vehicleId));
+                  }
+                : undefined
+            }
+          />
+          <CustomerSideCard
+            booking={booking}
+            onViewProfile={
+              booking.tenantCustomerId && customerProfileAccess
+                ? () => {
+                    onClose();
+                    navigateOnce(ROUTES.manage.customerDetail(booking.tenantCustomerId as string));
+                  }
+                : undefined
+            }
+            onDocuments={
+              booking.tenantCustomerId && canDocuments
+                ? () => {
+                    onClose();
+                    navigateOnce(ROUTES.manage.customerDetail(booking.tenantCustomerId as string));
+                  }
+                : undefined
+            }
+          />
+          <RentalContactButtons
+            name={booking.customerName}
+            phone={booking.customerPhone}
+            {...(permissions.has(PERMISSION.BOOKING_REQUEST_VIEW) && booking.bookingRequestId
+              ? {
+                  onMessage: () => {
+                    const requestId = booking.bookingRequestId;
+                    if (!requestId) return;
+                    if (!booking.canMessageOnPlatform) {
+                      toast.showInfo(tRequestActions('messageUnavailable'));
+                      return;
+                    }
+                    startConversation.mutate(requestId, {
+                      onSuccess: (conversation) => {
+                        onClose();
+                        navigateOnce(ROUTES.manage.chatThread(conversation.id, requestId));
+                      },
+                      onError: (error) => toast.showError(errorMessage(error)),
+                    });
+                  },
+                }
+              : {})}
+            messageUnavailable={!booking.canMessageOnPlatform}
+            messageLoading={startConversation.isPending}
+            disabled={startConversation.isPending}
+          />
         </YStack>
       )}
     </BottomSheet>

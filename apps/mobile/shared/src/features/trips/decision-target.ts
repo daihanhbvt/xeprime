@@ -21,6 +21,7 @@ export function tripToDecisionTarget(trip: CustomerTrip): BookingRequestDecision
     vehicleId: trip.vehicle.id,
     vehicleName: trip.vehicle.name,
     vehiclePlate: trip.vehicle.plateNumber ?? null,
+    vehicleImageUrl: trip.vehicle.imageUrl ?? null,
     customerName: trip.renter?.name ?? '',
     customerPhone: trip.renter?.phone ?? null,
     // Số tài khoản chỉ có khi khách để lại số liên hệ KHÁC số đã xác minh — server tự gác.

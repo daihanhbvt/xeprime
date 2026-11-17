@@ -1,6 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { useAccumulatedPages } from '@/hooks/use-accumulated-pages';
+import { ROUTES } from '@/navigation/routes';
 import {
   FINANCE_GRANULARITY,
   FINANCE_GRANULARITY_VALUES,
@@ -10,14 +13,14 @@ import {
 } from '@xeprime/types';
 import { buildPeriodRange, isZeroMoney } from '@xeprime/domain';
 import { Screen } from '@/components/layout/Screen';
-import { BlockTitle } from '@/components/ui/BlockTitle';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { Card } from '@/components/ui/Card';
-import { Chip } from '@/components/ui/Chip';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { ManageHeader } from '@/features/shell/ManageHeader';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { BranchFilterField } from '@/features/branches/components/BranchFilterField';
 import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { FIRST_PAGE } from '@/queries/use-clamped-page';
@@ -29,7 +32,7 @@ import { CustomerRevenueList } from './components/CustomerRevenueList';
 import { FinanceOverviewCards } from './components/FinanceOverviewCards';
 import { FinancePeriodBar } from './components/FinancePeriodBar';
 import { ShopTaxWithheldCard } from '@/features/tax/components/ShopTaxWithheldCard';
-import { RevenueTrendChart } from './components/RevenueTrendChart';
+import { REVENUE_TREND_PLOT_HEIGHT, RevenueTrendChart } from './components/RevenueTrendChart';
 import { useBucketLabels } from './hooks/use-bucket-labels';
 import { VehicleProfitList } from './components/VehicleProfitList';
 import {
@@ -69,6 +72,7 @@ const EMPTY_META = { page: FIRST_PAGE, limit: VEHICLE_PROFIT_PAGE_SIZE, total: 0
 export function FinanceOverviewScreen() {
   const colors = useColors();
   const t = useTranslations('Finance.overview');
+  const navigateOnce = useNavigateOnce();
   const permissions = usePermissions();
 
   const canViewFinance = permissions.has(PERMISSION.FINANCE_VIEW);
@@ -133,6 +137,9 @@ export function FinanceOverviewScreen() {
     rankingFilters,
     canViewFinance && perf === FINANCE_PERFORMANCE_VIEW.CUSTOMERS,
   );
+  // Dồn các trang đã tải (nút "Xem thêm"): đổi sắp xếp/kỳ thì trang về 1 nên mảng dồn tự làm mới.
+  const vehicleItems = useAccumulatedPages(vehicles.data?.items, vehicles.data?.meta.page, (row) => row.vehicleId);
+  const customerItems = useAccumulatedPages(customers.data?.items, customers.data?.meta.page, (row) => row.tenantCustomerId ?? 'none');
 
   const granularityOptions = useMemo(
     () => FINANCE_GRANULARITY_VALUES.map((value) => ({ value, label: t(`chart.every.${value}`) })),
@@ -174,12 +181,15 @@ export function FinanceOverviewScreen() {
   if (!permissions.isLoading && !canViewFinance) {
     return (
       <>
-        <ManageHeader />
+        <ManagePageHeader title={t('page.title')} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
             title={t('forbidden.title')}
             description={t('forbidden.description')}
+            // Web: lối thoát "Về trang chủ" của trang thiếu quyền.
+            actionLabel={t('forbidden.home')}
+            onAction={() => navigateOnce(ROUTES.manage.home())}
           />
         </Screen>
       </>
@@ -192,7 +202,8 @@ export function FinanceOverviewScreen() {
 
   return (
     <>
-      <ManageHeader />
+      {/* Chuẩn màn Đơn thuê: tiêu đề ở thanh trang, câu mô tả đứng đầu thân. */}
+      <ManagePageHeader title={t('page.title')} />
       <Screen
         edges={['left', 'right', 'bottom']}
         refreshing={
@@ -206,14 +217,9 @@ export function FinanceOverviewScreen() {
         onRefresh={refreshAll}
       >
         <YStack gap={layout.section}>
-          <YStack gap={2}>
-            <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold}>
-              {t('page.title')}
-            </Text>
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {t('page.subtitle')}
-            </Text>
-          </YStack>
+          <Text col={colors.textMuted} fos={fontSize.body}>
+            {t('page.subtitle')}
+          </Text>
 
           <BranchFilterField filter={branchFilter} value={branchId} />
 
@@ -233,48 +239,54 @@ export function FinanceOverviewScreen() {
             error={summary.isError}
           />
 
-          {/* ── Biểu đồ xu hướng ─────────────────────────────────────────── */}
-          <YStack gap={space.sm}>
-            <BlockTitle>{t('chart.title')}</BlockTitle>
-            <Text col={colors.textMuted} fos={fontSize.label}>
-              {t('chart.description')}
-            </Text>
+          {/*
+            ── Biểu đồ xu hướng ─────────────────────────────────────────────────
+            MỘT thẻ như web (ledger 09 §3.9 #5-6): tiêu đề, nút độ mịn có khung (`Segmented`), chú
+            giải ba chấm, trục Y ghi số triệu kèm "Đơn vị: triệu đồng".
+          */}
+          <Card lift="flat">
+            <YStack gap={space.sm}>
+              <SectionHeader icon="stats-chart-outline">{t('chart.title')}</SectionHeader>
 
-            {/* Ba tab của web, giữ nguyên hình thái "một cú bấm là đổi". */}
-            <XStack gap={space.xs} flexWrap="wrap" accessibilityLabel={t('chart.every.label')}>
-              {granularityOptions.map((option) => (
-                <Chip
-                  key={option.value}
-                  label={option.label}
-                  selected={granularity === option.value}
-                  size="sm"
-                  onPress={() => setGranularity(option.value)}
+              <XStack accessibilityLabel={t('chart.every.label')}>
+                <SegmentedTabs
+                  fit
+                  variant="neutral"
+                  items={granularityOptions.map((option) => ({
+                    key: option.value,
+                    label: option.label,
+                  }))}
+                  // Web tô theo độ mịn SERVER thật dùng (kỳ dài bị hạ về Tháng).
+                  value={actualGranularity}
+                  onChange={setGranularity}
                 />
-              ))}
-            </XStack>
+              </XStack>
 
-            {series.isError && !series.data ? (
-              <ScreenError
-                error={series.error}
-                title={t('chart.error')}
-                onRetry={() => void series.refetch()}
-              />
-            ) : series.isLoading && !series.data ? (
-              <SkeletonText lines={5} />
-            ) : seriesEmpty || !series.data || series.data.buckets.length === 0 ? (
-              <ScreenMessage
-                icon="stats-chart-outline"
-                title={t('chart.empty')}
-                description={t('chart.emptyHint')}
-              />
-            ) : (
-              <RevenueTrendChart
-                buckets={series.data.buckets}
-                labelOf={labelOf}
-                titleOf={titleOf}
-              />
-            )}
-          </YStack>
+              {series.isError && !series.data ? (
+                <ScreenError
+                  error={series.error}
+                  title={t('chart.error')}
+                  onRetry={() => void series.refetch()}
+                />
+              ) : series.isLoading && !series.data ? (
+                <SkeletonText lines={5} />
+              ) : seriesEmpty || !series.data || series.data.buckets.length === 0 ? (
+                <ScreenMessage
+                  icon="stats-chart-outline"
+                  title={t('chart.empty')}
+                  description={t('chart.emptyHint')}
+                />
+              ) : (
+                <RevenueTrendChart
+                  buckets={series.data.buckets}
+                  labelOf={labelOf}
+                  titleOf={titleOf}
+                  yAxis="million"
+                  plotHeight={REVENUE_TREND_PLOT_HEIGHT.financeOverview}
+                />
+              )}
+            </YStack>
+          </Card>
 
           <CategoryBreakdown
             title={t('categories.incomeTitle')}
@@ -295,61 +307,68 @@ export function FinanceOverviewScreen() {
             error={expense.isError}
           />
 
+          {/*
+            "Hiệu suất kinh doanh" — MỘT thẻ (web `BusinessPerformanceCard`, ledger 09 §3.9 #8):
+            tiêu đề, tab Theo xe / Theo khách có khung, rồi dải của tab đang mở.
+          */}
           <Card lift="flat">
             <YStack gap={space.sm}>
-              <BlockTitle>{t('performance.title')}</BlockTitle>
-              <XStack gap={space.xs} accessibilityLabel={t('performance.tabs.label')}>
-                {FINANCE_PERFORMANCE_VIEW_VALUES.map((value) => (
-                  <Chip
-                    key={value}
-                    label={t(`performance.tabs.${value}`)}
-                    selected={perf === value}
-                    size="sm"
-                    onPress={() => setPerf(value)}
-                  />
-                ))}
+              <SectionHeader icon="stats-chart-outline">{t('performance.title')}</SectionHeader>
+              <XStack accessibilityLabel={t('performance.tabs.label')}>
+                <SegmentedTabs
+                  fit
+                  variant="neutral"
+                  items={FINANCE_PERFORMANCE_VIEW_VALUES.map((value) => ({
+                    key: value,
+                    label: t(`performance.tabs.${value}`),
+                  }))}
+                  value={perf}
+                  onChange={setPerf}
+                />
               </XStack>
+
+              {perf === FINANCE_PERFORMANCE_VIEW.VEHICLES ? (
+                <VehicleProfitList
+                  items={vehicleItems}
+                  meta={vehicles.data?.meta ?? EMPTY_META}
+                  sort={vehicleSort}
+                  unassignedCost={summary.data?.unassignedCost}
+                  loading={vehicles.isFetching}
+                  /* Chỉ coi là lỗi khi KHÔNG còn dữ liệu cũ — refetch nền hỏng thì giữ dải đang đọc. */
+                  error={
+                    vehicles.isError && !vehicles.data
+                      ? { error: vehicles.error, onRetry: () => void vehicles.refetch() }
+                      : null
+                  }
+                  onSortChange={(next) => {
+                    setVehicleSort(next);
+                    setVehiclePage(FIRST_PAGE);
+                  }}
+                  onPageChange={setVehiclePage}
+                  embedded
+                />
+              ) : (
+                <CustomerRevenueList
+                  items={customerItems}
+                  meta={customers.data?.meta ?? EMPTY_META}
+                  sort={customerSort}
+                  unassignedRevenue={summary.data?.unassignedRevenue}
+                  loading={customers.isFetching}
+                  error={
+                    customers.isError && !customers.data
+                      ? { error: customers.error, onRetry: () => void customers.refetch() }
+                      : null
+                  }
+                  onSortChange={(next) => {
+                    setCustomerSort(next);
+                    setCustomerPage(FIRST_PAGE);
+                  }}
+                  onPageChange={setCustomerPage}
+                  embedded
+                />
+              )}
             </YStack>
           </Card>
-
-          {perf === FINANCE_PERFORMANCE_VIEW.VEHICLES ? (
-            <VehicleProfitList
-              items={vehicles.data?.items ?? []}
-              meta={vehicles.data?.meta ?? EMPTY_META}
-              sort={vehicleSort}
-              unassignedCost={summary.data?.unassignedCost}
-              loading={vehicles.isFetching}
-              /* Chỉ coi là lỗi khi KHÔNG còn dữ liệu cũ — refetch nền hỏng thì giữ dải đang đọc. */
-              error={
-                vehicles.isError && !vehicles.data
-                  ? { error: vehicles.error, onRetry: () => void vehicles.refetch() }
-                  : null
-              }
-              onSortChange={(next) => {
-                setVehicleSort(next);
-                setVehiclePage(FIRST_PAGE);
-              }}
-              onPageChange={setVehiclePage}
-            />
-          ) : (
-            <CustomerRevenueList
-              items={customers.data?.items ?? []}
-              meta={customers.data?.meta ?? EMPTY_META}
-              sort={customerSort}
-              unassignedRevenue={summary.data?.unassignedRevenue}
-              loading={customers.isFetching}
-              error={
-                customers.isError && !customers.data
-                  ? { error: customers.error, onRetry: () => void customers.refetch() }
-                  : null
-              }
-              onSortChange={(next) => {
-                setCustomerSort(next);
-                setCustomerPage(FIRST_PAGE);
-              }}
-              onPageChange={setCustomerPage}
-            />
-          )}
 
           {/*
             Thuế đã khấu trừ trong kỳ (Phase 8 — ADR 0032 điều 3). Đứng ở sổ tài chính vì nó là một

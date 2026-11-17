@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -251,7 +251,7 @@ function SlotTile({
       {!full && (!single || items.length === 0) ? (
         <Button
           label={t('choose')}
-          variant="secondary"
+          variant="outline"
           size="sm"
           icon="camera-outline"
           loading={upload.busy}

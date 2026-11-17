@@ -1,9 +1,12 @@
-import { memo, useCallback, useMemo, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useAccumulatedPages } from '@/hooks/use-accumulated-pages';
 import { FlatList, RefreshControl, StyleSheet, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocalSearchParams } from 'expo-router';
 import { useTranslations } from 'use-intl';
+import { LIST_SEPARATOR, toAppTz } from '@xeprime/domain';
 import {
   BOOKING_HISTORY_KIND,
   BOOKING_HISTORY_OUTCOME,
@@ -25,14 +28,20 @@ import { bookingRequestsApi } from '@/features/booking-requests/api';
 import { BookingRequestDetailScreen } from '@/features/booking-requests/BookingRequestDetailScreen';
 import { queryKeys } from '@/queries/query-keys';
 import { RecordCardSkeleton } from '@/components/ui/Skeleton';
+import { Button } from '@/components/ui/Button';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ManageHeader } from '@/features/shell/ManageHeader';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
+import { useRouter } from 'expo-router';
+import { Pill } from '@/components/ui/Pill';
+import { FactRow } from '@/components/ui/FactRow';
+import { ChipTabs } from '@/components/ui/ChipTabs';
+import { typeScale } from '@/theme/tokens';
 import { ManageListShell } from '@/features/shell/ManageListShell';
 import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
-import { BranchFilterField } from '@/features/branches/components/BranchFilterField';
 import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
@@ -42,11 +51,15 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
 import { useListParam, useListParamChange } from '@/navigation/list-params';
 import { layout } from '@/theme/layout';
+import { useCardGrid, useResponsive } from '@/theme/use-responsive';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { useColors } from '@/theme/ThemeProvider';
 import { scrollThrottle } from '@/theme/motion';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { Ionicons } from '@/components/icons/Ionicons';
+import { RemoteImage } from '@/components/ui/RemoteImage';
 import { useBookingHistory } from './hooks/use-booking-history';
+import { bookingsApi, historyFiltersToParams } from './api';
 import type { BookingHistoryItem, BookingHistoryMeta } from './api';
 
 const SKELETON_ROWS = 3;
@@ -63,6 +76,11 @@ const keyOf = (row: BookingHistoryItem) => `${row.kind}:${row.id}`;
  * ở SERVER (`GET /booking-history`). Kết cục do server suy; app chỉ dịch nhãn.
  */
 export function BookingHistoryScreen() {
+  const router = useRouter();
+  // Màn này nằm TRONG tab Vận hành: `router.back()` của bộ tab nhảy về tab trước (Tổng quan) - về thẳng danh sách đơn (16/11/2026).
+  const goBack = useCallback(() => router.navigate(ROUTES.manage.bookings()), [router]);
+  // `<Screen>` dựng cột giữa màn trên iPad, nên nội dung bên trong giữ lề điện thoại.
+  const gutter = layout.screenX;
   const colors = useColors();
   const t = useTranslations('Bookings.history');
   const tActions = useTranslations('Common.actions');
@@ -74,8 +92,14 @@ export function BookingHistoryScreen() {
   const routeTab = useListParam('tab', BOOKING_HISTORY_TAB_VALUES);
   const [tab, setTab] = useState<BookingHistoryTab>(routeTab ?? BOOKING_HISTORY_TAB.ALL);
   const [outcome, setOutcome] = useState<string>(ALL_FILTER);
-  const [serviceType, setServiceType] = useState<string>(ALL_FILTER);
-  const [search, setSearch] = useState('');
+  // Bộ lọc chung mang sang từ "Đơn thuê xe" (web `endedHref`) - chỉ đọc làm giá trị đầu.
+  const carried = useLocalSearchParams<{ q?: string; serviceType?: string }>();
+  const [serviceType, setServiceType] = useState<string>(() =>
+    carried.serviceType && (SERVICE_TYPE_VALUES as readonly string[]).includes(carried.serviceType)
+      ? carried.serviceType
+      : ALL_FILTER,
+  );
+  const [search, setSearch] = useState(() => carried.q ?? '');
   const [page, setPage] = useState(FIRST_PAGE);
   useListParamChange('tab', routeTab, (next) => {
     setTab(next);
@@ -85,16 +109,37 @@ export function BookingHistoryScreen() {
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   const { branchId, filter: branchFilter } = useScreenBranchFilter(() => setPage(FIRST_PAGE));
 
-  const query = useBookingHistory({
-    tab,
-    ...(outcome === ALL_FILTER ? {} : { outcome: outcome as BookingHistoryOutcome }),
-    ...(serviceType === ALL_FILTER ? {} : { serviceType }),
-    ...(branchId ? { branchId } : {}),
-    ...(debouncedSearch.trim() ? { q: debouncedSearch.trim() } : {}),
-    page,
-  });
-  const items = query.data?.items ?? [];
-  const meta = query.data?.meta;
+  const baseFilters = useMemo(
+    () => ({
+      ...(outcome === ALL_FILTER ? {} : { outcome: outcome as BookingHistoryOutcome }),
+      ...(serviceType === ALL_FILTER ? {} : { serviceType }),
+      ...(branchId ? { branchId } : {}),
+      ...(debouncedSearch.trim() ? { q: debouncedSearch.trim() } : {}),
+    }),
+    [outcome, serviceType, branchId, debouncedSearch],
+  );
+  const query = useBookingHistory({ tab, ...baseFilters, page });
+  // Cuộn vô hạn trên mobile: gộp các trang đã tải (`useAccumulatedPages`).
+  const items = useAccumulatedPages(query.data?.items, query.data?.meta?.page);
+  /*
+   * Tải TRƯỚC trang đầu của các tab còn lại (cùng bộ lọc) - bấm sang tab là có danh sách ngay
+   * từ cache, không chờ một lượt gọi (người dùng 16/11/2026).
+   */
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    for (const other of BOOKING_HISTORY_TAB_VALUES) {
+      if (other === tab) continue;
+      const filters = { tab: other, ...baseFilters, page: FIRST_PAGE };
+      void queryClient.prefetchQuery({
+        queryKey: queryKeys.bookings.history(historyFiltersToParams(filters)),
+        queryFn: () => bookingsApi.history(filters),
+      });
+    }
+  }, [queryClient, tab, baseFilters]);
+  /* Số đếm tab giữ bản đã biết trong lúc tab mới tải - không chớp về trống. */
+  const lastMeta = useRef(query.data?.meta);
+  if (query.data?.meta) lastMeta.current = query.data.meta;
+  const meta = query.data?.meta ?? lastMeta.current;
   useClampedPage(meta, setPage);
 
   // Người thiếu quyền yêu cầu không thấy kết cục của yêu cầu — server báo qua `includesRequests`.
@@ -156,13 +201,18 @@ export function BookingHistoryScreen() {
   }, []);
 
   const filtered =
-    outcome !== ALL_FILTER || serviceType !== ALL_FILTER || debouncedSearch.trim().length > 0;
+    outcome !== ALL_FILTER ||
+    serviceType !== ALL_FILTER ||
+    Boolean(branchId) ||
+    debouncedSearch.trim().length > 0;
   const clearFilters = useCallback(() => {
     setOutcome(ALL_FILTER);
     setServiceType(ALL_FILTER);
     setSearch('');
+    // Web `BookingHistoryView` xoá cả chi nhánh.
+    branchFilter.select(undefined);
     setPage(FIRST_PAGE);
-  }, []);
+  }, [branchFilter]);
 
   /*
    * Dòng YÊU CẦU không thành đơn mở chi tiết yêu cầu (web `setOpenRequestId` → hộp chi tiết) — THAY
@@ -190,6 +240,8 @@ export function BookingHistoryScreen() {
     ({ item }) => <HistoryCard row={item} onPress={openRow} />,
     [openRow],
   );
+  // iPad: thẻ xếp lưới 2 cột trong cột nội dung; điện thoại giữ 1 cột.
+  const grid = useCardGrid(renderItem, { listKey: 'history' });
 
   const canView =
     permissions.has(PERMISSION.BOOKING_VIEW) || permissions.has(PERMISSION.BOOKING_REQUEST_VIEW);
@@ -237,22 +289,33 @@ export function BookingHistoryScreen() {
 
   return (
     <>
-      <ManageHeader />
+      {/* Thanh trang v2 có nút lùi (Figma "Rental Request - Order Done" `24175:68159`). */}
+      <ManagePageHeader title={t('title')} onBack={goBack} />
       <Screen edges={['left', 'right', 'bottom']} scroll={false} padded={false}>
         <ManageListShell
+          variant="page"
           title={t('title')}
+          subtitle={t('subtitle')}
           {...(meta === undefined ? {} : { total: t('totalLabel', { count: meta.total }) })}
-          branch={<BranchFilterField filter={branchFilter} value={branchId} />}
+          branchFilter={{ filter: branchFilter, value: branchId }}
           searchValue={search}
           searchLabel={t('searchLabel')}
           searchPlaceholder={t('searchPlaceholder')}
           onSearchChange={changeSearch}
-          tabs={<HistoryTabs value={tab} meta={meta} onChange={selectTab} />}
+          tabs={
+            <HistoryTabs
+              value={tab}
+              meta={meta}
+              includesRequests={includesRequests}
+              onChange={selectTab}
+            />
+          }
           hasRows={items.length > 0}
           groups={groups}
           onFilterChange={changeFilter}
           {...(meta === undefined ? {} : { meta })}
           onPageChange={setPage}
+          loadingMore={query.isFetching && page > 1}
         >
           {({ onScroll, headerHeight, contentContainerStyle, bindList }) => {
             const inStateScroll = (children: ReactNode) => (
@@ -268,7 +331,7 @@ export function BookingHistoryScreen() {
 
             return query.isPending ? (
               inStateScroll(
-                <YStack px={layout.screenX} gap={layout.inline}>
+                <YStack px={gutter} gap={layout.inline}>
                   {Array.from({ length: SKELETON_ROWS }, (_, i) => (
                     <RecordCardSkeleton key={i} />
                   ))}
@@ -302,11 +365,12 @@ export function BookingHistoryScreen() {
               )
             ) : (
               <Animated.FlatList
+                key={grid.key}
                 ref={bindList}
                 data={items}
                 keyExtractor={keyOf}
                 {...LIST_TUNING}
-                renderItem={renderItem}
+                {...grid.listProps}
                 contentContainerStyle={contentContainerStyle}
                 onScroll={onScroll}
                 scrollEventThrottle={scrollThrottle.frame}
@@ -334,17 +398,21 @@ const tabKeyOf = (item: BookingHistoryTab) => item;
 function HistoryTabs({
   value,
   meta,
+  includesRequests,
   onChange,
 }: {
   value: BookingHistoryTab;
   meta: BookingHistoryMeta | undefined;
+  /** Server `meta.includesRequests`, chưa có meta thì suy từ quyền (web `BookingHistoryView`). */
+  includesRequests: boolean;
   onChange: (next: BookingHistoryTab) => void;
 }) {
+  const { gutter } = useResponsive();
   const t = useTranslations('Bookings.history');
   const counts = meta?.tabCounts;
   // Người không xem được yêu cầu thì không có ngăn "Không thành đơn" (như web).
   const tabs = BOOKING_HISTORY_TAB_VALUES.filter(
-    (item) => item !== BOOKING_HISTORY_TAB.NOT_CONVERTED || meta?.includesRequests !== false,
+    (item) => item !== BOOKING_HISTORY_TAB.NOT_CONVERTED || includesRequests,
   );
   const countOf = (item: BookingHistoryTab): number | null => {
     if (!counts) return null;
@@ -360,29 +428,12 @@ function HistoryTabs({
     }
   };
 
-  return (
-    <FlatList
-      horizontal
-      data={tabs}
-      keyExtractor={tabKeyOf}
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={tabStyles.content}
-      style={tabStyles.tabs}
-      accessibilityLabel={t('tabsLabel')}
-      renderItem={({ item }) => {
-        const count = countOf(item);
-        const text = t(`tabs.${item}`);
-        return (
-          <Chip
-            label={count === null ? text : `${text}  ${count}`}
-            selected={value === item}
-            size="sm"
-            onPress={() => onChange(item)}
-          />
-        );
-      }}
-    />
-  );
+  const items = tabs.map((item) => {
+    const count = countOf(item);
+    return { value: item, label: t(`tabs.${item}`), ...(count === null ? {} : { count }) };
+  });
+  // Cùng dải tab viên của màn Đơn thuê xe (`ChipTabs`, Figma "Horizontal tabs").
+  return <ChipTabs label={t('tabsLabel')} items={items} value={value} onSelect={onChange} gutter={gutter} />;
 }
 
 const tabStyles = StyleSheet.create({
@@ -391,6 +442,14 @@ const tabStyles = StyleSheet.create({
 });
 
 /** Thẻ một dòng lịch sử — cùng thông tin với hàng bảng web (mã, xe, dịch vụ, khách, lịch, kết cục, lúc kết thúc). */
+/** Ảnh xe ở thẻ dòng - cỡ ô ảnh của bộ chọn xe. */
+/** Ảnh xe 80 × 52 (người dùng 16/11: to hơn bản Figma 63 × 40). */
+const THUMB_W = 80;
+const THUMB_H = 52;
+/** Cùng nhịp `RentalCard`: đệm thẻ 16, các khối cách 12. */
+const CARD_PAD = 16;
+const BLOCK_GAP = 12;
+
 const HistoryCard = memo(function HistoryCard({
   row,
   onPress,
@@ -402,60 +461,68 @@ const HistoryCard = memo(function HistoryCard({
   const t = useTranslations('Bookings.history');
   const label = useDomainLabel();
   const fmt = useAppFormat();
-  const period =
-    row.pickupAt && row.returnAt
-      ? fmt.shortDateTimeRange(row.pickupAt, row.returnAt)
+  // Web `PeriodCell`: mốc nhận → trả + thời lượng; dài hạn chưa từng chốt lịch thì nói GÓI.
+  // Web `PeriodCell`: "nhận → trả" rồi thời lượng ở dòng dưới; dài hạn chưa chốt lịch thì nói GÓI.
+  const hasPeriod = Boolean(row.pickupAt && row.returnAt);
+  const periodMain = hasPeriod
+    ? `${fmt.rentalPoint(toAppTz(row.pickupAt as string))} → ${fmt.rentalPoint(toAppTz(row.returnAt as string))}`
+    : row.longTermPackageMonths
+      ? (fmt.packageLabel(row.longTermPackageMonths) ?? t('noSchedule'))
       : t('noSchedule');
+  const periodSub = hasPeriod
+    ? fmt.rentalDuration(toAppTz(row.pickupAt as string), toAppTz(row.returnAt as string))
+    : null;
   const outcome = row.outcome as BookingHistoryOutcome;
 
+  const body = { fos: typeScale.body.fontSize, lh: typeScale.body.lineHeight } as const;
   return (
-    <YStack px={layout.screenX} pb={layout.inline}>
-      <Card
-        onPress={() => onPress(row)}
-        accessibilityLabel={`${t('open')} ${row.code ?? ''}`}
-      >
-        <YStack gap={space.xs}>
-          <XStack justifyContent="space-between" alignItems="center" gap={space.sm}>
-            <Text
-              col={colors.text}
-              fos={fontSize.bodyLg}
-              fow={fontWeight.bold}
-              numberOfLines={1}
-              flexShrink={1}
-            >
+    <YStack pb={layout.inline}>
+      {/* Cùng thẻ web `BookingHistoryView.renderCard`: mã · kết cục / xe / khách · thời gian · kết thúc / Xem chi tiết. */}
+      <Card onPress={() => onPress(row)} accessibilityLabel={`${t('open')} ${row.code ?? ''}`}>
+        <YStack gap={space.sm}>
+          <XStack ai="center" jc="space-between" gap={space.sm}>
+            <Text col={row.code ? colors.text : colors.textMuted} {...body} fow={fontWeight.medium} numberOfLines={1} flexShrink={1}>
               {row.code ? `#${row.code}` : t('noCode')}
             </Text>
-            <ToneBadge tone={outcome === BOOKING_HISTORY_OUTCOME.COMPLETED ? 'success' : 'danger'}>
-              {label('bookingHistoryOutcome', outcome)}
-            </ToneBadge>
+            <Pill
+              label={label('bookingHistoryOutcome', outcome)}
+              tone={outcome === BOOKING_HISTORY_OUTCOME.COMPLETED ? 'success' : 'danger'}
+            />
           </XStack>
-          <Text col={colors.text} fos={fontSize.body} numberOfLines={1}>
-            {row.vehiclePlate ? `${row.vehicleName} · ${row.vehiclePlate}` : row.vehicleName}
-          </Text>
-          <Text col={colors.textMuted} fos={fontSize.bodySm} numberOfLines={1}>
-            {label('serviceType', row.serviceType)}
-          </Text>
-          <Field label={t('columns.customer')}>
-            {row.customerPhone ? `${row.customerName} · ${row.customerPhone}` : row.customerName}
-          </Field>
-          <Field label={t('columns.period')}>{period}</Field>
-          <Field label={t('columns.endedAt')}>{fmt.shortDateTime(row.endedAt)}</Field>
+          <XStack gap={12} ai="center">
+            <YStack w={THUMB_W} h={THUMB_H} br={radius.sm} ov="hidden" bg={colors.surfaceMuted} flexShrink={0}>
+              <RemoteImage
+                uri={row.vehicleImageUrl}
+                recyclingKey={row.id}
+                radius={radius.sm}
+                fallback={<Ionicons name="car-outline" size={iconSize.md} color={colors.placeholder} />}
+              />
+            </YStack>
+            <YStack f={1} minWidth={0} gap={2}>
+              <Text col={colors.text} {...body} fow={fontWeight.semibold} numberOfLines={1}>
+                {row.vehicleName}
+              </Text>
+              {row.vehiclePlate ? (
+                <Text col={colors.textMuted} {...body} numberOfLines={1}>
+                  {row.vehiclePlate}
+                </Text>
+              ) : null}
+            </YStack>
+          </XStack>
+          <FactRow label={t('columns.customer')}>
+            {row.customerPhone ? `${row.customerName} - ${row.customerPhone}` : row.customerName}
+          </FactRow>
+          <FactRow label={t('columns.period')} sub={periodSub}>
+            {periodMain}
+          </FactRow>
+          <FactRow label={t('columns.endedAt')}>{fmt.dateTime(row.endedAt)}</FactRow>
+          {/* Nút vàng dùng chung (gradient + hiệu ứng như app khách), trải hết bề ngang thẻ. */}
+          <YStack pt={space.xs}>
+            <Button label={t('open')} variant="gradient" size="compact" onPress={() => onPress(row)} />
+          </YStack>
         </YStack>
       </Card>
     </YStack>
   );
 });
 
-function Field({ label, children }: { label: string; children: string }) {
-  const colors = useColors();
-  return (
-    <XStack gap={space.sm} justifyContent="space-between">
-      <Text col={colors.textMuted} fos={fontSize.bodySm}>
-        {label}
-      </Text>
-      <Text col={colors.text} fos={fontSize.bodySm} flexShrink={1} textAlign="right">
-        {children}
-      </Text>
-    </XStack>
-  );
-}

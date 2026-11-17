@@ -10,10 +10,11 @@ import { ChatThreadScreen } from '@/features/chat/ChatThreadScreen';
  * trí cuộn — xem docblock `app/manage/_layout.tsx`.
  *
  * KHÔNG có `?v=`: ngữ cảnh xe là thứ khách mang theo từ một tin đăng, và gian hàng không đi vào
- * chat từ tin đăng của chính mình.
+ * chat từ tin đăng của chính mình. CÓ `?t=` — chuyến (id yêu cầu) vừa bấm "Nhắn khách" từ yêu cầu /
+ * đơn thuê: thẻ chuyến gắn vào câu đầu tiên (web `chatThreadHref(…, { tripId })`).
  */
 export default function ManageChatThreadRoute() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, t } = useLocalSearchParams<{ id: string; t?: string }>();
 
-  return <ChatThreadScreen conversationId={id} side={CHAT_SIDE.SHOP} />;
+  return <ChatThreadScreen conversationId={id} side={CHAT_SIDE.SHOP} pendingTripId={t ?? null} />;
 }

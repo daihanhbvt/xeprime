@@ -1,92 +1,84 @@
 import type { Href } from 'expo-router';
 import { PERMISSION, PLAN_FEATURE, type Permission, type PlanFeature } from '@xeprime/types';
-import type { IconName } from '@/components/ui/Chip';
+import type { LineIconName } from '@/components/icons/LineIcon';
 import { ROUTES } from '@/navigation/routes';
 import { PARTNER_TRACK, type PartnerTrack } from './partner-track';
 
 /**
- * Cây menu khu quản lý — gương của `apps/web/src/constants/nav.ts`: cùng KHOÁ, cùng khối, cùng
- * THỨ BẬC, cùng quyền, cùng chỗ gắn huy hiệu. Khác web đúng hai chỗ, cả hai là chuyện nền tảng:
+ * Cây menu site partner trên app — gương của `PARTNER_NAV` ở `apps/web/src/constants/nav.ts`
+ * (design Partner-XePrime, `docs/design/09_PARTNER_REDESIGN.md` §2): MỘT cây cho cả hai tuyến
+ * (ADR 0085 điều 1), sáu khối đúng thứ tự design — Tổng quan · Vận hành · Xe & Tài xế · Doanh thu ·
+ * Cấu hình · Trợ giúp. Cây của từng tuyến SUY từ cây chung (`tracks`, `commission`), không viết tay
+ * lần thứ hai.
  *
- *  1. **Biểu tượng** là tên Ionicons chứ không phải component AntD.
- *  2. **`href` có thể vắng.** Khu quản lý trên app mới dựng vài màn; mục chưa có màn thì vẫn HIỆN
- *     đúng chỗ của nó trong menu và chạm vào báo "đang phát triển". Đây chính là quy ước
- *     `comingSoon` của web ("chưa làm thì để menu trống") — ẩn đi thì người dùng không biết
- *     chức năng có tồn tại, và menu hai nền tảng đọc ra hai sản phẩm khác nhau.
- *
- * Vì sao CHÉP chứ không đưa vào `packages/domain`: cây này neo vào `Href` của expo-router và vào
- * bộ icon của từng client — hai thứ không thể sống trong một package framework-free. Phần THẬT SỰ
- * dùng chung (mã quyền `PERMISSION`, nhãn ở namespace `Navigation`) thì vẫn dùng chung, nên hai
- * bên không thể lệch nhau về quyền hay về chữ.
+ * Khác web đúng ba chỗ, đều là chuyện nền tảng:
+ *  1. **Biểu tượng** là CHÍNH bộ nét `PARTNER_NAV_ICON` của web (`LineIcon`, cùng file SVG). Hình
+ *     dạng điều hướng theo design APP (Figma `Menu MB`): năm ô theo khối thay cho drawer + bốn ô
+ *     của web — xem `PARTNER_MENU_TABS` ở cuối file.
+ *  2. **Mục ẩn (`hidden`) còn màn riêng trên app** — "Đơn đã kết thúc", "Chi nhánh", "Công nợ": web
+ *     đã gộp chúng vào màn khác (nút đầu "Đơn thuê xe", thẻ của "Thông tin cửa hàng", tab của "Lịch sử
+ *     giao dịch"); app vẫn giữ route cho lối vào từ các màn đó và từ thông báo. ("Yêu cầu đặt xe",
+ *     "Chờ giao xe" chỉ còn là route CHUYỂN TIẾP vào "Đơn thuê xe" — không cần mục.) Chúng KHÔNG vẽ thành dòng menu, nhưng vẫn tham gia khớp đường dẫn
+ *     (`activeAs` — sáng đúng mục cha) và tra cờ gói cho dải "hết hạn" (`ManageShellNotices`).
+ *  3. **Tin nhắn** không phải mục menu — icon ở thanh trên, như web.
  *
  * `permission` chỉ để ẩn/hiện — guard backend mới là lớp chặn thật (CLAUDE.md mục 6).
  */
 
-/** Khoá nhãn trong namespace `Navigation`. Ghép động sẽ lọt typecheck của `use-intl`. */
+/** Khoá nhãn trong namespace `Navigation`. */
 export type ManageNavLabel = string;
 
-/** Chỗ ĐƯỢC PHÉP mang huy hiệu "cần xử lý" — đúng bộ `NAV_BADGE` của web (04/11/2026). */
+/** Chỗ ĐƯỢC PHÉP mang huy hiệu "cần xử lý" — đúng bộ `NAV_BADGE` của web (05/11/2026). */
 export const MANAGE_NAV_BADGE = {
-  BOOKING_REQUESTS_PENDING: 'bookingRequestsPending',
+  /** "Đơn thuê xe" gộp: yêu cầu CHỜ DUYỆT + lượt giao/trả ĐẾN HẠN. Đỏ khi sắp trễ / quá giờ. */
+  RENTALS_WORK: 'rentalsWork',
+  /** Tin nhắn chưa đọc phía gian hàng — icon tin nhắn ở thanh trên. */
   CHAT_UNREAD: 'chatUnread',
-  /** Lượt giao + trả ĐẾN HẠN (hôm nay hoặc đã quá giờ) — mục "Quản lý đơn thuê xe". */
-  HANDOVERS_DUE: 'handoversDue',
   /** Xe có việc chặn (giấy tờ/bảo dưỡng quá hạn, bị trả về khi đăng chợ, thiếu KM trả). */
   VEHICLES_NEEDS_ACTION: 'vehiclesNeedsAction',
 } as const;
 
 export type ManageNavBadge = (typeof MANAGE_NAV_BADGE)[keyof typeof MANAGE_NAV_BADGE];
 
-/** Mục dẫn tới một trang. `href` vắng = màn chưa dựng ở app. */
+/** Một quyền, hoặc danh sách mà có BẤT KỲ quyền nào là thấy (web `NavPermission`). */
+export type ManageNavPermission = Permission | readonly Permission[];
+
+export function isManageNavPermissionGranted(
+  permission: ManageNavPermission,
+  has: (permission: Permission) => boolean,
+): boolean {
+  return typeof permission === 'string' ? has(permission) : permission.some(has);
+}
+
+/** Mục dẫn tới một trang. */
 export interface ManageNavLeaf {
   readonly type?: 'leaf';
   readonly key: string;
   readonly labelKey: ManageNavLabel;
-  readonly icon: IconName;
-  readonly permission: Permission;
+  readonly icon: LineIconName;
+  readonly permission: ManageNavPermission;
   readonly href?: Href;
   readonly badge?: ManageNavBadge;
-  /**
-   * Cờ NĂNG LỰC THEO GÓI (ADR 0027) — trục ĐỘC LẬP với , kiểm nối tiếp.
-   *
-   * Gương của  ở . Quyền trả lời "vai này được làm
-   * không"; cờ gói trả lời "gian hàng đã mua chưa". Gộp hai thứ vào một trường là mở đường cho
-   * việc hết hạn gói làm mất luôn quyền xem sổ của chính mình.
-   */
+  /** Cờ NĂNG LỰC THEO GÓI (ADR 0027) — trục độc lập với `permission`, kiểm nối tiếp. */
   readonly feature?: PlanFeature;
-  /**
-   * Chỉ CHỦ gian hàng thấy mục này (ADR 0038 điều 3).
-   *
-   * Không phải một khoá `PERMISSION`, và đó là cả điểm: permission uỷ quyền được. Chủ shop tạo
-   * một vai tuỳ biến rồi gán cho quản lý là mở luôn đường ra của tiền, còn guard đọc quyền từ DB
-   * mỗi request nên "mặc định không có" không ngăn được gì. Câu hỏi ở đây cũng khác: không phải
-   * "người này được làm gì trong gian hàng" mà "tiền này của ai".
-   */
+  /** Chỉ CHỦ gian hàng (ADR 0038 điều 3) — khớp `@ShopOwnerOnly()` ở API. */
   readonly ownerOnly?: true;
-  /**
-   * Nghịch đảo của `ownerOnly` trên CÙNG trục sở hữu: chỉ người KHÔNG phải chủ gian hàng thấy —
-   * gương `memberOnly` của web. Owner Lite: chủ đọc yêu cầu + đơn ở "Chuyến cho thuê", thành viên
-   * giữ hộp thư + bảng đơn. Luật chuyển trang tương ứng ở `partnerPathRedirect`.
-   */
-  readonly memberOnly?: true;
+  /** Tuyến được thấy mục — vắng = cả hai tuyến (ADR 0085 điều 1). */
+  readonly tracks?: readonly PartnerTrack[];
+  /** Bản của mục ở tuyến HOA HỒNG khi cùng trang mà khác cách gọi (ADR 0085 điều 2). */
+  readonly commission?: Partial<Pick<ManageNavLeaf, 'labelKey' | 'icon' | 'ownerOnly'>>;
+  /** Trang vẫn thuộc khối nhưng không vẽ thành dòng menu — xem docblock đầu file. */
+  readonly hidden?: true;
+  /** Mục ẩn đang mở thì mục HIỆN nào sáng thay (href của nó). */
+  readonly activeAs?: Href;
 }
 
-/**
- * Mục cha mở ra vài mục con — bản thân KHÔNG dẫn tới trang nào.
- *
- * Đúng ba chỗ, y như web, và vì cùng lý do: nghiệp vụ là MỘT nhưng route thì nhiều. "Xe của tôi"
- * (danh sách + bảo dưỡng), "Đơn thuê" (yêu cầu đặt xe + đơn đã chốt), "Tài chính" (doanh thu +
- * thu chi + công nợ). Gộp ở tầng ĐIỀU HƯỚNG chứ không gộp route: mọi trang giữ nguyên URL,
- * quyền và hành vi.
- *
- * Mục cha không có `permission` riêng — nó hiện khi CÒN ÍT NHẤT MỘT mục con được phép, đúng cách
- * web lọc. Cho nó một quyền riêng là tạo ra cửa thứ hai có thể khoá nhầm cả nhánh.
- */
+/** Mục cha mở ra vài mục con. Cây hiện tại không dùng (web gỡ ở design mới) — giữ kiểu cho test. */
 export interface ManageNavBranch {
   readonly type: 'branch';
   readonly key: string;
   readonly labelKey: ManageNavLabel;
-  readonly icon: IconName;
+  readonly icon: LineIconName;
   readonly children: readonly ManageNavLeaf[];
 }
 
@@ -99,25 +91,51 @@ export function isManageNavBranch(node: ManageNavNode): node is ManageNavBranch 
 export interface ManageNavSection {
   readonly key: string;
   readonly labelKey: ManageNavLabel;
-  /** Khối luôn bung, không gập được — Tổng quan và Hỗ trợ. */
+  /** Khối luôn bung, không gập được — Tổng quan và Trợ giúp. */
   readonly pinned?: boolean;
+  readonly icon?: LineIconName;
   readonly children: readonly ManageNavNode[];
 }
 
-/**
- * Menu GIAN HÀNG — cùng trật tự với web: xem tình hình → vận hành đội xe và đơn → chăm khách &
- * tiền → mặt tiền trên marketplace → cấu hình → hỗ trợ.
- */
-const SHOP_NAV: readonly ManageNavSection[] = [
+/** Biểu tượng theo VAI của mục — gương `PARTNER_NAV_ICON` của web. */
+const ICON = {
+  overview: 'discovery',
+  operations: 'folder',
+  fleet: 'category',
+  revenue: 'dollar-square',
+  settings: 'setting',
+  help: 'faq',
+  calendar: 'calendar-2',
+  bookings: 'doc-left',
+  customers: 'users',
+  vehicles: 'car',
+  drivers: 'profile',
+  maintenance: 'setting',
+  financeOverview: 'dollar-circle',
+  wallet: 'wallet',
+  transactions: 'doc-right',
+  shop: 'bag',
+  policies: 'shield-star',
+  members: 'add-category',
+  supportCenter: 'faq',
+  supportCases: 'doc-left',
+  ownerProfile: 'profile',
+  hostGuide: 'faq',
+  contracts: 'doc-right',
+  dataProtection: 'shield-star',
+} as const satisfies Record<string, LineIconName>;
+
+const PARTNER_NAV: readonly ManageNavSection[] = [
   {
     key: 'overview',
     labelKey: 'manageGroups.overview',
+    icon: ICON.overview,
     pinned: true,
     children: [
       {
         key: 'dashboard',
         labelKey: 'manage.dashboard',
-        icon: 'speedometer-outline',
+        icon: ICON.overview,
         permission: PERMISSION.TENANT_VIEW,
         href: ROUTES.manage.home(),
       },
@@ -125,402 +143,215 @@ const SHOP_NAV: readonly ManageNavSection[] = [
   },
   {
     key: 'operations',
-    labelKey: 'manageGroups.operations',
+    labelKey: 'manageGroups.partnerOperations',
+    icon: ICON.operations,
     children: [
       {
-        type: 'branch',
-        key: 'fleet',
-        labelKey: 'manage.myVehicles',
-        icon: 'car-outline',
-        children: [
-          {
-            key: 'vehicles',
-            labelKey: 'manage.vehicleList',
-            icon: 'list-outline',
-            permission: PERMISSION.VEHICLE_VIEW,
-            href: ROUTES.manage.vehicles(),
-            badge: MANAGE_NAV_BADGE.VEHICLES_NEEDS_ACTION,
-          },
-          {
-            key: 'maintenance',
-            labelKey: 'manage.maintenance',
-            icon: 'construct-outline',
-            permission: PERMISSION.VEHICLE_MAINTENANCE_VIEW,
-            feature: PLAN_FEATURE.MAINTENANCE,
-            href: ROUTES.manage.maintenance(),
-          },
-        ],
+        // MỘT mục cho cả chuyến (05/11/2026): yêu cầu chờ duyệt → chờ khách trả → chờ giao → đang thuê.
+        key: 'bookings',
+        labelKey: 'manage.rentals',
+        icon: ICON.bookings,
+        permission: [PERMISSION.BOOKING_REQUEST_VIEW, PERMISSION.BOOKING_VIEW],
+        href: ROUTES.manage.bookings(),
+        badge: MANAGE_NAV_BADGE.RENTALS_WORK,
+      },
+      {
+        key: 'bookings-ended',
+        labelKey: 'manage.bookingsEnded',
+        icon: ICON.bookings,
+        permission: PERMISSION.BOOKING_VIEW,
+        href: ROUTES.manage.bookingsEnded(),
+        hidden: true,
+        activeAs: ROUTES.manage.bookings(),
       },
       {
         key: 'calendar',
-        labelKey: 'manage.calendar',
-        icon: 'calendar-outline',
+        labelKey: 'manage.rentalCalendar',
+        icon: ICON.calendar,
         permission: PERMISSION.CALENDAR_VIEW,
         href: ROUTES.manage.calendar(),
       },
       {
-        type: 'branch',
-        key: 'orders',
-        labelKey: 'manage.orders',
-        icon: 'document-text-outline',
-        children: [
-          {
-            key: 'booking-requests',
-            labelKey: 'manage.bookingRequests',
-            icon: 'mail-unread-outline',
-            permission: PERMISSION.BOOKING_REQUEST_VIEW,
-            href: ROUTES.manage.requests(),
-            badge: MANAGE_NAV_BADGE.BOOKING_REQUESTS_PENDING,
-          },
-          {
-            /*
-             * Lối tắt tới nhóm việc "đơn đã có, xe chưa rời bãi" — KHÔNG phải một loại đơn và
-             * không phải một trạng thái mới (ADR 0047). Nó đứng GIỮA vì nhịp làm việc đi đúng
-             * thứ tự đó: duyệt yêu cầu → giao xe hôm nay → tra cứu mọi đơn.
-             *
-             * Cùng quyền với "Tất cả đơn thuê": nó không mở thêm dữ liệu nào, chỉ lọc sẵn.
-             */
-            key: 'bookings-awaiting-pickup',
-            labelKey: 'manage.bookingsAwaitingPickup',
-            icon: 'car-outline',
-            permission: PERMISSION.BOOKING_VIEW,
-            href: ROUTES.manage.bookingsAwaitingPickup(),
-          },
-          {
-            key: 'bookings',
-            labelKey: 'manage.bookings',
-            icon: 'checkbox-outline',
-            permission: PERMISSION.BOOKING_VIEW,
-            href: ROUTES.manage.bookings(),
-            badge: MANAGE_NAV_BADGE.HANDOVERS_DUE,
-          },
-          {
-            // "Đơn đã kết thúc" (05/11/2026, web `BOOKINGS_ENDED`) — đơn đã đóng + yêu cầu không
-            // thành đơn. Server lọc phần yêu cầu theo quyền (`includesRequests`).
-            key: 'bookings-ended',
-            labelKey: 'manage.bookingsEnded',
-            icon: 'archive-outline',
-            permission: PERMISSION.BOOKING_VIEW,
-            href: ROUTES.manage.bookingsEnded(),
-          },
-        ],
-      },
-      {
         key: 'customers',
-        labelKey: 'manage.customers',
-        icon: 'people-outline',
+        labelKey: 'manage.customerList',
+        icon: ICON.customers,
         permission: PERMISSION.CUSTOMER_VIEW,
         href: ROUTES.manage.customers(),
+        // Sổ khách là năng lực gói (ADR 0027 · 0056).
+        tracks: [PARTNER_TRACK.PACKAGE],
       },
     ],
   },
   {
-    key: 'business',
-    labelKey: 'manageGroups.business',
+    key: 'fleet',
+    labelKey: 'manageGroups.fleet',
+    icon: ICON.fleet,
     children: [
       {
-        key: 'chat',
-        labelKey: 'manage.chat',
-        icon: 'chatbubble-ellipses-outline',
-        permission: PERMISSION.TENANT_VIEW,
-        href: ROUTES.manage.chat(),
-        badge: MANAGE_NAV_BADGE.CHAT_UNREAD,
+        key: 'vehicles',
+        labelKey: 'manage.vehicleList',
+        icon: ICON.vehicles,
+        permission: PERMISSION.VEHICLE_VIEW,
+        href: ROUTES.manage.vehicles(),
+        badge: MANAGE_NAV_BADGE.VEHICLES_NEEDS_ACTION,
       },
       {
-        type: 'branch',
-        key: 'finance',
-        labelKey: 'manage.finance',
-        icon: 'wallet-outline',
-        children: [
-          {
-            /*
-             * KHÔNG gác bằng `feature`: ví là TIỀN CỦA CHÍNH gian hàng, gói hết hạn vẫn phải xem
-             * và rút được (ADR 0027 điều 3 — hết hạn là `read_only`, không phải `hidden`; ADR
-             * 0033). Đây là mục duy nhất trong nhóm Tài chính không mang cờ gói, và đó là chủ ý.
-             *
-             * `ownerOnly` thay cho `SELLER_PROFILE_VIEW` (ADR 0038 điều 3): `shop_manager` có
-             * khoá đó MẶC ĐỊNH, nên trước đợt này quản lý đọc được số dư, toàn bộ sổ cái và lịch
-             * sử rút của gian hàng. Server đã đóng bằng `@ShopOwnerOnly()`; mục menu này chỉ để
-             * quản lý không bấm vào một màn chắc chắn trả 403.
-             */
-            key: 'balance',
-            labelKey: 'manage.balance',
-            icon: 'wallet-outline',
-            permission: PERMISSION.TENANT_VIEW,
-            ownerOnly: true,
-            href: ROUTES.manage.balance(),
-          },
-          {
-            key: 'finance-overview',
-            labelKey: 'manage.financeOverview',
-            icon: 'stats-chart-outline',
-            permission: PERMISSION.FINANCE_VIEW,
-            feature: PLAN_FEATURE.FINANCE,
-            href: ROUTES.manage.finance(),
-          },
-          {
-            /*
-             * "Lịch sử giao dịch" gồm hai tab: Giao dịch thu chi và Công nợ (web PR #276, design
-             * 04/11/2026). Công nợ không còn là mục menu riêng — tab của nó (`TransactionHistoryTabs`)
-             * mang cờ gói `debts` của chính nó.
-             */
-            key: 'receipts',
-            labelKey: 'manage.transactionHistory',
-            icon: 'swap-horizontal-outline',
-            permission: PERMISSION.FINANCE_VIEW,
-            feature: PLAN_FEATURE.FINANCE,
-            href: ROUTES.manage.receipts(),
-          },
-        ],
+        // Không gác bằng cờ gói: tài xế mở cho cả hai tuyến (ADR 0063).
+        key: 'drivers',
+        labelKey: 'manage.driverManagement',
+        icon: ICON.drivers,
+        permission: PERMISSION.DRIVER_VIEW,
+        href: ROUTES.manage.drivers(),
+      },
+      {
+        key: 'maintenance',
+        labelKey: 'manage.maintenance',
+        icon: ICON.maintenance,
+        permission: PERMISSION.VEHICLE_MAINTENANCE_VIEW,
+        feature: PLAN_FEATURE.MAINTENANCE,
+        href: ROUTES.manage.maintenance(),
+        tracks: [PARTNER_TRACK.PACKAGE],
       },
     ],
   },
   {
-    key: 'storefront',
-    labelKey: 'manageGroups.storefront',
+    key: 'revenue',
+    labelKey: 'manageGroups.revenue',
+    icon: ICON.revenue,
     children: [
       {
-        key: 'shop',
-        labelKey: 'manage.shop',
-        icon: 'storefront-outline',
+        key: 'finance-overview',
+        labelKey: 'manage.financeOverview',
+        icon: ICON.financeOverview,
+        permission: PERMISSION.FINANCE_VIEW,
+        feature: PLAN_FEATURE.FINANCE,
+        href: ROUTES.manage.finance(),
+        tracks: [PARTNER_TRACK.PACKAGE],
+      },
+      {
+        /*
+         * Ví: KHÔNG gác bằng `feature` — số dư là tiền của chính gian hàng (ADR 0027 điều 3, ADR
+         * 0033). Gác bằng SỞ HỮU (`ownerOnly`), khớp `@ShopOwnerOnly()` ở API.
+         */
+        key: 'balance',
+        labelKey: 'manage.wallet',
+        icon: ICON.wallet,
         permission: PERMISSION.TENANT_VIEW,
-        href: ROUTES.manage.shop(),
+        ownerOnly: true,
+        href: ROUTES.manage.balance(),
+      },
+      {
+        // Hai tab: Giao dịch thu chi và Công nợ.
+        key: 'receipts',
+        labelKey: 'manage.transactionHistory',
+        icon: ICON.transactions,
+        permission: PERMISSION.FINANCE_VIEW,
+        feature: PLAN_FEATURE.FINANCE,
+        href: ROUTES.manage.receipts(),
+        tracks: [PARTNER_TRACK.PACKAGE],
+      },
+      {
+        key: 'debts',
+        labelKey: 'manage.debts',
+        icon: ICON.transactions,
+        permission: PERMISSION.FINANCE_VIEW,
+        feature: PLAN_FEATURE.DEBTS,
+        href: ROUTES.manage.debts(),
+        tracks: [PARTNER_TRACK.PACKAGE],
+        hidden: true,
+        activeAs: ROUTES.manage.receipts(),
       },
     ],
   },
   {
     key: 'settings',
     labelKey: 'manageGroups.settings',
+    icon: ICON.settings,
     children: [
       {
-        key: 'shop-policies',
-        labelKey: 'manage.shopPolicies',
-        icon: 'shield-checkmark-outline',
+        key: 'shop',
+        labelKey: 'manage.shopInfo',
+        icon: ICON.shop,
         permission: PERMISSION.TENANT_VIEW,
-        href: ROUTES.manage.shopPolicies(),
+        href: ROUTES.manage.shop(),
+        // Chủ xe cá nhân: CÙNG trang, mặt tiền cá nhân (ADR 0085 điều 2) — chỉ CHỦ.
+        commission: { labelKey: 'account.ownerProfile', icon: ICON.ownerProfile, ownerOnly: true },
       },
       {
+        // Chi nhánh là thẻ của "Thông tin cửa hàng" (06/11/2026).
         key: 'shop-branches',
         labelKey: 'manage.shopBranches',
-        icon: 'git-network-outline',
+        icon: ICON.shop,
         permission: PERMISSION.BRANCH_VIEW,
         feature: PLAN_FEATURE.BRANCHES,
         href: ROUTES.manage.shopBranches(),
+        tracks: [PARTNER_TRACK.PACKAGE],
+        hidden: true,
+        activeAs: ROUTES.manage.shop(),
       },
       {
-        key: 'drivers',
-        labelKey: 'manage.drivers',
-        icon: 'id-card-outline',
-        permission: PERMISSION.DRIVER_VIEW,
-        // Không gác bằng cờ gói: tài xế mở cho cả hai tuyến (ADR 0063).
-        href: ROUTES.manage.drivers(),
+        // Chủ xe cá nhân cấu hình chính sách trên TỪNG xe (ADR 0085 điều 3).
+        key: 'shop-policies',
+        labelKey: 'manage.shopPolicies',
+        icon: ICON.policies,
+        permission: PERMISSION.TENANT_VIEW,
+        href: ROUTES.manage.shopPolicies(),
+        tracks: [PARTNER_TRACK.PACKAGE],
       },
       {
         key: 'members',
-        labelKey: 'manage.members',
-        icon: 'person-add-outline',
+        labelKey: 'manage.staffPermissions',
+        icon: ICON.members,
         permission: PERMISSION.MEMBER_VIEW,
         feature: PLAN_FEATURE.MEMBERS,
         href: ROUTES.manage.members(),
+        tracks: [PARTNER_TRACK.PACKAGE],
       },
     ],
   },
   {
     key: 'support',
-    labelKey: 'manageGroups.support',
+    labelKey: 'manageGroups.help',
+    icon: ICON.help,
     pinned: true,
     children: [
-      {
-        /*
-         * `TENANT_VIEW` là mức thấp nhất mọi vai đều có — cố ý: đây là dữ liệu của một CON NGƯỜI,
-         * không phải của gian hàng, nên không có quyền nào để kiểm. Và KHÔNG gác bằng `feature`:
-         * mật khẩu không thuộc gói nào.
-         */
-        key: 'account',
-        /*
-         * Web không có mục này trong menu trái — chỉ trong thẻ người dùng ("Tài khoản & bảo mật", PR #151;
-         * bản native là `ManageAccountSheet`). Drawer giữ thêm một lối, nhãn dùng khoá có sẵn của
-         * namespace `Navigation` (`manage.security`) thay vì thêm khoá dịch dùng chung với web.
-         */
-        labelKey: 'manage.security',
-        icon: 'person-outline',
-        permission: PERMISSION.TENANT_VIEW,
-        href: ROUTES.manage.account(),
-      },
       {
         key: 'support',
         labelKey: 'manage.support',
-        icon: 'help-circle-outline',
+        icon: ICON.supportCenter,
         permission: PERMISSION.TENANT_VIEW,
         href: ROUTES.manage.support(),
+        tracks: [PARTNER_TRACK.PACKAGE],
       },
-      {
-        /*
-         * Bộ CƠ BẢN (ADR 0027 điều 1): tranh chấp có hệ quả TIỀN — nó tạm giữ việc chốt khoản
-         * giữ chỗ của chuyến — nên KHÔNG được khoá sau một cờ gói. Chỉ gác bằng quyền.
-         */
-        key: 'support-cases',
-        labelKey: 'manage.supportCases',
-        icon: 'alert-circle-outline',
-        permission: PERMISSION.SUPPORT_VIEW,
-        href: ROUTES.manage.supportCases(),
-      },
-    ],
-  },
-];
-
-/**
- * Menu của chủ xe tuyến HOA HỒNG (Owner Lite) trong app XePrime Partner — gương của `OWNER_LITE_NAV`
- * bên web (ADR 0053: Owner Lite rời khu tài khoản của app khách). Chỉ các trang trong danh sách
- * trắng `isCommissionPath`; không có trang nào của Full Manage (khách hàng, thu chi, bảo dưỡng…).
- */
-const OWNER_LITE_NAV: readonly ManageNavSection[] = [
-  {
-    key: 'owner-operations',
-    labelKey: 'manageGroups.operations',
-    pinned: true,
-    children: [
-      {
-        key: 'home',
-        labelKey: 'manage.dashboard',
-        icon: 'speedometer-outline',
-        permission: PERMISSION.TENANT_VIEW,
-        href: ROUTES.manage.home(),
-      },
-      {
-        key: 'vehicles',
-        labelKey: 'account.vehicles',
-        icon: 'list-outline',
-        permission: PERMISSION.VEHICLE_VIEW,
-        href: ROUTES.manage.vehicles(),
-        badge: MANAGE_NAV_BADGE.VEHICLES_NEEDS_ACTION,
-      },
-      {
-        key: 'calendar',
-        labelKey: 'account.calendar',
-        icon: 'calendar-outline',
-        permission: PERMISSION.CALENDAR_VIEW,
-        href: ROUTES.manage.calendar(),
-      },
-      {
-        /*
-         * MỘT mục cho cả yêu cầu lẫn đơn (web PR #158): chủ xe cá nhân có vài xe, hai bảng của gian
-         * hàng là bắt họ mở hai nơi cho vài chuyến. Huy hiệu yêu cầu chờ duyệt đi theo mục này.
-         */
-        key: 'trips',
-        labelKey: 'manage.ownerTrips',
-        icon: 'document-text-outline',
-        permission: PERMISSION.BOOKING_REQUEST_VIEW,
-        href: ROUTES.manage.trips(),
-        badge: MANAGE_NAV_BADGE.BOOKING_REQUESTS_PENDING,
-        ownerOnly: true,
-      },
-      /*
-       * THÀNH VIÊN (vd nhân viên của gian hàng vừa hết gói, ADR 0038 điều 5) không có danh sách phía
-       * chủ xe — họ giữ hộp thư + bảng đơn để còn bàn giao những chuyến đang chạy.
-       */
-      {
-        key: 'booking-requests',
-        labelKey: 'manage.bookingRequests',
-        icon: 'mail-unread-outline',
-        permission: PERMISSION.BOOKING_REQUEST_VIEW,
-        href: ROUTES.manage.requests(),
-        badge: MANAGE_NAV_BADGE.BOOKING_REQUESTS_PENDING,
-        memberOnly: true,
-      },
-      {
-        key: 'bookings',
-        labelKey: 'manage.bookings',
-        icon: 'checkbox-outline',
-        permission: PERMISSION.BOOKING_VIEW,
-        href: ROUTES.manage.bookings(),
-        badge: MANAGE_NAV_BADGE.HANDOVERS_DUE,
-        memberOnly: true,
-      },
-      {
-        key: 'chat',
-        labelKey: 'manage.chat',
-        icon: 'chatbubble-ellipses-outline',
-        permission: PERMISSION.TENANT_VIEW,
-        href: ROUTES.manage.chat(),
-        badge: MANAGE_NAV_BADGE.CHAT_UNREAD,
-      },
-      {
-        // Chủ xe cá nhân cũng mời tài xế cho chuyến có tài xế (ADR 0063) — gương web `OWNER_LITE_NAV`.
-        key: 'drivers',
-        labelKey: 'manage.drivers',
-        icon: 'id-card-outline',
-        permission: PERMISSION.DRIVER_VIEW,
-        href: ROUTES.manage.drivers(),
-      },
-    ],
-  },
-  {
-    key: 'owner-money',
-    labelKey: 'manageGroups.business',
-    children: [
-      {
-        key: 'balance',
-        labelKey: 'manage.balance',
-        icon: 'wallet-outline',
-        permission: PERMISSION.TENANT_VIEW,
-        href: ROUTES.manage.balance(),
-        ownerOnly: true,
-      },
-      /*
-       * PR #159 (web `nav.ts`): MỘT mục tiền. "Tài khoản nhận tiền" là khối của trang số dư; "Thuế"
-       * và "Gói dịch vụ" là hai phần của "Hồ sơ chủ xe" (tuyến gói: trang Cửa hàng) — app không có
-       * mục menu gói riêng; `/manage/tax` chỉ còn là alias chuyển tiếp (`partner-track.ts`).
-       */
-    ],
-  },
-  {
-    /*
-     * "Tài khoản" — web PR #156: hồ sơ chủ xe đã gộp vào trang tài khoản (`/manage/account`), nên
-     * mục trỏ thẳng vào đó; `/manage/registration` chỉ còn là alias chuyển tiếp.
-     */
-    key: 'owner-account',
-    labelKey: 'manageGroups.account',
-    children: [
-      {
-        key: 'owner-profile',
-        labelKey: 'account.ownerProfile',
-        icon: 'id-card-outline',
-        permission: PERMISSION.TENANT_VIEW,
-        href: ROUTES.manage.account(),
-        ownerOnly: true,
-      },
-    ],
-  },
-  {
-    key: 'owner-support',
-    labelKey: 'manageGroups.support',
-    children: [
       {
         key: 'host-guide',
         labelKey: 'account.hostGuide',
-        icon: 'book-outline',
+        icon: ICON.hostGuide,
         permission: PERMISSION.TENANT_VIEW,
         href: ROUTES.manage.hostGuide(),
+        tracks: [PARTNER_TRACK.COMMISSION],
       },
       {
         key: 'contracts-documents',
         labelKey: 'account.contractsDocuments',
-        icon: 'documents-outline',
+        icon: ICON.contracts,
         permission: PERMISSION.TENANT_VIEW,
         href: ROUTES.manage.contractsDocuments(),
+        tracks: [PARTNER_TRACK.COMMISSION],
       },
       {
         key: 'data-protection',
         labelKey: 'account.dataProtection',
-        icon: 'shield-checkmark-outline',
+        icon: ICON.dataProtection,
         permission: PERMISSION.TENANT_VIEW,
         href: ROUTES.manage.dataProtection(),
+        tracks: [PARTNER_TRACK.COMMISSION],
       },
       {
+        // Bộ CƠ BẢN (ADR 0027 điều 1): tranh chấp có hệ quả tiền, không khoá sau gói.
         key: 'support-cases',
         labelKey: 'manage.supportCases',
-        icon: 'alert-circle-outline',
+        icon: ICON.supportCases,
         permission: PERMISSION.SUPPORT_VIEW,
         href: ROUTES.manage.supportCases(),
       },
@@ -528,17 +359,50 @@ const OWNER_LITE_NAV: readonly ManageNavSection[] = [
   },
 ];
 
+/** Cây của MỘT tuyến — bản native của `navForTrack` web. */
+function navForTrack(
+  sections: readonly ManageNavSection[],
+  track: PartnerTrack,
+): ManageNavSection[] {
+  const leafFor = (leaf: ManageNavLeaf): ManageNavLeaf | null => {
+    if (leaf.tracks && !leaf.tracks.includes(track)) return null;
+    return track === PARTNER_TRACK.COMMISSION && leaf.commission
+      ? { ...leaf, ...leaf.commission }
+      : leaf;
+  };
+  return sections
+    .map((section) => ({
+      ...section,
+      children: section.children
+        .map((node): ManageNavNode | null => {
+          if (!isManageNavBranch(node)) return leafFor(node);
+          const children = node.children
+            .map(leafFor)
+            .filter((leaf): leaf is ManageNavLeaf => leaf !== null);
+          return children.length > 0 ? { ...node, children } : null;
+        })
+        .filter((node): node is ManageNavNode => node !== null),
+    }))
+    .filter((section) => section.children.length > 0);
+}
+
+const SHOP_NAV: readonly ManageNavSection[] = navForTrack(PARTNER_NAV, PARTNER_TRACK.PACKAGE);
+const COMMISSION_NAV: readonly ManageNavSection[] = navForTrack(
+  PARTNER_NAV,
+  PARTNER_TRACK.COMMISSION,
+);
+
 /**
- * Cây menu theo TUYẾN (web `navForZone(ZONE.PARTNER, track)`): gói ⇒ Full Manage, hoa hồng ⇒
- * Owner Lite; hai tuyến còn lại không có menu (`ScopeGuard` giữ họ ở màn chọn tuyến/onboarding).
+ * Cây menu theo TUYẾN (web `navForZone(ZONE.PARTNER, track)`). Hai tuyến chưa vào được khu quản lý
+ * không có menu (`ScopeGuard` giữ họ ở màn chọn tuyến/onboarding).
  */
 export function manageNavForTrack(track: PartnerTrack): readonly ManageNavSection[] {
   if (track === PARTNER_TRACK.PACKAGE) return SHOP_NAV;
-  if (track === PARTNER_TRACK.COMMISSION) return OWNER_LITE_NAV;
+  if (track === PARTNER_TRACK.COMMISSION) return COMMISSION_NAV;
   return [];
 }
 
-/** Trải phẳng mọi mục lá của một cây menu — cùng vai trò `flattenLeaves` của web. */
+/** Trải phẳng mọi mục lá (kể cả mục ẩn) — cùng vai trò `flattenLeaves` của web. */
 export function flattenManageLeaves(
   sections: readonly ManageNavSection[],
 ): readonly ManageNavLeaf[] {
@@ -547,31 +411,89 @@ export function flattenManageLeaves(
   );
 }
 
+/** Mục được VẼ của một khối (bỏ mục ẩn). */
+export function visibleNodes(section: ManageNavSection): readonly ManageNavNode[] {
+  return section.children.filter((node) => isManageNavBranch(node) || node.hidden !== true);
+}
+
 /**
- * `href` của ĐÚNG MỘT mục đang mở: mục có href là tiền tố DÀI NHẤT của đường dẫn hiện tại —
- * bản native của `matchSelectedKey` bên web.
+ * `href` của ĐÚNG MỘT mục đang mở: mục có href là tiền tố DÀI NHẤT của đường dẫn hiện tại — bản
+ * native của `matchSelectedKey` web. Mục ẩn khớp thì trả mục HIỆN mà nó thuộc về (`activeAs`).
  *
- * Không so từng mục độc lập bằng `startsWith`: `/manage/shop/branches` bắt đầu bằng cả
- * `/manage/shop`, nên cách đó làm "Cửa hàng" sáng cùng lúc với "Chi nhánh" và người dùng không
- * còn biết mình đang ở đâu. Nhưng vẫn phải so tiền tố, vì trang CON không có mục menu riêng
- * (`/manage/vehicles/new`) phải sáng mục cha gần nhất của nó ("Danh sách xe").
- *
- * Tổng quan (`/manage`) chỉ khớp TUYỆT ĐỐI — nó là tiền tố của mọi trang trong khu quản lý, để
- * so tiền tố thì trang nào cũng làm nó sáng.
+ * Tổng quan (`/manage`) chỉ khớp TUYỆT ĐỐI — nó là tiền tố của mọi trang trong khu quản lý.
  */
 export function matchActiveHref(
   pathname: string,
   leaves: readonly ManageNavLeaf[],
   homeHref: string,
 ): string | null {
-  let best: string | null = null;
+  let best: ManageNavLeaf | null = null;
+  let bestLength = -1;
 
   for (const leaf of leaves) {
     if (!leaf.href) continue;
     const target = String(leaf.href);
     const matches =
       pathname === target || (target !== homeHref && pathname.startsWith(`${target}/`));
-    if (matches && (best === null || target.length > best.length)) best = target;
+    if (matches && target.length > bestLength) {
+      best = leaf;
+      bestLength = target.length;
+    }
   }
-  return best;
+  if (!best) return null;
+  return String(best.activeAs ?? best.href);
+}
+
+/**
+ * Ô của thanh menu dưới đáy app Partner — Figma Partner-XePrime `Menu MB` (`24175:37780`).
+ *
+ * Design app CHIA cây menu thành năm ô theo KHỐI, không phải bốn đích chính + "Thêm" như web
+ * `PARTNER_MOBILE_TABS`: Tổng quan · Vận hành · Xe & Tài xế · Doanh thu · Tài khoản. Mỗi ô ôm trọn
+ * một khối của `PARTNER_NAV` (cùng mục, cùng thứ tự, cùng luật ẩn/hiện); ô Tài khoản ôm hai khối
+ * còn lại — Cấu hình và Trợ giúp — trên màn "Tài khoản của tôi" (`ROUTES.manage.more()`).
+ *
+ * Mô hình chỉ nói ô nào gom KHỐI nào; ô hiện khi còn mục được phép trong khối của nó (thanh tab tự
+ * lọc bằng `resolveSections`), biểu tượng là việc của thanh tab.
+ */
+export const MANAGE_MENU_TAB = {
+  OVERVIEW: 'overview',
+  OPERATIONS: 'operations',
+  FLEET: 'fleet',
+  REVENUE: 'revenue',
+  ACCOUNT: 'account',
+} as const;
+
+export type ManageMenuTabKey = (typeof MANAGE_MENU_TAB)[keyof typeof MANAGE_MENU_TAB];
+
+export interface ManageMenuTab {
+  readonly key: ManageMenuTabKey;
+  readonly labelKey: ManageNavLabel;
+  /** Khối của `PARTNER_NAV` mà ô gom (theo `ManageNavSection.key`). */
+  readonly sections: readonly string[];
+  /** Ô dẫn thẳng tới một MÀN (Tài khoản) thay vì mở danh sách mục của khối. */
+  readonly href?: Href;
+}
+
+const PARTNER_MENU_TABS: readonly ManageMenuTab[] = [
+  { key: MANAGE_MENU_TAB.OVERVIEW, labelKey: 'manageGroups.overview', sections: ['overview'] },
+  {
+    key: MANAGE_MENU_TAB.OPERATIONS,
+    labelKey: 'manageGroups.partnerOperations',
+    sections: ['operations'],
+  },
+  { key: MANAGE_MENU_TAB.FLEET, labelKey: 'manageGroups.fleet', sections: ['fleet'] },
+  { key: MANAGE_MENU_TAB.REVENUE, labelKey: 'manageGroups.revenue', sections: ['revenue'] },
+  {
+    key: MANAGE_MENU_TAB.ACCOUNT,
+    labelKey: 'manageGroups.account',
+    sections: ['settings', 'support'],
+    href: ROUTES.manage.more(),
+  },
+];
+
+/** Năm ô theo tuyến — hai tuyến chưa vào được khu quản lý không có thanh menu. */
+export function manageMenuTabsForTrack(track: PartnerTrack): readonly ManageMenuTab[] {
+  return track === PARTNER_TRACK.PACKAGE || track === PARTNER_TRACK.COMMISSION
+    ? PARTNER_MENU_TABS
+    : [];
 }

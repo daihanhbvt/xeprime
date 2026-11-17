@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -104,6 +104,8 @@ export function DeleteAccountScreen() {
   });
 
   const onSubmit = handleSubmit(() => {
+    // Chặn lượt thứ hai khi nút đang quay - như web `useAccountDeletionForm`.
+    if (openCase.isPending) return;
     openCase.mutate(
       {
         category: SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION,
@@ -131,17 +133,6 @@ export function DeleteAccountScreen() {
       />
       <Screen edges={['left', 'right', 'bottom']}>
         <YStack gap={space.md}>
-          {/*
-            Đứng TRƯỚC form, y như web dựng nó: một cảnh báo đọc sau khi đã bấm gửi thì không còn
-            là cảnh báo. KHÔNG chặn nút gửi — yêu cầu vẫn vào hàng đợi support. Thứ tự theo hộp
-            thoại web (design Account / Security - Delete): điều kiện → quy trình → dữ liệu.
-          */}
-          <AccountDeletionImpact />
-
-          <Callout tone="danger" title={t('warningTitle')}>
-            {t('warningBody')}
-          </Callout>
-
           {pendingQuery.isLoading ? (
             <Card>
               <MiniRowsSkeleton rows={4} />
@@ -180,87 +171,105 @@ export function DeleteAccountScreen() {
               </YStack>
             </Card>
           ) : (
-            <Card>
-              <YStack gap={space.sm}>
-                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                  {t('dataTitle')}
-                </Text>
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {t('confirmBody')}
-                </Text>
+            <>
+              {/*
+                Đứng TRƯỚC form, y như web dựng nó: một cảnh báo đọc sau khi đã bấm gửi thì không
+                còn là cảnh báo. KHÔNG chặn nút gửi - yêu cầu vẫn vào hàng đợi support. Chỉ ở luồng
+                GỬI: đã có yêu cầu đang chờ thì web (`DeleteAccountView` embedded) chỉ còn thẻ trạng
+                thái + Rút yêu cầu, không vẽ lại bảng điều kiện hay cảnh báo.
+              */}
+              <AccountDeletionImpact />
 
-                <YStack gap={space.xs}>
-                  {ITEMS.map((item) => (
-                    <XStack key={item} ai="center" gap={space.xs}>
-                      <Ionicons name="close-circle" size={iconSize.sm} color={colors.danger} />
-                      <Text f={1} col={colors.text} fos={fontSize.bodySm}>
-                        {t(`items.${item}` as never)}
-                      </Text>
-                    </XStack>
-                  ))}
-                </YStack>
+              <Callout tone="danger" title={t('warningTitle')}>
+                {t('warningBody')}
+              </Callout>
 
-                <Text col={colors.placeholder} fos={fontSize.label}>
-                  {t('retentionNote')}
-                </Text>
+              <Card>
+                <YStack gap={space.sm}>
+                  {/* Tiêu đề form như web `DeleteAccountView` (`confirmTitle`), không phải `dataTitle` của hộp khách. */}
+                  <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+                    {t('confirmTitle')}
+                  </Text>
+                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                    {t('confirmBody')}
+                  </Text>
 
-                {/*
+                  <YStack gap={space.xs}>
+                    {ITEMS.map((item) => (
+                      <XStack key={item} ai="center" gap={space.xs}>
+                        <Ionicons name="close-circle" size={iconSize.sm} color={colors.danger} />
+                        <Text f={1} col={colors.text} fos={fontSize.bodySm}>
+                          {t(`items.${item}` as never)}
+                        </Text>
+                      </XStack>
+                    ))}
+                  </YStack>
+
+                  <Text col={colors.placeholder} fos={fontSize.label}>
+                    {t('retentionNote')}
+                  </Text>
+
+                  {/*
                   Ô tick tự dựng: app chưa có `CheckboxField` nối với React Hook Form, và một
                   component dùng chung chỉ vì MỘT màn là suy đoán. Hàng vẫn giữ đúng vùng chạm
                   44pt và vai `checkbox` cho trình đọc màn hình, y như `LegalConsentCheckbox`.
                 */}
-                <Controller
-                  control={control}
-                  name="acknowledged"
-                  render={({ field, fieldState }) => (
-                    <YStack gap={2}>
-                      <Pressable
-                        // Khoá trong lúc gửi — web cũng `disabled` ô này khi đang gửi yêu cầu.
-                        disabled={openCase.isPending}
-                        onPress={() => field.onChange(!field.value)}
-                        accessibilityRole="checkbox"
-                        accessibilityState={{ checked: field.value, disabled: openCase.isPending }}
-                        accessibilityLabel={t('acknowledge')}
-                      >
-                        <XStack
-                          ai="flex-start"
-                          gap={space.sm}
-                          minHeight={sizing.touchTarget}
-                          py={space.xs}
+                  <Controller
+                    control={control}
+                    name="acknowledged"
+                    render={({ field, fieldState }) => (
+                      <YStack gap={2}>
+                        <Pressable
+                          // Khoá trong lúc gửi — web cũng `disabled` ô này khi đang gửi yêu cầu.
+                          disabled={openCase.isPending}
+                          onPress={() => field.onChange(!field.value)}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{
+                            checked: field.value,
+                            disabled: openCase.isPending,
+                          }}
+                          accessibilityLabel={t('acknowledge')}
                         >
-                          <YStack pt={2}>
-                            <CheckMark checked={field.value} />
-                          </YStack>
-                          <Text f={1} col={colors.text} fos={fontSize.bodySm}>
-                            {t('acknowledge')}
+                          <XStack
+                            ai="flex-start"
+                            gap={space.sm}
+                            minHeight={sizing.touchTarget}
+                            py={space.xs}
+                          >
+                            <YStack pt={2}>
+                              <CheckMark checked={field.value} />
+                            </YStack>
+                            <Text f={1} col={colors.text} fos={fontSize.bodySm}>
+                              {t('acknowledge')}
+                            </Text>
+                          </XStack>
+                        </Pressable>
+                        {fieldState.error?.message ? (
+                          <Text col={colors.danger} fos={fontSize.label}>
+                            {fieldState.error.message}
                           </Text>
-                        </XStack>
-                      </Pressable>
-                      {fieldState.error?.message ? (
-                        <Text col={colors.danger} fos={fontSize.label}>
-                          {fieldState.error.message}
-                        </Text>
-                      ) : null}
-                    </YStack>
-                  )}
-                />
+                        ) : null}
+                      </YStack>
+                    )}
+                  />
 
-                <Button
-                  label={t('submit')}
-                  variant="danger"
-                  icon="trash-outline"
-                  loading={openCase.isPending}
-                  disabled={!formState.isValid}
-                  onPress={() => void onSubmit()}
-                />
-                <Button
-                  label={t('reset')}
-                  variant="ghost"
-                  disabled={!formState.isDirty || openCase.isPending}
-                  onPress={() => reset()}
-                />
-              </YStack>
-            </Card>
+                  <Button
+                    label={t('submit')}
+                    variant="danger"
+                    icon="trash-outline"
+                    loading={openCase.isPending}
+                    disabled={!formState.isValid}
+                    onPress={() => void onSubmit()}
+                  />
+                  <Button
+                    label={t('reset')}
+                    variant="ghost"
+                    disabled={!formState.isDirty || openCase.isPending}
+                    onPress={() => reset()}
+                  />
+                </YStack>
+              </Card>
+            </>
           )}
         </YStack>
       </Screen>

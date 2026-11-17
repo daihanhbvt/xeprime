@@ -146,7 +146,22 @@
       "title": "Xe chưa về từ chuyến #{code} - đã quá giờ trả {duration}",
       "body": "Lịch xe chỉ giữ tới giờ trả theo đơn, nên chuyến mới vẫn duyệt được. Chỉ duyệt khi chắc xe về kịp; tự động nhận chuyến đang tạm dừng với xe này.",
       "open": "Mở chuyến đang trễ"
-    }
+    },
+    "payment": {
+      "rental": "Tiền thuê",
+      "rentalCalc": "{days, plural, other {# ngày}} × {price}",
+      "customerTotal": "Khách trả",
+      "hold": "Giữ chỗ",
+      "holdState": {
+        "expected": "Dự kiến",
+        "awaiting": "Chờ khách trả",
+        "unpaid": "Chưa thanh toán",
+        "paid": "Đã thanh toán"
+      },
+      "payAtPickup": "Còn lại (phải thu khi giao xe)",
+      "payAtPickupExpected": "Còn lại dự kiến (thu khi giao xe)"
+    },
+    "scheduleLink": "Lịch xe"
   },
   "longTerm": {
     "title": "Duyệt và giữ xe - thuê dài hạn",
@@ -634,7 +649,8 @@
     "noFreeCancel": "Chuyến này khách không có thời gian huỷ miễn phí.",
     "lateCancel": "Khách huỷ sau thời gian miễn phí: bạn nhận toàn bộ phần giữ chỗ dành cho chủ xe (phần cam kết giữ xe tính trên tiền thuê) vào Ví điểm. Bạn huỷ thì khách được hoàn 100%.",
     "tooShort": "Giờ nhận xe quá gần để khách kịp chuyển tiền giữ chỗ - lượt duyệt sẽ không thành công. Hãy liên hệ khách để thoả thuận trực tiếp.",
-    "longTermPickPickup": "Chọn giờ nhận xe để xem khách có bao lâu để thanh toán. Mã QR tiền giữ chỗ chỉ được gửi cho khách sau khi bạn chốt lịch và bấm duyệt."
+    "longTermPickPickup": "Chọn giờ nhận xe để xem khách có bao lâu để thanh toán. Mã QR tiền giữ chỗ chỉ được gửi cho khách sau khi bạn chốt lịch và bấm duyệt.",
+    "cancelPolicy": "Chính sách huỷ"
   },
   "staffFlow": {
     "title": "Đặt xe cho khách",

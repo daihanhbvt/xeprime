@@ -91,7 +91,7 @@ export const TENANT_CUSTOMER_NOTE_TYPE_VALUES = Object.values(
 
 export const TENANT_CUSTOMER_NOTE_TYPE_META: Readonly<Record<TenantCustomerNoteType, StatusMeta>> =
   {
-    [TENANT_CUSTOMER_NOTE_TYPE.GENERAL]: { label: 'Ghi chú chung', color: STATUS_COLOR.NEUTRAL },
+    [TENANT_CUSTOMER_NOTE_TYPE.GENERAL]: { label: 'Ghi chú chung', color: STATUS_COLOR.SPECIAL },
     [TENANT_CUSTOMER_NOTE_TYPE.PREFERENCE]: {
       label: 'Sở thích / thói quen',
       color: STATUS_COLOR.INFO,

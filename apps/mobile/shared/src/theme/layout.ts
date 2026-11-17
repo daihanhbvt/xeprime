@@ -1,4 +1,17 @@
+import Constants from 'expo-constants';
 import { NARROW_SCREEN, space } from './tokens';
+
+/**
+ * App XePrime Partner dùng lề ngang HẸP hơn app khách (người dùng chốt 10/11/2026): màn quản lý
+ * nhiều cột số liệu, bề ngang điện thoại đã chật nên mỗi dp đều quý. Nhận diện bằng `slug` của
+ * cấu hình Expo thay vì `@/app-profile` - file đó kéo theo routes/deep link, nạp vào đây là vòng import.
+ */
+const PARTNER_APP = Constants.expoConfig?.slug === 'xeprime-partner';
+const SCREEN_X = PARTNER_APP ? (NARROW_SCREEN ? 8 : 12) : NARROW_SCREEN ? 12 : space.md;
+/** Lề ngang thay cho `space.md` / `space.lg` viết tay: app khách giữ nguyên giá trị cũ, Partner hẹp hơn. */
+const PAD_X = PARTNER_APP ? (NARROW_SCREEN ? 8 : 12) : space.md;
+const PAD_X_LG = PARTNER_APP ? (NARROW_SCREEN ? 12 : 16) : space.lg;
+const CARD_PAD = PARTNER_APP ? (NARROW_SCREEN ? 10 : 12) : NARROW_SCREEN ? 12 : space.md;
 
 /**
  * Nhịp bố cục của MỘT màn nội dung — lề ngang, khoảng giữa các khối, phần đè lên ảnh mở đầu.
@@ -21,9 +34,14 @@ import { NARROW_SCREEN, space } from './tokens';
 export const layout = {
   /** Lề trái/phải của mọi màn nội dung. */
   // Máy hẹp (< 380dp): lề 12 thay 16 — trả lại 8dp ngang cho chữ (người dùng chốt 28/10/2026).
-  screenX: NARROW_SCREEN ? 12 : space.md,
+  // Partner: 12 (máy hẹp 8) - xem `PARTNER_APP` ở trên.
+  screenX: SCREEN_X,
   /** Đệm trong của thẻ — cùng luật máy hẹp với lề màn. */
-  cardPad: NARROW_SCREEN ? 12 : space.md,
+  cardPad: CARD_PAD,
+  /** Lề ngang nội bộ (thanh, tấm, chân màn) - thay `px={space.md}`; Partner 12 (hẹp 8), khách 16. */
+  padX: PAD_X,
+  /** Lề ngang rộng - thay `px={space.lg}`; Partner 16 (hẹp 12), khách 24. */
+  padXLg: PAD_X_LG,
   /** Giữa các khối lớn. Cũng là lề trên khối đầu tiên và lề dưới cuối trang. */
   section: space.lg,
   /** Trong một khối: tiêu đề ↔ nội dung. */
@@ -71,3 +89,28 @@ export const modalColumn = {
   maxWidth: CONTENT_MAX_WIDTH,
   alignSelf: 'center',
 } as const;
+
+/*
+ * Hằng cũ của bố cục iPad bản nhánh (trước khi gộp `develop` 16/11/2026) - giữ cho code đang đọc
+ * chúng, nay đứng trên cột gốc `ContentColumn` của `develop` (`CONTENT_MAX_WIDTH`).
+ */
+
+/** Cột RỘNG cho màn duyệt lưới - nằm trong cột gốc nên không vượt `CONTENT_MAX_WIDTH`. */
+export const WIDE_CONTENT_MAX_WIDTH = CONTENT_MAX_WIDTH;
+
+/** Từ bề rộng nội dung này trở lên lưới thẻ chia 3 cột. */
+export const WIDE_CARD_MIN_WIDTH = 1000;
+
+/** Bề rộng tối đa của form / thẻ đăng nhập trên màn rộng. */
+export const FORM_MAX_WIDTH = 560;
+
+/** Bề rộng tối đa của tấm trượt trên màn rộng - tấm trượt là một hộp thoại, không phải một trang. */
+export const SHEET_MAX_WIDTH = 640;
+
+/**
+ * Lề ngang để nội dung nằm giữa khi rộng hơn `maxWidth`; điện thoại giữ `layout.screenX`.
+ * `width` truyền vào là bề rộng CỘT (`useContentWidth`), không phải cửa sổ.
+ */
+export function contentGutter(width: number, maxWidth: number = CONTENT_MAX_WIDTH): number {
+  return Math.max(layout.screenX, Math.round((width - maxWidth) / 2));
+}

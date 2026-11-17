@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useForm, useWatch } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
@@ -15,17 +15,20 @@ import {
 import { vehicleSourceFormSchema, type VehicleSourceFormValues } from '@xeprime/validators';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { VehicleEditHeader } from './components/VehicleEditHeader';
+import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { Screen } from '@/components/layout/Screen';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Button } from '@/components/ui/Button';
-import { BlockTitle } from '@/components/ui/BlockTitle';
+import { InlineAction } from '@/components/ui/InlineAction';
+import { SectionHeader } from '@/components/ui/CardTitle';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { MoneyField } from '@/components/ui/MoneyField';
 import { NumberField } from '@/components/ui/NumberField';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { RadioField } from '@/components/ui/RadioField';
 import { SkeletonText } from '@/components/ui/Skeleton';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { TextField } from '@/components/ui/TextField';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
@@ -40,7 +43,7 @@ import { useLeaveGuard } from '@/hooks/use-leave-guard';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { DateField } from '@/components/ui/DateField';
 import { SourceContractFiles } from './components/SourceContractFiles';
 import {
@@ -53,9 +56,11 @@ import type { VehicleDetail, VehicleSource } from './api';
 import { getErrorMessage } from '@/lib/get-error-message';
 
 /** Đường kính viên hình ở dải trạng thái đầu màn. */
-const BANNER_ICON = 40;
 
 /** Cùng bộ hình với web (`HomeOutlined`/`BankOutlined`/`KeyOutlined`/`TeamOutlined`). */
+/** Ô icon tròn của thẻ hình thức — web `.typeIcon` 40px. */
+const TYPE_ICON = 40;
+
 const SOURCE_ICON: Record<VehicleSourceType, React.ComponentProps<typeof Ionicons>['name']> = {
   [VEHICLE_SOURCE_TYPE.OWNED]: 'home-outline',
   [VEHICLE_SOURCE_TYPE.FINANCED]: 'business-outline',
@@ -91,7 +96,7 @@ export function VehicleSourceScreen({ vehicleId }: { vehicleId: string }) {
     return (
       <>
         <AppHeader title={title} onBack={back} />
-        <Screen edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage icon="lock-closed-outline" title={title} description={t('noPermission')} />
         </Screen>
       </>
@@ -102,7 +107,7 @@ export function VehicleSourceScreen({ vehicleId }: { vehicleId: string }) {
     return (
       <>
         <AppHeader title={title} onBack={back} />
-        <Screen edges={['left', 'right', 'bottom']}>
+        <Screen scrollReveal edges={['left', 'right', 'bottom']}>
           <SkeletonText lines={10} />
         </Screen>
       </>
@@ -113,7 +118,7 @@ export function VehicleSourceScreen({ vehicleId }: { vehicleId: string }) {
     return (
       <>
         <AppHeader title={title} onBack={back} />
-        <Screen edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenError
             error={source.error ?? vehicle.error}
             title={t('loadError')}
@@ -187,6 +192,7 @@ function SourceForm({
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { isDirty, errors },
   } = useForm<VehicleSourceFormValues>({
     resolver,
@@ -247,19 +253,23 @@ function SourceForm({
 
   return (
     <>
-      <AppHeader
-        title={title}
-        subtitle={[vehicle.name, vehicle.plateNumber].filter(Boolean).join(LIST_SEPARATOR)}
-        onBack={() => leave.guard(onBack)}
+      <VehicleEditHeader
+        vehicleId={vehicle.id}
+        tab={VEHICLE_EDIT_TAB.SOURCE}
+        title={tEditTab('title')}
+        guard={leave.guard}
+        onBack={onBack}
       />
       <Screen
+        scrollReveal
         edges={['left', 'right', 'bottom']}
         {...refresh}
         footer={
           canEdit ? (
             <Button
+              variant="gradient"
               label={tActions('saveChanges')}
-              icon="save-outline"
+              icon="checkmark-outline"
               loading={save.isPending}
               disabled={!isDirty}
               onPress={submit}
@@ -268,47 +278,11 @@ function SourceForm({
         }
       >
         <YStack gap={layout.section}>
-          {/* Dải trạng thái đầu tab — nói ngay xe đang ở hình thức nào (đúng bố cục web). */}
-          <XStack
-            ai="center"
-            gap={space.sm}
-            p={space.md}
-            br={radius.md}
-            bw={1}
-            bg={colors.surface}
-            bc={colors.border}
-          >
-            {/*
-              Nền màu thương hiệu ĐẶC, hình trắng. Vàng nhạt trên một thẻ trắng viền nhạt gần như
-              không tách ra — ô hình mất luôn vai trò nhận diện nguồn xe.
-            */}
-            <YStack
-              width={BANNER_ICON}
-              height={BANNER_ICON}
-              ai="center"
-              jc="center"
-              br={radius.pill}
-              bg={colors.primary}
-            >
-              <Ionicons name={SOURCE_ICON[savedType]} size={iconSize.lg} color={colors.onPrimary} />
-            </YStack>
-            <YStack f={1} gap={space.xs}>
-              <XStack ai="center" gap={space.xs} flexWrap="wrap">
-                <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                  {t('banner.kind', { label: domainLabel('vehicleSourceType', savedType) })}
-                </Text>
-                <StatusBadge
-                  label={t(bannerKey(savedType))}
-                  color={STATUS_COLOR.WAITING}
-                  size="sm"
-                />
-              </XStack>
-              <Text col={colors.textMuted} fos={fontSize.label}>
-                {t(cardHintKey(savedType))}
-              </Text>
-            </YStack>
-          </XStack>
-
+          {/*
+            KHÔNG còn dải "Hình thức sở hữu xe: …" đầu trang (web 04/11/2026, ledger §3.6 E23b):
+            dải nói hình thức đã LƯU còn thẻ sáng lại là thẻ vừa CHỌN — người dùng không biết xe
+            đang thuộc gì. Hình thức đã lưu mang nhãn "Đang áp dụng" ngay trên lựa chọn của nó.
+          */}
           {!canEdit ? <Callout>{t('readOnly')}</Callout> : null}
 
           {errorCount > 0 ? (
@@ -322,22 +296,95 @@ function SourceForm({
           ) : null}
 
           <SectionCard title={t('typeCard')}>
-            <RadioField
-              control={control}
-              name="sourceType"
-              disabled={!canEdit}
-              options={VEHICLE_SOURCE_TYPE_VALUES.map((value) => ({
-                value,
-                label: domainLabel('vehicleSourceType', value),
-                hint: t(cardHintKey(value)),
-                /*
-                  Cùng bảng hình với dải đầu trang — chọn "Trả góp" ở đây rồi thấy đúng hình đó
-                  trên banner là một mạch liên tục; hai hình khác nhau cho cùng một thứ thì người
-                  dùng phải học hai lần.
-                */
-                icon: SOURCE_ICON[value],
-              }))}
-            />
+            {/*
+              Bốn thẻ hình thức (web `.typeOption` 2×2; Figma mobile `24238:60447` xếp DỌC, mỗi thẻ một hàng): icon TRÒN bên trái,
+              KHÔNG chấm radio — chọn nói bằng viền vàng + nền vàng nhạt; bản ĐÃ LƯU mang viên
+              "Đang áp dụng" xanh, khác với thẻ đang chọn trong form.
+            */}
+            <XStack flexWrap="wrap" mx={-space.xs} accessibilityRole="radiogroup">
+              {VEHICLE_SOURCE_TYPE_VALUES.map((value) => {
+                const selected = sourceType === value;
+                return (
+                  <YStack key={value} w="100%" p={space.xs}>
+                    <XStack
+                      f={1}
+                      ai="center"
+                      gap={space.sm}
+                      p={space.md}
+                      br={radius.control}
+                      bw={1}
+                      bc={selected ? colors.primary : colors.border}
+                      bg={selected ? colors.primaryLight : colors.surface}
+                      opacity={canEdit ? 1 : 0.7}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: selected, disabled: !canEdit }}
+                      accessibilityLabel={domainLabel('vehicleSourceType', value)}
+                      {...(canEdit
+                        ? { onPress: () => setValue('sourceType', value, { shouldDirty: true }) }
+                        : {})}
+                    >
+                      <YStack
+                        w={TYPE_ICON}
+                        h={TYPE_ICON}
+                        br={radius.pill}
+                        ai="center"
+                        jc="center"
+                        bg={selected ? colors.primaryMuted : colors.background}
+                      >
+                        <Ionicons
+                          name={SOURCE_ICON[value]}
+                          size={fontSize.bodyLg}
+                          color={selected ? colors.primaryActive : colors.textMuted}
+                        />
+                      </YStack>
+                      <YStack f={1} minWidth={0} gap={2}>
+                        <XStack flexWrap="wrap" ai="center" gap={space.xs}>
+                          <Text
+                            col={selected ? colors.primaryActive : colors.text}
+                            fos={fontSize.body}
+                            fow={fontWeight.semibold}
+                          >
+                            {domainLabel('vehicleSourceType', value)}
+                          </Text>
+                          {value === savedType ? (
+                            <StatusBadge
+                              label={t('typeCurrent')}
+                              color={STATUS_COLOR.SUCCESS}
+                              size="sm"
+                            />
+                          ) : null}
+                        </XStack>
+                        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                          {t(cardHintKey(value))}
+                        </Text>
+                      </YStack>
+                    </XStack>
+                  </YStack>
+                );
+              })}
+            </XStack>
+            {sourceType !== savedType ? (
+              /* Đổi mà chưa lưu: nói rõ đổi từ gì sang gì + lối "Giữ X" (web `typeChange`). */
+              <YStack gap={space.xs} pt={space.sm}>
+                <Text col={colors.warning} fos={fontSize.bodySm}>
+                  {t.rich('typeChange', {
+                    from: domainLabel('vehicleSourceType', savedType),
+                    to: domainLabel('vehicleSourceType', sourceType),
+                    b: (chunks) => (
+                      <Text fow={fontWeight.semibold} col={colors.warning}>
+                        {chunks}
+                      </Text>
+                    ),
+                  })}
+                </Text>
+                <XStack>
+                  <InlineAction
+                    label={t('typeKeep', { label: domainLabel('vehicleSourceType', savedType) })}
+                    onPress={() => setValue('sourceType', savedType, { shouldDirty: true })}
+                  />
+                </XStack>
+              </YStack>
+            ) : null}
           </SectionCard>
 
           {sourceType === VEHICLE_SOURCE_TYPE.OWNED ? (
@@ -437,13 +484,6 @@ function SourceForm({
 }
 
 /** Liệt kê tường minh — khoá i18n ghép động lọt qua typecheck của `use-intl`. */
-function bannerKey(value: VehicleSourceType) {
-  if (value === VEHICLE_SOURCE_TYPE.FINANCED) return 'banner.financed' as const;
-  if (value === VEHICLE_SOURCE_TYPE.RENTED) return 'banner.rented' as const;
-  if (value === VEHICLE_SOURCE_TYPE.PARTNERSHIP) return 'banner.partnership' as const;
-  return 'banner.owned' as const;
-}
-
 function cardHintKey(value: VehicleSourceType) {
   if (value === VEHICLE_SOURCE_TYPE.FINANCED) return 'cardHint.financed' as const;
   if (value === VEHICLE_SOURCE_TYPE.RENTED) return 'cardHint.rented' as const;
@@ -458,9 +498,9 @@ type SectionProps = {
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <Card>
+    <Card lift="flat">
       <YStack gap={space.sm}>
-        <BlockTitle>{title}</BlockTitle>
+        <SectionHeader>{title}</SectionHeader>
         {children}
       </YStack>
     </Card>
