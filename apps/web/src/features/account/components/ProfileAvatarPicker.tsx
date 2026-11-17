@@ -1,18 +1,16 @@
 'use client';
 
 import { CloudUploadOutlined, DeleteOutlined } from '@ant-design/icons';
-import { App, Button, Progress, Upload } from 'antd';
+import { Button, Progress, Upload } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useController, type Control } from 'react-hook-form';
 import { IMAGE_UPLOAD_MAX_BYTES, IMAGE_UPLOAD_MIME_TYPES } from '@xeprime/types';
 
-import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
 import { initialOf } from '@/lib/initials';
-import { getErrorMessage } from '@/services/api-client';
-import { presignAvatar, uploadImage, validateImageFile } from '@/services/upload';
 
 import type { AccountProfileValues } from '@xeprime/validators';
+import { useAvatarUpload } from '../hooks/use-avatar-upload';
 import styles from './ProfileAvatarPicker.module.css';
 
 const MAX_MB = Math.round(IMAGE_UPLOAD_MAX_BYTES / (1024 * 1024));
@@ -36,34 +34,19 @@ export function ProfileAvatarPicker({
 }) {
   const t = useTranslations('Account.profileEdit');
   const tUpload = useTranslations('Common.components.imageUpload');
-  const uploadRejectionMessage = useUploadRejectionMessage();
-  const { message } = App.useApp();
   const { field, fieldState } = useController({ control, name: 'avatarUrl' });
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [fileName, setFileName] = useState<string | null>(null);
+  const {
+    select: handleSelect,
+    uploading,
+    progress,
+  } = useAvatarUpload((publicUrl, name) => {
+    field.onChange(publicUrl);
+    setFileName(name);
+  });
 
   const url = field.value || null;
   const locked = disabled || uploading;
-
-  function handleSelect(file: File): false {
-    const invalid = validateImageFile(file);
-    if (invalid) {
-      message.error(uploadRejectionMessage(invalid));
-      return false;
-    }
-    setUploading(true);
-    setProgress(0);
-    uploadImage(file, presignAvatar, setProgress)
-      .then((publicUrl) => {
-        field.onChange(publicUrl);
-        setFileName(file.name);
-      })
-      .catch((err: unknown) => message.error(getErrorMessage(err)))
-      .finally(() => setUploading(false));
-    // Luôn chặn upload mặc định của AntD — mình tự PUT lên R2.
-    return false;
-  }
 
   function remove() {
     field.onChange(null);

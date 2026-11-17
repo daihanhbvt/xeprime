@@ -69,7 +69,27 @@
     "securePhoneTitle": "Your phone number is kept private",
     "securePhoneBody": "Used only to verify your account, reach you when needed, and send notices about your rentals.",
     "secureEmailTitle": "Your email is kept private",
-    "secureEmailBody": "Used only to verify your account and send notices about your bookings."
+    "secureEmailBody": "Used only to verify your account and send notices about your bookings.",
+    "updatePhoneTitle": "Update phone number",
+    "updateEmailTitle": "Update email",
+    "verifyPhoneTitle": "Verify phone number",
+    "verifyEmailTitle": "Verify email",
+    "phoneSubtitle": "Enter your phone number to get a verification code by SMS",
+    "emailSubtitle": "Enter your email address to get a verification code",
+    "currentPhone": "Current number: <strong>{value}</strong>",
+    "currentEmail": "Current email: <strong>{value}</strong>",
+    "codeTitle": "Enter verification code",
+    "codeSentPhone": "We sent a 6-digit code to the phone number <strong>{target}</strong>",
+    "codeSentEmail": "We sent a 6-digit code to <strong>{target}</strong>",
+    "noCode": "Didn't get a code?",
+    "resendAfter": "Resend in <strong>{time}</strong>",
+    "editPhoneFull": "Edit phone number",
+    "phoneChangeNote": "After the change you will sign in with the new number. The old number {old} will no longer work.",
+    "emailChangeNote": "After the change, notifications and support will go to the new email. The old email will no longer be used.",
+    "confirmPhoneChange": "Confirm new number",
+    "confirmEmailChange": "Confirm new email",
+    "verify": "Verify",
+    "verifyAria": "Verify {field}"
   },
   "sidebar": {
     "userCard": "Signed in as"
@@ -474,5 +494,46 @@
     "pick": "Choose a photo",
     "remove": "Remove profile photo",
     "displayName": "Display name"
+  },
+  "securityPage": {
+    "title": "Account and security",
+    "subtitle": "Manage your personal profile, sign-in details and account security.",
+    "loadError": "Could not load your account",
+    "loginTitle": "Sign-in details",
+    "loginHint": "You sign in with your phone number; your email receives notifications. Each change must be verified with a 6-digit code sent to the new details.",
+    "passwordTitle": "Password",
+    "passwordHint": "Update your password to protect your account. Use a strong password and never share it.",
+    "deleteLink": "Request account deletion",
+    "login": {
+      "phoneBody": "Your phone number is used to sign in and verify your account. You can change it whenever you need to, with a verification code.",
+      "emailBody": "Your email receives notifications, booking status updates and important information about your account."
+    },
+    "password": {
+      "forgot": "Forgot password",
+      "strength": {
+        "weak": "Weak",
+        "fair": "Fair",
+        "good": "Good",
+        "strong": "Strong"
+      },
+      "rules": {
+        "passwordTooShort": "At least {min} characters",
+        "passwordNeedsLetter": "At least 1 letter",
+        "passwordNeedsDigit": "At least 1 digit",
+        "notSameAsCurrent": "Different from current password"
+      }
+    },
+    "profile": {
+      "cardLabel": "Personal profile",
+      "changeAvatar": "Change profile photo",
+      "removeAvatar": "Remove profile photo",
+      "displayName": "Display name",
+      "displayNamePlaceholder": "Jane Doe",
+      "avatarHelp": "Upload a profile photo in <strong>JPG, PNG or WEBP</strong> format (up to {max}MB, square).",
+      "notShop": "Your name and photo belong to your personal account. The name, logo and phone number renters see are managed in <strong>Shop settings</strong>.",
+      "personalStorefront": "This photo and name are exactly what renters see on your <strong>host page</strong>.",
+      "shopSettingsLink": "View shop settings",
+      "ownerProfileLink": "View host profile"
+    }
   }
 }

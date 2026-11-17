@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formatOtpCooldown } from './format-cooldown';
-import { maskPhone, maskPhoneStars } from './mask';
+import { maskEmailHead, maskPhone, maskPhoneStars, maskPhoneTail } from './mask';
 
 describe('maskPhoneStars - kiểu che của hộp tài khoản design v2', () => {
   it('ba số đầu, ba số cuối', () => {
@@ -31,5 +31,18 @@ describe('formatOtpCooldown', () => {
   it('không bao giờ âm hay lẻ', () => {
     expect(formatOtpCooldown(-3)).toBe('00:00');
     expect(formatOtpCooldown(9.7)).toBe('00:09');
+  });
+});
+
+describe('maskPhoneTail / maskEmailHead - hộp đổi SĐT/email (design 24131:72204)', () => {
+  it('SĐT: chỉ giữ ba số cuối, quy +84 về 0', () => {
+    expect(maskPhoneTail('0987789688')).toBe('***688');
+    expect(maskPhoneTail('+84987789688')).toBe('***688');
+  });
+
+  it('email: che ba ký tự đầu của phần tên, giữ tên miền', () => {
+    expect(maskEmailHead('partner.xeprime@gmail.com')).toBe('***tner.xeprime@gmail.com');
+    expect(maskEmailHead('ab@x.vn')).toBe('***@x.vn');
+    expect(maskEmailHead('khong-phai-email')).toBe('khong-phai-email');
   });
 });

@@ -230,3 +230,20 @@
 .rotate-right {
   mask-image: url('/icons/menu/rotate-right.svg');
 }
+
+/* Trang Tài khoản & bảo mật (design `24131:71661`): máy ảnh 16px, bút sửa / thùng rác 20px, thư 24px. */
+.camera {
+  mask-image: url('/icons/menu/camera.svg');
+}
+
+.edit {
+  mask-image: url('/icons/menu/edit.svg');
+}
+
+.delete {
+  mask-image: url('/icons/menu/delete.svg');
+}
+
+.mail {
+  mask-image: url('/icons/menu/mail.svg');
+}

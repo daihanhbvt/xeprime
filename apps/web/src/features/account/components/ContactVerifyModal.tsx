@@ -1,9 +1,8 @@
 'use client';
 
-import { LockOutlined, MailOutlined, PhoneOutlined, SendOutlined } from '@ant-design/icons';
 import { App, Alert, Button } from 'antd';
 import { useTranslations } from 'next-intl';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { OTP_POLICY } from '@xeprime/types';
 import {
@@ -12,10 +11,15 @@ import {
   type AccountContactValues,
 } from '@xeprime/validators';
 import { TextField } from '@/components/form/TextField';
+import { LineIcon } from '@/components/icons/LineIcon';
+import { DialogHeading } from '@/components/overlay/DialogHeading';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { OtpCodeInput } from '@/features/phone-verification/components/OtpCodeInput';
+import { OtpDigitBoxes } from '@/features/phone-verification/components/OtpDigitBoxes';
+import { formatOtpCooldown } from '@/features/phone-verification/format-cooldown';
+import { maskEmailHead, maskPhoneTail } from '@/features/phone-verification/mask';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
+import { cx } from '@/lib/cx';
 import { useContactVerify } from '../hooks/use-contact-verify';
 import { CONTACT_CHANNEL, type ContactChannel } from '../types';
 import styles from './ContactVerifyModal.module.css';
@@ -26,33 +30,40 @@ interface ContactVerifyModalProps {
   readonly channel: ContactChannel;
   readonly open: boolean;
   readonly onClose: () => void;
-  /** Giá trị hiện tại — chỉ để nói "đang là X", KHÔNG điền sẵn vào ô nhập (xem docblock). */
+  /** Giá trị hiện tại - để nói "đang dùng X"; chỉ điền sẵn vào ô nhập khi hộp hỏi CHÍNH nó. */
   readonly current: string | null;
   /**
-   * Hộp BẮT BUỘC — tài khoản chưa có SĐT đã xác minh (ADR 0060, `AccountPhoneGate`). Không đóng
+   * Hộp BẮT BUỘC - tài khoản chưa có SĐT đã xác minh (ADR 0060, `AccountPhoneGate`). Không đóng
    * được bằng nút X, Esc hay bấm nền; lối ra duy nhất ngoài xác minh là "Đăng xuất". Ô nhập điền
    * sẵn SĐT hiện có (chưa xác minh) của tài khoản: việc ở đây là CHỨNG MINH số đó, không phải đổi.
    */
   readonly required?: { readonly onSignOut: () => void };
   /**
-   * Hộp NHẮC — site khách (ADR 0071, `AccountPhoneReminderProvider`). Giống hộp bắt buộc ở chỗ
+   * Hộp NHẮC - site khách (ADR 0071, `AccountPhoneReminderProvider`). Giống hộp bắt buộc ở chỗ
    * điền sẵn SĐT hiện có và nói rõ vì sao cần, nhưng ĐÓNG ĐƯỢC: nút phụ là "Để sau" (gọi
    * `onClose`). `lead` là câu mở theo ngữ cảnh mở hộp (nhắc chung, hay đang gửi yêu cầu thuê).
    */
   readonly reminder?: { readonly lead: string };
-  /** Xác minh đúng mã xong — gọi trước `onClose` (đóng vì xác minh, không phải vì "Để sau"). */
+  /**
+   * XÁC MINH định danh HIỆN CÓ (nút "Xác minh" của trang tài khoản partner): mở hộp là gửi mã thẳng
+   * tới `current`, không qua bước nhập. Gửi lỗi thì hộp đứng ở bước nhập, điền sẵn `current`.
+   */
+  readonly verifyCurrent?: boolean;
+  /** Xác minh đúng mã xong - gọi trước `onClose` (đóng vì xác minh, không phải vì "Để sau"). */
   readonly onVerified?: () => void;
 }
 
 /**
- * Đổi hoặc thêm email / số điện thoại — MỘT màn hình cho cả hai kênh.
+ * Đổi, thêm hoặc xác minh email / số điện thoại - MỘT hộp cho cả hai kênh, mọi nơi gọi (trang tài
+ * khoản hai site, hộp bắt buộc xác minh SĐT, wizard đăng xe nhanh). Design `24131:71845` (nhập) ·
+ * `24131:72204` (mã): thanh hai bước dưới thân, mã sáu ô.
  *
- * Hai bước, và bước hai là lý do màn hình này tồn tại: email và SĐT là định danh ĐĂNG NHẬP, nên
- * đổi chúng không thể chỉ là ghi một chuỗi. Người dùng phải chứng minh mình nhận được mã ở địa
- * chỉ/số MỚI, nếu không thì ai chiếm được một phiên sẽ chuyển tài khoản sang hộp thư của họ.
+ * Hai bước, và bước hai là lý do hộp này tồn tại: email và SĐT là định danh, nên đổi chúng không
+ * thể chỉ là ghi một chuỗi. Người dùng phải chứng minh mình nhận được mã ở địa chỉ/số MỚI, nếu
+ * không thì ai chiếm được một phiên sẽ chuyển tài khoản sang hộp thư của họ.
  *
- * Ô nhập luôn RỖNG chứ không điền sẵn giá trị cũ: việc ở đây là nhập một định danh mới, và một ô
- * đã có sẵn nội dung đúng thì mời người dùng bấm "Gửi mã" cho chính cái họ đang có.
+ * Ô nhập RỖNG khi đổi (không điền sẵn giá trị cũ): một ô đã có sẵn nội dung đúng thì mời người
+ * dùng bấm "Gửi mã" cho chính cái họ đang có. Giá trị cũ đứng ngay dưới ô ("Số đang dùng").
  */
 export function ContactVerifyModal({
   channel,
@@ -61,6 +72,7 @@ export function ContactVerifyModal({
   current,
   required,
   reminder,
+  verifyCurrent = false,
   onVerified,
 }: ContactVerifyModalProps) {
   const t = useTranslations('Account.contact');
@@ -69,8 +81,10 @@ export function ContactVerifyModal({
   const errorMessage = useErrorMessage();
 
   const isPhone = channel === CONTACT_CHANNEL.PHONE;
-  /** Hộp hỏi SĐT cho CHÍNH tài khoản (bắt buộc hoặc nhắc) — không phải lượt đổi số ở trang tài khoản. */
+  /** Hộp hỏi SĐT cho CHÍNH tài khoản (bắt buộc hoặc nhắc) - không phải lượt đổi số. */
   const asksAccountPhone = Boolean(required || reminder);
+  /** Lượt ĐỔI sang một định danh khác định danh đang có - mới có "Số đang dùng" và câu hết hiệu lực. */
+  const isChange = Boolean(current) && !asksAccountPhone && !verifyCurrent;
   const flow = useContactVerify(channel);
   const [code, setCode] = useState('');
 
@@ -80,16 +94,27 @@ export function ContactVerifyModal({
   );
   const { control, handleSubmit } = useForm<AccountContactValues>({
     resolver,
-    defaultValues: { identifier: asksAccountPhone ? (current ?? '') : '' },
+    defaultValues: { identifier: asksAccountPhone || verifyCurrent ? (current ?? '') : '' },
   });
 
   /*
-   * KHÔNG reset bằng effect: cả hai nơi gọi đều render hộp này CÓ ĐIỀU KIỆN (`AccountView`,
-   * `QuickVehicleOwnerStep`), nên mỗi lần mở đã là một instance mới với state khởi tạo sạch —
-   * mã cũ, lỗi cũ và định danh gõ dở của lượt trước không có đường sống sót sang lượt sau.
-   * Reset trong effect vừa thừa vừa tạo một vòng render phụ, đúng thứ `react-hooks/set-state-in-effect`
-   * chặn. Thêm nơi gọi thứ ba thì nó cũng phải render có điều kiện.
+   * KHÔNG reset bằng effect: mọi nơi gọi render hộp này CÓ ĐIỀU KIỆN (`LoginMethods`, `AccountView`,
+   * `AccountPhoneGate`, `QuickVehicleOwnerStep`), nên mỗi lần mở đã là một instance mới với state
+   * khởi tạo sạch. Thêm nơi gọi mới thì nó cũng phải render có điều kiện.
    */
+
+  /*
+   * "Xác minh": gửi mã ngay khi mở. Cờ ref chặn lượt gửi thứ hai khi StrictMode chạy effect hai lần
+   * (ref sống qua lượt gắn lại giả lập) - lượt thứ hai sẽ vấp cooldown của server và hiện lỗi giả.
+   */
+  const autoSent = useRef(false);
+  useEffect(() => {
+    if (!verifyCurrent || !current || autoSent.current) return;
+    autoSent.current = true;
+    flow.send(current);
+    // Chỉ một lần cho mỗi lần mở hộp.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!flow.verified) return;
@@ -105,52 +130,68 @@ export function ContactVerifyModal({
 
   const title = asksAccountPhone
     ? t('requiredTitle')
-    : isPhone
-      ? current
-        ? t('changePhoneTitle')
-        : t('addPhoneTitle')
+    : verifyCurrent
+      ? isPhone
+        ? t('verifyPhoneTitle')
+        : t('verifyEmailTitle')
       : current
-        ? t('changeEmailTitle')
-        : t('addEmailTitle');
+        ? isPhone
+          ? t('updatePhoneTitle')
+          : t('updateEmailTitle')
+        : isPhone
+          ? t('addPhoneTitle')
+          : t('addEmailTitle');
+
+  const subtitle = required
+    ? t('requiredLead')
+    : reminder
+      ? reminder.lead
+      : isPhone
+        ? t('phoneSubtitle')
+        : t('emailSubtitle');
 
   /*
-   * Nút chính nằm ở FOOTER của hộp thoại nhưng `<form>` ở trong thân, nên nó nối bằng
-   * thuộc tính `form` — nhờ vậy Enter trong ô nhập vẫn gửi được. Bản trước đặt nút
-   * `block` xếp chồng ngay trong thân, và đó là thứ làm hộp thoại trông như một danh sách
-   * nút thay vì một biểu mẫu.
+   * Nút chính nằm ở FOOTER nhưng `<form>` ở trong thân, nên nó nối bằng thuộc tính `form` - nhờ
+   * vậy Enter trong ô nhập vẫn gửi được.
    */
   const formId = `${useId()}-contact`;
   const isIdentifierStep = flow.step === 'identifier';
+  const mask = (value: string) => (isPhone ? maskPhoneTail(value) : maskEmailHead(value));
 
   const footer = (
     <div className={styles.footer}>
       {required ? (
-        <Button onClick={required.onSignOut} disabled={flow.verifying}>
+        <Button size="large" onClick={required.onSignOut} disabled={flow.verifying}>
           {t('signOut')}
         </Button>
       ) : (
-        <Button onClick={onClose} disabled={flow.verifying}>
+        <Button size="large" onClick={onClose} disabled={flow.verifying}>
           {reminder ? t('later') : tCommon('actions.cancel')}
         </Button>
       )}
       {isIdentifierStep ? (
         <Button
+          size="large"
           type="primary"
           htmlType="submit"
           form={formId}
-          icon={<SendOutlined />}
           loading={flow.sending}
         >
           {t('sendCode')}
         </Button>
       ) : (
         <Button
+          size="large"
           type="primary"
           loading={flow.verifying}
           disabled={code.length !== OTP_LENGTH}
           onClick={() => flow.verify(code)}
         >
-          {t('confirmCode')}
+          {isChange
+            ? isPhone
+              ? t('confirmPhoneChange')
+              : t('confirmEmailChange')
+            : t('confirmCode')}
         </Button>
       )}
     </div>
@@ -159,36 +200,17 @@ export function ContactVerifyModal({
   return (
     <ResponsiveDialog
       open={open}
-      // Hộp bắt buộc: không đường đóng vô ý nào — nút "Đăng xuất" ở footer là lối ra tường minh.
+      // Hộp bắt buộc: không đường đóng vô ý nào - nút "Đăng xuất" ở footer là lối ra tường minh.
       onClose={required ? () => undefined : onClose}
       closable={!required}
       closeOnEsc={!required}
       maskClosable={!required}
-      title={title}
+      title={<DialogHeading title={title} hint={subtitle} />}
       size="sm"
       footer={footer}
       confirmLoading={flow.sending || flow.verifying}
     >
       <div className={styles.body}>
-        <p className={styles.lead}>
-          {isIdentifierStep
-            ? required
-              ? t('requiredLead')
-              : reminder
-                ? reminder.lead
-                : isPhone
-                ? t('phoneLead')
-                : t('emailLead')
-            : t('codeSentTo')}{' '}
-          {isIdentifierStep ? null : <strong className={styles.strong}>{flow.sentTo}</strong>}
-        </p>
-
-        {current && isIdentifierStep && !asksAccountPhone ? (
-          <p className={styles.current}>
-            {t('currentValue')} <strong className={styles.strong}>{current}</strong>
-          </p>
-        ) : null}
-
         {isIdentifierStep ? (
           <form id={formId} onSubmit={sendCode} noValidate className={styles.step}>
             <TextField
@@ -197,21 +219,54 @@ export function ContactVerifyModal({
               type={isPhone ? 'tel' : 'email'}
               label={isPhone ? t('phoneLabel') : t('emailLabel')}
               placeholder={isPhone ? t('phonePlaceholder') : t('emailPlaceholder')}
-              prefix={isPhone ? <PhoneOutlined /> : <MailOutlined />}
+              prefix={<LineIcon name={isPhone ? 'calling' : 'mail'} className={styles.inputIcon} />}
               autoComplete={isPhone ? 'tel' : 'email'}
-              help={isPhone ? t('phoneHint') : t('emailHint')}
+              help={
+                isChange && current
+                  ? t.rich(isPhone ? 'currentPhone' : 'currentEmail', {
+                      value: current,
+                      strong: (chunks) => <strong className={styles.strong}>{chunks}</strong>,
+                    })
+                  : isPhone
+                    ? t('phoneHint')
+                    : t('emailHint')
+              }
               autoFocus
               required
               disabled={flow.sending}
             />
+
+            {/*
+              Nói rõ nền tảng dùng số/email này vào việc gì - câu trả lời cho nỗi ngần ngại giao
+              số điện thoại phải nằm NGAY chỗ hỏi, không phải trong trang điều khoản.
+            */}
+            <div className={styles.secure}>
+              <p className={styles.secureTitle}>
+                {isPhone ? t('securePhoneTitle') : t('secureEmailTitle')}
+              </p>
+              <p className={styles.secureBody}>
+                {isPhone ? t('securePhoneBody') : t('secureEmailBody')}
+              </p>
+            </div>
           </form>
         ) : (
-          <div className={styles.step}>
-            <OtpCodeInput
+          <div className={styles.codeStep}>
+            <div className={styles.codeHead}>
+              <p className={styles.codeTitle}>{t('codeTitle')}</p>
+              <p className={styles.codeSent}>
+                {t.rich(isPhone ? 'codeSentPhone' : 'codeSentEmail', {
+                  target: mask(flow.sentTo),
+                  strong: (chunks) => <strong className={styles.strong}>{chunks}</strong>,
+                })}
+              </p>
+            </div>
+
+            <OtpDigitBoxes
               value={code}
               onChange={setCode}
               onComplete={(full) => flow.verify(full)}
-              disabled={flow.verifying}
+              readOnly={flow.verifying}
+              invalid={Boolean(flow.error)}
               autoFocus
             />
 
@@ -219,20 +274,37 @@ export function ContactVerifyModal({
               <p className={styles.devCode}>{t('devCode', { code: flow.devCode })}</p>
             ) : null}
 
-            <div className={styles.altActions}>
-              <Button type="link" size="small" onClick={flow.editIdentifier}>
-                {isPhone ? t('editPhone') : t('editEmail')}
-              </Button>
-              <Button
-                type="link"
-                size="small"
-                loading={flow.sending}
-                disabled={flow.cooldown > 0}
-                onClick={() => flow.send(flow.sentTo)}
-              >
-                {flow.cooldown > 0 ? t('resendIn', { seconds: flow.cooldown }) : t('resend')}
+            <div className={styles.resendRow}>
+              <span className={styles.resend}>
+                {t('noCode')}{' '}
+                {flow.cooldown > 0 ? (
+                  t.rich('resendAfter', {
+                    time: formatOtpCooldown(flow.cooldown),
+                    strong: (chunks) => <strong className={styles.strong}>{chunks}</strong>,
+                  })
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.resendLink}
+                    disabled={flow.sending}
+                    onClick={() => flow.send(flow.sentTo)}
+                  >
+                    {t('resend')}
+                  </button>
+                )}
+              </span>
+              <Button type="link" className={styles.edit} onClick={flow.editIdentifier}>
+                {isPhone ? t('editPhoneFull') : t('editEmail')}
               </Button>
             </div>
+
+            {isChange && current ? (
+              <p className={styles.changeNote}>
+                {isPhone
+                  ? t('phoneChangeNote', { old: maskPhoneTail(current) })
+                  : t('emailChangeNote')}
+              </p>
+            ) : null}
           </div>
         )}
 
@@ -240,23 +312,10 @@ export function ContactVerifyModal({
           <Alert type="error" showIcon title={errorMessage(flow.error)} className={styles.error} />
         ) : null}
 
-        {/*
-          Nói rõ nền tảng dùng số/email này vào việc gì. Người ta ngần ngại giao số điện thoại
-          hơn hẳn giao một cái tên, và câu trả lời cho nỗi ngần ngại đó phải nằm NGAY chỗ hỏi —
-          không phải trong trang điều khoản.
-        */}
-        <div className={styles.secure}>
-          <span className={styles.secureIcon} aria-hidden="true">
-            <LockOutlined />
-          </span>
-          <span className={styles.secureBody}>
-            <span className={styles.secureTitle}>
-              {isPhone ? t('securePhoneTitle') : t('secureEmailTitle')}
-            </span>
-            <span className={styles.secureDesc}>
-              {isPhone ? t('securePhoneBody') : t('secureEmailBody')}
-            </span>
-          </span>
+        {/* Hai bước: nhập → mã. Chỉ để nhìn - tiêu đề và nút đã nói đang ở bước nào. */}
+        <div className={styles.steps} aria-hidden="true">
+          <span className={cx(styles.stepBar, styles.stepDone)} />
+          <span className={cx(styles.stepBar, !isIdentifierStep && styles.stepDone)} />
         </div>
       </div>
     </ResponsiveDialog>

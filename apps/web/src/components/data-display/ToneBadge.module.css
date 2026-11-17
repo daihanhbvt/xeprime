@@ -10,6 +10,12 @@
   white-space: nowrap;
 }
 
+.sm {
+  padding: var(--xp-space-2) var(--xp-space-sm);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
 .warning {
   background: var(--xp-color-warning-bg);
   color: var(--xp-color-warning);
