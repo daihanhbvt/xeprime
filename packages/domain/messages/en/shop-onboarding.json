@@ -107,17 +107,13 @@
   "checkout": {
     "loadError": "Could not load the payment status",
     "plansError": "Could not load the plan list",
-    "noPlans": "No shop plan is on sale right now",
-    "noPlansHint": "Contact XePrime support to have a plan opened for your shop.",
-    "createInvoice": "Create invoice and get the transfer code",
-    "pickTermFirst": "Pick a term to create the invoice.",
-    "partialFailure": "Could not create the {scope} invoice: {error} The invoices already created are still valid.",
     "scope": {
       "motorbike": "motorbike plan",
       "car": "car plan"
     },
     "addOtherScope": "Add a {scope}",
-    "addPlan": "Add a plan for another vehicle type"
+    "addPlan": "Add a plan for another vehicle type",
+    "editInvoice": "Choose plans again"
   },
   "packageWaiting": {
     "title": "Shop registered successfully!",

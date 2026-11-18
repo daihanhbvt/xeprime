@@ -59,12 +59,37 @@ const subscription = vi.hoisted(() => ({
     isError: false,
     error: null as unknown,
   },
+  checkout: { mutate: vi.fn(), isPending: false },
+  /** Gian hàng mới: chưa có gói nào, chưa có xe nào. */
+  me: {
+    data: {
+      currentPlans: [],
+      vehicleQuotas: {
+        motorbike: { kind: 'scope_required', limit: 0, used: 0, countedScope: 'motorbike' },
+        car: { kind: 'scope_required', limit: 0, used: 0, countedScope: 'car' },
+      },
+    } as unknown,
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  },
+  preview: {
+    data: { items: [] as unknown[], total: '250000', vehicleSlots: [] as unknown[] },
+    isSuccess: true,
+    isPlaceholderData: false,
+    isFetching: false,
+    isError: false,
+    refetch: vi.fn(),
+  },
   paymentInfo: { data: { configured: false } as unknown },
 }));
 vi.mock('@/features/subscription/hooks/use-subscription', () => ({
   usePendingInvoices: () => subscription.pending,
   useTenantPlans: () => subscription.plans,
+  useMySubscription: () => subscription.me,
+  usePurchasePreview: () => subscription.preview,
   usePurchaseSubscription: () => subscription.purchase,
+  useCreateSubscriptionCheckout: () => subscription.checkout,
   usePaymentInfo: () => subscription.paymentInfo,
   /* Làm mới scope khi tiền về — hành vi của nó thuộc về hook, không phải trang này. */
   useSyncScopeWhenInvoiceSettles: () => undefined,
@@ -146,6 +171,8 @@ beforeEach(() => {
   subscription.purchase.mutate.mockReset();
   subscription.purchase.mutateAsync.mockReset();
   subscription.purchase.isError = false;
+  subscription.checkout.mutate.mockReset();
+  subscription.me.isLoading = false;
 });
 
 afterEach(cleanup);
@@ -192,27 +219,31 @@ describe('Bước 2 - đã tạo gian hàng, chưa thanh toán', () => {
     expect(logout).toHaveBeenCalledTimes(1);
   });
 
-  it('chưa có hoá đơn: hiện bộ chọn gói, không hiện form tạo gian hàng', () => {
+  /*
+   * Cùng luồng hai bước với hộp "Mua hoặc gia hạn gói" của trang Gian hàng - nhưng là TRANG, không
+   * phải popup (người dùng 18/11/2026).
+   */
+  it('chưa có hoá đơn: luồng "Chọn gói → Kỳ hạn và xác nhận" ngay trên trang, không popup', () => {
     renderPage();
 
-    // Bảng giá BẬC là bước đầu; kỳ hạn chỉ mở ra sau khi chọn bậc (ADR 0041).
-    expect(screen.getByRole('radiogroup', { name: 'Gói xe máy' })).toBeTruthy();
-    expect(screen.getByText('Gói cơ bản')).toBeTruthy();
-    expect(screen.getByText('Tối đa 3 xe máy')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Tạo hoá đơn và lấy mã chuyển khoản/ })).toBeTruthy();
-    expect(screen.queryByText(/^2$/)).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('list', { name: 'Các bước mua gói' })).toBeTruthy();
+    expect(screen.getByRole('radiogroup', { name: 'Xe máy' })).toBeTruthy();
+    expect(screen.getByText('Chưa có gói xe máy')).toBeTruthy();
+    // Gian hàng chưa có gói, chưa có xe: không có viên "0/0 đang dùng".
+    expect(screen.queryByText(/đang dùng/)).toBeNull();
   });
 
   /*
-   * Nút mờ phải NÓI VÌ SAO. Không có dòng này, người dùng chọn số chỗ xong thấy nút xám và không
-   * có cách nào biết mình còn thiếu một cú bấm vào thẻ kỳ hạn.
+   * Nút mờ phải NÓI VÌ SAO. Và không có lối "Huỷ" - chưa có mã nào để quay về.
    */
-  it('chưa chọn kỳ hạn: nút tạo hoá đơn mờ VÀ có lý do đọc được', () => {
+  it('chưa chọn gói: "Tiếp tục" mờ VÀ có lý do đọc được, không có nút Huỷ', () => {
     renderPage();
 
-    const cta = screen.getByRole('button', { name: /Tạo hoá đơn và lấy mã chuyển khoản/ });
-    expect(cta.hasAttribute('disabled')).toBe(true);
-    expect(screen.getByText(/Chọn ít nhất một gói \(xe máy hoặc ô tô\)/)).toBeTruthy();
+    const next = screen.getByRole('button', { name: 'Tiếp tục' });
+    expect(next.hasAttribute('disabled')).toBe(true);
+    expect(screen.getByText('Chọn ít nhất một gói để tạo hoá đơn.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Huỷ' })).toBeNull();
   });
 
   /**
@@ -225,7 +256,7 @@ describe('Bước 2 - đã tạo gian hàng, chưa thanh toán', () => {
 
     expect(screen.getByText('XPGABC1234')).toBeTruthy();
     expect(screen.getByText(/Đang chờ tiền về/)).toBeTruthy();
-    expect(screen.queryByRole('radiogroup', { name: /Chọn kỳ hạn cam kết/ })).toBeNull();
+    expect(screen.queryByRole('radiogroup', { name: 'Xe máy' })).toBeNull();
     expect(router.replace).not.toHaveBeenCalled();
   });
 
@@ -264,54 +295,109 @@ describe('Bước 2 - gói theo loại xe (ADR 0065)', () => {
     subscription.plans.data = [PLAN, CAR_PLAN, ENTERPRISE];
   });
 
-  function pick(lane: string) {
+  /** Bấm "Chọn gói" của bậc đầu tiên trong làn. */
+  function pick(lane: 'Xe máy' | 'Ô tô') {
     const group = screen.getByRole('radiogroup', { name: lane });
     fireEvent.click(group.querySelector('[role="radio"]') as HTMLElement);
-    const terms = screen.getAllByRole('radiogroup', { name: 'Chọn thời hạn' });
-    fireEvent.click(terms[terms.length - 1]!.querySelector('[role="radio"]') as HTMLElement);
   }
 
-  it('hai làn + thẻ doanh nghiệp "Liên hệ tư vấn" - doanh nghiệp không mua trực tiếp được', () => {
+  /** Bước 1 → bước 2 → "Tạo hóa đơn". */
+  function confirm() {
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo hóa đơn' }));
+  }
+
+  it('hai làn + dải doanh nghiệp "Liên hệ tư vấn" - doanh nghiệp không mua trực tiếp được', () => {
     renderPage();
-    expect(screen.getByRole('radiogroup', { name: 'Gói xe máy' })).toBeTruthy();
-    expect(screen.getByRole('radiogroup', { name: 'Gói ô tô' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Liên hệ tư vấn' })).toBeTruthy();
+    expect(screen.getByRole('radiogroup', { name: 'Xe máy' })).toBeTruthy();
+    expect(screen.getByRole('radiogroup', { name: 'Ô tô' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Liên hệ tư vấn/ })).toBeTruthy();
   });
 
-  it('chỉ chọn MỘT làn ⇒ một hoá đơn, sang thẳng trang thanh toán của nó', async () => {
-    subscription.purchase.mutateAsync.mockResolvedValue({ ...INVOICE, id: 'INV-NEW' });
+  it('chỉ chọn MỘT làn ⇒ một hoá đơn, sang thẳng trang thanh toán không khung', () => {
     renderPage();
-    pick('Gói ô tô');
-    fireEvent.click(screen.getByRole('button', { name: /Tạo hoá đơn và lấy mã chuyển khoản/ }));
+    pick('Ô tô');
+    confirm();
 
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/manage/payment/INV-NEW'));
-    expect(subscription.purchase.mutateAsync).toHaveBeenCalledWith({
-      planId: 'PLAN-CAR',
-      termMonths: 3,
-    });
+    expect(subscription.checkout.mutate).not.toHaveBeenCalled();
+    const [body, options] = subscription.purchase.mutate.mock.calls[0]! as [
+      unknown,
+      { onSuccess: (created: { id: string }) => void },
+    ];
+    expect(body).toMatchObject({ planId: 'PLAN-CAR', termMonths: 3 });
+    options.onSuccess({ id: 'INV-NEW' });
+    expect(router.push).toHaveBeenCalledWith('/manage/payment/INV-NEW');
   });
 
-  it('chọn CẢ HAI làn ⇒ hai hoá đơn tạo lần lượt, ở lại trang để trả từng mã', async () => {
-    subscription.purchase.mutateAsync
-      .mockResolvedValueOnce({ ...INVOICE, id: 'INV-M' })
-      .mockResolvedValueOnce({ ...INVOICE, id: 'INV-C', vehicleScope: 'car' });
+  /*
+   * Hai gói = MỘT kỳ hạn chung + MỘT phiếu thanh toán gộp (ADR 0083) - cùng luật với hộp "Mua hoặc
+   * gia hạn gói" của trang Gian hàng.
+   */
+  it('chọn CẢ HAI làn ⇒ một phiếu gộp, sang trang thanh toán phiếu', () => {
     renderPage();
-    pick('Gói xe máy');
-    pick('Gói ô tô');
-    expect(screen.getByText(/Sẽ tạo 2 hoá đơn/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /Tạo hoá đơn và lấy mã chuyển khoản/ }));
+    pick('Xe máy');
+    pick('Ô tô');
+    confirm();
 
-    await waitFor(() => expect(subscription.purchase.mutateAsync).toHaveBeenCalledTimes(2));
-    expect(router.push).not.toHaveBeenCalled();
+    expect(subscription.purchase.mutate).not.toHaveBeenCalled();
+    const [body, options] = subscription.checkout.mutate.mock.calls[0]! as [
+      unknown,
+      { onSuccess: (created: { id: string }) => void },
+    ];
+    // Thứ tự hoá đơn con do SERVER sắp theo loại xe - ở đây chỉ khoá TẬP gói + kỳ hạn chung.
+    expect((body as { items: unknown[] }).items).toEqual(
+      expect.arrayContaining([
+        { planId: 'PLAN1', termMonths: 3 },
+        { planId: 'PLAN-CAR', termMonths: 3 },
+      ]),
+    );
+    expect((body as { items: unknown[] }).items).toHaveLength(2);
+    options.onSuccess({ id: 'CHK1' });
+    expect(router.push).toHaveBeenCalledWith('/manage/payment/checkout/CHK1');
   });
 
-  it('đã có hoá đơn xe máy chờ: lối thêm gói ô tô, KHÔNG mời mua lại xe máy', () => {
+  it('đã có hoá đơn xe máy chờ: "Thêm gói ô tô" mở luồng, "Huỷ" quay về mã đang chờ', () => {
     subscription.pending.data = [INVOICE];
     renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: 'Thêm gói ô tô' }));
-    expect(screen.getByRole('radiogroup', { name: 'Gói ô tô' })).toBeTruthy();
-    expect(screen.queryByRole('radiogroup', { name: 'Gói xe máy' })).toBeNull();
+    expect(screen.getByRole('radiogroup', { name: 'Ô tô' })).toBeTruthy();
+    expect(screen.queryByText('XPGABC1234')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Huỷ' }));
+    expect(screen.getByText('XPGABC1234')).toBeTruthy();
+    expect(screen.queryByRole('radiogroup', { name: 'Ô tô' })).toBeNull();
+  });
+
+  /*
+   * Hai hoá đơn rời từ trước (hoặc chọn nhầm gói): "Chọn lại gói" mở lại luồng; bước xác nhận
+   * cảnh báo mã cũ của loại xe chọn lại sẽ bị huỷ - đường để gộp chúng thành một phiếu.
+   */
+  it('hoá đơn chờ chưa nhận tiền ở cả hai loại xe: "Chọn lại gói" mở lại luồng', () => {
+    subscription.pending.data = [
+      INVOICE,
+      { ...INVOICE, id: 'INV-C', code: 'XPGCAR0001', vehicleScope: 'car' },
+    ];
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Chọn lại gói' }));
+    expect(screen.getByRole('radiogroup', { name: 'Xe máy' })).toBeTruthy();
+    expect(screen.getByRole('radiogroup', { name: 'Ô tô' })).toBeTruthy();
+    pick('Xe máy');
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+    expect(screen.getByText(/Hoá đơn XPGABC1234 của loại xe này đang chờ thanh toán/)).toBeTruthy();
+  });
+
+  it('cả hai hoá đơn đã nhận một phần: KHÔNG có lối mở lại luồng chọn gói', () => {
+    const partial = { status: SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID, paidAmount: '100000' };
+    subscription.pending.data = [
+      { ...INVOICE, ...partial },
+      { ...INVOICE, ...partial, id: 'INV-C', code: 'XPGCAR0001', vehicleScope: 'car' },
+    ];
+    renderPage();
+
+    expect(screen.queryByRole('button', { name: 'Chọn lại gói' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Thêm gói/ })).toBeNull();
   });
 });
 
@@ -359,9 +445,7 @@ describe('Thanh toán xong', () => {
     );
 
     // Vẫn đứng ở bước 2 (bộ chọn gói hiện lại vì hoá đơn đã rời danh sách chờ), chưa đi đâu cả.
-    await waitFor(() =>
-      expect(screen.getByRole('radiogroup', { name: 'Gói xe máy' })).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByRole('radiogroup', { name: 'Xe máy' })).toBeTruthy());
     expect(router.replace).not.toHaveBeenCalled();
   });
 });

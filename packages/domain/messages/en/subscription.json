@@ -258,8 +258,11 @@
       "car": "Pick a plan if you rent out cars. Leave it empty and cars cannot be listed on the marketplace yet."
     },
     "clear": "Clear",
-    "invoiceCount": "{count, plural, =1 {1 invoice will be created.} other {# invoices will be created, one per vehicle type.}}",
-    "pickTermFirst": "Choose a term for the selected plan to create the invoice.",
+    "invoiceCount": "{count, plural, =1 {1 invoice will be created.} other {# plans share one invoice - a single transfer with a single code.}}",
+    "pickTermFirst": "Choose a term to create the invoice.",
+    "sharedTermTitle": "{count, plural, other {Choose one term for the # plans}}",
+    "sharedTermHint": "One term for every selected plan - the price shown is the total for all plans. The longer the term, the lower the monthly cost.",
+    "noSharedTerm": "The selected plans have no term in common. Pick a different plan or contact XePrime support.",
     "pickAtLeastOne": "Choose at least one plan (motorbike or car) and a term to create an invoice.",
     "sectionTitle": "Plans by vehicle type",
     "sectionHint": "Each vehicle type has its own plan. You can run a motorbike plan and a car plan side by side.",

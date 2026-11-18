@@ -13,7 +13,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { VEHICLE_TYPE_ICON } from '@/components/data-display/VehicleTypeIcon';
 import { DialogHeading } from '@/components/overlay/DialogHeading';
@@ -100,6 +100,21 @@ const TIER_RANK_KEYS = ['economy', 'basic', 'advanced'] as const;
 type DialogStep = 'plans' | 'confirm';
 const DIALOG_STEPS: readonly DialogStep[] = ['plans', 'confirm'];
 
+/** Nơi lượt mua dẫn tới sau khi tạo - trang thanh toán TRONG khung gian hàng, hay trang không khung. */
+export interface PlanPurchasePaths {
+  invoice: (invoiceId: string) => string;
+  checkout: (checkoutId: string) => string;
+}
+
+/** Hai mảnh của luồng; KHUNG (hộp thoại hay trang) là việc của nơi gọi. */
+interface PlanPurchaseFlowParts {
+  body: ReactNode;
+  /** `null` khi chưa có gì để bấm (đang tải, lỗi, danh mục rỗng). */
+  footer: ReactNode;
+  /** Dọn lựa chọn rồi gọi `onClose` của nơi gọi. */
+  close: () => void;
+}
+
 export function PlanPurchaseDialog({
   open,
   data,
@@ -111,6 +126,84 @@ export function PlanPurchaseDialog({
   /** Làn mở hộp (nút "Gia hạn" / "Nâng cấp ngay" của một thẻ) - chọn sẵn bậc của làn đó. */
   initialScope: PlanLaneScope | null;
   onClose: () => void;
+}) {
+  const t = useTranslations('Subscription.combined');
+  return (
+    <PlanPurchaseFlow
+      active={open}
+      data={data}
+      initialScope={initialScope}
+      paths={shopPaymentPath}
+      onClose={onClose}
+      render={({ body, footer, close }) => (
+        <ResponsiveDialog
+          open={open}
+          // Khung design 1430 (ba thẻ 450) - rộng hơn `xl` 1180, nên hộp ôm bề rộng tự đặt ở `.dialogBody`.
+          size="fit"
+          bodyClassName={styles.dialogBody}
+          title={<DialogHeading title={t('title')} hint={t('subtitle')} />}
+          ariaLabel={t('title')}
+          onClose={close}
+          footer={footer}
+        >
+          {body}
+        </ResponsiveDialog>
+      )}
+    />
+  );
+}
+
+/**
+ * CÙNG luồng hai bước ở dạng TRANG - bước "Gói và thanh toán" của onboarding gian hàng trả phí
+ * (người dùng 18/11/2026: "dùng luồng của nâng cấp, nhưng thay vì popup là trang"). Chân luồng
+ * nằm cuối khung và dính đáy màn hình khi cuộn qua hai làn gói.
+ */
+export function PlanPurchasePage({
+  data,
+  paths,
+  onCancel,
+}: {
+  data: MySubscription;
+  paths: PlanPurchasePaths;
+  /** Có ⇒ chân bước 1 có nút "Huỷ" (vd quay lại mã đang chờ). Không có ⇒ không có lối huỷ. */
+  onCancel?: () => void;
+}) {
+  return (
+    <PlanPurchaseFlow
+      active
+      data={data}
+      initialScope={null}
+      paths={paths}
+      onClose={onCancel}
+      render={({ body, footer }) => (
+        <div className={styles.page}>
+          {body}
+          {footer ? <div className={styles.pageFooter}>{footer}</div> : null}
+        </div>
+      )}
+    />
+  );
+}
+
+/**
+ * Toàn bộ trạng thái + hành vi của "Mua hoặc gia hạn gói" - dùng chung cho hộp thoại (trang Gian
+ * hàng) và dạng trang (onboarding). Không có bản thứ hai của luật chọn gói / kỳ hạn / phiếu gộp.
+ */
+function PlanPurchaseFlow({
+  active: open,
+  data,
+  initialScope,
+  paths,
+  onClose,
+  render,
+}: {
+  /** Luồng đang hiện - hộp đóng thì không tải gì và dọn lựa chọn. */
+  active: boolean;
+  data: MySubscription;
+  initialScope: PlanLaneScope | null;
+  paths: PlanPurchasePaths;
+  onClose?: () => void;
+  render: (parts: PlanPurchaseFlowParts) => ReactNode;
 }) {
   const t = useTranslations('Subscription.combined');
   const tCommon = useTranslations('Common');
@@ -166,7 +259,7 @@ export function PlanPurchaseDialog({
     state.reset();
     setStep('plans');
     setSlotChoice(EMPTY_PLAN_SLOT_CHOICE);
-    onClose();
+    onClose?.();
   }
 
   function backToPlans() {
@@ -180,13 +273,16 @@ export function PlanPurchaseDialog({
     const onError = (err: unknown) => message.error(errorMessage(err));
     const slots = planSlotSelectionBody(slotGroups, slotChoice);
     if (state.selections.length === 1) {
-      purchase.mutate({ ...state.selections[0]!.body, ...slots }, {
-        onSuccess: (invoice) => {
-          close();
-          router.push(shopPaymentPath.invoice(invoice.id));
+      purchase.mutate(
+        { ...state.selections[0]!.body, ...slots },
+        {
+          onSuccess: (invoice) => {
+            close();
+            router.push(paths.invoice(invoice.id));
+          },
+          onError,
         },
-        onError,
-      });
+      );
       return;
     }
     checkout.mutate(
@@ -194,7 +290,7 @@ export function PlanPurchaseDialog({
       {
         onSuccess: (created) => {
           close();
-          router.push(shopPaymentPath.checkout(created.id));
+          router.push(paths.checkout(created.id));
         },
         onError,
       },
@@ -209,35 +305,26 @@ export function PlanPurchaseDialog({
 
   const ready = Boolean(plans.data) && state.lanes.length > 0;
 
-  return (
-    <ResponsiveDialog
-      open={open}
-      // Khung design 1430 (ba thẻ 450) - rộng hơn `xl` 1180, nên hộp ôm bề rộng tự đặt ở `.dialogBody`.
-      size="fit"
-      bodyClassName={styles.dialogBody}
-      title={<DialogHeading title={t('title')} hint={t('subtitle')} />}
-      ariaLabel={t('title')}
-      onClose={close}
-      footer={
-        !ready ? null : step === 'plans' ? (
-          <PlansFooter
-            state={state}
-            onCancel={close}
-            onNext={() => {
-              if (state.selections.length > 0) setStep('confirm');
-            }}
-          />
-        ) : (
-          <ConfirmFooter
-            total={previewReady ? preview.data!.total : state.total}
-            submitting={submitting}
-            canSubmit={previewReady && slotsReady}
-            onBack={backToPlans}
-            onSubmit={submit}
-          />
-        )
-      }
-    >
+  const footer = !ready ? null : step === 'plans' ? (
+    <PlansFooter
+      state={state}
+      onCancel={onClose ? close : undefined}
+      onNext={() => {
+        if (state.selections.length > 0) setStep('confirm');
+      }}
+    />
+  ) : (
+    <ConfirmFooter
+      total={previewReady ? preview.data!.total : state.total}
+      submitting={submitting}
+      canSubmit={previewReady && slotsReady}
+      onBack={backToPlans}
+      onSubmit={submit}
+    />
+  );
+
+  const body = (
+    <>
       {plans.isLoading ? (
         <Skeleton active paragraph={{ rows: 8 }} />
       ) : plans.isError ? (
@@ -286,8 +373,10 @@ export function PlanPurchaseDialog({
           )}
         </div>
       )}
-    </ResponsiveDialog>
+    </>
   );
+
+  return render({ body, footer, close });
 }
 
 /** Hai bước của hộp - số tròn vàng nối bằng một vạch; bước đã qua mang dấu tích. */
@@ -596,7 +685,8 @@ function LaneBlock({
         <div className={styles.laneText}>
           <h4 id={`xp-plan-lane-dialog-${lane.scope}`} className={styles.laneTitle}>
             {t(`scope.${lane.scope}`)}
-            {quota.limit != null ? (
+            {/* "0/0 đang dùng" của một gian hàng chưa có gói, chưa có xe không nói gì - bỏ. */}
+            {quota.limit != null && (lane.current || quota.used > 0) ? (
               <span className={styles.badge}>
                 {t('inUse', { used: quota.used, limit: quota.limit })}
               </span>
@@ -815,7 +905,8 @@ function PlansFooter({
   onNext,
 }: {
   state: CombinedPlanPurchaseState;
-  onCancel: () => void;
+  /** Không có ⇒ không vẽ nút "Huỷ" (dạng trang của onboarding chưa có gì để quay về). */
+  onCancel?: () => void;
   onNext: () => void;
 }) {
   const t = useTranslations('Subscription.combined');
@@ -846,9 +937,11 @@ function PlansFooter({
         )}
       </div>
       <div className={styles.pay}>
-        <Button size="large" onClick={onCancel}>
-          {tCommon('actions.cancel')}
-        </Button>
+        {onCancel ? (
+          <Button size="large" onClick={onCancel}>
+            {tCommon('actions.cancel')}
+          </Button>
+        ) : null}
         <Button size="large" type="primary" disabled={selections.length === 0} onClick={onNext}>
           {t('next')}
         </Button>
