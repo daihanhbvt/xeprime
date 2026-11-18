@@ -1,18 +1,18 @@
 {
   "page": {
     "title": "Bảo hiểm chuyến",
-    "subtitle": "Danh mục sản phẩm MIC hiện cho khách và hàng đợi giấy chứng nhận đã bán.",
+    "subtitle": "Tiền bảo hiểm từng tháng, biểu phí MIC, xe đủ điều kiện, hợp đồng đã bán và bảng kê trả phí.",
     "tabsLabel": "Khu vực quản trị bảo hiểm"
   },
   "tabs": {
-    "products": "Sản phẩm",
-    "certificates": "Chứng nhận",
-    "remittances": "Bảng kê trả phí"
+    "products": "Biểu phí & sản phẩm",
+    "certificates": "Hợp đồng",
+    "remittances": "Bảng kê trả phí",
+    "overview": "Tổng quan",
+    "vehicles": "Xe"
   },
   "products": {
     "tableLabel": "Danh mục sản phẩm bảo hiểm",
-    "feePolicyNote": "Biểu phí theo ngày (ô tô / xe máy) cấu hình ở Chính sách phí và có phiên bản. Ở đây chỉ sửa phần mô tả hiện cho khách và bật/tắt sản phẩm.",
-    "openFeePolicies": "Mở Chính sách phí",
     "columns": {
       "product": "Sản phẩm",
       "deductible": "Khấu trừ / vụ",
@@ -29,19 +29,26 @@
       "title": "Chưa có sản phẩm bảo hiểm nào",
       "description": "Danh mục được nạp khi chạy seed dữ liệu nền (SEED_MODE=system)."
     },
-    "loadError": "Không tải được danh mục sản phẩm."
+    "loadError": "Không tải được danh mục sản phẩm.",
+    "money": "Phí thu hộ {serviceFee} · hoa hồng đại lý {commission}",
+    "off": "tắt",
+    "dailyRate": "Phí theo ngày: {value}",
+    "notSold": "không bán"
   },
   "form": {
     "title": "Sửa sản phẩm · {name}",
     "submit": "Lưu thay đổi",
     "intro": "Hợp đồng đã bán giữ bản chụp sản phẩm của riêng nó - sửa ở đây chỉ áp cho các chuyến từ nay về sau.",
     "sections": {
-      "naming": "Tên hiển thị",
-      "coverage": "Quyền lợi",
-      "amounts": "Khấu trừ & bồi thường",
-      "operation": "Vận hành",
-      "premium": "Biểu phí theo bậc giá trị xe",
-      "serviceFee": "Phí thu hộ bảo hiểm"
+      "naming": "Tên sản phẩm",
+      "coverage": "Phạm vi bảo vệ",
+      "amounts": "Mức khấu trừ & bồi thường tối đa",
+      "premium": "Bậc phí theo thời lượng chuyến",
+      "serviceFee": "Phí thu hộ & hoa hồng đại lý",
+      "payoutNote": "Ghi chú bồi thường",
+      "status": "Trạng thái",
+      "partner": "Kết nối đối tác",
+      "daily": "Phí theo ngày"
     },
     "fields": {
       "nameVi": "Tên (tiếng Việt)",
@@ -60,22 +67,23 @@
       "isActive": "Đang bật",
       "isActiveDescription": "Tắt thì khách không thấy ô chọn sản phẩm này nữa. Hợp đồng đã bán không bị ảnh hưởng.",
       "premiumTiers": "Bậc phí",
-      "tierMaxDays": "Chuyến tối đa",
       "tierDaysSuffix": "ngày",
-      "tierPercent": "% giá trị xe",
       "claimHotline": "Hotline báo sự cố",
       "serviceFeeEnabled": "Thu phí thu hộ",
       "serviceFeeEnabledDescription": "Bật thì mỗi chuyến có bảo hiểm vật chất xe thu thêm phí thu hộ = % phí bảo hiểm. Khách thấy gộp vào dòng bảo hiểm kèm ⓘ tách hai số; hoàn cùng phí bảo hiểm; mã khuyến mãi không trừ vào khoản này.",
-      "serviceFeePercent": "% trên phí bảo hiểm"
+      "serviceFeePercent": "% trên phí bảo hiểm",
+      "agencyCommissionPercent": "Hoa hồng đại lý",
+      "dailyAmountCar": "Phí mỗi ngày - ô tô",
+      "dailyAmountMotorbike": "Phí mỗi ngày - xe máy"
     },
     "help": {
       "amountEmpty": "Để trống nếu không áp dụng.",
       "maxPayoutNote": "Ví dụ: “Theo giá trị thực tế của xe”, “Mỗi người, mỗi vụ”.",
-      "certificateUrlTemplate": "Bắt đầu bằng https:// và chứa '{certCode}' - chỗ thay số chứng nhận.",
-      "premiumTiers": "Bậc tăng dần cả số ngày lẫn tỷ lệ. Giờ lẻ làm tròn lên bậc kế tiếp.",
-      "valueTierIntro": "Sản phẩm bán kèm ô tô tự lái đủ điều kiện; chủ xe chọn Bắt buộc hoặc Tuỳ chọn cho xe của mình. Phí = giá trị xe × tỷ lệ của bậc thời lượng chuyến (đã gồm VAT), theo biểu phí MIC loại xe M1.11.",
-      "claimHotline": "Hiện cạnh giấy chứng nhận cho khách và chủ xe.",
-      "serviceFeeLegal": "Chưa có ý kiến luật sư thì KHÔNG bật ở production (ADR 0091 điều 3). Đổi % áp cho báo giá và lượt duyệt từ lúc lưu - đơn và khoản giữ chỗ đã có giữ số đã chốt."
+      "agencyCommissionPercent": "Theo hợp đồng đại lý với MIC - dùng làm mặc định khi lập bảng kê tháng.",
+      "premiumTiersHint": "Phí = giá trị xe × tỷ lệ của bậc thời lượng chuyến (đã gồm VAT), theo biểu phí MIC loại xe M1.11. Bậc tăng dần cả số ngày lẫn tỷ lệ; giờ lẻ làm tròn lên bậc kế tiếp. Sản phẩm bán kèm ô tô tự lái đủ điều kiện, chủ xe chọn Bắt buộc hoặc Tuỳ chọn.",
+      "serviceFeePercent": "Tính trên phí bảo hiểm. Đổi % áp cho báo giá và lượt duyệt từ lúc lưu - đơn và khoản giữ chỗ đã có giữ số đã chốt.",
+      "partnerSection": "Mã sản phẩm do MIC cấp. Hotline hiện cạnh giấy chứng nhận cho khách và chủ xe. Mẫu URL bắt đầu bằng https:// và chứa '{certCode}' - chỗ thay số chứng nhận.",
+      "dailyAmount": "Khách tự chọn, trả theo số ngày thuê. Để trống hoặc 0 thì không bán cho loại xe đó. Đổi số áp cho báo giá từ lúc lưu - đơn đã có giữ số đã chốt."
     },
     "validation": {
       "required": "Bắt buộc nhập.",
@@ -88,12 +96,53 @@
       "amountMax": "Số tiền quá lớn.",
       "tiers": "Biểu phí chưa hợp lệ: số ngày 1-30, tỷ lệ lớn hơn 0 và tối đa 4 chữ số lẻ, cả hai tăng dần.",
       "serviceFeePercent": "Tỷ lệ từ 0 đến {max}%, tối đa 2 chữ số lẻ.",
-      "serviceFeePercentRequired": "Bật phí thu hộ thì tỷ lệ phải lớn hơn 0."
+      "serviceFeePercentRequired": "Bật phí thu hộ thì tỷ lệ phải lớn hơn 0.",
+      "agencyCommissionPercent": "Từ 0 tới {max}%, tối đa hai chữ số lẻ"
     },
     "saved": "Đã lưu sản phẩm {name}.",
     "actions": {
       "addTier": "Thêm bậc",
       "removeTier": "Xoá bậc này"
+    },
+    "tabs": {
+      "pricing": "Biểu phí & thu hộ",
+      "content": "Nội dung hiển thị",
+      "payout": "Khấu trừ & bồi thường",
+      "operation": "Vận hành",
+      "premiumOnly": "Biểu phí"
+    },
+    "tabErrors": "{count, plural, other {# ô cần sửa}}",
+    "hints": {
+      "intro": "Phạm vi áp dụng khi sửa",
+      "premium": "Cách tính phí theo bậc",
+      "serviceFee": "Phí thu hộ là gì",
+      "serviceFeePercent": "Khi nào % mới có hiệu lực",
+      "agencyCommission": "Hoa hồng đại lý dùng để làm gì",
+      "amounts": "Khi nào để trống",
+      "payoutNote": "Ví dụ ghi chú",
+      "isActive": "Tắt sản phẩm thì sao",
+      "partner": "Giải thích các ô kết nối",
+      "daily": "Phí theo ngày tính thế nào"
+    },
+    "placeholders": {
+      "notApplicable": "Không áp dụng",
+      "maxPayoutNoteVi": "Theo giá trị thực tế của xe",
+      "maxPayoutNoteEn": "Up to the vehicle's actual value",
+      "notSold": "Không bán"
+    },
+    "tiers": {
+      "duration": "Thời lượng",
+      "maxDays": "Tối đa",
+      "percent": "Tỷ lệ phí",
+      "maxDaysAria": "Số ngày tối đa của bậc {index}",
+      "percentAria": "Tỷ lệ phí (% giá trị xe) của bậc {index}"
+    },
+    "preview": {
+      "title": "Xem trước",
+      "hint": "Tính theo số đang sửa, chưa lưu. Muốn so với MIC thì lưu rồi dùng \"Đối chiếu với MIC\" ở thẻ Tính thử.",
+      "hintLabel": "Bảng xem trước tính thế nào",
+      "sampleValue": "Giá trị xe mẫu",
+      "invalidTiers": "Sửa bậc phí cho hợp lệ để xem trước."
     }
   },
   "certificates": {
@@ -109,7 +158,7 @@
       "booking": "Đơn",
       "tenant": "Gian hàng · xe",
       "product": "Sản phẩm",
-      "premium": "Phí đã thu",
+      "premium": "Phí bảo hiểm",
       "status": "Trạng thái",
       "certificate": "Chứng nhận",
       "attempts": "Lần thử",
@@ -146,6 +195,12 @@
       "reasonOverdueNoTime": "Quá 2 giờ sau giao xe chưa cấp",
       "reasonPhotos": "MIC chưa nhận ảnh xe - liên hệ MIC",
       "more": "và {count, plural, other {# hợp đồng}} khác trong hàng đợi"
+    },
+    "premiumPartner": "MIC tính {amount}",
+    "premiumServiceFee": "Thu hộ {amount}",
+    "premiumSource": {
+      "partner": "Phí MIC báo lúc duyệt",
+      "formula": "Phí theo công thức dự phòng"
     }
   },
   "drawer": {
@@ -233,7 +288,21 @@
       "differenceUnder": "XePrime bù {amount}",
       "serviceFee": "Phí thu hộ (XePrime)",
       "refunded": "Đã hoàn vào Ví điểm",
-      "refundedValue": "{amount} vào Ví điểm khách - {at}"
+      "refundedValue": "{amount} vào Ví điểm khách - {at}",
+      "source": "Nguồn phí lúc duyệt",
+      "sources": {
+        "partner": "MIC báo",
+        "formula": "Công thức bảng bậc (dự phòng)"
+      },
+      "fallbackReasons": {
+        "timeout": "MIC không trả lời trong 1,5 giây",
+        "unavailable": "Không gọi được MIC (mạng, lỗi máy chủ)",
+        "rejected": "MIC từ chối tính phí",
+        "out_of_range": "Số MIC báo lệch quá xa bảng bậc",
+        "not_supported": "Đối tác đang chạy không có API tính phí"
+      },
+      "formulaWas": "Công thức tính {amount}",
+      "sourceUnrecorded": "Không ghi nhận (hợp đồng trước khi áp dụng)"
     }
   },
   "remittances": {
@@ -255,7 +324,7 @@
       "period": "Kỳ",
       "status": "Trạng thái",
       "policies": "Số hợp đồng",
-      "gross": "Tổng phí",
+      "gross": "Tổng phí MIC",
       "commission": "Hoa hồng đại lý",
       "payable": "Phải trả",
       "paid": "Đã trả",
@@ -287,18 +356,18 @@
     },
     "facts": {
       "policies": "Số hợp đồng",
-      "gross": "Tổng phí khách đã trả",
+      "gross": "Tổng phí phải kê (MIC tính)",
       "commission": "Hoa hồng đại lý ({percent}%)",
       "payable": "Phải trả MIC",
-      "partnerTotal": "Tổng phí MIC tính lúc cấp",
       "test": "Thử nghiệm",
       "testCount": "{count, plural, other {# hợp đồng sandbox}}",
       "paid": "Đã chuyển",
       "paidAt": "Ngày chuyển",
       "bankReference": "Mã giao dịch",
-      "note": "Ghi chú"
+      "note": "Ghi chú",
+      "collected": "Phí khách đã trả"
     },
-    "mismatch": "Phí MIC tính lệch phí khách đã trả - kiểm từng hợp đồng trước khi chốt.",
+    "mismatch": "{count, plural, other {# hợp đồng}} MIC không trả phí lúc cấp - đang kê theo phí khách trả, kiểm lại trước khi chốt.",
     "lines": {
       "label": "Hợp đồng trong bảng kê",
       "booking": "Mã đơn",
@@ -327,7 +396,7 @@
       "intro": "Gom mọi hợp đồng đã cấp, chưa kê, cấp trước hết tháng đã chọn.",
       "period": "Tháng kê",
       "commission": "Hoa hồng đại lý",
-      "commissionHelp": "Theo hợp đồng đại lý với MIC. Để 0 nếu MIC trả hoa hồng riêng.",
+      "commissionHelp": "Mặc định theo hợp đồng đại lý ở sản phẩm bảo hiểm. Để 0 nếu MIC trả hoa hồng riêng.",
       "note": "Ghi chú",
       "submit": "Lập bảng kê",
       "done": "Đã lập bảng kê {count, plural, other {# hợp đồng}}",
@@ -348,6 +417,139 @@
         "required": "Bắt buộc",
         "amount": "Số tiền phải lớn hơn 0"
       }
+    }
+  },
+  "overview": {
+    "month": "Tháng",
+    "loadError": "Chưa tải được số liệu tháng này.",
+    "retry": "Thử lại",
+    "testCount": "{count, plural, other {# hợp đồng sandbox}} trong số liệu (không có hiệu lực thật)",
+    "lead": {
+      "label": "Kết quả bảo hiểm trong tháng",
+      "earnings": "XePrime thu từ bảo hiểm",
+      "earningsInfo": "Phí thu hộ + hoa hồng đại lý + chênh lệch giữa phí khách trả và phí MIC tính, trên các hợp đồng cấp trong tháng.",
+      "earningsHint": "Thu hộ {serviceFee} · hoa hồng {commission}",
+      "netPayable": "Phải chuyển MIC",
+      "netPayableInfo": "Phí MIC tính lúc cấp trừ hoa hồng đại lý. Số chốt nằm ở bảng kê tháng.",
+      "netPayableHint": "Phí MIC {gross} - hoa hồng {percent}%",
+      "collected": "Phí bảo hiểm đã thu của khách",
+      "collectedHint": "{count, plural, other {# hợp đồng}} cấp trong tháng"
+    },
+    "detail": {
+      "label": "Chi tiết các dòng tiền",
+      "payable": "Phí MIC tính",
+      "payableInfo": "MIC tính lúc cấp hợp đồng (total_fee, đã gồm VAT). Hợp đồng MIC không trả số thì lấy phí khách trả.",
+      "payableMissing": "{count, plural, other {# hợp đồng}} thiếu số MIC",
+      "commission": "Hoa hồng đại lý ({percent}%)",
+      "commissionLabel": "Hoa hồng đại lý",
+      "commissionInfo": "Ước tính theo % đang cấu hình ở sản phẩm. Số chốt nằm ở bảng kê tháng.",
+      "serviceFee": "Phí thu hộ",
+      "serviceFeeInfo": "Phần nền tảng thu thêm trên phí bảo hiểm. Không chuyển MIC.",
+      "difference": "Chênh lệch thu - trả",
+      "differenceInfo": "Phí khách trả trừ phí MIC tính. Âm là XePrime đang bù.",
+      "refunds": "Đã hoàn cho khách",
+      "refundsHint": "{count, plural, other {# hợp đồng}} không cấp được"
+    },
+    "difference": {
+      "none": "Khớp",
+      "over": "Thu dư {amount}",
+      "under": "Bù {amount}"
+    },
+    "sources": {
+      "title": "Nguồn phí lúc duyệt",
+      "rateLabel": "Tỷ lệ phí lấy từ MIC",
+      "partner": "MIC báo phí",
+      "formula": "Dùng công thức dự phòng",
+      "unrecorded": "Không ghi nguồn (trước khi áp dụng)",
+      "empty": "Chưa có hợp đồng nào trong tháng.",
+      "lowRate": "Nhiều hợp đồng phải dùng công thức - kiểm tra kết nối MIC hoặc biểu phí."
+    },
+    "backlog": {
+      "title": "Việc đang tồn",
+      "attention": "Cần xử lý gấp",
+      "failed": "Hợp đồng lỗi cấp",
+      "unremitted": "Đã cấp, chưa kê",
+      "unremittedValue": "{count, plural, other {# hợp đồng}} - {amount}"
+    }
+  },
+  "plan": {
+    "columns": {
+      "duration": "Thời lượng thuê",
+      "premium": "Phí MIC",
+      "serviceFee": "Phí thu hộ",
+      "customerPays": "Khách trả",
+      "commission": "Hoa hồng đại lý",
+      "netToPartner": "Chuyển MIC",
+      "platformEarns": "XePrime giữ lại",
+      "partnerQuote": "MIC báo",
+      "difference": "Lệch"
+    },
+    "durationFirst": "Tới {to} ngày",
+    "durationRange": "Trên {from} tới {to} ngày",
+    "percentOfValue": "{percent}% giá trị xe",
+    "noAnswer": "Không có số",
+    "match": "Khớp",
+    "partnerHigher": "MIC cao hơn {amount}",
+    "partnerLower": "MIC thấp hơn {amount}",
+    "empty": "Chưa có bậc phí"
+  },
+  "calculator": {
+    "title": "Tính thử phí bảo hiểm",
+    "intro": "Gõ giá trị xe để xem từng bậc thời lượng: khách trả, chuyển MIC và XePrime giữ lại.",
+    "check": "Đối chiếu với MIC",
+    "checkedBy": "Đã hỏi {partner} phí từng bậc cho xe này",
+    "tableLabel": "Phí bảo hiểm theo bậc thời lượng",
+    "enterValue": "Nhập giá trị xe để xem bảng phí.",
+    "fields": {
+      "insuredValue": "Giá trị xe",
+      "manufactureYear": "Năm sản xuất",
+      "seatCount": "Số chỗ"
+    },
+    "validation": {
+      "insuredValue": "Giá trị xe từ 50 triệu tới 20 tỷ",
+      "year": "Năm sản xuất không hợp lệ",
+      "seats": "Số chỗ từ 2 tới 60"
+    }
+  },
+  "vehicles": {
+    "tableLabel": "Ô tô và bảo hiểm",
+    "loadError": "Chưa tải được danh sách xe.",
+    "total": "{count, plural, other {# xe}}",
+    "noResults": "Không có xe khớp bộ lọc.",
+    "empty": {
+      "title": "Chưa có ô tô nào",
+      "description": "Ô tô chủ xe đăng sẽ hiện ở đây kèm điều kiện bảo hiểm."
+    },
+    "filters": {
+      "search": "Tìm xe",
+      "searchPlaceholder": "Biển số, tên xe, gian hàng",
+      "eligibility": "Điều kiện bảo hiểm"
+    },
+    "eligibility": {
+      "eligible": "Đủ điều kiện",
+      "missing": "Còn thiếu"
+    },
+    "columns": {
+      "vehicle": "Xe",
+      "insuredValue": "Giá trị xe",
+      "mode": "Chế độ",
+      "eligibility": "Điều kiện",
+      "premiums": "Phí MIC theo bậc"
+    },
+    "eligibleTag": "Đủ điều kiện",
+    "tierDays": "Tới {days} ngày",
+    "check": "Đối chiếu MIC",
+    "card": {
+      "value": "Giá trị xe {amount}",
+      "firstTier": "Tới {days} ngày: {amount}"
+    },
+    "checkDialog": {
+      "title": "Đối chiếu biểu phí - {name}",
+      "intro": "Hỏi MIC phí từng bậc cho đúng giá trị, năm sản xuất và số chỗ của xe này, đặt cạnh bảng bậc đang dùng.",
+      "again": "Hỏi lại MIC",
+      "checkedBy": "Đã hỏi {partner} phí từng bậc",
+      "tableLabel": "So sánh phí MIC với bảng bậc",
+      "noTiers": "Sản phẩm bảo hiểm chưa có biểu phí theo bậc."
     }
   }
 }

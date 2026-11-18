@@ -998,6 +998,15 @@ export class BookingRequestsService {
       schedule,
       vehicleId: req.vehicleId,
     };
+    /*
+     * Phí bảo hiểm vật chất xe của HỢP ĐỒNG NÀY hỏi đối tác ĐÚNG MỘT LẦN (chờ tối đa 1,5s, lỗi thì
+     * công thức bậc — ADR 0097), rồi dùng chung cho mọi lượt tính bên dưới: lượt có mã và lượt không
+     * mã phải đứng trên cùng một con số `IV`.
+     */
+    const resolvedVehicleProtectionTier = await this.pricing.approvalVehicleProtectionTier(trip, {
+      selected: req.vehicleProtectionSelected,
+      required: req.vehicleProtectionRequired,
+    });
     const feeOpts = {
       depositRequired: deposit.required,
       vehicleProtectionSelected: req.vehicleProtectionSelected,
@@ -1005,6 +1014,7 @@ export class BookingRequestsService {
       // chọn khách đã thấy (ADR 0091 điều 1).
       vehicleProtectionRequired: req.vehicleProtectionRequired,
       personalAccidentSelected: req.personalAccidentSelected,
+      resolvedVehicleProtectionTier,
     };
 
     const frozen = this.promos.frozenTermsOf(req);

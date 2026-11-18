@@ -17,6 +17,7 @@ import {
   maxTaxRatePercent,
   parseTaxRates,
   parseWithDriverLimits,
+  PLATFORM_FEE_BASIS,
   WITH_DRIVER_LIMITS_DEFAULTS,
   withDriverLimitsValid,
   type BookingLimits,
@@ -25,6 +26,7 @@ import {
   type FeePolicyValues,
   type OwnerCommissionTier,
   type PerVehicleTypeAmount,
+  type PlatformFeeBasis,
   type TaxRatesByServiceType,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -57,6 +59,8 @@ const SELECT = {
   insurancePartnerName: true,
   customerPlatformFeeCar: true,
   customerPlatformFeeMotorbike: true,
+  customerPlatformFeeBasisCar: true,
+  customerPlatformFeeBasisMotorbike: true,
   ownerCommissionTiers: true,
   vehicleProtectionDailyCar: true,
   vehicleProtectionDailyMotorbike: true,
@@ -291,7 +295,11 @@ export class FeePoliciesService {
           targetType: 'fee_policy',
           targetId: id,
           before: { previousVersion: previous?.version ?? null },
-          after: { version: draft.version, effectiveFrom: now.toISOString(), ...auditValues(toValues(draft)) },
+          after: {
+            version: draft.version,
+            effectiveFrom: now.toISOString(),
+            ...auditValues(toValues(draft)),
+          },
         },
         tx,
       );
@@ -305,7 +313,9 @@ export class FeePoliciesService {
     const row = await this.load(id);
     this.assertDraft(row);
     await this.prisma.$transaction(async (tx) => {
-      const deleted = await tx.feePolicy.deleteMany({ where: { id, status: FEE_POLICY_STATUS.DRAFT } });
+      const deleted = await tx.feePolicy.deleteMany({
+        where: { id, status: FEE_POLICY_STATUS.DRAFT },
+      });
       if (deleted.count === 0) throw notDraft(row.status);
       await this.audit.record(
         {
@@ -371,7 +381,10 @@ function assertWithDriverLimits(dto: UpsertFeePolicyDto): void {
     message:
       'Giới hạn chuyến có tài xế phải có 0 < tối thiểu < tối đa, bội 1.000đ, mức gợi ý nằm trong khoảng tiền công',
     details: [
-      { field: 'withDriverLimits', constraints: { withDriverLimits: 'with_driver_limits_invalid' } },
+      {
+        field: 'withDriverLimits',
+        constraints: { withDriverLimits: 'with_driver_limits_invalid' },
+      },
     ],
   });
 }
@@ -420,12 +433,20 @@ function toValues(row: Row): FeePolicyValues {
     taxPercent: row.taxPercent == null ? null : Number(row.taxPercent),
     taxLabel: row.taxLabel,
     tripInsuranceEnabled: row.tripInsuranceEnabled,
-    tripInsurancePercent: row.tripInsurancePercent == null ? null : Number(row.tripInsurancePercent),
+    tripInsurancePercent:
+      row.tripInsurancePercent == null ? null : Number(row.tripInsurancePercent),
     vehicleProtectionEnabled: row.vehicleProtectionEnabled,
     vehicleProtectionPercent:
       row.vehicleProtectionPercent == null ? null : Number(row.vehicleProtectionPercent),
     insurancePartnerName: row.insurancePartnerName,
-    customerPlatformFee: perVehicleType(row.customerPlatformFeeCar, row.customerPlatformFeeMotorbike),
+    customerPlatformFee: perVehicleType(
+      row.customerPlatformFeeCar,
+      row.customerPlatformFeeMotorbike,
+    ),
+    customerPlatformFeeBasis: {
+      [VEHICLE_TYPE.CAR]: feeBasis(row.customerPlatformFeeBasisCar),
+      [VEHICLE_TYPE.MOTORBIKE]: feeBasis(row.customerPlatformFeeBasisMotorbike),
+    },
     ownerCommissionTiers: parseCommissionTiers(row.ownerCommissionTiers),
     vehicleProtectionDailyAmount: perVehicleType(
       row.vehicleProtectionDailyCar,
@@ -436,6 +457,13 @@ function toValues(row: Row): FeePolicyValues {
       row.tripInsuranceDailyMotorbike,
     ),
   };
+}
+
+/** Cột cách tính phí sàn (CHECK ở DB) → `PlatformFeeBasis`; giá trị lạ đọc là mỗi chuyến. */
+function feeBasis(value: string): PlatformFeeBasis {
+  return value === PLATFORM_FEE_BASIS.PER_DAY
+    ? PLATFORM_FEE_BASIS.PER_DAY
+    : PLATFORM_FEE_BASIS.PER_TRIP;
 }
 
 /** Hai cột tiền của một bảng theo loại xe → `PerVehicleTypeAmount` (chuỗi VND nguyên). */
@@ -489,6 +517,9 @@ function toDto(row: Row): FeePolicyDto {
     name: row.name,
     note: row.note,
     ...values,
+    // `toValues` luôn đọc hai cột; trường chỉ tuỳ chọn ở kiểu vì snapshot cũ của đơn không có nó.
+    customerPlatformFeeBasis:
+      values.customerPlatformFeeBasis ?? FEE_SCHEDULE_DEFAULTS.customerPlatformFeeBasis,
     ...bookingLimitsOf(row),
     withDriverLimits: parseWithDriverLimits(row.withDriverLimits) ?? WITH_DRIVER_LIMITS_DEFAULTS,
     effectiveFrom: row.effectiveFrom?.toISOString() ?? null,
@@ -514,8 +545,18 @@ function toDto(row: Row): FeePolicyDto {
  * Phép tính chỉ đọc nó khi cổng mở (`computeCustomerFees`).
  */
 function valuesData(dto: UpsertFeePolicyDto, base: FeePolicyValues | null) {
-  const platformFee = dto.customerPlatformFee ?? base?.customerPlatformFee ?? FEE_SCHEDULE_DEFAULTS.customerPlatformFee;
-  const tiers = dto.ownerCommissionTiers ?? base?.ownerCommissionTiers ?? FEE_SCHEDULE_DEFAULTS.ownerCommissionTiers;
+  const platformFee =
+    dto.customerPlatformFee ??
+    base?.customerPlatformFee ??
+    FEE_SCHEDULE_DEFAULTS.customerPlatformFee;
+  const platformFeeBasis =
+    dto.customerPlatformFeeBasis ??
+    base?.customerPlatformFeeBasis ??
+    FEE_SCHEDULE_DEFAULTS.customerPlatformFeeBasis;
+  const tiers =
+    dto.ownerCommissionTiers ??
+    base?.ownerCommissionTiers ??
+    FEE_SCHEDULE_DEFAULTS.ownerCommissionTiers;
   const vehicleDaily =
     dto.vehicleProtectionDailyAmount ??
     base?.vehicleProtectionDailyAmount ??
@@ -562,6 +603,8 @@ function valuesData(dto: UpsertFeePolicyDto, base: FeePolicyValues | null) {
         : null,
     customerPlatformFeeCar: new Prisma.Decimal(platformFee[VEHICLE_TYPE.CAR]),
     customerPlatformFeeMotorbike: new Prisma.Decimal(platformFee[VEHICLE_TYPE.MOTORBIKE]),
+    customerPlatformFeeBasisCar: platformFeeBasis[VEHICLE_TYPE.CAR],
+    customerPlatformFeeBasisMotorbike: platformFeeBasis[VEHICLE_TYPE.MOTORBIKE],
     // Chỉ hai trường khai báo — không để DTO (hay một khoá lạ lọt qua) thành cột jsonb.
     ownerCommissionTiers: tiers.map((t) => ({
       fromDay: t.fromDay,
@@ -575,7 +618,9 @@ function valuesData(dto: UpsertFeePolicyDto, base: FeePolicyValues | null) {
 }
 
 /** Bảng mức → jsonb, đúng ba khoá × hai trường (ADR 0068). */
-function taxRatesJson(rates: TaxRatesByServiceType): Record<string, { vatPercent: number; pitPercent: number }> {
+function taxRatesJson(
+  rates: TaxRatesByServiceType,
+): Record<string, { vatPercent: number; pitPercent: number }> {
   return Object.fromEntries(
     Object.entries(rates).map(([type, rate]) => [
       type,
@@ -601,6 +646,7 @@ function auditValues(v: FeePolicyValues): Record<string, unknown> {
     vehicleProtectionPercent: v.vehicleProtectionPercent ?? null,
     insurancePartnerName: v.insurancePartnerName ?? null,
     customerPlatformFee: v.customerPlatformFee,
+    customerPlatformFeeBasis: v.customerPlatformFeeBasis ?? null,
     ownerCommissionTiers: v.ownerCommissionTiers,
     vehicleProtectionDailyAmount: v.vehicleProtectionDailyAmount,
     tripInsuranceDailyAmount: v.tripInsuranceDailyAmount,

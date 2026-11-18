@@ -192,15 +192,18 @@ describe('Lập bảng kê tháng (ADR 0088 điều 6)', () => {
     });
 
     const r = await service.create({ periodMonth: MONTH, commissionPercent: '10' }, ownerId);
+    // Phải trả theo số HÃNG tính lúc cấp (ADR 0097): 112.200 + 46.000, không theo khách trả.
     expect(r).toMatchObject({
       periodMonth: MONTH,
       status: INSURANCE_REMITTANCE_STATUS.DRAFT,
       policyCount: 2,
-      grossPremium: '156400',
+      grossPremium: '158200',
       commissionPercent: '10.00',
-      commissionAmount: '15640',
-      payableAmount: '140760',
+      commissionAmount: '15820',
+      payableAmount: '142380',
       partnerPremiumTotal: '158200',
+      collectedPremiumTotal: '156400',
+      partnerPremiumMissingCount: 0,
     });
     const rows = await prisma.bookingInsurancePolicy.findMany({
       where: { id: { in: [a, b, later, reserved] } },
@@ -215,6 +218,36 @@ describe('Lập bảng kê tháng (ADR 0088 điều 6)', () => {
     const lines = await service.lines(r.id, {});
     expect(lines.meta.total).toBe(2);
   });
+
+  maybe(
+    'hợp đồng hãng không trả phí lúc cấp ⇒ kê theo phí khách trả, đếm riêng (ADR 0097)',
+    async () => {
+      await policy({
+        status: INSURANCE_POLICY_STATUS.ISSUED,
+        premium: 112200,
+        issuedAt: ISSUED_IN_MONTH,
+        partnerPremium: 110000,
+      });
+      await policy({
+        status: INSURANCE_POLICY_STATUS.ISSUED,
+        premium: 44200,
+        issuedAt: ISSUED_IN_MONTH,
+      });
+
+      const pending = await service.pending();
+      expect(Number(pending.grossPremium)).toBeGreaterThanOrEqual(154200);
+
+      const r = await service.create({ periodMonth: MONTH, commissionPercent: '0' }, ownerId);
+      expect(r).toMatchObject({
+        policyCount: 2,
+        grossPremium: '154200',
+        payableAmount: '154200',
+        partnerPremiumTotal: '110000',
+        collectedPremiumTotal: '156400',
+        partnerPremiumMissingCount: 1,
+      });
+    },
+  );
 
   maybe('một tháng một bảng kê — lập trùng (kể cả song song) ⇒ đúng một bảng thắng', async () => {
     await policy({

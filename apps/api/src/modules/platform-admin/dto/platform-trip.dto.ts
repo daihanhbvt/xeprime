@@ -52,11 +52,26 @@ class TripQueueQueryDto {
   limit?: number;
 }
 
-/** Hàng đợi đọc từ `booking_requests` — chưa có đơn. */
+/**
+ * Hàng đợi đọc từ `booking_requests` — chưa có đơn.
+ *
+ * Bỏ trống `queue` = CẢ HAI chặng (tab "Chưa giữ chỗ" của Đơn thuê toàn hệ thống), xếp theo hạn
+ * gần nhất của từng chặng.
+ */
 export class PlatformTripRequestListQueryDto extends TripQueueQueryDto {
-  @ApiProperty({ enum: PLATFORM_TRIP_REQUEST_QUEUES })
+  @ApiPropertyOptional({
+    enum: PLATFORM_TRIP_REQUEST_QUEUES,
+    description: 'Bỏ trống = cả hai chặng trước khi có đơn',
+  })
+  @IsOptional()
   @IsIn(PLATFORM_TRIP_REQUEST_QUEUES)
-  queue!: PlatformTripRequestQueue;
+  queue?: PlatformTripRequestQueue;
+
+  @ApiPropertyOptional({ description: 'Tra CHÍNH XÁC theo SĐT khách' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  phone?: string;
 }
 
 /** Hàng đợi đọc từ `bookings` — đơn đã ra đời. Dòng trả về là `PlatformBookingDto`. */

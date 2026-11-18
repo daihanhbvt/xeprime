@@ -8,11 +8,17 @@ import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { InsuranceCertificatesPanel } from './InsuranceCertificatesPanel';
+import { InsuranceOverviewPanel } from './InsuranceOverviewPanel';
 import { InsuranceProductsPanel } from './InsuranceProductsPanel';
+import { InsuranceVehiclesPanel } from './InsuranceVehiclesPanel';
 import { RemittancesPanel } from './RemittancesPanel';
 
 const TAB = {
+  /** Tiền bảo hiểm một tháng + nguồn phí + việc tồn (ADR 0097). */
+  OVERVIEW: 'overview',
   PRODUCTS: 'products',
+  /** Ô tô, điều kiện bảo hiểm, phí theo bậc, đối chiếu MIC (ADR 0097). */
+  VEHICLES: 'vehicles',
   CERTIFICATES: 'certificates',
   /** Bảng kê trả phí cho hãng (ADR 0088 điều 6). */
   REMITTANCES: 'remittances',
@@ -21,11 +27,27 @@ type Tab = (typeof TAB)[keyof typeof TAB];
 const isTab = (v: string | null): v is Tab => Object.values(TAB).includes(v as Tab);
 
 /**
- * Màn BẢO HIỂM của nền tảng (ADR 0064) — hai tab, mỗi tab gác bằng quyền của chính endpoint nó gọi:
+ * Tham số URL thuộc RIÊNG một tab (tìm kiếm, trang, bộ lọc, bản ghi đang mở, tháng). Các tab dùng
+ * chung tên `q`/`page` — đổi tab mà giữ chúng thì ô tìm của tab Hợp đồng lọc luôn tab Xe.
+ */
+const TAB_SCOPED_PARAMS = [
+  'q',
+  'page',
+  'limit',
+  'status',
+  'productKind',
+  'eligibility',
+  'open',
+  'remittance',
+  'month',
+] as const;
+type TabUrlState = { tab?: Tab } & Partial<Record<(typeof TAB_SCOPED_PARAMS)[number], string>>;
+
+/**
+ * Màn BẢO HIỂM của nền tảng (ADR 0064 · ADR 0097) — mỗi tab gác bằng quyền của chính endpoint nó gọi:
  *
- *   - "Sản phẩm" — `platform.insurance.manage` (danh mục hiện cho khách);
- *   - "Chứng nhận" — `platform.money.manage` (hàng đợi GCN là phí khách đang được giữ hộ; cùng
- *     bảng với hàng đợi bảo hiểm ở màn Tài chính).
+ *   - "Tổng quan", "Hợp đồng", "Bảng kê" — `platform.money.manage` (tiền giữ hộ / phải trả hãng);
+ *   - "Biểu phí & sản phẩm", "Xe" — `platform.insurance.manage` (danh mục, bảng bậc, đối chiếu MIC).
  *
  * Ẩn tab chỉ là trang trí — backend chặn thật bằng `@RequirePermissions` (ADR 0027 điều 4).
  * Tab đang mở nằm trên URL (`?tab=`) để F5 và gửi link giữ đúng chỗ.
@@ -33,7 +55,7 @@ const isTab = (v: string | null): v is Tab => Object.values(TAB).includes(v as T
 export function InsuranceAdminView() {
   const t = useTranslations('AdminInsurance');
   const { has, isLoading } = usePermissions();
-  const { filters, setFilters } = useUrlFilters((sp) => {
+  const { filters, setFilters } = useUrlFilters((sp): TabUrlState => {
     const tab = sp.get('tab');
     return { tab: isTab(tab) ? tab : undefined };
   });
@@ -41,6 +63,9 @@ export function InsuranceAdminView() {
   const canProducts = has(PERMISSION.PLATFORM_INSURANCE_MANAGE);
   const canCertificates = has(PERMISSION.PLATFORM_MONEY_MANAGE);
   const items = [
+    ...(canCertificates
+      ? [{ key: TAB.OVERVIEW, label: t('tabs.overview'), children: <InsuranceOverviewPanel /> }]
+      : []),
     ...(canCertificates
       ? [
           {
@@ -53,7 +78,10 @@ export function InsuranceAdminView() {
         ]
       : []),
     ...(canProducts
-      ? [{ key: TAB.PRODUCTS, label: t('tabs.products'), children: <InsuranceProductsPanel /> }]
+      ? [
+          { key: TAB.PRODUCTS, label: t('tabs.products'), children: <InsuranceProductsPanel /> },
+          { key: TAB.VEHICLES, label: t('tabs.vehicles'), children: <InsuranceVehiclesPanel /> },
+        ]
       : []),
   ];
   const active =
@@ -75,7 +103,12 @@ export function InsuranceAdminView() {
         <Tabs
           aria-label={t('page.tabsLabel')}
           activeKey={active}
-          onChange={(key) => setFilters({ tab: key as Tab }, { resetPage: false })}
+          onChange={(key) =>
+            setFilters({
+              tab: key as Tab,
+              ...Object.fromEntries(TAB_SCOPED_PARAMS.map((param) => [param, undefined])),
+            })
+          }
           destroyOnHidden
           items={items}
         />

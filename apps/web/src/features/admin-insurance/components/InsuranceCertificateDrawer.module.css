@@ -10,6 +10,13 @@
   color: var(--xp-color-text-secondary);
 }
 
+/* Nhiều dòng trong một ô facts (nguồn phí + lý do). */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   overflow-wrap: anywhere;

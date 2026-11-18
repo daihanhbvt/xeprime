@@ -207,8 +207,8 @@ export const INSURANCE_PENDING_CHECK_INTERVAL_SECONDS = 15;
 /** Quá chừng này sau mốc giao xe mà hợp đồng chưa cấp ⇒ báo khẩn admin MỘT lần (ADR 0091 điều 7). */
 export const INSURANCE_ESCALATE_AFTER_MINUTES = 120;
 
-/** Trần % phí thu hộ bảo hiểm của nền tảng trên `IV` (ADR 0091 điều 3) — khớp CHECK ở DB. */
-export const INSURANCE_SERVICE_FEE_PERCENT_MAX = 50;
+/** Trần % phí thu hộ bảo hiểm của nền tảng trên `IV` (ADR 0091 điều 3) — khớp CHECK ở DB (nâng 50 → 100 ngày 17/11/2026). */
+export const INSURANCE_SERVICE_FEE_PERCENT_MAX = 100;
 
 /** Trần chờ một lần gọi đối tác phát hành — adapter thật phải tôn trọng nó. */
 export const INSURANCE_PARTNER_TIMEOUT_MS = 60_000;
@@ -594,6 +594,85 @@ export interface VehicleProtectionTierQuote {
   insuredValue: string;
   maxDays: number;
   percent: string;
+  /**
+   * Nguồn của `amount` (ADR 0097). Chỉ lượt DUYỆT hỏi đối tác; báo giá công khai và ước tính để
+   * trống (= công thức, chưa chốt). Snapshot cũ không có trường này.
+   */
+  source?: InsurancePremiumSource;
+  /** Phí theo công thức bậc — luôn có khi `source` có, để so với số đối tác báo. */
+  formulaAmount?: string;
+  /** Vì sao dùng công thức thay vì số của đối tác — chỉ khi `source = formula`. */
+  fallbackReason?: InsurancePremiumFallbackReason;
+}
+
+/**
+ * Phí bảo hiểm vật chất xe của một hợp đồng đến từ đâu (ADR 0097): đối tác báo lúc duyệt, hay công
+ * thức bậc của hệ thống khi đối tác không trả lời kịp / trả lỗi / trả số bất thường.
+ */
+export const INSURANCE_PREMIUM_SOURCE = {
+  PARTNER: 'partner',
+  FORMULA: 'formula',
+} as const;
+
+export type InsurancePremiumSource =
+  (typeof INSURANCE_PREMIUM_SOURCE)[keyof typeof INSURANCE_PREMIUM_SOURCE];
+
+export const INSURANCE_PREMIUM_SOURCE_VALUES = Object.values(
+  INSURANCE_PREMIUM_SOURCE,
+) as InsurancePremiumSource[];
+
+/** Lý do rơi về công thức — DB canh CHECK cùng danh sách. */
+export const INSURANCE_PREMIUM_FALLBACK_REASON = {
+  /** Quá `INSURANCE_PARTNER_QUOTE_TIMEOUT_MS`. */
+  TIMEOUT: 'timeout',
+  /** Mạng lỗi, HTTP 5xx, không lấy được token. */
+  UNAVAILABLE: 'unavailable',
+  /** Đối tác trả mã lỗi nghiệp vụ (ví dụ chưa khai biểu phí). */
+  REJECTED: 'rejected',
+  /** Số đối tác báo lệch quá `INSURANCE_PARTNER_QUOTE_MAX_RATIO` lần so với công thức. */
+  OUT_OF_RANGE: 'out_of_range',
+  /** Adapter đang chạy không có API tính phí. */
+  NOT_SUPPORTED: 'not_supported',
+} as const;
+
+export type InsurancePremiumFallbackReason =
+  (typeof INSURANCE_PREMIUM_FALLBACK_REASON)[keyof typeof INSURANCE_PREMIUM_FALLBACK_REASON];
+
+export const INSURANCE_PREMIUM_FALLBACK_REASON_VALUES = Object.values(
+  INSURANCE_PREMIUM_FALLBACK_REASON,
+) as InsurancePremiumFallbackReason[];
+
+/**
+ * Thời gian chờ tối đa khi hỏi phí đối tác lúc DUYỆT (ADR 0097) — quá mốc này dùng công thức, lượt
+ * duyệt không chờ thêm. Sandbox MIC trả ~0,2s/lượt (đo 17/11/2026).
+ */
+export const INSURANCE_PARTNER_QUOTE_TIMEOUT_MS = 1500;
+
+/**
+ * Số đối tác báo chỉ được nhận khi nằm trong [công thức ÷ N, công thức × N]. Ngoài khoảng đó gần như
+ * chắc chắn là lỗi dữ liệu (sai đơn vị, sai bậc) — dùng công thức, admin thấy lý do `out_of_range`.
+ */
+export const INSURANCE_PARTNER_QUOTE_MAX_RATIO = 2;
+
+/**
+ * Nhận hay bỏ số phí đối tác báo — `null` = nhận; ngược lại là lý do bỏ. Một hàm cho API (lượt duyệt)
+ * và màn đối chiếu của admin, nên "bất thường" có đúng một định nghĩa.
+ */
+export function partnerPremiumProblem(
+  partnerAmount: string,
+  formulaAmount: string,
+): InsurancePremiumFallbackReason | null {
+  if (!/^\d+$/.test(partnerAmount) || BigInt(partnerAmount) <= BigInt(0)) {
+    return INSURANCE_PREMIUM_FALLBACK_REASON.OUT_OF_RANGE;
+  }
+  if (!/^\d+$/.test(formulaAmount) || BigInt(formulaAmount) <= BigInt(0)) return null;
+  const partner = BigInt(partnerAmount);
+  const formula = BigInt(formulaAmount);
+  const ratio = BigInt(INSURANCE_PARTNER_QUOTE_MAX_RATIO);
+  if (partner > formula * ratio || partner * ratio < formula) {
+    return INSURANCE_PREMIUM_FALLBACK_REASON.OUT_OF_RANGE;
+  }
+  return null;
 }
 
 /**
@@ -615,6 +694,19 @@ export const INSURANCE_ELIGIBILITY_GAP = {
 
 export type InsuranceEligibilityGap =
   (typeof INSURANCE_ELIGIBILITY_GAP)[keyof typeof INSURANCE_ELIGIBILITY_GAP];
+
+/** Bộ lọc danh sách ô tô ở màn Bảo hiểm của admin (ADR 0097) — đủ / chưa đủ điều kiện. */
+export const INSURANCE_VEHICLE_ELIGIBILITY_FILTER = {
+  ELIGIBLE: 'eligible',
+  MISSING: 'missing',
+} as const;
+
+export type InsuranceVehicleEligibilityFilter =
+  (typeof INSURANCE_VEHICLE_ELIGIBILITY_FILTER)[keyof typeof INSURANCE_VEHICLE_ELIGIBILITY_FILTER];
+
+export const INSURANCE_VEHICLE_ELIGIBILITY_FILTER_VALUES = Object.values(
+  INSURANCE_VEHICLE_ELIGIBILITY_FILTER,
+) as InsuranceVehicleEligibilityFilter[];
 
 export const INSURANCE_ELIGIBILITY_GAP_VALUES = Object.values(
   INSURANCE_ELIGIBILITY_GAP,
@@ -661,9 +753,9 @@ export const INSURANCE_REMITTANCE_STATUS_COLOR: Readonly<
   [INSURANCE_REMITTANCE_STATUS.PAID]: STATUS_COLOR.SUCCESS,
 };
 
-/** Giới hạn trường của bảng kê. Hoa hồng đại lý là % trên tổng phí, 0..50, tối đa 2 chữ số lẻ. */
+/** Giới hạn trường của bảng kê. Hoa hồng đại lý là % trên tổng phí, 0..100, tối đa 2 chữ số lẻ. */
 export const INSURANCE_REMITTANCE_LIMITS = {
-  commissionPercentMax: 50,
+  commissionPercentMax: 100,
   bankReference: { max: 100 },
   note: { max: 1000 },
 } as const;

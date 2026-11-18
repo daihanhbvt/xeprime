@@ -101,6 +101,7 @@ export class InsuranceService {
         )
       : await activeInsuranceProductSnapshots(tx);
 
+    const tier = input.snapshot.fees?.vehicleProtectionTier ?? null;
     const push = (kind: InsuranceProductKind, amount: Prisma.Decimal) => {
       if (amount.lte(0)) return;
       const product = products.get(kind) ?? null;
@@ -123,12 +124,17 @@ export class InsuranceService {
           ? { serviceFeeAmount: premiums.vehicleTripServiceFee }
           : {}),
         // Giá trị xe đã dùng tính phí theo bậc (ADR 0088) — đóng băng lúc duyệt, gửi hãng lúc cấp.
-        ...(kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP &&
-        input.snapshot.fees?.vehicleProtectionTier
+        ...(kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP && tier
           ? {
-              insuredValue: new Prisma.Decimal(
-                input.snapshot.fees.vehicleProtectionTier.insuredValue,
-              ),
+              insuredValue: new Prisma.Decimal(tier.insuredValue),
+              // Nguồn phí chốt lúc duyệt (ADR 0097) — đối tác báo hay công thức dự phòng, kèm lý do.
+              ...(tier.source
+                ? {
+                    premiumSource: tier.source,
+                    formulaPremiumAmount: new Prisma.Decimal(tier.formulaAmount ?? tier.amount),
+                    premiumQuoteFallbackReason: tier.fallbackReason ?? null,
+                  }
+                : {}),
             }
           : {}),
         ...(product

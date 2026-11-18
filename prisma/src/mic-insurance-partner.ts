@@ -9,6 +9,8 @@ import type {
   InsurancePartner,
   IssuePolicyRequest,
   IssuePolicyResult,
+  PremiumQuoteRequest,
+  PremiumQuoteResult,
 } from './insurance-issue';
 import {
   MIC_PATH,
@@ -18,6 +20,7 @@ import {
   type MicConfig,
   type MicIssued,
   type MicLookup,
+  type MicPremium,
 } from './mic-client';
 
 /**
@@ -70,6 +73,52 @@ export class MicInsurancePartner implements InsurancePartner {
   async lookupStatus(partnerRef: string): Promise<string | null> {
     const found = await this.client.lookup(partnerRef);
     return found?.ttrang ?? null;
+  }
+
+  /**
+   * Phí VCX MIC tính cho một chuyến (`phi_vcx`, ADR 0097). Thân phẳng như lúc cấp hợp đồng nhưng
+   * không có dữ liệu cá nhân nào. `total_fee` đã gồm VAT — cùng con số MIC ghi lên hợp đồng.
+   */
+  async quotePremium(request: PremiumQuoteRequest): Promise<PremiumQuoteResult> {
+    const insuredValue = Math.trunc(Number(request.insuredValue));
+    const body = {
+      contract_type: 'G',
+      start_date: vnDate(request.from),
+      start_time: vnTime(request.from),
+      end_date: vnDate(request.to),
+      end_time: vnTime(request.to),
+      manufacturing_year: String(request.manufactureYear),
+      number_of_seats: request.seatCount,
+      load_capacity: 0,
+      drive_crew_count: 0,
+      usage_purpose: MIC_USAGE_PURPOSE_COMMERCIAL,
+      vehicle_type: MIC_VEHICLE_TYPE_SELF_DRIVE,
+      coverage_scope: { tpl: 0, tpb: 0, vehicle_price: insuredValue, tv: insuredValue },
+      additional_data: [],
+    };
+    try {
+      const res = await this.client.call<MicPremium>('POST', MIC_PATH.PREMIUM, body, {
+        ...(request.timeoutMs === undefined ? {} : { timeoutMs: request.timeoutMs }),
+      });
+      if (res.status >= 500) {
+        return { ok: false, reason: 'unavailable', message: `MIC tính phí lỗi HTTP ${res.status}` };
+      }
+      const fee = res.body.data?.total_fee;
+      if (res.body.code !== MIC_SUCCESS_CODE || typeof fee !== 'number' || !Number.isFinite(fee)) {
+        return {
+          ok: false,
+          reason: 'rejected',
+          message:
+            `MIC không tính được phí: ${res.body.code ?? '-'} ${res.body.message ?? ''}`.trim(),
+        };
+      }
+      return { ok: true, amount: String(Math.round(fee)) };
+    } catch (err) {
+      if (err instanceof MicUnavailableError) {
+        return { ok: false, reason: 'unavailable', message: err.message };
+      }
+      throw err;
+    }
   }
 
   async issue(request: IssuePolicyRequest): Promise<IssuePolicyResult> {

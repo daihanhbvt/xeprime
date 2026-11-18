@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  INSURANCE_PREMIUM_BASIS,
   INSURANCE_PRODUCT_KIND,
   INSURANCE_PRODUCT_LIMITS,
   INSURANCE_PROVIDER,
@@ -7,6 +8,8 @@ import {
 import {
   buildInsuranceProductSchema,
   insuranceProductFormDefaults,
+  insuranceProductFormTabErrors,
+  insuranceProductFormTabs,
   isCertificateUrlTemplate,
   toUpdateInsuranceProductBody,
   type InsuranceProductFormValues,
@@ -29,6 +32,7 @@ const schema = buildInsuranceProductSchema({
   tiers: 'tiers',
   serviceFeePercent: (max) => `serviceFeePercent:${max}`,
   serviceFeePercentRequired: 'serviceFeePercentRequired',
+  agencyCommissionPercent: (max) => `agencyCommissionPercent:${max}`,
 });
 
 const PRODUCT = {
@@ -51,6 +55,7 @@ const PRODUCT = {
   isActive: true,
   serviceFeeEnabled: false,
   serviceFeePercent: 0,
+  agencyCommissionPercent: 0,
   updatedAt: '2026-08-01T00:00:00.000Z',
 } as InsuranceProduct;
 
@@ -108,18 +113,22 @@ describe('admin-insurance form', () => {
   });
 
   describe('phí thu hộ bảo hiểm (ADR 0091 điều 3)', () => {
-    it('bật thì % > 0; % ngoài 0..50 hoặc quá 2 chữ số lẻ ⇒ lỗi', async () => {
+    it('bật thì % > 0; % ngoài 0..100 hoặc quá 2 chữ số lẻ ⇒ lỗi', async () => {
       expect(
         await errorsOf({ ...valid(), serviceFeeEnabled: true, serviceFeePercent: 0 }),
       ).toContain('serviceFeePercentRequired');
-      expect(await errorsOf({ ...valid(), serviceFeePercent: 50.5 })).toContain(
-        'serviceFeePercent:50',
+      expect(await errorsOf({ ...valid(), serviceFeePercent: 100.5 })).toContain(
+        'serviceFeePercent:100',
       );
       expect(await errorsOf({ ...valid(), serviceFeePercent: 12.345 })).toContain(
-        'serviceFeePercent:50',
+        'serviceFeePercent:100',
       );
       expect(
         await errorsOf({ ...valid(), serviceFeeEnabled: true, serviceFeePercent: 12.5 }),
+      ).toEqual([]);
+      // Trần 100% (17/11/2026) — đúng trần vẫn hợp lệ.
+      expect(
+        await errorsOf({ ...valid(), serviceFeeEnabled: true, serviceFeePercent: 100 }),
       ).toEqual([]);
       // Tắt mà % = 0 là trạng thái mặc định hợp lệ.
       expect(await errorsOf(valid())).toEqual([]);
@@ -135,6 +144,69 @@ describe('admin-insurance form', () => {
       const body = toUpdateInsuranceProductBody(form, ip);
       expect(body).not.toHaveProperty('serviceFeeEnabled');
       expect(body).not.toHaveProperty('serviceFeePercent');
+    });
+  });
+
+  describe('hoa hồng đại lý (ADR 0097)', () => {
+    it('0..100%, tối đa hai chữ số lẻ; gửi lên cùng cấu hình phí của vật chất xe', async () => {
+      expect(await errorsOf({ ...valid(), agencyCommissionPercent: 15.25 })).toEqual([]);
+      expect(await errorsOf({ ...valid(), agencyCommissionPercent: 100 })).toEqual([]);
+      expect(await errorsOf({ ...valid(), agencyCommissionPercent: 100.01 })).toContain(
+        'agencyCommissionPercent:100',
+      );
+      expect(await errorsOf({ ...valid(), agencyCommissionPercent: 1.234 })).toContain(
+        'agencyCommissionPercent:100',
+      );
+      expect(await errorsOf({ ...valid(), agencyCommissionPercent: -1 })).toContain(
+        'agencyCommissionPercent:100',
+      );
+      const body = toUpdateInsuranceProductBody(
+        { ...valid(), agencyCommissionPercent: 15 },
+        PRODUCT,
+      );
+      expect(body).toMatchObject({ agencyCommissionPercent: 15 });
+      const ip = { ...PRODUCT, kind: INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT };
+      expect(toUpdateInsuranceProductBody(valid(), ip)).not.toHaveProperty(
+        'agencyCommissionPercent',
+      );
+    });
+  });
+
+  describe('tab của form', () => {
+    it('mọi sản phẩm có cách tính phí đều có tab giá - kể cả phí theo ngày (ADR 0098)', () => {
+      expect(insuranceProductFormTabs(PRODUCT)).toEqual([
+        'pricing',
+        'content',
+        'payout',
+        'operation',
+      ]);
+      const ip = {
+        ...PRODUCT,
+        kind: INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT,
+        premiumBasis: INSURANCE_PREMIUM_BASIS.DAILY,
+      };
+      expect(insuranceProductFormTabs(ip)).toEqual(['pricing', 'content', 'payout', 'operation']);
+    });
+
+    it('phí ngày đi lên dây là chuỗi số nguyên, ô trống là không bán (null)', () => {
+      const body = toUpdateInsuranceProductBody({
+        ...valid(),
+        dailyAmountCar: 20000,
+        dailyAmountMotorbike: null,
+      });
+      expect(body.dailyAmountCar).toBe('20000');
+      expect(body.dailyAmountMotorbike).toBeNull();
+    });
+
+    it('đếm lỗi theo tab để nhãn tab báo và nút lưu nhảy tới đó', () => {
+      expect(
+        insuranceProductFormTabErrors({
+          premiumTiers: { message: 'x' },
+          nameEn: { message: 'x' },
+          coverageVi: { message: 'x' },
+          certificateUrlTemplate: { message: 'x' },
+        }),
+      ).toEqual({ pricing: 1, content: 2, payout: 0, operation: 1 });
     });
   });
 });

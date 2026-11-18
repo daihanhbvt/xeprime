@@ -179,6 +179,11 @@ export interface AppFormat {
   measure: (value: number) => string;
   /** Điểm đánh giá một chữ số thập phân: `4,8` · `4.8`. */
   rating: (value: number) => string;
+  /**
+   * Số phần trăm đã tính sẵn (chuỗi thập phân của server hoặc số): `0,013` · `15` · `12,5` — tới
+   * bốn chữ số lẻ, không số 0 thừa. Câu chữ tự gắn `%`.
+   */
+  rate: (value: number | string) => string;
 }
 
 /**
@@ -452,5 +457,6 @@ export function createAppFormat(
     // Cùng preset với quãng đường giao xe: tối đa một chữ số lẻ, không ép `,0`.
     measure: (value) => format.number(value, 'distance'),
     rating: (value) => format.number(value, 'rating'),
+    rate: (value) => format.number(Number(value), 'rate'),
   };
 }

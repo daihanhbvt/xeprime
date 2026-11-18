@@ -13,6 +13,13 @@
     "dateFieldLabel": "Apply date range to",
     "dateRangeLabel": "Date range"
   },
+  "pending": {
+    "intro": "Customers sent a request but have not paid the hold yet - waiting for the host to approve or for the customer to pay. Nearest deadline first. When the deadline passes without payment, the request closes itself and moves to the Not completed tab so the customer can be called back.",
+    "searchPlaceholder": "Customer, vehicle, plate, shop",
+    "searchLabel": "Search by customer, vehicle, plate or shop",
+    "stageLabel": "Filter by stage",
+    "allStages": "All stages"
+  },
   "table": {
     "label": "All bookings",
     "code": "Booking code",
