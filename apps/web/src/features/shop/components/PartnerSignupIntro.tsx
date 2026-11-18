@@ -16,7 +16,7 @@ const ART: Record<RegistrationTrack, { bg: string; illustration: string }> = {
     illustration: '/partner/signup/personal.webp',
   },
   [REGISTRATION_TRACK.PACKAGE]: {
-    bg: '/partner/signup/bg-shop.webp',
+    bg: '/partner/signup/bg-shop-pastel.webp',
     illustration: '/partner/signup/shop.webp',
   },
 };

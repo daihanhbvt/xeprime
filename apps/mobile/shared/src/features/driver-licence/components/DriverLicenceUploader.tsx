@@ -3,6 +3,8 @@ import { Ionicons } from '@/components/icons/Ionicons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
+import { SvgXml } from 'react-native-svg';
+import { LICENCE_PORTRAIT_SVG } from '../licence-portrait-svg';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import type { DriverLicence } from '@/api/driver-licence/api';
@@ -45,6 +47,7 @@ export function DriverLicenceUploader({
   processing,
   onPick,
   onSubmitted,
+  tone = 'default',
 }: {
   /** Lượt nộp ĐANG ĐƯỢC ĐỌC ở server (`processing`), hoặc `null`. */
   processing: DriverLicence | null;
@@ -52,6 +55,8 @@ export function DriverLicenceUploader({
   onPick?: () => void;
   /** Tải xong (lượt nộp đã sang "đang đọc"). */
   onSubmitted?: () => void;
+  /** `danger`: viền đỏ đứt - màn Xem lại đặt xe, nơi bằng là việc còn thiếu trước khi gửi (như web). */
+  tone?: 'default' | 'danger';
 }) {
   const colors = useColors();
   const t = useTranslations('DriverLicence');
@@ -146,6 +151,50 @@ export function DriverLicenceUploader({
           ) : null}
           <ActivityIndicator color={colors.primary} />
         </YStack>
+      ) : tone === 'danger' ? (
+        // Figma `21836:54301` (màn Xem lại): chân dung tròn trái, nút tải lên + chữ phải, viền đỏ đứt.
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('picker.tapTitle')}
+          onPress={() => void pick(IMAGE_SOURCE.CAMERA)}
+        >
+          <XStack
+            w="100%"
+            minHeight={180}
+            ai="center"
+            gap={space.md}
+            p={space.md}
+            br={radius.lg}
+            bw={1}
+            borderStyle="dashed"
+            bc={colors.danger}
+            bg={colors.background}
+          >
+            <SvgXml xml={LICENCE_PORTRAIT_SVG} width={96} height={96} />
+            <YStack f={1} gap={space.sm} ai="flex-start">
+              <YStack
+                w={40}
+                h={40}
+                ai="center"
+                jc="center"
+                br={radius.md}
+                bw={1}
+                bc={colors.borderInput}
+                bg={colors.surface}
+              >
+                <Ionicons name="camera-outline" size={20} color={colors.textMuted} />
+              </YStack>
+              <YStack gap={space.xs}>
+                <Text col={colors.primary} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                  {t('picker.tapTitle')}
+                </Text>
+                <Text col={colors.placeholder} fos={fontSize.label}>
+                  {t('picker.hint')}
+                </Text>
+              </YStack>
+            </YStack>
+          </XStack>
+        </Pressable>
       ) : (
         <Pressable
           accessibilityRole="button"

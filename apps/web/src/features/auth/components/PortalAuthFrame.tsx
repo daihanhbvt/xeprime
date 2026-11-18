@@ -29,29 +29,54 @@ export function PortalAuthFrame({
   return (
     <div className={styles.page}>
       <aside className={styles.brand} aria-hidden="true">
+        {/* Nền vệt sáng phủ kín thẻ - lấp hai bên khi khung bản vẽ hẹp hơn thẻ. */}
         <Image src="/auth/partner-login-bg.webp" alt="" fill sizes="53vw" className={styles.bg} />
-        <Image
-          src="/auth/partner-login-car.webp"
-          alt=""
-          fill
-          sizes="53vw"
-          className={styles.car}
-          priority
-        />
-        <div className={styles.logoBlock}>
-          <Image
-            src="/home/logo-gold-app.svg"
-            alt={APP_NAME}
-            width={414}
-            height={130}
-            unoptimized
-            className={styles.logo}
-          />
-          <p className={styles.wordmark}>{PARTNER_WORDMARK}</p>
-        </div>
-        <div className={styles.infoCard}>
-          <p className={styles.infoTitle}>{t('brandTitle')}</p>
-          <p className={styles.infoBody}>{t('brandBody')}</p>
+        {/*
+          Khung bản vẽ Figma `24382:23344` (1256 × 1040) thu NGUYÊN KHỐI cho vừa thẻ - mọi vị trí và
+          cỡ chữ bên trong tính theo bề rộng khung (`cqw`), nên bố cục giữ đúng tỉ lệ bản vẽ ở mọi
+          kích thước màn hình thay vì bị cắt. Lớp, dưới lên trên: ảnh đường hầm + xe · ánh vàng neo
+          đáy · lưới `color-dodge` 40% (hai lớp sau dùng chung mặt nạ dải dọc `32e67`) · logo · thẻ.
+        */}
+        <div className={styles.stage}>
+          <div className={styles.art}>
+            <Image
+              src="/auth/partner-login-tunnel.webp"
+              alt=""
+              fill
+              sizes="53vw"
+              className={styles.tunnel}
+              priority
+            />
+            <Image
+              src="/auth/partner-login-car.webp"
+              alt=""
+              fill
+              sizes="53vw"
+              className={styles.car}
+            />
+            <Image
+              src="/auth/partner-login-grid.webp"
+              alt=""
+              fill
+              sizes="53vw"
+              className={styles.grid}
+            />
+            <div className={styles.logoBlock}>
+              <Image
+                src="/home/logo-gold-app.svg"
+                alt={APP_NAME}
+                width={414}
+                height={130}
+                unoptimized
+                className={styles.logo}
+              />
+              <p className={styles.wordmark}>{PARTNER_WORDMARK}</p>
+            </div>
+            <div className={styles.infoCard}>
+              <p className={styles.infoTitle}>{t('brandTitle')}</p>
+              <p className={styles.infoBody}>{t('brandBody')}</p>
+            </div>
+          </div>
         </div>
       </aside>
 

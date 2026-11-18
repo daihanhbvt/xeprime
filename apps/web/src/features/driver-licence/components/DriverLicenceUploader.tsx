@@ -4,6 +4,7 @@ import {
   CameraOutlined,
   CheckCircleFilled,
   CloudUploadOutlined,
+  UploadOutlined,
   LoadingOutlined,
   PictureOutlined,
   UserOutlined,
@@ -46,6 +47,7 @@ export function DriverLicenceUploader({
   processing,
   onPick,
   onSubmitted,
+  tone = 'default',
 }: {
   /** Lượt nộp ĐANG ĐƯỢC ĐỌC ở server (`processing`), hoặc `null`. */
   processing: DriverLicence | null;
@@ -53,6 +55,8 @@ export function DriverLicenceUploader({
   onPick?: () => void;
   /** Tải xong (lượt nộp đã sang "đang đọc"). */
   onSubmitted?: () => void;
+  /** `danger`: khung chọn viền đỏ đứt - màn Xem lại đặt xe, nơi bằng là việc còn thiếu trước khi gửi. */
+  tone?: 'default' | 'danger';
 }) {
   const t = useTranslations('DriverLicence');
   const errorMessage = useErrorMessage();
@@ -170,6 +174,35 @@ export function DriverLicenceUploader({
           )}
           <span className={styles.scanLine} aria-hidden="true" />
         </div>
+      ) : tone === 'danger' ? (
+        // Figma `21836:54301` (màn Xem lại): chân dung tròn trái, nút tải lên + chữ phải, viền đỏ đứt.
+        <button
+          type="button"
+          className={cx(styles.reviewPicker, dragging && styles.cardDragging)}
+          onClick={openPicker}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- SVG tĩnh trang trí */}
+          <img src="/illustrations/licence-portrait.svg" alt="" className={styles.reviewPortrait} />
+          <span className={styles.reviewText}>
+            <span className={styles.reviewIcon} aria-hidden="true">
+              <UploadOutlined className={styles.onPointer} />
+              <CameraOutlined className={styles.onTouch} />
+            </span>
+            <span className={styles.reviewCopy}>
+              <span className={cx(styles.reviewTitle, styles.onPointer)}>
+                {t('picker.dropTitle')}
+              </span>
+              <span className={cx(styles.reviewTitle, styles.onTouch)}>{t('picker.tapTitle')}</span>
+              <span className={styles.reviewHint}>{t('picker.hint')}</span>
+            </span>
+          </span>
+        </button>
       ) : (
         <button
           type="button"

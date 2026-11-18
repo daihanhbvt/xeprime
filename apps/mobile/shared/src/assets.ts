@@ -8,6 +8,11 @@ import partnerHero from '../assets/images/partner/partner-hero.webp';
 import ownerShopShowroom from '../assets/images/owner-shop-showroom.png';
 // Minh hoạ "chưa có bằng lái" — xuất thẳng từ Figma (Empty State, node 20043:49464).
 import driverLicenceEmpty from '../assets/images/driver-licence-empty.png';
+// Minh hoạ ba bước quên mật khẩu của app Partner - Figma Partner-XePrime `24382:85620` · `85789` ·
+// `85898` (cùng tệp web `public/auth/*.webp`).
+import forgotLock from '../assets/images/forgot-lock.webp';
+import otpLock from '../assets/images/otp-lock.webp';
+import resetShield from '../assets/images/reset-shield.webp';
 // Hộp rỗng 160px — Figma "List - Scroll - Empty" (20063:60274), sinh từ apps/web/public/illustrations/list-empty.svg.
 import listEmpty from '../assets/images/list-empty.png';
 // Logo Zalo của nút liên hệ khách — CHÉP NGUYÊN apps/web/public/icons/brand/zalo.png (`CustomerContactButtons`).
@@ -60,6 +65,9 @@ export const images = {
   partnerHero,
   ownerShopShowroom,
   driverLicenceEmpty,
+  forgotLock,
+  otpLock,
+  resetShield,
   listEmpty,
   homeHeroFallback,
   homeDestCities,

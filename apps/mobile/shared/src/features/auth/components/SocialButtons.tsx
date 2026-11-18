@@ -68,7 +68,16 @@ export function SocialButtons({
   onSuccess,
   blocked = false,
   intent = 'login',
+  layout = 'stack',
+  dividerLabel,
 }: {
+  /**
+   * `row` - các nút đứng NGANG, chia đều, nhãn chỉ là tên provider ("Google", "Facebook"), cao 48,
+   * bo 12: cột form Figma Partner-XePrime `24382:23343`. `stack` (mặc định) - mỗi nút một hàng.
+   */
+  layout?: 'stack' | 'row';
+  /** Chữ giữa hai vạch ngăn; mặc định `social.divider`. */
+  dividerLabel?: string;
   onSuccess: (user: CurrentUser) => void;
   /** Nhãn nút theo màn — "Đăng nhập với …" hay "Đăng ký với …", như `AuthPanel` web (ADR 0060). */
   intent?: 'login' | 'register';
@@ -126,8 +135,11 @@ export function SocialButtons({
     });
   }
 
+  const row = layout === 'row';
   const labelFor = (provider: string) =>
-    t(intent === 'register' ? 'social.registerWith' : 'social.loginWith', { provider });
+    row
+      ? provider
+      : t(intent === 'register' ? 'social.registerWith' : 'social.loginWith', { provider });
 
   function signIn(provider: AuthProvider) {
     setPending(provider);
@@ -144,23 +156,27 @@ export function SocialButtons({
   return (
     <YStack gap={space.md}>
       <XStack ai="center" gap={space.sm}>
-        <YStack f={1} h={1} bg={colors.border} />
-        <Text col={colors.textMuted} fos={fontSize.label}>
-          {t('social.divider')}
+        <YStack f={1} h={1} bg={row ? colors.surfaceMuted : colors.border} />
+        <Text
+          col={row ? colors.textDisabled : colors.textMuted}
+          fos={row ? fontSize.body : fontSize.label}
+        >
+          {dividerLabel ?? t('social.divider')}
         </Text>
-        <YStack f={1} h={1} bg={colors.border} />
+        <YStack f={1} h={1} bg={row ? colors.surfaceMuted : colors.border} />
       </XStack>
 
       {/*
         MỖI PROVIDER MỘT HÀNG ĐẦY ĐỦ (chốt 06/11/2026): cùng bề ngang, cùng chiều cao, cùng bo
         góc và cùng câu "Đăng nhập với …". Apple cũng đi qua `ProviderButton` — xem docblock trên.
       */}
-      <YStack gap={space.sm}>
+      <XStack gap={row ? space.md : space.sm} flexDirection={row ? 'row' : 'column'}>
         {PROVIDERS.map((provider) => {
           const label = labelFor(AUTH_PROVIDER_LABEL[provider]);
           return (
             <ProviderButton
               key={provider}
+              row={row}
               label={label}
               busy={pending === provider}
               stopped={stopped}
@@ -171,11 +187,11 @@ export function SocialButtons({
               icon={
                 provider === AUTH_PROVIDER.GOOGLE && !stopped ? (
                   // Logo Google CHUẨN bốn màu (người dùng chốt 28/10/2026) — Ionicons chỉ có bản một màu.
-                  <GoogleLogo size={PROVIDER_ICON[provider].size} />
+                  <GoogleLogo size={row ? ROW_ICON_SIZE : PROVIDER_ICON[provider].size} />
                 ) : (
                   <Ionicons
                     name={PROVIDER_ICON[provider].name}
-                    size={PROVIDER_ICON[provider].size}
+                    size={row ? ROW_ICON_SIZE : PROVIDER_ICON[provider].size}
                     color={stopped ? colors.textDisabled : AUTH_PROVIDER_BRAND_COLOR[provider]}
                   />
                 )
@@ -187,6 +203,7 @@ export function SocialButtons({
         {/* "Sign in with Apple" CHỈ ở iOS (App Store Guideline 4.8), và chỉ khi máy hỗ trợ. */}
         {appleAvailable ? (
           <ProviderButton
+            row={row}
             label={labelFor(NATIVE_IDENTITY_PROVIDER_LABEL[NATIVE_IDENTITY_PROVIDER.APPLE])}
             busy={pending === NATIVE_IDENTITY_PROVIDER.APPLE}
             stopped={stopped}
@@ -197,16 +214,20 @@ export function SocialButtons({
             icon={
               <Ionicons
                 name="logo-apple"
-                size={APPLE_ICON_SIZE}
+                size={row ? ROW_ICON_SIZE : APPLE_ICON_SIZE}
                 color={stopped ? colors.textDisabled : PROVIDER_BUTTON.black}
               />
             }
           />
         ) : null}
-      </YStack>
+      </XStack>
     </YStack>
   );
 }
+
+/** Kiểu `row` (Figma `24382:23393`): nút cao 48, bo 12, icon 22 trong ô 26, nhãn 16 đậm vừa. */
+const ROW_BUTTON_HEIGHT = 48;
+const ROW_ICON_SIZE = 22;
 
 const useStyles = makeStyles((colors) => ({
   button: {
@@ -236,10 +257,13 @@ const useStyles = makeStyles((colors) => ({
    * một nút im lặng khi bấm đọc ra là máy treo chứ không phải "còn thiếu một bước ở trên".
    */
   blocked: { borderColor: colors.border, opacity: DISABLED_OPACITY },
+  rowButton: { flex: 1, height: ROW_BUTTON_HEIGHT, borderRadius: radius.control },
+  rowLabel: { color: colors.textMuted, fontSize: fontSize.bodyLg, fontWeight: '600' },
 }));
 
 /** Một nút provider — Google, Facebook, Apple dùng chung để trông như MỘT bộ. */
 function ProviderButton({
+  row = false,
   label,
   icon,
   busy,
@@ -249,6 +273,7 @@ function ProviderButton({
   spinnerColor,
   onPress,
 }: {
+  row?: boolean;
   label: string;
   icon: ReactNode;
   busy: boolean;
@@ -273,6 +298,7 @@ function ProviderButton({
       accessibilityState={{ busy, disabled: stopped }}
       style={({ pressed }) => [
         styles.button,
+        row ? styles.rowButton : null,
         surface,
         pressed ? styles.pressed : null,
         blocked ? styles.blocked : null,
@@ -281,7 +307,10 @@ function ProviderButton({
       <XStack w={ICON_BOX} h={ICON_BOX} ai="center" jc="center">
         {busy ? <ActivityIndicator size="small" color={spinnerColor} /> : icon}
       </XStack>
-      <RNText numberOfLines={1} style={[styles.label, stopped ? styles.labelDisabled : null]}>
+      <RNText
+        numberOfLines={1}
+        style={[styles.label, row ? styles.rowLabel : null, stopped ? styles.labelDisabled : null]}
+      >
         {label}
       </RNText>
     </Pressable>

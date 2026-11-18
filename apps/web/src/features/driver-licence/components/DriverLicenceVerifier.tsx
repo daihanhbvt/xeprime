@@ -51,11 +51,18 @@ type TripIssue = 'expired' | 'expiredToday' | 'classMismatchCar' | 'classMismatc
 export function DriverLicenceVerifier({
   trip,
   embedded = false,
+  layout = 'default',
 }: {
   /** Luồng đặt xe: soát bằng cho CHÍNH chuyến này. Nút đi tiếp thuộc về luồng, không ở đây. */
   trip?: DriverLicenceTrip;
   /** Nằm trong một thẻ có sẵn (mục Giấy tờ của trang Tài khoản) — bỏ khung viền riêng. */
   embedded?: boolean;
+  /**
+   * `review`: nằm trong thẻ "Giấy tờ & điều kiện nhận xe" của màn Xem lại (Figma `21836:54301`) -
+   * ô chọn ảnh bên trái, tiêu đề + lời dẫn bên phải, "Giấy tờ được chấp nhận" là hộp cam bên dưới.
+   * Thẻ cha chỉ vẽ component này khi bằng CHƯA dùng được cho chuyến.
+   */
+  layout?: 'default' | 'review';
 }) {
   const t = useTranslations('DriverLicence');
   const fmt = useAppFormat();
@@ -173,10 +180,10 @@ export function DriverLicenceVerifier({
             <ExclamationCircleFilled className={styles.replaceFailedIcon} aria-hidden="true" />
             <span>
               {t('verified.replaceFailed', {
-              reason: t(
-                `reasons.${(rejected.rejectionReason ?? 'other') as DriverLicenceRejectReason}`,
-              ),
-            })}
+                reason: t(
+                  `reasons.${(rejected.rejectionReason ?? 'other') as DriverLicenceRejectReason}`,
+                ),
+              })}
             </span>
           </p>
         ) : null}
@@ -248,6 +255,28 @@ export function DriverLicenceVerifier({
           <CtaButton onClick={() => setAdding(true)}>{t('empty.add')}</CtaButton>
         </div>
         {addModal}
+      </div>
+    );
+  }
+
+  if (layout === 'review') {
+    return (
+      <div className={styles.review}>
+        <div className={styles.reviewRow}>
+          <div className={styles.reviewUploader}>
+            <DriverLicenceUploader
+              tone="danger"
+              processing={processing}
+              onPick={() => setPickedOver(latest?.id ?? null)}
+              onSubmitted={() => setReplacing(false)}
+            />
+          </div>
+          <div className={styles.reviewAside}>
+            <PanelHeading title={t('intro.reviewTitle')} body={t('intro.reviewBody')} />
+            {notice === heading ? null : notice}
+          </div>
+        </div>
+        <AcceptedDocuments tone="warm" />
       </div>
     );
   }
@@ -343,10 +372,10 @@ function RejectedNotice({ licence }: { licence: DriverLicence }) {
   );
 }
 
-function AcceptedDocuments() {
+function AcceptedDocuments({ tone = 'default' }: { tone?: 'default' | 'warm' }) {
   const t = useTranslations('DriverLicence.accepted');
   return (
-    <div className={styles.accepted}>
+    <div className={cx(styles.accepted, tone === 'warm' && styles.acceptedWarm)}>
       <p className={styles.acceptedTitle}>{t('title')}</p>
       <ul className={styles.acceptedList}>
         {ACCEPTED_KEYS.map((key) => (
