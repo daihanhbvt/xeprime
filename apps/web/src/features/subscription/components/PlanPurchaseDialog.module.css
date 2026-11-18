@@ -17,6 +17,23 @@
   gap: 20px;
 }
 
+/* Dạng TRANG (onboarding): thân luồng rồi tới chân, chân dính đáy khung nhìn khi cuộn. */
+.page {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.pageFooter {
+  position: sticky;
+  z-index: 2;
+  bottom: 0;
+  padding: 16px 0;
+  border-top: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+}
+
 .lane {
   display: flex;
   min-width: 0;

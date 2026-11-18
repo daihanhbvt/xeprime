@@ -178,9 +178,15 @@ export interface ScopedPlanLane {
  * BỘ CHỌN HAI LÀN - tối đa một bậc xe máy VÀ một bậc ô tô (ADR 0065 điều 2), dùng ở onboarding
  * tuyến gói và luồng nâng cấp từ tuyến hoa hồng.
  *
- * Hai `usePlanPurchase` độc lập, KHÔNG một state gộp: mỗi làn có bảng giá, kỳ hạn và nút bỏ chọn
- * của riêng nó, và người dùng mua một làn thì làn kia phải giữ nguyên trạng thái "chưa chọn". Số
- * hook cố định (hai) nên thứ tự hook ổn định qua mọi lần render.
+ * Mỗi làn chọn BẬC riêng (hai `usePlanPurchase`, số hook cố định nên thứ tự hook ổn định), nhưng
+ * KỲ HẠN là MỘT cho cả lượt - cùng luật với hộp "Mua hoặc gia hạn gói" (`useCombinedPlanPurchase`):
+ * hai gói mua cùng lúc đi chung một phiếu thanh toán gộp (ADR 0083), và một phiếu mà hai gói hết hạn
+ * lệch nhau là hai lần gia hạn cho một quyết định. Kỳ của từng `usePlanPurchase` bị bỏ qua ở đây.
+ *
+ * Kỳ chọn được là kỳ mà MỌI bậc đang chọn đều bán (`limits.termPrices` vừa là bảng giá vừa là danh
+ * sách kỳ được bán - ADR 0041 điều 2). % tiết kiệm của một kỳ lấy mức THẤP nhất giữa các bậc - một
+ * nhãn chung không hứa nhiều hơn bậc nào. KHÔNG chọn sẵn kỳ nào: mặc định sẵn một kỳ là có người
+ * trả trước 12 tháng vì đó là thứ đang sáng lên.
  *
  * Bậc doanh nghiệp (`all`, `salesOnly`) KHÔNG nằm trong làn nào: nó không tự mua được, nên nơi vẽ
  * dựng một thẻ "Liên hệ tư vấn" riêng từ `enterprise`.
@@ -189,11 +195,21 @@ export interface ScopedPlanPurchaseState {
   lanes: readonly ScopedPlanLane[];
   /** Bậc tư vấn phủ cả hai loại xe - `undefined` khi danh mục không bán bậc đó. */
   enterprise: PlanTier | undefined;
-  /** Các làn đã chọn đủ (bậc tự mua + kỳ hạn), theo thứ tự làn. Rỗng = chưa có gì để mua. */
+  /** Các bậc tự mua đang chọn, theo thứ tự làn - chưa xét kỳ hạn. */
+  pickedTiers: readonly PlanTier[];
+  /**
+   * Kỳ hạn chung chọn được cho các bậc đang chọn; `total` là TỔNG của mọi bậc ở kỳ đó. Rỗng khi
+   * chưa chọn bậc nào, hoặc các bậc đang chọn không có kỳ nào chung.
+   */
+  termOptions: readonly PlanTermChoice[];
+  /** Kỳ hạn chung đang chọn - `null` khi chưa chọn, hoặc kỳ cũ không còn được mọi bậc bán. */
+  termMonths: SubscriptionTermMonths | null;
+  setTermMonths: (months: SubscriptionTermMonths) => void;
+  /** Các làn đã chọn đủ (bậc tự mua + kỳ hạn chung), theo thứ tự làn. Rỗng = chưa có gì để mua. */
   selections: readonly ScopedPlanSelection[];
   /** Tổng mọi làn đã chọn (`sumMoney`, không qua `Number`) - chỉ để HIỂN THỊ; server đọc lại bảng giá của từng hoá đơn. */
   total: MoneyString | null;
-  /** Có làn nào đang chọn dở (đã chọn bậc nhưng chưa chọn kỳ hạn) - nút mua phải khoá. */
+  /** Đã chọn bậc nhưng chưa có kỳ hạn chung - nút mua phải khoá. */
   incomplete: boolean;
   /** Có ít nhất một bậc tự mua được trong danh mục - `false` = danh mục rỗng (lỗi cấu hình). */
   hasSellable: boolean;
@@ -207,6 +223,7 @@ export function useScopedPlanPurchase(
 ): ScopedPlanPurchaseState {
   const motorbike = usePlanPurchase(packagePlansForScope(plans, PLAN_VEHICLE_SCOPE.MOTORBIKE));
   const car = usePlanPurchase(packagePlansForScope(plans, PLAN_VEHICLE_SCOPE.CAR));
+  const [chosenTerm, setChosenTerm] = useState<SubscriptionTermMonths | null>(null);
   const enterprise = enterpriseTierOf(plans);
 
   const byScope: Record<PlanLaneScope, PlanPurchaseState> = {
@@ -217,26 +234,69 @@ export function useScopedPlanPurchase(
     .map((scope) => ({ scope, state: byScope[scope] }))
     .filter((lane) => lane.state.tiers.length > 0);
 
-  const selections: ScopedPlanSelection[] = lanes.flatMap(({ scope, state }) =>
-    state.selection
-      ? [{ ...state.selection, scope, planName: state.selected?.plan.name ?? '' }]
-      : [],
+  const picked = lanes.flatMap(({ scope, state }) =>
+    state.selected?.selfServe ? [{ scope, tier: state.selected }] : [],
   );
-  const total =
-    selections.length > 0 ? sumMoney(selections.map((item) => item.total)) : null;
+  const pickedTiers = picked.map((item) => item.tier);
+  const termOptions = sharedTermOptions(pickedTiers);
+  // Đổi bậc làm kỳ đã chọn hết được bán ⇒ bỏ chọn, KHÔNG tự nhảy sang kỳ khác.
+  const termMonths =
+    chosenTerm != null && termOptions.some((option) => option.months === chosenTerm)
+      ? chosenTerm
+      : null;
+
+  const selections: ScopedPlanSelection[] =
+    termMonths == null
+      ? []
+      : picked.flatMap(({ scope, tier }) => {
+          const term = tier.terms.find((choice) => choice.months === termMonths);
+          return term
+            ? [
+                {
+                  body: { planId: tier.plan.id, termMonths },
+                  total: term.total,
+                  scope,
+                  planName: tier.plan.name,
+                },
+              ]
+            : [];
+        });
+  const total = selections.length > 0 ? sumMoney(selections.map((item) => item.total)) : null;
 
   return {
     lanes,
     enterprise,
+    pickedTiers,
+    termOptions,
+    termMonths,
+    setTermMonths: setChosenTerm,
     selections,
     total,
-    incomplete: lanes.some(({ state }) => state.planId != null && state.selection == null),
+    incomplete: pickedTiers.length > 0 && selections.length === 0,
     hasSellable: lanes.some(({ state }) => state.tiers.some((tier) => tier.selfServe)),
     reset: () => {
       motorbike.reset();
       car.reset();
+      setChosenTerm(null);
     },
   };
+}
+
+/** Kỳ mà MỌI bậc đều bán, tăng dần - tổng tiền cộng các bậc, % tiết kiệm lấy mức thấp nhất. */
+function sharedTermOptions(tiers: readonly PlanTier[]): PlanTermChoice[] {
+  const [first, ...rest] = tiers;
+  if (!first) return [];
+  return first.terms
+    .filter((term) => rest.every((tier) => tier.terms.some((t) => t.months === term.months)))
+    .map((term) => {
+      const matching = tiers.map((tier) => tier.terms.find((t) => t.months === term.months)!);
+      return {
+        months: term.months,
+        total: sumMoney(matching.map((t) => t.total)),
+        savingPercent: Math.min(...matching.map((t) => t.savingPercent)),
+      };
+    })
+    .sort((a, b) => a.months - b.months);
 }
 
 /**

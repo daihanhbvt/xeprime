@@ -365,9 +365,9 @@ export function PackageUpgradeWizard() {
              * Không truyền giá: server đọc lại bảng giá của chính bậc + kỳ hạn này (ADR 0041 điều 2).
              */
             /*
-             * Mỗi làn đã chọn một hoá đơn, tạo lần lượt. MỘT hoá đơn ⇒ sang thẳng trang thanh toán
-             * của nó; hai ⇒ ở lại bước 3, mỗi mã một nút "Thanh toán". `setEditing(false)` vẫn cần:
-             * cờ sửa còn bật sẽ che mất bước thanh toán của mã vừa tạo.
+             * Một gói ⇒ một hoá đơn; hai gói (cùng MỘT kỳ hạn) ⇒ một phiếu gộp. Tạo xong là sang
+             * thẳng trang thanh toán. `setEditing(false)` vẫn cần: cờ sửa còn bật sẽ che mất bước
+             * thanh toán của mã vừa tạo.
              */
             onSaved={() => {
               if (creating) return;

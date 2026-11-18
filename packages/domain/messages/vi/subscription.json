@@ -258,8 +258,11 @@
       "car": "Chọn một gói nếu bạn cho thuê ô tô. Bỏ trống thì ô tô chưa đưa lên chợ được."
     },
     "clear": "Bỏ chọn",
-    "invoiceCount": "{count, plural, =1 {Sẽ tạo 1 hoá đơn.} other {Sẽ tạo # hoá đơn - mỗi loại xe một hoá đơn.}}",
-    "pickTermFirst": "Chọn kỳ hạn cho gói đã chọn để tạo hoá đơn.",
+    "invoiceCount": "{count, plural, =1 {Sẽ tạo 1 hoá đơn.} other {# gói gộp chung một hoá đơn - chuyển khoản một lần bằng một mã.}}",
+    "pickTermFirst": "Chọn thời hạn để tạo hoá đơn.",
+    "sharedTermTitle": "{count, plural, other {Chọn thời hạn chung cho # gói}}",
+    "sharedTermHint": "Một thời hạn cho mọi gói đã chọn - giá hiển thị là tổng các gói. Thời hạn càng dài, chi phí mỗi tháng càng thấp.",
+    "noSharedTerm": "Các gói đã chọn không có thời hạn nào chung. Đổi một gói khác hoặc liên hệ hỗ trợ XePrime.",
     "pickAtLeastOne": "Chọn ít nhất một gói (xe máy hoặc ô tô) và kỳ hạn để tạo hoá đơn.",
     "sectionTitle": "Gói theo loại xe",
     "sectionHint": "Mỗi loại xe một gói riêng - bạn có thể dùng song song một gói xe máy và một gói ô tô.",
