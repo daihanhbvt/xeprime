@@ -207,6 +207,7 @@ export function ContactVerifyModal({
       maskClosable={!required}
       title={<DialogHeading title={title} hint={subtitle} />}
       size="sm"
+      className={styles.dialog}
       footer={footer}
       confirmLoading={flow.sending || flow.verifying}
     >

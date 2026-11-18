@@ -1,3 +1,4 @@
+import { useRegisterSave, useReportDirty, type SubFormSave } from '@/hooks/use-report-dirty';
 import { useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { XStack, YStack } from 'tamagui';
@@ -66,7 +67,19 @@ export function VehicleHandoverTimeScreen({
   );
 }
 
-export function HandoverBody({ vehicleId, canEdit }: { vehicleId: string; canEdit: boolean }) {
+export function HandoverBody({
+  vehicleId,
+  canEdit,
+  onDirtyChange,
+  registerSave,
+}: {
+  vehicleId: string;
+  canEdit: boolean;
+  /** Báo "đang sửa dở" lên màn chứa (`useReportDirty`). */
+  onDirtyChange?: (dirty: boolean) => void;
+  /** Màn chứa có MỘT nút Lưu chung - form này ẩn nút riêng (`useRegisterSave`). */
+  registerSave?: (save: SubFormSave | null) => void;
+}) {
   const t = useTranslations('VehicleManage');
   const settings = useVehicleOperationSettings(vehicleId);
 
@@ -80,17 +93,29 @@ export function HandoverBody({ vehicleId, canEdit }: { vehicleId: string; canEdi
       />
     );
   }
-  return <HandoverForm settings={settings.data} vehicleId={vehicleId} canEdit={canEdit} />;
+  return (
+    <HandoverForm
+      settings={settings.data}
+      vehicleId={vehicleId}
+      canEdit={canEdit}
+      onDirtyChange={onDirtyChange}
+      registerSave={registerSave}
+    />
+  );
 }
 
 function HandoverForm({
   settings,
   vehicleId,
   canEdit,
+  onDirtyChange,
+  registerSave,
 }: {
   settings: VehicleOperationSettings;
   vehicleId: string;
   canEdit: boolean;
+  onDirtyChange?: ((dirty: boolean) => void) | undefined;
+  registerSave?: ((save: SubFormSave | null) => void) | undefined;
 }) {
   const t = useTranslations('VehicleManage');
   const tActions = useTranslations('Common.actions');
@@ -117,6 +142,7 @@ function HandoverForm({
     resolver,
     values,
   });
+  useReportDirty(formState.isDirty, onDirtyChange);
   const useShopDefault = useWatch({ control, name: 'useShopDefault' });
   const shopMinutes = settings.shopDefaultMinutes ?? 0;
   const formatBuffer = (minutes: number): string =>
@@ -126,26 +152,36 @@ function HandoverForm({
         ? t('common.hours', { count: minutes / 60 })
         : t('common.minutes', { count: minutes });
 
-  const submit = handleSubmit((next) => {
-    save.mutate(
-      {
+  const persist = async (next: FormValues, silent = false): Promise<boolean> => {
+    try {
+      const saved = await save.mutateAsync({
         turnaroundBufferMinutes: next.turnaroundBufferMinutes,
         useShopDefault: next.useShopDefault,
-      },
-      {
-        onSuccess: (saved) => {
-          // Reset theo bản SERVER trả về: nó chuẩn hoá và gộp mốc, nên form phải theo nó chứ
-          // không theo thứ người dùng vừa gõ — nếu không, nút Lưu còn sáng sau một lần lưu thành công.
-          reset({
-            turnaroundBufferMinutes: saved.turnaroundBufferMinutes,
-            useShopDefault: isShop && saved.useShopDefault,
-          });
-          toast.showSuccess(t('handover.saved'));
-        },
-        onError: (err) => toast.showError(errorMessage(err)),
-      },
-    );
+      });
+      // Reset theo bản SERVER trả về: nó chuẩn hoá và gộp mốc, nên form phải theo nó chứ
+      // không theo thứ người dùng vừa gõ — nếu không, nút Lưu còn sáng sau một lần lưu thành công.
+      reset({
+        turnaroundBufferMinutes: saved.turnaroundBufferMinutes,
+        useShopDefault: isShop && saved.useShopDefault,
+      });
+      if (!silent) toast.showSuccess(t('handover.saved'));
+      return true;
+    } catch (err) {
+      toast.showError(errorMessage(err));
+      return false;
+    }
+  };
+  const submit = handleSubmit(async (next) => {
+    await persist(next);
   });
+  useRegisterSave(async () => {
+    if (!formState.isDirty) return true;
+    let ok = false;
+    await handleSubmit(async (next) => {
+      ok = await persist(next, true);
+    })();
+    return ok;
+  }, registerSave);
 
   return (
     <YStack gap={space.md}>
@@ -179,7 +215,7 @@ function HandoverForm({
         </YStack>
       </Card>
 
-      {canEdit ? (
+      {canEdit && !registerSave ? (
         <XStack gap={space.sm}>
           {formState.isDirty ? (
             <YStack flexShrink={0}>

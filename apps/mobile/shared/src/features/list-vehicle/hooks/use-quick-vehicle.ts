@@ -13,7 +13,11 @@ import type { OwnerProfileValues } from '@xeprime/validators';
 import { publishRequirementsFrom } from '@xeprime/domain';
 import { quickVehicleToCreateInput, quickVehicleToPolicyInput } from '../quick-mappers';
 import type { QuickVehicleValues } from '../quick-schema';
-import { vehiclesApi, type VehicleDetail } from '@/api/vehicles/api';
+import {
+  vehiclesApi,
+  type CreateVehicleRegistrationInput,
+  type VehicleDetail,
+} from '@/api/vehicles/api';
 import { vehicleSettingsApi } from '@/api/vehicle-settings/api';
 import { tenantsApi, type MyShop } from '@/api/tenants/api';
 
@@ -46,6 +50,8 @@ interface RunOptions {
    * điều quan trọng nhất của luồng này: xem docblock của hook.
    */
   ownerProfile?: OwnerProfileValues | null;
+  /** Cà vẹt đã chụp/nhập (ADR 0099) - gắn trong cùng lượt tạo xe. */
+  registration?: CreateVehicleRegistrationInput;
   /** Câu lỗi hiển thị cho người dùng — nơi gọi truyền hàm dịch mã lỗi API. */
   toMessage: (error: unknown) => string;
 }
@@ -163,7 +169,7 @@ export function useQuickVehicleRegistration() {
   const run = useCallback(
     async (
       values: QuickVehicleValues,
-      { submitForReview, toMessage, ownerProfile }: RunOptions,
+      { submitForReview, toMessage, ownerProfile, registration }: RunOptions,
     ): Promise<QuickRegistrationResult> => {
       if (runningRef.current) throw new Error('busy');
       runningRef.current = true;
@@ -182,7 +188,10 @@ export function useQuickVehicleRegistration() {
            * đầu không có bộ chọn chi nhánh nào ở bước 2, nên trường đó còn rỗng.
            */
           const branchId = shop?.defaultBranch?.id ?? values.branchId;
-          vehicle = await vehiclesApi.create(quickVehicleToCreateInput({ ...values, branchId }));
+          vehicle = await vehiclesApi.create({
+            ...quickVehicleToCreateInput({ ...values, branchId }),
+            ...(registration ? { registration } : {}),
+          });
           createdVehicleRef.current = vehicle;
           setCreatedVehicle(vehicle);
         }

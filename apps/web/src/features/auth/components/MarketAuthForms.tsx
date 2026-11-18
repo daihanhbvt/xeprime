@@ -7,8 +7,10 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { compactPhoneInput } from '@xeprime/types';
 import {
+  buildPartnerLoginSchema,
   buildPhoneLoginSchema,
   buildRegisterSchema,
+  type PartnerLoginValues,
   type PhoneLoginValues,
   type RegisterValues,
 } from '@xeprime/validators';
@@ -44,6 +46,17 @@ export interface MarketAuthFormsProps {
   prefillPhone?: string | null;
   /** Tự focus ô đầu tiên — desktop có, mobile để bàn phím không bật lên che form. */
   autoFocus: boolean;
+  /**
+   * Site PARTNER: ô đăng nhập nhận SĐT HOẶC tên đăng nhập nhân viên (ADR 0087), không "Ghi nhớ tài
+   * khoản" — logic vẫn là `useAuthFlow.loginWithIdentifier` như `AuthPanel` cũ.
+   */
+  partnerLogin?: boolean;
+  /** Tiêu đề/phụ đề riêng của trang gọi (site partner) — thay câu mặc định của site khách. */
+  heading?: { title: string; sub: ReactNode };
+  /** Ghi chú ngữ cảnh ngay dưới tiêu đề. */
+  note?: ReactNode;
+  /** Chân cột form (link về site khách…). */
+  footer?: ReactNode;
 }
 
 /**
@@ -64,6 +77,10 @@ export function MarketAuthForms({
   forBooking,
   prefillPhone = null,
   autoFocus,
+  partnerLogin = false,
+  heading,
+  note,
+  footer,
 }: MarketAuthFormsProps) {
   const t = useTranslations('Auth');
   /**
@@ -92,18 +109,26 @@ export function MarketAuthForms({
 
   return (
     <div className={cx(styles.panel, isRegister && styles.panelCompact)}>
-      <header className={styles.header}>
+      <header className={cx(styles.header, heading && styles.headerCenter)}>
         <h2 className={cx(styles.title, styles.caps)}>
-          {isRegister ? t('market.register.title') : t('market.login.title')}
+          {heading
+            ? heading.title
+            : isRegister
+              ? t('market.register.title')
+              : t('market.login.title')}
         </h2>
         <p className={styles.sub}>
-          {forBooking
-            ? t('modal.bookingSub')
-            : t.rich(isRegister ? 'market.register.sub' : 'market.login.sub', {
-                br: () => <br />,
-              })}
+          {heading
+            ? heading.sub
+            : forBooking
+              ? t('modal.bookingSub')
+              : t.rich(isRegister ? 'market.register.sub' : 'market.login.sub', {
+                  br: () => <br />,
+                })}
         </p>
       </header>
+
+      {note ? <div className={styles.note}>{note}</div> : null}
 
       {formError ? (
         <Alert type="error" showIcon title={formError} className={styles.alert} role="alert" />
@@ -119,6 +144,20 @@ export function MarketAuthForms({
               action={t('market.register.toLogin')}
               disabled={busy}
               onClick={() => switchMode(AUTH_MODE.LOGIN)}
+            />
+          }
+        />
+      ) : partnerLogin ? (
+        <PartnerLoginForm
+          flow={flow}
+          autoFocus={autoFocus}
+          onForgot={onForgot}
+          switchLine={
+            <SwitchLine
+              question={t('market.login.noAccount')}
+              action={t('market.login.toRegister')}
+              disabled={busy}
+              onClick={() => switchMode(AUTH_MODE.REGISTER)}
             />
           }
         />
@@ -161,6 +200,8 @@ export function MarketAuthForms({
         </div>
         <LegalConsentNote place="marketAuth" className={styles.consent} />
       </div>
+
+      {footer ? <div className={styles.footer}>{footer}</div> : null}
 
       {registration ? (
         <VerifyAccountDialog
@@ -269,6 +310,97 @@ function LoginForm({
             className={cx(styles.textLink, styles.smallLink)}
             disabled={flow.busy}
             onClick={() => onForgot(getValues('phone'))}
+          >
+            {t('login.forgot')}
+          </button>
+        </div>
+      </div>
+      <div className={styles.submitBlock}>
+        <CtaButton
+          type="submit"
+          size="form"
+          block
+          loading={flow.pending === 'password'}
+          disabled={flow.busy && flow.pending !== 'password'}
+        >
+          {t('login.submit')}
+        </CtaButton>
+        {switchLine}
+      </div>
+    </form>
+  );
+}
+
+/**
+ * Đăng nhập site PARTNER: SĐT HOẶC tên đăng nhập nhân viên + mật khẩu (ADR 0060 · ADR 0087). Một ô —
+ * server phân loại theo hình dạng.
+ */
+function PartnerLoginForm({
+  flow,
+  autoFocus,
+  onForgot,
+  switchLine,
+}: {
+  flow: AuthFlow;
+  autoFocus: boolean;
+  onForgot: (phone: string) => void;
+  switchLine: ReactNode;
+}) {
+  const t = useTranslations('Auth');
+  const labels = useAuthSchemaLabels();
+  const schema = useMemo(() => buildPartnerLoginSchema(labels), [labels]);
+  // "Ghi nhớ tài khoản" như site khách — nhớ định danh (SĐT/tên đăng nhập), không bao giờ mật khẩu.
+  const [remembered] = useState(readRememberedPhone);
+  const [remember, setRemember] = useState(remembered !== null);
+  const { control, handleSubmit, getValues } = useForm<PartnerLoginValues>({
+    resolver: yupResolver(schema),
+    defaultValues: { identifier: remembered ?? '', password: '' },
+  });
+
+  async function submit(values: PartnerLoginValues) {
+    const ok = await flow.loginWithIdentifier(values);
+    if (ok) rememberPhone(remember ? values.identifier.trim() : null);
+  }
+
+  return (
+    <form
+      className={styles.form}
+      onSubmit={handleSubmit(submit)}
+      noValidate
+    >
+      <div className={styles.fields}>
+        <TextField
+          control={control}
+          name="identifier"
+          label={t('login.partnerIdentifier')}
+          placeholder={t('login.partnerIdentifierPlaceholder')}
+          autoComplete="username"
+          prefix={<UserIcon className={styles.fieldIcon} />}
+          autoFocus={autoFocus}
+        />
+        <TextField
+          control={control}
+          name="password"
+          label={t('login.password')}
+          type="password"
+          placeholder={t('login.passwordPlaceholder')}
+          autoComplete="current-password"
+          prefix={<LockIcon className={styles.fieldIcon} />}
+          visibilityIcon={passwordVisibilityIcon}
+        />
+        <div className={styles.formAction}>
+          <Checkbox
+            className={styles.remember}
+            checked={remember}
+            onChange={(event) => setRemember(event.target.checked)}
+          >
+            {t('market.login.remember')}
+          </Checkbox>
+          <button
+            type="button"
+            className={cx(styles.textLink, styles.smallLink)}
+            disabled={flow.busy}
+            onClick={() => onForgot(getValues('identifier'))}
           >
             {t('login.forgot')}
           </button>

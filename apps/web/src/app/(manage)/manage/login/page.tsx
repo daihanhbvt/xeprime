@@ -1,19 +1,15 @@
 'use client';
 
 import { ArrowLeftOutlined } from '@ant-design/icons';
-import { Button, Spin } from 'antd';
-import Link from 'next/link';
+import { Spin } from 'antd';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Suspense, useEffect } from 'react';
 import { ROUTES } from '@/constants/routes';
-import { AuthPanel } from '@/features/auth/components/AuthPanel';
 import { AUTH_ERROR_PARAM } from '@/features/auth/components/AuthModalProvider';
-import {
-  PORTAL_FOOT_CTA_CLASS,
-  PORTAL_FOOT_LINK_CLASS,
-  PortalLoginLayout,
-} from '@/features/auth/components/PortalLoginLayout';
+import { MarketAuthForms } from '@/features/auth/components/MarketAuthForms';
+import { PortalAuthFrame } from '@/features/auth/components/PortalAuthFrame';
+import marketStyles from '@/features/auth/components/MarketAuth.module.css';
 import { useAuthCache } from '@/features/auth/hooks/use-auth-actions';
 import {
   AUTH_INTENT,
@@ -21,6 +17,7 @@ import {
   resolvePartnerDestination,
 } from '@/features/auth/post-auth-destination';
 import { useCurrentUser, type CurrentUser } from '@/hooks/use-current-user';
+import { useIsMobile } from '@/hooks/use-media-query';
 import { ZONE, siteHref } from '@/zones';
 
 /**
@@ -41,10 +38,12 @@ export default function PartnerLoginPage() {
 
 function PartnerLoginView() {
   const t = useTranslations('Auth.portal');
+  const tAuth = useTranslations('Auth');
   const router = useRouter();
   const search = useSearchParams();
   const { refreshAfterAuth } = useAuthCache();
   const { data: user } = useCurrentUser();
+  const isMobile = useIsMobile();
 
   const next = search.get('next');
   const isOwnerIntent = search.get('intent') === AUTH_INTENT.OWNER;
@@ -70,30 +69,26 @@ function PartnerLoginView() {
   }
 
   return (
-    <PortalLoginLayout
-      asideText={t('asideText')}
-      title={t('title')}
-      subtitle={t('subtitle')}
-      note={isOwnerIntent ? t('ownerIntent') : undefined}
-      footer={
-        <>
-          {/* Site khách là site KHÁC (ADR 0051) — URL tuyệt đối ở chế độ `host`. */}
-          <a href={siteHref(ZONE.MARKET, ROUTES.HOME)} className={PORTAL_FOOT_LINK_CLASS}>
-            <ArrowLeftOutlined /> {t('backToSearch')}
-          </a>
-          <Link href={ROUTES.MANAGE.REGISTER}>
-            <Button type="link" className={PORTAL_FOOT_CTA_CLASS}>
-              {t('becomeOwner')}
-            </Button>
-          </Link>
-        </>
-      }
-    >
-      <AuthPanel
+    <PortalAuthFrame>
+      <MarketAuthForms
         mode={AUTH_MODE.LOGIN}
+        partnerLogin
+        heading={{ title: tAuth('market.login.title'), sub: t('subtitle') }}
+        note={isOwnerIntent ? t('ownerIntent') : undefined}
+        // "Đăng ký ngay!" của site partner là trang đăng ký đối tác (chọn tuyến).
+        onModeChange={() => router.push(ROUTES.MANAGE.REGISTER)}
+        onForgot={() => router.push(ROUTES.MANAGE.FORGOT_PASSWORD)}
         onAuthenticated={handleAuthenticated}
         initialErrorCode={authError}
+        forBooking={false}
+        autoFocus={!isMobile}
+        footer={
+          /* Site khách là site KHÁC (ADR 0051) — URL tuyệt đối ở chế độ `host`. */
+          <a href={siteHref(ZONE.MARKET, ROUTES.HOME)} className={marketStyles.footerLink}>
+            <ArrowLeftOutlined /> {t('backToSearch')}
+          </a>
+        }
       />
-    </PortalLoginLayout>
+    </PortalAuthFrame>
   );
 }

@@ -2,3 +2,30 @@
 .gate {
   margin-bottom: var(--xp-space-md);
 }
+
+/* Tiêu đề trang theo Figma `24352:79237`: nút lùi tròn 28 có viền, tiêu đề 20/30, phụ đề 14/20. */
+.figmaHeader :global(.ant-btn) {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #e9eaeb;
+  border-radius: 9999px;
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 1px 2px rgb(10 13 18 / 5%);
+  font-size: 12px;
+}
+
+.figmaHeader :global(h1) {
+  color: #0e0f12;
+  font-size: 20px !important;
+  font-weight: 600;
+  line-height: 30px !important;
+}
+
+.figmaHeader :global(h1 + p) {
+  margin-top: 0;
+  color: #717680;
+  font-size: 14px;
+  line-height: 20px;
+}

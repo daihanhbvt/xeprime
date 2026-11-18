@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { VehicleEditSummaryCard } from '@/features/vehicles/components/VehicleEditSummaryCard';
 import { useRouter } from 'expo-router';
 import { useForm } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
@@ -108,7 +109,10 @@ export function VehicleMaintenanceScreen({ vehicleId }: { vehicleId: string }) {
           void records.refetch();
         }}
       >
-        <VehicleMaintenanceWorkspace vehicleId={vehicleId} />
+        <YStack gap={layout.section}>
+          <VehicleEditSummaryCard vehicleId={vehicleId} tab={VEHICLE_EDIT_TAB.MAINTENANCE} />
+          <VehicleMaintenanceWorkspace vehicleId={vehicleId} />
+        </YStack>
       </Screen>
     </>
   );

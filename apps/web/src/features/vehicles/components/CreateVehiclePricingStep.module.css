@@ -1,24 +1,21 @@
+/* Bước 2 "Dịch vụ & giá" - Figma `24352:80745`. */
 .stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+.services {
   display: flex;
   flex-direction: column;
   gap: var(--xp-space-md);
 }
 
-.card {
-  border-color: var(--xp-color-border);
-}
-
-.description {
-  margin-top: 0;
-  color: var(--xp-color-text-secondary);
-}
-
-/* Panel "Xem trước bảng giá áp dụng" — khối nền nhạt tách khỏi thân thẻ. */
+/* Khối "Xe mới tự động kế thừa..." - nền xám nhạt, ba cột căn giữa. */
 .preview {
   padding: var(--xp-space-md);
-  border: 1px solid var(--xp-color-border-secondary);
-  border-radius: var(--xp-border-radius-md);
-  background: var(--xp-color-bg-layout);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-muted);
 }
 
 .previewHeader {
@@ -28,31 +25,36 @@
   justify-content: space-between;
   margin-bottom: var(--xp-space-md);
   gap: var(--xp-space-xs) var(--xp-space-sm);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
 }
 
-.previewSource {
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
+.inheritLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  color: var(--xp-color-primary-hover);
+  font-weight: var(--xp-font-weight-medium);
+  white-space: nowrap;
 }
 
 .previewGrid {
   display: grid;
   margin: 0;
   gap: var(--xp-space-md);
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  text-align: center;
 }
 
 .previewItem dt {
-  color: var(--xp-color-text-tertiary);
+  color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
 }
 
 .previewItem dd {
   margin: 2px 0 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-lg);
+  font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-semibold);
 }
 
@@ -62,30 +64,131 @@
 
 .previewDiscounts {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   padding-top: var(--xp-space-sm);
   border-top: 1px solid var(--xp-color-border-secondary);
   margin-top: var(--xp-space-md);
-  gap: var(--xp-space-xs);
+  gap: var(--xp-space-xs) var(--xp-space-md);
 }
 
 .previewDiscountsLabel {
-  color: var(--xp-color-text-tertiary);
+  color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
 }
 
 .previewChips {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--xp-space-xs);
+  gap: var(--xp-space-xs) var(--xp-space-md);
 }
 
 .previewChip {
   display: inline-flex;
   align-items: center;
   gap: var(--xp-space-xs);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* ── Thẻ dịch vụ ──────────────────────────────────────────────────────────── */
+
+.serviceCard,
+.serviceCardOn {
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+}
+
+/* Đang bật: viền vàng như Figma. */
+.serviceCardOn {
+  border-color: var(--xp-color-primary-border);
+}
+
+.serviceHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-md);
+}
+
+.serviceIcon {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary);
+  font-size: 18px;
+}
+
+.serviceText {
+  min-width: 0;
+  flex: 1;
+}
+
+.serviceTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.serviceDescription {
+  margin: 2px 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.serviceBody {
+  margin-top: var(--xp-space-md);
+}
+
+.inheritNote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-lg);
+  margin-top: var(--xp-space-sm);
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info);
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-xs) var(--xp-space-md);
+}
+
+/* ── Hàng công tắc (giao xe tận nơi · tự động nhận chuyến) ───────────────── */
+
+.toggleRows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.toggleRow {
+  margin: 0;
+}
+
+.toggleRowInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.toggleTitle {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.toggleDescription {
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
 }
@@ -94,5 +197,218 @@
   .previewGrid {
     grid-template-columns: 1fr;
     gap: var(--xp-space-sm);
+    text-align: left;
   }
+}
+
+/* ── Số đo Figma `24352:81568` / `24352:81597` / `24352:81626` ──────────────────────────── */
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: #fafafa;
+}
+
+.previewHeader {
+  margin-bottom: 0;
+  align-items: center;
+  color: #0e0f12;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.previewHeader strong {
+  font-weight: 600;
+}
+
+.inheritLink.inheritLink {
+  gap: 6px;
+  color: #f0b212;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+/* Mũi tên "Chi tiết →" - icon gốc Figma, màu theo chữ. */
+.linkArrow {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background: currentcolor;
+  mask: url('/images/vehicle-upload/arrow-right-brand.svg') center / 14px no-repeat;
+}
+
+.previewGrid {
+  padding: 0 0 12px;
+  border-bottom: 1px solid #e9eaeb;
+}
+
+.previewItem dt {
+  color: #414651;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.previewItem dd {
+  margin-top: 4px;
+  color: #0e0f12;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.previewOn.previewOn {
+  color: #039855;
+}
+
+.previewDiscounts {
+  padding-top: 0;
+  border-top: 0;
+  margin-top: 0;
+}
+
+.previewDiscountsLabel {
+  color: #414651;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.previewChips {
+  gap: 12px;
+}
+
+.previewChip {
+  gap: 8px;
+  color: #0e0f12;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+/* Badge ưu đãi xanh (`_Badge` success): nền success-low, chữ success-high. */
+.previewBadge {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 16px;
+  background: #ecfdf3;
+  color: #039855;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.serviceCard,
+.serviceCardOn {
+  padding: 16px;
+  border-color: #e9eaeb;
+  border-radius: 16px;
+}
+
+.serviceCardOn {
+  border-color: #f9d260;
+}
+
+.serviceHeader {
+  align-items: center;
+  gap: 12px;
+}
+
+.serviceIcon {
+  border-radius: 12px;
+  background: #fff9e5;
+  color: #f5c33b;
+}
+
+.glyph {
+  display: block;
+  width: 24px;
+  height: 24px;
+  background: currentcolor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+
+.glyph_key {
+  mask-image: url('/images/vehicle-upload/key.svg');
+}
+
+.glyph_users {
+  mask-image: url('/images/vehicle-upload/users.svg');
+}
+
+.glyph_calendar {
+  mask-image: url('/images/vehicle-upload/calendar.svg');
+}
+
+.serviceTitle,
+.toggleTitle {
+  color: #0e0f12;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.serviceDescription,
+.toggleDescription {
+  margin-top: 2px;
+  color: #717680;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.serviceBody {
+  margin-top: 12px;
+}
+
+/* "Ưu đãi theo thời hạn lấy từ chính sách gian hàng" - nền information-low, chữ information-high. */
+.inheritNote {
+  padding: 12px;
+  border-radius: 16px;
+  margin-top: 12px;
+  background: #ebf6ff;
+  color: #1570ef;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+/* Ô nhập bước 2 cùng kiểu Figma với bước 1: cao 40, bo 12, viền gray-low300, nhãn 14 medium. */
+.stack :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+.stack :global(.ant-form-item-label) {
+  padding-bottom: 6px;
+}
+
+.stack :global(.ant-form-item-label > label) {
+  color: #414651;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.stack :global(.ant-input),
+.stack :global(.ant-input-number),
+.stack :global(.ant-input-affix-wrapper),
+.stack :global(.ant-input-number-affix-wrapper),
+.stack :global(.ant-select) {
+  width: 100%;
+  min-height: 40px;
+  border-color: #d5d7da;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgb(10 13 18 / 5%);
+  font-size: 14px;
+}
+
+.stack :global(.ant-select-selector) {
+  border-radius: 12px !important;
+}
+
+.serviceBody :global(.ant-row) {
+  row-gap: 16px;
 }

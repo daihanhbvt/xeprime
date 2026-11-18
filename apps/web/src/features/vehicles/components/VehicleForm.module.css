@@ -346,3 +346,401 @@
   align-items: center;
   gap: var(--xp-space-xs);
 }
+
+/* ── Wizard tạo xe theo Figma 24352:70390 (17/11/2026) ─────────────────────── */
+
+/* Nút Huỷ ở bước 1 đứng riêng bên trái hàng nút. */
+.footerStart {
+  margin-right: auto;
+}
+
+.noticeStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+/* Nhãn "6 ảnh bắt buộc" - viền vàng, nền kem. */
+.requiredBadge.requiredBadge {
+  margin: 0;
+  border-color: var(--xp-color-primary-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary-hover);
+}
+
+.registrationBlock {
+  margin-top: var(--xp-space-lg);
+}
+
+.sectionDivider.sectionDivider {
+  margin: var(--xp-space-lg) 0;
+}
+
+/*
+ * Thẻ "Thông tin xe" của wizard thêm xe - Figma vẽ MỘT lưới 3 cột liền trên desktop. Các khối dùng
+ * chung với màn sửa (`BasicSection`, `SpecsSection`, cà vẹt) mỗi khối là một `Row` riêng; ở đây
+ * làm phẳng các Row (`display: contents`) để mọi ô rơi vào cùng một lưới. Ô full-width (chỉ
+ * `xs-24`) và phần tử không phải ô (khối kiểu dáng, đường kẻ, cảnh báo) trải hết hàng.
+ */
+@media (min-width: 1200px) {
+  .threeColumnFields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: var(--xp-space-lg);
+    align-items: start;
+  }
+
+  .threeColumnFields > *,
+  .threeColumnFields :global(.ant-row) > * {
+    grid-column: 1 / -1;
+  }
+
+  .threeColumnFields :global(.ant-row),
+  .threeColumnFields :global(.ant-col:has(> .ant-row)) {
+    display: contents;
+  }
+
+  .threeColumnFields :global(.ant-row) > :global(.ant-col) {
+    max-width: none;
+    padding-inline: 0 !important;
+  }
+
+  .threeColumnFields :global(.ant-row) > :global(.ant-col[class*='ant-col-sm-12']),
+  .threeColumnFields :global(.ant-row) > :global(.ant-col[class*='ant-col-md-8']),
+  .threeColumnFields :global(.ant-row) > :global(.ant-col[class*='ant-col-lg-8']),
+  .threeColumnFields :global(.ant-row) > :global(.ant-col[class*='ant-col-md-12']) {
+    grid-column: auto;
+  }
+
+  /* Figma: thông số (nhiên liệu, hộp số…) TRƯỚC khối kiểu dáng; nguồn xe ở cuối. */
+  .threeColumnFields :global(.ant-col):has(> .galleryBlock) {
+    order: 1;
+  }
+
+  .threeColumnFields > :global(.ant-divider),
+  .threeColumnFields > :global(.ant-divider) ~ * {
+    order: 2;
+  }
+
+  /* Kiểu dáng: 6 thẻ một hàng như Figma. */
+  .threeColumnFields [role='group'] {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+/*
+ * Figma không có dòng ghi chú dưới ô của thẻ "Thông tin xe" - ẩn chữ hướng dẫn (help/extra, gợi ý
+ * kiểu dáng) ở MỌI khổ màn hình. Lỗi validate cũng KHÔNG in chữ - viền đỏ của ô là đủ, in câu
+ * "... bắt buộc" dưới từng ô làm thẻ chật (18/11/2026). Chỉ nút gợi ý tên còn hiện.
+ */
+.threeColumnFields :global(.ant-form-item-extra),
+.threeColumnFields .fieldHint,
+.threeColumnFields :global(.ant-form-item-explain > div:not(:has(button))) {
+  display: none;
+}
+
+/* ── Thứ tự ô theo Figma `24352:79234` (thẻ "Thông tin xe" của wizard thêm xe) ──────────────
+ * Loại xe · Tên xe · Biển số / Chi nhánh · (Tên chủ xe) · Số khung · Số máy / Hãng · Dòng · Phiên
+ * bản / Năm · Màu · Số chỗ · Giá trị xe / Nhiên liệu · Hộp số… / Kiểu dáng / Nguồn xe. Ô không
+ * có id theo tên (Năm, Số chỗ, Giá trị xe, ô năng lượng) giữ thứ tự DOM trong nhóm 50.
+ */
+@media (min-width: 1200px) {
+  .threeColumnFields :global(.ant-col) {
+    order: 50;
+  }
+
+  .threeColumnFields :global(.ant-col):has([id^='vehicleType-']),
+  .threeColumnFields :global(.ant-col):has(:global(.ant-radio-group)) {
+    order: 1;
+  }
+
+  .threeColumnFields :global(.ant-col):has([id^='name-']) {
+    order: 2;
+  }
+
+  .threeColumnFields :global(.ant-col):has([id^='plateNumber-']) {
+    order: 3;
+  }
+
+  .threeColumnFields :global(.ant-col):has([id^='branchId-']) {
+    order: 4;
+  }
+
+  .threeColumnFields :global(.ant-col):has(:global(#vehicle-registration-holderName)) {
+    order: 7;
+  }
+
+  .threeColumnFields :global(.ant-col):has(:global(#vehicle-registration-chassisNumber)) {
+    order: 8;
+  }
+
+  .threeColumnFields :global(.ant-col):has(:global(#vehicle-registration-engineNumber)) {
+    order: 9;
+  }
+
+  .threeColumnFields :global(.ant-col):has([id^='brand-']) {
+    order: 5;
+  }
+
+  .threeColumnFields :global(.ant-col):has([id^='vehicleCatalogModelId-']) {
+    order: 6;
+  }
+
+  .threeColumnFields :global(.ant-col):has([id^='vehicleCatalogVariantId-']) {
+    order: 12;
+  }
+
+  /* Luồng chủ xe không có Chi nhánh: hàng 2 là bộ cà vẹt, Hãng · Dòng xuống hàng 3. */
+  .threeColumnFields:not(:has([id^='branchId-'])) :global(.ant-col):has([id^='brand-']) {
+    order: 10;
+  }
+
+  .threeColumnFields:not(:has([id^='branchId-'])) :global(.ant-col):has([id^='vehicleCatalogModelId-']) {
+    order: 11;
+  }
+
+  .threeColumnFields :global(.ant-col):has([id^='code-']) {
+    order: 11;
+  }
+
+  .threeColumnFields :global(.ant-col):has(> .galleryBlock) {
+    order: 90;
+  }
+
+  .threeColumnFields > :global(.ant-divider),
+  .threeColumnFields > :global(.ant-divider) ~ * {
+    order: 95;
+  }
+
+  /* Kiểu dáng xe: kẻ đứt phía trên + tiêu đề đậm như Figma. */
+  .threeColumnFields :global(.ant-col):has(> .galleryBlock) {
+    margin-top: var(--xp-space-sm);
+    padding-top: var(--xp-space-lg) !important;
+    border-top: 1px dashed var(--xp-color-border);
+  }
+}
+
+.threeColumnFields .galleryBlock .fieldLabel {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Hình thức nguồn xe: 4 thẻ gọn một hàng, chỉ icon + nhãn (Figma) - bỏ mô tả và ghi chú. */
+.threeColumnFields .sourceFieldset {
+  padding: 0;
+  border: 0;
+}
+
+.threeColumnFields .sourceLegend {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.threeColumnFields .sourceDescription,
+.threeColumnFields .sourceCopy small,
+.threeColumnFields .sourceHint {
+  display: none;
+}
+
+.threeColumnFields > :global(.ant-divider) {
+  border-color: var(--xp-color-border);
+  border-top-style: dashed;
+}
+
+@media (min-width: 1200px) {
+  .threeColumnFields .sourceGrid.sourceGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* ── Wizard THÊM XE: số đo Figma `24352:79258` ──────────────────────────────────────────── */
+
+/* Icon nguồn xe - SVG gốc của Figma làm mask, màu theo trạng thái. */
+.sourceGlyph {
+  display: block;
+  width: 24px;
+  height: 24px;
+  background: currentcolor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+
+.sourceGlyph_home {
+  mask-image: url('/images/vehicle-upload/home.svg');
+}
+
+.sourceGlyph_card {
+  mask-image: url('/images/vehicle-upload/card.svg');
+}
+
+.sourceGlyph_search {
+  mask-image: url('/images/vehicle-upload/search.svg');
+}
+
+.sourceGlyph_users {
+  mask-image: url('/images/vehicle-upload/users.svg');
+}
+
+/* Ô nhập: cao 40, bo 12, viền gray-low300, chữ 14; nhãn 14 medium; hàng cách 16. */
+.threeColumnFields :global(.ant-form-item) {
+  margin-bottom: 16px;
+}
+
+.threeColumnFields :global(.ant-form-item-label) {
+  padding-bottom: 6px;
+}
+
+.threeColumnFields :global(.ant-form-item-label > label) {
+  height: 20px;
+  color: #414651;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.threeColumnFields :global(.ant-input),
+.threeColumnFields :global(.ant-input-number),
+.threeColumnFields :global(.ant-input-affix-wrapper),
+.threeColumnFields :global(.ant-input-number-affix-wrapper),
+.threeColumnFields :global(.ant-select) {
+  min-height: 40px;
+  border-color: #d5d7da;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgb(10 13 18 / 5%);
+  font-size: 14px;
+}
+
+.threeColumnFields :global(.ant-input),
+.threeColumnFields :global(.ant-input-affix-wrapper) {
+  padding-inline: 14px;
+}
+
+.threeColumnFields :global(.ant-input-number),
+.threeColumnFields :global(.ant-input-number-affix-wrapper) {
+  width: 100%;
+}
+
+/* Ô nhập NẰM TRONG khung có icon (bút sửa, đơn vị ₫) - khung ngoài đã có viền/bo/bóng, ô trong
+ * không được vẽ lại lần nữa, không thì thành khung lồng khung (18/11/2026). */
+.threeColumnFields :global(.ant-input-affix-wrapper > input.ant-input) {
+  min-height: 0;
+  padding-inline: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.threeColumnFields :global(.ant-input[disabled]),
+.threeColumnFields :global(.ant-input-disabled) {
+  background: #fafafa;
+}
+
+.threeColumnFields :global(.ant-select .ant-select-selector),
+.threeColumnFields :global(.ant-select-selector) {
+  border-radius: 12px !important;
+  padding-inline: 14px !important;
+}
+
+/* Đường kẻ đứt + tiêu đề nhóm 16/24 semibold. */
+.threeColumnFields .galleryBlock .fieldLabel,
+.threeColumnFields .sourceLegend {
+  margin-bottom: 12px;
+  padding: 0;
+  color: #0e0f12;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+/* Kiểu dáng: thẻ 128, bo 16, icon 48; đang chọn nền primary-25 + viền primary. */
+.threeColumnFields [role='group'] {
+  gap: 16px;
+}
+
+.threeColumnFields [role='group'] > * {
+  min-height: 108px;
+  padding: 8px 16px;
+  border-color: #e9eaeb;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgb(10 13 18 / 5%);
+}
+
+/* Nguồn xe: 4 thẻ đều, icon 24 trong tròn 40, không nút radio. */
+.threeColumnFields .sourceGrid.sourceGrid {
+  gap: 16px;
+}
+
+.threeColumnFields .sourceOption.sourceOption {
+  min-height: 66px;
+  padding: 12px 16px;
+  border-color: #e9eaeb;
+  border-radius: 16px;
+  background: var(--xp-color-bg-container);
+}
+
+.threeColumnFields .sourceOption.sourceOption :global(.ant-radio) {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.threeColumnFields .sourceIcon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  margin-right: 12px;
+  background: #f5f5f5;
+  color: #717680;
+}
+
+.threeColumnFields .sourceCopy strong {
+  color: #0e0f12;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.threeColumnFields .sourceOption.sourceOption:global(.ant-radio-wrapper-checked) {
+  border-color: #f5c33b;
+  background: #fffdf5;
+}
+
+.threeColumnFields .sourceOption.sourceOption:global(.ant-radio-wrapper-checked) .sourceIcon {
+  background: #fff9e5;
+  color: #f5c33b;
+}
+
+.threeColumnFields .sourceOption.sourceOption:global(.ant-radio-wrapper-checked) .sourceCopy strong {
+  color: #f5c33b;
+}
+
+/* Nhãn của Radio AntD là một span - dựng icon + chữ thành một hàng như Figma. */
+.threeColumnFields .sourceOption.sourceOption > span:last-child {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  padding: 0;
+}
+
+/* Thẻ kiểu dáng: chữ phụ một dòng (Figma "5 chỗ · gầm cao"). */
+.threeColumnFields [role='group'] > * {
+  padding-inline: 6px;
+  white-space: nowrap;
+}
+
+/* Ô full-width rỗng (cảnh báo không hiện) không được chiếm một hàng trong lưới 3 cột. */
+.threeColumnFields :global(.ant-col:empty) {
+  display: none;
+}
+
+/*
+ * Ngoại lệ của luật ẩn ghi chú: Nhiên liệu / Hộp số giải thích vì sao lựa chọn bị THU HẸP theo
+ * mẫu xe ("Mẫu xe này dùng Xăng hoặc Dầu") - thiếu nó người dùng tưởng form lỗi (18/11/2026).
+ */
+.threeColumnFields
+  :global(.ant-col):has([id^='fuelType-'])
+  :global(.ant-form-item-explain > div:not(.ant-form-item-explain-error)),
+.threeColumnFields
+  :global(.ant-col):has([id^='transmission-'])
+  :global(.ant-form-item-explain > div:not(.ant-form-item-explain-error)) {
+  display: block;
+}

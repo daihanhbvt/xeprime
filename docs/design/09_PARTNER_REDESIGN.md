@@ -960,6 +960,26 @@ Partner `ShopDashboardScreen` (người dùng yêu cầu web và app giống 100
 Gỡ: `PlanPanel`, `MarketPanel`, `ReceiptMiniList`. Trạng thái tự dựng: tải · lỗi + thử lại · rỗng · tab
 rỗng · dưới 1200px một cột (cột phải xếp lưới) · điện thoại một cột.
 
+### 3.17 Thêm xe mới (nâng cao + đăng nhanh) — kiểm kê và quyết định (17/11/2026)
+
+Design: section `24352:70390`. Áp cho wizard nâng cao `/vehicles/new` (gian hàng) VÀ luồng đăng nhanh
+`/vehicles/register` (chủ xe tuyến hoa hồng) - cùng vỏ `VehicleWizard`. Logic nghiệp vụ giữ nguyên trừ các
+mục người dùng chốt bên dưới.
+
+| # | Mục | Mark | Quyết định |
+| --- | --- | --- | --- |
+| T1 | Vỏ: cột bước dọc (số + dòng phụ) · nội dung · cột phải; hàng nút dưới ba cột | ✅ | Theo design. Dưới 1024px: bước nằm ngang trên đầu, cột phải xuống dưới, hàng nút dính đáy |
+| T2 | 4 bước → 3: Thông tin xe (Ảnh + cà vẹt + thông tin) · Dịch vụ & giá · Tiện ích & mô tả | ✅ | Bước "Xác nhận" thành HỘP xác nhận (`24335:66465`) mở khi bấm "Gửi duyệt"; luồng nhanh đổi thứ tự cũ (Thông tin → Cho thuê → Hình ảnh) theo cùng khung |
+| T3 | Mã xe, Giá trị xe + gợi ý (ADR 0088/0090), Phân khúc xe máy, thông số xăng, gợi ý giá thuê, "Giá hiển thị trên sàn", Giao xe tận nơi | 🟡→✅ | GIỮ HẾT, xếp theo style design (người dùng chốt) |
+| T4 | Chip "Loại dịch vụ" ở bước 1 | 🟡→✅ | Thành công tắc trên 3 thẻ dịch vụ ở bước 2; luật khoá theo loại xe + cảnh báo xoá giá giữ nguyên |
+| T5 | "Tự động đồng ý nhận chuyến" ở luồng nâng cao | 🆕→✅ | Thêm; ghi bằng `patchVehicleServiceSetting` (dịch vụ tự lái) SAU khi tạo xe như luồng nhanh; hỏng thì xe vẫn tạo + cảnh báo |
+| T6 | Mô tả có thanh định dạng, 2.000 ký tự | ⚠️→✅ | Văn bản thường, giữ 4.000 (backend + trang khách là text thường); tiện ích lưới 2 cột (catalog không có nhóm) |
+| T7 | Cà vẹt = góc ảnh thứ 6 + "Số khung/Số máy" ở Thông tin xe | 🆕→✅ | Bắt buộc MỌI loại xe, cả hai luồng (ADR 0099); ô cà vẹt nằm dưới bảng ảnh trong thẻ "Ảnh xe"; "Nhập tay" mở bất cứ lúc nào, ảnh vẫn bắt buộc |
+| T8 | Cột "Xem trước trên Marketplace" + "Sẵn sàng gửi duyệt x/4" + Lưu nháp | 🆕→✅ | Dựng từ giá trị đang nhập; không có sao/đánh giá giả; 4 mục đọc cùng luật cổng gửi duyệt |
+| T9 | Thông báo "Có thông tin cần bổ sung!" (`24352:69368`) | ✅ | `notification.warning` khi lưu/gửi còn thiếu, kèm nhảy về đúng bước như cũ |
+| T10 | Màn thành công (`24352:67918`) | ✅ | Wizard nâng cao: 4 mục dẫn tới đúng tab màn sửa (Giấy tờ · Ảnh · Chính sách · Bảo dưỡng "Không bắt buộc"); không hiện "2/3" vì trang không đọc giấy tờ. Luồng nhanh giữ màn kết quả 4 trạng thái của nó |
+| T11 | Lưới ô 3 cột của "Thông tin xe" | 🟡 | Giữ lưới 2 cột của các khối dùng chung với màn sửa (đổi sẽ đổi luôn màn sửa) |
+
 ## 4. Node Figma đã dùng
 
 Ghi lại để phiên sau khỏi tốn lượt đọc lại.
@@ -983,6 +1003,7 @@ Ghi lại để phiên sau khỏi tốn lượt đọc lại.
 | `23807:68543` · `23807:70054` | Hộp Gia hạn thuê xe · Thanh toán gia hạn (ADR 0077) |
 | `23746:50954` | Nút chuyển (`_switch`) Active yes/no |
 | `23672:25621` | Section Chi tiết xe: Tổng quan `23670:3440` (thẻ xe `23797:53034`, tab `23672:4701`, thẻ "Nhóm thông tin" `23670:3504`, cột phải `23672:25630`) · Thông số `23672:3988` · Tài chính (trống) `23672:5931` · Tiện ích `23672:4755` · Bảo dưỡng & KM `23672:6379` |
+| `24352:70390` | Section Thêm xe mới: Bước 1 `24352:79234` · Bước 2 `24352:80745` · Bước 3 `24352:81824` · hộp xác nhận `24335:66465` · thiếu thông tin `24352:69368` · thành công `24352:67918` |
 | `23731:37932` | Section Chỉnh sửa xe: Thông tin chung `23683:17598` · Ảnh `23707:25596` · Giấy tờ `23713:7609` · Tự lái `23713:21048` · Có tài xế `23716:27912` · Dài hạn `23716:29056` · Điều kiện `23721:30416` · Giao nhận `23721:31485` · Bảo dưỡng `23724:10374` (hộp thêm KM `23731:39262`, thêm lịch `23724:29202`, lịch sử `23724:32002`) · Nguồn gốc & tài chính `23730:32702` |
 | `23672:25620` | Section Danh sách xe: từ 4 xe `23655:38521` (thẻ `23655:38951`) · dưới 4 xe `23655:36959` (hàng `23655:38389`) · lưới `23649:29724` (thẻ `23655:36682`) — KHÔNG còn dùng từ 16/11, chỉ còn đọc page header + hàng lọc `23649:30744` |
 | `23737:45750` | Section Quản lý tài xế: danh sách `23737:41945` (thẻ `23737:43826`, dải số `23737:44163`; menu "…" đang mở vẽ ngay trong frame này) · hộp Mời tài xế mới `23737:45751` |

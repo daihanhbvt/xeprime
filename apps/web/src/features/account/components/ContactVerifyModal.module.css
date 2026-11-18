@@ -198,3 +198,61 @@
 :global([data-theme='dark']) .edit:global(.ant-btn) {
   color: var(--xp-color-primary);
 }
+
+/*
+ * Khung hộp theo design `24131:71845`: header (tiêu đề + mô tả) và hàng nút đều có vạch kẻ
+ * full-width ngăn với thân; mỗi vùng đệm 20. Chỉ áp cho Modal desktop - sheet mobile giữ khung chung.
+ */
+.dialog :global(.ant-modal-container) {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 20px;
+}
+
+.dialog :global(.ant-modal-header) {
+  margin: 0;
+  padding: 20px 56px 16px 20px;
+  border-bottom: 1px solid var(--xp-color-border-secondary);
+}
+
+.dialog :global(.ant-modal-close) {
+  top: 20px;
+  inset-inline-end: 20px;
+}
+
+.dialog :global(.ant-modal-body) {
+  padding: 20px;
+}
+
+.dialog :global(.ant-modal-footer) {
+  margin: 0;
+  padding: 20px;
+  border-top: 1px solid var(--xp-color-border-secondary);
+}
+
+/* Nhãn nằm TRÊN ô nhập (design), không cùng hàng; bỏ dấu * và dấu hai chấm. */
+.step :global(.ant-form-item-row) {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.step :global(.ant-form-item-label) {
+  padding: 0 0 6px;
+  text-align: start;
+}
+
+.step :global(.ant-form-item-label > label) {
+  height: auto;
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.step :global(.ant-form-item-label > label::before),
+.step :global(.ant-form-item-label > label::after) {
+  display: none;
+}
+
+.step :global(.ant-form-item-control) {
+  flex: 1 1 auto;
+  max-width: 100%;
+}

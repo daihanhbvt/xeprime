@@ -1,3 +1,4 @@
+import { useReportDirty } from '@/hooks/use-report-dirty';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Ionicons } from '@/components/icons/Ionicons';
 import { useMemo, useState } from 'react';
@@ -76,7 +77,10 @@ export function AutoAcceptBody({
   serviceType,
   canEdit,
   part = 'all',
+  onDirtyChange,
 }: {
+  /** Báo "đang sửa dở" lên màn chứa (`useReportDirty`). */
+  onDirtyChange?: (dirty: boolean) => void;
   vehicleId: string;
   serviceType: ServiceType;
   canEdit: boolean;
@@ -107,6 +111,7 @@ export function AutoAcceptBody({
       vehicleId={vehicleId}
       canEdit={canEdit}
       part={part}
+      onDirtyChange={onDirtyChange}
     />
   );
 }
@@ -117,12 +122,14 @@ function AutoAcceptForm({
   vehicleId,
   canEdit,
   part,
+  onDirtyChange,
 }: {
   setting: VehicleServiceSetting;
   serviceType: ServiceType;
   vehicleId: string;
   canEdit: boolean;
   part: AutoAcceptPart;
+  onDirtyChange?: ((dirty: boolean) => void) | undefined;
 }) {
   const colors = useColors();
   const t = useTranslations('VehicleManage');
@@ -155,6 +162,7 @@ function AutoAcceptForm({
     values,
     resetOptions: { keepDirtyValues: true },
   });
+  useReportDirty(formState.isDirty, onDirtyChange);
 
   /* Công tắc LƯU NGAY — cùng hook với thẻ "Tối ưu nhận chuyến" ở chi tiết xe (web `useAutoAcceptToggle`). */
   const toggleAuto = useAutoAcceptToggle({ vehicleId, setting, canEdit });

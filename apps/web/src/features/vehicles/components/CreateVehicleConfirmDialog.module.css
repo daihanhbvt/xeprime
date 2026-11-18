@@ -1,0 +1,177 @@
+/* Hộp "Xác nhận thông tin & gửi duyệt xe" - Figma `24335:66465` (1124px). */
+.subtitle {
+  margin: 2px 0 var(--xp-space-md);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--xp-space-lg);
+  align-items: start;
+}
+
+.left {
+  min-width: 0;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.sectionTitle {
+  margin: 0 0 var(--xp-space-sm);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.photoCount {
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.gallery {
+  display: grid;
+  padding: 0 0 var(--xp-space-md);
+  border-bottom: 1px dashed var(--xp-color-border-secondary);
+  margin: 0;
+  gap: var(--xp-space-sm);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  list-style: none;
+}
+
+.thumb,
+.gallery :global(img) {
+  width: 100%;
+  border-radius: var(--xp-border-radius-sm);
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+
+.infoSection {
+  margin-top: var(--xp-space-md);
+}
+
+.infoGrid {
+  display: grid;
+  margin: 0;
+  gap: var(--xp-space-md);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.infoGrid dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.infoGrid dd {
+  overflow: hidden;
+  margin: 2px 0 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+  /* Xuống dòng thay vì cắt "Chi nhánh Quận 5 · Hồ Chí…" - hộp xác nhận phải đọc được hết. */
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.pricing {
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-control);
+}
+
+.priceGroup {
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-lg);
+  margin-top: var(--xp-space-sm);
+  background: var(--xp-color-bg-muted);
+}
+
+.priceGroupTitle {
+  margin: 0 0 var(--xp-space-xs);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.priceList {
+  margin: 0;
+}
+
+.priceRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.priceRow dt {
+  color: var(--xp-color-text-secondary);
+}
+
+.priceRow dd {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.positive.positive {
+  color: var(--xp-color-success);
+}
+
+.note {
+  display: flex;
+  align-items: center;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-lg);
+  margin: var(--xp-space-lg) 0 0;
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info);
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-sm);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.footerRight {
+  display: flex;
+  gap: var(--xp-space-sm);
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .infoGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gallery {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .footer,
+  .footerRight {
+    width: 100%;
+  }
+
+  .footer > *,
+  .footerRight > * {
+    flex: 1;
+  }
+}

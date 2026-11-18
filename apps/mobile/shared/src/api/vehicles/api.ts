@@ -30,6 +30,9 @@ export const marketPriceParams = (params: MarketPriceParams): QueryParams => ({
 });
 export type VehicleDetail = Schemas['VehicleDetailDto'];
 export type CreateVehicleInput = Schemas['CreateVehicleDto'];
+export type CreateVehicleRegistrationInput = Schemas['CreateVehicleRegistrationDto'];
+export type VehicleRegistrationPresign = Schemas['VehicleRegistrationPresignDto'];
+export type VehicleRegistrationReadResult = Schemas['VehicleRegistrationReadResultDto'];
 export type UpdateVehicleInput = Schemas['UpdateVehicleDto'];
 export type VehicleStats = Schemas['VehicleStatsDto'];
 export type FleetSummary = Schemas['FleetSummaryDto'];
@@ -159,6 +162,41 @@ export const vehiclesApi = {
 
   create(body: CreateVehicleInput): Promise<VehicleDetail> {
     return getApiClient().post<VehicleDetail>('/vehicles', body);
+  },
+
+  /**
+   * Cà vẹt cho xe SẮP tạo (ADR 0089 · 0099) — bản native của `uploadVehicleRegistration` bên web.
+   * Body đúng hai trường của DTO (API bật `forbidNonWhitelisted`).
+   */
+  presignRegistration(body: {
+    contentType: string;
+    fileSize: number;
+  }): Promise<VehicleRegistrationPresign> {
+    return getApiClient().post<VehicleRegistrationPresign>(
+      '/vehicle-registration-uploads/presign',
+      { contentType: body.contentType, fileSize: body.fileSize },
+    );
+  },
+
+  /** Server kiểm ảnh vừa PUT rồi ĐỌC đồng bộ (Tesseract tại chỗ) — trả kết quả đọc. */
+  /**
+   * Đọc ảnh cà vẹt đã lên kho. Ảnh không được mất vì một lần API chập chờn (5xx, rớt mạng) -
+   * thử lại tối đa 4 lần (chờ tổng ~12 giây, đủ để API khởi động lại); lặp lại an toàn vì server trả lại kết quả đã lưu. 4xx thì không thử lại.
+   * Bản native của `readRegistrationWithRetry` bên web (18/11/2026).
+   */
+  async readRegistration(uploadId: string, attempts = 4): Promise<VehicleRegistrationReadResult> {
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        return await getApiClient().post<VehicleRegistrationReadResult>(
+          `/vehicle-registration-uploads/${encodeURIComponent(uploadId)}/read`,
+        );
+      } catch (error) {
+        const status = (error as { status?: number }).status;
+        const retryable = status === undefined || status === 0 || status >= 500;
+        if (!retryable || attempt >= attempts) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
+      }
+    }
   },
 
   update(id: string, body: UpdateVehicleInput): Promise<VehicleDetail> {

@@ -146,14 +146,16 @@
     },
     "wizard": {
       "basic": {
-        "title": "Cơ bản",
-        "shortTitle": "Cơ bản",
-        "heading": "1. Thông tin cơ bản của xe"
+        "title": "Thông tin xe",
+        "shortTitle": "Thông tin",
+        "heading": "Thông tin xe",
+        "description": "Đầy đủ thông tin phương tiện"
       },
       "pricing": {
-        "title": "Giá & chính sách",
-        "shortTitle": "Giá",
-        "heading": "2. Giá thuê & chính sách"
+        "title": "Dịch vụ & giá",
+        "shortTitle": "Dịch vụ",
+        "heading": "Dịch vụ & giá",
+        "description": "Cần ít nhất 1 dịch vụ & giá"
       },
       "media": {
         "title": "Hình ảnh",
@@ -177,7 +179,17 @@
         "cancel": "Tiếp tục nhập",
         "body": "Các thay đổi chưa lưu trong wizard sẽ bị mất."
       },
-      "publishRequired": "Cần bổ sung để xe đủ điều kiện lên chợ: {items}."
+      "publishRequired": "Cần bổ sung để xe đủ điều kiện lên chợ: {items}.",
+      "features": {
+        "title": "Tiện ích & mô tả",
+        "shortTitle": "Tiện ích",
+        "heading": "Tiện ích & mô tả",
+        "description": "Tùy chọn cho xe của bạn"
+      },
+      "submit": "Gửi duyệt",
+      "missingTitle": "Có thông tin cần bổ sung!",
+      "missingBody": "Vui lòng điền đầy đủ thông tin bắt buộc trước khi gửi duyệt xe.",
+      "requiredForPublish": "Bắt buộc để xe lên chợ"
     },
     "basic": {
       "name": "Tên xe",
@@ -249,7 +261,9 @@
       "batteryCapacityHelp": "kWh - bỏ trống nếu bạn không rõ",
       "electricConsumption": "Mức tiêu thụ điện",
       "electricConsumptionPlaceholder": "15",
-      "electricConsumptionHelp": "kWh cho quãng đường 100 km - không bắt buộc"
+      "electricConsumptionHelp": "kWh cho quãng đường 100 km - không bắt buộc",
+      "electricOnly": "Chỉ dành cho xe điện",
+      "pickFuelFirst": "Chọn nhiên liệu trước"
     },
     "specs": {
       "plateNumber": "Biển số xe",
@@ -345,7 +359,25 @@
       "overtime": "Phí quá giờ trả xe",
       "notConfigured": "Chưa cấu hình",
       "discountsLabel": "Ưu đãi cam kết thời hạn (thuê dài hạn)",
-      "packageChip": "Gói {label}"
+      "packageChip": "Gói {label}",
+      "title": "Dịch vụ & giá",
+      "subtitle": "Thiết lập hình thức cho thuê và giá dịch vụ.",
+      "inheritTitle": "Xe mới tự động kế thừa tiền cọc, giao nhận, phí quá giờ và ưu đãi của gian hàng.",
+      "inheritDetail": "Chi tiết",
+      "longTermInherit": "Ưu đãi theo thời hạn lấy từ chính sách gian hàng",
+      "longTermInheritLink": "Xem chính sách",
+      "services": {
+        "toggleLabel": "Bật dịch vụ {service}",
+        "self_driveDescription": "Khách tự lái xe, tính theo ngày hoặc theo giờ",
+        "with_driverDescription": "Cung cấp tài xế phục vụ theo chuyến",
+        "long_termDescription": "Cho thuê xe theo tháng hoặc thời hạn dài hơn",
+        "notForVehicleType": "Dịch vụ này không áp dụng cho loại xe đang chọn"
+      },
+      "autoAccept": {
+        "title": "Tự động đồng ý nhận chuyến",
+        "description": "Tiết kiệm thời gian phản hồi và tăng tỉ lệ chuyển đổi.",
+        "needsSelfDrive": "Bật dịch vụ thuê xe tự lái để dùng tính năng này."
+      }
     },
     "review": {
       "editStep": "Chỉnh sửa",
@@ -380,7 +412,7 @@
       "submitted": "Hồ sơ xe đã được lưu và gửi đi duyệt công khai.",
       "draft": "Phương tiện đã được lưu vào cơ sở dữ liệu nội bộ ở trạng thái lưu nháp.",
       "cardLabel": "Xe vừa tạo",
-      "checklistTitle": "Hoàn thiện hồ sơ xe",
+      "checklistTitle": "Hoàn thiện hồ sơ để được duyệt nhanh hơn",
       "checklistBody": "Cần bổ sung các thông tin cốt lõi trước khi đăng công khai lên sàn dịch vụ.",
       "checkInfo": "Kiểm tra thông tin và thông số xe",
       "checkInfoLink": "Tab Thông tin →",
@@ -393,8 +425,36 @@
       "checkFuture": "Giấy tờ xe và bảo dưỡng",
       "checkFutureNote": "Sẽ mở ở các wave tiếp theo",
       "viewDetail": "Xem hồ sơ xe chi tiết",
-      "createAnother": "Thêm xe khác",
-      "submitFailed": "Đã tạo xe nhưng chưa gửi duyệt được: {reason}"
+      "createAnother": "Thêm xe mới",
+      "submitFailed": "Đã tạo xe nhưng chưa gửi duyệt được: {reason}",
+      "submittedTitle": "Đã gửi duyệt xe thành công",
+      "draftTitle": "Đã lưu nháp xe",
+      "submittedBody": "{vehicle} đang ở trạng thái Chờ duyệt. Chúng tôi sẽ thông báo ngay khi có kết quả!",
+      "draftBody": "{vehicle} đã được lưu ở trạng thái Nháp. Hoàn thiện hồ sơ rồi gửi duyệt khi sẵn sàng.",
+      "optional": "Không bắt buộc",
+      "backToList": "Danh sách xe",
+      "completeProfile": "Hoàn thiện hồ sơ xe",
+      "items": {
+        "documents": {
+          "title": "Giấy tờ xe",
+          "body": "Cà vẹt, đăng kiểm, bảo hiểm..."
+        },
+        "media": {
+          "title": "Thêm ảnh thực tế và tiện ích",
+          "body": "Bổ sung hình ảnh và các tiện ích của xe."
+        },
+        "policy": {
+          "title": "Kiểm tra giá, cọc và chính sách thuê",
+          "body": "Thiết lập giá thuê, tiền cọc và điều kiện áp dụng"
+        },
+        "maintenance": {
+          "title": "Bảo dưỡng & số KM",
+          "body": "Lịch bảo dưỡng định kỳ, số KM hiện tại"
+        }
+      },
+      "notSubmittedTitle": "Đã lưu nháp - chưa gửi duyệt được",
+      "notSubmittedReason": "Lý do: {reason}",
+      "fixShopProfile": "Cập nhật hồ sơ gian hàng"
     },
     "validation": {
       "nameRequired": "Tên xe là bắt buộc",
@@ -463,12 +523,13 @@
       "motorbikeCategoryMotorbikeOnly": "Phân khúc chỉ áp dụng cho xe máy",
       "priceThousandStep": "Giá phải là bội số 1.000đ",
       "insuredValueRange": "Giá trị xe từ 50.000.000đ tới 20.000.000.000đ, làm tròn tới triệu đồng.",
-      "insuredValueCarOnly": "Giá trị xe chỉ áp dụng cho ô tô"
+      "insuredValueCarOnly": "Giá trị xe chỉ áp dụng cho ô tô",
+      "photosRequired": "Còn {count, plural, other {# góc ảnh}} chưa có ảnh - không ô nào được để trống"
     },
     "registration": {
       "title": "Cà vẹt xe",
       "tipLabel": "Vì sao cần cà vẹt",
-      "tip": "Ảnh mặt có tên chủ xe, số khung, số máy. Thông tin này dùng để cấp bảo hiểm vật chất xe cho từng chuyến thuê.",
+      "tip": "Không bắt buộc - có ảnh mặt có tên chủ xe, số khung, số máy thì máy điền sẵn ba ô đó; không có thì tự nhập. Thông tin này dùng để cấp bảo hiểm vật chất xe cho từng chuyến thuê.",
       "choose": "Chụp hoặc tải ảnh cà vẹt",
       "chooseHint": "Mặt có tên chủ xe, số khung, số máy - chụp thẳng, đủ sáng",
       "replace": "Chụp lại",
@@ -507,7 +568,15 @@
         "engineRequired": "Nhập số máy",
         "engineInvalid": "Số máy gồm 4-25 chữ và số",
         "addressTooLong": "Địa chỉ tối đa 255 ký tự"
-      }
+      },
+      "manualEntry": "Nhập tay",
+      "scanPlaceholder": "Tải ảnh cà vẹt để quét hoặc tự nhập",
+      "editField": "Sửa {field}",
+      "scanOk": "Đã quét: số khung {chassis} · số máy {engine}",
+      "scanMissing": "Chưa lấy được số khung, số máy - vui lòng kiểm tra lại ảnh hoặc tự nhập bên dưới.",
+      "scanFound": "Đã quét: {items}",
+      "scanMissingItems": "Chưa lấy được {items} - vui lòng kiểm tra lại ảnh hoặc tự nhập bên dưới.",
+      "view": "Xem ảnh cà vẹt"
     },
     "catalog": {
       "variant": "Phiên bản",
@@ -553,6 +622,64 @@
       "rentReferenceModel": "Giá tham khảo cho dòng xe này: {price}",
       "rentMarket": "Xe cùng dòng đang cho thuê: {low} - {high} ({count, plural, other {# xe}})",
       "useRent": "Dùng {price}"
+    },
+    "createSteps": {
+      "photosTitle": "Ảnh xe",
+      "photosDescription": "Bắt đầu bằng ảnh để khách hàng thấy xe của bạn",
+      "photosRequired": "{count} ảnh bắt buộc",
+      "infoTitle": "Thông tin xe",
+      "infoDescription": "Cung cấp thông tin và thông số cơ bản của xe.",
+      "featuresTitle": "Tiện ích & mô tả",
+      "featuresDescription": "Chọn tiện ích và giới thiệu chi tiết về xe."
+    },
+    "createAside": {
+      "previewTitle": "Xem trước trên Marketplace",
+      "discountBadge": "Giảm {percent}%",
+      "deliveryPill": "Giao xe tận nơi",
+      "namePlaceholder": "Tên xe của bạn",
+      "newTag": "Xe mới",
+      "seats": "{count} chỗ",
+      "shopLabel": "Gian hàng",
+      "perDay": "/ngày",
+      "noPrice": "Chưa có giá",
+      "readyTitle": "Sẵn sàng gửi duyệt",
+      "readyCount": "{done}/{total}",
+      "readyPhotos": "Đủ {count} ảnh xe bắt buộc",
+      "readyInfo": "Thông tin bắt buộc của xe",
+      "readyPricing": "Đầy đủ dịch vụ & giá cho thuê",
+      "readyFeatures": "Thêm tiện ích & mô tả",
+      "srDone": "(đã xong)",
+      "srTodo": "(chưa xong)",
+      "saveDraft": "Lưu nháp",
+      "saveDraftHint": "Bạn có thể lưu nháp bất kỳ lúc nào và quay lại hoàn thiện sau",
+      "readyShop": "Hồ sơ gian hàng đủ (logo, địa chỉ)",
+      "optional": "Không bắt buộc"
+    },
+    "confirm": {
+      "title": "Xác nhận thông tin & gửi duyệt xe",
+      "subtitle": "Kiểm tra lại thông tin trước khi gửi cho XePrime",
+      "gallery": "Thư viện ảnh",
+      "photoCount": "{count} ảnh",
+      "info": "Thông tin xe",
+      "pricing": "Dịch vụ & giá",
+      "note": "Sau khi gửi, xe ở trạng thái Chờ duyệt. Bạn vẫn có thể bổ sung thông tin trong trang chỉnh sửa xe và gửi duyệt lại.",
+      "backToEdit": "Quay lại chỉnh sửa",
+      "saveDraft": "Lưu nháp",
+      "submit": "Gửi duyệt",
+      "vehicleType": "Loại xe",
+      "name": "Tên xe",
+      "plate": "Biển số xe",
+      "branch": "Chi nhánh giữ xe",
+      "chassis": "Số khung xe",
+      "engine": "Số máy xe",
+      "brand": "Hãng xe",
+      "model": "Dòng xe",
+      "year": "Năm sản xuất",
+      "color": "Màu sắc",
+      "seats": "Số chỗ ngồi",
+      "fuel": "Nhiên liệu",
+      "transmission": "Hộp số",
+      "source": "Hình thức nguồn xe"
     }
   },
   "publish": {
@@ -1731,13 +1858,16 @@
     }
   },
   "create": {
-    "title": "Thêm xe",
+    "title": "Thêm xe mới",
     "savedDraft": "Đã lưu nháp xe",
     "createdAndSubmitted": "Đã tạo xe và gửi duyệt công khai",
     "createdNotSubmitted": "Đã tạo xe nhưng chưa gửi duyệt được: {error}",
     "forbiddenTitle": "Không có quyền thêm xe",
     "forbiddenBody": "Bạn cần quyền dưới đây để thêm xe vào gian hàng. Liên hệ quản trị viên để được cấp quyền.",
-    "backToList": "Về danh sách xe"
+    "backToList": "Về danh sách xe",
+    "subtitle": "Đăng xe mới và thiết lập thông tin cho thuê.",
+    "parentCrumb": "Danh sách xe",
+    "autoAcceptNotSaved": "Xe đã được tạo nhưng chưa bật được tự động đồng ý nhận chuyến: {error}. Bạn có thể bật lại ở màn chỉnh sửa xe."
   },
   "imageSlot": {
     "front": "Mặt trước",
@@ -1849,7 +1979,8 @@
       "deliveryTitle": "Giao xe tận nơi",
       "rulesTitle": "Giao xe, cọc & phụ phí",
       "pricesInvalid": "Mục Dịch vụ & giá còn ô giá chưa hợp lệ (ví dụ chưa có giá ngày thường) - mở mục đó để sửa rồi lưu lại.",
-      "bufferTipLabel": "Thời gian chuẩn bị áp cho lịch nào"
+      "bufferTipLabel": "Thời gian chuẩn bị áp cho lịch nào",
+      "savedAll": "Đã lưu chính sách thuê"
     },
     "conditions": {
       "selfDriveTitle": "Thuê xe tự lái & Thuê xe dài hạn",

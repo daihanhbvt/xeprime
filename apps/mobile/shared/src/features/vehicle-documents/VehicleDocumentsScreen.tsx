@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
+import { VehicleEditSummaryCard } from '@/features/vehicles/components/VehicleEditSummaryCard';
 import { Ionicons } from '@/components/icons/Ionicons';
 import { ActivityIndicator, Linking, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -453,6 +454,9 @@ export function VehicleDocumentsScreen({
           />
         ) : (
           <YStack gap={layout.section}>
+            {customerScope ? null : (
+              <VehicleEditSummaryCard vehicleId={vehicleId} tab={VEHICLE_EDIT_TAB.DOCUMENTS} />
+            )}
             {!canManage ? <Callout tone="info">{t('readOnly')}</Callout> : null}
 
             {/* Figma `24231:107422`: mỗi giấy tờ là MỘT thẻ riêng (đệm 16, bo 16), cách nhau 12. */}

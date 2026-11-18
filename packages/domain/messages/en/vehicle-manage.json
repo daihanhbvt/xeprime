@@ -121,7 +121,11 @@
     "maxReached": "At most {max} gallery photos",
     "legacyNotice": "{count, plural, one {# photo} other {# photos}} uploaded earlier have no slot yet - shown under \"Other photos\". Drag them into a slot or keep them and save.",
     "saved": "Vehicle photos saved",
-    "alt": "{slot} photo of {vehicle}"
+    "alt": "{slot} photo of {vehicle}",
+    "clickToUpload": "Click to upload a photo",
+    "fileHint": "JPG, PNG, JPEG, WEBP (max {max}MB)",
+    "replace": "Replace {slot} photo",
+    "view": "View {slot} photo"
   },
   "documents": {
     "title": "Vehicle documents",
