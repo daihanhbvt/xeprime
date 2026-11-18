@@ -1323,7 +1323,10 @@
       "void": "Void insurance policy"
     },
     "insurance_product": {
-      "update": "Update insurance product"
+      "update": "Update insurance product",
+      "premium_sync": "Sync premium table from insurer",
+      "premium_sync_failed": "Premium table sync from insurer failed",
+      "premium_drift": "Insurer premium differs from stored table"
     },
     "listing": {
       "support": {
