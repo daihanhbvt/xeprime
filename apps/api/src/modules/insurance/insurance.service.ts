@@ -3,10 +3,13 @@ import {
   activeInsuranceProductSnapshots,
   applyInsuranceIssueResult,
   claimDueInsurancePolicies,
+  earliestHandoverKeepingTier,
   insuranceIssuingStaleBefore,
   issueInsurancePolicy,
+  MicInsurancePartner,
   newId,
   Prisma,
+  readInsuranceProductSnapshot,
   type InsuranceIssueOutcome,
   type InsuranceProductSnapshot,
 } from '@xeprime/prisma';
@@ -186,6 +189,55 @@ export class InsuranceService {
       data: { nextAttemptAt: now },
     });
     return count;
+  }
+
+  /**
+   * Chặn GIAO XE SỚM tới mức hợp đồng bảo hiểm vượt bậc phí khách đã trả — ADR 0106 điều 4. Gọi
+   * TRONG transaction lật đơn sang `active`, TRƯỚC lệnh ghi.
+   *
+   * Hãng tính phí theo thời lượng HỢP ĐỒNG (từ lúc giao xe tới giờ trả), còn khách trả theo bậc của
+   * lịch hẹn. Giao sớm quá một bậc là XePrime phải trả hãng phần chênh mà không ai thu (DHRX0MDN ở
+   * staging: khách 50.050, MIC 254.800). Sớm trong `EARLY_HANDOVER_GRACE_MS` thì cho giao — lượt cấp
+   * hợp đồng bắt đầu hiệu lực muộn lại cho vừa bậc (`coverageWindow`).
+   *
+   * Chỉ với hãng THẬT (`MicInsurancePartner`): adapter giả lập không tính phí theo thời lượng, chặn
+   * ở đó chỉ làm khó luồng thử ở dev mà không bảo vệ đồng nào.
+   */
+  async assertHandoverKeepsTierWithinTx(
+    tx: Prisma.TransactionClient,
+    bookingId: string,
+    handoverAt: Date,
+    now: Date = new Date(),
+  ): Promise<void> {
+    if (!(this.partner instanceof MicInsurancePartner)) return;
+    const policy = await tx.bookingInsurancePolicy.findFirst({
+      where: {
+        bookingId,
+        productKind: INSURANCE_PRODUCT_KIND.VEHICLE_TRIP,
+        status: INSURANCE_POLICY_STATUS.RESERVED,
+      },
+      select: {
+        productSnapshotJson: true,
+        booking: { select: { pickupAt: true, returnAt: true } },
+      },
+    });
+    if (!policy) return;
+    const earliest = earliestHandoverKeepingTier(
+      readInsuranceProductSnapshot(policy.productSnapshotJson),
+      policy.booking,
+    );
+    if (!earliest) return;
+    // Lượt cấp tính hiệu lực từ max(mốc giao, lúc cấp) — khai mốc giao lùi về quá khứ không kéo dài HĐ.
+    if (Math.max(handoverAt.getTime(), now.getTime()) >= earliest.getTime()) return;
+    throw new ConflictException({
+      code: API_ERROR_CODE.INSURANCE_EARLY_HANDOVER,
+      message:
+        'Giao xe sớm quá: hợp đồng bảo hiểm sẽ dài hơn bậc phí khách đã trả - giao gần giờ hẹn hơn',
+      details: {
+        earliestAt: earliest.toISOString(),
+        retryAfterSeconds: Math.ceil((earliest.getTime() - now.getTime()) / 1000),
+      },
+    });
   }
 
   /**

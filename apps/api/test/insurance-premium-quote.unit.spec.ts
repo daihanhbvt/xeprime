@@ -7,7 +7,11 @@ import {
   type VehicleProtectionTierQuote,
 } from '@xeprime/types';
 import type { InsuranceEligibilityService } from '../src/modules/insurance/insurance-eligibility.service';
-import { InsurancePremiumQuoteService } from '../src/modules/insurance/insurance-premium-quote.service';
+import {
+  InsurancePremiumQuoteService,
+  premiumDrifted,
+} from '../src/modules/insurance/insurance-premium-quote.service';
+import type { InsuranceProductsService } from '../src/modules/insurance/insurance-products.service';
 
 /**
  * ADR 0097 — phí bảo hiểm vật chất xe của từng hợp đồng hỏi đối tác lúc DUYỆT, công thức bậc là dự
@@ -52,13 +56,21 @@ function partner(quote?: () => Promise<PremiumQuoteResult>): InsurancePartner {
   };
 }
 
+let markPremiumDrift: jest.Mock<Promise<boolean>, [string]>;
+beforeEach(() => {
+  markPremiumDrift = jest.fn(async (_reason: string) => true);
+});
+
 const service = (
   quote?: () => Promise<PremiumQuoteResult>,
   vehicle: { manufactureYear: number | null; seatCount: number | null } | null = {
     manufactureYear: 2019,
     seatCount: 5,
   },
-) => new InsurancePremiumQuoteService(partner(quote), eligibility(vehicle));
+) =>
+  new InsurancePremiumQuoteService(partner(quote), eligibility(vehicle), {
+    markPremiumDrift: (reason: string) => markPremiumDrift(reason),
+  } as unknown as InsuranceProductsService);
 
 describe('InsurancePremiumQuoteService (ADR 0097)', () => {
   it('đối tác trả số hợp lệ ⇒ dùng số đối tác, giữ phí công thức để so', async () => {
@@ -162,6 +174,50 @@ describe('InsurancePremiumQuoteService (ADR 0097)', () => {
     );
     expect(quote).not.toHaveBeenCalled();
     expect(r.source).toBe(INSURANCE_PREMIUM_SOURCE.FORMULA);
+  });
+
+  it('hãng báo khác biểu phí ⇒ đánh dấu biểu phí lệch (ADR 0106), lượt duyệt vẫn dùng số hãng', async () => {
+    const r = await service(async () => ({ ok: true, amount: '125400' })).confirmForApproval(
+      TIER,
+      TRIP,
+    );
+    expect(r.amount).toBe('125400');
+    expect(markPremiumDrift).toHaveBeenCalledTimes(1);
+    const reason = markPremiumDrift.mock.calls[0]![0];
+    expect(reason).toContain('2019');
+    expect(reason).toContain('5 ngày');
+    expect(reason).toContain('112.200đ');
+    expect(reason).toContain('125.400đ');
+  });
+
+  it('lệch làm tròn vài trăm đồng ⇒ không báo lệch; hãng không trả lời ⇒ không báo lệch', async () => {
+    await service(async () => ({ ok: true, amount: '112650' })).confirmForApproval(TIER, TRIP);
+    await service(async () => ({
+      ok: false,
+      reason: 'unavailable',
+      message: 'HTTP 502',
+    })).confirmForApproval(TIER, TRIP);
+    expect(markPremiumDrift).not.toHaveBeenCalled();
+  });
+
+  it('ghi đánh dấu lệch hỏng ⇒ lượt duyệt vẫn đi tiếp', async () => {
+    markPremiumDrift = jest.fn(async (_reason: string): Promise<boolean> => {
+      throw new Error('db down');
+    });
+    const r = await service(async () => ({ ok: true, amount: '125400' })).confirmForApproval(
+      TIER,
+      TRIP,
+    );
+    expect(r).toMatchObject({ amount: '125400', source: INSURANCE_PREMIUM_SOURCE.PARTNER });
+  });
+
+  it('premiumDrifted: quá 1.000đ VÀ quá 0,5%', () => {
+    expect(premiumDrifted('112200', '112200')).toBe(false);
+    expect(premiumDrifted('113000', '112200')).toBe(false); // 800đ
+    expect(premiumDrifted('113300', '112200')).toBe(true); // 1.100đ ≈ 0,98%
+    expect(premiumDrifted('6020000', '6000000')).toBe(false); // 20.000đ = 0,33%
+    expect(premiumDrifted('6040000', '6000000')).toBe(true); // 0,67%
+    expect(premiumDrifted('50050', '59150')).toBe(true);
   });
 
   it('partnerPremiumProblem: khoảng nhận [công thức ÷ N, công thức × N]', () => {

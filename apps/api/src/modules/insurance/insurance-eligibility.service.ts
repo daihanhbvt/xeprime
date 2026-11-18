@@ -6,6 +6,7 @@ import {
 } from '@xeprime/prisma';
 import {
   insuranceEligibilityGaps,
+  insurancePremiumTiersForYear,
   vehicleProtectionTierQuote,
   type InsuranceEligibilityGap,
   type InsuranceEligibilityInput,
@@ -50,10 +51,20 @@ export class InsuranceEligibilityService {
     input: { vehicleId: string; serviceType: string; pickupAt: Date; returnAt: Date },
     db: Db = this.prisma,
   ): Promise<VehicleProtectionTierQuote | null | undefined> {
-    const tiers = await this.offer.vehicleTripTiers();
-    if (!tiers) return undefined;
+    const schedule = await this.offer.vehicleTripSchedule();
+    if (!schedule) return undefined;
     const eligibility = await this.eligibilityInput(input.vehicleId, db);
     if (!eligibility) return null;
+    /*
+     * % bậc của hãng đổi theo NĂM SẢN XUẤT (ADR 0106) — chọn đúng nhóm năm của xe. Không nhóm nào phủ
+     * đời xe đó ⇒ hãng không bán ⇒ không có dòng `IV`.
+     */
+    const tiers = insurancePremiumTiersForYear(
+      schedule.tiers,
+      schedule.bands,
+      eligibility.manufactureYear,
+    );
+    if (!tiers) return null;
     return vehicleProtectionTierQuote({
       eligibility,
       serviceType: input.serviceType,

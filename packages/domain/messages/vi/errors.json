@@ -279,13 +279,16 @@
     "VEHICLE_REGISTRATION_UPLOAD_INVALID": "Ảnh cà vẹt không còn dùng được - vui lòng tải lại ảnh cà vẹt.",
     "VEHICLE_REGISTRATION_UPLOAD_LIMIT": "Bạn đã tải ảnh cà vẹt quá nhiều lần trong 24 giờ qua - vui lòng thử lại sau.",
     "CHAT_BLOCKED": "Không thể nhắn tin vì một trong hai bên đã chặn.",
-    "HANDOVER_PICKUP_NOT_OPEN": "Chưa tới giờ giao xe - chỉ xác nhận được từ 60 phút trước giờ nhận."
+    "HANDOVER_PICKUP_NOT_OPEN": "Chưa tới giờ giao xe - chỉ xác nhận được từ 60 phút trước giờ nhận.",
+    "INSURANCE_PREMIUM_SYNCED_LOCKED": "Biểu phí đang đồng bộ từ MIC nên không sửa tay được. Chỉ sửa được khi một lần đồng bộ hỏng.",
+    "INSURANCE_EARLY_HANDOVER": "Chưa giao xe được lúc này: giao sớm như vậy làm hợp đồng bảo hiểm dài hơn bậc phí khách đã trả. Giao gần giờ hẹn hơn."
   },
   "codeWithWait": {
     "RATE_LIMITED": "Bạn thao tác hơi nhanh. Vui lòng thử lại sau {wait}.",
     "LOGIN_TEMPORARILY_LOCKED": "Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau {wait} hoặc dùng \"Quên mật khẩu\".",
     "OTP_COOLDOWN": "Vui lòng đợi {wait} rồi gửi lại mã.",
-    "OTP_TOO_MANY": "Bạn đã yêu cầu mã quá nhiều lần. Vui lòng thử lại sau {wait}."
+    "OTP_TOO_MANY": "Bạn đã yêu cầu mã quá nhiều lần. Vui lòng thử lại sau {wait}.",
+    "INSURANCE_EARLY_HANDOVER": "Chưa giao xe được lúc này: giao sớm như vậy làm hợp đồng bảo hiểm dài hơn bậc phí khách đã trả. Giao được sau {wait} nữa."
   },
   "wait": {
     "seconds": "{count, plural, other {# giây}}"

@@ -7,6 +7,7 @@ import {
   TENANT_STATUS,
   VEHICLE_DOCUMENT_TYPE,
   type InsurancePremiumTier,
+  type InsurancePremiumYearBand,
 } from '@xeprime/types';
 import { InsuranceEligibilityService } from '../src/modules/insurance/insurance-eligibility.service';
 import type { InsuranceOfferService } from '../src/modules/insurance/insurance-offer.service';
@@ -19,7 +20,12 @@ import type { PrismaService } from '../src/prisma/prisma.service';
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 let tiers: InsurancePremiumTier[] | null = [...MIC_VCX_TRIP_DEFAULT_TIERS];
-const offer = { vehicleTripTiers: async () => tiers } as unknown as InsuranceOfferService;
+let bands: InsurancePremiumYearBand[] | null = null;
+// Chưa đồng bộ nhóm năm sản xuất (ADR 0106) ⇒ một biểu phí cho mọi năm.
+const offer = {
+  vehicleTripTiers: async () => tiers,
+  vehicleTripSchedule: async () => (tiers ? { tiers, bands } : null),
+} as unknown as InsuranceOfferService;
 const eligibility = new InsuranceEligibilityService(asService, offer);
 
 const RUN = newId().slice(-8).toLowerCase();
@@ -116,6 +122,7 @@ beforeAll(async () => {
 
 afterEach(() => {
   tiers = [...MIC_VCX_TRIP_DEFAULT_TIERS];
+  bands = null;
 });
 
 afterAll(async () => {
@@ -141,6 +148,35 @@ describe('Bảo hiểm vật chất xe theo bậc (ADR 0088)', () => {
         returnAt: RETURN_57H,
       }),
     ).toEqual({ amount: '112200', insuredValue: '340000000', maxDays: 5, percent: '0.033' });
+  });
+
+  maybe('biểu phí theo năm sản xuất (ADR 0106): xe 2019 lấy % của nhóm 2018-2020', async () => {
+    const id = await car();
+    // Bậc ≤5 ngày của nhóm 2018-2020 khác biểu phí chung — báo giá phải đọc nhóm của xe.
+    bands = [
+      { yearFrom: 2024, yearTo: null, percents: ['0.011', '0.028', '0.056', '0.085', '0.17'] },
+      { yearFrom: 2018, yearTo: 2023, percents: ['0.012', '0.031', '0.062', '0.093', '0.19'] },
+    ];
+    expect(
+      await eligibility.tierQuoteFor({
+        vehicleId: id,
+        serviceType: SERVICE_TYPE.SELF_DRIVE,
+        pickupAt: PICKUP,
+        returnAt: RETURN_57H,
+      }),
+    ).toEqual({ amount: '105400', insuredValue: '340000000', maxDays: 5, percent: '0.031' });
+    // Đời 2019 không thuộc nhóm nào ⇒ hãng không bán ⇒ không có dòng IV.
+    bands = [
+      { yearFrom: 2021, yearTo: null, percents: ['0.011', '0.028', '0.056', '0.085', '0.17'] },
+    ];
+    expect(
+      await eligibility.tierQuoteFor({
+        vehicleId: id,
+        serviceType: SERVICE_TYPE.SELF_DRIVE,
+        pickupAt: PICKUP,
+        returnAt: RETURN_57H,
+      }),
+    ).toBeNull();
   });
 
   maybe(

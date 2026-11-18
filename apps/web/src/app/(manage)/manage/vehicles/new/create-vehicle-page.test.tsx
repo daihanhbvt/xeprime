@@ -1,7 +1,13 @@
 import { App } from 'antd';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PERMISSION } from '@xeprime/types';
+import {
+  BILLING_MODE,
+  PERMISSION,
+  SHOP_ONBOARDING_STATE,
+  TENANT_ROLE,
+  TENANT_STATUS,
+} from '@xeprime/types';
 import NewVehiclePage from './page';
 
 const nav = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
@@ -100,6 +106,27 @@ vi.mock('@/features/shop/hooks/use-shop', async (importOriginal) => ({
   useMyShop: () => ({ data: null, isLoading: false, isError: false }),
 }));
 
+/**
+ * Chủ gian hàng TUYẾN GÓI: wizard dùng chung hai tuyến từ 18/11/2026 và đọc tuyến từ phiên
+ * (`resolvePartnerTrack`) — bộ ca này kiểm phần đầy đủ của gian hàng (chi nhánh, nguồn xe).
+ */
+vi.mock('@/hooks/use-current-user', () => ({
+  useCurrentUser: () => ({
+    data: {
+      id: 'user-1',
+      platformRole: null,
+      tenant: {
+        id: 'tenant-1',
+        roleKey: TENANT_ROLE.SHOP_OWNER,
+        status: TENANT_STATUS.ACTIVE,
+        onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE,
+        billingMode: BILLING_MODE.PACKAGE,
+      },
+    },
+    isLoading: false,
+  }),
+}));
+
 const permissions = vi.hoisted(() => ({ allow: true }));
 vi.mock('@/hooks/use-permissions', () => ({
   usePermissions: () => ({
@@ -175,7 +202,8 @@ async function uploadRegistration() {
 async function pickModel() {
   fireEvent.mouseDown(screen.getByLabelText(/Hãng xe/));
   fireEvent.click(await screen.findByTitle('Toyota'));
-  fireEvent.mouseDown(screen.getByLabelText(/^Mẫu xe/));
+  // Nhãn "Mẫu xe" còn gắn nút ⓘ ghi chú (help-as-tip) — chỉ lấy ô chọn.
+  fireEvent.mouseDown(screen.getByLabelText(/^Mẫu xe/, { selector: 'input' }));
   fireEvent.click(await screen.findByTitle('Vios'));
 }
 
@@ -190,6 +218,8 @@ async function uploadPhotos() {
 }
 
 beforeEach(() => {
+  // Nháp wizard (sessionStorage, theo người + gian hàng) không được lọt từ ca này sang ca khác.
+  sessionStorage.clear();
   permissions.allow = true;
   uploaded = 0;
   mutation.mutateAsync.mockReset();

@@ -3,10 +3,13 @@ import {
   computeValueTierPremium,
   INSURANCE_ELIGIBILITY_GAP,
   insurancePremiumTierFor,
+  insurancePremiumTiersForYear,
   insurancePremiumTiersProblem,
+  insurancePremiumYearBandsProblem,
   insuranceRemittanceCommission,
   MIC_VCX_TRIP_DEFAULT_TIERS,
   readInsurancePremiumTiers,
+  readInsurancePremiumYearBands,
 } from './insurance';
 import {
   insuranceEligibilityGaps,
@@ -132,5 +135,78 @@ describe('điều kiện xe bán kèm bảo hiểm (ADR 0088 điều 2)', () => 
       vehicleProtectionTierQuote({ ...base, eligibility: { ...eligible, insuredValue: null } }),
     ).toBeNull();
     expect(vehicleProtectionTierQuote({ ...base, returnAt: at(31 * 24) })).toBeNull();
+  });
+});
+
+describe('biểu phí theo năm sản xuất (ADR 0106)', () => {
+  const tiers = [
+    { maxDays: 2, percent: '0.013' },
+    { maxDays: 5, percent: '0.033' },
+  ];
+  // Số đo sandbox MIC 18/11/2026 (hai bậc đầu).
+  const bands = [
+    { yearFrom: 2024, yearTo: null, percents: ['0.011', '0.028'] },
+    { yearFrom: 2021, yearTo: 2023, percents: ['0.012', '0.03'] },
+    { yearFrom: 2018, yearTo: 2020, percents: ['0.013', '0.033'] },
+    { yearFrom: null, yearTo: 2015, percents: ['0.014', '0.035'] },
+  ];
+
+  it('chọn % của nhóm phủ năm sản xuất, giữ mốc ngày chung', () => {
+    expect(insurancePremiumTiersForYear(tiers, bands, 2025)).toEqual([
+      { maxDays: 2, percent: '0.011' },
+      { maxDays: 5, percent: '0.028' },
+    ]);
+    // Đời xe mới hơn lần đồng bộ cuối vẫn có giá (nhóm mới nhất mở về tương lai).
+    expect(insurancePremiumTiersForYear(tiers, bands, 2031)?.[0]?.percent).toBe('0.011');
+    expect(insurancePremiumTiersForYear(tiers, bands, 2019)?.[1]?.percent).toBe('0.033');
+    expect(insurancePremiumTiersForYear(tiers, bands, 1990)?.[0]?.percent).toBe('0.014');
+  });
+
+  it('năm không thuộc nhóm nào ⇒ null (hãng không bán); chưa có nhóm ⇒ biểu phí chung', () => {
+    expect(insurancePremiumTiersForYear(tiers, bands, 2016)).toBeNull();
+    expect(insurancePremiumTiersForYear(tiers, null, 2016)).toEqual(tiers);
+    expect(insurancePremiumTiersForYear(tiers, bands, null)).toEqual(tiers);
+  });
+
+  it('kiểm nhóm năm: số % bằng số bậc, % tăng dần, không chồng năm', () => {
+    expect(insurancePremiumYearBandsProblem(bands, tiers)).toBeNull();
+    expect(insurancePremiumYearBandsProblem([], tiers)).not.toBeNull();
+    expect(
+      insurancePremiumYearBandsProblem(
+        [{ yearFrom: 2020, yearTo: null, percents: ['0.011'] }],
+        tiers,
+      ),
+    ).not.toBeNull();
+    expect(
+      insurancePremiumYearBandsProblem(
+        [{ yearFrom: 2020, yearTo: null, percents: ['0.03', '0.011'] }],
+        tiers,
+      ),
+    ).not.toBeNull();
+    expect(
+      insurancePremiumYearBandsProblem(
+        [
+          { yearFrom: 2020, yearTo: null, percents: ['0.011', '0.028'] },
+          { yearFrom: 2015, yearTo: 2020, percents: ['0.012', '0.03'] },
+        ],
+        tiers,
+      ),
+    ).not.toBeNull();
+    expect(
+      insurancePremiumYearBandsProblem(
+        [{ yearFrom: 2024, yearTo: 2020, percents: ['0.011', '0.028'] }],
+        tiers,
+      ),
+    ).not.toBeNull();
+  });
+
+  it('đọc từ JSON: hỏng hình dạng ⇒ null, rỗng ⇒ null', () => {
+    expect(readInsurancePremiumYearBands(bands, tiers)).toEqual(bands);
+    expect(readInsurancePremiumYearBands([], tiers)).toBeNull();
+    expect(readInsurancePremiumYearBands(null, tiers)).toBeNull();
+    expect(
+      readInsurancePremiumYearBands([{ yearFrom: '2020', yearTo: null, percents: [] }], tiers),
+    ).toBeNull();
+    expect(readInsurancePremiumYearBands(bands, null)).toBeNull();
   });
 });

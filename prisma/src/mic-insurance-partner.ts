@@ -1,8 +1,12 @@
 import {
   INSURANCE_ISSUE_ERROR,
+  INSURANCE_PREMIUM_BASIS,
   INSURANCE_PRODUCT_KIND,
   INSURANCE_PROVIDER,
   INSURANCE_TEST_CERTIFICATE_PREFIX,
+  CUSTOMER_PICKUP_CONFIRM_LEAD_MINUTES,
+  insurancePremiumTierFor,
+  type InsuranceProductSnapshot,
 } from '@xeprime/types';
 import type {
   InsuranceLogger,
@@ -51,6 +55,7 @@ export const MIC_PARTNER_REF_MAX = 20;
 
 const VN_TZ = 'Asia/Ho_Chi_Minh';
 const MINUTE_MS = 60_000;
+const DAY_MS = 24 * 60 * MINUTE_MS;
 
 export class MicInsurancePartner implements InsurancePartner {
   readonly partnerName = 'Bảo hiểm Quân đội MIC';
@@ -301,6 +306,11 @@ interface CoverageWindow {
 /**
  * Thời hạn bảo hiểm: từ mốc giao xe + 5 phút (không sớm hơn hiện tại + 5 phút — thử lại muộn thì
  * hiệu lực cũng bắt đầu muộn theo) tới giờ trả xe. Làm tròn tới phút vì MIC nhận `HH:mm`.
+ *
+ * KHÔNG BAO GIỜ dài hơn bậc phí khách đã trả (ADR 0106 điều 4): MIC tính phí theo thời lượng HỢP
+ * ĐỒNG, nên giao xe sớm làm hợp đồng nhảy bậc và XePrime phải trả hãng phần chênh (đơn DHRX0MDN ở
+ * staging: khách trả 50.050, MIC thu 254.800). Lượt giao xe đã chặn giao sớm quá khoảng cho phép
+ * (`INSURANCE_EARLY_HANDOVER`); phần sớm còn lại thì hiệu lực bắt đầu muộn lại cho vừa bậc.
  */
 export function coverageWindow(
   request: IssuePolicyRequest,
@@ -308,15 +318,60 @@ export function coverageWindow(
 ): CoverageWindow {
   const handedOver = request.trip?.handedOverAt ?? now;
   const earliest = Math.max(handedOver.getTime(), now.getTime()) + MIC_COVERAGE_START_DELAY_MS;
-  const from = new Date(Math.ceil(earliest / MINUTE_MS) * MINUTE_MS);
   const returnAt = request.trip?.returnAt ?? request.coverageTo;
   const to = new Date(Math.floor(returnAt.getTime() / MINUTE_MS) * MINUTE_MS);
+  const paidMaxMs = paidTierMaxMs(request);
+  const startMs = paidMaxMs !== null ? Math.max(earliest, to.getTime() - paidMaxMs) : earliest;
+  const from = new Date(Math.ceil(startMs / MINUTE_MS) * MINUTE_MS);
   return {
     from,
     to,
     problem:
       to.getTime() > from.getTime() ? null : 'Đã quá giờ trả xe - không còn thời gian để bảo hiểm',
   };
+}
+
+/**
+ * Thời lượng tối đa của bậc phí khách đã trả — bậc của chuyến THEO LỊCH HẸN (giờ nhận → giờ trả),
+ * đúng phép báo giá đã dùng. `null` khi sản phẩm không tính theo bậc hoặc thiếu dữ liệu (hợp đồng cũ).
+ */
+function paidTierMaxMs(request: IssuePolicyRequest): number | null {
+  return request.trip ? tierMaxMsOf(request.product, request.trip) : null;
+}
+
+function tierMaxMsOf(
+  product: InsuranceProductSnapshot | null | undefined,
+  trip: { pickupAt: Date; returnAt: Date },
+): number | null {
+  if (product?.premiumBasis !== INSURANCE_PREMIUM_BASIS.VALUE_TIER) return null;
+  const tiers = product.premiumTiers;
+  if (!tiers || tiers.length === 0) return null;
+  const tier = insurancePremiumTierFor(tiers, trip.pickupAt, trip.returnAt);
+  return tier ? tier.maxDays * DAY_MS : null;
+}
+
+/**
+ * Giao xe sớm hơn giờ hẹn trong khoảng này vẫn được (ADR 0106 điều 4): hiệu lực bảo hiểm bắt đầu
+ * muộn lại cho vừa bậc (`coverageWindow`). CÙNG cửa sổ giao xe của ADR 0104 (`pickupAt − 60′`) — hai
+ * luật không chọi nhau: trong cửa sổ đó giao được, hợp đồng tự vừa bậc; ngoài cửa sổ thì ADR 0104 đã
+ * chặn ở nút giao xe, phép chặn của bảo hiểm chỉ còn là chốt sau cho các đường chuyển đơn khác.
+ */
+export const EARLY_HANDOVER_GRACE_MS = CUSTOMER_PICKUP_CONFIRM_LEAD_MINUTES * MINUTE_MS;
+
+/**
+ * Mốc GIAO XE sớm nhất mà hợp đồng (từ lúc giao + 5 phút tới giờ trả) không vượt bậc khách đã trả quá
+ * `EARLY_HANDOVER_GRACE_MS` — cùng phép tính với `coverageWindow`. `null` = không có ràng buộc (sản
+ * phẩm theo ngày, hợp đồng cũ, chuyến ngoài bậc).
+ */
+export function earliestHandoverKeepingTier(
+  product: InsuranceProductSnapshot | null | undefined,
+  trip: { pickupAt: Date; returnAt: Date },
+): Date | null {
+  const paidMaxMs = tierMaxMsOf(product, trip);
+  if (paidMaxMs === null) return null;
+  return new Date(
+    trip.returnAt.getTime() - paidMaxMs - EARLY_HANDOVER_GRACE_MS - MIC_COVERAGE_START_DELAY_MS,
+  );
 }
 
 function missingFields(request: IssuePolicyRequest): string | null {

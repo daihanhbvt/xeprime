@@ -9,12 +9,7 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 
-import {
-  ROUTES,
-  VEHICLE_REGISTRATION_SOURCE,
-  listYourVehicleRegisterPath,
-  ownerVehiclePath,
-} from '@/constants/routes';
+import { ROUTES, ownerVehiclePath } from '@/constants/routes';
 import type { VehicleListItem } from '@/features/vehicles/types';
 import { renderWithIntl } from '@/i18n/test-utils';
 
@@ -173,13 +168,12 @@ describe('AccountVehiclesView', () => {
     expect(grid.layout).toBe('list');
   });
 
-  it('"Thêm xe mới" mở luồng đăng xe của chủ xe; trong phiên hỗ trợ thì vắng hẳn', () => {
+  it('"Thêm xe mới" mở wizard thêm xe dùng chung hai tuyến; trong phiên hỗ trợ thì vắng hẳn', () => {
     permissions.granted = new Set([PERMISSION.VEHICLE_VIEW, PERMISSION.VEHICLE_CREATE]);
     renderView();
     fireEvent.click(screen.getByRole('button', { name: /Thêm xe mới/ }));
-    expect(nav.push).toHaveBeenCalledWith(
-      listYourVehicleRegisterPath(VEHICLE_REGISTRATION_SOURCE.ACCOUNT),
-    );
+    // MỘT wizard cho hai tuyến từ 18/11/2026 (`workspacePaths().vehicleNew`).
+    expect(nav.push).toHaveBeenCalledWith(ROUTES.MANAGE.VEHICLE_NEW);
 
     cleanup();
     support.active = true;

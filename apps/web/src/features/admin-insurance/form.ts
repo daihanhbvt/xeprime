@@ -2,14 +2,17 @@ import * as yup from 'yup';
 import {
   INSURANCE_CERTIFICATE_URL_PLACEHOLDER,
   INSURANCE_PREMIUM_BASIS,
+  INSURANCE_PREMIUM_SYNC_STATUS,
   INSURANCE_PRODUCT_KIND,
   INSURANCE_PRODUCT_LIMITS,
   INSURANCE_REMITTANCE_LIMITS,
   INSURANCE_SERVICE_FEE_PERCENT_MAX,
   INSURANCE_VALUE_TIER_LIMITS,
   insurancePremiumTiersProblem,
+  insurancePremiumYearBandsProblem,
   MONEY_STEP_VND,
 } from '@xeprime/types';
+import { newestBand } from './premium-plan';
 import { tabErrorCounts } from '@/lib/form-tabs';
 import type { InsuranceProduct, UpdateInsuranceProductInput } from './types';
 
@@ -56,6 +59,8 @@ export interface InsuranceProductFormMessages {
   displayOrder: (min: number, max: number) => string;
   /** Biểu phí bậc sai (ADR 0088) — câu từ `insurancePremiumTiersProblem` không hiện cho admin. */
   tiers: string;
+  /** Biểu phí theo năm sản xuất sai (ADR 0106) — % không hợp lệ hoặc không tăng dần theo bậc. */
+  bands: string;
   /** % phí thu hộ ngoài 0..`INSURANCE_SERVICE_FEE_PERCENT_MAX` hoặc quá hai chữ số lẻ. */
   serviceFeePercent: (max: number) => string;
   /** Bật phí thu hộ mà % = 0. */
@@ -153,6 +158,35 @@ export function buildInsuranceProductSchema(m: InsuranceProductFormMessages) {
             ) === null,
       ),
     /*
+     * Biểu phí theo NĂM SẢN XUẤT (ADR 0106) — rỗng = một biểu phí cho mọi năm. Mỗi nhóm dùng chung
+     * mốc ngày của `premiumTiers`; luật là CHÍNH hàm server dùng.
+     */
+    premiumYearBands: yup
+      .array(
+        yup.object({
+          yearFrom: yup.number().nullable().defined(),
+          yearTo: yup.number().nullable().defined(),
+          percents: yup.array(yup.string().trim().defined()).defined(),
+        }),
+      )
+      .default([])
+      .test('bands', m.bands, function (bands) {
+        if (!bands || bands.length === 0) return true;
+        const tiers = (
+          (this.parent as { premiumTiers?: { maxDays: unknown }[] }).premiumTiers ?? []
+        ).map((t) => ({ maxDays: Number(t.maxDays), percent: '1' }));
+        return (
+          insurancePremiumYearBandsProblem(
+            bands.map((b) => ({
+              yearFrom: b.yearFrom ?? null,
+              yearTo: b.yearTo ?? null,
+              percents: b.percents.map((x) => String(x ?? '').trim()),
+            })),
+            tiers,
+          ) === null
+        );
+      }),
+    /*
      * Phí thu hộ bảo hiểm của nền tảng (ADR 0091 điều 3) — % trên `IV`, 0..50, hai chữ số lẻ; bật thì
      * % > 0. Cùng luật DTO + CHECK `insurance_products_service_fee_*` ở server.
      */
@@ -206,6 +240,7 @@ export const INSURANCE_PRODUCT_FORM_TAB_FIELDS: Record<
 > = {
   pricing: [
     'premiumTiers',
+    'premiumYearBands',
     'dailyAmountCar',
     'dailyAmountMotorbike',
     'serviceFeeEnabled',
@@ -281,6 +316,11 @@ export function insuranceProductFormDefaults(
     isActive: product.isActive,
     claimHotline: product.claimHotline ?? '',
     premiumTiers: (product.premiumTiers ?? []).map((t) => ({ ...t })),
+    premiumYearBands: (product.premiumYearBands ?? []).map((b) => ({
+      yearFrom: b.yearFrom ?? null,
+      yearTo: b.yearTo ?? null,
+      percents: [...b.percents],
+    })),
     serviceFeeEnabled: product.serviceFeeEnabled,
     serviceFeePercent: product.serviceFeePercent,
     agencyCommissionPercent: product.agencyCommissionPercent,
@@ -288,10 +328,24 @@ export function insuranceProductFormDefaults(
 }
 
 /** Payload PATCH — tiền là chuỗi số nguyên đồng (ADR 0007); ô trống = không áp dụng (`null`). */
+/** Biểu phí đang ĐỒNG BỘ từ hãng ⇒ khoá sửa tay (ADR 0106 điều 2). */
+export function premiumLocked(
+  product: Pick<InsuranceProduct, 'premiumSyncStatus'> | null | undefined,
+): boolean {
+  return product?.premiumSyncStatus === INSURANCE_PREMIUM_SYNC_STATUS.SYNCED;
+}
+
 export function toUpdateInsuranceProductBody(
   form: InsuranceProductFormValues,
-  product?: Pick<InsuranceProduct, 'premiumBasis' | 'kind'>,
+  product?: Pick<InsuranceProduct, 'premiumBasis' | 'kind' | 'premiumSyncStatus'>,
 ): UpdateInsuranceProductInput {
+  const bands = form.premiumYearBands.map((b) => ({
+    yearFrom: b.yearFrom ?? null,
+    yearTo: b.yearTo ?? null,
+    percents: b.percents.map((x) => String(x ?? '').trim()),
+  }));
+  // Có nhóm năm ⇒ biểu phí chung mang % của nhóm mới nhất (cùng luật với đồng bộ ở server).
+  const newest = bands.length > 0 ? newestBand(bands) : null;
   const body: UpdateInsuranceProductInput = {
     nameVi: form.nameVi,
     nameEn: form.nameEn,
@@ -304,13 +358,17 @@ export function toUpdateInsuranceProductBody(
     displayOrder: form.displayOrder,
     isActive: form.isActive,
     claimHotline: form.claimHotline.trim() || null,
-    // Chỉ gửi biểu phí khi sản phẩm tính theo bậc — sản phẩm theo ngày không có biểu phí bậc.
-    ...(product?.premiumBasis === INSURANCE_PREMIUM_BASIS.VALUE_TIER
+    /*
+     * Chỉ gửi biểu phí khi sản phẩm tính theo bậc VÀ chưa khoá — biểu phí đồng bộ từ hãng thì server
+     * từ chối sửa tay (ADR 0106 điều 2).
+     */
+    ...(product?.premiumBasis === INSURANCE_PREMIUM_BASIS.VALUE_TIER && !premiumLocked(product)
       ? {
-          premiumTiers: form.premiumTiers.map((t) => ({
+          premiumTiers: form.premiumTiers.map((t, i) => ({
             maxDays: Number(t.maxDays),
-            percent: String(t.percent).trim(),
+            percent: newest ? (newest.percents[i] ?? '') : String(t.percent).trim(),
           })),
+          premiumYearBands: bands.length > 0 ? bands : null,
         }
       : {}),
     // Phí thu hộ chỉ gửi cho vật chất xe — server từ chối bật nó ở sản phẩm khác (ADR 0091 điều 3).

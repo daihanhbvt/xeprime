@@ -1,0 +1,63 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+/* Năm cột bậc không vừa khung hẹp của form — cuộn ngang trong lưới, không đẩy cả trang. */
+.scroll {
+  overflow-x: auto;
+}
+
+.grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--xp-font-size-sm);
+}
+
+.yearHead,
+.tierHead {
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  font-weight: 500;
+  text-align: left;
+  color: var(--xp-color-text-secondary);
+  white-space: nowrap;
+}
+
+.tierHead {
+  text-align: right;
+}
+
+.yearCell {
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  font-weight: 600;
+  text-align: left;
+  color: var(--xp-color-text);
+  white-space: nowrap;
+}
+
+.cell {
+  padding: var(--xp-space-xs);
+  text-align: right;
+}
+
+.grid tbody tr {
+  border-top: 1px solid var(--xp-color-border);
+}
+
+.input {
+  width: 100%;
+  min-width: 96px;
+}
+
+.readOnly {
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-text);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-error);
+}
