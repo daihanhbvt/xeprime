@@ -1,6 +1,7 @@
 'use client';
 
-import { Alert, Button, DatePicker, Empty, Skeleton } from 'antd';
+import { Alert, Button, DatePicker, Skeleton } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { PERMISSION, TAX_WITHHOLDING_STATUS_META } from '@xeprime/types';
@@ -164,7 +165,7 @@ export function ShopTaxWithheldCard({
 
       {data ? (
         data.rows === 0 ? (
-          <Empty description={t('empty')} />
+          <EmptyState variant="empty" title={t('empty')} />
         ) : (
           <>
             <dl className={styles.stats}>

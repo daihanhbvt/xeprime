@@ -738,7 +738,7 @@ function Empty({
     return (
       <YStack flexGrow={1} ai="center" jc="center" gap={space.md} p={layout.screenX}>
         <ScreenMessage
-          art={images.listEmpty}
+          kind="no-results"
           title={t('emptyKeywordTitle', { q: keyword })}
           description={t('emptyKeywordDesc')}
           actionLabel={t('clearKeyword')}
@@ -759,7 +759,7 @@ function Empty({
     return (
       <YStack flexGrow={1} jc="center">
         <ScreenMessage
-          art={images.listEmpty}
+          kind="no-results"
           title={t('emptySystemTitle')}
           description={t('emptySystemDesc')}
         />
@@ -770,7 +770,7 @@ function Empty({
   return (
     <YStack flexGrow={1} ai="center" jc="center" gap={space.md} p={layout.screenX}>
       <ScreenMessage
-        art={images.listEmpty}
+        kind="no-results"
         title={t('emptyFilteredTitle')}
         description={t('emptyFilteredDesc')}
         actionLabel={tFilters('clear')}

@@ -1,7 +1,8 @@
 'use client';
 
 import { CarOutlined, PlusOutlined, ShoppingOutlined, SolutionOutlined } from '@ant-design/icons';
-import { Alert, Button, Result, Skeleton, Steps } from 'antd';
+import { Alert, Button, Skeleton, Steps } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -18,12 +19,7 @@ import {
 } from '@xeprime/types';
 
 import { StatusTag } from '@/components/data-display/StatusTag';
-import {
-  ROUTES,
-  SHOP_SECTION,
-  ownerVehiclePath,
-  shopSectionPath,
-} from '@/constants/routes';
+import { ROUTES, SHOP_SECTION, ownerVehiclePath, shopSectionPath } from '@/constants/routes';
 import { useMyShop } from '@/features/shop/hooks/use-shop';
 import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
 import type { VehicleListItem } from '@/features/vehicles/types';
@@ -127,10 +123,10 @@ export function OwnerRegistrationView() {
 
   if (isError && !shop) {
     return (
-      <Result
-        status="error"
+      <EmptyState
+        variant="error"
         title={t('loadError')}
-        extra={
+        action={
           <Button type="primary" onClick={() => void refetch()}>
             {tCommon('actions.retry')}
           </Button>

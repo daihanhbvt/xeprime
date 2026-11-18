@@ -321,5 +321,28 @@
   },
   "validation": {
     "maxLength": "Tối đa {max, number} ký tự."
+  },
+  "statePages": {
+    "notFound": {
+      "title": "Không tìm thấy trang",
+      "description": "Trang bạn đang tìm kiếm không tồn tại hoặc đã được di chuyển."
+    },
+    "error": {
+      "title": "Đã xảy ra lỗi hệ thống",
+      "description": "Hệ thống đang gặp sự cố ngoài ý muốn. Vui lòng thử lại sau ít phút."
+    },
+    "maintenance": {
+      "title": "Hệ thống đang bảo trì",
+      "description": "Hệ thống hiện đang bảo trì. Vui lòng thử lại sau ít phút!"
+    },
+    "comingSoon": {
+      "title": "Sắp ra mắt",
+      "description": "Tính năng hiện đang trong quá trình phát triển. Vui lòng truy cập lại sau!"
+    },
+    "noResults": {
+      "title": "Không tìm thấy kết quả",
+      "description": "Không có dữ liệu phù hợp với yêu cầu của bạn. Vui lòng thử lại"
+    },
+    "backHome": "Về trang chủ"
   }
 }

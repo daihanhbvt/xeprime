@@ -1,6 +1,7 @@
 'use client';
 
-import { Empty, Tag, Timeline } from 'antd';
+import { Tag, Timeline } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { useTranslations } from 'next-intl';
 import { APPROVAL_ACTION, type ApprovalAction } from '@xeprime/types';
 import { PreviewImage, PreviewImageGroup } from '@/components/data-display/PreviewImage';
@@ -30,7 +31,7 @@ export function ReviewGallery({
   const images = vehicle.images;
 
   if (images.length === 0) {
-    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('empty')} />;
+    return <EmptyState variant="empty" title={t('empty')} />;
   }
 
   const [cover, ...rest] = images;

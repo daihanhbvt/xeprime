@@ -1,6 +1,6 @@
 'use client';
 
-import { Empty } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import styles from './PlaceholderPage.module.css';
 import { useTranslations } from 'next-intl';
@@ -16,7 +16,7 @@ export function PlaceholderPage({ title }: { title: string }) {
     <div>
       <ManagePageHeader title={title} />
       <div className={styles.body}>
-        <Empty description={tCommon('states.empty')} />
+        <EmptyState variant="coming-soon" title={tCommon('states.empty')} />
       </div>
     </div>
   );

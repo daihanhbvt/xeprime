@@ -1,6 +1,7 @@
 'use client';
 
-import { Avatar, Badge, Button, Empty, Input, Skeleton } from 'antd';
+import { Avatar, Badge, Button, Input, Skeleton } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { SearchOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { CHAT_SIDE } from '@xeprime/types';
@@ -134,9 +135,9 @@ export function ConversationList({
           </div>
         ) : items.length === 0 ? (
           <div className={styles.centerPane}>
-            <Empty
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description={search || filter === 'unread' ? t('noMatches') : t('empty')}
+            <EmptyState
+              variant={search || filter === 'unread' ? 'no-results' : 'empty'}
+              title={search || filter === 'unread' ? t('noMatches') : t('empty')}
             />
           </div>
         ) : (
@@ -238,7 +239,12 @@ function ConversationRow({
           ) : null}
 
           <span className={styles.convBottom}>
-            <span className={cx(styles.convPreview, conversation.unread > 0 && styles.convPreviewUnread)}>
+            <span
+              className={cx(
+                styles.convPreview,
+                conversation.unread > 0 && styles.convPreviewUnread,
+              )}
+            >
               {preview}
             </span>
             {conversation.unread > 0 ? (

@@ -1,6 +1,7 @@
 'use client';
 
-import { Alert, Button, Empty, Skeleton } from 'antd';
+import { Alert, Button, Skeleton } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { PlusOutlined, SwapOutlined } from '@ant-design/icons';
 import { useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
@@ -133,22 +134,18 @@ export function BankAccountList({
       {isError ? <Alert type="error" showIcon title={t('loadError')} /> : null}
       {settled && !account ? (
         isPartner ? (
-          <Empty
-            className={styles.empty}
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={
-              <>
-                <span className={styles.emptyTitle}>{t('emptyTitle')}</span>
-                <span className={styles.emptyHint}>{t('emptyHint')}</span>
-              </>
+          <EmptyState
+            variant="empty"
+            title={t('emptyTitle')}
+            description={t('emptyHint')}
+            action={
+              <Button icon={<PlusOutlined />} onClick={openForm}>
+                {t('actions.add')}
+              </Button>
             }
-          >
-            <Button icon={<PlusOutlined />} onClick={openForm}>
-              {t('actions.add')}
-            </Button>
-          </Empty>
+          />
         ) : (
-          <Empty description={t('empty')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          <EmptyState variant="empty" title={t('empty')} />
         )
       ) : null}
 

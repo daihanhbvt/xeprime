@@ -6,8 +6,7 @@
   "hero": {
     "eyebrow": "Mobile app",
     "title": "XePrime in your pocket",
-    "lead": "The whole rental journey - search, ask, pick up, return - in one app. Owners manage their calendar and bookings from the very same place.",
-    "status": "Coming soon"
+    "lead": "The whole rental journey - search, ask, pick up, return - in one app. Owners manage their calendar and bookings from the very same place."
   },
   "preview": {
     "heading": "A first look",
@@ -45,8 +44,8 @@
     }
   },
   "download": {
-    "heading": "Be ready when it ships",
-    "body": "The app is not on the App Store or Google Play yet. The two codes below currently open the XePrime homepage; when the app ships, these same codes will point straight to the stores.",
+    "heading": "Get the XePrime app",
+    "body": "XePrime is now on the App Store and Google Play. Scan a code with your phone or tap a store button to install.",
     "scanHint": "Scan with your phone camera",
     "qrAlt": "QR code to download the XePrime app on {store}",
     "downloadOn": "Download on"

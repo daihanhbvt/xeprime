@@ -1,6 +1,7 @@
 'use client';
 
-import { Alert, Button, Empty, Pagination, Skeleton } from 'antd';
+import { Alert, Button, Pagination, Skeleton } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { SERVICE_TYPE, type HostMetrics } from '@xeprime/types';
 import { useTranslations } from 'next-intl';
 import { cx } from '@/lib/cx';
@@ -108,11 +109,7 @@ export function ShopVehicles({
         </h2>
 
         {showProvinceTabs ? (
-          <div
-            className={styles.chips}
-            role="group"
-            aria-label={t('vehicleFilters.provinceLabel')}
-          >
+          <div className={styles.chips} role="group" aria-label={t('vehicleFilters.provinceLabel')}>
             <FilterChip
               label={t('vehicleFilters.all')}
               active={!filters.provinceCode}
@@ -183,11 +180,13 @@ export function ShopVehicles({
         )
       ) : total === 0 ? (
         hasActiveFilter ? (
-          <Empty className={styles.empty} description={t('vehicleFilters.emptyFiltered')}>
-            <Button onClick={clearFilters}>{t('vehicleFilters.clear')}</Button>
-          </Empty>
+          <EmptyState
+            variant="no-results"
+            title={t('vehicleFilters.emptyFiltered')}
+            action={<Button onClick={clearFilters}>{t('vehicleFilters.clear')}</Button>}
+          />
         ) : (
-          <Empty className={styles.empty} description={t('vehicles.empty')} />
+          <EmptyState variant="empty" title={t('vehicles.empty')} />
         )
       ) : layout === 'list' ? (
         <div className={cx(styles.list, staggerFastClass, viewEnterClass)}>

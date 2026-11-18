@@ -1,0 +1,15 @@
+/* Figma `22306:65280`: nền gray-25, đệm trên 40 · ngang 120 · dưới 128, nội dung canh giữa. */
+.page {
+  display: flex;
+  min-height: calc(100vh - var(--xp-market-header-height, 62px));
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 120px 128px;
+  background: #fdfdfd;
+}
+
+@media (max-width: 900px) {
+  .page {
+    padding: 32px 16px 64px;
+  }
+}

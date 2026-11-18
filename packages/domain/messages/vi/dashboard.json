@@ -123,7 +123,16 @@
     "dayLabel": "{weekday}, {date}",
     "lateDays": "{count, plural, other {Trễ # ngày}}",
     "lateHours": "{count, plural, other {Trễ # giờ}}",
-    "lateMinutes": "{count, plural, other {Trễ # phút}}"
+    "lateMinutes": "{count, plural, other {Trễ # phút}}",
+    "upcoming": "Sắp tới",
+    "detail": "Chi tiết",
+    "columns": {
+      "time": "Thời gian",
+      "kind": "Loại",
+      "vehicle": "Xe",
+      "status": "Trạng thái",
+      "actions": "Thao tác"
+    }
   },
   "kpi": {
     "title": "Tháng này",
@@ -134,8 +143,8 @@
     "utilizationHint": "Thời gian xe có khách trên thời gian xe sẵn có",
     "utilizationEmpty": "Chưa có xe trong kỳ",
     "fleetHint": "{renting} đang thuê · {maintenance} bảo dưỡng",
-    "titleVsPrevious": "Tháng {month} vs tháng trước",
-    "report": "Báo cáo"
+    "titleVsPrevious": "Tháng {month} so với tháng trước",
+    "report": "Báo cáo doanh thu"
   },
   "change": {
     "up": "+{value, number}%",
@@ -147,17 +156,17 @@
     "suffix": "so với cùng kỳ tháng trước",
     "percent": "{value, number}%",
     "points": "{value, number} điểm",
-    "vsPrevious": "vs tháng trước ({value})",
-    "vsPreviousBare": "vs tháng trước"
+    "vsPrevious": "so với tháng trước ({value})",
+    "vsPreviousBare": "so với tháng trước"
   },
   "charts": {
     "revenueTitle": "Doanh thu {days} ngày qua",
-    "revenueDescription": "Theo sổ thu chi đã duyệt, không gồm tiền cọc giữ hộ.",
+    "revenueDescription": "Dữ liệu từ sổ thu chi đã duyệt, không bao gồm tiền cọc giữ hộ.",
     "revenueEmpty": "Chưa có phiếu thu chi nào trong {days} ngày qua",
     "revenueEmptyHint": "Phiếu thu tự sinh khi bạn quyết toán chuyến.",
     "revenueError": "Chưa tải được biểu đồ doanh thu.",
     "tripsTitle": "Đơn và chuyến {months} tháng gần nhất",
-    "tripsDescription": "Đơn mới theo ngày tạo, chuyến hoàn thành theo ngày trả xe.",
+    "tripsDescription": "Đơn hàng mới tính theo ngày tạo, chuyến hoàn thành tính theo ngày trả xe.",
     "tripsEmpty": "Chưa có đơn nào trong {months} tháng gần nhất",
     "tripsError": "Chưa tải được biểu đồ chuyến.",
     "newBookings": "Đơn mới",
@@ -166,12 +175,14 @@
     "tripsTab": "Đơn & chuyến {months} tháng",
     "revenue": "Doanh thu",
     "cost": "Chi phí",
-    "profit": "Lợi nhuận"
+    "profit": "Lợi nhuận",
+    "revenueSummaryTitle": "Thu chi {days} ngày gần nhất",
+    "legendTotal": "{label}: {count}"
   },
   "market": {
     "title": "Xe trên chợ",
     "onMarket": "Khách đang thấy",
-    "inReview": "Chờ XePrime duyệt",
+    "inReview": "Chờ duyệt",
     "needsRevision": "Cần sửa",
     "draft": "Chưa gửi duyệt",
     "manage": "Quản lý xe",
@@ -182,7 +193,8 @@
     "legendLabel": "{label}:"
   },
   "reputation": {
-    "title": "Uy tín với khách",
+    "title": "Uy tín của gian hàng",
+    "responseTimeEmpty": "Chưa có dữ liệu",
     "window": "{days} ngày qua",
     "note": "Khách thấy đúng các chỉ số này trên trang xe và trang gian hàng của bạn. Trả lời yêu cầu sớm và giữ chuyến đã nhận để chúng luôn đẹp."
   },
@@ -236,6 +248,7 @@
   },
   "fleetPlan": {
     "title": "Đội xe & gói dịch vụ",
-    "fleetTitle": "Đội xe"
+    "fleetTitle": "Đội xe",
+    "available": "Xe sẵn sàng"
   }
 }

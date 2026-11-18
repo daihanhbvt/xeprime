@@ -132,6 +132,8 @@ jobs:
           NEXT_PUBLIC_WEB_PARTNER_URL: https://${{ vars.PARTNER_DOMAIN }}
           NEXT_PUBLIC_WEB_ADMIN_URL: https://${{ vars.ADMIN_DOMAIN }}
           NEXT_PUBLIC_APP_NAME: ${{ vars.NEXT_PUBLIC_APP_NAME }}
+          NEXT_PUBLIC_APP_STORE_URL: ${{ vars.NEXT_PUBLIC_APP_STORE_URL || 'https://apps.apple.com/vn/app/xeprime/id6831492287' }}
+          NEXT_PUBLIC_PLAY_STORE_URL: ${{ vars.NEXT_PUBLIC_PLAY_STORE_URL || 'https://play.google.com/store/apps/details?id=vn.xeprime.customerapp' }}
           # Phải TRÙNG `SESSION_COOKIE_NAME` trong `.env.prodtemp` (giá trị lúc chạy thắng — đây
           # chỉ là đai an toàn, xem deploy/Dockerfile).
           SESSION_COOKIE_NAME: ${{ vars.SESSION_COOKIE_NAME }}

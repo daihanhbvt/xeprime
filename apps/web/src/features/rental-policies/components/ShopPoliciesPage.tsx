@@ -1,6 +1,7 @@
 'use client';
 
-import { App, Button, Result, Skeleton } from 'antd';
+import { App, Button, Skeleton } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
@@ -145,10 +146,10 @@ function PoliciesWorkspace({ canEdit }: { canEdit: boolean }) {
             {leading}
             {failed ? (
               <div className={styles.card}>
-                <Result
-                  status="error"
+                <EmptyState
+                  variant="error"
                   title={t('loadError')}
-                  extra={
+                  action={
                     <Button
                       type="primary"
                       onClick={() => {

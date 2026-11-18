@@ -1,0 +1,19 @@
+.link {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
+  white-space: nowrap;
+}
+
+.link:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+.arrow {
+  font-size: 20px;
+}

@@ -1,7 +1,8 @@
 'use client';
 
 import { MessageOutlined, RightOutlined } from '@ant-design/icons';
-import { Avatar, Badge, Button, Empty, Popover, Skeleton } from 'antd';
+import { Avatar, Badge, Button, Popover, Skeleton } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState, type ReactNode } from 'react';
@@ -20,7 +21,6 @@ import {
 } from '../hooks/use-recent-conversations';
 import type { ConversationSummary } from '../types';
 import styles from './ChatMenu.module.css';
-
 
 /**
  * Biểu tượng tin nhắn ở thanh trên cùng — MỘT component cho cả khu khách (`CHAT_SIDE.CUSTOMER`)
@@ -128,11 +128,7 @@ function ChatQuickPanel({
             </Button>
           </div>
         ) : items.length === 0 ? (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={t('empty')}
-            className={styles.empty}
-          />
+          <EmptyState variant="empty" title={t('empty')} />
         ) : (
           <ul className={styles.list}>
             {items.map((conversation) => (
