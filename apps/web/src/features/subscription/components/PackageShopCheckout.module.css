@@ -6,6 +6,9 @@
   gap: var(--xp-space-md);
 }
 
-.addMore {
-  align-self: flex-start;
+/* "Thêm gói cho loại xe khác" · "Chọn lại gói" - xuống dòng trên màn hẹp. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
 }

@@ -9,7 +9,7 @@ import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { laneVehicleType } from '../plan-lanes';
 import type { ScopedPlanPurchaseState } from '../plan-purchase';
 import { EnterprisePlanCard } from './EnterprisePlanCard';
-import { PlanPricingTable } from './PlanPricingTable';
+import { PlanPricingTable, PlanTermCards } from './PlanPricingTable';
 import styles from './PlanPickerPanel.module.css';
 
 /**
@@ -35,13 +35,14 @@ export interface PlanPickerCopy {
  * BỘ CHỌN GÓI HAI LÀN + nút hành động — phần dùng CHUNG của mọi màn bán gói nhiều phạm vi trong cổng
  * người dùng (ADR 0065): onboarding gian hàng trả phí và bước 1 của luồng nâng cấp.
  *
- *   Gói xe máy   [1 xe] [5 xe] [10 xe]   + kỳ hạn của bậc đang chọn
- *   Gói ô tô     [1 xe] [5 xe] [10 xe]   + kỳ hạn của bậc đang chọn
+ *   Gói xe máy   [1 xe] [5 xe] [10 xe]
+ *   Gói ô tô     [1 xe] [5 xe] [10 xe]
+ *   Thời hạn     [1] [3] [6] [12] tháng   - MỘT kỳ cho mọi gói đang chọn
  *   Doanh nghiệp — Liên hệ tư vấn
  *
  * Chọn ÍT NHẤT một làn; làn còn lại để trống là "không mua gói cho loại xe đó" — xe của loại đó
  * không lên chợ cho tới khi có gói (ADR 0065 điều 4), và dòng gợi ý dưới mỗi làn nói đúng điều đó.
- * Mỗi làn đã chọn sinh MỘT hoá đơn riêng ở nơi gọi.
+ * Một gói ⇒ một hoá đơn; hai gói ⇒ MỘT phiếu thanh toán gộp `XPC…` ở nơi gọi (ADR 0083).
  *
  * Panel KHÔNG sở hữu state: `useScopedPlanPurchase` sống ở nơi gọi vì chính nơi đó cần
  * `selections` để quyết định bước kế tiếp (tạo hoá đơn ngay, hay mở form hồ sơ).
@@ -68,6 +69,7 @@ export function PlanPickerPanel({
   onSubmit: () => void;
 }) {
   const t = useTranslations('Subscription.lanes');
+  const tPurchase = useTranslations('Subscription.purchase');
   const tCommon = useTranslations('Common');
 
   if (plans.isLoading) return <Skeleton active paragraph={{ rows: 6 }} />;
@@ -96,6 +98,13 @@ export function PlanPickerPanel({
   }
 
   const canSubmit = state.selections.length > 0 && !state.incomplete;
+  const [onlyTier] = state.pickedTiers;
+  const sharedTermTitle =
+    state.pickedTiers.length > 1
+      ? t('sharedTermTitle', { count: state.pickedTiers.length })
+      : onlyTier
+        ? tPurchase('termsTitleFor', { plan: onlyTier.plan.name })
+        : null;
 
   return (
     <div className={styles.panel}>
@@ -124,10 +133,28 @@ export function PlanPickerPanel({
                 </Button>
               ) : null}
             </header>
-            <PlanPricingTable state={lane} label={title} />
+            <PlanPricingTable state={lane} label={title} showTerms={false} />
           </section>
         );
       })}
+
+      {/*
+        MỘT kỳ hạn cho mọi gói đang chọn - dưới hai làn, không lặp lại dưới từng làn. Hai bậc
+        không có kỳ chung (danh mục admin bán lệch kỳ) thì nói thẳng thay vì một hàng thẻ rỗng.
+      */}
+      {sharedTermTitle ? (
+        state.termOptions.length > 0 ? (
+          <PlanTermCards
+            title={sharedTermTitle}
+            hint={state.pickedTiers.length > 1 ? t('sharedTermHint') : tPurchase('termsHint')}
+            options={state.termOptions}
+            value={state.termMonths}
+            onChange={state.setTermMonths}
+          />
+        ) : (
+          <Alert type="warning" showIcon title={t('noSharedTerm')} />
+        )
+      ) : null}
 
       {state.enterprise ? <EnterprisePlanCard tier={state.enterprise} /> : null}
 

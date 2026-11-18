@@ -5,13 +5,13 @@ import { Tag } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { PLAN_TIER_ICON, type PlanBenefitLine, type PlanTierIcon } from '@xeprime/domain';
-import { PLAN_VEHICLE_SCOPE } from '@xeprime/types';
+import { PLAN_VEHICLE_SCOPE, type SubscriptionTermMonths } from '@xeprime/types';
 
 import { ROUTES } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 
-import type { PlanPurchaseState } from '../plan-purchase';
+import type { PlanPurchaseState, PlanTermChoice } from '../plan-purchase';
 import type { TenantPlan } from '../types';
 import styles from './PlanPricingTable.module.css';
 
@@ -60,10 +60,16 @@ const TIER_ICONS: Readonly<Record<PlanTierIcon, typeof RiseOutlined>> = {
 export function PlanPricingTable({
   state,
   label,
+  showTerms = true,
 }: {
   state: PlanPurchaseState;
   /** Tên nhóm cho trình đọc màn hình — mỗi làn một tên ("Gói xe máy"), mặc định nhãn chung. */
   label?: string;
+  /**
+   * Vẽ kỳ hạn của bậc đang chọn. Bộ chọn HAI LÀN tắt đi: kỳ hạn ở đó là MỘT cho cả lượt, vẽ một
+   * lần dưới hai làn (`PlanPickerPanel`).
+   */
+  showTerms?: boolean;
 }) {
   const t = useTranslations('Subscription');
   const fmt = useAppFormat();
@@ -148,55 +154,84 @@ export function PlanPricingTable({
         })}
       </div>
 
-      {selected?.selfServe ? (
-        <div className={styles.terms}>
-          <div className={styles.termsHead}>
-            <h4 className={styles.termsTitle}>
-              {t('purchase.termsTitleFor', { plan: selected.plan.name })}
-            </h4>
-            <p className={styles.termsHint}>{t('purchase.termsHint')}</p>
-          </div>
-          <div className={styles.termCards} role="radiogroup" aria-label={t('purchase.termsTitle')}>
-            {selected.terms.map((choice) => {
-              const picked = termMonths === choice.months;
-              return (
-                <button
-                  key={choice.months}
-                  type="button"
-                  role="radio"
-                  aria-checked={picked}
-                  className={`${styles.termCard} ${picked ? styles.termCardActive : ''}`}
-                  onClick={() => state.setTermMonths(choice.months)}
-                >
-                  <span className={styles.termText}>
-                    <span className={styles.termMonths}>
-                      {t('purchase.termOption', { months: choice.months })}
-                    </span>
-                    <span className={styles.termTotal}>{fmt.money(String(choice.total))}</span>
-                    {/*
-                      % tiết kiệm là một phép SO SÁNH với giá tháng của chính bậc này, không phải
-                      một khoản giảm trên hoá đơn (ADR 0041 điều 2). Bậc không bán kỳ 1 tháng thì
-                      không có mốc để so và nhãn vắng mặt — im lặng đúng hơn một con số không
-                      kiểm chứng được.
-                    */}
-                    {choice.savingPercent > 0 ? (
-                      <Tag color="green" className={styles.termSaving}>
-                        {t('purchase.termSaving', { percent: choice.savingPercent })}
-                      </Tag>
-                    ) : null}
-                  </span>
-                  {/*
-                    Vòng tròn chọn là HÌNH ẢNH của `aria-checked` ở ngay trên nút — trình đọc màn
-                    hình nghe từ thuộc tính, mắt đọc từ vòng tròn. Không phải một `<input radio>`
-                    thứ hai: hai điều khiển cho một lựa chọn là hai chỗ để chúng lệch nhau.
-                  */}
-                  <span className={styles.termRadio} aria-hidden="true" />
-                </button>
-              );
-            })}
-          </div>
-        </div>
+      {showTerms && selected?.selfServe ? (
+        <PlanTermCards
+          title={t('purchase.termsTitleFor', { plan: selected.plan.name })}
+          hint={t('purchase.termsHint')}
+          options={selected.terms}
+          value={termMonths}
+          onChange={state.setTermMonths}
+        />
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * Hàng thẻ KỲ HẠN - dùng cho kỳ của một bậc (`PlanPricingTable`) và cho kỳ CHUNG của bộ chọn hai
+ * làn (`PlanPickerPanel`, nơi `total` của mỗi thẻ đã là tổng các gói đang chọn).
+ */
+export function PlanTermCards({
+  title,
+  hint,
+  options,
+  value,
+  onChange,
+}: {
+  title: string;
+  hint: string;
+  options: readonly PlanTermChoice[];
+  value: SubscriptionTermMonths | null;
+  onChange: (months: SubscriptionTermMonths) => void;
+}) {
+  const t = useTranslations('Subscription');
+  const fmt = useAppFormat();
+
+  return (
+    <div className={styles.terms}>
+      <div className={styles.termsHead}>
+        <h4 className={styles.termsTitle}>{title}</h4>
+        <p className={styles.termsHint}>{hint}</p>
+      </div>
+      <div className={styles.termCards} role="radiogroup" aria-label={t('purchase.termsTitle')}>
+        {options.map((choice) => {
+          const picked = value === choice.months;
+          return (
+            <button
+              key={choice.months}
+              type="button"
+              role="radio"
+              aria-checked={picked}
+              className={`${styles.termCard} ${picked ? styles.termCardActive : ''}`}
+              onClick={() => onChange(choice.months)}
+            >
+              <span className={styles.termText}>
+                <span className={styles.termMonths}>
+                  {t('purchase.termOption', { months: choice.months })}
+                </span>
+                <span className={styles.termTotal}>{fmt.money(String(choice.total))}</span>
+                {/*
+                  % tiết kiệm là một phép SO SÁNH với giá tháng của chính bậc này, không phải
+                  một khoản giảm trên hoá đơn (ADR 0041 điều 2). Bậc không bán kỳ 1 tháng thì
+                  không có mốc để so và nhãn vắng mặt — im lặng đúng hơn một con số không
+                  kiểm chứng được.
+                */}
+                {choice.savingPercent > 0 ? (
+                  <Tag color="green" className={styles.termSaving}>
+                    {t('purchase.termSaving', { percent: choice.savingPercent })}
+                  </Tag>
+                ) : null}
+              </span>
+              {/*
+                Vòng tròn chọn là HÌNH ẢNH của `aria-checked` ở ngay trên nút — trình đọc màn
+                hình nghe từ thuộc tính, mắt đọc từ vòng tròn. Không phải một `<input radio>`
+                thứ hai: hai điều khiển cho một lựa chọn là hai chỗ để chúng lệch nhau.
+              */}
+              <span className={styles.termRadio} aria-hidden="true" />
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -1,50 +1,40 @@
 'use client';
 
 import { Alert, Button, Skeleton } from 'antd';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
 import { paymentPath } from '@/constants/routes';
-
-import { usePurchaseErrorMessage } from '../use-plan-quota-gate-message';
 
 import { onePerPaymentTarget } from '../payable';
 import { PLAN_LANE_SCOPES, pendingInvoiceForScope } from '../plan-lanes';
-import { useScopedPlanPurchase } from '../plan-purchase';
-import {
-  usePendingInvoices,
-  usePurchaseSubscription,
-  useTenantPlans,
-} from '../hooks/use-subscription';
-import { useCreateScopedInvoices } from '../use-create-scoped-invoices';
+import { useMySubscription, usePendingInvoices } from '../hooks/use-subscription';
 import { InvoiceWaitingPanel } from './InvoiceWaitingPanel';
-import { PlanPickerPanel } from './PlanPickerPanel';
+import { PlanPurchasePage } from './PlanPurchaseDialog';
 import styles from './PackageShopCheckout.module.css';
 
 /**
  * BƯỚC 2 của onboarding gian hàng trả phí: chọn gói xe máy và/hoặc ô tô → chuyển khoản
  * (ADR 0040 · ADR 0065).
  *
+ * ## Cùng luồng với "Mua hoặc gia hạn gói", ở dạng TRANG
+ *
+ * Người dùng 18/11/2026: màn chọn gói ở đây dùng ĐÚNG luồng hai bước của hộp mua gói ở trang Gian
+ * hàng (`PlanPurchasePage` - cùng `PlanPurchaseFlow`): (1) chọn bậc từng loại xe, (2) MỘT kỳ hạn
+ * chung + xác nhận từ bản xem trước của server. Một gói ⇒ một hoá đơn `XPG…`; hai gói ⇒ MỘT phiếu
+ * thanh toán gộp `XPC…` với một mã QR (ADR 0083). Tạo xong là sang thẳng trang thanh toán không
+ * khung (`paymentPath` - gian hàng chưa vào được khu quản lý).
+ *
  * ## Trạng thái đến từ SERVER, không từ state của component
  *
- * Màn này có hai hình dạng, và cái nào hiện ra do `GET /subscription/invoices/pending` quyết định
- * — không phải một cờ `hasSubmitted` nào:
- *
- *   không có hoá đơn chờ  → bộ chọn hai làn + nút "Tạo hoá đơn"
- *   có hoá đơn chờ        → mỗi hoá đơn (tối đa một mỗi loại xe) một khối chờ tiền
+ *   không có hoá đơn chờ  → luồng chọn gói
+ *   có hoá đơn chờ        → mỗi khoản cần trả một khối chờ tiền (phiếu gộp là MỘT khối)
  *
  * Đó là toàn bộ lý do nó phục hồi được: F5, đóng trình duyệt, đăng nhập trên máy khác — cả ba
- * rơi đúng vào hình dạng thứ hai, với đúng mã cũ.
- *
- * ## Mỗi loại xe một hoá đơn
- *
- * Chọn cả xe máy lẫn ô tô là HAI hoá đơn (server giữ tối đa một hoá đơn mở mỗi phạm vi), tạo lần
- * lượt. Một hoá đơn → sang thẳng trang thanh toán của nó. Hai hoá đơn → ở lại đây, mỗi hoá đơn một
- * nút "Thanh toán": trả xong MỘT là gian hàng đã vào tuyến gói (ADR 0065 điều 5), hoá đơn còn lại
- * vẫn chờ ở trang gói.
- *
- * Tạo hoá đơn thứ hai hỏng thì hoá đơn thứ nhất VẪN đã có — màn hình hiện nó cùng lỗi, và lối
- * "Thêm gói cho loại xe còn lại" mở bộ chọn chỉ cho làn chưa có hoá đơn.
+ * rơi đúng vào hình dạng thứ hai, với đúng mã cũ. Ngoại lệ tường minh duy nhất: người dùng bấm
+ * "Chọn lại gói" / "Thêm gói …" - luồng mở lại, bước xác nhận cảnh báo mã cũ của loại xe được chọn
+ * lại sẽ bị huỷ (server void `issued` cùng loại xe; một con void thì cả phiếu void), "Huỷ" quay về
+ * mã đang chờ.
  *
  * ## Không có nút "Tôi đã chuyển khoản"
  *
@@ -57,64 +47,51 @@ import styles from './PackageShopCheckout.module.css';
  */
 export function PackageShopCheckout() {
   const t = useTranslations('ShopOnboarding.checkout');
-  const tCommon = useTranslations('Common');
-  const errorMessage = usePurchaseErrorMessage();
-  const router = useRouter();
 
   const pending = usePendingInvoices();
   const invoices = pending.data ?? [];
-  /** Người dùng bấm "Thêm gói cho loại xe còn lại" khi đã có hoá đơn chờ ở một làn. */
-  const [addingMore, setAddingMore] = useState(false);
-
-  /** Làn còn mua được: chưa có hoá đơn chờ ở phạm vi đó. */
-  const openScopes = PLAN_LANE_SCOPES.filter((scope) => !pendingInvoiceForScope(invoices, scope));
-  const [onlyOpenScope] = openScopes;
-  const showPicker = !pending.isLoading && (invoices.length === 0 || addingMore);
-  /*
-   * Danh mục gói chỉ tải khi bộ chọn sắp hiện ra: khi đã có mã để chuyển khoản thì bảng giá không
-   * còn là thứ người dùng đang quyết định, và một request nữa lúc đó chỉ làm màn thanh toán chậm hơn.
-   */
-  const plans = useTenantPlans(showPicker || invoices.length > 0);
-  const purchase = usePurchaseSubscription();
-  const selection = useScopedPlanPurchase(plans.data ?? [], openScopes);
-  const create = useCreateScopedInvoices(purchase);
+  /** Người dùng mở lại luồng chọn gói trong khi đang có hoá đơn chờ. */
+  const [editing, setEditing] = useState(false);
+  const showFlow = !pending.isLoading && (invoices.length === 0 || editing);
+  const me = useMySubscription(showFlow);
 
   if (pending.isLoading) return <Skeleton active paragraph={{ rows: 6 }} />;
 
   if (pending.isError && !pending.data) {
+    return <LoadError title={t('loadError')} onRetry={() => void pending.refetch()} />;
+  }
+
+  if (showFlow) {
+    if (me.isLoading) return <Skeleton active paragraph={{ rows: 8 }} />;
+    if (!me.data) {
+      return <LoadError title={t('plansError')} onRetry={() => void me.refetch()} />;
+    }
     return (
-      <Alert
-        type="error"
-        showIcon
-        title={t('loadError')}
-        action={
-          <Button size="small" onClick={() => void pending.refetch()}>
-            {tCommon('actions.retry')}
-          </Button>
-        }
+      <PlanPurchasePage
+        data={me.data}
+        paths={paymentPath}
+        onCancel={invoices.length > 0 ? () => setEditing(false) : undefined}
       />
     );
   }
 
-  async function submit() {
-    if (create.running || selection.selections.length === 0) return;
-    const result = await create.run(selection.selections);
-    if (result.created.length === 0) return;
-    selection.reset();
-    setAddingMore(false);
-    // Một hoá đơn, không lỗi ⇒ sang thẳng trang thanh toán của nó. Hai hoá đơn ⇒ ở lại, mỗi mã một nút.
-    const [only] = result.created;
-    if (result.created.length === 1 && only && !result.failed) {
-      router.push(paymentPath.invoice(only.id));
-    }
-  }
-
-  const failedText = create.failed
-    ? t('partialFailure', {
-        scope: t(`scope.${create.failed.scope}`),
-        error: errorMessage(create.failed.error),
-      })
-    : null;
+  /** Loại xe chưa có hoá đơn chờ - còn thêm gói được mà không đụng tới mã nào. */
+  const openScopes = PLAN_LANE_SCOPES.filter((scope) => !pendingInvoiceForScope(invoices, scope));
+  const [onlyOpenScope] = openScopes;
+  /*
+   * "Chọn lại gói" chỉ khi MỌI hoá đơn chờ chưa nhận đồng nào: hoá đơn đã nhận một phần thì server
+   * từ chối tạo mã mới (`SUBSCRIPTION_INVOICE_PARTIALLY_PAID`), và một nút dẫn tới lỗi đó là một
+   * nút nói dối. Còn loại xe trống thì lối là "Thêm gói …".
+   */
+  const canEdit = invoices.every((item) => item.status === SUBSCRIPTION_INVOICE_STATUS.ISSUED);
+  const reopenLabel =
+    openScopes.length === 1 && onlyOpenScope
+      ? t('addOtherScope', { scope: t(`scope.${onlyOpenScope}`) })
+      : openScopes.length > 1
+        ? t('addPlan')
+        : canEdit
+          ? t('editInvoice')
+          : null;
 
   return (
     <div className={styles.wrap}>
@@ -122,40 +99,27 @@ export function PackageShopCheckout() {
       {onePerPaymentTarget(invoices).map((invoice) => (
         <InvoiceWaitingPanel key={invoice.id} invoice={invoice} />
       ))}
-
-      {invoices.length > 0 && failedText ? (
-        <Alert type="error" showIcon title={failedText} />
-      ) : null}
-
-      {invoices.length > 0 && !addingMore && openScopes.length > 0 ? (
-        <Button className={styles.addMore} onClick={() => setAddingMore(true)}>
-          {openScopes.length === 1 && onlyOpenScope
-            ? t('addOtherScope', { scope: t(`scope.${onlyOpenScope}`) })
-            : t('addPlan')}
-        </Button>
-      ) : null}
-
-      {showPicker ? (
-        <PlanPickerPanel
-          plans={plans}
-          state={selection}
-          submitting={create.running}
-          errorText={invoices.length === 0 ? failedText : null}
-          copy={{
-            loadError: t('plansError'),
-            empty: t('noPlans'),
-            emptyHint: t('noPlansHint'),
-            submit: t('createInvoice'),
-          }}
-          onSubmit={() => void submit()}
-        />
-      ) : null}
-
-      {addingMore ? (
-        <Button type="link" onClick={() => setAddingMore(false)}>
-          {tCommon('actions.cancel')}
-        </Button>
+      {reopenLabel ? (
+        <div className={styles.actions}>
+          <Button onClick={() => setEditing(true)}>{reopenLabel}</Button>
+        </div>
       ) : null}
     </div>
+  );
+}
+
+function LoadError({ title, onRetry }: { title: string; onRetry: () => void }) {
+  const tCommon = useTranslations('Common');
+  return (
+    <Alert
+      type="error"
+      showIcon
+      title={title}
+      action={
+        <Button size="small" onClick={onRetry}>
+          {tCommon('actions.retry')}
+        </Button>
+      }
+    />
   );
 }
