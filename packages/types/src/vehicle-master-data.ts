@@ -112,6 +112,44 @@ export const VEHICLE_DATA_SPEC_FIELDS = [
 ] as const;
 export type VehicleDataSpecField = (typeof VEHICLE_DATA_SPEC_FIELDS)[number];
 
+/** Trần độ dài tên xe — cùng `@Length(1, 255)` của DTO và cột `vehicles.name`. */
+export const VEHICLE_NAME_MAX = 255;
+
+/**
+ * Tên xe TỰ GHÉP (ADR 0102): "Hãng Dòng Phiên bản Năm" — vd "Toyota Vios 1.5G CVT 2019". Màn đăng
+ * xe không còn ô tên; server ghép khi client không gửi, form ghép đúng hàm này để xem trước.
+ *
+ * Dòng xe đã mở đầu bằng tên hãng ("VinFast VF 3" gõ tay) thì không lặp hãng. Phần trống bị bỏ.
+ */
+export function composeVehicleName(parts: {
+  brandLabel?: string | null;
+  modelLabel?: string | null;
+  variantLabel?: string | null;
+  manufactureYear?: number | null;
+}): string {
+  const clean = (value: string | number | null | undefined) =>
+    value == null ? '' : String(value).replace(/\s+/g, ' ').trim();
+  const brand = clean(parts.brandLabel);
+  const model = clean(parts.modelLabel);
+  const brandInModel = brand && model.toLowerCase().startsWith(`${brand.toLowerCase()} `);
+  return [brandInModel ? '' : brand, model, clean(parts.variantLabel), clean(parts.manufactureYear)]
+    .filter(Boolean)
+    .join(' ')
+    .slice(0, VEHICLE_NAME_MAX)
+    .trim();
+}
+
+/** Năm sản xuất có nằm trong ĐỜI của một xe chuẩn không — đời để trống một đầu là mở đầu đó. */
+export function variantCoversYear(
+  variant: { yearFrom: number | null; yearTo: number | null },
+  year: number | null | undefined,
+): boolean {
+  if (year == null) return true;
+  if (variant.yearFrom != null && year < variant.yearFrom) return false;
+  if (variant.yearTo != null && year > variant.yearTo) return false;
+  return true;
+}
+
 /**
  * Giá thuê tham khảo — mỗi ô ứng đúng một ô giá của form xe (cùng tên cột ở `vehicles`). Thứ tự là
  * thứ tự hiển thị và thứ tự cột trong file.

@@ -49,7 +49,7 @@ const POLICY: FeePolicySnapshot = {
   holdMinAmount: '20000',
   holdPaymentWindowMinutes: 120,
   freeCancelHours: 4,
-  // depositPercent 15 · depositMinAmount '0' — FEE_SCHEDULE_DEFAULTS (chính sách v8, ADR 0066).
+  // depositPercent 30 · depositMinAmount '0' — FEE_SCHEDULE_DEFAULTS (ADR 0101).
   taxEnabled: false,
   taxRates: null,
   taxLegalBasis: null,
@@ -427,8 +427,8 @@ describe('promoCodeConfigBlockers — cấu hình admin', () => {
 describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () => {
   /**
    * Ô tô 2 ngày × 700.000đ, tuyến hoa hồng: S = 50.000, H = 140.000 (10% × 2 ngày), tổng khách
-   * trả 1.450.000. Phần chủ xe D = 15% × 1.400.000 = 210.000 ⇒ tiền giữ chỗ = S + H + D = 400.000
-   * (ADR 0066).
+   * trả 1.450.000. Tiền thuê trả trước C = 30% × 1.400.000 = 420.000 (đã gồm H) ⇒ tiền giữ chỗ
+   * = S + C = 470.000, phần chủ xe D = C − H = 280.000 (ADR 0101).
    */
   const feeInput = {
     billingMode: BILLING_MODE.COMMISSION,
@@ -441,9 +441,9 @@ describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () =
 
   it('KHÔNG có mã: grossOnline == online, và không có dòng promo nào', () => {
     const fees = computeCustomerFees(feeInput);
-    expect(fees.grossOnlineAmount).toBe('400000');
-    expect(fees.onlineAmount).toBe('400000');
-    expect(fees.sponsorableAmount).toBe('400000');
+    expect(fees.grossOnlineAmount).toBe('470000');
+    expect(fees.onlineAmount).toBe('470000');
+    expect(fees.sponsorableAmount).toBe('470000');
     expect(fees.promoDiscountAmount).toBe('0');
     expect(fees.promo).toBeNull();
     expect(fees.customerTotalAmount).toBe('1450000');
@@ -474,8 +474,8 @@ describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () =
 
     // Và đúng hai con số của KHÁCH giảm, đúng bằng phần tài trợ.
     expect(after.promoDiscountAmount).toBe('100000');
-    expect(after.onlineAmount).toBe('300000');
-    expect(after.holdAmount).toBe('300000');
+    expect(after.onlineAmount).toBe('370000');
+    expect(after.holdAmount).toBe('370000');
     expect(after.customerTotalAmount).toBe('1350000');
     expect(Number(before.onlineAmount) - Number(after.onlineAmount)).toBe(100000);
     expect(Number(before.customerTotalAmount) - Number(after.customerTotalAmount)).toBe(100000);
@@ -484,18 +484,18 @@ describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () =
   it('KẸP LẠI một lần nữa ở máy giá: snapshot đòi nhiều hơn trần thì chỉ được tới trần', () => {
     /*
      * Bất biến "online không xuống dưới sàn" không được phép phụ thuộc vào việc mọi caller đều
-     * nhớ kẹp. Đưa vào một snapshot đòi 10.000.000đ và kỳ vọng máy giá tự kẹp về 380.000đ
-     * (= 400.000 tiền giữ chỗ − 20.000 sàn đối soát).
+     * nhớ kẹp. Đưa vào một snapshot đòi 10.000.000đ và kỳ vọng máy giá tự kẹp về 450.000đ
+     * (= 470.000 tiền giữ chỗ − 20.000 sàn đối soát).
      */
     const fees = computeCustomerFees({
       ...feeInput,
       promo: snapshotOf(fixedTerms('10000000'), '10000000'),
     });
-    expect(fees.promoDiscountAmount).toBe('380000');
+    expect(fees.promoDiscountAmount).toBe('450000');
     expect(fees.onlineAmount).toBe('20000');
     expect(Number(fees.onlineAmount)).toBeGreaterThanOrEqual(Number(POLICY.holdMinAmount));
     // Snapshot đi kèm số ĐÃ KẸP, không phải số mã hứa — mọi màn hình đọc lại phải thấy số thật.
-    expect(fees.promo?.discountApplied).toBe('380000');
+    expect(fees.promo?.discountApplied).toBe('450000');
   });
 
   it('snapshot có số giảm 0 ⇒ `promo` về null, không để một mã "giảm 0đ" đi tiếp', () => {
@@ -585,11 +585,11 @@ describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () =
     });
     // Tuyến gói chỉ có phí sàn, không có dòng hoa hồng.
     expect(fees.lines.map((l) => l.key)).toEqual([FEE_LINE.SERVICE_FEE]);
-    // S 50.000 + D (15% × 1.400.000 = 210.000) = 260.000 ⇒ online 160.000 sau mã 100.000.
-    expect(fees.grossOnlineAmount).toBe('260000');
-    expect(fees.onlineAmount).toBe('160000');
+    // S 50.000 + C (30% × 1.400.000 = 420.000, H = 0 ⇒ D = C) = 470.000 ⇒ online 370.000 sau mã.
+    expect(fees.grossOnlineAmount).toBe('470000');
+    expect(fees.onlineAmount).toBe('370000');
     // Chủ xe VẪN được nhận đủ phần giữ chỗ: nền tảng bù phần chênh.
-    expect(fees.ownerPayableAmount).toBe('210000');
+    expect(fees.ownerPayableAmount).toBe('420000');
   });
 });
 

@@ -45,7 +45,7 @@ const PILOT: FeePolicySnapshot = {
   holdMinAmount: '20000',
   holdPaymentWindowMinutes: 120,
   freeCancelHours: 4,
-  // depositPercent 15 · depositMinAmount '0' — đọc từ FEE_SCHEDULE_DEFAULTS (chính sách v8, ADR 0066).
+  // depositPercent 30 · depositMinAmount '0' — đọc từ FEE_SCHEDULE_DEFAULTS (ADR 0101).
   taxEnabled: false,
   taxRates: null,
   taxLegalBasis: null,
@@ -155,17 +155,18 @@ describe('computeTieredOwnerCommission — hoa hồng lũy tiến theo từng ng
     expect(computeTieredOwnerCommission(Array(5).fill('1000000'), tiers)).toBe('410000');
   });
 
-  it('mốc nấc: ngày 1–2 là 10%, ngày 3–7 là 7%, ngày 8–30 là 3%, từ ngày 31 là 0%', () => {
+  it('mốc nấc (ADR 0101): ngày 1–2 là 10%, ngày 3–7 là 7%, ngày 8–30 là 5%, từ ngày 31 là 3%', () => {
     const days = [1, 2, 3, 7, 8, 30, 31, 365];
     expect(days.map((day) => ownerCommissionPercentForDay(day, tiers))).toEqual([
-      10, 10, 7, 7, 3, 3, 0, 0,
+      10, 10, 7, 7, 5, 5, 3, 3,
     ]);
   });
 
-  it('từ ngày 31 không thu thêm: 35 ngày và 30 ngày cùng ra 1.240.000đ', () => {
-    // 2 × 100k + 5 × 70k + 23 × 30k = 200k + 350k + 690k.
-    expect(computeTieredOwnerCommission(Array(30).fill(1_000_000), tiers)).toBe('1240000');
-    expect(computeTieredOwnerCommission(Array(35).fill(1_000_000), tiers)).toBe('1240000');
+  it('từ ngày 31 vẫn thu 3%: 30 ngày ra 1.700.000đ, 35 ngày ra 1.850.000đ', () => {
+    // 2 × 100k + 5 × 70k + 23 × 50k = 200k + 350k + 1.150k.
+    expect(computeTieredOwnerCommission(Array(30).fill(1_000_000), tiers)).toBe('1700000');
+    // + 5 × 30k cho ngày 31–35.
+    expect(computeTieredOwnerCommission(Array(35).fill(1_000_000), tiers)).toBe('1850000');
   });
 
   it('giá từng ngày khác nhau ⇒ % áp trên giá CỦA NGÀY ĐÓ', () => {
@@ -187,31 +188,33 @@ describe('computeTieredOwnerCommission — hoa hồng lũy tiến theo từng ng
 
 describe('computeCustomerFees — ví dụ chuẩn: ô tô 5 ngày × 1.000.000đ, tuyến HOA HỒNG', () => {
   /**
-   * Ca này khoá TOÀN BỘ công thức bằng đúng các con số của ADR 0066 (thay bảng 2.3 của bản thiết
-   * kế ADR 0064 — đổi 22/10/2026). Nếu nó đỏ thì hoặc code sai, hoặc quyết định đã đổi — không có
-   * khả năng thứ ba, và không được sửa số ở đây để nó xanh lại.
+   * Ca này khoá TOÀN BỘ công thức bằng đúng các con số của ADR 0101 (thay ADR 0066 — đổi
+   * 18/11/2026). Nếu nó đỏ thì hoặc code sai, hoặc quyết định đã đổi — không có khả năng thứ ba,
+   * và không được sửa số ở đây để nó xanh lại.
    *
-   * D = 15% × 5.000.000 = 750.000 · H = 410.000 · S = 50.000
-   * tiền giữ chỗ = S + H + D = 1.210.000 · trả tay = 5.050.000 − 1.210.000 = 3.840.000.
+   * C = 30% × 5.000.000 = 1.500.000 (đã gồm H = 410.000) · S = 50.000
+   * tiền giữ chỗ = S + C = 1.550.000 · trả tay = 5.050.000 − 1.550.000 = 3.500.000 (70% tiền thuê)
+   * D = C − H = 1.090.000.
    */
-  it('B 5.000.000 · phí sàn 50.000 ⇒ khách trả 5.050.000; giữ chỗ 1.210.000; trả tay 3.840.000', () => {
+  it('B 5.000.000 · phí sàn 50.000 ⇒ khách trả 5.050.000; giữ chỗ 1.550.000; trả tay 3.500.000', () => {
     const r = fees();
     expect(r.baseAmount).toBe('5000000');
     expect(r.customerFeeTotal).toBe('50000');
     expect(r.customerTotalAmount).toBe('5050000');
-    expect(r.grossOnlineAmount).toBe('1210000');
-    expect(r.onlineAmount).toBe('1210000');
-    expect(r.holdAmount).toBe('1210000');
-    expect(r.payAtPickupAmount).toBe('3840000');
+    expect(r.grossOnlineAmount).toBe('1550000');
+    expect(r.onlineAmount).toBe('1550000');
+    expect(r.holdAmount).toBe('1550000');
+    expect(r.payAtPickupAmount).toBe('3500000');
   });
 
-  it('hoa hồng 410.000 · sàn giữ 460.000 ⇒ phần chủ xe D = 750.000 (15% tiền thuê), chủ xe nhận 4.590.000', () => {
+  it('hoa hồng 410.000 · sàn giữ 460.000 ⇒ phần chủ xe D = 1.090.000 (30% tiền thuê − H), chủ xe nhận 4.590.000', () => {
     const r = fees();
     expect(r.ownerCommissionAmount).toBe('410000');
     expect(r.platformRetainedAmount).toBe('460000');
-    // H là khoản CỘNG THÊM trên D, không cắt từ D — D đúng bằng 15% tiền thuê.
-    expect(r.depositAmount).toBe('750000');
-    expect(r.ownerPayableAmount).toBe('750000');
+    // H nằm GỌN trong 30% tiền thuê, không cộng thêm: D + H = 1.500.000.
+    expect(r.depositAmount).toBe('1090000');
+    expect(Number(r.depositAmount) + Number(r.ownerCommissionAmount)).toBe(1_500_000);
+    expect(r.ownerPayableAmount).toBe('1090000');
     expect(r.ownerNetAmount).toBe('4590000');
   });
 
@@ -294,7 +297,8 @@ describe('computeCustomerFees — ví dụ chuẩn ADR 0064: thuế 10% trên ti
    * Hai quyết định 21/10/2026 khoá ở đây bằng chính con số: (1) thuế và hoa hồng tính trên TIỀN
    * THUÊ 5.000.000 — không trên 5.200.000; (2) phí giao không vào mẫu số phần giữ chỗ của chủ xe
    * và không bao giờ nằm trong mã QR — nó rơi trọn vào phần khách trả tận tay chủ xe. Số tiền giữ
-   * chỗ theo ADR 0066: D = 15% × 5.000.000 = 750.000. Không sửa số để test xanh.
+   * chỗ theo ADR 0101: C = 30% × 5.000.000 = 1.500.000 (đã gồm H), D = C − H = 1.090.000. Không
+   * sửa số để test xanh.
    */
   // 10% = GTGT 5% + TNCN 5% đều cho mọi loại dịch vụ — giữ con số của ví dụ chuẩn.
   const TAX10: FeePolicySnapshot = withTax(5, 5);
@@ -309,41 +313,42 @@ describe('computeCustomerFees — ví dụ chuẩn ADR 0064: thuế 10% trên ti
   const settled = (r: CustomerFeeBreakdown) =>
     allocationTotals(resolveHoldAllocation(holdLinesOf(r), 'settled', r.taxAmount));
 
-  it('tuyến hoa hồng, không bảo hiểm: H 410.000 · T 500.000 · QR 1.210.000 · trả tay 4.040.000', () => {
+  it('tuyến hoa hồng, không bảo hiểm: H 410.000 · T 500.000 · QR 1.550.000 · trả tay 3.700.000', () => {
     const r = trip();
     expect(r.deliveryAmount).toBe('200000');
     expect(r.ownerCommissionAmount).toBe('410000');
     expect(r.taxAmount).toBe('500000');
     expect(r.customerTotalAmount).toBe('5250000');
-    // S 50.000 + H 410.000 + D 750.000 (15% × 5.000.000 — phí giao không vào mẫu số) = 1.210.000.
-    expect(r.onlineAmount).toBe('1210000');
-    expect(r.holdAmount).toBe('1210000');
-    expect(r.payAtPickupAmount).toBe('4040000'); // 5.250.000 − 1.210.000, gồm trọn 200.000 phí giao
-    expect(r.depositAmount).toBe('750000'); // D = 1.210.000 − 50.000 − 410.000
+    // S 50.000 + C 1.500.000 (30% × 5.000.000, đã gồm H - phí giao không vào mẫu số) = 1.550.000.
+    expect(r.onlineAmount).toBe('1550000');
+    expect(r.holdAmount).toBe('1550000');
+    // 5.250.000 − 1.550.000 = 70% tiền thuê 3.500.000 + trọn 200.000 phí giao.
+    expect(r.payAtPickupAmount).toBe('3700000');
+    expect(r.depositAmount).toBe('1090000'); // D = 1.550.000 − 50.000 − 410.000 = 30% R − H
     expect(r.platformRetainedAmount).toBe('460000');
-    expect(r.ownerPayableAmount).toBe('250000'); // D − T
+    expect(r.ownerPayableAmount).toBe('590000'); // D − T
     // Chủ xe nhận cho TIỀN THUÊ = R − H − T = 5.000.000 − 410.000 − 500.000; phí giao 200.000 đi riêng.
     expect(r.ownerNetAmount).toBe('4090000');
     expect(r.taxableBaseAmount).toBe('5000000');
     const totals = settled(r);
-    expect(totals[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('250000'); // ví chủ xe
+    expect(totals[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('590000'); // ví chủ xe
     expect(totals[ALLOCATION_TARGET.TAX_LEDGER]).toBe('500000');
     expect(totals[ALLOCATION_TARGET.PLATFORM_REVENUE]).toBe('460000');
   });
 
-  it('tuyến hoa hồng, bảo hiểm vật chất 50.000/ngày: QR 1.460.000 · trả tay 4.040.000', () => {
+  it('tuyến hoa hồng, bảo hiểm vật chất 50.000/ngày: QR 1.800.000 · trả tay 3.700.000', () => {
     const r = trip({ vehicleProtectionSelected: true });
     expect(amountOf(r, FEE_LINE.VEHICLE_PROTECTION)).toBe(250000);
     expect(r.ownerCommissionAmount).toBe('410000');
     expect(r.taxAmount).toBe('500000');
     expect(r.customerTotalAmount).toBe('5500000');
-    expect(r.onlineAmount).toBe('1460000'); // S 50.000 + H 410.000 + IV 250.000 + D 750.000
-    expect(r.payAtPickupAmount).toBe('4040000'); // 5.500.000 − 1.460.000
-    expect(r.depositAmount).toBe('750000');
-    expect(r.ownerPayableAmount).toBe('250000');
+    expect(r.onlineAmount).toBe('1800000'); // S 50.000 + IV 250.000 + C 1.500.000
+    expect(r.payAtPickupAmount).toBe('3700000'); // 5.500.000 − 1.800.000
+    expect(r.depositAmount).toBe('1090000');
+    expect(r.ownerPayableAmount).toBe('590000');
     expect(r.ownerNetAmount).toBe('4090000');
     const totals = settled(r);
-    expect(totals[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('250000');
+    expect(totals[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('590000');
     expect(totals[ALLOCATION_TARGET.INSURER_PAYABLE]).toBe('250000');
     expect(totals[ALLOCATION_TARGET.TAX_LEDGER]).toBe('500000');
     expect(totals[ALLOCATION_TARGET.PLATFORM_REVENUE]).toBe('460000');
@@ -362,7 +367,7 @@ describe('computeCustomerFees — ví dụ chuẩn ADR 0064: thuế 10% trên ti
         required: true,
         serviceFeeAmount: '0',
       });
-      expect(r.onlineAmount).toBe('1434400'); // S 50.000 + H 410.000 + IV 224.400 + D 750.000
+      expect(r.onlineAmount).toBe('1774400'); // S 50.000 + IV 224.400 + C 1.500.000
       expect(settled(r)[ALLOCATION_TARGET.INSURER_PAYABLE]).toBe('224400');
     });
 
@@ -376,7 +381,7 @@ describe('computeCustomerFees — ví dụ chuẩn ADR 0064: thuế 10% trên ti
         required: false,
         serviceFeeAmount: '0',
       });
-      expect(r.onlineAmount).toBe('1210000'); // S 50.000 + H 410.000 + D 750.000
+      expect(r.onlineAmount).toBe('1550000'); // S 50.000 + C 1.500.000
     });
 
     it('Tuỳ chọn, khách tích: cộng IV, không phải bắt buộc', () => {
@@ -418,10 +423,10 @@ describe('computeCustomerFees — ví dụ chuẩn ADR 0064: thuế 10% trên ti
         const line = lineOf(r, FEE_LINE.INSURANCE_SERVICE_FEE)!;
         expect(line.bearer).toBe('customer');
         expect(line.beneficiary).toBe('platform');
-        // S 50.000 + H 410.000 + IV 224.400 + X 22.440 + D 750.000
-        expect(r.onlineAmount).toBe('1456840');
+        // S 50.000 + IV 224.400 + X 22.440 + C 1.500.000
+        expect(r.onlineAmount).toBe('1796840');
         // Phần chủ xe D không đổi vì X — X không phải tiền của chủ xe.
-        expect(r.depositAmount).toBe('750000');
+        expect(r.depositAmount).toBe('1090000');
         expect(r.platformRetainedAmount).toBe('460000');
         expect(r.vehicleProtectionOffer).toEqual({
           amount: '224400',
@@ -439,7 +444,7 @@ describe('computeCustomerFees — ví dụ chuẩn ADR 0064: thuế 10% trên ti
 
       it('mã khuyến mãi không trừ vào X: phần tài trợ được = D + S + H', () => {
         const r = withFee();
-        expect(r.sponsorableAmount).toBe(String(750000 + 50000 + 410000));
+        expect(r.sponsorableAmount).toBe(String(1090000 + 50000 + 410000));
       });
 
       it('hoàn khách cùng IV khi huỷ; thành doanh thu nền tảng khi chuyến xong', () => {
@@ -469,18 +474,18 @@ describe('computeCustomerFees — ví dụ chuẩn ADR 0064: thuế 10% trên ti
     });
   });
 
-  it('tuyến gói, bật thu cọc: H = 0 · QR 800.000 · ví chủ xe 250.000 · chủ xe nhận 4.500.000', () => {
+  it('tuyến gói, bật thu cọc: H = 0 · QR 1.550.000 · ví chủ xe 1.000.000 · chủ xe nhận 4.500.000', () => {
     const r = trip({ billingMode: BILLING_MODE.PACKAGE, depositRequired: true });
     expect(lineOf(r, FEE_LINE.OWNER_COMMISSION)).toBeUndefined();
     expect(r.ownerCommissionAmount).toBe('0');
     expect(r.taxAmount).toBe('500000');
-    expect(r.onlineAmount).toBe('800000'); // S 50.000 + D 750.000
-    expect(r.payAtPickupAmount).toBe('4450000'); // 5.250.000 − 800.000
-    expect(r.depositAmount).toBe('750000');
+    expect(r.onlineAmount).toBe('1550000'); // S 50.000 + C 1.500.000 (H = 0 ⇒ D = C)
+    expect(r.payAtPickupAmount).toBe('3700000'); // 5.250.000 − 1.550.000
+    expect(r.depositAmount).toBe('1500000');
     expect(r.platformRetainedAmount).toBe('50000');
-    expect(r.ownerPayableAmount).toBe('250000'); // 750.000 − 500.000
+    expect(r.ownerPayableAmount).toBe('1000000'); // 1.500.000 − 500.000
     expect(r.ownerNetAmount).toBe('4500000'); // R − T, phí giao 200.000 đi riêng
-    expect(settled(r)[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('250000');
+    expect(settled(r)[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('1000000');
   });
 
   it('phí giao KHÔNG vào mã QR: thêm 200.000 giao xe chỉ đổi phần trả tay, đúng 200.000', () => {
@@ -508,9 +513,9 @@ describe('computeCustomerFees — ví dụ chuẩn ADR 0064: thuế 10% trên ti
   it('phần chủ xe dưới thuế (cấu hình sai): xe máy 1 ngày 100.000, hai gói bảo hiểm, thuế 10%, giao 50.000', () => {
     /*
      * Chính sách giữ chỗ 5% < thuế 10% — cổng kích hoạt chặn nó (`deposit_percent_below_tax_percent`),
-     * nhưng phép tính vẫn phải tự đứng vững. D_target = 5% × 100.000 = 5.000 ⇒ S + H + IV + IP + D
-     * = 30.000 + 10.000 + 15.000 + 5.000 + 5.000 = 65.000 < S + H + IV + IP + T = 70.000: tiền giữ
-     * chỗ nâng lên đủ phần không phải của chủ xe, và phí giao vẫn nằm trọn ngoài mã QR.
+     * nhưng phép tính vẫn phải tự đứng vững. C_target = 5% × 100.000 = 5.000 ⇒ S + IV + IP + C
+     * = 30.000 + 15.000 + 5.000 + 5.000 = 55.000 < S + H + IV + IP + T = 70.000: tiền giữ chỗ nâng
+     * lên đủ phần không phải của chủ xe, và phí giao vẫn nằm trọn ngoài mã QR.
      */
     const r = fees({
       policy: { ...TAX10, depositPercent: 5 },
@@ -530,8 +535,8 @@ describe('computeCustomerFees — ví dụ chuẩn ADR 0064: thuế 10% trên ti
     expect(r.ownerNetAmount).toBe('80000');
   });
 
-  it('cùng chuyến xe máy ở chính sách đúng (15% ≥ thuế 10%): D đã đủ giữ T, không cần nâng', () => {
-    // D = 15% × 100.000 = 15.000 ≥ T 10.000 ⇒ giữ chỗ = 30.000 + 10.000 + 20.000 + 15.000 = 75.000.
+  it('cùng chuyến xe máy ở chính sách đúng (30% ≥ H 10% + thuế 10%): C đủ giữ H + T, không cần nâng', () => {
+    // C = 30% × 100.000 = 30.000 ≥ H 10.000 + T 10.000 ⇒ giữ chỗ = 30.000 + 20.000 + 30.000 = 80.000.
     const r = fees({
       policy: TAX10,
       vehicleType: VEHICLE_TYPE.MOTORBIKE,
@@ -541,10 +546,10 @@ describe('computeCustomerFees — ví dụ chuẩn ADR 0064: thuế 10% trên ti
       vehicleProtectionSelected: true,
       personalAccidentSelected: true,
     });
-    expect(r.onlineAmount).toBe('75000');
-    expect(r.depositAmount).toBe('15000');
-    expect(r.ownerPayableAmount).toBe('5000'); // 15.000 − 10.000
-    expect(r.payAtPickupAmount).toBe('125000'); // 200.000 − 75.000, gồm 50.000 phí giao
+    expect(r.onlineAmount).toBe('80000');
+    expect(r.depositAmount).toBe('20000'); // C 30.000 − H 10.000
+    expect(r.ownerPayableAmount).toBe('10000'); // 20.000 − 10.000
+    expect(r.payAtPickupAmount).toBe('120000'); // 200.000 − 80.000 = 70% R + 50.000 phí giao
     expect(r.ownerNetAmount).toBe('80000');
   });
 
@@ -565,7 +570,7 @@ describe('computeCustomerFees — insuranceOffered là cổng của NỀN TẢNG
     expect(lineOf(r, FEE_LINE.VEHICLE_PROTECTION)).toBeUndefined();
     expect(lineOf(r, FEE_LINE.TRIP_INSURANCE)).toBeUndefined();
     expect(r.customerTotalAmount).toBe('5050000');
-    expect(r.onlineAmount).toBe('1210000');
+    expect(r.onlineAmount).toBe('1550000');
   });
 
   it('true + khách tích ⇒ có dòng (đối chứng)', () => {
@@ -648,11 +653,11 @@ describe('computeCustomerFees — tuyến GÓI (0% hoa hồng)', () => {
     const r = fees({ billingMode: BILLING_MODE.PACKAGE, depositRequired: true });
     expect(lineOf(r, FEE_LINE.OWNER_COMMISSION)).toBeUndefined();
     expect(r.customerTotalAmount).toBe('5050000');
-    expect(r.onlineAmount).toBe('800000'); // S 50.000 + D 750.000 (15% × 5.000.000)
-    expect(r.payAtPickupAmount).toBe('4250000');
+    expect(r.onlineAmount).toBe('1550000'); // S 50.000 + C 1.500.000 (30% × 5.000.000, H = 0)
+    expect(r.payAtPickupAmount).toBe('3500000'); // 70% tiền thuê
     expect(r.ownerCommissionAmount).toBe('0');
     expect(r.platformRetainedAmount).toBe('50000');
-    expect(r.ownerPayableAmount).toBe('750000');
+    expect(r.ownerPayableAmount).toBe('1500000');
     expect(r.ownerNetAmount).toBe('5000000');
   });
 
@@ -675,7 +680,7 @@ describe('computeCustomerFees — tuyến GÓI (0% hoa hồng)', () => {
   });
 
   it('tuyến hoa hồng KHÔNG truyền depositRequired ⇒ mặc định LUÔN thu cọc', () => {
-    expect(fees().holdAmount).toBe('1210000');
+    expect(fees().holdAmount).toBe('1550000');
   });
 });
 
@@ -727,7 +732,7 @@ describe('computeCustomerFees — phí sàn theo chuyến hoặc theo ngày, t�
 });
 
 describe('computeCustomerFees — bảo hiểm MIC là TUỲ CHỌN, tính theo ngày', () => {
-  it('khách tích vật chất xe ô tô (50.000đ × 5 ngày) ⇒ tổng 5.300.000, giữ chỗ 1.460.000, trả tay 3.840.000', () => {
+  it('khách tích vật chất xe ô tô (50.000đ × 5 ngày) ⇒ tổng 5.300.000, giữ chỗ 1.800.000, trả tay 3.500.000', () => {
     const r = fees({ vehicleProtectionSelected: true });
     expect(lineOf(r, FEE_LINE.VEHICLE_PROTECTION)).toEqual({
       key: FEE_LINE.VEHICLE_PROTECTION,
@@ -740,11 +745,11 @@ describe('computeCustomerFees — bảo hiểm MIC là TUỲ CHỌN, tính theo 
       partnerName: MIC,
     });
     expect(r.customerTotalAmount).toBe('5300000');
-    expect(r.onlineAmount).toBe('1460000'); // S 50.000 + H 410.000 + IV 250.000 + D 750.000
-    expect(r.payAtPickupAmount).toBe('3840000');
+    expect(r.onlineAmount).toBe('1800000'); // S 50.000 + IV 250.000 + C 1.500.000
+    expect(r.payAtPickupAmount).toBe('3500000');
     // 250.000 là tiền giữ hộ MIC — không vào "sàn giữ", không vào phần của chủ xe.
     expect(r.platformRetainedAmount).toBe('460000');
-    expect(r.ownerPayableAmount).toBe('750000');
+    expect(r.ownerPayableAmount).toBe('1090000');
     expect(r.ownerNetAmount).toBe('4590000');
   });
 
@@ -753,15 +758,16 @@ describe('computeCustomerFees — bảo hiểm MIC là TUỲ CHỌN, tính theo 
     expect(amountOf(r, FEE_LINE.TRIP_INSURANCE)).toBe(100000);
     expect(r.customerFeeTotal).toBe('400000');
     expect(r.customerTotalAmount).toBe('5400000');
-    expect(r.onlineAmount).toBe('1560000'); // 50.000 + 410.000 + 250.000 + 100.000 + 750.000
-    expect(r.payAtPickupAmount).toBe('3840000');
+    expect(r.onlineAmount).toBe('1900000'); // 50.000 + 250.000 + 100.000 + 1.500.000
+    expect(r.payAtPickupAmount).toBe('3500000');
     expect(r.ownerNetAmount).toBe('4590000');
   });
 
   it('xe máy: phí sàn 30.000, bảo hiểm 15.000 + 5.000 mỗi ngày', () => {
     // 3 ngày × 150.000. H = 15.000 + 15.000 + 10.500 = 40.500 (đúng tới đồng — ADR 0069).
-    // D = 15% × 450.000 = 67.500 · giữ chỗ = 30.000 + 40.500 + 45.000 + 15.000 + 67.500 = 198.000.
-    // Tổng = 450.000 + 30.000 + 45.000 + 15.000 = 540.000 ⇒ trả tay 540.000 − 198.000 = 342.000.
+    // C = 30% × 450.000 = 135.000 (đã gồm H) · giữ chỗ = 30.000 + 45.000 + 15.000 + 135.000 = 225.000.
+    // Tổng = 450.000 + 30.000 + 45.000 + 15.000 = 540.000 ⇒ trả tay 540.000 − 225.000 = 315.000.
+    // D = C − H = 94.500.
     const r = fees({
       vehicleType: VEHICLE_TYPE.MOTORBIKE,
       baseAmount: '450000',
@@ -774,9 +780,9 @@ describe('computeCustomerFees — bảo hiểm MIC là TUỲ CHỌN, tính theo 
     expect(amountOf(r, FEE_LINE.TRIP_INSURANCE)).toBe(15000);
     expect(r.ownerCommissionAmount).toBe('40500');
     expect(r.customerTotalAmount).toBe('540000');
-    expect(r.onlineAmount).toBe('198000');
-    expect(r.payAtPickupAmount).toBe('342000');
-    expect(r.ownerPayableAmount).toBe('67500');
+    expect(r.onlineAmount).toBe('225000');
+    expect(r.payAtPickupAmount).toBe('315000');
+    expect(r.ownerPayableAmount).toBe('94500');
     expect(r.ownerNetAmount).toBe('409500'); // 450.000 − 40.500
   });
 
@@ -799,10 +805,10 @@ describe('computeCustomerFees — bảo hiểm MIC là TUỲ CHỌN, tính theo 
 });
 
 describe('computeCustomerFees — sàn và trần của tiền giữ chỗ', () => {
-  it('D CỘNG THÊM trên phần không phải của chủ xe — hoa hồng, phí sàn, bảo hiểm không ăn vào D', () => {
+  it('H nằm GỌN trong C = 30% tiền thuê; phí sàn và bảo hiểm cộng thêm, không ăn vào C', () => {
     /*
-     * Xe máy 1 ngày 100.000đ, tích cả hai gói: XePrime giữ 30.000 phí sàn + 10.000 hoa hồng +
-     * 20.000 bảo hiểm = 60.000, rồi cộng phần chủ xe D = 15% × 100.000 = 15.000 ⇒ 75.000.
+     * Xe máy 1 ngày 100.000đ, tích cả hai gói: 30.000 phí sàn + 20.000 bảo hiểm, cộng tiền thuê
+     * trả trước C = 30% × 100.000 = 30.000 (gồm hoa hồng 10.000) ⇒ 80.000; D = C − H = 20.000.
      * (ADR 0064 lấy 30% × 150.000 = 45.000 rồi nâng lên 60.000 — D = 0, chủ xe mất trắng khi
      * khách huỷ muộn.)
      */
@@ -813,15 +819,15 @@ describe('computeCustomerFees — sàn và trần của tiền giữ chỗ', () 
       vehicleProtectionSelected: true,
       personalAccidentSelected: true,
     });
-    expect(r.onlineAmount).toBe('75000');
-    expect(r.depositAmount).toBe('15000');
-    expect(r.ownerPayableAmount).toBe('15000');
-    expect(r.payAtPickupAmount).toBe('75000'); // 150.000 − 75.000
+    expect(r.onlineAmount).toBe('80000');
+    expect(r.depositAmount).toBe('20000');
+    expect(r.ownerPayableAmount).toBe('20000');
+    expect(r.payAtPickupAmount).toBe('70000'); // 150.000 − 80.000 = 70% tiền thuê
     expect(r.ownerNetAmount).toBe('90000');
   });
 
-  it('sàn của D (depositMinAmount) thắng % khi % quá nhỏ', () => {
-    // Xe máy tuyến gói 1 ngày 100.000: 15% × 100.000 = 15.000 < sàn 50.000 ⇒ D = 50.000.
+  it('sàn của C (depositMinAmount) thắng % khi % quá nhỏ', () => {
+    // Xe máy tuyến gói 1 ngày 100.000: 30% × 100.000 = 30.000 < sàn 50.000 ⇒ C = D = 50.000 (H = 0).
     const r = fees({
       policy: { ...PILOT, depositMinAmount: '50000' },
       billingMode: BILLING_MODE.PACKAGE,
@@ -850,13 +856,13 @@ describe('computeCustomerFees — sàn và trần của tiền giữ chỗ', () 
   });
 
   it('% tính ĐÚNG tới đồng (ADR 0069) — không còn làm tròn 1.000đ, mã QR được phép lẻ', () => {
-    // H = 10% × 1.234.000 = 123.400; D = 15% × 1.234.000 = 185.100.
-    // Giữ chỗ = 50.000 + 123.400 + 185.100 = 358.500; trả tay = 1.284.000 − 358.500 = 925.500.
+    // H = 10% × 1.234.000 = 123.400; C = 30% × 1.234.000 = 370.200; D = C − H = 246.800.
+    // Giữ chỗ = 50.000 + 370.200 = 420.200; trả tay = 1.284.000 − 420.200 = 863.800.
     const r = fees({ baseAmount: '1234000', rentalDays: 2 });
     expect(r.ownerCommissionAmount).toBe('123400');
-    expect(r.onlineAmount).toBe('358500');
-    expect(r.payAtPickupAmount).toBe('925500');
-    expect(r.ownerPayableAmount).toBe('185100');
+    expect(r.onlineAmount).toBe('420200');
+    expect(r.payAtPickupAmount).toBe('863800');
+    expect(r.ownerPayableAmount).toBe('246800');
   });
 });
 
@@ -870,8 +876,8 @@ describe('computeCustomerFees — thuế nằm phía CHỦ XE', () => {
     expect(tax.percent).toBe(7);
     expect(r.taxAmount).toBe('350000');
     expect(r.customerTotalAmount).toBe('5050000');
-    expect(r.payAtPickupAmount).toBe('3840000'); // thuế không đổi số khách trả
-    expect(r.ownerPayableAmount).toBe('400000'); // D 750.000 − T 350.000
+    expect(r.payAtPickupAmount).toBe('3500000'); // thuế không đổi số khách trả
+    expect(r.ownerPayableAmount).toBe('740000'); // D 1.090.000 − T 350.000
     expect(r.ownerNetAmount).toBe('4240000'); // 5.000.000 − 410.000 − 350.000
   });
 
@@ -1125,9 +1131,9 @@ describe('resolveHoldAllocation — luồng tiền v2', () => {
   const sum = (entries: ReturnType<typeof resolveHoldAllocation>) =>
     entries.reduce((t, e) => t + Number(e.amount), 0);
 
-  it('chuyến hoàn thành: chủ xe nhận 750.000, sàn giữ 460.000 (phí sàn + hoa hồng)', () => {
+  it('chuyến hoàn thành: chủ xe nhận 1.090.000 (30% tiền thuê − H), sàn giữ 460.000 (phí sàn + hoa hồng)', () => {
     const totals = allocationTotals(resolveHoldAllocation(holdLinesOf(fees()), 'settled'));
-    expect(totals[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('750000');
+    expect(totals[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('1090000');
     expect(totals[ALLOCATION_TARGET.PLATFORM_REVENUE]).toBe('460000');
     expect(totals[ALLOCATION_TARGET.CUSTOMER_BALANCE]).toBe('0');
   });
@@ -1145,10 +1151,10 @@ describe('resolveHoldAllocation — luồng tiền v2', () => {
     ]);
   });
 
-  it('có bảo hiểm MIC: 250.000 thành khoản phải trả hãng bảo hiểm, chủ xe vẫn nhận 750.000', () => {
+  it('có bảo hiểm MIC: 250.000 thành khoản phải trả hãng bảo hiểm, chủ xe vẫn nhận 1.090.000', () => {
     const r = fees({ vehicleProtectionSelected: true });
     const totals = allocationTotals(resolveHoldAllocation(holdLinesOf(r), 'settled'));
-    expect(totals[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('750000');
+    expect(totals[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('1090000');
     expect(totals[ALLOCATION_TARGET.PLATFORM_REVENUE]).toBe('460000');
     expect(totals[ALLOCATION_TARGET.INSURER_PAYABLE]).toBe('250000');
   });
@@ -1156,14 +1162,14 @@ describe('resolveHoldAllocation — luồng tiền v2', () => {
   it('huỷ trong cửa sổ miễn phí / chủ xe huỷ: hoàn 100% tiền giữ chỗ về ví khách', () => {
     const out = resolveHoldAllocation(holdLinesOf(fees()), 'refund_all');
     expect(out.every((e) => e.target === ALLOCATION_TARGET.CUSTOMER_BALANCE)).toBe(true);
-    expect(sum(out)).toBe(1210000);
+    expect(sum(out)).toBe(1550000);
   });
 
   it('huỷ muộn / no-show (ADR 0066): chủ xe nhận TRỌN D, XePrime giữ S + H, không thuế', () => {
-    // Giữ chỗ 1.210.000 = D 750.000 + S 50.000 + H 410.000 ⇒ chủ xe 750.000, sàn 460.000.
+    // Giữ chỗ 1.550.000 = D 1.090.000 + S 50.000 + H 410.000 ⇒ chủ xe 1.090.000, sàn 460.000.
     const out = resolveHoldAllocation(holdLinesOf(fees()), 'split_late_cancel');
     const totals = allocationTotals(out);
-    expect(totals[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('750000');
+    expect(totals[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('1090000');
     expect(totals[ALLOCATION_TARGET.PLATFORM_REVENUE]).toBe('460000');
     expect(totals[ALLOCATION_TARGET.CUSTOMER_BALANCE]).toBe('0');
     expect(totals[ALLOCATION_TARGET.TAX_LEDGER]).toBe('0');
@@ -1182,7 +1188,7 @@ describe('resolveHoldAllocation — luồng tiền v2', () => {
     const r = fees({ vehicleProtectionSelected: true });
     const totals = allocationTotals(resolveHoldAllocation(holdLinesOf(r), 'split_late_cancel'));
     expect(totals[ALLOCATION_TARGET.CUSTOMER_BALANCE]).toBe('250000');
-    expect(totals[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('750000');
+    expect(totals[ALLOCATION_TARGET.OWNER_BALANCE]).toBe('1090000');
     expect(totals[ALLOCATION_TARGET.PLATFORM_REVENUE]).toBe('460000');
   });
 

@@ -41,13 +41,25 @@ const CONSENT_KEY = {
  * Liên kết mở một màn WEBVIEW TRONG app (`useLegalLinkChunks`): các chỗ đặt câu này đều nằm giữa
  * một biểu mẫu dở dang, nên đẩy người dùng ra trình duyệt hệ thống là mất những gì đã nhập.
  */
-export function LegalConsentNote({ place }: { place: LegalConsentPlace }) {
+export function LegalConsentNote({
+  place,
+  align = 'left',
+}: {
+  place: LegalConsentPlace;
+  /** `center` - dòng điều khoản dưới nút mạng xã hội của cột form app Partner (Figma `24382:23403`). */
+  align?: 'left' | 'center';
+}) {
   const colors = useColors();
   const t = useTranslations('Legal');
   const chunks = useLegalLinkChunks();
 
   return (
-    <Text col={colors.textMuted} fos={fontSize.label}>
+    // Bản căn giữa (app Partner): chữ 14/22 `text-tertiary` như Figma; bản thường giữ 12 `text-secondary`.
+    <Text
+      col={align === 'center' ? colors.placeholder : colors.textMuted}
+      fos={align === 'center' ? fontSize.body : fontSize.label}
+      ta={align}
+    >
       {t.rich(CONSENT_KEY[place], chunks)}
     </Text>
   );

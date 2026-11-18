@@ -97,7 +97,7 @@ const DAY = 24 * 3600_000;
 /**
  * Chuyến ô tô 2 ngày × 700.000đ, tuyến HOA HỒNG, trên CHÍNH SÁCH PHÍ HIỆU LỰC của môi trường
  * (bản `active` duy nhất — luồng tiền v2, migration 20261020170000): phí sàn 50.000đ (ô tô) · hoa
- * hồng 10% cho ngày 1–2 · phần giữ chỗ của chủ xe 15% trên TIỀN THUÊ (chính sách v8, ADR 0066 —
+ * hồng 10% cho ngày 1–2 · tiền thuê trả trước 30% TIỀN THUÊ, đã gồm hoa hồng (ADR 0101 —
  * không sàn tiền) · thuế khấu trừ chính sách v9 (ADR 0068): tự lái 5% GTGT + 2% TNCN, CHỦ XE chịu · sàn
  * giữ chỗ 20.000. Bảo hiểm `IV` 50.000đ/ngày và `IP` 20.000đ/ngày chỉ tính khi khách TÍCH chọn —
  * mặc định các ca ở đây không chọn.
@@ -119,10 +119,12 @@ const VEHICLE_INSURANCE = 2 * 50_000;
 const TAX = 70_000 + 28_000;
 /** `B + S` — số khách trả khi KHÔNG có mã (không bảo hiểm). */
 const CUSTOMER_TOTAL = RENTAL + SERVICE_FEE;
-/** `D` — phần giữ chỗ của chủ xe = 15% × tiền thuê, đúng tới đồng (ADR 0066 · 0069) = 210.000. */
-const DEPOSIT = 210_000;
-/** Tiền giữ chỗ online = S + H + D — trước tài trợ (≥ S + H + T vì 15% ≥ thuế 7%). */
-const GROSS_ONLINE = SERVICE_FEE + COMMISSION + DEPOSIT;
+/** `C` — tiền thuê trả trước = 30% × tiền thuê, ĐÃ GỒM `H` (ADR 0101 · 0069) = 420.000. */
+const RENT_PREPAID = 420_000;
+/** `D` — phần thực của chủ xe trong tiền giữ chỗ = C − H = 280.000. */
+const DEPOSIT = RENT_PREPAID - COMMISSION;
+/** Tiền giữ chỗ online = S + C — trước tài trợ (≥ S + H + T vì 30% ≥ 10% + 7%). */
+const GROSS_ONLINE = SERVICE_FEE + RENT_PREPAID;
 
 let dbAvailable = false;
 let mainCustomer: string;
@@ -890,8 +892,8 @@ describe('Chốt giá lúc duyệt — dòng tiền khép kín', () => {
 
   maybe('mã KHỔNG LỒ bị kẹp ở `D + S` — không lấn một đồng nào vào tiền bảo hiểm', async () => {
     /*
-     * Trần chặt nhất ở đây là phần TÀI TRỢ ĐƯỢC (`D + S + H` = 400.000), không phải
-     * `grossOnline − sàn` (500.000 − 20.000 = 480.000): 100.000đ bảo hiểm là tiền XePrime giữ hộ
+     * Trần chặt nhất ở đây là phần TÀI TRỢ ĐƯỢC (`D + S + H` = 470.000), không phải
+     * `grossOnline − sàn` (570.000 − 20.000 = 550.000): 100.000đ bảo hiểm là tiền XePrime giữ hộ
      * hãng bảo hiểm và vẫn phải chuyển đủ cho đối tác dù nền tảng có giảm giá cho khách hay không
      * (ADR 0033 điều 4).
      */
@@ -903,7 +905,7 @@ describe('Chốt giá lúc duyệt — dòng tiền khép kín', () => {
     const hold = await prisma.bookingHold.findUniqueOrThrow({
       where: { bookingRequestId: receipt.id },
     });
-    // ADR 0066: bảo hiểm cộng THÊM vào tiền giữ chỗ, không làm đổi phần D của chủ xe.
+    // ADR 0101: bảo hiểm cộng THÊM vào tiền giữ chỗ, không làm đổi phần D của chủ xe.
     const grossOnlineWithIv = GROSS_ONLINE + VEHICLE_INSURANCE;
     const sponsorableWithIv = grossOnlineWithIv - VEHICLE_INSURANCE;
     expect(hold.promoDiscountAmount.toFixed(0)).toBe(String(sponsorableWithIv));

@@ -49,6 +49,8 @@ export class VehicleRegistrationReadingDto {
   @ApiProperty({ type: String, nullable: true }) holderAddress!: string | null;
   @ApiProperty({ type: String, nullable: true }) chassisNumber!: string | null;
   @ApiProperty({ type: String, nullable: true }) engineNumber!: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'Màu sơn - tự điền ô Màu sắc' })
+  color!: string | null;
 }
 
 export class VehicleRegistrationReadResultDto {

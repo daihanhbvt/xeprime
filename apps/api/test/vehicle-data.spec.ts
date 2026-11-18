@@ -598,3 +598,98 @@ describe('nhập / xuất file', () => {
     await imports.discard(adminId, preview.id);
   });
 });
+
+describe('ô "Mẫu xe" gộp + tên xe tự ghép (ADR 0102)', () => {
+  maybe(
+    'theo hãng: mọi xe chuẩn đã duyệt đang bật, theo dòng rồi phiên bản; includeId luôn có',
+    async () => {
+      const a = await vehicleData.create(adminId, {
+        vehicleType: VEHICLE_TYPE.CAR,
+        brandKey: BRAND,
+        newModelLabel: 'Gộp Một',
+        variantLabel: 'Bản B',
+        yearFrom: 2020,
+        seatCount: 5,
+      });
+      const { modelId } = await query.detail(a);
+      const b = await vehicleData.create(adminId, {
+        modelId,
+        variantLabel: 'Bản A',
+        yearFrom: 2021,
+      });
+      const hidden = await vehicleData.create(adminId, {
+        modelId,
+        variantLabel: 'Bản Ẩn',
+        yearFrom: 2019,
+      });
+      await vehicleData.update(adminId, hidden, { active: false });
+
+      const rows = await vehicleData.listOptions({
+        brandKey: BRAND,
+        vehicleType: VEHICLE_TYPE.CAR,
+      });
+      const mine = rows.filter((r) => r.modelId === modelId).map((r) => r.id);
+      expect(mine).toEqual([b, a]);
+
+      const withAttached = await vehicleData.listOptions({
+        brandKey: BRAND,
+        vehicleType: VEHICLE_TYPE.CAR,
+        includeId: hidden,
+      });
+      expect(withAttached[0]?.id).toBe(hidden);
+
+      await expect(vehicleData.listOptions({ brandKey: BRAND })).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    },
+  );
+
+  maybe(
+    'tạo xe không gửi tên ⇒ server ghép "Hãng Dòng Phiên bản Năm"; không có dòng xe ⇒ 400',
+    async () => {
+      const variant = await vehicleData.create(adminId, {
+        vehicleType: VEHICLE_TYPE.CAR,
+        brandKey: BRAND,
+        newModelLabel: 'Ghép Tên',
+        variantLabel: '1.5G CVT',
+        yearFrom: 2018,
+      });
+      const { modelId } = await query.detail(variant);
+
+      const picked = await createVehicle(tenantId, ownerId, {
+        code: `VD-N1-${TAG}`,
+        vehicleType: VEHICLE_TYPE.CAR,
+        vehicleCatalogModelId: modelId,
+        vehicleCatalogVariantId: variant,
+        manufactureYear: 2019,
+      });
+      expect(picked.name).toBe(`${BRAND_LABEL} Ghép Tên 1.5G CVT 2019`);
+      // Gian hàng test chỉ giữ được 3 xe (chưa có gói) — gỡ xe vừa kiểm để lượt sau còn chỗ.
+      const drop = (id: string) => prisma.vehicle.delete({ where: { id } });
+      await drop(picked.id);
+
+      const typed = await createVehicle(tenantId, ownerId, {
+        code: `VD-N2-${TAG}`,
+        vehicleType: VEHICLE_TYPE.CAR,
+        vehicleCatalogModelId: modelId,
+        catalogVariantLabel: 'Bản Tự Gõ',
+      });
+      expect(typed.name).toBe(`${BRAND_LABEL} Ghép Tên Bản Tự Gõ`);
+      await drop(typed.id);
+
+      const named = await createVehicle(tenantId, ownerId, {
+        code: `VD-N3-${TAG}`,
+        name: '  Xe Của Tôi ',
+        vehicleType: VEHICLE_TYPE.CAR,
+        vehicleCatalogModelId: modelId,
+      });
+      expect(named.name).toBe('Xe Của Tôi');
+      await drop(named.id);
+
+      await expectCode(
+        createVehicle(tenantId, ownerId, { code: `VD-N4-${TAG}`, vehicleType: VEHICLE_TYPE.CAR }),
+        API_ERROR_CODE.VEHICLE_NAME_REQUIRED,
+      );
+    },
+  );
+});

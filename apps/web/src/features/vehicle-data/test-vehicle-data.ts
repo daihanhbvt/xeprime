@@ -13,6 +13,7 @@ export function vehicleDataHooksMock() {
   return {
     VEHICLE_DATA_SORT_VALUES: ['updated_desc', 'name_asc', 'usage_desc'],
     useVehicleDataOptions: () => ({ options: [], isLoading: false }),
+    useBrandVehicleDataOptions: () => ({ options: [], isLoading: false, isError: false }),
     useVehicleDataSuggestion: () => null,
     useCreateOwnerModel: idle,
     useVehicleDataFilters: () => ({ filters: {}, setFilters: vi.fn() }),

@@ -3,6 +3,7 @@ import {
   EMPTY_REGISTRATION,
   checkRegistration,
   fieldsFromReading,
+  mergeTypedFields,
   registrationAutoFilled,
   type RegistrationCaptureState,
 } from './registration-capture';
@@ -13,6 +14,7 @@ const READING = {
   holderAddress: null,
   chassisNumber: 'RL4B29F30K1234567',
   engineNumber: '2NRX123456',
+  color: null,
 };
 
 const ready = (overrides: Partial<RegistrationCaptureState> = {}): RegistrationCaptureState => ({
@@ -26,14 +28,31 @@ const ready = (overrides: Partial<RegistrationCaptureState> = {}): RegistrationC
 });
 
 describe('registration-capture (ADR 0089)', () => {
-  it('chưa có ảnh ⇒ thiếu ảnh + ba trường bắt buộc', () => {
+  it('chưa có ảnh ⇒ chỉ thiếu ba trường bắt buộc, ảnh KHÔNG bắt buộc (ADR 0100)', () => {
     const check = checkRegistration(EMPTY_REGISTRATION, null);
     expect(check.ok).toBe(false);
-    expect(check.errors).toMatchObject({
-      photo: 'photoRequired',
+    expect(check.errors).toEqual({
       holderName: 'holderNameRequired',
       chassisNumber: 'chassisRequired',
       engineNumber: 'engineRequired',
+    });
+  });
+
+  it('không ảnh nhưng đủ ba trường gõ tay ⇒ hợp lệ, payload KHÔNG có uploadId', () => {
+    const check = checkRegistration(
+      { ...EMPTY_REGISTRATION, fields: fieldsFromReading(READING) },
+      '51H-100.00',
+    );
+    expect(check.ok).toBe(true);
+    expect(check.input).not.toHaveProperty('uploadId');
+    expect(check.input?.chassisNumber).toBe('RL4B29F30K1234567');
+  });
+
+  it('máy đọc về muộn KHÔNG ghi đè ô chủ xe đã gõ, chỉ lấp ô trống', () => {
+    const typed = { ...fieldsFromReading(null), chassisNumber: 'RL4TYPED0001' };
+    expect(mergeTypedFields(typed, fieldsFromReading(READING))).toEqual({
+      ...fieldsFromReading(READING),
+      chassisNumber: 'RL4TYPED0001',
     });
   });
 

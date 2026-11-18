@@ -387,3 +387,58 @@
   color: var(--xp-color-warning-strong);
   font-size: var(--xp-font-size-body-lg);
 }
+
+/* ── Bố cục trong thẻ giấy tờ của màn Xem lại (Figma `21836:54301`) ─────────── */
+
+.review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+/* Ô chọn ảnh trái, lời dẫn phải; hẹp thì lời dẫn xuống dưới (theo chỗ đứng, không theo màn). */
+.reviewRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--xp-space-md);
+}
+
+.reviewUploader {
+  flex: 0 1 352px;
+  min-width: 0;
+}
+
+.reviewAside {
+  display: flex;
+  flex: 1 1 220px;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.review .headingTitle {
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.review .headingBody {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
+}
+
+/* "Giấy tờ được chấp nhận" - hộp nền cam nhạt, chữ cam. */
+.acceptedWarm {
+  padding: var(--xp-space-12);
+  border-top: 0;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-primary-subtle);
+}
+
+.acceptedWarm .acceptedTitle,
+.acceptedWarm .acceptedList {
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
+}

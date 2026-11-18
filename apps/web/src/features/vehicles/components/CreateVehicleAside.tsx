@@ -1,7 +1,8 @@
 'use client';
 
-import { CheckCircleFilled } from '@ant-design/icons';
-import { Card, Progress } from 'antd';
+import { CheckOutlined } from '@ant-design/icons';
+import { Card } from 'antd';
+import type { CSSProperties } from 'react';
 import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 import {
@@ -138,18 +139,25 @@ export function CreateVehicleAside({
             {t('readyCount', { done: doneCount, total: items.length })}
           </span>
         </div>
-        <Progress
-          percent={Math.round((doneCount / items.length) * 100)}
-          showInfo={false}
-          size="small"
+        {/* Thanh tự vẽ theo design (cam trên nền vàng nhạt) - không bám class nội bộ của AntD. */}
+        <div
           className={styles.readyBar}
+          role="progressbar"
           aria-label={t('readyTitle')}
-        />
+          aria-valuemin={0}
+          aria-valuemax={items.length}
+          aria-valuenow={doneCount}
+        >
+          <span
+            className={styles.readyBarFill}
+            style={{ '--ready-percent': `${(doneCount / items.length) * 100}%` } as CSSProperties}
+          />
+        </div>
         <ul className={styles.readyList}>
           {items.map((item) => (
             <li key={item.key} className={item.done ? styles.readyDone : styles.readyTodo}>
               {item.done ? (
-                decorativeIcon(<CheckCircleFilled className={styles.readyIcon} />)
+                <span className={styles.readyCheck}>{decorativeIcon(<CheckOutlined />)}</span>
               ) : (
                 <span className={styles.readyCircle} aria-hidden="true" />
               )}
@@ -160,7 +168,7 @@ export function CreateVehicleAside({
           {optionalItems.map((item) => (
             <li key={item.key} className={item.done ? styles.readyDone : styles.readyTodo}>
               {item.done ? (
-                decorativeIcon(<CheckCircleFilled className={styles.readyIcon} />)
+                <span className={styles.readyCheck}>{decorativeIcon(<CheckOutlined />)}</span>
               ) : (
                 <span className={styles.readyCircle} aria-hidden="true" />
               )}

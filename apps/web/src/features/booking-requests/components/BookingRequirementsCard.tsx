@@ -3,7 +3,8 @@
 import { CheckCircleFilled, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { LIST_SEPARATOR } from '@xeprime/domain';
-import { COLLATERAL_MODE } from '@xeprime/types';
+import { COLLATERAL_MODE, CUSTOMER_DOCUMENT_TYPE } from '@xeprime/types';
+import type { ReactNode } from 'react';
 import type { DriverLicence } from '@/features/driver-licence/types';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -16,6 +17,12 @@ interface BookingRequirementsCardProps {
    * khoản. Chỉ hiện dòng "hợp lệ" khi dịch vụ cần bằng VÀ tài khoản có bằng đã xác thực.
    */
   licence: { required: boolean; current: DriverLicence | null };
+  /**
+   * Chỉ màn Xem lại truyền: bằng đã soát cho CHÍNH chuyến này chưa (`ready`) và bộ tải bằng nhúng
+   * (`uploader`). Chưa hợp lệ ⇒ thẻ vẽ bộ tải bằng ngay trong thẻ (Figma `21836:54301`).
+   * Không truyền (chuyến đã gửi) ⇒ chỉ đọc `current` như trước.
+   */
+  licenceGate?: { ready: boolean; loading: boolean; uploader: ReactNode };
   /** Điều kiện chủ xe công bố cho đúng dịch vụ của chuyến (giấy tờ, điều khoản). */
   hostTerms: { text: string | null; documents: string[] } | null;
   /**
@@ -37,6 +44,7 @@ interface BookingRequirementsCardProps {
  */
 export function BookingRequirementsCard({
   licence,
+  licenceGate,
   hostTerms,
   deposit = null,
   headingLevel = 3,
@@ -47,7 +55,14 @@ export function BookingRequirementsCard({
   const dl = useDomainLabel();
   const fmt = useAppFormat();
 
-  const verifiedLicence = licence.required ? licence.current : null;
+  const licenceBlocked = licence.required && licenceGate !== undefined && !licenceGate.ready;
+  // Chưa đọc xong bằng thì không vẽ trạng thái rỗng - tránh nháy "chưa có bằng" với người đã có.
+  const showLicenceEmpty = licenceBlocked && licenceGate !== undefined && !licenceGate.loading;
+  const verifiedLicence = licence.required && !licenceBlocked ? licence.current : null;
+  // Giấy tờ tuỳ thân (CCCD/CMND) không liệt kê ở đây - dòng này chỉ nhắc giấy tờ lái xe.
+  const hostDocuments = (hostTerms?.documents ?? []).filter(
+    (doc) => doc !== CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID,
+  );
   const licenceMeta = verifiedLicence
     ? [
         verifiedLicence.classes.length
@@ -75,18 +90,22 @@ export function BookingRequirementsCard({
         </span>
         <Heading className={styles.cardTitle}>{t('reviewPage.requirements.title')}</Heading>
       </div>
-      <div className={styles.requirementBlock}>
-        <p className={styles.requirementTitle}>
-          {licence.required
-            ? t('reviewPage.requirements.licenceTitle')
-            : t('reviewPage.requirements.driverTitle')}
-        </p>
-        <p className={styles.requirementBody}>
-          {licence.required
-            ? t('reviewPage.requirements.licenceBody')
-            : t('reviewPage.requirements.driverBody')}
-        </p>
-      </div>
+      {showLicenceEmpty && licenceGate ? (
+        licenceGate.uploader
+      ) : (
+        <div className={styles.requirementBlock}>
+          <p className={styles.requirementTitle}>
+            {licence.required
+              ? t('reviewPage.requirements.licenceTitle')
+              : t('reviewPage.requirements.driverTitle')}
+          </p>
+          <p className={styles.requirementBody}>
+            {licence.required
+              ? t('reviewPage.requirements.licenceBody')
+              : t('reviewPage.requirements.driverBody')}
+          </p>
+        </div>
+      )}
       {verifiedLicence ? (
         <p className={styles.licenceOk}>
           <CheckCircleFilled aria-hidden />
@@ -96,12 +115,10 @@ export function BookingRequirementsCard({
           </span>
         </p>
       ) : null}
-      {hostTerms && hostTerms.documents.length > 0 ? (
+      {!showLicenceEmpty && hostDocuments.length > 0 ? (
         <p className={styles.requirementBody}>
           {t('reviewPage.requirements.documents', {
-            documents: hostTerms.documents
-              .map((doc) => dl('customerDocumentType', doc, doc))
-              .join(', '),
+            documents: hostDocuments.map((doc) => dl('customerDocumentType', doc, doc)).join(', '),
           })}
         </p>
       ) : null}
@@ -124,7 +141,9 @@ export function BookingRequirementsCard({
           <p className={styles.hostTermsText}>{hostTerms.text}</p>
         </div>
       ) : null}
-      <p className={styles.reminder}>{t('reviewPage.requirements.reminder')}</p>
+      {showLicenceEmpty ? null : (
+        <p className={styles.reminder}>{t('reviewPage.requirements.reminder')}</p>
+      )}
     </section>
   );
 }

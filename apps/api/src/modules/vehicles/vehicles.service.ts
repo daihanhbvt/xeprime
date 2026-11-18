@@ -14,7 +14,9 @@ import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
   BOOKING_STATUS,
+  CATALOG_TYPE,
   canEnableMarketplace,
+  composeVehicleName,
   resolveMarketplaceVisibility,
   isPackageShopTrack,
   missingPackageShopListingRequirements,
@@ -40,7 +42,6 @@ import {
   type VehiclePublicationInput,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_SUBMITTABLE,
-  VEHICLE_TYPE,
   type PaginationMeta,
   type VehiclePublicStatus,
   type VehicleType,
@@ -535,6 +536,44 @@ export class VehiclesService {
   }
 
   /**
+   * Tên của xe MỚI (ADR 0102): giữ tên client gửi; bỏ trống thì ghép "Hãng Dòng Phiên bản Năm" từ
+   * danh mục — nhãn hãng/dòng/phiên bản đọc ở DB, không tin chữ client. Không có dòng xe thì không
+   * có gì để ghép: từ chối thay vì lưu một chiếc xe không tên.
+   */
+  private async nameForNewVehicle(
+    dto: Pick<CreateVehicleDto, 'name' | 'catalogVariantLabel' | 'manufactureYear'>,
+    canonical: { brand: string; model: string } | null,
+    variantId: string | null,
+  ): Promise<string> {
+    const given = dto.name?.trim();
+    if (given) return given;
+    if (!canonical) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VEHICLE_NAME_REQUIRED,
+        message: 'Chọn hãng và mẫu xe để hệ thống đặt tên xe',
+      });
+    }
+    const [brand, variant] = await Promise.all([
+      this.prisma.catalogItem.findUnique({
+        where: { type_key: { type: CATALOG_TYPE.VEHICLE_BRAND, key: canonical.brand } },
+        select: { label: true },
+      }),
+      variantId
+        ? this.prisma.vehicleCatalogVariant.findUnique({
+            where: { id: variantId },
+            select: { label: true },
+          })
+        : null,
+    ]);
+    return composeVehicleName({
+      brandLabel: brand?.label ?? canonical.brand,
+      modelLabel: canonical.model,
+      variantLabel: variant?.label || dto.catalogVariantLabel,
+      manufactureYear: dto.manufactureYear,
+    });
+  }
+
+  /**
    * Gian hàng đang hoạt động và chưa xoá — một vế của phép gộp hiển thị ngoài chợ (ADR 0048).
    *
    * Đọc RIÊNG thay vì join vào `LIST_SELECT`: mọi bề mặt ở đây đều tenant-scoped, nên câu trả
@@ -592,6 +631,8 @@ export class VehiclesService {
       ),
     };
 
+    const name = await this.nameForNewVehicle(dto, canonical, input.vehicleCatalogVariantId);
+
     await this.catalog.assertVehicleValues({ ...input, vehicleType: dto.vehicleType });
     assertVehicleProfile(dto.vehicleType, input.fuelType, input);
     // Cà vẹt kèm lượt tạo áp cho CẢ ô tô lẫn xe máy (ADR 0099, mở rộng ADR 0089 từ 17/11/2026).
@@ -623,7 +664,7 @@ export class VehiclesService {
           branchId: branch.id,
           createdBy: userId,
           code,
-          name: dto.name,
+          name,
           vehicleType: dto.vehicleType,
           ...writableFields(input),
           // Xe do phiên hỗ trợ tạo KHÔNG tự bật lên chợ: chủ xe tự quyết sau khi xe được duyệt.

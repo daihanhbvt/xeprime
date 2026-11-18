@@ -12,6 +12,8 @@ import { SelectField } from '@/components/form/SelectField';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 
 import { useCatalogModelSpec } from '../hooks/use-catalog-model-spec';
+import { useCatalogSpecLock } from '../hooks/use-catalog-spec-lock';
+import { SpecLockedField } from './SpecLockedField';
 
 interface VehicleClassificationFieldsProps {
   control: Control<VehicleFormValues>;
@@ -61,6 +63,16 @@ export function VehicleClassificationFields({
   // Khoá CHỈ khi giá trị đã khớp mẫu: xe cũ lưu lệch (VF 5 mà ghi 4 chỗ) vẫn phải sửa lại được.
   const seatLocked =
     Boolean(spec.model) && spec.seats.kind === 'fixed' && seatCount === spec.seats.value;
+  // Khoá theo xe chuẩn đang chọn hoặc theo dòng một cấu hình; bút cạnh nhãn mở lại (ADR 0102).
+  const tCatalog = useTranslations('Vehicles.form.catalog');
+  const seatLock = useCatalogSpecLock(control, vehicleType, 'seatCount', {
+    modelLocked: seatLocked,
+  });
+  const seatLockHelp = seatLock.fromData
+    ? tCatalog('specLocked')
+    : seatLock.locked && spec.model
+      ? t('specFromModel', { model: spec.model.label })
+      : undefined;
 
   const categoryOptions = useMemo(
     () =>
@@ -90,10 +102,20 @@ export function VehicleClassificationFields({
             Số chỗ theo MẪU XE đang chọn (`catalogSpecRule`): một cấu hình ⇒ điền sẵn và khoá;
             nhiều cấu hình ⇒ chỉ chọn trong đó; mẫu chưa khai ⇒ nhập tự do như trước.
           */}
-          {spec.model && spec.seats.kind === 'choice' ? (
+          {seatLock.locked && !disabled && seatCount != null ? (
+            <SpecLockedField
+              name="seatCount"
+              label={t('seatCount')}
+              value={tCommon('units.seat', { count: seatCount })}
+              lock={seatLock}
+              help={seatLockHelp}
+              required={seatRequired}
+            />
+          ) : spec.model && spec.seats.kind === 'choice' ? (
             <SeatChoiceField
               control={control}
               label={t('seatCount')}
+              ariaLabel={t('seatCount')}
               required={seatRequired}
               values={spec.seats.values}
               disabled={disabled}
@@ -113,12 +135,7 @@ export function VehicleClassificationFields({
               placeholder={t('seatPlaceholder')}
               min={1}
               max={64}
-              disabled={disabled || seatLocked}
-              help={
-                seatLocked && spec.model
-                  ? t('specFromModel', { model: spec.model.label })
-                  : undefined
-              }
+              disabled={disabled}
             />
           )}
         </Col>
@@ -154,13 +171,15 @@ export function VehicleClassificationFields({
 function SeatChoiceField({
   control,
   label,
+  ariaLabel,
   values,
   required,
   disabled,
   help,
 }: {
   control: Control<VehicleFormValues>;
-  label: string;
+  label: ReactNode;
+  ariaLabel: string;
   values: readonly number[];
   required?: boolean;
   disabled?: boolean;
@@ -186,7 +205,7 @@ function SeatChoiceField({
         value={field.value ?? undefined}
         onChange={(e) => field.onChange(e.target.value as number)}
         disabled={disabled}
-        aria-label={label}
+        aria-label={ariaLabel}
         options={shown.map((count) => ({ value: count, label: tCommon('units.seat', { count }) }))}
       />
     </Form.Item>

@@ -31,6 +31,7 @@ import {
   type RegistrationCaptureState,
   type RegistrationFields,
 } from '../registration-capture';
+import { LOCKED_INPUT_CLASS, LockedEditButton } from './LockedValueField';
 import styles from './RegistrationCapture.module.css';
 
 export interface RegistrationCaptureProps {
@@ -277,7 +278,7 @@ function ScanStatus({
 
 /**
  * Các trường cà vẹt trong thẻ "Thông tin xe" (Figma: Số khung · Số máy). Luôn nhập được - ảnh đọc
- * xong thì tự điền ô còn trống; ảnh vẫn bắt buộc (`checkRegistration`).
+ * xong thì tự điền ô còn trống; ảnh tuỳ chọn, ba ô bắt buộc (`checkRegistration`, ADR 0100).
  */
 export function RegistrationFieldsBlock({
   state,
@@ -326,17 +327,13 @@ export function RegistrationFieldsBlock({
                   placeholder={t('scanPlaceholder')}
                   autoComplete="off"
                   readOnly={locked}
-                  className={locked ? styles.lockedInput : undefined}
+                  className={locked ? LOCKED_INPUT_CLASS : undefined}
                   suffix={
                     locked ? (
-                      <button
-                        type="button"
-                        className={styles.editField}
+                      <LockedEditButton
+                        ariaLabel={t('editField', { field: t(`fields.${field}`) })}
                         onClick={() => unlock(field)}
-                        aria-label={t('editField', { field: t(`fields.${field}`) })}
-                      >
-                        <span className={styles.editGlyph} aria-hidden="true" />
-                      </button>
+                      />
                     ) : undefined
                   }
                 />

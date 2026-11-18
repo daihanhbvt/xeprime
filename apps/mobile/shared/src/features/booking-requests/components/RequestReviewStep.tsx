@@ -6,6 +6,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   COLLATERAL_MODE,
+  CUSTOMER_DOCUMENT_TYPE,
   HOLD_PAYMENT_WINDOW_MINUTES,
   isSameVnPhone,
   type PublicListingDetail,
@@ -25,10 +26,7 @@ import { CUSTOMER_NAME_MAX, NOTE_MAX } from '../booking-schema';
 import type { RequestForm } from '../RequestBookingScreen';
 import { DeliveryEstimate } from './RequestTripStep';
 import { BookingTripCard } from './BookingTripCard';
-import {
-  useCustomerCostView,
-  type CustomerCostBreakdown,
-} from '../hooks/use-customer-cost-view';
+import { useCustomerCostView, type CustomerCostBreakdown } from '../hooks/use-customer-cost-view';
 
 /** Chuyện xảy ra sau khi gửi — cùng bốn nhánh `BookingReviewNextStep` của web. */
 export type BookingReviewNextStep = 'instantHold' | 'instantConfirmed' | 'hold' | 'general';
@@ -47,6 +45,11 @@ interface RequestReviewStepProps {
   renter: { name: string; phone: string | null; email: string | null; verified: boolean } | null;
   /** Chuyến cần bằng lái (tự lái/dài hạn — ADR 0057) và bằng ĐÃ XÁC THỰC của tài khoản. */
   licence: { required: boolean; current: DriverLicence | null };
+  /**
+   * Cổng bằng lái cho CHÍNH chuyến này (Figma `21836:54301`, như web): chưa `ready` thì thẻ giấy tờ
+   * vẽ bộ tải bằng nhúng (`uploader`) ngay trong thẻ, và màn cha khoá nút Gửi.
+   */
+  licenceGate?: { ready: boolean; loading: boolean; uploader: ReactNode };
   /** Ô đồng ý có phủ điều khoản của CHỦ XE không — đổi câu đồng ý (`bookingCheckHost`). */
   agreementCoversHostTerms: boolean;
   nextStep: BookingReviewNextStep;
@@ -77,6 +80,7 @@ export function RequestReviewStep({
   rentalMode,
   renter,
   licence,
+  licenceGate,
   agreementCoversHostTerms,
   nextStep,
   agreementMissing,
@@ -98,7 +102,10 @@ export function RequestReviewStep({
   const activeTerms =
     listing.rentalTerms?.find((term) => term.serviceType === values.serviceType) ?? null;
 
-  const verifiedLicence = licence.required ? licence.current : null;
+  const licenceBlocked = licence.required && licenceGate !== undefined && !licenceGate.ready;
+  // Chưa đọc xong bằng thì không vẽ trạng thái rỗng - tránh nháy "chưa có bằng" với người đã có.
+  const showLicenceEmpty = licenceBlocked && licenceGate !== undefined && !licenceGate.loading;
+  const verifiedLicence = licence.required && !licenceBlocked ? licence.current : null;
   const licenceMeta = verifiedLicence
     ? [
         verifiedLicence.classes.length
@@ -117,7 +124,10 @@ export function RequestReviewStep({
         .filter(Boolean)
         .join(LIST_SEPARATOR)
     : '';
-  const hostDocuments = activeTerms?.requiredDocuments ?? [];
+  // Giấy tờ tuỳ thân (CCCD/CMND) không liệt kê ở đây - dòng này chỉ nhắc giấy tờ lái xe (như web).
+  const hostDocuments = (activeTerms?.requiredDocuments ?? []).filter(
+    (doc) => doc !== CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID,
+  );
   return (
     <YStack gap={space.lg}>
       <YStack gap={space.xs}>
@@ -172,18 +182,22 @@ export function RequestReviewStep({
 
       {/* ── Giấy tờ & điều kiện nhận xe ──────────────────────────────────────── */}
       <FormSection title={t('reviewPage.requirements.title')} icon="shield-checkmark-outline">
-        <YStack gap={2}>
-          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-            {licence.required
-              ? t('reviewPage.requirements.licenceTitle')
-              : t('reviewPage.requirements.driverTitle')}
-          </Text>
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {licence.required
-              ? t('reviewPage.requirements.licenceBody')
-              : t('reviewPage.requirements.driverBody')}
-          </Text>
-        </YStack>
+        {showLicenceEmpty && licenceGate ? (
+          licenceGate.uploader
+        ) : (
+          <YStack gap={2}>
+            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+              {licence.required
+                ? t('reviewPage.requirements.licenceTitle')
+                : t('reviewPage.requirements.driverTitle')}
+            </Text>
+            <Text col={colors.textMuted} fos={fontSize.bodySm}>
+              {licence.required
+                ? t('reviewPage.requirements.licenceBody')
+                : t('reviewPage.requirements.driverBody')}
+            </Text>
+          </YStack>
+        )}
         {verifiedLicence ? (
           <XStack
             ai="flex-start"
@@ -201,7 +215,7 @@ export function RequestReviewStep({
             </Text>
           </XStack>
         ) : null}
-        {hostDocuments.length > 0 ? (
+        {!showLicenceEmpty && hostDocuments.length > 0 ? (
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
             {t('reviewPage.requirements.documents', {
               documents: hostDocuments
@@ -238,12 +252,19 @@ export function RequestReviewStep({
             </Text>
           </YStack>
         ) : null}
-        {/* Figma: hộp nhắc nền cam nhạt, chữ cam — việc xác minh giấy tờ cụ thể theo chính sách. */}
-        <YStack p={space.sm} br={radius.md} bg={colors.warningSurface} bw={1} bc={colors.warningBorder}>
-          <Text col={colors.warning} fos={fontSize.bodySm}>
-            {t('reviewPage.requirements.reminder')}
-          </Text>
-        </YStack>
+        {showLicenceEmpty ? null : (
+          <YStack
+            p={space.sm}
+            br={radius.md}
+            bg={colors.warningSurface}
+            bw={1}
+            bc={colors.warningBorder}
+          >
+            <Text col={colors.warning} fos={fontSize.bodySm}>
+              {t('reviewPage.requirements.reminder')}
+            </Text>
+          </YStack>
+        )}
       </FormSection>
 
       {/* Hai thẻ tiền "Chi phí thuê xe" + "Các khoản khác" (gồm cọc) — đầu cột phải bên web. */}

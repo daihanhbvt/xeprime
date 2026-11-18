@@ -59,8 +59,8 @@ export function CreateVehicleInfoStep({
   const pricingHidden = useSupportHides(SUPPORT_HIDDEN_AREA.MONEY_TERMS);
   const vehicleType = useWatch({ control, name: 'vehicleType' });
   const plateNumber = useWatch({ control, name: 'plateNumber' });
-  const required =
-    requiredVehicleImageTypes(vehicleType ?? VEHICLE_TYPE.CAR).length + (registration ? 1 : 0);
+  // Ảnh cà vẹt TUỲ CHỌN (ADR 0100) — nhãn chỉ đếm các góc ảnh xe bắt buộc.
+  const required = requiredVehicleImageTypes(vehicleType ?? VEHICLE_TYPE.CAR).length;
   const props = { control, isCar, setValue };
 
   return (
@@ -114,7 +114,7 @@ export function CreateVehicleInfoStep({
             showErrors={registration.showErrors}
           />
         ) : null}
-        <SpecsSection {...props} creating />
+        <SpecsSection {...props} creating registrationReading={registration?.state.reading} />
         {!sourceHidden ? (
           <>
             <Divider className={styles.sectionDivider} />

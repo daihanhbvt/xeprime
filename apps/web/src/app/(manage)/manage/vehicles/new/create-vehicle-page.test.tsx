@@ -59,6 +59,7 @@ const FULL_READING = {
   holderAddress: null,
   chassisNumber: 'RL4B29F30K1234567',
   engineNumber: '2NRX123456',
+  color: 'Trắng',
 };
 // jsdom không có canvas — bỏ bước nén ảnh, trả nguyên tệp.
 vi.mock('@/features/driver-licence/prepare-licence-image', () => ({
@@ -91,6 +92,12 @@ vi.mock('@/features/branches/hooks/use-branches', () => ({
     isLoading: false,
     isError: false,
   }),
+}));
+
+/** Hồ sơ gian hàng (cột phải + cổng gửi duyệt tuyến gói) — `null` = không áp cổng hồ sơ gian hàng. */
+vi.mock('@/features/shop/hooks/use-shop', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  useMyShop: () => ({ data: null, isLoading: false, isError: false }),
 }));
 
 const permissions = vi.hoisted(() => ({ allow: true }));
@@ -147,8 +154,13 @@ async function goNext(expectedHeading: string) {
   await screen.findByRole('heading', { name: expectedHeading });
 }
 
-/** Đủ NĂM góc ảnh bắt buộc của ô tô — bước ảnh không cho đi tiếp khi còn ô trống. */
-/** Ảnh cà vẹt — ô riêng ở bước Hình ảnh của ô tô. */
+/** Bước cuối: "Gửi duyệt" mở hộp xác nhận; trả về hộp đó để bấm "Lưu nháp"/"Gửi duyệt" bên trong. */
+async function openConfirm() {
+  fireEvent.click(screen.getByRole('button', { name: 'Gửi duyệt' }));
+  return screen.findByRole('dialog', { name: 'Xác nhận thông tin & gửi duyệt xe' });
+}
+
+/** Ảnh cà vẹt — ô cuối lưới "Ảnh xe" ở bước 1 (Figma `24352:70390`, ADR 0099). */
 async function uploadRegistration() {
   const region = screen.getByRole('region', { name: /Cà vẹt xe/ });
   const input = region.querySelector('input[type="file"]')!;
@@ -157,6 +169,14 @@ async function uploadRegistration() {
   });
   await waitFor(() => expect(registrationRead).toHaveBeenCalled());
   return region;
+}
+
+/** Hãng + mẫu xe — thay ô "Tên xe" đã gỡ: server ghép tên từ đây (ADR 0102). */
+async function pickModel() {
+  fireEvent.mouseDown(screen.getByLabelText(/Hãng xe/));
+  fireEvent.click(await screen.findByTitle('Toyota'));
+  fireEvent.mouseDown(screen.getByLabelText(/^Mẫu xe/));
+  fireEvent.click(await screen.findByTitle('Vios'));
 }
 
 async function uploadPhotos() {
@@ -199,11 +219,15 @@ describe('/manage/vehicles/new - Wave 3 create wizard', () => {
     expect(screen.queryByLabelText('Tên xe')).toBeNull();
   });
 
-  it('hiện bốn bước gọn, không bắt nhập thông số nâng cao và có bốn hình thức nguồn xe', () => {
+  it('hiện ba bước gọn, không bắt nhập thông số nâng cao và có bốn hình thức nguồn xe', () => {
     renderPage();
-    for (const label of [/^Cơ bản$/, /^Giá (thuê )?& [Cc]hính sách$/, /Hình ảnh/, /Xác nhận/]) {
+    // "Thông tin xe" vừa là tên bước vừa là tiêu đề thẻ của bước 1.
+    expect(screen.getAllByText('Thông tin xe').length).toBeGreaterThan(0);
+    for (const label of ['Dịch vụ & giá', 'Tiện ích & mô tả']) {
       expect(screen.getByText(label)).toBeTruthy();
     }
+    // Không còn bước "Xác nhận" riêng — xác nhận là hộp thoại của nút "Gửi duyệt".
+    expect(screen.queryByText(/^Xác nhận/)).toBeNull();
     expect(screen.queryByText(/^Thông số$/)).toBeNull();
     expect(screen.queryByLabelText('Chiều dài (mm)')).toBeNull();
     for (const label of ['Sở hữu', 'Trả góp', 'Thuê lại', 'Hợp tác']) {
@@ -211,32 +235,40 @@ describe('/manage/vehicles/new - Wave 3 create wizard', () => {
     }
   });
 
-  it('mã nội bộ là tuỳ chọn nhưng tên xe vẫn được validate tại field', async () => {
+  it('không hỏi tên xe (ADR 0102); hãng + mẫu xe validate tại field, mã nội bộ tuỳ chọn', async () => {
     renderPage();
+    expect(screen.queryByLabelText(/^Tên xe/)).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
-    expect(await screen.findByText('Tên xe là bắt buộc')).toBeTruthy();
+    expect(await screen.findByText('Chọn hãng xe')).toBeTruthy();
+    expect(screen.getByText('Chọn mẫu xe')).toBeTruthy();
     expect(screen.queryByText('Mã xe là bắt buộc')).toBeNull();
   });
 
-  it('giữ dữ liệu qua bốn bước và gửi payload mới đúng contract', async () => {
+  it('giữ dữ liệu qua ba bước và gửi payload mới đúng contract', async () => {
     renderPage();
-    fireEvent.change(screen.getByLabelText(/Tên xe/), { target: { value: ' Toyota Altis ' } });
+    await pickModel();
     fireEvent.click(screen.getByText('Trả góp'));
-    await goNext('2. Giá thuê & chính sách');
-    await goNext('3. Hình ảnh, tiện ích & mô tả xe');
     await uploadPhotos();
     await uploadRegistration();
-    await screen.findByText('Đã đọc đủ thông tin cà vẹt');
-    await goNext('4. Xác nhận thông tin hồ sơ xe');
-    expect(screen.getByText('Toyota Altis')).toBeTruthy();
-    expect(screen.getByText('Trả góp')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await screen.findByText(/^Đã quét:/);
+    await goNext('Dịch vụ & giá');
+    await goNext('Tiện ích & mô tả');
+    const dialog = await openConfirm();
+    // Hộp xác nhận hiện đúng tên server sẽ ghép (hãng + dòng xe; chưa khai năm).
+    expect(within(dialog).getByText('Toyota Vios')).toBeTruthy();
+    expect(within(dialog).getByText('Trả góp')).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Lưu nháp' }));
     await waitFor(() => expect(mutation.mutateAsync).toHaveBeenCalledTimes(1));
     expect(mutation.mutateAsync.mock.calls[0]![0]).toMatchObject({
       code: undefined,
-      name: 'Toyota Altis',
+      vehicleCatalogModelId: 'm-toyota-vios',
       sourceType: 'financed',
+      // Biển số + màu sơn tự điền từ lượt đọc cà vẹt (ADR 0102).
+      plateNumber: '51H-100.00',
+      color: 'Trắng',
     });
+    // Không gửi tên: server ghép "Hãng Dòng Phiên bản Năm" từ danh mục.
+    expect((mutation.mutateAsync.mock.calls[0]![0] as { name?: string }).name).toBeUndefined();
     expect(mutation.mutateAsync.mock.calls[0]![0]).toMatchObject({
       registration: {
         uploadId: '01JREGISTRATIONUPLOAD00001',
@@ -249,15 +281,31 @@ describe('/manage/vehicles/new - Wave 3 create wizard', () => {
     expect(mutation.mutateAsync.mock.calls[0]![0]).not.toHaveProperty('publicStatus');
   });
 
-  it('ô tô: chưa chụp cà vẹt thì không qua được bước Hình ảnh', async () => {
+  it('cà vẹt: thiếu ba ô thì không qua bước 1; KHÔNG ảnh mà nhập tay đủ thì đi tiếp (ADR 0100)', async () => {
     renderPage();
-    fireEvent.change(screen.getByLabelText(/Tên xe/), { target: { value: 'Xe thiếu cà vẹt' } });
-    await goNext('2. Giá thuê & chính sách');
-    await goNext('3. Hình ảnh, tiện ích & mô tả xe');
+    await pickModel();
     await uploadPhotos();
     fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
-    expect(await screen.findByText('Vui lòng chụp hoặc tải ảnh cà vẹt')).toBeTruthy();
-    expect(screen.getByRole('heading', { name: '3. Hình ảnh, tiện ích & mô tả xe' })).toBeTruthy();
+    expect(await screen.findByText('Nhập số khung')).toBeTruthy();
+    expect(screen.queryByText('Vui lòng chụp hoặc tải ảnh cà vẹt')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Dịch vụ & giá' })).toBeNull();
+
+    fireEvent.change(screen.getByLabelText(/^Tên chủ xe/), { target: { value: 'Trần Bảo' } });
+    fireEvent.change(screen.getByLabelText(/^Số khung/), { target: { value: 'rl4b29f30k7654321' } });
+    fireEvent.change(screen.getByLabelText(/^Số máy/), { target: { value: '2nrx654321' } });
+    await goNext('Dịch vụ & giá');
+    await goNext('Tiện ích & mô tả');
+    const dialog = await openConfirm();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Lưu nháp' }));
+    await waitFor(() => expect(mutation.mutateAsync).toHaveBeenCalledTimes(1));
+    const payload = mutation.mutateAsync.mock.calls[0]![0] as { registration: object };
+    expect(payload.registration).toMatchObject({
+      holderName: 'Trần Bảo',
+      chassisNumber: 'RL4B29F30K7654321',
+      engineNumber: '2NRX654321',
+    });
+    expect(payload.registration).not.toHaveProperty('uploadId');
+    expect(registrationRead).not.toHaveBeenCalled();
   });
 
   it('máy đọc thiếu số máy: bắt nhập tay rồi mới đi tiếp', async () => {
@@ -267,19 +315,19 @@ describe('/manage/vehicles/new - Wave 3 create wizard', () => {
       readerAvailable: true,
     });
     renderPage();
-    fireEvent.change(screen.getByLabelText(/Tên xe/), { target: { value: 'Xe nhập tay' } });
-    await goNext('2. Giá thuê & chính sách');
-    await goNext('3. Hình ảnh, tiện ích & mô tả xe');
+    await pickModel();
     await uploadPhotos();
-    const region = await uploadRegistration();
-    expect(await within(region).findByText(/Chưa đọc được đủ thông tin/)).toBeTruthy();
+    await uploadRegistration();
+    expect(await screen.findByText(/^Chưa lấy được số máy/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
     expect(await screen.findByText('Nhập số máy')).toBeTruthy();
 
-    fireEvent.change(within(region).getByLabelText(/Số máy/), { target: { value: '2nr x999' } });
-    await goNext('4. Xác nhận thông tin hồ sơ xe');
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    fireEvent.change(screen.getByLabelText(/^Số máy/), { target: { value: '2nr x999' } });
+    await goNext('Dịch vụ & giá');
+    await goNext('Tiện ích & mô tả');
+    const dialog = await openConfirm();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Lưu nháp' }));
     await waitFor(() => expect(mutation.mutateAsync).toHaveBeenCalledTimes(1));
     expect(mutation.mutateAsync.mock.calls[0]![0]).toMatchObject({
       registration: { uploadId: '01JREGISTRATIONUPLOAD00002', engineNumber: '2NRX999' },
@@ -288,16 +336,16 @@ describe('/manage/vehicles/new - Wave 3 create wizard', () => {
 
   it('sau khi lưu nháp hiện success workspace thay vì điều hướng mù', async () => {
     renderPage();
-    fireEvent.change(screen.getByLabelText(/Tên xe/), { target: { value: createdVehicle.name } });
-    await goNext('2. Giá thuê & chính sách');
-    await goNext('3. Hình ảnh, tiện ích & mô tả xe');
+    await pickModel();
     await uploadPhotos();
     await uploadRegistration();
-    await screen.findByText('Đã đọc đủ thông tin cà vẹt');
-    await goNext('4. Xác nhận thông tin hồ sơ xe');
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
-    expect(await screen.findByText('Tạo xe thành công!')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Xem hồ sơ xe chi tiết' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Thêm xe khác' })).toBeTruthy();
+    await screen.findByText(/^Đã quét:/);
+    await goNext('Dịch vụ & giá');
+    await goNext('Tiện ích & mô tả');
+    const dialog = await openConfirm();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Lưu nháp' }));
+    expect(await screen.findByText('Đã lưu nháp xe')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Hoàn thiện hồ sơ xe' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Thêm xe mới' })).toBeTruthy();
   });
 });

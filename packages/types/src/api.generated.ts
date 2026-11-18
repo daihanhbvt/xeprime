@@ -2679,7 +2679,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Phiên bản (xe chuẩn) đã duyệt của một dòng xe, lọc theo năm sản xuất
+         * Phiên bản (xe chuẩn) đã duyệt của một dòng xe (lọc theo năm sản xuất) hoặc của cả một hãng
          * @description **Truy cập:** công khai - không cần đăng nhập.
          *
          *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` - phiên của realm khác bị từ chối.
@@ -16501,8 +16501,11 @@ export interface components {
              * @example XE-001
              */
             code?: string;
-            /** @example Toyota Vios 2022 */
-            name: string;
+            /**
+             * @description Bỏ trống để hệ thống ghép từ hãng, dòng xe, phiên bản và năm sản xuất
+             * @example Toyota Vios 1.5G CVT 2019
+             */
+            name?: string;
             /** @description Id chi nhánh đang hoạt động của gian hàng (GET /branches) */
             branchId: string;
             /** @enum {string} */
@@ -18182,9 +18185,9 @@ export interface components {
             vehicleProtectionEnabled: boolean;
             vehicleProtectionPercent?: number | null;
             insurancePartnerName?: string | null;
-            /** @description % phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi của xe, không gồm phí giao xe) - ADR 0066 */
+            /** @description % tiền thuê trả trước `C = D + H` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi của xe, không gồm phí giao xe), hoa hồng H nằm trong C - ADR 0101 */
             depositPercent: number;
-            /** @description Sàn của `D` (VND): D = max(% × tiền thuê, sàn) */
+            /** @description Sàn của `C` (VND): C = max(% × tiền thuê, sàn) */
             depositMinAmount: string;
             /** @description `S` - phí sàn theo loại xe */
             customerPlatformFee: components["schemas"]["PerVehicleTypeAmountDto"];
@@ -22694,7 +22697,7 @@ export interface components {
             tripInsuranceEnabled: boolean;
             vehicleProtectionEnabled: boolean;
             insurancePartnerName?: string | null;
-            /** @description % phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi của xe, không gồm phí giao xe) - ADR 0066 */
+            /** @description % tiền thuê trả trước `C = D + H` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi của xe, không gồm phí giao xe), hoa hồng H nằm trong C - ADR 0101 */
             depositPercent: number;
             /** @description `S` - phí sàn theo loại xe */
             customerPlatformFee: components["schemas"]["PerVehicleTypeAmountDto"];
@@ -25385,7 +25388,10 @@ export interface components {
              * @example XE-001
              */
             code?: string;
-            /** @example Toyota Vios 2022 */
+            /**
+             * @description Bỏ trống để hệ thống ghép từ hãng, dòng xe, phiên bản và năm sản xuất
+             * @example Toyota Vios 1.5G CVT 2019
+             */
             name?: string;
             /** @description Id chi nhánh đang hoạt động của gian hàng (GET /branches) */
             branchId?: string;
@@ -25553,12 +25559,12 @@ export interface components {
              */
             selfDriveMaxDays?: number;
             /**
-             * @description % phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi trực tiếp của xe, không gồm phí giao xe) - ADR 0066. Phí sàn, hoa hồng và bảo hiểm cộng THÊM trên D
-             * @example 15
+             * @description % tiền thuê trả trước `C = D + H` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi trực tiếp của xe, không gồm phí giao xe) - ADR 0101. Hoa hồng H nằm GỌN trong C; phí sàn và bảo hiểm cộng THÊM trên C
+             * @example 30
              */
             depositPercent: number;
             /**
-             * @description Sàn của `D` (VND string, bội 1.000đ): D = max(% × tiền thuê, sàn); 0 = không sàn
+             * @description Sàn của `C` (VND string, bội 1.000đ): C = max(% × tiền thuê, sàn); 0 = không sàn
              * @example 0
              */
             depositMinAmount: string;
@@ -26695,6 +26701,8 @@ export interface components {
             holderAddress: string | null;
             chassisNumber: string | null;
             engineNumber: string | null;
+            /** @description Màu sơn - tự điền ô Màu sắc */
+            color: string | null;
         };
         VehicleRegistrationReadResultDto: {
             uploadId: string;
@@ -44150,9 +44158,13 @@ export interface operations {
     };
     PublicVehicleDataController_listVariants: {
         parameters: {
-            query: {
+            query?: {
                 /** @description Dòng xe */
-                modelId: string;
+                modelId?: string;
+                /** @description Hãng - trả mọi xe chuẩn đã duyệt của các dòng xe đang bật của hãng (cần vehicleType) */
+                brandKey?: string;
+                /** @description Đi kèm brandKey */
+                vehicleType?: "car" | "motorbike";
                 /** @description Năm sản xuất của xe - chỉ trả xe chuẩn có đời chứa năm đó (đời trống = mọi năm) */
                 year?: number;
                 /** @description Xe chuẩn đang gắn với xe đang sửa - LUÔN có trong kết quả (kể cả chờ duyệt / đã ẩn) */

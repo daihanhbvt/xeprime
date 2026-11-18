@@ -6,7 +6,9 @@
   "intro": {
     "title": "Verify your driving licence",
     "body": "Take a photo of the front of your driving licence. You only need to do this once - it usually takes less than a minute.",
-    "bookingBody": "Self-drive rentals need a valid driving licence. Take a photo of the front of your licence - you only do this once for all future trips."
+    "bookingBody": "Self-drive rentals need a valid driving licence. Take a photo of the front of your licence - you only do this once for all future trips.",
+    "reviewTitle": "Verify your driving licence",
+    "reviewBody": "To rent a self-drive car you need a verified, valid licence. Take a photo of the front once - you will not need to verify again for later trips."
   },
   "accepted": {
     "title": "Accepted documents",

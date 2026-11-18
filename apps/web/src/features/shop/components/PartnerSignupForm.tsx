@@ -306,20 +306,25 @@ export function PartnerSignupForm({ track, onCreated, back }: PartnerSignupFormP
           <h3 className={styles.sectionTitle}>{t(`signup.profileSection.${track}`)}</h3>
           <div className={styles.grid}>
             {showProfileName ? (
-              <TextField
-                control={control}
-                name="name"
-                label={
-                  isPackageTrack ? t('form.fields.name.label') : t('signup.fields.ownerName.label')
-                }
-                placeholder={
-                  isPackageTrack
-                    ? t('form.fields.name.placeholder')
-                    : t('signup.fields.ownerName.placeholder')
-                }
-                prefix={isPackageTrack ? <ShopOutlined /> : <UserOutlined />}
-                required
-              />
+              // Figma `24382:85090`: "Tên gian hàng" rộng hết hàng.
+              <div className={styles.fieldFull}>
+                <TextField
+                  control={control}
+                  name="name"
+                  label={
+                    isPackageTrack
+                      ? t('form.fields.name.label')
+                      : t('signup.fields.ownerName.label')
+                  }
+                  placeholder={
+                    isPackageTrack
+                      ? t('form.fields.name.placeholder')
+                      : t('signup.fields.ownerName.placeholder')
+                  }
+                  prefix={isPackageTrack ? <ShopOutlined /> : <UserOutlined />}
+                  required
+                />
+              </div>
             ) : null}
             <div className={styles.addressGrid}>
               <AddressField

@@ -78,6 +78,8 @@ export interface VehicleRegistrationReading {
   holderAddress: string | null;
   chassisNumber: string | null;
   engineNumber: string | null;
+  /** Màu sơn ("Trắng") — tự điền ô Màu sắc của form xe (ADR 0102). */
+  color: string | null;
 }
 
 /** Biển số chỉ còn chữ + số, viết hoa — "51H-100.00" ≡ "51h 10000". */

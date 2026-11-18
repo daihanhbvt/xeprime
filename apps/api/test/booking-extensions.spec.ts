@@ -226,7 +226,7 @@ beforeAll(async () => {
       createdBy: ownerId,
     },
   });
-  // Tuyến HOA HỒNG: cọc bắt buộc ⇒ khoản online = 15% tiền thuê (ADR 0077 điều 8).
+  // Tuyến HOA HỒNG: cọc bắt buộc ⇒ khoản online = 30% tiền thuê (ADR 0077 điều 8 · ADR 0101).
   await prisma.plan.create({
     data: {
       id: planId,
@@ -302,8 +302,8 @@ describe('Báo giá phụ lục — miễn phí nền tảng (ADR 0077 điều 3
     expect(Number(q.onlineAmount) + Number(q.payAtPickupAmount)).toBe(Number(MONTHLY));
     // Khoản online chỉ là phần của chủ xe ⇒ ví nhận đúng online − thuế.
     expect(Number(q.ownerPayableAmount)).toBe(Number(q.onlineAmount) - Number(q.taxAmount));
-    // Tuyến hoa hồng luôn thu 15% (sàn là thuế).
-    expect(Number(q.onlineAmount)).toBeGreaterThanOrEqual(Number(MONTHLY) * 0.15);
+    // Tuyến hoa hồng luôn thu 30% tiền thuê trả trước (sàn là thuế).
+    expect(Number(q.onlineAmount)).toBeGreaterThanOrEqual(Number(MONTHLY) * 0.3);
     expect(q.billingMode).toBe(BILLING_MODE.COMMISSION);
     expect(q.available).toBe(true);
   });

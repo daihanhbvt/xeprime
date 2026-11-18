@@ -17,7 +17,7 @@ import {
   requiredVehicleImageTypes,
   type PublishRequirement,
 } from '@xeprime/types';
-import { vehicleFormWithPhotosSchema, type VehicleFormValues } from '@xeprime/validators';
+import { vehicleCreateFormSchema, type VehicleFormValues } from '@xeprime/validators';
 import { trailingRequiredMark } from '@/components/form/required-mark';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { decorativeIcon } from '@/lib/decorative-icon';
@@ -39,6 +39,8 @@ import { useMyShop } from '@/features/shop/hooks/use-shop';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import styles from './VehicleForm.module.css';
 import { usePublicationLabels } from '../hooks/use-publication-labels';
+import { useComposedVehicleName } from '../hooks/use-composed-vehicle-name';
+import { useApplyRegistrationReading } from '../hooks/use-registration-autofill';
 import { missingPublishRequirementsForForm, publishGapFields } from '../publication';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
@@ -156,7 +158,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
 
   const applyApiFieldErrors = useApiFieldErrors();
   const resolver = useValidationResolver<VehicleFormValues>(
-    vehicleFormWithPhotosSchema,
+    vehicleCreateFormSchema,
     'Vehicles.form.validation',
   );
 
@@ -234,6 +236,8 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
   const registrationRequired = !draftOnly;
   const [registration, setRegistration] = useState<RegistrationCaptureState>(EMPTY_REGISTRATION);
   const [registrationShowErrors, setRegistrationShowErrors] = useState(false);
+  // Lượt đọc cà vẹt mới ⇒ điền biển số + màu sơn (ADR 0102).
+  useApplyRegistrationReading(registration.reading, setValue);
   const plateNumber = useWatch({ control, name: 'plateNumber' });
   const registrationCheck = checkRegistration(registration, plateNumber);
   const registrationBlocked = registrationRequired && !registrationCheck.ok;
@@ -470,8 +474,10 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
    * cà vẹt), chỉ để chủ xe thấy còn thiếu gì; không thay cổng thật.
    */
   const watched = useWatch({ control });
-  const requiredPhotos =
-    requiredVehicleImageTypes(vehicleType ?? VEHICLE_TYPE.CAR).length + (registrationRequired ? 1 : 0);
+  // Thêm xe không hỏi tên (ADR 0102): xem trước + hộp xác nhận hiện đúng tên server sẽ ghép.
+  const autoName = useComposedVehicleName(watched);
+  // Ảnh cà vẹt TUỲ CHỌN (ADR 0100) — không tính vào số ảnh bắt buộc.
+  const requiredPhotos = requiredVehicleImageTypes(vehicleType ?? VEHICLE_TYPE.CAR).length;
   const readiness: CreateReadiness = useMemo(() => {
     const values = { ...EMPTY_DEFAULTS, ...watched } as VehicleFormValues;
     const gaps = missingPublishRequirementsForForm(values);
@@ -486,7 +492,8 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
       info:
         (!registrationRequired ||
           Object.keys(registrationCheck.errors).every((key) => key === 'photo')) &&
-        Boolean(values.name?.trim() && values.branchId) &&
+        // Tên xe tự ghép từ dòng xe (ADR 0102) - đủ dòng xe là đủ tên.
+        Boolean(values.vehicleCatalogModelId && values.branchId) &&
         !gaps.some(
           (gap) => REQUIREMENT_STEP[gap] === 'basic' && gap !== PUBLISH_REQUIREMENT.PHOTOS,
         ),
@@ -635,7 +642,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
           }
           aside={
             <CreateVehicleAside
-              preview={watched}
+              preview={{ ...watched, name: autoName }}
               readiness={readiness}
               branchLabel={selectedBranchLabel}
               shop={previewShopOf(shop.data)}
@@ -651,7 +658,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
       {draftOnly ? null : (
         <CreateVehicleConfirmDialog
           open={confirmSubmit}
-          values={getValues()}
+          values={{ ...getValues(), name: autoName }}
           branchLabel={selectedBranchLabel}
           registration={
             registrationRequired

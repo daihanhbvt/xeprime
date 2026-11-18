@@ -190,12 +190,22 @@
   font-weight: var(--xp-font-weight-semibold);
 }
 
+/* Design: vạch cam trên nền vàng nhạt, bo tròn hai đầu. Độ dài = biến runtime `--ready-percent`. */
 .readyBar {
+  overflow: hidden;
+  height: 8px;
   margin: var(--xp-space-sm) 0 var(--xp-space-md);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary-light);
 }
 
-.readyBar :global(.ant-progress-bg) {
+.readyBarFill {
+  display: block;
+  width: var(--ready-percent, 0%);
+  height: 100%;
+  border-radius: inherit;
   background: var(--xp-color-warning);
+  transition: width 0.3s ease;
 }
 
 .readyList {
@@ -222,16 +232,27 @@
   color: var(--xp-color-text-secondary);
 }
 
-.readyIcon {
-  color: var(--xp-color-primary);
-  font-size: 16px;
+/* Mục đã xong: tròn vàng thương hiệu, dấu tích trắng (design). */
+.readyCheck {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--xp-color-primary);
+  /* Trắng ở CẢ hai chế độ: dấu tích nằm trên nền vàng cố định, không theo nền thẻ. */
+  color: #fff;
+  font-size: 11px;
 }
 
+/* Mục chưa xong: vòng tròn rỗng viền xám, cùng cỡ dấu tích. */
 .readyCircle {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
-  border: 1px solid var(--xp-color-border);
+  border: 1.5px solid var(--xp-color-border);
   border-radius: 50%;
 }
 

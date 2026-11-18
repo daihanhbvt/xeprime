@@ -463,6 +463,28 @@ export const vehicleFormWithPhotosSchema = vehicleFormSchema.test(
 );
 
 /**
+ * Tên xe ở các form THÊM xe của web (ADR 0102): không có ô tên — server ghép "Hãng Dòng Phiên bản
+ * Năm" từ danh mục khi request không mang tên. Schema gốc vẫn bắt buộc tên (màn sửa xe, app native).
+ */
+export const autoVehicleNameSchema = yup.string().trim().max(255).default('');
+
+const filledText = (value: unknown) => typeof value === 'string' && value.trim() !== '';
+
+/**
+ * Form thêm xe nâng cao của web: luật ảnh bắt buộc + tên tự ghép. Hãng + mẫu xe BẮT BUỘC ngay cả khi
+ * lưu nháp — chúng là thứ server ghép tên xe từ đó, thiếu thì không có tên (`VEHICLE_NAME_REQUIRED`).
+ */
+export const vehicleCreateFormSchema = vehicleFormWithPhotosSchema.shape({
+  name: autoVehicleNameSchema,
+  brand: optionalText(100).test('required', 'brandRequired', filledText),
+  vehicleCatalogModelId: yup
+    .string()
+    .nullable()
+    .default(null)
+    .test('required', 'modelRequired', filledText),
+});
+
+/**
  * Số nguyên VND tuỳ chọn - form nhập number (NumberField), hoá chuỗi khi gửi API (ADR 0007).
  *
  * Chỉ `vehicleSourceFormSchema` dùng hàm này (kiểm bằng grep trước khi sửa) - message ở đây là

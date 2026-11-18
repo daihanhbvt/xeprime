@@ -104,6 +104,8 @@ export function usePhoneVerify(purpose: PhoneVerificationPurpose) {
       code: string,
       options?: { onError?: (error: unknown) => void; onSuccess?: () => void },
     ) => verifyMutation.mutate({ phone, code }, options),
+    /** Bản Promise của `verify` - màn quên mật khẩu 3 bước của app Partner đợi kết quả để sang bước 3 (như web). */
+    verifyAsync: (phone: string, code: string) => verifyMutation.mutateAsync({ phone, code }),
     clearError: () => setError(null),
     /** Mã vừa nhập đã chết (`OTP_LOCKED`/`OTP_EXPIRED`) — khoá ô nhập, chỉ còn gửi lại mã. */
     codeDead,

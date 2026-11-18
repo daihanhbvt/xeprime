@@ -60,8 +60,14 @@ const BANNER_ICON = 20;
 export function DriverLicenceVerifier({
   trip,
   embedded = false,
+  layout = 'default',
 }: {
   trip?: DriverLicenceTrip | null;
+  /**
+   * `review`: nằm trong thẻ "Giấy tờ & điều kiện nhận xe" của màn Xem lại (Figma `21836:54301`, như
+   * web): ô chọn ảnh viền đỏ đứt, tiêu đề + lời dẫn, "Giấy tờ được chấp nhận" là hộp cam.
+   */
+  layout?: 'default' | 'review';
   /**
    * Khối Giấy tờ của tab Tài khoản (design "Verify Empty / Add"): chưa nộp thì là thẻ rỗng, còn
    * thêm / thay bằng đi qua tấm trượt "Thêm bằng lái" — như hộp thoại bên web.
@@ -201,6 +207,22 @@ export function DriverLicenceVerifier({
         <Button label={t('empty.add')} variant="gradient" onPress={() => setAdding(true)} />
         {addSheet}
       </Panel>
+    );
+  }
+
+  if (layout === 'review') {
+    return (
+      <YStack gap={space.md}>
+        <DriverLicenceUploader
+          tone="danger"
+          processing={view.processing}
+          onPick={() => setPickedOver(latest?.id ?? null)}
+          onSubmitted={() => setReplacing(false)}
+        />
+        <PanelHeading title={t('intro.reviewTitle')} body={t('intro.reviewBody')} />
+        {view.rejected || (view.tripIssue && view.verified) ? notice : null}
+        <AcceptedDocuments tone="warm" />
+      </YStack>
     );
   }
 
@@ -662,9 +684,26 @@ const PHOTO_WIDTH = 256;
  * `space-sm`. Tiêu đề `.acceptedTitle` `font-size-sm` semibold `text-secondary`, cách danh sách
  * `space-xs`; danh sách `.acceptedList` chấm, khe 2, `font-size-sm` `text-tertiary`.
  */
-function AcceptedDocuments() {
+function AcceptedDocuments({ tone = 'default' }: { tone?: 'default' | 'warm' }) {
   const colors = useColors();
   const t = useTranslations('DriverLicence.accepted');
+  // `warm` (màn Xem lại, Figma `21836:54301`): hộp nền cam nhạt, chữ cam - như `.acceptedWarm` web.
+  if (tone === 'warm') {
+    return (
+      <YStack gap={space.xs} p={space.sm} br={radius.md} bg={colors.warningSurface}>
+        <Text col={colors.warning} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+          {t('title')}
+        </Text>
+        <YStack gap={2}>
+          {ACCEPTED_KEYS.map((key) => (
+            <Text key={key} col={colors.warning} fos={fontSize.bodySm}>
+              {`• ${t(key)}`}
+            </Text>
+          ))}
+        </YStack>
+      </YStack>
+    );
+  }
   return (
     <YStack gap={space.xs} pt={space.sm} borderTopWidth={1} borderTopColor={colors.borderSubtle}>
       <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.semibold}>
