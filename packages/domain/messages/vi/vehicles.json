@@ -263,7 +263,8 @@
       "electricConsumptionPlaceholder": "15",
       "electricConsumptionHelp": "kWh cho quãng đường 100 km - không bắt buộc",
       "electricOnly": "Chỉ dành cho xe điện",
-      "pickFuelFirst": "Chọn nhiên liệu trước"
+      "pickFuelFirst": "Chọn nhiên liệu trước",
+      "combustionOnly": "Chỉ dành cho xe xăng, dầu, hybrid"
     },
     "specs": {
       "plateNumber": "Biển số xe",
@@ -284,7 +285,7 @@
       "bodyType": "Kiểu dáng xe",
       "bodyTypeHint": "Giúp khách lọc xe trên chợ. Bấm lại để bỏ chọn.",
       "modelHelp": "Chọn đúng mẫu để xe hiện ra khi khách lọc theo dòng xe.",
-      "modelPickBrandFirst": "Chọn hãng xe trước để hiện danh sách mẫu.",
+      "modelPickBrandFirst": "Chọn hãng xe trước",
       "modelEmpty": "Hãng này chưa có mẫu xe trong danh mục.",
       "specFromModel": "Theo mẫu {model} - đã điền sẵn.",
       "specChoiceFromModel": "Mẫu {model} có các bản: {values}.",
@@ -303,7 +304,7 @@
       "weekendPlaceholder": "VD: 750.000",
       "weekendHelp": "Để trống nếu cùng giá ngày thường",
       "hourly": "Giá thuê theo giờ",
-      "hourlyPlaceholder": "Bỏ trống nếu không cho thuê giờ",
+      "hourlyPlaceholder": "VD: 150.000",
       "discountPercent": "Giảm giá đang chạy",
       "discountPlaceholder": "VD: 10",
       "discountHelp": "Giá sau giảm sẽ hiển thị trên marketplace",
@@ -318,7 +319,8 @@
       "withDriverInterCityHelp": "Khứ hồi; bỏ trống = tạm tính theo giá nội thành",
       "withDriverOneWay": "Giá/ngày có tài xế - 1 chiều",
       "withDriverOneWayPlaceholder": "VD: 2.200.000",
-      "withDriverOneWayHelp": "Liên tỉnh một chiều; bỏ trống = tạm tính theo bậc gần nhất"
+      "withDriverOneWayHelp": "Liên tỉnh một chiều; bỏ trống = tạm tính theo bậc gần nhất",
+      "hourlyHelp": "Bỏ trống nếu không cho thuê theo giờ."
     },
     "marketPrice": {
       "range": "Giá tham khảo: {low} - {high}/ngày",
@@ -579,7 +581,8 @@
       "scanFound": "Đã quét: {items}",
       "scanMissingItems": "Chưa lấy được {items} - vui lòng kiểm tra lại ảnh hoặc tự nhập bên dưới.",
       "view": "Xem ảnh cà vẹt",
-      "filledFromScan": "Đã điền theo cà vẹt"
+      "filledFromScan": "Đã điền theo cà vẹt",
+      "remove": "Bỏ ảnh cà vẹt"
     },
     "catalog": {
       "variant": "Phiên bản",
@@ -627,7 +630,7 @@
       "useRent": "Dùng {price}",
       "modelVariant": "Mẫu xe",
       "modelVariantPlaceholder": "Tìm dòng xe, phiên bản",
-      "modelVariantHelp": "Chọn đúng phiên bản để tự điền thông số. Không thấy xe của bạn thì chọn \"Nhập tay\" ở cuối danh sách.",
+      "modelVariantHelp": "Chọn mẫu xe để tự điền thông số",
       "manualEntry": "Nhập tay - xe chưa có trong danh sách",
       "backToList": "Chọn từ danh sách mẫu xe",
       "yearOutsideVariant": "Năm sản xuất {year} nằm ngoài đời {years} của phiên bản này - kiểm tra lại phiên bản hoặc năm.",
@@ -642,7 +645,12 @@
       "infoTitle": "Thông tin xe",
       "infoDescription": "Cung cấp thông tin và thông số cơ bản của xe.",
       "featuresTitle": "Tiện ích & mô tả",
-      "featuresDescription": "Chọn tiện ích và giới thiệu chi tiết về xe."
+      "featuresDescription": "Chọn tiện ích và giới thiệu chi tiết về xe.",
+      "groups": {
+        "model": "Thông tin chung",
+        "registration": "Giấy đăng ký xe (cà vẹt)",
+        "location": "Nơi nhận xe"
+      }
     },
     "createAside": {
       "previewTitle": "Xem trước trên Marketplace",
@@ -692,6 +700,16 @@
       "fuel": "Nhiên liệu",
       "transmission": "Hộp số",
       "source": "Hình thức nguồn xe"
+    },
+    "pickupAddress": {
+      "label": "Địa chỉ nhận xe",
+      "tipLabel": "Về địa chỉ nhận xe",
+      "tip": "Khách tới đây nhận xe - là địa chỉ chủ xe của bạn. Trên chợ chỉ hiện Phường/Xã, Tỉnh/TP cho tới khi khách có đơn.",
+      "loading": "Đang tải địa chỉ...",
+      "missing": "Chưa có địa chỉ - cập nhật ở Hồ sơ chủ xe",
+      "edit": "Sửa",
+      "sharedTitle": "Địa chỉ này đang dùng cho {count, plural, other {# xe}}",
+      "sharedBody": "Sửa ở đây sẽ đổi vị trí công khai của tất cả các xe đó."
     }
   },
   "publish": {

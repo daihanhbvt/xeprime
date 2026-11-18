@@ -18,7 +18,7 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 
 import { useCatalogModelSpec } from '../hooks/use-catalog-model-spec';
 import { useCatalogSpecLock, type SpecLock } from '../hooks/use-catalog-spec-lock';
-import { SpecLockedField } from './SpecLockedField';
+import { useSpecFieldLock } from '../hooks/use-spec-field-lock';
 
 import { FuelTypeSelect } from './VehicleFormSections';
 
@@ -107,31 +107,15 @@ export function VehicleEnergyFields({
         ? tSpecs('specFromModel', { model: spec.model.label })
         : undefined;
   /**
-   * Ô đang khoá ⇒ ô chỉ đọc có bút trong ô (cùng kiểu ô cà vẹt); `null` ⇒ nơi gọi vẽ ô nhập thật.
-   * Ô bị khoá vì lý do KHÁC (`disabled`: xe đã lên chợ) giữ ô gốc — bút không hứa một lần sửa.
+   * Ô đang khoá ⇒ CHÍNH ô nhập đó chuyển chỉ đọc + bút trong ô (cùng kiểu ô cà vẹt) — không thay
+   * bằng một ô khác, nên đổi mẫu xe chỉ đổi giá trị/trạng thái, không dựng lại ô. Ô bị khoá vì lý do
+   * KHÁC (`disabled`: xe đã lên chợ) không khoá theo mẫu — bút không hứa một lần sửa.
    */
-  const lockedView = (
-    lock: SpecLock,
-    name: string,
-    label: string,
-    display: string | null,
-    required?: boolean,
-  ) =>
-    lock.locked && !disabled && display ? (
-      <SpecLockedField
-        name={name}
-        label={label}
-        value={display}
-        lock={lock}
-        help={lockHelp(lock)}
-        required={required}
-      />
-    ) : null;
-  const numberText = (value: number | null | undefined) => (value == null ? null : String(value));
-  const consumption = useWatch({ control, name: 'fuelConsumptionCombined' });
-  const range = useWatch({ control, name: 'electricRangeKm' });
-  const battery = useWatch({ control, name: 'batteryCapacityKwh' });
-  const engine = useWatch({ control, name: 'engineDisplacementCc' });
+  const toFieldLock = useSpecFieldLock();
+  const fieldLock = (lock: SpecLock, label: string) => toFieldLock(lock, label, !disabled);
+  /** Ghi chú của ô: đang khoá thì nói nguồn dữ liệu, còn không thì ghi chú riêng của ô. */
+  const helpFor = (lock: SpecLock, help?: string) =>
+    (lock.locked && !disabled ? lockHelp(lock) : undefined) ?? help;
 
   let fuelHelp: React.ReactNode = lockedNotice ?? lockHelp(fuelLock);
   if (!fuelHelp && spec.model && fuelChoices) {
@@ -196,22 +180,15 @@ export function VehicleEnergyFields({
   return (
     <Row gutter={16}>
       <Col xs={24} sm={12}>
-        {lockedView(
-          fuelLock,
-          'fuelType',
-          tSpecs('fuelType'),
-          fuelType ? domainLabel('fuelType', fuelType) : null,
-          fuelRequired,
-        ) ?? (
-          <FuelTypeSelect
-            control={control}
-            vehicleType={vehicleType}
-            help={fuelHelp}
-            disabled={disabled}
-            allowedValues={fuelChoices}
-            required={fuelRequired}
-          />
-        )}
+        <FuelTypeSelect
+          control={control}
+          vehicleType={vehicleType}
+          help={fuelHelp}
+          disabled={disabled}
+          allowedValues={fuelChoices}
+          required={fuelRequired}
+          lock={fieldLock(fuelLock, tSpecs('fuelType'))}
+        />
       </Col>
 
       {showInapplicable && policy.transmission === 'hidden' ? (
@@ -219,49 +196,45 @@ export function VehicleEnergyFields({
       ) : null}
       {policy.transmission !== 'hidden' ? (
         <Col xs={24} sm={12}>
-          {(!fixedTransmission &&
-            lockedView(
-              gearLock,
-              'transmission',
-              t('transmission'),
-              transmissionOptions.find((o) => o.value === transmission)?.label ?? null,
-              policy.transmission === 'required',
-            )) || (
-            <SelectField
-              control={control}
-              name="transmission"
-              label={t('transmission')}
-              options={gearOptions}
-              placeholder={t('transmissionPlaceholder')}
-              required={policy.transmission === 'required'}
-              help={lockedNotice ?? (fixedTransmission ? t('transmissionElectricHelp') : undefined)}
-              disabled={disabled || Boolean(fixedTransmission)}
-              allowClear={!fixedTransmission}
-            />
-          )}
+          <SelectField
+            control={control}
+            name="transmission"
+            label={t('transmission')}
+            options={gearOptions}
+            placeholder={t('transmissionPlaceholder')}
+            required={policy.transmission === 'required'}
+            help={
+              lockedNotice ??
+              (fixedTransmission ? t('transmissionElectricHelp') : helpFor(gearLock))
+            }
+            disabled={disabled || Boolean(fixedTransmission)}
+            allowClear={!fixedTransmission}
+            // Xe điện đã khoá hộp số theo luật riêng (`disabled`) — không thêm bút mở khoá.
+            lock={toFieldLock(gearLock, t('transmission'), !disabled && !fixedTransmission)}
+          />
         </Col>
       ) : null}
 
+      {/*
+        Wizard thêm xe giữ ĐỦ 7 ô năng lượng (18/11/2026): ô không áp dụng hiện mờ kèm lý do thay vì
+        biến mất - đổi mẫu xe / nhiên liệu không làm lưới 3 cột nhảy hàng.
+      */}
+      {showInapplicable && policy.fuelConsumption === 'hidden' ? (
+        <InapplicableField label={t('consumption')} reason={t('combustionOnly')} />
+      ) : null}
       {policy.fuelConsumption !== 'hidden' ? (
         <Col xs={24} sm={12}>
-          {lockedView(
-            consumptionLock,
-            'fuelConsumptionCombined',
-            t('consumption'),
-            numberText(consumption),
-            policy.fuelConsumption === 'required',
-          ) ?? (
-            <NumberField
-              control={control}
-              name="fuelConsumptionCombined"
-              label={t('consumption')}
-              placeholder={t('consumptionPlaceholder')}
-              help={t('consumptionHelp')}
-              required={policy.fuelConsumption === 'required'}
-              min={0}
-              disabled={disabled}
-            />
-          )}
+          <NumberField
+            control={control}
+            name="fuelConsumptionCombined"
+            label={t('consumption')}
+            placeholder={t('consumptionPlaceholder')}
+            help={helpFor(consumptionLock, t('consumptionHelp'))}
+            required={policy.fuelConsumption === 'required'}
+            min={0}
+            disabled={disabled}
+            lock={fieldLock(consumptionLock, t('consumption'))}
+          />
         </Col>
       ) : null}
 
@@ -270,48 +243,37 @@ export function VehicleEnergyFields({
       ) : null}
       {policy.electricRangeKm !== 'hidden' ? (
         <Col xs={24} sm={12}>
-          {lockedView(
-            rangeLock,
-            'electricRangeKm',
-            t('electricRange'),
-            numberText(range),
-            policy.electricRangeKm === 'required',
-          ) ?? (
-            <NumberField
-              control={control}
-              name="electricRangeKm"
-              label={t('electricRange')}
-              placeholder={t('electricRangePlaceholder')}
-              help={t('electricRangeHelp')}
-              required={policy.electricRangeKm === 'required'}
-              min={VEHICLE_ENERGY_LIMITS.electricRangeKm.min}
-              max={VEHICLE_ENERGY_LIMITS.electricRangeKm.max}
-              disabled={disabled}
-            />
-          )}
+          <NumberField
+            control={control}
+            name="electricRangeKm"
+            label={t('electricRange')}
+            placeholder={t('electricRangePlaceholder')}
+            help={helpFor(rangeLock, t('electricRangeHelp'))}
+            required={policy.electricRangeKm === 'required'}
+            min={VEHICLE_ENERGY_LIMITS.electricRangeKm.min}
+            max={VEHICLE_ENERGY_LIMITS.electricRangeKm.max}
+            disabled={disabled}
+            lock={fieldLock(rangeLock, t('electricRange'))}
+          />
         </Col>
       ) : null}
 
+      {showInapplicable && policy.batteryCapacityKwh === 'hidden' ? (
+        <InapplicableField label={t('batteryCapacity')} reason={t('electricOnly')} />
+      ) : null}
       {policy.batteryCapacityKwh !== 'hidden' ? (
         <Col xs={24} sm={12}>
-          {lockedView(
-            batteryLock,
-            'batteryCapacityKwh',
-            t('batteryCapacity'),
-            numberText(battery),
-            false,
-          ) ?? (
-            <NumberField
-              control={control}
-              name="batteryCapacityKwh"
-              label={t('batteryCapacity')}
-              placeholder={t('batteryCapacityPlaceholder')}
-              help={t('batteryCapacityHelp')}
-              min={VEHICLE_ENERGY_LIMITS.batteryCapacityKwh.min}
-              max={VEHICLE_ENERGY_LIMITS.batteryCapacityKwh.max}
-              disabled={disabled}
-            />
-          )}
+          <NumberField
+            control={control}
+            name="batteryCapacityKwh"
+            label={t('batteryCapacity')}
+            placeholder={t('batteryCapacityPlaceholder')}
+            help={helpFor(batteryLock, t('batteryCapacityHelp'))}
+            min={VEHICLE_ENERGY_LIMITS.batteryCapacityKwh.min}
+            max={VEHICLE_ENERGY_LIMITS.batteryCapacityKwh.max}
+            disabled={disabled}
+            lock={fieldLock(batteryLock, t('batteryCapacity'))}
+          />
         </Col>
       ) : null}
 
@@ -333,25 +295,22 @@ export function VehicleEnergyFields({
         </Col>
       ) : null}
 
+      {showInapplicable && policy.engineDisplacementCc === 'hidden' ? (
+        <InapplicableField label={t('engineDisplacementCc')} reason={t('combustionOnly')} />
+      ) : null}
       {policy.engineDisplacementCc !== 'hidden' ? (
         <Col xs={24} sm={12}>
-          {lockedView(
-            engineLock,
-            'engineDisplacementCc',
-            t('engineDisplacementCc'),
-            numberText(engine),
-            policy.engineDisplacementCc === 'required',
-          ) ?? (
-            <NumberField
-              control={control}
-              name="engineDisplacementCc"
-              label={t('engineDisplacementCc')}
-              placeholder={t('enginePlaceholder')}
-              required={policy.engineDisplacementCc === 'required'}
-              min={1}
-              disabled={disabled}
-            />
-          )}
+          <NumberField
+            control={control}
+            name="engineDisplacementCc"
+            label={t('engineDisplacementCc')}
+            placeholder={t('enginePlaceholder')}
+            required={policy.engineDisplacementCc === 'required'}
+            min={1}
+            disabled={disabled}
+            help={helpFor(engineLock)}
+            lock={fieldLock(engineLock, t('engineDisplacementCc'))}
+          />
         </Col>
       ) : null}
     </Row>

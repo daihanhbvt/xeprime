@@ -1,6 +1,12 @@
-/* Dải "gói chưa cho phép" (ADR 0065) đứng giữa tiêu đề trang và form. */
-.gate {
-  margin-bottom: var(--xp-space-md);
+/*
+ * Dải "gói chưa cho phép" (ADR 0065) đứng giữa tiêu đề trang và form. Lặp lớp để thắng `margin: 0`
+ * của AntD Alert (CSS-in-JS) - không thì dải dính sát cột bước + thẻ wizard bên dưới (18/11/2026).
+ */
+.gate.gate {
+  align-items: center;
+  margin-bottom: var(--xp-space-lg);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius);
 }
 
 /* Tiêu đề trang theo Figma `24352:79237`: nút lùi tròn 28 có viền, tiêu đề 20/30, phụ đề 14/20. */

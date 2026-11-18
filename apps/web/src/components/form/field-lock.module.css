@@ -1,0 +1,58 @@
+/* Ô tự điền đang khoá + bút trong ô (ADR 0102) — một kiểu cho mọi ô khoá, xem `field-lock.tsx`. */
+
+.editField {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+/* 16px (18/11/2026, trước 20px): bút trong ô là phụ, không lấn chữ của ô. */
+.editGlyph {
+  width: 16px;
+  height: 16px;
+  background: var(--xp-color-text-secondary);
+  mask: url('/images/vehicle-upload/edit.svg') center / contain no-repeat;
+}
+
+.editField:hover .editGlyph,
+.editField:focus-visible .editGlyph {
+  background: var(--xp-color-primary);
+}
+
+/* Hậu tố luôn có mặt của ô khoá được (đơn vị + bút) — rỗng khi ô đang mở. */
+.suffixSlot {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs, 4px);
+}
+
+/*
+ * readOnly (không phải disabled) để chữ vẫn đậm, rõ; nền xám nhạt báo đang khoá. Nhân đôi class vì
+ * style AntD tiêm lúc chạy (xem `field.module.css`). Ô nhập BÊN TRONG khung bỏ hẳn viền/nền/bóng
+ * riêng - không thì thành khung lồng khung.
+ */
+.locked.locked:global(.ant-input-affix-wrapper),
+.locked.locked:global(.ant-input-number),
+.locked.locked:global(.ant-input-number-affix-wrapper),
+.locked.locked:global(.ant-select) {
+  background: var(--xp-color-bg-muted);
+  cursor: default;
+}
+
+.locked.locked :global(input.ant-input),
+.locked.locked :global(input.ant-input-number-input),
+.locked.locked :global(input.ant-select-input) {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--xp-color-text);
+  cursor: default;
+}
+
+.locked.locked :global(input.ant-input) {
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+}

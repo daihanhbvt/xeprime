@@ -95,7 +95,8 @@
     "emptyValue": "-",
     "selectDate": "Chọn ngày",
     "enabled": "Đang bật",
-    "disabled": "Đang tắt"
+    "disabled": "Đang tắt",
+    "fieldNote": "Ghi chú cho {field}"
   },
   "units": {
     "day": "{count, plural, other {# ngày}}",

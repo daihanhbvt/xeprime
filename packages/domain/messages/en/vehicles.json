@@ -263,7 +263,8 @@
       "electricConsumptionPlaceholder": "15",
       "electricConsumptionHelp": "kWh per 100 km - optional",
       "electricOnly": "Electric vehicles only",
-      "pickFuelFirst": "Choose the fuel type first"
+      "pickFuelFirst": "Choose the fuel type first",
+      "combustionOnly": "Fuel and hybrid vehicles only"
     },
     "specs": {
       "plateNumber": "Licence plate",
@@ -284,7 +285,7 @@
       "bodyType": "Body type",
       "bodyTypeHint": "Helps customers filter vehicles on the marketplace. Click again to deselect.",
       "modelHelp": "Pick the exact model so your vehicle appears when guests filter by model.",
-      "modelPickBrandFirst": "Select a brand first to load its models.",
+      "modelPickBrandFirst": "Select a brand first",
       "modelEmpty": "No models listed for this brand yet.",
       "specFromModel": "From the {model} model - pre-filled.",
       "specChoiceFromModel": "The {model} comes in: {values}.",
@@ -303,7 +304,7 @@
       "weekendPlaceholder": "e.g. 750,000",
       "weekendHelp": "Leave blank to use the weekday price",
       "hourly": "Hourly price",
-      "hourlyPlaceholder": "Leave blank if you do not rent by the hour",
+      "hourlyPlaceholder": "e.g. 150,000",
       "discountPercent": "Active discount",
       "discountPlaceholder": "e.g. 10",
       "discountHelp": "The discounted price is what appears on the marketplace",
@@ -318,7 +319,8 @@
       "withDriverInterCityHelp": "Round trip; blank = estimated from the in-city rate",
       "withDriverOneWay": "With-driver day rate - one way",
       "withDriverOneWayPlaceholder": "e.g. 2,200,000",
-      "withDriverOneWayHelp": "Intercity one way; blank = estimated from the nearest tier"
+      "withDriverOneWayHelp": "Intercity one way; blank = estimated from the nearest tier",
+      "hourlyHelp": "Leave empty if you do not rent by the hour."
     },
     "marketPrice": {
       "range": "Reference price: {low} - {high} per day",
@@ -579,7 +581,8 @@
       "scanFound": "Scanned: {items}",
       "scanMissingItems": "Could not read {items} - please check the photo or type it below.",
       "view": "View registration photo",
-      "filledFromScan": "Filled in from the registration"
+      "filledFromScan": "Filled in from the registration",
+      "remove": "Remove registration photo"
     },
     "catalog": {
       "variant": "Variant",
@@ -627,7 +630,7 @@
       "useRent": "Use {price}",
       "modelVariant": "Model",
       "modelVariantPlaceholder": "Search model or variant",
-      "modelVariantHelp": "Pick the exact variant to fill in the specs. If your car is not listed, choose \"Enter manually\" at the end of the list.",
+      "modelVariantHelp": "Pick a model to fill in the specs",
       "manualEntry": "Enter manually - car not in the list",
       "backToList": "Pick from the model list",
       "yearOutsideVariant": "Year {year} is outside the {years} production years of this variant - check the variant or the year.",
@@ -642,7 +645,12 @@
       "infoTitle": "Vehicle details",
       "infoDescription": "Provide the basic information and specs of the vehicle.",
       "featuresTitle": "Features & description",
-      "featuresDescription": "Pick features and describe the vehicle in detail."
+      "featuresDescription": "Pick features and describe the vehicle in detail.",
+      "groups": {
+        "model": "General information",
+        "registration": "Vehicle registration",
+        "location": "Pickup location"
+      }
     },
     "createAside": {
       "previewTitle": "Marketplace preview",
@@ -692,6 +700,16 @@
       "fuel": "Fuel",
       "transmission": "Transmission",
       "source": "Vehicle source"
+    },
+    "pickupAddress": {
+      "label": "Pickup address",
+      "tipLabel": "About the pickup address",
+      "tip": "Renters pick the car up here - your owner address. The marketplace only shows the ward and province until a booking is confirmed.",
+      "loading": "Loading address...",
+      "missing": "No address yet - add it in your owner profile",
+      "edit": "Edit",
+      "sharedTitle": "This address is used by {count, plural, one {# vehicle} other {# vehicles}}",
+      "sharedBody": "Editing it here changes the public location of all of them."
     }
   },
   "publish": {

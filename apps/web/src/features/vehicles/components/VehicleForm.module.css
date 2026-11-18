@@ -188,11 +188,6 @@
   font-size: var(--xp-font-size-body);
 }
 
-/* Giá sau khuyến mãi — chỉ hiển thị, không phải giá trị được lưu. */
-.pricePreview {
-  margin-bottom: var(--xp-space-md);
-}
-
 /*
  * Hai toggle chính sách thuê (giao tận nơi / miễn thế chấp) dưới hàng giá.
  *
@@ -383,10 +378,30 @@
  * làm phẳng các Row (`display: contents`) để mọi ô rơi vào cùng một lưới. Ô full-width (chỉ
  * `xs-24`) và phần tử không phải ô (khối kiểu dáng, đường kẻ, cảnh báo) trải hết hàng.
  */
+/*
+ * 18/11/2026: lưới + thứ tự áp ở MỌI khổ (1 cột điện thoại · 2 cột tablet · 3 cột ≥1200) để tiêu đề
+ * nhóm luôn đứng đúng chỗ - trước đây chỉ ≥1200 mới xếp, khổ nhỏ theo thứ tự DOM.
+ */
+.threeColumnFields {
+  --create-cols: 1;
+}
+
+@media (min-width: 768px) {
+  .threeColumnFields {
+    --create-cols: 2;
+  }
+}
+
 @media (min-width: 1200px) {
   .threeColumnFields {
+    --create-cols: 3;
+  }
+}
+
+@media all {
+  .threeColumnFields {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--create-cols), minmax(0, 1fr));
     column-gap: var(--xp-space-lg);
     align-items: start;
   }
@@ -445,63 +460,90 @@
  * bản / Năm · Màu · Số chỗ · Giá trị xe / Nhiên liệu · Hộp số… / Kiểu dáng / Nguồn xe. Ô không
  * có id theo tên (Năm, Số chỗ, Giá trị xe, ô năng lượng) giữ thứ tự DOM trong nhóm 50.
  */
-@media (min-width: 1200px) {
+@media all {
   .threeColumnFields :global(.ant-col) {
     order: 50;
   }
 
-  .threeColumnFields :global(.ant-col):has([id^='vehicleType-']),
-  .threeColumnFields :global(.ant-col):has(:global(.ant-radio-group)) {
-    order: 1;
+  /*
+   * Ba nhóm (18/11/2026): thông tin chung (biển số, mẫu xe, năm, thông số Dữ liệu xe tự điền - nhóm
+   * năng lượng giữ mức 50 - rồi màu sắc, giá trị xe) · giấy đăng ký / cà vẹt (tên chủ xe, số khung,
+   * số máy) · nơi nhận xe. Tiêu đề trải hết hàng, đứng trước ô của nhóm mình.
+   */
+  .threeColumnFields .fieldGroupTitle[data-group='model'] {
+    order: 0;
   }
 
-  .threeColumnFields :global(.ant-col):has([id^='name-']) {
+  .threeColumnFields .fieldGroupTitle[data-group='registration'] {
+    order: 55;
+  }
+
+  .threeColumnFields .fieldGroupTitle[data-group='vehicle'] {
+    order: 65;
+  }
+
+  /*
+   * Sắp lại 18/11/2026 theo LUỒNG PHỤ THUỘC của mẫu xe (Dữ liệu xe nạp từ Excel): chọn Loại → Hãng →
+   * Mẫu → Phiên bản, rồi các ô mẫu xe TỰ ĐIỀN (năm, số chỗ, kiểu dáng, nhiên liệu, hộp số, tiêu
+   * thụ, dung tích - nhóm năng lượng giữ thứ tự DOM ở mức 50), sau đó ô riêng của chiếc xe (biển số,
+   * màu, chi nhánh, giá trị xe) và cuối cùng bộ cà vẹt (tên chủ xe, số khung, số máy). Mọi ô xếp theo `data-field` - id của ô chọn
+   * là ngẫu nhiên (`useId`) và đổi khi ô bị khoá, không bám được.
+   */
+  .threeColumnFields :global(.ant-col[data-field='vehicleType']) {
     order: 2;
   }
 
-  .threeColumnFields :global(.ant-col):has([id^='plateNumber-']) {
-    order: 3;
-  }
-
-  .threeColumnFields :global(.ant-col):has([id^='branchId-']) {
+  .threeColumnFields :global(.ant-col[data-field='brand']) {
     order: 4;
   }
 
-  .threeColumnFields :global(.ant-col):has(:global(#vehicle-registration-holderName)) {
-    order: 7;
-  }
-
-  .threeColumnFields :global(.ant-col):has(:global(#vehicle-registration-chassisNumber)) {
-    order: 8;
-  }
-
-  .threeColumnFields :global(.ant-col):has(:global(#vehicle-registration-engineNumber)) {
-    order: 9;
-  }
-
-  .threeColumnFields :global(.ant-col):has([id^='brand-']) {
+  .threeColumnFields :global(.ant-col[data-field='model']) {
     order: 5;
   }
 
-  .threeColumnFields :global(.ant-col):has([id^='vehicleCatalogModelId-']) {
+  .threeColumnFields :global(.ant-col[data-field='variant']) {
+    order: 7;
+  }
+
+  .threeColumnFields :global(.ant-col[data-field='manufactureYear']) {
     order: 6;
   }
 
-  .threeColumnFields :global(.ant-col):has([id^='vehicleCatalogVariantId-']) {
-    order: 12;
+  .threeColumnFields :global(.ant-col[data-field='seatCount']),
+  .threeColumnFields :global(.ant-col[data-field='motorbikeCategory']) {
+    order: 8;
   }
 
-  /* Luồng chủ xe không có Chi nhánh: hàng 2 là bộ cà vẹt, Hãng · Dòng xuống hàng 3. */
-  .threeColumnFields:not(:has([id^='branchId-'])) :global(.ant-col):has([id^='brand-']) {
-    order: 10;
+  .threeColumnFields :global(.ant-col[data-field='bodyType']) {
+    order: 9;
   }
 
-  .threeColumnFields:not(:has([id^='branchId-'])) :global(.ant-col):has([id^='vehicleCatalogModelId-']) {
-    order: 11;
+  .threeColumnFields :global(.ant-col[data-field='plateNumber']) {
+    order: 1;
   }
 
-  .threeColumnFields :global(.ant-col):has([id^='code-']) {
-    order: 11;
+  .threeColumnFields :global(.ant-col[data-field='color']) {
+    order: 3;
+  }
+
+  .threeColumnFields :global(.ant-col[data-field='branchId']) {
+    order: 68;
+  }
+
+  .threeColumnFields :global(.ant-col[data-field='insuredValue']) {
+    order: 54;
+  }
+
+  .threeColumnFields :global(.ant-col):has(:global(#vehicle-registration-holderName)) {
+    order: 58;
+  }
+
+  .threeColumnFields :global(.ant-col):has(:global(#vehicle-registration-chassisNumber)) {
+    order: 59;
+  }
+
+  .threeColumnFields :global(.ant-col):has(:global(#vehicle-registration-engineNumber)) {
+    order: 60;
   }
 
   .threeColumnFields :global(.ant-col):has(> .galleryBlock) {
@@ -640,6 +682,45 @@
   padding-inline: 14px !important;
 }
 
+/*
+ * Mọi dạng ô trong lưới CAO 40 như nhau (18/11/2026): chọn mẫu xe đổi ô Số chỗ giữa ô số / nút chọn
+ * "6 chỗ - 7 chỗ" / ô khoá - lệch vài px là cả hàng nhảy. Nút chọn giãn đều hết bề ngang ô.
+ */
+.threeColumnFields :global(.ant-radio-group-solid),
+.threeColumnFields :global(.ant-radio-group:has(.ant-radio-button-wrapper)) {
+  display: flex;
+  width: 100%;
+}
+
+.threeColumnFields :global(.ant-radio-button-wrapper) {
+  flex: 1;
+  height: 40px;
+  line-height: 38px;
+  text-align: center;
+}
+
+.threeColumnFields :global(.ant-radio-button-wrapper:first-child) {
+  border-start-start-radius: 12px;
+  border-end-start-radius: 12px;
+}
+
+.threeColumnFields :global(.ant-radio-button-wrapper:last-child) {
+  border-start-end-radius: 12px;
+  border-end-end-radius: 12px;
+}
+
+/*
+ * Giá trị xe: ô cuối nhóm "Thông tin chung" - dòng "Giá trị tham khảo…" hiện đủ, tối đa 2 dòng.
+ * Không giữ sẵn chỗ (18/11/2026).
+ */
+.threeColumnFields :global(.ant-col[data-field='insuredValue']) [class*='inlineHint'] {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 18px;
+}
+
 /* Đường kẻ đứt + tiêu đề nhóm 16/24 semibold. */
 .threeColumnFields .galleryBlock .fieldLabel,
 .threeColumnFields .sourceLegend {
@@ -744,3 +825,22 @@
   :global(.ant-form-item-explain > div:not(.ant-form-item-explain-error)) {
   display: block;
 }
+
+/* Tiêu đề nhóm trong thẻ "Thông tin xe" - 15/22 semibold, kẻ đứt phía trên (trừ nhóm đầu). */
+.fieldGroupTitle {
+  margin: var(--xp-space-sm) 0 var(--xp-space-md);
+  padding-top: var(--xp-space-md);
+  border-top: 1px dashed var(--xp-color-border);
+  color: var(--xp-color-text);
+  font-size: 15px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 22px;
+}
+
+.fieldGroupTitle[data-group='model'] {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+

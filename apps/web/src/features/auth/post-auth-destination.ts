@@ -141,13 +141,15 @@ export function partnerSignupContinueHref(
  * DANH SÁCH TRẮNG chứ không phải đen: một trang tuyến gói thêm tháng sau mặc định bị chặn với tuyến
  * hoa hồng, thay vì mặc định mở cho tới khi ai đó nhớ thêm nó vào danh sách đen.
  *
- * `exact` = chỉ khớp đúng đường dẫn (gốc site là tiền tố của mọi thứ; `/vehicles/new` là form đầy
- * đủ của tuyến gói, còn chủ xe hoa hồng đăng xe qua wizard `/vehicles/register`).
+ * `exact` = chỉ khớp đúng đường dẫn (gốc site là tiền tố của mọi thứ). `/vehicles/register` (wizard
+ * nhanh) chỉ còn cho người CHƯA có gian hàng - bước hồ sơ chủ xe mở gian hàng ở đó.
  */
 const COMMISSION_PAGES: ReadonlyArray<{ readonly href: string; readonly exact?: true }> = [
   { href: ROUTES.MANAGE.ROOT, exact: true },
   { href: ROUTES.MANAGE.REGISTRATION },
   { href: ROUTES.MANAGE.VEHICLES, exact: true },
+  // Thêm xe: MỘT wizard cho hai tuyến từ 18/11/2026 (ẩn phần chỉ của gian hàng theo tuyến).
+  { href: ROUTES.MANAGE.VEHICLE_NEW, exact: true },
   { href: ROUTES.MANAGE.VEHICLE_REGISTER },
   { href: ROUTES.MANAGE.CALENDAR },
   // "Đơn thuê xe" (+ chi tiết `/bookings/[id]`, "Đơn đã kết thúc") là màn của CẢ hai tuyến, cho chủ
@@ -184,7 +186,7 @@ export function isCommissionPage(path: string): boolean {
   const pathname = pathOnly(path);
   if (COMMISSION_PAGES.some((page) => matchesPage(pathname, page))) return true;
   // `/vehicles/<id>` (chi tiết) và `/vehicles/<id>/edit` (màn sửa) — MỘT URL hai tuyến từ 03/11/2026;
-  // `/vehicles/<id>/manage/...` (Owner Lite cũ) còn để chuyển hướng. KHÔNG `/vehicles/new`.
+  // `/vehicles/<id>/manage/...` (Owner Lite cũ) còn để chuyển hướng. `/vehicles/new` khớp ở danh sách trên.
   const vehicles = `${ROUTES.MANAGE.VEHICLES}/`;
   if (!pathname.startsWith(vehicles)) return false;
   const rest = pathname.slice(vehicles.length);

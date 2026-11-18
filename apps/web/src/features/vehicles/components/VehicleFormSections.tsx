@@ -38,7 +38,9 @@ import { TextField } from '@/components/form/TextField';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useVehicleOptions } from '../hooks/use-vehicle-options';
 import { useCatalogSpecLock } from '../hooks/use-catalog-spec-lock';
+import { useSpecFieldLock } from '../hooks/use-spec-field-lock';
 import { SpecLockedField } from './SpecLockedField';
+import type { FieldLock } from '@/components/form/field-lock';
 import { RegistrationTextField } from './RegistrationTextField';
 import { PublishRequiredLabel } from './VehicleCompleteness';
 /*
@@ -270,6 +272,8 @@ export interface SectionProps {
    * là hai đường ghi cho cùng một trường. Wizard TẠO xe vẫn cần ô này: chưa có xe nào để bật.
    */
   hideServiceTypes?: boolean;
+  /** Ẩn ô chi nhánh (chủ xe tuyến hoa hồng - một chi nhánh mặc định, form tự điền). */
+  hideBranch?: boolean;
 }
 
 export function BasicSection({
@@ -281,6 +285,7 @@ export function BasicSection({
   branchLoading = false,
   branchDisabled = false,
   hideServiceTypes = false,
+  hideBranch = false,
 }: SectionProps) {
   const t = useTranslations('Vehicles.form.basic');
   const options = useVehicleOptions();
@@ -317,7 +322,8 @@ export function BasicSection({
           />
         </Col>
       )}
-      <Col xs={24} sm={12}>
+      {hideBranch ? null : (
+      <Col xs={24} sm={12} data-field="branchId">
         {/*
           Chi nhánh = VỊ TRÍ CÔNG KHAI của xe. Ngay cả khi gian hàng chỉ có một chi nhánh, ô này
           vẫn hiện (đã chọn sẵn) để người dùng biết xe sẽ hiển thị ở tỉnh nào — một trường bị ẩn
@@ -335,7 +341,8 @@ export function BasicSection({
           help={t('branchHelp')}
         />
       </Col>
-      <Col xs={24} sm={12}>
+      )}
+      <Col xs={24} sm={12} data-field="vehicleType">
         {/*
           Figma `193:1636` vẽ Loại xe là dropdown chứ không phải radio.
           Hôm nay chỉ có hai lựa chọn nên radio cũng dùng được, nhưng danh sách loại xe là thứ
@@ -575,6 +582,7 @@ export function SourceTypeSection({ control }: Pick<SectionProps, 'control'>) {
  */
 function useSpecLockField(control: Control<VehicleFormValues>) {
   const tCatalog = useTranslations('Vehicles.form.catalog');
+  const toFieldLock = useSpecFieldLock();
   const vehicleType = useWatch({ control, name: 'vehicleType' }) ?? VEHICLE_TYPE.CAR;
   const locks = {
     lengthMm: useCatalogSpecLock(control, vehicleType, 'lengthMm'),
@@ -583,24 +591,16 @@ function useSpecLockField(control: Control<VehicleFormValues>) {
     curbWeightKg: useCatalogSpecLock(control, vehicleType, 'curbWeightKg'),
     horsepowerHp: useCatalogSpecLock(control, vehicleType, 'horsepowerHp'),
   };
-  const [lengthMm, widthMm, heightMm, curbWeightKg, horsepowerHp] = useWatch({
-    control,
-    name: ['lengthMm', 'widthMm', 'heightMm', 'curbWeightKg', 'horsepowerHp'],
-  });
-  const values = { lengthMm, widthMm, heightMm, curbWeightKg, horsepowerHp };
-  /** Ô đang khoá ⇒ ô chỉ đọc + bút trong ô; `null` ⇒ nơi gọi vẽ ô số thật. */
-  return function lockedField(field: keyof typeof locks, label: string) {
+  /**
+   * Prop khoá + ghi chú cho ô số thật của trường: đang khoá thì CHÍNH ô đó chỉ đọc + bút trong ô,
+   * không thay bằng một ô khác (đổi mẫu xe không dựng lại ô).
+   */
+  return function lockProps(field: keyof typeof locks, label: string) {
     const lock = locks[field];
-    const value = values[field];
-    return lock.locked && value != null ? (
-      <SpecLockedField
-        name={field}
-        label={label}
-        value={String(value)}
-        lock={lock}
-        help={tCatalog('specLocked')}
-      />
-    ) : null;
+    return {
+      lock: toFieldLock(lock, label),
+      help: lock.locked ? tCatalog('specLocked') : undefined,
+    };
   };
 }
 
@@ -611,48 +611,44 @@ export function DimensionsSection({ control }: Pick<SectionProps, 'control'>) {
   return (
     <Row gutter={16}>
       <Col xs={24} sm={12}>
-        {lockField('lengthMm', t('lengthMm')) ?? (
-          <NumberField
-            control={control}
-            name="lengthMm"
-            label={t('lengthMm')}
-            placeholder={t('lengthPlaceholder')}
-            min={1}
-          />
-        )}
+        <NumberField
+          control={control}
+          name="lengthMm"
+          label={t('lengthMm')}
+          placeholder={t('lengthPlaceholder')}
+          min={1}
+          {...lockField('lengthMm', t('lengthMm'))}
+        />
       </Col>
       <Col xs={24} sm={12}>
-        {lockField('widthMm', t('widthMm')) ?? (
-          <NumberField
-            control={control}
-            name="widthMm"
-            label={t('widthMm')}
-            placeholder={t('widthPlaceholder')}
-            min={1}
-          />
-        )}
+        <NumberField
+          control={control}
+          name="widthMm"
+          label={t('widthMm')}
+          placeholder={t('widthPlaceholder')}
+          min={1}
+          {...lockField('widthMm', t('widthMm'))}
+        />
       </Col>
       <Col xs={24} sm={12}>
-        {lockField('heightMm', t('heightMm')) ?? (
-          <NumberField
-            control={control}
-            name="heightMm"
-            label={t('heightMm')}
-            placeholder={t('heightPlaceholder')}
-            min={1}
-          />
-        )}
+        <NumberField
+          control={control}
+          name="heightMm"
+          label={t('heightMm')}
+          placeholder={t('heightPlaceholder')}
+          min={1}
+          {...lockField('heightMm', t('heightMm'))}
+        />
       </Col>
       <Col xs={24} sm={12}>
-        {lockField('curbWeightKg', t('curbWeightKg')) ?? (
-          <NumberField
-            control={control}
-            name="curbWeightKg"
-            label={t('curbWeightKg')}
-            placeholder={t('curbWeightPlaceholder')}
-            min={1}
-          />
-        )}
+        <NumberField
+          control={control}
+          name="curbWeightKg"
+          label={t('curbWeightKg')}
+          placeholder={t('curbWeightPlaceholder')}
+          min={1}
+          {...lockField('curbWeightKg', t('curbWeightKg'))}
+        />
       </Col>
     </Row>
   );
@@ -669,15 +665,14 @@ export function EngineOutputSection({ control }: Pick<SectionProps, 'control'>) 
   return (
     <Row gutter={16}>
       <Col xs={24} sm={12}>
-        {lockField('horsepowerHp', t('horsepowerHp')) ?? (
-          <NumberField
-            control={control}
-            name="horsepowerHp"
-            label={t('horsepowerHp')}
-            placeholder={t('horsepowerPlaceholder')}
-            min={1}
-          />
-        )}
+        <NumberField
+          control={control}
+          name="horsepowerHp"
+          label={t('horsepowerHp')}
+          placeholder={t('horsepowerPlaceholder')}
+          min={1}
+          {...lockField('horsepowerHp', t('horsepowerHp'))}
+        />
       </Col>
     </Row>
   );
@@ -759,7 +754,7 @@ export function VehicleIdentitySection({
 
   return (
     <Row gutter={16}>
-      <Col xs={24} sm={12}>
+      <Col xs={24} sm={12} data-field="plateNumber">
         {/* Đọc được trên cà vẹt ⇒ điền + khoá, bút trong ô để sửa (ADR 0102). */}
         <RegistrationTextField
           control={control}
@@ -789,7 +784,7 @@ export function VehicleIdentitySection({
           required={creating}
         />
       </Col>
-      <Col xs={24} sm={12}>
+      <Col xs={24} sm={12} data-field="manufactureYear">
         <NumberField
           control={control}
           name="manufactureYear"
@@ -802,7 +797,7 @@ export function VehicleIdentitySection({
           disabled={Boolean(lockedNotice)}
         />
       </Col>
-      <Col xs={24} sm={12}>
+      <Col xs={24} sm={12} data-field="color">
         <RegistrationTextField
           control={control}
           name="color"
@@ -820,14 +815,20 @@ export function VehicleIdentitySection({
         <VehicleClassificationFields
           control={control}
           vehicleType={vehicleType}
-          bodyTypePicker={bodyTypeElsewhere ? undefined : <BodyTypePicker control={control} />}
+          bodyTypePicker={
+            bodyTypeElsewhere ? undefined : (
+              // Thêm xe: một ô chọn cỡ như các ô khác của lưới 3 cột (18/11/2026); màn sửa giữ thẻ ảnh.
+              <BodyTypePicker control={control} variant={creating ? 'select' : 'cards'} />
+            )
+          }
+          bodyTypeCompact={creating}
           disabled={Boolean(lockedNotice)}
           setValue={setValue}
           required={creating}
           trailing={
             // Giá trị xe (ADR 0088) — cạnh số chỗ; mẫu số phí bảo hiểm. Xe máy chưa có bảo hiểm.
             isCar ? (
-              <Col xs={24} sm={12}>
+              <Col xs={24} sm={12} data-field="insuredValue" data-dep="model">
                 <NumberField
                   control={control}
                   name="insuredValue"
@@ -842,7 +843,8 @@ export function VehicleIdentitySection({
                   money
                   min={0}
                 />
-                <InsuredValueSuggestion control={control} setValue={setValue} />
+                {/* Thêm xe đã tự điền giá trị xe ⇒ chỉ dòng đối chiếu, không nút "Dùng" (18/11/2026). */}
+                <InsuredValueSuggestion control={control} setValue={setValue} applyable={!creating} />
               </Col>
             ) : null
           }
@@ -859,22 +861,29 @@ export function VehicleIdentitySection({
 function InsuredValueSuggestion({
   control,
   setValue,
+  applyable = true,
 }: {
   control: Control<VehicleFormValues>;
   setValue?: UseFormSetValue<VehicleFormValues>;
+  applyable?: boolean;
 }) {
   const suggestion = useVehicleCatalogSuggestion({
     modelId: useWatch({ control, name: 'vehicleCatalogModelId' }),
     variantId: useWatch({ control, name: 'vehicleCatalogVariantId' }),
     year: useWatch({ control, name: 'manufactureYear' }),
   });
+  const insuredValue = useWatch({ control, name: 'insuredValue' });
   if (!suggestion?.value || !setValue) return null;
   return (
     <CatalogValueHint
       value={suggestion.value}
-      onApply={(amount) =>
-        setValue('insuredValue', amount, { shouldDirty: true, shouldValidate: true })
-      }
+      currentValue={insuredValue == null ? null : Number(insuredValue)}
+      {...(applyable
+        ? {
+            onApply: (amount: number) =>
+              setValue('insuredValue', amount, { shouldDirty: true, shouldValidate: true }),
+          }
+        : {})}
     />
   );
 }
@@ -898,7 +907,8 @@ export function VehicleEnergySection({
         (`VehicleEnergyFields`): xe xăng hỏi lít/100km, xe điện hỏi km mỗi lần sạc, và ma trận
         quyết định là `vehicleEnergySpecPolicy` ở `@xeprime/types` — cùng hàm backend dùng.
       */}
-      <Col xs={24}>
+      {/* Ô không dùng của nguồn năng lượng đang chọn thì ẨN hẳn (người dùng chốt 18/11/2026). */}
+      <Col xs={24} data-dep="model">
         <VehicleEnergyFields
           control={control}
           vehicleType={vehicleType}
@@ -906,7 +916,7 @@ export function VehicleEnergySection({
           lockedNotice={lockedNotice}
           disabled={Boolean(lockedNotice)}
           setValue={setValue}
-          showInapplicable={creating}
+          fuelRequired={creating}
         />
       </Col>
     </Row>
@@ -940,6 +950,7 @@ export function FuelTypeSelect({
   disabled,
   allowedValues,
   required = false,
+  lock,
 }: Pick<SectionProps, 'control'> & {
   vehicleType: string;
   /** Nhãn thay thế — kèm bút mở khoá khi ô đang khoá theo dữ liệu mẫu xe (ADR 0102). */
@@ -954,6 +965,8 @@ export function FuelTypeSelect({
    * sách dù không thuộc mẫu — ô chọn không được tự xoá dữ liệu cũ chỉ vì mở form.
    */
   allowedValues?: readonly string[];
+  /** Khoá theo dữ liệu mẫu xe — chính ô chọn này chuyển chỉ đọc (ADR 0102). */
+  lock?: FieldLock;
 }) {
   const t = useTranslations('Vehicles.form.specs');
   const current = useWatch({ control, name: 'fuelType' });
@@ -977,6 +990,7 @@ export function FuelTypeSelect({
       disabled={disabled}
       required={required}
       allowClear
+      lock={lock}
     />
   );
 }
@@ -1033,7 +1047,10 @@ export function BodyTypePicker({
   control,
   disabled = false,
   showLabel = true,
+  variant = 'cards',
 }: Pick<SectionProps, 'control'> & {
+  /** `select`: ô chọn thường (wizard thêm xe); `cards`: lưới thẻ ảnh (màn sửa xe, bộ lọc). */
+  variant?: 'cards' | 'select';
   disabled?: boolean;
   /** Tắt khi thẻ chứa nó đã mang tiêu đề "Kiểu dáng xe" — không nói hai lần. */
   showLabel?: boolean;
@@ -1045,8 +1062,33 @@ export function BodyTypePicker({
   // Kiểu dáng theo xe chuẩn đang chọn — khoá + bút trong ô như mọi ô tự điền (ADR 0102).
   const lock = useCatalogSpecLock(control, vehicleType, 'bodyType');
   const bodyType = useWatch({ control, name: 'bodyType' });
-  const lockedLabel = items.find((item) => item.key === bodyType)?.label;
+  const toFieldLock = useSpecFieldLock();
+  const bodyTypeOptions = useMemo(
+    () => items.map((item) => ({ value: item.key, label: item.label })),
+    [items],
+  );
 
+  if (variant === 'select') {
+    // Khoá là trạng thái của CHÍNH ô chọn này (chỉ đọc + bút trong ô) — đổi mẫu xe không dựng lại ô.
+    return (
+      <SelectField
+        control={control}
+        name="bodyType"
+        label={t('bodyType')}
+        options={bodyTypeOptions}
+        placeholder={t('bodyTypeHint')}
+        help={lock.locked && !disabled ? tCatalog('specLocked') : undefined}
+        loading={isLoading}
+        disabled={disabled}
+        allowClear
+        showSearch
+        lock={toFieldLock(lock, t('bodyType'), !disabled)}
+      />
+    );
+  }
+
+  // Lưới thẻ ảnh (màn sửa xe) không có trạng thái chỉ đọc - đang khoá thì thay bằng ô khoá.
+  const lockedLabel = items.find((item) => item.key === bodyType)?.label;
   if (lock.locked && !disabled && lockedLabel) {
     return (
       <SpecLockedField
@@ -1108,11 +1150,24 @@ function useCatalogPriceHint({ control, setValue }: Pick<SectionProps, 'control'
     variantId: useWatch({ control, name: 'vehicleCatalogVariantId' }),
     year: useWatch({ control, name: 'manufactureYear' }),
   });
+  const [weekdayPrice, weekendPrice, hourlyPrice, monthlyPrice, withDriverDailyPrice] = useWatch({
+    control,
+    name: ['weekdayPrice', 'weekendPrice', 'hourlyPrice', 'monthlyPrice', 'withDriverDailyPrice'],
+  });
+  const current: Record<CatalogPriceField, number | null | undefined> = {
+    weekdayPrice,
+    weekendPrice,
+    hourlyPrice,
+    monthlyPrice,
+    withDriverDailyPrice,
+  };
   // eslint-disable-next-line react/display-name -- hàm dựng gợi ý theo ô giá, không phải component
-  return (field: CatalogPriceField) => (
+  return (field: CatalogPriceField) =>
+    !suggestion?.rent.some((rent) => rent.field === field && (rent.reference || rent.market)) ? null : (
     <CatalogRentHint
       suggestion={suggestion}
       field={field}
+      currentValue={current[field] ?? null}
       onApply={
         setValue
           ? (price: number) => setValue(field, price, { shouldDirty: true, shouldValidate: true })
@@ -1147,7 +1202,7 @@ export function SelfDrivePriceFields({
             money
             help={t('weekdayHelp')}
           />
-          {hint('weekdayPrice')}
+        {hint('weekdayPrice')}
         </Col>
         <Col xs={24} sm={12} xl={6}>
           <NumberField
@@ -1159,7 +1214,7 @@ export function SelfDrivePriceFields({
             money
             help={t('weekendHelp')}
           />
-          {hint('weekendPrice')}
+        {hint('weekendPrice')}
         </Col>
         <Col xs={24} sm={12} xl={6}>
           <NumberField
@@ -1169,8 +1224,9 @@ export function SelfDrivePriceFields({
             placeholder={t('hourlyPlaceholder')}
             min={0}
             money
+            help={t('hourlyHelp')}
           />
-          {hint('hourlyPrice')}
+        {hint('hourlyPrice')}
         </Col>
         <Col xs={24} sm={12} xl={6}>
           <NumberField
@@ -1208,7 +1264,7 @@ export function WithDriverPriceFields({
           money
           help={t('withDriverDailyHelp')}
         />
-        {hint('withDriverDailyPrice')}
+      {hint('withDriverDailyPrice')}
       </Col>
       <Col xs={24} md={8}>
         <NumberField
@@ -1249,20 +1305,29 @@ export function LongTermPriceFields({
   const weekdayPriceValue = useWatch({ control, name: 'weekdayPrice' });
   const monthlyPriceValue = useWatch({ control, name: 'monthlyPrice' });
   return (
-    <>
-      <NumberField
-        control={control}
-        name="monthlyPrice"
-        label={t('monthly')}
-        required
-        placeholder={t('monthlyPlaceholder')}
-        min={0}
-        money
-        help={t('monthlyHelp')}
-      />
+    <Row gutter={16}>
+      {/* Cùng cỡ cột với các ô giá của thẻ tự lái / có tài (18/11/2026) - không kéo hết hàng. */}
+      <Col xs={24} sm={12} xl={8}>
+        <NumberField
+          control={control}
+          name="monthlyPrice"
+          label={t('monthly')}
+          required
+          placeholder={t('monthlyPlaceholder')}
+          min={0}
+          money
+          help={t('monthlyHelp')}
+        />
       {hint('monthlyPrice')}
-      <LongTermPriceHint weekdayPrice={weekdayPriceValue} monthlyPrice={monthlyPriceValue} />
-    </>
+      </Col>
+      {/*
+        Khung gợi ý giá gói ĐẦY ĐỦ (giá cơ sở, khoảng gợi ý, các gói 1-12 tháng khách sẽ thấy) - rộng
+        hết thẻ dưới ô giá, như trước (người dùng chốt 18/11/2026 giữ khung này).
+      */}
+      <Col xs={24}>
+        <LongTermPriceHint weekdayPrice={weekdayPriceValue} monthlyPrice={monthlyPriceValue} />
+      </Col>
+    </Row>
   );
 }
 

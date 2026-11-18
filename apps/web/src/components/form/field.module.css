@@ -112,3 +112,10 @@
 .withCount.withCount :global(.ant-form-item-explain) {
   padding-inline-end: 72px;
 }
+
+/* Nhãn kèm dấu ⓘ của `HelpAsTipProvider` - ghi chú của ô dời lên đây thay vì in dưới ô. */
+.labelWithTip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs, 4px);
+}

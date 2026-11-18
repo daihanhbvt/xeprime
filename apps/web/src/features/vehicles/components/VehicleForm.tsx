@@ -2,7 +2,7 @@
 
 import { ArrowLeftOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { Alert, App, Button, Form } from 'antd';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -19,9 +19,9 @@ import {
 } from '@xeprime/types';
 import { vehicleCreateFormSchema, type VehicleFormValues } from '@xeprime/validators';
 import { trailingRequiredMark } from '@/components/form/required-mark';
+import { HelpAsTipProvider } from '@/components/form/help-as-tip';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { decorativeIcon } from '@/lib/decorative-icon';
-import { discountedPriceVnd } from '../pricing';
 import { useCreateWizardSteps, type CreateWizardStepKey } from './VehicleFormSections';
 import { CreateVehicleFeaturesStep, CreateVehicleInfoStep } from './CreateVehicleSteps';
 import {
@@ -40,12 +40,18 @@ import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import styles from './VehicleForm.module.css';
 import { usePublicationLabels } from '../hooks/use-publication-labels';
 import { useComposedVehicleName } from '../hooks/use-composed-vehicle-name';
+import { useAutofillCatalogRent } from '../hooks/use-autofill-catalog-rent';
 import { useApplyRegistrationReading } from '../hooks/use-registration-autofill';
 import { missingPublishRequirementsForForm, publishGapFields } from '../publication';
-import { useAppFormat } from '@/i18n/use-app-format';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { EMPTY_REGISTRATION, checkRegistration, type RegistrationCaptureState } from '../registration-capture';
+import {
+  clearVehicleCreateDraft,
+  readVehicleCreateDraft,
+  writeVehicleCreateDraft,
+  type VehicleCreateDraft,
+} from '../use-create-draft';
 import type { CreateVehicleRegistrationInput } from '../types';
 
 /** Mặc định khi tạo mới: chọn sẵn giá trị hợp lệ để select bắt buộc không rỗng. */
@@ -119,6 +125,14 @@ interface VehicleFormProps {
    */
   onSubmit: (values: VehicleFormValues, options: VehicleSubmitOptions) => void | Promise<void>;
   onCancel: () => void;
+  /**
+   * Chủ xe tuyến HOA HỒNG (18/11/2026 - một wizard cho hai tuyến): ẩn chi nhánh (họ chỉ có chi nhánh
+   * mặc định, điền ngầm), nguồn xe (trục tài chính của gói) và khối chính sách gian hàng (họ đặt
+   * chính sách trên TỪNG xe ở màn sửa xe - ADR 0085 điều 3).
+   */
+  commission?: boolean;
+  /** Khoá nháp `sessionStorage` (`vehicleCreateDraftKey`); `null` = không giữ nháp (phiên hỗ trợ). */
+  draftKey?: string | null;
 }
 
 /** Điều kiện lên chợ thuộc BƯỚC nào của wizard — thiếu thì chặn đúng bước đó. */
@@ -143,24 +157,63 @@ const REQUIREMENT_STEP: Record<PublishRequirement, CreateWizardStepKey> = {
  * gọi API **một lần** khi lưu. Backend không có endpoint lưu từng phần, nên không chỗ nào ở đây
  * được nói "đã lưu nháp" giữa chừng.
  */
-export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: VehicleFormProps) {
+export function VehicleForm({
+  submitting,
+  errorMessage,
+  onSubmit,
+  onCancel,
+  commission = false,
+  draftKey = null,
+}: VehicleFormProps) {
+  /*
+   * Nháp đọc ĐỒNG BỘ một lần lúc mount (form chỉ dựng ở client, sau khi `/auth/me` về) để giá trị
+   * khôi phục là `defaultValues` - không có khung trống nháy rồi mới điền, và các effect điền sẵn
+   * (chi nhánh mặc định) thấy ngay ô đã có giá trị.
+   */
+  const [draft] = useState(() => (draftKey ? readVehicleCreateDraft(draftKey) : null));
   // Phiên hỗ trợ tạo xe NHÁP (ADR 0050 §13): gửi duyệt là thao tác riêng, có lý do + xác nhận hai lần.
   const draftOnly = useSupportHides(SUPPORT_HIDDEN_AREA.CREATE_AND_SUBMIT);
   // Không chọn hình thức nguồn xe (trục tài chính) — xe nháp giữ mặc định "Sở hữu".
-  const sourceHidden = useSupportHides(SUPPORT_HIDDEN_AREA.VEHICLE_SOURCE);
+  const sourceHidden = useSupportHides(SUPPORT_HIDDEN_AREA.VEHICLE_SOURCE) || commission;
   const t = useTranslations('Vehicles.form');
   const { formGaps } = usePublicationLabels();
   const tCommon = useTranslations('Common.actions');
   const tBranches = useTranslations('Branches');
-  const fmt = useAppFormat();
   const { notification } = App.useApp();
   const tShopGate = useTranslations('Shop.listingGate');
 
   const applyApiFieldErrors = useApiFieldErrors();
-  const resolver = useValidationResolver<VehicleFormValues>(
+  const baseResolver = useValidationResolver<VehicleFormValues>(
     vehicleCreateFormSchema,
     'Vehicles.form.validation',
   );
+  const steps = useCreateWizardSteps();
+  /*
+   * Bước người dùng ĐÃ bấm "Tiếp tục"/"Gửi duyệt" (18/11/2026). Form validate theo `onChange` để lỗi tự
+   * mất khi sửa, nhưng trước lần bấm đầu tiên của một bước thì không được mắng: tải tấm ảnh đầu tiên
+   * mà đã hiện "thiếu ảnh" là báo lỗi cho việc người dùng đang làm dở. Resolver lọc bỏ lỗi của các
+   * ô thuộc bước chưa bấm; lượt gửi cuối đánh dấu mọi bước nên không lỗi nào lọt.
+   */
+  const attemptedSteps = useRef(new Set<string>());
+  const resolver = useMemo<typeof baseResolver>(() => {
+    const stepOf = new Map<string, string>();
+    for (const candidate of steps) for (const field of candidate.fields) stepOf.set(field, candidate.key);
+    return async (values, context, options) => {
+      const result = await baseResolver(values, context, options);
+      const entries = Object.entries(result.errors ?? {});
+      if (entries.length === 0) return result;
+      const kept = entries.filter(([field]) => {
+        const key = stepOf.get(field);
+        return !key || attemptedSteps.current.has(key);
+      });
+      if (kept.length === entries.length) return result;
+      if (kept.length === 0) return { values, errors: {} };
+      return { values: {}, errors: Object.fromEntries(kept) } as typeof result;
+    };
+  }, [baseResolver, steps]);
+  const markAllStepsAttempted = () => {
+    for (const candidate of steps) attemptedSteps.current.add(candidate.key);
+  };
 
   const {
     control,
@@ -175,15 +228,14 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
     // Kiểm lại ô NGAY khi người dùng sửa (18/11/2026): wizard đi bước bằng `trigger` chứ không qua
     // `handleSubmit`, nên chế độ mặc định `onSubmit` giữ lỗi đỏ tới lần bấm lưu kế tiếp.
     mode: 'onChange',
-    defaultValues: EMPTY_DEFAULTS,
+    defaultValues: draft ? { ...EMPTY_DEFAULTS, ...draft.values } : EMPTY_DEFAULTS,
   });
 
-  const steps = useCreateWizardSteps();
   const lastStep = steps.length - 1;
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(() => Math.min(Math.max(draft?.step ?? 0, 0), lastStep));
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
-  const [autoAcceptEnabled, setAutoAcceptEnabled] = useState(false);
+  const [autoAcceptEnabled, setAutoAcceptEnabled] = useState(draft?.autoAcceptEnabled ?? false);
 
   /**
    * Chi nhánh: điền sẵn một giá trị để thao tác vẫn một bước như trước, nhưng vẫn là một trường
@@ -210,6 +262,12 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
     if (preferred) setValue('branchId', preferred.id, { shouldValidate: true });
   }, [branchId, branches.data, intendedBranchId, setValue]);
   const selectedBranchLabel = branchOptions.find((o) => o.value === branchId)?.label ?? null;
+  const selectedBranch = branches.data?.items.find((b) => b.id === branchId) ?? null;
+  /*
+   * Chủ xe tuyến hoa hồng MỘT chi nhánh: không có gì để chọn ⇒ thay ô chọn bằng "Địa chỉ nhận xe"
+   * (đọc + sửa). Có từ hai chi nhánh trở lên thì vẫn là ô chọn như gian hàng.
+   */
+  const branchHidden = commission && branchOptions.length <= 1;
   const shop = useMyShop(true);
   /** Hồ sơ gian hàng còn thiếu để gửi duyệt (tuyến gói) - `null` = không áp dụng. */
   const shopGaps = useMemo(() => shopListingGaps(shop.data), [shop.data]);
@@ -228,16 +286,34 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
   const vehicleType = useWatch({ control, name: 'vehicleType' });
   const fuelType = useWatch({ control, name: 'fuelType' });
   const isCar = vehicleType === VEHICLE_TYPE.CAR;
+  // Chọn mẫu xe ⇒ tự điền giá tham khảo vào ô giá còn trống (tự lái · có tài · dài hạn).
+  useAutofillCatalogRent(control, getValues, setValue);
 
   /*
    * Cà vẹt (ADR 0089 · 0099) — BẮT BUỘC khi thêm MỌI loại xe. Phiên hỗ trợ không có ô này: nhân sự
    * nền tảng không tải giấy tờ thay chủ xe (server cũng chặn).
    */
   const registrationRequired = !draftOnly;
-  const [registration, setRegistration] = useState<RegistrationCaptureState>(EMPTY_REGISTRATION);
+  const [registration, setRegistration] = useState<RegistrationCaptureState>(() => {
+    const saved = draft?.registration;
+    if (!saved) return EMPTY_REGISTRATION;
+    /*
+     * Có đủ ảnh (data URL) + mã lượt tải ⇒ khôi phục trọn: ảnh, kết quả đọc, ba ô. Nháp cũ thiếu ảnh
+     * ⇒ chỉ giữ ba ô (không để ô ảnh trống mà vẫn báo "Đã quét…").
+     */
+    if (saved.uploadId && saved.previewUrl?.startsWith('data:')) {
+      return { ...EMPTY_REGISTRATION, ...saved, phase: 'ready' };
+    }
+    return { ...EMPTY_REGISTRATION, fields: saved.fields, editing: true };
+  });
   const [registrationShowErrors, setRegistrationShowErrors] = useState(false);
   // Lượt đọc cà vẹt mới ⇒ điền biển số + màu sơn (ADR 0102).
-  useApplyRegistrationReading(registration.reading, setValue);
+  // Lượt đọc KHÔI PHỤC từ nháp không điền lại biển số/màu: form đã mang giá trị (có thể đã sửa tay).
+  const [restoredReading] = useState(registration.reading);
+  useApplyRegistrationReading(
+    registration.reading === restoredReading ? null : registration.reading,
+    setValue,
+  );
   const plateNumber = useWatch({ control, name: 'plateNumber' });
   const registrationCheck = checkRegistration(registration, plateNumber);
   const registrationBlocked = registrationRequired && !registrationCheck.ok;
@@ -257,23 +333,8 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
     }
   }, [fuelType, isCar, setValue, vehicleType]);
 
-  // Giá hiển thị trên sàn sau khi trừ khuyến mãi. Chỉ để xem — KHÔNG gửi lên API, backend tự
-  // tính lại khi dựng `public_listings` (ADR 0008).
-  const weekdayPrice = useWatch({ control, name: 'weekdayPrice' });
-  const discountPercent = useWatch({ control, name: 'discountPercent' });
-  const discounted = discountedPriceVnd(
-    weekdayPrice == null ? null : String(weekdayPrice),
-    discountPercent,
-  );
-  const pricePreview =
-    discounted != null ? (
-      <Alert
-        type="info"
-        showIcon
-        className={styles.pricePreview}
-        title={t('wizard.pricePreview', { price: fmt.money(discounted) })}
-      />
-    ) : null;
+  // "Giá hiển thị trên sàn" đã bỏ khỏi wizard (18/11/2026, người dùng chốt) - thẻ xem trước bên phải
+  // đã hiện giá sau giảm.
 
   /**
    * Điều kiện lên chợ còn thiếu (30/09/2026) — xe tạo qua wizard phải ĐỦ điều kiện lên chợ, CÙNG
@@ -347,6 +408,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
    * kiện lên chợ hoặc cà vẹt thì nhảy về bước chứa nó, không gọi API.
    */
   function passesPreSubmitGates(): boolean {
+    markAllStepsAttempted();
     const missing = publishGaps();
     setPublishMissing(missing);
     flagPublishGaps(missing);
@@ -448,6 +510,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
     if (submitting) return;
 
     if (step < lastStep) {
+      attemptedSteps.current.add(currentKey);
       // Chỉ validate trường của BƯỚC ĐANG MỞ — validate cả schema sẽ chặn người dùng bằng lỗi
       // của phần họ còn chưa nhìn thấy.
       const valid = await trigger([...steps[step]!.fields]);
@@ -505,6 +568,50 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
     };
   }, [watched, registrationRequired, registrationCheck.errors, shopGaps, draftOnly]);
 
+  /*
+   * Nháp chỉ ghi ở các MỐC ĐIỀU HƯỚNG trong luồng (18/11/2026): bấm Tiếp tục / Quay lại (đổi bước) và
+   * khi rời màn trong app (unmount - nút lùi, link). F5 / đóng tab thì XOÁ nháp: mở lại là form trống.
+   * Ảnh chụp mới nhất giữ ở ref (cập nhật mỗi render), không ghi `sessionStorage` theo từng phím.
+   */
+  const snapshotRef = useRef<VehicleCreateDraft | null>(null);
+  useEffect(() => {
+    snapshotRef.current = {
+      values: watched as Partial<VehicleFormValues>,
+      step,
+      autoAcceptEnabled,
+      // Đang đọc ảnh mới: `uploadId`/`reading` còn rỗng - ghi đúng thế.
+      registration: {
+        uploadId: registration.uploadId,
+        reading: registration.reading,
+        readerAvailable: registration.readerAvailable,
+        fields: registration.fields,
+        editing: registration.editing,
+        // Chỉ lưu ảnh đã đọc XONG (data URL); đang đọc thì chưa có gì để giữ.
+        previewUrl: registration.phase === 'ready' ? registration.previewUrl : null,
+      },
+    };
+  });
+
+  useEffect(() => {
+    if (!draftKey || !snapshotRef.current) return;
+    writeVehicleCreateDraft(draftKey, { ...snapshotRef.current, step });
+  }, [draftKey, step]);
+
+  useEffect(() => {
+    if (!draftKey) return;
+    let unloading = false;
+    const onUnload = () => {
+      unloading = true;
+      clearVehicleCreateDraft(draftKey);
+    };
+    window.addEventListener('beforeunload', onUnload);
+    return () => {
+      window.removeEventListener('beforeunload', onUnload);
+      // Rời màn trong app (không phải F5) ⇒ giữ đúng những gì đã nhập.
+      if (!unloading && snapshotRef.current) writeVehicleCreateDraft(draftKey, snapshotRef.current);
+    };
+  }, [draftKey]);
+
   function renderStep() {
     const props = { control, isCar, setValue };
     switch (currentKey) {
@@ -515,6 +622,12 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
             branchOptions={branchOptions}
             branchLoading={branches.isLoading}
             branchDisabled={branches.isError}
+            branchHidden={branchHidden}
+            pickupAddress={
+              branchHidden
+                ? { branch: selectedBranch, loading: branches.isLoading }
+                : null
+            }
             sourceHidden={sourceHidden}
             registration={
               registrationRequired
@@ -532,8 +645,9 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
           <CreateVehiclePricingStep
             control={control}
             isCar={isCar}
-            pricePreview={pricePreview}
+            pricePreview={null}
             setValue={setValue}
+            shopPolicy={!commission}
             autoAccept={
               draftOnly ? undefined : { value: autoAcceptEnabled, onChange: setAutoAcceptEnabled }
             }
@@ -586,7 +700,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
         <Button
           size="large"
           className={styles.footerStart}
-          onClick={() => (isDirty ? setConfirmCancel(true) : onCancel())}
+          onClick={() => (isDirty || draft ? setConfirmCancel(true) : onCancel())}
         >
           {t('wizard.cancel')}
         </Button>
@@ -609,6 +723,8 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
      * `<Form component={false}>` chỉ cấp NGỮ CẢNH bố cục cho `Form.Item`, không dựng thêm thẻ
      * `<form>` — form thật vẫn là thẻ dưới đây với `onSubmit` của React Hook Form (ADR 0004).
      */
+    // Ghi chú dưới các ô của wizard thành dấu ⓘ cạnh nhãn (18/11/2026) - lỗi vẫn in dưới ô.
+    <HelpAsTipProvider>
     <Form component={false} layout="vertical" colon={false} requiredMark={trailingRequiredMark}>
       <form onSubmit={handleFormSubmit} noValidate>
         <VehicleWizard
@@ -688,5 +804,6 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
         {t('wizard.cancelWizard.body')}
       </ResponsiveDialog>
     </Form>
+    </HelpAsTipProvider>
   );
 }

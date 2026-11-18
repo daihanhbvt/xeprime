@@ -4,14 +4,21 @@ import { App, Button } from 'antd';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PERMISSION, SERVICE_TYPE, SUPPORT_VEHICLE_CREATE_FIELDS } from '@xeprime/types';
 import { patchVehicleServiceSetting } from '@/features/vehicle-manage/api';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { PageContainer } from '@/components/layout/PageContainer';
-import { ROUTES } from '@/constants/routes';
+import { LoadingState } from '@/components/feedback/LoadingState';
+import {
+  ROUTES,
+  VEHICLE_REGISTRATION_SOURCE,
+  listYourVehicleRegisterPath,
+} from '@/constants/routes';
+import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/auth/post-auth-destination';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { useSupportSession } from '@/features/tenant-support/support-session';
 import { usePermissions } from '@/hooks/use-permissions';
 import { PlanQuotaGateAlert } from '@/features/subscription/components/PlanQuotaGateAlert';
@@ -23,6 +30,7 @@ import { formValuesToInput } from '../mappers';
 import type { CreateVehicleInput, VehicleDetail } from '../types';
 import { VehicleCreateSuccess } from './VehicleCreateSuccess';
 import { VehicleForm, type VehicleSubmitOptions } from './VehicleForm';
+import { clearVehicleCreateDraft, vehicleCreateDraftKey } from '../use-create-draft';
 import styles from './CreateVehiclePage.module.css';
 
 const SUPPORT_CREATE_FIELDS = new Set<string>(SUPPORT_VEHICLE_CREATE_FIELDS);
@@ -47,6 +55,22 @@ export function CreateVehiclePage() {
   const { has } = usePermissions();
   const support = useSupportSession();
   const create = useCreateVehicle();
+  const { data: user } = useCurrentUser();
+  /*
+   * MỘT wizard cho hai tuyến (18/11/2026): tuyến hoa hồng dùng chính màn này, ẩn phần chỉ của gian
+   * hàng (chi nhánh, nguồn xe, chính sách gian hàng). Phiên hỗ trợ luôn là gian hàng gói (ADR 0050).
+   * Server vẫn là cổng thật của mọi phần đó - đây chỉ chọn giao diện.
+   */
+  const track = support ? PARTNER_TRACK.PACKAGE : resolvePartnerTrack(user);
+  const commission = track === PARTNER_TRACK.COMMISSION;
+  /** Chưa có gian hàng ⇒ wizard đăng nhanh: bước hồ sơ chủ xe mở gian hàng ở đó. */
+  const needsShop = !support && Boolean(user) && track === PARTNER_TRACK.NONE;
+  useEffect(() => {
+    if (needsShop) router.replace(listYourVehicleRegisterPath(VEHICLE_REGISTRATION_SOURCE.ACCOUNT));
+  }, [needsShop, router]);
+  /** Nháp của wizard (sessionStorage) - theo người + gian hàng; phiên hỗ trợ không giữ nháp. */
+  const draftKey =
+    !support && user?.id && user.tenant?.id ? vehicleCreateDraftKey(user.id, user.tenant.id) : null;
   const [created, setCreated] = useState<{
     vehicle: VehicleDetail;
     submittedForReview: boolean;
@@ -76,7 +100,9 @@ export function CreateVehiclePage() {
     try {
       vehicle = await create.mutateAsync(body);
     } catch (error) {
-      message.error(errorMessage(error));
+      // Hết suất gói / chưa có gói ⇒ dải `PlanQuotaGateAlert` (có nút nâng cấp) là thông báo DUY
+      // NHẤT - không thêm toast + dải lỗi wizard nói lại cùng một câu (18/11/2026).
+      if (!planQuotaGateFrom(error)) message.error(errorMessage(error));
       /*
        * NÉM LẠI, không nuốt: wizard cần chính lỗi này để gắn `error.details` vào đúng ô nhập
        * và nhảy về bước chứa nó. Nuốt ở đây thì người dùng chỉ còn một toast chung và phải tự
@@ -90,6 +116,9 @@ export function CreateVehiclePage() {
      * xe đã có id — cùng đường với luồng đăng nhanh. Hỏng thì xe VẪN đã tạo: báo rõ, không ném tiếp
      * (bấm lại sẽ tạo xe thứ hai), chủ xe bật lại ở màn sửa xe.
      */
+    // Xe ĐÃ có trên server - bản nháp hết nhiệm vụ (lượt sau mở form trống).
+    if (draftKey) clearVehicleCreateDraft(draftKey);
+
     if (autoAcceptEnabled && !support) {
       try {
         await patchVehicleServiceSetting(vehicle.id, SERVICE_TYPE.SELF_DRIVE, {
@@ -135,6 +164,8 @@ export function CreateVehiclePage() {
     );
   }
 
+  if (!support && (!user || needsShop)) return <LoadingState variant="page" />;
+
   if (created) {
     return (
       <PageContainer>
@@ -163,12 +194,19 @@ export function CreateVehiclePage() {
         Gói chưa phủ loại xe vừa chọn / đã hết suất: dải có nút tới ĐÚNG làn gói (ADR 0065). Toast
         ở trên biến mất sau vài giây; người dùng cần một lối đi tiếp còn đứng đó khi họ quay lại.
       */}
-      {createGate ? <PlanQuotaGateAlert gate={createGate} className={styles.gate} /> : null}
+      {createGate ? (
+        <PlanQuotaGateAlert gate={createGate} className={styles.gate} inDialog />
+      ) : null}
       <VehicleForm
         submitting={create.isPending}
-        errorMessage={create.isError ? errorMessage(create.error) : null}
+        errorMessage={create.isError && !createGate ? errorMessage(create.error) : null}
         onSubmit={handleSubmit}
-        onCancel={backToList}
+        onCancel={() => {
+          if (draftKey) clearVehicleCreateDraft(draftKey);
+          backToList();
+        }}
+        commission={commission}
+        draftKey={draftKey}
       />
     </PageContainer>
   );

@@ -31,7 +31,7 @@ import {
   type RegistrationCaptureState,
   type RegistrationFields,
 } from '../registration-capture';
-import { LOCKED_INPUT_CLASS, LockedEditButton } from './LockedValueField';
+import { LOCKED_FIELD_CLASS, fieldLockSuffix } from '@/components/form/field-lock';
 import styles from './RegistrationCapture.module.css';
 
 export interface RegistrationCaptureProps {
@@ -73,6 +73,17 @@ const VISIBLE_FIELDS: readonly (keyof RegistrationFields)[] = [
 ];
 
 
+
+/** Đọc tệp ảnh đã nén thành data URL - để xem trước VÀ lưu được vào nháp wizard. */
+function readAsDataUrl(file: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error('read failed'));
+    reader.readAsDataURL(file);
+  });
+}
+
 /**
  * Chọn ảnh cà vẹt ⇒ nén trong trình duyệt (bỏ EXIF) ⇒ tải lên kho riêng tư ⇒ server đọc (ADR 0089 ·
  * 0099). Chữ chủ xe đã gõ giữ nguyên; máy đọc xong chỉ lấp ô còn trống.
@@ -93,7 +104,11 @@ function useRegistrationSelect({
       onChange((prev) => ({ ...prev, phase: 'failed', failure, failureError: null }));
       return;
     }
-    const previewUrl = URL.createObjectURL(prepared);
+    /*
+     * Data URL thay blob URL (18/11/2026): ảnh đã nén nhỏ, và data URL lưu được vào nháp
+     * (`sessionStorage`) - lùi trang / quay lại không mất ảnh cà vẹt như các ảnh xe.
+     */
+    const previewUrl = await readAsDataUrl(prepared);
     onChange((prev) => {
       if (prev.previewUrl) URL.revokeObjectURL(prev.previewUrl);
       // Ảnh MỚI = cà vẹt mới: xoá các ô cà vẹt để ảnh mới điền lại, không giữ số của ảnh cũ
@@ -201,12 +216,29 @@ export function RegistrationPhotoTile({
         )
       )}
       <div className={imageStyles.compactFoot}>
-        <span className={imageStyles.compactLabel}>
+        <span className={`${imageStyles.compactLabel} ${imageStyles.compactLabelOptional}`}>
           {t('title')}
         </span>
         <PolicyInfoTip label={t('tipLabel')}>{t('tip')}</PolicyInfoTip>
         {state.previewUrl && state.phase !== 'working' ? (
           <span className={imageStyles.compactActions}>
+            {/*
+              Cùng hai icon + thứ tự với các ô ảnh xe (`VehicleImageBoard`): xoá rồi thay. Bỏ ảnh cà
+              vẹt (ảnh tuỳ chọn - ADR 0100) chỉ reset phần ẢNH + kết quả đọc, giữ ba ô đã nhập.
+            */}
+            <button
+              type="button"
+              aria-label={t('remove')}
+              onClick={() =>
+                onChange((prev) => {
+                  if (prev.previewUrl) URL.revokeObjectURL(prev.previewUrl);
+                  return { ...EMPTY_REGISTRATION, fields: prev.fields, editing: true };
+                })
+              }
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- icon tĩnh của Figma */}
+              <img src="/images/vehicle-upload/delete.svg" alt="" width={20} height={20} />
+            </button>
             {picker(
               <button type="button" aria-label={t('replace')}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- icon tĩnh của Figma */}
@@ -250,14 +282,13 @@ function ScanStatus({
   // báo hỏng cả hai" (18/11/2026).
   const scanned = SCAN_FIELDS.filter((field) => read[field]);
   const missing = SCAN_FIELDS.filter((field) => !read[field]);
+  const found = scanned.map((f) => `${t(`fields.${f}`)} ${read[f]}`);
   return (
     <>
-      {scanned.length > 0 ? (
+      {found.length > 0 ? (
         <p className={styles.scanOk} role="status">
           <CheckCircleFilled aria-hidden="true" />{' '}
-          {t('scanFound', {
-            items: scanned.map((f) => `${t(`fields.${f}`)} ${read[f]}`).join(LIST_SEPARATOR),
-          })}
+          {t('scanFound', { items: found.join(LIST_SEPARATOR) })}
         </p>
       ) : null}
       {missing.length > 0 ? (
@@ -324,18 +355,18 @@ export function RegistrationFieldsBlock({
                   value={state.fields[field]}
                   onChange={(event) => setField(field, sanitizeField(field, event.target.value))}
                   maxLength={field === 'holderName' ? LIMITS.holderNameMax : CODE_MAX}
-                  placeholder={t('scanPlaceholder')}
+                  placeholder={state.phase === 'working' ? t('reading') : t('scanPlaceholder')}
                   autoComplete="off"
+                  // Đang đọc ảnh: ô sắp được điền - khoá để chữ gõ dở không lẫn với kết quả máy.
+                  disabled={state.phase === 'working'}
                   readOnly={locked}
-                  className={locked ? LOCKED_INPUT_CLASS : undefined}
-                  suffix={
-                    locked ? (
-                      <LockedEditButton
-                        ariaLabel={t('editField', { field: t(`fields.${field}`) })}
-                        onClick={() => unlock(field)}
-                      />
-                    ) : undefined
-                  }
+                  className={locked ? LOCKED_FIELD_CLASS : undefined}
+                  // Hậu tố luôn có mặt: khoá ↔ mở không đổi khung bọc của AntD, ô không bị dựng lại.
+                  suffix={fieldLockSuffix({
+                    locked,
+                    editLabel: t('editField', { field: t(`fields.${field}`) }),
+                    onUnlock: () => unlock(field),
+                  })}
                 />
               </Form.Item>
             </Col>

@@ -1,9 +1,11 @@
 'use client';
 
 import { Form, Select } from 'antd';
+import { useHelpAsTip } from './help-as-tip';
 import type React from 'react';
 import { useId, useState, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
+import { FieldLockButton, LOCKED_FIELD_CLASS, type FieldLock } from './field-lock';
 import styles from './field.module.css';
 
 export interface SelectFieldOption {
@@ -92,6 +94,11 @@ interface SelectFieldProps<T extends FieldValues> {
   hideLabel?: boolean;
   /** Cho gõ thêm lựa chọn chưa có — xem `SelectFieldCreatable`. Cần `showSearch`. */
   creatable?: SelectFieldCreatable;
+  /**
+   * Ô tự điền có thể KHOÁ: không mở danh sách, không gõ, bút trong ô thay mũi tên. Cùng một `Select`
+   * ở cả hai trạng thái nên đổi khoá ↔ mở không dựng lại ô (`field-lock.tsx`).
+   */
+  lock?: FieldLock;
 }
 
 /**
@@ -118,13 +125,16 @@ export function SelectField<T extends FieldValues>({
   renderOption,
   hideLabel = false,
   creatable,
+  lock,
 }: SelectFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
   // AntD `Select` không tự nhận `htmlFor` của `Form.Item` — thiếu `id` tường minh thì bấm nhãn
   // không mở được danh sách và `getByLabelText` không tìm ra ô chọn.
   const selectId = `${String(name)}-${useId()}`;
   const describedById = `${selectId}-help`;
-  const helpText = fieldState.error?.message ?? help;
+  // Vùng `HelpAsTipProvider`: ghi chú dời lên nhãn thành ⓘ, dưới ô chỉ còn lỗi.
+  const tip = useHelpAsTip(label, help);
+  const helpText = fieldState.error?.message ?? tip.help;
   const [search, setSearch] = useState('');
   const typed = search.trim();
   const flat = optionGroups ? optionGroups.flatMap((g) => g.options) : options;
@@ -134,10 +144,11 @@ export function SelectField<T extends FieldValues>({
       : null;
   const baseOptions = (optionGroups ?? options) as readonly unknown[];
   const allOptions = createOption ? [...baseOptions, createOption] : baseOptions;
+  const locked = Boolean(lock?.locked);
 
   return (
     <Form.Item
-      label={hideLabel ? undefined : label}
+      label={hideLabel ? undefined : tip.label}
       htmlFor={selectId}
       required={required}
       validateStatus={fieldState.error ? 'error' : ''}
@@ -180,8 +191,15 @@ export function SelectField<T extends FieldValues>({
         options={allOptions as React.ComponentProps<typeof Select>['options']}
         notFoundContent={notFoundContent}
         placeholder={placeholder}
-        allowClear={allowClear}
+        allowClear={allowClear && !locked}
         disabled={disabled}
+        className={locked ? LOCKED_FIELD_CLASS : undefined}
+        open={locked ? false : undefined}
+        // Ô tìm kiếm đang khoá: chữ gõ vào không đi đâu cả - giữ ô tìm rỗng thay vì hiện chữ trôi nổi.
+        searchValue={locked && showSearch ? '' : undefined}
+        suffixIcon={
+          lock?.locked ? <FieldLockButton ariaLabel={lock.editLabel} onClick={lock.onUnlock} /> : undefined
+        }
         loading={loading}
         showSearch={showSearch}
         // Ô cho thêm mới cần biết chữ đang gõ, nhưng VẪN lọc ở client (dòng "Thêm …" chứa chính chữ
