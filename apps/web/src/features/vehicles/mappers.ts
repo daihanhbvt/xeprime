@@ -58,7 +58,8 @@ function insuredValueToInput(values: VehicleFormValues): string | null {
 export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput {
   return {
     code: textOrUndefined(values.code),
-    name: values.name.trim(),
+    // Form thêm xe không có ô tên: trống ⇒ server ghép từ hãng + dòng + phiên bản + năm (ADR 0102).
+    name: textOrUndefined(values.name),
     // Chi nhánh giữ xe — bắt buộc ở API. Form chọn sẵn chi nhánh mặc định nên thao tác không dài
     // thêm, nhưng giá trị vẫn đi qua request thay vì để backend đoán.
     branchId: values.branchId,

@@ -54,6 +54,17 @@ describe('registration-text — đọc chữ cà vẹt (ADR 0089)', () => {
     expect(pass.plateNumber?.value).toBe('30A-467.38');
   });
 
+  it('màu sơn: cắt trước nhãn kế tiếp, viết hoa chữ đầu; có chữ số thì không đoán (ADR 0102)', () => {
+    const pass = analyseRegistrationPass(
+      ocr('Màu sơn (Color): TRẮNG Số chỗ ngồi (Seats): 05\nSố máy (Engine N°): 2NR X123456'),
+    );
+    expect(pass.color?.value).toBe('Trắng');
+    expect(analyseRegistrationPass(ocr('Màu sơn (Color): XANH - TRẮNG')).color?.value).toBe(
+      'Xanh - trắng',
+    );
+    expect(analyseRegistrationPass(ocr('Màu sơn (Color): 0512')).color).toBeUndefined();
+  });
+
   it('VIN 17 ký tự: O/Q đọc nhầm về số 0, I về số 1', () => {
     const pass = analyseRegistrationPass(ocr('Số khung (Chassis N°): RL4B29F3OKI234567'));
     expect(pass.chassisNumber?.value).toBe('RL4B29F30K1234567');
@@ -103,6 +114,7 @@ describe('assessRegistrationReading — đủ để lưu hay phải nhập tay',
     holderAddress: null,
     chassisNumber: 'RL4B29F30K1234567',
     engineNumber: '2NRX123456',
+    color: null,
   };
 
   it('đủ ba trường bắt buộc + biển số khớp (bỏ qua dấu, hoa thường) ⇒ đủ', () => {

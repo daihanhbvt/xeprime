@@ -295,7 +295,8 @@ async function fillOwnerStep() {
 async function fillIdentity() {
   fireEvent.mouseDown(screen.getByLabelText(/Hãng xe/));
   fireEvent.click(await screen.findByTitle('Toyota'));
-  fireEvent.mouseDown(screen.getByLabelText(/Dòng xe/));
+  // Ô "Mẫu xe" gộp dòng + phiên bản (ADR 0102); dòng chưa có phiên bản chọn theo dòng.
+  fireEvent.mouseDown(screen.getByLabelText(/^Mẫu xe/));
   fireEvent.click(await screen.findByTitle('Innova Cross'));
   fireEvent.change(screen.getByLabelText(/Năm sản xuất/), { target: { value: '2023' } });
   fireEvent.change(screen.getByLabelText(/Số chỗ ngồi/), { target: { value: '5' } });
@@ -327,9 +328,6 @@ async function fillInfoStep({ identity = true }: { identity?: boolean } = {}) {
   await uploadPhotos();
   fillRegistration();
   fireEvent.change(screen.getByLabelText(/Biển số xe/), { target: { value: '51H-123.45' } });
-  fireEvent.change(screen.getByLabelText(/^Tên xe/), {
-    target: { value: 'Toyota Vios 2023' },
-  });
   fireEvent.mouseDown(screen.getByLabelText(/Nguồn năng lượng|Nhiên liệu/));
   fireEvent.click(await screen.findByText('Xăng'));
   fireEvent.change(await screen.findByLabelText(/Mức tiêu thụ nhiên liệu/), {

@@ -138,6 +138,7 @@
     "MIN_RENTAL_DURATION": "Thời lượng thuê ngắn hơn mức tối thiểu chủ xe yêu cầu.",
     "VEHICLE_FIELD_LOCKED": "Xe đang hiển thị trên chợ nên không đổi được biển số, loại xe, hộp số, nhiên liệu hay năm sản xuất. Gỡ xe khỏi chợ trước nếu cần sửa.",
     "VEHICLE_TRANSMISSION_INCOMPATIBLE": "Kiểu hộp số không phù hợp với nguồn năng lượng của xe.",
+    "VEHICLE_NAME_REQUIRED": "Chọn hãng và mẫu xe để hệ thống đặt tên xe.",
     "CATALOG_MODEL_DUPLICATE": "Hãng này đã có một mẫu xe cùng tên.",
     "CATALOG_MODEL_IN_USE": "Đang có xe gắn mẫu này - hãy tắt mẫu thay vì xoá để xe cũ vẫn giữ liên kết.",
     "CATALOG_MODEL_HAS_VEHICLE_DATA": "Dòng xe còn xe chuẩn bên trong - xoá hoặc gộp các xe đó trước, hoặc tắt dòng thay vì xoá.",

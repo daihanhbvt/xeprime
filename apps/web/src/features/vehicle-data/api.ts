@@ -210,6 +210,19 @@ export function fetchVehicleDataOptions(params: {
   });
 }
 
+/** Mọi xe chuẩn đã duyệt của một hãng + loại xe - ô 'Mẫu xe' gộp của form đăng xe (ADR 0102). */
+export function fetchBrandVehicleDataOptions(params: {
+  vehicleType: string;
+  brandKey: string;
+  includeId?: string | null;
+}): Promise<VehicleDataOption[]> {
+  return apiGet<VehicleDataOption[]>('/catalog/variants', {
+    vehicleType: params.vehicleType,
+    brandKey: params.brandKey,
+    ...(params.includeId ? { includeId: params.includeId } : {}),
+  });
+}
+
 export function fetchVehicleDataSuggestion(params: {
   modelId: string;
   variantId?: string | null;

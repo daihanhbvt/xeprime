@@ -16,6 +16,7 @@ import {
   vehicleFeatureAppliesTo,
   vehicleTransmissionTypesFor,
   VEHICLE_TYPE,
+  type VehicleRegistrationReading,
   VEHICLE_SOURCE_TYPE,
   VEHICLE_SOURCE_TYPE_VALUES,
   vehicleFuelTypesFor,
@@ -36,6 +37,9 @@ import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useVehicleOptions } from '../hooks/use-vehicle-options';
+import { useCatalogSpecLock } from '../hooks/use-catalog-spec-lock';
+import { SpecLockedField } from './SpecLockedField';
+import { RegistrationTextField } from './RegistrationTextField';
 import { PublishRequiredLabel } from './VehicleCompleteness';
 /*
  * Import VÒNG có chủ đích: `VehicleEnergyFields` dùng `FuelTypeSelect` của file này, còn file
@@ -286,16 +290,21 @@ export function BasicSection({
 
   return (
     <Row gutter={24}>
-      {/* Thứ tự và nhãn theo Figma `193:1617`: Tên xe TRÁI, Mã xe PHẢI. */}
-      <Col xs={24} sm={12}>
-        <TextField
-          control={control}
-          name="name"
-          label={t('name')}
-          placeholder={t('namePlaceholder')}
-          required
-        />
-      </Col>
+      {/*
+        Thứ tự và nhãn theo Figma `193:1617`: Tên xe TRÁI, Mã xe PHẢI. Thêm xe KHÔNG hỏi tên: server
+        ghép "Hãng Dòng Phiên bản Năm" từ mẫu xe đã chọn (ADR 0102); đổi tên ở màn sửa xe.
+      */}
+      {creating ? null : (
+        <Col xs={24} sm={12}>
+          <TextField
+            control={control}
+            name="name"
+            label={t('name')}
+            placeholder={t('namePlaceholder')}
+            required
+          />
+        </Col>
+      )}
       {/* Thêm xe (Figma): không hỏi Mã xe - server tự sinh; sửa ở màn chỉnh sửa xe. */}
       {creating ? null : (
         <Col xs={24} sm={12}>
@@ -560,46 +569,90 @@ export function SourceTypeSection({ control }: Pick<SectionProps, 'control'>) {
  * section chỉ còn các ô. Trường, ràng buộc và cách lưu giữ nguyên — vẫn chung form Thông tin.
  */
 
+/**
+ * Khoá theo dữ liệu mẫu xe cho các ô số của màn sửa xe (kích thước, công suất — ADR 0102). Mọi
+ * khoá gọi đủ mỗi render, thứ tự cố định (luật hook).
+ */
+function useSpecLockField(control: Control<VehicleFormValues>) {
+  const tCatalog = useTranslations('Vehicles.form.catalog');
+  const vehicleType = useWatch({ control, name: 'vehicleType' }) ?? VEHICLE_TYPE.CAR;
+  const locks = {
+    lengthMm: useCatalogSpecLock(control, vehicleType, 'lengthMm'),
+    widthMm: useCatalogSpecLock(control, vehicleType, 'widthMm'),
+    heightMm: useCatalogSpecLock(control, vehicleType, 'heightMm'),
+    curbWeightKg: useCatalogSpecLock(control, vehicleType, 'curbWeightKg'),
+    horsepowerHp: useCatalogSpecLock(control, vehicleType, 'horsepowerHp'),
+  };
+  const [lengthMm, widthMm, heightMm, curbWeightKg, horsepowerHp] = useWatch({
+    control,
+    name: ['lengthMm', 'widthMm', 'heightMm', 'curbWeightKg', 'horsepowerHp'],
+  });
+  const values = { lengthMm, widthMm, heightMm, curbWeightKg, horsepowerHp };
+  /** Ô đang khoá ⇒ ô chỉ đọc + bút trong ô; `null` ⇒ nơi gọi vẽ ô số thật. */
+  return function lockedField(field: keyof typeof locks, label: string) {
+    const lock = locks[field];
+    const value = values[field];
+    return lock.locked && value != null ? (
+      <SpecLockedField
+        name={field}
+        label={label}
+        value={String(value)}
+        lock={lock}
+        help={tCatalog('specLocked')}
+      />
+    ) : null;
+  };
+}
+
 /** Kích thước & trọng lượng. */
 export function DimensionsSection({ control }: Pick<SectionProps, 'control'>) {
   const t = useTranslations('Vehicles.form.advanced');
+  const lockField = useSpecLockField(control);
   return (
     <Row gutter={16}>
       <Col xs={24} sm={12}>
-        <NumberField
-          control={control}
-          name="lengthMm"
-          label={t('lengthMm')}
-          placeholder={t('lengthPlaceholder')}
-          min={1}
-        />
+        {lockField('lengthMm', t('lengthMm')) ?? (
+          <NumberField
+            control={control}
+            name="lengthMm"
+            label={t('lengthMm')}
+            placeholder={t('lengthPlaceholder')}
+            min={1}
+          />
+        )}
       </Col>
       <Col xs={24} sm={12}>
-        <NumberField
-          control={control}
-          name="widthMm"
-          label={t('widthMm')}
-          placeholder={t('widthPlaceholder')}
-          min={1}
-        />
+        {lockField('widthMm', t('widthMm')) ?? (
+          <NumberField
+            control={control}
+            name="widthMm"
+            label={t('widthMm')}
+            placeholder={t('widthPlaceholder')}
+            min={1}
+          />
+        )}
       </Col>
       <Col xs={24} sm={12}>
-        <NumberField
-          control={control}
-          name="heightMm"
-          label={t('heightMm')}
-          placeholder={t('heightPlaceholder')}
-          min={1}
-        />
+        {lockField('heightMm', t('heightMm')) ?? (
+          <NumberField
+            control={control}
+            name="heightMm"
+            label={t('heightMm')}
+            placeholder={t('heightPlaceholder')}
+            min={1}
+          />
+        )}
       </Col>
       <Col xs={24} sm={12}>
-        <NumberField
-          control={control}
-          name="curbWeightKg"
-          label={t('curbWeightKg')}
-          placeholder={t('curbWeightPlaceholder')}
-          min={1}
-        />
+        {lockField('curbWeightKg', t('curbWeightKg')) ?? (
+          <NumberField
+            control={control}
+            name="curbWeightKg"
+            label={t('curbWeightKg')}
+            placeholder={t('curbWeightPlaceholder')}
+            min={1}
+          />
+        )}
       </Col>
     </Row>
   );
@@ -612,16 +665,19 @@ export function DimensionsSection({ control }: Pick<SectionProps, 'control'>) {
  */
 export function EngineOutputSection({ control }: Pick<SectionProps, 'control'>) {
   const t = useTranslations('Vehicles.form.advanced');
+  const lockField = useSpecLockField(control);
   return (
     <Row gutter={16}>
       <Col xs={24} sm={12}>
-        <NumberField
-          control={control}
-          name="horsepowerHp"
-          label={t('horsepowerHp')}
-          placeholder={t('horsepowerPlaceholder')}
-          min={1}
-        />
+        {lockField('horsepowerHp', t('horsepowerHp')) ?? (
+          <NumberField
+            control={control}
+            name="horsepowerHp"
+            label={t('horsepowerHp')}
+            placeholder={t('horsepowerPlaceholder')}
+            min={1}
+          />
+        )}
       </Col>
     </Row>
   );
@@ -671,10 +727,13 @@ export function ConsumptionSection({ control }: Pick<SectionProps, 'control'>) {
  */
 type DependentSectionProps = SectionProps & Required<Pick<SectionProps, 'setValue'>>;
 
-export function SpecsSection(props: DependentSectionProps) {
+export function SpecsSection({
+  registrationReading,
+  ...props
+}: DependentSectionProps & { registrationReading?: VehicleRegistrationReading | null }) {
   return (
     <>
-      <VehicleIdentitySection {...props} />
+      <VehicleIdentitySection {...props} registrationReading={registrationReading} />
       <VehicleEnergySection {...props} />
     </>
   );
@@ -688,9 +747,12 @@ export function VehicleIdentitySection({
   setValue,
   bodyTypeElsewhere = false,
   creating = false,
+  registrationReading,
 }: DependentSectionProps & {
   /** Màn sửa xe bày kiểu dáng thành thẻ RIÊNG (design 23683:17598) — khối này bỏ ô đó đi. */
   bodyTypeElsewhere?: boolean;
+  /** Lượt đọc cà vẹt của wizard thêm xe — biển số + màu khoá theo nó (ADR 0102). */
+  registrationReading?: VehicleRegistrationReading | null;
 }) {
   const t = useTranslations('Vehicles.form.specs');
   const vehicleType = isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE;
@@ -698,11 +760,14 @@ export function VehicleIdentitySection({
   return (
     <Row gutter={16}>
       <Col xs={24} sm={12}>
-        <TextField
+        {/* Đọc được trên cà vẹt ⇒ điền + khoá, bút trong ô để sửa (ADR 0102). */}
+        <RegistrationTextField
           control={control}
           name="plateNumber"
+          reading={registrationReading}
           // Thêm xe: điều kiện lên chợ hiện dấu * đỏ như ô bắt buộc (người dùng chốt 18/11/2026).
           label={creating ? t('plateNumber') : <PublishRequiredLabel label={t('plateNumber')} />}
+          fieldLabel={t('plateNumber')}
           required={creating}
           placeholder={t('platePlaceholder')}
           help={lockedNotice ?? t('plateHelp')}
@@ -738,10 +803,12 @@ export function VehicleIdentitySection({
         />
       </Col>
       <Col xs={24} sm={12}>
-        <TextField
+        <RegistrationTextField
           control={control}
           name="color"
+          reading={registrationReading}
           label={t('color')}
+          fieldLabel={t('color')}
           placeholder={t('colorPlaceholder')}
         />
       </Col>
@@ -868,12 +935,15 @@ export function useTransmissionOptions(vehicleType: string, fuelType: string | n
 export function FuelTypeSelect({
   control,
   vehicleType,
+  label,
   help,
   disabled,
   allowedValues,
   required = false,
 }: Pick<SectionProps, 'control'> & {
   vehicleType: string;
+  /** Nhãn thay thế — kèm bút mở khoá khi ô đang khoá theo dữ liệu mẫu xe (ADR 0102). */
+  label?: ReactNode;
   /** Hiện dấu * (wizard thêm xe - điều kiện lên chợ). */
   required?: boolean;
   /** Lý do ô bị khoá (xe đang trên chợ) — nơi gọi truyền chữ, component không tự đoán. */
@@ -898,7 +968,7 @@ export function FuelTypeSelect({
     <SelectField
       control={control}
       name="fuelType"
-      label={t('fuelType')}
+      label={label ?? t('fuelType')}
       options={options}
       placeholder={
         vehicleType === VEHICLE_TYPE.CAR ? t('fuelPlaceholderCar') : t('fuelPlaceholderMotorbike')
@@ -969,7 +1039,25 @@ export function BodyTypePicker({
   showLabel?: boolean;
 }) {
   const t = useTranslations('Vehicles.form.specs');
+  const tCatalog = useTranslations('Vehicles.form.catalog');
   const { items, isLoading } = useCatalogItems(CATALOG_TYPE.BODY_TYPE);
+  const vehicleType = useWatch({ control, name: 'vehicleType' }) ?? VEHICLE_TYPE.CAR;
+  // Kiểu dáng theo xe chuẩn đang chọn — khoá + bút trong ô như mọi ô tự điền (ADR 0102).
+  const lock = useCatalogSpecLock(control, vehicleType, 'bodyType');
+  const bodyType = useWatch({ control, name: 'bodyType' });
+  const lockedLabel = items.find((item) => item.key === bodyType)?.label;
+
+  if (lock.locked && !disabled && lockedLabel) {
+    return (
+      <SpecLockedField
+        name="bodyType"
+        label={t('bodyType')}
+        value={lockedLabel}
+        lock={lock}
+        help={tCatalog('specLocked')}
+      />
+    );
+  }
 
   return (
     <div className={styles.galleryBlock}>

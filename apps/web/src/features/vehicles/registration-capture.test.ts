@@ -14,6 +14,7 @@ const READING = {
   holderAddress: null,
   chassisNumber: 'RL4B29F30K1234567',
   engineNumber: '2NRX123456',
+  color: null,
 };
 
 const ready = (overrides: Partial<RegistrationCaptureState> = {}): RegistrationCaptureState => ({

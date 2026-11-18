@@ -9,7 +9,11 @@ import {
   missingVehicleImageTypes,
   vehicleEnergySpecPolicy,
 } from '@xeprime/types';
-import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
+import {
+  autoVehicleNameSchema,
+  vehicleFormSchema,
+  type VehicleFormValues,
+} from '@xeprime/validators';
 
 /**
  * Schema của wizard ĐĂNG XE NHANH.
@@ -27,6 +31,7 @@ import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
  */
 const VEHICLE_FIELDS = [
   'vehicleType',
+  // Tên xe không hỏi — server ghép từ hãng + dòng + phiên bản + năm (ADR 0102).
   'name',
   'branchId',
   'plateNumber',
@@ -127,6 +132,7 @@ export const quickVehicleSchema = vehicleFormSchema
   .pick(VEHICLE_FIELDS)
   .shape({
     ...PUBLISH_REQUIRED_FIELDS,
+    name: autoVehicleNameSchema,
     /*
      * Giá ngày thường là thứ DUY NHẤT bắt buộc ở bước cho thuê: xe không có giá thì không lên chợ
      * được, còn mọi cấu hình khác đều có mặc định an toàn (tắt).

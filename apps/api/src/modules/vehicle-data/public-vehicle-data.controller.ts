@@ -7,9 +7,9 @@ import { VehicleDataOptionDto, VehicleDataOptionQueryDto } from './dto/vehicle-d
 import { VehicleDataService } from './vehicle-data.service';
 
 /**
- * Ô "Phiên bản" của form xe (ADR 0090) — xe chuẩn đã duyệt, đang gợi ý của một dòng xe. Công khai
- * như phần còn lại của `/catalog` (thông số xe không thuộc riêng ai); giá tham khảo KHÔNG đi đường
- * này — nó nằm ở gợi ý cần đăng nhập.
+ * Ô "Phiên bản" của form xe (ADR 0090) và ô "Mẫu xe" gộp theo hãng (ADR 0102) — xe chuẩn đã
+ * duyệt, đang gợi ý của một dòng xe hoặc một hãng. Công khai như phần còn lại của `/catalog` (thông
+ * số xe không thuộc riêng ai); giá tham khảo KHÔNG đi đường này — nó nằm ở gợi ý cần đăng nhập.
  */
 @ApiTags('catalog')
 @Controller('catalog')
@@ -20,7 +20,10 @@ export class PublicVehicleDataController {
   @Public()
   @Get('variants')
   @PublicCache(PUBLIC_CACHE_SECONDS.catalog)
-  @ApiOperation({ summary: 'Phiên bản (xe chuẩn) đã duyệt của một dòng xe, lọc theo năm sản xuất' })
+  @ApiOperation({
+    summary:
+      'Phiên bản (xe chuẩn) đã duyệt của một dòng xe (lọc theo năm sản xuất) hoặc của cả một hãng',
+  })
   @ApiOkResponse({ type: [VehicleDataOptionDto] })
   listVariants(@Query() query: VehicleDataOptionQueryDto): Promise<VehicleDataOptionDto[]> {
     return this.vehicleData.listOptions(query);

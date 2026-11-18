@@ -524,7 +524,9 @@
       "priceThousandStep": "Prices must be a multiple of 1,000 VND",
       "insuredValueRange": "Car value must be between 50,000,000 and 20,000,000,000 VND, rounded to the million.",
       "insuredValueCarOnly": "Car value applies to cars only",
-      "photosRequired": "{count, plural, one {# photo angle is} other {# photo angles are}} still missing - every slot needs a photo"
+      "photosRequired": "{count, plural, one {# photo angle is} other {# photo angles are}} still missing - every slot needs a photo",
+      "brandRequired": "Choose a brand",
+      "modelRequired": "Choose a model"
     },
     "registration": {
       "title": "Vehicle registration certificate",
@@ -576,7 +578,8 @@
       "scanMissing": "Could not read the chassis and engine numbers - please check the photo or type them below.",
       "scanFound": "Scanned: {items}",
       "scanMissingItems": "Could not read {items} - please check the photo or type it below.",
-      "view": "View registration photo"
+      "view": "View registration photo",
+      "filledFromScan": "Filled in from the registration"
     },
     "catalog": {
       "variant": "Variant",
@@ -593,7 +596,7 @@
       "addVariant": "Add variant \"{text}\"",
       "newVariant": "New variant: {name}",
       "undoNewVariant": "Undo",
-      "applied": "Reference specs filled in - check them before saving.",
+      "applied": "Specs filled in from the model - use the pen icon to fix anything that is wrong.",
       "specTitle": "Reference specs · {name}",
       "apply": "Apply specs",
       "applyNote": "Click \"Apply specs\" to fill them in; you can still edit each field if your vehicle is modified or differs from stock.",
@@ -621,7 +624,16 @@
       "rentReference": "XePrime reference price: {price}",
       "rentReferenceModel": "Reference price for this model: {price}",
       "rentMarket": "Same model on XePrime: {low} - {high} ({count, plural, one {# vehicle} other {# vehicles}})",
-      "useRent": "Use {price}"
+      "useRent": "Use {price}",
+      "modelVariant": "Model",
+      "modelVariantPlaceholder": "Search model or variant",
+      "modelVariantHelp": "Pick the exact variant to fill in the specs. If your car is not listed, choose \"Enter manually\" at the end of the list.",
+      "manualEntry": "Enter manually - car not in the list",
+      "backToList": "Pick from the model list",
+      "yearOutsideVariant": "Year {year} is outside the {years} production years of this variant - check the variant or the year.",
+      "specLocked": "From model data",
+      "unlockSpec": "Edit if your car differs from the model data",
+      "unlockSpecAria": "Edit {field}"
     },
     "createSteps": {
       "photosTitle": "Vehicle photos",

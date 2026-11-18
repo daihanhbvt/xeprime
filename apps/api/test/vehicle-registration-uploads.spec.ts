@@ -58,6 +58,7 @@ const READING: VehicleRegistrationReading = {
   holderAddress: '123 Nguyễn Văn Cừ, Quận 5',
   chassisNumber: 'RL4B29F30K1234567',
   engineNumber: '2NRX123456',
+  color: 'Trắng',
 };
 let readerFails = false;
 const reader: VehicleRegistrationReader = {

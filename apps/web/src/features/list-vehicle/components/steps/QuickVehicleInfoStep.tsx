@@ -4,31 +4,32 @@ import { Col, Row } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 import { useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
-import { VEHICLE_TYPE, VEHICLE_TYPE_VALUES } from '@xeprime/types';
+import {
+  VEHICLE_TYPE,
+  VEHICLE_TYPE_VALUES,
+  type VehicleRegistrationReading,
+} from '@xeprime/types';
 
 import { NumberField } from '@/components/form/NumberField';
 import { SelectField } from '@/components/form/SelectField';
-import { TextField } from '@/components/form/TextField';
-import { useCatalogOptions } from '@/features/catalog/use-catalog';
-import { CATALOG_TYPE } from '@xeprime/types';
-import { useCatalogModels } from '@/features/catalog/use-catalog-models';
 import { VehicleClassificationFields } from '@/features/vehicles/components/VehicleClassificationFields';
 import { BodyTypePicker } from '@/features/vehicles/components/VehicleFormSections';
 import { VehicleEnergyFields } from '@/features/vehicles/components/VehicleEnergyFields';
 import { VehicleIdentityFields } from '@/features/vehicles/components/VehicleIdentityFields';
+import { RegistrationTextField } from '@/features/vehicles/components/RegistrationTextField';
 import {
   useTransmissionOptions,
 } from '@/features/vehicles/components/VehicleFormSections';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 
-import { suggestVehicleName } from '../../mappers';
 import type { QuickVehicleValues } from '../../schema';
-import styles from './QuickVehicleSteps.module.css';
 
 interface Props {
   control: Control<QuickVehicleValues>;
   setValue: UseFormSetValue<QuickVehicleValues>;
   vehicleType: string;
+  /** Lượt đọc cà vẹt — biển số + màu khoá theo nó (ADR 0102). */
+  registrationReading?: VehicleRegistrationReading | null;
 }
 
 /**
@@ -39,27 +40,20 @@ interface Props {
  * component mà wizard `/manage` và màn sửa xe đang dùng (hãng xe từ catalog, tiện nghi từ
  * catalog, khối năng lượng theo ma trận dùng chung) — không có bộ form thứ hai cho luồng nhanh.
  *
- * Tên hiển thị có nút gợi ý từ hãng + mẫu + năm, nhưng vẫn là một ô người dùng nhìn thấy và sửa
- * được: hệ thống không lưu một cái tên mà chủ xe không biết mình đang đặt.
+ * Không hỏi tên xe (ADR 0102): server ghép "Hãng Dòng Phiên bản Năm" từ mẫu xe đã chọn, khung xem
+ * trước hiện đúng tên đó; chủ xe đổi tên ở màn sửa xe.
  */
-export function QuickVehicleInfoStep({ control, setValue, vehicleType }: Props) {
+export function QuickVehicleInfoStep({
+  control,
+  setValue,
+  vehicleType,
+  registrationReading,
+}: Props) {
   const t = useTranslations('ListYourVehicle.info');
   const tForm = useTranslations('Vehicles.form');
   const domainLabel = useDomainLabel();
 
-  const brand = useWatch({ control, name: 'brand' });
-  const modelId = useWatch({ control, name: 'vehicleCatalogModelId' });
   const fuelType = useWatch({ control, name: 'fuelType' });
-  const year = useWatch({ control, name: 'manufactureYear' });
-  const brandOptions = useCatalogOptions(CATALOG_TYPE.VEHICLE_BRAND, brand);
-
-  // Tên mẫu để gợi ý tên xe lấy từ DANH MỤC — ô "Mẫu xe" giờ là select, không còn chữ tự do.
-  const { models } = useCatalogModels({
-    vehicleType: vehicleType || VEHICLE_TYPE.CAR,
-    brandKey: brand,
-    includeId: modelId,
-  });
-  const model = models.find((m) => m.id === modelId)?.label ?? null;
 
   const transmissionOptions = useTransmissionOptions(vehicleType || VEHICLE_TYPE.CAR, fuelType);
   const vehicleTypeOptions = useMemo(
@@ -71,15 +65,9 @@ export function QuickVehicleInfoStep({ control, setValue, vehicleType }: Props) 
     [domainLabel],
   );
 
-  const suggestedName = suggestVehicleName({
-    brandLabel: brandOptions.find((option) => option.value === brand)?.label ?? brand,
-    model,
-    manufactureYear: year,
-  });
-
   /*
    * MỘT Row phẳng (Figma `24352:79234`: lưới 3 cột liền) - wizard bọc trong `threeColumnFields`
-   * để mọi ô rơi vào cùng lưới; thứ tự ô theo Figma: loại xe · tên · biển số · hãng · dòng · năm…
+   * để mọi ô rơi vào cùng lưới; thứ tự ô theo Figma: loại xe · biển số · hãng · dòng · năm…
    */
   return (
     <Row gutter={16}>
@@ -94,32 +82,13 @@ export function QuickVehicleInfoStep({ control, setValue, vehicleType }: Props) 
         />
       </Col>
       <Col xs={24} sm={12}>
-        <TextField
-          control={control}
-          name="name"
-          label={tForm('basic.name')}
-          placeholder={t('namePlaceholder')}
-          help={
-            suggestedName ? (
-              <button
-                type="button"
-                className={styles.suggestion}
-                onClick={() => setValue('name', suggestedName, { shouldValidate: true })}
-              >
-                {t('nameSuggestion', { name: suggestedName })}
-              </button>
-            ) : (
-              t('nameHelp')
-            )
-          }
-          required
-        />
-      </Col>
-      <Col xs={24} sm={12}>
-        <TextField
-          control={control}
+        {/* Đọc được trên cà vẹt ⇒ điền + khoá, bút trong ô để sửa (ADR 0102). */}
+        <RegistrationTextField
+          control={control as never}
           name="plateNumber"
+          reading={registrationReading}
           label={tForm('specs.plateNumber')}
+          fieldLabel={tForm('specs.plateNumber')}
           placeholder={tForm('specs.platePlaceholder')}
           help={t('plateHint')}
           required
@@ -148,10 +117,12 @@ export function QuickVehicleInfoStep({ control, setValue, vehicleType }: Props) 
         />
       </Col>
       <Col xs={24} sm={12}>
-        <TextField
-          control={control}
+        <RegistrationTextField
+          control={control as never}
           name="color"
+          reading={registrationReading}
           label={tForm('specs.color')}
+          fieldLabel={tForm('specs.color')}
           placeholder={tForm('specs.colorPlaceholder')}
         />
       </Col>

@@ -118,11 +118,30 @@ export class VehicleDataOptionDto extends VehicleDataSpecDto {
   reviewStatus!: string;
 }
 
+/**
+ * Một trong hai phạm vi: `modelId` (ô Phiên bản của một dòng) hoặc `brandKey` + `vehicleType` (ô
+ * "Mẫu xe" gộp dòng + phiên bản của form đăng xe - ADR 0102). Thiếu cả hai ⇒ 400.
+ */
 export class VehicleDataOptionQueryDto {
-  @ApiProperty({ description: 'Dòng xe' })
+  @ApiPropertyOptional({ description: 'Dòng xe' })
+  @IsOptional()
   @IsString()
   @Length(26, 26)
-  modelId!: string;
+  modelId?: string;
+
+  @ApiPropertyOptional({
+    example: 'toyota',
+    description: 'Hãng - trả mọi xe chuẩn đã duyệt của các dòng xe đang bật của hãng (cần vehicleType)',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(CATALOG_KEY_PATTERN, { message: 'brandKey phải là mã hãng trong danh mục' })
+  brandKey?: string;
+
+  @ApiPropertyOptional({ enum: VEHICLE_TYPE_VALUES, description: 'Đi kèm brandKey' })
+  @IsOptional()
+  @IsIn(VEHICLE_TYPE_VALUES)
+  vehicleType?: string;
 
   @ApiPropertyOptional({
     description: 'Năm sản xuất của xe - chỉ trả xe chuẩn có đời chứa năm đó (đời trống = mọi năm)',

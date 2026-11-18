@@ -2,7 +2,8 @@
  * Vỏ wizard tạo xe - Figma `24352:70390` (Thêm xe mới, 17/11/2026).
  * Desktop: cột bước 280px · nội dung co giãn · cột phụ 340px, khoảng cách 24px; thẻ bo 16px.
  */
-.root {
+.root,
+.rootFooterInAside {
   display: flex;
   flex-direction: column;
   gap: var(--xp-space-lg);
@@ -257,6 +258,7 @@
 /* ── Mobile: các bước gọn MỘT hàng, nhãn dưới số ──────────────────────────── */
 @media (max-width: 640px) {
   .root,
+  .rootFooterInAside,
   .main,
   .plainBody {
     gap: var(--xp-space-md);
@@ -330,6 +332,29 @@
   .aside {
     position: static;
   }
+
+  /*
+   * Hàng nút đã vào cột phải ⇒ không còn hàng nút dưới đáy: cột giữa kéo tới sát đáy màn hình, chừa
+   * một khoảng bằng đệm đáy trang. `--wizard-main-top` là đỉnh cột giữa do wizard ĐO lúc chạy.
+   */
+  .rootFooterInAside .main {
+    max-height: calc(100dvh - var(--wizard-main-top, 200px) - var(--xp-space-xl));
+  }
+}
+
+/*
+ * Hàng nút ở cuối cột phải (desktop): nút lùi bên trái, nút đi tiếp bên phải, chia đều bề ngang
+ * cột (Figma: hai nút cùng hàng dưới thẻ "Sẵn sàng gửi duyệt").
+ */
+.asideFooter {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.asideFooter > * {
+  min-width: 0;
+  flex: 1;
 }
 
 /* ── Số đo Figma `24352:79258` cho thẻ khối + chân trang của wizard thêm xe ─────────────── */
@@ -360,7 +385,8 @@
   margin-top: 20px;
 }
 
-.footer :global(.ant-btn) {
+.footer :global(.ant-btn),
+.asideFooter :global(.ant-btn) {
   height: 44px;
   padding-inline: 20px;
   border-radius: 12px;

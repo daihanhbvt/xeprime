@@ -114,7 +114,7 @@ export function CreateVehicleInfoStep({
             showErrors={registration.showErrors}
           />
         ) : null}
-        <SpecsSection {...props} creating />
+        <SpecsSection {...props} creating registrationReading={registration?.state.reading} />
         {!sourceHidden ? (
           <>
             <Divider className={styles.sectionDivider} />

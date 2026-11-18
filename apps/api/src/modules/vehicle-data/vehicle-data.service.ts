@@ -82,6 +82,9 @@ export const VEHICLE_DATA_FIELD_KEYS = [
   'withDriverDailyPrice',
 ] as const satisfies readonly (keyof VehicleDataFields)[];
 
+/** Trần số xe chuẩn của một hãng trong ô "Mẫu xe" gộp — một hãng lớn hôm nay vài chục phiên bản. */
+const BRAND_OPTIONS_MAX = 500;
+
 const DECIMAL_FIELDS = ['fuelConsumptionCombined', 'batteryCapacityKwh'] as const;
 const MONEY_FIELDS = [
   'listPrice',
@@ -352,6 +355,7 @@ export class VehicleDataService {
    * với xe đang mở) luôn có mặt, kể cả chờ duyệt/đã ẩn/ngoài đời.
    */
   async listOptions(query: VehicleDataOptionQueryDto): Promise<VehicleDataOptionDto[]> {
+    if (!query.modelId) return this.listBrandOptions(query);
     const base = {
       modelId: query.modelId,
       deletedAt: null,
@@ -370,6 +374,52 @@ export class VehicleDataService {
     if (query.includeId && !rows.some((r) => r.id === query.includeId)) {
       const attached = await this.prisma.vehicleCatalogVariant.findFirst({
         where: { id: query.includeId, modelId: query.modelId, deletedAt: null },
+        select: RECORD_SELECT,
+      });
+      if (attached) rows.unshift(attached);
+    }
+    return rows.map(toOptionDto);
+  }
+
+  /**
+   * Ô "Mẫu xe" gộp của form đăng xe (ADR 0102): MỌI xe chuẩn đã duyệt, đang gợi ý của các dòng xe
+   * đang bật, đã duyệt của một hãng + loại xe — theo thứ tự dòng (như ô Dòng xe) rồi phiên bản, đời
+   * mới trước. Không lọc theo năm: ô chọn hiện đời của từng phiên bản, năm khai SAU khi chọn xe.
+   * `includeId` (xe chuẩn đang gắn) luôn có mặt nếu thuộc đúng hãng, kể cả chờ duyệt/đã ẩn.
+   */
+  private async listBrandOptions(
+    query: VehicleDataOptionQueryDto,
+  ): Promise<VehicleDataOptionDto[]> {
+    if (!query.brandKey || !query.vehicleType) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Cần modelId, hoặc brandKey kèm vehicleType',
+      });
+    }
+    const brandScope = {
+      brandKey: query.brandKey,
+      vehicleType: query.vehicleType,
+      deletedAt: null,
+    };
+    const rows = await this.prisma.vehicleCatalogVariant.findMany({
+      where: {
+        deletedAt: null,
+        active: true,
+        reviewStatus: CATALOG_REVIEW_STATUS.APPROVED,
+        model: { ...brandScope, active: true, reviewStatus: CATALOG_REVIEW_STATUS.APPROVED },
+      },
+      orderBy: [
+        { model: { sortOrder: 'asc' } },
+        { model: { label: 'asc' } },
+        { label: 'asc' },
+        { yearFrom: 'desc' },
+      ],
+      take: BRAND_OPTIONS_MAX,
+      select: RECORD_SELECT,
+    });
+    if (query.includeId && !rows.some((r) => r.id === query.includeId)) {
+      const attached = await this.prisma.vehicleCatalogVariant.findFirst({
+        where: { id: query.includeId, deletedAt: null, model: brandScope },
         select: RECORD_SELECT,
       });
       if (attached) rows.unshift(attached);

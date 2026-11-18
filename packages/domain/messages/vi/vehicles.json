@@ -524,7 +524,9 @@
       "priceThousandStep": "Giá phải là bội số 1.000đ",
       "insuredValueRange": "Giá trị xe từ 50.000.000đ tới 20.000.000.000đ, làm tròn tới triệu đồng.",
       "insuredValueCarOnly": "Giá trị xe chỉ áp dụng cho ô tô",
-      "photosRequired": "Còn {count, plural, other {# góc ảnh}} chưa có ảnh - không ô nào được để trống"
+      "photosRequired": "Còn {count, plural, other {# góc ảnh}} chưa có ảnh - không ô nào được để trống",
+      "brandRequired": "Chọn hãng xe",
+      "modelRequired": "Chọn mẫu xe"
     },
     "registration": {
       "title": "Cà vẹt xe",
@@ -576,7 +578,8 @@
       "scanMissing": "Chưa lấy được số khung, số máy - vui lòng kiểm tra lại ảnh hoặc tự nhập bên dưới.",
       "scanFound": "Đã quét: {items}",
       "scanMissingItems": "Chưa lấy được {items} - vui lòng kiểm tra lại ảnh hoặc tự nhập bên dưới.",
-      "view": "Xem ảnh cà vẹt"
+      "view": "Xem ảnh cà vẹt",
+      "filledFromScan": "Đã điền theo cà vẹt"
     },
     "catalog": {
       "variant": "Phiên bản",
@@ -593,7 +596,7 @@
       "addVariant": "Thêm phiên bản \"{text}\"",
       "newVariant": "Phiên bản mới: {name}",
       "undoNewVariant": "Bỏ",
-      "applied": "Đã điền thông số tham khảo - kiểm tra lại trước khi lưu.",
+      "applied": "Đã điền thông số theo mẫu xe - ô nào sai thì bấm biểu tượng bút để sửa.",
       "specTitle": "Thông số tham khảo · {name}",
       "apply": "Áp dụng thông số",
       "applyNote": "Bấm \"Áp dụng thông số\" để điền vào xe; bạn vẫn sửa được từng ô nếu xe đã độ hoặc khác bản gốc.",
@@ -621,7 +624,16 @@
       "rentReference": "Giá tham khảo XePrime: {price}",
       "rentReferenceModel": "Giá tham khảo cho dòng xe này: {price}",
       "rentMarket": "Xe cùng dòng đang cho thuê: {low} - {high} ({count, plural, other {# xe}})",
-      "useRent": "Dùng {price}"
+      "useRent": "Dùng {price}",
+      "modelVariant": "Mẫu xe",
+      "modelVariantPlaceholder": "Tìm dòng xe, phiên bản",
+      "modelVariantHelp": "Chọn đúng phiên bản để tự điền thông số. Không thấy xe của bạn thì chọn \"Nhập tay\" ở cuối danh sách.",
+      "manualEntry": "Nhập tay - xe chưa có trong danh sách",
+      "backToList": "Chọn từ danh sách mẫu xe",
+      "yearOutsideVariant": "Năm sản xuất {year} nằm ngoài đời {years} của phiên bản này - kiểm tra lại phiên bản hoặc năm.",
+      "specLocked": "Theo dữ liệu mẫu xe",
+      "unlockSpec": "Sửa nếu xe của bạn khác dữ liệu mẫu",
+      "unlockSpecAria": "Sửa {field}"
     },
     "createSteps": {
       "photosTitle": "Ảnh xe",
