@@ -47,6 +47,10 @@ một khoản nền tảng thu trên phí bảo hiểm.
 
 ### 2. Phí lấy từ bảng % nội bộ, admin thấy phí thực tế từng chuyến (giữ 0088 điều 3)
 
+> **Ghi đè bởi [ADR 0097](0097-insurance-premium-from-partner-at-approval.md) (17/11/2026):** lượt DUYỆT
+> hỏi MIC (`phi_vcx`, chờ tối đa 1,5 giây), công thức bậc chỉ là dự phòng. Báo giá công khai vẫn không
+> gọi MIC.
+
 Không gọi `phi_vcx` lúc báo giá hay lúc duyệt (bỏ Q22 của SRS). Màn Admin › Bảo hiểm hiện cho từng
 hợp đồng: giá trị xe, bậc áp dụng (số ngày và %), phí đã thu của khách, phí MIC tính lúc cấp
 (`partner_premium_amount`), chênh lệch, và phí thu hộ đã thu.
@@ -54,7 +58,7 @@ hợp đồng: giá trị xe, bậc áp dụng (số ngày và %), phí đã thu
 ### 3. Phí thu hộ bảo hiểm của nền tảng (Proposed — chờ luật sư)
 
 - Cấu hình trên sản phẩm bảo hiểm: `insurance_products.service_fee_enabled` (mặc định `false`) và
-  `service_fee_percent` (0–50, hai chữ số lẻ). Chỉ admin nền tảng sửa, có audit.
+  `service_fee_percent` (0–100, hai chữ số lẻ — trần nâng từ 50 ngày 17/11/2026, xem ADR 0097). Chỉ admin nền tảng sửa, có audit.
 - Dòng phí riêng `insurance_service_fee` (người hưởng: nền tảng, người trả: khách) =
   `roundVnd(IV × %)`, chỉ có khi chuyến có dòng `IV`. Tên hiển thị tạm "Phí thu hộ bảo hiểm".
 - Tiền: cộng vào tổng khách và vào tiền giữ chỗ online (không phải tiền của chủ xe); mã khuyến mãi

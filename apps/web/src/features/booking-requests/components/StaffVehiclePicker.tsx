@@ -1,7 +1,8 @@
 'use client';
 
 import { CarOutlined } from '@ant-design/icons';
-import { Button, Empty, Result, Skeleton, Spin } from 'antd';
+import { Button, Result, Skeleton, Spin } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { VEHICLE_OPERATION_STATUS_META, type VehicleOperationStatus } from '@xeprime/types';
@@ -121,17 +122,14 @@ export function StaffVehiclePicker({
       ) : null}
 
       {!isInitialLoading && !initialError && vehicles.length === 0 ? (
-        <Empty
-          className={styles.state}
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
+        <EmptyState
+          variant={q || branchId ? 'no-results' : 'empty'}
           /*
            * Ba câu khác nhau cho ba lý do khác nhau. "Gian hàng chưa có xe nào" nói ra khi thật
            * ra chỉ là chi nhánh đang lọc chưa có xe sẽ khiến người dùng đi tìm một lỗi không tồn
            * tại — trong khi việc cần làm chỉ là đổi ô chi nhánh ngay phía trên.
            */
-          description={
-            q ? t('emptySearch') : branchId ? t('emptyBranch') : t('empty')
-          }
+          title={q ? t('emptySearch') : branchId ? t('emptyBranch') : t('empty')}
         />
       ) : null}
 
@@ -164,7 +162,8 @@ export function StaffVehiclePicker({
                     <span className={styles.tags}>
                       <StatusTag
                         value={vehicle.operationStatus as VehicleOperationStatus}
-                        meta={VEHICLE_OPERATION_STATUS_META} group="vehicleOperationStatus"
+                        meta={VEHICLE_OPERATION_STATUS_META}
+                        group="vehicleOperationStatus"
                       />
                       {vehicle.weekdayPrice ? (
                         <span className={styles.price}>

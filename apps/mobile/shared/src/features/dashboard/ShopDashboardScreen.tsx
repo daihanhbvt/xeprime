@@ -4,7 +4,6 @@ import { useTranslations } from 'use-intl';
 import { PERMISSION, RECEIPT_SOURCE_GROUP, RECEIPT_STATUS, RECEIPT_TYPE } from '@xeprime/types';
 import { dayjs, moneyChangePercent } from '@xeprime/domain';
 import { Screen } from '@/components/layout/Screen';
-import CarOutlined from '@ant-design/icons-svg/es/asn/CarOutlined';
 import DollarOutlined from '@ant-design/icons-svg/es/asn/DollarOutlined';
 import LockOutlined from '@ant-design/icons-svg/es/asn/LockOutlined';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
@@ -22,11 +21,9 @@ import { space } from '@/theme/tokens';
 import { withBranchParam } from '@/features/branches/branch-link';
 import { BranchFilterField } from '@/features/branches/components/BranchFilterField';
 import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
-import { dashboardMonthRange, dashboardTodayRange } from './api';
+import { dashboardMonthRange } from './api';
 import { greetingKey, todayLabel } from './dashboard-model';
 import { AgendaPanel } from './components/AgendaPanel';
-import { DashboardPanel } from './components/DashboardPanel';
-import { ReceiptMiniList } from './components/ReceiptMiniList';
 import { ShopOnboardingCard } from './components/ShopOnboardingCard';
 import {
   FleetPlanPanel,
@@ -74,8 +71,8 @@ export function ShopDashboardScreen() {
   const session = useCurrentUser();
   /*
    * MỘT Tổng quan cho cả hai tuyến (ADR 0085 điều 1 — web `DashboardView`): chủ xe cá nhân dùng
-   * chính màn này, khối của gói tự vắng. Ba khác biệt có chủ đích giữ từ Tổng quan riêng cũ của họ:
-   * lời chào theo tên, "Xe của bạn" thay số đếm chợ, ví hiện thu nhập tháng; không thẻ Gói, không
+   * chính màn này, khối của gói tự vắng. Hai khác biệt có chủ đích giữ từ Tổng quan riêng cũ của họ:
+   * "Xe của bạn" thay số đếm chợ, ví hiện thu nhập tháng; không thẻ Gói, không
    * thẻ ba bước mở gian hàng.
    */
   const commission = resolvePartnerTrack(session.data) === PARTNER_TRACK.COMMISSION;
@@ -108,11 +105,6 @@ export function ShopDashboardScreen() {
   );
 
   /* Web: bấm một phiếu của "Thu Chi hôm nay" mở sổ thu chi lọc HÔM NAY (kèm chi nhánh). */
-  const goTodayReceipts = useCallback(
-    () => navigateOnce(withBranchParam(ROUTES.manage.receipts(dashboardTodayRange()), branchId)),
-    [navigateOnce, branchId],
-  );
-
   /* Thẻ cọc KHÔNG mang kỳ: `depositHeld` là số TẠI THỜI ĐIỂM NÀY. */
   const goDepositReceipts = useCallback(
     () =>
@@ -146,7 +138,12 @@ export function ShopDashboardScreen() {
       hint: t('stats.revenueHint'),
       value: cellValue(money.summary.isError, s ? fmt.money(s.revenue) : undefined),
       ...(s && prev
-        ? { change: { value: moneyChangePercent(s.revenue, prev.revenue), previous: fmt.moneyCompact(prev.revenue) } }
+        ? {
+            change: {
+              value: moneyChangePercent(s.revenue, prev.revenue),
+              previous: fmt.moneyCompact(prev.revenue),
+            },
+          }
         : {}),
       tone: 'gold',
       loading: money.summary.isPending,
@@ -156,31 +153,7 @@ export function ShopDashboardScreen() {
 
   cards.push(...monthCards);
 
-  if (canViewVehicles) {
-    cards.push({
-      key: 'available',
-      icon: CarOutlined,
-      label: t('stats.available'),
-      value: cellValue(
-        false,
-        fleet.data
-          ? `${fmt.count(fleet.data.available)}/${fmt.count(fleet.data.total)}`
-          : undefined,
-      ),
-      ...(fleet.data
-        ? {
-            hint: t('kpi.fleetHint', {
-              renting: fmt.count(fleet.data.renting),
-              maintenance: fmt.count(fleet.data.maintenance),
-            }),
-          }
-        : {}),
-      tone: 'green',
-      loading: fleet.isPending,
-      onPress: () => navigateOnce(links.availableVehicles),
-    });
-  }
-
+  // "Xe sẵn sàng" nằm trong thẻ Đội xe (`FleetPlanPanel`), cùng chỗ với web (chốt 17/11/2026).
   if (money.visible) {
     cards.push({
       key: 'deposit',
@@ -201,8 +174,8 @@ export function ShopDashboardScreen() {
 
   const trend = data?.trend ?? null;
   const now = dayjs();
-  // Chủ xe cá nhân: lời chào theo tên — Tổng quan của MỘT người, không của một gian hàng.
-  const greetName = commission ? session.data?.displayName?.trim() : undefined;
+  // Lời chào theo tên tài khoản cho CẢ HAI tuyến — như web (Figma Overview, chốt 17/11/2026).
+  const greetName = session.data?.displayName?.trim();
   const title = greetName ? t(`greeting.${greetingKey(now)}`, { name: greetName }) : t('title');
 
   const goReport = useCallback(
@@ -220,7 +193,12 @@ export function ShopDashboardScreen() {
   const tripsState = useMemo(
     () =>
       showTrips
-        ? { trend: trend ?? undefined, loading: overview.isPending, isError: overview.isError, onRetry: retryOverview }
+        ? {
+            trend: trend ?? undefined,
+            loading: overview.isPending,
+            isError: overview.isError,
+            onRetry: retryOverview,
+          }
         : null,
     [showTrips, trend, overview.isPending, overview.isError, retryOverview],
   );
@@ -246,7 +224,7 @@ export function ShopDashboardScreen() {
         {/*
           Thứ tự theo Figma Overview MB (24175:52345), các khối cách 16: phạm vi chi nhánh · câu trả
           lời · ba bước mở gian hàng · bốn ô việc · ví · lịch giao nhận · (tuyến hoa hồng) xe của bạn ·
-          KPI tháng · thu chi / đơn & chuyến · đội xe & gói · uy tín · thu chi hôm nay.
+          KPI tháng · thu chi / đơn & chuyến · đội xe & gói · uy tín.
         */}
         <YStack px={gutter} gap={PAGE_GAP} pb={layout.section}>
           <BranchFilterField filter={branchFilter} value={branchId} scope />
@@ -282,26 +260,11 @@ export function ShopDashboardScreen() {
             showPlan={false}
             showMarket={showMarket}
             market={data?.market ?? undefined}
+            fleet={canViewVehicles ? fleet : null}
             links={links}
           />
           <ReputationPanel metrics={data?.reputation} />
-
-          {money.visible ? (
-            <DashboardPanel
-              title={t('panels.receipts')}
-              loading={money.todayReceipts.isPending}
-              error={money.todayReceipts.isError && !money.todayReceipts.data}
-              onRetry={() => void money.todayReceipts.refetch()}
-              empty={t('panels.receiptsEmpty')}
-            >
-              {money.todayReceipts.data?.items.length ? (
-                <ReceiptMiniList
-                  items={money.todayReceipts.data.items}
-                  onSelect={goTodayReceipts}
-                />
-              ) : null}
-            </DashboardPanel>
-          ) : null}
+          {/* "Thu chi hôm nay" rời Tổng quan (cả web) - đã có ở Lịch sử giao dịch, chốt 17/11/2026. */}
         </YStack>
       </Screen>
     </>

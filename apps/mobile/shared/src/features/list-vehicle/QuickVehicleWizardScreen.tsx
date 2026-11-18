@@ -287,7 +287,7 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
   );
 
   /*
-   * Cà vẹt (ADR 0097) — BẮT BUỘC khi đăng xe nhanh, mọi loại xe. Presign cà vẹt cũng tenant-scoped
+   * Cà vẹt (ADR 0099) — BẮT BUỘC khi đăng xe nhanh, mọi loại xe. Presign cà vẹt cũng tenant-scoped
    * nên người chưa có gian hàng mở gian hàng ngay trước lượt tải, y như tấm ảnh xe đầu tiên.
    */
   const [regCapture, setRegCapture] = useState<RegistrationCaptureState>(EMPTY_REGISTRATION);
@@ -494,7 +494,7 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
       }
       return;
     }
-    // Cà vẹt (ADR 0097): thiếu ⇒ về bước 1, hiện lỗi tại ô. Xe đã tạo ở lượt trước thì cà vẹt đã gắn.
+    // Cà vẹt (ADR 0099): thiếu ⇒ về bước 1, hiện lỗi tại ô. Xe đã tạo ở lượt trước thì cà vẹt đã gắn.
     if (!regCheck.ok && !registration.createdVehicle) {
       setRegShowErrors(true);
       setStep('info');

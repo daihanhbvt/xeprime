@@ -187,6 +187,8 @@ export {
   type InsuranceSweepResult,
   type IssuePolicyRequest,
   type IssuePolicyResult,
+  type PremiumQuoteRequest,
+  type PremiumQuoteResult,
 } from './insurance-issue';
 
 /** Client + adapter THẬT của MIC (ADR 0088) — worker cấp hợp đồng, API tải GCN PDF. */

@@ -2,15 +2,36 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   INSURANCE_PREMIUM_BASIS,
   INSURANCE_PRODUCT_KIND,
+  VEHICLE_TYPE,
   readInsurancePremiumTiers,
+  type FeePolicySnapshot,
   type InsuranceOfferedByKind,
   type InsurancePremiumTier,
   type InsuranceProductKind,
+  type PerVehicleTypeAmount,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { INSURANCE_PARTNER, type InsurancePartner } from './partner/insurance-partner.port';
 
 const NOTHING_OFFERED: InsuranceOfferedByKind = { vehicleProtection: false, tripInsurance: false };
+
+const NO_DAILY_RATE: PerVehicleTypeAmount = {
+  [VEHICLE_TYPE.CAR]: '0',
+  [VEHICLE_TYPE.MOTORBIKE]: '0',
+};
+
+/**
+ * Phần bảo hiểm của chính sách phí khi tính tiền (ADR 0098): công tắc bán, biểu phí NGÀY và tên đối
+ * tác — đọc từ sản phẩm bảo hiểm + đối tác đang chạy, không còn từ `fee_policies`.
+ */
+export type InsuranceFeePolicyOverlay = Pick<
+  FeePolicySnapshot,
+  | 'vehicleProtectionEnabled'
+  | 'vehicleProtectionDailyAmount'
+  | 'tripInsuranceEnabled'
+  | 'tripInsuranceDailyAmount'
+  | 'insurancePartnerName'
+>;
 
 /**
  * Bao lâu một câu trả lời "sản phẩm nào đang bật" được dùng lại trong CÙNG tiến trình.
@@ -52,6 +73,8 @@ export class InsuranceOfferService {
     vehicleTripTiers: InsurancePremiumTier[] | null;
     /** % phí thu hộ của sản phẩm `IV` đang bật — `null` khi công tắc tắt (ADR 0091 điều 3). */
     vehicleTripServiceFeePercent: number | null;
+    /** Biểu phí NGÀY của sản phẩm tính theo ngày đang bật, theo loại sản phẩm (ADR 0098). */
+    dailyRates: Partial<Record<InsuranceProductKind, PerVehicleTypeAmount>>;
     at: number;
   } | null = null;
   /** Tăng mỗi lần `invalidate` — một lượt đọc bắt đầu TRƯỚC lần xoá không được ghi đè cache mới. */
@@ -99,6 +122,28 @@ export class InsuranceOfferService {
     return (await this.active()).vehicleTripServiceFeePercent;
   }
 
+  /**
+   * Phần bảo hiểm phủ lên chính sách phí trước khi tính tiền (ADR 0098) — một nguồn cho báo giá và
+   * lượt duyệt. Loại không được bán ⇒ tắt và biểu phí 0; sản phẩm theo bậc ⇒ biểu phí ngày 0 (phí đi
+   * qua `vehicleProtectionTier`). Tên đối tác lấy từ adapter đang chạy.
+   */
+  async feePolicyOverlay(): Promise<InsuranceFeePolicyOverlay> {
+    const offered = await this.offeredByKind();
+    const { dailyRates } = await this.active();
+    return {
+      vehicleProtectionEnabled: offered.vehicleProtection,
+      vehicleProtectionDailyAmount: offered.vehicleProtection
+        ? (dailyRates[INSURANCE_PRODUCT_KIND.VEHICLE_TRIP] ?? NO_DAILY_RATE)
+        : NO_DAILY_RATE,
+      tripInsuranceEnabled: offered.tripInsurance,
+      tripInsuranceDailyAmount: offered.tripInsurance
+        ? (dailyRates[INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT] ?? NO_DAILY_RATE)
+        : NO_DAILY_RATE,
+      insurancePartnerName:
+        offered.vehicleProtection || offered.tripInsurance ? this.partner.partnerName : null,
+    };
+  }
+
   /** Một loại sản phẩm có đang được bán không — đọc cùng câu trả lời với `offeredByKind`. */
   static offers(offered: InsuranceOfferedByKind, kind: InsuranceProductKind): boolean {
     return kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP
@@ -116,6 +161,7 @@ export class InsuranceOfferService {
     kinds: ReadonlySet<string>;
     vehicleTripTiers: InsurancePremiumTier[] | null;
     vehicleTripServiceFeePercent: number | null;
+    dailyRates: Partial<Record<InsuranceProductKind, PerVehicleTypeAmount>>;
   }> {
     const now = Date.now();
     if (this.cache && now - this.cache.at < INSURANCE_OFFER_CACHE_TTL_MS) return this.cache;
@@ -129,8 +175,18 @@ export class InsuranceOfferService {
         premiumTiersJson: true,
         serviceFeeEnabled: true,
         serviceFeePercent: true,
+        dailyAmountCar: true,
+        dailyAmountMotorbike: true,
       },
     });
+    const dailyRates: Partial<Record<InsuranceProductKind, PerVehicleTypeAmount>> = {};
+    for (const p of active) {
+      if (p.premiumBasis !== INSURANCE_PREMIUM_BASIS.DAILY) continue;
+      dailyRates[p.kind as InsuranceProductKind] = {
+        [VEHICLE_TYPE.CAR]: p.dailyAmountCar?.toFixed(0) ?? '0',
+        [VEHICLE_TYPE.MOTORBIKE]: p.dailyAmountMotorbike?.toFixed(0) ?? '0',
+      };
+    }
     const kinds = new Set(active.map((p) => p.kind));
     const vehicleTrip = active.find((p) => p.kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP);
     const isTier = vehicleTrip?.premiumBasis === INSURANCE_PREMIUM_BASIS.VALUE_TIER;
@@ -146,6 +202,7 @@ export class InsuranceOfferService {
       kinds: kinds as ReadonlySet<string>,
       vehicleTripTiers,
       vehicleTripServiceFeePercent: serviceFeePercent > 0 ? serviceFeePercent : null,
+      dailyRates,
       at: now,
     };
     if (generation === this.generation) this.cache = fresh;

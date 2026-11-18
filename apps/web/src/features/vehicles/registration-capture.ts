@@ -160,7 +160,7 @@ export function checkRegistration(
 }
 
 /**
- * Gộp kết quả máy đọc vào các ô chủ xe ĐÃ GÕ tay (ADR 0097): ô đã có chữ giữ nguyên, ô trống lấy
+ * Gộp kết quả máy đọc vào các ô chủ xe ĐÃ GÕ tay (ADR 0099): ô đã có chữ giữ nguyên, ô trống lấy
  * giá trị đọc được. Máy đọc về muộn không bao giờ ghi đè công nhập tay.
  */
 export function mergeTypedFields(

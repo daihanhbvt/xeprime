@@ -1,0 +1,44 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.muted {
+  margin: 0;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+/* Ba ô nhập trên một hàng ở desktop, xếp chồng trên điện thoại. */
+.fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 var(--xp-space-12);
+}
+
+@media (max-width: 768px) {
+  .fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

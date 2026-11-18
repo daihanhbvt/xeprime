@@ -1,6 +1,7 @@
 'use client';
 
-import { Card, Empty, Tag } from 'antd';
+import { Card, Tag } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { useTranslations } from 'next-intl';
 
 import type { AccountNavLabelKey } from '@/constants/account-nav';
@@ -27,15 +28,7 @@ export function AccountComingSoon({ labelKey }: { labelKey: AccountNavLabelKey }
         <h2 className={styles.title}>{tNav(labelKey)}</h2>
         <Tag variant="filled">{t('badge')}</Tag>
       </div>
-      <Empty
-        image={Empty.PRESENTED_IMAGE_SIMPLE}
-        description={
-          <span className={styles.description}>
-            <strong className={styles.descriptionTitle}>{t('title')}</strong>
-            <span>{t('body')}</span>
-          </span>
-        }
-      />
+      <EmptyState variant="coming-soon" title={t('title')} description={t('body')} />
     </Card>
   );
 }

@@ -939,7 +939,28 @@ Trạng thái tự dựng: đang tải (khung giữ chỗ hai cột) · lỗi + 
 nền vàng đầu thẻ `public/partner/account-profile-cover.webp`. Gỡ: `AccountSecuritySections`, `AccountProfileForm`,
 `DeleteAccountView`, `AccountDeletionImpact`, chế độ `embedded` của `ChangePasswordForm`.
 
-### 3.16 Thêm xe mới (nâng cao + đăng nhanh) — kiểm kê và quyết định (17/11/2026)
+### 3.16 Tổng quan — kiểm kê và quyết định (17/11/2026)
+
+Web `DashboardView` dựng theo Figma Overview `24138:80351`; logic giữ nguyên và ĐỒNG BỘ với app
+Partner `ShopDashboardScreen` (người dùng yêu cầu web và app giống 100% logic nghiệp vụ).
+
+| # | Mục | Đánh dấu | Quyết định |
+| --- | --- | --- | --- |
+| 1 | Lời chào theo tên | 🆕 | CẢ HAI tuyến, web + app (trước chỉ chủ xe cá nhân) |
+| 2 | Bốn ô việc | ✅ | `FocusTile` mới (icon Figma, viên đỏ quá hạn); `ActionTile` giữ nguyên cho trang quản trị |
+| 3 | Lịch giao & nhận: tab + bảng | ✅ | Tab Tất cả · Quá giờ · Hôm nay · N ngày tới, nhãn "Trễ N ngày/giờ/phút" như app. Cột "Hình thức giao/nhận" của bản vẽ **bỏ** — API chưa trả |
+| 4 | "Tháng N so với tháng trước" | ✅ | Doanh thu · đơn mới · chuyến hoàn thành · tỉ lệ lấp đầy, link "Báo cáo doanh thu" |
+| 5 | Thẻ "Xe sẵn sàng" | 🟡 | Thành dòng trong "Đội xe & gói dịch vụ" (web + app) |
+| 6 | Thẻ "Tiền cọc đang giữ" | 🟡 | Thành ô cuối của khối so sánh tháng (đúng như app) |
+| 7 | "Thu chi hôm nay" | 🟡 | Rời Tổng quan, web + app — đã có ở Lịch sử giao dịch |
+| 8 | Ví | ✅ | Nút "Rút về ngân hàng" mở thẳng hộp rút tiền (như app). Giữ dòng tạm khoá (khi `frozen`) và "Thu nhập tháng này" (tuyến hoa hồng) |
+| 9 | Gói + chợ | ✅ | Gộp vào "Đội xe & gói dịch vụ"; app vẫn ẩn phần gói (chính sách store, 13/11) |
+| 10 | Uy tín | ✅ | Ba dòng + thanh; dưới 60% đổi cam (web + app) |
+
+Gỡ: `PlanPanel`, `MarketPanel`, `ReceiptMiniList`. Trạng thái tự dựng: tải · lỗi + thử lại · rỗng · tab
+rỗng · dưới 1200px một cột (cột phải xếp lưới) · điện thoại một cột.
+
+### 3.17 Thêm xe mới (nâng cao + đăng nhanh) — kiểm kê và quyết định (17/11/2026)
 
 Design: section `24352:70390`. Áp cho wizard nâng cao `/vehicles/new` (gian hàng) VÀ luồng đăng nhanh
 `/vehicles/register` (chủ xe tuyến hoa hồng) - cùng vỏ `VehicleWizard`. Logic nghiệp vụ giữ nguyên trừ các
@@ -953,7 +974,7 @@ mục người dùng chốt bên dưới.
 | T4 | Chip "Loại dịch vụ" ở bước 1 | 🟡→✅ | Thành công tắc trên 3 thẻ dịch vụ ở bước 2; luật khoá theo loại xe + cảnh báo xoá giá giữ nguyên |
 | T5 | "Tự động đồng ý nhận chuyến" ở luồng nâng cao | 🆕→✅ | Thêm; ghi bằng `patchVehicleServiceSetting` (dịch vụ tự lái) SAU khi tạo xe như luồng nhanh; hỏng thì xe vẫn tạo + cảnh báo |
 | T6 | Mô tả có thanh định dạng, 2.000 ký tự | ⚠️→✅ | Văn bản thường, giữ 4.000 (backend + trang khách là text thường); tiện ích lưới 2 cột (catalog không có nhóm) |
-| T7 | Cà vẹt = góc ảnh thứ 6 + "Số khung/Số máy" ở Thông tin xe | 🆕→✅ | Bắt buộc MỌI loại xe, cả hai luồng (ADR 0097); ô cà vẹt nằm dưới bảng ảnh trong thẻ "Ảnh xe"; "Nhập tay" mở bất cứ lúc nào, ảnh vẫn bắt buộc |
+| T7 | Cà vẹt = góc ảnh thứ 6 + "Số khung/Số máy" ở Thông tin xe | 🆕→✅ | Bắt buộc MỌI loại xe, cả hai luồng (ADR 0099); ô cà vẹt nằm dưới bảng ảnh trong thẻ "Ảnh xe"; "Nhập tay" mở bất cứ lúc nào, ảnh vẫn bắt buộc |
 | T8 | Cột "Xem trước trên Marketplace" + "Sẵn sàng gửi duyệt x/4" + Lưu nháp | 🆕→✅ | Dựng từ giá trị đang nhập; không có sao/đánh giá giả; 4 mục đọc cùng luật cổng gửi duyệt |
 | T9 | Thông báo "Có thông tin cần bổ sung!" (`24352:69368`) | ✅ | `notification.warning` khi lưu/gửi còn thiếu, kèm nhảy về đúng bước như cũ |
 | T10 | Màn thành công (`24352:67918`) | ✅ | Wizard nâng cao: 4 mục dẫn tới đúng tab màn sửa (Giấy tờ · Ảnh · Chính sách · Bảo dưỡng "Không bắt buộc"); không hiện "2/3" vì trang không đọc giấy tờ. Luồng nhanh giữ màn kết quả 4 trạng thái của nó |
@@ -965,6 +986,7 @@ Ghi lại để phiên sau khỏi tốn lượt đọc lại.
 
 | Node | Là gì |
 | --- | --- |
+| `24138:80351` | Tổng quan (PC 1920): đầu trang `24138:80354` · bốn ô `24138:80355` · lịch giao nhận `24138:80394` · so sánh tháng `24138:80446` · thu chi `24138:80477` · đơn & chuyến `24138:80517` · cột phải `24138:80589` |
 | `23649:27690` | Header, biến thể Default |
 | `23661:22492` | Header, biến thể Details (có dải breadcrumb `23659:20986`) |
 | `23661:27362` | SubMenu: 4 dropdown (Vận hành · Xe & Tài · Doanh thu · Cấu hình) |

@@ -7,7 +7,7 @@ import {
 import type { CreateVehicleRegistrationInput } from '@/api/vehicles/api';
 
 /**
- * Ô "Cà vẹt xe" của hai wizard thêm xe (ADR 0089 · 0097) — bản native của
+ * Ô "Cà vẹt xe" của hai wizard thêm xe (ADR 0089 · 0099) — bản native của
  * `apps/web/src/features/vehicles/registration-capture.ts (sửa luật thì sửa CẢ HAI).
  *
  * Giữ NGOÀI form React Hook Form của wizard: `VehicleFormValues` là schema dùng chung với app
@@ -160,7 +160,7 @@ export function checkRegistration(
 }
 
 /**
- * Gộp kết quả máy đọc vào các ô chủ xe ĐÃ GÕ tay (ADR 0097): ô đã có chữ giữ nguyên, ô trống lấy
+ * Gộp kết quả máy đọc vào các ô chủ xe ĐÃ GÕ tay (ADR 0099): ô đã có chữ giữ nguyên, ô trống lấy
  * giá trị đọc được. Máy đọc về muộn không bao giờ ghi đè công nhập tay.
  */
 export function mergeTypedFields(

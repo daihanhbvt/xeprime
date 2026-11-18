@@ -1,15 +1,13 @@
 import Image from 'next/image';
-import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { ROUTES } from '@/constants/routes';
 import { APP_DOWNLOAD_QR } from '@/features/content-page/app-download';
 import { cx } from '@/lib/cx';
 import styles from './AppBanner.module.css';
 
-/** Tên cửa hàng lấy từ nguồn chung của trang tải app — không viết lại ở đây. */
-const STORE_NAME = Object.fromEntries(APP_DOWNLOAD_QR.map((s) => [s.key, s.store])) as Record<
+/** Tên + link cửa hàng lấy từ nguồn chung của mã QR tải app - không viết lại ở đây. */
+const STORE = Object.fromEntries(APP_DOWNLOAD_QR.map((s) => [s.key, s])) as Record<
   (typeof APP_DOWNLOAD_QR)[number]['key'],
-  string
+  (typeof APP_DOWNLOAD_QR)[number]
 >;
 
 const BADGES = [
@@ -22,7 +20,8 @@ const BADGES = [
  * viền `#ffd891`, logo, câu mời chữ tối, hai huy hiệu cửa hàng kính mờ và ảnh điện thoại NHÔ RA khỏi
  * mép trên + mép phải của khung (ảnh nền bị cắt trong khung, điện thoại thì không).
  *
- * Server Component: không có tương tác nào ngoài hai liên kết.
+ * Server Component: không có tương tác nào ngoài hai liên kết - mở thẳng trang app trên cửa hàng
+ * (cùng link với mã QR), tab mới.
  */
 export async function AppBanner({ className }: { className?: string }) {
   const t = await getTranslations('Home.app');
@@ -60,13 +59,18 @@ export async function AppBanner({ className }: { className?: string }) {
       <ul className={styles.badges}>
         {BADGES.map((badge) => (
           <li key={badge.key}>
-            <Link href={ROUTES.APP} className={styles.badge}>
+            <a
+              href={STORE[badge.key].value}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.badge}
+            >
               <Image src={badge.icon} alt="" width={24} height={24} unoptimized />
               <span className={styles.badgeText}>
                 <span className={styles.badgeCaption}>{t(badge.captionKey)}</span>
-                <span className={styles.badgeStore}>{STORE_NAME[badge.key]}</span>
+                <span className={styles.badgeStore}>{STORE[badge.key].store}</span>
               </span>
-            </Link>
+            </a>
           </li>
         ))}
       </ul>

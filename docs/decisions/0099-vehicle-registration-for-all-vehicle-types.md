@@ -1,4 +1,4 @@
-# ADR 0097 - Cà vẹt bắt buộc khi thêm xe cho CẢ ô tô và xe máy, ở cả hai luồng thêm xe
+# ADR 0099 - Cà vẹt bắt buộc khi thêm xe cho CẢ ô tô và xe máy, ở cả hai luồng thêm xe
 
 Ngày: 17/11/2026 · Trạng thái: **Accepted** (17/11/2026 - người dùng chốt: xe máy bắt buộc như ô tô; ảnh
 vẫn bắt buộc, nhập tay chỉ để sửa/bổ sung kết quả đọc; áp cho luồng nâng cao + luồng đăng nhanh, web + app

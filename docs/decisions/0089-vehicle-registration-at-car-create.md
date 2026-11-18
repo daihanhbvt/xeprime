@@ -3,7 +3,7 @@
 Ngày: 11/11/2026 · Trạng thái: **Accepted** (11/11/2026 — người dùng chốt: chỉ ô tô, xe cũ không chặn
 chỉ nhắc, Tesseract tự chạy, cà vẹt ở bước Hình ảnh chỉ lưu giấy tờ) · Bổ sung: [0088](0088-mic-trip-insurance-integration.md)
 điều 2 (điều kiện xe — cà vẹt có số khung + tên chủ) · Dùng lại: [0057](0057-customer-driver-licence-verification.md)
-điều 2b (Tesseract trong tiến trình API) · **Điều 1 bị [0097](0097-vehicle-registration-for-all-vehicle-types.md)
+điều 2b (Tesseract trong tiến trình API) · **Điều 1 bị [0099](0099-vehicle-registration-for-all-vehicle-types.md)
 ghi đè** trong phạm vi "chỉ ô tô" và "chỉ wizard nâng cao" (17/11/2026: mọi loại xe, cả luồng đăng nhanh)
 
 ## Bối cảnh

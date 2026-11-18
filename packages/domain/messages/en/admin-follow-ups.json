@@ -1,8 +1,9 @@
 {
   "tabs": {
     "label": "Booking views",
-    "bookings": "All bookings",
-    "followUps": "Follow-ups"
+    "pending": "Not yet held",
+    "bookings": "Bookings",
+    "followUps": "Not completed"
   },
   "page": {
     "intro": "Renters who sent a request but did not end up with a trip. Call them back to ask why and invite them to book again."

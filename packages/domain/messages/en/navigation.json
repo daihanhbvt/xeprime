@@ -31,6 +31,7 @@
   },
   "account": {
     "menuLabel": "Account menu",
+    "aboutUs": "About us",
     "security": "Account security",
     "profile": "Manage account",
     "personalProfile": "Personal profile",

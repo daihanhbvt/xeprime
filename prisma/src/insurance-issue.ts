@@ -183,6 +183,34 @@ export type IssuePolicyResult =
       photosSent?: boolean;
     };
 
+/**
+ * Hỏi đối tác phí bảo hiểm vật chất xe của MỘT chuyến (ADR 0097) — chỉ những gì biểu phí cần, không
+ * dữ liệu cá nhân nào.
+ */
+export interface PremiumQuoteRequest {
+  /** Giá trị xe (đồng, số nguyên). */
+  insuredValue: string;
+  manufactureYear: number;
+  seatCount: number;
+  /** Giờ nhận → giờ trả của chuyến. */
+  from: Date;
+  to: Date;
+  /** Phí theo công thức bậc — adapter giả lập trả lại đúng số này (đối tác "đồng ý" với bảng). */
+  formulaAmount: string;
+  /** Thời gian chờ HTTP của lượt gọi — caller còn chặn tổng thời gian ở phía nó. */
+  timeoutMs?: number;
+}
+
+export type PremiumQuoteResult =
+  | { ok: true; amount: string }
+  | {
+      ok: false;
+      /** `unavailable` = mạng/5xx/token; `rejected` = đối tác trả mã lỗi nghiệp vụ. */
+      reason: 'unavailable' | 'rejected';
+      /** Mã + câu báo của đối tác — KHÔNG bao giờ thân lỗi thô (401 của MIC chứa token). */
+      message: string;
+    };
+
 export interface InsurancePartner {
   /** Tên hiện cho khách và ghi vào snapshot hợp đồng. */
   readonly partnerName: string;
@@ -199,6 +227,11 @@ export interface InsurancePartner {
    * giao dịch. Ném khi mạng/đối tác lỗi. Vắng = đối tác không có khái niệm này (adapter giả lập).
    */
   lookupStatus?(partnerRef: string): Promise<string | null>;
+  /**
+   * Phí bảo hiểm vật chất xe đối tác tính cho một chuyến (ADR 0097). Vắng = đối tác không có API
+   * tính phí ⇒ caller dùng công thức (`not_supported`). Không ném: lỗi trả về `ok: false`.
+   */
+  quotePremium?(request: PremiumQuoteRequest): Promise<PremiumQuoteResult>;
 }
 
 /** Ghi log tối thiểu — API truyền `Logger` của Nest, worker truyền `console`. */
@@ -280,10 +313,15 @@ export const MIC_MOCK_CERTIFICATE_URL_TEMPLATE = `https://staging-cert.mic.vn/vi
  * nhận đúng số cũ — đúng hành vi mà đối tác thật phải có với khoá chống mua đôi.
  */
 export class MicMockInsurancePartner implements InsurancePartner {
-  readonly partnerName = 'MIC (giả lập — môi trường thử nghiệm)';
+  readonly partnerName = 'MIC (giả lập - môi trường thử nghiệm)';
   readonly configured = true;
 
   constructor(private readonly logger: InsuranceLogger = SILENT) {}
+
+  /** Giả lập "đối tác đồng ý với bảng bậc" — lượt duyệt ở dev/staging chạy đúng nhánh `partner`. */
+  quotePremium(request: PremiumQuoteRequest): Promise<PremiumQuoteResult> {
+    return Promise.resolve({ ok: true, amount: request.formulaAmount });
+  }
 
   issue(request: IssuePolicyRequest): Promise<IssuePolicyResult> {
     const invalid = invalidReason(request);

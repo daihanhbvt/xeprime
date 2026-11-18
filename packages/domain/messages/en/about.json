@@ -1,101 +1,119 @@
 {
   "meta": {
     "title": "About XePrime",
-    "description": "XePrime is the marketplace connecting vehicle owners and renters across Vietnam: self-drive, with driver and long-term rentals, with prices and responsibilities stated before you book."
+    "description": "XePrime connects renters with vehicle owners across Vietnam: self-drive, with driver and long-term rentals, with prices, schedules and terms stated clearly before you book."
+  },
+  "breadcrumb": {
+    "label": "Breadcrumb",
+    "home": "Home",
+    "current": "About us",
+    "back": "Back"
   },
   "hero": {
-    "eyebrow": "About us",
-    "title": "Renting a vehicle without the guesswork",
-    "lead": "XePrime connects people who need a vehicle with the people who own one, across Vietnam. We do not own a single vehicle - our job is to make the price, the calendar and each side's responsibilities clear before anyone pays."
+    "kicker": "About us",
+    "titleLine1": "Easy rentals",
+    "titleLine2": "Worry-free journeys with <accent>XEPRIME</accent>",
+    "lead": "Connecting people who need a vehicle with trusted owners across Vietnam.<br></br>Clear prices, flexible schedules and clear responsibilities before every trip.",
+    "partnerCta": "Become a partner",
+    "exploreCta": "Explore vehicles",
+    "photoTitle": "Independent journeys, carefully prepared",
+    "photoCaption": "99.8% Worry-free trips"
   },
-  "services": {
-    "heading": "Three ways to rent",
-    "selfDrive": {
-      "title": "Self-drive",
-      "desc": "You drive. Collect at the shop or ask for delivery, priced by the hour or by the day."
+  "stats": {
+    "legal": {
+      "kicker": "A connecting platform",
+      "value": "0",
+      "title": "Vehicles owned",
+      "desc": "Never competing with partners"
     },
-    "withDriver": {
-      "title": "With driver",
-      "desc": "Intercity trips, airport runs or half-day hire - the shop assigns the driver and the route is agreed up front."
-    },
-    "longTerm": {
-      "title": "Long-term",
-      "desc": "Fixed packages from 1 to 12 months for regular travel, with the return date counted in calendar months."
+    "cost": {
+      "kicker": "Our commitment",
+      "value": "100%",
+      "title": "Clear costs",
+      "desc": "No hidden fees at return"
     }
   },
-  "how": {
-    "heading": "How a rental works",
-    "lead": "Four steps, and none of them takes your money before the owner agrees.",
-    "request": {
-      "title": "Send a request",
-      "desc": "Pick the vehicle, the time window and where you want it. This step charges nothing and holds nothing."
+  "services": {
+    "kicker": "Service models",
+    "title": "Flexible for every rental need",
+    "lead": "Three ways to rent for every journey, from a weekend city ride and business trips to long-term mobility for companies",
+    "selfDrive": {
+      "badge": "Most popular",
+      "title": "Self-drive",
+      "desc": "Drive yourself and set your own schedule. Pick up at the shop or request delivery to your door or the airport.",
+      "p1": "Hourly or 24-hour rates",
+      "p2": "Clear mileage limits, no forced packages",
+      "p3": "Transparent checks with photos of every angle",
+      "cta": "Find a self-drive car"
     },
-    "accept": {
-      "title": "The shop accepts",
-      "desc": "The owner reviews your request. Only now is the calendar held, the price fixed, and the exact amount to transfer shown to you."
+    "withDriver": {
+      "badge": "Comfortable",
+      "title": "With driver",
+      "desc": "Travel in comfort and flexibility. Ideal for business trips, airport transfers, partner meetings and intercity journeys.",
+      "p1": "Route and timing agreed in advance",
+      "p2": "Fuel and parking costs as agreed",
+      "p3": "Professional, experienced drivers",
+      "cta": "See chauffeured service"
     },
-    "hold": {
-      "title": "Transfer the holding amount",
-      "desc": "You pay within the payment window. The booking is created only once reconciliation confirms the money arrived in full."
-    },
-    "trip": {
-      "title": "Pick up and return",
-      "desc": "Both sides sign a handover record with condition photos; the rest of the rental is paid directly to the owner at pick-up."
+    "longTerm": {
+      "badge": "Save up to 30%",
+      "title": "Long-term rental",
+      "desc": "Flexible long-term mobility from 1 - 12 months, for individuals, families and businesses.",
+      "p1": "E-contracts and valid VAT invoices",
+      "p2": "Maintenance support and equivalent replacement",
+      "p3": "Simple paperwork, no large credit hold",
+      "cta": "Request a long-term quote"
     }
   },
   "money": {
-    "heading": "Where the money goes",
-    "lead": "Every amount has an owner, and we show each line instead of rolling them into one number.",
-    "hold": {
-      "title": "Paid online",
-      "desc": "The holding amount, the booking fee and insurance where it applies. This is not the security deposit taken at pick-up."
+    "kicker": "Payment structure",
+    "title": "Every fee, made clear",
+    "lead": "Each charge is itemised, has a clear owner and is shown openly. No hidden fees, no vague costs",
+    "online": {
+      "title": "Online payment",
+      "desc": "Covers the reservation fee, platform service fee and trip insurance (if added).",
+      "noteTitle": "Not a security deposit",
+      "note": "The reservation amount secures your trip; it is not collateral."
     },
     "pickup": {
-      "title": "Paid at pick-up",
-      "desc": "The rest of the rental goes directly to the owner when you collect the vehicle - XePrime does not collect it on their behalf."
+      "title": "Payment at pickup",
+      "desc": "The rest of the rental is paid directly between the renter and the owner when the vehicle is handed over.",
+      "noteTitle": "No collection, no holding",
+      "note": "XePrime does not touch the direct payment, so both sides keep their freedom to agree."
     },
     "lines": {
-      "title": "Nothing bundled",
-      "desc": "Service fee, tax and insurance are three separate lines, frozen into the booking when it is created and never recalculated afterwards."
+      "title": "Every fee, made clear",
+      "desc": "Platform service fee, VAT and trip insurance are shown as separate lines on the e-contract.",
+      "noteTitle": "Costs fixed when you book",
+      "note": "Costs are fixed when the booking is confirmed, with no surcharges beyond what was agreed."
     }
   },
-  "owners": {
-    "heading": "If you own a vehicle",
-    "lead": "Two ways to join the same marketplace - pick by scale, switch later.",
-    "basic": {
-      "title": "Individual owner",
-      "desc": "A few vehicles, no subscription. You only pay a service fee on trips that actually happen.",
-      "descInApp": "A few cars, listed right on the marketplace. Service fees are charged per trip that actually happens."
-    },
-    "shop": {
-      "title": "Shop",
-      "desc": "A larger fleet on a plan priced by vehicle count and term. No XePrime percentage per trip, with the full management toolset.",
-      "descInApp": "A larger fleet, with the full management toolkit. Participation options and fees are published by XePrime."
-    },
-    "action": "List your vehicle"
+  "partners": {
+    "kicker": "Partner with XePrime",
+    "title": "Idle vehicle? Earn extra income",
+    "lead": "Two flexible partnership models on one platform, so you choose how to put your vehicle to work on your own terms."
   },
   "trust": {
-    "heading": "What we keep in check",
+    "kicker": "Protection infrastructure",
+    "title": "Safety from <accent>technology</accent> to the road",
+    "lead": "Trust built on verification technology, transaction protection and a strict review process.",
     "listing": {
-      "title": "Vehicles are reviewed before listing",
-      "desc": "Vehicle records and documents go through platform review before any renter sees them."
+      "value": "12+",
+      "title": "Vehicle checkpoints",
+      "desc": "Vehicle papers, registration and photos are checked by our team before they go live.",
+      "tag": "Reviewed before listing"
     },
     "calendar": {
-      "title": "No double bookings",
-      "desc": "One vehicle cannot be booked twice for the same window - the rule lives in the database, not in a screen."
+      "value": "1",
+      "title": "1 vehicle - 1 schedule",
+      "desc": "Booked slots are locked automatically, so a vehicle can never be booked twice for the same time.",
+      "tag": "Automatic schedule lock"
     },
     "metrics": {
-      "title": "Reputation measured from behaviour",
-      "desc": "A shop's response rate, response time and kept-trip rate come from the last 90 days of real data, not from self-reporting."
+      "value": "90",
+      "title": "Days of behaviour data",
+      "desc": "Reputation is computed automatically from performance over the last 90 days.",
+      "tag": "Transparent metrics"
     }
-  },
-  "next": {
-    "heading": "Where to next",
-    "search": "Find a vehicle",
-    "legal": "Legal documents",
-    "support": "Help centre",
-    "searchDesc": "Browse the vehicles on offer for your location and time window.",
-    "legalDesc": "Terms of service, privacy policy, marketplace rules and the cancellation policy.",
-    "supportDesc": "Where reports, complaints and in-trip incidents are received."
   }
 }

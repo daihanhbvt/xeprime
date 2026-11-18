@@ -9,6 +9,7 @@ import {
   type TaxRatesByServiceType,
 } from '@xeprime/types';
 import { NumberField } from '@/components/form/NumberField';
+import { useDecimalSeparator } from '@/i18n/use-decimal-separator';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import {
   TAX_PIT_PERCENT_MAX,
@@ -31,6 +32,7 @@ export function TaxRatesField({ control }: { control: Control<FeePolicyFormValue
   const domainLabel = useDomainLabel();
   const pf = useFeePolicyFormat();
   const rates = useWatch({ control, name: 'taxRates' });
+  const decimalSeparator = useDecimalSeparator();
 
   return (
     <div className={styles.table} role="group" aria-label={t('taxRatesTitle')}>
@@ -48,7 +50,8 @@ export function TaxRatesField({ control }: { control: Control<FeePolicyFormValue
               percent
               min={0}
               max={TAX_VAT_PERCENT_MAX}
-              precision={2}
+              decimals={2}
+              decimalSeparator={decimalSeparator}
             />
             <NumberField
               control={control}
@@ -57,7 +60,8 @@ export function TaxRatesField({ control }: { control: Control<FeePolicyFormValue
               percent
               min={0}
               max={TAX_PIT_PERCENT_MAX}
-              precision={2}
+              decimals={2}
+              decimalSeparator={decimalSeparator}
             />
             <span className={styles.total} aria-live="polite">
               {total == null ? tLabels('emptyValue') : pf.percent(total)}

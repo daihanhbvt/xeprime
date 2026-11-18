@@ -17,6 +17,7 @@ import { useCurrentUser, useLogout } from '@/features/auth/hooks/use-auth';
 import { APP_SCOPE } from '@/features/shell/app-scope';
 import { useShellScope } from '@/features/shell/use-shell-scope';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
 import { CountBadge } from '@/components/ui/CountBadge';
@@ -140,6 +141,9 @@ export function AccountNav() {
             <YStack px={space.xs} py={space.xs} gap={2}>
               <AppearanceToggleRow />
               <LocaleToggleRow />
+              {/* "Về chúng tôi" ngay DƯỚI Ngôn ngữ (người dùng chốt 17/11/2026) — mở trang `/about`
+                của web trong bộ đọc nội dung, cùng bản Figma `22306:64727`. */}
+              <AboutUsRow />
             </YStack>
 
             <Divider />
@@ -188,6 +192,41 @@ export function AccountNav() {
         }
       />
     </>
+  );
+}
+
+/**
+ * Hàng "Về chúng tôi" — cùng hình hàng tuỳ chọn ngay trên nó (`PreferenceToggleRows`: min-h 40,
+ * đệm sm/sm/sm/12, icon nét 20 placeholder, nhãn 14 medium `textMuted`), thêm mũi tên phải vì cả
+ * dòng là một lối RA khỏi khu tài khoản.
+ */
+function AboutUsRow() {
+  const colors = useColors();
+  const t = useTranslations('Navigation.account');
+  const navigateOnce = useNavigateOnce();
+  const label = t('aboutUs');
+  return (
+    <Pressable
+      onPress={() => navigateOnce(ROUTES.content.about())}
+      accessibilityRole="menuitem"
+      accessibilityLabel={label}
+      style={({ pressed }) => (pressed ? { backgroundColor: colors.surfaceMuted } : null)}
+    >
+      <XStack ai="center" gap={space.sm} minHeight={40} py={space.sm} pl={12} pr={space.sm}>
+        <Ionicons name="information-circle-outline" size={iconSize.lg} color={colors.placeholder} />
+        <Text
+          f={1}
+          minWidth={0}
+          col={colors.textMuted}
+          fos={fontSize.body}
+          fow={fontWeight.medium}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+        <LineIcon name="chevron-right" size={iconSize.lg} color={colors.placeholder} />
+      </XStack>
+    </Pressable>
   );
 }
 
@@ -247,47 +286,47 @@ function AccountNavRow({
       style={({ pressed }) => (pressed ? { backgroundColor: colors.surfaceMuted } : null)}
     >
       <Animated.View style={press.style}>
-      {/* Hàng `_Account Tab` của Figma `21860:83492`: đệm 12, kẻ dưới mảnh, icon Figma 20, chữ 14 medium. */}
-      <XStack
-        ai="center"
-        gap={space.sm}
-        minHeight={40}
-        px={12}
-        py={space.sm}
-        bg={active ? colors.surfaceSelected : 'transparent'}
-        borderBottomWidth={1}
-        borderBottomColor={colors.borderSubtle}
-      >
-        <Animated.View style={iconPop}>
-        {NAV_LINE_ICON[item.key] ? (
-          <LineIcon
-            name={NAV_LINE_ICON[item.key]!}
-            size={iconSize.lg}
-            color={active ? colors.primary : colors.placeholder}
-          />
-        ) : (
-          <Ionicons
-            name={item.icon}
-            size={iconSize.lg}
-            color={active ? colors.primary : colors.placeholder}
-          />
-        )}
-        </Animated.View>
-        <Text
-          f={1}
-          col={active ? colors.primary : colors.textMuted}
-          fos={fontSize.body}
-          fow={fontWeight.medium}
-          numberOfLines={1}
+        {/* Hàng `_Account Tab` của Figma `21860:83492`: đệm 12, kẻ dưới mảnh, icon Figma 20, chữ 14 medium. */}
+        <XStack
+          ai="center"
+          gap={space.sm}
+          minHeight={40}
+          px={12}
+          py={space.sm}
+          bg={active ? colors.surfaceSelected : 'transparent'}
+          borderBottomWidth={1}
+          borderBottomColor={colors.borderSubtle}
         >
-          {label}
-        </Text>
-        {badge > 0 ? <CountBadge count={badge} tone="danger" /> : null}
-        {/* Figma: chỉ "Trở thành chủ xe" có mũi tên — nó dẫn RA khỏi khu tài khoản. */}
-        {item.key === 'becomeOwner' ? (
-          <LineIcon name="arrow-right" size={iconSize.lg} color={colors.placeholder} />
-        ) : null}
-      </XStack>
+          <Animated.View style={iconPop}>
+            {NAV_LINE_ICON[item.key] ? (
+              <LineIcon
+                name={NAV_LINE_ICON[item.key]!}
+                size={iconSize.lg}
+                color={active ? colors.primary : colors.placeholder}
+              />
+            ) : (
+              <Ionicons
+                name={item.icon}
+                size={iconSize.lg}
+                color={active ? colors.primary : colors.placeholder}
+              />
+            )}
+          </Animated.View>
+          <Text
+            f={1}
+            col={active ? colors.primary : colors.textMuted}
+            fos={fontSize.body}
+            fow={fontWeight.medium}
+            numberOfLines={1}
+          >
+            {label}
+          </Text>
+          {badge > 0 ? <CountBadge count={badge} tone="danger" /> : null}
+          {/* Figma: chỉ "Trở thành chủ xe" có mũi tên — nó dẫn RA khỏi khu tài khoản. */}
+          {item.key === 'becomeOwner' ? (
+            <LineIcon name="arrow-right" size={iconSize.lg} color={colors.placeholder} />
+          ) : null}
+        </XStack>
       </Animated.View>
     </Pressable>
   );

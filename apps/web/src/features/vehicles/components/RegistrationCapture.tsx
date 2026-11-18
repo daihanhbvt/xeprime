@@ -74,7 +74,7 @@ const VISIBLE_FIELDS: readonly (keyof RegistrationFields)[] = [
 
 /**
  * Chọn ảnh cà vẹt ⇒ nén trong trình duyệt (bỏ EXIF) ⇒ tải lên kho riêng tư ⇒ server đọc (ADR 0089 ·
- * 0097). Chữ chủ xe đã gõ giữ nguyên; máy đọc xong chỉ lấp ô còn trống.
+ * 0099). Chữ chủ xe đã gõ giữ nguyên; máy đọc xong chỉ lấp ô còn trống.
  */
 function useRegistrationSelect({
   onChange,
@@ -96,7 +96,7 @@ function useRegistrationSelect({
     onChange((prev) => {
       if (prev.previewUrl) URL.revokeObjectURL(prev.previewUrl);
       // Ảnh MỚI = cà vẹt mới: xoá các ô cà vẹt để ảnh mới điền lại, không giữ số của ảnh cũ
-      // (18/11/2026). Chữ gõ TRONG LÚC ảnh mới đang đọc vẫn giữ (`mergeTypedFields`, ADR 0097).
+      // (18/11/2026). Chữ gõ TRONG LÚC ảnh mới đang đọc vẫn giữ (`mergeTypedFields`, ADR 0099).
       const fields = { ...prev.fields, holderName: '', chassisNumber: '', engineNumber: '', holderAddress: '' };
       return {
         ...EMPTY_REGISTRATION,

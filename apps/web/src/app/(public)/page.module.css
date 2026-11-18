@@ -27,7 +27,8 @@
  */
 .promo {
   order: -1;
-  margin: calc(var(--xp-space-64) - var(--xp-space-80)) 0 var(--xp-space-40);
+  /* Cách "Xe tiêu biểu" đúng một khe 40 của `.intro` — bỏ đệm dưới thêm (người dùng chốt 17/11/2026). */
+  margin: calc(var(--xp-space-64) - var(--xp-space-80)) 0 0;
 }
 
 .intro {

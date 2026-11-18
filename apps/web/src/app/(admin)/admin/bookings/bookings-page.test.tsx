@@ -45,6 +45,27 @@ vi.mock('@/features/admin-follow-ups/hooks/use-follow-ups', () => ({
   useNewFollowUpCount: () => ({ data: undefined, isPending: false }),
 }));
 
+// Tab "Chưa giữ chỗ": số đếm từ dải tóm tắt Vận hành chuyến + bảng yêu cầu cả hai chặng.
+const requests = vi.hoisted(() => ({
+  data: undefined as { items: unknown[]; meta: unknown } | undefined,
+  lastFilters: undefined as unknown,
+}));
+vi.mock('@/features/admin-trips/hooks/use-admin-trips', () => ({
+  useTripSummary: () => ({
+    data: {
+      queues: {
+        pending_approval: { count: 3, urgentCount: 1 },
+        awaiting_hold: { count: 2, urgentCount: 0 },
+      },
+    },
+  }),
+  useTripRequests: (filters: unknown) => {
+    requests.lastFilters = filters;
+    return { data: requests.data, isError: false, isFetching: false, refetch: vi.fn() };
+  },
+  useRemindTripRequest: () => ({ mutate: vi.fn(), isPending: false, variables: undefined }),
+}));
+
 vi.mock('@/hooks/use-permissions', () => ({
   usePermissions: () => ({ has: () => false, hasAny: () => false, isLoading: false }),
 }));
@@ -228,10 +249,109 @@ describe('/manage/admin/bookings - bảng + panel chi tiết', () => {
     expect(document.querySelector('[class*="debtOverdue"]')).toBeNull();
   });
 
+  it('ba tab theo hành trình; tab Chưa giữ chỗ đếm cả hai chặng; đổi tab là sang đúng link', () => {
+    renderPage();
+    const tabs = screen.getAllByRole('tab').map((tab) => tab.textContent ?? '');
+    expect(tabs).toHaveLength(3);
+    expect(tabs[0]).toContain('Chưa giữ chỗ');
+    expect(tabs[0]).toContain('5');
+    expect(tabs[1]).toContain('Đã thành đơn');
+    expect(tabs[2]).toContain('Không thành');
+
+    fireEvent.click(screen.getByRole('tab', { name: /Chưa giữ chỗ/ }));
+    expect(nav.replace).toHaveBeenCalledWith('/admin/bookings?view=pending');
+  });
+
   it('lọc trạng thái không còn lựa chọn `confirmed` đã deprecated', () => {
     renderPage();
     fireEvent.mouseDown(screen.getByLabelText('Lọc theo trạng thái đơn'));
     expect(screen.getAllByText('Tất cả trạng thái').length).toBeGreaterThan(0);
     expect(screen.queryByText('Đã xác nhận')).toBeNull();
+  });
+});
+
+describe('/manage/admin/bookings?view=pending - yêu cầu chưa giữ chỗ', () => {
+  const base = {
+    customerPhoneMasked: '090****001',
+    serviceType: 'self_drive',
+    pickupAt: '2026-12-01T01:00:00.000Z',
+    returnAt: '2026-12-03T01:00:00.000Z',
+    longTermPackageMonths: null,
+    pickupPreference: null,
+    requestedPickupDate: null,
+    pickupWindowStartDate: null,
+    pickupWindowEndDate: null,
+    createdAt: '2026-11-17T01:00:00.000Z',
+    firstRemindedAt: null,
+    finalRemindedAt: null,
+    tenantId: 'T1',
+    tenantName: 'XePrime Sài Gòn',
+    tenantStatus: 'active',
+    ownerName: 'Chủ xe',
+    ownerPhone: '0988000111',
+    vehicleId: 'V1',
+    vehicleName: 'Kia K3',
+    vehiclePlateNumber: '51G-301.15',
+    vehicleImageUrl: null,
+    vehicleType: 'car',
+    lastPlatformRemindAt: null,
+  };
+
+  beforeEach(() => {
+    nav.params = new URLSearchParams('view=pending');
+    requests.data = {
+      items: [
+        {
+          ...base,
+          id: 'R1',
+          status: 'pending_host_approval',
+          customerName: 'Khách Chờ Duyệt',
+          respondBy: '2099-01-01T00:00:00.000Z',
+          decidedAt: null,
+          holdExpiresAt: null,
+          holdAmount: null,
+        },
+        {
+          ...base,
+          id: 'R2',
+          status: 'awaiting_hold',
+          customerName: 'Khách Chờ Tiền',
+          respondBy: '2026-11-17T01:30:00.000Z',
+          decidedAt: '2026-11-17T01:10:00.000Z',
+          holdExpiresAt: '2099-01-01T00:00:00.000Z',
+          holdAmount: '450000',
+        },
+      ],
+      meta: { page: 1, limit: 20, total: 2, hasNext: false },
+    };
+  });
+
+  it('một bảng cho cả hai chặng: cột Tình trạng + Đã chờ + Hạn, không cột tiền của đơn', () => {
+    renderPage();
+    expect(requests.lastFilters).toMatchObject({ queue: undefined });
+    expect(headers()).toEqual(
+      expect.arrayContaining(['Khách', 'Xe · gian hàng', 'Lịch thuê', 'Tình trạng', 'Đã chờ', 'Hạn']),
+    );
+    expect(headers()).not.toContain('Còn nợ');
+    expect(screen.getByText('Chờ chủ xe duyệt')).toBeTruthy();
+    expect(screen.getByText('Chờ khách giữ chỗ')).toBeTruthy();
+    expect(screen.getByText('Giữ chỗ 450.000 ₫')).toBeTruthy();
+  });
+
+  it('nút Nhắc chủ xe chỉ có ở dòng đang chờ chủ xe', () => {
+    renderPage();
+    const pendingRow = screen.getByText('Khách Chờ Duyệt').closest('tr') as HTMLElement;
+    const awaitingRow = screen.getByText('Khách Chờ Tiền').closest('tr') as HTMLElement;
+    expect(within(pendingRow).queryByRole('button', { name: /Nhắc chủ xe/ })).not.toBeNull();
+    expect(within(awaitingRow).queryByRole('button', { name: /Nhắc chủ xe/ })).toBeNull();
+  });
+
+  it('chọn một tình trạng gửi đúng `queue` lên URL', () => {
+    nav.params = new URLSearchParams('view=pending&queue=awaiting_hold');
+    renderPage();
+    expect(requests.lastFilters).toMatchObject({ queue: 'awaiting_hold' });
+    // Một chặng thì tiêu đề cột hạn nói rõ hạn gì.
+    expect(headers()).toContain('Hạn giữ chỗ');
+    expect(headers()).not.toContain('Tình trạng');
   });
 });

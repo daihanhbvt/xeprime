@@ -1,7 +1,8 @@
 'use client';
 
 import { ArrowLeftOutlined, PrinterOutlined } from '@ant-design/icons';
-import { Button, Result, Spin } from 'antd';
+import { Button, Spin } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { useParams, useRouter } from 'next/navigation';
 import { ContractDocument } from '@/features/contracts/components/ContractDocument';
 import { useContract } from '@/features/contracts/hooks/use-contract';
@@ -34,11 +35,11 @@ export default function ContractPage() {
           <Spin size="large" />
         </div>
       ) : isError || !data ? (
-        <Result
-          status="error"
+        <EmptyState
+          variant="error"
           title="Không tải được hợp đồng"
-          subTitle={error ? getErrorMessage(error) : undefined}
-          extra={
+          description={error ? getErrorMessage(error) : undefined}
+          action={
             <Button type="primary" onClick={() => void refetch()}>
               Thử lại
             </Button>

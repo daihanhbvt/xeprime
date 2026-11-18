@@ -294,6 +294,32 @@ describe('Vận hành chuyến — hàng đợi yêu cầu', () => {
     expect(res.data[0]!.decidedAt).not.toBeNull();
   });
 
+  maybe('bỏ trống queue: cả hai chặng, xếp theo hạn của chặng mỗi dòng, phân trang đúng', async () => {
+    const all = await trips.requests({ tenantId });
+    // Hạn: chờ duyệt 5′ · chờ giữ chỗ 10′ · chờ duyệt 50′ · chờ giữ chỗ 90′ (awaiting có
+    // `respondBy` đã qua -10′ — nếu xếp nhầm theo cột đó thì hai dòng chờ giữ chỗ nhảy lên đầu).
+    expect(ids(all)).toEqual([pendingSoon, awaitingSoon, pendingLater, awaitingLater]);
+    expect(all.meta).toMatchObject({ total: 4, hasNext: false });
+
+    const page2 = await trips.requests({ tenantId, page: 2, limit: 3 });
+    expect(ids(page2)).toEqual([awaitingLater]);
+    expect(page2.meta).toMatchObject({ total: 4, page: 2, hasNext: false });
+
+    const beyond = await trips.requests({ tenantId, page: 5, limit: 3 });
+    expect(beyond.data).toEqual([]);
+    expect(beyond.meta.total).toBe(4);
+  });
+
+  maybe('tra đúng SĐT khách, chấp nhận dạng +84', async () => {
+    // `pendingLater` tạo đầu tiên ⇒ SĐT 0912345600.
+    const local = await trips.requests({ tenantId, phone: '0912345600' });
+    expect(ids(local)).toEqual([pendingLater]);
+    const intl = await trips.requests({ tenantId, phone: '+84912345600' });
+    expect(ids(intl)).toEqual([pendingLater]);
+    const partial = await trips.requests({ tenantId, phone: '091234' });
+    expect(partial.data).toEqual([]);
+  });
+
   maybe('tìm theo biển số / tên gian hàng', async () => {
     const byPlate = await trips.requests({
       queue: PLATFORM_TRIP_QUEUE.PENDING_APPROVAL,

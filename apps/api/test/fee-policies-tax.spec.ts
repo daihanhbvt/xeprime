@@ -107,16 +107,22 @@ describe('FeePoliciesService — bản nháp có thuế', () => {
     expect(dto.activationBlockers).not.toContain('tax_requires_rates_and_basis');
   });
 
-  maybe('% giữ chỗ dưới mức thuế cao nhất (7%) ⇒ 400 rõ ô, không phải lỗi 500 của CHECK', async () => {
-    await expect(
-      service.createDraft(adminId, { ...BASE, depositPercent: 5 } as unknown as UpsertFeePolicyDto),
-    ).rejects.toMatchObject({
-      response: {
-        code: API_ERROR_CODE.VALIDATION_FAILED,
-        details: [{ field: 'depositPercent' }],
-      },
-    });
-  });
+  maybe(
+    '% giữ chỗ dưới mức thuế cao nhất (7%) ⇒ 400 rõ ô, không phải lỗi 500 của CHECK',
+    async () => {
+      await expect(
+        service.createDraft(adminId, {
+          ...BASE,
+          depositPercent: 5,
+        } as unknown as UpsertFeePolicyDto),
+      ).rejects.toMatchObject({
+        response: {
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          details: [{ field: 'depositPercent' }],
+        },
+      });
+    },
+  );
 
   maybe('tắt thuế khi sửa nháp ⇒ xoá bảng mức + căn cứ (không để số mồ côi)', async () => {
     const draft = await service.createDraft(adminId, BASE as unknown as UpsertFeePolicyDto);
@@ -128,4 +134,44 @@ describe('FeePoliciesService — bản nháp có thuế', () => {
     expect(off.taxRates).toBeNull();
     expect(off.taxLegalBasis).toBeNull();
   });
+});
+
+describe('Phí sàn theo chuyến / theo ngày, từng loại xe (ADR 0098)', () => {
+  it('DTO chỉ nhận per_trip / per_day cho từng loại xe', async () => {
+    expect(
+      await dtoErrors({
+        ...BASE,
+        customerPlatformFeeBasis: { car: 'per_day', motorbike: 'per_trip' },
+      }),
+    ).toEqual([]);
+    expect(
+      await dtoErrors({
+        ...BASE,
+        customerPlatformFeeBasis: { car: 'per_week', motorbike: 'per_trip' },
+      }),
+    ).toContain('customerPlatformFeeBasis');
+  });
+
+  maybe(
+    'vắng trên dây ⇒ mặc định mỗi chuyến; gửi lên thì lưu và đọc lại đúng từng loại xe',
+    async () => {
+      const plain = await service.createDraft(adminId, BASE as unknown as UpsertFeePolicyDto);
+      created.push(plain.id);
+      expect(plain.customerPlatformFeeBasis).toEqual({ car: 'per_trip', motorbike: 'per_trip' });
+
+      const perDay = await service.updateDraft(plain.id, adminId, {
+        ...BASE,
+        customerPlatformFeeBasis: { car: 'per_day', motorbike: 'per_trip' },
+      } as unknown as UpsertFeePolicyDto);
+      expect(perDay.customerPlatformFeeBasis).toEqual({ car: 'per_day', motorbike: 'per_trip' });
+
+      // Sửa lần nữa mà không gửi trường ⇒ giữ lựa chọn của bản nháp, không rơi về mặc định.
+      const kept = await service.updateDraft(
+        plain.id,
+        adminId,
+        BASE as unknown as UpsertFeePolicyDto,
+      );
+      expect(kept.customerPlatformFeeBasis).toEqual({ car: 'per_day', motorbike: 'per_trip' });
+    },
+  );
 });

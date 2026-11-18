@@ -594,7 +594,7 @@ export class VehiclesService {
 
     await this.catalog.assertVehicleValues({ ...input, vehicleType: dto.vehicleType });
     assertVehicleProfile(dto.vehicleType, input.fuelType, input);
-    // Cà vẹt kèm lượt tạo áp cho CẢ ô tô lẫn xe máy (ADR 0097, mở rộng ADR 0089 từ 17/11/2026).
+    // Cà vẹt kèm lượt tạo áp cho CẢ ô tô lẫn xe máy (ADR 0099, mở rộng ADR 0089 từ 17/11/2026).
 
     await this.prisma.$transaction(async (tx) => {
       // Chi nhánh kiểm TRONG transaction: nó phải thuộc đúng gian hàng và đang hoạt động ngay

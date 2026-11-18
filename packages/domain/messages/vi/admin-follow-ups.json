@@ -1,8 +1,9 @@
 {
   "tabs": {
     "label": "Góc nhìn đơn thuê",
-    "bookings": "Tất cả đơn",
-    "followUps": "Cần chăm sóc"
+    "pending": "Chưa giữ chỗ",
+    "bookings": "Đã thành đơn",
+    "followUps": "Không thành"
   },
   "page": {
     "intro": "Khách đã gửi yêu cầu nhưng chuyến không thành. Gọi lại để hỏi lý do và mời đặt lại."

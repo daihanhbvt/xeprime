@@ -1,5 +1,11 @@
 import { newId, Prisma } from '@xeprime/prisma';
-import { INSURANCE_PREMIUM_BASIS, INSURANCE_PROVIDER } from '@xeprime/types';
+import {
+  FEE_SCHEDULE_DEFAULTS,
+  INSURANCE_PREMIUM_BASIS,
+  INSURANCE_PRODUCT_KIND,
+  INSURANCE_PROVIDER,
+  VEHICLE_TYPE,
+} from '@xeprime/types';
 import {
   CERTIFICATE_URL_TEMPLATE,
   INSURANCE_PRODUCTS,
@@ -62,4 +68,23 @@ export async function ensureInsuranceProducts(prisma: PrismaService): Promise<vo
     where: { provider: INSURANCE_PROVIDER.MIC, isActive: false },
     data: { isActive: true },
   });
+  /*
+   * ADR 0098: biểu phí NGÀY sống ở chính sản phẩm (`daily_amount_*`), không còn ở chính sách phí.
+   * Database trắng (CI: migrate → seed) có VCX theo bậc nên chưa có mức ngày — đặt mức mặc định
+   * của luồng tiền v2 cho dòng còn trống, cùng số mà spec báo giá suy ra (50.000/15.000 · 20.000/5.000).
+   */
+  for (const [kind, daily] of Object.entries(DAILY_DEFAULTS)) {
+    await prisma.insuranceProduct.updateMany({
+      where: { provider: INSURANCE_PROVIDER.MIC, kind, dailyAmountCar: null },
+      data: {
+        dailyAmountCar: new Prisma.Decimal(daily[VEHICLE_TYPE.CAR]),
+        dailyAmountMotorbike: new Prisma.Decimal(daily[VEHICLE_TYPE.MOTORBIKE]),
+      },
+    });
+  }
 }
+
+const DAILY_DEFAULTS = {
+  [INSURANCE_PRODUCT_KIND.VEHICLE_TRIP]: FEE_SCHEDULE_DEFAULTS.vehicleProtectionDailyAmount,
+  [INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT]: FEE_SCHEDULE_DEFAULTS.tripInsuranceDailyAmount,
+} as const;

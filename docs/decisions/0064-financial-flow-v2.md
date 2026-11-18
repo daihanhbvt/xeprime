@@ -44,6 +44,9 @@ bao giờ cộng vào tổng khách. Mọi số tiền XePrime tính ra là bộ
 
 ### 2. `S` — phí sàn cố định mỗi đơn, theo loại xe, cả hai tuyến
 
+> ⚠️ 17/11/2026 — ADR 0098 ghi đè "cố định mỗi đơn": mỗi loại xe chọn tính một lần mỗi chuyến hoặc
+> × số ngày thuê (`customer_platform_fee_basis_*`). Phần còn lại của điều này giữ nguyên.
+
 `fee_policies.customer_platform_fee_{car,motorbike}`: **50.000đ ô tô · 30.000đ xe máy** (giá trị của
 chính sách v7 — DỮ LIỆU admin sửa được, có phiên bản, không hồi tố). Áp như nhau cho đơn một ngày hay
 ba mươi ngày, và như nhau ở tuyến hoa hồng lẫn tuyến gói. Admin đặt 0 cho một loại xe ⇒ không sinh
@@ -180,6 +183,9 @@ Cả hai mốc vẫn tính XUÔI từ `acceptedAt` và kẹp bởi `pickupAt` (`
   > từ chối `perKm` mới.
 
 ### 10. Bảo hiểm: tuỳ chọn, và chỉ có khi có ĐỐI TÁC đã cấu hình
+
+> ⚠️ 17/11/2026 — ADR 0098: biểu phí theo ngày và công tắc bán chuyển từ `fee_policies` về sản phẩm
+> bảo hiểm (`insurance_products.daily_amount_*`, `is_active`); cổng `INSURANCE_PARTNER` giữ nguyên.
 
 - `IV` và `IP` **đều tuỳ chọn** (ghi đè "bảo hiểm xe/chuyến là bắt buộc" của ADR 0032 điều 4), khách
   tự tích, mặc định KHÔNG chọn. Biểu phí theo NGÀY theo loại xe ở `fee_policies` (v7: ô tô 50.000đ /

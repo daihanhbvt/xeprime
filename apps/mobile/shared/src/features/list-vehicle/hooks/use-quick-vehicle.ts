@@ -50,7 +50,7 @@ interface RunOptions {
    * điều quan trọng nhất của luồng này: xem docblock của hook.
    */
   ownerProfile?: OwnerProfileValues | null;
-  /** Cà vẹt đã chụp/nhập (ADR 0097) - gắn trong cùng lượt tạo xe. */
+  /** Cà vẹt đã chụp/nhập (ADR 0099) - gắn trong cùng lượt tạo xe. */
   registration?: CreateVehicleRegistrationInput;
   /** Câu lỗi hiển thị cho người dùng — nơi gọi truyền hàm dịch mã lỗi API. */
   toMessage: (error: unknown) => string;

@@ -890,7 +890,7 @@ export class CreateVehicleDto {
 
   /**
    * Cà vẹt (ADR 0089) — ảnh đã tải + trường đã xác nhận; gắn vào giấy tờ `registration` trong
-   * CÙNG transaction tạo xe. Mọi loại xe (ADR 0097). Client bắt buộc; server chưa bắt buộc để app
+   * CÙNG transaction tạo xe. Mọi loại xe (ADR 0099). Client bắt buộc; server chưa bắt buộc để app
    * native bản cũ chưa có bước này vẫn tạo được xe (xe thiếu cà vẹt không được bán kèm bảo hiểm).
    */
   @ApiPropertyOptional({ type: CreateVehicleRegistrationDto })

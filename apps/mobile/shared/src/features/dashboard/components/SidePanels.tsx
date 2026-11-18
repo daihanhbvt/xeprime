@@ -1,5 +1,7 @@
 import CarOutlined from '@ant-design/icons-svg/es/asn/CarOutlined';
 import type { Href } from 'expo-router';
+import type { UseQueryResult } from '@tanstack/react-query';
+import type { FleetSummary } from '@/features/vehicles/api';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo, useCallback, useMemo, useState, type ReactNode } from 'react';
@@ -50,7 +52,14 @@ import { useDomainLabel } from '@/i18n/domain';
 import { resolvePartnerPlanUrl } from '@/lib/partner-web-url';
 import { elevation } from '@/theme/elevation';
 import { useAppScheme, useColors } from '@/theme/ThemeProvider';
-import { fontWeight, gradients, iconSize, market as marketColors, radius, typeScale } from '@/theme/tokens';
+import {
+  fontWeight,
+  gradients,
+  iconSize,
+  market as marketColors,
+  radius,
+  typeScale,
+} from '@/theme/tokens';
 import type { PartnerOverviewMarket } from '../api';
 import { PLAN_RENEW_WARNING_DAYS, daysUntil } from '../dashboard-model';
 import type { DashboardLinks } from '../hooks/use-dashboard';
@@ -97,11 +106,14 @@ export function FleetPlanPanel({
   showPlan,
   showMarket,
   market,
+  fleet,
   links,
 }: {
   showPlan: boolean;
   showMarket: boolean;
   market: PartnerOverviewMarket | undefined;
+  /** `null` = người xem không có `vehicles.view` - dòng "Xe sẵn sàng" vắng (như web). */
+  fleet: UseQueryResult<FleetSummary> | null;
   links: DashboardLinks;
 }) {
   const tFleet = useTranslations('Dashboard.fleetPlan');
@@ -109,27 +121,80 @@ export function FleetPlanPanel({
   const tMarket = useTranslations('Dashboard.market');
   const navigateOnce = useNavigateOnce();
   const onManage = useCallback(() => navigateOnce(links.vehicles), [navigateOnce, links.vehicles]);
-  if (!showPlan && !showMarket) return null;
+  if (!showPlan && !showMarket && !fleet) return null;
 
   // Chỉ phần xe: "Đội xe" - "Xe trên chợ" trùng dòng "Trạng thái xe trên chợ" ngay dưới.
-  const title = showPlan && showMarket ? tFleet('title') : showPlan ? tPlan('title') : tFleet('fleetTitle');
+  const title = showPlan
+    ? showMarket || fleet
+      ? tFleet('title')
+      : tPlan('title')
+    : tFleet('fleetTitle');
   return (
     <InfoGroupCard
       title={title}
-      {...(showMarket ? { headerLink: { label: tMarket('manage'), onPress: onManage } } : {})}
+      {...(showMarket || fleet
+        ? { headerLink: { label: tMarket('manage'), onPress: onManage } }
+        : {})}
     >
       {showPlan ? <PlanSection href={links.subscription} /> : null}
+      {fleet ? <AvailableRow fleet={fleet} href={links.availableVehicles} /> : null}
       {showMarket ? <MarketSection market={market} links={links} /> : null}
     </InfoGroupCard>
   );
 }
 
-/**
- * Phần GÓI - dải tối Figma `24175:52527` (ảnh nền, bo 16, đệm 8/12): ô kính 36 với icon toà nhà,
- * tên gói 14/20 trắng, hạn 12/18 xám nhạt, viên "Còn N ngày". Dải bấm được ⇒ trang gói. Bên dưới
- * giữ các phần web có mà Figma không vẽ: "Xe đã dùng" + thanh, chạm trần, nút "Gia hạn gói" khi
- * sắp hết hạn + có `subscription.purchase` (app không bán gói - nút MỞ site partner).
- */
+/** "Xe sẵn sàng X/Y" + "N đang thuê · M bảo dưỡng" - cùng dòng với thẻ Đội xe của web (17/11/2026). */
+function AvailableRow({ fleet, href }: { fleet: UseQueryResult<FleetSummary>; href: Href }) {
+  const colors = useColors();
+  const t = useTranslations('Dashboard');
+  // Lỗi đếm đội xe nói "Không rõ", không giả vờ 0/0 - như ô "Xe sẵn sàng" cũ.
+  const tCommon = useTranslations('Common.labels');
+  const fmt = useAppFormat();
+  const navigateOnce = useNavigateOnce();
+  const onPress = useCallback(() => navigateOnce(href), [navigateOnce, href]);
+  const data = fleet.data;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="link"
+      accessibilityLabel={t('fleetPlan.available')}
+    >
+      <YStack gap={2}>
+        <XStack jc="space-between" gap={8}>
+          <Text
+            col={colors.textMuted}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            fow={fontWeight.medium}
+          >
+            {t('fleetPlan.available')}
+          </Text>
+          <Text
+            col={colors.text}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            fow={fontWeight.semibold}
+          >
+            {fleet.isPending
+              ? '…'
+              : data
+                ? `${fmt.count(data.available)}/${fmt.count(data.total)}`
+                : tCommon('emptyValue')}
+          </Text>
+        </XStack>
+        {data ? (
+          <Note
+            text={t('kpi.fleetHint', {
+              renting: fmt.count(data.renting),
+              maintenance: fmt.count(data.maintenance),
+            })}
+          />
+        ) : null}
+      </YStack>
+    </Pressable>
+  );
+}
+
 function PlanSection({ href }: { href: Href }) {
   const colors = useColors();
   const t = useTranslations('Dashboard.plan');
@@ -154,11 +219,18 @@ function PlanSection({ href }: { href: Href }) {
   const atCapacity = limit !== null && used >= limit;
   const graceEndsAt = user?.tenant?.graceEndsAt;
   const renewUrl = has(PERMISSION.SUBSCRIPTION_PURCHASE) ? resolvePartnerPlanUrl() : null;
-  const sub = inGrace && graceEndsAt ? t('grace', { date: fmt.date(graceEndsAt) }) : t('endsAt', { date: fmt.date(plan.endsAt) });
+  const sub =
+    inGrace && graceEndsAt
+      ? t('grace', { date: fmt.date(graceEndsAt) })
+      : t('endsAt', { date: fmt.date(plan.endsAt) });
 
   return (
     <YStack gap={STACK_GAP}>
-      <Pressable onPress={onOpen} accessibilityRole="link" accessibilityLabel={`${plan.planName}. ${sub}`}>
+      <Pressable
+        onPress={onOpen}
+        accessibilityRole="link"
+        accessibilityLabel={`${plan.planName}. ${sub}`}
+      >
         {({ pressed }) => (
           <ImageBackground
             source={PLAN_BG}
@@ -189,7 +261,12 @@ function PlanSection({ href }: { href: Href }) {
               </Text>
             </YStack>
             {inGrace ? null : (
-              <YStack px={8} py={2} br={radius.card} bg={expiring ? colors.dangerSurface : marketColors.onDarkChip}>
+              <YStack
+                px={8}
+                py={2}
+                br={radius.card}
+                bg={expiring ? colors.dangerSurface : marketColors.onDarkChip}
+              >
                 <Text
                   col={expiring ? colors.dangerStrong : marketColors.onDarkChipText}
                   fos={typeScale.label.fontSize}
@@ -206,11 +283,23 @@ function PlanSection({ href }: { href: Href }) {
       </Pressable>
       <YStack gap={8}>
         <XStack jc="space-between" gap={8}>
-          <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.medium}>
+          <Text
+            col={colors.textMuted}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            fow={fontWeight.medium}
+          >
             {t('vehicles')}
           </Text>
-          <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.semibold}>
-            {limit === null ? t('vehiclesUnlimited', { used }) : t('vehiclesValue', { used, limit })}
+          <Text
+            col={colors.text}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            fow={fontWeight.semibold}
+          >
+            {limit === null
+              ? t('vehiclesUnlimited', { used })
+              : t('vehiclesValue', { used, limit })}
           </Text>
         </XStack>
         {limit !== null ? (
@@ -267,9 +356,19 @@ function MarketSection({
     const byStatus = (status: VehiclePublicStatus) => links.vehiclesByPublicStatus(status);
     return [
       row('onMarket', market.onMarket, colors.success, links.vehicles),
-      row('inReview', market.inReview, colors.warningVivid, byStatus(VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW)),
+      row(
+        'inReview',
+        market.inReview,
+        colors.warningVivid,
+        byStatus(VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW),
+      ),
       row('draft', market.draft, colors.borderInput, byStatus(VEHICLE_PUBLIC_STATUS.DRAFT)),
-      row('needsRevision', market.needsRevision, colors.danger, byStatus(VEHICLE_PUBLIC_STATUS.NEEDS_REVISION)),
+      row(
+        'needsRevision',
+        market.needsRevision,
+        colors.danger,
+        byStatus(VEHICLE_PUBLIC_STATUS.NEEDS_REVISION),
+      ),
     ];
   }, [market, links, colors, t]);
 
@@ -294,10 +393,20 @@ function MarketSection({
     <YStack gap={STACK_GAP}>
       <YStack gap={8}>
         <XStack jc="space-between" ai="center" gap={8}>
-          <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.medium}>
+          <Text
+            col={colors.textMuted}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            fow={fontWeight.medium}
+          >
             {t('statusTitle')}
           </Text>
-          <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.semibold}>
+          <Text
+            col={colors.text}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            fow={fontWeight.semibold}
+          >
             {t('totalValue', { count: total })}
           </Text>
         </XStack>
@@ -348,7 +457,12 @@ const LegendRow = memo(function LegendRow({
   const navigateOnce = useNavigateOnce();
   const onPress = useCallback(() => navigateOnce(href), [navigateOnce, href]);
   return (
-    <Pressable onPress={onPress} accessibilityRole="link" accessibilityLabel={`${label}: ${count}`} hitSlop={4}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="link"
+      accessibilityLabel={`${label}: ${count}`}
+      hitSlop={4}
+    >
       {({ pressed }) => (
         <XStack ai="center" gap={6} opacity={pressed ? 0.6 : 1}>
           <YStack w={DOT} h={DOT} br={radius.pill} bg={color} />
@@ -385,6 +499,9 @@ const DOT = 6;
  * `HostMetrics` (bó `Shops.metrics`): chưa đủ mẫu ⇒ đúng một câu "mới có N yêu cầu…" của component
  * đó; `null` ≠ 0; "Đặt ngay" thay thời gian phản hồi khi không có mẫu do người quyết.
  */
+/** Dưới mức này chỉ số uy tín đổi cam - cùng ngưỡng với web (Figma: 48% cam, 82% xanh). */
+const REPUTATION_LOW_PERCENT = 60;
+
 export function ReputationPanel({ metrics }: { metrics: HostMetricsShape | undefined }) {
   const t = useTranslations('Dashboard.reputation');
   const tm = useTranslations('Shops.metrics');
@@ -403,9 +520,27 @@ export function ReputationPanel({ metrics }: { metrics: HostMetricsShape | undef
     }
     const speed = responseSpeedOf(metrics.responseMinutesMedian);
     if (speed !== null) {
-      list.push({ key: 'responseTime', label: tm('responseTime'), value: tm(`speed.${speed}`), percent: null });
+      list.push({
+        key: 'responseTime',
+        label: tm('responseTime'),
+        value: tm(`speed.${speed}`),
+        percent: null,
+      });
     } else if (metrics.instantBook) {
-      list.push({ key: 'instant', label: tm('responseTime'), value: tm('instantBook'), percent: null });
+      list.push({
+        key: 'instant',
+        label: tm('responseTime'),
+        value: tm('instantBook'),
+        percent: null,
+      });
+    } else {
+      // Chưa có lượt duyệt tay nào trong cửa sổ: vẫn giữ dòng, nói "chưa có dữ liệu" - không bao giờ "0 phút".
+      list.push({
+        key: 'responseTime',
+        label: tm('responseTime'),
+        value: t('responseTimeEmpty'),
+        percent: null,
+      });
     }
     if (metrics.acceptKeepRatePercent !== null) {
       list.push({
@@ -442,7 +577,11 @@ export function ReputationPanel({ metrics }: { metrics: HostMetricsShape | undef
                     {row.label}
                   </Text>
                   <Text
-                    col={colors.success}
+                    col={
+                      row.percent !== null && row.percent < REPUTATION_LOW_PERCENT
+                        ? colors.warningHigh
+                        : colors.success
+                    }
                     fos={typeScale.body.fontSize}
                     lh={typeScale.body.lineHeight}
                     fow={fontWeight.semibold}
@@ -450,7 +589,16 @@ export function ReputationPanel({ metrics }: { metrics: HostMetricsShape | undef
                     {row.value}
                   </Text>
                 </XStack>
-                {row.percent !== null ? <ProgressBar percent={row.percent} color={colors.successVivid} /> : null}
+                {row.percent !== null ? (
+                  <ProgressBar
+                    percent={row.percent}
+                    color={
+                      row.percent < REPUTATION_LOW_PERCENT
+                        ? colors.warningHigh
+                        : colors.successVivid
+                    }
+                  />
+                ) : null}
               </YStack>
             ))
           )}
@@ -513,7 +661,12 @@ export function WalletPanel({ showIncome, href }: { showIncome: boolean; href: H
       ) : (
         <YStack br={radius.control} ov="hidden" bg={dark ? colors.brandLow : colors.surface}>
           {dark ? null : (
-            <Image source={WALLET_BG} style={styles.walletBg} contentFit="fill" accessible={false} />
+            <Image
+              source={WALLET_BG}
+              style={styles.walletBg}
+              contentFit="fill"
+              accessible={false}
+            />
           )}
           <YStack p={INNER_PAD} gap={STACK_GAP}>
             <YStack ai="center" gap={2}>
@@ -548,7 +701,9 @@ export function WalletPanel({ showIncome, href }: { showIncome: boolean; href: H
               accessibilityRole="button"
               accessibilityLabel={tWallet('withdraw.action')}
               accessibilityState={{ disabled: !withdrawable }}
-              style={({ pressed }) => (!withdrawable ? styles.disabled : pressed ? styles.pressed : null)}
+              style={({ pressed }) =>
+                !withdrawable ? styles.disabled : pressed ? styles.pressed : null
+              }
             >
               <LinearGradient
                 colors={gradients.walletCta.colors}
@@ -569,7 +724,9 @@ export function WalletPanel({ showIncome, href }: { showIncome: boolean; href: H
             </Pressable>
             {frozen ? <Note text={t('frozen')} warn /> : null}
             {!withdrawable && !frozen ? (
-              <Note text={tWallet('withdraw.belowMinimum', { min: fmt.money(data.minWithdrawAmount) })} />
+              <Note
+                text={tWallet('withdraw.belowMinimum', { min: fmt.money(data.minWithdrawAmount) })}
+              />
             ) : null}
           </YStack>
         </YStack>
@@ -578,7 +735,11 @@ export function WalletPanel({ showIncome, href }: { showIncome: boolean; href: H
       {showIncome ? (
         <YStack px={INNER_PAD} gap={2} alignSelf="stretch">
           <XStack jc="space-between" ai="center" gap={8}>
-            <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+            <Text
+              col={colors.textMuted}
+              fos={typeScale.label.fontSize}
+              lh={typeScale.label.lineHeight}
+            >
               {t('income')}
             </Text>
             <Text
@@ -587,7 +748,11 @@ export function WalletPanel({ showIncome, href }: { showIncome: boolean; href: H
               lh={typeScale.title.lineHeight}
               fow={fontWeight.semibold}
             >
-              {statement.data ? fmt.money(statement.data.totals.ownerIncome) : statement.isError ? '-' : '…'}
+              {statement.data
+                ? fmt.money(statement.data.totals.ownerIncome)
+                : statement.isError
+                  ? '-'
+                  : '…'}
             </Text>
           </XStack>
           {statement.data ? (
@@ -616,11 +781,22 @@ const METRIC_COL_GAP = 20;
 const GRADIENT_START = { x: 0, y: 0.5 };
 const GRADIENT_END = { x: 1, y: 0.5 };
 
-const WalletFigure = memo(function WalletFigure({ label, value }: { label: string; value: string }) {
+const WalletFigure = memo(function WalletFigure({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
   const colors = useColors();
   return (
     <YStack f={1} minWidth={0} ai="center">
-      <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} numberOfLines={1}>
+      <Text
+        col={colors.textMuted}
+        fos={typeScale.label.fontSize}
+        lh={typeScale.label.lineHeight}
+        numberOfLines={1}
+      >
         {label}
       </Text>
       <Text
@@ -657,9 +833,16 @@ export function OwnerVehiclesPanel({ links }: { links: DashboardLinks }) {
   const { has } = usePermissions();
   // Lối sang gói chỉ có khi nền tảng bật cờ - tắt thì app không nhắc gì tới gói.
   const { isPlanPromotionEnabled } = usePartnerAppConfig();
-  const vehicles = useVehiclesPage({ page: 1, limit: OWNER_VEHICLE_PREVIEW, sort: VEHICLE_SORT.NEWEST });
+  const vehicles = useVehiclesPage({
+    page: 1,
+    limit: OWNER_VEHICLE_PREVIEW,
+    sort: VEHICLE_SORT.NEWEST,
+  });
   const subscription = useMySubscription(has(PERMISSION.SUBSCRIPTION_VIEW));
-  const onOpenVehicle = useCallback((id: string) => navigateOnce(links.vehicle(id)), [navigateOnce, links]);
+  const onOpenVehicle = useCallback(
+    (id: string) => navigateOnce(links.vehicle(id)),
+    [navigateOnce, links],
+  );
 
   const quota = subscription.data?.fleetQuota;
   const limit = quota?.kind === 'total' ? quota.totalLimit : null;
@@ -684,13 +867,30 @@ export function OwnerVehiclesPanel({ links }: { links: DashboardLinks }) {
           ) : (
             <YStack>
               {items.map((vehicle, index) => (
-                <OwnerVehicleRow key={vehicle.id} vehicle={vehicle} first={index === 0} onOpen={onOpenVehicle} />
+                <OwnerVehicleRow
+                  key={vehicle.id}
+                  vehicle={vehicle}
+                  first={index === 0}
+                  onOpen={onOpenVehicle}
+                />
               ))}
             </YStack>
           )}
           {atCapacity && isPlanPromotionEnabled ? (
-            <YStack gap={6} px={12} py={8} br={radius.control} bw={1} bc={colors.infoBorder} bg={colors.infoLow}>
-              <Text col={colors.text} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+            <YStack
+              gap={6}
+              px={12}
+              py={8}
+              br={radius.control}
+              bw={1}
+              bc={colors.infoBorder}
+              bg={colors.infoLow}
+            >
+              <Text
+                col={colors.text}
+                fos={typeScale.label.fontSize}
+                lh={typeScale.label.lineHeight}
+              >
                 {t('atCapacity', { limit: limit ?? 0 })}
               </Text>
               <XStack>
@@ -709,7 +909,9 @@ export function OwnerVehiclesPanel({ links }: { links: DashboardLinks }) {
             ) : (
               <YStack />
             )}
-            {total > 0 ? <LinkArrow label={t('viewAll')} onPress={() => navigateOnce(links.vehicles)} /> : null}
+            {total > 0 ? (
+              <LinkArrow label={t('viewAll')} onPress={() => navigateOnce(links.vehicles)} />
+            ) : null}
           </XStack>
         </Stack>
       ) : null}
@@ -785,7 +987,11 @@ const OwnerVehicleRow = memo(function OwnerVehicleRow({
                 {vehicle.name}
               </Text>
               {vehicle.plateNumber ? (
-                <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+                <Text
+                  col={colors.placeholder}
+                  fos={typeScale.label.fontSize}
+                  lh={typeScale.label.lineHeight}
+                >
                   {vehicle.plateNumber}
                 </Text>
               ) : null}
@@ -793,7 +999,11 @@ const OwnerVehicleRow = memo(function OwnerVehicleRow({
             <XStack gap={4} flexWrap="wrap">
               <StatusBadge label={marketBadge.label} color={marketBadge.color} size="sm" />
               <StatusBadge
-                label={domainLabel('vehicleOperationStatus', vehicle.operationStatus, operation.label)}
+                label={domainLabel(
+                  'vehicleOperationStatus',
+                  vehicle.operationStatus,
+                  operation.label,
+                )}
                 color={operation.color}
                 size="sm"
               />

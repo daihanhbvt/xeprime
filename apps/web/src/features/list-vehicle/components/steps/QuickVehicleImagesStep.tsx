@@ -36,7 +36,7 @@ export function QuickVehicleImagesStep({
    * ĐÚNG một đường tải ảnh: chỉ có thêm một việc xảy ra trước nó.
    */
   presign?: (file: File) => Promise<UploadPresign>;
-  /** Ô thêm vào cuối lưới ảnh - ô "Cà vẹt xe" (ADR 0097). */
+  /** Ô thêm vào cuối lưới ảnh - ô "Cà vẹt xe" (ADR 0099). */
   extraTiles?: ReactNode;
 }) {
   const vehicleType = useWatch({ control, name: 'vehicleType' });

@@ -55,7 +55,7 @@ interface RegistrationCaptureProps {
 }
 
 /**
- * Ô "Cà vẹt xe" của hai wizard thêm xe (ADR 0089 · 0097) — bản native của `RegistrationCapture` bên
+ * Ô "Cà vẹt xe" của hai wizard thêm xe (ADR 0089 · 0099) — bản native của `RegistrationCapture` bên
  * web. Cơ chế như bằng lái: chụp/chọn ảnh ⇒ nén ⇒ tải kho riêng tư ⇒ server đọc. Đọc đủ và biển khớp
  * ⇒ bản tóm tắt; thiếu/lệch ⇒ ô nhập tay. "Nhập tay" mở được bất cứ lúc nào, nhưng ẢNH vẫn bắt buộc.
  */
@@ -123,7 +123,7 @@ export function RegistrationCapture({
         uploadId: result.uploadId,
         reading: result.reading,
         readerAvailable: result.readerAvailable,
-        // Đã nhập tay: chỉ lấp ô trống bằng kết quả đọc, không ghi đè chữ đã gõ (ADR 0097).
+        // Đã nhập tay: chỉ lấp ô trống bằng kết quả đọc, không ghi đè chữ đã gõ (ADR 0099).
         fields: prev.editing
           ? mergeTypedFields(prev.fields, fieldsFromReading(result.reading))
           : mergeTypedFields(prev.fields, fieldsFromReading(result.reading)),

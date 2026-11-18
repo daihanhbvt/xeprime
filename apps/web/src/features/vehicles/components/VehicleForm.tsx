@@ -228,7 +228,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
   const isCar = vehicleType === VEHICLE_TYPE.CAR;
 
   /*
-   * Cà vẹt (ADR 0089 · 0097) — BẮT BUỘC khi thêm MỌI loại xe. Phiên hỗ trợ không có ô này: nhân sự
+   * Cà vẹt (ADR 0089 · 0099) — BẮT BUỘC khi thêm MỌI loại xe. Phiên hỗ trợ không có ô này: nhân sự
    * nền tảng không tải giấy tờ thay chủ xe (server cũng chặn).
    */
   const registrationRequired = !draftOnly;

@@ -1,6 +1,7 @@
 'use client';
 
-import { App, Button, Result, Skeleton } from 'antd';
+import { App, Button, Skeleton } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { PERMISSION, TENANT_ROLE, isEstablishedPackageShop } from '@xeprime/types';
@@ -119,10 +120,10 @@ export function ShopPage() {
 
   if ((isError && !shop) || (personal && ownerProfile.isError && !ownerProfile.data)) {
     return (
-      <Result
-        status="error"
+      <EmptyState
+        variant="error"
         title={t('page.loadError')}
-        extra={
+        action={
           <Button
             type="primary"
             onClick={() => {

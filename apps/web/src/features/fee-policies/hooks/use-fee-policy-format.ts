@@ -7,8 +7,12 @@ import {
   SERVICE_TYPE,
   VEHICLE_TYPE,
   taxRateTotalPercent,
+  PLATFORM_FEE_BASIS,
+  platformFeeBasisFor,
   type OwnerCommissionTier,
   type PerVehicleTypeAmount,
+  type PerVehicleTypeFeeBasis,
+  type VehicleType,
   type TaxRatesByServiceType,
 } from '@xeprime/types';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -28,6 +32,18 @@ export function useFeePolicyFormat() {
           car: fmt.money(amounts[VEHICLE_TYPE.CAR]),
           motorbike: fmt.money(amounts[VEHICLE_TYPE.MOTORBIKE]),
         }),
+      /** `50.000 ₫/chuyến` hoặc `50.000 ₫/ngày` — phí sàn của MỘT loại xe (ADR 0098). */
+      platformFeeOf: (
+        amounts: PerVehicleTypeAmount,
+        basis: PerVehicleTypeFeeBasis | null | undefined,
+        type: VehicleType,
+      ) =>
+        t(
+          platformFeeBasisFor(basis, type) === PLATFORM_FEE_BASIS.PER_DAY
+            ? 'platformFeePerDay'
+            : 'platformFeePerTrip',
+          { amount: fmt.money(amounts[type]) },
+        ),
       /** `10% · 7% · 3% · 0%` — theo thứ tự nấc. */
       tierSummary: (tiers: readonly OwnerCommissionTier[]) =>
         tiers.map((tier) => percent(tier.percent)).join(LIST_SEPARATOR),

@@ -1,7 +1,8 @@
 'use client';
 
 import { BellOutlined } from '@ant-design/icons';
-import { Button, Empty, Popover, Spin } from 'antd';
+import { Button, Popover, Spin } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState, type ReactNode } from 'react';
@@ -79,11 +80,7 @@ export function NotificationBell({
             <span className={styles.error}>{getErrorMessage(list.error)}</span>
           </div>
         ) : !list.data || list.data.items.length === 0 ? (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={t('empty')}
-            className={styles.empty}
-          />
+          <EmptyState variant="empty" title={t('empty')} />
         ) : (
           <ul className={styles.list}>
             {list.data.items.map((n) => (

@@ -1,4 +1,11 @@
-import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
+import {
+  createPrismaClient,
+  MicMockInsurancePartner,
+  newId,
+  Prisma,
+  type InsurancePartner,
+  type PremiumQuoteResult,
+} from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
   INSURANCE_MODE,
@@ -13,6 +20,7 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { FeePoliciesService } from '../src/modules/fee-policies/fee-policies.service';
 import { InsuranceEligibilityService } from '../src/modules/insurance/insurance-eligibility.service';
 import type { InsuranceOfferService } from '../src/modules/insurance/insurance-offer.service';
+import { InsurancePremiumQuoteService } from '../src/modules/insurance/insurance-premium-quote.service';
 import { PricingService } from '../src/modules/pricing/pricing.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
@@ -40,6 +48,10 @@ const pricing = new PricingService(
   new FeePoliciesService(asService, new AuditService(asService)),
   offer,
   new InsuranceEligibilityService(asService, offer),
+  new InsurancePremiumQuoteService(
+    new MicMockInsurancePartner(),
+    new InsuranceEligibilityService(asService, offer),
+  ),
 );
 
 const RUN = newId().slice(-8).toLowerCase();
@@ -293,5 +305,83 @@ describe('Cờ chặn tự lái trên snapshot chợ (ADR 0091 điều 1)', () =
     expect(impact.applies).toBe(true);
     expect(impact.vehicles.map((v) => v.id)).toContain(missing);
     expect(impact.vehicles.find((v) => v.id === missing)?.gaps).toEqual(['insured_value_missing']);
+  });
+});
+
+describe('Phí bảo hiểm của lượt duyệt hỏi MIC, công thức là dự phòng (ADR 0097)', () => {
+  /** Máy giá với một đối tác giả trả lời theo `quote` — mọi thứ khác như máy giá của spec. */
+  function pricingWith(quote: () => Promise<PremiumQuoteResult>, calls: { n: number }) {
+    const partner: InsurancePartner = {
+      partnerName: 'MIC thử',
+      configured: true,
+      issue: () => Promise.reject(new Error('không dùng')),
+      quotePremium: () => {
+        calls.n += 1;
+        return quote();
+      },
+    };
+    const eligibility = new InsuranceEligibilityService(asService, offer);
+    return new PricingService(
+      asService,
+      new AuditService(asService),
+      listings,
+      makeDepositPolicyService(asService),
+      new FeePoliciesService(asService, new AuditService(asService)),
+      offer,
+      eligibility,
+      new InsurancePremiumQuoteService(partner, eligibility),
+    );
+  }
+  const trip = (vehicleId: string) =>
+    ({
+      vehicleType: VEHICLE_TYPE.CAR,
+      serviceType: SERVICE_TYPE.SELF_DRIVE,
+      vehicleId,
+      schedule: { pickupAt: PICKUP, returnAt: RETURN },
+    }) as unknown as Parameters<PricingService['approvalVehicleProtectionTier']>[0];
+
+  maybe('MIC báo phí hợp lệ ⇒ chốt số MIC, giữ phí công thức để so', async () => {
+    const id = await car();
+    const calls = { n: 0 };
+    const p = pricingWith(async () => ({ ok: true, amount: '118000' }), calls);
+    const { value } = await p.approvalVehicleProtectionTier(trip(id), {
+      selected: false,
+      required: true,
+    });
+    expect(calls.n).toBe(1);
+    // 57 giờ ⇒ bậc tới 5 ngày: 340.000.000 × 0,033% = 112.200 theo bảng.
+    expect(value).toMatchObject({
+      amount: '118000',
+      formulaAmount: '112200',
+      source: 'partner',
+      maxDays: 5,
+    });
+  });
+
+  maybe('MIC lỗi ⇒ công thức bậc kèm lý do, lượt duyệt không hỏng', async () => {
+    const id = await car();
+    const p = pricingWith(() => Promise.reject(new Error('down')), { n: 0 });
+    const { value } = await p.approvalVehicleProtectionTier(trip(id), {
+      selected: true,
+      required: false,
+    });
+    expect(value).toMatchObject({
+      amount: '112200',
+      source: 'formula',
+      fallbackReason: 'unavailable',
+    });
+  });
+
+  maybe('chuyến không mua IV (Tuỳ chọn, khách không tích) ⇒ không gọi MIC', async () => {
+    const id = await car();
+    const calls = { n: 0 };
+    const p = pricingWith(async () => ({ ok: true, amount: '118000' }), calls);
+    const { value } = await p.approvalVehicleProtectionTier(trip(id), {
+      selected: false,
+      required: false,
+    });
+    expect(calls.n).toBe(0);
+    expect(value).toMatchObject({ amount: '112200' });
+    expect(value).not.toHaveProperty('source');
   });
 });

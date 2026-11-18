@@ -270,7 +270,7 @@ export function CreateVehicleScreen() {
     }
   }, [fuelType, isCar, setValue, vehicleType]);
 
-  /* Cà vẹt (ADR 0089 · 0097) — BẮT BUỘC khi thêm MỌI loại xe; app không có phiên hỗ trợ. */
+  /* Cà vẹt (ADR 0089 · 0099) — BẮT BUỘC khi thêm MỌI loại xe; app không có phiên hỗ trợ. */
   const [registration, setRegistration] = useState<RegistrationCaptureState>(EMPTY_REGISTRATION);
   const [registrationShowErrors, setRegistrationShowErrors] = useState(false);
   const plateNumber = useWatch({ control, name: 'plateNumber' });

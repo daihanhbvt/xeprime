@@ -62,13 +62,7 @@ export class EmailOutboxDispatcher implements OnApplicationBootstrap, OnApplicat
   onApplicationBootstrap(): void {
     // Test dựng app nhiều lần — không để vòng quét nền chen vào dữ liệu của spec.
     if (this.config.get<string>('NODE_ENV') === 'test') return;
-    // Bắt lỗi của CẢ vòng (vd DB rớt kết nối): promise bị từ chối không ai bắt sẽ làm Node tắt
-    // nguyên tiến trình API. Lỗi chỉ ghi log, vòng sau thử lại; `running` đã được nhả ở `finally`.
-    this.timer = setInterval(() => {
-      this.dispatch().catch((err: unknown) =>
-        this.logger.error(`Email outbox: vòng quét lỗi - ${String(err)}`),
-      );
-    }, EMAIL_OUTBOX_INTERVAL_MS);
+    this.timer = setInterval(() => void this.dispatch(), EMAIL_OUTBOX_INTERVAL_MS);
     this.timer.unref();
   }
 

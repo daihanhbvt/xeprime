@@ -6,8 +6,7 @@
   "hero": {
     "eyebrow": "Ứng dụng di động",
     "title": "XePrime trong túi bạn",
-    "lead": "Toàn bộ hành trình thuê xe - tìm, hỏi, nhận xe, trả xe - gói trong một ứng dụng. Chủ xe quản lý lịch và đơn ngay trên cùng một app.",
-    "status": "Sắp ra mắt"
+    "lead": "Toàn bộ hành trình thuê xe - tìm, hỏi, nhận xe, trả xe - gói trong một ứng dụng. Chủ xe quản lý lịch và đơn ngay trên cùng một app."
   },
   "preview": {
     "heading": "Vài màn hình đầu tiên",
@@ -45,8 +44,8 @@
     }
   },
   "download": {
-    "heading": "Nhận thông báo khi app phát hành",
-    "body": "Ứng dụng chưa lên App Store và Google Play. Hai mã dưới đây hiện dẫn về trang chủ XePrime; khi app phát hành, chính hai mã này sẽ trỏ thẳng tới cửa hàng.",
+    "heading": "Tải ứng dụng XePrime",
+    "body": "XePrime đã có trên App Store và Google Play. Quét mã bằng điện thoại hoặc bấm nút cửa hàng để cài ngay.",
     "scanHint": "Quét bằng camera điện thoại",
     "qrAlt": "Mã QR tải ứng dụng XePrime trên {store}",
     "downloadOn": "Tải trên"

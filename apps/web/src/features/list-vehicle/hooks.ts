@@ -60,7 +60,7 @@ interface RunOptions {
    * điều quan trọng nhất của luồng này: xem docblock của hook.
    */
   ownerProfile?: OwnerProfileValues | null;
-  /** Cà vẹt đã chụp + xác nhận (ADR 0097) — gắn vào xe trong CÙNG transaction tạo xe. */
+  /** Cà vẹt đã chụp + xác nhận (ADR 0099) — gắn vào xe trong CÙNG transaction tạo xe. */
   registration?: CreateVehicleRegistrationInput;
 }
 

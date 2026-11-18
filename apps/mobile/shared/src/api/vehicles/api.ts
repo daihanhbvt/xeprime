@@ -165,7 +165,7 @@ export const vehiclesApi = {
   },
 
   /**
-   * Cà vẹt cho xe SẮP tạo (ADR 0089 · 0097) — bản native của `uploadVehicleRegistration` bên web.
+   * Cà vẹt cho xe SẮP tạo (ADR 0089 · 0099) — bản native của `uploadVehicleRegistration` bên web.
    * Body đúng hai trường của DTO (API bật `forbidNonWhitelisted`).
    */
   presignRegistration(body: {

@@ -1,28 +1,102 @@
-.section {
+/* Dải ô so sánh tháng — Figma `24138:80448`: viền bo 16, đệm 16, mỗi ô đệm ngang 16, vạch dọc. */
+.strip {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: stretch;
+  padding: 16px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
 }
 
-.heading {
-  margin: 0;
-  font-size: 12px;
+.divider {
+  flex: none;
+  width: 1px;
+  background: var(--xp-color-border);
+}
+
+.cell {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 16px;
+  color: inherit;
+}
+
+.cell:hover {
+  color: inherit;
+}
+
+.cell:hover .value {
+  color: var(--xp-color-primary-hover);
+}
+
+.cell:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.label {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.value {
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-lead);
   font-weight: var(--xp-font-weight-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  line-height: var(--xp-line-height-lead);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.change {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+}
+
+.change img {
+  flex: none;
+  margin-top: 1px;
+}
+
+.up {
+  color: var(--xp-color-success);
+}
+
+.down {
+  color: #d92d20;
+}
+
+.flat {
   color: var(--xp-color-text-tertiary);
 }
 
-/* Thẻ co giãn theo số lượng (3 ở tuyến hoa hồng, 6 ở tuyến gói) — không chừa ô trống. */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
+/* Máy tính bảng: lưới 2 cột, bỏ vạch dọc; điện thoại một cột. */
+@media (max-width: 900px) {
+  .strip {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 0;
+  }
+
+  .divider {
+    display: none;
+  }
 }
 
-@media (max-width: 640px) {
-  .grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+@media (max-width: 480px) {
+  .strip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cell {
+    padding: 0;
   }
 }

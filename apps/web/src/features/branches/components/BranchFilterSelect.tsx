@@ -5,8 +5,10 @@ import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { ALL_FILTER } from '@/constants/filters';
+import { cx } from '@/lib/cx';
 
 import type { BranchFilterState } from '../hooks/use-branch-filter';
+import styles from './BranchFilterSelect.module.css';
 
 /**
  * Ô lọc chi nhánh cho các màn KHÔNG dùng `FilterBar` — ADR 0052.
@@ -50,7 +52,7 @@ export function BranchFilterSelect({
 
   return (
     <Select
-      className={className}
+      className={cx(styles.select, className)}
       size={size}
       value={value ?? ALL_FILTER}
       onChange={(next: string) => branch.select(next === ALL_FILTER ? undefined : next)}

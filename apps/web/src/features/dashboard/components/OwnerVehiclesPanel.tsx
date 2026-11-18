@@ -18,7 +18,7 @@ import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
 import type { VehicleListItem } from '@/features/vehicles/types';
 import { usePermissions } from '@/hooks/use-permissions';
 import type { DashboardLinks } from '../hooks/use-dashboard-links';
-import { DashboardPanel } from './DashboardPanel';
+import { InfoCard } from '@/components/layout/InfoCard';
 import styles from './SidePanels.module.css';
 
 /** Chủ xe cá nhân có một tới ba chiếc — đủ hiện hết, và vẫn có trần cho dữ liệu lạ. */
@@ -28,7 +28,7 @@ const OWNER_VEHICLE_PREVIEW = 5;
  * "Xe của bạn" — Tổng quan của CHỦ XE CÁ NHÂN đặt từng chiếc xe lên bàn: khách có đang thấy nó
  * không (hay vì sao không), và nó đang rảnh hay đang ở với khách.
  *
- * Gian hàng gói thấy SỐ ĐẾM (`MarketPanel`) vì đội xe của họ là hàng chục chiếc; chủ xe 1–3 xe thì
+ * Gian hàng gói thấy SỐ ĐẾM (`FleetPlanPanel`) vì đội xe của họ là hàng chục chiếc; chủ xe 1–3 xe thì
  * cần thấy chính CHIẾC XE. Cùng API danh sách xe (`GET /vehicles`) — không có đường đọc thứ hai.
  *
  * Trần xe đọc `fleetQuota` của `GET /subscription` (do server giải — ADR 0041). Chạm trần thì mời
@@ -70,9 +70,8 @@ export function OwnerVehiclesPanel({ links }: { links: DashboardLinks }) {
   }
 
   return (
-    <DashboardPanel
+    <InfoCard
       title={t('title')}
-      icon={<CarOutlined />}
       extra={
         limit !== null ? (
           <span className={styles.extraNote}>{t('quota', { used, limit })}</span>
@@ -107,7 +106,7 @@ export function OwnerVehiclesPanel({ links }: { links: DashboardLinks }) {
           ) : null}
         </div>
       </div>
-    </DashboardPanel>
+    </InfoCard>
   );
 }
 
@@ -125,7 +124,9 @@ function OwnerVehicleRow({ vehicle, href }: { vehicle: VehicleListItem; href: st
       )}
       <span className={styles.vehicleMain}>
         <span className={styles.vehicleName}>{vehicle.name}</span>
-        {vehicle.plateNumber ? <span className={styles.vehiclePlate}>{vehicle.plateNumber}</span> : null}
+        {vehicle.plateNumber ? (
+          <span className={styles.vehiclePlate}>{vehicle.plateNumber}</span>
+        ) : null}
       </span>
       <span className={styles.vehicleTags}>
         {approved ? (

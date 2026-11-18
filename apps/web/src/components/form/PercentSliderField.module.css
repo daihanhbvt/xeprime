@@ -1,0 +1,59 @@
+.field {
+  min-width: 0;
+}
+
+.labelRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 22px;
+  margin-bottom: var(--xp-space-6);
+}
+
+.label {
+  min-width: 0;
+  color: var(--xp-color-text);
+  cursor: pointer;
+  /* Cùng cỡ nhãn của Form.Item AntD (14px) — đứng cạnh các ô thường không bị lệch. */
+  font-size: var(--xp-font-size);
+  line-height: 22px;
+}
+
+.requiredMark {
+  margin-inline-end: 4px;
+  color: var(--xp-color-error);
+}
+
+.requiredMark::before {
+  content: '*';
+}
+
+.item.item {
+  margin-bottom: var(--xp-space-md);
+}
+
+/* Thanh kéo chiếm phần còn lại; ô số bề rộng cố định để các hàng % thẳng mép phải. */
+.controls {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-md);
+}
+
+.slider.slider {
+  flex: 1 1 auto;
+  min-width: 0;
+  /* Chừa chỗ cho nhãn mốc dưới thanh và để núm không chạm mép. */
+  margin: 10px 10px 22px;
+}
+
+/* Nhân đôi class: AntD tiêm `width: 90px` lúc chạy, cùng specificity thì nó thắng (xem field.module.css). */
+.input.input {
+  flex: none;
+  width: 112px;
+}
+
+.slider :global(.ant-slider-mark-text) {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-sm);
+  white-space: nowrap;
+}

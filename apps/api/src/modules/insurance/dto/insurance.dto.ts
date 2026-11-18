@@ -20,7 +20,9 @@ import {
   INSURANCE_COVERAGE_STATUS_VALUES,
   INSURANCE_ELIGIBILITY_GAP_VALUES,
   INSURANCE_PREMIUM_BASIS_VALUES,
+  INSURANCE_PREMIUM_SOURCE_VALUES,
   INSURANCE_SERVICE_FEE_PERCENT_MAX,
+  INSURANCE_REMITTANCE_LIMITS,
   INSURANCE_VALUE_TIER_LIMITS,
   type InsurancePremiumBasis,
   INSURANCE_POLICY_STATUS_VALUES,
@@ -34,6 +36,7 @@ import {
   type InsuranceCoverageStatus,
   type InsuranceEligibilityGap,
   type InsurancePolicyStatus,
+  type InsurancePremiumSource,
   type InsuranceProductKind,
   type InsuranceProvider,
   type InsuranceQueueStatusFilter,
@@ -112,6 +115,20 @@ export class PlatformInsurancePolicyDto {
   @ApiProperty({ enum: INSURANCE_PRODUCT_KIND_VALUES }) productKind!: InsuranceProductKind;
   @ApiProperty({ enum: INSURANCE_POLICY_STATUS_VALUES }) status!: InsurancePolicyStatus;
   @ApiProperty({ description: 'Phí đã thu của khách cho sản phẩm này' }) premiumAmount!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Phí hãng tính lúc cấp (MIC total_fee) - null khi chưa cấp',
+  })
+  partnerPremiumAmount!: string | null;
+  @ApiProperty({ description: 'Phí thu hộ bảo hiểm của nền tảng đã thu - "0" khi không có' })
+  serviceFeeAmount!: string;
+  @ApiPropertyOptional({
+    enum: INSURANCE_PREMIUM_SOURCE_VALUES,
+    nullable: true,
+    description: 'Nguồn phí chốt lúc duyệt (ADR 0097) - null với hợp đồng trước đó',
+  })
+  premiumSource!: InsurancePremiumSource | null;
   @ApiProperty() partnerName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) partnerProductCode!: string | null;
   @ApiPropertyOptional({
@@ -291,6 +308,14 @@ export class InsuranceProductDto {
   maxPayoutCar!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Bồi thường tối đa - xe máy' })
   maxPayoutMotorbike!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Phí mỗi ngày - ô tô (sản phẩm tính theo ngày, ADR 0098). `null` = không áp dụng',
+  })
+  dailyAmountCar!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Phí mỗi ngày - xe máy' })
+  dailyAmountMotorbike!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) maxPayoutNoteVi!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) maxPayoutNoteEn!: string | null;
   @ApiProperty({ description: 'Mẫu URL tra cứu GCN, `{certCode}` là chỗ thay số chứng nhận' })
@@ -314,6 +339,11 @@ export class InsuranceProductDto {
   serviceFeeEnabled!: boolean;
   @ApiProperty({ description: '% phí thu hộ trên IV, 0..50, hai chữ số lẻ' })
   serviceFeePercent!: number;
+  @ApiProperty({
+    description:
+      '% hoa hồng đại lý theo hợp đồng đại lý với hãng (ADR 0097) - mặc định cho bảng kê tháng, 0..50',
+  })
+  agencyCommissionPercent!: number;
 }
 
 /** Một bậc phí: chuyến tối đa `maxDays` ngày ⇒ phí = `percent`% giá trị xe (đã gồm VAT). */
@@ -400,6 +430,22 @@ export class UpdateInsuranceProductDto {
   @Matches(MONEY_PATTERN)
   maxPayoutMotorbike?: string | null;
 
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Phí mỗi ngày - ô tô, bội 1.000đ (sản phẩm tính theo ngày, ADR 0098)',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(MONEY_PATTERN)
+  dailyAmountCar?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Phí mỗi ngày - xe máy' })
+  @IsOptional()
+  @IsString()
+  @Matches(MONEY_PATTERN)
+  dailyAmountMotorbike?: string | null;
+
   @ApiPropertyOptional({ type: String, nullable: true })
   @IsOptional()
   @IsString()
@@ -470,6 +516,18 @@ export class UpdateInsuranceProductDto {
   @Min(0)
   @Max(INSURANCE_SERVICE_FEE_PERCENT_MAX)
   serviceFeePercent?: number;
+
+  @ApiPropertyOptional({
+    minimum: 0,
+    maximum: INSURANCE_REMITTANCE_LIMITS.commissionPercentMax,
+    description: '% hoa hồng đại lý hãng trả lại cho XePrime (ADR 0097)',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(INSURANCE_REMITTANCE_LIMITS.commissionPercentMax)
+  agencyCommissionPercent?: number;
 }
 
 /** Danh mục CÔNG KHAI — đúng loại xe khách đang xem, không có trường quản trị. */

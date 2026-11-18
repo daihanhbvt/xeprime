@@ -1,101 +1,119 @@
 {
   "meta": {
     "title": "Về XePrime",
-    "description": "XePrime là sàn kết nối chủ xe và người thuê xe trên toàn quốc: xe tự lái, xe có tài xế và thuê dài hạn, với giá và trách nhiệm được nói rõ trước khi đặt."
+    "description": "XePrime là nền tảng kết nối người thuê xe với chủ xe trên toàn quốc: xe tự lái, xe có tài xế và thuê dài hạn, với giá thuê, lịch trình và điều khoản rõ ràng trước khi đặt."
+  },
+  "breadcrumb": {
+    "label": "Đường dẫn",
+    "home": "Trang chủ",
+    "current": "Về chúng tôi",
+    "back": "Quay lại"
   },
   "hero": {
-    "eyebrow": "Về chúng tôi",
-    "title": "Một chỗ để thuê xe mà không phải đoán",
-    "lead": "XePrime là sàn kết nối người cần xe với chủ xe trên toàn quốc. Chúng tôi không sở hữu chiếc xe nào - việc của chúng tôi là làm cho giá, lịch và trách nhiệm của hai bên rõ ràng trước khi ai đó trả tiền."
+    "kicker": "Về chúng tôi",
+    "titleLine1": "Thuê xe dễ dàng",
+    "titleLine2": "Hành trình an tâm cùng <accent>XEPRIME</accent>",
+    "lead": "Kết nối người cần xe với chủ xe văn minh trên toàn quốc.<br></br>Giá rõ ràng, lịch trình chủ động, trách nhiệm sáng tỏ trước mỗi hành trình.",
+    "partnerCta": "Trở thành đối tác",
+    "exploreCta": "Khám phá xe ngay",
+    "photoTitle": "Hành trình độc lập, chuẩn bị chỉn chu",
+    "photoCaption": "99.8% Chuyến đi an tâm"
   },
-  "services": {
-    "heading": "Ba cách thuê",
-    "selfDrive": {
-      "title": "Xe tự lái",
-      "desc": "Bạn cầm lái. Nhận xe tại gian hàng hoặc yêu cầu giao tận nơi, tính giá theo giờ hoặc theo ngày."
+  "stats": {
+    "legal": {
+      "kicker": "Nền tảng kết nối",
+      "value": "0",
+      "title": "Xe tự sở hữu",
+      "desc": "Không cạnh tranh với đối tác"
     },
-    "withDriver": {
-      "title": "Xe có tài xế",
-      "desc": "Đi tỉnh, đón sân bay hay thuê theo buổi - tài xế do gian hàng bố trí, lộ trình thống nhất trước."
-    },
-    "longTerm": {
-      "title": "Thuê dài hạn",
-      "desc": "Gói cố định 1 đến 12 tháng cho nhu cầu đi lại thường xuyên, ngày trả tính theo tháng lịch."
+    "cost": {
+      "kicker": "Cam kết của chúng tôi",
+      "value": "100%",
+      "title": "Chi phí rõ ràng",
+      "desc": "Không phụ phí ẩn lúc trả xe"
     }
   },
-  "how": {
-    "heading": "Một chuyến thuê diễn ra thế nào",
-    "lead": "Bốn bước, và không bước nào thu tiền trước khi chủ xe đồng ý.",
-    "request": {
-      "title": "Gửi yêu cầu",
-      "desc": "Chọn xe, khung giờ và nơi nhận. Bước này chưa thu tiền và chưa giữ chỗ."
+  "services": {
+    "kicker": "Mô hình dịch vụ",
+    "title": "Linh hoạt mọi nhu cầu thuê xe",
+    "lead": "Ba hình thức thuê phù hợp cho mọi hành trình, từ dạo phố cuối tuần, công tác xa đến nhu cầu di chuyển dài hạn của doanh nghiệp",
+    "selfDrive": {
+      "badge": "Phổ biến nhất",
+      "title": "Xe tự lái",
+      "desc": "Tự do cầm lái, chủ động lịch trình. Nhận xe tại gian hàng hoặc yêu cầu giao xe tận nơi, sân bay theo nhu cầu.",
+      "p1": "Giá thuê theo giờ hoặc 24 giờ",
+      "p2": "Giới hạn km rõ ràng, không ép mua gói",
+      "p3": "Kiểm tra xe minh bạch qua ảnh đủ các góc xe",
+      "cta": "Tìm xe tự lái ngay"
     },
-    "accept": {
-      "title": "Gian hàng nhận chuyến",
-      "desc": "Chủ xe duyệt yêu cầu. Đến đây lịch mới được giữ, giá được chốt và bạn thấy chính xác phải chuyển bao nhiêu."
+    "withDriver": {
+      "badge": "Thoải mái",
+      "title": "Xe có tài xế",
+      "desc": "Di chuyển thoải mái, linh hoạt. Phù hợp cho công tác, đưa đón sân bay, gặp gỡ đối tác và hành trình liên tỉnh.",
+      "p1": "Lộ trình và thời gian thống nhất trước",
+      "p2": "Chi phí xăng, bến bãi theo thỏa thuận",
+      "p3": "Tài xế chuyên nghiệp, giàu kinh nghiệm",
+      "cta": "Xem dịch vụ có tài xế"
     },
-    "hold": {
-      "title": "Chuyển tiền giữ chỗ",
-      "desc": "Bạn chuyển khoản trong cửa sổ thanh toán. Đơn thuê chỉ hình thành khi đối soát xác nhận đã nhận đủ tiền."
-    },
-    "trip": {
-      "title": "Nhận xe và trả xe",
-      "desc": "Hai bên ký biên bản giao nhận kèm ảnh hiện trạng; phần tiền thuê còn lại trả trực tiếp chủ xe lúc nhận xe."
+    "longTerm": {
+      "badge": "Tiết kiệm đến 30%",
+      "title": "Thuê xe dài hạn",
+      "desc": "Giải pháp phương tiện linh hoạt lâu dài từ 1 - 12 tháng, dành cho cá nhân, gia đình và doanh nghiệp.",
+      "p1": "Hợp đồng điện tử, hóa đơn VAT hợp lệ",
+      "p2": "Hỗ trợ bảo dưỡng và đổi xe tương đương",
+      "p3": "Thủ tục đơn giản, không phong tỏa tín dụng lớn",
+      "cta": "Đăng ký báo giá dài hạn"
     }
   },
   "money": {
-    "heading": "Tiền đi đâu",
-    "lead": "Mỗi khoản có một chủ sở hữu, và chúng tôi hiện từng dòng thay vì gộp thành một con số.",
-    "hold": {
-      "title": "Khoản chuyển online",
-      "desc": "Gồm tiền giữ chỗ, phí đặt xe và bảo hiểm nếu có. Đây không phải cọc thế chấp khi nhận xe."
+    "kicker": "Cấu trúc dòng tiền",
+    "title": "Minh bạch từng khoản phí",
+    "lead": "Mỗi khoản thu đều được phân tách rõ ràng, xác định chủ sở hữu và hiển thị minh bạch. Không phí ẩn, không chi phí mập mờ",
+    "online": {
+      "title": "Khoản thanh toán online",
+      "desc": "Bao gồm phí giữ chỗ, phí dịch vụ nền tảng và bảo hiểm chuyến đi (nếu đăng ký thêm).",
+      "noteTitle": "Không phải tiền cọc thế chấp",
+      "note": "Tiền giữ chỗ dùng để đảm bảo chuyến đi, không phải khoản thế chấp tài sản."
     },
     "pickup": {
-      "title": "Phần trả tại chỗ",
-      "desc": "Số tiền thuê còn lại trả trực tiếp cho chủ xe lúc nhận xe - XePrime không thu hộ khoản này."
+      "title": "Khoản thanh toán tại chỗ",
+      "desc": "Phần tiền thuê xe còn lại được thanh toán trực tiếp giữa khách hàng và chủ xe khi nhận phương tiện.",
+      "noteTitle": "Không thu hộ, không giữ tiền",
+      "note": "XePrime không can thiệp vào khoản thanh toán trực tiếp, đảm bảo quyền thỏa thuận giữa 2 bên."
     },
     "lines": {
-      "title": "Không gộp dòng",
-      "desc": "Phí dịch vụ, thuế và bảo hiểm là ba dòng riêng, đóng băng vào đơn lúc tạo và không tính lại về sau."
+      "title": "Minh bạch từng khoản phí",
+      "desc": "Phí dịch vụ nền tảng, thuế VAT và bảo hiểm chuyến đi được hiển thị riêng biệt trên hợp đồng điện tử.",
+      "noteTitle": "Cố định chi phí ngay khi đặt xe",
+      "note": "Chi phí được cố định khi xác nhận đơn, không phát sinh phụ phí ngoài thỏa thuận."
     }
   },
-  "owners": {
-    "heading": "Nếu bạn có xe",
-    "lead": "Hai cách tham gia trên cùng một chợ - chọn theo quy mô, đổi được về sau.",
-    "basic": {
-      "title": "Chủ xe cá nhân",
-      "desc": "Vài chiếc xe, không thuê bao. Bạn chỉ trả phí dịch vụ theo chuyến thật sự phát sinh.",
-      "descInApp": "Vài chiếc xe, tham gia ngay trên chợ. Phí dịch vụ tính theo chuyến thật sự phát sinh."
-    },
-    "shop": {
-      "title": "Gian hàng",
-      "desc": "Đội xe lớn hơn, mua gói theo số xe và kỳ hạn. Không mất phần trăm cho XePrime trên mỗi chuyến, kèm bộ công cụ quản lý đầy đủ.",
-      "descInApp": "Đội xe lớn hơn, kèm bộ công cụ quản lý đầy đủ. Hình thức tham gia và biểu phí do XePrime công bố."
-    },
-    "action": "Đăng xe cho thuê"
+  "partners": {
+    "kicker": "Hợp tác cùng XePrime",
+    "title": "Có xe nhàn rỗi? Tạo thêm thu nhập",
+    "lead": "Hai mô hình hợp tác linh hoạt trên cùng nền tảng, giúp bạn chủ động lựa chọn cách khai thác xe phù hợp với nhu cầu và kế hoạch riêng."
   },
   "trust": {
-    "heading": "Những gì chúng tôi kiểm soát",
+    "kicker": "Hạ tầng bảo vệ",
+    "title": "An toàn từ <accent>công nghệ</accent> đến thực tế",
+    "lead": "Niềm tin được xây dựng bằng công nghệ xác minh, cơ chế bảo vệ giao dịch và quy trình kiểm tra chặt chẽ.",
     "listing": {
-      "title": "Xe được duyệt trước khi lên chợ",
-      "desc": "Hồ sơ xe và giấy tờ đi qua vòng kiểm duyệt của nền tảng trước khi khách nhìn thấy."
+      "value": "12+",
+      "title": "Điểm kiểm tra xe",
+      "desc": "Giấy tờ xe, đăng kiểm và hình ảnh xe đều được đội ngũ chuyên môn kiểm tra trước khi đăng tải.",
+      "tag": "Xe được duyệt trước khi đăng"
     },
     "calendar": {
-      "title": "Không trùng lịch",
-      "desc": "Một chiếc xe không thể bị đặt hai lần cho cùng một khung giờ - ràng buộc nằm ở tầng cơ sở dữ liệu."
+      "value": "1",
+      "title": "1 xe - 1 lịch trình",
+      "desc": "Hệ thống tự động khóa lịch đã có đơn, đảm bảo một xe không thể được đặt trùng thời gian.",
+      "tag": "Khóa trùng lịch tự động"
     },
     "metrics": {
-      "title": "Uy tín đo bằng hành vi thật",
-      "desc": "Tỉ lệ phản hồi, thời gian phản hồi và tỉ lệ giữ chuyến của gian hàng tính từ dữ liệu 90 ngày gần nhất, không phải tự khai."
+      "value": "90",
+      "title": "Ngày dữ liệu hành vi",
+      "desc": "Điểm uy tín tự động tính dựa trên hiệu suất hoạt động trong 90 ngày gần nhất.",
+      "tag": "Chỉ số minh bạch"
     }
-  },
-  "next": {
-    "heading": "Đi tiếp",
-    "search": "Tìm xe",
-    "legal": "Văn bản pháp lý",
-    "support": "Trung tâm trợ giúp",
-    "searchDesc": "Xem xe đang cho thuê theo địa điểm và khung giờ bạn cần.",
-    "legalDesc": "Điều khoản sử dụng, chính sách bảo mật, quy chế sàn và chính sách huỷ.",
-    "supportDesc": "Kênh tiếp nhận phản ánh, khiếu nại và sự cố trong chuyến."
   }
 }

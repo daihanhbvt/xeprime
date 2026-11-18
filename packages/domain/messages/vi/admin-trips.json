@@ -59,7 +59,11 @@
     "customer": "Khách",
     "vehicle": "Xe · gian hàng",
     "schedule": "Lịch thuê",
-    "sentAt": "Gửi lúc",
+    "stage": "Tình trạng",
+    "waited": "Đã chờ",
+    "deadline": "Hạn",
+    "sentAtValue": "Gửi {time}",
+    "acceptedAtValue": "Chủ xe nhận {time}",
     "respondBy": "Hạn trả lời",
     "holdBy": "Hạn giữ chỗ",
     "longTerm": "Dài hạn · {package}",
@@ -93,6 +97,7 @@
     "total": "{count, plural, other {# đơn}}"
   },
   "empty": {
+    "both": "Không có yêu cầu nào đang chờ chủ xe duyệt hay chờ khách giữ chỗ.",
     "pending_approval": "Không có yêu cầu nào đang chờ chủ xe trả lời.",
     "awaiting_hold": "Không có yêu cầu nào đang chờ khách giữ chỗ.",
     "pickup_soon": "Không có chuyến nào giao xe trong 24 giờ tới.",
@@ -105,7 +110,10 @@
     "inDays": "còn {count} ngày",
     "lateMinutes": "quá {count} phút",
     "lateHours": "quá {count} giờ",
-    "lateDays": "quá {count} ngày"
+    "lateDays": "quá {count} ngày",
+    "elapsedMinutes": "{count} phút",
+    "elapsedHours": "{count} giờ",
+    "elapsedDays": "{count} ngày"
   },
   "dashboard": {
     "title": "Vận hành chuyến",

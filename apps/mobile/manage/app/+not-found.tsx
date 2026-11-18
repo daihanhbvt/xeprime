@@ -6,14 +6,16 @@ import { ROUTES } from '@/navigation/routes';
 
 export default function NotFoundScreen() {
   const router = useRouter();
-  const t = useTranslations('MobileShell');
+  // Chữ chung với trang 404 của web (`Common.statePages`, Figma `22306:65272`).
+  const tState = useTranslations('Common.statePages');
 
   return (
     <Screen scroll={false} centered>
       <ScreenMessage
-        title={t('notFound.title')}
-        description={t('notFound.description')}
-        actionLabel={t('nav.backHome')}
+        kind="not-found"
+        title={tState('notFound.title')}
+        description={tState('notFound.description')}
+        actionLabel={tState('backHome')}
         onAction={() => router.replace(ROUTES.root.index())}
       />
     </Screen>
