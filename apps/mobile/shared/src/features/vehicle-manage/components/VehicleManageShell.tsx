@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode, type RefObject } from 'react';
+import { VehicleEditSummaryCard } from '@/features/vehicles/components/VehicleEditSummaryCard';
 import type { ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { YStack } from 'tamagui';
@@ -206,6 +207,9 @@ export function VehicleManageShell({
       >
         <FooterSlot.Provider value={setFooter}>
           <YStack gap={space.md}>
+            {isManage && section === VEHICLE_MANAGE_SECTION.IMAGES ? (
+              <VehicleEditSummaryCard vehicleId={vehicleId} tab={VEHICLE_EDIT_TAB.MEDIA} />
+            ) : null}
             {!canEdit ? <Callout tone="info">{t('readOnlyNotice')}</Callout> : null}
             {children({ vehicle, canEdit })}
           </YStack>

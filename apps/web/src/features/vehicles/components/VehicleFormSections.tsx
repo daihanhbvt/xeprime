@@ -1,6 +1,5 @@
 'use client';
 
-import { BankOutlined, HomeOutlined, KeyOutlined, TeamOutlined } from '@ant-design/icons';
 import { Alert, Checkbox, Col, Form, Radio, Row, Skeleton } from 'antd';
 import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
@@ -135,22 +134,73 @@ export interface VehicleWizardStep {
   title: string;
   /** Nhãn rút gọn cho mobile: giữ toàn bộ wizard trên một hàng. */
   shortTitle: string;
-  /** Tiêu đề trong thẻ nội dung, đã đánh số. */
-  heading: string;
+  /** Dòng phụ dưới nhãn ở cột bước dọc. */
+  description: string;
   fields: ReadonlyArray<keyof VehicleFormValues>;
 }
 
-const FIELDS_OF = Object.fromEntries(
-  VEHICLE_SECTIONS.map((section) => [section.key, section.fields]),
-) as Record<VehicleSectionKey, ReadonlyArray<keyof VehicleFormValues>>;
+/** Ba bước của wizard tạo xe (Figma `24352:70390`, 17/11/2026). */
+export type CreateWizardStepKey = 'basic' | 'pricing' | 'features';
 
 /**
- * Wizard **tạo xe** — 4 bước. Thông số kỹ thuật nâng cao được nhập sau ở workspace chỉnh sửa;
- * không bắt chủ xe đi qua một bước tuỳ chọn trong lúc onboarding.
+ * Trường của TỪNG bước wizard tạo — dùng để validate riêng bước đang mở và để nhảy về đúng bước
+ * khi lỗi (yup hoặc server). Một trường không nằm ở bước nào thì lỗi của nó không dẫn được người
+ * dùng tới đâu, nên mọi ô wizard thật sự vẽ phải có mặt ở đây.
+ */
+export const CREATE_STEP_FIELDS: Readonly<
+  Record<CreateWizardStepKey, ReadonlyArray<keyof VehicleFormValues>>
+> = {
+  // Bước 1: ảnh xe (+ cà vẹt, state riêng) và toàn bộ thông tin xe.
+  basic: [
+    'media',
+    'images',
+    'vehicleType',
+    'name',
+    'plateNumber',
+    'branchId',
+    'code',
+    'operationStatus',
+    'brand',
+    'model',
+    'vehicleCatalogModelId',
+    'vehicleCatalogVariantId',
+    'manufactureYear',
+    'color',
+    'seatCount',
+    'motorbikeCategory',
+    'bodyType',
+    'insuredValue',
+    'fuelType',
+    'transmission',
+    'fuelConsumptionCombined',
+    'engineDisplacementCc',
+    'electricRangeKm',
+    'batteryCapacityKwh',
+    'electricConsumptionKwhPer100Km',
+    'sourceType',
+  ],
+  // Bước 2: bật/tắt từng dịch vụ (thay ô "Loại dịch vụ" cũ) + giá của dịch vụ đó + giao xe.
+  pricing: [
+    'serviceTypes',
+    'weekdayPrice',
+    'weekendPrice',
+    'hourlyPrice',
+    'discountPercent',
+    'withDriverDailyPrice',
+    'withDriverInterCityPrice',
+    'withDriverOneWayPrice',
+    'monthlyPrice',
+    'deliveryEnabled',
+  ],
+  features: ['features', 'description'],
+};
+
+/**
+ * Wizard **tạo xe** — 3 bước theo Figma: Thông tin xe (ảnh + thông tin) → Dịch vụ & giá → Tiện ích &
+ * mô tả. Bước "Xác nhận" cũ thành HỘP xác nhận mở khi bấm "Gửi duyệt" (`CreateVehicleConfirmDialog`).
+ * Thông số kỹ thuật nâng cao vẫn nhập sau ở màn chỉnh sửa.
  *
- * Bước xác nhận không có trường nào để validate: nó tổng kết ba bước trước rồi gửi.
- *
- * Là HOOK, không hằng: cả ba nhãn của mỗi bước đều là chữ hiện cho người dùng.
+ * Là HOOK, không hằng: nhãn của mỗi bước là chữ hiện cho người dùng.
  */
 export function useCreateWizardSteps(): readonly VehicleWizardStep[] {
   const t = useTranslations('Vehicles.form.wizard');
@@ -159,36 +209,23 @@ export function useCreateWizardSteps(): readonly VehicleWizardStep[] {
 
   return useMemo(
     () =>
-      [
-        {
-          key: 'basic',
-          title: t('basic.title'),
-          shortTitle: t('basic.shortTitle'),
-          heading: t('basic.heading'),
-          fields: FIELDS_OF.basic,
-        },
-        {
-          key: 'pricing',
-          title: t('pricing.title'),
-          shortTitle: t('pricing.shortTitle'),
-          heading: t('pricing.heading'),
-          fields: FIELDS_OF.pricing,
-        },
-        {
-          key: 'media',
-          title: t('media.title'),
-          shortTitle: t('media.shortTitle'),
-          heading: t('media.heading'),
-          fields: FIELDS_OF.media,
-        },
-        {
-          key: 'review',
-          title: t('review.title'),
-          shortTitle: t('review.shortTitle'),
-          heading: t('review.heading'),
-          fields: [],
-        },
-      ].filter((step) => !(pricingHidden && step.key === 'pricing')),
+      (['basic', 'pricing', 'features'] as const)
+        .filter((key) => !(pricingHidden && key === 'pricing'))
+        .map((key) => ({
+          key,
+          title: t(`${key}.title`),
+          shortTitle: t(`${key}.shortTitle`),
+          heading: t(`${key}.heading`),
+          description: t(`${key}.description`),
+          /*
+           * Phiên hỗ trợ không có bước giá: ô "Loại dịch vụ" quay về bước 1 (dạng chip như cũ, ADR 0050
+           * §13 cho phép serviceTypes) — lỗi của nó phải dẫn về đúng bước đó.
+           */
+          fields:
+            pricingHidden && key === 'basic'
+              ? [...CREATE_STEP_FIELDS.basic, 'serviceTypes' as const]
+              : CREATE_STEP_FIELDS[key],
+        })),
     [pricingHidden, t],
   );
 }
@@ -259,15 +296,18 @@ export function BasicSection({
           required
         />
       </Col>
-      <Col xs={24} sm={12}>
-        <TextField
-          control={control}
-          name="code"
-          label={t('code')}
-          placeholder={t('codePlaceholder')}
-          disabled={codeReadOnly}
-        />
-      </Col>
+      {/* Thêm xe (Figma): không hỏi Mã xe - server tự sinh; sửa ở màn chỉnh sửa xe. */}
+      {creating ? null : (
+        <Col xs={24} sm={12}>
+          <TextField
+            control={control}
+            name="code"
+            label={t('code')}
+            placeholder={t('codePlaceholder')}
+            disabled={codeReadOnly}
+          />
+        </Col>
+      )}
       <Col xs={24} sm={12}>
         {/*
           Chi nhánh = VỊ TRÍ CÔNG KHAI của xe. Ngay cả khi gian hàng chỉ có một chi nhánh, ô này
@@ -336,9 +376,12 @@ export function BasicSection({
           />
         </Col>
       )}
-      <Col xs={24}>
-        <VehicleTypePolicyWarning control={control} />
-      </Col>
+      {/* Chỉ màn SỬA: xe mới chưa có chính sách nào để "kế thừa lại" khi đổi loại xe. */}
+      {creating ? null : (
+        <Col xs={24}>
+          <VehicleTypePolicyWarning control={control} />
+        </Col>
+      )}
       {/* Cảnh báo mất giá khi bỏ dịch vụ chỉ có nghĩa khi ô dịch vụ ở ngay đây; công tắc có hộp xác nhận riêng. */}
       {hideServiceTypes ? null : (
         <Col xs={24}>
@@ -376,7 +419,7 @@ function VehicleTypePolicyWarning({ control }: Pick<SectionProps, 'control'>) {
  * xoá theo (server `orphanPriceClears`), thêm lại dịch vụ thì phải nhập giá lại. Đây là lời
  * báo trước; nút Lưu bấm sau khi đã thấy cảnh báo chính là xác nhận.
  */
-function ServicePriceRemovalWarning({ control }: Pick<SectionProps, 'control'>) {
+export function ServicePriceRemovalWarning({ control }: Pick<SectionProps, 'control'>) {
   const t = useTranslations('Vehicles.form.warnings');
   const serviceTypes = useWatch({ control, name: 'serviceTypes' }) ?? [];
   const monthlyPrice = useWatch({ control, name: 'monthlyPrice' });
@@ -447,11 +490,17 @@ export function SourceTypeSection({ control }: Pick<SectionProps, 'control'>) {
   const t = useTranslations('Vehicles.form.source');
   const domainLabel = useDomainLabel();
 
+  // Icon gốc của Figma (`24352:79296`), tô màu bằng CSS mask theo trạng thái chọn.
   const iconOf = (value: VehicleSourceType) => {
-    if (value === VEHICLE_SOURCE_TYPE.OWNED) return <HomeOutlined />;
-    if (value === VEHICLE_SOURCE_TYPE.FINANCED) return <BankOutlined />;
-    if (value === VEHICLE_SOURCE_TYPE.RENTED) return <KeyOutlined />;
-    return <TeamOutlined />;
+    const name =
+      value === VEHICLE_SOURCE_TYPE.OWNED
+        ? 'home'
+        : value === VEHICLE_SOURCE_TYPE.FINANCED
+          ? 'card'
+          : value === VEHICLE_SOURCE_TYPE.RENTED
+            ? 'search'
+            : 'users';
+    return <span className={`${styles.sourceGlyph} ${styles[`sourceGlyph_${name}`]}`} />;
   };
 
   /*
@@ -638,6 +687,7 @@ export function VehicleIdentitySection({
   lockedNotice,
   setValue,
   bodyTypeElsewhere = false,
+  creating = false,
 }: DependentSectionProps & {
   /** Màn sửa xe bày kiểu dáng thành thẻ RIÊNG (design 23683:17598) — khối này bỏ ô đó đi. */
   bodyTypeElsewhere?: boolean;
@@ -651,7 +701,9 @@ export function VehicleIdentitySection({
         <TextField
           control={control}
           name="plateNumber"
-          label={<PublishRequiredLabel label={t('plateNumber')} />}
+          // Thêm xe: điều kiện lên chợ hiện dấu * đỏ như ô bắt buộc (người dùng chốt 18/11/2026).
+          label={creating ? t('plateNumber') : <PublishRequiredLabel label={t('plateNumber')} />}
+          required={creating}
           placeholder={t('platePlaceholder')}
           help={lockedNotice ?? t('plateHelp')}
           disabled={Boolean(lockedNotice)}
@@ -669,6 +721,7 @@ export function VehicleIdentitySection({
           lockedNotice={lockedNotice}
           disabled={Boolean(lockedNotice)}
           setValue={setValue}
+          required={creating}
         />
       </Col>
       <Col xs={24} sm={12}>
@@ -676,6 +729,7 @@ export function VehicleIdentitySection({
           control={control}
           name="manufactureYear"
           label={t('manufactureYear')}
+          required={creating}
           placeholder={String(CURRENT_YEAR)}
           min={1980}
           max={CURRENT_YEAR + 1}
@@ -702,6 +756,7 @@ export function VehicleIdentitySection({
           bodyTypePicker={bodyTypeElsewhere ? undefined : <BodyTypePicker control={control} />}
           disabled={Boolean(lockedNotice)}
           setValue={setValue}
+          required={creating}
           trailing={
             // Giá trị xe (ADR 0088) — cạnh số chỗ; mẫu số phí bảo hiểm. Xe máy chưa có bảo hiểm.
             isCar ? (
@@ -763,6 +818,7 @@ export function VehicleEnergySection({
   isCar,
   lockedNotice,
   setValue,
+  creating = false,
 }: DependentSectionProps) {
   const vehicleType = isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE;
   const fuelType = useWatch({ control, name: 'fuelType' });
@@ -783,6 +839,7 @@ export function VehicleEnergySection({
           lockedNotice={lockedNotice}
           disabled={Boolean(lockedNotice)}
           setValue={setValue}
+          showInapplicable={creating}
         />
       </Col>
     </Row>
@@ -814,8 +871,11 @@ export function FuelTypeSelect({
   help,
   disabled,
   allowedValues,
+  required = false,
 }: Pick<SectionProps, 'control'> & {
   vehicleType: string;
+  /** Hiện dấu * (wizard thêm xe - điều kiện lên chợ). */
+  required?: boolean;
   /** Lý do ô bị khoá (xe đang trên chợ) — nơi gọi truyền chữ, component không tự đoán. */
   help?: ReactNode;
   disabled?: boolean;
@@ -845,6 +905,7 @@ export function FuelTypeSelect({
       }
       help={help}
       disabled={disabled}
+      required={required}
       allowClear
     />
   );
@@ -941,80 +1002,66 @@ export function BodyTypePicker({
   );
 }
 
-/**
- * Giá và chính sách tách làm hai khối rời.
- *
- * Wizard **tạo** gộp chúng vào một bước ("Giá thuê & chính sách", Figma `193:1779`), wizard
- * **sửa** tách thành hai bước ("Thiết lập giá" `193:2441` và "Điều khoản thuê"). Cùng một khối
- * dùng cho cả hai nên hai luồng không bao giờ lệch nhau về trường hay nhãn.
- */
-export function PricingSection({
-  control,
-  isCar,
-  pricePreview,
-  setValue,
-}: SectionProps & { pricePreview: React.ReactNode }) {
-  return (
-    <>
-      <PricesSection
-        control={control}
-        isCar={isCar}
-        pricePreview={pricePreview}
-        setValue={setValue}
-      />
-      <PoliciesSection control={control} isCar={isCar} />
-    </>
-  );
-}
+/** Trường giá nhận gợi ý "Dùng giá" theo Dữ liệu xe (ADR 0090). */
+type CatalogPriceField =
+  | 'weekdayPrice'
+  | 'weekendPrice'
+  | 'hourlyPrice'
+  | 'monthlyPrice'
+  | 'withDriverDailyPrice';
 
-export function PricesSection({
-  control,
-  pricePreview,
-  setValue,
-}: SectionProps & { pricePreview: React.ReactNode }) {
-  const t = useTranslations('Vehicles.form.prices');
-  // Giá thuê tham khảo theo Dữ liệu xe (ADR 0090) — chỉ chữ + nút "Dùng giá", không tự điền.
-  const catalogSuggestion = useVehicleCatalogSuggestion({
+/**
+ * Giá thuê tham khảo theo Dữ liệu xe (ADR 0090) - chỉ chữ + nút "Dùng giá", không tự điền. Một
+ * hook cho cả ba nhóm giá để chúng đọc CÙNG một gợi ý.
+ */
+function useCatalogPriceHint({ control, setValue }: Pick<SectionProps, 'control' | 'setValue'>) {
+  const suggestion = useVehicleCatalogSuggestion({
     modelId: useWatch({ control, name: 'vehicleCatalogModelId' }),
     variantId: useWatch({ control, name: 'vehicleCatalogVariantId' }),
     year: useWatch({ control, name: 'manufactureYear' }),
   });
-  const applyPrice =
-    (
-      name:
-        'weekdayPrice' | 'weekendPrice' | 'hourlyPrice' | 'monthlyPrice' | 'withDriverDailyPrice',
-    ) =>
-    (price: number) =>
-      setValue?.(name, price, { shouldDirty: true, shouldValidate: true });
-  // Ô giá dài hạn/có tài xế chỉ hiện khi xe ĐĂNG dịch vụ đó (bước Cơ bản) — không bắt shop
-  // nhìn hai ô giá vô nghĩa với xe chỉ tự lái.
-  const serviceTypes = useWatch({ control, name: 'serviceTypes' }) ?? [];
-  const offersLongTerm = serviceTypes.includes(SERVICE_TYPE.LONG_TERM);
-  const offersWithDriver = serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER);
-  // Hook gọi vô điều kiện (rules of hooks) — hint chỉ RENDER khi có khối dài hạn.
-  const weekdayPriceValue = useWatch({ control, name: 'weekdayPrice' });
-  const monthlyPriceValue = useWatch({ control, name: 'monthlyPrice' });
+  // eslint-disable-next-line react/display-name -- hàm dựng gợi ý theo ô giá, không phải component
+  return (field: CatalogPriceField) => (
+    <CatalogRentHint
+      suggestion={suggestion}
+      field={field}
+      onApply={
+        setValue
+          ? (price: number) => setValue(field, price, { shouldDirty: true, shouldValidate: true })
+          : undefined
+      }
+    />
+  );
+}
 
+/**
+ * Giá TỰ LÁI của wizard tạo xe (thẻ "Thuê xe tự lái", Figma `24352:80745`): ngày thường · cuối tuần ·
+ * theo giờ · giảm giá, rồi dòng "Giá hiển thị trên sàn". Bốn cột ở desktop như design.
+ */
+export function SelfDrivePriceFields({
+  control,
+  setValue,
+  pricePreview,
+}: Pick<SectionProps, 'control' | 'setValue'> & { pricePreview?: ReactNode }) {
+  const t = useTranslations('Vehicles.form.prices');
+  const hint = useCatalogPriceHint({ control, setValue });
   return (
     <>
       <Row gutter={16}>
-        <Col xs={24} sm={12}>
+        <Col xs={24} sm={12} xl={6}>
           <NumberField
             control={control}
             name="weekdayPrice"
-            label={<PublishRequiredLabel label={t('weekday')} />}
+            label={t('weekday')}
+            required
             placeholder={t('weekdayPlaceholder')}
             min={0}
             money
             help={t('weekdayHelp')}
           />
-          <CatalogRentHint
-            suggestion={catalogSuggestion}
-            field="weekdayPrice"
-            onApply={setValue ? applyPrice('weekdayPrice') : undefined}
-          />
+          {hint('weekdayPrice')}
         </Col>
-        <Col xs={24} sm={12}>
+        <Col xs={24} sm={12} xl={6}>
           <NumberField
             control={control}
             name="weekendPrice"
@@ -1024,13 +1071,9 @@ export function PricesSection({
             money
             help={t('weekendHelp')}
           />
-          <CatalogRentHint
-            suggestion={catalogSuggestion}
-            field="weekendPrice"
-            onApply={setValue ? applyPrice('weekendPrice') : undefined}
-          />
+          {hint('weekendPrice')}
         </Col>
-        <Col xs={24} sm={12}>
+        <Col xs={24} sm={12} xl={6}>
           <NumberField
             control={control}
             name="hourlyPrice"
@@ -1039,13 +1082,9 @@ export function PricesSection({
             min={0}
             money
           />
-          <CatalogRentHint
-            suggestion={catalogSuggestion}
-            field="hourlyPrice"
-            onApply={setValue ? applyPrice('hourlyPrice') : undefined}
-          />
+          {hint('hourlyPrice')}
         </Col>
-        <Col xs={24} sm={12}>
+        <Col xs={24} sm={12} xl={6}>
           <NumberField
             control={control}
             name="discountPercent"
@@ -1055,79 +1094,86 @@ export function PricesSection({
             help={t('discountHelp')}
           />
         </Col>
-        {offersLongTerm ? (
-          <>
-            <Col xs={24} sm={12}>
-              <NumberField
-                control={control}
-                name="monthlyPrice"
-                label={<PublishRequiredLabel label={t('monthly')} />}
-                placeholder={t('monthlyPlaceholder')}
-                min={0}
-                money
-                help={t('monthlyHelp')}
-              />
-              <CatalogRentHint
-                suggestion={catalogSuggestion}
-                field="monthlyPrice"
-                onApply={setValue ? applyPrice('monthlyPrice') : undefined}
-              />
-            </Col>
-            <Col xs={24}>
-              {/* Gợi ý giá tháng theo giá ngày ĐANG NHẬP (17/08 đợt 3) — cùng component với
-                  tab Giá & chính sách, hai bề mặt không lệch lời khuyên. */}
-              <LongTermPriceHint
-                weekdayPrice={weekdayPriceValue}
-                monthlyPrice={monthlyPriceValue}
-              />
-            </Col>
-          </>
-        ) : null}
-        {offersWithDriver ? (
-          <>
-            <Col xs={24} sm={12}>
-              <NumberField
-                control={control}
-                name="withDriverDailyPrice"
-                label={<PublishRequiredLabel label={t('withDriverDaily')} />}
-                placeholder={t('withDriverDailyPlaceholder')}
-                min={0}
-                money
-                help={t('withDriverDailyHelp')}
-              />
-              <CatalogRentHint
-                suggestion={catalogSuggestion}
-                field="withDriverDailyPrice"
-                onApply={setValue ? applyPrice('withDriverDailyPrice') : undefined}
-              />
-            </Col>
-            <Col xs={24} sm={12}>
-              <NumberField
-                control={control}
-                name="withDriverInterCityPrice"
-                label={t('withDriverInterCity')}
-                placeholder={t('withDriverInterCityPlaceholder')}
-                min={0}
-                money
-                help={t('withDriverInterCityHelp')}
-              />
-            </Col>
-            <Col xs={24} sm={12}>
-              <NumberField
-                control={control}
-                name="withDriverOneWayPrice"
-                label={t('withDriverOneWay')}
-                placeholder={t('withDriverOneWayPlaceholder')}
-                min={0}
-                money
-                help={t('withDriverOneWayHelp')}
-              />
-            </Col>
-          </>
-        ) : null}
       </Row>
-
       {pricePreview}
+    </>
+  );
+}
+
+/** Giá CÓ TÀI XẾ (thẻ "Xe có tài xế"): nội thành (bắt buộc lên chợ) · liên tỉnh · liên tỉnh 1 chiều. */
+export function WithDriverPriceFields({
+  control,
+  setValue,
+}: Pick<SectionProps, 'control' | 'setValue'>) {
+  const t = useTranslations('Vehicles.form.prices');
+  const hint = useCatalogPriceHint({ control, setValue });
+  return (
+    <Row gutter={16}>
+      <Col xs={24} md={8}>
+        <NumberField
+          control={control}
+          name="withDriverDailyPrice"
+          label={t('withDriverDaily')}
+          required
+          placeholder={t('withDriverDailyPlaceholder')}
+          min={0}
+          money
+          help={t('withDriverDailyHelp')}
+        />
+        {hint('withDriverDailyPrice')}
+      </Col>
+      <Col xs={24} md={8}>
+        <NumberField
+          control={control}
+          name="withDriverInterCityPrice"
+          label={t('withDriverInterCity')}
+          placeholder={t('withDriverInterCityPlaceholder')}
+          min={0}
+          money
+          help={t('withDriverInterCityHelp')}
+        />
+      </Col>
+      <Col xs={24} md={8}>
+        <NumberField
+          control={control}
+          name="withDriverOneWayPrice"
+          label={t('withDriverOneWay')}
+          placeholder={t('withDriverOneWayPlaceholder')}
+          min={0}
+          money
+          help={t('withDriverOneWayHelp')}
+        />
+      </Col>
+    </Row>
+  );
+}
+
+/**
+ * Giá DÀI HẠN (thẻ "Thuê xe dài hạn"): giá tháng + gợi ý giá tháng theo giá ngày đang nhập (cùng
+ * component với tab Giá & chính sách của màn sửa - hai bề mặt không lệch lời khuyên).
+ */
+export function LongTermPriceFields({
+  control,
+  setValue,
+}: Pick<SectionProps, 'control' | 'setValue'>) {
+  const t = useTranslations('Vehicles.form.prices');
+  const hint = useCatalogPriceHint({ control, setValue });
+  const weekdayPriceValue = useWatch({ control, name: 'weekdayPrice' });
+  const monthlyPriceValue = useWatch({ control, name: 'monthlyPrice' });
+  return (
+    <>
+      <NumberField
+        control={control}
+        name="monthlyPrice"
+        label={t('monthly')}
+        required
+        placeholder={t('monthlyPlaceholder')}
+        min={0}
+        money
+        help={t('monthlyHelp')}
+      />
+      {hint('monthlyPrice')}
+      <LongTermPriceHint weekdayPrice={weekdayPriceValue} monthlyPrice={monthlyPriceValue} />
     </>
   );
 }

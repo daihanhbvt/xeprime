@@ -105,3 +105,37 @@ export const catalogModelApi = {
     });
   },
 };
+
+/** Gợi ý từ Dữ liệu xe khi đăng/sửa xe (ADR 0090) - bản native của `fetchVehicleDataSuggestion` web. */
+export type VehicleDataSuggestion = components['schemas']['VehicleDataSuggestionDto'];
+export type VehicleDataValue = components['schemas']['VehicleDataValueDto'];
+
+export type VehicleDataOption = components['schemas']['VehicleDataOptionDto'];
+
+export const vehicleDataApi = {
+  /** Phiên bản (xe chuẩn) của một dòng xe, lọc theo năm; cái đang gắn luôn có mặt. */
+  options(params: {
+    modelId: string;
+    year?: number | null;
+    includeId?: string | null;
+  }): Promise<VehicleDataOption[]> {
+    return getApiClient().get<VehicleDataOption[]>('/catalog/variants', {
+      modelId: params.modelId,
+      ...(params.year ? { year: params.year } : {}),
+      ...(params.includeId ? { includeId: params.includeId } : {}),
+    });
+  },
+  suggestion(params: {
+    modelId: string;
+    variantId?: string | null;
+    year?: number | null;
+    vehicleId?: string | null;
+  }): Promise<VehicleDataSuggestion> {
+    return getApiClient().get<VehicleDataSuggestion>('/vehicle-catalog/suggestion', {
+      modelId: params.modelId,
+      ...(params.variantId ? { variantId: params.variantId } : {}),
+      ...(params.year ? { year: params.year } : {}),
+      ...(params.vehicleId ? { vehicleId: params.vehicleId } : {}),
+    });
+  },
+};

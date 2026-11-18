@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 
 import {
@@ -30,6 +30,8 @@ export function TypedMediaFields<T extends FieldValues>({
   mediaName = 'media' as Path<T>,
   presign = presignVehicleImage,
   onUploadingChange,
+  variant,
+  extraTiles,
 }: {
   control: Control<T>;
   vehicleType: string;
@@ -39,6 +41,9 @@ export function TypedMediaFields<T extends FieldValues>({
   presign?: (file: File) => Promise<UploadPresign>;
   /** Có ảnh đang tải — wizard chặn "Tiếp tục"/"Lưu" để không gửi thiếu ảnh. */
   onUploadingChange?: (uploading: boolean) => void;
+  /** Lưới ảnh kiểu wizard thêm xe - xem `VehicleImageBoard`. */
+  variant?: 'board' | 'compact';
+  extraTiles?: ReactNode;
 }) {
   const { field, fieldState: mediaState } = useController({ control, name: mediaName });
   const { field: legacyImages } = useController({ control, name: 'images' as Path<T> });
@@ -71,6 +76,8 @@ export function TypedMediaFields<T extends FieldValues>({
         canEdit
         presign={presign}
         onUploadingChange={onUploadingChange}
+        {...(variant ? { variant } : {})}
+        extraTiles={extraTiles}
       />
       {/* Còn trống một góc ảnh bắt buộc — lỗi của form, hiện ngay dưới bảng ảnh. */}
       {mediaState.error?.message ? (

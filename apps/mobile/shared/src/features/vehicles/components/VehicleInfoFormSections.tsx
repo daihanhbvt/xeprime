@@ -24,7 +24,7 @@ import { fontSize, space } from '@/theme/tokens';
 import type { VehicleDetail } from '../api';
 import { VehicleClassificationFields } from './VehicleClassificationFields';
 import { VehicleEnergyFields, useTransmissionOptions } from './VehicleEnergyFields';
-import { BodyTypePicker, FeaturesField, Notice } from './VehicleFormSteps';
+import { BodyTypePicker, FeaturesField, InsuredValueField, Notice } from './VehicleFormSteps';
 import { VehicleIdentityFields } from './VehicleIdentityFields';
 
 /*
@@ -245,6 +245,8 @@ export function VehicleIdentityCardFields({
         disabled={Boolean(lockedNotice)}
         setValue={setValue}
       />
+      {/* Giá trị xe (ADR 0088) - cạnh số chỗ như web; bù 17/11/2026. */}
+      {isCar ? <InsuredValueField control={control} setValue={setValue} /> : null}
     </YStack>
   );
 }

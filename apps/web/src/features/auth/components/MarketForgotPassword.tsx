@@ -62,6 +62,8 @@ export interface MarketForgotPasswordProps {
   /** "Quay lại đăng nhập!" (`null`) hoặc "Đăng nhập" sau khi đặt lại xong (SĐT vừa đặt lại). */
   onBackToLogin: (phone: string | null) => void;
   autoFocus: boolean;
+  /** Ẩn ba vạch tiến trình — trang quên mật khẩu site partner không có (Figma `24382:85620`). */
+  hideProgress?: boolean;
 }
 
 /**
@@ -89,6 +91,7 @@ export function MarketForgotPassword({
   onCodeSent,
   onBackToLogin,
   autoFocus,
+  hideProgress = false,
 }: MarketForgotPasswordProps) {
   const errorMessage = useErrorMessage();
   const errorCodeMessage = useErrorCodeMessage();
@@ -233,7 +236,9 @@ export function MarketForgotPassword({
         )}
       </div>
 
-      <StepProgress step={step} disabled={busy !== null} onBack={goToStep} />
+      {hideProgress ? null : (
+        <StepProgress step={step} disabled={busy !== null} onBack={goToStep} />
+      )}
 
       <PasswordResetDoneDialog open={done} onLogin={() => onBackToLogin(phone)} />
     </div>

@@ -6,8 +6,18 @@
  * đủ hẹp để khối cảnh báo SĐT tràn ngang. Tràn ngang không chỉ xấu: nó đẻ ra thanh cuộn ngang
  * và làm header dính (`position: sticky`) hết dính, nên header trôi đi để lại một khoảng hở.
  */
+/*
+ * 17/11/2026: wizard ba cột theo Figma `24352:70390` (cột bước 280 + nội dung + cột xem trước 300) -
+ * khung nội dung Figma rộng 1560px, nên trang mở theo đó; dưới 1024px vỏ wizard tự về một cột.
+ */
 .page {
-  max-width: var(--xp-shell-form-max-width);
+  max-width: 1600px;
   margin: 0 auto;
   padding: var(--xp-space-lg) var(--xp-space-md) var(--xp-space-xl);
+}
+
+/* Khung đầy đủ (chủ xe vào từ "Thêm xe") thêm breadcrumb + đệm - cột giữa chừa thêm để chân trang
+   "Tiếp tục" luôn nằm trong màn hình. */
+.page {
+  --wizard-chrome-offset: 230px;
 }

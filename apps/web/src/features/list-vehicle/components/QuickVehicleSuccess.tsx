@@ -1,7 +1,6 @@
 'use client';
 
-import { CheckCircleFilled, WarningFilled } from '@ant-design/icons';
-import { Alert, Button } from 'antd';
+import { Button } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 
@@ -13,24 +12,26 @@ import {
   type VehicleRegistrationSource,
 } from '@/constants/routes';
 import { usePublicationLabels } from '@/features/vehicles/hooks/use-publication-labels';
+import styles from '@/features/vehicles/components/VehicleCreateSuccess.module.css';
 
 import type { QuickRegistrationResult } from '../hooks';
-import styles from './QuickVehicleSuccess.module.css';
+
+/** Icon tĩnh lấy nguyên từ Figma `24352:67918` - cùng bộ với màn kết quả của wizard gian hàng. */
+const ICON = {
+  success: '/images/vehicle-upload/success-check.png',
+  back: '/images/vehicle-upload/arrow-left-gray.svg',
+  plus: '/images/vehicle-upload/plus-gray.svg',
+  plusDark: '/images/vehicle-upload/plus-dark.svg',
+} as const;
 
 /**
- * Màn kết quả của wizard — nói ĐÚNG chuyện vừa xảy ra, không nói chung chung.
+ * Màn KẾT QUẢ của wizard đăng xe nhanh (chủ xe) - CÙNG khuôn Figma `24352:67918` với màn kết quả
+ * của wizard gian hàng (`VehicleCreateSuccess`, 18/11/2026). Bốn kết cục, logic giữ nguyên:
  *
- * Bốn kết cục, và không được lẫn vào nhau:
- *
- *  1. **Đã gửi duyệt** — phiếu duyệt XE có thật (`submitted` chỉ bật khi server trả về xe ở
- *     `pending_public_review`). Đây là toàn bộ vòng duyệt của tuyến hoa hồng: một cổng, không
- *     còn bước "chờ duyệt gian hàng" nào phía trước (ADR 0036).
- *  2. **Chưa gửi được vì còn thiếu điều kiện** — liệt kê TỪNG mục, xe nằm nháp và sửa được ngay.
- *     Đây là lý do màn này nhận `missingRequirements` dưới dạng MÃ: nó dựng nhãn theo ngôn ngữ
- *     đang dùng, thay vì hiện lại câu tiếng Việt của server (ADR 0012).
- *  3. **Đã lưu nháp** — người dùng chủ động chọn "Lưu nháp".
- *  4. **Lưu nháp nhưng một phần cấu hình chưa lưu được** — xe TỒN TẠI; người dùng phải biết điều
- *     đó để không bấm tạo lại và đẻ ra chiếc xe thứ hai.
+ *  1. **Đã gửi duyệt** - phiếu duyệt xe có thật (`submitted`).
+ *  2. **Chưa gửi được vì còn thiếu điều kiện** - liệt kê TỪNG mục (mã → nhãn theo ngôn ngữ).
+ *  3. **Đã lưu nháp** - người dùng chủ động chọn.
+ *  4. **Lưu nháp nhưng một phần cấu hình chưa lưu được** - xe TỒN TẠI; nói rõ để không tạo lại.
  */
 export function QuickVehicleSuccess({
   result,
@@ -45,10 +46,12 @@ export function QuickVehicleSuccess({
   const { requirement } = usePublicationLabels();
 
   const incomplete = result.missingRequirements.length > 0;
+  const warn = Boolean(result.partialError) || incomplete;
   const manageHref =
     source === VEHICLE_REGISTRATION_SOURCE.MANAGE
       ? ROUTES.MANAGE.VEHICLES
       : ownerVehiclePath.manage(result.vehicle.id);
+  const subject = [result.vehicle.name, result.vehicle.plateNumber].filter(Boolean).join(' - ');
 
   const title = result.partialError
     ? t('partialTitle')
@@ -59,71 +62,78 @@ export function QuickVehicleSuccess({
         : t('draftTitle');
 
   return (
-    <section className={styles.wrap}>
-      <span
-        className={result.partialError || incomplete ? styles.badgeWarning : styles.badge}
-        aria-hidden="true"
-      >
-        {result.partialError || incomplete ? <WarningFilled /> : <CheckCircleFilled />}
-      </span>
+    <main className={styles.root} aria-labelledby="quick-success-title">
+      <div className={styles.card}>
+        <div className={styles.hero}>
+          {warn ? (
+            <span className={styles.warnIcon} aria-hidden="true">
+              !
+            </span>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element -- minh hoạ tĩnh của Figma
+            <img src={ICON.success} alt="" width={100} height={100} className={styles.heroImage} />
+          )}
+          <div className={styles.heroText}>
+            <h1 id="quick-success-title" className={styles.title}>
+              {title}
+            </h1>
+            <p className={styles.lead}>
+              <strong>{subject}</strong>
+              <br />
+              {result.partialError
+                ? t('partialBody')
+                : incomplete
+                  ? t('incompleteBody')
+                  : result.submitted
+                    ? t('submittedBody')
+                    : t('draftBody')}
+            </p>
+          </div>
+        </div>
 
-      <h1 className={styles.title}>{title}</h1>
-      <p className={styles.vehicle}>{result.vehicle.name}</p>
-
-      {result.partialError ? (
-        <Alert
-          type="warning"
-          showIcon
-          className={styles.alert}
-          title={t('partialBody')}
-          description={result.partialError}
-        />
-      ) : incomplete ? (
-        /*
-         * Danh sách việc phải làm, không phải một lỗi. Mỗi dòng là một mục CỤ THỂ — "thiếu 4 ảnh"
-         * chứ không phải "dữ liệu chưa hợp lệ" — vì chủ xe phải biết bấm vào đâu để sửa.
-         */
-        <Alert
-          type="warning"
-          showIcon
-          className={styles.alert}
-          title={t('incompleteBody')}
-          description={
-            <ul className={styles.missingList}>
+        {result.partialError ? (
+          <div className={styles.reason} role="alert">
+            <p className={styles.reasonText}>{result.partialError}</p>
+          </div>
+        ) : incomplete ? (
+          /*
+           * Danh sách việc phải làm, không phải một lỗi. Mỗi dòng là một mục CỤ THỂ — "thiếu 4 ảnh"
+           * chứ không phải "dữ liệu chưa hợp lệ" — vì chủ xe phải biết bấm vào đâu để sửa.
+           */
+          <div className={styles.reason} role="alert">
+            <ul className={styles.reasonText}>
               {result.missingRequirements.map((key) => (
                 <li key={key}>{requirement(key)}</li>
               ))}
             </ul>
-          }
-          action={
-            <Link href={manageHref}>
-              <Button size="small" type="primary">
-                {t('incompleteCta')}
-              </Button>
+            <Link href={manageHref} className={styles.reasonLink}>
+              {t('incompleteCta')}
             </Link>
-          }
-        />
-      ) : result.submitted ? (
-        <p className={styles.body}>{t('submittedBody')}</p>
-      ) : (
-        <p className={styles.body}>{t('draftBody')}</p>
-      )}
+          </div>
+        ) : null}
 
-      <div className={styles.actions}>
-        <Link href={manageHref}>
-          <Button type="primary" size="large">
-            {t('manageCta')}
+        <div className={styles.actions}>
+          <Link href={vehicleListPathFor(source)}>
+            <Button className={styles.secondary}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- icon tĩnh của Figma */}
+              <img src={ICON.back} alt="" width={20} height={20} />
+              {t('listCta')}
+            </Button>
+          </Link>
+          <Button className={styles.secondary} onClick={onAddAnother}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- icon tĩnh của Figma */}
+            <img src={ICON.plus} alt="" width={20} height={20} />
+            {t('addAnotherCta')}
           </Button>
-        </Link>
-        <Button size="large" onClick={onAddAnother}>
-          {t('addAnotherCta')}
-        </Button>
-        <Link href={vehicleListPathFor(source)}>
-          <Button type="text" size="large">
-            {t('listCta')}
-          </Button>
-        </Link>
+          <Link href={manageHref} className={styles.primaryLink}>
+            <Button className={styles.primary}>
+              {t('manageCta')}
+              {/* eslint-disable-next-line @next/next/no-img-element -- icon tĩnh của Figma */}
+              <img src={ICON.plusDark} alt="" width={20} height={20} />
+            </Button>
+          </Link>
+        </div>
       </div>
-    </section>
+    </main>
   );
 }

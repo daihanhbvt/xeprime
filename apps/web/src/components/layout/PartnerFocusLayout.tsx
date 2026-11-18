@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
 import { Logo } from '@/components/brand/Logo';
+import { cx } from '@/lib/cx';
 import { ROUTES } from '@/constants/routes';
 import { usePortalLogout } from '@/features/auth/hooks/use-portal-logout';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -22,29 +23,44 @@ import styles from './PartnerFocusLayout.module.css';
  * ngay khi `/auth/me` đổi tuyến. Một thanh trên cùng mỏng (logo + ai đang đăng nhập + đăng xuất)
  * giữ cho người dùng luôn có lối ra.
  */
-export function PartnerFocusLayout({ children }: { children: ReactNode }) {
+export function PartnerFocusLayout({
+  children,
+  bare = false,
+  className,
+}: {
+  children: ReactNode;
+  /** Ẩn thanh trên (trang đăng ký đối tác khi chưa đăng nhập — đúng bản vẽ). */
+  bare?: boolean;
+  className?: string;
+}) {
   const t = useTranslations('ManageCommon');
   const { data: user } = useCurrentUser();
   const logout = usePortalLogout();
   const name = user ? user.displayName || user.email || user.phone : null;
 
   return (
-    <div className={styles.page}>
-      <header className={styles.topbar}>
-        <Link href={ROUTES.MANAGE.ROOT} className={styles.brand} aria-label={t('shell.partnerHome')}>
-          <Logo size="md" />
-        </Link>
-        {user ? (
-          <div className={styles.account}>
-            {name ? (
-              <span className={styles.signedInAs}>{t('shell.signedInAs', { name })}</span>
-            ) : null}
-            <Button type="text" icon={<LogoutOutlined />} onClick={() => void logout()}>
-              {t('shell.logout')}
-            </Button>
-          </div>
-        ) : null}
-      </header>
+    <div className={cx(styles.page, className)}>
+      {bare ? null : (
+        <header className={styles.topbar}>
+          <Link
+            href={ROUTES.MANAGE.ROOT}
+            className={styles.brand}
+            aria-label={t('shell.partnerHome')}
+          >
+            <Logo size="md" />
+          </Link>
+          {user ? (
+            <div className={styles.account}>
+              {name ? (
+                <span className={styles.signedInAs}>{t('shell.signedInAs', { name })}</span>
+              ) : null}
+              <Button type="text" icon={<LogoutOutlined />} onClick={() => void logout()}>
+                {t('shell.logout')}
+              </Button>
+            </div>
+          ) : null}
+        </header>
+      )}
       <div className={styles.body}>{children}</div>
     </div>
   );

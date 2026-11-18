@@ -1,3 +1,4 @@
+import { useRegisterSave, useReportDirty, type SubFormSave } from '@/hooks/use-report-dirty';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
@@ -90,7 +91,13 @@ export function TermsBody({
   canEdit,
   isManage = true,
   showRules = true,
+  onDirtyChange,
+  registerSave,
 }: {
+  /** Báo "đang sửa dở" lên màn chứa (`useReportDirty`). */
+  onDirtyChange?: (dirty: boolean) => void;
+  /** Màn chứa có MỘT nút Lưu chung - form này ẩn nút riêng (`useRegisterSave`). */
+  registerSave?: (save: SubFormSave | null) => void;
   vehicleId: string;
   serviceType: ServiceType;
   canEdit: boolean;
@@ -131,6 +138,8 @@ export function TermsBody({
       canEdit={canEdit}
       isManage={isManage}
       showRules={showRules}
+      onDirtyChange={onDirtyChange}
+      registerSave={registerSave}
     />
   );
 }
@@ -143,7 +152,11 @@ function TermsForm({
   canEdit,
   isManage,
   showRules,
+  onDirtyChange,
+  registerSave,
 }: {
+  onDirtyChange?: ((dirty: boolean) => void) | undefined;
+  registerSave?: ((save: SubFormSave | null) => void) | undefined;
   isManage: boolean;
   showRules: boolean;
   setting: VehicleServiceSetting;
@@ -204,6 +217,7 @@ function TermsForm({
     },
     values,
   });
+  useReportDirty(formState.isDirty, onDirtyChange);
   const policyDirty = Boolean(
     formState.dirtyFields.collateralMode ||
     formState.dirtyFields.depositAmount ||
@@ -224,7 +238,7 @@ function TermsForm({
       : legalDocs
   ).map((d) => domainLabel('customerDocumentType', d));
 
-  const submit = handleSubmit(async (next) => {
+  const persist = async (next: FormValues, silent = false): Promise<boolean> => {
     try {
       await patch.mutateAsync({
         requiredDocuments:
@@ -245,11 +259,24 @@ function TermsForm({
           policy: formToSaveInput(next),
         });
       }
-      toast.showSuccess(t('saved'));
+      if (!silent) toast.showSuccess(t('saved'));
+      return true;
     } catch (err) {
       toast.showError(errorMessage(err));
+      return false;
     }
+  };
+  const submit = handleSubmit(async (next) => {
+    await persist(next);
   });
+  useRegisterSave(async () => {
+    if (!formState.isDirty) return true;
+    let ok = false;
+    await handleSubmit(async (next) => {
+      ok = await persist(next, true);
+    })();
+    return ok;
+  }, registerSave);
 
   const docOptions = [
     {
@@ -372,7 +399,7 @@ function TermsForm({
         </YStack>
       </Card>
 
-      {canEdit ? (
+      {canEdit && !registerSave ? (
         <XStack gap={space.sm}>
           {formState.isDirty ? (
             <YStack flexShrink={0}>

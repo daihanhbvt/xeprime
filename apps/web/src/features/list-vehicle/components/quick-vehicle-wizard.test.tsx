@@ -235,6 +235,12 @@ vi.mock('@/features/vehicles/hooks/use-market-price', () => ({
   useMarketPriceSuggestion: () => ({ data: undefined, isLoading: false }),
 }));
 
+/** Thẻ xem trước chợ đọc hồ sơ gian hàng - test không dựng QueryClient, trả "chưa có". */
+vi.mock('@/features/shop/hooks/use-shop', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/shop/hooks/use-shop')>()),
+  useMyShop: () => ({ data: undefined, isLoading: false, isError: false }),
+}));
+
 vi.mock('@tanstack/react-query', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@tanstack/react-query')>()),
   useQueryClient: () => ({ invalidateQueries: vi.fn(), setQueryData: vi.fn() }),

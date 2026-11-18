@@ -1,0 +1,155 @@
+/*
+ * Trang tài khoản site PARTNER — Figma Partner-XePrime `24382:23343` (1920 × 1080): đệm trang 20,
+ * thẻ ảnh bo 20 rộng 1256 bên trái, cột form 400 căn giữa phần còn lại (đệm trên 80), linh vật đứng
+ * đè mép giữa hai cột. Nền: trắng + vệt cam mờ góc trên phải.
+ */
+.page {
+  position: relative;
+  display: grid;
+  min-height: 100dvh;
+  padding: 20px;
+  grid-template-columns: minmax(0, 1256fr) minmax(0, 624fr);
+  background:
+    radial-gradient(700px 500px at 100% 0%, rgba(255, 163, 4, 0.12), transparent 70%),
+    var(--xp-color-bg-container);
+}
+
+/* ---------- Thẻ ảnh ---------- */
+.brand {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #0e0f12;
+}
+
+.bg {
+  object-fit: cover;
+}
+
+/* Ảnh đường hầm + xe: bản vẽ dùng mặt nạ mờ dần ở mép trên để hoà vào nền tối. */
+.car {
+  object-fit: cover;
+  /* Bản vẽ: ảnh rộng bằng thẻ, cao 1694 và kéo lên 662 ⇒ neo đáy ảnh. */
+  object-position: center 100%;
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 30%);
+}
+
+.logoBlock {
+  position: absolute;
+  top: clamp(40px, 9.4vh, 101px);
+  left: 21%;
+  display: flex;
+  width: min(414px, 60%);
+  flex-direction: column;
+  gap: 18px;
+}
+
+.logo {
+  width: 100%;
+  height: auto;
+}
+
+.wordmark {
+  margin: 0;
+  font-size: clamp(30px, 2.6vw, 50px);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.59em;
+  color: #fff;
+}
+
+.infoCard {
+  position: absolute;
+  top: clamp(260px, 32.9vh, 355px);
+  left: 21%;
+  display: flex;
+  width: min(639px, 72%);
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid #3e3312;
+  border-radius: 20px;
+  background: rgba(88, 88, 88, 0.1);
+  backdrop-filter: blur(2px);
+}
+
+.infoTitle {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 32px;
+  color: #edbb4f;
+}
+
+.infoBody {
+  margin: 0;
+  font-size: 18px;
+  line-height: 28px;
+  color: #d5d7da;
+}
+
+/* Linh vật đứng đè mép phải thẻ ảnh, chân chạm đáy trang. */
+.mascot {
+  position: absolute;
+  bottom: 0;
+  left: calc(20px + (100% - 40px) * 1256 / 1880 - 198px);
+  z-index: 1;
+  width: clamp(200px, 16vw, 307px);
+  height: auto;
+  pointer-events: none;
+}
+
+/* ---------- Cột form ---------- */
+.content {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  justify-content: center;
+}
+
+.locale {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+}
+
+.column {
+  display: flex;
+  width: 100%;
+  max-width: 440px;
+  flex-direction: column;
+}
+
+.topLink {
+  padding: clamp(24px, 4vh, 40px) 20px 0;
+}
+
+/* Cột form dùng lại `MarketAuthForms`/`MarketForgotPassword` — chỉnh đệm cho khớp bản vẽ trang. */
+.column.column > :last-child {
+  flex: 1;
+  padding: clamp(48px, 7.4vh, 80px) 20px 24px;
+}
+
+@media (max-width: 1023px) {
+  .page {
+    padding: 0;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .brand,
+  .mascot {
+    display: none;
+  }
+
+  .locale {
+    top: 16px;
+    right: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .column.column > :last-child {
+    padding: 64px 16px calc(24px + env(safe-area-inset-bottom));
+  }
+}

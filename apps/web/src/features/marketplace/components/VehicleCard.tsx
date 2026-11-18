@@ -37,6 +37,11 @@ export interface VehicleCardProps {
    * trang kết quả (ADR 0045 điều 3), nơi thẻ cố ý không mang chỉ số.
    */
   hostMetrics?: HostMetricsShape | null;
+  /**
+   * Thẻ XEM TRƯỚC ở wizard thêm xe của site partner: không có nút yêu thích (cần phiên khách +
+   * `AuthModalProvider` của khu public, và xe chưa tồn tại). Nơi gọi tự khoá tương tác.
+   */
+  preview?: boolean;
 }
 
 /**
@@ -49,6 +54,7 @@ export function VehicleCard({
   listing,
   variant = 'grid',
   hostMetrics,
+  preview = false,
 }: VehicleCardProps) {
   const t = useTranslations('Listings.card');
   const tResults = useTranslations('Marketplace.results');
@@ -235,12 +241,14 @@ export function VehicleCard({
                 )}
               </div>
 
-              <FavoriteButton
-                vehicleId={listing.id}
-                vehicleName={listing.name}
-                className={styles.listFavoriteBtn}
-                activeClassName={styles.heartActive}
-              />
+              {preview ? null : (
+                <FavoriteButton
+                  vehicleId={listing.id}
+                  vehicleName={listing.name}
+                  className={styles.listFavoriteBtn}
+                  activeClassName={styles.heartActive}
+                />
+              )}
             </div>
           </div>
 
@@ -374,12 +382,14 @@ export function VehicleCard({
           </div>
         ) : null}
 
-        <FavoriteButton
-          vehicleId={listing.id}
-          vehicleName={listing.name}
-          className={styles.favoriteBtn}
-          activeClassName={styles.heartActive}
-        />
+        {preview ? null : (
+          <FavoriteButton
+            vehicleId={listing.id}
+            vehicleName={listing.name}
+            className={styles.favoriteBtn}
+            activeClassName={styles.heartActive}
+          />
+        )}
 
         <PhotoAmenityPills items={amenities} label={t('amenitiesLabel')} />
 
@@ -483,7 +493,8 @@ export function VehicleCard({
                   })}
                 </span>
               </>
-            ) : (
+            ) : preview ? null : (
+              // Thẻ xem trước của wizard thêm xe: chưa nhập giá thì để trống, không "Liên hệ báo giá".
               <b className={styles.priceContact}>{t('contactForQuote')}</b>
             )}
           </div>

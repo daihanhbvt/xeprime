@@ -149,3 +149,84 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Nút "Nhập tay" - mở các ô bất cứ lúc nào (ADR 0097). */
+.manualToggle.manualToggle {
+  padding-inline: 0;
+  margin-bottom: var(--xp-space-sm);
+}
+
+/* Ô cà vẹt trong lưới ảnh (Figma `24352:79234`). */
+.tilePreview {
+  position: relative;
+}
+
+.tileBusy {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xp-space-xs);
+  border-radius: var(--xp-border-radius);
+  background: rgb(255 255 255 / 75%);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.tileError.tileError {
+  border-color: var(--xp-color-error);
+}
+
+/* Quét cà vẹt đọc được số khung + số máy - dòng xanh lá dưới ô ảnh. */
+.scanOk {
+  margin: 0;
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body-sm);
+  overflow-wrap: anywhere;
+}
+
+/* Máy chưa đọc ra - chỉ là NHẮC (ảnh vẫn được nhận), tông cảnh báo chứ không phải lỗi. */
+.scanMissing {
+  margin: 0;
+  color: #b54708;
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* Bút chì mở khoá ô cà vẹt máy đã đọc được - icon `edit` của Figma, tô bằng mask. */
+.editField {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.editGlyph {
+  width: 20px;
+  height: 20px;
+  background: var(--xp-color-text-secondary, #535862);
+  mask: url('/images/vehicle-upload/edit.svg') center / contain no-repeat;
+}
+
+.editField:hover .editGlyph {
+  background: #f0b212;
+}
+
+/* Ô đã quét: readOnly (không phải disabled) để chữ vẫn đậm, rõ; nền xám nhạt báo đang khoá.
+ * Ô nhập BÊN TRONG khung bỏ hẳn viền/nền/bóng riêng - không thì thành khung lồng khung. */
+.lockedInput.lockedInput:global(.ant-input-affix-wrapper) {
+  background: #fafafa;
+  cursor: default;
+}
+
+.lockedInput.lockedInput :global(input.ant-input) {
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #0e0f12;
+  cursor: default;
+}

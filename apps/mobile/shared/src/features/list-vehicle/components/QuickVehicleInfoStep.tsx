@@ -202,28 +202,6 @@ export function QuickVehicleInfoStep({
         </YStack>
       </Card>
 
-      <Card>
-        <YStack gap={space.md}>
-          <BlockTitle>{t('descriptionTitle')}</BlockTitle>
-          <TextField
-            control={control}
-            name="description"
-            label={tForm('media.description')}
-            placeholder={tForm('media.descriptionPlaceholder')}
-            hint={t('descriptionHelp')}
-            multiline
-            rows={5}
-            maxLength={DESCRIPTION_MAX}
-          />
-        </YStack>
-      </Card>
-
-      <Card>
-        <YStack gap={space.md}>
-          <BlockTitle>{t('featuresTitle')}</BlockTitle>
-          <FeaturesField control={control} vehicleType={vehicleType} />
-        </YStack>
-      </Card>
     </YStack>
   );
 }
@@ -287,5 +265,33 @@ function FeaturesField({
         );
       }}
     />
+  );
+}
+
+/**
+ * Bước 3 "Tiện ích & mô tả" của luồng đăng nhanh (Figma `24352:81824`, 17/11/2026) — tiện nghi rồi mô
+ * tả văn bản thường. Hai khối này trước nằm cuối bước "Thông tin xe".
+ */
+export function QuickVehicleFeaturesStep({ control }: { control: Control<QuickVehicleValues> }) {
+  const t = useTranslations('ListYourVehicle.info');
+  const tForm = useTranslations('Vehicles.form');
+  const vehicleType = useWatch({ control, name: 'vehicleType' });
+  return (
+    <Card>
+      <YStack gap={space.md}>
+        <BlockTitle>{t('featuresTitle')}</BlockTitle>
+        <FeaturesField control={control} vehicleType={vehicleType} />
+        <TextField
+          control={control}
+          name="description"
+          label={tForm('media.description')}
+          placeholder={tForm('media.descriptionPlaceholder')}
+          hint={t('descriptionHelp')}
+          multiline
+          rows={5}
+          maxLength={DESCRIPTION_MAX}
+        />
+      </YStack>
+    </Card>
   );
 }

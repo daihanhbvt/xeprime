@@ -78,9 +78,30 @@ export async function uploadVehicleRegistration(file: File): Promise<VehicleRegi
     fileSize: file.size,
   });
   await uploadToR2(ticket.uploadUrl, file);
-  return apiPost<VehicleRegistrationReadResult>(
-    `/vehicle-registration-uploads/${ticket.uploadId}/read`,
-  );
+  return readRegistrationWithRetry(ticket.uploadId);
+}
+
+/**
+ * Ảnh ĐÃ lên kho thì không được mất vì một lần API chập chờn (khởi động lại, 5xx, rớt mạng) -
+ * người dùng chốt 18/11/2026. Bước đọc lặp lại an toàn: server trả lại kết quả đã lưu. Lỗi 4xx
+ * (ảnh hỏng, lượt tải không hợp lệ) là câu trả lời thật - không thử lại.
+ */
+async function readRegistrationWithRetry(
+  uploadId: string,
+  attempts = 4,
+): Promise<VehicleRegistrationReadResult> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await apiPost<VehicleRegistrationReadResult>(
+        `/vehicle-registration-uploads/${uploadId}/read`,
+      );
+    } catch (error) {
+      const status = (error as { status?: number }).status;
+      const retryable = status === undefined || status === 0 || status >= 500;
+      if (!retryable || attempt >= attempts) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
+    }
+  }
 }
 
 export const submitVehiclePublic = (id: string): Promise<VehicleDetail> =>

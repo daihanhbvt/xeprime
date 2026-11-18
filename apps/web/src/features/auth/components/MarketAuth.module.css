@@ -541,3 +541,44 @@ button.progressStep:focus-visible {
     flex-wrap: wrap;
   }
 }
+
+/* Ghi chú ngữ cảnh dưới tiêu đề (site partner — đang tiếp tục mở gian hàng). */
+.note {
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-gold-wash);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--xp-color-text-secondary);
+}
+
+/* Chân cột form của trang đứng một mình (site partner): link về site khách. */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+  margin-top: auto;
+}
+
+.footerLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+  color: var(--xp-color-text-secondary);
+}
+
+.footerLink:hover {
+  color: var(--xp-color-primary);
+}
+
+/* Trang đăng nhập site partner: tiêu đề + phụ đề căn giữa (Figma Partner-XePrime `24382:23343`). */
+.headerCenter {
+  align-items: center;
+  text-align: center;
+}

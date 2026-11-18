@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { VehicleEditSummaryCard } from '@/features/vehicles/components/VehicleEditSummaryCard';
 import { Ionicons } from '@/components/icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useForm, useWatch } from 'react-hook-form';
@@ -283,6 +284,11 @@ function SourceForm({
             dải nói hình thức đã LƯU còn thẻ sáng lại là thẻ vừa CHỌN — người dùng không biết xe
             đang thuộc gì. Hình thức đã lưu mang nhãn "Đang áp dụng" ngay trên lựa chọn của nó.
           */}
+          <VehicleEditSummaryCard
+            vehicleId={vehicle.id}
+            tab={VEHICLE_EDIT_TAB.SOURCE}
+            guard={leave.guard}
+          />
           {!canEdit ? <Callout>{t('readOnly')}</Callout> : null}
 
           {errorCount > 0 ? (

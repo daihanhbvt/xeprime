@@ -14,7 +14,7 @@ import type { OwnerProfileValues } from '@xeprime/validators';
 import { queryKeys } from '@/services/query-keys';
 
 import { createVehicle, submitVehiclePublic } from '@/features/vehicles/api';
-import type { VehicleDetail } from '@/features/vehicles/types';
+import type { CreateVehicleRegistrationInput, VehicleDetail } from '@/features/vehicles/types';
 import { fetchVehiclePricing, saveVehiclePricing } from '@/features/rental-policies/api';
 import type { SaveRentalPolicyInput } from '@/features/rental-policies/types';
 import { registerShop, updateShopProfile } from '@/features/shop/api';
@@ -60,6 +60,8 @@ interface RunOptions {
    * điều quan trọng nhất của luồng này: xem docblock của hook.
    */
   ownerProfile?: OwnerProfileValues | null;
+  /** Cà vẹt đã chụp + xác nhận (ADR 0099) — gắn vào xe trong CÙNG transaction tạo xe. */
+  registration?: CreateVehicleRegistrationInput;
 }
 
 /**
@@ -181,7 +183,7 @@ export function useQuickVehicleRegistration() {
   const run = useCallback(
     async (
       values: QuickVehicleValues,
-      { submitForReview, toMessage, ownerProfile }: RunOptions,
+      { submitForReview, toMessage, ownerProfile, registration }: RunOptions,
     ): Promise<QuickRegistrationResult> => {
       // Chặn gửi trùng do bấm nhanh/Enter: nút `loading` chỉ nuốt sự kiện chuột.
       if (runningRef.current) throw new Error('busy');
@@ -201,7 +203,10 @@ export function useQuickVehicleRegistration() {
            * đầu không có bộ chọn chi nhánh nào ở bước 2, nên trường đó còn rỗng.
            */
           const branchId = shop?.defaultBranch?.id ?? values.branchId;
-          vehicle = await createVehicle(quickVehicleToCreateInput({ ...values, branchId }));
+          vehicle = await createVehicle({
+            ...quickVehicleToCreateInput({ ...values, branchId }),
+            ...(registration ? { registration } : {}),
+          });
           createdVehicleRef.current = vehicle;
           setCreatedVehicle(vehicle);
         }

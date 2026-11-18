@@ -3,7 +3,7 @@
   flex-direction: column;
   gap: var(--xp-space-md);
   width: 100%;
-  max-width: 1080px;
+  max-width: 1248px;
   margin: 0 auto;
   padding: var(--xp-space-lg) var(--xp-space-md);
 }
@@ -19,4 +19,15 @@
 .loginHint {
   margin: var(--xp-space-md) 0;
   text-align: center;
+}
+
+/* Trang đăng ký theo tuyến: nền xám, thẻ căn giữa dọc (Figma `24382:23516`). */
+.page.page {
+  background: #fafafa;
+}
+
+.page.page > :last-child {
+  display: flex;
+  flex: 1;
+  align-items: center;
 }

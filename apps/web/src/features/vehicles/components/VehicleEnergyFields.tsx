@@ -1,6 +1,6 @@
 'use client';
 
-import { Col, Row } from 'antd';
+import { Col, Form, Input, Row } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
 import { useFormState, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
@@ -33,6 +33,13 @@ interface VehicleEnergyFieldsProps {
    * số mà vẫn giữ "số tự động" — không lưu được, không sửa được (lỗi 06/10/2026 ở màn sửa xe).
    */
   setValue: UseFormSetValue<VehicleFormValues>;
+  /**
+   * Wizard THÊM XE (Figma `24352:79234`): ô hộp số, quãng đường mỗi lần sạc, mức tiêu thụ điện
+   * luôn hiện - khi không áp dụng thì khoá kèm lý do, thay vì ẩn. Màn sửa xe giữ cách ẩn.
+   */
+  showInapplicable?: boolean;
+  /** Dấu * ở Nhiên liệu - điều kiện lên chợ (wizard thêm xe). Mặc định theo `showInapplicable`. */
+  fuelRequired?: boolean;
 }
 
 /**
@@ -52,6 +59,8 @@ export function VehicleEnergyFields({
   lockedNotice,
   disabled,
   setValue,
+  showInapplicable = false,
+  fuelRequired = showInapplicable,
 }: VehicleEnergyFieldsProps) {
   const t = useTranslations('Vehicles.form.advanced');
   const fuelType = useWatch({ control, name: 'fuelType' });
@@ -147,9 +156,13 @@ export function VehicleEnergyFields({
           help={fuelHelp}
           disabled={disabled || fuelLocked}
           allowedValues={fuelChoices}
+          required={fuelRequired}
         />
       </Col>
 
+      {showInapplicable && policy.transmission === 'hidden' ? (
+        <InapplicableField label={t('transmission')} reason={t('pickFuelFirst')} />
+      ) : null}
       {policy.transmission !== 'hidden' ? (
         <Col xs={24} sm={12}>
           <SelectField
@@ -188,6 +201,9 @@ export function VehicleEnergyFields({
         </Col>
       ) : null}
 
+      {showInapplicable && policy.electricRangeKm === 'hidden' ? (
+        <InapplicableField label={t('electricRange')} reason={t('electricOnly')} />
+      ) : null}
       {policy.electricRangeKm !== 'hidden' ? (
         <Col xs={24} sm={12}>
           <NumberField
@@ -219,6 +235,9 @@ export function VehicleEnergyFields({
         </Col>
       ) : null}
 
+      {showInapplicable && policy.electricConsumption === 'hidden' ? (
+        <InapplicableField label={t('electricConsumption')} reason={t('electricOnly')} />
+      ) : null}
       {policy.electricConsumption !== 'hidden' ? (
         <Col xs={24} sm={12}>
           <NumberField
@@ -248,5 +267,16 @@ export function VehicleEnergyFields({
         </Col>
       ) : null}
     </Row>
+  );
+}
+
+/** Ô không áp dụng cho nguồn năng lượng đang chọn - hiện khoá kèm lý do (wizard thêm xe). */
+function InapplicableField({ label, reason }: { label: string; reason: string }) {
+  return (
+    <Col xs={24} sm={12}>
+      <Form.Item label={label}>
+        <Input disabled placeholder={reason} aria-label={label} />
+      </Form.Item>
+    </Col>
   );
 }

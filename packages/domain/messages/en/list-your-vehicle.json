@@ -170,17 +170,25 @@
       "info": {
         "title": "Vehicle details",
         "short": "Details",
-        "heading": "1. Vehicle details"
+        "heading": "1. Vehicle details",
+        "description": "Photos, registration and vehicle details"
       },
       "rental": {
         "title": "Renting",
         "short": "Renting",
-        "heading": "2. Rental setup"
+        "heading": "2. Rental setup",
+        "description": "Price, address and rental terms"
       },
       "images": {
         "title": "Vehicle photos",
         "short": "Photos",
         "heading": "3. Vehicle photos"
+      },
+      "features": {
+        "title": "Features & description",
+        "short": "Features",
+        "heading": "Features & description",
+        "description": "Optional for your vehicle"
       }
     },
     "errors": {

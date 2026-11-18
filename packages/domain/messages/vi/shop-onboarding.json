@@ -174,7 +174,8 @@
         "verifiedHelp": "Số điện thoại {phone} đã được xác thực.",
         "dialogTitle": "Xác thực số điện thoại",
         "codeSentTo": "Nhập mã 6 số đã gửi qua SMS tới",
-        "cancel": "Huỷ"
+        "cancel": "Huỷ",
+        "sendOtp": "Gửi mã OTP"
       },
       "email": {
         "label": "Email liên hệ",
@@ -190,12 +191,52 @@
       }
     },
     "submit": {
-      "commission": "Đăng ký và tiếp tục",
-      "package": "Đăng ký gian hàng"
+      "commission": "Đăng ký & đăng xe đầu tiên",
+      "package": "Đăng ký & chọn gói"
     },
     "changeTrack": "Đổi cách cho thuê",
     "hasAccount": "Đã có tài khoản đối tác?",
     "login": "Đăng nhập",
-    "backToRegister": "Quay lại đăng ký"
+    "backToRegister": "Quay lại đăng ký",
+    "intro": {
+      "commission": {
+        "title": "Đăng xe cá nhân",
+        "tagline": "Linh hoạt, dễ dàng, không phí duy trì",
+        "body": "Giải pháp hoàn hảo để tạo thu nhập thụ động từ chiếc xe của bạn. Đăng ký nhanh chóng, vận hành đơn giản ngay trên ứng dụng mà không cần cam kết doanh số.",
+        "first": {
+          "title": "Miễn phí đăng ký",
+          "sub": "Không phí duy trì, không cam kết doanh số"
+        },
+        "second": {
+          "title": "Đăng tối đa 3 xe",
+          "sub": "Quản lý lịch cho thuê cơ bản trên app"
+        },
+        "third": {
+          "title": "Chỉ 10% hoa hồng / chuyến thành công",
+          "sub": "Không có chuyến, không mất phí"
+        }
+      },
+      "package": {
+        "title": "Gian hàng Chuyên nghiệp",
+        "tagline": "Công cụ quản trị toàn diện, tối đa lợi nhuận",
+        "body": "Nền tảng quản lý đội xe chuyên sâu dành cho mô hình kinh doanh quy mô lớn. Tận hưởng chính sách 0% phí hoa hồng cùng hệ thống báo cáo, phân quyền nhân viên và quản lý đa chi nhánh mạnh mẽ.",
+        "first": {
+          "title": "0% phí hoa hồng",
+          "sub": "Giữ trọn 100% doanh thu, trả phí thuê bao theo quy mô"
+        },
+        "second": {
+          "title": "Đa chi nhánh & phân quyền nhân viên",
+          "sub": "Quản lý đội xe quy mô lớn trên một nơi"
+        },
+        "third": {
+          "title": "Báo cáo tài chính chi tiết",
+          "sub": "Theo dõi doanh thu, công nợ, hiệu suất từng xe"
+        }
+      }
+    },
+    "formTitle": "Tạo tài khoản đối tác",
+    "formSub": "Chỉ mất khoảng 2 phút để hợp tác cùng XePrime",
+    "footnote": "Sau khi đăng ký, bạn có thể bổ sung giấy tờ & thông tin tài chính trong trang quản lý",
+    "consentRequired": "Vui lòng đồng ý với Quy chế hoạt động sàn và Điều khoản sử dụng"
   }
 }

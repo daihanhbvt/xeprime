@@ -26,7 +26,8 @@ vi.mock('@/services/auth.service', async (importOriginal) => ({
   fetchCurrentUser: me.fetchCurrentUser,
 }));
 vi.mock('@/features/auth/hooks/use-portal-logout', () => ({ usePortalLogout: () => vi.fn() }));
-vi.mock('./AuthPanel', () => ({ AuthPanel: () => <div data-testid="auth-panel" /> }));
+vi.mock('./MarketAuthForms', () => ({ MarketAuthForms: () => <div data-testid="auth-panel" /> }));
+vi.mock('./AuthBrandPanel', () => ({ AuthBrandPanel: () => null }));
 vi.mock('@/features/locations/hooks/use-provinces', () => ({
   useProvinceOptions: () => ({ options: [], isLoading: false, isError: false, error: null, refetch: vi.fn() }),
 }));

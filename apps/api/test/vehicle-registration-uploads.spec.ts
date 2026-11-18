@@ -322,26 +322,38 @@ describe('Gắn cà vẹt trong transaction tạo xe', () => {
     expect(await prisma.vehicle.count({ where: { tenantId } })).toBe(0);
   });
 
-  maybe('xe máy không nhận cà vẹt kèm lượt tạo', async () => {
+  maybe('xe máy CŨNG gắn cà vẹt kèm lượt tạo (ADR 0099 - mọi loại xe)', async () => {
     const uploadId = await readUpload();
-    await expectCode(
-      vehicles.create(
-        tenantId,
-        ownerId,
-        carBody({
-          vehicleType: VEHICLE_TYPE.MOTORBIKE,
-          brand: 'honda',
-          model: 'Vision',
-          seatCount: undefined,
-          motorbikeCategory: MOTORBIKE_CATEGORY.SCOOTER,
-          transmission: undefined,
-          media: CAR_MEDIA.slice(0, 2),
-          registration: registrationOf(uploadId),
-        }),
-        null,
-      ),
-      API_ERROR_CODE.VALIDATION_FAILED,
+    const vehicle = await vehicles.create(
+      tenantId,
+      ownerId,
+      carBody({
+        vehicleType: VEHICLE_TYPE.MOTORBIKE,
+        brand: 'honda',
+        model: 'Vision',
+        seatCount: undefined,
+        motorbikeCategory: MOTORBIKE_CATEGORY.SCOOTER,
+        transmission: undefined,
+        media: CAR_MEDIA.slice(0, 2),
+        registration: registrationOf(uploadId),
+      }),
+      null,
     );
+    const doc = await prisma.vehicleDocument.findFirstOrThrow({ where: { vehicleId: vehicle.id } });
+    expect(doc.activeVersionId).not.toBeNull();
+  });
+
+  maybe('không có ảnh cà vẹt: vẫn lưu giấy tờ với các trường đã nhập, không kèm tệp', async () => {
+    const { uploadId: _drop, ...noPhoto } = registrationOf(await readUpload());
+    const vehicle = await vehicles.create(
+      tenantId,
+      ownerId,
+      carBody({ registration: noPhoto }),
+      null,
+    );
+    const doc = await prisma.vehicleDocument.findFirstOrThrow({ where: { vehicleId: vehicle.id } });
+    expect(doc.chassisNumber).toBe(noPhoto.chassisNumber);
+    expect(doc.activeVersionId).toBeNull();
   });
 
   maybe('tạo ô tô KHÔNG kèm cà vẹt vẫn được (app native chưa có bước này)', async () => {

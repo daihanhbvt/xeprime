@@ -7,8 +7,7 @@ import { useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 import { VEHICLE_TYPE, VEHICLE_TYPE_VALUES } from '@xeprime/types';
 
 import { NumberField } from '@/components/form/NumberField';
-import { RadioGroupField } from '@/components/form/RadioGroupField';
-import { TextAreaField } from '@/components/form/TextAreaField';
+import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
 import { useCatalogOptions } from '@/features/catalog/use-catalog';
 import { CATALOG_TYPE } from '@xeprime/types';
@@ -18,7 +17,6 @@ import { BodyTypePicker } from '@/features/vehicles/components/VehicleFormSectio
 import { VehicleEnergyFields } from '@/features/vehicles/components/VehicleEnergyFields';
 import { VehicleIdentityFields } from '@/features/vehicles/components/VehicleIdentityFields';
 import {
-  FeaturesSelect,
   useTransmissionOptions,
 } from '@/features/vehicles/components/VehicleFormSections';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -36,7 +34,8 @@ interface Props {
 /**
  * Bước 1 — thông tin xe.
  *
- * Ba khối theo mockup: biển số · thông tin cơ bản · mô tả và tiện nghi. Các ô dùng ĐÚNG những
+ * Các khối: loại xe · biển số · thông tin cơ bản · năng lượng. Mô tả và tiện nghi chuyển sang bước 3
+ * "Tiện ích & mô tả" (Figma 24352:70390, 17/11/2026). Các ô dùng ĐÚNG những
  * component mà wizard `/manage` và màn sửa xe đang dùng (hãng xe từ catalog, tiện nghi từ
  * catalog, khối năng lượng theo ma trận dùng chung) — không có bộ form thứ hai cho luồng nhanh.
  *
@@ -78,125 +77,104 @@ export function QuickVehicleInfoStep({ control, setValue, vehicleType }: Props) 
     manufactureYear: year,
   });
 
+  /*
+   * MỘT Row phẳng (Figma `24352:79234`: lưới 3 cột liền) - wizard bọc trong `threeColumnFields`
+   * để mọi ô rơi vào cùng lưới; thứ tự ô theo Figma: loại xe · tên · biển số · hãng · dòng · năm…
+   */
   return (
-    <div className={styles.stack}>
-      <section className={styles.block}>
-        <h3 className={styles.blockTitle}>{t('typeTitle')}</h3>
-        <RadioGroupField
+    <Row gutter={16}>
+      <Col xs={24} sm={12}>
+        {/* Loại xe: ô chọn như Figma (18/11/2026) - cùng kiểu wizard gian hàng. */}
+        <SelectField
           control={control}
           name="vehicleType"
-          label={t('typeLabel')}
+          label={tForm('basic.vehicleType')}
           options={vehicleTypeOptions}
           required
         />
-      </section>
-
-      <section className={styles.block}>
-        <h3 className={styles.blockTitle}>{t('plateTitle')}</h3>
-        <p className={styles.blockHint}>{t('plateHint')}</p>
+      </Col>
+      <Col xs={24} sm={12}>
+        <TextField
+          control={control}
+          name="name"
+          label={tForm('basic.name')}
+          placeholder={t('namePlaceholder')}
+          help={
+            suggestedName ? (
+              <button
+                type="button"
+                className={styles.suggestion}
+                onClick={() => setValue('name', suggestedName, { shouldValidate: true })}
+              >
+                {t('nameSuggestion', { name: suggestedName })}
+              </button>
+            ) : (
+              t('nameHelp')
+            )
+          }
+          required
+        />
+      </Col>
+      <Col xs={24} sm={12}>
         <TextField
           control={control}
           name="plateNumber"
           label={tForm('specs.plateNumber')}
           placeholder={tForm('specs.platePlaceholder')}
+          help={t('plateHint')}
           required
         />
-      </section>
-
-      <section className={styles.block}>
-        <h3 className={styles.blockTitle}>{t('basicTitle')}</h3>
-        <Row gutter={16}>
-          {/*
-            Hãng → Mẫu xe và các ô phân loại dùng CHUNG component với form đầy đủ ở `/manage`:
-            một chủ xe đăng nhanh rồi vào sửa lại phải thấy đúng những ô đó, hỏi đúng cách đó.
-          */}
-          <Col xs={24}>
-            <VehicleIdentityFields
-              required
-              control={control as never}
-              vehicleType={vehicleType || VEHICLE_TYPE.CAR}
-              setValue={setValue as never}
-            />
-          </Col>
-          <Col xs={24}>
-            <VehicleClassificationFields
-              required
-              control={control as never}
-              vehicleType={vehicleType || VEHICLE_TYPE.CAR}
-              bodyTypePicker={<BodyTypePicker control={control as never} />}
-              setValue={setValue as never}
-            />
-          </Col>
-          <Col xs={24} sm={12}>
-            <NumberField
-              control={control}
-              name="manufactureYear"
-              required
-              label={tForm('specs.manufactureYear')}
-              min={1980}
-              max={new Date().getFullYear() + 1}
-            />
-          </Col>
-          <Col xs={24} sm={12}>
-            <TextField
-              control={control}
-              name="color"
-              label={tForm('specs.color')}
-              placeholder={tForm('specs.colorPlaceholder')}
-            />
-          </Col>
-          <Col xs={24}>
-            <TextField
-              control={control}
-              name="name"
-              label={t('nameLabel')}
-              placeholder={t('namePlaceholder')}
-              help={
-                suggestedName ? (
-                  <button
-                    type="button"
-                    className={styles.suggestion}
-                    onClick={() => setValue('name', suggestedName, { shouldValidate: true })}
-                  >
-                    {t('nameSuggestion', { name: suggestedName })}
-                  </button>
-                ) : (
-                  t('nameHelp')
-                )
-              }
-              required
-            />
-          </Col>
-        </Row>
-      </section>
-
-      <section className={styles.block}>
-        <h3 className={styles.blockTitle}>{t('energyTitle')}</h3>
+      </Col>
+      {/*
+        Hãng → Mẫu xe và các ô phân loại dùng CHUNG component với form đầy đủ ở `/manage`:
+        một chủ xe đăng nhanh rồi vào sửa lại phải thấy đúng những ô đó, hỏi đúng cách đó.
+      */}
+      <Col xs={24}>
+        <VehicleIdentityFields
+          required
+          control={control as never}
+          vehicleType={vehicleType || VEHICLE_TYPE.CAR}
+          setValue={setValue as never}
+        />
+      </Col>
+      <Col xs={24} sm={12}>
+        <NumberField
+          control={control}
+          name="manufactureYear"
+          required
+          label={tForm('specs.manufactureYear')}
+          min={1980}
+          max={new Date().getFullYear() + 1}
+        />
+      </Col>
+      <Col xs={24} sm={12}>
+        <TextField
+          control={control}
+          name="color"
+          label={tForm('specs.color')}
+          placeholder={tForm('specs.colorPlaceholder')}
+        />
+      </Col>
+      <Col xs={24}>
+        <VehicleClassificationFields
+          required
+          control={control as never}
+          vehicleType={vehicleType || VEHICLE_TYPE.CAR}
+          bodyTypePicker={<BodyTypePicker control={control as never} />}
+          setValue={setValue as never}
+        />
+      </Col>
+      <Col xs={24}>
         <VehicleEnergyFields
           control={control as never}
           vehicleType={vehicleType || VEHICLE_TYPE.CAR}
           transmissionOptions={transmissionOptions}
           setValue={setValue as never}
+          // Luồng nhanh của chủ xe: chỉ hỏi ô ÁP DỤNG cho nhiên liệu đã chọn (như bản cũ) - không bày
+          // ô khoá "chỉ dành cho xe điện" làm dài form (18/11/2026).
+          fuelRequired
         />
-      </section>
-
-      <section className={styles.block}>
-        <h3 className={styles.blockTitle}>{t('descriptionTitle')}</h3>
-        <TextAreaField
-          control={control}
-          name="description"
-          label={tForm('media.description')}
-          placeholder={tForm('media.descriptionPlaceholder')}
-          help={t('descriptionHelp')}
-          maxLength={4000}
-          rows={5}
-        />
-      </section>
-
-      <section className={styles.block}>
-        <h3 className={styles.blockTitle}>{t('featuresTitle')}</h3>
-        <FeaturesSelect control={control as never} vehicleType={vehicleType || VEHICLE_TYPE.CAR} />
-      </section>
-    </div>
+      </Col>
+    </Row>
   );
 }

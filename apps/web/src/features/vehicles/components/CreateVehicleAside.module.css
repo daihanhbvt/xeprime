@@ -1,0 +1,267 @@
+/* Cột phải wizard tạo xe - Figma `24352:79234` ("Xem trước trên Marketplace" + "Sẵn sàng gửi duyệt"). */
+.card {
+  border-color: var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-card);
+  box-shadow: var(--xp-shadow-card);
+}
+
+.card.card :global(.ant-card-body) {
+  padding: var(--xp-space-md);
+}
+
+.cardTitle,
+.previewTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.previewTitle {
+  margin-bottom: var(--xp-space-sm);
+  text-align: center;
+}
+
+/* ── Thẻ xem trước ─────────────────────────────────────────────────────────── */
+
+.previewPhoto {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--xp-border-radius-control);
+  aspect-ratio: 16 / 10;
+  background: var(--xp-color-bg-muted);
+}
+
+.previewImage,
+.previewPhoto :global(img) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.previewPlaceholder {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  color: var(--xp-color-text-placeholder);
+  font-size: 40px;
+}
+
+.previewDiscount {
+  position: absolute;
+  top: var(--xp-space-sm);
+  left: var(--xp-space-sm);
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-size: var(--xp-font-size-caption, 12px);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.previewPill {
+  position: absolute;
+  bottom: var(--xp-space-sm);
+  left: var(--xp-space-sm);
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-overlay);
+  color: var(--xp-color-text-on-dark);
+  font-size: var(--xp-font-size-caption, 12px);
+}
+
+.previewNameRow {
+  display: flex;
+  align-items: center;
+  margin-top: var(--xp-space-sm);
+  gap: var(--xp-space-sm);
+}
+
+.previewName {
+  overflow: hidden;
+  min-width: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.newTag {
+  flex-shrink: 0;
+  padding: 0 var(--xp-space-xs);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-caption, 12px);
+}
+
+.previewLocation {
+  display: flex;
+  align-items: center;
+  margin-top: var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-xs);
+}
+
+.previewSpecs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  padding: var(--xp-space-sm) 0 0;
+  border-top: 1px solid var(--xp-color-border-secondary);
+  margin: var(--xp-space-sm) 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-xs) var(--xp-space-sm);
+  list-style: none;
+}
+
+.previewSpecs li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.previewFooter {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: var(--xp-space-sm);
+  gap: var(--xp-space-sm);
+}
+
+.previewShop {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.previewShopLabel {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-caption, 12px);
+}
+
+.previewShopName {
+  overflow: hidden;
+  color: var(--xp-color-primary-hover);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.previewPrice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.previewOldPrice {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-caption, 12px);
+  text-decoration: line-through;
+}
+
+.previewNewPrice {
+  color: var(--xp-color-primary-hover);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.previewUnit,
+.previewNoPrice {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* ── Sẵn sàng gửi duyệt ────────────────────────────────────────────────────── */
+
+.readyHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.readyCount {
+  color: var(--xp-color-warning);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.readyBar {
+  margin: var(--xp-space-sm) 0 var(--xp-space-md);
+}
+
+.readyBar :global(.ant-progress-bg) {
+  background: var(--xp-color-warning);
+}
+
+.readyList {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  gap: var(--xp-space-sm);
+  list-style: none;
+}
+
+.readyList li {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.readyDone {
+  color: var(--xp-color-text);
+}
+
+.readyTodo {
+  color: var(--xp-color-text-secondary);
+}
+
+.readyIcon {
+  color: var(--xp-color-primary);
+  font-size: 16px;
+}
+
+.readyCircle {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 1px solid var(--xp-color-border);
+  border-radius: 50%;
+}
+
+
+
+.srOnly {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* Thẻ xe của trang khách vẽ y nguyên, chỉ để xem: không bấm, không link. */
+.previewCard {
+  pointer-events: none;
+}
+
+/* "Không bắt buộc" cạnh mục tuỳ chọn - không tính vào x/N. */
+.optionalTag {
+  margin-left: auto;
+  padding: 0 8px;
+  border: 1px solid #d5d7da;
+  border-radius: 16px;
+  background: #fafafa;
+  color: #414651;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}

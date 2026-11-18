@@ -97938,7 +97938,7 @@
         "properties": {
           "uploadId": {
             "type": "string",
-            "description": "Id lượt tải ảnh cà vẹt (POST /vehicle-registration-uploads/presign)."
+            "description": "Id lượt tải ảnh cà vẹt (POST /vehicle-registration-uploads/presign). TUỲ CHỌN (18/11/2026): ảnh chỉ để máy điền nhanh - không có ảnh thì chủ xe tự nhập, giấy tờ lưu không kèm tệp."
           },
           "holderName": {
             "type": "string",
@@ -97967,7 +97967,6 @@
           }
         },
         "required": [
-          "uploadId",
           "holderName",
           "chassisNumber",
           "engineNumber"

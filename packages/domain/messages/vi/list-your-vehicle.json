@@ -170,17 +170,25 @@
       "info": {
         "title": "Thông tin xe",
         "short": "Thông tin",
-        "heading": "1. Thông tin xe"
+        "heading": "1. Thông tin xe",
+        "description": "Ảnh xe, cà vẹt và thông tin phương tiện"
       },
       "rental": {
         "title": "Cho thuê",
         "short": "Cho thuê",
-        "heading": "2. Thiết lập cho thuê"
+        "heading": "2. Thiết lập cho thuê",
+        "description": "Giá thuê, địa chỉ và điều kiện cho thuê"
       },
       "images": {
         "title": "Hình ảnh xe",
         "short": "Hình ảnh",
         "heading": "3. Hình ảnh xe"
+      },
+      "features": {
+        "title": "Tiện ích & mô tả",
+        "short": "Tiện ích",
+        "heading": "Tiện ích & mô tả",
+        "description": "Tùy chọn cho xe của bạn"
       }
     },
     "errors": {

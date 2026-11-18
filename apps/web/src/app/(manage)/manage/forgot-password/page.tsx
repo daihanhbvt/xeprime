@@ -1,11 +1,6 @@
-import { AuthPageFrame } from '@/features/auth/components/AuthPageFrame';
-import { ForgotPasswordView } from '@/features/auth/components/ForgotPasswordView';
+import { PartnerForgotPasswordView } from '@/features/auth/components/PartnerForgotPasswordView';
 
-/** Quên mật khẩu của tài khoản thuộc site này — link đặt lại về đúng site (ADR 0053). */
+/** Quên mật khẩu tài khoản đối tác — link/mã về đúng site partner (ADR 0053). */
 export default function ForgotPasswordPage() {
-  return (
-    <AuthPageFrame>
-      <ForgotPasswordView />
-    </AuthPageFrame>
-  );
+  return <PartnerForgotPasswordView />;
 }

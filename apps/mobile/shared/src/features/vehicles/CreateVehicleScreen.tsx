@@ -12,6 +12,7 @@ import {
   VEHICLE_SOURCE_TYPE,
   VEHICLE_TYPE,
   isVehicleFuelTypeAllowed,
+  requiredVehicleImageTypes,
   type PublishRequirement,
 } from '@xeprime/types';
 import { vehicleFormWithPhotosSchema, type VehicleFormValues } from '@xeprime/validators';
@@ -38,10 +39,21 @@ import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 import {
   BasicStep,
-  MediaStep,
+  FeaturesDescriptionCard,
+  ImagesCard,
   SourceTypeSection,
   SpecsSection,
 } from './components/VehicleFormSteps';
+import { RegistrationCapture } from './components/RegistrationCapture';
+import { CreateReadinessCard } from './components/CreateReadinessCard';
+import {
+  EMPTY_REGISTRATION,
+  checkRegistration,
+  type RegistrationCaptureState,
+} from './registration-capture';
+import { vehicleSettingsApi } from '@/api/vehicle-settings/api';
+import { BottomSheet } from '@/components/ui/BottomSheet';
+import { Pill } from '@/components/ui/Pill';
 import { CreateVehiclePricingStep } from './components/CreateVehiclePricingStep';
 import { VehicleWizardBar, type WizardStep } from './components/VehicleWizardBar';
 import { VehicleCreateSuccess } from './components/VehicleCreateSuccess';
@@ -56,7 +68,7 @@ import { usePlanAwareErrorMessage } from '@/features/subscription/plan-quota-gat
 /** Mặc định khi tạo mới: chọn sẵn giá trị hợp lệ để các ô bắt buộc không rỗng. */
 const EMPTY_DEFAULTS: VehicleFormValues = {
   code: '',
-  insuredValue: null, // chỉ web nhập; app chưa có ô này
+  insuredValue: null,
   name: '',
   // Điền ở runtime bằng chi nhánh MẶC ĐỊNH của gian hàng — một hằng không thể biết id đó.
   branchId: '',
@@ -103,73 +115,79 @@ const EMPTY_DEFAULTS: VehicleFormValues = {
 };
 
 /**
- * Trường của TỪNG BƯỚC — dùng để validate **riêng bước đang mở** trước khi cho đi tiếp.
- *
- * Không có nó thì "Tiếp tục" phải validate cả schema, và người dùng bị chặn bởi lỗi của một phần
- * họ còn chưa nhìn thấy. Danh sách khớp `VEHICLE_SECTIONS` của web.
+ * Trường của TỪNG BƯỚC — dùng để validate **riêng bước đang mở** trước khi cho đi tiếp, và để lỗi
+ * (yup hoặc server) dẫn về đúng bước. Khớp `CREATE_STEP_FIELDS` của web (Figma `24352:70390`).
  */
-const STEP_FIELDS: Record<string, ReadonlyArray<keyof VehicleFormValues>> = {
+const STEP_FIELDS: Record<CreateStepKey, ReadonlyArray<keyof VehicleFormValues>> = {
   basic: [
-    'code',
-    'name',
-    'branchId',
+    'media',
+    'images',
     'vehicleType',
-    'serviceTypes',
-    'operationStatus',
+    'name',
     'plateNumber',
+    'branchId',
+    'code',
+    'operationStatus',
     'brand',
     'model',
-    'bodyType',
+    'vehicleCatalogModelId',
+    'vehicleCatalogVariantId',
     'manufactureYear',
-    'seatCount',
-    'fuelType',
     'color',
+    'seatCount',
+    'motorbikeCategory',
+    'bodyType',
+    'insuredValue',
+    'fuelType',
+    'transmission',
+    'fuelConsumptionCombined',
+    'engineDisplacementCc',
+    'electricRangeKm',
+    'batteryCapacityKwh',
+    'electricConsumptionKwhPer100Km',
     'sourceType',
   ],
   pricing: [
+    'serviceTypes',
     'weekdayPrice',
     'weekendPrice',
     'hourlyPrice',
-    'monthlyPrice',
-    'withDriverDailyPrice',
     'discountPercent',
+    'withDriverDailyPrice',
+    'withDriverInterCityPrice',
+    'withDriverOneWayPrice',
+    'monthlyPrice',
     'deliveryEnabled',
   ],
-  media: ['images', 'media', 'features', 'description'],
-  review: [],
+  features: ['features', 'description'],
 };
 
-/**
- * MỌI ô của wizard — bộ lọc cho lỗi validate từ server.
- *
- * Dựng từ chính `STEP_FIELDS` chứ không chép tay danh sách thứ hai: thêm một ô vào một bước là
- * tập này tự rộng ra theo, không có chỗ nào để hai bên trôi khỏi nhau.
- */
-/** Điều kiện lên chợ thuộc BƯỚC nào của wizard — thiếu thì chặn đúng bước đó (như web). */
-const REQUIREMENT_STEP: Record<PublishRequirement, string> = {
+type CreateStepKey = 'basic' | 'pricing' | 'features';
+const STEP_KEYS: readonly CreateStepKey[] = ['basic', 'pricing', 'features'];
+
+/** Điều kiện lên chợ thuộc BƯỚC nào — thiếu thì chặn đúng bước đó (như web). */
+const REQUIREMENT_STEP: Record<PublishRequirement, CreateStepKey> = {
   [PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE]: 'pricing',
   [PUBLISH_REQUIREMENT.LONG_TERM_PRICE]: 'pricing',
   [PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]: 'pricing',
-  [PUBLISH_REQUIREMENT.PHOTOS]: 'media',
+  [PUBLISH_REQUIREMENT.PHOTOS]: 'basic',
   [PUBLISH_REQUIREMENT.PLATE_NUMBER]: 'basic',
   [PUBLISH_REQUIREMENT.IDENTITY]: 'basic',
   [PUBLISH_REQUIREMENT.ENERGY_SPEC]: 'basic',
   [PUBLISH_REQUIREMENT.BRANCH_LOCATION]: 'basic',
 };
 
+/** MỌI ô của wizard — bộ lọc cho lỗi validate từ server, dựng từ chính `STEP_FIELDS`. */
 const WIZARD_FIELDS: ReadonlyArray<keyof VehicleFormValues> = Object.values(STEP_FIELDS).flat();
 
 /**
- * Wizard THÊM XE (VEH-02) — bốn bước, thuần client.
+ * Wizard THÊM XE — bản native của `VehicleForm` web theo Figma `24352:70390` (17/11/2026): ba bước
+ * Thông tin xe (ảnh + cà vẹt + thông tin) → Dịch vụ & giá → Tiện ích & mô tả, mức "Sẵn sàng gửi duyệt"
+ * ở đầu mỗi bước, và tấm XÁC NHẬN thay bước "Xác nhận" cũ.
  *
- * ⚠️ Mọi bước giữ giá trị trong CÙNG một form React Hook Form và chỉ gọi API **một lần** ở bước
- * cuối. Backend không có endpoint lưu từng phần, nên không chỗ nào ở đây được nói "đã lưu nháp"
- * giữa chừng.
- *
- * Hai hành động ở bước cuối là hai hành vi backend có thật: "Lưu nháp" = `POST /vehicles` (xe
- * luôn sinh ra ở trạng thái nháp — ADR 0008); "Lưu & Gửi duyệt" = gọi tiếp
- * `POST /vehicles/:id/submit-public`. **Bước hai hỏng thì xe VẪN đã được tạo**, nên thông báo
- * phải nói rõ điều đó — báo "lỗi tạo xe" sẽ khiến người dùng bấm lại và tạo xe thứ hai.
+ * ⚠️ Thuần client: mọi bước giữ giá trị trong CÙNG một form và chỉ gọi API **một lần** khi lưu.
+ * "Lưu nháp" = `POST /vehicles`; "Gửi duyệt" = gọi tiếp `submit-public`. Bước sau hỏng thì xe VẪN đã
+ * tạo — nói rõ điều đó, không để người dùng bấm lại tạo xe thứ hai.
  */
 export function CreateVehicleScreen() {
   const colors = useColors();
@@ -177,10 +195,11 @@ export function CreateVehicleScreen() {
   const tCommon = useTranslations('Common.actions');
   const tBranches = useTranslations('Branches');
   const tPermission = useTranslations('ManageCommon.permission');
+  const tCreate = useTranslations('Vehicles.create');
+  const tSteps = useTranslations('Vehicles.form.createSteps');
+  const tConfirm = useTranslations('Vehicles.form.confirm');
   const router = useRouter();
   const toast = useAppToast();
-  // Đúng `CreateVehiclePage` bên web: toast + câu lỗi dịch theo MÃ, hiểu cổng hạn mức gói (ADR 0065).
-  const tCreate = useTranslations('Vehicles.create');
   const errorMessage = usePlanAwareErrorMessage();
   const { has, isLoading: permissionsLoading } = usePermissions();
   const { formGaps } = usePublicationLabels();
@@ -188,6 +207,8 @@ export function CreateVehicleScreen() {
   const create = useCreateVehicle();
   const [step, setStep] = useState(0);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmSubmit, setConfirmSubmit] = useState(false);
+  const [autoAcceptEnabled, setAutoAcceptEnabled] = useState(false);
   const [created, setCreated] = useState<{
     vehicle: VehicleDetail;
     submittedForReview: boolean;
@@ -213,20 +234,12 @@ export function CreateVehicleScreen() {
   });
 
   const steps = useMemo<readonly WizardStep[]>(
-    () => [
-      { key: 'basic', shortTitle: t('wizard.basic.shortTitle') },
-      { key: 'pricing', shortTitle: t('wizard.pricing.shortTitle') },
-      { key: 'media', shortTitle: t('wizard.media.shortTitle') },
-      { key: 'review', shortTitle: t('wizard.review.shortTitle') },
-    ],
+    () => STEP_KEYS.map((key) => ({ key, shortTitle: t(`wizard.${key}.shortTitle`) })),
     [t],
   );
   const lastStep = steps.length - 1;
 
-  /*
-   * Chi nhánh: chọn sẵn cái MẶC ĐỊNH để thao tác vẫn một bước, nhưng vẫn là một trường thật trên
-   * form — người dùng thấy xe sẽ nằm ở đâu và đổi được ngay tại đây.
-   */
+  /* Chi nhánh: chọn sẵn (gợi ý `?branchId=` → mặc định → đầu tiên), vẫn là một trường thật. */
   const branches = useActiveBranches();
   const branchId = useWatch({ control, name: 'branchId' });
   const noProvince = tBranches('labels.noProvince');
@@ -238,15 +251,8 @@ export function CreateVehicleScreen() {
       })),
     [branches.data, noProvince],
   );
-
-  /*
-   * Chi nhánh danh sách đang lọc (`?branchId=` từ nút "Thêm xe") là GỢI Ý đầu tiên — ADR 0052 điều
-   * 6: trước đây form luôn nhảy về chi nhánh MẶC ĐỊNH, nên lưu xong xe biến khỏi đúng danh sách vừa
-   * mở. Gợi ý không còn hoạt động thì rơi về mặc định như cũ.
-   */
   const hintedBranchId = useBranchReturnParam();
   useEffect(() => {
-    // Chỉ điền khi ô còn TRỐNG: người dùng đã chọn tay thì dữ liệu tới muộn không được ghi đè.
     if (branchId) return;
     const items = branches.data?.items;
     const preferred =
@@ -254,10 +260,6 @@ export function CreateVehicleScreen() {
     if (preferred) setValue('branchId', preferred.id, { shouldValidate: true });
   }, [branchId, branches.data, setValue, hintedBranchId]);
 
-  /*
-   * Kiểu dáng thân xe chỉ có nghĩa với ô tô; nguồn năng lượng cũng phụ thuộc loại phương tiện —
-   * xe máy chỉ nhận xăng/điện, nên đổi từ ô tô dầu/hybrid phải xoá lựa chọn không còn hợp lệ.
-   */
   const vehicleType = useWatch({ control, name: 'vehicleType' });
   const fuelType = useWatch({ control, name: 'fuelType' });
   const isCar = vehicleType === VEHICLE_TYPE.CAR;
@@ -268,97 +270,147 @@ export function CreateVehicleScreen() {
     }
   }, [fuelType, isCar, setValue, vehicleType]);
 
-  /**
-   * Điều kiện lên chợ còn thiếu (30/09/2026) — xe tạo qua wizard phải ĐỦ điều kiện lên chợ, CÙNG
-   * luật với cổng gửi duyệt ở backend. Chặn ở bước chứa nó, như `VehicleForm` bên web.
-   */
+  /* Cà vẹt (ADR 0089 · 0099) — BẮT BUỘC khi thêm MỌI loại xe; app không có phiên hỗ trợ. */
+  const [registration, setRegistration] = useState<RegistrationCaptureState>(EMPTY_REGISTRATION);
+  const [registrationShowErrors, setRegistrationShowErrors] = useState(false);
+  const plateNumber = useWatch({ control, name: 'plateNumber' });
+  const registrationCheck = checkRegistration(registration, plateNumber);
+
+  /** Điều kiện lên chợ còn thiếu — CÙNG luật với cổng gửi duyệt ở backend. */
   const [publishMissing, setPublishMissing] = useState<PublishRequirement[]>([]);
-  function publishGaps(stepKey?: string): PublishRequirement[] {
+  function publishGaps(stepKey?: CreateStepKey): PublishRequirement[] {
     const missing = missingPublishRequirementsForForm(getValues());
     return stepKey ? missing.filter((key) => REQUIREMENT_STEP[key] === stepKey) : missing;
   }
 
   const back = () => goBackOr(router, ROUTES.manage.vehicles());
+  const goToStep = (key: CreateStepKey) => setStep(Math.max(0, STEP_KEYS.indexOf(key)));
 
-  function submitNow(submitForReview: boolean) {
+  /** Cổng chung trước MỌI lượt lưu — điều kiện lên chợ, rồi cà vẹt; nhảy về đúng bước. */
+  function passesGates(): boolean {
     const missing = publishGaps();
     setPublishMissing(missing);
     if (missing.length > 0) {
-      const target = steps.findIndex(
-        (candidate) => candidate.key === REQUIREMENT_STEP[missing[0]!],
-      );
-      if (target >= 0) setStep(target);
+      goToStep(REQUIREMENT_STEP[missing[0]!]);
+      toast.showError(t('wizard.missingTitle'));
+      return false;
+    }
+    if (!registrationCheck.ok) {
+      setRegistrationShowErrors(true);
+      goToStep('basic');
+      toast.showError(t('wizard.missingTitle'));
+      return false;
+    }
+    return true;
+  }
+
+  function jumpToFirstError(hasError: (field: keyof VehicleFormValues) => boolean) {
+    const target = STEP_KEYS.findIndex((key) => STEP_FIELDS[key].some(hasError));
+    if (target >= 0) setStep(target);
+  }
+
+  function submitNow(submitForReview: boolean) {
+    if (!passesGates()) {
+      setConfirmSubmit(false);
       return;
     }
+    const withAutoAccept =
+      autoAcceptEnabled && (getValues('serviceTypes') ?? []).includes(SERVICE_TYPE.SELF_DRIVE);
     void handleSubmit(
       (values) => {
-        create.mutate(formValuesToInput(values), {
-          onSuccess: async (vehicle) => {
-            if (!submitForReview) {
-              toast.showSuccess(tCreate('savedDraft'));
-              setCreated({ vehicle, submittedForReview: false });
-              return;
-            }
-            try {
-              const submitted = await vehiclesApi.submitPublic(vehicle.id);
-              toast.showSuccess(tCreate('createdAndSubmitted'));
-              setCreated({ vehicle: submitted, submittedForReview: true });
-            } catch (error) {
-              // Xe ĐÃ tạo — nói đúng điều đó, đừng để người dùng bấm lại và tạo xe thứ hai.
-              toast.showError(tCreate('createdNotSubmitted', { error: errorMessage(error) }));
-              setCreated({ vehicle, submittedForReview: false });
-            }
+        create.mutate(
+          { ...formValuesToInput(values), registration: registrationCheck.input },
+          {
+            onSuccess: async (vehicle) => {
+              // "Tự động đồng ý nhận chuyến" — thiết lập dịch vụ tự lái, ghi sau khi xe có id (như web).
+              if (withAutoAccept) {
+                try {
+                  await vehicleSettingsApi.patchServiceSetting(vehicle.id, SERVICE_TYPE.SELF_DRIVE, {
+                    autoAcceptEnabled: true,
+                  });
+                } catch (error) {
+                  toast.showError(tCreate('autoAcceptNotSaved', { error: errorMessage(error) }));
+                }
+              }
+              if (!submitForReview) {
+                toast.showSuccess(tCreate('savedDraft'));
+                setCreated({ vehicle, submittedForReview: false });
+                return;
+              }
+              try {
+                const submitted = await vehiclesApi.submitPublic(vehicle.id);
+                toast.showSuccess(tCreate('createdAndSubmitted'));
+                setCreated({ vehicle: submitted, submittedForReview: true });
+              } catch (error) {
+                // Xe ĐÃ tạo — nói đúng điều đó, đừng để người dùng bấm lại và tạo xe thứ hai.
+                toast.showError(tCreate('createdNotSubmitted', { error: errorMessage(error) }));
+                setCreated({ vehicle, submittedForReview: false });
+              }
+            },
+            onError: (error) => {
+              setConfirmSubmit(false);
+              toast.showError(errorMessage(error));
+              const applied = applyApiFieldErrors(error, setError, { fields: WIZARD_FIELDS });
+              if (applied.length === 0) return;
+              const bad = new Set<string>(applied);
+              jumpToFirstError((f) => bad.has(f));
+            },
           },
-          onError: (error) => {
-            /*
-             * Server bắt được thứ yup bỏ lọt (luật chỉ có ở backend: biển số trùng, số chữ số
-             * thập phân, độ dài…) → gắn vào ĐÚNG Ô và nhảy về bước chứa nó, thay vì để người dùng
-             * đứng ở bước xác nhận với một dòng "Dữ liệu gửi lên không hợp lệ" không chỉ được chỗ
-             * nào. Cùng cách xử lý với lỗi schema ở nhánh ngay dưới.
-             */
-            // Như `CreateVehiclePage` bên web: LUÔN báo câu dịch theo MÃ (vd `VEHICLE_CODE_DUPLICATE`),
-            // rồi mới gắn lỗi cấp trường vào ô.
-            toast.showError(errorMessage(error));
-            const applied = applyApiFieldErrors(error, setError, { fields: WIZARD_FIELDS });
-            if (applied.length === 0) return;
-            const bad = new Set<string>(applied);
-            const target = steps.findIndex((candidate) =>
-              (STEP_FIELDS[candidate.key] ?? []).some((f) => bad.has(f)),
-            );
-            if (target >= 0) setStep(target);
-          },
-        });
-      },
-      /*
-       * Gửi mà schema không hợp lệ → **nhảy về bước chứa lỗi đầu tiên**. Không có nó thì màn xác
-       * nhận đứng im không giải thích gì.
-       */
-      (formErrors) => {
-        const target = steps.findIndex((candidate) =>
-          (STEP_FIELDS[candidate.key] ?? []).some((f) => formErrors[f]),
         );
-        if (target >= 0) setStep(target);
+      },
+      (formErrors) => {
+        setConfirmSubmit(false);
+        toast.showError(t('wizard.missingTitle'));
+        jumpToFirstError((f) => Boolean(formErrors[f]));
+      },
+    )();
+  }
+
+  /** "Gửi duyệt" mở tấm xác nhận — chỉ khi mọi cổng đã qua và toàn form hợp lệ. */
+  function openConfirm() {
+    if (!passesGates()) return;
+    void handleSubmit(
+      () => setConfirmSubmit(true),
+      (formErrors) => {
+        toast.showError(t('wizard.missingTitle'));
+        jumpToFirstError((f) => Boolean(formErrors[f]));
       },
     )();
   }
 
   async function goNext() {
     if (create.isPending) return;
-    // Chỉ validate trường của BƯỚC ĐANG MỞ — xem docblock của `STEP_FIELDS`.
-    const valid = await trigger([...(STEP_FIELDS[steps[step]!.key] ?? [])]);
-    const missing = valid ? publishGaps(steps[step]!.key) : [];
+    const key = STEP_KEYS[step]!;
+    const valid = await trigger([...STEP_FIELDS[key]]);
+    const missing = valid ? publishGaps(key) : [];
     setPublishMissing(missing);
-    if (valid && missing.length === 0) setStep(step + 1);
+    const registrationGap = key === 'basic' && !registrationCheck.ok;
+    if (registrationGap) setRegistrationShowErrors(true);
+    if (valid && missing.length === 0 && !registrationGap) setStep(step + 1);
   }
 
-  /*
-   * Thiếu quyền tạo → thay TOÀN BỘ nội dung, không dựng một form không gửi được. Đây chỉ là lớp
-   * trải nghiệm; chặn thật là guard backend trên `POST /vehicles`.
-   *
-   * Tiêu đề là tên của MÀN ("Thêm xe"), không phải tên bước đang mở: bước 1 tên "Cơ bản", và
-   * một màn báo thiếu quyền mang tiêu đề "Cơ bản" không nói cho ai biết họ vừa bị chặn khỏi cái
-   * gì. Tiêu đề/câu/nút dùng đúng khoá `Vehicles.create.*` của `CreateVehiclePage` bên web.
-   */
+  /* Mức "Sẵn sàng gửi duyệt" — cùng luật cổng gửi duyệt, chỉ để chủ xe thấy còn thiếu gì. */
+  const watched = useWatch({ control });
+  const readiness = useMemo(() => {
+    const values = { ...EMPTY_DEFAULTS, ...watched } as VehicleFormValues;
+    const gaps = missingPublishRequirementsForForm(values);
+    const media = values.media ?? [];
+    return {
+      photos:
+        requiredVehicleImageTypes(values.vehicleType).every((slot) =>
+          media.some((item) => item.type === slot),
+        ) && registrationCheck.ok,
+      info:
+        Boolean(values.name?.trim() && values.branchId) &&
+        !gaps.some((g) => REQUIREMENT_STEP[g] === 'basic' && g !== PUBLISH_REQUIREMENT.PHOTOS),
+      pricing:
+        (values.serviceTypes ?? []).length > 0 &&
+        !gaps.some((g) => REQUIREMENT_STEP[g] === 'pricing'),
+      features: (values.features ?? []).length > 0 || Boolean(values.description?.trim()),
+    };
+  }, [watched, registrationCheck.ok]);
+  const requiredPhotos = requiredVehicleImageTypes(vehicleType ?? VEHICLE_TYPE.CAR).length + 1;
+
   if (!permissionsLoading && !has(PERMISSION.VEHICLE_CREATE)) {
     return (
       <>
@@ -390,13 +442,17 @@ export function CreateVehicleScreen() {
     );
   }
 
-  const stepKey = steps[step]!.key;
-  const stepErrors = (STEP_FIELDS[stepKey] ?? []).filter((f) => errors[f]).length;
+  const stepKey = STEP_KEYS[step]!;
+  const stepErrors =
+    STEP_FIELDS[stepKey].filter((f) => errors[f]).length +
+    (stepKey === 'basic' && registrationShowErrors
+      ? Object.keys(registrationCheck.errors).length
+      : 0);
 
   return (
     <>
       <AppHeader
-        title={t(`wizard.${stepKey}.title` as 'wizard.basic.title')}
+        title={tCreate('title')}
         onBack={() => (isDirty ? setConfirmCancel(true) : back())}
       />
       <Screen
@@ -404,19 +460,7 @@ export function CreateVehicleScreen() {
         edges={['left', 'right', 'bottom']}
         footer={
           <XStack gap={space.sm}>
-            {/*
-              Nút lùi bước CHỈ hiện khi footer còn hai ô. Ở bước cuối nó biến mất, vì ba nút cỡ `md`
-              không thể vừa một hàng: riêng đệm ngang đã ăn 144dp trong 304dp khả dụng của máy
-              360dp, chỉ còn ~160dp chia cho ba nhãn — nhãn nào cũng bị cắt.
-
-              Bỏ được mà không mất lối đi: `VehicleWizardBar` ngay trên nội dung cho bấm về BẤT KỲ
-              bước đã qua, nên ở bước cuối nút này là lối thứ hai tới cùng một chỗ.
-
-              Và nó KHÔNG mang icon: ở f={1} cạnh một nút f={2} nó chỉ rộng ~104dp, trừ 48dp đệm
-              còn 56dp — vừa đúng cho chữ "Quay lại", không còn chỗ cho 22dp icon. Icon dành cho
-              nút CHÍNH của hàng, nơi có dư bề ngang.
-            */}
-            {step > 0 && step < lastStep ? (
+            {step > 0 ? (
               <YStack flexShrink={0}>
                 <Button
                   label={tCommon('back')}
@@ -435,29 +479,15 @@ export function CreateVehicleScreen() {
                 />
               </YStack>
             ) : (
-              <>
-                {/*
-                  "Lưu nháp" là hành động PHỤ nên co vừa chữ; "Lưu & Gửi duyệt" lấy phần còn lại.
-                  Nó cũng bỏ icon — nút chính cạnh nó giữ icon, đủ để hàng đọc ra đâu là việc chính.
-                */}
-                <YStack flexShrink={0}>
-                  <Button
-                    label={t('wizard.saveDraft')}
-                    variant="outline"
-                    loading={create.isPending}
-                    onPress={() => submitNow(false)}
-                  />
-                </YStack>
-                <YStack f={1}>
-                  <Button
-                    variant="gradient"
-                    label={t('wizard.saveAndSubmit')}
-                    icon="send-outline"
-                    loading={create.isPending}
-                    onPress={() => submitNow(true)}
-                  />
-                </YStack>
-              </>
+              <YStack f={1}>
+                <Button
+                  variant="gradient"
+                  label={t('wizard.submit')}
+                  icon="send-outline"
+                  loading={create.isPending}
+                  onPress={openConfirm}
+                />
+              </YStack>
             )}
           </XStack>
         }
@@ -465,14 +495,17 @@ export function CreateVehicleScreen() {
         <YStack gap={layout.section}>
           <VehicleWizardBar steps={steps} current={step} onStepChange={setStep} />
 
-          {create.isError ? <Callout tone="danger">{errorMessage(create.error)}</Callout> : null}
+          <CreateReadinessCard
+            readiness={readiness}
+            requiredPhotos={requiredPhotos}
+          />
 
+          {create.isError ? <Callout tone="danger">{errorMessage(create.error)}</Callout> : null}
           {publishMissing.length > 0 ? (
             <Callout tone="danger">
               {t('wizard.publishRequired', { items: formGaps(publishMissing, getValues()) })}
             </Callout>
           ) : null}
-
           {stepErrors > 0 ? (
             <Text col={colors.danger} fos={fontSize.bodySm} fow={fontWeight.medium}>
               {t('wizard.stepErrors', { count: stepErrors })}
@@ -480,28 +513,85 @@ export function CreateVehicleScreen() {
           ) : null}
 
           {stepKey === 'basic' ? (
-            /*
-              Ba khối nối nhau, đúng bước 1 của `VehicleForm` bên web: cơ bản → thông số vận hành
-              → hình thức nguồn xe. Nguồn xe CHỈ hỏi ở đây, không hỏi lại ở màn sửa.
-            */
             <>
-              <BasicStep
+              <ImagesCard
                 control={control}
-                branchOptions={branchOptions}
-                branchLoading={branches.isPending}
-              />
-              <SpecsSection control={control} isCar={isCar} setValue={setValue} />
-              <SourceTypeSection control={control} />
+                title={tSteps('photosTitle')}
+                badge={<Pill tone="warning" label={tSteps('photosRequired', { count: requiredPhotos })} />}
+              >
+                <RegistrationCapture
+                  state={registration}
+                  onChange={setRegistration}
+                  vehiclePlate={plateNumber}
+                  showErrors={registrationShowErrors}
+                />
+              </ImagesCard>
+              <Card>
+                <YStack gap={space.md}>
+                  <BasicStep
+                    control={control}
+                    branchOptions={branchOptions}
+                    branchLoading={branches.isPending}
+                    hideServiceTypes
+                  />
+                  <SpecsSection control={control} isCar={isCar} setValue={setValue} />
+                  <SourceTypeSection control={control} />
+                </YStack>
+              </Card>
             </>
           ) : stepKey === 'pricing' ? (
-            <CreateVehiclePricingStep control={control} isCar={isCar} />
-          ) : stepKey === 'media' ? (
-            <MediaStep control={control} isCar={isCar} />
+            <CreateVehiclePricingStep
+              control={control}
+              isCar={isCar}
+              setValue={setValue}
+              autoAccept={{ value: autoAcceptEnabled, onChange: setAutoAcceptEnabled }}
+            />
           ) : (
-            <ReviewStep values={getValues()} onEditStep={setStep} />
+            <FeaturesDescriptionCard control={control} title={tSteps('featuresTitle')} />
           )}
         </YStack>
       </Screen>
+
+      {/* Tấm xác nhận — thay bước "Xác nhận" cũ (Figma `24335:66465`). */}
+      <BottomSheet
+        open={confirmSubmit}
+        onClose={() => (create.isPending ? undefined : setConfirmSubmit(false))}
+        title={tConfirm('title')}
+        subtitle={tConfirm('subtitle')}
+        dismissable={!create.isPending}
+        footer={
+          <XStack gap={space.sm}>
+            <YStack flexShrink={0}>
+              <Button
+                label={tConfirm('saveDraft')}
+                variant="outline"
+                loading={create.isPending}
+                onPress={() => submitNow(false)}
+              />
+            </YStack>
+            <YStack f={1}>
+              <Button
+                variant="gradient"
+                label={tConfirm('submit')}
+                icon="send-outline"
+                loading={create.isPending}
+                onPress={() => submitNow(true)}
+              />
+            </YStack>
+          </XStack>
+        }
+      >
+        <YStack gap={space.md}>
+          <ReviewStep
+            values={getValues()}
+            onEditStep={(next) => {
+              setConfirmSubmit(false);
+              setStep(next);
+            }}
+          />
+          <Callout tone="info">{tConfirm('note')}</Callout>
+        </YStack>
+      </BottomSheet>
 
       <AlertDialog
         open={confirmCancel}

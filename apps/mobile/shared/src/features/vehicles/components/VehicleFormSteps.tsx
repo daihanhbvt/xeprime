@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -32,9 +33,13 @@ import { VehicleClassificationFields } from './VehicleClassificationFields';
 import { VehicleEnergyFields, useTransmissionOptions } from './VehicleEnergyFields';
 import { VehicleIdentityFields } from './VehicleIdentityFields';
 import { TypedMediaFields } from './TypedMediaFields';
+import {
+  CatalogRentHint,
+  CatalogValueHint,
+  useVehicleCatalogSuggestion,
+} from './CatalogSuggestions';
 import { useDomainLabel } from '@/i18n/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { discountedPriceVnd } from '../pricing';
@@ -114,7 +119,13 @@ export function BasicStep({
   branchLoading,
   codeReadOnly = false,
   lockedNotice,
+  hideServiceTypes = false,
 }: Pick<StepProps, 'control'> & {
+  /**
+   * Wizard tạo xe (17/11/2026) hỏi dịch vụ bằng công tắc trên từng thẻ ở bước "Dịch vụ & giá" —
+   * ẩn chip ở đây để không có hai đường ghi cho cùng một trường.
+   */
+  hideServiceTypes?: boolean;
   branchOptions: readonly { value: string; label: string }[];
   branchLoading: boolean;
   /**
@@ -181,8 +192,12 @@ export function BasicStep({
       />
 
       {/* MẢNG dịch vụ — một xe đăng đồng thời tự lái / có tài xế / dài hạn. */}
-      <ServiceTypesField control={control} required />
-      <ServicePriceRemovalWarning control={control} />
+      {hideServiceTypes ? null : (
+        <>
+          <ServiceTypesField control={control} required />
+          <ServicePriceRemovalWarning control={control} />
+        </>
+      )}
     </YStack>
   );
 }
@@ -271,6 +286,12 @@ export function SpecsSection({
       />
 
       {/*
+        Giá trị xe (ADR 0088) — mẫu số phí bảo hiểm, chỉ ô tô; gợi ý theo Dữ liệu xe (ADR 0090) chỉ
+        điền khi chủ xe bấm. Trước 17/11/2026 app không có ô này (web có) - bù cho đủ thông tin.
+      */}
+      {isCar ? <InsuredValueField control={control} setValue={setValue} /> : null}
+
+      {/*
         Nguồn năng lượng + thông số của nó: xe xăng hỏi lít/100km, xe điện hỏi km mỗi lần sạc.
         Cùng khối với wizard đăng xe nhanh, cùng ma trận `vehicleEnergySpecPolicy` mà backend dùng.
       */}
@@ -284,6 +305,55 @@ export function SpecsSection({
         setValue={setValue}
       />
     </YStack>
+  );
+}
+
+/**
+ * Giá trị xe (ADR 0088) - mẫu số phí bảo hiểm VCX, chỉ ô tô. Bản native của ô "Giá trị xe" bên
+ * web: nhập tiền + nhãn giải thích, kèm gợi ý theo Dữ liệu xe (ADR 0090) chỉ điền khi chủ xe bấm.
+ */
+export function InsuredValueField({
+  control,
+  setValue,
+}: {
+  control: Control<VehicleFormValues>;
+  setValue: UseFormSetValue<VehicleFormValues>;
+}) {
+  const t = useTranslations('Vehicles.form.specs');
+  return (
+    <YStack gap={space.xs}>
+      <MoneyField
+        control={control}
+        name="insuredValue"
+        label={t('insuredValue')}
+        hint={t('insuredValueTip')}
+      />
+      <InsuredValueSuggestion control={control} setValue={setValue} />
+    </YStack>
+  );
+}
+
+/** Giá trị xe tham khảo — bản native của `InsuredValueSuggestion` bên web. */
+function InsuredValueSuggestion({
+  control,
+  setValue,
+}: {
+  control: Control<VehicleFormValues>;
+  setValue: UseFormSetValue<VehicleFormValues>;
+}) {
+  const suggestion = useVehicleCatalogSuggestion({
+    modelId: useWatch({ control, name: 'vehicleCatalogModelId' }),
+    variantId: useWatch({ control, name: 'vehicleCatalogVariantId' }),
+    year: useWatch({ control, name: 'manufactureYear' }),
+  });
+  if (!suggestion?.value) return null;
+  return (
+    <CatalogValueHint
+      value={suggestion.value}
+      onApply={(amount) =>
+        setValue('insuredValue', amount, { shouldDirty: true, shouldValidate: true })
+      }
+    />
   );
 }
 
@@ -463,7 +533,7 @@ function SourceTypeField({ control }: { control: Control<VehicleFormValues> }) {
  * (server `orphanPriceClears`), thêm lại dịch vụ thì phải nhập giá lại. Đây là lời báo trước;
  * nút Lưu bấm sau khi đã thấy cảnh báo chính là xác nhận.
  */
-function ServicePriceRemovalWarning({ control }: { control: Control<VehicleFormValues> }) {
+export function ServicePriceRemovalWarning({ control }: { control: Control<VehicleFormValues> }) {
   const t = useTranslations('Vehicles.form.warnings');
   const serviceTypes = useWatch({ control, name: 'serviceTypes' }) ?? [];
   const monthlyPrice = useWatch({ control, name: 'monthlyPrice' });
@@ -501,63 +571,82 @@ function ServicePriceRemovalWarning({ control }: { control: Control<VehicleFormV
   );
 }
 
+/** Trường giá nhận gợi ý "Dùng giá" theo Dữ liệu xe (ADR 0090). */
+type CatalogPriceField =
+  | 'weekdayPrice'
+  | 'weekendPrice'
+  | 'hourlyPrice'
+  | 'monthlyPrice'
+  | 'withDriverDailyPrice';
+
+interface PriceFieldsProps {
+  control: Control<VehicleFormValues>;
+  setValue: UseFormSetValue<VehicleFormValues>;
+}
+
+/** Một gợi ý cho cả ba nhóm giá - một query, không ba (cùng khoá với web). */
+function useCatalogPriceHint({ control, setValue }: PriceFieldsProps) {
+  const suggestion = useVehicleCatalogSuggestion({
+    modelId: useWatch({ control, name: 'vehicleCatalogModelId' }),
+    variantId: useWatch({ control, name: 'vehicleCatalogVariantId' }),
+    year: useWatch({ control, name: 'manufactureYear' }),
+  });
+  return (field: CatalogPriceField) => (
+    <CatalogRentHint
+      suggestion={suggestion}
+      field={field}
+      onApply={(price) => setValue(field, price, { shouldDirty: true, shouldValidate: true })}
+    />
+  );
+}
+
 /**
- * Bước 2 — giá thuê & chính sách.
- *
- * Ô giá dài hạn / có tài xế CHỈ hiện khi xe đăng dịch vụ đó ở bước 1 — không bắt chủ xe nhìn hai
- * ô giá vô nghĩa với một chiếc xe chỉ cho thuê tự lái.
+ * Giá TỰ LÁI (thẻ "Thuê xe tự lái" - Figma `24352:80745`): ngày thường · cuối tuần · theo giờ ·
+ * giảm giá, rồi dòng "Giá hiển thị trên sàn" (chỉ để xem, backend tự tính - ADR 0008).
  */
-export function PricingStep({ control }: StepProps) {
+export function SelfDrivePriceFields({ control, setValue }: PriceFieldsProps) {
   const t = useTranslations('Vehicles.form.prices');
-  const tPolicies = useTranslations('Vehicles.form.policies');
   const tWizard = useTranslations('Vehicles.form.wizard');
   const fmt = useAppFormat();
-  const serviceTypes = useWatch({ control, name: 'serviceTypes' }) ?? [];
-  const offersLongTerm = serviceTypes.includes(SERVICE_TYPE.LONG_TERM);
-  const offersWithDriver = serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER);
-  /*
-   * Đọc vô điều kiện (rules of hooks) — gợi ý giá tháng chỉ RENDER khi xe có dịch vụ dài hạn.
-   * Cùng component với tab Giá & chính sách: hai bề mặt không được khuyên khác nhau.
-   */
+  const hint = useCatalogPriceHint({ control, setValue });
   const weekdayPrice = useWatch({ control, name: 'weekdayPrice' });
-  const monthlyPrice = useWatch({ control, name: 'monthlyPrice' });
-  /*
-   * GIÁ HIỂN THỊ TRÊN SÀN sau khi trừ khuyến mãi trực tiếp — chỉ để XEM, không gửi lên API:
-   * backend tự tính lại khi dựng `public_listings` (ADR 0008).
-   *
-   * Đặt ở cuối khối giá, trước công tắc giao xe — đúng chỗ web đặt nó (`PricesSection`). Người
-   * đang gõ hai con số rời nhau (giá ngày + % giảm) cần thấy TÍCH của chúng ngay tại đây; để họ
-   * tự nhân nhẩm là cách một chiếc xe lên chợ với mức giá chủ xe không định đưa ra.
-   */
   const discountPercent = useWatch({ control, name: 'discountPercent' });
   const discounted = discountedPriceVnd(
     weekdayPrice == null ? null : String(weekdayPrice),
     discountPercent,
   );
-
   return (
     <YStack gap={space.md}>
-      <MoneyField
-        control={control}
-        name="weekdayPrice"
-        label={t('weekday')}
-        publishRequired
-        placeholder={t('weekdayPlaceholder')}
-        hint={t('weekdayHelp')}
-      />
-      <MoneyField
-        control={control}
-        name="weekendPrice"
-        label={t('weekend')}
-        placeholder={t('weekendPlaceholder')}
-        hint={t('weekendHelp')}
-      />
-      <MoneyField
-        control={control}
-        name="hourlyPrice"
-        label={t('hourly')}
-        placeholder={t('hourlyPlaceholder')}
-      />
+      <YStack gap={space.xs}>
+        <MoneyField
+          control={control}
+          name="weekdayPrice"
+          label={t('weekday')}
+          publishRequired
+          placeholder={t('weekdayPlaceholder')}
+          hint={t('weekdayHelp')}
+        />
+        {hint('weekdayPrice')}
+      </YStack>
+      <YStack gap={space.xs}>
+        <MoneyField
+          control={control}
+          name="weekendPrice"
+          label={t('weekend')}
+          placeholder={t('weekendPlaceholder')}
+          hint={t('weekendHelp')}
+        />
+        {hint('weekendPrice')}
+      </YStack>
+      <YStack gap={space.xs}>
+        <MoneyField
+          control={control}
+          name="hourlyPrice"
+          label={t('hourly')}
+          placeholder={t('hourlyPlaceholder')}
+        />
+        {hint('hourlyPrice')}
+      </YStack>
       <NumberField
         control={control}
         name="discountPercent"
@@ -566,126 +655,157 @@ export function PricingStep({ control }: StepProps) {
         placeholder={t('discountPlaceholder')}
         hint={t('discountHelp')}
       />
-
-      {offersLongTerm ? (
-        <>
-          <MoneyField
-            control={control}
-            name="monthlyPrice"
-            label={t('monthly')}
-            publishRequired
-            placeholder={t('monthlyPlaceholder')}
-            hint={t('monthlyHelp')}
-          />
-          <LongTermPriceHint weekdayPrice={weekdayPrice} monthlyPrice={monthlyPrice} />
-        </>
-      ) : null}
-
-      {offersWithDriver ? (
-        <>
-          <MoneyField
-            control={control}
-            name="withDriverDailyPrice"
-            label={t('withDriverDaily')}
-            publishRequired
-            placeholder={t('withDriverDailyPlaceholder')}
-            hint={t('withDriverDailyHelp')}
-          />
-          <MoneyField
-            control={control}
-            name="withDriverInterCityPrice"
-            label={t('withDriverInterCity')}
-            placeholder={t('withDriverInterCityPlaceholder')}
-            hint={t('withDriverInterCityHelp')}
-          />
-          <MoneyField
-            control={control}
-            name="withDriverOneWayPrice"
-            label={t('withDriverOneWay')}
-            placeholder={t('withDriverOneWayPlaceholder')}
-            hint={t('withDriverOneWayHelp')}
-          />
-        </>
-      ) : null}
-
       {discounted != null ? (
         <Notice tone="info" title={tWizard('pricePreview', { price: fmt.money(discounted) })} />
       ) : null}
+    </YStack>
+  );
+}
 
-      <Controller
+/** Giá CÓ TÀI XẾ (thẻ "Xe có tài xế"): nội thành (bắt buộc lên chợ) · liên tỉnh · liên tỉnh 1 chiều. */
+export function WithDriverPriceFields({ control, setValue }: PriceFieldsProps) {
+  const t = useTranslations('Vehicles.form.prices');
+  const hint = useCatalogPriceHint({ control, setValue });
+  return (
+    <YStack gap={space.md}>
+      <YStack gap={space.xs}>
+        <MoneyField
+          control={control}
+          name="withDriverDailyPrice"
+          label={t('withDriverDaily')}
+          publishRequired
+          placeholder={t('withDriverDailyPlaceholder')}
+          hint={t('withDriverDailyHelp')}
+        />
+        {hint('withDriverDailyPrice')}
+      </YStack>
+      <MoneyField
         control={control}
-        name="deliveryEnabled"
-        render={({ field }) => (
-          <ToggleRow
-            label={tPolicies('delivery')}
-            hint={tPolicies('deliveryDescription')}
-            checked={field.value === true}
-            onToggle={() => field.onChange(!field.value)}
-          />
-        )}
+        name="withDriverInterCityPrice"
+        label={t('withDriverInterCity')}
+        placeholder={t('withDriverInterCityPlaceholder')}
+        hint={t('withDriverInterCityHelp')}
+      />
+      <MoneyField
+        control={control}
+        name="withDriverOneWayPrice"
+        label={t('withDriverOneWay')}
+        placeholder={t('withDriverOneWayPlaceholder')}
+        hint={t('withDriverOneWayHelp')}
       />
     </YStack>
   );
 }
 
-/** Bước 3 — ảnh, tiện ích, mô tả. */
-export function MediaStep({ control }: StepProps) {
-  const t = useTranslations('Vehicles.form.media');
-  const tCards = useTranslations('Vehicles.edit.cards');
-  const { catalog } = useCatalog();
-  const vehicleType = useWatch({ control, name: 'vehicleType' });
-
-  /*
-   * LỌC theo loại xe. Bộ tiện ích nghiêng hẳn về ô tô (camera 360, túi khí, ghế trẻ em) và trước
-   * bản này hiện nguyên vẹn cho cả xe máy. Tiện ích là một chiều LỌC ngoài chợ, nên một chiếc
-   * Wave gắn "cửa sổ trời" không chỉ vô lý mà còn làm sai kết quả tìm kiếm của khách.
-   */
-  const features = (catalog[CATALOG_TYPE.VEHICLE_FEATURE] ?? []).filter((item) =>
-    vehicleFeatureAppliesTo(item.key, vehicleType),
-  );
-
+/** Giá DÀI HẠN (thẻ "Thuê xe dài hạn"): giá tháng + gợi ý giá tháng theo giá ngày đang nhập. */
+export function LongTermPriceFields({ control, setValue }: PriceFieldsProps) {
+  const t = useTranslations('Vehicles.form.prices');
+  const hint = useCatalogPriceHint({ control, setValue });
+  const weekdayPrice = useWatch({ control, name: 'weekdayPrice' });
+  const monthlyPrice = useWatch({ control, name: 'monthlyPrice' });
   return (
-    /*
-      HAI THẺ, đúng hai `<Card>` của web: "Hình ảnh xe" (`ImagesSection`) và "Tiện ích & mô tả"
-      (`FeaturesDescriptionSection`) — tiện ích và mô tả đi CHUNG một thẻ, không tách ba.
-
-      Thẻ chứ không phải tiêu đề trần: hai nhóm này là hai loại việc khác hẳn nhau (tải ảnh và
-      nhập chữ), và một mặt phẳng riêng cho mỗi nhóm nói điều đó rõ hơn mọi dòng tiêu đề.
-
-      Tiêu đề lấy thẳng `Vehicles.edit.cards.*` — đúng chuỗi web dùng; khai khoá mới cho cùng
-      một chữ là mở đường cho hai bên lệch nhau.
-    */
-    <YStack gap={layout.section}>
-      <Card>
-        <YStack gap={space.md}>
-          <SectionHeader icon="images-outline">{tCards('images')}</SectionHeader>
-          {/*
-            Ảnh theo GÓC CHỤP (`media[{url,type}]`) + ảnh đại diện — cùng `TypedMediaFields` với
-            wizard đăng nhanh, đúng `ImagesSection` của web. Ảnh xe đi qua endpoint riêng của xe.
-          */}
-          <TypedMediaFields control={control} vehicleType={vehicleType} />
-        </YStack>
-      </Card>
-
-      <Card>
-        <YStack gap={space.md}>
-          <SectionHeader icon="list-outline">{tCards('featuresDescription')}</SectionHeader>
-          <FeaturesField control={control} features={features} />
-          <TextField
-            control={control}
-            name="description"
-            label={t('description')}
-            placeholder={t('descriptionPlaceholder')}
-            multiline
-            rows={5}
-            maxLength={DESCRIPTION_MAX}
-          />
-        </YStack>
-      </Card>
+    <YStack gap={space.xs}>
+      <MoneyField
+        control={control}
+        name="monthlyPrice"
+        label={t('monthly')}
+        publishRequired
+        placeholder={t('monthlyPlaceholder')}
+        hint={t('monthlyHelp')}
+      />
+      {hint('monthlyPrice')}
+      <LongTermPriceHint weekdayPrice={weekdayPrice} monthlyPrice={monthlyPrice} />
     </YStack>
   );
 }
 
+/** Công tắc "Giao xe tận nơi" của wizard tạo xe. */
+export function DeliveryToggle({ control }: { control: Control<VehicleFormValues> }) {
+  const tPolicies = useTranslations('Vehicles.form.policies');
+  return (
+    <Controller
+      control={control}
+      name="deliveryEnabled"
+      render={({ field }) => (
+        <ToggleRow
+          label={tPolicies('delivery')}
+          hint={tPolicies('deliveryDescription')}
+          checked={field.value === true}
+          onToggle={() => field.onChange(!field.value)}
+        />
+      )}
+    />
+  );
+}
+
+/**
+ * Thẻ "Hình ảnh xe" — ảnh theo GÓC CHỤP (`media[{url,type}]`) + ảnh đại diện, cùng `TypedMediaFields`
+ * với wizard đăng nhanh. `children` là phần đi kèm trong CÙNG thẻ (ô cà vẹt của wizard tạo xe).
+ */
+export function ImagesCard({
+  control,
+  title,
+  badge,
+  children,
+}: {
+  control: Control<VehicleFormValues>;
+  title: string;
+  badge?: ReactNode;
+  children?: ReactNode;
+}) {
+  const vehicleType = useWatch({ control, name: 'vehicleType' });
+  return (
+    <Card>
+      <YStack gap={space.md}>
+        <XStack ai="center" jc="space-between" gap={space.sm}>
+          <YStack f={1}>
+            <SectionHeader icon="images-outline">{title}</SectionHeader>
+          </YStack>
+          {badge}
+        </XStack>
+        <TypedMediaFields control={control} vehicleType={vehicleType} />
+        {children}
+      </YStack>
+    </Card>
+  );
+}
+
+/**
+ * Thẻ "Tiện ích & mô tả" — bước 3 của wizard tạo xe (Figma `24352:81824`). Mô tả văn bản thường,
+ * tối đa 4.000 ký tự (người dùng chốt 17/11/2026, không thanh định dạng).
+ */
+export function FeaturesDescriptionCard({
+  control,
+  title,
+}: {
+  control: Control<VehicleFormValues>;
+  title: string;
+}) {
+  const t = useTranslations('Vehicles.form.media');
+  const { catalog } = useCatalog();
+  const vehicleType = useWatch({ control, name: 'vehicleType' });
+  // LỌC theo loại xe - tiện ích là một chiều lọc ngoài chợ, "cửa sổ trời" cho xe máy là sai.
+  const features = (catalog[CATALOG_TYPE.VEHICLE_FEATURE] ?? []).filter((item) =>
+    vehicleFeatureAppliesTo(item.key, vehicleType),
+  );
+  return (
+    <Card>
+      <YStack gap={space.md}>
+        <SectionHeader icon="list-outline">{title}</SectionHeader>
+        <FeaturesField control={control} features={features} />
+        <TextField
+          control={control}
+          name="description"
+          label={t('description')}
+          placeholder={t('descriptionPlaceholder')}
+          multiline
+          rows={5}
+          maxLength={DESCRIPTION_MAX}
+        />
+      </YStack>
+    </Card>
+  );
+}
 /** Trần mô tả — khớp `vehicleFormSchema.description` và `maxLength={4000}` của web. */
 const DESCRIPTION_MAX = 4000;
 

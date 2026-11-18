@@ -174,7 +174,8 @@
         "verifiedHelp": "Phone number {phone} is verified.",
         "dialogTitle": "Verify phone number",
         "codeSentTo": "Enter the 6-digit code sent by SMS to",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "sendOtp": "Send OTP"
       },
       "email": {
         "label": "Contact email",
@@ -190,12 +191,52 @@
       }
     },
     "submit": {
-      "commission": "Register and continue",
-      "package": "Register shop"
+      "commission": "Sign up & list your first vehicle",
+      "package": "Sign up & choose a plan"
     },
     "changeTrack": "Change rental option",
     "hasAccount": "Already have a partner account?",
     "login": "Sign in",
-    "backToRegister": "Back to registration"
+    "backToRegister": "Back to registration",
+    "intro": {
+      "commission": {
+        "title": "List your own vehicle",
+        "tagline": "Flexible, easy, no upkeep fees",
+        "body": "The simplest way to earn from your vehicle. Sign up in minutes and run everything from the app, with no sales commitment.",
+        "first": {
+          "title": "Free to join",
+          "sub": "No upkeep fees, no sales commitment"
+        },
+        "second": {
+          "title": "List up to 3 vehicles",
+          "sub": "Basic rental calendar in the app"
+        },
+        "third": {
+          "title": "Only 10% commission per completed trip",
+          "sub": "No trip, no fee"
+        }
+      },
+      "package": {
+        "title": "Professional shop",
+        "tagline": "Complete management tools, maximum profit",
+        "body": "Fleet management built for larger rental businesses. Enjoy 0% commission with reporting, staff permissions and multi-branch management.",
+        "first": {
+          "title": "0% commission",
+          "sub": "Keep 100% of revenue, pay a subscription by fleet size"
+        },
+        "second": {
+          "title": "Multiple branches & staff roles",
+          "sub": "Manage a large fleet in one place"
+        },
+        "third": {
+          "title": "Detailed financial reports",
+          "sub": "Track revenue, receivables and per-vehicle performance"
+        }
+      }
+    },
+    "formTitle": "Create your partner account",
+    "formSub": "It only takes about 2 minutes to partner with XePrime",
+    "footnote": "After signing up you can add documents & payout details in your dashboard",
+    "consentRequired": "Please agree to the Marketplace rules and Terms of use"
   }
 }
