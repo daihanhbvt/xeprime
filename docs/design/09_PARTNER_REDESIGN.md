@@ -974,7 +974,7 @@ mục người dùng chốt bên dưới.
 | T4 | Chip "Loại dịch vụ" ở bước 1 | 🟡→✅ | Thành công tắc trên 3 thẻ dịch vụ ở bước 2; luật khoá theo loại xe + cảnh báo xoá giá giữ nguyên |
 | T5 | "Tự động đồng ý nhận chuyến" ở luồng nâng cao | 🆕→✅ | Thêm; ghi bằng `patchVehicleServiceSetting` (dịch vụ tự lái) SAU khi tạo xe như luồng nhanh; hỏng thì xe vẫn tạo + cảnh báo |
 | T6 | Mô tả có thanh định dạng, 2.000 ký tự | ⚠️→✅ | Văn bản thường, giữ 4.000 (backend + trang khách là text thường); tiện ích lưới 2 cột (catalog không có nhóm) |
-| T7 | Cà vẹt = góc ảnh thứ 6 + "Số khung/Số máy" ở Thông tin xe | 🆕→✅ | Bắt buộc MỌI loại xe, cả hai luồng (ADR 0099); ô cà vẹt nằm dưới bảng ảnh trong thẻ "Ảnh xe"; "Nhập tay" mở bất cứ lúc nào, ảnh vẫn bắt buộc |
+| T7 | Cà vẹt = góc ảnh thứ 6 + "Số khung/Số máy" ở Thông tin xe | 🆕→✅ | Bắt buộc MỌI loại xe, cả hai luồng (ADR 0099); ô cà vẹt nằm dưới bảng ảnh trong thẻ "Ảnh xe"; ảnh tuỳ chọn, ba ô Tên chủ xe · Số khung · Số máy bắt buộc (ADR 0100) |
 | T8 | Cột "Xem trước trên Marketplace" + "Sẵn sàng gửi duyệt x/4" + Lưu nháp | 🆕→✅ | Dựng từ giá trị đang nhập; không có sao/đánh giá giả; 4 mục đọc cùng luật cổng gửi duyệt |
 | T9 | Thông báo "Có thông tin cần bổ sung!" (`24352:69368`) | ✅ | `notification.warning` khi lưu/gửi còn thiếu, kèm nhảy về đúng bước như cũ |
 | T10 | Màn thành công (`24352:67918`) | ✅ | Wizard nâng cao: 4 mục dẫn tới đúng tab màn sửa (Giấy tờ · Ảnh · Chính sách · Bảo dưỡng "Không bắt buộc"); không hiện "2/3" vì trang không đọc giấy tờ. Luồng nhanh giữ màn kết quả 4 trạng thái của nó |

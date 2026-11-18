@@ -134,25 +134,32 @@ function type(label: RegExp, value: string) {
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 }
 
-/** Bấm "Xác thực" cạnh SĐT (gửi mã + mở popup) → gõ đủ 6 số (tự xác thực) → chờ tích xanh. */
+/** Bấm "Gửi mã OTP" cạnh SĐT (gửi mã + mở popup) → gõ đủ 6 số (tự xác thực) → chờ tích xanh. */
 async function enterOtp(code = '654321'): Promise<void> {
-  fireEvent.click(screen.getByRole('button', { name: /Xác thực$/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Gửi mã OTP/ }));
   await waitFor(() => expect(api.sendOtp).toHaveBeenCalled());
   const input = await screen.findByLabelText(/^Mã xác thực gồm/);
   fireEvent.change(input, { target: { value: code } });
   await waitFor(() => expect(screen.getAllByText(/Đã xác thực|đã được xác thực/).length).toBeGreaterThan(0));
 }
 
+/** Ô "Tôi đồng ý với Quy chế… và Điều khoản…" — chưa tích thì form không gửi gì lên server. */
+function agree() {
+  fireEvent.click(screen.getByRole('checkbox', { name: /Tôi đồng ý với/ }));
+}
+
 async function fillAccount({
   email = 'a@xeprime.test',
   otp = true,
-}: { email?: string; otp?: boolean } = {}) {
+  consent = true,
+}: { email?: string; otp?: boolean; consent?: boolean } = {}) {
   type(/^Họ và tên/, 'Nguyễn Văn A');
   type(/^Số điện thoại/, '0901234567');
   if (otp) await enterOtp();
   type(/^Email/, email);
   type(/^Mật khẩu/, 'matkhau123');
   type(/^Nhập lại mật khẩu/, 'matkhau123');
+  if (consent) agree();
 }
 
 beforeEach(() => {
@@ -242,11 +249,35 @@ describe('Bước 2 - một form, không ô nào hỏi hai lần', () => {
     await fillAccount({ email: '' });
     await pickProvince();
     type(/^Địa chỉ\s*\*?\s*$/, '12 Lê Lợi');
-    fireEvent.click(screen.getByRole('button', { name: /Đăng ký và tiếp tục/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Đăng ký & đăng xe đầu tiên/ }));
 
     await waitFor(() => expect(screen.getByText('Vui lòng nhập email')).toBeTruthy());
     expect(api.registerWithPassword).not.toHaveBeenCalled();
     expect(api.registerShop).not.toHaveBeenCalled();
+  });
+
+  it('chưa tích "Tôi đồng ý": báo lỗi tại chỗ, không gửi mã OTP, không gọi API nào', async () => {
+    nav.search = 'track=commission';
+    renderView();
+
+    await fillAccount({ otp: false, consent: false });
+    await pickProvince();
+    type(/^Địa chỉ\s*\*?\s*$/, '12 Lê Lợi');
+    fireEvent.click(screen.getByRole('button', { name: /Đăng ký & đăng xe đầu tiên/ }));
+
+    expect(
+      await screen.findByText('Vui lòng đồng ý với Quy chế hoạt động sàn và Điều khoản sử dụng'),
+    ).toBeTruthy();
+    expect(api.sendOtp).not.toHaveBeenCalled();
+    expect(api.registerWithPassword).not.toHaveBeenCalled();
+    expect(api.registerShop).not.toHaveBeenCalled();
+
+    agree();
+    await waitFor(() =>
+      expect(
+        screen.queryByText('Vui lòng đồng ý với Quy chế hoạt động sàn và Điều khoản sử dụng'),
+      ).toBeNull(),
+    );
   });
 
   it('chưa xác thực SĐT: nút đăng ký KHÔNG khoá - bấm thì mở popup OTP, đúng mã là tự đăng ký luôn', async () => {
@@ -256,7 +287,7 @@ describe('Bước 2 - một form, không ô nào hỏi hai lần', () => {
     await fillAccount({ otp: false });
     await pickProvince();
     type(/^Địa chỉ\s*\*?\s*$/, '12 Lê Lợi');
-    const submit = screen.getByRole('button', { name: /Đăng ký và tiếp tục/ }) as HTMLButtonElement;
+    const submit = screen.getByRole('button', { name: /Đăng ký & đăng xe đầu tiên/ }) as HTMLButtonElement;
     expect(submit.disabled).toBe(false);
     expect(screen.queryByLabelText(/^Mã xác thực gồm/)).toBeNull();
 
@@ -279,18 +310,18 @@ describe('Bước 2 - một form, không ô nào hỏi hai lần', () => {
     expect(api.registerShop).toHaveBeenCalledTimes(1);
   });
 
-  it('popup mở từ nút đăng ký bị ĐÓNG: không gửi gì; xác thực sau đó bằng nút "Xác thực" KHÔNG tự đăng ký', async () => {
+  it('popup mở từ nút đăng ký bị ĐÓNG: không gửi gì; xác thực sau đó bằng nút "Gửi mã OTP" KHÔNG tự đăng ký', async () => {
     nav.search = 'track=commission';
     renderView();
 
     await fillAccount({ otp: false });
     await pickProvince();
     type(/^Địa chỉ\s*\*?\s*$/, '12 Lê Lợi');
-    fireEvent.click(screen.getByRole('button', { name: /Đăng ký và tiếp tục/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Đăng ký & đăng xe đầu tiên/ }));
     await screen.findByLabelText(/^Mã xác thực gồm/);
     fireEvent.click(screen.getByRole('button', { name: /Huỷ/ }));
 
-    fireEvent.click(screen.getAllByRole('button', { name: /Xác thực$/ })[0]!);
+    fireEvent.click(screen.getAllByRole('button', { name: /Gửi mã OTP/ })[0]!);
     fireEvent.change(await screen.findByLabelText(/^Mã xác thực gồm/), { target: { value: '654321' } });
     await waitFor(() => expect(screen.getAllByText(/Đã xác thực/).length).toBeGreaterThan(0));
     expect(api.registerWithPassword).not.toHaveBeenCalled();
@@ -312,7 +343,7 @@ describe('Bước 2 - một form, không ô nào hỏi hai lần', () => {
     await fillAccount();
     await pickProvince();
     type(/^Địa chỉ\s*\*?\s*$/, '12 Lê Lợi');
-    fireEvent.click(screen.getByRole('button', { name: /Đăng ký và tiếp tục/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Đăng ký & đăng xe đầu tiên/ }));
 
     await waitFor(() => expect(nav.replace).toHaveBeenCalledWith(MANAGE_HOME));
     expect(api.registerWithPassword).toHaveBeenCalledWith({
@@ -343,7 +374,7 @@ describe('Bước 2 - một form, không ô nào hỏi hai lần', () => {
     type(/^Tên gian hàng/, 'Gian hàng Bình Minh');
     await pickProvince();
     type(/^Địa chỉ\s*\*?\s*$/, '12 Lê Lợi');
-    fireEvent.click(screen.getByRole('button', { name: /Đăng ký gian hàng/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Đăng ký & chọn gói/ }));
 
     await waitFor(() => expect(nav.replace).toHaveBeenCalledWith(PACKAGE_ONBOARDING));
     expect(api.registerShop.mock.calls[0]![0]).toMatchObject({
@@ -363,7 +394,7 @@ describe('Bước 2 - một form, không ô nào hỏi hai lần', () => {
     type(/^Tên gian hàng/, 'Gian hàng Bình Minh');
     await pickProvince();
     type(/^Địa chỉ\s*\*?\s*$/, '12 Lê Lợi');
-    fireEvent.click(screen.getByRole('button', { name: /Đăng ký gian hàng/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Đăng ký & chọn gói/ }));
     await waitFor(() => expect(api.registerShop).toHaveBeenCalledTimes(1));
 
     // Phiên đã có: lần render sau bỏ phần tài khoản, giữ nguyên thứ đã gõ.
@@ -376,7 +407,7 @@ describe('Bước 2 - một form, không ô nào hỏi hai lần', () => {
     );
     await waitFor(() => expect(screen.queryByLabelText(/^Mật khẩu/)).toBeNull());
 
-    fireEvent.click(screen.getByRole('button', { name: /Đăng ký gian hàng/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Đăng ký & chọn gói/ }));
     await waitFor(() => expect(nav.replace).toHaveBeenCalledWith(PACKAGE_ONBOARDING));
     expect(api.registerWithPassword).toHaveBeenCalledTimes(1);
     expect(api.registerShop).toHaveBeenCalledTimes(2);

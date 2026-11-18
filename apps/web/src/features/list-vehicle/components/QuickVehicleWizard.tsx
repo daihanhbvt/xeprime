@@ -653,7 +653,7 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
               readiness={readiness}
               branchLabel={branchText}
               shop={previewShopOf(shopQuery.data)}
-              requiredPhotos={requiredVehicleImageTypes(vehicleType).length + 1}
+              requiredPhotos={requiredVehicleImageTypes(vehicleType).length}
             />
           }
           onStepChange={(next) => {
@@ -688,7 +688,7 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
                 badge={
                   <Tag className={styles.requiredBadge}>
                     {tSteps('photosRequired', {
-                      count: requiredVehicleImageTypes(vehicleType).length + 1,
+                      count: requiredVehicleImageTypes(vehicleType).length,
                     })}
                   </Tag>
                 }

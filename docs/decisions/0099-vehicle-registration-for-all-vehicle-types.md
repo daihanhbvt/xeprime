@@ -3,7 +3,8 @@
 Ngày: 17/11/2026 · Trạng thái: **Accepted** (17/11/2026 - người dùng chốt: xe máy bắt buộc như ô tô; ảnh
 vẫn bắt buộc, nhập tay chỉ để sửa/bổ sung kết quả đọc; áp cho luồng nâng cao + luồng đăng nhanh, web + app
 Partner) · Mở rộng: [0089](0089-vehicle-registration-at-car-create.md) (ghi đè điều 1 trong phạm vi "chỉ ô
-tô" và "chỉ wizard nâng cao trên web")
+tô" và "chỉ wizard nâng cao trên web") · **Điều 2 bị [0100](0100-vehicle-registration-photo-optional.md)
+ghi đè** trong phạm vi "ảnh vẫn bắt buộc" (18/11/2026: ảnh tuỳ chọn, ba ô vẫn bắt buộc)
 
 ## Bối cảnh
 

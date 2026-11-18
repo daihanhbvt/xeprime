@@ -40,7 +40,6 @@ import {
   type VehiclePublicationInput,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_SUBMITTABLE,
-  VEHICLE_TYPE,
   type PaginationMeta,
   type VehiclePublicStatus,
   type VehicleType,

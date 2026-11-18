@@ -470,8 +470,8 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
    * cà vẹt), chỉ để chủ xe thấy còn thiếu gì; không thay cổng thật.
    */
   const watched = useWatch({ control });
-  const requiredPhotos =
-    requiredVehicleImageTypes(vehicleType ?? VEHICLE_TYPE.CAR).length + (registrationRequired ? 1 : 0);
+  // Ảnh cà vẹt TUỲ CHỌN (ADR 0100) — không tính vào số ảnh bắt buộc.
+  const requiredPhotos = requiredVehicleImageTypes(vehicleType ?? VEHICLE_TYPE.CAR).length;
   const readiness: CreateReadiness = useMemo(() => {
     const values = { ...EMPTY_DEFAULTS, ...watched } as VehicleFormValues;
     const gaps = missingPublishRequirementsForForm(values);
