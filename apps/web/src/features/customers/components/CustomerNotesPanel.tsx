@@ -1,7 +1,8 @@
 'use client';
 
 import { DeleteOutlined } from '@ant-design/icons';
-import { App, Button, Empty, Pagination, Popconfirm, Result, Skeleton, Tag } from 'antd';
+import { App, Button, Pagination, Popconfirm, Result, Skeleton, Tag } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -141,7 +142,7 @@ export function CustomerNotesPanel({
       ) : null}
 
       {!isLoading && !isError && items.length === 0 ? (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('notes.emptyTitle')} />
+        <EmptyState variant="empty" title={t('notes.emptyTitle')} />
       ) : null}
 
       {items.length > 0 ? (

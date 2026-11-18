@@ -13,6 +13,13 @@
     "dateFieldLabel": "Khoảng ngày áp theo",
     "dateRangeLabel": "Khoảng ngày"
   },
+  "pending": {
+    "intro": "Khách đã gửi yêu cầu nhưng chưa chuyển tiền giữ chỗ - đang chờ chủ xe duyệt hoặc chờ khách chuyển tiền. Hạn gần nhất lên đầu. Hết hạn mà chưa có tiền thì yêu cầu tự đóng và sang tab Không thành để gọi lại khách.",
+    "searchPlaceholder": "Khách, xe, biển số, gian hàng",
+    "searchLabel": "Tìm theo tên khách, xe, biển số hoặc gian hàng",
+    "stageLabel": "Lọc theo tình trạng",
+    "allStages": "Tất cả tình trạng"
+  },
   "table": {
     "label": "Đơn thuê toàn hệ thống",
     "code": "Mã đơn",

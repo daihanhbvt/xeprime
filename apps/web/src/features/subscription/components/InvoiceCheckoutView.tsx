@@ -2,6 +2,7 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Result, Skeleton } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -19,7 +20,11 @@ import { Logo } from '@/components/brand/Logo';
 import { Countdown } from '@/components/data-display/Countdown';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ROUTES, SHOP_SECTION, invoicePaymentHref, shopSectionPath } from '@/constants/routes';
-import { PARTNER_TRACK, partnerHomeHref, resolvePartnerTrack } from '@/features/auth/post-auth-destination';
+import {
+  PARTNER_TRACK,
+  partnerHomeHref,
+  resolvePartnerTrack,
+} from '@/features/auth/post-auth-destination';
 import { CheckoutFrame } from '@/features/payment-gateway/components/CheckoutFrame';
 import { CheckoutPanel } from '@/features/payment-gateway/components/CheckoutPanel';
 import { GatewayOrderNotice } from '@/features/payment-gateway/components/GatewayOrderNotice';
@@ -78,7 +83,9 @@ export function CheckoutPaymentView({
   checkoutId: string;
   variant?: PaymentViewVariant;
 }) {
-  return <SubscriptionPaymentView target={{ kind: 'checkout', id: checkoutId }} variant={variant} />;
+  return (
+    <SubscriptionPaymentView target={{ kind: 'checkout', id: checkoutId }} variant={variant} />
+  );
 }
 
 /**
@@ -182,11 +189,11 @@ function SubscriptionPaymentView({
   } else if (query.isError || !payable) {
     const notFound = getErrorCode(query.error) === API_ERROR_CODE.NOT_FOUND;
     body = (
-      <Result
-        status={notFound ? '404' : 'error'}
+      <EmptyState
+        variant={notFound ? 'not-found' : 'error'}
         title={notFound ? t('notFoundTitle') : t('loadErrorTitle')}
-        subTitle={notFound ? t('notFoundBody') : errorMessage(query.error)}
-        extra={
+        description={notFound ? t('notFoundBody') : errorMessage(query.error)}
+        action={
           notFound ? (
             <Link href={homeHref}>
               <Button type="primary">{shell ? t('backToShop') : t('backHome')}</Button>
@@ -200,9 +207,7 @@ function SubscriptionPaymentView({
       />
     );
   } else {
-    body = (
-      <PaymentBody payable={payable} orderId={orderId} homeHref={homeHref} shell={shell} />
-    );
+    body = <PaymentBody payable={payable} orderId={orderId} homeHref={homeHref} shell={shell} />;
   }
 
   const notice = orderId ? (

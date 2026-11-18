@@ -11,6 +11,7 @@ import 'dayjs/locale/vi';
 import { useLocale } from 'next-intl';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Provider as ReduxProvider } from 'react-redux';
+import { AntdEmpty } from '@/components/feedback/AntdEmpty';
 import { ChatRealtimeProvider } from '@/features/chat/context/ChatRealtimeContext';
 import { BadgeRealtimeProvider } from '@/features/badges/BadgeRealtimeProvider';
 import type { AppLocale } from '@/i18n/config';
@@ -105,7 +106,11 @@ function ProvidersInner({
 
   return (
     <AntdRegistry>
-      <ConfigProvider theme={antdThemeConfig} locale={ANTD_LOCALE[locale]}>
+      <ConfigProvider
+        theme={antdThemeConfig}
+        locale={ANTD_LOCALE[locale]}
+        renderEmpty={(componentName) => <AntdEmpty componentName={componentName} />}
+      >
         <ReduxProvider store={store}>
           <QueryClientProvider client={queryClient}>
             <AntdApp>

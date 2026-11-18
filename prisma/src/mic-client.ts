@@ -76,6 +76,13 @@ export interface MicLookup {
   gio_kt?: string | null;
 }
 
+/** Phản hồi tính phí `phi_vcx` — `total_fee` đã gồm VAT (đo sandbox 17/11/2026). */
+export interface MicPremium {
+  insurance_fee?: number | null;
+  vat_fee?: number | null;
+  total_fee?: number | null;
+}
+
 /** Phản hồi cấp hợp đồng `gcn_vcx`. */
 export interface MicIssued {
   contact_number?: string | null;
@@ -92,6 +99,8 @@ export const MIC_PATH = {
   UPLOAD_FILE: '/api/e/file/v1/open-api/upload-file',
   VALIDATE: '/api/e/xel_chuyen/v1/gcn_vcx_validate',
   ISSUE: '/api/e/xel_chuyen/v1/gcn_vcx',
+  /** Tính phí VCX theo chuyến — thân phẳng, PHẢI có giờ bắt đầu và ngày/giờ kết thúc (ADR 0097). */
+  PREMIUM: '/api/e/xel_chuyen/v1/phi_vcx',
   LOOKUP: '/api/e/tracuu/v2/id_trans',
   DOWNLOAD_CERTIFICATE: '/api/e/portal-file/v1/file/download-gcn-by-so-id',
 } as const;
@@ -107,13 +116,18 @@ export class MicClient {
   }
 
   /** Gọi một endpoint đã xác thực. 401 ⇒ làm mới token và thử lại MỘT lần. */
-  async call<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<MicResponse<T>> {
+  async call<T>(
+    method: 'GET' | 'POST',
+    path: string,
+    body?: unknown,
+    opts: { timeoutMs?: number } = {},
+  ): Promise<MicResponse<T>> {
     await this.ensureToken();
-    let res = await this.send<T>(method, path, body, true);
+    let res = await this.send<T>(method, path, body, true, opts.timeoutMs);
     if (res.status === 401) {
       this.token = null;
       await this.ensureToken();
-      res = await this.send<T>(method, path, body, true);
+      res = await this.send<T>(method, path, body, true, opts.timeoutMs);
     }
     if (res.status === 401) {
       throw new MicUnavailableError('MIC từ chối token (401) sau khi làm mới');
@@ -190,6 +204,7 @@ export class MicClient {
     path: string,
     body: unknown,
     authed: boolean,
+    timeoutMs?: number,
   ): Promise<MicResponse<T>> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json;charset=UTF-8',
@@ -205,7 +220,7 @@ export class MicClient {
         method,
         headers,
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-        signal: AbortSignal.timeout(this.config.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+        signal: AbortSignal.timeout(timeoutMs ?? this.config.timeoutMs ?? DEFAULT_TIMEOUT_MS),
       });
     } catch (err) {
       const reason = err instanceof Error ? err.name : 'unknown';

@@ -315,4 +315,73 @@ describe('tiện ích hợp đồng MIC', () => {
     ]);
     expect(urls).toEqual(['front', 'left', 'right', 'rear', 'interior']);
   });
+
+  describe('quotePremium - phí từng hợp đồng lúc duyệt (ADR 0097)', () => {
+    const quote = {
+      insuredValue: '340000000',
+      manufactureYear: 2019,
+      seatCount: 5,
+      from: new Date('2026-12-10T02:00:00Z'),
+      to: new Date('2026-12-12T11:00:00Z'),
+      formulaAmount: '112200',
+      timeoutMs: 1500,
+    };
+
+    it('gửi thân phẳng phi_vcx có giờ bắt đầu và ngày/giờ kết thúc, đọc total_fee', async () => {
+      const mic = new FakeMic();
+      mic.responses.set('phi_vcx', {
+        status: 200,
+        body: {
+          code: '00',
+          message: 'Thành công!',
+          data: { insurance_fee: 102000.0, vat_fee: 10200.0, total_fee: 112200.0 },
+        },
+      });
+      const r = await new MicInsurancePartner(mic, silent).quotePremium(quote);
+      expect(r).toEqual({ ok: true, amount: '112200' });
+      const call = mic.calls.find((c) => c.path.includes('phi_vcx'));
+      expect(call?.body).toMatchObject({
+        start_date: '10/12/2026',
+        start_time: '09:00',
+        end_date: '12/12/2026',
+        end_time: '18:00',
+        manufacturing_year: '2019',
+        number_of_seats: 5,
+        vehicle_type: 'M1.11',
+        usage_purpose: 'C',
+        coverage_scope: { vehicle_price: 340000000, tv: 340000000 },
+      });
+      // Không có dữ liệu cá nhân nào trong lượt hỏi phí.
+      expect(JSON.stringify(call?.body)).not.toMatch(/buyer|owner|chassis|license_plate/);
+    });
+
+    it('MIC trả mã lỗi nghiệp vụ ⇒ rejected kèm mã + câu báo', async () => {
+      const mic = new FakeMic();
+      mic.responses.set('phi_vcx', {
+        status: 200,
+        body: { code: '03', message: 'Chua khai bieu phi co han', data: null },
+      });
+      const r = await new MicInsurancePartner(mic, silent).quotePremium(quote);
+      expect(r).toMatchObject({ ok: false, reason: 'rejected' });
+      expect(r.ok ? '' : r.message).toContain('03');
+    });
+
+    it('HTTP 5xx hoặc lỗi mạng ⇒ unavailable, không ném', async () => {
+      const mic = new FakeMic();
+      mic.responses.set('phi_vcx', {
+        status: 502,
+        body: { code: null, message: null, data: null },
+      });
+      expect(await new MicInsurancePartner(mic, silent).quotePremium(quote)).toMatchObject({
+        ok: false,
+        reason: 'unavailable',
+      });
+      const down = new FakeMic();
+      down.throwOn = 'phi_vcx';
+      expect(await new MicInsurancePartner(down, silent).quotePremium(quote)).toMatchObject({
+        ok: false,
+        reason: 'unavailable',
+      });
+    });
+  });
 });

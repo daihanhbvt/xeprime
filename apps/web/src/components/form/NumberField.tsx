@@ -30,8 +30,15 @@ interface NumberFieldProps<T extends FieldValues> {
    * Giá trị là **số phần trăm** (12.5 nghĩa là 12,5%), KHÔNG phải tỉ lệ 0–1.
    */
   percent?: boolean;
-  /** Số chữ số thập phân. Mặc định: tiền và phần trăm nguyên → 0. */
+  /** Số chữ số thập phân CỐ ĐỊNH (luôn hiện đủ, vd `5.00`). Mặc định: tiền và phần trăm nguyên → 0. */
   precision?: number;
+  /**
+   * TỐI ĐA N chữ số lẻ, hiện đúng số người dùng gõ (`10`, `4,5` chứ không `10.0`, `4.50`): giá trị
+   * làm tròn về N chữ số khi đổi. Thắng `precision`.
+   */
+  decimals?: number;
+  /** Dấu thập phân hiển thị — nơi gọi truyền theo ngôn ngữ (`,` cho tiếng Việt). Mặc định `.`. */
+  decimalSeparator?: string;
   addonAfter?: string;
   disabled?: boolean;
   /** Dấu bắt buộc của AntD. Ràng buộc thật vẫn ở schema Yup. */
@@ -58,6 +65,8 @@ export function NumberField<T extends FieldValues>({
   money,
   percent,
   precision,
+  decimals,
+  decimalSeparator,
   addonAfter,
   disabled,
   required,
@@ -96,11 +105,22 @@ export function NumberField<T extends FieldValues>({
       // Không hiện nút tăng/giảm: các ô số ở đây (năm, kích thước…) đều gõ trực tiếp.
       controls={false}
       value={(field.value as number | null | undefined) ?? null}
-      onChange={(value) => field.onChange(value ?? null)}
+      onChange={(value) =>
+        field.onChange(
+          value == null
+            ? null
+            : decimals != null
+              ? Math.round(value * 10 ** decimals) / 10 ** decimals
+              : value,
+        )
+      }
       onBlur={field.onBlur}
       min={effectiveMin}
       max={effectiveMax}
-      precision={precision ?? (percent ? 0 : undefined)}
+      // `decimals`: không đặt precision (AntD suy số chữ số lẻ HIỂN THỊ từ giá trị và bước), bước 1.
+      precision={decimals != null ? undefined : (precision ?? (percent ? 0 : undefined))}
+      step={decimals != null ? 1 : undefined}
+      decimalSeparator={decimalSeparator}
       placeholder={placeholder}
       suffix={suffix}
       disabled={disabled}

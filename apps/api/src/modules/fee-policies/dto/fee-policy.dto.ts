@@ -9,11 +9,14 @@ import {
   OWNER_COMMISSION_FROM_DAY_MAX,
   OWNER_COMMISSION_PERCENT_MAX,
   OWNER_COMMISSION_TIERS_MAX,
+  PLATFORM_FEE_BASIS,
+  PLATFORM_FEE_BASIS_VALUES,
   SERVICE_FEE_PERCENT_MAX,
   SERVICE_FEE_PERCENT_MIN,
   TAX_LEGAL_BASIS_MAX_LENGTH,
   TAX_PIT_PERCENT_MAX,
   TAX_VAT_PERCENT_MAX,
+  type PlatformFeeBasis,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
@@ -22,6 +25,7 @@ import {
   IsArray,
   IsBoolean,
   IsDefined,
+  IsIn,
   IsInt,
   IsNumber,
   IsNumberString,
@@ -58,6 +62,17 @@ export class PerVehicleTypeAmountDto {
   @ApiProperty({ description: 'Xe máy - VND, bội 1.000đ', example: '30000' })
   @Matches(THOUSAND_STEP_PATTERN, { message: THOUSAND_STEP_MESSAGE })
   motorbike!: string;
+}
+
+/** Cách tính phí sàn cho TỪNG loại xe — `PerVehicleTypeFeeBasis` ở `@xeprime/types` (ADR 0098). */
+export class PerVehicleTypeFeeBasisDto {
+  @ApiProperty({ enum: PLATFORM_FEE_BASIS_VALUES, example: PLATFORM_FEE_BASIS.PER_TRIP })
+  @IsIn(PLATFORM_FEE_BASIS_VALUES)
+  car!: PlatformFeeBasis;
+
+  @ApiProperty({ enum: PLATFORM_FEE_BASIS_VALUES, example: PLATFORM_FEE_BASIS.PER_DAY })
+  @IsIn(PLATFORM_FEE_BASIS_VALUES)
+  motorbike!: PlatformFeeBasis;
 }
 
 /** Khoảng tiền (VND, bội 1.000đ) — `0 < min < max` do `withDriverLimitsValid` canh ở service. */
@@ -338,12 +353,23 @@ export class UpsertFeePolicyDto {
 
   @ApiPropertyOptional({
     type: PerVehicleTypeAmountDto,
-    description: '`S` - phí sàn CỐ ĐỊNH mỗi đơn, phía khách, theo loại xe. Áp cho cả hai tuyến.',
+    description:
+      '`S` - phí sàn phía khách theo loại xe, áp cho cả hai tuyến; cách tính ở customerPlatformFeeBasis.',
   })
   @IsOptional()
   @ValidateNested()
   @Type(() => PerVehicleTypeAmountDto)
   customerPlatformFee?: PerVehicleTypeAmountDto;
+
+  @ApiPropertyOptional({
+    type: PerVehicleTypeFeeBasisDto,
+    description:
+      'Cách tính `S` theo loại xe (ADR 0098): per_trip = một lần mỗi chuyến, per_day = × số ngày thuê (mọi loại thuê). Vắng ⇒ giữ của bản đang sửa / mặc định mỗi chuyến.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PerVehicleTypeFeeBasisDto)
+  customerPlatformFeeBasis?: PerVehicleTypeFeeBasisDto;
 
   @ApiPropertyOptional({
     type: [OwnerCommissionTierDto],
@@ -432,6 +458,8 @@ export class FeePolicyDto {
   @ApiPropertyOptional({ type: Number, nullable: true }) vehicleProtectionPercent!: number | null;
   @ApiPropertyOptional({ type: String, nullable: true }) insurancePartnerName!: string | null;
   @ApiProperty({ type: PerVehicleTypeAmountDto }) customerPlatformFee!: PerVehicleTypeAmountDto;
+  @ApiProperty({ type: PerVehicleTypeFeeBasisDto })
+  customerPlatformFeeBasis!: PerVehicleTypeFeeBasisDto;
   @ApiProperty({ type: [OwnerCommissionTierDto] })
   ownerCommissionTiers!: readonly OwnerCommissionTierDto[];
   @ApiProperty({ type: PerVehicleTypeAmountDto })

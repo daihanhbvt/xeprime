@@ -64,6 +64,7 @@ import { ListingsService } from '../public-listings/listings.service';
 import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InsuranceEligibilityService } from '../insurance/insurance-eligibility.service';
+import { InsurancePremiumQuoteService } from '../insurance/insurance-premium-quote.service';
 import { InsuranceOfferService } from '../insurance/insurance-offer.service';
 import {
   DeliverySummaryDto,
@@ -225,6 +226,7 @@ export class PricingService {
     private readonly feePolicies: FeePoliciesService,
     private readonly insuranceOffer: InsuranceOfferService,
     private readonly insuranceEligibility: InsuranceEligibilityService,
+    private readonly insurancePremiumQuote: InsurancePremiumQuoteService,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -286,10 +288,21 @@ export class PricingService {
        * hàm phí của đơn, nên phụ lục không có bản thứ hai của công thức nào.
        */
       platformFeesWaived?: boolean;
+      /**
+       * Báo giá bảo hiểm theo bậc ĐÃ CHỐT cho lượt duyệt (`approvalVehicleProtectionTier` — phí lấy
+       * từ đối tác, ADR 0097). Bọc trong `{ value }` vì `undefined` có nghĩa riêng (sản phẩm theo
+       * ngày). Bỏ trống ⇒ tự tính bằng công thức như báo giá công khai.
+       */
+      resolvedVehicleProtectionTier?: { value: VehicleProtectionTierQuote | null | undefined };
     } = {},
   ): Promise<CustomerFeeBreakdown | null> {
-    const effective = await this.feePolicies.findEffective();
-    if (!effective) return null;
+    const stored = await this.feePolicies.findEffective();
+    if (!stored) return null;
+    /*
+     * Bảo hiểm (công tắc bán, biểu phí ngày, tên đối tác) đọc từ sản phẩm bảo hiểm + đối tác đang
+     * chạy, phủ lên chính sách phí (ADR 0098). Bảng tiền đóng băng vào đơn mang đúng số đã phủ.
+     */
+    const effective = { ...stored, ...(await this.insuranceOffer.feePolicyOverlay()) };
     const policy = opts.platformFeesWaived ? waivePlatformFees(effective) : effective;
     /*
      * MỘT nguồn cho cả `billingMode` lẫn "có thu cọc không" (Phase 6).
@@ -317,7 +330,9 @@ export class PricingService {
      */
     const vehicleProtectionTier = opts.platformFeesWaived
       ? undefined
-      : await this.vehicleProtectionTierFor(trip);
+      : opts.resolvedVehicleProtectionTier
+        ? opts.resolvedVehicleProtectionTier.value
+        : await this.vehicleProtectionTierFor(trip);
     /*
      * Chế độ của chủ xe chỉ có nghĩa khi xe MUA ĐƯỢC (có báo giá bậc) — không có thì khỏi hỏi DB.
      * Lượt duyệt truyền cột đóng băng; báo giá đọc chế độ hiện hành (ADR 0091 điều 1).
@@ -374,6 +389,31 @@ export class PricingService {
     if (dayAmountsListed) return fees;
     const { dayAmounts: _evenSplit, ...withoutDayAmounts } = fees;
     return withoutDayAmounts;
+  }
+
+  /**
+   * Báo giá bảo hiểm theo bậc của LƯỢT DUYỆT (ADR 0097) — tính MỘT lần rồi truyền vào mọi lượt
+   * `customerFeesFor` của cùng quyết định (`resolvedVehicleProtectionTier`), để một lượt duyệt hỏi
+   * đối tác đúng một lần.
+   *
+   * Chỉ hỏi đối tác khi chuyến THẬT SỰ thu `IV` (chủ xe đặt Bắt buộc lúc khách gửi, hoặc khách đã
+   * tích): xe Tuỳ chọn mà khách không mua thì phí chỉ là lời chào, không đáng một lượt gọi ra ngoài.
+   */
+  async approvalVehicleProtectionTier(
+    trip: FeeTrip,
+    charged: { selected: boolean; required: boolean },
+  ): Promise<{ value: VehicleProtectionTierQuote | null | undefined }> {
+    const tier = await this.vehicleProtectionTierFor(trip);
+    if (!tier || !trip.vehicleId || !trip.schedule || !(charged.required || charged.selected)) {
+      return { value: tier };
+    }
+    return {
+      value: await this.insurancePremiumQuote.confirmForApproval(tier, {
+        vehicleId: trip.vehicleId,
+        pickupAt: trip.schedule.pickupAt,
+        returnAt: trip.schedule.returnAt,
+      }),
+    };
   }
 
   /**

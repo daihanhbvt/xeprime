@@ -1,6 +1,7 @@
 'use client';
 
 import { App, Button, Result, Skeleton } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -89,11 +90,11 @@ export function TripPaymentView({ tripId }: { tripId: string }) {
           crumbs={[{ key: 'payment', label: t('title') }]}
           title={t('title')}
         />
-        <Result
-          status={notFound ? '404' : 'error'}
+        <EmptyState
+          variant={notFound ? 'not-found' : 'error'}
           title={notFound ? t('notFoundTitle') : t('loadErrorTitle')}
-          subTitle={notFound ? t('notFoundBody') : errorMessage(trip.error)}
-          extra={
+          description={notFound ? t('notFoundBody') : errorMessage(trip.error)}
+          action={
             notFound ? (
               <Link href={ROUTES.TRIPS}>
                 <Button type="primary">{t('backToTrips')}</Button>

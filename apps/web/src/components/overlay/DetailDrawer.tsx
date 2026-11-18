@@ -1,7 +1,8 @@
 'use client';
 
 import { ArrowLeftOutlined, CloseOutlined } from '@ant-design/icons';
-import { Button, Drawer, Result, Skeleton } from 'antd';
+import { Button, Drawer, Skeleton } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import type { ReactNode } from 'react';
 
 import { useIsMobile } from '@/hooks/use-media-query';
@@ -161,11 +162,11 @@ export function DetailDrawer({
     // Lỗi thắng loading: refetch nền không được che mất thông báo lỗi đang hiện.
     if (error) {
       return (
-        <Result
-          status="error"
+        <EmptyState
+          variant="error"
           title={errorTitleText}
-          subTitle={errorDescription}
-          extra={
+          description={errorDescription}
+          action={
             onRetry ? (
               <Button type="primary" onClick={onRetry}>
                 {retryLabel}

@@ -50,7 +50,6 @@ export default async function AppPromoPage() {
         eyebrow={t('hero.eyebrow')}
         title={t('hero.title')}
         lead={t('hero.lead')}
-        meta={t('hero.status')}
       />
 
       <div className={styles.page}>

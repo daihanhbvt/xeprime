@@ -28,6 +28,8 @@ const MONEY_FIELDS = [
   'deductibleMotorbike',
   'maxPayoutCar',
   'maxPayoutMotorbike',
+  'dailyAmountCar',
+  'dailyAmountMotorbike',
 ] as const satisfies readonly (keyof UpdateInsuranceProductDto)[];
 
 /** Bước giá của luồng tiền v2 — khấu trừ/bồi thường hiện cạnh phí ngày, không sinh số lẻ. */
@@ -37,7 +39,8 @@ const MONEY_STEP = 1000;
  * DANH MỤC sản phẩm bảo hiểm — ADR 0064. Writer duy nhất của `insurance_products`.
  *
  * Bảng này mô tả sản phẩm (tên, quyền lợi, khấu trừ, mẫu URL GCN) và bật/tắt hiển thị. Biểu phí
- * NGÀY có phiên bản ở `fee_policies` và không bao giờ được sửa ở đây.
+ * NGÀY của sản phẩm tính theo ngày cũng sống ở đây (ADR 0098 chuyển từ `fee_policies`): sửa chỉ
+ * áp cho báo giá từ lúc lưu — đơn đã có giữ số trong snapshot của nó.
  *
  * Sửa danh mục KHÔNG viết lại hợp đồng đã bán: `reserveForBookingWithinTx` đóng băng một bản
  * snapshot vào từng hợp đồng lúc đơn ra đời.
@@ -155,6 +158,10 @@ export class InsuranceProductsService {
       if (dto.serviceFeePercent !== undefined) {
         data.serviceFeePercent = new Prisma.Decimal(dto.serviceFeePercent);
       }
+      // % hoa hồng đại lý (ADR 0097) — mặc định cho bảng kê; CHECK 0..100 ở DB là chốt sau.
+      if (dto.agencyCommissionPercent !== undefined) {
+        data.agencyCommissionPercent = new Prisma.Decimal(dto.agencyCommissionPercent);
+      }
       const assign = <K extends keyof UpdateInsuranceProductDto>(key: K) => {
         if (dto[key] !== undefined) (data as Record<string, unknown>)[key] = dto[key];
       };
@@ -228,6 +235,8 @@ function toAdminDto(r: ProductRow): InsuranceProductDto {
     deductibleMotorbike: money(r.deductibleMotorbike),
     maxPayoutCar: money(r.maxPayoutCar),
     maxPayoutMotorbike: money(r.maxPayoutMotorbike),
+    dailyAmountCar: money(r.dailyAmountCar),
+    dailyAmountMotorbike: money(r.dailyAmountMotorbike),
     maxPayoutNoteVi: r.maxPayoutNoteVi,
     maxPayoutNoteEn: r.maxPayoutNoteEn,
     certificateUrlTemplate: r.certificateUrlTemplate,
@@ -242,5 +251,6 @@ function toAdminDto(r: ProductRow): InsuranceProductDto {
     claimHotline: r.claimHotline,
     serviceFeeEnabled: r.serviceFeeEnabled,
     serviceFeePercent: Number(r.serviceFeePercent),
+    agencyCommissionPercent: Number(r.agencyCommissionPercent),
   };
 }

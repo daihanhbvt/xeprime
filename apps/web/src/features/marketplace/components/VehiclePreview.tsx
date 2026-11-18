@@ -1,6 +1,7 @@
 'use client';
 
-import { Alert, Button, Empty, Skeleton } from 'antd';
+import { Alert, Button, Skeleton } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import Link from 'next/link';
 import { serviceTypeLabel } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
@@ -132,10 +133,9 @@ export function VehiclePreview() {
             }
           />
         ) : items.length === 0 ? (
-          <Empty
-            description={
-              serviceLabel ? t('emptyForService', { service: serviceLabel }) : t('empty')
-            }
+          <EmptyState
+            variant="empty"
+            title={serviceLabel ? t('emptyForService', { service: serviceLabel }) : t('empty')}
           />
         ) : (
           // Lưới responsive (4-6 cột tuỳ màn hình); mobile là slider thẻ-ở-giữa (bản vẽ mobile v2).

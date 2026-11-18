@@ -736,6 +736,12 @@ export const queryKeys = {
     remittanceLines: (id: string, params: QueryParams) =>
       ['platform-insurance', 'remittance', id, 'lines', params] as const,
     remittancePending: ['platform-insurance', 'remittance-pending'] as const,
+    /** Tổng quan tháng - thu khách, phải trả hãng, hoa hồng, phí thu hộ, nguồn phí (ADR 0097). */
+    overview: (month: string) => ['platform-insurance', 'overview', month] as const,
+    /** Ô tô và phí theo từng bậc (ADR 0097). */
+    vehicles: (params: QueryParams) => ['platform-insurance', 'vehicles', params] as const,
+    /** Đối chiếu biểu phí với hãng cho một xe — không cache (mỗi lần mở là một lượt hỏi). */
+    premiumCheck: (vehicleId: string) => ['platform-insurance', 'premium-check', vehicleId] as const,
   },
   /** Bảo hiểm phía khách/gian hàng - danh mục công khai + GCN của một đơn (ADR 0064). */
   insurance: {

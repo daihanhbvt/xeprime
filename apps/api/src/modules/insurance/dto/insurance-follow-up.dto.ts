@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { INSURANCE_POLICY_STATUS_VALUES } from '@xeprime/types';
+import {
+  INSURANCE_POLICY_STATUS_VALUES,
+  INSURANCE_PREMIUM_FALLBACK_REASON_VALUES,
+  INSURANCE_PREMIUM_SOURCE_VALUES,
+  type InsurancePremiumFallbackReason,
+  type InsurancePremiumSource,
+} from '@xeprime/types';
 
 /** Phí thực tế của một hợp đồng bảo hiểm — ngăn chi tiết admin (ADR 0091 điều 2). */
 export class InsurancePolicyPricingDto {
@@ -46,6 +52,28 @@ export class InsurancePolicyPricingDto {
     description: 'Mốc đã tự hoàn phí bảo hiểm + phí thu hộ vào Ví điểm khách (ADR 0091 điều 7)',
   })
   refundedAt!: string | null;
+
+  @ApiPropertyOptional({
+    enum: INSURANCE_PREMIUM_SOURCE_VALUES,
+    nullable: true,
+    description:
+      'Nguồn phí chốt lúc duyệt (ADR 0097): partner = hãng báo, formula = công thức dự phòng. null = hợp đồng trước ADR 0097',
+  })
+  premiumSource!: InsurancePremiumSource | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Phí theo công thức bậc lúc duyệt - để so với số hãng báo',
+  })
+  formulaPremiumAmount!: string | null;
+
+  @ApiPropertyOptional({
+    enum: INSURANCE_PREMIUM_FALLBACK_REASON_VALUES,
+    nullable: true,
+    description: 'Vì sao dùng công thức thay vì số hãng báo',
+  })
+  premiumQuoteFallbackReason!: InsurancePremiumFallbackReason | null;
 }
 
 /** Một hợp đồng cần người xử lý gấp (ADR 0091 điều 7). */

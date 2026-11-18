@@ -12,6 +12,7 @@ import { InsuranceFollowUpService } from './insurance-follow-up.service';
 import { InsuranceFollowUpSweeper } from './insurance-follow-up.sweeper';
 import { InsuranceRefundService } from './insurance-refund.service';
 import { InsuranceOfferService } from './insurance-offer.service';
+import { InsurancePremiumQuoteService } from './insurance-premium-quote.service';
 import { InsuranceProductsService } from './insurance-products.service';
 import { InsuranceReadService } from './insurance-read.service';
 import { InsuranceRemittanceController } from './insurance-remittance.controller';
@@ -23,6 +24,8 @@ import {
   type InsurancePartner,
 } from './partner/insurance-partner.port';
 import { PlatformInsuranceController } from './platform-insurance.controller';
+import { PlatformInsuranceInsightsController } from './platform-insurance-insights.controller';
+import { InsuranceInsightsService } from './insurance-insights.service';
 import { VehicleInsuranceController } from './vehicle-insurance.controller';
 import { StorageModule } from '../storage/storage.module';
 import { WalletModule } from '../wallet/wallet.module';
@@ -67,6 +70,8 @@ function micConfigFrom(config: ConfigService) {
     BookingInsuranceController,
     VehicleInsuranceController,
     InsuranceRemittanceController,
+    // Tổng quan tháng, danh sách xe, đối chiếu biểu phí với hãng (ADR 0097).
+    PlatformInsuranceInsightsController,
   ],
   providers: [
     InsuranceService,
@@ -76,6 +81,8 @@ function micConfigFrom(config: ConfigService) {
     InsuranceOfferService,
     // Điều kiện xe + báo giá bảo hiểm vật chất xe theo bậc (ADR 0088) — PricingModule đọc nó.
     InsuranceEligibilityService,
+    // Phí từng hợp đồng hỏi đối tác lúc duyệt, công thức là dự phòng (ADR 0097) — PricingModule đọc.
+    InsurancePremiumQuoteService,
     InsuranceCertificateService,
     // Báo khẩn + phí thực tế từng chuyến + lưu trước GCN (ADR 0091 điều 2, 6, 7).
     InsuranceFollowUpService,
@@ -83,6 +90,7 @@ function micConfigFrom(config: ConfigService) {
     InsuranceRefundService,
     // Bảng kê trả phí hãng (ADR 0088 điều 6) — writer duy nhất của insurance_premium_remittances.
     InsuranceRemittanceService,
+    InsuranceInsightsService,
     /*
      * Client MIC dùng chung cho API (tải GCN PDF). `null` khi không chạy adapter MIC thật — mọi
      * chỗ dùng nó phải xử lý nhánh đó (GCN giả lập không có PDF).
@@ -121,6 +129,7 @@ function micConfigFrom(config: ConfigService) {
     InsuranceProductsService,
     InsuranceOfferService,
     InsuranceEligibilityService,
+    InsurancePremiumQuoteService,
     InsuranceCertificateService,
     INSURANCE_PARTNER,
     MIC_CLIENT,

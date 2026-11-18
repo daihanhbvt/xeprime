@@ -73,6 +73,10 @@ giờ trả. Địa chỉ bên mua: sổ khách → địa chỉ nhận xe → �
 về hàng đợi admin; mạng/5xx ⇒ thử lại theo backoff có trần. Thân lỗi lưu chỉ gồm mã + câu báo.
 
 ### 6. Tiền: giữ hộ → phải trả → bảng kê tháng
+
+> **Sửa bởi [ADR 0097](0097-insurance-premium-from-partner-at-approval.md) (17/11/2026):** "tổng phí" của
+> bảng kê là phí MIC tính lúc cấp (`partner_premium_amount`), thiếu thì phí khách trả; % hoa hồng đại lý
+> mặc định đọc từ sản phẩm.
 Phí `IV` nằm trong khoản giữ chỗ (vế giữ hộ, ADR 0033 điều 4); hợp đồng `issued` ⇒ khoản phải trả hãng.
 Mỗi tháng admin lập **bảng kê** (`insurance_premium_remittances`, writer `InsuranceRemittanceService`):
 gom mọi hợp đồng `issued`/`claim` chưa kê, cấp trước hết tháng; phải trả = tổng phí − **hoa hồng đại lý**

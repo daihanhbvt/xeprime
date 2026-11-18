@@ -1,0 +1,71 @@
+/* Trang chính: thẻ hai cột. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-md);
+  /* Thẻ cùng hàng cao bằng nhau — mép dưới thẳng hàng. */
+  align-items: stretch;
+  min-width: 0;
+}
+
+/* Panel chi tiết: xếp dọc. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+  min-width: 0;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.card {
+  padding: var(--xp-space-md) var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  min-height: 24px;
+}
+
+.title {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
+}
+
+.scope {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.muted {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+}
+
+.full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

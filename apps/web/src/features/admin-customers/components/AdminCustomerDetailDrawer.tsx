@@ -1,7 +1,8 @@
 'use client';
 
 import { EyeOutlined, ReloadOutlined } from '@ant-design/icons';
-import { Alert, App, Button, Descriptions, Empty, Image, Segmented, Skeleton, Tag } from 'antd';
+import { Alert, App, Button, Descriptions, Image, Segmented, Skeleton, Tag } from 'antd';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -193,7 +194,7 @@ function Body({ customer }: { customer: AdminCustomerDetail }) {
 
       <div className={styles.sectionTitle}>{t('drawer.recentRequests')}</div>
       {customer.recentRequests.length === 0 ? (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('drawer.noRequests')} />
+        <EmptyState variant="empty" title={t('drawer.noRequests')} />
       ) : (
         <DataTable<AdminCustomerRequest>
           label={t('drawer.recentRequests')}
@@ -286,7 +287,7 @@ function LicenceSection({ userId }: { userId: string }) {
           }
         />
       ) : !shown ? (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('licence.none')} />
+        <EmptyState variant="empty" title={t('licence.none')} />
       ) : (
         <>
           {items.length > 1 ? (

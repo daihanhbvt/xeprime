@@ -432,10 +432,32 @@ function PolicyPricing({ policyId }: { policyId: string }) {
       label: t('tier'),
       value:
         p.tierMaxDays != null && p.tierPercent != null
-          ? t('tierValue', { days: p.tierMaxDays, percent: p.tierPercent })
+          ? t('tierValue', { days: p.tierMaxDays, percent: fmt.rate(p.tierPercent) })
           : empty,
     },
     { key: 'collected', label: t('collected'), value: fmt.money(p.premiumAmount) },
+    // Nguồn phí chốt lúc duyệt (ADR 0097): MIC báo, hay công thức bậc khi MIC lỗi/chậm.
+    {
+      key: 'source',
+      label: t('source'),
+      value: p.premiumSource ? (
+        <span className={styles.stack}>
+          <span>{t(`sources.${p.premiumSource}`)}</span>
+          {p.premiumQuoteFallbackReason ? (
+            <span className={styles.muted}>
+              {t(`fallbackReasons.${p.premiumQuoteFallbackReason}`)}
+            </span>
+          ) : null}
+          {p.formulaPremiumAmount && p.formulaPremiumAmount !== p.premiumAmount ? (
+            <span className={styles.muted}>
+              {t('formulaWas', { amount: fmt.money(p.formulaPremiumAmount) })}
+            </span>
+          ) : null}
+        </span>
+      ) : (
+        t('sourceUnrecorded')
+      ),
+    },
     {
       key: 'partner',
       label: t('partner'),

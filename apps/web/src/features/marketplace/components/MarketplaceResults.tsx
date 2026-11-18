@@ -1,6 +1,8 @@
 'use client';
 
-import { CloseOutlined, ReloadOutlined } from '@ant-design/icons';
+import { EmptyState } from '@/components/feedback/EmptyState';
+import { CtaButton } from './CtaButton';
+import { CloseOutlined } from '@ant-design/icons';
 import { Button, Select, Skeleton } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -41,7 +43,6 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 
 /** Số ô khung chờ — bằng đúng cỡ trang của API để lưới không đổi hình khi dữ liệu về. */
 const SKELETON_COUNT = 12;
-
 
 export function MarketplaceResults() {
   return (
@@ -312,16 +313,12 @@ function MarketplaceResultsContent() {
 
         {/* --- Thân kết quả: 4 trạng thái loại trừ nhau ----------------------------------- */}
         {initialError ? (
-          <div className={styles.stateBox} role="alert">
-            <div className={styles.stateIcon}>
-              <ReloadOutlined />
-            </div>
-            <h2 className={styles.stateTitle}>{t('loadErrorTitle')}</h2>
-            <p className={styles.stateDesc}>{errorMessage(initialError)}</p>
-            <Button type="primary" onClick={retryInitial}>
-              {tCommon('actions.retry')}
-            </Button>
-          </div>
+          <EmptyState
+            variant="error"
+            title={t('loadErrorTitle')}
+            description={errorMessage(initialError)}
+            onRetry={retryInitial}
+          />
         ) : isInitialLoading ? (
           <div className={styles.grid} aria-busy="true" aria-label={t('loadingLabel')}>
             {Array.from({ length: SKELETON_COUNT }, (_, i) => (
@@ -329,59 +326,49 @@ function MarketplaceResultsContent() {
             ))}
           </div>
         ) : listings.length === 0 ? (
+          // Trạng thái rỗng chung (Figma "States Page" `22306:67026`) - cùng component với mọi màn.
           filters.q ? (
-            <div className={styles.stateBox}>
-              {/* Hộp rỗng 160px của Figma "List - Scroll - Empty" (20063:60274). */}
-              {/* eslint-disable-next-line @next/next/no-img-element -- SVG tĩnh trang trí */}
-              <img
-                src="/illustrations/list-empty.svg"
-                alt=""
-                className={styles.stateArt}
-                aria-hidden
-              />
-              <h2 className={styles.stateTitle}>{t('emptyKeywordTitle', { q: filters.q })}</h2>
-              <p className={styles.stateDesc}>{t('emptyKeywordDesc')}</p>
-              <Button type="primary" onClick={() => setFilters({ q: undefined })}>
-                {t('clearKeyword')}
-              </Button>
-              {appliedChips.length > 0 ? (
-                <button type="button" className={styles.stateLink} onClick={clearFacets}>
-                  {tFilters('clear')}
-                </button>
-              ) : null}
-            </div>
+            <EmptyState
+              variant="no-results"
+              title={t('emptyKeywordTitle', { q: filters.q })}
+              description={t('emptyKeywordDesc')}
+              action={
+                <CtaButton onClick={() => setFilters({ q: undefined })}>
+                  {t('clearKeyword')}
+                </CtaButton>
+              }
+              {...(appliedChips.length > 0
+                ? {
+                    secondaryAction: (
+                      <button type="button" className={styles.stateLink} onClick={clearFacets}>
+                        {tFilters('clear')}
+                      </button>
+                    ),
+                  }
+                : {})}
+            />
           ) : hasActiveQuery ? (
-            <div className={styles.stateBox}>
-              {/* Hộp rỗng 160px của Figma "List - Scroll - Empty" (20063:60274). */}
-              {/* eslint-disable-next-line @next/next/no-img-element -- SVG tĩnh trang trí */}
-              <img
-                src="/illustrations/list-empty.svg"
-                alt=""
-                className={styles.stateArt}
-                aria-hidden
-              />
-              <h2 className={styles.stateTitle}>{t('emptyFilteredTitle')}</h2>
-              <p className={styles.stateDesc}>{t('emptyFilteredDesc')}</p>
-              <Button type="primary" onClick={clearFacets}>
-                {tFilters('clear')}
-              </Button>
-              <button type="button" className={styles.stateLink} onClick={() => setEditOpen(true)}>
-                {t('changeTimeOrPlace')}
-              </button>
-            </div>
+            <EmptyState
+              variant="no-results"
+              title={t('emptyFilteredTitle')}
+              description={t('emptyFilteredDesc')}
+              action={<CtaButton onClick={clearFacets}>{tFilters('clear')}</CtaButton>}
+              secondaryAction={
+                <button
+                  type="button"
+                  className={styles.stateLink}
+                  onClick={() => setEditOpen(true)}
+                >
+                  {t('changeTimeOrPlace')}
+                </button>
+              }
+            />
           ) : (
-            <div className={styles.stateBox}>
-              {/* Hộp rỗng 160px của Figma "List - Scroll - Empty" (20063:60274). */}
-              {/* eslint-disable-next-line @next/next/no-img-element -- SVG tĩnh trang trí */}
-              <img
-                src="/illustrations/list-empty.svg"
-                alt=""
-                className={styles.stateArt}
-                aria-hidden
-              />
-              <h2 className={styles.stateTitle}>{t('emptySystemTitle')}</h2>
-              <p className={styles.stateDesc}>{t('emptySystemDesc')}</p>
-            </div>
+            <EmptyState
+              variant="no-results"
+              title={t('emptySystemTitle')}
+              description={t('emptySystemDesc')}
+            />
           )
         ) : (
           <>

@@ -1,0 +1,32 @@
+/*
+ * Ô chọn chi nhánh (Figma Partner `24138:80354` "Tất cả chi nhánh"): nền trắng, viền xám 1px,
+ * bo 12, đệm 10 × 16, chữ 14 đậm, mũi tên 20. Dùng chung cho mọi màn gọi `BranchFilterSelect`.
+ */
+.select:global(.ant-select) {
+  height: 40px;
+  padding: 0 12px 0 16px;
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: 12px;
+  background: var(--xp-color-bg-container);
+  box-shadow: none;
+}
+
+.select:global(.ant-select:not(.ant-select-disabled):hover),
+.select:global(.ant-select-focused) {
+  border-color: var(--xp-color-border-strong);
+  box-shadow: 0 0 0 3px var(--xp-color-bg-muted);
+}
+
+.select :global(.ant-select-content),
+.select :global(.ant-select-selection-item) {
+  color: var(--xp-color-text-secondary);
+  font-size: 14px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 20px;
+}
+
+.select :global(.ant-select-suffix) {
+  margin-inline-start: 6px;
+  color: var(--xp-color-text-secondary);
+  font-size: 14px;
+}

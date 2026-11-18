@@ -5,7 +5,9 @@ import {
   INSURANCE_POLICY_STATUS_VALUES,
   INSURANCE_PRODUCT_KIND_VALUES,
   INSURANCE_QUEUE_STATUS_ANY,
+  INSURANCE_VEHICLE_ELIGIBILITY_FILTER_VALUES,
   type InsurancePolicyStatus,
+  type InsuranceVehicleEligibilityFilter,
   type InsuranceProductKind,
   type InsuranceQueueStatusFilter,
 } from '@xeprime/types';
@@ -30,10 +32,16 @@ import {
   finalizeRemittance,
   payRemittance,
   remittanceFiltersToParams,
+  checkInsurancePremium,
+  fetchInsuranceOverview,
+  fetchInsuranceVehicles,
+  vehicleFiltersToParams,
 } from './api';
 import type {
   CertificateFilters,
   CreateInsuranceRemittanceInput,
+  InsurancePremiumCheckInput,
+  InsuranceVehicleFilters,
   PayInsuranceRemittanceInput,
   RemittanceFilters,
   UpdateInsuranceProductInput,
@@ -234,6 +242,74 @@ export function usePayRemittance() {
 export function useDeleteRemittance() {
   const invalidate = useInvalidateInsurance();
   return useMutation({ mutationFn: deleteRemittance, onSuccess: invalidate });
+}
+
+// ── Tổng quan · xe · đối chiếu biểu phí (ADR 0097) ──────────────────────────
+
+/** Tháng đang xem của Tổng quan (`?month=YYYY-MM`) — bỏ trống = tháng hiện tại (giờ Việt Nam). */
+export function useOverviewMonth() {
+  return useUrlFilters((params) => {
+    const month = params.get('month');
+    return { month: month && /^d{4}-(0[1-9]|1[0-2])$/.test(month) ? month : undefined };
+  });
+}
+
+export function useInsuranceOverview(month: string) {
+  return useQuery({
+    queryKey: queryKeys.platformInsurance.overview(month),
+    queryFn: () => fetchInsuranceOverview(month),
+    placeholderData: keepPreviousData,
+  });
+}
+
+function parseVehicleFilters(params: URLSearchParams): InsuranceVehicleFilters {
+  const eligibility = params.get('eligibility');
+  return {
+    q: params.get('q')?.trim() || undefined,
+    eligibility: (INSURANCE_VEHICLE_ELIGIBILITY_FILTER_VALUES as readonly string[]).includes(
+      eligibility ?? '',
+    )
+      ? (eligibility as InsuranceVehicleEligibilityFilter)
+      : undefined,
+    page: positiveIntParam(params, 'page'),
+    limit: positiveIntParam(params, 'limit'),
+  };
+}
+
+export function useInsuranceVehicleFilters() {
+  return useUrlFilters(parseVehicleFilters);
+}
+
+export function useInsuranceVehicles(filters: InsuranceVehicleFilters) {
+  const params = vehicleFiltersToParams(filters);
+  return useQuery({
+    queryKey: queryKeys.platformInsurance.vehicles(params),
+    queryFn: () => fetchInsuranceVehicles(filters),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Đối chiếu biểu phí với hãng cho MỘT xe — một LƯỢT ĐỌC (không ghi gì), nên là query: mở hộp là hỏi,
+ * "Hỏi lại" là `refetch`. Không cache, không tự thử lại — mỗi lượt là một lần gọi API của đối tác.
+ * (Gọi `mutate` trong effect lúc mount bị StrictMode làm rơi observer ⇒ kẹt ở pending.)
+ */
+export function useVehiclePremiumCheck(vehicleId: string) {
+  return useQuery({
+    queryKey: queryKeys.platformInsurance.premiumCheck(vehicleId),
+    queryFn: () => checkInsurancePremium({ vehicleId }),
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/** Đối chiếu biểu phí với hãng — một lượt gọi ra ngoài, không cache (mỗi lần bấm là một lần hỏi). */
+export function usePremiumCheck() {
+  return useMutation({
+    mutationFn: (body: InsurancePremiumCheckInput) => checkInsurancePremium(body),
+  });
 }
 
 export type { InsurancePolicyStatus };

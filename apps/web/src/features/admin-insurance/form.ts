@@ -4,11 +4,13 @@ import {
   INSURANCE_PREMIUM_BASIS,
   INSURANCE_PRODUCT_KIND,
   INSURANCE_PRODUCT_LIMITS,
+  INSURANCE_REMITTANCE_LIMITS,
   INSURANCE_SERVICE_FEE_PERCENT_MAX,
   INSURANCE_VALUE_TIER_LIMITS,
   insurancePremiumTiersProblem,
   MONEY_STEP_VND,
 } from '@xeprime/types';
+import { tabErrorCounts } from '@/lib/form-tabs';
 import type { InsuranceProduct, UpdateInsuranceProductInput } from './types';
 
 /**
@@ -29,6 +31,8 @@ export const INSURANCE_MONEY_FIELDS = [
   'deductibleMotorbike',
   'maxPayoutCar',
   'maxPayoutMotorbike',
+  'dailyAmountCar',
+  'dailyAmountMotorbike',
 ] as const;
 
 /** Mẫu URL GCN hợp lệ: https, không khoảng trắng, có chỗ thay số chứng nhận. */
@@ -56,7 +60,15 @@ export interface InsuranceProductFormMessages {
   serviceFeePercent: (max: number) => string;
   /** Bật phí thu hộ mà % = 0. */
   serviceFeePercentRequired: string;
+  /** % hoa hồng đại lý ngoài 0..trần hoặc quá hai chữ số lẻ (ADR 0097). */
+  agencyCommissionPercent: (max: number) => string;
 }
+
+/** Trần % hoa hồng đại lý — cùng trần bảng kê và CHECK ở DB. */
+export const AGENCY_COMMISSION_PERCENT_MAX = INSURANCE_REMITTANCE_LIMITS.commissionPercentMax;
+
+const twoDecimals = (v: number | null | undefined) =>
+  v == null || Math.abs(Math.round(v * 100) - v * 100) < 1e-6;
 
 /** Phí thu hộ bảo hiểm chỉ có ở bảo hiểm VẬT CHẤT XE (ADR 0091 điều 3) — cùng luật CHECK ở DB. */
 export function offersServiceFee(product: Pick<InsuranceProduct, 'kind'> | null | undefined) {
@@ -94,6 +106,9 @@ export function buildInsuranceProductSchema(m: InsuranceProductFormMessages) {
     deductibleMotorbike: money(),
     maxPayoutCar: money(),
     maxPayoutMotorbike: money(),
+    /* Phí mỗi ngày của sản phẩm tính theo ngày (ADR 0098 — chuyển từ chính sách phí). */
+    dailyAmountCar: money(),
+    dailyAmountMotorbike: money(),
     maxPayoutNoteVi: note(),
     maxPayoutNoteEn: note(),
     partnerProductCode: text(INSURANCE_PRODUCT_LIMITS.partnerProductCode),
@@ -150,21 +165,96 @@ export function buildInsuranceProductSchema(m: InsuranceProductFormMessages) {
         INSURANCE_SERVICE_FEE_PERCENT_MAX,
         m.serviceFeePercent(INSURANCE_SERVICE_FEE_PERCENT_MAX),
       )
-      .test(
-        'decimals',
-        m.serviceFeePercent(INSURANCE_SERVICE_FEE_PERCENT_MAX),
-        (v) => v == null || Math.abs(Math.round(v * 100) - v * 100) < 1e-6,
-      )
+      .test('decimals', m.serviceFeePercent(INSURANCE_SERVICE_FEE_PERCENT_MAX), twoDecimals)
       .when('serviceFeeEnabled', {
         is: true,
         then: (s) => s.moreThan(0, m.serviceFeePercentRequired),
       }),
+    /*
+     * % hoa hồng đại lý theo hợp đồng đại lý với hãng (ADR 0097) — mặc định cho bảng kê tháng.
+     * 0..trần bảng kê, hai chữ số lẻ; cùng luật DTO + CHECK ở server.
+     */
+    agencyCommissionPercent: yup
+      .number()
+      .required(m.agencyCommissionPercent(AGENCY_COMMISSION_PERCENT_MAX))
+      .min(0, m.agencyCommissionPercent(AGENCY_COMMISSION_PERCENT_MAX))
+      .max(AGENCY_COMMISSION_PERCENT_MAX, m.agencyCommissionPercent(AGENCY_COMMISSION_PERCENT_MAX))
+      .test('decimals', m.agencyCommissionPercent(AGENCY_COMMISSION_PERCENT_MAX), twoDecimals),
   });
 }
 
 export type InsuranceProductFormValues = yup.InferType<
   ReturnType<typeof buildInsuranceProductSchema>
 >;
+
+/**
+ * Các TAB của form sửa sản phẩm và trường thuộc từng tab. Một lỗi ở tab đang khuất phải hiện số
+ * lỗi trên nhãn tab và kéo người dùng tới đó khi bấm lưu — không thì nút lưu "không làm gì cả".
+ */
+export const INSURANCE_PRODUCT_FORM_TAB = {
+  PRICING: 'pricing',
+  CONTENT: 'content',
+  PAYOUT: 'payout',
+  OPERATION: 'operation',
+} as const;
+export type InsuranceProductFormTab =
+  (typeof INSURANCE_PRODUCT_FORM_TAB)[keyof typeof INSURANCE_PRODUCT_FORM_TAB];
+
+export const INSURANCE_PRODUCT_FORM_TAB_FIELDS: Record<
+  InsuranceProductFormTab,
+  readonly (keyof InsuranceProductFormValues)[]
+> = {
+  pricing: [
+    'premiumTiers',
+    'dailyAmountCar',
+    'dailyAmountMotorbike',
+    'serviceFeeEnabled',
+    'serviceFeePercent',
+    'agencyCommissionPercent',
+  ],
+  content: ['nameVi', 'nameEn', 'coverageVi', 'coverageEn'],
+  payout: [
+    'deductibleCar',
+    'deductibleMotorbike',
+    'maxPayoutCar',
+    'maxPayoutMotorbike',
+    'maxPayoutNoteVi',
+    'maxPayoutNoteEn',
+  ],
+  operation: [
+    'isActive',
+    'displayOrder',
+    'partnerProductCode',
+    'certificateUrlTemplate',
+    'claimHotline',
+  ],
+};
+
+/**
+ * Tab nào có trong form của sản phẩm này. Tab giá có ở MỌI sản phẩm có cách tính phí: bậc giá trị
+ * xe, phí thu hộ, hoặc phí theo ngày (ADR 0098 — phí ngày chuyển từ chính sách phí về sản phẩm).
+ */
+export function insuranceProductFormTabs(
+  product: Pick<InsuranceProduct, 'premiumBasis' | 'kind'> | null | undefined,
+): InsuranceProductFormTab[] {
+  const pricing =
+    product?.premiumBasis === INSURANCE_PREMIUM_BASIS.VALUE_TIER ||
+    product?.premiumBasis === INSURANCE_PREMIUM_BASIS.DAILY ||
+    offersServiceFee(product);
+  return [
+    ...(pricing ? [INSURANCE_PRODUCT_FORM_TAB.PRICING] : []),
+    INSURANCE_PRODUCT_FORM_TAB.CONTENT,
+    INSURANCE_PRODUCT_FORM_TAB.PAYOUT,
+    INSURANCE_PRODUCT_FORM_TAB.OPERATION,
+  ];
+}
+
+/** Số trường đang lỗi của từng tab (`errors` của RHF — chỉ cần biết khoá nào có mặt). */
+export function insuranceProductFormTabErrors(
+  errors: Partial<Record<keyof InsuranceProductFormValues, unknown>>,
+): Record<InsuranceProductFormTab, number> {
+  return tabErrorCounts(INSURANCE_PRODUCT_FORM_TAB_FIELDS, errors);
+}
 
 /** Tiền trên dây là chuỗi số nguyên đồng; ô số trên form là `number`. Chỉ để HIỂN THỊ trong ô. */
 const toFormAmount = (value: string | null | undefined) => (value == null ? null : Number(value));
@@ -181,6 +271,8 @@ export function insuranceProductFormDefaults(
     deductibleMotorbike: toFormAmount(product.deductibleMotorbike),
     maxPayoutCar: toFormAmount(product.maxPayoutCar),
     maxPayoutMotorbike: toFormAmount(product.maxPayoutMotorbike),
+    dailyAmountCar: toFormAmount(product.dailyAmountCar),
+    dailyAmountMotorbike: toFormAmount(product.dailyAmountMotorbike),
     maxPayoutNoteVi: product.maxPayoutNoteVi ?? '',
     maxPayoutNoteEn: product.maxPayoutNoteEn ?? '',
     partnerProductCode: product.partnerProductCode,
@@ -191,6 +283,7 @@ export function insuranceProductFormDefaults(
     premiumTiers: (product.premiumTiers ?? []).map((t) => ({ ...t })),
     serviceFeeEnabled: product.serviceFeeEnabled,
     serviceFeePercent: product.serviceFeePercent,
+    agencyCommissionPercent: product.agencyCommissionPercent,
   };
 }
 
@@ -222,7 +315,11 @@ export function toUpdateInsuranceProductBody(
       : {}),
     // Phí thu hộ chỉ gửi cho vật chất xe — server từ chối bật nó ở sản phẩm khác (ADR 0091 điều 3).
     ...(offersServiceFee(product)
-      ? { serviceFeeEnabled: form.serviceFeeEnabled, serviceFeePercent: form.serviceFeePercent }
+      ? {
+          serviceFeeEnabled: form.serviceFeeEnabled,
+          serviceFeePercent: form.serviceFeePercent,
+          agencyCommissionPercent: form.agencyCommissionPercent,
+        }
       : {}),
   };
   for (const field of INSURANCE_MONEY_FIELDS) {

@@ -9,6 +9,7 @@ import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
   INSURANCE_POLICY_STATUS,
+  INSURANCE_PRODUCT_KIND,
   INSURANCE_PROVIDER,
   INSURANCE_REMITTANCE_LIMITS,
   INSURANCE_REMITTANCE_STATUS,
@@ -55,6 +56,10 @@ type RemittanceRow = Prisma.InsurancePremiumRemittanceGetPayload<object>;
  *
  *   tổng phí các hợp đồng đã cấp chưa kê (cấp trước hết tháng) − hoa hồng đại lý = phải trả hãng
  *
+ * "Phí" của một hợp đồng là số HÃNG TÍNH lúc cấp (`partner_premium_amount`, MIC `total_fee`) — hãng
+ * thu theo số của chính nó; khoản khách trả chỉ là phía thu. Hợp đồng không có số hãng (cấp trước
+ * ADR 0088, hoặc hãng không trả) rơi về số khách trả, và bảng kê đếm riêng các dòng đó (ADR 0097).
+ *
  * rồi chốt số (gửi hãng đối chiếu, xuất CSV) và ghi nhận chuyển khoản. Gom hợp đồng bằng
  * `updateMany … WHERE remittance_id IS NULL` trong CÙNG transaction tạo bảng kê: hai admin bấm cùng
  * lúc thì một hợp đồng chỉ rơi vào một bảng (cột là một FK đơn — không thể nằm ở hai nơi), và
@@ -94,17 +99,29 @@ export class InsuranceRemittanceService {
 
   /** Hợp đồng đã cấp mà chưa kê — để admin biết tháng nào còn việc. */
   async pending(): Promise<InsuranceRemittancePendingDto> {
-    const where = unremittedWhere(null);
-    const agg = await this.prisma.bookingInsurancePolicy.aggregate({
-      where,
-      _count: { _all: true },
-      _sum: { premiumAmount: true },
-      _min: { issuedAt: true },
-    });
+    const [rows, product] = await Promise.all([
+      this.prisma.$queryRaw<
+        Array<{ count: bigint; gross: Prisma.Decimal | null; oldest: Date | null }>
+      >`
+      SELECT COUNT(*) AS count,
+             SUM(COALESCE(partner_premium_amount, premium_amount)) AS gross,
+             MIN(issued_at) AS oldest
+        FROM booking_insurance_policies
+       WHERE status IN (${Prisma.join(PAYABLE_STATUSES)})
+         AND remittance_id IS NULL
+         AND issued_at IS NOT NULL`,
+      // % hoa hồng theo hợp đồng đại lý (ADR 0097) — giá trị mặc định của hộp lập bảng kê.
+      this.prisma.insuranceProduct.findFirst({
+        where: { provider: INSURANCE_PROVIDER.MIC, kind: INSURANCE_PRODUCT_KIND.VEHICLE_TRIP },
+        select: { agencyCommissionPercent: true },
+      }),
+    ]);
+    const row = rows[0];
     return {
-      policyCount: agg._count._all,
-      grossPremium: (agg._sum.premiumAmount ?? ZERO).toFixed(0),
-      oldestIssuedAt: agg._min.issuedAt?.toISOString() ?? null,
+      policyCount: Number(row?.count ?? 0),
+      grossPremium: new Prisma.Decimal(row?.gross ?? 0).toFixed(0),
+      oldestIssuedAt: row?.oldest?.toISOString() ?? null,
+      agencyCommissionPercent: (product?.agencyCommissionPercent ?? ZERO).toFixed(2),
     };
   }
 
@@ -171,7 +188,7 @@ export class InsuranceRemittanceService {
       [],
       ['Kỳ kê', monthKey(row.periodMonth)],
       ['Số hợp đồng', String(row.policyCount)],
-      ['Tổng phí', row.grossPremium.toFixed(0)],
+      ['Tổng phí MIC tính', row.grossPremium.toFixed(0)],
       [`Hoa hồng đại lý (${row.commissionPercent.toFixed(2)}%)`, row.commissionAmount.toFixed(0)],
       ['Phải trả', row.payableAmount.toFixed(0)],
     ];
@@ -233,11 +250,12 @@ export class InsuranceRemittanceService {
             message: 'Không có hợp đồng đã cấp nào chưa kê tới hết tháng này',
           });
         }
-        const sum = await tx.bookingInsurancePolicy.aggregate({
-          where: { remittanceId: id },
-          _sum: { premiumAmount: true },
-        });
-        const gross = (sum._sum.premiumAmount ?? ZERO).toFixed(0);
+        // Phải trả theo số HÃNG tính; hợp đồng thiếu số hãng rơi về số khách trả (ADR 0097).
+        const [sum] = await tx.$queryRaw<Array<{ gross: Prisma.Decimal | null }>>`
+          SELECT SUM(COALESCE(partner_premium_amount, premium_amount)) AS gross
+            FROM booking_insurance_policies
+           WHERE remittance_id = ${id}`;
+        const gross = new Prisma.Decimal(sum?.gross ?? 0).toFixed(0);
         const commissionAmount = insuranceRemittanceCommission(gross, dto.commissionPercent);
         const row = await tx.insurancePremiumRemittance.update({
           where: { id },
@@ -380,26 +398,43 @@ export class InsuranceRemittanceService {
   /** Tổng phí hãng tính + số GCN thử nghiệm của từng bảng kê — một câu gộp cho cả trang. */
   private async extrasFor(ids: string[]): Promise<Map<string, Extras>> {
     if (ids.length === 0) return new Map();
-    const [sums, tests] = await Promise.all([
+    const [sums, tests, missing] = await Promise.all([
       this.prisma.bookingInsurancePolicy.groupBy({
         by: ['remittanceId'],
         where: { remittanceId: { in: ids } },
-        _sum: { partnerPremiumAmount: true },
+        _sum: { partnerPremiumAmount: true, premiumAmount: true },
       }),
       this.prisma.bookingInsurancePolicy.groupBy({
         by: ['remittanceId'],
         where: { remittanceId: { in: ids }, isTest: true },
         _count: { _all: true },
       }),
+      this.prisma.bookingInsurancePolicy.groupBy({
+        by: ['remittanceId'],
+        where: { remittanceId: { in: ids }, partnerPremiumAmount: null },
+        _count: { _all: true },
+      }),
     ]);
     const map = new Map<string, Extras>();
-    for (const id of ids) map.set(id, { partnerPremiumTotal: ZERO, testPolicyCount: 0 });
+    for (const id of ids) {
+      map.set(id, {
+        partnerPremiumTotal: ZERO,
+        collectedPremiumTotal: ZERO,
+        partnerPremiumMissingCount: 0,
+        testPolicyCount: 0,
+      });
+    }
     for (const s of sums) {
-      if (s.remittanceId)
-        map.get(s.remittanceId)!.partnerPremiumTotal = s._sum.partnerPremiumAmount ?? ZERO;
+      if (!s.remittanceId) continue;
+      const e = map.get(s.remittanceId)!;
+      e.partnerPremiumTotal = s._sum.partnerPremiumAmount ?? ZERO;
+      e.collectedPremiumTotal = s._sum.premiumAmount ?? ZERO;
     }
     for (const t of tests) {
       if (t.remittanceId) map.get(t.remittanceId)!.testPolicyCount = t._count._all;
+    }
+    for (const m of missing) {
+      if (m.remittanceId) map.get(m.remittanceId)!.partnerPremiumMissingCount = m._count._all;
     }
     return map;
   }
@@ -407,6 +442,10 @@ export class InsuranceRemittanceService {
 
 interface Extras {
   partnerPremiumTotal: Prisma.Decimal;
+  /** Tổng phí khách đã trả của các hợp đồng trong bảng kê — để thấy chênh lệch thu ↔ trả. */
+  collectedPremiumTotal: Prisma.Decimal;
+  /** Số hợp đồng hãng không trả phí lúc cấp — các dòng này kê theo phí khách trả. */
+  partnerPremiumMissingCount: number;
   testPolicyCount: number;
 }
 
@@ -461,6 +500,8 @@ function toDto(r: RemittanceRow, extras?: Extras): InsuranceRemittanceDto {
     commissionAmount: r.commissionAmount.toFixed(0),
     payableAmount: r.payableAmount.toFixed(0),
     partnerPremiumTotal: (extras?.partnerPremiumTotal ?? ZERO).toFixed(0),
+    collectedPremiumTotal: (extras?.collectedPremiumTotal ?? ZERO).toFixed(0),
+    partnerPremiumMissingCount: extras?.partnerPremiumMissingCount ?? 0,
     testPolicyCount: extras?.testPolicyCount ?? 0,
     paidAmount: r.paidAmount?.toFixed(0) ?? null,
     paidAt: r.paidAt?.toISOString() ?? null,

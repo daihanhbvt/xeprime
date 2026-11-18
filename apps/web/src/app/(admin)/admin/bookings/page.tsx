@@ -2,7 +2,7 @@
 
 import { DatePicker, Select, Space } from 'antd';
 import { useTranslations } from 'next-intl';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState, type ReactNode } from 'react';
 import { BOOKING_DATE_FIELD } from '@xeprime/types';
 import { LoadingState } from '@/components/feedback/LoadingState';
@@ -12,14 +12,17 @@ import { CountTabs } from '@/components/navigation/CountTabs';
 import { FollowUpsView } from '@/features/admin-follow-ups/components/FollowUpsView';
 import {
   ADMIN_BOOKINGS_VIEW,
+  ADMIN_BOOKINGS_VIEW_HREF,
   ADMIN_BOOKINGS_VIEW_PARAM,
-  FOLLOW_UPS_HREF,
+  parseAdminBookingsView,
   type AdminBookingsView,
 } from '@/features/admin-follow-ups/constants';
 import { useNewFollowUpCount } from '@/features/admin-follow-ups/hooks/use-follow-ups';
+import { useTripSummary } from '@/features/admin-trips/hooks/use-admin-trips';
 import { ADMIN_BOOKINGS_DEFAULT_LIMIT } from '@/features/admin-bookings/api';
 import { AdminBookingDetailDrawer } from '@/features/admin-bookings/components/AdminBookingDetailDrawer';
 import { AdminBookingTable } from '@/features/admin-bookings/components/AdminBookingTable';
+import { PendingRequestsView } from '@/features/admin-bookings/components/PendingRequestsView';
 import { useAdminBookingFilters } from '@/features/admin-bookings/hooks/use-admin-booking-filters';
 import { useAdminBookingOptions } from '@/features/admin-bookings/hooks/use-admin-booking-options';
 import { useAdminBookings } from '@/features/admin-bookings/hooks/use-admin-bookings';
@@ -60,36 +63,37 @@ function AdminBookingsTabs() {
   const t = useTranslations('AdminFollowUps.tabs');
   const tPage = useTranslations('AdminBookings.page');
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const view: View =
-    searchParams.get(ADMIN_BOOKINGS_VIEW_PARAM) === VIEW.FOLLOW_UPS
-      ? VIEW.FOLLOW_UPS
-      : VIEW.BOOKINGS;
+  const view: View = parseAdminBookingsView(searchParams.get(ADMIN_BOOKINGS_VIEW_PARAM));
   const newCount = useNewFollowUpCount();
+  // Số trên tab "Chưa giữ chỗ" = hai hàng đợi trước khi có đơn của Vận hành chuyến — cùng nguồn
+  // đếm, nên con số ở hai màn luôn khớp nhau.
+  const summary = useTripSummary();
+  const pendingCount = summary.data
+    ? summary.data.queues.pending_approval.count + summary.data.queues.awaiting_hold.count
+    : undefined;
 
   const tabs = (
     <CountTabs<View>
       label={t('label')}
       value={view}
       items={[
+        { value: VIEW.PENDING, label: t('pending'), count: pendingCount },
         { value: VIEW.BOOKINGS, label: t('bookings') },
         { value: VIEW.FOLLOW_UPS, label: t('followUps'), count: newCount.data },
       ]}
-      onChange={(next) => router.replace(next === VIEW.FOLLOW_UPS ? FOLLOW_UPS_HREF : pathname)}
+      onChange={(next) => router.replace(ADMIN_BOOKINGS_VIEW_HREF[next])}
     />
   );
 
-  if (view === VIEW.FOLLOW_UPS) {
-    return (
-      <div>
-        <ManagePageHeader title={tPage('title')} />
-        {tabs}
-        <FollowUpsView />
-      </div>
-    );
-  }
-  return <AdminBookingsView tabs={tabs} />;
+  if (view === VIEW.BOOKINGS) return <AdminBookingsView tabs={tabs} />;
+  return (
+    <div>
+      <ManagePageHeader title={tPage('title')} />
+      {tabs}
+      {view === VIEW.PENDING ? <PendingRequestsView /> : <FollowUpsView />}
+    </div>
+  );
 }
 
 function AdminBookingsView({ tabs }: { tabs: ReactNode }) {

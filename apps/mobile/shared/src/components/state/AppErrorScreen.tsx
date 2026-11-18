@@ -42,6 +42,7 @@ function AppErrorBody({ error, onRetry }: AppErrorScreenProps) {
   return (
     <Screen scroll={false} centered>
       <ScreenMessage
+        kind="error"
         title={t('appError.title')}
         description={error.message}
         actionLabel={tCommon('actions.retry')}

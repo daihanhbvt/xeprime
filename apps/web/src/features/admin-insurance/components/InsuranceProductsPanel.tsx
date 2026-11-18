@@ -1,19 +1,19 @@
 'use client';
 
 import { EditOutlined } from '@ant-design/icons';
-import { Alert, Tag } from 'antd';
-import Link from 'next/link';
+import { Tag } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { STATUS_COLOR } from '@xeprime/types';
+import { INSURANCE_PREMIUM_BASIS, INSURANCE_PRODUCT_KIND, STATUS_COLOR } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
-import { ROUTES } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useLocalizedText } from '@/i18n/localized';
 import { useInsuranceProducts } from '../hooks';
 import type { InsuranceProduct } from '../types';
 import { InsuranceProductFormDialog } from './InsuranceProductFormDialog';
+import { PremiumCalculatorCard } from './PremiumCalculatorCard';
+import { premiumConfigOf } from '../premium-plan';
 import styles from './InsuranceProductsPanel.module.css';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 
@@ -30,6 +30,13 @@ export function InsuranceProductsPanel() {
   const localized = useLocalizedText();
   const { data, isError, isFetching, refetch } = useInsuranceProducts();
   const [editing, setEditing] = useState<InsuranceProduct | null>(null);
+  // Sản phẩm vật chất xe theo bậc (ADR 0088) — nguồn của thẻ tính thử.
+  const tierProduct = data?.find(
+    (p) =>
+      p.kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP &&
+      p.premiumBasis === INSURANCE_PREMIUM_BASIS.VALUE_TIER,
+  );
+  const tierConfig = tierProduct ? premiumConfigOf(tierProduct) : null;
 
   const perVehicle = (
     car: string | null | undefined,
@@ -55,6 +62,22 @@ export function InsuranceProductsPanel() {
             {LIST_SEPARATOR}
             {p.partnerProductCode}
           </span>
+          {/* Sản phẩm tính theo ngày: phí mỗi ngày theo loại xe (ADR 0098). */}
+          {p.premiumBasis === INSURANCE_PREMIUM_BASIS.DAILY ? (
+            <span className={styles.muted}>
+              {t('dailyRate', {
+                value: perVehicle(p.dailyAmountCar, p.dailyAmountMotorbike, t('notSold')),
+              })}
+            </span>
+          ) : null}
+          {p.kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP ? (
+            <span className={styles.muted}>
+              {t('money', {
+                serviceFee: p.serviceFeeEnabled ? `${fmt.rate(p.serviceFeePercent)}%` : t('off'),
+                commission: `${fmt.rate(p.agencyCommissionPercent)}%`,
+              })}
+            </span>
+          ) : null}
         </div>
       ),
     },
@@ -104,12 +127,6 @@ export function InsuranceProductsPanel() {
 
   return (
     <div className={styles.panel}>
-      <Alert
-        type="info"
-        showIcon
-        title={t('feePolicyNote')}
-        action={<Link href={ROUTES.ADMIN.FEE_POLICIES}>{t('openFeePolicies')}</Link>}
-      />
       <DataTable<InsuranceProduct>
         label={t('tableLabel')}
         columns={columns}
@@ -120,6 +137,7 @@ export function InsuranceProductsPanel() {
         error={isError && !data ? { title: t('loadError'), onRetry: () => void refetch() } : null}
         empty={{ title: t('empty.title'), description: t('empty.description') }}
       />
+      {tierConfig ? <PremiumCalculatorCard config={tierConfig} /> : null}
       <InsuranceProductFormDialog
         key={editing?.id ?? 'closed'}
         product={editing}

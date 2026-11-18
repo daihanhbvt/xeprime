@@ -1,0 +1,69 @@
+/* "Uy tín của gian hàng" — Figma `24138:80642`: các dòng cách 20, thanh 8 bo 4 nền gray-100. */
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.metricHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.label {
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.value {
+  color: var(--xp-color-success);
+  font-weight: var(--xp-font-weight-semibold);
+  white-space: nowrap;
+}
+
+.valueLow {
+  color: var(--xp-color-warning-high);
+}
+
+.track {
+  position: relative;
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--xp-color-bg-muted);
+}
+
+.fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--fill, 0%);
+  border-radius: 4px;
+  background: var(--xp-color-success-accent);
+}
+
+.fillLow {
+  background: var(--xp-color-warning-high);
+}
+
+.note {
+  margin: -12px 0 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+}
+
+.window {
+  color: var(--xp-color-text-placeholder);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}

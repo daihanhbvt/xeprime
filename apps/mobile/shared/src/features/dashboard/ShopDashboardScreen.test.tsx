@@ -274,7 +274,7 @@ describe('ShopDashboardScreen - không gọi API cho khối thiếu quyền', ()
     const view = await renderScreen([PERMISSION.VEHICLE_VIEW]);
 
     await view.findByText('Xe sẵn sàng');
-    await view.findByText('Xe trên chợ');
+    await view.findByText('Đội xe');
     expect(view.queryByText('Chờ giao xe')).toBeNull();
     expect(view.queryByText('Lịch giao & nhận xe')).toBeNull();
     expect(view.queryByText('Đơn mới')).toBeNull();
@@ -287,7 +287,8 @@ describe('ShopDashboardScreen - không gọi API cho khối thiếu quyền', ()
 
     await view.findByText('Lịch giao & nhận xe');
     expect(view.fleetSpy).not.toHaveBeenCalled();
-    expect(view.queryByText('Xe trên chợ')).toBeNull();
+    expect(view.queryByText('Đội xe')).toBeNull();
+    expect(view.queryByText('Xe sẵn sàng')).toBeNull();
   });
 
   it('thiếu `subscription.view`: không khối gói', async () => {
@@ -350,11 +351,11 @@ describe('ShopDashboardScreen - việc cần làm, KPI tháng và đích của t
     ).toBeTruthy();
   });
 
-  it('KPI so cùng kỳ: +20% cho đơn mới; kỳ trước 0 ⇒ "Chưa có số cùng kỳ để so", không 0%', async () => {
+  it('KPI so cùng kỳ: 20% cho đơn mới; kỳ trước 0 ⇒ "Chưa có số cùng kỳ để so", không 0%', async () => {
     const view = await renderScreen(FULL);
-    expect(await view.findByText('+20% so với cùng kỳ tháng trước')).toBeTruthy();
+    expect(await view.findByText('so với tháng trước (10)')).toBeTruthy();
     expect(view.getAllByText('Chưa có số cùng kỳ để so').length).toBeGreaterThan(0);
-    expect(view.getByText('+10 điểm so với cùng kỳ tháng trước')).toBeTruthy();
+    expect(view.getByText('10 điểm')).toBeTruthy();
   });
 
   it('ô "Chờ giao xe" mở màn Chờ giao xe; dòng lịch mở chi tiết đơn', async () => {

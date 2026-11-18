@@ -123,7 +123,16 @@
     "dayLabel": "{weekday}, {date}",
     "lateDays": "{count, plural, one {# day late} other {# days late}}",
     "lateHours": "{count, plural, one {# hour late} other {# hours late}}",
-    "lateMinutes": "{count, plural, one {# min late} other {# mins late}}"
+    "lateMinutes": "{count, plural, one {# min late} other {# mins late}}",
+    "upcoming": "Upcoming",
+    "detail": "Details",
+    "columns": {
+      "time": "Time",
+      "kind": "Type",
+      "vehicle": "Vehicle",
+      "status": "Status",
+      "actions": "Actions"
+    }
   },
   "kpi": {
     "title": "This month",
@@ -135,7 +144,7 @@
     "utilizationEmpty": "No cars in this period",
     "fleetHint": "{renting} rented · {maintenance} in maintenance",
     "titleVsPrevious": "{month, select, other {This month}} vs last month",
-    "report": "Reports"
+    "report": "Revenue report"
   },
   "change": {
     "up": "+{value, number}%",
@@ -166,12 +175,14 @@
     "tripsTab": "Bookings & trips {months} months",
     "revenue": "Revenue",
     "cost": "Costs",
-    "profit": "Profit"
+    "profit": "Profit",
+    "revenueSummaryTitle": "Income & expenses, last {days} days",
+    "legendTotal": "{label}: {count}"
   },
   "market": {
     "title": "Cars on the marketplace",
     "onMarket": "Visible to customers",
-    "inReview": "Awaiting XePrime review",
+    "inReview": "In review",
     "needsRevision": "Needs changes",
     "draft": "Not submitted",
     "manage": "Manage cars",
@@ -182,7 +193,8 @@
     "legendLabel": "{label}:"
   },
   "reputation": {
-    "title": "Reputation with customers",
+    "title": "Shop reputation",
+    "responseTimeEmpty": "No data yet",
     "window": "Last {days} days",
     "note": "Customers see exactly these figures on your car and shop pages. Reply to requests promptly and keep the trips you accept to keep them strong."
   },
@@ -236,6 +248,7 @@
   },
   "fleetPlan": {
     "title": "Fleet & plan",
-    "fleetTitle": "Fleet"
+    "fleetTitle": "Fleet",
+    "available": "Ready to rent"
   }
 }

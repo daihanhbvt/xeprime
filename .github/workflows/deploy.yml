@@ -208,6 +208,8 @@ jobs:
           NEXT_PUBLIC_WEB_PARTNER_URL: ${{ vars.WEB_PARTNER_URL || format('https://{0}', vars.PARTNER_DOMAIN) }}
           NEXT_PUBLIC_WEB_ADMIN_URL: ${{ vars.WEB_ADMIN_URL || format('https://{0}', vars.ADMIN_DOMAIN) }}
           NEXT_PUBLIC_APP_NAME: ${{ vars.NEXT_PUBLIC_APP_NAME }}
+          NEXT_PUBLIC_APP_STORE_URL: ${{ vars.NEXT_PUBLIC_APP_STORE_URL || 'https://apps.apple.com/vn/app/xeprime/id6831492287' }}
+          NEXT_PUBLIC_PLAY_STORE_URL: ${{ vars.NEXT_PUBLIC_PLAY_STORE_URL || 'https://play.google.com/store/apps/details?id=vn.xeprime.customerapp' }}
           NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
           NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
           NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
@@ -320,6 +322,8 @@ jobs:
           V_R2_PUBLIC_BASE_URL: ${{ vars.R2_PUBLIC_BASE_URL }}
           V_BACKUP_KEEP_DAYS: ${{ vars.BACKUP_KEEP_DAYS }}
           V_NEXT_PUBLIC_APP_NAME: ${{ vars.NEXT_PUBLIC_APP_NAME }}
+          V_NEXT_PUBLIC_APP_STORE_URL: ${{ vars.NEXT_PUBLIC_APP_STORE_URL }}
+          V_NEXT_PUBLIC_PLAY_STORE_URL: ${{ vars.NEXT_PUBLIC_PLAY_STORE_URL }}
           V_GEO_DAILY_CALL_BUDGET: ${{ vars.GEO_DAILY_CALL_BUDGET }}
           V_WITHDRAWAL_DUAL_CONTROL_MIN_AMOUNT: ${{ vars.WITHDRAWAL_DUAL_CONTROL_MIN_AMOUNT }}
           V_NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
@@ -625,6 +629,8 @@ jobs:
           kv NEXT_PUBLIC_WEB_PARTNER_URL "${V_WEB_PARTNER_URL:-https://${V_PARTNER_DOMAIN}}"
           kv NEXT_PUBLIC_WEB_ADMIN_URL "${V_WEB_ADMIN_URL:-https://${V_ADMIN_DOMAIN}}"
           kv NEXT_PUBLIC_APP_NAME "${V_NEXT_PUBLIC_APP_NAME:-XePrime}"
+          kv NEXT_PUBLIC_APP_STORE_URL "${V_NEXT_PUBLIC_APP_STORE_URL:-https://apps.apple.com/vn/app/xeprime/id6831492287}"
+          kv NEXT_PUBLIC_PLAY_STORE_URL "${V_NEXT_PUBLIC_PLAY_STORE_URL:-https://play.google.com/store/apps/details?id=vn.xeprime.customerapp}"
           kv NEXT_PUBLIC_FIREBASE_API_KEY "${V_NEXT_PUBLIC_FIREBASE_API_KEY:-}"
           kv NEXT_PUBLIC_FIREBASE_PROJECT_ID "${V_NEXT_PUBLIC_FIREBASE_PROJECT_ID:-}"
           kv NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN "${V_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-}"

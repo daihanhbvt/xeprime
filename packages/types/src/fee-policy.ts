@@ -93,8 +93,9 @@ export const FEE_POLICY_STATUS_META: Readonly<Record<FeePolicyStatus, StatusMeta
  */
 export const FEE_LINE = {
   /**
-   * `S` — PHÍ SÀN phía khách, XePrime hưởng: một số CỐ ĐỊNH mỗi đơn theo loại xe
-   * (`customerPlatformFee`), áp cho CẢ HAI tuyến, không phụ thuộc số ngày thuê.
+   * `S` — PHÍ SÀN phía khách, XePrime hưởng: số tiền theo loại xe (`customerPlatformFee`), áp cho
+   * CẢ HAI tuyến. Mỗi loại xe chọn tính MỘT LẦN mỗi chuyến hoặc × số ngày thuê
+   * (`customerPlatformFeeBasis`, ADR 0098) — theo ngày thì dòng mang `unitAmount` × `quantity`.
    *
    * Giữ khoá cũ `service_fee` dù cách tính đổi từ % sang cố định: người chịu (khách) và người hưởng
    * (XePrime) không đổi, cột `booking_holds.service_fee_amount` vẫn là cột của nó, và đổi khoá là
@@ -558,8 +559,13 @@ export interface FeePolicyValues {
   depositPercent: number;
   /** Sàn của `D` (VND), áp sau phép nhân %: `D = max(depositPercent% × B, depositMinAmount)`. */
   depositMinAmount: string;
-  /** `S` — phí sàn CỐ ĐỊNH mỗi đơn, phía khách, theo loại xe. Áp cho cả hai tuyến. */
+  /** `S` — phí sàn phía khách, theo loại xe. Áp cho cả hai tuyến. */
   customerPlatformFee: PerVehicleTypeAmount;
+  /**
+   * Cách tính `S` của từng loại xe (ADR 0098): `per_trip` = một lần mỗi chuyến, `per_day` = × số
+   * ngày thuê (mọi loại thuê, kể cả dài hạn). Vắng (snapshot trước 17/11/2026) = mỗi chuyến.
+   */
+  customerPlatformFeeBasis?: PerVehicleTypeFeeBasis;
   /** `H` — nấc hoa hồng lũy tiến theo ngày của TUYẾN HOA HỒNG, `fromDay` tăng dần từ 1. */
   ownerCommissionTiers: readonly OwnerCommissionTier[];
   /** Cổng khấu trừ thuế (ADR 0068). Tắt ⇒ `T = 0` ở mọi đơn. */
@@ -599,6 +605,28 @@ export interface FeePolicyValues {
 /** Một số tiền (VND string) cho TỪNG loại xe — thiếu một loại là lỗi biên dịch, không phải 0đ. */
 export type PerVehicleTypeAmount = Readonly<Record<VehicleType, string>>;
 
+/** Cách tính phí sàn `S` (ADR 0098): một lần mỗi chuyến, hay × số ngày thuê. */
+export const PLATFORM_FEE_BASIS = {
+  PER_TRIP: 'per_trip',
+  PER_DAY: 'per_day',
+} as const;
+export type PlatformFeeBasis = (typeof PLATFORM_FEE_BASIS)[keyof typeof PLATFORM_FEE_BASIS];
+export const PLATFORM_FEE_BASIS_VALUES: readonly PlatformFeeBasis[] =
+  Object.values(PLATFORM_FEE_BASIS);
+
+/** Cách tính phí sàn cho TỪNG loại xe. */
+export type PerVehicleTypeFeeBasis = Readonly<Record<VehicleType, PlatformFeeBasis>>;
+
+/** Cách tính phí sàn của một loại xe — snapshot cũ không có trường ⇒ mỗi chuyến. */
+export function platformFeeBasisFor(
+  basis: PerVehicleTypeFeeBasis | null | undefined,
+  vehicleType: VehicleType,
+): PlatformFeeBasis {
+  return basis?.[vehicleType] === PLATFORM_FEE_BASIS.PER_DAY
+    ? PLATFORM_FEE_BASIS.PER_DAY
+    : PLATFORM_FEE_BASIS.PER_TRIP;
+}
+
 /**
  * Bộ số mặc định của luồng tiền v2 — giá trị khởi tạo cho bản chính sách đầu tiên (seed/migration)
  * và form admin. Chính sách đang hiệu lực mới là nguồn sự thật; đừng đọc hằng này lúc tính tiền.
@@ -607,6 +635,10 @@ export const FEE_SCHEDULE_DEFAULTS = {
   depositPercent: 15,
   depositMinAmount: '0',
   customerPlatformFee: { [VEHICLE_TYPE.CAR]: '50000', [VEHICLE_TYPE.MOTORBIKE]: '30000' },
+  customerPlatformFeeBasis: {
+    [VEHICLE_TYPE.CAR]: PLATFORM_FEE_BASIS.PER_TRIP,
+    [VEHICLE_TYPE.MOTORBIKE]: PLATFORM_FEE_BASIS.PER_TRIP,
+  },
   ownerCommissionTiers: [
     { fromDay: 1, percent: 10 },
     { fromDay: 3, percent: 7 },
@@ -620,6 +652,7 @@ export const FEE_SCHEDULE_DEFAULTS = {
   | 'depositPercent'
   | 'depositMinAmount'
   | 'customerPlatformFee'
+  | 'customerPlatformFeeBasis'
   | 'ownerCommissionTiers'
   | 'vehicleProtectionDailyAmount'
   | 'tripInsuranceDailyAmount'
@@ -1020,15 +1053,26 @@ export function computeCustomerFees(input: {
   const insurer = p.insurancePartnerName ? { partnerName: p.insurancePartnerName } : {};
   const lines: FeeLine[] = [];
 
-  /* S — phí sàn cố định, cả hai tuyến. Admin đặt 0 cho một loại xe ⇒ không sinh dòng 0đ. */
-  const platformFee = amountFor(p.customerPlatformFee, vehicleType, 'phí sàn');
-  if (platformFee > 0) {
+  /*
+   * S — phí sàn, cả hai tuyến. Admin đặt 0 cho một loại xe ⇒ không sinh dòng 0đ. Theo ngày
+   * (ADR 0098) thì × số ngày thuê và dòng mang đơn giá × số ngày như dòng bảo hiểm theo ngày.
+   */
+  const platformFeeUnit = amountFor(p.customerPlatformFee, vehicleType, 'phí sàn');
+  if (platformFeeUnit > 0) {
+    const perDay =
+      platformFeeBasisFor(p.customerPlatformFeeBasis, vehicleType) === PLATFORM_FEE_BASIS.PER_DAY;
     lines.push({
       key: FEE_LINE.SERVICE_FEE,
       beneficiary: FEE_BENEFICIARY.PLATFORM,
       bearer: FEE_BEARER.CUSTOMER,
       percent: null,
-      amount: String(platformFee),
+      ...(perDay
+        ? {
+            unitAmount: String(platformFeeUnit),
+            quantity: days,
+            amount: String(platformFeeUnit * days),
+          }
+        : { amount: String(platformFeeUnit) }),
     });
   }
   /* H — hoa hồng lũy tiến, chỉ tuyến hoa hồng; tuyến gói 0% (không phải một nấc cấu hình). */
@@ -1409,6 +1453,7 @@ export type PublicFeePolicySnapshot = Pick<
   | 'freeCancelHours'
   | 'depositPercent'
   | 'customerPlatformFee'
+  | 'customerPlatformFeeBasis'
   | 'tripInsuranceEnabled'
   | 'tripInsuranceDailyAmount'
   | 'vehicleProtectionEnabled'
@@ -1483,6 +1528,9 @@ export function toPublicFeeBreakdown(fees: CustomerFeeBreakdown): PublicCustomer
       freeCancelHours: p.freeCancelHours,
       depositPercent: p.depositPercent,
       customerPlatformFee: p.customerPlatformFee,
+      ...(p.customerPlatformFeeBasis
+        ? { customerPlatformFeeBasis: p.customerPlatformFeeBasis }
+        : {}),
       tripInsuranceEnabled: p.tripInsuranceEnabled,
       tripInsuranceDailyAmount: p.tripInsuranceDailyAmount,
       vehicleProtectionEnabled: p.vehicleProtectionEnabled,

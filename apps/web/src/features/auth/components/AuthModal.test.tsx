@@ -187,14 +187,14 @@ describe('AuthModal - mở/đóng theo URL', () => {
     expect(await heading('Đăng ký')).toBeTruthy();
   });
 
-  it('cột ảnh: hai huy hiệu cửa hàng dẫn tới trang ứng dụng', async () => {
+  it('cột ảnh: hai huy hiệu cửa hàng mở thẳng trang app trên cửa hàng', async () => {
     renderModal('auth=login');
     await heading('Đăng nhập');
 
     const play = screen.getByRole('link', { name: /Google Play/ });
     const appStore = screen.getByRole('link', { name: /App Store/ });
-    expect(play.getAttribute('href')).toBe('/app');
-    expect(appStore.getAttribute('href')).toBe('/app');
+    expect(play.getAttribute('href')).toMatch(/^https:\/\/play\.google\.com\//);
+    expect(appStore.getAttribute('href')).toMatch(/^https:\/\/apps\.apple\.com\//);
   });
 });
 

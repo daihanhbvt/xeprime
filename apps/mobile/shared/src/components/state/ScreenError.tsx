@@ -24,7 +24,7 @@ export function ScreenError({ error, title, onRetry, messageFrom = 'code' }: Scr
   if (isOfflineError(error)) {
     return (
       <ScreenMessage
-        icon="cloud-offline-outline"
+        kind="error"
         title={tNetwork('errorTitle')}
         description={tNetwork('errorHint')}
         {...(onRetry ? { actionLabel: t('actions.retry'), onAction: onRetry } : {})}
@@ -34,7 +34,7 @@ export function ScreenError({ error, title, onRetry, messageFrom = 'code' }: Scr
 
   return (
     <ScreenMessage
-      icon="alert-circle-outline"
+      kind="error"
       title={title ?? t('states.error')}
       description={messageFrom === 'backend' ? getErrorMessage(error) : errorMessage(error)}
       {...(onRetry ? { actionLabel: t('actions.retry'), onAction: onRetry } : {})}

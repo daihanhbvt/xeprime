@@ -114,3 +114,13 @@
   line-height: var(--xp-line-height-body-sm);
   white-space: nowrap;
 }
+
+/* Nhãn cửa hàng là link: giữ màu chữ của nhãn, chỉ gạch chân khi rê. */
+a.store,
+a.store:hover {
+  color: inherit;
+}
+
+a.store:hover .storeText {
+  text-decoration: underline;
+}

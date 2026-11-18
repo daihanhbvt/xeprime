@@ -1,0 +1,172 @@
+/* Hai thẻ biểu đồ — Figma `24138:80476`. */
+.totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.tile {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: var(--xp-border-radius-control);
+}
+
+.tile_gold {
+  background: #fffcf5;
+}
+
+.tile_gray {
+  background: var(--xp-color-bg);
+}
+
+.tile_green {
+  background: var(--xp-color-success-bg);
+}
+
+.tileLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.tileValue {
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tile_green .tileValue {
+  color: var(--xp-color-success);
+}
+
+.chart {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Vùng cột 168 (thu chi) / 212 (đơn & chuyến), kẻ đáy gray-100. */
+.bars {
+  display: flex;
+  height: 168px;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 16px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+}
+
+.chartTall .bars {
+  height: 212px;
+}
+
+.barCol,
+.barColNarrow {
+  display: flex;
+  height: 100%;
+  flex: 0 1 72px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.barColNarrow {
+  flex-basis: 30px;
+}
+
+.barValue {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-label);
+  white-space: nowrap;
+}
+
+/* Chiều cao theo `--bar` (tỉ lệ 0-1 của vùng trừ hàng số 22px). */
+.bar {
+  width: 100%;
+  height: calc((100% - 22px) * var(--bar, 0));
+  min-height: 2px;
+  border-radius: 12px 12px 0 0;
+}
+
+.barColNarrow .bar {
+  border-radius: 6px 6px 0 0;
+}
+
+.barGold {
+  background: #f5c33b;
+}
+
+.barGreen {
+  background: var(--xp-color-success);
+}
+
+.pair {
+  display: flex;
+  height: 100%;
+  flex: 0 1 64px;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+}
+
+.axis {
+  display: flex;
+  justify-content: space-around;
+  gap: 16px;
+  padding: 12px 8px 0;
+}
+
+.axisLabel {
+  flex: 0 1 72px;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.axisGrouped .axisLabel {
+  flex-basis: 64px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+@media (max-width: 640px) {
+  .totals {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .bars,
+  .axis {
+    gap: 8px;
+  }
+}

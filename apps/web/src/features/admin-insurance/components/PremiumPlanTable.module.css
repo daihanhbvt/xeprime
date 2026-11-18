@@ -1,0 +1,37 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.strong {
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.muted {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.amount {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.earn {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--xp-color-success);
+}
+
+.ok {
+  color: var(--xp-color-success);
+  white-space: nowrap;
+}
+
+.warn {
+  color: var(--xp-color-warning);
+  white-space: nowrap;
+}
