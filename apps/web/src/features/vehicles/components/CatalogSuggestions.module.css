@@ -11,21 +11,27 @@
   font-size: var(--xp-font-size-body-sm);
 }
 
+.inlineHintText {
+  min-width: 0;
+}
+
 .rent {
+  /* Một dòng chữ nhỏ ngay dưới ô (18/11/2026) - không còn hộp nền xám to hơn chính ô nhập. */
   display: flex;
   flex-direction: column;
   gap: 2px;
   margin-top: var(--xp-space-xs);
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-muted);
 }
 
 .rentRange {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--xp-space-xs);
   margin: 0;
-  color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 18px;
 }
 
 /* Nút chữ căn trái cùng mép chữ — AntD đệm ngang mặc định cho nút link. */
@@ -33,4 +39,6 @@
   align-self: flex-start;
   height: auto;
   padding: 0;
+  font-size: inherit;
+  line-height: inherit;
 }

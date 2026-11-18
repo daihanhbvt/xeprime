@@ -3,33 +3,15 @@
 import { Form, Input } from 'antd';
 import type { ReactNode } from 'react';
 
-import styles from './LockedValueField.module.css';
+import { FieldLockButton, LOCKED_FIELD_CLASS } from '@/components/form/field-lock';
+import { useHelpAsTip } from '@/components/form/help-as-tip';
 
 /**
- * Nút bút NẰM TRONG ô đang khoá — một kiểu cho mọi ô tự điền của form xe (thông số theo mẫu xe,
- * biển số / màu / số khung / số máy đọc từ cà vẹt — ADR 0102). Bấm là mở riêng ô đó để sửa.
- */
-export function LockedEditButton({
-  ariaLabel,
-  onClick,
-}: {
-  ariaLabel: string;
-  onClick: () => void;
-}) {
-  return (
-    <button type="button" className={styles.editField} onClick={onClick} aria-label={ariaLabel}>
-      <span className={styles.editGlyph} aria-hidden="true" />
-    </button>
-  );
-}
-
-/** Lớp của ô khoá (readOnly, nền xám nhạt) — dùng khi nơi gọi tự dựng `Input`. */
-export const LOCKED_INPUT_CLASS = styles.lockedInput;
-
-/**
- * Ô ĐANG KHOÁ của một trường tự điền: chỉ đọc (không disabled — chữ vẫn đậm, rõ), giá trị đã định
- * dạng, bút trong ô để mở. Nơi gọi vẽ ô nhập thật (ô số, ô chọn, thẻ kiểu dáng…) sau khi mở khoá —
- * khoá hiện CÙNG một hình dạng dù ô gốc là loại gì.
+ * Ô ĐANG KHOÁ thay chỗ một ô KHÔNG có trạng thái chỉ đọc (lưới thẻ ảnh kiểu dáng ở màn sửa xe):
+ * chỉ đọc, giá trị đã định dạng, bút trong ô để mở.
+ *
+ * Ô nhập thường (chữ, số, ô chọn) KHÔNG dùng component này — chúng khoá tại chỗ qua prop `lock`
+ * (`components/form/field-lock.tsx`), để đổi khoá ↔ mở không gỡ rồi dựng lại ô (18/11/2026).
  */
 export function LockedValueField({
   id,
@@ -52,15 +34,17 @@ export function LockedValueField({
   editLabel: string;
   onUnlock: () => void;
 }) {
+  // Wizard thêm xe: "Theo dữ liệu mẫu xe" thành ⓘ cạnh nhãn, không đẩy lệch hàng lưới.
+  const tip = useHelpAsTip(label, help);
   return (
-    <Form.Item label={label} required={required} help={help} htmlFor={id}>
+    <Form.Item label={tip.label} required={required} help={tip.help} htmlFor={id}>
       <Input
         id={id}
         value={value}
         readOnly
         aria-label={fieldLabel}
-        className={styles.lockedInput}
-        suffix={<LockedEditButton ariaLabel={editLabel} onClick={onUnlock} />}
+        className={LOCKED_FIELD_CLASS}
+        suffix={<FieldLockButton ariaLabel={editLabel} onClick={onUnlock} />}
       />
     </Form.Item>
   );

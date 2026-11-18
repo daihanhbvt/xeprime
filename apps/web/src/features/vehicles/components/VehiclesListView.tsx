@@ -13,8 +13,6 @@ import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ALL_FILTER } from '@/constants/filters';
 import {
   ROUTES,
-  VEHICLE_REGISTRATION_SOURCE,
-  listYourVehicleRegisterPath,
   ownerVehiclePath,
   vehiclePath,
 } from '@/constants/routes';
@@ -122,11 +120,8 @@ function VehiclesListBody({ scope }: { scope: VehicleFiltersScope }) {
   }
 
   function goCreate() {
-    router.push(
-      isOwner
-        ? listYourVehicleRegisterPath(VEHICLE_REGISTRATION_SOURCE.ACCOUNT)
-        : ROUTES.MANAGE.VEHICLE_NEW,
-    );
+    // MỘT wizard thêm xe cho hai tuyến (18/11/2026) - trang tự ẩn phần không thuộc tuyến hoa hồng.
+    router.push(ROUTES.MANAGE.VEHICLE_NEW);
   }
 
   /** "Lịch" của một xe — cùng một đích với nút ở Hồ sơ xe (`vehicleSchedulePath`). */

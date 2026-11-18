@@ -584,8 +584,13 @@
   flex-shrink: 0;
 }
 
-/* Mọi ô của lưới ảnh thêm xe đều bắt buộc (góc ảnh + cà vẹt) - dấu * đỏ như ô nhập bắt buộc. */
-.compactLabel::after {
+/* Các góc ảnh xe bắt buộc - dấu * đỏ như ô nhập bắt buộc. Cà vẹt TUỲ CHỌN (ADR 0100) - không dấu. */
+.compactLabel:not(.compactLabelOptional)::after {
   content: ' *';
-  color: #d92d20;
+  color: var(--xp-color-error, #d92d20);
+}
+
+/* Nhãn ô ảnh TUỲ CHỌN (cà vẹt) - không mang dấu * của `.compactLabel::after`. */
+.compactLabelOptional {
+  flex-shrink: 0;
 }

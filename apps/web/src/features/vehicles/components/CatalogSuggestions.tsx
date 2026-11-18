@@ -30,9 +30,13 @@ export function useVehicleCatalogSuggestion(params: {
 export function CatalogValueHint({
   value,
   onApply,
+  currentValue,
 }: {
   value: VehicleDataValue;
-  onApply: (amount: number) => void;
+  /** Vắng = không có nút "Dùng" (wizard thêm xe đã TỰ ĐIỀN giá trị xe - chỉ còn dòng đối chiếu). */
+  onApply?: (amount: number) => void;
+  /** Giá trị đang trong ô - đã bằng giá tham khảo thì không mời "Dùng" nữa. */
+  currentValue?: number | null;
 }) {
   const t = useTranslations('Vehicles.form.catalog');
   const fmt = useAppFormat();
@@ -40,17 +44,21 @@ export function CatalogValueHint({
     value.age > 0
       ? t('valueBasis', { age: value.age, percent: value.residualPercent })
       : t('valueBasisNew');
+  const text = `${t('valueHint', { amount: fmt.money(value.amount) })} ${basis}`;
   return (
-    <span className={styles.inlineHint}>
-      {t('valueHint', { amount: fmt.money(value.amount) })} {basis}{' '}
+    // `title`: lưới thêm xe cắt dòng này về MỘT dòng (không đẩy hàng dưới) - rê chuột xem đủ.
+    <span className={styles.inlineHint} title={text}>
+      <span className={styles.inlineHintText}>{text}</span>{' '}
+      {!onApply || Number(value.amount) === currentValue ? null : (
       <Button
         type="link"
         size="small"
         className={styles.link}
-        onClick={() => onApply(Number(value.amount))}
+        onClick={() => onApply?.(Number(value.amount))}
       >
         {t('useValue')}
       </Button>
+      )}
     </span>
   );
 }
@@ -63,11 +71,14 @@ export function CatalogRentHint({
   suggestion,
   field,
   onApply,
+  currentValue,
   fallback = null,
 }: {
   suggestion: VehicleDataSuggestion | null;
   field: VehicleDataRentField;
   onApply?: (price: number) => void;
+  /** Giá đang nằm trong ô - đã bằng giá tham khảo (vd vừa tự điền) thì không mời "Dùng" nữa. */
+  currentValue?: number | null;
   fallback?: ReactNode;
 }) {
   const t = useTranslations('Vehicles.form.catalog');
@@ -81,7 +92,7 @@ export function CatalogRentHint({
           {rent.referenceBasis === RENT_REFERENCE_BASIS.MODEL
             ? t('rentReferenceModel', { price: fmt.money(rent.reference) })
             : t('rentReference', { price: fmt.money(rent.reference) })}
-          {onApply ? (
+          {onApply && Number(rent.reference) !== currentValue ? (
             <Button
               type="link"
               size="small"

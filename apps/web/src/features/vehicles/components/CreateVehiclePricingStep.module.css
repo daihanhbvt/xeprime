@@ -386,6 +386,9 @@
 }
 
 .stack :global(.ant-form-item-label > label) {
+  /* AntD đặt nhãn cao 32px - thừa ~12px giữa nhãn và ô (nhất là nhãn có dấu ⓘ). */
+  height: auto;
+  min-height: 20px;
   color: #414651;
   font-size: 14px;
   font-weight: 500;
