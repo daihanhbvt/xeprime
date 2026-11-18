@@ -202,6 +202,9 @@ export const queryKeys = {
     /** Ô 'Phiên bản' của form xe (ADR 0090) - khoá theo năm sản xuất + xe chuẩn đang gắn. */
     variants: (modelId: string, year: number | null, includeId: string) =>
       ['catalog', 'variants', modelId, year, includeId] as const,
+    /** Ô 'Mẫu xe' gộp dòng + phiên bản của form đăng xe (ADR 0101) - mọi xe chuẩn của một hãng. */
+    brandVariants: (vehicleType: string, brandKey: string, includeId: string) =>
+      ['catalog', 'brand-variants', vehicleType, brandKey, includeId] as const,
     /** Gợi ý khi đăng/sửa xe: thông số, giá trị xe, giá thuê tham khảo. */
     suggestion: (params: QueryParams) => ['catalog', 'suggestion', params] as const,
   },

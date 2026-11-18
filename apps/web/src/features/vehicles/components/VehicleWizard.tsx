@@ -3,7 +3,7 @@
 import { CheckOutlined } from '@ant-design/icons';
 import { Card, Steps } from 'antd';
 import { useIsDesktop, useIsMobile } from '@/hooks/use-media-query';
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import styles from './VehicleWizard.module.css';
 
 export interface WizardStep {
@@ -55,7 +55,8 @@ interface VehicleWizardProps {
  * Vỏ wizard tạo xe - Figma `24352:70390` (Thêm xe mới, 17/11/2026).
  *
  * Desktop (>1024px) ba cột: thẻ BƯỚC dọc bên trái (số bước + dòng phụ), nội dung ở giữa, cột phụ
- * bên phải; hàng nút nằm DƯỚI cả ba cột, dồn phải. Tablet/mobile: thanh bước nằm ngang trên đầu,
+ * bên phải; hàng nút ở cuối cột phải (không có cột phải thì dưới cả hai cột, dồn phải), cột giữa
+ * tự cuộn và kéo tới sát đáy màn hình. Tablet/mobile: thanh bước nằm ngang trên đầu,
  * cột phụ xuống dưới nội dung, hàng nút dính đáy màn hình.
  *
  * Dùng `Steps` của AntD thay vì tự vẽ: nó lo sẵn `aria-current`, thứ tự đọc và trạng thái hoàn
@@ -121,17 +122,65 @@ export function VehicleWizard({
     </Card>
   );
 
+  /*
+   * Desktop có cột phụ: hàng nút nằm CUỐI cột phải, ngay dưới "Sẵn sàng gửi duyệt" (người dùng chốt
+   * 18/11/2026) - nút đi tiếp đứng cạnh thứ cho biết đã đủ chưa. Tablet/mobile (cột phụ xuống dưới
+   * nội dung) giữ hàng nút dính đáy màn hình.
+   */
+  const footerInAside = Boolean(aside) && isDesktop;
+  const { mainRef, mainStyle } = useMainFillsViewport(footerInAside);
+
   return (
-    <div className={styles.root}>
+    <div className={footerInAside ? styles.rootFooterInAside : styles.root}>
       <div className={aside ? styles.layoutWithAside : styles.layout}>
         {/* Đệm của thẻ đặt ở BODY qua CSS module (xem `.stepperCard`) - không ép inline. */}
         <Card className={styles.stepperCard}>{stepper}</Card>
-        <div className={styles.main}>{body}</div>
-        {aside ? <aside className={styles.aside}>{aside}</aside> : null}
+        <div ref={mainRef} className={styles.main} style={mainStyle}>
+          {body}
+        </div>
+        {aside ? (
+          <aside className={styles.aside}>
+            {aside}
+            {footerInAside ? <div className={styles.asideFooter}>{footer}</div> : null}
+          </aside>
+        ) : null}
       </div>
-      <div className={styles.footer}>{footer}</div>
+      {footerInAside ? null : <div className={styles.footer}>{footer}</div>}
     </div>
   );
+}
+
+/**
+ * Hàng nút đã vào cột phải ⇒ cột giữa kéo tới sát đáy màn hình. Đỉnh của cột giữa phụ thuộc thứ
+ * đứng trên nó (thanh đầu trang, tiêu đề trang, dải cảnh báo gói…) nên ĐO thay vì đoán một hằng số
+ * - hằng số đoán để lại một dải trống dưới đáy (người dùng báo 18/11/2026). Giá trị chỉ biết lúc
+ * chạy nên đi qua CSS custom property (ngoại lệ duy nhất của luật không inline style).
+ */
+function useMainFillsViewport(enabled: boolean) {
+  const mainRef = useRef<HTMLDivElement>(null);
+  const [top, setTop] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    const el = mainRef.current;
+    if (!enabled || !el) {
+      setTop(null);
+      return;
+    }
+    const measure = () => setTop(Math.round(el.getBoundingClientRect().top + window.scrollY));
+    measure();
+    window.addEventListener('resize', measure);
+    /* Nội dung phía trên đổi cao (dải cảnh báo hiện/ẩn) ⇒ đỉnh cột giữa dời theo. */
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(document.body);
+    return () => {
+      window.removeEventListener('resize', measure);
+      observer?.disconnect();
+    };
+  }, [enabled]);
+
+  const mainStyle =
+    top === null ? undefined : ({ '--wizard-main-top': `${top}px` } as CSSProperties);
+  return { mainRef, mainStyle };
 }
 
 /** Vòng tròn của một bước - ba trạng thái theo Figma. Trang trí thuần, AntD lo phần đọc màn hình. */

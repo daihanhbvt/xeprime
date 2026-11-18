@@ -37,6 +37,8 @@ import {
   CreateVehicleConfirmDialog,
   type CreateConfirmValues,
 } from '@/features/vehicles/components/CreateVehicleConfirmDialog';
+import { useComposedVehicleName } from '@/features/vehicles/hooks/use-composed-vehicle-name';
+import { useApplyRegistrationReading } from '@/features/vehicles/hooks/use-registration-autofill';
 import {
   RegistrationFieldsBlock,
   RegistrationPhotoTile,
@@ -281,6 +283,8 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
    * nên người chưa có gian hàng mở gian hàng ngay trước lượt tải, y như tấm ảnh xe đầu tiên.
    */
   const [regCapture, setRegCapture] = useState<RegistrationCaptureState>(EMPTY_REGISTRATION);
+  // Lượt đọc cà vẹt mới ⇒ điền biển số + màu sơn (ADR 0102).
+  useApplyRegistrationReading(regCapture.reading, setValue as never);
   const [regShowErrors, setRegShowErrors] = useState(false);
   const plateNumber = useWatch({ control, name: 'plateNumber' });
   const regCheck = checkRegistration(regCapture, plateNumber);
@@ -320,7 +324,7 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
       // Ảnh cà vẹt chỉ cần CÓ (máy đọc ra hay không không tính); tên chủ xe / số khung / số máy là
       // ô nhập của mục thông tin (18/11/2026).
       info:
-        Boolean(values.name?.trim()) &&
+        Boolean(values.vehicleCatalogModelId) &&
         Object.keys(regCheck.errors).every((key) => key === 'photo') &&
         missingEnergyFields(values).length === 0 &&
         !gaps.some((gap) => REQUIREMENT_STEP[gap] === 'info' && gap !== PUBLISH_REQUIREMENT.PHOTOS),
@@ -328,8 +332,11 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
       features: (values.features ?? []).length > 0 || Boolean(values.description?.trim()),
     };
   }, [watched, regCheck.errors]);
+  // Không hỏi tên (ADR 0102): xem trước + hộp xác nhận hiện đúng tên server sẽ ghép.
+  const autoName = useComposedVehicleName(watched);
   const previewValues: CreatePreviewValues = {
     ...watched,
+    name: autoName,
     discountPercent: watched.discountEnabled ? (watched.discountPercent ?? null) : null,
   };
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -634,6 +641,7 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
 
   const confirmValues: CreateConfirmValues = {
     ...getValues(),
+    name: autoName,
     serviceTypes: [...QUICK_VEHICLE_FIXED.serviceTypes],
     sourceType: QUICK_VEHICLE_FIXED.sourceType,
     discountPercent: getValues('discountEnabled') ? getValues('discountPercent') : null,
@@ -723,6 +731,7 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
                     control={control}
                     setValue={setValue}
                     vehicleType={vehicleType}
+                    registrationReading={regCapture.reading}
                   />
                 </div>
               </WizardSection>

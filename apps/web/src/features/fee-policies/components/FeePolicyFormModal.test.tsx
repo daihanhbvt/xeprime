@@ -64,8 +64,15 @@ describe('FeePolicyFormModal - tạo bản nháp', () => {
     expect((screen.getByLabelText('Phí sàn - Ô tô') as HTMLInputElement).value).toBe('50.000');
     expect((screen.getByLabelText('Phí sàn - Xe máy') as HTMLInputElement).value).toBe('30.000');
     expect(
-      (screen.getByLabelText('Phần giữ chỗ của chủ xe (% tiền thuê)') as HTMLInputElement).value,
-    ).toBe('15');
+      (
+        screen.getByLabelText(
+          'Tiền thuê trả trước (% tiền thuê, đã gồm hoa hồng)',
+        ) as HTMLInputElement
+      ).value,
+    ).toBe('30');
+    // Nấc mặc định ADR 0101: ngày 8-30 là 5%, từ ngày 31 là 3%.
+    expect((screen.getByLabelText('Nấc 3: % giá thuê') as HTMLInputElement).value).toBe('5');
+    expect((screen.getByLabelText('Nấc 4: % giá thuê') as HTMLInputElement).value).toBe('3');
     expect((screen.getByLabelText('Nấc 2: từ ngày') as HTMLInputElement).value).toBe('3');
     // % hoa hồng hiện gọn: "10", không "10.0".
     expect((screen.getByLabelText('Nấc 1: % giá thuê') as HTMLInputElement).value).toBe('10');
@@ -127,14 +134,14 @@ describe('FeePolicyFormModal - tạo bản nháp', () => {
     const body = create.mutateAsync.mock.calls[0]![0];
     expect(body).toMatchObject({
       name: 'Luồng tiền v2',
-      depositPercent: 15,
+      depositPercent: 30,
       depositMinAmount: '0',
       customerPlatformFee: { car: '50000', motorbike: '30000' },
       ownerCommissionTiers: [
         { fromDay: 1, percent: 10 },
         { fromDay: 3, percent: 7 },
-        { fromDay: 8, percent: 3 },
-        { fromDay: 31, percent: 0 },
+        { fromDay: 8, percent: 5 },
+        { fromDay: 31, percent: 3 },
       ],
       vehicleProtectionEnabled: false,
       tripInsuranceEnabled: false,

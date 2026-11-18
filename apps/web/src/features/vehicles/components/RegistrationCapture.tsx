@@ -31,6 +31,7 @@ import {
   type RegistrationCaptureState,
   type RegistrationFields,
 } from '../registration-capture';
+import { LOCKED_INPUT_CLASS, LockedEditButton } from './LockedValueField';
 import styles from './RegistrationCapture.module.css';
 
 export interface RegistrationCaptureProps {
@@ -326,17 +327,13 @@ export function RegistrationFieldsBlock({
                   placeholder={t('scanPlaceholder')}
                   autoComplete="off"
                   readOnly={locked}
-                  className={locked ? styles.lockedInput : undefined}
+                  className={locked ? LOCKED_INPUT_CLASS : undefined}
                   suffix={
                     locked ? (
-                      <button
-                        type="button"
-                        className={styles.editField}
+                      <LockedEditButton
+                        ariaLabel={t('editField', { field: t(`fields.${field}`) })}
                         onClick={() => unlock(field)}
-                        aria-label={t('editField', { field: t(`fields.${field}`) })}
-                      >
-                        <span className={styles.editGlyph} aria-hidden="true" />
-                      </button>
+                      />
                     ) : undefined
                   }
                 />

@@ -59,6 +59,7 @@ const FULL_READING = {
   holderAddress: null,
   chassisNumber: 'RL4B29F30K1234567',
   engineNumber: '2NRX123456',
+  color: 'Trắng',
 };
 // jsdom không có canvas — bỏ bước nén ảnh, trả nguyên tệp.
 vi.mock('@/features/driver-licence/prepare-licence-image', () => ({
@@ -170,6 +171,14 @@ async function uploadRegistration() {
   return region;
 }
 
+/** Hãng + mẫu xe — thay ô "Tên xe" đã gỡ: server ghép tên từ đây (ADR 0102). */
+async function pickModel() {
+  fireEvent.mouseDown(screen.getByLabelText(/Hãng xe/));
+  fireEvent.click(await screen.findByTitle('Toyota'));
+  fireEvent.mouseDown(screen.getByLabelText(/^Mẫu xe/));
+  fireEvent.click(await screen.findByTitle('Vios'));
+}
+
 async function uploadPhotos() {
   const inputs = [...document.querySelectorAll('input[type="file"]')].slice(0, 5);
   for (const [index, input] of inputs.entries()) {
@@ -226,16 +235,18 @@ describe('/manage/vehicles/new - Wave 3 create wizard', () => {
     }
   });
 
-  it('mã nội bộ là tuỳ chọn nhưng tên xe vẫn được validate tại field', async () => {
+  it('không hỏi tên xe (ADR 0102); hãng + mẫu xe validate tại field, mã nội bộ tuỳ chọn', async () => {
     renderPage();
+    expect(screen.queryByLabelText(/^Tên xe/)).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
-    expect(await screen.findByText('Tên xe là bắt buộc')).toBeTruthy();
+    expect(await screen.findByText('Chọn hãng xe')).toBeTruthy();
+    expect(screen.getByText('Chọn mẫu xe')).toBeTruthy();
     expect(screen.queryByText('Mã xe là bắt buộc')).toBeNull();
   });
 
   it('giữ dữ liệu qua ba bước và gửi payload mới đúng contract', async () => {
     renderPage();
-    fireEvent.change(screen.getByLabelText(/^Tên xe/), { target: { value: ' Toyota Altis ' } });
+    await pickModel();
     fireEvent.click(screen.getByText('Trả góp'));
     await uploadPhotos();
     await uploadRegistration();
@@ -243,15 +254,21 @@ describe('/manage/vehicles/new - Wave 3 create wizard', () => {
     await goNext('Dịch vụ & giá');
     await goNext('Tiện ích & mô tả');
     const dialog = await openConfirm();
-    expect(within(dialog).getByText('Toyota Altis')).toBeTruthy();
+    // Hộp xác nhận hiện đúng tên server sẽ ghép (hãng + dòng xe; chưa khai năm).
+    expect(within(dialog).getByText('Toyota Vios')).toBeTruthy();
     expect(within(dialog).getByText('Trả góp')).toBeTruthy();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Lưu nháp' }));
     await waitFor(() => expect(mutation.mutateAsync).toHaveBeenCalledTimes(1));
     expect(mutation.mutateAsync.mock.calls[0]![0]).toMatchObject({
       code: undefined,
-      name: 'Toyota Altis',
+      vehicleCatalogModelId: 'm-toyota-vios',
       sourceType: 'financed',
+      // Biển số + màu sơn tự điền từ lượt đọc cà vẹt (ADR 0102).
+      plateNumber: '51H-100.00',
+      color: 'Trắng',
     });
+    // Không gửi tên: server ghép "Hãng Dòng Phiên bản Năm" từ danh mục.
+    expect((mutation.mutateAsync.mock.calls[0]![0] as { name?: string }).name).toBeUndefined();
     expect(mutation.mutateAsync.mock.calls[0]![0]).toMatchObject({
       registration: {
         uploadId: '01JREGISTRATIONUPLOAD00001',
@@ -266,7 +283,7 @@ describe('/manage/vehicles/new - Wave 3 create wizard', () => {
 
   it('cà vẹt: thiếu ba ô thì không qua bước 1; KHÔNG ảnh mà nhập tay đủ thì đi tiếp (ADR 0100)', async () => {
     renderPage();
-    fireEvent.change(screen.getByLabelText(/^Tên xe/), { target: { value: 'Xe nhập tay cà vẹt' } });
+    await pickModel();
     await uploadPhotos();
     fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
     expect(await screen.findByText('Nhập số khung')).toBeTruthy();
@@ -298,7 +315,7 @@ describe('/manage/vehicles/new - Wave 3 create wizard', () => {
       readerAvailable: true,
     });
     renderPage();
-    fireEvent.change(screen.getByLabelText(/^Tên xe/), { target: { value: 'Xe nhập tay' } });
+    await pickModel();
     await uploadPhotos();
     await uploadRegistration();
     expect(await screen.findByText(/^Chưa lấy được số máy/)).toBeTruthy();
@@ -319,7 +336,7 @@ describe('/manage/vehicles/new - Wave 3 create wizard', () => {
 
   it('sau khi lưu nháp hiện success workspace thay vì điều hướng mù', async () => {
     renderPage();
-    fireEvent.change(screen.getByLabelText(/^Tên xe/), { target: { value: createdVehicle.name } });
+    await pickModel();
     await uploadPhotos();
     await uploadRegistration();
     await screen.findByText(/^Đã quét:/);

@@ -5,10 +5,12 @@ import {
   VEHICLE_DATA_STATUS,
   catalogResidualPercent,
   catalogVariantKey,
+  composeVehicleName,
   estimateCatalogValue,
   rentPercentile,
   vehicleDataGaps,
   vehicleDataStatus,
+  variantCoversYear,
 } from './vehicle-master-data';
 import { VEHICLE_TYPE } from './status/vehicle';
 
@@ -86,5 +88,31 @@ describe('dữ liệu xe chuẩn', () => {
     expect(rentPercentile(sorted, 0.5)).toBe('800000');
     expect(rentPercentile([600000, 750000], 0.5)).toBe('675000');
     expect(rentPercentile([], 0.5)).toBeNull();
+  });
+
+  it('tên xe tự ghép: hãng · dòng · phiên bản · năm, bỏ phần trống, không lặp hãng', () => {
+    expect(
+      composeVehicleName({
+        brandLabel: 'Toyota',
+        modelLabel: 'Vios',
+        variantLabel: '1.5G CVT',
+        manufactureYear: 2019,
+      }),
+    ).toBe('Toyota Vios 1.5G CVT 2019');
+    expect(composeVehicleName({ brandLabel: 'Hyundai', modelLabel: 'Grand i10', manufactureYear: 2019 })).toBe(
+      'Hyundai Grand i10 2019',
+    );
+    expect(composeVehicleName({ brandLabel: 'VinFast', modelLabel: 'vinfast VF 3' })).toBe('vinfast VF 3');
+    expect(composeVehicleName({ brandLabel: '  ', modelLabel: null })).toBe('');
+    expect(composeVehicleName({ modelLabel: 'x'.repeat(300) })).toHaveLength(255);
+  });
+
+  it('đời xe: năm nằm trong khoảng, đầu trống là mở', () => {
+    expect(variantCoversYear({ yearFrom: 2018, yearTo: 2022 }, 2019)).toBe(true);
+    expect(variantCoversYear({ yearFrom: 2018, yearTo: 2022 }, 2023)).toBe(false);
+    expect(variantCoversYear({ yearFrom: 2023, yearTo: null }, 2026)).toBe(true);
+    expect(variantCoversYear({ yearFrom: 2023, yearTo: null }, 2020)).toBe(false);
+    expect(variantCoversYear({ yearFrom: null, yearTo: null }, 2001)).toBe(true);
+    expect(variantCoversYear({ yearFrom: 2018, yearTo: 2022 }, null)).toBe(true);
   });
 });

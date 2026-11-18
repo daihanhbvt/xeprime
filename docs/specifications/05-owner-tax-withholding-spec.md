@@ -66,7 +66,7 @@ Hồ sơ đã xác minh mà đổi loại chủ thể, MST hoặc CCCD ⇒ tự 
 - **Huỷ trước chuyến:** không phát sinh thuế. Khoản đền huỷ muộn cho chủ xe (`D`) là bồi thường, không khấu trừ.
 - **Điều chỉnh sau khi đã ghi sổ:** ghi dòng đảo + dòng mới (bù trừ theo NĐ 117), không sửa dòng cũ.
 - **Không bao giờ cộng vào số khách trả**; luôn trừ vào phần của chủ xe.
-- Sàn tiền giữ chỗ `S + H + IV + IP + T` bảo đảm ví chủ xe không âm (`D = 15% × B ≥ T` vì 15% ≥ 7%).
+- Sàn tiền giữ chỗ `S + H + IV + IP + T` bảo đảm ví chủ xe không âm (ADR 0101: tiền thuê trả trước `C = 30% × B` đã gồm `H`; `D = C − H ≥ T` vì 30% ≥ 10% + 7%).
 
 ---
 
@@ -74,11 +74,11 @@ Hồ sơ đã xác minh mà đổi loại chủ thể, MST hoặc CCCD ⇒ tự 
 
 | Loại số tiền | Quy tắc | Lý do |
 | :--- | :--- | :--- |
-| Khoản **tính ra từ tỷ lệ**: hoa hồng `H`, phần giữ chỗ 15%, GTGT, TNCN, phí giao xe theo km | **Đúng tới đồng** (`roundVnd`) | Số thật; thuế phải khớp tỷ lệ × doanh thu |
+| Khoản **tính ra từ tỷ lệ**: hoa hồng `H`, tiền thuê trả trước 30%, GTGT, TNCN, phí giao xe theo km | **Đúng tới đồng** (`roundVnd`) | Số thật; thuế phải khớp tỷ lệ × doanh thu |
 | Khoản **giảm giá theo %**: khuyến mãi của xe, ưu đãi dài hạn, mã khuyến mãi nền tảng | Làm tròn **LÊN** 1.000đ, rồi mới kẹp trần | Hạn chế lẻ bằng chính sách, khách không bao giờ được giảm ít hơn % đã công bố |
 | Số **cấu hình**: phí đặt xe `S`, biểu phí bảo hiểm, sàn giữ chỗ, giá gói | Bội 1.000đ (validator + CHECK) | Giá niêm yết tròn ngay từ nguồn |
 
-Hệ quả: tiền giữ chỗ trên QR có thể lẻ (ví dụ 196.250đ) — SePay đối soát theo đúng số, không cần số tròn.
+Hệ quả: tiền giữ chỗ trên QR có thể lẻ (ví dụ 420.200đ) — SePay đối soát theo đúng số, không cần số tròn.
 
 ---
 
@@ -92,15 +92,15 @@ Hệ quả: tiền giữ chỗ trên QR có thể lẻ (ví dụ 196.250đ) — 
 | Phí dịch vụ – Chủ xe (H) | 10% × 780.000 (ngày 1) | −78.000 |
 | Thuế khấu trừ (GTGT 5% + TNCN 2%) | 39.000 + 15.600 | −54.600 |
 | **Thu nhập chủ xe (a)** | B − H − T | **647.400** |
-| Khách thanh toán trực tiếp (b) | B − D − H = 780.000 − 117.000 − 78.000 | 585.000 |
-| **Số tiền cộng ví (a − b)** | = D − T = 117.000 − 54.600 | **62.400** |
+| Khách thanh toán trực tiếp (b) | B − D − H = 780.000 − 156.000 − 78.000 (= 70% × B) | 546.000 |
+| **Số tiền cộng ví (a − b)** | = D − T = 156.000 − 54.600 | **101.400** |
 
-Phía khách: phí đặt xe 50.000 + tiền thuê 780.000 = 830.000; tiền giữ chỗ = 50.000 + 78.000 + 117.000 = **245.000**; trả chủ xe khi nhận xe 585.000.
+Phía khách: phí đặt xe 50.000 + tiền thuê 780.000 = 830.000; tiền thuê trả trước C = 30% × 780.000 = 234.000 (đã gồm H 78.000 ⇒ D = 156.000); tiền giữ chỗ = 50.000 + 234.000 = **284.000**; trả chủ xe khi nhận xe 546.000.
 
 ### 6.2. Có tài xế, chủ xe cá nhân — 2 ngày × 1.200.000đ
 
-B = 2.400.000 · H = 10% × 2.400.000 = 240.000 · GTGT 3% = 72.000 · TNCN 1,5% = 36.000 · T = 108.000 · D = 360.000
-⇒ a = 2.052.000 · b = 1.800.000 · **cộng ví = 252.000** (= 360.000 − 108.000) ✓
+B = 2.400.000 · H = 10% × 2.400.000 = 240.000 · GTGT 3% = 72.000 · TNCN 1,5% = 36.000 · T = 108.000 · C = 720.000 ⇒ D = C − H = 480.000
+⇒ a = 2.052.000 · b = 1.680.000 · **cộng ví = 372.000** (= 480.000 − 108.000) ✓
 
 ### 6.3. Tuyến gói — 3 ngày tự lái × 1.000.000đ
 
@@ -109,14 +109,14 @@ B = 2.400.000 · H = 10% × 2.400.000 = 240.000 · GTGT 3% = 72.000 · TNCN 1,5%
 | B | 3.000.000 | 3.000.000 |
 | H (tuyến gói) | 0 | 0 |
 | T | 0 (không khấu trừ) | 150.000 + 60.000 = 210.000 |
-| D (15%) | 450.000 | 450.000 |
-| Tiền giữ chỗ (S + D) | 500.000 | 500.000 |
-| **Cộng ví (D − T)** | **450.000** | **240.000** |
+| D (= C = 30%, H = 0) | 900.000 | 900.000 |
+| Tiền giữ chỗ (S + D) | 950.000 | 950.000 |
+| **Cộng ví (D − T)** | **900.000** | **690.000** |
 
 ### 6.4. Số lẻ thật sau khuyến mãi — 1 ngày × 650.000đ, giảm 10%
 
-B = 650.000 − 65.000 = 585.000 · H = 58.500 · D = 87.750 · GTGT 29.250 + TNCN 11.700 = 40.950
-⇒ tiền giữ chỗ = 50.000 + 58.500 + 87.750 = **196.250** (trước đây làm tròn thành 197.000) · trả khi nhận xe = 438.750 · cộng ví = 87.750 − 40.950 = **46.800**.
+B = 650.000 − 65.000 = 585.000 · H = 58.500 · C = 175.500 ⇒ D = 117.000 · GTGT 29.250 + TNCN 11.700 = 40.950
+⇒ tiền giữ chỗ = 50.000 + 175.500 = **225.500** · trả khi nhận xe = 409.500 (70% × B) · cộng ví = 117.000 − 40.950 = **76.050** (đúng tới đồng, không làm tròn nghìn).
 
 ---
 
@@ -135,11 +135,11 @@ Có mặt ở **hộp duyệt yêu cầu**, **chi tiết đơn** và **sao kê v
   Thuế khấu trừ (GTGT 5% + TNCN 2%) (i)  −54.600 ← doanh nghiệp: "Không khấu trừ (doanh nghiệp)"
   ───────────────────────────────────────────
   Thu nhập chủ xe (a)              647.400
-  Khách thanh toán trực tiếp (b)   585.000
-  Số tiền cộng ví (a − b)           62.400
+  Khách thanh toán trực tiếp (b)   546.000
+  Số tiền cộng ví (a − b)           101.400
 ```
 
-- **(i) Phí dịch vụ – Chủ xe:** "% lũy tiến theo ngày thuê theo chính sách phí đang áp dụng (10% ngày 1–2 · 7% ngày 3–7 · 3% ngày 8–30 · 0% từ ngày 31). Gian hàng có gói: 0đ. Khoản này giúp XePrime vận hành chợ, chăm sóc khách, xử lý hoàn/huỷ, hỗ trợ tranh chấp và bảo hiểm."
+- **(i) Phí dịch vụ – Chủ xe:** "% lũy tiến theo ngày thuê theo chính sách phí đang áp dụng (10% ngày 1–2 · 7% ngày 3–7 · 5% ngày 8–30 · 3% từ ngày 31). Gian hàng có gói: 0đ. Khoản này giúp XePrime vận hành chợ, chăm sóc khách, xử lý hoàn/huỷ, hỗ trợ tranh chấp và bảo hiểm."
 - **(i) Thuế khấu trừ:** "Theo NĐ 117/2025 và NĐ 68/2026, XePrime khấu trừ, kê khai và nộp thay thuế cho chủ xe là cá nhân/hộ kinh doanh. Tự lái và dài hạn 7% (GTGT 5% + TNCN 2%), có tài xế 4,5% (GTGT 3% + TNCN 1,5%) trên tiền thuê. Doanh nghiệp không bị khấu trừ." + liên kết **Chính sách thuế**.
 - Đơn giá chỉ hiện khi mọi ngày cùng giá; giá khác nhau theo ngày thì hiện "Tiền thuê N ngày".
 

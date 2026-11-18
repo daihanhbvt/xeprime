@@ -63,10 +63,17 @@
   gap: var(--xp-space-xs);
 }
 
-/* Xe của một dòng, xổ ra dưới hàng dòng — thụt vào để đọc ra quan hệ cha - con. */
+/*
+ * Xe của một dòng, xổ ra dưới hàng dòng — thụt vào để đọc ra quan hệ cha - con. Nền xám nhạt
+ * làm "khay" cho bảng con (khung trắng viền nhạt), vạch vàng bên trái gắn khay với dòng vừa mở.
+ */
 .lineVehicles {
   min-width: 0;
-  padding-inline-start: var(--xp-space-lg);
+  margin-inline-start: var(--xp-space-lg);
+  padding: var(--xp-space-md);
+  background: var(--xp-color-bg-muted);
+  border-inline-start: 3px solid var(--xp-color-primary);
+  border-radius: var(--xp-border-radius-control);
 }
 
 .lineCard {
@@ -146,6 +153,7 @@
   }
 
   .lineVehicles {
-    padding-inline-start: 0;
+    margin-inline-start: 0;
+    padding: var(--xp-space-sm);
   }
 }

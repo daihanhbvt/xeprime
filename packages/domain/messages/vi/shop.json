@@ -294,7 +294,7 @@
     },
     "mode": {
       "onTitle": "Khách thanh toán tiền giữ chỗ sau khi bạn duyệt",
-      "onBody": "Sau khi bạn duyệt yêu cầu thuê xe, khách quét VietQR thanh toán tiền giữ chỗ (phí sàn + bảo hiểm + 15% tiền thuê) trong cửa sổ thời gian quy định. Đơn thuê chính thức được kích hoạt ngay khi XePrime nhận đủ tiền. Nếu bạn hủy đơn sau khi nhận, khách được hoàn 100% và bạn bị trừ điểm uy tín.",
+      "onBody": "Sau khi bạn duyệt yêu cầu thuê xe, khách quét VietQR thanh toán tiền giữ chỗ (phí sàn + bảo hiểm + 30% tiền thuê trả trước) trong cửa sổ thời gian quy định. Đơn thuê chính thức được kích hoạt ngay khi XePrime nhận đủ tiền. Nếu bạn hủy đơn sau khi nhận, khách được hoàn 100% và bạn bị trừ điểm uy tín.",
       "offTitle": "Bạn tự thoả thuận với khách",
       "offBody": "Duyệt xong là có đơn ngay, không chờ tiền. Bạn liên hệ khách để thoả thuận tiền cọc/thế chấp khi nhận xe - XePrime không thu hộ và không đối soát khoản này, nên nếu có tranh chấp thì XePrime không có bằng chứng để hỗ trợ."
     },

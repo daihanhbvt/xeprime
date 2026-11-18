@@ -111,7 +111,7 @@ export type ExtensionPaymentOutcome =
  *
  * Ba điều đóng đinh:
  *  1. **Miễn phí nền tảng** (điều 4): không `S`, không `H`, không bán bảo hiểm — nhưng đi qua ĐÚNG
- *     `PricingService.customerFeesFor` của đơn, nên thuế, phần giữ chỗ 15% và sàn đối soát không
+ *     `PricingService.customerFeesFor` của đơn, nên thuế, tiền thuê trả trước 30% và sàn đối soát không
  *     có bản công thức thứ hai.
  *  2. **Lịch là của chính đơn**: phụ lục kéo dài dòng occupancy `booking` của đơn chứ không thêm
  *     dòng mới — một dòng thứ hai đặt sát đuôi đơn sẽ đụng buffer chuẩn bị của chính đơn đó ở

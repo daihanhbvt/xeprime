@@ -54,17 +54,6 @@
   text-align: right;
 }
 
-/* Gợi ý tên xe: một nút chữ, bấm là điền — không tự ghi đè thứ người dùng đang gõ. */
-.suggestion {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--xp-color-primary);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
 .counterRow {
   display: flex;
   align-items: center;

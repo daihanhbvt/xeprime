@@ -179,6 +179,11 @@ export const API_ERROR_CODE = {
    * gọi API trực tiếp, để câu báo nói đúng chuyện hộp số thay vì "dữ liệu không hợp lệ" chung chung.
    */
   VEHICLE_TRANSMISSION_INCOMPATIBLE: 'VEHICLE_TRANSMISSION_INCOMPATIBLE',
+  /**
+   * Tạo xe không gửi tên mà cũng không chọn dòng xe trong danh mục — server không có gì để ghép tên
+   * "Hãng Dòng Phiên bản Năm" (ADR 0102). Form web luôn bắt chọn dòng xe; mã này cho client cũ.
+   */
+  VEHICLE_NAME_REQUIRED: 'VEHICLE_NAME_REQUIRED',
   /** Hãng này đã có một mẫu xe cùng tên (danh mục mẫu xe — màn quản trị). */
   CATALOG_MODEL_DUPLICATE: 'CATALOG_MODEL_DUPLICATE',
   /** Mẫu xe đang có xe gắn nên không xoá được — tắt mẫu thay vì xoá. */

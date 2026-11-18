@@ -15,6 +15,7 @@ import {
   VEHICLE_SOURCE_TYPE_VALUES,
   VEHICLE_TYPE_VALUES,
   INSURANCE_VALUE_TIER_LIMITS,
+  VEHICLE_NAME_MAX,
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -422,10 +423,18 @@ export class CreateVehicleDto {
   @MaxLength(80)
   code?: string;
 
-  @ApiProperty({ example: 'Toyota Vios 2022' })
+  /**
+   * Bỏ trống ⇒ server tự ghép "Hãng Dòng Phiên bản Năm" từ danh mục (ADR 0102) — màn đăng xe web
+   * không còn ô tên. Gửi thì giữ nguyên (app cũ, màn sửa xe).
+   */
+  @ApiPropertyOptional({
+    example: 'Toyota Vios 1.5G CVT 2019',
+    description: 'Bỏ trống để hệ thống ghép từ hãng, dòng xe, phiên bản và năm sản xuất',
+  })
+  @IsOptional()
   @IsString()
-  @Length(1, 255)
-  name!: string;
+  @Length(1, VEHICLE_NAME_MAX)
+  name?: string;
 
   /**
    * BẮT BUỘC: chi nhánh giữ xe. Đây là nguồn VỊ TRÍ CÔNG KHAI của xe trên marketplace, nên

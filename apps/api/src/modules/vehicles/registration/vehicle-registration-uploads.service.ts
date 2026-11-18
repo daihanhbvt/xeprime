@@ -44,6 +44,7 @@ const EMPTY_READING: VehicleRegistrationReading = {
   holderAddress: null,
   chassisNumber: null,
   engineNumber: null,
+  color: null,
 };
 
 const uploadInvalid = () =>
@@ -58,7 +59,7 @@ const imageInvalid = () =>
     message: 'Tệp tải lên không phải ảnh hợp lệ - hãy chọn ảnh JPG, PNG hoặc WEBP.',
   });
 
-/** Đọc lại `reading_json` đã lưu — chỉ giữ năm trường chuỗi, mọi thứ khác về `null`. */
+/** Đọc lại `reading_json` đã lưu — chỉ giữ các trường chuỗi đã biết, mọi thứ khác về `null`. */
 function storedReading(value: Prisma.JsonValue | null): VehicleRegistrationReading {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return EMPTY_READING;
   const record = value as Record<string, unknown>;
@@ -72,6 +73,7 @@ function storedReading(value: Prisma.JsonValue | null): VehicleRegistrationReadi
     holderAddress: text('holderAddress'),
     chassisNumber: text('chassisNumber'),
     engineNumber: text('engineNumber'),
+    color: text('color'),
   };
 }
 

@@ -16,6 +16,7 @@ import {
   createVehicleData,
   deleteVehicleData,
   discardVehicleDataImport,
+  fetchBrandVehicleDataOptions,
   fetchVehicleDataDetail,
   fetchVehicleDataImport,
   fetchVehicleDataImportRows,
@@ -32,7 +33,10 @@ import {
   vehicleDataModelCountsToParams,
   type VehicleDataModelCountsParams,
 } from './api';
-import type { VehicleDataFilters, VehicleDataInput } from './types';
+import type { VehicleDataFilters, VehicleDataInput, VehicleDataOption } from './types';
+
+/** Mảng rỗng ỔN ĐỊNH - `data ?? []` mỗi render là một mảng mới, làm useMemo phía sau chạy lại. */
+const EMPTY_OPTIONS: VehicleDataOption[] = [];
 
 /** Thứ tự sắp nhận được — khớp DTO server. */
 export const VEHICLE_DATA_SORT_VALUES = ['updated_desc', 'name_asc', 'usage_desc'] as const;
@@ -182,6 +186,29 @@ export function useVehicleDataOptions(params: {
     staleTime: 5 * 60 * 1000,
   });
   return { options: data ?? [], isLoading: Boolean(modelId) && isLoading };
+}
+
+/**
+ * Mọi xe chuẩn đã duyệt của một hãng (ADR 0102) - nguồn của ô 'Mẫu xe' gộp VÀ của luật khoá thông
+ * số: mọi nơi đọc cùng tham số nên cùng một cache, không thêm request.
+ */
+export function useBrandVehicleDataOptions(params: {
+  vehicleType: string;
+  brandKey: string | null | undefined;
+  includeId: string | null | undefined;
+}) {
+  const { vehicleType, brandKey, includeId } = params;
+  const { data, isLoading, isError } = useQuery({
+    queryKey: queryKeys.catalog.brandVariants(vehicleType, brandKey ?? '', includeId ?? ''),
+    queryFn: () => fetchBrandVehicleDataOptions({ vehicleType, brandKey: brandKey!, includeId }),
+    enabled: Boolean(brandKey),
+    staleTime: 5 * 60 * 1000,
+  });
+  return {
+    options: data ?? EMPTY_OPTIONS,
+    isLoading: Boolean(brandKey) && isLoading,
+    isError,
+  };
 }
 
 /**

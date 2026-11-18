@@ -64,6 +64,10 @@ const LABELS: Readonly<Record<Field, readonly Phrase[]>> = {
     ['NUMBERPLATE', 2],
     ['BIENSO', 0],
   ],
+  color: [
+    ['MAUSON', 0],
+    ['COLOR', 0],
+  ],
 };
 
 /** Nhãn của các ô KHÁC trên cà vẹt — chỉ để cắt giá trị, không đọc. */
@@ -73,8 +77,6 @@ const OTHER_LABELS: readonly Phrase[] = [
   ['SOLOAI', 0],
   ['MODELCODE', 1],
   ['LOAIXE', 0],
-  ['MAUSON', 0],
-  ['COLOR', 0],
   ['NAMSANXUAT', 1],
   ['SOCHONGOI', 1],
   ['DANGKYLANDAU', 2],
@@ -281,6 +283,26 @@ function parseHolderName(value: string): string | null {
   return name;
 }
 
+/** Màu dài nhất còn tin được — tên màu ghép hai màu ("Xanh dương - Trắng") vẫn dưới mức này. */
+const COLOR_MAX = 30;
+
+/**
+ * Màu sơn ("Trắng", "Đỏ - Đen"): chỉ chữ cái, khoảng trắng, gạch nối; viết hoa chữ đầu. Có chữ số
+ * hay quá dài là máy đọc lẫn ô bên cạnh ⇒ không đoán (ADR 0102).
+ */
+function parseColor(value: string): string | null {
+  const text = value
+    .replace(/[^\p{L}\s-]/gu, ' ')
+    .replace(/\s*-\s*/g, ' - ')
+    .replace(/\s+/g, ' ')
+    .replace(/^[\s-]+|[\s-]+$/g, '')
+    .toLowerCase();
+  if (/\d/.test(value) || text.replace(/[\s-]/g, '').length < 2 || text.length > COLOR_MAX) {
+    return null;
+  }
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 function parseAddress(value: string): string | null {
   const address = value.replace(/\s+/g, ' ').trim();
   if (address.length < 5 || address.length > LIMITS.holderAddressMax) return null;
@@ -314,6 +336,7 @@ const FIELD_PARSERS: Readonly<Record<Field, (value: string) => string | null>> =
   engineNumber: parseCode(LIMITS.engineNumberMin, LIMITS.engineNumberMax),
   chassisNumber: parseChassis,
   plateNumber: parsePlate,
+  color: parseColor,
 };
 
 // ── Bỏ phiếu ───────────────────────────────────────────────────────────────────────────────────
@@ -467,6 +490,7 @@ export function mergeRegistrationPasses(
     holderAddress: pick('holderAddress'),
     chassisNumber: pick('chassisNumber'),
     engineNumber: pick('engineNumber'),
+    color: pick('color'),
   };
 }
 

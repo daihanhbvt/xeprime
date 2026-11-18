@@ -13,10 +13,12 @@ import { CatalogRentHint, CatalogValueHint } from './CatalogSuggestions';
 import { VehicleIdentityFields } from './VehicleIdentityFields';
 
 /**
- * Gợi ý từ Dữ liệu xe (ADR 0090): GỢI Ý như Mioto, không tự điền.
- *   - thẻ thông số chỉ chép vào form khi chủ xe bấm "Áp dụng thông số"; tiện ích được CỘNG thêm;
- *   - không thấy phiên bản thì GÕ ngay trong ô (không hộp thoại đề xuất);
- *   - giá thuê: giá tham khảo + nút dùng, giá thực tế của xe cùng dòng; không có gì ⇒ fallback.
+ * Ô "Mẫu xe" gộp + Dữ liệu xe (ADR 0090 · ADR 0102):
+ *   - chọn một phiên bản ⇒ điền NGAY thông số (tiện ích được CỘNG thêm), không có bước "Áp dụng";
+ *   - dòng chưa có phiên bản nào chọn theo dòng; mục "Nhập tay" mở cặp ô Dòng xe → Phiên bản, gõ
+ *     được phiên bản mới; quay lại danh sách thì bỏ tên đã gõ;
+ *   - năm sản xuất ngoài đời của phiên bản ⇒ cảnh báo dưới ô;
+ *   - giá thuê / giá trị xe: vẫn là GỢI Ý + nút dùng; không có gì ⇒ fallback.
  */
 
 const RECORD = {
@@ -59,36 +61,40 @@ const SUGGESTION: VehicleDataSuggestion = {
 
 vi.mock('@/features/vehicle-data/hooks', () => ({
   useVehicleDataOptions: () => ({ options: [RECORD], isLoading: false }),
+  useBrandVehicleDataOptions: () => ({ options: [RECORD], isLoading: false, isError: false }),
   useVehicleDataSuggestion: () => SUGGESTION,
   useCreateOwnerModel: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 vi.mock('@/features/catalog/use-catalog', async () =>
   (await import('@/features/catalog/test-catalog')).catalogModuleMock(),
 );
+function catalogModel(id: string, label: string) {
+  return {
+    id,
+    key: `toyota-${id}`,
+    label,
+    brandKey: 'toyota',
+    vehicleType: VEHICLE_TYPE.CAR,
+    marketStatus: 'current',
+    motorbikeCategory: null,
+    fuelTypes: [],
+    transmissions: [],
+    engineDisplacementCc: null,
+    seatCounts: [],
+    yearFrom: null,
+    yearTo: null,
+    active: true,
+    reviewStatus: 'approved',
+  };
+}
+// `m-wagon` chưa có xe chuẩn nào ⇒ ô gộp hiện riêng tên dòng.
+const MODELS = [catalogModel('m-sedan', 'Sedan'), catalogModel('m-wagon', 'Wagon')];
+
 vi.mock('@/features/catalog/use-catalog-models', () => ({
-  useCatalogModels: () => ({
-    models: [
-      {
-        id: 'm-sedan',
-        key: 'toyota-sedan',
-        label: 'Sedan',
-        brandKey: 'toyota',
-        vehicleType: VEHICLE_TYPE.CAR,
-        marketStatus: 'current',
-        motorbikeCategory: null,
-        fuelTypes: [],
-        transmissions: [],
-        engineDisplacementCc: null,
-        seatCounts: [],
-        yearFrom: null,
-        yearTo: null,
-        active: true,
-        reviewStatus: 'approved',
-      },
-    ],
-    isLoading: false,
-  }),
-  useCatalogModelGroups: () => [],
+  useCatalogModels: () => ({ models: MODELS, isLoading: false }),
+  useCatalogModelGroups: (models: typeof MODELS) => [
+    { marketStatus: 'current', options: models.map((m) => ({ value: m.id, label: m.label })) },
+  ],
 }));
 
 const handle: { current: UseFormReturn<VehicleFormValues> | null } = { current: null };
@@ -119,33 +125,64 @@ afterEach(() => {
   handle.current = null;
 });
 
-describe('Gợi ý thông số theo phiên bản', () => {
-  it('hiện thẻ gợi ý nhưng KHÔNG tự điền; bấm "Áp dụng" mới chép, tiện ích được cộng thêm', async () => {
+/** Mở ô chọn theo nhãn rồi bấm một dòng — AntD Select trong jsdom. */
+async function pick(label: string, option: string) {
+  fireEvent.mouseDown(await screen.findByLabelText(label));
+  fireEvent.click(await screen.findByText(option));
+}
+
+describe('Ô "Mẫu xe" gộp dòng xe + phiên bản', () => {
+  it('chọn một phiên bản ⇒ gắn dòng + phiên bản và điền ngay thông số, tiện ích cộng thêm', async () => {
     renderWithIntl(
       <Harness
         initial={{
           brand: 'toyota',
-          vehicleCatalogModelId: 'm-sedan',
-          vehicleCatalogVariantId: 'v-hybrid',
-          manufactureYear: 2022,
+          vehicleCatalogModelId: null,
+          vehicleCatalogVariantId: null,
           horsepowerHp: null,
           features: ['bluetooth'],
         }}
       />,
     );
 
-    expect(await screen.findByText('Thông số tham khảo · Sedan 2.0 Hybrid')).toBeTruthy();
-    expect(form().getValues('horsepowerHp')).toBeNull();
+    // Nhãn gọn như hãng gọi xe - chỉ một đời nên không kèm đời.
+    await pick('Mẫu xe', 'Sedan 2.0 Hybrid');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Áp dụng thông số' }));
-    await waitFor(() => expect(form().getValues('horsepowerHp')).toBe(150));
+    await waitFor(() => expect(form().getValues('vehicleCatalogVariantId')).toBe('v-hybrid'));
+    expect(form().getValues('vehicleCatalogModelId')).toBe('m-sedan');
+    expect(form().getValues('horsepowerHp')).toBe(150);
     expect(form().getValues('engineDisplacementCc')).toBe(1987);
     expect(form().getValues('fuelType')).toBe(FUEL_TYPE.HYBRID);
     expect(form().getValues('fuelConsumptionCombined')).toBe(4.5);
     expect(form().getValues('features')).toEqual(['bluetooth', 'camera_360']);
   });
 
-  it('gõ một phiên bản chưa có ⇒ lưu tên đã gõ (không hộp thoại), bỏ được', async () => {
+  it('dòng chưa có phiên bản ⇒ chọn theo dòng, không gắn phiên bản', async () => {
+    renderWithIntl(<Harness initial={{ brand: 'toyota', vehicleCatalogModelId: null }} />);
+    await pick('Mẫu xe', 'Wagon');
+    await waitFor(() => expect(form().getValues('vehicleCatalogModelId')).toBe('m-wagon'));
+    expect(form().getValues('vehicleCatalogVariantId')).toBeNull();
+  });
+
+  it('đổi sang dòng khác ⇒ gỡ thông số phiên bản cũ đã tự điền, giữ ô chủ xe đã sửa', async () => {
+    renderWithIntl(
+      <Harness
+        initial={{ brand: 'toyota', vehicleCatalogModelId: null, vehicleCatalogVariantId: null }}
+      />,
+    );
+    await pick('Mẫu xe', 'Sedan 2.0 Hybrid');
+    await waitFor(() => expect(form().getValues('horsepowerHp')).toBe(150));
+    // Chủ xe tự sửa dung tích ⇒ đó là dữ liệu của họ, không còn là của xe chuẩn.
+    act(() => form().setValue('engineDisplacementCc', 2000));
+
+    await pick('Mẫu xe', 'Wagon');
+    await waitFor(() => expect(form().getValues('vehicleCatalogModelId')).toBe('m-wagon'));
+    expect(form().getValues('horsepowerHp')).toBeNull();
+    expect(form().getValues('fuelConsumptionCombined')).toBeNull();
+    expect(form().getValues('engineDisplacementCc')).toBe(2000);
+  });
+
+  it('"Nhập tay" ⇒ gõ phiên bản mới (không hộp thoại); quay lại danh sách thì bỏ tên đã gõ', async () => {
     renderWithIntl(
       <Harness
         initial={{
@@ -156,6 +193,8 @@ describe('Gợi ý thông số theo phiên bản', () => {
         }}
       />,
     );
+    await pick('Mẫu xe', 'Nhập tay - xe chưa có trong danh sách');
+
     const select = await screen.findByLabelText('Phiên bản');
     fireEvent.mouseDown(select);
     fireEvent.change(select, { target: { value: '1.8 Turbo' } });
@@ -164,26 +203,44 @@ describe('Gợi ý thông số theo phiên bản', () => {
     expect(form().getValues('vehicleCatalogVariantId')).toBeNull();
     expect(screen.getByText('Phiên bản mới: 1.8 Turbo')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Bỏ' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Chọn từ danh sách mẫu xe' }));
     await waitFor(() => expect(form().getValues('catalogVariantLabel')).toBeNull());
+    expect(await screen.findByLabelText('Mẫu xe')).toBeTruthy();
   });
 
-  it('đổi dòng xe ⇒ phiên bản cũ (chọn hay gõ) bị gỡ', async () => {
+  it('xe đang mang phiên bản gõ tay ⇒ mở sẵn chế độ nhập tay; đổi dòng xe ⇒ bỏ phiên bản cũ', async () => {
+    renderWithIntl(
+      <Harness
+        initial={{
+          brand: 'toyota',
+          vehicleCatalogModelId: 'm-sedan',
+          vehicleCatalogVariantId: null,
+          catalogVariantLabel: '1.8 Turbo',
+        }}
+      />,
+    );
+    expect(await screen.findByText('Phiên bản mới: 1.8 Turbo')).toBeTruthy();
+    expect(screen.queryByLabelText('Mẫu xe')).toBeNull();
+
+    await pick('Dòng xe (Model)', 'Wagon');
+    await waitFor(() => expect(form().getValues('vehicleCatalogModelId')).toBe('m-wagon'));
+    expect(form().getValues('catalogVariantLabel')).toBeNull();
+  });
+
+  it('năm sản xuất ngoài đời của phiên bản ⇒ cảnh báo dưới ô', async () => {
     renderWithIntl(
       <Harness
         initial={{
           brand: 'toyota',
           vehicleCatalogModelId: 'm-sedan',
           vehicleCatalogVariantId: 'v-hybrid',
-          catalogVariantLabel: null,
+          manufactureYear: 2019,
         }}
       />,
     );
-    await waitFor(() => expect(handle.current).not.toBeNull());
-    act(() => form().setValue('catalogVariantLabel', 'X'));
-    act(() => form().setValue('vehicleCatalogModelId', 'm-other'));
-    await waitFor(() => expect(form().getValues('vehicleCatalogVariantId')).toBeNull());
-    expect(form().getValues('catalogVariantLabel')).toBeNull();
+    expect(await screen.findByText(/Năm sản xuất 2019 nằm ngoài đời 2021 - nay/)).toBeTruthy();
+    act(() => form().setValue('manufactureYear', 2022));
+    await waitFor(() => expect(screen.queryByText(/nằm ngoài đời/)).toBeNull());
   });
 });
 

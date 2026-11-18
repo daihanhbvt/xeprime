@@ -104,7 +104,11 @@ describe('Điền sẵn thông số theo mẫu xe', () => {
 
     await waitFor(() => expect(form().getValues('seatCount')).toBe(5));
     expect(form().getValues('fuelType')).toBe(FUEL_TYPE.ELECTRIC);
-    await waitFor(() => expect(seatInput().disabled).toBe(true));
+    // Khoá = ô chỉ đọc + bút trong ô (ADR 0102), không còn ô số bị disabled.
+    const locked = (await screen.findByLabelText('Số chỗ ngồi')) as HTMLInputElement;
+    expect(locked.readOnly).toBe(true);
+    expect(locked.value).toBe('5 chỗ');
+    expect(screen.queryByRole('spinbutton')).toBeNull();
     expect(screen.getByText('Theo mẫu VF 5 - đã điền sẵn.')).toBeTruthy();
   });
 
