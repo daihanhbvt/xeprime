@@ -22,7 +22,7 @@ import { useWorkspace } from '@/hooks/use-workspace';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
-import { isNegativeMoney, isZeroMoney, subtractMoney } from '@/lib/money';
+import { isNegativeMoney, isZeroMoney, subtractMoney, sumMoney } from '@/lib/money';
 import { BookingDriverSection } from '../BookingDriverSection';
 import { BookingStatusActions } from '../BookingStatusActions';
 import { useBookingDetailActions } from './BookingDetailActions';
@@ -196,11 +196,16 @@ export function PaymentSideCard() {
   const fmt = useAppFormat();
   const { has } = usePermissions();
   const { booking, closed, moneyClosed, openFee } = useBookingDetailActions();
-  const excess = subtractMoney(booking.collectedAmount, booking.amountDue);
-  const overCollected = isNegativeMoney(excess) || isZeroMoney(excess) ? null : excess;
   const prepaid = isZeroMoney(booking.ownerShareOnlineAmount)
     ? null
     : booking.ownerShareOnlineAmount;
+  // Thu vượt = (trả trước qua XePrime + đã thu tại quầy) − tổng chuyến. Bỏ `D` là nói "không vượt"
+  // với một đơn đã thu trọn tiền thuê ở quầy trong khi khách đã trả trước một phần qua XePrime.
+  const excess = subtractMoney(
+    sumMoney([booking.collectedAmount, booking.ownerShareOnlineAmount]),
+    booking.amountDue,
+  );
+  const overCollected = isNegativeMoney(excess) || isZeroMoney(excess) ? null : excess;
   const settled = isZeroMoney(booking.counterDueAmount);
   const unit = booking.ownerPayout?.unitAmount ?? null;
   const days = booking.ownerPayout?.rentalDays ?? null;

@@ -8,6 +8,8 @@ import {
 import {
   createSupportCaseWithinTx,
   findOpenTripNotReceivedReport,
+  findOpenTripNotReturnedReport,
+  isTripNotReceivedReport,
   newId,
   Prisma,
   supportCaseCode,
@@ -49,7 +51,10 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
 import { AppConfigService } from '../app-config/app-config.service';
-import type { PlanConsultationDto, PlanConsultationResultDto } from '../app-config/dto/app-config.dto';
+import type {
+  PlanConsultationDto,
+  PlanConsultationResultDto,
+} from '../app-config/dto/app-config.dto';
 import {
   AssignSupportCaseDto,
   OpenSupportCaseDto,
@@ -279,6 +284,80 @@ export class SupportService {
         type: NOTIFICATION_TYPE.SUPPORT_CASE_UPDATED,
         title: `Khách báo chưa nhận được xe - chuyến ${booking.code}`,
         body: 'XePrime tạm giữ tiền của chuyến và sẽ liên hệ hai bên để xác minh.',
+        tenantId: booking.tenantId,
+        targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+        targetId: booking.id,
+      },
+      tx,
+    );
+    return { caseId: created.id, code: created.code, created: true };
+  }
+
+  /**
+   * "TÔI CHƯA TRẢ XE" (ADR 0105 điều 2): chủ xe đã xác nhận nhận lại xe SỚM hơn giờ trả, khách nói
+   * vẫn đang giữ xe. Mở MỘT case `dispute` mức khẩn gắn đơn, dấu `reason = trip_not_returned` trên
+   * dòng audit (cùng transaction), báo gian hàng. Bấm lại trả case cũ, không mở thêm.
+   *
+   * Đơn đã `completed` nên tiền giữ chỗ đã quyết toán lúc chủ xe xác nhận - case này KHÔNG giữ lại
+   * được khoản nào; nó đưa lời khách tới người trực (gọi hai bên, kiểm xe có bị cho thuê chồng lịch,
+   * bồi hoàn nếu cần qua đường tiền hiện có).
+   */
+  async openTripNotReturnedWithinTx(
+    tx: Prisma.TransactionClient,
+    customerUserId: string,
+    booking: {
+      id: string;
+      tenantId: string;
+      code: string;
+      bookingRequestId: string | null;
+      returnAt: Date;
+      returnConfirmedAt: Date;
+    },
+  ): Promise<{ caseId: string; code: string; created: boolean }> {
+    const existing = await findOpenTripNotReturnedReport(tx, booking.id, customerUserId);
+    if (existing) return { caseId: existing.id, code: existing.code, created: false };
+
+    const created = await createSupportCaseWithinTx(tx, {
+      tenantId: booking.tenantId,
+      bookingId: booking.id,
+      bookingRequestId: booking.bookingRequestId,
+      openedByUserId: customerUserId,
+      openedByScope: SUPPORT_PARTY.CUSTOMER,
+      category: SUPPORT_CASE_CATEGORY.DISPUTE,
+      priority: SUPPORT_CASE_PRIORITY.URGENT,
+      subject: `Khách báo chưa trả xe - chuyến ${booking.code}`,
+      description:
+        `Chủ xe xác nhận đã nhận lại xe lúc ${booking.returnConfirmedAt.toISOString()}, sớm hơn giờ ` +
+        `trả theo đơn (${booking.returnAt.toISOString()}), nhưng khách báo VẪN ĐANG GIỮ XE. Đơn đã ` +
+        'hoàn thành và tiền giữ chỗ đã quyết toán - cần liên hệ cả hai bên, kiểm tra xe có bị cho ' +
+        'thuê chồng lịch không và thoả thuận lại phần thời gian còn lại của chuyến.',
+    });
+    // Dòng audit MANG dấu `reason` - `findOpenTripNotReturnedReport` đọc nó. Cùng transaction với case.
+    await this.audit.record(
+      {
+        tenantId: booking.tenantId,
+        actorUserId: customerUserId,
+        actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
+        action: SUPPORT_CASE_AUDIT_ACTION.OPEN,
+        targetType: AUDIT_TARGET_TYPE.SUPPORT_CASE,
+        targetId: created.id,
+        after: {
+          code: created.code,
+          category: SUPPORT_CASE_CATEGORY.DISPUTE,
+          bookingId: booking.id,
+          reason: SUPPORT_CASE_OPEN_REASON.TRIP_NOT_RETURNED,
+        },
+      },
+      tx,
+    );
+    await this.notifications.emitToTenantMembers(
+      booking.tenantId,
+      {
+        type: NOTIFICATION_TYPE.SUPPORT_CASE_UPDATED,
+        title: `Khách báo chưa trả xe - chuyến ${booking.code}`,
+        body:
+          'Bạn đã xác nhận nhận lại xe trước giờ trả, nhưng khách báo vẫn đang giữ xe. ' +
+          'XePrime sẽ liên hệ hai bên để xác minh.',
         tenantId: booking.tenantId,
         targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
         targetId: booking.id,
@@ -547,7 +626,9 @@ export class SupportService {
     const where: Prisma.SupportCaseWhereInput = {
       ...this.scopeWhere(actor),
       // Không lọc = case còn MỞ (việc cần làm), không phải toàn bộ lịch sử.
-      ...(query.status ? { status: query.status } : { status: { in: [...SUPPORT_CASE_STATUS_OPEN] } }),
+      ...(query.status
+        ? { status: query.status }
+        : { status: { in: [...SUPPORT_CASE_STATUS_OPEN] } }),
       ...(query.category ? { category: query.category } : {}),
       ...(query.q
         ? {
@@ -619,10 +700,17 @@ export class SupportService {
         attachmentName: e.attachmentName,
         createdAt: e.createdAt.toISOString(),
       })),
-      // Chỉ nền tảng kết luận chuyến (ADR 0094) — hai bên còn lại không có gì để bấm.
+      // Chỉ nền tảng kết luận chuyến (ADR 0094) — hai bên còn lại không có gì để bấm. Lời báo
+      // "Chưa nhận được xe" mở thêm kết luận cho đơn ĐANG THUÊ (ADR 0104 điều 3).
       tripVerdicts:
         actor.scope === SUPPORT_PARTY.PLATFORM && isSupportCaseOpen(row.status as SupportCaseStatus)
-          ? [...tripVerdictsFor(row.category, row.booking?.status)]
+          ? [
+              ...tripVerdictsFor(row.category, row.booking?.status, {
+                tripNotReceived:
+                  row.category === SUPPORT_CASE_CATEGORY.DISPUTE &&
+                  (await isTripNotReceivedReport(this.prisma, row.id)),
+              }),
+            ]
           : [],
       // Tranh chấp có kết luận nhưng KHÔNG bắt buộc (ADR 0095 điều 2) — màn hỗ trợ giữ nút trần.
       tripVerdictRequired:

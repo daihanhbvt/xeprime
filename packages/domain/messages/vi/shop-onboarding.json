@@ -184,6 +184,16 @@
       "confirmPassword": {
         "label": "Nhập lại mật khẩu",
         "placeholder": "Nhập lại mật khẩu"
+      },
+      "logo": {
+        "label": "Logo gian hàng",
+        "tile": "Tải logo",
+        "choose": "Chọn ảnh",
+        "change": "Đổi ảnh",
+        "remove": "Xoá",
+        "hint": "Ảnh vuông PNG, JPG hoặc WebP, tối đa {maxMb} MB. Logo hiện trên trang gian hàng và trên mọi xe bạn đăng.",
+        "previewAlt": "Logo gian hàng đã chọn",
+        "required": "Tải logo gian hàng lên để tiếp tục"
       }
     },
     "submit": {
@@ -233,6 +243,13 @@
     "formTitle": "Tạo tài khoản đối tác",
     "formSub": "Chỉ mất khoảng 2 phút để hợp tác cùng XePrime",
     "footnote": "Sau khi đăng ký, bạn có thể bổ sung giấy tờ & thông tin tài chính trong trang quản lý",
-    "consentRequired": "Vui lòng đồng ý với Quy chế hoạt động sàn và Điều khoản sử dụng"
+    "consentRequired": "Vui lòng đồng ý với Quy chế hoạt động sàn và Điều khoản sử dụng",
+    "logoUploadFailed": "Gian hàng đã được tạo nhưng chưa tải được logo: {error} Bấm đăng ký lại để tải logo."
+  },
+  "logoStep": {
+    "title": "Thêm logo gian hàng",
+    "body": "Gian hàng cần có logo trước khi chọn gói. Logo hiện trên trang gian hàng và trên mọi xe bạn đăng.",
+    "required": "Tải logo gian hàng lên để tiếp tục",
+    "save": "Lưu logo và chọn gói"
   }
 }

@@ -184,6 +184,16 @@
       "confirmPassword": {
         "label": "Confirm password",
         "placeholder": "Re-enter your password"
+      },
+      "logo": {
+        "label": "Shop logo",
+        "tile": "Upload logo",
+        "choose": "Choose image",
+        "change": "Change image",
+        "remove": "Remove",
+        "hint": "Square PNG, JPG or WebP, up to {maxMb} MB. The logo appears on your shop page and on every vehicle you list.",
+        "previewAlt": "Selected shop logo",
+        "required": "Upload your shop logo to continue"
       }
     },
     "submit": {
@@ -233,6 +243,13 @@
     "formTitle": "Create your partner account",
     "formSub": "It only takes about 2 minutes to partner with XePrime",
     "footnote": "After signing up you can add documents & payout details in your dashboard",
-    "consentRequired": "Please agree to the Marketplace rules and Terms of use"
+    "consentRequired": "Please agree to the Marketplace rules and Terms of use",
+    "logoUploadFailed": "Your shop was created but the logo could not be uploaded: {error} Press register again to upload the logo."
+  },
+  "logoStep": {
+    "title": "Add your shop logo",
+    "body": "Your shop needs a logo before you pick a plan. The logo appears on your shop page and on every vehicle you list.",
+    "required": "Upload your shop logo to continue",
+    "save": "Save logo and pick a plan"
   }
 }

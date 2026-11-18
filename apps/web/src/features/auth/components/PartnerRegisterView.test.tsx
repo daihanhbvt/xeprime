@@ -24,6 +24,8 @@ const api = vi.hoisted(() => ({
   fetchCurrentUser: vi.fn(),
   sendOtp: vi.fn(),
   verifyOtp: vi.fn(),
+  uploadImage: vi.fn(),
+  updateShopProfile: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -53,7 +55,15 @@ vi.mock('@/services/auth.service', async (importOriginal) => ({
   registerWithPassword: api.registerWithPassword,
   fetchCurrentUser: api.fetchCurrentUser,
 }));
-vi.mock('@/features/shop/api', () => ({ registerShop: api.registerShop }));
+vi.mock('@/features/shop/api', () => ({
+  registerShop: api.registerShop,
+  updateShopProfile: api.updateShopProfile,
+}));
+/* Tải logo lên R2 (ADR 0103) - kiểm tra tệp giữ bản thật, chỉ thay lượt tải. */
+vi.mock('@/services/upload', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  uploadImage: api.uploadImage,
+}));
 vi.mock('@/features/phone-verification/api', () => ({
   sendOtp: api.sendOtp,
   verifyOtp: api.verifyOtp,
@@ -140,7 +150,17 @@ async function enterOtp(code = '654321'): Promise<void> {
   await waitFor(() => expect(api.sendOtp).toHaveBeenCalled());
   const input = await screen.findByLabelText(/^Mã xác thực gồm/);
   fireEvent.change(input, { target: { value: code } });
-  await waitFor(() => expect(screen.getAllByText(/Đã xác thực|đã được xác thực/).length).toBeGreaterThan(0));
+  await waitFor(() =>
+    expect(screen.getAllByText(/Đã xác thực|đã được xác thực/).length).toBeGreaterThan(0),
+  );
+}
+
+/** Chọn logo gian hàng ở ô logo (tuyến gói) — ảnh ở máy, chưa tải lên. */
+async function pickLogo(): Promise<void> {
+  const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+  const file = new File(['logo'], 'logo.png', { type: 'image/png' });
+  fireEvent.change(input, { target: { files: [file] } });
+  await waitFor(() => expect(screen.getByAltText('Logo gian hàng đã chọn')).toBeTruthy());
 }
 
 /** Ô "Tôi đồng ý với Quy chế… và Điều khoản…" — chưa tích thì form không gửi gì lên server. */
@@ -173,6 +193,13 @@ beforeEach(() => {
   api.sendOtp.mockReset().mockResolvedValue({ expiresAt: '2030-01-01T00:00:00Z', devCode: null });
   api.verifyOtp.mockReset().mockResolvedValue({ verified: true });
   api.fetchCurrentUser.mockReset().mockRejectedValue(new Error('offline'));
+  api.uploadImage.mockReset().mockResolvedValue('https://cdn.xeprime.test/logo.png');
+  api.updateShopProfile
+    .mockReset()
+    .mockResolvedValue({ id: 'T1', profile: { logoUrl: 'https://cdn.xeprime.test/logo.png' } });
+  // jsdom không có URL `blob:` - ô logo chỉ cần một chuỗi để xem trước.
+  URL.createObjectURL = vi.fn(() => 'blob:logo-preview');
+  URL.revokeObjectURL = vi.fn();
   window.localStorage.clear();
 });
 
@@ -234,12 +261,14 @@ describe('Bước 2 - một form, không ô nào hỏi hai lần', () => {
     expect(screen.queryByRole('link', { name: /Đổi cách cho thuê/ })).toBeNull();
   });
 
-  it('chủ xe chưa có tài khoản: họ tên chỉ hỏi một lần, KHÔNG có ô tên gian hàng', () => {
+  it('chủ xe chưa có tài khoản: họ tên chỉ hỏi một lần, KHÔNG có ô tên gian hàng, KHÔNG có ô logo', () => {
     nav.search = 'track=commission';
     renderView();
 
     expect(screen.getAllByLabelText(/^Họ và tên/)).toHaveLength(1);
     expect(screen.queryByLabelText(/^Tên gian hàng/)).toBeNull();
+    // Tuyến hoa hồng không cần logo (ADR 0040 điều 7 · ADR 0103 điều 4).
+    expect(screen.queryByText('Logo gian hàng')).toBeNull();
   });
 
   it('email BẮT BUỘC: thiếu email thì không gọi API nào', async () => {
@@ -287,15 +316,21 @@ describe('Bước 2 - một form, không ô nào hỏi hai lần', () => {
     await fillAccount({ otp: false });
     await pickProvince();
     type(/^Địa chỉ\s*\*?\s*$/, '12 Lê Lợi');
-    const submit = screen.getByRole('button', { name: /Đăng ký & đăng xe đầu tiên/ }) as HTMLButtonElement;
+    const submit = screen.getByRole('button', {
+      name: /Đăng ký & đăng xe đầu tiên/,
+    }) as HTMLButtonElement;
     expect(submit.disabled).toBe(false);
     expect(screen.queryByLabelText(/^Mã xác thực gồm/)).toBeNull();
 
     fireEvent.click(submit);
-    await waitFor(() => expect(api.sendOtp).toHaveBeenCalledWith({ phone: '0901234567', purpose: 'register' }));
+    await waitFor(() =>
+      expect(api.sendOtp).toHaveBeenCalledWith({ phone: '0901234567', purpose: 'register' }),
+    );
     // Chưa có mã thì chưa tạo gì.
     expect(api.registerWithPassword).not.toHaveBeenCalled();
-    fireEvent.change(await screen.findByLabelText(/^Mã xác thực gồm/), { target: { value: '654321' } });
+    fireEvent.change(await screen.findByLabelText(/^Mã xác thực gồm/), {
+      target: { value: '654321' },
+    });
 
     // Một lần bấm: xác thực xong là form tự gửi tiếp, không phải bấm lại.
     await waitFor(() => expect(nav.replace).toHaveBeenCalledWith(MANAGE_HOME));
@@ -322,7 +357,9 @@ describe('Bước 2 - một form, không ô nào hỏi hai lần', () => {
     fireEvent.click(screen.getByRole('button', { name: /Huỷ/ }));
 
     fireEvent.click(screen.getAllByRole('button', { name: /Gửi mã OTP/ })[0]!);
-    fireEvent.change(await screen.findByLabelText(/^Mã xác thực gồm/), { target: { value: '654321' } });
+    fireEvent.change(await screen.findByLabelText(/^Mã xác thực gồm/), {
+      target: { value: '654321' },
+    });
     await waitFor(() => expect(screen.getAllByText(/Đã xác thực/).length).toBeGreaterThan(0));
     expect(api.registerWithPassword).not.toHaveBeenCalled();
   });
@@ -366,12 +403,13 @@ describe('Bước 2 - một form, không ô nào hỏi hai lần', () => {
     });
   });
 
-  it('gian hàng: gửi `registrationTrack: package` rồi sang bước chọn gói + thanh toán', async () => {
+  it('gian hàng: gửi `registrationTrack: package`, tải logo lên + gắn vào hồ sơ, rồi sang bước chọn gói', async () => {
     nav.search = 'track=package';
     renderView();
 
     await fillAccount();
     type(/^Tên gian hàng/, 'Gian hàng Bình Minh');
+    await pickLogo();
     await pickProvince();
     type(/^Địa chỉ\s*\*?\s*$/, '12 Lê Lợi');
     fireEvent.click(screen.getByRole('button', { name: /Đăng ký & chọn gói/ }));
@@ -381,6 +419,58 @@ describe('Bước 2 - một form, không ô nào hỏi hai lần', () => {
       name: 'Gian hàng Bình Minh',
       registrationTrack: 'package',
     });
+    // Ảnh chỉ tải lên SAU khi gian hàng đã có (ký URL ảnh gian hàng cần một gian hàng).
+    expect(api.uploadImage).toHaveBeenCalledTimes(1);
+    expect(api.uploadImage.mock.invocationCallOrder[0]!).toBeGreaterThan(
+      api.registerShop.mock.invocationCallOrder[0]!,
+    );
+    expect(api.updateShopProfile).toHaveBeenCalledWith({
+      logoUrl: 'https://cdn.xeprime.test/logo.png',
+    });
+  });
+
+  it('gian hàng CHƯA chọn logo: báo lỗi ngay tại ô logo, không gọi API nào (ADR 0103)', async () => {
+    nav.search = 'track=package';
+    renderView();
+
+    await fillAccount();
+    type(/^Tên gian hàng/, 'Gian hàng Bình Minh');
+    await pickProvince();
+    type(/^Địa chỉ\s*\*?\s*$/, '12 Lê Lợi');
+    fireEvent.click(screen.getByRole('button', { name: /Đăng ký & chọn gói/ }));
+
+    expect(await screen.findByText('Tải logo gian hàng lên để tiếp tục')).toBeTruthy();
+    expect(api.registerWithPassword).not.toHaveBeenCalled();
+    expect(api.registerShop).not.toHaveBeenCalled();
+
+    await pickLogo();
+    // AntD rút dòng lỗi bằng hiệu ứng - đợi nó rời hẳn.
+    await waitFor(() =>
+      expect(screen.queryByText('Tải logo gian hàng lên để tiếp tục')).toBeNull(),
+    );
+  });
+
+  it('tải logo HỎNG sau khi gian hàng đã tạo: báo rõ, bấm lại chỉ tải lại logo (không tạo gian hàng lần hai)', async () => {
+    nav.search = 'track=package';
+    api.registerShop.mockResolvedValue({ id: 'T1', profile: { logoUrl: null } });
+    api.uploadImage.mockRejectedValueOnce(new Error('R2 hỏng'));
+    renderView();
+
+    await fillAccount();
+    type(/^Tên gian hàng/, 'Gian hàng Bình Minh');
+    await pickLogo();
+    await pickProvince();
+    type(/^Địa chỉ\s*\*?\s*$/, '12 Lê Lợi');
+    fireEvent.click(screen.getByRole('button', { name: /Đăng ký & chọn gói/ }));
+
+    expect(await screen.findByText(/Gian hàng đã được tạo nhưng chưa tải được logo/)).toBeTruthy();
+    expect(nav.replace).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /Đăng ký & chọn gói/ }));
+    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith(PACKAGE_ONBOARDING));
+    expect(api.registerShop).toHaveBeenCalledTimes(1);
+    expect(api.uploadImage).toHaveBeenCalledTimes(2);
+    expect(api.updateShopProfile).toHaveBeenCalledTimes(1);
   });
 
   it('tạo gian hàng HỎNG sau khi tài khoản đã tạo: thử lại KHÔNG tạo tài khoản lần hai', async () => {
@@ -392,6 +482,7 @@ describe('Bước 2 - một form, không ô nào hỏi hai lần', () => {
 
     await fillAccount();
     type(/^Tên gian hàng/, 'Gian hàng Bình Minh');
+    await pickLogo();
     await pickProvince();
     type(/^Địa chỉ\s*\*?\s*$/, '12 Lê Lợi');
     fireEvent.click(screen.getByRole('button', { name: /Đăng ký & chọn gói/ }));

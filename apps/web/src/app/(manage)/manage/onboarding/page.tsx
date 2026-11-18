@@ -1,7 +1,7 @@
 'use client';
 
 import { CheckOutlined, LogoutOutlined, QuestionCircleOutlined } from '@ant-design/icons';
-import { Button, Popover, Spin } from 'antd';
+import { Button, Popover, Skeleton, Spin } from 'antd';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -17,6 +17,8 @@ import {
 import { usePortalLogout } from '@/features/auth/hooks/use-portal-logout';
 import { isPackageOnboarding, resolveWorkspaceHref } from '@/features/auth/post-auth-destination';
 import { ClientRedirect } from '@/features/partner/components/ClientRedirect';
+import { ShopLogoRequiredStep } from '@/features/shop/components/ShopLogoRequiredStep';
+import { useMyShop } from '@/features/shop/hooks/use-shop';
 import { PackageShopCheckout } from '@/features/subscription/components/PackageShopCheckout';
 import { useSyncScopeWhenInvoiceSettles } from '@/features/subscription/hooks/use-subscription';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -74,6 +76,7 @@ export default function OwnerOnboardingPage() {
   const isPackageTrack = track === REGISTRATION_TRACK.PACKAGE;
 
   useSyncScopeWhenInvoiceSettles(packagePending);
+  const shop = useMyShop(packagePending);
 
   useEffect(() => {
     if (!hasTenant || packagePending) return;
@@ -110,7 +113,13 @@ export default function OwnerOnboardingPage() {
 
   /** Bước đang mở — chỉ tuyến GÓI có hai bước; tuyến hoa hồng là một màn duy nhất. */
   const showSteps = isPackageTrack || packagePending;
-  const currentStep = packagePending ? 2 : 1;
+  /*
+   * Logo là một phần của bước 1 "Thông tin gian hàng" (ADR 0103): gian hàng chưa có logo đứng lại
+   * ở bước 1 và chưa chọn gói được. Đọc hồ sơ lỗi thì KHÔNG chặn - một lượt mạng hỏng không được
+   * khoá người ta khỏi màn thanh toán của chính họ (cổng gửi xe duyệt vẫn đòi logo ở server).
+   */
+  const needsLogo = packagePending && shop.data != null && !shop.data.profile?.logoUrl;
+  const currentStep = packagePending && !needsLogo ? 2 : 1;
 
   return (
     <div className={styles.page}>
@@ -187,9 +196,21 @@ export default function OwnerOnboardingPage() {
           </ol>
         ) : null}
 
-        <section className={styles.checkout} aria-label={t('steps.planPayment')}>
-          <PackageShopCheckout />
-        </section>
+        {shop.isLoading ? (
+          <section className={styles.checkout}>
+            <Skeleton active paragraph={{ rows: 6 }} />
+          </section>
+        ) : needsLogo ? (
+          <section className={styles.checkout} aria-label={t('steps.shopInfo')}>
+            <ShopLogoRequiredStep />
+            {/* Mã đang chờ (nếu có) vẫn hiện - khoản đã chuyển không bị giấu sau ô logo. */}
+            <PackageShopCheckout purchaseLocked />
+          </section>
+        ) : (
+          <section className={styles.checkout} aria-label={t('steps.planPayment')}>
+            <PackageShopCheckout />
+          </section>
+        )}
 
         <div className={styles.back}>
           {/* Bước gói chưa vào được khu quản lý — lối ra duy nhất là đăng xuất (về đăng nhập partner). */}

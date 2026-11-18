@@ -54,13 +54,16 @@ export function TripNotReceivedReport({
    * chưa có báo cáo mở). Còn "đang trong cửa sổ hay chưa" thì tính theo ĐỒNG HỒ ở đây, không theo
    * `canReportNotReceived` lúc tải: trang mở trước giờ nhận xe không được hỏi lại server (hết
    * polling sau khi trả tiền giữ chỗ), nên phải tự hiện nút đúng `pickupAt` và tự ẩn lúc đóng.
-   * Chỉ để HIỂN THỊ — `POST /trips/:id/report-not-received` vẫn là cửa chặn thật.
+   * Mốc mở là `notReceivedReportFrom` của server: chủ xe giao SỚM hơn giờ nhận thì cửa sổ mở từ lúc
+   * giao (ADR 0104 điều 2). Chỉ để HIỂN THỊ — `POST /trips/:id/report-not-received` vẫn là cửa chặn thật.
    */
   const until = trip.notReceivedReportUntil;
+  const from = trip.notReceivedReportFrom;
   const windowOpen =
     until != null &&
     trip.pickupAt != null &&
-    notReceivedWindowPhase(new Date(trip.pickupAt), new Date(now)) === 'open';
+    notReceivedWindowPhase(new Date(trip.pickupAt), new Date(now), from ? new Date(from) : null) ===
+      'open';
   if (!windowOpen) return null;
 
   return (

@@ -216,7 +216,8 @@ const SHOP: MyShop = {
   profile: {
     displayName: 'Xe của Minh',
     bio: 'Cho thuê xe tự lái',
-    logoUrl: null,
+    // Đã có logo - logo bắt buộc ở bước này (ADR 0103); test "thiếu logo" tự gỡ nó.
+    logoUrl: 'https://cdn.xeprime.test/logo.png',
     coverUrl: null,
     address: '12 Nguyễn Thái Học, Hà Nội',
     provinceCode: '01',
@@ -567,15 +568,19 @@ describe('PackageUpgradeWizard - bước thông tin gian hàng', () => {
     expect(purchase.mutateAsync).not.toHaveBeenCalled();
   });
 
-  /** Logo là cổng của việc ĐĂNG XE, không phải cổng của việc mua gói (ADR 0040 điều 7). */
-  it('thiếu logo vẫn mua gói được, kèm câu nói rõ nó sẽ bị đòi lúc nào', async () => {
+  /** Logo bắt buộc ngay lúc thành gian hàng (ADR 0103, ghi đè ADR 0040 điều 7). */
+  it('thiếu logo ⇒ báo lỗi tại ô logo, không lưu gì và không tạo hoá đơn', async () => {
+    shopQuery.data = { ...SHOP, profile: { ...SHOP.profile!, logoUrl: null } };
     renderWizard();
     pickPlanAndContinue();
 
-    expect(screen.getByText(/gian hàng phải có logo trước khi gửi xe lên chợ/)).toBeTruthy();
-
     fireEvent.click(submitButton());
-    await waitFor(() => expect(purchase.mutateAsync).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByText('Tải logo gian hàng lên để tiếp tục')).toBeTruthy(),
+    );
+    expect(updateBranch.mutateAsync).not.toHaveBeenCalled();
+    expect(updateProfile.mutateAsync).not.toHaveBeenCalled();
+    expect(purchase.mutateAsync).not.toHaveBeenCalled();
   });
 
   it('gian hàng không có chi nhánh nào ⇒ nói thẳng, không âm thầm bỏ qua SĐT', () => {

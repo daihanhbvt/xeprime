@@ -24,10 +24,16 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { fetchCurrentUser, registerWithPassword, setPassword } from '@/services/auth.service';
 import { queryKeys } from '@/services/query-keys';
-import { registerShop } from '../api';
+import { presignShopMedia, uploadImage } from '@/services/upload';
+import { registerShop, updateShopProfile } from '../api';
+import type { MyShop } from '../types';
 import { PartnerAccountFields } from './PartnerAccountFields';
 import { PartnerSignupIntro } from './PartnerSignupIntro';
+import { ShopLogoPicker, type PickedLogo } from './ShopLogoPicker';
 import styles from './ShopRegistration.module.css';
+
+/** `id` nút chọn logo - nút đăng ký đặt tiêu điểm vào đây khi còn thiếu logo. */
+const LOGO_TRIGGER_ID = 'partner-signup-logo';
 
 const ADDRESS_FIELD_NAMES = {
   provinceCode: 'provinceCode',
@@ -72,6 +78,15 @@ interface PartnerSignupFormProps {
  * Bước 1 xong mà bước 2 hỏng: phiên ĐÃ có, nên lần render sau `withAccount = false` — phần tài
  * khoản biến mất, giá trị đã gõ còn nguyên, bấm lại chỉ chạy bước 2. Không bao giờ tạo tài khoản
  * thứ hai; một tài khoản đối tác đã có gian hàng thì server trả 409 (ADR 0053).
+ *
+ * ## Logo gian hàng - bắt buộc ở tuyến gói (ADR 0103)
+ *
+ * 3. Tuyến gói: tải logo lên (`presignShopMedia` - chỉ ký được khi gian hàng đã có) rồi
+ *    `PATCH /tenants/current/profile { logoUrl }`.
+ *
+ * Bước 3 hỏng thì gian hàng ĐÃ có: bấm lại bỏ qua bước 2 (`createdShop`) và chỉ tải lại logo. Người
+ * dùng rời trang lúc đó vẫn bị trang onboarding đòi logo trước khi chọn gói, nên không có gian hàng
+ * tuyến gói nào đi tiếp mà thiếu logo. Tuyến hoa hồng KHÔNG có ô này (ADR 0040 điều 7).
  */
 export function PartnerSignupForm({ track, onCreated, back }: PartnerSignupFormProps) {
   const t = useTranslations('ShopOnboarding');
@@ -84,8 +99,13 @@ export function PartnerSignupForm({ track, onCreated, back }: PartnerSignupFormP
   const busy = useRef(false);
   const [agreed, setAgreed] = useState(false);
   const [consentError, setConsentError] = useState(false);
+  const [logo, setLogo] = useState<PickedLogo | null>(null);
+  const [logoMissing, setLogoMissing] = useState(false);
+  /** Gian hàng đã tạo ở một lượt trước mà bước logo hỏng - lượt sau không tạo lại (409). */
+  const createdShop = useRef<MyShop | null>(null);
 
   const isPackageTrack = track === REGISTRATION_TRACK.PACKAGE;
+  const needsLogo = isPackageTrack && logo == null;
   /** Chưa có phiên ⇒ form tạo luôn tài khoản. Đây là DỮ LIỆU của schema (`.when`). */
   const withAccount = !user;
 
@@ -150,6 +170,12 @@ export function PartnerSignupForm({ track, onCreated, back }: PartnerSignupFormP
 
   const submit = async (values: PartnerSignupValues) => {
     if (busy.current) return;
+    // Tuyến gói: chưa có logo thì chưa gửi gì lên server (ADR 0103).
+    if (needsLogo) {
+      setLogoMissing(true);
+      document.getElementById(LOGO_TRIGGER_ID)?.focus();
+      return;
+    }
     // Ô "Tôi đồng ý…" của bản vẽ: chưa tích thì chưa gửi gì lên server.
     if (!agreed) {
       setConsentError(true);
@@ -183,20 +209,33 @@ export function PartnerSignupForm({ track, onCreated, back }: PartnerSignupFormP
       }
       // Tuyến hoa hồng tạo tài khoản mới: họ tên CHÍNH LÀ tên hồ sơ chủ xe — không hỏi lại.
       const name = (values.name.trim() || values.displayName.trim()).trim();
-      const shop = await registerShop({
-        name,
-        registrationTrack: track,
-        tenantType: TENANT_TYPE.INDIVIDUAL,
-        provinceCode: values.provinceCode,
-        wardCode: values.wardCode || undefined,
-        addressLine: values.addressLine.trim() || undefined,
-        placeId: values.placeId ?? undefined,
-        latitude: values.latitude ?? undefined,
-        longitude: values.longitude ?? undefined,
-        locationSource: values.locationSource ?? undefined,
-        phone: values.phone.trim(),
-        email: values.email.trim(),
-      });
+      let shop =
+        createdShop.current ??
+        (await registerShop({
+          name,
+          registrationTrack: track,
+          tenantType: TENANT_TYPE.INDIVIDUAL,
+          provinceCode: values.provinceCode,
+          wardCode: values.wardCode || undefined,
+          addressLine: values.addressLine.trim() || undefined,
+          placeId: values.placeId ?? undefined,
+          latitude: values.latitude ?? undefined,
+          longitude: values.longitude ?? undefined,
+          locationSource: values.locationSource ?? undefined,
+          phone: values.phone.trim(),
+          email: values.email.trim(),
+        }));
+      createdShop.current = shop;
+      if (logo && !shop.profile?.logoUrl) {
+        try {
+          const logoUrl = await uploadImage(logo.file, presignShopMedia);
+          shop = await updateShopProfile({ logoUrl });
+        } catch (err) {
+          // Gian hàng đã có - nói đúng điều đó; bấm lại chỉ tải lại logo.
+          setError(t('signup.logoUploadFailed', { error: errorMessage(err) }));
+          return;
+        }
+      }
       /*
        * Nạp scope MỚI (đã có gian hàng) TRƯỚC khi điều hướng: trang đích (`/onboarding`, wizard đăng
        * xe) đọc `/auth/me` từ cache — scope cũ "chưa có gian hàng" sẽ đá người dùng NGƯỢC về
@@ -221,7 +260,11 @@ export function PartnerSignupForm({ track, onCreated, back }: PartnerSignupFormP
   };
 
   // `handleSubmit` gọi trong event handler: callback đọc `busy` (ref) không bị coi là đọc lúc render.
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => void handleSubmit(submit)(event);
+  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+    // Báo thiếu logo CÙNG LÚC với lỗi của các ô khác, không đợi schema qua hết mới nói.
+    if (needsLogo) setLogoMissing(true);
+    void handleSubmit(submit)(event);
+  };
   /** Đúng mã ở popup mở từ nút đăng ký ⇒ gửi tiếp, người dùng không phải bấm lần nữa. */
   const continueSubmit = () => void handleSubmit(submit)();
 
@@ -325,6 +368,18 @@ export function PartnerSignupForm({ track, onCreated, back }: PartnerSignupFormP
                   required
                 />
               </div>
+            ) : null}
+            {isPackageTrack ? (
+              <ShopLogoPicker
+                id={LOGO_TRIGGER_ID}
+                value={logo}
+                onChange={(next) => {
+                  setLogo(next);
+                  if (next) setLogoMissing(false);
+                }}
+                error={logoMissing && !logo ? t('signup.fields.logo.required') : null}
+                disabled={pending}
+              />
             ) : null}
             <div className={styles.addressGrid}>
               <AddressField

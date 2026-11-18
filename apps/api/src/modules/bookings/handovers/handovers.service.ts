@@ -35,6 +35,7 @@ import {
   isHandoverPhotoSlotFor,
   isHandoverEditable,
   isHandoverEligible,
+  pickupHandoverOpensAt,
   vehicleMaintenanceSchedule,
   type BookingStatus,
   type HandoverPhotoSlot,
@@ -157,6 +158,8 @@ export class HandoversService {
       energyKind,
       bookingPickupAt: booking.pickupAt.toISOString(),
       bookingReturnAt: booking.returnAt.toISOString(),
+      // Mốc sớm nhất bấm "Đã giao xe" (ADR 0104 điều 1) - màn hình tự mở nút đúng lúc.
+      pickupConfirmOpensAt: pickupHandoverOpensAt(booking.pickupAt).toISOString(),
       vehicleOdometerKm: profile?.currentOdometerKm ?? null,
       pickupOdometerKm: confirmedOdometerKm(pickup),
       // Cùng công thức với tab Bảo dưỡng & KM (§9) — hai màn không được lệch cách tính.
@@ -326,6 +329,8 @@ export class HandoversService {
     scope: HandoverViewScope,
     /** Người gọi có `payments.record` — đọc từ scope của request ở controller, không từ body. */
     money: { canRecordPayment: boolean } = { canRecordPayment: false },
+    /** Đồng hồ của cổng mở giao xe (ADR 0104 điều 1) - test cố định được; mặc định là bây giờ. */
+    now: Date = new Date(),
   ): Promise<HandoverContextDto> {
     /*
      * Phụ phí + "Đã thu tiền" (06/11/2026) chỉ có nghĩa lúc NHẬN LẠI xe, và là tiền: cần đúng quyền
@@ -366,6 +371,23 @@ export class HandoversService {
     }
 
     if (!isHandoverEligible(type, bookingStatus)) throw notEligible(type, booking.status);
+
+    /*
+     * Giao xe chỉ mở từ `pickupAt − 60′` (ADR 0104 điều 1) - cùng mốc với nút "Đã nhận xe" của khách.
+     * Bấm sớm hơn là chuyến thành "Đang thuê" nhiều ngày trước giờ hẹn: thuế ghi nghĩa vụ, bảo hiểm
+     * tới hạn phát hành, mà khách thì chưa thể phản bác vì chưa tới giờ nhận. Muốn giao sớm thật thì
+     * đổi giờ nhận với khách trước. Đặt SAU nhánh "đã xác nhận rồi" để lượt bấm lại vẫn idempotent.
+     */
+    if (type === HANDOVER_TYPE.PICKUP) {
+      const opensAt = pickupHandoverOpensAt(booking.pickupAt);
+      if (now.getTime() < opensAt.getTime()) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.HANDOVER_PICKUP_NOT_OPEN,
+          message: 'Chưa tới giờ giao xe - chỉ xác nhận được từ 60 phút trước giờ nhận',
+          details: { opensAt: opensAt.toISOString() },
+        });
+      }
+    }
 
     /**
      * Wave 10 (docs/design/14 §2): Odo và ảnh hiện trạng đều **TUỲ CHỌN ở CẢ HAI CHIỀU**.
@@ -661,6 +683,56 @@ export class HandoversService {
    * gọi xác minh. `customerUserId` lúc đó là TÀI KHOẢN NHÂN SỰ (người ký biên bản), lượt chuyển đơn
    * mang scope `platform` và KHÔNG `silent` — chủ xe lẫn khách cần biết chuyến vừa được chốt thay họ.
    */
+  /**
+   * GỠ lượt giao xe của một chuyến KHÔNG DIỄN RA - ADR 0104 điều 3. Chỉ lượt kết luận chuyến của
+   * nền tảng gọi (khách báo "Chưa nhận được xe" trên đơn đang thuê, người trực đã xác minh), trong
+   * transaction đã khoá dòng đơn:
+   *  1. huỷ MỌI biên bản còn sống của đơn (giao xe đã xác nhận + nháp trả xe nếu có). Biên bản giao
+   *     xe giữ `confirmed_at`/`confirmed_by` làm lịch sử; liên kết số KM phải gỡ (CHECK
+   *     `vh_reading_requires_confirmed`) - dòng số KM của xe giữ nguyên, nó là một lần đọc đồng hồ thật;
+   *  2. đưa đơn về `reserved` qua `BookingsService.revertPickupWithinTx`;
+   *  3. audit.
+   * Thuế do người gọi đảo (`TaxService.reverseLiveForBookingWithinTx`); bảo hiểm chưa phát hành bị
+   * huỷ khi lượt chuyển trạng thái tiếp theo kết thúc đơn, như mọi lượt huỷ trước bàn giao.
+   */
+  async revertPickupWithinTx(
+    tx: Prisma.TransactionClient,
+    input: { tenantId: string; bookingId: string; actorUserId: string; reason: string },
+  ): Promise<void> {
+    const { tenantId, bookingId, actorUserId, reason } = input;
+    const live = await tx.vehicleHandover.findMany({
+      where: { tenantId, bookingId, status: { not: HANDOVER_STATUS.CANCELED } },
+      select: { id: true, type: true, status: true },
+    });
+    if (live.length > 0) {
+      await tx.vehicleHandover.updateMany({
+        where: { id: { in: live.map((row) => row.id) } },
+        data: {
+          status: HANDOVER_STATUS.CANCELED,
+          odometerReadingId: null,
+          updatedBy: actorUserId,
+          rowVersion: { increment: 1 },
+        },
+      });
+    }
+    await this.bookings.revertPickupWithinTx(tx, input);
+    await this.audit.record(
+      {
+        tenantId,
+        actorUserId,
+        actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+        action: 'booking.handover.pickup.revert',
+        targetType: 'booking',
+        targetId: bookingId,
+        before: {
+          handovers: live.map((row) => ({ id: row.id, type: row.type, status: row.status })),
+        },
+        after: { status: HANDOVER_STATUS.CANCELED, reason },
+      },
+      tx,
+    );
+  }
+
   async confirmOnCustomerWordWithinTx(
     tx: Prisma.TransactionClient,
     input: {
@@ -1286,8 +1358,7 @@ export class HandoversService {
     });
     if (open.length === 0) return;
 
-    const who =
-      input.by === 'customer' ? 'khách' : input.by === 'platform' ? 'XePrime' : 'chủ xe';
+    const who = input.by === 'customer' ? 'khách' : input.by === 'platform' ? 'XePrime' : 'chủ xe';
     const resolution = pickup
       ? `Tự động kết luận: ${who} đã xác nhận giao xe của chuyến ${input.bookingCode} - ` +
         'chuyến đã diễn ra, không còn việc chờ xác minh bàn giao.'

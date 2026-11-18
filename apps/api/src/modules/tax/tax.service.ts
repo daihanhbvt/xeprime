@@ -18,6 +18,7 @@ import {
   taxPeriodKeyVn,
   vnDateKey,
   taxRateLabel,
+  type AuditActorScope,
   type BookingPriceSnapshot,
   type SellerEntityType,
   type TaxCategory,
@@ -71,6 +72,35 @@ export interface TaxSnapshot {
  * mỗi đơn. Worker chạy lại, hai chuyển trạng thái nối tiếp, admin bấm hai lần — DB từ chối bản
  * thứ hai và service dịch `P2002` thành "đã có, không làm gì".
  */
+/** Cột của một dòng thuế cần để ghi dòng ĐẢO của nó - một bản cho mọi lượt đảo. */
+const TAX_REVERSAL_SELECT = {
+  id: true,
+  tenantId: true,
+  bookingId: true,
+  bookingExtensionId: true,
+  status: true,
+  amount: true,
+  taxableBase: true,
+  percent: true,
+  label: true,
+  feePolicyId: true,
+  sellerProfileId: true,
+  periodKey: true,
+  reversalOfId: true,
+  vatAmount: true,
+  pitAmount: true,
+  vatPercent: true,
+  pitPercent: true,
+  taxCategory: true,
+  sellerEntityType: true,
+  taxSubjectType: true,
+  sellerTaxId: true,
+  sellerIdNumber: true,
+  sellerLegalName: true,
+} satisfies Prisma.TaxWithholdingSelect;
+
+type TaxReversalRow = Prisma.TaxWithholdingGetPayload<{ select: typeof TAX_REVERSAL_SELECT }>;
+
 @Injectable()
 export class TaxService {
   private readonly logger = new Logger(TaxService.name);
@@ -228,31 +258,7 @@ export class TaxService {
   async reverse(id: string, actorUserId: string, reason: string): Promise<string> {
     const row = await this.prisma.taxWithholding.findUnique({
       where: { id },
-      select: {
-        id: true,
-        tenantId: true,
-        bookingId: true,
-        bookingExtensionId: true,
-        status: true,
-        amount: true,
-        taxableBase: true,
-        percent: true,
-        label: true,
-        feePolicyId: true,
-        sellerProfileId: true,
-        periodKey: true,
-        reversalOfId: true,
-        vatAmount: true,
-        pitAmount: true,
-        vatPercent: true,
-        pitPercent: true,
-        taxCategory: true,
-        sellerEntityType: true,
-        taxSubjectType: true,
-        sellerTaxId: true,
-        sellerIdNumber: true,
-        sellerLegalName: true,
-      },
+      select: TAX_REVERSAL_SELECT,
     });
     if (!row) {
       throw new NotFoundException({
@@ -274,72 +280,124 @@ export class TaxService {
       });
     }
 
-    const reversalId = newId();
-    await this.prisma.$transaction(async (tx) => {
-      /*
-       * Lật dòng gốc TRƯỚC, có điều kiện `status` trong WHERE: hai admin bấm cùng lúc thì đúng
-       * một người thấy `count = 1`. Bên thua không ghi dòng âm thứ hai — và `unique` trên
-       * `reversal_of_id` là dây an toàn thứ hai nếu họ vẫn tới được bước sau.
-       */
-      const claimed = await tx.taxWithholding.updateMany({
-        where: { id, status: row.status, reversalOfId: null },
-        data: { status: TAX_WITHHOLDING_STATUS.REVERSED },
-      });
-      if (claimed.count === 0) {
+    return this.prisma.$transaction((tx) =>
+      this.writeReversalWithinTx(tx, row, actorUserId, reason, AUDIT_ACTOR_SCOPE.PLATFORM),
+    );
+  }
+
+  /**
+   * ĐẢO mọi nghĩa vụ thuế CÒN SỐNG của một chuyến KHÔNG DIỄN RA - ADR 0104 điều 3: nền tảng gỡ một
+   * lượt giao xe mà khách chưa từng nhận. Thuế phát sinh ở mốc giao xe (ADR 0032 điều 3); lượt giao
+   * đó không có thật thì nghĩa vụ cũng không có, khác hẳn một chuyến đã chạy rồi kết thúc sớm (nghĩa
+   * vụ GIỮ NGUYÊN - xem `BookingsService.transitionWithinTx`).
+   *
+   * Chạy TRONG transaction của người gọi. Một dòng đã `remitted` (tiền đã nộp) thì TỪ CHỐI cả lượt:
+   * đó là việc của tờ khai điều chỉnh, không phải hệ quả của một nút kết luận.
+   */
+  async reverseLiveForBookingWithinTx(
+    tx: Prisma.TransactionClient,
+    input: { bookingId: string; actorUserId: string; reason: string },
+  ): Promise<number> {
+    const rows = await tx.taxWithholding.findMany({
+      where: {
+        bookingId: input.bookingId,
+        reversalOfId: null,
+        status: { not: TAX_WITHHOLDING_STATUS.REVERSED },
+      },
+      select: TAX_REVERSAL_SELECT,
+    });
+    for (const row of rows) {
+      if (!canTransitionTax(row.status as TaxWithholdingStatus, TAX_WITHHOLDING_STATUS.REVERSED)) {
         throw new ConflictException({
-          code: API_ERROR_CODE.CONFLICT,
-          message: 'Dòng thuế vừa được người khác xử lý - tải lại rồi thử lại',
+          code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
+          message:
+            'Thuế của chuyến này đã nộp - không gỡ lượt giao xe được, xử lý bằng tờ khai điều chỉnh',
+          details: { status: row.status },
         });
       }
-
-      await tx.taxWithholding.create({
-        data: {
-          id: reversalId,
-          bookingId: row.bookingId,
-          bookingExtensionId: row.bookingExtensionId,
-          tenantId: row.tenantId,
-          sellerProfileId: row.sellerProfileId,
-          taxableBase: row.taxableBase,
-          percent: row.percent,
-          label: row.label,
-          // ÂM — phép cộng một kỳ chỉ là `SUM(amount)`, không phải một cây if theo trạng thái.
-          amount: row.amount.negated(),
-          feePolicyId: row.feePolicyId,
-          // Hai sắc thuế đảo CÙNG dấu với tổng — CHECK `vat + pit = amount` giữ ở cả dòng đảo.
-          vatAmount: row.vatAmount?.negated() ?? null,
-          pitAmount: row.pitAmount?.negated() ?? null,
-          vatPercent: row.vatPercent,
-          pitPercent: row.pitPercent,
-          taxCategory: row.taxCategory,
-          sellerEntityType: row.sellerEntityType,
-          taxSubjectType: row.taxSubjectType,
-          sellerTaxId: row.sellerTaxId,
-          sellerIdNumber: row.sellerIdNumber,
-          sellerLegalName: row.sellerLegalName,
-          status: TAX_WITHHOLDING_STATUS.REVERSED,
-          // Dòng đảo thuộc CÙNG kỳ với dòng gốc: đảo một nghĩa vụ của tháng 3 vào tháng 5 vẫn
-          // là sửa tờ khai tháng 3, và xếp nó vào tháng 5 sẽ làm cả hai kỳ sai.
-          periodKey: row.periodKey,
-          reversalOfId: row.id,
-          reversalReason: reason,
-          createdBy: actorUserId,
-        },
-      });
-
-      await this.audit.record(
-        {
-          tenantId: row.tenantId,
-          actorUserId,
-          actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
-          action: 'tax_withholding.reverse',
-          targetType: 'tax_withholding',
-          targetId: row.id,
-          before: { status: row.status, amount: row.amount.toFixed(0) },
-          after: { status: TAX_WITHHOLDING_STATUS.REVERSED, reversalId, reason },
-        },
+      await this.writeReversalWithinTx(
         tx,
+        row,
+        input.actorUserId,
+        input.reason,
+        AUDIT_ACTOR_SCOPE.PLATFORM,
       );
+    }
+    return rows.length;
+  }
+
+  /**
+   * Ghi MỘT lượt đảo: lật dòng gốc sang `reversed` (có điều kiện `status` trong WHERE - hai lượt cùng
+   * lúc thì đúng một bên thắng) rồi ghi dòng ÂM trỏ về nó, kèm audit. Dùng chung cho nút đảo tay của
+   * admin và lượt gỡ giao xe - một cách đảo, không hai.
+   */
+  private async writeReversalWithinTx(
+    tx: Prisma.TransactionClient,
+    row: TaxReversalRow,
+    actorUserId: string,
+    reason: string,
+    actorScope: AuditActorScope,
+  ): Promise<string> {
+    const id = row.id;
+    const reversalId = newId();
+    const claimed = await tx.taxWithholding.updateMany({
+      where: { id, status: row.status, reversalOfId: null },
+      data: { status: TAX_WITHHOLDING_STATUS.REVERSED },
     });
+    if (claimed.count === 0) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.CONFLICT,
+        message: 'Dòng thuế vừa được người khác xử lý - tải lại rồi thử lại',
+      });
+    }
+
+    await tx.taxWithholding.create({
+      data: {
+        id: reversalId,
+        bookingId: row.bookingId,
+        bookingExtensionId: row.bookingExtensionId,
+        tenantId: row.tenantId,
+        sellerProfileId: row.sellerProfileId,
+        taxableBase: row.taxableBase,
+        percent: row.percent,
+        label: row.label,
+        // ÂM — phép cộng một kỳ chỉ là `SUM(amount)`, không phải một cây if theo trạng thái.
+        amount: row.amount.negated(),
+        feePolicyId: row.feePolicyId,
+        // Hai sắc thuế đảo CÙNG dấu với tổng — CHECK `vat + pit = amount` giữ ở cả dòng đảo.
+        vatAmount: row.vatAmount?.negated() ?? null,
+        pitAmount: row.pitAmount?.negated() ?? null,
+        vatPercent: row.vatPercent,
+        pitPercent: row.pitPercent,
+        taxCategory: row.taxCategory,
+        sellerEntityType: row.sellerEntityType,
+        taxSubjectType: row.taxSubjectType,
+        sellerTaxId: row.sellerTaxId,
+        sellerIdNumber: row.sellerIdNumber,
+        sellerLegalName: row.sellerLegalName,
+        status: TAX_WITHHOLDING_STATUS.REVERSED,
+        // Dòng đảo thuộc CÙNG kỳ với dòng gốc: đảo một nghĩa vụ của tháng 3 vào tháng 5 vẫn
+        // là sửa tờ khai tháng 3, và xếp nó vào tháng 5 sẽ làm cả hai kỳ sai.
+        periodKey: row.periodKey,
+        reversalOfId: row.id,
+        reversalReason: reason,
+        createdBy: actorUserId,
+      },
+    });
+
+    await this.audit.record(
+      {
+        tenantId: row.tenantId,
+        actorUserId,
+        actorScope,
+        action: 'tax_withholding.reverse',
+        targetType: 'tax_withholding',
+        targetId: row.id,
+        before: { status: row.status, amount: row.amount.toFixed(0) },
+        after: { status: TAX_WITHHOLDING_STATUS.REVERSED, reversalId, reason },
+      },
+      tx,
+    );
 
     return reversalId;
   }

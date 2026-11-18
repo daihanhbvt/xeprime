@@ -45,6 +45,12 @@ interface TripVerdictCase {
    * nó có thể khép bằng thoả thuận mà chuyến vẫn diễn ra (ADR 0095 điều 2).
    */
   required: boolean;
+  /**
+   * Trạng thái đơn THÊM VÀO `bookingStatuses` khi case là lời báo "Chưa nhận được xe" của khách
+   * (ADR 0104 điều 3): chủ xe đã bấm giao xe (`active`) nhưng khách nói không nhận được. Kết luận
+   * chuyến khi đó GỠ biên bản giao xe trước rồi đi tiếp như đơn chưa giao.
+   */
+  tripNotReceivedStatuses?: readonly BookingStatus[];
 }
 
 /** Loại case nào cần kết luận chuyến, và kết luận nào hợp lệ cho nó. */
@@ -66,10 +72,12 @@ export const TRIP_VERDICT_CASES: Readonly<Partial<Record<SupportCaseCategory, Tr
   /*
    * Tranh chấp ở mốc nhận xe (ADR 0095): worker không mở `handover_unconfirmed` khi khách đã lên
    * tiếng, nên đây là lối DUY NHẤT để nền tảng khép một chuyến mà chủ xe bỏ mặc. Đơn đang chạy thì
-   * không — đơn `active` không huỷ được (ADR 0045 điều 1).
+   * CHỈ khi case là lời báo "Chưa nhận được xe" (ADR 0104 điều 3, thu hẹp "Không làm" của ADR 0095):
+   * một tranh chấp khác giữa chuyến vẫn không huỷ được đơn `active` (ADR 0045 điều 1).
    */
   [SUPPORT_CASE_CATEGORY.DISPUTE]: {
     bookingStatuses: [BOOKING_STATUS.RESERVED, BOOKING_STATUS.CONFIRMED],
+    tripNotReceivedStatuses: [BOOKING_STATUS.ACTIVE],
     verdicts: [
       TRIP_VERDICT.HANDED_OVER,
       TRIP_VERDICT.CUSTOMER_NO_SHOW,
@@ -79,6 +87,29 @@ export const TRIP_VERDICT_CASES: Readonly<Partial<Record<SupportCaseCategory, Tr
     required: false,
   },
 };
+
+/** Ngữ cảnh của case mà `tripVerdictsFor` cần ngoài loại case và trạng thái đơn. */
+export interface TripVerdictCaseContext {
+  /** Case là lời báo "Chưa nhận được xe" của khách (dấu `reason` trên dòng audit mở case). */
+  tripNotReceived?: boolean;
+}
+
+/**
+ * Kết luận này trên đơn này có phải GỠ biên bản giao xe trước không (ADR 0104 điều 3): đơn `active`
+ * mà kết luận nói chuyến chưa từng bắt đầu. `handed_over` trên đơn `active` thì không gỡ gì - nó
+ * chỉ xác nhận lượt giao xe đã có là thật.
+ */
+export function tripVerdictRevertsPickup(
+  verdict: TripVerdict,
+  bookingStatus: string | null | undefined,
+): boolean {
+  return (
+    bookingStatus === BOOKING_STATUS.ACTIVE &&
+    (verdict === TRIP_VERDICT.CUSTOMER_NO_SHOW ||
+      verdict === TRIP_VERDICT.HOST_NOT_DELIVERED ||
+      verdict === TRIP_VERDICT.PLATFORM_CANCELLED)
+  );
+}
 
 /**
  * Các kết luận dùng được cho case này NGAY BÂY GIỜ — rỗng khi loại case không cần kết luận chuyến,
@@ -90,10 +121,14 @@ export const TRIP_VERDICT_CASES: Readonly<Partial<Record<SupportCaseCategory, Tr
 export function tripVerdictsFor(
   category: string,
   bookingStatus: string | null | undefined,
+  context: TripVerdictCaseContext = {},
 ): readonly TripVerdict[] {
   const spec = TRIP_VERDICT_CASES[category as SupportCaseCategory];
   if (!spec || !bookingStatus) return [];
-  return (spec.bookingStatuses as readonly string[]).includes(bookingStatus) ? spec.verdicts : [];
+  const statuses: readonly string[] = context.tripNotReceived
+    ? [...spec.bookingStatuses, ...(spec.tripNotReceivedStatuses ?? [])]
+    : spec.bookingStatuses;
+  return statuses.includes(bookingStatus) ? spec.verdicts : [];
 }
 
 /**

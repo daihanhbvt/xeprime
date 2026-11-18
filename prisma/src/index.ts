@@ -132,7 +132,9 @@ export {
 export {
   createSupportCaseWithinTx,
   findOpenTripNotReceivedReport,
+  findOpenTripNotReturnedReport,
   hasOpenSupportCase,
+  isTripNotReceivedReport,
   openSupportCaseCategoriesByBooking,
   openSupportCaseWhere,
   openTripNotReceivedReports,

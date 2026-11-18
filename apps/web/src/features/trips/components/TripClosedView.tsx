@@ -26,6 +26,7 @@ import { TripFinanceCard } from './TripFinanceCard';
 import { TripHandoverEvidence } from './TripHandoverEvidence';
 import { TripHoldPanel } from './TripHoldPanel';
 import { TripNotReceivedReport } from './TripNotReceivedReport';
+import { TripNotReturnedReport } from './TripNotReturnedReport';
 import { TripOwnerActions } from './TripOwnerActions';
 import { CustomerTripTimeline } from './CustomerTripTimeline';
 import { TripPageHeader } from './TripPageHeader';
@@ -259,6 +260,9 @@ export function TripClosedView({ trip, backHref }: { trip: CustomerTripDetail; b
       }
       priority={
         <>
+          {/* Chủ xe xác nhận trả xe SỚM mà khách vẫn giữ xe (ADR 0105) - việc gấp hơn đánh giá. */}
+          <TripNotReturnedReport trip={trip} />
+
           {completed ? <TripReviewCard trip={trip} /> : null}
 
           {/* Khiếu nại "chưa nhận được xe" còn mở (ADR 0066) — ngoài ca đó khối tự im lặng. */}

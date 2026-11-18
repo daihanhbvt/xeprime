@@ -195,6 +195,19 @@
     "hostOpenTitle": "Chuyến này đang có khiếu nại",
     "hostOpenBody": "XePrime đang tạm giữ tiền của chuyến và sẽ liên hệ hai bên để xác minh. Nếu đã giao xe, hãy xác nhận biên bản giao xe (kèm ảnh nếu có) để XePrime có căn cứ xác minh."
   },
+  "notReturned": {
+    "title": "Chủ xe đã xác nhận nhận lại xe sớm",
+    "lead": "Chủ xe xác nhận đã nhận lại xe trước giờ trả theo đơn ({returnAt}). Tiền thuê giữ nguyên theo đơn đã đặt. Nếu bạn vẫn đang giữ xe, hãy báo cho XePrime trước {time}.",
+    "action": "Tôi chưa trả xe",
+    "dialogTitle": "Báo chưa trả xe",
+    "dialogBody": "XePrime sẽ liên hệ cả bạn lẫn chủ xe để xác minh và thống nhất phần thời gian còn lại của chuyến.",
+    "dialogNote": "Chỉ báo khi bạn thật sự vẫn đang giữ xe. Nếu đã trả xe, hãy bỏ qua.",
+    "confirm": "Báo chưa trả xe",
+    "keep": "Quay lại",
+    "success": "Đã gửi báo cáo. XePrime sẽ sớm liên hệ bạn.",
+    "openTitle": "Đang xử lý báo cáo chưa trả xe",
+    "openBody": "XePrime sẽ liên hệ bạn cùng chủ xe để xác minh."
+  },
   "cancel": {
     "title": "Hủy chuyến đi",
     "leadPending": "Yêu cầu thuê sẽ được rút lại và thông báo đến chủ xe. Bạn vẫn có thể gửi lại yêu cầu cho xe này bất cứ lúc nào. Thao tác này không thể hoàn tác!",

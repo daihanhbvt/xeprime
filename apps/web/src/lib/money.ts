@@ -18,6 +18,7 @@ export {
   moneyToEnglishWords,
   moneyToVietnameseWords,
   subtractMoney,
+  sumMoney,
   wholeUnits,
   type CompactMoneyParts,
   type MoneyCompactUnit,

@@ -87,8 +87,8 @@ function context(overrides: Partial<HandoverContext> = {}): HandoverContext {
     plateNumber: '51K-836.79',
     vehicleType: 'car',
     bookingPickupAt: '2026-08-01T02:00:00.000Z',
-    // Hẹn trả ở tương lai: mặc định giờ nhận = bây giờ ⇒ đúng giờ.
-    bookingReturnAt: '2099-01-01T02:00:00.000Z',
+    // Hẹn trả 30′ nữa: mặc định giờ nhận = bây giờ ⇒ đúng giờ, và chưa tới ngưỡng trả SỚM (60′).
+    bookingReturnAt: new Date(Date.now() + 30 * 60_000).toISOString(),
     vehicleOdometerKm: 42500,
     pickupOdometerKm: 42500,
     pickup: null,
@@ -175,6 +175,21 @@ describe('ConfirmReturnDialog', () => {
     expect(screen.getByTestId('photo-grid').textContent).toBe(HANDOVER_TYPE.RETURN);
   });
 
+  it('nhận lại xe sớm hơn giờ hẹn ≥ 60′ ⇒ viên "Sớm …" + cảnh báo nhả lịch, tiền giữ nguyên theo đơn', () => {
+    state.context = context({
+      bookingReturnAt: new Date(Date.now() + 3 * 86_400_000).toISOString(),
+    });
+    renderDialog();
+    expect(screen.getByText(/^Trả sớm .+ so với giờ hẹn$/)).toBeTruthy();
+    expect(screen.getByText(/Tiền thuê giữ nguyên theo đơn/)).toBeTruthy();
+    expect(screen.getByText(/^Sớm /)).toBeTruthy();
+  });
+
+  it('đúng giờ (sớm < 60′) ⇒ không cảnh báo trả sớm', () => {
+    renderDialog();
+    expect(screen.queryByText(/^Trả sớm /)).toBeNull();
+  });
+
   it('khách chưa báo trả ⇒ giờ nhận mặc định = GIỜ HẸN; "Hiện tại" ↔ "Đúng giờ" bật qua lại', async () => {
     state.context = context({ bookingReturnAt: '2026-11-01T02:00:00.000Z' }); // 09:00 giờ VN
     const { onClose } = renderDialog();
@@ -232,9 +247,9 @@ describe('ConfirmReturnDialog', () => {
     expect(screen.getByText('Trễ 1 giờ')).toBeTruthy();
     expect(screen.getByText('Trễ 1 giờ 30 phút so với giờ hẹn')).toBeTruthy();
     // Viên / câu trạng thái không còn "Đúng giờ" — chữ đó giờ chỉ là NÚT về lại giờ hẹn.
-    expect(
-      screen.queryAllByText('Đúng giờ').filter((el) => el.tagName !== 'BUTTON'),
-    ).toHaveLength(0);
+    expect(screen.queryAllByText('Đúng giờ').filter((el) => el.tagName !== 'BUTTON')).toHaveLength(
+      0,
+    );
     expect(screen.getByRole('button', { name: /Đặt về giờ hẹn trả/ })).toBeTruthy();
 
     fireEvent.click(confirmButton());

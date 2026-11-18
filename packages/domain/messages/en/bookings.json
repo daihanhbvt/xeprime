@@ -50,7 +50,8 @@
     "handoverPhotos": "Handover photos",
     "confirmPickup": "Confirm vehicle handed over",
     "confirmReturn": "Confirm vehicle returned",
-    "confirmPermissionHint": "The handovers.confirm permission is required to confirm a handover"
+    "confirmPermissionHint": "The handovers.confirm permission is required to confirm a handover",
+    "pickupNotOpen": "It is not handover time yet. Handover can be confirmed from {time} (60 minutes before pickup). If the customer needs the vehicle earlier, change the pickup time with them first."
   },
   "statusActions": {
     "cancel": "Cancel booking",
@@ -330,6 +331,9 @@
       "onTime": "On time",
       "late": "{duration} late",
       "lateHint": "{duration} later than scheduled",
+      "early": "{duration} early",
+      "earlyTitle": "Returned {duration} before the booked time",
+      "earlyBody": "The vehicle becomes free on the calendar as soon as you confirm, and other customers can book it. The rental price stays as booked - XePrime does not refund unused days automatically. The customer is notified and can report \"I still have the vehicle\" if they do.",
       "timeLabel": "Actual return time",
       "useNow": "Now",
       "useScheduled": "On time",
@@ -507,11 +511,18 @@
     "recordDepositTitle": "Collect deposit",
     "recordOk": "Record",
     "debtLead": "Outstanding",
+    "counterLead": "Still to collect from the customer",
     "depositLead": "Deposit still due",
     "depositNoticeTitle": "A deposit does not reduce the balance due",
     "depositNoticeBody": "A deposit is the customer’s property held in trust and returned at the end of the trip - it appears in the cash book but does not reduce what the customer still owes in rent.",
     "descriptionLabel": "Note (optional)",
-    "recordDepositSuccess": "Deposit recorded"
+    "recordDepositSuccess": "Deposit recorded",
+    "validation": {
+      "amountRequired": "Enter an amount",
+      "amountPositive": "The amount must be greater than 0",
+      "amountOverDue": "You can collect at most {amount}. For money paid on top of the booking, add an income receipt in the Cash book.",
+      "methodRequired": "Choose a payment method"
+    }
   },
   "create": {
     "title": "New counter booking",
@@ -523,8 +534,8 @@
       "price": "Price"
     },
     "vehicle": {
-        "available": "Available",
-        "pricePerDay": "{price}/day",
+      "available": "Available",
+      "pricePerDay": "{price}/day",
       "title": "Pick a vehicle",
       "searchLabel": "Search vehicles",
       "searchPlaceholder": "Name, plate, code…",
@@ -949,7 +960,11 @@
     }
   },
   "detailPage": {
-    "tabs": { "prep": "Preparation", "trip": "Trip & time", "extra": "Extras" },
+    "tabs": {
+      "prep": "Preparation",
+      "trip": "Trip & time",
+      "extra": "Extras"
+    },
     "title": "Booking details · #{code}",
     "createdAt": "Created {date}",
     "stepperLabel": "Booking progress",

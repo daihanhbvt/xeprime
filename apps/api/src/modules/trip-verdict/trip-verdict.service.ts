@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { openSupportCaseWhere, type Prisma } from '@xeprime/prisma';
+import { isTripNotReceivedReport, openSupportCaseWhere, type Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
@@ -9,10 +9,13 @@ import {
   CANCELLATION_REASON_CATEGORY,
   HANDOVER_CONFIRM_SOURCE,
   HANDOVER_TYPE,
+  INSURANCE_POLICY_STATUS,
   SUPPORT_CASE_AUDIT_ACTION,
+  SUPPORT_CASE_CATEGORY,
   SUPPORT_CASE_STATUS,
   TRIP_VERDICT,
   isSupportCaseOpen,
+  tripVerdictRevertsPickup,
   tripVerdictsFor,
   type AuditActorScope,
   type BookingStatus,
@@ -26,6 +29,7 @@ import { HandoversService } from '../bookings/handovers/handovers.service';
 import { HoldSettlementService } from '../holds/hold-settlement.service';
 import type { TripVerdictMoneyDto, TripVerdictPreviewDto } from '../support/dto/support.dto';
 import { SupportService } from '../support/support.service';
+import { TaxService } from '../tax/tax.service';
 
 /** Câu mở đầu kết luận của case — hai bên đọc được trên dòng thời gian (server soạn, tiếng Việt). */
 const VERDICT_HEADLINE: Readonly<Record<TripVerdict, string>> = {
@@ -75,6 +79,7 @@ export class TripVerdictService {
     private readonly bookings: BookingsService,
     private readonly handovers: HandoversService,
     private readonly holdSettlement: HoldSettlementService,
+    private readonly tax: TaxService,
   ) {}
 
   /**
@@ -100,11 +105,16 @@ export class TripVerdictService {
       });
     }
     const bookingId = supportCase.bookingId;
+    const bookingStatus = supportCase.booking?.status ?? null;
     const verdicts =
       bookingId && isSupportCaseOpen(supportCase.status as SupportCaseStatus)
-        ? tripVerdictsFor(supportCase.category, supportCase.booking?.status)
+        ? tripVerdictsFor(supportCase.category, bookingStatus, {
+            tripNotReceived: await this.isNotReceivedReport(this.prisma, supportCase),
+          })
         : [];
-    if (!bookingId || verdicts.length === 0) return { items: [] };
+    if (!bookingId || verdicts.length === 0) {
+      return { items: [], revertsHandover: false, insuranceIssued: false };
+    }
 
     const otherFreezingCase = await this.prisma.supportCase.findFirst({
       where: { bookingId, id: { not: caseId }, ...openSupportCaseWhere() },
@@ -134,7 +144,11 @@ export class TripVerdictService {
         deferred: money != null && otherFreezingCase !== null,
       });
     }
-    return { items };
+    return {
+      items,
+      revertsHandover: verdicts.some((verdict) => tripVerdictRevertsPickup(verdict, bookingStatus)),
+      insuranceIssued: await this.hasIssuedInsurance(bookingId),
+    };
   }
 
   async apply(
@@ -167,7 +181,9 @@ export class TripVerdictService {
       const booking = supportCase.bookingId
         ? await this.lockBooking(tx, supportCase.bookingId)
         : null;
-      const verdicts = tripVerdictsFor(supportCase.category, booking?.status);
+      const verdicts = tripVerdictsFor(supportCase.category, booking?.status, {
+        tripNotReceived: await this.isNotReceivedReport(tx, supportCase),
+      });
       if (!booking || !verdicts.includes(input.verdict)) {
         throw new ConflictException({
           code: API_ERROR_CODE.SUPPORT_TRIP_VERDICT_NOT_ALLOWED,
@@ -184,10 +200,34 @@ export class TripVerdictService {
         { guardTripVerdict: false, audit: { verdict: input.verdict } },
       );
 
-      const from = booking.status as BookingStatus;
+      let from = booking.status as BookingStatus;
+      /*
+       * Đơn ĐANG THUÊ mà kết luận nói chuyến chưa từng bắt đầu (ADR 0104 điều 3): gỡ lượt giao xe
+       * TRƯỚC - đảo nghĩa vụ thuế, huỷ biên bản, đơn về `reserved` - rồi đi tiếp đúng đường của một
+       * đơn chưa giao bên dưới. Cùng transaction: không có trạng thái "đã gỡ giao xe mà chưa huỷ".
+       */
+      const revertsPickup = tripVerdictRevertsPickup(input.verdict, from);
+      if (revertsPickup) {
+        const reason = `${VERDICT_HEADLINE[input.verdict]} ${note}`;
+        await this.tax.reverseLiveForBookingWithinTx(tx, {
+          bookingId: booking.id,
+          actorUserId,
+          reason,
+        });
+        await this.handovers.revertPickupWithinTx(tx, {
+          tenantId: booking.tenantId,
+          bookingId: booking.id,
+          actorUserId,
+          reason,
+        });
+        from = BOOKING_STATUS.RESERVED;
+      }
       switch (input.verdict) {
         case TRIP_VERDICT.HANDED_OVER:
         case TRIP_VERDICT.RETURNED: {
+          // Lời báo "chưa nhận được xe" trên đơn ĐÃ giao: xác minh lượt giao là thật - giữ chuyến,
+          // không có biên bản nào để lập thêm.
+          if (input.verdict === TRIP_VERDICT.HANDED_OVER && from === BOOKING_STATUS.ACTIVE) break;
           const pickup = input.verdict === TRIP_VERDICT.HANDED_OVER;
           const scheduled = pickup ? booking.pickupAt : booking.returnAt;
           const done = await this.handovers.confirmOnCustomerWordWithinTx(tx, {
@@ -268,17 +308,40 @@ export class TripVerdictService {
           action: SUPPORT_CASE_AUDIT_ACTION.TRIP_VERDICT,
           targetType: AUDIT_TARGET_TYPE.SUPPORT_CASE,
           targetId: caseId,
-          before: { caseStatus: supportCase.status, bookingStatus: from },
+          before: { caseStatus: supportCase.status, bookingStatus: booking.status },
           after: {
             caseStatus: SUPPORT_CASE_STATUS.RESOLVED,
             verdict: input.verdict,
             bookingId: booking.id,
+            ...(revertsPickup ? { pickupReverted: true } : {}),
             note,
           },
         },
         tx,
       );
     });
+  }
+
+  /** Case là lời báo "Chưa nhận được xe" của khách - chỉ case tranh chấp mới cần đọc dấu audit. */
+  private isNotReceivedReport(
+    db: Pick<Prisma.TransactionClient, 'supportCase' | 'auditLog'>,
+    supportCase: { id: string; category: string },
+  ): Promise<boolean> {
+    return supportCase.category === SUPPORT_CASE_CATEGORY.DISPUTE
+      ? isTripNotReceivedReport(db, supportCase.id)
+      : Promise.resolve(false);
+  }
+
+  /** GCN đã (hoặc đang) phát hành - kết luận huỷ vẫn hoàn khách, phí hãng do XePrime chịu (ADR 0104 điều 4). */
+  private async hasIssuedInsurance(bookingId: string): Promise<boolean> {
+    const issued = await this.prisma.bookingInsurancePolicy.findFirst({
+      where: {
+        bookingId,
+        status: { in: [INSURANCE_POLICY_STATUS.ISSUED, INSURANCE_POLICY_STATUS.ISSUING] },
+      },
+      select: { id: true },
+    });
+    return issued !== null;
   }
 
   private async lockBooking(tx: Prisma.TransactionClient, bookingId: string) {

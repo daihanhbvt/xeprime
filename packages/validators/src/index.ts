@@ -1248,9 +1248,10 @@ export type ShopProfileWithContactValues = yup.InferType<typeof shopProfileWithC
  * một cái tên nói đúng vai trò giữ cho nơi gọi không gửi nó nhầm phong bì. Luật thì vẫn là MỘT
  * (`contactPhoneRule`).
  *
- * Logo cố ý KHÔNG bắt buộc: nó chưa cần thiết để nhận tiền gói, và đòi một tấm ảnh trước khi
- * người ta kịp trả tiền là ma sát đặt sai chỗ. Cổng đòi nó là lúc chiếc xe đầu tiên lên chợ
- * (`missingPackageShopListingRequirements`).
+ * Logo BẮT BUỘC (ADR 0103, thay ghi chú cũ "logo chưa cần để nhận tiền gói"): người dùng chốt ngày
+ * 18/11/2026 rằng gian hàng tuyến gói có logo ngay lúc thành lập - đợi tới lần gửi xe duyệt mới
+ * đòi là để chủ gian hàng ăn một lỗi giữa lúc đang đăng xe. Cổng gửi xe ở server
+ * (`missingPackageShopListingRequirements`) vẫn soát logo như cũ.
  *
  * Message là MÃ - `useValidationResolver` tra `Subscription.upgrade.validation.*` trước, rồi
  * `Shop.validation.*` cho những mã đến từ `shopProfileSchema`.
@@ -1270,6 +1271,17 @@ export const shopUpgradeSchema = shopProfileSchema
   .shape({
     addressLine: addressShape.addressLine.required('addressLineRequired'),
     contactPhone: contactPhoneRule.required('phoneRequired'),
+    logoUrl: yup
+      .string()
+      .trim()
+      .transform((v) => (v === '' ? null : v))
+      .url('logoUrlInvalid')
+      .max(2000)
+      .nullable()
+      .default(null)
+      // `.test` chứ không `.required()`: giữ kiểu `string | null` - giá trị mở form đọc từ hồ sơ
+      // có thể chưa có logo, và đó là trạng thái HỢP LỆ để hiện, chỉ không hợp lệ để lưu.
+      .test('logoRequired', 'logoRequired', (value) => value != null),
   });
 
 export type ShopUpgradeValues = yup.InferType<typeof shopUpgradeSchema>;

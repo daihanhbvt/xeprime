@@ -603,11 +603,28 @@ export class CustomerTripDetailDto extends CustomerTripListItemDto {
    */
   @ApiProperty() canReportNotReceived!: boolean;
   /**
+   * Mốc MỞ cửa sổ báo "Chưa nhận được xe" (ISO-8601 UTC): giờ nhận, hoặc giờ chủ xe xác nhận giao xe
+   * nếu sớm hơn (ADR 0104 điều 2). Có mặt cùng lúc với `notReceivedReportUntil`.
+   */
+  @ApiPropertyOptional({ type: String, nullable: true }) notReceivedReportFrom!: string | null;
+  /**
    * Mốc ĐÓNG cửa sổ báo "Chưa nhận được xe" (`pickupAt + 120′`, ISO-8601 UTC) — có mặt khi chuyến
    * còn báo được (chưa tới giờ hoặc đang trong cửa sổ), để giao diện tự hiện nút lúc tới giờ nhận
    * và tự ẩn đúng lúc đóng. `null` khi không áp dụng.
    */
   @ApiPropertyOptional({ type: String, nullable: true }) notReceivedReportUntil!: string | null;
+
+  /**
+   * Người đi thuê có lời báo "Tôi chưa trả xe" (ADR 0105) của CHÍNH họ còn mở - giao diện hiện khối
+   * "đang xử lý" thay cho nút.
+   */
+  @ApiProperty() notReturnedReportOpen!: boolean;
+  /**
+   * Người đi thuê bấm được "Tôi chưa trả xe" NGAY BÂY GIỜ (ADR 0105): chủ xe xác nhận nhận lại xe sớm
+   * hơn giờ trả ≥ 60′, chưa có lời báo nào còn mở. Giá trị là mốc ĐÓNG nút (`returnAt + 120′`, ISO-8601
+   * UTC) để giao diện tự ẩn đúng lúc; `null` khi không bấm được. Server vẫn là cửa chặn.
+   */
+  @ApiPropertyOptional({ type: String, nullable: true }) notReturnedReportUntil!: string | null;
 
   /**
    * Người đi thuê bấm được "Đã nhận xe" NGAY BÂY GIỜ (ADR 0081): đơn `reserved`, tự lái/dài hạn,

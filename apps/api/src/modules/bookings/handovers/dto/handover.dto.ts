@@ -152,6 +152,11 @@ export class HandoverContextDto {
    */
   @ApiProperty({ description: 'Giờ nhận xe theo đơn (ISO-8601 UTC)' }) bookingPickupAt!: string;
   @ApiProperty({ description: 'Giờ trả xe theo đơn (ISO-8601 UTC)' }) bookingReturnAt!: string;
+  @ApiProperty({
+    description:
+      'Mốc sớm nhất xác nhận GIAO XE được: `pickupAt − 60′` (ADR 0104 điều 1, ISO-8601 UTC). Bấm sớm hơn ⇒ 409 `HANDOVER_PICKUP_NOT_OPEN`',
+  })
+  pickupConfirmOpensAt!: string;
 
   @ApiPropertyOptional({
     type: Number,

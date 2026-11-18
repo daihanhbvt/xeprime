@@ -240,7 +240,7 @@ function UpgradeShopInfoForm({
               required
             />
 
-            <ShopLogoField control={control} help={t('shopInfo.logoHelp')} />
+            <ShopLogoField control={control} help={t('shopInfo.logoHelp')} required />
           </fieldset>
 
           <div className={styles.actions}>
