@@ -8,6 +8,7 @@ import {
   type VehicleProtectionTierQuote,
 } from '@xeprime/types';
 import { InsuranceEligibilityService } from './insurance-eligibility.service';
+import { InsuranceProductsService } from './insurance-products.service';
 import {
   INSURANCE_PARTNER,
   type InsurancePartner,
@@ -27,6 +28,24 @@ export type PartnerPremiumAnswer =
 const TIMED_OUT = Symbol('timed-out');
 
 /**
+ * Phí hãng báo lúc duyệt lệch biểu phí bao nhiêu thì coi là hãng đã đổi giá (ADR 0106 điều 2): quá
+ * 0,5% VÀ quá 1.000đ. % biểu phí giữ 4 chữ số lẻ nên số tính lại có thể lệch vài trăm đồng so với hãng
+ * ở xe giá trị lớn — ngưỡng này để lệch làm tròn không báo động giả, còn đổi nhóm năm (~8%) hay đổi bậc
+ * thì luôn vượt.
+ */
+const DRIFT_MIN_VND = 1000n;
+const DRIFT_PERMILLE = 5n;
+
+export function premiumDrifted(partnerAmount: string, formulaAmount: string): boolean {
+  const partner = BigInt(partnerAmount);
+  const formula = BigInt(formulaAmount);
+  const diff = partner > formula ? partner - formula : formula - partner;
+  return diff > DRIFT_MIN_VND && diff * 1000n > formula * DRIFT_PERMILLE;
+}
+
+const vnd = (amount: string) => `${new Intl.NumberFormat('vi-VN').format(BigInt(amount))}đ`;
+
+/**
  * Phí bảo hiểm vật chất xe của từng hợp đồng lấy từ ĐỐI TÁC — ADR 0097.
  *
  * Chỉ lượt DUYỆT hỏi (một lần mỗi chuyến, chờ tối đa `INSURANCE_PARTNER_QUOTE_TIMEOUT_MS`): đó là
@@ -43,6 +62,7 @@ export class InsurancePremiumQuoteService {
   constructor(
     @Inject(INSURANCE_PARTNER) private readonly partner: InsurancePartner,
     private readonly eligibility: InsuranceEligibilityService,
+    private readonly products: InsuranceProductsService,
   ) {}
 
   /**
@@ -83,6 +103,11 @@ export class InsurancePremiumQuoteService {
           } as const);
 
     if (answer.ok) {
+      if (vehicle?.manufactureYear && premiumDrifted(answer.amount, formulaAmount)) {
+        await this.reportDrift(
+          `Lượt duyệt: xe đời ${vehicle.manufactureYear}, bậc tới ${tier.maxDays} ngày - biểu phí ${vnd(formulaAmount)}, ${this.partner.partnerName} báo ${vnd(answer.amount)}`,
+        );
+      }
       const problem = partnerPremiumProblem(answer.amount, formulaAmount);
       if (!problem) {
         return { ...base, amount: answer.amount, source: INSURANCE_PREMIUM_SOURCE.PARTNER };
@@ -107,6 +132,24 @@ export class InsurancePremiumQuoteService {
       elapsedMs: answer.elapsedMs,
     });
     return { ...base, source: INSURANCE_PREMIUM_SOURCE.FORMULA, fallbackReason: answer.reason };
+  }
+
+  /**
+   * Hãng báo khác biểu phí ⇒ đánh dấu biểu phí lệch, nhắc admin đồng bộ lại (ADR 0106 điều 2). Không
+   * bao giờ làm hỏng lượt duyệt: ghi không được thì chỉ log.
+   */
+  private async reportDrift(reason: string): Promise<void> {
+    try {
+      if (await this.products.markPremiumDrift(reason)) {
+        this.logger.warn({ msg: 'insurance: phí hãng khác biểu phí - đánh dấu lệch', reason });
+      }
+    } catch (err) {
+      this.logger.error({
+        msg: 'insurance: không ghi được đánh dấu lệch biểu phí',
+        reason,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
   /**

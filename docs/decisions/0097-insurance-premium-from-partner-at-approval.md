@@ -83,7 +83,10 @@ Năm tab, mỗi tab gác bằng quyền của endpoint nó gọi:
   việc tồn (cần xử lý gấp, lỗi cấp, đã cấp chưa kê).
 - **Biểu phí & sản phẩm** (`platform.insurance.manage`): danh mục + ô % hoa hồng đại lý; thẻ **Tính thử**
   (gõ giá trị xe ⇒ mỗi bậc: phí MIC · phí thu hộ · khách trả · hoa hồng · chuyển MIC · XePrime giữ lại);
-  form sản phẩm xem trước bảng đó theo số ĐANG SỬA.
+  form sản phẩm xem trước bảng đó theo số ĐANG SỬA. Biểu phí theo NĂM SẢN XUẤT và việc đồng bộ nó từ
+  MIC: [ADR 0106](0106-insurance-premium-by-manufacture-year-synced-from-partner.md) (thẻ "Biểu phí đang
+  áp dụng"; thẻ "Biểu phí MIC theo năm sản xuất" thêm sáng 18/11/2026 đã gỡ cùng ngày vì mỗi lần bấm
+  tốn 75-100 lượt hỏi MIC).
 - **Xe** (`platform.insurance.manage`, `GET /platform/insurance/vehicles`): ô tô phân trang/lọc ở server
   (đủ / chưa đủ điều kiện — lọc bằng điều kiện Prisma cùng các vế với `insuranceEligibilityGaps`), giá
   trị xe, chế độ chủ xe, việc còn thiếu, phí từng bậc.

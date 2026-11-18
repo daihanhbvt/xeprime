@@ -20,14 +20,24 @@ import { SERVICE_TYPE, VEHICLE_TYPE } from './status/vehicle';
 import { SELLER_ENTITY_TYPE } from './status/seller';
 
 /**
- * Bộ ca kiểm thử nghiệp vụ tiền của một chuyến — khớp tài liệu "XePrime_Testcase_Phi_BaoHiem.docx".
- * Chính sách = cấu hình staging v9 (18/11/2026): phí sàn 50k/30k theo chuyến, hoa hồng 10/7/3/0,
- * cọc 15%, sàn giữ chỗ 20k, thuế NĐ 117 theo loại dịch vụ, IV MIC theo bậc, phí thu hộ 10%.
+ * Bộ ca kiểm thử nghiệp vụ tiền của một chuyến — dựng từ tài liệu "XePrime_Testcase_Phi_BaoHiem.docx",
+ * số kỳ vọng tính theo ADR 0101 (18/11/2026): phí sàn 50k/30k theo chuyến, tiền thuê trả trước
+ * `C = 30% × R` ĐÃ GỒM hoa hồng `H` (không cộng thêm), nấc hoa hồng 10/7/5/3, sàn giữ chỗ 20k,
+ * thuế NĐ 117 theo loại dịch vụ, IV MIC theo bậc, phí thu hộ 10%.
+ * `depositPercent` và nấc hoa hồng ghim TƯỜNG MINH: đổi mặc định không được âm thầm đổi kịch bản.
  */
 const POLICY: FeePolicySnapshot = {
   ...FEE_SCHEDULE_DEFAULTS,
-  policyId: 'STG-V9',
-  version: 9,
+  depositPercent: 30,
+  depositMinAmount: '0',
+  ownerCommissionTiers: [
+    { fromDay: 1, percent: 10 },
+    { fromDay: 3, percent: 7 },
+    { fromDay: 8, percent: 5 },
+    { fromDay: 31, percent: 3 },
+  ],
+  policyId: 'TC-ADR-0101',
+  version: 10,
   serviceFeePercent: 10,
   holdMinAmount: '20000',
   holdPaymentWindowMinutes: 120,
@@ -98,8 +108,8 @@ describe('TC-PS phí sàn S', () => {
     const s = line(f, FEE_LINE.SERVICE_FEE);
     expect([s?.unitAmount, s?.quantity, s?.amount]).toEqual(['50000', 3, '150000']);
     expect(f.customerTotalAmount).toBe('2550000');
-    expect(f.onlineAmount).toBe('726000');
-    expect(f.payAtPickupAmount).toBe('1824000');
+    expect(f.onlineAmount).toBe('870000');
+    expect(f.payAtPickupAmount).toBe('1680000');
   });
   it('TC-PS-04 phí sàn đặt 0 ⇒ không có dòng 0đ', () => {
     const f = fees({
@@ -114,9 +124,9 @@ describe('TC-HH hoa hồng H', () => {
   it('TC-HH-01 3 ngày × 800.000 = 216.000', () => {
     expect(fees({ baseAmount: '2400000', rentalDays: 3 }).ownerCommissionAmount).toBe('216000');
   });
-  it('TC-HH-02 dài hạn 31 ngày, 15.000.000 = 600.000 (ngày 31 = 0%)', () => {
+  it('TC-HH-02 dài hạn 31 ngày, 15.000.000 = 837.097 (ngày 31 = 3%)', () => {
     const f = fees({ baseAmount: '15000000', rentalDays: 31, serviceType: SERVICE_TYPE.LONG_TERM });
-    expect(f.ownerCommissionAmount).toBe('600000');
+    expect(f.ownerCommissionAmount).toBe('837097');
   });
   it('TC-HH-03 tuyến gói ⇒ không có dòng hoa hồng', () => {
     const f = fees({ billingMode: BILLING_MODE.PACKAGE, baseAmount: '1000000', depositRequired: true });
@@ -147,8 +157,8 @@ describe('TC-TH thuế T', () => {
       sellerEntityType: SELLER_ENTITY_TYPE.COMPANY,
     });
     expect(f.taxAmount).toBe('0');
-    expect(f.onlineAmount).toBe('800000');
-    expect(f.ownerPayableAmount).toBe('750000');
+    expect(f.onlineAmount).toBe('1550000');
+    expect(f.ownerPayableAmount).toBe('1500000');
   });
   it('TC-TH-04 thiếu hồ sơ người bán ⇒ coi là cá nhân', () => {
     expect(fees({ baseAmount: '1000000', sellerEntityType: null }).taxAmount).toBe('70000');
@@ -159,7 +169,7 @@ describe('TC-TH thuế T', () => {
       '33333',
       '16667',
       '6667',
-      '50000',
+      '66667',
     ]);
   });
 });
@@ -189,9 +199,9 @@ describe('TC-BH bảo hiểm vật chất xe IV (MIC theo bậc) + phí thu hộ
     expect(line(f, FEE_LINE.VEHICLE_PROTECTION)?.amount).toBe('165000');
     expect(f.insuranceServiceFeeAmount).toBe('16500');
     expect(f.customerTotalAmount).toBe('2631500');
-    expect(f.onlineAmount).toBe('807500');
-    expect(f.payAtPickupAmount).toBe('1824000');
-    expect(f.ownerPayableAmount).toBe('192000');
+    expect(f.onlineAmount).toBe('951500');
+    expect(f.payAtPickupAmount).toBe('1680000');
+    expect(f.ownerPayableAmount).toBe('336000');
   });
   it('TC-BH-08 Tuỳ chọn, khách KHÔNG tích ⇒ có lời chào bán, không thu', () => {
     const f = fees({
@@ -250,12 +260,12 @@ describe('TC-GC tiền giữ chỗ / trả tay', () => {
     const f = fees({ baseAmount: '2400000', rentalDays: 3 });
     expect([f.customerTotalAmount, f.onlineAmount, f.depositAmount, f.payAtPickupAmount]).toEqual([
       '2450000',
-      '626000',
-      '360000',
-      '1824000',
+      '770000',
+      '504000',
+      '1680000',
     ]);
     expect([f.ownerPayableAmount, f.ownerNetAmount, f.platformRetainedAmount]).toEqual([
-      '192000',
+      '336000',
       '2016000',
       '266000',
     ]);
@@ -278,24 +288,24 @@ describe('TC-GC tiền giữ chỗ / trả tay', () => {
       rentalDays: 2,
       depositRequired: true,
     });
-    expect([f.onlineAmount, f.payAtPickupAmount, f.ownerPayableAmount]).toEqual(['75000', '255000', '24000']);
+    expect([f.onlineAmount, f.payAtPickupAmount, f.ownerPayableAmount]).toEqual(['120000', '210000', '69000']);
   });
   it('TC-GC-04 có tài xế + phí giao: G không vào QR', () => {
     const f = fees({ baseAmount: '1400000', deliveryAmount: '200000', serviceType: SERVICE_TYPE.WITH_DRIVER });
     expect([f.customerTotalAmount, f.onlineAmount, f.payAtPickupAmount, f.ownerPayableAmount]).toEqual([
       '1450000',
-      '350000',
-      '1100000',
-      '126000',
+      '410000',
+      '1040000',
+      '186000',
     ]);
   });
   it('TC-GC-05 dài hạn 31 ngày', () => {
     const f = fees({ baseAmount: '15000000', rentalDays: 31, serviceType: SERVICE_TYPE.LONG_TERM });
     expect([f.onlineAmount, f.payAtPickupAmount, f.ownerPayableAmount, f.ownerNetAmount]).toEqual([
-      '2900000',
-      '12150000',
-      '1200000',
-      '13350000',
+      '4550000',
+      '10500000',
+      '2612903',
+      '13112903',
     ]);
   });
   it('TC-GC-06 báo giá tạm tính ⇒ không thu online, không QR', () => {
@@ -322,15 +332,15 @@ describe('TC-KM mã khuyến mãi nền tảng', () => {
   it('TC-KM-01 mã 100.000: khách giảm, chủ xe không đổi', () => {
     const f = fees({ baseAmount: '2400000', rentalDays: 3, promo: promo('100000') });
     expect([f.onlineAmount, f.customerTotalAmount, f.ownerPayableAmount, f.payAtPickupAmount]).toEqual([
-      '526000',
+      '670000',
       '2350000',
-      '192000',
-      '1824000',
+      '336000',
+      '1680000',
     ]);
   });
   it('TC-KM-02 mã quá lớn ⇒ kẹp, online còn đúng sàn 20.000', () => {
     const f = fees({ baseAmount: '2400000', rentalDays: 3, promo: promo('1000000') });
-    expect([f.promoDiscountAmount, f.onlineAmount]).toEqual(['606000', '20000']);
+    expect([f.promoDiscountAmount, f.onlineAmount]).toEqual(['750000', '20000']);
   });
   it('TC-KM-03 mã không lấn vào IV + X', () => {
     const f = fees({

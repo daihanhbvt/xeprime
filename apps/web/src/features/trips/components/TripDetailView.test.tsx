@@ -129,6 +129,8 @@ const TRIP: CustomerTripDetail = {
   canConfirmPickup: false,
   canReportReturn: false,
   notReceivedReportUntil: null,
+  notReturnedReportOpen: false,
+  notReturnedReportUntil: null,
   // GCN bảo hiểm (ADR 0064) — chuyến này chưa bàn giao nên chưa có giấy nào.
   insuranceCertificates: [],
   insuranceCoverage: [],

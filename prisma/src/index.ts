@@ -196,9 +196,11 @@ export {
 /** Client + adapter THẬT của MIC (ADR 0088) — worker cấp hợp đồng, API tải GCN PDF. */
 export { MicClient, MicUnavailableError, readMicConfig, type MicConfig } from './mic-client';
 export {
+  EARLY_HANDOVER_GRACE_MS,
   MIC_VEHICLE_TYPE_SELF_DRIVE,
   MicInsurancePartner,
   coverageWindow,
+  earliestHandoverKeepingTier,
   parseVnDateTime,
   vnDate,
   vnTime,

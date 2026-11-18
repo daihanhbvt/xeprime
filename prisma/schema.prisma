@@ -5616,8 +5616,21 @@ model InsuranceProduct {
   /// @xeprime/types → InsurancePremiumBasis (ADR 0088). `value_tier` = phí theo bậc giá trị xe; chủ
   /// xe chọn Bắt buộc/Tuỳ chọn (ADR 0091). CHECK: chỉ `vehicle_trip` được tính theo bậc.
   premiumBasis           String   @default("daily") @map("premium_basis") @db.VarChar(20)
-  /// Biểu phí bậc `[{maxDays, percent}]` — bắt buộc khi `premium_basis = value_tier`.
+  /// Biểu phí bậc `[{maxDays, percent}]` — bắt buộc khi `premium_basis = value_tier`. Có nhóm năm
+  /// thì đây là mốc ngày chung + % của nhóm năm mới nhất (ADR 0106).
   premiumTiersJson       Json?    @map("premium_tiers_json") @db.JsonB
+  /// Biểu phí theo NĂM SẢN XUẤT (ADR 0106): `[{yearFrom, yearTo, percents[]}]`, `percents[i]` ứng với
+  /// bậc thứ i. NULL = một biểu phí cho mọi năm. Đồng bộ từ hãng (`InsurancePremiumSyncService`).
+  premiumYearBandsJson   Json?    @map("premium_year_bands_json") @db.JsonB
+  /// @xeprime/types → InsurancePremiumSyncStatus. NULL = chưa từng đồng bộ. `synced` ⇒ biểu phí khoá;
+  /// `failed` (đồng bộ hỏng) / `drifted` (lượt duyệt thấy hãng báo khác) ⇒ admin được sửa tay. CHECK.
+  premiumSyncStatus      String?  @map("premium_sync_status") @db.VarChar(20)
+  /// Lần đồng bộ THÀNH CÔNG gần nhất.
+  premiumSyncedAt        DateTime? @map("premium_synced_at") @db.Timestamptz(3)
+  /// Lúc trạng thái hiện tại được ghi (đồng bộ được / hỏng / phát hiện lệch). CHECK: có khi có trạng thái.
+  premiumSyncStatusAt    DateTime? @map("premium_sync_status_at") @db.Timestamptz(3)
+  /// Vì sao hỏng / lệch — chỉ có khi `premium_sync_status` là `failed` hoặc `drifted`.
+  premiumSyncError       String?  @map("premium_sync_error") @db.VarChar(500)
   /// Hotline báo sự cố / bồi thường của hãng — hiện cạnh GCN cho khách và chủ xe.
   claimHotline           String?  @map("claim_hotline") @db.VarChar(30)
   /// Phí thu hộ bảo hiểm của NỀN TẢNG (ADR 0091 điều 3 — Proposed, chờ luật sư): bật thì mỗi chuyến

@@ -4,14 +4,26 @@ import {
   INSURANCE_PRODUCT_KIND,
   VEHICLE_TYPE,
   readInsurancePremiumTiers,
+  readInsurancePremiumYearBands,
   type FeePolicySnapshot,
   type InsuranceOfferedByKind,
   type InsurancePremiumTier,
+  type InsurancePremiumYearBand,
   type InsuranceProductKind,
   type PerVehicleTypeAmount,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { INSURANCE_PARTNER, type InsurancePartner } from './partner/insurance-partner.port';
+
+/**
+ * Biểu phí bậc ĐANG BÁN của bảo hiểm vật chất xe (ADR 0088 · ADR 0106): mốc ngày + % chung, và các
+ * nhóm năm sản xuất khi đã đồng bộ từ hãng. Chọn % cho một xe bằng `insurancePremiumTiersForYear`.
+ */
+export interface VehicleTripPremiumSchedule {
+  tiers: InsurancePremiumTier[];
+  /** `null` = một biểu phí cho mọi năm sản xuất. */
+  bands: InsurancePremiumYearBand[] | null;
+}
 
 const NOTHING_OFFERED: InsuranceOfferedByKind = { vehicleProtection: false, tripInsurance: false };
 
@@ -71,6 +83,8 @@ export class InsuranceOfferService {
     kinds: ReadonlySet<string>;
     /** Biểu phí bậc của sản phẩm `IV` đang bật — `null` = sản phẩm tính theo ngày (ADR 0088). */
     vehicleTripTiers: InsurancePremiumTier[] | null;
+    /** Nhóm năm sản xuất của biểu phí bậc (ADR 0106) — `null` = một biểu phí cho mọi năm. */
+    vehicleTripYearBands: InsurancePremiumYearBand[] | null;
     /** % phí thu hộ của sản phẩm `IV` đang bật — `null` khi công tắc tắt (ADR 0091 điều 3). */
     vehicleTripServiceFeePercent: number | null;
     /** Biểu phí NGÀY của sản phẩm tính theo ngày đang bật, theo loại sản phẩm (ADR 0098). */
@@ -109,6 +123,16 @@ export class InsuranceOfferService {
     const offered = await this.offeredByKind();
     if (!offered.vehicleProtection) return null;
     return (await this.active()).vehicleTripTiers;
+  }
+
+  /**
+   * Biểu phí bậc ĐẦY ĐỦ (mốc ngày + nhóm năm sản xuất — ADR 0106) của bảo hiểm vật chất xe đang bán.
+   * `null` cùng nghĩa với `vehicleTripTiers`.
+   */
+  async vehicleTripSchedule(): Promise<VehicleTripPremiumSchedule | null> {
+    const tiers = await this.vehicleTripTiers();
+    if (!tiers) return null;
+    return { tiers, bands: (await this.active()).vehicleTripYearBands };
   }
 
   /**
@@ -160,6 +184,7 @@ export class InsuranceOfferService {
   private async active(): Promise<{
     kinds: ReadonlySet<string>;
     vehicleTripTiers: InsurancePremiumTier[] | null;
+    vehicleTripYearBands: InsurancePremiumYearBand[] | null;
     vehicleTripServiceFeePercent: number | null;
     dailyRates: Partial<Record<InsuranceProductKind, PerVehicleTypeAmount>>;
   }> {
@@ -173,6 +198,7 @@ export class InsuranceOfferService {
         kind: true,
         premiumBasis: true,
         premiumTiersJson: true,
+        premiumYearBandsJson: true,
         serviceFeeEnabled: true,
         serviceFeePercent: true,
         dailyAmountCar: true,
@@ -193,6 +219,10 @@ export class InsuranceOfferService {
     const vehicleTripTiers = isTier
       ? readInsurancePremiumTiers(vehicleTrip.premiumTiersJson)
       : null;
+    // Nhóm năm hỏng hình dạng ⇒ `null` = biểu phí chung (đường ghi đã kiểm, đây chỉ là phòng hờ).
+    const vehicleTripYearBands = isTier
+      ? readInsurancePremiumYearBands(vehicleTrip.premiumYearBandsJson, vehicleTripTiers)
+      : null;
     // Sản phẩm bậc mà biểu phí hỏng ⇒ KHÔNG bán (không lặng lẽ rơi về biểu phí ngày).
     if (isTier && !vehicleTripTiers) kinds.delete(INSURANCE_PRODUCT_KIND.VEHICLE_TRIP);
     const serviceFeePercent = vehicleTrip?.serviceFeeEnabled
@@ -201,6 +231,7 @@ export class InsuranceOfferService {
     const fresh = {
       kinds: kinds as ReadonlySet<string>,
       vehicleTripTiers,
+      vehicleTripYearBands,
       vehicleTripServiceFeePercent: serviceFeePercent > 0 ? serviceFeePercent : null,
       dailyRates,
       at: now,

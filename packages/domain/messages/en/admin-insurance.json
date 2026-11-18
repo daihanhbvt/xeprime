@@ -97,12 +97,14 @@
       "tiers": "Invalid tiers: days 1-30, rate above 0 with up to 4 decimals, both increasing.",
       "serviceFeePercent": "Rate from 0 to {max}%, up to 2 decimals.",
       "serviceFeePercentRequired": "The rate must be above 0 when the fee is on.",
-      "agencyCommissionPercent": "From 0 to {max}%, at most two decimals"
+      "agencyCommissionPercent": "From 0 to {max}%, at most two decimals",
+      "bands": "The premium table by manufacture year is invalid: each % must be above 0, at most 4 decimals and increase with the tier."
     },
     "saved": "Saved product {name}.",
     "actions": {
       "addTier": "Add tier",
-      "removeTier": "Remove this tier"
+      "removeTier": "Remove this tier",
+      "collapseBands": "Use one premium table for every manufacture year"
     },
     "tabs": {
       "pricing": "Premium & service fee",
@@ -509,7 +511,41 @@
       "insuredValue": "Vehicle value from 50 million to 20 billion",
       "year": "Invalid year",
       "seats": "Seats from 2 to 60"
-    }
+    },
+    "yearNotSold": "MIC does not insure cars of this manufacture year."
+  },
+  "bands": {
+    "tableLabel": "Premiums by manufacture year and duration tier",
+    "columns": {
+      "year": "Manufacture year"
+    },
+    "percent": "{percent}%",
+    "percentAria": "% of vehicle value - {years}, tier up to {days} days",
+    "yearRange": "{from} - {to}",
+    "yearFromOpen": "{year} and newer",
+    "yearToOpen": "{year} and older",
+    "allYears": "All years"
+  },
+  "sync": {
+    "title": "Premium table in use",
+    "intro": "Premium = vehicle value × the % of the duration tier, with the % depending on the manufacture year. It syncs from MIC only when you click (about 50-60 MIC requests); when a booking approval sees a different price from MIC, you will be asked to sync again.",
+    "syncNow": "Sync from MIC now",
+    "lockedTag": "Synced from MIC",
+    "editableTag": "Manual",
+    "driftedTag": "Differs from MIC",
+    "lockedTitle": "Synced from MIC at {at}",
+    "lockedBody": "The table comes straight from MIC and cannot be edited by hand. It unlocks when a sync fails or when MIC quotes a different price.",
+    "failedTitle": "The sync at {at} failed",
+    "failedBody": "The table from the last successful sync is still in use. You can edit it by hand; the next successful sync will overwrite it.",
+    "driftedTitle": "MIC quoted a different premium at {at}",
+    "driftedBody": "A booking approval asked MIC and got a different amount from the table in use - MIC may have changed its prices. That booking still uses the MIC amount; click \"Sync from MIC now\" so vehicle pages match again. Meanwhile you can edit the table by hand.",
+    "reason": "Reason: {reason}",
+    "neverSynced": "Not synced from MIC yet - the table is entered by hand.",
+    "syncedToast": "Premium table synced from MIC ({count} requests)",
+    "failedToast": "Sync failed - the previous table stays in use, see the reason on the premium card.",
+    "notSupportedToast": "This environment is not connected to the real MIC, so it cannot sync.",
+    "tableLabel": "Premium table in use by manufacture year",
+    "empty": "No premium table yet."
   },
   "vehicles": {
     "tableLabel": "Cars and insurance",

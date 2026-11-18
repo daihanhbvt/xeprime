@@ -1190,6 +1190,14 @@ export class BookingsService {
     if (to === BOOKING_STATUS.NO_SHOW) {
       await this.assertNoShowAllowed(tx, tenantId, id);
     }
+    // Giao xe sớm quá làm hợp đồng bảo hiểm vượt bậc phí khách đã trả (ADR 0106 điều 4).
+    if (to === BOOKING_STATUS.ACTIVE) {
+      await this.insurance.assertHandoverKeepsTierWithinTx(
+        tx,
+        id,
+        opts.actualPickupAt ? new Date(opts.actualPickupAt) : new Date(),
+      );
+    }
 
     // Điều kiện `status: from` trong WHERE: nếu ai đó vừa chuyển trạng thái xen vào giữa thì
     // 0 dòng khớp và ta 409 thay vì ghi đè quyết định của họ.

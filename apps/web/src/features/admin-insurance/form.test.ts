@@ -30,6 +30,7 @@ const schema = buildInsuranceProductSchema({
   urlTemplate: 'urlTemplate',
   displayOrder: (min, max) => `displayOrder:${min}-${max}`,
   tiers: 'tiers',
+  bands: 'bands',
   serviceFeePercent: (max) => `serviceFeePercent:${max}`,
   serviceFeePercentRequired: 'serviceFeePercentRequired',
   agencyCommissionPercent: (max) => `agencyCommissionPercent:${max}`,
@@ -169,6 +170,57 @@ describe('admin-insurance form', () => {
       expect(toUpdateInsuranceProductBody(valid(), ip)).not.toHaveProperty(
         'agencyCommissionPercent',
       );
+    });
+  });
+
+  describe('biểu phí theo năm sản xuất, đồng bộ từ hãng (ADR 0106)', () => {
+    const TIER_PRODUCT = {
+      ...PRODUCT,
+      premiumBasis: INSURANCE_PREMIUM_BASIS.VALUE_TIER,
+      premiumTiers: [
+        { maxDays: 2, percent: '0.013' },
+        { maxDays: 5, percent: '0.033' },
+      ],
+      premiumYearBands: [
+        { yearFrom: 2024, yearTo: null, percents: ['0.011', '0.028'] },
+        { yearFrom: null, yearTo: 2023, percents: ['0.013', '0.033'] },
+      ],
+    } as InsuranceProduct;
+
+    it('biểu phí ĐANG ĐỒNG BỘ ⇒ không gửi biểu phí lên (server khoá sửa tay)', () => {
+      const locked = { ...TIER_PRODUCT, premiumSyncStatus: 'synced' } as InsuranceProduct;
+      const body = toUpdateInsuranceProductBody(insuranceProductFormDefaults(locked), locked);
+      expect(body).not.toHaveProperty('premiumTiers');
+      expect(body).not.toHaveProperty('premiumYearBands');
+    });
+
+    it('lần đồng bộ gần nhất hỏng ⇒ gửi nhóm năm; biểu phí chung mang % của nhóm mới nhất', () => {
+      const failed = { ...TIER_PRODUCT, premiumSyncStatus: 'failed' } as InsuranceProduct;
+      const form = insuranceProductFormDefaults(failed);
+      form.premiumYearBands[0]!.percents = ['0.012', '0.029'];
+      const body = toUpdateInsuranceProductBody(form, failed);
+      expect(body.premiumYearBands).toEqual([
+        { yearFrom: 2024, yearTo: null, percents: ['0.012', '0.029'] },
+        { yearFrom: null, yearTo: 2023, percents: ['0.013', '0.033'] },
+      ]);
+      expect(body.premiumTiers).toEqual([
+        { maxDays: 2, percent: '0.012' },
+        { maxDays: 5, percent: '0.029' },
+      ]);
+    });
+
+    it('không có nhóm năm ⇒ gửi null (một biểu phí cho mọi năm)', () => {
+      const plain = { ...TIER_PRODUCT, premiumYearBands: null } as InsuranceProduct;
+      const body = toUpdateInsuranceProductBody(insuranceProductFormDefaults(plain), plain);
+      expect(body.premiumYearBands).toBeNull();
+      expect(body.premiumTiers?.[0]).toEqual({ maxDays: 2, percent: '0.013' });
+    });
+
+    it('% của nhóm không tăng dần theo bậc ⇒ lỗi biểu phí theo năm', async () => {
+      const form = insuranceProductFormDefaults(TIER_PRODUCT);
+      expect(await errorsOf(form)).toEqual([]);
+      form.premiumYearBands[1]!.percents = ['0.04', '0.033'];
+      expect(await errorsOf(form)).toContain('bands');
     });
   });
 

@@ -47,6 +47,7 @@ export type InsuranceVehicleRow = Schemas['InsuranceVehicleRowDto'];
 export type InsuranceTierPremium = Schemas['InsuranceTierPremiumDto'];
 export type InsurancePremiumCheckInput = Schemas['InsurancePremiumCheckDto'];
 export type InsurancePremiumCheckResult = Schemas['InsurancePremiumCheckResultDto'];
+export type InsurancePremiumSyncResult = Schemas['InsurancePremiumSyncResultDto'];
 
 export interface InsuranceVehicleFilters {
   q?: string;

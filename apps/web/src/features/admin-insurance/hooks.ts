@@ -33,6 +33,7 @@ import {
   payRemittance,
   remittanceFiltersToParams,
   checkInsurancePremium,
+  syncInsurancePremium,
   fetchInsuranceOverview,
   fetchInsuranceVehicles,
   vehicleFiltersToParams,
@@ -66,6 +67,21 @@ export function useUpdateInsuranceProduct() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.platformInsurance.products });
       // Danh mục công khai (quyền lợi cạnh ô chọn) đọc cùng bảng — làm mới luôn bản đã cache.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.insurance.all });
+    },
+  });
+}
+
+/**
+ * Đồng bộ biểu phí từ hãng NGAY (ADR 0106) — ~50-60 lượt gọi API của đối tác, chỉ chạy khi bấm.
+ * Xong thì làm mới danh mục (biểu phí + trạng thái khoá) và danh mục công khai.
+ */
+export function useSyncInsurancePremium() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => syncInsurancePremium(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.platformInsurance.products });
       void queryClient.invalidateQueries({ queryKey: queryKeys.insurance.all });
     },
   });

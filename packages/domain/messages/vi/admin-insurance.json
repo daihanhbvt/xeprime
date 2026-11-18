@@ -97,12 +97,14 @@
       "tiers": "Biểu phí chưa hợp lệ: số ngày 1-30, tỷ lệ lớn hơn 0 và tối đa 4 chữ số lẻ, cả hai tăng dần.",
       "serviceFeePercent": "Tỷ lệ từ 0 đến {max}%, tối đa 2 chữ số lẻ.",
       "serviceFeePercentRequired": "Bật phí thu hộ thì tỷ lệ phải lớn hơn 0.",
-      "agencyCommissionPercent": "Từ 0 tới {max}%, tối đa hai chữ số lẻ"
+      "agencyCommissionPercent": "Từ 0 tới {max}%, tối đa hai chữ số lẻ",
+      "bands": "Biểu phí theo năm sản xuất chưa hợp lệ: mỗi % phải lớn hơn 0, tối đa 4 chữ số lẻ và tăng dần theo bậc."
     },
     "saved": "Đã lưu sản phẩm {name}.",
     "actions": {
       "addTier": "Thêm bậc",
-      "removeTier": "Xoá bậc này"
+      "removeTier": "Xoá bậc này",
+      "collapseBands": "Dùng một biểu phí cho mọi năm sản xuất"
     },
     "tabs": {
       "pricing": "Biểu phí & thu hộ",
@@ -509,7 +511,41 @@
       "insuredValue": "Giá trị xe từ 50 triệu tới 20 tỷ",
       "year": "Năm sản xuất không hợp lệ",
       "seats": "Số chỗ từ 2 tới 60"
-    }
+    },
+    "yearNotSold": "MIC không bán bảo hiểm cho xe đời này."
+  },
+  "bands": {
+    "tableLabel": "Biểu phí theo năm sản xuất và bậc thời lượng",
+    "columns": {
+      "year": "Năm sản xuất"
+    },
+    "percent": "{percent}%",
+    "percentAria": "% giá trị xe - {years}, bậc tới {days} ngày",
+    "yearRange": "{from} - {to}",
+    "yearFromOpen": "Từ {year}",
+    "yearToOpen": "Tới {year}",
+    "allYears": "Mọi năm"
+  },
+  "sync": {
+    "title": "Biểu phí đang áp dụng",
+    "intro": "Phí = giá trị xe × % của bậc thời lượng, % theo năm sản xuất của xe. Chỉ đồng bộ từ MIC khi bạn bấm (khoảng 50-60 lượt hỏi MIC); lượt duyệt đơn thấy MIC báo khác sẽ nhắc bạn đồng bộ lại.",
+    "syncNow": "Đồng bộ từ MIC ngay",
+    "lockedTag": "Đồng bộ từ MIC",
+    "editableTag": "Sửa tay",
+    "driftedTag": "Lệch với MIC",
+    "lockedTitle": "Đồng bộ từ MIC lúc {at}",
+    "lockedBody": "Biểu phí lấy thẳng từ MIC nên không sửa tay. Mở sửa tay khi một lần đồng bộ hỏng hoặc khi MIC báo khác.",
+    "failedTitle": "Lần đồng bộ lúc {at} không thành công",
+    "failedBody": "Đang dùng biểu phí của lần đồng bộ được gần nhất. Bạn có thể sửa tay; lần đồng bộ được kế tiếp sẽ ghi đè.",
+    "driftedTitle": "MIC báo phí khác biểu phí lúc {at}",
+    "driftedBody": "Một lượt duyệt đơn hỏi MIC ra số khác biểu phí đang dùng - MIC có thể đã đổi giá. Đơn đó vẫn tính đúng số MIC; bấm \"Đồng bộ từ MIC ngay\" để giá ở trang xe khớp lại. Trong lúc chờ, bạn có thể sửa tay.",
+    "reason": "Lý do: {reason}",
+    "neverSynced": "Chưa đồng bộ từ MIC - biểu phí đang nhập tay.",
+    "syncedToast": "Đã đồng bộ biểu phí từ MIC ({count} lượt hỏi)",
+    "failedToast": "Đồng bộ không thành công - vẫn dùng biểu phí cũ, xem lý do trong thẻ biểu phí.",
+    "notSupportedToast": "Môi trường này chưa kết nối MIC thật nên không đồng bộ được.",
+    "tableLabel": "Biểu phí đang áp dụng theo năm sản xuất",
+    "empty": "Chưa có biểu phí."
   },
   "vehicles": {
     "tableLabel": "Ô tô và bảo hiểm",

@@ -22,6 +22,7 @@ import {
   type InsuranceVehicleEligibilityFilter,
 } from '@xeprime/types';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
+import { InsuranceProductDto } from './insurance.dto';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
@@ -229,4 +230,28 @@ export class InsurancePremiumCheckResultDto {
   @ApiProperty() seatCount!: number;
   @ApiProperty({ description: 'Tên đối tác đang chạy' }) partnerName!: string;
   @ApiProperty({ type: () => [InsurancePremiumCheckRowDto] }) rows!: InsurancePremiumCheckRowDto[];
+}
+
+// ── Đồng bộ biểu phí với hãng (ADR 0106) ──────────────────────────────────────────────────────
+
+/** `not_supported` = môi trường này không đồng bộ được (chưa cắm adapter thật, hoặc chưa có sản phẩm). */
+export const INSURANCE_PREMIUM_SYNC_OUTCOME_VALUES = ['synced', 'failed', 'not_supported'] as const;
+export type InsurancePremiumSyncOutcome = (typeof INSURANCE_PREMIUM_SYNC_OUTCOME_VALUES)[number];
+
+export class InsurancePremiumSyncResultDto {
+  @ApiProperty({ enum: INSURANCE_PREMIUM_SYNC_OUTCOME_VALUES })
+  status!: InsurancePremiumSyncOutcome;
+  @ApiProperty({ description: 'Số lượt đã hỏi hãng' }) askedCount!: number;
+  /**
+   * Vì sao lượt này hỏng. KHÔNG đặt tên `error`: `ResponseInterceptor` (và bộ dựng OpenAPI) coi object
+   * có `error` là đã bọc sẵn, response sẽ mất lớp `{ data }`.
+   */
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Vì sao lượt này hỏng' })
+  failureReason!: string | null;
+  @ApiPropertyOptional({
+    type: () => InsuranceProductDto,
+    nullable: true,
+    description: 'Sản phẩm sau lượt đồng bộ (null khi không đồng bộ được)',
+  })
+  product!: InsuranceProductDto | null;
 }

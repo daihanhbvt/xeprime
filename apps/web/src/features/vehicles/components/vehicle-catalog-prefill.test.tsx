@@ -107,8 +107,9 @@ describe('Điền sẵn thông số theo mẫu xe', () => {
     // Khoá = ô chỉ đọc + bút trong ô (ADR 0102), không còn ô số bị disabled.
     const locked = (await screen.findByLabelText('Số chỗ ngồi')) as HTMLInputElement;
     expect(locked.readOnly).toBe(true);
-    expect(locked.value).toBe('5 chỗ');
-    expect(screen.queryByRole('spinbutton')).toBeNull();
+    // Khoá là trạng thái của CHÍNH ô số (field-lock) nên giá trị là số thô.
+    expect(locked.value).toBe('5');
+    expect(screen.getByRole('button', { name: 'Sửa Số chỗ ngồi' })).toBeTruthy();
     expect(screen.getByText('Theo mẫu VF 5 - đã điền sẵn.')).toBeTruthy();
   });
 

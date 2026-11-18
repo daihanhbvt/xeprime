@@ -15,6 +15,8 @@ import { InsuranceEligibilityService } from '../src/modules/insurance/insurance-
 import { InsuranceFollowUpService } from '../src/modules/insurance/insurance-follow-up.service';
 import { InsuranceInsightsService } from '../src/modules/insurance/insurance-insights.service';
 import { InsuranceOfferService } from '../src/modules/insurance/insurance-offer.service';
+import { AuditService } from '../src/modules/audit/audit.service';
+import { InsuranceProductsService } from '../src/modules/insurance/insurance-products.service';
 import { InsurancePremiumQuoteService } from '../src/modules/insurance/insurance-premium-quote.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
@@ -33,7 +35,11 @@ const eligibility = new InsuranceEligibilityService(asService, offer);
 const service = new InsuranceInsightsService(
   asService,
   new InsuranceFollowUpService(asService),
-  new InsurancePremiumQuoteService(partner, eligibility),
+  new InsurancePremiumQuoteService(
+    partner,
+    eligibility,
+    new InsuranceProductsService(asService, new AuditService(asService), offer),
+  ),
   partner,
 );
 

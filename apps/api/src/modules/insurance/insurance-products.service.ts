@@ -1,13 +1,24 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, type InsuranceProductRow } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
   INSURANCE_PREMIUM_BASIS,
+  INSURANCE_PREMIUM_SYNC_STATUS,
   INSURANCE_PRODUCT_KIND,
   insurancePremiumTiersProblem,
+  insurancePremiumYearBandsProblem,
   readInsurancePremiumTiers,
+  readInsurancePremiumYearBands,
   VEHICLE_TYPE,
+  type InsurancePremiumSyncStatus,
+  type InsurancePremiumTier,
+  type InsurancePremiumYearBand,
   type InsuranceProductKind,
   type InsuranceProvider,
   type VehicleType,
@@ -34,6 +45,15 @@ const MONEY_FIELDS = [
 
 /** Bước giá của luồng tiền v2 — khấu trừ/bồi thường hiện cạnh phí ngày, không sinh số lẻ. */
 const MONEY_STEP = 1000;
+
+/** Sản phẩm vật chất xe tính theo bậc — đích của đồng bộ biểu phí và của đánh dấu lệch (ADR 0106). */
+const VEHICLE_TRIP_TIER_PRODUCT = {
+  where: {
+    kind: INSURANCE_PRODUCT_KIND.VEHICLE_TRIP,
+    premiumBasis: INSURANCE_PREMIUM_BASIS.VALUE_TIER,
+  },
+  orderBy: [{ isActive: 'desc' }, { displayOrder: 'asc' }],
+} satisfies Prisma.InsuranceProductFindFirstArgs;
 
 /**
  * DANH MỤC sản phẩm bảo hiểm — ADR 0064. Writer duy nhất của `insurance_products`.
@@ -124,13 +144,56 @@ export class InsuranceProductsService {
        * kiểm ở đây để trả lỗi có nghĩa, CHECK `insurance_products_value_tier_check` là chốt sau.
        */
       const basis = dto.premiumBasis ?? before.premiumBasis;
-      const tiers = dto.premiumTiers ?? readInsurancePremiumTiers(before.premiumTiersJson);
+      const beforeTiers = readInsurancePremiumTiers(before.premiumTiersJson);
+      const beforeBands = readInsurancePremiumYearBands(before.premiumYearBandsJson, beforeTiers);
+      /*
+       * Biểu phí ĐANG ĐỒNG BỘ từ hãng thì khoá (ADR 0106 điều 2) — đồng bộ hỏng hay lượt duyệt thấy hãng
+       * báo khác (`failed` / `drifted`) mới mở cho sửa tay. Gửi lại đúng số đang có (client cũ gửi
+       * cả form) không phải là sửa.
+       */
+      // `yearFrom`/`yearTo` vắng trên dây = `null` (mở về một phía).
+      const dtoBands: InsurancePremiumYearBand[] | null | undefined =
+        dto.premiumYearBands === undefined
+          ? undefined
+          : dto.premiumYearBands === null || dto.premiumYearBands.length === 0
+            ? null
+            : dto.premiumYearBands.map((b) => ({
+                yearFrom: b.yearFrom ?? null,
+                yearTo: b.yearTo ?? null,
+                percents: [...b.percents],
+              }));
+      const tiersChanged =
+        dto.premiumTiers !== undefined &&
+        !sameJson(
+          dto.premiumTiers.map((t) => ({ maxDays: t.maxDays, percent: t.percent })),
+          beforeTiers,
+        );
+      const bandsChanged = dtoBands !== undefined && !sameJson(dtoBands, beforeBands);
+      if (
+        before.premiumSyncStatus === INSURANCE_PREMIUM_SYNC_STATUS.SYNCED &&
+        (tiersChanged ||
+          bandsChanged ||
+          (dto.premiumBasis !== undefined && basis !== before.premiumBasis))
+      ) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.INSURANCE_PREMIUM_SYNCED_LOCKED,
+          message: 'Biểu phí đang đồng bộ từ hãng - không sửa tay được',
+        });
+      }
+      const tiers = dto.premiumTiers ?? beforeTiers;
+      const bands = dtoBands !== undefined ? dtoBands : beforeBands;
       if (basis === INSURANCE_PREMIUM_BASIS.VALUE_TIER) {
         if (before.kind !== INSURANCE_PRODUCT_KIND.VEHICLE_TRIP) {
           throw invalidProduct('Chỉ bảo hiểm vật chất xe được tính phí theo bậc giá trị xe');
         }
         const problem = tiers ? insurancePremiumTiersProblem(tiers) : 'Cần biểu phí bậc';
         if (problem) throw invalidProduct(problem, 'premiumTiers');
+        // Đổi số bậc mà giữ nhóm năm cũ ⇒ % của nhóm không còn khớp bậc: phải gửi kèm nhóm năm mới.
+        const bandProblem =
+          bands && bands.length > 0 && tiers
+            ? insurancePremiumYearBandsProblem(bands, tiers)
+            : null;
+        if (bandProblem) throw invalidProduct(bandProblem, 'premiumYearBands');
       }
 
       const data: Prisma.InsuranceProductUpdateInput = {};
@@ -140,6 +203,12 @@ export class InsuranceProductsService {
           maxDays: t.maxDays,
           percent: t.percent,
         }));
+      }
+      if (basis !== INSURANCE_PREMIUM_BASIS.VALUE_TIER) {
+        // Nhóm năm chỉ có nghĩa với phí theo bậc (CHECK `insurance_products_premium_year_bands_check`).
+        if (before.premiumYearBandsJson !== null) data.premiumYearBandsJson = Prisma.DbNull;
+      } else if (dtoBands !== undefined) {
+        data.premiumYearBandsJson = dtoBands ? dtoBands.map(bandJson) : Prisma.DbNull;
       }
       if (dto.claimHotline !== undefined) data.claimHotline = dto.claimHotline?.trim() || null;
       /*
@@ -207,6 +276,136 @@ export class InsuranceProductsService {
     this.offer.invalidate();
     return updated;
   }
+
+  /**
+   * Sản phẩm vật chất xe tính theo bậc — đích của đồng bộ biểu phí (ADR 0106). `null` khi danh mục
+   * chưa có (môi trường chưa seed) hoặc sản phẩm đang tính theo ngày.
+   */
+  async vehicleTripTierProduct(): Promise<ProductRow | null> {
+    return this.prisma.insuranceProduct.findFirst(VEHICLE_TRIP_TIER_PRODUCT);
+  }
+
+  /**
+   * Ghi KẾT QUẢ một lần đồng bộ biểu phí với hãng (ADR 0106 điều 1) — writer duy nhất của bảng này
+   * nên đồng bộ cũng đi qua đây. Chỉ admin bấm mới đồng bộ, nên mọi lượt đều có người làm và có audit.
+   *
+   *  - thành công ⇒ thay mốc bậc + nhóm năm, KHOÁ biểu phí (`synced`);
+   *  - hỏng ⇒ GIỮ biểu phí đang chạy, ghi lý do, MỞ cho sửa tay (`failed`).
+   */
+  async applyPremiumSync(
+    productId: string,
+    outcome:
+      | { ok: true; tiers: InsurancePremiumTier[]; bands: InsurancePremiumYearBand[] }
+      | { ok: false; reason: string },
+    actorUserId: string,
+    now: Date = new Date(),
+  ): Promise<InsuranceProductDto> {
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const before = await tx.insuranceProduct.findUnique({ where: { id: productId } });
+      if (!before) {
+        throw new NotFoundException({
+          code: API_ERROR_CODE.NOT_FOUND,
+          message: 'Không tìm thấy sản phẩm bảo hiểm',
+        });
+      }
+      const data: Prisma.InsuranceProductUpdateInput = outcome.ok
+        ? {
+            premiumTiersJson: outcome.tiers.map((t) => ({
+              maxDays: t.maxDays,
+              percent: t.percent,
+            })),
+            premiumYearBandsJson: outcome.bands.map(bandJson),
+            premiumSyncStatus: INSURANCE_PREMIUM_SYNC_STATUS.SYNCED,
+            premiumSyncedAt: now,
+            premiumSyncStatusAt: now,
+            premiumSyncError: null,
+          }
+        : {
+            premiumSyncStatus: INSURANCE_PREMIUM_SYNC_STATUS.FAILED,
+            premiumSyncStatusAt: now,
+            premiumSyncError: outcome.reason.slice(0, PREMIUM_SYNC_ERROR_MAX),
+          };
+      const after = await tx.insuranceProduct.update({ where: { id: productId }, data });
+      await this.audit.record(
+        {
+          tenantId: null,
+          actorUserId,
+          actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+          action: outcome.ok
+            ? 'insurance_product.premium_sync'
+            : 'insurance_product.premium_sync_failed',
+          targetType: 'insurance_product',
+          targetId: productId,
+          before: toAdminDto(before),
+          after: toAdminDto(after),
+        },
+        tx,
+      );
+      return toAdminDto(after);
+    });
+    this.offer.invalidate();
+    return updated;
+  }
+
+  /**
+   * Lượt DUYỆT đơn hỏi hãng ra phí KHÁC biểu phí đang lưu (ADR 0106 điều 2) ⇒ đánh dấu `drifted`: mở
+   * cho sửa tay và nhắc admin đồng bộ lại. Không tốn lượt hỏi nào — lượt duyệt vốn đã hỏi hãng.
+   *
+   * Chỉ ghi khi biểu phí đang `synced` hoặc chưa từng đồng bộ: đã `failed`/`drifted` thì admin đã được
+   * nhắc, giữ lý do đầu tiên thay vì ghi đè ở mỗi lượt duyệt. Không đổi số của biểu phí — giá khách
+   * thấy đổi khi admin đồng bộ lại hoặc sửa tay. Trả `true` khi vừa đánh dấu.
+   */
+  async markPremiumDrift(reason: string, now: Date = new Date()): Promise<boolean> {
+    const marked = await this.prisma.$transaction(async (tx) => {
+      const before = await tx.insuranceProduct.findFirst(VEHICLE_TRIP_TIER_PRODUCT);
+      if (!before) return false;
+      // Điều kiện nằm TRONG lệnh ghi: hai lượt duyệt cùng thấy lệch thì chỉ một lượt ghi.
+      const { count } = await tx.insuranceProduct.updateMany({
+        where: {
+          id: before.id,
+          OR: [
+            { premiumSyncStatus: null },
+            { premiumSyncStatus: INSURANCE_PREMIUM_SYNC_STATUS.SYNCED },
+          ],
+        },
+        data: {
+          premiumSyncStatus: INSURANCE_PREMIUM_SYNC_STATUS.DRIFTED,
+          premiumSyncStatusAt: now,
+          premiumSyncError: reason.slice(0, PREMIUM_SYNC_ERROR_MAX),
+        },
+      });
+      if (count === 0) return false;
+      const after = await tx.insuranceProduct.findUniqueOrThrow({ where: { id: before.id } });
+      await this.audit.record(
+        {
+          tenantId: null,
+          actorUserId: null,
+          actorScope: AUDIT_ACTOR_SCOPE.SYSTEM,
+          action: 'insurance_product.premium_drift',
+          targetType: 'insurance_product',
+          targetId: before.id,
+          before: toAdminDto(before),
+          after: toAdminDto(after),
+        },
+        tx,
+      );
+      return true;
+    });
+    if (marked) this.offer.invalidate();
+    return marked;
+  }
+}
+
+/** Độ dài tối đa lý do hỏng — cùng `VARCHAR(500)` của cột. */
+const PREMIUM_SYNC_ERROR_MAX = 500;
+
+function bandJson(b: InsurancePremiumYearBand): Prisma.InputJsonObject {
+  return { yearFrom: b.yearFrom ?? null, yearTo: b.yearTo ?? null, percents: [...b.percents] };
+}
+
+/** So hai giá trị JSON (biểu phí) — thứ tự khoá cố định vì cả hai đều do chính service này dựng. */
+function sameJson(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 }
 
 function invalidProduct(message: string, field?: string): BadRequestException {
@@ -248,6 +447,14 @@ function toAdminDto(r: ProductRow): InsuranceProductDto {
         ? INSURANCE_PREMIUM_BASIS.VALUE_TIER
         : INSURANCE_PREMIUM_BASIS.DAILY,
     premiumTiers: readInsurancePremiumTiers(r.premiumTiersJson),
+    premiumYearBands: readInsurancePremiumYearBands(
+      r.premiumYearBandsJson,
+      readInsurancePremiumTiers(r.premiumTiersJson),
+    ),
+    premiumSyncStatus: (r.premiumSyncStatus as InsurancePremiumSyncStatus | null) ?? null,
+    premiumSyncedAt: r.premiumSyncedAt?.toISOString() ?? null,
+    premiumSyncStatusAt: r.premiumSyncStatusAt?.toISOString() ?? null,
+    premiumSyncError: r.premiumSyncError,
     claimHotline: r.claimHotline,
     serviceFeeEnabled: r.serviceFeeEnabled,
     serviceFeePercent: Number(r.serviceFeePercent),

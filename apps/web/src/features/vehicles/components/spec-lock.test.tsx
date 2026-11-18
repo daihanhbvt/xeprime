@@ -105,7 +105,8 @@ describe('Khoá ô thông số theo mẫu xe', () => {
 
     // Khoá = ô chỉ đọc (cùng kiểu ô cà vẹt), giá trị đã định dạng, bút trong ô.
     await waitFor(() => expect(seatInput().readOnly).toBe(true));
-    expect(seatInput().value).toBe('5 chỗ');
+    // Khoá là trạng thái của CHÍNH ô số (field-lock) nên giá trị là số thô.
+    expect(seatInput().value).toBe('5');
     expect(engineInput().readOnly).toBe(true);
     expect(screen.getAllByText('Theo dữ liệu mẫu xe').length).toBeGreaterThan(0);
 

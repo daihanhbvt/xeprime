@@ -1337,6 +1337,17 @@ export const API_ERROR_CODE = {
   /** Hợp đồng đã nằm trong bảng kê trả hãng — không huỷ-hoàn được, phải đối chiếu với hãng (ADR 0093). */
   INSURANCE_POLICY_REMITTED: 'INSURANCE_POLICY_REMITTED',
   /**
+   * Biểu phí bảo hiểm vật chất xe đang ĐỒNG BỘ từ hãng — không sửa tay (ADR 0106 điều 2). Mở lại khi
+   * một lần đồng bộ hỏng. 409.
+   */
+  INSURANCE_PREMIUM_SYNCED_LOCKED: 'INSURANCE_PREMIUM_SYNCED_LOCKED',
+  /**
+   * Giao xe sớm tới mức hợp đồng bảo hiểm (từ lúc giao tới giờ trả) vượt bậc phí khách đã trả (ADR
+   * 0106 điều 4). `details.retryAfterSeconds` = còn bao lâu mới giao được; `details.earliestAt` (ISO).
+   * 409 — giao đúng giờ hẹn hoặc chờ tới mốc đó.
+   */
+  INSURANCE_EARLY_HANDOVER: 'INSURANCE_EARLY_HANDOVER',
+  /**
    * Chủ xe đặt bảo hiểm Bắt buộc mà xe chưa đủ điều kiện bảo hiểm — xe tạm không nhận đặt tự lái
    * (ADR 0091 điều 1). 409 ở bước gửi yêu cầu.
    */

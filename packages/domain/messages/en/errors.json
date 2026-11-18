@@ -279,13 +279,16 @@
     "VEHICLE_REGISTRATION_UPLOAD_INVALID": "The registration photo can no longer be used - please upload it again.",
     "VEHICLE_REGISTRATION_UPLOAD_LIMIT": "You have uploaded registration photos too many times in the last 24 hours - please try again later.",
     "CHAT_BLOCKED": "Messaging is unavailable because one of you has blocked the other.",
-    "HANDOVER_PICKUP_NOT_OPEN": "It is not handover time yet - handover can only be confirmed from 60 minutes before pickup."
+    "HANDOVER_PICKUP_NOT_OPEN": "It is not handover time yet - handover can only be confirmed from 60 minutes before pickup.",
+    "INSURANCE_PREMIUM_SYNCED_LOCKED": "The premium table is synced from MIC and cannot be edited by hand. It unlocks only when a sync fails.",
+    "INSURANCE_EARLY_HANDOVER": "The car cannot be handed over yet: handing over this early makes the insurance contract longer than the tier the customer paid for. Hand over closer to the pickup time."
   },
   "codeWithWait": {
     "RATE_LIMITED": "You're going a little fast. Please try again in {wait}.",
     "LOGIN_TEMPORARILY_LOCKED": "Too many incorrect attempts. Please try again in {wait} or use \"Forgot password\".",
     "OTP_COOLDOWN": "Please wait {wait} before requesting a new code.",
-    "OTP_TOO_MANY": "You've requested too many codes. Please try again in {wait}."
+    "OTP_TOO_MANY": "You've requested too many codes. Please try again in {wait}.",
+    "INSURANCE_EARLY_HANDOVER": "The car cannot be handed over yet: handing over this early makes the insurance contract longer than the tier the customer paid for. You can hand over in {wait}."
   },
   "wait": {
     "seconds": "{count, plural, one {# second} other {# seconds}}"
