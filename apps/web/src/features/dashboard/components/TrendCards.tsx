@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import type { CSSProperties } from 'react';
 import { useMemo } from 'react';
 import type { UseQueryResult } from '@tanstack/react-query';
-import { DASHBOARD_REVENUE_DAYS, DASHBOARD_TREND_MONTHS } from '@xeprime/types';
+import { DASHBOARD_TREND_MONTHS } from '@xeprime/types';
 import { isZeroMoney, sumMoney } from '@xeprime/domain';
 import { toChartValue } from '@/components/chart/chart-data';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -13,6 +13,7 @@ import { InfoCard } from '@/components/layout/InfoCard';
 import type { FinanceSeries } from '@/features/finance/types';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { cx } from '@/lib/cx';
+import { DASHBOARD_REVENUE_DAYS } from '../api';
 import type { PartnerTrendPoint } from '../types';
 import styles from './TrendCards.module.css';
 

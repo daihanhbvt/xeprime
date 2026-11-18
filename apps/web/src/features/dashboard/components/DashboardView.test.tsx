@@ -318,8 +318,11 @@ describe('Tổng quan gian hàng - việc cần làm', () => {
     });
     await renderView();
 
+    // Câu "yên ả" nằm cuối dòng phụ đề, sau ngày hôm nay.
     expect(
-      await screen.findByText('Hôm nay chưa có lịch giao nhận xe nào và không có yêu cầu nào chờ bạn.'),
+      await screen.findByText(
+        /Hôm nay chưa có lịch giao nhận xe nào và không có yêu cầu nào chờ bạn\.$/,
+      ),
     ).toBeTruthy();
     expect(screen.getByText('Không có yêu cầu mới')).toBeTruthy();
     expect(screen.getByText('Không có lịch giao hay nhận xe nào trong 7 ngày tới.')).toBeTruthy();
